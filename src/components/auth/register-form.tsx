@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import React, { useState } from "react"; // Added useState import
 
 const registerFormSchema = z.object({
   name: z.string().min(2, { message: "Ad Soyad en az 2 karakter olmalıdır." }),
@@ -38,7 +39,7 @@ export default function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
   // Simüle edilmiş yükleme durumu için
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Used useState directly
 
 
   const form = useForm<RegisterFormValues>({

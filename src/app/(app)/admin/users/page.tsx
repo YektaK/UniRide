@@ -15,18 +15,77 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import React, { useEffect, useState } from "react";
-import { getUsers } from "@/lib/mock-database"; // Import from mock DB
+import { getUsers as dbGetUsers, updateUser as dbUpdateUser, createNewUserSchedule } from "@/lib/mock-database";
+import UserFormDialog from "@/components/admin/user-form-dialog"; // Import the dialog
+import { useToast } from "@/hooks/use-toast";
+
 
 export default function AdminUsersPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUserFormOpen, setIsUserFormOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     setIsLoading(true);
-    const usersFromDb = getUsers();
+    const usersFromDb = dbGetUsers();
     setAllUsers(usersFromDb);
     setIsLoading(false);
   }, []);
+
+  const handleOpenEditDialog = (user: User) => {
+    setEditingUser(user);
+    setIsUserFormOpen(true);
+  };
+
+  const handleCloseUserFormDialog = () => {
+    setIsUserFormOpen(false);
+    setEditingUser(null);
+  };
+
+  const handleSaveUser = (updatedUserData: User) => {
+    let userToUpdate = { ...updatedUserData };
+
+    // Handle role change logic
+    const originalUser = allUsers.find(u => u.id === updatedUserData.id);
+    if (originalUser && originalUser.role === 'admin' && userToUpdate.role === 'student') {
+      // Admin to Student: ensure studentNumber, create weeklyScheduleId if missing
+      if (!userToUpdate.studentNumber) {
+        // You might want to make studentNumber mandatory in the form if role is student
+        // For now, let's assign a placeholder or leave it for the form validation to catch
+        toast({title: "Hata", description: "Öğrenci rolü için öğrenci numarası zorunludur.", variant: "destructive"});
+        return; // Or handle this more gracefully in the form
+      }
+      if (!userToUpdate.weeklyScheduleId) {
+        userToUpdate.weeklyScheduleId = `schedule${Date.now()}${Math.random().toString(36).substring(2, 7)}`;
+        createNewUserSchedule(userToUpdate.id, userToUpdate.weeklyScheduleId);
+      }
+    } else if (originalUser && originalUser.role === 'student' && userToUpdate.role === 'admin') {
+      // Student to Admin: clear student-specific fields
+      userToUpdate.studentNumber = undefined;
+      userToUpdate.homeAddress = undefined;
+      userToUpdate.accessibilityNeeds = [];
+      // weeklyScheduleId can remain, or be cleared. Let's keep it.
+    }
+
+
+    if (dbUpdateUser(userToUpdate)) {
+      setAllUsers(prevUsers => prevUsers.map(u => u.id === userToUpdate.id ? userToUpdate : u));
+      toast({
+        title: "Kullanıcı Güncellendi",
+        description: `${userToUpdate.name} adlı kullanıcının bilgileri başarıyla güncellendi.`,
+      });
+    } else {
+      toast({
+        title: "Güncelleme Başarısız",
+        description: "Kullanıcı güncellenirken bir hata oluştu.",
+        variant: "destructive",
+      });
+    }
+    handleCloseUserFormDialog();
+  };
+
 
   if (isLoading) {
     return (
@@ -51,7 +110,7 @@ export default function AdminUsersPage() {
           <div>
             <CardTitle className="text-2xl flex items-center gap-2"><UsersIcon className="text-primary"/>Kullanıcı Yönetimi</CardTitle>
             <CardDescription>
-              Sistemde kayıtlı öğrenci ve admin hesaplarını görüntüleyin.
+              Sistemde kayıtlı öğrenci ve admin hesaplarını görüntüleyin ve düzenleyin.
             </CardDescription>
           </div>
            <Button disabled> {/* TODO: Implement Add User functionality */}
@@ -88,7 +147,7 @@ export default function AdminUsersPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" disabled className="mr-2"> {/* TODO: Implement Edit User */}
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(user)} className="mr-2">
                           <Edit className="h-4 w-4" />
                           <span className="sr-only">Düzenle</span>
                         </Button>
@@ -104,14 +163,16 @@ export default function AdminUsersPage() {
             </div>
           )}
            <CardDescription className="mt-4 text-xs">
-            Not: Şifreler güvenlik nedeniyle burada gösterilmemektedir. Öğrenci girişleri için şifreler:
-            Ayşe (student@uniride.com) - Şifre: studentpassword,
-            Veli (veli@uniride.com) - Şifre: velipassword,
-            Zeynep (zeynep@uniride.com) - Şifre: zeyneppassword.
-            Yeni eklenen kullanıcıların şifreleri kayıt sırasında belirlenir.
+            Not: Şifreler güvenlik nedeniyle burada gösterilmemektedir.
           </CardDescription>
         </CardContent>
       </Card>
+       <UserFormDialog
+        isOpen={isUserFormOpen}
+        onClose={handleCloseUserFormDialog}
+        onSave={handleSaveUser}
+        user={editingUser}
+      />
     </div>
   );
 }

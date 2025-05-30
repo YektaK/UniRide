@@ -119,25 +119,46 @@ const chartConfig = {
   },
 };
 
+const DEFAULT_Y_AXIS_MAX = 5;
+
 export default function AdminReportsPage() {
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [arrivalChartData, setArrivalChartData] = useState<ChartData[]>([]);
   const [departureChartData, setDepartureChartData] = useState<ChartData[]>([]);
+  const [arrivalChartMaxY, setArrivalChartMaxY] = useState<number>(DEFAULT_Y_AXIS_MAX);
+  const [departureChartMaxY, setDepartureChartMaxY] = useState<number>(DEFAULT_Y_AXIS_MAX);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (selectedDate) {
       setIsLoading(true);
       const allUsers = getUsers();
-      const processedArrivalData = processArrivalDataForChart(allUsers, selectedDate);
-      const processedDepartureData = processDepartureDataForChart(allUsers, selectedDate);
-      setArrivalChartData(processedArrivalData);
-      setDepartureChartData(processedDepartureData);
+      
+      const newArrivalData = processArrivalDataForChart(allUsers, selectedDate);
+      setArrivalChartData(newArrivalData);
+      if (newArrivalData.length > 0) {
+        const maxVal = Math.max(...newArrivalData.map(d => d.Wheelchair + d.Other));
+        setArrivalChartMaxY(maxVal > 0 ? maxVal + 1 : DEFAULT_Y_AXIS_MAX);
+      } else {
+        setArrivalChartMaxY(DEFAULT_Y_AXIS_MAX);
+      }
+
+      const newDepartureData = processDepartureDataForChart(allUsers, selectedDate);
+      setDepartureChartData(newDepartureData);
+      if (newDepartureData.length > 0) {
+        const maxVal = Math.max(...newDepartureData.map(d => d.Wheelchair + d.Other));
+        setDepartureChartMaxY(maxVal > 0 ? maxVal + 1 : DEFAULT_Y_AXIS_MAX);
+      } else {
+        setDepartureChartMaxY(DEFAULT_Y_AXIS_MAX);
+      }
+      
       setIsLoading(false);
     } else {
       setArrivalChartData([]);
       setDepartureChartData([]);
+      setArrivalChartMaxY(DEFAULT_Y_AXIS_MAX);
+      setDepartureChartMaxY(DEFAULT_Y_AXIS_MAX);
       setIsLoading(false);
     }
   }, [selectedDate]);
@@ -240,6 +261,7 @@ export default function AdminReportsPage() {
                         tickLine={false} 
                         axisLine={false} 
                         tickMargin={8}
+                        domain={[0, arrivalChartMaxY]}
                         />
                       <Tooltip
                         cursorStyle={{ fill: 'hsl(var(--muted))', opacity: 0.5 }}
@@ -282,6 +304,7 @@ export default function AdminReportsPage() {
                         tickLine={false} 
                         axisLine={false} 
                         tickMargin={8}
+                        domain={[0, departureChartMaxY]}
                         />
                       <Tooltip
                         cursorStyle={{ fill: 'hsl(var(--muted))', opacity: 0.5 }}
@@ -302,6 +325,5 @@ export default function AdminReportsPage() {
     </div>
   );
 }
-
 
     

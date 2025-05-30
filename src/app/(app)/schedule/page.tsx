@@ -16,7 +16,7 @@ const locations: ("Dudullu" | "Çengelköy")[] = ["Dudullu", "Çengelköy"];
 
 const generateRandomTime = (minHour = 8, maxHour = 15): string => {
   const hour = Math.floor(Math.random() * (maxHour - minHour + 1)) + minHour;
-  const minute = Math.random() < 0.5 ? 0 : 30;
+  const minute = 0; // Ders başlangıçları her zaman saat başı olacak (XX:00)
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 };
 
@@ -60,8 +60,8 @@ const generateRandomScheduleEntries = (): ScheduleEntry[] => {
       // Try to find a non-overlapping time slot within reasonable hours
       do {
         startTime = generateRandomTime(8, 14); // Start time between 8 AM and 2 PM (to allow for duration)
-        const duration = Math.floor(Math.random() * 3) + 2; // Duration between 2 and 4 hours
-        endTime = addHours(startTime, duration);
+        const durationHours = Math.floor(Math.random() * 3) + 2; // Duration between 2 and 4 hours
+        endTime = addHours(startTime, durationHours);
         attempts++;
       } while (
         (startTime <= lastEndTime || endTime > "19:00") && // Ensure no overlap and not too late

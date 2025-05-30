@@ -25,7 +25,8 @@ import {
   ShieldAlert,
   LogOut,
   HelpingHand,
-  ListChecks, // Added Icon
+  ListChecks,
+  CalendarEdit, // Added Icon for Schedule Management
 } from "lucide-react";
 import { Button } from "../ui/button";
 
@@ -37,13 +38,14 @@ const commonMenuItems = [
 const studentMenuItems = [
   { href: "/schedule", label: "Ders Programım", icon: CalendarDays },
   { href: "/request-ride", label: "Servis Talebi", icon: ClipboardList },
-  { href: "/ride-history", label: "Taleplerim", icon: ListChecks }, // New menu item
+  { href: "/ride-history", label: "Taleplerim", icon: ListChecks },
   { href: "/track-ride", label: "Servis Takibi", icon: MapPin },
 ];
 
 const adminMenuItems = [
   { href: "/admin/vehicles", label: "Araç Yönetimi", icon: Bus },
   { href: "/admin/users", label: "Kullanıcı Yönetimi", icon: Users },
+  { href: "/admin/schedules", label: "Ders Programları", icon: CalendarEdit }, // New menu item
   { href: "/admin/ride-requests", label: "Servis Talepleri", icon: ShieldAlert },
   { href: "/admin/settings", label: "Ayarlar", icon: Settings },
 ];

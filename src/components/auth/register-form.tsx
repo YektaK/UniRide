@@ -19,6 +19,8 @@ import { UserPlus, Hash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
+import { addUser as dbAddUser } from "@/lib/mock-database"; // Import from mock DB
+import type { User } from "@/types";
 
 const registerFormSchema = z.object({
   name: z.string().min(2, { message: "Ad Soyad en az 2 karakter olmalıdır." }),
@@ -54,17 +56,35 @@ export default function RegisterForm() {
 
   async function onSubmit(data: RegisterFormValues) {
     setIsLoading(true);
-    console.log("Kayıt bilgileri (simülasyon):", data);
-    // In a real app, this would call an API to register the user
-    // For now, we simulate success and redirect
-    setTimeout(() => {
+    
+    // Prepare user data for adding to the mock database
+    // The addUser function in mock-database will assign 'id', 'role', and 'weeklyScheduleId'
+    const newUserPayload: Omit<User, 'id' | 'weeklyScheduleId' | 'role'> = {
+      name: data.name,
+      studentNumber: data.studentNumber,
+      email: data.email,
+      password: data.password, // In a real app, hash this password on the backend
+      // homeAddress and accessibilityNeeds can be empty or prompted later
+      homeAddress: "", 
+      accessibilityNeeds: [],
+    };
+
+    const createdUser = dbAddUser(newUserPayload);
+
+    if (createdUser) {
       toast({
-        title: "Kayıt Başarılı (Simülasyon)",
-        description: "Hesabınız başarıyla oluşturuldu. Giriş sayfasına yönlendiriliyorsunuz.",
+        title: "Kayıt Başarılı",
+        description: `Hesabınız başarıyla oluşturuldu: ${createdUser.name}. Giriş sayfasına yönlendiriliyorsunuz.`,
       });
-      setIsLoading(false);
       router.push("/login");
-    }, 1500);
+    } else {
+      toast({
+        title: "Kayıt Başarısız",
+        description: "Kullanıcı oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.",
+        variant: "destructive",
+      });
+    }
+    setIsLoading(false);
   }
 
   return (

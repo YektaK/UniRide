@@ -20,10 +20,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Save, MapPin, Hash } from "lucide-react";
+import { updateUser as dbUpdateUser } from "@/lib/mock-database"; // Import from mock DB
 
 interface ProfileFormProps {
   currentUser: User;
-  onUpdateProfile: (updatedUser: User) => void;
+  onUpdateProfile: (updatedUser: User) => void; // This is effectively setUser from AuthContext
 }
 
 const accessibilityNeedsOptions = [
@@ -36,10 +37,11 @@ const accessibilityNeedsOptions = [
 const profileFormSchema = z.object({
   name: z.string().min(2, { message: "İsim en az 2 karakter olmalıdır." }),
   email: z.string().email({ message: "Geçerli bir e-posta adresi girin." }),
-  studentNumber: z.string().optional(), // Öğrenci numarası eklendi
+  studentNumber: z.string().optional(),
   homeAddress: z.string().min(10, { message: "Ev adresi en az 10 karakter olmalıdır." }).optional(),
   accessibilityNeeds: z.array(z.string()).optional(),
   otherAccessibilityNeed: z.string().optional(),
+  // Password fields can be added here if password change is desired on this form
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -65,24 +67,35 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
     }
 
     const updatedUser: User = {
-      ...currentUser,
+      ...currentUser, // Preserve ID, role, password, weeklyScheduleId etc.
       name: data.name,
-      email: data.email,
+      // Email is read-only, so no need to update it from form data if it cannot be changed
+      // email: data.email, 
     };
 
     if (currentUser.role === 'student') {
-      updatedUser.studentNumber = data.studentNumber; // Öğrenci numarasını güncelle
+      updatedUser.studentNumber = data.studentNumber;
       updatedUser.homeAddress = data.homeAddress;
       updatedUser.accessibilityNeeds = finalAccessibilityNeeds;
     }
 
-    onUpdateProfile(updatedUser);
-    localStorage.setItem("uniRideUser", JSON.stringify(updatedUser));
+    // Update in the mock database first
+    const successInDb = dbUpdateUser(updatedUser);
 
-    toast({
-      title: "Profil Güncellendi",
-      description: "Bilgileriniz başarıyla kaydedildi.",
-    });
+    if (successInDb) {
+      // Then update in AuthContext (which also updates localStorage)
+      onUpdateProfile(updatedUser); 
+      toast({
+        title: "Profil Güncellendi",
+        description: "Bilgileriniz başarıyla kaydedildi.",
+      });
+    } else {
+      toast({
+        title: "Güncelleme Başarısız",
+        description: "Profiliniz güncellenirken bir hata oluştu.",
+        variant: "destructive",
+      });
+    }
   }
 
   return (

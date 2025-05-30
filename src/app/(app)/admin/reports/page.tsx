@@ -8,7 +8,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { BarChartHorizontal, Download, Calendar as CalendarIcon, AlertCircle } from "lucide-react";
 import {
-  ChartContainer,
+  ChartContainer, // Added import
   ChartTooltip,
   ChartTooltipContent,
   ChartLegend,
@@ -178,7 +178,7 @@ export default function AdminReportsPage() {
                 <p className="text-muted-foreground">Görüntülenecek yeterli ders programı verisi bulunamadı.</p>
               </div>
             ) : (
-              <div className="h-[400px] w-full mt-4">
+              <ChartContainer config={chartConfig} className="h-[400px] w-full mt-4">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -203,7 +203,7 @@ export default function AdminReportsPage() {
                       <Bar dataKey="Other" stackId="a" fill="var(--color-Other)" radius={[4, 4, 0, 0]} />
                     </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </ChartContainer>
             )}
              <p className="text-xs text-muted-foreground pt-2">Bu grafik, öğrencilerin haftalık ders programlarındaki her gün için ilk ders başlangıç saatlerini baz alarak saatlik yoğunluğu gösterir. 'Tekerlekli Sandalye' ve 'Diğer' olarak öğrenci sayıları ayrıştırılmıştır.</p>
           </section>

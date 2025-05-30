@@ -3,7 +3,7 @@
 
 import type { User } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users as UsersIcon, PlusCircle, Edit, Trash2 } from "lucide-react";
+import { Users as UsersIcon, PlusCircle, Edit, Trash2, Search } from "lucide-react"; // Added Search
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input"; // Added Input
 import React, { useEffect, useState } from "react";
 import { getUsers as dbGetUsers, updateUser as dbUpdateUser } from "@/lib/mock-database";
 import UserFormDialog from "@/components/admin/user-form-dialog"; 
@@ -25,6 +26,7 @@ export default function AdminUsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [searchTerm, setSearchTerm] = useState(""); // State for the search term
   const { toast } = useToast();
 
   useEffect(() => {
@@ -45,7 +47,6 @@ export default function AdminUsersPage() {
   };
 
   const handleSaveUser = (updatedUserData: User) => {
-    // Role change logic is removed as role is no longer editable in the form
     const userToSave = { ...updatedUserData };
 
     if (dbUpdateUser(userToSave)) {
@@ -63,6 +64,13 @@ export default function AdminUsersPage() {
     }
     handleCloseUserFormDialog();
   };
+
+  // Filter users based on search term
+  const filteredUsers = allUsers.filter(user =>
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (user.studentNumber && user.studentNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
 
   if (isLoading) {
@@ -84,22 +92,40 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-6">
       <Card className="shadow-lg">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="md:flex md:flex-row md:items-start md:justify-between">
           <div>
             <CardTitle className="text-2xl flex items-center gap-2"><UsersIcon className="text-primary"/>Kullanıcı Yönetimi</CardTitle>
             <CardDescription>
-              Sistemde kayıtlı öğrenci ve admin hesaplarını görüntüleyin ve düzenleyin.
+              Sistemde kayıtlı öğrenci ve admin hesaplarını görüntüleyin, düzenleyin ve filtreleyin.
             </CardDescription>
           </div>
-           <Button disabled> {/* TODO: Implement Add User functionality */}
+           <Button disabled className="mt-4 md:mt-0"> {/* TODO: Implement Add User functionality */}
             <PlusCircle className="mr-2 h-4 w-4" /> Yeni Kullanıcı Ekle
           </Button>
         </CardHeader>
         <CardContent>
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Ad, Öğrenci No veya E-posta ile Ara..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8 w-full md:w-1/2 lg:w-1/3"
+              />
+            </div>
+          </div>
+
           {allUsers.length === 0 ? (
             <div className="my-6 p-4 border border-dashed rounded-lg aspect-video bg-muted flex flex-col items-center justify-center">
               <UsersIcon className="h-16 w-16 text-muted-foreground mb-4" />
               <p className="text-muted-foreground">Sistemde kayıtlı kullanıcı bulunmamaktadır.</p>
+            </div>
+          ) : filteredUsers.length === 0 ? (
+             <div className="my-6 p-4 border border-dashed rounded-lg aspect-video bg-muted flex flex-col items-center justify-center">
+              <Search className="h-16 w-16 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Arama kriterlerinize uygun kullanıcı bulunamadı.</p>
             </div>
           ) : (
             <div className="border rounded-lg">
@@ -114,7 +140,7 @@ export default function AdminUsersPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {allUsers.map((user) => (
+                  {filteredUsers.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.name}</TableCell>
                       <TableCell>{user.studentNumber || "-"}</TableCell>
@@ -154,5 +180,3 @@ export default function AdminUsersPage() {
     </div>
   );
 }
-
-    

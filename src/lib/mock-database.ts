@@ -1,5 +1,5 @@
 
-import type { WeeklySchedule, ScheduleEntry, User, UserRole } from "@/types";
+import type { WeeklySchedule, ScheduleEntry, User, UserRole, RideRequest, RideStatus } from "@/types";
 
 const allPossibleDays: ScheduleEntry["dayOfWeek"][] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
@@ -70,82 +70,139 @@ export function updateUser(updatedUserData: User): boolean {
   if (userIndex !== -1) {
     const existingUser = mockUsers[userIndex];
     mockUsers[userIndex] = {
-      ...existingUser, // Preserve fields like password, weeklyScheduleId unless explicitly changed
+      ...existingUser, 
       ...updatedUserData,
-      // Ensure password is not accidentally cleared if not part of updatedUserData
       password: updatedUserData.password || existingUser.password,
+      role: existingUser.role, // Ensure role is not changed via this function if not intended
     };
-    // If role changed to student and weeklyScheduleId is missing, create one
+    
+    // If role is student (should always be if using user-form-dialog as it preserves role)
+    // and weeklyScheduleId is missing (e.g. admin was changed to student, which we disallowed, but for safety)
     if (mockUsers[userIndex].role === 'student' && !mockUsers[userIndex].weeklyScheduleId) {
-        const newScheduleId = `schedule${Date.now()}${Math.random().toString(36).substring(2,7)}`;
+        const newScheduleId = `schedule_usr_upd_${Date.now()}${Math.random().toString(36).substring(2,7)}`;
         mockUsers[userIndex].weeklyScheduleId = newScheduleId;
-        createNewUserSchedule(mockUsers[userIndex].id, newScheduleId);
+        createNewUserSchedule(mockUsers[userIndex].id, newScheduleId); // Ensure schedule exists
     }
     return true;
   }
   return false;
 }
 
-export function addUser(newUserData: Omit<User, 'id' | 'role' | 'weeklyScheduleId'> & {role?: UserRole, password?: string}): User | null {
+export function addUser(newUserData: Omit<User, 'id' | 'role' | 'weeklyScheduleId'> & {password?: string}): User | null {
     const newId = `user${Date.now()}${Math.random().toString(36).substring(2, 7)}`;
-    const newScheduleId = `schedule${Date.now()}${Math.random().toString(36).substring(2, 7)}`;
+    const newScheduleId = `schedule_new_usr_${Date.now()}${Math.random().toString(36).substring(2,7)}`;
 
     const newUser: User = {
       ...newUserData,
       id: newId,
-      role: "student", // New registrations via student form are always students
-      password: newUserData.password || `pass${Math.random().toString(36).substring(2, 8)}`, // Assign a random password if not provided
+      role: "student", 
+      password: newUserData.password || `pass${Math.random().toString(36).substring(2, 8)}`,
       weeklyScheduleId: newScheduleId,
+      homeAddress: newUserData.homeAddress || "",
+      accessibilityNeeds: newUserData.accessibilityNeeds || [],
     };
 
     mockUsers.push(JSON.parse(JSON.stringify(newUser)));
-    createNewUserSchedule(newId, newScheduleId); // Create an empty schedule for the new user
+    createNewUserSchedule(newId, newScheduleId); 
     return JSON.parse(JSON.stringify(newUser));
 }
 
 export function deleteUser(userId: string): boolean {
-  const initialLength = mockUsers.length;
-  mockUsers = mockUsers.filter(u => u.id !== userId);
-  // Also delete their schedule if it exists
-  const userScheduleId = mockSchedules[userId]?.id; // This logic might need refinement based on how schedule IDs are linked
+  const userIndex = mockUsers.findIndex(u => u.id === userId);
+  if (userIndex === -1) return false;
+
+  const userScheduleId = mockUsers[userIndex].weeklyScheduleId;
+  mockUsers.splice(userIndex, 1);
+
   if (userScheduleId && mockSchedules[userScheduleId]) {
     delete mockSchedules[userScheduleId];
   }
-  return mockUsers.length < initialLength;
+  return true;
 }
 
 
 // --- Schedule Data ---
+const generateRandomTime = (minHour = 8, maxHour = 16): string => {
+  const hour = Math.floor(Math.random() * (maxHour - minHour + 1)) + minHour;
+  return `${hour.toString().padStart(2, '0')}:00`;
+};
+
+const generateRandomCourseCode = (): string => {
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const numLetters = Math.random() < 0.5 ? 2 : 3;
+  let code = "";
+  for (let i = 0; i < numLetters; i++) {
+    code += letters.charAt(Math.floor(Math.random() * letters.length));
+  }
+  for (let i = 0; i < 3; i++) {
+    code += Math.floor(Math.random() * 10);
+  }
+  return code;
+};
+
+const generateRandomScheduleEntries = (): ScheduleEntry[] => {
+    const entries: ScheduleEntry[] = [];
+    const daysToHaveClasses = new Set<ScheduleEntry["dayOfWeek"]>();
+    const availableDays: ScheduleEntry["dayOfWeek"][] = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+    
+    while(daysToHaveClasses.size < 4 && availableDays.length > 0) {
+        const randomIndex = Math.floor(Math.random() * availableDays.length);
+        daysToHaveClasses.add(availableDays.splice(randomIndex, 1)[0]);
+    }
+
+    Array.from(daysToHaveClasses).forEach(day => {
+        const numClassesToday = Math.floor(Math.random() * 3) + 1; // 1 to 3 classes
+        let lastEndTime = "00:00";
+
+        for (let i = 0; i < numClassesToday; i++) {
+            let startTime = generateRandomTime();
+            // Ensure startTime is after lastEndTime if it's not the first class of the day
+            if (i > 0) {
+                let attempts = 0;
+                while (startTime <= lastEndTime && attempts < 10) { // Prevent infinite loops
+                    startTime = generateRandomTime();
+                    attempts++;
+                }
+                if (startTime <= lastEndTime) continue; // Skip if can't find a suitable slot
+            }
+
+            const durationHours = Math.floor(Math.random() * 3) + 2; // 2 to 4 hours
+            const startHour = parseInt(startTime.split(":")[0]);
+            let endHour = startHour + durationHours;
+            
+            if (endHour > 22) endHour = 22; // Cap end time to avoid going too late
+
+            const endTime = `${endHour.toString().padStart(2, '0')}:00`;
+
+            // Basic check to ensure endTime is after startTime and reasonable duration
+            if (endTime <= startTime) continue; 
+
+            entries.push({
+                id: `se${day}${i}${Date.now()}${Math.random().toString(36).substring(2, 5)}`,
+                dayOfWeek: day,
+                courseName: generateRandomCourseCode(),
+                startTime,
+                endTime,
+                location: Math.random() < 0.5 ? "Dudullu" : "Çengelköy",
+            });
+            lastEndTime = endTime; // Update last end time for the current day
+        }
+    });
+    return entries.sort((a,b) => allPossibleDays.indexOf(a.dayOfWeek) - allPossibleDays.indexOf(b.dayOfWeek) || a.startTime.localeCompare(b.startTime));
+};
 
 let mockSchedules: Record<string, WeeklySchedule> = {
   "schedule001": {
-    id: "schedule001", userId: "student001", lastUpdated: "2024-05-15T10:00:00.000Z",
-    entries: [
-      { id: "s1m1", dayOfWeek: "monday", courseName: "MAT101", startTime: "09:00", endTime: "11:00", location: "Dudullu" },
-      { id: "s1m2", dayOfWeek: "monday", courseName: "PHY101", startTime: "13:00", endTime: "15:00", location: "Çengelköy" },
-      { id: "s1t1", dayOfWeek: "tuesday", courseName: "ENG101", startTime: "10:00", endTime: "12:00", location: "Dudullu" },
-      { id: "s1w1", dayOfWeek: "wednesday", courseName: "CS101", startTime: "11:00", endTime: "14:00", location: "Çengelköy" },
-      { id: "s1f1", dayOfWeek: "friday", courseName: "HIS101", startTime: "14:00", endTime: "17:00", location: "Dudullu" },
-    ]
+    id: "schedule001", userId: "student001", lastUpdated: new Date().toISOString(),
+    entries: generateRandomScheduleEntries()
   },
   "schedule002": {
-    id: "schedule002", userId: "student002", lastUpdated: "2024-05-15T10:00:00.000Z",
-    entries: [
-      { id: "s2m1", dayOfWeek: "monday", courseName: "ECO202", startTime: "10:00", endTime: "13:00", location: "Çengelköy" },
-      { id: "s2w1", dayOfWeek: "wednesday", courseName: "STA201", startTime: "09:00", endTime: "11:00", location: "Dudullu" },
-      { id: "s2w2", dayOfWeek: "wednesday", courseName: "ACC201", startTime: "14:00", endTime: "16:00", location: "Dudullu" },
-      { id: "s2th1", dayOfWeek: "thursday", courseName: "FIN201", startTime: "11:00", endTime: "13:00", location: "Çengelköy" },
-      { id: "s2f1", dayOfWeek: "friday", courseName: "MKT201", startTime: "13:00", endTime: "15:00", location: "Dudullu" },
-    ]
+    id: "schedule002", userId: "student002", lastUpdated: new Date().toISOString(),
+    entries: generateRandomScheduleEntries()
   },
   "schedule003": {
-    id: "schedule003", userId: "student003", lastUpdated: "2024-05-15T10:00:00.000Z",
-    entries: [
-      { id: "s3t1", dayOfWeek: "tuesday", courseName: "ART100", startTime: "09:00", endTime: "12:00", location: "Dudullu" },
-      { id: "s3t2", dayOfWeek: "tuesday", courseName: "MUS100", startTime: "14:00", endTime: "16:00", location: "Çengelköy" },
-      { id: "s3th1", dayOfWeek: "thursday", courseName: "DRA100", startTime: "10:00", endTime: "13:00", location: "Dudullu" },
-      { id: "s3f1", dayOfWeek: "friday", courseName: "PHL100", startTime: "11:00", endTime: "14:00", location: "Çengelköy" },
-    ]
+    id: "schedule003", userId: "student003", lastUpdated: new Date().toISOString(),
+    entries: generateRandomScheduleEntries()
   },
 };
 
@@ -174,31 +231,111 @@ export function createNewUserSchedule(userId: string, scheduleId: string): Weekl
     const newSchedule: WeeklySchedule = {
         id: scheduleId,
         userId: userId,
-        entries: [],
+        entries: [], // Initially empty, can be populated by admin or student
         lastUpdated: new Date().toISOString(),
     };
     mockSchedules[scheduleId] = JSON.parse(JSON.stringify(newSchedule));
     return JSON.parse(JSON.stringify(newSchedule));
 }
 
-// Function to generate multiple random schedules for initial setup
-export function generateInitialSchedules() {
-    // This function can be called once if needed to populate mockSchedules
-    // For Ayşe, Veli, Zeynep - their schedules are already defined above.
-    // If more students were added programmatically and needed random schedules:
-    // mockUsers.forEach(user => {
-    //   if (user.role === 'student' && user.weeklyScheduleId && !mockSchedules[user.weeklyScheduleId]) {
-    //      const entries = generateRandomScheduleEntries(); // Assume this function exists and is defined
-    //      mockSchedules[user.weeklyScheduleId] = {
-    //         id: user.weeklyScheduleId,
-    //         userId: user.id,
-    //         entries: entries,
-    //         lastUpdated: new Date().toISOString(),
-    //      };
-    //   }
-    // });
+// --- Ride Request Data ---
+const createMockIsoDateTime = (dayOffset: number, hour: number, minute: number): string => {
+  const date = new Date();
+  date.setDate(date.getDate() + dayOffset);
+  date.setHours(hour, minute, 0, 0);
+  return date.toISOString();
+};
+
+let mockRideRequests: RideRequest[] = [
+  {
+    id: "req001",
+    userId: "student001",
+    type: "adhoc",
+    requestedPickupTime: createMockIsoDateTime(-2, 9, 0),
+    requestedDropoffTime: createMockIsoDateTime(-2, 17, 0),
+    pickupLocation: { address: "123 Lale Sokak, Çankaya, Ankara" },
+    dropoffLocation: { address: "ODTÜ Kampüsü, Ana Giriş" },
+    status: "completed",
+    createdAt: new Date(new Date().setDate(new Date().getDate() - 2)).toISOString(),
+  },
+  {
+    id: "req002",
+    userId: "student001",
+    type: "scheduled",
+    requestedPickupTime: createMockIsoDateTime(1, 8, 30),
+    requestedDropoffTime: createMockIsoDateTime(1, 16, 30),
+    pickupLocation: { address: "123 Lale Sokak, Çankaya, Ankara" },
+    dropoffLocation: { address: "Mühendislik Fakültesi" },
+    status: "confirmed",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "req003",
+    userId: "student001",
+    type: "adhoc",
+    requestedPickupTime: createMockIsoDateTime(3, 10, 0),
+    requestedDropoffTime: createMockIsoDateTime(3, 14, 0),
+    pickupLocation: { address: "Ev Adresim (Değiştirilmiş)" },
+    dropoffLocation: { address: "Kütüphane" },
+    status: "pending_admin_approval",
+    createdAt: new Date().toISOString(),
+  },
+    {
+    id: "req004",
+    userId: "student001",
+    type: "scheduled",
+    requestedPickupTime: createMockIsoDateTime(-1, 9, 15),
+    requestedDropoffTime: createMockIsoDateTime(-1, 17, 45),
+    pickupLocation: { address: "123 Lale Sokak, Çankaya, Ankara" },
+    dropoffLocation: { address: "Yemekhane" },
+    status: "cancelled_by_student",
+    createdAt: new Date(new Date().setDate(new Date().getDate() -1)).toISOString(),
+  },
+  {
+    id: "req005",
+    userId: "student002", 
+    type: "adhoc",
+    requestedPickupTime: createMockIsoDateTime(0, 11, 0), 
+    requestedDropoffTime: createMockIsoDateTime(0, 15, 30),
+    pickupLocation: { address: "456 Menekşe Caddesi" },
+    dropoffLocation: { address: "Spor Salonu" },
+    status: "pending_admin_approval",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "req006",
+    userId: "student003",
+    type: "adhoc",
+    requestedPickupTime: createMockIsoDateTime(2, 14, 0),
+    requestedDropoffTime: createMockIsoDateTime(2, 18, 0),
+    pickupLocation: { address: "789 Gül Apartmanı" },
+    dropoffLocation: { address: "Sosyal Bilimler Binası" },
+    status: "pending_admin_approval",
+    createdAt: new Date().toISOString(),
+  }
+];
+
+export function getRideRequests(): RideRequest[] {
+  return JSON.parse(JSON.stringify(mockRideRequests));
 }
-// Helper function for random entries (example, not used for the static data above)
-// function generateRandomScheduleEntries(): ScheduleEntry[] { /* ... complex logic ... */ return []; }
-// function generateRandomTime(minHour = 8, maxHour = 16): string { /* ... */ return "09:00"; }
-// function generateRandomCourseCode(): string { /* ... */ return "CS101"; }
+
+export function updateRideRequestStatus(requestId: string, newStatus: RideStatus): boolean {
+  const requestIndex = mockRideRequests.findIndex(req => req.id === requestId);
+  if (requestIndex !== -1) {
+    mockRideRequests[requestIndex].status = newStatus;
+    return true;
+  }
+  return false;
+}
+
+export function addRideRequest(request: Omit<RideRequest, 'id' | 'createdAt'>): RideRequest {
+    const newRequest: RideRequest = {
+        ...request,
+        id: `req${Date.now()}${Math.random().toString(36).substring(2,7)}`,
+        createdAt: new Date().toISOString(),
+    };
+    mockRideRequests.push(JSON.parse(JSON.stringify(newRequest)));
+    return JSON.parse(JSON.stringify(newRequest));
+}
+
+    

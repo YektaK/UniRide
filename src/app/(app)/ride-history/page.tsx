@@ -16,75 +16,9 @@ import { Badge } from "@/components/ui/badge";
 import { ListChecks, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import React from "react";
-import { cn } from "@/lib/utils"; // Added missing import
-
-// Helper function to generate ISO date strings for mock data
-const createMockIsoDateTime = (dayOffset: number, hour: number, minute: number): string => {
-  const date = new Date();
-  date.setDate(date.getDate() + dayOffset);
-  date.setHours(hour, minute, 0, 0);
-  return date.toISOString();
-};
-
-// Mock ride requests - in a real app, this would come from a service/API
-const mockRideRequests: RideRequest[] = [
-  {
-    id: "req001",
-    userId: "student001",
-    type: "adhoc",
-    requestedPickupTime: createMockIsoDateTime(-2, 9, 0),
-    requestedDropoffTime: createMockIsoDateTime(-2, 17, 0),
-    pickupLocation: { address: "123 Lale Sokak, Çankaya, Ankara" },
-    dropoffLocation: { address: "ODTÜ Kampüsü, Ana Giriş" },
-    status: "completed",
-    createdAt: new Date(new Date().setDate(new Date().getDate() - 2)).toISOString(),
-  },
-  {
-    id: "req002",
-    userId: "student001",
-    type: "scheduled",
-    requestedPickupTime: createMockIsoDateTime(1, 8, 30),
-    requestedDropoffTime: createMockIsoDateTime(1, 16, 30),
-    pickupLocation: { address: "123 Lale Sokak, Çankaya, Ankara" },
-    dropoffLocation: { address: "Mühendislik Fakültesi" },
-    status: "confirmed",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "req003",
-    userId: "student001",
-    type: "adhoc",
-    requestedPickupTime: createMockIsoDateTime(3, 10, 0),
-    requestedDropoffTime: createMockIsoDateTime(3, 14, 0),
-    pickupLocation: { address: "Ev Adresim (Değiştirilmiş)" },
-    dropoffLocation: { address: "Kütüphane" },
-    status: "pending_admin_approval",
-    createdAt: new Date().toISOString(),
-  },
-    {
-    id: "req004",
-    userId: "student001",
-    type: "scheduled",
-    requestedPickupTime: createMockIsoDateTime(-1, 9, 15),
-    requestedDropoffTime: createMockIsoDateTime(-1, 17, 45),
-    pickupLocation: { address: "123 Lale Sokak, Çankaya, Ankara" },
-    dropoffLocation: { address: "Yemekhane" },
-    status: "cancelled_by_student",
-    createdAt: new Date(new Date().setDate(new Date().getDate() -1)).toISOString(),
-  },
-  {
-    id: "req005",
-    userId: "student002", // For Öğrenci Veli
-    type: "adhoc",
-    requestedPickupTime: createMockIsoDateTime(0, 11, 0), // Today
-    requestedDropoffTime: createMockIsoDateTime(0, 15, 30),
-    pickupLocation: { address: "456 Menekşe Caddesi" },
-    dropoffLocation: { address: "Spor Salonu" },
-    status: "pending_admin_approval",
-    createdAt: new Date().toISOString(),
-  }
-];
+import React, { useEffect, useState } from "react"; // useState eklendi
+import { cn } from "@/lib/utils";
+import { getRideRequests as dbGetRideRequests } from "@/lib/mock-database"; // mock-database'den import edildi
 
 const statusDisplayMap: Record<RideStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
   pending_student_confirmation: { label: "Öğrenci Onayı Bekliyor", variant: "outline", className: "border-yellow-500 text-yellow-700" },
@@ -99,16 +33,21 @@ const statusDisplayMap: Record<RideStatus, { label: string; variant: "default" |
 
 export default function RideHistoryPage() {
   const { user, isLoading } = useAuth();
-  const [userRequests, setUserRequests] = React.useState<RideRequest[]>([]);
+  const [userRequests, setUserRequests] = useState<RideRequest[]>([]); // useState kullanıldı
+  const [isDataLoading, setIsDataLoading] = useState(true); // Yeni state eklendi
 
-  React.useEffect(() => {
-    if (user) {
-      // Filter requests for the current logged-in student
-      setUserRequests(mockRideRequests.filter(req => req.userId === user.id));
+  useEffect(() => { // React.useEffect yerine useEffect kullanıldı
+    if (user && !isLoading) { // isLoading kontrolü eklendi
+      setIsDataLoading(true);
+      const allRequests = dbGetRideRequests(); // Veritabanından tüm talepler çekildi
+      setUserRequests(allRequests.filter(req => req.userId === user.id));
+      setIsDataLoading(false);
+    } else if (!user && !isLoading) { // Kullanıcı yoksa ve yükleme bittiyse
+      setIsDataLoading(false); // Yüklemeyi bitir
     }
-  }, [user]);
+  }, [user, isLoading]);
 
-  if (isLoading) {
+  if (isLoading || isDataLoading) { // Her iki yükleme durumu da kontrol ediliyor
     return <Card><CardHeader><CardTitle>Yükleniyor...</CardTitle></CardHeader><CardContent><p>Servis talepleriniz yükleniyor.</p></CardContent></Card>;
   }
 
@@ -183,3 +122,5 @@ export default function RideHistoryPage() {
     </div>
   );
 }
+
+    

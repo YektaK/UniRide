@@ -19,10 +19,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Send, MapPin } from "lucide-react";
-import { format } from "date-fns";
+import { format, addHours } from "date-fns"; // addHours eklendi
 import { tr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { addRideRequest } from "@/lib/mock-database"; // Servis talebi ekleme fonksiyonu import edildi
+import type { RideRequest } from "@/types"; // RideRequest tipi import edildi
 
 interface AdhocRideFormProps {
   userId: string;
@@ -33,7 +35,7 @@ const adhocRideFormSchema = z.object({
   rideDate: z.date({ required_error: "Lütfen bir tarih seçin." }),
   pickupTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: "Saat SS:DD formatında olmalıdır." }),
   pickupAddress: z.string().min(5, { message: "Alınış adresi en az 5 karakter olmalıdır." }),
-  dropoffAddress: z.string().min(5, { message: "Bırakılış adresi en az 5 karakter olmalıdır." }), // Default to university or allow input
+  dropoffAddress: z.string().min(5, { message: "Bırakılış adresi en az 5 karakter olmalıdır." }), 
   notes: z.string().optional(),
 });
 
@@ -44,39 +46,48 @@ export default function AdhocRideForm({ userId, defaultPickupAddress }: AdhocRid
   const form = useForm<AdhocRideFormValues>({
     resolver: zodResolver(adhocRideFormSchema),
     defaultValues: {
-      rideDate: undefined, // Calendar handles undefined/null for selection
-      pickupTime: "",     // Initialize with an empty string
+      rideDate: undefined, 
+      pickupTime: "",     
       pickupAddress: defaultPickupAddress || "",
-      dropoffAddress: "ODTÜ Kampüsü, Ana Giriş", // Example default
-      notes: "",          // Initialize optional field with an empty string
+      dropoffAddress: "Doğuş Üniversitesi, Dudullu Kampüsü", 
+      notes: "",          
     },
   });
 
   function onSubmit(data: AdhocRideFormValues) {
-    // Combine date and time for requestedPickupTime
     const requestedPickupDateTime = new Date(data.rideDate);
     const [hours, minutes] = data.pickupTime.split(":").map(Number);
-    requestedPickupDateTime.setHours(hours, minutes);
+    requestedPickupDateTime.setHours(hours, minutes, 0, 0); // Saniye ve milisaniyeyi sıfırla
 
-    const rideRequestPayload = {
+    // Bırakılış saati için basit bir tahmin: Alınıştan 2 saat sonrası (örnek)
+    const requestedDropoffDateTime = addHours(requestedPickupDateTime, 2);
+
+
+    // Omit<RideRequest, 'id' | 'createdAt'> tipine uygun bir nesne oluştur
+    const rideRequestPayload: Omit<RideRequest, 'id' | 'createdAt'> = {
       userId,
       type: "adhoc",
       requestedPickupTime: requestedPickupDateTime.toISOString(),
-      // requestedDropoffTime could be estimated or left for admin
+      requestedDropoffTime: requestedDropoffDateTime.toISOString(), // Örnek bırakılış saati
       pickupLocation: { address: data.pickupAddress },
       dropoffLocation: { address: data.dropoffAddress },
       status: "pending_admin_approval",
-      notes: data.notes,
-      createdAt: new Date().toISOString(),
+      notes: data.notes || "", // Notlar boşsa boş string ata
     };
+    
+    addRideRequest(rideRequestPayload); // Mock veritabanına ekle
 
-    console.log("Ad-hoc Ride Request:", rideRequestPayload);
-    // In a real app, send this to an API
     toast({
       title: "Servis Talebi Gönderildi",
-      description: "Talebiniz başarıyla alındı. Onay durumu için bildirimlerinizi kontrol edin.",
+      description: "Talebiniz başarıyla alındı. Onay durumu için bildirimlerinizi ve taleplerim sayfasını kontrol edin.",
     });
-    form.reset();
+    form.reset({
+      rideDate: undefined,
+      pickupTime: "",
+      pickupAddress: defaultPickupAddress || "",
+      dropoffAddress: "Doğuş Üniversitesi, Dudullu Kampüsü",
+      notes: "",
+    });
   }
 
   return (
@@ -113,7 +124,7 @@ export default function AdhocRideForm({ userId, defaultPickupAddress }: AdhocRid
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
-                        disabled={(date) => date < new Date(new Date().setHours(0,0,0,0)) } // Disable past dates
+                        disabled={(date) => date < new Date(new Date().setHours(0,0,0,0)) } 
                         initialFocus
                         locale={tr}
                     />
@@ -148,7 +159,7 @@ export default function AdhocRideForm({ userId, defaultPickupAddress }: AdhocRid
                 <Input placeholder="Tam alınış adresiniz" {...field} />
               </FormControl>
               <FormDescription className="flex items-center gap-1">
-                <MapPin className="h-4 w-4"/> Genellikle ev adresiniz. Haritadan seçme özelliği yakında eklenecektir.
+                <MapPin className="h-4 w-4"/> Genellikle ev adresiniz.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -165,7 +176,7 @@ export default function AdhocRideForm({ userId, defaultPickupAddress }: AdhocRid
                 <Input placeholder="Tam bırakılış adresiniz (örn: Üniversite Kampüsü)" {...field} />
               </FormControl>
                <FormDescription className="flex items-center gap-1">
-                <MapPin className="h-4 w-4"/> Genellikle okul veya özel bir konum. Haritadan seçme özelliği yakında eklenecektir.
+                <MapPin className="h-4 w-4"/> Genellikle okul veya özel bir konum.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -193,3 +204,5 @@ export default function AdhocRideForm({ userId, defaultPickupAddress }: AdhocRid
     </Form>
   );
 }
+
+    

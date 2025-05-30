@@ -26,7 +26,8 @@ import {
   LogOut,
   HelpingHand,
   ListChecks,
-  FilePenLine, // Changed from CalendarEdit
+  FilePenLine, 
+  BarChartHorizontal // Icon for Reports
 } from "lucide-react";
 import { Button } from "../ui/button";
 
@@ -45,8 +46,9 @@ const studentMenuItems = [
 const adminMenuItems = [
   { href: "/admin/vehicles", label: "Araç Yönetimi", icon: Bus },
   { href: "/admin/users", label: "Kullanıcı Yönetimi", icon: Users },
-  { href: "/admin/schedules", label: "Ders Programları", icon: FilePenLine }, // Changed from CalendarEdit
+  { href: "/admin/schedules", label: "Ders Programları", icon: FilePenLine }, 
   { href: "/admin/ride-requests", label: "Servis Talepleri", icon: ShieldAlert },
+  { href: "/admin/reports", label: "Raporlar", icon: BarChartHorizontal }, // Added Reports Link
   { href: "/admin/settings", label: "Ayarlar", icon: Settings },
 ];
 
@@ -98,3 +100,4 @@ export default function AppSidebar() {
     </Sidebar>
   );
 }
+

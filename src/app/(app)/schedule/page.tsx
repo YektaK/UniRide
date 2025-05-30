@@ -10,7 +10,8 @@ import { CalendarDays, PlusCircle } from "lucide-react";
 import ScheduleDisplay from "@/components/student/schedule-display";
 import ScheduleFormDialog from "@/components/student/schedule-form-dialog";
 
-const daysOfWeek: ScheduleEntry["dayOfWeek"][] = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+const daysOfWeek: ScheduleEntry["dayOfWeek"][] = ["monday", "tuesday", "wednesday", "thursday", "friday"]; // Only weekdays for random generation
+const allPossibleDays: ScheduleEntry["dayOfWeek"][] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const locations: ("Dudullu" | "Çengelköy")[] = ["Dudullu", "Çengelköy"];
 
 const generateRandomTime = (minHour = 8, maxHour = 15): string => {
@@ -21,7 +22,7 @@ const generateRandomTime = (minHour = 8, maxHour = 15): string => {
 
 const addHours = (time: string, hoursToAdd: number): string => {
   const [hour, minute] = time.split(':').map(Number);
-  const date = new Date();
+  const date = new Date(); // Use a fixed date to avoid DST issues if any, though not critical here
   date.setHours(hour, minute, 0, 0);
   date.setHours(date.getHours() + hoursToAdd);
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -42,39 +43,46 @@ const generateRandomCourseCode = (): string => {
 
 const generateRandomScheduleEntries = (): ScheduleEntry[] => {
   const entries: ScheduleEntry[] = [];
-  const selectedDays = [...daysOfWeek].sort(() => 0.5 - Math.random()).slice(0, 4); // Select 4 random days
+  // Shuffle daysOfWeek to pick 4 random unique days
+  const shuffledDays = [...daysOfWeek].sort(() => 0.5 - Math.random());
+  const selectedDays = shuffledDays.slice(0, 4); 
 
   selectedDays.forEach(day => {
     const numClasses = Math.floor(Math.random() * 3) + 1; // 1 to 3 classes
-    let lastEndTime = "00:00";
+    let lastEndTime = "00:00"; // Track end time of the last class added for this day
 
     for (let i = 0; i < numClasses; i++) {
       let startTime: string;
       let endTime: string;
       let attempts = 0;
+      const maxAttempts = 10;
 
-      // Try to find a non-overlapping time slot
+      // Try to find a non-overlapping time slot within reasonable hours
       do {
-        startTime = generateRandomTime(8, 14); // Ensure start time allows for duration
-        const duration = Math.floor(Math.random() * 3) + 2; // 2 to 4 hours
+        startTime = generateRandomTime(8, 14); // Start time between 8 AM and 2 PM (to allow for duration)
+        const duration = Math.floor(Math.random() * 3) + 2; // Duration between 2 and 4 hours
         endTime = addHours(startTime, duration);
         attempts++;
-      } while (startTime <= lastEndTime && endTime <= "19:00" && attempts < 10); // Prevent overlaps and late end times
+      } while (
+        (startTime <= lastEndTime || endTime > "19:00") && // Ensure no overlap and not too late
+        attempts < maxAttempts
+      );
 
       if (startTime > lastEndTime && endTime <= "19:00") { // Max end time 7 PM
         entries.push({
-          id: `se${Date.now()}${i}${day}`,
+          id: `se${Date.now()}${Math.random().toString(36).substring(2, 7)}${i}${day}`, // More unique ID
           dayOfWeek: day,
           courseName: generateRandomCourseCode(),
           startTime,
           endTime,
           location: locations[Math.floor(Math.random() * locations.length)],
         });
-        lastEndTime = endTime;
+        lastEndTime = endTime; // Update last end time for the current day
       }
     }
   });
-  return entries.sort((a,b) => daysOfWeek.indexOf(a.dayOfWeek) - daysOfWeek.indexOf(b.dayOfWeek) || a.startTime.localeCompare(b.startTime));
+  // Sort entries by day and then by start time
+  return entries.sort((a,b) => allPossibleDays.indexOf(a.dayOfWeek) - allPossibleDays.indexOf(b.dayOfWeek) || a.startTime.localeCompare(b.startTime));
 };
 
 
@@ -112,6 +120,7 @@ export default function SchedulePage() {
       const storedScheduleJson = localStorage.getItem(`schedule_${user.weeklyScheduleId}`);
       if (storedScheduleJson) {
         const storedSchedule = JSON.parse(storedScheduleJson) as WeeklySchedule;
+        // Ensure location is one of the valid options, default to "Dudullu" if not
         const updatedEntries = storedSchedule.entries.map((entry: ScheduleEntry) => ({
             ...entry,
             location: (entry.location === "Dudullu" || entry.location === "Çengelköy") ? entry.location : "Dudullu"
@@ -119,16 +128,18 @@ export default function SchedulePage() {
         setSchedule({...storedSchedule, entries: updatedEntries});
       } else if (initialSchedules[user.weeklyScheduleId]) {
         const initialSched = initialSchedules[user.weeklyScheduleId];
+         // Ensure location is one of the valid options, default to "Dudullu" if not for initial data too
          const updatedEntries = initialSched.entries.map((entry: ScheduleEntry) => ({
             ...entry,
             location: (entry.location === "Dudullu" || entry.location === "Çengelköy") ? entry.location : "Dudullu"
         }));
         setSchedule({...initialSched, entries: updatedEntries});
       } else {
+        // For a new user not in initialSchedules, generate a new random schedule
         setSchedule({
             id: user.weeklyScheduleId,
             userId: user.id,
-            entries: generateRandomScheduleEntries(), // Generate for new users not in initialSchedules
+            entries: generateRandomScheduleEntries(), 
             lastUpdated: new Date().toISOString()
         });
       }
@@ -165,16 +176,16 @@ export default function SchedulePage() {
   
   const handleSaveEntry = (entryData: Omit<ScheduleEntry, 'id'>, entryId?: string) => {
     if (schedule) {
-      if (entryId) { 
+      if (entryId) { // Editing existing entry
         setSchedule({
           ...schedule,
           entries: schedule.entries.map(e => e.id === entryId ? { ...e, ...entryData, id: entryId } : e),
           lastUpdated: new Date().toISOString()
         });
-      } else { 
+      } else { // Adding new entry
         const newEntry: ScheduleEntry = {
           ...entryData,
-          id: `se${Date.now()}` 
+          id: `se${Date.now()}${Math.random().toString(36).substring(2, 7)}` // More unique ID
         };
         setSchedule({
           ...schedule,
@@ -197,6 +208,8 @@ export default function SchedulePage() {
   }
 
   if (!schedule) {
+    // This case should ideally not be hit if a new schedule is generated for users without one.
+    // But as a fallback:
     return (
       <Card>
         <CardHeader>

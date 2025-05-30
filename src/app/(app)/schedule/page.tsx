@@ -2,43 +2,99 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import type { WeeklySchedule, ScheduleEntry } from "@/types";
+import type { WeeklySchedule, ScheduleEntry, UserRole } from "@/types";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, PlusCircle } from "lucide-react";
 import ScheduleDisplay from "@/components/student/schedule-display";
-import ScheduleFormDialog from "@/components/student/schedule-form-dialog"; // Import the new dialog
+import ScheduleFormDialog from "@/components/student/schedule-form-dialog";
 
-// Mock data for student schedule
-const mockScheduleEntriesStudent1: ScheduleEntry[] = [
-  { id: "se001", dayOfWeek: "monday", courseName: "MAT101 Calculus I", startTime: "09:00", endTime: "11:50", location: "Dudullu" },
-  { id: "se002", dayOfWeek: "monday", courseName: "PHY101 Physics I", startTime: "14:00", endTime: "16:50", location: "Dudullu" },
-  { id: "se003", dayOfWeek: "tuesday", courseName: "ENG101 English Comp.", startTime: "10:00", endTime: "11:50", location: "Dudullu" },
-  { id: "se004", dayOfWeek: "wednesday", courseName: "MAT101 Calculus I", startTime: "09:00", endTime: "11:50", location: "Dudullu" },
-  { id: "se005", dayOfWeek: "thursday", courseName: "CS101 Intro to CS", startTime: "13:00", endTime: "15:50", location: "Dudullu" },
-  { id: "se006", dayOfWeek: "friday", courseName: "PHY101 Physics I", startTime: "14:00", endTime: "16:50", location: "Dudullu" },
-];
+const daysOfWeek: ScheduleEntry["dayOfWeek"][] = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+const locations: ("Dudullu" | "Çengelköy")[] = ["Dudullu", "Çengelköy"];
+
+const generateRandomTime = (minHour = 8, maxHour = 15): string => {
+  const hour = Math.floor(Math.random() * (maxHour - minHour + 1)) + minHour;
+  const minute = Math.random() < 0.5 ? 0 : 30;
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+};
+
+const addHours = (time: string, hoursToAdd: number): string => {
+  const [hour, minute] = time.split(':').map(Number);
+  const date = new Date();
+  date.setHours(hour, minute, 0, 0);
+  date.setHours(date.getHours() + hoursToAdd);
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+};
+
+const generateRandomCourseCode = (): string => {
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const numLetters = Math.random() < 0.5 ? 2 : 3;
+  let code = "";
+  for (let i = 0; i < numLetters; i++) {
+    code += letters.charAt(Math.floor(Math.random() * letters.length));
+  }
+  for (let i = 0; i < 3; i++) {
+    code += Math.floor(Math.random() * 10);
+  }
+  return code;
+};
+
+const generateRandomScheduleEntries = (): ScheduleEntry[] => {
+  const entries: ScheduleEntry[] = [];
+  const selectedDays = [...daysOfWeek].sort(() => 0.5 - Math.random()).slice(0, 4); // Select 4 random days
+
+  selectedDays.forEach(day => {
+    const numClasses = Math.floor(Math.random() * 3) + 1; // 1 to 3 classes
+    let lastEndTime = "00:00";
+
+    for (let i = 0; i < numClasses; i++) {
+      let startTime: string;
+      let endTime: string;
+      let attempts = 0;
+
+      // Try to find a non-overlapping time slot
+      do {
+        startTime = generateRandomTime(8, 14); // Ensure start time allows for duration
+        const duration = Math.floor(Math.random() * 3) + 2; // 2 to 4 hours
+        endTime = addHours(startTime, duration);
+        attempts++;
+      } while (startTime <= lastEndTime && endTime <= "19:00" && attempts < 10); // Prevent overlaps and late end times
+
+      if (startTime > lastEndTime && endTime <= "19:00") { // Max end time 7 PM
+        entries.push({
+          id: `se${Date.now()}${i}${day}`,
+          dayOfWeek: day,
+          courseName: generateRandomCourseCode(),
+          startTime,
+          endTime,
+          location: locations[Math.floor(Math.random() * locations.length)],
+        });
+        lastEndTime = endTime;
+      }
+    }
+  });
+  return entries.sort((a,b) => daysOfWeek.indexOf(a.dayOfWeek) - daysOfWeek.indexOf(b.dayOfWeek) || a.startTime.localeCompare(b.startTime));
+};
+
 
 const initialSchedules: Record<string, WeeklySchedule> = {
   "schedule001": { // For student001 (Ayşe)
     id: "schedule001",
     userId: "student001",
-    entries: mockScheduleEntriesStudent1,
+    entries: generateRandomScheduleEntries(),
     lastUpdated: new Date().toISOString(),
   },
-  "schedule002": { // For student002 (Veli) - empty initially
+  "schedule002": { // For student002 (Veli)
     id: "schedule002",
     userId: "student002",
-    entries: [],
+    entries: generateRandomScheduleEntries(),
     lastUpdated: new Date().toISOString(),
   },
-  "schedule003": { // For student003 (Zeynep) - one entry
+  "schedule003": { // For student003 (Zeynep)
     id: "schedule003",
     userId: "student003",
-    entries: [
-        { id: "se007", dayOfWeek: "wednesday", courseName: "TURK101 Turkish Lang.", startTime: "10:00", endTime: "11:50", location: "Dudullu" }
-    ],
+    entries: generateRandomScheduleEntries(),
     lastUpdated: new Date().toISOString(),
   }
 };
@@ -53,32 +109,26 @@ export default function SchedulePage() {
 
   useEffect(() => {
     if (user && user.role === "student" && user.weeklyScheduleId) {
-      // Load schedule from localStorage if exists, otherwise from initialSchedules
       const storedScheduleJson = localStorage.getItem(`schedule_${user.weeklyScheduleId}`);
       if (storedScheduleJson) {
-        const storedSchedule = JSON.parse(storedScheduleJson);
-        // Ensure locations in stored schedule are valid, default to "Dudullu" if not
+        const storedSchedule = JSON.parse(storedScheduleJson) as WeeklySchedule;
         const updatedEntries = storedSchedule.entries.map((entry: ScheduleEntry) => ({
             ...entry,
             location: (entry.location === "Dudullu" || entry.location === "Çengelköy") ? entry.location : "Dudullu"
         }));
         setSchedule({...storedSchedule, entries: updatedEntries});
-
       } else if (initialSchedules[user.weeklyScheduleId]) {
-         // Ensure locations in initialSchedules are valid (already done in mock data, but good practice)
         const initialSched = initialSchedules[user.weeklyScheduleId];
-        const updatedEntries = initialSched.entries.map((entry: ScheduleEntry) => ({
+         const updatedEntries = initialSched.entries.map((entry: ScheduleEntry) => ({
             ...entry,
             location: (entry.location === "Dudullu" || entry.location === "Çengelköy") ? entry.location : "Dudullu"
         }));
         setSchedule({...initialSched, entries: updatedEntries});
-
       } else {
-         // Fallback for new students not in initialSchedules
         setSchedule({
             id: user.weeklyScheduleId,
             userId: user.id,
-            entries: [],
+            entries: generateRandomScheduleEntries(), // Generate for new users not in initialSchedules
             lastUpdated: new Date().toISOString()
         });
       }
@@ -86,7 +136,6 @@ export default function SchedulePage() {
     setIsLoading(false);
   }, [user]);
 
-  // Save schedule to localStorage whenever it changes
   useEffect(() => {
     if (schedule && user && user.role === "student" && user.weeklyScheduleId) {
       localStorage.setItem(`schedule_${user.weeklyScheduleId}`, JSON.stringify(schedule));
@@ -116,16 +165,16 @@ export default function SchedulePage() {
   
   const handleSaveEntry = (entryData: Omit<ScheduleEntry, 'id'>, entryId?: string) => {
     if (schedule) {
-      if (entryId) { // Editing existing entry
+      if (entryId) { 
         setSchedule({
           ...schedule,
-          entries: schedule.entries.map(e => e.id === entryId ? { ...e, ...entryData, id: entryId } : e), // ensure id is preserved
+          entries: schedule.entries.map(e => e.id === entryId ? { ...e, ...entryData, id: entryId } : e),
           lastUpdated: new Date().toISOString()
         });
-      } else { // Adding new entry
+      } else { 
         const newEntry: ScheduleEntry = {
           ...entryData,
-          id: `se${Date.now()}` // Simple unique ID generation
+          id: `se${Date.now()}` 
         };
         setSchedule({
           ...schedule,
@@ -198,3 +247,5 @@ export default function SchedulePage() {
     </div>
   );
 }
+
+    

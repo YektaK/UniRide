@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { User } from "@/types"; // UserRole importu kaldırıldı, User içinde zaten var
+import type { User } from "@/types";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import React, { createContext, useState, useEffect } from "react";
 
@@ -9,7 +9,7 @@ interface AuthContextType {
   user: User | null;
   setUser: Dispatch<SetStateAction<User | null>>;
   isLoading: boolean;
-  login: (emailOrUsername: string, password_param: string) => void; // role parametresi kaldırıldı
+  login: (emailOrUsername: string, password_param: string) => void;
   logout: () => void;
 }
 
@@ -20,7 +20,7 @@ const mockAdmin: User = {
   id: "admin001",
   name: "Admin Kullanıcısı",
   email: "admin@uniride.com",
-  password: "admin", // Şifre "admin" olarak güncellendi
+  password: "admin",
   role: "admin",
   homeAddress: "Üniversite Yönetim Binası",
 };
@@ -31,6 +31,7 @@ const mockStudent1: User = {
   email: "student@uniride.com",
   password: "studentpassword",
   role: "student",
+  studentNumber: "202003002001",
   homeAddress: "123 Lale Sokak, Çankaya, Ankara",
   accessibilityNeeds: ["wheelchair"],
   weeklyScheduleId: "schedule001",
@@ -42,6 +43,7 @@ const mockStudent2: User = {
   email: "veli@uniride.com",
   password: "velipassword",
   role: "student",
+  studentNumber: "202003002002",
   homeAddress: "456 Menekşe Caddesi, Yenimahalle, Ankara",
   accessibilityNeeds: [],
   weeklyScheduleId: "schedule002",
@@ -53,6 +55,7 @@ const mockStudent3: User = {
   email: "zeynep@uniride.com",
   password: "zeyneppassword",
   role: "student",
+  studentNumber: "202003002003",
   homeAddress: "789 Gül Apartmanı, Keçiören, Ankara",
   accessibilityNeeds: ["visual_impairment"],
   weeklyScheduleId: "schedule003",
@@ -72,29 +75,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = (emailOrUsername: string, password_param: string) => { // role parametresi kaldırıldı
+  const login = (emailOrUsername: string, password_param: string) => {
     setIsLoading(true);
     setTimeout(() => {
       const lowerEmailOrUsername = emailOrUsername.toLowerCase();
       let loggedInUser: User | null = null;
 
-      if (lowerEmailOrUsername === mockAdmin.email && password_param === mockAdmin.password) {
-        loggedInUser = mockAdmin;
-      } else {
-        // Check against all student users
-        const foundStudent = allMockUsers.find(
-          u => u.role === 'student' && u.email.toLowerCase() === lowerEmailOrUsername && u.password === password_param
-        );
-        if (foundStudent) {
-          loggedInUser = foundStudent;
-        }
+      const foundUser = allMockUsers.find(
+        u => (u.email.toLowerCase() === lowerEmailOrUsername || u.studentNumber === lowerEmailOrUsername) && u.password === password_param
+      );
+      
+      if (foundUser) {
+        loggedInUser = foundUser;
       }
 
       if (loggedInUser) {
         setUser(loggedInUser);
         localStorage.setItem("uniRideUser", JSON.stringify(loggedInUser));
-      } else {
-        // Login failed
       }
       setIsLoading(false);
     }, 500);
@@ -103,7 +100,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem("uniRideUser");
-    // window.location.href = "/login"; 
   };
 
   return (

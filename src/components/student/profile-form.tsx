@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Save, MapPin } from "lucide-react";
+import { Save, MapPin, Hash } from "lucide-react";
 
 interface ProfileFormProps {
   currentUser: User;
@@ -36,7 +36,8 @@ const accessibilityNeedsOptions = [
 const profileFormSchema = z.object({
   name: z.string().min(2, { message: "İsim en az 2 karakter olmalıdır." }),
   email: z.string().email({ message: "Geçerli bir e-posta adresi girin." }),
-  homeAddress: z.string().min(10, { message: "Ev adresi en az 10 karakter olmalıdır." }).optional(), // Admin için opsiyonel
+  studentNumber: z.string().optional(), // Öğrenci numarası eklendi
+  homeAddress: z.string().min(10, { message: "Ev adresi en az 10 karakter olmalıdır." }).optional(),
   accessibilityNeeds: z.array(z.string()).optional(),
   otherAccessibilityNeed: z.string().optional(),
 });
@@ -50,6 +51,7 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
     defaultValues: {
       name: currentUser.name || "",
       email: currentUser.email || "",
+      studentNumber: currentUser.studentNumber || "",
       homeAddress: currentUser.homeAddress || "",
       accessibilityNeeds: currentUser.accessibilityNeeds || [],
       otherAccessibilityNeed: currentUser.accessibilityNeeds?.includes("other") ? currentUser.accessibilityNeeds.find(n => n.startsWith("other:"))?.split(":")[1] || "" : "",
@@ -63,30 +65,19 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
     }
 
     const updatedUser: User = {
-      ...currentUser, // Preserve existing fields like ID, role etc.
+      ...currentUser,
       name: data.name,
-      email: data.email, // Usually email is not editable or requires verification
+      email: data.email,
     };
 
     if (currentUser.role === 'student') {
+      updatedUser.studentNumber = data.studentNumber; // Öğrenci numarasını güncelle
       updatedUser.homeAddress = data.homeAddress;
       updatedUser.accessibilityNeeds = finalAccessibilityNeeds;
-    } else {
-      // For admin, ensure these fields are not part of the update from the form
-      // or explicitly set them to undefined if they should not exist for admin.
-      // Since they are optional in User type, they might already be undefined.
-      // If an admin had a homeAddress for some reason, and the field is now hidden,
-      // data.homeAddress would be undefined, so it would clear it if directly assigned.
-      // To be safe, we only assign them if the user is a student.
-      // Or, if they shouldn't exist on admin AT ALL, delete them:
-      // delete updatedUser.homeAddress;
-      // delete updatedUser.accessibilityNeeds;
-      // For now, we assume they might exist but are not editable for admin via this form.
     }
 
-
     onUpdateProfile(updatedUser);
-    localStorage.setItem("uniRideUser", JSON.stringify(updatedUser)); // Update mock storage
+    localStorage.setItem("uniRideUser", JSON.stringify(updatedUser));
 
     toast({
       title: "Profil Güncellendi",
@@ -127,6 +118,22 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
 
         {currentUser.role === 'student' && (
           <>
+            <FormField
+              control={form.control}
+              name="studentNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Öğrenci Numarası</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Örn: 202003002016" {...field} />
+                  </FormControl>
+                   <FormDescription className="flex items-center gap-1">
+                    <Hash className="h-4 w-4"/> Öğrenci numaranız.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="homeAddress"
@@ -212,8 +219,6 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
           </>
         )}
         
-        {/* Google Maps API Key field removed */}
-
         <Button type="submit" className="w-full sm:w-auto">
           <Save className="mr-2 h-4 w-4" /> Bilgileri Kaydet
         </Button>

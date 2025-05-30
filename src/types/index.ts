@@ -6,6 +6,7 @@ export interface User {
   email: string;
   password?: string; // Added password field
   role: UserRole;
+  studentNumber?: string; // Added student number
   homeAddress?: string;
   homeCoordinates?: { lat: number; lng: number };
   accessibilityNeeds?: string[]; // e.g., ["wheelchair", "visual_impairment"]

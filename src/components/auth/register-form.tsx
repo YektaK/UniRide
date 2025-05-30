@@ -15,13 +15,14 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Hash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react"; // Added useState import
+import React, { useState } from "react";
 
 const registerFormSchema = z.object({
   name: z.string().min(2, { message: "Ad Soyad en az 2 karakter olmalıdır." }),
+  studentNumber: z.string().regex(/^\d{12}$/, { message: "Öğrenci numarası 12 haneli bir sayı olmalıdır." }),
   email: z.string().email({ message: "Geçerli bir e-posta adresi girin." })
     .refine(email => email.endsWith(".edu.tr") || email.endsWith(".edu"), {
       message: "Lütfen geçerli bir okul e-posta adresi girin (örn: kullanici@okul.edu.tr)."
@@ -30,7 +31,7 @@ const registerFormSchema = z.object({
   confirmPassword: z.string().min(6, { message: "Şifre tekrarı en az 6 karakter olmalıdır." }),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Şifreler eşleşmiyor.",
-  path: ["confirmPassword"], // Hata mesajını bu alana ata
+  path: ["confirmPassword"],
 });
 
 type RegisterFormValues = z.infer<typeof registerFormSchema>;
@@ -38,14 +39,13 @@ type RegisterFormValues = z.infer<typeof registerFormSchema>;
 export default function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
-  // Simüle edilmiş yükleme durumu için
-  const [isLoading, setIsLoading] = useState(false); // Used useState directly
-
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
     defaultValues: {
       name: "",
+      studentNumber: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -55,15 +55,15 @@ export default function RegisterForm() {
   async function onSubmit(data: RegisterFormValues) {
     setIsLoading(true);
     console.log("Kayıt bilgileri (simülasyon):", data);
-    // Burada normalde bir API çağrısı yapılır.
-    // Şimdilik sadece bir gecikme ve toast mesajı ekliyoruz.
+    // In a real app, this would call an API to register the user
+    // For now, we simulate success and redirect
     setTimeout(() => {
       toast({
         title: "Kayıt Başarılı (Simülasyon)",
         description: "Hesabınız başarıyla oluşturuldu. Giriş sayfasına yönlendiriliyorsunuz.",
       });
       setIsLoading(false);
-      router.push("/login"); // Kullanıcıyı giriş sayfasına yönlendir
+      router.push("/login");
     }, 1500);
   }
 
@@ -79,6 +79,22 @@ export default function RegisterForm() {
               <FormControl>
                 <Input placeholder="Adınız Soyadınız" {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="studentNumber"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Öğrenci Numarası</FormLabel>
+              <FormControl>
+                <Input placeholder="Örn: 202003002016" {...field} />
+              </FormControl>
+              <FormDescription className="flex items-center gap-1">
+                <Hash className="h-4 w-4"/> 12 haneli okul numaranız.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

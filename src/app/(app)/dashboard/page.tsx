@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ArrowRight, CalendarCheck, BusFront, UserCog } from "lucide-react";
+import { ArrowRight, CalendarCheck, BusFront, UserCog, Settings } from "lucide-react"; // Added Settings icon
 import ScheduleConfirmationCard from "@/components/student/schedule-confirmation-card"; // For student notifications
 
 export default function DashboardPage() {

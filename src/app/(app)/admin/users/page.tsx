@@ -15,8 +15,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import React, { useEffect, useState } from "react";
-import { getUsers as dbGetUsers, updateUser as dbUpdateUser, createNewUserSchedule } from "@/lib/mock-database";
-import UserFormDialog from "@/components/admin/user-form-dialog"; // Import the dialog
+import { getUsers as dbGetUsers, updateUser as dbUpdateUser } from "@/lib/mock-database";
+import UserFormDialog from "@/components/admin/user-form-dialog"; 
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -45,36 +45,14 @@ export default function AdminUsersPage() {
   };
 
   const handleSaveUser = (updatedUserData: User) => {
-    let userToUpdate = { ...updatedUserData };
+    // Role change logic is removed as role is no longer editable in the form
+    const userToSave = { ...updatedUserData };
 
-    // Handle role change logic
-    const originalUser = allUsers.find(u => u.id === updatedUserData.id);
-    if (originalUser && originalUser.role === 'admin' && userToUpdate.role === 'student') {
-      // Admin to Student: ensure studentNumber, create weeklyScheduleId if missing
-      if (!userToUpdate.studentNumber) {
-        // You might want to make studentNumber mandatory in the form if role is student
-        // For now, let's assign a placeholder or leave it for the form validation to catch
-        toast({title: "Hata", description: "Öğrenci rolü için öğrenci numarası zorunludur.", variant: "destructive"});
-        return; // Or handle this more gracefully in the form
-      }
-      if (!userToUpdate.weeklyScheduleId) {
-        userToUpdate.weeklyScheduleId = `schedule${Date.now()}${Math.random().toString(36).substring(2, 7)}`;
-        createNewUserSchedule(userToUpdate.id, userToUpdate.weeklyScheduleId);
-      }
-    } else if (originalUser && originalUser.role === 'student' && userToUpdate.role === 'admin') {
-      // Student to Admin: clear student-specific fields
-      userToUpdate.studentNumber = undefined;
-      userToUpdate.homeAddress = undefined;
-      userToUpdate.accessibilityNeeds = [];
-      // weeklyScheduleId can remain, or be cleared. Let's keep it.
-    }
-
-
-    if (dbUpdateUser(userToUpdate)) {
-      setAllUsers(prevUsers => prevUsers.map(u => u.id === userToUpdate.id ? userToUpdate : u));
+    if (dbUpdateUser(userToSave)) {
+      setAllUsers(prevUsers => prevUsers.map(u => u.id === userToSave.id ? userToSave : u));
       toast({
         title: "Kullanıcı Güncellendi",
-        description: `${userToUpdate.name} adlı kullanıcının bilgileri başarıyla güncellendi.`,
+        description: `${userToSave.name} adlı kullanıcının bilgileri başarıyla güncellendi.`,
       });
     } else {
       toast({
@@ -176,3 +154,5 @@ export default function AdminUsersPage() {
     </div>
   );
 }
+
+    

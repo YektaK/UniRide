@@ -24,7 +24,8 @@ import {
   MapPin,
   ShieldAlert,
   LogOut,
-  HelpingHand
+  HelpingHand,
+  ListChecks, // Added Icon
 } from "lucide-react";
 import { Button } from "../ui/button";
 
@@ -36,6 +37,7 @@ const commonMenuItems = [
 const studentMenuItems = [
   { href: "/schedule", label: "Ders Programım", icon: CalendarDays },
   { href: "/request-ride", label: "Servis Talebi", icon: ClipboardList },
+  { href: "/ride-history", label: "Taleplerim", icon: ListChecks }, // New menu item
   { href: "/track-ride", label: "Servis Takibi", icon: MapPin },
 ];
 

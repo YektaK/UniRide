@@ -26,7 +26,7 @@ import {
   LogOut,
   HelpingHand,
   ListChecks,
-  CalendarEdit, // Added Icon for Schedule Management
+  FilePenLine, // Changed from CalendarEdit
 } from "lucide-react";
 import { Button } from "../ui/button";
 
@@ -45,7 +45,7 @@ const studentMenuItems = [
 const adminMenuItems = [
   { href: "/admin/vehicles", label: "Araç Yönetimi", icon: Bus },
   { href: "/admin/users", label: "Kullanıcı Yönetimi", icon: Users },
-  { href: "/admin/schedules", label: "Ders Programları", icon: CalendarEdit }, // New menu item
+  { href: "/admin/schedules", label: "Ders Programları", icon: FilePenLine }, // Changed from CalendarEdit
   { href: "/admin/ride-requests", label: "Servis Talepleri", icon: ShieldAlert },
   { href: "/admin/settings", label: "Ayarlar", icon: Settings },
 ];

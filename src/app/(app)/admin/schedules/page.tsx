@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CalendarEdit, Edit } from "lucide-react";
+import { FilePenLine, Edit } from "lucide-react"; // Changed from CalendarEdit
 import React, { useEffect, useState } from "react";
 import { getUsers as dbGetUsers } from "@/lib/mock-database";
 import Link from "next/link";
@@ -35,7 +35,7 @@ export default function AdminStudentSchedulesPage() {
       <div className="space-y-6">
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="text-2xl flex items-center gap-2"><CalendarEdit className="text-primary"/>Öğrenci Ders Programları</CardTitle>
+            <CardTitle className="text-2xl flex items-center gap-2"><FilePenLine className="text-primary"/>Öğrenci Ders Programları</CardTitle>
             <CardDescription>Öğrenci ders programları yükleniyor...</CardDescription>
           </CardHeader>
           <CardContent>
@@ -50,7 +50,7 @@ export default function AdminStudentSchedulesPage() {
     <div className="space-y-6">
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl flex items-center gap-2"><CalendarEdit className="text-primary"/>Öğrenci Ders Programı Yönetimi</CardTitle>
+          <CardTitle className="text-2xl flex items-center gap-2"><FilePenLine className="text-primary"/>Öğrenci Ders Programı Yönetimi</CardTitle>
           <CardDescription>
             Öğrencilerin haftalık ders programlarını görüntüleyin ve düzenleyin.
           </CardDescription>
@@ -58,7 +58,7 @@ export default function AdminStudentSchedulesPage() {
         <CardContent>
           {students.length === 0 ? (
             <div className="my-6 p-4 border border-dashed rounded-lg aspect-video bg-muted flex flex-col items-center justify-center">
-              <CalendarEdit className="h-16 w-16 text-muted-foreground mb-4" />
+              <FilePenLine className="h-16 w-16 text-muted-foreground mb-4" />
               <p className="text-muted-foreground">Sistemde kayıtlı öğrenci bulunmamaktadır.</p>
             </div>
           ) : (

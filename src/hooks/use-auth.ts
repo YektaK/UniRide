@@ -3,13 +3,14 @@
 
 import { AuthContext } from "@/contexts/auth-context";
 import { useContext } from "react";
+import type { User } from "@/types"; // UserRole importu User tipinden gelecek
 
 // Keep the login signature general for now, will be specified in AuthContextType
 interface AuthContextType {
-  user: import("@/types").User | null;
-  setUser: React.Dispatch<React.SetStateAction<import("@/types").User | null>>;
+  user: User | null;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
   isLoading: boolean;
-  login: (emailOrUsername: string, password_param: string, role: import("@/types").UserRole) => void;
+  login: (emailOrUsername: string, password_param: string) => void; // role parametresi kaldırıldı
   logout: () => void;
 }
 

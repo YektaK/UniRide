@@ -14,25 +14,23 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+// RadioGroup importları kaldırıldı
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
-import type { UserRole } from "@/types";
-import { LogIn, KeyRound } from "lucide-react"; // Added KeyRound
+// UserRole importu kaldırıldı
+import { LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const loginFormSchema = z.object({
   emailOrUsername: z.string().min(1, { message: "Lütfen e-posta veya kullanıcı adınızı girin." }),
   password: z.string().min(1, { message: "Lütfen şifrenizi girin." }),
-  role: z.enum(["student", "admin"], {
-    required_error: "Lütfen bir rol seçin.",
-  }),
+  // role alanı kaldırıldı
 });
 
 type LoginFormValues = z.infer<typeof loginFormSchema>;
 
 export default function LoginForm() {
-  const { login, isLoading, user } = useAuth(); // Added user to check auth state
+  const { login, isLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -41,17 +39,14 @@ export default function LoginForm() {
     defaultValues: {
       emailOrUsername: "",
       password: "",
-      role: "student",
+      // role default değeri kaldırıldı
     },
   });
 
   async function onSubmit(data: LoginFormValues) {
-    login(data.emailOrUsername, data.password, data.role as UserRole);
+    login(data.emailOrUsername, data.password); // role parametresi kaldırıldı
     
-    // AuthContext will handle navigation on successful login via useEffect in HomePage or (app) layout
-    // For demo purposes, we'll check after a delay if login attempt leads to user state change.
     setTimeout(() => {
-      // Check localStorage directly as user state update might have a slight delay
       const storedUser = localStorage.getItem("uniRideUser");
       if (storedUser) { 
         toast({
@@ -62,7 +57,7 @@ export default function LoginForm() {
       } else {
          toast({
           title: "Giriş Başarısız",
-          description: "E-posta/kullanıcı adı, şifre veya rol hatalı. Lütfen bilgilerinizi kontrol edin. Örnek: student@uniride.com / studentpassword (Öğrenci) veya admin@uniride.com / adminpassword (Admin).",
+          description: "E-posta/kullanıcı adı veya şifre hatalı. Lütfen bilgilerinizi kontrol edin. Admin: admin@uniride.com / admin. Öğrenciler için örnekler: student@uniride.com / studentpassword, veli@uniride.com / velipassword, zeynep@uniride.com / zeyneppassword.",
           variant: "destructive",
         });
       }
@@ -98,36 +93,7 @@ export default function LoginForm() {
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="role"
-          render={({ field }) => (
-            <FormItem className="space-y-3">
-              <FormLabel>Rolünüz</FormLabel>
-              <FormControl>
-                <RadioGroup
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                  className="flex flex-col space-y-1"
-                >
-                  <FormItem className="flex items-center space-x-3 space-y-0">
-                    <FormControl>
-                      <RadioGroupItem value="student" />
-                    </FormControl>
-                    <FormLabel className="font-normal">Öğrenci</FormLabel>
-                  </FormItem>
-                  <FormItem className="flex items-center space-x-3 space-y-0">
-                    <FormControl>
-                      <RadioGroupItem value="admin" />
-                    </FormControl>
-                    <FormLabel className="font-normal">Admin</FormLabel>
-                  </FormItem>
-                </RadioGroup>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Rol seçimi FormField'ı kaldırıldı */}
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? "Giriş Yapılıyor..." : "Giriş Yap"}
           {!isLoading && <LogIn className="ml-2 h-4 w-4" />}

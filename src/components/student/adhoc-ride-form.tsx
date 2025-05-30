@@ -44,9 +44,11 @@ export default function AdhocRideForm({ userId, defaultPickupAddress }: AdhocRid
   const form = useForm<AdhocRideFormValues>({
     resolver: zodResolver(adhocRideFormSchema),
     defaultValues: {
+      rideDate: undefined, // Calendar handles undefined/null for selection
+      pickupTime: "",     // Initialize with an empty string
       pickupAddress: defaultPickupAddress || "",
       dropoffAddress: "ODTÜ Kampüsü, Ana Giriş", // Example default
-      // rideDate and pickupTime will be empty initially
+      notes: "",          // Initialize optional field with an empty string
     },
   });
 

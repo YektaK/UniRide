@@ -10,7 +10,7 @@ import { CalendarDays, PlusCircle } from "lucide-react";
 import ScheduleDisplay from "@/components/student/schedule-display";
 import ScheduleFormDialog from "@/components/student/schedule-form-dialog";
 
-const daysOfWeek: ScheduleEntry["dayOfWeek"][] = ["monday", "tuesday", "wednesday", "thursday", "friday"]; // Only weekdays for random generation
+const daysOfWeek: ScheduleEntry["dayOfWeek"][] = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 const allPossibleDays: ScheduleEntry["dayOfWeek"][] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const locations: ("Dudullu" | "Çengelköy")[] = ["Dudullu", "Çengelköy"];
 
@@ -22,7 +22,7 @@ const generateRandomTime = (minHour = 8, maxHour = 15): string => {
 
 const addHours = (time: string, hoursToAdd: number): string => {
   const [hour, minute] = time.split(':').map(Number);
-  const date = new Date(); // Use a fixed date to avoid DST issues if any, though not critical here
+  const date = new Date();
   date.setHours(hour, minute, 0, 0);
   date.setHours(date.getHours() + hoursToAdd);
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -43,45 +43,62 @@ const generateRandomCourseCode = (): string => {
 
 const generateRandomScheduleEntries = (): ScheduleEntry[] => {
   const entries: ScheduleEntry[] = [];
-  // Shuffle daysOfWeek to pick 4 random unique days
-  const shuffledDays = [...daysOfWeek].sort(() => 0.5 - Math.random());
-  const selectedDays = shuffledDays.slice(0, 4); 
+  const daysWithActualEntries = new Set<ScheduleEntry["dayOfWeek"]>();
+  let availableDaysForSelection = [...daysOfWeek]; // Start with Monday-Friday
 
-  selectedDays.forEach(day => {
-    const numClasses = Math.floor(Math.random() * 3) + 1; // 1 to 3 classes
-    let lastEndTime = "00:00"; // Track end time of the last class added for this day
+  let totalGenerationAttempts = 0;
+  const maxTotalGenerationAttempts = 100; // Safety break for the outer loop
 
-    for (let i = 0; i < numClasses; i++) {
+  // Loop until we have entries for 4 distinct days or run out of attempts/days
+  while (daysWithActualEntries.size < 4 && availableDaysForSelection.length > 0 && totalGenerationAttempts < maxTotalGenerationAttempts) {
+    totalGenerationAttempts++;
+
+    // Pick a random day from the remaining available days
+    const dayIndex = Math.floor(Math.random() * availableDaysForSelection.length);
+    const dayToPopulate = availableDaysForSelection[dayIndex];
+
+    const numClassesForThisDay = Math.floor(Math.random() * 3) + 1; // 1 to 3 classes for this day
+    let classesSuccessfullyAddedThisDay = 0;
+    let lastEndTimeForThisDay = "00:00";
+
+    for (let i = 0; i < numClassesForThisDay && totalGenerationAttempts < maxTotalGenerationAttempts; i++) {
+      totalGenerationAttempts++;
       let startTime: string;
       let endTime: string;
-      let attempts = 0;
-      const maxAttempts = 10;
+      let classPlacementAttempts = 0;
+      const maxClassPlacementAttempts = 10;
 
-      // Try to find a non-overlapping time slot within reasonable hours
       do {
-        startTime = generateRandomTime(8, 14); // Start time between 8 AM and 2 PM (to allow for duration)
-        const durationHours = Math.floor(Math.random() * 3) + 2; // Duration between 2 and 4 hours
+        startTime = generateRandomTime(8, 14); // Classes start between 8 AM and 2 PM
+        const durationHours = Math.floor(Math.random() * 3) + 2; // Duration 2 to 4 hours
         endTime = addHours(startTime, durationHours);
-        attempts++;
+        classPlacementAttempts++;
       } while (
-        (startTime <= lastEndTime || endTime > "19:00") && // Ensure no overlap and not too late
-        attempts < maxAttempts
+        (startTime <= lastEndTimeForThisDay || endTime > "19:00") && // Ensure no overlap and not too late (max end time 7 PM)
+        classPlacementAttempts < maxClassPlacementAttempts
       );
 
-      if (startTime > lastEndTime && endTime <= "19:00") { // Max end time 7 PM
+      if (startTime > lastEndTimeForThisDay && endTime <= "19:00") {
         entries.push({
-          id: `se${Date.now()}${Math.random().toString(36).substring(2, 7)}${i}${day}`, // More unique ID
-          dayOfWeek: day,
+          id: `se${Date.now()}${Math.random().toString(36).substring(2, 7)}${i}${dayToPopulate}`,
+          dayOfWeek: dayToPopulate,
           courseName: generateRandomCourseCode(),
           startTime,
           endTime,
           location: locations[Math.floor(Math.random() * locations.length)],
         });
-        lastEndTime = endTime; // Update last end time for the current day
+        lastEndTimeForThisDay = endTime;
+        classesSuccessfullyAddedThisDay++;
       }
     }
-  });
-  // Sort entries by day and then by start time
+
+    if (classesSuccessfullyAddedThisDay > 0) {
+      daysWithActualEntries.add(dayToPopulate);
+    }
+    // Remove the tried day from selection pool, regardless of success, to ensure we try other days
+    availableDaysForSelection.splice(dayIndex, 1);
+  }
+
   return entries.sort((a,b) => allPossibleDays.indexOf(a.dayOfWeek) - allPossibleDays.indexOf(b.dayOfWeek) || a.startTime.localeCompare(b.startTime));
 };
 
@@ -120,7 +137,6 @@ export default function SchedulePage() {
       const storedScheduleJson = localStorage.getItem(`schedule_${user.weeklyScheduleId}`);
       if (storedScheduleJson) {
         const storedSchedule = JSON.parse(storedScheduleJson) as WeeklySchedule;
-        // Ensure location is one of the valid options, default to "Dudullu" if not
         const updatedEntries = storedSchedule.entries.map((entry: ScheduleEntry) => ({
             ...entry,
             location: (entry.location === "Dudullu" || entry.location === "Çengelköy") ? entry.location : "Dudullu"
@@ -128,14 +144,12 @@ export default function SchedulePage() {
         setSchedule({...storedSchedule, entries: updatedEntries});
       } else if (initialSchedules[user.weeklyScheduleId]) {
         const initialSched = initialSchedules[user.weeklyScheduleId];
-         // Ensure location is one of the valid options, default to "Dudullu" if not for initial data too
          const updatedEntries = initialSched.entries.map((entry: ScheduleEntry) => ({
             ...entry,
             location: (entry.location === "Dudullu" || entry.location === "Çengelköy") ? entry.location : "Dudullu"
         }));
         setSchedule({...initialSched, entries: updatedEntries});
       } else {
-        // For a new user not in initialSchedules, generate a new random schedule
         setSchedule({
             id: user.weeklyScheduleId,
             userId: user.id,
@@ -166,9 +180,11 @@ export default function SchedulePage() {
 
   const handleDeleteEntry = (entryId: string) => {
     if (schedule && window.confirm("Bu ders girişini silmek istediğinizden emin misiniz?")) {
+        const updatedEntries = schedule.entries.filter(e => e.id !== entryId);
+        const sortedEntries = updatedEntries.sort((a,b) => allPossibleDays.indexOf(a.dayOfWeek) - allPossibleDays.indexOf(b.dayOfWeek) || a.startTime.localeCompare(b.startTime));
         setSchedule({
             ...schedule,
-            entries: schedule.entries.filter(e => e.id !== entryId),
+            entries: sortedEntries,
             lastUpdated: new Date().toISOString()
         });
     }
@@ -176,23 +192,22 @@ export default function SchedulePage() {
   
   const handleSaveEntry = (entryData: Omit<ScheduleEntry, 'id'>, entryId?: string) => {
     if (schedule) {
-      if (entryId) { // Editing existing entry
-        setSchedule({
-          ...schedule,
-          entries: schedule.entries.map(e => e.id === entryId ? { ...e, ...entryData, id: entryId } : e),
-          lastUpdated: new Date().toISOString()
-        });
-      } else { // Adding new entry
+      let updatedEntries;
+      if (entryId) { 
+        updatedEntries = schedule.entries.map(e => e.id === entryId ? { ...e, ...entryData, id: entryId } : e);
+      } else { 
         const newEntry: ScheduleEntry = {
           ...entryData,
-          id: `se${Date.now()}${Math.random().toString(36).substring(2, 7)}` // More unique ID
+          id: `se${Date.now()}${Math.random().toString(36).substring(2, 7)}`
         };
-        setSchedule({
+        updatedEntries = [...schedule.entries, newEntry];
+      }
+      const sortedEntries = updatedEntries.sort((a,b) => allPossibleDays.indexOf(a.dayOfWeek) - allPossibleDays.indexOf(b.dayOfWeek) || a.startTime.localeCompare(b.startTime));
+      setSchedule({
           ...schedule,
-          entries: [...schedule.entries, newEntry],
+          entries: sortedEntries,
           lastUpdated: new Date().toISOString()
         });
-      }
     }
     setIsFormOpen(false);
     setEditingEntry(null);
@@ -208,8 +223,6 @@ export default function SchedulePage() {
   }
 
   if (!schedule) {
-    // This case should ideally not be hit if a new schedule is generated for users without one.
-    // But as a fallback:
     return (
       <Card>
         <CardHeader>

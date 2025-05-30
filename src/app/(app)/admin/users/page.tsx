@@ -30,6 +30,7 @@ const mockUsers: User[] = [
     name: "Öğrenci Ayşe",
     email: "student@uniride.com",
     role: "student",
+    studentNumber: "202003002001",
     homeAddress: "123 Lale Sokak, Çankaya, Ankara",
     accessibilityNeeds: ["wheelchair"],
     weeklyScheduleId: "schedule001",
@@ -39,6 +40,7 @@ const mockUsers: User[] = [
     name: "Öğrenci Veli",
     email: "veli@uniride.com",
     role: "student",
+    studentNumber: "202003002002",
     homeAddress: "456 Menekşe Caddesi, Yenimahalle, Ankara",
     accessibilityNeeds: [],
     weeklyScheduleId: "schedule002",
@@ -48,6 +50,7 @@ const mockUsers: User[] = [
     name: "Öğrenci Zeynep",
     email: "zeynep@uniride.com",
     role: "student",
+    studentNumber: "202003002003",
     homeAddress: "789 Gül Apartmanı, Keçiören, Ankara",
     accessibilityNeeds: ["visual_impairment"],
     weeklyScheduleId: "schedule003",
@@ -87,6 +90,7 @@ export default function AdminUsersPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Ad Soyad</TableHead>
+                    <TableHead>Öğrenci No</TableHead>
                     <TableHead>E-posta</TableHead>
                     <TableHead>Rol</TableHead>
                     <TableHead className="text-right">İşlemler</TableHead>
@@ -96,6 +100,7 @@ export default function AdminUsersPage() {
                   {mockUsers.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell>{user.studentNumber || "-"}</TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell>
                         <Badge variant={user.role === "admin" ? "destructive" : "secondary"}>

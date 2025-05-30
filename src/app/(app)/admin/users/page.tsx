@@ -92,29 +92,29 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-6">
       <Card className="shadow-lg">
-        <CardHeader className="md:flex md:flex-row md:items-start md:justify-between">
+        <CardHeader>
           <div>
             <CardTitle className="text-2xl flex items-center gap-2"><UsersIcon className="text-primary"/>Kullanıcı Yönetimi</CardTitle>
             <CardDescription>
               Sistemde kayıtlı öğrenci ve admin hesaplarını görüntüleyin, düzenleyin ve filtreleyin.
             </CardDescription>
           </div>
-           <Button disabled className="mt-4 md:mt-0"> {/* TODO: Implement Add User functionality */}
-            <PlusCircle className="mr-2 h-4 w-4" /> Yeni Kullanıcı Ekle
-          </Button>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
-            <div className="relative">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-6 space-y-3 md:space-y-0 md:space-x-4">
+            <div className="relative w-full md:flex-grow">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Ad, Öğrenci No veya E-posta ile Ara..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 w-full md:w-1/2 lg:w-1/3"
+                className="pl-8 w-full"
               />
             </div>
+            <Button disabled className="w-full md:w-auto"> {/* TODO: Implement Add User functionality */}
+              <PlusCircle className="mr-2 h-4 w-4" /> Yeni Kullanıcı Ekle
+            </Button>
           </div>
 
           {allUsers.length === 0 ? (

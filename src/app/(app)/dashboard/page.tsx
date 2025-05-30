@@ -7,9 +7,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ArrowRight, CalendarCheck, BusFront, UserCog, Settings as SettingsIcon } from "lucide-react";
+import { ArrowRight, CalendarCheck, BusFront, UserCog, Settings as SettingsIcon, AlertTriangle } from "lucide-react";
 import ScheduleConfirmationCard from "@/components/student/schedule-confirmation-card";
-import { format, addDays } from 'date-fns';
+import { format, addDays, getDay } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
 interface NextRideInfo {
@@ -39,37 +39,54 @@ export default function DashboardPage() {
           studentSchedule = JSON.parse(storedScheduleJson);
         }
 
-        const tomorrow = addDays(new Date(), 1);
-        const tomorrowDayName = daysOrder[tomorrow.getDay()];
-        const relevantDateFormatted = format(tomorrow, "dd MMMM yyyy, EEEE", { locale: tr });
-        
+        let rideFound = false;
+        let checkDate = new Date();
+        let relevantDateObject = addDays(new Date(), 1); // Start checking from tomorrow
+        let relevantDateFormatted = "";
         let pickupTime = "";
         let dropoffTime = "";
-        let notificationMessage = `Merhaba ${user.name}, yarın (${relevantDateFormatted}) için planlanmış bir servisiniz bulunmamaktadır.`;
-        let hasRide = false;
+        let notificationMessage = "";
 
         if (studentSchedule && studentSchedule.entries.length > 0) {
-          const tomorrowEntries = studentSchedule.entries
-            .filter(entry => entry.dayOfWeek === tomorrowDayName)
-            .sort((a, b) => a.startTime.localeCompare(b.startTime));
+          for (let i = 1; i <= 7; i++) { // Check up to 7 days ahead
+            checkDate = addDays(new Date(), i);
+            const dayName = daysOrder[getDay(checkDate)];
+            const entriesForDay = studentSchedule.entries
+              .filter(entry => entry.dayOfWeek === dayName)
+              .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
-          if (tomorrowEntries.length > 0) {
-            pickupTime = tomorrowEntries[0].startTime;
-            dropoffTime = tomorrowEntries[tomorrowEntries.length - 1].endTime; // This is class end, not necessarily shuttle dropoff
-            // For simplicity, we'll use class times. A real app would use AI to estimate shuttle times.
-            notificationMessage = `Merhaba ${user.name}, yarın (${relevantDateFormatted}) için servisiniz planlanmıştır. Tahmini okulda olma saatiniz ${pickupTime}, okuldan ayrılış saatiniz ise ${dropoffTime} olacaktır. Lütfen servis saatleri için ayrıca onayınızı bekleyin.`;
-            hasRide = true;
+            if (entriesForDay.length > 0) {
+              relevantDateObject = checkDate;
+              relevantDateFormatted = format(relevantDateObject, "dd MMMM yyyy, EEEE", { locale: tr });
+              pickupTime = entriesForDay[0].startTime;
+              dropoffTime = entriesForDay[entriesForDay.length - 1].endTime;
+              notificationMessage = `Merhaba ${user.name}, ${relevantDateFormatted} için servisiniz planlanmıştır. Tahmini okulda olma saatiniz ${pickupTime}, okuldan ayrılış saatiniz ise ${dropoffTime} olacaktır. Lütfen servis saatleri için ayrıca onayınızı bekleyin.`;
+              rideFound = true;
+              break; 
+            }
           }
         }
         
-        setNextRideInfo({
-          studentName: user.name,
-          pickupTime: hasRide ? pickupTime : "N/A", // Placeholder if no ride
-          dropoffTime: hasRide ? dropoffTime : "N/A", // Placeholder if no ride
-          notificationMessage,
-          relevantDate: relevantDateFormatted,
-          hasRide,
-        });
+        if (rideFound) {
+          setNextRideInfo({
+            studentName: user.name,
+            pickupTime,
+            dropoffTime,
+            notificationMessage,
+            relevantDate: relevantDateFormatted,
+            hasRide: true,
+          });
+        } else {
+          relevantDateFormatted = format(addDays(new Date(), 1), "dd MMMM yyyy, EEEE", { locale: tr }); // Default to tomorrow for message
+          setNextRideInfo({
+            studentName: user.name,
+            pickupTime: "N/A",
+            dropoffTime: "N/A",
+            notificationMessage: `Merhaba ${user.name}, önümüzdeki 7 gün için planlanmış bir servisiniz bulunmamaktadır.`,
+            relevantDate: "Yakın Zamanda Servis Yok",
+            hasRide: false,
+          });
+        }
 
       } catch (error) {
         console.error("Error processing schedule for dashboard:", error);
@@ -120,7 +137,7 @@ export default function DashboardPage() {
 
       {user.role === "student" && (
         <>
-          {isScheduleLoading && <Card><CardContent><p>Servis bilgileriniz yükleniyor...</p></CardContent></Card>}
+          {isScheduleLoading && <Card><CardHeader><CardTitle>Servis Bilgileri Yükleniyor</CardTitle></CardHeader><CardContent><p>Ders programınız ve yaklaşan servis bilgileriniz kontrol ediliyor...</p></CardContent></Card>}
           {!isScheduleLoading && nextRideInfo && nextRideInfo.hasRide && (
             <ScheduleConfirmationCard {...nextRideInfo} />
           )}
@@ -128,12 +145,12 @@ export default function DashboardPage() {
              <Card className="bg-muted/50 border-border">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-xl">
-                    <CalendarCheck className="h-6 w-6 text-muted-foreground" />
-                    Servis Planı: {nextRideInfo.relevantDate}
+                    <AlertTriangle className="h-6 w-6 text-yellow-500" /> {/* Changed icon */}
+                    Servis Durumu
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p>{nextRideInfo.notificationMessage}</p>
+                    <p className="text-muted-foreground">{nextRideInfo.notificationMessage}</p>
                 </CardContent>
             </Card>
           )}
@@ -204,7 +221,7 @@ export default function DashboardPage() {
                     <h3 className="font-semibold">Genel Ayarlar</h3>
                     <p className="text-sm text-muted-foreground">Bildirim ve sistem ayarlarını yapılandır.</p>
                   </div>
-                  <SettingsIcon /> {/* Renamed from Settings */}
+                  <SettingsIcon />
               </Button>
             </Link>
           </CardContent>
@@ -213,5 +230,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    

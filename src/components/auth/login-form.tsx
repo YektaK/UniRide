@@ -18,11 +18,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import type { UserRole } from "@/types";
-import { LogIn } from "lucide-react";
+import { LogIn, KeyRound } from "lucide-react"; // Added KeyRound
 import { useToast } from "@/hooks/use-toast";
 
 const loginFormSchema = z.object({
-  email: z.string().email({ message: "Lütfen geçerli bir e-posta adresi girin." }),
+  emailOrUsername: z.string().min(1, { message: "Lütfen e-posta veya kullanıcı adınızı girin." }),
+  password: z.string().min(1, { message: "Lütfen şifrenizi girin." }),
   role: z.enum(["student", "admin"], {
     required_error: "Lütfen bir rol seçin.",
   }),
@@ -31,27 +32,28 @@ const loginFormSchema = z.object({
 type LoginFormValues = z.infer<typeof loginFormSchema>;
 
 export default function LoginForm() {
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, user } = useAuth(); // Added user to check auth state
   const router = useRouter();
   const { toast } = useToast();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
-      email: "",
+      emailOrUsername: "",
+      password: "",
       role: "student",
     },
   });
 
   async function onSubmit(data: LoginFormValues) {
-    login(data.email, data.role as UserRole);
-    // AuthContext will handle navigation on successful login via useEffect in HomePage or (app) layout
-    // For demo purposes, we'll assume login might succeed or fail
-    // A more robust solution would await login and then navigate or show error
+    login(data.emailOrUsername, data.password, data.role as UserRole);
     
-    // Simulate redirection after a short delay to allow auth state to update
+    // AuthContext will handle navigation on successful login via useEffect in HomePage or (app) layout
+    // For demo purposes, we'll check after a delay if login attempt leads to user state change.
     setTimeout(() => {
-      if (localStorage.getItem("uniRideUser")) { // Check if login was successful (mock)
+      // Check localStorage directly as user state update might have a slight delay
+      const storedUser = localStorage.getItem("uniRideUser");
+      if (storedUser) { 
         toast({
           title: "Giriş Başarılı",
           description: "Kontrol paneline yönlendiriliyorsunuz...",
@@ -60,11 +62,11 @@ export default function LoginForm() {
       } else {
          toast({
           title: "Giriş Başarısız",
-          description: "E-posta veya rol hatalı. Lütfen 'student@uniride.com' veya 'admin@uniride.com' (admin rolüyle) deneyin.",
+          description: "E-posta/kullanıcı adı, şifre veya rol hatalı. Lütfen bilgilerinizi kontrol edin. Örnek: student@uniride.com / studentpassword (Öğrenci) veya admin@uniride.com / adminpassword (Admin).",
           variant: "destructive",
         });
       }
-    }, 700); // Slightly longer than login simulation
+    }, 700); 
   }
 
   return (
@@ -72,12 +74,25 @@ export default function LoginForm() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
-          name="email"
+          name="emailOrUsername"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>E-posta Adresi</FormLabel>
+              <FormLabel>E-posta veya Kullanıcı Adı</FormLabel>
               <FormControl>
-                <Input placeholder="ornek@uniride.com" {...field} />
+                <Input placeholder="ornek@uniride.com veya kullanici_adim" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Şifre</FormLabel>
+              <FormControl>
+                <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

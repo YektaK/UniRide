@@ -4,6 +4,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  password?: string; // Added password field
   role: UserRole;
   homeAddress?: string;
   homeCoordinates?: { lat: number; lng: number };

@@ -9,7 +9,7 @@ interface AuthContextType {
   user: User | null;
   setUser: Dispatch<SetStateAction<User | null>>;
   isLoading: boolean;
-  login: (email: string, role: UserRole) => void;
+  login: (emailOrUsername: string, password_param: string, role: UserRole) => void;
   logout: () => void;
 }
 
@@ -20,6 +20,7 @@ const mockAdmin: User = {
   id: "admin001",
   name: "Admin Kullanıcısı",
   email: "admin@uniride.com",
+  password: "adminpassword", // Added mock password
   role: "admin",
   homeAddress: "Üniversite Yönetim Binası",
 };
@@ -27,7 +28,8 @@ const mockAdmin: User = {
 const mockStudent: User = {
   id: "student001",
   name: "Öğrenci Ayşe",
-  email: "ayse@example.com",
+  email: "student@uniride.com", // Changed for easier testing
+  password: "studentpassword", // Added mock password
   role: "student",
   homeAddress: "123 Lale Sokak, Çankaya, Ankara",
   accessibilityNeeds: ["wheelchair"],
@@ -47,17 +49,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = (email: string, role: UserRole) => {
+  const login = (emailOrUsername: string, password_param: string, role: UserRole) => {
     setIsLoading(true);
     // Simulate API call
     setTimeout(() => {
       let loggedInUser: User | null = null;
-      if (role === "admin" && email.toLowerCase() === "admin@uniride.com") {
+      const lowerEmailOrUsername = emailOrUsername.toLowerCase();
+
+      if (role === "admin" && lowerEmailOrUsername === mockAdmin.email && password_param === mockAdmin.password) {
         loggedInUser = mockAdmin;
-      } else if (role === "student" && email.toLowerCase() === "student@uniride.com") {
+      } else if (role === "student" && lowerEmailOrUsername === mockStudent.email && password_param === mockStudent.password) {
         loggedInUser = mockStudent;
-      } else if (role === "student") { // Allow any student email for demo
-        loggedInUser = { ...mockStudent, email, name: `Öğrenci ${email.split('@')[0]}`};
+      } else if (role === "student" && lowerEmailOrUsername.includes('@')) { 
+        // For demo: Allow any student email if password matches a generic one, or specific one for "student@uniride.com"
+        // This part is highly simplified for mock purposes.
+        // In a real app, you'd query a database.
+        if (password_param === "password123" || (lowerEmailOrUsername === mockStudent.email && password_param === mockStudent.password)) {
+           loggedInUser = { ...mockStudent, email: lowerEmailOrUsername, name: `Öğrenci ${lowerEmailOrUsername.split('@')[0]}`};
+           // If it's the main mock student, ensure all data is correct
+           if (lowerEmailOrUsername === mockStudent.email) {
+            loggedInUser = mockStudent;
+           }
+        }
       }
 
 
@@ -65,8 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(loggedInUser);
         localStorage.setItem("uniRideUser", JSON.stringify(loggedInUser));
       } else {
-        // Handle login failure (e.g., show error message)
-        // console.error("Login failed: Invalid credentials or role.");
+        // Login failed
       }
       setIsLoading(false);
     }, 500);
@@ -75,6 +87,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem("uniRideUser");
+    // Optionally redirect to login page
+    // window.location.href = "/login"; 
   };
 
   return (
@@ -83,4 +97,3 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     </AuthContext.Provider>
   );
 }
-

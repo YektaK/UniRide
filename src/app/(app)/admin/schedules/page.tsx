@@ -18,24 +18,14 @@ import { FilePenLine, Edit, Search, Upload } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { getUsers as dbGetUsers } from "@/lib/mock-database";
 import Link from "next/link";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation"; // Import useRouter for navigation
+
 
 export default function AdminStudentSchedulesPage() {
   const [students, setStudents] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false);
-  const { toast } = useToast();
+  const router = useRouter(); // Initialize router
 
   useEffect(() => {
     setIsLoading(true);
@@ -50,16 +40,6 @@ export default function AdminStudentSchedulesPage() {
     (student.studentNumber && student.studentNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
     student.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const handleBulkUpload = () => {
-    // In a real app, this would handle file processing.
-    // For now, just show a toast.
-    toast({
-      title: "Toplu Yükleme Başlatıldı (Simülasyon)",
-      description: "Dosya seçildi ve işleniyor. Bu özellik yakında tam olarak aktif olacaktır.",
-    });
-    setIsBulkUploadDialogOpen(false);
-  };
 
   if (isLoading) {
     return (
@@ -88,41 +68,9 @@ export default function AdminStudentSchedulesPage() {
                 Öğrencilerin haftalık ders programlarını görüntüleyin, düzenleyin veya toplu olarak yükleyin.
               </CardDescription>
             </div>
-            <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Upload className="mr-2 h-4 w-4" /> Toplu Program Yükle
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[525px]">
-                <DialogHeader>
-                  <DialogTitle>Toplu Ders Programı Yükle</DialogTitle>
-                  <DialogDescription>
-                    Öğrenci ders programlarını içeren bir CSV dosyası seçin. Dosya formatı: Öğrenci No, Gün (örn: monday), Ders Kodu, Başlangıç Saati (SS:DD), Bitiş Saati (SS:DD), Konum (Dudullu/Çengelköy).
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <label htmlFor="scheduleFile" className="text-right col-span-1">
-                      Dosya:
-                    </label>
-                    <Input id="scheduleFile" type="file" accept=".csv" className="col-span-3" />
-                  </div>
-                  <p className="text-xs text-muted-foreground px-1">
-                    Örnek CSV satırı: <br />
-                    `202003002001,monday,MAT101,09:00,11:00,Dudullu`
-                  </p>
-                </div>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button type="button" variant="outline">
-                      İptal
-                    </Button>
-                  </DialogClose>
-                  <Button type="button" onClick={handleBulkUpload}>Yükle ve İşle</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <Button onClick={() => router.push('/admin/schedules/bulk-upload')}>
+              <Upload className="mr-2 h-4 w-4" /> Toplu Program Yükle/Yönet
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -184,4 +132,3 @@ export default function AdminStudentSchedulesPage() {
     </div>
   );
 }
-

@@ -13,7 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FilePenLine, Edit } from "lucide-react"; // Changed from CalendarEdit
+import { Input } from "@/components/ui/input"; // Import Input component
+import { FilePenLine, Edit, Search } from "lucide-react"; 
 import React, { useEffect, useState } from "react";
 import { getUsers as dbGetUsers } from "@/lib/mock-database";
 import Link from "next/link";
@@ -21,6 +22,7 @@ import Link from "next/link";
 export default function AdminStudentSchedulesPage() {
   const [students, setStudents] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState(""); // State for the search term
 
   useEffect(() => {
     setIsLoading(true);
@@ -29,6 +31,13 @@ export default function AdminStudentSchedulesPage() {
     setStudents(studentUsers);
     setIsLoading(false);
   }, []);
+
+  // Filter students based on search term
+  const filteredStudents = students.filter(student =>
+    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (student.studentNumber && student.studentNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    student.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (isLoading) {
     return (
@@ -52,14 +61,32 @@ export default function AdminStudentSchedulesPage() {
         <CardHeader>
           <CardTitle className="text-2xl flex items-center gap-2"><FilePenLine className="text-primary"/>Öğrenci Ders Programı Yönetimi</CardTitle>
           <CardDescription>
-            Öğrencilerin haftalık ders programlarını görüntüleyin ve düzenleyin.
+            Öğrencilerin haftalık ders programlarını görüntüleyin ve düzenleyin. Aşağıdaki arama kutusunu kullanarak öğrencileri filtreleyebilirsiniz.
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Ad, Öğrenci No veya E-posta ile Ara..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8 w-full md:w-1/3 lg:w-1/4"
+              />
+            </div>
+          </div>
+
           {students.length === 0 ? (
             <div className="my-6 p-4 border border-dashed rounded-lg aspect-video bg-muted flex flex-col items-center justify-center">
               <FilePenLine className="h-16 w-16 text-muted-foreground mb-4" />
               <p className="text-muted-foreground">Sistemde kayıtlı öğrenci bulunmamaktadır.</p>
+            </div>
+          ) : filteredStudents.length === 0 ? (
+             <div className="my-6 p-4 border border-dashed rounded-lg aspect-video bg-muted flex flex-col items-center justify-center">
+              <Search className="h-16 w-16 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Arama kriterlerinize uygun öğrenci bulunamadı.</p>
             </div>
           ) : (
             <div className="border rounded-lg">
@@ -73,7 +100,7 @@ export default function AdminStudentSchedulesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {students.map((student) => (
+                  {filteredStudents.map((student) => (
                     <TableRow key={student.id}>
                       <TableCell className="font-medium">{student.name}</TableCell>
                       <TableCell>{student.studentNumber || "-"}</TableCell>

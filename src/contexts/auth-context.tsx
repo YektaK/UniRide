@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem("uniRideUser", JSON.stringify(loggedInUser));
       } else {
         // Handle login failure (e.g., show error message)
-        console.error("Login failed: Invalid credentials or role.");
+        // console.error("Login failed: Invalid credentials or role.");
       }
       setIsLoading(false);
     }, 500);
@@ -83,3 +83,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     </AuthContext.Provider>
   );
 }
+

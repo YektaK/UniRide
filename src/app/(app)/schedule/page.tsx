@@ -12,12 +12,12 @@ import ScheduleFormDialog from "@/components/student/schedule-form-dialog"; // I
 
 // Mock data for student schedule
 const mockScheduleEntriesStudent1: ScheduleEntry[] = [
-  { id: "se001", dayOfWeek: "monday", courseName: "MAT101 Calculus I", startTime: "09:00", endTime: "11:50", location: "Mühendislik B-101" },
-  { id: "se002", dayOfWeek: "monday", courseName: "PHY101 Physics I", startTime: "14:00", endTime: "16:50", location: "Fen Fak. Z-05" },
-  { id: "se003", dayOfWeek: "tuesday", courseName: "ENG101 English Comp.", startTime: "10:00", endTime: "11:50", location: "Edebiyat K-203" },
-  { id: "se004", dayOfWeek: "wednesday", courseName: "MAT101 Calculus I", startTime: "09:00", endTime: "11:50", location: "Mühendislik B-101" },
-  { id: "se005", dayOfWeek: "thursday", courseName: "CS101 Intro to CS", startTime: "13:00", endTime: "15:50", location: "Bilgisayar Lab 1" },
-  { id: "se006", dayOfWeek: "friday", courseName: "PHY101 Physics I", startTime: "14:00", endTime: "16:50", location: "Fen Fak. Z-05" },
+  { id: "se001", dayOfWeek: "monday", courseName: "MAT101 Calculus I", startTime: "09:00", endTime: "11:50", location: "Dudullu" },
+  { id: "se002", dayOfWeek: "monday", courseName: "PHY101 Physics I", startTime: "14:00", endTime: "16:50", location: "Dudullu" },
+  { id: "se003", dayOfWeek: "tuesday", courseName: "ENG101 English Comp.", startTime: "10:00", endTime: "11:50", location: "Dudullu" },
+  { id: "se004", dayOfWeek: "wednesday", courseName: "MAT101 Calculus I", startTime: "09:00", endTime: "11:50", location: "Dudullu" },
+  { id: "se005", dayOfWeek: "thursday", courseName: "CS101 Intro to CS", startTime: "13:00", endTime: "15:50", location: "Dudullu" },
+  { id: "se006", dayOfWeek: "friday", courseName: "PHY101 Physics I", startTime: "14:00", endTime: "16:50", location: "Dudullu" },
 ];
 
 const initialSchedules: Record<string, WeeklySchedule> = {
@@ -37,7 +37,7 @@ const initialSchedules: Record<string, WeeklySchedule> = {
     id: "schedule003",
     userId: "student003",
     entries: [
-        { id: "se007", dayOfWeek: "wednesday", courseName: "TURK101 Turkish Lang.", startTime: "10:00", endTime: "11:50", location: "Sosyal Bil. A-01" }
+        { id: "se007", dayOfWeek: "wednesday", courseName: "TURK101 Turkish Lang.", startTime: "10:00", endTime: "11:50", location: "Dudullu" }
     ],
     lastUpdated: new Date().toISOString(),
   }
@@ -54,11 +54,25 @@ export default function SchedulePage() {
   useEffect(() => {
     if (user && user.role === "student" && user.weeklyScheduleId) {
       // Load schedule from localStorage if exists, otherwise from initialSchedules
-      const storedSchedule = localStorage.getItem(`schedule_${user.weeklyScheduleId}`);
-      if (storedSchedule) {
-        setSchedule(JSON.parse(storedSchedule));
+      const storedScheduleJson = localStorage.getItem(`schedule_${user.weeklyScheduleId}`);
+      if (storedScheduleJson) {
+        const storedSchedule = JSON.parse(storedScheduleJson);
+        // Ensure locations in stored schedule are valid, default to "Dudullu" if not
+        const updatedEntries = storedSchedule.entries.map((entry: ScheduleEntry) => ({
+            ...entry,
+            location: (entry.location === "Dudullu" || entry.location === "Çengelköy") ? entry.location : "Dudullu"
+        }));
+        setSchedule({...storedSchedule, entries: updatedEntries});
+
       } else if (initialSchedules[user.weeklyScheduleId]) {
-        setSchedule(initialSchedules[user.weeklyScheduleId]);
+         // Ensure locations in initialSchedules are valid (already done in mock data, but good practice)
+        const initialSched = initialSchedules[user.weeklyScheduleId];
+        const updatedEntries = initialSched.entries.map((entry: ScheduleEntry) => ({
+            ...entry,
+            location: (entry.location === "Dudullu" || entry.location === "Çengelköy") ? entry.location : "Dudullu"
+        }));
+        setSchedule({...initialSched, entries: updatedEntries});
+
       } else {
          // Fallback for new students not in initialSchedules
         setSchedule({
@@ -105,7 +119,7 @@ export default function SchedulePage() {
       if (entryId) { // Editing existing entry
         setSchedule({
           ...schedule,
-          entries: schedule.entries.map(e => e.id === entryId ? { ...e, ...entryData } : e),
+          entries: schedule.entries.map(e => e.id === entryId ? { ...e, ...entryData, id: entryId } : e), // ensure id is preserved
           lastUpdated: new Date().toISOString()
         });
       } else { // Adding new entry

@@ -46,7 +46,7 @@ const scheduleEntrySchema = z.object({
   courseName: z.string().optional(),
   startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: "Saat SS:DD formatında olmalıdır." }),
   endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: "Saat SS:DD formatında olmalıdır." }),
-  location: z.string().optional(),
+  location: z.enum(["Dudullu", "Çengelköy"], { required_error: "Lütfen bir konum seçin." }),
 }).refine(data => data.startTime < data.endTime, {
   message: "Bitiş saati başlangıç saatinden sonra olmalıdır.",
   path: ["endTime"],
@@ -64,6 +64,8 @@ const dayTranslations: Record<ScheduleEntry["dayOfWeek"], string> = {
   sunday: "Pazar",
 };
 
+const locationOptions: ScheduleFormValues["location"][] = ["Dudullu", "Çengelköy"];
+
 export default function ScheduleFormDialog({ isOpen, onClose, onSave, entry }: ScheduleFormDialogProps) {
   const form = useForm<ScheduleFormValues>({
     resolver: zodResolver(scheduleEntrySchema),
@@ -72,21 +74,22 @@ export default function ScheduleFormDialog({ isOpen, onClose, onSave, entry }: S
       courseName: "",
       startTime: "",
       endTime: "",
-      location: "",
+      location: "Dudullu",
     },
   });
 
   useEffect(() => {
     if (isOpen) {
       if (entry) {
-        form.reset(entry);
+        const validLocation = locationOptions.includes(entry.location as ScheduleFormValues["location"]) ? entry.location : "Dudullu";
+        form.reset({...entry, location: validLocation as ScheduleFormValues["location"]});
       } else {
         form.reset({
           dayOfWeek: "monday",
           courseName: "",
           startTime: "",
           endTime: "",
-          location: "",
+          location: "Dudullu",
         });
       }
     }
@@ -175,10 +178,19 @@ export default function ScheduleFormDialog({ isOpen, onClose, onSave, entry }: S
               name="location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Konum (Opsiyonel)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Örn: Mühendislik B-101" {...field} />
-                  </FormControl>
+                  <FormLabel>Konum</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Konum seçin" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {locationOptions.map((loc) => (
+                        <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

@@ -16,8 +16,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input"; // Added Input
 import React, { useEffect, useState } from "react";
-import { getUsers as dbGetUsers, updateUser as dbUpdateUser } from "@/lib/mock-database";
-import UserFormDialog from "@/components/admin/user-form-dialog"; 
+import { adminApi } from "@/lib/admin-api";
+import UserFormDialog from "@/components/admin/user-form-dialog";
+import AddUserDialog from "@/components/admin/add-user-dialog";
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -25,16 +26,41 @@ export default function AdminUsersPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState(""); // State for the search term
   const { toast } = useToast();
 
   useEffect(() => {
     setIsLoading(true);
-    const usersFromDb = dbGetUsers();
-    setAllUsers(usersFromDb);
-    setIsLoading(false);
-  }, []);
+    const loadUsers = async () => {
+      try {
+        const usersFromDb = await adminApi.users.getAll();
+        // Convert snake_case to camelCase
+        const convertedUsers = usersFromDb.map((u: any) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          role: u.role,
+          studentNumber: u.student_number,
+          homeAddress: u.home_address,
+          accessibilityNeeds: u.accessibility_needs,
+          weeklyScheduleId: u.weekly_schedule_id,
+        }));
+        setAllUsers(convertedUsers);
+      } catch (error) {
+        console.error("Error loading users:", error);
+        toast({
+          title: "Yükleme Hatası",
+          description: "Kullanıcılar yüklenirken bir hata oluştu.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadUsers();
+  }, [toast]);
 
   const handleOpenEditDialog = (user: User) => {
     setEditingUser(user);
@@ -46,26 +72,84 @@ export default function AdminUsersPage() {
     setEditingUser(null);
   };
 
-  const handleSaveUser = (updatedUserData: User) => {
-    const userToSave = { ...updatedUserData };
+  const handleSaveUser = async (updatedUserData: User) => {
+    try {
+      const { id, ...updates } = updatedUserData;
+      await adminApi.users.update(id, updates);
 
-    if (dbUpdateUser(userToSave)) {
-      setAllUsers(prevUsers => prevUsers.map(u => u.id === userToSave.id ? userToSave : u));
+      setAllUsers(prevUsers => prevUsers.map(u => u.id === id ? updatedUserData : u));
       toast({
         title: "Kullanıcı Güncellendi",
-        description: `${userToSave.name} adlı kullanıcının bilgileri başarıyla güncellendi.`,
+        description: `${updatedUserData.name} adlı kullanıcının bilgileri başarıyla güncellendi.`,
       });
-    } else {
+      handleCloseUserFormDialog();
+    } catch (error) {
+      console.error("Error updating user:", error);
       toast({
         title: "Güncelleme Başarısız",
         description: "Kullanıcı güncellenirken bir hata oluştu.",
         variant: "destructive",
       });
     }
-    handleCloseUserFormDialog();
   };
 
-  // Filter users based on search term
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (!confirm(`${userName} adlı kullanıcıyı silmek istediğinize emin misiniz?`)) {
+      return;
+    }
+
+    try {
+      await adminApi.users.delete(userId);
+      setAllUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
+      toast({
+        title: "Kullanıcı Silindi",
+        description: `${userName} adlı kullanıcı başarıyla silindi.`,
+      });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast({
+        title: "Silme Başarısız",
+        description: "Kullanıcı silinirken bir hata oluştu.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddUser = async (userData: {
+    email: string;
+    password: string;
+    name: string;
+    role: string;
+    studentNumber?: string;
+  }) => {
+    try {
+      const newUser = await adminApi.users.create(userData);
+      // Convert snake_case to camelCase
+      const convertedUser = {
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        studentNumber: newUser.student_number,
+        homeAddress: newUser.home_address,
+        accessibilityNeeds: newUser.accessibility_needs,
+        weeklyScheduleId: newUser.weekly_schedule_id,
+      };
+      setAllUsers(prevUsers => [...prevUsers, convertedUser]);
+      toast({
+        title: "Kullanıcı Eklendi",
+        description: `${userData.name} adlı kullanıcı başarıyla oluşturuldu.`,
+      });
+    } catch (error: any) {
+      console.error("Error adding user:", error);
+      toast({
+        title: "Ekleme Başarısız",
+        description: error.message || "Kullanıcı eklenirken bir hata oluştu.",
+        variant: "destructive",
+      });
+      throw error; // Re-throw to let dialog know it failed
+    }
+  };
   const filteredUsers = allUsers.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (user.studentNumber && user.studentNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -78,7 +162,7 @@ export default function AdminUsersPage() {
       <div className="space-y-6">
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="text-2xl flex items-center gap-2"><UsersIcon className="text-primary"/>Kullanıcı Yönetimi</CardTitle>
+            <CardTitle className="text-2xl flex items-center gap-2"><UsersIcon className="text-primary" />Kullanıcı Yönetimi</CardTitle>
             <CardDescription>Kullanıcılar yükleniyor...</CardDescription>
           </CardHeader>
           <CardContent>
@@ -94,7 +178,7 @@ export default function AdminUsersPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <div>
-            <CardTitle className="text-2xl flex items-center gap-2"><UsersIcon className="text-primary"/>Kullanıcı Yönetimi</CardTitle>
+            <CardTitle className="text-2xl flex items-center gap-2"><UsersIcon className="text-primary" />Kullanıcı Yönetimi</CardTitle>
             <CardDescription>
               Sistemde kayıtlı öğrenci ve admin hesaplarını görüntüleyin, düzenleyin ve filtreleyin.
             </CardDescription>
@@ -112,7 +196,7 @@ export default function AdminUsersPage() {
                 className="pl-8 w-full"
               />
             </div>
-            <Button disabled className="w-full md:w-auto"> {/* TODO: Implement Add User functionality */}
+            <Button onClick={() => setIsAddUserOpen(true)} className="w-full md:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" /> Yeni Kullanıcı Ekle
             </Button>
           </div>
@@ -123,7 +207,7 @@ export default function AdminUsersPage() {
               <p className="text-muted-foreground">Sistemde kayıtlı kullanıcı bulunmamaktadır.</p>
             </div>
           ) : filteredUsers.length === 0 ? (
-             <div className="my-6 p-4 border border-dashed rounded-lg aspect-video bg-muted flex flex-col items-center justify-center">
+            <div className="my-6 p-4 border border-dashed rounded-lg aspect-video bg-muted flex flex-col items-center justify-center">
               <Search className="h-16 w-16 text-muted-foreground mb-4" />
               <p className="text-muted-foreground">Arama kriterlerinize uygun kullanıcı bulunamadı.</p>
             </div>
@@ -146,8 +230,11 @@ export default function AdminUsersPage() {
                       <TableCell>{user.studentNumber || "-"}</TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell>
-                        <Badge variant={user.role === "admin" ? "destructive" : "secondary"}>
-                          {user.role === "admin" ? "Admin" : "Öğrenci"}
+                        <Badge
+                          variant={user.role === "admin" ? "destructive" : user.role === "driver" ? "default" : "secondary"}
+                          className={user.role === "driver" ? "bg-blue-600 hover:bg-blue-700" : ""}
+                        >
+                          {user.role === "admin" ? "Admin" : user.role === "driver" ? "Şoför" : "Öğrenci"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -155,9 +242,9 @@ export default function AdminUsersPage() {
                           <Edit className="h-4 w-4" />
                           <span className="sr-only">Düzenle</span>
                         </Button>
-                        <Button variant="ghost" size="icon" disabled> {/* TODO: Implement Delete User */}
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id, user.name)}>
                           <Trash2 className="h-4 w-4" />
-                           <span className="sr-only">Sil</span>
+                          <span className="sr-only">Sil</span>
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -166,16 +253,21 @@ export default function AdminUsersPage() {
               </Table>
             </div>
           )}
-           <CardDescription className="mt-4 text-xs">
+          <CardDescription className="mt-4 text-xs">
             Not: Şifreler güvenlik nedeniyle burada gösterilmemektedir.
           </CardDescription>
         </CardContent>
       </Card>
-       <UserFormDialog
+      <UserFormDialog
         isOpen={isUserFormOpen}
         onClose={handleCloseUserFormDialog}
         onSave={handleSaveUser}
         user={editingUser}
+      />
+      <AddUserDialog
+        isOpen={isAddUserOpen}
+        onClose={() => setIsAddUserOpen(false)}
+        onSave={handleAddUser}
       />
     </div>
   );

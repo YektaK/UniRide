@@ -1,4 +1,4 @@
-export type UserRole = "student" | "admin";
+export type UserRole = "student" | "admin" | "driver";
 
 export interface User {
   id: string;
@@ -9,7 +9,9 @@ export interface User {
   studentNumber?: string; // Added student number
   homeAddress?: string;
   homeCoordinates?: { lat: number; lng: number };
-  accessibilityNeeds?: string[]; // e.g., ["wheelchair", "visual_impairment"]
+  accessibilityNeeds?: string[]; // e.g., ["visual_impairment", "hearing_impairment"]
+  disabilityType?: "Sw" | "So"; // Sw = wheelchair, So = other disability
+  locationCode?: string; // Test data reference: Sw1, So5, etc.
   weeklyScheduleId?: string; // Reference to a schedule document/object
 }
 

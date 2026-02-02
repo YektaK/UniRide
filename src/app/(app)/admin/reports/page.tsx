@@ -16,7 +16,7 @@ import { BarChart, CartesianGrid, XAxis, YAxis, Bar, Tooltip, Legend, Responsive
 import { format, getDay, startOfWeek, addDays, endOfWeek } from "date-fns";
 import { tr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
-import { getUsers, getStudentSchedule } from "@/lib/mock-database";
+import { getUsers, getStudentSchedule } from "@/lib/database";
 import type { User, ScheduleEntry } from "@/types";
 
 interface ChartData {
@@ -37,37 +37,41 @@ const localizedDays: Record<ScheduleEntry["dayOfWeek"], string> = {
 };
 
 
-const processArrivalDataForChart = (users: User[], targetDate: Date | undefined): ChartData[] => {
+const processArrivalDataForChart = async (users: User[], targetDate: Date | undefined): Promise<ChartData[]> => {
   if (!targetDate) return [];
   const hourlyDemand: Record<string, { wheelchair: number; other: number }> = {};
   const students = users.filter(u => u.role === 'student');
   const dayIndex = getDay(targetDate);
   const targetDayName = daysOrder[dayIndex === 0 ? 6 : dayIndex -1]; 
 
-
-  students.forEach(student => {
+  // Process all students in parallel
+  await Promise.all(students.map(async (student) => {
     if (student.weeklyScheduleId) {
-      const schedule = getStudentSchedule(student.weeklyScheduleId);
-      if (schedule) {
-        const entriesForTargetDay = schedule.entries
-          .filter(entry => entry.dayOfWeek === targetDayName)
-          .sort((a, b) => a.startTime.localeCompare(b.startTime));
+      try {
+        const schedule = await getStudentSchedule(student.weeklyScheduleId);
+        if (schedule) {
+          const entriesForTargetDay = schedule.entries
+            .filter(entry => entry.dayOfWeek === targetDayName)
+            .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
-        if (entriesForTargetDay.length > 0) {
-          const firstArrivalTime = entriesForTargetDay[0].startTime;
-          const hour = firstArrivalTime.substring(0, 2) + ":00"; 
-          if (!hourlyDemand[hour]) {
-            hourlyDemand[hour] = { wheelchair: 0, other: 0 };
-          }
-          if (student.accessibilityNeeds?.includes("wheelchair")) {
-            hourlyDemand[hour].wheelchair++;
-          } else {
-            hourlyDemand[hour].other++;
+          if (entriesForTargetDay.length > 0) {
+            const firstArrivalTime = entriesForTargetDay[0].startTime;
+            const hour = firstArrivalTime.substring(0, 2) + ":00"; 
+            if (!hourlyDemand[hour]) {
+              hourlyDemand[hour] = { wheelchair: 0, other: 0 };
+            }
+            if (student.accessibilityNeeds?.includes("wheelchair")) {
+              hourlyDemand[hour].wheelchair++;
+            } else {
+              hourlyDemand[hour].other++;
+            }
           }
         }
+      } catch (error) {
+        console.error(`Error loading schedule for student ${student.id}:`, error);
       }
     }
-  });
+  }));
 
   return Object.entries(hourlyDemand)
     .map(([timeSlot, counts]) => ({
@@ -78,36 +82,41 @@ const processArrivalDataForChart = (users: User[], targetDate: Date | undefined)
     .sort((a, b) => a.timeSlot.localeCompare(b.timeSlot));
 };
 
-const processDepartureDataForChart = (users: User[], targetDate: Date | undefined): ChartData[] => {
+const processDepartureDataForChart = async (users: User[], targetDate: Date | undefined): Promise<ChartData[]> => {
   if (!targetDate) return [];
   const hourlyDemand: Record<string, { wheelchair: number; other: number }> = {};
   const students = users.filter(u => u.role === 'student');
   const dayIndex = getDay(targetDate);
   const targetDayName = daysOrder[dayIndex === 0 ? 6 : dayIndex -1];
 
-  students.forEach(student => {
+  // Process all students in parallel
+  await Promise.all(students.map(async (student) => {
     if (student.weeklyScheduleId) {
-      const schedule = getStudentSchedule(student.weeklyScheduleId);
-      if (schedule) {
-        const entriesForTargetDay = schedule.entries
-          .filter(entry => entry.dayOfWeek === targetDayName)
-          .sort((a, b) => a.endTime.localeCompare(b.endTime)); 
+      try {
+        const schedule = await getStudentSchedule(student.weeklyScheduleId);
+        if (schedule) {
+          const entriesForTargetDay = schedule.entries
+            .filter(entry => entry.dayOfWeek === targetDayName)
+            .sort((a, b) => a.endTime.localeCompare(b.endTime)); 
 
-        if (entriesForTargetDay.length > 0) {
-          const lastDepartureTime = entriesForTargetDay[entriesForTargetDay.length - 1].endTime;
-          const hour = lastDepartureTime.substring(0, 2) + ":00"; 
-          if (!hourlyDemand[hour]) {
-            hourlyDemand[hour] = { wheelchair: 0, other: 0 };
-          }
-          if (student.accessibilityNeeds?.includes("wheelchair")) {
-            hourlyDemand[hour].wheelchair++;
-          } else {
-            hourlyDemand[hour].other++;
+          if (entriesForTargetDay.length > 0) {
+            const lastDepartureTime = entriesForTargetDay[entriesForTargetDay.length - 1].endTime;
+            const hour = lastDepartureTime.substring(0, 2) + ":00"; 
+            if (!hourlyDemand[hour]) {
+              hourlyDemand[hour] = { wheelchair: 0, other: 0 };
+            }
+            if (student.accessibilityNeeds?.includes("wheelchair")) {
+              hourlyDemand[hour].wheelchair++;
+            } else {
+              hourlyDemand[hour].other++;
+            }
           }
         }
+      } catch (error) {
+        console.error(`Error loading schedule for student ${student.id}:`, error);
       }
     }
-  });
+  }));
 
   return Object.entries(hourlyDemand)
     .map(([timeSlot, counts]) => ({
@@ -149,46 +158,62 @@ export default function AdminReportsPage() {
 
   useEffect(() => {
     setIsLoading(true);
-    const allUsers = getUsers();
-    const today = new Date();
-    const weekStart = startOfWeek(today, { weekStartsOn: 1, locale: tr }); 
-    
-    setCurrentWeekDisplay(
-      `${format(weekStart, "dd MMMM", { locale: tr })} - ${format(addDays(weekStart, 6), "dd MMMM yyyy", { locale: tr })}`
-    );
+    const loadReports = async () => {
+      try {
+        const allUsers = await getUsers();
+        const today = new Date();
+        const weekStart = startOfWeek(today, { weekStartsOn: 1, locale: tr }); 
+        
+        setCurrentWeekDisplay(
+          `${format(weekStart, "dd MMMM", { locale: tr })} - ${format(addDays(weekStart, 6), "dd MMMM yyyy", { locale: tr })}`
+        );
 
-    const daysInWeek: Date[] = [];
-    for (let i = 0; i < 7; i++) {
-      daysInWeek.push(addDays(weekStart, i));
-    }
+        const daysInWeek: Date[] = [];
+        for (let i = 0; i < 7; i++) {
+          daysInWeek.push(addDays(weekStart, i));
+        }
 
-    let maxArrivalForWeek = 0;
-    let maxDepartureForWeek = 0;
+        let maxArrivalForWeek = 0;
+        let maxDepartureForWeek = 0;
 
-    const processedDataForWeek = daysInWeek.map(date => {
-      const dayIndex = getDay(date); 
-      const dayNameKey = daysOrder[dayIndex === 0 ? 6 : dayIndex - 1];
-      
-      const arrivalData = processArrivalDataForChart(allUsers, date);
-      const departureData = processDepartureDataForChart(allUsers, date);
+        // Process all days in parallel
+        const processedDataForWeek = await Promise.all(daysInWeek.map(async (date) => {
+          const dayIndex = getDay(date); 
+          const dayNameKey = daysOrder[dayIndex === 0 ? 6 : dayIndex - 1];
+          
+          const [arrivalData, departureData] = await Promise.all([
+            processArrivalDataForChart(allUsers, date),
+            processDepartureDataForChart(allUsers, date),
+          ]);
 
-      if (arrivalData.length > 0) {
-        const dayMaxArrival = Math.max(...arrivalData.map(d => d.Wheelchair + d.Other));
-        if (dayMaxArrival > maxArrivalForWeek) maxArrivalForWeek = dayMaxArrival;
+          if (arrivalData.length > 0) {
+            const dayMaxArrival = Math.max(...arrivalData.map(d => d.Wheelchair + d.Other));
+            if (dayMaxArrival > maxArrivalForWeek) maxArrivalForWeek = dayMaxArrival;
+          }
+          if (departureData.length > 0) {
+            const dayMaxDeparture = Math.max(...departureData.map(d => d.Wheelchair + d.Other));
+            if (dayMaxDeparture > maxDepartureForWeek) maxDepartureForWeek = dayMaxDeparture;
+          }
+          
+          return { date, dayNameKey, arrivalData, departureData };
+        }));
+
+        setWeeklyChartData(processedDataForWeek);
+        setGlobalArrivalMaxY(maxArrivalForWeek > 0 ? maxArrivalForWeek + 1 : DEFAULT_Y_AXIS_MAX);
+        setGlobalDepartureMaxY(maxDepartureForWeek > 0 ? maxDepartureForWeek + 1 : DEFAULT_Y_AXIS_MAX);
+      } catch (error) {
+        console.error("Error loading reports:", error);
+        toast({
+          title: "Rapor Yükleme Hatası",
+          description: "Rapor verileri yüklenirken bir hata oluştu.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
-      if (departureData.length > 0) {
-        const dayMaxDeparture = Math.max(...departureData.map(d => d.Wheelchair + d.Other));
-        if (dayMaxDeparture > maxDepartureForWeek) maxDepartureForWeek = dayMaxDeparture;
-      }
-      
-      return { date, dayNameKey, arrivalData, departureData };
-    });
-
-    setWeeklyChartData(processedDataForWeek);
-    setGlobalArrivalMaxY(maxArrivalForWeek > 0 ? maxArrivalForWeek + 1 : DEFAULT_Y_AXIS_MAX);
-    setGlobalDepartureMaxY(maxDepartureForWeek > 0 ? maxDepartureForWeek + 1 : DEFAULT_Y_AXIS_MAX);
-    setIsLoading(false);
-  }, []);
+    };
+    loadReports();
+  }, [toast]);
 
   const handleDownloadWeekly = () => {
     toast({

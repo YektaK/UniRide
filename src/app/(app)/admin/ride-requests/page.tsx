@@ -18,7 +18,7 @@ import { ShieldAlert, CheckCircle, XCircle, AlertCircle, Search } from "lucide-r
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
-import { getRideRequests, updateRideRequestStatus, getUsers } from "@/lib/mock-database";
+import { adminApi } from "@/lib/admin-api";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -42,13 +42,52 @@ export default function AdminRideRequestsPage() {
 
   useEffect(() => {
     setIsLoading(true);
-    const fetchedUsers = getUsers();
-    const fetchedRequests = getRideRequests();
-    setUsers(fetchedUsers);
-    setAllRequests(fetchedRequests);
-    setFilteredRequests(fetchedRequests);
-    setIsLoading(false);
-  }, []);
+    const loadData = async () => {
+      try {
+        // Load users and ride requests via admin API
+        const [fetchedUsers, fetchedRequests] = await Promise.all([
+          adminApi.users.getAll(),
+          adminApi.rideRequests.getAll(),
+        ]);
+
+        // Convert users from snake_case
+        const convertedUsers = fetchedUsers.map((u: any) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          role: u.role,
+          studentNumber: u.student_number,
+        }));
+
+        // Convert ride requests from snake_case
+        const convertedRequests = fetchedRequests.map((r: any) => ({
+          id: r.id,
+          userId: r.user_id,
+          type: r.type,
+          pickupLocation: r.pickup_location || { address: "Belirtilmemiş", lat: 0, lng: 0 },
+          dropoffLocation: r.dropoff_location || { address: "Belirtilmemiş", lat: 0, lng: 0 },
+          requestedPickupTime: r.requested_pickup_time,
+          status: r.status,
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
+        }));
+
+        setUsers(convertedUsers);
+        setAllRequests(convertedRequests);
+        setFilteredRequests(convertedRequests);
+      } catch (error) {
+        console.error("Error loading data:", error);
+        toast({
+          title: "Yükleme Hatası",
+          description: "Veriler yüklenirken bir hata oluştu.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, [toast]);
 
   useEffect(() => {
     const lowerSearchTerm = searchTerm.toLowerCase();
@@ -60,17 +99,24 @@ export default function AdminRideRequestsPage() {
       const pickupLocation = request.pickupLocation.address.toLowerCase();
 
       return studentName.includes(lowerSearchTerm) ||
-             requestDate.includes(lowerSearchTerm) ||
-             statusLabel.includes(lowerSearchTerm) ||
-             pickupLocation.includes(lowerSearchTerm);
+        requestDate.includes(lowerSearchTerm) ||
+        statusLabel.includes(lowerSearchTerm) ||
+        pickupLocation.includes(lowerSearchTerm);
     });
     setFilteredRequests(filtered);
   }, [searchTerm, allRequests, users]);
 
 
-  const handleUpdateRequestStatus = (requestId: string, newStatus: RideStatus, studentName: string | undefined) => {
-    if (updateRideRequestStatus(requestId, newStatus)) {
+  const handleUpdateRequestStatus = async (requestId: string, newStatus: RideStatus, studentName: string | undefined) => {
+    try {
+      await adminApi.rideRequests.updateStatus(requestId, { status: newStatus });
+
       setAllRequests(prevRequests =>
+        prevRequests.map(req =>
+          req.id === requestId ? { ...req, status: newStatus } : req
+        )
+      );
+      setFilteredRequests(prevRequests =>
         prevRequests.map(req =>
           req.id === requestId ? { ...req, status: newStatus } : req
         )
@@ -79,7 +125,8 @@ export default function AdminRideRequestsPage() {
         title: "Talep Durumu Güncellendi",
         description: `${studentName || 'Öğrenci'}'nin talebi "${statusDisplayMap[newStatus].label}" olarak işaretlendi.`,
       });
-    } else {
+    } catch (error) {
+      console.error("Error updating request status:", error);
       toast({
         title: "Güncelleme Başarısız",
         description: "Talep durumu güncellenirken bir hata oluştu.",
@@ -106,7 +153,7 @@ export default function AdminRideRequestsPage() {
     <div className="space-y-6">
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl flex items-center gap-2"><ShieldAlert className="text-primary"/>Servis Talepleri Yönetimi</CardTitle>
+          <CardTitle className="text-2xl flex items-center gap-2"><ShieldAlert className="text-primary" />Servis Talepleri Yönetimi</CardTitle>
           <CardDescription>
             Öğrencilerden gelen anlık ve programlı servis taleplerini onaylayın veya reddedin.
           </CardDescription>
@@ -150,7 +197,7 @@ export default function AdminRideRequestsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRequests.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() ).map((request) => {
+                  {filteredRequests.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((request) => {
                     const studentName = getStudentName(request.userId);
                     return (
                       <TableRow key={request.id}>
@@ -166,7 +213,7 @@ export default function AdminRideRequestsPage() {
                         <TableCell>{request.pickupLocation.address}</TableCell>
                         <TableCell>{request.dropoffLocation.address}</TableCell>
                         <TableCell className="text-center">
-                          <Badge 
+                          <Badge
                             variant={statusDisplayMap[request.status].variant}
                             className={cn("font-semibold", statusDisplayMap[request.status].className)}
                           >
@@ -176,17 +223,17 @@ export default function AdminRideRequestsPage() {
                         <TableCell className="text-right space-x-2">
                           {request.status === "pending_admin_approval" && (
                             <>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 onClick={() => handleUpdateRequestStatus(request.id, "confirmed", studentName)}
                                 className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700"
                               >
                                 <CheckCircle className="mr-1 h-4 w-4" /> Onayla
                               </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 onClick={() => handleUpdateRequestStatus(request.id, "cancelled_by_admin", studentName)}
                                 className="text-red-600 border-red-600 hover:bg-red-50 hover:text-red-700"
                               >
@@ -194,16 +241,16 @@ export default function AdminRideRequestsPage() {
                               </Button>
                             </>
                           )}
-                           {(request.status === "confirmed" || request.status === "in_progress") && (
-                             <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => handleUpdateRequestStatus(request.id, "cancelled_by_admin", studentName)}
-                                className="text-red-600 border-red-600 hover:bg-red-50 hover:text-red-700"
-                              >
-                                <XCircle className="mr-1 h-4 w-4" /> İptal Et
-                              </Button>
-                           )}
+                          {(request.status === "confirmed" || request.status === "in_progress") && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleUpdateRequestStatus(request.id, "cancelled_by_admin", studentName)}
+                              className="text-red-600 border-red-600 hover:bg-red-50 hover:text-red-700"
+                            >
+                              <XCircle className="mr-1 h-4 w-4" /> İptal Et
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
@@ -218,4 +265,3 @@ export default function AdminRideRequestsPage() {
   );
 }
 
-    

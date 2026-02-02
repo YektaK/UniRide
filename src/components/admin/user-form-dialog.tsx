@@ -34,11 +34,16 @@ interface UserFormDialogProps {
   user: User | null;
 }
 
+const disabilityTypeOptions = [
+  { id: "Sw", label: "Sw - Tekerlekli Sandalye" },
+  { id: "So", label: "So - Diğer Engel Tipi" },
+];
+
 const accessibilityNeedsOptions = [
-  { id: "wheelchair", label: "Tekerlekli Sandalye Kullanıcısı" },
   { id: "visual_impairment", label: "Görme Engelli" },
   { id: "hearing_impairment", label: "İşitme Engelli" },
-  { id: "other", label: "Diğer (Lütfen belirtin)" },
+  { id: "mobility_aid", label: "Yürüme Desteği" },
+  { id: "other", label: "Diğer" },
 ];
 
 // Role is no longer part of the editable form values
@@ -48,10 +53,12 @@ const userFormSchema = z.object({
   email: z.string().email({ message: "Geçerli bir e-posta adresi girin." }),
   studentNumber: z.string().optional(),
   homeAddress: z.string().optional(),
+  disabilityType: z.enum(["Sw", "So"]).optional(),
   accessibilityNeeds: z.array(z.string()).optional(),
   otherAccessibilityNeed: z.string().optional(),
-  password: z.string().optional(), 
-  weeklyScheduleId: z.string().optional(), 
+  locationCode: z.string().optional(),
+  password: z.string().optional(),
+  weeklyScheduleId: z.string().optional(),
   role: z.enum(["student", "admin"]) as z.ZodType<UserRole>, // Keep role for data structure, but not for editing
 }).refine(data => {
   // Student number validation only if the user's role (which is not editable in this form but comes with the user object) is "student"
@@ -77,22 +84,24 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
         ...user, // This will include the non-editable role
         studentNumber: user.studentNumber || "",
         homeAddress: user.homeAddress || "",
+        disabilityType: (user as any).disabilityType || undefined,
+        locationCode: (user as any).locationCode || "",
         accessibilityNeeds: user.accessibilityNeeds || [],
         otherAccessibilityNeed: user.accessibilityNeeds?.includes("other")
           ? user.accessibilityNeeds.find(n => n.startsWith("other:"))?.split(":")[1] || ""
           : "",
       });
-    } else if (isOpen && !user) { 
-        form.reset({ // Default for a potential "add user" - though this dialog is for edit
-            id: `new-${Date.now()}`, 
-            name: "",
-            email: "",
-            role: "student", // Default role for new user if this form were used for adding
-            studentNumber: "",
-            homeAddress: "",
-            accessibilityNeeds: [],
-            otherAccessibilityNeed: ""
-        });
+    } else if (isOpen && !user) {
+      form.reset({ // Default for a potential "add user" - though this dialog is for edit
+        id: `new-${Date.now()}`,
+        name: "",
+        email: "",
+        role: "student", // Default role for new user if this form were used for adding
+        studentNumber: "",
+        homeAddress: "",
+        accessibilityNeeds: [],
+        otherAccessibilityNeed: ""
+      });
     }
   }, [user, form, isOpen]);
 
@@ -102,7 +111,7 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
   const handleSubmit = (data: UserFormValues) => {
     const finalAccessibilityNeeds = data.accessibilityNeeds?.filter(need => need !== "other") || [];
     if (data.accessibilityNeeds?.includes("other") && data.otherAccessibilityNeed) {
-        finalAccessibilityNeeds.push(`other:${data.otherAccessibilityNeed}`);
+      finalAccessibilityNeeds.push(`other:${data.otherAccessibilityNeed}`);
     }
 
     // The user's original role is preserved from the 'user' prop
@@ -117,9 +126,9 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
 
     // If the user's role is admin, student-specific fields should be undefined
     if (userDataToSave.role === 'admin') {
-        userDataToSave.studentNumber = undefined;
-        userDataToSave.homeAddress = undefined;
-        userDataToSave.accessibilityNeeds = [];
+      userDataToSave.studentNumber = undefined;
+      userDataToSave.homeAddress = undefined;
+      userDataToSave.accessibilityNeeds = [];
     }
 
     onSave(userDataToSave);
@@ -165,7 +174,7 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
                 </FormItem>
               )}
             />
-            
+
             {/* Role selection field is removed */}
 
             {user?.role === "student" && ( // Conditionally render based on the original user's role
@@ -179,6 +188,31 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
                       <FormControl>
                         <Input placeholder="12 haneli numara" {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="disabilityType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Engel Tipi</FormLabel>
+                      <div className="flex gap-4">
+                        {disabilityTypeOptions.map((option) => (
+                          <label key={option.id} className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="disabilityType"
+                              value={option.id}
+                              checked={field.value === option.id}
+                              onChange={() => field.onChange(option.id)}
+                              className="w-4 h-4"
+                            />
+                            <span className="text-sm">{option.label}</span>
+                          </label>
+                        ))}
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -222,10 +256,10 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
                                       return checked
                                         ? checkboxField.onChange([...(checkboxField.value || []), item.id])
                                         : checkboxField.onChange(
-                                            checkboxField.value?.filter(
-                                              (value) => value !== item.id
-                                            )
-                                          );
+                                          checkboxField.value?.filter(
+                                            (value) => value !== item.id
+                                          )
+                                        );
                                     }}
                                   />
                                 </FormControl>
@@ -242,19 +276,19 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
                   )}
                 />
                 {form.watch("accessibilityNeeds")?.includes("other") && (
-                    <FormField
-                        control={form.control}
-                        name="otherAccessibilityNeed"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Diğer Erişilebilirlik İhtiyacı</FormLabel>
-                            <FormControl>
-                                <Input placeholder="Lütfen belirtin..." {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                  <FormField
+                    control={form.control}
+                    name="otherAccessibilityNeed"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Diğer Erişilebilirlik İhtiyacı</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Lütfen belirtin..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 )}
               </>
             )}
@@ -272,4 +306,3 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
   );
 }
 
-    

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { CalendarDays, PlusCircle } from "lucide-react";
 import ScheduleDisplay from "@/components/student/schedule-display";
 import ScheduleFormDialog from "@/components/student/schedule-form-dialog";
-import { getStudentSchedule, updateStudentScheduleEntries, createNewUserSchedule } from "@/lib/mock-database";
+import { getStudentSchedule, updateStudentScheduleEntries, createNewUserSchedule } from "@/lib/database";
 
 const allPossibleDays: ScheduleEntry["dayOfWeek"][] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
@@ -22,17 +22,23 @@ export default function SchedulePage() {
 
   useEffect(() => {
     setIsLoading(true);
-    if (user && user.role === "student" && user.weeklyScheduleId) {
-      let userSchedule = getStudentSchedule(user.weeklyScheduleId);
-      if (!userSchedule) {
-        // If schedule doesn't exist in mock DB (e.g. for a newly registered student not in initial mocks)
-        // create a new empty schedule for them.
-        // For this demo, we'll assume weeklyScheduleId is always pre-assigned and exists or we create it.
-        userSchedule = createNewUserSchedule(user.id, user.weeklyScheduleId);
+    const loadSchedule = async () => {
+      if (user && user.role === "student" && user.weeklyScheduleId) {
+        try {
+          let userSchedule = await getStudentSchedule(user.weeklyScheduleId);
+          if (!userSchedule) {
+            // If schedule doesn't exist, create a new empty schedule
+            userSchedule = await createNewUserSchedule(user.id, user.weeklyScheduleId);
+          }
+          setSchedule(userSchedule || null);
+        } catch (error) {
+          console.error("Error loading schedule:", error);
+          setSchedule(null);
+        }
       }
-      setSchedule(userSchedule || null);
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+    loadSchedule();
   }, [user]);
 
   const handleAddEntry = () => {
@@ -45,42 +51,54 @@ export default function SchedulePage() {
     setIsFormOpen(true);
   };
 
-  const handleDeleteEntry = (entryId: string) => {
+  const handleDeleteEntry = async (entryId: string) => {
     if (schedule && user && user.weeklyScheduleId && window.confirm("Bu ders girişini silmek istediğinizden emin misiniz?")) {
-        const updatedEntries = schedule.entries.filter(e => e.id !== entryId);
-        // No need to sort here, updateStudentScheduleEntries will handle it.
-        if (updateStudentScheduleEntries(user.weeklyScheduleId, updatedEntries)) {
-            setSchedule(prevSchedule => prevSchedule ? {...prevSchedule, entries: updatedEntries, lastUpdated: new Date().toISOString()} : null);
-        } else {
-            // Handle error - e.g. schedule not found in mock DB
-            console.error("Error deleting entry: Schedule not found in mock DB");
+        try {
+          const updatedEntries = schedule.entries.filter(e => e.id !== entryId);
+          // No need to sort here, updateStudentScheduleEntries will handle it.
+          const success = await updateStudentScheduleEntries(user.weeklyScheduleId, updatedEntries);
+          if (success) {
+            // Reload schedule from database to get updated version
+            const updatedSchedule = await getStudentSchedule(user.weeklyScheduleId);
+            if (updatedSchedule) {
+              setSchedule(updatedSchedule);
+            }
+          } else {
+            console.error("Error deleting entry: Failed to update schedule");
+          }
+        } catch (error) {
+          console.error("Error deleting entry:", error);
         }
     }
   };
   
-  const handleSaveEntry = (entryData: Omit<ScheduleEntry, 'id'>, entryId?: string) => {
+  const handleSaveEntry = async (entryData: Omit<ScheduleEntry, 'id'>, entryId?: string) => {
     if (schedule && user && user.weeklyScheduleId) {
-      let updatedEntries;
-      if (entryId) { 
-        updatedEntries = schedule.entries.map(e => e.id === entryId ? { ...e, ...entryData, id: entryId } : e);
-      } else { 
-        const newEntry: ScheduleEntry = {
-          ...entryData,
-          id: `se${Date.now()}${Math.random().toString(36).substring(2, 7)}`
-        };
-        updatedEntries = [...schedule.entries, newEntry];
-      }
-      
-      // The sort will be handled by updateStudentScheduleEntries
-      if (updateStudentScheduleEntries(user.weeklyScheduleId, updatedEntries)) {
-         // Fetch the potentially sorted schedule from the "DB" to ensure consistency
-        const latestScheduleFromDb = getStudentSchedule(user.weeklyScheduleId);
-        if (latestScheduleFromDb) {
-            setSchedule(latestScheduleFromDb);
+      try {
+        let updatedEntries;
+        if (entryId) { 
+          updatedEntries = schedule.entries.map(e => e.id === entryId ? { ...e, ...entryData, id: entryId } : e);
+        } else { 
+          const newEntry: ScheduleEntry = {
+            ...entryData,
+            id: `se${Date.now()}${Math.random().toString(36).substring(2, 7)}`
+          };
+          updatedEntries = [...schedule.entries, newEntry];
         }
-      } else {
-          // Handle error
-          console.error("Error saving entry: Schedule not found in mock DB");
+        
+        // The sort will be handled by updateStudentScheduleEntries
+        const success = await updateStudentScheduleEntries(user.weeklyScheduleId, updatedEntries);
+        if (success) {
+          // Fetch the potentially sorted schedule from the database to ensure consistency
+          const latestScheduleFromDb = await getStudentSchedule(user.weeklyScheduleId);
+          if (latestScheduleFromDb) {
+            setSchedule(latestScheduleFromDb);
+          }
+        } else {
+          console.error("Error saving entry: Failed to update schedule");
+        }
+      } catch (error) {
+        console.error("Error saving entry:", error);
       }
     }
     setIsFormOpen(false);

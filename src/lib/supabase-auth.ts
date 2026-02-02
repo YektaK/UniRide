@@ -1,0 +1,241 @@
+/**
+ * Supabase Authentication Helper Functions
+ * Implements authentication using Supabase Auth
+ */
+
+import { getSupabaseClient } from "./supabase";
+import { getUserByEmail, getUserByStudentNumber, createUser, updateUser, createSchedule } from "./database";
+import type { FirestoreUser } from "@/types/firestore";
+import type { User } from "@/types";
+
+/**
+ * Convert FirestoreUser to User (for backward compatibility)
+ */
+const firestoreUserToUser = (firestoreUser: FirestoreUser): User => {
+  return {
+    id: firestoreUser.id,
+    name: firestoreUser.name,
+    email: firestoreUser.email,
+    role: firestoreUser.role,
+    studentNumber: firestoreUser.studentNumber,
+    homeAddress: firestoreUser.homeAddress,
+    homeCoordinates: firestoreUser.homeCoordinates,
+    accessibilityNeeds: firestoreUser.accessibilityNeeds,
+    weeklyScheduleId: firestoreUser.weeklyScheduleId,
+  };
+};
+
+/**
+ * Sign in with email and password
+ */
+export const signIn = async (
+  emailOrStudentNumber: string,
+  password: string
+): Promise<User | null> => {
+  try {
+    let email = emailOrStudentNumber.toLowerCase();
+
+    // Try email first
+    const supabaseClient = getSupabaseClient();
+    let { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    // If email fails, try student number
+    if (authError || !authData.user) {
+      const user = await getUserByStudentNumber(emailOrStudentNumber);
+      if (user && user.email) {
+        email = user.email.toLowerCase();
+        const result = await supabaseClient.auth.signInWithPassword({
+          email,
+          password,
+        });
+        authData = result.data;
+        authError = result.error;
+      }
+    }
+
+    if (authError || !authData.user) {
+      console.error("Sign in error:", authError);
+      return null;
+    }
+
+    // Get user data from database
+    const firestoreUser = await getUserByEmail(authData.user.email!);
+    if (!firestoreUser) {
+      console.error("User not found in database");
+      return null;
+    }
+
+    return firestoreUserToUser(firestoreUser);
+  } catch (error) {
+    console.error("Sign in error:", error);
+    return null;
+  }
+};
+
+/**
+ * Register new user
+ */
+export const signUp = async (
+  email: string,
+  password: string,
+  name: string,
+  studentNumber?: string,
+  role: User["role"] = "student",
+  userData?: Partial<Pick<FirestoreUser, 'homeAddress' | 'accessibilityNeeds'>>
+): Promise<User | null> => {
+  try {
+    // Create user in Supabase Auth
+    const supabaseClient = getSupabaseClient();
+    const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+      email: email.toLowerCase(),
+      password,
+    });
+
+    if (authError || !authData.user) {
+      console.error("Sign up error:", authError);
+      throw authError || new Error("Failed to create user");
+    }
+
+    // Create user document in database FIRST (before schedule due to foreign key)
+    const newUser: FirestoreUser = {
+      id: authData.user.id,
+      name,
+      email: authData.user.email!,
+      role,
+      studentNumber,
+      homeAddress: userData?.homeAddress || "",
+      accessibilityNeeds: userData?.accessibilityNeeds || [],
+      weeklyScheduleId: undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await createUser(newUser, authData.user.id);
+
+    // Create weekly schedule for students AFTER user exists
+    let weeklyScheduleId: string | undefined;
+    if (role === "student") {
+      const schedule = await createSchedule({
+        userId: authData.user.id,
+        entries: [],
+        lastUpdated: new Date().toISOString()
+      });
+      weeklyScheduleId = schedule.id;
+
+      // Update user with schedule id
+      await updateUser(authData.user.id, { weeklyScheduleId });
+      newUser.weeklyScheduleId = weeklyScheduleId;
+    }
+
+    return firestoreUserToUser(newUser);
+  } catch (error) {
+    console.error("Sign up error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Register new user (wrapper for signUp)
+ * This function is for compatibility with register-form.tsx
+ */
+export const register = async (
+  email: string,
+  password: string,
+  userData: Omit<FirestoreUser, 'id' | 'email' | 'createdAt' | 'updatedAt' | 'passwordHash' | 'weeklyScheduleId'>
+): Promise<User> => {
+  const result = await signUp(
+    email,
+    password,
+    userData.name,
+    userData.studentNumber,
+    userData.role || "student",
+    {
+      homeAddress: userData.homeAddress,
+      accessibilityNeeds: userData.accessibilityNeeds
+    }
+  );
+
+  if (!result) {
+    throw new Error("Failed to register user");
+  }
+
+  return result;
+};
+
+/**
+ * Sign out user
+ */
+export const signOutUser = async (): Promise<void> => {
+  try {
+    const supabaseClient = getSupabaseClient();
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) {
+      console.error("Sign out error:", error);
+      throw error;
+    }
+  } catch (error) {
+    console.error("Sign out error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Listen to auth state changes
+ */
+export const onAuthStateChange = (callback: (user: User | null) => void): (() => void) => {
+  // Set up Supabase auth state listener
+  const supabaseClient = getSupabaseClient();
+  const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    if (session?.user?.email) {
+      try {
+        const firestoreUser = await getUserByEmail(session.user.email);
+        if (firestoreUser) {
+          callback(firestoreUserToUser(firestoreUser));
+        } else {
+          // User exists in Auth but not in database - this can happen during registration
+          callback(null);
+        }
+      } catch (error: any) {
+        // Only log actual errors, not expected cases like RLS blocking or user not found
+        if (error?.code && error.code !== "PGRST116" && error.code !== "42501") {
+          console.error("Error getting user:", error);
+        }
+        callback(null);
+      }
+    } else {
+      callback(null);
+    }
+  });
+
+  // Return unsubscribe function
+  return () => {
+    subscription.unsubscribe();
+  };
+};
+
+/**
+ * Get current user
+ */
+export const getCurrentUser = async (): Promise<User | null> => {
+  try {
+    const supabaseClient = getSupabaseClient();
+    const { data: { user: authUser }, error } = await supabaseClient.auth.getUser();
+
+    if (error || !authUser) {
+      return null;
+    }
+
+    const firestoreUser = await getUserByEmail(authUser.email!);
+    if (!firestoreUser) {
+      return null;
+    }
+
+    return firestoreUserToUser(firestoreUser);
+  } catch (error) {
+    console.error("Error getting current user:", error);
+    return null;
+  }
+};

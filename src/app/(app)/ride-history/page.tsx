@@ -18,7 +18,7 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import React, { useEffect, useState } from "react"; // useState eklendi
 import { cn } from "@/lib/utils";
-import { getRideRequests as dbGetRideRequests } from "@/lib/mock-database"; // mock-database'den import edildi
+import { getRideRequests as dbGetRideRequests } from "@/lib/database";
 
 const statusDisplayMap: Record<RideStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
   pending_student_confirmation: { label: "Öğrenci Onayı Bekliyor", variant: "outline", className: "border-yellow-500 text-yellow-700" },
@@ -36,14 +36,23 @@ export default function RideHistoryPage() {
   const [userRequests, setUserRequests] = useState<RideRequest[]>([]); // useState kullanıldı
   const [isDataLoading, setIsDataLoading] = useState(true); // Yeni state eklendi
 
-  useEffect(() => { // React.useEffect yerine useEffect kullanıldı
-    if (user && !isLoading) { // isLoading kontrolü eklendi
+  useEffect(() => {
+    if (user && !isLoading) {
       setIsDataLoading(true);
-      const allRequests = dbGetRideRequests(); // Veritabanından tüm talepler çekildi
-      setUserRequests(allRequests.filter(req => req.userId === user.id));
+      const loadRequests = async () => {
+        try {
+          const allRequests = await dbGetRideRequests({ userId: user.id });
+          setUserRequests(allRequests);
+        } catch (error) {
+          console.error("Error loading ride requests:", error);
+          setUserRequests([]);
+        } finally {
+          setIsDataLoading(false);
+        }
+      };
+      loadRequests();
+    } else if (!user && !isLoading) {
       setIsDataLoading(false);
-    } else if (!user && !isLoading) { // Kullanıcı yoksa ve yükleme bittiyse
-      setIsDataLoading(false); // Yüklemeyi bitir
     }
   }, [user, isLoading]);
 

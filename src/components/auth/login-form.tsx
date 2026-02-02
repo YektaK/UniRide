@@ -44,24 +44,20 @@ export default function LoginForm() {
   });
 
   async function onSubmit(data: LoginFormValues) {
-    login(data.emailOrUsername, data.password); // role parametresi kaldırıldı
-    
-    setTimeout(() => {
-      const storedUser = localStorage.getItem("uniRideUser");
-      if (storedUser) { 
-        toast({
-          title: "Giriş Başarılı",
-          description: "Kontrol paneline yönlendiriliyorsunuz...",
-        });
-        router.push("/dashboard");
-      } else {
-         toast({
-          title: "Giriş Başarısız",
-          description: "E-posta/kullanıcı adı veya şifre hatalı. Lütfen bilgilerinizi kontrol edin. Admin: admin@uniride.com / admin. Öğrenciler için örnekler: student@uniride.com / studentpassword, veli@uniride.com / velipassword, zeynep@uniride.com / zeyneppassword.",
-          variant: "destructive",
-        });
-      }
-    }, 700); 
+    try {
+      await login(data.emailOrUsername, data.password);
+      toast({
+        title: "Giriş Başarılı",
+        description: "Kontrol paneline yönlendiriliyorsunuz...",
+      });
+      router.push("/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "Giriş Başarısız",
+        description: error.message || "E-posta/kullanıcı adı veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.",
+        variant: "destructive",
+      });
+    }
   }
 
   return (

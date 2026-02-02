@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input"; 
 import { FilePenLine, Edit, Search, Upload } from "lucide-react"; 
 import React, { useEffect, useState } from "react";
-import { getUsers as dbGetUsers } from "@/lib/mock-database";
+import { getUsers as dbGetUsers } from "@/lib/database";
 import Link from "next/link";
 import { useRouter } from "next/navigation"; // Import useRouter for navigation
 
@@ -29,10 +29,18 @@ export default function AdminStudentSchedulesPage() {
 
   useEffect(() => {
     setIsLoading(true);
-    const allUsers = dbGetUsers();
-    const studentUsers = allUsers.filter(user => user.role === "student");
-    setStudents(studentUsers);
-    setIsLoading(false);
+    const loadStudents = async () => {
+      try {
+        const allUsers = await dbGetUsers();
+        const studentUsers = allUsers.filter(user => user.role === "student");
+        setStudents(studentUsers);
+      } catch (error) {
+        console.error("Error loading students:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadStudents();
   }, []);
 
   const filteredStudents = students.filter(student =>

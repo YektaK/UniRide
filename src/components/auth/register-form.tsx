@@ -19,8 +19,8 @@ import { UserPlus, Hash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
-import { addUser as dbAddUser } from "@/lib/mock-database"; // Import from mock DB
-import type { User } from "@/types";
+import { register } from "@/lib/supabase-auth";
+import type { FirestoreUser } from "@/types/firestore";
 
 const registerFormSchema = z.object({
   name: z.string().min(2, { message: "Ad Soyad en az 2 karakter olmalıdır." }),
@@ -56,35 +56,36 @@ export default function RegisterForm() {
 
   async function onSubmit(data: RegisterFormValues) {
     setIsLoading(true);
-    
-    // Prepare user data for adding to the mock database
-    // The addUser function in mock-database will assign 'id', 'role', and 'weeklyScheduleId'
-    const newUserPayload: Omit<User, 'id' | 'weeklyScheduleId' | 'role'> = {
-      name: data.name,
-      studentNumber: data.studentNumber,
-      email: data.email,
-      password: data.password, // In a real app, hash this password on the backend
-      // homeAddress and accessibilityNeeds can be empty or prompted later
-      homeAddress: "", 
-      accessibilityNeeds: [],
-    };
 
-    const createdUser = dbAddUser(newUserPayload);
+    try {
+      // Prepare user data for Firebase registration
+      const newUserPayload: Omit<FirestoreUser, 'id' | 'email' | 'createdAt' | 'updatedAt' | 'passwordHash' | 'weeklyScheduleId'> = {
+        name: data.name,
+        studentNumber: data.studentNumber,
+        role: "student", // All registrations are students
+        homeAddress: "",
+        accessibilityNeeds: [],
+      };
 
-    if (createdUser) {
+      // Register user with Firebase Auth and create Firestore document
+      // The register function automatically creates the weekly schedule
+      const createdUser = await register(data.email, data.password, newUserPayload);
+
       toast({
         title: "Kayıt Başarılı",
         description: `Hesabınız başarıyla oluşturuldu: ${createdUser.name}. Giriş sayfasına yönlendiriliyorsunuz.`,
       });
       router.push("/login");
-    } else {
+    } catch (error: any) {
+      console.error("Registration error:", error);
       toast({
         title: "Kayıt Başarısız",
-        description: "Kullanıcı oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.",
+        description: error.message || "Kullanıcı oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }
 
   return (
@@ -113,7 +114,7 @@ export default function RegisterForm() {
                 <Input placeholder="Örn: 202003002016" {...field} />
               </FormControl>
               <FormDescription className="flex items-center gap-1">
-                <Hash className="h-4 w-4"/> 12 haneli okul numaranız.
+                <Hash className="h-4 w-4" /> 12 haneli okul numaranız.
               </FormDescription>
               <FormMessage />
             </FormItem>

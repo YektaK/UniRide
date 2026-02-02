@@ -20,7 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Save, MapPin, Hash } from "lucide-react";
-import { updateUser as dbUpdateUser } from "@/lib/mock-database"; // Import from mock DB
+import { updateUser as dbUpdateUser } from "@/lib/database";
 
 interface ProfileFormProps {
   currentUser: User;
@@ -60,36 +60,38 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
     },
   });
 
-  function onSubmit(data: ProfileFormValues) {
+  async function onSubmit(data: ProfileFormValues) {
     const finalAccessibilityNeeds = data.accessibilityNeeds?.filter(need => need !== "other") || [];
     if (data.accessibilityNeeds?.includes("other") && data.otherAccessibilityNeed) {
         finalAccessibilityNeeds.push(`other:${data.otherAccessibilityNeed}`);
     }
 
-    const updatedUser: User = {
-      ...currentUser, // Preserve ID, role, password, weeklyScheduleId etc.
-      name: data.name,
-      // Email is read-only, so no need to update it from form data if it cannot be changed
-      // email: data.email, 
-    };
+    try {
+      // Update user in Firebase
+      const updates: Partial<User> = {
+        name: data.name,
+      };
 
-    if (currentUser.role === 'student') {
-      updatedUser.studentNumber = data.studentNumber;
-      updatedUser.homeAddress = data.homeAddress;
-      updatedUser.accessibilityNeeds = finalAccessibilityNeeds;
-    }
+      if (currentUser.role === 'student') {
+        updates.studentNumber = data.studentNumber;
+        updates.homeAddress = data.homeAddress;
+        updates.accessibilityNeeds = finalAccessibilityNeeds;
+      }
 
-    // Update in the mock database first
-    const successInDb = dbUpdateUser(updatedUser);
+      await dbUpdateUser(currentUser.id, updates);
 
-    if (successInDb) {
-      // Then update in AuthContext (which also updates localStorage)
+      // Update in AuthContext
+      const updatedUser: User = {
+        ...currentUser,
+        ...updates,
+      };
       onUpdateProfile(updatedUser); 
       toast({
         title: "Profil Güncellendi",
         description: "Bilgileriniz başarıyla kaydedildi.",
       });
-    } else {
+    } catch (error) {
+      console.error("Error updating profile:", error);
       toast({
         title: "Güncelleme Başarısız",
         description: "Profiliniz güncellenirken bir hata oluştu.",

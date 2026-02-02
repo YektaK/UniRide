@@ -121,78 +121,80 @@ export default function VehicleFormDialog({ isOpen, onClose, onSave, vehicle }: 
               )}
             />
             <div className="grid grid-cols-2 gap-4">
-                <FormField
+              <FormField
                 control={form.control}
                 name="type"
                 render={({ field }) => (
-                    <FormItem>
+                  <FormItem>
                     <FormLabel>Araç Tipi</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
+                      <FormControl>
                         <SelectTrigger>
-                            <SelectValue placeholder="Araç tipi seçin" />
+                          <SelectValue placeholder="Araç tipi seçin" />
                         </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
+                      </FormControl>
+                      <SelectContent>
                         <SelectItem value="minibus">Minibüs</SelectItem>
                         <SelectItem value="bus">Otobüs</SelectItem>
                         <SelectItem value="van">Van</SelectItem>
-                        </SelectContent>
+                      </SelectContent>
                     </Select>
                     <FormMessage />
-                    </FormItem>
+                  </FormItem>
                 )}
-                />
-                 <FormField
+              />
+              <FormField
                 control={form.control}
                 name="status"
                 render={({ field }) => (
-                    <FormItem>
+                  <FormItem>
                     <FormLabel>Durum</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
+                      <FormControl>
                         <SelectTrigger>
-                            <SelectValue placeholder="Durum seçin" />
+                          <SelectValue placeholder="Durum seçin" />
                         </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
+                      </FormControl>
+                      <SelectContent>
                         <SelectItem value="active">Aktif</SelectItem>
                         <SelectItem value="inactive">Pasif</SelectItem>
                         <SelectItem value="maintenance">Bakımda</SelectItem>
-                        </SelectContent>
+                      </SelectContent>
                     </Select>
                     <FormMessage />
-                    </FormItem>
+                  </FormItem>
                 )}
-                />
+              />
             </div>
-             <div className="grid grid-cols-2 gap-4">
-                <FormField
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
                 control={form.control}
                 name="wheelchairCapacity"
                 render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Tekerlekli Sandalye Kapasitesi</FormLabel>
+                  <FormItem>
+                    <FormLabel>Sw Kapasitesi</FormLabel>
                     <FormControl>
-                        <Input type="number" {...field} onChange={event => field.onChange(+event.target.value)} />
+                      <Input type="number" {...field} onChange={event => field.onChange(+event.target.value)} />
                     </FormControl>
+                    <p className="text-xs text-muted-foreground">Tekerlekli sandalye sayısı</p>
                     <FormMessage />
-                    </FormItem>
+                  </FormItem>
                 )}
-                />
-                <FormField
+              />
+              <FormField
                 control={form.control}
                 name="seatingCapacity"
                 render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Oturma Kapasitesi</FormLabel>
+                  <FormItem>
+                    <FormLabel>So Kapasitesi</FormLabel>
                     <FormControl>
-                        <Input type="number" {...field} onChange={event => field.onChange(+event.target.value)} />
+                      <Input type="number" {...field} onChange={event => field.onChange(+event.target.value)} />
                     </FormControl>
+                    <p className="text-xs text-muted-foreground">Diğer engel tipi (normal koltuk)</p>
                     <FormMessage />
-                    </FormItem>
+                  </FormItem>
                 )}
-                />
+              />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>

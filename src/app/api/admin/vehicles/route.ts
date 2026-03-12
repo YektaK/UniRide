@@ -9,6 +9,7 @@ import {
     requireAdmin,
     createErrorResponse,
     createSuccessResponse,
+    handleApiError,
 } from "@/lib/admin-auth";
 
 // GET /api/admin/vehicles - Get all vehicles
@@ -27,14 +28,8 @@ export async function GET(request: NextRequest) {
         }
 
         return createSuccessResponse(data);
-    } catch (error: any) {
-        if (error.message.includes("Unauthorized")) {
-            return createErrorResponse(error.message, 401);
-        }
-        if (error.message.includes("Forbidden")) {
-            return createErrorResponse(error.message, 403);
-        }
-        return createErrorResponse(error.message, 500);
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -51,7 +46,7 @@ export async function POST(request: NextRequest) {
         }
 
         const adminClient = getSupabaseAdmin();
-        const { data, error } = await adminClient
+        const { data, error } = await (adminClient as any)
             .from("vehicles")
             .insert({
                 name,
@@ -71,14 +66,8 @@ export async function POST(request: NextRequest) {
         }
 
         return createSuccessResponse(data, 201);
-    } catch (error: any) {
-        if (error.message.includes("Unauthorized")) {
-            return createErrorResponse(error.message, 401);
-        }
-        if (error.message.includes("Forbidden")) {
-            return createErrorResponse(error.message, 403);
-        }
-        return createErrorResponse(error.message, 500);
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -108,7 +97,7 @@ export async function PUT(request: NextRequest) {
         if (updates.seatingCapacity !== undefined) dbUpdates.seating_capacity = updates.seatingCapacity;
         if (updates.status) dbUpdates.status = updates.status;
 
-        const { data, error } = await adminClient
+        const { data, error } = await (adminClient as any)
             .from("vehicles")
             .update(dbUpdates)
             .eq("id", id)
@@ -120,14 +109,8 @@ export async function PUT(request: NextRequest) {
         }
 
         return createSuccessResponse(data);
-    } catch (error: any) {
-        if (error.message.includes("Unauthorized")) {
-            return createErrorResponse(error.message, 401);
-        }
-        if (error.message.includes("Forbidden")) {
-            return createErrorResponse(error.message, 403);
-        }
-        return createErrorResponse(error.message, 500);
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -154,13 +137,7 @@ export async function DELETE(request: NextRequest) {
         }
 
         return createSuccessResponse({ message: "Vehicle deleted successfully" });
-    } catch (error: any) {
-        if (error.message.includes("Unauthorized")) {
-            return createErrorResponse(error.message, 401);
-        }
-        if (error.message.includes("Forbidden")) {
-            return createErrorResponse(error.message, 403);
-        }
-        return createErrorResponse(error.message, 500);
+    } catch (error) {
+        return handleApiError(error);
     }
 }

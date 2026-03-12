@@ -10,8 +10,8 @@ interface AuthContextType {
   user: User | null;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   isLoading: boolean;
-  login: (emailOrUsername: string, password_param: string) => void; // role parametresi kaldırıldı
-  logout: () => void;
+  login: (emailOrUsername: string, password_param: string) => Promise<void>; // role parametresi kaldırıldı
+  logout: () => Promise<void>;
 }
 
 

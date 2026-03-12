@@ -5,13 +5,13 @@
 
 import { getSupabaseClient } from "./supabase";
 import { getUserByEmail, getUserByStudentNumber, createUser, updateUser, createSchedule } from "./database";
-import type { FirestoreUser } from "@/types/firestore";
+import type { DbUser } from "@/types/db";
 import type { User } from "@/types";
 
 /**
- * Convert FirestoreUser to User (for backward compatibility)
+ * Convert DbUser to User (for backward compatibility)
  */
-const firestoreUserToUser = (firestoreUser: FirestoreUser): User => {
+const firestoreUserToUser = (firestoreUser: DbUser): User => {
   return {
     id: firestoreUser.id,
     name: firestoreUser.name,
@@ -76,6 +76,46 @@ export const signIn = async (
 };
 
 /**
+ * Reset Password (Send Email)
+ */
+export const resetPasswordForEmail = async (email: string): Promise<void> => {
+  try {
+    const supabaseClient = getSupabaseClient();
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      console.error("Password reset error:", error);
+      throw error;
+    }
+  } catch (error) {
+    console.error("Password reset error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Update Password (from Reset Link)
+ */
+export const updatePassword = async (newPassword: string): Promise<void> => {
+  try {
+    const supabaseClient = getSupabaseClient();
+    const { error } = await supabaseClient.auth.updateUser({
+      password: newPassword
+    });
+
+    if (error) {
+      console.error("Password update error:", error);
+      throw error;
+    }
+  } catch (error) {
+    console.error("Password update error:", error);
+    throw error;
+  }
+};
+
+/**
  * Register new user
  */
 export const signUp = async (
@@ -84,7 +124,7 @@ export const signUp = async (
   name: string,
   studentNumber?: string,
   role: User["role"] = "student",
-  userData?: Partial<Pick<FirestoreUser, 'homeAddress' | 'accessibilityNeeds'>>
+  userData?: Partial<Pick<DbUser, 'homeAddress' | 'accessibilityNeeds' | 'passwordHint'>>
 ): Promise<User | null> => {
   try {
     // Create user in Supabase Auth
@@ -100,12 +140,13 @@ export const signUp = async (
     }
 
     // Create user document in database FIRST (before schedule due to foreign key)
-    const newUser: FirestoreUser = {
+    const newUser: DbUser = {
       id: authData.user.id,
       name,
       email: authData.user.email!,
       role,
       studentNumber,
+      passwordHint: userData?.passwordHint,
       homeAddress: userData?.homeAddress || "",
       accessibilityNeeds: userData?.accessibilityNeeds || [],
       weeklyScheduleId: undefined,
@@ -144,7 +185,7 @@ export const signUp = async (
 export const register = async (
   email: string,
   password: string,
-  userData: Omit<FirestoreUser, 'id' | 'email' | 'createdAt' | 'updatedAt' | 'passwordHash' | 'weeklyScheduleId'>
+  userData: Omit<DbUser, 'id' | 'email' | 'createdAt' | 'updatedAt' | 'passwordHash' | 'weeklyScheduleId'>
 ): Promise<User> => {
   const result = await signUp(
     email,
@@ -154,7 +195,8 @@ export const register = async (
     userData.role || "student",
     {
       homeAddress: userData.homeAddress,
-      accessibilityNeeds: userData.accessibilityNeeds
+      accessibilityNeeds: userData.accessibilityNeeds,
+      passwordHint: userData.passwordHint
     }
   );
 

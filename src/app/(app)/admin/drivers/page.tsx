@@ -10,15 +10,15 @@ import { format, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Download, FileText, Calendar, MapPin, Users, Clock } from "lucide-react";
 import { getAllRouteAssignments, getAllVehicles, getAllUsers } from "@/lib/database";
-import type { RouteAssignment } from "@/types/firestore";
+import type { RouteAssignment } from "@/types/db";
 import type { Vehicle } from "@/types";
-import type { FirestoreUser } from "@/types/firestore";
+import type { DbUser } from "@/types/db";
 import { exportDriverAssignmentsToExcel, exportDriverAssignmentsToPDF } from "@/services/excel/driver-export";
 
 export default function DriverAssignmentsPage() {
   const [assignments, setAssignments] = useState<RouteAssignment[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [users, setUsers] = useState<FirestoreUser[]>([]);
+  const [users, setUsers] = useState<DbUser[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(
     format(new Date(), "yyyy-MM-dd")
   );

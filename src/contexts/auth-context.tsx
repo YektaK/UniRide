@@ -21,7 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Listen to Firebase Auth state changes
+    // Listen to Supabase Auth state changes
     const unsubscribe = onAuthStateChange((user) => {
       setUser(user);
       setIsLoading(false);

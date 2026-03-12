@@ -1,31 +1,31 @@
 import type { User, WeeklySchedule, RideRequest, Vehicle, AdminSettings } from "./index";
 
 /**
- * Firestore document types with Firestore-specific fields
- * These extend the base types with Firestore metadata
+ * Database document types with DB metadata fields
+ * These extend the base types with timestamps and other database-specific fields
  */
 
-export interface FirestoreUser extends Omit<User, "password"> {
+export interface DbUser extends Omit<User, "password"> {
   passwordHash?: string; // Hashed password (for future use if needed)
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
 }
 
-export interface FirestoreWeeklySchedule extends WeeklySchedule {
+export interface DbWeeklySchedule extends WeeklySchedule {
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
 }
 
-export interface FirestoreRideRequest extends RideRequest {
+export interface DbRideRequest extends RideRequest {
   updatedAt: string; // ISO date string
 }
 
-export interface FirestoreVehicle extends Vehicle {
+export interface DbVehicle extends Vehicle {
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
 }
 
-export interface FirestoreAdminSettings extends AdminSettings {
+export interface DbAdminSettings extends AdminSettings {
   updatedAt: string; // ISO date string
 }
 

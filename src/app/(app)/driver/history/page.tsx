@@ -15,7 +15,7 @@ import {
     XCircle
 } from "lucide-react";
 import { adminApi } from "@/lib/admin-api";
-import type { RouteAssignment } from "@/types/firestore";
+import type { RouteAssignment } from "@/types/db";
 import type { Vehicle } from "@/types";
 
 interface AssignmentWithDetails extends RouteAssignment {

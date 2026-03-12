@@ -4,17 +4,17 @@
  */
 
 import * as XLSX from "xlsx";
-import type { RouteAssignment } from "@/types/firestore";
+import type { RouteAssignment } from "@/types/db";
 import type { Vehicle } from "@/types";
-import type { FirestoreUser } from "@/types/firestore";
+import type { DbUser } from "@/types/db";
 import { format, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 
 export interface AssignmentWithDetails {
   assignment: RouteAssignment;
   vehicle?: Vehicle;
-  driver?: FirestoreUser | null;
-  students: FirestoreUser[];
+  driver?: DbUser | null;
+  students: DbUser[];
 }
 
 /**

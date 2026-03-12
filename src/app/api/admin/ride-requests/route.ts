@@ -9,6 +9,7 @@ import {
     requireAdmin,
     createErrorResponse,
     createSuccessResponse,
+    handleApiError,
 } from "@/lib/admin-auth";
 
 // GET /api/admin/ride-requests - Get all ride requests
@@ -40,14 +41,8 @@ export async function GET(request: NextRequest) {
         }
 
         return createSuccessResponse(data);
-    } catch (error: any) {
-        if (error.message.includes("Unauthorized")) {
-            return createErrorResponse(error.message, 401);
-        }
-        if (error.message.includes("Forbidden")) {
-            return createErrorResponse(error.message, 403);
-        }
-        return createErrorResponse(error.message, 500);
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -73,7 +68,7 @@ export async function PUT(request: NextRequest) {
         if (vehicleId !== undefined) dbUpdates.vehicle_id = vehicleId;
         if (notes !== undefined) dbUpdates.notes = notes;
 
-        const { data, error } = await adminClient
+        const { data, error } = await (adminClient as any)
             .from("ride_requests")
             .update(dbUpdates)
             .eq("id", id)
@@ -85,14 +80,8 @@ export async function PUT(request: NextRequest) {
         }
 
         return createSuccessResponse(data);
-    } catch (error: any) {
-        if (error.message.includes("Unauthorized")) {
-            return createErrorResponse(error.message, 401);
-        }
-        if (error.message.includes("Forbidden")) {
-            return createErrorResponse(error.message, 403);
-        }
-        return createErrorResponse(error.message, 500);
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -119,13 +108,7 @@ export async function DELETE(request: NextRequest) {
         }
 
         return createSuccessResponse({ message: "Ride request deleted successfully" });
-    } catch (error: any) {
-        if (error.message.includes("Unauthorized")) {
-            return createErrorResponse(error.message, 401);
-        }
-        if (error.message.includes("Forbidden")) {
-            return createErrorResponse(error.message, 403);
-        }
-        return createErrorResponse(error.message, 500);
+    } catch (error) {
+        return handleApiError(error);
     }
 }

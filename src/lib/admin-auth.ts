@@ -7,6 +7,44 @@ import { headers } from "next/headers";
 import { getSupabaseAdmin } from "./supabase-admin";
 import { createClient } from "@supabase/supabase-js";
 
+// ==================== AppError ====================
+
+/**
+ * Custom error class with HTTP status code.
+ * Use this instead of plain Error in API routes for consistent error handling.
+ */
+export class AppError extends Error {
+    public readonly statusCode: number;
+
+    constructor(message: string, statusCode: number = 500) {
+        super(message);
+        this.name = "AppError";
+        this.statusCode = statusCode;
+    }
+
+    /** 400 Bad Request */
+    static badRequest(message: string) {
+        return new AppError(message, 400);
+    }
+
+    /** 401 Unauthorized */
+    static unauthorized(message: string = "Unauthorized: Not logged in") {
+        return new AppError(message, 401);
+    }
+
+    /** 403 Forbidden */
+    static forbidden(message: string = "Forbidden: Admin access required") {
+        return new AppError(message, 403);
+    }
+
+    /** 404 Not Found */
+    static notFound(message: string = "Resource not found") {
+        return new AppError(message, 404);
+    }
+}
+
+// ==================== Auth Helpers ====================
+
 // Get current user from the Authorization header
 export async function getCurrentUserFromRequest(): Promise<{
     id: string;
@@ -49,7 +87,7 @@ export async function getCurrentUserFromRequest(): Promise<{
     return userData;
 }
 
-// Check if current user is admin
+// Check if current user is admin — throws AppError instead of plain Error
 export async function requireAdmin(): Promise<{
     id: string;
     email: string;
@@ -58,15 +96,17 @@ export async function requireAdmin(): Promise<{
     const user = await getCurrentUserFromRequest();
 
     if (!user) {
-        throw new Error("Unauthorized: Not logged in");
+        throw AppError.unauthorized();
     }
 
     if (user.role !== "admin") {
-        throw new Error("Forbidden: Admin access required");
+        throw AppError.forbidden();
     }
 
     return user;
 }
+
+// ==================== Response Helpers ====================
 
 // Helper to create error response
 export function createErrorResponse(message: string, status: number) {
@@ -76,4 +116,26 @@ export function createErrorResponse(message: string, status: number) {
 // Helper to create success response
 export function createSuccessResponse(data: any, status: number = 200) {
     return Response.json(data, { status });
+}
+
+import { z } from "zod";
+
+/**
+ * Centralized error handler for API routes.
+ * Checks for AppError instances instead of fragile string matching.
+ */
+export function handleApiError(error: unknown) {
+    if (error instanceof z.ZodError) {
+        // Return first validation error message
+        const message = error.errors[0]?.message || "Validasyon hatası";
+        return createErrorResponse(message, 400);
+    }
+
+    if (error instanceof AppError) {
+        return createErrorResponse(error.message, error.statusCode);
+    }
+    // Fallback for unexpected errors
+    const message = error instanceof Error ? error.message : "Internal server error";
+    console.error("Unhandled API error:", error);
+    return createErrorResponse(message, 500);
 }

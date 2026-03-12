@@ -1,26 +1,58 @@
 /**
  * API Route: Student Ride Confirmation
  * POST /api/ride-confirmation
+ * GET  /api/ride-confirmation?date=YYYY-MM-DD
  * 
- * Handles student confirmation/cancellation for next-day rides
+ * Handles student confirmation/cancellation for next-day rides.
+ * Requires JWT authentication — userId is extracted from the token.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+/**
+ * Verify JWT from Authorization header and return the authenticated user's ID.
+ */
+async function getAuthenticatedUserId(request: NextRequest): Promise<string | null> {
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+        return null;
+    }
+    const token = authHeader.split(" ")[1];
+
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+        return null;
+    }
+    return user.id;
+}
 
 export async function POST(request: NextRequest) {
+    // Authenticate
+    const authenticatedUserId = await getAuthenticatedUserId(request);
+    if (!authenticatedUserId) {
+        return NextResponse.json(
+            { error: "Unauthorized: Giriş yapmanız gerekiyor." },
+            { status: 401 }
+        );
+    }
+
     try {
         const body = await request.json();
-        const { userId, action, rideDate, pickupTime, dropoffTime, notes } = body;
+        const { action, rideDate, pickupTime, dropoffTime, notes } = body;
 
-        if (!userId || !action || !rideDate) {
+        // userId comes from the token, not from the body
+        const userId = authenticatedUserId;
+
+        if (!action || !rideDate) {
             return NextResponse.json(
-                { error: "userId, action, and rideDate are required" },
+                { error: "action and rideDate are required" },
                 { status: 400 }
             );
         }
@@ -31,6 +63,8 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             );
         }
+
+        const adminClient = getSupabaseAdmin();
 
         // Check deadline (22:00 previous day)
         const now = new Date();
@@ -52,7 +86,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if a ride request already exists for this date
-        const { data: existingRide, error: findError } = await supabase
+        const { data: existingRide, error: findError } = await adminClient
             .from("ride_requests")
             .select("*")
             .eq("user_id", userId)
@@ -67,14 +101,14 @@ export async function POST(request: NextRequest) {
         let result;
         if (existingRide) {
             // Update existing ride
-            const { data, error } = await supabase
+            const { data, error } = await (adminClient as any)
                 .from("ride_requests")
                 .update({
                     status,
-                    notes: notes || existingRide.notes,
+                    notes: notes || (existingRide as any).notes,
                     updated_at: new Date().toISOString(),
                 })
-                .eq("id", existingRide.id)
+                .eq("id", (existingRide as any).id)
                 .select()
                 .single();
 
@@ -82,7 +116,7 @@ export async function POST(request: NextRequest) {
             result = data;
         } else if (action === "confirm") {
             // Create new ride request
-            const { data: user, error: userError } = await supabase
+            const { data: user, error: userError } = await adminClient
                 .from("users")
                 .select("home_address, home_coordinates")
                 .eq("id", userId)
@@ -90,7 +124,7 @@ export async function POST(request: NextRequest) {
 
             if (userError) throw userError;
 
-            const { data, error } = await supabase
+            const { data, error } = await (adminClient as any)
                 .from("ride_requests")
                 .insert({
                     user_id: userId,
@@ -99,8 +133,8 @@ export async function POST(request: NextRequest) {
                     requested_pickup_time: `${rideDate}T${pickupTime || "08:00"}:00`,
                     requested_dropoff_time: `${rideDate}T${dropoffTime || "17:00"}:00`,
                     pickup_location: {
-                        address: user?.home_address || "Ev Adresi",
-                        coordinates: user?.home_coordinates,
+                        address: (user as any)?.home_address || "Ev Adresi",
+                        coordinates: (user as any)?.home_coordinates,
                     },
                     dropoff_location: {
                         address: "Yıldız Teknik Üniversitesi Davutpaşa Kampüsü",
@@ -152,19 +186,31 @@ function getActionMessage(action: string, status: string, isPastDeadline: boolea
 
 // GET: Check ride status for a specific date
 export async function GET(request: NextRequest) {
+    // Authenticate
+    const authenticatedUserId = await getAuthenticatedUserId(request);
+    if (!authenticatedUserId) {
+        return NextResponse.json(
+            { error: "Unauthorized: Giriş yapmanız gerekiyor." },
+            { status: 401 }
+        );
+    }
+
     try {
         const { searchParams } = new URL(request.url);
-        const userId = searchParams.get("userId");
         const date = searchParams.get("date");
 
-        if (!userId || !date) {
+        if (!date) {
             return NextResponse.json(
-                { error: "userId and date are required" },
+                { error: "date query parameter is required" },
                 { status: 400 }
             );
         }
 
-        const { data, error } = await supabase
+        // userId comes from the token
+        const userId = authenticatedUserId;
+
+        const adminClient = getSupabaseAdmin();
+        const { data, error } = await adminClient
             .from("ride_requests")
             .select("*")
             .eq("user_id", userId)

@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { adminApi } from "@/lib/admin-api";
-import type { RouteAssignment } from "@/types/firestore";
+import type { RouteAssignment } from "@/types/db";
 import type { Vehicle } from "@/types";
 
 interface AssignmentWithDetails extends RouteAssignment {

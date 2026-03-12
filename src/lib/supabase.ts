@@ -4,9 +4,62 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-// Database type will be generated from Supabase schema
-// For now, we'll use any to avoid type errors
-type Database = any;
+import type { DbUser, DbVehicle, DbRideRequest, DbWeeklySchedule, RouteAssignment, Route as DbRoute } from "@/types/db";
+
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
+export interface Database {
+  public: {
+    Tables: {
+      users: {
+        Row: DbUser;
+        Insert: Partial<DbUser>;
+        Update: Partial<DbUser>;
+      };
+      vehicles: {
+        Row: DbVehicle;
+        Insert: Partial<DbVehicle>;
+        Update: Partial<DbVehicle>;
+      };
+      ride_requests: {
+        Row: DbRideRequest;
+        Insert: Partial<DbRideRequest>;
+        Update: Partial<DbRideRequest>;
+      };
+      weekly_schedules: {
+        Row: DbWeeklySchedule;
+        Insert: Partial<DbWeeklySchedule>;
+        Update: Partial<DbWeeklySchedule>;
+      };
+      route_assignments: {
+        Row: RouteAssignment;
+        Insert: Partial<RouteAssignment>;
+        Update: Partial<RouteAssignment>;
+      };
+      routes: {
+        Row: DbRoute;
+        Insert: Partial<DbRoute>;
+        Update: Partial<DbRoute>;
+      };
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      [_ in never]: never;
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+  };
+}
+
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

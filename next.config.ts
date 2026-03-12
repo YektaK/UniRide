@@ -2,9 +2,6 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   // eslint config removed - use .eslintrc.json or eslint.config.js instead
   images: {
     remotePatterns: [

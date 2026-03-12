@@ -9,7 +9,30 @@ import {
     requireAdmin,
     createErrorResponse,
     createSuccessResponse,
+    handleApiError,
 } from "@/lib/admin-auth";
+import { z } from "zod";
+
+const createUserSchema = z.object({
+    email: z.string().email("Geçerli bir e-posta adresi girin"),
+    password: z.string().min(6, "Şifre en az 6 karakter olmalıdır"),
+    name: z.string().min(2, "İsim en az 2 karakter olmalıdır"),
+    role: z.enum(["student", "driver", "admin"], {
+        errorMap: () => ({ message: "Geçersiz rol seçimi" })
+    }),
+    studentNumber: z.string().optional(),
+    homeAddress: z.string().optional(),
+    accessibilityNeeds: z.array(z.string()).optional(),
+});
+
+const updateUserSchema = z.object({
+    id: z.string().uuid("Geçerli bir kullanıcı kimliği (UUID) gerekli"),
+    name: z.string().min(2, "İsim en az 2 karakter olmalıdır").optional(),
+    role: z.enum(["student", "driver", "admin"]).optional(),
+    studentNumber: z.string().optional(),
+    homeAddress: z.string().optional(),
+    accessibilityNeeds: z.array(z.string()).optional(),
+});
 
 // GET /api/admin/users - Get all users
 export async function GET(request: NextRequest) {
@@ -27,14 +50,8 @@ export async function GET(request: NextRequest) {
         }
 
         return createSuccessResponse(data);
-    } catch (error: any) {
-        if (error.message.includes("Unauthorized")) {
-            return createErrorResponse(error.message, 401);
-        }
-        if (error.message.includes("Forbidden")) {
-            return createErrorResponse(error.message, 403);
-        }
-        return createErrorResponse(error.message, 500);
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -44,11 +61,8 @@ export async function POST(request: NextRequest) {
         await requireAdmin();
 
         const body = await request.json();
-        const { email, password, name, role, studentNumber, homeAddress, accessibilityNeeds } = body;
-
-        if (!email || !password || !name || !role) {
-            return createErrorResponse("Missing required fields", 400);
-        }
+        const validatedData = createUserSchema.parse(body);
+        const { email, password, name, role, studentNumber, homeAddress, accessibilityNeeds } = validatedData;
 
         const adminClient = getSupabaseAdmin();
 
@@ -64,7 +78,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Create database user
-        const { data: userData, error: dbError } = await adminClient
+        const { data: userData, error: dbError } = await (adminClient as any)
             .from("users")
             .insert({
                 id: authData.user.id,
@@ -87,14 +101,8 @@ export async function POST(request: NextRequest) {
         }
 
         return createSuccessResponse(userData, 201);
-    } catch (error: any) {
-        if (error.message.includes("Unauthorized")) {
-            return createErrorResponse(error.message, 401);
-        }
-        if (error.message.includes("Forbidden")) {
-            return createErrorResponse(error.message, 403);
-        }
-        return createErrorResponse(error.message, 500);
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -104,11 +112,8 @@ export async function PUT(request: NextRequest) {
         await requireAdmin();
 
         const body = await request.json();
-        const { id, ...updates } = body;
-
-        if (!id) {
-            return createErrorResponse("User ID is required", 400);
-        }
+        const validatedData = updateUserSchema.parse(body);
+        const { id, ...updates } = validatedData;
 
         const adminClient = getSupabaseAdmin();
 
@@ -123,7 +128,7 @@ export async function PUT(request: NextRequest) {
         if (updates.homeAddress !== undefined) dbUpdates.home_address = updates.homeAddress;
         if (updates.accessibilityNeeds !== undefined) dbUpdates.accessibility_needs = updates.accessibilityNeeds;
 
-        const { data, error } = await adminClient
+        const { data, error } = await (adminClient as any)
             .from("users")
             .update(dbUpdates)
             .eq("id", id)
@@ -135,14 +140,8 @@ export async function PUT(request: NextRequest) {
         }
 
         return createSuccessResponse(data);
-    } catch (error: any) {
-        if (error.message.includes("Unauthorized")) {
-            return createErrorResponse(error.message, 401);
-        }
-        if (error.message.includes("Forbidden")) {
-            return createErrorResponse(error.message, 403);
-        }
-        return createErrorResponse(error.message, 500);
+    } catch (error) {
+        return handleApiError(error);
     }
 }
 
@@ -178,13 +177,7 @@ export async function DELETE(request: NextRequest) {
         }
 
         return createSuccessResponse({ message: "User deleted successfully" });
-    } catch (error: any) {
-        if (error.message.includes("Unauthorized")) {
-            return createErrorResponse(error.message, 401);
-        }
-        if (error.message.includes("Forbidden")) {
-            return createErrorResponse(error.message, 403);
-        }
-        return createErrorResponse(error.message, 500);
+    } catch (error) {
+        return handleApiError(error);
     }
 }

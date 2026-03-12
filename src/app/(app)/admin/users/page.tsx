@@ -3,7 +3,7 @@
 
 import type { User } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users as UsersIcon, PlusCircle, Edit, Trash2, Search } from "lucide-react"; // Added Search
+import { Users as UsersIcon, PlusCircle, Edit, Trash2, Search, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -14,7 +14,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input"; // Added Input
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import React, { useEffect, useState } from "react";
 import { adminApi } from "@/lib/admin-api";
 import UserFormDialog from "@/components/admin/user-form-dialog";
@@ -28,7 +37,11 @@ export default function AdminUsersPage() {
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [searchTerm, setSearchTerm] = useState(""); // State for the search term
+  const [searchTerm, setSearchTerm] = useState("");
+  // Password reset dialog state
+  const [passwordResetUser, setPasswordResetUser] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -112,6 +125,28 @@ export default function AdminUsersPage() {
         description: "Kullanıcı silinirken bir hata oluştu.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleOpenPasswordReset = (user: User) => {
+    setPasswordResetUser(user);
+    setNewPassword("");
+  };
+
+  const handlePasswordReset = async () => {
+    if (!passwordResetUser || newPassword.length < 6) {
+      toast({ title: "Hata", description: "Şifre en az 6 karakter olmalıdır.", variant: "destructive" });
+      return;
+    }
+    setIsResettingPassword(true);
+    try {
+      await adminApi.users.resetPassword(passwordResetUser.id, newPassword);
+      toast({ title: "Başarılı", description: `${passwordResetUser.name} için şifre güncellendi.` });
+      setPasswordResetUser(null);
+    } catch (err: any) {
+      toast({ title: "Hata", description: err.message, variant: "destructive" });
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -238,11 +273,15 @@ export default function AdminUsersPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(user)} className="mr-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(user)} className="mr-1" title="Düzenle">
                           <Edit className="h-4 w-4" />
                           <span className="sr-only">Düzenle</span>
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id, user.name)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenPasswordReset(user)} className="mr-1 text-amber-600 hover:text-amber-700" title="Şifre Değiştir">
+                          <KeyRound className="h-4 w-4" />
+                          <span className="sr-only">Şifre Değiştir</span>
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id, user.name)} className="text-destructive hover:text-destructive" title="Sil">
                           <Trash2 className="h-4 w-4" />
                           <span className="sr-only">Sil</span>
                         </Button>
@@ -269,6 +308,35 @@ export default function AdminUsersPage() {
         onClose={() => setIsAddUserOpen(false)}
         onSave={handleAddUser}
       />
+
+      {/* Password Reset Dialog */}
+      <Dialog open={!!passwordResetUser} onOpenChange={(open) => !open && setPasswordResetUser(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5 text-amber-500" /> Şifre Değiştir</DialogTitle>
+            <DialogDescription>
+              <strong>{passwordResetUser?.name}</strong> ({passwordResetUser?.email}) için yeni bir şifre belirleyin.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            <Label htmlFor="new-password">Yeni Şifre (min. 6 karakter)</Label>
+            <Input
+              id="new-password"
+              type="password"
+              placeholder="Yeni şifreyi girin..."
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handlePasswordReset()}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPasswordResetUser(null)}>İptal</Button>
+            <Button onClick={handlePasswordReset} disabled={isResettingPassword} className="bg-amber-600 hover:bg-amber-700">
+              {isResettingPassword ? "Güncelleniyor..." : "Şifreyi Güncelle"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

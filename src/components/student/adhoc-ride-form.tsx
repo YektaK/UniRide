@@ -75,7 +75,7 @@ export default function AdhocRideForm({ userId, defaultPickupAddress }: AdhocRid
         notes: data.notes || "", // Notlar boşsa boş string ata
       };
 
-      await addRideRequest(rideRequestPayload); // Firebase'e ekle
+      await addRideRequest(rideRequestPayload); // Supabase'e ekle
 
       toast({
         title: "Servis Talebi Gönderildi",

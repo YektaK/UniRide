@@ -1,15 +1,14 @@
 /**
  * Database Adapter
- * This file provides a unified interface that can switch between Firebase and Supabase
- * Currently uses Firebase by default
+ * This file provides a unified interface for Database
+ * Currently uses Supabase by default
  * To use Supabase, set NEXT_PUBLIC_USE_SUPABASE=true in .env.local
  * 
  * Note: Conditional exports are not supported in ES modules
  * We'll implement Supabase integration in a separate phase
  */
 
-// For now, always export Firebase functions
-// TODO: Implement Supabase adapter and dynamic switching
+// Export Supabase database functions
 export {
   // User functions
   getUserById,
@@ -70,10 +69,10 @@ export {
 
 // Re-export types for convenience
 export type {
-  FirestoreUser,
-  FirestoreWeeklySchedule,
-  FirestoreRideRequest,
-  FirestoreVehicle,
+  DbUser,
+  DbWeeklySchedule,
+  DbRideRequest,
+  DbVehicle,
   RouteAssignment,
   Route,
-} from "@/types/firestore";
+} from "@/types/db";

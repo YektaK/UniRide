@@ -8,7 +8,7 @@ import type { Vehicle } from "@/types";
 import { getOptimalRoute, calculateDistance, type LocationCode } from "./route";
 import { addressToLocationCode } from "./location-mapper";
 import type { Route as DouBusRoute } from "./route";
-import type { Route as FirestoreRoute } from "@/types/firestore";
+import type { Route as DbRoute } from "@/types/db";
 
 export interface TimeSlot {
   startTime: string; // ISO datetime
@@ -129,6 +129,7 @@ export const groupRequestsByTimeSlot = (
 
 /**
  * Optimize routes for a time slot with multiple vehicles
+ * NEW: Uses the Python Microservice Optimization API (Strategy Pattern)
  */
 export const optimizeTimeSlotRoutes = async (
   timeSlot: TimeSlot,
@@ -136,124 +137,156 @@ export const optimizeTimeSlotRoutes = async (
   startLocation: LocationCode = "D.Kampus"
 ): Promise<MultiVehicleRoutingResult> => {
   const activeVehicles = vehicles.filter((v) => v.status === "active");
-  const vehicleRoutes: VehicleRoute[] = [];
-  const unassignedRequests: RideRequest[] = [];
 
-  // Map requests to location codes
+  const sw_capacity = activeVehicles.length > 0 ? activeVehicles[0].wheelchairCapacity : 4;
+  const so_capacity = activeVehicles.length > 0 ? activeVehicles[0].seatingCapacity : 5;
+
   const requestLocations = new Map<RideRequest, LocationCode>();
+  const unassignedRequests: RideRequest[] = [];
+  const studentsPayload: { id: string; type: string }[] = [];
+  const locToRequests = new Map<string, RideRequest[]>();
+
   for (const request of timeSlot.requests) {
     const address =
       timeSlot.type === "pickup"
         ? request.pickupLocation.address
         : request.dropoffLocation.address;
+
     const locationCode = addressToLocationCode(address);
     if (locationCode) {
       requestLocations.set(request, locationCode);
+
+      const type = locationCode.startsWith("Sw") ? "Sw" : "So";
+      studentsPayload.push({
+        id: locationCode,
+        type: type,
+      });
+
+      if (!locToRequests.has(locationCode)) {
+        locToRequests.set(locationCode, []);
+      }
+      locToRequests.get(locationCode)!.push(request);
     } else {
       unassignedRequests.push(request);
     }
   }
 
-  // Group requests by location
-  const locationGroups = new Map<LocationCode, RideRequest[]>();
-  for (const [request, location] of requestLocations) {
-    if (!locationGroups.has(location)) {
-      locationGroups.set(location, []);
-    }
-    locationGroups.get(location)!.push(request);
+  if (studentsPayload.length === 0) {
+    return {
+      routes: [],
+      unassignedRequests: unassignedRequests,
+      totalVehiclesUsed: 0,
+      totalDuration: 0,
+      totalDistance: 0,
+    };
   }
 
-  // Simple greedy assignment: assign vehicles to routes based on capacity
-  let remainingRequests = [...timeSlot.requests.filter((r) => !unassignedRequests.includes(r))];
-  let vehicleIndex = 0;
-
-  while (remainingRequests.length > 0 && vehicleIndex < activeVehicles.length) {
-    const vehicle = activeVehicles[vehicleIndex];
-    const vehicleCapacity = vehicle.seatingCapacity + vehicle.wheelchairCapacity;
-
-    // Get requests that fit in this vehicle
-    const vehicleRequests: RideRequest[] = [];
-    const vehicleLocations: LocationCode[] = [];
-
-    for (const request of remainingRequests) {
-      if (vehicleRequests.length >= vehicleCapacity) break;
-
-      const location = requestLocations.get(request);
-      if (!location) continue;
-
-      // Check accessibility needs (simplified - in production, load user data beforehand)
-      // For now, we'll check this later when we have user data loaded
-      const needsWheelchair = false; // Will be determined from user data
-
-      if (needsWheelchair && vehicleRequests.filter((r) => {
-        const u = requestLocations.get(r);
-        return u === location;
-      }).length >= vehicle.wheelchairCapacity) {
-        continue; // No wheelchair capacity left
-      }
-
-      vehicleRequests.push(request);
-      if (!vehicleLocations.includes(location)) {
-        vehicleLocations.push(location);
-      }
-    }
-
-    if (vehicleLocations.length > 0) {
-      // Calculate optimal route for this vehicle
-      const waypoints = vehicleLocations.filter((loc) => loc !== startLocation);
-      const endLocation = waypoints.length > 0 ? waypoints[waypoints.length - 1] : startLocation;
-
-      try {
-        const route = await getOptimalRoute(startLocation, endLocation, waypoints);
-
-        const estimatedStartTime = timeSlot.startTime;
-        const estimatedEndTime = new Date(
-          new Date(estimatedStartTime).getTime() + route.durationMinutes * 60 * 1000
-        ).toISOString();
-
-        vehicleRoutes.push({
-          vehicleId: vehicle.id,
-          route,
-          studentIds: vehicleRequests.map((r) => r.userId),
-          estimatedStartTime,
-          estimatedEndTime,
-        });
-
-        // Remove assigned requests
-        remainingRequests = remainingRequests.filter(
-          (r) => !vehicleRequests.includes(r)
-        );
-      } catch (error) {
-        console.error(`Error optimizing route for vehicle ${vehicle.id}:`, error);
-        unassignedRequests.push(...vehicleRequests);
-        remainingRequests = remainingRequests.filter(
-          (r) => !vehicleRequests.includes(r)
-        );
-      }
-    }
-
-    vehicleIndex++;
-  }
-
-  // Add remaining unassigned requests
-  unassignedRequests.push(...remainingRequests);
-
-  const totalDuration = vehicleRoutes.reduce(
-    (sum, vr) => sum + vr.route.durationMinutes,
-    0
-  );
-  const totalDistance = vehicleRoutes.reduce(
-    (sum, vr) => sum + vr.route.distanceKm,
-    0
-  );
-
-  return {
-    routes: vehicleRoutes,
-    unassignedRequests,
-    totalVehiclesUsed: vehicleRoutes.length,
-    totalDuration,
-    totalDistance,
+  const payload = {
+    algorithm: "ortools_cvrp",
+    students: studentsPayload,
+    depot: { id: startLocation, type: "D" },
+    max_travel_time: 120,
+    sw_capacity: sw_capacity,
+    so_capacity: so_capacity,
   };
+
+  try {
+    const response = await fetch("http://127.0.0.1:8000/api/v1/optimize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Python API Status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.success || !data.routes) {
+      throw new Error(data.error_message || "Unknown error from Python engine");
+    }
+
+    const vehicleRoutes: VehicleRoute[] = [];
+    let totalDuration = 0;
+    let totalDistance = 0;
+
+    data.routes.forEach((pyRoute: any, idx: number) => {
+      const assignedVehicleId =
+        idx < activeVehicles.length ? activeVehicles[idx].id : `Ekstra-Araç-${idx + 1}`;
+
+      const waypoints: LocationCode[] = [];
+      const studentIds: string[] = [];
+      const matchedRequests: RideRequest[] = [];
+
+      pyRoute.route_details.forEach((step: any) => {
+        if (step.location2 !== startLocation && step.location2 !== "D.Kampus") {
+          const locCode = step.location2 as LocationCode;
+          waypoints.push(locCode);
+
+          if (locToRequests.has(locCode)) {
+            const reqs = locToRequests.get(locCode)!;
+            if (reqs.length > 0) {
+              const req = reqs.shift()!;
+              matchedRequests.push(req);
+              studentIds.push(req.userId);
+            }
+          }
+        }
+      });
+
+      const routeDetails: any[] = pyRoute.route_details.map((step: any) => ({
+        location1: step.location1 || "unknown",
+        location2: step.location2,
+        duration: step.duration || 0,
+      }));
+
+      const douBusRoute: DouBusRoute = {
+        start: startLocation,
+        end: startLocation,
+        routeDetails,
+        distanceKm: pyRoute.total_distance_km,
+        durationMinutes: pyRoute.total_duration_minutes,
+      };
+
+      const estimatedStartTime = timeSlot.startTime;
+      const estimatedEndTime = new Date(
+        new Date(estimatedStartTime).getTime() + douBusRoute.durationMinutes * 60 * 1000
+      ).toISOString();
+
+      vehicleRoutes.push({
+        vehicleId: assignedVehicleId,
+        route: douBusRoute,
+        studentIds: studentIds,
+        estimatedStartTime,
+        estimatedEndTime,
+      });
+
+      totalDuration += douBusRoute.durationMinutes;
+      totalDistance += douBusRoute.distanceKm;
+    });
+
+    locToRequests.forEach((reqs) => {
+      unassignedRequests.push(...reqs);
+    });
+
+    return {
+      routes: vehicleRoutes,
+      unassignedRequests,
+      totalVehiclesUsed: vehicleRoutes.length,
+      totalDuration,
+      totalDistance,
+    };
+  } catch (error) {
+    console.error("Python VRP API Hatası:", error);
+    return {
+      routes: [],
+      unassignedRequests: [...timeSlot.requests],
+      totalVehiclesUsed: 0,
+      totalDuration: 0,
+      totalDistance: 0,
+    };
+  }
 };
 
 /**

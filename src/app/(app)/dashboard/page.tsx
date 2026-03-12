@@ -36,7 +36,7 @@ export default function DashboardPage() {
       setIsScheduleLoading(true);
       const loadSchedule = async () => {
         try {
-          // Fetch schedule from Firebase
+          // Fetch schedule from Supabase
           const studentSchedule = await getStudentSchedule(user.weeklyScheduleId!);
 
           let rideFound = false;
@@ -86,6 +86,7 @@ export default function DashboardPage() {
               dropoffTime: "N/A",
               notificationMessage: `Merhaba ${user.name}, önümüzdeki 7 gün için planlanmış bir servisiniz bulunmamaktadır.`,
               relevantDate: "Yakın Zamanda Servis Yok",
+              rideDate: "",
               hasRide: false,
             });
           }
@@ -97,6 +98,7 @@ export default function DashboardPage() {
             dropoffTime: "Hata",
             notificationMessage: `Merhaba ${user.name}, servis bilgileriniz yüklenirken bir sorun oluştu.`,
             relevantDate: format(addDays(new Date(), 1), "dd MMMM yyyy, EEEE", { locale: tr }),
+            rideDate: "",
             hasRide: false,
           });
         } finally {

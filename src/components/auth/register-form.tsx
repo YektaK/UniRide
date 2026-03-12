@@ -20,7 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { register } from "@/lib/supabase-auth";
-import type { FirestoreUser } from "@/types/firestore";
+import type { DbUser } from "@/types/db";
 
 const registerFormSchema = z.object({
   name: z.string().min(2, { message: "Ad Soyad en az 2 karakter olmalıdır." }),
@@ -31,6 +31,7 @@ const registerFormSchema = z.object({
     }),
   password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
   confirmPassword: z.string().min(6, { message: "Şifre tekrarı en az 6 karakter olmalıdır." }),
+  passwordHint: z.string().min(2, { message: "Lütfen şifrenizi hatırlamak için bir ipucu girin." }).optional().or(z.literal('')),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Şifreler eşleşmiyor.",
   path: ["confirmPassword"],
@@ -51,6 +52,7 @@ export default function RegisterForm() {
       email: "",
       password: "",
       confirmPassword: "",
+      passwordHint: "",
     },
   });
 
@@ -58,16 +60,17 @@ export default function RegisterForm() {
     setIsLoading(true);
 
     try {
-      // Prepare user data for Firebase registration
-      const newUserPayload: Omit<FirestoreUser, 'id' | 'email' | 'createdAt' | 'updatedAt' | 'passwordHash' | 'weeklyScheduleId'> = {
+      // Prepare user data for Supabase registration
+      const newUserPayload: Omit<DbUser, 'id' | 'email' | 'createdAt' | 'updatedAt' | 'passwordHash' | 'weeklyScheduleId'> = {
         name: data.name,
         studentNumber: data.studentNumber,
         role: "student", // All registrations are students
+        passwordHint: data.passwordHint,
         homeAddress: "",
         accessibilityNeeds: [],
       };
 
-      // Register user with Firebase Auth and create Firestore document
+      // Register user with Supabase Auth and create Db document
       // The register function automatically creates the weekly schedule
       const createdUser = await register(data.email, data.password, newUserPayload);
 
@@ -158,6 +161,22 @@ export default function RegisterForm() {
               <FormControl>
                 <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="passwordHint"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Şifre İpucu (İsteğe Bağlı)</FormLabel>
+              <FormControl>
+                <Input placeholder="Örn: İlk evcil hayvanımın adı" {...field} />
+              </FormControl>
+              <FormDescription>
+                Şifrenizi unutursanız size gösterilecek bir hatırlatıcı.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

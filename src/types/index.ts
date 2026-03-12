@@ -5,6 +5,7 @@ export interface User {
   name: string;
   email: string;
   password?: string; // Added password field
+  passwordHint?: string; // Custom hint created during registration
   role: UserRole;
   studentNumber?: string; // Added student number
   homeAddress?: string;

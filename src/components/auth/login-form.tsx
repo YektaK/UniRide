@@ -4,6 +4,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -43,6 +44,38 @@ export default function LoginForm() {
     },
   });
 
+  async function fetchHint() {
+    const emailOrNum = form.getValues().emailOrUsername;
+    if (!emailOrNum) {
+      toast({
+        title: "Bilgi Eksik",
+        description: "Lütfen ipucunu görmek için e-posta adresinizi veya öğrenci numaranızı girin.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/auth/hint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emailOrStudentNumber: emailOrNum })
+      });
+      const data = await res.json();
+
+      toast({
+        title: "💡 Şifre İpucu",
+        description: data.hint || "Özel bir ipucu bulunamadı.",
+      });
+    } catch (e) {
+      toast({
+        title: "Hata",
+        description: "İpucu getirilemedi.",
+        variant: "destructive"
+      });
+    }
+  }
+
   async function onSubmit(data: LoginFormValues) {
     try {
       await login(data.emailOrUsername, data.password);
@@ -81,11 +114,28 @@ export default function LoginForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Şifre</FormLabel>
+              <div className="flex items-center justify-between">
+                <FormLabel>Şifre</FormLabel>
+                <Link
+                  href="/forgot-password"
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Şifremi unuttum
+                </Link>
+              </div>
               <FormControl>
                 <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
-              <FormMessage />
+              <div className="flex justify-between items-center mt-1">
+                <FormMessage />
+                <button
+                  type="button"
+                  onClick={fetchHint}
+                  className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Şifre ipucu göster
+                </button>
+              </div>
             </FormItem>
           )}
         />

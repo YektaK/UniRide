@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, XCircle, Edit3, BellRing, CalendarClock, Clock, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { getSupabaseClient } from "@/lib/supabase";
 import { format, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 
@@ -35,14 +36,27 @@ export default function ScheduleConfirmationCard({
   const [isPastDeadline, setIsPastDeadline] = useState(false);
   const [deadlineTime, setDeadlineTime] = useState<string>("");
 
+  // Helper to get auth headers for API calls
+  const getAuthHeaders = async (): Promise<Record<string, string>> => {
+    const supabase = getSupabaseClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return { "Content-Type": "application/json" };
+    return {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`,
+    };
+  };
+
   // Check existing ride status on mount
   useEffect(() => {
     const checkStatus = async () => {
       if (!user?.id || !rideDate) return;
 
       try {
+        const headers = await getAuthHeaders();
         const response = await fetch(
-          `/api/ride-confirmation?userId=${user.id}&date=${rideDate}`
+          `/api/ride-confirmation?date=${rideDate}`,
+          { headers }
         );
         if (response.ok) {
           const data = await response.json();
@@ -67,11 +81,11 @@ export default function ScheduleConfirmationCard({
 
     setLoading(true);
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch("/api/ride-confirmation", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
-          userId: user.id,
           action,
           rideDate: rideDate || getNextWeekday(),
           pickupTime,

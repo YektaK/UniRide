@@ -1,0 +1,6 @@
+src/lib/supabase-db.ts(174,17): error TS2345: Argument of type 'any' is not assignable to parameter of type 'never'.
+src/lib/supabase-db.ts(269,17): error TS2345: Argument of type 'any' is not assignable to parameter of type 'never'.
+src/lib/supabase-db.ts(372,17): error TS2345: Argument of type 'any' is not assignable to parameter of type 'never'.
+src/lib/supabase-db.ts(458,17): error TS2345: Argument of type 'any' is not assignable to parameter of type 'never'.
+src/lib/supabase-db.ts(560,17): error TS2345: Argument of type 'any' is not assignable to parameter of type 'never'.
+src/lib/supabase-db.ts(658,17): error TS2345: Argument of type 'any' is not assignable to parameter of type 'never'.

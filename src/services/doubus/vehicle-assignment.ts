@@ -4,8 +4,8 @@
  */
 
 import type { Vehicle } from "@/types";
-import type { FirestoreUser } from "@/types/firestore";
-import type { RouteAssignment } from "@/types/firestore";
+import type { DbUser } from "@/types/db";
+import type { RouteAssignment } from "@/types/db";
 import { getAllVehicles, getAllUsers } from "@/lib/database";
 
 export interface AssignmentInput {
@@ -20,8 +20,8 @@ export interface AssignmentInput {
 export interface AssignmentResult {
   assignment: Omit<RouteAssignment, "id" | "createdAt" | "updatedAt">;
   vehicle: Vehicle;
-  driver?: FirestoreUser;
-  students: FirestoreUser[];
+  driver?: DbUser;
+  students: DbUser[];
   canAssign: boolean;
   reason?: string;
 }
@@ -31,7 +31,7 @@ export interface AssignmentResult {
  */
 const checkVehicleCapacity = (
   vehicle: Vehicle,
-  students: FirestoreUser[]
+  students: DbUser[]
 ): { canFit: boolean; reason?: string } => {
   const wheelchairUsers = students.filter((s) =>
     s.accessibilityNeeds?.includes("wheelchair")
@@ -64,7 +64,7 @@ const checkVehicleCapacity = (
 const assignDriver = async (
   vehicleId: string,
   date: string
-): Promise<FirestoreUser | undefined> => {
+): Promise<DbUser | undefined> => {
   const allUsers = await getAllUsers();
   const drivers = allUsers.filter((u) => u.role === "driver");
 

@@ -113,6 +113,18 @@ export const adminApi = {
             }
             return res.json();
         },
+
+        async resetPassword(userId: string, newPassword: string) {
+            const res = await adminFetch("/api/admin/users/password", {
+                method: "PATCH",
+                body: JSON.stringify({ userId, newPassword }),
+            });
+            if (!res.ok) {
+                const error = await res.json();
+                throw new Error(error.error || "Şifre güncellenemedi.");
+            }
+            return res.json();
+        },
     },
 
     // ==================== VEHICLES ====================

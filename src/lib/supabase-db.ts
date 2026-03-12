@@ -5,13 +5,13 @@
 
 import { getSupabaseClient } from "./supabase";
 import type {
-    FirestoreUser,
-    FirestoreWeeklySchedule,
-    FirestoreRideRequest,
-    FirestoreVehicle,
+    DbUser,
+    DbWeeklySchedule,
+    DbRideRequest,
+    DbVehicle,
     RouteAssignment,
     Route,
-} from "@/types/firestore";
+} from "@/types/db";
 import type { ScheduleEntry } from "@/types";
 
 // Helper to get Supabase client
@@ -65,7 +65,7 @@ const toSnakeCase = (obj: any): any => {
 
 // ==================== USER OPERATIONS ====================
 
-export const getUserById = async (userId: string): Promise<FirestoreUser | null> => {
+export const getUserById = async (userId: string): Promise<DbUser | null> => {
     const { data, error } = await getClient()
         .from("users")
         .select("*")
@@ -78,10 +78,10 @@ export const getUserById = async (userId: string): Promise<FirestoreUser | null>
         throw error;
     }
 
-    return toCamelCase(data) as FirestoreUser;
+    return toCamelCase(data) as DbUser;
 };
 
-export const getUserByEmail = async (email: string): Promise<FirestoreUser | null> => {
+export const getUserByEmail = async (email: string): Promise<DbUser | null> => {
     const { data, error } = await getClient()
         .from("users")
         .select("*")
@@ -95,10 +95,10 @@ export const getUserByEmail = async (email: string): Promise<FirestoreUser | nul
         throw error;
     }
 
-    return toCamelCase(data) as FirestoreUser;
+    return toCamelCase(data) as DbUser;
 };
 
-export const getUserByStudentNumber = async (studentNumber: string): Promise<FirestoreUser | null> => {
+export const getUserByStudentNumber = async (studentNumber: string): Promise<DbUser | null> => {
     const { data, error } = await getClient()
         .from("users")
         .select("*")
@@ -111,10 +111,10 @@ export const getUserByStudentNumber = async (studentNumber: string): Promise<Fir
         throw error;
     }
 
-    return toCamelCase(data) as FirestoreUser;
+    return toCamelCase(data) as DbUser;
 };
 
-export const getAllUsers = async (): Promise<FirestoreUser[]> => {
+export const getAllUsers = async (): Promise<DbUser[]> => {
     const { data, error } = await getClient().from("users").select("*");
 
     if (error) {
@@ -122,13 +122,13 @@ export const getAllUsers = async (): Promise<FirestoreUser[]> => {
         throw error;
     }
 
-    return data.map(toCamelCase) as FirestoreUser[];
+    return data.map(toCamelCase) as DbUser[];
 };
 
 export const createUser = async (
-    userData: Omit<FirestoreUser, "id" | "createdAt" | "updatedAt"> | FirestoreUser,
+    userData: Omit<DbUser, "id" | "createdAt" | "updatedAt"> | DbUser,
     userId?: string
-): Promise<FirestoreUser> => {
+): Promise<DbUser> => {
     const now = new Date().toISOString();
 
     // Remove any existing id, createdAt, updatedAt from userData to avoid conflicts
@@ -157,12 +157,12 @@ export const createUser = async (
         throw error;
     }
 
-    return toCamelCase(data) as FirestoreUser;
+    return toCamelCase(data) as DbUser;
 };
 
 export const updateUser = async (
     userId: string,
-    updates: Partial<Omit<FirestoreUser, "id" | "createdAt">>
+    updates: Partial<Omit<DbUser, "id" | "createdAt">>
 ): Promise<void> => {
     const dbUpdates = toSnakeCase({
         ...updates,
@@ -171,7 +171,7 @@ export const updateUser = async (
 
     const { error } = await getClient()
         .from("users")
-        .update(dbUpdates)
+        .update(dbUpdates as never)
         .eq("id", userId);
 
     if (error) {
@@ -191,7 +191,7 @@ export const deleteUser = async (userId: string): Promise<void> => {
 
 // ==================== SCHEDULE OPERATIONS ====================
 
-export const getScheduleById = async (scheduleId: string): Promise<FirestoreWeeklySchedule | null> => {
+export const getScheduleById = async (scheduleId: string): Promise<DbWeeklySchedule | null> => {
     const { data, error } = await getClient()
         .from("weekly_schedules")
         .select("*")
@@ -206,10 +206,10 @@ export const getScheduleById = async (scheduleId: string): Promise<FirestoreWeek
 
     // entries is JSONB, so it might need special handling if toCamelCase doesn't cover it deep enough
     // But toCamelCase is recursive, so it should be fine.
-    return toCamelCase(data) as FirestoreWeeklySchedule;
+    return toCamelCase(data) as DbWeeklySchedule;
 };
 
-export const getScheduleByUserId = async (userId: string): Promise<FirestoreWeeklySchedule | null> => {
+export const getScheduleByUserId = async (userId: string): Promise<DbWeeklySchedule | null> => {
     const { data, error } = await getClient()
         .from("weekly_schedules")
         .select("*")
@@ -222,13 +222,13 @@ export const getScheduleByUserId = async (userId: string): Promise<FirestoreWeek
         throw error;
     }
 
-    return toCamelCase(data) as FirestoreWeeklySchedule;
+    return toCamelCase(data) as DbWeeklySchedule;
 };
 
 export const createSchedule = async (
-    scheduleData: Omit<FirestoreWeeklySchedule, "id" | "createdAt" | "updatedAt">,
+    scheduleData: Omit<DbWeeklySchedule, "id" | "createdAt" | "updatedAt">,
     scheduleId?: string
-): Promise<FirestoreWeeklySchedule> => {
+): Promise<DbWeeklySchedule> => {
     const now = new Date().toISOString();
     const dbData = toSnakeCase({
         ...scheduleData,
@@ -251,12 +251,12 @@ export const createSchedule = async (
         throw error;
     }
 
-    return toCamelCase(data) as FirestoreWeeklySchedule;
+    return toCamelCase(data) as DbWeeklySchedule;
 };
 
 export const updateSchedule = async (
     scheduleId: string,
-    updates: Partial<Omit<FirestoreWeeklySchedule, "id" | "createdAt">>
+    updates: Partial<Omit<DbWeeklySchedule, "id" | "createdAt">>
 ): Promise<void> => {
     const dbUpdates = toSnakeCase({
         ...updates,
@@ -266,7 +266,7 @@ export const updateSchedule = async (
 
     const { error } = await getClient()
         .from("weekly_schedules")
-        .update(dbUpdates)
+        .update(dbUpdates as never)
         .eq("id", scheduleId);
 
     if (error) {
@@ -285,7 +285,7 @@ export const updateScheduleEntries = async (
 
 // ==================== RIDE REQUEST OPERATIONS ====================
 
-export const getRideRequestById = async (requestId: string): Promise<FirestoreRideRequest | null> => {
+export const getRideRequestById = async (requestId: string): Promise<DbRideRequest | null> => {
     const { data, error } = await getClient()
         .from("ride_requests")
         .select("*")
@@ -298,7 +298,7 @@ export const getRideRequestById = async (requestId: string): Promise<FirestoreRi
         throw error;
     }
 
-    return toCamelCase(data) as FirestoreRideRequest;
+    return toCamelCase(data) as DbRideRequest;
 };
 
 export const getAllRideRequests = async (
@@ -309,7 +309,7 @@ export const getAllRideRequests = async (
         dateFrom?: string;
         dateTo?: string;
     }
-): Promise<FirestoreRideRequest[]> => {
+): Promise<DbRideRequest[]> => {
     let query = getClient().from("ride_requests").select("*");
 
     if (filters?.userId) query = query.eq("user_id", filters.userId);
@@ -327,13 +327,13 @@ export const getAllRideRequests = async (
         throw error;
     }
 
-    return data.map(toCamelCase) as FirestoreRideRequest[];
+    return data.map(toCamelCase) as DbRideRequest[];
 };
 
 export const createRideRequest = async (
-    requestData: Omit<FirestoreRideRequest, "id" | "createdAt" | "updatedAt">,
+    requestData: Omit<DbRideRequest, "id" | "createdAt" | "updatedAt">,
     requestId?: string
-): Promise<FirestoreRideRequest> => {
+): Promise<DbRideRequest> => {
     const now = new Date().toISOString();
     const dbData = toSnakeCase({
         ...requestData,
@@ -355,12 +355,12 @@ export const createRideRequest = async (
         throw error;
     }
 
-    return toCamelCase(data) as FirestoreRideRequest;
+    return toCamelCase(data) as DbRideRequest;
 };
 
 export const updateRideRequest = async (
     requestId: string,
-    updates: Partial<Omit<FirestoreRideRequest, "id" | "createdAt">>
+    updates: Partial<Omit<DbRideRequest, "id" | "createdAt">>
 ): Promise<void> => {
     const dbUpdates = toSnakeCase({
         ...updates,
@@ -369,7 +369,7 @@ export const updateRideRequest = async (
 
     const { error } = await getClient()
         .from("ride_requests")
-        .update(dbUpdates)
+        .update(dbUpdates as never)
         .eq("id", requestId);
 
     if (error) {
@@ -389,7 +389,7 @@ export const deleteRideRequest = async (requestId: string): Promise<void> => {
 
 // ==================== VEHICLE OPERATIONS ====================
 
-export const getAllVehicles = async (): Promise<FirestoreVehicle[]> => {
+export const getAllVehicles = async (): Promise<DbVehicle[]> => {
     const { data, error } = await getClient().from("vehicles").select("*");
 
     if (error) {
@@ -397,10 +397,10 @@ export const getAllVehicles = async (): Promise<FirestoreVehicle[]> => {
         throw error;
     }
 
-    return data.map(toCamelCase) as FirestoreVehicle[];
+    return data.map(toCamelCase) as DbVehicle[];
 };
 
-export const getVehicleById = async (vehicleId: string): Promise<FirestoreVehicle | null> => {
+export const getVehicleById = async (vehicleId: string): Promise<DbVehicle | null> => {
     const { data, error } = await getClient()
         .from("vehicles")
         .select("*")
@@ -413,13 +413,13 @@ export const getVehicleById = async (vehicleId: string): Promise<FirestoreVehicl
         throw error;
     }
 
-    return toCamelCase(data) as FirestoreVehicle;
+    return toCamelCase(data) as DbVehicle;
 };
 
 export const createVehicle = async (
-    vehicleData: Omit<FirestoreVehicle, "id" | "createdAt" | "updatedAt">,
+    vehicleData: Omit<DbVehicle, "id" | "createdAt" | "updatedAt">,
     vehicleId?: string
-): Promise<FirestoreVehicle> => {
+): Promise<DbVehicle> => {
     const now = new Date().toISOString();
     const dbData = toSnakeCase({
         ...vehicleData,
@@ -441,12 +441,12 @@ export const createVehicle = async (
         throw error;
     }
 
-    return toCamelCase(data) as FirestoreVehicle;
+    return toCamelCase(data) as DbVehicle;
 };
 
 export const updateVehicle = async (
     vehicleId: string,
-    updates: Partial<Omit<FirestoreVehicle, "id" | "createdAt">>
+    updates: Partial<Omit<DbVehicle, "id" | "createdAt">>
 ): Promise<void> => {
     const dbUpdates = toSnakeCase({
         ...updates,
@@ -455,7 +455,7 @@ export const updateVehicle = async (
 
     const { error } = await getClient()
         .from("vehicles")
-        .update(dbUpdates)
+        .update(dbUpdates as never)
         .eq("id", vehicleId);
 
     if (error) {
@@ -557,7 +557,7 @@ export const updateRouteAssignment = async (
 
     const { error } = await getClient()
         .from("route_assignments")
-        .update(dbUpdates)
+        .update(dbUpdates as never)
         .eq("id", id);
 
     if (error) {
@@ -655,7 +655,7 @@ export const updateRoute = async (
 
     const { error } = await getClient()
         .from("routes")
-        .update(dbUpdates)
+        .update(dbUpdates as never)
         .eq("id", id);
 
     if (error) {
@@ -682,7 +682,7 @@ export const getStudentSchedule = getScheduleById;
 export const createNewUserSchedule = async (
     userId: string,
     scheduleId?: string
-): Promise<FirestoreWeeklySchedule> => {
+): Promise<DbWeeklySchedule> => {
     return createSchedule(
         {
             userId,
@@ -726,7 +726,7 @@ export const getUsers = getAllUsers;
 export const getUserByEmailOrStudentNumber = async (
     identifier: string,
     passwordInput: string
-): Promise<FirestoreUser | null> => {
+): Promise<DbUser | null> => {
     // In Supabase, we use Auth, so this is only for checking user existence
     let user = await getUserByEmail(identifier.toLowerCase());
     if (!user) {

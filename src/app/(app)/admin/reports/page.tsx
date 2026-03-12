@@ -42,7 +42,7 @@ const processArrivalDataForChart = async (users: User[], targetDate: Date | unde
   const hourlyDemand: Record<string, { wheelchair: number; other: number }> = {};
   const students = users.filter(u => u.role === 'student');
   const dayIndex = getDay(targetDate);
-  const targetDayName = daysOrder[dayIndex === 0 ? 6 : dayIndex -1]; 
+  const targetDayName = daysOrder[dayIndex === 0 ? 6 : dayIndex - 1];
 
   // Process all students in parallel
   await Promise.all(students.map(async (student) => {
@@ -56,7 +56,7 @@ const processArrivalDataForChart = async (users: User[], targetDate: Date | unde
 
           if (entriesForTargetDay.length > 0) {
             const firstArrivalTime = entriesForTargetDay[0].startTime;
-            const hour = firstArrivalTime.substring(0, 2) + ":00"; 
+            const hour = firstArrivalTime.substring(0, 2) + ":00";
             if (!hourlyDemand[hour]) {
               hourlyDemand[hour] = { wheelchair: 0, other: 0 };
             }
@@ -87,7 +87,7 @@ const processDepartureDataForChart = async (users: User[], targetDate: Date | un
   const hourlyDemand: Record<string, { wheelchair: number; other: number }> = {};
   const students = users.filter(u => u.role === 'student');
   const dayIndex = getDay(targetDate);
-  const targetDayName = daysOrder[dayIndex === 0 ? 6 : dayIndex -1];
+  const targetDayName = daysOrder[dayIndex === 0 ? 6 : dayIndex - 1];
 
   // Process all students in parallel
   await Promise.all(students.map(async (student) => {
@@ -97,11 +97,11 @@ const processDepartureDataForChart = async (users: User[], targetDate: Date | un
         if (schedule) {
           const entriesForTargetDay = schedule.entries
             .filter(entry => entry.dayOfWeek === targetDayName)
-            .sort((a, b) => a.endTime.localeCompare(b.endTime)); 
+            .sort((a, b) => a.endTime.localeCompare(b.endTime));
 
           if (entriesForTargetDay.length > 0) {
             const lastDepartureTime = entriesForTargetDay[entriesForTargetDay.length - 1].endTime;
-            const hour = lastDepartureTime.substring(0, 2) + ":00"; 
+            const hour = lastDepartureTime.substring(0, 2) + ":00";
             if (!hourlyDemand[hour]) {
               hourlyDemand[hour] = { wheelchair: 0, other: 0 };
             }
@@ -162,8 +162,8 @@ export default function AdminReportsPage() {
       try {
         const allUsers = await getUsers();
         const today = new Date();
-        const weekStart = startOfWeek(today, { weekStartsOn: 1, locale: tr }); 
-        
+        const weekStart = startOfWeek(today, { weekStartsOn: 1, locale: tr });
+
         setCurrentWeekDisplay(
           `${format(weekStart, "dd MMMM", { locale: tr })} - ${format(addDays(weekStart, 6), "dd MMMM yyyy", { locale: tr })}`
         );
@@ -178,9 +178,9 @@ export default function AdminReportsPage() {
 
         // Process all days in parallel
         const processedDataForWeek = await Promise.all(daysInWeek.map(async (date) => {
-          const dayIndex = getDay(date); 
+          const dayIndex = getDay(date);
           const dayNameKey = daysOrder[dayIndex === 0 ? 6 : dayIndex - 1];
-          
+
           const [arrivalData, departureData] = await Promise.all([
             processArrivalDataForChart(allUsers, date),
             processDepartureDataForChart(allUsers, date),
@@ -194,7 +194,7 @@ export default function AdminReportsPage() {
             const dayMaxDeparture = Math.max(...departureData.map(d => d.Wheelchair + d.Other));
             if (dayMaxDeparture > maxDepartureForWeek) maxDepartureForWeek = dayMaxDeparture;
           }
-          
+
           return { date, dayNameKey, arrivalData, departureData };
         }));
 
@@ -213,7 +213,7 @@ export default function AdminReportsPage() {
       }
     };
     loadReports();
-  }, [toast]);
+  }, []);
 
   const handleDownloadWeekly = () => {
     toast({
@@ -221,7 +221,7 @@ export default function AdminReportsPage() {
       description: "Haftalık tüm ders programlarının ve yoğunluk verilerinin indirilmesi özelliği yakında aktif olacaktır.",
     });
   };
-  
+
   const hasAnyDataForWeek = useMemo(() => {
     return weeklyChartData.some(dayInfo => dayInfo.arrivalData.length > 0 || dayInfo.departureData.length > 0);
   }, [weeklyChartData]);
@@ -241,9 +241,9 @@ export default function AdminReportsPage() {
           <section className="space-y-4 p-4 border rounded-lg bg-muted/30">
             <h3 className="text-lg font-semibold">Haftalık Program İndirme</h3>
             <div className="flex flex-col sm:flex-row gap-4 items-start">
-                 <Button onClick={handleDownloadWeekly} variant="outline" className="w-full sm:w-auto">
-                    <Download className="mr-2 h-4 w-4" /> Haftalık Verileri İndir (CSV)
-                </Button>
+              <Button onClick={handleDownloadWeekly} variant="outline" className="w-full sm:w-auto">
+                <Download className="mr-2 h-4 w-4" /> Haftalık Verileri İndir (CSV)
+              </Button>
             </div>
             <p className="text-xs text-muted-foreground">Not: İndirme işlevi şu anda simülasyon modundadır.</p>
           </section>
@@ -253,91 +253,91 @@ export default function AdminReportsPage() {
       {/* Combined Daily Arrival and Departure Charts Section */}
       <Card className="shadow-lg">
         <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
-                <CalendarRange className="text-primary"/> Günlük Servis Yoğunlukları ({currentWeekDisplay})
-            </CardTitle>
-            <CardDescription>Öğrencilerin hafta boyunca günlük ilk ders başlangıç ve son ders bitiş saatlerine göre dağılımı.</CardDescription>
+          <CardTitle className="text-xl flex items-center gap-2">
+            <CalendarRange className="text-primary" /> Günlük Servis Yoğunlukları ({currentWeekDisplay})
+          </CardTitle>
+          <CardDescription>Öğrencilerin hafta boyunca günlük ilk ders başlangıç ve son ders bitiş saatlerine göre dağılımı.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-            {isLoading ? (
-              <p>Haftalık grafik verileri yükleniyor...</p>
-            ) : !hasAnyDataForWeek ? (
-              <div className="h-[300px] flex flex-col items-center justify-center text-muted-foreground border border-dashed rounded-md">
-                <AlertCircle className="h-12 w-12 mb-4" />
-                <p>Bu hafta için görüntülenecek program verisi bulunmamaktadır.</p>
-              </div>
-            ) : (
-              weeklyChartData.map(({ date, dayNameKey, arrivalData, departureData }) => {
-                if (arrivalData.length === 0 && departureData.length === 0) {
-                    return null; // Hide day if no arrival and no departure data
-                }
-                return (
-                    <Card key={dayNameKey} className="flex flex-col shadow-md">
-                    <CardHeader className="pb-2 border-b">
-                        <CardTitle className="text-lg font-semibold text-primary">
-                        {localizedDays[dayNameKey]} - {format(date, "dd MMMM yyyy", { locale: tr })}
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-4">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
-                        {/* Arrival Chart for the day */}
-                        <div className="space-y-2">
-                            <h3 className="text-md font-medium text-center">Varış Yoğunluğu</h3>
-                            {arrivalData.length === 0 ? (
-                            <div className="h-[250px] flex flex-col items-center justify-center text-muted-foreground border border-dashed rounded-md">
-                                <AlertCircle className="h-8 w-8 mb-2" />
-                                <p className="text-xs">Varış verisi yok</p>
-                            </div>
-                            ) : (
-                            <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={arrivalData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                    <XAxis dataKey="timeSlot" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} />
-                                    <YAxis allowDecimals={false} tickLine={false} axisLine={false} tickMargin={8} domain={[0, globalArrivalMaxY]} fontSize={10}/>
-                                    <Tooltip cursorStyle={{ fill: 'hsl(var(--muted))', opacity: 0.5 }} content={<ChartTooltipContent indicator="dot" />} />
-                                    <Legend content={<ChartLegendContent className="text-xs mt-1"/>} wrapperStyle={{fontSize: '10px'}}/>
-                                    <Bar dataKey="Wheelchair" stackId="arrival" fill="var(--color-Wheelchair)" radius={[2, 2, 0, 0]} barSize={15}/>
-                                    <Bar dataKey="Other" stackId="arrival" fill="var(--color-Other)" radius={[2, 2, 0, 0]} barSize={15}/>
-                                </BarChart>
-                                </ResponsiveContainer>
-                            </ChartContainer>
-                            )}
-                            <p className="text-xs text-muted-foreground text-center pt-1">İlk ders başlangıç saatlerine göre.</p>
-                        </div>
+          {isLoading ? (
+            <p>Haftalık grafik verileri yükleniyor...</p>
+          ) : !hasAnyDataForWeek ? (
+            <div className="h-[300px] flex flex-col items-center justify-center text-muted-foreground border border-dashed rounded-md">
+              <AlertCircle className="h-12 w-12 mb-4" />
+              <p>Bu hafta için görüntülenecek program verisi bulunmamaktadır.</p>
+            </div>
+          ) : (
+            weeklyChartData.map(({ date, dayNameKey, arrivalData, departureData }) => {
+              if (arrivalData.length === 0 && departureData.length === 0) {
+                return null; // Hide day if no arrival and no departure data
+              }
+              return (
+                <Card key={dayNameKey} className="flex flex-col shadow-md">
+                  <CardHeader className="pb-2 border-b">
+                    <CardTitle className="text-lg font-semibold text-primary">
+                      {localizedDays[dayNameKey]} - {format(date, "dd MMMM yyyy", { locale: tr })}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
+                      {/* Arrival Chart for the day */}
+                      <div className="space-y-2">
+                        <h3 className="text-md font-medium text-center">Varış Yoğunluğu</h3>
+                        {arrivalData.length === 0 ? (
+                          <div className="h-[250px] flex flex-col items-center justify-center text-muted-foreground border border-dashed rounded-md">
+                            <AlertCircle className="h-8 w-8 mb-2" />
+                            <p className="text-xs">Varış verisi yok</p>
+                          </div>
+                        ) : (
+                          <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={arrivalData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="timeSlot" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} />
+                                <YAxis allowDecimals={false} tickLine={false} axisLine={false} tickMargin={8} domain={[0, globalArrivalMaxY]} fontSize={10} />
+                                <Tooltip cursorStyle={{ fill: 'hsl(var(--muted))', opacity: 0.5 }} content={<ChartTooltipContent indicator="dot" />} />
+                                <Legend content={<ChartLegendContent className="text-xs mt-1" />} wrapperStyle={{ fontSize: '10px' }} />
+                                <Bar dataKey="Wheelchair" stackId="arrival" fill="var(--color-Wheelchair)" radius={[2, 2, 0, 0]} barSize={15} />
+                                <Bar dataKey="Other" stackId="arrival" fill="var(--color-Other)" radius={[2, 2, 0, 0]} barSize={15} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </ChartContainer>
+                        )}
+                        <p className="text-xs text-muted-foreground text-center pt-1">İlk ders başlangıç saatlerine göre.</p>
+                      </div>
 
-                        {/* Departure Chart for the day */}
-                        <div className="space-y-2">
-                            <h3 className="text-md font-medium text-center">Ayrılış Yoğunluğu</h3>
-                            {departureData.length === 0 ? (
-                            <div className="h-[250px] flex flex-col items-center justify-center text-muted-foreground border border-dashed rounded-md">
-                                <AlertCircle className="h-8 w-8 mb-2" />
-                                <p className="text-xs">Ayrılış verisi yok</p>
-                            </div>
-                            ) : (
-                            <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={departureData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                    <XAxis dataKey="timeSlot" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} />
-                                    <YAxis allowDecimals={false} tickLine={false} axisLine={false} tickMargin={8} domain={[0, globalDepartureMaxY]} fontSize={10}/>
-                                    <Tooltip cursorStyle={{ fill: 'hsl(var(--muted))', opacity: 0.5 }} content={<ChartTooltipContent indicator="dot" />} />
-                                    <Legend content={<ChartLegendContent className="text-xs mt-1" />} wrapperStyle={{fontSize: '10px'}} />
-                                    <Bar dataKey="Wheelchair" stackId="departure" fill="var(--color-Wheelchair)" radius={[2, 2, 0, 0]} barSize={15}/>
-                                    <Bar dataKey="Other" stackId="departure" fill="var(--color-Other)" radius={[2, 2, 0, 0]} barSize={15}/>
-                                </BarChart>
-                                </ResponsiveContainer>
-                            </ChartContainer>
-                            )}
-                            <p className="text-xs text-muted-foreground text-center pt-1">Son ders bitiş saatlerine göre.</p>
-                        </div>
-                        </div>
-                    </CardContent>
-                    </Card>
-                )
-              })
-            )}
-             <p className="text-xs text-muted-foreground pt-4">Bu grafikler, öğrencilerin haftanın her günü için ilk ders başlangıç ve son ders bitiş saatlerini baz alarak saatlik varış ve ayrılış yoğunluğunu gösterir.</p>
+                      {/* Departure Chart for the day */}
+                      <div className="space-y-2">
+                        <h3 className="text-md font-medium text-center">Ayrılış Yoğunluğu</h3>
+                        {departureData.length === 0 ? (
+                          <div className="h-[250px] flex flex-col items-center justify-center text-muted-foreground border border-dashed rounded-md">
+                            <AlertCircle className="h-8 w-8 mb-2" />
+                            <p className="text-xs">Ayrılış verisi yok</p>
+                          </div>
+                        ) : (
+                          <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={departureData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="timeSlot" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} />
+                                <YAxis allowDecimals={false} tickLine={false} axisLine={false} tickMargin={8} domain={[0, globalDepartureMaxY]} fontSize={10} />
+                                <Tooltip cursorStyle={{ fill: 'hsl(var(--muted))', opacity: 0.5 }} content={<ChartTooltipContent indicator="dot" />} />
+                                <Legend content={<ChartLegendContent className="text-xs mt-1" />} wrapperStyle={{ fontSize: '10px' }} />
+                                <Bar dataKey="Wheelchair" stackId="departure" fill="var(--color-Wheelchair)" radius={[2, 2, 0, 0]} barSize={15} />
+                                <Bar dataKey="Other" stackId="departure" fill="var(--color-Other)" radius={[2, 2, 0, 0]} barSize={15} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </ChartContainer>
+                        )}
+                        <p className="text-xs text-muted-foreground text-center pt-1">Son ders bitiş saatlerine göre.</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })
+          )}
+          <p className="text-xs text-muted-foreground pt-4">Bu grafikler, öğrencilerin haftanın her günü için ilk ders başlangıç ve son ders bitiş saatlerini baz alarak saatlik varış ve ayrılış yoğunluğunu gösterir.</p>
         </CardContent>
       </Card>
     </div>

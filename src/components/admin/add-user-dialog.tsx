@@ -50,6 +50,7 @@ const addUserFormSchema = z.object({
     password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
     role: z.enum(["student", "admin", "driver"]),
     studentNumber: z.string().optional(),
+    disabilityType: z.enum(["Sw", "So"]).nullable().optional(),
 }).refine(data => {
     if (data.role === "student" && (!data.studentNumber || !/^\d{12}$/.test(data.studentNumber))) {
         return false;
@@ -73,6 +74,7 @@ export default function AddUserDialog({ isOpen, onClose, onSave }: AddUserDialog
             password: "",
             role: "student",
             studentNumber: "",
+            disabilityType: null,
         },
     });
 
@@ -86,6 +88,7 @@ export default function AddUserDialog({ isOpen, onClose, onSave }: AddUserDialog
                 password: "",
                 role: "student",
                 studentNumber: "",
+                disabilityType: null,
             });
         }
     }, [isOpen, form]);
@@ -99,7 +102,9 @@ export default function AddUserDialog({ isOpen, onClose, onSave }: AddUserDialog
                 name: data.name,
                 role: data.role,
                 studentNumber: data.role === "student" ? data.studentNumber : undefined,
-            });
+                // Ensure null for admin/driver
+                disabilityType: data.role === "student" ? data.disabilityType : null,
+            } as any);
             onClose();
         } finally {
             setIsSubmitting(false);

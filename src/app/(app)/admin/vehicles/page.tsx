@@ -46,7 +46,7 @@ export default function VehiclesPage() {
       }
     };
     loadVehicles();
-  }, [toast]);
+  }, []);
 
   const handleAddVehicle = () => {
     setEditingVehicle(null);

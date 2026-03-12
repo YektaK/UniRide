@@ -53,15 +53,15 @@ const userFormSchema = z.object({
   email: z.string().email({ message: "Geçerli bir e-posta adresi girin." }),
   studentNumber: z.string().optional(),
   homeAddress: z.string().optional(),
-  disabilityType: z.enum(["Sw", "So"]).optional(),
+  disabilityType: z.enum(["Sw", "So"]).nullable().optional(),
   accessibilityNeeds: z.array(z.string()).optional(),
   otherAccessibilityNeed: z.string().optional(),
   locationCode: z.string().optional(),
   password: z.string().optional(),
   weeklyScheduleId: z.string().optional(),
-  role: z.enum(["student", "admin"]) as z.ZodType<UserRole>, // Keep role for data structure, but not for editing
+  role: z.enum(["student", "admin", "driver"]) as z.ZodType<UserRole>, // Extended roles
 }).refine(data => {
-  // Student number validation only if the user's role (which is not editable in this form but comes with the user object) is "student"
+  // Student number validation only if the user's role is "student"
   if (data.role === "student" && (!data.studentNumber || !/^\d{12}$/.test(data.studentNumber))) {
     return false;
   }
@@ -81,10 +81,10 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
   useEffect(() => {
     if (isOpen && user) {
       form.reset({
-        ...user, // This will include the non-editable role
+        ...user,
         studentNumber: user.studentNumber || "",
         homeAddress: user.homeAddress || "",
-        disabilityType: (user as any).disabilityType || undefined,
+        disabilityType: user.disabilityType || null,
         locationCode: (user as any).locationCode || "",
         accessibilityNeeds: user.accessibilityNeeds || [],
         otherAccessibilityNeed: user.accessibilityNeeds?.includes("other")
@@ -92,21 +92,19 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
           : "",
       });
     } else if (isOpen && !user) {
-      form.reset({ // Default for a potential "add user" - though this dialog is for edit
+      form.reset({
         id: `new-${Date.now()}`,
         name: "",
         email: "",
-        role: "student", // Default role for new user if this form were used for adding
+        role: "student",
         studentNumber: "",
         homeAddress: "",
+        disabilityType: null,
         accessibilityNeeds: [],
         otherAccessibilityNeed: ""
       });
     }
   }, [user, form, isOpen]);
-
-  // Watched role is no longer needed for conditional rendering of form fields if role is not editable
-  // const watchedRole = form.watch("role"); // No longer needed if role is not changeable here
 
   const handleSubmit = (data: UserFormValues) => {
     const finalAccessibilityNeeds = data.accessibilityNeeds?.filter(need => need !== "other") || [];
@@ -114,21 +112,22 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
       finalAccessibilityNeeds.push(`other:${data.otherAccessibilityNeed}`);
     }
 
-    // The user's original role is preserved from the 'user' prop
-    // The 'data' object will contain the role from form.reset, but it wasn't editable.
-    // We ensure the original role from the user object passed in is maintained.
     const userDataToSave: User = {
-      ...(user!), // Start with existing user data to preserve password, weeklyScheduleId, and original role
-      ...data, // Apply form changes (name, email, student-specific fields)
-      role: user!.role, // Explicitly use the original role
+      ...(user!),
+      ...data,
+      role: user!.role,
       accessibilityNeeds: finalAccessibilityNeeds,
     };
 
-    // If the user's role is admin, student-specific fields should be undefined
-    if (userDataToSave.role === 'admin') {
+    // Correctly apply Sw/So/Null logic based on role
+    if (userDataToSave.role === 'admin' || userDataToSave.role === 'driver') {
       userDataToSave.studentNumber = undefined;
       userDataToSave.homeAddress = undefined;
       userDataToSave.accessibilityNeeds = [];
+      userDataToSave.disabilityType = null;
+    } else {
+      // For students, use what was in the form, ensuring it's Sw, So, or null
+      userDataToSave.disabilityType = data.disabilityType || null;
     }
 
     onSave(userDataToSave);
@@ -141,7 +140,7 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Kullanıcıyı Düzenle: {user?.name} ({user?.role === "admin" ? "Admin" : "Öğrenci"})</DialogTitle>
+          <DialogTitle>Kullanıcıyı Düzenle: {user?.name} ({user?.role === "admin" ? "Admin" : user?.role === "driver" ? "Şoför" : "Öğrenci"})</DialogTitle>
           <DialogDescription>
             Kullanıcı bilgilerini güncelleyin. E-posta değişikliği dikkatli yapılmalıdır. Rol bu ekrandan değiştirilemez.
           </DialogDescription>

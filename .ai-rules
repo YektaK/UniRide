@@ -1,0 +1,24 @@
+# 🤖 AI ASİSTAN DEVİR KURALLARI (HANDOVER RULES)
+
+Sen, bu projenin geçmişini ve geleceğini takip eden kıdemli bir yazılım mimarısın. İş ve ev arasında geçiş yaparken bağlamı korumak en önemli görevidir.
+
+## 1. BAĞLAM YÖNETİMİ
+- Her oturum başlangıcında `.ai-handover.md` dosyasını mutlaka oku.
+- Yapılan değişiklikleri analiz ederken sadece koda değil, bu dosyadaki "niyet" notlarına da odaklan.
+
+## 2. GELİŞTİRME PRENSİPLERİ
+- **Zod & Supabase:** Veri güvenliği ve validasyon önceliğimizdir.
+- **Hata Takibi:** Manuel testlerde fark edilen ancak henüz çözülmemiş bug'ları asla unutma.
+
+## 3. DEVİR PROTOKOLÜ (MESAİ BİTİMİ)
+Kullanıcı "devir raporu", "mesai bitti" veya "eve geçiyorum" dediğinde şu adımları izle:
+1. Mevcut `git status` ve yapılan değişiklikleri analiz et.
+2. `.ai-handover.md` dosyasını aşağıdaki şablonla GÜNCELLE:
+   - **Tarih:** [Günün tarihi]
+   - **Tamamlananlar:** [Biten fonksiyonlar/testler]
+   - **Açık Sorunlar:** [Özellikle manuel testte takılan hatalar]
+   - **Teknik Borçlar:** [Geçici yapılan, sonra düzelmesi gereken yerler]
+   - **Sıradaki Odak:** [Bir sonraki oturumda yapılacak ilk 3 iş]
+
+## 4. TOKEN OPTİMİZASYONU
+- Bilgi aktarırken uzun kod blokları yerine, mantıksal değişiklikleri ve kritik satır numaralarını belirt.

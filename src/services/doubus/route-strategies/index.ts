@@ -6,12 +6,16 @@
 import { PermutationStrategy } from "./permutation-strategy";
 import { NearestNeighborStrategy } from "./nearest-neighbor-strategy";
 import { TwoOptStrategy } from "./two-opt-strategy";
+import { GeneticAlgorithmStrategy } from "./ga-strategy";
+import { PSOStrategy } from "./pso-strategy";
 import type { RouteStrategy } from "./types";
 
 const strategies: Record<string, RouteStrategy> = {
   permutation: new PermutationStrategy(),
   "nearest-neighbor": new NearestNeighborStrategy(),
   "two-opt": new TwoOptStrategy(),
+  "genetic-algorithm": new GeneticAlgorithmStrategy(),
+  "pso": new PSOStrategy(),
 };
 
 // Strategy metadata for UI

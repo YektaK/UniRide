@@ -23,6 +23,7 @@ const createUserSchema = z.object({
     studentNumber: z.string().optional(),
     homeAddress: z.string().optional(),
     accessibilityNeeds: z.array(z.string()).optional(),
+    disabilityType: z.enum(["Sw", "So"]).nullable().optional(),
 });
 
 const updateUserSchema = z.object({
@@ -32,6 +33,7 @@ const updateUserSchema = z.object({
     studentNumber: z.string().optional(),
     homeAddress: z.string().optional(),
     accessibilityNeeds: z.array(z.string()).optional(),
+    disabilityType: z.enum(["Sw", "So"]).nullable().optional(),
 });
 
 // GET /api/admin/users - Get all users
@@ -62,7 +64,7 @@ export async function POST(request: NextRequest) {
 
         const body = await request.json();
         const validatedData = createUserSchema.parse(body);
-        const { email, password, name, role, studentNumber, homeAddress, accessibilityNeeds } = validatedData;
+        const { email, password, name, role, studentNumber, homeAddress, accessibilityNeeds, disabilityType } = validatedData;
 
         const adminClient = getSupabaseAdmin();
 
@@ -77,6 +79,9 @@ export async function POST(request: NextRequest) {
             return createErrorResponse(authError.message, 400);
         }
 
+        // Logic check: Admin and Driver should have null disability_type
+        const finalDisabilityType = (role === "admin" || role === "driver") ? null : (disabilityType || null);
+
         // Create database user
         const { data: userData, error: dbError } = await (adminClient as any)
             .from("users")
@@ -88,6 +93,7 @@ export async function POST(request: NextRequest) {
                 student_number: studentNumber,
                 home_address: homeAddress || "",
                 accessibility_needs: accessibilityNeeds || [],
+                disability_type: finalDisabilityType,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
             })
@@ -127,6 +133,13 @@ export async function PUT(request: NextRequest) {
         if (updates.studentNumber !== undefined) dbUpdates.student_number = updates.studentNumber;
         if (updates.homeAddress !== undefined) dbUpdates.home_address = updates.homeAddress;
         if (updates.accessibilityNeeds !== undefined) dbUpdates.accessibility_needs = updates.accessibilityNeeds;
+        if (updates.disabilityType !== undefined) dbUpdates.disability_type = updates.disabilityType;
+
+        // Logic check: If role changed to admin/driver, clear disability_type
+        if (dbUpdates.role === "admin" || dbUpdates.role === "driver") {
+            dbUpdates.disability_type = null;
+            dbUpdates.accessibility_needs = [];
+        }
 
         const { data, error } = await (adminClient as any)
             .from("users")

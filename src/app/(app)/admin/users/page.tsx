@@ -73,7 +73,9 @@ export default function AdminUsersPage() {
       }
     };
     loadUsers();
-  }, [toast]);
+    // Removed toast from dependency array to prevent unnecessary re-runs
+    // toast is guaranteed to be stable or we only want to load once on mount
+  }, []);
 
   const handleOpenEditDialog = (user: User) => {
     setEditingUser(user);

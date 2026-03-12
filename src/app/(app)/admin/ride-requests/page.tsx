@@ -87,7 +87,7 @@ export default function AdminRideRequestsPage() {
       }
     };
     loadData();
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     const lowerSearchTerm = searchTerm.toLowerCase();

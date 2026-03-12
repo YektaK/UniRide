@@ -14,7 +14,7 @@ import { format } from "date-fns";
 /**
  * Convert DouBus route to Database Route format
  */
-const convertToDbRoute = (
+export const convertToDbRoute = (
   vehicleRoute: MultiVehicleRoutingResult["routes"][0],
   date: string,
   timeslot: string,

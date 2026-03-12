@@ -11,7 +11,7 @@ export interface User {
   homeAddress?: string;
   homeCoordinates?: { lat: number; lng: number };
   accessibilityNeeds?: string[]; // e.g., ["visual_impairment", "hearing_impairment"]
-  disabilityType?: "Sw" | "So"; // Sw = wheelchair, So = other disability
+  disabilityType?: "Sw" | "So" | null; // Sw = wheelchair, So = other disability, null = none/admin/driver
   locationCode?: string; // Test data reference: Sw1, So5, etc.
   weeklyScheduleId?: string; // Reference to a schedule document/object
 }

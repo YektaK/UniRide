@@ -43,3 +43,14 @@ next-env.d.ts
 # firebase
 firebase-debug.log
 firestore-debug.log
+
+# Vitest (Test sonuçları ve cache)
+.vitest-result/
+test-results/
+
+# Supabase (Yerel geliştirme yapıyorsanız)
+.supabase/
+
+# IDE Ayarları (İş ve ev PC farklı ayarlar isteyebilir)
+.vscode/
+.idea/

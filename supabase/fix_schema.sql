@@ -21,5 +21,7 @@ ALTER TABLE users ADD CONSTRAINT users_disability_type_check
 UPDATE users SET disability_type = NULL WHERE role IN ('admin', 'driver');
 UPDATE users SET accessibility_needs = '{}' WHERE role IN ('admin', 'driver');
 
--- 4. PostgREST cache'ini yenilemek için tabloyu notify edelim (veya Dashboard'dan 'Reload Schema' yapın)
-NOTIFY pgrst, 'reload schema';
+-- 5. weekly_schedules tablosuna UNIQUE(user_id) kısıtlaması ekleme
+-- Bu sayede her kullanıcının sadece bir programı olabilir ve upsert düzgün çalışır.
+ALTER TABLE weekly_schedules DROP CONSTRAINT IF EXISTS weekly_schedules_user_id_key;
+ALTER TABLE weekly_schedules ADD CONSTRAINT weekly_schedules_user_id_key UNIQUE (user_id);

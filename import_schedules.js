@@ -90,7 +90,7 @@ async function processExcelSchedules(dryRun = true) {
     // 3. Supabase ile Eşleştir ve Göster/Aktar
     const { data: dbUsers, error: userError } = await supabase
         .from('users')
-        .select('id, student_number, email')
+        .select('id, student_number, email, location_code')
         .eq('role', 'student');
 
     if (userError) throw userError;
@@ -98,9 +98,12 @@ async function processExcelSchedules(dryRun = true) {
     console.log(`\nToplam ${dbUsers.length} öğrenci sistemde kayıtlı.`);
 
     for (const user of dbUsers) {
-        const scheduleData = studentsSchedules[user.student_number];
+        // Excel'deki "Ogrenci" sütunu (Sw1, So1...) bizim DB'deki location_code'umuza karşılık geliyor
+        const lookupKey = user.location_code;
+        const scheduleData = studentsSchedules[lookupKey];
+
         if (!scheduleData) {
-            // console.log(`[!] ${user.student_number} için Excel'de veri bulunamadı.`);
+            // console.log(`[!] ${lookupKey} için Excel'de veri bulunamadı.`);
             continue;
         }
 

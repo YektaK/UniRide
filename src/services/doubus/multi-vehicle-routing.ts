@@ -1,6 +1,12 @@
 /**
- * Multi-Vehicle Routing Service
+ * Multi-Vehicle Routing Service - FIXED VERSION
  * Optimizes routes for multiple vehicles based on time slots and capacity constraints
+ * 
+ * FIXES:
+ * 1. Hard-coded API URL replaced with environment variable
+ * 2. Added timeout handling for API requests
+ * 3. Better error handling with specific error types
+ * 4. Added request retry logic
  */
 
 import type { RideRequest } from "@/types";
@@ -9,6 +15,11 @@ import { getOptimalRoute, calculateDistance, type LocationCode } from "./route";
 import { addressToLocationCode } from "./location-mapper";
 import type { Route as DouBusRoute } from "./route";
 import type { Route as DbRoute } from "@/types/db";
+import { OPTIMIZER_API_URL, DEFAULT_TIME_WINDOW_MINUTES, DEFAULT_MAX_TRAVEL_TIME, DEFAULT_SW_CAPACITY, DEFAULT_SO_CAPACITY } from "@/lib/config";
+
+// API Configuration
+const API_TIMEOUT_MS = 30000; // 30 seconds
+const API_MAX_RETRIES = 2;
 
 export interface TimeSlot {
   startTime: string; // ISO datetime
@@ -34,11 +45,24 @@ export interface MultiVehicleRoutingResult {
 }
 
 /**
+ * Custom error class for routing errors
+ */
+class RoutingError extends Error {
+  constructor(
+    message: string,
+    public readonly code: "API_ERROR" | "TIMEOUT" | "INVALID_RESPONSE" | "NO_LOCATION"
+  ) {
+    super(message);
+    this.name = "RoutingError";
+  }
+}
+
+/**
  * Group ride requests by time slots
  */
 export const groupRequestsByTimeSlot = (
   requests: RideRequest[],
-  timeWindowMinutes: number = 30
+  timeWindowMinutes: number = DEFAULT_TIME_WINDOW_MINUTES
 ): TimeSlot[] => {
   // Separate pickup and dropoff requests
   const pickupRequests = requests.filter(
@@ -128,8 +152,46 @@ export const groupRequestsByTimeSlot = (
 };
 
 /**
+ * Fetch with timeout and retry
+ */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number = API_TIMEOUT_MS,
+  maxRetries: number = API_MAX_RETRIES
+): Promise<Response> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      lastError = error as Error;
+      if (attempt < maxRetries) {
+        // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
+      }
+    }
+  }
+  
+  throw new RoutingError(
+    `API request failed after ${maxRetries + 1} attempts: ${lastError?.message}`,
+    "TIMEOUT"
+  );
+}
+
+/**
  * Optimize routes for a time slot with multiple vehicles
- * NEW: Uses the Python Microservice Optimization API (Strategy Pattern)
+ * Uses the Python Microservice Optimization API
  */
 export const optimizeTimeSlotRoutes = async (
   timeSlot: TimeSlot,
@@ -138,8 +200,12 @@ export const optimizeTimeSlotRoutes = async (
 ): Promise<MultiVehicleRoutingResult> => {
   const activeVehicles = vehicles.filter((v) => v.status === "active");
 
-  const sw_capacity = activeVehicles.length > 0 ? activeVehicles[0].wheelchairCapacity : 4;
-  const so_capacity = activeVehicles.length > 0 ? activeVehicles[0].seatingCapacity : 5;
+  const sw_capacity = activeVehicles.length > 0 
+    ? activeVehicles[0].wheelchairCapacity 
+    : DEFAULT_SW_CAPACITY;
+  const so_capacity = activeVehicles.length > 0 
+    ? activeVehicles[0].seatingCapacity 
+    : DEFAULT_SO_CAPACITY;
 
   const requestLocations = new Map<RideRequest, LocationCode>();
   const unassignedRequests: RideRequest[] = [];
@@ -153,6 +219,8 @@ export const optimizeTimeSlotRoutes = async (
         : request.dropoffLocation.address;
 
     const locationCode = addressToLocationCode(address);
+    
+    // FIXED: Handle null location codes properly instead of defaulting
     if (locationCode) {
       requestLocations.set(request, locationCode);
 
@@ -167,6 +235,11 @@ export const optimizeTimeSlotRoutes = async (
       }
       locToRequests.get(locationCode)!.push(request);
     } else {
+      // Log warning and add to unassigned
+      console.warn(
+        `[Routing] Could not map address for request ${request.id}: "${address}". ` +
+        `Student will be marked as unassigned.`
+      );
       unassignedRequests.push(request);
     }
   }
@@ -185,26 +258,41 @@ export const optimizeTimeSlotRoutes = async (
     algorithm: "ortools_cvrp",
     students: studentsPayload,
     depot: { id: startLocation, type: "D" },
-    max_travel_time: 120,
+    max_travel_time: DEFAULT_MAX_TRAVEL_TIME,
     sw_capacity: sw_capacity,
     so_capacity: so_capacity,
   };
 
   try {
-    const response = await fetch("http://127.0.0.1:8000/api/v1/optimize", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    // FIXED: Use environment variable for API URL
+    const apiUrl = `${OPTIMIZER_API_URL}/api/v1/optimize`;
+    
+    console.log(`[Routing] Calling optimizer API: ${apiUrl}`);
+    
+    const response = await fetchWithRetry(
+      apiUrl,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    );
 
     if (!response.ok) {
-      throw new Error(`Python API Status: ${response.status}`);
+      const errorText = await response.text();
+      throw new RoutingError(
+        `Python API returned status ${response.status}: ${errorText}`,
+        "API_ERROR"
+      );
     }
 
     const data = await response.json();
 
     if (!data.success || !data.routes) {
-      throw new Error(data.error_message || "Unknown error from Python engine");
+      throw new RoutingError(
+        data.error_message || "Unknown error from Python engine",
+        "INVALID_RESPONSE"
+      );
     }
 
     const vehicleRoutes: VehicleRoute[] = [];
@@ -266,9 +354,15 @@ export const optimizeTimeSlotRoutes = async (
       totalDistance += douBusRoute.distanceKm;
     });
 
+    // Add any remaining unmatched requests to unassigned
     locToRequests.forEach((reqs) => {
       unassignedRequests.push(...reqs);
     });
+
+    console.log(
+      `[Routing] Successfully optimized ${vehicleRoutes.length} routes for ` +
+      `${studentsPayload.length} students`
+    );
 
     return {
       routes: vehicleRoutes,
@@ -278,7 +372,13 @@ export const optimizeTimeSlotRoutes = async (
       totalDistance,
     };
   } catch (error) {
-    console.error("Python VRP API Hatası:", error);
+    if (error instanceof RoutingError) {
+      console.error(`[Routing] ${error.code}: ${error.message}`);
+    } else {
+      console.error("[Routing] Unexpected error:", error);
+    }
+    
+    // Return all requests as unassigned on failure
     return {
       routes: [],
       unassignedRequests: [...timeSlot.requests],
@@ -308,4 +408,3 @@ export const optimizeAllTimeSlots = async (
 
   return results;
 };
-

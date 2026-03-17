@@ -1,63 +1,124 @@
 /**
- * Location Mapper
+ * Location Mapper - FIXED VERSION
  * Maps student addresses to DouBus location codes
- * This is a simplified mapping - in production, you'd use geocoding/address matching
+ * 
+ * FIXES:
+ * 1. Removed dangerous default fallback to "Sw1"
+ * 2. Returns null when no match found (safer behavior)
+ * 3. Added better logging for debugging
  */
 
 import type { LocationCode } from "./route";
 
+// Location code mappings - keyword to location code
+const LOCATION_MAPPINGS: Record<string, LocationCode> = {
+  // Sarıyer (Sw) locations
+  "sw1": "Sw1", "sarıyer 1": "Sw1",
+  "sw2": "Sw2", "sarıyer 2": "Sw2",
+  "sw3": "Sw3", "sarıyer 3": "Sw3",
+  "sw4": "Sw4", "sarıyer 4": "Sw4",
+  "sw5": "Sw5", "sarıyer 5": "Sw5",
+  "sw6": "Sw6", "sarıyer 6": "Sw6",
+  "sw7": "Sw7", "sarıyer 7": "Sw7",
+  "sw8": "Sw8", "sarıyer 8": "Sw8",
+  "sw9": "Sw9", "sarıyer 9": "Sw9",
+  
+  // Sultangazi (So) locations
+  "so1": "So1", "sultangazi 1": "So1",
+  "so2": "So2", "sultangazi 2": "So2",
+  "so3": "So3", "sultangazi 3": "So3",
+  "so4": "So4", "sultangazi 4": "So4",
+  "so5": "So5", "sultangazi 5": "So5",
+  "so6": "So6", "sultangazi 6": "So6",
+  "so7": "So7", "sultangazi 7": "So7",
+  "so8": "So8", "sultangazi 8": "So8",
+  "so9": "So9", "sultangazi 9": "So9",
+  "so10": "So10", "sultangazi 10": "So10",
+  "so11": "So11", "sultangazi 11": "So11",
+  "so12": "So12", "sultangazi 12": "So12",
+  "so13": "So13", "sultangazi 13": "So13",
+  "so14": "So14", "sultangazi 14": "So14",
+  "so15": "So15", "sultangazi 15": "So15",
+  "so16": "So16", "sultangazi 16": "So16",
+  "so17": "So17", "sultangazi 17": "So17",
+  "so18": "So18", "sultangazi 18": "So18",
+  "so19": "So19", "sultangazi 19": "So19",
+};
+
 /**
  * Map address to DouBus location code
- * This is a simplified version - in production, use geocoding API
+ * 
+ * @param address - The address string to map
+ * @returns LocationCode if found, null otherwise (FIXED: no default fallback)
+ * 
+ * @example
+ * addressToLocationCode("Sw1 Mahallesi") // Returns "Sw1"
+ * addressToLocationCode("Unknown Address") // Returns null (NOT "Sw1")
  */
 export const addressToLocationCode = (address: string): LocationCode | null => {
+  if (!address || typeof address !== "string") {
+    console.warn("[LocationMapper] Invalid address provided:", address);
+    return null;
+  }
+
   const normalized = address.toLowerCase().trim();
   
-  // Simple keyword matching - can be enhanced with geocoding
-  if (normalized.includes("sw1") || normalized.includes("sarıyer 1")) return "Sw1";
-  if (normalized.includes("sw2") || normalized.includes("sarıyer 2")) return "Sw2";
-  if (normalized.includes("sw3") || normalized.includes("sarıyer 3")) return "Sw3";
-  if (normalized.includes("sw4") || normalized.includes("sarıyer 4")) return "Sw4";
-  if (normalized.includes("sw5") || normalized.includes("sarıyer 5")) return "Sw5";
-  if (normalized.includes("sw6") || normalized.includes("sarıyer 6")) return "Sw6";
-  if (normalized.includes("sw7") || normalized.includes("sarıyer 7")) return "Sw7";
-  if (normalized.includes("sw8") || normalized.includes("sarıyer 8")) return "Sw8";
-  if (normalized.includes("sw9") || normalized.includes("sarıyer 9")) return "Sw9";
+  // Check each mapping
+  for (const [keyword, locationCode] of Object.entries(LOCATION_MAPPINGS)) {
+    if (normalized.includes(keyword)) {
+      return locationCode;
+    }
+  }
   
-  if (normalized.includes("so1") || normalized.includes("sultangazi 1")) return "So1";
-  if (normalized.includes("so2") || normalized.includes("sultangazi 2")) return "So2";
-  if (normalized.includes("so3") || normalized.includes("sultangazi 3")) return "So3";
-  if (normalized.includes("so4") || normalized.includes("sultangazi 4")) return "So4";
-  if (normalized.includes("so5") || normalized.includes("sultangazi 5")) return "So5";
-  if (normalized.includes("so6") || normalized.includes("sultangazi 6")) return "So6";
-  if (normalized.includes("so7") || normalized.includes("sultangazi 7")) return "So7";
-  if (normalized.includes("so8") || normalized.includes("sultangazi 8")) return "So8";
-  if (normalized.includes("so9") || normalized.includes("sultangazi 9")) return "So9";
-  if (normalized.includes("so10") || normalized.includes("sultangazi 10")) return "So10";
-  if (normalized.includes("so11") || normalized.includes("sultangazi 11")) return "So11";
-  if (normalized.includes("so12") || normalized.includes("sultangazi 12")) return "So12";
-  if (normalized.includes("so13") || normalized.includes("sultangazi 13")) return "So13";
-  if (normalized.includes("so14") || normalized.includes("sultangazi 14")) return "So14";
-  if (normalized.includes("so15") || normalized.includes("sultangazi 15")) return "So15";
-  if (normalized.includes("so16") || normalized.includes("sultangazi 16")) return "So16";
-  if (normalized.includes("so17") || normalized.includes("sultangazi 17")) return "So17";
-  if (normalized.includes("so18") || normalized.includes("sultangazi 18")) return "So18";
-  if (normalized.includes("so19") || normalized.includes("sultangazi 19")) return "So19";
-  
-  // Default to closest location if no match
-  // In production, use geocoding to find nearest location
-  return "Sw1"; // Default fallback
+  // No match found - return null instead of default
+  console.warn(
+    `[LocationMapper] No location code found for address: "${address}". ` +
+    `Please update the student's address or add a new mapping.`
+  );
+  return null;
 };
 
 /**
  * Get location code from coordinates (future enhancement)
+ * 
+ * @param lat - Latitude
+ * @param lng - Longitude
+ * @returns LocationCode if found, null otherwise
  */
 export const coordinatesToLocationCode = (
   lat: number,
   lng: number
 ): LocationCode | null => {
   // TODO: Implement geocoding-based location detection
-  // For now, return null to use address-based mapping
+  // Could use a spatial index or distance calculation to nearest known location
+  console.warn(
+    `[LocationMapper] coordinatesToLocationCode not implemented. ` +
+    `Coordinates: (${lat}, ${lng})`
+  );
   return null;
 };
 
+/**
+ * Validate if a location code is valid
+ */
+export const isValidLocationCode = (code: string): code is LocationCode => {
+  const validCodes = [
+    "D.Kampus",
+    "Sw1", "Sw2", "Sw3", "Sw4", "Sw5", "Sw6", "Sw7", "Sw8", "Sw9",
+    "So1", "So2", "So3", "So4", "So5", "So6", "So7", "So8", "So9",
+    "So10", "So11", "So12", "So13", "So14", "So15", "So16", "So17", "So18", "So19"
+  ];
+  return validCodes.includes(code);
+};
+
+/**
+ * Get all valid location codes
+ */
+export const getAllLocationCodes = (): LocationCode[] => {
+  return [
+    "D.Kampus",
+    "Sw1", "Sw2", "Sw3", "Sw4", "Sw5", "Sw6", "Sw7", "Sw8", "Sw9",
+    "So1", "So2", "So3", "So4", "So5", "So6", "So7", "So8", "So9",
+    "So10", "So11", "So12", "So13", "So14", "So15", "So16", "So17", "So18", "So19"
+  ];
+};

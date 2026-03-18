@@ -65,9 +65,19 @@ export interface OptimizationResult {
     error_message?: string;
 }
 
+export interface AlgorithmResult {
+    algorithm: string;
+    success: boolean;
+    total_vehicles: number;
+    total_duration_minutes: number;
+    execution_time_seconds: number;
+    routes: VehicleRoute[];
+    error_message?: string;
+}
+
 export interface CompareResult {
     success: boolean;
-    results: OptimizationResult[];
+    results: AlgorithmResult[];
     best_algorithm: string;
     fastest_algorithm: string;
     summary: Record<string, { 

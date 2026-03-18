@@ -1,173 +1,238 @@
-from models.schemas import OptimizationRequest, OptimizationResponse, VehicleRoute, RouteStep
+"""
+OR-Tools CVRP Strategy
+Uses Google OR-Tools for Capacitated Vehicle Routing Problem
+Industry-standard solver for VRP
+"""
+
+import time
+from typing import List, Dict, Optional
+
+from models.schemas import (
+    OptimizationRequest, OptimizationResponse,
+    VehicleRoute, RouteStep
+)
 from strategies.base_strategy import BaseRoutingStrategy
-from ortools.constraint_solver import routing_enums_pb2
-from ortools.constraint_solver import pywrapcp
-from utils.data_loader import DataLoader
-import math
+from utils.data_loader import DataLoader, haversine_distance, estimate_travel_time
+
 
 class ORToolsCVRPStrategy(BaseRoutingStrategy):
     """
-    MATLAB Exact Parity:
-    - Independent Sw & So Capacity Limits
-    - Reading Real Asymmetric Time Matrix from Veri.xlsx
-    - Strict Maximum Tour Time Limit enforcement
+    OR-Tools based CVRP solver.
+    Uses Google's optimization library for vehicle routing.
     """
-    def __init__(self):
-        super().__init__()
-        self.data_loader = DataLoader.get_instance()
-        
-    def _create_data_model(self, depot, students, sw_capacity, so_capacity):
-        data = {}
-        locations = [depot] + students
-        
-        # 1. Fetch Exact Time Matrix
-        location_ids = [loc.id for loc in locations]
-        raw_time_matrix = self.data_loader.get_submatrix(location_ids)
-        
-        # Scale to integer (x100 for 2 decimal places precision)
-        SCALING_FACTOR = 100
-        data["time_matrix"] = [[int(round(val * SCALING_FACTOR)) for val in row] for row in raw_time_matrix]
-        data["locations"] = locations
-        
-        # 2. Extract specific demands properly
-        data["sw_demands"] = [0] + [1 if loc.type == "Sw" else 0 for loc in students]
-        data["so_demands"] = [0] + [1 if loc.type == "So" else 0 for loc in students]
-        
-        # Provide enough empty vehicles for OR-Tools to pick from
-        total_veh = len(students)
-        data["num_vehicles"] = total_veh
-        
-        data["sw_capacities"] = [sw_capacity] * total_veh
-        data["so_capacities"] = [so_capacity] * total_veh
-        data["depot"] = 0
-        return data, SCALING_FACTOR
+
+    @property
+    def name(self) -> str:
+        return "ortools_cvrp"
+
+    @property
+    def display_name(self) -> str:
+        return "OR-Tools CVRP"
+
+    @property
+    def description(self) -> str:
+        return "Google OR-Tools kütüphanesi ile endüstri standardı VRP çözümü."
+
+    def _get_duration(self, from_loc: str, to_loc: str, time_matrix: Dict, coordinates: Dict) -> float:
+        """Get duration between locations"""
+        if from_loc in time_matrix and to_loc in time_matrix[from_loc]:
+            return time_matrix[from_loc][to_loc]
+
+        if from_loc in coordinates and to_loc in coordinates:
+            c1 = coordinates[from_loc]
+            c2 = coordinates[to_loc]
+            dist = haversine_distance(c1["lat"], c1["lng"], c2["lat"], c2["lng"])
+            return estimate_travel_time(dist)
+
+        return 15.0
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:
-        students = request.students
-        if not students:
-            return OptimizationResponse(algorithm_used="ortools_exact_cvrp", success=True, routes=[])
-            
-        data, SCALING_FACTOR = self._create_data_model(
-            request.depot, students, request.sw_capacity, request.so_capacity
-        )
+        """Execute OR-Tools optimization"""
+        start_time = time.time()
 
-        manager = pywrapcp.RoutingIndexManager(
-            len(data["time_matrix"]), data["num_vehicles"], data["depot"]
-        )
+        students = request.students
+        depot = request.depot
+
+        if not students:
+            return OptimizationResponse(
+                algorithm_used=self.name,
+                success=True,
+                routes=[],
+                total_vehicles=0,
+                execution_time_seconds=time.time() - start_time
+            )
+
+        try:
+            from ortools.constraint_solver import routing_enums_pb2
+            from ortools.constraint_solver import pywrapcp
+        except ImportError:
+            # Fall back to greedy if OR-Tools not installed
+            return OptimizationResponse(
+                algorithm_used=self.name,
+                success=False,
+                routes=[],
+                total_vehicles=0,
+                error_message="OR-Tools not installed. Run: pip install ortools",
+                execution_time_seconds=time.time() - start_time
+            )
+
+        # Build time matrix
+        data_loader = DataLoader.get_instance()
+        location_ids = [depot.id] + [s.location_code for s in students]
+        raw_matrix = data_loader.get_submatrix(location_ids)
+
+        # Convert to integer matrix (OR-Tools uses integers)
+        # Multiply by 10 for precision
+        time_matrix = [[int(raw_matrix[i][j] * 10) for j in range(len(raw_matrix))] for i in range(len(raw_matrix))]
+
+        coordinates = {depot.id: {"lat": depot.lat, "lng": depot.lng}}
+        for s in students:
+            coords = s.coordinates or {"lat": 0, "lng": 0}
+            coordinates[s.location_code] = coords
+
+        # Create routing model
+        num_locations = len(location_ids)
+        num_vehicles = min(len(students), 10)  # Reasonable upper bound
+        depot_index = 0
+
+        manager = pywrapcp.RoutingIndexManager(num_locations, num_vehicles, depot_index)
         routing = pywrapcp.RoutingModel(manager)
 
-        def time_callback(from_index, to_index):
+        # Distance callback
+        def distance_callback(from_index, to_index):
             from_node = manager.IndexToNode(from_index)
             to_node = manager.IndexToNode(to_index)
-            return data["time_matrix"][from_node][to_node]
+            return time_matrix[from_node][to_node]
 
-        transit_callback_index = routing.RegisterTransitCallback(time_callback)
+        transit_callback_index = routing.RegisterTransitCallback(distance_callback)
         routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
 
-        # DIMENSION 1: SW CAPACITY
+        # Capacity constraints
+        # Sw students (wheelchair)
+        sw_demands = [0]  # Depot
+        for s in students:
+            sw_demands.append(10 if s.disability_type == "Sw" else 0)
+
         def sw_demand_callback(from_index):
             from_node = manager.IndexToNode(from_index)
-            return data["sw_demands"][from_node]
+            return sw_demands[from_node]
 
         sw_demand_callback_index = routing.RegisterUnaryTransitCallback(sw_demand_callback)
         routing.AddDimensionWithVehicleCapacity(
             sw_demand_callback_index,
-            0,
-            data["sw_capacities"],
-            True,
-            "SwCapacity",
+            0,  # null capacity slack
+            [request.sw_capacity * 10] * num_vehicles,  # vehicle maximum capacities
+            False,  # start cumul to zero
+            'SwCapacity'
         )
-        
-        # DIMENSION 2: SO CAPACITY
+
+        # So students (walking)
+        so_demands = [0]  # Depot
+        for s in students:
+            so_demands.append(10 if s.disability_type == "So" else 0)
+
         def so_demand_callback(from_index):
             from_node = manager.IndexToNode(from_index)
-            return data["so_demands"][from_node]
+            return so_demands[from_node]
 
         so_demand_callback_index = routing.RegisterUnaryTransitCallback(so_demand_callback)
         routing.AddDimensionWithVehicleCapacity(
             so_demand_callback_index,
             0,
-            data["so_capacities"],
-            True,
-            "SoCapacity",
+            [request.so_capacity * 10] * num_vehicles,
+            False,
+            'SoCapacity'
         )
-        
-        # DIMENSION 3: MAX TRAVEL TIME
-        max_time_scaled = int(request.max_travel_time * SCALING_FACTOR)
+
+        # Time constraint
         routing.AddDimension(
             transit_callback_index,
-            0, 
-            max_time_scaled, 
-            True, 
-            "Time"
+            0,  # allow waiting time
+            int(request.max_travel_time * 10),  # maximum time per vehicle
+            False,
+            'Time'
         )
-        
-        # Penalize extra vehicles heavily so solver minimizes vehicle fleet count (like MATLAB does)
-        penalty_cost = 1440 * SCALING_FACTOR
-        for vehicle_id in range(data["num_vehicles"]):
-            routing.SetFixedCostOfVehicle(penalty_cost, vehicle_id)
 
+        # Setting first solution heuristic
         search_parameters = pywrapcp.DefaultRoutingSearchParameters()
-        search_parameters.first_solution_strategy = (routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
-        search_parameters.local_search_metaheuristic = (routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH)
-        search_parameters.time_limit.FromSeconds(5)
+        search_parameters.first_solution_strategy = (
+            routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
+        )
+        search_parameters.local_search_metaheuristic = (
+            routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+        )
+        search_parameters.time_limit.seconds = 30
 
+        # Solve
         solution = routing.SolveWithParameters(search_parameters)
 
         if not solution:
             return OptimizationResponse(
-                algorithm_used="ortools_exact_cvrp",
+                algorithm_used=self.name,
                 success=False,
                 routes=[],
-                error_message="OR-Tools CVRP Failed. Strict constraints breached (Check max_travel_time or capacities)."
+                total_vehicles=0,
+                error_message="OR-Tools could not find a solution",
+                execution_time_seconds=time.time() - start_time
             )
 
+        # Extract routes
         routes = []
-        actual_vehicle_idx = 1
-        for vehicle_id in range(data["num_vehicles"]):
+        time_dimension = routing.GetDimensionOrDie('Time')
+
+        for vehicle_id in range(num_vehicles):
             index = routing.Start(vehicle_id)
-            if routing.IsEnd(solution.Value(routing.NextVar(index))):
-                continue
-                
             route_details = []
-            route_time_scaled = 0
-            
+            route_students = []
+            total_duration = 0
+            sw_count = 0
+            so_count = 0
+
             while not routing.IsEnd(index):
-                node_index = manager.IndexToNode(index)
-                previous_index = index
-                index = solution.Value(routing.NextVar(index))
-                next_node_index = manager.IndexToNode(index)
-                
-                # Read pure travel time directly from the matrix to avoid
-                # GetArcCostForVehicle including the fixed vehicle penalty cost
-                arc_time = data["time_matrix"][node_index][next_node_index]
-                route_time_scaled += arc_time
-                
-                duration_minutes = arc_time / SCALING_FACTOR
-                
-                loc1_id = data["locations"][node_index].id
-                loc2_id = data["locations"][next_node_index].id
-                
-                if loc1_id != loc2_id:
-                    route_details.append(RouteStep(
-                        location1=loc1_id,
-                        location2=loc2_id,
-                        duration=round(duration_minutes, 2),
-                        distance=0.0
-                    ))
-            
-            if len(route_details) > 0:
-                total_duration = route_time_scaled / SCALING_FACTOR
+                from_index = index
+                to_index = solution.Value(routing.NextVar(index))
+
+                from_node = manager.IndexToNode(from_index)
+                to_node = manager.IndexToNode(to_index)
+
+                if to_node > 0:  # Not depot
+                    student = students[to_node - 1]  # -1 because depot is 0
+                    route_students.append(student)
+                    if student.disability_type == "Sw":
+                        sw_count += 1
+                    else:
+                        so_count += 1
+
+                duration = time_matrix[from_node][to_node] / 10.0
+                total_duration += duration
+
+                route_details.append(RouteStep(
+                    location1=location_ids[from_node],
+                    location2=location_ids[to_node],
+                    duration=round(duration, 2),
+                    distance=0.0
+                ))
+
+                index = to_index
+
+            if route_details:
                 routes.append(VehicleRoute(
-                    vehicle_id=f"Araç {actual_vehicle_idx}",
+                    vehicle_id=f"Araç {vehicle_id + 1} (OR-Tools)",
                     route_details=route_details,
                     total_duration_minutes=round(total_duration, 2),
-                    total_distance_km=0.0
+                    total_distance_km=0.0,
+                    sw_count=sw_count,
+                    so_count=so_count,
+                    student_ids=[s.id for s in route_students]
                 ))
-                actual_vehicle_idx += 1
+
+        execution_time = time.time() - start_time
 
         return OptimizationResponse(
-            algorithm_used="ortools_exact_cvrp",
+            algorithm_used=self.name,
             success=True,
-            routes=routes
+            routes=routes,
+            total_vehicles=len(routes),
+            total_duration_minutes=sum(r.total_duration_minutes for r in routes),
+            execution_time_seconds=round(execution_time, 4)
         )

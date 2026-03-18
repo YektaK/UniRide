@@ -1,15 +1,19 @@
 /**
  * Route Optimization API
- * Endpoint for optimizing routes using various strategies
+ * Calls Python Optimization API
  */
 
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
-import { getStrategy, getAvailableStrategies, getDefaultStrategy } from "@/services/doubus/route-strategies";
-import { calculateDistance } from "@/services/doubus/route";
+import { 
+    optimizeRoutes, 
+    getAvailableStrategies,
+    type StudentForOptimization, 
+    type Depot 
+} from "@/services/optimizer-service";
 
-// Create Supabase client with service role for admin operations
+// Create Supabase client
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -22,14 +26,12 @@ async function verifyAuth(authHeader: string | null) {
     }
 
     const token = authHeader.split(" ")[1];
-
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
 
     if (error || !user) {
         return null;
     }
 
-    // Get user profile to check role
     const { data: profile } = await supabaseAdmin
         .from("users")
         .select("*")
@@ -41,32 +43,30 @@ async function verifyAuth(authHeader: string | null) {
 
 /**
  * GET /api/optimize-route
- * Returns available strategies
+ * Returns available algorithms
  */
 export async function GET() {
-    return NextResponse.json({
-        strategies: getAvailableStrategies(),
-        defaultStrategy: getDefaultStrategy().name,
-    });
+    try {
+        const strategies = await getAvailableStrategies();
+        
+        return NextResponse.json({
+            strategies,
+            defaultStrategy: "genetic_algorithm",
+            pythonApiEnabled: true,
+        });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 }
 
 /**
  * POST /api/optimize-route
- * Optimizes a route using the specified strategy
- * 
- * Body:
- * {
- *   start: string,      // Starting location code
- *   end: string,        // Ending location code
- *   waypoints: string[], // Intermediate locations
- *   strategy?: string   // Optional: "permutation", "nearest-neighbor", "two-opt"
- * }
+ * Optimizes routes using Python API
  */
 export async function POST(request: Request) {
     try {
         const headersList = await headers();
         const authHeader = headersList.get("authorization");
-
         const user = await verifyAuth(authHeader);
 
         if (!user) {
@@ -79,69 +79,80 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { start, end, waypoints, strategy: strategyName } = body;
+        const { 
+            students, 
+            depot, 
+            algorithm, 
+            max_travel_time, 
+            sw_capacity, 
+            so_capacity,
+            ga_config,
+            pso_config
+        } = body;
 
         // Validate input
-        if (!start || !end) {
+        if (!students || !Array.isArray(students) || students.length === 0) {
             return NextResponse.json(
-                { error: "Missing required fields: start, end" },
+                { error: "Students array is required and must not be empty" },
                 { status: 400 }
             );
         }
 
-        if (!Array.isArray(waypoints)) {
+        if (!depot) {
             return NextResponse.json(
-                { error: "waypoints must be an array" },
+                { error: "Depot is required" },
                 { status: 400 }
             );
         }
 
-        // Get the strategy
-        const strategy = getStrategy(strategyName);
+        // Convert students to optimization format
+        const optimizationStudents: StudentForOptimization[] = students.map((s: any) => ({
+            id: s.id || s.student_id,
+            name: s.name || `Öğrenci ${s.id}`,
+            location_code: s.location_code || s.locationCode,
+            coordinates: s.coordinates || s.home_coordinates || null,
+            disability_type: s.disability_type || s.disabilityType || "So",
+        }));
 
-        if (!strategy) {
-            return NextResponse.json(
-                {
-                    error: `Unknown strategy: ${strategyName}`,
-                    availableStrategies: getAvailableStrategies()
-                },
-                { status: 400 }
-            );
-        }
+        // Default depot (Düzce University Campus)
+        const optimizationDepot: Depot = {
+            id: depot.id || "D.Kampus",
+            lat: depot.lat || 40.8410,
+            lng: depot.lng || 31.1478,
+        };
 
-        // Measure optimization time
-        const startTime = performance.now();
-
-        // Calculate optimal route
-        const result = await strategy.calculateOptimalRoute(
-            start,
-            end,
-            waypoints,
-            calculateDistance
+        // Call Python API
+        const result = await optimizeRoutes(
+            optimizationStudents,
+            optimizationDepot,
+            {
+                algorithm: algorithm || "genetic_algorithm",
+                max_travel_time: max_travel_time || 120,
+                sw_capacity: sw_capacity || 4,
+                so_capacity: so_capacity || 5,
+                ga_config,
+                pso_config,
+            }
         );
 
-        const endTime = performance.now();
-        const optimizationTimeMs = Math.round(endTime - startTime);
-
-        // Calculate total distance (approximation based on duration)
-        // Assuming average speed of 40 km/h
-        const totalDistanceKm = (result.totalDuration / 60) * 40;
+        if (!result.success) {
+            return NextResponse.json(
+                { 
+                    error: result.error_message || "Optimization failed",
+                    algorithm_used: result.algorithm_used,
+                },
+                { status: 500 }
+            );
+        }
 
         return NextResponse.json({
             success: true,
-            strategy: strategy.name,
-            route: {
-                start,
-                end,
-                waypoints: result.routeDetails.map(d => d.location2).slice(0, -1),
-                routeDetails: result.routeDetails,
-                totalDurationMinutes: result.totalDuration,
-                totalDistanceKm: Math.round(totalDistanceKm * 10) / 10,
-            },
-            meta: {
-                waypointCount: waypoints.length,
-                optimizationTimeMs,
-            },
+            algorithm_used: result.algorithm_used,
+            routes: result.routes,
+            total_vehicles: result.total_vehicles,
+            total_duration_minutes: result.total_duration_minutes,
+            execution_time_seconds: result.execution_time_seconds,
+            student_count: students.length,
         });
     } catch (error: any) {
         console.error("Route optimization error:", error);

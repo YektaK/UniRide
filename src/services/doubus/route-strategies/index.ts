@@ -24,6 +24,7 @@ export interface StrategyInfo {
   label: string;
   description: string;
   complexity: string;
+  recommended?: boolean;
 }
 
 const strategyInfo: StrategyInfo[] = [
@@ -31,24 +32,41 @@ const strategyInfo: StrategyInfo[] = [
     name: "nearest-neighbor",
     label: "En Yakın Komşu (Hızlı)",
     description: "Greedy algoritma, hızlı sonuç verir ama optimal olmayabilir",
-    complexity: "O(n²)"
+    complexity: "O(n²)",
+    recommended: false,
   },
   {
     name: "two-opt",
     label: "2-opt İyileştirme (Dengeli)",
     description: "Nearest neighbor başlangıcı + lokal iyileştirme",
-    complexity: "O(n³)"
+    complexity: "O(n³)",
+    recommended: true,
+  },
+  {
+    name: "genetic-algorithm",
+    label: "Genetik Algoritma",
+    description: "Popülasyon tabanlı meta-sezgisel. Büyük problemler için ideal.",
+    complexity: "O(g × p × n²)",
+    recommended: true,
+  },
+  {
+    name: "pso",
+    label: "Parçacık Sürü Optimizasyonu",
+    description: "Sürü zekası tabanlı meta-sezgisel. Hızlı yakınsama.",
+    complexity: "O(i × s × n²)",
+    recommended: true,
   },
   {
     name: "permutation",
     label: "Permütasyon (Optimal)",
-    description: "Tüm kombinasyonları dener, en iyi sonucu garanti eder",
-    complexity: "O(n!)"
-  }
+    description: "Tüm kombinasyonları dener, en iyi sonucu garanti eder (n ≤ 10)",
+    complexity: "O(n!)",
+    recommended: false,
+  },
 ];
 
 // Default strategy - can be overridden via environment variable
-const DEFAULT_STRATEGY = process.env.ROUTE_OPTIMIZATION_STRATEGY || "two-opt";
+const DEFAULT_STRATEGY = process.env.ROUTE_OPTIMIZATION_STRATEGY || "genetic-algorithm";
 
 /**
  * Get a route strategy by name
@@ -62,7 +80,7 @@ export const getStrategy = (name?: string): RouteStrategy | null => {
  * Get the default strategy
  */
 export const getDefaultStrategy = (): RouteStrategy => {
-  return strategies[DEFAULT_STRATEGY] || strategies["two-opt"];
+  return strategies[DEFAULT_STRATEGY] || strategies["genetic-algorithm"];
 };
 
 /**
@@ -85,3 +103,8 @@ export const getStrategyInfo = (): StrategyInfo[] => {
 export const getStrategyInfoByName = (name: string): StrategyInfo | undefined => {
   return strategyInfo.find(s => s.name === name);
 };
+
+// Export strategy classes for direct use
+export { GeneticAlgorithmStrategy, PSOStrategy };
+// Export types
+export type { RouteStrategy, StrategyCalculationResult, RouteDetail, GAConfig, PSOConfig } from "./types";

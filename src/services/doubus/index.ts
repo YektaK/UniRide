@@ -8,7 +8,12 @@ export { getOptimalRoute, calculateDistance, ALL_LOCATIONS } from "./route";
 export type { Route, RouteDetail, LocationCode } from "./route";
 
 // Location mapping
-export { addressToLocationCode, coordinatesToLocationCode } from "./location-mapper";
+export {
+  addressToLocationCode,
+  coordinatesToLocationCode,
+  isValidLocationCode,
+  getAllLocationCodes,
+} from "./location-mapper";
 
 // Multi-vehicle routing
 export {
@@ -23,7 +28,7 @@ export type {
 } from "./multi-vehicle-routing";
 
 // Route optimizer
-export { optimizeRoutesForDate, calculateETA } from "./route-optimizer";
+export { optimizeRoutesForDate, calculateETA, convertToDbRoute } from "./route-optimizer";
 
 // Vehicle assignment
 export {
@@ -33,6 +38,19 @@ export {
 export type { AssignmentInput, AssignmentResult } from "./vehicle-assignment";
 
 // Route strategies
-export { getStrategy, getAvailableStrategies } from "./route-strategies";
-export type { RouteStrategy, StrategyCalculationResult } from "./route-strategies/types";
-
+export {
+  getStrategy,
+  getAvailableStrategies,
+  getStrategyInfo,
+  getStrategyInfoByName,
+  getDefaultStrategy,
+  GeneticAlgorithmStrategy,
+  PSOStrategy,
+} from "./route-strategies";
+export type {
+  RouteStrategy,
+  StrategyCalculationResult,
+  GAConfig,
+  PSOConfig,
+} from "./route-strategies/types";
+export type { StrategyInfo } from "./route-strategies";

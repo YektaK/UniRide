@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,41 +17,62 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Truck, Users, Clock, Calculator, ArrowRight, Info } from "lucide-react";
-import { ALL_LOCATIONS } from "@/services/doubus/route";
+import { Truck, Users, Clock, Calculator, ArrowRight, Info, Activity } from "lucide-react";
+import { adminApi } from "@/lib/admin-api";
+import type { User } from "@/types";
 
-// Test students data (based on Excel data)
-const testStudents = [
-    ...Array.from({ length: 9 }, (_, i) => ({
-        id: `sw-${i + 1}`,
-        name: `Sw${i + 1} Öğrenci`,
-        locationCode: `Sw${i + 1}`,
-        disabilityType: "Sw" as const,
-    })),
-    ...Array.from({ length: 19 }, (_, i) => ({
-        id: `so-${i + 1}`,
-        name: `So${i + 1} Öğrenci`,
-        locationCode: `So${i + 1}`,
-        disabilityType: "So" as const,
-    })),
-];
-
-// Strategies
+// Strategies mapped to Python Optimizer Backend keeping legacy UI labels
 const strategies = [
     { name: "nearest-neighbor", label: "En Yakın Komşu (Hızlı)" },
     { name: "two-opt", label: "2-opt (Dengeli)" },
     { name: "permutation", label: "Permütasyon (Optimal)" },
+    { name: "genetic_algorithm", label: "Genetik Algoritma (GA)" },
+    { name: "pso", label: "Parçacık Sürü (PSO)" },
+];
+
+const clusteringAlgorithms = [
+    { name: "kmeans", label: "K-Means" },
+    { name: "fuzzy_cmeans", label: "Fuzzy C-Means" },
+    { name: "k_medoids", label: "K-Medoids (Süre Tabanlı)" },
+    { name: "sweep", label: "Sweep Algoritması" },
+    { name: "clarke_wright", label: "Clarke-Wright" },
 ];
 
 export default function VehiclePlanningPage() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
+    const [isLoadingStudents, setIsLoadingStudents] = useState(true);
+    const [students, setStudents] = useState<User[]>([]);
     const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
     const [maxTourTime, setMaxTourTime] = useState(120);
     const [swCapacity, setSwCapacity] = useState(4);
     const [soCapacity, setSoCapacity] = useState(5);
     const [strategy, setStrategy] = useState("two-opt");
+    const [clusteringAlgorithm, setClusteringAlgorithm] = useState("kmeans");
     const [result, setResult] = useState<any>(null);
+
+    useEffect(() => {
+        loadStudents();
+    }, []);
+
+    const loadStudents = async () => {
+        setIsLoadingStudents(true);
+        try {
+            const response = await adminApi.users.getAll(1, 100);
+            const usersArray = Array.isArray(response) ? response : (response.data || []);
+            const studentUsers = usersArray.filter((u: any) => u.role === "student");
+            setStudents(studentUsers);
+        } catch (error) {
+            console.error("Error loading students:", error);
+            toast({
+                title: "Öğrenciler Yüklenemedi",
+                description: "Veritabanından öğrenci listesi alınamadı.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsLoadingStudents(false);
+        }
+    };
 
     const handleStudentToggle = (studentId: string) => {
         setSelectedStudents((prev) => {
@@ -65,9 +86,9 @@ export default function VehiclePlanningPage() {
 
     const selectAll = (type: "Sw" | "So" | "all") => {
         if (type === "all") {
-            setSelectedStudents(testStudents.map(s => s.id));
+            setSelectedStudents(students.map(s => s.id));
         } else {
-            const ids = testStudents.filter(s => s.disabilityType === type).map(s => s.id);
+            const ids = students.filter((s: any) => (s.disability_type || s.disabilityType) === type).map(s => s.id);
             setSelectedStudents(prev => [...new Set([...prev, ...ids])]);
         }
     };
@@ -79,9 +100,9 @@ export default function VehiclePlanningPage() {
             setLoading(true);
             setResult(null);
 
-            const students = testStudents.filter(s => selectedStudents.includes(s.id));
+            const activeStudents = students.filter(s => selectedStudents.includes(s.id));
 
-            if (students.length === 0) {
+            if (activeStudents.length === 0) {
                 toast({
                     title: "Hata",
                     description: "En az bir öğrenci seçin",
@@ -94,11 +115,12 @@ export default function VehiclePlanningPage() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    students,
+                    students: activeStudents,
                     maxTourTime,
                     swCapacity,
                     soCapacity,
                     strategy,
+                    clusteringAlgorithm,
                 }),
             });
 
@@ -124,10 +146,10 @@ export default function VehiclePlanningPage() {
         }
     };
 
-    const swStudents = testStudents.filter(s => s.disabilityType === "Sw");
-    const soStudents = testStudents.filter(s => s.disabilityType === "So");
-    const selectedSwCount = selectedStudents.filter(id => id.startsWith("sw-")).length;
-    const selectedSoCount = selectedStudents.filter(id => id.startsWith("so-")).length;
+    const swStudents = students.filter((s: any) => (s.disability_type || s.disabilityType) === "Sw");
+    const soStudents = students.filter((s: any) => (s.disability_type || s.disabilityType) === "So" || !(s.disability_type || s.disabilityType));
+    const selectedSwCount = swStudents.filter(s => selectedStudents.includes(s.id)).length;
+    const selectedSoCount = soStudents.filter(s => selectedStudents.includes(s.id)).length;
 
     return (
         <div className="space-y-6">
@@ -143,7 +165,7 @@ export default function VehiclePlanningPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                     {/* Parameters */}
-                    <div className="grid gap-4 md:grid-cols-5">
+                    <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
                         <div className="space-y-2">
                             <Label>Sw Kapasitesi</Label>
                             <Input
@@ -190,6 +212,21 @@ export default function VehiclePlanningPage() {
                             </Select>
                         </div>
                         <div className="space-y-2">
+                            <Label>Kümeleme Yöntemi</Label>
+                            <Select value={clusteringAlgorithm} onValueChange={setClusteringAlgorithm}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {clusteringAlgorithms.map((c) => (
+                                        <SelectItem key={c.name} value={c.name}>
+                                            {c.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
                             <Label>&nbsp;</Label>
                             <Button onClick={handleCalculate} disabled={loading} className="w-full">
                                 <Calculator className="h-4 w-4 mr-2" />
@@ -220,46 +257,63 @@ export default function VehiclePlanningPage() {
                                 </Button>
                             </div>
                         </div>
-                        <ScrollArea className="h-40 w-full rounded-md border p-4 bg-muted/30">
-                            <div className="mb-3">
-                                <p className="text-xs font-semibold text-muted-foreground mb-2">
-                                    Sw Öğrenciler (Tekerlekli Sandalye)
-                                </p>
-                                <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-9 gap-2">
-                                    {swStudents.map((student) => (
-                                        <div key={student.id} className="flex items-center space-x-1">
-                                            <Checkbox
-                                                id={student.id}
-                                                checked={selectedStudents.includes(student.id)}
-                                                onCheckedChange={() => handleStudentToggle(student.id)}
-                                            />
-                                            <Label htmlFor={student.id} className="text-xs cursor-pointer">
-                                                {student.locationCode}
-                                            </Label>
-                                        </div>
-                                    ))}
+                        <ScrollArea className="h-40 w-full rounded-md border p-4 bg-muted/30 relative">
+                            {isLoadingStudents ? (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/50 z-10">
+                                    <Activity className="h-6 w-6 text-primary animate-spin mb-2" />
+                                    <p className="text-sm text-muted-foreground">Öğrenciler yükleniyor...</p>
                                 </div>
-                            </div>
-                            <Separator className="my-3" />
-                            <div>
-                                <p className="text-xs font-semibold text-muted-foreground mb-2">
-                                    So Öğrenciler (Diğer Engel Tipi)
-                                </p>
-                                <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-10 gap-2">
-                                    {soStudents.map((student) => (
-                                        <div key={student.id} className="flex items-center space-x-1">
-                                            <Checkbox
-                                                id={student.id}
-                                                checked={selectedStudents.includes(student.id)}
-                                                onCheckedChange={() => handleStudentToggle(student.id)}
-                                            />
-                                            <Label htmlFor={student.id} className="text-xs cursor-pointer">
-                                                {student.locationCode}
-                                            </Label>
-                                        </div>
-                                    ))}
+                            ) : students.length === 0 ? (
+                                <div className="text-center py-8 text-muted-foreground text-sm">
+                                    Sistemde bulunabilen kayıtlı öğrenci yok.
                                 </div>
-                            </div>
+                            ) : (
+                                <>
+                                    <div className="mb-3">
+                                        <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center justify-between">
+                                            <span>Sw Öğrenciler (Tekerlekli Sandalye)</span>
+                                            <Badge variant="outline">{swStudents.length}</Badge>
+                                        </p>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                                            {swStudents.map((student) => (
+                                                <div key={student.id} className="flex items-center space-x-1 border rounded p-1 bg-white hover:bg-slate-50 transition-colors">
+                                                    <Checkbox
+                                                        id={student.id}
+                                                        checked={selectedStudents.includes(student.id)}
+                                                        onCheckedChange={() => handleStudentToggle(student.id)}
+                                                    />
+                                                    <Label htmlFor={student.id} className="text-xs cursor-pointer truncate" title={student.name || "Öğrenci"}>
+                                                        {(student as any).location_code || student.locationCode || "Bilinmiyor"}
+                                                    </Label>
+                                                </div>
+                                            ))}
+                                            {swStudents.length === 0 && <span className="text-xs italic text-muted-foreground">Kayıtlı Sw yok.</span>}
+                                        </div>
+                                    </div>
+                                    <Separator className="my-3" />
+                                    <div>
+                                        <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center justify-between">
+                                            <span>So Öğrenciler (Diğer Engel Tipi)</span>
+                                            <Badge variant="outline">{soStudents.length}</Badge>
+                                        </p>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                                            {soStudents.map((student) => (
+                                                <div key={student.id} className="flex items-center space-x-1 border rounded p-1 bg-white hover:bg-slate-50 transition-colors">
+                                                    <Checkbox
+                                                        id={student.id}
+                                                        checked={selectedStudents.includes(student.id)}
+                                                        onCheckedChange={() => handleStudentToggle(student.id)}
+                                                    />
+                                                    <Label htmlFor={student.id} className="text-xs cursor-pointer truncate" title={student.name || "Öğrenci"}>
+                                                        {(student as any).location_code || student.locationCode || "Bilinmiyor"}
+                                                    </Label>
+                                                </div>
+                                            ))}
+                                            {soStudents.length === 0 && <span className="text-xs italic text-muted-foreground">Kayıtlı So yok.</span>}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </ScrollArea>
                     </div>
                 </CardContent>

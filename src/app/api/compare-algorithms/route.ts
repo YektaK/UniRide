@@ -32,7 +32,7 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { students, depot, algorithms } = body;
+        const { students, depot, algorithms, clusteringAlgorithm = "kmeans" } = body;
 
         if (!students || students.length === 0) {
             return NextResponse.json({ error: "Students required" }, { status: 400 });
@@ -52,7 +52,12 @@ export async function POST(request: Request) {
             lng: depot?.lng || 31.1478,
         };
 
-        const result = await compareAllAlgorithms(optimizationStudents, optimizationDepot, {}, algorithms);
+        const result = await compareAllAlgorithms(
+            optimizationStudents, 
+            optimizationDepot, 
+            { clustering_algorithm: clusteringAlgorithm }, 
+            algorithms
+        );
 
         return NextResponse.json({
             success: result.success,

@@ -11,17 +11,17 @@ import type { User } from "@/types";
 /**
  * Convert DbUser to User (for backward compatibility)
  */
-const firestoreUserToUser = (firestoreUser: DbUser): User => {
+const dbUserToUser = (dbUser: DbUser): User => {
   return {
-    id: firestoreUser.id,
-    name: firestoreUser.name,
-    email: firestoreUser.email,
-    role: firestoreUser.role,
-    studentNumber: firestoreUser.studentNumber,
-    homeAddress: firestoreUser.homeAddress,
-    homeCoordinates: firestoreUser.homeCoordinates,
-    accessibilityNeeds: firestoreUser.accessibilityNeeds,
-    weeklyScheduleId: firestoreUser.weeklyScheduleId,
+    id: dbUser.id,
+    name: dbUser.name,
+    email: dbUser.email,
+    role: dbUser.role,
+    studentNumber: dbUser.studentNumber,
+    homeAddress: dbUser.homeAddress,
+    homeCoordinates: dbUser.homeCoordinates,
+    accessibilityNeeds: dbUser.accessibilityNeeds,
+    weeklyScheduleId: dbUser.weeklyScheduleId,
   };
 };
 
@@ -62,13 +62,13 @@ export const signIn = async (
     }
 
     // Get user data from database
-    const firestoreUser = await getUserByEmail(authData.user.email!);
-    if (!firestoreUser) {
+    const dbUser = await getUserByEmail(authData.user.email!);
+    if (!dbUser) {
       console.error("User not found in database");
       return null;
     }
 
-    return firestoreUserToUser(firestoreUser);
+    return dbUserToUser(dbUser);
   } catch (error) {
     console.error("Sign in error:", error);
     return null;
@@ -171,7 +171,7 @@ export const signUp = async (
       newUser.weeklyScheduleId = weeklyScheduleId;
     }
 
-    return firestoreUserToUser(newUser);
+    return dbUserToUser(newUser);
   } catch (error) {
     console.error("Sign up error:", error);
     throw error;
@@ -233,9 +233,9 @@ export const onAuthStateChange = (callback: (user: User | null) => void): (() =>
   const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
     if (session?.user?.email) {
       try {
-        const firestoreUser = await getUserByEmail(session.user.email);
-        if (firestoreUser) {
-          callback(firestoreUserToUser(firestoreUser));
+        const dbUser = await getUserByEmail(session.user.email);
+        if (dbUser) {
+          callback(dbUserToUser(dbUser));
         } else {
           // User exists in Auth but not in database - this can happen during registration
           callback(null);
@@ -270,12 +270,12 @@ export const getCurrentUser = async (): Promise<User | null> => {
       return null;
     }
 
-    const firestoreUser = await getUserByEmail(authUser.email!);
-    if (!firestoreUser) {
+    const dbUser = await getUserByEmail(authUser.email!);
+    if (!dbUser) {
       return null;
     }
 
-    return firestoreUserToUser(firestoreUser);
+    return dbUserToUser(dbUser);
   } catch (error) {
     console.error("Error getting current user:", error);
     return null;

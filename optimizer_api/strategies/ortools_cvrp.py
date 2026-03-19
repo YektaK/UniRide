@@ -215,7 +215,7 @@ class ORToolsCVRPStrategy(BaseRoutingStrategy):
 
                 index = to_index
 
-            if route_details:
+            if route_details and len(route_students) > 0:
                 routes.append(VehicleRoute(
                     vehicle_id=f"Araç {vehicle_id + 1} (OR-Tools)",
                     route_details=route_details,

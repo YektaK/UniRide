@@ -16,6 +16,7 @@ class Point:
     lat: float
     lng: float
     disability_type: str  # 'Sw' or 'So'
+    location_code: str = ""
 
 
 @dataclass
@@ -202,11 +203,13 @@ class VehicleCalculator:
         self,
         sw_capacity: int = 4,
         so_capacity: int = 5,
-        max_tour_time: int = 120
+        max_tour_time: int = 120,
+        clustering_algorithm: str = "kmeans"
     ):
         self.sw_capacity = sw_capacity
         self.so_capacity = so_capacity
         self.max_tour_time = max_tour_time
+        self.clustering_algorithm = clustering_algorithm
 
     def estimate_vehicle_count(self, students: List[Point]) -> int:
         """Estimate minimum number of vehicles needed"""
@@ -218,37 +221,26 @@ class VehicleCalculator:
 
         return max(min_by_sw, min_by_so, 1)
 
-    def cluster_students(self, students: List[Point], num_vehicles: int) -> List[Cluster]:
+    def cluster_students(self, students: List[Point], num_vehicles: int, **kwargs) -> List[Cluster]:
         """
         Cluster students into groups for vehicle assignment.
-        Handles capacity constraints by splitting over-capacity clusters.
+        Handles capacity constraints by delegating to the selected clustering strategy.
         """
-        # Initial clustering
-        clusters = kmeans_clustering(students, num_vehicles)
-
-        # Validate and split over-capacity clusters
-        validated_clusters = []
-        for cluster in clusters:
-            if validate_cluster_capacity(cluster, self.sw_capacity, self.so_capacity):
-                validated_clusters.append(cluster)
-            else:
-                # Try splitting
-                split_clusters = split_cluster(cluster)
-                for sc in split_clusters:
-                    if validate_cluster_capacity(sc, self.sw_capacity, self.so_capacity):
-                        validated_clusters.append(sc)
-                    else:
-                        # Still over capacity - need more vehicles
-                        # Force split into individual students
-                        for point in sc.points:
-                            validated_clusters.append(Cluster(
-                                centroid=(point.lat, point.lng),
-                                points=[point],
-                                sw_count=1 if point.disability_type == "Sw" else 0,
-                                so_count=1 if point.disability_type == "So" else 0
-                            ))
-
-        return validated_clusters
+        from utils.clustering_strategies import get_clustering_strategy
+        from utils.data_loader import DataLoader
+        
+        # Build local time matrix dict for strategies that need true road distances (like K-Medoids or CW)
+        # Assuming depot is D.Kampus unless specified otherwise in kwargs
+        depot_id = kwargs.get("depot", {"id": "D.Kampus"})["id"]
+        location_ids = [depot_id] + list(set(s.location_code for s in kwargs.get("raw_students", [])))
+        
+        # We need raw_students passed down to get location codes easily, or we can use Point ids
+        # point id is student id, not location_code!
+        # wait, Point model does NOT have location_code. So we can't get time matrix easily without the dicts.
+        # But we can pass time_matrix from calculate()
+        
+        strategy = get_clustering_strategy(self.clustering_algorithm, self.sw_capacity, self.so_capacity)
+        return strategy.cluster_students(students, num_vehicles, **kwargs)
 
     def calculate(
         self,
@@ -284,14 +276,20 @@ class VehicleCalculator:
                 id=s["id"],
                 lat=coords.get("lat", 0),
                 lng=coords.get("lng", 0),
-                disability_type=s.get("disability_type", "So")
+                disability_type=s.get("disability_type", "So"),
+                location_code=s.get("location_code", "")
             )
             points.append(point)
             student_map[s["id"]] = s
 
         # Estimate and iteratively find correct vehicle count
         num_vehicles = self.estimate_vehicle_count(points)
-        max_attempts = len(students)
+        max_attempts = min(len(students) - num_vehicles + 1, 15)  # Cap attempts to avoid long loops
+
+        best_assignments = []
+        min_violation = float('inf')
+        best_vehicle_count = 0
+        best_duration = 0
 
         for attempt in range(max_attempts):
             clusters = self.cluster_students(points, num_vehicles)
@@ -300,6 +298,7 @@ class VehicleCalculator:
             assignments = []
             total_duration = 0
             valid = True
+            violation_sum = 0
 
             for i, cluster in enumerate(clusters):
                 cluster_students = [student_map[p.id] for p in cluster.points]
@@ -320,7 +319,7 @@ class VehicleCalculator:
                 # Check tour time constraint
                 if route_duration > self.max_tour_time:
                     valid = False
-                    break
+                    violation_sum += (route_duration - self.max_tour_time)
 
                 assignments.append({
                     "vehicle_index": i + 1,
@@ -341,11 +340,29 @@ class VehicleCalculator:
                     "unassigned_students": [],
                     "message": f"Optimal routes found with {len(clusters)} vehicles"
                 }
+                
+            # Track best effort if strictly valid solution not found
+            if violation_sum < min_violation:
+                min_violation = violation_sum
+                best_assignments = list(assignments)
+                best_vehicle_count = len(clusters)
+                best_duration = total_duration
 
             # Try with more vehicles
             num_vehicles += 1
 
-        # Fallback: one student per vehicle
+        # Fallback: Instead of 1 student per vehicle, return the best effort clustering we found
+        if best_assignments:
+            return {
+                "success": True,
+                "required_vehicles": best_vehicle_count,
+                "assignments": best_assignments,
+                "total_duration": best_duration,
+                "unassigned_students": [],
+                "message": f"Kısıtlamalar aşıldığı için en iyi tahmini gruplama kullanıldı (Zaman aşımı: {min_violation:.1f} dk)"
+            }
+
+        # Ultimate Fallback: one student per vehicle (should rarely hit this now)
         assignments = []
         for i, student in enumerate(students):
             assignments.append({
@@ -363,5 +380,5 @@ class VehicleCalculator:
             "assignments": assignments,
             "total_duration": 0,
             "unassigned_students": [],
-            "message": f"Fallback: Each student assigned to separate vehicle"
+            "message": f"Fallback: Her öğrenci için ayrı araç atandı"
         }

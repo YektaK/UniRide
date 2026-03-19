@@ -370,11 +370,11 @@ class PSOStrategy(BaseRoutingStrategy):
                 "disability_type": s.disability_type
             })
 
-        # Calculate vehicle assignments
         calculator = VehicleCalculator(
             sw_capacity=request.sw_capacity,
             so_capacity=request.so_capacity,
-            max_tour_time=request.max_travel_time
+            max_tour_time=request.max_travel_time,
+            clustering_algorithm=request.clustering_algorithm
         )
 
         def route_optimizer(location_codes: List[str]) -> Dict:

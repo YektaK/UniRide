@@ -47,6 +47,7 @@ class VehicleRoute(BaseModel):
 
 class OptimizationRequest(BaseModel):
     algorithm: str = Field(default="genetic_algorithm", description="Algorithm: genetic_algorithm, pso, greedy, kmeans_tsp, ortools_cvrp, permutation_tsp")
+    clustering_algorithm: str = Field(default="kmeans", description="Clustering method: kmeans, fuzzy_cmeans, k_medoids, sweep, clarke_wright")
     students: List[StudentNode] = Field(..., description="List of students needing pickup")
     depot: LocationNode = Field(..., description="The depot node (e.g., D.Kampus)")
     max_travel_time: int = Field(default=120, description="Maximum tour time per vehicle in minutes")
@@ -75,6 +76,7 @@ class CompareRequest(BaseModel):
     max_travel_time: int = Field(default=120)
     sw_capacity: int = Field(default=4)
     so_capacity: int = Field(default=5)
+    clustering_algorithm: str = Field(default="kmeans", description="Clustering method to use across algorithms")
     algorithms: Optional[List[str]] = Field(default=None, description="Algorithms to compare (default: all)")
 
 

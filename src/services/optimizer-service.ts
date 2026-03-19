@@ -22,6 +22,7 @@ export interface Depot {
 
 export interface OptimizationOptions {
     algorithm?: "genetic_algorithm" | "pso" | "greedy" | "permutation_tsp" | "ortools_cvrp";
+    clustering_algorithm?: string;
     max_travel_time?: number;
     sw_capacity?: number;
     so_capacity?: number;
@@ -161,6 +162,7 @@ export async function optimizeRoutes(
                 max_travel_time: options.max_travel_time || 120,
                 sw_capacity: options.sw_capacity || 4,
                 so_capacity: options.so_capacity || 5,
+                clustering_algorithm: options.clustering_algorithm || "kmeans",
                 ga_config: options.ga_config,
                 pso_config: options.pso_config,
             }),
@@ -221,6 +223,7 @@ export async function compareAllAlgorithms(
                 max_travel_time: options.max_travel_time || 120,
                 sw_capacity: options.sw_capacity || 4,
                 so_capacity: options.so_capacity || 5,
+                clustering_algorithm: options.clustering_algorithm || "kmeans",
                 algorithms,
             }),
             signal: AbortSignal.timeout(300000),

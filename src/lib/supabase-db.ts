@@ -106,7 +106,7 @@ export const getUserByStudentNumber = async (studentNumber: string): Promise<DbU
         .single();
 
     if (error) {
-        if (error.code === "PGRST116") return null;
+        if (error.code === "PGRST116" || error.code === "42501") return null;
         console.error("Error getting user by student number:", error);
         throw error;
     }

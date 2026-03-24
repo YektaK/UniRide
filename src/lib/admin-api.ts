@@ -357,9 +357,26 @@ export const adminApi = {
       waypoints: string[];
       strategy?: string;
     }) {
+      // Map route-test simple waypoints format to standard API format
+      const students = params.waypoints.map((wp, index) => ({
+        id: `test-${index}`,
+        name: `Test Waypoint ${wp}`,
+        location_code: wp,
+        disability_type: wp.startsWith("Sw") ? "Sw" : "So"
+      }));
+
+      const payload = {
+        students,
+        depot: { id: params.start || "D.Kampus", lat: 40.8410, lng: 31.1478 },
+        algorithm: params.strategy || "genetic_algorithm",
+        max_travel_time: 120,
+        sw_capacity: 4,
+        so_capacity: 5
+      };
+
       const res = await adminFetch("/api/optimize-route", {
         method: "POST",
-        body: JSON.stringify(params),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const error = await res.json();

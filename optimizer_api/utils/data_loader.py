@@ -70,7 +70,7 @@ class DataLoader:
             np.fill_diagonal(matrix, 0.0)
             self.time_matrix = matrix
 
-            print(f"[✓] Time Matrix loaded: {n} locations, {len(rows)} edges.")
+            print(f"[OK] Time Matrix loaded: {n} locations, {len(rows)} edges.")
 
         except Exception as e:
             print(f"[!] Failed to load from Supabase: {e}")

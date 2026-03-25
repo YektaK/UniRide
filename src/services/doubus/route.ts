@@ -90,26 +90,13 @@ export const getOptimalRoute = async (
   waypoints: string[],
   strategyName: string = "permutation"
 ): Promise<Route> => {
-  // Import strategy dynamically
-  const { getStrategy } = await import("./route-strategies");
-  const strategy = getStrategy(strategyName);
-
-  if (!strategy) {
-    throw new Error(`Strategy ${strategyName} not found`);
-  }
-
-  const result = await strategy.calculateOptimalRoute(
-    start,
-    end,
-    waypoints,
-    calculateDistance
-  );
-
-  // Build route details
+  // Legacy function - real optimization is handled by python API
+  // This just returns a linear route through waypoints
+  
   const routeDetails: RouteDetail[] = [];
   let totalDuration = 0;
 
-  const path = [start, ...result.routeDetails.map((d: any) => d.location2)];
+  const path = [start, ...waypoints, end];
 
   for (let i = 0; i < path.length - 1; i++) {
     const duration = calculateDistance(path[i], path[i + 1]);
@@ -121,7 +108,6 @@ export const getOptimalRoute = async (
     });
   }
 
-  // Calculate approximate distance (assuming average speed of 40 km/h)
   const totalDistance = (totalDuration / 60) * 40;
 
   return {

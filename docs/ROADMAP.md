@@ -26,7 +26,7 @@
 
 | Faz | Durum | Açıklama |
 |---|---|---|
-| **Faz 1: Kritik Düzeltmeler** | 🔴 Başlanmadı | Sistem çalışır hale gelir |
+| **Faz 1: Kritik Düzeltmeler** | ✅ Tamamlandı | Sistem çalışır hale geldi |
 | **Faz 2: Veri Kalıcılığı + Atama** | ⬜ Bekliyor | Rota kaydı + sürücü ataması |
 | **Faz 3: İş Akışı Otomasyonu** | ⬜ Bekliyor | Onay/iptal + bildirim |
 | **Faz 4: İleri Özellikler** | ⬜ Bekliyor | Canlı takip + dinamik matris |
@@ -102,8 +102,8 @@ veya ASCII karşılıklarını kullan: [OK], [FAIL], [!]
 ---
 
 ### Görev 1.3: Ölü Kod Temizliği (KN2)
-- **Durum:** 🔴 Başlanmadı
-- **Atanan:** —
+- **Durum:** ✅ Tamamlandı
+- **Atanan:** Antigravity AI
 - **Tahmini süre:** 30 dakika
 - **Mimari karar:** Temiz silme — fallback tutmak iki ayrı bakım demek
 

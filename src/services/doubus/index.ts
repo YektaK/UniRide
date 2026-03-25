@@ -37,20 +37,3 @@ export {
 } from "./vehicle-assignment";
 export type { AssignmentInput, AssignmentResult } from "./vehicle-assignment";
 
-// Route strategies
-export {
-  getStrategy,
-  getAvailableStrategies,
-  getStrategyInfo,
-  getStrategyInfoByName,
-  getDefaultStrategy,
-  GeneticAlgorithmStrategy,
-  PSOStrategy,
-} from "./route-strategies";
-export type {
-  RouteStrategy,
-  StrategyCalculationResult,
-  GAConfig,
-  PSOConfig,
-} from "./route-strategies/types";
-export type { StrategyInfo } from "./route-strategies";

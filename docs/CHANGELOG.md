@@ -7,6 +7,8 @@
 
 ## 2026-03-25
 
+- **[Antigravity AI]** — **Faz 1 Kritik Düzeltmeler Tamamlandı**
+- **[Antigravity AI]** — Görev 1.3 tamamlandı: Ölü kod (`vehicle-calculator.ts` ve lokal `route-strategies`) silindi, TSC hataları giderildi
 - **[Antigravity AI]** — Görev 1.1 tamamlandı: `calculate-vehicles/route.ts` Python API'ye yönlendirildi, `vehicle-planning/page.tsx` `ALGORITHM_OPTIONS` kullanıyor, `optimizer-service.ts`'e `clustering_algorithm` eklendi
 - **[Antigravity AI]** — Pre-existing fix: `route-test/page.tsx` JSX comment, `compare/page.tsx` AlgorithmResult import
 - **[Antigravity AI]** — Görev 1.2 tamamlandı: `data_loader.py` Windows encoding fix (`sys.stdout.reconfigure`), `print()` → `logging` dönüşümü, `test_strategies.py` Unicode karakter temizliği

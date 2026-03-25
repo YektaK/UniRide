@@ -227,7 +227,7 @@ export function isAlgorithmRecommended(algorithm: string): boolean {
  */
 export function algorithmSupportsLocalSearch(algorithm: string): boolean {
   const normalized = normalizeAlgorithmName(algorithm);
-  return [
+  const algorithms: string[] = [
     ALGORITHM_KEYS.GENETIC_ALGORITHM,
     ALGORITHM_KEYS.GA,
     ALGORITHM_KEYS.PSO,
@@ -235,12 +235,6 @@ export function algorithmSupportsLocalSearch(algorithm: string): boolean {
     ALGORITHM_KEYS.GREY_WOLF,
     ALGORITHM_KEYS.HHO,
     ALGORITHM_KEYS.HARRIS_HAWKS,
-  ].includes(normalized);
-}
-
-/**
- * Get display name for local search type
- */
-export function getLocalSearchDisplayName(type: LocalSearchType): string {
-  return LOCAL_SEARCH_DISPLAY_NAMES[type] || type;
+  ];
+  return algorithms.includes(normalized);
 }

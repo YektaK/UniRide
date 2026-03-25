@@ -29,6 +29,7 @@ export interface OptimizationOptions {
     sw_capacity?: number;
     so_capacity?: number;
     local_search_type?: LocalSearchType;
+    clustering_algorithm?: string;
     ga_config?: {
         population_size?: number;
         max_iterations?: number;

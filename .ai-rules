@@ -1,24 +1,43 @@
-# 🤖 AI ASİSTAN DEVİR KURALLARI (HANDOVER RULES)
+# 🤖 AI ASİSTAN KURALLARI
 
-Sen, bu projenin geçmişini ve geleceğini takip eden kıdemli bir yazılım mimarısın. İş ve ev arasında geçiş yaparken bağlamı korumak en önemli görevidir.
+Sen, bu projenin geçmişini ve geleceğini takip eden kıdemli bir yazılım mimarısın.
+
+## 0. ZORUNLU: İLK ADIM — DOKÜMAN OKU
+
+**Kod yazmadan, analiz yapmadan, herhangi bir işlem başlatmadan ÖNCE şu dosyaları oku:**
+
+1. `docs/ARCHITECTURE.md` — Mimari kurallar, dosya sorumluluk haritası, API kontratları
+2. `docs/ROADMAP.md` — Geliştirme yol haritası, görev durumları, faz planı
+3. `docs/ANALYSIS.md` — Mevcut durum analizi, bilinen sorunlar
+4. `docs/CHANGELOG.md` — Son değişiklikler
+5. `.ai-handover.md` — Son devir raporu
+
+**Bu dosyaları okumadan kod değişikliği YAPMA. Mimari kurallara aykırı değişiklik YAPMA.**
 
 ## 1. BAĞLAM YÖNETİMİ
-- Her oturum başlangıcında `.ai-handover.md` dosyasını mutlaka oku.
-- Yapılan değişiklikleri analiz ederken sadece koda değil, bu dosyadaki "niyet" notlarına da odaklan.
+- Her oturum başlangıcında yukarıdaki dokümanları oku.
+- Yapılan değişiklikleri analiz ederken sadece koda değil, mimari kurallara ve niyet notlarına da odaklan.
 
 ## 2. GELİŞTİRME PRENSİPLERİ
+- **Mimari:** `docs/ARCHITECTURE.md` içindeki kurallara uy (özellikle algoritma key kuralı ve Python API kuralı).
 - **Zod & Supabase:** Veri güvenliği ve validasyon önceliğimizdir.
 - **Hata Takibi:** Manuel testlerde fark edilen ancak henüz çözülmemiş bug'ları asla unutma.
 
-## 3. DEVİR PROTOKOLÜ (MESAİ BİTİMİ)
-Kullanıcı "devir raporu", "mesai bitti" veya "eve geçiyorum" dediğinde şu adımları izle:
+## 3. DEĞİŞİKLİK SONRASI PROTOKOL
+Her anlamlı değişiklik sonrasında:
+1. `docs/CHANGELOG.md` dosyasına kayıt ekle
+2. Eğer bir ROADMAP görevi tamamlandıysa `docs/ROADMAP.md`'de durumu güncelle
+
+## 4. DEVİR PROTOKOLÜ (MESAİ BİTİMİ)
+Kullanıcı "devir raporu", "mesai bitti" veya "eve geçiyorum" dediğinde:
 1. Mevcut `git status` ve yapılan değişiklikleri analiz et.
-2. `.ai-handover.md` dosyasını aşağıdaki şablonla GÜNCELLE:
+2. `.ai-handover.md` dosyasını güncelle:
    - **Tarih:** [Günün tarihi]
    - **Tamamlananlar:** [Biten fonksiyonlar/testler]
-   - **Açık Sorunlar:** [Özellikle manuel testte takılan hatalar]
-   - **Teknik Borçlar:** [Geçici yapılan, sonra düzelmesi gereken yerler]
+   - **Açık Sorunlar:** [Manuel testte takılan hatalar]
+   - **Teknik Borçlar:** [Geçici yapılanlar]
    - **Sıradaki Odak:** [Bir sonraki oturumda yapılacak ilk 3 iş]
+3. `docs/CHANGELOG.md` dosyasına bugünün değişikliklerini ekle
 
-## 4. TOKEN OPTİMİZASYONU
+## 5. TOKEN OPTİMİZASYONU
 - Bilgi aktarırken uzun kod blokları yerine, mantıksal değişiklikleri ve kritik satır numaralarını belirt.

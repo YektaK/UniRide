@@ -1,13 +1,28 @@
 /**
  * API Route: Calculate Required Vehicles
  * POST /api/calculate-vehicles
- * 
- * Calculates the number of vehicles needed and assigns students to vehicles
- * based on capacity constraints and tour time limits.
+ *
+ * Araç planlama sayfasından gelen isteği Python Optimizer API'ye iletir.
+ * Öğrencileri kümeleyip her küme için rota optimize eder.
+ *
+ * Mimari karar KN1: İşlev bazlı Next.js proxy
+ * Bkz: docs/ARCHITECTURE.md
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { calculateRequiredVehicles, type StudentForAssignment } from "@/services/vehicle-calculator";
+import {
+    optimizeRoutes,
+    type StudentForOptimization,
+    type Depot,
+} from "@/services/optimizer-service";
+import { normalizeAlgorithmName } from "@/lib/algorithm-constants";
+
+// Varsayılan depot (Düzce Üniversitesi Kampüs)
+const DEFAULT_DEPOT: Depot = {
+    id: "D.Kampus",
+    lat: 40.841,
+    lng: 31.1478,
+};
 
 export async function POST(request: NextRequest) {
     try {
@@ -19,10 +34,10 @@ export async function POST(request: NextRequest) {
             swCapacity = 4,
             soCapacity = 5,
             strategy = "genetic_algorithm",
-            local_search_type = "two_opt",
+            clusteringAlgorithm = "kmeans",
         } = body;
 
-        // Validate input
+        // Girdi doğrulama
         if (!students || !Array.isArray(students)) {
             return NextResponse.json(
                 { error: "students array is required" },
@@ -30,24 +45,39 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Convert and validate students
-        const validStudents: StudentForAssignment[] = [];
+        // Öğrencileri Python API formatına dönüştür
+        const validStudents: StudentForOptimization[] = [];
+        const studentLookup: Record<string, any> = {};
+
         for (const student of students) {
-            if (!student.id || !student.locationCode || !student.disabilityType) {
-                continue; // Skip invalid entries
+            // Geçersiz kayıtları atla
+            const locationCode = student.location_code || student.locationCode;
+            const disabilityType = student.disability_type || student.disabilityType;
+
+            if (!student.id || !locationCode || !disabilityType) {
+                continue;
             }
 
-            if (!["Sw", "So"].includes(student.disabilityType)) {
-                continue; // Skip invalid disability types
+            if (!["Sw", "So"].includes(disabilityType)) {
+                continue;
             }
 
             validStudents.push({
                 id: student.id,
-                name: student.name || `Öğrenci ${student.id}`,
-                locationCode: student.locationCode,
-                coordinates: student.coordinates,
-                disabilityType: student.disabilityType,
+                name: student.name || `Öğrenci ${student.id.slice(0, 6)}`,
+                location_code: locationCode,
+                coordinates: student.coordinates || student.home_coordinates || null,
+                disability_type: disabilityType as "Sw" | "So",
             });
+
+            // Sonuçları UI formatına çevirirken öğrenci bilgilerine erişmek için
+            studentLookup[student.id] = {
+                id: student.id,
+                name: student.name || `Öğrenci ${student.id.slice(0, 6)}`,
+                locationCode: locationCode,
+                disabilityType: disabilityType,
+                coordinates: student.coordinates || student.home_coordinates || null,
+            };
         }
 
         if (validStudents.length === 0) {
@@ -57,28 +87,73 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Calculate vehicles
+        // Algoritma adını Python registry formatına dönüştür
+        const normalizedAlgorithm = normalizeAlgorithmName(strategy);
+
+        // Python API'yi çağır
         const startTime = Date.now();
-        const result = await calculateRequiredVehicles(validStudents, {
-            maxTourTime,
-            vehicleCapacity: { swCapacity, soCapacity },
-            strategy,
-            local_search_type,
+
+        const result = await optimizeRoutes(validStudents, DEFAULT_DEPOT, {
+            algorithm: normalizedAlgorithm as any,
+            max_travel_time: maxTourTime,
+            sw_capacity: swCapacity,
+            so_capacity: soCapacity,
+            clustering_algorithm: clusteringAlgorithm,
         });
+
         const calculationTime = Date.now() - startTime;
 
+        if (!result.success) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: result.error_message || "Optimization failed",
+                    algorithm_used: result.algorithm_used,
+                },
+                { status: 500 }
+            );
+        }
+
+        // Python yanıtını UI'ın beklediği formata dönüştür
+        // Python: { routes[], total_vehicles, total_duration_minutes }
+        // UI: { requiredVehicles, assignments[], totalDuration, message }
+        const assignments = (result.routes || []).map((route: any, index: number) => {
+            // Rota içindeki öğrenci bilgilerini al
+            const routeStudents = (route.student_ids || []).map((sid: string) => {
+                const s = studentLookup[sid];
+                if (s) return s;
+                // Fallback: ID varsa basit obje döndür
+                return { id: sid, name: sid, locationCode: "?", disabilityType: "So" };
+            });
+
+            return {
+                vehicleIndex: index + 1,
+                students: routeStudents,
+                route: route.route_details || [],
+                totalDuration: route.total_duration_minutes || 0,
+                swCount: route.sw_count || 0,
+                soCount: route.so_count || 0,
+            };
+        });
+
         return NextResponse.json({
-            ...result,
+            success: true,
+            requiredVehicles: result.total_vehicles || assignments.length,
+            assignments,
+            totalDuration: Math.round(result.total_duration_minutes || 0),
+            message: `${result.total_vehicles} araç ile optimizasyon tamamlandı (${result.algorithm_used})`,
             meta: {
                 calculationTimeMs: calculationTime,
                 inputStudentCount: students.length,
                 validStudentCount: validStudents.length,
+                algorithmUsed: result.algorithm_used,
+                executionTimeSeconds: result.execution_time_seconds,
                 options: {
                     maxTourTime,
                     swCapacity,
                     soCapacity,
-                    strategy,
-                    local_search_type,
+                    strategy: normalizedAlgorithm,
+                    clusteringAlgorithm,
                 },
             },
         });

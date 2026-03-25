@@ -4,8 +4,21 @@ Loads time matrix from Supabase and provides efficient access
 """
 
 import os
+import sys
+import logging
 import numpy as np
 from typing import List, Optional
+
+# Windows ortaminda Unicode karakterlerin konsola yazilmasinda
+# charmap encoding hatasi olusmasini onler
+if sys.platform == 'win32':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
+logger = logging.getLogger(__name__)
 
 
 class DataLoader:
@@ -25,7 +38,7 @@ class DataLoader:
             self._load_from_supabase(supabase_url, supabase_key)
         else:
             # Fallback to local CSV/JSON or generate synthetic matrix
-            print("[!] SUPABASE credentials not found. Using coordinate-based distance calculation.")
+            logger.warning("SUPABASE credentials not found. Using coordinate-based distance calculation.")
             self.locations = []
             self.loc_to_idx = {}
             self.time_matrix = None
@@ -36,7 +49,7 @@ class DataLoader:
         try:
             from supabase import create_client, Client
 
-            print("Loading Time Matrix from Supabase `time_matrix` table...")
+            logger.info("Loading Time Matrix from Supabase time_matrix table...")
             client: Client = create_client(url, key)
 
             response = client.table("time_matrix").select(
@@ -70,11 +83,11 @@ class DataLoader:
             np.fill_diagonal(matrix, 0.0)
             self.time_matrix = matrix
 
-            print(f"[OK] Time Matrix loaded: {n} locations, {len(rows)} edges.")
+            logger.info("Time Matrix loaded: %d locations, %d edges", n, len(rows))
 
         except Exception as e:
-            print(f"[!] Failed to load from Supabase: {e}")
-            print("[!] Falling back to coordinate-based distance calculation.")
+            logger.error("Failed to load from Supabase: %s", e)
+            logger.warning("Falling back to coordinate-based distance calculation.")
             self.locations = []
             self.loc_to_idx = {}
             self.time_matrix = None

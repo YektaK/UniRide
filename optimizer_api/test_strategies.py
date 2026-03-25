@@ -295,7 +295,7 @@ def compare_all_strategies():
     print("-"*80)
 
     for name, r in results.items():
-        status = "✓ BAŞARILI" if r["success"] else "✗ HATA"
+        status = "BASARILI" if r["success"] else "HATA"
         duration = f"{r['duration']:.1f}" if r["success"] else "-"
         time_str = f"{r['time']:.3f}" if r["success"] else "-"
         vehicles = str(r["vehicles"]) if r["success"] else "-"

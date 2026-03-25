@@ -207,7 +207,7 @@ export default function RouteTestPage() {
                             )}
                         </div>
 
-                        {/* Local Search Type - Only shown for meta-heuristics */
+                        {/* Local Search Type - Only shown for meta-heuristics */}
                         <div className="space-y-2">
                             <Label>Yerel Arama</Label>
                             <Select 

@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Cpu, Play, CheckCircle2, Clock, Truck, Activity, Target, Eye, ChevronRight, Users, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi, getAuthToken } from "@/lib/admin-api";
-import { CompareResult, AlgorithmResult } from "@/services/optimizer-service";
+import { CompareResult, AlgorithmCompareResult } from "@/services/optimizer-service";
 import {
     Select,
     SelectContent,
@@ -32,7 +32,7 @@ export default function AlgorithmComparisonPage() {
     const [isFetchingUsers, setIsFetchingUsers] = useState(true);
     const [students, setStudents] = useState<User[]>([]);
     const [compareResult, setCompareResult] = useState<CompareResult | null>(null);
-    const [selectedResult, setSelectedResult] = useState<AlgorithmResult | null>(null);
+    const [selectedResult, setSelectedResult] = useState<AlgorithmCompareResult | null>(null);
     const [clusteringAlgorithm, setClusteringAlgorithm] = useState("kmeans");
 
     useEffect(() => {

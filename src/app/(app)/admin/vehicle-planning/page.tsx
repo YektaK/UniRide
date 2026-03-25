@@ -19,16 +19,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Truck, Users, Clock, Calculator, ArrowRight, Info, Activity } from "lucide-react";
 import { adminApi } from "@/lib/admin-api";
+import { ALGORITHM_OPTIONS } from "@/lib/algorithm-constants";
 import type { User } from "@/types";
 
-// Strategies mapped to Python Optimizer Backend keeping legacy UI labels
-const strategies = [
-    { name: "nearest-neighbor", label: "En Yakın Komşu (Hızlı)" },
-    { name: "two-opt", label: "2-opt (Dengeli)" },
-    { name: "permutation", label: "Permütasyon (Optimal)" },
-    { name: "genetic_algorithm", label: "Genetik Algoritma (GA)" },
-    { name: "pso", label: "Parçacık Sürü (PSO)" },
-];
+// Algoritmalar merkezi sabitlerden alinir (algorithm-constants.ts → Python registry)
+// Detay: docs/ARCHITECTURE.md#3-algoritma-key-kurali
 
 const clusteringAlgorithms = [
     { name: "kmeans", label: "K-Means" },
@@ -47,7 +42,7 @@ export default function VehiclePlanningPage() {
     const [maxTourTime, setMaxTourTime] = useState(120);
     const [swCapacity, setSwCapacity] = useState(4);
     const [soCapacity, setSoCapacity] = useState(5);
-    const [strategy, setStrategy] = useState("two-opt");
+    const [strategy, setStrategy] = useState("genetic_algorithm");
     const [clusteringAlgorithm, setClusteringAlgorithm] = useState("kmeans");
     const [result, setResult] = useState<any>(null);
 
@@ -203,8 +198,8 @@ export default function VehiclePlanningPage() {
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {strategies.map((s) => (
-                                        <SelectItem key={s.name} value={s.name}>
+                                    {ALGORITHM_OPTIONS.map((s) => (
+                                        <SelectItem key={s.key} value={s.key}>
                                             {s.label}
                                         </SelectItem>
                                     ))}

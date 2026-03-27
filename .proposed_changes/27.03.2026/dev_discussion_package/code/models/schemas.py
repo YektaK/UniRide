@@ -54,48 +54,10 @@ class LocalSearchType(str, Enum):
     HYBRID = "hybrid"
 
 
-class VehicleConfig(BaseModel):
-    """Vehicle configuration for heterogeneous fleet support"""
-    vehicle_id: str = Field(..., description="Unique vehicle identifier")
-    sw_capacity: int = Field(default=4, description="Wheelchair capacity")
-    so_capacity: int = Field(default=5, description="Other disability capacity")
-    cooldown_minutes: int = Field(default=15, description="Minutes between routes")
-
-
-class OptimizationMode(str, Enum):
-    """IE Engine operating mode"""
-    BENCHMARK = "benchmark"  # Ideal mode - standard vehicles
-    SANDBOX = "sandbox"      # Fine-tune mode - custom vehicles
-
-
-class BottleneckInfo(BaseModel):
-    """Information about a bottleneck in the schedule"""
-    time: str = Field(..., description="Hour identifier (e.g., '12:00')")
-    type: str = Field(..., description="Type: infeasible, low_efficiency, resource_conflict")
-    reason: str = Field(..., description="Description of the issue")
-    affected_students: Optional[List[str]] = Field(default=None, description="Student IDs affected")
-
-
-class TimeShiftSuggestion(BaseModel):
-    """Suggestion for time shifting to reduce resource demand"""
-    student_id: str
-    current_time: str
-    suggested_time: str
-    savings_vehicles: float = Field(..., description="Estimated vehicle savings")
-
-
-class IEResponseData(BaseModel):
-    """IE Engine response data"""
-    standard_vehicles_needed: int = Field(default=0, description="Number of standard minibusses (4Sw+5So) needed")
-    hourly_demand: Dict[str, Dict[str, Dict[str, int]]] = Field(default_factory=dict, description="Hourly Sw/So breakdown")
-    bottlenecks: List[BottleneckInfo] = Field(default_factory=list, description="Identified bottlenecks")
-    time_shift_suggestions: List[TimeShiftSuggestion] = Field(default_factory=list, description="Slack time suggestions")
-
-
 class OptimizationRequest(BaseModel):
     algorithm: str = Field(
         default="genetic_algorithm",
-        description="Algorithm: genetic_algorithm, ga, pso, gwo, hho, two_opt, greedy, ortools_cvrp, permutation_tsp, pyvrp, vroom, ga_split, pso_split"
+        description="Algorithm: genetic_algorithm, ga, pso, gwo, hho, two_opt, greedy, ortools_cvrp, permutation_tsp"
     )
     students: List[StudentNode] = Field(..., description="List of students needing pickup")
     depot: LocationNode = Field(..., description="The depot node (e.g., D.Kampus)")
@@ -116,13 +78,6 @@ class OptimizationRequest(BaseModel):
     hho_config: Optional[Dict[str, Any]] = Field(default=None, description="HHO parameters")
     two_opt_config: Optional[Dict[str, Any]] = Field(default=None, description="Two-Opt parameters")
 
-    # IE Engine parameters (Faz 1.5X)
-    vehicles: Optional[List[VehicleConfig]] = Field(default=None, description="Available vehicles for sandbox mode")
-    allow_time_shift: bool = Field(default=False, description="Allow student time shifting for resource leveling")
-    slack_window_minutes: int = Field(default=60, description="Maximum minutes to shift student pickup/dropoff time")
-    mode: OptimizationMode = Field(default=OptimizationMode.BENCHMARK, description="Operating mode: benchmark or sandbox")
-    clustering_algorithm: Optional[str] = Field(default="sweep", description="Clustering method: kmeans, sweep, clarke_wright")
-
 
 class OptimizationResponse(BaseModel):
     algorithm_used: str
@@ -132,9 +87,6 @@ class OptimizationResponse(BaseModel):
     total_duration_minutes: float = Field(default=0.0)
     error_message: Optional[str] = None
     execution_time_seconds: float = Field(default=0.0)
-    
-    # IE Engine response data (Faz 1.5X)
-    ie_data: Optional[IEResponseData] = Field(default=None, description="Resource analysis data")
 
 
 class CompareRequest(BaseModel):

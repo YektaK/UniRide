@@ -1,7 +1,7 @@
 # 🗺️ UniRide Geliştirme Yol Haritası
 
 > **Her geliştirici yeni iş almadan önce bu dokümanı kontrol etmeli ve hangi faz/görevde çalıştığını belirtmelidir.**  
-> Son güncelleme: 26 Mart 2026  
+> Son güncelleme: 28 Mart 2026  
 > Onaylanan mimari kararlar: [Tasarım Dokümanı](./superpowers/specs/2026-03-25-full-system-design.md)
 
 ---
@@ -23,6 +23,13 @@
 | **KN11** | **Hibrit Algoritmalar** | **PSO/HHO/GWO/GA + Split Decoder** | **Faz 1.5** |
 | **KN12** | **Çift Pipeline** | **Pipeline A (Sweep/CW) ∥ Pipeline B (Split)** | **Faz 1.5** |
 | **KN13** | **Holistik Çözücüler** | **PyVRP (HGS) + VROOM (C++) bağımsız çözücüler** | **Faz 1.5** |
+| **KN14** | **Heterojen Filo** | **Farklı Sw/So kapasiteli araç desteği** | **Faz 1.5X** |
+| **KN15** | **IE Resource Engine** | **Standard Vehicle Benchmark + Resource Leveling** | **Faz 1.5X** |
+| **KN16** | **Directional Blocking** | **Pickup/Return için ayrı zaman blokları** | **Faz 1.5X** |
+| **KN17** | **Slack Time** | **Öğrenci hareket zamanı esnetme (±60 dk)** | **Faz 1.5X** |
+| **KN18** | **Sandbox Mode** | **Admin fine-tune (araç ekleme, öğrenci kaydırma)** | **Faz 1.5X** |
+| **KN19** | **Standart Araç Tablosu** | **Zaman çizelgesi x saat (gidiş/geliş ayrı)** | **Faz 2X** |
+| **KN20** | **Günlük Planlama** | **Çift yönlü (pickup + dropoff) birlikte** | **Faz 2X** |
 
 ---
 
@@ -31,7 +38,9 @@
 | Faz | Durum | Açıklama |
 |---|---|---|
 | **Faz 1: Kritik Düzeltmeler** | ✅ Tamamlandı | Sistem çalışır hale geldi |
-| **Faz 1.5: Çift Pipeline + Split** | 🔵 Planlanıyor | Pipeline A (Sweep/CW) + Pipeline B (Giant Tour + Split) |
+| **Faz 1.5: Çift Pipeline + Split** | 🔵 Devam Ediyor | Pipeline A (Sweep/CW) + Pipeline B (Giant Tour + Split) |
+| **Faz 1.5X: Heterojen Filo + IE Engine** | ⬜ Bekliyor | Standart Araç Benchmark, Resource Histogram, Sandbox Mode |
+| **Faz 2X: Günlük Planlama** | ⬜ Bekliyor | Çift yönlü planlama, Standart araç ihtiyacı tablosu |
 | **Faz 2: Veri Kalıcılığı + Atama** | ⬜ Bekliyor | Rota kaydı + sürücü ataması |
 | **Faz 3: İş Akışı Otomasyonu** | ⬜ Bekliyor | Onay/iptal + bildirim |
 | **Faz 4: İleri Özellikler** | ⬜ Bekliyor | Canlı takip + dinamik matris |
@@ -387,6 +396,285 @@ VROOM, C++ motoru sayesinde 1000+ nokta < 5 saniye çözer. CVRPTW, HFVRP, PDPTW
 
 ---
 
+## Faz 1.5X: Heterojen Filo + IE Engine 🟣
+
+> **YENİ FAZ** — Superpowers dokümantasyonu (27 Mart 2026) ve konuşma geçmişi taleplerine dayalı  
+> Heterojen araç filoları, Endüstri Mühendisliği kaynak allokasyonu ve günlük planlama desteği  
+> Referans: [Tasarım Dokümanı](./superpowers/specs/2026-03-27-heterogeneous-fleet-design.md) | [IE Plan](./superpowers/plans/2026-03-27-heterogeneous-fleet-ie.md)
+
+### Sorun Özeti
+
+Mevcut sistem homojen araç kapasitesi (4 Sw + 5 So = 9) varsaymaktadır. Gerçek operasyonda:
+- Farklı kapasiteli araçlar (minibüs, otobüs, binek) kullanılabilir
+- Pik saatlerde araç yetersizliği yaşanabilir (infeasible çözüm)
+- Verimsiz tek-öğrenci rotalar oluşabilir
+- Adminin "gözle" araç planlaması yapması gerekiyor
+
+### Çözüm: IE Resource Engine
+
+Sistem iki modda çalışır:
+1. **Ideal (Benchmark) Mode**: "Standart Minibüs" (4 Sw + 5 So) cinsinden teorik minimum araç sayısı
+2. **Fine-tune (Sandbox) Mode**: Adminin mevcut araçları verdiği, fine-tune yaptığı mod
+
+---
+
+### Görev 1.5X.1: Proposed Changes Entegrasyonu
+- **Durum:** ⬜ Bekliyor
+- **Dosyalar:** `.proposed_changes/27.03.2026/dev_discussion_package/code/`
+- **Süre:** 2-3 saat
+- **Öncelik:** 🔴 Kritik
+
+**Yapılacaklar:**
+- [ ] `split_decoder.py` → `optimizer_api/utils/`
+- [ ] `pyvrp_strategy.py` → `optimizer_api/strategies/`
+- [ ] `vroom_strategy.py` → `optimizer_api/strategies/`
+- [ ] `ga_split_strategy.py` → `optimizer_api/strategies/`
+- [ ] Test dosyalarını çalıştır ve doğrula
+
+---
+
+### Görev 1.5X.2: VehicleConfig Schema ve Backend
+- **Durum:** ⬜ Bekliyor
+- **Dosya:** `optimizer_api/models/schemas.py`
+- **Süre:** 1-2 saat
+- **Bağımlılık:** Görev 1.5X.1
+- **Öncelik:** 🔴 Kritik
+
+**Yapılacaklar:**
+- [ ] `VehicleConfig` modeli ekle (sw_capacity, so_capacity, cooldown_minutes=15)
+- [ ] `OptimizationRequest`'e `vehicles: List[VehicleConfig]` ekle
+- [ ] `allow_time_shift: bool` ekle (Slack Time desteği)
+
+```python
+class VehicleConfig(BaseModel):
+    vehicle_id: str
+    sw_capacity: int = 4
+    so_capacity: int = 5
+    cooldown_minutes: int = 15  # Rotalar arası geçiş süresi
+
+class OptimizationRequest(BaseModel):
+    # ... mevcut alanlar ...
+    vehicles: Optional[List[VehicleConfig]] = None
+    allow_time_shift: bool = False
+    slack_window_minutes: int = 60  # Öğrenci zaman esnetme payı
+```
+
+---
+
+### Görev 1.5X.3: IE Resource Engine (Standard Vehicle Benchmark)
+- **Durum:** ⬜ Bekliyor
+- **Dosya:** `optimizer_api/utils/resource_profiler.py` (YENİ)
+- **Süre:** 3-4 saat
+- **Bağımlılık:** Görev 1.5X.2
+- **Öncelik:** 🔴 Kritik
+
+**Yapılacaklar:**
+- [ ] `ResourceProfiler` sınıfı oluştur
+- [ ] `calculate_standard_vehicle_needs()` - Standart minibüs cinsinden ihtiyaç
+- [ ] `generate_resource_histogram()` - Saatlik Sw/So talep kırılımı
+- [ ] `identify_bottlenecks()` - Infeasible veya verimsiz zaman dilimleri
+
+**Çıktı Formatı:**
+```python
+{
+    "standard_vehicles_needed": 5,  # 4 Sw + 5 So minibüs cinsinden
+    "hourly_demand": {
+        "08:00": {"pickup": {"sw": 2, "so": 3}, "dropoff": {"sw": 0, "so": 0}},
+        "09:00": {"pickup": {"sw": 4, "so": 5}, "dropoff": {"sw": 1, "so": 2}},
+        ...
+    },
+    "bottlenecks": [
+        {"time": "12:00", "type": "infeasible", "reason": "Sw > available"}
+    ]
+}
+```
+
+---
+
+### Görev 1.5X.4: Directional Blocking Logic
+- **Durum:** ⬜ Bekliyor
+- **Dosya:** `optimizer_api/utils/resource_profiler.py`
+- **Süre:** 2-3 saat
+- **Bağımlılık:** Görev 1.5X.3
+- **Öncelik:** 🟡 Yüksek
+
+**Yapılacaklar:**
+- [ ] `check_directional_conflict()` - Pickup ve Dropoff araç çakışması kontrolü
+- [ ] `calculate_resource_blocks()` - Her araç için zaman bloku hesaplama
+
+**Kural:**
+- Pickup rotası: [T - max_tour_duration, T] arası bloke
+- Dropoff rotası: [T, T + max_tour_duration] arası bloke
+- Aynı araç aynı anda pickup ve dropoff yapamaz
+
+---
+
+### Görev 1.5X.5: Slack Time Demand Leveling
+- **Durum:** ⬜ Bekliyor
+- **Dosya:** `optimizer_api/utils/resource_profiler.py`
+- **Süre:** 2-3 saat
+- **Bağımlılık:** Görev 1.5X.4
+- **Öncelik:** 🟡 Yüksek
+
+**Yapılacaklar:**
+- [ ] `suggest_time_shifts()` - Pik saat yığılmasını azaltmak için öneriler
+- [ ] `optimize_with_slack()` - Slack time dahil edilerek yeniden optimizasyon
+
+**Örnek:**
+- Saat 12:00'de 10 öğrenci, kapasite 9 → infeasible
+- 2 öğrenciyi 11:00'e kaydır → 8 öğrenci (feasible)
+- Öneri: "2 öğrenciyi ±60 dk esneterek 1 araç tasarruf edilebilir"
+
+---
+
+### Görev 1.5X.6: Split Decoder V2 (Heterojen Kapasite)
+- **Durum:** ⬜ Bekliyor
+- **Dosya:** `optimizer_api/utils/split_decoder.py` (Görev 1.5X.1'den)
+- **Süre:** 2-3 saat
+- **Bağımlılık:** Görev 1.5X.1
+- **Öncelik:** 🔴 Kritik
+
+**Yapılacaklar:**
+- [ ] Her araç için farklı Sw/So kapasitesi desteği
+- [ ] Per-vehicle capacity constraint
+- [ ] VROOM ve PyVRP wrapper güncelleme
+
+---
+
+### Görev 1.5X.7: Frontend IE Dashboard - Resource Histogram
+- **Durum:** ⬜ Bekliyor
+- **Dosya:** `src/components/admin/resource-histogram.tsx` (YENİ)
+- **Süre:** 3-4 saat
+- **Bağımlılık:** Görev 1.5X.3
+- **Öncelik:** 🟡 Yüksek
+
+**Yapılacaklar:**
+- [ ] `ResourceHistogram` component - stacked bars
+- [ ] Pickup/Dropoff ayrı renklerde
+- [ ] Tooltip - saat başı Sw/So kırılımı
+- [ ] Bottleneck indicators (kırmızı uyarılar)
+
+---
+
+### Görev 1.5X.8: Frontend IE Dashboard - Resource Tracks (Gantt)
+- **Durum:** ⬜ Bekliyor
+- **Dosya:** `src/components/admin/resource-tracks.tsx` (YENİ)
+- **Süre:** 2-3 saat
+- **Bağımlılık:** Görev 1.5X.7
+- **Öncelik:** 🟡 Yüksek
+
+**Yapılacaklar:**
+- [ ] `ResourceTracks` component - Gantt benzeri
+- [ ] X ekseni saat, Y ekseni araçlar
+- [ ] Pickup/Dropoff blokları renkli
+- [ ] Cooldown period görselleştirme
+
+---
+
+### Görev 1.5X.9: Sandbox Mode (Fine-tune UI)
+- **Durum:** ⬜ Bekliyor
+- **Dosya:** `src/app/(app)/admin/sandbox/page.tsx` (YENİ)
+- **Süre:** 4-5 saat
+- **Bağımlılık:** Görev 1.5X.6 + 1.5X.8
+- **Öncelik:** 🟡 Yüksek
+
+**Yapılacaklar:**
+- [ ] `SandboxPage` - Adminin araç ekleme/kaldırma
+- [ ] "Add Vehicle" butonu - mevcut araçlardan seçim
+- [ ] "Shift Student" action - öğrenci zaman kaydırma
+- [ ] "Re-optimize" butonu - değişikliklerle yeniden çalıştır
+- [ ] Before/After karşılaştırma
+
+---
+
+### Görev 1.5X.10: Ad-hoc Request Entegrasyonu
+- **Durum:** ⬜ Bekliyor
+- **Dosya:** Backend + Frontend
+- **Süre:** 2-3 saat
+- **Bağımlılık:** Görev 1.5X.9
+- **Öncelik:** 🟢 Orta
+
+**Yapılacaklar:**
+- [ ] "Pending Ad-hoc Requests" listesi
+- [ ] Rotadan 1-2 saat önce talep ekleme
+- [ ] Re-optimization trigger (yeniden planlama)
+
+---
+
+### Faz 1.5X Zaman Çizelgesi
+
+| Hafta | Görevler | Tahmini Süre |
+|-------|----------|--------------|
+| Hafta 1 | 1.5X.1 (Proposed Integration) | 2-3 saat |
+| Hafta 1 | 1.5X.2 (VehicleConfig Schema) | 1-2 saat |
+| Hafta 1-2 | 1.5X.3 (IE Resource Engine) | 3-4 saat |
+| Hafta 2 | 1.5X.4 (Directional Blocking) | 2-3 saat |
+| Hafta 2 | 1.5X.5 (Slack Time) | 2-3 saat |
+| Hafta 2 | 1.5X.6 (Split Decoder V2) | 2-3 saat |
+| Hafta 2-3 | 1.5X.7 (Resource Histogram) | 3-4 saat |
+| Hafta 3 | 1.5X.8 (Resource Tracks) | 2-3 saat |
+| Hafta 3-4 | 1.5X.9 (Sandbox Mode) | 4-5 saat |
+| Hafta 4 | 1.5X.10 (Ad-hoc) | 2-3 saat |
+| **TOPLAM** | **Faz 1.5X** | **23-31 saat** |
+
+---
+
+## Faz 2X: Günlük Planlama 🟡
+
+> Konuşma geçmişi Madde 14, 19, 21, 23 taleplerine dayalı  
+> Çift yönlü planlama ve standart araç ihtiyacı tablosu
+
+### Görev 2X.1: Çift Yönlü Planlama (Pickup + Dropoff)
+- **Durum:** ⬜ Bekliyor
+- **Süre:** 4-5 saat
+- **Öncelik:** 🟡 Yüksek
+
+**Yapılacaklar:**
+- [ ] Aynı gün için pickup ve dropoff birlikte planlama
+- [ ] Toplayıcı ve dağıtıcı araçların ayrı hesaplanması
+- [ ] Farklı hareket saatleri (örn: 09:00 pickup, 12:00 dropoff)
+
+---
+
+### Görev 2X.2: Standart Araç İhtiyacı Tablosu
+- **Durum:** ⬜ Bekliyor
+- **Süre:** 2-3 saat
+- **Öncelik:** 🟡 Yüksek
+- **Referans:** Konuşma geçmişi Madde 21
+
+**Yapılacaklar:**
+- [ ] Zaman çizelgesi (x ekseni saat)
+- [ ] Gidiş ve geliş için ayrı stack'lenmiş grafik
+- [ ] So/Sw bazlı renklendirme
+
+---
+
+### Görev 2X.3: Gün İçi Yeniden Planlama API
+- **Durum:** ⬜ Bekliyor
+- **Süre:** 3-4 saat
+- **Öncelik:** 🟡 Yüksek
+- **Referans:** Konuşma geçmişi Madde 7
+
+**Yapılacaklar:**
+- [ ] `POST /api/v1/reoptimize` - Gün içi talep ekleme
+- [ ] `PATCH /api/route-plans/:id` - Rota güncelleme
+- [ ] Admin onayı ile yeniden planlama tetikleme
+
+---
+
+### Görev 2X.4: Verimsiz Çözüm Analizi
+- **Durum:** ⬜ Bekliyor
+- **Süre:** 2-3 saat
+- **Öncelik:** 🟢 Orta
+- **Referans:** Konuşma geçmişi Madde 14
+
+**Yapılacaklar:**
+- [ ] Düşük doluluklu araçları işaretleme
+- [ ] Tek öğrenci rotaları raporlama
+- [ ] İyileştirme önerileri (öğrenci kaydırma, araç değiştirme)
+
+---
+
 ## Faz 2: Veri Kalıcılığı ve Atama 🟡
 
 > Faz 1.5 tamamlandıktan sonra başlanabilir.
@@ -640,42 +928,79 @@ Admin rota onaylayınca:
 
 ## Görev Alma ve Takip Kuralları
 
-1. Bir görevi almadan önce bu dosyada **"Atanan"** alanını güncelle
-2. Görev tamamlandığında durumu `✅ Tamamlandı` olarak işaretle
-3. `docs/CHANGELOG.md`'ye değişikliği kaydet
-4. **Faz sırasını atlamadan ilerle** (1 → 1.5 → 2 → 3 → 4)
-5. Aynı faz içinde görevler paralel yapılabilir
+1. Bir görevi almadan önce bu dokümanı ve superpowers dokümantasyonunu kontrol et
+2. Bir görevi almadan önce bu dosyada **"Atanan"** alanını güncelle
+3. Görev tamamlandığında durumu `✅ Tamamlandı` olarak işaretle
+4. `docs/CHANGELOG.md`'ye değişikliği kaydet
+5. **Faz sırasını atlamadan ilerle** (1 → 1.5 → 1.5X → 2X → 2 → 3 → 4)
+6. Aynı faz içinde görevler paralel yapılabilir
+7. Konuşma geçmişi taleplerine göre öncelik belirle (Madde 14, 19, 21, 23 öncelikli)
 
 ## Bağımlılık Haritası
 
 ```
 Faz 1 (✅ Tamamlandı)
  1.1 (vehicle-planning fix) ✅
-  ├── 1.3 (ölü kod silme) ✅
-  └── Faz 1.5 (Split Entegrasyonu)
+   ├── 1.3 (ölü kod silme) ✅
+   └── Faz 1.5 (Split Entegrasyonu)
 
 Faz 1.5 (Çift Pipeline + Split)
  1.5.1 (Split Decoder)
-     │
-     ├──→ 1.5.2 (Hybrid Base)
-     │        │
-     │        ├──→ 1.5.3 (PSO-Split)
-     │        ├──→ 1.5.4 (HHO-Split)
-     │        ├──→ 1.5.5 (GWO-Split)
-     │        └──→ 1.5.6 (GA-Split)
-     │                 │
-     │                 └──→ 1.5.8 (Registry)
-     │                          │
-     │                          └──→ 1.5.9 (Frontend)
-     │
-     └──→ 1.5.7 (Local Search) [Paralel]
+      │
+      ├──→ 1.5.2 (Hybrid Base)
+      │        │
+      │        ├──→ 1.5.3 (PSO-Split)
+      │        ├──→ 1.5.4 (HHO-Split)
+      │        ├──→ 1.5.5 (GWO-Split)
+      │        └──→ 1.5.6 (GA-Split)
+      │                 │
+      │                 └──→ 1.5.8 (Registry)
+      │                          │
+      │                          └──→ 1.5.9 (Frontend)
+      │
+      └──→ 1.5.7 (Local Search) [Paralel]
 
  1.5.11 (PyVRP)  → Bağımsız, paralel çalışılabilir
  1.5.12 (VROOM)  → Bağımsız, paralel çalışılabilir
 
  1.5.10 (Benchmark) ← Tüm 1.5.x tamamlandıktan sonra
 
-Faz 2 ← Faz 1.5 tamamlandıktan sonra
+══════════════════════════════════════════════════════════════════════════════
+
+Faz 1.5X (Heterojen Filo + IE Engine) ← Faz 1.5 tamamlandıktan sonra
+ 1.5X.1 (Proposed Integration)
+      │
+      ├──→ 1.5X.2 (VehicleConfig Schema)
+      │        │
+      │        └──→ 1.5X.3 (IE Resource Engine)
+      │                 │
+      │                 ├──→ 1.5X.4 (Directional Blocking)
+      │                 │        │
+      │                 │        └──→ 1.5X.5 (Slack Time)
+      │                 │
+      │                 └──→ 1.5X.6 (Split Decoder V2)
+      │
+      └──→ [Paralel]
+           ├── 1.5X.7 (Resource Histogram)
+           ├── 1.5X.8 (Resource Tracks)
+           └── 1.5X.9 (Sandbox Mode)
+                    │
+                    └──→ 1.5X.10 (Ad-hoc Request)
+
+══════════════════════════════════════════════════════════════════════════════
+
+Faz 2X (Günlük Planlama) ← Faz 1.5X tamamlandıktan sonra
+ 2X.1 (Çift Yönlü Planlama)
+      │
+      ├──→ 2X.2 (Standart Araç Tablosu)
+      │
+      └──→ 2X.3 (Gün İçi Yeniden Planlama)
+               │
+               └──→ 2X.4 (Verimsiz Çözüm Analizi)
+
+══════════════════════════════════════════════════════════════════════════════
+
+Faz 2 ← Faz 1.5X + 2X tamamlandıktan sonra
  2.1 (rota kaydı) → 2.2 (sürücü ataması)
  2.3 (payload fix) → Bağımsız
  2.4 (DataLoader) → Bağımsız
@@ -688,6 +1013,18 @@ Faz 4 ← Faz 3 tamamlandıktan sonra
  4.2 (matris güncelleme) → Bağımsız
  4.3 (adres eşleme) → Bağımsız
 ```
+
+## Konuşma Geçmişi Referans Haritası
+
+| Madde | Talep | Karşılık Görev |
+|-------|-------|----------------|
+| 3 | Araç tipleri farklı olabilir | 1.5X.2 (VehicleConfig), 1.5X.6 (Split V2) |
+| 5 | Bütünsel yaklaşım | 1.5X.3 (IE Resource Engine) |
+| 7 | Gün içi yeniden planlama | 2X.3 (Gün İçi Re-optimization) |
+| 14 | Verimsiz noktaları görüp planlama | 1.5X.9 (Sandbox Mode), 2X.4 |
+| 19 | Toplayıcı/Dağıtıcı araç ayrımı | 1.5X.4 (Directional Blocking), 2X.1 |
+| 21 | Standart araç ihtiyacı tablosu | 1.5X.7 (Resource Histogram), 2X.2 |
+| 23 | So/Sw kırılımı görme | 1.5X.7 (Resource Histogram)
 
 ## Akademik Yayın Takibi
 

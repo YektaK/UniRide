@@ -5,6 +5,14 @@
 
 ---
 
+## 2026-03-27
+
+- **[Antigravity AI]** — **Heterojen Filo Tasarımı (v2):** Sw/So kapasite yönetimi, IE tabanlı kaynak allokasyonu ve yönsel bloklama (directional blocking) tasarlandı.
+- **[Antigravity AI]** — `docs/superpowers/specs/2026-03-27-heterogeneous-fleet-design.md` v2 olarak hazırlandı.
+- **[Antigravity AI]** — `docs/superpowers/plans/2026-03-27-heterogeneous-fleet-ie.md` uygulama planı hazırlandı.
+- **[Antigravity AI]** — Tasarım temellerini (Logic Basis) ve tam konuşma geçmişini içeren dokümanlar oluşturuldu.
+- **[Antigravity AI]** — Proje kök dizinindeki hatalı `.docs` klasörü temizlendi, tüm dokümantasyon `UniRide/docs/` altına taşındı.
+
 ## 2026-03-26
 
 - **[Antigravity AI]** — **KN13 kararı:** PyVRP (HGS) ve VROOM (C++) bağımsız holistik çözücüler olarak eklendi

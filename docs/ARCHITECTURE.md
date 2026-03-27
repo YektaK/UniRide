@@ -306,4 +306,134 @@ optimizer_api/
 | B4 | Eski alg. UI'da karışıklık yaratır | ⚠️ Orta | Pipeline etiketi + sıralama |
 | B5 | `max_tour_time` tutarsızlığı | 🔴 Kritik | §4 tek referans noktası |
 | B6 | OR-Tools + Split anlamsız | ℹ️ Düşük | §3.3 belgelendi |
+
+---
+
+## 13. IE Resource Engine ve Heterojen Filo (Faz 1.5X)
+
+> Bu bölüm 28 Mart 2026 tarihinde superpowers dokümantasyonu ve konuşma geçmişi taleplerine göre eklenmiştir.  
+> Referans: [Heterojen Filo Tasarımı](../superpowers/specs/2026-03-27-heterogeneous-fleet-design.md) | [IE Plan](../superpowers/plans/2026-03-27-heterogeneous-fleet-ie.md)
+
+### 13.1 İki Modlu Çalışma
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    IE RESOURCE ENGINE                               │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌─────────────────────┐    ┌─────────────────────────────────────┐ │
+│  │  IDEAL MODE         │    │  FINE-TUNE (SANDBOX) MODE          │ │
+│  │  (Benchmark)        │    │                                     │ │
+│  │                     │    │                                     │ │
+│  │  - Standart araç    │    │  - Mevcut araçlar verilir           │ │
+│  │    (4 Sw + 5 So)    │    │  - Admin fine-tune yapar            │ │
+│  │  - Teorik minimum   │    │  - Araç ekleme/çıkarma              │ │
+│  │  - Resource         │    │  - Öğrenci zaman kaydırma            │ │
+│  │    Histogram        │    │  - Re-optimization trigger           │ │
+│  └─────────────────────┘    └─────────────────────────────────────┘ │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 13.2 VehicleConfig Modeli
+
+```python
+class VehicleConfig(BaseModel):
+    vehicle_id: str
+    sw_capacity: int = 4      # Tekerlekli sandalye kapasitesi
+    so_capacity: int = 5       # Diğer engel kapasitesi
+    cooldown_minutes: int = 15  # Rotalar arası geçiş süresi
+```
+
+### 13.3 Directional Blocking (Yönsel Bloklama)
+
+> Aynı araç aynı anda hem pickup hem dropoff yapamaz.
+
+| Yön | Zaman Bloğu | Açıklama |
+|-----|-------------|----------|
+| **Pickup** | [T - max_tour_duration, T] | Okula geliş, T saatinde okulda |
+| **Dropoff** | [T, T + max_tour_duration] | Okuldan dönüş, T saatinde okuldan ayrılış |
+
+**Örnek:**
+- Araç 10:00-12:00 arası pickup rotası yapıyor (okula 12:00'de varır)
+- Bu araç 11:00 dropoff rotası için KULLANILAMAZ (çakışma var)
+- 12:00 sonrası dropoff için müsait
+
+### 13.4 Slack Time (Esneklik Payı)
+
+```python
+class OptimizationRequest(BaseModel):
+    allow_time_shift: bool = False
+    slack_window_minutes: int = 60  # ±60 dakika esnetme
+```
+
+**Kullanım:**
+- Pik saat yığılmasını azaltmak için öğrenci hareket zamanı esnetilebilir
+- Sistem öneriler sunar: "2 öğrenciyi 11:00'e kaydırarak 1 araç tasarruf edilebilir"
+
+### 13.5 Resource Histogram (Kaynak Histogramı)
+
+```
+Saatteki Araç İhtiyacı (Standart Minibüs Cinsinden)
+
+08:00   ██░░░░░░░░  (2 araç - 8 Sw, 12 So)
+09:00   ████░░░░░░  (4 araç - 16 Sw, 20 So)
+10:00   ██░░░░░░░░  (2 araç - 8 Sw, 10 So)
+11:00   ██░░░░░░░░  (2 araç - 6 Sw, 14 So)
+12:00   ██████░░░░  [DOLU - İNFEASIBLE] 6 araç gerekli ama 5 var
+13:00   ███░░░░░░░  (3 araç - 10 Sw, 15 So)
+```
+
+### 13.6 Dosya Yapısı (Faz 1.5X Sonrası)
+
+```
+optimizer_api/
+├── strategies/
+│   ├── __init__.py              # 🆕 get_available_solvers()
+│   ├── pyvrp_strategy.py        # 🆕 Heterojen araç desteği
+│   ├── vroom_strategy.py        # 🆕 Heterojen araç desteği
+│   ├── ga_split_strategy.py    # 🆕 Pipeline B
+│   └── ...
+├── utils/
+│   ├── split_decoder.py          # 🆕 V2 - per-vehicle capacity
+│   ├── resource_profiler.py     # 🆕 YENİ - IE Engine
+│   └── ...
+└── models/
+    └── schemas.py               # 🆕 VehicleConfig, allow_time_shift
+
+src/
+├── components/admin/
+│   ├── resource-histogram.tsx   # 🆕 YENİ
+│   ├── resource-tracks.tsx      # 🆕 YENİ
+│   └── sandbox/
+│       └── page.tsx              # 🆕 YENİ
+└── app/api/
+    └── calculate-vehicles/
+        └── route.ts              # 🆕 vehicles param, allow_time_shift
+```
+
+---
+
+## 14. Karar Noktaları Özeti
+
+| # | Karar | Seçim | Referans |
+|---|---|---|---|
+| KN1 | API Katmanı | İşlev bazlı Next.js proxy | Faz 1.1 |
+| KN2 | Ölü Kod | Temiz silme | Faz 1.3 |
+| KN3 | Time Matrix | Sabit matris + encoding fix | Faz 1.2 |
+| KN4 | DB Şeması | Minimal JSON (`route_plans`) | Faz 2.1 |
+| KN5 | Onay/İptal | Hybrid (ders=otomatik, dışı=talep) | Faz 3.1 |
+| KN6 | Sürücü Atama | Manuel atama | Faz 2.2 |
+| KN7 | Canlı Takip | Supabase Realtime | Faz 4.1 |
+| KN8 | Konum Sistemi | Sabit kodlar (şimdilik) | Mevcut |
+| KN9 | Algoritma Pipeline | Registry Pattern (mevcut) | Mevcut |
+| KN10 | Split Entegrasyonu | Giant Tour + Optimal Split (Prins, 2004) | Faz 1.5 |
+| KN11 | Hibrit Algoritmalar | PSO/HHO/GWO/GA + Split Decoder | Faz 1.5 |
+| KN12 | Çift Pipeline | Pipeline A (Sweep/CW) ∥ Pipeline B (Split) | Faz 1.5 |
+| KN13 | Holistik Çözücüler | PyVRP (HGS) + VROOM (C++) bağımsız çözücüler | Faz 1.5 |
+| **KN14** | **Heterojen Filo** | **Farklı Sw/So kapasiteli araç desteği** | **Faz 1.5X** |
+| **KN15** | **IE Resource Engine** | **Standard Vehicle Benchmark + Resource Leveling** | **Faz 1.5X** |
+| **KN16** | **Directional Blocking** | **Pickup/Return için ayrı zaman blokları** | **Faz 1.5X** |
+| **KN17** | **Slack Time** | **Öğrenci hareket zamanı esnetme (±60 dk)** | **Faz 1.5X** |
+| **KN18** | **Sandbox Mode** | **Admin fine-tune (araç ekleme, öğrenci kaydırma)** | **Faz 1.5X** |
 ```

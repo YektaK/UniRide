@@ -1,7 +1,7 @@
 # 🗺️ UniRide Geliştirme Yol Haritası
 
 > **Her geliştirici yeni iş almadan önce bu dokümanı kontrol etmeli ve hangi faz/görevde çalıştığını belirtmelidir.**  
-> Son güncelleme: 26 Mart 2026  
+> Son güncelleme: 27 Mart 2026  
 > Onaylanan mimari kararlar: [Tasarım Dokümanı](./superpowers/specs/2026-03-25-full-system-design.md)
 
 ---
@@ -31,7 +31,7 @@
 | Faz | Durum | Açıklama |
 |---|---|---|
 | **Faz 1: Kritik Düzeltmeler** | ✅ Tamamlandı | Sistem çalışır hale geldi |
-| **Faz 1.5: Çift Pipeline + Split** | 🔵 Planlanıyor | Pipeline A (Sweep/CW) + Pipeline B (Giant Tour + Split) |
+| **Faz 1.5: Çift Pipeline + Split** | 🔵 Devam Ediyor | Pipeline A (Sweep/CW) + Pipeline B (Giant Tour + Split) |
 | **Faz 2: Veri Kalıcılığı + Atama** | ⬜ Bekliyor | Rota kaydı + sürücü ataması |
 | **Faz 3: İş Akışı Otomasyonu** | ⬜ Bekliyor | Onay/iptal + bildirim |
 | **Faz 4: İleri Özellikler** | ⬜ Bekliyor | Canlı takip + dinamik matris |

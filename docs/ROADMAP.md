@@ -8,42 +8,42 @@
 
 ## Onaylanan Mimari Kararlar
 
-| # | Karar | Seçim | Referans |
-|---|---|---|---|
-| KN1 | API Katmanı | İşlev bazlı Next.js proxy | Faz 1.1 |
-| KN2 | Ölü Kod | Temiz silme | Faz 1.3 |
-| KN3 | Time Matrix | Sabit matris + encoding fix | Faz 1.2 |
-| KN4 | DB Şeması | Minimal JSON (`route_plans`) | Faz 2.1 |
-| KN5 | Onay/İptal | Hybrid (ders=otomatik, dışı=talep) | Faz 3.1 |
-| KN6 | Sürücü Atama | Manuel atama | Faz 2.2 |
-| KN7 | Canlı Takip | Supabase Realtime | Faz 4.1 |
-| KN8 | Konum Sistemi | Sabit kodlar (şimdilik) | Mevcut |
-| KN9 | Algoritma Pipeline | Registry Pattern (mevcut) | Mevcut |
-| **KN10** | **Split Entegrasyonu** | **Giant Tour + Optimal Split (Prins, 2004)** | **Faz 1.5** |
-| **KN11** | **Hibrit Algoritmalar** | **PSO/HHO/GWO/GA + Split Decoder** | **Faz 1.5** |
-| **KN12** | **Çift Pipeline** | **Pipeline A (Sweep/CW) ∥ Pipeline B (Split)** | **Faz 1.5** |
-| **KN13** | **Holistik Çözücüler** | **PyVRP (HGS) + VROOM (C++) bağımsız çözücüler** | **Faz 1.5** |
-| **KN14** | **Heterojen Filo** | **Farklı Sw/So kapasiteli araç desteği** | **Faz 1.5X** |
-| **KN15** | **IE Resource Engine** | **Standard Vehicle Benchmark + Resource Leveling** | **Faz 1.5X** |
-| **KN16** | **Directional Blocking** | **Pickup/Return için ayrı zaman blokları** | **Faz 1.5X** |
-| **KN17** | **Slack Time** | **Öğrenci hareket zamanı esnetme (±60 dk)** | **Faz 1.5X** |
-| **KN18** | **Sandbox Mode** | **Admin fine-tune (araç ekleme, öğrenci kaydırma)** | **Faz 1.5X** |
-| **KN19** | **Standart Araç Tablosu** | **Zaman çizelgesi x saat (gidiş/geliş ayrı)** | **Faz 2X** |
-| **KN20** | **Günlük Planlama** | **Çift yönlü (pickup + dropoff) birlikte** | **Faz 2X** |
+| #        | Karar                     | Seçim                                               | Referans     |
+| -------- | ------------------------- | --------------------------------------------------- | ------------ |
+| KN1      | API Katmanı               | İşlev bazlı Next.js proxy                           | Faz 1.1      |
+| KN2      | Ölü Kod                   | Temiz silme                                         | Faz 1.3      |
+| KN3      | Time Matrix               | Sabit matris + encoding fix                         | Faz 1.2      |
+| KN4      | DB Şeması                 | Minimal JSON (`route_plans`)                        | Faz 2.1      |
+| KN5      | Onay/İptal                | Hybrid (ders=otomatik, dışı=talep)                  | Faz 3.1      |
+| KN6      | Sürücü Atama              | Manuel atama                                        | Faz 2.2      |
+| KN7      | Canlı Takip               | Supabase Realtime                                   | Faz 4.1      |
+| KN8      | Konum Sistemi             | Sabit kodlar (şimdilik)                             | Mevcut       |
+| KN9      | Algoritma Pipeline        | Registry Pattern (mevcut)                           | Mevcut       |
+| **KN10** | **Split Entegrasyonu**    | **Giant Tour + Optimal Split (Prins, 2004)**        | **Faz 1.5**  |
+| **KN11** | **Hibrit Algoritmalar**   | **PSO/HHO/GWO/GA + Split Decoder**                  | **Faz 1.5**  |
+| **KN12** | **Çift Pipeline**         | **Pipeline A (Sweep/CW) ∥ Pipeline B (Split)**      | **Faz 1.5**  |
+| **KN13** | **Holistik Çözücüler**    | **PyVRP (HGS) + VROOM (C++) bağımsız çözücüler**    | **Faz 1.5**  |
+| **KN14** | **Heterojen Filo**        | **Farklı Sw/So kapasiteli araç desteği**            | **Faz 1.5X** |
+| **KN15** | **IE Resource Engine**    | **Standard Vehicle Benchmark + Resource Leveling**  | **Faz 1.5X** |
+| **KN16** | **Directional Blocking**  | **Pickup/Return için ayrı zaman blokları**          | **Faz 1.5X** |
+| **KN17** | **Slack Time**            | **Öğrenci hareket zamanı esnetme (±60 dk)**         | **Faz 1.5X** |
+| **KN18** | **Sandbox Mode**          | **Admin fine-tune (araç ekleme, öğrenci kaydırma)** | **Faz 1.5X** |
+| **KN19** | **Standart Araç Tablosu** | **Zaman çizelgesi x saat (gidiş/geliş ayrı)**       | **Faz 2X**   |
+| **KN20** | **Günlük Planlama**       | **Çift yönlü (pickup + dropoff) birlikte**          | **Faz 2X**   |
 
 ---
 
 ## Faz Durumu Özeti
 
-| Faz | Durum | Açıklama |
-|---|---|---|
-| **Faz 1: Kritik Düzeltmeler** | ✅ Tamamlandı | Sistem çalışır hale geldi |
-| **Faz 1.5: Çift Pipeline + Split** | 🔵 Devam Ediyor | Pipeline A (Sweep/CW) + Pipeline B (Giant Tour + Split) |
-| **Faz 1.5X: Heterojen Filo + IE Engine** | ⬜ Bekliyor | Standart Araç Benchmark, Resource Histogram, Sandbox Mode |
-| **Faz 2X: Günlük Planlama** | ⬜ Bekliyor | Çift yönlü planlama, Standart araç ihtiyacı tablosu |
-| **Faz 2: Veri Kalıcılığı + Atama** | ⬜ Bekliyor | Rota kaydı + sürücü ataması |
-| **Faz 3: İş Akışı Otomasyonu** | ⬜ Bekliyor | Onay/iptal + bildirim |
-| **Faz 4: İleri Özellikler** | ⬜ Bekliyor | Canlı takip + dinamik matris |
+| Faz                                      | Durum           | Açıklama                                                  |
+| ---------------------------------------- | --------------- | --------------------------------------------------------- |
+| **Faz 1: Kritik Düzeltmeler**            | ✅ Tamamlandı   | Sistem çalışır hale geldi                                 |
+| **Faz 1.5: Çift Pipeline + Split**       | 🔵 Devam Ediyor | Pipeline A (Sweep/CW) + Pipeline B (Giant Tour + Split)   |
+| **Faz 1.5X: Heterojen Filo + IE Engine** | ⬜ Bekliyor     | Standart Araç Benchmark, Resource Histogram, Sandbox Mode |
+| **Faz 2X: Günlük Planlama**              | ⬜ Bekliyor     | Çift yönlü planlama, Standart araç ihtiyacı tablosu       |
+| **Faz 2: Veri Kalıcılığı + Atama**       | ⬜ Bekliyor     | Rota kaydı + sürücü ataması                               |
+| **Faz 3: İş Akışı Otomasyonu**           | ⬜ Bekliyor     | Onay/iptal + bildirim                                     |
+| **Faz 4: İleri Özellikler**              | ⬜ Bekliyor     | Canlı takip + dinamik matris                              |
 
 ---
 
@@ -52,6 +52,7 @@
 > Bu faz tamamlanmadan sistem operasyonel olarak **kullanılamaz**.
 
 ### Görev 1.1: `vehicle-planning` → Python API Bağlantısı (KN1)
+
 - **Durum:** ✅ Tamamlandı
 - **Atanan:** Antigravity AI
 - **Tahmini süre:** 2-3 saat
@@ -60,6 +61,7 @@
 **Değiştirilecek dosyalar:**
 
 #### A) `src/app/api/calculate-vehicles/route.ts` — YENİDEN YAZ
+
 ```
 ESKİ akış: import { calculateRequiredVehicles } from "@/services/vehicle-calculator"
 YENİ akış: import { optimizeRoutes } from "@/services/optimizer-service"
@@ -73,7 +75,7 @@ YENİ akış: import { optimizeRoutes } from "@/services/optimizer-service"
 5. Response'u UI formatına map et:
    Python döndürüyor → { routes[], total_vehicles, total_duration_minutes }
    UI bekliyor → { requiredVehicles, assignments[], totalDuration, message, meta }
-   
+
    Her route → assignment mapping:
      vehicleIndex  = route.vehicle_id veya index+1
      students      = route.student_ids üzerinden öğrenci lookup
@@ -84,6 +86,7 @@ YENİ akış: import { optimizeRoutes } from "@/services/optimizer-service"
 ```
 
 #### B) `src/app/(app)/admin/vehicle-planning/page.tsx` — GÜNCELLE
+
 ```
 1. SİL → satır 25-31'deki lokal strategies array
 2. EKLE → import { ALGORITHM_OPTIONS } from "@/lib/algorithm-constants"
@@ -93,11 +96,13 @@ YENİ akış: import { optimizeRoutes } from "@/services/optimizer-service"
 ```
 
 #### C) `src/services/vehicle-calculator.ts` — SONRA SİLİNECEK
+
 - A+B tamamlanıp test edildikten sonra silinir (Görev 1.3 ile birlikte)
 
 ---
 
 ### Görev 1.2: Windows Encoding Fix (KN3)
+
 - **Durum:** ✅ Tamamlandı
 - **Atanan:** Antigravity AI
 - **Tahmini süre:** 15 dakika
@@ -116,6 +121,7 @@ veya ASCII karşılıklarını kullan: [OK], [FAIL], [!]
 ---
 
 ### Görev 1.3: Ölü Kod Temizliği (KN2)
+
 - **Durum:** ✅ Tamamlandı
 - **Atanan:** Antigravity AI
 - **Tahmini süre:** 30 dakika
@@ -154,22 +160,24 @@ Son olarak: calculate-vehicles/route.ts'in eski import'u kaldırıldığını do
 
 Mevcut "Cluster-First, Route-Second" mimarisi K-Means ile kümeleme yapıp, süre kısıtı aşıldığında araç sayısını +1 artırarak tek öğrencilik verimsiz rotalar oluşturmaktadır (%15-20). Split Decoder, bu problemi ortadan kaldırır:
 
-| Metrik | Mevcut (K-Means) | Hedef (Split) | İyileştirme |
-|--------|------------------|---------------|-------------|
-| Ort. Araç Sayısı | 7-8 | 5-6 | -20% |
-| Tek Öğrenci Rotalar | %15-20 | <%5 | -75% |
-| Feasibility | %92 | %100 | +8% |
-| Time Matrix | Duyarsız | Duyarlı | ✓ |
+| Metrik              | Mevcut (K-Means) | Hedef (Split) | İyileştirme |
+| ------------------- | ---------------- | ------------- | ----------- |
+| Ort. Araç Sayısı    | 7-8              | 5-6           | -20%        |
+| Tek Öğrenci Rotalar | %15-20           | <%5           | -75%        |
+| Feasibility         | %92              | %100          | +8%         |
+| Time Matrix         | Duyarsız         | Duyarlı       | ✓           |
 
 ---
 
 ### Görev 1.5.1: Split Decoder Modülü
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `optimizer_api/utils/split_decoder.py`
 - **Süre:** 3-4 saat
 - **Öncelik:** 🔴 Kritik
 
 **Yapılacaklar:**
+
 - [ ] `SplitDecoder` sınıfı oluştur
 - [ ] Dinamik programlama (DP) ile optimal bölme algoritması
 - [ ] Sw/So heterojen kapasite constraint entegrasyonu
@@ -177,6 +185,7 @@ Mevcut "Cluster-First, Route-Second" mimarisi K-Means ile kümeleme yapıp, sür
 - [ ] Unit testler yaz
 
 **Kabul Kriterleri:**
+
 - Giant tour input → Routes output
 - Her route: Sw ≤ 4, So ≤ 5
 - Her route süresi ≤ max_tour_time
@@ -186,6 +195,7 @@ Mevcut "Cluster-First, Route-Second" mimarisi K-Means ile kümeleme yapıp, sür
 ---
 
 ### Görev 1.5.2: Hibrit Base Strategy
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `optimizer_api/strategies/hybrid_base_strategy.py`
 - **Süre:** 1-2 saat
@@ -193,6 +203,7 @@ Mevcut "Cluster-First, Route-Second" mimarisi K-Means ile kümeleme yapıp, sür
 - **Öncelik:** 🔴 Kritik
 
 **Yapılacaklar:**
+
 - [ ] `HybridSplitStrategy` base class (BaseRoutingStrategy'den türetilir)
 - [ ] `decode_tour()` metodu → Split Decoder çağrısı
 - [ ] `_build_response()` yardımcı metotları
@@ -201,6 +212,7 @@ Mevcut "Cluster-First, Route-Second" mimarisi K-Means ile kümeleme yapıp, sür
 ---
 
 ### Görev 1.5.3: PSO-Split
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `optimizer_api/strategies/pso_split_strategy.py`
 - **Süre:** 2-3 saat
@@ -208,6 +220,7 @@ Mevcut "Cluster-First, Route-Second" mimarisi K-Means ile kümeleme yapıp, sür
 - **Öncelik:** 🟡 Yüksek
 
 **Yapılacaklar:**
+
 - [ ] `PSOSplitStrategy` sınıfı
 - [ ] Swarm initialization (giant tour permütasyonları)
 - [ ] Velocity update (swap operations)
@@ -217,6 +230,7 @@ Mevcut "Cluster-First, Route-Second" mimarisi K-Means ile kümeleme yapıp, sür
 ---
 
 ### Görev 1.5.4: HHO-Split
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `optimizer_api/strategies/hho_split_strategy.py`
 - **Süre:** 2-3 saat
@@ -224,6 +238,7 @@ Mevcut "Cluster-First, Route-Second" mimarisi K-Means ile kümeleme yapıp, sür
 - **Öncelik:** 🟡 Yüksek
 
 **Yapılacaklar:**
+
 - [ ] `HHOSplitStrategy` sınıfı
 - [ ] 4 siege strategy (Soft/Hard Besiege ± Progressive Dives)
 - [ ] Lévy Flight entegrasyonu (lokal optimumdan kaçış)
@@ -232,6 +247,7 @@ Mevcut "Cluster-First, Route-Second" mimarisi K-Means ile kümeleme yapıp, sür
 ---
 
 ### Görev 1.5.5: GWO-Split
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `optimizer_api/strategies/gwo_split_strategy.py`
 - **Süre:** 2-3 saat
@@ -239,6 +255,7 @@ Mevcut "Cluster-First, Route-Second" mimarisi K-Means ile kümeleme yapıp, sür
 - **Öncelik:** 🟡 Yüksek
 
 **Yapılacaklar:**
+
 - [ ] `GWOSplitStrategy` sınıfı
 - [ ] Alpha-Beta-Delta hierarchy
 - [ ] Position update toward leaders
@@ -246,6 +263,7 @@ Mevcut "Cluster-First, Route-Second" mimarisi K-Means ile kümeleme yapıp, sür
 ---
 
 ### Görev 1.5.6: GA-Split
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `optimizer_api/strategies/ga_split_strategy.py`
 - **Süre:** 2-3 saat
@@ -253,6 +271,7 @@ Mevcut "Cluster-First, Route-Second" mimarisi K-Means ile kümeleme yapıp, sür
 - **Öncelik:** 🟡 Yüksek
 
 **Yapılacaklar:**
+
 - [ ] `GASplitStrategy` sınıfı
 - [ ] Order Crossover (OX1) + Selection
 - [ ] Swap/Inversion mutation
@@ -261,12 +280,14 @@ Mevcut "Cluster-First, Route-Second" mimarisi K-Means ile kümeleme yapıp, sür
 ---
 
 ### Görev 1.5.7: Local Search Modülü Genişletme
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `optimizer_api/utils/local_search.py`
 - **Süre:** 1-2 saat
 - **Öncelik:** 🟢 Orta (Paralel çalışılabilir)
 
 **Yapılacaklar:**
+
 - [ ] 2-opt improvement (mevcut, genişletilecek)
 - [ ] Or-opt (relocate) ekleme
 - [ ] Hibrit stratejilerle entegrasyon
@@ -274,6 +295,7 @@ Mevcut "Cluster-First, Route-Second" mimarisi K-Means ile kümeleme yapıp, sür
 ---
 
 ### Görev 1.5.8: Strategy Registry Güncelleme
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `optimizer_api/strategies/__init__.py`
 - **Süre:** 30 dk
@@ -281,6 +303,7 @@ Mevcut "Cluster-First, Route-Second" mimarisi K-Means ile kümeleme yapıp, sür
 - **Öncelik:** 🔴 Kritik
 
 **Yapılacaklar:**
+
 - [ ] Yeni hibrit stratejileri STRATEGY_REGISTRY'ye ekle
 - [ ] Factory metodunu güncelle
 
@@ -291,7 +314,7 @@ STRATEGY_REGISTRY = {
     "pso": PSOStrategy,
     "hho": HarrisHawksStrategy,
     "gwo": GreyWolfStrategy,
-    
+
     # YENİ: Split tabanlı
     "pso_split": PSOSplitStrategy,
     "hho_split": HHOSplitStrategy,
@@ -303,6 +326,7 @@ STRATEGY_REGISTRY = {
 ---
 
 ### Görev 1.5.9: Frontend Algoritma Seçenekleri Güncelleme
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `src/lib/algorithm-constants.ts`
 - **Süre:** 30 dk
@@ -310,6 +334,7 @@ STRATEGY_REGISTRY = {
 - **Öncelik:** 🟡 Yüksek
 
 **Yapılacaklar:**
+
 - [ ] Yeni Split algoritma seçeneklerini `ALGORITHM_OPTIONS`'a ekle
 - [ ] Varsayılan algoritmayı `pso_split` olarak değiştir
 - [ ] Split seçildiğinde "Kümeleme Yöntemi" dropdown'ını gizle
@@ -317,6 +342,7 @@ STRATEGY_REGISTRY = {
 ---
 
 ### Görev 1.5.10: Benchmark Testleri
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `tests/benchmark_split.py`
 - **Süre:** 3-4 saat
@@ -325,14 +351,14 @@ STRATEGY_REGISTRY = {
 
 **Test Senaryoları:**
 
-| ID | N | Sw% | So% | Açıklama |
-|----|---|-----|-----|----------|
-| S1 | 30 | 30% | 70% | Mevcut ölçek |
-| S2 | 50 | 30% | 70% | Küçük büyüme |
-| S3 | 100 | 30% | 70% | Orta ölçek |
-| S4 | 300 | 30% | 70% | Hedef ölçek |
-| S5 | 100 | 50% | 50% | Dengeli |
-| S6 | 100 | 70% | 30% | Ağır Sw |
+| ID  | N   | Sw% | So% | Açıklama     |
+| --- | --- | --- | --- | ------------ |
+| S1  | 30  | 30% | 70% | Mevcut ölçek |
+| S2  | 50  | 30% | 70% | Küçük büyüme |
+| S3  | 100 | 30% | 70% | Orta ölçek   |
+| S4  | 300 | 30% | 70% | Hedef ölçek  |
+| S5  | 100 | 50% | 50% | Dengeli      |
+| S6  | 100 | 70% | 30% | Ağır Sw      |
 
 **Metrikler:** Toplam araç, toplam süre, tek öğrencilik rota %, execution time, feasibility rate  
 **İstatistik:** Her senaryo 10 run → Mean, Std, Min, Max + ANOVA testi
@@ -340,6 +366,7 @@ STRATEGY_REGISTRY = {
 ---
 
 ### Görev 1.5.11: PyVRP Entegrasyonu
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `optimizer_api/strategies/pyvrp_strategy.py`
 - **Süre:** 2-3 saat
@@ -351,6 +378,7 @@ STRATEGY_REGISTRY = {
 PyVRP, Hybrid Genetic Search (HGS-CVRP) tabanlı, DIMACS 2021 VRPTW yarışması birincisi, state-of-the-art akademik çözücüdür. Heterojen araç tipleri, time windows, multi-depot native desteklenir.
 
 **Yapılacaklar:**
+
 - [ ] `pyvrp` paketini `requirements.txt`'e ekle
 - [ ] `PyVRPStrategy` sınıfı oluştur (BaseRoutingStrategy'den)
 - [ ] Sw/So heterojen kapasite → PyVRP `VehicleType` mapping
@@ -362,6 +390,7 @@ PyVRP, Hybrid Genetic Search (HGS-CVRP) tabanlı, DIMACS 2021 VRPTW yarışması
 ---
 
 ### Görev 1.5.12: VROOM Entegrasyonu
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `optimizer_api/strategies/vroom_strategy.py`
 - **Süre:** 2-3 saat
@@ -373,6 +402,7 @@ PyVRP, Hybrid Genetic Search (HGS-CVRP) tabanlı, DIMACS 2021 VRPTW yarışması
 VROOM, C++ motoru sayesinde 1000+ nokta < 5 saniye çözer. CVRPTW, HFVRP, PDPTW, multi-trip native desteklenir. Hız kritik ve büyük ölçek senaryoları için idealdir.
 
 **Yapılacaklar:**
+
 - [ ] `pyvroom` paketini `requirements.txt`'e ekle
 - [ ] `VROOMStrategy` sınıfı oluştur (BaseRoutingStrategy'den)
 - [ ] Sw/So kapasite → VROOM `Vehicle` mapping
@@ -385,14 +415,14 @@ VROOM, C++ motoru sayesinde 1000+ nokta < 5 saniye çözer. CVRPTW, HFVRP, PDPTW
 
 ### Faz 1.5 Zaman Çizelgesi
 
-| Hafta | Görevler | Tahmini Süre |
-|-------|----------|--------------|
-| Hafta 1 | 1.5.1 + 1.5.2 | 4-6 saat |
-| Hafta 1-2 | 1.5.3-1.5.6 (paralel) | 8-12 saat |
-| Hafta 2 | 1.5.7 + 1.5.8 + 1.5.9 | 2-3 saat |
-| Hafta 2 | 1.5.11 + 1.5.12 (paralel, bağımsız) | 4-6 saat |
-| Hafta 2-3 | 1.5.10 (Benchmark — tüm algoritmalar) | 3-4 saat |
-| **TOPLAM** | **Faz 1.5** | **22-31 saat** |
+| Hafta      | Görevler                              | Tahmini Süre   |
+| ---------- | ------------------------------------- | -------------- |
+| Hafta 1    | 1.5.1 + 1.5.2                         | 4-6 saat       |
+| Hafta 1-2  | 1.5.3-1.5.6 (paralel)                 | 8-12 saat      |
+| Hafta 2    | 1.5.7 + 1.5.8 + 1.5.9                 | 2-3 saat       |
+| Hafta 2    | 1.5.11 + 1.5.12 (paralel, bağımsız)   | 4-6 saat       |
+| Hafta 2-3  | 1.5.10 (Benchmark — tüm algoritmalar) | 3-4 saat       |
+| **TOPLAM** | **Faz 1.5**                           | **22-31 saat** |
 
 ---
 
@@ -405,6 +435,7 @@ VROOM, C++ motoru sayesinde 1000+ nokta < 5 saniye çözer. CVRPTW, HFVRP, PDPTW
 ### Sorun Özeti
 
 Mevcut sistem homojen araç kapasitesi (4 Sw + 5 So = 9) varsaymaktadır. Gerçek operasyonda:
+
 - Farklı kapasiteli araçlar (minibüs, otobüs, binek) kullanılabilir
 - Pik saatlerde araç yetersizliği yaşanabilir (infeasible çözüm)
 - Verimsiz tek-öğrenci rotalar oluşabilir
@@ -413,18 +444,21 @@ Mevcut sistem homojen araç kapasitesi (4 Sw + 5 So = 9) varsaymaktadır. Gerçe
 ### Çözüm: IE Resource Engine
 
 Sistem iki modda çalışır:
+
 1. **Ideal (Benchmark) Mode**: "Standart Minibüs" (4 Sw + 5 So) cinsinden teorik minimum araç sayısı
 2. **Fine-tune (Sandbox) Mode**: Adminin mevcut araçları verdiği, fine-tune yaptığı mod
 
 ---
 
 ### Görev 1.5X.1: Proposed Changes Entegrasyonu
+
 - **Durum:** ⬜ Bekliyor
 - **Dosyalar:** `.proposed_changes/27.03.2026/dev_discussion_package/code/`
 - **Süre:** 2-3 saat
 - **Öncelik:** 🔴 Kritik
 
 **Yapılacaklar:**
+
 - [ ] `split_decoder.py` → `optimizer_api/utils/`
 - [ ] `pyvrp_strategy.py` → `optimizer_api/strategies/`
 - [ ] `vroom_strategy.py` → `optimizer_api/strategies/`
@@ -434,6 +468,7 @@ Sistem iki modda çalışır:
 ---
 
 ### Görev 1.5X.2: VehicleConfig Schema ve Backend
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `optimizer_api/models/schemas.py`
 - **Süre:** 1-2 saat
@@ -441,6 +476,7 @@ Sistem iki modda çalışır:
 - **Öncelik:** 🔴 Kritik
 
 **Yapılacaklar:**
+
 - [ ] `VehicleConfig` modeli ekle (sw_capacity, so_capacity, cooldown_minutes=15)
 - [ ] `OptimizationRequest`'e `vehicles: List[VehicleConfig]` ekle
 - [ ] `allow_time_shift: bool` ekle (Slack Time desteği)
@@ -462,6 +498,7 @@ class OptimizationRequest(BaseModel):
 ---
 
 ### Görev 1.5X.3: IE Resource Engine (Standard Vehicle Benchmark)
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `optimizer_api/utils/resource_profiler.py` (YENİ)
 - **Süre:** 3-4 saat
@@ -469,12 +506,14 @@ class OptimizationRequest(BaseModel):
 - **Öncelik:** 🔴 Kritik
 
 **Yapılacaklar:**
+
 - [ ] `ResourceProfiler` sınıfı oluştur
 - [ ] `calculate_standard_vehicle_needs()` - Standart minibüs cinsinden ihtiyaç
 - [ ] `generate_resource_histogram()` - Saatlik Sw/So talep kırılımı
 - [ ] `identify_bottlenecks()` - Infeasible veya verimsiz zaman dilimleri
 
 **Çıktı Formatı:**
+
 ```python
 {
     "standard_vehicles_needed": 5,  # 4 Sw + 5 So minibüs cinsinden
@@ -492,6 +531,7 @@ class OptimizationRequest(BaseModel):
 ---
 
 ### Görev 1.5X.4: Directional Blocking Logic
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `optimizer_api/utils/resource_profiler.py`
 - **Süre:** 2-3 saat
@@ -499,10 +539,12 @@ class OptimizationRequest(BaseModel):
 - **Öncelik:** 🟡 Yüksek
 
 **Yapılacaklar:**
+
 - [ ] `check_directional_conflict()` - Pickup ve Dropoff araç çakışması kontrolü
 - [ ] `calculate_resource_blocks()` - Her araç için zaman bloku hesaplama
 
 **Kural:**
+
 - Pickup rotası: [T - max_tour_duration, T] arası bloke
 - Dropoff rotası: [T, T + max_tour_duration] arası bloke
 - Aynı araç aynı anda pickup ve dropoff yapamaz
@@ -510,6 +552,7 @@ class OptimizationRequest(BaseModel):
 ---
 
 ### Görev 1.5X.5: Slack Time Demand Leveling
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `optimizer_api/utils/resource_profiler.py`
 - **Süre:** 2-3 saat
@@ -517,10 +560,12 @@ class OptimizationRequest(BaseModel):
 - **Öncelik:** 🟡 Yüksek
 
 **Yapılacaklar:**
+
 - [ ] `suggest_time_shifts()` - Pik saat yığılmasını azaltmak için öneriler
 - [ ] `optimize_with_slack()` - Slack time dahil edilerek yeniden optimizasyon
 
 **Örnek:**
+
 - Saat 12:00'de 10 öğrenci, kapasite 9 → infeasible
 - 2 öğrenciyi 11:00'e kaydır → 8 öğrenci (feasible)
 - Öneri: "2 öğrenciyi ±60 dk esneterek 1 araç tasarruf edilebilir"
@@ -528,6 +573,7 @@ class OptimizationRequest(BaseModel):
 ---
 
 ### Görev 1.5X.6: Split Decoder V2 (Heterojen Kapasite)
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `optimizer_api/utils/split_decoder.py` (Görev 1.5X.1'den)
 - **Süre:** 2-3 saat
@@ -535,6 +581,7 @@ class OptimizationRequest(BaseModel):
 - **Öncelik:** 🔴 Kritik
 
 **Yapılacaklar:**
+
 - [ ] Her araç için farklı Sw/So kapasitesi desteği
 - [ ] Per-vehicle capacity constraint
 - [ ] VROOM ve PyVRP wrapper güncelleme
@@ -542,6 +589,7 @@ class OptimizationRequest(BaseModel):
 ---
 
 ### Görev 1.5X.7: Frontend IE Dashboard - Resource Histogram
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `src/components/admin/resource-histogram.tsx` (YENİ)
 - **Süre:** 3-4 saat
@@ -549,6 +597,7 @@ class OptimizationRequest(BaseModel):
 - **Öncelik:** 🟡 Yüksek
 
 **Yapılacaklar:**
+
 - [ ] `ResourceHistogram` component - stacked bars
 - [ ] Pickup/Dropoff ayrı renklerde
 - [ ] Tooltip - saat başı Sw/So kırılımı
@@ -557,6 +606,7 @@ class OptimizationRequest(BaseModel):
 ---
 
 ### Görev 1.5X.8: Frontend IE Dashboard - Resource Tracks (Gantt)
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `src/components/admin/resource-tracks.tsx` (YENİ)
 - **Süre:** 2-3 saat
@@ -564,6 +614,7 @@ class OptimizationRequest(BaseModel):
 - **Öncelik:** 🟡 Yüksek
 
 **Yapılacaklar:**
+
 - [ ] `ResourceTracks` component - Gantt benzeri
 - [ ] X ekseni saat, Y ekseni araçlar
 - [ ] Pickup/Dropoff blokları renkli
@@ -572,6 +623,7 @@ class OptimizationRequest(BaseModel):
 ---
 
 ### Görev 1.5X.9: Sandbox Mode (Fine-tune UI)
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `src/app/(app)/admin/sandbox/page.tsx` (YENİ)
 - **Süre:** 4-5 saat
@@ -579,6 +631,7 @@ class OptimizationRequest(BaseModel):
 - **Öncelik:** 🟡 Yüksek
 
 **Yapılacaklar:**
+
 - [ ] `SandboxPage` - Adminin araç ekleme/kaldırma
 - [ ] "Add Vehicle" butonu - mevcut araçlardan seçim
 - [ ] "Shift Student" action - öğrenci zaman kaydırma
@@ -588,6 +641,7 @@ class OptimizationRequest(BaseModel):
 ---
 
 ### Görev 1.5X.10: Ad-hoc Request Entegrasyonu
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** Backend + Frontend
 - **Süre:** 2-3 saat
@@ -595,6 +649,7 @@ class OptimizationRequest(BaseModel):
 - **Öncelik:** 🟢 Orta
 
 **Yapılacaklar:**
+
 - [ ] "Pending Ad-hoc Requests" listesi
 - [ ] Rotadan 1-2 saat önce talep ekleme
 - [ ] Re-optimization trigger (yeniden planlama)
@@ -603,19 +658,19 @@ class OptimizationRequest(BaseModel):
 
 ### Faz 1.5X Zaman Çizelgesi
 
-| Hafta | Görevler | Tahmini Süre |
-|-------|----------|--------------|
-| Hafta 1 | 1.5X.1 (Proposed Integration) | 2-3 saat |
-| Hafta 1 | 1.5X.2 (VehicleConfig Schema) | 1-2 saat |
-| Hafta 1-2 | 1.5X.3 (IE Resource Engine) | 3-4 saat |
-| Hafta 2 | 1.5X.4 (Directional Blocking) | 2-3 saat |
-| Hafta 2 | 1.5X.5 (Slack Time) | 2-3 saat |
-| Hafta 2 | 1.5X.6 (Split Decoder V2) | 2-3 saat |
-| Hafta 2-3 | 1.5X.7 (Resource Histogram) | 3-4 saat |
-| Hafta 3 | 1.5X.8 (Resource Tracks) | 2-3 saat |
-| Hafta 3-4 | 1.5X.9 (Sandbox Mode) | 4-5 saat |
-| Hafta 4 | 1.5X.10 (Ad-hoc) | 2-3 saat |
-| **TOPLAM** | **Faz 1.5X** | **23-31 saat** |
+| Hafta      | Görevler                      | Tahmini Süre   |
+| ---------- | ----------------------------- | -------------- |
+| Hafta 1    | 1.5X.1 (Proposed Integration) | 2-3 saat       |
+| Hafta 1    | 1.5X.2 (VehicleConfig Schema) | 1-2 saat       |
+| Hafta 1-2  | 1.5X.3 (IE Resource Engine)   | 3-4 saat       |
+| Hafta 2    | 1.5X.4 (Directional Blocking) | 2-3 saat       |
+| Hafta 2    | 1.5X.5 (Slack Time)           | 2-3 saat       |
+| Hafta 2    | 1.5X.6 (Split Decoder V2)     | 2-3 saat       |
+| Hafta 2-3  | 1.5X.7 (Resource Histogram)   | 3-4 saat       |
+| Hafta 3    | 1.5X.8 (Resource Tracks)      | 2-3 saat       |
+| Hafta 3-4  | 1.5X.9 (Sandbox Mode)         | 4-5 saat       |
+| Hafta 4    | 1.5X.10 (Ad-hoc)              | 2-3 saat       |
+| **TOPLAM** | **Faz 1.5X**                  | **23-31 saat** |
 
 ---
 
@@ -625,11 +680,13 @@ class OptimizationRequest(BaseModel):
 > Çift yönlü planlama ve standart araç ihtiyacı tablosu
 
 ### Görev 2X.1: Çift Yönlü Planlama (Pickup + Dropoff)
+
 - **Durum:** ⬜ Bekliyor
 - **Süre:** 4-5 saat
 - **Öncelik:** 🟡 Yüksek
 
 **Yapılacaklar:**
+
 - [ ] Aynı gün için pickup ve dropoff birlikte planlama
 - [ ] Toplayıcı ve dağıtıcı araçların ayrı hesaplanması
 - [ ] Farklı hareket saatleri (örn: 09:00 pickup, 12:00 dropoff)
@@ -637,12 +694,14 @@ class OptimizationRequest(BaseModel):
 ---
 
 ### Görev 2X.2: Standart Araç İhtiyacı Tablosu
+
 - **Durum:** ⬜ Bekliyor
 - **Süre:** 2-3 saat
 - **Öncelik:** 🟡 Yüksek
 - **Referans:** Konuşma geçmişi Madde 21
 
 **Yapılacaklar:**
+
 - [ ] Zaman çizelgesi (x ekseni saat)
 - [ ] Gidiş ve geliş için ayrı stack'lenmiş grafik
 - [ ] So/Sw bazlı renklendirme
@@ -650,12 +709,14 @@ class OptimizationRequest(BaseModel):
 ---
 
 ### Görev 2X.3: Gün İçi Yeniden Planlama API
+
 - **Durum:** ⬜ Bekliyor
 - **Süre:** 3-4 saat
 - **Öncelik:** 🟡 Yüksek
 - **Referans:** Konuşma geçmişi Madde 7
 
 **Yapılacaklar:**
+
 - [ ] `POST /api/v1/reoptimize` - Gün içi talep ekleme
 - [ ] `PATCH /api/route-plans/:id` - Rota güncelleme
 - [ ] Admin onayı ile yeniden planlama tetikleme
@@ -663,12 +724,14 @@ class OptimizationRequest(BaseModel):
 ---
 
 ### Görev 2X.4: Verimsiz Çözüm Analizi
+
 - **Durum:** ⬜ Bekliyor
 - **Süre:** 2-3 saat
 - **Öncelik:** 🟢 Orta
 - **Referans:** Konuşma geçmişi Madde 14
 
 **Yapılacaklar:**
+
 - [ ] Düşük doluluklu araçları işaretleme
 - [ ] Tek öğrenci rotaları raporlama
 - [ ] İyileştirme önerileri (öğrenci kaydırma, araç değiştirme)
@@ -680,12 +743,14 @@ class OptimizationRequest(BaseModel):
 > Faz 1.5 tamamlandıktan sonra başlanabilir.
 
 ### Görev 2.1: Rota Sonuçlarını Veritabanına Kaydet (KN4)
+
 - **Durum:** ⬜ Bekliyor
 - **Atanan:** —
 - **Tahmini süre:** 4-5 saat
 - **Mimari karar:** Minimal JSON — tek tablo, hızlı başlangıç
 
 #### A) Supabase Migration
+
 ```sql
 CREATE TABLE route_plans (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -716,6 +781,7 @@ CREATE POLICY "Drivers can read assigned" ON route_plans
 ```
 
 #### B) API Endpoint
+
 ```
 POST /api/route-plans       → Yeni plan kaydet
 GET  /api/route-plans       → Planları listele (tarih/durum filtreli)
@@ -723,6 +789,7 @@ PATCH /api/route-plans/:id  → Durumu güncelle (confirm/cancel/complete)
 ```
 
 #### C) UI Değişiklikleri
+
 ```
 vehicle-planning sayfasına:
   - "Planı Kaydet" butonu → optimizasyon sonucu Supabase'e yazılır
@@ -733,12 +800,14 @@ vehicle-planning sayfasına:
 ---
 
 ### Görev 2.2: Manuel Sürücü Ataması (KN6)
+
 - **Durum:** ⬜ Bekliyor
 - **Atanan:** —
 - **Tahmini süre:** 3-4 saat
 - **Mimari karar:** Manuel atama — admin dropdown'dan seçer
 
 #### A) DB Değişikliği
+
 ```sql
 -- route_plans tablosuna veya ayrı bir tablo:
 ALTER TABLE route_plans ADD COLUMN driver_assignments JSONB;
@@ -746,6 +815,7 @@ ALTER TABLE route_plans ADD COLUMN driver_assignments JSONB;
 ```
 
 #### B) UI: Sürücü Atama Paneli
+
 ```
 Confirmed plan açıldığında her araç için:
   - Sürücü dropdown (vehicles tablosundan aktif sürücüler)
@@ -756,6 +826,7 @@ Confirmed plan açıldığında her araç için:
 ---
 
 ### Görev 2.3: `multi-vehicle-routing.ts` Payload Düzeltmesi
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `src/services/doubus/multi-vehicle-routing.ts`
 
@@ -769,6 +840,7 @@ Python StudentNode schema'sına uyumlu olmalı.
 ---
 
 ### Görev 2.4: DataLoader Fallback İyileştirme
+
 - **Durum:** ⬜ Bekliyor
 - **Dosya:** `optimizer_api/utils/data_loader.py`
 
@@ -787,12 +859,14 @@ Hedef: Fail-fast → sunucu başlatılırken hata ver, sıfır matris ile çalı
 > Faz 2 tamamlandıktan sonra başlanabilir.
 
 ### Görev 3.1: Hybrid Onay/İptal Mekanizması (KN5)
+
 - **Durum:** ⬜ Bekliyor
 - **Atanan:** —
 - **Tahmini süre:** 6-8 saat
 - **Mimari karar:** Ders içi otomatik + ders dışı talep bazlı
 
 #### A) Otomatik Talep Üretimi (Ders İçi)
+
 ```
 Cron/Scheduled function: Her gece 00:00
   1. Ertesi günkü weekly_schedules kayıtlarını al
@@ -806,6 +880,7 @@ ride_requests tablosuna yeni kolonlar:
 ```
 
 #### B) İptal Penceresi (Ders İçi)
+
 ```
 Öğrenci uygulamasında "Yarınki Seferlerim" kartı:
   - Otomatik oluşturulan talepler listelenir
@@ -814,6 +889,7 @@ ride_requests tablosuna yeni kolonlar:
 ```
 
 #### C) Manuel Talep Akışı (Ders Dışı)
+
 ```
 Mevcut request-ride sayfası korunur.
   - Öğrenci istediği zaman ek talep oluşturur
@@ -822,6 +898,7 @@ Mevcut request-ride sayfası korunur.
 ```
 
 #### D) Rota Planlaması Entegrasyonu
+
 ```
 Admin sabah rota planladığında:
   1. O günkü onaylı ride_requests filtrelenir
@@ -832,6 +909,7 @@ Admin sabah rota planladığında:
 ---
 
 ### Görev 3.2: Öğrenci Dashboard Güncellemesi
+
 - **Durum:** ⬜ Bekliyor
 
 ```
@@ -844,6 +922,7 @@ Admin sabah rota planladığında:
 ---
 
 ### Görev 3.3: Sürücü Dashboard Güncellemesi
+
 - **Durum:** ⬜ Bekliyor
 
 ```
@@ -860,6 +939,7 @@ Admin sabah rota planladığında:
 > Faz 3 tamamlandıktan sonra başlanabilir.
 
 ### Görev 4.1: Canlı Konum Takibi (KN7)
+
 - **Durum:** ⬜ Bekliyor
 - **Mimari karar:** Supabase Realtime
 
@@ -888,6 +968,7 @@ ETA hesaplama: Mevcut konum + kalan rota durakları → time_matrix'ten toplam s
 ---
 
 ### Görev 4.2: Hybrid Time Matrix Güncelleme (KN3-C evrim)
+
 - **Durum:** ⬜ Bekliyor
 
 ```
@@ -895,13 +976,14 @@ Admin panele "Matrisi Güncelle" butonu:
   1. Google Distance Matrix API çağrısı
   2. Yeni/güncellenmiş edge'ler time_matrix'e yazılır
   3. DataLoader singleton cache'i invalidate edilir
-  
+
 Sadece ihtiyaç olduğunda çalışır — otomatik değil.
 ```
 
 ---
 
 ### Görev 4.3: Adres → En Yakın Kod Eşleme (KN8-B evrim)
+
 - **Durum:** ⬜ Bekliyor
 
 ```
@@ -915,6 +997,7 @@ Sadece ihtiyaç olduğunda çalışır — otomatik değil.
 ---
 
 ### Görev 4.4: Sürücü Öneri + Onay (KN6-C evrim)
+
 - **Durum:** ⬜ Bekliyor
 
 ```
@@ -1016,27 +1099,27 @@ Faz 4 ← Faz 3 tamamlandıktan sonra
 
 ## Konuşma Geçmişi Referans Haritası
 
-| Madde | Talep | Karşılık Görev |
-|-------|-------|----------------|
-| 3 | Araç tipleri farklı olabilir | 1.5X.2 (VehicleConfig), 1.5X.6 (Split V2) |
-| 5 | Bütünsel yaklaşım | 1.5X.3 (IE Resource Engine) |
-| 7 | Gün içi yeniden planlama | 2X.3 (Gün İçi Re-optimization) |
-| 14 | Verimsiz noktaları görüp planlama | 1.5X.9 (Sandbox Mode), 2X.4 |
-| 19 | Toplayıcı/Dağıtıcı araç ayrımı | 1.5X.4 (Directional Blocking), 2X.1 |
-| 21 | Standart araç ihtiyacı tablosu | 1.5X.7 (Resource Histogram), 2X.2 |
-| 23 | So/Sw kırılımı görme | 1.5X.7 (Resource Histogram)
+| Madde | Talep                             | Karşılık Görev                            |
+| ----- | --------------------------------- | ----------------------------------------- |
+| 3     | Araç tipleri farklı olabilir      | 1.5X.2 (VehicleConfig), 1.5X.6 (Split V2) |
+| 5     | Bütünsel yaklaşım                 | 1.5X.3 (IE Resource Engine)               |
+| 7     | Gün içi yeniden planlama          | 2X.3 (Gün İçi Re-optimization)            |
+| 14    | Verimsiz noktaları görüp planlama | 1.5X.9 (Sandbox Mode), 2X.4               |
+| 19    | Toplayıcı/Dağıtıcı araç ayrımı    | 1.5X.4 (Directional Blocking), 2X.1       |
+| 21    | Standart araç ihtiyacı tablosu    | 1.5X.7 (Resource Histogram), 2X.2         |
+| 23    | So/Sw kırılımı görme              | 1.5X.7 (Resource Histogram)               |
 
 ## Akademik Yayın Takibi
 
-| Aşama | Durum |
-|-------|-------|
-| Problem Tanımı | ✅ |
-| Literatür Taraması | ✅ |
-| Yöntem Seçimi (Giant Tour + Split) | ✅ |
-| Implementasyon | ⬜ Faz 1.5 |
-| Deneyler (Benchmark) | ⬜ Faz 1.5.10 |
-| Yazım | ⬜ Sonraki |
+| Aşama                              | Durum         |
+| ---------------------------------- | ------------- |
+| Problem Tanımı                     | ✅            |
+| Literatür Taraması                 | ✅            |
+| Yöntem Seçimi (Giant Tour + Split) | ✅            |
+| Implementasyon                     | ⬜ Faz 1.5    |
+| Deneyler (Benchmark)               | ⬜ Faz 1.5.10 |
+| Yazım                              | ⬜ Sonraki    |
 
 **Önerilen Makale Başlığı:**
-> "Hybrid Meta-Heuristic Algorithms with Optimal Split for Heterogeneous CVRPTW: A Case Study on Disabled Student Transportation"
 
+> "Hybrid Meta-Heuristic Algorithms with Optimal Split for Heterogeneous CVRPTW: A Case Study on Disabled Student Transportation"

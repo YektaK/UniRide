@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-03-26
+
+- **[Antigravity AI]** — **KN13 kararı:** PyVRP (HGS) ve VROOM (C++) bağımsız holistik çözücüler olarak eklendi
+- **[Antigravity AI]** — Görev 1.5.11 (PyVRP) ve 1.5.12 (VROOM) `docs/ROADMAP.md`'ye eklendi
+- **[Antigravity AI]** — **KN12 kararı:** Çift Pipeline Mimarisi benimsendi (Pipeline A: Sweep/CW + Pipeline B: Split)
+- **[Antigravity AI]** — `docs/ARCHITECTURE.md` §3 çift pipeline diyagramı, kısıt referans tablosu, pipeline seçim matrisi eklendi
+- **[Antigravity AI]** — `docs/ALGORITHM_COMPARISON.md` pipeline etiketleri ve `[TAHMİNİ]` işaretleri eklendi
+- **[Antigravity AI]** — CVRPTW analizi: Katı kümeleme (K-Means) sorunu tespit edildi, `clustering.py` incelendi
+- **[Antigravity AI]** — Giant Tour + Split Decoder (Prins, 2004) çözümü benimsendi (KN10/KN11)
+- **[Antigravity AI]** — `docs/ROADMAP.md`'ye Faz 1.5 (Split Entegrasyonu, 10 görev) eklendi
+- **[Antigravity AI]** — `docs/ARCHITECTURE.md` Split Decoder mimarisi, hibrit strateji yapısı ve hedef dosya yapısı ile güncellendi
+- **[Antigravity AI]** — `docs/ANALYSIS.md` CVRPTW analizi ve ölçeklenebilirlik bölümleri eklendi
+- **[Antigravity AI]** — `docs/ALGORITHM_COMPARISON.md` oluşturuldu: tüm algoritmaların karşılaştırma tablosu
+- **[Akademisyen/Harici]** — Dışarıdan alınan teknik görüş ve analiz dosyaları proje dokümanlarına entegre edildi
+- **[Antigravity AI]** — Ölçeklenebilirlik seçenekleri dokümante edildi: `docs/superpowers/specs/2026-03-26-scalability-options.md`
+
 ## 2026-03-25
 
 - **[Antigravity AI]** — **Faz 1 Kritik Düzeltmeler Tamamlandı**

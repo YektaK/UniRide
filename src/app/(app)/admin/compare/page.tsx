@@ -19,11 +19,11 @@ import {
 import type { User } from "@/types";
 
 const clusteringAlgorithms = [
-    { name: "kmeans", label: "K-Means" },
-    { name: "fuzzy_cmeans", label: "Fuzzy C-Means" },
+    { name: "sweep", label: "Sweep Algoritması (Önerilen)" },
+    { name: "clarke_wright", label: "Clarke-Wright Savings" },
     { name: "k_medoids", label: "K-Medoids (Süre Tabanlı)" },
-    { name: "sweep", label: "Sweep Algoritması" },
-    { name: "clarke_wright", label: "Clarke-Wright" },
+    { name: "fuzzy_cmeans", label: "Fuzzy C-Means" },
+    { name: "kmeans", label: "K-Means (Eski)" },
 ];
 
 export default function AlgorithmComparisonPage() {
@@ -33,7 +33,7 @@ export default function AlgorithmComparisonPage() {
     const [students, setStudents] = useState<User[]>([]);
     const [compareResult, setCompareResult] = useState<CompareResult | null>(null);
     const [selectedResult, setSelectedResult] = useState<AlgorithmCompareResult | null>(null);
-    const [clusteringAlgorithm, setClusteringAlgorithm] = useState("kmeans");
+    const [clusteringAlgorithm, setClusteringAlgorithm] = useState("sweep");
 
     useEffect(() => {
         loadStudents();

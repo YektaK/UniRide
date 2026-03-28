@@ -26,11 +26,11 @@ import type { User } from "@/types";
 // Detay: docs/ARCHITECTURE.md#3-algoritma-key-kurali
 
 const clusteringAlgorithms = [
-    { name: "kmeans", label: "K-Means" },
-    { name: "fuzzy_cmeans", label: "Fuzzy C-Means" },
+    { name: "sweep", label: "Sweep Algoritması (Önerilen)" },
+    { name: "clarke_wright", label: "Clarke-Wright Savings" },
     { name: "k_medoids", label: "K-Medoids (Süre Tabanlı)" },
-    { name: "sweep", label: "Sweep Algoritması" },
-    { name: "clarke_wright", label: "Clarke-Wright" },
+    { name: "fuzzy_cmeans", label: "Fuzzy C-Means" },
+    { name: "kmeans", label: "K-Means (Eski)" },
 ];
 
 export default function VehiclePlanningPage() {
@@ -43,7 +43,7 @@ export default function VehiclePlanningPage() {
     const [swCapacity, setSwCapacity] = useState(4);
     const [soCapacity, setSoCapacity] = useState(5);
     const [strategy, setStrategy] = useState("genetic_algorithm");
-    const [clusteringAlgorithm, setClusteringAlgorithm] = useState("kmeans");
+    const [clusteringAlgorithm, setClusteringAlgorithm] = useState("sweep");
     const [result, setResult] = useState<any>(null);
 
     useEffect(() => {

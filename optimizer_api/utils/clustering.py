@@ -204,7 +204,7 @@ class VehicleCalculator:
         sw_capacity: int = 4,
         so_capacity: int = 5,
         max_tour_time: int = 120,
-        clustering_algorithm: str = "kmeans"
+        clustering_algorithm: str = "sweep"
     ):
         self.sw_capacity = sw_capacity
         self.so_capacity = so_capacity

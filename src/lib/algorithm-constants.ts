@@ -6,7 +6,7 @@
  * See: optimizer_api/strategies/__init__.py
  * 
  * Organized by Pipeline:
- * - Pipeline A: Cluster-First, Route-Second (K-Means + TSP)
+ * - Pipeline A: Cluster-First, Route-Second (Sweep/CW + TSP)
  * - Pipeline B: Route-First, Cluster-Second (Giant Tour + Split)
  * - Holistic: Native CVRP solvers
  * - Heuristic: Simple algorithms
@@ -16,7 +16,7 @@
 // ALGORITHM KEYS - MUST match Python STRATEGY_REGISTRY exactly
 // ============================================================
 
-// Pipeline A: Cluster-First, Route-Second (K-Means based)
+// Pipeline A: Cluster-First, Route-Second (Sweep/CW based)
 export const PIPELINE_A_KEYS = {
   GENETIC_ALGORITHM: "genetic_algorithm",
   GA: "ga", // Alias
@@ -86,13 +86,13 @@ export type LocalSearchType = typeof LOCAL_SEARCH_KEYS[keyof typeof LOCAL_SEARCH
 
 // Pipeline A Display Names
 export const PIPELINE_A_DISPLAY_NAMES: Record<string, string> = {
-  [PIPELINE_A_KEYS.GENETIC_ALGORITHM]: "Genetik Algoritma (K-Means)",
-  [PIPELINE_A_KEYS.GA]: "Genetik Algoritma (K-Means)",
-  [PIPELINE_A_KEYS.PSO]: "Parçacık Sürü (K-Means)",
-  [PIPELINE_A_KEYS.GWO]: "Gri Kurt (K-Means)",
-  [PIPELINE_A_KEYS.GREY_WOLF]: "Gri Kurt (K-Means)",
-  [PIPELINE_A_KEYS.HHO]: "Harris Hawks (K-Means)",
-  [PIPELINE_A_KEYS.HARRIS_HAWKS]: "Harris Hawks (K-Means)",
+  [PIPELINE_A_KEYS.GENETIC_ALGORITHM]: "Genetik Algoritma (Sweep)",
+  [PIPELINE_A_KEYS.GA]: "Genetik Algoritma (Sweep)",
+  [PIPELINE_A_KEYS.PSO]: "Parçacık Sürü (Sweep)",
+  [PIPELINE_A_KEYS.GWO]: "Gri Kurt (Sweep)",
+  [PIPELINE_A_KEYS.GREY_WOLF]: "Gri Kurt (Sweep)",
+  [PIPELINE_A_KEYS.HHO]: "Harris Hawks (Sweep)",
+  [PIPELINE_A_KEYS.HARRIS_HAWKS]: "Harris Hawks (Sweep)",
 };
 
 // Pipeline B Display Names (Route-First = Split)
@@ -152,10 +152,10 @@ export const LOCAL_SEARCH_DISPLAY_NAMES: Record<LocalSearchType, string> = {
 
 export const ALGORITHM_DESCRIPTIONS: Record<string, string> = {
   // Pipeline A
-  [PIPELINE_A_KEYS.GENETIC_ALGORITHM]: "K-Means kümeleme + GA rotalama. Kümeleme öncesi, rota sonrası.",
-  [PIPELINE_A_KEYS.PSO]: "K-Means kümeleme + PSO rotalama. Hızlı yakınsama.",
-  [PIPELINE_A_KEYS.GWO]: "K-Means kümeleme + GWO rotalama. Sosyal hiyerarşi.",
-  [PIPELINE_A_KEYS.HHO]: "K-Means kümeleme + HHO rotalama. Adaptif avlanma.",
+  [PIPELINE_A_KEYS.GENETIC_ALGORITHM]: "Sweep/CW kümeleme + GA rotalama. Kümeleme öncesi, rota sonrası.",
+  [PIPELINE_A_KEYS.PSO]: "Sweep/CW kümeleme + PSO rotalama. Hızlı yakınsama.",
+  [PIPELINE_A_KEYS.GWO]: "Sweep/CW kümeleme + GWO rotalama. Sosyal hiyerarşi.",
+  [PIPELINE_A_KEYS.HHO]: "Sweep/CW kümeleme + HHO rotalama. Adaptif avlanma.",
   
   // Pipeline B
   [PIPELINE_B_KEYS.GA_SPLIT]: "GA Giant Tour + Optimal Split. %100 feasible, optimal bölme.",
@@ -191,10 +191,10 @@ export const LOCAL_SEARCH_DESCRIPTIONS: Record<LocalSearchType, string> = {
 
 export const ALGORITHM_COMPLEXITY: Record<string, string> = {
   // Pipeline A
-  [PIPELINE_A_KEYS.GENETIC_ALGORITHM]: "O(g × p × n²) + K-Means",
-  [PIPELINE_A_KEYS.PSO]: "O(i × s × n²) + K-Means",
-  [PIPELINE_A_KEYS.GWO]: "O(i × p × n²) + K-Means",
-  [PIPELINE_A_KEYS.HHO]: "O(i × h × n²) + K-Means",
+  [PIPELINE_A_KEYS.GENETIC_ALGORITHM]: "O(g × p × n²) + Sweep",
+  [PIPELINE_A_KEYS.PSO]: "O(i × s × n²) + Sweep",
+  [PIPELINE_A_KEYS.GWO]: "O(i × p × n²) + Sweep",
+  [PIPELINE_A_KEYS.HHO]: "O(i × h × n²) + Sweep",
   
   // Pipeline B
   [PIPELINE_B_KEYS.GA_SPLIT]: "O(g × p × n²) + O(n²) Split",
@@ -219,7 +219,7 @@ export const ALGORITHM_COMPLEXITY: Record<string, string> = {
 
 export const ALGORITHM_OPTIONS_GROUPED = [
   {
-    category: "Cluster-First, Route-Second (K-Means)",
+    category: "Cluster-First, Route-Second (Sweep/CW)",
     description: "Önce coğrafi kümeleme, sonra her küme içinde rota optimizasyonu",
     algorithms: [
       {

@@ -32,7 +32,7 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { students, depot, algorithms, clusteringAlgorithm = "kmeans" } = body;
+        const { students, depot, algorithms, clusteringAlgorithm = "sweep" } = body;
 
         if (!students || students.length === 0) {
             return NextResponse.json({ error: "Students required" }, { status: 400 });

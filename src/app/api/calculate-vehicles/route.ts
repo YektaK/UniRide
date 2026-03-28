@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
             swCapacity = 4,
             soCapacity = 5,
             strategy = "genetic_algorithm",
-            clusteringAlgorithm = "kmeans",
+            clusteringAlgorithm = "sweep",
         } = body;
 
         // Girdi doğrulama

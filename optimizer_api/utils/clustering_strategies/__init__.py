@@ -8,7 +8,7 @@ from .clarke_wright import ClarkeWrightClusteringStrategy
 def get_clustering_strategy(strategy_name: str, sw_capacity: int = 4, so_capacity: int = 5) -> BaseClusteringStrategy:
     """
     Factory method to get the appropriate clustering strategy.
-    Fallback to K-Means if unknown strategy is provided.
+    Fallback to Sweep if unknown strategy is provided (better for CVRP than K-Means).
     """
     strategies = {
         "kmeans": KMeansClusteringStrategy,
@@ -17,6 +17,6 @@ def get_clustering_strategy(strategy_name: str, sw_capacity: int = 4, so_capacit
         "sweep": SweepClusteringStrategy,
         "clarke_wright": ClarkeWrightClusteringStrategy
     }
-    
-    strategy_class = strategies.get(strategy_name, KMeansClusteringStrategy)
+
+    strategy_class = strategies.get(strategy_name, SweepClusteringStrategy)
     return strategy_class(sw_capacity=sw_capacity, so_capacity=so_capacity)

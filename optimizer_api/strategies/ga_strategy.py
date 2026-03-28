@@ -12,7 +12,7 @@ Implements:
 
 import random
 import time
-from typing import List, Dict, Tuple, Callable, Optional
+from typing import List, Dict, Tuple, Callable, Optional, cast
 from dataclasses import dataclass
 
 from models.schemas import (
@@ -173,9 +173,9 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
         start = self.rng.randint(0, n - 1)
         end = self.rng.randint(start, n - 1)
 
-        # Initialize children
-        child1 = [None] * n
-        child2 = [None] * n
+        # Initialize children with proper type
+        child1: List[Optional[str]] = [None] * n
+        child2: List[Optional[str]] = [None] * n
 
         # Copy segment
         for i in range(start, end + 1):
@@ -195,7 +195,8 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
         fill_child(child1, parent2)
         fill_child(child2, parent1)
 
-        return child1, child2
+        # Cast to List[str] - all positions filled
+        return cast(List[str], child1), cast(List[str], child2)
 
     def _mutate(self, chromosome: List[str]) -> List[str]:
         """Apply mutation (swap or inversion)"""

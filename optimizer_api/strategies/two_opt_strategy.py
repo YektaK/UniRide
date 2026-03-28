@@ -16,7 +16,7 @@ Operations Research, 6(6), 791-812.
 
 import random
 import time
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, cast
 from dataclasses import dataclass
 
 from models.schemas import (
@@ -172,7 +172,7 @@ class TwoOptStrategy(BaseRoutingStrategy):
         def duration_func(route):
             return self._calculate_route_duration(route, depot, time_matrix, coordinates)
 
-        best_route = None
+        best_route: Optional[List[str]] = None
         best_duration = float('inf')
 
         if self.config["multi_start"]:
@@ -203,6 +203,8 @@ class TwoOptStrategy(BaseRoutingStrategy):
             initial_route = self._nearest_neighbor_initial(waypoints, depot, time_matrix, coordinates)
             best_route, best_duration = two_opt.improve(initial_route, duration_func)
 
+        # best_route is guaranteed to be set (either multi-start or single run)
+        assert best_route is not None, "best_route should be set by optimization loop"
         return best_route, best_duration
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:

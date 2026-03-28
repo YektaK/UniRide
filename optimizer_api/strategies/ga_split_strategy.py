@@ -18,7 +18,7 @@ Computers & Operations Research, 31(12), 1985-2002.
 
 import random
 import time
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, cast
 from dataclasses import dataclass
 
 from models.schemas import (
@@ -155,9 +155,9 @@ class GASplitStrategy(BaseRoutingStrategy):
         
         return population
 
-    def _nearest_neighbor_tour(self, waypoints: List[str], 
-                                distance_matrix: Dict = None,
-                                depot: str = None) -> List[str]:
+    def _nearest_neighbor_tour(self, waypoints: List[str],
+                                distance_matrix: Optional[Dict] = None,
+                                depot: Optional[str] = None) -> List[str]:
         """Create a tour using nearest neighbor heuristic"""
         if not waypoints:
             return []
@@ -179,6 +179,8 @@ class GASplitStrategy(BaseRoutingStrategy):
                     best_dist = dist
                     best_next = candidate
             
+            # best_next is guaranteed not None here (loop invariant)
+            best_next = cast(str, best_next)
             tour.append(best_next)
             remaining.remove(best_next)
             current = best_next
@@ -265,8 +267,8 @@ class GASplitStrategy(BaseRoutingStrategy):
         start = self.rng.randint(0, n - 1)
         end = self.rng.randint(start, n - 1)
         
-        child1 = [None] * n
-        child2 = [None] * n
+        child1: List[Optional[str]] = [None] * n
+        child2: List[Optional[str]] = [None] * n
         
         # Copy segment
         for i in range(start, end + 1):
@@ -286,7 +288,9 @@ class GASplitStrategy(BaseRoutingStrategy):
         fill_child(child1, parent2)
         fill_child(child2, parent1)
         
-        return child1, child2
+        # Cast to List[str] - all positions are filled by fill_child
+        
+        return cast(List[str], child1), cast(List[str], child2)
 
     def _mutate(self, chromosome: List[str]) -> List[str]:
         """Apply mutation operators"""
@@ -610,16 +614,16 @@ class GAEnhancedSplitStrategy(GASplitStrategy):
         n = len(parent1)
         if n < 2:
             return parent1.copy()
-        
+
         start = self.rng.randint(0, n - 2)
         end = self.rng.randint(start + 1, n - 1)
-        
-        child = [None] * n
-        
+
+        child: List[Optional[str]] = [None] * n
+
         # Copy segment from parent1
         for i in range(start, end + 1):
             child[i] = parent1[i]
-        
+
         # Map from parent2
         for i in range(start, end + 1):
             if parent2[i] not in child:
@@ -628,51 +632,55 @@ class GAEnhancedSplitStrategy(GASplitStrategy):
                 while start <= pos <= end:
                     pos = parent2.index(parent1[pos])
                 child[pos] = parent2[i]
-        
+
         # Fill remaining from parent2
         for i in range(n):
             if child[i] is None:
                 child[i] = parent2[i]
+
+        # Cast to List[str] - all positions filled
         
-        return child
+        return cast(List[str], child)
     
     def _crossover_cx2(self, parent1: List[str], parent2: List[str]) -> List[str]:
         """Cycle Crossover 2 (CX2)"""
         n = len(parent1)
-        child = [None] * n
-        visited = set()
-        
+        child: List[Optional[str]] = [None] * n
+        visited: set = set()
+
         i = 0
         while len(visited) < n:
             if parent1[i] not in visited:
                 # Start new cycle
                 cycle_start = i
-                cycle = []
-                
+                cycle: list = []
+
                 while True:
                     cycle.append(parent1[i])
                     visited.add(parent1[i])
-                    
+
                     # Find position of parent2[i] in parent1
                     next_val = parent2[i]
                     if next_val in visited:
                         break
-                    
+
                     i = parent1.index(next_val)
                     if i == cycle_start:
                         break
-                
+
                 # Alternate cycle direction
                 if len(cycle) > 1 and self.rng.random() < 0.5:
                     cycle = cycle[::-1]
-                
+
                 for j, val in enumerate(cycle):
                     child[cycle_start + j] = val
-            
+
             i = (i + 1) % n
             while i < n and child[i] is not None:
                 i += 1
             if i >= n:
                 break
+
+        # Cast to List[str] - all positions filled
         
-        return child
+        return cast(List[str], child)

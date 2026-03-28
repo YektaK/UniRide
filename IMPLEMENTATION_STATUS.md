@@ -1,6 +1,6 @@
 # Implementation Status
 
-> **Son Güncelleme:** 28 Mart 2026 — Cross-validated analiz sonrası durum düzeltmeleri
+> **Son Güncelleme:** 28 Mart 2026, 23:30 — Cross-validated analiz sonrası durum senkronizasyonu
 > **Referans:** `docs/ROADMAP.md` | `docs/ARCHITECTURE.md` | `docs/CURRENT_STATE_ANALYSIS_AND_RECOMMENDATIONS_28.03.2026_21.30.md`
 
 ---
@@ -49,26 +49,23 @@
 
 ## 🔄 Tamamlanmamış / Eksik Bileşenler
 
-### 🔴 Kritik (Faz 2.1)
-- ❌ `route_plans` tablosu — Optimizasyon sonuçları geçici (sayfayı yenileyince kaybolur)
-- ❌ `/api/route-plans` endpoint'leri — POST, GET, PATCH
-- ❌ Sandbox backend API'leri — `/api/sandbox/reoptimize`, `/api/sandbox/add-vehicle`, `/api/sandbox/shift-student`
+### 🔴 Kritik (Acil Müdahale Gerekli)
+- ❌ **Veritabanı Kalıcılığı Yok (P1)** — `route_plans` tablosu ve API eksik (Sonuçlar geçici)
+- ❌ **Sandbox Backend Bağlantıları Eksik (P2)** — `/api/sandbox/*` re-optimize logic'i yok
+- ❌ **Time Window Desteği Eksik (P3)** — Sistem şu an CVRP çalışıyor, CVRPTW değil
 
-### 🟡 Orta
-- ⚠️ Hybrid Base Strategy dosyası yok — Refactoring item (RI1)
-- ⚠️ Local Search modülü kısmi — Sadece 2-opt, or-opt/three_opt eksik
-- ⚠️ Split Decoder V2 — VehicleConfig ile dinamik kapasite entegre edilmedi
-- ⚠️ Time matrix caching — Her istekte DB'den yüklüyor
-- ⚠️ Test coverage düşük — Sadece resource_profiler test edildi (20 test)
-- ⚠️ CI/CD pipeline yok
-- ⚠️ Rate limiting eksik
+### 🟡 Orta (Fonksiyonel İyileştirme)
+- ⚠️ **Test Coverage Düşük (P4)** — Sadece `resource_profiler` test edildi (20 test)
+- ⚠️ **Local Search Kısıtlı (P5)** — Sadece 2-opt var; or-opt ve 3-opt eksik
+- ⚠️ **time_matrix Veri Akışı (P7)** — Caching yok, her istekte DB'den yükleniyor
+- ⚠️ **Heterojen Filo Kısmi (P8)** — `VehicleConfig` şemada var ama stratejilerde pasif
 
-### 🟢 Düşük
-- ⬜ Time Window desteği (CVRPTW) — CVRP olarak çalışıyor
-- ⬜ Sürücü atama sistemi — UI kısımları var ama tam entegre değil
-- ⬜ Bildirim sistemi — Otomatik talep üretimi ve onay akışı
-- ⬜ Canlı takip — Supabase Realtime ile driver_locations
-- ⬜ Akademik yayın — Benchmark testleri ve yazım
+### 🟢 Düşük (Refactoring & Gelecek)
+- ⚠️ **Hybrid Base Strategy Yok (P9)** — Teknik borç (RI1)
+- ⚠️ **DataLoader Fallback Zayıf (P10)** — Fail-fast mekanizması eksik
+- ⬜ **Sürücü Atama Sistemi** — UI var, veritabanı bağlantısı (route_plans) bekliyor
+- ⬜ **Canlı Takip (Faz 4.1)** — Supabase Realtime entegrasyonu
+- ⬜ **Akademik Yayın** — Benchmark testleri ve yazım
 
 ---
 

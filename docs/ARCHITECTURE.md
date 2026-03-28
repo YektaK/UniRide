@@ -1,11 +1,66 @@
 # 🏗️ UniRide Mimari Dokümanı
 
 > **Bu dosya projenin mimari kurallarını tanımlar. Tüm geliştiriciler ve AI agent'lar bu kurallara UYMAK ZORUNDADIR.**  
-> Son güncelleme: 28 Mart 2026 — Cross-validated analiz sonrası güncelleme
+> Son güncelleme: 28 Mart 2026, 23:30 — Cross-validated analiz sonrası görsel ve modüler güncelleme
 
 ---
 
-## 1. Sistem Mimarisi
+## 🏗️ Sistem Mimarisi (Görsel)
+
+```mermaid
+graph TD
+    subgraph "Kullanıcı Katmanı (Next.js)"
+        Admin[Admin: Araç Planlama & Sandbox]
+        Driver[Sürücü: Görev & Navigasyon]
+        Student[Öğrenci: Talep & Takip]
+    end
+
+    subgraph "API Katmanı (Next.js Routes)"
+        Proxy["/api/optimize-route"]
+        ProxyCalc["/api/calculate-vehicles"]
+        ProxySB["/api/sandbox/*"]
+    end
+
+    subgraph "Zeka Katmanı (Python FastAPI)"
+        Registry{Strategy Registry}
+        
+        subgraph "Pipeline A: Cluster-First"
+            Clustering[Sweep / Clarke-Wright]
+            TSP[Meta-heuristic TSP]
+            Clustering --> TSP
+        end
+        
+        subgraph "Pipeline B: Route-First"
+            GiantTour[Meta-heuristic Giant Tour]
+            Split[Split Decoder - Prins 2004]
+            GiantTour --> Split
+        end
+        
+        subgraph "Holistik Çözücüler"
+            PyVRP[PyVRP - HGS]
+            VROOM[VROOM - C++]
+        end
+        
+        IE[IE Resource Engine]
+    end
+
+    subgraph "Veri Katmanı (Supabase)"
+        SB[(Supabase DB)]
+        Matrix[[Time Matrix - 29 Node]]
+    end
+
+    Admin --> Proxy & ProxyCalc & ProxySB
+    Proxy & ProxyCalc & ProxySB --> Registry
+    Registry --> Clustering & GiantTour & Holistik
+    Clustering --> TSP
+    GiantTour --> Split
+    Holistik --> PyVRP & VROOM
+    IE --> Registry
+    Registry --> SB
+    Registry --> Matrix
+```
+
+## 1. Sistem Mimarisi (Detay)
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -123,19 +178,19 @@ Aşağıdaki çözücüler her iki pipeline'ın **dışındadır**. Kendi intern
 
 ---
 
-## 4. Kısıt Referans Tablosu
+## 4. Kısıt Referans Tablosu (Modüler Varsayılanlar)
 
-> ⚠️ **Tüm dokümanlar ve kodlar bu değerleri referans almalıdır.**
+> ⚠️ **Bu değerler sistemin "Standart Araç" (Benchmark) modu için varsayılanlardır. Gerçek araçlar için `VehicleConfig` kullanılarak geçersiz kılınabilirler.**
 
-| Kısıt | Değişken | Varsayılan | Açıklama |
-|-------|----------|-----------|----------|
-| Sw Kapasitesi | `sw_capacity` | **4** | Tekerlekli sandalye koltuğu |
-| So Kapasitesi | `so_capacity` | **5** | Diğer engel koltuğu |
-| Toplam Kapasite | `sw + so` | **≤ 9** | Aynı araçta max toplam |
-| Max Tur Süresi | `max_tour_time` | **120 dk** | Araç kampüsten çıkış → dönüş |
-| Max Öğrenci Süresi | `max_student_time` | **90 dk** | Öğrencinin araçta max süresi |
+| Kısıt | Değişken | Varsayılan (Standart) | Override / Modülerlik |
+|-------|----------|-----------------------|----------------------|
+| Sw Kapasitesi | `sw_capacity` | **4** | `VehicleConfig.sw_capacity` (§13.2) |
+| So Kapasitesi | `so_capacity` | **5** | `VehicleConfig.so_capacity` (§13.2) |
+| Toplam Kapasite | `sw + so` | **≤ 9** | Araç bazlı toplam kapasite |
+| Max Tur Süresi | `max_tour_time` | **120 dk** | `OptimizationRequest.max_travel_time` |
+| Max Öğrenci Süresi | `max_student_time` | **90 dk** | İstek bazlı manuel kısıt |
 
-> **DP Formülasyonu Uyarısı:** `if sw_count > SW_CAP or so_count > SO_CAP or (sw_count + so_count) > 9: break`
+> **DP / Split Formülasyonu Uyarısı:** Algoritma statik kısıtlar yerine `vehicle.sw_capacity` ve `vehicle.so_capacity` değerlerini kullanmalıdır. Standart araç modu (Benchmark) bu varsayılan tablodaki değerleri referans alır.
 
 ---
 

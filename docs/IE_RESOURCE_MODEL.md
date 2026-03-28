@@ -1,6 +1,6 @@
 # IE Resource Model - Heterojen Filo Kaynak Yönetimi
 
-> **Tarih:** 28 Mart 2026  
+> **Tarih:** 28 Mart 2026, 23:30  
 > **Versiyon:** 1.0  
 > **Referans:** [Heterojen Filo Tasarımı](./superpowers/specs/2026-03-27-heterogeneous-fleet-design.md) | [IE Plan](./superpowers/plans/2026-03-27-heterogeneous-fleet-ie.md) | [Konuşma Geçmişi](../konusma_gecmisi.txt)
 
@@ -14,8 +14,8 @@ Bu doküman, UniRide sisteminin **Endüstri Mühendisliği (IE) Kaynak Yönetimi
 
 | Kavram | Açıklama |
 |--------|----------|
-| **Standart Araç** | 4 Sw + 5 So = 9 kapasiteli minibüs |
-| **Heterojen Filo** | Farklı Sw/So kapasitelerine sahip araçlar |
+| **Standart Araç (Benchmark)** | 4 Sw + 5 So = 9 kapasiteli referans minibüs (Varsayılan) |
+| **Heterojen Filo (Modular)** | `VehicleConfig` ile tanımlanan farklı Sw/So kapasiteleri |
 | **Resource Leveling** | Kaynak ihtiyacını zaman içinde dengeleme |
 | **Directional Blocking** | Pickup/Dropoff için ayrı zaman blokları |
 | **Slack Time** | Öğrenci hareket zamanını esnetme (±60 dk) |
@@ -61,11 +61,12 @@ Output: Optimized routes with admin interventions
 
 ```python
 def calculate_standard_vehicle_needs(students: List[Student], 
-                                       time_matrix: dict,
-                                       max_tour_time: int = 120) -> int:
+                                     time_matrix: dict,
+                                     max_tour_time: int = 120) -> int:
     """
     Her öğrenci için en yakın standart minibüs eşdeğeri hesapla.
-    Dönüş: Kaç adet 4 Sw + 5 So minibüs gerekir
+    Dönüş: Kaç adet referans (4 Sw + 5 So) minibüs gerekir.
+    Not: Bu değer 'Ideal Mode' için baseline oluşturur; 'Sandbox Mode' gerçek kapasiteleri kullanır.
     """
 ```
 

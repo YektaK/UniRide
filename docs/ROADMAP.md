@@ -45,7 +45,7 @@
 | **Faz 3: İş Akışı Otomasyonu**           | ⬜ Bekliyor         | Onay/iptal + bildirim                                                 |
 | **Faz 4: İleri Özellikler**              | ⬜ Bekliyor         | Canlı takip + dinamik matris                                          |
 
-> **Son Güncelleme:** 28 Mart 2026 — Cross-validated analiz sonrası durum düzeltmeleri yapıldı.
+> **Son Güncelleme:** 28 Mart 2026, 23:30 — Cross-validated analiz sonrası durum düzeltmeleri yapıldı.
 > **Faz 1.5X Eksiklikler:** route_plans tablosu, Sandbox backend API'leri, Time Window desteği, DataLoader caching
 
 > **Not:** Faz 1.5X ve 2X, konuşma geçmişindeki (konusma_gecmisi.txt) Madde 3, 5, 7, 14, 19, 21, 23 taleplerine dayalı olarak eklendi. Detaylar için [IE Resource Model](./IE_RESOURCE_MODEL.md) ve [Implementation Plan](./IMPLEMENTATION_PLAN_1_5X.md) dokümanlarına bakınız.

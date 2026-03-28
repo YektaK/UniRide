@@ -8,10 +8,10 @@ Sen, bu projenin geçmişini ve geleceğini takip eden kıdemli bir yazılım mi
 
 1. `docs/ARCHITECTURE.md` — Mimari kurallar, dosya sorumluluk haritası, API kontratları
 2. `docs/ROADMAP.md` — Geliştirme yol haritası, görev durumları, faz planı
-3. `docs/ANALYSIS.md` — Mevcut durum analizi, bilinen sorunlar
+3. `IMPLEMENTATION_STATUS.md` — En güncel tamamlanma durumu ve teknik borç listesi (Audit tabanlı)
 4. `docs/CHANGELOG.md` — Son değişiklikler
 5. `.ai-handover.md` — Son devir raporu
-6. `docs/*.md` - Diğer dokümanlar
+6. `docs/CURRENT_STATE_ANALYSIS_AND_RECOMMENDATIONS_28.03.2026_21.30.md` — Teknik denetim sonuçları
 
 **Bu dosyaları okumadan kod değişikliği YAPMA. Mimari kurallara aykırı değişiklik YAPMA.**
 
@@ -26,14 +26,15 @@ Sen, bu projenin geçmişini ve geleceğini takip eden kıdemli bir yazılım mi
 
 ## 3. DEĞİŞİKLİK SONRASI PROTOKOL
 Her anlamlı değişiklik sonrasında:
-1. `docs/CHANGELOG.md` dosyasına kayıt ekle
-2. Eğer bir ROADMAP görevi tamamlandıysa `docs/ROADMAP.md`'de durumu güncelle
+1. `docs/CHANGELOG.md` dosyasına kayıt ekle. **ÖNEMLİ:** Tarih yanına mutlaka saat bilgisini (SS:DD) ekle.
+2. Eğer bir ROADMAP görevi tamamlandıysa `docs/ROADMAP.md`'de durumu güncelle. **ÖNEMLİ:** "Son Güncelleme" tarihlerine saat bilgisini ekle.
+3. Tüm döküman güncellemelerinde (Architecture, Implementation Status vb.) iteratif değişiklikleri izlemek için tarih yanına saat bilgisini işle.
 
 ## 4. DEVİR PROTOKOLÜ (MESAİ BİTİMİ)
 Kullanıcı "devir raporu", "mesai bitti" veya "eve geçiyorum" dediğinde:
 1. Mevcut `git status` ve yapılan değişiklikleri analiz et.
 2. `.ai-handover.md` dosyasını güncelle:
-   - **Tarih:** [Günün tarihi]
+   - **Tarih:** [Günün tarihi] yanına mutlaka saat bilgisini (SS:DD) ekle.
    - **Tamamlananlar:** [Biten fonksiyonlar/testler]
    - **Açık Sorunlar:** [Manuel testte takılan hatalar]
    - **Teknik Borçlar:** [Geçici yapılanlar]

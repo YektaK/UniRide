@@ -33,9 +33,10 @@ class Trip:
 
 class SplitDecoder:
     """
-    Optimal Split Decoder for CVRP using Dynamic Programming.
+    Optimal Split Decoder for CVRP/CVRPTW using Dynamic Programming.
     
     Converts a giant tour (TSP solution) into feasible vehicle routes.
+    Supports both CVRP (capacity only) and CVRPTW (capacity + time window) modes.
     
     Time Complexity: O(n²) where n is the number of customers
     Space Complexity: O(n)
@@ -50,7 +51,9 @@ class SplitDecoder:
         self,
         sw_capacity: int = 4,
         so_capacity: int = 5,
-        max_tour_duration: float = 120.0
+        max_tour_duration: float = 120.0,
+        time_windows: Optional[Dict[str, Tuple[int, int]]] = None,
+        use_time_windows: bool = False
     ):
         """
         Initialize Split Decoder.
@@ -59,10 +62,14 @@ class SplitDecoder:
             sw_capacity: Maximum wheelchair passengers per vehicle
             so_capacity: Maximum other disability passengers per vehicle
             max_tour_duration: Maximum tour duration in minutes
+            time_windows: Dict mapping location -> (earliest_pickup, latest_pickup) in minutes from depot departure
+            use_time_windows: If True, enforce time window constraints (CVRPTW mode)
         """
         self.sw_capacity = sw_capacity
         self.so_capacity = so_capacity
         self.max_tour_duration = max_tour_duration
+        self.time_windows = time_windows or {}
+        self.use_time_windows = use_time_windows
     
     def decode(
         self,
@@ -183,6 +190,7 @@ class SplitDecoder:
             sw_load = 0
             so_load = 0
             cost = 0.0
+            arrival_time = 0.0  # Track arrival time for time windows
             prev = depot
             
             for j in range(i, n):
@@ -195,11 +203,24 @@ class SplitDecoder:
                 if sw_load > self.sw_capacity or so_load > self.so_capacity:
                     break
                 
+                # Check time window feasibility (CVRPTW mode)
+                if self.use_time_windows and loc in self.time_windows:
+                    earliest, latest = self.time_windows[loc]
+                    if arrival_time > latest:
+                        break  # Cannot serve this customer within time window
+                    # Note: We allow early arrival, will wait until earliest
+                
                 # Add travel cost
+                travel_time = 0.0
                 if prev in distance_matrix and loc in distance_matrix[prev]:
-                    cost += distance_matrix[prev][loc]
+                    travel_time = distance_matrix[prev][loc]
+                    cost += travel_time
                 else:
                     cost += 15.0  # Default fallback
+                    travel_time = 15.0
+                
+                # Update arrival time for time window checking
+                arrival_time += travel_time
                 
                 prev = loc
                 

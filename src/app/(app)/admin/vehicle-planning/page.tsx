@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Truck, Users, Clock, Calculator, ArrowRight, Info, Activity } from "lucide-react";
 import { adminApi } from "@/lib/admin-api";
 import { ALGORITHM_OPTIONS } from "@/lib/algorithm-constants";
+import { formatRoutePlanForSave, saveRoutePlan } from "@/services/route-plans";
 import type { User } from "@/types";
 import { IEDashboard } from "@/components/admin/ie-dashboard";
 import type { IEResponseData } from "@/types/ie-resource";
@@ -46,6 +47,9 @@ export default function VehiclePlanningPage() {
     const [soCapacity, setSoCapacity] = useState(5);
     const [strategy, setStrategy] = useState("genetic_algorithm");
     const [clusteringAlgorithm, setClusteringAlgorithm] = useState("sweep");
+    const [planDate, setPlanDate] = useState<string>(new Date().toISOString().split('T')[0]);
+    const [direction, setDirection] = useState<"pickup" | "dropoff">("pickup");
+    const [isSaving, setIsSaving] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [ieData, setIeData] = useState<IEResponseData | null>(null);
 
@@ -145,6 +149,37 @@ export default function VehiclePlanningPage() {
         }
     };
 
+    const handleSavePlan = async () => {
+        if (!result || !result.success) {
+            toast({
+                title: "Hata",
+                description: "Önce hesaplama yapın",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        try {
+            setIsSaving(true);
+
+            const planData = formatRoutePlanForSave(result, planDate, direction, strategy, clusteringAlgorithm);
+            await saveRoutePlan(planData);
+
+            toast({
+                title: "Plan Kaydedildi",
+                description: `${planDate} tarihli ${direction} planı başarıyla kaydedildi`,
+            });
+        } catch (error: any) {
+            toast({
+                title: "Kaydetme Hatası",
+                description: error.message,
+                variant: "destructive",
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const swStudents = students.filter((s: any) => (s.disability_type || s.disabilityType) === "Sw");
     const soStudents = students.filter((s: any) => (s.disability_type || s.disabilityType) === "So" || !(s.disability_type || s.disabilityType));
     const selectedSwCount = swStudents.filter(s => selectedStudents.includes(s.id)).length;
@@ -226,10 +261,36 @@ export default function VehiclePlanningPage() {
                             </Select>
                         </div>
                         <div className="space-y-2">
+                            <Label>Tarih</Label>
+                            <Input
+                                type="date"
+                                value={planDate}
+                                onChange={(e) => setPlanDate(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Yön</Label>
+                            <Select value={direction} onValueChange={(v) => setDirection(v as "pickup" | "dropoff")}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="pickup">Pickup (Okula Gidiş)</SelectItem>
+                                    <SelectItem value="dropoff">Dropoff (Okuldan Dönüş)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
                             <Label>&nbsp;</Label>
                             <Button onClick={handleCalculate} disabled={loading} className="w-full">
                                 <Calculator className="h-4 w-4 mr-2" />
                                 {loading ? "Hesaplanıyor..." : "Hesapla"}
+                            </Button>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>&nbsp;</Label>
+                            <Button onClick={handleSavePlan} disabled={isSaving || !result} variant="outline" className="w-full">
+                                {isSaving ? "Kaydediliyor..." : "Planı Kaydet"}
                             </Button>
                         </div>
                     </div>

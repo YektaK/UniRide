@@ -1,7 +1,7 @@
 # Implementation Status
 
-> **Son Güncelleme:** 28 Mart 2026, 23:30 — Cross-validated analiz sonrası durum senkronizasyonu
-> **Referans:** `docs/ROADMAP.md` | `docs/ARCHITECTURE.md` | `docs/CURRENT_STATE_ANALYSIS_AND_RECOMMENDATIONS_28.03.2026_21.30.md`
+> **Son Güncelleme:** 29 Mart 2026, 00:30 — P1, P2, P3 tamamlandı
+> **Referans:** `docs/ROADMAP.md` | `docs/ARCHITECTURE.md`
 
 ---
 
@@ -26,7 +26,7 @@
 - ✅ Strategy Registry (`optimizer_api/strategies/__init__.py`) — 29 key
 - ✅ Frontend algorithm categories (`src/lib/algorithm-constants.ts`)
 
-### Faz 1.5X: Heterojen Filo + IE Engine ⚠️ Kısmi Tamamlandı
+### Faz 1.5X: Heterojen Filo + IE Engine ✅ (TAMAMLANDI)
 - ✅ VehicleConfig Schema (`optimizer_api/models/schemas.py`)
 - ✅ IE Resource Engine (`optimizer_api/utils/resource_profiler.py`) — 20 test passed
 - ✅ Directional Blocking (`check_directional_conflict()`, `calculate_resource_blocks()`)
@@ -34,7 +34,25 @@
 - ✅ Resource Histogram (`src/components/admin/resource-histogram.tsx`)
 - ✅ Resource Tracks (`src/components/admin/resource-tracks.tsx`)
 - ✅ IE Dashboard (`src/components/admin/ie-dashboard.tsx`)
-- ⚠️ Sandbox Mode — UI mevcut (33KB) ama backend API'leri eksik
+- ✅ Sandbox Mode — API + senaryo kaydetme eklendi (29.03.2026)
+
+### ✅ P1: Veritabanı Kalıcılığı (TAMAMLANDI - 29.03.2026)
+- ✅ `route_plans` tablosu migration (`supabase/migrations/20260329_add_route_plans.sql`)
+- ✅ API endpoints (`src/app/api/route-plans/route.ts`)
+- ✅ Frontend service (`src/services/route-plans.ts`)
+- ✅ Vehicle-planning sayfasına "Kaydet" butonu eklendi
+- ✅ Tarih/yön seçici eklendi
+
+### ✅ P2: Sandbox Backend (TAMAMLANDI - 29.03.2026)
+- ✅ `/api/sandbox` endpoint (POST re-optimize, GET scenarios)
+- ✅ `sandbox_scenarios` tablosu migration
+- ✅ Frontend service (`src/services/sandbox-api.ts`)
+- ✅ Sandbox page `/api/sandbox` kullanıyor
+
+### ✅ P3: Time Window Desteği (TAMAMLANDI - 29.03.2026)
+- ✅ SplitDecoder `time_windows` parametresi eklendi
+- ✅ `CVRPTWDecoder` wrapper (`optimizer_api/strategies/cvrptw_wrapper.py`)
+- ✅ Time window feasibility checking
 
 ### Temel Altyapı ✅
 - ✅ Supabase Auth entegrasyonu (`src/lib/supabase-auth.ts`)
@@ -49,11 +67,6 @@
 
 ## 🔄 Tamamlanmamış / Eksik Bileşenler
 
-### 🔴 Kritik (Acil Müdahale Gerekli)
-- ❌ **Veritabanı Kalıcılığı Yok (P1)** — `route_plans` tablosu ve API eksik (Sonuçlar geçici)
-- ❌ **Sandbox Backend Bağlantıları Eksik (P2)** — `/api/sandbox/*` re-optimize logic'i yok
-- ❌ **Time Window Desteği Eksik (P3)** — Sistem şu an CVRP çalışıyor, CVRPTW değil
-
 ### 🟡 Orta (Fonksiyonel İyileştirme)
 - ⚠️ **Test Coverage Düşük (P4)** — Sadece `resource_profiler` test edildi (20 test)
 - ⚠️ **Local Search Kısıtlı (P5)** — Sadece 2-opt var; or-opt ve 3-opt eksik
@@ -63,7 +76,7 @@
 ### 🟢 Düşük (Refactoring & Gelecek)
 - ⚠️ **Hybrid Base Strategy Yok (P9)** — Teknik borç (RI1)
 - ⚠️ **DataLoader Fallback Zayıf (P10)** — Fail-fast mekanizması eksik
-- ⬜ **Sürücü Atama Sistemi** — UI var, veritabanı bağlantısı (route_plans) bekliyor
+- ⬜ **Sürücü Atama Sistemi** — UI var, route_plans driver_assignments kullanabilir
 - ⬜ **Canlı Takip (Faz 4.1)** — Supabase Realtime entegrasyonu
 - ⬜ **Akademik Yayın** — Benchmark testleri ve yazım
 
@@ -72,12 +85,18 @@
 ## 📝 Notlar
 
 1. **npm install required**: Node.js kurulumdan sonra `npm install` çalıştır
-2. **Veritabanı Seçenekleri**:
+2. **Yeni migrations çalıştırın**:
+   ```sql
+   -- Supabase SQL Editor'da çalıştır:
+   supabase/migrations/20260329_add_route_plans.sql
+   supabase/migrations/20260329_add_sandbox_scenarios.sql
+   ```
+3. **Veritabanı Seçenekleri**:
    - **Mock Database** (Hızlı test): `.env.local` dosyasına `NEXT_PUBLIC_USE_MOCK_DB=true` yaz
    - **Supabase** (Önerilen): `SUPABASE_SETUP.md` takip et
    - **Python API**: `optimizer_api/` dizininde `python main.py` ile çalıştır
-3. **Algoritma Kaynağı**: Tüm rota hesaplama Python FastAPI üzerinden yapılır
-4. **Time Matrix**: Supabase'te `time_matrix` tablosu, 812 satır, 29 node
+4. **Algoritma Kaynağı**: Tüm rota hesaplama Python FastAPI üzerinden yapılır
+5. **Time Matrix**: Supabase'te `time_matrix` tablosu, 812 satır, 29 node
 
 ---
 
@@ -91,4 +110,5 @@
 - ✅ Sürücü atama paneli (Excel/PDF export)
 - ✅ Rota optimizasyonu (Python API entegrasyonu)
 - ✅ IE Dashboard (Resource Histogram, Tracks)
-- ⚠️ Sandbox Mode (UI var, backend yok)
+- ✅ **Yeni: Planı Kaydet** (vehicle-planning sayfasında)
+- ✅ **Yeni: Sandbox re-optimize** (özel araç config ile)

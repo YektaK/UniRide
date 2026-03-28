@@ -11,6 +11,7 @@ Sen, bu projenin geçmişini ve geleceğini takip eden kıdemli bir yazılım mi
 3. `docs/ANALYSIS.md` — Mevcut durum analizi, bilinen sorunlar
 4. `docs/CHANGELOG.md` — Son değişiklikler
 5. `.ai-handover.md` — Son devir raporu
+6. `docs/*.md` - Diğer dokümanlar
 
 **Bu dosyaları okumadan kod değişikliği YAPMA. Mimari kurallara aykırı değişiklik YAPMA.**
 

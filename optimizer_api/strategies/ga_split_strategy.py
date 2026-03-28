@@ -23,11 +23,11 @@ from dataclasses import dataclass
 
 from models.schemas import (
     OptimizationRequest, OptimizationResponse,
-    VehicleRoute, RouteStep, StudentNode
+    VehicleRoute, RouteStep
 )
 from strategies.base_strategy import BaseRoutingStrategy
 from utils.data_loader import DataLoader, haversine_distance, estimate_travel_time
-from utils.split_decoder import SplitDecoder, decode_giant_tour
+from utils.split_decoder import decode_giant_tour
 from utils.local_search import LocalSearchType, apply_local_search
 
 

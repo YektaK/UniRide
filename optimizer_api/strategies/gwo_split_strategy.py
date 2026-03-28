@@ -25,11 +25,11 @@ from dataclasses import dataclass
 
 from models.schemas import (
     OptimizationRequest, OptimizationResponse,
-    VehicleRoute, RouteStep, StudentNode
+    VehicleRoute, RouteStep
 )
 from strategies.base_strategy import BaseRoutingStrategy
 from utils.data_loader import DataLoader, haversine_distance, estimate_travel_time
-from utils.split_decoder import SplitDecoder, decode_giant_tour
+from utils.split_decoder import decode_giant_tour
 from utils.local_search import LocalSearchType, apply_local_search
 
 
@@ -92,9 +92,9 @@ class GWOSplitStrategy(BaseRoutingStrategy):
         self.config = {**self.DEFAULT_CONFIG, **(config or {})}
         self.seed = self.config.get("seed") or int(time.time() * 1000)
         self.rng = random.Random(self.seed)
-        self._alpha = None  # Best solution
-        self._beta = None   # Second best
-        self._delta = None  # Third best
+        self._alpha: Optional[Wolf] = None  # Best solution
+        self._beta: Optional[Wolf] = None   # Second best
+        self._delta: Optional[Wolf] = None  # Third best
         self._generation_stats = []
 
     @property
@@ -169,7 +169,7 @@ class GWOSplitStrategy(BaseRoutingStrategy):
         return pack
 
     def _nearest_neighbor_tour(self, waypoints: List[str],
-                                distance_matrix: Dict = None) -> List[str]:
+                                distance_matrix: Optional[Dict] = None) -> List[str]:
         """Create a tour using nearest neighbor heuristic"""
         if not waypoints:
             return []

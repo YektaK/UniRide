@@ -27,11 +27,11 @@ from dataclasses import dataclass
 
 from models.schemas import (
     OptimizationRequest, OptimizationResponse,
-    VehicleRoute, RouteStep, StudentNode
+    VehicleRoute, RouteStep
 )
 from strategies.base_strategy import BaseRoutingStrategy
 from utils.data_loader import DataLoader, haversine_distance, estimate_travel_time
-from utils.split_decoder import SplitDecoder, decode_giant_tour
+from utils.split_decoder import decode_giant_tour
 from utils.local_search import LocalSearchType, apply_local_search
 
 
@@ -39,7 +39,7 @@ from utils.local_search import LocalSearchType, apply_local_search
 class Particle:
     """Particle representing a giant tour (TSP permutation)"""
     position: List[str]  # Permutation of all customer locations
-    velocity: List[Tuple[int, int]]  # Swap operations with probability
+    velocity: List[Tuple[int, int, float]]  # Swap operations (i, j, probability)
     personal_best: List[str]
     personal_best_cost: float
     current_cost: float
@@ -94,7 +94,7 @@ class PSOSplitStrategy(BaseRoutingStrategy):
         self.config = {**self.DEFAULT_CONFIG, **(config or {})}
         self.seed = self.config.get("seed") or int(time.time() * 1000)
         self.rng = random.Random(self.seed)
-        self._global_best = None
+        self._global_best: Optional[List[str]] = None
         self._generation_stats = []
 
     @property
@@ -173,7 +173,7 @@ class PSOSplitStrategy(BaseRoutingStrategy):
         return swarm
 
     def _nearest_neighbor_tour(self, waypoints: List[str],
-                                distance_matrix: Dict = None) -> List[str]:
+                                distance_matrix: Optional[Dict] = None) -> List[str]:
         """Create a tour using nearest neighbor heuristic"""
         if not waypoints:
             return []
@@ -244,7 +244,7 @@ class PSOSplitStrategy(BaseRoutingStrategy):
         
         return new_position
 
-    def _update_velocity(self, particle: Particle, global_best: List[str],
+    def _update_velocity(self, particle: Particle, global_best: Optional[List[str]],
                          inertia: float) -> List[Tuple[int, int, float]]:
         """
         Calculate new velocity using PSO equation:
@@ -268,11 +268,12 @@ class PSOSplitStrategy(BaseRoutingStrategy):
         new_velocity.extend(c1_swaps)
         
         # Social component: toward global best
-        c2_swaps = self._get_difference_swaps(
-            particle.position, global_best,
-            self.config["social_weight"]
-        )
-        new_velocity.extend(c2_swaps)
+        if global_best is not None:
+            c2_swaps = self._get_difference_swaps(
+                particle.position, global_best,
+                self.config["social_weight"]
+            )
+            new_velocity.extend(c2_swaps)
         
         # Limit velocity size
         max_velocity = int(self.config["velocity_clamp"] * len(particle.position))
@@ -443,6 +444,18 @@ class PSOSplitStrategy(BaseRoutingStrategy):
                 break
         
         # Final split on best solution
+        if global_best is None:
+            return OptimizationResponse(
+                algorithm_used=self.name,
+                success=False,
+                routes=[],
+                total_vehicles=0,
+                execution_time_seconds=time.time() - start_time
+            )
+
+        # Type assertion for LSP - we've already checked for None above
+        assert global_best is not None
+
         final_result = decode_giant_tour(
             giant_tour=global_best,
             depot=depot.id,

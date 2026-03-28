@@ -27,8 +27,7 @@ Heuristics:
 - permutation_tsp: Complete Permutation Search (optimal for n≤10)
 """
 
-from typing import Dict, List, Type, Optional
-import importlib
+from typing import Dict, List, Type, Optional, Union
 
 from strategies.base_strategy import BaseRoutingStrategy
 from strategies.ga_strategy import GeneticAlgorithmStrategy
@@ -47,21 +46,27 @@ from strategies.hho_split_strategy import HHOSplitStrategy
 from strategies.gwo_split_strategy import GWOSplitStrategy
 
 # Holistic solvers (with graceful fallback)
+# Type placeholders for optional strategies
+PyVRPStrategy: Optional[Type] = None
+PyVRPAlternativeStrategy: Optional[Type] = None
+VROOMStrategy: Optional[Type] = None
+VROOMFallbackStrategy: Optional[Type] = None
+
 try:
-    from strategies.pyvrp_strategy import PyVRPStrategy, PyVRPAlternativeStrategy
+    from strategies.pyvrp_strategy import PyVRPStrategy as _PyVRPStrategy, PyVRPAlternativeStrategy as _PyVRPAltStrategy
+    PyVRPStrategy = _PyVRPStrategy
+    PyVRPAlternativeStrategy = _PyVRPAltStrategy
     _PYVRP_AVAILABLE = True
 except ImportError:
     _PYVRP_AVAILABLE = False
-    PyVRPStrategy = None
-    PyVRPAlternativeStrategy = None
 
 try:
-    from strategies.vroom_strategy import VROOMStrategy, VROOMFallbackStrategy
+    from strategies.vroom_strategy import VROOMStrategy as _VROOMStrategy, VROOMFallbackStrategy as _VROOMFallbackStrategy
+    VROOMStrategy = _VROOMStrategy
+    VROOMFallbackStrategy = _VROOMFallbackStrategy
     _VROOM_AVAILABLE = True
 except ImportError:
     _VROOM_AVAILABLE = False
-    VROOMStrategy = None
-    VROOMFallbackStrategy = None
 
 
 # Strategy instances (Singleton pattern for efficiency)
@@ -81,14 +86,26 @@ _hho_split_strategy = HHOSplitStrategy()
 _gwo_split_strategy = GWOSplitStrategy()
 
 # Holistic solver instances (only if available)
-_pyvrp_strategy = PyVRPStrategy() if _PYVRP_AVAILABLE else None
-_pyvrp_alt_strategy = PyVRPAlternativeStrategy() if _PYVRP_AVAILABLE else None
-_vroom_strategy = VROOMStrategy() if _VROOM_AVAILABLE else None
-_vroom_fallback_strategy = VROOMFallbackStrategy() if _VROOM_AVAILABLE else None
+_pyvrp_strategy: Optional[BaseRoutingStrategy] = None
+_pyvrp_alt_strategy: Optional[BaseRoutingStrategy] = None
+_vroom_strategy: Optional[BaseRoutingStrategy] = None
+_vroom_fallback_strategy: Optional[BaseRoutingStrategy] = None
+
+if _PYVRP_AVAILABLE:
+    if PyVRPStrategy is not None:
+        _pyvrp_strategy = PyVRPStrategy()
+    if PyVRPAlternativeStrategy is not None:
+        _pyvrp_alt_strategy = PyVRPAlternativeStrategy()
+
+if _VROOM_AVAILABLE:
+    if VROOMStrategy is not None:
+        _vroom_strategy = VROOMStrategy()
+    if VROOMFallbackStrategy is not None:
+        _vroom_fallback_strategy = VROOMFallbackStrategy()
 
 
 # Registry mapping name -> instance
-STRATEGY_REGISTRY: Dict[str, BaseRoutingStrategy] = {
+STRATEGY_REGISTRY: Dict[str, Optional[BaseRoutingStrategy]] = {
     # =====================================================
     # Pipeline A: Cluster-First, Route-Second (K-Means based)
     # =====================================================
@@ -182,9 +199,9 @@ def get_all_strategies() -> List[BaseRoutingStrategy]:
     Get list of all unique strategy instances.
     
     Returns:
-        List of unique strategy instances
+        List of unique strategy instances (excluding None)
     """
-    return list(set(STRATEGY_REGISTRY.values()))
+    return list(set(s for s in STRATEGY_REGISTRY.values() if s is not None))
 
 
 def get_strategy_info() -> List[dict]:

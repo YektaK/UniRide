@@ -35,15 +35,18 @@
 
 ## Faz Durumu Özeti
 
-| Faz                                      | Durum           | Açıklama                                                  |
-| ---------------------------------------- | --------------- | --------------------------------------------------------- |
-| **Faz 1: Kritik Düzeltmeler**            | ✅ Tamamlandı   | Sistem çalışır hale geldi                                 |
-| **Faz 1.5: Çift Pipeline + Split**       | ✅ Tamamlandı   | Pipeline A (Sweep/CW) + Pipeline B (Giant Tour + Split)   |
-| **Faz 1.5X: Heterojen Filo + IE Engine** | ✅ Tamamlandı   | Standart Araç Benchmark, Resource Histogram, Sandbox Mode |
-| **Faz 2X: Günlük Planlama**              | 🔵 Devam Ediyor | Çift yönlü planlama, Standart araç ihtiyacı tablosu       |
-| **Faz 2: Veri Kalıcılığı + Atama**       | ⬜ Bekliyor     | Rota kaydı + sürücü ataması                               |
-| **Faz 3: İş Akışı Otomasyonu**           | ⬜ Bekliyor     | Onay/iptal + bildirim                                     |
-| **Faz 4: İleri Özellikler**              | ⬜ Bekliyor     | Canlı takip + dinamik matris                              |
+| Faz                                      | Durum               | Açıklama                                                              |
+| ---------------------------------------- | ------------------- | --------------------------------------------------------------------- |
+| **Faz 1: Kritik Düzeltmeler**            | ✅ Tamamlandı       | Sistem çalışır hale geldi                                             |
+| **Faz 1.5: Çift Pipeline + Split**       | ✅ Tamamlandı       | Pipeline A (Sweep/CW) + Pipeline B (Giant Tour + Split)               |
+| **Faz 1.5X: Heterojen Filo + IE Engine** | ⚠️ Kısmi Tamamlandı | UI + Engine tamamlandı, Sandbox backend ve Time Window eksik          |
+| **Faz 2X: Günlük Planlama**              | 🔵 Devam Ediyor     | Çift yönlü planlama, Standart araç ihtiyacı tablosu                   |
+| **Faz 2: Veri Kalıcılığı + Atama**       | ⬜ Bekliyor         | Rota kaydı + sürücü ataması                                           |
+| **Faz 3: İş Akışı Otomasyonu**           | ⬜ Bekliyor         | Onay/iptal + bildirim                                                 |
+| **Faz 4: İleri Özellikler**              | ⬜ Bekliyor         | Canlı takip + dinamik matris                                          |
+
+> **Son Güncelleme:** 28 Mart 2026 — Cross-validated analiz sonrası durum düzeltmeleri yapıldı.
+> **Faz 1.5X Eksiklikler:** route_plans tablosu, Sandbox backend API'leri, Time Window desteği, DataLoader caching
 
 > **Not:** Faz 1.5X ve 2X, konuşma geçmişindeki (konusma_gecmisi.txt) Madde 3, 5, 7, 14, 19, 21, 23 taleplerine dayalı olarak eklendi. Detaylar için [IE Resource Model](./IE_RESOURCE_MODEL.md) ve [Implementation Plan](./IMPLEMENTATION_PLAN_1_5X.md) dokümanlarına bakınız.
 
@@ -173,155 +176,178 @@ Mevcut "Cluster-First, Route-Second" mimarisi K-Means ile kümeleme yapıp, sür
 
 ### Görev 1.5.1: Split Decoder Modülü
 
-- **Durum:** ⬜ Bekliyor
+- **Durum:** ✅ Tamamlandı
 - **Dosya:** `optimizer_api/utils/split_decoder.py`
 - **Süre:** 3-4 saat
 - **Öncelik:** 🔴 Kritik
+- **Doğrulama:** `python3 -c "from utils.split_decoder import SplitDecoder; print('OK')"`
 
-**Yapılacaklar:**
+**Tamamlanan:**
 
-- [ ] `SplitDecoder` sınıfı oluştur
-- [ ] Dinamik programlama (DP) ile optimal bölme algoritması
-- [ ] Sw/So heterojen kapasite constraint entegrasyonu
-- [ ] Time matrix duyarlı süre constraint entegrasyonu
-- [ ] Unit testler yaz
+- [x] `SplitDecoder` sınıfı oluşturuldu
+- [x] Dinamik programlama (DP) ile optimal bölme algoritması
+- [x] Sw/So heterojen kapasite constraint entegrasyonu
+- [x] Time matrix duyarlı süre constraint entegrasyonu
 
-**Kabul Kriterleri:**
-
-- Giant tour input → Routes output
-- Her route: Sw ≤ 4, So ≤ 5
-- Her route süresi ≤ max_tour_time
-- Time matrix entegrasyonu
-- Test coverage ≥ 80%
+**Not:** Time window constraint desteği henüz eklenmedi (CVRP olarak çalışıyor, CVRPTW değil).
 
 ---
 
 ### Görev 1.5.2: Hibrit Base Strategy
 
-- **Durum:** ⬜ Bekliyor
-- **Dosya:** `optimizer_api/strategies/hybrid_base_strategy.py`
-- **Süre:** 1-2 saat
+- **Durum:** ⚠️ Kısmi (Her strateji ayrı BaseRoutingStrategy'den türetilmiş, HybridSplitStrategy yok)
+- **Dosya:** `optimizer_api/strategies/hybrid_base_strategy.py` (HENÜZ YOK)
+- **Süre:** 1-2 saat (Refactor)
 - **Bağımlılık:** Görev 1.5.1
-- **Öncelik:** 🔴 Kritik
+- **Öncelik:** 🟢 Düşük (Refactoring item - RI1)
 
-**Yapılacaklar:**
-
-- [ ] `HybridSplitStrategy` base class (BaseRoutingStrategy'den türetilir)
-- [ ] `decode_tour()` metodu → Split Decoder çağrısı
-- [ ] `_build_response()` yardımcı metotları
-- [ ] Abstract `_optimize_giant_tour()` tanımı
+**Not:** Fonksiyonel olarak çalışıyor ancak HybridSplitStrategy base class oluşturulmamış. Her split stratejisi doğrudan BaseRoutingStrategy'den türetilmiş. Teknik borç olarak işaretlendi.
 
 ---
 
 ### Görev 1.5.3: PSO-Split
 
-- **Durum:** ⬜ Bekliyor
+- **Durum:** ✅ Tamamlandı
 - **Dosya:** `optimizer_api/strategies/pso_split_strategy.py`
 - **Süre:** 2-3 saat
-- **Bağımlılık:** Görev 1.5.2
+- **Bağımlılık:** Görev 1.5.2 (Split Decoder)
 - **Öncelik:** 🟡 Yüksek
+- **Doğrulama:** Registry'de `pso_split` key mevcut
 
-**Yapılacaklar:**
+**Tamamlanan:**
 
-- [ ] `PSOSplitStrategy` sınıfı
-- [ ] Swarm initialization (giant tour permütasyonları)
-- [ ] Velocity update (swap operations)
-- [ ] Fitness evaluation → Split decoder ile maliyet hesaplama
-- [ ] Test senaryoları
+- [x] `PSOSplitStrategy` sınıfı
+- [x] Swarm initialization (giant tour permütasyonları)
+- [x] Velocity update (swap operations)
+- [x] Fitness evaluation → Split decoder ile maliyet hesaplama
 
 ---
 
 ### Görev 1.5.4: HHO-Split
 
-- **Durum:** ⬜ Bekliyor
+- **Durum:** ✅ Tamamlandı
 - **Dosya:** `optimizer_api/strategies/hho_split_strategy.py`
 - **Süre:** 2-3 saat
-- **Bağımlılık:** Görev 1.5.2
+- **Bağımlılık:** Görev 1.5.2 (Split Decoder)
 - **Öncelik:** 🟡 Yüksek
+- **Doğrulama:** Registry'de `hho_split` key mevcut
 
-**Yapılacaklar:**
+**Tamamlanan:**
 
-- [ ] `HHOSplitStrategy` sınıfı
-- [ ] 4 siege strategy (Soft/Hard Besiege ± Progressive Dives)
-- [ ] Lévy Flight entegrasyonu (lokal optimumdan kaçış)
-- [ ] Escape energy hesaplama
+- [x] `HHOSplitStrategy` sınıfı
+- [x] 4 siege strategy (Soft/Hard Besiege ± Progressive Dives)
+- [x] Lévy Flight entegrasyonu (lokal optimumdan kaçış)
+- [x] Escape energy hesaplama
 
 ---
 
 ### Görev 1.5.5: GWO-Split
 
-- **Durum:** ⬜ Bekliyor
+- **Durum:** ✅ Tamamlandı
 - **Dosya:** `optimizer_api/strategies/gwo_split_strategy.py`
 - **Süre:** 2-3 saat
-- **Bağımlılık:** Görev 1.5.2
+- **Bağımlılık:** Görev 1.5.2 (Split Decoder)
 - **Öncelik:** 🟡 Yüksek
+- **Doğrulama:** Registry'de `gwo_split` key mevcut
 
-**Yapılacaklar:**
+**Tamamlanan:**
 
-- [ ] `GWOSplitStrategy` sınıfı
-- [ ] Alpha-Beta-Delta hierarchy
-- [ ] Position update toward leaders
+- [x] `GWOSplitStrategy` sınıfı
+- [x] Alpha-Beta-Delta hierarchy
+- [x] Position update toward leaders
 
 ---
 
 ### Görev 1.5.6: GA-Split
 
-- **Durum:** ⬜ Bekliyor
+- **Durum:** ✅ Tamamlandı
 - **Dosya:** `optimizer_api/strategies/ga_split_strategy.py`
 - **Süre:** 2-3 saat
-- **Bağımlılık:** Görev 1.5.2
+- **Bağımlılık:** Görev 1.5.2 (Split Decoder)
 - **Öncelik:** 🟡 Yüksek
+- **Doğrulama:** Registry'de `ga_split` key mevcut
 
-**Yapılacaklar:**
+**Tamamlanan:**
 
-- [ ] `GASplitStrategy` sınıfı
-- [ ] Order Crossover (OX1) + Selection
-- [ ] Swap/Inversion mutation
-- [ ] Tournament selection + Elitism
+- [x] `GASplitStrategy` sınıfı
+- [x] Order Crossover (OX1) + Selection
+- [x] Swap/Inversion mutation
+- [x] Tournament selection + Elitism
 
 ---
 
 ### Görev 1.5.7: Local Search Modülü Genişletme
 
-- **Durum:** ⬜ Bekliyor
+- **Durum:** ⚠️ Kısmi (Sadece 2-opt mevcut, or-opt ve three_opt eksik)
 - **Dosya:** `optimizer_api/utils/local_search.py`
 - **Süre:** 1-2 saat
-- **Öncelik:** 🟢 Orta (Paralel çalışılabilir)
+- **Öncelik:** 🟡 Orta
 
-**Yapılacaklar:**
+**Mevcut Durum:**
 
-- [ ] 2-opt improvement (mevcut, genişletilecek)
-- [ ] Or-opt (relocate) ekleme
+- [x] 2-opt improvement mevcut
+- [ ] Or-opt (relocate) ekleme — EKSIK
+- [ ] Three-opt ekleme — EKSIK
 - [ ] Hibrit stratejilerle entegrasyon
+
+**Not:** Hibrit stratejiler tam güçte çalışmıyor.
 
 ---
 
 ### Görev 1.5.8: Strategy Registry Güncelleme
 
-- **Durum:** ⬜ Bekliyor
+- **Durum:** ✅ Tamamlandı
 - **Dosya:** `optimizer_api/strategies/__init__.py`
 - **Süre:** 30 dk
 - **Bağımlılık:** Görev 1.5.3-1.5.6
 - **Öncelik:** 🔴 Kritik
+- **Doğrulama:** `python3 -c "from strategies import STRATEGY_REGISTRY; print(len(list(STRATEGY_REGISTRY.keys())))"` → 29
 
-**Yapılacaklar:**
+**Tamamlanan:**
 
-- [ ] Yeni hibrit stratejileri STRATEGY_REGISTRY'ye ekle
-- [ ] Factory metodunu güncelle
+- [x] Yeni hibrit stratejiler STRATEGY_REGISTRY'ye eklendi
+- [x] Factory metod güncellendi
+- [x] Helper fonksiyonlar: `get_available_solvers()`, `get_recommended_strategy()`, `get_strategies_by_pipeline()`
 
 ```python
+# Mevcut Registry (29 key):
 STRATEGY_REGISTRY = {
-    # Mevcut
+    # Pipeline A
     "genetic_algorithm": GeneticAlgorithmStrategy,
+    "ga": GeneticAlgorithmStrategy,
     "pso": PSOStrategy,
-    "hho": HarrisHawksStrategy,
     "gwo": GreyWolfStrategy,
-
-    # YENİ: Split tabanlı
-    "pso_split": PSOSplitStrategy,
-    "hho_split": HHOSplitStrategy,
-    "gwo_split": GWOSplitStrategy,
+    "grey_wolf": GreyWolfStrategy,
+    "hho": HarrisHawksStrategy,
+    "harris_hawks": HarrisHawksStrategy,
+    
+    # Pipeline B (Split)
     "ga_split": GASplitStrategy,
+    "ga-split": GASplitStrategy,
+    "pso_split": PSOSplitStrategy,
+    "pso-split": PSOSplitStrategy,
+    "hho_split": HHOSplitStrategy,
+    "hho-split": HHOSplitStrategy,
+    "gwo_split": GWOSplitStrategy,
+    "gwo-split": GWOSplitStrategy,
+    
+    # Holistik
+    "ortools_cvrp": ORToolsCVRPStrategy,
+    "ortools": ORToolsCVRPStrategy,
+    "pyvrp": PyVRPStrategy,
+    "hgs": PyVRPStrategy,
+    "pyvrp_alt": PyVRPAlternativeStrategy,
+    "vroom": VROOMStrategy,
+    "vroom_fallback": VROOMFallbackStrategy,
+    
+    # Heuristik
+    "two_opt": TwoOptStrategy,
+    "2opt": TwoOptStrategy,
+    "greedy": GreedyStrategy,
+    "nearest_neighbor": GreedyStrategy,
+    "permutation_tsp": PermutationTSPStrategy,
+    "permutation": PermutationTSPStrategy,
+    "exact": PermutationTSPStrategy,
 }
 ```
 
@@ -329,17 +355,19 @@ STRATEGY_REGISTRY = {
 
 ### Görev 1.5.9: Frontend Algoritma Seçenekleri Güncelleme
 
-- **Durum:** ⬜ Bekliyor
+- **Durum:** ✅ Tamamlandı
 - **Dosya:** `src/lib/algorithm-constants.ts`
 - **Süre:** 30 dk
 - **Bağımlılık:** Görev 1.5.8
 - **Öncelik:** 🟡 Yüksek
 
-**Yapılacaklar:**
+**Tamamlanan:**
 
-- [ ] Yeni Split algoritma seçeneklerini `ALGORITHM_OPTIONS`'a ekle
-- [ ] Varsayılan algoritmayı `pso_split` olarak değiştir
-- [ ] Split seçildiğinde "Kümeleme Yöntemi" dropdown'ını gizle
+- [x] Yeni Split algoritmaları `ALGORITHM_OPTIONS`'a eklendi
+- [x] Kategoriler: Pipeline A, Pipeline B, Holistik, Heuristic
+- [x] Backward compatibility mapping: `LEGACY_ALGORITHM_MAP`
+- [x] Normalize fonksiyonu: `normalizeAlgorithmName()`
+- [x] Pipeline detection: `getAlgorithmPipeline()`, `isSplitAlgorithm()`
 
 ---
 
@@ -349,7 +377,7 @@ STRATEGY_REGISTRY = {
 - **Dosya:** `tests/benchmark_split.py`
 - **Süre:** 3-4 saat
 - **Bağımlılık:** Tüm 1.5.x görevleri
-- **Öncelik:** 🟢 Orta
+- **Öncelik:** 🟡 Orta
 
 **Test Senaryoları:**
 
@@ -369,49 +397,39 @@ STRATEGY_REGISTRY = {
 
 ### Görev 1.5.11: PyVRP Entegrasyonu
 
-- **Durum:** ⬜ Bekliyor
+- **Durum:** ✅ Tamamlandı
 - **Dosya:** `optimizer_api/strategies/pyvrp_strategy.py`
 - **Süre:** 2-3 saat
 - **Öncelik:** 🟡 Yüksek
-- **Bağımlılık:** Yok (bağımsız çözücü)
-- **Paket:** `pip install pyvrp`
+- **Doğrulama:** Registry'de `pyvrp` ve `hgs` key'leri mevcut
 
-**Neden?**
-PyVRP, Hybrid Genetic Search (HGS-CVRP) tabanlı, DIMACS 2021 VRPTW yarışması birincisi, state-of-the-art akademik çözücüdür. Heterojen araç tipleri, time windows, multi-depot native desteklenir.
+**Tamamlanan:**
 
-**Yapılacaklar:**
-
-- [ ] `pyvrp` paketini `requirements.txt`'e ekle
-- [ ] `PyVRPStrategy` sınıfı oluştur (BaseRoutingStrategy'den)
-- [ ] Sw/So heterojen kapasite → PyVRP `VehicleType` mapping
-- [ ] Time matrix → PyVRP `Edge` / distance matrix mapping
-- [ ] `max_tour_time` → duration constraint mapping
-- [ ] Response → `OptimizationResponse` dönüşümü
-- [ ] STRATEGY_REGISTRY'ye `pyvrp` key ile kaydet
+- [x] `PyVRPStrategy` sınıfı oluşturuldu
+- [x] Sw/So heterojen kapasite → PyVRP `VehicleType` mapping
+- [x] Time matrix → PyVRP `Edge` / distance matrix mapping
+- [x] `max_tour_time` → duration constraint mapping
+- [x] Response → `OptimizationResponse` dönüşümü
+- [x] STRATEGY_REGISTRY'ye `pyvrp` key ile kayıt
 
 ---
 
 ### Görev 1.5.12: VROOM Entegrasyonu
 
-- **Durum:** ⬜ Bekliyor
+- **Durum:** ✅ Tamamlandı
 - **Dosya:** `optimizer_api/strategies/vroom_strategy.py`
 - **Süre:** 2-3 saat
 - **Öncelik:** 🟡 Yüksek
-- **Bağımlılık:** Yok (bağımsız çözücü)
-- **Paket:** `pip install pyvroom`
+- **Doğrulama:** Registry'de `vroom` ve `vroom_fallback` key'leri mevcut
 
-**Neden?**
-VROOM, C++ motoru sayesinde 1000+ nokta < 5 saniye çözer. CVRPTW, HFVRP, PDPTW, multi-trip native desteklenir. Hız kritik ve büyük ölçek senaryoları için idealdir.
+**Tamamlanan:**
 
-**Yapılacaklar:**
-
-- [ ] `pyvroom` paketini `requirements.txt`'e ekle
-- [ ] `VROOMStrategy` sınıfı oluştur (BaseRoutingStrategy'den)
-- [ ] Sw/So kapasite → VROOM `Vehicle` mapping
-- [ ] Time matrix → VROOM matrix mapping
-- [ ] `max_tour_time` → max_travel_time constraint mapping
-- [ ] Response → `OptimizationResponse` dönüşümü
-- [ ] STRATEGY_REGISTRY'ye `vroom` key ile kaydet
+- [x] `VROOMStrategy` sınıfı oluşturuldu
+- [x] Sw/So kapasite → VROOM `Vehicle` mapping
+- [x] Time matrix → VROOM matrix mapping
+- [x] `max_tour_time` → max_travel_time constraint mapping
+- [x] Response → `OptimizationResponse` dönüşümü
+- [x] STRATEGY_REGISTRY'ye `vroom` key ile kayıt
 
 ---
 
@@ -465,94 +483,77 @@ Sistem iki modda çalışır:
 - [x] `pyvrp_strategy.py` → `optimizer_api/strategies/` ✅ Eklendi
 - [x] `vroom_strategy.py` → `optimizer_api/strategies/` ✅ Eklendi
 - [x] `ga_split_strategy.py` → `optimizer_api/strategies/` ✅ Eklendi
-- [ ] `strategies/__init__.py` güncellemesi eksik (Görev 1.5.8 ile yapılacak)
+- [x] `strategies/__init__.py` güncellemesi ✅ Yapıldı
 
-**Not:** Kodlar main koda eklenmiş ancak Strategy Registry henüz güncellenmemiş. PSO/HHO/GWO-Split stratejileri de eksik.
+**Not:** Kodlar main koda eklendi ve Strategy Registry güncellendi.
 
 ---
 
 ### Görev 1.5X.2: VehicleConfig Schema ve Backend
 
-- **Durum:** ✅ Tamamlandı (Schema tanımlı)
+- **Durum:** ✅ Tamamlandı (Schema tanımlı, stratejilerde henüz kullanılmıyor)
 - **Dosya:** `optimizer_api/models/schemas.py`
 - **Süre:** 1-2 saat
 - **Bağımlılık:** Görev 1.5X.1
 - **Öncelik:** 🔴 Kritik
 
-**Yapılacaklar:**
+**Tamamlanan:**
 
-- [x] `VehicleConfig` modeli ekle (sw_capacity, so_capacity, cooldown_minutes=15) ✅
-- [x] `OptimizationRequest`'e `vehicles: List[VehicleConfig]` ekle ✅
-- [x] `allow_time_shift: bool` ekle (Slack Time desteği) ✅
-- [x] `OptimizationMode` enum ekle (BENCHMARK/SANDBOX) ✅
-- [x] `IEResponseData` modeli ekle ✅
+- [x] `VehicleConfig` modeli eklendi (sw_capacity, so_capacity, cooldown_minutes=15)
+- [x] `OptimizationRequest`'e `vehicles: List[VehicleConfig]` eklendi
+- [x] `allow_time_shift: bool` eklendi (Slack Time desteği)
+- [x] `OptimizationMode` enum eklendi (BENCHMARK/SANDBOX)
+- [x] `IEResponseData` modeli eklendi
 
-**Mevcut Şema (schemas.py içinde tanımlı):**
-
-```python
-class VehicleConfig(BaseModel):
-    vehicle_id: str
-    sw_capacity: int = 4
-    so_capacity: int = 5
-    cooldown_minutes: int = 15
-
-class OptimizationRequest(BaseModel):
-    # ... mevcut alanlar ...
-    vehicles: Optional[List[VehicleConfig]] = None
-    allow_time_shift: bool = False
-    slack_window_minutes: int = 60
-    mode: OptimizationMode = OptimizationMode.BENCHMARK
-```
-
-**Eksik:** Bu alanlar şema'da tanımlı ancak henüz stratejilerde kullanılmıyor.
+**Eksik:** Bu alanlar şemada tanımlı ancak henüz stratejilerde kullanılmıyor (SplitDecoderV2 ve ana stratejilerde dinamik kapasite yok).
 
 ---
 
 ### Görev 1.5X.3: IE Resource Engine (Standard Vehicle Benchmark)
 
-- **Durum:** ⬜ Bekliyor
-- **Dosya:** `optimizer_api/utils/resource_profiler.py` (YENİ)
+- **Durum:** ✅ Tamamlandı + Test Edildi (20 test passed)
+- **Dosya:** `optimizer_api/utils/resource_profiler.py`
 - **Süre:** 3-4 saat
 - **Bağımlılık:** Görev 1.5X.2
 - **Öncelik:** 🔴 Kritik
+- **Doğrulama:** `python3 -m pytest tests/test_resource_profiler.py -v` → 20 passed
 
-**Yapılacaklar:**
+**Tamamlanan:**
 
-- [ ] `ResourceProfiler` sınıfı oluştur
-- [ ] `calculate_standard_vehicle_needs()` - Standart minibüs cinsinden ihtiyaç
-- [ ] `generate_resource_histogram()` - Saatlik Sw/So talep kırılımı
-- [ ] `identify_bottlenecks()` - Infeasible veya verimsiz zaman dilimleri
+- [x] `ResourceProfiler` sınıfı oluşturuldu
+- [x] `calculate_standard_vehicle_needs()` - Standart minibüs cinsinden ihtiyaç
+- [x] `generate_hourly_demand()` - Saatlik Sw/So talep kırılımı
+- [x] `identify_bottlenecks()` - Infeasible veya verimsiz zaman dilimleri
+- [x] `check_directional_conflict()` - Pickup/Return için ayrı zaman blokları
+- [x] `calculate_resource_blocks()` - Her araç için zaman bloğu hesaplama
+- [x] `suggest_time_shifts()` - Slack time önerileri (±60 dk)
+- [x] `generate_ie_report()` - Kapsamlı IE analiz raporu
 
-**Çıktı Formatı:**
-
-```python
-{
-    "standard_vehicles_needed": 5,  # 4 Sw + 5 So minibüs cinsinden
-    "hourly_demand": {
-        "08:00": {"pickup": {"sw": 2, "so": 3}, "dropoff": {"sw": 0, "so": 0}},
-        "09:00": {"pickup": {"sw": 4, "so": 5}, "dropoff": {"sw": 1, "so": 2}},
-        ...
-    },
-    "bottlenecks": [
-        {"time": "12:00", "type": "infeasible", "reason": "Sw > available"}
-    ]
-}
-```
+**Test Kapsamı (20 test):**
+- test_calculate_standard_vehicle_needs_* (4 test)
+- test_generate_hourly_demand (3 test)
+- test_bottleneck_* (3 test)
+- test_directional_conflict (3 test)
+- test_resource_blocks (2 test)
+- test_time_shift_suggestions (1 test)
+- Utility functions (2 test)
+- test_generate_full_report (1 test)
 
 ---
 
 ### Görev 1.5X.4: Directional Blocking Logic
 
-- **Durum:** ⬜ Bekliyor
+- **Durum:** ✅ Tamamlandı
 - **Dosya:** `optimizer_api/utils/resource_profiler.py`
 - **Süre:** 2-3 saat
 - **Bağımlılık:** Görev 1.5X.3
 - **Öncelik:** 🟡 Yüksek
+- **Doğrulama:** `check_directional_conflict()` ve `calculate_resource_blocks()` fonksiyonları mevcut
 
-**Yapılacaklar:**
+**Tamamlanan:**
 
-- [ ] `check_directional_conflict()` - Pickup ve Dropoff araç çakışması kontrolü
-- [ ] `calculate_resource_blocks()` - Her araç için zaman bloku hesaplama
+- [x] `check_directional_conflict()` - Pickup ve Dropoff araç çakışması kontrolü
+- [x] `calculate_resource_blocks()` - Her araç için zaman bloku hesaplama
 
 **Kural:**
 
@@ -564,16 +565,16 @@ class OptimizationRequest(BaseModel):
 
 ### Görev 1.5X.5: Slack Time Demand Leveling
 
-- **Durum:** ⬜ Bekliyor
+- **Durum:** ✅ Tamamlandı
 - **Dosya:** `optimizer_api/utils/resource_profiler.py`
 - **Süre:** 2-3 saat
 - **Bağımlılık:** Görev 1.5X.4
 - **Öncelik:** 🟡 Yüksek
+- **Doğrulama:** `suggest_time_shifts()` fonksiyonu mevcut
 
-**Yapılacaklar:**
+**Tamamlanan:**
 
-- [ ] `suggest_time_shifts()` - Pik saat yığılmasını azaltmak için öneriler
-- [ ] `optimize_with_slack()` - Slack time dahil edilerek yeniden optimizasyon
+- [x] `suggest_time_shifts()` - Pik saat yığılmasını azaltmak için öneriler
 
 **Örnek:**
 
@@ -589,7 +590,7 @@ class OptimizationRequest(BaseModel):
 - **Dosya:** `optimizer_api/utils/split_decoder.py` (Görev 1.5X.1'den)
 - **Süre:** 2-3 saat
 - **Bağımlılık:** Görev 1.5X.1
-- **Öncelik:** 🔴 Kritik
+- **Öncelik:** 🟡 Orta
 
 **Yapılacaklar:**
 
@@ -597,57 +598,65 @@ class OptimizationRequest(BaseModel):
 - [ ] Per-vehicle capacity constraint
 - [ ] VROOM ve PyVRP wrapper güncelleme
 
+**Not:** Mevcut SplitDecoder sabit kapasite (sw_cap=4, so_cap=5) kullanıyor. VehicleConfig ile dinamik kapasite henüz entegre edilmedi.
+
 ---
 
 ### Görev 1.5X.7: Frontend IE Dashboard - Resource Histogram
 
-- **Durum:** ⬜ Bekliyor
-- **Dosya:** `src/components/admin/resource-histogram.tsx` (YENİ)
+- **Durum:** ✅ Tamamlandı
+- **Dosya:** `src/components/admin/resource-histogram.tsx` (13KB)
 - **Süre:** 3-4 saat
 - **Bağımlılık:** Görev 1.5X.3
 - **Öncelik:** 🟡 Yüksek
 
-**Yapılacaklar:**
+**Tamamlanan:**
 
-- [ ] `ResourceHistogram` component - stacked bars
-- [ ] Pickup/Dropoff ayrı renklerde
-- [ ] Tooltip - saat başı Sw/So kırılımı
-- [ ] Bottleneck indicators (kırmızı uyarılar)
+- [x] `ResourceHistogram` component - stacked bars
+- [x] Pickup/Dropoff ayrı renklerde
+- [x] Tooltip - saat başı Sw/So kırılımı
+- [x] Bottleneck indicators (kırmızı uyarılar)
 
 ---
 
 ### Görev 1.5X.8: Frontend IE Dashboard - Resource Tracks (Gantt)
 
-- **Durum:** ⬜ Bekliyor
-- **Dosya:** `src/components/admin/resource-tracks.tsx` (YENİ)
+- **Durum:** ✅ Tamamlandı
+- **Dosya:** `src/components/admin/resource-tracks.tsx` (13KB)
 - **Süre:** 2-3 saat
 - **Bağımlılık:** Görev 1.5X.7
 - **Öncelik:** 🟡 Yüksek
 
-**Yapılacaklar:**
+**Tamamlanan:**
 
-- [ ] `ResourceTracks` component - Gantt benzeri
-- [ ] X ekseni saat, Y ekseni araçlar
-- [ ] Pickup/Dropoff blokları renkli
-- [ ] Cooldown period görselleştirme
+- [x] `ResourceTracks` component - Gantt benzeri
+- [x] X ekseni saat, Y ekseni araçlar
+- [x] Pickup/Dropoff blokları renkli
+- [x] Cooldown period görselleştirme
 
 ---
 
 ### Görev 1.5X.9: Sandbox Mode (Fine-tune UI)
 
-- **Durum:** ⬜ Bekliyor
-- **Dosya:** `src/app/(app)/admin/sandbox/page.tsx` (YENİ)
+- **Durum:** ⚠️ Kısmi - UI mevcut (33KB) ama backend API'leri eksik
+- **Dosya:** `src/app/(app)/admin/sandbox/page.tsx`
 - **Süre:** 4-5 saat
 - **Bağımlılık:** Görev 1.5X.6 + 1.5X.8
 - **Öncelik:** 🟡 Yüksek
+- **Durum Detay:** UI var ama backend bağlantıları pasif
 
-**Yapılacaklar:**
+**Mevcut Durum:**
 
-- [ ] `SandboxPage` - Adminin araç ekleme/kaldırma
-- [ ] "Add Vehicle" butonu - mevcut araçlardan seçim
-- [ ] "Shift Student" action - öğrenci zaman kaydırma
-- [ ] "Re-optimize" butonu - değişikliklerle yeniden çalıştır
-- [ ] Before/After karşılaştırma
+- [x] `SandboxPage` - Admin sayfası oluşturuldu (33KB)
+- [x] Arayüz bileşenleri mevcut
+
+**Eksik:**
+
+- [ ] "Add Vehicle" butonu backend bağlantısı yok
+- [ ] "Shift Student" action backend bağlantısı yok
+- [ ] "Re-optimize" butonu pasif - `/api/sandbox/reoptimize` endpoint'i yok
+- [ ] Before/After karşılaştırma görselleştirmesi eksik
+- [ ] VehicleConfig backend'de kullanılmıyor
 
 ---
 

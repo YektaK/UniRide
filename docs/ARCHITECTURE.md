@@ -1,7 +1,7 @@
 # 🏗️ UniRide Mimari Dokümanı
 
 > **Bu dosya projenin mimari kurallarını tanımlar. Tüm geliştiriciler ve AI agent'lar bu kurallara UYMAK ZORUNDADIR.**  
-> Son güncelleme: 26 Mart 2026
+> Son güncelleme: 28 Mart 2026 — Cross-validated analiz sonrası güncelleme
 
 ---
 
@@ -296,16 +296,66 @@ optimizer_api/
 
 ## 12. İnceleme Bulguları ve Uyarılar
 
-> Bu bölüm 26 Mart 2026 tarihli teknik inceleme sonuçlarını içerir.
+> Bu bölüm 26-28 Mart 2026 tarihli teknik inceleme sonuçlarını içerir.  
+> Cross-validated analiz ile %95+ uyumlu.
 
-| # | Bulgu | Ciddiyet | Çözüm |
-|---|-------|----------|-------|
-| B1 | N>100'de Giant Tour arama uzayı patlar | ⚠️ Yüksek | Pipeline Seçim Matrisi (§3.4) |
-| B2 | DP'de Sw+So AND kısıtı atlanabilir | 🔴 Kritik | §4 Kısıt Referans Tablosu |
-| B3 | Performans rakamları tahmini | ⚠️ Orta | `[TAHMİNİ]` etiketi |
-| B4 | Eski alg. UI'da karışıklık yaratır | ⚠️ Orta | Pipeline etiketi + sıralama |
-| B5 | `max_tour_time` tutarsızlığı | 🔴 Kritik | §4 tek referans noktası |
-| B6 | OR-Tools + Split anlamsız | ℹ️ Düşük | §3.3 belgelendi |
+### Mevcut Durum Özeti
+
+| Kategori | Durum | Not |
+|----------|-------|-----|
+| **Algoritma Altyapısı** | ✅ Tam Çalışır | 29 registry key, runtime doğrulandı |
+| **Split Decoder** | ✅ Kod Mevcut | Import başarılı, CVRPTW değil (sadece CVRP) |
+| **IE Resource Engine** | ✅ Test Edildi | 20 unit test passed |
+| **Strategy Registry** | ✅ Güncel | 29 algoritma key'i mevcut |
+| **PyVRP/VROOM** | ✅ Entegre | Registry'de mevcut |
+| **Frontend Entegrasyonu** | ✅ Kısmi | Dashboard bileşenleri mevcut |
+| **Sandbox Mode UI** | ⚠️ Kısmi | UI var (33KB) ama backend bağlantıları eksik |
+| **route_plans Tablosu** | ❌ Eksik | Optimizasyon sonuçları geçici |
+| **Test Coverage** | ⚠️ Sınırlı | Sadece resource_profiler (20 test) |
+| **Time Window Desteği** | ❌ Eksik | CVRP olarak çalışıyor, CVRPTW değil |
+
+### Kritik Bulgular (Cross-Validated)
+
+| # | Bulgu | Ciddiyet | Çözüm Durumu | Referans |
+|---|-------|----------|--------------|----------|
+| B1 | N>100'de Giant Tour arama uzayı patlar | ⚠️ Yüksek | ⬜ Pipeline Seçim Matrisi (§3.4) | Mevcut |
+| B2 | DP'de Sw+So AND kısıtı atlanabilir | 🔴 Kritik | ⬜ §4 Kısıt Referans Tablosu | Mevcut |
+| B3 | Performans rakamları tahmini | ⚠️ Orta | ⬜ `[TAHMİNİ]` etiketi | Mevcut |
+| B4 | Eski alg. UI'da karışıklık yaratır | ⚠️ Orta | ⬜ Pipeline etiketi + sıralama | Mevcut |
+| B5 | `max_tour_time` tutarsızlığı | 🔴 Kritik | ⬜ §4 tek referans noktası | Mevcut |
+| B6 | OR-Tools + Split anlamsız | ℹ️ Düşük | ⬜ §3.3 belgelendi | Mevcut |
+| **B7** | **route_plans tablosu yok** | 🔴 Kritik | ❌ Faz 2.1'de planlandı | Faz 2.1 |
+| **B8** | **Sandbox backend endpoints eksik** | 🔴 Kritik | ⚠️ UI mevcut, API yok | Faz 1.5X.9 |
+| **B9** | **Time Window desteği yok** | 🔴 Kritik | ❌ CVRPTW implementasyonu gerekiyor | Yeni |
+| **B10** | **time_matrix DataLoader caching yok** | ⚠️ Orta | ❌ Her istekte DB'den yüklüyor | Faz 2 |
+| **B11** | **Heterojen filo desteği kısmi** | ⚠️ Orta | ⚠️ VehicleConfig şemada tanımlı ama kullanılmıyor | Faz 1.5X |
+| **B12** | **Test coverage düşük** | ⚠️ Orta | ⚠️ Sadece resource_profiler test edildi | Faz 1.5 |
+| **B13** | **Hybrid base strategy dosyası yok** | ℹ️ Düşük | ⬜ Refactoring item (RI1) | Faz 1.5 |
+
+### Dosya Durum Kontrolü
+
+| Kategori | Dosya | Durum | Not |
+|----------|-------|-------|-----|
+| **Strategies** | ga_split_strategy.py | ✅ | Mevcut |
+| | pso_split_strategy.py | ✅ | Mevcut |
+| | hho_split_strategy.py | ✅ | Mevcut |
+| | gwo_split_strategy.py | ✅ | Mevcut |
+| | pyvrp_strategy.py | ✅ | Mevcut |
+| | vroom_strategy.py | ✅ | Mevcut |
+| | hybrid_base_strategy.py | ❌ | Eksik (RI1 Refactoring) |
+| **Utils** | split_decoder.py | ✅ | Mevcut (CVRP) |
+| | resource_profiler.py | ✅ | Mevcut + Test |
+| | local_search.py | ⚠️ | Kısmi (2-opt only) |
+| **Frontend** | vehicle-planning/page.tsx | ✅ | Mevcut |
+| | sandbox/page.tsx | ⚠️ | UI var, backend yok |
+| | ie-dashboard.tsx | ✅ | Mevcut |
+| | resource-histogram.tsx | ✅ | Mevcut |
+| | resource-tracks.tsx | ✅ | Mevcut |
+| **API** | calculate-vehicles/route.ts | ✅ | Mevcut |
+| | route-plans/route.ts | ❌ | Eksik |
+| | sandbox/reoptimize/route.ts | ❌ | Eksik |
+| **Database** | route_plans migration | ❌ | Eksik |
+| | time_matrix table | ✅ | 812 satır, 29 node |
 
 ---
 

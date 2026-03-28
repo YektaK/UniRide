@@ -5,6 +5,50 @@
 
 ---
 
+## 2026-03-28
+
+### Sprint 1: Pipeline B Split Algoritmaları ✅
+
+**[Antigravity AI]** — **PSO-Split Stratejisi:**
+- `optimizer_api/strategies/pso_split_strategy.py` oluşturuldu
+- Literatür temelli parametreler: swarm_size=60, inertia=[0.9→0.4], c1=c2=2.0
+- Giant Tour optimizasyonu + Nearest Neighbor initialization
+- Local search her 20 iterasyonda, velocity clamping
+
+**[Antigravity AI]** — **HHO-Split Stratejisi:**
+- `optimizer_api/strategies/hho_split_strategy.py` oluşturuldu
+- Harris Hawks Optimization (Heidari et al., 2019) implementasyonu
+- 4 siege stratejisi: Soft/Hard besiege with/without dives
+- Literatür parametreleri: population=50, E0=2.0, levy_flight_scale=0.3
+
+**[Antigravity AI]** — **GWO-Split Stratejisi:**
+- `optimizer_api/strategies/gwo_split_strategy.py` oluşturuldu
+- Grey Wolf Optimizer (Mirjalili et al., 2014) implementasyonu
+- Alpha/Beta/Delta hierarchy, A-parametre decay
+- Literatür parametreleri: population=50, a=2.5, exploration_rate=0.4
+
+**[Antigravity AI]** — **Strategy Registry Güncellemesi:**
+- `optimizer_api/strategies/__init__.py` tam rewrite
+- Pipeline A (Cluster-First): GA, PSO, GWO, HHO
+- Pipeline B (Route-First): GA-Split, PSO-Split, HHO-Split, GWO-Split
+- Holistik: OR-Tools, PyVRP (fallback), VROOM (fallback)
+- Helper fonksiyonlar: `get_available_solvers()`, `get_recommended_strategy()`, `get_strategies_by_pipeline()`
+
+**[Antigravity AI]** — **Frontend Algoritma Kategorileri:**
+- `src/lib/algorithm-constants.ts` tam rewrite
+- Grouped dropdown yapısı: Pipeline A, Pipeline B, Holistik, Heuristic
+- Rozetler: "En İyi Kalite", "Hızlı", "DIMACS 2021 🏆", "Ultra Hızlı ⚡"
+- Backward compatibility mapping, pipeline algılama fonksiyonları
+
+**[Antigravity AI]** — **Dokümantasyon:**
+- `docs/ANALYSIS_AND_PLANNING_REPORT.md` — Sprint 1 öncesi analiz
+- `docs/IMPLEMENTATION_PLAN_1_5X.md` — 4 Sprint'lik uygulama planı
+- `docs/SPRINT_1_TEST_PLAN.md` — Kapsamlı test planı
+- `docs/ROADMAP.md` güncellendi — Sprint 1 tamamlandı
+- `docs/IE_RESOURCE_MODEL.md` güncellendi — IE Engine planı eklendi
+
+---
+
 ## 2026-03-27
 
 - **[Antigravity AI]** — **Heterojen Filo Tasarımı (v2):** Sw/So kapasite yönetimi, IE tabanlı kaynak allokasyonu ve yönsel bloklama (directional blocking) tasarlandı.

@@ -370,4 +370,42 @@ class OptimizationResponse(BaseModel):
 
 ---
 
+## 10. Implementation Status
+
+> **Son Güncelleme:** 28 Mart 2026
+
+### 10.1 Backend Implementation
+
+| Bileşen | Dosya | Durum | Notlar |
+|---------|-------|-------|--------|
+| VehicleConfig Schema | `models/schemas.py` | ✅ Tamamlandı | sw_capacity, so_capacity, cooldown_minutes |
+| OptimizationRequest | `models/schemas.py` | ✅ Tamamlandı | vehicles, allow_time_shift, mode |
+| IEResponseData | `models/schemas.py` | ✅ Tamamlandı | hourly_demand, bottlenecks, suggestions |
+| Split Decoder | `utils/split_decoder.py` | ✅ Tamamlandı | Giant Tour → Routes dönüşümü |
+| Split Decoder V2 | `utils/split_decoder.py` | ⚠️ Kısmi | Heterojen kapasite desteği eksik |
+| Resource Profiler | `utils/resource_profiler.py` | ❌ Yok | **IE Engine ana dosyası - henüz implemente edilmedi** |
+| PyVRP Strategy | `strategies/pyvrp_strategy.py` | ✅ Tamamlandı | HGS çözücü entegrasyonu |
+| VROOM Strategy | `strategies/vroom_strategy.py` | ✅ Tamamlandı | C++ çözücü entegrasyonu |
+| GA-Split | `strategies/ga_split_strategy.py` | ✅ Tamamlandı | GA + Split entegrasyonu |
+| PSO-Split | `strategies/pso_split_strategy.py` | ❌ Yok | **Eksik** |
+| HHO-Split | `strategies/hho_split_strategy.py` | ❌ Yok | **Eksik** |
+| GWO-Split | `strategies/gwo_split_strategy.py` | ❌ Yok | **Eksik** |
+| Hybrid Base | `strategies/hybrid_base_strategy.py` | ❌ Yok | **Eksik** |
+| Strategy Registry | `strategies/__init__.py` | ⚠️ Kısmi | Yeni stratejiler eklenmemiş |
+
+### 10.2 Frontend Implementation
+
+| Bileşen | Dosya | Durum | Notlar |
+|---------|-------|-------|--------|
+| Resource Histogram | `components/admin/resource-histogram.tsx` | ❌ Yok | **IE Dashboard - henüz implemente edilmedi** |
+| Resource Tracks | `components/admin/resource-tracks.tsx` | ❌ Yok | **Gantt görünüm - henüz implemente edilmedi** |
+| Sandbox Mode | `app/(app)/admin/sandbox/page.tsx` | ❌ Yok | **Fine-tune UI - henüz implemente edilmedi** |
+| Bottleneck Indicator | `components/admin/bottleneck-indicator.tsx` | ❌ Yok | **Uyarı bileşeni - henüz implemente edilmedi** |
+
+### 10.3 Implementation Plan
+
+Detaylı uygulama planı için bkz: [IMPLEMENTATION_PLAN_1_5X.md](./IMPLEMENTATION_PLAN_1_5X.md)
+
+---
+
 *Bu doküman ROADMAP.md ve ARCHITECTURE.md'yi tamamlar.*

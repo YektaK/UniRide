@@ -39,11 +39,13 @@
 | ---------------------------------------- | --------------- | --------------------------------------------------------- |
 | **Faz 1: Kritik Düzeltmeler**            | ✅ Tamamlandı   | Sistem çalışır hale geldi                                 |
 | **Faz 1.5: Çift Pipeline + Split**       | 🔵 Devam Ediyor | Pipeline A (Sweep/CW) + Pipeline B (Giant Tour + Split)   |
-| **Faz 1.5X: Heterojen Filo + IE Engine** | ⬜ Bekliyor     | Standart Araç Benchmark, Resource Histogram, Sandbox Mode |
-| **Faz 2X: Günlük Planlama**              | ⬜ Bekliyor     | Çift yönlü planlama, Standart araç ihtiyacı tablosu       |
+| **Faz 1.5X: Heterojen Filo + IE Engine** | ⬜ Planlandı    | Standart Araç Benchmark, Resource Histogram, Sandbox Mode |
+| **Faz 2X: Günlük Planlama**              | ⬜ Planlandı    | Çift yönlü planlama, Standart araç ihtiyacı tablosu       |
 | **Faz 2: Veri Kalıcılığı + Atama**       | ⬜ Bekliyor     | Rota kaydı + sürücü ataması                               |
 | **Faz 3: İş Akışı Otomasyonu**           | ⬜ Bekliyor     | Onay/iptal + bildirim                                     |
 | **Faz 4: İleri Özellikler**              | ⬜ Bekliyor     | Canlı takip + dinamik matris                              |
+
+> **Not:** Faz 1.5X ve 2X, konuşma geçmişindeki (konusma_gecmisi.txt) Madde 3, 5, 7, 14, 19, 21, 23 taleplerine dayalı olarak eklendi. Detaylar için [IE Resource Model](./IE_RESOURCE_MODEL.md) ve [Implementation Plan](./IMPLEMENTATION_PLAN_1_5X.md) dokümanlarına bakınız.
 
 ---
 
@@ -450,26 +452,28 @@ Sistem iki modda çalışır:
 
 ---
 
-### Görev 1.5X.1: Proposed Changes Entegrasyonu
+### Görev 1.5X.1: Proposed Changes Doğrulama ve Entegrasyon Kontrolü
 
-- **Durum:** ⬜ Bekliyor
+- **Durum:** ✅ Tamamlandı (Kodlar main'e eklendi)
 - **Dosyalar:** `.proposed_changes/27.03.2026/dev_discussion_package/code/`
-- **Süre:** 2-3 saat
+- **Süre:** 1-2 saat
 - **Öncelik:** 🔴 Kritik
 
-**Yapılacaklar:**
+**Kontrol Edilecekler:**
 
-- [ ] `split_decoder.py` → `optimizer_api/utils/`
-- [ ] `pyvrp_strategy.py` → `optimizer_api/strategies/`
-- [ ] `vroom_strategy.py` → `optimizer_api/strategies/`
-- [ ] `ga_split_strategy.py` → `optimizer_api/strategies/`
-- [ ] Test dosyalarını çalıştır ve doğrula
+- [x] `split_decoder.py` → `optimizer_api/utils/` ✅ Eklendi
+- [x] `pyvrp_strategy.py` → `optimizer_api/strategies/` ✅ Eklendi
+- [x] `vroom_strategy.py` → `optimizer_api/strategies/` ✅ Eklendi
+- [x] `ga_split_strategy.py` → `optimizer_api/strategies/` ✅ Eklendi
+- [ ] `strategies/__init__.py` güncellemesi eksik (Görev 1.5.8 ile yapılacak)
+
+**Not:** Kodlar main koda eklenmiş ancak Strategy Registry henüz güncellenmemiş. PSO/HHO/GWO-Split stratejileri de eksik.
 
 ---
 
 ### Görev 1.5X.2: VehicleConfig Schema ve Backend
 
-- **Durum:** ⬜ Bekliyor
+- **Durum:** ✅ Tamamlandı (Schema tanımlı)
 - **Dosya:** `optimizer_api/models/schemas.py`
 - **Süre:** 1-2 saat
 - **Bağımlılık:** Görev 1.5X.1
@@ -477,23 +481,30 @@ Sistem iki modda çalışır:
 
 **Yapılacaklar:**
 
-- [ ] `VehicleConfig` modeli ekle (sw_capacity, so_capacity, cooldown_minutes=15)
-- [ ] `OptimizationRequest`'e `vehicles: List[VehicleConfig]` ekle
-- [ ] `allow_time_shift: bool` ekle (Slack Time desteği)
+- [x] `VehicleConfig` modeli ekle (sw_capacity, so_capacity, cooldown_minutes=15) ✅
+- [x] `OptimizationRequest`'e `vehicles: List[VehicleConfig]` ekle ✅
+- [x] `allow_time_shift: bool` ekle (Slack Time desteği) ✅
+- [x] `OptimizationMode` enum ekle (BENCHMARK/SANDBOX) ✅
+- [x] `IEResponseData` modeli ekle ✅
+
+**Mevcut Şema (schemas.py içinde tanımlı):**
 
 ```python
 class VehicleConfig(BaseModel):
     vehicle_id: str
     sw_capacity: int = 4
     so_capacity: int = 5
-    cooldown_minutes: int = 15  # Rotalar arası geçiş süresi
+    cooldown_minutes: int = 15
 
 class OptimizationRequest(BaseModel):
     # ... mevcut alanlar ...
     vehicles: Optional[List[VehicleConfig]] = None
     allow_time_shift: bool = False
-    slack_window_minutes: int = 60  # Öğrenci zaman esnetme payı
+    slack_window_minutes: int = 60
+    mode: OptimizationMode = OptimizationMode.BENCHMARK
 ```
+
+**Eksik:** Bu alanlar şema'da tanımlı ancak henüz stratejilerde kullanılmıyor.
 
 ---
 

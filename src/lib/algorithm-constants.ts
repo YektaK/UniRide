@@ -4,24 +4,69 @@
  * 
  * IMPORTANT: These names MUST match Python STRATEGY_REGISTRY keys
  * See: optimizer_api/strategies/__init__.py
+ * 
+ * Organized by Pipeline:
+ * - Pipeline A: Cluster-First, Route-Second (K-Means + TSP)
+ * - Pipeline B: Route-First, Cluster-Second (Giant Tour + Split)
+ * - Holistic: Native CVRP solvers
+ * - Heuristic: Simple algorithms
  */
 
-// Algorithm keys - MUST match Python exactly
-export const ALGORITHM_KEYS = {
+// ============================================================
+// ALGORITHM KEYS - MUST match Python STRATEGY_REGISTRY exactly
+// ============================================================
+
+// Pipeline A: Cluster-First, Route-Second (K-Means based)
+export const PIPELINE_A_KEYS = {
   GENETIC_ALGORITHM: "genetic_algorithm",
-  GA: "ga", // Alias for genetic_algorithm
+  GA: "ga", // Alias
   PSO: "pso",
   GWO: "gwo",
-  GREY_WOLF: "grey_wolf", // Alias for gwo
+  GREY_WOLF: "grey_wolf", // Alias
   HHO: "hho",
-  HARRIS_HAWKS: "harris_hawks", // Alias for hho
-  TWO_OPT: "two_opt", // Standalone 2-opt local search
-  GREEDY: "greedy",
-  NEAREST_NEIGHBOR: "nearest_neighbor", // Alias for greedy
-  PERMUTATION_TSP: "permutation_tsp",
-  PERMUTATION: "permutation", // Alias for permutation_tsp
+  HARRIS_HAWKS: "harris_hawks", // Alias
+} as const;
+
+// Pipeline B: Route-First, Cluster-Second (Split based)
+export const PIPELINE_B_KEYS = {
+  GA_SPLIT: "ga_split",
+  GA_SPLIT_ALIAS: "ga-split", // Alias
+  PSO_SPLIT: "pso_split",
+  PSO_SPLIT_ALIAS: "pso-split", // Alias
+  GWO_SPLIT: "gwo_split",
+  GWO_SPLIT_ALIAS: "gwo-split", // Alias
+  HHO_SPLIT: "hho_split",
+  HHO_SPLIT_ALIAS: "hho-split", // Alias
+} as const;
+
+// Holistic Solvers (Native CVRP)
+export const HOLISTIC_KEYS = {
   ORTOOLS_CVRP: "ortools_cvrp",
-  ORTOOLS: "ortools", // Alias for ortools_cvrp
+  ORTOOLS: "ortools", // Alias
+  PYVRP: "pyvrp",
+  HGS: "hgs", // PyVRP alias
+  PYVRP_ALT: "pyvrp_alt",
+  VROOM: "vroom",
+  VROOM_FALLBACK: "vroom_fallback",
+} as const;
+
+// Heuristic Algorithms
+export const HEURISTIC_KEYS = {
+  TWO_OPT: "two_opt",
+  TWO_OPT_ALIAS: "2opt", // Alias
+  GREEDY: "greedy",
+  NEAREST_NEIGHBOR: "nearest_neighbor", // Alias
+  PERMUTATION_TSP: "permutation_tsp",
+  PERMUTATION: "permutation", // Alias
+  EXACT: "exact", // Alias for permutation_tsp
+} as const;
+
+// Combined algorithm keys
+export const ALGORITHM_KEYS = {
+  ...PIPELINE_A_KEYS,
+  ...PIPELINE_B_KEYS,
+  ...HOLISTIC_KEYS,
+  ...HEURISTIC_KEYS,
 } as const;
 
 // Local Search Type keys - MUST match Python LocalSearchType enum
@@ -35,22 +80,61 @@ export const LOCAL_SEARCH_KEYS = {
 
 export type LocalSearchType = typeof LOCAL_SEARCH_KEYS[keyof typeof LOCAL_SEARCH_KEYS];
 
-// Algorithm display names for UI
+// ============================================================
+// ALGORITHM DISPLAY NAMES
+// ============================================================
+
+// Pipeline A Display Names
+export const PIPELINE_A_DISPLAY_NAMES: Record<string, string> = {
+  [PIPELINE_A_KEYS.GENETIC_ALGORITHM]: "Genetik Algoritma (K-Means)",
+  [PIPELINE_A_KEYS.GA]: "Genetik Algoritma (K-Means)",
+  [PIPELINE_A_KEYS.PSO]: "Parçacık Sürü (K-Means)",
+  [PIPELINE_A_KEYS.GWO]: "Gri Kurt (K-Means)",
+  [PIPELINE_A_KEYS.GREY_WOLF]: "Gri Kurt (K-Means)",
+  [PIPELINE_A_KEYS.HHO]: "Harris Hawks (K-Means)",
+  [PIPELINE_A_KEYS.HARRIS_HAWKS]: "Harris Hawks (K-Means)",
+};
+
+// Pipeline B Display Names (Route-First = Split)
+export const PIPELINE_B_DISPLAY_NAMES: Record<string, string> = {
+  [PIPELINE_B_KEYS.GA_SPLIT]: "GA-Split (Route-First)",
+  [PIPELINE_B_KEYS.GA_SPLIT_ALIAS]: "GA-Split (Route-First)",
+  [PIPELINE_B_KEYS.PSO_SPLIT]: "PSO-Split (Route-First)",
+  [PIPELINE_B_KEYS.PSO_SPLIT_ALIAS]: "PSO-Split (Route-First)",
+  [PIPELINE_B_KEYS.GWO_SPLIT]: "GWO-Split (Route-First)",
+  [PIPELINE_B_KEYS.GWO_SPLIT_ALIAS]: "GWO-Split (Route-First)",
+  [PIPELINE_B_KEYS.HHO_SPLIT]: "HHO-Split (Route-First)",
+  [PIPELINE_B_KEYS.HHO_SPLIT_ALIAS]: "HHO-Split (Route-First)",
+};
+
+// Holistic Solvers Display Names
+export const HOLISTIC_DISPLAY_NAMES: Record<string, string> = {
+  [HOLISTIC_KEYS.ORTOOLS_CVRP]: "OR-Tools CVRP",
+  [HOLISTIC_KEYS.ORTOOLS]: "OR-Tools CVRP",
+  [HOLISTIC_KEYS.PYVRP]: "PyVRP (HGS - DIMACS Winner)",
+  [HOLISTIC_KEYS.HGS]: "PyVRP (HGS - DIMACS Winner)",
+  [HOLISTIC_KEYS.PYVRP_ALT]: "PyVRP Alternative",
+  [HOLISTIC_KEYS.VROOM]: "VROOM (Ultra-fast)",
+  [HOLISTIC_KEYS.VROOM_FALLBACK]: "VROOM (Fallback)",
+};
+
+// Heuristic Display Names
+export const HEURISTIC_DISPLAY_NAMES: Record<string, string> = {
+  [HEURISTIC_KEYS.TWO_OPT]: "Two-Opt Local Search",
+  [HEURISTIC_KEYS.TWO_OPT_ALIAS]: "Two-Opt Local Search",
+  [HEURISTIC_KEYS.GREEDY]: "Greedy (En Yakın Komşu)",
+  [HEURISTIC_KEYS.NEAREST_NEIGHBOR]: "Greedy (En Yakın Komşu)",
+  [HEURISTIC_KEYS.PERMUTATION_TSP]: "Permütasyon (Optimal n≤10)",
+  [HEURISTIC_KEYS.PERMUTATION]: "Permütasyon (Optimal n≤10)",
+  [HEURISTIC_KEYS.EXACT]: "Permütasyon (Optimal n≤10)",
+};
+
+// Combined display names
 export const ALGORITHM_DISPLAY_NAMES: Record<string, string> = {
-  [ALGORITHM_KEYS.GENETIC_ALGORITHM]: "Genetik Algoritma",
-  [ALGORITHM_KEYS.GA]: "Genetik Algoritma",
-  [ALGORITHM_KEYS.PSO]: "Parçacık Sürü Optimizasyonu",
-  [ALGORITHM_KEYS.GWO]: "Gri Kurt Optimizasyonu",
-  [ALGORITHM_KEYS.GREY_WOLF]: "Gri Kurt Optimizasyonu",
-  [ALGORITHM_KEYS.HHO]: "Harris Hawks Optimizasyonu",
-  [ALGORITHM_KEYS.HARRIS_HAWKS]: "Harris Hawks Optimizasyonu",
-  [ALGORITHM_KEYS.TWO_OPT]: "Two-Opt Local Search",
-  [ALGORITHM_KEYS.GREEDY]: "Greedy (En Yakın Komşu)",
-  [ALGORITHM_KEYS.NEAREST_NEIGHBOR]: "Greedy (En Yakın Komşu)",
-  [ALGORITHM_KEYS.PERMUTATION_TSP]: "Permütasyon (Optimal)",
-  [ALGORITHM_KEYS.PERMUTATION]: "Permütasyon (Optimal)",
-  [ALGORITHM_KEYS.ORTOOLS_CVRP]: "OR-Tools CVRP",
-  [ALGORITHM_KEYS.ORTOOLS]: "OR-Tools CVRP",
+  ...PIPELINE_A_DISPLAY_NAMES,
+  ...PIPELINE_B_DISPLAY_NAMES,
+  ...HOLISTIC_DISPLAY_NAMES,
+  ...HEURISTIC_DISPLAY_NAMES,
 };
 
 // Local Search display names for UI
@@ -62,100 +146,230 @@ export const LOCAL_SEARCH_DISPLAY_NAMES: Record<LocalSearchType, string> = {
   [LOCAL_SEARCH_KEYS.HYBRID]: "Hibrit (Kombine)",
 };
 
-// Algorithm descriptions
+// ============================================================
+// ALGORITHM DESCRIPTIONS
+// ============================================================
+
 export const ALGORITHM_DESCRIPTIONS: Record<string, string> = {
-  [ALGORITHM_KEYS.GENETIC_ALGORITHM]: "Popülasyon tabanlı meta-sezgisel optimizasyon. Büyük problemler için ideal.",
-  [ALGORITHM_KEYS.PSO]: "Sürü zekası tabanlı meta-sezgisel. Hızlı yakınsama özelliği.",
-  [ALGORITHM_KEYS.GWO]: "Sosyal hiyerarşi tabanlı meta-sezgisel. Keşif-sömürü dengesi güçlü.",
-  [ALGORITHM_KEYS.HHO]: "Şahin avlanma davranışı tabanlı meta-sezgisel. Kaçış enerjisi ile adaptif arama.",
-  [ALGORITHM_KEYS.TWO_OPT]: "Klasik 2-opt yerel arama algoritması. Küçük-orta ölçekli problemler için ideal.",
-  [ALGORITHM_KEYS.GREEDY]: "Hızlı sezgisel algoritma. En yakın öğrenciyi her adımda seçer.",
-  [ALGORITHM_KEYS.PERMUTATION_TSP]: "Tüm kombinasyonları dener, en iyi sonucu garanti eder. n ≤ 10 için kullanılabilir.",
-  [ALGORITHM_KEYS.ORTOOLS_CVRP]: "Google OR-Tools kütüphanesi ile endüstri standardı VRP çözümü.",
+  // Pipeline A
+  [PIPELINE_A_KEYS.GENETIC_ALGORITHM]: "K-Means kümeleme + GA rotalama. Kümeleme öncesi, rota sonrası.",
+  [PIPELINE_A_KEYS.PSO]: "K-Means kümeleme + PSO rotalama. Hızlı yakınsama.",
+  [PIPELINE_A_KEYS.GWO]: "K-Means kümeleme + GWO rotalama. Sosyal hiyerarşi.",
+  [PIPELINE_A_KEYS.HHO]: "K-Means kümeleme + HHO rotalama. Adaptif avlanma.",
+  
+  // Pipeline B
+  [PIPELINE_B_KEYS.GA_SPLIT]: "GA Giant Tour + Optimal Split. %100 feasible, optimal bölme.",
+  [PIPELINE_B_KEYS.PSO_SPLIT]: "PSO Giant Tour + Optimal Split. Hızlı ve kaliteli.",
+  [PIPELINE_B_KEYS.GWO_SPLIT]: "GWO Giant Tour + Optimal Split. Güçlü keşif-sömürü.",
+  [PIPELINE_B_KEYS.HHO_SPLIT]: "HHO Giant Tour + Optimal Split. Adaptif, kaçış enerjisi.",
+  
+  // Holistic
+  [HOLISTIC_KEYS.ORTOOLS_CVRP]: "Google OR-Tools endüstri standardı CVRP çözücüsü.",
+  [HOLISTIC_KEYS.PYVRP]: "PyVRP HGS - DIMACS 2021 birincisi. En yüksek kalite.",
+  [HOLISTIC_KEYS.PYVRP_ALT]: "PyVRP alternatif implementasyon.",
+  [HOLISTIC_KEYS.VROOM]: "VROOM C++ motor - 1000+ nokta < 5 saniye.",
+  [HOLISTIC_KEYS.VROOM_FALLBACK]: "VROOM yedek çözücü.",
+  
+  // Heuristics
+  [HEURISTIC_KEYS.TWO_OPT]: "Klasik 2-opt yerel arama. Küçük-orta ölçekli.",
+  [HEURISTIC_KEYS.GREEDY]: "Hızlı sezgisel. En yakın komşu stratejisi.",
+  [HEURISTIC_KEYS.PERMUTATION_TSP]: "Tüm kombinasyonları dener. n ≤ 10 için optimal.",
 };
 
 // Local Search descriptions
 export const LOCAL_SEARCH_DESCRIPTIONS: Record<LocalSearchType, string> = {
   [LOCAL_SEARCH_KEYS.NONE]: "Yerel arama uygulanmaz.",
   [LOCAL_SEARCH_KEYS.TWO_OPT]: "Kenar değiştirme ile iyileştirme. Hızlı ve etkili.",
-  [LOCAL_SEARCH_KEYS.THREE_OPT]: "3 kenar değiştirme ile daha güçlü iyileştirme. Daha yavaş ama daha kaliteli.",
-  [LOCAL_SEARCH_KEYS.OR_OPT]: "Alt tur yeniden konumlandırma. Kümeleme için etkili.",
-  [LOCAL_SEARCH_KEYS.HYBRID]: "2-opt + 3-opt + Or-opt kombine. En iyi kalite, en yavaş.",
+  [LOCAL_SEARCH_KEYS.THREE_OPT]: "3 kenar değiştirme ile daha güçlü iyileştirme.",
+  [LOCAL_SEARCH_KEYS.OR_OPT]: "Alt tur yeniden konumlandırma.",
+  [LOCAL_SEARCH_KEYS.HYBRID]: "2-opt + 3-opt + Or-opt kombine.",
 };
 
-// Algorithm complexity
+// ============================================================
+// ALGORITHM COMPLEXITY
+// ============================================================
+
 export const ALGORITHM_COMPLEXITY: Record<string, string> = {
-  [ALGORITHM_KEYS.GENETIC_ALGORITHM]: "O(g × p × n²)",
-  [ALGORITHM_KEYS.PSO]: "O(i × s × n²)",
-  [ALGORITHM_KEYS.GWO]: "O(i × p × n²)",
-  [ALGORITHM_KEYS.HHO]: "O(i × h × n²)",
-  [ALGORITHM_KEYS.TWO_OPT]: "O(n²)",
-  [ALGORITHM_KEYS.GREEDY]: "O(n²)",
-  [ALGORITHM_KEYS.PERMUTATION_TSP]: "O(n!)",
-  [ALGORITHM_KEYS.ORTOOLS_CVRP]: "O(n³)",
+  // Pipeline A
+  [PIPELINE_A_KEYS.GENETIC_ALGORITHM]: "O(g × p × n²) + K-Means",
+  [PIPELINE_A_KEYS.PSO]: "O(i × s × n²) + K-Means",
+  [PIPELINE_A_KEYS.GWO]: "O(i × p × n²) + K-Means",
+  [PIPELINE_A_KEYS.HHO]: "O(i × h × n²) + K-Means",
+  
+  // Pipeline B
+  [PIPELINE_B_KEYS.GA_SPLIT]: "O(g × p × n²) + O(n²) Split",
+  [PIPELINE_B_KEYS.PSO_SPLIT]: "O(i × s × n²) + O(n²) Split",
+  [PIPELINE_B_KEYS.GWO_SPLIT]: "O(i × p × n²) + O(n²) Split",
+  [PIPELINE_B_KEYS.HHO_SPLIT]: "O(i × h × n²) + O(n²) Split",
+  
+  // Holistic
+  [HOLISTIC_KEYS.ORTOOLS_CVRP]: "O(n³)"
+  [HOLISTIC_KEYS.PYVRP]: "O(n² log n)",
+  [HOLISTIC_KEYS.VROOM]: "O(n²)",
+  
+  // Heuristics
+  [HEURISTIC_KEYS.TWO_OPT]: "O(n²)",
+  [HEURISTIC_KEYS.GREEDY]: "O(n²)",
+  [HEURISTIC_KEYS.PERMUTATION_TSP]: "O(n!)",
 };
 
-// Algorithm select options for UI dropdowns
-export const ALGORITHM_OPTIONS = [
+// ============================================================
+// ALGORITHM OPTIONS FOR UI DROPDOWNS (Grouped by Pipeline)
+// ============================================================
+
+export const ALGORITHM_OPTIONS_GROUPED = [
   {
-    key: ALGORITHM_KEYS.GENETIC_ALGORITHM,
-    label: ALGORITHM_DISPLAY_NAMES[ALGORITHM_KEYS.GENETIC_ALGORITHM],
-    description: ALGORITHM_DESCRIPTIONS[ALGORITHM_KEYS.GENETIC_ALGORITHM],
-    complexity: ALGORITHM_COMPLEXITY[ALGORITHM_KEYS.GENETIC_ALGORITHM],
-    recommended: true,
+    category: "Cluster-First, Route-Second (K-Means)",
+    description: "Önce coğrafi kümeleme, sonra her küme içinde rota optimizasyonu",
+    algorithms: [
+      {
+        key: PIPELINE_A_KEYS.GENETIC_ALGORITHM,
+        label: PIPELINE_A_DISPLAY_NAMES[PIPELINE_A_KEYS.GENETIC_ALGORITHM],
+        description: ALGORITHM_DESCRIPTIONS[PIPELINE_A_KEYS.GENETIC_ALGORITHM],
+        complexity: ALGORITHM_COMPLEXITY[PIPELINE_A_KEYS.GENETIC_ALGORITHM],
+        recommended: false,
+        pipeline: "A",
+      },
+      {
+        key: PIPELINE_A_KEYS.PSO,
+        label: PIPELINE_A_DISPLAY_NAMES[PIPELINE_A_KEYS.PSO],
+        description: ALGORITHM_DESCRIPTIONS[PIPELINE_A_KEYS.PSO],
+        complexity: ALGORITHM_COMPLEXITY[PIPELINE_A_KEYS.PSO],
+        recommended: false,
+        pipeline: "A",
+      },
+      {
+        key: PIPELINE_A_KEYS.GWO,
+        label: PIPELINE_A_DISPLAY_NAMES[PIPELINE_A_KEYS.GWO],
+        description: ALGORITHM_DESCRIPTIONS[PIPELINE_A_KEYS.GWO],
+        complexity: ALGORITHM_COMPLEXITY[PIPELINE_A_KEYS.GWO],
+        recommended: false,
+        pipeline: "A",
+      },
+      {
+        key: PIPELINE_A_KEYS.HHO,
+        label: PIPELINE_A_DISPLAY_NAMES[PIPELINE_A_KEYS.HHO],
+        description: ALGORITHM_DESCRIPTIONS[PIPELINE_A_KEYS.HHO],
+        complexity: ALGORITHM_COMPLEXITY[PIPELINE_A_KEYS.HHO],
+        recommended: false,
+        pipeline: "A",
+      },
+    ],
   },
   {
-    key: ALGORITHM_KEYS.PSO,
-    label: ALGORITHM_DISPLAY_NAMES[ALGORITHM_KEYS.PSO],
-    description: ALGORITHM_DESCRIPTIONS[ALGORITHM_KEYS.PSO],
-    complexity: ALGORITHM_COMPLEXITY[ALGORITHM_KEYS.PSO],
-    recommended: true,
+    category: "Route-First, Cluster-Second (Optimal Split)",
+    description: "Önce tüm öğrenciler için Giant Tour, sonra optimal araç bölme",
+    algorithms: [
+      {
+        key: PIPELINE_B_KEYS.GA_SPLIT,
+        label: PIPELINE_B_DISPLAY_NAMES[PIPELINE_B_KEYS.GA_SPLIT],
+        description: ALGORITHM_DESCRIPTIONS[PIPELINE_B_KEYS.GA_SPLIT],
+        complexity: ALGORITHM_COMPLEXITY[PIPELINE_B_KEYS.GA_SPLIT],
+        recommended: true,
+        pipeline: "B",
+        badge: "En İyi Kalite",
+      },
+      {
+        key: PIPELINE_B_KEYS.PSO_SPLIT,
+        label: PIPELINE_B_DISPLAY_NAMES[PIPELINE_B_KEYS.PSO_SPLIT],
+        description: ALGORITHM_DESCRIPTIONS[PIPELINE_B_KEYS.PSO_SPLIT],
+        complexity: ALGORITHM_COMPLEXITY[PIPELINE_B_KEYS.PSO_SPLIT],
+        recommended: true,
+        pipeline: "B",
+        badge: "Hızlı",
+      },
+      {
+        key: PIPELINE_B_KEYS.GWO_SPLIT,
+        label: PIPELINE_B_DISPLAY_NAMES[PIPELINE_B_KEYS.GWO_SPLIT],
+        description: ALGORITHM_DESCRIPTIONS[PIPELINE_B_KEYS.GWO_SPLIT],
+        complexity: ALGORITHM_COMPLEXITY[PIPELINE_B_KEYS.GWO_SPLIT],
+        recommended: true,
+        pipeline: "B",
+      },
+      {
+        key: PIPELINE_B_KEYS.HHO_SPLIT,
+        label: PIPELINE_B_DISPLAY_NAMES[PIPELINE_B_KEYS.HHO_SPLIT],
+        description: ALGORITHM_DESCRIPTIONS[PIPELINE_B_KEYS.HHO_SPLIT],
+        complexity: ALGORITHM_COMPLEXITY[PIPELINE_B_KEYS.HHO_SPLIT],
+        recommended: true,
+        pipeline: "B",
+      },
+    ],
   },
   {
-    key: ALGORITHM_KEYS.GWO,
-    label: ALGORITHM_DISPLAY_NAMES[ALGORITHM_KEYS.GWO],
-    description: ALGORITHM_DESCRIPTIONS[ALGORITHM_KEYS.GWO],
-    complexity: ALGORITHM_COMPLEXITY[ALGORITHM_KEYS.GWO],
-    recommended: true,
+    category: "Holistik Çözücüler (Native CVRP)",
+    description: "Endüstri standardı kütüphaneler ile doğal CVRP çözümü",
+    algorithms: [
+      {
+        key: HOLISTIC_KEYS.ORTOOLS_CVRP,
+        label: HOLISTIC_DISPLAY_NAMES[HOLISTIC_KEYS.ORTOOLS_CVRP],
+        description: ALGORITHM_DESCRIPTIONS[HOLISTIC_KEYS.ORTOOLS_CVRP],
+        complexity: ALGORITHM_COMPLEXITY[HOLISTIC_KEYS.ORTOOLS_CVRP],
+        recommended: false,
+        pipeline: "holistic",
+      },
+      {
+        key: HOLISTIC_KEYS.PYVRP,
+        label: HOLISTIC_DISPLAY_NAMES[HOLISTIC_KEYS.PYVRP],
+        description: ALGORITHM_DESCRIPTIONS[HOLISTIC_KEYS.PYVRP],
+        complexity: ALGORITHM_COMPLEXITY[HOLISTIC_KEYS.PYVRP],
+        recommended: false,
+        pipeline: "holistic",
+        badge: "DIMACS 2021 🏆",
+      },
+      {
+        key: HOLISTIC_KEYS.VROOM,
+        label: HOLISTIC_DISPLAY_NAMES[HOLISTIC_KEYS.VROOM],
+        description: ALGORITHM_DESCRIPTIONS[HOLISTIC_KEYS.VROOM],
+        complexity: ALGORITHM_COMPLEXITY[HOLISTIC_KEYS.VROOM],
+        recommended: false,
+        pipeline: "holistic",
+        badge: "Ultra Hızlı ⚡",
+      },
+    ],
   },
   {
-    key: ALGORITHM_KEYS.HHO,
-    label: ALGORITHM_DISPLAY_NAMES[ALGORITHM_KEYS.HHO],
-    description: ALGORITHM_DESCRIPTIONS[ALGORITHM_KEYS.HHO],
-    complexity: ALGORITHM_COMPLEXITY[ALGORITHM_KEYS.HHO],
-    recommended: true,
-  },
-  {
-    key: ALGORITHM_KEYS.TWO_OPT,
-    label: ALGORITHM_DISPLAY_NAMES[ALGORITHM_KEYS.TWO_OPT],
-    description: ALGORITHM_DESCRIPTIONS[ALGORITHM_KEYS.TWO_OPT],
-    complexity: ALGORITHM_COMPLEXITY[ALGORITHM_KEYS.TWO_OPT],
-    recommended: false,
-  },
-  {
-    key: ALGORITHM_KEYS.GREEDY,
-    label: ALGORITHM_DISPLAY_NAMES[ALGORITHM_KEYS.GREEDY],
-    description: ALGORITHM_DESCRIPTIONS[ALGORITHM_KEYS.GREEDY],
-    complexity: ALGORITHM_COMPLEXITY[ALGORITHM_KEYS.GREEDY],
-    recommended: false,
-  },
-  {
-    key: ALGORITHM_KEYS.PERMUTATION_TSP,
-    label: ALGORITHM_DISPLAY_NAMES[ALGORITHM_KEYS.PERMUTATION_TSP],
-    description: ALGORITHM_DESCRIPTIONS[ALGORITHM_KEYS.PERMUTATION_TSP],
-    complexity: ALGORITHM_COMPLEXITY[ALGORITHM_KEYS.PERMUTATION_TSP],
-    recommended: false,
-  },
-  {
-    key: ALGORITHM_KEYS.ORTOOLS_CVRP,
-    label: ALGORITHM_DISPLAY_NAMES[ALGORITHM_KEYS.ORTOOLS_CVRP],
-    description: ALGORITHM_DESCRIPTIONS[ALGORITHM_KEYS.ORTOOLS_CVRP],
-    complexity: ALGORITHM_COMPLEXITY[ALGORITHM_KEYS.ORTOOLS_CVRP],
-    recommended: false,
+    category: "Sezgisel Algoritmalar",
+    description: "Basit ve hızlı çözümler",
+    algorithms: [
+      {
+        key: HEURISTIC_KEYS.TWO_OPT,
+        label: HEURISTIC_DISPLAY_NAMES[HEURISTIC_KEYS.TWO_OPT],
+        description: ALGORITHM_DESCRIPTIONS[HEURISTIC_KEYS.TWO_OPT],
+        complexity: ALGORITHM_COMPLEXITY[HEURISTIC_KEYS.TWO_OPT],
+        recommended: false,
+        pipeline: "heuristic",
+      },
+      {
+        key: HEURISTIC_KEYS.GREEDY,
+        label: HEURISTIC_DISPLAY_NAMES[HEURISTIC_KEYS.GREEDY],
+        description: ALGORITHM_DESCRIPTIONS[HEURISTIC_KEYS.GREEDY],
+        complexity: ALGORITHM_COMPLEXITY[HEURISTIC_KEYS.GREEDY],
+        recommended: false,
+        pipeline: "heuristic",
+      },
+      {
+        key: HEURISTIC_KEYS.PERMUTATION_TSP,
+        label: HEURISTIC_DISPLAY_NAMES[HEURISTIC_KEYS.PERMUTATION_TSP],
+        description: ALGORITHM_DESCRIPTIONS[HEURISTIC_KEYS.PERMUTATION_TSP],
+        complexity: ALGORITHM_COMPLEXITY[HEURISTIC_KEYS.PERMUTATION_TSP],
+        recommended: false,
+        pipeline: "heuristic",
+      },
+    ],
   },
 ];
 
-// Local Search options for UI dropdowns (used with meta-heuristics)
+// Flattened options for backward compatibility
+export const ALGORITHM_OPTIONS = ALGORITHM_OPTIONS_GROUPED.flatMap(group => 
+  group.algorithms.map(alg => ({
+    ...alg,
+    category: group.category,
+    categoryDescription: group.description,
+  }))
+);
+
+// Local Search options for UI dropdowns
 export const LOCAL_SEARCH_OPTIONS = [
   {
     key: LOCAL_SEARCH_KEYS.NONE,
@@ -184,23 +398,35 @@ export const LOCAL_SEARCH_OPTIONS = [
   },
 ];
 
+// ============================================================
+// UTILITY FUNCTIONS
+// ============================================================
+
 // Legacy mapping for backward compatibility
-// Maps old UI names to correct Python keys
 export const LEGACY_ALGORITHM_MAP: Record<string, string> = {
-  "nearest-neighbor": ALGORITHM_KEYS.GREEDY,
-  "two-opt": ALGORITHM_KEYS.TWO_OPT, // Now maps to standalone two_opt strategy
-  "permutation": ALGORITHM_KEYS.PERMUTATION_TSP,
+  "nearest-neighbor": HEURISTIC_KEYS.GREEDY,
+  "two-opt": HEURISTIC_KEYS.TWO_OPT,
+  "permutation": HEURISTIC_KEYS.PERMUTATION_TSP,
+  "ga": PIPELINE_A_KEYS.GENETIC_ALGORITHM,
+  "grey_wolf": PIPELINE_A_KEYS.GWO,
+  "harris_hawks": PIPELINE_A_KEYS.HHO,
+  "ga-split": PIPELINE_B_KEYS.GA_SPLIT,
+  "pso-split": PIPELINE_B_KEYS.PSO_SPLIT,
+  "gwo-split": PIPELINE_B_KEYS.GWO_SPLIT,
+  "hho-split": PIPELINE_B_KEYS.HHO_SPLIT,
+  "ortools": HOLISTIC_KEYS.ORTOOLS_CVRP,
+  "hgs": HOLISTIC_KEYS.PYVRP,
+  "2opt": HEURISTIC_KEYS.TWO_OPT,
+  "exact": HEURISTIC_KEYS.PERMUTATION_TSP,
 };
 
 /**
  * Normalize algorithm name to canonical Python key
  */
 export function normalizeAlgorithmName(name: string): string {
-  // Check legacy mapping first
   if (LEGACY_ALGORITHM_MAP[name]) {
     return LEGACY_ALGORITHM_MAP[name];
   }
-  // Return as-is if no mapping needed
   return name;
 }
 
@@ -222,19 +448,59 @@ export function isAlgorithmRecommended(algorithm: string): boolean {
 }
 
 /**
+ * Get algorithm pipeline type
+ */
+export function getAlgorithmPipeline(algorithm: string): string {
+  const normalized = normalizeAlgorithmName(algorithm);
+  const option = ALGORITHM_OPTIONS.find(opt => opt.key === normalized);
+  return option?.pipeline || "unknown";
+}
+
+/**
  * Check if algorithm supports local search configuration
- * Meta-heuristics (GA, PSO, GWO, HHO) support local search, others don't
+ * Pipeline A algorithms support local search, Pipeline B has built-in local search
  */
 export function algorithmSupportsLocalSearch(algorithm: string): boolean {
   const normalized = normalizeAlgorithmName(algorithm);
-  const algorithms: string[] = [
-    ALGORITHM_KEYS.GENETIC_ALGORITHM,
-    ALGORITHM_KEYS.GA,
-    ALGORITHM_KEYS.PSO,
-    ALGORITHM_KEYS.GWO,
-    ALGORITHM_KEYS.GREY_WOLF,
-    ALGORITHM_KEYS.HHO,
-    ALGORITHM_KEYS.HARRIS_HAWKS,
+  const pipelineAAlgorithms: string[] = [
+    PIPELINE_A_KEYS.GENETIC_ALGORITHM,
+    PIPELINE_A_KEYS.GA,
+    PIPELINE_A_KEYS.PSO,
+    PIPELINE_A_KEYS.GWO,
+    PIPELINE_A_KEYS.GREY_WOLF,
+    PIPELINE_A_KEYS.HHO,
+    PIPELINE_A_KEYS.HARRIS_HAWKS,
   ];
-  return algorithms.includes(normalized);
+  return pipelineAAlgorithms.includes(normalized);
+}
+
+/**
+ * Check if algorithm is a Split-based algorithm (Pipeline B)
+ */
+export function isSplitAlgorithm(algorithm: string): boolean {
+  const normalized = normalizeAlgorithmName(algorithm);
+  const splitAlgorithms: string[] = [
+    PIPELINE_B_KEYS.GA_SPLIT,
+    PIPELINE_B_KEYS.GA_SPLIT_ALIAS,
+    PIPELINE_B_KEYS.PSO_SPLIT,
+    PIPELINE_B_KEYS.PSO_SPLIT_ALIAS,
+    PIPELINE_B_KEYS.GWO_SPLIT,
+    PIPELINE_B_KEYS.GWO_SPLIT_ALIAS,
+    PIPELINE_B_KEYS.HHO_SPLIT,
+    PIPELINE_B_KEYS.HHO_SPLIT_ALIAS,
+  ];
+  return splitAlgorithms.includes(normalized);
+}
+
+/**
+ * Get recommended algorithm based on problem size
+ */
+export function getRecommendedAlgorithm(nStudents: number): string {
+  if (nStudents <= 30) {
+    return PIPELINE_B_KEYS.GA_SPLIT; // Best quality for small instances
+  } else if (nStudents <= 100) {
+    return PIPELINE_B_KEYS.PSO_SPLIT; // Good balance
+  } else {
+    return HOLISTIC_KEYS.ORTOOLS_CVRP; // Reliable for large instances
+  }
 }

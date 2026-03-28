@@ -358,18 +358,6 @@ class OptimizationResponse(BaseModel):
 
 ---
 
-## 10. Test Senaryoları
-
-| # | Senaryo | Beklenen Sonuç |
-|---|---------|----------------|
-| T1 | 30 öğrenci, standart araç | 4 minibüs, feasible |
-| T2 | 45 öğrenci, heterojen araç (2x 4Sw, 1x 5Sw) | 3 araç, feasible |
-| T3 | Pickup + Dropoff çakışması | Conflict tespiti |
-| T4 | 12:00'de 10 öğrenci | Bottleneck: infeasible |
-| T5 | Slack time ile optimizasyon | 2 öğrenci kaydı, 4 araç |
-
----
-
 ## 10. Implementation Status
 
 > **Son Güncelleme:** 28 Mart 2026
@@ -380,27 +368,27 @@ class OptimizationResponse(BaseModel):
 |---------|-------|-------|--------|
 | VehicleConfig Schema | `models/schemas.py` | ✅ Tamamlandı | sw_capacity, so_capacity, cooldown_minutes |
 | OptimizationRequest | `models/schemas.py` | ✅ Tamamlandı | vehicles, allow_time_shift, mode |
-| IEResponseData | `models/schemas.py` | ✅ Tamamlandı | hourly_demand, bottlenecks, suggestions |
-| Split Decoder | `utils/split_decoder.py` | ✅ Tamamlandı | Giant Tour → Routes dönüşümü |
-| Split Decoder V2 | `utils/split_decoder.py` | ⚠️ Kısmi | Heterojen kapasite desteği eksik |
-| Resource Profiler | `utils/resource_profiler.py` | ❌ Yok | **IE Engine ana dosyası - henüz implemente edilmedi** |
-| PyVRP Strategy | `strategies/pyvrp_strategy.py` | ✅ Tamamlandı | HGS çözücü entegrasyonu |
-| VROOM Strategy | `strategies/vroom_strategy.py` | ✅ Tamamlandı | C++ çözücü entegrasyonu |
-| GA-Split | `strategies/ga_split_strategy.py` | ✅ Tamamlandı | GA + Split entegrasyonu |
-| PSO-Split | `strategies/pso_split_strategy.py` | ❌ Yok | **Eksik** |
-| HHO-Split | `strategies/hho_split_strategy.py` | ❌ Yok | **Eksik** |
-| GWO-Split | `strategies/gwo_split_strategy.py` | ❌ Yok | **Eksik** |
-| Hybrid Base | `strategies/hybrid_base_strategy.py` | ❌ Yok | **Eksik** |
-| Strategy Registry | `strategies/__init__.py` | ⚠️ Kısmi | Yeni stratejiler eklenmemiş |
+| IEResponseData | `models/schemas.py" | ✅ Tamamlandı | hourly_demand, bottlenecks, suggestions |
+| Split Decoder | `utils/split_decoder.py" | ✅ Tamamlandı | Giant Tour → Routes dönüşümü |
+| Split Decoder V2 | `utils/split_decoder.py" | ✅ Tamamlandı | Heterojen kapasite desteği eklendi |
+| Resource Profiler | `utils/resource_profiler.py" | ✅ Tamamlandı | Tüm IE fonksiyonları + unit testler |
+| PyVRP Strategy | `strategies/pyvrp_strategy.py" | ✅ Tamamlandı | HGS çözücü entegrasyonu |
+| VROOM Strategy | `strategies/vroom_strategy.py" | ✅ Tamamlandı | C++ çözücü entegrasyonu |
+| GA-Split | `strategies/ga_split_strategy.py" | ✅ Tamamlandı | GA + Split entegrasyonu |
+| PSO-Split | `strategies/pso_split_strategy.py" | ✅ Tamamlandı | Literatür temelli parametreler |
+| HHO-Split | `strategies/hho_split_strategy.py" | ✅ Tamamlandı | Harris Hawks Optimization |
+| GWO-Split | `strategies/gwo_split_strategy.py" | ✅ Tamamlandı | Grey Wolf Optimizer |
+| Strategy Registry | `strategies/__init__.py" | ✅ Tamamlandı | Tüm stratejiler kayıt edildi |
 
 ### 10.2 Frontend Implementation
 
 | Bileşen | Dosya | Durum | Notlar |
 |---------|-------|-------|--------|
-| Resource Histogram | `components/admin/resource-histogram.tsx` | ❌ Yok | **IE Dashboard - henüz implemente edilmedi** |
-| Resource Tracks | `components/admin/resource-tracks.tsx` | ❌ Yok | **Gantt görünüm - henüz implemente edilmedi** |
-| Sandbox Mode | `app/(app)/admin/sandbox/page.tsx` | ❌ Yok | **Fine-tune UI - henüz implemente edilmedi** |
-| Bottleneck Indicator | `components/admin/bottleneck-indicator.tsx` | ❌ Yok | **Uyarı bileşeni - henüz implemente edilmedi** |
+| Resource Histogram | `components/admin/resource-histogram.tsx` | ✅ Tamamlandı | Saatlik talep grafiği |
+| Resource Tracks | `components/admin/resource-tracks.tsx` | ✅ Tamamlandı | Gantt görünümü |
+| Sandbox Mode | `app/(app)/admin/sandbox/page.tsx` | ✅ Tamamlandı | Fine-tune UI |
+| Bottleneck Indicator | `components/admin/bottleneck-indicator.tsx` | ✅ Tamamlandı | Uyarı ve öneri bileşeni |
+| IE Dashboard | `components/admin/ie-dashboard.tsx` | ✅ Tamamlandı | Merkezi yönetim ekranı |
 
 ### 10.3 Implementation Plan
 

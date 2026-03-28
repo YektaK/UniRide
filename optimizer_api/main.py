@@ -19,7 +19,8 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
 from models.schemas import (
     OptimizationRequest, OptimizationResponse,
     CompareRequest, CompareResponse, AlgorithmResult,
-    StrategyInfo, VehicleRoute
+    StrategyInfo, VehicleRoute,
+    IEResponseData, BottleneckInfo, TimeShiftSuggestion
 )
 from strategies import (
     STRATEGY_REGISTRY, get_strategy, get_strategy_info,
@@ -27,6 +28,7 @@ from strategies import (
     GreyWolfOptimizerStrategy, HarrisHawksOptimizerStrategy,
     TwoOptStrategy
 )
+from utils.resource_profiler import ResourceProfiler
 
 # Create FastAPI app
 app = FastAPI(
@@ -160,6 +162,85 @@ def optimize_route(request: OptimizationRequest):
         result = strategy.optimize(request)
         execution_time = time.time() - start_time
         result.execution_time_seconds = round(execution_time, 4)
+
+        # Generate IE analysis using ResourceProfiler
+        profiler = ResourceProfiler(
+            standard_sw_capacity=request.sw_capacity,
+            standard_so_capacity=request.so_capacity,
+            max_tour_duration=request.max_travel_time
+        )
+
+        # Count Sw/So students
+        students = request.students
+        sw_count = sum(1 for s in students if s.disability_type == 'Sw')
+        so_count = len(students) - sw_count
+
+        # Calculate standard vehicle needs
+        standard_needs = profiler.calculate_standard_vehicle_needs(students, mode='pickup')
+
+        # Generate hourly demand (using default time range 6-22)
+        hourly_demand_raw = profiler.generate_hourly_demand(students)
+
+        # Convert hourly demand to schema format
+        hourly_demand = {
+            hour: {
+                'pickup': {
+                    'Sw': d.pickup_sw,
+                    'So': d.pickup_so
+                },
+                'dropoff': {
+                    'Sw': d.dropoff_sw,
+                    'So': d.dropoff_so
+                }
+            }
+            for hour, d in hourly_demand_raw.items()
+        }
+
+        # Identify bottlenecks using available vehicles from request
+        available_vehicles = request.vehicles if request.vehicles else []
+        bottlenecks_raw = profiler.identify_bottlenecks(
+            hourly_demand_raw,
+            available_vehicles,
+            mode='pickup'
+        )
+
+        # Convert bottlenecks to schema format
+        bottlenecks = [
+            BottleneckInfo(
+                time=b.hour,
+                type=b.type,
+                reason=b.description,
+                affected_students=None
+            )
+            for b in bottlenecks_raw
+        ]
+
+        # Generate time shift suggestions
+        bottleneck_hours = [b.hour for b in bottlenecks_raw if b.severity in ['high', 'medium']]
+        shift_suggestions_raw = profiler.suggest_time_shifts(
+            hourly_demand_raw,
+            bottleneck_hours,
+            slack_window_minutes=request.slack_window_minutes
+        )
+
+        # Convert time shift suggestions to schema format
+        time_shift_suggestions = [
+            TimeShiftSuggestion(
+                student_id=s.student_id,
+                current_time=s.current_time,
+                suggested_time=s.suggested_time,
+                savings_vehicles=float(s.savings_vehicles)
+            )
+            for s in shift_suggestions_raw
+        ]
+
+        # Populate ie_data field
+        result.ie_data = IEResponseData(
+            standard_vehicles_needed=standard_needs.get('standard_vehicles_needed', 0),
+            hourly_demand=hourly_demand,
+            bottlenecks=bottlenecks,
+            time_shift_suggestions=time_shift_suggestions
+        )
 
         return result
 

@@ -38,9 +38,9 @@
 | Faz                                      | Durum           | Açıklama                                                  |
 | ---------------------------------------- | --------------- | --------------------------------------------------------- |
 | **Faz 1: Kritik Düzeltmeler**            | ✅ Tamamlandı   | Sistem çalışır hale geldi                                 |
-| **Faz 1.5: Çift Pipeline + Split**       | 🔵 Devam Ediyor | Pipeline A (Sweep/CW) + Pipeline B (Giant Tour + Split)   |
-| **Faz 1.5X: Heterojen Filo + IE Engine** | ⬜ Planlandı    | Standart Araç Benchmark, Resource Histogram, Sandbox Mode |
-| **Faz 2X: Günlük Planlama**              | ⬜ Planlandı    | Çift yönlü planlama, Standart araç ihtiyacı tablosu       |
+| **Faz 1.5: Çift Pipeline + Split**       | ✅ Tamamlandı   | Pipeline A (Sweep/CW) + Pipeline B (Giant Tour + Split)   |
+| **Faz 1.5X: Heterojen Filo + IE Engine** | ✅ Tamamlandı   | Standart Araç Benchmark, Resource Histogram, Sandbox Mode |
+| **Faz 2X: Günlük Planlama**              | 🔵 Devam Ediyor | Çift yönlü planlama, Standart araç ihtiyacı tablosu       |
 | **Faz 2: Veri Kalıcılığı + Atama**       | ⬜ Bekliyor     | Rota kaydı + sürücü ataması                               |
 | **Faz 3: İş Akışı Otomasyonu**           | ⬜ Bekliyor     | Onay/iptal + bildirim                                     |
 | **Faz 4: İleri Özellikler**              | ⬜ Bekliyor     | Canlı takip + dinamik matris                              |
@@ -151,7 +151,7 @@ Son olarak: calculate-vehicles/route.ts'in eski import'u kaldırıldığını do
 
 ---
 
-## Faz 1.5: Çift Pipeline + Split Entegrasyonu 🟣
+## Faz 1.5: Çift Pipeline + Split Entegrasyonu 🟢
 
 > **YENİ FAZ** — K-Means + Katı Kümeleme sorununu **iki paralel pipeline** ile çözer (KN12).  
 > Pipeline A: K-Means → **Sweep/Clarke-Wright** + Sezgisel  
@@ -428,7 +428,7 @@ VROOM, C++ motoru sayesinde 1000+ nokta < 5 saniye çözer. CVRPTW, HFVRP, PDPTW
 
 ---
 
-## Faz 1.5X: Heterojen Filo + IE Engine 🟣
+## Faz 1.5X: Heterojen Filo + IE Engine 🟢
 
 > **YENİ FAZ** — Superpowers dokümantasyonu (27 Mart 2026) ve konuşma geçmişi taleplerine dayalı  
 > Heterojen araç filoları, Endüstri Mühendisliği kaynak allokasyonu ve günlük planlama desteği  
@@ -685,7 +685,7 @@ class OptimizationRequest(BaseModel):
 
 ---
 
-## Faz 2X: Günlük Planlama 🟡
+## Faz 2X: Günlük Planlama 🔵
 
 > Konuşma geçmişi Madde 14, 19, 21, 23 taleplerine dayalı  
 > Çift yönlü planlama ve standart araç ihtiyacı tablosu

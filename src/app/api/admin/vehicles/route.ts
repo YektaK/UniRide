@@ -39,10 +39,21 @@ export async function POST(request: NextRequest) {
         await requireAdmin();
 
         const body = await request.json();
-        const { name, type, plateNumber, wheelchairCapacity, seatingCapacity, status } = body;
+        const { name, type, plateNumber, wheelchairCapacity, seatingCapacity, cooldownMinutes, status } = body;
 
         if (!name || !type) {
             return createErrorResponse("Name and type are required", 400);
+        }
+
+        // Validate at least one capacity is > 0
+        if ((wheelchairCapacity || 0) <= 0 && (seatingCapacity || 0) <= 0) {
+            return createErrorResponse("At least one capacity (wheelchair or seating) must be greater than 0", 400);
+        }
+
+        // Validate cooldown range
+        const cooldown = cooldownMinutes ?? 10;
+        if (cooldown < 0 || cooldown > 60) {
+            return createErrorResponse("Cooldown minutes must be between 0 and 60", 400);
         }
 
         const adminClient = getSupabaseAdmin();
@@ -54,6 +65,7 @@ export async function POST(request: NextRequest) {
                 plate_number: plateNumber,
                 wheelchair_capacity: wheelchairCapacity || 0,
                 seating_capacity: seatingCapacity || 0,
+                cooldown_minutes: cooldown,
                 status: status || "active",
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
@@ -83,6 +95,24 @@ export async function PUT(request: NextRequest) {
             return createErrorResponse("Vehicle ID is required", 400);
         }
 
+        // Validate at least one capacity is > 0 if capacities are being updated
+        const newWheelchairCapacity = updates.wheelchairCapacity !== undefined ? updates.wheelchairCapacity : updates.wheelchair_capacity;
+        const newSeatingCapacity = updates.seatingCapacity !== undefined ? updates.seatingCapacity : updates.seating_capacity;
+        
+        if (newWheelchairCapacity !== undefined && newSeatingCapacity !== undefined) {
+            if (newWheelchairCapacity <= 0 && newSeatingCapacity <= 0) {
+                return createErrorResponse("At least one capacity (wheelchair or seating) must be greater than 0", 400);
+            }
+        }
+
+        // Validate cooldown range if provided
+        if (updates.cooldownMinutes !== undefined || updates.cooldown_minutes !== undefined) {
+            const cooldown = updates.cooldownMinutes ?? updates.cooldown_minutes;
+            if (cooldown < 0 || cooldown > 60) {
+                return createErrorResponse("Cooldown minutes must be between 0 and 60", 400);
+            }
+        }
+
         const adminClient = getSupabaseAdmin();
 
         // Convert camelCase to snake_case for database
@@ -95,6 +125,7 @@ export async function PUT(request: NextRequest) {
         if (updates.plateNumber !== undefined) dbUpdates.plate_number = updates.plateNumber;
         if (updates.wheelchairCapacity !== undefined) dbUpdates.wheelchair_capacity = updates.wheelchairCapacity;
         if (updates.seatingCapacity !== undefined) dbUpdates.seating_capacity = updates.seatingCapacity;
+        if (updates.cooldownMinutes !== undefined) dbUpdates.cooldown_minutes = updates.cooldownMinutes;
         if (updates.status) dbUpdates.status = updates.status;
 
         const { data, error } = await (adminClient as any)

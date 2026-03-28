@@ -21,6 +21,8 @@ import { Truck, Users, Clock, Calculator, ArrowRight, Info, Activity } from "luc
 import { adminApi } from "@/lib/admin-api";
 import { ALGORITHM_OPTIONS } from "@/lib/algorithm-constants";
 import type { User } from "@/types";
+import { IEDashboard } from "@/components/admin/ie-dashboard";
+import type { IEResponseData } from "@/types/ie-resource";
 
 // Algoritmalar merkezi sabitlerden alinir (algorithm-constants.ts → Python registry)
 // Detay: docs/ARCHITECTURE.md#3-algoritma-key-kurali
@@ -45,6 +47,7 @@ export default function VehiclePlanningPage() {
     const [strategy, setStrategy] = useState("genetic_algorithm");
     const [clusteringAlgorithm, setClusteringAlgorithm] = useState("sweep");
     const [result, setResult] = useState<any>(null);
+    const [ieData, setIeData] = useState<IEResponseData | null>(null);
 
     useEffect(() => {
         loadStudents();
@@ -125,6 +128,7 @@ export default function VehiclePlanningPage() {
 
             const data = await response.json();
             setResult(data);
+            setIeData(data.ieData);
 
             toast({
                 title: "Hesaplama Tamamlandı",
@@ -401,6 +405,14 @@ export default function VehiclePlanningPage() {
                         </div>
                     </CardContent>
                 </Card>
+            )}
+
+            {ieData && (
+                <IEDashboard
+                    ieData={ieData}
+                    onRefresh={() => handleCalculate()}
+                    onExport={() => console.log("Export IE report")}
+                />
             )}
         </div>
     );

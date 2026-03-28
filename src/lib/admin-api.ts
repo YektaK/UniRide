@@ -242,6 +242,7 @@ export const adminApi = {
       plateNumber?: string;
       wheelchairCapacity?: number;
       seatingCapacity?: number;
+      cooldownMinutes?: number;
       status?: string;
     }) {
       const res = await adminFetch("/api/admin/vehicles", {
@@ -263,6 +264,7 @@ export const adminApi = {
         plateNumber: string;
         wheelchairCapacity: number;
         seatingCapacity: number;
+        cooldownMinutes: number;
         status: string;
       }>
     ) {

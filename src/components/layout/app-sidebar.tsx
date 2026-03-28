@@ -30,7 +30,8 @@ import {
   BarChartHorizontal, // Icon for Reports
   Navigation, // Icon for Driver navigation
   Route, // Icon for Driver routes
-  Cpu // Icon for Algorithms
+  Cpu, // Icon for Algorithms
+  FlaskConical // Icon for Sandbox
 } from "lucide-react";
 import { Button } from "../ui/button";
 
@@ -53,6 +54,7 @@ const adminMenuItems = [
   { href: "/admin/ride-requests", label: "Servis Talepleri", icon: ShieldAlert },
   { href: "/admin/drivers", label: "Şoför Görevlendirmeleri", icon: Users },
   { href: "/admin/vehicle-planning", label: "Araç Planlama", icon: Route },
+  { href: "/admin/sandbox", label: "IE Sandbox", icon: FlaskConical },
   { href: "/admin/compare", label: "Algoritma Karşılaştırma", icon: Cpu },
   { href: "/admin/route-test", label: "Rota Testi", icon: Navigation },
   { href: "/admin/reports", label: "Raporlar", icon: BarChartHorizontal },

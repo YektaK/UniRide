@@ -23,6 +23,13 @@ export interface Depot {
     lng: number;
 }
 
+export interface VehicleConfig {
+    vehicleId: string;
+    swCapacity: number;
+    soCapacity: number;
+    cooldownMinutes?: number;
+}
+
 export interface OptimizationOptions {
     algorithm?: "genetic_algorithm" | "ga" | "pso" | "gwo" | "grey_wolf" | "hho" | "harris_hawks" | "two_opt" | "greedy" | "permutation_tsp" | "ortools_cvrp";
     max_travel_time?: number;  // minutes
@@ -30,6 +37,8 @@ export interface OptimizationOptions {
     so_capacity?: number;
     local_search_type?: LocalSearchType;
     clustering_algorithm?: string;
+    // IE Sandbox mode - custom vehicle configurations
+    vehicles?: VehicleConfig[];
     ga_config?: {
         population_size?: number;
         max_iterations?: number;
@@ -255,6 +264,8 @@ export async function optimizeRoutes(
                 sw_capacity: options.sw_capacity || 4,
                 so_capacity: options.so_capacity || 5,
                 local_search_type: options.local_search_type || "two_opt",
+                clustering_algorithm: options.clustering_algorithm || "sweep",
+                vehicles: options.vehicles,
                 ga_config: options.ga_config,
                 pso_config: options.pso_config,
                 gwo_config: options.gwo_config,

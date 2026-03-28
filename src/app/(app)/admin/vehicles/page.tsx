@@ -31,6 +31,7 @@ export default function VehiclesPage() {
           plateNumber: v.plate_number,
           wheelchairCapacity: v.wheelchair_capacity,
           seatingCapacity: v.seating_capacity,
+          cooldownMinutes: v.cooldown_minutes ?? 10,
           status: v.status,
         }));
         setVehicles(convertedVehicles);
@@ -103,6 +104,7 @@ export default function VehiclesPage() {
           plateNumber: createdVehicle.plate_number,
           wheelchairCapacity: createdVehicle.wheelchair_capacity,
           seatingCapacity: createdVehicle.seating_capacity,
+          cooldownMinutes: createdVehicle.cooldown_minutes ?? 10,
           status: createdVehicle.status,
         };
         setVehicles([...vehicles, convertedVehicle]);

@@ -16,6 +16,7 @@ import {
     type Depot,
 } from "@/services/optimizer-service";
 import { normalizeAlgorithmName } from "@/lib/algorithm-constants";
+import type { IEResponseData, HourlyDemandData, BottleneckData, TimeShiftSuggestion } from "@/types/ie-resource";
 
 // Varsayılan depot (Düzce Üniversitesi Kampüs)
 const DEFAULT_DEPOT: Depot = {
@@ -23,6 +24,113 @@ const DEFAULT_DEPOT: Depot = {
     lat: 40.841,
     lng: 31.1478,
 };
+
+function transformIEData(
+    ieData: any,
+    validStudents: StudentForOptimization[],
+    studentLookup: Record<string, any>,
+    totalVehicles: number
+): IEResponseData | undefined {
+    if (!ieData) return undefined;
+
+    // Count Sw/So students from validStudents array
+    const swCount = validStudents.filter((s) => s.disability_type === "Sw").length;
+    const soCount = validStudents.filter((s) => s.disability_type === "So").length;
+    const totalStudents = validStudents.length;
+
+    // Transform hourly_demand format to match frontend
+    const hourlyDemand: Record<string, HourlyDemandData> = {};
+    if (ieData.hourly_demand) {
+        for (const [hour, data] of Object.entries(ieData.hourly_demand)) {
+            const demand = data as any;
+            const pickupSw = demand.sw?.pickup || 0;
+            const pickupSo = demand.so?.pickup || 0;
+            const dropoffSw = demand.sw?.dropoff || 0;
+            const dropoffSo = demand.so?.dropoff || 0;
+
+            hourlyDemand[hour] = {
+                hour,
+                pickupSw,
+                pickupSo,
+                dropoffSw,
+                dropoffSo,
+                totalPickup: pickupSw + pickupSo,
+                totalDropoff: dropoffSw + dropoffSo,
+                totalSw: pickupSw + dropoffSw,
+                totalSo: pickupSo + dropoffSo,
+                isInfeasible: (pickupSw + pickupSo + dropoffSw + dropoffSo) > totalVehicles,
+            };
+        }
+    }
+
+    // Map bottlenecks with severity based on type
+    const bottlenecks: BottleneckData[] = (ieData.bottlenecks || []).map((b: any) => ({
+        hour: b.time || "",
+        type: b.type === "infeasible" ? "infeasible" : b.type === "resource_conflict" ? "resource_conflict" : "low_efficiency",
+        severity: b.type === "infeasible" ? "high" : b.type === "resource_conflict" ? "medium" : "low",
+        description: b.reason || "",
+        swNeeded: 0,
+        soNeeded: 0,
+        swAvailable: 0,
+        soAvailable: 0,
+        vehiclesNeeded: 0,
+        vehiclesAvailable: totalVehicles,
+    }));
+
+    // Transform shift suggestions with student names
+    const shiftSuggestions: TimeShiftSuggestion[] = (ieData.time_shift_suggestions || []).map((s: any) => ({
+        studentId: s.student_id || "",
+        studentName: studentLookup[s.student_id]?.name || s.student_id || "",
+        currentTime: s.current_time || "",
+        suggestedTime: s.suggested_time || "",
+        shiftMinutes: 0,
+        reason: `Save ${s.savings_vehicles} vehicle(s)`,
+        savingsVehicles: s.savings_vehicles || 0,
+    }));
+
+    // Calculate standard vehicle needs
+    const standardVehiclesNeeded = ieData.standard_vehicles_needed || 0;
+
+    // Calculate utilization percentages
+    const swCapacityNeeded = Math.ceil(swCount / 4);
+    const soCapacityNeeded = Math.ceil(soCount / 5);
+    const maxNeeded = Math.max(swCapacityNeeded, soCapacityNeeded);
+
+    const swUtilization = swCapacityNeeded > 0 ? (swCount / (swCapacityNeeded * 4)) * 100 : 0;
+    const soUtilization = soCapacityNeeded > 0 ? (soCount / (soCapacityNeeded * 5)) * 100 : 0;
+    const totalUtilization = maxNeeded > 0 ? (totalStudents / (maxNeeded * 5)) * 100 : 0;
+
+    const standardNeeds = {
+        totalStudents,
+        swCount,
+        soCount,
+        standardVehiclesNeeded,
+        byCapacity: {
+            bySw: swCapacityNeeded,
+            bySo: soCapacityNeeded,
+            maxNeeded,
+        },
+        utilizationPercent: Math.round(totalUtilization * 100) / 100,
+        utilizationBreakdown: {
+            sw: Math.round(swUtilization * 100) / 100,
+            so: Math.round(soUtilization * 100) / 100,
+        },
+    };
+
+    return {
+        summary: {
+            totalStudents,
+            availableVehicles: totalVehicles,
+            standardVehiclesNeeded,
+            bottleneckCount: bottlenecks.length,
+            shiftSuggestionsCount: shiftSuggestions.length,
+        },
+        standardNeeds,
+        hourlyDemand,
+        bottlenecks,
+        shiftSuggestions,
+    };
+}
 
 export async function POST(request: NextRequest) {
     try {
@@ -35,6 +143,7 @@ export async function POST(request: NextRequest) {
             soCapacity = 5,
             strategy = "genetic_algorithm",
             clusteringAlgorithm = "sweep",
+            vehicles: customVehicles,
         } = body;
 
         // Girdi doğrulama
@@ -99,6 +208,7 @@ export async function POST(request: NextRequest) {
             sw_capacity: swCapacity,
             so_capacity: soCapacity,
             clustering_algorithm: clusteringAlgorithm,
+            vehicles: customVehicles,
         });
 
         const calculationTime = Date.now() - startTime;
@@ -136,12 +246,21 @@ export async function POST(request: NextRequest) {
             };
         });
 
+        // Transform IE data from Python API
+        const ieData = transformIEData(
+            result.ie_data,
+            validStudents,
+            studentLookup,
+            result.total_vehicles || 0
+        );
+
         return NextResponse.json({
             success: true,
             requiredVehicles: result.total_vehicles || assignments.length,
             assignments,
             totalDuration: Math.round(result.total_duration_minutes || 0),
             message: `${result.total_vehicles} araç ile optimizasyon tamamlandı (${result.algorithm_used})`,
+            ieData,
             meta: {
                 calculationTimeMs: calculationTime,
                 inputStudentCount: students.length,

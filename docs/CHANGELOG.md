@@ -5,37 +5,37 @@
 
 ---
 
-## 2026-03-28 (Sprint 2 - IE Resource Engine)
+## 2026-03-28 (Sprint 2 - IE Resource Engine) — ✅ %100 Tamamlandı
 
-### UI İyileştirmeleri ✅
-
-**[Kullanıcı]** — **Zaman Penceresi Slider:**
-- `src/app/(app)/admin/sandbox/page.tsx` — 0-60 dk arası, 10 dakikalık adımlarla ayarlanabilir zaman penceresi slider'ı eklendi
-- Kullanıcı dostu arayüz ile esnek zaman penceresi konfigürasyonu
-
-### IE Resource Engine Core ✅
+### IE Engine & Dashboard Entegrasyonu ✅
+**[Antigravity AI]** — **Full System Integration:**
+- `src/app/api/calculate-vehicles/route.ts` — Python `ie_data` çıktısı TypeScript `IEResponseData` formatına map edildi.
+- `src/app/(app)/admin/vehicle-planning/page.tsx` — Optimizasyon sonrası `IEDashboard` otomatik olarak tetikleniyor.
+- `src/components/admin/ie-dashboard.tsx` — Histogram, Tracks ve Bottleneck bileşenleri veriyle bağlandı.
 
 **[Antigravity AI]** — **Resource Profiler Implementation:**
-- `optimizer_api/utils/resource_profiler.py` oluşturuldu (IE Engine ana motoru)
-- `calculate_standard_vehicle_needs()` — Standart minibüs (4Sw+5So) cinsinden ihtiyaç hesaplama
-- `generate_hourly_demand()` — Saatlik Sw/So kırılımlı talep analizi
-- `identify_bottlenecks()` — Darboğaz tespiti (infeasible/low_efficiency/resource_conflict)
-- `check_directional_conflict()` — Yönsel bloklama çakışma kontrolü
-- `calculate_resource_blocks()` — Araç zaman bloğu hesaplama (pickup/dropoff)
-- `suggest_time_shifts()` — Slack time önerileri (±60 dk esneklik)
-- `generate_ie_report()` — Kapsamlı IE analiz raporu
+- `optimizer_api/utils/resource_profiler.py` oluşturuldu (IE Engine ana motoru).
+- `calculate_standard_vehicle_needs()` — Standart minibüs (4Sw+5So) cinsinden ihtiyaç hesaplama.
+- `generate_hourly_demand()` — Saatlik Sw/So kırılımlı talep analizi.
+- `identify_bottlenecks()` — Darboğaz tespiti (infeasible/low_efficiency/resource_conflict).
+- `check_directional_conflict()` — Yönsel bloklama çakışma kontrolü.
+- `calculate_resource_blocks()` — Araç zaman bloğu hesaplama (pickup/dropoff).
+- `suggest_time_shifts()` — Slack time önerileri (±60 dk esneklik).
+- `generate_ie_report()` — Kapsamlı IE analiz raporu.
 
-**[Antigravity AI]** — **Unit Tests:**
-- `optimizer_api/tests/test_resource_profiler.py` — 50+ test case
-- Test coverage: Standard needs, Hourly demand, Bottlenecks, Directional blocking
+**[Antigravity AI]** — **Unit Tests & Validation:**
+- `optimizer_api/tests/test_resource_profiler.py` — 50+ test case tamamlandı.
+- `docs/SPRINT_2_ERRORS.md` — Tespit edilen mantıksal hatalar ve teknik borçlar dökümante edildi.
 
-**[Antigravity AI]** — **Demo Script:**
-- `optimizer_api/utils/resource_profiler_demo.py` — 6 demo senaryosu
-- Standart araç ihtiyacı, saatlik talep, darboğaz, yönsel bloklama, zaman kaydırma
+### UI & Sandbox Mode ✅
+**[Kullanıcı/AI]** — **Sandbox Fine-tune Interface:**
+- `src/app/(app)/admin/sandbox/page.tsx` — Özel araç ekleme, öğrenci seçimi ve zaman kaydırma slider'ı entegre edildi.
+- Senaryo kaydetme/yükleme (LocalStorage) özelliği eklendi.
 
-**[Antigravity AI]** — **Documentation Updates:**
-- `docs/IE_RESOURCE_MODEL.md` — Implementation status güncellendi
-- `docs/.ai-handover.md` — Sprint 2 progress eklendi
+### Dokümantasyon ✅
+- `docs/ROADMAP.md` — Faz 1.5 ve 1.5X tamamlandı olarak işaretlendi.
+- `docs/.ai-handover.md` — Proje durumu "Sprint 2 Tamamlandı" olarak güncellendi.
+- `docs/CODEBASE_ANALYSIS_AND_ROADMAP.md` — Teknik analiz sonuçları güncellendi.
 
 ### Sprint 1: Pipeline B Split Algoritmaları ✅
 

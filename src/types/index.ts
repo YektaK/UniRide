@@ -21,8 +21,9 @@ export interface Vehicle {
   name: string; // e.g., "Servis A", "Mavi Minibüs"
   type: "minibus" | "bus" | "van";
   plateNumber?: string;
-  wheelchairCapacity: number;
-  seatingCapacity: number;
+  wheelchairCapacity: number; // Sw (Wheelchair) capacity
+  seatingCapacity: number; // So (Seat Other - non-wheelchair disability) capacity
+  cooldownMinutes: number; // Minutes between pickup and dropoff routes (default: 10)
   status: "active" | "inactive" | "maintenance";
 }
 

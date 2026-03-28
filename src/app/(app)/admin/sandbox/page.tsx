@@ -249,23 +249,25 @@ export default function SandboxPage() {
 
     setIsCalculating(true);
     try {
-      // Call the IE analysis endpoint
-      const response = await fetch("/api/calculate-vehicles", {
+      const selectedStudents = students.filter((s) => selectedStudentIds.includes(s.id));
+      const vehicleConfigs = sandboxVehicles.map((v) => ({
+        name: v.name,
+        swCapacity: v.swCapacity,
+        soCapacity: v.soCapacity,
+        cooldownMinutes: v.cooldownMinutes || 10,
+      }));
+
+      // Use sandbox API for re-optimization with custom vehicles
+      const response = await fetch("/api/sandbox", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          students: students.filter((s) => selectedStudentIds.includes(s.id)),
+          students: selectedStudents,
+          vehicles: vehicleConfigs,
           maxTourTime: 120,
-          swCapacity: 4,
-          soCapacity: 5,
+          allowTimeShift: timeWindowMinutes > 0,
           strategy: "genetic_algorithm",
           clusteringAlgorithm: "sweep",
-          vehicles: sandboxVehicles.map((v) => ({
-            vehicleId: v.vehicleId,
-            swCapacity: v.swCapacity,
-            soCapacity: v.soCapacity,
-            cooldownMinutes: v.cooldownMinutes,
-          })),
         }),
       });
 
@@ -275,7 +277,14 @@ export default function SandboxPage() {
 
       const data = await response.json();
       
-      if (data.ieData) {
+      if (data.data?.ieData) {
+        setIeData(data.data.ieData);
+        setActiveTab("results");
+        toast({
+          title: "Analiz Tamamlandı",
+          description: `IE analizi başarıyla tamamlandı`,
+        });
+      } else if (data.ieData) {
         setIeData(data.ieData);
         setActiveTab("results");
         toast({

@@ -7,7 +7,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from models.schemas import OptimizationRequest, StudentNode, LocationNode
-from strategies.gwo_strategy import GWOStrategy
+from strategies.gwo_strategy import GreyWolfOptimizerStrategy as GWOStrategy
 
 
 def test_gwo_basic():

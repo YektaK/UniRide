@@ -62,6 +62,7 @@ export async function GET() {
 /**
  * POST /api/optimize-route
  * Optimizes routes using Python API
+ * Supports CVRPTW with direction and time window parameters
  */
 export async function POST(request: Request) {
     try {
@@ -87,7 +88,15 @@ export async function POST(request: Request) {
             sw_capacity, 
             so_capacity,
             ga_config,
-            pso_config
+            pso_config,
+            gwo_config,
+            hho_config,
+            // CVRPTW parameters
+            direction,
+            use_time_windows,
+            target_time,
+            time_window_size,
+            offset_minutes,
         } = body;
 
         // Validate input
@@ -112,6 +121,9 @@ export async function POST(request: Request) {
             location_code: s.location_code || s.locationCode,
             coordinates: s.coordinates || s.home_coordinates || null,
             disability_type: s.disability_type || s.disabilityType || "So",
+            // CVRPTW fields
+            pickup_time: s.pickup_time || s.pickupTime,
+            dropoff_time: s.dropoff_time || s.dropoffTime,
         }));
 
         // Default depot (Düzce University Campus)
@@ -121,7 +133,7 @@ export async function POST(request: Request) {
             lng: depot.lng || 31.1478,
         };
 
-        // Call Python API
+        // Call Python API with CVRPTW options
         const result = await optimizeRoutes(
             optimizationStudents,
             optimizationDepot,
@@ -132,6 +144,14 @@ export async function POST(request: Request) {
                 so_capacity: so_capacity || 5,
                 ga_config,
                 pso_config,
+                gwo_config,
+                hho_config,
+                // CVRPTW options
+                direction: direction || "pickup",
+                use_time_windows: use_time_windows ?? false,
+                target_time,
+                time_window_size,
+                offset_minutes,
             }
         );
 
@@ -153,6 +173,10 @@ export async function POST(request: Request) {
             total_duration_minutes: result.total_duration_minutes,
             execution_time_seconds: result.execution_time_seconds,
             student_count: students.length,
+            // CVRPTW response fields
+            direction: result.direction,
+            time_windows_used: result.time_windows_used,
+            total_time_window_violations: result.total_time_window_violations,
         });
     } catch (error: any) {
         console.error("Route optimization error:", error);

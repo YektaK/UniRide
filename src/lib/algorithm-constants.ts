@@ -81,6 +81,53 @@ export const LOCAL_SEARCH_KEYS = {
 export type LocalSearchType = typeof LOCAL_SEARCH_KEYS[keyof typeof LOCAL_SEARCH_KEYS];
 
 // ============================================================
+// DIRECTION KEYS - CVRPTW Support
+// ============================================================
+
+export const DIRECTION_KEYS = {
+  PICKUP: "pickup",   // Geliş - öğrencileri okula getirme
+  DROPOFF: "dropoff", // Gidiş - öğrencileri okuldan bırakma
+} as const;
+
+export type DirectionType = typeof DIRECTION_KEYS[keyof typeof DIRECTION_KEYS];
+
+// Direction display names for UI
+export const DIRECTION_DISPLAY_NAMES: Record<DirectionType, string> = {
+  [DIRECTION_KEYS.PICKUP]: "Geliş (Okula Getirme)",
+  [DIRECTION_KEYS.DROPOFF]: "Gidiş (Okuldan Bırakma)",
+};
+
+// Direction descriptions for UI
+export const DIRECTION_DESCRIPTIONS: Record<DirectionType, string> = {
+  [DIRECTION_KEYS.PICKUP]: "Öğrencileri evlerinden alıp okula getirme. Hedef varış saatine göre geriye doğru planlama.",
+  [DIRECTION_KEYS.DROPOFF]: "Öğrencileri okuldan alıp evlerine bırakma. Çıkış saatinden itibaren ileriye doğru planlama.",
+};
+
+// Direction options for UI dropdowns
+export const DIRECTION_OPTIONS = [
+  {
+    key: DIRECTION_KEYS.PICKUP,
+    label: DIRECTION_DISPLAY_NAMES[DIRECTION_KEYS.PICKUP],
+    description: DIRECTION_DESCRIPTIONS[DIRECTION_KEYS.PICKUP],
+    icon: "🏠➡️🏫",
+  },
+  {
+    key: DIRECTION_KEYS.DROPOFF,
+    label: DIRECTION_DISPLAY_NAMES[DIRECTION_KEYS.DROPOFF],
+    description: DIRECTION_DESCRIPTIONS[DIRECTION_KEYS.DROPOFF],
+    icon: "🏫➡️🏠",
+  },
+];
+
+// Default time window settings
+export const TIME_WINDOW_DEFAULTS = {
+  WINDOW_SIZE_MINUTES: 30,      // Default time window size
+  OFFSET_MINUTES: 10,           // Buffer for driver notification
+  DEFAULT_PICKUP_TIME: "09:00", // Default school arrival time
+  DEFAULT_DROPOFF_TIME: "14:00", // Default school departure time
+} as const;
+
+// ============================================================
 // ALGORITHM DISPLAY NAMES
 // ============================================================
 

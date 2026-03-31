@@ -7,7 +7,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from models.schemas import OptimizationRequest, StudentNode, LocationNode
-from strategies.hho_strategy import HHOStrategy
+from strategies.hho_strategy import HarrisHawksOptimizerStrategy as HHOStrategy
 
 
 def test_hho_basic():

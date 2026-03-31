@@ -27,7 +27,7 @@ from models.schemas import (
 )
 from strategies.base_strategy import BaseRoutingStrategy
 from utils.data_loader import DataLoader, haversine_distance, estimate_travel_time
-from utils.split_decoder import decode_giant_tour
+from utils.split_decoder import decode_giant_tour, decode_with_time_windows, Direction
 from utils.local_search import LocalSearchType, apply_local_search
 
 
@@ -416,7 +416,7 @@ class GASplitStrategy(BaseRoutingStrategy):
         return new_population[:self.config["population_size"]]
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:
-        """Main optimization entry point"""
+        """Main optimization entry point with CVRPTW support"""
         start_time = time.time()
         
         students = request.students
@@ -428,8 +428,23 @@ class GASplitStrategy(BaseRoutingStrategy):
                 success=True,
                 routes=[],
                 total_vehicles=0,
-                execution_time_seconds=time.time() - start_time
+                execution_time_seconds=time.time() - start_time,
+                direction=request.direction,
+                time_windows_used=False
             )
+        
+        # CVRPTW: Extract time windows if enabled
+        use_time_windows = getattr(request, 'use_time_windows', False)
+        time_windows = {}
+        target_time_minutes = None
+        direction = getattr(request, 'direction', Direction.PICKUP)
+        offset_minutes = getattr(request, 'offset_minutes', 10)
+        
+        if use_time_windows:
+            time_windows = request.get_time_windows()
+            if request.target_time:
+                parts = request.target_time.split(":")
+                target_time_minutes = int(parts[0]) * 60 + int(parts[1])
         
         # Override config
         if request.ga_config:
@@ -516,16 +531,36 @@ class GASplitStrategy(BaseRoutingStrategy):
                 )
                 no_improvement = 0
         
-        # Final split on best solution
-        final_result = decode_giant_tour(
-            giant_tour=best.chromosome,
-            depot=depot.id,
-            distance_matrix=distance_matrix,
-            demands=demands,
-            sw_capacity=request.sw_capacity,
-            so_capacity=request.so_capacity,
-            max_tour_duration=request.max_travel_time
-        )
+        # Final split on best solution - use CVRPTW decoder if time windows enabled
+        if use_time_windows and time_windows:
+            # Convert TimeWindow objects to tuple format for split decoder
+            tw_tuples = {}
+            for loc, tw in time_windows.items():
+                tw_tuples[loc] = (tw.earliest, tw.latest)
+            
+            final_result = decode_with_time_windows(
+                giant_tour=best.chromosome,
+                depot=depot.id,
+                distance_matrix=distance_matrix,
+                demands=demands,
+                time_windows=tw_tuples,
+                direction=direction,
+                target_time=target_time_minutes,
+                offset_minutes=offset_minutes,
+                sw_capacity=request.sw_capacity,
+                so_capacity=request.so_capacity,
+                max_tour_duration=request.max_travel_time
+            )
+        else:
+            final_result = decode_giant_tour(
+                giant_tour=best.chromosome,
+                depot=depot.id,
+                distance_matrix=distance_matrix,
+                demands=demands,
+                sw_capacity=request.sw_capacity,
+                so_capacity=request.so_capacity,
+                max_tour_duration=request.max_travel_time
+            )
         
         # Build response routes
         routes = []
@@ -580,13 +615,19 @@ class GASplitStrategy(BaseRoutingStrategy):
         
         execution_time = time.time() - start_time
         
+        # Calculate total time window violations
+        total_tw_violations = final_result.get('time_window_violations', 0)
+        
         return OptimizationResponse(
             algorithm_used=self.name,
             success=True,
             routes=routes,
             total_vehicles=len(routes),
             total_duration_minutes=sum(r.total_duration_minutes for r in routes),
-            execution_time_seconds=round(execution_time, 4)
+            execution_time_seconds=round(execution_time, 4),
+            direction=direction,
+            time_windows_used=use_time_windows and len(time_windows) > 0,
+            total_time_window_violations=total_tw_violations
         )
 
 
@@ -610,7 +651,16 @@ class GAEnhancedSplitStrategy(GASplitStrategy):
         return "GA-Split Enhanced (HGS-style)"
     
     def _crossover_pmx(self, parent1: List[str], parent2: List[str]) -> List[str]:
-        """Partially Mapped Crossover (PMX)"""
+        """
+        Partially Mapped Crossover (PMX) - Corrected Implementation
+        
+        PMX preserves absolute positions from one parent while using
+        a mapping to maintain permutation validity.
+        
+        Reference: Goldberg & Lingle (1985) - Alleles, loci, and the traveling salesman problem
+        
+        Fixed version: Uses position-based mapping instead of static value mapping.
+        """
         n = len(parent1)
         if n < 2:
             return parent1.copy()
@@ -620,67 +670,87 @@ class GAEnhancedSplitStrategy(GASplitStrategy):
 
         child: List[Optional[str]] = [None] * n
 
-        # Copy segment from parent1
+        # Step 1: Copy segment from parent1 to child
         for i in range(start, end + 1):
             child[i] = parent1[i]
 
-        # Map from parent2
-        for i in range(start, end + 1):
-            if parent2[i] not in child:
-                # Find position in parent2
-                pos = i
-                while start <= pos <= end:
-                    pos = parent2.index(parent1[pos])
-                child[pos] = parent2[i]
+        # Values already in child from segment
+        segment_values = set(parent1[start:end + 1])
 
-        # Fill remaining from parent2
+        # Step 2: Build position lookup for parent1
+        pos_in_p1: Dict[str, int] = {val: idx for idx, val in enumerate(parent1)}
+
+        # Step 3: Fill positions outside segment from parent2
         for i in range(n):
             if child[i] is None:
-                child[i] = parent2[i]
+                val = parent2[i]
 
-        # Cast to List[str] - all positions filled
-        
+                # Follow the mapping: while val is in segment, find its partner
+                # This implements the true PMX position-based crossover
+                while val in segment_values:
+                    # Find position of val in parent1
+                    pos = pos_in_p1[val]
+                    # Get the value at same position in parent2
+                    val = parent2[pos]
+
+                child[i] = val
+
         return cast(List[str], child)
     
     def _crossover_cx2(self, parent1: List[str], parent2: List[str]) -> List[str]:
-        """Cycle Crossover 2 (CX2)"""
+        """
+        Cycle Crossover 2 (CX2) - Corrected Implementation
+        
+        In true Cycle Crossover, elements are placed at their ORIGINAL indices
+        from the cycle, not sequentially from cycle_start.
+        
+        Reference: Oliver et al. (1987) - A study of permutation crossover operators
+        """
         n = len(parent1)
+        if n < 2:
+            return parent1.copy()
+        
         child: List[Optional[str]] = [None] * n
         visited: set = set()
 
-        i = 0
-        while len(visited) < n:
-            if parent1[i] not in visited:
-                # Start new cycle
-                cycle_start = i
-                cycle: list = []
-
+        for start in range(n):
+            if parent1[start] not in visited:
+                # Build cycle starting from 'start'
+                cycle_indices: List[int] = []
+                cycle_values: List[str] = []
+                i = start
+                
                 while True:
-                    cycle.append(parent1[i])
+                    cycle_indices.append(i)
+                    cycle_values.append(parent1[i])
                     visited.add(parent1[i])
-
-                    # Find position of parent2[i] in parent1
+                    
+                    # Find where parent2[i] is in parent1
                     next_val = parent2[i]
                     if next_val in visited:
                         break
-
-                    i = parent1.index(next_val)
-                    if i == cycle_start:
+                    
+                    try:
+                        i = parent1.index(next_val)
+                    except ValueError:
+                        break  # Safety: value not found
+                    
+                    if i == start:
                         break
+                
+                # CX2 feature: Alternate cycle direction randomly
+                if len(cycle_values) > 1 and self.rng.random() < 0.5:
+                    cycle_values = cycle_values[::-1]
+                
+                # Place at ORIGINAL indices (correct CX behavior)
+                for idx, val in zip(cycle_indices, cycle_values):
+                    child[idx] = val
 
-                # Alternate cycle direction
-                if len(cycle) > 1 and self.rng.random() < 0.5:
-                    cycle = cycle[::-1]
-
-                for j, val in enumerate(cycle):
-                    child[cycle_start + j] = val
-
-            i = (i + 1) % n
-            while i < n and child[i] is not None:
-                i += 1
-            if i >= n:
-                break
-
-        # Cast to List[str] - all positions filled
+        # Verify all positions filled (safety check)
+        if None in child:
+            # Fill any remaining gaps from parent2
+            for i in range(n):
+                if child[i] is None:
+                    child[i] = parent2[i]
         
         return cast(List[str], child)

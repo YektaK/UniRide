@@ -8,6 +8,7 @@ import { OPTIMIZER_API_URL } from "@/lib/config";
 
 // Types
 export type LocalSearchType = "none" | "two_opt" | "three_opt" | "or_opt" | "hybrid";
+export type DirectionType = "pickup" | "dropoff";
 
 export interface StudentForOptimization {
     id: string;
@@ -15,6 +16,9 @@ export interface StudentForOptimization {
     location_code: string;
     coordinates?: { lat: number; lng: number };
     disability_type: "Sw" | "So";
+    // CVRPTW fields
+    pickup_time?: string;  // Target arrival at school (HH:MM)
+    dropoff_time?: string; // Target departure from school (HH:MM)
 }
 
 export interface Depot {
@@ -31,7 +35,7 @@ export interface VehicleConfig {
 }
 
 export interface OptimizationOptions {
-    algorithm?: "genetic_algorithm" | "ga" | "pso" | "gwo" | "grey_wolf" | "hho" | "harris_hawks" | "two_opt" | "greedy" | "permutation_tsp" | "ortools_cvrp";
+    algorithm?: "genetic_algorithm" | "ga" | "pso" | "gwo" | "grey_wolf" | "hho" | "harris_hawks" | "two_opt" | "greedy" | "permutation_tsp" | "ortools_cvrp" | "ga_split" | "pso_split" | "gwo_split" | "hho_split";
     max_travel_time?: number;  // minutes
     sw_capacity?: number;
     so_capacity?: number;
@@ -39,6 +43,12 @@ export interface OptimizationOptions {
     clustering_algorithm?: string;
     // IE Sandbox mode - custom vehicle configurations
     vehicles?: VehicleConfig[];
+    // CVRPTW options
+    direction?: DirectionType;           // "pickup" or "dropoff"
+    use_time_windows?: boolean;          // Enable time window constraints
+    target_time?: string;                // Global target time (HH:MM)
+    time_window_size?: number;           // Time window size in minutes (default: 30)
+    offset_minutes?: number;             // Buffer for driver notification (default: 10)
     ga_config?: {
         population_size?: number;
         max_iterations?: number;
@@ -88,6 +98,10 @@ export interface VehicleRoute {
     sw_count: number;
     so_count: number;
     student_ids: string[];
+    // CVRPTW fields
+    departure_time?: string;              // Vehicle departure time (HH:MM)
+    arrival_times?: Record<string, string>; // Arrival at each location {location: HH:MM}
+    time_window_violations?: number;       // Number of time window violations
 }
 
 export interface OptimizationResult {
@@ -98,6 +112,10 @@ export interface OptimizationResult {
     total_duration_minutes: number;
     execution_time_seconds: number;
     error_message?: string;
+    // CVRPTW fields
+    direction?: DirectionType;
+    time_windows_used?: boolean;
+    total_time_window_violations?: number;
 }
 
 /**
@@ -253,6 +271,9 @@ export async function optimizeRoutes(
                     location_code: s.location_code,
                     coordinates: s.coordinates,
                     disability_type: s.disability_type,
+                    // CVRPTW fields
+                    pickup_time: s.pickup_time,
+                    dropoff_time: s.dropoff_time,
                 })),
                 depot: {
                     id: depot.id,
@@ -266,6 +287,13 @@ export async function optimizeRoutes(
                 local_search_type: options.local_search_type || "two_opt",
                 clustering_algorithm: options.clustering_algorithm || "sweep",
                 vehicles: options.vehicles,
+                // CVRPTW options
+                direction: options.direction || "pickup",
+                use_time_windows: options.use_time_windows ?? false,
+                target_time: options.target_time,
+                time_window_size: options.time_window_size || 30,
+                offset_minutes: options.offset_minutes || 10,
+                // Algorithm configs
                 ga_config: options.ga_config,
                 pso_config: options.pso_config,
                 gwo_config: options.gwo_config,
@@ -290,6 +318,10 @@ export async function optimizeRoutes(
             total_duration_minutes: data.total_duration_minutes || 0,
             execution_time_seconds: data.execution_time_seconds || 0,
             error_message: data.error_message,
+            // CVRPTW fields
+            direction: data.direction,
+            time_windows_used: data.time_windows_used,
+            total_time_window_violations: data.total_time_window_violations,
         };
     } catch (error: any) {
         console.error("Optimization API error:", error);
@@ -327,6 +359,9 @@ export async function compareAllAlgorithms(
                     location_code: s.location_code,
                     coordinates: s.coordinates,
                     disability_type: s.disability_type,
+                    // CVRPTW fields
+                    pickup_time: s.pickup_time,
+                    dropoff_time: s.dropoff_time,
                 })),
                 depot: {
                     id: depot.id,
@@ -338,6 +373,9 @@ export async function compareAllAlgorithms(
                 sw_capacity: options.sw_capacity || 4,
                 so_capacity: options.so_capacity || 5,
                 algorithms,
+                // CVRPTW options
+                direction: options.direction || "pickup",
+                use_time_windows: options.use_time_windows ?? false,
             }),
             signal: AbortSignal.timeout(300000), // 5 minute timeout for comparison
         });
@@ -411,6 +449,11 @@ export const ALGORITHM_DISPLAY_NAMES: Record<string, string> = {
     "nearest_neighbor": "Greedy (En Yakın Komşu)",
     "permutation_tsp": "Permütasyon (Optimal)",
     "ortools_cvrp": "OR-Tools CVRP",
+    // Split algorithms (Pipeline B)
+    "ga_split": "GA-Split (Route-First)",
+    "pso_split": "PSO-Split (Route-First)",
+    "gwo_split": "GWO-Split (Route-First)",
+    "hho_split": "HHO-Split (Route-First)",
 };
 
 /**
@@ -425,6 +468,14 @@ export const LOCAL_SEARCH_DISPLAY_NAMES: Record<LocalSearchType, string> = {
 };
 
 /**
+ * Direction display names for UI
+ */
+export const DIRECTION_DISPLAY_NAMES: Record<DirectionType, string> = {
+    "pickup": "Geliş (Okula Getirme)",
+    "dropoff": "Gidiş (Okuldan Bırakma)",
+};
+
+/**
  * Get display name for algorithm
  */
 export function getAlgorithmDisplayName(algorithm: string): string {
@@ -436,4 +487,11 @@ export function getAlgorithmDisplayName(algorithm: string): string {
  */
 export function getLocalSearchDisplayName(type: LocalSearchType): string {
     return LOCAL_SEARCH_DISPLAY_NAMES[type] || type;
+}
+
+/**
+ * Get display name for direction
+ */
+export function getDirectionDisplayName(direction: DirectionType): string {
+    return DIRECTION_DISPLAY_NAMES[direction] || direction;
 }

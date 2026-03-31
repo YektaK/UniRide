@@ -31,7 +31,7 @@ from models.schemas import (
 )
 from strategies.base_strategy import BaseRoutingStrategy
 from utils.data_loader import DataLoader, haversine_distance, estimate_travel_time
-from utils.split_decoder import decode_giant_tour
+from utils.split_decoder import decode_giant_tour, decode_with_time_windows, Direction
 from utils.local_search import LocalSearchType, apply_local_search
 
 
@@ -317,7 +317,7 @@ class PSOSplitStrategy(BaseRoutingStrategy):
             return tour
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:
-        """Main optimization entry point"""
+        """Main optimization entry point with CVRPTW support"""
         start_time = time.time()
         
         students = request.students
@@ -329,8 +329,23 @@ class PSOSplitStrategy(BaseRoutingStrategy):
                 success=True,
                 routes=[],
                 total_vehicles=0,
-                execution_time_seconds=time.time() - start_time
+                execution_time_seconds=time.time() - start_time,
+                direction=getattr(request, 'direction', Direction.PICKUP),
+                time_windows_used=False
             )
+        
+        # CVRPTW: Extract time windows if enabled
+        use_time_windows = getattr(request, 'use_time_windows', False)
+        time_windows = {}
+        target_time_minutes = None
+        direction = getattr(request, 'direction', Direction.PICKUP)
+        offset_minutes = getattr(request, 'offset_minutes', 10)
+        
+        if use_time_windows:
+            time_windows = request.get_time_windows()
+            if request.target_time:
+                parts = request.target_time.split(":")
+                target_time_minutes = int(parts[0]) * 60 + int(parts[1])
         
         # Override config if provided (user-customizable)
         if request.pso_config:
@@ -456,15 +471,36 @@ class PSOSplitStrategy(BaseRoutingStrategy):
         # Type assertion for LSP - we've already checked for None above
         assert global_best is not None
 
-        final_result = decode_giant_tour(
-            giant_tour=global_best,
-            depot=depot.id,
-            distance_matrix=distance_matrix,
-            demands=demands,
-            sw_capacity=request.sw_capacity,
-            so_capacity=request.so_capacity,
-            max_tour_duration=request.max_travel_time
-        )
+        # Final split on best solution - use CVRPTW decoder if time windows enabled
+        if use_time_windows and time_windows:
+            # Convert TimeWindow objects to tuple format for split decoder
+            tw_tuples = {}
+            for loc, tw in time_windows.items():
+                tw_tuples[loc] = (tw.earliest, tw.latest)
+            
+            final_result = decode_with_time_windows(
+                giant_tour=global_best,
+                depot=depot.id,
+                distance_matrix=distance_matrix,
+                demands=demands,
+                time_windows=tw_tuples,
+                direction=direction,
+                target_time=target_time_minutes,
+                offset_minutes=offset_minutes,
+                sw_capacity=request.sw_capacity,
+                so_capacity=request.so_capacity,
+                max_tour_duration=request.max_travel_time
+            )
+        else:
+            final_result = decode_giant_tour(
+                giant_tour=global_best,
+                depot=depot.id,
+                distance_matrix=distance_matrix,
+                demands=demands,
+                sw_capacity=request.sw_capacity,
+                so_capacity=request.so_capacity,
+                max_tour_duration=request.max_travel_time
+            )
         
         # Build response routes
         routes = []
@@ -519,11 +555,17 @@ class PSOSplitStrategy(BaseRoutingStrategy):
         
         execution_time = time.time() - start_time
         
+        # Calculate total time window violations
+        total_tw_violations = final_result.get('time_window_violations', 0)
+        
         return OptimizationResponse(
             algorithm_used=self.name,
             success=True,
             routes=routes,
             total_vehicles=len(routes),
             total_duration_minutes=sum(r.total_duration_minutes for r in routes),
-            execution_time_seconds=round(execution_time, 4)
+            execution_time_seconds=round(execution_time, 4),
+            direction=direction,
+            time_windows_used=use_time_windows and len(time_windows) > 0,
+            total_time_window_violations=total_tw_violations
         )

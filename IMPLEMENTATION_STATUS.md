@@ -1,7 +1,8 @@
 # Implementation Status
 
-> **Son Güncelleme:** 29 Mart 2026, 00:30 — P1, P2, P3 tamamlandı
+> **Son Güncelleme:** 29 Mart 2026, 15:00 — Kod doğrulaması tamamlandı
 > **Referans:** `docs/ROADMAP.md` | `docs/ARCHITECTURE.md`
+> **Doğrulayan:** Senior Developer (Kod seviyesinde teyit edildi)
 
 ---
 
@@ -53,6 +54,18 @@
 - ✅ SplitDecoder `time_windows` parametresi eklendi
 - ✅ `CVRPTWDecoder` wrapper (`optimizer_api/strategies/cvrptw_wrapper.py`)
 - ✅ Time window feasibility checking
+
+### Faz 2: Veri Kalıcılığı + Atama ⚠️ (KISMI)
+- ✅ Görev 2.1: Rota kaydı (`route_plans` tablosu + API) — TAMAMLANDI
+- ⬜ Görev 2.2: Sürücü ataması — BEKLİYOR (DB kolonu mevcut, UI gerekli)
+- ⬜ Görev 2.3: Payload düzeltmesi — BEKLİYOR
+- ⬜ Görev 2.4: DataLoader fallback — BEKLİYOR
+
+### Faz 2X: Günlük Planlama 🔵 (DEVAM EDİYOR)
+- ⬜ Görev 2X.1: Çift yönlü planlama (Pickup + Dropoff birlikte)
+- ⬜ Görev 2X.2: Standart araç ihtiyacı tablosu
+- ⬜ Görev 2X.3: Gün içi yeniden planlama API
+- ⬜ Görev 2X.4: Verimsiz çözüm analizi
 
 ### Temel Altyapı ✅
 - ✅ Supabase Auth entegrasyonu (`src/lib/supabase-auth.ts`)

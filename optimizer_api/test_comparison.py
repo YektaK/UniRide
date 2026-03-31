@@ -10,8 +10,8 @@ import time
 from models.schemas import OptimizationRequest, StudentNode, LocationNode
 from strategies.ga_strategy import GeneticAlgorithmStrategy
 from strategies.pso_strategy import PSOStrategy
-from strategies.gwo_strategy import GWOStrategy
-from strategies.hho_strategy import HHOStrategy
+from strategies.gwo_strategy import GreyWolfOptimizerStrategy as GWOStrategy
+from strategies.hho_strategy import HarrisHawksOptimizerStrategy as HHOStrategy
 from strategies.greedy_heuristic import GreedyHeuristicStrategy
 
 
@@ -45,7 +45,7 @@ def create_test_data(num_students: int = 10):
     return depot, students
 
 
-def run_comparison():
+def test_algorithm_comparison():
     """Compare all algorithms"""
     print("=" * 70)
     print("ALGORITHM COMPARISON TEST")
@@ -120,4 +120,4 @@ def run_comparison():
 
 
 if __name__ == "__main__":
-    run_comparison()
+    test_algorithm_comparison()

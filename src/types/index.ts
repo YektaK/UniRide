@@ -16,6 +16,25 @@ export interface User {
   weeklyScheduleId?: string; // Reference to a schedule document/object
 }
 
+// ============================================================
+// CVRPTW Types - Direction and Time Window Support
+// ============================================================
+
+export type DirectionType = "pickup" | "dropoff";
+
+export interface TimeWindow {
+  earliest: number; // Minutes from midnight
+  latest: number;   // Minutes from midnight
+}
+
+export interface RouteSchedule {
+  departureTime: string;           // Vehicle departure time (HH:MM)
+  arrivalTimes: Record<string, string>; // Location -> arrival time
+  timeWindowViolations: number;    // Number of violations
+}
+
+// ============================================================
+
 export interface Vehicle {
   id: string;
   name: string; // e.g., "Servis A", "Mavi Minibüs"

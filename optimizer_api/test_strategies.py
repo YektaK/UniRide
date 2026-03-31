@@ -4,12 +4,13 @@ Tests all optimization strategies independently
 """
 
 import sys
+import os
 import time
 import json
 from typing import List, Dict
 
 # Add parent directory to path
-sys.path.insert(0, '/home/z/my-project/download/optimizer_api')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from models.schemas import (
     OptimizationRequest, OptimizationResponse,

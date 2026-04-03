@@ -1,8 +1,8 @@
 # Implementation Status
 
-> **Son Güncelleme:** 29 Mart 2026, 15:00 — Kod doğrulaması tamamlandı
-> **Referans:** `docs/ROADMAP.md` | `docs/ARCHITECTURE.md`
-> **Doğrulayan:** Senior Developer (Kod seviyesinde teyit edildi)
+> **Son Güncelleme:** 03 Nisan 2026, 05:05 — SOTA Smart Benchmark Entegrasyonu
+> **Referans:** `docs/03_Roadmap.md` | `docs/02_Architecture.md`
+> **Doğrulayan:** AI Assistant & Yekta Kayman
 
 ---
 
@@ -54,6 +54,12 @@
 - ✅ SplitDecoder `time_windows` parametresi eklendi
 - ✅ `CVRPTWDecoder` wrapper (`optimizer_api/strategies/cvrptw_wrapper.py`)
 - ✅ Time window feasibility checking
+
+### ✅ Akademik Makale (Smart Benchmark) Altyapısı (TAMAMLANDI - 03.04.2026)
+- ✅ `academic_benchmark` izole klasör mimarisi oluşturuldu
+- ✅ Dinamik TSPLib `dataset_loader.py` (.opt.tour mesafesi dinamik hesaplama destekli)
+- ✅ Code hash hashing ve json caching: `utils_benchmark.py`
+- ✅ Akıllı Interaktif Seçici TUI (Terminal Dashboard): `run_smart_benchmark.py`
 
 ### Faz 2: Veri Kalıcılığı + Atama ⚠️ (KISMI)
 - ✅ Görev 2.1: Rota kaydı (`route_plans` tablosu + API) — TAMAMLANDI

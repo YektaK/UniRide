@@ -108,10 +108,12 @@ class OptimizationRequest(BaseModel):
     use_time_windows: bool = False
     target_time: Optional[str] = None
     offset_minutes: int = 15
+    allow_time_shift: bool = False
     slack_window_minutes: int = 60
     vehicles: Optional[List[VehicleConfig]] = None
     mode: OptimizationMode = OptimizationMode.BENCHMARK
     local_search_type: Optional[str] = "two_opt"
+    use_sota_engine: bool = False
     ga_config: Optional[Dict[str, Any]] = None
     pso_config: Optional[Dict[str, Any]] = None
     gwo_config: Optional[Dict[str, Any]] = None

@@ -33,7 +33,8 @@ class CVRPTWDecoder:
         so_capacity: int = 5,
         max_tour_duration: float = 120.0,
         time_windows: Optional[Dict[str, Tuple[int, int]]] = None,
-        use_time_windows: bool = True
+        use_time_windows: bool = True,
+        use_sota_engine: bool = False
     ):
         """
         Initialize CVRPTW Decoder.
@@ -44,16 +45,27 @@ class CVRPTWDecoder:
             max_tour_duration: Maximum tour duration in minutes
             time_windows: Dict mapping location -> (earliest, latest) in minutes from start
             use_time_windows: Whether to enforce time window constraints
+            use_sota_engine: Whether to use experimental LinearSplitDecoder (SOTA) or stable SplitDecoder
         """
-        self.decoder = LinearSplitDecoder(
-            sw_capacity=sw_capacity,
-            so_capacity=so_capacity,
-            max_tour_duration=max_tour_duration,
-            time_windows=time_windows,
-            penalty_config=PenaltyConfig(allow_time_warp=True, allow_capacity_overflow=True)
-        )
         self.time_windows = time_windows or {}
         self.use_time_windows = use_time_windows
+        self.use_sota_engine = use_sota_engine
+        
+        if use_sota_engine:
+            self.decoder = LinearSplitDecoder(
+                sw_capacity=sw_capacity,
+                so_capacity=so_capacity,
+                max_tour_duration=max_tour_duration,
+                time_windows=time_windows,
+                penalty_config=PenaltyConfig(allow_time_warp=True, allow_capacity_overflow=True)
+            )
+        else:
+            self.decoder = SplitDecoder(
+                sw_capacity=sw_capacity,
+                so_capacity=so_capacity,
+                max_tour_duration=max_tour_duration,
+                direction=Direction.PICKUP
+            )
     
     def decode(
         self,
@@ -74,15 +86,28 @@ class CVRPTWDecoder:
         Returns:
             Dict with routes, costs, and feasibility info
         """
-        res = self.decoder.decode(giant_tour, depot, distance_matrix, demands)
-        return {
-            "routes": res.routes,
-            "total_cost": res.final_objective,
-            "num_vehicles": res.num_vehicles,
-            "time_window_violations": res.time_window_violations,
-            "capacity_violations": res.capacity_violations,
-            "schedules": res.schedules
-        }
+        if self.use_sota_engine:
+            # SOTA LinearSplitDecoder returns an object with attributes
+            res = self.decoder.decode(giant_tour, depot, distance_matrix, demands)
+            return {
+                "routes": res.routes,
+                "total_cost": res.final_objective,
+                "num_vehicles": res.num_vehicles,
+                "time_window_violations": res.time_window_violations,
+                "capacity_violations": getattr(res, 'capacity_violations', 0),
+                "schedules": getattr(res, 'schedules', [])
+            }
+        else:
+            # Stable SplitDecoder returns a dictionary
+            res = self.decoder.decode(giant_tour, depot, distance_matrix, demands)
+            return {
+                "routes": res.get("routes", []),
+                "total_cost": res.get("total_cost", float('inf')),
+                "num_vehicles": res.get("num_vehicles", 0),
+                "time_window_violations": res.get("time_window_violations", 0),
+                "capacity_violations": res.get("capacity_violations", 0),
+                "schedules": res.get("schedules", [])
+            }
     
     def is_feasible(
         self,

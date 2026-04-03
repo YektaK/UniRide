@@ -1,154 +1,141 @@
-"""
-Optimization API Schemas
-Pydantic models for request/response validation
-"""
-
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 from enum import Enum
 
+# --- Enums ---
+class Direction(str, Enum):
+    PICKUP = "pickup"
+    DROPOFF = "dropoff"
 
 class DisabilityType(str, Enum):
-    SW = "Sw"  # Wheelchair
-    SO = "So"  # Walking
+    SW = "Sw"
+    SO = "So"
 
-
-class LocationNode(BaseModel):
-    id: str = Field(..., description="Unique identifier for the location, e.g., 'Sw1', 'So5', 'D.Kampus'")
-    lat: float = Field(..., description="Latitude coordinate")
-    lng: float = Field(..., description="Longitude coordinate")
-    type: str = Field(default="So", description="Type of node: 'Sw' (Wheelchair), 'So' (Walking)")
-
-
-class StudentNode(BaseModel):
-    id: str = Field(..., description="Student ID")
-    name: str = Field(default="", description="Student name")
-    location_code: str = Field(..., description="Location code e.g., 'Sw1', 'So5'")
-    coordinates: Optional[Dict[str, float]] = Field(default=None, description="Lat/lng coordinates")
-    disability_type: str = Field(default="So", description="'Sw' or 'So'")
-
-
-class RouteStep(BaseModel):
-    location1: str
-    location2: str
-    duration: float = Field(description="Travel time in minutes")
-    distance: float = Field(default=0.0, description="Travel distance in meters")
-
-
-class VehicleRoute(BaseModel):
-    vehicle_id: str
-    route_details: List[RouteStep]
-    total_duration_minutes: float
-    total_distance_km: float = Field(default=0.0)
-    sw_count: int = Field(default=0, description="Number of wheelchair students")
-    so_count: int = Field(default=0, description="Number of walking students")
-    student_ids: List[str] = Field(default_factory=list, description="IDs of students in this route")
-
+class OptimizationMode(str, Enum):
+    BENCHMARK = "benchmark"
+    SANDBOX = "sandbox"
 
 class LocalSearchType(str, Enum):
-    """Available local search types for strategies"""
     NONE = "none"
     TWO_OPT = "two_opt"
     THREE_OPT = "three_opt"
     OR_OPT = "or_opt"
     HYBRID = "hybrid"
 
+# --- Models ---
+class LocationNode(BaseModel):
+    id: str
+    lat: float
+    lng: float
+    type: str = "So"
+
+class StudentNode(BaseModel):
+    id: str
+    name: str = ""
+    location_code: str
+    coordinates: Optional[Dict[str, float]] = None
+    disability_type: str = "So"
+    pickup_time: Optional[str] = None
+    dropoff_time: Optional[str] = None
+
+class TimeWindow(BaseModel):
+    earliest: int
+    latest: int
 
 class VehicleConfig(BaseModel):
     """Vehicle configuration for heterogeneous fleet support"""
-    vehicle_id: str = Field(..., description="Unique vehicle identifier")
-    sw_capacity: int = Field(default=4, description="Wheelchair capacity")
-    so_capacity: int = Field(default=5, description="Other disability capacity")
-    cooldown_minutes: int = Field(default=15, description="Minutes between routes")
+    vehicle_id: str
+    sw_capacity: int = 4
+    so_capacity: int = 5
+    cooldown_minutes: int = 15
 
+class WeeklyScheduleEntry(BaseModel):
+    id: str
+    dayOfWeek: str
+    startTime: str
+    endTime: str
+    location_code: Optional[str] = None
 
-class OptimizationMode(str, Enum):
-    """IE Engine operating mode"""
-    BENCHMARK = "benchmark"  # Ideal mode - standard vehicles
-    SANDBOX = "sandbox"      # Fine-tune mode - custom vehicles
+class WeeklyScheduleRequest(BaseModel):
+    entries: List[WeeklyScheduleEntry]
+    target_day: str
+    direction: Direction
 
+class RouteStep(BaseModel):
+    location1: str
+    location2: str
+    duration: float
+    distance: float = 0.0
+
+class VehicleRoute(BaseModel):
+    vehicle_id: str
+    route_details: List[RouteStep]
+    total_duration_minutes: float
+    total_distance_km: float = 0.0
+    sw_count: int = 0
+    so_count: int = 0
+    student_ids: List[str] = []
+    departure_time: Optional[str] = None
+    arrival_times: Optional[Dict[str, str]] = None
 
 class BottleneckInfo(BaseModel):
-    """Information about a bottleneck in the schedule"""
-    time: str = Field(..., description="Hour identifier (e.g., '12:00')")
-    type: str = Field(..., description="Type: infeasible, low_efficiency, resource_conflict")
-    reason: str = Field(..., description="Description of the issue")
-    affected_students: Optional[List[str]] = Field(default=None, description="Student IDs affected")
-
+    time: str
+    type: str
+    reason: str
+    affected_students: Optional[List[str]] = None
 
 class TimeShiftSuggestion(BaseModel):
-    """Suggestion for time shifting to reduce resource demand"""
     student_id: str
     current_time: str
     suggested_time: str
-    savings_vehicles: float = Field(..., description="Estimated vehicle savings")
-
+    savings_vehicles: float
 
 class IEResponseData(BaseModel):
-    """IE Engine response data"""
-    standard_vehicles_needed: int = Field(default=0, description="Number of standard minibusses (4Sw+5So) needed")
-    hourly_demand: Dict[str, Dict[str, Dict[str, int]]] = Field(default_factory=dict, description="Hourly Sw/So breakdown")
-    bottlenecks: List[BottleneckInfo] = Field(default_factory=list, description="Identified bottlenecks")
-    time_shift_suggestions: List[TimeShiftSuggestion] = Field(default_factory=list, description="Slack time suggestions")
+    standard_vehicles_needed: int = 0
+    hourly_demand: Dict[str, Any] = {}
+    bottlenecks: List[BottleneckInfo] = []
+    time_shift_suggestions: List[TimeShiftSuggestion] = []
 
-
+# --- Request / Response ---
 class OptimizationRequest(BaseModel):
-    algorithm: str = Field(
-        default="genetic_algorithm",
-        description="Algorithm: genetic_algorithm, ga, pso, gwo, hho, two_opt, greedy, ortools_cvrp, permutation_tsp, pyvrp, vroom, ga_split, pso_split"
-    )
-    students: List[StudentNode] = Field(..., description="List of students needing pickup")
-    depot: LocationNode = Field(..., description="The depot node (e.g., D.Kampus)")
-    max_travel_time: int = Field(default=120, description="Maximum tour time per vehicle in minutes")
-    sw_capacity: int = Field(default=4, description="Wheelchair capacity per vehicle")
-    so_capacity: int = Field(default=5, description="Walking student capacity per vehicle")
+    algorithm: str = "ga_split"
+    students: List[StudentNode]
+    depot: LocationNode
+    max_travel_time: int = 120
+    sw_capacity: int = 4
+    so_capacity: int = 5
+    direction: Direction = Direction.PICKUP
+    use_time_windows: bool = False
+    target_time: Optional[str] = None
+    offset_minutes: int = 15
+    slack_window_minutes: int = 60
+    vehicles: Optional[List[VehicleConfig]] = None
+    mode: OptimizationMode = OptimizationMode.BENCHMARK
+    local_search_type: Optional[str] = "two_opt"
+    ga_config: Optional[Dict[str, Any]] = None
+    pso_config: Optional[Dict[str, Any]] = None
+    gwo_config: Optional[Dict[str, Any]] = None
+    hho_config: Optional[Dict[str, Any]] = None
+    two_opt_config: Optional[Dict[str, Any]] = None
+    clustering_algorithm: Optional[str] = "sweep"
 
-    # Local search configuration (applies to GA, PSO, GWO, HHO)
-    local_search_type: Optional[str] = Field(
-        default="two_opt",
-        description="Local search type: none, two_opt, three_opt, or_opt, hybrid"
-    )
-
-    # Algorithm-specific parameters
-    ga_config: Optional[Dict[str, Any]] = Field(default=None, description="GA parameters")
-    pso_config: Optional[Dict[str, Any]] = Field(default=None, description="PSO parameters")
-    gwo_config: Optional[Dict[str, Any]] = Field(default=None, description="GWO parameters")
-    hho_config: Optional[Dict[str, Any]] = Field(default=None, description="HHO parameters")
-    two_opt_config: Optional[Dict[str, Any]] = Field(default=None, description="Two-Opt parameters")
-
-    # IE Engine parameters (Faz 1.5X)
-    vehicles: Optional[List[VehicleConfig]] = Field(default=None, description="Available vehicles for sandbox mode")
-    allow_time_shift: bool = Field(default=False, description="Allow student time shifting for resource leveling")
-    slack_window_minutes: int = Field(default=60, description="Maximum minutes to shift student pickup/dropoff time")
-    mode: OptimizationMode = Field(default=OptimizationMode.BENCHMARK, description="Operating mode: benchmark or sandbox")
-    clustering_algorithm: Optional[str] = Field(default="sweep", description="Clustering method: kmeans, sweep, clarke_wright")
-
+    def get_time_windows(self) -> Dict[str, TimeWindow]:
+        """Helper to get time windows from students if applicable"""
+        return {}
 
 class OptimizationResponse(BaseModel):
     algorithm_used: str
     success: bool
     routes: List[VehicleRoute]
-    total_vehicles: int = Field(default=0)
-    total_duration_minutes: float = Field(default=0.0)
+    total_vehicles: int = 0
+    total_duration_minutes: float = 0.0
     error_message: Optional[str] = None
-    execution_time_seconds: float = Field(default=0.0)
-    
-    # IE Engine response data (Faz 1.5X)
-    ie_data: Optional[IEResponseData] = Field(default=None, description="Resource analysis data")
-
-
-class CompareRequest(BaseModel):
-    """Request for comparing all algorithms"""
-    students: List[StudentNode] = Field(..., description="List of students needing pickup")
-    depot: LocationNode = Field(..., description="The depot node")
-    max_travel_time: int = Field(default=120)
-    sw_capacity: int = Field(default=4)
-    so_capacity: int = Field(default=5)
-    algorithms: Optional[List[str]] = Field(default=None, description="Algorithms to compare (default: all)")
-
+    execution_time_seconds: float = 0.0
+    direction: Optional[Direction] = None
+    time_windows_used: bool = False
+    ie_data: Optional[IEResponseData] = None
 
 class AlgorithmResult(BaseModel):
-    """Result from a single algorithm"""
     algorithm: str
     success: bool
     total_vehicles: int
@@ -157,20 +144,26 @@ class AlgorithmResult(BaseModel):
     routes: List[VehicleRoute]
     error_message: Optional[str] = None
 
+class CompareRequest(BaseModel):
+    students: List[StudentNode]
+    depot: LocationNode
+    max_travel_time: int = 120
+    sw_capacity: int = 4
+    so_capacity: int = 5
+    direction: Direction = Direction.PICKUP
+    use_time_windows: bool = False
+    algorithms: Optional[List[str]] = None
 
 class CompareResponse(BaseModel):
-    """Response for algorithm comparison"""
     success: bool
     results: List[AlgorithmResult]
-    best_algorithm: str = Field(description="Algorithm with lowest total duration")
-    fastest_algorithm: str = Field(description="Algorithm with fastest execution")
-    summary: Dict[str, Dict[str, float]] = Field(description="Summary comparison table")
-
+    best_algorithm: str
+    fastest_algorithm: str
+    summary: Dict[str, Any]
 
 class StrategyInfo(BaseModel):
-    """Information about an algorithm strategy"""
     name: str
     display_name: str
     description: str
     complexity: str
-    recommended: bool = Field(default=False)
+    recommended: bool = False

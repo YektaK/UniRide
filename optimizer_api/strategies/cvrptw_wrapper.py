@@ -5,8 +5,8 @@ Provides time window support for the optimization pipeline.
 This module wraps existing strategies to add time window constraints.
 """
 
-from typing import List, Dict, Tuple, Optional
-from utils.split_decoder import SplitDecoder
+from utils.split_decoder import SplitDecoder, Direction
+from utils.linear_split_decoder import LinearSplitDecoder, PenaltyConfig
 
 
 class CVRPTWDecoder:
@@ -45,12 +45,12 @@ class CVRPTWDecoder:
             time_windows: Dict mapping location -> (earliest, latest) in minutes from start
             use_time_windows: Whether to enforce time window constraints
         """
-        self.decoder = SplitDecoder(
+        self.decoder = LinearSplitDecoder(
             sw_capacity=sw_capacity,
             so_capacity=so_capacity,
             max_tour_duration=max_tour_duration,
             time_windows=time_windows,
-            use_time_windows=use_time_windows
+            penalty_config=PenaltyConfig(allow_time_warp=True, allow_capacity_overflow=True)
         )
         self.time_windows = time_windows or {}
         self.use_time_windows = use_time_windows
@@ -74,7 +74,15 @@ class CVRPTWDecoder:
         Returns:
             Dict with routes, costs, and feasibility info
         """
-        return self.decoder.decode(giant_tour, depot, distance_matrix, demands)
+        res = self.decoder.decode(giant_tour, depot, distance_matrix, demands)
+        return {
+            "routes": res.routes,
+            "total_cost": res.final_objective,
+            "num_vehicles": res.num_vehicles,
+            "time_window_violations": res.time_window_violations,
+            "capacity_violations": res.capacity_violations,
+            "schedules": res.schedules
+        }
     
     def is_feasible(
         self,

@@ -1,45 +1,47 @@
 # 🤖 AI ASİSTAN KURALLARI
 
 Sen, bu projenin geçmişini ve geleceğini takip eden kıdemli bir yazılım mimarısın.
+Düzgün bir bağlam analizi yapabilmek için Projenin tek Bilgi Kaynağı olan `docs/` klasöründeki indekslenmiş dokümanlardan beslenmelisin.
 
 ## 0. ZORUNLU: İLK ADIM — DOKÜMAN OKU
 
-**Kod yazmadan, analiz yapmadan, herhangi bir işlem başlatmadan ÖNCE şu dosyaları oku:**
+**Kod yazmadan, analiz yapmadan, herhangi bir işlem başlatmadan ÖNCE şu dosyaları sıralamaya uygun olarak (01, 02, 03 vs.) oku:**
 
-1. `docs/ARCHITECTURE.md` — Mimari kurallar, dosya sorumluluk haritası, API kontratları
-2. `docs/ROADMAP.md` — Geliştirme yol haritası, görev durumları, faz planı
-3. `IMPLEMENTATION_STATUS.md` — En güncel tamamlanma durumu ve teknik borç listesi (Audit tabanlı)
-4. `docs/CHANGELOG.md` — Son değişiklikler
-5. `.ai-handover.md` — Son devir raporu
-6. `docs/CURRENT_STATE_ANALYSIS_AND_RECOMMENDATIONS_28.03.2026_21.30.md` — Teknik denetim sonuçları
+1. `docs/01_Implementation_Status.md` — En güncel tamamlanma durumu ve teknik borç listesi
+2. `docs/02_Architecture.md` — Mimari kurallar, dosya sorumluluk haritası, API kontratları
+3. `docs/03_Roadmap.md` — Geliştirme yol haritası, görev durumları, faz planı
+4. `docs/04_Changelog.md` — Son eklenen değişiklikler ve sürümler
+5. `.ai-handover.md` — Son mesai devir raporu
+6. `docs/sota_framework_plan_2026/` İçindeki Dosyalar — Algoritma verimliliği, ALNS gelişimi, State of The Art (SOTA) yaklaşımları, Akıllı Benchmark mekanizmaları, Akademik Makale (Performance Comparison) vizyonu ve Çift-Yollu (Dual-Track) mimari hedeflerinin BÜTÜNÜ için bu klasör vizyon rehberimizdir. SOTA veya Akademik Makale (Paper) kelimesi geçtiği an burayı referans al.
 
 **Bu dosyaları okumadan kod değişikliği YAPMA. Mimari kurallara aykırı değişiklik YAPMA.**
 
-## 1. BAĞLAM YÖNETİMİ
-- Her oturum başlangıcında yukarıdaki dokümanları oku.
-- Yapılan değişiklikleri analiz ederken sadece koda değil, mimari kurallara ve niyet notlarına da odaklan.
+## 1. BAĞLAM YÖNETİMİ & AKADEMİK HEDEF
+- Her oturum başlangıcında yukarıdaki dokümanları 01'den başlayarak oku.
+- **Akademik Makale Hedefi:** Bu projenin iki ayağı vardır. 1) Ticari, canlı ürün (Stabil Hybrid algoritmalar). 2) İleride uluslararası yayın (Performans Kıyaslama Makalesi) hedeflenen, kendi kendini güncelleyebilen ve SOTA algoritmaları (ALNS, LinearSplit) test eden Akademik Araştırma Tarafı. Her yeni özellik eklerken bu çift yollu (Dual-Track) yapıyı ve makale tekrarlanabilirliğini (reproducibility) koru.
 
 ## 2. GELİŞTİRME PRENSİPLERİ
-- **Mimari:** `docs/ARCHITECTURE.md` içindeki kurallara uy (özellikle algoritma key kuralı ve Python API kuralı).
-- **Zod & Supabase:** Veri güvenliği ve validasyon önceliğimizdir.
+- **Mimari:** `docs/02_Architecture.md` içindeki kurallara uy.
+- **SOTA ve Live Dual-Track:** Kod eklerken ticari ürünün "Hybrid Motor" ile güvende olduğunu, Ar-ge ürününün izole edildiğini unutma.
 - **Hata Takibi:** Manuel testlerde fark edilen ancak henüz çözülmemiş bug'ları asla unutma.
 
 ## 3. DEĞİŞİKLİK SONRASI PROTOKOL
 Her anlamlı değişiklik sonrasında:
-1. `docs/CHANGELOG.md` dosyasına kayıt ekle. **ÖNEMLİ:** Tarih yanına mutlaka saat bilgisini (SS:DD) ekle.
-2. Eğer bir ROADMAP görevi tamamlandıysa `docs/ROADMAP.md`'de durumu güncelle. **ÖNEMLİ:** "Son Güncelleme" tarihlerine saat bilgisini ekle.
-3. Tüm döküman güncellemelerinde (Architecture, Implementation Status vb.) iteratif değişiklikleri izlemek için tarih yanına saat bilgisini işle.
+1. `docs/04_Changelog.md` dosyasına kayıt ekle. **ÖNEMLİ:** Tarih yanına mutlaka saat bilgisini (SS:DD) ekle.
+2. Eğer bir görev tamamlandıysa `docs/03_Roadmap.md`'de veya `docs/01_Implementation_Status.md`'de durumu güncelle.
+3. Tüm döküman güncellemelerinde iteratif değişiklikleri izlemek için tarih yanına saat bilgisini işle.
 
-## 4. DEVİR PROTOKOLÜ (MESAİ BİTİMİ)
+## 4. DEVİR PROTOKOLÜ (MESAİ BİTİMİ) - DETAY ZORUNLULUĞU
 Kullanıcı "devir raporu", "mesai bitti" veya "eve geçiyorum" dediğinde:
 1. Mevcut `git status` ve yapılan değişiklikleri analiz et.
-2. `.ai-handover.md` dosyasını güncelle:
-   - **Tarih:** [Günün tarihi] yanına mutlaka saat bilgisini (SS:DD) ekle.
-   - **Tamamlananlar:** [Biten fonksiyonlar/testler]
-   - **Açık Sorunlar:** [Manuel testte takılan hatalar]
-   - **Teknik Borçlar:** [Geçici yapılanlar]
-   - **Sıradaki Odak:** [Bir sonraki oturumda yapılacak ilk 3 iş]
-3. `docs/CHANGELOG.md` dosyasına bugünün değişikliklerini ekle
+2. `.ai-handover.md` dosyasını YÜKSEK DETAY SEVİYESİNDE, başka bir geliştiricinin tam bağlamı (context) anlayabileceği "açıklayıcı bir dille" ve şu formata uygun şekilde güncelle:
+   - **Tarih:** [Günün tarihi ve SC:DD]
+   - **Tamamlananlar:** [Biten modüller, yapılan tasarım tercihleri ve "neden" böyle yapıldığına dair kısa bir zemin hazırlaması)
+   - **Planlananlar/Makale Hedefleri:** [Oturumda alınan kararların (Örn: Academic Benchmark) proje hedeflerini nerede desteklediği]
+   - **Açık Sorunlar:** [Testte takılan hatalar, uyarılar ve şüpheler]
+   - **Teknik Borçlar:** [Geçici taktikler / workaround'lar]
+   - **Sıradaki Odak:** [Bir sonraki oturumda okunacak 01_ vb. dosyalara atıf yaparak ilk 3 iş]
+3. `docs/04_Changelog.md` dosyasına bugünün değişikliklerini ekle.
 
 ## 5. TOKEN OPTİMİZASYONU
 - Bilgi aktarırken uzun kod blokları yerine, mantıksal değişiklikleri ve kritik satır numaralarını belirt.

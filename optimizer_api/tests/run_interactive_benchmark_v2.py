@@ -60,7 +60,7 @@ TSPLIB_BASE_URL = "https://raw.githubusercontent.com/mastqe/tsplib/master/"
 # Number of runs per problem
 N_RUNS = 3
 
-# Strategies to test
+# Strategies to test (Local Search methods)
 STRATEGIES = [
     ("2-opt", LocalSearchType.TWO_OPT, 1000),
     ("3-opt", LocalSearchType.THREE_OPT, 500),
@@ -68,6 +68,18 @@ STRATEGIES = [
     ("Swap", LocalSearchType.SWAP, 1000),
     ("Hybrid", LocalSearchType.HYBRID, 100),
 ]
+
+# SOTA Solvers (State-of-the-Art)
+# OR-Tools: Always available (installed by default)
+# PyVRP: DIMACS 2021 Challenge Winner - requires pip install pyvrp
+SOTA_SOLVERS = [
+    ("OR-Tools", "ortools", 30),  # OR-Tools with 30s time limit - SOTA baseline
+    ("PyVRP", "pyvrp", 30),       # DIMACS 2021 Winner - 30s time limit
+    # ("VROOM", "vroom", None),  # High-performance - requires VROOM binary
+]
+
+# Combined strategies for benchmark
+ALL_STRATEGIES = STRATEGIES + SOTA_SOLVERS
 
 
 # ============================================================
@@ -397,6 +409,163 @@ def convert_route_to_indices(route: List[str]) -> List[int]:
 
 
 # ============================================================
+# SOTA Solver Wrappers
+# ============================================================
+
+def run_ortools_tsp(coordinates: List[Tuple[float, float]], time_limit_seconds: float = 30.0) -> Tuple[List[int], int, float]:
+    """
+    Run OR-Tools TSP solver on coordinates.
+    
+    Returns:
+        Tuple of (tour_indices, tour_length, elapsed_time)
+    """
+    try:
+        from ortools.constraint_solver import routing_enums_pb2
+        from ortools.constraint_solver import pywrapcp
+    except ImportError:
+        raise ImportError("OR-Tools not installed. Run: pip install ortools")
+    
+    start_time = time.time()
+    n = len(coordinates)
+    
+    # Create distance matrix
+    distance_matrix = []
+    for i in range(n):
+        row = []
+        for j in range(n):
+            if i == j:
+                row.append(0)
+            else:
+                dist = tsplib_distance(coordinates[i], coordinates[j])
+                row.append(dist)
+        distance_matrix.append(row)
+    
+    # Create routing model
+    manager = pywrapcp.RoutingIndexManager(n, 1, 0)
+    routing = pywrapcp.RoutingModel(manager)
+    
+    def distance_callback(from_index, to_index):
+        from_node = manager.IndexToNode(from_index)
+        to_node = manager.IndexToNode(to_index)
+        return distance_matrix[from_node][to_node]
+    
+    transit_callback_index = routing.RegisterTransitCallback(distance_callback)
+    routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
+    
+    # Set search parameters
+    search_parameters = pywrapcp.DefaultRoutingSearchParameters()
+    search_parameters.first_solution_strategy = (
+        routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
+    )
+    search_parameters.local_search_metaheuristic = (
+        routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+    )
+    search_parameters.time_limit.seconds = int(time_limit_seconds)
+    
+    # Solve
+    solution = routing.SolveWithParameters(search_parameters)
+    elapsed = time.time() - start_time
+    
+    if not solution:
+        return [], 0, elapsed
+    
+    # Extract tour
+    tour = []
+    index = routing.Start(0)
+    while not routing.IsEnd(index):
+        tour.append(manager.IndexToNode(index) + 1)  # 1-based
+        index = solution.Value(routing.NextVar(index))
+    tour.append(manager.IndexToNode(index) + 1)
+    
+    # Calculate tour length
+    tour_length = calculate_tour_length(tour, coordinates)
+    
+    return tour, tour_length, elapsed
+
+
+def run_pyvrp_tsp(coordinates: List[Tuple[float, float]], time_limit_seconds: float = 30.0) -> Tuple[List[int], int, float]:
+    """
+    Run PyVRP TSP solver on coordinates.
+    PyVRP is the DIMACS 2021 Challenge Winner using Hybrid Genetic Search (HGS).
+    
+    Returns:
+        Tuple of (tour_indices, tour_length, elapsed_time)
+    """
+    try:
+        from pyvrp import Model
+        from pyvrp.stop import MaxRuntime
+    except ImportError:
+        raise ImportError("PyVRP not installed. Run: pip install pyvrp")
+    
+    start_time = time.time()
+    n = len(coordinates)
+    
+    if n < 3:
+        return list(range(1, n + 1)), 0, 0.0
+    
+    try:
+        # Create PyVRP model
+        model = Model()
+        
+        # Add depot (first coordinate)
+        depot_coords = coordinates[0]
+        model.add_depot(x=int(depot_coords[0] * 1000), y=int(depot_coords[1] * 1000))
+        
+        # Add clients (remaining coordinates)
+        for i in range(1, n):
+            x, y = coordinates[i]
+            model.add_client(x=int(x * 1000), y=int(y * 1000), delivery=[1])
+        
+        # Add vehicle type
+        model.add_vehicle_type(num_available=1, capacity=[n])
+        
+        # Build distance matrix
+        distance_matrix = []
+        for i in range(n):
+            row = []
+            for j in range(n):
+                if i == j:
+                    row.append(0)
+                else:
+                    dist = tsplib_distance(coordinates[i], coordinates[j])
+                    row.append(dist)
+            distance_matrix.append(row)
+        
+        # Add edges with distances
+        for i in range(n):
+            for j in range(n):
+                if i != j:
+                    model.add_edge(i, j, distance=distance_matrix[i][j], duration=distance_matrix[i][j])
+        
+        # Solve with time limit
+        result = model.solve(stop=MaxRuntime(int(time_limit_seconds)))
+        
+        elapsed = time.time() - start_time
+        
+        if result.best is None:
+            return [], 0, elapsed
+        
+        # Extract tour from solution
+        solution = result.best
+        tour = [1]  # Start with depot (1-based index)
+        
+        for route in solution.routes():
+            for client_idx in route:
+                # PyVRP client indices are 0-based for clients, need to convert to 1-based node indices
+                tour.append(client_idx + 2)  # +1 for depot, +1 for 1-based indexing
+        
+        # Calculate actual tour length using coordinates
+        tour_length = calculate_tour_length(tour, coordinates)
+        
+        return tour, tour_length, elapsed
+        
+    except Exception as e:
+        elapsed = time.time() - start_time
+        print(f"    [PyVRP ERROR] {e}")
+        return [], 0, elapsed
+
+
+# ============================================================
 # Benchmark Functions
 # ============================================================
 
@@ -444,11 +613,21 @@ def run_single_test(
 def run_benchmark_for_problem(
     problem: TSPLIBProblem,
     n_runs: int = 3,
-    verbose: bool = True
+    verbose: bool = True,
+    include_sota: bool = True
 ) -> List[Dict]:
-    """Run benchmark for a single problem with all strategies"""
-    results = []
+    """Run benchmark for a single problem with all strategies
     
+    Args:
+        problem: TSPLIB problem to solve
+        n_runs: Number of runs per strategy
+        verbose: Print progress
+        include_sota: Include SOTA solvers (OR-Tools, PyVRP)
+    """
+    results = []
+    coordinates = problem.coordinates
+    
+    # Test Local Search strategies
     for strat_name, ls_type, max_iter in STRATEGIES:
         if verbose:
             print(f"    Testing {strat_name}...", end=" ", flush=True)
@@ -486,6 +665,53 @@ def run_benchmark_for_problem(
         if verbose:
             status = "*" if best_gap <= 1 else ("+" if best_gap <= 5 else ("o" if best_gap <= 10 else "x"))
             print(f"avg_gap: {avg_gap:.2f}%, best_gap: {best_gap:.2f}% {status}")
+    
+    # Test SOTA solvers (single run is sufficient for deterministic solvers)
+    if include_sota:
+        for strat_name, solver_type, time_limit in SOTA_SOLVERS:
+            if verbose:
+                print(f"    Testing {strat_name} (SOTA)...", end=" ", flush=True)
+            
+            try:
+                if solver_type == "ortools":
+                    tour, tour_length, elapsed = run_ortools_tsp(coordinates, time_limit or 30)
+                elif solver_type == "pyvrp":
+                    tour, tour_length, elapsed = run_pyvrp_tsp(coordinates, time_limit or 30)
+                else:
+                    continue
+                
+                if tour_length > 0:
+                    gap = ((tour_length - problem.optimal) / problem.optimal) * 100
+                    
+                    result = {
+                        "problem": problem.name,
+                        "dimension": problem.dimension,
+                        "category": problem.category,
+                        "optimal": problem.optimal,
+                        "strategy": strat_name,
+                        "avg_length": tour_length,
+                        "avg_gap": gap,
+                        "best_length": tour_length,
+                        "best_gap": gap,
+                        "avg_time_ms": elapsed * 1000,
+                        "n_runs": 1,
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                    results.append(result)
+                    
+                    if verbose:
+                        status = "*" if gap <= 1 else ("+" if gap <= 5 else ("o" if gap <= 10 else "x"))
+                        print(f"gap: {gap:.2f}% {status}")
+                else:
+                    if verbose:
+                        print("FAILED (no solution)")
+                        
+            except ImportError as e:
+                if verbose:
+                    print(f"SKIPPED ({solver_type} not installed)")
+            except Exception as e:
+                if verbose:
+                    print(f"ERROR: {e}")
     
     return results
 

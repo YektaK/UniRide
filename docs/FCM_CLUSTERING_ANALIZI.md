@@ -293,22 +293,52 @@ Büyük problemlerde (N > threshold) tek aşamalı FCM:
 
 ### 5.3 Benchmark Planı (Threshold Belirleme)
 
+Benchmark, gerçek TSPLIB problemleri kullanılarak gerçekleştirilecektir. Her hedef boyut için 3 TSPLIB problemi seçilmiştir:
+
 ```
-Test problemleri (farklı N değerleri):
-├── N = 50  → Standart vs Hierarchical karşılaştırma
-├── N = 100 → Standart vs Hierarchical karşılaştırma
-├── N = 150 → Standart vs Hierarchical karşılaştırma
-├── N = 200 → Standart vs Hierarchical karşılaştırma
-├── N = 300 → Standart vs Hierarchical karşılaştırma
-└── N = 500 → Standart vs Hierarchical karşılaştırma
+Test Problemleri (TSPLIB - Her boyut için 3 problem):
+│
+├── ~50  (Hedef: 50)
+│   ├── eil51    (n=51,  optimal=426)
+│   ├── berlin52 (n=52,  optimal=7542)
+│   └── eil76    (n=76,  optimal=538)
+│
+├── ~100 (Hedef: 100)
+│   ├── kroA100  (n=100, optimal=21282)
+│   ├── kroB100  (n=100, optimal=22141)
+│   └── kroC100  (n=100, optimal=20749)
+│
+├── ~150 (Hedef: 150)
+│   ├── kroA150  (n=150, optimal=26524)
+│   ├── kroB150  (n=150, optimal=26130)
+│   └── pr152    (n=152, optimal=73682)
+│
+├── ~200 (Hedef: 200)
+│   ├── kroA200  (n=200, optimal=29368)
+│   ├── kroB200  (n=200, optimal=29437)
+│   └── ts225    (n=225, optimal=126843)
+│
+├── ~300 (Hedef: 300)
+│   ├── gil262   (n=262, optimal=2412)
+│   ├── pr299    (n=299, optimal=48191)
+│   └── lin318   (n=318, optimal=42029)
+│
+└── ~500 (Hedef: 500)
+    ├── rd400    (n=400, optimal=15281)
+    ├── pr439    (n=439, optimal=107217)
+    └── d493     (n=493, optimal=35002)
+
+Toplam: 18 TSPLIB problemi × 3 strateji × 3 run = 162 test
 
 Ölçümler:
 ├── Çalışma süresi (ms)
-├── Çözüm kalitesi (total duration)
-├── Kapasite ihlali sayısı
-├── Time window ihlali (dk)
-└── Border point sayısı
+├── Çözüm kalitesi (total distance)
+├── Kapasite ihlali sayısı (SW/SO ayrı)
+├── Küme istatistikleri (avg/std size)
+└── Border point sayısı (enhanced strateji için)
 ```
+
+**Not:** TSPLIB koordinatları normalize edilip öğrenci noktalarına dönüştürülecektir. Engellilik türü (Sw/So) rastgele atanacaktır (3:5 oranı).
 
 ---
 

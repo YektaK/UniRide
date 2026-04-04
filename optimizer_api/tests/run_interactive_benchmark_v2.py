@@ -60,7 +60,7 @@ TSPLIB_BASE_URL = "https://raw.githubusercontent.com/mastqe/tsplib/master/"
 # Number of runs per problem
 N_RUNS = 3
 
-# Strategies to test
+# Strategies to test (Local Search methods)
 STRATEGIES = [
     ("2-opt", LocalSearchType.TWO_OPT, 1000),
     ("3-opt", LocalSearchType.THREE_OPT, 500),
@@ -68,6 +68,18 @@ STRATEGIES = [
     ("Swap", LocalSearchType.SWAP, 1000),
     ("Hybrid", LocalSearchType.HYBRID, 100),
 ]
+
+# SOTA Solvers (State-of-the-Art) - Optional
+# OR-Tools is always available (installed by default)
+# PyVRP and VROOM are optional (uncomment in requirements.txt to install)
+SOTA_SOLVERS = [
+    ("OR-Tools", "ortools", 30),  # OR-Tools with 30s time limit - SOTA baseline
+    # ("PyVRP", "pyvrp", None),  # DIMACS 2021 Winner - uncomment when installed
+    # ("VROOM", "vroom", None),  # High-performance - uncomment when installed
+]
+
+# Combined strategies for benchmark
+ALL_STRATEGIES = STRATEGIES + SOTA_SOLVERS
 
 
 # ============================================================
@@ -394,6 +406,81 @@ def create_duration_func(matrix: Dict[str, Dict[str, float]]) -> Callable[[List[
 def convert_route_to_indices(route: List[str]) -> List[int]:
     """Convert string route to integer indices"""
     return [int(loc[1:]) for loc in route]
+
+
+# ============================================================
+# SOTA Solver Wrappers
+# ============================================================
+
+def run_ortools_tsp(coordinates: List[Tuple[float, float]], time_limit_seconds: float = 30.0) -> Tuple[List[int], int, float]:
+    """
+    Run OR-Tools TSP solver on coordinates.
+    
+    Returns:
+        Tuple of (tour_indices, tour_length, elapsed_time)
+    """
+    try:
+        from ortools.constraint_solver import routing_enums_pb2
+        from ortools.constraint_solver import pywrapcp
+    except ImportError:
+        raise ImportError("OR-Tools not installed. Run: pip install ortools")
+    
+    start_time = time.time()
+    n = len(coordinates)
+    
+    # Create distance matrix
+    distance_matrix = []
+    for i in range(n):
+        row = []
+        for j in range(n):
+            if i == j:
+                row.append(0)
+            else:
+                dist = tsplib_distance(coordinates[i], coordinates[j])
+                row.append(dist)
+        distance_matrix.append(row)
+    
+    # Create routing model
+    manager = pywrapcp.RoutingIndexManager(n, 1, 0)
+    routing = pywrapcp.RoutingModel(manager)
+    
+    def distance_callback(from_index, to_index):
+        from_node = manager.IndexToNode(from_index)
+        to_node = manager.IndexToNode(to_index)
+        return distance_matrix[from_node][to_node]
+    
+    transit_callback_index = routing.RegisterTransitCallback(distance_callback)
+    routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
+    
+    # Set search parameters
+    search_parameters = pywrapcp.DefaultRoutingSearchParameters()
+    search_parameters.first_solution_strategy = (
+        routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
+    )
+    search_parameters.local_search_metaheuristic = (
+        routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+    )
+    search_parameters.time_limit.seconds = int(time_limit_seconds)
+    
+    # Solve
+    solution = routing.SolveWithParameters(search_parameters)
+    elapsed = time.time() - start_time
+    
+    if not solution:
+        return [], 0, elapsed
+    
+    # Extract tour
+    tour = []
+    index = routing.Start(0)
+    while not routing.IsEnd(index):
+        tour.append(manager.IndexToNode(index) + 1)  # 1-based
+        index = solution.Value(routing.NextVar(index))
+    tour.append(manager.IndexToNode(index) + 1)
+    
+    # Calculate tour length
+    tour_length = calculate_tour_length(tour, coordinates)
+    
+    return tour, tour_length, elapsed
 
 
 # ============================================================

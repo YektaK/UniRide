@@ -1,0 +1,230 @@
+UniRide Projesi
+ Kod Inceleme ve Durum Degerlendirme Raporu
+Engelli Ogrenci Servis Optimizasyon Sistemi
+Next.js 16 + TypeScript + Supabase
+Tarih: Mart 2026
+Hazirlayan: Z.ai Kod Analiz Sistemi
+
+1. Yonetici Ozeti
+Bu rapor, UniRide projesinin mevcut kod tabaninin kapsamli bir incelemesini
+icermektedir. Proje, engelli universite ogrencileri icin servis rotalama
+optimizasyonu saglayan bir Next.js uygulamasidir. Inceleme sonucunda 8 kritik sorun,
+12 orta oncelikli sorun ve 18 dusuk oncelikli iyilestirme onerisi tespit edilmistir.
+Projenin temel mimarisi saglam olmakla birlikte, bazi onemli guvenlik, performans ve
+bakim sorunlari mevcuttur.
+ Kategori
+ Sayi
+ Durum
+Kritik Sorunlar
+8
+Acil Duzeltim Gerekli
+Orta Oncelikli Sorunlar
+12
+Planli Duzeltim
+Dusuk Oncelikli Sorunlar
+18
+Iyilestirme Onerisi
+Dogru Uygulamalar
+15+
+Korunmali
+2. Proje Genel Bakis
+2.1 Teknoloji Yigini
+ Katman
+ Teknoloji
+ Versiyon
+Frontend Framework
+Next.js
+16.1.6
+UI Library
+React
+18.3.1
+Dil
+TypeScript
+5.x
+UI Komponentleri
+shadcn/ui (Radix)
+Latest
+Stil
+Tailwind CSS
+3.4.1
+Veritabani
+Supabase
+2.98.0
+AI Entegrasyonu
+Genkit (Google AI)
+1.8.0
+Test
+Vitest
+4.0.18
+2.2 Proje Yapisi
+
+Proje, Next.js App Router mimarisini kullanmaktadir ve iyi organize edilmis bir
+klasor yapisina sahiptir. Kaynak kodlar src/ klasoru altinda organize edilmistir.
+Uygulama modulleri app/ altinda route-based olarak ayrilmistir. Admin, Driver ve
+Student olmak uzere uc ana kullanici rolu bulunmaktadir. Servis katmani services/
+altinda yer almakta ve is mantigi burada yurutulmektedir. DouBus adli ozel bir rota
+optimizasyon servisi bulunmaktadir.
+3. Kritik Sorunlar (Yuksek Oncelik)
+3.1 Hard-coded API URL Guvenlik Riski
+DOSYA: src/services/doubus/multi-vehicle-routing.ts (Satir: 3288) - Python
+optimizasyon API'si icin URL hard-coded olarak yazilmis. Bu, gelistirme ve uretim
+ortamlari arasinda gecis yapmayi zorlastirir ve guvenlik riski olusturur.
+// MEVCUT (Yanlis): const response = await fetch("http://127.0.0.1:8000/api/v1/optimize", {...}); // ONERILEN: const
+API_URL = process.env.OPTIMIZER_API_URL || "http://127.0.0.1:8000"; const response = await
+fetch(`${API_URL}/api/v1/optimize`, {...});
+3.2 GA ve PSO Algoritmalari Bos (Taslak)
+DOSYA: src/services/doubus/route-strategies/ga-strategy.ts, pso-strategy.ts -
+Genetik Algoritma (GA) ve Parcacik Surusu Optimizasyonu (PSO) stratejileri sadece
+interface uyumlu bos metodlar icermektedir. Bu, .ai-handover.md dosyasinda da
+belirtilmistir. Rota optimizasyonu icin kritik olan bu algoritmalar calismamaktadir.
+3.3 TypeScript Type Safety Sorunlari
+DOSYA: src/lib/supabase-db.ts - toCamelCase ve toSnakeCase fonksiyonlari 'any' tipi
+kullanmaktadir. Bu, TypeScript'in tip guvenligi avantajlarini ortadan kaldirir ve
+runtime hatalarina neden olabilir. Ayrica bircok yerde 'as any' ve 'as never' tip
+donusumleri kullanilmistir.
+3.4 Auth Token Race Condition Riski
+DOSYA: src/lib/admin-api.ts - getAuthToken() fonksiyonu birden fazla async islemi
+sirayla dener. Hizli ardisik cagrilarda race condition olusabilir. Session refresh
+ve getUser cagrilari arasinda tutarsizlik riski vardir.
+
+3.5 Veritabani UNIQUE Kisitlamasi Eksik
+DOSYA: .ai-handover.md ve supabase/fix_schema.sql - weekly_schedules tablosundaki
+user_id sutunu icin UNIQUE kisitlamasi Supabase'de manuel olarak uygulanmasi
+gerekmektedir. Bu kisitlama olmadan, bir kullanici icin birden fazla schedule
+olusturulabilir ve veri tutarsizliklari yasabilir.
+3.6 Location Mapper Default Fallback Riski
+DOSYA: src/services/doubus/location-mapper.ts (Satir: 3075) - Adres eslesmesi
+bulunamazsa default olarak 'Sw1' dondurulmektedir. Bu, yanlis lokasyonlara servis
+yapilmasina neden olabilir. Hata firlatmak veya null donmek daha guvenli olacaktir.
+3.7 Dev-Reset Endpoint Guvenlik Riski
+DOSYA: src/app/api/auth/dev-reset/route.ts - Sadece NODE_ENV kontrolu ile sinirli
+olsa da, bu endpoint uretim ortaminda yanlislikla aktif kalabilir. Ek guvenlik
+katmanlari (IP whitelist, auth token) onerilir.
+3.8 Schedule Import Mukerrer Veri Kontrolu
+DOSYA: src/services/excel/import.ts - Excel import sirasinda ayni ogrenci icin
+tekrarlanan gunler icin veri degistirilir ancak eski verilerin tamamen silinip
+silinmedigi net degil. Merge mantigi data integrity sorunlarina yol acabilir.
+4. Orta Oncelikli Sorunlar
+Sorun
+Dosya
+Aciklama
+Memory Leak Riski
+src/hooks/use-toast.ts
+memoryState modul
+seviyesinde degisken
+Error Handling
+Eksik
+src/app/api/admin/user
+s/route.ts
+Rollback sirasinda hata
+bildirimi yok
+Hard-coded Capaciti
+es
+src/services/vehicle-c
+alculator.ts
+Arac kapasiteleri sabit
+degerler
+
+Missing Input
+Validation
+src/app/api/admin/vehi
+cles/route.ts
+POST endpoint validasyon
+eksik
+Travel Times Static
+src/services/doubus/ro
+ute.ts
+Real-time trafik bilgisi
+yok
+K-Means Random Init
+src/services/clusterin
+g.ts
+Deterministik degil
+No Pagination
+src/app/api/admin/user
+s/route.ts
+Buyuk veri setlerinde sorun
+Console.error
+Kullanimi
+Multiple files
+Log sistemine donusturulmel
+i
+Missing Rate
+Limiting
+All API routes
+DoS riski
+Incomplete RLS
+Policies
+supabase/rls_policies.
+sql
+Bazi tablolarda eksik
+No Transaction
+Support
+src/lib/supabase-db.ts
+Coklu islem destegi yok
+Duplicate Code
+Multiple API files
+Tekrarlanan kod patternleri
+5. Dusuk Oncelikli Sorunlar ve Iyilestirme Onerileri
+5.1 Kod Organizasyonu
+src/lib/supabase-db.ts dosyasi 1600+ satir uzunlugundadir ve Single Responsibility
+Principle ihlal edilmektedir. Bu dosya user, schedule, vehicle, route operations
+gibi ayri modullere bolunmelidir.
+5.2 Performans Optimizasyonlari
+K-means clustering icin Web Workers kullanimi onerilir. Buyuk veri setlerinde UI
+blocklanmasini onlemek icin arka planda calisma saglanmalidir. Travel time matrix
+icin memoization veya caching mekanizmasi eklenebilir.
+5.3 Test Kapsami
+
+Mevcut testler AppError ve Zod validation lari icermektedir. Ancak servis katmani,
+API route lari ve React komponentleri icin unit test ve integration test
+yazilmalidir. E2E testler icin Playwright onerilir.
+5.4 Dokumentasyon
+API endpoint leri icin JSDoc yorumlari eksik. OpenAPI/Swagger dokumantasyonu
+olusturulmali. Komplex algoritma dosyalari icin detayli aciklamalar eklenmeli.
+6. Dogru Yapilmis Uygulamalar
+ Uygulama
+ Aciklama
+Moduler Mimari
+Kodlar islevlerine gore iyi ayrilmis
+TypeScript Kullanimi
+Tip tanimlari mevcut, strict mode aktif
+shadcn/ui Entegrasyonu
+Tutarli UI komponentleri, accessibility
+Route-Based Auth
+Middleware ile route korumasi
+AppError Sinifi
+Merkezi hata yonetimi pattern
+Zod Validation
+API input validasyonu
+Supabase Admin Client
+RLS bypass duzgun yapilmis
+Strategy Pattern
+Route optimizasyon pattern
+K-Means++ Init
+Optimize edilmis baslangic noktalari
+Excel Import/Export
+XLSX kutuphanesi entegrasyonu
+Genkit AI Flow
+Duzenli AI flow tanimi
+7. Oncelikli Aksiyon Plani
+7.1 Acil (1-2 Hafta)
+- Python API URL environment variable olarak tasinmali - weekly_schedules.user_id
+UNIQUE constraint Supabase de uygulanmali - location-mapper.ts default fallback null
+
+olarak degistirilmeli - API route lari icin rate limiting eklenmeli
+7.2 Kisa Vadeli (1 Ay)
+- GA ve PSO algoritmalari implement edilmeli - Type any kullanimlari kaldirilip
+proper type lar yazilmali - Error handling ve logging mekanizmasi kurulmali - API
+pagination destegi eklenmeli
+7.3 Orta Vadeli (2-3 Ay)
+- supabase-db.ts dosyasi modullere ayrilmali - Unit test ve integration test kapsami
+artirilmali - Real-time trafik bilgisi entegrasyonu arastirilmali - API
+dokumantasyonu (OpenAPI) olusturulmali
+8. Sonuc
+UniRide projesi, engelli ogrenciler icin servis optimizasyonu yapan degerli bir
+uygulamadir. Projenin temel mimarisi saglam temellere dayanmaktadir ve modern
+teknolojiler kullanilmaktadir. Ancak, tespit edilen kritik sorunlarin acil olarak
+giderilmesi gerekmektedir. Ozellikle guvenlik, tip guvenligi ve algoritma
+tamamlanmasi oncelikli olarak ele alinmalidir. Bu raporda belirtilen oneriler
+uygulandigi takdirde, proje uretim ortama hazir hale gelecektir.

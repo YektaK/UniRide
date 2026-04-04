@@ -109,3 +109,9 @@ npm run build
 | Düşük | GA/PSO algoritmaları boş | `src/services/doubus/route-strategies/` |
 
 Bu düzeltmeleri de yapmamı ister misiniz?
+
+## AI Collaboration Test
+
+This is a test PR to verify the GitHub workflow for AI-Human collaboration.
+
+Created by Z.ai - 04.04.2026 11:41

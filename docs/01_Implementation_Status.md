@@ -1,6 +1,6 @@
 # Implementation Status
 
-> **Son Güncelleme:** 04 Nisan 2026, 14:00 — SOTA Çözücü Entegrasyon Analizi (04.04.2026 - Ekleyen: Z.ai)
+> **Son Güncelleme:** 04 Nisan 2026, 15:30 — Local Search İyileştirmesi (P5) (04.04.2026 - Ekleyen: Z.ai)
 > **Referans:** `docs/03_Roadmap.md` | `docs/02_Architecture.md`
 > **Doğrulayan:** AI Assistant & Yekta Kayman
 
@@ -88,7 +88,7 @@
 
 ### 🟡 Orta (Fonksiyonel İyileştirme)
 - ⚠️ **Test Coverage Düşük (P4)** — Sadece `resource_profiler` test edildi (20 test)
-- ⚠️ **Local Search Kısıtlı (P5)** — Sadece 2-opt var; or-opt ve 3-opt eksik
+- ✅ **Local Search Tam (P5)** — 2-opt, 3-opt, Or-opt, Swap, Cross Exchange, Hybrid mevcut. Tüm stratejiler default 'hybrid' kullanıyor (04.04.2026 - Z.ai)
 - ⚠️ **time_matrix Veri Akışı (P7)** — Caching yok, her istekte DB'den yükleniyor
 - ⚠️ **Heterojen Filo Kısmi (P8)** — `VehicleConfig` şemada var ama stratejilerde pasif
 

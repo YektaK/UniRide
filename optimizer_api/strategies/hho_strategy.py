@@ -64,7 +64,7 @@ class HarrisHawksOptimizerStrategy(BaseRoutingStrategy):
         "jump_probability": 0.5,  # Probability of prey escaping
         "max_no_improvement": 20,
         "seed": None,
-        "local_search_type": "two_opt",  # Type of local search to apply
+        "local_search_type": "hybrid",  # Type of local search to apply (hybrid = 2-opt + 3-opt + or-opt + swap)
     }
 
     def __init__(self, config: Optional[Dict] = None):

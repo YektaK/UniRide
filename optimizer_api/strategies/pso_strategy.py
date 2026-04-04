@@ -58,7 +58,7 @@ class PSOStrategy(BaseRoutingStrategy):
         "velocity_clamp": 0.9,
         "max_no_improvement": 25,
         "seed": None,
-        "local_search_type": "two_opt",  # Local search to apply after PSO
+        "local_search_type": "hybrid",  # Local search to apply after PSO (hybrid = 2-opt + 3-opt + or-opt + swap)
     }
 
     def __init__(self, config: Optional[Dict] = None):

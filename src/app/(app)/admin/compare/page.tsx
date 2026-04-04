@@ -87,7 +87,7 @@ export default function AlgorithmComparisonPage() {
                 },
                 body: JSON.stringify({
                     students: students,
-                    depot: { id: "D.Kampus", lat: 40.8410, lng: 31.1478 },
+                    depot: { id: "D.Kampus", lat: 41.001, lng: 29.177 },
                     clusteringAlgorithm: clusteringAlgorithm
                 })
             });

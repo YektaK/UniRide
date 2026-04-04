@@ -54,3 +54,9 @@ test-results/
 # IDE Ayarları (İş ve ev PC farklı ayarlar isteyebilir)
 .vscode/
 .idea/
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python

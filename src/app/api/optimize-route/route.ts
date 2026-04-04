@@ -126,11 +126,11 @@ export async function POST(request: Request) {
             dropoff_time: s.dropoff_time || s.dropoffTime,
         }));
 
-        // Default depot (Düzce University Campus)
+        // Default depot (Doğuş Üniversitesi, Dudullu Kampüsü)
         const optimizationDepot: Depot = {
             id: depot.id || "D.Kampus",
-            lat: depot.lat || 40.8410,
-            lng: depot.lng || 31.1478,
+            lat: depot.lat || 41.001,
+            lng: depot.lng || 29.177,
         };
 
         // Call Python API with CVRPTW options

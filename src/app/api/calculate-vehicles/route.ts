@@ -18,11 +18,11 @@ import {
 import { normalizeAlgorithmName } from "@/lib/algorithm-constants";
 import type { IEResponseData, HourlyDemandData, BottleneckData, TimeShiftSuggestion } from "@/types/ie-resource";
 
-// Varsayılan depot (Düzce Üniversitesi Kampüs)
+// Varsayılan depot (Doğuş Üniversitesi, Dudullu Kampüsü)
 const DEFAULT_DEPOT: Depot = {
     id: "D.Kampus",
-    lat: 40.841,
-    lng: 31.1478,
+    lat: 41.001,
+    lng: 29.177,
 };
 
 function transformIEData(

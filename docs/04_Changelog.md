@@ -5,6 +5,35 @@
 
 ---
 
+## 2026-04-04 (14:00) — SOTA Çözücü Analizi ve Dokümantasyon Standardizasyonu (04.04.2026 - Ekleyen: Z.ai)
+
+### SOTA Çözücü Entegrasyon Analizi
+**[Z.ai]** — **PyVRP, VROOM, OR-Tools Durum Tespiti:**
+- Mevcut dosyalar: `pyvrp_strategy.py` (505 satır), `vroom_strategy.py` (429 satır), `ortools_cvrp.py` (aktif)
+- Sorun: PyVRP ve VROOM `requirements.txt`'de tanımlı DEĞİL, kurulu değilse sessizce fallback yapılıyor
+- Öneri: Akademik makale için SOTA çözücülerle kıyaslama ZORUNLU (P11 görevi)
+
+### Dokümantasyon Standardizasyonu
+**[Z.ai]** — **Tarih/Ekleyen Bilgisi Zorunluluğu:**
+- `.ai-rules` dosyasına Bölüm 6 eklendi: Tüm güncellemelerde `(GG.AA.YYYY - Ekleyen: İsim)` formatı
+- Silme yasağı: Eski bilgiler silinmemeli, yanına parantez içinde görüş eklenmeli
+- Görüş çakışmaları: Aynı konuda farklı zamanlarda farklı görüşler olabilir, kullanıcı konsolide eder
+
+### Güncellenen Dosyalar
+- `.ai-rules`: Bölüm 6 - Dokümantasyon Güncelleme Kuralları eklendi
+- `docs/ALGORITHM_COMPARISON.md`: Bölüm 6 - SOTA Çözücü Entegrasyon Durumu eklendi
+- `docs/sota_framework_plan_2026/01_SOTA_Architecture_Vision.md`: Bölüm 3 - SOTA Baseline Çözücüler eklendi
+- `docs/01_Implementation_Status.md`: P11 görevi eklendi, son güncelleme tarihi değiştirildi
+- `.ai-handover.md`: 04.04.2026 kaydı eklendi (eski kayıtlar korundu)
+
+### Akademik Gerekçe
+**[Z.ai]** — Makalede "State-of-the-Art" iddiası için:
+- PyVRP (DIMACS 2021 Winner, HGS) ile kıyaslama ZORUNLU
+- Vidal (2022) referansı literatür bağlantısı sağlar
+- Reviewer'lar "Where is your comparison with HGS/PyVRP?" sorusunu soracaktır
+
+---
+
 ## 2026-03-28 (23:30) — Cross-Validated Analiz + Dokümantasyon Güncelleme
 
 ### Mevcut Durum Analizi ve Dokümantasyon Güncelleme

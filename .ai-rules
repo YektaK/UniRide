@@ -45,3 +45,37 @@ Kullanıcı "devir raporu", "mesai bitti" veya "eve geçiyorum" dediğinde:
 
 ## 5. TOKEN OPTİMİZASYONU
 - Bilgi aktarırken uzun kod blokları yerine, mantıksal değişiklikleri ve kritik satır numaralarını belirt.
+
+## 6. DOKÜMANTASYON GÜNCELLEME KURALLARI (04.04.2026 - Z.ai)
+
+### 6.1 Tarih ve Ekleyen Bilgisi Zorunluluğu
+Tüm dokümantasyon güncellemelerinde şu format kullanılacaktır:
+- **Format:** `(GG.AA.YYYY - Ekleyen: İsim)`
+- **Örnek:** `(04.04.2026 - Ekleyen: Z.ai)`
+
+Bu bilgi şu durumlarda eklenmelidir:
+- Yeni bölüm/görev eklendiğinde
+- Mevcut bölümde önemli değişiklik yapıldığında
+- Yeni bir karar veya görüş belirtildiğinde
+
+### 6.2 Silme Yasağı ve Görüş Sistemi
+**ASLA doğrudan silme yapmayın!** Silmek yerine şu yöntemi kullanın:
+
+1. **Olumsuz Görüş:** Eski bilginin yanına parantez içinde görüş ekleyin
+   - Örnek: `• Eski madde (04.04.2026 - Z.ai: Bu yaklaşım X nedeniyle önerilmiyor, yerine Y kullanılmalı)`
+
+2. **İptal Edilen Maddeler:** İptal edildiğini belirtin ama içeriği koruyun
+   - Örnek: `• [İPTAL] Eski madde (04.04.2026 - Z.ai: Kullanıcı tarafından iptal edildi, sebep: Z)`
+
+3. **Neden?** Farklı zamanlarda farklı kişilerle çalışırken, daha önce denenmiş ve olumsuz sonuçlanan yaklaşımlara tekrar sapılmamış olur. Geçmiş bilgi muhafaza edilir.
+
+### 6.3 Görüş Çakışmaları
+Aynı konuda farklı zamanlarda farklı görüşler olabilir:
+```
+• Yaklaşım A (01.04.2026 - Ekleyen: X.ai: Öneriliyor)
+• Yaklaşım A (04.04.2026 - Ekleyen: Z.ai: X testlerinde başarısız oldu, revizyon gerekli)
+```
+Bu durumda kullanıcı/lead konsolidasyon yaparak nihai kararı belirler.
+
+### 6.4 Yeni Yol Önerisi
+Farklı bir yol önerecek iseniz, **İŞLEM YAPMADAN ÖNCE** kullanıcıya belirtin ve mutabık kalın. Sonra gerekli işlemleri yapın.

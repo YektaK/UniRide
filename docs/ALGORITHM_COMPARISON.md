@@ -1,7 +1,7 @@
 # 📊 UniRide Algoritma Karşılaştırması
 
-> **Proje:** UniRide - Engelli Öğrenci Taşımacılık Sistemi  
-> **Son Güncelleme:** 26 Mart 2026
+> **Proje:** UniRide - Engelli Öğrenci Taşımacılık Sistemi
+> **Son Güncelleme:** 04 Nisan 2026 (04.04.2026 - Ekleyen: Z.ai)
 
 ---
 
@@ -143,3 +143,95 @@ Her senaryo için: 10 run → Mean, Std, Min, Max, ANOVA testi, Wilcoxon rank-su
 5. Vidal, T. (2022). Hybrid genetic search for the CVRP: Open-source implementation and SWAP* neighborhood. *Computers & OR*.
 6. Wouda, N., et al. (2024). PyVRP: A high-performance VRP solver package. *INFORMS Journal on Computing*.
 7. Coupey, J. (2024). VROOM — Vehicle Routing Open-source Optimization Machine. GitHub.
+
+---
+
+## 6. SOTA Çözücü Entegrasyon Durumu (04.04.2026 - Ekleyen: Z.ai)
+
+### 6.1 Mevcut Dosya ve Kullanım Analizi
+
+| Çözücü | Dosya Var mı? | Registry'de Kayıtlı mı? | requirements.txt'de mi? | Aktif Kullanım |
+|--------|---------------|-------------------------|-------------------------|----------------|
+| **OR-Tools** | ✅ `ortools_cvrp.py` | ✅ Evet | ✅ `ortools>=9.8.0` | ✅ Aktif |
+| **PyVRP** | ✅ `pyvrp_strategy.py` | ✅ Evet (graceful fallback) | ❌ YOK | ❌ Pasif |
+| **VROOM** | ✅ `vroom_strategy.py` | ✅ Evet (graceful fallback) | ❌ YOK | ❌ Pasif |
+
+### 6.2 Kod Analizi Özeti (04.04.2026 - Z.ai)
+
+**PyVRP (`pyvrp_strategy.py`):**
+- ✅ Kapsamlı implementasyon mevcut (505 satır)
+- ✅ DIMACS 2021 birincisi HGS algoritması
+- ✅ Heterojen fleet desteği (Sw/So kapasite)
+- ✅ Time window desteği
+- ⚠️ `graceful fallback` ile import ediliyor (yüklü değilse None döner)
+- ❌ `requirements.txt`'de tanımlı DEĞİL
+
+**VROOM (`vroom_strategy.py`):**
+- ✅ Kapsamlı implementasyon mevcut (429 satır)
+- ✅ Ultra-hızlı C++ tabanlı
+- ✅ PDPTW ve Multi-trip desteği
+- ✅ OSRM entegrasyonu için hazır
+- ⚠️ `graceful fallback` ile import ediliyor
+- ❌ `requirements.txt`'de tanımlı DEĞİL
+
+**OR-Tools (`ortools_cvrp.py`):**
+- ✅ Tam entegre ve aktif kullanımda
+- ✅ GLS (Guided Local Search) metaheuristic
+- ✅ Heterojen kapasite kısıtları
+- ✅ Time limit desteği (30s default)
+
+### 6.3 Akademik Makale Perspektifi (04.04.2026 - Z.ai)
+
+**Neden SOTA Çözücüler Benchmark'a Eklenmeli?**
+
+| Kriter | Değerlendirme | Açıklama |
+|--------|---------------|----------|
+| **Referans Noktası** | ⭐⭐⭐⭐⭐ Kritik | "Bizim ALNS algoritmamız, DIMACS birincisi PyVRP'ye X% yaklaşıyor" ifadesi makale güvenilirliğini artırır |
+| **SOTA Kanıtı** | ⭐⭐⭐⭐⭐ Zorunlu | Makalede "State-of-the-Art" iddiası için SOTA çözücülerle kıyaslanmak ZORUNLU |
+| **Reviewer Cevabı** | ⭐⭐⭐⭐⭐ Gerekli | "Neden kendi algoritmanız daha iyi?" sorusuna quantified cevap verilebilir |
+| **Literatür Bağlantısı** | ⭐⭐⭐⭐ Önemli | Vidal (2022), Wouda (2024) referansları ile literatüre oturum |
+
+**Makale Tablosu Örneği (Önerilen Format):**
+
+| Instance | N | Optimal | PyVRP | OR-Tools | VROOM | **Ours (ALNS)** |
+|----------|---|---------|-------|----------|-------|-----------------|
+| berlin52 | 52 | 7542 | 7542 (0.00%) | 7542 (0.00%) | 7542 (0.00%) | **TBD** |
+| kroA100 | 100 | 21282 | 21345 (0.30%) | 21420 (0.65%) | 21500 (1.02%) | **TBD** |
+| d198 | 198 | 15780 | 15820 (0.25%) | 15900 (0.76%) | 15850 (0.44%) | **TBD** |
+
+### 6.4 Önerilen Entegrasyon Adımları (04.04.2026 - Z.ai)
+
+1. **requirements.txt Güncellemesi:**
+   ```
+   # SOTA Solvers (Akademik Benchmark için)
+   pyvrp>=0.9.0    # DIMACS 2021 Winner - HGS
+   pyvroom>=1.0.0  # Ultra-fast C++ solver
+   ```
+
+2. **Benchmark STRATEGIES Listesine Ekleme (`run_interactive_benchmark_v2.py`):**
+   ```python
+   # SOTA Baseline Solvers (04.04.2026 - Z.ai)
+   ("PyVRP", "pyvrp", 30),      # DIMACS Winner - Gold Standard
+   ("OR-Tools", "ortools", 30), # Industry Standard
+   ("VROOM", "vroom", 5),       # Ultra-Fast - Scalability Test
+   ```
+
+3. **Makale İçin Strateji Kategorizasyonu:**
+   - **[A] Kendi Algoritmalarımız** (Makale Konusu): Hybrid LS, ALNS, Linear Split
+   - **[B] SOTA Baseline** (Karşılaştırma İçin): PyVRP, OR-Tools, VROOM
+   - **[C] Klasik Sezgiseller** (Literatür Referansı): NN, Sweep, CW
+
+### 6.5 Riskler ve Çözümler (04.04.2026 - Z.ai)
+
+| Risk | Olasılık | Çözüm |
+|------|----------|-------|
+| PyVRP/VROOM kurulu değil | Yüksek | `pip install pyvrp pyvroom` basit kurulum |
+| TSPLIB format uyumsuzluğu | Düşük | Mevcut `dataset_loader.py` zaten TSPLIB okuyor |
+| Heterojen fleet (Sw/So) | Orta | TSPLIB CVRP instance'ları için homojen fleet kullan |
+| Süre farkı | Düşük | PyVRP 30s, VROOM 5s limit ile çalıştır |
+
+### 6.6 Sonuç (04.04.2026 - Z.ai)
+
+**KESİNLİKLE EKLENMELİ** ✅
+
+SOTA çözücüler (PyVRP, VROOM) akademik makale için kritik öneme sahiptir. Kod zaten hazır, sadece kurulum ve benchmark entegrasyonu gerekli. Bu olmadan makalede "SOTA" iddiası yapmak reviewer'lardan "Where is your comparison with PyVRP/HGS?" sorusu alınmasına neden olur.

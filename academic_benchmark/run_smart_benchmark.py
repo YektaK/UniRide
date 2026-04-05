@@ -175,6 +175,129 @@ def print_problem_detail(problem, p_res: Dict, all_strat_names: List[str]):
     
     print("─" * 70)
 
+def multi_select_problems(all_problems: List) -> List:
+    """Çoklu problem seçimi"""
+    print("\n" + "═" * 70)
+    print("PROBLEM SEÇİMİ")
+    print("═" * 70)
+    print("Test etmek istediğiniz problemleri seçin.")
+    print("Birden fazla seçim için virgülle ayırın (örn: 1,3,5-8) veya 'all' tümü için.")
+    print("─" * 70)
+    
+    # Kategorilere göre grupla
+    categories = {'small': [], 'medium': [], 'large': []}
+    for p in all_problems:
+        if p.category in categories:
+            categories[p.category].append(p)
+    
+    # Numaralandırılmış liste oluştur
+    idx = 1
+    problem_map = {}
+    
+    for cat_name, cat_label in [('small', 'KÜÇÜK'), ('medium', 'ORTA'), ('large', 'BÜYÜK')]:
+        problems = categories[cat_name]
+        if not problems:
+            continue
+        problems.sort(key=lambda x: x.dimension)
+        
+        print(f"\n[{cat_label} PROBLEMLER]")
+        for p in problems:
+            print(f"  {idx:>2}. {p.name:<12} (n={p.dimension:<5})")
+            problem_map[idx] = p
+            idx += 1
+    
+    print("\n─" * 70)
+    print("Seçiminiz: ", end="")
+    user_input = input().strip().lower()
+    
+    selected = []
+    
+    if user_input == 'all' or user_input == 'tum' or user_input == 'tüm':
+        return all_problems[:]
+    
+    # Parse selection (support: 1,3,5-8,10)
+    try:
+        parts = user_input.replace(' ', '').split(',')
+        for part in parts:
+            if '-' in part:
+                # Range selection (e.g., 5-8)
+                start, end = part.split('-')
+                for i in range(int(start), int(end) + 1):
+                    if i in problem_map:
+                        selected.append(problem_map[i])
+            else:
+                # Single selection
+                i = int(part)
+                if i in problem_map:
+                    selected.append(problem_map[i])
+    except (ValueError, KeyError):
+        print("Geçersiz seçim!")
+        return []
+    
+    if not selected:
+        print("Hiçbir problem seçilmedi!")
+        return []
+    
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_selected = []
+    for p in selected:
+        if p.name not in seen:
+            seen.add(p.name)
+            unique_selected.append(p)
+    
+    print(f"\n✓ {len(unique_selected)} problem seçildi: {', '.join([p.name for p in unique_selected])}")
+    return unique_selected
+
+
+def multi_select_algorithms(all_strat_names: List[str]) -> List[str]:
+    """Çoklu algoritma seçimi"""
+    print("\n" + "═" * 70)
+    print("ALGORİTMA SEÇİMİ")
+    print("═" * 70)
+    print("Test etmek istediğiniz algoritmaları seçin.")
+    print("Birden fazla seçim için virgülle ayırın (örn: 1,3,5) veya 'all' tümü için.")
+    print("─" * 70)
+    
+    for idx, name in enumerate(all_strat_names, 1):
+        print(f"  {idx:>2}. {name}")
+    
+    print("\n─" * 70)
+    print("Seçiminiz: ", end="")
+    user_input = input().strip().lower()
+    
+    selected = []
+    
+    if user_input == 'all' or user_input == 'tum' or user_input == 'tüm':
+        return all_strat_names[:]
+    
+    # Parse selection
+    try:
+        parts = user_input.replace(' ', '').split(',')
+        for part in parts:
+            i = int(part)
+            if 1 <= i <= len(all_strat_names):
+                selected.append(all_strat_names[i - 1])
+    except (ValueError, IndexError):
+        print("Geçersiz seçim!")
+        return []
+    
+    if not selected:
+        print("Hiçbir algoritma seçilmedi!")
+        return []
+    
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_selected = []
+    for s in selected:
+        if s not in seen:
+            seen.add(s)
+            unique_selected.append(s)
+    
+    print(f"\n✓ {len(unique_selected)} algoritma seçildi: {', '.join(unique_selected)}")
+    return unique_selected
+
+
 def interactive_detail_mode(all_problems: List, saved_results: Dict, all_strat_names: List[str]):
     """İnteraktif detay modu"""
     # Problem lookup dict
@@ -243,6 +366,7 @@ def main():
         print("  [B] Eksikleri Tamamla: Sadece Hiç Test Edilmemiş Problem/Stratejileri Çöz")
         print("  [C] Hızlı Mod: Sadece Küçük Problemlerde Tüm Algoritmaları Çalıştır")
         print("  [D] Kapsamlı (Tehlikeli): Her Şeyi (Tüm Kod + Tüm Problemler) Yeniden Test Et")
+        print("  [E] Özel Seçim: İstediğiniz Problemleri ve Algoritmaları Seçin")
         print("  [S] Detay Modu: Bir Problem İçin Detaylı Sonuçları Görüntüle")
         print("  [Q] Çıkış")
         
@@ -280,6 +404,16 @@ def main():
         elif choice == 'D':
             problems_to_run = all_problems
             strategies_to_run = all_strat_names
+        elif choice == 'E':
+            # Özel seçim modu
+            problems_to_run = multi_select_problems(all_problems)
+            if not problems_to_run:
+                input("Devam etmek için Enter'a basın...")
+                continue
+            strategies_to_run = multi_select_algorithms(all_strat_names)
+            if not strategies_to_run:
+                input("Devam etmek için Enter'a basın...")
+                continue
         else:
             print("Geçersiz seçim.")
             input("Devam etmek için Enter'a basın...")

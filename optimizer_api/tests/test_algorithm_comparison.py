@@ -9,6 +9,9 @@ Tests solution quality and execution time.
 Run with:
     cd optimizer_api
     python tests/test_algorithm_comparison.py
+    
+    # Or with pytest (slow tests excluded by default):
+    pytest tests/test_algorithm_comparison.py -v -m "not slow"
 
 Version: 1.0.0
 Author: Super Z AI Assistant
@@ -21,6 +24,7 @@ import time
 import json
 import random
 import math
+import pytest
 from datetime import datetime
 from typing import Dict, List, Any, Tuple
 
@@ -110,6 +114,7 @@ class AlgorithmComparator:
     """Compare performance of different algorithms"""
     
     ALGORITHMS = [
+        ("Nearest Neighbor", None, {}),  # Baseline heuristic (no local search)
         ("2-opt", LocalSearchType.TWO_OPT, {"max_iterations": 500}),
         ("3-opt", LocalSearchType.THREE_OPT, {"max_iterations": 200}),
         ("Or-opt", LocalSearchType.OR_OPT, {"max_iterations": 300}),
@@ -136,12 +141,21 @@ class AlgorithmComparator:
         initial_distance = calculate_route_distance(initial_route, distance_matrix)
         
         start_time = time.time()
-        improved_route, improved_distance = apply_local_search(
-            initial_route.copy(),
-            duration_func,
-            algorithm_type,
-            **config
-        )
+        
+        if algorithm_type is None and algorithm_name == "Nearest Neighbor":
+            # Use nearest neighbor heuristic as baseline
+            locations = list(distance_matrix.keys())
+            improved_route = nearest_neighbor_solution(locations, distance_matrix)
+            improved_distance = calculate_route_distance(improved_route, distance_matrix)
+        else:
+            # Use local search algorithm
+            improved_route, improved_distance = apply_local_search(
+                initial_route.copy(),
+                duration_func,
+                algorithm_type,
+                **config
+            )
+        
         elapsed = time.time() - start_time
         
         improvement = ((initial_distance - improved_distance) / initial_distance * 100) if initial_distance > 0 else 0
@@ -330,7 +344,7 @@ def test_basic_comparison():
     
     print("\nAlgorithm Details:")
     for alg in result["algorithms"]:
-        print(f"  {alg['algorithm']:<10}: dist={alg['final_distance']:.2f}, "
+        print(f"  {alg['algorithm']:<15}: dist={alg['final_distance']:.2f}, "
               f"improvement={alg['improvement_pct']:.1f}%, time={alg['time_seconds']:.4f}s")
     
     # Verify all routes are valid
@@ -340,6 +354,7 @@ def test_basic_comparison():
     print("\n✅ Basic comparison test passed!")
 
 
+@pytest.mark.slow
 def test_benchmark_suite():
     """Test full benchmark suite"""
     print("\n🔬 Running Benchmark Suite...")

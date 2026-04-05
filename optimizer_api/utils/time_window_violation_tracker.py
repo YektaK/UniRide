@@ -61,7 +61,8 @@ class ViolationReport:
     early_arrivals: int = 0
     late_arrivals: int = 0
     no_window_count: int = 0
-    total_violation_minutes: float = 0.0
+    total_violation_minutes: float = 0.0  # Raw violation minutes (sum of actual delays/early arrivals)
+    total_penalty: float = 0.0            # Weighted penalty score (minutes * penalty weights)
     compliance_rate: float = 100.0  # Percentage of on-time arrivals
     violations: List[TimeWindowViolation] = field(default_factory=list)
     route_duration: float = 0.0
@@ -75,6 +76,7 @@ class ViolationReport:
             "late_arrivals": self.late_arrivals,
             "no_window_count": self.no_window_count,
             "total_violation_minutes": self.total_violation_minutes,
+            "total_penalty": self.total_penalty,
             "compliance_rate": self.compliance_rate,
             "num_locations": len(self.violations),
             "route_duration": self.route_duration,
@@ -84,8 +86,11 @@ class ViolationReport:
     
     def get_summary(self) -> str:
         """Get human-readable summary"""
-        if self.total_violations == 0:
+        if self.total_violations == 0 and self.no_window_count == 0:
             return f"✅ No violations. Compliance: 100%"
+        
+        if self.total_violations == 0:
+            return f"⚠️ No time violations, but {self.no_window_count} locations without time window defined."
         
         return (
             f"⚠️ {self.total_violations} violations detected:\n"
@@ -93,6 +98,7 @@ class ViolationReport:
             f"   - Late arrivals: {self.late_arrivals}\n"
             f"   - No window defined: {self.no_window_count}\n"
             f"   - Total violation time: {self.total_violation_minutes:.1f} min\n"
+            f"   - Total penalty score: {self.total_penalty:.1f}\n"
             f"   - Compliance rate: {self.compliance_rate:.1f}%"
         )
 
@@ -113,11 +119,11 @@ class TimeWindowViolationTracker:
         print(report.get_summary())
     """
     
-    # Severity thresholds (in minutes)
+    # Severity thresholds (in minutes) used by severity classification:
+    # minor: 1-5 minutes, moderate: 6-15 minutes, severe: > 15 minutes
     SEVERITY_THRESHOLDS = {
-        "minor": 5,      # 1-5 minutes
-        "moderate": 15,  # 5-15 minutes
-        "severe": 30     # > 15 minutes
+        "minor": 5,      # <= 5 minutes
+        "moderate": 15   # <= 15 minutes, > 15 = severe
     }
     
     def __init__(
@@ -225,7 +231,8 @@ class TimeWindowViolationTracker:
                     )
                     report.violations.append(violation)
                     report.early_arrivals += 1
-                    report.total_violation_minutes += (earliest - current_time) * self.wait_penalty
+                    report.total_violation_minutes += (earliest - current_time)  # Raw minutes
+                    report.total_penalty += (earliest - current_time) * self.wait_penalty  # Weighted
                     
                     # Wait until window opens
                     current_time = earliest
@@ -246,7 +253,8 @@ class TimeWindowViolationTracker:
                     )
                     report.violations.append(violation)
                     report.late_arrivals += 1
-                    report.total_violation_minutes += (current_time - latest) * self.late_penalty
+                    report.total_violation_minutes += (current_time - latest)  # Raw minutes
+                    report.total_penalty += (current_time - latest) * self.late_penalty  # Weighted
                     
                 else:
                     # Within window - no violation
@@ -327,6 +335,7 @@ class TimeWindowViolationTracker:
         route_reports = []
         total_violations = 0
         total_violation_minutes = 0.0
+        total_penalty = 0.0
         total_locations = 0
         total_compliant = 0
         
@@ -344,6 +353,7 @@ class TimeWindowViolationTracker:
             
             total_violations += report.total_violations
             total_violation_minutes += report.total_violation_minutes
+            total_penalty += report.total_penalty
             total_locations += len([v for v in report.violations if v.violation_type != ViolationType.NO_WINDOW])
             total_compliant += len([v for v in report.violations if v.violation_type == ViolationType.WITHIN_WINDOW])
         
@@ -354,15 +364,16 @@ class TimeWindowViolationTracker:
                 "total_routes": len(routes),
                 "total_violations": total_violations,
                 "total_violation_minutes": total_violation_minutes,
+                "total_penalty": total_penalty,
                 "overall_compliance_rate": overall_compliance,
                 "timestamp": datetime.now().isoformat()
             },
             "route_reports": [r.to_dict() for r in route_reports],
             "worst_routes": sorted(
-                [(r.vehicle_id, r.total_violations, r.total_violation_minutes) for r in route_reports],
+                [(r.vehicle_id, r.total_violations, r.total_penalty) for r in route_reports],
                 key=lambda x: x[2],
                 reverse=True
-            )[:5]  # Top 5 worst routes
+            )[:5]  # Top 5 worst routes by penalty
         }
     
     def calculate_penalty(self, report: ViolationReport) -> float:
@@ -460,6 +471,9 @@ def create_tracker_from_students(
     time_windows = {}
     time_key = "pickup_time" if direction == "pickup" else "dropoff_time"
     
+    # Day boundaries (minutes from midnight)
+    MINUTES_PER_DAY = 24 * 60
+    
     for student in students:
         location = student.get("location_code", "")
         time_str = student.get(time_key, "")
@@ -471,10 +485,14 @@ def create_tracker_from_students(
                 
                 if direction == "pickup":
                     # Pickup: window ends at pickup time
-                    time_windows[location] = (minutes - window_size, minutes)
+                    earliest = max(0, minutes - window_size)  # Clamp to day start
+                    latest = min(MINUTES_PER_DAY, minutes)     # Clamp to day end
+                    time_windows[location] = (earliest, latest)
                 else:
                     # Dropoff: window starts at dropoff time
-                    time_windows[location] = (minutes, minutes + window_size)
+                    earliest = max(0, minutes)                  # Clamp to day start
+                    latest = min(MINUTES_PER_DAY, minutes + window_size)  # Clamp to day end
+                    time_windows[location] = (earliest, latest)
             except (ValueError, IndexError):
                 continue
     

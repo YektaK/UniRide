@@ -78,9 +78,6 @@ SOTA_SOLVERS = [
     # ("VROOM", "vroom", None),  # High-performance - requires VROOM binary
 ]
 
-# Combined strategies for benchmark
-ALL_STRATEGIES = STRATEGIES + SOTA_SOLVERS
-
 
 # ============================================================
 # TSPLIB Problem Definition

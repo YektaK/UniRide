@@ -88,7 +88,7 @@
 
 ### 🟡 Orta (Fonksiyonel İyileştirme)
 - ⚠️ **Test Coverage Düşük (P4)** — Sadece `resource_profiler` test edildi (20 test)
-- ✅ **Local Search Tam (P5)** — 2-opt, 3-opt, Or-opt, Swap, Cross Exchange, Hybrid mevcut. Tüm stratejiler default 'hybrid' kullanıyor (04.04.2026 - Z.ai)
+- ✅ **Local Search Tam (P5)** — 2-opt, 3-opt, Or-opt, Swap, Cross Exchange, Hybrid mevcut. Hybrid desteği var; varsayılan local search stratejiye göre değişiyor (bazılarında `two_opt`, bazılarında `hybrid`) (04.04.2026 - Z.ai)
 - ⚠️ **time_matrix Veri Akışı (P7)** — Caching yok, her istekte DB'den yükleniyor
 - ⚠️ **Heterojen Filo Kısmi (P8)** — `VehicleConfig` şemada var ama stratejilerde pasif
 
@@ -111,15 +111,15 @@
 - ✅ VROOM kodu hazır (`vroom_strategy.py` - 429 satır)
 - ✅ OR-Tools aktif ve kullanımda
 - ✅ OR-Tools benchmark'a eklendi (SOTA_SOLVERS listesi) (04.04.2026 - Z.ai)
-- ✅ `requirements.txt`'ye PyVRP/VROOM eklendi (commented - optional) (04.04.2026 - Z.ai)
+- ✅ `requirements-benchmark.txt` oluşturuldu (PyVRP/VROOM optional) (05.04.2026 - Z.ai)
 - 🔄 Benchmark testleri çalıştırılmadı (kullanıcı tarafından yapılmalı)
 
 **Yapılacaklar:**
-1. ✅ `requirements.txt`'ye `pyvrp>=0.9.0` ve `pyvroom>=1.0.0` ekle (optional)
+1. ✅ `requirements-benchmark.txt`'ye `pyvrp>=0.9.0` ve `pyvroom>=1.0.0` ekle (optional)
 2. ✅ `run_interactive_benchmark_v2.py` STRATEGIES listesine OR-Tools eklendi
 3. ⬜ Benchmark çalıştır ve sonuçları kaydet
 4. ⬜ `ALGORITHM_COMPARISON.md`'de TABLO'yu gerçek verilerle güncelle
-5. ⬜ PyVRP ve VROOM aktif edilmesi (pip install sonrası uncomment)
+5. ⬜ PyVRP ve VROOM aktif edilmesi (pip install -r requirements-benchmark.txt sonrası)
 
 **Akademik Gerekçe:**
 - Makalede "SOTA" iddiası için PyVRP (DIMACS 2021 Winner) ile kıyaslama ZORUNLU

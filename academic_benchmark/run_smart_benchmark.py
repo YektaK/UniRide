@@ -343,13 +343,13 @@ def show_algorithms_info():
     
     input("\n\nDevam etmek için Enter'a basın...")
 
-def multi_select_problems(all_problems: List) -> List:
-    """Çoklu problem seçimi"""
+def multi_select_problems(all_problems: List, saved_results: Dict = None, all_strat_names: List[str] = None) -> List:
+    """Çoklu problem seçimi - alias ve cache desteği ile"""
     print("\n" + "═" * 70)
     print("PROBLEM SEÇİMİ")
     print("═" * 70)
     print("Test etmek istediğiniz problemleri seçin.")
-    print("Birden fazla seçim için virgülle ayırın (örn: 1,3,5-8) veya 'all' tümü için.")
+    print("Seçim: numara (1,3,5-8), 'all', veya 'küçük/orta/büyük' alias'ları.")
     print("─" * 70)
     
     # Kategorilere göre grupla
@@ -362,26 +362,66 @@ def multi_select_problems(all_problems: List) -> List:
     idx = 1
     problem_map = {}
     
+    # Kategori range'lerini takip et
+    category_ranges = {'small': (0, 0), 'medium': (0, 0), 'large': (0, 0)}
+    
     for cat_name, cat_label in [('small', 'KÜÇÜK'), ('medium', 'ORTA'), ('large', 'BÜYÜK')]:
         problems = categories[cat_name]
         if not problems:
             continue
         problems.sort(key=lambda x: x.dimension)
         
+        start_idx = idx
         print(f"\n[{cat_label} PROBLEMLER]")
         for p in problems:
-            print(f"  {idx:>2}. {p.name:<12} (n={p.dimension:<5})")
+            # Cache durumunu göster
+            cache_status = ""
+            if saved_results and all_strat_names:
+                p_res = saved_results.get(p.name, {})
+                tested = [s for s in all_strat_names if s in p_res]
+                if len(tested) == len(all_strat_names):
+                    cache_status = " ✓"
+                elif tested:
+                    cache_status = f" ({len(tested)}/{len(all_strat_names)})"
+            
+            print(f"  {idx:>2}. {p.name:<12} (n={p.dimension:<5}){cache_status}")
             problem_map[idx] = p
             idx += 1
+        end_idx = idx - 1
+        category_ranges[cat_name] = (start_idx, end_idx)
     
-    print("\n─" * 70)
+    print("\n" + "─" * 70)
+    print("💡 Alias'lar: 'k' veya 'küçük' = 1-{}, 'o' veya 'orta' = {}-{}, 'b' veya 'büyük' = {}-{}"
+          .format(category_ranges['small'][1], 
+                  category_ranges['medium'][0], category_ranges['medium'][1],
+                  category_ranges['large'][0], category_ranges['large'][1]))
+    print("─" * 70)
     print("Seçiminiz: ", end="")
     user_input = input().strip().lower()
     
     selected = []
     
-    if user_input == 'all' or user_input == 'tum' or user_input == 'tüm':
+    # Alias kontrolü
+    if user_input in ['all', 'tum', 'tüm', 'hepsi']:
         return all_problems[:]
+    elif user_input in ['k', 'kucuk', 'küçük', 'kucuk', 'small']:
+        start, end = category_ranges['small']
+        for i in range(start, end + 1):
+            selected.append(problem_map[i])
+        print(f"\n✓ KÜÇÜK problemler seçildi ({len(selected)} adet)")
+        return selected
+    elif user_input in ['o', 'orta', 'medium']:
+        start, end = category_ranges['medium']
+        for i in range(start, end + 1):
+            selected.append(problem_map[i])
+        print(f"\n✓ ORTA problemler seçildi ({len(selected)} adet)")
+        return selected
+    elif user_input in ['b', 'buyuk', 'büyük', 'large']:
+        start, end = category_ranges['large']
+        for i in range(start, end + 1):
+            selected.append(problem_map[i])
+        print(f"\n✓ BÜYÜK problemler seçildi ({len(selected)} adet)")
+        return selected
     
     # Parse selection (support: 1,3,5-8,10)
     try:
@@ -424,13 +464,15 @@ def multi_select_algorithms(all_strat_names: List[str]) -> List[str]:
     print("ALGORİTMA SEÇİMİ")
     print("═" * 70)
     print("Test etmek istediğiniz algoritmaları seçin.")
-    print("Birden fazla seçim için virgülle ayırın (örn: 1,3,5) veya 'all' tümü için.")
+    print("Seçim: numara (1,3,5) veya 'all' tümü için.")
     print("─" * 70)
     
     for idx, name in enumerate(all_strat_names, 1):
-        print(f"  {idx:>2}. {name}")
+        info = ALGORITHM_INFO.get(name, {})
+        complexity = info.get('complexity', '?')
+        print(f"  {idx:>2}. {name:<10} [{complexity}]")
     
-    print("\n─" * 70)
+    print("\n" + "─" * 70)
     print("Seçiminiz: ", end="")
     user_input = input().strip().lower()
     
@@ -443,9 +485,15 @@ def multi_select_algorithms(all_strat_names: List[str]) -> List[str]:
     try:
         parts = user_input.replace(' ', '').split(',')
         for part in parts:
-            i = int(part)
-            if 1 <= i <= len(all_strat_names):
-                selected.append(all_strat_names[i - 1])
+            if '-' in part:
+                start, end = part.split('-')
+                for i in range(int(start), int(end) + 1):
+                    if 1 <= i <= len(all_strat_names):
+                        selected.append(all_strat_names[i - 1])
+            else:
+                i = int(part)
+                if 1 <= i <= len(all_strat_names):
+                    selected.append(all_strat_names[i - 1])
     except (ValueError, IndexError):
         print("Geçersiz seçim!")
         return []
@@ -503,8 +551,34 @@ def interactive_detail_mode(all_problems: List, saved_results: Dict, all_strat_n
                 print(f"'{user_input}' adlı problem bulunamadı. 'list' yazarak tüm problemleri görebilirsiniz.")
 
 
-def show_test_summary(problems: List, algorithms: List[str]) -> bool:
-    """Test öncesi özet göster ve onay al"""
+def analyze_cached_tests(problems: List, algorithms: List[str], saved_results: Dict) -> Dict:
+    """Cache analizini yap - hangi testler daha önce yapılmış"""
+    cached_tests = []  # Daha önce yapılmış testler
+    new_tests = []     # Henüz yapılmamış testler
+    
+    for p in problems:
+        p_res = saved_results.get(p.name, {})
+        for alg in algorithms:
+            if alg in p_res:
+                cached_tests.append((p.name, alg, p_res[alg]))
+            else:
+                new_tests.append((p.name, alg))
+    
+    return {
+        'cached': cached_tests,
+        'new': new_tests,
+        'total': len(problems) * len(algorithms),
+        'cached_count': len(cached_tests),
+        'new_count': len(new_tests)
+    }
+
+
+def show_test_summary(problems: List, algorithms: List[str], saved_results: Dict = None, skip_mode: str = 'ask') -> tuple:
+    """Test öncesi özet göster ve onay al - cache durumu ile
+    
+    Returns:
+        tuple: (continue: bool, skip_cached: bool)
+    """
     clear_screen()
     print("═" * 70)
     print("TEST ÖZETİ")
@@ -512,14 +586,53 @@ def show_test_summary(problems: List, algorithms: List[str]) -> bool:
     
     total_tests = len(problems) * len(algorithms)
     
+    # Cache analizi
+    cache_info = None
+    if saved_results:
+        cache_info = analyze_cached_tests(problems, algorithms, saved_results)
+    
     print(f"\n📊 Test Yapılacak:")
     print(f"   • Problemler: {len(problems)}")
     print(f"   • Algoritmalar: {len(algorithms)} ({', '.join(algorithms)})")
     print(f"   • Her problem {N_RUNS} kez çalıştırılacak")
     print(f"   • Toplam test sayısı: {total_tests}")
     
+    # Cache durumu göster
+    skip_cached = False
+    if cache_info and cache_info['cached_count'] > 0:
+        print(f"\n📦 ÖNBELLEK DURUMU:")
+        print(f"   • Daha önce yapılmış: {cache_info['cached_count']} test")
+        print(f"   • Henüz yapılmamış: {cache_info['new_count']} test")
+        print("─" * 70)
+        
+        if skip_mode == 'ask':
+            print("\n🔍 Önbellekteki testler için ne yapmak istersiniz?")
+            print("   [S] Atla - Sadece yeni testleri yap (önerilen)")
+            print("   [R] Yenile - Tüm testleri baştan yap")
+            print("   [A] Arttır - Mevcut sonuçlara yeni koşumlar ekle")
+            print("   [Q] Çıkış")
+            
+            cache_choice = input("\nSeçiminiz: ").strip().upper()
+            
+            if cache_choice == 'Q':
+                return (False, False)
+            elif cache_choice == 'S':
+                skip_cached = True
+                print(f"\n✓ {cache_info['new_count']} yeni test yapılacak")
+            elif cache_choice == 'A':
+                # Mevcut sonuçlara ekleme yapılacak
+                skip_cached = False
+                print(f"\n✓ Tüm testler yapılacak, mevcut sonuçlar genişletilecek")
+            else:  # R veya default
+                skip_cached = False
+                print(f"\n✓ Tüm {total_tests} test baştan yapılacak")
+    
     # Tahmini süre
+    effective_tests = cache_info['new_count'] if skip_cached else total_tests
     estimated_seconds = estimate_total_time(problems, algorithms)
+    if skip_cached and cache_info:
+        # Sadece yeni testler için süre tahmini
+        estimated_seconds = estimated_seconds * (cache_info['new_count'] / total_tests) if total_tests > 0 else 0
     print(f"\n⏱️ Tahmini Süre: ~{format_time(estimated_seconds)}")
     
     # Kategori dağılımı
@@ -540,17 +653,24 @@ def show_test_summary(problems: List, algorithms: List[str]) -> bool:
     choice = input("\nSeçiminiz: ").strip().upper()
     
     if choice == 'Q':
-        return False
+        return (False, skip_cached)
     elif choice == 'D':
         print("\n📋 Problemler:")
         for i, p in enumerate(problems, 1):
-            print(f"   {i:>3}. {p.name:<15} (n={p.dimension:<5}, opt={p.optimal})")
+            cache_mark = ""
+            if cache_info:
+                p_cached = len([t for t in cache_info['cached'] if t[0] == p.name])
+                if p_cached == len(algorithms):
+                    cache_mark = " [TAMAM]"
+                elif p_cached > 0:
+                    cache_mark = f" [{p_cached}/{len(algorithms)}]"
+            print(f"   {i:>3}. {p.name:<15} (n={p.dimension:<5}, opt={p.optimal}){cache_mark}")
         input("\nDevam etmek için Enter'a basın...")
-        return show_test_summary(problems, algorithms)  # Recursive
+        return show_test_summary(problems, algorithms, saved_results, skip_mode)  # Recursive
     elif choice == 'Y':
-        return True
+        return (True, skip_cached)
     else:
-        return show_test_summary(problems, algorithms)
+        return show_test_summary(problems, algorithms, saved_results, skip_mode)
 
 
 def save_incremental_result(result: Dict, metadata: Dict, problem_name: str, strat_name: str):
@@ -651,7 +771,7 @@ def main():
             strategies_to_run = all_strat_names
         elif choice == 'E':
             # Özel seçim modu
-            problems_to_run = multi_select_problems(all_problems)
+            problems_to_run = multi_select_problems(all_problems, saved_results, all_strat_names)
             if not problems_to_run:
                 input("Devam etmek için Enter'a basın...")
                 continue
@@ -669,8 +789,9 @@ def main():
             input("Devam etmek için Enter'a basın...")
             continue
         
-        # Test öncesi özet göster
-        if not show_test_summary(problems_to_run, strategies_to_run):
+        # Test öncesi özet göster - skip_cached desteği ile
+        continue_test, skip_cached = show_test_summary(problems_to_run, strategies_to_run, saved_results)
+        if not continue_test:
             print("Test iptal edildi.")
             input("Devam etmek için Enter'a basın...")
             continue
@@ -683,8 +804,17 @@ def main():
         completed_tests = 0
         start_time = time.time()
         
+        # Cache info for skip_cached mode
+        cache_info = analyze_cached_tests(problems_to_run, strategies_to_run, saved_results) if skip_cached else None
+        new_tests_count = cache_info['new_count'] if cache_info else total_tests
+        
         print(f"\n🚀 TEST BAŞLIYOR...")
-        print(f"   Toplam: {len(problems_to_run)} problem × {len(strategies_to_run)} algoritma = {total_tests} test")
+        if skip_cached:
+            print(f"   Toplam: {len(problems_to_run)} problem × {len(strategies_to_run)} algoritma")
+            print(f"   Önbellekten atlanacak: {cache_info['cached_count']} test")
+            print(f"   Yapılacak: {new_tests_count} yeni test")
+        else:
+            print(f"   Toplam: {len(problems_to_run)} problem × {len(strategies_to_run)} algoritma = {total_tests} test")
         print(f"   Tahmini süre: ~{format_time(estimate_total_time(problems_to_run, strategies_to_run))}")
         print()
         
@@ -718,8 +848,8 @@ def main():
                 
                 print(f"  [{completed_tests}/{total_tests}] {strat_name:<10} ", end="", flush=True)
                     
-                # B Modu: Önbellekte varsa oynamaya gerek yok
-                if choice == 'B' and strat_name in p_res:
+                # Önbellekte varsa atla (B modu veya skip_cached)
+                if (choice == 'B' or skip_cached) and strat_name in p_res:
                     print(f"[ÖNBELLEK] ✓")
                     
                     # Eski değeri flat listeye yansıt ki tablo kopuk çıkmasın

@@ -4,7 +4,7 @@
 Algorithm Performance Comparison Test
 
 Automated comparison of all routing algorithms on benchmark problems.
-Tests solution quality, execution time, and resource usage.
+Tests solution quality and execution time.
 
 Run with:
     cd optimizer_api

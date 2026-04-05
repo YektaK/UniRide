@@ -1,7 +1,20 @@
 #!/usr/bin/env python3
+"""
+UniRide Smart Benchmark - Gelişmiş Versiyon
+
+Özellikler:
+- Ctrl+C ile güvenli çıkış (sonuçlar kaybolmaz)
+- Her algoritma sonucunda anında kayıt
+- Tahmini süre hesaplaması
+- Progress gösterimi
+- Çoklu problem/algoritma seçimi
+"""
 import sys
 import os
 import json
+import signal
+import time
+import csv
 from datetime import datetime
 from typing import List, Dict
 
@@ -45,6 +58,39 @@ ALGORITHMS_TO_CHECK = {
     "CVRPTWWrapper": "optimizer_api/strategies/cvrptw_wrapper.py"
 }
 
+# ============================================================
+# GLOBAL DEĞİŞKENLER - Graceful Shutdown için
+# ============================================================
+_shutdown_requested = False
+_current_metadata = None
+_current_results = []
+
+def signal_handler(signum, frame):
+    """Ctrl+C ile güvenli çıkış - sonuçları kaydeder"""
+    global _shutdown_requested
+    _shutdown_requested = True
+    print("\n\n⚠️  DURDURMA İSTEĞİ ALINDI!")
+    print("📝 Mevcut sonuçlar kaydediliyor, lütfen bekleyin...")
+    
+    if _current_metadata and _current_results:
+        # Metadata kaydet
+        save_metadata(METADATA_PATH, _current_metadata)
+        
+        # CSV yedek
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        csv_path = os.path.join(HISTORY_DIR, f"interrupted_{timestamp}.csv")
+        with open(csv_path, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=_current_results[0].keys())
+            writer.writeheader()
+            writer.writerows(_current_results)
+        print(f"✅ {len(_current_results)} sonuç kaydedildi: {csv_path}")
+    
+    print("👋 Güvenli çıkış yapıldı.")
+    sys.exit(0)
+
+# Signal handler'ı kaydet
+signal.signal(signal.SIGINT, signal_handler)
+
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
@@ -77,6 +123,34 @@ def format_time(seconds: float) -> str:
         hours = int(seconds // 3600)
         minutes = int((seconds % 3600) // 60)
         return f"{hours}sa {minutes}dk"
+
+def estimate_total_time(problems: List, algorithms: List[str]) -> float:
+    """Tahmini toplam süre hesapla (saniye)"""
+    # Ortalama süre tahminleri (saniye) - problem boyutuna göre
+    # Bu değerler empirik olarak belirlenmiştir
+    base_times = {
+        'small': 0.5,    # Küçük problemler hızlı
+        'medium': 2.0,   # Orta problemler
+        'large': 10.0,   # Büyük problemler yavaş
+    }
+    
+    # Algoritma çarpanları
+    algo_multipliers = {
+        '2-opt': 1.0,
+        '3-opt': 3.0,
+        'Or-opt': 1.5,
+        'Swap': 1.0,
+        'Hybrid': 5.0,
+    }
+    
+    total_time = 0
+    for p in problems:
+        base = base_times.get(p.category, 2.0)
+        for alg in algorithms:
+            mult = algo_multipliers.get(alg, 2.0)
+            total_time += base * mult * N_RUNS
+    
+    return total_time
 
 def make_progress_bar(completed: int, total: int, width: int = 10) -> str:
     """Progress bar oluştur"""
@@ -334,7 +408,79 @@ def interactive_detail_mode(all_problems: List, saved_results: Dict, all_strat_n
             else:
                 print(f"'{user_input}' adlı problem bulunamadı. 'list' yazarak tüm problemleri görebilirsiniz.")
 
+
+def show_test_summary(problems: List, algorithms: List[str]) -> bool:
+    """Test öncesi özet göster ve onay al"""
+    clear_screen()
+    print("═" * 70)
+    print("TEST ÖZETİ")
+    print("═" * 70)
+    
+    total_tests = len(problems) * len(algorithms)
+    
+    print(f"\n📊 Test Yapılacak:")
+    print(f"   • Problemler: {len(problems)}")
+    print(f"   • Algoritmalar: {len(algorithms)} ({', '.join(algorithms)})")
+    print(f"   • Her problem {N_RUNS} kez çalıştırılacak")
+    print(f"   • Toplam test sayısı: {total_tests}")
+    
+    # Tahmini süre
+    estimated_seconds = estimate_total_time(problems, algorithms)
+    print(f"\n⏱️ Tahmini Süre: ~{format_time(estimated_seconds)}")
+    
+    # Kategori dağılımı
+    cat_counts = {}
+    for p in problems:
+        cat_counts[p.category] = cat_counts.get(p.category, 0) + 1
+    print(f"\n📈 Kategori Dağılımı:")
+    for cat, count in sorted(cat_counts.items()):
+        print(f"   • {cat}: {count} problem")
+    
+    print("\n⚠️ DİKKAT:")
+    print("   • Ctrl+C ile istediğiniz zaman güvenli çıkış yapabilirsiniz")
+    print("   • Sonuçlar HER ALGORİTMA sonrası otomatik kaydedilir")
+    print("   • Mevcut sonuçlarınız kaybolmaz!")
+    
+    print("\n[Y] Başla    [Q] Çıkış    [D] Detayları Gör")
+    
+    choice = input("\nSeçiminiz: ").strip().upper()
+    
+    if choice == 'Q':
+        return False
+    elif choice == 'D':
+        print("\n📋 Problemler:")
+        for i, p in enumerate(problems, 1):
+            print(f"   {i:>3}. {p.name:<15} (n={p.dimension:<5}, opt={p.optimal})")
+        input("\nDevam etmek için Enter'a basın...")
+        return show_test_summary(problems, algorithms)  # Recursive
+    elif choice == 'Y':
+        return True
+    else:
+        return show_test_summary(problems, algorithms)
+
+
+def save_incremental_result(result: Dict, metadata: Dict, problem_name: str, strat_name: str):
+    """Her algoritma sonucunu anında kaydet"""
+    saved_results = metadata.get("results", {})
+    
+    if problem_name not in saved_results:
+        saved_results[problem_name] = {}
+    
+    saved_results[problem_name][strat_name] = {
+        "avg_length": result["avg_length"],
+        "avg_gap": result["avg_gap"],
+        "best_gap": result["best_gap"],
+        "avg_time_ms": result["avg_time_ms"],
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    metadata["results"] = saved_results
+    save_metadata(METADATA_PATH, metadata)
+
+
 def main():
+    global _current_metadata, _current_results, _shutdown_requested
+    
     metadata = get_latest_metadata(METADATA_PATH)
     algo_status = check_algorithms_status(metadata, ALGORITHMS_TO_CHECK)
     
@@ -345,6 +491,7 @@ def main():
     all_strat_names = [s[0] for s in STRATEGIES]
     
     while True:
+        _shutdown_requested = False
         clear_screen()
         print("=" * 70)
         print("          UNIRIDE SOTA BENCHMARK KONTROL MERKEZİ")
@@ -423,27 +570,63 @@ def main():
             print("Test edilecek problem bulunamadı (Her şey tamamlanmış).")
             input("Devam etmek için Enter'a basın...")
             continue
-            
-        print(f"\n🚀 TEST BAŞLIYOR... Görev Kuyruğu: {len(problems_to_run)} Problem")
         
-        all_results_flat = []
+        # Test öncesi özet göster
+        if not show_test_summary(problems_to_run, strategies_to_run):
+            print("Test iptal edildi.")
+            input("Devam etmek için Enter'a basın...")
+            continue
         
-        for i, problem in enumerate(problems_to_run, 1):
-            print(f"\n[{i}/{len(problems_to_run)}] {problem.name.upper()} Test Ediliyor... (Optimum: {problem.optimal})")
+        # Global değişkenleri ayarla (Ctrl+C için)
+        _current_metadata = metadata
+        _current_results = []
+        
+        total_tests = len(problems_to_run) * len(strategies_to_run)
+        completed_tests = 0
+        start_time = time.time()
+        
+        print(f"\n🚀 TEST BAŞLIYOR...")
+        print(f"   Toplam: {len(problems_to_run)} problem × {len(strategies_to_run)} algoritma = {total_tests} test")
+        print(f"   Tahmini süre: ~{format_time(estimate_total_time(problems_to_run, strategies_to_run))}")
+        print()
+        
+        for prob_idx, problem in enumerate(problems_to_run, 1):
+            if _shutdown_requested:
+                break
+                
+            print(f"\n{'═'*70}")
+            print(f"[{prob_idx}/{len(problems_to_run)}] {problem.name.upper()} (n={problem.dimension}, opt={problem.optimal})")
+            print(f"{'═'*70}")
             
             p_res = saved_results.get(problem.name, {})
             
-            for strat_name, ls_type, max_iter in STRATEGIES:
+            for strat_idx, (strat_name, ls_type, max_iter) in enumerate(STRATEGIES):
+                if _shutdown_requested:
+                    break
+                    
                 if strat_name not in strategies_to_run:
                     continue
                     
+                completed_tests += 1
+                
+                # Progress göster
+                elapsed = time.time() - start_time
+                if completed_tests > 1:
+                    avg_time_per_test = elapsed / (completed_tests - 1)
+                    remaining = (total_tests - completed_tests + 1) * avg_time_per_test
+                    progress_str = f" | Kalan: ~{format_time(remaining)}"
+                else:
+                    progress_str = ""
+                
+                print(f"  [{completed_tests}/{total_tests}] {strat_name:<10} ", end="", flush=True)
+                    
                 # B Modu: Önbellekte varsa oynamaya gerek yok
                 if choice == 'B' and strat_name in p_res:
-                    print(f"    - {strat_name:<10} [Önbellekten Geçildi]")
+                    print(f"[ÖNBELLEK] ✓")
                     
                     # Eski değeri flat listeye yansıt ki tablo kopuk çıkmasın
                     old_data = p_res[strat_name]
-                    all_results_flat.append({
+                    _current_results.append({
                         "problem": problem.name,
                         "dimension": problem.dimension,
                         "category": problem.category,
@@ -451,14 +634,14 @@ def main():
                         "strategy": strat_name,
                         "avg_length": old_data["avg_length"],
                         "avg_gap": old_data["avg_gap"],
-                        "best_length": old_data.get("avg_length", 0), # Simple mock for view
+                        "best_length": old_data.get("avg_length", 0),
                         "best_gap": old_data["best_gap"],
                         "avg_time_ms": old_data["avg_time_ms"],
                         "n_runs": N_RUNS,
                     })
                     continue
-                    
-                print(f"    - {strat_name:<10} çalışıyor... ", end="", flush=True)
+                
+                print(f"çalışıyor...{progress_str}", end="", flush=True)
                 
                 run_avg_results = []
                 for run in range(N_RUNS):
@@ -472,17 +655,12 @@ def main():
                 best_length = min(r["tour_length"] for r in run_avg_results)
                 best_gap = min(r["gap"] for r in run_avg_results)
                 
-                print(f"Bitti. Ortalama Gap: {avg_gap:.2f}%")
+                # Sonucu yazdır
+                status = "★" if best_gap <= 1 else ("✓" if best_gap <= 5 else ("○" if best_gap <= 10 else "✗"))
+                print(f"\r  [{completed_tests}/{total_tests}] {strat_name:<10} GAP: {avg_gap:>6.2f}% (best: {best_gap:>6.2f}%) {status}")
                 
-                p_res[strat_name] = {
-                    "avg_length": avg_length,
-                    "avg_gap": avg_gap,
-                    "best_gap": best_gap,
-                    "avg_time_ms": avg_time,
-                    "timestamp": datetime.now().isoformat()
-                }
-                
-                all_results_flat.append({
+                # Sonucu oluştur
+                result_entry = {
                     "problem": problem.name,
                     "dimension": problem.dimension,
                     "category": problem.category,
@@ -494,9 +672,33 @@ def main():
                     "best_gap": best_gap,
                     "avg_time_ms": avg_time,
                     "n_runs": N_RUNS,
-                })
+                }
+                
+                # ANINDA KAYDET - Her algoritma sonucunda
+                save_incremental_result(result_entry, metadata, problem.name, strat_name)
+                _current_results.append(result_entry)
+                
+                # saved_results'ı güncelle
+                p_res[strat_name] = {
+                    "avg_length": avg_length,
+                    "avg_gap": avg_gap,
+                    "best_gap": best_gap,
+                    "avg_time_ms": avg_time,
+                    "timestamp": datetime.now().isoformat()
+                }
                 
             saved_results[problem.name] = p_res
+            
+            if _shutdown_requested:
+                break
+        
+        if _shutdown_requested:
+            print("\n⚠️ Test kullanıcı tarafından durduruldu.")
+            input("Ana menüye dönmek için Enter'a basın...")
+            metadata = get_latest_metadata(METADATA_PATH)
+            algo_status = check_algorithms_status(metadata, ALGORITHMS_TO_CHECK)
+            saved_results = metadata.get("results", {})
+            continue
         
         # Test başarılıysa HASH'leri güncelle
         from academic_benchmark.utils_benchmark import get_file_hash
@@ -511,18 +713,20 @@ def main():
         
         save_metadata(METADATA_PATH, metadata)
         
-        import csv
-        if all_results_flat:
+        if _current_results:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             csv_path = os.path.join(HISTORY_DIR, f"smart_run_{timestamp}.csv")
             with open(csv_path, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.DictWriter(f, fieldnames=all_results_flat[0].keys())
+                writer = csv.DictWriter(f, fieldnames=_current_results[0].keys())
                 writer.writeheader()
-                writer.writerows(all_results_flat)
+                writer.writerows(_current_results)
             
-            print_summary_table(all_results_flat)
+            print_summary_table(_current_results)
+            
+            total_elapsed = time.time() - start_time
             print(f"\n✅ Tüm sonuçlar başarıyla 'latest_metadata.json'a işlendi.")
-            print(f"📦 Excel/Log yedeği geçmişe alındı: {csv_path}")
+            print(f"📦 Excel/Log yedeği: {csv_path}")
+            print(f"⏱️ Toplam süre: {format_time(total_elapsed)}")
             
         input("\nAna menüye dönmek için Enter'a basın...")
         metadata = get_latest_metadata(METADATA_PATH)

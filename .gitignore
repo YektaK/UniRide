@@ -60,3 +60,7 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
+academic_benchmark/benchmark_db/history/
+optimizer_api/tests/__pycache__/
+optimizer_api/utils/__pycache__/
+academic_benchmark/benchmark_db/

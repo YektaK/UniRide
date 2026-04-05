@@ -137,16 +137,18 @@ export function formatRoutePlanForSave(
     clusteringUsed: string
 ): SaveRoutePlanRequest {
     const routes = (optimizationResult.routes ?? optimizationResult.assignments ?? []) as VehicleRoute[] | Record<string, unknown>[];
-    const studentCount = routes.reduce(
-        (sum: number, route: VehicleRoute | Record<string, unknown>) => {
-            const r = route as Record<string, unknown>;
-            const students = r.students as unknown[] | undefined;
-            const studentIds = r.studentIds as unknown[] | undefined;
-            const routeStudentIds = (route as VehicleRoute).student_ids;
-            return sum + (students?.length ?? studentIds?.length ?? routeStudentIds?.length ?? 0);
-        },
-        0
-    );
+
+    function countStudents(route: VehicleRoute | Record<string, unknown>): number {
+        if (Array.isArray((route as VehicleRoute).student_ids)) {
+            return (route as VehicleRoute).student_ids.length;
+        }
+        const r = route as Record<string, unknown>;
+        const students = r.students as unknown[] | undefined;
+        const studentIds = r.studentIds as unknown[] | undefined;
+        return students?.length ?? studentIds?.length ?? 0;
+    }
+
+    const studentCount = routes.reduce((sum: number, route) => sum + countStudents(route), 0);
 
     return {
         planDate,

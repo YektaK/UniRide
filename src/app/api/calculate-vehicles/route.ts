@@ -191,8 +191,8 @@ export async function POST(request: NextRequest) {
             }
 
             const id = student.id as string;
-            const name = (student.name as string | undefined) || `Öğrenci ${id.slice(0, 6)}`;
-            const coordinates = (student.coordinates || student.home_coordinates) as { lat: number; lng: number } | null ?? null;
+            const name = (student.name as string | undefined) ?? `Öğrenci ${id.slice(0, 6)}`;
+            const coordinates = (student.coordinates ?? student.home_coordinates) as { lat: number; lng: number } | null;
 
             validStudents.push({
                 id,

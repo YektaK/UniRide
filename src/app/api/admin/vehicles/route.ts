@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         const rawBody = await request.json();
         const parseResult = createVehicleSchema.safeParse(rawBody);
         if (!parseResult.success) {
-            return createErrorResponse(parseResult.error.flatten().fieldErrors as unknown as string, 400);
+            return createErrorResponse(parseResult.error.errors[0].message, 400);
         }
 
         const { name, type, plateNumber, wheelchairCapacity, seatingCapacity, cooldownMinutes, status } = parseResult.data;
@@ -114,7 +114,7 @@ export async function PUT(request: NextRequest) {
         const rawBody = await request.json();
         const parseResult = updateVehicleSchema.safeParse(rawBody);
         if (!parseResult.success) {
-            return createErrorResponse(parseResult.error.flatten().fieldErrors as unknown as string, 400);
+            return createErrorResponse(parseResult.error.errors[0].message, 400);
         }
 
         const { id, ...updates } = parseResult.data;

@@ -62,7 +62,7 @@ export async function PUT(request: NextRequest) {
         const rawBody = await request.json();
         const parseResult = updateRideRequestSchema.safeParse(rawBody);
         if (!parseResult.success) {
-            return createErrorResponse(parseResult.error.flatten().fieldErrors as unknown as string, 400);
+            return createErrorResponse(parseResult.error.errors[0].message, 400);
         }
 
         const { id, status, vehicleId, notes } = parseResult.data;

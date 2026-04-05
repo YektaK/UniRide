@@ -3,9 +3,7 @@
  * Handles route plan API calls from frontend
  */
 
-import { createClient } from "@/lib/supabase";
-
-const SUPABASEAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+import type { VehicleRoute, OptimizationResult } from "@/services/optimizer-service";
 
 export interface RoutePlan {
     id: string;
@@ -17,9 +15,9 @@ export interface RoutePlan {
     total_duration_minutes: number;
     execution_time_seconds?: number;
     status: 'draft' | 'confirmed' | 'active' | 'completed' | 'cancelled';
-    routes: any;
+    routes: VehicleRoute[] | Record<string, unknown>[];
     student_count: number;
-    driver_assignments?: any[];
+    driver_assignments?: Record<string, unknown>[];
     notes?: string;
     created_by?: string;
     created_at: string;
@@ -35,7 +33,7 @@ export interface SaveRoutePlanRequest {
     totalVehicles: number;
     totalDurationMinutes: number;
     executionTimeSeconds?: number;
-    routes: any;
+    routes: VehicleRoute[] | Record<string, unknown>[];
     studentCount: number;
     notes?: string;
 }
@@ -43,7 +41,7 @@ export interface SaveRoutePlanRequest {
 export interface UpdateRoutePlanRequest {
     id: string;
     status?: 'draft' | 'confirmed' | 'active' | 'completed' | 'cancelled';
-    driverAssignments?: any;
+    driverAssignments?: Record<string, unknown>[];
     notes?: string;
 }
 
@@ -132,26 +130,34 @@ export async function deleteRoutePlan(id: string): Promise<void> {
 }
 
 export function formatRoutePlanForSave(
-    optimizationResult: any,
+    optimizationResult: OptimizationResult & { assignments?: Array<Record<string, unknown>>; meta?: Record<string, unknown>; requiredVehicles?: number; totalDuration?: number },
     planDate: string,
     direction: 'pickup' | 'dropoff',
     algorithmUsed: string,
     clusteringUsed: string
 ): SaveRoutePlanRequest {
-    const routes = optimizationResult.routes || optimizationResult.assignments || [];
-    const studentCount = routes.reduce(
-        (sum: number, route: any) => sum + (route.students?.length || route.studentIds?.length || 0),
-        0
-    );
+    const routes = (optimizationResult.routes ?? optimizationResult.assignments ?? []) as VehicleRoute[] | Record<string, unknown>[];
+
+    function countStudents(route: VehicleRoute | Record<string, unknown>): number {
+        if (Array.isArray((route as VehicleRoute).student_ids)) {
+            return (route as VehicleRoute).student_ids.length;
+        }
+        const r = route as Record<string, unknown>;
+        const students = r.students as unknown[] | undefined;
+        const studentIds = r.studentIds as unknown[] | undefined;
+        return students?.length ?? studentIds?.length ?? 0;
+    }
+
+    const studentCount = routes.reduce((sum: number, route) => sum + countStudents(route), 0);
 
     return {
         planDate,
         direction,
         algorithmUsed,
         clusteringUsed,
-        totalVehicles: optimizationResult.requiredVehicles || routes.length,
-        totalDurationMinutes: optimizationResult.totalDuration || 0,
-        executionTimeSeconds: optimizationResult.executionTime || optimizationResult.meta?.executionTime,
+        totalVehicles: optimizationResult.requiredVehicles ?? optimizationResult.total_vehicles ?? routes.length,
+        totalDurationMinutes: optimizationResult.totalDuration ?? optimizationResult.total_duration_minutes ?? 0,
+        executionTimeSeconds: optimizationResult.execution_time_seconds,
         routes,
         studentCount,
     };

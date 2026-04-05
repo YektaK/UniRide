@@ -22,20 +22,20 @@ const getClient = () => getSupabaseClient();
 /**
  * Convert snake_case keys to camelCase
  */
-const toCamelCase = (obj: any): any => {
+const toCamelCase = (obj: unknown): unknown => {
     if (obj === null || obj === undefined) {
         return obj;
     }
     if (Array.isArray(obj)) {
         return obj.map((v) => toCamelCase(v));
-    } else if (obj.constructor === Object) {
-        return Object.keys(obj).reduce(
+    } else if (typeof obj === 'object' && obj !== null && obj.constructor === Object) {
+        return Object.keys(obj as Record<string, unknown>).reduce(
             (result, key) => {
                 const camelKey = key.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
-                result[camelKey] = toCamelCase(obj[key]);
+                result[camelKey] = toCamelCase((obj as Record<string, unknown>)[key]);
                 return result;
             },
-            {} as any
+            {} as Record<string, unknown>
         );
     }
     return obj;
@@ -44,20 +44,20 @@ const toCamelCase = (obj: any): any => {
 /**
  * Convert camelCase keys to snake_case
  */
-const toSnakeCase = (obj: any): any => {
+const toSnakeCase = (obj: unknown): unknown => {
     if (obj === null || obj === undefined) {
         return obj;
     }
     if (Array.isArray(obj)) {
         return obj.map((v) => toSnakeCase(v));
-    } else if (obj.constructor === Object) {
-        return Object.keys(obj).reduce(
+    } else if (typeof obj === 'object' && obj !== null && obj.constructor === Object) {
+        return Object.keys(obj as Record<string, unknown>).reduce(
             (result, key) => {
                 const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-                result[snakeKey] = toSnakeCase(obj[key]);
+                result[snakeKey] = toSnakeCase((obj as Record<string, unknown>)[key]);
                 return result;
             },
-            {} as any
+            {} as Record<string, unknown>
         );
     }
     return obj;
@@ -132,7 +132,7 @@ export const createUser = async (
     const now = new Date().toISOString();
 
     // Remove any existing id, createdAt, updatedAt from userData to avoid conflicts
-    const { id: _id, createdAt: _ca, updatedAt: _ua, ...cleanUserData } = userData as any;
+    const { id: _id, createdAt: _ca, updatedAt: _ua, ...cleanUserData } = userData as DbUser;
 
     const dbData = toSnakeCase({
         ...cleanUserData,
@@ -277,10 +277,10 @@ export const updateSchedule = async (
 
 export const updateScheduleEntries = async (
     scheduleId: string,
-    entries: any[]
+    entries: ScheduleEntry[]
 ): Promise<void> => {
     // entries is a JSON array, Supabase handles it as JSONB
-    await updateSchedule(scheduleId, { entries, lastUpdated: new Date().toISOString() } as any);
+    await updateSchedule(scheduleId, { entries, lastUpdated: new Date().toISOString() });
 };
 
 // ==================== RIDE REQUEST OPERATIONS ====================
@@ -695,7 +695,7 @@ export const createNewUserSchedule = async (
 
 export const updateStudentScheduleEntries = async (
     scheduleId: string,
-    entries: any[]
+    entries: ScheduleEntry[]
 ): Promise<boolean> => {
     try {
         await updateScheduleEntries(scheduleId, entries);
@@ -711,7 +711,7 @@ export const updateRideRequestStatus = async (
     status: string
 ): Promise<boolean> => {
     try {
-        await updateRideRequest(requestId, { status: status as any });
+        await updateRideRequest(requestId, { status: status as DbRideRequest["status"] });
         return true;
     } catch (error) {
         console.error("Error updating ride request status:", error);

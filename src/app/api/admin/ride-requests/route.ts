@@ -4,6 +4,7 @@
  */
 
 import { NextRequest } from "next/server";
+import { z } from "zod";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import {
     requireAdmin,
@@ -11,6 +12,13 @@ import {
     createSuccessResponse,
     handleApiError,
 } from "@/lib/admin-auth";
+
+const updateRideRequestSchema = z.object({
+    id: z.string().min(1, "Request ID is required"),
+    status: z.string().optional(),
+    vehicleId: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
+});
 
 // GET /api/admin/ride-requests - Get all ride requests
 export async function GET(request: NextRequest) {
@@ -51,16 +59,17 @@ export async function PUT(request: NextRequest) {
     try {
         await requireAdmin();
 
-        const body = await request.json();
-        const { id, status, vehicleId, notes } = body;
-
-        if (!id) {
-            return createErrorResponse("Request ID is required", 400);
+        const rawBody = await request.json();
+        const parseResult = updateRideRequestSchema.safeParse(rawBody);
+        if (!parseResult.success) {
+            return createErrorResponse(parseResult.error.errors[0].message, 400);
         }
+
+        const { id, status, vehicleId, notes } = parseResult.data;
 
         const adminClient = getSupabaseAdmin();
 
-        const dbUpdates: any = {
+        const dbUpdates: Record<string, unknown> = {
             updated_at: new Date().toISOString(),
         };
 
@@ -68,9 +77,9 @@ export async function PUT(request: NextRequest) {
         if (vehicleId !== undefined) dbUpdates.vehicle_id = vehicleId;
         if (notes !== undefined) dbUpdates.notes = notes;
 
-        const { data, error } = await (adminClient as any)
+        const { data, error } = await adminClient
             .from("ride_requests")
-            .update(dbUpdates)
+            .update(dbUpdates as never)
             .eq("id", id)
             .select()
             .single();

@@ -22,20 +22,20 @@ def create_test_students(n: int = 10) -> List[StudentNode]:
     """Create test student data"""
     students = []
 
-    # Sample location codes around Düzce University
+    # Sample location codes around Doğuş Üniversitesi, Dudullu Kampüsü
     locations = [
-        ("Sw1", "Sw", 40.8412, 31.1456),
-        ("Sw2", "Sw", 40.8398, 31.1489),
-        ("Sw3", "Sw", 40.8425, 31.1512),
-        ("Sw4", "Sw", 40.8378, 31.1434),
-        ("So1", "So", 40.8401, 31.1501),
-        ("So2", "So", 40.8389, 31.1467),
-        ("So3", "So", 40.8418, 31.1523),
-        ("So4", "So", 40.8395, 31.1445),
-        ("So5", "So", 40.8432, 31.1478),
-        ("So6", "So", 40.8382, 31.1498),
-        ("Sw5", "Sw", 40.8408, 31.1432),
-        ("So7", "So", 40.8421, 31.1489),
+        ("Sw1", "Sw", 41.0012, 29.1748),
+        ("Sw2", "Sw", 40.9998, 29.1781),
+        ("Sw3", "Sw", 41.0025, 29.1804),
+        ("Sw4", "Sw", 40.9978, 29.1726),
+        ("So1", "So", 41.0001, 29.1793),
+        ("So2", "So", 40.9989, 29.1759),
+        ("So3", "So", 41.0018, 29.1815),
+        ("So4", "So", 40.9995, 29.1737),
+        ("So5", "So", 41.0032, 29.1770),
+        ("So6", "So", 40.9982, 29.1790),
+        ("Sw5", "Sw", 41.0008, 29.1724),
+        ("So7", "So", 41.0021, 29.1781),
     ]
 
     for i in range(min(n, len(locations))):
@@ -55,8 +55,8 @@ def create_depot() -> LocationNode:
     """Create depot location (D.Kampus)"""
     return LocationNode(
         id="D.Kampus",
-        lat=40.8410,
-        lng=31.1478,
+        lat=41.001,
+        lng=29.177,
         type="depot"
     )
 

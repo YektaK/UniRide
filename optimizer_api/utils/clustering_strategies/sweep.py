@@ -21,7 +21,7 @@ class SweepClusteringStrategy(BaseClusteringStrategy):
         if num_vehicles >= len(students):
             return [Cluster(centroid=(p.lat, p.lng), points=[p], sw_count=1 if p.disability_type == "Sw" else 0, so_count=1 if p.disability_type == "So" else 0) for p in students]
 
-        depot = kwargs.get("depot", {"lat": 40.8410, "lng": 31.1478}) # fallback to Düzce campus
+        depot = kwargs.get("depot", {"lat": 41.001, "lng": 29.177}) # fallback to Doğuş Üniversitesi, Dudullu Kampüsü
         
         # Sort students by polar angle
         sorted_students = sorted(students, key=lambda p: calculate_angle(depot["lat"], depot["lng"], p))

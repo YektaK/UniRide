@@ -369,7 +369,7 @@ export const adminApi = {
 
       const payload = {
         students,
-        depot: { id: params.start || "D.Kampus", lat: 40.8410, lng: 31.1478 },
+        depot: { id: params.start || "D.Kampus", lat: 41.001, lng: 29.177 },
         algorithm: params.strategy || "genetic_algorithm",
         max_travel_time: 120,
         sw_capacity: 4,

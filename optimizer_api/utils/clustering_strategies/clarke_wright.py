@@ -21,7 +21,7 @@ class ClarkeWrightClusteringStrategy(BaseClusteringStrategy):
         if not students or num_vehicles <= 0: return []
         
         time_matrix = kwargs.get("time_matrix", {})
-        depot = kwargs.get("depot", {"id": "D.Kampus", "lat": 40.8410, "lng": 31.1478})
+        depot = kwargs.get("depot", {"id": "D.Kampus", "lat": 41.001, "lng": 29.177})
         
         # We need a dummy depot point for distance calc
         depot_point = Point(id=depot["id"], lat=depot["lat"], lng=depot["lng"], disability_type="So")

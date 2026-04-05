@@ -4,9 +4,17 @@
  */
 
 import { NextRequest } from "next/server";
+import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { createErrorResponse, createSuccessResponse, handleApiError } from "@/lib/admin-auth";
+import { createErrorResponse, createSuccessResponse } from "@/lib/admin-auth";
+
+const updatePasswordSchema = z.object({
+    newPassword: z.string().min(6, "Şifre en az 6 karakter olmalıdır.").optional(),
+    passwordHint: z.string().optional(),
+}).refine(data => data.newPassword !== undefined || data.passwordHint !== undefined, {
+    message: "newPassword veya passwordHint alanlarından en az biri gereklidir.",
+});
 
 // PATCH /api/profile/password
 // Body: { newPassword?: string, passwordHint?: string }
@@ -28,16 +36,17 @@ export async function PATCH(request: NextRequest) {
             return createErrorResponse("Unauthorized: Invalid session", 401);
         }
 
-        const body = await request.json();
-        const { newPassword, passwordHint } = body;
+        const rawBody = await request.json();
+        const parseResult = updatePasswordSchema.safeParse(rawBody);
+        if (!parseResult.success) {
+            return createErrorResponse(parseResult.error.errors[0].message, 400);
+        }
 
+        const { newPassword, passwordHint } = parseResult.data;
         const adminClient = getSupabaseAdmin();
 
         // 1. Update password in Supabase Auth (if provided)
         if (newPassword) {
-            if (newPassword.length < 6) {
-                return createErrorResponse("Şifre en az 6 karakter olmalıdır.", 400);
-            }
             const { error: pwError } = await adminClient.auth.admin.updateUserById(user.id, {
                 password: newPassword,
             });
@@ -48,9 +57,9 @@ export async function PATCH(request: NextRequest) {
 
         // 2. Update password_hint in users table (if provided)
         if (passwordHint !== undefined) {
-            const { error: dbError } = await (adminClient as any)
+            const { error: dbError } = await adminClient
                 .from("users")
-                .update({ password_hint: passwordHint, updated_at: new Date().toISOString() })
+                .update({ password_hint: passwordHint, updated_at: new Date().toISOString() } as never)
                 .eq("id", user.id);
             if (dbError) {
                 return createErrorResponse(dbError.message, 500);
@@ -58,7 +67,7 @@ export async function PATCH(request: NextRequest) {
         }
 
         return createSuccessResponse({ message: "Bilgiler başarıyla güncellendi." });
-    } catch (error: any) {
-        return createErrorResponse(error.message, 500);
+    } catch (error: unknown) {
+        return createErrorResponse(error instanceof Error ? error.message : "Internal server error", 500);
     }
 }

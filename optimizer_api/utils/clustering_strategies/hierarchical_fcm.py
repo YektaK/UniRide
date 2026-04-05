@@ -183,7 +183,10 @@ def distribute_vehicles_to_regions(
     """
     Distribute vehicles among regions based on student count.
     
-    Uses proportional allocation with minimum 1 vehicle per region.
+    Uses largest fractional parts method to ensure:
+    1. Sum of allocations equals n_vehicles exactly
+    2. Minimum 1 vehicle per region (raises error if impossible)
+    3. Never makes remaining_vehicles negative
     
     Args:
         regions: List of region clusters
@@ -193,6 +196,9 @@ def distribute_vehicles_to_regions(
     
     Returns:
         List of vehicle counts per region
+    
+    Raises:
+        ValueError: If n_vehicles < n_regions (cannot allocate min 1 per region)
     """
     n_regions = len(regions)
     
@@ -202,26 +208,44 @@ def distribute_vehicles_to_regions(
     if n_regions == 1:
         return [n_vehicles]
     
+    if n_vehicles < n_regions:
+        raise ValueError(
+            f"Cannot allocate at least 1 vehicle to each of {n_regions} regions "
+            f"with only {n_vehicles} vehicles"
+        )
+    
     # Calculate total students and weight per region
     total_students = sum(len(r.points) for r in regions)
     
+    # Start by giving every region one vehicle to guarantee the minimum.
+    allocations = [1] * n_regions
+    remaining_vehicles = n_vehicles - n_regions
+    
+    if remaining_vehicles == 0:
+        return allocations
+    
     if total_students == 0:
-        return [1] * n_regions
+        # Distribute remaining evenly if no students
+        weights = [1.0 / n_regions] * n_regions
+    else:
+        weights = [len(region.points) / total_students for region in regions]
     
-    # Proportional allocation
-    allocations = []
-    remaining_vehicles = n_vehicles
+    # Distribute the remainder proportionally using largest fractional parts.
+    fractional_parts = []
+    distributed = 0
     
-    for i, region in enumerate(regions):
-        if i == n_regions - 1:
-            # Last region gets remaining vehicles
-            allocations.append(remaining_vehicles)
-        else:
-            # Proportional to student count
-            proportion = len(region.points) / total_students
-            vehicles = max(1, round(n_vehicles * proportion))
-            allocations.append(vehicles)
-            remaining_vehicles -= vehicles
+    for i, weight in enumerate(weights):
+        exact_share = remaining_vehicles * weight
+        whole_share = math.floor(exact_share)
+        allocations[i] += whole_share
+        distributed += whole_share
+        fractional_parts.append((exact_share - whole_share, i))
+    
+    leftover = remaining_vehicles - distributed
+    
+    # Distribute leftover to regions with largest fractional parts
+    for _, i in sorted(fractional_parts, key=lambda item: (-item[0], item[1]))[:leftover]:
+        allocations[i] += 1
     
     return allocations
 
@@ -341,27 +365,33 @@ def hierarchical_fcm_clustering(
             region, n_vehicles, sw_capacity, so_capacity, config
         )
         
-        # Assign global cluster IDs
+        # Stage 3a: Run per-region transfer optimization BEFORE concatenation.
+        # Student membership indices created during Stage 2 are local to the
+        # region's cluster list, so transfer optimization must happen before
+        # we concatenate all regions together.
+        for _ in range(config.max_transfer_iterations):
+            violations = sum(1 for c in region_clusters if c.has_capacity_violation())
+            if violations == 0:
+                break
+            
+            region_clusters = run_transfer_optimization(
+                region_clusters,
+                sw_capacity,
+                so_capacity,
+                max_iterations=1
+            )
+        
+        # Assign global cluster IDs after local transfer optimization is complete
         for cluster in region_clusters:
             cluster.cluster_id = cluster_id_counter
             cluster_id_counter += 1
         
         all_clusters.extend(region_clusters)
     
-    # Stage 3: Cross-region transfer (simplified - uses local membership)
-    # Note: Full cross-region transfer would require recomputing membership
-    # across all clusters, which is expensive. Instead, we run local transfer.
-    for _ in range(config.max_transfer_iterations):
-        violations = sum(1 for c in all_clusters if c.has_capacity_violation())
-        if violations == 0:
-            break
-        
-        all_clusters = run_transfer_optimization(
-            all_clusters,
-            sw_capacity,
-            so_capacity,
-            max_iterations=1
-        )
+    # Stage 3b: Optional cross-region transfer (if enabled)
+    # This requires recomputing membership across all clusters, which is expensive.
+    # For now, we skip true cross-region transfer since local transfer handled
+    # the capacity violations within each region.
     
     return all_clusters
 

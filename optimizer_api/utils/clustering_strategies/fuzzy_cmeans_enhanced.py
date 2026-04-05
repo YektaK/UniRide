@@ -171,10 +171,12 @@ def fuzzy_c_means_with_membership(
         return [], [], []
     
     if k >= len(points):
-        # Each point is its own cluster
+        # Each point is its own cluster; cap the effective cluster count
+        # to the number of available points so returned shapes stay consistent.
+        effective_k = len(points)
         centroids = [(p.lat, p.lng) for p in points]
-        U = [[1.0 if i == j else 0.0 for j in range(k)] for i in range(len(points))]
-        assignments = list(range(len(points)))
+        U = [[1.0 if i == j else 0.0 for j in range(effective_k)] for i in range(len(points))]
+        assignments = list(range(effective_k))
         return centroids, U, assignments
     
     n = len(points)
@@ -299,6 +301,10 @@ def create_enhanced_clusters(
     """
     Create EnhancedCluster objects with membership metadata.
     
+    Maintains stable k-length structure (including empty clusters) to preserve
+    cluster indices for membership references. Empty clusters are still included
+    but marked with empty points.
+    
     Args:
         points: List of Point objects
         centroids: Cluster centroids
@@ -309,13 +315,14 @@ def create_enhanced_clusters(
         so_capacity: SO capacity limit
     
     Returns:
-        List of EnhancedCluster objects
+        List of EnhancedCluster objects (length k, including empty ones)
     """
     clusters = []
     
     for j in range(k):
         cluster_points = [points[i] for i in range(len(points)) if assignments[i] == j]
         
+        # Create cluster even if empty (stable structure for index consistency)
         if cluster_points:
             sw_count = sum(1 for p in cluster_points if p.disability_type == "Sw")
             so_count = sum(1 for p in cluster_points if p.disability_type == "So")
@@ -344,7 +351,21 @@ def create_enhanced_clusters(
                 capacity_sw=sw_capacity,
                 capacity_so=so_capacity
             )
-            clusters.append(cluster)
+        else:
+            # Empty cluster with valid centroid and cluster_id
+            cluster = EnhancedCluster(
+                centroid=centroids[j] if j < len(centroids) else (0.0, 0.0),
+                points=[],
+                sw_count=0,
+                so_count=0,
+                cluster_id=j,
+                membership_data={},
+                border_points=[],
+                capacity_sw=sw_capacity,
+                capacity_so=so_capacity
+            )
+        
+        clusters.append(cluster)
     
     return clusters
 
@@ -358,6 +379,7 @@ def find_transfer_candidates(
     Find transfer candidates from clusters with capacity violations.
     
     Candidates are sorted by priority (lowest ambiguity score = highest priority).
+    Uses cluster.cluster_id for membership index lookup (not list position).
     
     Args:
         clusters: List of EnhancedCluster objects
@@ -370,6 +392,10 @@ def find_transfer_candidates(
     candidates = []
     
     for cluster_id, cluster in enumerate(clusters):
+        # Skip empty clusters
+        if not cluster.points:
+            continue
+        
         # Check for capacity violation
         if not cluster.has_capacity_violation():
             continue
@@ -388,14 +414,18 @@ def find_transfer_candidates(
             if not student:
                 continue
             
-            # Get target cluster
+            # Get target cluster using membership's secondary_cluster index
             target_cluster_id = membership.secondary_cluster
             
-            # Validate target cluster exists
+            # Validate target cluster exists and is not empty
             if target_cluster_id < 0 or target_cluster_id >= len(clusters):
                 continue
             
             target_cluster = clusters[target_cluster_id]
+            
+            # Skip empty target clusters
+            if not target_cluster.points:
+                continue
             
             # Check feasibility
             is_feasible = True
@@ -463,9 +493,13 @@ def execute_transfer(
     
     # Add to target
     target.points.append(student)
-    if student.id in candidate.student_membership.membership_values:
-        target.membership_data[student.id] = candidate.student_membership
-    if candidate.student_membership.is_border_point():
+    # Always add membership data (unconditionally)
+    target.membership_data[student.id] = candidate.student_membership
+    # Add to border_points with duplicate check
+    if (
+        candidate.student_membership.is_border_point()
+        and student.id not in target.border_points
+    ):
         target.border_points.append(student.id)
     
     # Update target counts

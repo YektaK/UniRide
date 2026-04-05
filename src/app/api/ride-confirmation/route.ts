@@ -9,8 +9,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@supabase/supabase-js";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { AppError, getCurrentUserFromRequest } from "@/lib/admin-auth";
 
 const rideConfirmationSchema = z.object({
     action: z.enum(["confirm", "cancel", "change"], {
@@ -22,39 +22,13 @@ const rideConfirmationSchema = z.object({
     notes: z.string().optional(),
 });
 
-/**
- * Verify JWT from Authorization header and return the authenticated user's ID.
- */
-async function getAuthenticatedUserId(request: NextRequest): Promise<string | null> {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-        return null;
-    }
-    const token = authHeader.split(" ")[1];
-
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-
-    if (error || !user) {
-        return null;
-    }
-    return user.id;
-}
-
 export async function POST(request: NextRequest) {
-    // Authenticate
-    const authenticatedUserId = await getAuthenticatedUserId(request);
-    if (!authenticatedUserId) {
-        return NextResponse.json(
-            { error: "Unauthorized: Giriş yapmanız gerekiyor." },
-            { status: 401 }
-        );
-    }
-
     try {
+        const authUser = await getCurrentUserFromRequest(request);
+        if (!authUser) {
+            throw AppError.unauthorized("Unauthorized: Giriş yapmanız gerekiyor.");
+        }
+
         const rawBody = await request.json();
         const parseResult = rideConfirmationSchema.safeParse(rawBody);
         if (!parseResult.success) {
@@ -67,7 +41,7 @@ export async function POST(request: NextRequest) {
         const { action, rideDate, pickupTime, dropoffTime, notes } = parseResult.data;
 
         // userId comes from the token, not from the body
-        const userId = authenticatedUserId;
+        const userId = authUser.id;
 
         const adminClient = getSupabaseAdmin();
 
@@ -168,6 +142,9 @@ export async function POST(request: NextRequest) {
             ride: result,
         });
     } catch (error: unknown) {
+        if (error instanceof AppError) {
+            return NextResponse.json({ error: error.message }, { status: error.statusCode });
+        }
         console.error("Ride confirmation error:", error);
         return NextResponse.json(
             { error: error instanceof Error ? error.message : "Confirmation failed" },
@@ -191,16 +168,12 @@ function getActionMessage(action: string, status: string, isPastDeadline: boolea
 
 // GET: Check ride status for a specific date
 export async function GET(request: NextRequest) {
-    // Authenticate
-    const authenticatedUserId = await getAuthenticatedUserId(request);
-    if (!authenticatedUserId) {
-        return NextResponse.json(
-            { error: "Unauthorized: Giriş yapmanız gerekiyor." },
-            { status: 401 }
-        );
-    }
-
     try {
+        const authUser = await getCurrentUserFromRequest(request);
+        if (!authUser) {
+            throw AppError.unauthorized("Unauthorized: Giriş yapmanız gerekiyor.");
+        }
+
         const { searchParams } = new URL(request.url);
         const date = searchParams.get("date");
 
@@ -212,7 +185,7 @@ export async function GET(request: NextRequest) {
         }
 
         // userId comes from the token
-        const userId = authenticatedUserId;
+        const userId = authUser.id;
 
         const adminClient = getSupabaseAdmin();
         const { data, error } = await adminClient
@@ -241,6 +214,9 @@ export async function GET(request: NextRequest) {
             deadline: deadline.toISOString(),
         });
     } catch (error: unknown) {
+        if (error instanceof AppError) {
+            return NextResponse.json({ error: error.message }, { status: error.statusCode });
+        }
         console.error("Get ride status error:", error);
         return NextResponse.json(
             { error: error instanceof Error ? error.message : "Internal server error" },

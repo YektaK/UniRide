@@ -3,15 +3,9 @@
  */
 
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
-import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { compareAllAlgorithms, type StudentForOptimization, type Depot } from "@/services/optimizer-service";
-
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { requireAdmin } from "@/lib/admin-auth";
 
 const studentSchema = z.object({
     id: z.string().optional(),
@@ -36,24 +30,9 @@ const compareAlgorithmsSchema = z.object({
     clusteringAlgorithm: z.string().default("sweep"),
 });
 
-async function verifyAuth(authHeader: string | null) {
-    if (!authHeader?.startsWith("Bearer ")) return null;
-    const token = authHeader.split(" ")[1];
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-    if (error || !user) return null;
-    const { data: profile } = await supabaseAdmin.from("users").select("*").eq("id", user.id).single();
-    return profile;
-}
-
 export async function POST(request: Request) {
     try {
-        const headersList = await headers();
-        const authHeader = headersList.get("authorization");
-        const user = await verifyAuth(authHeader);
-
-        if (!user || user.role !== "admin") {
-            return NextResponse.json({ error: "Unauthorized - Admin only" }, { status: 401 });
-        }
+        await requireAdmin(request);
 
         const rawBody = await request.json();
         const parseResult = compareAlgorithmsSchema.safeParse(rawBody);

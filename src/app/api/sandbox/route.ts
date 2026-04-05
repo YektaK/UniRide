@@ -43,7 +43,7 @@ interface SaveScenarioRequest {
 // POST /api/sandbox/reoptimize - Re-optimize with custom vehicle config
 export async function POST(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const body = await request.json() as ReoptimizeRequest;
         const {
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
 // GET /api/sandbox/scenarios - Get saved scenarios
 export async function GET(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const { searchParams } = new URL(request.url);
         const scenarioId = searchParams.get("id");
@@ -162,7 +162,7 @@ export async function GET(request: NextRequest) {
 // POST /api/sandbox/scenarios - Save scenario
 export async function PUT(request: NextRequest) {
     try {
-        await requireAdmin();
+        const adminUser = await requireAdmin(request);
 
         const body = await request.json() as SaveScenarioRequest;
         const { name, vehicles, studentIds, timeWindowMinutes } = body;
@@ -172,7 +172,6 @@ export async function PUT(request: NextRequest) {
         }
 
         const adminClient = getSupabaseAdmin();
-        const { data: { user } } = await adminClient.auth.getUser();
 
         const { data, error } = await adminClient
             .from("sandbox_scenarios")
@@ -181,7 +180,7 @@ export async function PUT(request: NextRequest) {
                 vehicles: JSON.stringify(vehicles),
                 student_ids: studentIds,
                 time_window_minutes: timeWindowMinutes,
-                created_by: user?.id,
+                created_by: adminUser.id,
             })
             .select()
             .single();
@@ -199,7 +198,7 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/sandbox/scenarios - Delete scenario
 export async function DELETE(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const { searchParams } = new URL(request.url);
         const id = searchParams.get("id");

@@ -4,6 +4,7 @@
  */
 
 import type { VehicleRoute, OptimizationResult } from "@/services/optimizer-service";
+import { getAuthToken } from "@/lib/admin-api";
 
 export interface RoutePlan {
     id: string;
@@ -46,10 +47,14 @@ export interface UpdateRoutePlanRequest {
 }
 
 export async function saveRoutePlan(plan: SaveRoutePlanRequest): Promise<RoutePlan> {
+    const token = await getAuthToken();
+    if (!token) throw new Error("Not authenticated");
+
     const response = await fetch('/api/route-plans', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(plan),
     });
@@ -68,6 +73,9 @@ export async function getRoutePlans(filters?: {
     status?: string;
     direction?: string;
 }): Promise<RoutePlan[]> {
+    const token = await getAuthToken();
+    if (!token) throw new Error("Not authenticated");
+
     const params = new URLSearchParams();
 
     if (filters?.date) {
@@ -87,6 +95,7 @@ export async function getRoutePlans(filters?: {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
         },
     });
 
@@ -100,10 +109,14 @@ export async function getRoutePlans(filters?: {
 }
 
 export async function updateRoutePlan(update: UpdateRoutePlanRequest): Promise<RoutePlan> {
+    const token = await getAuthToken();
+    if (!token) throw new Error("Not authenticated");
+
     const response = await fetch('/api/route-plans', {
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(update),
     });
@@ -118,8 +131,14 @@ export async function updateRoutePlan(update: UpdateRoutePlanRequest): Promise<R
 }
 
 export async function deleteRoutePlan(id: string): Promise<void> {
+    const token = await getAuthToken();
+    if (!token) throw new Error("Not authenticated");
+
     const response = await fetch(`/api/route-plans?id=${id}`, {
         method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        },
     });
 
     const data = await response.json();

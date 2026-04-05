@@ -40,7 +40,7 @@ interface RoutePlanUpdate {
 // POST /api/route-plans - Create new route plan
 export async function POST(request: NextRequest) {
     try {
-        await requireAdmin();
+        const adminUser = await requireAdmin(request);
 
         const body = await request.json() as RoutePlanRequest;
         const {
@@ -67,9 +67,6 @@ export async function POST(request: NextRequest) {
 
         const adminClient = getSupabaseAdmin();
 
-        // Get authenticated user
-        const { data: { user } } = await adminClient.auth.getUser();
-
         const { data, error } = await adminClient
             .from("route_plans")
             .insert({
@@ -84,7 +81,7 @@ export async function POST(request: NextRequest) {
                 student_count: studentCount,
                 notes,
                 status: 'draft',
-                created_by: user?.id,
+                created_by: adminUser.id,
             })
             .select()
             .single();
@@ -102,7 +99,7 @@ export async function POST(request: NextRequest) {
 // GET /api/route-plans - List route plans
 export async function GET(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const { searchParams } = new URL(request.url);
         const planDate = searchParams.get("date");
@@ -140,7 +137,7 @@ export async function GET(request: NextRequest) {
 // PATCH /api/route-plans - Update route plan
 export async function PATCH(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const body = await request.json() as RoutePlanUpdate;
         const { id, status, driverAssignments, notes } = body;
@@ -195,7 +192,7 @@ export async function PATCH(request: NextRequest) {
 // DELETE /api/route-plans - Delete route plan
 export async function DELETE(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const { searchParams } = new URL(request.url);
         const id = searchParams.get("id");

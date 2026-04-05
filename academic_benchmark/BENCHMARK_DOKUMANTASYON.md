@@ -126,6 +126,16 @@ FirebaseUniRide/UniRide/
 | **H** | Algoritma bilgileri | Algoritma detayları |
 | **Q** | Çıkış | - |
 
+### Önbellek Seçenekleri (Cache Options)
+
+Test öncesi özette, daha önce yapılmış testler varsa şu seçenekler sunulur:
+
+| Seçenek | Açıklama | Kullanım |
+|---------|----------|----------|
+| **[S] Atla** | Sadece yeni testleri yap | Önerilen - zaman kazandırır |
+| **[R] Yenile** | Tüm testleri baştan yap | Mevcut sonuçları geçersiz kılar |
+| **[A] Arttır** | Mevcut sonuçlara yeni koşumlar ekle | Daha fazla istatistik için |
+
 ---
 
 ## 🔧 Yapılan Düzeltmeler
@@ -329,14 +339,46 @@ python run_smart_benchmark.py
 
 ### Özel Seçim Modu [E]
 
-Problem seçimi için:
-- Tek seçim: `1, 3, 5`
-- Aralık seçimi: `5-8` (5'ten 8'e kadar)
-- Tümü: `all` veya `tüm`
+#### Problem Seçimi
 
-Algoritma seçimi için:
-- Sayı ile: `1, 2, 4`
-- Tümü: `all` veya `tüm`
+| Giriş | Anlamı |
+|-------|-------|
+| `1, 3, 5` | Tekil seçim |
+| `5-8` | Aralık seçimi (5, 6, 7, 8) |
+| `all`, `tüm`, `hepsi` | Tüm problemler |
+| `k`, `küçük`, `kucuk`, `small` | Küçük problemler (n≤100) |
+| `o`, `orta`, `medium` | Orta problemler (100<n≤500) |
+| `b`, `büyük`, `buyuk`, `large` | Büyük problemler (n>500) |
+
+**Cache Durumu Gösterimi:**
+- `✓` = Tüm algoritmalar test edilmiş
+- `(3/5)` = 5 algoritmadan 3'ü test edilmiş
+- Boş = Hiç test edilmemiş
+
+**Örnek:**
+```
+[KÜÇÜK PROBLEMLER]
+   1. eil51        (n=51   ) ✓
+   2. berlin52     (n=52   ) (3/5)
+   3. st70         (n=70   )
+```
+
+#### Algoritma Seçimi
+
+| Giriş | Anlamı |
+|-------|-------|
+| `1, 2, 4` | Tekil seçim |
+| `1-3` | Aralık seçimi (1, 2, 3) |
+| `all`, `tüm` | Tüm algoritmalar |
+
+**Karmaşıklık Gösterimi:**
+```
+   1. 2-opt      [O(n²)]
+   2. 3-opt      [O(n³)]
+   3. Or-opt     [O(n²)]
+   4. Swap       [O(n²)]
+   5. Hybrid     [O(n³)]
+```
 
 ---
 
@@ -589,6 +631,7 @@ result = {
 
 | Versiyon | Tarih | Değişiklikler |
 |----------|-------|---------------|
+| 3.1 | 2026-04-05 | Alias seçimi (k/orta/büyük), cache durumu gösterimi, önbellek seçenekleri (Atla/Yenile/Arttır), algoritma karmaşıklık bilgisi |
 | 3.0 | 2026-04-05 | [E] Özel seçim, [H] Algoritma bilgileri, Ctrl+C güvenli çıkış, incremental save, tahmini süre |
 | 2.0 | 2026-04-03 | IndexError düzeltmesi, V2 entegrasyonu, negatif GAP düzeltmesi |
 | 1.0 | - | İlk sürüm (hardcoded koordinatlar) |

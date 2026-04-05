@@ -62,7 +62,7 @@ export default function VehiclePlanningPage() {
         try {
             const response = await adminApi.users.getAll(1, 100);
             const usersArray = Array.isArray(response) ? response : (response.data || []);
-            const studentUsers = usersArray.filter((u: any) => u.role === "student");
+            const studentUsers = usersArray.filter((u: User) => u.role === "student");
             setStudents(studentUsers);
         } catch (error) {
             console.error("Error loading students:", error);
@@ -90,7 +90,7 @@ export default function VehiclePlanningPage() {
         if (type === "all") {
             setSelectedStudents(students.map(s => s.id));
         } else {
-            const ids = students.filter((s: any) => (s.disability_type || s.disabilityType) === type).map(s => s.id);
+            const ids = students.filter((s: User) => s.disabilityType === type).map(s => s.id);
             setSelectedStudents(prev => [...new Set([...prev, ...ids])]);
         }
     };
@@ -138,10 +138,10 @@ export default function VehiclePlanningPage() {
                 title: "Hesaplama Tamamlandı",
                 description: `${data.requiredVehicles} araç gerekli`,
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast({
                 title: "Hata",
-                description: error.message,
+                description: error instanceof Error ? error.message : "Bilinmeyen hata",
                 variant: "destructive",
             });
         } finally {
@@ -169,10 +169,10 @@ export default function VehiclePlanningPage() {
                 title: "Plan Kaydedildi",
                 description: `${planDate} tarihli ${direction} planı başarıyla kaydedildi`,
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast({
                 title: "Kaydetme Hatası",
-                description: error.message,
+                description: error instanceof Error ? error.message : "Bilinmeyen hata",
                 variant: "destructive",
             });
         } finally {
@@ -180,8 +180,8 @@ export default function VehiclePlanningPage() {
         }
     };
 
-    const swStudents = students.filter((s: any) => (s.disability_type || s.disabilityType) === "Sw");
-    const soStudents = students.filter((s: any) => (s.disability_type || s.disabilityType) === "So" || !(s.disability_type || s.disabilityType));
+    const swStudents = students.filter((s: User) => s.disabilityType === "Sw");
+    const soStudents = students.filter((s: User) => s.disabilityType === "So" || !s.disabilityType);
     const selectedSwCount = swStudents.filter(s => selectedStudents.includes(s.id)).length;
     const selectedSoCount = soStudents.filter(s => selectedStudents.includes(s.id)).length;
 

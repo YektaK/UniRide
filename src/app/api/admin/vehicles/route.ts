@@ -4,6 +4,7 @@
  */
 
 import { NextRequest } from "next/server";
+import { z } from "zod";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import {
     requireAdmin,
@@ -11,6 +12,31 @@ import {
     createSuccessResponse,
     handleApiError,
 } from "@/lib/admin-auth";
+
+const createVehicleSchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    type: z.string().min(1, "Type is required"),
+    plateNumber: z.string().optional(),
+    wheelchairCapacity: z.number().int().min(0).optional(),
+    seatingCapacity: z.number().int().min(0).optional(),
+    cooldownMinutes: z.number().int().min(0).max(60).optional(),
+    status: z.string().optional(),
+});
+
+const updateVehicleSchema = z.object({
+    id: z.string().min(1, "Vehicle ID is required"),
+    name: z.string().optional(),
+    type: z.string().optional(),
+    plateNumber: z.string().optional(),
+    plate_number: z.string().optional(),
+    wheelchairCapacity: z.number().int().min(0).optional(),
+    wheelchair_capacity: z.number().int().min(0).optional(),
+    seatingCapacity: z.number().int().min(0).optional(),
+    seating_capacity: z.number().int().min(0).optional(),
+    cooldownMinutes: z.number().int().min(0).max(60).optional(),
+    cooldown_minutes: z.number().int().min(0).max(60).optional(),
+    status: z.string().optional(),
+});
 
 // GET /api/admin/vehicles - Get all vehicles
 export async function GET(request: NextRequest) {
@@ -38,38 +64,35 @@ export async function POST(request: NextRequest) {
     try {
         await requireAdmin();
 
-        const body = await request.json();
-        const { name, type, plateNumber, wheelchairCapacity, seatingCapacity, cooldownMinutes, status } = body;
-
-        if (!name || !type) {
-            return createErrorResponse("Name and type are required", 400);
+        const rawBody = await request.json();
+        const parseResult = createVehicleSchema.safeParse(rawBody);
+        if (!parseResult.success) {
+            return createErrorResponse(parseResult.error.flatten().fieldErrors as unknown as string, 400);
         }
 
+        const { name, type, plateNumber, wheelchairCapacity, seatingCapacity, cooldownMinutes, status } = parseResult.data;
+
         // Validate at least one capacity is > 0
-        if ((wheelchairCapacity || 0) <= 0 && (seatingCapacity || 0) <= 0) {
+        if ((wheelchairCapacity ?? 0) <= 0 && (seatingCapacity ?? 0) <= 0) {
             return createErrorResponse("At least one capacity (wheelchair or seating) must be greater than 0", 400);
         }
 
-        // Validate cooldown range
         const cooldown = cooldownMinutes ?? 10;
-        if (cooldown < 0 || cooldown > 60) {
-            return createErrorResponse("Cooldown minutes must be between 0 and 60", 400);
-        }
 
         const adminClient = getSupabaseAdmin();
-        const { data, error } = await (adminClient as any)
+        const { data, error } = await adminClient
             .from("vehicles")
             .insert({
                 name,
                 type,
                 plate_number: plateNumber,
-                wheelchair_capacity: wheelchairCapacity || 0,
-                seating_capacity: seatingCapacity || 0,
+                wheelchair_capacity: wheelchairCapacity ?? 0,
+                seating_capacity: seatingCapacity ?? 0,
                 cooldown_minutes: cooldown,
-                status: status || "active",
+                status: status ?? "active",
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
-            })
+            } as never)
             .select()
             .single();
 
@@ -88,12 +111,13 @@ export async function PUT(request: NextRequest) {
     try {
         await requireAdmin();
 
-        const body = await request.json();
-        const { id, ...updates } = body;
-
-        if (!id) {
-            return createErrorResponse("Vehicle ID is required", 400);
+        const rawBody = await request.json();
+        const parseResult = updateVehicleSchema.safeParse(rawBody);
+        if (!parseResult.success) {
+            return createErrorResponse(parseResult.error.flatten().fieldErrors as unknown as string, 400);
         }
+
+        const { id, ...updates } = parseResult.data;
 
         // Validate at least one capacity is > 0 if capacities are being updated
         const newWheelchairCapacity = updates.wheelchairCapacity !== undefined ? updates.wheelchairCapacity : updates.wheelchair_capacity;
@@ -106,17 +130,15 @@ export async function PUT(request: NextRequest) {
         }
 
         // Validate cooldown range if provided
-        if (updates.cooldownMinutes !== undefined || updates.cooldown_minutes !== undefined) {
-            const cooldown = updates.cooldownMinutes ?? updates.cooldown_minutes;
-            if (cooldown < 0 || cooldown > 60) {
-                return createErrorResponse("Cooldown minutes must be between 0 and 60", 400);
-            }
+        const cooldownValue = updates.cooldownMinutes ?? updates.cooldown_minutes;
+        if (cooldownValue !== undefined && (cooldownValue < 0 || cooldownValue > 60)) {
+            return createErrorResponse("Cooldown minutes must be between 0 and 60", 400);
         }
 
         const adminClient = getSupabaseAdmin();
 
         // Convert camelCase to snake_case for database
-        const dbUpdates: any = {
+        const dbUpdates: Record<string, unknown> = {
             updated_at: new Date().toISOString(),
         };
 
@@ -128,9 +150,9 @@ export async function PUT(request: NextRequest) {
         if (updates.cooldownMinutes !== undefined) dbUpdates.cooldown_minutes = updates.cooldownMinutes;
         if (updates.status) dbUpdates.status = updates.status;
 
-        const { data, error } = await (adminClient as any)
+        const { data, error } = await adminClient
             .from("vehicles")
-            .update(dbUpdates)
+            .update(dbUpdates as never)
             .eq("id", id)
             .select()
             .single();

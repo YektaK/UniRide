@@ -5,12 +5,36 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import { compareAllAlgorithms, type StudentForOptimization, type Depot } from "@/services/optimizer-service";
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+const studentSchema = z.object({
+    id: z.string().optional(),
+    student_id: z.string().optional(),
+    name: z.string().optional(),
+    location_code: z.string().optional(),
+    locationCode: z.string().optional(),
+    coordinates: z.object({ lat: z.number(), lng: z.number() }).optional().nullable(),
+    home_coordinates: z.object({ lat: z.number(), lng: z.number() }).optional().nullable(),
+    disability_type: z.string().optional(),
+    disabilityType: z.string().optional(),
+});
+
+const compareAlgorithmsSchema = z.object({
+    students: z.array(studentSchema).min(1, "At least one student is required"),
+    depot: z.object({
+        id: z.string().optional(),
+        lat: z.number().optional(),
+        lng: z.number().optional(),
+    }).optional(),
+    algorithms: z.array(z.string()).optional(),
+    clusteringAlgorithm: z.string().default("sweep"),
+});
 
 async function verifyAuth(authHeader: string | null) {
     if (!authHeader?.startsWith("Bearer ")) return null;
@@ -31,25 +55,29 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Unauthorized - Admin only" }, { status: 401 });
         }
 
-        const body = await request.json();
-        const { students, depot, algorithms, clusteringAlgorithm = "sweep" } = body;
-
-        if (!students || students.length === 0) {
-            return NextResponse.json({ error: "Students required" }, { status: 400 });
+        const rawBody = await request.json();
+        const parseResult = compareAlgorithmsSchema.safeParse(rawBody);
+        if (!parseResult.success) {
+            return NextResponse.json(
+                { error: "Invalid request body", details: parseResult.error.flatten() },
+                { status: 400 }
+            );
         }
 
-        const optimizationStudents: StudentForOptimization[] = students.map((s: any) => ({
-            id: s.id || s.student_id,
-            name: s.name || `Öğrenci ${s.id}`,
-            location_code: s.location_code || s.locationCode,
-            coordinates: s.coordinates || s.home_coordinates || null,
-            disability_type: s.disability_type || s.disabilityType || "So",
+        const { students, depot, algorithms, clusteringAlgorithm } = parseResult.data;
+
+        const optimizationStudents: StudentForOptimization[] = students.map((s) => ({
+            id: s.id ?? s.student_id ?? "",
+            name: s.name ?? `Öğrenci ${s.id ?? s.student_id}`,
+            location_code: s.location_code ?? s.locationCode ?? "",
+            coordinates: s.coordinates ?? s.home_coordinates ?? undefined,
+            disability_type: (s.disability_type ?? s.disabilityType ?? "So") as "Sw" | "So",
         }));
 
         const optimizationDepot: Depot = {
-            id: depot?.id || "D.Kampus",
-            lat: depot?.lat || 41.001,
-            lng: depot?.lng || 29.177,
+            id: depot?.id ?? "D.Kampus",
+            lat: depot?.lat ?? 41.001,
+            lng: depot?.lng ?? 29.177,
         };
 
         const result = await compareAllAlgorithms(
@@ -75,8 +103,8 @@ export async function POST(request: Request) {
             summary: result.summary,
             student_count: students.length,
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Compare algorithms error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : "Internal server error" }, { status: 500 });
     }
 }

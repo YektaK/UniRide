@@ -59,7 +59,7 @@ export async function POST(request: Request) {
         // Use admin client to bypass RLS — password_hint is intentionally non-sensitive
         const adminClient = getSupabaseAdmin();
 
-        const { data, error } = await (adminClient as any)
+        const { data, error } = await adminClient
             .from('users')
             .select('password_hint')
             .or(`email.eq.${emailOrStudentNumber.toLowerCase()},student_number.eq.${emailOrStudentNumber}`)

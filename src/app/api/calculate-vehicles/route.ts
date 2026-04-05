@@ -14,9 +14,20 @@ import {
     optimizeRoutes,
     type StudentForOptimization,
     type Depot,
+    type VehicleRoute,
+    type OptimizationOptions,
 } from "@/services/optimizer-service";
 import { normalizeAlgorithmName } from "@/lib/algorithm-constants";
-import type { IEResponseData, HourlyDemandData, BottleneckData, TimeShiftSuggestion } from "@/types/ie-resource";
+import type { IEResponseData, HourlyDemandData, BottleneckData, TimeShiftSuggestion, IERawData } from "@/types/ie-resource";
+
+// Student info kept in a local lookup map for result enrichment
+interface StudentLookupEntry {
+    id: string;
+    name: string;
+    locationCode: string;
+    disabilityType: "Sw" | "So";
+    coordinates: { lat: number; lng: number } | null;
+}
 
 // Varsayılan depot (Doğuş Üniversitesi, Dudullu Kampüsü)
 const DEFAULT_DEPOT: Depot = {
@@ -26,9 +37,9 @@ const DEFAULT_DEPOT: Depot = {
 };
 
 function transformIEData(
-    ieData: any,
+    ieData: IERawData | undefined,
     validStudents: StudentForOptimization[],
-    studentLookup: Record<string, any>,
+    studentLookup: Record<string, StudentLookupEntry>,
     totalVehicles: number
 ): IEResponseData | undefined {
     if (!ieData) return undefined;
@@ -41,12 +52,11 @@ function transformIEData(
     // Transform hourly_demand format to match frontend
     const hourlyDemand: Record<string, HourlyDemandData> = {};
     if (ieData.hourly_demand) {
-        for (const [hour, data] of Object.entries(ieData.hourly_demand)) {
-            const demand = data as any;
-            const pickupSw = demand.sw?.pickup || 0;
-            const pickupSo = demand.so?.pickup || 0;
-            const dropoffSw = demand.sw?.dropoff || 0;
-            const dropoffSo = demand.so?.dropoff || 0;
+        for (const [hour, demand] of Object.entries(ieData.hourly_demand)) {
+            const pickupSw = demand.sw?.pickup ?? 0;
+            const pickupSo = demand.so?.pickup ?? 0;
+            const dropoffSw = demand.sw?.dropoff ?? 0;
+            const dropoffSo = demand.so?.dropoff ?? 0;
 
             hourlyDemand[hour] = {
                 hour,
@@ -64,11 +74,11 @@ function transformIEData(
     }
 
     // Map bottlenecks with severity based on type
-    const bottlenecks: BottleneckData[] = (ieData.bottlenecks || []).map((b: any) => ({
-        hour: b.time || "",
+    const bottlenecks: BottleneckData[] = (ieData.bottlenecks ?? []).map((b) => ({
+        hour: b.time ?? "",
         type: b.type === "infeasible" ? "infeasible" : b.type === "resource_conflict" ? "resource_conflict" : "low_efficiency",
         severity: b.type === "infeasible" ? "high" : b.type === "resource_conflict" ? "medium" : "low",
-        description: b.reason || "",
+        description: b.reason ?? "",
         swNeeded: 0,
         soNeeded: 0,
         swAvailable: 0,
@@ -78,14 +88,14 @@ function transformIEData(
     }));
 
     // Transform shift suggestions with student names
-    const shiftSuggestions: TimeShiftSuggestion[] = (ieData.time_shift_suggestions || []).map((s: any) => ({
-        studentId: s.student_id || "",
-        studentName: studentLookup[s.student_id]?.name || s.student_id || "",
-        currentTime: s.current_time || "",
-        suggestedTime: s.suggested_time || "",
+    const shiftSuggestions: TimeShiftSuggestion[] = (ieData.time_shift_suggestions ?? []).map((s) => ({
+        studentId: s.student_id ?? "",
+        studentName: studentLookup[s.student_id ?? ""]?.name ?? s.student_id ?? "",
+        currentTime: s.current_time ?? "",
+        suggestedTime: s.suggested_time ?? "",
         shiftMinutes: 0,
         reason: `Save ${s.savings_vehicles} vehicle(s)`,
-        savingsVehicles: s.savings_vehicles || 0,
+        savingsVehicles: s.savings_vehicles ?? 0,
     }));
 
     // Calculate standard vehicle needs
@@ -134,7 +144,15 @@ function transformIEData(
 
 export async function POST(request: NextRequest) {
     try {
-        const body = await request.json();
+        const body = await request.json() as {
+            students?: unknown[];
+            maxTourTime?: number;
+            swCapacity?: number;
+            soCapacity?: number;
+            strategy?: string;
+            clusteringAlgorithm?: string;
+            vehicles?: OptimizationOptions["vehicles"];
+        };
 
         const {
             students,
@@ -156,12 +174,13 @@ export async function POST(request: NextRequest) {
 
         // Öğrencileri Python API formatına dönüştür
         const validStudents: StudentForOptimization[] = [];
-        const studentLookup: Record<string, any> = {};
+        const studentLookup: Record<string, StudentLookupEntry> = {};
 
-        for (const student of students) {
+        for (const rawStudent of students) {
+            const student = rawStudent as Record<string, unknown>;
             // Geçersiz kayıtları atla
-            const locationCode = student.location_code || student.locationCode;
-            const disabilityType = student.disability_type || student.disabilityType;
+            const locationCode = (student.location_code as string | undefined) || (student.locationCode as string | undefined);
+            const disabilityType = (student.disability_type as string | undefined) || (student.disabilityType as string | undefined);
 
             if (!student.id || !locationCode || !disabilityType) {
                 continue;
@@ -171,21 +190,25 @@ export async function POST(request: NextRequest) {
                 continue;
             }
 
+            const id = student.id as string;
+            const name = (student.name as string | undefined) || `Öğrenci ${id.slice(0, 6)}`;
+            const coordinates = (student.coordinates || student.home_coordinates) as { lat: number; lng: number } | null ?? null;
+
             validStudents.push({
-                id: student.id,
-                name: student.name || `Öğrenci ${student.id.slice(0, 6)}`,
+                id,
+                name,
                 location_code: locationCode,
-                coordinates: student.coordinates || student.home_coordinates || null,
+                coordinates: coordinates ?? undefined,
                 disability_type: disabilityType as "Sw" | "So",
             });
 
             // Sonuçları UI formatına çevirirken öğrenci bilgilerine erişmek için
-            studentLookup[student.id] = {
-                id: student.id,
-                name: student.name || `Öğrenci ${student.id.slice(0, 6)}`,
-                locationCode: locationCode,
-                disabilityType: disabilityType,
-                coordinates: student.coordinates || student.home_coordinates || null,
+            studentLookup[id] = {
+                id,
+                name,
+                locationCode,
+                disabilityType: disabilityType as "Sw" | "So",
+                coordinates,
             };
         }
 
@@ -203,7 +226,7 @@ export async function POST(request: NextRequest) {
         const startTime = Date.now();
 
         const result = await optimizeRoutes(validStudents, DEFAULT_DEPOT, {
-            algorithm: normalizedAlgorithm as any,
+            algorithm: normalizedAlgorithm as OptimizationOptions["algorithm"],
             max_travel_time: maxTourTime,
             sw_capacity: swCapacity,
             so_capacity: soCapacity,
@@ -227,22 +250,22 @@ export async function POST(request: NextRequest) {
         // Python yanıtını UI'ın beklediği formata dönüştür
         // Python: { routes[], total_vehicles, total_duration_minutes }
         // UI: { requiredVehicles, assignments[], totalDuration, message }
-        const assignments = (result.routes || []).map((route: any, index: number) => {
+        const assignments = (result.routes ?? []).map((route: VehicleRoute, index: number) => {
             // Rota içindeki öğrenci bilgilerini al
-            const routeStudents = (route.student_ids || []).map((sid: string) => {
+            const routeStudents = (route.student_ids ?? []).map((sid: string) => {
                 const s = studentLookup[sid];
                 if (s) return s;
                 // Fallback: ID varsa basit obje döndür
-                return { id: sid, name: sid, locationCode: "?", disabilityType: "So" };
+                return { id: sid, name: sid, locationCode: "?", disabilityType: "So" as const };
             });
 
             return {
                 vehicleIndex: index + 1,
                 students: routeStudents,
-                route: route.route_details || [],
-                totalDuration: route.total_duration_minutes || 0,
-                swCount: route.sw_count || 0,
-                soCount: route.so_count || 0,
+                route: route.route_details ?? [],
+                totalDuration: route.total_duration_minutes ?? 0,
+                swCount: route.sw_count ?? 0,
+                soCount: route.so_count ?? 0,
             };
         });
 
@@ -251,14 +274,14 @@ export async function POST(request: NextRequest) {
             result.ie_data,
             validStudents,
             studentLookup,
-            result.total_vehicles || 0
+            result.total_vehicles ?? 0
         );
 
         return NextResponse.json({
             success: true,
-            requiredVehicles: result.total_vehicles || assignments.length,
+            requiredVehicles: result.total_vehicles ?? assignments.length,
             assignments,
-            totalDuration: Math.round(result.total_duration_minutes || 0),
+            totalDuration: Math.round(result.total_duration_minutes ?? 0),
             message: `${result.total_vehicles} araç ile optimizasyon tamamlandı (${result.algorithm_used})`,
             ieData,
             meta: {
@@ -276,10 +299,10 @@ export async function POST(request: NextRequest) {
                 },
             },
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Vehicle calculation error:", error);
         return NextResponse.json(
-            { error: error.message || "Calculation failed" },
+            { error: error instanceof Error ? error.message : "Calculation failed" },
             { status: 500 }
         );
     }

@@ -97,3 +97,33 @@ export interface IEChartData {
     totalVehicles: number[];
     capacity: number[];
 }
+
+// ==================== RAW PYTHON API RESPONSE TYPES ====================
+// These represent the raw JSON structure returned by the Python optimizer API
+// before transformation into the frontend-friendly IEResponseData format.
+
+export interface IEHourlyDemandEntryRaw {
+    sw?: { pickup?: number; dropoff?: number };
+    so?: { pickup?: number; dropoff?: number };
+}
+
+export interface IEBottleneckRaw {
+    time?: string;
+    type?: string;
+    reason?: string;
+}
+
+export interface IEShiftSuggestionRaw {
+    student_id?: string;
+    current_time?: string;
+    suggested_time?: string;
+    savings_vehicles?: number;
+}
+
+/** Raw IE analysis data as returned directly by the Python optimizer API */
+export interface IERawData {
+    hourly_demand?: Record<string, IEHourlyDemandEntryRaw>;
+    bottlenecks?: IEBottleneckRaw[];
+    time_shift_suggestions?: IEShiftSuggestionRaw[];
+    standard_vehicles_needed?: number;
+}

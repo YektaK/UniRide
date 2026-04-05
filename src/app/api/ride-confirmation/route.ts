@@ -8,8 +8,19 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+
+const rideConfirmationSchema = z.object({
+    action: z.enum(["confirm", "cancel", "change"], {
+        errorMap: () => ({ message: "Invalid action. Must be 'confirm', 'cancel', or 'change'" }),
+    }),
+    rideDate: z.string().min(1, "rideDate is required"),
+    pickupTime: z.string().optional(),
+    dropoffTime: z.string().optional(),
+    notes: z.string().optional(),
+});
 
 /**
  * Verify JWT from Authorization header and return the authenticated user's ID.
@@ -44,25 +55,19 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-        const body = await request.json();
-        const { action, rideDate, pickupTime, dropoffTime, notes } = body;
+        const rawBody = await request.json();
+        const parseResult = rideConfirmationSchema.safeParse(rawBody);
+        if (!parseResult.success) {
+            return NextResponse.json(
+                { error: parseResult.error.errors[0].message },
+                { status: 400 }
+            );
+        }
+
+        const { action, rideDate, pickupTime, dropoffTime, notes } = parseResult.data;
 
         // userId comes from the token, not from the body
         const userId = authenticatedUserId;
-
-        if (!action || !rideDate) {
-            return NextResponse.json(
-                { error: "action and rideDate are required" },
-                { status: 400 }
-            );
-        }
-
-        if (!["confirm", "cancel", "change"].includes(action)) {
-            return NextResponse.json(
-                { error: "Invalid action. Must be 'confirm', 'cancel', or 'change'" },
-                { status: 400 }
-            );
-        }
 
         const adminClient = getSupabaseAdmin();
 
@@ -101,14 +106,14 @@ export async function POST(request: NextRequest) {
         let result;
         if (existingRide) {
             // Update existing ride
-            const { data, error } = await (adminClient as any)
+            const { data, error } = await adminClient
                 .from("ride_requests")
                 .update({
                     status,
-                    notes: notes || (existingRide as any).notes,
+                    notes: notes ?? existingRide.notes,
                     updated_at: new Date().toISOString(),
-                })
-                .eq("id", (existingRide as any).id)
+                } as never)
+                .eq("id", existingRide.id)
                 .select()
                 .single();
 
@@ -116,7 +121,7 @@ export async function POST(request: NextRequest) {
             result = data;
         } else if (action === "confirm") {
             // Create new ride request
-            const { data: user, error: userError } = await adminClient
+            const { data: userData, error: userError } = await adminClient
                 .from("users")
                 .select("home_address, home_coordinates")
                 .eq("id", userId)
@@ -124,24 +129,24 @@ export async function POST(request: NextRequest) {
 
             if (userError) throw userError;
 
-            const { data, error } = await (adminClient as any)
+            const { data, error } = await adminClient
                 .from("ride_requests")
                 .insert({
                     user_id: userId,
                     type: "scheduled",
                     status,
-                    requested_pickup_time: `${rideDate}T${pickupTime || "08:00"}:00`,
-                    requested_dropoff_time: `${rideDate}T${dropoffTime || "17:00"}:00`,
+                    requested_pickup_time: `${rideDate}T${pickupTime ?? "08:00"}:00`,
+                    requested_dropoff_time: `${rideDate}T${dropoffTime ?? "17:00"}:00`,
                     pickup_location: {
-                        address: (user as any)?.home_address || "Ev Adresi",
-                        coordinates: (user as any)?.home_coordinates,
+                        address: userData?.home_address ?? "Ev Adresi",
+                        coordinates: userData?.home_coordinates,
                     },
                     dropoff_location: {
                         address: "Yıldız Teknik Üniversitesi Davutpaşa Kampüsü",
                         coordinates: { lat: 41.0254, lng: 28.8895 },
                     },
                     notes,
-                })
+                } as never)
                 .select()
                 .single();
 
@@ -162,10 +167,10 @@ export async function POST(request: NextRequest) {
             message: getActionMessage(action, status, isPastDeadline),
             ride: result,
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Ride confirmation error:", error);
         return NextResponse.json(
-            { error: error.message || "Confirmation failed" },
+            { error: error instanceof Error ? error.message : "Confirmation failed" },
             { status: 500 }
         );
     }
@@ -235,10 +240,10 @@ export async function GET(request: NextRequest) {
             isPastDeadline: now > deadline,
             deadline: deadline.toISOString(),
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Get ride status error:", error);
         return NextResponse.json(
-            { error: error.message },
+            { error: error instanceof Error ? error.message : "Internal server error" },
             { status: 500 }
         );
     }

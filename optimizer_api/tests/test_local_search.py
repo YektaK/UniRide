@@ -344,18 +344,49 @@ class TestTimeWindowAwareLocalSearch:
         
         assert len(improved_route) == len(simple_route)
     
-    def test_with_time_windows(self, simple_route, simple_duration_func, time_windows, arrival_times):
-        """Should consider time windows when optimizing"""
+    def test_with_time_windows(self, simple_duration_func):
+        """Should consider time windows and reduce violations when optimizing"""
         ls = TimeWindowAwareLocalSearch(tw_penalty=100.0)
         
+        # Create a route that violates time windows
+        # Time windows: A(0,30), B(10,40), C(20,50), D(30,60), E(40,70)
+        # Reverse order will cause violations
+        route = ["E", "D", "C", "B", "A"]
+        
+        # Calculate initial time window violation
+        def calculate_violation(route, time_windows):
+            # Simulate arrival at time 0 + travel
+            arrival = 0
+            violation = 0
+            for i, loc in enumerate(route):
+                tw_start, tw_end = time_windows[loc]
+                if arrival < tw_start:
+                    arrival = tw_start  # Wait
+                if arrival > tw_end:
+                    violation += (arrival - tw_end)
+                # Travel to next (10 units between adjacent)
+                if i < len(route) - 1:
+                    arrival += 10
+            return violation
+        
+        time_windows = {"A": (0, 30), "B": (10, 40), "C": (20, 50), "D": (30, 60), "E": (40, 70)}
+        
+        initial_violation = calculate_violation(route, time_windows)
+        
         improved_route, _ = ls.improve(
-            simple_route, 
+            route, 
             simple_duration_func,
             time_windows=time_windows,
-            arrival_times=arrival_times
+            arrival_times={loc: i * 10 for i, loc in enumerate(route)}
         )
         
-        assert len(improved_route) == len(simple_route)
+        # Assert time-window-specific behavior
+        assert len(improved_route) == len(route)
+        
+        # The improved route should have same or lower violation
+        improved_violation = calculate_violation(improved_route, time_windows)
+        assert improved_violation <= initial_violation, \
+            f"Time window violation increased: {initial_violation} -> {improved_violation}"
     
     def test_penalty_calculation(self, simple_duration_func, time_windows):
         """Should penalize time window violations"""
@@ -465,13 +496,15 @@ class TestFactoryFunctions:
         assert route == simple_route
     
     def test_apply_local_search_default(self, simple_route, simple_duration_func):
-        """apply_local_search should default to 2-opt"""
-        route, duration = apply_local_search(
-            simple_route,
-            simple_duration_func,
-            LocalSearchType.TWO_OPT
-        )
+        """apply_local_search should default to 2-opt when no type specified"""
+        # Call without explicit local_search_type to test default argument path
+        route, duration = apply_local_search(simple_route, simple_duration_func)
+        
+        # Should return a valid route (default behavior is TWO_OPT)
         assert len(route) == len(simple_route)
+        assert set(route) == set(simple_route)
+        # Duration should be calculated
+        assert duration >= 0
 
 
 # ============================================================
@@ -571,13 +604,21 @@ class TestEdgeCases:
         assert len(route) == len(simple_route)
     
     def test_duplicate_locations(self, simple_duration_func):
-        """Should handle routes with conceptually same locations"""
-        # Note: Current implementation may not support duplicates well
-        # This test documents expected behavior
-        route = ["A", "B", "C", "D", "E"]
+        """Should handle routes with actual duplicate location IDs"""
+        # Route with TRUE duplicates - same location ID appears multiple times
+        # This represents visiting the same stop twice (e.g., same customer, different packages)
+        route = ["A", "B", "C", "B", "D"]  # B appears twice
+        
         ls = TwoOptLocalSearch()
         improved, _ = ls.improve(route, simple_duration_func)
+        
+        # Should preserve all elements including duplicates
         assert len(improved) == 5
+        # Count occurrences - B should still appear twice
+        assert improved.count("B") == 2, "Duplicate location was lost"
+        assert improved.count("A") == 1
+        assert improved.count("C") == 1
+        assert improved.count("D") == 1
 
 
 # ============================================================
@@ -585,8 +626,9 @@ class TestEdgeCases:
 # ============================================================
 
 class TestPerformance:
-    """Basic performance tests"""
+    """Basic performance tests - marked as slow, excluded from default runs"""
     
+    @pytest.mark.slow
     def test_2opt_speed(self):
         """2-opt should complete quickly on moderate size"""
         import time
@@ -610,6 +652,7 @@ class TestPerformance:
         # Should complete in reasonable time (< 5 seconds)
         assert elapsed < 5.0
     
+    @pytest.mark.slow
     def test_hybrid_speed(self):
         """Hybrid should complete quickly with few iterations"""
         import time
@@ -632,5 +675,11 @@ class TestPerformance:
         assert elapsed < 10.0
 
 
+# Custom pytest configuration for slow tests
+# Run fast tests only: pytest tests/test_local_search.py -v -m "not slow"
+# Run all tests: pytest tests/test_local_search.py -v
+
+
 if __name__ == "__main__":
-    pytest.main([__file__, "-v", "--tb=short"])
+    pytest.main([__file__, "-v", "--tb=short", "-m", "not slow"])
+

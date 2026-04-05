@@ -45,15 +45,15 @@ def generate_tsp_problem(n: int, seed: int = 42) -> Tuple[List[str], Dict, Dict]
     Returns:
         Tuple of (locations, distance_matrix, coordinates)
     """
-    random.seed(seed)
+    rng = random.Random(seed)
     
     # Generate random coordinates
     locations = [f"L{i}" for i in range(n)]
     coordinates = {}
     for loc in locations:
         coordinates[loc] = {
-            "lat": random.uniform(40.0, 42.0),
-            "lng": random.uniform(28.0, 30.0)
+            "lat": rng.uniform(40.0, 42.0),
+            "lng": rng.uniform(28.0, 30.0)
         }
     
     # Calculate Euclidean distance matrix

@@ -152,7 +152,7 @@ class AlgorithmComparator:
             "final_distance": round(improved_distance, 2),
             "improvement_pct": round(improvement, 2),
             "time_seconds": round(elapsed, 4),
-            "route_valid": set(improved_route) == set(initial_route)
+            "route_valid": sorted(improved_route) == sorted(initial_route)
         }
     
     def run_comparison(

@@ -180,11 +180,11 @@ def format_time(seconds: float) -> str:
     elif seconds < 3600:
         minutes = int(seconds // 60)
         secs = int(seconds % 60)
-        return f"{minutes}d {secs}s"
+        return f"{minutes}m {secs}s"
     else:
         hours = int(seconds // 3600)
         minutes = int((seconds % 3600) // 60)
-        return f"{hours}s {minutes}d"
+        return f"{hours}h {minutes}m"
 
 # ============================================================
 # MODÜL İTHALATI

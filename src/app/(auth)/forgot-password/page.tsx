@@ -37,6 +37,9 @@ export default function ForgotPasswordPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const [isSent, setIsSent] = useState(false);
+    const isDevResetUiEnabled =
+        process.env.NODE_ENV === "development" &&
+        process.env.NEXT_PUBLIC_ENABLE_DEV_RESET_UI === "true";
 
     const form = useForm<ForgotPasswordValues>({
         resolver: zodResolver(forgotPasswordSchema),
@@ -79,7 +82,10 @@ export default function ForgotPasswordPage() {
         try {
             const res = await fetch("/api/auth/dev-reset", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${process.env.NEXT_PUBLIC_DEV_RESET_SECRET ?? ""}`,
+                },
                 body: JSON.stringify({ email, newPassword: newPass })
             });
             const data = await res.json();
@@ -145,7 +151,7 @@ export default function ForgotPasswordPage() {
                         Giriş sayfasına geri dön
                     </Link>
 
-                    {process.env.NODE_ENV === "development" && (
+                    {isDevResetUiEnabled && (
                         <Button variant="outline" size="sm" type="button" onClick={handleDevReset} className="w-full text-xs text-orange-500 border-orange-200 hover:bg-orange-50">
                             <Bug className="h-3 w-3 mr-2" />
                             [Geliştirici] Doğrudan Şifre Atama (Test Hesapları İçin)

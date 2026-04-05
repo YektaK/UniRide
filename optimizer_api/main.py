@@ -99,7 +99,7 @@ executor = ThreadPoolExecutor(max_workers=5)
 
 
 @app.get("/health")
-def health_check():
+def health_check() -> dict:
     """Health check endpoint"""
     return {
         "status": "ok",
@@ -111,7 +111,7 @@ def health_check():
 
 
 @app.get("/api/v1/strategies", response_model=List[StrategyInfo])
-def list_strategies():
+def list_strategies() -> List[StrategyInfo]:
     """List all available optimization strategies"""
     strategies = get_strategy_info()
     recommended = ["ga_split", "pso_split", "genetic_algorithm", "pso", "gwo", "hho"]
@@ -265,7 +265,7 @@ def _minutes_to_time(minutes: float) -> str:
 
 
 @app.post("/api/v1/optimize", response_model=OptimizationResponse)
-def optimize_route(request: OptimizationRequest):
+def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
     """
     Optimize routes using specified algorithm.
     
@@ -416,7 +416,7 @@ def extract_time_windows(
     direction: Direction = Query(..., description="pickup or dropoff"),
     target_day: str = Query(..., description="Day of week (monday, tuesday, etc.)"),
     window_minutes: int = Query(30, description="Time window size in minutes")
-):
+) -> Dict[str, TimeWindow]:
     """
     Extract time windows from weekly schedule entries.
     
@@ -465,7 +465,7 @@ def convert_schedule_to_students(
     entries: List[WeeklyScheduleEntry],
     target_day: str = Query(..., description="Day of week"),
     user_mapping: Dict[str, Dict] = None
-):
+) -> List[StudentNode]:
     """
     Convert weekly schedule entries to StudentNode list for optimization.
     
@@ -552,7 +552,7 @@ def _run_single_algorithm(algorithm_name: str, request: OptimizationRequest) -> 
 
 
 @app.post("/api/v1/compare", response_model=CompareResponse)
-def compare_algorithms(request: CompareRequest):
+def compare_algorithms(request: CompareRequest) -> CompareResponse:
     """
     Compare all algorithms on the same problem.
 
@@ -650,7 +650,7 @@ def compare_algorithms(request: CompareRequest):
 
 
 @app.post("/api/v1/vehicle-calculator", response_model=OptimizationResponse)
-def calculate_vehicles(request: OptimizationRequest):
+def calculate_vehicles(request: OptimizationRequest) -> OptimizationResponse:
     """
     Calculate vehicle requirements and student assignments.
 

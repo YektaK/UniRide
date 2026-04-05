@@ -15,6 +15,8 @@ import {
     handleApiError,
 } from "@/lib/admin-auth";
 
+import type { VehicleRoute } from "@/services/optimizer-service";
+
 interface RoutePlanRequest {
     planDate: string;
     direction: 'pickup' | 'dropoff';
@@ -23,7 +25,7 @@ interface RoutePlanRequest {
     totalVehicles: number;
     totalDurationMinutes: number;
     executionTimeSeconds?: number;
-    routes: any;
+    routes: VehicleRoute[] | Record<string, unknown>[];
     studentCount: number;
     notes?: string;
 }
@@ -31,7 +33,7 @@ interface RoutePlanRequest {
 interface RoutePlanUpdate {
     id: string;
     status?: 'draft' | 'confirmed' | 'active' | 'completed' | 'cancelled';
-    driverAssignments?: any;
+    driverAssignments?: Record<string, unknown>[];
     notes?: string;
 }
 
@@ -149,7 +151,7 @@ export async function PATCH(request: NextRequest) {
 
         const adminClient = getSupabaseAdmin();
 
-        const dbUpdates: any = {
+        const dbUpdates: Record<string, unknown> = {
             updated_at: new Date().toISOString(),
         };
 

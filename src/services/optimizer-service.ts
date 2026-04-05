@@ -5,6 +5,7 @@
  */
 
 import { OPTIMIZER_API_URL } from "@/lib/config";
+import type { IERawData } from "@/types/ie-resource";
 
 // Types
 export type LocalSearchType = "none" | "two_opt" | "three_opt" | "or_opt" | "hybrid";
@@ -112,6 +113,8 @@ export interface OptimizationResult {
     total_duration_minutes: number;
     execution_time_seconds: number;
     error_message?: string;
+    // IE Resource analysis data (raw from Python API)
+    ie_data?: IERawData;
     // CVRPTW fields
     direction?: DirectionType;
     time_windows_used?: boolean;
@@ -323,7 +326,7 @@ export async function optimizeRoutes(
             time_windows_used: data.time_windows_used,
             total_time_window_violations: data.total_time_window_violations,
         };
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Optimization API error:", error);
         return {
             success: false,
@@ -332,7 +335,7 @@ export async function optimizeRoutes(
             total_vehicles: 0,
             total_duration_minutes: 0,
             execution_time_seconds: 0,
-            error_message: error.message || "Optimization failed",
+            error_message: error instanceof Error ? error.message : "Optimization failed",
         };
     }
 }
@@ -388,7 +391,7 @@ export async function compareAllAlgorithms(
 
         // Map results to use AlgorithmCompareResult interface
         // Note: Python returns 'algorithm' field, not 'algorithm_used'
-        const mappedResults: AlgorithmCompareResult[] = (data.results || []).map((r: any) => ({
+        const mappedResults: AlgorithmCompareResult[] = (data.results || []).map((r: AlgorithmCompareResult) => ({
             algorithm: r.algorithm,
             success: r.success,
             routes: r.routes || [],
@@ -405,7 +408,7 @@ export async function compareAllAlgorithms(
             fastest_algorithm: data.fastest_algorithm || "",
             summary: data.summary || {},
         };
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Compare API error:", error);
         return {
             success: false,

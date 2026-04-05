@@ -174,17 +174,17 @@ def print_separator():
     print("-" * 70)
 
 def format_time(seconds: float) -> str:
-    """Saniyeyi okunabilir formata çevir"""
+    """Saniyeyi okunabilir Türkçe formata çevir"""
     if seconds < 60:
-        return f"{seconds:.1f}s"
+        return f"{seconds:.1f}sn"
     elif seconds < 3600:
         minutes = int(seconds // 60)
         secs = int(seconds % 60)
-        return f"{minutes}m {secs}s"
+        return f"{minutes}dk {secs}sn"
     else:
         hours = int(seconds // 3600)
         minutes = int((seconds % 3600) // 60)
-        return f"{hours}h {minutes}m"
+        return f"{hours}sa {minutes}dk"
 
 # ============================================================
 # MODÜL İTHALATI

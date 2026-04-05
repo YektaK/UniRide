@@ -380,7 +380,9 @@ class TimeWindowViolationTracker:
         """
         Calculate total penalty score for a route.
         
-        Higher penalty = worse solution
+        Higher penalty = worse solution. Returns the pre-computed
+        total_penalty field from the report (already calculated
+        by analyze_route with the configured wait/late penalty weights).
         
         Args:
             report: ViolationReport from analyze_route
@@ -388,17 +390,7 @@ class TimeWindowViolationTracker:
         Returns:
             Total penalty score
         """
-        penalty = 0.0
-        
-        for violation in report.violations:
-            if violation.violation_type == ViolationType.EARLY_ARRIVAL:
-                # Early arrivals cause waiting, less severe
-                penalty += violation.violation_amount * self.wait_penalty
-            elif violation.violation_type == ViolationType.LATE_ARRIVAL:
-                # Late arrivals are more severe
-                penalty += violation.violation_amount * self.late_penalty
-        
-        return penalty
+        return report.total_penalty
     
     def suggest_improvements(
         self,

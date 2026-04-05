@@ -249,6 +249,100 @@ def print_problem_detail(problem, p_res: Dict, all_strat_names: List[str]):
     
     print("─" * 70)
 
+# ============================================================
+# ALGORİTMA BİLGİLERİ
+# ============================================================
+
+ALGORITHM_INFO = {
+    "2-opt": {
+        "name": "2-opt",
+        "description": "Klasik kenar değiştirme algoritması",
+        "complexity": "O(n²)",
+        "best_for": "Orta büyüklükte problemler, hızlı sonuç",
+        "how_it_works": "Tur üzerindeki iki kenarı kaldırır, yeni iki kenar ekleyerek turu iyileştirir",
+        "iterations": 1000,
+    },
+    "3-opt": {
+        "name": "3-opt",
+        "description": "Üç kenar değiştirme, yüksek kalite",
+        "complexity": "O(n³)",
+        "best_for": "Yüksek kalite çözüm, zaman kritik değilse",
+        "how_it_works": "Tur üzerindeki üç kenarı kaldırır, 7 farklı yeniden bağlantıyı dener",
+        "iterations": 500,
+    },
+    "Or-opt": {
+        "name": "Or-opt",
+        "description": "Segment relocation (1-3 düğüm taşıma)",
+        "complexity": "O(n²)",
+        "best_for": "Kümelenmiş düğümler, 2-opt sonrası fine-tuning",
+        "how_it_works": "1-3 düğümlük segmenti turun başka bir noktasına taşır",
+        "iterations": 500,
+    },
+    "Swap": {
+        "name": "Swap",
+        "description": "İki düğüm yer değiştirme",
+        "complexity": "O(n²)",
+        "best_for": "Hızlı fine-tuning, basit problemler",
+        "how_it_works": "Tur üzerindeki iki düğümün yerini değiştirir",
+        "iterations": 1000,
+    },
+    "Hybrid": {
+        "name": "Hybrid",
+        "description": "Tüm algoritmaların kombinasyonu",
+        "complexity": "O(n³)",
+        "best_for": "En iyi kalite, orta/büyük problemler",
+        "how_it_works": "Sırayla 2-opt → Or-opt → 3-opt uygular",
+        "iterations": 100,
+    },
+}
+
+def show_algorithms_info():
+    """Algoritma bilgileri ekranı"""
+    clear_screen()
+    print("═" * 70)
+    print("          ALGORİTMA KATALOĞU")
+    print("═" * 70)
+    
+    print("\n📍 LOCAL SEARCH ALGORİTMALARI:")
+    print("─" * 70)
+    print(f"{'Algoritma':<10} | {'Karmaşıklık':<10} | {'Açıklama'}")
+    print("─" * 70)
+    
+    for key, info in ALGORITHM_INFO.items():
+        print(f"{key:<10} | {info['complexity']:<10} | {info['description']}")
+    
+    print("\n" + "═" * 70)
+    print("DETAYLI BİLGİ")
+    print("═" * 70)
+    
+    for key, info in ALGORITHM_INFO.items():
+        print(f"\n[{info['name']}]")
+        print(f"  📖 Açıklama: {info['description']}")
+        print(f"  ⏱️ Karmaşıklık: {info['complexity']}")
+        print(f"  🎯 En İyi Kullanım: {info['best_for']}")
+        print(f"  🔧 Çalışma Şekli: {info['how_it_works']}")
+        print(f"  🔢 Varsayılan İterasyon: {info['iterations']}")
+    
+    print("\n" + "─" * 70)
+    print("💡 İPUCULAR:")
+    print("─" * 70)
+    print("  • Küçük problemler (n≤100): 2-opt veya Hybrid önerilir")
+    print("  • Orta problemler (100<n≤500): Hybrid en iyi sonucu verir")
+    print("  • Büyük problemler (n>500): 2-opt hız, Hybrid kalite için")
+    print("  • 3-opt tek başına yavaş ama çok kaliteli sonuç verir")
+    print("  • Swap basit ama nadiren en iyi seçimdir")
+    
+    print("\n" + "─" * 70)
+    print("📊 PERFORMANS BEKLENTİSİ (GAP %):")
+    print("─" * 70)
+    print("  • 2-opt: Genellikle %3-10 arası")
+    print("  • 3-opt: Genellikle %1-5 arası")
+    print("  • Or-opt: Genellikle %2-8 arası")
+    print("  • Swap: Genellikle %5-15 arası")
+    print("  • Hybrid: Genellikle %0.5-3 arası (en iyi)")
+    
+    input("\n\nDevam etmek için Enter'a basın...")
+
 def multi_select_problems(all_problems: List) -> List:
     """Çoklu problem seçimi"""
     print("\n" + "═" * 70)
@@ -515,6 +609,7 @@ def main():
         print("  [D] Kapsamlı (Tehlikeli): Her Şeyi (Tüm Kod + Tüm Problemler) Yeniden Test Et")
         print("  [E] Özel Seçim: İstediğiniz Problemleri ve Algoritmaları Seçin")
         print("  [S] Detay Modu: Bir Problem İçin Detaylı Sonuçları Görüntüle")
+        print("  [H] Algoritma Bilgileri: Algoritmalar Hakkında Detaylı Bilgi")
         print("  [Q] Çıkış")
         
         choice = input("\nSeçiminiz: ").strip().upper()
@@ -525,6 +620,9 @@ def main():
         elif choice == 'S':
             interactive_detail_mode(all_problems, saved_results, all_strat_names)
             input("\nAna menüye dönmek için Enter'a basın...")
+            continue
+        elif choice == 'H':
+            show_algorithms_info()
             continue
         
         problems_to_run = []

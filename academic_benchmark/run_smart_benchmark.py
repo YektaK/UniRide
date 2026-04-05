@@ -65,6 +65,139 @@ def load_problems_smart():
     
     return all_problems
 
+def make_progress_bar(completed: int, total: int, width: int = 10) -> str:
+    """Progress bar oluştur"""
+    filled = int((completed / total) * width) if total > 0 else 0
+    empty = width - filled
+    return "█" * filled + "░" * empty
+
+def print_compact_status(all_problems: List, saved_results: Dict, all_strat_names: List[str]):
+    """Compact status görünümü - her problem için bir satır"""
+    total_algos = len(all_strat_names)
+    
+    print("\n" + "═" * 80)
+    print("BENCHMARK STATUS OVERVIEW")
+    print("═" * 80)
+    
+    # Kategorilere göre grupla ve sırala
+    categories = {'small': [], 'medium': [], 'large': []}
+    for p in all_problems:
+        if p.category in categories:
+            categories[p.category].append(p)
+    
+    total_completed = 0
+    total_tests = 0
+    
+    for cat_name, cat_label in [('small', 'KÜÇÜK'), ('medium', 'ORTA'), ('large', 'BÜYÜK')]:
+        problems = categories[cat_name]
+        if not problems:
+            continue
+            
+        print(f"\n[{cat_label} PROBLEMLER]")
+        print("─" * 80)
+        
+        # Boyuta göre sırala
+        problems.sort(key=lambda x: x.dimension)
+        
+        for p in problems:
+            p_res = saved_results.get(p.name, {})
+            tested_strats = list(p_res.keys())
+            completed = len([s for s in tested_strats if s in all_strat_names])
+            missing = [s for s in all_strat_names if s not in tested_strats]
+            
+            total_completed += completed
+            total_tests += total_algos
+            
+            # Progress bar
+            bar = make_progress_bar(completed, total_algos)
+            
+            # Status
+            if completed == total_algos:
+                status = "✓ COMPLETE"
+                missing_str = ""
+            else:
+                status = ""
+                # Missing algoritmaları kısalt (3'ten fazlaysa ...)
+                if len(missing) <= 3:
+                    missing_str = f"Missing: {', '.join(missing)}"
+                else:
+                    missing_str = f"Missing: {', '.join(missing[:3])}... (+{len(missing)-3})"
+            
+            # Satır yazdır
+            line = f"{p.name:<12} (n={p.dimension:<4}) : [{bar}] {completed:>2}/{total_algos}"
+            if status:
+                line += f" {status}"
+            elif missing_str:
+                line += f" | {missing_str}"
+            
+            print(line)
+    
+    # Özet
+    print("\n" + "─" * 80)
+    pct = (total_completed / total_tests * 100) if total_tests > 0 else 0
+    print(f"ÖZET: {len(all_problems)} problem | {total_completed}/{total_tests} tamamlandı ({pct:.1f}%)")
+    print("═" * 80)
+
+def print_problem_detail(problem, p_res: Dict, all_strat_names: List[str]):
+    """Tek problem için detaylı görünüm"""
+    print("\n" + "─" * 70)
+    print(f"{problem.name} (n={problem.dimension}, optimal={problem.optimal})")
+    print("─" * 70)
+    
+    for strat_name in all_strat_names:
+        if strat_name in p_res:
+            data = p_res[strat_name]
+            best_gap = data.get("best_gap", 0)
+            avg_gap = data.get("avg_gap", 0)
+            avg_time = data.get("avg_time_ms", 0)
+            
+            # Run count (metadata'da yoksa N_RUNS varsay)
+            n_runs = data.get("n_runs", N_RUNS)
+            
+            print(f"  ✓ {strat_name:<12} : {n_runs}/{N_RUNS} runs | "
+                  f"Best GAP: {best_gap:>6.2f}% | Avg GAP: {avg_gap:>6.2f}% | "
+                  f"Avg Time: {avg_time:>7.1f}ms")
+        else:
+            print(f"  ✗ {strat_name:<12} : 0/{N_RUNS} runs | MISSING")
+    
+    print("─" * 70)
+
+def interactive_detail_mode(all_problems: List, saved_results: Dict, all_strat_names: List[str]):
+    """İnteraktif detay modu"""
+    # Problem lookup dict
+    problem_dict = {p.name: p for p in all_problems}
+    
+    while True:
+        print("\n" + "─" * 70)
+        print("Detay görmek için problem adı girin (örn: berlin52, eil51)")
+        print("Tüm problemleri listelemek için 'list' yazın")
+        print("Çıkmak için 'q' veya Enter'a basın")
+        print("─" * 70)
+        
+        user_input = input("> ").strip().lower()
+        
+        if not user_input or user_input == 'q':
+            print("Detay modundan çıkılıyor...")
+            break
+        
+        if user_input == 'list':
+            print("\nMevcut problemler:")
+            for p in sorted(all_problems, key=lambda x: x.dimension):
+                print(f"  {p.name:<12} (n={p.dimension:<5}, cat={p.category})")
+            continue
+        
+        if user_input in problem_dict:
+            problem = problem_dict[user_input]
+            p_res = saved_results.get(problem.name, {})
+            print_problem_detail(problem, p_res, all_strat_names)
+        else:
+            # Yakın eşleşme ara
+            matches = [p.name for p in all_problems if user_input in p.name]
+            if matches:
+                print(f"'{user_input}' bulunamadı. Benzer problemler: {', '.join(matches[:5])}")
+            else:
+                print(f"'{user_input}' adlı problem bulunamadı. 'list' yazarak tüm problemleri görebilirsiniz.")
+
 def main():
     metadata = get_latest_metadata(METADATA_PATH)
     algo_status = check_algorithms_status(metadata, ALGORITHMS_TO_CHECK)
@@ -89,44 +222,31 @@ def main():
             if status in ["DEGISMIS", "YENI"]:
                 any_changed = True
         
-        print("\n[📊 VERİSETLERİ / PROBLEMLER]")
-        small_missing = []
-        medium_missing = []
-        large_missing = []
-        
-        for p in all_problems:
-            p_res = saved_results.get(p.name, {})
-            tested_strats = list(p_res.keys())
-            missing = [s for s in all_strat_names if s not in tested_strats]
-            if missing:
-                if p.category == "small": small_missing.append(p.name)
-                elif p.category == "medium": medium_missing.append(p.name)
-                elif p.category == "large": large_missing.append(p.name)
-                
-        small_total = len([p for p in all_problems if p.category == "small"])
-        med_total = len([p for p in all_problems if p.category == "medium"])
-        large_total = len([p for p in all_problems if p.category == "large"])
-        
-        print(f"  1. Küçük TSPLib  ({small_total:<3} Problem) -> [{len(small_missing)} Problemde Eksik Test Var]")
-        print(f"  2. Orta TSPLib   ({med_total:<3} Problem) -> [{len(medium_missing)} Problemde Eksik Test Var]")
-        print(f"  3. Büyük TSPLib  ({large_total:<3} Problem) -> [{len(large_missing)} Problemde Eksik Test Var]")
+        # Compact Status View
+        print_compact_status(all_problems, saved_results, all_strat_names)
         
         print("\n=> NE YAPMAK İSTERSİNİZ?")
         print("  [A] Zorunlu: Değişen/Yeni Kodları Tüm Çözümler İçin Baştan Test Et")
         print("  [B] Eksikleri Tamamla: Sadece Hiç Test Edilmemiş Problem/Stratejileri Çöz")
         print("  [C] Hızlı Mod: Sadece Küçük Problemlerde Tüm Algoritmaları Çalıştır")
         print("  [D] Kapsamlı (Tehlikeli): Her Şeyi (Tüm Kod + Tüm Problemler) Yeniden Test Et")
+        print("  [S] Detay Modu: Bir Problem İçin Detaylı Sonuçları Görüntüle")
         print("  [Q] Çıkış")
         
         choice = input("\nSeçiminiz: ").strip().upper()
         
-        problems_to_run = []
-        strategies_to_run = []
-        
         if choice == 'Q':
             print("Çıkış yapılıyor...")
             break
-        elif choice == 'A':
+        elif choice == 'S':
+            interactive_detail_mode(all_problems, saved_results, all_strat_names)
+            input("\nAna menüye dönmek için Enter'a basın...")
+            continue
+        
+        problems_to_run = []
+        strategies_to_run = []
+        
+        if choice == 'A':
             if not any_changed:
                 print("Değişen bir kod yok. Önbelleğiniz son kod durumunuzla birebir aynı!")
                 input("Devam etmek için Enter'a basın...")
@@ -134,7 +254,12 @@ def main():
             problems_to_run = all_problems
             strategies_to_run = all_strat_names
         elif choice == 'B':
-            problems_to_run = [p for p in all_problems if p.name in small_missing + medium_missing + large_missing]
+            # Eksik olan problemleri bul
+            for p in all_problems:
+                p_res = saved_results.get(p.name, {})
+                missing = [s for s in all_strat_names if s not in p_res]
+                if missing:
+                    problems_to_run.append(p)
             strategies_to_run = all_strat_names 
         elif choice == 'C':
             problems_to_run = [p for p in all_problems if p.category == 'small']

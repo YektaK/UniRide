@@ -75,9 +75,9 @@ export async function POST(request: Request) {
         }));
 
         const optimizationDepot: Depot = {
-            id: depot?.id ?? "D.Kampus",
-            lat: depot?.lat ?? 41.001,
-            lng: depot?.lng ?? 29.177,
+            id: depot?.id || "D.Kampus",
+            lat: depot?.lat || 41.001,
+            lng: depot?.lng || 29.177,
         };
 
         const result = await compareAllAlgorithms(

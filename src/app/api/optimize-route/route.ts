@@ -165,9 +165,9 @@ export async function POST(request: Request) {
 
         // Default depot (Doğuş Üniversitesi, Dudullu Kampüsü)
         const optimizationDepot: Depot = {
-            id: depot.id ?? "D.Kampus",
-            lat: depot.lat ?? 41.001,
-            lng: depot.lng ?? 29.177,
+            id: depot.id || "D.Kampus",
+            lat: depot.lat || 41.001,
+            lng: depot.lng || 29.177,
         };
 
         // Call Python API with CVRPTW options

@@ -112,6 +112,8 @@ FirebaseUniRide/UniRide/
 | **Progress Gösterimi** | Kalan test sayısı ve tahmini kalan süre |
 | **Çoklu Seçim** | İstenen problemler ve algoritmalar seçilebilir |
 | **Algoritma Kataloğu** | Her algoritma için detaylı bilgi |
+| **Multiprocessing** | 4 worker ile paralel test çalıştırma (4x hız artışı) |
+| **Dinamik Süre Tahmini** | Gerçek ölçümlere dayalı süre tahmini |
 
 ### Menü Seçenekleri
 
@@ -631,6 +633,7 @@ result = {
 
 | Versiyon | Tarih | Değişiklikler |
 |----------|-------|---------------|
+| 3.2 | 2026-04-06 | Multiprocessing (4 worker), dinamik süre tahmini, gerçekçi süre değerleri |
 | 3.1 | 2026-04-05 | Alias seçimi (k/orta/büyük), cache durumu gösterimi, önbellek seçenekleri (Atla/Yenile/Arttır), algoritma karmaşıklık bilgisi |
 | 3.0 | 2026-04-05 | [E] Özel seçim, [H] Algoritma bilgileri, Ctrl+C güvenli çıkış, incremental save, tahmini süre |
 | 2.0 | 2026-04-03 | IndexError düzeltmesi, V2 entegrasyonu, negatif GAP düzeltmesi |

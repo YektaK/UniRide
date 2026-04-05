@@ -15,6 +15,18 @@ numpy>=1.24.0
 # Optimization (optional but recommended)
 ortools>=9.8.0
 
+# SOTA Solvers (for academic benchmark only)
+# These are optional dependencies for benchmark purposes.
+# Install with: pip install -r requirements-benchmark.txt
+
+# PyVRP: DIMACS 2021 Challenge Winner - State-of-the-art VRP solver
+# Note: Requires native build tools. Install separately for benchmark:
+# pip install pyvrp>=0.9.0
+
+# VROOM: High-performance VRP solver with time windows
+# Note: Requires VROOM binary installation - see https://github.com/VROOM-Project/vroom
+# pip install pyvroom>=1.0.0
+
 # Development
 pytest>=7.4.0
 httpx>=0.25.0

@@ -69,6 +69,15 @@ STRATEGIES = [
     ("Hybrid", LocalSearchType.HYBRID, 100),
 ]
 
+# SOTA Solvers (State-of-the-Art)
+# OR-Tools: Always available (installed by default)
+# PyVRP: DIMACS 2021 Challenge Winner - requires pip install pyvrp
+SOTA_SOLVERS = [
+    ("OR-Tools", "ortools", 30),  # OR-Tools with 30s time limit - SOTA baseline
+    ("PyVRP", "pyvrp", 30),       # DIMACS 2021 Winner - 30s time limit
+    # ("VROOM", "vroom", None),  # High-performance - requires VROOM binary
+]
+
 
 # ============================================================
 # TSPLIB Problem Definition

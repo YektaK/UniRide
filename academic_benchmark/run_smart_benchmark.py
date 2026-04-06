@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 UniRide Smart Benchmark - Gelişmiş Versiyon
 
@@ -12,6 +13,13 @@ UniRide Smart Benchmark - Gelişmiş Versiyon
 """
 import sys
 import os
+import io
+
+# Windows encoding fix (Turkish characters + PyPy support)
+if sys.platform == 'win32' or 'pypy' in sys.implementation.name.lower():
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 import json
 import signal
 import time
@@ -75,8 +83,8 @@ def signal_handler(signum, frame):
     """Ctrl+C ile güvenli çıkış - sonuçları kaydeder"""
     global _shutdown_requested
     _shutdown_requested = True
-    print("\n\n⚠️  DURDURMA İSTEĞİ ALINDI!")
-    print("📝 Mevcut sonuçlar kaydediliyor, lütfen bekleyin...")
+    print("\n\n[!]  DURDURMA İSTEĞİ ALINDI!")
+    print("[NOTE] Mevcut sonuçlar kaydediliyor, lütfen bekleyin...")
     
     if _current_metadata and _current_results:
         # Metadata kaydet
@@ -89,7 +97,7 @@ def signal_handler(signum, frame):
             writer = csv.DictWriter(f, fieldnames=_current_results[0].keys())
             writer.writeheader()
             writer.writerows(_current_results)
-        print(f"✅ {len(_current_results)} sonuç kaydedildi: {csv_path}")
+        print(f"[OK] {len(_current_results)} sonuç kaydedildi: {csv_path}")
     
     print("👋 Güvenli çıkış yapıldı.")
     sys.exit(0)
@@ -236,15 +244,15 @@ def make_progress_bar(completed: int, total: int, width: int = 10) -> str:
     """Progress bar oluştur"""
     filled = int((completed / total) * width) if total > 0 else 0
     empty = width - filled
-    return "█" * filled + "░" * empty
+    return "#" * filled + "." * empty
 
 def print_compact_status(all_problems: List, saved_results: Dict, all_strat_names: List[str]):
     """Compact status görünümü - her problem için bir satır"""
     total_algos = len(all_strat_names)
     
-    print("\n" + "═" * 80)
+    print("\n" + "=" * 80)
     print("BENCHMARK STATUS OVERVIEW")
-    print("═" * 80)
+    print("=" * 80)
     
     # Kategorilere göre grupla ve sırala
     categories = {'small': [], 'medium': [], 'large': []}
@@ -261,7 +269,7 @@ def print_compact_status(all_problems: List, saved_results: Dict, all_strat_name
             continue
             
         print(f"\n[{cat_label} PROBLEMLER]")
-        print("─" * 80)
+        print("-" * 80)
         
         # Boyuta göre sırala
         problems.sort(key=lambda x: x.dimension)
@@ -280,7 +288,7 @@ def print_compact_status(all_problems: List, saved_results: Dict, all_strat_name
             
             # Status
             if completed == total_algos:
-                status = "✓ COMPLETE"
+                status = "v COMPLETE"
                 missing_str = ""
             else:
                 status = ""
@@ -300,16 +308,16 @@ def print_compact_status(all_problems: List, saved_results: Dict, all_strat_name
             print(line)
     
     # Özet
-    print("\n" + "─" * 80)
+    print("\n" + "-" * 80)
     pct = (total_completed / total_tests * 100) if total_tests > 0 else 0
     print(f"ÖZET: {len(all_problems)} problem | {total_completed}/{total_tests} tamamlandı ({pct:.1f}%)")
-    print("═" * 80)
+    print("=" * 80)
 
 def print_problem_detail(problem, p_res: Dict, all_strat_names: List[str]):
     """Tek problem için detaylı görünüm"""
-    print("\n" + "─" * 70)
+    print("\n" + "-" * 70)
     print(f"{problem.name} (n={problem.dimension}, optimal={problem.optimal})")
-    print("─" * 70)
+    print("-" * 70)
     
     for strat_name in all_strat_names:
         if strat_name in p_res:
@@ -321,13 +329,13 @@ def print_problem_detail(problem, p_res: Dict, all_strat_names: List[str]):
             # Run count (metadata'da yoksa N_RUNS varsay)
             n_runs = data.get("n_runs", N_RUNS)
             
-            print(f"  ✓ {strat_name:<12} : {n_runs}/{N_RUNS} runs | "
+            print(f"  v {strat_name:<12} : {n_runs}/{N_RUNS} runs | "
                   f"Best GAP: {best_gap:>6.2f}% | Avg GAP: {avg_gap:>6.2f}% | "
                   f"Avg Time: {avg_time:>7.1f}ms")
         else:
-            print(f"  ✗ {strat_name:<12} : 0/{N_RUNS} runs | MISSING")
+            print(f"  x {strat_name:<12} : 0/{N_RUNS} runs | MISSING")
     
-    print("─" * 70)
+    print("-" * 70)
 
 # ============================================================
 # ALGORİTMA BİLGİLERİ
@@ -379,42 +387,42 @@ ALGORITHM_INFO = {
 def show_algorithms_info():
     """Algoritma bilgileri ekranı"""
     clear_screen()
-    print("═" * 70)
+    print("=" * 70)
     print("          ALGORİTMA KATALOĞU")
-    print("═" * 70)
+    print("=" * 70)
     
-    print("\n📍 LOCAL SEARCH ALGORİTMALARI:")
-    print("─" * 70)
+    print("\n[LOC] LOCAL SEARCH ALGORİTMALARI:")
+    print("-" * 70)
     print(f"{'Algoritma':<10} | {'Karmaşıklık':<10} | {'Açıklama'}")
-    print("─" * 70)
+    print("-" * 70)
     
     for key, info in ALGORITHM_INFO.items():
         print(f"{key:<10} | {info['complexity']:<10} | {info['description']}")
     
-    print("\n" + "═" * 70)
+    print("\n" + "=" * 70)
     print("DETAYLI BİLGİ")
-    print("═" * 70)
+    print("=" * 70)
     
     for key, info in ALGORITHM_INFO.items():
         print(f"\n[{info['name']}]")
-        print(f"  📖 Açıklama: {info['description']}")
-        print(f"  ⏱️ Karmaşıklık: {info['complexity']}")
-        print(f"  🎯 En İyi Kullanım: {info['best_for']}")
-        print(f"  🔧 Çalışma Şekli: {info['how_it_works']}")
-        print(f"  🔢 Varsayılan İterasyon: {info['iterations']}")
+        print(f"  [INFO] Açıklama: {info['description']}")
+        print(f"  [TIME] Karmaşıklık: {info['complexity']}")
+        print(f"  [TARGET] En İyi Kullanım: {info['best_for']}")
+        print(f"  [CONFIG] Çalışma Şekli: {info['how_it_works']}")
+        print(f"  [NUM] Varsayılan İterasyon: {info['iterations']}")
     
-    print("\n" + "─" * 70)
-    print("💡 İPUCULAR:")
-    print("─" * 70)
+    print("\n" + "-" * 70)
+    print("[TIP] İPUCULAR:")
+    print("-" * 70)
     print("  • Küçük problemler (n≤100): 2-opt veya Hybrid önerilir")
     print("  • Orta problemler (100<n≤500): Hybrid en iyi sonucu verir")
     print("  • Büyük problemler (n>500): 2-opt hız, Hybrid kalite için")
     print("  • 3-opt tek başına yavaş ama çok kaliteli sonuç verir")
     print("  • Swap basit ama nadiren en iyi seçimdir")
     
-    print("\n" + "─" * 70)
-    print("📊 PERFORMANS BEKLENTİSİ (GAP %):")
-    print("─" * 70)
+    print("\n" + "-" * 70)
+    print("[STATS] PERFORMANS BEKLENTİSİ (GAP %):")
+    print("-" * 70)
     print("  • 2-opt: Genellikle %3-10 arası")
     print("  • 3-opt: Genellikle %1-5 arası")
     print("  • Or-opt: Genellikle %2-8 arası")
@@ -425,12 +433,12 @@ def show_algorithms_info():
 
 def multi_select_problems(all_problems: List, saved_results: Dict = None, all_strat_names: List[str] = None) -> List:
     """Çoklu problem seçimi - alias ve cache desteği ile"""
-    print("\n" + "═" * 70)
+    print("\n" + "=" * 70)
     print("PROBLEM SEÇİMİ")
-    print("═" * 70)
+    print("=" * 70)
     print("Test etmek istediğiniz problemleri seçin.")
     print("Seçim: numara (1,3,5-8), 'all', veya 'küçük/orta/büyük' alias'ları.")
-    print("─" * 70)
+    print("-" * 70)
     
     # Kategorilere göre grupla
     categories = {'small': [], 'medium': [], 'large': []}
@@ -460,7 +468,7 @@ def multi_select_problems(all_problems: List, saved_results: Dict = None, all_st
                 p_res = saved_results.get(p.name, {})
                 tested = [s for s in all_strat_names if s in p_res]
                 if len(tested) == len(all_strat_names):
-                    cache_status = " ✓"
+                    cache_status = " v"
                 elif tested:
                     cache_status = f" ({len(tested)}/{len(all_strat_names)})"
             
@@ -470,12 +478,12 @@ def multi_select_problems(all_problems: List, saved_results: Dict = None, all_st
         end_idx = idx - 1
         category_ranges[cat_name] = (start_idx, end_idx)
     
-    print("\n" + "─" * 70)
-    print("💡 Alias'lar: 'k' veya 'küçük' = 1-{}, 'o' veya 'orta' = {}-{}, 'b' veya 'büyük' = {}-{}"
+    print("\n" + "-" * 70)
+    print("[TIP] Alias'lar: 'k' veya 'küçük' = 1-{}, 'o' veya 'orta' = {}-{}, 'b' veya 'büyük' = {}-{}"
           .format(category_ranges['small'][1], 
                   category_ranges['medium'][0], category_ranges['medium'][1],
                   category_ranges['large'][0], category_ranges['large'][1]))
-    print("─" * 70)
+    print("-" * 70)
     print("Seçiminiz: ", end="")
     user_input = input().strip().lower()
     
@@ -488,19 +496,19 @@ def multi_select_problems(all_problems: List, saved_results: Dict = None, all_st
         start, end = category_ranges['small']
         for i in range(start, end + 1):
             selected.append(problem_map[i])
-        print(f"\n✓ KÜÇÜK problemler seçildi ({len(selected)} adet)")
+        print(f"\nv KÜÇÜK problemler seçildi ({len(selected)} adet)")
         return selected
     elif user_input in ['o', 'orta', 'medium']:
         start, end = category_ranges['medium']
         for i in range(start, end + 1):
             selected.append(problem_map[i])
-        print(f"\n✓ ORTA problemler seçildi ({len(selected)} adet)")
+        print(f"\nv ORTA problemler seçildi ({len(selected)} adet)")
         return selected
     elif user_input in ['b', 'buyuk', 'büyük', 'large']:
         start, end = category_ranges['large']
         for i in range(start, end + 1):
             selected.append(problem_map[i])
-        print(f"\n✓ BÜYÜK problemler seçildi ({len(selected)} adet)")
+        print(f"\nv BÜYÜK problemler seçildi ({len(selected)} adet)")
         return selected
     
     # Parse selection (support: 1,3,5-8,10)
@@ -534,25 +542,25 @@ def multi_select_problems(all_problems: List, saved_results: Dict = None, all_st
             seen.add(p.name)
             unique_selected.append(p)
     
-    print(f"\n✓ {len(unique_selected)} problem seçildi: {', '.join([p.name for p in unique_selected])}")
+    print(f"\nv {len(unique_selected)} problem seçildi: {', '.join([p.name for p in unique_selected])}")
     return unique_selected
 
 
 def multi_select_algorithms(all_strat_names: List[str]) -> List[str]:
     """Çoklu algoritma seçimi"""
-    print("\n" + "═" * 70)
+    print("\n" + "=" * 70)
     print("ALGORİTMA SEÇİMİ")
-    print("═" * 70)
+    print("=" * 70)
     print("Test etmek istediğiniz algoritmaları seçin.")
     print("Seçim: numara (1,3,5) veya 'all' tümü için.")
-    print("─" * 70)
+    print("-" * 70)
     
     for idx, name in enumerate(all_strat_names, 1):
         info = ALGORITHM_INFO.get(name, {})
         complexity = info.get('complexity', '?')
         print(f"  {idx:>2}. {name:<10} [{complexity}]")
     
-    print("\n" + "─" * 70)
+    print("\n" + "-" * 70)
     print("Seçiminiz: ", end="")
     user_input = input().strip().lower()
     
@@ -590,7 +598,7 @@ def multi_select_algorithms(all_strat_names: List[str]) -> List[str]:
             seen.add(s)
             unique_selected.append(s)
     
-    print(f"\n✓ {len(unique_selected)} algoritma seçildi: {', '.join(unique_selected)}")
+    print(f"\nv {len(unique_selected)} algoritma seçildi: {', '.join(unique_selected)}")
     return unique_selected
 
 
@@ -600,11 +608,11 @@ def interactive_detail_mode(all_problems: List, saved_results: Dict, all_strat_n
     problem_dict = {p.name: p for p in all_problems}
     
     while True:
-        print("\n" + "─" * 70)
+        print("\n" + "-" * 70)
         print("Detay görmek için problem adı girin (örn: berlin52, eil51)")
         print("Tüm problemleri listelemek için 'list' yazın")
         print("Çıkmak için 'q' veya Enter'a basın")
-        print("─" * 70)
+        print("-" * 70)
         
         user_input = input("> ").strip().lower()
         
@@ -660,9 +668,9 @@ def show_test_summary(problems: List, algorithms: List[str], saved_results: Dict
         tuple: (continue: bool, skip_cached: bool)
     """
     clear_screen()
-    print("═" * 70)
+    print("=" * 70)
     print("TEST ÖZETİ")
-    print("═" * 70)
+    print("=" * 70)
     
     total_tests = len(problems) * len(algorithms)
     
@@ -671,7 +679,7 @@ def show_test_summary(problems: List, algorithms: List[str], saved_results: Dict
     if saved_results:
         cache_info = analyze_cached_tests(problems, algorithms, saved_results)
     
-    print(f"\n📊 Test Yapılacak:")
+    print(f"\n[STATS] Test Yapılacak:")
     print(f"   • Problemler: {len(problems)}")
     print(f"   • Algoritmalar: {len(algorithms)} ({', '.join(algorithms)})")
     print(f"   • Her problem {N_RUNS} kez çalıştırılacak")
@@ -680,13 +688,13 @@ def show_test_summary(problems: List, algorithms: List[str], saved_results: Dict
     # Cache durumu göster
     skip_cached = False
     if cache_info and cache_info['cached_count'] > 0:
-        print(f"\n📦 ÖNBELLEK DURUMU:")
+        print(f"\n[CACHE] ÖNBELLEK DURUMU:")
         print(f"   • Daha önce yapılmış: {cache_info['cached_count']} test")
         print(f"   • Henüz yapılmamış: {cache_info['new_count']} test")
-        print("─" * 70)
+        print("-" * 70)
         
         if skip_mode == 'ask':
-            print("\n🔍 Önbellekteki testler için ne yapmak istersiniz?")
+            print("\n[SEARCH] Önbellekteki testler için ne yapmak istersiniz?")
             print("   [S] Atla - Sadece yeni testleri yap (önerilen)")
             print("   [R] Yenile - Tüm testleri baştan yap")
             print("   [A] Arttır - Mevcut sonuçlara yeni koşumlar ekle")
@@ -698,14 +706,14 @@ def show_test_summary(problems: List, algorithms: List[str], saved_results: Dict
                 return (False, False)
             elif cache_choice == 'S':
                 skip_cached = True
-                print(f"\n✓ {cache_info['new_count']} yeni test yapılacak")
+                print(f"\nv {cache_info['new_count']} yeni test yapılacak")
             elif cache_choice == 'A':
                 # Mevcut sonuçlara ekleme yapılacak
                 skip_cached = False
-                print(f"\n✓ Tüm testler yapılacak, mevcut sonuçlar genişletilecek")
+                print(f"\nv Tüm testler yapılacak, mevcut sonuçlar genişletilecek")
             else:  # R veya default
                 skip_cached = False
-                print(f"\n✓ Tüm {total_tests} test baştan yapılacak")
+                print(f"\nv Tüm {total_tests} test baştan yapılacak")
     
     # Tahmini süre
     effective_tests = cache_info['new_count'] if skip_cached else total_tests
@@ -713,17 +721,17 @@ def show_test_summary(problems: List, algorithms: List[str], saved_results: Dict
     if skip_cached and cache_info:
         # Sadece yeni testler için süre tahmini
         estimated_seconds = estimated_seconds * (cache_info['new_count'] / total_tests) if total_tests > 0 else 0
-    print(f"\n⏱️ Tahmini Süre: ~{format_time(estimated_seconds)}")
+    print(f"\n[TIME] Tahmini Süre: ~{format_time(estimated_seconds)}")
     
     # Kategori dağılımı
     cat_counts = {}
     for p in problems:
         cat_counts[p.category] = cat_counts.get(p.category, 0) + 1
-    print(f"\n📈 Kategori Dağılımı:")
+    print(f"\n[GRAPH] Kategori Dağılımı:")
     for cat, count in sorted(cat_counts.items()):
         print(f"   • {cat}: {count} problem")
     
-    print("\n⚠️ DİKKAT:")
+    print("\n[!] DİKKAT:")
     print("   • Ctrl+C ile istediğiniz zaman güvenli çıkış yapabilirsiniz")
     print("   • Sonuçlar HER ALGORİTMA sonrası otomatik kaydedilir")
     print("   • Mevcut sonuçlarınız kaybolmaz!")
@@ -735,7 +743,7 @@ def show_test_summary(problems: List, algorithms: List[str], saved_results: Dict
     if choice == 'Q':
         return (False, skip_cached)
     elif choice == 'D':
-        print("\n📋 Problemler:")
+        print("\n[LIST] Problemler:")
         for i, p in enumerate(problems, 1):
             cache_mark = ""
             if cache_info:
@@ -941,10 +949,10 @@ def main():
         print("          UNIRIDE SOTA BENCHMARK KONTROL MERKEZİ")
         print("=" * 70)
         
-        print("\n[🔍 ALGORİTMA DURUMLARI]")
+        print("\n[[SEARCH] ALGORİTMA DURUMLARI]")
         any_changed = False
         for algo, status in algo_status.items():
-            symbol = "❌" if status == "DOSYA_YOK" else ("⚠️" if status == "DEGISMIS" else ("✨" if status == "YENI" else "✅"))
+            symbol = "[X]" if status == "DOSYA_YOK" else ("[!]" if status == "DEGISMIS" else ("[*]" if status == "YENI" else "[OK]"))
             print(f"  {symbol} {algo:<20} : {status}")
             if status in ["DEGISMIS", "YENI"]:
                 any_changed = True
@@ -1037,8 +1045,8 @@ def main():
         cache_info = analyze_cached_tests(problems_to_run, strategies_to_run, saved_results) if skip_cached else None
         new_tests_count = cache_info['new_count'] if cache_info else total_tests
         
-        print(f"\n🚀 TEST BAŞLIYOR...")
-        print(f"   🔧 Paralel worker sayısı: {NUM_WORKERS}")
+        print(f"\n[START] TEST BAŞLIYOR...")
+        print(f"   [CONFIG] Paralel worker sayısı: {NUM_WORKERS}")
         if skip_cached:
             print(f"   Toplam: {len(problems_to_run)} problem × {len(strategies_to_run)} algoritma")
             print(f"   Önbellekten atlanacak: {cache_info['cached_count']} test")
@@ -1096,11 +1104,11 @@ def main():
                 elif result:
                     # Sonuç yazdır
                     if 'cached' in result:
-                        print(f"  [{completed}/{total}] {result['problem']:<12} + {result['strategy']:<8} [ÖNBELLEK] ✓")
+                        print(f"  [{completed}/{total}] {result['problem']:<12} + {result['strategy']:<8} [ÖNBELLEK] v")
                     else:
                         gap = result['avg_gap']
                         best_gap = result['best_gap']
-                        status_icon = "★" if best_gap <= 1 else ("✓" if best_gap <= 5 else ("○" if best_gap <= 10 else "✗"))
+                        status_icon = "*" if best_gap <= 1 else ("v" if best_gap <= 5 else ("o" if best_gap <= 10 else "x"))
                         elapsed_s = result['elapsed_ms'] / 1000
                         
                         # Kalan süre tahmini
@@ -1122,7 +1130,7 @@ def main():
                 tasks, metadata, skip_cached, saved_results, progress_callback
             )
         except KeyboardInterrupt:
-            print("\n\n⚠️ Test durduruldu, sonuçlar kaydedildi...")
+            print("\n\n[!] Test durduruldu, sonuçlar kaydedildi...")
             all_results = _current_results
         
         # Sonuçları işle
@@ -1169,9 +1177,9 @@ def main():
             print_summary_table(_current_results)
             
             total_elapsed = time.time() - start_time
-            print(f"\n✅ Tüm sonuçlar başarıyla 'latest_metadata.json'a işlendi.")
-            print(f"📦 Excel/Log yedeği: {csv_path}")
-            print(f"⏱️ Toplam süre: {format_time(total_elapsed)}")
+            print(f"\n[OK] Tüm sonuçlar başarıyla 'latest_metadata.json'a işlendi.")
+            print(f"[CACHE] Excel/Log yedeği: {csv_path}")
+            print(f"[TIME] Toplam süre: {format_time(total_elapsed)}")
             
         input("\nAna menüye dönmek için Enter'a basın...")
         metadata = get_latest_metadata(METADATA_PATH)

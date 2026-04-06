@@ -250,7 +250,7 @@ export const ALGORITHM_COMPLEXITY: Record<string, string> = {
   [PIPELINE_B_KEYS.HHO_SPLIT]: "O(i × h × n²) + O(n²) Split",
   
   // Holistic
-  [HOLISTIC_KEYS.ORTOOLS_CVRP]: "O(n³)"
+  [HOLISTIC_KEYS.ORTOOLS_CVRP]: "O(n³)",
   [HOLISTIC_KEYS.PYVRP]: "O(n² log n)",
   [HOLISTIC_KEYS.VROOM]: "O(n²)",
   

@@ -50,7 +50,7 @@ export function ResourceTracks({
     const hourLabels = useMemo(() => {
         const labels = [];
         for (let h = timeRange.start; h <= timeRange.end; h++) {
-            labels.push(`${h:02d}:00`);
+            labels.push(`${h.toString().padStart(2, "0")}:00`);
         }
         return labels;
     }, [timeRange]);

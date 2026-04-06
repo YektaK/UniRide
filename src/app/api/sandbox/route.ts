@@ -15,6 +15,7 @@ import {
     createSuccessResponse,
     handleApiError,
 } from "@/lib/admin-auth";
+import type { Database } from "@/lib/supabase";
 
 interface VehicleConfig {
     id?: string;
@@ -173,15 +174,19 @@ export async function PUT(request: NextRequest) {
 
         const adminClient = getSupabaseAdmin();
 
+        const insertPayload: Database["public"]["Tables"]["sandbox_scenarios"]["Insert"] = {
+            name,
+            vehicles: JSON.stringify(vehicles),
+            student_ids: studentIds,
+            time_window_minutes: timeWindowMinutes,
+            created_by: adminUser.id,
+            updated_at: null,
+        };
+
         const { data, error } = await adminClient
+            .schema("public")
             .from("sandbox_scenarios")
-            .insert({
-                name,
-                vehicles: JSON.stringify(vehicles),
-                student_ids: studentIds,
-                time_window_minutes: timeWindowMinutes,
-                created_by: adminUser.id,
-            } as never)
+            .insert(insertPayload)
             .select()
             .single();
 

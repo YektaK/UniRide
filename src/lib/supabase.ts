@@ -14,6 +14,40 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
+export type RoutePlanStatus = "draft" | "confirmed" | "active" | "completed" | "cancelled";
+
+export interface DbRoutePlan {
+  id: string;
+  plan_date: string;
+  direction: "pickup" | "dropoff";
+  algorithm_used: string;
+  clustering_used: string | null;
+  total_vehicles: number;
+  total_duration_minutes: number;
+  execution_time_seconds: number | null;
+  routes: Json;
+  student_count: number;
+  driver_assignments: Json | null;
+  notes: string | null;
+  status: RoutePlanStatus;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string | null;
+  confirmed_at: string | null;
+  completed_at: string | null;
+}
+
+export interface DbSandboxScenario {
+  id: string;
+  name: string;
+  vehicles: string;
+  student_ids: string[];
+  time_window_minutes: number;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string | null;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -54,15 +88,15 @@ export interface Database {
         Relationships: [];
       };
       route_plans: {
-        Row: Record<string, unknown>;
-        Insert: Record<string, unknown>;
-        Update: Record<string, unknown>;
+        Row: DbRoutePlan;
+        Insert: Omit<DbRoutePlan, "id" | "created_at"> & { id?: string; created_at?: string };
+        Update: Partial<Omit<DbRoutePlan, "id" | "created_at">>;
         Relationships: [];
       };
       sandbox_scenarios: {
-        Row: Record<string, unknown>;
-        Insert: Record<string, unknown>;
-        Update: Record<string, unknown>;
+        Row: DbSandboxScenario;
+        Insert: Omit<DbSandboxScenario, "id" | "created_at"> & { id?: string; created_at?: string };
+        Update: Partial<Omit<DbSandboxScenario, "id" | "created_at">>;
         Relationships: [];
       };
     };

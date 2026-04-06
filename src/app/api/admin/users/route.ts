@@ -39,7 +39,7 @@ const updateUserSchema = z.object({
 // GET /api/admin/users - Get all users
 export async function GET(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const adminClient = getSupabaseAdmin();
         const { data, error } = await adminClient
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 // POST /api/admin/users - Create new user
 export async function POST(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const body = await request.json();
         const validatedData = createUserSchema.parse(body);
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
 // PUT /api/admin/users - Update user
 export async function PUT(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const body = await request.json();
         const validatedData = updateUserSchema.parse(body);
@@ -161,7 +161,7 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/admin/users - Delete user
 export async function DELETE(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const { searchParams } = new URL(request.url);
         const id = searchParams.get("id");

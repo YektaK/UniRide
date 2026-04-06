@@ -16,7 +16,7 @@ const passwordUpdateSchema = z.object({
 // PATCH /api/admin/users/password - Reset a user's password
 export async function PATCH(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const body = await request.json();
         const validatedData = passwordUpdateSchema.parse(body);

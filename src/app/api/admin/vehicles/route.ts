@@ -41,7 +41,7 @@ const updateVehicleSchema = z.object({
 // GET /api/admin/vehicles - Get all vehicles
 export async function GET(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const adminClient = getSupabaseAdmin();
         const { data, error } = await adminClient
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 // POST /api/admin/vehicles - Create new vehicle
 export async function POST(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const rawBody = await request.json();
         const parseResult = createVehicleSchema.safeParse(rawBody);
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
 // PUT /api/admin/vehicles - Update vehicle
 export async function PUT(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const rawBody = await request.json();
         const parseResult = updateVehicleSchema.safeParse(rawBody);
@@ -170,7 +170,7 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/admin/vehicles - Delete vehicle
 export async function DELETE(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const { searchParams } = new URL(request.url);
         const id = searchParams.get("id");

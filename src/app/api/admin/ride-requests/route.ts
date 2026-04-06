@@ -23,7 +23,7 @@ const updateRideRequestSchema = z.object({
 // GET /api/admin/ride-requests - Get all ride requests
 export async function GET(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const { searchParams } = new URL(request.url);
         const status = searchParams.get("status");
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
 // PUT /api/admin/ride-requests - Update ride request status
 export async function PUT(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const rawBody = await request.json();
         const parseResult = updateRideRequestSchema.safeParse(rawBody);
@@ -97,7 +97,7 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/admin/ride-requests - Delete ride request
 export async function DELETE(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const { searchParams } = new URL(request.url);
         const id = searchParams.get("id");

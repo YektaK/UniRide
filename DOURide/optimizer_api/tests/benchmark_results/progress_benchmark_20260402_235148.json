@@ -1,0 +1,72 @@
+[
+  {
+    "problem": "berlin52",
+    "dimension": 52,
+    "category": "small",
+    "optimal": 7542,
+    "strategy": "2-opt",
+    "avg_length": 8884.666666666666,
+    "avg_gap": 17.8025280650579,
+    "best_length": 8864,
+    "best_gap": 17.52850702731371,
+    "avg_time_ms": 34.6219539642334,
+    "n_runs": 3,
+    "timestamp": "2026-04-02T23:51:34.104987"
+  },
+  {
+    "problem": "berlin52",
+    "dimension": 52,
+    "category": "small",
+    "optimal": 7542,
+    "strategy": "3-opt",
+    "avg_length": 8331.333333333334,
+    "avg_gap": 10.46583576416512,
+    "best_length": 8029,
+    "best_gap": 6.457173163617077,
+    "avg_time_ms": 1457.220474878947,
+    "n_runs": 3,
+    "timestamp": "2026-04-02T23:51:38.482395"
+  },
+  {
+    "problem": "berlin52",
+    "dimension": 52,
+    "category": "small",
+    "optimal": 7542,
+    "strategy": "Or-opt",
+    "avg_length": 8216.333333333334,
+    "avg_gap": 8.941041279943429,
+    "best_length": 8017,
+    "best_gap": 6.298064173959162,
+    "avg_time_ms": 643.7079906463623,
+    "n_runs": 3,
+    "timestamp": "2026-04-02T23:51:40.413520"
+  },
+  {
+    "problem": "berlin52",
+    "dimension": 52,
+    "category": "small",
+    "optimal": 7542,
+    "strategy": "Swap",
+    "avg_length": 10916.0,
+    "avg_gap": 44.73614425881729,
+    "best_length": 10470,
+    "best_gap": 38.822593476531424,
+    "avg_time_ms": 29.42212422688802,
+    "n_runs": 3,
+    "timestamp": "2026-04-02T23:51:40.507422"
+  },
+  {
+    "problem": "berlin52",
+    "dimension": 52,
+    "category": "small",
+    "optimal": 7542,
+    "strategy": "Hybrid",
+    "avg_length": 7974.0,
+    "avg_gap": 5.727923627684963,
+    "best_length": 7749,
+    "best_gap": 2.7446300715990453,
+    "avg_time_ms": 2698.4029610951743,
+    "n_runs": 3,
+    "timestamp": "2026-04-02T23:51:48.612713"
+  }
+]

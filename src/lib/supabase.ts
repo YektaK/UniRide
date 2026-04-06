@@ -21,41 +21,49 @@ export interface Database {
         Row: DbUser;
         Insert: Partial<DbUser>;
         Update: Partial<DbUser>;
+        Relationships: [];
       };
       vehicles: {
         Row: DbVehicle;
         Insert: Partial<DbVehicle>;
         Update: Partial<DbVehicle>;
+        Relationships: [];
       };
       ride_requests: {
         Row: DbRideRequest;
         Insert: Partial<DbRideRequest>;
         Update: Partial<DbRideRequest>;
+        Relationships: [];
       };
       weekly_schedules: {
         Row: DbWeeklySchedule;
         Insert: Partial<DbWeeklySchedule>;
         Update: Partial<DbWeeklySchedule>;
+        Relationships: [];
       };
       route_assignments: {
         Row: RouteAssignment;
         Insert: Partial<RouteAssignment>;
         Update: Partial<RouteAssignment>;
+        Relationships: [];
       };
       routes: {
         Row: DbRoute;
         Insert: Partial<DbRoute>;
         Update: Partial<DbRoute>;
+        Relationships: [];
       };
       route_plans: {
         Row: Record<string, unknown>;
         Insert: Record<string, unknown>;
         Update: Record<string, unknown>;
+        Relationships: [];
       };
       sandbox_scenarios: {
         Row: Record<string, unknown>;
         Insert: Record<string, unknown>;
         Update: Record<string, unknown>;
+        Relationships: [];
       };
     };
     Views: {

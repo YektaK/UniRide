@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { AppError, getCurrentUserFromRequest } from "@/lib/admin-auth";
+import type { Database } from "@/lib/supabase";
 
 const rideConfirmationSchema = z.object({
     action: z.enum(["confirm", "cancel", "change"], {
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if a ride request already exists for this date
-        const { data: existingRide, error: findError } = await adminClient
+        const { data: existingRideRaw, error: findError } = await adminClient
             .from("ride_requests")
             .select("*")
             .eq("user_id", userId)
@@ -77,6 +78,7 @@ export async function POST(request: NextRequest) {
             throw findError;
         }
 
+        const existingRide = existingRideRaw as Database["public"]["Tables"]["ride_requests"]["Row"] | null;
         let result;
         if (existingRide) {
             // Update existing ride
@@ -95,13 +97,14 @@ export async function POST(request: NextRequest) {
             result = data;
         } else if (action === "confirm") {
             // Create new ride request
-            const { data: userData, error: userError } = await adminClient
+            const { data: userDataRaw, error: userError } = await adminClient
                 .from("users")
                 .select("home_address, home_coordinates")
                 .eq("id", userId)
                 .single();
 
             if (userError) throw userError;
+            const userData = userDataRaw as Pick<Database["public"]["Tables"]["users"]["Row"], "homeAddress" | "homeCoordinates"> | null;
 
             const { data, error } = await adminClient
                 .from("ride_requests")
@@ -112,8 +115,8 @@ export async function POST(request: NextRequest) {
                     requested_pickup_time: `${rideDate}T${pickupTime ?? "08:00"}:00`,
                     requested_dropoff_time: `${rideDate}T${dropoffTime ?? "17:00"}:00`,
                     pickup_location: {
-                        address: userData?.home_address ?? "Ev Adresi",
-                        coordinates: userData?.home_coordinates,
+                        address: userData?.homeAddress ?? "Ev Adresi",
+                        coordinates: userData?.homeCoordinates,
                     },
                     dropoff_location: {
                         address: "Yıldız Teknik Üniversitesi Davutpaşa Kampüsü",

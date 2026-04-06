@@ -181,7 +181,7 @@ export async function PUT(request: NextRequest) {
                 student_ids: studentIds,
                 time_window_minutes: timeWindowMinutes,
                 created_by: adminUser.id,
-            })
+            } as never)
             .select()
             .single();
 

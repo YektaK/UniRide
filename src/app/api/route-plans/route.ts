@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
                 notes,
                 status: 'draft',
                 created_by: adminUser.id,
-            })
+            } as never)
             .select()
             .single();
 
@@ -174,7 +174,7 @@ export async function PATCH(request: NextRequest) {
 
         const { data, error } = await adminClient
             .from("route_plans")
-            .update(dbUpdates)
+            .update(dbUpdates as never)
             .eq("id", id)
             .select()
             .single();

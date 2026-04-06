@@ -83,8 +83,12 @@ METADATA_PATH = os.path.join(os.path.dirname(__file__), "benchmark_db", "latest_
 HISTORY_DIR = os.path.join(os.path.dirname(__file__), "benchmark_db", "history")
 
 # Hangi mimari kodların değişimlerini takip edeceğiz?
+# Scriptin bulunduğu dizine göre ayarlanmış yol
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+
 ALGORITHMS_TO_CHECK = {
-    "LocalSearchEngine_NUMBA": "optimizer_api/utils/local_search_numba.py",
+    "LocalSearchEngine_NUMBA": os.path.join(PROJECT_ROOT, "optimizer_api", "utils", "local_search_numba.py"),
 }
 
 # ============================================================

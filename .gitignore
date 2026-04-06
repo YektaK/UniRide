@@ -1,29 +1,62 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Numba JIT cache
-*.nbc
-*.nbi
-.numba_cache/
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
-# Virtual environments
-venv/
-.venv/
-env/
-.env/
+# testing
+/coverage
 
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
+# next.js
+/.next/
+/out/
 
-# OS
+# production
+/build
+
+# misc
 .DS_Store
-Thumbs.db
+*.pem
 
-# Logs
-*.log
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+.genkit/*
+.env*
+
+# firebase
+firebase-debug.log
+firestore-debug.log
+
+# Vitest (Test sonuçları ve cache)
+.vitest-result/
+test-results/
+
+# Supabase (Yerel geliştirme yapıyorsanız)
+.supabase/
+
+# IDE Ayarları (İş ve ev PC farklı ayarlar isteyebilir)
+.vscode/
+.idea/
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python

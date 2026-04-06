@@ -1,0 +1,110 @@
+{
+  "tarama_ozet": {
+    "tarama_tarihi": "2026-03-28T22:09:40",
+    "tarama_modu": "dry-run",
+    "kok_dizin": "C:\\Users\\yekta\\Masaüstü\\AiCode\\FirebaseUniRide\\UniRide",
+    "tarama_disi_dizinler": [".next", "node_modules"],
+    "toplam_dosya": 466,
+    "gereksiz_dosya": 108,
+    "gerekli_dosya": 358,
+    "gereksiz_toplam_boyut_mb": 2.99
+  },
+  "kategori_dagilimi": {
+    "gereksiz": {
+      "tek_kullanimli_script": { "dosya_sayisi": 18, "boyut_mb": 0.05 },
+      "image_export": { "dosya_sayisi": 7, "boyut_mb": 0.50 },
+      "log_dosyasi": { "dosya_sayisi": 8, "boyut_mb": 0.03 },
+      "python_cache": { "dosya_sayisi": 29, "boyut_mb": 1.20 },
+      "env_backup": { "dosya_sayisi": 1, "boyut_mb": 0.0006 },
+      "ts_buildinfo": { "dosya_sayisi": 1, "boyut_mb": 0.05 },
+      "text_dump": { "dosya_sayisi": 3, "boyut_mb": 0.70 },
+      "akademik_taslak": { "dosya_sayisi": 6, "boyut_mb": 0.60 },
+      "one_cikan_dosya": { "dosya_sayisi": 3, "boyut_mb": 0.04 },
+      "proje_disi_icerik": { "dosya_sayisi": 2, "boyut_mb": 0.02 },
+      "tekrar_edici_rapor": { "dosya_sayisi": 8, "boyut_mb": 0.03 },
+      "data_dosyasi": { "dosya_sayisi": 3, "boyut_mb": 0.05 },
+      "diger": { "dosya_sayisi": 17, "boyut_mb": 0.10 }
+    },
+    "gerekli": {
+      "python_kaynak": { "dosya_sayisi": 88, "boyut_mb": 0.84 },
+      "react_component": { "dosya_sayisi": 84, "boyut_mb": 0.57 },
+      "dokumantasyon": { "dosya_sayisi": 76, "boyut_mb": 0.60 },
+      "typescript_kaynak": { "dosya_sayisi": 49, "boyut_mb": 0.25 },
+      "veritabani_migration": { "dosya_sayisi": 8, "boyut_mb": 0.015 },
+      "konfigurasyon": { "dosya_sayisi": 12, "boyut_mb": 0.02 },
+      "stil_dosyasi": { "dosya_sayisi": 3, "boyut_mb": 0.015 },
+      "modul": { "dosya_sayisi": 1, "boyut_mb": 0.002 },
+      "javascript": { "dosya_sayisi": 12, "boyut_mb": 0.03 },
+      "diger": { "dosya_sayisi": 25, "boyut_mb": 1.20 }
+    }
+  },
+  "en_buyuk_gereksiz_dosyalar": [
+    { "dosya": "full_project.txt", "boyut_kb": 458.25, "kategori": "text_dump" },
+    { "dosya": "DRAFT_Special student transportation_V3.docx", "boyut_kb": 292.47, "kategori": "akademik_taslak" },
+    { "dosya": "full_project_code.txt", "boyut_kb": 234.38, "kategori": "text_dump" },
+    { "dosya": "Mapcoded.png", "boyut_kb": 134.61, "kategori": "image_export" },
+    { "dosya": "Fig4b_ExecutionTimeComparison.jpg", "boyut_kb": 134.61, "kategori": "image_export" }
+  ],
+  "onay_gereken_islemler": [
+    {
+      "id": 1,
+      "islem": "Python cache temizliği",
+      "dosya_sayisi": 29,
+      "boyut_mb": 1.2,
+      "risk_seviyesi": "dusuk",
+      "aciklama": "__pycache__ ve *.pyc dosyaları otomatik yeniden oluşturulur"
+    },
+    {
+      "id": 2,
+      "islem": "Log dosyası temizliği",
+      "dosya_sayisi": 8,
+      "boyut_mb": 0.03,
+      "risk_seviyesi": "dusuk",
+      "aciklama": "Geçici hata ayıklama logları"
+    },
+    {
+      "id": 3,
+      "islem": "Tek kullanımlık script taşıma",
+      "dosya_sayisi": 18,
+      "boyut_mb": 0.05,
+      "risk_seviyesi": "orta",
+      "aciklama": "Bir kez çalıştırılmış import/utility scriptler"
+    },
+    {
+      "id": 4,
+      "islem": "Akademik içerik taşıma",
+      "dosya_sayisi": 6,
+      "boyut_mb": 0.60,
+      "risk_seviyesi": "dusuk",
+      "aciklama": "Proje kodu ile doğrudan ilişkisi olmayan akademik çıktılar"
+    },
+    {
+      "id": 5,
+      "islem": "Text dump taşıma",
+      "dosya_sayisi": 3,
+      "boyut_mb": 0.70,
+      "risk_seviyesi": "dusuk",
+      "aciklama": "Kodun tamamını içeren büyük metin dosyaları"
+    },
+    {
+      "id": 6,
+      "islem": "Tekrar edici rapor taşıma",
+      "dosya_sayisi": 8,
+      "boyut_mb": 0.03,
+      "risk_seviyesi": "dusuk",
+      "aciklama": "Durum raporları ve kurulum dokümanları"
+    }
+  ],
+  "rapor_dosyalari": {
+    "json_rapor": "_scan_output/envanter_raporu_20260328_220932.json",
+    "csv_gereksiz": "_scan_output/gereksiz_dosyalar_20260328_220932.csv",
+    "csv_tum": "_scan_output/tum_dosyalar_20260328_220932.csv",
+    "markdown_rapor": "_scan_output/TEMIZLIK_RAPORU_TR.md"
+  },
+  "guvenlik_notlari": {
+    "yedekleme_onerisi": "UniRide klasörünün tam yedeğini alın",
+    "git_kontrolu": "git status ile değişiklikleri kontrol edin",
+    "test_onerisi": "Temizlik sonrası npm run dev ile test edin",
+    "geri_alma_plani": "Yedekten geri yükleme adımları hazır bulundurun"
+  }
+}

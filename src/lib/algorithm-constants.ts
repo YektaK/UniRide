@@ -486,6 +486,13 @@ export function getAlgorithmDisplayName(algorithm: string): string {
 }
 
 /**
+ * Get display name for local search type
+ */
+export function getLocalSearchDisplayName(localSearchType: string): string {
+  return LOCAL_SEARCH_DISPLAY_NAMES[localSearchType as LocalSearchType] || localSearchType;
+}
+
+/**
  * Check if algorithm is recommended for production use
  */
 export function isAlgorithmRecommended(algorithm: string): boolean {

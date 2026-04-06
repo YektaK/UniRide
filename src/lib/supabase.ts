@@ -47,6 +47,16 @@ export interface Database {
         Insert: Partial<DbRoute>;
         Update: Partial<DbRoute>;
       };
+      route_plans: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+      };
+      sandbox_scenarios: {
+        Row: Record<string, unknown>;
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+      };
     };
     Views: {
       [_ in never]: never;
@@ -93,4 +103,3 @@ export const getSupabaseClient = () => {
   }
   return supabase;
 };
-

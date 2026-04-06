@@ -786,11 +786,27 @@ def run_single_benchmark_task(args):
     Returns:
         dict: Sonuç veya None (cache'den atlandıysa)
     """
+    # Worker process'te gerekli tüm import'ları YENİDEN yap
+    import sys
+    import os
+    import time
+    
+    # Proje yollarını ekle
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "optimizer_api")))
+    
+    # Şimdi import'ları yap
+    from optimizer_api.tests.run_interactive_benchmark_v2 import (
+        TSPLIBProblem, 
+        run_single_test,
+        N_RUNS
+    )
+    from optimizer_api.utils.local_search import LocalSearchType
+    
+    # Args'ı unpack et
     problem_dict, strat_name, ls_type_value, max_iter, task_id = args
     
     # Problem dict'ini geri oluştur
-    from optimizer_api.tests.run_interactive_benchmark_v2 import TSPLIBProblem
-    
     problem = TSPLIBProblem(
         name=problem_dict['name'],
         dimension=problem_dict['dimension'],
@@ -801,7 +817,6 @@ def run_single_benchmark_task(args):
     )
     
     # LocalSearchType'ı string'den al
-    from optimizer_api.utils.local_search import LocalSearchType
     ls_type = LocalSearchType(ls_type_value)
     
     # Testi çalıştır

@@ -101,8 +101,90 @@ _shutdown_requested = False
 _current_metadata = None
 _current_results = []
 
-# Multiprocessing için
+# Multiprocessing için - başlangıç değeri, kullanıcı tarafından değiştirilecek
 NUM_WORKERS = min(cpu_count(), 4)
+
+def get_cpu_info() -> dict:
+    """CPU bilgilerini topla ve optimal worker sayısı öner"""
+    import platform
+    
+    try:
+        import psutil
+        physical_cores = psutil.cpu_count(logical=False) or cpu_count()
+        logical_cores = psutil.cpu_count(logical=True) or cpu_count()
+        has_smt = logical_cores > physical_cores
+    except ImportError:
+        physical_cores = cpu_count()
+        logical_cores = cpu_count()
+        has_smt = False
+    
+    # CPU-bound task'ler için optimal worker sayısı
+    # NUMBA JIT ile çalışan kod CPU-intensive olduğu için
+    # fiziksel çekirdek sayısı veya biraz daha az optimal
+    if has_smt:
+        # Hyperthreading/SMT varsa fiziksel çekirdek sayısı optimal
+        recommended = physical_cores
+    else:
+        # Yoksa biraz daha az kullan (sistem için yer aç)
+        recommended = max(1, physical_cores - 1)
+    
+    # Maksimum sınır (aşırı kaynak kullanımını önle)
+    recommended = min(recommended, 16)
+    
+    return {
+        'physical_cores': physical_cores,
+        'logical_cores': logical_cores,
+        'has_smt': has_smt,
+        'recommended_workers': recommended,
+        'platform': platform.processor() or platform.machine()
+    }
+
+def select_worker_count() -> int:
+    """Kullanıcıdan worker sayısını al veya otomatik öner"""
+    cpu_info = get_cpu_info()
+    
+    print("\n" + "="*60)
+    print("[CPU] ISLEMCI BILGILERI")
+    print("="*60)
+    print(f"   Platform      : {cpu_info['platform']}")
+    print(f"   Fiziksel Cekirdek : {cpu_info['physical_cores']}")
+    print(f"   Mantiksal Cekirdek: {cpu_info['logical_cores']}")
+    if cpu_info['has_smt']:
+        print(f"   SMT/Hyperthreading: Aktif")
+    print()
+    
+    recommended = cpu_info['recommended_workers']
+    print(f"[ONERI] Optimal worker sayisi: {recommended}")
+    print("   - CPU-bound islemler icin fiziksel cekirdek sayisi optimal")
+    print("   - NUMBA JIT zaten cok hizli, fazla worker overhead yaratabilir")
+    print()
+    print("[SECIM] Worker sayisi belirleyin:")
+    print(f"   [1] {recommended} (Onerilen - Otomatik)")
+    print(f"   [2] {min(cpu_info['logical_cores'], 8)} (Standart - maks 8)")
+    print(f"   [3] {min(cpu_info['logical_cores'], 12)} (Yuksek performans)")
+    print(f"   [4] {min(cpu_info['logical_cores'], 16)} (Maksimum)")
+    print("   [C] Custom - Kendiniz girin")
+    print(f"   [Enter] Varsayilan: {min(cpu_count(), 4)}")
+    
+    choice = input("\nSeciminiz: ").strip().upper()
+    
+    if choice == '' or choice == '1':
+        return recommended
+    elif choice == '2':
+        return min(cpu_info['logical_cores'], 8)
+    elif choice == '3':
+        return min(cpu_info['logical_cores'], 12)
+    elif choice == '4':
+        return min(cpu_info['logical_cores'], 16)
+    elif choice == 'C':
+        try:
+            custom = int(input(f"   Worker sayisi (1-{cpu_info['logical_cores']}): ").strip())
+            return max(1, min(custom, cpu_info['logical_cores']))
+        except ValueError:
+            print("   Gecersiz giris, onerilen kullanilacak")
+            return recommended
+    else:
+        return min(cpu_count(), 4)
 
 def signal_handler(signum, frame):
     """Ctrl+C ile güvenli çıkış - sonuçları kaydeder"""
@@ -1044,6 +1126,11 @@ def main():
             N_RUNS = DEFAULT_N_RUNS
         
         print(f"   -> {N_RUNS} run secildi")
+        
+        # Worker sayisi secimi
+        global NUM_WORKERS
+        NUM_WORKERS = select_worker_count()
+        print(f"\n[OK] {NUM_WORKERS} worker kullanilacak")
         
         total_tests = len(problems_to_run) * len(strategies_to_run)
         start_time = time.time()

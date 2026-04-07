@@ -53,7 +53,7 @@ npm install --legacy-peer-deps
 Kök dizinde `.env.local` oluşturun:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_ID_HERE.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
 SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 
@@ -97,14 +97,14 @@ Supabase tarafında ilgili SQL dosyalarını sırasıyla uygulayın:
 
 ## NPM Komutları
 
-| Komut | Açıklama |
-|---|---|
-| `npm run dev` | Geliştirme sunucusu (Turbopack, port 9002) |
-| `npm run build` | Production build |
-| `npm run start` | Production sunucusu |
-| `npm run typecheck` | TypeScript tip kontrolü |
-| `npm run test` | Vitest |
-| `npm run lint` | Next.js lint komutu |
+| Komut | Açıklama | Durum |
+|---|---|---|
+| `npm run dev` | Geliştirme sunucusu (Turbopack, port 9002) | ✅ |
+| `npm run build` | Production build | ✅ (ağ kısıtlarında font fetch hatası görülebilir) |
+| `npm run start` | Production sunucusu | ✅ (`build` sonrası) |
+| `npm run typecheck` | TypeScript tip kontrolü | ⚠️ repoda mevcut baseline hata var |
+| `npm run test` | Vitest | ⚠️ test dosyası yoksa başarısız döner |
+| `npm run lint` | Next.js lint komutu | ⚠️ mevcut script bu ortamda hataya düşebiliyor |
 
 ## Optimizer API Uç Noktaları
 
@@ -125,8 +125,7 @@ Supabase tarafında ilgili SQL dosyalarını sırasıyla uygulayın:
 
 ## Bilinen Durum Notları
 
-- `npm run lint` mevcut script yapısıyla bu ortamda hataya düşebilir (`next lint` çağrısı).
-- `npm run test` komutu, test dosyası bulunmadığında başarısız döner.
+Komutların güncel çalışma davranışı NPM tablosundaki **Durum** sütununda belirtilmiştir.
 
 ## Lisans
 

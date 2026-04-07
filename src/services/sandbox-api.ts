@@ -2,6 +2,7 @@
  * Sandbox API Service
  * Handles sandbox mode API calls from frontend
  */
+import { getAuthToken } from "@/lib/admin-api";
 
 export interface VehicleConfig {
     id?: string;
@@ -30,10 +31,14 @@ export interface SandboxScenario {
 }
 
 export async function reoptimize(request: ReoptimizeRequest): Promise<any> {
+    const token = await getAuthToken();
+    if (!token) throw new Error("Not authenticated");
+
     const response = await fetch('/api/sandbox', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(request),
     });
@@ -48,10 +53,14 @@ export async function reoptimize(request: ReoptimizeRequest): Promise<any> {
 }
 
 export async function saveSandboxScenario(scenario: Omit<SandboxScenario, 'id' | 'createdAt'>): Promise<SandboxScenario> {
+    const token = await getAuthToken();
+    if (!token) throw new Error("Not authenticated");
+
     const response = await fetch('/api/sandbox?action=save', {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(scenario),
     });
@@ -66,8 +75,14 @@ export async function saveSandboxScenario(scenario: Omit<SandboxScenario, 'id' |
 }
 
 export async function getSandboxScenarios(): Promise<SandboxScenario[]> {
+    const token = await getAuthToken();
+    if (!token) throw new Error("Not authenticated");
+
     const response = await fetch('/api/sandbox?action=list', {
         method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        },
     });
 
     const data = await response.json();
@@ -80,8 +95,14 @@ export async function getSandboxScenarios(): Promise<SandboxScenario[]> {
 }
 
 export async function deleteSandboxScenario(id: string): Promise<void> {
+    const token = await getAuthToken();
+    if (!token) throw new Error("Not authenticated");
+
     const response = await fetch(`/api/sandbox?action=delete&id=${id}`, {
         method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        },
     });
 
     const data = await response.json();

@@ -4,8 +4,6 @@
  */
 
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
-import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { 
     optimizeRoutes, 
@@ -13,12 +11,7 @@ import {
     type StudentForOptimization, 
     type Depot 
 } from "@/services/optimizer-service";
-
-// Create Supabase client
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { requireAdmin } from "@/lib/admin-auth";
 
 const studentSchema = z.object({
     id: z.string().optional(),
@@ -58,34 +51,6 @@ const optimizeRouteSchema = z.object({
     offset_minutes: z.number().optional(),
 });
 
-// Create Supabase client
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-// Verify JWT and get user
-async function verifyAuth(authHeader: string | null) {
-    if (!authHeader?.startsWith("Bearer ")) {
-        return null;
-    }
-
-    const token = authHeader.split(" ")[1];
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-
-    if (error || !user) {
-        return null;
-    }
-
-    const { data: profile } = await supabaseAdmin
-        .from("users")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-    return profile;
-}
-
 /**
  * GET /api/optimize-route
  * Returns available algorithms
@@ -111,18 +76,7 @@ export async function GET() {
  */
 export async function POST(request: Request) {
     try {
-        const headersList = await headers();
-        const authHeader = headersList.get("authorization");
-        const user = await verifyAuth(authHeader);
-
-        if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
-        // Only admins can optimize routes
-        if (user.role !== "admin") {
-            return NextResponse.json({ error: "Forbidden - Admin only" }, { status: 403 });
-        }
+        await requireAdmin(request);
 
         const rawBody = await request.json();
         const parseResult = optimizeRouteSchema.safeParse(rawBody);

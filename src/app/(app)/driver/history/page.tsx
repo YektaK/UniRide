@@ -15,6 +15,7 @@ import {
     XCircle
 } from "lucide-react";
 import { adminApi } from "@/lib/admin-api";
+import { getSupabaseClient } from "@/lib/supabase";
 import type { RouteAssignment } from "@/types/db";
 import type { Vehicle } from "@/types";
 
@@ -38,9 +39,17 @@ export default function DriverHistoryPage() {
     const loadHistory = async () => {
         try {
             setLoading(true);
+            const { data: { session } } = await getSupabaseClient().auth.getSession();
+            if (!session?.access_token) {
+                throw new Error("Unauthorized");
+            }
 
             const [assignmentsData, vehiclesData] = await Promise.all([
-                fetch("/api/driver/assignments").then(res => res.json()).catch(() => []),
+                fetch("/api/driver/assignments", {
+                    headers: {
+                        "Authorization": `Bearer ${session.access_token}`,
+                    },
+                }).then(res => res.json()).catch(() => []),
                 adminApi.vehicles.getAll().catch(() => [])
             ]);
 

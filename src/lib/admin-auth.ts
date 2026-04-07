@@ -45,22 +45,33 @@ export class AppError extends Error {
 
 // ==================== Auth Helpers ====================
 
-// Get current user from the Authorization header
-export async function getCurrentUserFromRequest(): Promise<{
+export type AuthenticatedUser = {
     id: string;
     email: string;
     role: string;
-} | null> {
-    const headersList = await headers();
-    const authHeader = headersList.get("authorization");
+};
 
+export function parseBearerToken(authHeader: string | null): string | null {
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
         return null;
     }
+    return authHeader.slice("Bearer ".length).trim() || null;
+}
 
-    const token = authHeader.split(" ")[1];
+export async function getBearerTokenFromRequest(request?: Request): Promise<string | null> {
+    if (request) {
+        return parseBearerToken(request.headers.get("authorization"));
+    }
 
-    // Verify the token with Supabase
+    const headersList = await headers();
+    return parseBearerToken(headersList.get("authorization"));
+}
+
+export async function getCurrentUserFromToken(token: string): Promise<AuthenticatedUser | null> {
+    if (!token) {
+        return null;
+    }
+
     const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -87,23 +98,39 @@ export async function getCurrentUserFromRequest(): Promise<{
     return userData;
 }
 
-// Check if current user is admin — throws AppError instead of plain Error
-export async function requireAdmin(): Promise<{
-    id: string;
-    email: string;
-    role: string;
-}> {
-    const user = await getCurrentUserFromRequest();
+// Get current user from the Authorization header
+export async function getCurrentUserFromRequest(request?: Request): Promise<AuthenticatedUser | null> {
+    const token = await getBearerTokenFromRequest(request);
+    if (!token) {
+        return null;
+    }
+
+    return getCurrentUserFromToken(token);
+}
+
+export async function requireAuthenticatedUser(request?: Request): Promise<AuthenticatedUser> {
+    const user = await getCurrentUserFromRequest(request);
 
     if (!user) {
         throw AppError.unauthorized();
     }
 
-    if (user.role !== "admin") {
+    return user;
+}
+
+export async function requireRole(request: Request | undefined, allowedRoles: string[]): Promise<AuthenticatedUser> {
+    const user = await requireAuthenticatedUser(request);
+
+    if (!allowedRoles.includes(user.role)) {
         throw AppError.forbidden();
     }
 
     return user;
+}
+
+// Check if current user is admin — throws AppError instead of plain Error
+export async function requireAdmin(request?: Request): Promise<AuthenticatedUser> {
+    return requireRole(request, ["admin"]);
 }
 
 // ==================== Response Helpers ====================

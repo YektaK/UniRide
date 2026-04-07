@@ -5,9 +5,8 @@
 
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { createClient } from "@supabase/supabase-js";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { createErrorResponse, createSuccessResponse } from "@/lib/admin-auth";
+import { createErrorResponse, createSuccessResponse, requireAuthenticatedUser } from "@/lib/admin-auth";
 
 const updatePasswordSchema = z.object({
     newPassword: z.string().min(6, "Şifre en az 6 karakter olmalıdır.").optional(),
@@ -20,21 +19,7 @@ const updatePasswordSchema = z.object({
 // Body: { newPassword?: string, passwordHint?: string }
 export async function PATCH(request: NextRequest) {
     try {
-        // Authenticate the calling user via Bearer token
-        const authHeader = request.headers.get("authorization");
-        if (!authHeader?.startsWith("Bearer ")) {
-            return createErrorResponse("Unauthorized: Not logged in", 401);
-        }
-        const token = authHeader.split(" ")[1];
-
-        const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
-        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-        if (authError || !user) {
-            return createErrorResponse("Unauthorized: Invalid session", 401);
-        }
+        const user = await requireAuthenticatedUser(request);
 
         const rawBody = await request.json();
         const parseResult = updatePasswordSchema.safeParse(rawBody);

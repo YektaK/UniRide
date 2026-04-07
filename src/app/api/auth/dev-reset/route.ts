@@ -5,8 +5,14 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 // Automatically disabled when NODE_ENV=production.
 
 export async function POST(request: Request) {
-    // Block in production
-    if (process.env.NODE_ENV === 'production') {
+    const isLocalEnv = (process.env.NODE_ENV !== 'production') && (
+        process.env.VERCEL_ENV === undefined ||
+        process.env.VERCEL_ENV === 'development'
+    );
+    const isDevResetEnabled = process.env.ENABLE_DEV_RESET === 'true';
+    const expectedSecret = process.env.DEV_RESET_SECRET;
+
+    if (!isLocalEnv || !isDevResetEnabled || !expectedSecret) {
         return NextResponse.json(
             { error: 'Bu endpoint yalnızca geliştirme ortamında kullanılabilir.' },
             { status: 403 }
@@ -14,6 +20,11 @@ export async function POST(request: Request) {
     }
 
     try {
+        const authHeader = request.headers.get('authorization');
+        if (!authHeader?.startsWith('Bearer ') || authHeader.slice('Bearer '.length).trim() !== expectedSecret) {
+            return NextResponse.json({ error: 'Yetkisiz erişim.' }, { status: 401 });
+        }
+
         const { email, newPassword } = await request.json();
 
         if (!email || !newPassword) {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
+import { requireRole } from "@/lib/admin-auth";
 
 // Create Supabase client with service role for admin operations
 const supabaseAdmin = createClient(
@@ -14,44 +14,9 @@ const updateAssignmentSchema = z.object({
     status: z.enum(["in_progress", "completed"]),
 });
 
-// Verify JWT and get user
-async function verifyAuth(authHeader: string | null) {
-    if (!authHeader?.startsWith("Bearer ")) {
-        return null;
-    }
-
-    const token = authHeader.split(" ")[1];
-
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-
-    if (error || !user) {
-        return null;
-    }
-
-    // Get user profile to check role
-    const { data: profile } = await supabaseAdmin
-        .from("users")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-    return profile;
-}
-
-export async function GET() {
+export async function GET(request: Request) {
     try {
-        const headersList = await headers();
-        const authHeader = headersList.get("authorization");
-
-        const user = await verifyAuth(authHeader);
-
-        if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
-        if (user.role !== "driver" && user.role !== "admin") {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-        }
+        const user = await requireRole(request, ["driver", "admin"]);
 
         // Get route assignments for this driver
         let query = supabaseAdmin
@@ -95,18 +60,7 @@ export async function GET() {
 
 export async function PUT(request: Request) {
     try {
-        const headersList = await headers();
-        const authHeader = headersList.get("authorization");
-
-        const user = await verifyAuth(authHeader);
-
-        if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
-        if (user.role !== "driver") {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-        }
+        const user = await requireRole(request, ["driver"]);
 
         const rawBody = await request.json();
         const parseResult = updateAssignmentSchema.safeParse(rawBody);

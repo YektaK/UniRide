@@ -31,6 +31,8 @@ import {
     type LocalSearchType
 } from "@/lib/algorithm-constants";
 
+type AlgorithmType = (typeof ALGORITHM_KEYS)[keyof typeof ALGORITHM_KEYS];
+
 // Test students data (based on Excel data)
 const testStudents = [
     ...Array.from({ length: 9 }, (_, i) => ({
@@ -54,7 +56,7 @@ export default function VehiclePlanningPage() {
     const [maxTourTime, setMaxTourTime] = useState(120);
     const [swCapacity, setSwCapacity] = useState(4);
     const [soCapacity, setSoCapacity] = useState(5);
-    const [algorithm, setAlgorithm] = useState(ALGORITHM_KEYS.GENETIC_ALGORITHM);
+    const [algorithm, setAlgorithm] = useState<AlgorithmType>(ALGORITHM_KEYS.GENETIC_ALGORITHM);
     const [localSearchType, setLocalSearchType] = useState<LocalSearchType>(LOCAL_SEARCH_KEYS.TWO_OPT);
     const [result, setResult] = useState<any>(null);
 
@@ -182,7 +184,7 @@ export default function VehiclePlanningPage() {
                         </div>
                         <div className="space-y-2">
                             <Label>Algoritma</Label>
-                            <Select value={algorithm} onValueChange={setAlgorithm}>
+                            <Select value={algorithm} onValueChange={(value) => setAlgorithm(value as AlgorithmType)}>
                                 <SelectTrigger>
                                     <SelectValue />
                                 </SelectTrigger>

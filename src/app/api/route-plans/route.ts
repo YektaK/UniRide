@@ -16,6 +16,7 @@ import {
 } from "@/lib/admin-auth";
 
 import type { VehicleRoute } from "@/services/optimizer-service";
+import type { Database, Json, RoutePlanStatus } from "@/lib/supabase";
 
 interface RoutePlanRequest {
     planDate: string;
@@ -32,7 +33,7 @@ interface RoutePlanRequest {
 
 interface RoutePlanUpdate {
     id: string;
-    status?: 'draft' | 'confirmed' | 'active' | 'completed' | 'cancelled';
+    status?: RoutePlanStatus;
     driverAssignments?: Record<string, unknown>[];
     notes?: string;
 }
@@ -40,7 +41,7 @@ interface RoutePlanUpdate {
 // POST /api/route-plans - Create new route plan
 export async function POST(request: NextRequest) {
     try {
-        await requireAdmin();
+        const adminUser = await requireAdmin(request);
 
         const body = await request.json() as RoutePlanRequest;
         const {
@@ -67,25 +68,29 @@ export async function POST(request: NextRequest) {
 
         const adminClient = getSupabaseAdmin();
 
-        // Get authenticated user
-        const { data: { user } } = await adminClient.auth.getUser();
+        const insertPayload: Database["public"]["Tables"]["route_plans"]["Insert"] = {
+            plan_date: planDate,
+            direction,
+            algorithm_used: algorithmUsed,
+            clustering_used: clusteringUsed,
+            total_vehicles: totalVehicles,
+            total_duration_minutes: totalDurationMinutes,
+            execution_time_seconds: executionTimeSeconds ?? null,
+            routes: routes as Json,
+            student_count: studentCount,
+            notes: notes ?? null,
+            status: "draft",
+            created_by: adminUser.id,
+            driver_assignments: null,
+            updated_at: null,
+            confirmed_at: null,
+            completed_at: null,
+        };
 
         const { data, error } = await adminClient
+            .schema("public")
             .from("route_plans")
-            .insert({
-                plan_date: planDate,
-                direction,
-                algorithm_used: algorithmUsed,
-                clustering_used: clusteringUsed,
-                total_vehicles: totalVehicles,
-                total_duration_minutes: totalDurationMinutes,
-                execution_time_seconds: executionTimeSeconds,
-                routes,
-                student_count: studentCount,
-                notes,
-                status: 'draft',
-                created_by: user?.id,
-            })
+            .insert(insertPayload)
             .select()
             .single();
 
@@ -102,7 +107,7 @@ export async function POST(request: NextRequest) {
 // GET /api/route-plans - List route plans
 export async function GET(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const { searchParams } = new URL(request.url);
         const planDate = searchParams.get("date");
@@ -140,7 +145,7 @@ export async function GET(request: NextRequest) {
 // PATCH /api/route-plans - Update route plan
 export async function PATCH(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const body = await request.json() as RoutePlanUpdate;
         const { id, status, driverAssignments, notes } = body;
@@ -151,7 +156,7 @@ export async function PATCH(request: NextRequest) {
 
         const adminClient = getSupabaseAdmin();
 
-        const dbUpdates: Record<string, unknown> = {
+        const dbUpdates: Database["public"]["Tables"]["route_plans"]["Update"] = {
             updated_at: new Date().toISOString(),
         };
 
@@ -169,13 +174,14 @@ export async function PATCH(request: NextRequest) {
             }
         }
         if (driverAssignments !== undefined) {
-            dbUpdates.driver_assignments = driverAssignments;
+            dbUpdates.driver_assignments = driverAssignments as Json[];
         }
         if (notes !== undefined) {
             dbUpdates.notes = notes;
         }
 
         const { data, error } = await adminClient
+            .schema("public")
             .from("route_plans")
             .update(dbUpdates)
             .eq("id", id)
@@ -195,7 +201,7 @@ export async function PATCH(request: NextRequest) {
 // DELETE /api/route-plans - Delete route plan
 export async function DELETE(request: NextRequest) {
     try {
-        await requireAdmin();
+        await requireAdmin(request);
 
         const { searchParams } = new URL(request.url);
         const id = searchParams.get("id");

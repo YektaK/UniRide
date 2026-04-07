@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import type { Database } from '@/lib/supabase';
 
 // ==================== RATE LIMITING ====================
 // Simple in-memory rate limiter (per IP, 5 requests per minute)
@@ -74,8 +75,9 @@ export async function POST(request: Request) {
             );
         }
 
+        const userWithHint = data as Pick<Database["public"]["Tables"]["users"]["Row"], "password_hint">;
         return NextResponse.json({
-            hint: data.password_hint || "Bu hesap için özel bir ipucu tanımlanmamış."
+            hint: userWithHint.password_hint || "Bu hesap için özel bir ipucu tanımlanmamış."
         }, { status: 200 });
 
     } catch (error) {

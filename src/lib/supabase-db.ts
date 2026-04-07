@@ -13,9 +13,11 @@ import type {
     Route,
 } from "@/types/db";
 import type { ScheduleEntry } from "@/types";
+import type { Database } from "./supabase";
 
 // Helper to get Supabase client
 const getClient = () => getSupabaseClient();
+type DbInsert<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Insert"];
 
 // ==================== HELPERS ====================
 
@@ -139,7 +141,7 @@ export const createUser = async (
         id: userId,
         created_at: now,
         updated_at: now,
-    });
+    }) as DbInsert<"users"> & { id?: string };
 
     // If userId is not provided, let Supabase generate it
     if (!userId) {
@@ -148,7 +150,7 @@ export const createUser = async (
 
     const { data, error } = await getClient()
         .from("users")
-        .insert(dbData)
+        .insert(dbData as never)
         .select()
         .single();
 
@@ -236,13 +238,13 @@ export const createSchedule = async (
         last_updated: now,
         created_at: now,
         updated_at: now,
-    });
+    }) as DbInsert<"weekly_schedules"> & { id?: string };
 
     if (!scheduleId) delete dbData.id;
 
     const { data, error } = await getClient()
         .from("weekly_schedules")
-        .insert(dbData)
+        .insert(dbData as never)
         .select()
         .single();
 
@@ -340,13 +342,13 @@ export const createRideRequest = async (
         id: requestId,
         created_at: now,
         updated_at: now,
-    });
+    }) as DbInsert<"ride_requests"> & { id?: string };
 
     if (!requestId) delete dbData.id;
 
     const { data, error } = await getClient()
         .from("ride_requests")
-        .insert(dbData)
+        .insert(dbData as never)
         .select()
         .single();
 
@@ -426,13 +428,13 @@ export const createVehicle = async (
         id: vehicleId,
         created_at: now,
         updated_at: now,
-    });
+    }) as DbInsert<"vehicles"> & { id?: string };
 
     if (!vehicleId) delete dbData.id;
 
     const { data, error } = await getClient()
         .from("vehicles")
-        .insert(dbData)
+        .insert(dbData as never)
         .select()
         .single();
 
@@ -528,13 +530,13 @@ export const createRouteAssignment = async (
         id,
         created_at: now,
         updated_at: now,
-    });
+    }) as DbInsert<"route_assignments"> & { id?: string };
 
     if (!id) delete dbData.id;
 
     const { data: result, error } = await getClient()
         .from("route_assignments")
-        .insert(dbData)
+        .insert(dbData as never)
         .select()
         .single();
 
@@ -629,13 +631,13 @@ export const createRoute = async (
         ...data,
         id,
         created_at: now,
-    });
+    }) as DbInsert<"routes"> & { id?: string };
 
     if (!id) delete dbData.id;
 
     const { data: result, error } = await getClient()
         .from("routes")
-        .insert(dbData)
+        .insert(dbData as never)
         .select()
         .single();
 

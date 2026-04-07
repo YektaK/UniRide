@@ -31,6 +31,8 @@ import {
 } from "@/lib/algorithm-constants";
 import { optimizeRoutes, type StudentForOptimization, type Depot } from "@/services/optimizer-service";
 
+type AlgorithmType = (typeof ALGORITHM_KEYS)[keyof typeof ALGORITHM_KEYS];
+
 // Lokasyon grupları
 const dKampusAndSwLocations = ALL_LOCATIONS.filter(
     (loc) => loc === "D.Kampus" || loc.startsWith("Sw")
@@ -47,7 +49,7 @@ const DEFAULT_DEPOT: Depot = {
 export default function RouteTestPage() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
-    const [algorithm, setAlgorithm] = useState(ALGORITHM_KEYS.GENETIC_ALGORITHM);
+    const [algorithm, setAlgorithm] = useState<AlgorithmType>(ALGORITHM_KEYS.GENETIC_ALGORITHM);
     const [localSearchType, setLocalSearchType] = useState<LocalSearchType>(LOCAL_SEARCH_KEYS.TWO_OPT);
     const [start, setStart] = useState("D.Kampus");
     const [end, setEnd] = useState("D.Kampus");
@@ -96,7 +98,7 @@ export default function RouteTestPage() {
             }
 
             // Uyarı: Permütasyon için çok fazla nokta
-            if (algorithm === ALGORITHM_KEYS.PERMUTATION_TSP && waypoints.length > 8) {
+            if (normalizeAlgorithmName(algorithm) === ALGORITHM_KEYS.PERMUTATION_TSP && waypoints.length > 8) {
                 toast({
                     title: "Uyarı",
                     description: "Permütasyon stratejisi 8'den fazla nokta için çok yavaş olabilir",
@@ -182,7 +184,7 @@ export default function RouteTestPage() {
                     <div className="grid gap-4 md:grid-cols-4">
                         <div className="space-y-2">
                             <Label>Algoritma</Label>
-                            <Select value={algorithm} onValueChange={setAlgorithm}>
+                            <Select value={algorithm} onValueChange={(value) => setAlgorithm(value as AlgorithmType)}>
                                 <SelectTrigger>
                                     <SelectValue />
                                 </SelectTrigger>

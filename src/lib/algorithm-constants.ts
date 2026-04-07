@@ -250,7 +250,7 @@ export const ALGORITHM_COMPLEXITY: Record<string, string> = {
   [PIPELINE_B_KEYS.HHO_SPLIT]: "O(i × h × n²) + O(n²) Split",
   
   // Holistic
-  [HOLISTIC_KEYS.ORTOOLS_CVRP]: "O(n³)"
+  [HOLISTIC_KEYS.ORTOOLS_CVRP]: "O(n³)",
   [HOLISTIC_KEYS.PYVRP]: "O(n² log n)",
   [HOLISTIC_KEYS.VROOM]: "O(n²)",
   
@@ -483,6 +483,13 @@ export function normalizeAlgorithmName(name: string): string {
 export function getAlgorithmDisplayName(algorithm: string): string {
   const normalized = normalizeAlgorithmName(algorithm);
   return ALGORITHM_DISPLAY_NAMES[normalized] || algorithm;
+}
+
+/**
+ * Get display name for local search type
+ */
+export function getLocalSearchDisplayName(localSearchType: string): string {
+  return LOCAL_SEARCH_DISPLAY_NAMES[localSearchType as LocalSearchType] || localSearchType;
 }
 
 /**

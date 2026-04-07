@@ -33,6 +33,8 @@ const clusteringAlgorithms = [
     { name: "clarke_wright", label: "Clarke-Wright Savings" },
     { name: "k_medoids", label: "K-Medoids (Süre Tabanlı)" },
     { name: "fuzzy_cmeans", label: "Fuzzy C-Means" },
+    { name: "fuzzy_cmeans_enhanced", label: "Enhanced Fuzzy C-Means" },
+    { name: "hierarchical_fcm", label: "Hierarchical FCM (Büyük Veri)" },
     { name: "kmeans", label: "K-Means (Eski)" },
 ];
 

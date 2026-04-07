@@ -75,9 +75,9 @@ export async function POST(request: Request) {
             );
         }
 
-        const userWithHint = data as Database["public"]["Tables"]["users"]["Row"];
+        const userWithHint = data as Pick<Database["public"]["Tables"]["users"]["Row"], "password_hint">;
         return NextResponse.json({
-            hint: userWithHint.passwordHint || "Bu hesap için özel bir ipucu tanımlanmamış."
+            hint: userWithHint.password_hint || "Bu hesap için özel bir ipucu tanımlanmamış."
         }, { status: 200 });
 
     } catch (error) {

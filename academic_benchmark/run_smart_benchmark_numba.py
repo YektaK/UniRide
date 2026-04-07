@@ -50,11 +50,13 @@ try:
         STRATEGIES, 
         run_single_test, 
         print_summary_table,
-        N_RUNS,
         load_all_problems,
         TSPLIB_PROBLEMS,
         NUMBA_AVAILABLE,
     )
+    # N_RUNS default degeri
+    DEFAULT_N_RUNS = 3
+    N_RUNS = DEFAULT_N_RUNS  # Global degisken, kullanicidan alinacak
     USE_V2 = True
     if NUMBA_AVAILABLE:
         print("[INFO] NUMBA JIT ENABLED - 10-50x speedup!")
@@ -68,10 +70,11 @@ except ImportError as e:
             STRATEGIES, 
             run_single_test, 
             print_summary_table,
-            N_RUNS,
             load_all_problems,
             TSPLIB_PROBLEMS
         )
+        DEFAULT_N_RUNS = 3
+        N_RUNS = DEFAULT_N_RUNS
         USE_V2 = True
         NUMBA_AVAILABLE = False
         print("[INFO] Using non-Numba fallback version")
@@ -83,8 +86,12 @@ METADATA_PATH = os.path.join(os.path.dirname(__file__), "benchmark_db", "latest_
 HISTORY_DIR = os.path.join(os.path.dirname(__file__), "benchmark_db", "history")
 
 # Hangi mimari kodların değişimlerini takip edeceğiz?
+# Scriptin bulunduğu dizine göre ayarlanmış yol
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+
 ALGORITHMS_TO_CHECK = {
-    "LocalSearchEngine_NUMBA": "optimizer_api/utils/local_search_numba.py",
+    "LocalSearchEngine_NUMBA": os.path.join(PROJECT_ROOT, "optimizer_api", "utils", "local_search_numba.py"),
 }
 
 # ============================================================
@@ -94,8 +101,90 @@ _shutdown_requested = False
 _current_metadata = None
 _current_results = []
 
-# Multiprocessing için
+# Multiprocessing için - başlangıç değeri, kullanıcı tarafından değiştirilecek
 NUM_WORKERS = min(cpu_count(), 4)
+
+def get_cpu_info() -> dict:
+    """CPU bilgilerini topla ve optimal worker sayısı öner"""
+    import platform
+    
+    try:
+        import psutil
+        physical_cores = psutil.cpu_count(logical=False) or cpu_count()
+        logical_cores = psutil.cpu_count(logical=True) or cpu_count()
+        has_smt = logical_cores > physical_cores
+    except ImportError:
+        physical_cores = cpu_count()
+        logical_cores = cpu_count()
+        has_smt = False
+    
+    # CPU-bound task'ler için optimal worker sayısı
+    # NUMBA JIT ile çalışan kod CPU-intensive olduğu için
+    # fiziksel çekirdek sayısı veya biraz daha az optimal
+    if has_smt:
+        # Hyperthreading/SMT varsa fiziksel çekirdek sayısı optimal
+        recommended = physical_cores
+    else:
+        # Yoksa biraz daha az kullan (sistem için yer aç)
+        recommended = max(1, physical_cores - 1)
+    
+    # Maksimum sınır (aşırı kaynak kullanımını önle)
+    recommended = min(recommended, 16)
+    
+    return {
+        'physical_cores': physical_cores,
+        'logical_cores': logical_cores,
+        'has_smt': has_smt,
+        'recommended_workers': recommended,
+        'platform': platform.processor() or platform.machine()
+    }
+
+def select_worker_count() -> int:
+    """Kullanıcıdan worker sayısını al veya otomatik öner"""
+    cpu_info = get_cpu_info()
+    
+    print("\n" + "="*60)
+    print("[CPU] ISLEMCI BILGILERI")
+    print("="*60)
+    print(f"   Platform      : {cpu_info['platform']}")
+    print(f"   Fiziksel Cekirdek : {cpu_info['physical_cores']}")
+    print(f"   Mantiksal Cekirdek: {cpu_info['logical_cores']}")
+    if cpu_info['has_smt']:
+        print(f"   SMT/Hyperthreading: Aktif")
+    print()
+    
+    recommended = cpu_info['recommended_workers']
+    print(f"[ONERI] Optimal worker sayisi: {recommended}")
+    print("   - CPU-bound islemler icin fiziksel cekirdek sayisi optimal")
+    print("   - NUMBA JIT zaten cok hizli, fazla worker overhead yaratabilir")
+    print()
+    print("[SECIM] Worker sayisi belirleyin:")
+    print(f"   [1] {recommended} (Onerilen - Otomatik)")
+    print(f"   [2] {min(cpu_info['logical_cores'], 8)} (Standart - maks 8)")
+    print(f"   [3] {min(cpu_info['logical_cores'], 12)} (Yuksek performans)")
+    print(f"   [4] {min(cpu_info['logical_cores'], 16)} (Maksimum)")
+    print("   [C] Custom - Kendiniz girin")
+    print(f"   [Enter] Varsayilan: {min(cpu_count(), 4)}")
+    
+    choice = input("\nSeciminiz: ").strip().upper()
+    
+    if choice == '' or choice == '1':
+        return recommended
+    elif choice == '2':
+        return min(cpu_info['logical_cores'], 8)
+    elif choice == '3':
+        return min(cpu_info['logical_cores'], 12)
+    elif choice == '4':
+        return min(cpu_info['logical_cores'], 16)
+    elif choice == 'C':
+        try:
+            custom = int(input(f"   Worker sayisi (1-{cpu_info['logical_cores']}): ").strip())
+            return max(1, min(custom, cpu_info['logical_cores']))
+        except ValueError:
+            print("   Gecersiz giris, onerilen kullanilacak")
+            return recommended
+    else:
+        return min(cpu_count(), 4)
 
 def signal_handler(signum, frame):
     """Ctrl+C ile güvenli çıkış - sonuçları kaydeder"""
@@ -728,6 +817,7 @@ def save_incremental_result(result: Dict, metadata: Dict, problem_name: str, str
         "avg_gap": result["avg_gap"],
         "best_gap": result["best_gap"],
         "avg_time_ms": result["avg_time_ms"],
+        "n_runs": result.get("n_runs", 3),
         "timestamp": datetime.now().isoformat()
     }
     
@@ -752,11 +842,16 @@ def run_single_benchmark_task(args):
     from optimizer_api.tests.run_interactive_benchmark_v2_numba import (
         TSPLIBProblem, 
         run_single_test,
-        N_RUNS
     )
     from optimizer_api.utils.local_search_numba import LocalSearchType
     
-    problem_dict, strat_name, ls_type_value, max_iter, task_id = args
+    # args: (problem_dict, strat_name, ls_type_value, max_iter, task_id, n_runs)
+    if len(args) == 6:
+        problem_dict, strat_name, ls_type_value, max_iter, task_id, n_runs = args
+    else:
+        # Backward compatibility
+        problem_dict, strat_name, ls_type_value, max_iter, task_id = args
+        n_runs = 3
     
     problem = TSPLIBProblem(
         name=problem_dict['name'],
@@ -772,7 +867,7 @@ def run_single_benchmark_task(args):
     start_time = time.time()
     run_avg_results = []
     
-    for run in range(N_RUNS):
+    for run in range(n_runs):
         seed = (run + 1) * 42 + task_id
         result = run_single_test(problem, ls_type, seed, max_iter)
         run_avg_results.append(result)
@@ -798,21 +893,22 @@ def run_single_benchmark_task(args):
         "best_gap": best_gap,
         "avg_time_ms": avg_time,
         "elapsed_ms": elapsed_ms,
-        "n_runs": N_RUNS,
+        "n_runs": n_runs,
         "numba_optimized": True,
     }
 
 
-def run_benchmark_parallel(tasks: List, metadata: Dict, skip_cached: bool, saved_results: Dict, 
-                           progress_callback=None) -> List[Dict]:
-    """Benchmark'i paralel calistir"""
+def run_benchmark_sequential(tasks: List, metadata: Dict, skip_cached: bool, saved_results: Dict,
+                              progress_callback=None) -> List[Dict]:
+    """Benchmark'i sirayla calistir (anlik progress gosterimi icin)"""
     results = []
     completed = 0
     total = len(tasks)
     
     tasks_to_run = []
     for task in tasks:
-        problem_dict, strat_name, _, _, _ = task
+        problem_dict = task[0]
+        strat_name = task[1]
         problem_name = problem_dict['name']
         
         if skip_cached and problem_name in saved_results and strat_name in saved_results[problem_name]:
@@ -830,7 +926,62 @@ def run_benchmark_parallel(tasks: List, metadata: Dict, skip_cached: bool, saved
                 "best_gap": old_data["best_gap"],
                 "avg_time_ms": old_data["avg_time_ms"],
                 "elapsed_ms": 0,
-                "n_runs": N_RUNS,
+                "n_runs": old_data.get("n_runs", 3),
+                "cached": True,
+                "numba_optimized": True,
+            })
+            completed += 1
+            if progress_callback:
+                progress_callback(completed, total, 0, "running", results[-1])
+        else:
+            tasks_to_run.append(task)
+    
+    if progress_callback and tasks_to_run:
+        progress_callback(completed, total, len(tasks_to_run), "starting")
+    
+    for task in tasks_to_run:
+        result = run_single_benchmark_task(task)
+        completed += 1
+        results.append(result)
+        
+        save_incremental_result(result, metadata, result["problem"], result["strategy"])
+        
+        if progress_callback:
+            progress_callback(completed, total, len(tasks_to_run) - (completed - len(tasks_to_run)), "running", result)
+    
+    return results
+
+
+def run_benchmark_parallel(tasks: List, metadata: Dict, skip_cached: bool, saved_results: Dict, 
+                           progress_callback=None) -> List[Dict]:
+    """Benchmark'i paralel calistir"""
+    results = []
+    completed = 0
+    total = len(tasks)
+    
+    tasks_to_run = []
+    for task in tasks:
+        # 6 elemanlı yeni tuple desteği
+        problem_dict = task[0]
+        strat_name = task[1]
+        problem_name = problem_dict['name']
+        
+        if skip_cached and problem_name in saved_results and strat_name in saved_results[problem_name]:
+            old_data = saved_results[problem_name][strat_name]
+            results.append({
+                "task_id": task[4],
+                "problem": problem_name,
+                "dimension": problem_dict['dimension'],
+                "category": problem_dict['category'],
+                "optimal": problem_dict['optimal'],
+                "strategy": strat_name,
+                "avg_length": old_data["avg_length"],
+                "avg_gap": old_data["avg_gap"],
+                "best_length": old_data.get("avg_length", 0),
+                "best_gap": old_data["best_gap"],
+                "avg_time_ms": old_data["avg_time_ms"],
+                "elapsed_ms": 0,
+                "n_runs": old_data.get("n_runs", 3),
                 "cached": True,
                 "numba_optimized": True,
             })
@@ -958,6 +1109,30 @@ def main():
         _current_metadata = metadata
         _current_results = []
         
+        # Calistirma sayisi secimi
+        global N_RUNS
+        print(f"\n[RUNS] CALISTIRMA SAYISI SECIN:")
+        print(f"   Varsayilan: {DEFAULT_N_RUNS}")
+        print("   [3] 3 run (hizli test)")
+        print("   [5] 5 run (standart)")
+        print("   [10] 10 run (detayli)")
+        print("   [Enter] Varsayilan kullan")
+        runs_input = input("\nSeciminiz: ").strip()
+        
+        if runs_input == '':
+            N_RUNS = DEFAULT_N_RUNS
+        elif runs_input.isdigit() and int(runs_input) >= 1:
+            N_RUNS = int(runs_input)
+        else:
+            N_RUNS = DEFAULT_N_RUNS
+        
+        print(f"   -> {N_RUNS} run secildi")
+        
+        # Worker sayisi secimi
+        global NUM_WORKERS
+        NUM_WORKERS = select_worker_count()
+        print(f"\n[OK] {NUM_WORKERS} worker kullanilacak")
+        
         total_tests = len(problems_to_run) * len(strategies_to_run)
         start_time = time.time()
         
@@ -966,6 +1141,7 @@ def main():
         
         print(f"\n[START] TEST BASLIYOR (NUMBA OPTIMIZED)...")
         print(f"   [CONFIG] Paralel worker sayisi: {NUM_WORKERS}")
+        print(f"   [CONFIG] Her problem {N_RUNS} kez calistirilacak")
         if skip_cached:
             print(f"   Toplam: {len(problems_to_run)} problem x {len(strategies_to_run)} algoritma")
             print(f"   Onbellekten atlanacak: {cache_info['cached_count']} test")
@@ -990,21 +1166,36 @@ def main():
             
             for strat_name, ls_type, max_iter in STRATEGIES:
                 if strat_name in strategies_to_run:
-                    tasks.append((problem_dict, strat_name, ls_type.value, max_iter, task_id))
+                    tasks.append((problem_dict, strat_name, ls_type.value, max_iter, task_id, N_RUNS))
                     task_id += 1
         
-        # Progress callback
+        # Progress callback - her sonuc aninda gosterilir
         def progress_callback(completed, total, remaining, status, result=None):
             if status == "starting":
-                print(f"[PROGRESS] {completed}/{total} cached, {remaining} to compute")
+                print(f"[PROGRESS] {completed}/{total} cached, {remaining} to compute", flush=True)
             elif result:
                 sym = "*" if result.get('best_gap', 100) <= 1 else ("+" if result.get('best_gap', 100) <= 5 else "o")
                 cached = "[CACHED]" if result.get('cached') else ""
                 print(f"  [{completed:>3}/{total}] {result['problem']:<12} {result['strategy']:<8} "
-                      f"GAP: {result['best_gap']:>6.2f}% {sym} {result['avg_time_ms']:>7.0f}ms {cached}")
+                      f"GAP: {result['best_gap']:>6.2f}% {sym} {result['avg_time_ms']:>7.0f}ms {cached}", flush=True)
+        
+        # Calistirma modu secimi
+        print("\n[MODE] CALISTIRMA MODU SECIN:")
+        print("   [S] Sirali (Sequential) - Anlik progress gosterimi (onerilen)")
+        print("   [P] Paralel - Daha hizli ama toplu sonuc")
+        mode_choice = input("\nSeciminiz [S/P]: ").strip().upper()
+        use_sequential = mode_choice != 'P'
+        
+        if use_sequential:
+            print("\n[MODE] Sirali mod secildi - her sonuc aninda gorunecek")
+        else:
+            print(f"\n[MODE] Paralel mod secildi - {NUM_WORKERS} worker")
         
         # Run benchmark
-        results = run_benchmark_parallel(tasks, metadata, skip_cached, saved_results, progress_callback)
+        if use_sequential:
+            results = run_benchmark_sequential(tasks, metadata, skip_cached, saved_results, progress_callback)
+        else:
+            results = run_benchmark_parallel(tasks, metadata, skip_cached, saved_results, progress_callback)
         
         # Save final results
         _current_results = results

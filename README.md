@@ -63,6 +63,8 @@ OPTIMIZER_API_URL=http://127.0.0.1:8000
 NEXT_PUBLIC_OPTIMIZER_API_URL=http://127.0.0.1:8000
 ```
 
+> `your-project-id` yerine Supabase proje ayarlarında görünen gerçek proje kimliğini yazın.
+
 ### 3) Python optimizasyon servisi
 
 ```bash
@@ -102,7 +104,7 @@ Supabase tarafında ilgili SQL dosyalarını sırasıyla uygulayın:
 | `npm run dev` | Geliştirme sunucusu (Turbopack, port 9002) | ✅ |
 | `npm run build` | Production build | ✅ (ağ kısıtlarında font fetch hatası görülebilir) |
 | `npm run start` | Production sunucusu | ✅ (`build` sonrası) |
-| `npm run typecheck` | TypeScript tip kontrolü | ⚠️ repoda mevcut baseline hata var |
+| `npm run typecheck` | TypeScript tip kontrolü | ⚠️ repo'da mevcut baseline hata var |
 | `npm run test` | Vitest | ⚠️ test dosyası yoksa başarısız döner |
 | `npm run lint` | Next.js lint komutu | ⚠️ mevcut script bu ortamda hataya düşebiliyor |
 

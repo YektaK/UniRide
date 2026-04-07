@@ -11,7 +11,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { AppError, getCurrentUserFromRequest } from "@/lib/admin-auth";
-import type { Database } from "@/lib/supabase";
 
 const rideConfirmationSchema = z.object({
     action: z.enum(["confirm", "cancel", "change"], {
@@ -78,7 +77,7 @@ export async function POST(request: NextRequest) {
             throw findError;
         }
 
-        const existingRide = existingRideRaw as Database["public"]["Tables"]["ride_requests"]["Row"] | null;
+        const existingRide = existingRideRaw as { id: string; notes: string | null } | null;
         let result;
         if (existingRide) {
             // Update existing ride
@@ -104,7 +103,7 @@ export async function POST(request: NextRequest) {
                 .single();
 
             if (userError) throw userError;
-            const userData = userDataRaw as Pick<Database["public"]["Tables"]["users"]["Row"], "homeAddress" | "homeCoordinates"> | null;
+            const userData = userDataRaw as { home_address: string | null; home_coordinates: unknown } | null;
 
             const { data, error } = await adminClient
                 .from("ride_requests")
@@ -115,8 +114,8 @@ export async function POST(request: NextRequest) {
                     requested_pickup_time: `${rideDate}T${pickupTime ?? "08:00"}:00`,
                     requested_dropoff_time: `${rideDate}T${dropoffTime ?? "17:00"}:00`,
                     pickup_location: {
-                        address: userData?.homeAddress ?? "Ev Adresi",
-                        coordinates: userData?.homeCoordinates,
+                        address: userData?.home_address ?? "Ev Adresi",
+                        coordinates: userData?.home_coordinates,
                     },
                     dropoff_location: {
                         address: "Yıldız Teknik Üniversitesi Davutpaşa Kampüsü",

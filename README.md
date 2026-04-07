@@ -53,7 +53,7 @@ npm install --legacy-peer-deps
 Kök dizinde `.env.local` oluşturun:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://<your-project-id>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
 SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 
@@ -103,8 +103,8 @@ Supabase tarafında ilgili SQL dosyalarını sırasıyla uygulayın:
 | `npm run build` | Production build |
 | `npm run start` | Production sunucusu |
 | `npm run typecheck` | TypeScript tip kontrolü |
-| `npm run test` | Vitest |
-| `npm run lint` | Next.js lint komutu |
+| `npm run test` | Vitest (⚠️ test dosyası yoksa başarısız döner) |
+| `npm run lint` | Next.js lint komutu (⚠️ mevcut script bu ortamda hataya düşebiliyor) |
 
 ## Optimizer API Uç Noktaları
 

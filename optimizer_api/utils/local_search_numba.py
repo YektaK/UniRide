@@ -914,12 +914,16 @@ class HybridLocalSearch(BaseLocalSearch):
     
     Applies multiple local search methods in sequence.
     Uses Numba-optimized implementations for each method.
+    
+    UPDATED (2024-04):
+        - Changed to cycle-based approach (max_iterations = number of cycles)
+        - Updated internal iteration limits for better performance
     """
 
     def __init__(
         self,
         methods: Optional[List[LocalSearchType]] = None,
-        max_iterations: int = 100,
+        max_iterations: int = 5,  # Now represents number of cycles
         use_random_order: bool = False,
         include_cross_exchange: bool = True,
         include_time_window: bool = True
@@ -964,14 +968,18 @@ class HybridLocalSearch(BaseLocalSearch):
         if self.use_random_order:
             self.rng.shuffle(methods)
 
-        # Iteration limits per method
+        # ============================================================
+        # UPDATED ITERATION LIMITS PER METHOD (2024-04)
+        # ============================================================
+        # Increased limits for better quality, especially for Swap
+        # ============================================================
         iteration_limits = {
-            LocalSearchType.SWAP: 30,
-            LocalSearchType.TWO_OPT: 40,
-            LocalSearchType.OR_OPT: 30,
-            LocalSearchType.CROSS_EXCHANGE: 20,
-            LocalSearchType.THREE_OPT: 15,
-            LocalSearchType.TIME_WINDOW_AWARE: 25,
+            LocalSearchType.SWAP: 100,           # Increased from 30
+            LocalSearchType.TWO_OPT: 80,         # Increased from 40
+            LocalSearchType.OR_OPT: 60,          # Increased from 30
+            LocalSearchType.CROSS_EXCHANGE: 40,  # Increased from 20
+            LocalSearchType.THREE_OPT: 25,       # Increased from 15
+            LocalSearchType.TIME_WINDOW_AWARE: 50,  # Increased from 25
         }
 
         for iteration in range(self.max_iterations):
@@ -1114,21 +1122,3 @@ def improve_route_numba(
         return best_route, best_length
     else:
         return _two_opt_improve_numba(route, dist_matrix, max_iterations, False)
-
-
-# Export all classes and functions
-__all__ = [
-    'LocalSearchType',
-    'BaseLocalSearch',
-    'TwoOptLocalSearch',
-    'ThreeOptLocalSearch',
-    'OrOptLocalSearch',
-    'SwapLocalSearch',
-    'CrossExchangeLocalSearch',
-    'TimeWindowAwareLocalSearch',
-    'HybridLocalSearch',
-    'get_local_search',
-    'apply_local_search',
-    'improve_route_numba',
-    'NUMBA_AVAILABLE',
-]

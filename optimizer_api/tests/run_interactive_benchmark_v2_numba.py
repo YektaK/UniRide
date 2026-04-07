@@ -59,13 +59,22 @@ TSPLIB_BASE_URL = "https://raw.githubusercontent.com/mastqe/tsplib/master/"
 # Number of runs per problem
 N_RUNS = 3
 
-# Strategies to test (same as original)
+# ============================================================
+# STRATEGIES - UPDATED ITERATION COUNTS (2024-04)
+# ============================================================
+# Changes made:
+#   - 2-opt: 1000 -> 2000 (better quality)
+#   - 3-opt: 500 -> 200 (reduced for speed, O(n³) complexity)
+#   - Or-opt: 500 -> 1000 (better quality)
+#   - Swap: 1000 -> 5000 (compensate for weak performance)
+#   - Hybrid: 100 -> 5 (cycle-based, 5 cycles sufficient)
+# ============================================================
 STRATEGIES = [
-    ("2-opt", LocalSearchType.TWO_OPT, 1000),
-    ("3-opt", LocalSearchType.THREE_OPT, 500),
-    ("Or-opt", LocalSearchType.OR_OPT, 500),
-    ("Swap", LocalSearchType.SWAP, 1000),
-    ("Hybrid", LocalSearchType.HYBRID, 100),
+    ("2-opt", LocalSearchType.TWO_OPT, 2000),    # +1000 iterations
+    ("3-opt", LocalSearchType.THREE_OPT, 200),   # -300 iterations (speed)
+    ("Or-opt", LocalSearchType.OR_OPT, 1000),    # +500 iterations
+    ("Swap", LocalSearchType.SWAP, 5000),        # +4000 iterations
+    ("Hybrid", LocalSearchType.HYBRID, 5),       # Cycle-based (5 cycles)
 ]
 
 

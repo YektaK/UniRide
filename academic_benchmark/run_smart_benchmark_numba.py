@@ -33,7 +33,7 @@ import signal
 import time
 import csv
 from datetime import datetime
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Any
 from multiprocessing import Pool, cpu_count, Manager
 import threading
 
@@ -41,7 +41,7 @@ import threading
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "optimizer_api")))
 
-from academic_benchmark.utils_benchmark import get_latest_metadata, save_metadata, check_algorithms_status
+from academic_benchmark.utils_benchmark import get_latest_metadata, save_metadata, check_algorithms_status, get_file_hash
 from academic_benchmark.dataset_loader import BenchmarkDatasetLoader
 
 # NUMBA OPTIMIZED v2 kullan
@@ -92,6 +92,11 @@ PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 
 ALGORITHMS_TO_CHECK = {
     "LocalSearchEngine_NUMBA": os.path.join(PROJECT_ROOT, "optimizer_api", "utils", "local_search_numba.py"),
+    "BenchmarkRunner_NUMBA": os.path.join(PROJECT_ROOT, "optimizer_api", "tests", "run_interactive_benchmark_v2_numba.py"),
+    "GA_Strategy": os.path.join(PROJECT_ROOT, "optimizer_api", "strategies", "ga_strategy.py"),
+    "PSO_Strategy": os.path.join(PROJECT_ROOT, "optimizer_api", "strategies", "pso_strategy.py"),
+    "GWO_Strategy": os.path.join(PROJECT_ROOT, "optimizer_api", "strategies", "gwo_strategy.py"),
+    "HHO_Strategy": os.path.join(PROJECT_ROOT, "optimizer_api", "strategies", "hho_strategy.py"),
 }
 
 # ============================================================
@@ -239,6 +244,35 @@ def format_time(seconds: float) -> str:
         hours = int(seconds // 3600)
         minutes = int((seconds % 3600) // 60)
         return f"{hours}sa {minutes}dk"
+
+
+def update_algorithm_hashes(metadata: Dict[str, Any]):
+    """Track current algorithm hashes with backward compatibility fields."""
+    hashes = {}
+    for algo_name, filepath in ALGORITHMS_TO_CHECK.items():
+        if os.path.exists(filepath):
+            hashes[algo_name] = get_file_hash(filepath)
+    metadata["algorithm_hashes"] = hashes
+    metadata["file_hashes"] = hashes
+
+
+def get_algorithm_type(strat_name: str, params: Optional[Dict[str, Any]] = None) -> str:
+    if params and "algorithm_type" in params:
+        return str(params["algorithm_type"])
+    if strat_name in {"GA", "PSO", "GWO", "HHO"}:
+        return "meta_heuristic"
+    return "local_search"
+
+
+def normalize_strategy_entry(entry: Tuple[Any, ...]) -> Tuple[str, Any, Dict[str, Any]]:
+    """Normalize strategy tuple from benchmark module."""
+    if len(entry) < 2:
+        raise ValueError(f"Invalid strategy entry: {entry}")
+    if len(entry) >= 3 and isinstance(entry[2], dict):
+        return entry[0], entry[1], entry[2].copy()
+    # Backward compatibility: (name, LocalSearchType, max_iterations)
+    max_iterations = entry[2] if len(entry) > 2 else 1000
+    return entry[0], entry[1], {"max_iterations": int(max_iterations), "algorithm_type": "local_search"}
 
 # ============================================================
 # SÜRE ÖLÇÜM VE TAHMİN SİSTEMİ (Numba için optimize edilmiş)
@@ -420,43 +454,84 @@ def print_problem_detail(problem, p_res: Dict, all_strat_names: List[str]):
 ALGORITHM_INFO = {
     "2-opt": {
         "name": "2-opt",
+        "type": "local_search",
         "description": "Klasik kenar degistirme algoritmasi (NUMBA)",
         "complexity": "O(n^2)",
         "best_for": "Orta buyuklukte problemler, hizli sonuc",
         "how_it_works": "Tur uzerindeki iki kenari kaldirir, yeni iki kenar ekleyerek turu iyilestirir",
-        "iterations": 1000,
+        "iterations": 2000,
     },
     "3-opt": {
         "name": "3-opt",
+        "type": "local_search",
         "description": "Uc kenar degistirme, yuksek kalite (NUMBA)",
         "complexity": "O(n^3)",
         "best_for": "Yuksek kalite cozum, zaman kritik degilse",
         "how_it_works": "Tur uzerindeki uc kenari kaldirir, 7 farkli yeniden baglantiyi dener",
-        "iterations": 500,
+        "iterations": 200,
     },
     "Or-opt": {
         "name": "Or-opt",
+        "type": "local_search",
         "description": "Segment relocation (1-3 dugum tasima) (NUMBA)",
         "complexity": "O(n^2)",
         "best_for": "Kumelenmis dugumler, 2-opt sonrasi fine-tuning",
         "how_it_works": "1-3 dugumluk segmenti turun baska bir noktasina tasir",
-        "iterations": 500,
+        "iterations": 1000,
     },
     "Swap": {
         "name": "Swap",
+        "type": "local_search",
         "description": "Iki dugum yer degistirme (NUMBA)",
         "complexity": "O(n^2)",
         "best_for": "Hizli fine-tuning, basit problemler",
         "how_it_works": "Tur uzerindeki iki dugumun yerini degistirir",
-        "iterations": 1000,
+        "iterations": 5000,
     },
     "Hybrid": {
         "name": "Hybrid",
+        "type": "local_search",
         "description": "Tum algoritmalarin kombinasyonu (NUMBA)",
         "complexity": "O(n^3)",
         "best_for": "En iyi kalite, orta/buyuk problemler",
         "how_it_works": "Sirayla 2-opt -> Or-opt -> 3-opt uygular",
-        "iterations": 100,
+        "iterations": 5,
+    },
+    "GA": {
+        "name": "GA",
+        "type": "meta_heuristic",
+        "description": "Genetic Algorithm",
+        "complexity": "O(pop x gen x n)",
+        "best_for": "Global arama, farkli rota adaylari",
+        "how_it_works": "Populasyon tabanli secilim, caprazlama ve mutasyon",
+        "parameters": "pop_size=50, generations=100",
+    },
+    "PSO": {
+        "name": "PSO",
+        "type": "meta_heuristic",
+        "description": "Particle Swarm Optimization",
+        "complexity": "O(swarm x iter x n)",
+        "best_for": "Hizli yakinlama ve denge",
+        "how_it_works": "Parcaciklar pbest/gbest'e yonelerek permutasyon gunceller",
+        "parameters": "swarm_size=30, iterations=100",
+    },
+    "GWO": {
+        "name": "GWO",
+        "type": "meta_heuristic",
+        "description": "Grey Wolf Optimizer",
+        "complexity": "O(pack x iter x n)",
+        "best_for": "Kesif/somuru dengesi",
+        "how_it_works": "Alpha/Beta/Delta rehberliginde rota iyilestirme",
+        "parameters": "pack_size=30, iterations=100",
+    },
+    "HHO": {
+        "name": "HHO",
+        "type": "meta_heuristic",
+        "description": "Harris Hawks Optimization",
+        "complexity": "O(hawks x iter x n)",
+        "best_for": "Saldiri-kacis tabanli adaptif arama",
+        "how_it_works": "Enerji modeline gore yakinlasma ve rastgele ataklar",
+        "parameters": "hawks=30, iterations=100",
     },
 }
 
@@ -469,11 +544,20 @@ def show_algorithms_info():
     
     print("\n[LOC] LOCAL SEARCH ALGORITMALARI:")
     print("-" * 70)
-    print(f"{'Algoritma':<10} | {'Karmasiklik':<10} | {'Aciklama'}")
+    print(f"{'Algoritma':<10} | {'Tur':<14} | {'Karmasiklik':<16} | {'Aciklama'}")
     print("-" * 70)
     
     for key, info in ALGORITHM_INFO.items():
-        print(f"{key:<10} | {info['complexity']:<10} | {info['description']}")
+        if info.get("type") == "local_search":
+            print(f"{key:<10} | {info.get('type', '-'):<14} | {info['complexity']:<16} | {info['description']}")
+
+    print("\n[META] META-HEURISTIC ALGORITMALARI:")
+    print("-" * 70)
+    print(f"{'Algoritma':<10} | {'Tur':<14} | {'Karmasiklik':<16} | {'Aciklama'}")
+    print("-" * 70)
+    for key, info in ALGORITHM_INFO.items():
+        if info.get("type") == "meta_heuristic":
+            print(f"{key:<10} | {info.get('type', '-'):<14} | {info['complexity']:<16} | {info['description']}")
     
     print("\n" + "=" * 70)
     print("DETAYLI BILGI")
@@ -481,11 +565,15 @@ def show_algorithms_info():
     
     for key, info in ALGORITHM_INFO.items():
         print(f"\n[{info['name']}]")
+        print(f"  [TYPE] Tur: {info.get('type', '-')}")
         print(f"  [INFO] Aciklama: {info['description']}")
         print(f"  [TIME] Karmasiklik: {info['complexity']}")
         print(f"  [TARGET] En Iyi Kullanim: {info['best_for']}")
         print(f"  [CONFIG] Calisma Sekli: {info['how_it_works']}")
-        print(f"  [NUM] Varsayilan Iterasyon: {info['iterations']}")
+        if "iterations" in info:
+            print(f"  [NUM] Varsayilan Iterasyon: {info['iterations']}")
+        if "parameters" in info:
+            print(f"  [PARAM] Varsayilan Parametreler: {info['parameters']}")
     
     print("\n" + "-" * 70)
     print("[TIP] IPUCULAR:")
@@ -503,6 +591,7 @@ def show_algorithms_info():
     print("  * Or-opt: Genellikle %2-8 arasi")
     print("  * Swap: Genellikle %5-15 arasi")
     print("  * Hybrid: Genellikle %0.5-3 arasi (en iyi)")
+    print("  * GA/PSO/GWO/HHO: Problem boyutuna gore genelde %1-6 arasi")
     
     input("\n\nDevam etmek icin Enter'a basin...")
 
@@ -617,36 +706,44 @@ def multi_select_algorithms(all_strat_names: List[str]) -> List[str]:
     print("ALGORITMA SECIMI")
     print("=" * 70)
     print("Test etmek istediginiz algoritmalari secin.")
-    print("Secim: numara (1,3,5) veya 'all' tumu icin.")
+    print("Secim: numara (1,3,5), isim (GA,Hybrid), veya karisik (1,GA).")
     print("-" * 70)
     
+    algo_map = {}
     for idx, name in enumerate(all_strat_names, 1):
         info = ALGORITHM_INFO.get(name, {})
         complexity = info.get('complexity', '?')
-        print(f"  {idx:>2}. {name:<10} [{complexity}]")
+        algo_type = info.get('type', '?')
+        print(f"  {idx:>2}. {name:<10} [{algo_type:<14}] [{complexity}]")
+        algo_map[str(idx)] = name
+        algo_map[name.lower()] = name
     
     print("\n" + "-" * 70)
+    print("Alias: all | local | meta (sota alias'i da meta gibi davranir)")
     print("Seciminiz: ", end="")
     user_input = input().strip().lower()
     
-    selected = []
-    
-    if user_input == 'all' or user_input == 'tum' or user_input == 'tüm':
+    if user_input in {'all', 'tum', 'tüm'}:
         return all_strat_names[:]
+    if user_input in {'local', 'ls'}:
+        return [n for n in all_strat_names if get_algorithm_type(n, ALGORITHM_INFO.get(n, {})) == "local_search"]
+    if user_input in {'meta', 'sota'}:
+        return [n for n in all_strat_names if get_algorithm_type(n, ALGORITHM_INFO.get(n, {})) == "meta_heuristic"]
     
+    selected = []
     try:
         parts = user_input.replace(' ', '').split(',')
         for part in parts:
             if '-' in part:
                 start, end = part.split('-')
                 for i in range(int(start), int(end) + 1):
-                    if 1 <= i <= len(all_strat_names):
-                        selected.append(all_strat_names[i - 1])
+                    key = str(i)
+                    if key in algo_map:
+                        selected.append(algo_map[key])
             else:
-                i = int(part)
-                if 1 <= i <= len(all_strat_names):
-                    selected.append(all_strat_names[i - 1])
-    except (ValueError, IndexError):
+                if part in algo_map:
+                    selected.append(algo_map[part])
+    except (ValueError, IndexError, KeyError):
         print("Gecersiz secim!")
         return []
     
@@ -818,10 +915,13 @@ def save_incremental_result(result: Dict, metadata: Dict, problem_name: str, str
         "best_gap": result["best_gap"],
         "avg_time_ms": result["avg_time_ms"],
         "n_runs": result.get("n_runs", 3),
+        "algorithm_type": result.get("algorithm_type", get_algorithm_type(strat_name)),
         "timestamp": datetime.now().isoformat()
     }
     
     metadata["results"] = saved_results
+    metadata["last_updated"] = datetime.now().isoformat()
+    update_algorithm_hashes(metadata)
     save_metadata(METADATA_PATH, metadata)
 
 
@@ -845,12 +945,18 @@ def run_single_benchmark_task(args):
     )
     from optimizer_api.utils.local_search_numba import LocalSearchType
     
-    # args: (problem_dict, strat_name, ls_type_value, max_iter, task_id, n_runs)
+    # args: (problem_dict, strat_name, strategy_payload, strategy_params, task_id, n_runs)
     if len(args) == 6:
-        problem_dict, strat_name, ls_type_value, max_iter, task_id, n_runs = args
+        problem_dict, strat_name, strategy_payload, strategy_params, task_id, n_runs = args
+        if isinstance(strategy_params, int):
+            strategy_params = {"max_iterations": strategy_params, "algorithm_type": "local_search"}
+        elif not isinstance(strategy_params, dict):
+            strategy_params = {"algorithm_type": get_algorithm_type(strat_name)}
     else:
         # Backward compatibility
         problem_dict, strat_name, ls_type_value, max_iter, task_id = args
+        strategy_payload = {"kind": "local_search", "value": ls_type_value}
+        strategy_params = {"max_iterations": int(max_iter), "algorithm_type": "local_search"}
         n_runs = 3
     
     problem = TSPLIBProblem(
@@ -862,14 +968,21 @@ def run_single_benchmark_task(args):
         source=problem_dict.get('source', 'tsplib')
     )
     
-    ls_type = LocalSearchType(ls_type_value)
+    if isinstance(strategy_payload, dict):
+        if strategy_payload.get("kind") == "local_search":
+            strategy_instance = LocalSearchType(strategy_payload["value"])
+        else:
+            strategy_instance = strategy_payload.get("value")
+    else:
+        strategy_instance = LocalSearchType(strategy_payload)
+    algorithm_type = strategy_params.get("algorithm_type", get_algorithm_type(strat_name))
     
     start_time = time.time()
     run_avg_results = []
     
     for run in range(n_runs):
         seed = (run + 1) * 42 + task_id
-        result = run_single_test(problem, ls_type, seed, max_iter)
+        result = run_single_test(problem, strategy_instance, seed, strategy_params)
         run_avg_results.append(result)
     
     elapsed_ms = (time.time() - start_time) * 1000
@@ -894,6 +1007,7 @@ def run_single_benchmark_task(args):
         "avg_time_ms": avg_time,
         "elapsed_ms": elapsed_ms,
         "n_runs": n_runs,
+        "algorithm_type": run_avg_results[0].get("algorithm_type", algorithm_type),
         "numba_optimized": True,
     }
 
@@ -927,6 +1041,7 @@ def run_benchmark_sequential(tasks: List, metadata: Dict, skip_cached: bool, sav
                 "avg_time_ms": old_data["avg_time_ms"],
                 "elapsed_ms": 0,
                 "n_runs": old_data.get("n_runs", 3),
+                "algorithm_type": old_data.get("algorithm_type", get_algorithm_type(strat_name)),
                 "cached": True,
                 "numba_optimized": True,
             })
@@ -982,6 +1097,7 @@ def run_benchmark_parallel(tasks: List, metadata: Dict, skip_cached: bool, saved
                 "avg_time_ms": old_data["avg_time_ms"],
                 "elapsed_ms": 0,
                 "n_runs": old_data.get("n_runs", 3),
+                "algorithm_type": old_data.get("algorithm_type", get_algorithm_type(strat_name)),
                 "cached": True,
                 "numba_optimized": True,
             })
@@ -1164,9 +1280,14 @@ def main():
                 'source': problem.source,
             }
             
-            for strat_name, ls_type, max_iter in STRATEGIES:
+            for strategy_entry in STRATEGIES:
+                strat_name, strategy_instance, strategy_params = normalize_strategy_entry(strategy_entry)
                 if strat_name in strategies_to_run:
-                    tasks.append((problem_dict, strat_name, ls_type.value, max_iter, task_id, N_RUNS))
+                    if hasattr(strategy_instance, "value"):
+                        strategy_payload = {"kind": "local_search", "value": strategy_instance.value}
+                    else:
+                        strategy_payload = {"kind": "meta_heuristic", "value": str(strategy_instance)}
+                    tasks.append((problem_dict, strat_name, strategy_payload, strategy_params, task_id, N_RUNS))
                     task_id += 1
         
         # Progress callback - her sonuc aninda gosterilir

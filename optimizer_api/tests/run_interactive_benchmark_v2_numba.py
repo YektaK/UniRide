@@ -27,7 +27,7 @@ import math
 import random
 import re
 from datetime import datetime
-from typing import List, Dict, Tuple, Callable, Optional
+from typing import List, Dict, Tuple, Callable, Optional, Any, Union
 from dataclasses import dataclass, asdict
 from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
@@ -60,22 +60,28 @@ TSPLIB_BASE_URL = "https://raw.githubusercontent.com/mastqe/tsplib/master/"
 N_RUNS = 3
 
 # ============================================================
-# STRATEGIES - UPDATED ITERATION COUNTS (2024-04)
+# STRATEGIES - Local Search + Meta-Heuristic
 # ============================================================
-# Changes made:
-#   - 2-opt: 1000 -> 2000 (better quality)
-#   - 3-opt: 500 -> 200 (reduced for speed, O(n³) complexity)
-#   - Or-opt: 500 -> 1000 (better quality)
-#   - Swap: 1000 -> 5000 (compensate for weak performance)
-#   - Hybrid: 100 -> 5 (cycle-based, 5 cycles sufficient)
-# ============================================================
-STRATEGIES = [
-    ("2-opt", LocalSearchType.TWO_OPT, 2000),    # +1000 iterations
-    ("3-opt", LocalSearchType.THREE_OPT, 200),   # -300 iterations (speed)
-    ("Or-opt", LocalSearchType.OR_OPT, 1000),    # +500 iterations
-    ("Swap", LocalSearchType.SWAP, 5000),        # +4000 iterations
-    ("Hybrid", LocalSearchType.HYBRID, 5),       # Cycle-based (5 cycles)
+LOCAL_SEARCH_STRATEGIES = [
+    ("2-opt", LocalSearchType.TWO_OPT, {"max_iterations": 2000, "algorithm_type": "local_search"}),
+    ("3-opt", LocalSearchType.THREE_OPT, {"max_iterations": 200, "algorithm_type": "local_search"}),
+    ("Or-opt", LocalSearchType.OR_OPT, {"max_iterations": 1000, "algorithm_type": "local_search"}),
+    ("Swap", LocalSearchType.SWAP, {"max_iterations": 5000, "algorithm_type": "local_search"}),
+    ("Hybrid", LocalSearchType.HYBRID, {"max_iterations": 5, "algorithm_type": "local_search"}),
 ]
+
+META_HEURISTIC_STRATEGIES = [
+    ("GA", "GA", {"pop_size": 50, "generations": 100, "mutation_rate": 0.1, "elite_size": 4, "algorithm_type": "meta_heuristic"}),
+    ("PSO", "PSO", {"swarm_size": 30, "iterations": 100, "w": 0.7, "c1": 1.5, "c2": 1.5, "algorithm_type": "meta_heuristic"}),
+    ("GWO", "GWO", {"pack_size": 30, "iterations": 100, "algorithm_type": "meta_heuristic"}),
+    ("HHO", "HHO", {"hawks": 30, "iterations": 100, "algorithm_type": "meta_heuristic"}),
+]
+
+STRATEGIES = LOCAL_SEARCH_STRATEGIES + META_HEURISTIC_STRATEGIES
+
+# Discrete-move scaling for permutation update operators.
+# We keep only a small portion of swaps per step to avoid route destruction.
+MOVE_SCALE = 0.1
 
 
 # ============================================================
@@ -349,19 +355,219 @@ def convert_route_to_indices(route: List[str]) -> List[int]:
     return [int(loc[1:]) for loc in route]
 
 
+def _route_cost(route: List[str], duration_func: Callable[[List[str]], float]) -> float:
+    return duration_func(route)
+
+
+def _random_swap(route: List[str], rng: random.Random) -> List[str]:
+    if len(route) < 2:
+        return route[:]
+    i, j = rng.sample(range(len(route)), 2)
+    r = route[:]
+    r[i], r[j] = r[j], r[i]
+    return r
+
+
+def _ordered_crossover(parent_a: List[str], parent_b: List[str], rng: random.Random) -> List[str]:
+    n = len(parent_a)
+    i, j = sorted(rng.sample(range(n), 2))
+    child = [None] * n
+    child[i:j] = parent_a[i:j]
+    child_set = set(child[i:j])
+    fill = [g for g in parent_b if g not in child_set]
+    k = 0
+    for idx in range(n):
+        if child[idx] is None:
+            child[idx] = fill[k]
+            k += 1
+    return child
+
+
+def _run_ga(initial_route: List[str], duration_func: Callable[[List[str]], float], params: Dict[str, Any], seed: int) -> List[str]:
+    rng = random.Random(seed)
+    pop_size = int(params.get("pop_size", 50))
+    generations = int(params.get("generations", 100))
+    mutation_rate = float(params.get("mutation_rate", 0.1))
+    elite_size = max(1, int(params.get("elite_size", 4)))
+
+    population = []
+    for _ in range(pop_size):
+        candidate = initial_route[:]
+        rng.shuffle(candidate)
+        population.append(candidate)
+
+    for _ in range(generations):
+        scored = sorted(((route, _route_cost(route, duration_func)) for route in population), key=lambda x: x[1])
+        elites = [r[:] for r, _ in scored[:elite_size]]
+        next_pop = elites[:]
+
+        while len(next_pop) < pop_size:
+            parent_a = rng.choice(scored[: max(2, pop_size // 2)])[0]
+            parent_b = rng.choice(scored[: max(2, pop_size // 2)])[0]
+            child = _ordered_crossover(parent_a, parent_b, rng)
+            if rng.random() < mutation_rate:
+                child = _random_swap(child, rng)
+            next_pop.append(child)
+
+        population = next_pop
+
+    return min(population, key=lambda r: _route_cost(r, duration_func))
+
+
+def _towards_route(current: List[str], target: List[str], rng: random.Random, strength: float = 0.5) -> List[str]:
+    if not current:
+        return current[:]
+    route = current[:]
+    index_of = {v: i for i, v in enumerate(route)}
+    # MOVE_SCALE limits per-step disruption so we keep guided convergence stable.
+    moves = max(1, int(len(route) * strength * MOVE_SCALE))
+    target_index = {gene: idx for idx, gene in enumerate(target)}
+    for _ in range(moves):
+        gene = rng.choice(target)
+        target_idx = target_index[gene]
+        curr_idx = index_of.get(gene, target_idx)
+        if curr_idx != target_idx:
+            swap_gene = route[target_idx]
+            route[curr_idx], route[target_idx] = route[target_idx], route[curr_idx]
+            index_of[gene] = target_idx
+            index_of[swap_gene] = curr_idx
+    return route
+
+
+def _run_pso(initial_route: List[str], duration_func: Callable[[List[str]], float], params: Dict[str, Any], seed: int) -> List[str]:
+    rng = random.Random(seed)
+    swarm_size = int(params.get("swarm_size", 30))
+    iterations = int(params.get("iterations", 100))
+    w = float(params.get("w", 0.7))
+    c1 = float(params.get("c1", 1.5))
+    c2 = float(params.get("c2", 1.5))
+
+    swarm = []
+    for _ in range(swarm_size):
+        route = initial_route[:]
+        rng.shuffle(route)
+        swarm.append({"route": route, "best": route[:], "best_cost": _route_cost(route, duration_func)})
+
+    gbest = min(swarm, key=lambda p: p["best_cost"])["best"][:]
+
+    for _ in range(iterations):
+        for particle in swarm:
+            route = particle["route"][:]
+            if rng.random() < w:
+                route = _random_swap(route, rng)
+            if rng.random() < min(1.0, c1 / 2.0):
+                route = _towards_route(route, particle["best"], rng, strength=c1)
+            if rng.random() < min(1.0, c2 / 2.0):
+                route = _towards_route(route, gbest, rng, strength=c2)
+
+            cost = _route_cost(route, duration_func)
+            particle["route"] = route
+            if cost < particle["best_cost"]:
+                particle["best"] = route[:]
+                particle["best_cost"] = cost
+
+        gbest = min(swarm, key=lambda p: p["best_cost"])["best"][:]
+
+    return gbest
+
+
+def _run_gwo(initial_route: List[str], duration_func: Callable[[List[str]], float], params: Dict[str, Any], seed: int) -> List[str]:
+    rng = random.Random(seed)
+    pack_size = max(3, int(params.get("pack_size", 30)))
+    iterations = int(params.get("iterations", 100))
+
+    pack = []
+    for _ in range(pack_size):
+        route = initial_route[:]
+        rng.shuffle(route)
+        pack.append(route)
+
+    for _ in range(iterations):
+        scored = sorted(((r, _route_cost(r, duration_func)) for r in pack), key=lambda x: x[1])
+        alpha = scored[0][0]
+        beta = scored[min(1, len(scored) - 1)][0]
+        delta = scored[min(2, len(scored) - 1)][0]
+
+        new_pack = [alpha[:], beta[:], delta[:]]
+        while len(new_pack) < pack_size:
+            base = rng.choice(pack)
+            r = _towards_route(base, alpha, rng, strength=0.9)
+            r = _towards_route(r, beta, rng, strength=0.6)
+            r = _towards_route(r, delta, rng, strength=0.4)
+            if rng.random() < 0.4:
+                r = _random_swap(r, rng)
+            new_pack.append(r)
+        pack = new_pack
+
+    return min(pack, key=lambda r: _route_cost(r, duration_func))
+
+
+def _run_hho(initial_route: List[str], duration_func: Callable[[List[str]], float], params: Dict[str, Any], seed: int) -> List[str]:
+    rng = random.Random(seed)
+    hawks = int(params.get("hawks", 30))
+    iterations = int(params.get("iterations", 100))
+
+    population = []
+    for _ in range(hawks):
+        route = initial_route[:]
+        rng.shuffle(route)
+        population.append(route)
+
+    best = min(population, key=lambda r: _route_cost(r, duration_func))
+
+    for it in range(iterations):
+        escape_energy = 2 * (1 - (it / max(1, iterations)))
+        updated = [best[:]]
+        while len(updated) < hawks:
+            hawk = rng.choice(population)[:]
+            if rng.random() < 0.5:
+                hawk = _towards_route(hawk, best, rng, strength=max(0.2, escape_energy))
+            for _ in range(max(1, int((1.0 + escape_energy) * 2))):
+                hawk = _random_swap(hawk, rng)
+            updated.append(hawk)
+        population = updated
+        best = min(population, key=lambda r: _route_cost(r, duration_func))
+
+    return best
+
+
+def _run_meta_heuristic(
+    strategy_name: str,
+    initial_route: List[str],
+    duration_func: Callable[[List[str]], float],
+    params: Dict[str, Any],
+    seed: int,
+) -> List[str]:
+    upper = strategy_name.upper()
+    if upper == "GA":
+        return _run_ga(initial_route, duration_func, params, seed)
+    if upper == "PSO":
+        return _run_pso(initial_route, duration_func, params, seed)
+    if upper == "GWO":
+        return _run_gwo(initial_route, duration_func, params, seed)
+    if upper == "HHO":
+        return _run_hho(initial_route, duration_func, params, seed)
+    raise ValueError(f"Unknown meta-heuristic strategy: {strategy_name}")
+
+
 # ============================================================
 # Benchmark Functions
 # ============================================================
 
 def run_single_test(
     problem: TSPLIBProblem,
-    ls_type: LocalSearchType,
+    strategy_instance: Union[LocalSearchType, str],
     seed: int,
-    max_iterations: int = 500
+    params: Union[Dict[str, Any], int, None] = None
 ) -> Dict:
-    """Run single test with specific seed - NUMBA OPTIMIZED"""
+    """Run single test with specific seed for local-search or meta-heuristic"""
     coordinates = problem.coordinates
     dimension = problem.dimension
+    run_params: Dict[str, Any] = {}
+    if isinstance(params, dict):
+        run_params = params.copy()
+    elif isinstance(params, int):
+        run_params = {"max_iterations": params}
     
     # Create distance matrix
     matrix = create_distance_matrix(coordinates)
@@ -374,11 +580,25 @@ def run_single_test(
     
     initial_route = [f"L{i}" for i in indices]
     
-    # Apply local search (NUMBA OPTIMIZED)
+    # Apply selected optimization strategy
     start_time = time.time()
-    improved_route, _ = apply_local_search(
-        initial_route, duration_func, ls_type, max_iterations=max_iterations
-    )
+    if isinstance(strategy_instance, LocalSearchType):
+        improved_route, _ = apply_local_search(
+            initial_route,
+            duration_func,
+            strategy_instance,
+            max_iterations=int(run_params.get("max_iterations", 1000)),
+        )
+        algorithm_type = "local_search"
+    else:
+        improved_route = _run_meta_heuristic(
+            str(strategy_instance),
+            initial_route,
+            duration_func,
+            run_params,
+            seed,
+        )
+        algorithm_type = "meta_heuristic"
     elapsed = time.time() - start_time
     
     # Calculate tour length
@@ -391,6 +611,7 @@ def run_single_test(
         "tour_length": tour_length,
         "gap": gap,
         "time_ms": elapsed * 1000,
+        "algorithm_type": algorithm_type,
     }
 
 
@@ -402,14 +623,14 @@ def run_benchmark_for_problem(
     """Run benchmark for a single problem with all strategies"""
     results = []
     
-    for strat_name, ls_type, max_iter in STRATEGIES:
+    for strat_name, strategy_instance, strategy_params in STRATEGIES:
         if verbose:
             print(f"    Testing {strat_name}...", end=" ", flush=True)
         
         run_results = []
         for run in range(n_runs):
             seed = (run + 1) * 42
-            result = run_single_test(problem, ls_type, seed, max_iter)
+            result = run_single_test(problem, strategy_instance, seed, strategy_params)
             run_results.append(result)
         
         # Calculate averages
@@ -434,6 +655,7 @@ def run_benchmark_for_problem(
             "n_runs": n_runs,
             "timestamp": datetime.now().isoformat(),
             "numba_optimized": True,
+            "algorithm_type": strategy_params.get("algorithm_type", "local_search"),
         }
         results.append(result)
         

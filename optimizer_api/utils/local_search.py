@@ -668,7 +668,7 @@ class TimeWindowAwareLocalSearch(BaseLocalSearch):
 
             # Try swap moves
             for i in range(len(best_route)):
-                for j in range(i + 2, len(best_route)):
+                for j in range(i + 1, len(best_route)):
                     new_route = best_route.copy()
                     new_route[i], new_route[j] = new_route[j], new_route[i]
 

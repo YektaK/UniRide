@@ -176,13 +176,10 @@ def _two_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
             if improved and first_improvement:
                 break
         
-        # FIX: Periodically recalculate tour length to avoid floating-point error accumulation
-        # This prevents negative gaps from accumulating rounding errors
-        if iterations % 10 == 0 and iterations > 0:
-            actual_length = _calculate_tour_length_numba(best_route, dist_matrix)
-            if actual_length < best_length - 1e-6:
-                # Recalculate has improved result - use it
-                best_length = actual_length
+        # Periodically recalculate tour length unconditionally to correct any
+        # floating-point error accumulated via best_length += delta (in either direction).
+        if iterations % 10 == 0:
+            best_length = _calculate_tour_length_numba(best_route, dist_matrix)
     
     return best_route, best_length
 
@@ -324,7 +321,7 @@ def _three_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
                     for c in range(7):
                         cand_length = _calculate_tour_length_numba(candidates[c], dist_matrix)
                         
-                        if cand_length < best_length - 1e-10:
+                        if cand_length < best_length - 1e-10 * max(1.0, best_length):
                             best_route = candidates[c].copy()
                             best_length = cand_length
                             improved = True
@@ -405,7 +402,7 @@ def _or_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
                     
                     new_length = _calculate_tour_length_numba(new_route, dist_matrix)
                     
-                    if new_length < best_length - 1e-10:
+                    if new_length < best_length - 1e-10 * max(1.0, best_length):
                         best_route = new_route.copy()
                         best_length = new_length
                         improved = True
@@ -453,7 +450,7 @@ def _swap_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
                 
                 new_length = _calculate_tour_length_numba(new_route, dist_matrix)
                 
-                if new_length < best_length - 1e-10:
+                if new_length < best_length - 1e-10 * max(1.0, best_length):
                     best_route = new_route.copy()
                     best_length = new_length
                     improved = True
@@ -501,8 +498,10 @@ def _cross_exchange_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
                         seg1 = best_route[i:i + seg1_len].copy()
                         seg2 = best_route[j:j + seg2_len].copy()
                         
-                        # Build new route with exchanged segments
-                        new_route = np.zeros(n - seg1_len - seg2_len + seg2_len + seg1_len, dtype=np.int64)
+                        # Build new route with exchanged segments.
+                        # Note: swapping segments of different sizes preserves total length n
+                        # because seg1_len nodes are replaced by seg2_len and vice-versa.
+                        new_route = np.zeros(n, dtype=np.int64)
                         
                         # Different segment lengths need careful handling
                         if seg1_len == seg2_len:
@@ -533,14 +532,11 @@ def _cross_exchange_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
                             for p in range(j + seg2_len, n):
                                 new_route[pos] = best_route[p]
                                 pos += 1
-                            new_route = new_route[:pos]
-                        
-                        if len(new_route) != n:
-                            continue
+                            # pos == n is guaranteed: swapping segments keeps total length
                         
                         new_length = _calculate_tour_length_numba(new_route, dist_matrix)
                         
-                        if new_length < best_length - 1e-10:
+                        if new_length < best_length - 1e-10 * max(1.0, best_length):
                             best_route = new_route.copy()
                             best_length = new_length
                             improved = True

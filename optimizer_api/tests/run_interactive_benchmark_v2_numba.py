@@ -373,7 +373,8 @@ def _ordered_crossover(parent_a: List[str], parent_b: List[str], rng: random.Ran
     i, j = sorted(rng.sample(range(n), 2))
     child = [None] * n
     child[i:j] = parent_a[i:j]
-    fill = [g for g in parent_b if g not in child]
+    child_set = set(child[i:j])
+    fill = [g for g in parent_b if g not in child_set]
     k = 0
     for idx in range(n):
         if child[idx] is None:
@@ -418,10 +419,12 @@ def _towards_route(current: List[str], target: List[str], rng: random.Random, st
         return current[:]
     route = current[:]
     index_of = {v: i for i, v in enumerate(route)}
+    # MOVE_SCALE limits per-step disruption so we keep guided convergence stable.
     moves = max(1, int(len(route) * strength * MOVE_SCALE))
+    target_index = {gene: idx for idx, gene in enumerate(target)}
     for _ in range(moves):
         gene = rng.choice(target)
-        target_idx = target.index(gene)
+        target_idx = target_index[gene]
         curr_idx = index_of.get(gene, target_idx)
         if curr_idx != target_idx:
             swap_gene = route[target_idx]
@@ -470,7 +473,7 @@ def _run_pso(initial_route: List[str], duration_func: Callable[[List[str]], floa
 
 def _run_gwo(initial_route: List[str], duration_func: Callable[[List[str]], float], params: Dict[str, Any], seed: int) -> List[str]:
     rng = random.Random(seed)
-    pack_size = int(params.get("pack_size", 30))
+    pack_size = max(3, int(params.get("pack_size", 30)))
     iterations = int(params.get("iterations", 100))
 
     pack = []

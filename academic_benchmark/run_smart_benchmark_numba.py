@@ -725,9 +725,9 @@ def multi_select_algorithms(all_strat_names: List[str]) -> List[str]:
     if user_input in {'all', 'tum', 'tüm'}:
         return all_strat_names[:]
     if user_input in {'local', 'ls'}:
-        return [n for n in all_strat_names if get_algorithm_type(n, ALGORITHM_INFO.get(n)) == "local_search"]
+        return [n for n in all_strat_names if get_algorithm_type(n, ALGORITHM_INFO.get(n, {})) == "local_search"]
     if user_input in {'meta', 'sota'}:
-        return [n for n in all_strat_names if get_algorithm_type(n, ALGORITHM_INFO.get(n)) == "meta_heuristic"]
+        return [n for n in all_strat_names if get_algorithm_type(n, ALGORITHM_INFO.get(n, {})) == "meta_heuristic"]
     
     selected = []
     try:
@@ -964,13 +964,11 @@ def run_single_benchmark_task(args):
     if isinstance(strategy_payload, dict):
         if strategy_payload.get("kind") == "local_search":
             strategy_instance = LocalSearchType(strategy_payload["value"])
-            algorithm_type = "local_search"
         else:
             strategy_instance = strategy_payload.get("value")
-            algorithm_type = "meta_heuristic"
     else:
         strategy_instance = LocalSearchType(strategy_payload)
-        algorithm_type = "local_search"
+    algorithm_type = strategy_params.get("algorithm_type", get_algorithm_type(strat_name))
     
     start_time = time.time()
     run_avg_results = []

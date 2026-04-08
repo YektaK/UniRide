@@ -64,3 +64,7 @@ academic_benchmark/benchmark_db/history/
 optimizer_api/tests/__pycache__/
 optimizer_api/utils/__pycache__/
 academic_benchmark/benchmark_db/
+.github/skills/
+.sixth/
+.claude/
+cache/

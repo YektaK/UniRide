@@ -92,6 +92,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 
 ALGORITHMS_TO_CHECK = {
     "LocalSearchEngine_NUMBA": os.path.join(PROJECT_ROOT, "optimizer_api", "utils", "local_search_numba.py"),
+    "BenchmarkRunner_NUMBA": os.path.join(PROJECT_ROOT, "optimizer_api", "tests", "run_interactive_benchmark_v2_numba.py"),
     "GA_Strategy": os.path.join(PROJECT_ROOT, "optimizer_api", "strategies", "ga_strategy.py"),
     "PSO_Strategy": os.path.join(PROJECT_ROOT, "optimizer_api", "strategies", "pso_strategy.py"),
     "GWO_Strategy": os.path.join(PROJECT_ROOT, "optimizer_api", "strategies", "gwo_strategy.py"),

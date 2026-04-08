@@ -52,8 +52,10 @@ try:
         print_summary_table,
         load_all_problems,
         TSPLIB_PROBLEMS,
+        BENCHMARK_PROFILE,
         NUMBA_AVAILABLE,
     )
+    from optimizer_api.utils.local_search_numba import LocalSearchType
     # N_RUNS default degeri
     DEFAULT_N_RUNS = 3
     N_RUNS = DEFAULT_N_RUNS  # Global degisken, kullanicidan alinacak
@@ -73,10 +75,12 @@ except ImportError as e:
             load_all_problems,
             TSPLIB_PROBLEMS
         )
+        from optimizer_api.utils.local_search import LocalSearchType
         DEFAULT_N_RUNS = 3
         N_RUNS = DEFAULT_N_RUNS
         USE_V2 = True
         NUMBA_AVAILABLE = False
+        BENCHMARK_PROFILE = os.environ.get("BENCHMARK_PROFILE", "quality_first").strip().lower()
         print("[INFO] Using non-Numba fallback version")
     except ImportError as e2:
         print(f"[ERROR] Benchmark modules not found: {e2}")
@@ -504,7 +508,7 @@ ALGORITHM_INFO = {
         "complexity": "O(pop x gen x n)",
         "best_for": "Global arama, farkli rota adaylari",
         "how_it_works": "Populasyon tabanli secilim, caprazlama ve mutasyon",
-        "parameters": "pop_size=50, generations=100",
+        "parameters": "pop_size=120, generations=300",
     },
     "PSO": {
         "name": "PSO",
@@ -513,7 +517,7 @@ ALGORITHM_INFO = {
         "complexity": "O(swarm x iter x n)",
         "best_for": "Hizli yakinlama ve denge",
         "how_it_works": "Parcaciklar pbest/gbest'e yonelerek permutasyon gunceller",
-        "parameters": "swarm_size=30, iterations=100",
+        "parameters": "swarm_size=80, iterations=250",
     },
     "GWO": {
         "name": "GWO",
@@ -522,7 +526,7 @@ ALGORITHM_INFO = {
         "complexity": "O(pack x iter x n)",
         "best_for": "Kesif/somuru dengesi",
         "how_it_works": "Alpha/Beta/Delta rehberliginde rota iyilestirme",
-        "parameters": "pack_size=30, iterations=100",
+        "parameters": "pack_size=80, iterations=250",
     },
     "HHO": {
         "name": "HHO",
@@ -531,7 +535,7 @@ ALGORITHM_INFO = {
         "complexity": "O(hawks x iter x n)",
         "best_for": "Saldiri-kacis tabanli adaptif arama",
         "how_it_works": "Enerji modeline gore yakinlasma ve rastgele ataklar",
-        "parameters": "hawks=30, iterations=100",
+        "parameters": "hawks=80, iterations=250",
     },
 }
 
@@ -837,6 +841,7 @@ def show_test_summary(problems: List, algorithms: List[str], saved_results: Dict
     print(f"   * Algoritmalar: {len(algorithms)} ({', '.join(algorithms)})")
     print(f"   * Her problem {N_RUNS} kez calistirilacak")
     print(f"   * Toplam test sayisi: {total_tests}")
+    print(f"   * Benchmark profili: {BENCHMARK_PROFILE}")
     
     if NUMBA_AVAILABLE:
         print(f"\n[NUMBA] JIT Optimization: ENABLED (10-50x speedup)")
@@ -943,7 +948,6 @@ def run_single_benchmark_task(args):
         TSPLIBProblem, 
         run_single_test,
     )
-    from optimizer_api.utils.local_search_numba import LocalSearchType
     
     # args: (problem_dict, strat_name, strategy_payload, strategy_params, task_id, n_runs)
     if len(args) == 6:
@@ -968,13 +972,18 @@ def run_single_benchmark_task(args):
         source=problem_dict.get('source', 'tsplib')
     )
     
+    # FIX: Extract strategy value from payload dict
     if isinstance(strategy_payload, dict):
         if strategy_payload.get("kind") == "local_search":
-            strategy_instance = LocalSearchType(strategy_payload["value"])
+            # Convert string like "two_opt" to LocalSearchType enum (uppercase: "TWO_OPT")
+            ls_type_name = strategy_payload["value"].upper()
+            strategy_instance = LocalSearchType[ls_type_name]
         else:
+            # Meta-heuristic: keep as string like "GA"
             strategy_instance = strategy_payload.get("value")
     else:
-        strategy_instance = LocalSearchType(strategy_payload)
+        # Fallback for direct enum (shouldn't reach here in normal flow)
+        strategy_instance = strategy_payload
     algorithm_type = strategy_params.get("algorithm_type", get_algorithm_type(strat_name))
     
     start_time = time.time()

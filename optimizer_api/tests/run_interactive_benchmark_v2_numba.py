@@ -35,8 +35,8 @@ from urllib.error import URLError, HTTPError
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# NUMBA OPTIMIZED local_search import
-from utils.local_search_numba import (
+# NUMBA OPTIMIZED local_search import - use consistent absolute paths
+from optimizer_api.utils.local_search_numba import (
     LocalSearchType,
     apply_local_search,
     NUMBA_AVAILABLE,
@@ -59,25 +59,120 @@ TSPLIB_BASE_URL = "https://raw.githubusercontent.com/mastqe/tsplib/master/"
 # Number of runs per problem
 N_RUNS = 3
 
+# Benchmark profile: quality-first is the default for paper-grade runs.
+# Set BENCHMARK_PROFILE=baseline to compare against the more conservative setup.
+BENCHMARK_PROFILE = os.environ.get("BENCHMARK_PROFILE", "quality_first").strip().lower()
+VALID_BENCHMARK_PROFILES = {"baseline", "quality_first"}
+
 # ============================================================
 # STRATEGIES - Local Search + Meta-Heuristic
 # ============================================================
 LOCAL_SEARCH_STRATEGIES = [
-    ("2-opt", LocalSearchType.TWO_OPT, {"max_iterations": 2000, "algorithm_type": "local_search"}),
-    ("3-opt", LocalSearchType.THREE_OPT, {"max_iterations": 200, "algorithm_type": "local_search"}),
-    ("Or-opt", LocalSearchType.OR_OPT, {"max_iterations": 1000, "algorithm_type": "local_search"}),
-    ("Swap", LocalSearchType.SWAP, {"max_iterations": 5000, "algorithm_type": "local_search"}),
-    ("Hybrid", LocalSearchType.HYBRID, {"max_iterations": 5, "algorithm_type": "local_search"}),
+    ("2-opt", LocalSearchType.TWO_OPT, {"max_iterations": 3000, "algorithm_type": "local_search"}),
+    ("3-opt", LocalSearchType.THREE_OPT, {"max_iterations": 400, "algorithm_type": "local_search"}),
+    ("Or-opt", LocalSearchType.OR_OPT, {"max_iterations": 1500, "algorithm_type": "local_search"}),
+    ("Swap", LocalSearchType.SWAP, {"max_iterations": 8000, "algorithm_type": "local_search"}),
+    ("Hybrid", LocalSearchType.HYBRID, {"max_iterations": 10, "algorithm_type": "local_search"}),
 ]
 
 META_HEURISTIC_STRATEGIES = [
-    ("GA", "GA", {"pop_size": 50, "generations": 100, "mutation_rate": 0.1, "elite_size": 4, "algorithm_type": "meta_heuristic"}),
-    ("PSO", "PSO", {"swarm_size": 30, "iterations": 100, "w": 0.7, "c1": 1.5, "c2": 1.5, "algorithm_type": "meta_heuristic"}),
-    ("GWO", "GWO", {"pack_size": 30, "iterations": 100, "algorithm_type": "meta_heuristic"}),
-    ("HHO", "HHO", {"hawks": 30, "iterations": 100, "algorithm_type": "meta_heuristic"}),
+    ("GA", "GA", {"pop_size": 120, "generations": 300, "mutation_rate": 0.12, "elite_size": 6, "algorithm_type": "meta_heuristic"}),
+    ("PSO", "PSO", {"swarm_size": 80, "iterations": 250, "w": 0.72, "c1": 1.6, "c2": 1.6, "algorithm_type": "meta_heuristic"}),
+    ("GWO", "GWO", {"pack_size": 80, "iterations": 250, "algorithm_type": "meta_heuristic"}),
+    ("HHO", "HHO", {"hawks": 80, "iterations": 250, "algorithm_type": "meta_heuristic"}),
 ]
 
 STRATEGIES = LOCAL_SEARCH_STRATEGIES + META_HEURISTIC_STRATEGIES
+
+
+def _current_benchmark_profile() -> str:
+    if BENCHMARK_PROFILE not in VALID_BENCHMARK_PROFILES:
+        return "quality_first"
+    return BENCHMARK_PROFILE
+
+
+def _tune_meta_params(strategy_name: str, params: Dict[str, Any], n_nodes: int) -> Dict[str, Any]:
+    tuned = params.copy()
+    profile = _current_benchmark_profile()
+    n = max(1, int(n_nodes))
+
+    def _cap(value: int, lower: int, upper: int) -> int:
+        return max(lower, min(upper, value))
+
+    if strategy_name.upper() == "GA":
+        pop_size = int(tuned.get("pop_size", 120))
+        generations = int(tuned.get("generations", 300))
+        mutation_rate = float(tuned.get("mutation_rate", 0.12))
+        elite_size = int(tuned.get("elite_size", 6))
+
+        if profile == "quality_first":
+            pop_size = int(pop_size * 0.7)
+            generations = int(generations * 1.15)
+            mutation_rate = min(0.18, mutation_rate + 0.02)
+            elite_size = max(4, int(pop_size * 0.07))
+        else:
+            pop_size = int(pop_size * 1.0)
+            generations = int(generations * 1.0)
+            elite_size = max(6, int(pop_size * 0.06))
+
+        tuned["pop_size"] = _cap(pop_size, 60 if n <= 100 else 80, 150 if n <= 500 else 180)
+        tuned["generations"] = _cap(generations, 200 if n <= 100 else 250, 500 if n <= 100 else 700 if n <= 500 else 900)
+        tuned["mutation_rate"] = mutation_rate
+        tuned["elite_size"] = elite_size
+
+    elif strategy_name.upper() == "PSO":
+        swarm_size = int(tuned.get("swarm_size", 80))
+        iterations = int(tuned.get("iterations", 250))
+        if profile == "quality_first":
+            swarm_size = int(swarm_size * 0.75)
+            iterations = int(iterations * 1.20)
+        else:
+            swarm_size = int(swarm_size * 1.0)
+            iterations = int(iterations * 1.0)
+        tuned["swarm_size"] = _cap(swarm_size, 40 if n <= 100 else 50, 120 if n <= 500 else 160)
+        tuned["iterations"] = _cap(iterations, 150 if n <= 100 else 200, 450 if n <= 100 else 650 if n <= 500 else 850)
+
+    elif strategy_name.upper() == "GWO":
+        pack_size = int(tuned.get("pack_size", 80))
+        iterations = int(tuned.get("iterations", 250))
+        if profile == "quality_first":
+            pack_size = int(pack_size * 0.75)
+            iterations = int(iterations * 1.20)
+        tuned["pack_size"] = _cap(pack_size, 40 if n <= 100 else 50, 120 if n <= 500 else 160)
+        tuned["iterations"] = _cap(iterations, 150 if n <= 100 else 200, 450 if n <= 100 else 650 if n <= 500 else 850)
+
+    elif strategy_name.upper() == "HHO":
+        hawks = int(tuned.get("hawks", 80))
+        iterations = int(tuned.get("iterations", 250))
+        if profile == "quality_first":
+            hawks = int(hawks * 0.75)
+            iterations = int(iterations * 1.20)
+        tuned["hawks"] = _cap(hawks, 40 if n <= 100 else 50, 120 if n <= 500 else 160)
+        tuned["iterations"] = _cap(iterations, 150 if n <= 100 else 200, 450 if n <= 100 else 650 if n <= 500 else 850)
+
+    return tuned
+
+
+def _refine_route(route: List[str], duration_func: Callable[[List[str]], float], profile: str) -> Tuple[List[str], float]:
+    if profile == "baseline":
+        ls_type = LocalSearchType.TWO_OPT
+        max_iterations = 2
+    else:
+        ls_type = LocalSearchType.HYBRID
+        max_iterations = 5
+
+    try:
+        refined_route, refined_cost = apply_local_search(
+            route,
+            duration_func,
+            ls_type,
+            max_iterations=max_iterations,
+        )
+    except TypeError:
+        # Fallback for implementations that do not accept max_iterations as a keyword.
+        refined_route, refined_cost = apply_local_search(route, duration_func, ls_type)
+
+    return refined_route, refined_cost
 
 # Discrete-move scaling for permutation update operators.
 # We keep only a small portion of swaps per step to avoid route destruction.
@@ -396,6 +491,9 @@ def _run_ga(initial_route: List[str], duration_func: Callable[[List[str]], float
         rng.shuffle(candidate)
         population.append(candidate)
 
+    if population:
+        population[0] = initial_route[:]
+
     for _ in range(generations):
         scored = sorted(((route, _route_cost(route, duration_func)) for route in population), key=lambda x: x[1])
         elites = [r[:] for r, _ in scored[:elite_size]]
@@ -448,6 +546,11 @@ def _run_pso(initial_route: List[str], duration_func: Callable[[List[str]], floa
         rng.shuffle(route)
         swarm.append({"route": route, "best": route[:], "best_cost": _route_cost(route, duration_func)})
 
+    if swarm:
+        swarm[0]["route"] = initial_route[:]
+        swarm[0]["best"] = initial_route[:]
+        swarm[0]["best_cost"] = _route_cost(initial_route, duration_func)
+
     gbest = min(swarm, key=lambda p: p["best_cost"])["best"][:]
 
     for _ in range(iterations):
@@ -482,6 +585,9 @@ def _run_gwo(initial_route: List[str], duration_func: Callable[[List[str]], floa
         rng.shuffle(route)
         pack.append(route)
 
+    if pack:
+        pack[0] = initial_route[:]
+
     for _ in range(iterations):
         scored = sorted(((r, _route_cost(r, duration_func)) for r in pack), key=lambda x: x[1])
         alpha = scored[0][0]
@@ -513,6 +619,9 @@ def _run_hho(initial_route: List[str], duration_func: Callable[[List[str]], floa
         rng.shuffle(route)
         population.append(route)
 
+    if population:
+        population[0] = initial_route[:]
+
     best = min(population, key=lambda r: _route_cost(r, duration_func))
 
     for it in range(iterations):
@@ -538,16 +647,23 @@ def _run_meta_heuristic(
     params: Dict[str, Any],
     seed: int,
 ) -> List[str]:
+    tuned_params = _tune_meta_params(strategy_name, params, len(initial_route))
     upper = strategy_name.upper()
     if upper == "GA":
-        return _run_ga(initial_route, duration_func, params, seed)
-    if upper == "PSO":
-        return _run_pso(initial_route, duration_func, params, seed)
-    if upper == "GWO":
-        return _run_gwo(initial_route, duration_func, params, seed)
-    if upper == "HHO":
-        return _run_hho(initial_route, duration_func, params, seed)
-    raise ValueError(f"Unknown meta-heuristic strategy: {strategy_name}")
+        route = _run_ga(initial_route, duration_func, tuned_params, seed)
+    elif upper == "PSO":
+        route = _run_pso(initial_route, duration_func, tuned_params, seed)
+    elif upper == "GWO":
+        route = _run_gwo(initial_route, duration_func, tuned_params, seed)
+    elif upper == "HHO":
+        route = _run_hho(initial_route, duration_func, tuned_params, seed)
+    else:
+        raise ValueError(f"Unknown meta-heuristic strategy: {strategy_name}")
+
+    refined_route, refined_cost = _refine_route(route, duration_func, _current_benchmark_profile())
+    if refined_cost < _route_cost(route, duration_func):
+        return refined_route
+    return route
 
 
 # ============================================================

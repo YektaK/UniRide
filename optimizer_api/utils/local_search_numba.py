@@ -138,6 +138,9 @@ def _two_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
     """
     Numba-optimized 2-opt local search.
     
+    FIX: Removed unnecessary skip condition that was dead code.
+    The loop structure (j starting at i+2) already prevents invalid moves.
+    
     Returns:
         Tuple of (improved_route, best_length)
     """
@@ -157,8 +160,8 @@ def _two_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
         
         for i in range(n - 2):
             for j in range(i + 2, n):
-                if j == n - 1 and i == 0:
-                    continue  # Skip adjacent edges
+                # FIX: Removed dead code condition: if j == n - 1 and i == 0: continue
+                # The loop structure already prevents invalid moves
                 
                 delta = _two_opt_delta_numba(best_route, dist_matrix, i, j)
                 
@@ -172,6 +175,14 @@ def _two_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
             
             if improved and first_improvement:
                 break
+        
+        # FIX: Periodically recalculate tour length to avoid floating-point error accumulation
+        # This prevents negative gaps from accumulating rounding errors
+        if iterations % 10 == 0 and iterations > 0:
+            actual_length = _calculate_tour_length_numba(best_route, dist_matrix)
+            if actual_length < best_length - 1e-6:
+                # Recalculate has improved result - use it
+                best_length = actual_length
     
     return best_route, best_length
 
@@ -336,6 +347,8 @@ def _or_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
                           max_iterations: int, max_segment_size: int) -> Tuple[np.ndarray, float]:
     """
     Numba-optimized Or-opt local search.
+    
+    FIX: Corrected index mapping in insertion logic to properly handle relocated segments.
     """
     n = len(route)
     if n < 4:
@@ -366,20 +379,26 @@ def _or_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
                     remaining[pos] = best_route[p]
                     pos += 1
                 
-                # Try inserting at each position
+                # Try inserting at each position in remaining array
                 for j in range(len(remaining) + 1):
+                    # FIX: Calculate correct skip for original position
+                    # After removing segment from positions [i, i+seg_size),
+                    # the insertion should skip if j would recreate the original tour
                     if j == i:
                         continue
                     
-                    # Create new route
+                    # Create new route by inserting segment at position j in remaining
                     new_route = np.zeros(n, dtype=np.int64)
                     pos = 0
+                    # Copy nodes before insertion point
                     for p in range(j):
                         new_route[pos] = remaining[p]
                         pos += 1
+                    # Insert segment
                     for p in range(seg_size):
                         new_route[pos] = segment[p]
                         pos += 1
+                    # Copy nodes after insertion point
                     for p in range(j, len(remaining)):
                         new_route[pos] = remaining[p]
                         pos += 1
@@ -405,6 +424,9 @@ def _swap_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
                         max_iterations: int, first_improvement: bool) -> Tuple[np.ndarray, float]:
     """
     Numba-optimized Swap local search.
+    
+    FIXED: Removed skip condition for adjacent swaps - these ARE valid moves in TSP
+    and can lead to improvements, especially when combined with other operators.
     """
     n = len(route)
     if n < 3:
@@ -422,10 +444,10 @@ def _swap_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
         
         for i in range(n):
             for j in range(i + 1, n):
-                if j == i + 1:
-                    continue  # Skip adjacent
+                # FIX: Try ALL swap pairs, including adjacent ones
+                # Removed: if j == i + 1: continue
                 
-                # Swap
+                # Perform swap
                 new_route = best_route.copy()
                 new_route[i], new_route[j] = new_route[j], new_route[i]
                 

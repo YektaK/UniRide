@@ -118,9 +118,9 @@ class TwoOptLocalSearch(BaseLocalSearch):
 
             for i in range(len(best_route) - 1):
                 for j in range(i + 2, len(best_route)):
-                    # Skip adjacent edges (no improvement possible)
-                    if j == i + 1:
-                        continue
+                    # FIX: Removed dead code
+                    # The condition 'if j == i + 1' can never be true since j starts at i+2
+                    # The loop structure prevents invalid moves
 
                     # Create new route with 2-opt swap
                     new_route = self._two_opt_swap(best_route, i, j)
@@ -376,9 +376,8 @@ class SwapLocalSearch(BaseLocalSearch):
             # Try all pairs of positions
             for i in range(len(best_route)):
                 for j in range(i + 1, len(best_route)):
-                    # Skip adjacent swaps (handled better by 2-opt)
-                    if j == i + 1:
-                        continue
+                    # FIX: Include adjacent swaps - they are valid TSP moves
+                    # Removed: if j == i + 1: continue
 
                     new_route = self._swap(best_route, i, j)
                     new_duration = duration_func(new_route)

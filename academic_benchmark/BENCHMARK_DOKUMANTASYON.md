@@ -8,9 +8,10 @@
 4. [Yapılan Düzeltmeler](#yapılan-düzeltmeler)
 5. [Çalışma Akışı](#çalışma-akışı)
 6. [Kullanım Kılavuzu](#kullanım-kılavuzu)
-7. [Güncelleme Yaparken Dikkat Edilmesi Gerekenler](#güncelleme-yaparken-dikkat-edilmesi-gerekenler)
-8. [Sorun Giderme](#sorun-giderme)
-9. [Genişletme Rehberi](#genişletme-rehberi)
+7. [Benchmark Profilleri](#benchmark-profilleri)
+8. [Güncelleme Yaparken Dikkat Edilmesi Gerekenler](#güncelleme-yaparken-dikkat-edilmesi-gerekenler)
+9. [Sorun Giderme](#sorun-giderme)
+10. [Genişletme Rehberi](#genişletme-rehberi)
 
 ---
 
@@ -23,6 +24,7 @@ Bu benchmark sistemi, TSP (Traveling Salesman Problem) algoritmalarını TSPLIB 
 - **Akıllı Önbellek**: İndirilen dosyalar ve test sonuçları önbelleğe alınır
 - **Dosya Değişiklik Takibi**: Hash tabanlı değişiklik algılama
 - **Kategorize Edilmiş Problemler**: Küçük (≤100), Orta (≤500), Büyük (≤2000) düğüm
+- **Benchmark Profilleri**: `baseline` ve `quality_first` ile ayrı bütçe ayarları
 - **Güvenli Çıkış**: Ctrl+C ile sonuçlar kaybolmadan çıkış
 - **Anlık Kayıt**: Her algoritma sonucu hemen kaydedilir
 - **Tahmini Süre**: Test öncesi süre tahmini
@@ -320,6 +322,39 @@ cd /home/z/my-project/academic_benchmark
 # Benchmark'ı çalıştır
 python run_smart_benchmark.py
 ```
+
+### Benchmark Profili Seçimi
+
+Benchmark runner, `BENCHMARK_PROFILE` ortam değişkenini okuyarak profil seçer. Varsayılan profil `quality_first`'tir.
+
+| Profil | Açıklama |
+|--------|----------|
+| `quality_first` | Paper/rapor odaklı varsayılan profil. Meta-sezgiseller daha güçlü bütçelerle çalışır ve final local search rafinmanı uygular. |
+| `baseline` | Karşılaştırma için daha muhafazakar profil. Klasik bütçe davranışını görmek için kullanılır. |
+
+PowerShell örnekleri:
+
+```powershell
+$env:BENCHMARK_PROFILE = "quality_first"
+python academic_benchmark/run_smart_benchmark_numba.py
+```
+
+```powershell
+$env:BENCHMARK_PROFILE = "baseline"
+python academic_benchmark/run_smart_benchmark_numba.py
+```
+
+Kalıcı ayar için:
+
+```powershell
+setx BENCHMARK_PROFILE quality_first
+```
+
+### Benchmark Profili Davranışı
+
+- `baseline`: Daha küçük popülasyon ve iterasyon sayılarıyla çalışır.
+- `quality_first`: Daha yüksek bütçe, daha iyi başlangıç adayları ve final local search rafinmanı kullanır.
+- İki profil de aynı benchmark akışını kullanır; fark sadece arama bütçesi ve son iyileştirme aşamasındadır.
 
 ### Algoritma Durum Sembolleri
 

@@ -947,18 +947,16 @@ def run_single_benchmark_task(args):
     # args: (problem_dict, strat_name, strategy_payload, strategy_params, task_id, n_runs)
     if len(args) == 6:
         problem_dict, strat_name, strategy_payload, strategy_params, task_id, n_runs = args
+        if isinstance(strategy_params, int):
+            strategy_params = {"max_iterations": strategy_params, "algorithm_type": "local_search"}
+        elif not isinstance(strategy_params, dict):
+            strategy_params = {"algorithm_type": get_algorithm_type(strat_name)}
     else:
         # Backward compatibility
         problem_dict, strat_name, ls_type_value, max_iter, task_id = args
         strategy_payload = {"kind": "local_search", "value": ls_type_value}
         strategy_params = {"max_iterations": int(max_iter), "algorithm_type": "local_search"}
         n_runs = 3
-    
-    if not isinstance(strategy_params, dict):
-        if isinstance(strategy_params, int):
-            strategy_params = {"max_iterations": strategy_params, "algorithm_type": "local_search"}
-        else:
-            strategy_params = {"algorithm_type": get_algorithm_type(strat_name)}
     
     problem = TSPLIBProblem(
         name=problem_dict['name'],

@@ -265,6 +265,8 @@ def get_algorithm_type(strat_name: str, params: Optional[Dict[str, Any]] = None)
 
 def normalize_strategy_entry(entry: Tuple[Any, ...]) -> Tuple[str, Any, Dict[str, Any]]:
     """Normalize strategy tuple from benchmark module."""
+    if len(entry) < 2:
+        raise ValueError(f"Invalid strategy entry: {entry}")
     if len(entry) >= 3 and isinstance(entry[2], dict):
         return entry[0], entry[1], entry[2].copy()
     # Backward compatibility: (name, LocalSearchType, max_iterations)
@@ -739,8 +741,6 @@ def multi_select_algorithms(all_strat_names: List[str]) -> List[str]:
                         selected.append(algo_map[key])
             else:
                 if part in algo_map:
-                    selected.append(algo_map[part])
-                elif part.isdigit() and part in algo_map:
                     selected.append(algo_map[part])
     except (ValueError, IndexError, KeyError):
         print("Gecersiz secim!")

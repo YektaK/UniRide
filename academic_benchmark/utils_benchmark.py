@@ -3,6 +3,21 @@ import json
 import hashlib
 from typing import Dict, Any, List
 
+
+def _sync_hash_fields(data: Dict[str, Any]) -> Dict[str, Any]:
+    file_hashes = data.get("file_hashes", {})
+    algorithm_hashes = data.get("algorithm_hashes", {})
+    if not file_hashes and algorithm_hashes:
+        file_hashes = algorithm_hashes
+    if not algorithm_hashes and file_hashes:
+        algorithm_hashes = file_hashes
+    return {
+        **data,
+        "file_hashes": file_hashes,
+        "algorithm_hashes": algorithm_hashes,
+    }
+
+
 def get_file_hash(filepath: str) -> str:
     """Belirtilen dosyanın SHA-256 özetini (hash) döndürür."""
     if not os.path.exists(filepath):
@@ -31,37 +46,19 @@ def get_latest_metadata(metadata_path: str) -> Dict[str, Any]:
             data = json.load(f)
             if not isinstance(data, dict):
                 return default_metadata.copy()
-
-            file_hashes = data.get("file_hashes", {})
-            algo_hashes = data.get("algorithm_hashes", {})
-            if not file_hashes and algo_hashes:
-                file_hashes = algo_hashes
-            if not algo_hashes and file_hashes:
-                algo_hashes = file_hashes
-
+            synced = _sync_hash_fields(data)
             return {
-                "file_hashes": file_hashes,
-                "algorithm_hashes": algo_hashes,
-                "results": data.get("results", {}),
-                "last_updated": data.get("last_updated", ""),
+                "file_hashes": synced.get("file_hashes", {}),
+                "algorithm_hashes": synced.get("algorithm_hashes", {}),
+                "results": synced.get("results", {}),
+                "last_updated": synced.get("last_updated", ""),
             }
     except Exception:
         return default_metadata.copy()
 
 def save_metadata(metadata_path: str, data: Dict[str, Any]):
     """Güncel hash ve test sonuçlarını metadata JSON belgesine kaydeder."""
-    file_hashes = data.get("file_hashes", {})
-    algorithm_hashes = data.get("algorithm_hashes", {})
-    if not file_hashes and algorithm_hashes:
-        file_hashes = algorithm_hashes
-    if not algorithm_hashes and file_hashes:
-        algorithm_hashes = file_hashes
-
-    data_to_save = {
-        **data,
-        "file_hashes": file_hashes,
-        "algorithm_hashes": algorithm_hashes,
-    }
+    data_to_save = _sync_hash_fields(data)
 
     os.makedirs(os.path.dirname(metadata_path), exist_ok=True)
     with open(metadata_path, 'w', encoding='utf-8') as f:

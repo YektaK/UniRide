@@ -79,6 +79,10 @@ META_HEURISTIC_STRATEGIES = [
 
 STRATEGIES = LOCAL_SEARCH_STRATEGIES + META_HEURISTIC_STRATEGIES
 
+# Discrete-move scaling for permutation update operators.
+# We keep only a small portion of swaps per step to avoid route destruction.
+MOVE_SCALE = 0.1
+
 
 # ============================================================
 # TSPLIB Problem Definition
@@ -414,7 +418,7 @@ def _towards_route(current: List[str], target: List[str], rng: random.Random, st
         return current[:]
     route = current[:]
     index_of = {v: i for i, v in enumerate(route)}
-    moves = max(1, int(len(route) * strength * 0.1))
+    moves = max(1, int(len(route) * strength * MOVE_SCALE))
     for _ in range(moves):
         gene = rng.choice(target)
         target_idx = target.index(gene)

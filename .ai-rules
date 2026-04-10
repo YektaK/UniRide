@@ -11,8 +11,10 @@ Düzgün bir bağlam analizi yapabilmek için Projenin tek Bilgi Kaynağı olan 
 2. `docs/02_Architecture.md` — Mimari kurallar, dosya sorumluluk haritası, API kontratları
 3. `docs/03_Roadmap.md` — Geliştirme yol haritası, görev durumları, faz planı
 4. `docs/04_Changelog.md` — Son eklenen değişiklikler ve sürümler
-5. `.ai-handover.md` — Son mesai devir raporu
-6. `docs/sota_framework_plan_2026/` İçindeki Dosyalar — Algoritma verimliliği, ALNS gelişimi, State of The Art (SOTA) yaklaşımları, Akıllı Benchmark mekanizmaları, Akademik Makale (Performance Comparison) vizyonu ve Çift-Yollu (Dual-Track) mimari hedeflerinin BÜTÜNÜ için bu klasör vizyon rehberimizdir. SOTA veya Akademik Makale (Paper) kelimesi geçtiği an burayı referans al.
+5. `docs/05_Code_Quality_Roadmap.md` — Kod kalitesi ve güvenlik düzeltme planı (09.04.2026 - Ekleyen: Copilot AI)
+6. `docs/09_04_2026_Codebase_Analysis_Report.md` — Kapsamlı statik analiz raporu; güvenlik açıkları ve fonksiyonel bug'lar için referans al
+7. `.ai-handover.md` — Son mesai devir raporu
+8. `docs/sota_framework_plan_2026/` İçindeki Dosyalar — Algoritma verimliliği, ALNS gelişimi, State of The Art (SOTA) yaklaşımları, Akıllı Benchmark mekanizmaları, Akademik Makale (Performance Comparison) vizyonu ve Çift-Yollu (Dual-Track) mimari hedeflerinin BÜTÜNÜ için bu klasör vizyon rehberimizdir. SOTA veya Akademik Makale (Paper) kelimesi geçtiği an burayı referans al.
 
 **Bu dosyaları okumadan kod değişikliği YAPMA. Mimari kurallara aykırı değişiklik YAPMA.**
 

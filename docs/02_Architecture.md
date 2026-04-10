@@ -1,6 +1,6 @@
 # UniRide CVRPTW - Mimari Tasarım
 
-## Sürüm: 2.0.0 | Tarih: 30 Mart 2026
+## Sürüm: 2.1.0 | Tarih: 09 Nisan 2026 (09.04.2026 - Ekleyen: Copilot AI)
 
 ---
 
@@ -63,8 +63,8 @@ UniRide, mikroservis tabanlı bir mimari ile tasarlanmış olup, frontend ve bac
 |-----------|-------|------|
 | Next.js | 16.x | App Router, SSR |
 | TypeScript | 5.x | Type safety |
-| React | 19.x | UI components |
-| Tailwind CSS | 4.x | Styling |
+| React | 18.x | UI components |
+| Tailwind CSS | 3.x | Styling (`^3.4.1` — 4.x DEĞİL, 09.04.2026 - Ekleyen: Copilot AI) |
 | shadcn/ui | latest | UI component library |
 | Supabase JS | 2.x | Database client |
 
@@ -77,10 +77,10 @@ src/
 │   │   ├── driver/        # Driver interface
 │   │   └── dashboard/     # Student dashboard
 │   ├── (auth)/            # Authentication pages
-│   └── api/               # API route handlers
+│   └── api/               # API route handlers (14 dosya)
 ├── components/            # React components
 │   ├── ui/               # shadcn/ui components
-│   ├── admin/            # Admin-specific components
+│   ├── admin/            # Admin-specific components (IE Dashboard dahil)
 │   ├── auth/             # Auth components
 │   └── student/          # Student components
 ├── services/             # Business logic services
@@ -90,6 +90,7 @@ src/
 ├── lib/                  # Utilities and config
 │   ├── config.ts         # Centralized configuration
 │   ├── supabase.ts       # Database client
+│   ├── supabase-admin.ts # Server-side admin client (service_role)
 │   └── algorithm-constants.ts
 ├── types/                # TypeScript types
 └── hooks/                # Custom React hooks
@@ -109,21 +110,35 @@ src/
 #### Dizin Yapısı
 ```
 optimizer_api/
-├── main.py               # FastAPI application entry
+├── main.py               # FastAPI application entry (7 endpoints)
 ├── models/
 │   └── schemas.py        # Pydantic models
-├── strategies/
-│   ├── __init__.py       # Strategy registry
+├── strategies/           # 16 strateji dosyası
+│   ├── __init__.py       # Strategy registry (29 anahtar)
 │   ├── base_strategy.py  # Abstract base class
-│   ├── ga_strategy.py    # Genetic Algorithm
-│   ├── pso_strategy.py   # Particle Swarm Optimization
-│   ├── greedy_heuristic.py
-│   ├── ortools_cvrp.py   # OR-Tools CVRP
-│   ├── permutation_tsp.py
-│   └── kmeans_tsp.py     # K-Means clustering
+│   ├── ga_strategy.py    # Genetic Algorithm (Pipeline A)
+│   ├── pso_strategy.py   # Particle Swarm Optimization (Pipeline A)
+│   ├── gwo_strategy.py   # Grey Wolf Optimizer (Pipeline A)
+│   ├── hho_strategy.py   # Harris Hawks Optimization (Pipeline A)
+│   ├── ga_split_strategy.py   # GA + Split Decoder (Pipeline B)
+│   ├── pso_split_strategy.py  # PSO + Split Decoder (Pipeline B)
+│   ├── gwo_split_strategy.py  # GWO + Split Decoder (Pipeline B)
+│   ├── hho_split_strategy.py  # HHO + Split Decoder (Pipeline B)
+│   ├── ortools_cvrp.py   # OR-Tools CVRP (Holistic)
+│   ├── pyvrp_strategy.py # PyVRP / HGS (opsiyonel, Holistic)
+│   ├── vroom_strategy.py # VROOM (opsiyonel, Holistic)
+│   ├── greedy_heuristic.py # Greedy / Nearest Neighbor
+│   ├── two_opt_strategy.py # Two-Opt local search
+│   ├── permutation_tsp.py  # Permutation TSP
+│   ├── cvrptw_wrapper.py   # CVRPTW time-window wrapper
+│   └── kmeans_tsp.py     # KMeans TSP (registry'e kayıtlı değil)
 └── utils/
-    ├── clustering.py     # Clustering utilities
-    └── data_loader.py    # Data loading utilities
+    ├── clustering_strategies/  # 7 clustering algoritması
+    ├── local_search.py         # 8 local search tipi
+    ├── local_search_numba.py   # Numba JIT-hızlandırmalı varyant
+    ├── split_decoder.py        # DP tabanlı split decoder
+    ├── resource_profiler.py    # IE Resource Engine
+    └── data_loader.py          # Data loading utilities
 ```
 
 ### 3. Database (Supabase/PostgreSQL)
@@ -215,9 +230,44 @@ ride_requests (
 
 ## 🧮 Optimizasyon Algoritmaları
 
-### Genetic Algorithm (GA)
+> **Güncel Liste** (09.04.2026 - Ekleyen: Copilot AI — önceki liste yalnızca GA/PSO/Greedy/OR-Tools'u kapsıyordu)
+
+### Pipeline A: Cluster-First, Route-Second (Klasik CVRP)
+
+| Algoritma | Anahtar(lar) | Açıklama |
+|---|---|---|
+| Genetic Algorithm | `genetic_algorithm`, `ga` | OX1 crossover, swap/inversion mutation |
+| PSO | `pso` | Swap-based velocity, discrete PSO |
+| GWO | `gwo`, `grey_wolf` | Grey Wolf Optimizer |
+| HHO | `hho`, `harris_hawks` | Harris Hawks Optimization |
+
+### Pipeline B: Route-First, Split Decoder (CVRPTW uyumlu)
+
+| Algoritma | Anahtar(lar) | Açıklama |
+|---|---|---|
+| GA-Split | `ga_split`, `ga-split` | GA + DP Split Decoder |
+| PSO-Split | `pso_split` | PSO + DP Split Decoder |
+| GWO-Split | `gwo_split` | GWO + DP Split Decoder |
+| HHO-Split | `hho_split` | HHO + DP Split Decoder |
+
+### Holistic Solvers
+
+| Algoritma | Anahtar(lar) | Açıklama |
+|---|---|---|
+| OR-Tools | `ortools_cvrp`, `ortools` | Google OR-Tools CVRP |
+| PyVRP | `pyvrp`, `hgs` | DIMACS 2021 winner — opsiyonel |
+| VROOM | `vroom` | Açık kaynak VRP çözücü — opsiyonel |
+
+### Heuristics
+
+| Algoritma | Anahtar(lar) | Açıklama |
+|---|---|---|
+| Greedy | `greedy`, `nearest_neighbor` | Nearest Neighbor |
+| Two-Opt | `two_opt`, `2opt` | 2-opt local search |
+| Permutation TSP | `permutation_tsp` | Optimal (n≤10) |
+
+### Genetic Algorithm (GA) — Parametreler
 ```python
-# Parametreler
 population_size: 50
 max_iterations: 100
 crossover_rate: 0.85
@@ -225,22 +275,19 @@ mutation_rate: 0.15
 elite_count: 2
 tournament_size: 3
 
-# Operatörler
 Selection: Tournament Selection
 Crossover: Order Crossover (OX1)
 Mutation: Swap / Inversion
 ```
 
-### Particle Swarm Optimization (PSO)
+### Particle Swarm Optimization (PSO) — Parametreler
 ```python
-# Parametreler
 swarm_size: 30
 max_iterations: 100
 inertia_weight: 0.7
 cognitive_weight: 1.5
 social_weight: 1.5
 
-# Velocity Update
 v(t+1) = w*v(t) + c1*r1*(pbest-x) + c2*r2*(gbest-x)
 ```
 
@@ -298,9 +345,9 @@ USING (
 
 ### Backend
 - **Connection Pooling:** Database connection reuse
-- **Caching:** Redis for frequent queries
-- **Async Processing:** Background tasks for long operations
-- **Rate Limiting:** 60 req/min per IP
+- **Caching:** Redis for frequent queries (planlı — henüz implement edilmemiş)
+- **Async Processing:** Background tasks for long operations (planlı — optimizer şu an senkron)
+- **Rate Limiting:** Yalnızca `/api/auth/hint` endpoint'inde uygulanmıştır (5 req/min/IP). Genel rate limiting henüz aktif değil. (09.04.2026 - Ekleyen: Copilot AI: "60 req/min per IP" iddiası yanlıştı, düzeltildi)
 
 ### Database
 - **Indexing:** Indexed columns for frequent queries

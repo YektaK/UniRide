@@ -88,7 +88,11 @@ app = FastAPI(
 # CORS middleware
 # Read allowed origins from ALLOWED_ORIGINS env var (comma-separated).
 # Default to localhost dev server. Set ALLOWED_ORIGINS=* only if truly needed.
-_allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:9002,http://127.0.0.1:9002").split(",")
+_allowed_origins = [
+    o.strip()
+    for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:9002,http://127.0.0.1:9002").split(",")
+    if o.strip()
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,

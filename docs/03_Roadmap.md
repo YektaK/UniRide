@@ -88,7 +88,7 @@ Bu yol haritası, UniRide Özel Öğrenci Taşıma Sistemi'nin CVRPTW (Kapasitel
 |-------|-----|-------|---------|---------|
 | Auth guard — POST /api/calculate-vehicles | A-1 | ✅ TAMAMLANDI (09.04.2026) | 🔴 KRİTİK | ✅ |
 | CORS env-tabanlı yapılandırma | A-2 | ✅ TAMAMLANDI (09.04.2026) | 🔴 YÜKSEK | ✅ |
-| Sandbox IE endpoint düzeltme | A-3 | ⬜ Bekliyor | 🔴 YÜKSEK | ✅ |
+| Sandbox IE endpoint düzeltme | A-3 | ✅ TAMAMLANDI (10.04.2026) | 🔴 YÜKSEK | ✅ |
 | `total_time_window_violations` modele ekle | B-1 | ✅ TAMAMLANDI (09.04.2026) | 🟡 ORTA | ✅ |
 | `strategy`→`algorithm` field fix (sandbox) | B-2 | ✅ TAMAMLANDI (09.04.2026) | 🟡 ORTA | ✅ |
 | `strategy`→`algorithm` field fix (calculate-vehicles) | B-3 | ✅ GEREK YOK (zaten doğru) | 🟡 ORTA | ✅ |

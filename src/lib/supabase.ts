@@ -4,7 +4,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import type { DbUser, DbUserRow, DbVehicle, DbRideRequest, DbWeeklySchedule, RouteAssignment, Route as DbRoute } from "@/types/db";
+import type { DbUserRow, DbVehicle, DbRideRequest, DbWeeklySchedule, RouteAssignment, Route as DbRoute } from "@/types/db";
 
 export type Json =
   | string

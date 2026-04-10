@@ -32,11 +32,28 @@
 4. **CR-8/CR-9 (Commit: b33c646):** `src/app/api/sandbox/route.ts` — `strategy`→`algorithm`, `max_tour_time`→`max_travel_time` fetch gövdesi düzeltildi. Sandbox önceden her zaman varsayılan algoritmayı kullanıyordu.
 5. **CR-6 (config.ts):** `RATE_LIMIT_REQUESTS_PER_MINUTE` — kullanılmayan export'a TODO yorumu eklendi.
 
-### Açık Sorunlar (Diğer Geliştiriciler Alabilir)
-- **A-3:** `sandbox/route.ts:95` → `/api/v1/ie/analyze` endpoint'i `main.py`'de tanımlı değil
-- **C-2:** `kmeans_tsp.py` registry'e kayıtlı değil
-- **C-3:** `as any` kullanımları 11 yerde devam ediyor
-- **C-4:** Supabase env var boş string fallback yerine hata fırlatmalı
+### Açık Sorunlar
+_(Tüm A-3, C-2, C-3, C-4 sorunları 10.04.2026 itibarıyla kapatıldı — aşağıdaki girişe bakın.)_
+
+---
+
+## 2026-04-10 — Geriye Kalan Sorunların Kapanması ve PR Gözden Geçirme Düzeltmeleri (10.04.2026 - Ekleyen: Copilot AI)
+
+### Kapatılan Sorunlar
+**[Copilot AI]** — Tüm bekleyen kalite ve fonksiyonel sorunlar giderildi:
+
+1. **A-3 — Sandbox IE endpoint (Commit: ce0dffe):** Var olmayan `/api/v1/ie/analyze` fetch kaldırıldı. `sandbox/route.ts` artık `optimizeRoutes` Python servisinin `/api/v1/optimize` endpoint'inden gelen inline `ie_data` alanını kullanıyor. `result.ie_data` → `ieData` (frontend `IEResponseData` şeklinde) dönüşüm helper'ı eklendi. `depot` nesnesı ve doğru Python `VehicleConfig` şeması (snake_case) eklendi; önceden 422 hatası alınıyordu.
+2. **C-2 — `kmeans_tsp.py` (Commit: ce0dffe):** Dosya `optimizer_api/strategies/_archived/` dizinine taşındı. K-Means pipeline gelecekte kullanılmayacak; `strategies/__init__.py` docstring güncellendi.
+3. **C-3 — `as any` (Commit: 84b3e3c):** `admin/users/route.ts:86,144` temizlendi; `DbUserRow` eklendi.
+4. **C-4 — Supabase env fallback (Commit: ce0dffe):** `config.ts`'ten boş string fallback export'ları kaldırıldı; gerçek doğrulama `supabase.ts` + `supabase-admin.ts` içinde zaten mevcuttu.
+
+### PR Gözden Geçirme Sonrası Düzeltmeler
+**[Copilot AI]** — `copilot-pull-request-reviewer` geri bildirimlerine göre:
+
+5. **`src/types/db.ts`:** `DbUserRow` yorumuna `password_hint` için doğru kaynak referansı eklendi (`migrations/20260305_add_missing_user_columns.sql`).
+6. **`src/lib/supabase.ts`:** Kullanılmayan `DbUser` import'u kaldırıldı.
+7. **`optimizer_api/main.py`:** `ALLOWED_ORIGINS` değerlerinde `.strip()` + boş string filtreleme eklendi (başında/sonunda boşluk içeren değerlerin CORS hatalarına neden olması önlendi).
+8. **Tüm dokümanlar güncellendi:** `01_Implementation_Status.md`, `03_Roadmap.md`, `04_Changelog.md`, `.ai-handover.md` artık tamamlanan sorunları doğru yansıtıyor.
 
 ---
 

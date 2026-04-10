@@ -2,7 +2,9 @@ import type { User, WeeklySchedule, RideRequest, Vehicle, AdminSettings } from "
 
 /**
  * Exact row shape returned by Supabase for the `users` table.
- * Uses snake_case column names matching the PostgreSQL schema in supabase/schema.sql.
+ * Uses snake_case column names matching the PostgreSQL schema.
+ * Note: `password_hint` is added via migration, not in the base schema.sql —
+ * see supabase/migrations/20260305_add_missing_user_columns.sql.
  *
  * When to use this type vs DbUser:
  *   - Use `DbUserRow` for direct database operations (insert/update/select in API routes and DB helpers)

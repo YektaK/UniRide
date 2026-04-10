@@ -138,19 +138,14 @@ Düzeltme planı: `docs/05_Code_Quality_Roadmap.md`
 | ID | Açıklama | Commit |
 |---|---|---|
 | A-1 | `POST /api/calculate-vehicles` — `requireAdmin` auth guard eklendi | `5d87418` |
-| A-2 | CORS wildcard → `ALLOWED_ORIGINS` env var ile yapılandırılabilir yapıldı | `1bf2b97` |
+| A-2 | CORS wildcard → `ALLOWED_ORIGINS` env var ile yapılandırılabilir yapıldı; değer trimming eklendi | `1bf2b97` |
+| A-3 | Sandbox IE — broken `/api/v1/ie/analyze` fetch kaldırıldı; `result.ie_data` → `ieData` dönüştürülerek frontend'e aktarılıyor; `depot` ve doğru Python `vehicles` şeması eklendi | `ce0dffe` |
 | B-1 | `total_time_window_violations: Optional[int]` → `OptimizationResponse` Pydantic modeline eklendi | `fcf4ce1` |
 | B-2/B-4 | `sandbox/route.ts` — `strategy`→`algorithm`, `max_tour_time`→`max_travel_time` düzeltildi | `b33c646` |
 | C-1 | `RATE_LIMIT_REQUESTS_PER_MINUTE` sabiti belgelendi (TODO yorumu eklendi) | `config.ts` |
-
-### Bekleyen Düzeltmeler (Başka Geliştiriciler Alabilir)
-
-| ID | Açıklama | Paralel? |
-|---|---|---|
-| A-3 | Sandbox IE endpoint — `/api/v1/ie/analyze` main.py'de tanımlı değil | ✅ |
-| C-2 | `kmeans_tsp.py` registry'e kaydet veya kaldır | ✅ |
-| C-3 | `as any` kullanımlarını azalt (admin/users/route.ts:86,144) | ✅ |
-| C-4 | Supabase env var boş string fallback → hata fırlat | ✅ |
+| C-2 | `kmeans_tsp.py` `optimizer_api/strategies/_archived/` dizinine taşındı; K-Means artık kullanılmayacak | `ce0dffe` |
+| C-3 | `admin/users/route.ts` — `as any` kaldırıldı; `DbUserRow` eklendi | `84b3e3c` |
+| C-4 | `config.ts` — boş string Supabase env fallback export'ları kaldırıldı | `ce0dffe` |
 
 ---
 

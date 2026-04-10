@@ -75,9 +75,9 @@ export async function POST(request: NextRequest) {
             body: JSON.stringify({
                 students,
                 vehicles,
-                max_tour_time: maxTourTime,
+                max_travel_time: maxTourTime,
                 allow_time_shift: allowTimeShift,
-                strategy,
+                algorithm: strategy,
                 clustering_algorithm: clusteringAlgorithm,
             }),
         });

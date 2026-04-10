@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "tsp-benchmark-cli"
+version = "1.0.0"
+description = "TSP Benchmark CLI — Benchmark 9 optimization algorithms on TSPLIB problems"
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.21.0",
+]
+
+[project.optional-dependencies]
+numba = ["numba>=0.55.0"]
+
+[project.scripts]
+tsp-benchmark = "tsp_benchmark_cli.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["tsp_benchmark_cli*"]

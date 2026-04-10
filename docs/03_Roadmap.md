@@ -1,42 +1,47 @@
 # UniRide CVRPTW - Geliştirme Yol Haritası
 
-## Sürüm: 2.1.0 | Tarih: 09 Nisan 2026 (09.04.2026 - Ekleyen: Copilot AI)
+## Sürüm: 2.2.0 | Tarih: 10 Nisan 2026 (10.04.2026 - Ekleyen: Antigravity AI)
 
 ---
 
 ## 📊 Genel Bakış
 
-Bu yol haritası, UniRide Özel Öğrenci Taşıma Sistemi'nin CVRPTW (Kapasiteli Araç Rotalama Problemi Zaman Pencereli) entegrasyonu için kapsamlı bir plan sunmaktadır. Proje, 4 ana fazdan oluşmakta olup, her faz belirli hedeflere odaklanmaktadır.
+Bu yol haritası, UniRide Özel Öğrenci Taşıma Sistemi'nin CVRPTW (Kapasiteli Araç Rotalama Problemi Zaman Pencereli) entegrasyonu için kapsamlı bir plan sunmaktadır. Proje, 7 ana fazdan oluşmakta olup, ilk 4 faz tamamlanmıştır.
 
 ---
 
 ## ✅ Tamamlanan Fazlar
 
 ### Faz 1: Temel Altyapı ✅
-**Durum:** Tamamlandı | **Tahmini Süre:** 2 hafta
+**Durum:** Tamamlandı | **Süre:** 2 hafta
 
 | Görev | Durum | Açıklama |
 |-------|-------|----------|
-| Next.js 16 Kurulumu | ✅ | App Router, TypeScript, Tailwind CSS |
+| Next.js 16 Kurulumu | ✅ | App Router, TypeScript, Tailwind CSS 3.x |
 | Supabase Entegrasyonu | ✅ | PostgreSQL, RLS policies |
-| Python Backend API | ✅ | FastAPI, CORS, Health check |
-| Temel UI Bileşenleri | ✅ | shadcn/ui components |
-| Authentication | ✅ | Supabase Auth |
+| Python Backend API | ✅ | FastAPI, CORS (env-tabanlı), Health check |
+| Temel UI Bileşenleri | ✅ | shadcn/ui components (80+ bileşen) |
+| Authentication | ✅ | Supabase Auth + requireAdmin guard |
 
 ### Faz 2: CVRP Optimizasyonu ✅
-**Durum:** Tamamlandı | **Tahmini Süre:** 3 hafta
+**Durum:** Tamamlandı | **Süre:** 3 hafta
 
 | Görev | Durum | Açıklama |
 |-------|-------|----------|
 | Genetic Algorithm | ✅ | OX1 crossover, swap/inversion mutation |
 | PSO | ✅ | Swap-based velocity, discrete PSO |
+| GWO | ✅ | Grey Wolf Optimizer (Mirjalili et al., 2014) |
+| HHO | ✅ | Harris Hawks Optimization (Heidari et al., 2019) |
 | Greedy/Nearest Neighbor | ✅ | Hızlı sezgisel çözüm |
 | OR-Tools CVRP | ✅ | Endüstri standardı çözücü |
+| PyVRP (Opsiyonel) | ✅ | DIMACS 2021 kazananı — graceful fallback |
+| VROOM (Opsiyonel) | ✅ | Ultra-hızlı C++ çözücü — graceful fallback |
 | Permutation TSP | ✅ | Optimal çözüm (n≤10) |
-| K-Means Clustering | ✅ | Multi-vehicle clustering |
+| Two-Opt | ✅ | Local search iyileştirme |
+| K-Means Clustering | ✅ | Multi-vehicle clustering (arşivlendi: `_archived/`) |
 
 ### Faz 3: Veritabanı & UI ✅
-**Durum:** Tamamlandı | **Tahmini Süre:** 2 hafta
+**Durum:** Tamamlandı | **Süre:** 2 hafta
 
 | Görev | Durum | Açıklama |
 |-------|-------|----------|
@@ -45,88 +50,131 @@ Bu yol haritası, UniRide Özel Öğrenci Taşıma Sistemi'nin CVRPTW (Kapasitel
 | Student Interface | ✅ | Haftalık program, ride request |
 | Excel Bulk Upload | ✅ | Toplu öğrenci yükleme |
 | Route Planning UI | ✅ | Algoritma seçimi ve sonuçlar |
+| IE Dashboard | ✅ | Resource Histogram, Tracks, Bottleneck |
+| Sandbox Mode | ✅ | Özel araç config ile re-optimize |
+| Route Plan Kaydetme | ✅ | `route_plans` tablosu + API |
+
+### Faz 4: CVRPTW (Zaman Pencereli Rotalama) ✅
+**Durum:** Tamamlandı | **Süre:** 4 hafta
+
+#### 4.1 Backend CVRPTW Desteği ✅
+| Görev | Durum | Açıklama |
+|-------|-------|----------|
+| Split Decoder (DP) | ✅ | Optimal trip bölme — Prins (2004) |
+| GA-Split Strategy | ✅ | GA + Split Decoder (Pipeline B) |
+| PSO-Split Strategy | ✅ | PSO + Split Decoder (Pipeline B) |
+| GWO-Split Strategy | ✅ | GWO + Split Decoder (Pipeline B) |
+| HHO-Split Strategy | ✅ | HHO + Split Decoder (Pipeline B) |
+| Time Window Veri Yapısı | ✅ | Backward (Pickup) + Forward (Dropoff) |
+| Time Window Violation Tracking | ✅ | Accumulating counter, earliest-time wait |
+| CVRPTW Wrapper | ✅ | Time window overlay for holistic solvers |
+| Local Search (8 tip) | ✅ | 2-opt, 3-opt, Or-opt, Swap, Cross, Hybrid + Numba |
+
+#### 4.2 Frontend Time Window UI ✅
+| Görev | Durum | Açıklama |
+|-------|-------|----------|
+| Direction Selection UI | ✅ | Pickup / Dropoff toggle |
+| Time Window Input Fields | ✅ | Target time, offset |
+| API Integration Updates | ✅ | Direction, target_time gönderimi |
+
+#### 4.3 Güvenlik & Kod Kalitesi ✅ (09–10.04.2026)
+| Görev | ID | Durum | Açıklama |
+|-------|----|-------|----------|
+| Auth guard — calculate-vehicles | A-1 | ✅ | `requireAdmin` eklendi |
+| CORS env-tabanlı yapılandırma | A-2 | ✅ | `ALLOWED_ORIGINS` env var |
+| Sandbox IE endpoint düzeltme | A-3 | ✅ | `/api/v1/ie/analyze` fetch kaldırıldı |
+| `total_time_window_violations` | B-1 | ✅ | Pydantic modele eklendi |
+| `strategy`→`algorithm` fix | B-2 | ✅ | Sandbox fetch düzeltildi |
+| `max_tour_time`→`max_travel_time` | B-4 | ✅ | Sandbox field düzeltildi |
+| `as any` kaldır | C-3 | ✅ | `DbUserRow` tipi eklendi |
+| Supabase env doğrulama | C-4 | ✅ | Boş fallback kaldırıldı |
+| `kmeans_tsp.py` arşivle | C-2 | ✅ | `_archived/` dizinine taşındı |
+
+#### 4.4 Forensic Audit Düzeltmeleri ✅ (10.04.2026)
+| Görev | ID | Durum | Açıklama |
+|-------|----|-------|----------|
+| Negatif departure skip | FIX-01 | ✅ | `departure_time < 0 → continue` |
+| DROPOFF tw_violations birikmeli | FIX-02 | ✅ | Counter loop dışına, `+= 1`, `earliest` wait |
+| PICKUP `j` değişken çakışması | FIX-03 | ✅ | `k` + `trip_end` tracker |
+| `15.0` → constant (split stratejiler) | FIX-04 | ✅ | `constants.py` + `logger.warning` |
+| Duplicate `_minutes_to_time` kaldır | FIX-05 | ✅ | 2. kopya silindi |
+| Bare `except:` → typed exceptions | FIX-06 | ✅ | 7/7 site düzeltildi |
+| `haversine_distance` tek kaynak | FIX-07 | ⚠️ | `clustering.py` hâlâ kendi kopyasını içeriyor |
+| `HybridSplitBaseStrategy` oluştur | FIX-08 | ✅ | 3 method taşındı, 4 strateji inherit ediyor |
+| Unused `depot` parametre kaldır | FIX-09 | ✅ | `_get_target_arrival/departure_time` |
+| `ALGORITHM_COMPARISON.md` güncelle | FIX-10 | ✅ | 🔵→🟢 statü güncellendi |
 
 ---
 
 ## 🔄 Devam Eden Fazlar
 
-### Faz 4: CVRPTW (Zaman Pencereli Rotalama) 🔄
-**Durum:** Devam Ediyor | **Tahmini Süre:** 3-4 hafta
+### Faz 4.5: Kalan Teknik Borç ve Test 🔄
+**Durum:** Devam Ediyor | **Tahmini Süre:** 1-2 hafta
 
-#### 4.1 Backend CVRPTW Desteği (1-2 hafta)
-| Görev | Durum | Öncelik |
-|-------|-------|---------|
-| GWO Strategy Implementasyonu | ✅ TAMAMLANDI (09.04.2026 - Ekleyen: Copilot AI) | Yüksek |
-| HHO Strategy Implementasyonu | ✅ TAMAMLANDI (09.04.2026 - Ekleyen: Copilot AI) | Yüksek |
-| Split Decoder (Pipeline B) | ✅ TAMAMLANDI | Yüksek |
-| Time Window Veri Yapısı | ✅ TAMAMLANDI | Yüksek |
-| Backward Scheduling (Pickup) | ✅ TAMAMLANDI | Yüksek |
-| Forward Scheduling (Dropoff) | ✅ TAMAMLANDI | Yüksek |
-| Time Window Violation Tracking | ✅ TAMAMLANDI | Orta |
+#### 4.5.1 Kalan Teknik Borç
+| Görev | Öncelik | Durum | Açıklama |
+|-------|---------|-------|----------|
+| FIX-04 genişlet — Pipeline A stratejileri | 🟡 | ⬜ | 11 dosyada hâlâ `return 15.0` var (ga/pso/gwo/hho_strategy, ortools, pyvrp, vroom, greedy, permutation, two_opt) |
+| FIX-07 tamamla — `clustering.py` haversine | 🟢 | ⬜ | `clustering.py:31` → `from utils.data_loader import haversine_distance` |
+| Algorithm Parameter Config UI | 🟢 | ⬜ | Frontend'de algoritma parametresi ayarlama |
+| DataLoader TTL/Invalidation | 🟢 | ⬜ | Singleton'a cache süresi + yenileme mekanizması |
+| ResourceProfiler magic numbers | 🟢 | ⬜ | Sabit saatler (14:00, 17:00) config'e taşınsın |
+| `main.old.py` temizle | 🟢 | ⬜ | 24KB ölü kod — silinebilir veya arşivlenebilir |
 
-#### 4.2 Frontend Time Window UI (1 hafta)
-| Görev | Durum | Öncelik |
-|-------|-------|---------|
-| Direction Selection UI | ✅ TAMAMLANDI | Yüksek |
-| Time Window Input Fields | ✅ TAMAMLANDI | Yüksek |
-| Algorithm Parameter Config UI | ⬜ Bekliyor | Orta |
-| API Integration Updates | ✅ TAMAMLANDI | Yüksek |
+#### 4.5.2 Test Altyapısı
+| Görev | Öncelik | Durum | Açıklama |
+|-------|---------|-------|----------|
+| Split Decoder audit fix testleri | 🔴 | ⬜ | FIX-01/02/03 için doğrulama testleri |
+| HybridSplitBaseStrategy testleri | 🟡 | ⬜ | Base class inheritance doğrulaması |
+| Strategy smoke tests (tüm 18 strateji) | 🟡 | ⬜ | Her strateji için basic optimize() çağrısı |
+| Test coverage hedefi: %60 | 🟡 | ⬜ | Mevcut: ~%25 → Hedef: %60 |
 
-#### 4.3 Test & Doğrulama (1 hafta)
-| Görev | Durum | Öncelik |
-|-------|-------|---------|
-| Unit Tests | ⬜ Bekliyor | Orta |
-| Integration Tests | ⬜ Bekliyor | Orta |
-| Performance Benchmarks | 🔄 Kısmi (TSPLib benchmark mevcut) | Düşük |
-
----
-
-## 🔧 Faz 4.4: Kod Kalitesi ve Güvenlik Düzeltmeleri (09.04.2026 - Ekleyen: Copilot AI)
-**Durum:** Devam Ediyor | **Referans:** `docs/05_Code_Quality_Roadmap.md`
-
-| Görev | ID | Durum | Öncelik | Paralel? |
-|-------|-----|-------|---------|---------|
-| Auth guard — POST /api/calculate-vehicles | A-1 | ✅ TAMAMLANDI (09.04.2026) | 🔴 KRİTİK | ✅ |
-| CORS env-tabanlı yapılandırma | A-2 | ✅ TAMAMLANDI (09.04.2026) | 🔴 YÜKSEK | ✅ |
-| Sandbox IE endpoint düzeltme | A-3 | ✅ TAMAMLANDI (10.04.2026) | 🔴 YÜKSEK | ✅ |
-| `total_time_window_violations` modele ekle | B-1 | ✅ TAMAMLANDI (09.04.2026) | 🟡 ORTA | ✅ |
-| `strategy`→`algorithm` field fix (sandbox) | B-2 | ✅ TAMAMLANDI (09.04.2026) | 🟡 ORTA | ✅ |
-| `strategy`→`algorithm` field fix (calculate-vehicles) | B-3 | ✅ GEREK YOK (zaten doğru) | 🟡 ORTA | ✅ |
-| `max_tour_time`→`max_travel_time` (sandbox) | B-4 | ✅ TAMAMLANDI (09.04.2026) | 🟡 ORTA | ✅ |
+#### 4.5.3 Akademik Benchmark
+| Görev | Öncelik | Durum | Açıklama |
+|-------|---------|-------|----------|
+| Benchmark sonuçlarını çalıştır | 🟡 | ⬜ | TSPLib + Solomon instances |
+| PyVRP/VROOM karşılaştırma tablosu | 🟡 | ⬜ | SOTA kıyaslama (DIMACS) |
+| `ALGORITHM_COMPARISON.md` gerçek veriyle güncelle | 🟡 | ⬜ | `[TAHMİNİ]` etiketlerini kaldır |
+| GAP hesaplama doğrulama | 🟡 | ⬜ | Negatif GAP sorunu araştırın |
 
 ---
 
 ## 📅 Gelecek Fazlar
 
-### Faz 5: Bildirim Sistemi
-**Durum:** Planlandı | **Tahmini Süre:** 2 hafta
+### Faz 5: Veri Kalıcılığı & Atama Sistemi
+**Durum:** Planlandı | **Tahmini Süre:** 2 hafta | **Hedef:** Mayıs 2026
 
-| Görev | Açıklama |
-|-------|----------|
-| Notification Service | Push/email/SMS bildirimler |
-| Evening Confirmations | Akşam 22:00 bildirimleri |
-| Student Confirmation UI | Onay/Red butonları |
-| Admin Notification Panel | Bildirim yönetimi |
+| Görev | Öncelik | Açıklama |
+|-------|---------|----------|
+| Sürücü atama UI | 🔴 | `route_plans.driver_assignments` kolonu mevcut, UI gerekli |
+| Çift yönlü planlama | 🟡 | Pickup + Dropoff birlikte planlama |
+| Standart araç ihtiyaç tablosu | 🟡 | IE engine ile entegre |
+| DataLoader payload düzeltmesi | 🟢 | Fail-fast mekanizması |
+| time_matrix caching | 🟢 | Redis veya in-memory TTL cache |
 
-### Faz 6: Otomatik Planlama
-**Durum:** Planlandı | **Tahmini Süre:** 2 hafta
+### Faz 6: Bildirim & Otomasyon
+**Durum:** Planlandı | **Tahmini Süre:** 2-3 hafta | **Hedef:** Haziran 2026
 
-| Görev | Açıklama |
-|-------|----------|
-| Scheduled Jobs | Cron job entegrasyonu |
-| Nightly Planning | Gece 23:00 rota planlama |
-| ETA Calculation | Varış zamanı tahmini |
-| Dynamic Re-routing | Anlık rota güncelleme |
+| Görev | Öncelik | Açıklama |
+|-------|---------|----------|
+| Push/Email/SMS bildirim servisi | 🟡 | Firebase Cloud Messaging veya Supabase Edge Functions |
+| Akşam 22:00 onay bildirimleri | 🟡 | Ertesi gün seferi onay/red |
+| Gece 23:00 otomatik planlama | 🟡 | Cron job ile rota oluşturma |
+| ETA hesaplama | 🟢 | Varış zamanı tahmini |
+| Anlık rota güncelleme | 🟢 | İptal/onay sonrası dynamic re-routing |
 
 ### Faz 7: Production Deployment
-**Durum:** Planlandı | **Tahmini Süre:** 1 hafta
+**Durum:** Planlandı | **Tahmini Süre:** 2 hafta | **Hedef:** Temmuz 2026
 
-| Görev | Açıklama |
-|-------|----------|
-| Docker Containerization | Dockerfile, docker-compose |
-| CI/CD Pipeline | GitHub Actions |
-| Monitoring | Logging, metrics |
-| Security Audit | Penetrasyon testi |
+| Görev | Öncelik | Açıklama |
+|-------|---------|----------|
+| Docker Containerization | 🔴 | Frontend + Backend + Redis docker-compose |
+| CI/CD Pipeline | 🔴 | GitHub Actions: lint, test, build, deploy |
+| Rate Limiting (tüm API) | 🟡 | Redis-backed rate limiter middleware |
+| Monitoring & Logging | 🟡 | Structured logging, Sentry veya benzeri |
+| FastAPI async endpoint | 🟢 | `/api/v1/optimize` → async + `run_in_executor` |
+| Zod schema validation | 🟢 | `calculate-vehicles` raw cast → `zod.parse` |
+| Penetrasyon testi | 🟢 | OWASP Top 10 doğrulaması |
 
 ---
 
@@ -139,9 +187,10 @@ Bu yol haritası, UniRide Özel Öğrenci Taşıma Sistemi'nin CVRPTW (Kapasitel
 └── Faz 3: Veritabanı & UI ✅
 
 2026 Q2 (Devam Ediyor)
-├── Faz 4: CVRPTW 🔄 (Nisan 2026)
-├── Faz 5: Bildirim Sistemi (Mayıs 2026)
-└── Faz 6: Otomatik Planlama (Haziran 2026)
+├── Faz 4: CVRPTW ✅ (Nisan 2026)
+├── Faz 4.5: Teknik Borç & Test 🔄 (Nisan 2026)
+├── Faz 5: Veri Kalıcılığı & Atama (Mayıs 2026)
+└── Faz 6: Bildirim & Otomasyon (Haziran 2026)
 
 2026 Q3 (Planlandı)
 └── Faz 7: Production Deployment (Temmuz 2026)
@@ -152,12 +201,16 @@ Bu yol haritası, UniRide Özel Öğrenci Taşıma Sistemi'nin CVRPTW (Kapasitel
 ## 🎯 KPI'lar ve Başarı Kriterleri
 
 ### Teknik KPI'lar
-| Metrik | Hedef | Mevcut |
-|--------|-------|--------|
-| Optimizasyon Hızı | <5 saniye (50 öğrenci) | ~3 saniye ✅ |
-| Route Quality | <10% optimal farkı | ~8% ✅ |
-| API Response Time | <200ms | ~150ms ✅ |
-| Test Coverage | >80% | ~40% ⚠️ |
+| Metrik | Hedef | Mevcut | Durum |
+|--------|-------|--------|-------|
+| Optimizasyon Hızı (50 öğrenci) | <5 saniye | ~3 saniye | ✅ |
+| Route Quality (optimal farkı) | <10% | ~8% | ✅ |
+| API Response Time | <200ms | ~150ms | ✅ |
+| Test Coverage | >60% | ~25% | ⚠️ |
+| Bare `except:` sayısı | 0 | 0 | ✅ |
+| Magic number `15.0` (split stratejiler) | 0 | 0 | ✅ |
+| Magic number `15.0` (tüm codebase) | 0 | 11 site | ⚠️ |
+| Duplicate code (LOC) | <50 | ~80 | ⚠️ |
 
 ### İş KPI'ları
 | Metrik | Hedef | Mevcut |
@@ -172,10 +225,12 @@ Bu yol haritası, UniRide Özel Öğrenci Taşıma Sistemi'nin CVRPTW (Kapasitel
 
 | Risk | Olasılık | Etki | Azaltıcı Önlem |
 |------|----------|------|----------------|
-| Algoritma Performansı | Orta | Yüksek | Benchmark testleri, optimizasyon |
-| Time Window İhlalleri | Yüksek | Orta | Soft constraint, penalty function |
-| API Entegrasyon Sorunları | Düşük | Yüksek | Fallback mekanizması |
-| Veri Güvenliği | Düşük | Kritik | RLS, encryption, audit |
+| Algoritma Performansı N>100 | Orta | Yüksek | Benchmark testleri, PyVRP/VROOM fallback |
+| Time Window İhlalleri | Düşük (düzeltildi) | Orta | FIX-01/02/03 uygulandı, test yazılacak |
+| time_matrix veri eksikliği | Orta | Yüksek | `logger.warning` eklendi (FIX-04), caching planlı |
+| Singleton DataLoader stale data | Düşük | Orta | TTL mekanizması planlı |
+| Test coverage düşük | Yüksek | Orta | Faz 4.5.2 test sprint |
+| Veri Güvenliği | Düşük | Kritik | RLS, CORS fix, auth guard uygulandı |
 
 ---
 
@@ -189,3 +244,4 @@ Bu yol haritası, UniRide Özel Öğrenci Taşıma Sistemi'nin CVRPTW (Kapasitel
 ---
 
 *Bu yol haritası proje gereksinimlerine göre güncellenecektir.*
+*Son güncelleme: 10.04.2026 — Forensic audit düzeltmeleri ve teknik borç analizi sonrası.*

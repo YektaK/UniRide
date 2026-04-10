@@ -1,6 +1,6 @@
 # UniRide CVRPTW - Mimari Tasarım
 
-## Sürüm: 2.1.0 | Tarih: 09 Nisan 2026 (09.04.2026 - Ekleyen: Copilot AI)
+## Sürüm: 2.2.0 | Tarih: 10 Nisan 2026 (10.04.2026 - Ekleyen: Antigravity AI)
 
 ---
 
@@ -113,9 +113,10 @@ optimizer_api/
 ├── main.py               # FastAPI application entry (7 endpoints)
 ├── models/
 │   └── schemas.py        # Pydantic models
-├── strategies/           # 16 strateji dosyası
+├── strategies/           # 18 strateji dosyası + base
 │   ├── __init__.py       # Strategy registry (29 anahtar)
 │   ├── base_strategy.py  # Abstract base class
+│   ├── hybrid_base_strategy.py # Shared base for split strategies (10.04.2026)
 │   ├── ga_strategy.py    # Genetic Algorithm (Pipeline A)
 │   ├── pso_strategy.py   # Particle Swarm Optimization (Pipeline A)
 │   ├── gwo_strategy.py   # Grey Wolf Optimizer (Pipeline A)
@@ -131,14 +132,18 @@ optimizer_api/
 │   ├── two_opt_strategy.py # Two-Opt local search
 │   ├── permutation_tsp.py  # Permutation TSP
 │   ├── cvrptw_wrapper.py   # CVRPTW time-window wrapper
-│   └── kmeans_tsp.py     # KMeans TSP (registry'e kayıtlı değil)
+│   └── _archived/          # Retired strategies (kmeans_tsp.py)
 └── utils/
-    ├── clustering_strategies/  # 7 clustering algoritması
-    ├── local_search.py         # 8 local search tipi
-    ├── local_search_numba.py   # Numba JIT-hızlandırmalı varyant
-    ├── split_decoder.py        # DP tabanlı split decoder
-    ├── resource_profiler.py    # IE Resource Engine
-    └── data_loader.py          # Data loading utilities
+    ├── constants.py             # Shared constants (DEFAULT_TRAVEL_FALLBACK_MINUTES)
+    ├── clustering.py            # Student clustering algorithms
+    ├── clustering_strategies/   # 7 clustering algoritması
+    ├── local_search.py          # 8 local search tipi
+    ├── local_search_numba.py    # Numba JIT-hızlandırmalı varyant
+    ├── split_decoder.py         # DP tabanlı split decoder
+    ├── linear_split_decoder.py  # O(n) linear split variant
+    ├── resource_profiler.py     # IE Resource Engine
+    ├── time_window_extractor.py # TW extraction utilities
+    └── data_loader.py           # Data loading (haversine canonical source)
 ```
 
 ### 3. Database (Supabase/PostgreSQL)
@@ -413,20 +418,25 @@ logger.info({
 
 ## 🔮 Gelecek Geliştirmeler
 
-### Kısa Vadeli
-1. CVRPTW time window desteği
-2. GWO/HHO algoritma implementasyonu
-3. Pickup/Dropoff direction UI
+### Kısa Vadeli (Nisan-Mayıs 2026)
+1. FIX-04 Pipeline A genişletmesi (11 dosya)
+2. FIX-07 haversine birleştirme tamamlama
+3. Test coverage %25 → %60
+4. Akademik benchmark sonuçları
+5. Sürücü atama UI
 
-### Orta Vadeli
+### Orta Vadeli (Haziran-Temmuz 2026)
 1. Real-time vehicle tracking
 2. Push notifications
-3. Mobile app (React Native)
+3. Docker + CI/CD
+4. DataLoader TTL/invalidation
+5. Redis-backed rate limiting
 
 ### Uzun Vadeli
 1. Machine learning ile talep tahmini
-2. Dynamic pricing
-3. Multi-campus support
+2. Multi-campus support
+3. Mobile app (React Native)
+4. Heterojen filo aktivasyonu (stratejilerde)
 
 ---
 

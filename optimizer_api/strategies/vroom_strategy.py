@@ -16,6 +16,10 @@ from models.schemas import (
 )
 from strategies.base_strategy import BaseRoutingStrategy
 from utils.data_loader import DataLoader, haversine_distance, estimate_travel_time
+from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class VROOMStrategy(BaseRoutingStrategy):
@@ -59,7 +63,8 @@ class VROOMStrategy(BaseRoutingStrategy):
             dist = haversine_distance(c1["lat"], c1["lng"], c2["lat"], c2["lng"])
             return estimate_travel_time(dist)
 
-        return 15.0  # Default fallback
+        logger.warning(f"Distance matrix miss for {from_loc} to {to_loc}. Using default fallback: {DEFAULT_TRAVEL_FALLBACK_MINUTES} mins")
+        return DEFAULT_TRAVEL_FALLBACK_MINUTES  # Default fallback
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:
         """Execute VROOM optimization"""
@@ -310,7 +315,8 @@ class VROOMFallbackStrategy(BaseRoutingStrategy):
                 c1, c2 = coordinates[from_loc], coordinates[to_loc]
                 dist = haversine_distance(c1["lat"], c1["lng"], c2["lat"], c2["lng"])
                 return estimate_travel_time(dist)
-            return 15.0
+            logger.warning(f"Distance matrix miss for {from_loc} to {to_loc}. Using default fallback: {DEFAULT_TRAVEL_FALLBACK_MINUTES} mins")
+            return DEFAULT_TRAVEL_FALLBACK_MINUTES
 
         # Sweep algorithm: sort by angle from depot
         import math

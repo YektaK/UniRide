@@ -16,6 +16,10 @@ from models.schemas import (
 )
 from strategies.base_strategy import BaseRoutingStrategy
 from utils.data_loader import DataLoader, haversine_distance, estimate_travel_time
+from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class PyVRPStrategy(BaseRoutingStrategy):
@@ -60,7 +64,8 @@ class PyVRPStrategy(BaseRoutingStrategy):
             dist = haversine_distance(c1["lat"], c1["lng"], c2["lat"], c2["lng"])
             return estimate_travel_time(dist)
 
-        return 15.0
+        logger.warning(f"Distance matrix miss for {from_loc} to {to_loc}. Using default fallback: {DEFAULT_TRAVEL_FALLBACK_MINUTES} mins")
+        return DEFAULT_TRAVEL_FALLBACK_MINUTES
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:
         """Execute PyVRP optimization"""
@@ -116,7 +121,7 @@ class PyVRPStrategy(BaseRoutingStrategy):
             for i, from_loc in enumerate(location_ids):
                 row = []
                 for j, to_loc in enumerate(location_ids):
-                    duration_minutes = raw_matrix[i][j] if raw_matrix[i][j] > 0 else 15.0
+                    duration_minutes = raw_matrix[i][j] if raw_matrix[i][j] > 0 else DEFAULT_TRAVEL_FALLBACK_MINUTES
                     row.append(int(duration_minutes * 60))  # Convert to seconds
                 duration_matrix.append(row)
 
@@ -334,15 +339,15 @@ class PyVRPAlternativeStrategy(BaseRoutingStrategy):
                         duration_matrix[i, j] = 0
                     elif i == 0 and j > 0:
                         # Depot to client
-                        duration = raw_matrix[0][j] if raw_matrix[0][j] > 0 else 15.0
+                        duration = raw_matrix[0][j] if raw_matrix[0][j] > 0 else DEFAULT_TRAVEL_FALLBACK_MINUTES
                         duration_matrix[i, j] = int(duration * 60 * scale)
                     elif i > 0 and j == 0:
                         # Client to depot
-                        duration = raw_matrix[i][0] if raw_matrix[i][0] > 0 else 15.0
+                        duration = raw_matrix[i][0] if raw_matrix[i][0] > 0 else DEFAULT_TRAVEL_FALLBACK_MINUTES
                         duration_matrix[i, j] = int(duration * 60 * scale)
                     else:
                         # Client to client
-                        duration = raw_matrix[i][j] if raw_matrix[i][j] > 0 else 15.0
+                        duration = raw_matrix[i][j] if raw_matrix[i][j] > 0 else DEFAULT_TRAVEL_FALLBACK_MINUTES
                         duration_matrix[i, j] = int(duration * 60 * scale)
 
             # Create depot
@@ -435,7 +440,7 @@ class PyVRPAlternativeStrategy(BaseRoutingStrategy):
                             dist = haversine_distance(c1["lat"], c1["lng"], c2["lat"], c2["lng"])
                             duration = estimate_travel_time(dist)
                         else:
-                            duration = raw_matrix[location_ids.index(prev_location)][location_ids.index(current_location)] if prev_location in location_ids and current_location in location_ids else 15.0
+                            duration = raw_matrix[location_ids.index(prev_location)][location_ids.index(current_location)] if prev_location in location_ids and current_location in location_ids else DEFAULT_TRAVEL_FALLBACK_MINUTES
 
                         total_duration += duration
 
@@ -462,7 +467,7 @@ class PyVRPAlternativeStrategy(BaseRoutingStrategy):
                         dist = haversine_distance(c1["lat"], c1["lng"], c2["lat"], c2["lng"])
                         duration = estimate_travel_time(dist)
                     else:
-                        duration = 15.0
+                        duration = DEFAULT_TRAVEL_FALLBACK_MINUTES
 
                     total_duration += duration
                     route_details.append(RouteStep(

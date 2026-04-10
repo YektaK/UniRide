@@ -447,7 +447,7 @@ def euclidean_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> floa
 
 def tsplib_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> int:
     """TSPLIB EUC_2D distance (rounded)"""
-    return int(round(euclidean_distance(p1, p2)))
+    return int(euclidean_distance(p1, p2) + 0.5)
 
 
 def calculate_tour_length(tour: List[int], coordinates: List[Tuple[float, float]]) -> int:

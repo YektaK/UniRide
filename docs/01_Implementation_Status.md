@@ -1,6 +1,6 @@
 # Implementation Status
 
-> **Son Güncelleme:** 04 Nisan 2026, 14:00 — SOTA Çözücü Entegrasyon Analizi (04.04.2026 - Ekleyen: Z.ai)
+> **Son Güncelleme:** 10 Nisan 2026, 12:00 — Forensic Audit Düzeltmeleri & Roadmap Güncellemesi (10.04.2026 - Ekleyen: Antigravity AI)
 > **Referans:** `docs/03_Roadmap.md` | `docs/02_Architecture.md`
 > **Doğrulayan:** AI Assistant & Yekta Kayman
 
@@ -87,13 +87,15 @@
 ## 🔄 Tamamlanmamış / Eksik Bileşenler
 
 ### 🟡 Orta (Fonksiyonel İyileştirme)
-- ⚠️ **Test Coverage Düşük (P4)** — Sadece `resource_profiler` test edildi (20 test)
+- ⚠️ **Test Coverage Düşük (P4)** — Sadece `resource_profiler` test edildi (20 test). Hedef: %60
 - ✅ **Local Search Tam (P5)** — 2-opt, 3-opt, Or-opt, Swap, Cross Exchange, Hybrid mevcut. Hybrid desteği var; varsayılan local search stratejiye göre değişiyor (bazılarında `two_opt`, bazılarında `hybrid`) (04.04.2026 - Z.ai)
 - ⚠️ **time_matrix Veri Akışı (P7)** — Caching yok, her istekte DB'den yükleniyor
 - ⚠️ **Heterojen Filo Kısmi (P8)** — `VehicleConfig` şemada var ama stratejilerde pasif
+- ⚠️ **FIX-04 Pipeline A genişletmesi** — 11 dosyada hâlâ `return 15.0` (split stratejiler temiz) (10.04.2026 - Antigravity AI)
+- ⚠️ **FIX-07 Kısmi** — `clustering.py:31` hâlâ kendi `haversine_distance` kopyasını içeriyor (10.04.2026 - Antigravity AI)
 
 ### 🟢 Düşük (Refactoring & Gelecek)
-- ⚠️ **Hybrid Base Strategy Yok (P9)** — Teknik borç (RI1)
+- ✅ **Hybrid Base Strategy (P9)** — `hybrid_base_strategy.py` oluşturuldu; 4 split strateji inherit ediyor (10.04.2026 - Antigravity AI)
 - ⚠️ **DataLoader Fallback Zayıf (P10)** — Fail-fast mekanizması eksik
 - ⬜ **Sürücü Atama Sistemi** — UI var, route_plans driver_assignments kullanabilir
 - ⬜ **Canlı Takip (Faz 4.1)** — Supabase Realtime entegrasyonu

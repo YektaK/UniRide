@@ -11,12 +11,12 @@
 
 The UniRide CVRPTW optimizer is a substantial system (29 registered strategies, dual-pipeline architecture, 6+ local search operators). Documentation broadly reflects reality, but the audit found **5 logic errors**, **3 systemic code smells**, **7 bare `except:` clauses**, and **2 cross-file DRY violations** that undermine constraint-handling correctness and observability.
 
-| Category | Critical | Medium | Low | Info |
-|---|---|---|---|---|
-| Logic Errors | 2 | 2 | 1 | — |
-| Code Smells | — | 2 | 1 | — |
-| Documentation Gaps | — | 1 | 2 | 2 |
-| Security / Robustness | — | 1 | — | 1 |
+| Category              | Critical | Medium | Low | Info |
+| --------------------- | -------- | ------ | --- | ---- |
+| Logic Errors          | 2        | 2      | 1   | —    |
+| Code Smells           | —        | 2      | 1   | —    |
+| Documentation Gaps    | —        | 1      | 2   | 2    |
+| Security / Robustness | —        | 1      | —   | 1    |
 
 ---
 
@@ -24,25 +24,25 @@ The UniRide CVRPTW optimizer is a substantial system (29 registered strategies, 
 
 ### ✅ Aligned Areas
 
-| Claim (docs) | Evidence (code) | Verdict |
-|---|---|---|
-| 29 strategies in registry | `strategies/__init__.py` — 29 keys confirmed | ✅ Match |
-| Pipeline A (Cluster-First) + Pipeline B (Route-First) | GA/PSO/GWO/HHO + `*_split` variants all present | ✅ Match |
-| PyVRP / VROOM graceful fallback | `try/except ImportError` with `_PYVRP_AVAILABLE` flag | ✅ Match |
-| ResourceProfiler IE engine | `resource_profiler.py` 659 lines, 20 tests passing | ✅ Match |
-| Supabase time_matrix (812 rows, 29 nodes) | `DataLoader._load_from_supabase()` confirmed | ✅ Match |
-| CORS env-based config (A-2 fix) | `ALLOWED_ORIGINS` in `main.py` | ✅ Match |
-| Auth guard on `/api/calculate-vehicles` (A-1 fix) | `requireAdmin` middleware in route handler | ✅ Match |
+| Claim (docs)                                          | Evidence (code)                                       | Verdict |
+| ----------------------------------------------------- | ----------------------------------------------------- | ------- |
+| 29 strategies in registry                             | `strategies/__init__.py` — 29 keys confirmed          | ✅ Match |
+| Pipeline A (Cluster-First) + Pipeline B (Route-First) | GA/PSO/GWO/HHO + `*_split` variants all present       | ✅ Match |
+| PyVRP / VROOM graceful fallback                       | `try/except ImportError` with `_PYVRP_AVAILABLE` flag | ✅ Match |
+| ResourceProfiler IE engine                            | `resource_profiler.py` 659 lines, 20 tests passing    | ✅ Match |
+| Supabase time_matrix (812 rows, 29 nodes)             | `DataLoader._load_from_supabase()` confirmed          | ✅ Match |
+| CORS env-based config (A-2 fix)                       | `ALLOWED_ORIGINS` in `main.py`                        | ✅ Match |
+| Auth guard on `/api/calculate-vehicles` (A-1 fix)     | `requireAdmin` middleware in route handler            | ✅ Match |
 
 ### ⚠️ Sync Gaps
 
-| Gap | Severity | Details |
-|---|---|---|
-| **Caveman Heuristic missing** | 🟡 | Conv. `95989c49` shows intent to implement. Neither `strategies/` nor `clustering_strategies/` contain it. Docs silent → dropped context or unmerged branch. |
-| **`ALGORITHM_COMPARISON.md` stale status** | 🟡 | Table in §2 lists GA-Split, PSO-Split, etc. as `🔵 Planlanıyor` — they are **fully implemented and registered**. Status should be `✅`. |
-| **Time Matrix caching undone** | 🟢 | `01_Implementation_Status.md` P7 correctly marks it as pending. `DataLoader` is a singleton but does **no TTL or invalidation** — acceptable for now, but worth noting. |
-| **Test coverage claim at 40%** | ℹ️ | `03_Roadmap.md` shows `~40%`. Only `test_resource_profiler.py` + 3 CVRPTW phase tests exist. Actual coverage is likely **< 25%** for `optimizer_api/`. |
-| **Driver Assignments** | ℹ️ | Accurately documented as awaiting UI. No discrepancy. |
+| Gap                                        | Severity | Details                                                                                                                                                                                  |
+| ------------------------------------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Caveman Heuristic missing**              | 🟡       | Conv. `95989c49` shows intent to implement. Neither `strategies/` nor `clustering_strategies/` contain it. Docs silent → dropped context or unmerged branch. |
+| **`ALGORITHM_COMPARISON.md` stale status** | 🟡       | Table in §2 lists GA-Split, PSO-Split, etc. as `🔵 Planlanıyor` — they are **fully implemented and registered**. Status should be `✅`.                                                   |
+| **Time Matrix caching undone**             | 🟢       | `01_Implementation_Status.md` P7 correctly marks it as pending. `DataLoader` is a singleton but does **no TTL or invalidation** — acceptable for now, but worth noting.                  |
+| **Test coverage claim at 40%**             | ℹ️       | `03_Roadmap.md` shows `~40%`. Only `test_resource_profiler.py` + 3 CVRPTW phase tests exist. Actual coverage is likely **< 25%** for `optimizer_api/`.                                   |
+| **Driver Assignments**                     | ℹ️       | Accurately documented as awaiting UI. No discrepancy.                                                                                                                                    |
 
 ---
 
@@ -86,6 +86,7 @@ if loc in self.time_windows:
 ```
 
 **Two bugs in one:**
+
 1. `tw_violations = 0` is **inside the inner loop**, which resets the counter for every location — only the *last* location's violation is ever counted.
 2. No `elif current_time < earliest` check — if the vehicle arrives early at a dropoff stop, it should wait until `earliest`, adding idle time. Currently the arrival is recorded raw, potentially violating constraints.
 
@@ -125,24 +126,24 @@ After the first loop, `j` may point to a node that exceeded capacity. Line 318 t
 
 **Files (15 occurrences):**
 
-| Strategy File | Line |
-|---|---|
-| `ga_strategy.py` | 86 |
-| `pso_strategy.py` | 92 |
-| `gwo_strategy.py` | 93 |
-| `hho_strategy.py` | 98 |
-| `ga_split_strategy.py` | 106 |
-| `pso_split_strategy.py` | 127 |
-| `gwo_split_strategy.py` | 127 |
-| `hho_split_strategy.py` | 127 |
-| `ortools_cvrp.py` | 47 |
-| `pyvrp_strategy.py` | 63 |
-| `vroom_strategy.py` | 62, 313 |
-| `two_opt_strategy.py` | 82 |
-| `greedy_heuristic.py` | 46 |
-| `permutation_tsp.py` | 51 |
-| `split_decoder.py` | 236, 241, 301, 310, 371, 386 |
-| `time_window_extractor.py` | 250 |
+| Strategy File              | Line                         |
+| -------------------------- | ---------------------------- |
+| `ga_strategy.py`           | 86                           |
+| `pso_strategy.py`          | 92                           |
+| `gwo_strategy.py`          | 93                           |
+| `hho_strategy.py`          | 98                           |
+| `ga_split_strategy.py`     | 106                          |
+| `pso_split_strategy.py`    | 127                          |
+| `gwo_split_strategy.py`    | 127                          |
+| `hho_split_strategy.py`    | 127                          |
+| `ortools_cvrp.py`          | 47                           |
+| `pyvrp_strategy.py`        | 63                           |
+| `vroom_strategy.py`        | 62, 313                      |
+| `two_opt_strategy.py`      | 82                           |
+| `greedy_heuristic.py`      | 46                           |
+| `permutation_tsp.py`       | 51                           |
+| `split_decoder.py`         | 236, 241, 301, 310, 371, 386 |
+| `time_window_extractor.py` | 250                          |
 
 Every strategy independently returns a magic `15.0` when a distance-matrix key is missing, with **zero logging or telemetry**. This masks broken data silently.
 
@@ -171,14 +172,14 @@ The method `_minutes_to_time` appears on lines 439 and 500. Both are identical. 
 
 ### S-01 · 🟡 Seven bare `except:` clauses
 
-| File | Line |
-|---|---|
-| `local_search_numba.py` | 36 |
-| `ga_split_strategy.py` | 348 |
-| `pso_split_strategy.py` | 319 |
-| `gwo_split_strategy.py` | 321 |
-| `hho_split_strategy.py` | 369 |
-| `cvrptw_wrapper.py` | 181, 223 |
+| File                    | Line     |
+| ----------------------- | -------- |
+| `local_search_numba.py` | 36       |
+| `ga_split_strategy.py`  | 348      |
+| `pso_split_strategy.py` | 319      |
+| `gwo_split_strategy.py` | 321      |
+| `hho_split_strategy.py` | 369      |
+| `cvrptw_wrapper.py`     | 181, 223 |
 
 Bare `except:` catches `SystemExit`, `KeyboardInterrupt`, and memory errors. All should be `except Exception:` at minimum, or typed to the expected failure mode.
 
@@ -186,12 +187,13 @@ Bare `except:` catches `SystemExit`, `KeyboardInterrupt`, and memory errors. All
 
 ### S-02 · 🟡 `haversine_distance` defined in 2 separate modules
 
-| Module | Line | Param names |
-|---|---|---|
-| `utils/data_loader.py` | 145 | `lat1, lon1, lat2, lon2` |
-| `utils/clustering.py` | 31 | `lat1, lng1, lat2, lng2` |
+| Module                 | Line | Param names              |
+| ---------------------- | ---- | ------------------------ |
+| `utils/data_loader.py` | 145  | `lat1, lon1, lat2, lon2` |
+| `utils/clustering.py`  | 31   | `lat1, lng1, lat2, lng2` |
 
 Both are functionally identical but use **different parameter names** (`lon` vs `lng`). Clustering sub-strategies import from one or the other inconsistently:
+
 - `k_medoids.py`, `clarke_wright.py` → import from `data_loader`
 - `kmeans.py`, `fuzzy_cmeans.py`, `fuzzy_cmeans_enhanced.py` → import from `clustering`
 
@@ -224,6 +226,7 @@ Both `_get_target_arrival_time(locations, depot)` and `_get_target_departure_tim
 ### 4.3 ResourceProfiler Magic Numbers
 
 `resource_profiler.py` uses hardcoded scheduling constants:
+
 - `14 * 60` (14:00) for dropoff start
 - `17 * 60` (17:00) for dropoff end
 - Standard capacity `{sw: 4, so: 5}`
@@ -242,13 +245,13 @@ The benchmark cache loader uses a broad `except Exception` that silently returns
 
 ## 5. Cross-File DRY Violations Summary
 
-| Duplicated Code | Files | LOC |
-|---|---|---|
-| `_minutes_to_time` | `split_decoder.py` (×2) | 6 |
-| `haversine_distance` | `data_loader.py`, `clustering.py` | 26 |
-| `_nearest_neighbor_tour` | 4× `*_split_strategy.py` | ~80 |
-| `_build_distance_matrix` pattern | 13× strategy files | ~130 |
-| `return 15.0` fallback | 15 files, 17 sites | 17 |
+| Duplicated Code                  | Files                             | LOC  |
+| -------------------------------- | --------------------------------- | ---- |
+| `_minutes_to_time`               | `split_decoder.py` (×2)           | 6    |
+| `haversine_distance`             | `data_loader.py`, `clustering.py` | 26   |
+| `_nearest_neighbor_tour`         | 4× `*_split_strategy.py`          | ~80  |
+| `_build_distance_matrix` pattern | 13× strategy files                | ~130 |
+| `return 15.0` fallback           | 15 files, 17 sites                | 17   |
 
 **Total duplicated LOC: ~260 lines** — consolidation would improve maintainability significantly.
 
@@ -256,20 +259,20 @@ The benchmark cache loader uses a broad `except Exception` that silently returns
 
 ## 6. Prioritized Remediation Plan
 
-| Priority | ID | Action | Impact | Effort |
-|---|---|---|---|---|
-| 🔴 P0 | F-01 | SplitDecoder: fail infeasible trips instead of clamping departure to 0 | Correctness | 15 min |
-| 🔴 P0 | F-02 | SplitDecoder DROPOFF: fix `tw_violations` reset + add `earliest` wait | Correctness | 30 min |
-| 🟡 P1 | F-03 | SplitDecoder PICKUP: rename inner loop variable to avoid `j` collision | Correctness | 10 min |
-| 🟡 P1 | F-04 | Extract `15.0` fallback to constant + add `logger.warning` at all 17 sites | Observability | 1 hr |
-| 🟡 P1 | S-01 | Replace 7 bare `except:` with typed exceptions | Robustness | 30 min |
-| 🟢 P2 | F-05 | Remove duplicate `_minutes_to_time` | Cleanliness | 5 min |
-| 🟢 P2 | S-02 | Unify `haversine_distance` to single canonical module | DRY | 20 min |
-| 🟢 P2 | S-03 | Extract `_nearest_neighbor_tour` to `HybridSplitBaseStrategy` | DRY / P9 tech debt | 1.5 hr |
-| 🟢 P3 | §4.2 | Remove unused `depot` params from time helper methods | API clarity | 10 min |
-| 🟢 P3 | §4.3 | Extract ResourceProfiler magic numbers to config | Flexibility | 30 min |
-| ℹ️ P4 | §4.1 | Add TTL/invalidation to `DataLoader` singleton | Freshness | 2 hr |
-| ℹ️ P4 | §1 | Update `ALGORITHM_COMPARISON.md` status for Split strategies | Accuracy | 10 min |
+| Priority | ID   | Action                                                                     | Impact             | Effort |
+| -------- | ---- | -------------------------------------------------------------------------- | ------------------ | ------ |
+| 🔴 P0    | F-01 | SplitDecoder: fail infeasible trips instead of clamping departure to 0     | Correctness        | 15 min |
+| 🔴 P0    | F-02 | SplitDecoder DROPOFF: fix `tw_violations` reset + add `earliest` wait      | Correctness        | 30 min |
+| 🟡 P1    | F-03 | SplitDecoder PICKUP: rename inner loop variable to avoid `j` collision     | Correctness        | 10 min |
+| 🟡 P1    | F-04 | Extract `15.0` fallback to constant + add `logger.warning` at all 17 sites | Observability      | 1 hr   |
+| 🟡 P1    | S-01 | Replace 7 bare `except:` with typed exceptions                             | Robustness         | 30 min |
+| 🟢 P2    | F-05 | Remove duplicate `_minutes_to_time`                                        | Cleanliness        | 5 min  |
+| 🟢 P2    | S-02 | Unify `haversine_distance` to single canonical module                      | DRY                | 20 min |
+| 🟢 P2    | S-03 | Extract `_nearest_neighbor_tour` to `HybridSplitBaseStrategy`              | DRY / P9 tech debt | 1.5 hr |
+| 🟢 P3    | §4.2 | Remove unused `depot` params from time helper methods                      | API clarity        | 10 min |
+| 🟢 P3    | §4.3 | Extract ResourceProfiler magic numbers to config                           | Flexibility        | 30 min |
+| ℹ️ P4    | §4.1 | Add TTL/invalidation to `DataLoader` singleton                             | Freshness          | 2 hr   |
+| ℹ️ P4    | §1   | Update `ALGORITHM_COMPARISON.md` status for Split strategies               | Accuracy           | 10 min |
 
 ---
 

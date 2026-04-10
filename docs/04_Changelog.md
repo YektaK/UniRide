@@ -5,7 +5,36 @@
 
 ---
 
-## 2026-04-09 (00:15) — Kapsamlı Kod Analizi, Dokümantasyon Güncellemesi ve Güvenlik Düzeltmeleri (09.04.2026 - Ekleyen: Copilot AI)
+## 2026-04-10 (12:00) — Forensic Audit Remediation, Roadmap Rewrite & Improvement Analysis (10.04.2026 - Ekleyen: Antigravity AI)
+
+### Forensic Audit Düzeltmeleri (FIX-01 → FIX-10)
+**[Antigravity AI]** — `CODEBASE_ANALYSIS_REPORT_04_10_2026.md` bulgularına göre 10 düzeltme uygulandı:
+- **FIX-01 (🔴 P0):** `split_decoder.py` — Negatif `departure_time` → `continue` ile infeasible trip atlanıyor
+- **FIX-02 (🔴 P0):** `split_decoder.py` — DROPOFF `tw_violations` birikmeli sayaç + `earliest` wait
+- **FIX-03 (🟡 P1):** `split_decoder.py` — PICKUP iç döngü `j` → `k` + `trip_end` tracker
+- **FIX-04 (🟡 P1):** `constants.py` oluşturuldu; split stratejilerde `15.0` → `DEFAULT_TRAVEL_FALLBACK_MINUTES` + `logger.warning`
+- **FIX-05 (🟢 P2):** `split_decoder.py` — İkinci `_minutes_to_time` kopyası silindi
+- **FIX-06 (🟡 P1):** 7 dosyada bare `except:` → typed exception (`Exception`, `ValueError/IndexError`, `AttributeError/RuntimeError`)
+- **FIX-08 (🟢 P2):** `hybrid_base_strategy.py` oluşturuldu — `_get_duration`, `_build_distance_matrix`, `_nearest_neighbor_tour` 4 stratejiden taşındı
+- **FIX-09 (🟢 P3):** `split_decoder.py` — Unused `depot` parametresi `_get_target_arrival/departure_time`'dan kaldırıldı
+- **FIX-10 (ℹ️ P4):** `ALGORITHM_COMPARISON.md` — Split stratejiler 🔵→🟢 statü güncellendi
+
+### Dokümantasyon Güncellemesi
+**[Antigravity AI]** — Tüm dokümanlar codebase ile senkronize edildi:
+- `docs/03_Roadmap.md` — Tam yeniden yazıldı (v2.2.0): Faz 4 tamamlandı, Faz 4.5 (teknik borç) eklendi
+- `docs/01_Implementation_Status.md` — P9 (Hybrid Base) ✅, FIX-04/07 kısmi durumu belgelendi
+- `docs/02_Architecture.md` — Versiyon 2.2.0, dizin ağacı güncellemeleri, gelecek planları düzeltildi
+- `docs/ALGORITHM_COMPARISON.md` — Split stratejiler "Uygulandı" olarak güncellendi
+
+### İyileştirme Analizi
+**[Antigravity AI]** — Kalan teknik borç ve iyileştirme fırsatları analiz edildi:
+- 11 Pipeline A stratejisinde `return 15.0` hâlâ mevcut
+- `clustering.py` haversine kopyası devam ediyor
+- Test coverage ~%25 (hedef: %60)
+- DataLoader TTL/invalidation eksik
+- Heterojen filo stratejilerde pasif
+
+
 
 ### Analiz ve Yeni Dokümanlar
 **[Copilot AI]** — **Statik Kod Analizi:**

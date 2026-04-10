@@ -25,8 +25,12 @@ from models.schemas import (
 )
 from strategies.base_strategy import BaseRoutingStrategy
 from utils.data_loader import DataLoader, haversine_distance, estimate_travel_time
+from utils.patterns import SingletonMeta
+from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
 from utils.clustering import VehicleCalculator
 from utils.local_search import TwoOptLocalSearch, LocalSearchType
+
+logger = logging.getLogger(__name__)
 
 
 class TwoOptStrategy(BaseRoutingStrategy):
@@ -79,7 +83,8 @@ class TwoOptStrategy(BaseRoutingStrategy):
             dist = haversine_distance(c1["lat"], c1["lng"], c2["lat"], c2["lng"])
             return estimate_travel_time(dist)
 
-        return 15.0
+        logger.warning(f"Distance matrix miss for {from_loc} to {to_loc}. Using default fallback: {DEFAULT_TRAVEL_FALLBACK_MINUTES} mins")
+        return DEFAULT_TRAVEL_FALLBACK_MINUTES
 
     def _calculate_route_duration(
         self,

@@ -86,13 +86,13 @@ Bu yol haritası, UniRide Özel Öğrenci Taşıma Sistemi'nin CVRPTW (Kapasitel
 
 | Görev | ID | Durum | Öncelik | Paralel? |
 |-------|-----|-------|---------|---------|
-| Auth guard — POST /api/calculate-vehicles | A-1 | ⬜ Bekliyor | 🔴 KRİTİK | ✅ |
-| CORS env-tabanlı yapılandırma | A-2 | ⬜ Bekliyor | 🔴 YÜKSEK | ✅ |
+| Auth guard — POST /api/calculate-vehicles | A-1 | ✅ TAMAMLANDI (09.04.2026) | 🔴 KRİTİK | ✅ |
+| CORS env-tabanlı yapılandırma | A-2 | ✅ TAMAMLANDI (09.04.2026) | 🔴 YÜKSEK | ✅ |
 | Sandbox IE endpoint düzeltme | A-3 | ⬜ Bekliyor | 🔴 YÜKSEK | ✅ |
-| `total_time_window_violations` modele ekle | B-1 | ⬜ Bekliyor | 🟡 ORTA | ✅ |
-| `strategy`→`algorithm` field fix (sandbox) | B-2 | ⬜ Bekliyor | 🟡 ORTA | ✅ |
-| `strategy`→`algorithm` field fix (calculate-vehicles) | B-3 | ⬜ Bekliyor | 🟡 ORTA | ✅ |
-| `max_tour_time`→`max_travel_time` (sandbox) | B-4 | ⬜ Bekliyor | 🟡 ORTA | ✅ |
+| `total_time_window_violations` modele ekle | B-1 | ✅ TAMAMLANDI (09.04.2026) | 🟡 ORTA | ✅ |
+| `strategy`→`algorithm` field fix (sandbox) | B-2 | ✅ TAMAMLANDI (09.04.2026) | 🟡 ORTA | ✅ |
+| `strategy`→`algorithm` field fix (calculate-vehicles) | B-3 | ✅ GEREK YOK (zaten doğru) | 🟡 ORTA | ✅ |
+| `max_tour_time`→`max_travel_time` (sandbox) | B-4 | ✅ TAMAMLANDI (09.04.2026) | 🟡 ORTA | ✅ |
 
 ---
 

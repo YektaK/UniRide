@@ -115,14 +115,14 @@ Bu fazı diğer geliştiricilerle paralel bölebilirsiniz.
 
 | ID | Görev | Öncelik | Paralel? | Durum |
 |---|---|---|---|---|
-| A-1 | Auth guard — calculate-vehicles | 🔴 KRİTİK | ✅ | ⬜ Bekliyor |
-| A-2 | CORS env-tabanlı yapılandırma | 🔴 YÜKSEK | ✅ | ⬜ Bekliyor |
+| A-1 | Auth guard — calculate-vehicles | 🔴 KRİTİK | ✅ | ✅ TAMAMLANDI (09.04.2026) |
+| A-2 | CORS env-tabanlı yapılandırma | 🔴 YÜKSEK | ✅ | ✅ TAMAMLANDI (09.04.2026) |
 | A-3 | Sandbox IE endpoint düzeltme | 🔴 YÜKSEK | ✅ | ⬜ Bekliyor |
-| B-1 | `total_time_window_violations` modele ekle | 🟡 ORTA | ✅ | ⬜ Bekliyor |
-| B-2 | `strategy`→`algorithm` (sandbox) | 🟡 ORTA | ✅ | ⬜ Bekliyor |
-| B-3 | `strategy`→`algorithm` (calc-vehicles) | 🟡 ORTA | ✅ | ⬜ Bekliyor |
-| B-4 | `max_tour_time`→`max_travel_time` (sandbox) | 🟡 ORTA | ✅ | ⬜ Bekliyor |
-| C-1 | Kullanılmayan RATE_LIMIT sabiti | 🟢 DÜŞÜK | ✅ | ⬜ Bekliyor |
+| B-1 | `total_time_window_violations` modele ekle | 🟡 ORTA | ✅ | ✅ TAMAMLANDI (09.04.2026) |
+| B-2 | `strategy`→`algorithm` (sandbox) | 🟡 ORTA | ✅ | ✅ TAMAMLANDI (09.04.2026) |
+| B-3 | `strategy`→`algorithm` (calc-vehicles) | 🟡 ORTA | ✅ | ✅ GEREK YOK — zaten doğru (`optimizeRoutes` servisi üzerinden) |
+| B-4 | `max_tour_time`→`max_travel_time` (sandbox) | 🟡 ORTA | ✅ | ✅ TAMAMLANDI (09.04.2026) |
+| C-1 | Kullanılmayan RATE_LIMIT sabiti | 🟢 DÜŞÜK | ✅ | ✅ TAMAMLANDI (09.04.2026) |
 | C-2 | kmeans_tsp.py ölü kod | 🟢 DÜŞÜK | ✅ | ⬜ Bekliyor |
 | C-3 | `as any` azalt | 🟢 DÜŞÜK | kısmi | ⬜ Bekliyor |
 | C-4 | Supabase env doğrulama | 🟢 DÜŞÜK | ✅ | ⬜ Bekliyor |

@@ -128,6 +128,32 @@
 
 ---
 
+## 🔒 Güvenlik ve Kod Kalitesi Düzeltmeleri (09.04.2026 - Ekleyen: Copilot AI)
+
+Detaylı analiz: `docs/09_04_2026_Codebase_Analysis_Report.md`
+Düzeltme planı: `docs/05_Code_Quality_Roadmap.md`
+
+### Tamamlanan Düzeltmeler
+
+| ID | Açıklama | Commit |
+|---|---|---|
+| A-1 | `POST /api/calculate-vehicles` — `requireAdmin` auth guard eklendi | `5d87418` |
+| A-2 | CORS wildcard → `ALLOWED_ORIGINS` env var ile yapılandırılabilir yapıldı | `1bf2b97` |
+| B-1 | `total_time_window_violations: Optional[int]` → `OptimizationResponse` Pydantic modeline eklendi | `fcf4ce1` |
+| B-2/B-4 | `sandbox/route.ts` — `strategy`→`algorithm`, `max_tour_time`→`max_travel_time` düzeltildi | `b33c646` |
+| C-1 | `RATE_LIMIT_REQUESTS_PER_MINUTE` sabiti belgelendi (TODO yorumu eklendi) | `config.ts` |
+
+### Bekleyen Düzeltmeler (Başka Geliştiriciler Alabilir)
+
+| ID | Açıklama | Paralel? |
+|---|---|---|
+| A-3 | Sandbox IE endpoint — `/api/v1/ie/analyze` main.py'de tanımlı değil | ✅ |
+| C-2 | `kmeans_tsp.py` registry'e kaydet veya kaldır | ✅ |
+| C-3 | `as any` kullanımlarını azalt (admin/users/route.ts:86,144) | ✅ |
+| C-4 | Supabase env var boş string fallback → hata fırlat | ✅ |
+
+---
+
 ## 📝 Notlar
 
 1. **npm install required**: Node.js kurulumdan sonra `npm install` çalıştır

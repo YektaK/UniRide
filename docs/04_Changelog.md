@@ -1,7 +1,42 @@
 # 📝 UniRide Değişiklik Günlüğü (Changelog)
 
-> Her anlamlı değişiklik sonrasında bu dosyaya kayıt eklenmeli.  
+> Her anlamlı değişiklik sonrasında bu dosyaya kayıt eklenmeli.
 > Format: `[Tarih] [Geliştirici/AI] — Açıklama`
+
+---
+
+## 2026-04-09 (00:15) — Kapsamlı Kod Analizi, Dokümantasyon Güncellemesi ve Güvenlik Düzeltmeleri (09.04.2026 - Ekleyen: Copilot AI)
+
+### Analiz ve Yeni Dokümanlar
+**[Copilot AI]** — **Statik Kod Analizi:**
+- Tüm aktif kaynak kodu taranarak 11 sorun tespit edildi (güvenlik, fonksiyonel bug, teknik borç)
+- `docs/09_04_2026_Codebase_Analysis_Report.md`: Her sorun dosya + satır numarasıyla belgelendi
+- `docs/05_Code_Quality_Roadmap.md`: Öncelikli düzeltme planı, paralel çalışma rehberi
+
+### Dokümantasyon Güncellemeleri
+**[Copilot AI]** — Aşağıdaki doküman yanlışlıkları düzeltildi:
+- `docs/02_Architecture.md`: React 19→18, Tailwind 4→3; strateji dizin ağacı genişletildi; rate-limit iddiası düzeltildi; algoritma listesi genişletildi
+- `docs/03_Roadmap.md`: GWO/HHO/TW görevleri ✅; Faz 4.4 eklendi
+- `docs/01_Implementation_Status.md`: Güvenlik/fonksiyonel düzeltme bölümü eklendi
+- `README.md`: 15+ algoritma listesi, tam 7-endpoint tablosu, Tailwind/React versiyonu notu
+- `.ai-rules`: `docs/05` ve `docs/09_04` zorunlu okuma listesine eklendi
+
+### Güvenlik Düzeltmeleri
+**[Copilot AI]** — Kritik güvenlik açıkları kapatıldı:
+1. **CR-1 (Commit: 5d87418):** `POST /api/calculate-vehicles` — `requireAdmin` auth guard eklendi. Önceden kimliği doğrulanmamış herhangi biri pahalı optimizasyon tetikleyebiliyordu.
+2. **CR-3 (Commit: 1bf2b97):** `optimizer_api/main.py` — CORS `allow_origins=["*"]` wildcard → `ALLOWED_ORIGINS` env var ile yapılandırılabilir hale getirildi. Varsayılan: `http://localhost:9002`.
+
+### Fonksiyonel Düzeltmeler
+**[Copilot AI]** — İşlev bozuklukları giderildi:
+3. **CR-4 (Commit: fcf4ce1):** `optimizer_api/models/schemas.py` — `total_time_window_violations: Optional[int] = None` → `OptimizationResponse` Pydantic modeline eklendi.
+4. **CR-8/CR-9 (Commit: b33c646):** `src/app/api/sandbox/route.ts` — `strategy`→`algorithm`, `max_tour_time`→`max_travel_time` fetch gövdesi düzeltildi. Sandbox önceden her zaman varsayılan algoritmayı kullanıyordu.
+5. **CR-6 (config.ts):** `RATE_LIMIT_REQUESTS_PER_MINUTE` — kullanılmayan export'a TODO yorumu eklendi.
+
+### Açık Sorunlar (Diğer Geliştiriciler Alabilir)
+- **A-3:** `sandbox/route.ts:95` → `/api/v1/ie/analyze` endpoint'i `main.py`'de tanımlı değil
+- **C-2:** `kmeans_tsp.py` registry'e kayıtlı değil
+- **C-3:** `as any` kullanımları 11 yerde devam ediyor
+- **C-4:** Supabase env var boş string fallback yerine hata fırlatmalı
 
 ---
 

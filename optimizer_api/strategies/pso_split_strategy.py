@@ -20,16 +20,22 @@ References:
 - PSO for VRP: A Survey and Comparative Analysis (Springer, 2024)
 """
 
+import logging
 import random
 import time
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
+
+from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
+
+logger = logging.getLogger(__name__)
 
 from models.schemas import (
     OptimizationRequest, OptimizationResponse,
     VehicleRoute, RouteStep
 )
 from strategies.base_strategy import BaseRoutingStrategy
+from strategies.hybrid_base_strategy import HybridSplitBaseStrategy
 from utils.data_loader import DataLoader, haversine_distance, estimate_travel_time
 from utils.split_decoder import decode_giant_tour, decode_with_time_windows, Direction
 from utils.local_search import LocalSearchType, apply_local_search
@@ -45,7 +51,7 @@ class Particle:
     current_cost: float
 
 
-class PSOSplitStrategy(BaseRoutingStrategy):
+class PSOSplitStrategy(HybridSplitBaseStrategy):
     """
     PSO-Split Hybrid Strategy for CVRPTW.
     
@@ -112,33 +118,6 @@ class PSOSplitStrategy(BaseRoutingStrategy):
     def description(self) -> str:
         return "Parçacık Sürü + Optimal Split. Hızlı yakınsama, yüksek kalite."
 
-    def _get_duration(self, from_loc: str, to_loc: str, 
-                      time_matrix: Dict, coordinates: Dict) -> float:
-        """Get duration between two locations"""
-        if from_loc in time_matrix and to_loc in time_matrix[from_loc]:
-            return time_matrix[from_loc][to_loc]
-        
-        if from_loc in coordinates and to_loc in coordinates:
-            c1 = coordinates[from_loc]
-            c2 = coordinates[to_loc]
-            dist = haversine_distance(c1["lat"], c1["lng"], c2["lat"], c2["lng"])
-            return estimate_travel_time(dist)
-        
-        return 15.0
-
-    def _build_distance_matrix(self, location_ids: List[str], 
-                                time_matrix: Dict, coordinates: Dict) -> Dict[str, Dict[str, float]]:
-        """Build complete distance matrix for all locations"""
-        matrix = {}
-        for loc1 in location_ids:
-            matrix[loc1] = {}
-            for loc2 in location_ids:
-                if loc1 == loc2:
-                    matrix[loc1][loc2] = 0.0
-                else:
-                    matrix[loc1][loc2] = self._get_duration(loc1, loc2, time_matrix, coordinates)
-        return matrix
-
     def _shuffle(self, items: List) -> List:
         """Shuffle list using internal RNG (Fisher-Yates)"""
         result = items.copy()
@@ -175,31 +154,6 @@ class PSOSplitStrategy(BaseRoutingStrategy):
         
         return swarm
 
-    def _nearest_neighbor_tour(self, waypoints: List[str],
-                                distance_matrix: Optional[Dict] = None) -> List[str]:
-        """Create a tour using nearest neighbor heuristic"""
-        if not waypoints:
-            return []
-        
-        tour = []
-        remaining = waypoints.copy()
-        current = remaining.pop(self.rng.randint(0, len(remaining) - 1))
-        tour.append(current)
-        
-        while remaining:
-            if distance_matrix:
-                # Find actual nearest neighbor
-                best_next = min(remaining, 
-                               key=lambda x: distance_matrix.get(current, {}).get(x, float('inf')))
-            else:
-                # Random selection if no distance matrix
-                best_next = remaining[self.rng.randint(0, len(remaining) - 1)]
-            
-            tour.append(best_next)
-            remaining.remove(best_next)
-            current = best_next
-        
-        return tour
 
     def _calculate_giant_tour_cost(self, tour: List[str], depot: str,
                                     distance_matrix: Dict) -> float:
@@ -316,7 +270,8 @@ class PSOSplitStrategy(BaseRoutingStrategy):
             ls_type = LocalSearchType(ls_type_str)
             improved_route, _ = apply_local_search(tour, cost_func, ls_type)
             return improved_route
-        except:
+        except Exception as exc:
+            logger.debug("Local search failed, returning original tour: %s", exc)
             return tour
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:

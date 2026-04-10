@@ -16,16 +16,22 @@ Prins, C. (2004). A simple and effective evolutionary algorithm for VRP.
 Computers & Operations Research, 31(12), 1985-2002.
 """
 
+import logging
 import random
 import time
 from typing import List, Dict, Tuple, Optional, cast
 from dataclasses import dataclass
+
+from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
+
+logger = logging.getLogger(__name__)
 
 from models.schemas import (
     OptimizationRequest, OptimizationResponse,
     VehicleRoute, RouteStep
 )
 from strategies.base_strategy import BaseRoutingStrategy
+from strategies.hybrid_base_strategy import HybridSplitBaseStrategy
 from utils.data_loader import DataLoader, haversine_distance, estimate_travel_time
 from utils.split_decoder import decode_giant_tour, decode_with_time_windows, Direction
 from utils.local_search import LocalSearchType, apply_local_search
@@ -40,7 +46,7 @@ class Individual:
     num_vehicles: int  # Number of vehicles after split
 
 
-class GASplitStrategy(BaseRoutingStrategy):
+class GASplitStrategy(HybridSplitBaseStrategy):
     """
     GA-Split Hybrid Strategy for CVRPTW.
     
@@ -91,32 +97,7 @@ class GASplitStrategy(BaseRoutingStrategy):
     def description(self) -> str:
         return "Route-first yaklaşımı. GA giant tour + Optimal Split decoder."
 
-    def _get_duration(self, from_loc: str, to_loc: str, 
-                      time_matrix: Dict, coordinates: Dict) -> float:
-        """Get duration between two locations"""
-        if from_loc in time_matrix and to_loc in time_matrix[from_loc]:
-            return time_matrix[from_loc][to_loc]
-        
-        if from_loc in coordinates and to_loc in coordinates:
-            c1 = coordinates[from_loc]
-            c2 = coordinates[to_loc]
-            dist = haversine_distance(c1["lat"], c1["lng"], c2["lat"], c2["lng"])
-            return estimate_travel_time(dist)
-        
-        return 15.0
 
-    def _build_distance_matrix(self, location_ids: List[str], 
-                                time_matrix: Dict, coordinates: Dict) -> Dict[str, Dict[str, float]]:
-        """Build complete distance matrix for all locations"""
-        matrix = {}
-        for loc1 in location_ids:
-            matrix[loc1] = {}
-            for loc2 in location_ids:
-                if loc1 == loc2:
-                    matrix[loc1][loc2] = 0.0
-                else:
-                    matrix[loc1][loc2] = self._get_duration(loc1, loc2, time_matrix, coordinates)
-        return matrix
 
     def _initialize_population(self, waypoints: List[str]) -> List[Individual]:
         """Initialize population with random and heuristic permutations"""
@@ -155,37 +136,6 @@ class GASplitStrategy(BaseRoutingStrategy):
         
         return population
 
-    def _nearest_neighbor_tour(self, waypoints: List[str],
-                                distance_matrix: Optional[Dict] = None,
-                                depot: Optional[str] = None) -> List[str]:
-        """Create a tour using nearest neighbor heuristic"""
-        if not waypoints:
-            return []
-        
-        tour = []
-        remaining = waypoints.copy()
-        current = remaining.pop(0)  # Start from random point
-        tour.append(current)
-        
-        while remaining:
-            # Find nearest unvisited
-            best_next = None
-            best_dist = float('inf')
-            
-            for candidate in remaining:
-                # Simple distance estimate
-                dist = self.rng.random() * 100  # Fallback random
-                if best_next is None or dist < best_dist:
-                    best_dist = dist
-                    best_next = candidate
-            
-            # best_next is guaranteed not None here (loop invariant)
-            best_next = cast(str, best_next)
-            tour.append(best_next)
-            remaining.remove(best_next)
-            current = best_next
-        
-        return tour
 
     def _evaluate_individual(
         self,
@@ -345,7 +295,8 @@ class GASplitStrategy(BaseRoutingStrategy):
                 total_cost=individual.total_cost,
                 num_vehicles=individual.num_vehicles
             )
-        except:
+        except Exception as exc:
+            logger.debug("Local search failed for individual: %s", exc)
             return individual
 
     def _diversify(self, population: List[Individual]) -> List[Individual]:

@@ -13,9 +13,14 @@ Computers & Operations Research, 31(12), 1985-2002.
 """
 
 import math
+import logging
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass, field
 from enum import Enum
+
+from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
+
+logger = logging.getLogger(__name__)
 
 
 class Direction(Enum):
@@ -212,47 +217,47 @@ class SplitDecoder:
         """Build all feasible trips (capacity only, no time windows)."""
         n = len(giant_tour)
         trips = {j: [] for j in range(1, n + 1)}
-        
+
         for i in range(n):
             sw_load = 0
             so_load = 0
             cost = 0.0
             prev = depot
-            
+
             for j in range(i, n):
                 loc = giant_tour[j]
                 sw_d, so_d = demands.get(loc, (0, 0))
                 sw_load += sw_d
                 so_load += so_d
-                
-                # Check capacity feasibility
+
                 if sw_load > self.sw_capacity or so_load > self.so_capacity:
                     break
-                
-                # Add travel cost
+
+                # FIX-04: named constant instead of magic 15.0
                 if prev in distance_matrix and loc in distance_matrix[prev]:
                     cost += distance_matrix[prev][loc]
                 else:
-                    cost += 15.0
-                
+                    cost += DEFAULT_TRAVEL_FALLBACK_MINUTES
+
                 prev = loc
-                
-                # Add return to depot cost
-                return_cost = distance_matrix.get(loc, {}).get(depot, 15.0)
+
+                return_cost = distance_matrix.get(loc, {}).get(
+                    depot, DEFAULT_TRAVEL_FALLBACK_MINUTES
+                )
                 total_trip_cost = cost + return_cost
-                
+
                 if total_trip_cost > self.max_tour_duration:
                     continue
-                
+
                 trips[j + 1].append(Trip(
                     start_idx=i,
                     end_idx=j,
                     cost=total_trip_cost,
                     sw_count=sw_load,
                     so_count=so_load,
-                    is_feasible=True
+                    is_feasible=True,
                 ))
-        
+
         return trips
     
     def _build_trips_with_tw(
@@ -264,131 +269,159 @@ class SplitDecoder:
     ) -> Dict[int, List[Trip]]:
         """
         Build feasible trips with time window constraints.
-        
+
         For PICKUP (backward scheduling):
         - Determine latest time from time_windows (latest arrival at school)
         - Calculate backwards: departure = latest - tour_duration - offset
-        
+        - FIX-01: Trips with negative departure are skipped (physically infeasible)
+        - FIX-03: Uses trip_end variable to avoid j-variable collision between loops
+
         For DROPOFF (forward scheduling):
         - Determine earliest time from time_windows
         - Calculate forwards: arrival times accumulate from departure
+        - FIX-02A: tw_violations counter initialised before loop (not inside)
+        - FIX-02B: early arrivals wait until earliest window opens
         """
         n = len(giant_tour)
-        trips = {j: [] for j in range(1, n + 1)}
-        
+        trips = {k: [] for k in range(1, n + 1)}
+
         for i in range(n):
             sw_load = 0
             so_load = 0
             cost = 0.0
             prev = depot
-            arrival_times = {}  # Track arrival times for each location
-            
+            arrival_times: Dict[str, int] = {}
+
             if self.direction == Direction.PICKUP:
-                # BACKWARD SCHEDULING
-                # First, find the target arrival time at the last stop (should be depot/school)
-                # We'll calculate times backwards from the target
-                
-                for j in range(i, n):
-                    loc = giant_tour[j]
+                # ── BACKWARD SCHEDULING ──────────────────────────────────────
+                # LOOP 1: accumulate capacity and travel cost.
+                # Use variable 'k' to avoid shadowing outer 'i' and the
+                # second verification loop (FIX-03).
+                trip_end = i  # last feasible stop index
+                for k in range(i, n):
+                    loc = giant_tour[k]
                     sw_d, so_d = demands.get(loc, (0, 0))
                     sw_load += sw_d
                     so_load += so_d
-                    
+
                     if sw_load > self.sw_capacity or so_load > self.so_capacity:
                         break
-                    
-                    # Add travel cost
-                    travel_time = distance_matrix.get(prev, {}).get(loc, 15.0)
+
+                    # FIX-04: use named constant instead of magic 15.0
+                    travel_time = distance_matrix.get(prev, {}).get(
+                        loc, DEFAULT_TRAVEL_FALLBACK_MINUTES
+                    )
                     cost += travel_time
                     prev = loc
-                
-                # Now we have the total cost to visit all stops
-                # Calculate return to depot
+                    trip_end = k  # commit: this stop is within capacity
+
+                # Return-to-depot segment
                 if prev in distance_matrix and depot in distance_matrix[prev]:
                     return_cost = distance_matrix[prev][depot]
                 else:
-                    return_cost = 15.0
-                
+                    return_cost = DEFAULT_TRAVEL_FALLBACK_MINUTES
+
                 total_trip_cost = cost + return_cost
-                
+
                 if total_trip_cost > self.max_tour_duration:
                     continue
-                
-                # Find target arrival time at depot (school)
-                target_arrival = self._get_target_arrival_time(giant_tour[i:j+1], depot)
-                
+
+                # FIX-03: use trip_end for slicing, NOT the loop variable j
+                target_arrival = self._get_target_arrival_time(
+                    giant_tour[i:trip_end + 1]
+                )
+
                 # Calculate departure time (backward scheduling)
-                departure_time = target_arrival - int(total_trip_cost) - self.offset_minutes
-                
-                # Verify time windows are satisfied
+                departure_time = (
+                    target_arrival - int(total_trip_cost) - self.offset_minutes
+                )
+
+                # FIX-01: If departure_time is negative the trip is physically
+                # impossible (driver would depart before midnight). Skip it.
+                if departure_time < 0:
+                    logger.debug(
+                        "Skipping infeasible pickup trip i=%d trip_end=%d: "
+                        "departure_time=%d < 0 (target=%d cost=%d offset=%d)",
+                        i, trip_end, departure_time,
+                        target_arrival, int(total_trip_cost), self.offset_minutes,
+                    )
+                    continue
+
+                # LOOP 2: verify time windows — iterate only over committed stops
                 tw_violations = 0
                 current_time = departure_time
                 prev = depot
-                temp_cost = 0
-                
-                for j in range(i, n):
-                    loc = giant_tour[j]
-                    travel_time = distance_matrix.get(prev, {}).get(loc, 15.0)
+
+                for k in range(i, trip_end + 1):  # FIX-03: bounded by trip_end
+                    loc = giant_tour[k]
+                    travel_time = distance_matrix.get(prev, {}).get(
+                        loc, DEFAULT_TRAVEL_FALLBACK_MINUTES
+                    )
                     current_time += int(travel_time)
-                    temp_cost += travel_time
-                    arrival_times[loc] = current_time
-                    
-                    # Check time window
+
                     if loc in self.time_windows:
                         earliest, latest = self.time_windows[loc]
                         if current_time > latest:
                             tw_violations += 1
                         elif current_time < earliest:
-                            # Wait until earliest
-                            current_time = earliest
-                    
+                            current_time = earliest  # wait until window opens
+
+                    arrival_times[loc] = current_time
                     prev = loc
-                
-                trips[j + 1].append(Trip(
+
+                trips[trip_end + 1].append(Trip(
                     start_idx=i,
-                    end_idx=j,
+                    end_idx=trip_end,
                     cost=total_trip_cost,
                     sw_count=sw_load,
                     so_count=so_load,
                     is_feasible=True,
                     time_window_violations=tw_violations,
-                    departure_time=max(0, departure_time)
+                    departure_time=departure_time,  # FIX-01: guaranteed >= 0
                 ))
-            
-            else:  # DROPOFF - FORWARD SCHEDULING
-                current_time = self._get_target_departure_time(giant_tour[i:min(i+1, n)], depot)
-                
+
+            else:  # ── DROPOFF — FORWARD SCHEDULING ─────────────────────────
+                current_time = self._get_target_departure_time(
+                    giant_tour[i:min(i + 1, n)]
+                )
+
+                # FIX-02A: initialise BEFORE the loop so count accumulates
+                tw_violations = 0
+
                 for j in range(i, n):
                     loc = giant_tour[j]
                     sw_d, so_d = demands.get(loc, (0, 0))
                     sw_load += sw_d
                     so_load += so_d
-                    
+
                     if sw_load > self.sw_capacity or so_load > self.so_capacity:
                         break
-                    
-                    # Add travel cost
-                    travel_time = distance_matrix.get(prev, {}).get(loc, 15.0)
+
+                    travel_time = distance_matrix.get(prev, {}).get(
+                        loc, DEFAULT_TRAVEL_FALLBACK_MINUTES
+                    )
                     cost += travel_time
                     current_time += int(travel_time)
-                    arrival_times[loc] = current_time
-                    
-                    # Check time window
-                    tw_violations = 0
+
+                    # FIX-02B: check both window bounds
                     if loc in self.time_windows:
                         earliest, latest = self.time_windows[loc]
                         if current_time > latest:
-                            tw_violations = 1
-                    
+                            tw_violations += 1  # FIX-02A: accumulate, not reset
+                        elif current_time < earliest:
+                            current_time = earliest  # wait until window opens
+
+                    arrival_times[loc] = current_time  # record after possible wait
                     prev = loc
-                    
-                    # Return to depot
-                    return_cost = distance_matrix.get(loc, {}).get(depot, 15.0)
+
+                    return_cost = distance_matrix.get(loc, {}).get(
+                        depot, DEFAULT_TRAVEL_FALLBACK_MINUTES
+                    )
                     total_trip_cost = cost + return_cost
-                    
+
                     if total_trip_cost > self.max_tour_duration:
                         continue
-                    
+
                     trips[j + 1].append(Trip(
                         start_idx=i,
                         end_idx=j,
@@ -397,47 +430,51 @@ class SplitDecoder:
                         so_count=so_load,
                         is_feasible=True,
                         time_window_violations=tw_violations,
-                        departure_time=current_time - int(cost)
+                        departure_time=current_time - int(cost),
                     ))
-        
+
         return trips
     
-    def _get_target_arrival_time(self, locations: List[str], depot: str) -> int:
+    def _get_target_arrival_time(self, locations: List[str]) -> int:
         """
-        Get target arrival time for a trip.
-        
-        For PICKUP: This is when the vehicle should arrive at school (depot).
-        We use the latest time window among all locations.
+        Get target arrival time for a PICKUP trip.
+
+        Returns the latest time window bound across all locations in the
+        trip, defaulting to 09:00 when no time windows are set.
+
+        FIX-09: removed unused `depot` parameter.
         """
         latest_time = self.target_time or (9 * 60)  # Default 09:00
-        
+
         for loc in locations:
             if loc in self.time_windows:
                 _, latest = self.time_windows[loc]
                 if latest > latest_time:
                     latest_time = latest
-        
+
         return latest_time
-    
-    def _get_target_departure_time(self, locations: List[str], depot: str) -> int:
+
+    def _get_target_departure_time(self, locations: List[str]) -> int:
         """
-        Get target departure time for a trip.
-        
-        For DROPOFF: This is when the vehicle should leave school (depot).
-        We use the earliest time window among all locations.
+        Get target departure time for a DROPOFF trip.
+
+        Returns the earliest time window bound across all locations in the
+        trip, defaulting to 14:00 when no time windows are set.
+
+        FIX-09: removed unused `depot` parameter.
         """
         earliest_time = self.target_time or (14 * 60)  # Default 14:00
-        
+
         for loc in locations:
             if loc in self.time_windows:
                 earliest, _ = self.time_windows[loc]
                 if earliest < earliest_time:
                     earliest_time = earliest
-        
+
         return earliest_time
     
     def _minutes_to_time(self, minutes: int) -> str:
-        """Convert minutes from midnight to HH:MM format"""
+        """Convert minutes-from-midnight integer to HH:MM string."""
         hours = (minutes // 60) % 24
         mins = minutes % 60
         return f"{hours:02d}:{mins:02d}"
@@ -496,12 +533,7 @@ class SplitDecoder:
         
         result["detailed_routes"] = detailed_routes
         return result
-    
-    def _minutes_to_time(self, minutes: int) -> str:
-        """Convert minutes from midnight to HH:MM format"""
-        hours = (minutes // 60) % 24
-        mins = minutes % 60
-        return f"{hours:02d}:{mins:02d}"
+        # FIX-05: second _minutes_to_time definition removed — single copy at line ~445
 
 
 def decode_giant_tour(

@@ -47,10 +47,10 @@
 
 | Algoritma | Dosya | Durum | Avantaj |
 |-----------|-------|-------|---------|
-| GA-Split | `ga_split_strategy.py` | 🔵 Planlanıyor | Kanıtlanmış + Split güvencesi |
-| PSO-Split | `pso_split_strategy.py` | 🔵 Planlanıyor | Hız-kalite dengesi (Önerilen) |
-| HHO-Split | `hho_split_strategy.py` | 🔵 Planlanıyor | En iyi kalite (Lévy Flight) |
-| GWO-Split | `gwo_split_strategy.py` | 🔵 Planlanıyor | Akademik yayın potansiyeli |
+| GA-Split | `ga_split_strategy.py` | 🟢 Uygulandı | Kanıtlanmış + Split güvencesi |
+| PSO-Split | `pso_split_strategy.py` | 🟢 Uygulandı | Hız-kalite dengesi (Önerilen) |
+| HHO-Split | `hho_split_strategy.py` | 🟢 Uygulandı | En iyi kalite (Lévy Flight) |
+| GWO-Split | `gwo_split_strategy.py` | 🟢 Uygulandı | Akademik yayın potansiyeli |
 
 ---
 

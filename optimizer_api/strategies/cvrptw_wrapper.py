@@ -178,7 +178,7 @@ def parse_time_windows(
         try:
             parts = time_str.split(":")
             return int(parts[0]) * 60 + int(parts[1])
-        except:
+        except (ValueError, IndexError):
             return 0
     
     time_windows = {}
@@ -220,7 +220,7 @@ def create_time_windows_from_students(
         # Parse time
         try:
             minutes = int(time_str.split(":")[0]) * 60 + int(time_str.split(":")[1])
-        except:
+        except (ValueError, IndexError, KeyError):
             continue
         
         # Add 30 minute window

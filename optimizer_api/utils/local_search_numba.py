@@ -33,8 +33,8 @@ try:
     # Set number of threads for parallel execution
     try:
         set_num_threads(min(4, numba.config.NUMBA_NUM_THREADS))
-    except:
-        pass
+    except (AttributeError, RuntimeError):
+        pass  # FIX-06: Numba config may not expose NUMBA_NUM_THREADS in all builds
 except ImportError:
     NUMBA_AVAILABLE = False
     # Fallback: create a no-op decorator

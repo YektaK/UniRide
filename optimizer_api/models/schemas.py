@@ -136,6 +136,7 @@ class OptimizationResponse(BaseModel):
     direction: Optional[Direction] = None
     time_windows_used: bool = False
     ie_data: Optional[IEResponseData] = None
+    total_time_window_violations: Optional[int] = None
 
 class AlgorithmResult(BaseModel):
     algorithm: str

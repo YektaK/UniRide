@@ -1,24 +1,33 @@
 # UniRide
 
-UniRide, üniversite içi öğrenci taşımacılığını optimize etmek için geliştirilmiş bir **CVRPTW (Capacitated Vehicle Routing Problem with Time Windows)** platformudur.  
+UniRide, üniversite içi öğrenci taşımacılığını optimize etmek için geliştirilmiş bir **CVRPTW (Capacitated Vehicle Routing Problem with Time Windows)** platformudur.
 Sistem; yönetici, sürücü ve öğrenci akışlarını tek uygulamada toplar, rota planlamayı Python tabanlı optimizasyon servisine delege eder.
 
 ## Öne Çıkanlar
 
-- Next.js tabanlı web uygulaması (admin/driver/student akışları)
+- Next.js 16 tabanlı web uygulaması (admin/driver/student akışları)
 - Supabase (PostgreSQL + Auth) entegrasyonu
 - FastAPI tabanlı optimizasyon mikroservisi
-- Çoklu algoritma desteği (GA, PSO, GWO, HHO, Greedy, Two-Opt, OR-Tools, split stratejileri)
+- **15+ algoritma desteği:**
+  - Pipeline A (Cluster-First): GA, PSO, GWO (Grey Wolf), HHO (Harris Hawks)
+  - Pipeline B (Split Decoder): GA-Split, PSO-Split, GWO-Split, HHO-Split
+  - Holistic Solvers: OR-Tools, PyVRP\* (HGS), VROOM\*
+  - Heuristics: Two-Opt, Greedy / Nearest Neighbor, Permutation TSP
+- 7 clustering stratejisi: K-Means, Fuzzy C-Means, K-Medoids, Clarke-Wright, Sweep, FCM-Enhanced, Hierarchical-FCM
 - Zaman pencereli planlama (pickup/dropoff yönleri)
-- Route planları ve sandbox senaryoları için kalıcılık API’leri
+- Route planları ve sandbox senaryoları için kalıcılık API'leri
+- IE (Industrial Engineering) Resource Dashboard
+- Akademik benchmark suit (TSPLib, Numba JIT)
+
+\*PyVRP ve VROOM opsiyonel; `pip install -r requirements-benchmark.txt` ile etkinleştirilebilir.
 
 ## Mimari Özeti
 
-1. **Frontend + API Katmanı (Next.js)**  
-   `src/app` altındaki sayfalar ve `src/app/api/*` endpoint’leri istekleri yönetir.
-2. **Optimizasyon Katmanı (Python/FastAPI)**  
-   `optimizer_api/main.py` üzerinden `/api/v1/optimize`, `/api/v1/compare`, `/api/v1/strategies` servisleri sunulur.
-3. **Veri Katmanı (Supabase/PostgreSQL)**  
+1. **Frontend + API Katmanı (Next.js 16)**
+   `src/app` altındaki sayfalar ve `src/app/api/*` endpoint'leri istekleri yönetir.
+2. **Optimizasyon Katmanı (Python/FastAPI)**
+   `optimizer_api/main.py` üzerinden optimize, compare, strategies servisleri sunulur.
+3. **Veri Katmanı (Supabase/PostgreSQL)**
    Şema ve migration dosyaları `supabase/` altında yer alır.
 
 ## Depo Yapısı
@@ -28,7 +37,7 @@ src/                 # Next.js uygulaması (UI, API routes, servisler)
 optimizer_api/       # Python optimizasyon motoru
 supabase/            # SQL şema, RLS ve migration dosyaları
 docs/                # Mimari, yol haritası, changelog ve teknik notlar
-academic_benchmark/  # Akademik benchmark araçları
+academic_benchmark/  # Akademik benchmark araçları (TSPLib + Numba)
 ```
 
 ## Gereksinimler
@@ -46,7 +55,7 @@ academic_benchmark/  # Akademik benchmark araçları
 npm install --legacy-peer-deps
 ```
 
-> Not: Mevcut bağımlılık ağacında peer dependency çakışması olduğu için `--legacy-peer-deps` gerekebilir.
+> Not: Next.js 16 ve @genkit-ai/next arasında peer dependency çakışması olduğu için `--legacy-peer-deps` gereklidir.
 
 ### 2) Ortam değişkenleri
 
@@ -59,11 +68,7 @@ SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 
 # Opsiyonel (default: http://127.0.0.1:8000)
 OPTIMIZER_API_URL=http://127.0.0.1:8000
-# veya
-NEXT_PUBLIC_OPTIMIZER_API_URL=http://127.0.0.1:8000
 ```
-
-> `your-project-id` yerine Supabase proje ayarlarında görünen gerçek proje kimliğini yazın.
 
 ### 3) Python optimizasyon servisi
 
@@ -73,7 +78,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Opsiyonel benchmark bağımlılıkları:
+Opsiyonel SOTA benchmark bağımlılıkları (PyVRP, VROOM):
 
 ```bash
 pip install -r requirements-benchmark.txt
@@ -110,24 +115,33 @@ Supabase tarafında ilgili SQL dosyalarını sırasıyla uygulayın:
 
 ## Optimizer API Uç Noktaları
 
-- `GET /health`
-- `GET /api/v1/strategies`
-- `POST /api/v1/optimize`
-- `POST /api/v1/compare`
-- `POST /api/v1/extract-time-windows`
+| Method | Path | Açıklama |
+|---|---|---|
+| GET | `/health` | Sağlık kontrolü |
+| GET | `/api/v1/strategies` | Kullanılabilir stratejiler |
+| POST | `/api/v1/optimize` | Tek algoritmayla rota optimizasyonu |
+| POST | `/api/v1/compare` | Tüm algoritmaları karşılaştır |
+| POST | `/api/v1/extract-time-windows` | Haftalık programdan zaman penceresi çıkar |
+| POST | `/api/v1/schedule-to-students` | Program → öğrenci node listesi |
+| POST | `/api/v1/vehicle-calculator` | Araç kapasitesi hesaplama |
 
 ## Dokümantasyon Haritası
 
-- `docs/01_Implementation_Status.md` → güncel durum ve eksikler
+- `docs/01_Implementation_Status.md` → güncel tamamlanma durumu ve eksikler
 - `docs/02_Architecture.md` → mimari açıklamalar
-- `docs/03_Roadmap.md` → yol haritası
+- `docs/03_Roadmap.md` → geliştirme yol haritası
 - `docs/04_Changelog.md` → sürüm/değişiklik geçmişi
+- `docs/05_Code_Quality_Roadmap.md` → kod kalitesi düzeltme yol haritası (09.04.2026)
+- `docs/09_04_2026_Codebase_Analysis_Report.md` → kapsamlı kod tabanı analiz raporu
 - `docs/ALGORITHM_COMPARISON.md` → algoritma karşılaştırmaları
+- `docs/sota_framework_plan_2026/` → SOTA algoritma ve akademik makale vizyonu
 - `optimizer_api/README_TESTS.md` → Python test ve benchmark notları
 
 ## Bilinen Durum Notları
 
-Komutların güncel çalışma davranışı NPM tablosundaki **Durum** sütununda belirtilmiştir.
+- `npm run lint` bu sandbox ortamında başarısız olabiliyor (bkz. NPM Komutları tablosu)
+- Typecheck'te birkaç baseline hata mevcut (bkz. `docs/01_Implementation_Status.md`)
+- `docs/09_04_2026_Codebase_Analysis_Report.md` — tespit edilen sorunlar ve düzeltme planı
 
 ## Lisans
 

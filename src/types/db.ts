@@ -1,6 +1,33 @@
 import type { User, WeeklySchedule, RideRequest, Vehicle, AdminSettings } from "./index";
 
 /**
+ * Exact row shape returned by Supabase for the `users` table.
+ * Uses snake_case column names matching the PostgreSQL schema.
+ * Note: `password_hint` is added via migration, not in the base schema.sql —
+ * see supabase/migrations/20260305_add_missing_user_columns.sql.
+ *
+ * When to use this type vs DbUser:
+ *   - Use `DbUserRow` for direct database operations (insert/update/select in API routes and DB helpers)
+ *   - Use `DbUser` (camelCase) for application logic — after fetching data and converting via toCamelCase()
+ */
+export interface DbUserRow {
+    id: string;
+    email: string;
+    name: string;
+    role: "student" | "admin" | "driver";
+    student_number: string | null;
+    home_address: string | null;
+    home_coordinates: { lat: number; lng: number } | null;
+    accessibility_needs: string[] | null;
+    disability_type: "Sw" | "So" | null;
+    location_code: string | null;
+    weekly_schedule_id: string | null;
+    password_hint: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+/**
  * Database document types with DB metadata fields
  * These extend the base types with timestamps and other database-specific fields
  */

@@ -1,6 +1,6 @@
 # UniRide CVRPTW - Geliştirme Yol Haritası
 
-## Sürüm: 2.0.0 | Tarih: 30 Mart 2026
+## Sürüm: 2.1.0 | Tarih: 09 Nisan 2026 (09.04.2026 - Ekleyen: Copilot AI)
 
 ---
 
@@ -56,27 +56,43 @@ Bu yol haritası, UniRide Özel Öğrenci Taşıma Sistemi'nin CVRPTW (Kapasitel
 #### 4.1 Backend CVRPTW Desteği (1-2 hafta)
 | Görev | Durum | Öncelik |
 |-------|-------|---------|
-| GWO Strategy Implementasyonu | ⏳ | Yüksek |
-| HHO Strategy Implementasyonu | ⏳ | Yüksek |
-| Time Window Veri Yapısı | ⏳ | Yüksek |
-| Backward Scheduling (Pickup) | ⏳ | Yüksek |
-| Forward Scheduling (Dropoff) | ⏳ | Yüksek |
-| Time Window Violation Tracking | ⏳ | Orta |
+| GWO Strategy Implementasyonu | ✅ TAMAMLANDI (09.04.2026 - Ekleyen: Copilot AI) | Yüksek |
+| HHO Strategy Implementasyonu | ✅ TAMAMLANDI (09.04.2026 - Ekleyen: Copilot AI) | Yüksek |
+| Split Decoder (Pipeline B) | ✅ TAMAMLANDI | Yüksek |
+| Time Window Veri Yapısı | ✅ TAMAMLANDI | Yüksek |
+| Backward Scheduling (Pickup) | ✅ TAMAMLANDI | Yüksek |
+| Forward Scheduling (Dropoff) | ✅ TAMAMLANDI | Yüksek |
+| Time Window Violation Tracking | ✅ TAMAMLANDI | Orta |
 
 #### 4.2 Frontend Time Window UI (1 hafta)
 | Görev | Durum | Öncelik |
 |-------|-------|---------|
-| Direction Selection UI | ⏳ | Yüksek |
-| Time Window Input Fields | ⏳ | Yüksek |
-| Algorithm Parameter Config UI | ⏳ | Orta |
-| API Integration Updates | ⏳ | Yüksek |
+| Direction Selection UI | ✅ TAMAMLANDI | Yüksek |
+| Time Window Input Fields | ✅ TAMAMLANDI | Yüksek |
+| Algorithm Parameter Config UI | ⬜ Bekliyor | Orta |
+| API Integration Updates | ✅ TAMAMLANDI | Yüksek |
 
 #### 4.3 Test & Doğrulama (1 hafta)
 | Görev | Durum | Öncelik |
 |-------|-------|---------|
-| Unit Tests | ⏳ | Orta |
-| Integration Tests | ⏳ | Orta |
-| Performance Benchmarks | ⏳ | Düşük |
+| Unit Tests | ⬜ Bekliyor | Orta |
+| Integration Tests | ⬜ Bekliyor | Orta |
+| Performance Benchmarks | 🔄 Kısmi (TSPLib benchmark mevcut) | Düşük |
+
+---
+
+## 🔧 Faz 4.4: Kod Kalitesi ve Güvenlik Düzeltmeleri (09.04.2026 - Ekleyen: Copilot AI)
+**Durum:** Devam Ediyor | **Referans:** `docs/05_Code_Quality_Roadmap.md`
+
+| Görev | ID | Durum | Öncelik | Paralel? |
+|-------|-----|-------|---------|---------|
+| Auth guard — POST /api/calculate-vehicles | A-1 | ✅ TAMAMLANDI (09.04.2026) | 🔴 KRİTİK | ✅ |
+| CORS env-tabanlı yapılandırma | A-2 | ✅ TAMAMLANDI (09.04.2026) | 🔴 YÜKSEK | ✅ |
+| Sandbox IE endpoint düzeltme | A-3 | ✅ TAMAMLANDI (10.04.2026) | 🔴 YÜKSEK | ✅ |
+| `total_time_window_violations` modele ekle | B-1 | ✅ TAMAMLANDI (09.04.2026) | 🟡 ORTA | ✅ |
+| `strategy`→`algorithm` field fix (sandbox) | B-2 | ✅ TAMAMLANDI (09.04.2026) | 🟡 ORTA | ✅ |
+| `strategy`→`algorithm` field fix (calculate-vehicles) | B-3 | ✅ GEREK YOK (zaten doğru) | 🟡 ORTA | ✅ |
+| `max_tour_time`→`max_travel_time` (sandbox) | B-4 | ✅ TAMAMLANDI (09.04.2026) | 🟡 ORTA | ✅ |
 
 ---
 

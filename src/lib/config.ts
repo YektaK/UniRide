@@ -9,10 +9,10 @@ export const OPTIMIZER_API_URL =
   process.env.NEXT_PUBLIC_OPTIMIZER_API_URL || 
   "http://127.0.0.1:8000";
 
-// Supabase Configuration
-export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-export const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+// Supabase configuration is intentionally NOT re-exported from here.
+// Each consumer reads process.env directly and handles missing values:
+//   - src/lib/supabase.ts        → warns + sets client to null; getSupabaseClient() throws
+//   - src/lib/supabase-admin.ts  → throws immediately if URL or SERVICE_ROLE_KEY missing
 
 // Application Settings
 export const APP_NAME = "UniRide";
@@ -26,6 +26,10 @@ export const DEFAULT_PAGE_SIZE = 50;
 export const MAX_PAGE_SIZE = 100;
 
 // Rate limiting (requests per minute)
+// TODO(CR-6): This constant is exported but not yet connected to any middleware.
+// To enable global rate limiting, import this in src/middleware.ts and wire it
+// to a Redis-backed limiter (the in-process Map in auth/hint/route.ts is
+// insufficient for multi-process deployments).
 export const RATE_LIMIT_REQUESTS_PER_MINUTE = 60;
 
 // Logging

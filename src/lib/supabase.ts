@@ -4,7 +4,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import type { DbUser, DbVehicle, DbRideRequest, DbWeeklySchedule, RouteAssignment, Route as DbRoute } from "@/types/db";
+import type { DbUserRow, DbVehicle, DbRideRequest, DbWeeklySchedule, RouteAssignment, Route as DbRoute } from "@/types/db";
 
 export type Json =
   | string
@@ -52,9 +52,9 @@ export interface Database {
   public: {
     Tables: {
       users: {
-        Row: DbUser;
-        Insert: Partial<DbUser>;
-        Update: Partial<DbUser>;
+        Row: DbUserRow;
+        Insert: Partial<DbUserRow>;
+        Update: Partial<DbUserRow>;
         Relationships: [];
       };
       vehicles: {

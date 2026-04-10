@@ -19,6 +19,7 @@ import {
 } from "@/services/optimizer-service";
 import { normalizeAlgorithmName } from "@/lib/algorithm-constants";
 import type { IEResponseData, HourlyDemandData, BottleneckData, TimeShiftSuggestion, IERawData } from "@/types/ie-resource";
+import { requireAdmin } from "@/lib/admin-auth";
 
 // Student info kept in a local lookup map for result enrichment
 interface StudentLookupEntry {
@@ -144,6 +145,8 @@ function transformIEData(
 
 export async function POST(request: NextRequest) {
     try {
+        await requireAdmin(request);
+
         const body = await request.json() as {
             students?: unknown[];
             maxTourTime?: number;

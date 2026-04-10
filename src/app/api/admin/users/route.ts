@@ -12,6 +12,7 @@ import {
     handleApiError,
 } from "@/lib/admin-auth";
 import { z } from "zod";
+import type { DbUserRow } from "@/types/db";
 
 const createUserSchema = z.object({
     email: z.string().email("Geçerli bir e-posta adresi girin"),
@@ -83,20 +84,24 @@ export async function POST(request: NextRequest) {
         const finalDisabilityType = (role === "admin" || role === "driver") ? null : (disabilityType || null);
 
         // Create database user
-        const { data: userData, error: dbError } = await (adminClient as any)
+        // Payload is typed as DbUserRow fields but Supabase's overload resolution
+        // requires `as never` at the method boundary — same pattern as supabase-db.ts:153
+        // and profile/password/route.ts:47 throughout the codebase.
+        const insertPayload: Partial<DbUserRow> = {
+            id: authData.user.id,
+            email,
+            name,
+            role,
+            student_number: studentNumber ?? null,
+            home_address: homeAddress ?? null,
+            accessibility_needs: accessibilityNeeds || [],
+            disability_type: finalDisabilityType,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        };
+        const { data: userData, error: dbError } = await adminClient
             .from("users")
-            .insert({
-                id: authData.user.id,
-                email,
-                name,
-                role,
-                student_number: studentNumber,
-                home_address: homeAddress || "",
-                accessibility_needs: accessibilityNeeds || [],
-                disability_type: finalDisabilityType,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-            })
+            .insert(insertPayload as never)
             .select()
             .single();
 
@@ -124,7 +129,7 @@ export async function PUT(request: NextRequest) {
         const adminClient = getSupabaseAdmin();
 
         // Convert camelCase to snake_case for database
-        const dbUpdates: any = {
+        const dbUpdates: Partial<Omit<DbUserRow, "id">> = {
             updated_at: new Date().toISOString(),
         };
 
@@ -141,9 +146,9 @@ export async function PUT(request: NextRequest) {
             dbUpdates.accessibility_needs = [];
         }
 
-        const { data, error } = await (adminClient as any)
+        const { data, error } = await adminClient
             .from("users")
-            .update(dbUpdates)
+            .update(dbUpdates as never)
             .eq("id", id)
             .select()
             .single();

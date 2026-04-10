@@ -117,15 +117,15 @@ Bu fazı diğer geliştiricilerle paralel bölebilirsiniz.
 |---|---|---|---|---|
 | A-1 | Auth guard — calculate-vehicles | 🔴 KRİTİK | ✅ | ✅ TAMAMLANDI (09.04.2026) |
 | A-2 | CORS env-tabanlı yapılandırma | 🔴 YÜKSEK | ✅ | ✅ TAMAMLANDI (09.04.2026) |
-| A-3 | Sandbox IE endpoint düzeltme | 🔴 YÜKSEK | ✅ | ⬜ Bekliyor |
+| A-3 | Sandbox IE endpoint düzeltme | 🔴 YÜKSEK | ✅ | ✅ TAMAMLANDI (10.04.2026) — `/api/v1/ie/analyze` fetch kaldırıldı; `result.ie_data` optimize yanıtından kullanılıyor |
 | B-1 | `total_time_window_violations` modele ekle | 🟡 ORTA | ✅ | ✅ TAMAMLANDI (09.04.2026) |
 | B-2 | `strategy`→`algorithm` (sandbox) | 🟡 ORTA | ✅ | ✅ TAMAMLANDI (09.04.2026) |
 | B-3 | `strategy`→`algorithm` (calc-vehicles) | 🟡 ORTA | ✅ | ✅ GEREK YOK — zaten doğru (`optimizeRoutes` servisi üzerinden) |
 | B-4 | `max_tour_time`→`max_travel_time` (sandbox) | 🟡 ORTA | ✅ | ✅ TAMAMLANDI (09.04.2026) |
 | C-1 | Kullanılmayan RATE_LIMIT sabiti | 🟢 DÜŞÜK | ✅ | ✅ TAMAMLANDI (09.04.2026) |
-| C-2 | kmeans_tsp.py ölü kod | 🟢 DÜŞÜK | ✅ | ⬜ Bekliyor |
+| C-2 | kmeans_tsp.py ölü kod | 🟢 DÜŞÜK | ✅ | ✅ TAMAMLANDI (10.04.2026) — `strategies/_archived/` dizinine taşındı; K-Means pipeline kullanılmayacak |
 | C-3 | `as any` azalt | 🟢 DÜŞÜK | kısmi | ✅ TAMAMLANDI (10.04.2026) — `admin/users/route.ts:86,144` temizlendi; `DbUserRow` eklendi; bonus: `auth/hint/route.ts:78` baseline hata da düzeltildi |
-| C-4 | Supabase env doğrulama | 🟢 DÜŞÜK | ✅ | ⬜ Bekliyor |
+| C-4 | Supabase env doğrulama | 🟢 DÜŞÜK | ✅ | ✅ TAMAMLANDI (10.04.2026) — Boş string export'lar `config.ts`'den kaldırıldı; gerçek doğrulama `supabase.ts` + `supabase-admin.ts`'de zaten mevcut |
 
 ---
 

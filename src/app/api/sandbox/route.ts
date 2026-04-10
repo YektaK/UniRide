@@ -89,32 +89,14 @@ export async function POST(request: NextRequest) {
 
         const result = await response.json();
 
-        // Get IE data
-        let ieData = null;
-        try {
-            const ieResponse = await fetch(`${process.env.OPTIMIZER_API_URL}/api/v1/ie/analyze`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    vehicles,
-                    pickup_times: result.pickup_times || [],
-                    dropoff_times: result.dropoff_times || [],
-                    routes: result.routes || [],
-                }),
-            });
-
-            if (ieResponse.ok) {
-                ieData = await ieResponse.json();
-            }
-        } catch (ieError) {
-            console.error("IE analysis error:", ieError);
-        }
+        // ie_data is already embedded in the optimize response (generated inline
+        // by the Python service's ResourceProfiler). No separate /api/v1/ie/analyze
+        // call is needed — that endpoint does not exist in main.py (A-3 fix).
 
         return createSuccessResponse({
             ...result,
             totalSwCapacity,
             totalSoCapacity,
-            ieData,
         });
     } catch (error) {
         return handleApiError(error);

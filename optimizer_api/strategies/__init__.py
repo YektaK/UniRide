@@ -4,11 +4,11 @@ Exports all routing strategies and provides registry for lookup.
 
 Available algorithms:
 
-Cluster-First, Route-Second (Pipeline A):
-- genetic_algorithm (ga): GA + K-Means clustering
-- pso: PSO + K-Means clustering  
-- gwo: GWO + K-Means clustering
-- hho: HHO + K-Means clustering
+Cluster-First, Route-Second (Pipeline A — uses Sweep/CW clustering):
+- genetic_algorithm (ga): GA optimization
+- pso: PSO optimization
+- gwo: GWO optimization
+- hho: HHO optimization
 
 Route-First, Cluster-Second (Pipeline B - Split):
 - ga_split: GA + Optimal Split Decoder
@@ -25,6 +25,9 @@ Heuristics:
 - two_opt: Two-Opt Local Search
 - greedy: Greedy/Nearest Neighbor
 - permutation_tsp: Complete Permutation Search (optimal for n≤10)
+
+Archived (not registered):
+- _archived/kmeans_tsp.py: Retired proof-of-concept K-Means+TSP skeleton
 """
 
 from typing import Dict, List, Type, Optional, Union

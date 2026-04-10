@@ -124,7 +124,7 @@ Bu fazı diğer geliştiricilerle paralel bölebilirsiniz.
 | B-4 | `max_tour_time`→`max_travel_time` (sandbox) | 🟡 ORTA | ✅ | ✅ TAMAMLANDI (09.04.2026) |
 | C-1 | Kullanılmayan RATE_LIMIT sabiti | 🟢 DÜŞÜK | ✅ | ✅ TAMAMLANDI (09.04.2026) |
 | C-2 | kmeans_tsp.py ölü kod | 🟢 DÜŞÜK | ✅ | ⬜ Bekliyor |
-| C-3 | `as any` azalt | 🟢 DÜŞÜK | kısmi | ⬜ Bekliyor |
+| C-3 | `as any` azalt | 🟢 DÜŞÜK | kısmi | ✅ TAMAMLANDI (10.04.2026) — `admin/users/route.ts:86,144` temizlendi; `DbUserRow` eklendi; bonus: `auth/hint/route.ts:78` baseline hata da düzeltildi |
 | C-4 | Supabase env doğrulama | 🟢 DÜŞÜK | ✅ | ⬜ Bekliyor |
 
 ---

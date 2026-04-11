@@ -1,6 +1,7 @@
 ---
 name: PDF Processing Pro
 description: Production-ready PDF processing with forms, tables, OCR, validation, and batch operations. Use when working with complex PDF workflows in production environments, processing large volumes of PDFs, or requiring robust error handling and validation.
+group: smart.docs
 ---
 
 # PDF Processing Pro

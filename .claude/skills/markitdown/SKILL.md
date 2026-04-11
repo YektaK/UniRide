@@ -4,6 +4,7 @@ description: "Convert files and office documents to Markdown. Supports PDF, DOCX
 allowed-tools: [Read, Write, Edit, Bash]
 license: MIT
 source: https://github.com/microsoft/markitdown
+group: smart.docs
 ---
 
 # MarkItDown - File to Markdown Conversion

@@ -4,6 +4,7 @@ description: >
   Ultra-compressed communication mode. Distills AI output to its core — ~65% fewer tokens
   while keeping full technical accuracy. Use when user says "caveman", "terse", "kurz",
   "kurz&knapp", "kurz bitte", "less tokens", "weniger text", or invokes /caveman-distillate.
+group: smart.frontend
 ---
 
 # Caveman Distillate

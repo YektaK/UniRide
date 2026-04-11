@@ -61,12 +61,13 @@ UniRide, mikroservis tabanlı bir mimari ile tasarlanmış olup, frontend ve bac
 #### Teknoloji Stack
 | Teknoloji | Sürüm | Amaç |
 |-----------|-------|------|
-| Next.js | 16.x | App Router, SSR |
+| Next.js | 16.1.6 | App Router, SSR |
 | TypeScript | 5.x | Type safety |
-| React | 18.x | UI components |
-| Tailwind CSS | 3.x | Styling (`^3.4.1` — 4.x DEĞİL, 09.04.2026 - Ekleyen: Copilot AI) |
+| React | 18.3.1 | UI components |
+| react-dom | 18.3.1 | Virtual DOM rendering |
+| Tailwind CSS | 3.4.1 | Styling (NOT 4.x — Approved 09.04.2026 - Copilot AI) |
 | shadcn/ui | latest | UI component library |
-| Supabase JS | 2.x | Database client |
+| Supabase JS | 2.98.0 | Database client |
 
 #### Dizin Yapısı
 ```

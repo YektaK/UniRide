@@ -161,10 +161,10 @@ class PSOSplitStrategy(HybridSplitBaseStrategy):
         if not tour:
             return 0.0
         
-        total = distance_matrix.get(depot, {}).get(tour[0], 15.0)
+        total = distance_matrix.get(depot, {}).get(tour[0], DEFAULT_TRAVEL_FALLBACK_MINUTES)
         for i in range(len(tour) - 1):
-            total += distance_matrix.get(tour[i], {}).get(tour[i + 1], 15.0)
-        total += distance_matrix.get(tour[-1], {}).get(depot, 15.0)
+            total += distance_matrix.get(tour[i], {}).get(tour[i + 1], DEFAULT_TRAVEL_FALLBACK_MINUTES)
+        total += distance_matrix.get(tour[-1], {}).get(depot, DEFAULT_TRAVEL_FALLBACK_MINUTES)
         return total
 
     def _get_difference_swaps(self, current: List[str], target: List[str],

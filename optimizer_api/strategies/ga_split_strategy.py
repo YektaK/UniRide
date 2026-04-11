@@ -279,9 +279,9 @@ class GASplitStrategy(HybridSplitBaseStrategy):
             total = 0
             prev = depot
             for loc in route:
-                total += distance_matrix.get(prev, {}).get(loc, 15.0)
+                total += distance_matrix.get(prev, {}).get(loc, DEFAULT_TRAVEL_FALLBACK_MINUTES)
                 prev = loc
-            total += distance_matrix.get(prev, {}).get(depot, 15.0)
+            total += distance_matrix.get(prev, {}).get(depot, DEFAULT_TRAVEL_FALLBACK_MINUTES)
             return total
         
         try:

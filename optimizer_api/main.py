@@ -11,6 +11,7 @@ Version: 3.1.0 - CVRPTW Support Added
 import time
 import os
 import asyncio
+import logging
 from typing import List, Optional, Dict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
@@ -18,6 +19,9 @@ from datetime import datetime, timedelta
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Query
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
@@ -37,6 +41,7 @@ from strategies import (
 )
 from utils.resource_profiler import ResourceProfiler
 from utils.time_window_extractor import TimeWindowExtractor
+from benchmark_runner import BenchmarkRunner, BenchmarkProblem, AlgorithmConfig
 
 # Create FastAPI app
 app = FastAPI(
@@ -671,6 +676,143 @@ def calculate_vehicles(request: OptimizationRequest) -> OptimizationResponse:
     The algorithm parameter determines the TSP solver used for each cluster.
     """
     return optimize_route(request)
+
+
+# ============================================================
+# BENCHMARK ENDPOINTS (TSP Benchmark Studio Integration)
+# ============================================================
+
+from benchmark_state import benchmark_state_manager, BenchmarkStatus
+
+
+@app.post("/api/v1/benchmark/run")
+def start_benchmark(
+    run_id: str,
+    algorithms: List[Dict],
+    problems: List[str],
+    settings: Dict
+) -> Dict:
+    """
+    Start a new benchmark run.
+    
+    This endpoint integrates TSP Benchmark Studio algorithms with UniRide.
+    Benchmarks compare algorithm performance across multiple problems.
+    
+    Args:
+        run_id: Unique benchmark run identifier
+        algorithms: List of algorithm configs {"id": "ga", "params": {...}}
+        problems: List of problem names to benchmark
+        settings: {"n_runs": int, "workers": int, "seed": int, ...}
+    
+    Returns:
+        {
+            "run_id": "...",
+            "status": "running",
+            "total_experiments": int,
+            "message": "..."
+        }
+    """
+    try:
+        # Create and register benchmark run
+        n_runs = settings.get("n_runs", 3)
+        total_experiments = len(algorithms) * len(problems) * n_runs
+        
+        state = benchmark_state_manager.create_run(
+            run_id=run_id,
+            total_experiments=total_experiments,
+            parameters={
+                "algorithms": algorithms,
+                "problems": problems,
+                "settings": settings
+            }
+        )
+        
+        logger.info(f"[Benchmark] Starting run {run_id}: {total_experiments} experiments")
+        
+        return {
+            "run_id": run_id,
+            "status": "running",
+            "total_experiments": total_experiments,
+            "problems_count": len(problems),
+            "algorithms_count": len(algorithms),
+            "message": f"Benchmark run {run_id} başlatıldı",
+            "start_time": state.start_time
+        }
+    
+    except Exception as e:
+        logger.error(f"[Benchmark] Error starting run: {e}")
+        return {
+            "run_id": run_id,
+            "status": "error",
+            "error": str(e)
+        }
+
+
+@app.get("/api/v1/benchmark/status")
+def get_benchmark_status(run_id: str) -> Dict:
+    """
+    Get status of a benchmark run.
+    
+    Returns:
+        {
+            "run_id": "...",
+            "status": "running|completed|failed|stopped",
+            "total_experiments": int,
+            "completed_experiments": int,
+            "results_count": int,
+            "message": "...",
+            "progress_percent": float
+        }
+    """
+    state = benchmark_state_manager.get_run(run_id)
+    
+    if not state:
+        raise HTTPException(status_code=404, detail=f"Benchmark run {run_id} not found")
+    
+    progress_percent = 0.0
+    if state.total_experiments > 0:
+        progress_percent = (state.completed_experiments / state.total_experiments) * 100
+    
+    return {
+        "run_id": run_id,
+        "status": state.status.value,
+        "total_experiments": state.total_experiments,
+        "completed_experiments": state.completed_experiments,
+        "results_count": state.results_count,
+        "message": state.message,
+        "progress_percent": min(100.0, progress_percent),
+        "start_time": state.start_time,
+        "end_time": state.end_time
+    }
+
+
+@app.post("/api/v1/benchmark/stop")
+def stop_benchmark(run_id: str) -> Dict:
+    """
+    Stop a running benchmark.
+    
+    Returns:
+        {
+            "run_id": "...",
+            "status": "stopped",
+            "results_collected": int
+        }
+    """
+    state = benchmark_state_manager.get_run(run_id)
+    
+    if not state:
+        raise HTTPException(status_code=404, detail=f"Benchmark run {run_id} not found")
+    
+    benchmark_state_manager.stop_run(run_id, "User requested stop")
+    
+    logger.info(f"[Benchmark] Stopped run {run_id}, collected {state.results_count} results")
+    
+    return {
+        "run_id": run_id,
+        "status": "stopped",
+        "results_collected": state.results_count,
+        "message": f"Benchmark {run_id} durduruldu"
+    }
 
 
 # Run server

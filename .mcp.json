@@ -12,13 +12,6 @@
         "SUPABASE_ACCESS_TOKEN": "<personal-access-token>"
       }
     },
-    "DeepGraph Next.js MCP": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-code-graph@latest",
-        "vercel/next.js"
-      ]
-    }
+    
   }
 }

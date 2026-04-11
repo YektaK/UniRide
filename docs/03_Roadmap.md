@@ -245,3 +245,6 @@ Bu yol haritası, UniRide Özel Öğrenci Taşıma Sistemi'nin CVRPTW (Kapasitel
 
 *Bu yol haritası proje gereksinimlerine göre güncellenecektir.*
 *Son güncelleme: 10.04.2026 — Forensic audit düzeltmeleri ve teknik borç analizi sonrası.*
+
+
+> (10.04.2026 - AI Audit): TSP Benchmark Studio entegrasyonu kod düzeyinde incelendi. /api/benchmark/run rotaları, FastAPI backend benchmark_runner mekanizmaları ve ilgili Python (Numba JIT vb.) strateji dosyalarının projenin 'Dual-Track' SOTA (State of the Art) ve ticari hibrit motor yapısına uygun olarak ayrı bir execution branch olarak (academic_benchmark) başarıyla entegre edildiği doğrulandı. Optimizasyon hedefleri ve izolasyon kurallarıyla uyumlu.

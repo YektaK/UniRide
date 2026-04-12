@@ -111,50 +111,49 @@ class BenchmarkRunner:
         Convert BenchmarkProblem → OptimizationRequest for real strategy dispatch.
         
         Handles both TSP (simple) and CVRPTW (complex) problem formats.
-        Creates dummy StudentNode + LocationNode from problem coordinates.
+        Creates StudentNode + LocationNode matching actual schema.
         """
         from models.schemas import (
             OptimizationRequest, OptimizationMode, Direction,
             LocationNode, StudentNode
         )
         
-        # Step 1: Create depot
+        # Step 1: Create depot (LocationNode with actual schema fields)
         depot_coord = problem.coordinates[problem.depot_index]
         depot = LocationNode(
             id="depot",
             lat=depot_coord[0],
             lng=depot_coord[1],
-            order_type="depot"
+            type="So"  # ✅ Correct schema field (NOT order_type)
         )
         
-        # Step 2: Create students (all except depot)
+        # Step 2: Create students (StudentNode with actual schema fields)
         students = []
         for i, coord in enumerate(problem.coordinates):
             if i == problem.depot_index:
                 continue
             
+            # ✅ StudentNode requires: id, location_code
+            # ✅ Coordinates as Dict[str, float], NOT separate lat/lng
             student = StudentNode(
                 id=f"student_{i}",
-                lat=coord[0],
-                lng=coord[1],
-                order_type="pickup"
+                name=f"Student {i}",
+                location_code=f"loc_{i}",  # ✅ REQUIRED field
+                coordinates={"latitude": coord[0], "longitude": coord[1]},  # ✅ Dict format
+                disability_type="So"  # Default disability type
             )
             students.append(student)
         
-        # Step 3: Detect problem type
+        # Step 3: Detect problem type and calculate distance metric
         use_time_windows = problem.problem_type == "cvrptw" and problem.time_windows is not None
         
-        # Step 4: Choose appropriate algorithm category (promote to Split for CVRPTW)
+        # Step 4: Determine best algorithm (promote to Split for CVRPTW if needed)
         best_algo = algorithm_id
         if problem.problem_type == "cvrptw":
-            if algorithm_id.startswith("ga") and "split" not in algorithm_id.lower():
-                best_algo = "ga_split"
-            elif algorithm_id.startswith("pso") and "split" not in algorithm_id.lower():
-                best_algo = "pso_split"
-            elif algorithm_id.startswith("gwo") and "split" not in algorithm_id.lower():
-                best_algo = "gwo_split"
-            elif algorithm_id.startswith("hho") and "split" not in algorithm_id.lower():
-                best_algo = "hho_split"
+            # Only promote Pipeline A (simple) to Pipeline B (split), not already-split algos
+            if algorithm_id in ["ga", "pso", "gwo", "hho"]:
+                best_algo = f"{algorithm_id}_split"
+            # Holistic solvers already handle CVRPTW
         
         # Step 5: Build OptimizationRequest
         request = OptimizationRequest(
@@ -276,6 +275,7 @@ class BenchmarkRunner:
         """Run a single algorithm on a single problem using real strategy dispatch."""
         
         start_time = time.time()
+        execution_failed = False
         
         try:
             # Get strategy from registry
@@ -304,9 +304,11 @@ class BenchmarkRunner:
                     f"Strategy {algorithm.algorithm_id} failed on {problem.name}: "
                     f"{response.error_message}"
                 )
-                tour_length = 1000 + random.uniform(-100, 100)
+                execution_failed = True
+                tour_length = 1000 + random.uniform(-100, 100)  # Fallback
             else:
-                tour_length = response.total_duration_minutes or 1000
+                # ✅ Use total_distance_km (comparable metric) instead of duration
+                tour_length = response.total_distance_km or 1000
         
         except Exception as e:
             logger.warning(
@@ -314,7 +316,8 @@ class BenchmarkRunner:
                 f"{str(e)}",
                 exc_info=True
             )
-            tour_length = 1000 + random.uniform(-100, 100)
+            execution_failed = True
+            tour_length = 1000 + random.uniform(-100, 100)  # Fallback
         
         elapsed_ms = (time.time() - start_time) * 1000
         
@@ -333,7 +336,8 @@ class BenchmarkRunner:
                 "problem_dimension": problem.dimension,
                 "problem_type": problem.problem_type,
                 "problem_category": problem.category,
-                "algorithm_params": algorithm.params
+                "algorithm_params": algorithm.params,
+                "execution_failed": execution_failed  # ✅ Mark failures explicitly
             }
         )
     

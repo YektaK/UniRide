@@ -701,7 +701,7 @@ def calculate_vehicles(request: OptimizationRequest) -> OptimizationResponse:
 # TODO[P1]: Implement graceful shutdown handler
 # ============================================================
 
-from benchmark_state import benchmark_state_manager, BenchmarkStatus
+from benchmark_state import benchmark_state_manager, BenchmarkStatus, MAX_CONCURRENT_BENCHMARKS
 
 
 @app.post("/api/v1/benchmark/run")
@@ -751,6 +751,9 @@ def start_benchmark(
             "start_time": "..."
         }
     
+    Raises:
+        HTTPException(429): When MAX_CONCURRENT_BENCHMARKS limit exceeded
+    
     See: docs/BENCHMARK_ARCHITECTURE_DEBT.md
     """
     try:
@@ -758,15 +761,17 @@ def start_benchmark(
         if not benchmark_state_manager.can_start_run():
             logger.warning(
                 f"[Benchmark] Concurrent limit exceeded. "
-                f"Max {benchmark_state_manager._lock.__class__.__module__}.MAX_CONCURRENT_BENCHMARKS running"
+                f"Max {MAX_CONCURRENT_BENCHMARKS} benchmark runs allowed (currently at limit)"
             )
-            return {
-                "run_id": run_id,
-                "status": "queue",
-                "error": "Maximum concurrent benchmarks (3) reached",
-                "error_code": "CONCURRENT_LIMIT_EXCEEDED",
-                "message": "Bekleyen taklada. Diğer benchmarklar tamamlanana kadar bekleyin."
-            }, 429
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "error": f"Maximum {MAX_CONCURRENT_BENCHMARKS} concurrent benchmarks reached",
+                    "error_code": "CONCURRENT_LIMIT_EXCEEDED",
+                    "message": "Bekleyen taklada. Diğer benchmarklar tamamlanana kadar bekleyin.",
+                    "max_concurrent": MAX_CONCURRENT_BENCHMARKS
+                }
+            )
         
         # Create and register benchmark run
         n_runs = settings.get("n_runs", 3)

@@ -114,12 +114,13 @@ Bu yol haritası, UniRide Özel Öğrenci Taşıma Sistemi'nin CVRPTW (Kapasitel
 #### 4.5.1 Kalan Teknik Borç
 | Görev | Öncelik | Durum | Açıklama |
 |-------|---------|-------|----------|
-| FIX-04 genişlet — Pipeline A stratejileri | 🟡 | ✅ | main.py (2 site) + BaseStrategy mixin extraction (13.04.2026) |
+| FIX-04 genişlet — Pipeline A stratejileri | � | ✅ | main.py consolidation + BaseStrategy extraction + Strategy refactoring (Commit a8ccb11 - 174 LOC removed) |
+| 🔴 P1 Stratejileri refactor (super() kullan) | 🔴 | ✅ | Remove duplicate _get_duration/_calculate_route_duration from GA/HHO/PSO/GWO strategies (13.04.2026 - Commit a8ccb11) |
 | FIX-07 tamamla — `clustering.py` haversine | 🟢 | ✅ | `clustering.py:11` → `from utils.data_loader import haversine_distance` (13.04.2026) |
 | Algorithm Parameter Config UI | 🟢 | ⬜ | Frontend'de algoritma parametresi ayarlama |
 | DataLoader TTL/Invalidation | 🟢 | ⬜ | Singleton'a cache süresi + yenileme mekanizması |
 | ResourceProfiler magic numbers | 🟢 | ✅ | DEFAULT_PICKUP_HOUR/DEFAULT_DROPOFF_HOUR env vars (13.04.2026) |
-| `main.old.py` temizle | 🟢 | ✅ | 24KB ölü kod → docs/old/ archive (13.04.2026) |
+| `main.old.py` temizle | 🟢 | ✅ | 24KB ölü kod → docs/old/ archive (13.04.2026)
 
 #### 4.5.2 Test Altyapısı
 | Görev | Öncelik | Durum | Açıklama |

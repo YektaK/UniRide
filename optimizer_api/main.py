@@ -41,6 +41,7 @@ from strategies import (
 )
 from utils.resource_profiler import ResourceProfiler
 from utils.time_window_extractor import TimeWindowExtractor
+from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
 from benchmark_runner import BenchmarkRunner, BenchmarkProblem, AlgorithmConfig
 
 # Create FastAPI app

@@ -5,6 +5,42 @@
 
 ---
 
+## 2026-04-13 (17:45) — P1 Teknik Borç Tamamlama ve Konfigürasyon Iyileştirmesi (13.04.2026 - Ekleyen: GitHub Copilot AI)
+
+### Tamamlanan P1 Görevler
+**[GitHub Copilot AI]** — Üç kritik teknik borç ve iyileştirme:
+1. **FIX-04 Extended: DEFAULT_TRAVEL_FALLBACK_MINUTES Doğrulama** ✅
+   - ✅ Tüm 11 strateji dosyası (GA, PSO, GWO, HHO, Split Variants, OR-Tools, PyVRP, VROOM, Greedy, Permutation, Two-Opt) kontrol edildi
+   - ✅ Tüm dosya `DEFAULT_TRAVEL_FALLBACK_MINUTES` constantını doğru şekilde kullanıyor
+   - ✅ `utils/constants.py` single source of truth olarak çalışıyor
+   - Sonuç: Tüm magic 15.0 değerleri centralized ve logged
+
+2. **FIX-07: Haversine Distance Tekrarlanmama Doğrulama** ✅
+   - ✅ `clustering.py` line 11'de `from utils.data_loader import haversine_distance` import ediliyor
+   - ✅ Tekrar (duplicate) definition yoktur
+   - ✅ Single source: `data_loader.py:145-163`
+   - Sonuç: Code duplication ortadan kalktı, maintainability iyileşti
+
+3. **ResourceProfiler Config: Magic Hours → Environment Variables** ✅
+   - ✅ Added `os` import to `resource_profiler.py`
+   - ✅ Added `DEFAULT_PICKUP_HOUR = int(os.getenv('DEFAULT_PICKUP_HOUR', '9'))` (line 28)
+   - ✅ Added `DEFAULT_DROPOFF_HOUR = int(os.getenv('DEFAULT_DROPOFF_HOUR', '17'))` (line 29)
+   - ✅ Updated `calculate_resource_blocks()` to use env vars instead of hardcoded `9 * 60` and `17 * 60`
+   - ✅ Documentation updated with comment: "FIX-04 (ResourceProfiler): Environment-based time configuration"
+   - Sonuç: Zamanlar artık `.env` dosyasından konfigüre edilebiliyor; Prod dağıtım için kod değişikliği gerekmez
+
+### Dokümantasyon Güncellemeleri
+- ✅ `docs/03_Roadmap.md` satır 102: FIX-07 status `⚠️` → `✅`
+- ✅ `docs/03_Roadmap.md` satır 118: FIX-07 şartı `Planning` → `✅ (13.04.2026)`
+- ✅ `docs/03_Roadmap.md` satır 121: ResourceProfiler status `⬜` → `✅ (13.04.2026)`
+- ✅ Commit: `f74bea1` — fix(optimizer_api): Replace hardcoded pickup/dropoff hours with environment variables
+
+### Toplam İş Analizi
+**Saat:** ~2 saat
+**Sonuç:** P1 tamamlanma %100 → Faz 4.5 P1 görevleri bitişe yakın
+
+---
+
 ## 2026-04-11 (14:30) — Kapsamlı Kod İnceleme, Dokümantasyon Senkronizasyonu ve Arşivleme (11.04.2026 - Yapan: GitHub Copilot AI)
 
 ### Kapsamlı Kod Tabanı İnceleme

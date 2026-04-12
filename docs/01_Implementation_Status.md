@@ -2,7 +2,7 @@
 
 > **Tarih:** 11 Nisan 2026, 14:35 (11.04.2026 - Oluşturan: GitHub Copilot AI)
 > **Dönem:** Faz 4.5 — Kalan Teknik Borç ve Test Altyapısı
-> **Son Güncelleme:** 10 Nisan 2026 — Forensic Audit FIX-01 → FIX-10 tamamlandı
+> **Son Güncelleme:** 13 Nisan 2026, 17:45 — P1 Teknik Borç Tamamlama (FIX-04/07, ResourceProfiler config)
 
 ---
 
@@ -80,12 +80,12 @@
 
 #### Priority 🟡 — YÜKSEK
 
-| ID | Görev | Dosyalar | Mod | Neden |
-|----|-------|----------|-----|-------|
-| T-1 | FIX-04 Genişlet — Magic constants | 11 strateji | Parallel | `15.0` → `DEFAULT_TRAVEL_FALLBACK_MINUTES` herkeste |
-| T-2 | FIX-07 Tamamla | `clustering.py` | Sequential | Haversine kopyası → import |
-| T-3 | ResourceProfiler config | `utils/resource_profiler.py` | Sequential | Magic hours (14:00, 17:00) → env vars |
-| T-4 | Test Coverage | `tests/` | Parallel | %25 → %60 — Split, clustering, local_search |
+| ID | Görev | Dosyalar | Mod | Durum | Tamamlama |
+|----|-------|----------|-----|-------|----------|
+| T-1 | FIX-04 Genişlet — Magic constants | 11 strateji | Parallel | ✅ | 13.04.2026 - Verified all strategies use DEFAULT_TRAVEL_FALLBACK_MINUTES |
+| T-2 | FIX-07 Tamamla | `clustering.py` | Sequential | ✅ | 13.04.2026 - No duplicate haversine, imports from utils.data_loader |
+| T-3 | ResourceProfiler config | `utils/resource_profiler.py` | Sequential | ✅ | 13.04.2026 - DEFAULT_PICKUP_HOUR, DEFAULT_DROPOFF_HOUR env vars implemented |
+| T-4 | Test Coverage | `tests/` | Parallel | ⬜ | %25 → %60 — Split, clustering, local_search (Next Session) |
 
 #### Priority 🟢 — DÜŞÜK
 

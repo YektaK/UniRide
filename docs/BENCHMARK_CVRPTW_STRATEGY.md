@@ -34,26 +34,30 @@ class BenchmarkProblem:
     category: str = "medium"
 ```
 
-### Proposed (TSP + CVRPTW)
+### Proposed (TSP + CVRPTW - ACTUAL IMPLEMENTATION)
 ```python
 @dataclass
 class BenchmarkProblem:
-    # Common fields
+    # Common fields (required)
     name: str
-    problem_type: str  # "tsp" or "cvrptw"
+    problem_type: str  # "tsp" or "cvrptw" (default: "tsp")
     dimension: int
     coordinates: List[Tuple[float, float]]
     optimal_score: Optional[int] = None
     category: str = "medium"  # small, medium, large
     
-    # CVRPTW-specific fields
-    vehicle_count: int = 1  # For TSP: 1, For CVRPTW: 2-10
-    vehicle_capacity: Optional[float] = None  # For CVRPTW
-    customer_demands: Optional[List[float]] = None  # [node_0_demand, node_1_demand, ...]
-    time_windows: Optional[List[Tuple[float, float]]] = None  # [(earliest, latest), ...]
-    service_times: Optional[List[float]] = None  # Service duration at each node
-    depot_index: int = 0  # Index of depot node
+    # CVRPTW-specific fields (optional)
+    capacity: Optional[int] = None  # Vehicle capacity for CVRPTW
+    num_vehicles: Optional[int] = None  # Number of vehicles for CVRPTW
+    time_windows: Optional[List[Tuple[int, int]]] = None  # Tuples (start, end) in minutes
+    depot_index: int = 0  # Index of depot coordinate (default: 0)
 ```
+
+**Schema Notes:**
+- All fields use actual Python types (int, str, Optional[], List[])
+- time_windows: List of (start_min, end_min) tuples (e.g., [(9*60, 17*60)] = 9:00 AM to 5:00 PM)
+- capacity: Integer (e.g., 4 for SW students, 5 for SO students)
+- depot_index: Which coordinate is the depot (e.g., 0 for first coordinate)
 
 ## 3. Strategy Dispatch Logic (Interface Adapter)
 
@@ -130,70 +134,119 @@ def dispatch_strategy(problem: BenchmarkProblem, algorithm_id: str) -> BaseRouti
     return strategy
 ```
 
-## 4. Strategy Adapter (_convert_benchmark_to_optimization_request)
+## 4. Strategy Adapter (_benchmark_problem_to_optimization_request)
+
+**Implementation Location:** `optimizer_api/benchmark_runner.py` lines 90-152
+
+### Actual Schema (From models/schemas.py)
+
+```python
+# Depot representation
+class LocationNode(BaseModel):
+    id: str
+    lat: float
+    lng: float
+    type: str = "So"  # Location type (e.g., "So" for service outlet)
+
+# Student/Customer representation  
+class StudentNode(BaseModel):
+    id: str
+    name: str = ""
+    location_code: str  # REQUIRED - unique location identifier
+    coordinates: Optional[Dict[str, float]] = None  # {"latitude": x, "longitude": y}
+    disability_type: str = "So"
+    pickup_time: Optional[str] = None
+    dropoff_time: Optional[str] = None
+    
+# Optimization request
+class OptimizationRequest(BaseModel):
+    algorithm: str
+    students: List[StudentNode]
+    depot: LocationNode
+    max_travel_time: int
+    sw_capacity: int  # Social worker capacity
+    so_capacity: int  # Service outlet capacity
+    direction: Direction  # PICKUP or DROPOFF
+    use_time_windows: bool = False
+    mode: OptimizationMode
+```
 
 ### TSP Conversion
 ```python
-def convert_tsp_to_optimization_request(
-    problem: BenchmarkProblem,
-    algorithm_params: Dict
-) -> OptimizationRequest:
-    """
-    Convert TSP BenchmarkProblem → OptimizationRequest (single depot + students)
-    """
-    # First node (index 0) is depot
-    depot = StudentNode(
+def _benchmark_problem_to_optimization_request(self, problem: BenchmarkProblem, algorithm_id: str):
+    """TSP/CVRPTW → OptimizationRequest (works for BOTH problem types)"""
+    
+    # Step 1: Create depot (LocationNode)
+    depot_coord = problem.coordinates[problem.depot_index]
+    depot = LocationNode(
         id="depot",
-        latitude=problem.coordinates[0][0],
-        longitude=problem.coordinates[0][1],
-        node_type="depot"
+        lat=depot_coord[0],
+        lng=depot_coord[1],
+        type="So"  # Service outlet
     )
     
-    # Remaining nodes are students
-    students = [
-        StudentNode(
-            id=f"node_{i}",
-            latitude=problem.coordinates[i][0],
-            longitude=problem.coordinates[i][1],
-            pickup_time_start=0,
-            pickup_time_end=24*60,  # Full day
-            dropoff_time_start=0,
-            dropoff_time_end=24*60
+    # Step 2: Create students (all non-depot nodes)
+    students = []
+    for i, coord in enumerate(problem.coordinates):
+        if i == problem.depot_index:
+            continue
+        
+        student = StudentNode(
+            id=f"student_{i}",
+            name=f"Student {i}",
+            location_code=f"loc_{i}",  # REQUIRED unique identifier
+            coordinates={"latitude": coord[0], "longitude": coord[1]},  # Dict format
+            disability_type="So"
         )
-        for i in range(1, problem.dimension)
-    ]
+        students.append(student)
     
-    return OptimizationRequest(
+    # Step 3: Detect problem type and auto-promote algorithm if needed
+    use_time_windows = (
+        problem.problem_type == "cvrptw" and 
+        problem.time_windows is not None
+    )
+    
+    best_algo = algorithm_id
+    if problem.problem_type == "cvrptw" and algorithm_id in ["ga", "pso", "gwo", "hho"]:
+        best_algo = f"{algorithm_id}_split"  # Upgrade to Split variant
+    
+    # Step 4: Build OptimizationRequest
+    request = OptimizationRequest(
+        algorithm=best_algo,
         students=students,
         depot=depot,
-        vehicle_count=1,
-        solver_timeout_seconds=300,
-        # TSP has no capacity constraints
-        algorithm_params=algorithm_params
-    )
-```
-
-### CVRPTW Conversion
-```python
-def convert_cvrptw_to_optimization_request(
-    problem: BenchmarkProblem,
-    algorithm_params: Dict
-) -> OptimizationRequest:
-    """
-    Convert CVRPTW BenchmarkProblem → OptimizationRequest (multiple vehicles + time windows)
-    """
-    # Depot
-    depot = StudentNode(
-        id="depot",
-        latitude=problem.coordinates[problem.depot_index][0],
-        longitude=problem.coordinates[problem.depot_index][1],
-        node_type="depot"
+        max_travel_time=180,
+        sw_capacity=problem.capacity or 4,
+        so_capacity=problem.capacity or 5,
+        direction=Direction.PICKUP,
+        use_time_windows=use_time_windows,
+        mode=OptimizationMode.BENCHMARK
     )
     
-    # Customers with time windows and demands
-    students = []
-    for i in range(problem.dimension):
-        if i == problem.depot_index:
+    return request
+```
+
+### Key Implementation Notes
+
+1. **Schema Compatibility:**
+   - LocationNode uses `lat`, `lng` (NOT latitude/longitude)
+   - LocationNode uses `type` field (NOT order_type)
+   - StudentNode REQUIRES `location_code` field
+   - StudentNode uses `coordinates` as Dict {"latitude": x, "longitude": y}
+
+2. **Algorithm Auto-Promotion:**
+   - TSP algorithms (ga, pso, gwo, hho) → CVRPTW upgrade to _split variants
+   - Only upgrades base algorithms from Pipeline A
+   - Already-upgraded algorithms (ga_split) pass through unchanged
+   - CVRPTW-native solvers (ortools, pyvrp) used as-is
+
+3. **Time Windows Handling:**
+   - Only activated if problem_type == "cvrptw" AND time_windows is not None
+   - StudentNode pickup_time/dropoff_time populated separately (from problem.time_windows)
+
+4. **Capacity Mapping:**
+   - Uses problem.capacity or defaults to 4 (sw_capacity) / 5 (so_capacity)
+   - For CVRPTW: problem.num_vehicles ignored (splits multiple routes as needed)
             continue
         
         tw = problem.time_windows[i] if problem.time_windows else (0, 24*60)

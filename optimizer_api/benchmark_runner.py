@@ -134,12 +134,12 @@ class BenchmarkRunner:
                 continue
             
             # ✅ StudentNode requires: id, location_code
-            # ✅ Coordinates as Dict[str, float], NOT separate lat/lng
+            # ✅ Coordinates as Dict[str, float] with CORRECT KEY NAMES (all strategies expect "lat"/"lng")
             student = StudentNode(
                 id=f"student_{i}",
                 name=f"Student {i}",
                 location_code=f"loc_{i}",  # ✅ REQUIRED field
-                coordinates={"latitude": coord[0], "longitude": coord[1]},  # ✅ Dict format
+                coordinates={"lat": coord[0], "lng": coord[1]},  # ✅ Correct keys for strategy compatibility
                 disability_type="So"  # Default disability type
             )
             students.append(student)
@@ -307,8 +307,9 @@ class BenchmarkRunner:
                 execution_failed = True
                 tour_length = 1000 + random.uniform(-100, 100)  # Fallback
             else:
-                # ✅ Use total_distance_km (comparable metric) instead of duration
-                tour_length = response.total_distance_km or 1000
+                # ✅ Use total distance from routes (distance comparable metric)
+                # VehicleRoute.total_distance_km is calculated per route, sum for total
+                tour_length = sum(r.total_distance_km for r in response.routes) or response.total_duration_minutes or 1000
         
         except Exception as e:
             logger.warning(

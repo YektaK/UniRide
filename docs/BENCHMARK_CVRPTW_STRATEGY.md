@@ -195,7 +195,7 @@ def _benchmark_problem_to_optimization_request(self, problem: BenchmarkProblem, 
             id=f"student_{i}",
             name=f"Student {i}",
             location_code=f"loc_{i}",  # REQUIRED unique identifier
-            coordinates={"latitude": coord[0], "longitude": coord[1]},  # Dict format
+            coordinates={"lat": coord[0], "lng": coord[1]},  # ✅ CORRECT keys - all strategies expect "lat"/"lng"
             disability_type="So"
         )
         students.append(student)

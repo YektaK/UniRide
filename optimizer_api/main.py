@@ -226,7 +226,7 @@ def _calculate_scheduled_times(
                 to_loc = locations[i + 1]
                 
                 # Get travel time
-                travel_time = distance_matrix.get(from_loc, {}).get(to_loc, 15.0)
+                travel_time = distance_matrix.get(from_loc, {}).get(to_loc, DEFAULT_TRAVEL_FALLBACK_MINUTES)
                 current_minutes -= travel_time
                 arrival_times[from_loc] = _minutes_to_time(current_minutes)
             
@@ -260,7 +260,7 @@ def _calculate_scheduled_times(
                 from_loc = locations[i]
                 to_loc = locations[i + 1]
                 
-                travel_time = distance_matrix.get(from_loc, {}).get(to_loc, 15.0)
+                travel_time = distance_matrix.get(from_loc, {}).get(to_loc, DEFAULT_TRAVEL_FALLBACK_MINUTES)
                 current_minutes += travel_time
                 arrival_times[to_loc] = _minutes_to_time(current_minutes)
         

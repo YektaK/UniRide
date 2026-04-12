@@ -99,7 +99,7 @@ Bu yol haritası, UniRide Özel Öğrenci Taşıma Sistemi'nin CVRPTW (Kapasitel
 | `15.0` → constant (split stratejiler) | FIX-04 | ✅ | `constants.py` + `logger.warning` |
 | Duplicate `_minutes_to_time` kaldır | FIX-05 | ✅ | 2. kopya silindi |
 | Bare `except:` → typed exceptions | FIX-06 | ✅ | 7/7 site düzeltildi |
-| `haversine_distance` tek kaynak | FIX-07 | ⚠️ | `clustering.py` hâlâ kendi kopyasını içeriyor |
+| `haversine_distance` tek kaynak | FIX-07 | ✅ | `clustering.py` → `from utils.data_loader import haversine_distance` |
 | `HybridSplitBaseStrategy` oluştur | FIX-08 | ✅ | 3 method taşındı, 4 strateji inherit ediyor |
 | Unused `depot` parametre kaldır | FIX-09 | ✅ | `_get_target_arrival/departure_time` |
 | `ALGORITHM_COMPARISON.md` güncelle | FIX-10 | ✅ | 🔵→🟢 statü güncellendi |
@@ -115,10 +115,10 @@ Bu yol haritası, UniRide Özel Öğrenci Taşıma Sistemi'nin CVRPTW (Kapasitel
 | Görev | Öncelik | Durum | Açıklama |
 |-------|---------|-------|----------|
 | FIX-04 genişlet — Pipeline A stratejileri | 🟡 | ⬜ | 11 dosyada hâlâ `return 15.0` var (ga/pso/gwo/hho_strategy, ortools, pyvrp, vroom, greedy, permutation, two_opt) |
-| FIX-07 tamamla — `clustering.py` haversine | 🟢 | ⬜ | `clustering.py:31` → `from utils.data_loader import haversine_distance` |
+| FIX-07 tamamla — `clustering.py` haversine | 🟢 | ✅ | `clustering.py:11` → `from utils.data_loader import haversine_distance` (13.04.2026) |
 | Algorithm Parameter Config UI | 🟢 | ⬜ | Frontend'de algoritma parametresi ayarlama |
 | DataLoader TTL/Invalidation | 🟢 | ⬜ | Singleton'a cache süresi + yenileme mekanizması |
-| ResourceProfiler magic numbers | 🟢 | ⬜ | Sabit saatler (14:00, 17:00) config'e taşınsın |
+| ResourceProfiler magic numbers | 🟢 | ✅ | DEFAULT_PICKUP_HOUR/DEFAULT_DROPOFF_HOUR env vars (13.04.2026) |
 | `main.old.py` temizle | 🟢 | ⬜ | 24KB ölü kod — silinebilir veya arşivlenebilir |
 
 #### 4.5.2 Test Altyapısı

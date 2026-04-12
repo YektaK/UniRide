@@ -17,10 +17,16 @@ from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 import logging
+import os
 
 from models.schemas import VehicleConfig, StudentNode
 
 logger = logging.getLogger(__name__)
+
+# FIX-04 (ResourceProfiler): Environment-based time configuration
+# Allows flexible scheduling without code changes
+DEFAULT_PICKUP_HOUR = int(os.getenv('DEFAULT_PICKUP_HOUR', '9'))  # 09:00
+DEFAULT_DROPOFF_HOUR = int(os.getenv('DEFAULT_DROPOFF_HOUR', '17'))  # 17:00
 
 
 @dataclass
@@ -366,8 +372,8 @@ class ResourceProfiler:
                 hour, minute = map(int, target_time_str.split(':'))
                 target_minutes = hour * 60 + minute
             else:
-                # Varsayılan: sabah 09:00 pickup, akşam 17:00 dropoff
-                target_minutes = 9 * 60 if direction == 'pickup' else 17 * 60
+                # Varsayılan: sabah DEFAULT_PICKUP_HOUR, akşam DEFAULT_DROPOFF_HOUR (env-configurable)
+                target_minutes = DEFAULT_PICKUP_HOUR * 60 if direction == 'pickup' else DEFAULT_DROPOFF_HOUR * 60
 
             # Blok sürelerini hesapla
             if direction == 'pickup':

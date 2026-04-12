@@ -55,20 +55,42 @@ class BenchmarkRunner:
     """
     Runs benchmark experiments comparing multiple algorithms.
     
+    ARCHITECTURE CHANGES (13.04.2026):
+    - Added state_manager parameter for progress tracking
+    - Added run_id parameter for state identification
+    - Updates state_manager.update_progress() during execution
+    - Calls state_manager.complete_run()/fail_run() at end
+    
+    This allows non-blocking web integration:
+    - Daemon thread in main.py calls runner.run()
+    - Runner updates state_manager while executing
+    - Frontend polls /api/v1/benchmark/status for progress
+    
+    See: docs/BENCHMARK_ARCHITECTURE_DEBT.md
+    
     Usage:
-        runner = BenchmarkRunner()
+        from benchmark_state import benchmark_state_manager
+        runner = BenchmarkRunner(
+            state_manager=benchmark_state_manager,
+            run_id="benchmark_20260413_123456_abc123"
+        )
         results = runner.run(problems, algorithms, n_runs=3)
     """
     
-    def __init__(self, strategies_registry=None):
+    def __init__(self, strategies_registry=None, state_manager=None, run_id=None):
         """
         Initialize benchmark runner.
         
         Args:
             strategies_registry: Optional registry of available strategies.
                                 If None, will be imported from optimizer_api.strategies
+            state_manager: Optional BenchmarkStateManager for progress tracking.
+                          If provided, runner will call update_progress() and complete_run()
+            run_id: Unique run identifier for state manager tracking
         """
         self.strategies_registry = strategies_registry
+        self.state_manager = state_manager
+        self.run_id = run_id
         self.results: List[ExperimentResult] = []
         self.start_time: Optional[float] = None
         self.running = False
@@ -126,6 +148,16 @@ class BenchmarkRunner:
                             self.results.append(result)
                             completed += 1
                             
+                            # ✅ UPDATE STATE MANAGER (NEW - 13.04.2026)
+                            # This allows frontend to track real-time progress
+                            if self.state_manager and self.run_id:
+                                self.state_manager.update_progress(
+                                    self.run_id,
+                                    completed,
+                                    f"Completed: {algorithm.algorithm_id} on {problem.name} "
+                                    f"(run {run_num}) - {completed}/{metadata['total_experiments']}"
+                                )
+                            
                             logger.info(
                                 f"[{completed}/{metadata['total_experiments']}] "
                                 f"{algorithm.algorithm_id} on {problem.name} "
@@ -147,6 +179,15 @@ class BenchmarkRunner:
             metadata["end_time"] = datetime.utcnow().isoformat()
             metadata["elapsed_seconds"] = elapsed
             metadata["completed_experiments"] = completed
+            
+            # ✅ MARK RUN AS COMPLETE (NEW - 13.04.2026)
+            if self.state_manager and self.run_id:
+                self.state_manager.complete_run(
+                    self.run_id,
+                    len(self.results),
+                    f"Benchmark completed: {len(self.results)} results in {elapsed:.1f}s"
+                )
+                logger.info(f"[Benchmark Complete] {self.run_id}: marked as complete in state manager")
         
         return self.results, metadata
     

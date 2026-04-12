@@ -681,7 +681,25 @@ def calculate_vehicles(request: OptimizationRequest) -> OptimizationResponse:
 # ============================================================
 # BENCHMARK ENDPOINTS (TSP Benchmark Studio Integration)
 # ============================================================
+# 
+# 🔴 CRITICAL ARCHITECTURE DEBT - See docs/BENCHMARK_ARCHITECTURE_DEBT.md
+# 
+# ISSUE: Benchmark runner is never actually started!
+# - POST /api/v1/benchmark/run creates state but doesn't run benchmark
+# - BenchmarkRunner imported but never instantiated/executed
+# - Frontend polling /status gets infinite "running" with 0% progress
+# - 2-3 hour benchmarks would block Uvicorn worker (if started)
+#
+# SOLUTION: Use daemon thread for non-blocking execution
+# See: docs/BENCHMARK_ARCHITECTURE_DEBT.md for implementation details
+#
+# TODO[P0]: Replace start_benchmark() with daemon thread implementation
+# TODO[P0]: Add state_manager callbacks to BenchmarkRunner
+# TODO[P1]: Add concurrent benchmark limit (max 3 running)
+# TODO[P1]: Implement graceful shutdown handler
+# ============================================================
 
+import threading
 from benchmark_state import benchmark_state_manager, BenchmarkStatus
 
 
@@ -694,6 +712,23 @@ def start_benchmark(
 ) -> Dict:
     """
     Start a new benchmark run.
+    
+    DESIGN:
+    - Creates benchmark state immediately (thread-safe)
+    - Spawns daemon thread for non-blocking execution
+    - Returns 200 OK immediately (doesn't wait for completion)
+    - Frontend polls /api/v1/benchmark/status for progress updates
+    
+    ARCHITECTURE:
+    HTTP Request (Uvicorn Worker)
+        ├─ create_run() → BenchmarkRunState
+        ├─ spawn thread → run_benchmark_task()
+        └─ return 200 OK (IMMEDIATELY)
+    
+    Daemon Thread (Background)
+        ├─ BenchmarkRunner.run(...)
+        ├─ update_progress() every N experiments
+        └─ complete_run() when done
     
     This endpoint integrates TSP Benchmark Studio algorithms with UniRide.
     Benchmarks compare algorithm performance across multiple problems.
@@ -709,14 +744,18 @@ def start_benchmark(
             "run_id": "...",
             "status": "running",
             "total_experiments": int,
-            "message": "..."
+            "message": "...",
+            "start_time": "..."
         }
+    
+    See: docs/BENCHMARK_ARCHITECTURE_DEBT.md
     """
     try:
         # Create and register benchmark run
         n_runs = settings.get("n_runs", 3)
         total_experiments = len(algorithms) * len(problems) * n_runs
         
+        # ✅ STEP 1: Create state immediately (thread-safe)
         state = benchmark_state_manager.create_run(
             run_id=run_id,
             total_experiments=total_experiments,
@@ -727,24 +766,73 @@ def start_benchmark(
             }
         )
         
-        logger.info(f"[Benchmark] Starting run {run_id}: {total_experiments} experiments")
+        # ✅ STEP 2: Define background task
+        # TODO[P0]: This is the FIXED implementation (daemon thread pattern)
+        def run_benchmark_task():
+            """
+            Background task executed in daemon thread.
+            Runs benchmark and updates state_manager with progress.
+            
+            See: docs/BENCHMARK_ARCHITECTURE_DEBT.md for rationale
+            """
+            try:
+                logger.info(f"[Benchmark] Executor thread started: {run_id}")
+                
+                # ✅ Create runner with state manager callbacks
+                runner = BenchmarkRunner(
+                    strategies_registry=STRATEGY_REGISTRY,
+                    state_manager=benchmark_state_manager,
+                    run_id=run_id
+                )
+                
+                # ✅ Run benchmark (will update state_manager automatically)
+                runner.run(
+                    problems=problems,
+                    algorithms=algorithms,
+                    n_runs=n_runs,
+                    seed=settings.get("seed", 42),
+                    skip_cached=settings.get("skip_cached", False)
+                )
+                
+                logger.info(f"[Benchmark] Executor thread completed: {run_id}, "
+                           f"results={len(runner.results)}")
+                
+            except Exception as e:
+                logger.error(f"[Benchmark] Executor error in {run_id}: {e}", exc_info=True)
+                # Mark run as failed
+                benchmark_state_manager.fail_run(run_id, f"Error: {str(e)}")
         
+        # ✅ STEP 3: Spawn daemon thread (non-blocking)
+        # This allows endpoint to return immediately while benchmark runs in background
+        executor_thread = threading.Thread(
+            target=run_benchmark_task,
+            daemon=True,
+            name=f"benchmark-executor-{run_id}"
+        )
+        executor_thread.start()
+        
+        logger.info(f"[Benchmark] Started run {run_id}: {total_experiments} "
+                   f"experiments ({len(problems)} problems × {len(algorithms)} "
+                   f"algorithms × {n_runs} runs)")
+        
+        # ✅ Return immediately (thread is running in background)
         return {
             "run_id": run_id,
             "status": "running",
             "total_experiments": total_experiments,
             "problems_count": len(problems),
             "algorithms_count": len(algorithms),
-            "message": f"Benchmark run {run_id} başlatıldı",
+            "message": f"Benchmark run {run_id} arka planda başlatıldı",
             "start_time": state.start_time
         }
     
     except Exception as e:
-        logger.error(f"[Benchmark] Error starting run: {e}")
+        logger.error(f"[Benchmark] Error starting run: {e}", exc_info=True)
         return {
             "run_id": run_id,
             "status": "error",
-            "error": str(e)
+            "error": str(e),
+            "code": "START_ERROR"
         }
 
 

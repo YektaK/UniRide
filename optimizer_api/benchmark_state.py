@@ -1,7 +1,31 @@
 """
-Benchmark State Management
+Benchmark State Management - Thread-Safe Progress Tracking
 
-Manages active benchmark experiments and their results.
+ARCHITECTURE (13.04.2026):
+- Used by main.py HTTP endpoints: /api/v1/benchmark/run, /api/v1/benchmark/status
+- Updated by benchmark_runner.py in daemon thread: update_progress(), complete_run()
+- Thread-safety: threading.Lock() protects all state mutations
+
+FLOW:
+- HTTP Thread (Uvicorn): POST /api/v1/benchmark/run
+  ├─ create_run() → BenchmarkRunState (with lock)
+  └─ Spawn daemon thread → return 200 OK
+
+- Daemon Thread: run_benchmark_task() (background)
+  ├─ BenchmarkRunner.run(state_manager=..., run_id=...)
+  ├─ update_progress() every N experiments (with lock)
+  └─ complete_run() or fail_run() at end (with lock)
+
+- HTTP Thread (Uvicorn): GET /api/v1/benchmark/status (polling every 1s)
+  ├─ get_run() reads state (with lock)
+  └─ Return progress_percent, completed_experiments, status
+
+THREAD SAFETY:
+- All writes: protected by self._lock (threading.Lock)
+- All reads: protected by self._lock
+- No race conditions: lock acquired during mutation
+
+See: docs/BENCHMARK_ARCHITECTURE_DEBT.md for full architecture
 """
 
 from dataclasses import dataclass, field

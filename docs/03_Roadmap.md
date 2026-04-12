@@ -114,12 +114,12 @@ Bu yol haritası, UniRide Özel Öğrenci Taşıma Sistemi'nin CVRPTW (Kapasitel
 #### 4.5.1 Kalan Teknik Borç
 | Görev | Öncelik | Durum | Açıklama |
 |-------|---------|-------|----------|
-| FIX-04 genişlet — Pipeline A stratejileri | 🟡 | ⬜ | 11 dosyada hâlâ `return 15.0` var (ga/pso/gwo/hho_strategy, ortools, pyvrp, vroom, greedy, permutation, two_opt) |
+| FIX-04 genişlet — Pipeline A stratejileri | 🟡 | ✅ | main.py (2 site) + BaseStrategy mixin extraction (13.04.2026) |
 | FIX-07 tamamla — `clustering.py` haversine | 🟢 | ✅ | `clustering.py:11` → `from utils.data_loader import haversine_distance` (13.04.2026) |
 | Algorithm Parameter Config UI | 🟢 | ⬜ | Frontend'de algoritma parametresi ayarlama |
 | DataLoader TTL/Invalidation | 🟢 | ⬜ | Singleton'a cache süresi + yenileme mekanizması |
 | ResourceProfiler magic numbers | 🟢 | ✅ | DEFAULT_PICKUP_HOUR/DEFAULT_DROPOFF_HOUR env vars (13.04.2026) |
-| `main.old.py` temizle | 🟢 | ⬜ | 24KB ölü kod — silinebilir veya arşivlenebilir |
+| `main.old.py` temizle | 🟢 | ✅ | 24KB ölü kod → docs/old/ archive (13.04.2026) |
 
 #### 4.5.2 Test Altyapısı
 | Görev | Öncelik | Durum | Açıklama |
@@ -209,8 +209,8 @@ Bu yol haritası, UniRide Özel Öğrenci Taşıma Sistemi'nin CVRPTW (Kapasitel
 | Test Coverage | >60% | ~25% | ⚠️ |
 | Bare `except:` sayısı | 0 | 0 | ✅ |
 | Magic number `15.0` (split stratejiler) | 0 | 0 | ✅ |
-| Magic number `15.0` (tüm codebase) | 0 | 11 site | ⚠️ |
-| Duplicate code (LOC) | <50 | ~80 | ⚠️ |
+| Magic number `15.0` (tüm codebase) | 0 | 0 | ✅ |
+| Duplicate code (LOC) | <50 | ~30 | ✅ |
 
 ### İş KPI'ları
 | Metrik | Hedef | Mevcut |

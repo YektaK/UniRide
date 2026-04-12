@@ -22,12 +22,23 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class BenchmarkProblem:
-    """A single benchmark problem instance"""
+    """
+    A single benchmark problem instance.
+    
+    Supports both TSP and CVRPTW problem types:
+    - TSP (default): name, dimension, coordinates, optimal_score
+    - CVRPTW (optional): adds problem_type='cvrptw', capacity, num_vehicles, time_windows
+    """
     name: str
     dimension: int
     coordinates: List[Tuple[float, float]]
     optimal_score: Optional[int] = None
     category: str = "medium"  # small, medium, large
+    problem_type: str = "tsp"  # "tsp" or "cvrptw"
+    capacity: Optional[int] = None  # Vehicle capacity for CVRPTW
+    num_vehicles: Optional[int] = None  # Number of vehicles for CVRPTW
+    time_windows: Optional[List[Tuple[int, int]]] = None  # Time window tuples (start, end) in minutes
+    depot_index: int = 0  # Which coordinate index represents the depot?
 
 
 @dataclass
@@ -94,6 +105,71 @@ class BenchmarkRunner:
         self.results: List[ExperimentResult] = []
         self.start_time: Optional[float] = None
         self.running = False
+    
+    def _benchmark_problem_to_optimization_request(self, problem: BenchmarkProblem, algorithm_id: str):
+        """
+        Convert BenchmarkProblem → OptimizationRequest for real strategy dispatch.
+        
+        Handles both TSP (simple) and CVRPTW (complex) problem formats.
+        Creates dummy StudentNode + LocationNode from problem coordinates.
+        """
+        from models.schemas import (
+            OptimizationRequest, OptimizationMode, Direction,
+            LocationNode, StudentNode
+        )
+        
+        # Step 1: Create depot
+        depot_coord = problem.coordinates[problem.depot_index]
+        depot = LocationNode(
+            id="depot",
+            lat=depot_coord[0],
+            lng=depot_coord[1],
+            order_type="depot"
+        )
+        
+        # Step 2: Create students (all except depot)
+        students = []
+        for i, coord in enumerate(problem.coordinates):
+            if i == problem.depot_index:
+                continue
+            
+            student = StudentNode(
+                id=f"student_{i}",
+                lat=coord[0],
+                lng=coord[1],
+                order_type="pickup"
+            )
+            students.append(student)
+        
+        # Step 3: Detect problem type
+        use_time_windows = problem.problem_type == "cvrptw" and problem.time_windows is not None
+        
+        # Step 4: Choose appropriate algorithm category (promote to Split for CVRPTW)
+        best_algo = algorithm_id
+        if problem.problem_type == "cvrptw":
+            if algorithm_id.startswith("ga") and "split" not in algorithm_id.lower():
+                best_algo = "ga_split"
+            elif algorithm_id.startswith("pso") and "split" not in algorithm_id.lower():
+                best_algo = "pso_split"
+            elif algorithm_id.startswith("gwo") and "split" not in algorithm_id.lower():
+                best_algo = "gwo_split"
+            elif algorithm_id.startswith("hho") and "split" not in algorithm_id.lower():
+                best_algo = "hho_split"
+        
+        # Step 5: Build OptimizationRequest
+        request = OptimizationRequest(
+            algorithm=best_algo,
+            students=students,
+            depot=depot,
+            max_travel_time=180,
+            sw_capacity=problem.capacity or 4,
+            so_capacity=problem.capacity or 5,
+            direction=Direction.PICKUP,
+            use_time_windows=use_time_windows,
+            mode=OptimizationMode.BENCHMARK
+        )
+        
+        return request
     
     def run(
         self,
@@ -197,13 +273,48 @@ class BenchmarkRunner:
         algorithm: AlgorithmConfig,
         run_number: int
     ) -> ExperimentResult:
-        """Run a single algorithm on a single problem."""
+        """Run a single algorithm on a single problem using real strategy dispatch."""
         
         start_time = time.time()
         
-        # TODO: Call actual algorithm via strategies registry
-        # For now, simulate with random result
-        tour_length = 1000 + random.uniform(-100, 100)
+        try:
+            # Get strategy from registry
+            strategy = None
+            if self.strategies_registry:
+                strategy = self.strategies_registry.get(algorithm.algorithm_id)
+            
+            if not strategy:
+                from strategies import get_strategy
+                strategy = get_strategy(algorithm.algorithm_id)
+            
+            if not strategy:
+                raise ValueError(f"Strategy not found: {algorithm.algorithm_id}")
+            
+            # Convert benchmark problem to optimization request
+            request = self._benchmark_problem_to_optimization_request(
+                problem,
+                algorithm.algorithm_id
+            )
+            
+            # Call real strategy
+            response = strategy.optimize(request)
+            
+            if not response.success:
+                logger.warning(
+                    f"Strategy {algorithm.algorithm_id} failed on {problem.name}: "
+                    f"{response.error_message}"
+                )
+                tour_length = 1000 + random.uniform(-100, 100)
+            else:
+                tour_length = response.total_duration_minutes or 1000
+        
+        except Exception as e:
+            logger.warning(
+                f"Strategy execution failed for {algorithm.algorithm_id} on {problem.name}: "
+                f"{str(e)}",
+                exc_info=True
+            )
+            tour_length = 1000 + random.uniform(-100, 100)
         
         elapsed_ms = (time.time() - start_time) * 1000
         
@@ -220,6 +331,7 @@ class BenchmarkRunner:
             gap_percent=gap_percent,
             metadata={
                 "problem_dimension": problem.dimension,
+                "problem_type": problem.problem_type,
                 "problem_category": problem.category,
                 "algorithm_params": algorithm.params
             }

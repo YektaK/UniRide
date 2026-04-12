@@ -35,6 +35,10 @@ from enum import Enum
 import threading
 
 
+# Concurrent benchmark limit (soft limit - returns 429 if exceeded)
+MAX_CONCURRENT_BENCHMARKS = 3
+
+
 class BenchmarkStatus(str, Enum):
     """Benchmark run status"""
     RUNNING = "running"
@@ -58,11 +62,25 @@ class BenchmarkRunState:
 
 
 class BenchmarkStateManager:
-    """Thread-safe manager for benchmark runs"""
+    """Thread-safe manager for benchmark runs with concurrent limit enforcement."""
     
     def __init__(self):
         self._runs: Dict[str, BenchmarkRunState] = {}
         self._lock = threading.Lock()
+    
+    def can_start_run(self) -> bool:
+        """
+        Check if a new benchmark run can start without exceeding concurrent limit.
+        
+        Returns:
+            True if running count < MAX_CONCURRENT_BENCHMARKS, False otherwise
+        """
+        with self._lock:
+            running_count = len([
+                s for s in self._runs.values()
+                if s.status == BenchmarkStatus.RUNNING
+            ])
+            return running_count < MAX_CONCURRENT_BENCHMARKS
     
     def create_run(self, run_id: str, total_experiments: int, parameters: Dict) -> BenchmarkRunState:
         """Create a new benchmark run"""

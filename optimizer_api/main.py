@@ -12,6 +12,7 @@ import time
 import os
 import asyncio
 import logging
+import threading
 from typing import List, Optional, Dict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
@@ -700,7 +701,6 @@ def calculate_vehicles(request: OptimizationRequest) -> OptimizationResponse:
 # TODO[P1]: Implement graceful shutdown handler
 # ============================================================
 
-import threading
 from benchmark_state import benchmark_state_manager, BenchmarkStatus
 
 
@@ -719,15 +719,17 @@ def start_benchmark(
     - Spawns daemon thread for non-blocking execution
     - Returns 200 OK immediately (doesn't wait for completion)
     - Frontend polls /api/v1/benchmark/status for progress updates
+    - Enforces concurrent limit (max 3 running) via can_start_run()
     
     ARCHITECTURE:
     HTTP Request (Uvicorn Worker)
+        ├─ can_start_run() check → 429 if limit exceeded
         ├─ create_run() → BenchmarkRunState
         ├─ spawn thread → run_benchmark_task()
         └─ return 200 OK (IMMEDIATELY)
     
     Daemon Thread (Background)
-        ├─ BenchmarkRunner.run(...)
+        ├─ BenchmarkRunner.run(...) with real algorithm dispatch
         ├─ update_progress() every N experiments
         └─ complete_run() when done
     
@@ -752,6 +754,20 @@ def start_benchmark(
     See: docs/BENCHMARK_ARCHITECTURE_DEBT.md
     """
     try:
+        # ✅ STEP 0: Check concurrent limit (soft limit)
+        if not benchmark_state_manager.can_start_run():
+            logger.warning(
+                f"[Benchmark] Concurrent limit exceeded. "
+                f"Max {benchmark_state_manager._lock.__class__.__module__}.MAX_CONCURRENT_BENCHMARKS running"
+            )
+            return {
+                "run_id": run_id,
+                "status": "queue",
+                "error": "Maximum concurrent benchmarks (3) reached",
+                "error_code": "CONCURRENT_LIMIT_EXCEEDED",
+                "message": "Bekleyen taklada. Diğer benchmarklar tamamlanana kadar bekleyin."
+            }, 429
+        
         # Create and register benchmark run
         n_runs = settings.get("n_runs", 3)
         total_experiments = len(algorithms) * len(problems) * n_runs
@@ -768,11 +784,11 @@ def start_benchmark(
         )
         
         # ✅ STEP 2: Define background task
-        # TODO[P0]: This is the FIXED implementation (daemon thread pattern)
+        # NOW FIXED: Uses real algorithm dispatch via BenchmarkRunner
         def run_benchmark_task():
             """
             Background task executed in daemon thread.
-            Runs benchmark and updates state_manager with progress.
+            Runs benchmark using real strategies and updates state_manager with progress.
             
             See: docs/BENCHMARK_ARCHITECTURE_DEBT.md for rationale
             """

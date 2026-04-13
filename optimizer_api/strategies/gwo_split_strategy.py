@@ -310,9 +310,12 @@ class GWOSplitStrategy(HybridSplitBaseStrategy):
                 target_time_minutes = int(parts[0]) * 60 + int(parts[1])
         
         # Override config if provided (user-customizable)
+        # Singleton self.config korunuyor; her istek icin local kopya
+        effective_config = dict(self.config)
+        rng = random.Random(self.seed)
         if hasattr(request, 'gwo_config') and request.gwo_config:
-            self.config.update(request.gwo_config)
-            self.rng = random.Random(self.config.get("seed", self.seed))
+            effective_config = {**self.config, **request.gwo_config}
+            rng = random.Random(effective_config.get("seed", self.seed))
         
         # Load data
         data_loader = DataLoader.get_instance()

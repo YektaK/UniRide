@@ -309,10 +309,12 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
                 execution_time_seconds=time.time() - start_time
             )
 
-        # Override config if provided
+                # Singleton self.config korunuyor; her istek icin local kopya
+        effective_config = dict(self.config)
+        rng = random.Random(self.seed)
         if hasattr(request, 'gwo_config') and request.gwo_config:
-            self.config.update(request.gwo_config)
-            self.rng = random.Random(self.config.get("seed", self.seed))
+            effective_config = {**self.config, **request.gwo_config}
+            rng = random.Random(effective_config.get("seed", self.seed))
 
         # Build time matrix and coordinates
         data_loader = DataLoader.get_instance()

@@ -229,10 +229,11 @@ class TwoOptStrategy(BaseRoutingStrategy):
                 execution_time_seconds=time.time() - start_time
             )
 
-        # Override config if provided
+                # Singleton self.config korunuyor; her istek icin local kopya
+        effective_config = dict(self.config)
         if hasattr(request, 'two_opt_config') and request.two_opt_config:
-            self.config.update(request.two_opt_config)
-            self.rng = random.Random(self.config.get("seed", self.seed))
+            effective_config = {**self.config, **request.two_opt_config}
+            rng = random.Random(effective_config.get("seed", self.seed))
 
         # Build time matrix and coordinates
         data_loader = DataLoader.get_instance()

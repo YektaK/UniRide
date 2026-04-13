@@ -90,9 +90,10 @@ docs/
 │   │   ├── QUICK_REFERENCE.md
 │   │   ├── VALIDATION_CHECKLIST.md
 │   │   └── BENCHMARK_QUICK_REFERENCE.md
-│   ├── deprecated/                 # Completely obsolete
-│   │   ├── MOVED_TO_GEREKSIZ_LOG.md
-│   │   └── HOW_TO_FIX_AUDIT_FINDINGS.md
+│   ├── legacy_code/                # Old tests, temp logs, scripts
+│   │   ├── algorithm_validation_test.py
+│   │   ├── _temp_list.txt
+│   │   └── (14 more files...)
 │   └── ARCHIVING_LOG.md            # This file
 └── (Active docs — see list above)
 ```
@@ -148,17 +149,42 @@ docs/
 - MOVED_TO_GEREKSIZ_LOG.md
 - HOW_TO_FIX_AUDIT_FINDINGS.md
 
+### Batch 5: Legacy/Temp Scripts & Logs (14.04.2026)
+**Sayı:** 16 dosya  
+**Hedef:** `docs/old/legacy_code/`  
+**Durum:** ✅ TAŞINDI  
+
+**Açıklama:** Kök dizin ve `optimizer_api` altında biriken, geliştirme sürecinden kalan geçici loglar (`.log`, `.txt`) ve artık yerini `tests/` altındaki yeni yapıya bırakmış eski test/doğrulama scriptleri temizlendi.
+
+| Dosya | Kaynak | Tip |
+|-------|--------|-----|
+| _temp_list.txt | Root | Geçici Liste |
+| diff_stats.txt | Root | Geçici İstatiistik |
+| test_output.log | Root | Log |
+| algorithm_validation_test.py | Root | Eski Test |
+| test_all_algorithms.py | Root | Eski Test |
+| test_benchmark_single.py | Root | Eski Test |
+| test_strategy_fix.py | Root | Eski Test |
+| test_strategy_routing.py | Root | Eski Test |
+| verify_strategies.py | optimizer_api | Doğrulama |
+| test_api.py | optimizer_api | API Test |
+| test_comparison.py | optimizer_api | Karşılaştırma |
+| test_gwo.py | optimizer_api | Birim Test |
+| test_hho.py | optimizer_api | Birim Test |
+| test_strategies.py | optimizer_api | Birim Test |
+| test_split_strategies.py | optimizer_api | Birim Test |
+| test_linear_split_perf.py | optimizer_api | Performans |
+
 ---
 
 ## 📊 Arşivleme Özeti
 
-| Kategori | Sayı | Hedef Klasör | Durum |
-|----------|------|--------------|-------|
 | Analysis Reports | 5 | old/analysis_reports | ✅ |
 | Audit Reports | 3 | old/audit_reports | ✅ |
 | Quick References | 3 | old/references | ✅ |
 | Deprecated | 2 | old/deprecated | ✅ |
-| **TOPLAM** | **13** | **docs/old/** | **✅ TAŞINDI** |
+| Legacy Code | 16 | old/legacy_code | ✅ |
+| **TOPLAM** | **29** | **docs/old/** | **✅ TAŞINDI** |
 
 ---
 
@@ -179,7 +205,7 @@ docs/
 
 ---
 
-**Arşivleme Tamamlanma Tarihi:** 11 Nisan 2026, 14:45  
-**Arşivleyen:** GitHub Copilot AI  
-**Status:** ✅ TAMAMLANDI
+**Arşivleme Tamamlanma Tarihi:** 14 Nisan 2026, 02:10  
+**Geliştirici:** Antigravity AI (Senior Fullstack)  
+**Status:** ✅ TAMAMLANDI (T-6 Cleanup Done)
 

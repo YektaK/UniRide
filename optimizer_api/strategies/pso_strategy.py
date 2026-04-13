@@ -333,14 +333,16 @@ class PSOStrategy(BaseRoutingStrategy):
                 execution_time_seconds=time.time() - start_time
             )
 
-        # Override config if provided
+        # Singleton self.config korunuyor; her istek icin local kopya
+        effective_config = dict(self.config)
+        rng = random.Random(self.seed)
         if request.pso_config:
-            self.config.update(request.pso_config)
-            self.rng = random.Random(self.config.get("seed", self.seed))
+            effective_config.update(request.pso_config)
+            rng = random.Random(effective_config.get("seed", self.seed))
 
         # Set local search type from request
         if request.local_search_type:
-            self.config["local_search_type"] = request.local_search_type
+            effective_config["local_search_type"] = request.local_search_type
 
         # Build time matrix and coordinates
         data_loader = DataLoader.get_instance()

@@ -1,4 +1,4 @@
-# 📊 UniRide Tamamlanma Durumu ve Teknik Borç Listesi
+﻿# 📊 UniRide Tamamlanma Durumu ve Teknik Borç Listesi
 
 > **Tarih:** 11 Nisan 2026, 14:35 (11.04.2026 - Oluşturan: GitHub Copilot AI)
 > **Dönem:** Faz 4.5 — Kalan Teknik Borç ve Test Altyapısı
@@ -83,22 +83,8 @@
 
 | ID | Görev | Dosyalar | Durum |
 |----|-------|----------|-------|
-| **P1-2** | Singleton strateji `self.config` mutation | `ga/pso/gwo/hho_strategy.py` | ❌ Açık — `/compare` concurrent risk |
-| **P0-2** | Admin sayfa client-side role guard | `src/app/(app)/admin/**` | ❌ Açık — UI erişim riski |
-
-
-#### Priority 🟢 — DÜŞÜK
-
-| ID | Görev | Dosyalar | Durum |
-|----|-------|----------|-------|
-| T-5 | DataLoader TTL | `services/doubus` | Planning |
-| T-6 | main.old.py cleanup | `optimizer_api/` | Backlog |
-| T-7 | Benchmark V1 deprecation | `run_interactive_benchmark.py` | Backlog |
-
-### Dokümantasyon Güncellemesi
-
-#### Critical Missing ❌
-
+| **P1-2** | Singleton strateji `self.config` mutation | 9 strateji dosyası | ✅ `effective_config = dict(self.config)` pre-init (14.04.2026) |
+| **P0-2** | Admin sayfa role guard | `src/app/(app)/admin/layout.tsx` | ✅ Layout HOC oluşturuldu, 12 admin route kapsıyor (14.04.2026) |
 | Dosya | Durum | Detay |
 |-------|-------|-------|
 | **docs/01_Implementation_Status.md** | ❌ EKSIK | .ai-rules zorunlu referans — **ŞU DOSYA BUDUR** |

@@ -1,7 +1,7 @@
 /**
  * Benchmark Service
  * TSPLIB benchmark suite service for running systematic algorithm comparisons
- * All API calls use relative paths with ?XTransformPort=8000 for gateway proxy
+ * All API calls use relative paths with ?XTransformPort for gateway proxy
  */
 
 // ============================================================
@@ -87,13 +87,14 @@ export interface BenchmarkRunResponse {
 // ============================================================
 
 const PYTHON_API_BASE = "/api/v1/benchmark";
+const TRANSFORM_PORT = process.env.NEXT_PUBLIC_OPTIMIZER_PORT ?? "8099";
 
 /**
  * Fetch available TSPLIB problems
  */
 export async function fetchProblems(category?: string): Promise<BenchmarkProblem[]> {
   const params = new URLSearchParams();
-  params.set("XTransformPort", "8099");
+  params.set("XTransformPort", TRANSFORM_PORT);
   if (category) {
     params.set("category", category);
   }
@@ -120,7 +121,7 @@ export async function fetchProblems(category?: string): Promise<BenchmarkProblem
  */
 export async function fetchStrategies(): Promise<string[]> {
   const params = new URLSearchParams();
-  params.set("XTransformPort", "8099");
+  params.set("XTransformPort", TRANSFORM_PORT);
 
   const response = await fetch(`/api/v1/strategies?${params.toString()}`, {
     method: "GET",
@@ -153,7 +154,7 @@ export async function startBenchmark(
 ): Promise<BenchmarkRunResponse> {
   const runId = `bench_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
   const params = new URLSearchParams();
-  params.set("XTransformPort", "8099");
+  params.set("XTransformPort", TRANSFORM_PORT);
   params.set("run_id", runId);
 
   const response = await fetch(`${PYTHON_API_BASE}/run?${params.toString()}`, {
@@ -182,7 +183,7 @@ export async function startBenchmark(
  */
 export async function pollStatus(runId: string): Promise<BenchmarkStatus> {
   const params = new URLSearchParams();
-  params.set("XTransformPort", "8099");
+  params.set("XTransformPort", TRANSFORM_PORT);
   params.set("run_id", runId);
 
   const response = await fetch(`${PYTHON_API_BASE}/status?${params.toString()}`, {
@@ -206,7 +207,7 @@ export async function pollStatus(runId: string): Promise<BenchmarkStatus> {
  */
 export async function stopBenchmark(runId: string): Promise<void> {
   const params = new URLSearchParams();
-  params.set("XTransformPort", "8099");
+  params.set("XTransformPort", TRANSFORM_PORT);
   params.set("run_id", runId);
 
   const response = await fetch(`${PYTHON_API_BASE}/stop?${params.toString()}`, {
@@ -228,7 +229,7 @@ export async function stopBenchmark(runId: string): Promise<void> {
  */
 export async function fetchResults(runId: string): Promise<BenchmarkResultsResponse> {
   const params = new URLSearchParams();
-  params.set("XTransformPort", "8099");
+  params.set("XTransformPort", TRANSFORM_PORT);
 
   const response = await fetch(`${PYTHON_API_BASE}/results/${runId}?${params.toString()}`, {
     method: "GET",

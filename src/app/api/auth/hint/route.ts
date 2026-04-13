@@ -72,7 +72,7 @@ export async function POST(request: Request) {
             .select('password_hint')
             .limit(1);
 
-        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         const studentNumberRegex = /^[a-zA-Z0-9_-]{3,32}$/;
 
         const query = emailRegex.test(normalizedInput)

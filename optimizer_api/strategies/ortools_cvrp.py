@@ -4,6 +4,7 @@ Uses Google OR-Tools for Capacitated Vehicle Routing Problem
 Industry-standard solver for VRP
 """
 
+import logging
 import time
 from typing import List, Dict, Optional
 
@@ -12,7 +13,7 @@ from models.schemas import (
     VehicleRoute, RouteStep
 )
 from strategies.base_strategy import BaseRoutingStrategy
-from utils.data_loader import DataLoader, haversine_distance, estimate_travel_time
+from utils.data_loader import DataLoader, euclidean_distance, haversine_distance, estimate_travel_time
 from utils.patterns import SingletonMeta
 from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
 
@@ -84,16 +85,21 @@ class ORToolsCVRPStrategy(BaseRoutingStrategy):
         # Build time matrix
         data_loader = DataLoader.get_instance()
         location_ids = [depot.id] + [s.location_code for s in students]
-        raw_matrix = data_loader.get_submatrix(location_ids)
+
+        # Build coordinates BEFORE get_submatrix for euclidean distance fallback
+        coordinates = {depot.id: {"lat": depot.lat, "lng": depot.lng}}
+        for s in students:
+            coords = s.coordinates or {"lat": 0, "lng": 0}
+            coordinates[s.location_code] = coords
+
+        raw_matrix = data_loader.get_submatrix(location_ids, coordinates)
 
         # Convert to integer matrix (OR-Tools uses integers)
         # Multiply by 10 for precision
         time_matrix = [[int(raw_matrix[i][j] * 10) for j in range(len(raw_matrix))] for i in range(len(raw_matrix))]
 
-        coordinates = {depot.id: {"lat": depot.lat, "lng": depot.lng}}
-        for s in students:
-            coords = s.coordinates or {"lat": 0, "lng": 0}
-            coordinates[s.location_code] = coords
+        # Build euclidean distance matrix (same index order as location_ids)
+        dist_matrix = DataLoader.build_euclidean_matrix(location_ids, coordinates)
 
         # Create routing model
         num_locations = len(location_ids)
@@ -215,7 +221,7 @@ class ORToolsCVRPStrategy(BaseRoutingStrategy):
                     location1=location_ids[from_node],
                     location2=location_ids[to_node],
                     duration=round(duration, 2),
-                    distance=0.0
+                    distance=round(dist_matrix[from_node][to_node], 2)
                 ))
 
                 index = to_index
@@ -225,7 +231,7 @@ class ORToolsCVRPStrategy(BaseRoutingStrategy):
                     vehicle_id=f"Araç {vehicle_id + 1} (OR-Tools)",
                     route_details=route_details,
                     total_duration_minutes=round(total_duration, 2),
-                    total_distance_km=0.0,
+                    total_distance_km=round(sum(s.distance for s in route_details), 2),
                     sw_count=sw_count,
                     so_count=so_count,
                     student_ids=[s.id for s in route_students]

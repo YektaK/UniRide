@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     const isDevResetEnabled = process.env.ENABLE_DEV_RESET === 'true';
     const expectedSecret = process.env.DEV_RESET_SECRET;
 
-    if (!isLocalEnv || !isDevResetEnabled || !expectedSecret) {
+    if (!isLocalEnv || !isDevResetEnabled) {
         return NextResponse.json(
             { error: 'Bu endpoint yalnızca geliştirme ortamında kullanılabilir.' },
             { status: 403 }
@@ -20,9 +20,11 @@ export async function POST(request: Request) {
     }
 
     try {
-        const authHeader = request.headers.get('authorization');
-        if (!authHeader?.startsWith('Bearer ') || authHeader.slice('Bearer '.length).trim() !== expectedSecret) {
-            return NextResponse.json({ error: 'Yetkisiz erişim.' }, { status: 401 });
+        if (expectedSecret) {
+            const authHeader = request.headers.get('authorization');
+            if (!authHeader?.startsWith('Bearer ') || authHeader.slice('Bearer '.length).trim() !== expectedSecret) {
+                return NextResponse.json({ error: 'Yetkisiz erişim.' }, { status: 401 });
+            }
         }
 
         const { email, newPassword } = await request.json();

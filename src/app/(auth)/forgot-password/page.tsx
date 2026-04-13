@@ -37,9 +37,7 @@ export default function ForgotPasswordPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const [isSent, setIsSent] = useState(false);
-    const isDevResetUiEnabled =
-        process.env.NODE_ENV === "development" &&
-        process.env.NEXT_PUBLIC_ENABLE_DEV_RESET_UI === "true";
+    const isDevResetUiEnabled = process.env.NODE_ENV === "development";
 
     const form = useForm<ForgotPasswordValues>({
         resolver: zodResolver(forgotPasswordSchema),
@@ -84,7 +82,6 @@ export default function ForgotPasswordPage() {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${process.env.NEXT_PUBLIC_DEV_RESET_SECRET ?? ""}`,
                 },
                 body: JSON.stringify({ email, newPassword: newPass })
             });

@@ -34,10 +34,38 @@ CREATE POLICY "users_insert_self"
   ON users FOR INSERT
   WITH CHECK (auth.uid() = id);
 
--- Users can update their own data
+-- Users can update their own data (role is protected by trigger below)
 CREATE POLICY "users_update_own"
   ON users FOR UPDATE
-  USING (auth.uid() = id);
+  USING (auth.uid() = id)
+  WITH CHECK (auth.uid() = id);
+
+-- Trigger: prevent self-role-escalation
+-- Regular authenticated users cannot change the `role` column.
+-- Service-role connections (server-side admin operations) are exempt.
+CREATE OR REPLACE FUNCTION prevent_role_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- Allow service_role to change the role column (admin operations via server)
+  IF auth.role() = 'service_role' THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.role IS DISTINCT FROM OLD.role THEN
+    RAISE EXCEPTION 'Direct role modification not allowed - use server-side admin endpoints';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS enforce_no_role_change ON users;
+CREATE TRIGGER enforce_no_role_change
+  BEFORE UPDATE OF role ON users
+  FOR EACH ROW
+  EXECUTE FUNCTION prevent_role_change();
 
 -- Service role can do anything (for admin operations via server)
 -- Note: This requires using service_role key on server-side
@@ -109,7 +137,7 @@ CREATE POLICY "notifications_update_own"
 
 -- System can create notifications (using service role)
 CREATE POLICY "notifications_insert_system"
-  ON notifications FOR INSERT
+  ON notifications FOR INSERT TO service_role
   WITH CHECK (true);
 
 -- ==================== ADMIN SETTINGS POLICIES ====================

@@ -7,7 +7,7 @@ import os
 import sys
 import logging
 import numpy as np
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 # Windows ortaminda Unicode karakterlerin konsola yazilmasinda
 # charmap encoding hatasi olusmasini onler
@@ -99,15 +99,31 @@ class DataLoader:
             cls._instance = cls()
         return cls._instance
 
-    def get_submatrix(self, request_locations: List[str]) -> List[List[float]]:
+    def get_submatrix(
+        self,
+        request_locations: List[str],
+        coordinates: Optional[Dict[str, Dict[str, float]]] = None,
+        geo_coords: bool = False,
+    ) -> List[List[float]]:
         """
         Extracts an NxN time submatrix for the given subset of location IDs.
-        Falls back to coordinate-based calculation if matrix not loaded.
+        Falls back to coordinate-based distance if the Supabase matrix is not loaded.
+
+        Args:
+            request_locations: List of location IDs (same order as matrix indices)
+            coordinates: Optional dict mapping location_id -> {"lat": float, "lng": float}.
+            geo_coords: When True and Supabase is unavailable, uses haversine distance
+                        converted to estimated travel minutes (for real geographic lat/lng).
+                        When False (default), uses L2 euclidean distance, which is correct
+                        for TSPLIB EUC_2D abstract X-Y coordinates.
         """
         n = len(request_locations)
 
         if self._use_coordinates or self.time_matrix is None:
-            # Return zeros - actual distances calculated elsewhere
+            if coordinates:
+                if geo_coords:
+                    return self.build_haversine_matrix(request_locations, coordinates)
+                return self.build_euclidean_matrix(request_locations, coordinates)
             return [[0.0] * n for _ in range(n)]
 
         submatrix = [[0.0] * n for _ in range(n)]
@@ -120,6 +136,73 @@ class DataLoader:
                     submatrix[i][j] = float(self.time_matrix[idx_from][idx_to])
 
         return submatrix
+
+    @staticmethod
+    def build_euclidean_matrix(
+        locations: List[str],
+        coordinates: Dict[str, Dict[str, float]]
+    ) -> List[List[float]]:
+        """
+        Build NxN euclidean distance matrix from coordinate dict.
+
+        Uses L2 (euclidean) distance between coordinate pairs.
+        This is the correct distance metric for TSPLIB EUC_2D problems
+        where coordinates are abstract X-Y plane positions, NOT geographic.
+
+        Args:
+            locations: Ordered list of location IDs (index = matrix row/col)
+            coordinates: Dict mapping location_id -> {"lat": float, "lng": float}
+                          Note: "lat"/"lng" keys are reused but values are X/Y for TSPLIB.
+
+        Returns:
+            NxN symmetric matrix where matrix[i][j] = euclidean distance
+        """
+        import math
+
+        n = len(locations)
+        matrix = [[0.0] * n for _ in range(n)]
+        for i in range(n):
+            c1 = coordinates.get(locations[i], {})
+            x1, y1 = c1.get("lat", 0.0), c1.get("lng", 0.0)
+            for j in range(i + 1, n):
+                c2 = coordinates.get(locations[j], {})
+                x2, y2 = c2.get("lat", 0.0), c2.get("lng", 0.0)
+                dist = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+                matrix[i][j] = dist
+                matrix[j][i] = dist
+        return matrix
+
+    @staticmethod
+    def build_haversine_matrix(
+        locations: List[str],
+        coordinates: Dict[str, Dict[str, float]],
+        avg_speed_kmh: float = 40.0,
+    ) -> List[List[float]]:
+        """
+        Build NxN travel-time matrix (minutes) from real geographic lat/lng coordinates
+        using the haversine formula.
+
+        Args:
+            locations: Ordered list of location IDs
+            coordinates: Dict mapping location_id -> {"lat": float, "lng": float}
+            avg_speed_kmh: Average vehicle speed used to convert distance to time
+
+        Returns:
+            NxN matrix where matrix[i][j] = estimated travel time in minutes
+        """
+        n = len(locations)
+        matrix = [[0.0] * n for _ in range(n)]
+        for i in range(n):
+            c1 = coordinates.get(locations[i], {})
+            lat1, lng1 = c1.get("lat", 0.0), c1.get("lng", 0.0)
+            for j in range(i + 1, n):
+                c2 = coordinates.get(locations[j], {})
+                lat2, lng2 = c2.get("lat", 0.0), c2.get("lng", 0.0)
+                dist_m = haversine_distance(lat1, lng1, lat2, lng2)
+                travel_min = estimate_travel_time(dist_m, avg_speed_kmh)
+                matrix[i][j] = travel_min
+                matrix[j][i] = travel_min
+        return matrix
 
     def get_duration(self, from_loc: str, to_loc: str) -> float:
         """
@@ -142,10 +225,20 @@ class DataLoader:
         return loc_id in self.loc_to_idx
 
 
+def euclidean_distance(x1: float, y1: float, x2: float, y2: float) -> float:
+    """
+    Calculate euclidean (L2) distance between two 2D points.
+    This is the standard distance metric for TSPLIB EUC_2D problems.
+    """
+    import math
+    return math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+
+
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """
-    Calculate the great-circle distance between two points.
+    Calculate the great-circle distance between two geographic points.
     Returns distance in meters.
+    Use this for real-world lat/lng coordinates, NOT for TSPLIB abstract X-Y.
     """
     import math
 

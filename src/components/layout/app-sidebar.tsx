@@ -55,6 +55,7 @@ const adminMenuItems = [
   { href: "/admin/drivers", label: "Şoför Görevlendirmeleri", icon: Users },
   { href: "/admin/vehicle-planning", label: "Araç Planlama", icon: Route },
   { href: "/admin/sandbox", label: "IE Sandbox", icon: FlaskConical },
+  { href: "/admin/benchmark", label: "Benchmark Suite", icon: BarChartHorizontal },
   { href: "/admin/compare", label: "Algoritma Karşılaştırma", icon: Cpu },
   { href: "/admin/route-test", label: "Rota Testi", icon: Navigation },
   { href: "/admin/reports", label: "Raporlar", icon: BarChartHorizontal },
@@ -125,4 +126,3 @@ export default function AppSidebar() {
     </Sidebar>
   );
 }
-

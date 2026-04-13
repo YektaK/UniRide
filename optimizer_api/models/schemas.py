@@ -122,8 +122,42 @@ class OptimizationRequest(BaseModel):
     clustering_algorithm: Optional[str] = "sweep"
 
     def get_time_windows(self) -> Dict[str, TimeWindow]:
-        """Helper to get time windows from students if applicable"""
-        return {}
+        """Helper to get time windows from students if applicable
+        
+        Parses pickup_time and dropoff_time from StudentNode objects
+        into TimeWindow dicts keyed by student location_code.
+        
+        Time format: HH:MM (e.g., "08:30", "14:00")
+        Returns: Dict mapping location_code -> TimeWindow(earliest, latest)
+        """
+        time_windows: Dict[str, TimeWindow] = {}
+        
+        for student in self.students:
+            # Use pickup_time for PICKUP direction, dropoff_time for DROPOFF
+            time_str = None
+            if self.direction == Direction.PICKUP and student.pickup_time:
+                time_str = student.pickup_time
+            elif self.direction == Direction.DROPOFF and student.dropoff_time:
+                time_str = student.dropoff_time
+            elif student.pickup_time:
+                time_str = student.pickup_time
+            elif student.dropoff_time:
+                time_str = student.dropoff_time
+            
+            if time_str and isinstance(time_str, str) and ':' in time_str:
+                try:
+                    parts = time_str.strip().split(':')
+                    total_minutes = int(parts[0]) * 60 + int(parts[1])
+                    # Default window: ±15 minutes around the target time
+                    window_size = 30  # 30 minute window
+                    time_windows[student.location_code] = TimeWindow(
+                        earliest=max(0, total_minutes - window_size // 2),
+                        latest=total_minutes + window_size // 2
+                    )
+                except (ValueError, IndexError):
+                    pass
+        
+        return time_windows
 
 class OptimizationResponse(BaseModel):
     algorithm_used: str

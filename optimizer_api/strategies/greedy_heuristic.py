@@ -3,6 +3,7 @@ Greedy (Nearest Neighbor) Heuristic Strategy
 Constructs routes by always visiting the nearest valid student
 """
 
+import logging
 import time
 from typing import List, Dict
 
@@ -11,7 +12,7 @@ from models.schemas import (
     VehicleRoute, RouteStep
 )
 from strategies.base_strategy import BaseRoutingStrategy
-from utils.data_loader import DataLoader, haversine_distance, estimate_travel_time
+from utils.data_loader import DataLoader, euclidean_distance, haversine_distance, estimate_travel_time
 from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
 
 logger = logging.getLogger(__name__)
@@ -68,7 +69,14 @@ class GreedyHeuristicStrategy(BaseRoutingStrategy):
         # Build time matrix
         data_loader = DataLoader.get_instance()
         location_ids = [depot.id] + [s.location_code for s in students]
-        raw_matrix = data_loader.get_submatrix(location_ids)
+
+        # Build coordinates BEFORE get_submatrix for euclidean distance fallback
+        coordinates = {depot.id: {"lat": depot.lat, "lng": depot.lng}}
+        for s in students:
+            coords = s.coordinates or {"lat": 0, "lng": 0}
+            coordinates[s.location_code] = coords
+
+        raw_matrix = data_loader.get_submatrix(location_ids, coordinates)
         time_matrix = {
             location_ids[i]: {
                 location_ids[j]: raw_matrix[i][j]
@@ -77,10 +85,11 @@ class GreedyHeuristicStrategy(BaseRoutingStrategy):
             for i in range(len(location_ids))
         }
 
-        coordinates = {depot.id: {"lat": depot.lat, "lng": depot.lng}}
-        for s in students:
-            coords = s.coordinates or {"lat": 0, "lng": 0}
-            coordinates[s.location_code] = coords
+        # Helper to compute euclidean distance between two location IDs
+        def _dist(loc1: str, loc2: str) -> float:
+            c1 = coordinates.get(loc1, {})
+            c2 = coordinates.get(loc2, {})
+            return round(euclidean_distance(c1.get("lat", 0), c1.get("lng", 0), c2.get("lat", 0), c2.get("lng", 0)), 2)
 
         # Greedy assignment
         unassigned = list(students)
@@ -96,6 +105,8 @@ class GreedyHeuristicStrategy(BaseRoutingStrategy):
             route_students = []
             sw_count = 0
             so_count = 0
+
+            route_distance = 0.0
 
             while unassigned:
                 best_student = None
@@ -132,12 +143,14 @@ class GreedyHeuristicStrategy(BaseRoutingStrategy):
                     break
 
                 # Add to route
+                step_dist = _dist(current_loc, best_student.location_code)
                 route_details.append(RouteStep(
                     location1=current_loc,
                     location2=best_student.location_code,
                     duration=round(best_time, 2),
-                    distance=0.0
+                    distance=step_dist
                 ))
+                route_distance += step_dist
 
                 current_time += best_time
                 current_loc = best_student.location_code
@@ -154,19 +167,21 @@ class GreedyHeuristicStrategy(BaseRoutingStrategy):
 
             # Return to depot
             return_time = self._get_duration(current_loc, depot.id, time_matrix, coordinates)
+            return_dist = _dist(current_loc, depot.id)
             route_details.append(RouteStep(
                 location1=current_loc,
                 location2=depot.id,
                 duration=round(return_time, 2),
-                distance=0.0
+                distance=return_dist
             ))
             current_time += return_time
+            route_distance += return_dist
 
             routes.append(VehicleRoute(
                 vehicle_id=f"Araç {vehicle_idx} (Greedy)",
                 route_details=route_details,
                 total_duration_minutes=round(current_time, 2),
-                total_distance_km=0.0,
+                total_distance_km=round(route_distance, 2),
                 sw_count=sw_count,
                 so_count=so_count,
                 student_ids=[s.id for s in route_students]

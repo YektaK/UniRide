@@ -9,6 +9,7 @@ Implements:
 - Optional local search (2-opt, 3-opt, Or-opt, Hybrid)
 """
 
+import logging
 import random
 import time
 from typing import List, Dict, Tuple, Optional
@@ -19,7 +20,7 @@ from models.schemas import (
     VehicleRoute, RouteStep
 )
 from strategies.base_strategy import BaseRoutingStrategy
-from utils.data_loader import DataLoader, haversine_distance, estimate_travel_time
+from utils.data_loader import DataLoader, euclidean_distance, haversine_distance, estimate_travel_time
 from utils.clustering import VehicleCalculator
 from utils.local_search import LocalSearchType, apply_local_search
 from utils.patterns import SingletonMeta
@@ -345,7 +346,14 @@ class PSOStrategy(BaseRoutingStrategy):
         data_loader = DataLoader.get_instance()
 
         location_ids = [depot.id] + [s.location_code for s in students]
-        raw_matrix = data_loader.get_submatrix(location_ids)
+
+        # Build coordinates BEFORE get_submatrix for euclidean distance fallback
+        coordinates = {depot.id: {"lat": depot.lat, "lng": depot.lng}}
+        for s in students:
+            coords = s.coordinates or {"lat": 0, "lng": 0}
+            coordinates[s.location_code] = coords
+
+        raw_matrix = data_loader.get_submatrix(location_ids, coordinates)
         time_matrix = {
             location_ids[i]: {
                 location_ids[j]: raw_matrix[i][j]
@@ -354,10 +362,11 @@ class PSOStrategy(BaseRoutingStrategy):
             for i in range(len(location_ids))
         }
 
-        coordinates = {depot.id: {"lat": depot.lat, "lng": depot.lng}}
-        for s in students:
-            coords = s.coordinates or {"lat": 0, "lng": 0}
-            coordinates[s.location_code] = coords
+        # Helper to compute euclidean distance between two location IDs
+        def _dist(loc1: str, loc2: str) -> float:
+            c1 = coordinates.get(loc1, {})
+            c2 = coordinates.get(loc2, {})
+            return round(euclidean_distance(c1.get("lat", 0), c1.get("lng", 0), c2.get("lat", 0), c2.get("lng", 0)), 2)
 
         # Convert students
         student_dicts = []
@@ -417,7 +426,7 @@ class PSOStrategy(BaseRoutingStrategy):
                     location1=step["location1"],
                     location2=step["location2"],
                     duration=round(step["duration"], 2),
-                    distance=0.0
+                    distance=_dist(step["location1"], step["location2"])
                 )
                 for step in assignment["route"]
             ]
@@ -426,7 +435,7 @@ class PSOStrategy(BaseRoutingStrategy):
                 vehicle_id=f"Araç {assignment['vehicle_index']} (PSO)",
                 route_details=route_steps,
                 total_duration_minutes=round(assignment["total_duration"], 2),
-                total_distance_km=0.0,
+                total_distance_km=round(sum(s.distance for s in route_steps), 2),
                 sw_count=assignment["sw_count"],
                 so_count=assignment["so_count"],
                 student_ids=[s["id"] for s in assignment["students"]]

@@ -142,13 +142,13 @@ export async function PUT(request: NextRequest) {
             updated_at: new Date().toISOString(),
         };
 
-        if (updates.name) dbUpdates.name = updates.name;
-        if (updates.type) dbUpdates.type = updates.type;
+        if (updates.name !== undefined) dbUpdates.name = updates.name;
+        if (updates.type !== undefined) dbUpdates.type = updates.type;
         if (updates.plateNumber !== undefined) dbUpdates.plate_number = updates.plateNumber;
         if (updates.wheelchairCapacity !== undefined) dbUpdates.wheelchair_capacity = updates.wheelchairCapacity;
         if (updates.seatingCapacity !== undefined) dbUpdates.seating_capacity = updates.seatingCapacity;
         if (updates.cooldownMinutes !== undefined) dbUpdates.cooldown_minutes = updates.cooldownMinutes;
-        if (updates.status) dbUpdates.status = updates.status;
+        if (updates.status !== undefined) dbUpdates.status = updates.status;
 
         const { data, error } = await adminClient
             .from("vehicles")

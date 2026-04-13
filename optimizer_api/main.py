@@ -889,7 +889,41 @@ def _start_benchmark_impl(
         n_runs = settings.get("n_runs", 3)
         total_experiments = len(algorithms) * len(problems) * n_runs
         
-        # ✅ STEP 1: Create state immediately (thread-safe)
+        # ✅ STEP 1: VALIDATION (P1-5 Fix: Return error before backgrounding if invalid)
+        benchmark_problems: List[BenchmarkProblem] = []
+        for problem_name in problems:
+            info = get_problem_by_name(problem_name)
+            if not info or not info.file_path:
+                logger.warning(f"[Benchmark] Problem '{problem_name}' not found")
+                continue
+            
+            coords = load_problem_coordinates(problem_name)
+            if not coords:
+                logger.warning(f"[Benchmark] Could not load coordinates for '{problem_name}'")
+                continue
+            
+            bp = BenchmarkProblem(
+                name=info.name,
+                dimension=info.dimension,
+                coordinates=coords,
+                optimal_score=info.optimal,
+                category=info.category,
+                problem_type="tsp",
+                depot_index=0,
+            )
+            benchmark_problems.append(bp)
+        
+        if not benchmark_problems:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "No valid benchmark problems found",
+                    "code": "INVALID_PROBLEMS",
+                    "problems_tried": problems
+                }
+            )
+
+        # ✅ STEP 2: Create state (thread-safe)
         state = benchmark_state_manager.create_run(
             run_id=run_id,
             total_experiments=total_experiments,
@@ -900,45 +934,12 @@ def _start_benchmark_impl(
             }
         )
         
-        # ✅ STEP 2: Define background task
-        # NOW FIXED: Uses real algorithm dispatch via BenchmarkRunner
+        # ✅ STEP 3: Define background task
         def run_benchmark_task():
-            """
-            Background task executed in daemon thread.
-            Runs benchmark using real strategies and updates state_manager with progress.
-            """
             try:
                 logger.info(f"[Benchmark] Executor thread started: {run_id}")
                 
-                # ✅ Resolve problem names to BenchmarkProblem objects
-                benchmark_problems: List[BenchmarkProblem] = []
-                for problem_name in problems:
-                    info = get_problem_by_name(problem_name)
-                    if not info or not info.file_path:
-                        logger.warning(f"[Benchmark] Problem '{problem_name}' not found, skipping")
-                        continue
-                    
-                    coords = load_problem_coordinates(problem_name)
-                    if not coords:
-                        logger.warning(f"[Benchmark] Could not load coordinates for '{problem_name}', skipping")
-                        continue
-                    
-                    bp = BenchmarkProblem(
-                        name=info.name,
-                        dimension=info.dimension,
-                        coordinates=coords,
-                        optimal_score=info.optimal,
-                        category=info.category,
-                        problem_type="tsp",  # Default to TSP; CVRPTW can be added via problem_type param
-                        depot_index=0,
-                    )
-                    benchmark_problems.append(bp)
-                
-                if not benchmark_problems:
-                    benchmark_state_manager.fail_run(run_id, "No valid problems found")
-                    return
-                
-                # ✅ Resolve algorithm configs
+                # Resolve algorithm configs
                 algo_configs: List[AlgorithmConfig] = []
                 for algo_dict in algorithms:
                     algo_configs.append(AlgorithmConfig(
@@ -947,14 +948,14 @@ def _start_benchmark_impl(
                         params=algo_dict.get("params", {}),
                     ))
                 
-                # ✅ Create runner with state manager callbacks
+                # Create runner with state manager callbacks
                 runner = BenchmarkRunner(
                     strategies_registry=STRATEGY_REGISTRY,
                     state_manager=benchmark_state_manager,
                     run_id=run_id
                 )
                 
-                # ✅ Run benchmark (will update state_manager automatically)
+                # Run benchmark
                 runner.run(
                     problems=benchmark_problems,
                     algorithms=algo_configs,
@@ -963,12 +964,10 @@ def _start_benchmark_impl(
                     skip_cached=settings.get("skip_cached", False)
                 )
                 
-                logger.info(f"[Benchmark] Executor thread completed: {run_id}, "
-                           f"results={len(runner.results)}")
+                logger.info(f"[Benchmark] Executor thread completed: {run_id}")
                 
             except Exception as e:
                 logger.error(f"[Benchmark] Executor error in {run_id}: {e}", exc_info=True)
-                # Mark run as failed
                 benchmark_state_manager.fail_run(run_id, f"Error: {str(e)}")
         
         # ✅ STEP 3: Spawn daemon thread (non-blocking)
@@ -1008,6 +1007,25 @@ def _start_benchmark_impl(
                 "run_id": run_id,
             }
         )
+
+@app.post("/api/v1/benchmark/import")
+def import_benchmark(body: BenchmarkImportRequest) -> Dict:
+    """
+    Import external benchmark results (CLI -> Web).
+    Adds results to the in-memory benchmark state manager.
+    """
+    try:
+        data = body.model_dump()
+        state = benchmark_state_manager.import_run(body.run_id, data)
+        return {
+            "run_id": state.run_id,
+            "status": state.status.value,
+            "results_imported": state.results_count,
+            "message": f"Dış benchmark verisi başarıyla içe aktarıldı ({state.results_count} sonuç)"
+        }
+    except Exception as e:
+        logger.error(f"[Benchmark] Error importing run {body.run_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/v1/benchmark/status")

@@ -22,6 +22,18 @@ BEGIN
     END LOOP;
 END $$;
 
+-- Helper function to check if user is admin
+CREATE OR REPLACE FUNCTION is_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN (
+    SELECT role = 'admin'
+    FROM public.users
+    WHERE id = auth.uid()
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- ==================== USERS POLICIES ====================
 
 -- Users can read their own data
@@ -109,6 +121,13 @@ CREATE POLICY "vehicles_select_all"
   ON vehicles FOR SELECT
   USING (auth.uid() IS NOT NULL);
 
+-- Admin can manage vehicles
+CREATE POLICY "vehicles_all_admin"
+  ON vehicles FOR ALL
+  TO authenticated
+  USING (is_admin())
+  WITH CHECK (is_admin());
+
 -- ==================== ROUTES POLICIES ====================
 
 -- All authenticated users can view routes
@@ -116,12 +135,26 @@ CREATE POLICY "routes_select_all"
   ON routes FOR SELECT
   USING (auth.uid() IS NOT NULL);
 
+-- Admin can manage routes
+CREATE POLICY "routes_all_admin"
+  ON routes FOR ALL
+  TO authenticated
+  USING (is_admin())
+  WITH CHECK (is_admin());
+
 -- ==================== ROUTE ASSIGNMENTS POLICIES ====================
 
 -- Users can view assignments they're part of
 CREATE POLICY "route_assignments_select_own"
   ON route_assignments FOR SELECT
   USING (auth.uid() = ANY(student_ids) OR auth.uid() = driver_id);
+
+-- Admin can manage route assignments
+CREATE POLICY "route_assignments_all_admin"
+  ON route_assignments FOR ALL
+  TO authenticated
+  USING (is_admin())
+  WITH CHECK (is_admin());
 
 -- ==================== NOTIFICATIONS POLICIES ====================
 

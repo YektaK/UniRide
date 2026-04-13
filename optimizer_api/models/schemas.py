@@ -212,3 +212,23 @@ class BenchmarkRunRequest(BaseModel):
     algorithms: List[Dict[str, Any]]
     problems: List[str]
     settings: Dict[str, Any] = {}
+class BenchmarkResult(BaseModel):
+    """Single experiment result for import"""
+    algorithm: str
+    problem: str
+    run_number: int
+    tour_length: float
+    elapsed_ms: float
+    gap_percent: Optional[float] = None
+    timestamp: str
+    metadata: Dict[str, Any] = {}
+
+class BenchmarkImportRequest(BaseModel):
+    """Request body for POST /api/v1/benchmark/import"""
+    run_id: str
+    status: str = "completed"
+    results: List[BenchmarkResult]
+    parameters: Dict[str, Any] = {}
+    total_experiments: Optional[int] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None

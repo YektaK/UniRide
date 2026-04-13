@@ -133,8 +133,8 @@ export async function PUT(request: NextRequest) {
             updated_at: new Date().toISOString(),
         };
 
-        if (updates.name) dbUpdates.name = updates.name;
-        if (updates.role) dbUpdates.role = updates.role;
+        if (updates.name !== undefined) dbUpdates.name = updates.name;
+        if (updates.role !== undefined) dbUpdates.role = updates.role;
         if (updates.studentNumber !== undefined) dbUpdates.student_number = updates.studentNumber;
         if (updates.homeAddress !== undefined) dbUpdates.home_address = updates.homeAddress;
         if (updates.accessibilityNeeds !== undefined) dbUpdates.accessibility_needs = updates.accessibilityNeeds;
@@ -177,21 +177,24 @@ export async function DELETE(request: NextRequest) {
 
         const adminClient = getSupabaseAdmin();
 
-        // Delete from database first
+        // 1. Delete from Auth first (Primary action)
+        const { error: authError } = await adminClient.auth.admin.deleteUser(id);
+
+        if (authError) {
+            // If user doesn't exist in Auth anymore, we might still want to try deleting from DB
+            if (!authError.message.includes("not found")) {
+                return createErrorResponse(`Auth deletion failed: ${authError.message}`, 500);
+            }
+        }
+
+        // 2. Delete from database (Secondary action/cleanup)
         const { error: dbError } = await adminClient
             .from("users")
             .delete()
             .eq("id", id);
 
         if (dbError) {
-            return createErrorResponse(dbError.message, 500);
-        }
-
-        // Delete from auth
-        const { error: authError } = await adminClient.auth.admin.deleteUser(id);
-
-        if (authError) {
-            return createErrorResponse(authError.message, 500);
+            return createErrorResponse(`Database deletion failed: ${dbError.message}`, 500);
         }
 
         return createSuccessResponse({ message: "User deleted successfully" });

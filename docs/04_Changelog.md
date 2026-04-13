@@ -1,4 +1,5 @@
-﻿# 📝 UniRid## [14.04.2026] - Teknik Borç ve Güvenlik Sprinti
+# 📝 UniRide Değişiklik Günlüğü (Changelog)
+
 
 ### ✅ Tamamlananlar
 - **P1-2:** 9 strateji dosyasında singleton state mutation engellendi (Thread-safe).

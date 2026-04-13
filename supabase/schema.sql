@@ -125,6 +125,52 @@ CREATE TABLE IF NOT EXISTS admin_settings (
   UNIQUE(id)
 );
 
+-- Time Matrix table for distance/duration caching
+CREATE TABLE IF NOT EXISTS time_matrix (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    origin_code TEXT NOT NULL,
+    destination_code TEXT NOT NULL,
+    duration_minutes NUMERIC NOT NULL,
+    distance_meters NUMERIC,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(origin_code, destination_code)
+);
+
+-- Route Plans table for optimization result persistence
+CREATE TABLE IF NOT EXISTS route_plans (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  plan_date DATE NOT NULL,
+  direction TEXT NOT NULL CHECK (direction IN ('pickup', 'dropoff')),
+  algorithm_used TEXT NOT NULL,
+  clustering_used TEXT DEFAULT 'kmeans',
+  total_vehicles INTEGER NOT NULL,
+  total_duration_minutes FLOAT NOT NULL,
+  execution_time_seconds FLOAT,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'confirmed', 'active', 'completed', 'cancelled')),
+  routes JSONB NOT NULL,
+  student_count INTEGER,
+  driver_assignments JSONB DEFAULT '[]'::jsonb,
+  notes TEXT,
+  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  confirmed_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ
+);
+
+-- Sandbox Scenarios table for IE sandbox mode
+CREATE TABLE IF NOT EXISTS sandbox_scenarios (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  vehicles JSONB NOT NULL,
+  student_ids UUID[] DEFAULT '{}'::uuid[],
+  time_window_minutes INTEGER DEFAULT 0,
+  notes TEXT,
+  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_student_number ON users(student_number);
@@ -139,6 +185,10 @@ CREATE INDEX IF NOT EXISTS idx_route_assignments_driver_id ON route_assignments(
 CREATE INDEX IF NOT EXISTS idx_routes_date ON routes(date);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);
+CREATE INDEX IF NOT EXISTS idx_time_matrix_origin_dest ON time_matrix(origin_code, destination_code);
+CREATE INDEX IF NOT EXISTS idx_route_plans_date ON route_plans(plan_date);
+CREATE INDEX IF NOT EXISTS idx_route_plans_status ON route_plans(status);
+CREATE INDEX IF NOT EXISTS idx_sandbox_scenarios_created_by ON sandbox_scenarios(created_by);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -174,6 +224,14 @@ DROP TRIGGER IF EXISTS update_admin_settings_updated_at ON admin_settings;
 CREATE TRIGGER update_admin_settings_updated_at BEFORE UPDATE ON admin_settings
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_route_plans_updated_at ON route_plans;
+CREATE TRIGGER update_route_plans_updated_at BEFORE UPDATE ON route_plans
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_sandbox_scenarios_updated_at ON sandbox_scenarios;
+CREATE TRIGGER update_sandbox_scenarios_updated_at BEFORE UPDATE ON sandbox_scenarios
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- Enable Row Level Security
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE weekly_schedules ENABLE ROW LEVEL SECURITY;
@@ -183,3 +241,6 @@ ALTER TABLE routes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE route_assignments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE time_matrix ENABLE ROW LEVEL SECURITY;
+ALTER TABLE route_plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sandbox_scenarios ENABLE ROW LEVEL SECURITY;

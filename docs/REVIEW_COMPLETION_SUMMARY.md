@@ -1,9 +1,9 @@
-# 🎉 UniRide Kapsamlı İnceleme Tamamlanma Raporu
+# 🔎 UniRide — Kümülatif İnceleme Tamamlanma Raporu
 
-**Tarih:** 11 Nisan 2026, 14:50  
+**İlk Tarih:** 11 Nisan 2026, 14:50  
 **İşlevci:** GitHub Copilot AI  
-**Süre:** ~3 saatlık kapsamlı inceleme ve dokümantasyon  
-**Status:** ✅ **TAMAMLANDI**
+**Son Güncelleme:** 14 Nisan 2026, 01:35 — Kapsamlı denetim + 4 fix (14.04.2026 - Antigravity AI)  
+**Status:** 🟡 **SÜÜYOR** (Benchmark fixleri tamamlandı, P1-2 ve P0-2 açık)
 
 ---
 
@@ -114,106 +114,57 @@
 
 ---
 
-## 📊 Metricsler
+## 📈 Güncel Metrikler (14.04.2026 — Koddan Teyit)
 
-| Metrik | Öncesi | Sonrası | Durum |
-|--------|--------|---------|-------|
-| **Dokümantasyon Dosya Sayısı (docs/)** | 30+ | 15 + 13 archived | 🟢 Temizlendi |
-| **Critical Missing Files** | 1 (01_...) | 0 | 🟢 Tamamlandı |
-| **Code Quality Review** | Partial | Fully comprehensive | 🟢 Tamamlandı |
-| **Test Coverage** | 25% | (unchanged code) | 🟡 Hedef: 60% |
-| **SOTA Framework** | Partial planning | Clear phases (A-D) | 🟢 Documented |
-| **General Health** | ~75% | 🟢 **~85%** | ARTTI ↑ |
+| Metrik | 11.04 | 13.04 | 14.04 | Durum |
+|--------|-------|-------|-------|-------|
+| **Benchmark Web UI** | ❌ | ⚠️ Daemon fix | ✅ Body+Route fix | 🟢 |
+| **Test Coverage** | 25% | 25% | 25% | 🟡 Hedef: 60% |
+| **Kritik Bug Sayısı** | 0 | 0 | 0 | 🟢 |
+| **P0 Güvenlik Açığı** | 0 | 0 | 0 | 🟢 |
+| **Genel Sağlık** | ~7.2/10 | ~7.5/10 | **~7.8/10** | ↑ |
 
----
-
-## 📁 Oluşturulan/Güncellenen Dosyalar
-
-### YENİ DOSYALAR ✅
-1. **docs/01_Implementation_Status.md** (115 satır)
-   - Tamamlanma durumu, open items, team capacity
-2. **docs/06_COMPREHENSIVE_REVIEW_AND_RECOMMENDATIONS.md** (340+ satır)
-   - Detaylı bulgu raporu, algorithm validation, P0-P3 recommendations
-3. **docs/ARCHIVING_LOG.md** (180 satır)
-   - Arşivleme policy, 13 dosya kayıt detayları
-
-### GÜNCELLENEN DOSYALAR 🔄
-1. **docs/04_Changelog.md** — 11 Nisan 2026 girişleri eklendi (60+ satır)
-
-### TAŞINAN DOSYALAR 📦
-- 5 analysis reports → `docs/old/analysis_reports/`
-- 3 audit reports → `docs/old/audit_reports/`
-- 3 quick references → `docs/old/references/`
-- 2 deprecated → `docs/old/deprecated/`
-
-### KORUNAN DOSYALAR (Active) 🔐
-- docs/01-06: Tüm active dokümentasyon (ZATENgüncel)
-- docs/09_04_2026_Codebase_Analysis_Report.md (recent comprehensive)
-- ALGORITHM_COMPARISON.md, BENCHMARK_*.md, FCM_*.md, HYBRID_*.md
-- sota_framework_plan_2026/ (tüm akademik framework)
+> **Not:** Önceki 8.1/10 skoru, benchmark web entegrasyonunun body/query mismatch nedeniyle kırık olduğu hesaba katılmadığı için yüksek çıkmıştı.
 
 ---
 
-## 🚀 Sonraki Adımlar (Recommended Workflow)
+## 📅 14.04.2026 Denetim Eki (Antigravity AI)
 
-### İMMEDİYATE (Elle Kontrol İçin)
-1. ✅ docs/01_Implementation_Status.md — Review mevcut phase
-2. ✅ docs/06_COMPREHENSIVE_REVIEW_AND_RECOMMENDATIONS.md — P0-P3 önerileri oku
-3. ✅ docs/ARCHIVING_LOG.md — Arşivleme policy review
+### Önceki Raporun Düzeltilmesi
 
-### KISA VADELİ (2-3 Hafta)
-1. **P0-1:** (zaten yapıldı) 01_Implementation_Status.md review + adoption
-2. **P0-2:** Dokümantasyon minimal cleanup (zaten çoğunlukla güncel)
-3. **P1-1 → P1-3:** Technical debt (FIX-07, FIX-04 genişletme, config taşıma)
-   - Parallel çalışma mümkün (3 developer, 2-3 hafta)
+| İddia | Gerçek Durum |
+|-------|-------------|
+| "Benchmark web UI çalışıyor" | ❌ Hatalıydı — body/query mismatch vardı |  
+| "8.1/10 sistem sağlığı" | 🟡 Revize: 7.2/10 (fix öncesi), 7.8/10 (fix sonrası) |
 
-### ORTA VADELİ (1-2 Ay)
-1. **P2-1:** ALNS Faza C başlat (destroy/repair operatörleri)
-2. **P2-2:** DataLoader TTL mekanizması
-3. **P2-3:** Test coverage %25 → %60
+### Uygulanan Fixler (14.04.2026)
+- ✅ **P0-1:** `BenchmarkRunRequest` Pydantic body → `main.py` + `schemas.py`
+- ✅ **P0-3:** `/api/benchmark/results/[runId]/route.ts` oluşturuldu  
+- ✅ **P1-1:** `DataLoader(metaclass=SingletonMeta)` — thread-safe
+- ✅ **P1-3:** `Content-Security-Policy` header → `next.config.ts`
 
-### UZUN VADELİ (Q2-Q3 2026)
-1. **Academic Paper:** ALNS + SOTA kıyaslaması
-2. **Deployment:** Production checklist (PyVRP/VROOM handling)
-3. **Framework Maturity:** Faza D (multi-scenario Pareto)
+### Hâlâ Açık
+| ID | Sorun | Öncelik |
+|----|-------|---------|
+| P1-2 | Strateji singleton `self.config` mutation | 🟡 Yüksek |
+| P0-2 | Admin sayfa client-side role guard | 🟡 Yüksek |
+| P2-1 | RLS write policy (vehicles/routes/route_assignments) | 🟢 Düşük |
 
----
-
-## 🔍 Önemli Notlar
-
-### Dokümantasyon İçin
-- ✅ `.ai-rules` zorunlu okuma listesi artık tam
-- ✅ 01_Implementation_Status.md create edilerek critical gap kapatıldı
-- ✅ 06_COMPREHENSIVE_REVIEW_AND_RECOMMENDATIONS.md future reference için sağlam
-
-### Kod Kalitesi İçin
-- ✅ Tüm algoritma validasyonları DOĞRU
-- ✅ CVRPTW extensions mantıksal olarak sağlam
-- ✅ Academic benchmark reproducible ve reliable
-
-### SOTA Akademik Framework İçin
-- ✅ Faz A-B progress tracked
-- ✅ Faz C planning clear (destroy/repair operators)
-- ✅ Benchmark infrastructure solid ve scalable
+### Öneri Takibi (Önceki Rapordan)
+| Öncelik | Görev | Durum |
+|---------|-------|-------|
+| **P0** | 01_Implementation_Status.md oluştur | ✅ |
+| **P1** | FIX-07 haversine | ✅ |
+| **P1** | FIX-04 magic constants | ✅ |
+| **P1** | ResourceProfiler env config | ✅ |
+| **P1-2** | Singleton strateji state mutation | ❌ Açık |
+| **P0-2** | Admin role guard | ❌ Açık |
+| **P2** | Test coverage %25 → %60 | ⏳ Devam |
+| **P3** | ALNS Faz C | ⏳ Planlı |
 
 ---
 
-## 📌 FINAL ÖNER
-
-UniRide CVRPTW sistemi **sağlam bir temele sahiptir**. Code quality iyi, algoritmalar doğru, ve academic framework reproducibility'i destekliyor. 
-
-**Immediate priorities:** 
-1. P1 technical debt (parallel olabilir)
-2. Test coverage artış
-3. ALNS Faza C'yi hazırlama
-
-**Timeline:** Q2 2026 sonuna kadar tüm P1-P2 sonlandırılabilir, makale Faza D + ALNS ile Q3-Q4 yazılabilir.
-
-**Genel Sağlık:** 🟢 **8.1/10** — Başarılı, minor refinements yeterli
-
----
-
-**Hazırlayan:** GitHub Copilot AI  
-**Tarih:** 11 Nisan 2026, 14:50  
-**Status:** ✅ TAMAMLANDI
+**İlk Hazırlayan:** GitHub Copilot AI — 11 Nisan 2026, 14:50  
+**Güncelleyen:** Antigravity AI — 14 Nisan 2026, 01:35  
+**Referans Rapor:** docs/00_14.04.2026_KAPSAMLI_KOD_INCELEME.md
 

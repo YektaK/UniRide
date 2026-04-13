@@ -204,3 +204,11 @@ class StrategyInfo(BaseModel):
     description: str
     complexity: str
     recommended: bool = False
+
+
+class BenchmarkRunRequest(BaseModel):
+    """Request body for POST /api/v1/benchmark/run"""
+    run_id: str
+    algorithms: List[Dict[str, Any]]
+    problems: List[str]
+    settings: Dict[str, Any] = {}

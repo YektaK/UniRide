@@ -113,13 +113,19 @@ Bu yol haritası, UniRide Özel Öğrenci Taşıma Sistemi'nin CVRPTW (Kapasitel
 
 #### 4.5.1 Kalan Teknik Borç
 | Görev | Öncelik | Durum | Açıklama |
-|-------|---------|-------|----------|| 🔴 Benchmark daemon thread | 🔴 | ⚠️ 🟡 | Critical architecture debt identified + documented (Commit f64f7fd) - needs architect review before merge || FIX-04 genişlet — Pipeline A stratejileri | � | ✅ | main.py consolidation + BaseStrategy extraction + Strategy refactoring (Commit a8ccb11 - 174 LOC removed) |
-| 🔴 P1 Stratejileri refactor (super() kullan) | 🔴 | ✅ | Remove duplicate _get_duration/_calculate_route_duration from GA/HHO/PSO/GWO strategies (13.04.2026 - Commit a8ccb11) |
+|-------|---------|-------|----------|
+| 🔴 Benchmark daemon thread | 🔴 | ⚠️ | Critical architecture debt identified + documented — needs architect review |
+| FIX-04 genişlet — Pipeline A stratejileri | 🔴 | ✅ | main.py consolidation + BaseStrategy extraction (13.04.2026 - Commit a8ccb11) |
+| P1 Stratejileri refactor (super() kullan) | 🔴 | ✅ | Duplicate _get_duration/_calculate_route_duration kaldırıldı (13.04.2026) |
+| **P0-1: Benchmark run body/query fix** | **🔴** | **✅** | **start_benchmark → BenchmarkRunRequest Pydantic body (14.04.2026 - Antigravity AI)** |
+| **P0-3: Results Next.js route** | **🔴** | **✅** | **/api/benchmark/results/[runId]/route.ts oluşturuldu (14.04.2026 - Antigravity AI)** |
+| **P1-1: DataLoader thread-safety** | **🟡** | **✅** | **SingletonMeta metaclass kullanıyor, get_instance() backward-compat (14.04.2026)** |
+| **P1-3: CSP header** | **🟡** | **✅** | **Content-Security-Policy next.config.ts'e eklendi (14.04.2026 - Antigravity AI)** |
 | FIX-07 tamamla — `clustering.py` haversine | 🟢 | ✅ | `clustering.py:11` → `from utils.data_loader import haversine_distance` (13.04.2026) |
 | Algorithm Parameter Config UI | 🟢 | ⬜ | Frontend'de algoritma parametresi ayarlama |
 | DataLoader TTL/Invalidation | 🟢 | ⬜ | Singleton'a cache süresi + yenileme mekanizması |
 | ResourceProfiler magic numbers | 🟢 | ✅ | DEFAULT_PICKUP_HOUR/DEFAULT_DROPOFF_HOUR env vars (13.04.2026) |
-| `main.old.py` temizle | 🟢 | ✅ | 24KB ölü kod → docs/old/ archive (13.04.2026)
+| `main.old.py` temizle | 🟢 | ✅ | 24KB ölü kod → docs/old/ archive (13.04.2026) |
 
 #### 4.5.2 Test Altyapısı
 | Görev | Öncelik | Durum | Açıklama |
@@ -248,3 +254,5 @@ Bu yol haritası, UniRide Özel Öğrenci Taşıma Sistemi'nin CVRPTW (Kapasitel
 
 
 > (10.04.2026 - AI Audit): TSP Benchmark Studio entegrasyonu kod düzeyinde incelendi. /api/benchmark/run rotaları, FastAPI backend benchmark_runner mekanizmaları ve ilgili Python (Numba JIT vb.) strateji dosyalarının projenin 'Dual-Track' SOTA (State of the Art) ve ticari hibrit motor yapısına uygun olarak ayrı bir execution branch olarak (academic_benchmark) başarıyla entegre edildiği doğrulandı. Optimizasyon hedefleri ve izolasyon kurallarıyla uyumlu.
+
+> (14.04.2026 - Antigravity AI): Kapsamlı çapraz kontrol gerçekleştirildi. Benchmark web entegrasyonunda kritik body/query param uyumsuzluğu (P0-1) ve eksik Next.js results route (P0-3) tespit edildi. 4 düzeltme uygulandı: BenchmarkRunRequest Pydantic modeli, /api/benchmark/results/[runId] route, DataLoader SingletonMeta thread-safety, CSP security header. Detaylar: docs/00_14.04.2026_KAPSAMLI_KOD_INCELEME.md

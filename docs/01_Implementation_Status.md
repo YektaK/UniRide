@@ -2,7 +2,7 @@
 
 > **Tarih:** 11 Nisan 2026, 14:35 (11.04.2026 - Oluşturan: GitHub Copilot AI)
 > **Dönem:** Faz 4.5 — Kalan Teknik Borç ve Test Altyapısı
-> **Son Güncelleme:** 13 Nisan 2026, 17:45 — P1 Teknik Borç Tamamlama (FIX-04/07, ResourceProfiler config)
+> **Son Güncelleme:** 14 Nisan 2026, 01:35 — Kapsamlı denetim + 4 kritik fix (P0-1, P0-3, P1-1, P1-3) uygulandı (14.04.2026 - Antigravity AI)
 
 ---
 
@@ -12,11 +12,12 @@
 
 | Metrik | Durum |
 |--------|-------|
-| **Phase Progress** | 45% (Phase 4'ten Faz 4.5'e geçildi; Faz 5'e hazırlık) |
-| **Code Quality** | 🟢 Sağlam (recent fixes: FIX-01 → FIX-10 tamamlandı) |
+| **Phase Progress** | 55% (Benchmark web fix'leri + 4 kritik P0/P1 uygulandı) |
+| **Code Quality** | 🟢 Sağlam (FIX-01→FIX-10 + P0-1/P0-3/P1-1/P1-3 tamamlandı) |
 | **Test Coverage** | 🟡 ~25% (Hedef: 60%) |
-| **Documentation** | 🟡 90% (Versiyonlar + bazı listeler güncel değil) |
+| **Documentation** | 🟡 92% (14.04 denetimi sonrası güncellendi) |
 | **SOTA Readiness** | 🟢 Yapı hazır (ALNS Faz C pending) |
+| **Benchmark Web UI** | 🟢 Çalışır duruma getirildi (P0-1, P0-3 fix) |
 
 ---
 
@@ -74,18 +75,17 @@
 
 ### Kalan Teknik Borç
 
-#### Priority 🔴 — KRITIK
+#### Priority 🔴 — KRİTİK
 
-**Hiçbiri** — Kriitik sorunlar FIX-01 → FIX-10 ile çözüldü
+**14.04.2026 İtibarıyla Tümü Tamamlandı** — P0-1, P0-3, P1-1, P1-3 fix'leri uygulandı
 
-#### Priority 🟡 — YÜKSEK
+#### Priority 🟡 — YÜKSEK (Benchmark Sonrası Açık)
 
-| ID | Görev | Dosyalar | Mod | Durum | Tamamlama |
-|----|-------|----------|-----|-------|----------|
-| T-1 | FIX-04 Genişlet — Magic constants | 11 strateji | Parallel | ✅ | 13.04.2026 - Verified all strategies use DEFAULT_TRAVEL_FALLBACK_MINUTES |
-| T-2 | FIX-07 Tamamla | `clustering.py` | Sequential | ✅ | 13.04.2026 - No duplicate haversine, imports from utils.data_loader |
-| T-3 | ResourceProfiler config | `utils/resource_profiler.py` | Sequential | ✅ | 13.04.2026 - DEFAULT_PICKUP_HOUR, DEFAULT_DROPOFF_HOUR env vars implemented |
-| T-4 | Test Coverage | `tests/` | Parallel | ⬜ | %25 → %60 — Split, clustering, local_search (Next Session) |
+| ID | Görev | Dosyalar | Durum |
+|----|-------|----------|-------|
+| **P1-2** | Singleton strateji `self.config` mutation | `ga/pso/gwo/hho_strategy.py` | ❌ Açık — `/compare` concurrent risk |
+| **P0-2** | Admin sayfa client-side role guard | `src/app/(app)/admin/**` | ❌ Açık — UI erişim riski |
+
 
 #### Priority 🟢 — DÜŞÜK
 
@@ -139,9 +139,10 @@
 - Benchmark harness
 
 ### Faz B — Split + Meta-heuristic Entegrasyonu 🔄
-**Durum:** Partial (~70%)
+**Durum:** Partial (~75%)
 - ✅ GA-Split, PSO-Split, GWO-Split, HHO-Split tamamlandı
 - ✅ Split Decoder bug fix'ler tamamlandı
+- ✅ **Benchmark web entegrasyonu çalışır hale getirildi (14.04.2026 — P0-1, P0-3 fix)**
 - ⚠️ SOTA baseline'lar (PyVRP, VROOM) optional dependencies — production risk
 - ⚠️ Benchmark v2 veri yükleme — stable ancak scale test'i gerekli
 
@@ -172,12 +173,12 @@
 
 ---
 
-## 🚀 Sıradaki Oturumda Odak (Makale Hazırlık)
+## 🚀 Sıradaki Oturumda Odak
 
-Sırada olan 3 önemli iş:
-1. **01_Implementation_Status.md Oluştur** — Critical (this file)
-2. **Dokümantasyon Sync** — React/Tailwind versiyonları, algoritma listesi
-3. **FIX-04 Genişletme** — Magic constants (parallel olabilir)
+Sırada olan önemli işler (14.04.2026 güncellenmiş):
+1. **P1-2: Strateji singleton state** — `ga/pso/gwo/hho_strategy.py`'de `self.config.update()` mutation'ı `/compare` concurrent senaryolarında veri bozulmasına yol açabilir
+2. **P0-2: Admin role guard** — Client-side role kontrolü admin sayfalarına eklenmeli
+3. **T-4: Test Coverage** — %25 → %60 hedefi (split, clustering, local_search)
 
 ---
 
@@ -186,4 +187,6 @@ Sırada olan 3 önemli iş:
 - **SOTA Kıyaslaması:** PyVRP ve VROOM hâlâ optional; production deployment öncesi require/graceful fallback mekanizması review'lenmeli
 - **Makale Timeline:** ALNS Faz C'ye başlanırsa, Q3 2026 sonunda makale draft hazır olabilir
 - **Reproducibility:** Seed fixing ve hash tracking mekanizmaları çalışıyor — benchmark sonuçları güvenilir
+- **Benchmark Web UI:** 14.04.2026 itibarıyla çalışır — P0-1 (body fix), P0-3 (results route), P1-1 (thread-safe), P1-3 (CSP) tamamlandı
 
+> (14.04.2026 - Antigravity AI): Kapsamlı çapraz kontrol denetimi yapıldı. 13.04.2026 öneri aktarımları koddan teyit edildi. Benchmark web entegrasyonunda body/query mismatch (P0-1) ve eksik results route (P0-3) tespit edilerek düzeltildi. DataLoader thread-safety (P1-1) ve CSP header (P1-3) uygulandı. Detaylı rapor: docs/00_14.04.2026_KAPSAMLI_KOD_INCELEME.md

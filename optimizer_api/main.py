@@ -45,7 +45,8 @@ from models.schemas import (
     CompareRequest, CompareResponse, AlgorithmResult,
     StrategyInfo, VehicleRoute, Direction, TimeWindow,
     IEResponseData, BottleneckInfo, TimeShiftSuggestion,
-    WeeklyScheduleEntry, WeeklyScheduleRequest, StudentNode
+    WeeklyScheduleEntry, WeeklyScheduleRequest, StudentNode,
+    BenchmarkRunRequest,
 )
 from strategies import (
     STRATEGY_REGISTRY, get_strategy, get_strategy_info,
@@ -802,7 +803,21 @@ def get_benchmark_results(run_id: str) -> Dict:
 
 
 @app.post("/api/v1/benchmark/run")
-def start_benchmark(
+def start_benchmark(body: BenchmarkRunRequest) -> Dict:
+    """
+    Start a new benchmark run (JSON body version).
+    Accepts a BenchmarkRunRequest Pydantic model as JSON body.
+    """
+    # Parse fields from body
+    run_id = body.run_id
+    algorithms = body.algorithms
+    problems = body.problems
+    settings = body.settings
+
+    return _start_benchmark_impl(run_id, algorithms, problems, settings)
+
+
+def _start_benchmark_impl(
     run_id: str,
     algorithms: List[Dict],
     problems: List[str],
@@ -980,14 +995,19 @@ def start_benchmark(
             "start_time": state.start_time
         }
     
+    except HTTPException:
+        # Re-raise FastAPI HTTP exceptions (e.g. 429) as-is
+        raise
     except Exception as e:
-        logger.error(f"[Benchmark] Error starting run: {e}", exc_info=True)
-        return {
-            "run_id": run_id,
-            "status": "error",
-            "error": str(e),
-            "code": "START_ERROR"
-        }
+        logger.error("[Benchmark] Error starting run %s: %s", run_id, e, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": str(e),
+                "code": "START_ERROR",
+                "run_id": run_id,
+            }
+        )
 
 
 @app.get("/api/v1/benchmark/status")

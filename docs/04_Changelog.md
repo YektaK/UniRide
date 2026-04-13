@@ -1,7 +1,51 @@
-# 📝 UniRide Değişiklik Günlüğü (Changelog)
+﻿# 📝 UniRide Değişiklik Günlüğü (Changelog)
 
 > Her anlamlı değişiklik sonrasında bu dosyaya kayıt eklenmeli.
 > Format: `[Tarih] [Geliştirici/AI] — Açıklama`
+
+
+---
+
+## 2026-04-14 (01:35) — Kapsamlı Denetim + 4 Kritik Fix (14.04.2026 - Ekleyen: Antigravity AI)
+
+**[Antigravity AI]** — .proposed_changes/13.04.2026, ana kaynak kodu ve dokümantasyon capraz analizine dayali kapsamli denetim + 4 kritik fix uygulandı.
+
+### Denetim Bulgulari — Dogrulanan Calisan Kisimlar
+- ✅ GA/PSO/GWO/HHO import logging — NameError yok (CR-08 duzeltmesi teyit edildi)
+- ✅ auth-context.tsx updateUser whitelist — role, email, id expose edilmiyor (CR-06)
+- ✅ Hint API injection fix — emailRegex + .eq(), .or() kaldirildi (CR-07)
+- ✅ get_time_windows() — gercek TimeWindow donduruyor, bos degil (CR-10)
+- ✅ Notifications RLS — TO service_role ile kisitlandi (CR-02)
+- ✅ patterns.py SingletonMeta — olusturuldu, double-checked locking var
+- ✅ Dev reset — NODE_ENV=development kontrolu, client'a secret sizdirmiyor
+
+### Uygulanan Fixler
+
+**Fix P0-1 — Benchmark Body/Query Mismatch** TAMAMLANDI
+- BenchmarkRunRequest Pydantic model: optimizer_api/models/schemas.py
+- start_benchmark(body: BenchmarkRunRequest): optimizer_api/main.py
+- Ic mantik _start_benchmark_impl() ile ayristirildi
+- Outer except HTTPException(500) — artik 200 OK ile hata maskesi yok
+
+**Fix P0-3 — Eksik Results Route** TAMAMLANDI
+- src/app/api/benchmark/results/[runId]/route.ts olusturuldu
+- Python GET /api/v1/benchmark/results/{run_id} proxy yapıyor
+
+**Fix P1-1 — DataLoader Thread-Safety** TAMAMLANDI
+- DataLoader(metaclass=SingletonMeta): optimizer_api/utils/data_loader.py
+- get_instance() backward-compat alias olarak korundı
+
+**Fix P1-3 — Content-Security-Policy** TAMAMLANDI
+- CSP header eklendi: next.config.ts
+- connect-src: Supabase + lokal backend dahil
+
+### Hala Acik (Sonraki Sprint)
+- P1-2: Singleton strateji self.config mutation (/compare concurrent) — YUKSEK
+- P0-2: Admin sayfa client-side role guard — YUKSEK
+- P2-1: RLS write policy (vehicles/routes/route_assignments) — DUSUK
+
+### Syntax Dogrulama
+- main.py, schemas.py, data_loader.py — ast.parse() hatasiz
 
 ---
 
@@ -74,6 +118,50 @@ Frontend GET (polling every 1s, same HTTP thread)
 - **Status:** READY FOR ARCHITECT REVIEW before merging
 - **Priority:** 🔴 P0 - Critical for benchmark functionality
 
+
+---
+
+## 2026-04-14 (01:35) — Kapsamlı Denetim + 4 Kritik Fix (14.04.2026 - Ekleyen: Antigravity AI)
+
+**[Antigravity AI]** — .proposed_changes/13.04.2026, ana kaynak kodu ve dokümantasyon capraz analizine dayali kapsamli denetim + 4 kritik fix uygulandı.
+
+### Denetim Bulgulari — Dogrulanan Calisan Kisimlar
+- ✅ GA/PSO/GWO/HHO import logging — NameError yok (CR-08 duzeltmesi teyit edildi)
+- ✅ auth-context.tsx updateUser whitelist — role, email, id expose edilmiyor (CR-06)
+- ✅ Hint API injection fix — emailRegex + .eq(), .or() kaldirildi (CR-07)
+- ✅ get_time_windows() — gercek TimeWindow donduruyor, bos degil (CR-10)
+- ✅ Notifications RLS — TO service_role ile kisitlandi (CR-02)
+- ✅ patterns.py SingletonMeta — olusturuldu, double-checked locking var
+- ✅ Dev reset — NODE_ENV=development kontrolu, client'a secret sizdirmiyor
+
+### Uygulanan Fixler
+
+**Fix P0-1 — Benchmark Body/Query Mismatch** TAMAMLANDI
+- BenchmarkRunRequest Pydantic model: optimizer_api/models/schemas.py
+- start_benchmark(body: BenchmarkRunRequest): optimizer_api/main.py
+- Ic mantik _start_benchmark_impl() ile ayristirildi
+- Outer except HTTPException(500) — artik 200 OK ile hata maskesi yok
+
+**Fix P0-3 — Eksik Results Route** TAMAMLANDI
+- src/app/api/benchmark/results/[runId]/route.ts olusturuldu
+- Python GET /api/v1/benchmark/results/{run_id} proxy yapıyor
+
+**Fix P1-1 — DataLoader Thread-Safety** TAMAMLANDI
+- DataLoader(metaclass=SingletonMeta): optimizer_api/utils/data_loader.py
+- get_instance() backward-compat alias olarak korundı
+
+**Fix P1-3 — Content-Security-Policy** TAMAMLANDI
+- CSP header eklendi: next.config.ts
+- connect-src: Supabase + lokal backend dahil
+
+### Hala Acik (Sonraki Sprint)
+- P1-2: Singleton strateji self.config mutation (/compare concurrent) — YUKSEK
+- P0-2: Admin sayfa client-side role guard — YUKSEK
+- P2-1: RLS write policy (vehicles/routes/route_assignments) — DUSUK
+
+### Syntax Dogrulama
+- main.py, schemas.py, data_loader.py — ast.parse() hatasiz
+
 ---
 
 ## 2026-04-13 (19:15) — P1 Strategy Inheritance Refactoring Completion (13.04.2026 - Ekleyen: GitHub Copilot AI)
@@ -111,6 +199,50 @@ Frontend GET (polling every 1s, same HTTP thread)
 - ✅ Import resolution: PASSED
 - ✅ Inheritance chain validation: PASSED
 - 🟡 Unit tests: Pending (P2 sprint)
+
+
+---
+
+## 2026-04-14 (01:35) — Kapsamlı Denetim + 4 Kritik Fix (14.04.2026 - Ekleyen: Antigravity AI)
+
+**[Antigravity AI]** — .proposed_changes/13.04.2026, ana kaynak kodu ve dokümantasyon capraz analizine dayali kapsamli denetim + 4 kritik fix uygulandı.
+
+### Denetim Bulgulari — Dogrulanan Calisan Kisimlar
+- ✅ GA/PSO/GWO/HHO import logging — NameError yok (CR-08 duzeltmesi teyit edildi)
+- ✅ auth-context.tsx updateUser whitelist — role, email, id expose edilmiyor (CR-06)
+- ✅ Hint API injection fix — emailRegex + .eq(), .or() kaldirildi (CR-07)
+- ✅ get_time_windows() — gercek TimeWindow donduruyor, bos degil (CR-10)
+- ✅ Notifications RLS — TO service_role ile kisitlandi (CR-02)
+- ✅ patterns.py SingletonMeta — olusturuldu, double-checked locking var
+- ✅ Dev reset — NODE_ENV=development kontrolu, client'a secret sizdirmiyor
+
+### Uygulanan Fixler
+
+**Fix P0-1 — Benchmark Body/Query Mismatch** TAMAMLANDI
+- BenchmarkRunRequest Pydantic model: optimizer_api/models/schemas.py
+- start_benchmark(body: BenchmarkRunRequest): optimizer_api/main.py
+- Ic mantik _start_benchmark_impl() ile ayristirildi
+- Outer except HTTPException(500) — artik 200 OK ile hata maskesi yok
+
+**Fix P0-3 — Eksik Results Route** TAMAMLANDI
+- src/app/api/benchmark/results/[runId]/route.ts olusturuldu
+- Python GET /api/v1/benchmark/results/{run_id} proxy yapıyor
+
+**Fix P1-1 — DataLoader Thread-Safety** TAMAMLANDI
+- DataLoader(metaclass=SingletonMeta): optimizer_api/utils/data_loader.py
+- get_instance() backward-compat alias olarak korundı
+
+**Fix P1-3 — Content-Security-Policy** TAMAMLANDI
+- CSP header eklendi: next.config.ts
+- connect-src: Supabase + lokal backend dahil
+
+### Hala Acik (Sonraki Sprint)
+- P1-2: Singleton strateji self.config mutation (/compare concurrent) — YUKSEK
+- P0-2: Admin sayfa client-side role guard — YUKSEK
+- P2-1: RLS write policy (vehicles/routes/route_assignments) — DUSUK
+
+### Syntax Dogrulama
+- main.py, schemas.py, data_loader.py — ast.parse() hatasiz
 
 ---
 
@@ -188,6 +320,50 @@ Frontend GET (polling every 1s, same HTTP thread)
 - 🟡 P3: Shared test harness (tüm stratejileri uniform suite ile test et)
 
 **Commit Hash:** (Son commit refactoring işlemini içerir)
+
+
+---
+
+## 2026-04-14 (01:35) — Kapsamlı Denetim + 4 Kritik Fix (14.04.2026 - Ekleyen: Antigravity AI)
+
+**[Antigravity AI]** — .proposed_changes/13.04.2026, ana kaynak kodu ve dokümantasyon capraz analizine dayali kapsamli denetim + 4 kritik fix uygulandı.
+
+### Denetim Bulgulari — Dogrulanan Calisan Kisimlar
+- ✅ GA/PSO/GWO/HHO import logging — NameError yok (CR-08 duzeltmesi teyit edildi)
+- ✅ auth-context.tsx updateUser whitelist — role, email, id expose edilmiyor (CR-06)
+- ✅ Hint API injection fix — emailRegex + .eq(), .or() kaldirildi (CR-07)
+- ✅ get_time_windows() — gercek TimeWindow donduruyor, bos degil (CR-10)
+- ✅ Notifications RLS — TO service_role ile kisitlandi (CR-02)
+- ✅ patterns.py SingletonMeta — olusturuldu, double-checked locking var
+- ✅ Dev reset — NODE_ENV=development kontrolu, client'a secret sizdirmiyor
+
+### Uygulanan Fixler
+
+**Fix P0-1 — Benchmark Body/Query Mismatch** TAMAMLANDI
+- BenchmarkRunRequest Pydantic model: optimizer_api/models/schemas.py
+- start_benchmark(body: BenchmarkRunRequest): optimizer_api/main.py
+- Ic mantik _start_benchmark_impl() ile ayristirildi
+- Outer except HTTPException(500) — artik 200 OK ile hata maskesi yok
+
+**Fix P0-3 — Eksik Results Route** TAMAMLANDI
+- src/app/api/benchmark/results/[runId]/route.ts olusturuldu
+- Python GET /api/v1/benchmark/results/{run_id} proxy yapıyor
+
+**Fix P1-1 — DataLoader Thread-Safety** TAMAMLANDI
+- DataLoader(metaclass=SingletonMeta): optimizer_api/utils/data_loader.py
+- get_instance() backward-compat alias olarak korundı
+
+**Fix P1-3 — Content-Security-Policy** TAMAMLANDI
+- CSP header eklendi: next.config.ts
+- connect-src: Supabase + lokal backend dahil
+
+### Hala Acik (Sonraki Sprint)
+- P1-2: Singleton strateji self.config mutation (/compare concurrent) — YUKSEK
+- P0-2: Admin sayfa client-side role guard — YUKSEK
+- P2-1: RLS write policy (vehicles/routes/route_assignments) — DUSUK
+
+### Syntax Dogrulama
+- main.py, schemas.py, data_loader.py — ast.parse() hatasiz
 
 ---
 

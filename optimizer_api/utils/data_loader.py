@@ -7,7 +7,7 @@ import os
 import sys
 import logging
 import numpy as np
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 # Windows ortaminda Unicode karakterlerin konsola yazilmasinda
 # charmap encoding hatasi olusmasini onler
@@ -20,14 +20,16 @@ if sys.platform == 'win32':
 
 logger = logging.getLogger(__name__)
 
+from utils.patterns import SingletonMeta
 
-class DataLoader:
+
+class DataLoader(metaclass=SingletonMeta):
     """
     Fetches the full NxN time matrix from the Supabase `time_matrix` table.
-    Uses a singleton pattern so the matrix is only loaded once per server session.
+    Uses SingletonMeta (thread-safe double-checked locking) so the matrix is
+    loaded exactly once per server session.
     Falls back to coordinate-based distance calculation if a pair is missing.
     """
-    _instance = None
 
     def __init__(self):
         # Try Supabase first
@@ -95,9 +97,8 @@ class DataLoader:
 
     @classmethod
     def get_instance(cls) -> "DataLoader":
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
+        """Returns the singleton instance (backward-compatible alias)."""
+        return cls()
 
     def get_submatrix(
         self,

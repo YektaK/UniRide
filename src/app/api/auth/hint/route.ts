@@ -56,16 +56,36 @@ export async function POST(request: Request) {
         if (!emailOrStudentNumber) {
             return NextResponse.json({ error: 'E-posta veya öğrenci numarası gerekli' }, { status: 400 });
         }
+        if (typeof emailOrStudentNumber !== "string") {
+            return NextResponse.json({ error: 'Geçersiz kullanıcı bilgisi formatı' }, { status: 400 });
+        }
+
+        const normalizedInput = emailOrStudentNumber.trim();
+        if (!normalizedInput) {
+            return NextResponse.json({ error: 'E-posta veya öğrenci numarası gerekli' }, { status: 400 });
+        }
 
         // Use admin client to bypass RLS — password_hint is intentionally non-sensitive
         const adminClient = getSupabaseAdmin();
-
-        const { data, error } = await adminClient
+        const baseQuery = adminClient
             .from('users')
             .select('password_hint')
-            .or(`email.eq.${emailOrStudentNumber.toLowerCase()},student_number.eq.${emailOrStudentNumber}`)
-            .limit(1)
-            .single();
+            .limit(1);
+
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        const studentNumberRegex = /^[a-zA-Z0-9_-]{3,32}$/;
+
+        const query = emailRegex.test(normalizedInput)
+            ? baseQuery.eq("email", normalizedInput.toLowerCase())
+            : studentNumberRegex.test(normalizedInput)
+                ? baseQuery.eq("student_number", normalizedInput)
+                : null;
+
+        if (!query) {
+            return NextResponse.json({ error: 'Geçersiz e-posta veya öğrenci numarası formatı' }, { status: 400 });
+        }
+
+        const { data, error } = await query.single();
 
         if (error || !data) {
             // Return generic message to avoid user enumeration

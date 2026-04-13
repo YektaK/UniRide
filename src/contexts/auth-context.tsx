@@ -2,14 +2,14 @@
 "use client";
 
 import type { User } from "@/types";
-import type { Dispatch, ReactNode, SetStateAction } from "react";
+import type { ReactNode } from "react";
 import React, { createContext, useState, useEffect } from "react";
 import { signIn, signOutUser, onAuthStateChange } from "@/lib/supabase-auth";
 
 interface AuthContextType {
   user: User | null;
-  setUser: Dispatch<SetStateAction<User | null>>;
   isLoading: boolean;
+  updateUser: (updatedUser: User) => void;
   login: (emailOrUsername: string, password_param: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -57,8 +57,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateUser = (updatedUser: User) => {
+    setUser((currentUser) => {
+      if (!currentUser || currentUser.id !== updatedUser.id) {
+        return currentUser;
+      }
+
+      return {
+        ...currentUser,
+        name: updatedUser.name,
+        homeAddress: updatedUser.homeAddress,
+        homeCoordinates: updatedUser.homeCoordinates,
+        accessibilityNeeds: updatedUser.accessibilityNeeds,
+        disabilityType: updatedUser.disabilityType,
+        locationCode: updatedUser.locationCode,
+        weeklyScheduleId: updatedUser.weeklyScheduleId,
+        passwordHint: updatedUser.passwordHint,
+      };
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, setUser, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, updateUser, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

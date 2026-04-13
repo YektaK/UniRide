@@ -37,7 +37,13 @@ CREATE POLICY "users_insert_self"
 -- Users can update their own data
 CREATE POLICY "users_update_own"
   ON users FOR UPDATE
-  USING (auth.uid() = id);
+  USING (auth.uid() = id)
+  WITH CHECK (
+    auth.uid() = id
+    AND role IS NOT DISTINCT FROM (
+      SELECT u.role FROM users u WHERE u.id = auth.uid()
+    )
+  );
 
 -- Service role can do anything (for admin operations via server)
 -- Note: This requires using service_role key on server-side
@@ -109,7 +115,7 @@ CREATE POLICY "notifications_update_own"
 
 -- System can create notifications (using service role)
 CREATE POLICY "notifications_insert_system"
-  ON notifications FOR INSERT
+  ON notifications FOR INSERT TO service_role
   WITH CHECK (true);
 
 -- ==================== ADMIN SETTINGS POLICIES ====================

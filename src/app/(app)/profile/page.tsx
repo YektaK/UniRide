@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { UserCog } from "lucide-react";
 
 export default function ProfilePage() {
-  const { user, isLoading, setUser } = useAuth();
+  const { user, isLoading, updateUser } = useAuth();
 
   if (isLoading) {
     return <Card><CardHeader><CardTitle>Yükleniyor...</CardTitle></CardHeader><CardContent><p>Profil bilgileriniz yükleniyor.</p></CardContent></Card>;
@@ -27,7 +27,7 @@ export default function ProfilePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ProfileForm currentUser={user} onUpdateProfile={setUser} />
+          <ProfileForm currentUser={user} onUpdateProfile={updateUser} />
         </CardContent>
       </Card>
     </div>

@@ -27,6 +27,19 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
 
+# TSPLIB parser for benchmark problems
+from utils.tsplib_parser import (
+    get_available_problems as get_tsplib_problems,
+    get_problem_by_name,
+    load_problem_coordinates,
+    TSPLIBProblemInfo,
+    TSPLIB_OPTIMALS,
+    euclidean_distance_2d,
+    parse_tsplib_file,
+    download_tsplib_problem,
+    ensure_tsplib_problems,
+)
+
 from models.schemas import (
     OptimizationRequest, OptimizationResponse,
     CompareRequest, CompareResponse, AlgorithmResult,
@@ -43,7 +56,7 @@ from strategies import (
 from utils.resource_profiler import ResourceProfiler
 from utils.time_window_extractor import TimeWindowExtractor
 from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
-from benchmark_runner import BenchmarkRunner, BenchmarkProblem, AlgorithmConfig
+from benchmark_runner import BenchmarkRunner, BenchmarkProblem, AlgorithmConfig, ExperimentResult
 
 # Create FastAPI app
 app = FastAPI(
@@ -88,16 +101,19 @@ app = FastAPI(
     - `POST /api/v1/compare` - Compare all algorithms
     - `GET /api/v1/strategies` - List available strategies
     - `POST /api/v1/extract-time-windows` - Extract time windows from weekly schedules
+    - `GET /api/v1/benchmark/problems` - List available TSPLIB benchmark problems
+    - `GET /api/v1/benchmark/results/{run_id}` - Get benchmark results
     """,
     version="3.1.0"
 )
 
 # CORS middleware
-# Read allowed origins from ALLOWED_ORIGINS env var (comma-separated).
-# Default to localhost dev server. Set ALLOWED_ORIGINS=* only if truly needed.
 _allowed_origins = [
     o.strip()
-    for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:9002,http://127.0.0.1:9002").split(",")
+    for o in os.getenv(
+        "ALLOWED_ORIGINS",
+        "http://localhost:9002,http://127.0.0.1:9002,http://localhost:3000,http://127.0.0.1:3000"
+    ).split(",")
     if o.strip()
 ]
 app.add_middleware(
@@ -681,27 +697,108 @@ def calculate_vehicles(request: OptimizationRequest) -> OptimizationResponse:
 
 
 # ============================================================
-# BENCHMARK ENDPOINTS (TSP Benchmark Studio Integration)
+# BENCHMARK ENDPOINTS
 # ============================================================
-# 
-# 🔴 CRITICAL ARCHITECTURE DEBT - See docs/BENCHMARK_ARCHITECTURE_DEBT.md
-# 
-# ISSUE: Benchmark runner is never actually started!
-# - POST /api/v1/benchmark/run creates state but doesn't run benchmark
-# - BenchmarkRunner imported but never instantiated/executed
-# - Frontend polling /status gets infinite "running" with 0% progress
-# - 2-3 hour benchmarks would block Uvicorn worker (if started)
-#
-# SOLUTION: Use daemon thread for non-blocking execution
-# See: docs/BENCHMARK_ARCHITECTURE_DEBT.md for implementation details
-#
-# TODO[P0]: Replace start_benchmark() with daemon thread implementation
-# TODO[P0]: Add state_manager callbacks to BenchmarkRunner
-# TODO[P1]: Add concurrent benchmark limit (max 3 running)
-# TODO[P1]: Implement graceful shutdown handler
+# TSPLIB Benchmark integration via daemon threads.
+# Supports TSP, CVRP, and CVRPTW problem types.
 # ============================================================
 
 from benchmark_state import benchmark_state_manager, BenchmarkStatus, MAX_CONCURRENT_BENCHMARKS
+
+
+@app.get("/api/v1/benchmark/problems")
+def list_benchmark_problems(
+    category: Optional[str] = Query(None, description="Filter by category: small, medium, large")
+) -> List[Dict]:
+    """
+    List available TSPLIB benchmark problems for selection.
+    
+    Returns problem metadata including:
+    - name, dimension, category, optimal score (if known)
+    - Whether the problem file is available locally
+    
+    Args:
+        category: Optional filter (small/medium/large)
+    """
+    problems = get_tsplib_problems()
+    
+    if category:
+        problems = [p for p in problems if p.category == category]
+    
+    return [
+        {
+            "name": p.name,
+            "dimension": p.dimension,
+            "optimal": p.optimal,
+            "category": p.category,
+            "problem_type": p.problem_type,
+            "edge_weight_type": p.edge_weight_type,
+            "available": p.file_path is not None,
+        }
+        for p in problems
+    ]
+
+
+@app.get("/api/v1/benchmark/problems/{problem_name}")
+def get_benchmark_problem_detail(problem_name: str) -> Dict:
+    """Get detailed info about a specific TSPLIB problem including coordinates."""
+    info = get_problem_by_name(problem_name)
+    
+    if not info:
+        raise HTTPException(status_code=404, detail=f"Problem '{problem_name}' not found")
+    
+    result = {
+        "name": info.name,
+        "dimension": info.dimension,
+        "optimal": info.optimal,
+        "category": info.category,
+        "problem_type": info.problem_type,
+        "edge_weight_type": info.edge_weight_type,
+        "available": info.file_path is not None,
+        "coordinates": None,
+    }
+    
+    # Include coordinates if requested
+    if info.file_path:
+        coords = load_problem_coordinates(problem_name)
+        if coords:
+            result["coordinates"] = coords
+    
+    return result
+
+
+@app.get("/api/v1/benchmark/results/{run_id}")
+def get_benchmark_results(run_id: str) -> Dict:
+    """
+    Get results from a completed benchmark run.
+    
+    Returns list of experiment results with tour_length, elapsed_ms, gap_percent
+    for each algorithm-problem-run combination.
+    """
+    state = benchmark_state_manager.get_run(run_id)
+    
+    if not state:
+        raise HTTPException(status_code=404, detail=f"Benchmark run {run_id} not found")
+    
+    if state.status != BenchmarkStatus.COMPLETED:
+        return {
+            "run_id": run_id,
+            "status": state.status.value,
+            "results": [],
+            "message": f"Benchmark is still {state.status.value}. Use /api/v1/benchmark/status for progress.",
+            "parameters": state.parameters,
+        }
+    
+    # Return results stored in state by BenchmarkRunner
+    return {
+        "run_id": run_id,
+        "status": state.status.value,
+        "results_count": state.results_count,
+        "total_experiments": state.total_experiments,
+        "message": state.message,
+        "parameters": state.parameters,
+        "results": state.results,
+    }
 
 
 @app.post("/api/v1/benchmark/run")
@@ -794,11 +891,46 @@ def start_benchmark(
             """
             Background task executed in daemon thread.
             Runs benchmark using real strategies and updates state_manager with progress.
-            
-            See: docs/BENCHMARK_ARCHITECTURE_DEBT.md for rationale
             """
             try:
                 logger.info(f"[Benchmark] Executor thread started: {run_id}")
+                
+                # ✅ Resolve problem names to BenchmarkProblem objects
+                benchmark_problems: List[BenchmarkProblem] = []
+                for problem_name in problems:
+                    info = get_problem_by_name(problem_name)
+                    if not info or not info.file_path:
+                        logger.warning(f"[Benchmark] Problem '{problem_name}' not found, skipping")
+                        continue
+                    
+                    coords = load_problem_coordinates(problem_name)
+                    if not coords:
+                        logger.warning(f"[Benchmark] Could not load coordinates for '{problem_name}', skipping")
+                        continue
+                    
+                    bp = BenchmarkProblem(
+                        name=info.name,
+                        dimension=info.dimension,
+                        coordinates=coords,
+                        optimal_score=info.optimal,
+                        category=info.category,
+                        problem_type="tsp",  # Default to TSP; CVRPTW can be added via problem_type param
+                        depot_index=0,
+                    )
+                    benchmark_problems.append(bp)
+                
+                if not benchmark_problems:
+                    benchmark_state_manager.fail_run(run_id, "No valid problems found")
+                    return
+                
+                # ✅ Resolve algorithm configs
+                algo_configs: List[AlgorithmConfig] = []
+                for algo_dict in algorithms:
+                    algo_configs.append(AlgorithmConfig(
+                        name=algo_dict.get("id", algo_dict.get("name", "unknown")),
+                        algorithm_id=algo_dict.get("id", algo_dict.get("name", "unknown")),
+                        params=algo_dict.get("params", {}),
+                    ))
                 
                 # ✅ Create runner with state manager callbacks
                 runner = BenchmarkRunner(
@@ -809,8 +941,8 @@ def start_benchmark(
                 
                 # ✅ Run benchmark (will update state_manager automatically)
                 runner.run(
-                    problems=problems,
-                    algorithms=algorithms,
+                    problems=benchmark_problems,
+                    algorithms=algo_configs,
                     n_runs=n_runs,
                     seed=settings.get("seed", 42),
                     skip_cached=settings.get("skip_cached", False)
@@ -925,7 +1057,474 @@ def stop_benchmark(run_id: str) -> Dict:
     }
 
 
+@app.post("/api/v1/benchmark/download/{problem_name}")
+def download_benchmark_problem(problem_name: str) -> Dict:
+    """
+    Download a missing TSPLIB problem file from the official archive.
+
+    If the file already exists locally, returns its path immediately.
+    Otherwise attempts to download from the Heidelberg TSPLIB95 server.
+    Tries two URL patterns:
+      1. {NAME}.tsp.tgz  (compressed archive)
+      2. {NAME}/{NAME}.tsp  (direct file)
+
+    Args:
+        problem_name: TSPLIB problem name (e.g. "eil51")
+
+    Returns:
+        {
+            "problem_name": str,
+            "status": "downloaded" | "already_existed" | "failed",
+            "file_path": str | None,
+            "message": str
+        }
+    """
+    # Validate name against known problems (optional but helpful)
+    name_lower = problem_name.lower().strip()
+
+    # Check if already available locally
+    info = get_problem_by_name(name_lower)
+    if info and info.file_path:
+        return {
+            "problem_name": name_lower,
+            "status": "already_existed",
+            "file_path": info.file_path,
+            "message": f"Problem '{name_lower}' already available at {info.file_path}",
+        }
+
+    # Attempt download
+    logger.info(f"[Benchmark] Download request for problem '{name_lower}'")
+    result_path = download_tsplib_problem(name_lower)
+
+    if result_path:
+        return {
+            "problem_name": name_lower,
+            "status": "downloaded",
+            "file_path": result_path,
+            "message": f"Successfully downloaded '{name_lower}' to {result_path}",
+        }
+
+    return {
+        "problem_name": name_lower,
+        "status": "failed",
+        "file_path": None,
+        "message": (
+            f"Could not download '{name_lower}'. "
+            f"The problem may not exist in the TSPLIB archive, or the server is unreachable."
+        ),
+    }
+
+
+# ============================================================
+# CLI → WEB IMPORT BRIDGE
+# ============================================================
+# Seçenek A: CLI benchmark sonuçlarını web arayüzünde görüntülenebilir hale getiren
+# import endpoint'leri. CLI JSON dosyalarını okuyup, benchmark_state_manager
+# formatına çevirir. Böylece mevcut /benchmark/results/{run_id} endpoint'i
+# ile CLI sonuçları da web frontend'de gösterilebilir.
+#
+# CLI Format:  {problem, dimension, category, optimal, strategy, avg_length, avg_gap,
+#               best_length, best_gap, avg_time_ms, n_runs, timestamp, numba_optimized}
+# Web Format:  {algorithm, problem, run_number, tour_length, elapsed_ms, gap_percent,
+#               timestamp, metadata: {problem_dimension, problem_category, ...}}
+# ============================================================
+
+import json
+import glob as glob_mod
+from datetime import datetime, timezone
+
+# CLI benchmark results klasörü
+CLI_RESULTS_DIR = os.path.join(os.path.dirname(__file__), "tests", "benchmark_results")
+CLI_RESULTS_NUMBA_DIR = os.path.join(os.path.dirname(__file__), "tests", "benchmark_results_numba")
+
+
+def _convert_cli_record_to_web(cli_record: Dict, run_number: int = 1) -> Dict:
+    """
+    Convert a single CLI benchmark record to web ExperimentResult format.
+
+    CLI stores aggregated data (avg/best over N runs).
+    We expand into N individual records — one per conceptual "run".
+    For the best-gap run (run_number=1), we use best_length/best_gap.
+    For other runs, we use avg_length/avg_gap as representative.
+
+    Args:
+        cli_record: Single record from CLI JSON file
+        run_number: Virtual run number (1..n_runs)
+
+    Returns:
+        Dict compatible with web BenchmarkRunner's ExperimentResult asdict format
+    """
+    is_best_run = (run_number == 1)
+
+    return {
+        "algorithm": cli_record.get("strategy", "unknown"),
+        "problem": cli_record.get("problem", "unknown"),
+        "run_number": run_number,
+        "tour_length": float(cli_record.get("best_length", cli_record.get("avg_length", 0)))
+        if is_best_run
+        else float(cli_record.get("avg_length", 0)),
+        "elapsed_ms": float(cli_record.get("avg_time_ms", 0)),
+        "gap_percent": float(cli_record.get("best_gap", cli_record.get("avg_gap", 0)))
+        if is_best_run
+        else float(cli_record.get("avg_gap", 0)),
+        "timestamp": cli_record.get("timestamp", datetime.now(timezone.utc).isoformat()),
+        "metadata": {
+            "problem_dimension": cli_record.get("dimension", 0),
+            "problem_type": "tsp",
+            "problem_category": cli_record.get("category", "unknown"),
+            "optimal_score": cli_record.get("optimal"),
+            "n_runs": cli_record.get("n_runs", 3),
+            "numba_optimized": cli_record.get("numba_optimized", True),
+            "algorithm_type": cli_record.get("algorithm_type", "local_search"),
+            "source": "cli_import",
+            "execution_failed": False,
+            "routes_count": 1,
+            "vehicles_used": 1,
+            # Preserve original CLI fields for reference
+            "cli_avg_length": cli_record.get("avg_length"),
+            "cli_best_length": cli_record.get("best_length"),
+            "cli_avg_gap": cli_record.get("avg_gap"),
+            "cli_best_gap": cli_record.get("best_gap"),
+            "cli_avg_time_ms": cli_record.get("avg_time_ms"),
+        },
+    }
+
+
+def _find_cli_json_files() -> List[Dict]:
+    """
+    Scan CLI benchmark result directories for JSON files.
+
+    Returns:
+        List of dicts: {filename, filepath, size_bytes, modified_time, source_dir}
+    """
+    files = []
+
+    for search_dir in [CLI_RESULTS_DIR, CLI_RESULTS_NUMBA_DIR]:
+        if not os.path.isdir(search_dir):
+            continue
+
+        pattern = os.path.join(search_dir, "*.json")
+        for filepath in sorted(glob_mod.glob(pattern)):
+            try:
+                stat = os.stat(filepath)
+                files.append({
+                    "filename": os.path.basename(filepath),
+                    "filepath": filepath,
+                    "size_bytes": stat.st_size,
+                    "modified_time": datetime.fromtimestamp(
+                        stat.st_mtime, tz=timezone.utc
+                    ).isoformat(),
+                    "source_dir": os.path.basename(search_dir),
+                })
+            except OSError:
+                continue
+
+    return files
+
+
+def _load_and_validate_cli_json(filepath: str) -> List[Dict]:
+    """
+    Load CLI JSON file and validate format.
+
+    Args:
+        filepath: Absolute path to CLI JSON file
+
+    Returns:
+        List of CLI records
+
+    Raises:
+        HTTPException: If file cannot be read or format is invalid
+    """
+    if not os.path.isfile(filepath):
+        raise HTTPException(status_code=404, detail=f"Dosya bulunamadı: {filepath}")
+
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=400, detail=f"JSON parse hatası: {e}")
+
+    if not isinstance(data, list):
+        raise HTTPException(
+            status_code=400,
+            detail="CLI JSON dosyası bir dizi (array) olmalıdır"
+        )
+
+    if not data:
+        raise HTTPException(status_code=400, detail="CLI JSON dosyası boş")
+
+    # Validate required fields in first record
+    required_fields = ["problem", "strategy", "dimension"]
+    first = data[0]
+    missing = [f for f in required_fields if f not in first]
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Eksik zorunlu alanlar: {missing}. Beklenen format: CLI benchmark JSON"
+        )
+
+    return data
+
+
+@app.get("/api/v1/benchmark/cli/files")
+def list_cli_benchmark_files() -> Dict:
+    """
+    List available CLI benchmark JSON files for import.
+
+    Returns all JSON files found in optimizer_api/tests/benchmark_results/
+    and optimizer_api/tests/benchmark_results_numba/ directories.
+
+    Each file can be imported via POST /api/v1/benchmark/cli/import
+    """
+    files = _find_cli_json_files()
+
+    return {
+        "total_files": len(files),
+        "scan_directories": [
+            d for d in [CLI_RESULTS_DIR, CLI_RESULTS_NUMBA_DIR]
+            if os.path.isdir(d)
+        ],
+        "files": files,
+    }
+
+
+@app.post("/api/v1/benchmark/cli/import")
+def import_cli_benchmark_results(
+    filepath: str = "",
+    filename: str = "",
+    run_id: Optional[str] = None,
+    label: Optional[str] = None,
+) -> Dict:
+    """
+    Import CLI benchmark results into the web benchmark state manager.
+
+    This endpoint reads a CLI JSON file (from run_smart_benchmark_numba.py
+    or run_interactive_benchmark_v2_numba.py), converts each record to the
+    web ExperimentResult format, and registers them in the benchmark_state_manager.
+
+    Once imported, the results can be viewed via:
+      - GET /api/v1/benchmark/results/{run_id}
+      - GET /api/v1/benchmark/status/{run_id}
+
+    Args:
+        filepath: Absolute or relative path to CLI JSON file
+                  (relative to optimizer_api/tests/benchmark_results/)
+        filename: Alternative: just the filename (searches in known directories)
+        run_id: Custom run_id. If not provided, auto-generated as "cli-import-{timestamp}"
+        label: Optional label for the run (e.g., "Numba Small Problems Run")
+
+    Returns:
+        {
+            "run_id": str,
+            "status": "completed",
+            "results_count": int,
+            "source_file": str,
+            "summary": {...}
+        }
+    """
+    # Resolve filepath
+    if not filepath and not filename:
+        raise HTTPException(
+            status_code=400,
+            detail="filepath veya filename parametresi gerekiyor"
+        )
+
+    if filename and not filepath:
+        # Search in known directories
+        for search_dir in [CLI_RESULTS_DIR, CLI_RESULTS_NUMBA_DIR]:
+            candidate = os.path.join(search_dir, filename)
+            if os.path.isfile(candidate):
+                filepath = candidate
+                break
+
+        if not filepath:
+            raise HTTPException(
+                status_code=404,
+                detail=f"'{filename}' bulunamadı. GET /api/v1/benchmark/cli/files ile mevcut dosyaları kontrol edin."
+            )
+
+    # Normalize path
+    filepath = os.path.abspath(filepath)
+
+    # Load and validate
+    cli_records = _load_and_validate_cli_json(filepath)
+
+    # Generate run_id
+    if not run_id:
+        timestamp_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        run_id = f"cli-import-{timestamp_str}"
+
+    # Check if run_id already exists
+    existing = benchmark_state_manager.get_run(run_id)
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Run ID '{run_id}' zaten mevcut. Farklı bir run_id kullanın."
+        )
+
+    # Convert CLI records to web format
+    web_results = []
+    for record in cli_records:
+        n_runs = record.get("n_runs", 3)
+        # Expand aggregated CLI record into n_runs individual web records
+        for run_num in range(1, n_runs + 1):
+            web_record = _convert_cli_record_to_web(record, run_number=run_num)
+            web_results.append(web_record)
+
+    # Determine unique problems and strategies for summary
+    unique_problems = list(set(r["problem"] for r in cli_records))
+    unique_strategies = list(set(r["strategy"] for r in cli_records))
+    categories = list(set(r.get("category", "unknown") for r in cli_records))
+
+    # Create run state (immediately completed — no background thread needed)
+    state = benchmark_state_manager.create_run(
+        run_id=run_id,
+        total_experiments=len(web_results),
+        parameters={
+            "source": "cli_import",
+            "source_file": os.path.basename(filepath),
+            "source_path": filepath,
+            "label": label or f"CLI Import: {os.path.basename(filepath)}",
+            "imported_at": datetime.now(timezone.utc).isoformat(),
+            "problems": unique_problems,
+            "algorithms": unique_strategies,
+            "categories": categories,
+            "original_record_count": len(cli_records),
+            "n_runs_per_combination": cli_records[0].get("n_runs", 3) if cli_records else 1,
+        }
+    )
+
+    # Add all results and mark as completed
+    for result in web_results:
+        benchmark_state_manager.add_result(run_id, result)
+
+    benchmark_state_manager.complete_run(
+        run_id=run_id,
+        results_count=len(web_results),
+        message=f"CLI'dan {len(cli_records)} kayıt içe aktarıldı ({os.path.basename(filepath)})"
+    )
+
+    logger.info(
+        f"[CLI Import] Imported {len(cli_records)} CLI records → {len(web_results)} web records "
+        f"as run_id='{run_id}' from {os.path.basename(filepath)}"
+    )
+
+    # Build summary
+    summary = {
+        "unique_problems": len(unique_problems),
+        "unique_strategies": len(unique_strategies),
+        "categories": categories,
+        "problems": unique_problems,
+        "strategies": unique_strategies,
+    }
+
+    # Per-strategy best gap summary
+    strategy_best = {}
+    for r in cli_records:
+        strat = r.get("strategy", "unknown")
+        best_gap = r.get("best_gap", float("inf"))
+        if strat not in strategy_best or best_gap < strategy_best[strat]["best_gap"]:
+            strategy_best[strat] = {
+                "best_gap": best_gap,
+                "avg_gap": r.get("avg_gap", 0),
+                "best_length": r.get("best_length", 0),
+                "problem": r.get("problem", ""),
+            }
+    summary["strategy_best"] = strategy_best
+
+    return {
+        "run_id": run_id,
+        "status": "completed",
+        "results_count": len(web_results),
+        "source_file": os.path.basename(filepath),
+        "source_path": filepath,
+        "original_records": len(cli_records),
+        "summary": summary,
+        "message": f"CLI sonuçları içe aktarıldı. GET /api/v1/benchmark/results/{run_id} ile görüntüleyin",
+    }
+
+
+@app.get("/api/v1/benchmark/cli/preview")
+def preview_cli_import(
+    filepath: str = "",
+    filename: str = "",
+) -> Dict:
+    """
+    Preview CLI benchmark file content without importing.
+
+    Shows the first N records in both original CLI format and
+    converted web format, so you can verify the conversion
+    before importing.
+
+    Args:
+        filepath: Absolute or relative path to CLI JSON file
+        filename: Alternative: just the filename
+
+    Returns:
+        {
+            "file": {...},
+            "total_records": int,
+            "preview": [converted_records],
+            "problems": [...],
+            "strategies": [...],
+            "categories": [...]
+        }
+    """
+    if not filepath and filename:
+        for search_dir in [CLI_RESULTS_DIR, CLI_RESULTS_NUMBA_DIR]:
+            candidate = os.path.join(search_dir, filename)
+            if os.path.isfile(candidate):
+                filepath = candidate
+                break
+
+    if not filepath:
+        raise HTTPException(status_code=400, detail="filepath veya filename gerekiyor")
+
+    filepath = os.path.abspath(filepath)
+    cli_records = _load_and_validate_cli_json(filepath)
+
+    # Convert first 3 records for preview
+    preview_records = []
+    for record in cli_records[:3]:
+        converted = _convert_cli_record_to_web(record, run_number=1)
+        preview_records.append({
+            "original": {
+                "problem": record.get("problem"),
+                "dimension": record.get("dimension"),
+                "strategy": record.get("strategy"),
+                "optimal": record.get("optimal"),
+                "avg_length": record.get("avg_length"),
+                "best_length": record.get("best_length"),
+                "avg_gap": record.get("avg_gap"),
+                "best_gap": record.get("best_gap"),
+                "avg_time_ms": record.get("avg_time_ms"),
+                "n_runs": record.get("n_runs"),
+            },
+            "converted_web": converted,
+        })
+
+    unique_problems = list(set(r["problem"] for r in cli_records))
+    unique_strategies = list(set(r["strategy"] for r in cli_records))
+    categories = list(set(r.get("category", "unknown") for r in cli_records))
+
+    return {
+        "file": {
+            "name": os.path.basename(filepath),
+            "path": filepath,
+            "size_bytes": os.path.getsize(filepath),
+        },
+        "total_records": len(cli_records),
+        "unique_problems": len(unique_problems),
+        "unique_strategies": len(unique_strategies),
+        "problems": unique_problems,
+        "strategies": unique_strategies,
+        "categories": categories,
+        "preview": preview_records,
+        "message": f"Bu dosyayı import etmek için POST /api/v1/benchmark/cli/import?filename={os.path.basename(filepath)}",
+    }
+
+
 # Run server
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8099, reload=True)

@@ -8,8 +8,8 @@ import type { User } from "@/types"; // UserRole importu User tipinden gelecek
 // Keep the login signature general for now, will be specified in AuthContextType
 interface AuthContextType {
   user: User | null;
-  setUser: React.Dispatch<React.SetStateAction<User | null>>;
   isLoading: boolean;
+  updateUser: (updatedUser: User) => void;
   login: (emailOrUsername: string, password_param: string) => Promise<void>; // role parametresi kaldırıldı
   logout: () => Promise<void>;
 }

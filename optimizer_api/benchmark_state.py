@@ -29,8 +29,8 @@ See: docs/BENCHMARK_ARCHITECTURE_DEBT.md for full architecture
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, Optional, List
-from datetime import datetime
+from typing import Dict, Optional, List, Any
+from datetime import datetime, timezone
 from enum import Enum
 import threading
 
@@ -55,10 +55,11 @@ class BenchmarkRunState:
     total_experiments: int = 0
     completed_experiments: int = 0
     results_count: int = 0
-    start_time: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    start_time: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     end_time: Optional[str] = None
     message: str = "Başlatılıyor..."
     parameters: Dict = field(default_factory=dict)
+    results: List[Dict[str, Any]] = field(default_factory=list)
 
 
 class BenchmarkStateManager:
@@ -106,13 +107,20 @@ class BenchmarkStateManager:
                 if message:
                     self._runs[run_id].message = message
     
+    def add_result(self, run_id: str, result: Dict[str, Any]):
+        """Append a single experiment result to the run's results list."""
+        with self._lock:
+            if run_id in self._runs:
+                self._runs[run_id].results.append(result)
+                self._runs[run_id].results_count = len(self._runs[run_id].results)
+
     def complete_run(self, run_id: str, results_count: int, message: str = ""):
         """Mark a run as completed"""
         with self._lock:
             if run_id in self._runs:
                 self._runs[run_id].status = BenchmarkStatus.COMPLETED
                 self._runs[run_id].results_count = results_count
-                self._runs[run_id].end_time = datetime.utcnow().isoformat()
+                self._runs[run_id].end_time = datetime.now(timezone.utc).isoformat()
                 self._runs[run_id].completed_experiments = self._runs[run_id].total_experiments
                 if message:
                     self._runs[run_id].message = message
@@ -122,7 +130,7 @@ class BenchmarkStateManager:
         with self._lock:
             if run_id in self._runs:
                 self._runs[run_id].status = BenchmarkStatus.FAILED
-                self._runs[run_id].end_time = datetime.utcnow().isoformat()
+                self._runs[run_id].end_time = datetime.now(timezone.utc).isoformat()
                 if message:
                     self._runs[run_id].message = message
     
@@ -131,7 +139,7 @@ class BenchmarkStateManager:
         with self._lock:
             if run_id in self._runs:
                 self._runs[run_id].status = BenchmarkStatus.STOPPED
-                self._runs[run_id].end_time = datetime.utcnow().isoformat()
+                self._runs[run_id].end_time = datetime.now(timezone.utc).isoformat()
                 if message:
                     self._runs[run_id].message = message
     

@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS vehicles (
   plate_number TEXT,
   wheelchair_capacity INTEGER NOT NULL DEFAULT 0,
   seating_capacity INTEGER NOT NULL DEFAULT 0,
+  cooldown_minutes INTEGER NOT NULL DEFAULT 10,
   status TEXT NOT NULL CHECK (status IN ('active', 'inactive', 'maintenance')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -182,4 +183,3 @@ ALTER TABLE routes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE route_assignments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_settings ENABLE ROW LEVEL SECURITY;
-

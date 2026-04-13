@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const BACKEND_URL = process.env.OPTIMIZER_API_URL || "http://localhost:8000";
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category");
 
-    // Build query params - forward category filter
     const params = new URLSearchParams();
     if (category) params.set("category", category);
 
-    // Use gateway proxy: relative path + XTransformPort for Python API (port 8000)
-    const pythonPath = `/api/v1/benchmark/problems${params.toString() ? `?${params.toString()}&` : "?"}XTransformPort=8099`;
+    const url = `${BACKEND_URL}/api/v1/benchmark/problems${params.toString() ? `?${params.toString()}` : ""}`;
 
-    const response = await fetch(pythonPath, {
+    const response = await fetch(url, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       signal: AbortSignal.timeout(15000),

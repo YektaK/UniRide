@@ -280,7 +280,19 @@ def _extract_tgz_to_dest(tgz_data: bytes, dest_dir: str, problem_name: str) -> O
 
             try:
                 with tarfile.open(tgz_path, 'r:gz') as tar:
-                    tar.extractall(path=tmpdir)
+                    # Guard against path traversal: only extract members whose
+                    # resolved path stays inside tmpdir.
+                    safe_members = []
+                    for member in tar.getmembers():
+                        member_path = os.path.realpath(os.path.join(tmpdir, member.name))
+                        if member_path.startswith(os.path.realpath(tmpdir) + os.sep) or \
+                                member_path == os.path.realpath(tmpdir):
+                            safe_members.append(member)
+                        else:
+                            logger.warning(
+                                f"Skipping unsafe tar member: {member.name}"
+                            )
+                    tar.extractall(path=tmpdir, members=safe_members)
             except tarfile.TarError:
                 logger.debug(f"Not a valid tar.gz archive for {problem_name}")
                 return None

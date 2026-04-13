@@ -56,6 +56,7 @@ import {
   type BenchmarkResult,
   type BenchmarkResultsResponse,
   fetchProblems,
+  fetchStrategies,
   startBenchmark,
   pollStatus,
   stopBenchmark,
@@ -177,11 +178,8 @@ export default function BenchmarkPage() {
   useEffect(() => {
     const checkApi = async () => {
       try {
-        const res = await fetch("/api/v1/strategies?XTransformPort=8099", {
-          method: "GET",
-          signal: AbortSignal.timeout(5000),
-        });
-        setIsApiOnline(res.ok);
+        const strategies = await fetchStrategies();
+        setIsApiOnline(strategies.length > 0);
       } catch {
         setIsApiOnline(false);
       }

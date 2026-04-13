@@ -310,11 +310,17 @@ class BenchmarkRunner:
                                 from dataclasses import asdict
                                 self.state_manager.add_result(self.run_id, asdict(result))
                             
+                            import math
+                            gap_str = (
+                                f"{result.gap_percent:.1f}%"
+                                if result.gap_percent is not None and not math.isnan(result.gap_percent)
+                                else "n/a"
+                            )
                             logger.info(
                                 f"[{completed}/{metadata['total_experiments']}] "
                                 f"{algorithm.algorithm_id} on {problem.name} "
                                 f"(run {run_num}): tour={result.tour_length:.1f} "
-                                f"gap={result.gap_percent:.1f}% "
+                                f"gap={gap_str} "
                                 f"({result.elapsed_ms:.1f}ms)"
                             )
                         except Exception as e:

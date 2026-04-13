@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
+const BACKEND_URL = process.env.OPTIMIZER_API_URL || "http://localhost:8000";
+
 const StopBenchmarkRequestSchema = z.object({
   run_id: z.string().min(1, "run_id gerekli"),
 });
@@ -19,12 +21,7 @@ export async function POST(request: NextRequest) {
 
     const { run_id } = parsed.data;
 
-    // Use gateway proxy: relative path + XTransformPort for Python API (port 8000)
-    const params = new URLSearchParams();
-    params.set("run_id", run_id);
-    const pythonPath = `/api/v1/benchmark/stop?${params.toString()}&XTransformPort=8099`;
-
-    const response = await fetch(pythonPath, {
+    const response = await fetch(`${BACKEND_URL}/api/v1/benchmark/stop`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ run_id }),

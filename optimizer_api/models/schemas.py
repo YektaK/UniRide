@@ -125,10 +125,10 @@ class OptimizationRequest(BaseModel):
         """Helper to get time windows from students if applicable
         
         Parses pickup_time and dropoff_time from StudentNode objects
-        into TimeWindow dicts keyed by student id.
+        into TimeWindow dicts keyed by student location_code.
         
         Time format: HH:MM (e.g., "08:30", "14:00")
-        Returns: Dict mapping student_id -> TimeWindow(earliest, latest)
+        Returns: Dict mapping location_code -> TimeWindow(earliest, latest)
         """
         time_windows: Dict[str, TimeWindow] = {}
         
@@ -150,7 +150,7 @@ class OptimizationRequest(BaseModel):
                     total_minutes = int(parts[0]) * 60 + int(parts[1])
                     # Default window: ±15 minutes around the target time
                     window_size = 30  # 30 minute window
-                    time_windows[student.id] = TimeWindow(
+                    time_windows[student.location_code] = TimeWindow(
                         earliest=max(0, total_minutes - window_size // 2),
                         latest=total_minutes + window_size // 2
                     )

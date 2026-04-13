@@ -66,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return {
         ...currentUser,
         name: updatedUser.name,
+        studentNumber: updatedUser.studentNumber,
         homeAddress: updatedUser.homeAddress,
         homeCoordinates: updatedUser.homeCoordinates,
         accessibilityNeeds: updatedUser.accessibilityNeeds,

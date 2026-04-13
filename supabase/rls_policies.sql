@@ -34,16 +34,32 @@ CREATE POLICY "users_insert_self"
   ON users FOR INSERT
   WITH CHECK (auth.uid() = id);
 
--- Users can update their own data
+-- Users can update their own data (role is protected by trigger below)
 CREATE POLICY "users_update_own"
   ON users FOR UPDATE
   USING (auth.uid() = id)
-  WITH CHECK (
-    auth.uid() = id
-    AND role IS NOT DISTINCT FROM (
-      SELECT u.role FROM users u WHERE u.id = auth.uid()
-    )
-  );
+  WITH CHECK (auth.uid() = id);
+
+-- Trigger: prevent self-role-escalation
+-- Users cannot change their own `role` column; only service_role (server-side) may do so.
+CREATE OR REPLACE FUNCTION prevent_role_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  IF NEW.role IS DISTINCT FROM OLD.role THEN
+    RAISE EXCEPTION 'Forbidden: role column cannot be changed by users';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS enforce_no_role_change ON users;
+CREATE TRIGGER enforce_no_role_change
+  BEFORE UPDATE OF role ON users
+  FOR EACH ROW
+  EXECUTE FUNCTION prevent_role_change();
 
 -- Service role can do anything (for admin operations via server)
 -- Note: This requires using service_role key on server-side

@@ -86,24 +86,27 @@ export interface BenchmarkRunResponse {
 // API Functions
 // ============================================================
 
-const PYTHON_API_BASE = "/api/v1/benchmark";
-const TRANSFORM_PORT = process.env.NEXT_PUBLIC_OPTIMIZER_PORT ?? "8099";
+// All benchmark calls go through Next.js API routes which proxy to OPTIMIZER_API_URL.
+// No XTransformPort gateway pattern needed here.
+const BENCHMARK_API_BASE = "/api/benchmark";
 
 /**
  * Fetch available TSPLIB problems
  */
 export async function fetchProblems(category?: string): Promise<BenchmarkProblem[]> {
   const params = new URLSearchParams();
-  params.set("XTransformPort", TRANSFORM_PORT);
   if (category) {
     params.set("category", category);
   }
 
-  const response = await fetch(`${PYTHON_API_BASE}/problems?${params.toString()}`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-    signal: AbortSignal.timeout(15000),
-  });
+  const response = await fetch(
+    `${BENCHMARK_API_BASE}/problems${params.toString() ? `?${params.toString()}` : ""}`,
+    {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(15000),
+    }
+  );
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -120,10 +123,7 @@ export async function fetchProblems(category?: string): Promise<BenchmarkProblem
  * Fetch available strategies from Python API
  */
 export async function fetchStrategies(): Promise<string[]> {
-  const params = new URLSearchParams();
-  params.set("XTransformPort", TRANSFORM_PORT);
-
-  const response = await fetch(`/api/v1/strategies?${params.toString()}`, {
+  const response = await fetch(`${BENCHMARK_API_BASE}/strategies`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
     signal: AbortSignal.timeout(10000),
@@ -152,12 +152,7 @@ export async function startBenchmark(
   problems: string[],
   settings: BenchmarkRunSettings
 ): Promise<BenchmarkRunResponse> {
-  const runId = `bench_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-  const params = new URLSearchParams();
-  params.set("XTransformPort", TRANSFORM_PORT);
-  params.set("run_id", runId);
-
-  const response = await fetch(`${PYTHON_API_BASE}/run?${params.toString()}`, {
+  const response = await fetch(`${BENCHMARK_API_BASE}/run`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -183,10 +178,9 @@ export async function startBenchmark(
  */
 export async function pollStatus(runId: string): Promise<BenchmarkStatus> {
   const params = new URLSearchParams();
-  params.set("XTransformPort", TRANSFORM_PORT);
   params.set("run_id", runId);
 
-  const response = await fetch(`${PYTHON_API_BASE}/status?${params.toString()}`, {
+  const response = await fetch(`${BENCHMARK_API_BASE}/status?${params.toString()}`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
     signal: AbortSignal.timeout(10000),
@@ -206,13 +200,10 @@ export async function pollStatus(runId: string): Promise<BenchmarkStatus> {
  * Stop a running benchmark
  */
 export async function stopBenchmark(runId: string): Promise<void> {
-  const params = new URLSearchParams();
-  params.set("XTransformPort", TRANSFORM_PORT);
-  params.set("run_id", runId);
-
-  const response = await fetch(`${PYTHON_API_BASE}/stop?${params.toString()}`, {
+  const response = await fetch(`${BENCHMARK_API_BASE}/stop`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ run_id: runId }),
     signal: AbortSignal.timeout(10000),
   });
 
@@ -228,10 +219,7 @@ export async function stopBenchmark(runId: string): Promise<void> {
  * Fetch benchmark results
  */
 export async function fetchResults(runId: string): Promise<BenchmarkResultsResponse> {
-  const params = new URLSearchParams();
-  params.set("XTransformPort", TRANSFORM_PORT);
-
-  const response = await fetch(`${PYTHON_API_BASE}/results/${runId}?${params.toString()}`, {
+  const response = await fetch(`${BENCHMARK_API_BASE}/results/${encodeURIComponent(runId)}`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
     signal: AbortSignal.timeout(30000),

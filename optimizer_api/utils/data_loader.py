@@ -99,22 +99,30 @@ class DataLoader:
             cls._instance = cls()
         return cls._instance
 
-    def get_submatrix(self, request_locations: List[str], coordinates: Optional[Dict[str, Dict[str, float]]] = None) -> List[List[float]]:
+    def get_submatrix(
+        self,
+        request_locations: List[str],
+        coordinates: Optional[Dict[str, Dict[str, float]]] = None,
+        geo_coords: bool = False,
+    ) -> List[List[float]]:
         """
         Extracts an NxN time submatrix for the given subset of location IDs.
-        Falls back to coordinate-based euclidean distance if matrix not loaded.
+        Falls back to coordinate-based distance if the Supabase matrix is not loaded.
 
         Args:
             request_locations: List of location IDs (same order as matrix indices)
             coordinates: Optional dict mapping location_id -> {"lat": float, "lng": float}.
-                         When provided and Supabase is unavailable, builds euclidean distance
-                         matrix from coordinates (L2 norm). This is correct for TSPLIB-style
-                         abstract X-Y coordinates.
+            geo_coords: When True and Supabase is unavailable, uses haversine distance
+                        converted to estimated travel minutes (for real geographic lat/lng).
+                        When False (default), uses L2 euclidean distance, which is correct
+                        for TSPLIB EUC_2D abstract X-Y coordinates.
         """
         n = len(request_locations)
 
         if self._use_coordinates or self.time_matrix is None:
             if coordinates:
+                if geo_coords:
+                    return self.build_haversine_matrix(request_locations, coordinates)
                 return self.build_euclidean_matrix(request_locations, coordinates)
             return [[0.0] * n for _ in range(n)]
 
@@ -162,6 +170,38 @@ class DataLoader:
                 dist = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
                 matrix[i][j] = dist
                 matrix[j][i] = dist
+        return matrix
+
+    @staticmethod
+    def build_haversine_matrix(
+        locations: List[str],
+        coordinates: Dict[str, Dict[str, float]],
+        avg_speed_kmh: float = 40.0,
+    ) -> List[List[float]]:
+        """
+        Build NxN travel-time matrix (minutes) from real geographic lat/lng coordinates
+        using the haversine formula.
+
+        Args:
+            locations: Ordered list of location IDs
+            coordinates: Dict mapping location_id -> {"lat": float, "lng": float}
+            avg_speed_kmh: Average vehicle speed used to convert distance to time
+
+        Returns:
+            NxN matrix where matrix[i][j] = estimated travel time in minutes
+        """
+        n = len(locations)
+        matrix = [[0.0] * n for _ in range(n)]
+        for i in range(n):
+            c1 = coordinates.get(locations[i], {})
+            lat1, lng1 = c1.get("lat", 0.0), c1.get("lng", 0.0)
+            for j in range(i + 1, n):
+                c2 = coordinates.get(locations[j], {})
+                lat2, lng2 = c2.get("lat", 0.0), c2.get("lng", 0.0)
+                dist_m = haversine_distance(lat1, lng1, lat2, lng2)
+                travel_min = estimate_travel_time(dist_m, avg_speed_kmh)
+                matrix[i][j] = travel_min
+                matrix[j][i] = travel_min
         return matrix
 
     def get_duration(self, from_loc: str, to_loc: str) -> float:

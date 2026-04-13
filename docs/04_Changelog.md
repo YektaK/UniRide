@@ -1,4 +1,12 @@
-﻿# 📝 UniRide Değişiklik Günlüğü (Changelog)
+﻿# 📝 UniRid## [14.04.2026] - Teknik Borç ve Güvenlik Sprinti
+
+### ✅ Tamamlananlar
+- **P1-2:** 9 strateji dosyasında singleton state mutation engellendi (Thread-safe).
+- **P0-2:** Admin rotaları için merkezi `AdminLayout` Role Guard eklendi.
+- **T-6:** 16 adet legacy/temp dosya `docs/old/legacy_code/` altına arşivlendi.
+- **T-4:** Core Logic (Split, Clustering, LocalSearch) test kapsamı %25'ten **%64**'e yükseltildi.
+
+e Değişiklik Günlüğü (Changelog)
 
 > Her anlamlı değişiklik sonrasında bu dosyaya kayıt eklenmeli.
 > Format: `[Tarih] [Geliştirici/AI] — Açıklama`

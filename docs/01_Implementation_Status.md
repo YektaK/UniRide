@@ -164,7 +164,7 @@
 Sırada olan önemli işler (14.04.2026 güncellenmiş):
 1. **P1-2: Strateji singleton state** — `ga/pso/gwo/hho_strategy.py`'de `self.config.update()` mutation'ı `/compare` concurrent senaryolarında veri bozulmasına yol açabilir
 2. **P0-2: Admin role guard** — Client-side role kontrolü admin sayfalarına eklenmeli
-3. **T-4: Test Coverage** — %25 → %60 hedefi (split, clustering, local_search)
+3. **T-4: Test Coverage (✅ %64)** — %25 → %60 hedefi (split, clustering, local_search)
 
 ---
 

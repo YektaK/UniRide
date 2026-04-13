@@ -41,15 +41,21 @@ CREATE POLICY "users_update_own"
   WITH CHECK (auth.uid() = id);
 
 -- Trigger: prevent self-role-escalation
--- Users cannot change their own `role` column; only service_role (server-side) may do so.
+-- Regular authenticated users cannot change the `role` column.
+-- Service-role connections (server-side admin operations) are exempt.
 CREATE OR REPLACE FUNCTION prevent_role_change()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
+  -- Allow service_role to change the role column (admin operations via server)
+  IF auth.role() = 'service_role' THEN
+    RETURN NEW;
+  END IF;
+
   IF NEW.role IS DISTINCT FROM OLD.role THEN
-    RAISE EXCEPTION 'Forbidden: role column cannot be changed by users';
+    RAISE EXCEPTION 'Direct role modification not allowed - use server-side admin endpoints';
   END IF;
   RETURN NEW;
 END;

@@ -310,7 +310,6 @@ class BenchmarkRunner:
                                 from dataclasses import asdict
                                 self.state_manager.add_result(self.run_id, asdict(result))
                             
-                            import math
                             gap_str = (
                                 f"{result.gap_percent:.1f}%"
                                 if result.gap_percent is not None and not math.isnan(result.gap_percent)

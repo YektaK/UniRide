@@ -1,0 +1,92 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+.genkit/*
+.env*
+
+# firebase
+firebase-debug.log
+firestore-debug.log
+
+# Vitest (Test sonuçları ve cache)
+.vitest-result/
+test-results/
+
+# Supabase (Yerel geliştirme yapıyorsanız)
+.supabase/
+
+# IDE Ayarları (İş ve ev PC farklı ayarlar isteyebilir)
+.vscode/
+.idea/
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+academic_benchmark/benchmark_db/history/
+optimizer_api/tests/__pycache__/
+optimizer_api/utils/__pycache__/
+academic_benchmark/benchmark_db/
+.github/skills/
+.sixth/
+.claude/*
+cache/
+.claude/skills/brainstorming/
+.claude/skills/*
+.github/skills/*
+.claude/skills/brainstorming/SKILL.md
+.claude/skills/brainstorming/SKILL.md
+.claude/skills/code-reviewer/SKILL.md
+.claude/skills/markitdown/SKILL.md
+.claude/skills/pdf-processing-pro/SKILL.md
+.claude/skills/senior-architect/SKILL.md
+.claude/skills/senior-fullstack/SKILL.md
+.claude/skills/using-superpowers/SKILL.md
+.claude/skills/webapp-testing/SKILL.md
+.claude/skills/xlsx/SKILL.md
+.github/skills/brainstorming/SKILL.md
+.github/skills/caveman-distillate/SKILL.md
+.github/skills/docx/SKILL.md
+.github/skills/pdf/SKILL.md
+.github/skills/receiving-code-review/SKILL.md
+.github/skills/requesting-code-review/SKILL.md
+.github/skills/writing-plans/SKILL.md
+.github/skills/xlsx/SKILL.md
+antigravity-god-mode

@@ -152,10 +152,16 @@ export async function startBenchmark(
   problems: string[],
   settings: BenchmarkRunSettings
 ): Promise<BenchmarkRunResponse> {
+  const now = new Date();
+  const timestamp = now.toISOString().replace(/[:\-T.]/g, "").substring(0, 14);
+  const randomSuffix = Math.random().toString(36).substring(2, 8);
+  const runId = `benchmark_${timestamp}_${randomSuffix}`;
+
   const response = await fetch(`${BENCHMARK_API_BASE}/run`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      run_id: runId,
       algorithms,
       problems,
       settings,

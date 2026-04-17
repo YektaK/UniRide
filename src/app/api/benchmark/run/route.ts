@@ -60,11 +60,16 @@ export async function POST(request: NextRequest) {
     const seed = settings.seed ?? 42;
     const skipCached = Boolean(settings.skipCached ?? false);
 
-    // Generate run ID
+    // Use caller-provided run ID if available; otherwise generate one
     const now = new Date();
+    const providedRunId = typeof body.run_id === 'string'
+      ? body.run_id.trim()
+      : typeof body.runId === 'string'
+        ? body.runId.trim()
+        : '';
     const timestamp = now.toISOString().replace(/[:\-T.]/g, '').substring(0, 14);
     const randomSuffix = Math.random().toString(36).substring(2, 8);
-    const runId = `benchmark_${timestamp}_${randomSuffix}`;
+    const runId = providedRunId || `benchmark_${timestamp}_${randomSuffix}`;
 
     // Build benchmark request for Python backend
     const benchmarkRequest = {

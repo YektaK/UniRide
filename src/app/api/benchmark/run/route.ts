@@ -62,12 +62,9 @@ export async function POST(request: NextRequest) {
 
     // Use caller-provided run ID if available; otherwise generate one
     const now = new Date();
-    const providedRunId = typeof body.run_id === 'string'
-      ? body.run_id.trim()
-      : typeof body.runId === 'string'
-        ? body.runId.trim()
-        : '';
-    const timestamp = now.toISOString().replace(/[:\-T.]/g, '').substring(0, 14);
+    const providedRunIdRaw = body.run_id ?? body.runId;
+    const providedRunId = typeof providedRunIdRaw === 'string' ? providedRunIdRaw.trim() : '';
+    const timestamp = now.toISOString().replace(/[:T.-]/g, '').substring(0, 14);
     const randomSuffix = Math.random().toString(36).substring(2, 8);
     const runId = providedRunId || `benchmark_${timestamp}_${randomSuffix}`;
 

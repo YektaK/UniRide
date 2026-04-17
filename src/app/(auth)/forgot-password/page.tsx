@@ -37,7 +37,10 @@ export default function ForgotPasswordPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const [isSent, setIsSent] = useState(false);
-    const isDevResetUiEnabled = process.env.NODE_ENV === "development";
+    // Dev reset UI: enabled only in development mode.
+    // Server-side guards (ENABLE_DEV_RESET, DEV_RESET_SECRET) provide actual security.
+    const isDevResetUiEnabled =
+        process.env.NODE_ENV === "development";
 
     const form = useForm<ForgotPasswordValues>({
         resolver: zodResolver(forgotPasswordSchema),

@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import { useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import AppHeader from "@/components/layout/app-header";
 import AppSidebar from "@/components/layout/app-sidebar";
@@ -13,18 +13,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
     if (!isLoading && !user) {
       router.replace("/login");
-      return;
     }
-
-    if (!isLoading && user && pathname.startsWith("/admin") && user.role !== "admin") {
-      router.replace("/dashboard");
-    }
-  }, [user, isLoading, router, pathname]);
+  }, [user, isLoading, router]);
 
   if (isLoading || !user) {
     return (

@@ -15,7 +15,7 @@ from models.schemas import (
     VehicleRoute, RouteStep
 )
 from strategies.base_strategy import BaseRoutingStrategy
-from utils.data_loader import DataLoader, haversine_distance, estimate_travel_time
+from utils.data_loader import DataLoader, haversine_distance, estimate_travel_time, euclidean_distance
 from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
 import logging
 
@@ -113,6 +113,11 @@ class VROOMStrategy(BaseRoutingStrategy):
             coords = s.coordinates or {"lat": 0, "lng": 0}
             coordinates[s.location_code] = coords
 
+        def _dist(loc1: str, loc2: str) -> float:
+            c1 = coordinates.get(loc1, {})
+            c2 = coordinates.get(loc2, {})
+            return round(euclidean_distance(c1.get("lat", 0), c1.get("lng", 0), c2.get("lat", 0), c2.get("lng", 0)), 2)
+
         try:
             # Initialize VROOM problem
             problem = pyvroom.Problem()
@@ -202,7 +207,7 @@ class VROOMStrategy(BaseRoutingStrategy):
                                 location1=prev_location,
                                 location2=current_location,
                                 duration=round(duration, 2),
-                                distance=0.0
+                                distance=_dist(prev_location, current_location)
                             ))
 
                             route_students.append(student)
@@ -221,14 +226,14 @@ class VROOMStrategy(BaseRoutingStrategy):
                         location1=prev_location,
                         location2=depot.id,
                         duration=round(duration, 2),
-                        distance=0.0
+                        distance=_dist(prev_location, depot.id)
                     ))
 
                     routes.append(VehicleRoute(
                         vehicle_id=f"Araç {len(routes) + 1} (VROOM)",
                         route_details=route_details,
                         total_duration_minutes=round(total_duration, 2),
-                        total_distance_km=0.0,
+                        total_distance_km=round(sum(s.distance for s in route_details), 2),
                         sw_count=sw_count,
                         so_count=so_count,
                         student_ids=[s.id for s in route_students]
@@ -318,6 +323,11 @@ class VROOMFallbackStrategy(BaseRoutingStrategy):
             logger.warning(f"Distance matrix miss for {from_loc} to {to_loc}. Using default fallback: {DEFAULT_TRAVEL_FALLBACK_MINUTES} mins")
             return DEFAULT_TRAVEL_FALLBACK_MINUTES
 
+        def _dist(loc1: str, loc2: str) -> float:
+            c1 = coordinates.get(loc1, {})
+            c2 = coordinates.get(loc2, {})
+            return round(euclidean_distance(c1.get("lat", 0), c1.get("lng", 0), c2.get("lat", 0), c2.get("lng", 0)), 2)
+
         # Sweep algorithm: sort by angle from depot
         import math
         depot_coords = coordinates[depot.id]
@@ -367,7 +377,7 @@ class VROOMFallbackStrategy(BaseRoutingStrategy):
                 if current_route:
                     routes.append(self._build_route(
                         current_route, depot.id, time_matrix, 
-                        coordinates, get_duration, len(routes) + 1
+                        coordinates, get_duration, len(routes) + 1, _dist
                     ))
                 current_route = [student]
                 current_sw = 1 if student.disability_type == "Sw" else 0
@@ -375,11 +385,10 @@ class VROOMFallbackStrategy(BaseRoutingStrategy):
                 current_duration = get_duration(depot.id, loc)
                 prev_location = loc
 
-        # Add last route
         if current_route:
             routes.append(self._build_route(
                 current_route, depot.id, time_matrix,
-                coordinates, get_duration, len(routes) + 1
+                coordinates, get_duration, len(routes) + 1, _dist
             ))
 
         execution_time = time.time() - start_time
@@ -393,7 +402,7 @@ class VROOMFallbackStrategy(BaseRoutingStrategy):
             execution_time_seconds=round(execution_time, 4)
         )
 
-    def _build_route(self, students, depot_id, time_matrix, coordinates, get_duration, route_num):
+    def _build_route(self, students, depot_id, time_matrix, coordinates, get_duration, route_num, _dist):
         """Build a VehicleRoute from list of students"""
         route_details = []
         total_duration = 0
@@ -406,7 +415,7 @@ class VROOMFallbackStrategy(BaseRoutingStrategy):
                 location1=prev,
                 location2=student.location_code,
                 duration=round(duration, 2),
-                distance=0.0
+                distance=_dist(prev, student.location_code)
             ))
             prev = student.location_code
 
@@ -417,7 +426,7 @@ class VROOMFallbackStrategy(BaseRoutingStrategy):
             location1=prev,
             location2=depot_id,
             duration=round(duration, 2),
-            distance=0.0
+            distance=_dist(prev, depot_id)
         ))
 
         sw_count = sum(1 for s in students if s.disability_type == "Sw")
@@ -427,7 +436,7 @@ class VROOMFallbackStrategy(BaseRoutingStrategy):
             vehicle_id=f"Araç {route_num} (VROOM-Fallback)",
             route_details=route_details,
             total_duration_minutes=round(total_duration, 2),
-            total_distance_km=0.0,
+            total_distance_km=round(sum(s.distance for s in route_details), 2),
             sw_count=sw_count,
             so_count=so_count,
             student_ids=[s.id for s in students]

@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     const now = new Date();
     const providedRunIdRaw = body.run_id ?? body.runId;
     const providedRunId = typeof providedRunIdRaw === 'string' ? providedRunIdRaw.trim() : '';
-    const timestamp = now.toISOString().replace(/[:T.-]/g, '').substring(0, 14);
+    const timestamp = now.toISOString().replace(/[-:T.]/g, '').substring(0, 14);
     const randomSuffix = Math.random().toString(36).substring(2, 8);
     const runId = providedRunId || `benchmark_${timestamp}_${randomSuffix}`;
 

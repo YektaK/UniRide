@@ -153,7 +153,7 @@ export async function startBenchmark(
   settings: BenchmarkRunSettings
 ): Promise<BenchmarkRunResponse> {
   const now = new Date();
-  const timestamp = now.toISOString().replace(/[:T.-]/g, "").substring(0, 14);
+  const timestamp = now.toISOString().replace(/[-:T.]/g, "").substring(0, 14);
   const randomSuffix = Math.random().toString(36).substring(2, 8);
   const runId = `benchmark_${timestamp}_${randomSuffix}`;
 

@@ -8,16 +8,22 @@ Sistem; yönetici, sürücü ve öğrenci akışlarını tek uygulamada toplar, 
 - Next.js 16 tabanlı web uygulaması (admin/driver/student akışları)
 - Supabase (PostgreSQL + Auth) entegrasyonu
 - FastAPI tabanlı optimizasyon mikroservisi
-- **15+ algoritma desteği:**
+- **20+ algoritma desteği:**
   - Pipeline A (Cluster-First): GA, PSO, GWO (Grey Wolf), HHO (Harris Hawks)
-  - Pipeline B (Split Decoder): GA-Split, PSO-Split, GWO-Split, HHO-Split
+  - Pipeline B (Split + Optimal Decoder): GA-Split, PSO-Split, GWO-Split, HHO-Split
   - Holistic Solvers: OR-Tools, PyVRP\* (HGS), VROOM\*
   - Heuristics: Two-Opt, Greedy / Nearest Neighbor, Permutation TSP
+- **SOTA Framework FAZ 0-3 TAMAMLANDI** 🏆
+  - E²BSO: eil51=%0.47, berlin52=%0.00 (OPTIMAL)
+  - R²DMA: 6-boyutlu rezonans metriği, eil51=%0.47, berlin52=%0.00 (OPTIMAL)
+  - P-AOEA: eil51=**%0.00 OPTIMAL**, berlin52=**%0.00 OPTIMAL**
+  - SOTA Infrastructure v3.0.0, DNA Coverage 10/10
 - 7 clustering stratejisi: K-Means, Fuzzy C-Means, K-Medoids, Clarke-Wright, Sweep, FCM-Enhanced, Hierarchical-FCM
 - Zaman pencereli planlama (pickup/dropoff yönleri)
 - Route planları ve sandbox senaryoları için kalıcılık API'leri
 - IE (Industrial Engineering) Resource Dashboard
 - Akademik benchmark suit (TSPLib, Numba JIT)
+- CLI→Web Import Bridge (`/api/v1/benchmark/cli/import`)
 
 \*PyVRP ve VROOM opsiyonel; `pip install -r requirements-benchmark.txt` ile etkinleştirilebilir.
 
@@ -91,8 +97,8 @@ pip install -r requirements-benchmark.txt
 npm run dev
 ```
 
-- Web: `http://localhost:9002`
-- Optimizer API: `http://127.0.0.1:8000`
+- Web: `http://localhost:3000`
+- Optimizer API: `http://127.0.0.1:8000` (prod: 8099)
 
 ## Veritabanı
 
@@ -124,6 +130,22 @@ Supabase tarafında ilgili SQL dosyalarını sırasıyla uygulayın:
 | POST | `/api/v1/extract-time-windows` | Haftalık programdan zaman penceresi çıkar |
 | POST | `/api/v1/schedule-to-students` | Program → öğrenci node listesi |
 | POST | `/api/v1/vehicle-calculator` | Araç kapasitesi hesaplama |
+| GET | `/api/v1/benchmark/cli/files` | CLI JSON dosyalarını listele |
+| POST | `/api/v1/benchmark/cli/import` | CLI → Web format dönüşümü |
+| GET | `/api/v1/benchmark/cli/preview` | Import önizlemesi |
+
+## SOTA CLI Araçları
+
+```bash
+# FAZ 0-3 interaktif optimizasyon
+cd optimizer_api && python faz0_interactive.py
+
+# Standalone demo (web gerekmez)
+cd optimizer_api && python faz0_standalone_demo.py
+
+# Belirli problem
+cd optimizer_api && python faz0_standalone_demo.py berlin52
+```
 
 ## Dokümantasyon Haritası
 

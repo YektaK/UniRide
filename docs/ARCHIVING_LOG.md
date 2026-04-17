@@ -209,3 +209,70 @@ docs/
 **Geliştirici:** Antigravity AI (Senior Fullstack)  
 **Status:** ✅ TAMAMLANDI (T-6 Cleanup Done)
 
+---
+
+## 🗂️ Batch 6: Session Reports & Root Cleanup (17.04.2026)
+
+**Tarih:** 17 Nisan 2026, 23:00  
+**Arşivleyen:** Antigravity AI  
+**Tetikleyici:** Proposed changes incelemesi + SOTA Framework v3.0.0 tamamlanması sonrası cleanup
+
+### Batch 6a — docs/archive/session_reports/ (8 dosya)
+
+| Dosya | Neden Arşivlendi |
+|-------|-----------------|
+| 00_13.04.2026_ZAI_CODE_REVIEW_REPORT.md | Oturum raporu → 04_Changelog.md'de özetlendi |
+| 00_14.04.2026_KAPSAMLI_KOD_INCELEME.md | Oturum raporu → 01_Implementation_Status.md'de özetlendi |
+| 00_Sonnet_KAPSAMLI_KOD_INCELEME_RAPORU_14.04.2026.md | Yukarıdakinin duplicate |
+| SESSION_SUMMARY_11.04.2026_T1T7.md | Tamamlanmış oturum özeti |
+| REVIEW_COMPLETION_SUMMARY.md | T-6 completion summary → ARCHIVING_LOG'a dahil |
+| BUG_FIX_MISSING_IMPORT.md | Tek satırlık fix notu → 04_Changelog'a dahil |
+| BENCHMARK_FINDINGS_ALERT.md | Bulgular → BENCHMARK_ARCHITECTURE_DEBT.md'e entegre |
+| BENCHMARK_STUDIO_MIGRATION_COMPLETE.md | Migration tamamlandı → aktif referans değil |
+
+### Batch 6b — archive/root_cleanup/ (4 dosya)
+
+| Dosya | Neden Arşivlendi |
+|-------|-----------------|
+| .env.local.bak | Eski env backup — .gitignore'da, silinmesi daha sağlıklı ama arşivlendi |
+| worklog.md | Geliştirici çalışma logu → 04_Changelog.md'de resmi versiyon var |
+| CODE_REVIEW_REPORT.md | Kök dizindeki kopya → docs/ içindeki versiyonu aktif |
+| ROADMAP.md | Kök dizindeki kopya → docs/03_Roadmap.md aktif kaynak |
+
+### Mevcut Durum: .proposed_changes/
+
+`.proposed_changes/` klasörü (10 tarihli alt klasör, 500+ dosya) **kasıtlı olarak korundu.**
+- Tüm içerik incelendi ve referans malzeme olarak saklandı
+- `.gitignore` eklenmesi önerilen klasör (büyük boyut)
+- Gelecekte tamamen kaldırılabilir — ancak şimdilik arşiv niteliğindedir
+
+### Yeni Arşiv Yapısı (17.04.2026)
+
+```
+UniRide/
+├── archive/
+│   └── root_cleanup/     # Kök dizinden taşınan dosyalar
+├── docs/
+│   ├── archive/
+│   │   ├── session_reports/  # Oturum raporları ve tamamlanan audit notları
+│   │   └── build_artifacts/  # (Gelecek kullanım)
+│   └── old/              # Önceki arşiv (11-14 Nisan 2026)
+│       ├── analysis_reports/
+│       ├── audit_reports/
+│       ├── references/
+│       ├── deprecated/
+│       └── legacy_code/
+```
+
+### Batch 6 Özeti
+
+| Batch | Dosya Sayısı | Hedef | Durum |
+|-------|-------------|-------|-------|
+| 6a — Session Reports | 8 | docs/archive/session_reports/ | ✅ |
+| 6b — Root Cleanup | 4 | archive/root_cleanup/ | ✅ |
+| **TOPLAM (Tüm Batch'ler)** | **41** | — | **✅** |
+
+**Arşivleme Tamamlanma Tarihi:** 17 Nisan 2026, 23:00  
+**Geliştirici:** Antigravity AI  
+**Status:** ✅ TAMAMLANDI (Batch 6 — Post-SOTA Cleanup)
+

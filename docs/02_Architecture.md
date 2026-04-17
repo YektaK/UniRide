@@ -1,6 +1,8 @@
 # UniRide CVRPTW - Mimari Tasarım
 
-## Sürüm: 2.2.0 | Tarih: 10 Nisan 2026 (10.04.2026 - Ekleyen: Antigravity AI)
+## Sürüm: 3.1.0 | Tarih: 17 Nisan 2026 (17.04.2026 - Ekleyen: Antigravity AI)
+
+> **Son Güncelleme:** FAZ 0-3 SOTA Framework v3.0.0 tamamlandı. E²BSO, R²DMA, P-AOEA algoritmaları üretime hazır. Test coverage %64. DNA Coverage 10/10.
 
 ---
 
@@ -12,10 +14,11 @@ UniRide, mikroservis tabanlı bir mimari ile tasarlanmış olup, frontend ve bac
 ┌─────────────────────────────────────────────────────────────────┐
 │                     PRESENTATION LAYER                          │
 │  ┌─────────────────────────────────────────────────────────┐   │
-│  │                   Next.js 16 Frontend                    │   │
+│  │              Next.js Frontend (Port 3000)                │   │
 │  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐       │   │
 │  │  │   Admin     │ │   Driver    │ │   Student   │       │   │
 │  │  │   Panel     │ │   Interface │ │   Interface │       │   │
+│  │  │ + SOTA UI   │ │             │ │             │       │   │
 │  │  └─────────────┘ └─────────────┘ └─────────────┘       │   │
 │  └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
@@ -23,19 +26,22 @@ UniRide, mikroservis tabanlı bir mimari ile tasarlanmış olup, frontend ve bac
                               │ HTTP/REST
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    BUSINESS LOGIC LAYER                         │
+│                    BUSINESS LOGIC LAYER (BFF)                   │
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │                 Next.js API Routes                       │   │
-│  │  /api/optimize-route  /api/admin/*  /api/driver/*       │   │
+│  │  /api/optimize-route  /api/admin/*  /api/benchmark/*    │   │
+│  │  /api/faz0/status     /api/faz3/status                  │   │
 │  └─────────────────────────────────────────────────────────┘   │
 │                              │                                  │
 │                              │ HTTP/REST                        │
 │                              ▼                                  │
 │  ┌─────────────────────────────────────────────────────────┐   │
-│  │              Python Optimization Engine                  │   │
-│  │  ┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐    │   │
-│  │  │  GA   │ │  PSO  │ │ Greedy│ │ORTOOLS│ │ KMean │    │   │
-│  │  └───────┘ └───────┘ └───────┘ └───────┘ └───────┘    │   │
+│  │         Python Optimization Engine (Port 8099)           │   │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────────┐ │   │
+│  │  │ Pipeline │ │ Pipeline │ │ Holistic │ │ SOTA v3.0  │ │   │
+│  │  │    A     │ │    B     │ │ Solvers  │ │ E²BSO/R²DMA│ │   │
+│  │  │(GA,PSO..)│ │(GA-Split)│ │ OR-Tools │ │ P-AOEA     │ │   │
+│  │  └──────────┘ └──────────┘ └──────────┘ └────────────┘ │   │
 │  └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                               │
@@ -65,9 +71,10 @@ UniRide, mikroservis tabanlı bir mimari ile tasarlanmış olup, frontend ve bac
 | TypeScript | 5.x | Type safety |
 | React | 18.3.1 | UI components |
 | react-dom | 18.3.1 | Virtual DOM rendering |
-| Tailwind CSS | 3.4.1 | Styling (NOT 4.x — Approved 09.04.2026 - Copilot AI) |
-| shadcn/ui | latest | UI component library |
+| Tailwind CSS | **4.x** | Utility-first styling (v4 — `@import "tailwindcss"`) |
+| shadcn/ui | New York | UI component library (~38 bileşen) |
 | Supabase JS | 2.98.0 | Database client |
+| tw-animate-css | latest | Animasyon utiliteleri (Tailwind v4 ile) |
 
 #### Dizin Yapısı
 ```
@@ -75,25 +82,43 @@ src/
 ├── app/                    # Next.js App Router
 │   ├── (app)/             # Authenticated routes
 │   │   ├── admin/         # Admin panel pages
+│   │   │   ├── benchmark/ # Benchmark Suite (TSPLIB)
+│   │   │   ├── sandbox/   # IE Sandbox
+│   │   │   ├── compare/   # Algoritma karşılaştırma
+│   │   │   └── ...
 │   │   ├── driver/        # Driver interface
 │   │   └── dashboard/     # Student dashboard
 │   ├── (auth)/            # Authentication pages
-│   └── api/               # API route handlers (14 dosya)
+│   ├── api/               # API route handlers (19+ dosya)
+│   │   ├── benchmark/     # Benchmark proxy routes
+│   │   ├── admin/         # Admin CRUD endpoints
+│   │   ├── faz0/          # SOTA FAZ 0 status
+│   │   ├── faz3/          # SOTA FAZ 3 status
+│   │   └── ...
+│   ├── globals.css        # Tailwind v4 + oklch color system
+│   └── page.tsx           # SOTA Dashboard (FAZ 0-3)
 ├── components/            # React components
-│   ├── ui/               # shadcn/ui components
-│   ├── admin/            # Admin-specific components (IE Dashboard dahil)
+│   ├── ui/               # shadcn/ui components (~38)
+│   ├── admin/            # Admin-specific (IE Dashboard, Bottleneck)
 │   ├── auth/             # Auth components
 │   └── student/          # Student components
 ├── services/             # Business logic services
-│   ├── doubus/           # Route optimization
+│   ├── doubus/           # Multi-vehicle routing
+│   │   └── multi-vehicle-routing.ts  # fetchWithRetry, RoutingError
 │   ├── excel/            # Import/Export
-│   └── optimizer-service.ts
+│   ├── optimizer-service.ts  # Python API (CVRPTW support)
+│   └── benchmark-service.ts  # Benchmark polling
 ├── lib/                  # Utilities and config
-│   ├── config.ts         # Centralized configuration
+│   ├── config.ts         # OPTIMIZER_API_URL, centralized config
 │   ├── supabase.ts       # Database client
 │   ├── supabase-admin.ts # Server-side admin client (service_role)
-│   └── algorithm-constants.ts
+│   ├── supabase-db.ts    # DB helpers (toCamelCase/toSnakeCase)
+│   ├── algorithm-constants.ts  # ALGORITHM_KEYS, SSOT
+│   └── utils.ts          # cn() ve genel utils
 ├── types/                # TypeScript types
+│   ├── index.ts          # Genel tipler
+│   ├── db.ts             # Veritabanı tipleri
+│   └── ie-resource.ts    # IE kaynak analizi tipleri (IERawData vb.)
 └── hooks/                # Custom React hooks
 ```
 
@@ -111,40 +136,49 @@ src/
 #### Dizin Yapısı
 ```
 optimizer_api/
-├── main.py               # FastAPI application entry (7 endpoints)
+├── main.py               # FastAPI v3.1.0 (16+ endpoints)
+├── benchmark_runner.py   # Benchmark çalıştırıcı (daemon thread)
+├── benchmark_state.py    # Thread-safe state (Lock + SingletonMeta)
+├── faz0_interactive.py   # ★ Standalone CLI (2,251 satır, multiprocessing)
+├── faz0_standalone_demo.py  # ★ Demo (web gerekmez)
 ├── models/
 │   └── schemas.py        # Pydantic models
-├── strategies/           # 18 strateji dosyası + base
-│   ├── __init__.py       # Strategy registry (29 anahtar)
+├── strategies/           # 20+ strateji dosyası
+│   ├── __init__.py       # Strategy Registry (SSOT)
 │   ├── base_strategy.py  # Abstract base class
-│   ├── hybrid_base_strategy.py # Shared base for split strategies (10.04.2026)
-│   ├── ga_strategy.py    # Genetic Algorithm (Pipeline A)
-│   ├── pso_strategy.py   # Particle Swarm Optimization (Pipeline A)
-│   ├── gwo_strategy.py   # Grey Wolf Optimizer (Pipeline A)
-│   ├── hho_strategy.py   # Harris Hawks Optimization (Pipeline A)
-│   ├── ga_split_strategy.py   # GA + Split Decoder (Pipeline B)
-│   ├── pso_split_strategy.py  # PSO + Split Decoder (Pipeline B)
-│   ├── gwo_split_strategy.py  # GWO + Split Decoder (Pipeline B)
-│   ├── hho_split_strategy.py  # HHO + Split Decoder (Pipeline B)
-│   ├── ortools_cvrp.py   # OR-Tools CVRP (Holistic)
-│   ├── pyvrp_strategy.py # PyVRP / HGS (opsiyonel, Holistic)
-│   ├── vroom_strategy.py # VROOM (opsiyonel, Holistic)
-│   ├── greedy_heuristic.py # Greedy / Nearest Neighbor
-│   ├── two_opt_strategy.py # Two-Opt local search
-│   ├── permutation_tsp.py  # Permutation TSP
-│   ├── cvrptw_wrapper.py   # CVRPTW time-window wrapper
-│   └── _archived/          # Retired strategies (kmeans_tsp.py)
+│   ├── hybrid_base_strategy.py  # Shared base for split
+│   ├── [Pipeline A: ga, pso, gwo, hho]
+│   ├── [Pipeline B: ga_split, pso_split, gwo_split, hho_split]
+│   ├── [Holistic: ortools_cvrp, pyvrp_strategy, vroom_strategy]
+│   ├── [Heuristics: greedy_heuristic, two_opt_strategy, permutation_tsp]
+│   ├── cvrptw_wrapper.py # CVRPTW time-window wrapper
+│   └── sota_common/      # ★ FAZ 0-3 SOTA Framework
+│       ├── __init__.py
+│       ├── e2bso.py      # FAZ 1: E²BSO (978 satır)
+│       ├── r2dma.py      # FAZ 2: R²DMA (~680 satır)
+│       ├── paoea.py      # FAZ 3: P-AOEA (~1423 satır)
+│       ├── multi_start_initializer.py  # DNA-6
+│       ├── multi_layer_ls.py           # DNA-3
+│       ├── penalty_manager.py          # DNA-4, DNA-9
+│       ├── acceptance_criteria.py      # DNA-7
+│       ├── destroy_operators.py        # DNA-1, DNA-2
+│       ├── repair_operators.py         # DNA-1, DNA-2
+│       └── diversity_controller.py     # DNA-4, DNA-8
 └── utils/
-    ├── constants.py             # Shared constants (DEFAULT_TRAVEL_FALLBACK_MINUTES)
-    ├── clustering.py            # Student clustering algorithms
-    ├── clustering_strategies/   # 7 clustering algoritması
+    ├── constants.py             # Shared constants
+    ├── patterns.py              # ★ SingletonMeta (thread-safe, double-checked locking)
+    ├── haversine.py             # ★ Haversine distance (tek kaynak)
+    ├── tsplib_parser.py         # TSPLIB EUC_2D + NINT rounding
+    ├── data_loader.py           # Supabase data loader
+    ├── split_decoder.py         # Prins (2004) split decoder
+    ├── linear_split_decoder.py  # O(n) linear split
+    ├── clustering.py            # K-Means (haversine_distance → data_loader)
+    ├── clustering_strategies/   # 7 clustering stratejisi
     ├── local_search.py          # 8 local search tipi
-    ├── local_search_numba.py    # Numba JIT-hızlandırmalı varyant
-    ├── split_decoder.py         # DP tabanlı split decoder
-    ├── linear_split_decoder.py  # O(n) linear split variant
+    ├── local_search_numba.py    # Numba JIT hızlandırmalı
     ├── resource_profiler.py     # IE Resource Engine
-    ├── time_window_extractor.py # TW extraction utilities
-    └── data_loader.py           # Data loading (haversine canonical source)
+    ├── time_window_extractor.py # TW extraction
+    └── time_window_violation_tracker.py
 ```
 
 ### 3. Database (Supabase/PostgreSQL)
@@ -231,6 +265,103 @@ ride_requests (
    └─> Show route details
    └─> Export options
 ```
+
+---
+
+## 🚀 SOTA Framework Mimarisi (FAZ 0-3) — v3.0.0
+
+> **17.04.2026 eklendi.** E²BSO, R²DMA ve P-AOEA algoritmalarının tamamı üretime hazır.
+
+### DNA Faktör Matrisi (10/10 Coverage)
+
+| DNA ID | Faktör | Modül(ler) | Durum |
+|--------|--------|-----------|-------|
+| D1 | Problem-Yapılı Operatörler | DestroyOperators, RepairOperators | ✅ |
+| D2 | Büyük Komşuluk Araması (LNS) | DestroyOperators, RepairOperators | ✅ |
+| D3 | Çok Katmanlı Lokal Arama | MultiLayerLS | ✅ |
+| D4 | Adaptif Mekanizmalar | PenaltyManager, DiversityController | ✅ |
+| D5 | Giant Tour + Split Temsil | sota_common | ✅ |
+| D6 | Çoklu Başlangıç Çözümü | MultiStartInitializer | ✅ |
+| D7 | Kabul Kriterleri (SA/LAHC) | AcceptanceCriterion | ✅ |
+| D8 | Çeşitlilik Yönetimi | DiversityController | ✅ |
+| D9 | Penalty-Based Relaxation | PenaltyManager | ✅ |
+| D10 | Neural/ML via Evolutionary Genome | P-AOEA | ✅ |
+
+### SOTA Algoritma Mimarisi
+
+```
+BaseRoutingStrategy (base_strategy.py)
+│
+├── SOTA Algorithms (sota_common/)
+│   │
+│   ├── FAZ 1: E²BSO — GeneticAlgorithmSOTA
+│   │   DNA: D1✅ D2✅ D3✅ D4✅ D6✅ D7✅ D8✅
+│   │   Benchmark: eil51=0.47%, berlin52=0.00% OPTIMAL
+│   │
+│   ├── FAZ 2: R²DMA — ResonanceSOTA
+│   │   DNA: D1✅ D2✅ D3✅ D4✅ D6✅ D7✅ D8✅ D9✅
+│   │   6-boyutlu rezonans (Jaccard, LCS, Shaw, Kapasite, TW)
+│   │   3 crossover modu: Constructive / Moderate / Destructive
+│   │   Benchmark: eil51=0.47%, berlin52=0.00% OPTIMAL
+│   │
+│   └── FAZ 3: P-AOEA — PhysicsOperatorEvo
+│       DNA: D1✅ D2✅ D3✅ D4✅ D5✅ D6✅ D7✅ D8✅ D9✅ D10✅
+│       20+ atomic op, meta-evrim (tournament/crossover/mutation)
+│       Benchmark: eil51=0.00% OPTIMAL, berlin52=0.00% OPTIMAL 🏆
+│
+├── FAZ 0: Ortak Altyapı Modülleri (sota_common/)
+│   ├── MultiStartInitializer  — NN + CW + Regret-2 + Random
+│   ├── MultiLayerLS           — 2-opt → Or-opt → 3-opt → Swap
+│   ├── PenaltyManager         — α_tw, α_cap, iterated penalty
+│   ├── AcceptanceCriterion    — SA + LAHC + RTR
+│   ├── DestroyOperators       — Random/Worst/Shaw/Related
+│   ├── RepairOperators        — Greedy/Regret-2/Regret-3
+│   └── DiversityController    — Edge entropy, Hamming
+│
+└── [Mevcut Pipeline A / B / Holistic / Heuristic stratejileri]
+```
+
+### Haversine Tek Kaynak Kuralı
+
+> **Kural:** Tüm coğrafi mesafe hesaplamaları `optimizer_api/utils/haversine.py`'den gelir.
+> `clustering.py`, `data_loader.py` ve tüm stratejiler bu modülü `import` eder.
+> Duplicate haversine implementasyonu yasaktır. (**FIX-07** ile tesis edildi.)
+
+### Thread-Safety Mimarisi
+
+```python
+# optimizer_api/utils/patterns.py
+class SingletonMeta(type):
+    """Thread-safe singleton — double-checked locking."""
+    _instances = {}
+    _lock = threading.Lock()  # Sınıf seviyesinde paylaşılan kilit
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            with cls._lock:
+                if cls not in cls._instances:  # double-check
+                    cls._instances[cls] = super().__call__(*args, **kwargs)
+        return cls._instances[cls]
+```
+
+Uygulanan sınıflar: `DataLoader`, `BenchmarkStateManager`
+
+### TSPLIB Akademik Doğruluk
+
+```python
+# optimizer_api/utils/tsplib_parser.py
+def tsplib_euc_2d_distance(x1, y1, x2, y2) -> int:
+    """EUC_2D NINT rounding — TSPLIB standardına tam uyumlu."""
+    return int(math.sqrt((x1-x2)**2 + (y1-y2)**2) + 0.5)
+```
+
+| Algoritma | eil51 Optimal (426) | Gap | Berlin52 Optimal (7542) | Gap |
+|-----------|--------------------|----|------------------------|----|
+| Greedy | 511 | 19.95% | - | - |
+| Two-Opt | 453 | 6.34% | - | - |
+| E²BSO | 428 | **0.47%** | 7542 | **0.00%** |
+| R²DMA | 428 | **0.47%** | 7542 | **0.00%** |
+| P-AOEA | **426** | **0.00% 🏆** | **7542** | **0.00% 🏆** |
 
 ---
 
@@ -419,25 +550,34 @@ logger.info({
 
 ## 🔮 Gelecek Geliştirmeler
 
+### Tamamlanan (17.04.2026 itibarıyla)
+1. ✅ SOTA Framework FAZ 0-3 (E²BSO, R²DMA, P-AOEA)
+2. ✅ TSPLIB EUC_2D NINT rounding — tam akademik standart
+3. ✅ Thread-safe SingletonMeta
+4. ✅ Haversine tek kaynak (`utils/haversine.py`)
+5. ✅ Test coverage %64
+6. ✅ CLI → Web Import Bridge
+7. ✅ CSP + Security headers (`next.config.ts`)
+8. ✅ RLS write policies (vehicles, routes, assignments)
+9. ✅ Admin role guard (12 admin route)
+
 ### Kısa Vadeli (Nisan-Mayıs 2026)
-1. FIX-04 Pipeline A genişletmesi (11 dosya)
-2. FIX-07 haversine birleştirme tamamlama
-3. Test coverage %25 → %60
-4. Akademik benchmark sonuçları
-5. Sürücü atama UI
+1. Solomon CVRPTW benchmark testleri
+2. Frontend CVRPTW zaman penceresi UI
+3. Akademik makale yazımı (GECCO 2026 deadline'ı)
+4. Sürücü atama UI
 
 ### Orta Vadeli (Haziran-Temmuz 2026)
 1. Real-time vehicle tracking
 2. Push notifications
 3. Docker + CI/CD
-4. DataLoader TTL/invalidation
-5. Redis-backed rate limiting
+4. Redis-backed rate limiting
 
 ### Uzun Vadeli
 1. Machine learning ile talep tahmini
 2. Multi-campus support
 3. Mobile app (React Native)
-4. Heterojen filo aktivasyonu (stratejilerde)
+4. Heterojen filo aktivasyonu
 
 ---
 

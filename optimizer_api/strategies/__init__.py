@@ -42,6 +42,8 @@ from strategies.greedy_heuristic import GreedyHeuristicStrategy
 from strategies.permutation_tsp import PermutationTSPStrategy
 from strategies.ortools_cvrp import ORToolsCVRPStrategy
 from strategies.ebso_strategy import E2BSoStrategy
+from strategies.rdma_strategy import R2DMAStrategy
+from strategies.aoea_strategy import PAOEAStrategy
 
 # Pipeline B: Split-based strategies
 from strategies.ga_split_strategy import GASplitStrategy
@@ -91,6 +93,8 @@ _gwo_split_strategy = GWOSplitStrategy()
 
 # SOTA solver instances
 _e2bso_strategy = E2BSoStrategy()
+_r2dma_strategy = R2DMAStrategy()
+_paoea_strategy = PAOEAStrategy()
 
 # Holistic solver instances (only if available)
 _pyvrp_strategy: Optional[BaseRoutingStrategy] = None
@@ -178,6 +182,14 @@ STRATEGY_REGISTRY: Dict[str, Optional[BaseRoutingStrategy]] = {
     "e2bso": _e2bso_strategy,
     "entropy_bso": _e2bso_strategy,  # Alias
     "e2b": _e2bso_strategy,  # Short alias
+
+    # R²DMA — Resonance-Supported Destroy-and-Merge (FAZ 2)
+    "r2dma": _r2dma_strategy,
+    "rdma": _r2dma_strategy,
+
+    # P-AOEA — Production Adaptive Operator Evolution (FAZ 3)
+    "paoea": _paoea_strategy,
+    "aoea": _paoea_strategy,
 
     # =====================================================
     # Heuristics & Local Search
@@ -280,6 +292,10 @@ def get_available_solvers() -> Dict[str, dict]:
         "heuristics": {
             "available": True,
             "algorithms": ["two_opt", "greedy", "permutation_tsp"]
+        },
+        "sota": {
+            "available": True,
+            "algorithms": ["e2bso", "r2dma", "paoea"]
         }
     }
 
@@ -377,6 +393,8 @@ __all__ = [
     'GreedyHeuristicStrategy',
     'PermutationTSPStrategy',
     'E2BSoStrategy',
+    'R2DMAStrategy',
+    'PAOEAStrategy',
     'ORToolsCVRPStrategy',
     
     # Registry and utilities

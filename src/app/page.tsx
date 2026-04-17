@@ -569,7 +569,7 @@ export default function BenchmarkSuitePage() {
   useEffect(() => {
     const checkApi = async () => {
       try {
-        const res = await fetch("/health?XTransformPort=8099", {
+        const res = await fetch("/api/benchmark/health", {
           method: "GET",
           signal: AbortSignal.timeout(5000),
         });

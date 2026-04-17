@@ -30,7 +30,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: https://placehold.co",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co http://localhost:8000 http://localhost:9002",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co http://localhost:8000 http://localhost:9002 http://127.0.0.1:8000 http://127.0.0.1:9002",
               "frame-ancestors 'none'",
               "object-src 'none'",
               "base-uri 'self'",

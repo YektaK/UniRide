@@ -106,14 +106,14 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
 
     return NextResponse.json({
-      runId: runId,
-      totalExperiments: body.algorithms.length * body.problems.length * nRuns,
-      problemsCount: body.problems.length,
-      algorithmsCount: body.algorithms.length,
-      nRuns: nRuns,
+      run_id: runId,
+      total_experiments: body.algorithms.length * body.problems.length * nRuns,
+      problems_count: body.problems.length,
+      algorithms_count: body.algorithms.length,
+      n_runs: nRuns,
       status: 'running',
       message: 'Benchmark başlatıldı',
-      startTime: now.toISOString(),
+      start_time: now.toISOString(),
     });
 
   } catch (error: any) {

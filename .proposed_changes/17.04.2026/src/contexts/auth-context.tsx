@@ -4,12 +4,14 @@
 import type { User } from "@/types";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import React, { createContext, useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import { signIn, signOutUser, onAuthStateChange } from "@/lib/supabase-auth";
 
 interface AuthContextType {
   user: User | null;
   setUser: Dispatch<SetStateAction<User | null>>;
   isLoading: boolean;
+  isConfigured: boolean;
   login: (emailOrUsername: string, password_param: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -19,8 +21,15 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const isConfigured = !!supabase;
 
   useEffect(() => {
+    // If Supabase is not configured, skip auth listener
+    if (!supabase) {
+      setIsLoading(false);
+      return;
+    }
+
     // Listen to Supabase Auth state changes
     const unsubscribe = onAuthStateChange((user) => {
       setUser(user);
@@ -58,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, setUser, isLoading, isConfigured, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

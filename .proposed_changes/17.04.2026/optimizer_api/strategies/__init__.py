@@ -26,6 +26,11 @@ Heuristics:
 - greedy: Greedy/Nearest Neighbor
 - permutation_tsp: Complete Permutation Search (optimal for n≤10)
 
+SOTA Algorithms (Akademik Yayın Hedefli):
+- e2bso: E²BSO — Enhanced Entropy-Balanced Swarm Optimization (FAZ 1)
+- r2dma: R²DMA — Resonance-Supported Destroy-and-Merge Algorithm (FAZ 2)
+- paoea: P-AOEA — Production Adaptive Operator Evolution Algorithm (FAZ 3)
+
 Archived (not registered):
 - _archived/kmeans_tsp.py: Retired proof-of-concept K-Means+TSP skeleton
 """
@@ -41,13 +46,17 @@ from strategies.two_opt_strategy import TwoOptStrategy
 from strategies.greedy_heuristic import GreedyHeuristicStrategy
 from strategies.permutation_tsp import PermutationTSPStrategy
 from strategies.ortools_cvrp import ORToolsCVRPStrategy
-from strategies.ebso_strategy import E2BSoStrategy
 
 # Pipeline B: Split-based strategies
 from strategies.ga_split_strategy import GASplitStrategy
 from strategies.pso_split_strategy import PSOSplitStrategy
 from strategies.hho_split_strategy import HHOSplitStrategy
 from strategies.gwo_split_strategy import GWOSplitStrategy
+
+# SOTA Algorithms (FAZ 1-3)
+from strategies.ebso_strategy import E2BSoStrategy
+from strategies.rdma_strategy import R2DMAStrategy
+from strategies.aoea_strategy import PAOEAStrategy
 
 # Holistic solvers (with graceful fallback)
 # Type placeholders for optional strategies
@@ -89,8 +98,10 @@ _pso_split_strategy = PSOSplitStrategy()
 _hho_split_strategy = HHOSplitStrategy()
 _gwo_split_strategy = GWOSplitStrategy()
 
-# SOTA solver instances
+# SOTA strategy instances
 _e2bso_strategy = E2BSoStrategy()
+_r2dma_strategy = R2DMAStrategy()
+_paoea_strategy = PAOEAStrategy()
 
 # Holistic solver instances (only if available)
 _pyvrp_strategy: Optional[BaseRoutingStrategy] = None
@@ -170,16 +181,6 @@ STRATEGY_REGISTRY: Dict[str, Optional[BaseRoutingStrategy]] = {
     "vroom_fallback": _vroom_fallback_strategy if _VROOM_AVAILABLE else _ortools_strategy,
 
     # =====================================================
-    # =====================================================
-    # SOTA Algorithms (FAZ 0 Infrastructure + FAZ 1+ Algorithms)
-    # =====================================================
-
-    # E²BSO — Enhanced Entropy-Balanced Swarm Optimization (FAZ 1)
-    "e2bso": _e2bso_strategy,
-    "entropy_bso": _e2bso_strategy,  # Alias
-    "e2b": _e2bso_strategy,  # Short alias
-
-    # =====================================================
     # Heuristics & Local Search
     # =====================================================
     
@@ -195,6 +196,23 @@ STRATEGY_REGISTRY: Dict[str, Optional[BaseRoutingStrategy]] = {
     "permutation_tsp": _permutation_strategy,
     "permutation": _permutation_strategy,  # Alias
     "exact": _permutation_strategy,  # Alias
+
+    # =====================================================
+    # SOTA Algorithms (Akademik Yayın Hedefli)
+    # =====================================================
+
+    # E²BSO — Enhanced Entropy-Balanced Swarm Optimization (FAZ 1)
+    "e2bso": _e2bso_strategy,
+    "entropy_bso": _e2bso_strategy,  # Alias
+    "e2b": _e2bso_strategy,  # Short alias
+
+    # R²DMA — Resonance-Supported Memetic Algorithm (FAZ 2)
+    "r2dma": _r2dma_strategy,
+    "r2dma_full": _r2dma_strategy,  # Full run alias
+
+    # P-AOEA — Adaptive Operator Evolution Algorithm (FAZ 3)
+    "paoea": _paoea_strategy,
+    "paoea_full": _paoea_strategy,  # Full run alias
 }
 
 
@@ -280,6 +298,11 @@ def get_available_solvers() -> Dict[str, dict]:
         "heuristics": {
             "available": True,
             "algorithms": ["two_opt", "greedy", "permutation_tsp"]
+        },
+        "sota": {
+            "available": True,
+            "count": 3,
+            "algorithms": ["e2bso", "r2dma", "paoea"]
         }
     }
 
@@ -310,11 +333,11 @@ def get_recommended_strategy(n_students: int, priority: str = "balanced") -> str
     
     elif priority == "quality":
         if n_students <= 30:
-            return "ga_split"  # Best quality for small instances
+            return "e2bso"  # SOTA: best quality for small instances
         elif n_students <= 100:
-            return "pyvrp" if _PYVRP_AVAILABLE else "ga_split"
+            return "r2dma"  # SOTA: resonance-guided for medium
         else:
-            return "pyvrp" if _PYVRP_AVAILABLE else "ortools"
+            return "paoea"  # SOTA: adaptive operators for large
     
     else:  # balanced
         if n_students <= 30:
@@ -340,7 +363,8 @@ def get_strategies_by_pipeline(pipeline: str) -> List[dict]:
         "a": ["genetic_algorithm", "pso", "gwo", "hho"],
         "b": ["ga_split", "pso_split", "gwo_split", "hho_split"],
         "holistic": ["ortools_cvrp", "pyvrp", "pyvrp_alt", "vroom", "vroom_fallback"],
-        "heuristic": ["two_opt", "greedy", "permutation_tsp"]
+        "heuristic": ["two_opt", "greedy", "permutation_tsp"],
+        "sota": ["e2bso", "r2dma", "paoea"]
     }
     
     strategy_names = pipeline_map.get(pipeline.lower(), [])
@@ -376,8 +400,12 @@ __all__ = [
     'TwoOptStrategy',
     'GreedyHeuristicStrategy',
     'PermutationTSPStrategy',
-    'E2BSoStrategy',
     'ORToolsCVRPStrategy',
+
+    # SOTA Strategies
+    'E2BSoStrategy',
+    'R2DMAStrategy',
+    'PAOEAStrategy',
     
     # Registry and utilities
     'STRATEGY_REGISTRY',

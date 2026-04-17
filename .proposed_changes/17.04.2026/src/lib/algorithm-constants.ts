@@ -61,12 +61,20 @@ export const HEURISTIC_KEYS = {
   EXACT: "exact", // Alias for permutation_tsp
 } as const;
 
+// SOTA Algorithm Keys (FAZ 0-3)
+export const SOTA_KEYS = {
+  E2BSO: "e2bso",
+  R2DMA: "r2dma",
+  PAOEA: "paoea",
+} as const;
+
 // Combined algorithm keys
 export const ALGORITHM_KEYS = {
   ...PIPELINE_A_KEYS,
   ...PIPELINE_B_KEYS,
   ...HOLISTIC_KEYS,
   ...HEURISTIC_KEYS,
+  ...SOTA_KEYS,
 } as const;
 
 // Local Search Type keys - MUST match Python LocalSearchType enum
@@ -176,12 +184,20 @@ export const HEURISTIC_DISPLAY_NAMES: Record<string, string> = {
   [HEURISTIC_KEYS.EXACT]: "Permütasyon (Optimal n≤10)",
 };
 
+// SOTA Display Names
+export const SOTA_DISPLAY_NAMES: Record<string, string> = {
+  [SOTA_KEYS.E2BSO]: "E²BSO (Entropy-Balanced Swarm)",
+  [SOTA_KEYS.R2DMA]: "R²DMA (Rezonans-Destekli Memetik)",
+  [SOTA_KEYS.PAOEA]: "P-AOEA (Adaptif Operatör Evrimi)",
+};
+
 // Combined display names
 export const ALGORITHM_DISPLAY_NAMES: Record<string, string> = {
   ...PIPELINE_A_DISPLAY_NAMES,
   ...PIPELINE_B_DISPLAY_NAMES,
   ...HOLISTIC_DISPLAY_NAMES,
   ...HEURISTIC_DISPLAY_NAMES,
+  ...SOTA_DISPLAY_NAMES,
 };
 
 // Local Search display names for UI
@@ -221,6 +237,11 @@ export const ALGORITHM_DESCRIPTIONS: Record<string, string> = {
   [HEURISTIC_KEYS.TWO_OPT]: "Klasik 2-opt yerel arama. Küçük-orta ölçekli.",
   [HEURISTIC_KEYS.GREEDY]: "Hızlı sezgisel. En yakın komşu stratejisi.",
   [HEURISTIC_KEYS.PERMUTATION_TSP]: "Tüm kombinasyonları dener. n ≤ 10 için optimal.",
+
+  // SOTA
+  [SOTA_KEYS.E2BSO]: "FAZ 1: Kenar entropisi ile faz geçişli swarm optimizasyonu. ALNS destroy/repair + LAHC kabul.",
+  [SOTA_KEYS.R2DMA]: "FAZ 2: 6 boyutlu rezonans tabanlı memetik algoritma. Constructive/Moderate/Destructive crossover.",
+  [SOTA_KEYS.PAOEA]: "FAZ 3: Operatör genomlarının evrimsel seçilimi. Meta-evrim + adaptif destroy yoğunluğu.",
 };
 
 // Local Search descriptions
@@ -258,6 +279,11 @@ export const ALGORITHM_COMPLEXITY: Record<string, string> = {
   [HEURISTIC_KEYS.TWO_OPT]: "O(n²)",
   [HEURISTIC_KEYS.GREEDY]: "O(n²)",
   [HEURISTIC_KEYS.PERMUTATION_TSP]: "O(n!)",
+
+  // SOTA
+  [SOTA_KEYS.E2BSO]: "O(pop × iter × n²)",
+  [SOTA_KEYS.R2DMA]: "O(pop × iter × n²)",
+  [SOTA_KEYS.PAOEA]: "O(pop × genome × iter × n²)",
 };
 
 // ============================================================
@@ -405,6 +431,39 @@ export const ALGORITHM_OPTIONS_GROUPED = [
       },
     ],
   },
+  {
+    category: "SOTA Algoritmalar (Akademik Yayın Hedefli)",
+    description: "Akademik yayın kalitesinde, 10 Başarı DNA'sı entegreli algoritmalar",
+    algorithms: [
+      {
+        key: SOTA_KEYS.E2BSO,
+        label: SOTA_DISPLAY_NAMES[SOTA_KEYS.E2BSO],
+        description: ALGORITHM_DESCRIPTIONS[SOTA_KEYS.E2BSO],
+        complexity: ALGORITHM_COMPLEXITY[SOTA_KEYS.E2BSO],
+        recommended: true,
+        pipeline: "sota",
+        badge: "FAZ 1 🧬",
+      },
+      {
+        key: SOTA_KEYS.R2DMA,
+        label: SOTA_DISPLAY_NAMES[SOTA_KEYS.R2DMA],
+        description: ALGORITHM_DESCRIPTIONS[SOTA_KEYS.R2DMA],
+        complexity: ALGORITHM_COMPLEXITY[SOTA_KEYS.R2DMA],
+        recommended: true,
+        pipeline: "sota",
+        badge: "FAZ 2 🔬",
+      },
+      {
+        key: SOTA_KEYS.PAOEA,
+        label: SOTA_DISPLAY_NAMES[SOTA_KEYS.PAOEA],
+        description: ALGORITHM_DESCRIPTIONS[SOTA_KEYS.PAOEA],
+        complexity: ALGORITHM_COMPLEXITY[SOTA_KEYS.PAOEA],
+        recommended: true,
+        pipeline: "sota",
+        badge: "FAZ 3 🧪",
+      },
+    ],
+  },
 ];
 
 // Flattened options for backward compatibility
@@ -465,6 +524,10 @@ export const LEGACY_ALGORITHM_MAP: Record<string, string> = {
   "hgs": HOLISTIC_KEYS.PYVRP,
   "2opt": HEURISTIC_KEYS.TWO_OPT,
   "exact": HEURISTIC_KEYS.PERMUTATION_TSP,
+  "e2bso": SOTA_KEYS.E2BSO,
+  "entropy_bso": SOTA_KEYS.E2BSO,
+  "r2dma": SOTA_KEYS.R2DMA,
+  "paoea": SOTA_KEYS.PAOEA,
 };
 
 /**

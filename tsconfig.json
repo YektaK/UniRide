@@ -36,6 +36,12 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "optimizer_api",
+    ".proposed_changes",
+    "antigravity-god-mode",
+    "academic_benchmark",
+    "examples",
+    ".agent"
   ]
 }

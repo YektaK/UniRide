@@ -148,34 +148,6 @@ class BenchmarkStateManager:
         with self._lock:
             return list(self._runs.values())
 
-    def import_run(self, run_id: str, data: Dict[str, Any]):
-        """
-        Import a complete benchmark run results into the state manager.
-        Used for CLI -> Web sync.
-        """
-        with self._lock:
-            # Determine status based on data or default to COMPLETED
-            status_val = data.get("status", "completed")
-            try:
-                status = BenchmarkStatus(status_val)
-            except ValueError:
-                status = BenchmarkStatus.COMPLETED
-
-            state = BenchmarkRunState(
-                run_id=run_id,
-                status=status,
-                total_experiments=data.get("total_experiments", len(data.get("results", []))),
-                completed_experiments=data.get("total_experiments", len(data.get("results", []))),
-                results_count=len(data.get("results", [])),
-                start_time=data.get("start_time", datetime.now(timezone.utc).isoformat()),
-                end_time=data.get("end_time", datetime.now(timezone.utc).isoformat()),
-                parameters=data.get("parameters", {}),
-                results=data.get("results", []),
-                message=f"Içe aktarıldı: {len(data.get('results', []))} sonuç"
-            )
-            self._runs[run_id] = state
-            return state
-
 
 # Global instance
 benchmark_state_manager = BenchmarkStateManager()

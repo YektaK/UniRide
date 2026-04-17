@@ -41,6 +41,7 @@ from strategies.two_opt_strategy import TwoOptStrategy
 from strategies.greedy_heuristic import GreedyHeuristicStrategy
 from strategies.permutation_tsp import PermutationTSPStrategy
 from strategies.ortools_cvrp import ORToolsCVRPStrategy
+from strategies.ebso_strategy import E2BSoStrategy
 
 # Pipeline B: Split-based strategies
 from strategies.ga_split_strategy import GASplitStrategy
@@ -87,6 +88,9 @@ _ga_split_strategy = GASplitStrategy()
 _pso_split_strategy = PSOSplitStrategy()
 _hho_split_strategy = HHOSplitStrategy()
 _gwo_split_strategy = GWOSplitStrategy()
+
+# SOTA solver instances
+_e2bso_strategy = E2BSoStrategy()
 
 # Holistic solver instances (only if available)
 _pyvrp_strategy: Optional[BaseRoutingStrategy] = None
@@ -164,6 +168,16 @@ STRATEGY_REGISTRY: Dict[str, Optional[BaseRoutingStrategy]] = {
     # VROOM (Ultra-fast C++)
     "vroom": _vroom_strategy if _VROOM_AVAILABLE else _ortools_strategy,
     "vroom_fallback": _vroom_fallback_strategy if _VROOM_AVAILABLE else _ortools_strategy,
+
+    # =====================================================
+    # =====================================================
+    # SOTA Algorithms (FAZ 0 Infrastructure + FAZ 1+ Algorithms)
+    # =====================================================
+
+    # E²BSO — Enhanced Entropy-Balanced Swarm Optimization (FAZ 1)
+    "e2bso": _e2bso_strategy,
+    "entropy_bso": _e2bso_strategy,  # Alias
+    "e2b": _e2bso_strategy,  # Short alias
 
     # =====================================================
     # Heuristics & Local Search
@@ -362,6 +376,7 @@ __all__ = [
     'TwoOptStrategy',
     'GreedyHeuristicStrategy',
     'PermutationTSPStrategy',
+    'E2BSoStrategy',
     'ORToolsCVRPStrategy',
     
     # Registry and utilities

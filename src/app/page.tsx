@@ -1498,12 +1498,12 @@ export default function BenchmarkSuitePage() {
                   <div className="p-2.5 rounded-lg bg-muted/50 border">
                     <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Pipeline</p>
                     <p className="text-xs">{(() => {
-                      const algo = ALGORITHM_OPTIONS_GROUPED.flatMap(g => g.algorithms).find(a => a.key === selectedAlgoInfo);
+                      const algo = ALGORITHM_OPTIONS_GROUPED.flatMap((g: any) => g.algorithms).find((a: any) => a.key === selectedAlgoInfo);
                       return algo?.pipeline === "A" ? "Cluster-First, Route-Second" : algo?.pipeline === "B" ? "Route-First, Cluster-Second" : algo?.pipeline === "holistic" ? "Holistik Çözücü" : "Sezgisel";
                     })()}</p>
                   </div>
                 </div>
-                {ALGORITHM_OPTIONS_GROUPED.flatMap(g => g.algorithms).find(a => a.key === selectedAlgoInfo)?.recommended && (
+                {ALGORITHM_OPTIONS_GROUPED.flatMap((g: any) => g.algorithms).find((a: any) => a.key === selectedAlgoInfo)?.recommended && (
                   <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                     <Trophy className="h-4 w-4 text-emerald-600" />
                     <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Bu algoritma önerilenler listesinde</p>
@@ -2218,14 +2218,14 @@ export default function BenchmarkSuitePage() {
                                     <TableRow key={stat.problem} className="transition-all duration-200 hover:scale-[1.003]">
                                       <TableCell className="font-mono font-medium text-xs">{stat.problem}</TableCell>
                                       <TableCell className="text-center font-mono text-[11px] tabular-nums">
-                                        {stat.optimal !== null ? stat.optimal.toLocaleString() : "-"}
+                                        {stat.optimal != null ? stat.optimal.toLocaleString() : "-"}
                                       </TableCell>
                                       <TableCell className="text-center font-mono text-[11px] tabular-nums">
                                         {stat.bestTour.toLocaleString()}
                                       </TableCell>
                                       <TableCell className="text-xs">{stat.bestAlgorithmName}</TableCell>
                                       <TableCell className="text-center font-mono text-[11px] tabular-nums">
-                                        {stat.gapFromOptimal !== null ? (
+                                        {stat.gapFromOptimal != null ? (
                                           <span className={stat.gapFromOptimal < 3 ? "text-emerald-600 font-semibold" : ""}>
                                             %{stat.gapFromOptimal.toFixed(2)}
                                           </span>
@@ -2300,7 +2300,7 @@ export default function BenchmarkSuitePage() {
                                           {heatmapData.probs.map((prob) => {
                                             const cell = heatmapData.matrix.find((m) => m.algo === algo && m.prob === prob);
                                             const gap = cell?.gap;
-                                            const bg = gap === null
+                                            const bg = gap == null
                                               ? "bg-muted"
                                               : gap < 2
                                                 ? "bg-emerald-500/40"
@@ -2315,9 +2315,9 @@ export default function BenchmarkSuitePage() {
                                               <td
                                                 key={`${algo}-${prob}`}
                                                 className={`p-1.5 text-center font-mono tabular-nums rounded-sm transition-all duration-200 hover:scale-110 hover:z-10 hover:shadow-md cursor-default ${bg}`}
-                                                title={`${algoName} × ${prob}: ${gap !== null ? `%${gap.toFixed(2)}` : "-"}`}
+                                                title={`${algoName} × ${prob}: ${gap != null ? `%${gap.toFixed(2)}` : "-"}`}
                                               >
-                                                {gap !== null ? gap.toFixed(1) : "-"}
+                                                {gap != null ? gap.toFixed(1) : "-"}
                                               </td>
                                             );
                                           })}

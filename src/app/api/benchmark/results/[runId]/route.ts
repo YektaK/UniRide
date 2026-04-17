@@ -21,9 +21,9 @@ const BACKEND_URL = process.env.OPTIMIZER_API_URL || 'http://localhost:8000';
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { runId: string } }
+  { params }: { params: Promise<{ runId: string }> }
 ) {
-  const { runId } = params;
+  const { runId } = await params;
 
   if (!runId || typeof runId !== 'string') {
     return NextResponse.json(

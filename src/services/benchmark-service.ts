@@ -1,3 +1,5 @@
+import { generateBenchmarkRunId } from "@/lib/benchmark-run-id";
+
 /**
  * Benchmark Service
  * TSPLIB benchmark suite service for running systematic algorithm comparisons
@@ -152,10 +154,7 @@ export async function startBenchmark(
   problems: string[],
   settings: BenchmarkRunSettings
 ): Promise<BenchmarkRunResponse> {
-  const now = new Date();
-  const timestamp = now.toISOString().replace(/[-:T.]/g, "").substring(0, 14);
-  const randomSuffix = Math.random().toString(36).substring(2, 8);
-  const runId = `benchmark_${timestamp}_${randomSuffix}`;
+  const runId = generateBenchmarkRunId();
 
   const response = await fetch(`${BENCHMARK_API_BASE}/run`, {
     method: "POST",

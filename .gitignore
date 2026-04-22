@@ -40,6 +40,15 @@ next-env.d.ts
 .genkit/*
 .env*
 
+# Logs & databases
+*.log
+*.db
+*.sqlite
+*.sqlite3
+
+# TSP build artifacts
+*.tsp
+
 # firebase
 firebase-debug.log
 firestore-debug.log

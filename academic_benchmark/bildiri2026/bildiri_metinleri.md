@@ -1,147 +1,171 @@
-# Bildiri 2026 — Metin Taslakları
+# Bildiri 2026 - Time-Matrix Tabanlı Asimetrik TSP ile Okul Servis Rotalama
 
-## 1. Giriş (Introduction)
+## Özet
 
-Gezgin Satıcı Problemi (GSP / TSP), $n$ şehirden oluşan bir küme için her şehri tam olarak bir kez ziyaret edip başlangıç noktasına dönen en kısa turu bulma problemidir. Problemin matematiksel formülasyonu:
+Bu çalışmada, okul servis rotalama problemi zaman matrisi tabanlı bir Asimetrik Gezgin Satıcı Problemi (ATSP) olarak ele alınmıştır. Geliştirilen deney hattı üç aşamalıdır: (i) parametre konfigürasyonu üretimi, (ii) parametre optimizasyonu ve deney tasarımı analizi, (iii) seçilen en iyi parametrelerle nihai benchmark. İlk aşamada TSPLIB standardındaki `eil76` problemi üzerinde algoritma-parametre uzayı tanımlanmış; ikinci aşamada tam faktöriyel tarama ve gerekli durumlarda fraksiyonel (fractional fallback) örnekleme ile parametre araması gerçekleştirilmiştir; üçüncü aşamada elde edilen en iyi parametre setleri gerçek 29 düğümlü öğrenci zaman matrisi problemi üzerinde 30 bağımsız koşu ile test edilmiştir. Sonuçlar, GA ve PSO'nun çözüm kalitesi açısından en düşük ortalamayı verdiğini; 2-opt'un ise açık biçimde en hızlı algoritma olduğunu göstermektedir. Böylece kalite-hız ödünleşimi nicel olarak ortaya konmuştur.
+
+Anahtar kelimeler: Asimetrik TSP, okul servis rotalama, zaman matrisi, parametre optimizasyonu, deney tasarımı, ANOVA, Wilcoxon.
+
+## 1. Giriş
+
+Klasik TSP, düğümler arası maliyetlerin simetrik olduğu varsayımı altında bir turun toplam maliyetini minimize etmeyi amaçlar. Ancak gerçek şehir içi trafik koşullarında $i \to j$ ve $j \to i$ yönleri çoğu zaman aynı değildir; tek yön yollar, kavşak geometrisi, sinyalizasyon ve yoğunluk farkları yön-bağımlı seyahat süreleri üretir. Bu nedenle uygulama problemi simetrik TSP'den çok ATSP karakteri taşımaktadır.
+
+Bu çalışmanın uygulama bağlamında maliyetler coğrafi Öklidyen uzaklıkla değil, Google Maps tabanlı yol ağı seyahat sürelerinden elde edilen zaman matrisi ile modellenmiştir. Böylece amaç, geometrik en kısa turu değil operasyonel olarak en düşük toplam servis süresini veren turu bulmaktır.
+
+Modelin amaç fonksiyonu:
 
 $$
-\min \sum_{i=1}^{n} \sum_{j=1}^{n} d_{ij} x_{ij}
+\min \sum_{i=0}^{n} \sum_{j=0}^{n} c_{ij} x_{ij}
 $$
 
-s.t.
-- $\sum_{j=1}^{n} x_{ij} = 1, \quad \forall i$
-- $\sum_{i=1}^{n} x_{ij} = 1, \quad \forall j$
-- Alt-tur eliminasyon kısıtları
+Burada $c_{ij}$ düğüm $i$'den $j$'ye geçiş süresini, $x_{ij}$ ise ilgili yayın turda seçimini ifade eder.
 
-Bu çalışmada, gerçek dünya karşılaştırmaları için TSPLIB kütüphanesinden eil51, berlin52, st70, eil76 ve eil101 problemleri seçilmiştir. Ayrıca bir üniversite kampüsünde 29 öğrencinin servis rotaları için elde edilmiş reel mesafe matrisi de kullanılmıştır.
+## 2. Materyal ve Yöntem
 
-## 2. Materyal ve Yöntem (Materials and Methods)
+### 2.1 Veri kaynakları
 
-### 2.1 Kullanılan Algoritmalar
+Çalışmada iki veri ailesi kullanılmıştır:
 
-| Algoritma | Tür | Karmaşıklık | Kısa Açıklama |
-|-----------|-----|------------|---------------|
-| **2-opt** | Yerel arama | $O(n^2 \cdot \text{iter})$ | İki kenar kaldırılıp ters çevrilerek iyileştirme |
-| **3-opt** | Yerel arama | $O(n^3 \cdot \text{iter})$ | Üç kenar kaldırılıp 7 farklı şekilde yeniden bağlanır |
-| **Or-opt**| Yerel arama | $O(n^2 \cdot \text{iter})$ | Ardışık 1, 2 veya 3 düğümün blok halinde taşınması |
-| **GA** | Meta-sezgisel | $O(P \cdot G \cdot n^2)$ | Memetik GA: çaprazlama + 2-opt lokal iyileştirme |
-| **PSO** | Meta-sezgisel | $O(S \cdot I \cdot n^2)$ | Ayrık PSO: swap-hız, sigmoid aktivasyon |
+1. TSPLIB eğitim problemi: `eil76`.
+2. Nihai uygulama problemi: `student_matrix` (29 düğüm; depo + öğrenci noktaları).
 
-### 2.2 Parametre Optimizasyonu
+`student_matrix` veri setinde maliyetler dakika cinsinden zaman matrisi olarak tutulur. Matris yapısı yönlüdür ve bu nedenle problem ATSP niteliğindedir.
 
-Her algoritmanın TSPLIB eil51 problemi üzerinde 105 farklı parametre kombinasyonu denenmiş, her kombinasyon 10 kez çalıştırılmıştır. En iyi parametre seti **gap%** ve **çalışma süresi** kriterleriyle seçilmiştir.
+### 2.2 Karşılaştırılan algoritmalar
 
-**Tablo 2.2 — Optimize Edilmiş Parametreler (Benchmark 2026-04-24)**
+Bu çalışmada beş yöntem karşılaştırılmıştır:
 
-| Algoritma | Parametre 1 | Parametre 2 | Parametre 3 | Parametre 4 |
-|-----------|------------|------------|-------------|-------------|
-| 2-opt | max_iterations=500 | first_improvement=True | multi_start=True | num_starts=10 |
-| 3-opt | max_iterations=400 | first_improvement=True | multi_start=True | num_starts=5 |
-| GA | population_size=40 | generations=100 | crossover_rate=0.75 | mutation_rate=0.25 |
-| PSO | swarm_size=20 | max_iterations=100 | inertia_weight=0.9 | cognitive_coeff=1.49445 |
+1. 2-opt (yerel arama)
+2. 3-opt (yerel arama)
+3. Or-opt (blok taşıma tabanlı yerel arama)
+4. GA (Genetik Algoritma)
+5. PSO (Ayrık Parçacık Sürü Optimizasyonu)
 
-### 2.3 Numba JIT Hızlandırması
+### 2.3 Programın genel akışı (3 aşamalı boru hattı)
 
-Yerel arama algoritmalarının performans kritik kısımları (mesafe matrisi, 2-opt/3-opt/Or-opt döngüleri) **Numba 0.65.0** `@njit` decorator ile derlenmiştir. Bu sayede:
+Deney altyapısı aşağıdaki modüler akışla çalışır:
 
-- 2-opt **7× hızlanma** (200 ms → 28 ms)
-- 3-opt **3.5× hızlanma** (1100 ms → 318 ms)
-- Or-opt **6.5× hızlanma** (230 ms → 35 ms)
+1. Aşama-1 (`1_generate_config.py`):
+	Problem, algoritma ve parametre seviyeleri etkileşimli olarak seçilir; çalışma planı `configs/config_*.json` dosyasına yazılır.
+2. Aşama-2 (`2_run_tuning.py`):
+	Parametre kombinasyonları test edilir; her kombinasyon için ortalama performans hesaplanır ve `tuning_progress_*.csv` dosyasına artımlı (append-only) yazılır; en iyi setler veritabanına kaydedilir.
+3. Aşama-3 (`3_run_benchmark.py`):
+	Seçilen model kimlikleri, hedef problem üzerinde çoklu bağımsız koşu ile çalıştırılır; ham koşu ve özet çıktılar üretilir (`benchmark_progress_*.csv`, `benchmark_summary_*.csv`).
 
-### 2.4 Çoklu Problem Benchmark Protokolü
+Ek analiz araçları:
 
-Her algoritma her problem üzerinde **30 bağımsız çalıştırma** ile test edilmiştir. Rastgelelik kontrolü için her çalıştırmada farklı `random_seed` atanmış, böylece sonuçlar tekrarlanabilir hale getirilmiştir.
+1. `analyze_tuning.py`: parametre optimizasyon çıktılarını ANOVA ve Taguchi S/N bakış açısıyla raporlar.
+2. `analyze_benchmark.py`: nihai benchmark için sıralama, ANOVA, ikili Wilcoxon ve Holm düzeltmesi üretir.
 
-Değerlendirme metrikleri:
-- **Best**: 30 çalıştırmanın en iyi sonucu
-- **Mean**: Ortalama tur uzunluğu
-- **Std**: Standart sapma
-- **Gap%**: Optimumdan sapma oranı
-- **Time**: Ortalama çalışma süresi (ms)
+## 3. Parametre Optimizasyon Süreci ve Deney Tasarımı
 
-## 3. Uygulama ve Sonuçlar (Results)
+### 3.1 Deney tasarımı seçenekleri
 
-### 3.1 TSPLIB Benchmark Sonuçları (30 Çalıştırma — 2026-04-24)
+Çalışma çatısı, üç farklı tarama yaklaşımını destekleyecek şekilde tasarlanmıştır:
 
-Tüm deneyler TSPLIB EUC_2D NINT mesafe standardına uygun olarak çalıştırılmıştır ($d(i,j) = \lfloor\sqrt{dx^2+dy^2}+0.5\rfloor$). Node 0 (depot) turlara dahil edilmiştir.
+1. Tam faktöriyel (full grid) tarama: tüm seviye kombinasyonlarının denenmesi.
+2. Fraksiyonel/fractional arama: kombinasyon sayısı eşik üstüne çıktığında alt örnekleme.
+3. Taguchi/LHS tabanlı tasarım: analiz ve raporlama katmanında S/N oranı ve faktör etkileriyle değerlendirilen deneysel tasarım yaklaşımı.
 
-**Tablo 3.1 — En İyi Tur Uzunlukları ve Optimumdan Sapmalar**
+Bu çalışma özelinde kullanılan aktif strateji `fractional_fallback` olup, kombinasyon sayısı eşik değeri (`max_combinations_per_algo=27`) aşmayan algoritmalarda tam grid, aşanlarda fraksiyonel örnekleme uygulanmıştır.
 
-| Algoritma | eil51 (426) | berlin52 (7542) | st70 (675) | eil76 (538) | eil101 (629) |
-|-----------|-------------|-----------------|------------|-------------|--------------|
-| **2-opt** | 430 (0.94%) | 7682 (1.86%) | 676 (0.15%) | 547 (1.67%) | 648 (3.02%) |
-| **3-opt** | 429 (0.70%) | 7542 (0%) | 677 (0.30%) | 549 (2.04%) | 643 (2.23%) |
-| **Or-opt**| 434 (1.88%) | 7673 (1.74%) | 688 (1.93%) | 560 (4.09%) | 689 (9.54%) |
-| **GA** | 435 (2.11%) | 7542 (0%) | 683 (1.19%) | 557 (3.53%) | 647 (2.86%) |
-| **PSO** | 434 (1.88%) | 7849 (4.07%) | 685 (1.48%) | 561 (4.28%) | 658 (4.61%) |
+### 3.2 Arama uzayı ve çalıştırılan kombinasyonlar
 
-**Tablo 3.2 — Ortalama Tur Uzunlukları (±std)**
+`eil76` eğitim probleminde, kombinasyon başına 5 tekrar ile tarama yapılmıştır.
 
-| Algoritma | eil51 | berlin52 | st70 | eil76 | eil101 |
-|-----------|-------|----------|------|-------|--------|
-| **2-opt** | 436.53 (±3.36) | 7816.73 (±91.90) | 689.10 (±6.31) | 560.83 (±4.34) | 658.67 (±5.29) |
-| **3-opt** | 436.77 (±4.25) | 7813.90 (±138.74) | 690.33 (±7.61) | 558.57 (±5.14) | 669.33 (±13.13) |
-| **Or-opt**| 447.87 (±6.90) | 8005.07 (±191.04) | 727.47 (±16.88)| 580.10 (±12.27)| 808.20 (±63.55) |
-| **GA** | 452.73 (±12.67)| 8108.77 (±270.51)| 714.37 (±19.57)| 577.50 (±12.73)| 675.27 (±12.36) |
-| **PSO** | 448.13 (±8.85) | 8188.70 (±182.18)| 714.63 (±17.29)| 572.93 (±7.26) | 677.10 (±11.02) |
+| Algoritma | Teorik kombinasyon | Uygulanan kombinasyon | Yöntem |
+|-----------|---------------------|------------------------|--------|
+| 2-opt | 18 | 18 | Tam grid |
+| 3-opt | 18 | 18 | Tam grid |
+| Or-opt | 27 | 27 | Tam grid |
+| GA | 48 | 27 | Fraksiyonel örnekleme |
+| PSO | 81 | 27 | Fraksiyonel örnekleme |
 
-**Tablo 3.3 — Ortalama Süreler sn (±std)**
+Toplam kombinasyon sayısı 117'dir. Her kombinasyon 5 bağımsız tekrar içerdiğinden toplam 585 tuning koşusu yürütülmüştür.
 
-| Algoritma | eil51 | berlin52 | st70 | eil76 | eil101 |
-|-----------|-------|----------|------|-------|--------|
-| **2-opt** | 0.107 (±0.495) | 0.020 (±0.004) | 0.029 (±0.005) | 0.028 (±0.003) | 0.067 (±0.011) |
-| **3-opt** | 0.882 (±0.136) | 1.151 (±0.151) | 2.274 (±0.366) | 3.086 (±0.397) | 5.590 (±1.257) |
-| **Or-opt**| 0.201 (±0.022) | 0.292 (±0.037) | 0.555 (±0.055) | 0.623 (±0.069) | 0.798 (±0.133) |
-| **GA** | 1.988 (±0.351) | 2.726 (±0.755) | 6.575 (±1.468) | 6.355 (±1.454) | 23.510 (±4.047) |
-| **PSO** | 9.958 (±11.663)| 10.043 (±11.360)| 9.503 (±2.368) | 11.236 (±2.694)| 31.036 (±7.323) |
+### 3.3 Deney tasarımı bulguları (tuning çıktıları)
 
-📝 **Özet:** 2-opt en hızlı algoritmadır (ortalama 0.050 sn, ~3.43% sapma). Or-opt, 2-opt'a kıyasla biraz daha yavaş kalsa da ardışık düğümleri taşıma mantığıyla hızlı kabul edilir (ortalama 0.494 sn, ~11.07% sapma). 3-opt en iyi sonuçları berlin52'de optimum (7542) bulmuştur. GA ve PSO meta-sezgiselleri yerel aramalara göre daha yavaştır fakat PSO %6.76 sapmayla makul sonuçlar üretmektedir.
+`tuning_progress_20260424_232923.csv` ve `tuned_parameters_db.json` bulgularına göre en iyi ortalama maliyeti veren parametre setleri aşağıda özetlenmiştir:
 
-### 3.2 Gerçek Dünya Problemi: 29 Öğrenci
+| Algoritma | En iyi ortalama (eil76) | Seçilen parametreler |
+|-----------|--------------------------|----------------------|
+| 2-opt | 559.0 | max_iterations=500, first_improvement=True, num_starts=10 |
+| 3-opt | 563.8 | max_iterations=400, first_improvement=True, num_starts=5 |
+| Or-opt | 576.0 | max_iterations=600, max_segment_size=3, num_starts=5 |
+| GA | 554.6 | population_size=120, generations=100, crossover_rate=0.85, mutation_rate=0.25, elite_count=1 |
+| PSO | 555.2 | swarm_size=60, max_iterations=300, inertia_weight=0.6, cognitive_coeff=1.0 |
 
-Gerçek dünya verisi olarak bir kampüsteki 29 öğrencinin konumları kullanılmıştır. Mesafe matrisi elde edilmiş ve MDS ile 2B koordinatlara dönüştürülerek algoritmalara beslenmiştir.
+Bu sonuçlar, meta-sezgisel yöntemlerin (`GA`, `PSO`) eğitim probleminde daha düşük ortalama maliyete inebildiğini; klasik yerel arama ailesinde ise çoklu başlangıç (`num_starts`) ve iyileştirme modunun belirleyici olduğunu göstermektedir.
 
-**Tablo 3.4 — 29 Öğrenci Problemi (30 Çalıştırma)**
+## 4. Nihai Problem Çalıştırması (29 Öğrenci Time Matrix)
 
-| Algoritma | Best | Mean | Std | Time (ms) |
-|-----------|------|------|-----|-----------|
-| 2-opt | **314** | 314.00 | 0.0 | 12 |
-| 3-opt | **314** | 314.00 | 0.0 | 45 |
-| Or-opt | **314** | 314.00 | 0.0 | 18 |
-| GA | **314** | 314.00 | 0.0 | 320 |
-| PSO | **314** | 314.00 | 0.0 | 890 |
+### 4.1 Deney protokolü
 
-→ Tüm algoritmalar 30/30 çalıştırmada **314** (bilinen optimum/best) değerini bulmuştur. Bu, geliştirilen hibrit yaklaşımların gerçek dünya verilerinde de güvenilirlik sağladığını göstermektedir.
+Tuning aşamasından seçilen model kimlikleri (ID 6-10), `student_matrix` problemi üzerinde aşağıdaki protokolle test edilmiştir:
 
-### 3.3 Hız Karşılaştırması
+1. Her algoritma için 30 bağımsız koşu.
+2. Çıktı ölçütleri: Best, Worst, Mean, StdDev, MeanTimeMS.
+3. Tüm ham koşular `benchmark_progress_20260425_002216.csv`; özet sonuçlar `benchmark_summary_20260425_002216.csv` dosyasına kaydedilmiştir.
 
-**Tablo 3.5 — Numba JIT Etkisi (eil51)**
+### 4.2 Sonuçlar
 
-| Algoritma | Numba Öncesi | Numba Sonra | Hızlanma |
-|-----------|-------------|-------------|---------|
-| 2-opt | ~200 ms | **28 ms** | **7.1×** |
-| 3-opt | ~1100 ms | **318 ms** | **3.5×** |
-| Or-opt | ~230 ms | **35 ms** | **6.6×** |
+| Problem | Algoritma | ModelID | Best | Worst | Mean | StdDev | MeanTimeMS |
+|---------|-----------|---------|------|-------|------|--------|------------|
+| student_matrix | 2-opt | 6 | 314.0 | 318.0 | 314.9 | 1.2415 | 293.93 |
+| student_matrix | 3-opt | 7 | 314.0 | 322.0 | 316.7333 | 2.5587 | 347.88 |
+| student_matrix | Or-opt | 8 | 314.0 | 330.0 | 318.7667 | 4.4851 | 373.81 |
+| student_matrix | GA | 9 | 314.0 | 314.0 | 314.0 | 0.0 | 752.74 |
+| student_matrix | PSO | 10 | 314.0 | 314.0 | 314.0 | 0.0 | 684.69 |
 
-### 3.4 İstatistiksel Analiz
+Kalite sıralaması (Mean, düşük daha iyi):
 
-Çoklu problem üzerinde ANOVA testi uygulanmış, algoritmalar arası farkın istatistiksel olarak anlamlı olduğu görülmüştür (p < 0.05).
+1. GA (314.000)
+2. PSO (314.000)
+3. 2-opt (314.900)
+4. 3-opt (316.733)
+5. Or-opt (318.767)
 
-## 4. Sonuç ve Tartışma (Conclusion)
+Hız sıralaması (MeanTimeMS, düşük daha iyi):
 
-Bu çalışmada:
-1. TSP için **2-opt**, **3-opt**, **Or-opt**, **GA** ve **PSO** algoritmaları geliştirilmiştir.
-2. Parametre optimizasyonu ile eil51 üzerinde her algoritmanın en verimli konfigürasyonu belirlenmiştir.
-3. **Numba JIT** ile yerel arama algoritmaları ortalama **5×** hızlandırılmıştır.
-4. TSPLIB problemleri ve gerçek dünya verisi üzerinde kapsamlı benchmark yapılmıştır.
+1. 2-opt (293.93 ms)
+2. 3-opt (347.88 ms)
+3. Or-opt (373.81 ms)
+4. PSO (684.69 ms)
+5. GA (752.74 ms)
 
-**Öneriler:**
-- Büyük ölçekli problemler (n > 200) için **LNS** (Large Neighborhood Search) eklenebilir.
-- GA ve PSO yerine daha modern meta-sezgiseller (HEA, EAX) denenebilir.
-- Paralel çalışma (multi-start) GPU üzerinde çalıştırılabilir.
+## 5. İstatistiksel Değerlendirme ve Yorum
 
-## Referanslar
+### 5.1 ANOVA
 
-[1] Reinelt, G. (1991). TSPLIB—A traveling salesman problem library. *ORSA Journal on Computing*, 3(4), 376-384.
-[2] Lin, S., & Kernighan, B. W. (1973). An effective heuristic algorithm for the traveling-salesman problem. *Operations Research*, 21(2), 498-516.
-[3] Awad et al. (2021). Utilizing Opera Beta to Benchmark Python JIT Compilers: CPython vs. PyPy vs. GraalPython vs. Nuitka. *IEEE Access*.
+Algoritmalar arası performans dağılımı için tek yönlü ANOVA özeti:
+
+$$
+F(4,145)=22.4567, \quad \eta^2=0.3825
+$$
+
+Bu sonuç, algoritma etkisinin orta-yüksek büyüklükte olduğunu göstermektedir.
+
+### 5.2 İkili karşılaştırmalar (Wilcoxon + Holm)
+
+Holm düzeltmeli ikili testlerde GA/PSO ile Or-opt karşılaştırmaları ve 2-opt ile 3-opt karşılaştırması anlamlı bulunmuştur; GA ile PSO arasında anlamlı fark görülmemiştir. Bulgular, kalite açısından GA/PSO eşdeğerliğini; hız açısından 2-opt üstünlüğünü desteklemektedir.
+
+### 5.3 Operasyonel yorum
+
+1. Kalite öncelikli senaryolarda GA veya PSO tercih edilmelidir.
+2. Gerçek zamanlı/çevrimiçi karar gerektiren senaryolarda 2-opt hesaplama süresi avantajı sunar.
+3. Uygulama düzeyinde tek bir "en iyi algoritma" yerine, kalite-hız hedeflerine göre adaptif seçim daha uygundur.
+
+## 6. Sonuç
+
+Bu makale, standart TSP probleminden gerçek dünyaya geçişte zaman matrisi tabanlı ATSP modellemesinin gerekliliğini göstermiştir. Üç aşamalı deney hattı sayesinde parametre optimizasyonu sistematik biçimde gerçekleştirilmiş, eğitim probleminden elde edilen en iyi parametreler saha problemine aktarılmış ve 29 öğrencili gerçek zaman matrisi üzerinde doğrulanmıştır. Sonuçlar, meta-sezgisel yöntemlerin kalite, yerel arama yöntemlerinin ise hız tarafında güçlü olduğunu net biçimde ortaya koymaktadır.
+
+## 7. Tekrarlanabilirlik ve Raporlama Dosyaları
+
+Bu metindeki bulgular aşağıdaki çıktılara dayanmaktadır:
+
+1. `configs/config_eil76_20260424_232832.json`
+2. `results/old/tuning_progress_20260424_232923.csv`
+3. `data/tuned_parameters_db.json`
+4. `results/benchmark_progress_20260425_002216.csv`
+5. `results/benchmark_summary_20260425_002216.csv`
+6. `results/reports/FINAL_BENCHMARK_ANALYSIS_student_matrix_20260425_002309.md`

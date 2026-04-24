@@ -49,7 +49,12 @@ class BaseTSPSolver(ABC):
         """Load problem coordinates and cache distance matrix."""
         self._coordinates = coordinates
         self._n = len(coordinates)
-        self._dist_matrix = self._build_dist_matrix(coordinates)
+        # Keep the original matrix when solving matrix-based problems.
+        # Otherwise, pseudo-coordinates would rebuild a zero Euclidean matrix.
+        if self._use_time_matrix and self._time_matrix is not None:
+            self._dist_matrix = self._time_matrix
+        else:
+            self._dist_matrix = self._build_dist_matrix(coordinates)
     
     def _build_dist_matrix(self, coordinates: List[Tuple[float, float]]) -> List[List[float]]:
         """Pre-compute full Euclidean distance matrix for numba JIT."""

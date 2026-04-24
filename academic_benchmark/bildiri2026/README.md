@@ -86,6 +86,26 @@ python timematrix_benchmark.py \
   --output ../results
 ```
 
+### 5. Nihai Benchmark Analizi (Siralama + ANOVA + Wilcoxon)
+
+`3_run_benchmark.py` sonrasi olusan dosyalari otomatik analiz eder.
+
+```bash
+cd academic_benchmark/bildiri2026
+python analyze_benchmark.py --problem eil76
+```
+
+Varsayilan olarak en guncel su dosyalari kullanir:
+- `results/benchmark_progress_*.csv`
+- `results/benchmark_summary_*.csv`
+
+Urettigi rapor:
+- `results/reports/FINAL_BENCHMARK_ANALYSIS_<problem>_<timestamp>.md`
+
+Not:
+- `analyze_tuning.py` parametre optimizasyonu (tuning) analizini yapar.
+- `analyze_benchmark.py` final benchmark sonuclarini (algoritmalar arasi) analiz eder.
+
 ## 📊 Çıktı Formatı
 
 ### JSON Örneği

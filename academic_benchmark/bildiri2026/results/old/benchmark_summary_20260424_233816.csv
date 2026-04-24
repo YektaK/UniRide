@@ -1,0 +1,6 @@
+Problem,Algorithm,ModelID,Best,Worst,Mean,StdDev,MeanTimeMS
+student_matrix,2-opt,6,0.0,0.0,0.0,0.0,249.79768666662494
+student_matrix,3-opt,7,0.0,0.0,0.0,0.0,298.62634000007046
+student_matrix,Or-opt,8,0.0,0.0,0.0,0.0,243.27898999999888
+student_matrix,GA,9,0.0,0.0,0.0,0.0,613.8582633333803
+student_matrix,PSO,10,0.0,0.0,0.0,0.0,501.42195333331375

@@ -136,6 +136,7 @@ class PSOOptimizer(BaseTSPSolver):
         swarm = []
         global_best = self._initial_tour_nodes()
         global_best_len = float("inf")
+        history = []
 
         for _ in range(self.swarm_size):
             pos = self._initial_tour_nodes()
@@ -154,6 +155,8 @@ class PSOOptimizer(BaseTSPSolver):
         no_improve_count = 0
 
         for iteration in range(self.max_iterations):
+            # Record history
+            history.append(float(global_best_len))
             improved = False
 
             for p in swarm:
@@ -218,5 +221,6 @@ class PSOOptimizer(BaseTSPSolver):
                 "memetic": True,
                 "reinit_interval": self.reinit_interval,
             },
+            history=history,
             seed=self.random_seed,
         )

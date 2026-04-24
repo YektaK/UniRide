@@ -62,6 +62,7 @@ def solve_run(algo_name, params, run_idx, seed, prob_data, is_time_matrix, prob_
         "elapsed_ms": result.elapsed_ms,
         "iterations": result.iterations,
         "seed": seed,
+        "history": result.history,
     }
 
 def main():
@@ -208,8 +209,32 @@ def main():
             print(f"{p_name:<15} {a_name:<12} {m_id:<6} {best:>8.1f} {worst:>9.1f} {mean:>10.1f} {mean_ms:>10.0f}")
             writer.writerow([p_name, a_name, m_id, best, worst, mean, stdev, mean_ms])
 
-    print(f"\n[✓] Ham veriler: {running_csv_path}")
-    print(f"[✓] Özet tablo: {summary_path}")
+    # 7. Yakınsama Eğrileri İçin En İyi Geçmişleri Kaydet (JSON)
+    histories_dir = os.path.join(RESULTS_DIR, "histories")
+    os.makedirs(histories_dir, exist_ok=True)
+    
+    best_histories = {}
+    for (p_name, m_id, a_name), results in groups.items():
+        # En iyi koşuyu bul
+        best_run = min(results, key=lambda r: r["duration"])
+        if best_run.get("history"):
+            key = f"{p_name}_{a_name}_model{m_id}"
+            best_histories[key] = {
+                "problem": p_name,
+                "algorithm": a_name,
+                "model_id": m_id,
+                "best_duration": best_run["duration"],
+                "history": best_run["history"]
+            }
+    
+    if best_histories:
+        h_path = os.path.join(histories_dir, f"convergence_{timestamp}.json")
+        with open(h_path, "w", encoding="utf-8") as f:
+            json.dump(best_histories, f, indent=2)
+        print(f"[OK] Yakinsama verileri: {h_path}")
+
+    print(f"\n[OK] Ham veriler: {running_csv_path}")
+    print(f"[OK] Ozet tablo: {summary_path}")
 
 if __name__ == "__main__":
     main()

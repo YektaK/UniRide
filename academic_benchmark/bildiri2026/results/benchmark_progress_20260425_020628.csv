@@ -1,0 +1,3 @@
+timestamp,problem,model_id,algorithm,run_idx,duration,elapsed_ms,seed
+02:06:38,eil76,9,GA,1,560.0,7561,9900
+02:06:42,eil76,10,PSO,1,565.0,1597,10000

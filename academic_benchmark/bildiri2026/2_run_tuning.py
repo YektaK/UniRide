@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """
-Aşama 2: Dirençli Deney Tasarımı ve Parametre Optimizasyonu (Gece Koşusu)
+Aşama 2: Paralel Deney Tasarımı ve Parametre Optimizasyonu (Yüksek Performanslı)
+Multi-processing desteği ve kaldığı yerden devam etme (Resume) yeteneği eklendi.
 """
 import os
 import sys
 import json
 import csv
 import random
+import glob
+import concurrent.futures
 from itertools import product
 from datetime import datetime
 
@@ -55,6 +58,42 @@ FACTORIES = {
         random_seed=s)
 }
 
+def load_existing_progress():
+    """Tüm sonuç klasörünü tarayıp biten (config, problem, algorithm, params) kombinasyonlarını döner."""
+    completed = set()
+    csv_files = glob.glob(os.path.join(RESULTS_DIR, "tuning_progress_*.csv"))
+    for f_path in csv_files:
+        try:
+            with open(f_path, "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    # Key: (config_file, problem, algorithm, params_compact_json)
+                    # Parametreleri normalize etmek için tekrar yükleyip dump ediyoruz
+                    p_json = json.dumps(json.loads(row["params"]), sort_keys=True)
+                    key = (row["config_file"], row["problem"], row["algorithm"], p_json)
+                    completed.add(key)
+        except Exception:
+            continue
+    return completed
+
+def evaluate_combination(algo_name, params, runs_per_combo, prob_data, is_time_matrix, base_seed):
+    """Worker fonksiyon: Bir parametre seti için tüm tekrarları çalıştırır."""
+    durations = []
+    for run in range(runs_per_combo):
+        seed = base_seed + run
+        solver = FACTORIES[algo_name](params, seed)
+        
+        if is_time_matrix:
+            solver._set_time_matrix(prob_data)
+            result = solver.solve(solver._coordinates)
+        else:
+            result = solver.solve(prob_data)
+            
+        durations.append(result.tour_length)
+        
+    mean_len = sum(durations) / len(durations)
+    return mean_len
+
 def generate_combinations(params_dict, max_combos, strategy):
     keys = list(params_dict.keys())
     values = [params_dict[k] for k in keys]
@@ -64,18 +103,13 @@ def generate_combinations(params_dict, max_combos, strategy):
         
     total = len(combos)
     if total > max_combos and strategy == "fractional_fallback":
-        print(f"    [MOD] Kısmi (Fractional) Arama: {total} olası kombinasyondan rastgele {max_combos} adet seçiliyor.")
         random.seed(42)  
         combos = random.sample(combos, max_combos)
-    else:
-        print(f"    [MOD] Tam Grid Arama: Toplam {total} kombinasyon denenecek.")
-        
     return combos
 
 def load_problem(problem_config):
     prob_type = problem_config.get("type", "tsplib")
     path = os.path.join(SCRIPT_DIR, problem_config["path_relative"])
-    
     if not os.path.exists(path):
         raise FileNotFoundError(f"Problem dosyası bulunamadı: {path}")
         
@@ -84,150 +118,140 @@ def load_problem(problem_config):
         prob = parse_tsplib(path)
         optimal = TSPLIB_OPTIMALS.get(name, None)
         return name, prob["dimension"], prob["coordinates"], optimal, False
-        
     elif prob_type == "time_matrix":
         name = problem_config["name"]
         with open(path, "r") as f:
             data = json.load(f)
         matrix = data["time_matrix"]
         return name, len(matrix), matrix, None, True
-    
     raise ValueError(f"Bilinmeyen problem tipi: {prob_type}")
 
 def list_configs():
     if not os.path.exists(CONFIG_DIR):
         return []
-    return [f for f in os.listdir(CONFIG_DIR) if f.endswith(".json")]
+    return sorted([f for f in os.listdir(CONFIG_DIR) if f.endswith(".json")])
 
 def main():
     print("=" * 70)
-    print("Aşama 2: Dirençli Parametre Optimizasyonu")
+    print("Aşama 2: Paralel & Akıllı Parametre Optimizasyonu")
     print("=" * 70)
     
     configs = list_configs()
     if not configs:
         print("[HATA] 'configs/' klasöründe konfigürasyon dosyası bulunamadı.")
-        print("Lütfen önce 'python 1_generate_config.py' çalıştırın.")
         return
         
     print("\n--- Mevcut Konfigürasyonlar ---")
     for idx, c in enumerate(configs, 1):
         print(f"  [{idx}] {c}")
         
-    sel_input = input("\nÇalıştırılacak config numaralarını girin (Örn: 1,2 veya tümü için 'all'): ").strip()
-    selected_files = []
-    
-    if sel_input.lower() == 'all':
-        selected_files = configs
-    else:
+    sel_input = input("\nÇalıştırılacak config numaralarını girin (Örn: 1,2 veya 'all'): ").strip()
+    selected_files = configs if sel_input.lower() == 'all' else []
+    if not selected_files:
         try:
             indices = [int(x.strip()) - 1 for x in sel_input.split(',')]
-            for i in indices:
-                selected_files.append(configs[i])
+            selected_files = [configs[i] for i in indices]
         except (ValueError, IndexError):
-            print("[HATA] Geçersiz seçim.")
-            return
+            print("[HATA] Geçersiz seçim."); return
 
     os.makedirs(RESULTS_DIR, exist_ok=True)
+    existing_progress = load_existing_progress()
+    if existing_progress:
+        print(f"[BİLGİ] Geçmiş kayıtlar tarandı: {len(existing_progress)} adet kombinasyon zaten tamamlanmış.")
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     running_csv_path = os.path.join(RESULTS_DIR, f"tuning_progress_{timestamp}.csv")
     
-    # Create the incremental progress file header
     with open(running_csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(["timestamp", "config_file", "problem", "algorithm", "combo_idx", "mean_duration", "params"])
 
-    print(f"\n[BİLGİ] Anlık ilerleme '{running_csv_path}' dosyasına 'append' moduyla yazılacaktır.")
-    print("        Elektrik kesilirse veya işlem iptal edilirse, biten tüm veriler burada kalacaktır.\n")
+    max_workers = os.cpu_count() or 4
+    print(f"[BİLGİ] {max_workers} çekirdek üzerinden paralel çalışma başlatılıyor.\n")
 
     for c_file in selected_files:
         c_path = os.path.join(CONFIG_DIR, c_file)
-        print(f"\n{'='*70}")
-        print(f"--> KUYRUK İŞLENİYOR: {c_file}")
-        print(f"{'='*70}")
-        
         with open(c_path, "r", encoding="utf-8") as f:
             config = json.load(f)
             
         prob_name, prob_dim, prob_data, optimal, is_time_matrix = load_problem(config["problem"])
-        print(f"Hedef Problem: {prob_name} (Boyut: {prob_dim})")
-        if optimal:
-            print(f"Bilinen Optimum: {optimal}")
-            
+        print(f"--> KUYRUĞA ALINDI: {c_file} | Problem: {prob_name}")
+        
         tuning_sets = config["tuning_settings"]
         runs_per_combo = tuning_sets["runs_per_combination"]
         max_combos = tuning_sets["max_combinations_per_algo"]
         strategy = tuning_sets.get("strategy", "fractional_fallback")
         
-        algorithms = config["algorithms"]
-        
-        for algo_name, param_ranges in algorithms.items():
-            if algo_name not in FACTORIES:
-                continue
+        for algo_name, param_ranges in config["algorithms"].items():
+            if algo_name not in FACTORIES: continue
                 
-            print(f"\n--- Algoritma: {algo_name} ---")
-            combos = generate_combinations(param_ranges, max_combos, strategy)
+            all_combos = generate_combinations(param_ranges, max_combos, strategy)
+            
+            # Filtreleme: Zaten yapılmış olanları çıkar
+            to_run = []
+            for idx, p in enumerate(all_combos, 1):
+                p_json = json.dumps(p, sort_keys=True)
+                if (c_file, prob_name, algo_name, p_json) in existing_progress:
+                    continue
+                to_run.append((idx, p))
+            
+            skipped = len(all_combos) - len(to_run)
+            if skipped > 0:
+                print(f"   [{algo_name}] {skipped} kombinasyon geçmiş kayıtlarda bulundu, atlanıyor.")
+            
+            if not to_run:
+                print(f"   [{algo_name}] Tüm kombinasyonlar zaten tamamlanmış.")
+                continue
+
+            print(f"   [{algo_name}] {len(to_run)} yeni kombinasyon test ediliyor...")
             
             best_mean = float('inf')
             best_params = None
-            
-            for idx, params in enumerate(combos, 1):
-                durations = []
-                for run in range(runs_per_combo):
-                    seed = 5000 + idx * 10 + run
-                    solver = FACTORIES[algo_name](params, seed)
-                    
-                    if is_time_matrix:
-                        solver._set_time_matrix(prob_data)
-                        result = solver.solve(solver._coordinates)
-                    else:
-                        result = solver.solve(prob_data)
+            completed_count = 0
+
+            with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+                # {future: (original_idx, params)}
+                future_to_combo = {}
+                for idx, params in to_run:
+                    seed = 5000 + idx * 10
+                    f = executor.submit(evaluate_combination, algo_name, params, runs_per_combo, prob_data, is_time_matrix, seed)
+                    future_to_combo[f] = (idx, params)
+
+                for future in concurrent.futures.as_completed(future_to_combo):
+                    idx, params = future_to_combo[future]
+                    try:
+                        mean_len = future.result()
+                        completed_count += 1
                         
-                    durations.append(result.tour_length)
-                    
-                mean_len = sum(durations) / len(durations)
-                
-                # Resilient Save per combo
-                with open(running_csv_path, "a", newline="", encoding="utf-8") as f:
-                    writer = csv.writer(f)
-                    writer.writerow([
-                        datetime.now().strftime("%H:%M:%S"), c_file, prob_name, algo_name, idx, round(mean_len, 2), json.dumps(params)
-                    ])
-                
-                if mean_len < best_mean:
-                    best_mean = mean_len
-                    best_params = params
-                    
-                if idx % 10 == 0 or idx == len(combos):
-                    gap_str = ""
-                    if optimal:
-                        gap_pct = ((best_mean - optimal) / optimal) * 100
-                        gap_str = f" (Gap: %{gap_pct:.2f})"
-                    print(f"      [{idx}/{len(combos)}] Şu ana kadarki en iyi: {best_mean:.2f}{gap_str}")
-                    
-            gap_str = ""
-            if optimal:
-                gap_pct = ((best_mean - optimal) / optimal) * 100
-                gap_str = f" (Gap: %{gap_pct:.2f})"
-            print(f"    [✓] {algo_name} tamamlandı. En iyi sonuç: {best_mean:.2f}{gap_str}")
-            
-            # Kalıcı Veritabanı Kaydı (Her algoritma bitiminde)
-            entry = {
-                "algorithm": algo_name,
-                "problem": prob_name,
-                "dimension": prob_dim,
-                "runs_per_combination": runs_per_combo,
-                "best_mean_length": best_mean,
-                "parameters": best_params,
-                "search_space_bounds": param_ranges
-            }
-            entry_id = config_manager.save_to_db(entry)
-            print(f"    -> Parametreler DB'ye kaydedildi (ID: {entry_id})")
+                        # Anlık Kaydet
+                        with open(running_csv_path, "a", newline="", encoding="utf-8") as f:
+                            writer = csv.writer(f)
+                            writer.writerow([
+                                datetime.now().strftime("%H:%M:%S"), c_file, prob_name, algo_name, idx, round(mean_len, 2), json.dumps(params)
+                            ])
+                        
+                        if mean_len < best_mean:
+                            best_mean = mean_len
+                            best_params = params
+                        
+                        if completed_count % 5 == 0 or completed_count == len(to_run):
+                            gap_str = f" (Gap: %{((best_mean - optimal) / optimal * 100):.2f})" if optimal else ""
+                            print(f"      - {algo_name} İlerleme: {completed_count}/{len(to_run)} | En İyi: {best_mean:.2f}{gap_str}")
+                            
+                    except Exception as e:
+                        print(f"      [HATA] Kombinasyon {idx} başarısız: {e}")
+
+            if best_params:
+                config_manager.save_to_db({
+                    "algorithm": algo_name, "problem": prob_name, "dimension": prob_dim,
+                    "runs_per_combination": runs_per_combo, "best_mean_length": best_mean,
+                    "parameters": best_params, "search_space_bounds": param_ranges
+                })
+                print(f"   [OK] {algo_name} bitti. En iyi parametreler DB'ye eklendi.")
 
     print("\n" + "=" * 70)
-    print("TÜM KUYRUK BAŞARIYLA TAMAMLANDI.")
-    print("Artık Aşama 3'e geçebilirsiniz:")
-    print("    python 3_run_benchmark.py")
+    print("TUM ISLEMLER TAMAMLANDI.")
+    print(f"Detaylı rapor için: python analyze_tuning.py")
 
 if __name__ == "__main__":
     main()

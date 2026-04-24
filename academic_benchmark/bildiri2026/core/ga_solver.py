@@ -107,6 +107,7 @@ class GAOptimizer(BaseTSPSolver):
         best_len = pop[0].tour_length
         best_chrom = pop[0].chromosome[:]
         no_improve = 0
+        history = []
 
         for gen in range(self.generations):
             pop.sort(key=lambda x: x.tour_length)
@@ -117,6 +118,9 @@ class GAOptimizer(BaseTSPSolver):
                 no_improve = 0
             else:
                 no_improve += 1
+            
+            # Record history
+            history.append(float(best_len))
 
             if no_improve >= self.max_no_improvement:
                 break
@@ -155,5 +159,6 @@ class GAOptimizer(BaseTSPSolver):
                 "elite_count": self.elite_count,
                 "hybrid_2opt": True,
             },
+            history=history,
             seed=self.random_seed,
         )

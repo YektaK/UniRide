@@ -23,6 +23,7 @@ class TSPResult:
     elapsed_ms: float         # Execution time in milliseconds
     iterations: int           # Number of iterations/generations
     params: dict              # Algorithm parameters used
+    history: List[float] = None # Convergence history (optional)
     seed: Optional[int] = None
 
 

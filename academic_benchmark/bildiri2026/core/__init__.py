@@ -1,12 +1,15 @@
 """
-Bildiri 2026 - Engelsiz Ulaşım SBRP Optimizasyon Çekirdek Modülleri
+Bildiri 2026 - Engelsiz Ulasim SBRP Optimizasyon Cekirdek Modulleri
 
-Bu modül, bildiri çalışması için gerekli olan TSP çözüm algoritmalarını içerir:
+Bu modul, bildiri calismasi icin gerekli olan TSP cozum algoritmalarini icerir:
 - Yerel Arama (Local Search): 2-opt, 3-opt, Or-opt
-- Meta-sezgiseller: Genetik Algoritma (GA), Parçacık Sürü Optimizasyonu (PSO)
+- Meta-sezgiseller: Genetik Algoritma (GA), Parcacik Suru Optimizasyonu (PSO)
+- Numba JIT hizlandirmali kernel: numba_accel
 
-Tüm algoritmalar TSPLIB formatında Öklid mesafeleri ile çalışır.
+Tum algoritmalar hem TSPLIB Oklid koordinatlari hem de gercek dunya
+zaman/mesafe matrisleri ile calisir (BaseTSPSolver.solve / solve_with_matrix).
 """
+
 
 from .two_opt import TwoOptSolver
 from .three_opt import ThreeOptSolver

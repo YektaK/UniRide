@@ -1,10 +1,21 @@
-# Bildiri 2026 - Python Dependencies
-# Install: pip install -r requirements.txt
+# Bildiri 2026 - Python Bağımlılıkları
+# Kurulum: pip install -r requirements.txt
 
-# Data processing
+# Temel bilimsel hesaplama
 numpy>=1.24.0
-pandas>=2.0.0
-openpyxl>=3.1.0    # For Excel .xlsx reading
 
-# Standard library only (no install needed):
-# json, csv, math, time, random, os, sys, argparse, re, datetime, dataclasses, typing, abc
+# JIT hızlandırma (opsiyonel — yoksa Python fallback devreye girer)
+numba>=0.57.0
+
+# Veri işleme
+pandas>=2.0.0
+openpyxl>=3.1.0       # Excel .xlsx okuma için
+
+# Görselleştirme (Aşama 5: 5_visualize.py için zorunlu)
+matplotlib>=3.7.0
+seaborn>=0.12.0
+Pillow>=9.0.0          # matplotlib'in PNG çıktısı için gerekli
+
+# Standart kütüphane (kurulum gerektirmez):
+# json, csv, math, time, random, os, sys, argparse, re,
+# datetime, dataclasses, typing, abc, concurrent.futures

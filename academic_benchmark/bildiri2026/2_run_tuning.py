@@ -142,6 +142,12 @@ def main():
         return
         
     print("\n--- Mevcut Konfigürasyonlar ---")
+    
+    # Environment Info Logging
+    env = config_manager.get_environment_info()
+    print(f"[SİSTEM] OS: {env['os']} {env['os_release']} | CPU: {env['cpu']}")
+    print(f"[SİSTEM] Python: {env['python']} | Numpy: {env['numpy']} | Numba: {env['numba']}")
+    print("-" * 70)
     for idx, c in enumerate(configs, 1):
         print(f"  [{idx}] {c}")
         
@@ -172,7 +178,17 @@ def main():
     for c_file in selected_files:
         c_path = os.path.join(CONFIG_DIR, c_file)
         with open(c_path, "r", encoding="utf-8") as f:
-            config = json.load(f)
+            try:
+                config = json.load(f)
+            except json.JSONDecodeError as e:
+                print(f"[HATA] {c_file} JSON formatı bozuk: {e}")
+                continue
+        
+        # Config Validation
+        is_valid, msg = config_manager.validate_config(config)
+        if not is_valid:
+            print(f"[HATA] {c_file} doğrulaması başarısız: {msg}")
+            continue
             
         prob_name, prob_dim, prob_data, optimal, is_time_matrix = load_problem(config["problem"])
         print(f"--> KUYRUĞA ALINDI: {c_file} | Problem: {prob_name}")

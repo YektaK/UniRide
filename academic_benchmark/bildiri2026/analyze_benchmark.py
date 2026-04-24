@@ -175,6 +175,40 @@ def wilcoxon_signed_rank_paired(a_vals: List[float], b_vals: List[float]) -> Dic
     }
 
 
+def generate_latex_table(problem: str, quality_table: List[Dict[str, Any]], optimal: float | None) -> str:
+    """Generates a LaTeX table string for the benchmark results."""
+    latex = []
+    latex.append("\\begin{table}[h]")
+    latex.append("  \\centering")
+    latex.append("  \\caption{Benchmark Results for Problem: " + problem.replace("_", "\\_") + "}")
+    latex.append("  \\label{tab:results_" + problem.lower() + "}")
+    latex.append("  \\begin{tabular}{lccccc}")
+    latex.append("    \\hline")
+    latex.append("    Algorithm & Best & Mean & Std.Dev & Time (ms) & Gap (\\%) \\\\")
+    latex.append("    \\hline")
+
+    for row in quality_table:
+        algo = row["algorithm"]
+        best = f"{row['best']:.2f}"
+        mean = f"{row['mean']:.2f}"
+        std = f"{row['std']:.2f}"
+        time = f"{row['mean_time_ms']:.1f}"
+
+        gap_val = "-"
+        if optimal and optimal > 0:
+            gap_val = f"{((row['best'] - optimal) / optimal * 100):.2f}"
+
+        latex.append(
+            f"    {algo} & {best} & {mean} & {std} & {time} & {gap_val} \\\\"
+        )
+
+    latex.append("    \\hline")
+    latex.append("  \\end{tabular}")
+    latex.append("\\end{table}")
+
+    return "\n".join(latex)
+
+
 def holm_correction(pairs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     ordered = sorted(enumerate(pairs), key=lambda x: x[1]["p"])
     m = len(pairs)
@@ -338,6 +372,11 @@ def build_report(
         )
     else:
         lines.append("4. Pairwise tests show no significant differences after Holm correction.\n")
+
+    lines.append("\n## LaTeX Table (Academic Output)\n\n")
+    lines.append("```latex\n")
+    lines.append(generate_latex_table(problem, quality_table, optimal))
+    lines.append("\n```\n")
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.writelines(lines)

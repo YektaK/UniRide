@@ -99,6 +99,12 @@ def main():
         print("[HATA] Seçilen ID bulunamadı.")
         return
         
+    # Environment Info Logging
+    env = config_manager.get_environment_info()
+    print(f"[SİSTEM] OS: {env['os']} {env['os_release']} | CPU: {env['cpu']}")
+    print(f"[SİSTEM] Python: {env['python']} | Numpy: {env['numpy']} | Numba: {env['numba']}")
+    print("-" * 70)
+
     # 2. Hedef Problemleri Seç
     problems = data_manager.list_local_problems()
     print("\n--- Hedef Problemler ---")

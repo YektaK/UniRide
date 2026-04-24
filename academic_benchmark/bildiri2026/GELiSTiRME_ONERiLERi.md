@@ -33,21 +33,19 @@ Sistem; **1 (Config) -> 2 (Tuning) -> 3 (Benchmark) -> Raporlama** şeklinde do�
     *   **Convergence Curves:** Yakınsama hızı grafikleri.
     *   **Box-Plots:** Hata dağılım grafikleri.
     *   **Taguchi Main Effects Plot:** Parametre etki grafikleri.
-*   **LaTeX Tablo Çıktısı:** Raporların sonuna doğrudan makaleye (Overleaf vb.) yapıştırılabilecek hazır LaTeX kod blokları eklenmelidir.
+*   **LaTeX Tablo Çıktısı:** (UYGULANDI) `analyze_benchmark.py` raporlarının sonuna akademik makaleye (Overleaf vb.) doğrudan yapıştırılabilecek hazır LaTeX kod blokları eklendi.
 
 ---
 
 ## 4. Portabilite ve Güvenlik
 
-*   **Config Validasyonu:** JSON konfigürasyonlarının script başlamadan önce bir schema üzerinden doğrulanması.
-*   **Environment Check:** Çalışma anındaki kütüphane versiyonlarının (Numba, Numpy vb.) ve CPU bilgilerinin loglanması.
+*   **Config Validasyonu:** (UYGULANDI) `config_manager.py` üzerinden JSON konfigürasyonlarının doğrulanması ve `2_run_tuning.py` başında otomatik kontrol sağlandı.
+*   **Environment Check:** (UYGULANDI) Çalışma anındaki kütüphane versiyonlarının (Numba, Numpy vb.) ve CPU bilgilerinin hem ekrana hem loglara yazılması sağlandı.
 
 ---
 
 ## 💡 Öncelikli Uygulama Planı (Kalanlar)
-1.  **LaTeX Otomasyonu:** Raporlama aşamasına akademik tablo üretimi eklemek.
-2.  **Erken Durdurma (Pruning):** Bariz kötü sonuç veren parametre setlerinin tuning sırasında erken elenmesi.
-3.  **Hata Yönetimi:** Config validasyonu ve environment logging.
+1.  **Erken Durdurma (Pruning):** Bariz kötü sonuç veren parametre setlerinin tuning sırasında erken elenmesi.
 
 ---
 *Bu rapor, Antigravity AI tarafından akademik çalışma standartları gözetilerek oluşturulmuştur.*

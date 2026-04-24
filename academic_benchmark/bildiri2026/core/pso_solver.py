@@ -20,9 +20,9 @@ Memetic PSO Features:
 
 import time
 import random
-from typing import List, Tuple, Optional
 from dataclasses import dataclass
 from .base_solver import BaseTSPSolver, TSPResult
+from . import numba_accel as _nb
 
 
 @dataclass
@@ -60,28 +60,7 @@ class PSOOptimizer(BaseTSPSolver):
         self.reinit_interval = reinit_interval
         self._rng = random.Random(self.random_seed)
 
-    # ----- Local search ------------------------------------------
-    def _two_opt_fast(self, tour: List[int], max_iter: int = 200) -> Tuple[List[int], float]:
-        best = tour[:]
-        best_len = self.tour_length(best)
-        improved = True
-        itr = 0
-        n = len(best)
-        while improved and itr < max_iter and n > 3:
-            improved = False
-            for i in range(n - 1):
-                for j in range(i + 2, n):
-                    new_tour = best[:i + 1] + best[i + 1:j + 1][::-1] + best[j + 1:]
-                    new_len = self.tour_length(new_tour)
-                    if new_len < best_len:
-                        best = new_tour
-                        best_len = new_len
-                        improved = True
-                        break
-                if improved:
-                    break
-            itr += 1
-        return best, best_len
+    # _two_opt_fast removed in favor of _nb.nb_two_opt
 
     # ----- Velocity helpers --------------------------------------
     def _diff_swaps(self, current: List[int], target: List[int]) -> List[Tuple[int, int]]:
@@ -140,7 +119,10 @@ class PSOOptimizer(BaseTSPSolver):
             else:
                 pos = self._initial_tour_nodes()
                 self._rng.shuffle(pos)
-            pos, plen = self._two_opt_fast(pos, max_iter=30)
+            if self._dist_matrix is not None:
+                pos, plen = _nb.nb_two_opt(pos, self._dist_matrix, 30, False)
+            else:
+                plen = self.tour_length(pos)
             vel = [(self._rng.randint(0, len(pos)-1), self._rng.randint(0, len(pos)-1)) for _ in range(self.max_velocity_size)]
             new_swarm.append(_Particle(pos, vel, p.personal_best, p.personal_best_len, plen))
         return new_swarm
@@ -158,7 +140,10 @@ class PSOOptimizer(BaseTSPSolver):
         for _ in range(self.swarm_size):
             pos = self._initial_tour_nodes()
             self._rng.shuffle(pos)
-            pos, plen = self._two_opt_fast(pos, max_iter=30)
+            if self._dist_matrix is not None:
+                pos, plen = _nb.nb_two_opt(pos, self._dist_matrix, 30, False)
+            else:
+                plen = self.tour_length(pos)
             vel = [(self._rng.randint(0, len(pos)-1), self._rng.randint(0, len(pos)-1)) for _ in range(self.max_velocity_size)]
             p = _Particle(pos, vel, pos[:], plen, plen)
             swarm.append(p)
@@ -214,7 +199,8 @@ class PSOOptimizer(BaseTSPSolver):
                 break
 
         # Final aggressive 2-opt on global best
-        global_best, global_best_len = self._two_opt_fast(global_best, max_iter=300)
+        if self._dist_matrix is not None:
+            global_best, global_best_len = _nb.nb_two_opt(global_best, self._dist_matrix, 300, False)
 
         elapsed_ms = (time.perf_counter() - t0) * 1000
         return TSPResult(

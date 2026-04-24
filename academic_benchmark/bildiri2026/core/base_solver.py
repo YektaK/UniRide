@@ -40,8 +40,8 @@ class BaseTSPSolver(ABC):
         self._dist_matrix: Optional[List[List[float]]] = None  # cached for numba speedup
 
     def _initial_tour_nodes(self) -> List[int]:
-        """Return initial node list. For SBRP exclude depot(0); for TSP use all nodes."""
-        if self._exclude_depot:
+        """Return initial node list. For time matrix, exclude depot(0); for TSP use all nodes."""
+        if self._exclude_depot or self._use_time_matrix:
             return list(range(1, self._n))
         return list(range(self._n))
     
@@ -64,12 +64,14 @@ class BaseTSPSolver(ABC):
     def _set_time_matrix(self, time_matrix: List[List[float]]):
         """
         Load problem as time/distance matrix.
-        Automatically generates MDS pseudo-coordinates for solver compatibility.
+        Do NOT overwrite self._coordinates with pseudo-coordinates unless we want to bypass.
+        We keep empty coordinates and rely strictly on _dist_matrix.
         """
         self._time_matrix = time_matrix
         self._use_time_matrix = True
         self._n = len(time_matrix)
-        self._coordinates = self._matrix_to_coordinates(time_matrix)
+        # Avoid generating pseudo-coordinates to prevent accidental use of Euclidean distances
+        self._coordinates = [(0.0, 0.0) for _ in range(self._n)]
         self._dist_matrix = time_matrix
     
     @staticmethod

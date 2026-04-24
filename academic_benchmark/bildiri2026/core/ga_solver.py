@@ -19,6 +19,7 @@ import random
 from typing import List, Tuple, Optional
 from dataclasses import dataclass
 from .base_solver import BaseTSPSolver, TSPResult
+from . import numba_accel as _nb
 
 
 @dataclass
@@ -50,27 +51,7 @@ class GAOptimizer(BaseTSPSolver):
         self.max_no_improvement = max_no_improvement
         self._rng = random.Random(self.random_seed)
 
-    def _two_opt_fast(self, tour: List[int], max_iter: int = 200) -> Tuple[List[int], float]:
-        best = tour[:]
-        best_len = self.tour_length(best)
-        improved = True
-        itr = 0
-        n = len(best)
-        while improved and itr < max_iter and n > 3:
-            improved = False
-            for i in range(n - 1):
-                for j in range(i + 2, n):
-                    new_tour = best[:i + 1] + best[i + 1:j + 1][::-1] + best[j + 1:]
-                    new_len = self.tour_length(new_tour)
-                    if new_len < best_len:
-                        best = new_tour
-                        best_len = new_len
-                        improved = True
-                        break
-                if improved:
-                    break
-            itr += 1
-        return best, best_len
+    # _two_opt_fast removed to use numba_accel
 
     def _init_population(self) -> List[Individual]:
         pop = []
@@ -79,7 +60,10 @@ class GAOptimizer(BaseTSPSolver):
             perm = base[:]
             self._rng.shuffle(perm)
             # Only 10 iters on init to save time
-            perm, length = self._two_opt_fast(perm, max_iter=10)
+            if self._dist_matrix is not None:
+                perm, length = _nb.nb_two_opt(perm, self._dist_matrix, 10, False)
+            else:
+                length = self.tour_length(perm)
             pop.append(Individual(perm, 1.0 / (length + 1e-10), length))
         return pop
 
@@ -153,7 +137,8 @@ class GAOptimizer(BaseTSPSolver):
             pop = new_pop
 
         # Final aggressive 2-opt on best
-        best_chrom, best_len = self._two_opt_fast(best_chrom, max_iter=300)
+        if self._dist_matrix is not None:
+            best_chrom, best_len = _nb.nb_two_opt(best_chrom, self._dist_matrix, 300, False)
 
         elapsed_ms = (time.perf_counter() - t0) * 1000
         return TSPResult(

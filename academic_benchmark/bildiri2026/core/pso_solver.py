@@ -141,7 +141,12 @@ class PSOOptimizer(BaseTSPSolver):
         for _ in range(self.swarm_size):
             pos = self._initial_tour_nodes()
             self._rng.shuffle(pos)
-            if self._dist_matrix is not None:
+            # Gelistirme #1: Swarm baslatilirken onbellekli numpy array kullanilir.
+            if self._dist_matrix_np is not None:
+                route_np = _nb._prepare_route(pos)
+                improved_np, plen = _nb._two_opt_improve_atsp_numba(route_np, self._dist_matrix_np, 30, False)
+                pos = _nb._extract_route(improved_np, pos)
+            elif self._dist_matrix is not None:
                 pos, plen = _nb.nb_two_opt(pos, self._dist_matrix, 30, False)
             else:
                 plen = self.tour_length(pos)
@@ -167,7 +172,8 @@ class PSOOptimizer(BaseTSPSolver):
 
                 # Update position
                 p.position = self._apply_swaps(p.position, p.velocity)
-                p.current_len = self.tour_length(p.position)
+                # Gelistirme #2: Her parcacik icin tur uzunlugu Numba JIT + onceki numpy array ile hesaplanir.
+                p.current_len = self._tour_length_fast(p.position)
 
                 # Update personal best
                 if p.current_len < p.personal_best_len:
@@ -188,9 +194,9 @@ class PSOOptimizer(BaseTSPSolver):
             # Re-initialize swarm periodically to maintain diversity
             if iteration > 0 and iteration % self.reinit_interval == 0:
                 swarm = self._reinit_swarm(swarm, global_best)
-                # Evaluate re-initialized swarm
+                # Gelistirme #2: Reinit sonrasi evaluasyon da hizli metotla yapilir.
                 for p in swarm:
-                    p.current_len = self.tour_length(p.position)
+                    p.current_len = self._tour_length_fast(p.position)
                     if p.current_len < p.personal_best_len:
                         p.personal_best = p.position[:]
                         p.personal_best_len = p.current_len
@@ -201,8 +207,12 @@ class PSOOptimizer(BaseTSPSolver):
             if no_improve_count >= self.max_no_improvement:
                 break
 
-        # Final aggressive 2-opt on global best
-        if self._dist_matrix is not None:
+        # Final aggressive 2-opt on global best — Gelistirme #1: onceden hazir numpy array kullanilir.
+        if self._dist_matrix_np is not None:
+            route_np = _nb._prepare_route(global_best)
+            improved_np, global_best_len = _nb._two_opt_improve_atsp_numba(route_np, self._dist_matrix_np, 300, False)
+            global_best = _nb._extract_route(improved_np, global_best)
+        elif self._dist_matrix is not None:
             global_best, global_best_len = _nb.nb_two_opt(global_best, self._dist_matrix, 300, False)
 
         elapsed_ms = (time.perf_counter() - t0) * 1000

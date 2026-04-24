@@ -59,8 +59,13 @@ class GAOptimizer(BaseTSPSolver):
         for _ in range(self.population_size):
             perm = base[:]
             self._rng.shuffle(perm)
-            # Only 10 iters on init to save time
-            if self._dist_matrix is not None:
+            # Gelistirme #1: nb_two_opt'a onceden hazir numpy array veriliyor (sadece list-of-lists degil).
+            # Bu sayede her particle icin tekrarlanan np.array() donusum maliyeti ortadan kalkar.
+            if self._dist_matrix_np is not None:
+                route_np = _nb._prepare_route(perm)
+                improved_np, length = _nb._two_opt_improve_atsp_numba(route_np, self._dist_matrix_np, 10, False)
+                perm = _nb._extract_route(improved_np, perm)
+            elif self._dist_matrix is not None:
                 perm, length = _nb.nb_two_opt(perm, self._dist_matrix, 10, False)
             else:
                 length = self.tour_length(perm)
@@ -135,13 +140,19 @@ class GAOptimizer(BaseTSPSolver):
                 child = self._ox(p1.chromosome, p2.chromosome) if self._rng.random() < self.crossover_rate else p1.chromosome[:]
                 if self._rng.random() < self.mutation_rate:
                     child = self._mutate(child)
-                clen = self.tour_length(child)
+                # Gelistirme #2: tour_length hesabi icin on-bellek numpy array + Numba JIT kerneli kullanilir.
+                # Fallback: numpy yoksa orijinal Python dongusune duser — geriye donuk uyumluluk saglanir.
+                clen = self._tour_length_fast(child)
                 new_pop.append(Individual(child, 1.0 / (clen + 1e-10), clen))
 
             pop = new_pop
 
-        # Final aggressive 2-opt on best
-        if self._dist_matrix is not None:
+        # Final aggressive 2-opt on best — Gelistirme #1: onceden hazir numpy array kullanilir.
+        if self._dist_matrix_np is not None:
+            route_np = _nb._prepare_route(best_chrom)
+            improved_np, best_len = _nb._two_opt_improve_atsp_numba(route_np, self._dist_matrix_np, 300, False)
+            best_chrom = _nb._extract_route(improved_np, best_chrom)
+        elif self._dist_matrix is not None:
             best_chrom, best_len = _nb.nb_two_opt(best_chrom, self._dist_matrix, 300, False)
 
         elapsed_ms = (time.perf_counter() - t0) * 1000

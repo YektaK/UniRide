@@ -12,6 +12,11 @@ from dataclasses import dataclass
 from typing import List, Tuple, Optional
 import time
 import math
+try:
+    import numpy as np
+    _NUMPY_AVAILABLE = True
+except ImportError:
+    _NUMPY_AVAILABLE = False
 
 
 @dataclass
@@ -39,6 +44,9 @@ class BaseTSPSolver(ABC):
         self._time_matrix: Optional[List[List[float]]] = None
         self._use_time_matrix: bool = False
         self._dist_matrix: Optional[List[List[float]]] = None  # cached for numba speedup
+        # Gelistirme #1: Numpy önbelleği — matris bir kez np.ndarray'e dönüştürülür.
+        # Bu, her nb_two_opt / tour_length çağrısındaki dönüşüm yükünü ortadan kaldırır.
+        self._dist_matrix_np = None  # np.ndarray veya None
 
     def _initial_tour_nodes(self) -> List[int]:
         """Return initial node list. For time matrix, exclude depot(0); for TSP use all nodes."""
@@ -56,6 +64,8 @@ class BaseTSPSolver(ABC):
             self._dist_matrix = self._time_matrix
         else:
             self._dist_matrix = self._build_dist_matrix(coordinates)
+        # Gelistirme #1: Python list hazır olduktan sonra numpy önbelleğini bir kez oluştur.
+        self._build_np_cache()
     
     def _build_dist_matrix(self, coordinates: List[Tuple[float, float]]) -> List[List[float]]:
         """Pre-compute full Euclidean distance matrix for numba JIT."""
@@ -79,7 +89,44 @@ class BaseTSPSolver(ABC):
         # Avoid generating pseudo-coordinates to prevent accidental use of Euclidean distances
         self._coordinates = [(0.0, 0.0) for _ in range(self._n)]
         self._dist_matrix = time_matrix
+        # Gelistirme #1: Zaman matrisi yüklendiğinde numpy önbelleğini de hemen oluştur.
+        self._build_np_cache()
     
+    def _build_np_cache(self):
+        """Gelistirme #1 — Numpy Veri Transferi Optimizasyonu.
+        
+        dist_matrix (Python list-of-lists) bir kez np.ndarray'e dönüştürülür ve 
+        _dist_matrix_np olarak önbelleklenir. Bu sayede her nb_two_opt / _tour_length_fast 
+        çağrısında tekrarlanan np.array() maliyeti ortadan kalkar.
+        Numpy mevcut değilse sessizce atlanır; mevcut davranış korunur.
+        """
+        if _NUMPY_AVAILABLE and self._dist_matrix is not None:
+            self._dist_matrix_np = np.array(self._dist_matrix, dtype=np.float64)
+        else:
+            self._dist_matrix_np = None
+
+    def _tour_length_fast(self, tour: List[int]) -> float:
+        """Gelistirme #2 — Hızlı Tur Uzunluğu Hesabı.
+        
+        Önce numpy önbelleği (_dist_matrix_np) ve numba_accel JIT kerneli kullanılmaya 
+        çalışılır. Başarısız olursa mevcut Python tabanlı hesaplamaya düşer (fallback).
+        Bu sayede GA döngüsündeki her `self.tour_length(child)` çağrısı Numba ile hızlanır.
+        Mevcut tour_length() metodu değişmeden korunur — geriye dönük uyumluluk sağlanır.
+        """
+        if self._dist_matrix_np is not None:
+            try:
+                from . import numba_accel as _nb
+                import numpy as _np
+                # 0 depot içermeyen turlar için: Numba kerneli depot dahil tam tur bekler.
+                # _nb içindeki _prepare_route helper'ı bu dönüşümü yapıyor.
+                route_np = _nb._prepare_route(tour)
+                length = _nb._calculate_tour_length_atsp_numba(route_np, self._dist_matrix_np)
+                return float(length)
+            except Exception:
+                pass  # Fallback: herhangi bir hata olursa yavaş yola dön
+        # Fallback: orijinal Python tabanlı hesaplama (güvenli)
+        return self.tour_length(tour)
+
     @staticmethod
     def _matrix_to_coordinates(time_matrix: List[List[float]]) -> List[Tuple[float, float]]:
         """

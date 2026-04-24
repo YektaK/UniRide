@@ -1,0 +1,5 @@
+Parameter,F,df_between,df_within,MSB,MSW,Significant_0.05,Significant_0.01
+swarm_size,0.0,0,17,0,5.2445,False,False
+max_iterations,0.0441,1,16,0.245,5.5569,False,False
+inertia_weight,0.4413,2,15,2.4772,5.6134,False,False
+cognitive_coeff,0.289,2,15,1.6539,5.7232,False,False

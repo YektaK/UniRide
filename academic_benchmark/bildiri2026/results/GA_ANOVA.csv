@@ -1,0 +1,6 @@
+Parameter,F,df_between,df_within,MSB,MSW,Significant_0.05,Significant_0.01
+population_size,0.0,0,26,0,10.3469,False,False
+generations,0.0,0,26,0,10.3469,False,False
+crossover_rate,0.1448,2,24,1.6033,11.0756,False,False
+mutation_rate,3.1283,2,24,27.8144,8.8913,True,False
+elite_count,0.3129,2,24,3.4178,10.9244,False,False

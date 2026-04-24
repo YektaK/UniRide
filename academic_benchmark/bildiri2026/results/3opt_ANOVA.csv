@@ -1,0 +1,4 @@
+Parameter,F,df_between,df_within,MSB,MSW,Significant_0.05,Significant_0.01
+max_iterations,0.2793,2,15,6.9089,24.7403,False,False
+first_improvement,3.4603,1,16,68.445,19.7799,True,False
+num_starts,15.6946,2,15,130.2289,8.2977,True,True

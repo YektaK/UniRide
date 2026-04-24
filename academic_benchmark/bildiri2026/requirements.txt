@@ -1,0 +1,10 @@
+# Bildiri 2026 - Python Dependencies
+# Install: pip install -r requirements.txt
+
+# Data processing
+numpy>=1.24.0
+pandas>=2.0.0
+openpyxl>=3.1.0    # For Excel .xlsx reading
+
+# Standard library only (no install needed):
+# json, csv, math, time, random, os, sys, argparse, re, datetime, dataclasses, typing, abc

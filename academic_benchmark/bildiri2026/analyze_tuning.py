@@ -182,7 +182,7 @@ def generate_report(all_analyses, output_path, is_master=False):
 
     with open(output_path, 'w', encoding='utf-8') as fh:
         fh.writelines(lines)
-    print(f"  ✅ Rapor oluşturuldu: {os.path.basename(output_path)}")
+    print(f"  [OK] Rapor oluşturuldu: {os.path.basename(output_path)}")
 
 # =====================================================================
 # 4. Main Data Processing

@@ -1,0 +1,13 @@
+timestamp,config_file,problem,algorithm,combo_idx,mean_duration,params
+09:31:56,batch_extra_oropt_kroA100.json,kroA100,Or-opt,2,85419.0,"{""max_iterations"": 300, ""max_segment_size"": 2, ""num_starts"": 1}"
+09:31:56,batch_extra_oropt_kroA100.json,kroA100,Or-opt,1,82070.67,"{""max_iterations"": 300, ""max_segment_size"": 2, ""num_starts"": 5}"
+09:31:57,batch_extra_oropt_kroA100.json,kroA100,Or-opt,4,89626.67,"{""max_iterations"": 300, ""max_segment_size"": 3, ""num_starts"": 1}"
+09:31:59,batch_extra_oropt_kroA100.json,kroA100,Or-opt,3,48360.0,"{""max_iterations"": 500, ""max_segment_size"": 2, ""num_starts"": 5}"
+09:32:06,batch_extra_oropt_rd100.json,rd100,Or-opt,4,28447.67,"{""max_iterations"": 300, ""max_segment_size"": 3, ""num_starts"": 1}"
+09:32:06,batch_extra_oropt_rd100.json,rd100,Or-opt,2,25329.33,"{""max_iterations"": 300, ""max_segment_size"": 2, ""num_starts"": 1}"
+09:32:06,batch_extra_oropt_rd100.json,rd100,Or-opt,1,25597.33,"{""max_iterations"": 300, ""max_segment_size"": 2, ""num_starts"": 5}"
+09:32:08,batch_extra_oropt_rd100.json,rd100,Or-opt,3,13860.33,"{""max_iterations"": 500, ""max_segment_size"": 2, ""num_starts"": 5}"
+09:32:17,batch_extra_oropt_st70.json,st70,Or-opt,2,1159.67,"{""max_iterations"": 300, ""max_segment_size"": 2, ""num_starts"": 1}"
+09:32:18,batch_extra_oropt_st70.json,st70,Or-opt,4,1174.33,"{""max_iterations"": 300, ""max_segment_size"": 3, ""num_starts"": 1}"
+09:32:18,batch_extra_oropt_st70.json,st70,Or-opt,1,928.0,"{""max_iterations"": 300, ""max_segment_size"": 2, ""num_starts"": 5}"
+09:32:20,batch_extra_oropt_st70.json,st70,Or-opt,3,760.33,"{""max_iterations"": 500, ""max_segment_size"": 2, ""num_starts"": 5}"

@@ -1,0 +1,32 @@
+{
+    "problem": {
+        "name": "eil76",
+        "type": "tsplib",
+        "path_relative": "data/tsplib/eil76.tsp"
+    },
+    "tuning_settings": {
+        "runs_per_combination": 3,
+        "max_combinations_per_algo": 8,
+        "strategy": "fractional_fallback"
+    },
+    "algorithms": {
+        "2-opt": {
+            "max_iterations": [500, 1500],
+            "first_improvement": [true, false],
+            "num_starts": [1, 10]
+        },
+        "GA": {
+            "population_size": [50, 150],
+            "generations": [100, 300],
+            "crossover_rate": [0.8],
+            "mutation_rate": [0.05, 0.1],
+            "elite_count": [2]
+        },
+        "PSO": {
+            "swarm_size": [30, 70],
+            "max_iterations": [100, 300],
+            "inertia_weight": [0.729],
+            "cognitive_coeff": [1.494]
+        }
+    }
+}

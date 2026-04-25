@@ -151,7 +151,12 @@ def main():
     for idx, c in enumerate(configs, 1):
         print(f"  [{idx}] {c}")
         
-    sel_input = input("\nÇalıştırılacak config numaralarını girin (Örn: 1,2 veya 'all'): ").strip()
+    # Argument support for automation
+    if len(sys.argv) > 1:
+        sel_input = sys.argv[1]
+    else:
+        sel_input = input("\nÇalıştırılacak config numaralarını girin (Örn: 1,2 veya 'all'): ").strip()
+    
     selected_files = configs if sel_input.lower() == 'all' else []
     if not selected_files:
         try:

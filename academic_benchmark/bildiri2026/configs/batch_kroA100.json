@@ -1,0 +1,62 @@
+{
+    "problem": {
+        "name": "kroA100",
+        "type": "tsplib",
+        "path_relative": "data/tsplib/kroA100.tsp"
+    },
+    "tuning_settings": {
+        "runs_per_combination": 3,
+        "max_combinations_per_algo": 5,
+        "strategy": "fractional_fallback"
+    },
+    "algorithms": {
+        "2-opt": {
+            "max_iterations": [
+                500,
+                1000
+            ],
+            "first_improvement": [
+                true
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "GA": {
+            "population_size": [
+                50,
+                100
+            ],
+            "generations": [
+                100,
+                200
+            ],
+            "crossover_rate": [
+                0.8
+            ],
+            "mutation_rate": [
+                0.1
+            ],
+            "elite_count": [
+                2
+            ]
+        },
+        "PSO": {
+            "swarm_size": [
+                20,
+                50
+            ],
+            "max_iterations": [
+                100,
+                200
+            ],
+            "inertia_weight": [
+                0.729
+            ],
+            "cognitive_coeff": [
+                1.494
+            ]
+        }
+    }
+}

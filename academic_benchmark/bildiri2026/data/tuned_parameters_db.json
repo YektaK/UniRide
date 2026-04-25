@@ -3,6 +3,875 @@
         "algorithm": "2-opt",
         "problem": "berlin52",
         "dimension": 52,
+        "runs_per_combination": 3,
+        "best_mean_length": 7929.666666666667,
+        "parameters": {
+            "max_iterations": 500,
+            "first_improvement": true,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                500,
+                1000
+            ],
+            "first_improvement": [
+                true
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "id": 1,
+        "timestamp": "2026-04-25 03:02:50"
+    },
+    {
+        "algorithm": "GA",
+        "problem": "berlin52",
+        "dimension": 52,
+        "runs_per_combination": 3,
+        "best_mean_length": 7623.333333333333,
+        "parameters": {
+            "population_size": 100,
+            "generations": 100,
+            "crossover_rate": 0.8,
+            "mutation_rate": 0.1,
+            "elite_count": 2
+        },
+        "search_space_bounds": {
+            "population_size": [
+                50,
+                100
+            ],
+            "generations": [
+                100,
+                200
+            ],
+            "crossover_rate": [
+                0.8
+            ],
+            "mutation_rate": [
+                0.1
+            ],
+            "elite_count": [
+                2
+            ]
+        },
+        "id": 2,
+        "timestamp": "2026-04-25 03:02:59"
+    },
+    {
+        "algorithm": "PSO",
+        "problem": "berlin52",
+        "dimension": 52,
+        "runs_per_combination": 3,
+        "best_mean_length": 7595.666666666667,
+        "parameters": {
+            "swarm_size": 50,
+            "max_iterations": 200,
+            "inertia_weight": 0.729,
+            "cognitive_coeff": 1.494
+        },
+        "search_space_bounds": {
+            "swarm_size": [
+                20,
+                50
+            ],
+            "max_iterations": [
+                100,
+                200
+            ],
+            "inertia_weight": [
+                0.729
+            ],
+            "cognitive_coeff": [
+                1.494
+            ]
+        },
+        "id": 3,
+        "timestamp": "2026-04-25 03:03:07"
+    },
+    {
+        "algorithm": "2-opt",
+        "problem": "eil51",
+        "dimension": 51,
+        "runs_per_combination": 3,
+        "best_mean_length": 439.0,
+        "parameters": {
+            "max_iterations": 1000,
+            "first_improvement": true,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                500,
+                1000
+            ],
+            "first_improvement": [
+                true
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "id": 4,
+        "timestamp": "2026-04-25 03:03:12"
+    },
+    {
+        "algorithm": "GA",
+        "problem": "eil51",
+        "dimension": 51,
+        "runs_per_combination": 3,
+        "best_mean_length": 432.3333333333333,
+        "parameters": {
+            "population_size": 100,
+            "generations": 200,
+            "crossover_rate": 0.8,
+            "mutation_rate": 0.1,
+            "elite_count": 2
+        },
+        "search_space_bounds": {
+            "population_size": [
+                50,
+                100
+            ],
+            "generations": [
+                100,
+                200
+            ],
+            "crossover_rate": [
+                0.8
+            ],
+            "mutation_rate": [
+                0.1
+            ],
+            "elite_count": [
+                2
+            ]
+        },
+        "id": 5,
+        "timestamp": "2026-04-25 03:03:22"
+    },
+    {
+        "algorithm": "PSO",
+        "problem": "eil51",
+        "dimension": 51,
+        "runs_per_combination": 3,
+        "best_mean_length": 432.3333333333333,
+        "parameters": {
+            "swarm_size": 50,
+            "max_iterations": 200,
+            "inertia_weight": 0.729,
+            "cognitive_coeff": 1.494
+        },
+        "search_space_bounds": {
+            "swarm_size": [
+                20,
+                50
+            ],
+            "max_iterations": [
+                100,
+                200
+            ],
+            "inertia_weight": [
+                0.729
+            ],
+            "cognitive_coeff": [
+                1.494
+            ]
+        },
+        "id": 6,
+        "timestamp": "2026-04-25 03:03:28"
+    },
+    {
+        "algorithm": "2-opt",
+        "problem": "kroA100",
+        "dimension": 100,
+        "runs_per_combination": 3,
+        "best_mean_length": 21935.0,
+        "parameters": {
+            "max_iterations": 500,
+            "first_improvement": true,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                500,
+                1000
+            ],
+            "first_improvement": [
+                true
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "id": 7,
+        "timestamp": "2026-04-25 03:03:36"
+    },
+    {
+        "algorithm": "GA",
+        "problem": "kroA100",
+        "dimension": 100,
+        "runs_per_combination": 3,
+        "best_mean_length": 21605.666666666668,
+        "parameters": {
+            "population_size": 100,
+            "generations": 200,
+            "crossover_rate": 0.8,
+            "mutation_rate": 0.1,
+            "elite_count": 2
+        },
+        "search_space_bounds": {
+            "population_size": [
+                50,
+                100
+            ],
+            "generations": [
+                100,
+                200
+            ],
+            "crossover_rate": [
+                0.8
+            ],
+            "mutation_rate": [
+                0.1
+            ],
+            "elite_count": [
+                2
+            ]
+        },
+        "id": 8,
+        "timestamp": "2026-04-25 03:03:43"
+    },
+    {
+        "algorithm": "PSO",
+        "problem": "kroA100",
+        "dimension": 100,
+        "runs_per_combination": 3,
+        "best_mean_length": 21688.333333333332,
+        "parameters": {
+            "swarm_size": 50,
+            "max_iterations": 100,
+            "inertia_weight": 0.729,
+            "cognitive_coeff": 1.494
+        },
+        "search_space_bounds": {
+            "swarm_size": [
+                20,
+                50
+            ],
+            "max_iterations": [
+                100,
+                200
+            ],
+            "inertia_weight": [
+                0.729
+            ],
+            "cognitive_coeff": [
+                1.494
+            ]
+        },
+        "id": 9,
+        "timestamp": "2026-04-25 03:03:52"
+    },
+    {
+        "algorithm": "2-opt",
+        "problem": "rd100",
+        "dimension": 100,
+        "runs_per_combination": 3,
+        "best_mean_length": 8231.0,
+        "parameters": {
+            "max_iterations": 500,
+            "first_improvement": true,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                500,
+                1000
+            ],
+            "first_improvement": [
+                true
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "id": 10,
+        "timestamp": "2026-04-25 03:03:58"
+    },
+    {
+        "algorithm": "GA",
+        "problem": "rd100",
+        "dimension": 100,
+        "runs_per_combination": 3,
+        "best_mean_length": 8091.333333333333,
+        "parameters": {
+            "population_size": 100,
+            "generations": 100,
+            "crossover_rate": 0.8,
+            "mutation_rate": 0.1,
+            "elite_count": 2
+        },
+        "search_space_bounds": {
+            "population_size": [
+                50,
+                100
+            ],
+            "generations": [
+                100,
+                200
+            ],
+            "crossover_rate": [
+                0.8
+            ],
+            "mutation_rate": [
+                0.1
+            ],
+            "elite_count": [
+                2
+            ]
+        },
+        "id": 11,
+        "timestamp": "2026-04-25 03:04:05"
+    },
+    {
+        "algorithm": "PSO",
+        "problem": "rd100",
+        "dimension": 100,
+        "runs_per_combination": 3,
+        "best_mean_length": 8119.0,
+        "parameters": {
+            "swarm_size": 20,
+            "max_iterations": 100,
+            "inertia_weight": 0.729,
+            "cognitive_coeff": 1.494
+        },
+        "search_space_bounds": {
+            "swarm_size": [
+                20,
+                50
+            ],
+            "max_iterations": [
+                100,
+                200
+            ],
+            "inertia_weight": [
+                0.729
+            ],
+            "cognitive_coeff": [
+                1.494
+            ]
+        },
+        "id": 12,
+        "timestamp": "2026-04-25 03:04:11"
+    },
+    {
+        "algorithm": "2-opt",
+        "problem": "st70",
+        "dimension": 70,
+        "runs_per_combination": 3,
+        "best_mean_length": 691.3333333333334,
+        "parameters": {
+            "max_iterations": 500,
+            "first_improvement": true,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                500,
+                1000
+            ],
+            "first_improvement": [
+                true
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "id": 13,
+        "timestamp": "2026-04-25 03:04:16"
+    },
+    {
+        "algorithm": "GA",
+        "problem": "st70",
+        "dimension": 70,
+        "runs_per_combination": 3,
+        "best_mean_length": 682.0,
+        "parameters": {
+            "population_size": 100,
+            "generations": 200,
+            "crossover_rate": 0.8,
+            "mutation_rate": 0.1,
+            "elite_count": 2
+        },
+        "search_space_bounds": {
+            "population_size": [
+                50,
+                100
+            ],
+            "generations": [
+                100,
+                200
+            ],
+            "crossover_rate": [
+                0.8
+            ],
+            "mutation_rate": [
+                0.1
+            ],
+            "elite_count": [
+                2
+            ]
+        },
+        "id": 14,
+        "timestamp": "2026-04-25 03:04:23"
+    },
+    {
+        "algorithm": "PSO",
+        "problem": "st70",
+        "dimension": 70,
+        "runs_per_combination": 3,
+        "best_mean_length": 682.3333333333334,
+        "parameters": {
+            "swarm_size": 50,
+            "max_iterations": 200,
+            "inertia_weight": 0.729,
+            "cognitive_coeff": 1.494
+        },
+        "search_space_bounds": {
+            "swarm_size": [
+                20,
+                50
+            ],
+            "max_iterations": [
+                100,
+                200
+            ],
+            "inertia_weight": [
+                0.729
+            ],
+            "cognitive_coeff": [
+                1.494
+            ]
+        },
+        "id": 15,
+        "timestamp": "2026-04-25 03:04:29"
+    },
+    {
+        "algorithm": "2-opt",
+        "problem": "Universal_Small_Scale",
+        "dimension": 0,
+        "runs_per_combination": 30,
+        "best_mean_length": 0,
+        "parameters": {
+            "max_iterations": 500,
+            "first_improvement": true,
+            "num_starts": 5
+        },
+        "id": 16,
+        "timestamp": "2026-04-25 09:00:39"
+    },
+    {
+        "algorithm": "GA",
+        "problem": "Universal_Small_Scale",
+        "dimension": 0,
+        "runs_per_combination": 30,
+        "best_mean_length": 0,
+        "parameters": {
+            "population_size": 100,
+            "generations": 200,
+            "crossover_rate": 0.8,
+            "mutation_rate": 0.1,
+            "elite_count": 2
+        },
+        "id": 17,
+        "timestamp": "2026-04-25 09:00:39"
+    },
+    {
+        "algorithm": "PSO",
+        "problem": "Universal_Small_Scale",
+        "dimension": 0,
+        "runs_per_combination": 30,
+        "best_mean_length": 0,
+        "parameters": {
+            "swarm_size": 50,
+            "max_iterations": 200,
+            "inertia_weight": 0.729,
+            "cognitive_coeff": 1.494
+        },
+        "id": 18,
+        "timestamp": "2026-04-25 09:00:39"
+    },
+    {
+        "algorithm": "3-opt",
+        "problem": "berlin52",
+        "dimension": 52,
+        "runs_per_combination": 3,
+        "best_mean_length": 7929.666666666667,
+        "parameters": {
+            "max_iterations": 300,
+            "first_improvement": true,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                300,
+                500
+            ],
+            "first_improvement": [
+                true
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "id": 19,
+        "timestamp": "2026-04-25 09:30:12"
+    },
+    {
+        "algorithm": "3-opt",
+        "problem": "eil51",
+        "dimension": 51,
+        "runs_per_combination": 3,
+        "best_mean_length": 439.0,
+        "parameters": {
+            "max_iterations": 500,
+            "first_improvement": true,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                300,
+                500
+            ],
+            "first_improvement": [
+                true
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "id": 20,
+        "timestamp": "2026-04-25 09:30:23"
+    },
+    {
+        "algorithm": "3-opt",
+        "problem": "kroA100",
+        "dimension": 100,
+        "runs_per_combination": 3,
+        "best_mean_length": 22041.0,
+        "parameters": {
+            "max_iterations": 500,
+            "first_improvement": true,
+            "num_starts": 1
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                300,
+                500
+            ],
+            "first_improvement": [
+                true
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "id": 21,
+        "timestamp": "2026-04-25 09:30:34"
+    },
+    {
+        "algorithm": "3-opt",
+        "problem": "rd100",
+        "dimension": 100,
+        "runs_per_combination": 3,
+        "best_mean_length": 8290.0,
+        "parameters": {
+            "max_iterations": 500,
+            "first_improvement": true,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                300,
+                500
+            ],
+            "first_improvement": [
+                true
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "id": 22,
+        "timestamp": "2026-04-25 09:30:46"
+    },
+    {
+        "algorithm": "3-opt",
+        "problem": "st70",
+        "dimension": 70,
+        "runs_per_combination": 3,
+        "best_mean_length": 691.3333333333334,
+        "parameters": {
+            "max_iterations": 300,
+            "first_improvement": true,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                300,
+                500
+            ],
+            "first_improvement": [
+                true
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "id": 23,
+        "timestamp": "2026-04-25 09:30:56"
+    },
+    {
+        "algorithm": "Or-opt",
+        "problem": "berlin52",
+        "dimension": 52,
+        "runs_per_combination": 3,
+        "best_mean_length": 7968.333333333333,
+        "parameters": {
+            "max_iterations": 500,
+            "max_segment_size": 2,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                300,
+                500
+            ],
+            "max_segment_size": [
+                2,
+                3
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "id": 24,
+        "timestamp": "2026-04-25 09:31:39"
+    },
+    {
+        "algorithm": "Or-opt",
+        "problem": "eil51",
+        "dimension": 51,
+        "runs_per_combination": 3,
+        "best_mean_length": 452.3333333333333,
+        "parameters": {
+            "max_iterations": 500,
+            "max_segment_size": 2,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                300,
+                500
+            ],
+            "max_segment_size": [
+                2,
+                3
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "id": 25,
+        "timestamp": "2026-04-25 09:31:45"
+    },
+    {
+        "algorithm": "Or-opt",
+        "problem": "kroA100",
+        "dimension": 100,
+        "runs_per_combination": 3,
+        "best_mean_length": 48360.0,
+        "parameters": {
+            "max_iterations": 500,
+            "max_segment_size": 2,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                300,
+                500
+            ],
+            "max_segment_size": [
+                2,
+                3
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "id": 26,
+        "timestamp": "2026-04-25 09:31:56"
+    },
+    {
+        "algorithm": "Or-opt",
+        "problem": "kroA100",
+        "dimension": 100,
+        "runs_per_combination": 3,
+        "best_mean_length": 48360.0,
+        "parameters": {
+            "max_iterations": 500,
+            "max_segment_size": 2,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                300,
+                500
+            ],
+            "max_segment_size": [
+                2,
+                3
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "id": 27,
+        "timestamp": "2026-04-25 09:31:59"
+    },
+    {
+        "algorithm": "Or-opt",
+        "problem": "rd100",
+        "dimension": 100,
+        "runs_per_combination": 3,
+        "best_mean_length": 13860.333333333334,
+        "parameters": {
+            "max_iterations": 500,
+            "max_segment_size": 2,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                300,
+                500
+            ],
+            "max_segment_size": [
+                2,
+                3
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "id": 28,
+        "timestamp": "2026-04-25 09:32:06"
+    },
+    {
+        "algorithm": "Or-opt",
+        "problem": "rd100",
+        "dimension": 100,
+        "runs_per_combination": 3,
+        "best_mean_length": 13860.333333333334,
+        "parameters": {
+            "max_iterations": 500,
+            "max_segment_size": 2,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                300,
+                500
+            ],
+            "max_segment_size": [
+                2,
+                3
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "id": 29,
+        "timestamp": "2026-04-25 09:32:09"
+    },
+    {
+        "algorithm": "Or-opt",
+        "problem": "st70",
+        "dimension": 70,
+        "runs_per_combination": 3,
+        "best_mean_length": 760.3333333333334,
+        "parameters": {
+            "max_iterations": 500,
+            "max_segment_size": 2,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                300,
+                500
+            ],
+            "max_segment_size": [
+                2,
+                3
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "id": 30,
+        "timestamp": "2026-04-25 09:32:17"
+    },
+    {
+        "algorithm": "Or-opt",
+        "problem": "st70",
+        "dimension": 70,
+        "runs_per_combination": 3,
+        "best_mean_length": 760.3333333333334,
+        "parameters": {
+            "max_iterations": 500,
+            "max_segment_size": 2,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                300,
+                500
+            ],
+            "max_segment_size": [
+                2,
+                3
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "id": 31,
+        "timestamp": "2026-04-25 09:32:20"
+    },
+    {
+        "algorithm": "2-opt",
+        "problem": "berlin52",
+        "dimension": 52,
         "runs_per_combination": 5,
         "best_mean_length": 7766.8,
         "parameters": {
@@ -26,8 +895,8 @@
                 10
             ]
         },
-        "id": 1,
-        "timestamp": "2026-04-24 14:43:02"
+        "id": 32,
+        "timestamp": "2026-04-25 09:32:39"
     },
     {
         "algorithm": "3-opt",
@@ -56,8 +925,8 @@
                 5
             ]
         },
-        "id": 2,
-        "timestamp": "2026-04-24 14:43:03"
+        "id": 33,
+        "timestamp": "2026-04-25 09:32:51"
     },
     {
         "algorithm": "Or-opt",
@@ -87,8 +956,8 @@
                 5
             ]
         },
-        "id": 3,
-        "timestamp": "2026-04-24 14:43:11"
+        "id": 34,
+        "timestamp": "2026-04-25 09:33:15"
     },
     {
         "algorithm": "GA",
@@ -126,8 +995,8 @@
                 3
             ]
         },
-        "id": 4,
-        "timestamp": "2026-04-24 14:44:12"
+        "id": 35,
+        "timestamp": "2026-04-25 09:33:48"
     },
     {
         "algorithm": "PSO",
@@ -163,8 +1032,102 @@
                 2.0
             ]
         },
-        "id": 5,
-        "timestamp": "2026-04-24 14:44:50"
+        "id": 36,
+        "timestamp": "2026-04-25 09:34:26"
+    },
+    {
+        "algorithm": "2-opt",
+        "problem": "berlin52",
+        "dimension": 52,
+        "runs_per_combination": 3,
+        "best_mean_length": 7777.666666666667,
+        "parameters": {
+            "max_iterations": 1000,
+            "first_improvement": true,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                500,
+                1000
+            ],
+            "first_improvement": [
+                true,
+                false
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "id": 37,
+        "timestamp": "2026-04-25 09:34:43"
+    },
+    {
+        "algorithm": "GA",
+        "problem": "berlin52",
+        "dimension": 52,
+        "runs_per_combination": 3,
+        "best_mean_length": 7623.333333333333,
+        "parameters": {
+            "population_size": 100,
+            "generations": 100,
+            "crossover_rate": 0.8,
+            "mutation_rate": 0.1,
+            "elite_count": 2
+        },
+        "search_space_bounds": {
+            "population_size": [
+                50,
+                100
+            ],
+            "generations": [
+                100,
+                200
+            ],
+            "crossover_rate": [
+                0.8
+            ],
+            "mutation_rate": [
+                0.1
+            ],
+            "elite_count": [
+                2
+            ]
+        },
+        "id": 38,
+        "timestamp": "2026-04-25 09:35:04"
+    },
+    {
+        "algorithm": "PSO",
+        "problem": "berlin52",
+        "dimension": 52,
+        "runs_per_combination": 3,
+        "best_mean_length": 7595.666666666667,
+        "parameters": {
+            "swarm_size": 50,
+            "max_iterations": 200,
+            "inertia_weight": 0.729,
+            "cognitive_coeff": 1.494
+        },
+        "search_space_bounds": {
+            "swarm_size": [
+                20,
+                50
+            ],
+            "max_iterations": [
+                100,
+                200
+            ],
+            "inertia_weight": [
+                0.729
+            ],
+            "cognitive_coeff": [
+                1.494
+            ]
+        },
+        "id": 39,
+        "timestamp": "2026-04-25 09:35:12"
     },
     {
         "algorithm": "2-opt",
@@ -193,8 +1156,8 @@
                 10
             ]
         },
-        "id": 6,
-        "timestamp": "2026-04-24 23:29:29"
+        "id": 40,
+        "timestamp": "2026-04-25 09:35:32"
     },
     {
         "algorithm": "3-opt",
@@ -223,8 +1186,8 @@
                 5
             ]
         },
-        "id": 7,
-        "timestamp": "2026-04-24 23:29:31"
+        "id": 41,
+        "timestamp": "2026-04-25 09:35:49"
     },
     {
         "algorithm": "Or-opt",
@@ -254,8 +1217,8 @@
                 5
             ]
         },
-        "id": 8,
-        "timestamp": "2026-04-24 23:29:51"
+        "id": 42,
+        "timestamp": "2026-04-25 09:36:12"
     },
     {
         "algorithm": "GA",
@@ -293,8 +1256,8 @@
                 3
             ]
         },
-        "id": 9,
-        "timestamp": "2026-04-24 23:31:10"
+        "id": 43,
+        "timestamp": "2026-04-25 09:36:36"
     },
     {
         "algorithm": "PSO",
@@ -330,7 +1293,141 @@
                 2.0
             ]
         },
-        "id": 10,
-        "timestamp": "2026-04-24 23:32:10"
+        "id": 44,
+        "timestamp": "2026-04-25 09:37:04"
+    },
+    {
+        "algorithm": "2-opt",
+        "problem": "eil76",
+        "dimension": 76,
+        "runs_per_combination": 3,
+        "best_mean_length": 560.6666666666666,
+        "parameters": {
+            "max_iterations": 1500,
+            "first_improvement": false,
+            "num_starts": 10
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                500,
+                1500
+            ],
+            "first_improvement": [
+                true,
+                false
+            ],
+            "num_starts": [
+                1,
+                10
+            ]
+        },
+        "id": 45,
+        "timestamp": "2026-04-25 09:37:20"
+    },
+    {
+        "algorithm": "GA",
+        "problem": "eil76",
+        "dimension": 76,
+        "runs_per_combination": 3,
+        "best_mean_length": 555.0,
+        "parameters": {
+            "population_size": 50,
+            "generations": 300,
+            "crossover_rate": 0.8,
+            "mutation_rate": 0.1,
+            "elite_count": 2
+        },
+        "search_space_bounds": {
+            "population_size": [
+                50,
+                150
+            ],
+            "generations": [
+                100,
+                300
+            ],
+            "crossover_rate": [
+                0.8
+            ],
+            "mutation_rate": [
+                0.05,
+                0.1
+            ],
+            "elite_count": [
+                2
+            ]
+        },
+        "id": 46,
+        "timestamp": "2026-04-25 09:39:14"
+    },
+    {
+        "algorithm": "PSO",
+        "problem": "eil76",
+        "dimension": 76,
+        "runs_per_combination": 3,
+        "best_mean_length": 555.6666666666666,
+        "parameters": {
+            "swarm_size": 70,
+            "max_iterations": 300,
+            "inertia_weight": 0.729,
+            "cognitive_coeff": 1.494
+        },
+        "search_space_bounds": {
+            "swarm_size": [
+                30,
+                70
+            ],
+            "max_iterations": [
+                100,
+                300
+            ],
+            "inertia_weight": [
+                0.729
+            ],
+            "cognitive_coeff": [
+                1.494
+            ]
+        },
+        "id": 47,
+        "timestamp": "2026-04-25 09:39:51"
+    },
+    {
+        "algorithm": "GA",
+        "problem": "berlin52",
+        "dimension": 52,
+        "runs_per_combination": 5,
+        "best_mean_length": 7693.8,
+        "parameters": {
+            "population_size": 80,
+            "generations": 100,
+            "crossover_rate": 0.75,
+            "mutation_rate": 0.1,
+            "elite_count": 3
+        },
+        "search_space_bounds": {
+            "population_size": [
+                40,
+                80,
+                120
+            ],
+            "generations": [
+                100,
+                200
+            ],
+            "crossover_rate": [
+                0.75,
+                0.85
+            ],
+            "mutation_rate": [
+                0.1,
+                0.25
+            ],
+            "elite_count": [
+                1,
+                3
+            ]
+        },
+        "id": 48,
+        "timestamp": "2026-04-25 09:40:58"
     }
 ]

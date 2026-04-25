@@ -1,0 +1,3 @@
+timestamp,config_file,problem,algorithm,combo_idx,mean_duration,params
+09:40:57,config_berlin52_20260424_144223.json,berlin52,GA,5,7802.2,"{""population_size"": 40, ""generations"": 200, ""crossover_rate"": 0.85, ""mutation_rate"": 0.25, ""elite_count"": 3}"
+09:40:57,config_berlin52_20260424_144223.json,berlin52,GA,4,7693.8,"{""population_size"": 80, ""generations"": 100, ""crossover_rate"": 0.75, ""mutation_rate"": 0.1, ""elite_count"": 3}"

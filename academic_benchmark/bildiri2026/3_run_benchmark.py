@@ -83,7 +83,12 @@ def main():
         score = entry["best_mean_length"]
         print(f"  [{entry['id']}] {algo:<8} (Eğitim: {prob:<8}) -> Skor: {score:.2f}")
         
-    ans = input("\nÇalıştırılacak Model ID'leri (Örn: 1,3,4 veya 'all'): ").strip()
+    # Argument support for automation
+    if len(sys.argv) > 1:
+        ans = sys.argv[1]
+    else:
+        ans = input("\nÇalıştırılacak Model ID'leri (Örn: 1,3,4 veya 'all'): ").strip()
+        
     selected_entries = []
     if ans.lower() == 'all':
         selected_entries = db
@@ -111,7 +116,12 @@ def main():
     for idx, p in enumerate(problems, 1):
         print(f"  [{idx}] {p['name']} ({p['type']})")
         
-    p_ans = input("\nÇalıştırılacak Problem Numaraları (Örn: 1,2 veya 'all'): ").strip()
+    # Argument support for automation
+    if len(sys.argv) > 2:
+        p_ans = sys.argv[2]
+    else:
+        p_ans = input("\nÇalıştırılacak Problem Numaraları (Örn: 1,2 veya 'all'): ").strip()
+        
     selected_problems = []
     if p_ans.lower() == 'all':
         selected_problems = problems
@@ -124,10 +134,14 @@ def main():
             return
 
     # 3. Ayarlar
-    try:
-        num_runs = int(input("\nHer algoritma için tekrar sayısı [Varsayılan 30]: ").strip() or "30")
-    except ValueError:
-        num_runs = 30
+    # Argument support for automation
+    if len(sys.argv) > 3:
+        num_runs = int(sys.argv[3])
+    else:
+        try:
+            num_runs = int(input("\nHer algoritma için tekrar sayısı [Varsayılan 30]: ").strip() or "30")
+        except ValueError:
+            num_runs = 30
         
     max_workers = os.cpu_count() or 4
     

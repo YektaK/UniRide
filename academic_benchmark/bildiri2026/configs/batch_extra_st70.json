@@ -1,0 +1,40 @@
+{
+    "problem": {
+        "name": "st70",
+        "type": "tsplib",
+        "path_relative": "data/tsplib/st70.tsp"
+    },
+    "tuning_settings": {
+        "runs_per_combination": 3,
+        "max_combinations_per_algo": 4,
+        "strategy": "fractional_fallback"
+    },
+    "algorithms": {
+        "3-opt": {
+            "max_iterations": [
+                300,
+                500
+            ],
+            "first_improvement": [
+                true
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        },
+        "Or-opt": {
+            "max_iterations": [
+                300,
+                500
+            ],
+            "first_improvement": [
+                true
+            ],
+            "num_starts": [
+                1,
+                5
+            ]
+        }
+    }
+}

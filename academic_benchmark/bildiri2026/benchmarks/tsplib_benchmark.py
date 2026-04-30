@@ -34,12 +34,13 @@ from core import (
 
 
 # TSPLIB Optimal Solutions
+# All keys normalized to lowercase for case-insensitive lookup
 TSPLIB_OPTIMALS = {
     # Small problems (n <= 100)
     "berlin52": 7542, "eil51": 426, "eil76": 538, "st70": 675,
-    "kroA100": 21282, "eil101": 629, "pr107": 44303,
+    "kroa100": 21282, "eil101": 629, "pr107": 44303,
     # Medium problems (101-299)
-    "kroA150": 26524, "kroB150": 26130, "kroA200": 29368,
+    "kroa150": 26524, "krob150": 26130, "kroa200": 29368,
     "a280": 2579, "lin318": 42029,
     # Large problems (slower, optional)
     # "pcb1173": 56892, "u1060": 224094,

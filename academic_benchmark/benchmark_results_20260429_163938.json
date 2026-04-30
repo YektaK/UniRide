@@ -1,0 +1,15 @@
+{
+  "timestamp": "20260429_163938",
+  "total_time_sec": 0.008295699999507633,
+  "total_runs": 0,
+  "algorithms": [
+    "E2BSO",
+    "R2DMA",
+    "P-AOEA"
+  ],
+  "problems": [
+    "berlin52",
+    "eil51"
+  ],
+  "results": []
+}

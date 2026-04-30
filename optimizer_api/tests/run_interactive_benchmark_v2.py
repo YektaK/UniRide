@@ -92,6 +92,7 @@ class TSPLIBProblem:
     coordinates: List[Tuple[float, float]]
     category: str  # small, medium, large
     source: str = "tsplib"  # tsplib or generated
+    edge_weight_type: str = "EUC_2D"
 
 
 # ============================================================
@@ -160,6 +161,7 @@ def parse_tsplib_file(filepath: str) -> Optional[Dict]:
         name_match = re.search(r'NAME\s*:\s*(\S+)', content, re.IGNORECASE)
         dim_match = re.search(r'DIMENSION\s*:\s*(\d+)', content, re.IGNORECASE)
         type_match = re.search(r'TYPE\s*:\s*(\S+)', content, re.IGNORECASE)
+        ewt_match = re.search(r'EDGE_WEIGHT_TYPE\s*:\s*(\S+)', content, re.IGNORECASE)
         
         if not dim_match:
             print(f"    [ERROR] Cannot find DIMENSION in {filepath}")
@@ -168,6 +170,7 @@ def parse_tsplib_file(filepath: str) -> Optional[Dict]:
         name = name_match.group(1) if name_match else os.path.basename(filepath)
         dimension = int(dim_match.group(1))
         problem_type = type_match.group(1) if type_match else "TSP"
+        edge_weight_type = ewt_match.group(1) if ewt_match else "EUC_2D"
         
         # Extract coordinates
         coordinates = []
@@ -204,7 +207,8 @@ def parse_tsplib_file(filepath: str) -> Optional[Dict]:
             'name': name.lower(),
             'dimension': dimension,
             'coordinates': coordinates,
-            'type': problem_type
+            'type': problem_type,
+            'edge_weight_type': edge_weight_type
         }
     
     except Exception as e:
@@ -240,7 +244,8 @@ def load_tsplib_problem(problem_name: str, optimal: int, category: str) -> Optio
         optimal=optimal,
         coordinates=data['coordinates'],
         category=category,
-        source="tsplib"
+        source="tsplib",
+        edge_weight_type=data.get('edge_weight_type', 'EUC_2D')
     )
 
 

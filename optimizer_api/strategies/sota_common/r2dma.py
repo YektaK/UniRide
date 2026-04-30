@@ -468,7 +468,7 @@ class R2DMA:
             cost_fn,
             rng,
             intensity=self.cfg.ls_final,
-            overall_time_limit=30.0,
+            overall_time_limit=5.0,  # benchmark için kısaltıldı: 30s → 5s
         )
         if polished_cost < global_best_cost - 1e-10:
             global_best = polished_tour

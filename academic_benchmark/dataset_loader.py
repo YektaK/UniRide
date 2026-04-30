@@ -29,6 +29,7 @@ except ImportError:
             optimal: int
             coordinates: List[Tuple[float, float]]
             category: str
+            edge_weight_type: str
         ALL_PROBLEMS = []
         USE_V2 = False
         TSPLIB_PROBLEMS = None
@@ -39,6 +40,7 @@ def parse_tsp_file(filepath: str, optimal_score: int = 0) -> TSPLIBProblem:
     name = os.path.basename(filepath).replace(".tsp", "")
     dimension = 0
     coordinates = []
+    edge_weight_type = "EUC_2D"
     
     with open(filepath, 'r', encoding='utf-8') as f:
         in_node_section = False
@@ -51,6 +53,8 @@ def parse_tsp_file(filepath: str, optimal_score: int = 0) -> TSPLIBProblem:
                 name = line.split(":")[-1].strip()
             elif line.startswith("DIMENSION"):
                 dimension = int(line.split(":")[-1].strip())
+            elif line.startswith("EDGE_WEIGHT_TYPE"):
+                edge_weight_type = line.split(":")[-1].strip()
             elif line.startswith("NODE_COORD_SECTION"):
                 in_node_section = True
                 continue
@@ -78,8 +82,93 @@ def parse_tsp_file(filepath: str, optimal_score: int = 0) -> TSPLIBProblem:
         dimension=dimension,
         optimal=optimal_score, 
         coordinates=coordinates,
-        category=category
+        category=category,
+        edge_weight_type=edge_weight_type
     )
+
+
+def download_opt_tour(problem_name: str, data_dir: str) -> Optional[str]:
+    """Download TSPLIB .opt.tour file from GitHub mirror or TSPLIB95 tour archive."""
+    import gzip
+    import tarfile
+    import urllib.request
+    from urllib.error import URLError, HTTPError
+    os.makedirs(data_dir, exist_ok=True)
+    filename = f"{problem_name}.opt.tour"
+    filepath = os.path.join(data_dir, filename)
+    if os.path.exists(filepath):
+        return filepath
+
+    local_archive = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "tsplib_problems", "ALL_tsp.tar.gz")
+    )
+    if os.path.exists(local_archive):
+        try:
+            with tarfile.open(local_archive, "r:gz") as tar:
+                member = tar.getmember(filename)
+                tar.extract(member, data_dir)
+            if os.path.exists(filepath):
+                return filepath
+        except Exception:
+            pass
+
+    url = f"https://raw.githubusercontent.com/mastqe/tsplib/master/{filename}"
+    try:
+        with urllib.request.urlopen(url, timeout=15) as resp:
+            content = resp.read().decode("utf-8")
+        with open(filepath, "w", encoding="utf-8") as f_out:
+            f_out.write(content)
+        return filepath
+    except (URLError, HTTPError, TimeoutError, ValueError):
+        pass
+
+    tsplib_url = f"http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tour/{filename}.gz"
+    gz_path = filepath + ".gz"
+    try:
+        with urllib.request.urlopen(tsplib_url, timeout=15) as resp:
+            content = resp.read()
+        with open(gz_path, "wb") as f_gz:
+            f_gz.write(content)
+        with gzip.open(gz_path, "rt") as f_in:
+            with open(filepath, "w", encoding="utf-8") as f_out:
+                f_out.write(f_in.read())
+        os.remove(gz_path)
+        return filepath
+    except (URLError, HTTPError, TimeoutError, ValueError):
+        if os.path.exists(gz_path):
+            os.remove(gz_path)
+        return None
+
+
+def download_tsp_file(problem_name: str, data_dir: str) -> Optional[str]:
+    """Download TSPLIB .tsp file from GitHub mirror if missing."""
+    import urllib.request
+    import tarfile
+    os.makedirs(data_dir, exist_ok=True)
+    filename = f"{problem_name}.tsp"
+    filepath = os.path.join(data_dir, filename)
+    if os.path.exists(filepath):
+        return filepath
+
+    local_archive = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "tsplib_problems", "ALL_tsp.tar.gz")
+    )
+    if os.path.exists(local_archive):
+        try:
+            with tarfile.open(local_archive, "r:gz") as tar:
+                member = tar.getmember(filename)
+                tar.extract(member, data_dir)
+            if os.path.exists(filepath):
+                return filepath
+        except Exception:
+            pass
+
+    url = f"https://raw.githubusercontent.com/mastqe/tsplib/master/{filename}"
+    try:
+        urllib.request.urlretrieve(url, filepath)
+        return filepath
+    except Exception:
+        return None
 
 def parse_opt_tour_file(filepath: str) -> List[int]:
     """ .opt.tour dosyasını okur ve sırayla ziyaret edilen tam sayı düğüm indekslerini döner. """

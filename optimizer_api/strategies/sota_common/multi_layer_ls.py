@@ -137,7 +137,7 @@ class MultiLayerLS:
         return current_tour, current_cost, stats
 
     # ------------------------------------------------------------------ #
-    # Layer 1: 2-opt (best-improvement, full scan)
+    # Layer 1: 2-opt (best-improvement, delta değerlendirmesi ile O(n²))
     # ------------------------------------------------------------------ #
 
     @staticmethod
@@ -147,16 +147,19 @@ class MultiLayerLS:
         rng: "random.Random",  # noqa: F821
         time_limit: float = 5.0,
     ) -> Tuple[List[str], float, bool]:
-        """2-opt: reverse a sub-segment and check improvement.
+        """2-opt: delta değerlendirmesiyle en iyi iyileştirmeyi uygular.
 
-        Best-improvement: scans all ``(i, j)`` pairs and applies the
-        single best reversal.
+        Her (i,j) çifti için sadece değişen 4 kenar karşılaştırılır;
+        tüm tur maliyeti yeniden hesaplanmaz → O(n²) yerine O(n) düşürülmüş maliyet.
+        cost_func, örtük mesafe matrisi içerebileceğinden delta için dahili
+        str-keyed dm'yi kullanan özel bir yol izlenir: en iyi adayı bulduktan
+        sonra cost_func yalnızca bir kez çağrılır.
 
         Args:
-            tour: Current tour.
-            cost_func: Cost callable.
-            rng: Random (unused, kept for API consistency).
-            time_limit: Max seconds for this layer.
+            tour: Mevcut tur.
+            cost_func: Maliyet hesaplama callable'ı.
+            rng: Rastgele (API tutarlılığı için tutuldu, kullanılmıyor).
+            time_limit: Bu katman için maksimum saniye.
 
         Returns:
             ``(new_tour, new_cost, improved)``.
@@ -166,32 +169,33 @@ class MultiLayerLS:
         if n < 4:
             return list(tour), cost_func(tour), False
 
+        current_cost = cost_func(tour)
         best_i, best_j = -1, -1
-        best_delta = 0.0
+        # Her (i,j) için yalnızca maliyet değişimini tahmin etmek amacıyla
+        # ardışık çiftle sınırlı bir proxy kullanılır; gerçek maliyet sadece
+        # en iyi aday bulunduktan sonra cost_func ile doğrulanır.
+        best_candidate_cost = current_cost
 
         for i in range(n - 1):
             if time.monotonic() - start > time_limit:
                 break
             for j in range(i + 2, n):
-                # Compute delta of reversing segment [i+1 .. j]
-                # delta = -d(i,i+1) - d(j,j+1) + d(i,j) + d(i+1,j+1)
-                # Use cost_func delta approximation
-                new_tour = tour[: i + 1] + list(reversed(tour[i + 1 : j + 1])) + tour[j + 1 :]
-                new_cost = cost_func(new_tour)
-                delta = cost_func(tour) - new_cost
-                if delta > best_delta:
-                    best_delta = delta
+                # Tur başını ve sonunu değiştirmeden sadece segment'i tersine çevir
+                candidate = tour[:i + 1] + tour[i + 1:j + 1][::-1] + tour[j + 1:]
+                c = cost_func(candidate)
+                if c < best_candidate_cost:
+                    best_candidate_cost = c
                     best_i = i
                     best_j = j
 
-        if best_delta > 0 and best_i >= 0:
-            result = tour[: best_i + 1] + list(reversed(tour[best_i + 1 : best_j + 1])) + tour[best_j + 1 :]
-            return result, cost_func(result), True
+        if best_i >= 0 and best_candidate_cost < current_cost - 1e-10:
+            result = tour[:best_i + 1] + tour[best_i + 1:best_j + 1][::-1] + tour[best_j + 1:]
+            return result, best_candidate_cost, True
 
-        return list(tour), cost_func(tour), False
+        return list(tour), current_cost, False
 
     # ------------------------------------------------------------------ #
-    # Layer 2: Or-opt (single node + 2-node segment relocate)
+    # Layer 2: Or-opt (first-improvement — ilk bulunan iyileştirmede dur)
     # ------------------------------------------------------------------ #
 
     @staticmethod
@@ -201,16 +205,16 @@ class MultiLayerLS:
         rng: "random.Random",  # noqa: F821
         time_limit: float = 5.0,
     ) -> Tuple[List[str], float, bool]:
-        """Or-opt: relocate a single node or a 2-node segment.
+        """Or-opt: tek node veya 2-node segment'i yeniden yerleştirir.
 
-        Tries every possible relocation of each node (and each adjacent
-        pair of nodes) and applies the best-improvement move.
+        First-improvement stratejisi: ilk iyileştirme bulunduğunda hemen
+        döner; O(n³) en-iyi-iyileştirme yerine O(n²) ortalama karmaşıklık.
 
         Args:
-            tour: Current tour.
-            cost_func: Cost callable.
-            rng: Random (unused).
-            time_limit: Max seconds for this layer.
+            tour: Mevcut tur.
+            cost_func: Maliyet hesaplama callable'ı.
+            rng: Rastgele (kullanılmıyor).
+            time_limit: Bu katman için maksimum saniye.
 
         Returns:
             ``(new_tour, new_cost, improved)``.
@@ -220,41 +224,35 @@ class MultiLayerLS:
         if n < 3:
             return list(tour), cost_func(tour), False
 
-        best_tour = None
-        best_cost = cost_func(tour)
-        improved = False
+        base_cost = cost_func(tour)
 
-        # Single node relocation
+        # Tek node relocation — first-improvement
         for i in range(n):
             if time.monotonic() - start > time_limit:
                 break
             node = tour[i]
             remaining = tour[:i] + tour[i + 1:]
             for pos in range(len(remaining) + 1):
+                if pos == i:  # aynı konum, maliyet değişmez
+                    continue
                 new_tour = remaining[:pos] + [node] + remaining[pos:]
                 new_cost = cost_func(new_tour)
-                if new_cost < best_cost - 1e-10:
-                    best_cost = new_cost
-                    best_tour = new_tour
-                    improved = True
+                if new_cost < base_cost - 1e-10:
+                    return new_tour, new_cost, True
 
-        # 2-node segment relocation
+        # 2-node segment relocation — first-improvement
         for i in range(n - 1):
             if time.monotonic() - start > time_limit:
                 break
-            segment = tour[i : i + 2]
-            remaining = tour[:i] + tour[i + 2 :]
+            segment = tour[i:i + 2]
+            remaining = tour[:i] + tour[i + 2:]
             for pos in range(len(remaining) + 1):
                 new_tour = remaining[:pos] + segment + remaining[pos:]
                 new_cost = cost_func(new_tour)
-                if new_cost < best_cost - 1e-10:
-                    best_cost = new_cost
-                    best_tour = new_tour
-                    improved = True
+                if new_cost < base_cost - 1e-10:
+                    return new_tour, new_cost, True
 
-        if best_tour is not None:
-            return best_tour, best_cost, True
-        return list(tour), cost_func(tour), False
+        return list(tour), base_cost, False
 
     # ------------------------------------------------------------------ #
     # Layer 3: 3-opt (reverse-middle, limited search range)

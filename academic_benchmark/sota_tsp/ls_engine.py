@@ -29,7 +29,7 @@ try:
         _sys.path.insert(0, _ab_dir)
     from core import numba_accel as _nb
     _NUMBA_OK = _nb.NUMBA_AVAILABLE
-except ImportError:
+except Exception:
     _NUMBA_OK = False
     _nb = None
 

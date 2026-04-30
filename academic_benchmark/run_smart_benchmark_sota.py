@@ -62,6 +62,24 @@ HISTORY_DIR = os.path.join(BENCHMARK_DB, "history")
 
 ALL_ALGOS = ["E2BSO-TSP", "R2DMA-TSP", "P-AOEA-TSP"]
 
+# Worker pool limits
+_MAX_RECOMMENDED_WORKERS = 16
+
+# Adaptive solver config bounds (Numba-enabled)
+_NUMBA_POP_MIN = 20
+_NUMBA_POP_MAX = 60
+_NUMBA_POP_DIV = 2      # population_size = n // _NUMBA_POP_DIV clamped
+_NUMBA_ITER_MIN = 200
+_NUMBA_ITER_MAX = 500
+_NUMBA_ITER_FACTOR = 5  # max_iterations = n * factor clamped
+# Python-fallback (no Numba) — smaller budgets to avoid 85-second runs
+_PY_POP_MIN = 15
+_PY_POP_MAX = 35
+_PY_POP_DIV = 3
+_PY_ITER_MIN = 100
+_PY_ITER_MAX = 250
+_PY_ITER_FACTOR = 3
+
 # Source files to hash-track for cache invalidation
 ALGORITHMS_TO_CHECK: Dict[str, str] = {
     "E2BSO_TSP": os.path.join(SCRIPT_DIR, "sota_tsp", "e2bso_tsp.py"),
@@ -369,12 +387,12 @@ _NUMBA_AVAILABLE = _detect_numba()
 def _make_solver_config(algo_name: str, n: int, numba_ok: bool) -> Dict[str, Any]:
     if numba_ok:
         ls_limit = 0.5
-        pop = max(20, min(60, n // 2))
-        max_iter = max(200, min(500, n * 5))
+        pop = max(_NUMBA_POP_MIN, min(_NUMBA_POP_MAX, n // _NUMBA_POP_DIV))
+        max_iter = max(_NUMBA_ITER_MIN, min(_NUMBA_ITER_MAX, n * _NUMBA_ITER_FACTOR))
     else:
         ls_limit = max(0.02, min(0.12, 0.003 * n))
-        pop = max(15, min(35, n // 3))
-        max_iter = max(100, min(250, n * 3))
+        pop = max(_PY_POP_MIN, min(_PY_POP_MAX, n // _PY_POP_DIV))
+        max_iter = max(_PY_ITER_MIN, min(_PY_ITER_MAX, n * _PY_ITER_FACTOR))
 
     configs: Dict[str, Dict[str, Any]] = {
         "E2BSO-TSP": {
@@ -411,7 +429,7 @@ def _run_solver_task(args: Tuple) -> Dict[str, Any]:
             E2BSO_TSP, R2DMA_TSP, PAOEA_TSP,
             E2BSOTSPConfig, R2DMATSPConfig, PAOEAConfig,
         )
-    except (ImportError, Exception) as exc:
+    except Exception as exc:
         return {"error": f"Import failed: {exc}", "algorithm": algo_name}
 
     cfg = _make_solver_config(algo_name, n_nodes, numba_ok)
@@ -469,7 +487,7 @@ def _get_cpu_info() -> Dict[str, Any]:
         logical = cpu_count()
     smt = logical > physical
     recommended = physical if smt else max(1, physical - 1)
-    recommended = min(recommended, 16)
+    recommended = min(recommended, _MAX_RECOMMENDED_WORKERS)
     import platform
     return {
         "physical": physical,
@@ -488,7 +506,7 @@ def _select_worker_count() -> int:
     print(f"\n  Worker count options:")
     print(f"    [1] {rec} (recommended)")
     print(f"    [2] {min(info['logical'], 8)} (standard max-8)")
-    print(f"    [3] {min(info['logical'], 16)} (maximum)")
+    print(f"    [3] {min(info['logical'], _MAX_RECOMMENDED_WORKERS)} (maximum)")
     print("    [C] custom")
     print(f"    [Enter] default: {min(cpu_count(), 4)}")
     choice = input("\n  Selection: ").strip().upper()
@@ -497,7 +515,7 @@ def _select_worker_count() -> int:
     if choice == "2":
         return min(info["logical"], 8)
     if choice == "3":
-        return min(info["logical"], 16)
+        return min(info["logical"], _MAX_RECOMMENDED_WORKERS)
     if choice == "C":
         try:
             v = int(input(f"  Workers (1-{info['logical']}): ").strip())

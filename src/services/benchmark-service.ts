@@ -1,3 +1,5 @@
+import { generateBenchmarkRunId } from "@/lib/benchmark-run-id";
+
 /**
  * Benchmark Service
  * TSPLIB benchmark suite service for running systematic algorithm comparisons
@@ -152,10 +154,13 @@ export async function startBenchmark(
   problems: string[],
   settings: BenchmarkRunSettings
 ): Promise<BenchmarkRunResponse> {
+  const runId = generateBenchmarkRunId();
+
   const response = await fetch(`${BENCHMARK_API_BASE}/run`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      run_id: runId,
       algorithms,
       problems,
       settings,

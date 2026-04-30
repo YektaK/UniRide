@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { generateBenchmarkRunId, isValidBenchmarkRunId } from '@/lib/benchmark-run-id';
 
 const BACKEND_URL = process.env.OPTIMIZER_API_URL || 'http://localhost:8000';
 
@@ -60,11 +61,48 @@ export async function POST(request: NextRequest) {
     const seed = settings.seed ?? 42;
     const skipCached = Boolean(settings.skipCached ?? false);
 
-    // Generate run ID
+    // Use caller-provided run ID if available; otherwise generate one
     const now = new Date();
-    const timestamp = now.toISOString().replace(/[:\-T.]/g, '').substring(0, 14);
-    const randomSuffix = Math.random().toString(36).substring(2, 8);
-    const runId = `benchmark_${timestamp}_${randomSuffix}`;
+    const providedRunIdRaw = body.run_id ?? body.runId;
+    const providedRunId = typeof providedRunIdRaw === 'string' ? providedRunIdRaw.trim() : '';
+    if (providedRunId && !isValidBenchmarkRunId(providedRunId)) {
+      return NextResponse.json(
+        {
+          error: 'Geçersiz run_id formatı. Sadece harf, rakam, "_" ve "-" kullanılabilir (maksimum 64 karakter).',
+        },
+        { status: 400 }
+      );
+    }
+
+    if (providedRunId) {
+      try {
+        const statusResponse = await fetch(
+          `${BACKEND_URL}/api/v1/benchmark/status?run_id=${encodeURIComponent(providedRunId)}`,
+          { method: 'GET' }
+        );
+
+        if (statusResponse.ok) {
+          return NextResponse.json(
+            { error: 'Bu run_id zaten kullanılıyor. Lütfen farklı bir run_id deneyin.' },
+            { status: 409 }
+          );
+        }
+
+        if (statusResponse.status !== 404) {
+          return NextResponse.json(
+            { error: 'run_id doğrulaması sırasında backend erişim hatası oluştu.' },
+            { status: 502 }
+          );
+        }
+      } catch {
+        return NextResponse.json(
+          { error: 'run_id doğrulaması sırasında backend erişim hatası oluştu.' },
+          { status: 502 }
+        );
+      }
+    }
+
+    const runId = providedRunId || generateBenchmarkRunId(now);
 
     // Build benchmark request for Python backend
     const benchmarkRequest = {

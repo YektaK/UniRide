@@ -1,0 +1,36 @@
+{
+    "problem": {
+        "type": "tsplib",
+        "name": "gil262",
+        "path_relative": "data/tsplib/gil262.tsp"
+    },
+    "tuning_settings": {
+        "runs_per_combination": 5,
+        "max_combinations_per_algo": 27,
+        "strategy": "fractional_fallback"
+    },
+    "algorithms": {
+        "PSO": {
+            "swarm_size": [
+                20,
+                40,
+                60
+            ],
+            "max_iterations": [
+                100,
+                200,
+                300
+            ],
+            "inertia_weight": [
+                0.6,
+                0.729,
+                0.9
+            ],
+            "cognitive_coeff": [
+                1.0,
+                1.49445,
+                2.0
+            ]
+        }
+    }
+}

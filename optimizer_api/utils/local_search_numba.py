@@ -21,6 +21,7 @@ Note:
 from abc import ABC, abstractmethod
 from typing import List, Dict, Tuple, Optional, Callable, Any
 from enum import Enum
+import os
 import random
 import time
 import numpy as np
@@ -35,6 +36,10 @@ try:
         set_num_threads(min(4, numba.config.NUMBA_NUM_THREADS))
     except (AttributeError, RuntimeError):
         pass  # FIX-06: Numba config may not expose NUMBA_NUM_THREADS in all builds
+    # Disable Numba disk cache to avoid "No module named 'local_search_numba'" errors
+    # when multiprocessing workers try to reload cached JIT artefacts in different import contexts.
+    # This MUST be set before any numba JIT compilation happens.
+    os.environ["NUMBA_CACHE_DIR"] = os.devnull
 except ImportError:
     NUMBA_AVAILABLE = False
     # Fallback: create a no-op decorator
@@ -64,7 +69,7 @@ class LocalSearchType(str, Enum):
 # NUMBA-OPTIMIZED CORE FUNCTIONS
 # ============================================================
 
-@jit(nopython=True, cache=True)
+@jit(nopython=True, cache=False)
 def _calculate_tour_length_numba(route: np.ndarray, dist_matrix: np.ndarray) -> float:
     """
     Calculate total tour length using precomputed distance matrix.
@@ -89,7 +94,7 @@ def _calculate_tour_length_numba(route: np.ndarray, dist_matrix: np.ndarray) -> 
     return total
 
 
-@jit(nopython=True, cache=True)
+@jit(nopython=True, cache=False)
 def _two_opt_delta_numba(route: np.ndarray, dist_matrix: np.ndarray, i: int, j: int) -> float:
     """
     Calculate the change in tour length for a 2-opt move.
@@ -116,7 +121,7 @@ def _two_opt_delta_numba(route: np.ndarray, dist_matrix: np.ndarray, i: int, j: 
     return new_cost - original
 
 
-@jit(nopython=True, cache=True)
+@jit(nopython=True, cache=False)
 def _apply_two_opt_numba(route: np.ndarray, i: int, j: int) -> np.ndarray:
     """
     Apply 2-opt move: reverse segment between i+1 and j.
@@ -132,7 +137,7 @@ def _apply_two_opt_numba(route: np.ndarray, i: int, j: int) -> np.ndarray:
     return new_route
 
 
-@jit(nopython=True, cache=True)
+@jit(nopython=True, cache=False)
 def _two_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray, 
                            max_iterations: int, first_improvement: bool) -> Tuple[np.ndarray, float]:
     """
@@ -184,7 +189,7 @@ def _two_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
     return best_route, best_length
 
 
-@jit(nopython=True, cache=True)
+@jit(nopython=True, cache=False)
 def _three_opt_cases_numba(route: np.ndarray, i: int, j: int, k: int) -> np.ndarray:
     """
     Generate all 7 3-opt reconnection patterns and return the best one.
@@ -292,7 +297,7 @@ def _three_opt_cases_numba(route: np.ndarray, i: int, j: int, k: int) -> np.ndar
     return candidates
 
 
-@jit(nopython=True, cache=True)
+@jit(nopython=True, cache=False)
 def _three_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
                              max_iterations: int, first_improvement: bool) -> Tuple[np.ndarray, float]:
     """
@@ -339,7 +344,7 @@ def _three_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
     return best_route, best_length
 
 
-@jit(nopython=True, cache=True)
+@jit(nopython=True, cache=False)
 def _or_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
                           max_iterations: int, max_segment_size: int) -> Tuple[np.ndarray, float]:
     """
@@ -416,7 +421,7 @@ def _or_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
     return best_route, best_length
 
 
-@jit(nopython=True, cache=True)
+@jit(nopython=True, cache=False)
 def _swap_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
                         max_iterations: int, first_improvement: bool) -> Tuple[np.ndarray, float]:
     """
@@ -464,7 +469,7 @@ def _swap_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
     return best_route, best_length
 
 
-@jit(nopython=True, cache=True)
+@jit(nopython=True, cache=False)
 def _cross_exchange_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
                                   max_iterations: int, max_segment_size: int,
                                   first_improvement: bool) -> Tuple[np.ndarray, float]:

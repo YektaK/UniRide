@@ -23,7 +23,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from .base_solver import BaseTSPSolver, TSPResult
 from .ls_engine import MultiLayerLS, improve_2opt, _tour_cost
 from .destroy_ops import RandomRemoval, WorstRemoval, ShawRemoval, RelatedRemoval
-from .repair_ops import GreedyInsertion, Regret2Insertion
+from .repair_ops import GreedyInsertion, Regret2Insertion, Regret3Insertion
 
 
 @dataclass
@@ -69,7 +69,7 @@ class _SA:
             self._temp = self._end
 
 
-def _compute_resonance(t1: List[int], t2: List[int], n: int) -> float:
+def _compute_resonance(t1: List[int], t2: List[int], n: int, dm: Optional[List[List[float]]] = None) -> float:
     # Build undirected edge sets once — O(n) each
     edges1 = set()
     for i in range(n):
@@ -85,8 +85,21 @@ def _compute_resonance(t1: List[int], t2: List[int], n: int) -> float:
     edge_sim = common / total if total > 0 else 0.0
     # Position match: fraction of positions with same city — O(n)
     pos_match = sum(1 for i in range(n) if t1[i] == t2[i]) / n if n > 0 else 0.0
-    # Weighted combination (removed O(n²) adj_sim — redundant with edge_sim)
-    return 0.6 * edge_sim + 0.4 * pos_match
+    # Distance-profile similarity: compares relative edge lengths of both tours.
+    dist_sim = 0.5
+    if dm is not None:
+        try:
+            d1 = [dm[t1[i]][t1[(i + 1) % n]] for i in range(n)]
+            d2 = [dm[t2[i]][t2[(i + 1) % n]] for i in range(n)]
+            avg1 = sum(d1) / len(d1)
+            avg2 = sum(d2) / len(d2)
+            if avg1 > 1e-12 and avg2 > 1e-12:
+                norm_diff = sum(abs((a / avg1) - (b / avg2)) for a, b in zip(d1, d2)) / n
+                dist_sim = max(0.0, 1.0 - norm_diff / 2.0)
+        except Exception:
+            dist_sim = 0.5
+    # Keep primary structure from TSP adaptation while borrowing extra signal from source design.
+    return 0.45 * edge_sim + 0.35 * pos_match + 0.20 * dist_sim
 
 
 class R2DMA_TSP(BaseTSPSolver):
@@ -164,7 +177,7 @@ class R2DMA_TSP(BaseTSPSolver):
 
     def _destructive_crossover(self, tour: List[int], rng: random.Random) -> List[int]:
         destroy_ops = [RandomRemoval(), WorstRemoval(), ShawRemoval(), RelatedRemoval()]
-        repair_ops = [GreedyInsertion(), Regret2Insertion()]
+        repair_ops = [GreedyInsertion(), Regret2Insertion(), Regret3Insertion()]
         destroyer = rng.choice(destroy_ops)
         repairer = rng.choice(repair_ops)
         n_remove = max(2, int(self._n * self.cfg.remove_ratio))
@@ -213,7 +226,7 @@ class R2DMA_TSP(BaseTSPSolver):
                 for j in range(len(population)):
                     if i == j:
                         continue
-                    r = _compute_resonance(population[i], population[j], self._n)
+                    r = _compute_resonance(population[i], population[j], self._n, self._dist_matrix)
                     if r > best_resonance:
                         best_resonance = r
                         best_partner = j

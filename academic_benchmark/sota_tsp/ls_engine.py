@@ -138,6 +138,45 @@ def improve_swap(tour: List[int], dm: List[List[float]],
     return best_tour, best_length
 
 
+def improve_3opt(tour: List[int], dm: List[List[float]],
+                 max_iterations: int = 200) -> Tuple[List[int], float]:
+    """Simple bounded 3-opt style improvement (reverse-middle neighborhood)."""
+    best_tour = tour[:]
+    best_length = _tour_cost(best_tour, dm)
+    n = len(best_tour)
+    if n < 5:
+        return best_tour, best_length
+    improved = True
+    iters = 0
+    while improved and iters < max_iterations:
+        improved = False
+        iters += 1
+        for i in range(0, n - 3):
+            # Bound inner scan to keep runtime under control.
+            j_max = min(n - 2, i + 12)
+            for j in range(i + 2, j_max + 1):
+                k_max = min(n - 1, j + 12)
+                for k in range(j + 1, k_max + 1):
+                    # 3-opt inspired reconnect: keep prefix/suffix, reverse middle chunks.
+                    cand = (
+                        best_tour[:i + 1]
+                        + best_tour[i + 1:j + 1][::-1]
+                        + best_tour[j + 1:k + 1][::-1]
+                        + best_tour[k + 1:]
+                    )
+                    cand_len = _tour_cost(cand, dm)
+                    if cand_len < best_length - 1e-10:
+                        best_tour = cand
+                        best_length = cand_len
+                        improved = True
+                        break
+                if improved:
+                    break
+            if improved:
+                break
+    return best_tour, best_length
+
+
 class MultiLayerLS:
 
     @staticmethod
@@ -159,6 +198,7 @@ class MultiLayerLS:
         if intensity in ("moderate", "full"):
             layers.append(("or-opt", improve_or_opt))
         if intensity == "full":
+            layers.append(("3-opt", improve_3opt))
             layers.append(("swap", improve_swap))
 
         for layer_name, layer_fn in layers:
@@ -168,6 +208,8 @@ class MultiLayerLS:
                 new_tour, new_cost = layer_fn(current_tour, dm, dm_np, max_iterations)
             elif layer_name == "or-opt":
                 new_tour, new_cost = layer_fn(current_tour, dm, dm_np, max_iterations)
+            elif layer_name == "3-opt":
+                new_tour, new_cost = layer_fn(current_tour, dm, max_iterations)
             else:
                 new_tour, new_cost = layer_fn(current_tour, dm, max_iterations)
             if new_cost < current_cost - 1e-10:

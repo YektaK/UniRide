@@ -25,6 +25,7 @@ Usage:
 import argparse
 import csv
 import gzip
+import hashlib
 import io
 import json
 import math
@@ -382,6 +383,14 @@ def _detect_numba() -> bool:
 _NUMBA_AVAILABLE = _detect_numba()
 
 
+def make_deterministic_seed(problem_name: str, algo_name: str, run_idx: int, algo_idx: int, seed_base: int) -> int:
+    """Create reproducible cross-process seed using hashlib (stable across runs)."""
+    raw = f"{problem_name}|{algo_name}|{run_idx}|{algo_idx}|{seed_base}".encode("utf-8")
+    digest = hashlib.sha256(raw).hexdigest()
+    # Keep seed in signed 32-bit positive range for broad RNG compatibility.
+    return int(digest[:8], 16) & 0x7FFFFFFF
+
+
 # ── Adaptive solver config ────────────────────────────────────────────────────
 
 def _make_solver_config(algo_name: str, n: int, numba_ok: bool) -> Dict[str, Any]:
@@ -501,24 +510,36 @@ def _get_cpu_info() -> Dict[str, Any]:
 def _select_worker_count() -> int:
     info = _get_cpu_info()
     rec = info["recommended"]
-    print(f"\n  CPU: {info['platform']}")
-    print(f"  Physical cores: {info['physical']}  Logical: {info['logical']}")
-    print(f"\n  Worker count options:")
-    print(f"    [1] {rec} (recommended)")
-    print(f"    [2] {min(info['logical'], 8)} (standard max-8)")
-    print(f"    [3] {min(info['logical'], _MAX_RECOMMENDED_WORKERS)} (maximum)")
-    print("    [C] custom")
-    print(f"    [Enter] default: {min(cpu_count(), 4)}")
-    choice = input("\n  Selection: ").strip().upper()
+    print("\n" + "=" * 60)
+    print("[CPU] ISLEMCI BILGILERI")
+    print("=" * 60)
+    print(f"   Platform      : {info['platform']}")
+    print(f"   Fiziksel Cekirdek : {info['physical']}")
+    print(f"   Mantiksal Cekirdek: {info['logical']}")
+    print(f"\n[ONERI] Optimal worker sayisi: {rec}")
+    if info["smt"]:
+        print("   - CPU-bound islemler icin fiziksel cekirdek sayisi optimal")
+    else:
+        print("   - Sistem kaynaklarini korumak icin bir cekirdek bos birakiliyor")
+    print("\n[SECIM] Worker sayisi belirleyin:")
+    print(f"   [1] {rec} (Onerilen - Otomatik)")
+    print(f"   [2] {min(info['logical'], 8)} (Standart - maks 8)")
+    print(f"   [3] {min(info['logical'], _MAX_RECOMMENDED_WORKERS)} (Yuksek performans)")
+    print(f"   [4] {info['logical']} (Maksimum)")
+    print("   [C] Custom - Kendiniz girin")
+    print(f"   [Enter] Varsayilan: {min(cpu_count(), 4)}")
+    choice = input("\nSeciminiz: ").strip().upper()
     if choice in ("", "1"):
         return rec
     if choice == "2":
         return min(info["logical"], 8)
     if choice == "3":
         return min(info["logical"], _MAX_RECOMMENDED_WORKERS)
+    if choice == "4":
+        return info["logical"]
     if choice == "C":
         try:
-            v = int(input(f"  Workers (1-{info['logical']}): ").strip())
+            v = int(input(f"   Worker sayisi (1-{info['logical']}): ").strip())
             return max(1, min(v, info["logical"]))
         except ValueError:
             return rec
@@ -792,49 +813,102 @@ def _show_test_summary(problems: List[TSPProblem], algos: List[str],
         1 for p in problems for a in algos
         if a in saved.get(p.name, {}) and saved[p.name][a].get("n_runs", 0) >= runs
     )
-    new_items = len(problems) * len(algos) - (cached_items // runs if runs else 0)
+    total_pairs = len(problems) * len(algos)
+    new_items = total_pairs - cached_items
 
-    print("\n" + "=" * 70)
-    print("  TEST SUMMARY")
     print("=" * 70)
-    print(f"  Problems    : {len(problems)}")
-    print(f"  Algorithms  : {len(algos)} ({', '.join(algos)})")
-    print(f"  Runs / algo : {runs}")
-    print(f"  Total tasks : {total}")
-    print(f"  Mode        : {'sequential' if sequential else f'parallel ({workers} workers)'}")
-    print(f"  Numba       : {'ENABLED' if _NUMBA_AVAILABLE else 'disabled'}")
-    if cached_items:
-        print(f"\n  [CACHE] Already cached (sufficient runs): {cached_items} problem×algo pair(s)")
-    print("\n  [!] Ctrl+C saves completed results at any time.")
+    print("TEST OZETI (SOTA)")
+    print("=" * 70)
+
+    print(f"\n[STATS] Test Yapilacak:")
+    print(f"   * Problemler: {len(problems)}")
+    print(f"   * Algoritmalar: {len(algos)} ({', '.join(algos)})")
+    print(f"   * Her problem {runs} kez calistirilacak")
+    print(f"   * Toplam test sayisi: {total}")
+    print(f"   * Calistirma modu: {'Sirali (Sequential)' if sequential else f'Paralel ({workers} worker)'}")
+
+    if _NUMBA_AVAILABLE:
+        print(f"\n[NUMBA] JIT Optimization: ENABLED")
+    else:
+        print(f"\n[NUMBA] JIT Optimization: DISABLED (python fallback)")
 
     skip_cached = False
     if cached_items:
-        print("\n  Cached results found. What to do?")
-        print("    [S] Skip cached — only run missing tests (recommended)")
-        print("    [R] Re-run all (overwrite cache)")
-        print("    [Q] Cancel")
-        ch = input("  Choice: ").strip().upper()
+        print(f"\n[CACHE] ONBELLEK DURUMU:")
+        print(f"   * Daha once yapilmis: {cached_items} problem×algoritma")
+        print(f"   * Henuz yapilmamis: {new_items} problem×algoritma")
+        print("-" * 70)
+
+        print("\n[SEARCH] Onbellekteki testler icin ne yapmak istersiniz?")
+        print("   [S] Atla - Sadece yeni testleri yap (onerilen)")
+        print("   [R] Yenile - Tum testleri bastan yap")
+        print("   [Q] Cikis")
+        ch = input("\nSeciminiz: ").strip().upper()
         if ch == "Q":
             return False, False
         if ch == "S":
             skip_cached = True
+            print(f"\n√ {new_items} yeni problem×algoritma calistirilacak")
+        else:
+            print(f"\n√ Tum {total_pairs} problem×algoritma bastan yapilacak")
+
+    effective_pairs = new_items if skip_cached else total_pairs
+    estimated_seconds = 0.0
+    if effective_pairs > 0:
+        # rough estimate: average completed elapsed time if available, otherwise simple heuristic
+        historical_times = []
+        for p in problems:
+            for a in algos:
+                prev = saved.get(p.name, {}).get(a)
+                if prev and prev.get("avg_time_sec"):
+                    historical_times.append(float(prev["avg_time_sec"]))
+        if historical_times:
+            estimated_seconds = (sum(historical_times) / len(historical_times)) * effective_pairs * runs
+        else:
+            estimated_seconds = effective_pairs * runs * (0.6 if _NUMBA_AVAILABLE else 1.5)
+        if not sequential and workers > 0:
+            estimated_seconds /= workers
+    print(f"\n[TIME] Tahmini Sure: ~{_fmt_time(estimated_seconds)}")
+
+    cat_counts: Dict[str, int] = {}
+    for p in problems:
+        cat_counts[p.category] = cat_counts.get(p.category, 0) + 1
+    print(f"\n[GRAPH] Kategori Dagilimi:")
+    for cat, count in sorted(cat_counts.items()):
+        print(f"   * {cat}: {count} problem")
+
+    print("\n[!] DIKKAT:")
+    print("   * Ctrl+C ile istediginiz zaman guvenli cikis yapabilirsiniz")
+    print("   * Sonuclar her run sonrasi otomatik kaydedilir")
+
+    print("\n[Y] Basla    [Q] Cikis    [D] Detaylari Gor")
+    ch = input("\nSeciminiz: ").strip().upper()
+    if ch == "Q":
+        return False, skip_cached
+    elif ch == "D":
+        print("\n[LIST] Problemler:")
+        for i, p in enumerate(problems, 1):
+            print(f"   {i:>3}. {p.name:<15} (n={p.dimension:<5}, opt={p.optimal})")
+        input("\nDevam etmek icin Enter'a basin...")
+        return _show_test_summary(problems, algos, saved, runs, workers, sequential)
+    elif ch == "Y":
+        return True, skip_cached
     else:
-        print("\n  [Y] Start   [Q] Cancel")
-        ch = input("  Choice: ").strip().upper()
-        if ch == "Q":
-            return False, False
+        return _show_test_summary(problems, algos, saved, runs, workers, sequential)
 
     return True, skip_cached
 
 
 def _print_result_line(completed: int, total: int, res: Dict, eta: Optional[float]):
-    gap = _gap_str(res.get("gap_pct"))
-    eta_str = f"ETA {_fmt_time(eta)}" if eta else ""
+    gap_val = res.get("gap_pct")
+    sym = "*" if gap_val is not None and gap_val <= 1 else ("+" if gap_val is not None and gap_val <= 5 else "o")
+    cached = "[CACHED]" if res.get("cached") else ""
+    eta_str = f" ETA: {_fmt_time(eta)}" if eta else ""
+    gap_text = f"{gap_val:>6.2f}%" if gap_val is not None else "   N/A "
     print(
-        f"  [{completed:>{len(str(total))}}/{total}] "
-        f"{res['algorithm']:<14} run {res['run']}  "
-        f"cost={res['tour_cost']:>8}  gap={gap:<8}  "
-        f"{_fmt_time(res['elapsed_sec']):<7}  {eta_str}"
+        f"  [{completed:>3}/{total}] {res['problem']:<12} {res['algorithm']:<12} "
+        f"GAP: {gap_text} {sym} {res['elapsed_sec'] * 1000:>7.0f}ms {cached}{eta_str}",
+        flush=True,
     )
 
 
@@ -957,7 +1031,7 @@ def _run_benchmark(
                 ar = saved.get(p.name, {}).get(algo, {})
                 cached_runs = ar.get("n_runs", 0)
             for run_idx in range(cached_runs, runs):
-                seed = seeds_base + run_idx * 37 + ai * 100 + hash(p.name) % 1000
+                seed = make_deterministic_seed(p.name, algo, run_idx, ai, seeds_base)
                 tasks.append((
                     algo, p.coordinates, seed, run_idx,
                     p.dimension, p.optimal, _NUMBA_AVAILABLE,
@@ -970,14 +1044,22 @@ def _run_benchmark(
 
     total = len(tasks)
     if total == 0:
+        print("[PROGRESS] 0/0 cached, 0 to compute")
         print("  Nothing to run — all results already cached.")
         return []
 
-    print(f"\n  Running {total} task(s) …  (Ctrl+C to abort and save)\n")
+    total_pairs = len(problems) * len(algos)
+    cached_pairs = 0
+    if skip_cached:
+        for p in problems:
+            for a in algos:
+                ar = saved.get(p.name, {}).get(a, {})
+                if ar.get("n_runs", 0) >= runs:
+                    cached_pairs += 1
+    print(f"[PROGRESS] {cached_pairs}/{total_pairs} cached, {total} to compute")
 
     all_results: List[Dict] = []
     eta = _ETATracker()
-    t0 = time.perf_counter()
     completed = 0
 
     def _process(res: Dict, task_idx: int):
@@ -1180,15 +1262,43 @@ def main() -> int:
             continue
 
         # ── Run count / worker selection ─────────────────────────────────
-        print(f"\n  RUNS PER ALGORITHM (default {runs}):")
-        print("    [3] 3 runs (fast)   [5] 5 runs (standard)   [10] 10 runs (thorough)")
-        print("    [Enter] keep default")
-        ri = input("  Runs: ").strip()
+        print(f"\n[RUNS] CALISTIRMA SAYISI SECIN:")
+        print(f"   Varsayilan: {runs}")
+        print("   [3] 3 run (hizli test)")
+        print("   [5] 5 run (standart)")
+        print("   [10] 10 run (detayli)")
+        print("   [Enter] Varsayilan kullan")
+        ri = input("\nSeciminiz: ").strip()
         if ri.isdigit() and int(ri) >= 1:
             runs = int(ri)
+        print(f"   -> {runs} run secildi")
 
-        if not use_sequential:
-            workers = _select_worker_count()
+        workers = _select_worker_count()
+        print(f"\n[OK] {workers} worker kullanilacak")
+
+        total_tests = len(selected_problems) * len(selected_algos)
+        print(f"\n[START] TEST BASLIYOR (SOTA)...")
+        print(f"   [CONFIG] Paralel worker sayisi: {workers}")
+        print(f"   [CONFIG] Her problem {runs} kez calistirilacak")
+        if skip_cached:
+            print(f"   Toplam: {len(selected_problems)} problem x {len(selected_algos)} algoritma")
+        else:
+            print(f"   Toplam: {len(selected_problems)} problem x {len(selected_algos)} algoritma = {total_tests} test")
+
+        print("\n[MODE] CALISTIRMA MODU SECIN:")
+        print("   [S] Sirali (Sequential) - Anlik progress gosterimi (onerilen)")
+        print("   [P] Paralel - Daha hizli ama toplu sonuc")
+        print(f"   [Enter] Mevcut mod: {'S' if use_sequential else 'P'}")
+        mode_choice = input("\nSeciminiz [S/P]: ").strip().upper()
+        if mode_choice == "S":
+            use_sequential = True
+        elif mode_choice == "P":
+            use_sequential = False
+
+        if use_sequential:
+            print("\n[MODE] Sirali mod secildi - her sonuc aninda gorunecek")
+        else:
+            print(f"\n[MODE] Paralel mod secildi - {workers} worker")
 
         # ── Confirm ───────────────────────────────────────────────────────
         proceed, skip_cached = _show_test_summary(

@@ -1,0 +1,3 @@
+problem,algorithm,run,seed,dimension,optimal,tour_cost,gap_pct,elapsed_sec,iterations
+berlin52,R2DMA-TSP,1,1268,52,7542,7542,0.0,4.484,260
+berlin52,P-AOEA-TSP,1,1368,52,7542,7542,0.0,3.901,260

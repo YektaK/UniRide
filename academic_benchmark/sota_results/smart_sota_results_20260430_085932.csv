@@ -1,0 +1,2 @@
+problem,algorithm,run,seed,dimension,optimal,tour_cost,gap_pct,elapsed_sec,iterations
+berlin52,E2BSO-TSP,1,1950,52,7542,7542,0.0,5.147,260

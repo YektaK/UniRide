@@ -218,6 +218,23 @@ def signal_handler(signum, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 
+
+def get_worker_backend_module(prefer_numba: bool = True) -> str:
+    """Select a worker backend module that can be imported in child process."""
+    candidates = []
+    if prefer_numba:
+        candidates.append("optimizer_api.tests.run_interactive_benchmark_v2_numba")
+    candidates.append("optimizer_api.tests.run_interactive_benchmark_v2")
+    if not prefer_numba:
+        candidates.append("optimizer_api.tests.run_interactive_benchmark_v2_numba")
+    for module_name in candidates:
+        try:
+            __import__(module_name, fromlist=["run_single_test", "TSPLIBProblem"])
+            return module_name
+        except Exception:
+            continue
+    raise ImportError("No benchmark worker backend is importable")
+
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
@@ -277,6 +294,29 @@ def normalize_strategy_entry(entry: Tuple[Any, ...]) -> Tuple[str, Any, Dict[str
     # Backward compatibility: (name, LocalSearchType, max_iterations)
     max_iterations = entry[2] if len(entry) > 2 else 1000
     return entry[0], entry[1], {"max_iterations": int(max_iterations), "algorithm_type": "local_search"}
+
+
+def select_benchmark_profile(current_profile: str) -> str:
+    """Ask the user which benchmark profile to use."""
+    normalized_current = (current_profile or "quality_first").strip().lower()
+    if normalized_current not in {"baseline", "quality_first"}:
+        normalized_current = "quality_first"
+
+    print(f"\n[PROFILE] BENCHMARK PROFILI SECIN:")
+    print("   [1] quality_first (onerilen - daha guclu kalite odagi)")
+    print("   [2] baseline (temel/orijinal preset)")
+    print(f"   [Enter] Varsayilan: {normalized_current}")
+
+    choice = input("\nSeciminiz: ").strip().lower()
+    if choice in {"", "1", "q", "quality", "quality_first"}:
+        selected = "quality_first"
+    elif choice in {"2", "b", "baseline"}:
+        selected = "baseline"
+    else:
+        selected = normalized_current
+
+    print(f"   -> {selected} profili secildi")
+    return selected
 
 # ============================================================
 # SÜRE ÖLÇÜM VE TAHMİN SİSTEMİ (Numba için optimize edilmiş)
@@ -943,11 +983,10 @@ def run_single_benchmark_task(args):
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "optimizer_api")))
     
-    # NUMBA versiyonunu import et
-    from optimizer_api.tests.run_interactive_benchmark_v2_numba import (
-        TSPLIBProblem, 
-        run_single_test,
-    )
+    backend_module = get_worker_backend_module(prefer_numba=NUMBA_AVAILABLE)
+    backend = __import__(backend_module, fromlist=["TSPLIBProblem", "run_single_test"])
+    TSPLIBProblem = backend.TSPLIBProblem
+    run_single_test = backend.run_single_test
     
     # args: (problem_dict, strat_name, strategy_payload, strategy_params, task_id, n_runs)
     if len(args) == 6:
@@ -1133,7 +1172,7 @@ def run_benchmark_parallel(tasks: List, metadata: Dict, skip_cached: bool, saved
 
 
 def main():
-    global _current_metadata, _current_results, _shutdown_requested
+    global _current_metadata, _current_results, _shutdown_requested, BENCHMARK_PROFILE
     
     metadata = get_latest_metadata(METADATA_PATH)
     algo_status = check_algorithms_status(metadata, ALGORITHMS_TO_CHECK)
@@ -1225,6 +1264,9 @@ def main():
             input("Devam etmek icin Enter'a basin...")
             continue
         
+        BENCHMARK_PROFILE = select_benchmark_profile(BENCHMARK_PROFILE)
+        os.environ["BENCHMARK_PROFILE"] = BENCHMARK_PROFILE
+
         continue_test, skip_cached = show_test_summary(problems_to_run, strategies_to_run, saved_results)
         if not continue_test:
             print("Test iptal edildi.")
@@ -1265,6 +1307,7 @@ def main():
         new_tests_count = cache_info['new_count'] if cache_info else total_tests
         
         print(f"\n[START] TEST BASLIYOR (NUMBA OPTIMIZED)...")
+        print(f"   [CONFIG] Benchmark profili: {BENCHMARK_PROFILE}")
         print(f"   [CONFIG] Paralel worker sayisi: {NUM_WORKERS}")
         print(f"   [CONFIG] Her problem {N_RUNS} kez calistirilacak")
         if skip_cached:

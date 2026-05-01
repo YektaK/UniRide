@@ -22,7 +22,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from .base_solver import BaseTSPSolver, TSPResult
 from .ls_engine import MultiLayerLS, improve_2opt, _tour_cost
 from .destroy_ops import RandomRemoval, WorstRemoval, ShawRemoval, RelatedRemoval
-from .repair_ops import GreedyInsertion, Regret2Insertion
+from .repair_ops import GreedyInsertion, Regret2Insertion, Regret3Insertion
 
 
 @dataclass
@@ -83,7 +83,7 @@ class PAOEAConfig:
     mutation_rate: float = 0.3
     genome_injection_rate: float = 0.2
     destroy_ops_pool: Tuple[str, ...] = ("random", "worst", "shaw", "related")
-    repair_ops_pool: Tuple[str, ...] = ("greedy", "regret2")
+    repair_ops_pool: Tuple[str, ...] = ("greedy", "regret2", "regret3")
     acceptance_types: Tuple[str, ...] = ("sa", "lahc")
     ls_time_limit: float = 0.5
     remove_ratio_range: Tuple[float, float] = (0.10, 0.30)
@@ -97,7 +97,7 @@ class PAOEAConfig:
 
 
 _DESTROY_MAP = {"random": RandomRemoval, "worst": WorstRemoval, "shaw": ShawRemoval, "related": RelatedRemoval}
-_REPAIR_MAP = {"greedy": GreedyInsertion, "regret2": Regret2Insertion}
+_REPAIR_MAP = {"greedy": GreedyInsertion, "regret2": Regret2Insertion, "regret3": Regret3Insertion}
 
 
 class _LAHC:

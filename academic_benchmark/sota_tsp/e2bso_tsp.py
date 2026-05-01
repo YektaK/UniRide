@@ -23,7 +23,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from .base_solver import BaseTSPSolver, TSPResult
 from .ls_engine import MultiLayerLS, improve_2opt, _tour_cost
 from .destroy_ops import RandomRemoval, WorstRemoval, ShawRemoval
-from .repair_ops import GreedyInsertion, Regret2Insertion
+from .repair_ops import GreedyInsertion, Regret2Insertion, Regret3Insertion
 
 
 @dataclass
@@ -188,7 +188,7 @@ class E2BSO_TSP(BaseTSPSolver):
         n_inject = max(1, int(self.cfg.injection_rate * len(population)))
         worst_indices = sorted(range(len(pop_costs)), key=lambda i: pop_costs[i], reverse=True)[:n_inject]
         destroy_ops = [RandomRemoval(), WorstRemoval(), ShawRemoval()]
-        repair_ops = [GreedyInsertion(), Regret2Insertion()]
+        repair_ops = [GreedyInsertion(), Regret2Insertion(), Regret3Insertion()]
         dm_np = self._dist_matrix_np if self._dist_matrix_np is not None else None
         for idx in worst_indices:
             destroyer = rng.choice(destroy_ops)

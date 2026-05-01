@@ -847,7 +847,7 @@ def run_single_benchmark_task(args):
         TSPLIBProblem, 
         run_single_test,
     )
-    from utils.local_search_numba import LocalSearchType
+    from optimizer_api.utils.local_search_numba import LocalSearchType
     
     # args: (problem_dict, strat_name, ls_type_value, max_iter, task_id, n_runs)
     if len(args) == 6:

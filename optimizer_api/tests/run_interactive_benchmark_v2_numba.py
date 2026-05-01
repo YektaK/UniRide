@@ -575,6 +575,14 @@ def _run_pso(initial_route: List[str], duration_func: Callable[[List[str]], floa
 
 
 def _run_gwo(initial_route: List[str], duration_func: Callable[[List[str]], float], params: Dict[str, Any], seed: int) -> List[str]:
+    """Grey Wolf Optimizer — Mirjalili et al. (2014) uyumlu TSP adaptasyonu.
+
+    Temel mekanizmalar:
+    - a parametresi 2→0 lineer azalır (keşif-sömürü dengesi)
+    - A vektörü: |A|>1 → keşif (uzak arama), |A|<1 → sömürü (yakın arama)
+    - C vektörü: rastgele ağırlık [0,2]
+    - α, β, δ hiyerarşisi ile pozisyon güncelleme
+    """
     rng = random.Random(seed)
     pack_size = max(3, int(params.get("pack_size", 30)))
     iterations = int(params.get("iterations", 100))
@@ -588,27 +596,80 @@ def _run_gwo(initial_route: List[str], duration_func: Callable[[List[str]], floa
     if pack:
         pack[0] = initial_route[:]
 
-    for _ in range(iterations):
+    for it in range(iterations):
         scored = sorted(((r, _route_cost(r, duration_func)) for r in pack), key=lambda x: x[1])
         alpha = scored[0][0]
         beta = scored[min(1, len(scored) - 1)][0]
         delta = scored[min(2, len(scored) - 1)][0]
 
+        # a parametresi: 2'den 0'a lineer azalma (Mirjalili Eq. 3.3)
+        a = 2.0 * (1.0 - it / max(1, iterations))
+
         new_pack = [alpha[:], beta[:], delta[:]]
         while len(new_pack) < pack_size:
-            base = rng.choice(pack)
-            r = _towards_route(base, alpha, rng, strength=0.9)
-            r = _towards_route(r, beta, rng, strength=0.6)
-            r = _towards_route(r, delta, rng, strength=0.4)
-            if rng.random() < 0.4:
-                r = _random_swap(r, rng)
-            new_pack.append(r)
+            wolf = rng.choice(pack)[:]
+
+            # Her lider için güncelleme (Mirjalili Eq. 3.5-3.7)
+            for leader in [alpha, beta, delta]:
+                r1 = rng.random()
+                r2 = rng.random()
+                A = 2.0 * a * r1 - a        # |A|>1 → keşif, |A|<1 → sömürü
+                C = 2.0 * r2                 # rastgele ağırlık
+
+                if abs(A) > 1.0:
+                    # Keşif: rastgele pak üyesine doğru hareket
+                    random_wolf = rng.choice(pack)
+                    strength = min(0.9, abs(A) * 0.3)
+                    wolf = _towards_route(wolf, random_wolf, rng, strength=strength)
+                else:
+                    # Sömürü: liderlere doğru hareket
+                    strength = max(0.1, abs(C) * 0.5)
+                    wolf = _towards_route(wolf, leader, rng, strength=strength)
+
+            # Düşük olasılıkla rastgele swap (çeşitlilik)
+            if rng.random() < 0.3 * a / 2.0:
+                wolf = _random_swap(wolf, rng)
+
+            new_pack.append(wolf)
         pack = new_pack
 
     return min(pack, key=lambda r: _route_cost(r, duration_func))
 
 
+def _levy_flight(route: List[str], rng: random.Random, scale: float = 0.3) -> List[str]:
+    """Lévy flight mutasyonu — uzun atlama ile lokal optimumdan kaçış.
+
+    Mantega's Lévy distribution (beta=1.5) kullanılarak swap sayısı belirlenir.
+    Heidari et al. (2019) HHO Eq. 4.8 uyumlu.
+    """
+    n = len(route)
+    if n < 2:
+        return route[:]
+    beta = 1.5
+    sigma_num = math.gamma(1 + beta) * math.sin(math.pi * beta / 2)
+    sigma_den = math.gamma((1 + beta) / 2) * beta * (2 ** ((beta - 1) / 2))
+    sigma = (sigma_num / sigma_den) ** (1 / beta)
+    u = rng.gauss(0, sigma)
+    v = rng.gauss(0, 1)
+    step = u / (abs(v) ** (1 / beta))
+    num_swaps = max(1, min(int(abs(step) * scale * n), n // 2))
+    result = route[:]
+    for _ in range(num_swaps):
+        i, j = rng.sample(range(n), 2)
+        result[i], result[j] = result[j], result[i]
+    return result
+
+
 def _run_hho(initial_route: List[str], duration_func: Callable[[List[str]], float], params: Dict[str, Any], seed: int) -> List[str]:
+    """Harris Hawks Optimization — Heidari et al. (2019) uyumlu TSP adaptasyonu.
+
+    Temel mekanizmalar:
+    - Kaçış enerjisi: E = 2·E₀·(1-t/T), E₀ ∈ [-1,1]
+    - Keşif fazı: |E| ≥ 1 — rastgele konumlanma
+    - Sömürü fazı: 4 strateji (soft/hard besiege, with/without rapid dives)
+    - Lévy flight: uzun atlama ile lokal optimumdan kaçış
+    - r (kaçış olasılığı): strateji seçimi
+    """
     rng = random.Random(seed)
     hawks = int(params.get("hawks", 30))
     iterations = int(params.get("iterations", 100))
@@ -623,19 +684,80 @@ def _run_hho(initial_route: List[str], duration_func: Callable[[List[str]], floa
         population[0] = initial_route[:]
 
     best = min(population, key=lambda r: _route_cost(r, duration_func))
+    best = best[:]
+    best_cost = _route_cost(best, duration_func)
 
     for it in range(iterations):
-        escape_energy = 2 * (1 - (it / max(1, iterations)))
+        # Kaçış enerjisi: E₀ rastgele [-1,1], E lineer azalır (Heidari Eq. 4.1)
+        E0 = 2 * rng.random() - 1
+        E = 2 * E0 * (1 - it / max(1, iterations))
+
         updated = [best[:]]
         while len(updated) < hawks:
             hawk = rng.choice(population)[:]
-            if rng.random() < 0.5:
-                hawk = _towards_route(hawk, best, rng, strength=max(0.2, escape_energy))
-            for _ in range(max(1, int((1.0 + escape_energy) * 2))):
-                hawk = _random_swap(hawk, rng)
-            updated.append(hawk)
+            hawk_cost = _route_cost(hawk, duration_func)
+            r = rng.random()  # Kaçış olasılığı
+
+            if abs(E) >= 1:
+                # ═══ KEŞİF FAZI ═══ (|E| ≥ 1)
+                # Rastgele konumlanma: ya rastgele pak üyesine ya da Lévy flight
+                if rng.random() < 0.5:
+                    # Rastgele bir şahine doğru hareket
+                    random_hawk = rng.choice(population)
+                    strength = rng.random() * 0.5
+                    hawk = _towards_route(hawk, random_hawk, rng, strength=strength)
+                else:
+                    # Lévy flight ile rastgele keşif
+                    hawk = _levy_flight(hawk, rng, scale=0.3)
+            else:
+                # ═══ SÖMÜRÜ FAZI ═══ (|E| < 1)
+                if r >= 0.5:
+                    if abs(E) >= 0.5:
+                        # Soft besiege: av enerjisi var ama yakalanır
+                        # X(t+1) = ΔX - E·|J·Prey - X(t)|
+                        J = 2 * (1 - rng.random())
+                        intensity = abs(E * J)
+                        hawk = _towards_route(hawk, best, rng, strength=intensity)
+                    else:
+                        # Hard besiege: av yorgun, sıkı çevreleme
+                        # X(t+1) = Prey - E·|Prey - X(t)|
+                        intensity = abs(E)
+                        hawk = _towards_route(hawk, best, rng, strength=intensity)
+                else:
+                    if abs(E) >= 0.5:
+                        # Soft besiege + progressive rapid dives (Lévy)
+                        # Hawks dive toward prey with Lévy flight
+                        best_dive = hawk[:]
+                        best_dive_cost = hawk_cost
+                        for _ in range(3):
+                            intensity = abs(E) * rng.random()
+                            candidate = _towards_route(hawk, best, rng, strength=intensity)
+                            candidate = _levy_flight(candidate, rng, scale=0.3)
+                            candidate_cost = _route_cost(candidate, duration_func)
+                            if candidate_cost < best_dive_cost:
+                                best_dive = candidate
+                                best_dive_cost = candidate_cost
+                        hawk = best_dive
+                    else:
+                        # Hard besiege + progressive rapid dives (Lévy)
+                        # X(t+1) = Prey - E·|mean_pos - X(t)| + Lévy
+                        intensity = abs(E)
+                        hawk = _towards_route(hawk, best, rng, strength=intensity)
+                        hawk = _levy_flight(hawk, rng, scale=0.2)
+
+            # Değerlendir ve güncelle
+            new_cost = _route_cost(hawk, duration_func)
+            if new_cost < hawk_cost:
+                updated.append(hawk)
+            else:
+                updated.append(hawk[:])
+
+            # Av (en iyi çözüm) güncelle
+            if new_cost < best_cost:
+                best = hawk[:]
+                best_cost = new_cost
+
         population = updated
-        best = min(population, key=lambda r: _route_cost(r, duration_func))
 
     return best
 

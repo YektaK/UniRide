@@ -16,7 +16,7 @@ Core DNA:
 import math
 import random
 import time
-from collections import Counter
+from collections import Counter, deque
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -24,6 +24,8 @@ from .base_solver import BaseTSPSolver, TSPResult
 from .ls_engine import MultiLayerLS, improve_2opt, _tour_cost
 from .destroy_ops import RandomRemoval, WorstRemoval, ShawRemoval
 from .repair_ops import GreedyInsertion, Regret2Insertion, Regret3Insertion
+
+from academic_benchmark.benchmark_utils import compute_population_diversity
 
 
 @dataclass
@@ -221,7 +223,7 @@ class E2BSO_TSP(BaseTSPSolver):
         h_max = self.cfg.h_start
         entropy_ema_low = h_min
         entropy_ema_high = h_max
-        improvement_entropies: List[float] = []
+        improvement_entropies: deque = deque(maxlen=200)
         history: List[float] = []
         current_entropy = self._edge_entropy(population)
 
@@ -232,7 +234,7 @@ class E2BSO_TSP(BaseTSPSolver):
 
             if t <= self.cfg.learn_period and improvement_entropies:
                 alpha = 0.1
-                recent = improvement_entropies[-min(20, len(improvement_entropies)):]
+                recent = list(improvement_entropies)[-min(20, len(improvement_entropies)):]
                 entropy_ema_low = (1 - alpha) * entropy_ema_low + alpha * min(recent)
                 entropy_ema_high = (1 - alpha) * entropy_ema_high + alpha * max(recent)
                 h_min = max(0.05, entropy_ema_low - 0.05)
@@ -281,21 +283,14 @@ class E2BSO_TSP(BaseTSPSolver):
             history.append(gbest_cost)
 
             if t % self.cfg.diversity_check_interval == 0:
-                avg_dist = 0.0
-                count = 0
-                for i in range(min(5, len(population))):
-                    for j in range(i + 1, min(5, len(population))):
-                        shared = sum(1 for k in range(self._n)
-                                     if population[i][(k + 1) % self._n] == population[j][(k + 1) % self._n])
-                        avg_dist += 1.0 - shared / self._n
-                        count += 1
-                if count > 0 and avg_dist / count < self.cfg.diversity_threshold:
+                diversity = compute_population_diversity(population, self._n)
+                if diversity < self.cfg.diversity_threshold:
                     population, pop_costs = self._inject_diversity(population, pop_costs, rng)
 
             if time.monotonic() - t_start > 300:
                 break
 
-        dm_np = self._dist_matrix_np if self._dist_matrix_np is not None else None
+        # dm_np zaten solve() başında atandı — yeniden atamaya gerek yok
         gbest, gbest_cost, _ = MultiLayerLS.improve(gbest, self._dist_matrix, dm_np, "full", 500, 5.0)
 
         elapsed_ms = (time.monotonic() - t_start) * 1000

@@ -6,7 +6,7 @@ import statistics
 from datetime import datetime
 import concurrent.futures
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath('3_run_benchmark.py'))
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 from core import ThreeOptSolver, OrOptSolver
 from benchmarks.tsplib_benchmark import parse_tsplib
@@ -29,7 +29,7 @@ def main():
     print('Ozel Benchmark Baslatiliyor...')
     target_problems = ['eil51', 'berlin52', 'st70', 'kroA100', 'rd100']
 
-    with open('data/tuned_parameters_db.json', 'r') as f:
+    with open(os.path.join(SCRIPT_DIR, 'data', 'tuned_parameters_db.json'), 'r') as f:
         db = json.load(f)
 
     target_models = [m for m in db if m['algorithm'] in ['3-opt', 'Or-opt']]

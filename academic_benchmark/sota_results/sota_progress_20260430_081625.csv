@@ -1,4 +1,0 @@
-timestamp,problem,algorithm,run,seed,dimension,optimal,tour_cost,gap_pct,elapsed_sec,iterations
-08:21:28,a280,E2BSO-TSP,1,1000,280,2579,2622,1.6673,303.46,89
-08:26:30,a280,R2DMA-TSP,1,1100,280,2579,2627,1.8612,301.578,417
-08:31:35,a280,P-AOEA-TSP,1,1200,280,2579,2647,2.6367,304.808,10

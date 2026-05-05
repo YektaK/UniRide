@@ -63,7 +63,8 @@ class Regret2Insertion:
                     best_node = node
             if best_node is None:
                 break
-            uninserted.remove(best_node)
+            best_node_idx = uninserted.index(best_node)
+            uninserted.pop(best_node_idx)
             best_pos = 0
             best_cost = float("inf")
             for pos in range(len(result) + 1):
@@ -116,7 +117,8 @@ class Regret3Insertion:
                     best_node = node
             if best_node is None:
                 break
-            uninserted.remove(best_node)
+            best_node_idx = uninserted.index(best_node)
+            uninserted.pop(best_node_idx)
             best_pos = 0
             best_cost = float("inf")
             for pos in range(len(result) + 1):

@@ -4,13 +4,20 @@ Numba JIT Acceleration for Bildiri 2026 Solvers
 Provides ATSP-aware Local Search algorithms specifically optimized 
 for time-matrix and School Bus Routing problems where the depot (0) is fixed.
 """
+from __future__ import annotations
 import sys, os
-import numpy as np
 from typing import Tuple, List
 
 try:
+    import numpy as np
+    _NUMPY_AVAILABLE = True
+except ImportError:
+    _NUMPY_AVAILABLE = False
+    np = None  # type: ignore
+
+try:
     from numba import jit
-    NUMBA_AVAILABLE = True
+    NUMBA_AVAILABLE = _NUMPY_AVAILABLE
 except ImportError:
     NUMBA_AVAILABLE = False
     def jit(*args, **kwargs):

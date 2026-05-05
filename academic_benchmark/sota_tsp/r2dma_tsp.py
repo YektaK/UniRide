@@ -5,8 +5,15 @@ Adapted from optimizer_api/strategies/sota_common/r2dma.py for pure TSP.
 Uses integer-indexed tours and Numba-accelerated distance matrix.
 
 Core DNA:
-  - 6-dim resonance metric between solution pairs (edge overlap, segment similarity)
+  - 6-dim resonance metric between solution pairs:
+      (1) edge_similarity    — Jaccard on undirected edge sets
+      (2) position_match     — fraction of positions with same city
+      (3) distance_profile   — normalized edge-length distribution similarity
+      (4) segment_length     — longest common segment ratio
+      (5) common_subsequence — longest common subsequence approximation
+      (6) cost_ratio         — relative tour cost similarity
   - 3-mode crossover: CONSTRUCTIVE (R>=0.7) / MODERATE (0.3<=R<0.7) / DESTRUCTIVE (R<0.3)
+  - Tournament-based partner selection (k=5) for O(n_pop×k×n) complexity
   - OX crossover for moderate mode
   - ALNS destroy/repair for destructive mode
   - SA acceptance with dissonance filter
@@ -24,6 +31,8 @@ from .base_solver import BaseTSPSolver, TSPResult
 from .ls_engine import MultiLayerLS, improve_2opt, _tour_cost
 from .destroy_ops import RandomRemoval, WorstRemoval, ShawRemoval, RelatedRemoval
 from .repair_ops import GreedyInsertion, Regret2Insertion, Regret3Insertion
+
+from academic_benchmark.benchmark_utils import compute_population_diversity
 
 
 @dataclass
@@ -44,6 +53,7 @@ class R2DMATSPConfig:
     entropy_threshold: float = 0.15
     pulse_injection_rate: float = 0.25
     diversity_check_interval: int = 50
+    tournament_k: int = 5
     seed: int = 42
 
 
@@ -70,7 +80,14 @@ class _SA:
 
 
 def _compute_resonance(t1: List[int], t2: List[int], n: int, dm: Optional[List[List[float]]] = None) -> float:
-    # Build undirected edge sets once — O(n) each
+    """
+    6-boyutlu rezonans metriği. İki tur arasındaki yapısal benzerliği ölçer.
+    Boyutlar: edge_sim, pos_match, dist_sim, segment_len, common_subseq, cost_ratio
+    """
+    if n < 2:
+        return 0.0
+
+    # (1) Edge similarity: Jaccard on undirected edge sets — O(n)
     edges1 = set()
     for i in range(n):
         a, b = t1[i], t1[(i + 1) % n]
@@ -79,14 +96,17 @@ def _compute_resonance(t1: List[int], t2: List[int], n: int, dm: Optional[List[L
     for i in range(n):
         a, b = t2[i], t2[(i + 1) % n]
         edges2.add((min(a, b), max(a, b)))
-    # Edge similarity: Jaccard on undirected edge sets — O(n)
-    common = len(edges1 & edges2)
-    total = len(edges1 | edges2)
-    edge_sim = common / total if total > 0 else 0.0
-    # Position match: fraction of positions with same city — O(n)
-    pos_match = sum(1 for i in range(n) if t1[i] == t2[i]) / n if n > 0 else 0.0
-    # Distance-profile similarity: compares relative edge lengths of both tours.
+    common_edges = len(edges1 & edges2)
+    total_edges = len(edges1 | edges2)
+    edge_sim = common_edges / total_edges if total_edges > 0 else 0.0
+
+    # (2) Position match: fraction of positions with same city — O(n)
+    pos_match = sum(1 for i in range(n) if t1[i] == t2[i]) / n
+
+    # (3) Distance-profile similarity — O(n)
     dist_sim = 0.5
+    d1 = None
+    d2 = None
     if dm is not None:
         try:
             d1 = [dm[t1[i]][t1[(i + 1) % n]] for i in range(n)]
@@ -98,8 +118,50 @@ def _compute_resonance(t1: List[int], t2: List[int], n: int, dm: Optional[List[L
                 dist_sim = max(0.0, 1.0 - norm_diff / 2.0)
         except Exception:
             dist_sim = 0.5
-    # Keep primary structure from TSP adaptation while borrowing extra signal from source design.
-    return 0.45 * edge_sim + 0.35 * pos_match + 0.20 * dist_sim
+
+    # (4) Segment length: en uzun ortak ardışık kenar zinciri — O(n)
+    pos_map_2 = {city: idx for idx, city in enumerate(t2)}
+    max_seg = 0
+    current_seg = 0
+    for i in range(n):
+        next_in_t1 = t1[(i + 1) % n]
+        pos_in_t2 = pos_map_2.get(t1[i], -1)
+        if pos_in_t2 >= 0 and t2[(pos_in_t2 + 1) % n] == next_in_t1:
+            current_seg += 1
+            max_seg = max(max_seg, current_seg)
+        else:
+            current_seg = 0
+    segment_len = max_seg / n if n > 0 else 0.0
+
+    # (5) Common subsequence approximation: ardışık olmayan ortak sıra — O(n)
+    pos_map_1 = {city: idx for idx, city in enumerate(t1)}
+    ordered_count = 0
+    for i in range(n - 1):
+        city_a = t2[i]
+        city_b = t2[i + 1]
+        pos_a = pos_map_1.get(city_a, -1)
+        pos_b = pos_map_1.get(city_b, -1)
+        if pos_a >= 0 and pos_b >= 0 and pos_b > pos_a:
+            ordered_count += 1
+    common_subseq = ordered_count / max(1, n - 1)
+
+    # (6) Cost ratio: tur maliyetleri arasındaki benzerlik — O(1) (d1/d2 zaten hesaplandı)
+    cost_ratio = 0.5
+    if d1 is not None and d2 is not None:
+        cost1 = sum(d1)
+        cost2 = sum(d2)
+        if cost1 > 1e-12 and cost2 > 1e-12:
+            cost_ratio = min(cost1, cost2) / max(cost1, cost2)
+
+    # Ağırlıklı birleşim: 6-boyutlu rezonans skoru
+    return (
+        0.25 * edge_sim
+        + 0.15 * pos_match
+        + 0.15 * dist_sim
+        + 0.20 * segment_len
+        + 0.15 * common_subseq
+        + 0.10 * cost_ratio
+    )
 
 
 class R2DMA_TSP(BaseTSPSolver):
@@ -221,11 +283,14 @@ class R2DMA_TSP(BaseTSPSolver):
             offspring_costs = []
 
             for i in range(len(population)):
+                # B1: Tournament-based partner selection (k=tournament_k) — O(k×n)
+                candidates = rng.sample(
+                    [j for j in range(len(population)) if j != i],
+                    min(self.cfg.tournament_k, len(population) - 1)
+                )
                 best_partner = None
                 best_resonance = -1.0
-                for j in range(len(population)):
-                    if i == j:
-                        continue
+                for j in candidates:
                     r = _compute_resonance(population[i], population[j], self._n, self._dist_matrix)
                     if r > best_resonance:
                         best_resonance = r
@@ -291,13 +356,8 @@ class R2DMA_TSP(BaseTSPSolver):
                 segment_results = []
 
             if t % self.cfg.diversity_check_interval == 0:
-                entropy = 0.0
-                for i in range(min(5, len(population))):
-                    for j in range(i + 1, min(5, len(population))):
-                        common = sum(1 for k in range(self._n)
-                                     if population[i][(k + 1) % self._n] == population[j][(k + 1) % self._n])
-                        entropy += 1.0 - common / self._n
-                if entropy < self.cfg.entropy_threshold:
+                diversity = compute_population_diversity(population, self._n)
+                if diversity < self.cfg.entropy_threshold:
                     n_inject = max(1, int(self.cfg.pulse_injection_rate * len(population)))
                     worst = sorted(range(len(pop_costs)), key=lambda i: pop_costs[i], reverse=True)[:n_inject]
                     for idx in worst:

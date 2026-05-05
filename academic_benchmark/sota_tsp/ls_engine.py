@@ -22,6 +22,8 @@ except ImportError:
     _NUMPY_AVAILABLE = False
 
 try:
+    # sys.path hack: bildiri2026/core is not a pip-installable package,
+    # so we add its parent to the path for Numba-accelerated kernels.
     import sys as _sys
     _ls_dir = os.path.dirname(os.path.abspath(__file__))
     _ab_dir = os.path.join(_ls_dir, "..", "bildiri2026")

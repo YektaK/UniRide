@@ -57,7 +57,7 @@ class ShawRemoval:
             if not remaining:
                 break
             ref = removed[-1]
-            sims = [(dm[ref][n], i, n) for i, n in enumerate(remaining)]
+            sims = [(dm[ref][node], i, node) for i, node in enumerate(remaining)]
             sims.sort(key=lambda x: x[0])
             pick = sims[rng.randint(0, min(2, len(sims) - 1))]
             removed.append(remaining.pop(pick[1]))

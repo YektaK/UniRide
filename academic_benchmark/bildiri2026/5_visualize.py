@@ -9,11 +9,17 @@ Kullanım: python 5_visualize.py
 import os
 import sys
 import json
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 import glob
 from datetime import datetime
+
+try:
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    _VIZ_AVAILABLE = True
+except ImportError as _viz_err:
+    _VIZ_AVAILABLE = False
+    _VIZ_ERROR = str(_viz_err)
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 RESULTS_DIR = os.path.join(SCRIPT_DIR, "results")
@@ -142,6 +148,11 @@ def main():
     print("=" * 70)
     print("Aşama 5: Akademik Görselleştirme Paketi Başlatılıyor")
     print("=" * 70)
+
+    if not _VIZ_AVAILABLE:
+        print(f"\n[HATA] Görselleştirme kütüphaneleri eksik: {_VIZ_ERROR}")
+        print("İpucu: pip install pandas matplotlib seaborn")
+        sys.exit(1)
     
     try:
         ensure_dirs()

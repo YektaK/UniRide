@@ -16,7 +16,6 @@ if os.path.basename(SCRIPT_DIR) in ('benchmarks', 'core'):
 else:
     sys.path.insert(0, SCRIPT_DIR)
 
-import os
 import json
 import csv
 import time
@@ -46,7 +45,7 @@ TSPLIB_OPTIMALS = {
     # "pcb1173": 56892, "u1060": 224094,
 }
 
-TSPLIB_DOWNLOAD_URL = "http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/"
+TSPLIB_DOWNLOAD_URL = "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/"
 
 
 def download_tsplib(name: str, data_dir: str) -> str:
@@ -263,7 +262,7 @@ def run_benchmark_suite(
     
     # JSON
     json_path = os.path.join(output_dir, f"benchmark_{timestamp}.json")
-    with open(json_path, 'w') as f:
+    with open(json_path, 'w', encoding='utf-8') as f:
         json.dump({
             "timestamp": timestamp,
             "num_runs": num_runs,

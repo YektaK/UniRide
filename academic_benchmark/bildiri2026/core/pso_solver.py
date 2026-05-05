@@ -21,7 +21,7 @@ Memetic PSO Features:
 import time
 import random
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from .base_solver import BaseTSPSolver, TSPResult
 from . import numba_accel as _nb
 

@@ -58,8 +58,9 @@ def load_db():
 
 def save_to_db(entry):
     db = load_db()
-    # Add timestamp and ID
-    entry["id"] = len(db) + 1
+    # Add timestamp and ID (use max existing ID to avoid collisions after deletions)
+    existing_ids = [item.get("id", 0) for item in db]
+    entry["id"] = max(existing_ids, default=0) + 1
     entry["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     db.append(entry)
     

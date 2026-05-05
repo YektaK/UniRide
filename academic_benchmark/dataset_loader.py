@@ -4,7 +4,8 @@ import math
 from typing import List, Tuple, Dict, Optional
 from dataclasses import dataclass
 
-# Klasik test arraylerini alarak devasa koordinat çöplüğünden kaçınıyoruz
+# sys.path hack: optimizer_api is a sibling package not on the default path.
+# Needed so `from optimizer_api.tests...` resolves correctly.
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # Önce v2'yi dene (gerçek TSPLIB koordinatları), yoksa v1 veya fallback
@@ -29,8 +30,13 @@ except ImportError:
             optimal: int
             coordinates: List[Tuple[float, float]]
             category: str
-            edge_weight_type: str
-        ALL_PROBLEMS = []
+            edge_weight_type: str = "EUC_2D"
+
+            @property
+            def node_coords(self) -> List[Tuple[float, float]]:
+                return self.coordinates
+
+        ALL_PROBLEMS: List[TSPLIBProblem] = []
         USE_V2 = False
         TSPLIB_PROBLEMS = None
         load_tsplib_problem = None
@@ -269,8 +275,8 @@ class BenchmarkDatasetLoader:
                     prob = load_tsplib_problem(problem_name, optimal, category)
                     if prob:
                         problems[prob.name] = prob
-        # v1 modunda ALL_PROBLEMS'den yükle
-        elif 'ALL_PROBLEMS' in dir() and ALL_PROBLEMS:
+        # v1 fallback: ALL_PROBLEMS modül seviyesinde tanımlıysa kullan
+        elif not USE_V2 and ALL_PROBLEMS:
             problems = {p.name: p for p in ALL_PROBLEMS}
         
         # Klasördeki ek dosyaları da tara

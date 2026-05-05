@@ -24,6 +24,8 @@ from .ls_engine import MultiLayerLS, improve_2opt, _tour_cost
 from .destroy_ops import RandomRemoval, WorstRemoval, ShawRemoval, RelatedRemoval
 from .repair_ops import GreedyInsertion, Regret2Insertion, Regret3Insertion
 
+from academic_benchmark.benchmark_utils import compute_population_diversity
+
 
 @dataclass
 class OperatorGenome:
@@ -69,7 +71,8 @@ class OperatorGenome:
             destroy_ops=self.destroy_ops[:], repair_ops=self.repair_ops[:],
             acceptance_type=self.acceptance_type,
             destroy_weights=self.destroy_weights[:], repair_weights=self.repair_weights[:],
-            ls_intensity=self.ls_intensity, fitness=self.fitness)
+            ls_intensity=self.ls_intensity, fitness=self.fitness,
+            success_count=self.success_count, total_trials=self.total_trials)
 
 
 @dataclass
@@ -271,15 +274,8 @@ class PAOEA_TSP(BaseTSPSolver):
                 genome_assignments = [rng.choice(genomes) for _ in range(len(population))]
 
             if t % self.cfg.diversity_check_interval == 0:
-                entropy = 0.0
-                count = 0
-                for i in range(min(5, len(population))):
-                    for j in range(i + 1, min(5, len(population))):
-                        common = sum(1 for k in range(self._n)
-                                     if population[i][(k + 1) % self._n] == population[j][(k + 1) % self._n])
-                        entropy += 1.0 - common / self._n
-                        count += 1
-                if count > 0 and entropy / count < self.cfg.entropy_threshold:
+                diversity = compute_population_diversity(population, self._n)
+                if diversity < self.cfg.entropy_threshold:
                     population, pop_costs = self._inject_diversity(population, pop_costs, rng)
 
             history.append(gbest_cost)

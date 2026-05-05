@@ -231,7 +231,7 @@ def run_timematrix_benchmark(
     os.makedirs(output_dir, exist_ok=True)
     
     json_path = os.path.join(output_dir, f"{output_prefix}_{timestamp}.json")
-    with open(json_path, 'w') as f:
+    with open(json_path, 'w', encoding='utf-8') as f:
         json.dump({
             "timestamp": timestamp,
             "num_students": n_students,
@@ -241,7 +241,7 @@ def run_timematrix_benchmark(
     
     csv_path = os.path.join(output_dir, f"{output_prefix}_{timestamp}.csv")
     if results:
-        with open(csv_path, 'w', newline='') as f:
+        with open(csv_path, 'w', newline='', encoding='utf-8') as f:
             writer = csv.DictWriter(f, fieldnames=list(results[0].keys()))
             writer.writeheader()
             writer.writerows(results)

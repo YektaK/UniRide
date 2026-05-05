@@ -27,9 +27,9 @@ export const MAX_PAGE_SIZE = 100;
 
 // Rate limiting (requests per minute)
 // TODO(CR-6): This constant is exported but not yet connected to any middleware.
-// To enable global rate limiting, import this in src/middleware.ts and wire it
-// to a Redis-backed limiter (the in-process Map in auth/hint/route.ts is
-// insufficient for multi-process deployments).
+// Current state: auth/hint/route.ts uses an in-process Map-based limiter (sufficient
+// for single-process dev). For multi-process production, wire this to a Redis-backed
+// limiter in src/middleware.ts. Tracked in docs/05_Code_Quality_Roadmap.md → Faz D.
 export const RATE_LIMIT_REQUESTS_PER_MINUTE = 60;
 
 // Logging

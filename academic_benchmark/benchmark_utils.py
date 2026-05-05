@@ -1,0 +1,605 @@
+"""
+Benchmark Utils — Ortak araçlar modülü (Konsolidasyon FAZ 0)
+
+Tüm master engine'ler tarafından paylaşılan yardımcı fonksiyonlar.
+DRY prensibiyle 6 farklı benchmark dosyasından çıkarılmıştır.
+"""
+
+import csv
+import hashlib
+import io
+import itertools
+import json
+import math
+import os
+import platform
+import random
+import signal
+import statistics
+import sys
+import time
+from dataclasses import dataclass
+from datetime import datetime
+from multiprocessing import cpu_count
+from typing import Any, Dict, List, Optional, Sequence, Tuple
+
+
+# ── TSPLIB Bilinen Optimal Değerler ──────────────────────────────────────────
+
+TSPLIB_OPTIMALS: Dict[str, int] = {
+    "berlin52": 7542, "eil51": 426, "eil76": 538, "st70": 675,
+    "kroa100": 21282, "krob100": 22141, "kroc100": 20749, "krod100": 21294,
+    "kroe100": 22068, "eil101": 629, "pr107": 44303, "pr124": 59030,
+    "bier127": 118282, "ch130": 6110, "ch150": 6528, "kroa150": 26524,
+    "krob150": 26130, "pr152": 73682, "u159": 42080, "rat195": 2323,
+    "d198": 15780, "kroa200": 29368, "krob200": 29437, "ts225": 126643,
+    "tsp225": 3916, "pr226": 80369, "gil262": 2378, "pr264": 49135,
+    "a280": 2579, "pr299": 48191, "lin318": 42029, "rd400": 15281,
+    "fl417": 11861, "pr439": 107217, "pcb442": 50778, "d493": 35002,
+    "u574": 36905, "rat575": 6773, "p654": 34643, "d657": 48912,
+    "u724": 41910, "rat783": 8806, "pr1002": 259045, "u1060": 224094,
+    "vm1084": 239297, "pcb1173": 56892, "d1291": 50801, "rl1304": 252948,
+    "rl1323": 270199, "nrw1379": 56638, "fl1400": 20127, "u1432": 152970,
+    "fl1577": 22249, "d1655": 62128, "vm1748": 336556, "u1817": 57201,
+    "rl1889": 316536, "d2103": 80450, "u2152": 64253, "u2319": 234256,
+    "pr2392": 378032, "pcb3038": 137694, "fl3795": 28772, "fnl4461": 182566,
+    "lin105": 14379, "rd100": 7910, "pr136": 96772, "pr144": 58537,
+    "att48": 10628, "att532": 27686, "burma14": 3323, "bayg29": 1610,
+    "bays29": 2020, "brazil58": 25395, "dantzig42": 699, "gr17": 2085,
+    "gr21": 2707, "gr24": 1272, "gr48": 5046, "gr96": 55209,
+    "gr120": 6942, "gr137": 69853, "gr202": 40160, "gr229": 134602,
+    "gr431": 171414, "gr666": 294358, "hk48": 11461, "swiss42": 1273,
+    "ulysses16": 6859, "ulysses22": 7013,
+}
+
+_MAX_RECOMMENDED_WORKERS = 16
+
+
+# ── Dosya Hash ───────────────────────────────────────────────────────────────
+
+def get_file_hash(filepath: str) -> str:
+    """SHA-256 hash hesaplar. Dosya yoksa boş string döner."""
+    if not os.path.exists(filepath):
+        return ""
+    h = hashlib.sha256()
+    with open(filepath, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+# ── Metadata Yönetimi ────────────────────────────────────────────────────────
+
+def _sync_hash_fields(data: Dict[str, Any]) -> Dict[str, Any]:
+    fh = data.get("file_hashes", {})
+    ah = data.get("algorithm_hashes", {})
+    if fh and ah and fh != ah:
+        common_keys = set(fh) & set(ah)
+        divergent = [k for k in common_keys if fh.get(k) != ah.get(k)]
+        if divergent:
+            print(f"[UYARI] Hash uyumsuzlugu tespit edildi: {divergent}. algorithm_hashes oncelikli.")
+    merged = {**fh, **ah}
+    return {**data, "file_hashes": merged, "algorithm_hashes": merged}
+
+
+def load_metadata(path: str) -> Dict[str, Any]:
+    """JSON metadata dosyasını okur."""
+    default = {
+        "file_hashes": {}, "algorithm_hashes": {},
+        "results": {}, "best_params": {}, "last_updated": "",
+    }
+    if not os.path.exists(path):
+        return default.copy()
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            return default.copy()
+        synced = _sync_hash_fields(data)
+        return {
+            "file_hashes": synced.get("file_hashes", {}),
+            "algorithm_hashes": synced.get("algorithm_hashes", {}),
+            "results": synced.get("results", {}),
+            "best_params": synced.get("best_params", {}),
+            "last_updated": synced.get("last_updated", ""),
+        }
+    except Exception:
+        return default.copy()
+
+
+def save_metadata(path: str, data: Dict[str, Any]) -> None:
+    """Metadata'yı JSON dosyasına kaydeder."""
+    data_to_save = _sync_hash_fields(data)
+    data_to_save["last_updated"] = datetime.now().isoformat()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data_to_save, f, indent=2, ensure_ascii=False)
+
+
+def check_algorithms_status(
+    metadata: Dict[str, Any],
+    algorithms_to_check: Dict[str, str],
+) -> Dict[str, str]:
+    """Algoritma dosyalarının hash durumunu kontrol eder."""
+    saved = metadata.get("algorithm_hashes") or metadata.get("file_hashes", {})
+    status: Dict[str, str] = {}
+    for name, filepath in algorithms_to_check.items():
+        if not os.path.exists(filepath):
+            status[name] = "FILE_MISSING"
+        else:
+            cur = get_file_hash(filepath)
+            if name not in saved:
+                status[name] = "NEW"
+            elif saved[name] != cur:
+                status[name] = "CHANGED"
+            else:
+                status[name] = "CURRENT"
+    return status
+
+
+def update_algorithm_hashes(
+    metadata: Dict[str, Any],
+    algorithms_to_check: Dict[str, str],
+) -> None:
+    """Metadata'daki hash değerlerini günceller."""
+    hashes = {k: get_file_hash(v) for k, v in algorithms_to_check.items()}
+    metadata["algorithm_hashes"] = hashes
+    metadata["file_hashes"] = hashes
+
+
+# ── Zaman ve UI Araçları ─────────────────────────────────────────────────────
+
+def format_time(seconds: float) -> str:
+    """Saniyeyi okunabilir formata çevirir."""
+    if seconds < 60:
+        return f"{seconds:.1f}s"
+    if seconds < 3600:
+        m = int(seconds // 60)
+        s = int(seconds % 60)
+        return f"{m}m {s:02d}s"
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
+    return f"{h}h {m:02d}m"
+
+
+def clear_screen() -> None:
+    """Terminal ekranını temizler."""
+    if sys.stdin.isatty():
+        os.system("cls" if os.name == "nt" else "clear")
+    else:
+        print("\n" * 3)
+
+
+def gap_str(gap) -> str:
+    """Gap değerini formatlar."""
+    if gap is None or (isinstance(gap, float) and math.isnan(gap)):
+        return "  N/A "
+    return f"{gap:.2f}%"
+
+
+def make_bar(done: int, total: int, width: int = 12) -> str:
+    if total <= 0:
+        return "." * width
+    filled = int(done / total * width)
+    return "#" * filled + "." * (width - filled)
+
+
+def log_environment_info() -> None:
+    """Ortam bilgilerini yazdırır."""
+    print(f"[ENV] OS: {platform.system()} {platform.release()}")
+    print(f"[ENV] Python: {sys.version.split()[0]}")
+    try:
+        import numpy
+        print(f"[ENV] NumPy: {numpy.__version__}")
+    except ImportError:
+        print("[ENV] NumPy: N/A")
+    try:
+        import numba
+        print(f"[ENV] Numba: {numba.__version__}")
+    except ImportError:
+        print("[ENV] Numba: N/A")
+    print(f"[ENV] CPU: {cpu_count()} cores")
+
+
+# ── ETA Tracker ──────────────────────────────────────────────────────────────
+
+class ETATracker:
+    """Tamamlanan görevlere göre ETA tahmin eder."""
+
+    def __init__(self):
+        self._times: List[float] = []
+        self._by_algo: Dict[str, List[float]] = {}
+        self._by_cat: Dict[str, List[float]] = {}
+
+    def record(self, elapsed: float, algo: str = "", cat: str = "") -> None:
+        self._times.append(elapsed)
+        if algo:
+            self._by_algo.setdefault(algo, []).append(elapsed)
+        if cat:
+            self._by_cat.setdefault(cat, []).append(elapsed)
+
+    def estimate_remaining(self, tasks_left: int) -> Optional[float]:
+        if not self._times:
+            return None
+        avg = sum(self._times) / len(self._times)
+        return avg * tasks_left
+
+    def estimate_for(self, algo: str, cat: str) -> Optional[float]:
+        if algo in self._by_algo:
+            vals = self._by_algo[algo]
+            return sum(vals) / len(vals)
+        if cat in self._by_cat:
+            vals = self._by_cat[cat]
+            return sum(vals) / len(vals)
+        if self._times:
+            return sum(self._times) / len(self._times)
+        return None
+
+
+# ── CPU & Worker Seçimi ──────────────────────────────────────────────────────
+
+def get_cpu_info() -> Dict[str, Any]:
+    """CPU bilgilerini toplar ve optimal worker sayısı önerir."""
+    try:
+        import psutil
+        physical = psutil.cpu_count(logical=False) or cpu_count()
+        logical = psutil.cpu_count(logical=True) or cpu_count()
+    except ImportError:
+        physical = cpu_count()
+        logical = cpu_count()
+    smt = logical > physical
+    recommended = physical if smt else max(1, physical - 1)
+    recommended = min(recommended, _MAX_RECOMMENDED_WORKERS)
+    return {
+        "physical": physical, "logical": logical, "smt": smt,
+        "recommended": recommended,
+        "platform": platform.processor() or platform.machine(),
+    }
+
+
+def select_worker_count() -> int:
+    """Kullanıcıdan worker sayısı seçimi alır."""
+    info = get_cpu_info()
+    rec = info["recommended"]
+    print("\n" + "=" * 60)
+    print("[CPU] ISLEMCI BILGILERI")
+    print("=" * 60)
+    print(f"   Platform      : {info['platform']}")
+    print(f"   Fiziksel Cekirdek : {info['physical']}")
+    print(f"   Mantiksal Cekirdek: {info['logical']}")
+    print(f"\n[ONERI] Optimal worker sayisi: {rec}")
+    print("\n[SECIM] Worker sayisi belirleyin:")
+    print(f"   [1] {rec} (Onerilen)")
+    print(f"   [2] {min(info['logical'], 8)} (Standart)")
+    print(f"   [3] {min(info['logical'], _MAX_RECOMMENDED_WORKERS)} (Yuksek)")
+    print(f"   [4] {info['logical']} (Maksimum)")
+    print("   [C] Custom")
+    print(f"   [Enter] Varsayilan: {min(cpu_count(), 4)}")
+    choice = input("\nSeciminiz: ").strip().upper()
+    if choice in ("", "1"):
+        return rec
+    if choice == "2":
+        return min(info["logical"], 8)
+    if choice == "3":
+        return min(info["logical"], _MAX_RECOMMENDED_WORKERS)
+    if choice == "4":
+        return info["logical"]
+    if choice == "C":
+        try:
+            v = int(input(f"   Worker sayisi (1-{info['logical']}): ").strip())
+            return max(1, min(v, info["logical"]))
+        except ValueError:
+            return rec
+    return min(cpu_count(), 4)
+
+
+def select_run_count(label: str, default: int, allow_zero: bool = False) -> int:
+    """Kullanıcıdan çalıştırma sayısı seçimi alır."""
+    print(f"\n[RUNS] {label} CALISTIRMA SAYISI SECIN:")
+    print(f"   Varsayilan: {default}")
+    if allow_zero:
+        print("   [0] 0 run (atla)")
+    print("   [3] 3 run (hizli)")
+    print("   [5] 5 run (standart)")
+    print("   [10] 10 run (detayli)")
+    print("   [Enter] Varsayilan kullan")
+    raw = input("\nSeciminiz: ").strip()
+    if not raw:
+        return default
+    if raw.isdigit():
+        val = int(raw)
+        if val == 0 and allow_zero:
+            return 0
+        if val >= 1:
+            return val
+    return default
+
+
+def select_mode() -> bool:
+    """Sequential vs Parallel seçimi. True = sequential."""
+    print("\n[MODE] CALISTIRMA MODU SECIN:")
+    print("   [S] Sirali (Sequential) - Anlik progress (onerilen)")
+    print("   [P] Paralel - Daha hizli")
+    choice = input("\nSeciminiz [S/P]: ").strip().upper()
+    return choice != "P"
+
+
+# ── Parametre Araçları ───────────────────────────────────────────────────────
+
+def validate_param_value(key: str, raw: str, expected_type: type,
+                         validators: Optional[Dict] = None) -> Optional[Any]:
+    """Parametre değerini doğrular ve çevirir."""
+    try:
+        if expected_type == bool:
+            val = raw.lower() in ("true", "1", "t", "evet", "e")
+        elif expected_type == float:
+            val = float(raw)
+        elif expected_type == int:
+            val = int(raw)
+        else:
+            val = raw
+        if validators and key in validators:
+            vmin, vmax, _ = validators[key]
+            if val < vmin or val > vmax:
+                print(f"    [!] {key} aralik disi [{vmin}, {vmax}]: {val}")
+                return None
+        return val
+    except ValueError:
+        print(f"    [!] {key} icin gecersiz deger: {raw}")
+        return None
+
+
+def edit_param_space(space: Dict[str, List[Any]], algo_name: str,
+                     validators: Optional[Dict] = None) -> Dict[str, List[Any]]:
+    """Parametre uzayını kullanıcı ile düzenler."""
+    print(f"\n[PARAM] {algo_name} parametre uzayini duzenleyin (Enter = kabul):")
+    result: Dict[str, List[Any]] = {}
+    for key, vals in space.items():
+        print(f"  {key} = {vals}")
+        raw = input(f"    Yeni degerler (virgul) [{vals}]: ").strip()
+        if not raw:
+            result[key] = vals
+            continue
+        parts = [x.strip() for x in raw.split(",")]
+        new_vals: List[Any] = []
+        sample_type = type(vals[0]) if vals else str
+        valid = True
+        for p in parts:
+            if not p:
+                continue
+            v = validate_param_value(key, p, sample_type, validators)
+            if v is None:
+                valid = False
+                break
+            new_vals.append(v)
+        if valid and new_vals:
+            result[key] = new_vals
+        else:
+            print(f"    [!] Gecersiz, mevcut korunuyor: {vals}")
+            result[key] = vals
+    return result
+
+
+# ── DoE Araçları ─────────────────────────────────────────────────────────────
+
+def generate_combinations(space: Dict[str, List[Any]], max_combos: int,
+                          strategy: str = "sequential",
+                          random_seed: int = 42) -> List[Dict[str, Any]]:
+    """Parametre uzayından kombinasyonlar üretir."""
+    keys = list(space.keys())
+    combos = [dict(zip(keys, v)) for v in itertools.product(*(space[k] for k in keys))]
+    if len(combos) > max_combos and strategy == "fractional_fallback":
+        random.seed(random_seed)
+        combos = random.sample(combos, max_combos)
+    else:
+        combos = combos[:max_combos]
+    return combos
+
+
+def param_signature(params: Dict[str, Any]) -> str:
+    """Parametre setinin benzersiz imzasını döner."""
+    return json.dumps(params, sort_keys=True, ensure_ascii=False)
+
+
+def make_deterministic_seed(problem_name: str, algo_name: str,
+                            run_idx: int, algo_idx: int,
+                            seed_base: int) -> int:
+    """Hashlib tabanlı deterministik seed üretir."""
+    raw = f"{problem_name}|{algo_name}|{run_idx}|{algo_idx}|{seed_base}".encode("utf-8")
+    digest = hashlib.sha256(raw).hexdigest()
+    return int(digest[:8], 16) & 0x7FFFFFFF
+
+
+# ── Seçim Araçları ───────────────────────────────────────────────────────────
+
+def parse_index_or_all(raw: str, item_count: int) -> Optional[List[int]]:
+    """Kullanıcı girdisinden indeks listesi parse eder."""
+    raw = raw.strip().lower()
+    if raw == "all":
+        return list(range(item_count))
+    indices: List[int] = []
+    for part in raw.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "-" in part:
+            try:
+                lo, hi = part.split("-", 1)
+                for i in range(int(lo) - 1, int(hi)):
+                    if 0 <= i < item_count:
+                        indices.append(i)
+            except ValueError:
+                print(f"  [HATA] Gecersiz aralik: '{part}'")
+                return None
+        elif part.isdigit():
+            idx = int(part) - 1
+            if 0 <= idx < item_count:
+                indices.append(idx)
+            else:
+                print(f"  [HATA] {part} aralik disi (1-{item_count})")
+                return None
+        else:
+            print(f"  [HATA] Gecersiz giris: '{part}'")
+            return None
+    if not indices:
+        return None
+    seen: set = set()
+    return [i for i in indices if not (i in seen or seen.add(i))]
+
+
+def multi_select(items: Sequence[str], title: str) -> List[str]:
+    """Listeden çoklu seçim yapar."""
+    print(f"\n[{title}]")
+    for idx, item in enumerate(items, 1):
+        print(f"   [{idx}] {item}")
+    raw = input("Secimler (virgul) / Enter=all: ").strip()
+    if not raw:
+        return list(items)
+    selected: List[str] = []
+    for part in raw.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if part.isdigit():
+            idx = int(part) - 1
+            if 0 <= idx < len(items):
+                selected.append(items[idx])
+                continue
+        matches = [item for item in items if part.lower() in item.lower()]
+        selected.extend(matches)
+    seen: set = set()
+    return [item for item in selected if not (item in seen or seen.add(item))]
+
+
+# ── CSV Araçları ─────────────────────────────────────────────────────────────
+
+def append_csv_row(path: str, fieldnames: Sequence[str],
+                   row: Dict[str, Any]) -> None:
+    """CSV dosyasına tek satır ekler. Dosya yoksa header yazar."""
+    exists = os.path.exists(path)
+    with open(path, "a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(fieldnames))
+        if not exists:
+            writer.writeheader()
+        writer.writerow(row)
+
+
+# ── Config Yönetimi ──────────────────────────────────────────────────────────
+
+def list_configs(configs_dir: str) -> List[str]:
+    """Kayıtlı config dosyalarını listeler."""
+    if not os.path.exists(configs_dir):
+        return []
+    return sorted([f for f in os.listdir(configs_dir) if f.endswith(".json")])
+
+
+def save_config(problems_names: List[str], algo_names: List[str],
+                settings: Dict[str, Any], configs_dir: str,
+                param_overrides: Optional[Dict] = None) -> str:
+    """Seçimleri JSON config olarak kaydeder."""
+    os.makedirs(configs_dir, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    scope = "_".join(problems_names[:3])
+    if len(problems_names) > 3:
+        scope += f"_and{len(problems_names) - 3}more"
+    filename = f"{ts}_{scope}.json"
+    filepath = os.path.join(configs_dir, filename)
+    config = {
+        "version": 1,
+        "created_at": datetime.now().isoformat(),
+        "problems": problems_names,
+        "algorithms": algo_names,
+        "settings": settings,
+    }
+    if param_overrides:
+        config["param_overrides"] = param_overrides
+    with open(filepath, "w", encoding="utf-8") as f:
+        json.dump(config, f, indent=2, ensure_ascii=False)
+    return filepath
+
+
+def load_config(filepath: str) -> Optional[Dict[str, Any]]:
+    """Config dosyasını yükler ve doğrular."""
+    if not os.path.exists(filepath):
+        print(f"[HATA] Config bulunamadi: {filepath}")
+        return None
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            config = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"[HATA] JSON hatasi: {e}")
+        return None
+    if not isinstance(config, dict) or "version" not in config:
+        print("[HATA] Gecersiz config formati")
+        return None
+    return config
+
+
+def save_convergence_history(best_params: Dict[str, Dict[str, Any]],
+                             histories_dir: str) -> None:
+    """Yakınsama profillerini kaydeder."""
+    histories: Dict[str, Any] = {}
+    for key, entry in best_params.items():
+        profile = entry.get("per_run_lengths") or entry.get("convergence_profile")
+        if profile:
+            histories[key] = {
+                "problem": entry.get("problem"),
+                "strategy": entry.get("strategy"),
+                "avg_length": entry.get("avg_length"),
+                "avg_gap": entry.get("avg_gap"),
+                "convergence_profile": profile,
+            }
+    if histories:
+        os.makedirs(histories_dir, exist_ok=True)
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        path = os.path.join(histories_dir, f"convergence_{ts}.json")
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(histories, f, indent=2, ensure_ascii=False)
+        print(f"[SAVED] Yakinsama gecmisi: {path}")
+
+
+# ── Çeşitlilik Ölçümü ───────────────────────────────────────────────────────
+
+def compute_population_diversity(
+    population: list,
+    n_cities: int,
+    sample_size: int = 0,
+) -> float:
+    """
+    Popülasyondaki bireylerin ortalama çeşitliliğini ölçer.
+    B3 (Dinamik √n örnekleme) ve B10 (DRY) gereği merkezi fonksiyon.
+    """
+    pop_size = len(population)
+    if pop_size < 2 or n_cities < 2:
+        return 1.0
+    if sample_size <= 0:
+        sample_size = min(pop_size, int(math.sqrt(pop_size)) + 1)
+    sample_size = min(sample_size, pop_size)
+
+    total_dist = 0.0
+    pair_count = 0
+    for i in range(sample_size):
+        for j in range(i + 1, sample_size):
+            shared = sum(
+                1 for k in range(n_cities)
+                if population[i][(k + 1) % n_cities] == population[j][(k + 1) % n_cities]
+            )
+            total_dist += 1.0 - shared / n_cities
+            pair_count += 1
+    return total_dist / pair_count if pair_count > 0 else 1.0
+
+
+# ── Kategori Sınıflandırma ───────────────────────────────────────────────────
+
+def categorize_dimension(n: int) -> str:
+    """Problem boyutuna göre kategori belirler."""
+    if n <= 100:
+        return "small"
+    if n <= 500:
+        return "medium"
+    return "large"
+
+
+def stdev_safe(vals: List[float]) -> float:
+    """Güvenli standart sapma (n<2 için 0.0)."""
+    return statistics.stdev(vals) if len(vals) >= 2 else 0.0

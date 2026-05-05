@@ -1,0 +1,4 @@
+timestamp,problem,algorithm,run,seed,dimension,optimal,tour_cost,gap_pct,elapsed_sec,iterations
+01:55:58,berlin52,E2BSO-TSP,1,1000,52,7542,7542,0.0,2.995,260
+01:56:03,berlin52,R2DMA-TSP,1,1100,52,7542,7769,3.0098,4.976,260
+01:56:08,berlin52,P-AOEA-TSP,1,1200,52,7542,7542,0.0,5.541,260

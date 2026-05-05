@@ -1,0 +1,124 @@
+{
+  "version": "1.0.0",
+  "timestamp": "20260430_102137",
+  "total_time_sec": 402.71415089999937,
+  "algorithms": [
+    "E2BSO-TSP",
+    "R2DMA-TSP",
+    "P-AOEA-TSP"
+  ],
+  "numba_available": true,
+  "problems": [
+    "eil76"
+  ],
+  "results": [
+    {
+      "algorithm": "E2BSO-TSP",
+      "run": 1,
+      "seed": 251035873,
+      "dimension": 76,
+      "optimal": 538,
+      "tour_cost": 538,
+      "gap_pct": 0.0,
+      "elapsed_sec": 11.456,
+      "iterations": 380,
+      "problem": "eil76"
+    },
+    {
+      "algorithm": "E2BSO-TSP",
+      "run": 2,
+      "seed": 503599048,
+      "dimension": 76,
+      "optimal": 538,
+      "tour_cost": 538,
+      "gap_pct": 0.0,
+      "elapsed_sec": 17.149,
+      "iterations": 380,
+      "problem": "eil76"
+    },
+    {
+      "algorithm": "E2BSO-TSP",
+      "run": 3,
+      "seed": 1903301870,
+      "dimension": 76,
+      "optimal": 538,
+      "tour_cost": 538,
+      "gap_pct": 0.0,
+      "elapsed_sec": 18.909,
+      "iterations": 380,
+      "problem": "eil76"
+    },
+    {
+      "algorithm": "R2DMA-TSP",
+      "run": 1,
+      "seed": 1876103991,
+      "dimension": 76,
+      "optimal": 538,
+      "tour_cost": 549,
+      "gap_pct": 2.0446,
+      "elapsed_sec": 43.619,
+      "iterations": 380,
+      "problem": "eil76"
+    },
+    {
+      "algorithm": "R2DMA-TSP",
+      "run": 2,
+      "seed": 801728473,
+      "dimension": 76,
+      "optimal": 538,
+      "tour_cost": 550,
+      "gap_pct": 2.2305,
+      "elapsed_sec": 48.213,
+      "iterations": 380,
+      "problem": "eil76"
+    },
+    {
+      "algorithm": "R2DMA-TSP",
+      "run": 3,
+      "seed": 714646863,
+      "dimension": 76,
+      "optimal": 538,
+      "tour_cost": 542,
+      "gap_pct": 0.7435,
+      "elapsed_sec": 50.489,
+      "iterations": 380,
+      "problem": "eil76"
+    },
+    {
+      "algorithm": "P-AOEA-TSP",
+      "run": 1,
+      "seed": 1331398446,
+      "dimension": 76,
+      "optimal": 538,
+      "tour_cost": 538,
+      "gap_pct": 0.0,
+      "elapsed_sec": 50.502,
+      "iterations": 380,
+      "problem": "eil76"
+    },
+    {
+      "algorithm": "P-AOEA-TSP",
+      "run": 2,
+      "seed": 1772279002,
+      "dimension": 76,
+      "optimal": 538,
+      "tour_cost": 538,
+      "gap_pct": 0.0,
+      "elapsed_sec": 72.353,
+      "iterations": 380,
+      "problem": "eil76"
+    },
+    {
+      "algorithm": "P-AOEA-TSP",
+      "run": 3,
+      "seed": 302142187,
+      "dimension": 76,
+      "optimal": 538,
+      "tour_cost": 538,
+      "gap_pct": 0.0,
+      "elapsed_sec": 89.717,
+      "iterations": 380,
+      "problem": "eil76"
+    }
+  ]
+}

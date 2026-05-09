@@ -2,7 +2,9 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import os
+import glob
 from pathlib import Path
+from academic_benchmark.dashboard_utils import derive_filter_options
 
 # Sayfa yapılandırması
 st.set_page_config(page_title="UniRide Academic Dashboard", page_icon="🎓", layout="wide")
@@ -18,40 +20,33 @@ RESULT_DIRS = [
 ]
 
 # Veri yükleme (Önbellekli - Caching)
-@st.cache_data
+@st.cache_data(ttl=3600)
 def load_data():
     all_summary = []
     all_progress = []
     all_tuning = []
-    
+    loaded_sources = {"summary": [], "progress": [], "tuning": []}
+
     for d in RESULT_DIRS:
         summary_path = os.path.join(d, "benchmark_summary.csv")
         progress_path = os.path.join(d, "benchmark_progress.csv")
-        tuning_path = os.path.join(d, "tuning_progress.csv")
-        
         if os.path.exists(summary_path):
             all_summary.append(pd.read_csv(summary_path))
+            loaded_sources["summary"].append(summary_path)
         if os.path.exists(progress_path):
             all_progress.append(pd.read_csv(progress_path))
-        if os.path.exists(tuning_path):
+            loaded_sources["progress"].append(progress_path)
+        for tuning_path in glob.glob(os.path.join(d, "**", "tuning_progress.csv"), recursive=True):
             all_tuning.append(pd.read_csv(tuning_path))
-            
+            loaded_sources["tuning"].append(tuning_path)
+
     summary_df = pd.concat(all_summary, ignore_index=True) if all_summary else pd.DataFrame()
     progress_df = pd.concat(all_progress, ignore_index=True) if all_progress else pd.DataFrame()
     tuning_df = pd.concat(all_tuning, ignore_index=True) if all_tuning else pd.DataFrame()
-    
-    # Eger summary_df bos ama progress_df doluysa, progress_df'den ozet uret
-    if summary_df.empty and not progress_df.empty:
-        summary_df = progress_df.groupby(['problem', 'strategy']).agg({
-            'avg_length': 'mean',
-            'avg_gap': 'mean',
-            'avg_time_ms': 'mean',
-            'n_runs': 'max'
-        }).reset_index()
-    
-    return summary_df, progress_df, tuning_df
 
-summary_df, progress_df, tuning_df = load_data()
+    return summary_df, progress_df, tuning_df, loaded_sources
+
+summary_df, progress_df, tuning_df, loaded_sources = load_data()
 
 st.title("🎓 UniRide Academic TSP Benchmark Dashboard")
 
@@ -61,11 +56,27 @@ if summary_df.empty and progress_df.empty and tuning_df.empty:
 
 # --- SIDEBAR (Filtreler) ---
 st.sidebar.header("🛠️ Data Filters")
-all_probs = [p for p in summary_df['problem'].unique() if pd.notna(p)] if not summary_df.empty else []
-all_algos = [a for a in summary_df['strategy'].unique() if pd.notna(a)] if not summary_df.empty else []
+all_probs, all_algos = derive_filter_options(summary_df, progress_df)
 
 selected_probs = st.sidebar.multiselect("Select TSP Problems", all_probs, default=all_probs)
 selected_algos = st.sidebar.multiselect("Select Algorithms", all_algos, default=all_algos)
+
+with st.sidebar.expander("📁 Source Diagnostics"):
+    st.markdown(f"**Summary files:** {len(loaded_sources['summary'])}")
+    for s in loaded_sources['summary']:
+        st.code(s, language="")
+    st.markdown(f"**Progress files (raw):** {len(loaded_sources['progress'])}")
+    for s in loaded_sources['progress']:
+        st.code(s, language="")
+    st.markdown(f"**Tuning files:** {len(loaded_sources['tuning'])}")
+    for s in loaded_sources['tuning']:
+        st.code(s, language="")
+    if not progress_df.empty:
+        st.markdown(f"**Progress rows:** {len(progress_df)}")
+        if 'result_type' in progress_df.columns:
+            raw_count = len(progress_df[progress_df['result_type'] == 'raw'])
+            agg_count = len(progress_df[progress_df['result_type'] == 'aggregate'])
+            st.markdown(f"**Raw:** {raw_count} | **Aggregate:** {agg_count}")
 
 # Verileri Filtrele
 filtered_summary = pd.DataFrame()
@@ -74,7 +85,8 @@ filtered_progress = pd.DataFrame()
 if not summary_df.empty:
     filtered_summary = summary_df[summary_df['problem'].isin(selected_probs) & summary_df['strategy'].isin(selected_algos)]
 if not progress_df.empty:
-    filtered_progress = progress_df[progress_df['problem'].isin(selected_probs) & progress_df['strategy'].isin(selected_algos)]
+    raw_progress = progress_df[progress_df['result_type'] == 'raw'] if 'result_type' in progress_df.columns else progress_df
+    filtered_progress = raw_progress[raw_progress['problem'].isin(selected_probs) & raw_progress['strategy'].isin(selected_algos)]
 
 # --- SEKMELER (TABS) ---
 tab1, tab2, tab3 = st.tabs(["🏆 Leaderboard & LaTeX", "📊 Statistical Robustness", "🎛️ DoE Parameter Analysis"])

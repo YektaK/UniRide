@@ -46,6 +46,10 @@ python academic_benchmark/master_numba_engine.py --mode default --algos GA,PSO -
 To guarantee data integrity and academic reproducibility, the framework uses a highly structured output hierarchy located in the `results/` folder:
 
 *   **`benchmark_progress.csv` & `tuning_progress.csv`**: Raw, incremental logs of every single run. Prevents data loss during long execution times.
+  * **Schema (`benchmark_progress.csv`):** `timestamp`, `problem`, `strategy`, `avg_length`, `avg_gap`, `avg_time_ms`, `n_runs`, `result_type`, `params_json`.
+  * **`result_type` semantics:**
+    - `"raw"` — SOTA engine: one row per independent run (`n_runs=1`). Feeds robustness box-plots.
+    - `"aggregate"` — Numba engine: one row per parameter combo, averaged across all `n_runs`. Feeds leaderboard summary.
 *   **`benchmark_summary.csv`**: The aggregated final results (average lengths, gaps, times) used directly for statistical analysis.
 *   **`best_params.json`**: Stores the optimal hyperparameter sets discovered during the `TUNING` mode.
 *   **`metadata.json`**: The global state tracker. It maintains caching hashes, resumes interrupted benchmarks, and ensures that redundant calculations are skipped.

@@ -60,31 +60,60 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
 # ── benchmark_utils import ────────────────────────────────────────────────────
-from benchmark_utils import (
-    ETATracker,
-    TSPLIB_OPTIMALS,
-    append_csv_row,
-    check_algorithms_status,
-    clear_screen,
-    compute_population_diversity,
-    format_time,
-    generate_combinations,
-    get_cpu_info,
-    get_file_hash,
-    load_metadata,
-    log_environment_info,
-    make_deterministic_seed,
-    multi_select,
-    param_signature,
-    parse_index_or_all,
-    save_config,
-    save_convergence_history,
-    save_metadata,
-    select_run_count,
-    select_worker_count,
-    stdev_safe,
-    update_algorithm_hashes,
-)
+try:
+    from benchmark_utils import (
+        ETATracker,
+        TSPLIB_OPTIMALS,
+        append_csv_row,
+        check_algorithms_status,
+        clear_screen,
+        compute_population_diversity,
+        format_time,
+        generate_combinations,
+        get_cpu_info,
+        get_file_hash,
+        load_metadata,
+        log_environment_info,
+        make_deterministic_seed,
+        multi_select,
+        param_signature,
+        parse_index_or_all,
+        ProblemSelector,
+        save_config,
+        save_convergence_history,
+        save_metadata,
+        select_run_count,
+        select_worker_count,
+        stdev_safe,
+        update_algorithm_hashes,
+    )
+except ModuleNotFoundError:
+    from academic_benchmark.benchmark_utils import (
+        ETATracker,
+        TSPLIB_OPTIMALS,
+        append_csv_row,
+        check_algorithms_status,
+        clear_screen,
+        compute_population_diversity,
+        format_time,
+        generate_combinations,
+        get_cpu_info,
+        get_file_hash,
+        load_metadata,
+        log_environment_info,
+        make_deterministic_seed,
+        multi_select,
+        param_signature,
+        parse_index_or_all,
+        ProblemSelector,
+        save_config,
+        save_convergence_history,
+        save_metadata,
+        select_run_count,
+        select_worker_count,
+        stdev_safe,
+        update_algorithm_hashes,
+    )
 
 # ── Versiyon ve yollar ────────────────────────────────────────────────────────
 
@@ -589,12 +618,11 @@ def _save_incremental(result: Dict[str, Any], metadata: Dict[str, Any]) -> None:
     file_exists = os.path.isfile(progress_path)
     
     with open(progress_path, "a", newline="", encoding="utf-8") as f:
-        fields = ["timestamp", "problem", "strategy", "avg_length", "avg_gap", "avg_time_ms", "n_runs", "params_json"]
+        fields = ["timestamp", "problem", "strategy", "avg_length", "avg_gap", "avg_time_ms", "n_runs", "result_type", "params_json"]
         writer = csv.DictWriter(f, fieldnames=fields)
         if not file_exists:
             writer.writeheader()
-        
-        # SOTA sonuclarini Numba formatina uyduruyoruz
+
         writer.writerow({
             "timestamp": datetime.now().isoformat(),
             "problem": result["problem"],
@@ -603,6 +631,7 @@ def _save_incremental(result: Dict[str, Any], metadata: Dict[str, Any]) -> None:
             "avg_gap": result["gap_pct"],
             "avg_time_ms": result["elapsed_sec"] * 1000.0,
             "n_runs": 1,
+            "result_type": "raw",
             "params_json": json.dumps(result.get("params", {}), ensure_ascii=False)
         })
 
@@ -680,9 +709,10 @@ def _run_engine_default(
                 completed += saved_runs
                 
             for run_idx in range(runs_to_do):
-                seed = make_deterministic_seed(problem.name, algo, run_idx, 0, 5000)
+                global_run_idx = saved_runs + run_idx
+                seed = make_deterministic_seed(problem.name, algo, global_run_idx, 0, 5000)
                 tasks.append((
-                    algo, problem.coordinates, seed, run_idx, 
+                    algo, problem.coordinates, seed, global_run_idx,
                     problem.dimension, problem.optimal, _NUMBA_AVAILABLE, problem.name
                 ))
     
@@ -697,6 +727,7 @@ def _run_engine_default(
         for task in tasks:
             res = _run_solver_task(task)
             results.append(res)
+            _active_results.append(res)
             completed += 1
             _save_incremental(res, metadata)
             _print_progress_line(completed, total_runs, res, "BENCH")
@@ -706,6 +737,7 @@ def _run_engine_default(
             for future in concurrent.futures.as_completed(future_to_task):
                 res = future.result()
                 results.append(res)
+                _active_results.append(res)
                 completed += 1
                 _save_incremental(res, metadata)
                 _print_progress_line(completed, total_runs, res, "BENCH")
@@ -885,10 +917,23 @@ def _log_environment_info() -> None:
     print(f"[ENV] CPU: {cpu_count()} cores")
 
 
-def _select_problem_scope() -> str:
-    print("\n[PROBLEM SET] Boyut secin: [1] small [2] medium [3] large [4] all")
-    choice = input("Seciminiz [varsayilan: 1]: ").strip()
-    return {"1": "small", "2": "medium", "3": "large", "4": "all", "": "small"}.get(choice, "small")
+def _select_problems_from_args(args, all_problems, interactive: bool = False):
+    selector = ProblemSelector(all_problems)
+
+    if args.select:
+        return selector.quick_select(args.select)
+
+    if args.problems:
+        wanted = {x.strip().lower() for x in args.problems.split(",") if x.strip()}
+        return [p for p in all_problems if p.name.lower() in wanted]
+
+    if args.size_limit:
+        return [p for p in all_problems if p.dimension <= args.size_limit]
+
+    if interactive:
+        return selector.interactive_select()
+
+    return list(all_problems)
 
 
 def _select_algorithms() -> List[str]:
@@ -919,6 +964,7 @@ def _main_loop() -> int:
     parser.add_argument("--mode", choices=["default", "tuning"], help="Calisma modu")
     parser.add_argument("--algos", help="Algoritma listesi (virgulle ayrilmis)")
     parser.add_argument("--problems", help="Problem listesi (virgulle ayrilmis)")
+    parser.add_argument("--select", help="Universal problem selection syntax")
     parser.add_argument("--runs", type=int, help="Tekrar sayisi")
     parser.add_argument("--size-limit", type=int, help="Problem boyutu limiti")
     parser.add_argument("--workers", type=int, help="Paralel worker sayisi")
@@ -932,9 +978,7 @@ def _main_loop() -> int:
         
     if args.mode:
         selected_problems = all_problems
-        if args.problems:
-            wanted = [x.strip().lower() for x in args.problems.split(",")]
-            selected_problems = [p for p in all_problems if p.name.lower() in wanted]
+        selected_problems = _select_problems_from_args(args, all_problems)
             
         selected_algos = args.algos.split(",") if args.algos else list(ALL_ALGOS)
         runs = args.runs or 5
@@ -997,11 +1041,14 @@ def _main_loop() -> int:
             input("Devam etmek icin Enter...")
             continue
             
-        scope = _select_problem_scope()
-        selected_problems = [p for p in all_problems if p.category == scope or scope == "all"]
-        
         if not selected_problems:
-            print(f"[UYARI] {scope} kategorisinde problem yok.")
+            print("[UYARI] Problem seçilmedi.")
+            input("Devam etmek icin Enter...")
+            continue
+
+        selected_problems = _select_problems_from_args(args, all_problems, interactive=True)
+        if not selected_problems:
+            print("[UYARI] Problem seçilmedi.")
             input("Devam etmek icin Enter...")
             continue
             

@@ -115,8 +115,14 @@ def improve_or_opt(tour: List[int], dm: List[List[float]], dm_np=None,
     return best_tour, best_length
 
 
-def improve_swap(tour: List[int], dm: List[List[float]],
+def improve_swap(tour: List[int], dm: List[List[float]], dm_np=None,
                  max_iterations: int = 500) -> Tuple[List[int], float]:
+    if _NUMBA_OK and dm_np is not None:
+        route_np = _nb._prepare_route(tour)
+        improved_np, length = _nb._swap_improve_atsp_numba(route_np, dm_np, max_iterations)
+        return _nb._extract_route(improved_np, tour), float(length)
+    if _NUMBA_OK and dm is not None:
+        return _nb.nb_swap(tour, dm, max_iterations)
     best_tour = tour[:]
     best_length = _tour_cost(best_tour, dm)
     n = len(best_tour)
@@ -140,9 +146,15 @@ def improve_swap(tour: List[int], dm: List[List[float]],
     return best_tour, best_length
 
 
-def improve_3opt(tour: List[int], dm: List[List[float]],
+def improve_3opt(tour: List[int], dm: List[List[float]], dm_np=None,
                  max_iterations: int = 200) -> Tuple[List[int], float]:
     """Simple bounded 3-opt style improvement (reverse-middle neighborhood)."""
+    if _NUMBA_OK and dm_np is not None:
+        route_np = _nb._prepare_route(tour)
+        improved_np, length = _nb._three_opt_improve_atsp_numba(route_np, dm_np, max_iterations, False)
+        return _nb._extract_route(improved_np, tour), float(length)
+    if _NUMBA_OK and dm is not None:
+        return _nb.nb_three_opt(tour, dm, max_iterations, False)
     best_tour = tour[:]
     best_length = _tour_cost(best_tour, dm)
     n = len(best_tour)
@@ -203,21 +215,23 @@ class MultiLayerLS:
             layers.append(("3-opt", improve_3opt))
             layers.append(("swap", improve_swap))
 
-        for layer_name, layer_fn in layers:
-            if time.monotonic() - t0 > time_limit:
+        max_ls_pass_iterations = 5
+        for ls_pass in range(max_ls_pass_iterations):
+            any_improved = False
+            for layer_name, layer_fn in layers:
+                if time.monotonic() - t0 > time_limit:
+                    break
+                if layer_name in ("2-opt", "or-opt", "3-opt", "swap"):
+                    new_tour, new_cost = layer_fn(current_tour, dm, dm_np, max_iterations)
+                else:
+                    new_tour, new_cost = layer_fn(current_tour, dm, max_iterations)
+                if new_cost < current_cost - 1e-10:
+                    stats["improves_per_layer"][layer_name] = current_cost - new_cost
+                    current_tour = new_tour
+                    current_cost = new_cost
+                    any_improved = True
+            if not any_improved:
                 break
-            if layer_name == "2-opt":
-                new_tour, new_cost = layer_fn(current_tour, dm, dm_np, max_iterations)
-            elif layer_name == "or-opt":
-                new_tour, new_cost = layer_fn(current_tour, dm, dm_np, max_iterations)
-            elif layer_name == "3-opt":
-                new_tour, new_cost = layer_fn(current_tour, dm, max_iterations)
-            else:
-                new_tour, new_cost = layer_fn(current_tour, dm, max_iterations)
-            if new_cost < current_cost - 1e-10:
-                stats["improves_per_layer"][layer_name] = current_cost - new_cost
-                current_tour = new_tour
-                current_cost = new_cost
 
         elapsed = (time.monotonic() - t0) * 1000
         stats["total_time_ms"] = elapsed

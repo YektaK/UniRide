@@ -100,8 +100,22 @@ def _compute_resonance(t1: List[int], t2: List[int], n: int, dm: Optional[List[L
     total_edges = len(edges1 | edges2)
     edge_sim = common_edges / total_edges if total_edges > 0 else 0.0
 
-    # (2) Position match: fraction of positions with same city — O(n)
-    pos_match = sum(1 for i in range(n) if t1[i] == t2[i]) / n
+    # (2) Position match: rotation-normalized — max over all n rotations O(n²)
+    pos_match = 0.0
+    if n <= 2000:
+        t2_set = set(t2)
+        if len(t2_set) == n:
+            t2_pos = {city: idx for idx, city in enumerate(t2)}
+            for r in range(n):
+                match = 0
+                for i in range(n):
+                    if t2_pos.get(t1[(i + r) % n]) == i:
+                        match += 1
+                if match > pos_match:
+                    pos_match = match
+            pos_match /= n
+    if pos_match == 0.0:
+        pos_match = sum(1 for i in range(n) if t1[i] == t2[i]) / n
 
     # (3) Distance-profile similarity — O(n)
     dist_sim = 0.5

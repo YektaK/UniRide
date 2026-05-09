@@ -203,7 +203,8 @@ class PAOEA_TSP(BaseTSPSolver):
             else:
                 child = self._random_genome(rng)
             if rng.random() < self.cfg.mutation_rate:
-                child.destroy_ops = list(self.cfg.destroy_ops_pool)[:rng.randint(1, len(self.cfg.destroy_ops_pool))]
+                n_select = rng.randint(1, len(self.cfg.destroy_ops_pool))
+                child.destroy_ops = list(rng.sample(self.cfg.destroy_ops_pool, n_select))
                 child.destroy_weights = [1.0] * len(child.destroy_ops)
             if rng.random() < self.cfg.mutation_rate:
                 child.acceptance_type = rng.choice(self.cfg.acceptance_types)

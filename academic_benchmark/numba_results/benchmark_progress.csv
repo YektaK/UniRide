@@ -1,0 +1,10 @@
+timestamp,problem,strategy,avg_length,avg_gap,avg_time_ms,n_runs,params_json
+2026-05-06T10:33:20.675993,st70,Swap,1148.8,70.192593,773.5545,5,"{""algorithm_type"": ""local_search"", ""max_iterations"": 8000}"
+2026-05-06T10:33:20.957167,st70,2-opt,749.8,11.081481,831.8287,5,"{""algorithm_type"": ""local_search"", ""max_iterations"": 3000}"
+2026-05-06T10:33:21.302269,st70,Or-opt,788.8,16.859259,899.2332,5,"{""algorithm_type"": ""local_search"", ""max_iterations"": 1500}"
+2026-05-06T10:33:23.855874,st70,3-opt,741.6,9.866667,1410.9637,5,"{""algorithm_type"": ""local_search"", ""max_iterations"": 400}"
+2026-05-06T10:33:26.194440,st70,Hybrid,703.2,4.177778,1103.626,5,"{""algorithm_type"": ""local_search"", ""max_iterations"": 10}"
+2026-05-06T10:33:29.132885,st70,GA,698.6,3.496296,1635.031,5,"{""algorithm_type"": ""meta_heuristic"", ""elite_size"": 6, ""generations"": 300, ""mutation_rate"": 0.12, ""pop_size"": 120}"
+2026-05-06T10:33:29.705079,st70,PSO,704.0,4.296296,1680.4872,5,"{""algorithm_type"": ""meta_heuristic"", ""c1"": 1.6, ""c2"": 1.6, ""iterations"": 250, ""swarm_size"": 80, ""w"": 0.72}"
+2026-05-06T10:33:31.112501,st70,GWO,700.4,3.762963,1451.2518,5,"{""algorithm_type"": ""meta_heuristic"", ""iterations"": 250, ""pack_size"": 80}"
+2026-05-06T10:33:34.395216,st70,HHO,702.6,4.088889,1640.1091,5,"{""algorithm_type"": ""meta_heuristic"", ""hawks"": 80, ""iterations"": 250}"

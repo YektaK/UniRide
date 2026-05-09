@@ -21,7 +21,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from multiprocessing import cpu_count
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 
 # ── TSPLIB Bilinen Optimal Değerler ──────────────────────────────────────────
@@ -322,6 +322,227 @@ def select_mode() -> bool:
     print("   [P] Paralel - Daha hizli")
     choice = input("\nSeciminiz [S/P]: ").strip().upper()
     return choice != "P"
+
+
+# ── Problem Selection (Universal Selector) ───────────────────────────────────
+
+def _prob_name(p: Any) -> str:
+    """Problem adini dict veya dataclass nesnesinden okur."""
+    if isinstance(p, dict):
+        return str(p.get("name", ""))
+    return str(getattr(p, "name", p))
+
+
+def _prob_dim(p: Any) -> int:
+    """Problem boyutunu dict veya dataclass nesnesinden okur."""
+    if isinstance(p, dict):
+        try:
+            return int(p.get("dimension", 0) or 0)
+        except (TypeError, ValueError):
+            return 0
+    try:
+        return int(getattr(p, "dimension", 0) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _prob_optimal(p: Any) -> Optional[int]:
+    """Problem optimal degerini okur; gerekirse TSPLIB_OPTIMALS'a bakar."""
+    if isinstance(p, dict):
+        raw = p.get("optimal")
+        if raw is not None:
+            try:
+                return int(raw)
+            except (TypeError, ValueError):
+                pass
+        return TSPLIB_OPTIMALS.get(_prob_name(p).lower())
+
+    raw = getattr(p, "optimal", None)
+    if raw is not None:
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            pass
+
+    raw = getattr(p, "optimal_score", None)
+    if raw is not None:
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            pass
+
+    return TSPLIB_OPTIMALS.get(_prob_name(p).lower())
+
+
+def _prob_category(p: Any, dim: Optional[int] = None) -> str:
+    """Boyuta gore small/medium/large kategorisini döner."""
+    d = _prob_dim(p) if dim is None else dim
+    return categorize_dimension(d)
+
+
+class ProblemSelector:
+    """SOTA ve Numba icin ortak problem secim motoru."""
+
+    def __init__(self, problems: Sequence[Any], title: str = "PROBLEM SEÇİMİ"):
+        self.title = title
+        self.all_problems = list(problems)
+        self._build_index()
+
+    def _build_index(self) -> None:
+        self.sorted = sorted(self.all_problems, key=lambda p: _prob_name(p).lower())
+        self.name_map: Dict[str, int] = {}
+        self.cat_indices: Dict[str, List[int]] = {"small": [], "medium": [], "large": []}
+
+        for idx, problem in enumerate(self.sorted):
+            name = _prob_name(problem).lower()
+            self.name_map[name] = idx
+            category = _prob_category(problem, _prob_dim(problem))
+            if category in self.cat_indices:
+                self.cat_indices[category].append(idx)
+
+    def display_table(self, selected: Optional[Set[int]] = None) -> None:
+        total = len(self.sorted)
+        selected_count = len(selected) if selected else 0
+        print(f"\n{'═' * 72}")
+        print(f"  {self.title:<42} Toplam: {total} | Seçili: {selected_count}")
+        print(f"{'═' * 72}")
+        print("  Kategoriler:  small (n≤100) | medium (101-500) | large (500+)")
+        print(f"  {'─' * 64}")
+        print(f"  {'#':>3}  {'Name':<20} {'n':>5}  {'Optimal':>10}  {'Kat':<8}")
+        print(f"  {'─' * 64}")
+        for idx, problem in enumerate(self.sorted, 1):
+            name = _prob_name(problem)
+            dim = _prob_dim(problem)
+            optimal = _prob_optimal(problem)
+            category = _prob_category(problem, dim)
+            marker = "▸" if selected is not None and (idx - 1) in selected else " "
+            optimal_text = f"{optimal:>10}" if optimal is not None else "       N/A"
+            print(f"  {marker}[{idx:>2}] {name:<20} n={dim:>5}  {optimal_text}  [{category:<6}]")
+        print(f"  {'─' * 64}")
+        print("  Syntax:  1,3,5 | 1-7 | berlin52 | small | medium | large | all")
+        print("           !token = exclude")
+        print(f"  {'─' * 64}")
+
+    def _resolve_token(self, token: str, current: Set[int]) -> Tuple[Set[int], List[str]]:
+        warnings: List[str] = []
+        lower = token.strip().lower()
+
+        if not lower:
+            return current, warnings
+
+        if lower.startswith("!"):
+            resolved, child_warnings = self._resolve_token(lower[1:], set())
+            warnings.extend(child_warnings)
+            return current - resolved, warnings
+
+        if lower == "all":
+            return current | set(range(len(self.sorted))), warnings
+
+        if lower in self.cat_indices:
+            return current | set(self.cat_indices[lower]), warnings
+
+        if "-" in lower and not lower.startswith("-"):
+            left, right = lower.split("-", 1)
+            try:
+                start = int(left)
+                end = int(right)
+                if start > end:
+                    start, end = end, start
+                start_idx = max(0, start - 1)
+                end_idx = min(len(self.sorted), end)
+                return current | set(range(start_idx, end_idx)), warnings
+            except ValueError:
+                pass
+
+        if lower.isdigit():
+            idx = int(lower) - 1
+            if 0 <= idx < len(self.sorted):
+                return current | {idx}, warnings
+            warnings.append(f"[UYARI] İndeks geçersiz: {token} (1-{len(self.sorted)})")
+            return current, warnings
+
+        if lower in self.name_map:
+            return current | {self.name_map[lower]}, warnings
+
+        warnings.append(f"[UYARI] Bilinmeyen token: {token}")
+        return current, warnings
+
+    def resolve_tokens(self, raw: str, current: Optional[Set[int]] = None) -> Tuple[Set[int], List[str]]:
+        selected = set() if current is None else set(current)
+        warnings: List[str] = []
+        for token in (part.strip() for part in raw.split(",")):
+            if not token:
+                continue
+            selected, token_warnings = self._resolve_token(token, selected)
+            warnings.extend(token_warnings)
+        return selected, warnings
+
+    def quick_select(self, token_str: str) -> List[Any]:
+        raw = (token_str or "").strip()
+        if not raw or raw.lower() == "all":
+            return list(self.sorted)
+        selected, _ = self.resolve_tokens(raw)
+        return [self.sorted[idx] for idx in sorted(selected)]
+
+    def interactive_select(self) -> List[Any]:
+        current: Set[int] = set()
+        first_prompt = True
+
+        while True:
+            self.display_table(current)
+            raw = input("\n  Seçim [Enter=tümü, done=bitir, ?=yardım, list=tablo]: ").strip()
+
+            if not raw:
+                if first_prompt:
+                    current = set(range(len(self.sorted)))
+                    break
+                print("  [UYARI] Boş giriş yoksayıldı; mevcut seçim korunuyor.")
+                continue
+
+            first_prompt = False
+            lowered = raw.lower()
+
+            if lowered == "?":
+                self._show_help()
+                continue
+
+            if lowered == "list":
+                continue
+
+            if lowered == "done":
+                if not current:
+                    confirm = input("  Hiç seçim yok. Boş seçimle çıkılsın mı? [e/H]: ").strip().lower()
+                    if confirm not in {"e", "evet", "y", "yes"}:
+                        continue
+                break
+
+            current, warnings = self.resolve_tokens(raw, current)
+            for warning in warnings:
+                print(f"  {warning}")
+
+            if not current:
+                print("  [UYARI] Seçim boş! Tekrar deneyin veya 'done' ile çıkın.")
+                continue
+
+            print(f"  → {len(current)} problem seçildi.")
+
+        return [self.sorted[idx] for idx in sorted(current)]
+
+    @staticmethod
+    def _show_help() -> None:
+        print(
+            """
+  ── SEÇİM YARDIMI ──────────────────────────────────
+  all           → Tüm problemler
+  small/medium/large → Kategori filtresi
+  1,3,5         → 1., 3. ve 5. problem
+  1-7           → 1-7 arası (ters yazılırsa düzeltilir)
+  berlin52      → İsimle eşleşme (büyük/küçük harf duyarsız)
+  !berlin52     → Hariç tut
+  Karma: small,!eil51,10-15
+  ───────────────────────────────────────────────────
+            """
+        )
 
 
 # ── Parametre Araçları ───────────────────────────────────────────────────────

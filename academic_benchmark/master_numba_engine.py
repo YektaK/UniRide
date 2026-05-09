@@ -58,29 +58,56 @@ if _PROJECT_ROOT not in sys.path:
 if os.path.join(_PROJECT_ROOT, "optimizer_api") not in sys.path:
     sys.path.insert(0, os.path.join(_PROJECT_ROOT, "optimizer_api"))
 
-from benchmark_utils import (
-    ETATracker,
-    TSPLIB_OPTIMALS,
-    append_csv_row,
-    check_algorithms_status,
-    clear_screen,
-    format_time,
-    generate_combinations,
-    get_cpu_info,
-    get_file_hash,
-    load_metadata,
-    log_environment_info,
-    multi_select,
-    param_signature,
-    parse_index_or_all,
-    save_config,
-    save_convergence_history,
-    save_metadata,
-    select_run_count,
-    select_worker_count,
-    stdev_safe,
-    update_algorithm_hashes,
-)
+try:
+    from benchmark_utils import (
+        ETATracker,
+        TSPLIB_OPTIMALS,
+        append_csv_row,
+        check_algorithms_status,
+        clear_screen,
+        format_time,
+        generate_combinations,
+        get_cpu_info,
+        get_file_hash,
+        load_metadata,
+        log_environment_info,
+        multi_select,
+        param_signature,
+        parse_index_or_all,
+        ProblemSelector,
+        save_config,
+        save_convergence_history,
+        save_metadata,
+        select_run_count,
+        select_worker_count,
+        stdev_safe,
+        update_algorithm_hashes,
+    )
+except ModuleNotFoundError:
+    from academic_benchmark.benchmark_utils import (
+        ETATracker,
+        TSPLIB_OPTIMALS,
+        append_csv_row,
+        check_algorithms_status,
+        clear_screen,
+        format_time,
+        generate_combinations,
+        get_cpu_info,
+        get_file_hash,
+        load_metadata,
+        log_environment_info,
+        multi_select,
+        param_signature,
+        parse_index_or_all,
+        ProblemSelector,
+        save_config,
+        save_convergence_history,
+        save_metadata,
+        select_run_count,
+        select_worker_count,
+        stdev_safe,
+        update_algorithm_hashes,
+    )
 
 # Numba modüllerini import edelim
 from optimizer_api.tests.run_interactive_benchmark_v2_numba import (
@@ -235,8 +262,11 @@ def _parse_tsplib_text(content: str, name_hint: str = "") -> Optional[Dict[str, 
 
 def load_problems(size_limit: int = 0) -> List[DOEProblem]:
     """TSPLIB arşivinden veya özel time_matrix JSON'larından problemleri yükler."""
-    problems = []
-    
+    problems: Dict[str, DOEProblem] = {}
+
+    def _add(p: DOEProblem) -> None:
+        problems.setdefault(p.name, p)
+
     # 1. TSPLIB Tar Arşivi Yüklemesi
     if os.path.exists(TSPLIB_ARCHIVE):
         try:
@@ -258,27 +288,27 @@ def load_problems(size_limit: int = 0) -> List[DOEProblem]:
                     except Exception:
                         continue
                     pdata = _parse_tsplib_text(content, member.name)
-                    if pdata:
+                    if pdata and pdata["dimension"] <= (size_limit if size_limit > 0 else pdata["dimension"]):
                         dim = pdata["dimension"]
                         cat = "small" if dim <= 100 else ("medium" if dim <= 500 else "large")
-                        problems.append(DOEProblem(
+                        _add(DOEProblem(
                             name=pdata["name"], dimension=dim,
                             coordinates=pdata["coordinates"], optimal=pdata["optimal"],
                             category=cat, source="tsplib"
                         ))
         except Exception as e:
             print(f"[UYARI] tar.gz okunamadi: {e}")
-            
+
     # 2. Arşiv yoksa dizinden fallback
     if not problems and os.path.exists(TSPLIB_DIR_FALLBACK):
         for fname in os.listdir(TSPLIB_DIR_FALLBACK):
             if fname.lower().endswith(".tsp"):
                 with open(os.path.join(TSPLIB_DIR_FALLBACK, fname), "r", encoding="utf-8") as f:
                     pdata = _parse_tsplib_text(f.read(), fname)
-                    if pdata:
+                    if pdata and pdata["dimension"] <= (size_limit if size_limit > 0 else pdata["dimension"]):
                         dim = pdata["dimension"]
                         cat = "small" if dim <= 100 else ("medium" if dim <= 500 else "large")
-                        problems.append(DOEProblem(
+                        _add(DOEProblem(
                             name=pdata["name"], dimension=dim,
                             coordinates=pdata["coordinates"], optimal=pdata["optimal"],
                             category=cat, source="tsplib"
@@ -298,7 +328,7 @@ def load_problems(size_limit: int = 0) -> List[DOEProblem]:
                         name = data.get("name", f.replace(".json", ""))
                         dim = len(matrix)
                         cat = "small" if dim <= 100 else ("medium" if dim <= 500 else "large")
-                        problems.append(DOEProblem(
+                        _add(DOEProblem(
                             name=name, dimension=dim, coordinates=[(0.0, 0.0)] * dim,
                             optimal=data.get("optimal"), category=cat, source="time_matrix",
                             is_time_matrix=True, time_matrix=matrix
@@ -306,10 +336,7 @@ def load_problems(size_limit: int = 0) -> List[DOEProblem]:
                 except Exception:
                     continue
 
-    problems.sort(key=lambda p: p.dimension)
-    if size_limit > 0:
-        problems = [p for p in problems if p.dimension <= size_limit]
-    return problems
+    return sorted(problems.values(), key=lambda p: p.dimension)
 
 def _normalize_strategy_entry(entry: Tuple[Any, ...]) -> StrategySpec:
     name = entry[0]
@@ -696,11 +723,11 @@ def _execute_benchmark_tasks(tasks, workers, metadata, stage_label):
         return []
         
     csv_path = os.path.join(RESULTS_DIR, "benchmark_progress.csv")
-    fields = ["timestamp", "problem", "strategy", "avg_length", "avg_gap", "avg_time_ms", "n_runs", "params_json"]
-    
+    fields = ["timestamp", "problem", "strategy", "avg_length", "avg_gap", "avg_time_ms", "n_runs", "result_type", "params_json"]
+
     tracker = ETATracker()
     rows = []
-    
+
     def on_result(idx, result, total):
         row = {
             "timestamp": datetime.now().isoformat(),
@@ -710,9 +737,11 @@ def _execute_benchmark_tasks(tasks, workers, metadata, stage_label):
             "avg_gap": None if math.isnan(result["avg_gap"]) else round(result["avg_gap"], 6),
             "avg_time_ms": round(result["avg_time_ms"], 4),
             "n_runs": result["n_runs"],
+            "result_type": "aggregate",
             "params_json": json.dumps(result["params"], ensure_ascii=False, sort_keys=True),
         }
         rows.append(row)
+        _active_results.append(row)
         append_csv_row(csv_path, fields, row)
         
         tracker.record(result.get("avg_time_ms", 0.0) / 1000.0, result["strategy"], result["problem"])
@@ -746,6 +775,25 @@ def _write_summary(rows: List[Dict[str, Any]]) -> None:
                 "n_runs": row["n_runs"],
             })
 
+
+def _select_problems_from_args(args, all_problems, interactive: bool = False):
+    selector = ProblemSelector(all_problems)
+
+    if args.select:
+        return selector.quick_select(args.select)
+
+    if args.problems:
+        wanted = {x.strip().lower() for x in args.problems.split(",") if x.strip()}
+        return [p for p in all_problems if p.name.lower() in wanted]
+
+    if args.size_limit:
+        return [p for p in all_problems if p.dimension <= args.size_limit]
+
+    if interactive:
+        return selector.interactive_select()
+
+    return list(all_problems)
+
 def main() -> int:
     global _active_metadata
     
@@ -765,6 +813,7 @@ def main() -> int:
     parser.add_argument("--mode", choices=["default", "tuning"], help="Çalışma modu")
     parser.add_argument("--algos", help="Algoritma listesi (virgülle ayrılmış)")
     parser.add_argument("--problems", help="Problem listesi (virgülle ayrılmış)")
+    parser.add_argument("--select", help="Universal problem selection syntax")
     parser.add_argument("--runs", type=int, help="Tekrar sayısı")
     parser.add_argument("--size-limit", type=int, help="Problem boyutu limiti")
     args, _ = parser.parse_known_args()
@@ -775,12 +824,7 @@ def main() -> int:
         runs = args.runs or 3
         workers = min(cpu_count(), 6)
         
-        selected_problems = all_problems
-        if args.problems:
-            wanted = [x.strip().lower() for x in args.problems.split(",")]
-            selected_problems = [p for p in all_problems if p.name.lower() in wanted]
-        elif args.size_limit:
-            selected_problems = [p for p in all_problems if p.dimension <= args.size_limit]
+        selected_problems = _select_problems_from_args(args, all_problems)
             
         selected_specs = [s for s in all_specs if s.name in algos]
 
@@ -824,26 +868,8 @@ def main() -> int:
             continue
             
         mode = EngineMode.DEFAULT if choice == '1' else EngineMode.TUNING
-        
-        print("\n[PROBLEM SEÇİMİ]")
-        print("  [1] Kapsamlı Seçim (Tüm problemler, limit belirle)")
-        print("  [2] Spesifik Problemler (Örn: berlin52, eil51)")
-        p_choice = input("Seçiminiz [1]: ").strip()
-        
-        selected_problems = all_problems
-        if p_choice == '2':
-            print("\nMevcut Problemler: " + ", ".join(p.name for p in all_problems[:10]) + " ...")
-            raw_p = input("Problem isimleri (virgülle ayırın): ").strip().lower()
-            if raw_p:
-                wanted = [x.strip() for x in raw_p.split(",")]
-                selected_problems = [p for p in all_problems if p.name.lower() in wanted]
-        else:
-            try:
-                lim = int(input("Boyut limiti (0 = hepsi) [varsayılan: 200]: ").strip() or "200")
-                if lim > 0:
-                    selected_problems = [p for p in all_problems if p.dimension <= lim]
-            except ValueError:
-                pass
+
+        selected_problems = _select_problems_from_args(args, all_problems, interactive=True)
 
         if not selected_problems:
             print("Seçilen kriterlere uygun problem bulunamadı.")

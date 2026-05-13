@@ -1,0 +1,344 @@
+{
+  "st70::Swap": {
+    "problem": "st70",
+    "strategy": "Swap",
+    "avg_length": 1148.8,
+    "avg_gap": 70.19259259259259,
+    "avg_time_ms": 176.00153999956092,
+    "params": {
+      "max_iterations": 8000,
+      "algorithm_type": "local_search"
+    },
+    "per_run_lengths": [
+      1188.0,
+      1158.0,
+      1127.0,
+      1170.0,
+      1101.0
+    ]
+  },
+  "st70::2-opt": {
+    "problem": "st70",
+    "strategy": "2-opt",
+    "avg_length": 749.8,
+    "avg_gap": 11.08148148148148,
+    "avg_time_ms": 229.24929999935557,
+    "params": {
+      "max_iterations": 3000,
+      "algorithm_type": "local_search"
+    },
+    "per_run_lengths": [
+      745.0,
+      763.0,
+      754.0,
+      757.0,
+      730.0
+    ]
+  },
+  "st70::Or-opt": {
+    "problem": "st70",
+    "strategy": "Or-opt",
+    "avg_length": 788.8,
+    "avg_gap": 16.859259259259257,
+    "avg_time_ms": 350.30798000007053,
+    "params": {
+      "max_iterations": 1500,
+      "algorithm_type": "local_search"
+    },
+    "per_run_lengths": [
+      794.0,
+      822.0,
+      750.0,
+      794.0,
+      784.0
+    ]
+  },
+  "st70::3-opt": {
+    "problem": "st70",
+    "strategy": "3-opt",
+    "avg_length": 741.6,
+    "avg_gap": 9.866666666666665,
+    "avg_time_ms": 983.1084400000691,
+    "params": {
+      "max_iterations": 400,
+      "algorithm_type": "local_search"
+    },
+    "per_run_lengths": [
+      726.0,
+      764.0,
+      728.0,
+      777.0,
+      713.0
+    ]
+  },
+  "st70::Hybrid": {
+    "problem": "st70",
+    "strategy": "Hybrid",
+    "avg_length": 703.2,
+    "avg_gap": 4.177777777777778,
+    "avg_time_ms": 1403.6983599995438,
+    "params": {
+      "max_iterations": 10,
+      "algorithm_type": "local_search"
+    },
+    "per_run_lengths": [
+      685.0,
+      688.0,
+      725.0,
+      687.0,
+      731.0
+    ]
+  },
+  "st70::GA": {
+    "problem": "st70",
+    "strategy": "GA",
+    "avg_length": 686.0,
+    "avg_gap": 1.6296296296296298,
+    "avg_time_ms": 830.942060000234,
+    "params": {
+      "pop_size": 80,
+      "generations": 250,
+      "mutation_rate": 0.16,
+      "elite_size": 8,
+      "algorithm_type": "meta_heuristic"
+    },
+    "per_run_lengths": [
+      682.0,
+      683.0,
+      684.0,
+      701.0,
+      680.0
+    ]
+  },
+  "st70::PSO": {
+    "problem": "st70",
+    "strategy": "PSO",
+    "avg_length": 689.4,
+    "avg_gap": 2.1333333333333333,
+    "avg_time_ms": 998.7473000001046,
+    "params": {
+      "swarm_size": 50,
+      "iterations": 200,
+      "w": 0.8,
+      "c1": 1.9,
+      "c2": 1.4,
+      "algorithm_type": "meta_heuristic"
+    },
+    "per_run_lengths": [
+      687.0,
+      690.0,
+      694.0,
+      691.0,
+      685.0
+    ]
+  },
+  "st70::GWO": {
+    "problem": "st70",
+    "strategy": "GWO",
+    "avg_length": 692.0,
+    "avg_gap": 2.5185185185185186,
+    "avg_time_ms": 1281.798620000336,
+    "params": {
+      "pack_size": 80,
+      "iterations": 200,
+      "algorithm_type": "meta_heuristic"
+    },
+    "per_run_lengths": [
+      714.0,
+      688.0,
+      684.0,
+      686.0,
+      688.0
+    ]
+  },
+  "st70::HHO": {
+    "problem": "st70",
+    "strategy": "HHO",
+    "avg_length": 692.8,
+    "avg_gap": 2.637037037037037,
+    "avg_time_ms": 4114.642719999392,
+    "params": {
+      "hawks": 120,
+      "iterations": 450,
+      "algorithm_type": "meta_heuristic"
+    },
+    "per_run_lengths": [
+      696.0,
+      685.0,
+      697.0,
+      684.0,
+      702.0
+    ]
+  },
+  "eil51::Swap": {
+    "problem": "eil51",
+    "strategy": "Swap",
+    "avg_length": 584.6,
+    "avg_gap": 37.230046948356815,
+    "avg_time_ms": 173.86568000001716,
+    "params": {
+      "max_iterations": 8000,
+      "algorithm_type": "local_search"
+    },
+    "per_run_lengths": [
+      548.0,
+      650.0,
+      537.0,
+      581.0,
+      607.0
+    ]
+  },
+  "eil51::2-opt": {
+    "problem": "eil51",
+    "strategy": "2-opt",
+    "avg_length": 455.2,
+    "avg_gap": 6.854460093896714,
+    "avg_time_ms": 237.47996000020066,
+    "params": {
+      "max_iterations": 3000,
+      "algorithm_type": "local_search"
+    },
+    "per_run_lengths": [
+      455.0,
+      452.0,
+      455.0,
+      433.0,
+      481.0
+    ]
+  },
+  "eil51::Or-opt": {
+    "problem": "eil51",
+    "strategy": "Or-opt",
+    "avg_length": 472.6,
+    "avg_gap": 10.938967136150236,
+    "avg_time_ms": 291.3139999996929,
+    "params": {
+      "max_iterations": 1500,
+      "algorithm_type": "local_search"
+    },
+    "per_run_lengths": [
+      467.0,
+      461.0,
+      471.0,
+      487.0,
+      477.0
+    ]
+  },
+  "eil51::3-opt": {
+    "problem": "eil51",
+    "strategy": "3-opt",
+    "avg_length": 448.0,
+    "avg_gap": 5.164319248826291,
+    "avg_time_ms": 907.7652199994191,
+    "params": {
+      "max_iterations": 400,
+      "algorithm_type": "local_search"
+    },
+    "per_run_lengths": [
+      459.0,
+      453.0,
+      442.0,
+      435.0,
+      451.0
+    ]
+  },
+  "eil51::Hybrid": {
+    "problem": "eil51",
+    "strategy": "Hybrid",
+    "avg_length": 437.6,
+    "avg_gap": 2.723004694835681,
+    "avg_time_ms": 1487.2384199996304,
+    "params": {
+      "max_iterations": 10,
+      "algorithm_type": "local_search"
+    },
+    "per_run_lengths": [
+      442.0,
+      434.0,
+      437.0,
+      432.0,
+      443.0
+    ]
+  },
+  "eil51::GA": {
+    "problem": "eil51",
+    "strategy": "GA",
+    "avg_length": 433.0,
+    "avg_gap": 1.6431924882629108,
+    "avg_time_ms": 1520.9209799999371,
+    "params": {
+      "pop_size": 80,
+      "generations": 250,
+      "mutation_rate": 0.12,
+      "elite_size": 6,
+      "algorithm_type": "meta_heuristic"
+    },
+    "per_run_lengths": [
+      433.0,
+      429.0,
+      432.0,
+      436.0,
+      435.0
+    ]
+  },
+  "eil51::PSO": {
+    "problem": "eil51",
+    "strategy": "PSO",
+    "avg_length": 433.6,
+    "avg_gap": 1.784037558685446,
+    "avg_time_ms": 655.102999999508,
+    "params": {
+      "swarm_size": 50,
+      "iterations": 300,
+      "w": 0.72,
+      "c1": 1.6,
+      "c2": 1.4,
+      "algorithm_type": "meta_heuristic"
+    },
+    "per_run_lengths": [
+      438.0,
+      431.0,
+      431.0,
+      435.0,
+      433.0
+    ]
+  },
+  "eil51::GWO": {
+    "problem": "eil51",
+    "strategy": "GWO",
+    "avg_length": 436.2,
+    "avg_gap": 2.3943661971830985,
+    "avg_time_ms": 1347.6961799999117,
+    "params": {
+      "pack_size": 80,
+      "iterations": 300,
+      "algorithm_type": "meta_heuristic"
+    },
+    "per_run_lengths": [
+      437.0,
+      439.0,
+      435.0,
+      436.0,
+      434.0
+    ]
+  },
+  "eil51::HHO": {
+    "problem": "eil51",
+    "strategy": "HHO",
+    "avg_length": 437.2,
+    "avg_gap": 2.6291079812206575,
+    "avg_time_ms": 1675.8967399997346,
+    "params": {
+      "hawks": 50,
+      "iterations": 450,
+      "algorithm_type": "meta_heuristic"
+    },
+    "per_run_lengths": [
+      430.0,
+      441.0,
+      427.0,
+      450.0,
+      438.0
+    ]
+  }
+}

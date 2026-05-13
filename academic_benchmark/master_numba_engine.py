@@ -357,15 +357,17 @@ def _build_numba_parameter_space(spec: StrategySpec) -> Dict[str, List[Any]]:
             "pop_size": [80, 120, 150],
             "generations": [250, 350, 500],
             "mutation_rate": [0.08, 0.12, 0.16],
-            "elite_size": [4, 6, 8],
+            "elite_size": [2, 4, 6, 8],  # GOREV 6: 2 eklendi (bildiri2026: 2)
+            "crossover_rate": [0.80, 0.85, 0.90],  # GOREV 6: eklendi (bildiri2026: 0.85)
         }
     if name == "PSO":
         return {
             "swarm_size": [50, 80, 120],
-            "iterations": [200, 300, 450],
+            "iterations": [200, 300, 450, 500],  # GOREV 6: 500 eklendi (bildiri2026: 500)
             "w": [0.65, 0.72, 0.80],
             "c1": [1.4, 1.6, 1.9],
             "c2": [1.4, 1.6, 1.9],
+            "reinit_interval": [30, 50, 70],  # GOREV 6: eklendi (bildiri2026: 50)
         }
     if name == "GWO":
         return {

@@ -1,0 +1,1 @@
+GWO_HHO_FIX_PLAN.md fix planı oluşturuluyor

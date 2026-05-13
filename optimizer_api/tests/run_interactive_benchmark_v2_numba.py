@@ -62,7 +62,7 @@ N_RUNS = 3
 # Benchmark profile: quality-first is the default for paper-grade runs.
 # Set BENCHMARK_PROFILE=baseline to compare against the more conservative setup.
 BENCHMARK_PROFILE = os.environ.get("BENCHMARK_PROFILE", "quality_first").strip().lower()
-VALID_BENCHMARK_PROFILES = {"baseline", "quality_first"}
+VALID_BENCHMARK_PROFILES = {"baseline", "quality_first", "bildiri_aligned"}
 
 # ============================================================
 # STRATEGIES - Local Search + Meta-Heuristic
@@ -95,6 +95,10 @@ def _tune_meta_params(strategy_name: str, params: Dict[str, Any], n_nodes: int) 
     tuned = params.copy()
     profile = _current_benchmark_profile()
     n = max(1, int(n_nodes))
+
+    # GOREV 5: Profile bypass modu - bildiri_aligned parametreleri degistirmez
+    if profile == "bildiri_aligned":
+        return tuned
 
     def _cap(value: int, lower: int, upper: int) -> int:
         return max(lower, min(upper, value))
@@ -156,10 +160,10 @@ def _tune_meta_params(strategy_name: str, params: Dict[str, Any], n_nodes: int) 
 def _refine_route(route: List[str], duration_func: Callable[[List[str]], float], profile: str) -> Tuple[List[str], float]:
     if profile == "baseline":
         ls_type = LocalSearchType.TWO_OPT
-        max_iterations = 2
+        max_iterations = 50
     else:
-        ls_type = LocalSearchType.HYBRID
-        max_iterations = 5
+        ls_type = LocalSearchType.TWO_OPT
+        max_iterations = 300
 
     try:
         refined_route, refined_cost = apply_local_search(
@@ -169,7 +173,6 @@ def _refine_route(route: List[str], duration_func: Callable[[List[str]], float],
             max_iterations=max_iterations,
         )
     except TypeError:
-        # Fallback for implementations that do not accept max_iterations as a keyword.
         refined_route, refined_cost = apply_local_search(route, duration_func, ls_type)
 
     return refined_route, refined_cost
@@ -478,21 +481,40 @@ def _ordered_crossover(parent_a: List[str], parent_b: List[str], rng: random.Ran
     return child
 
 
+def _apply_2opt_to_route(
+    route: List[str],
+    duration_func: Callable[[List[str]], float],
+    max_iter: int = 10,
+) -> List[str]:
+    """Memetic initialization icin 2-opt iyilestirme."""
+    try:
+        improved, _ = apply_local_search(
+            route, duration_func, LocalSearchType.TWO_OPT,
+            max_iterations=max_iter,
+        )
+        return improved
+    except Exception:
+        return route
+
+
 def _run_ga(initial_route: List[str], duration_func: Callable[[List[str]], float], params: Dict[str, Any], seed: int) -> List[str]:
     rng = random.Random(seed)
     pop_size = int(params.get("pop_size", 50))
     generations = int(params.get("generations", 100))
     mutation_rate = float(params.get("mutation_rate", 0.1))
     elite_size = max(1, int(params.get("elite_size", 4)))
+    crossover_rate = float(params.get("crossover_rate", 0.85))
 
     population = []
     for _ in range(pop_size):
         candidate = initial_route[:]
         rng.shuffle(candidate)
+        # Memetic 2-opt initialization (Bildiri2026 ile uyumlu)
+        candidate = _apply_2opt_to_route(candidate, duration_func, max_iter=10)
         population.append(candidate)
 
     if population:
-        population[0] = initial_route[:]
+        population[0] = _apply_2opt_to_route(initial_route[:], duration_func, max_iter=10)
 
     for _ in range(generations):
         scored = sorted(((route, _route_cost(route, duration_func)) for route in population), key=lambda x: x[1])
@@ -502,7 +524,10 @@ def _run_ga(initial_route: List[str], duration_func: Callable[[List[str]], float
         while len(next_pop) < pop_size:
             parent_a = rng.choice(scored[: max(2, pop_size // 2)])[0]
             parent_b = rng.choice(scored[: max(2, pop_size // 2)])[0]
-            child = _ordered_crossover(parent_a, parent_b, rng)
+            if rng.random() < crossover_rate:
+                child = _ordered_crossover(parent_a, parent_b, rng)
+            else:
+                child = parent_a[:]
             if rng.random() < mutation_rate:
                 child = _random_swap(child, rng)
             next_pop.append(child)
@@ -532,6 +557,31 @@ def _towards_route(current: List[str], target: List[str], rng: random.Random, st
     return route
 
 
+def _reinit_swarm_pso(
+    swarm: List[Dict], global_best: List[str],
+    rng: random.Random, duration_func: Callable,
+) -> List[Dict]:
+    """PSO surusunu cesitlilik icin yeniden baslatir (Bildiri2026 uyumlu)."""
+    new_swarm = []
+    for p in swarm:
+        if rng.random() < 0.9:
+            pos = p["best"][:]
+            for _ in range(rng.randint(1, 3)):
+                i, j = rng.sample(range(len(pos)), 2)
+                pos[i], pos[j] = pos[j], pos[i]
+        else:
+            pos = global_best[:]
+            rng.shuffle(pos)
+        pos = _apply_2opt_to_route(pos, duration_func, max_iter=30)
+        cost = _route_cost(pos, duration_func)
+        entry = {"route": pos, "best": p["best"][:], "best_cost": p["best_cost"]}
+        if cost < entry["best_cost"]:
+            entry["best"] = pos[:]
+            entry["best_cost"] = cost
+        new_swarm.append(entry)
+    return new_swarm
+
+
 def _run_pso(initial_route: List[str], duration_func: Callable[[List[str]], float], params: Dict[str, Any], seed: int) -> List[str]:
     rng = random.Random(seed)
     swarm_size = int(params.get("swarm_size", 30))
@@ -539,21 +589,25 @@ def _run_pso(initial_route: List[str], duration_func: Callable[[List[str]], floa
     w = float(params.get("w", 0.7))
     c1 = float(params.get("c1", 1.5))
     c2 = float(params.get("c2", 1.5))
+    reinit_interval = int(params.get("reinit_interval", 50))
 
     swarm = []
     for _ in range(swarm_size):
         route = initial_route[:]
         rng.shuffle(route)
+        # Memetic 2-opt initialization (Bildiri2026 ile uyumlu)
+        route = _apply_2opt_to_route(route, duration_func, max_iter=30)
         swarm.append({"route": route, "best": route[:], "best_cost": _route_cost(route, duration_func)})
 
     if swarm:
-        swarm[0]["route"] = initial_route[:]
-        swarm[0]["best"] = initial_route[:]
-        swarm[0]["best_cost"] = _route_cost(initial_route, duration_func)
+        init_opt = _apply_2opt_to_route(initial_route[:], duration_func, max_iter=30)
+        swarm[0]["route"] = init_opt
+        swarm[0]["best"] = init_opt[:]
+        swarm[0]["best_cost"] = _route_cost(init_opt, duration_func)
 
     gbest = min(swarm, key=lambda p: p["best_cost"])["best"][:]
 
-    for _ in range(iterations):
+    for it in range(iterations):
         for particle in swarm:
             route = particle["route"][:]
             if rng.random() < w:
@@ -570,6 +624,18 @@ def _run_pso(initial_route: List[str], duration_func: Callable[[List[str]], floa
                 particle["best_cost"] = cost
 
         gbest = min(swarm, key=lambda p: p["best_cost"])["best"][:]
+
+        # Periyodik re-initialization (Bildiri2026 ile uyumlu)
+        if it > 0 and it % reinit_interval == 0:
+            swarm = _reinit_swarm_pso(swarm, gbest, rng, duration_func)
+            for p in swarm:
+                p["current_len"] = _route_cost(p["route"], duration_func)
+                if p["current_len"] < p["best_cost"]:
+                    p["best"] = p["route"][:]
+                    p["best_cost"] = p["current_len"]
+                if p["current_len"] < _route_cost(gbest, duration_func):
+                    gbest = p["route"][:]
+            gbest = min(swarm, key=lambda p: p["best_cost"])["best"][:]
 
     return gbest
 
@@ -591,16 +657,25 @@ def _run_gwo(initial_route: List[str], duration_func: Callable[[List[str]], floa
     for _ in range(pack_size):
         route = initial_route[:]
         rng.shuffle(route)
+        # Memetic 2-opt initialization (GOREV 7)
+        route = _apply_2opt_to_route(route, duration_func, max_iter=10)
         pack.append(route)
 
     if pack:
-        pack[0] = initial_route[:]
+        init_opt = _apply_2opt_to_route(initial_route[:], duration_func, max_iter=10)
+        pack[0] = init_opt
 
     for it in range(iterations):
         scored = sorted(((r, _route_cost(r, duration_func)) for r in pack), key=lambda x: x[1])
         alpha = scored[0][0]
         beta = scored[min(1, len(scored) - 1)][0]
         delta = scored[min(2, len(scored) - 1)][0]
+
+        # Periyodik memetic refinement (her 10 iterasyonda) - GWO_HHO_FIX_PLAN
+        if it > 0 and it % 10 == 0:
+            alpha = _apply_2opt_to_route(alpha, duration_func, max_iter=20)
+            beta = _apply_2opt_to_route(beta, duration_func, max_iter=20)
+            delta = _apply_2opt_to_route(delta, duration_func, max_iter=20)
 
         # a parametresi: 2'den 0'a lineer azalma (Mirjalili Eq. 3.3)
         a = 2.0 * (1.0 - it / max(1, iterations))
@@ -633,7 +708,9 @@ def _run_gwo(initial_route: List[str], duration_func: Callable[[List[str]], floa
             new_pack.append(wolf)
         pack = new_pack
 
-    return min(pack, key=lambda r: _route_cost(r, duration_func))
+    # Final polishing - GWO_HHO_FIX_PLAN
+    best_route = min(pack, key=lambda r: _route_cost(r, duration_func))
+    return _apply_2opt_to_route(best_route, duration_func, max_iter=50)
 
 
 def _levy_flight(route: List[str], rng: random.Random, scale: float = 0.3) -> List[str]:
@@ -678,10 +755,13 @@ def _run_hho(initial_route: List[str], duration_func: Callable[[List[str]], floa
     for _ in range(hawks):
         route = initial_route[:]
         rng.shuffle(route)
+        # Memetic 2-opt initialization (GOREV 7)
+        route = _apply_2opt_to_route(route, duration_func, max_iter=10)
         population.append(route)
 
     if population:
-        population[0] = initial_route[:]
+        init_opt = _apply_2opt_to_route(initial_route[:], duration_func, max_iter=10)
+        population[0] = init_opt
 
     best = min(population, key=lambda r: _route_cost(r, duration_func))
     best = best[:]
@@ -757,9 +837,15 @@ def _run_hho(initial_route: List[str], duration_func: Callable[[List[str]], floa
                 best = hawk[:]
                 best_cost = new_cost
 
+        # Periyodik memetic refinement (her 10 iterasyonda) - GWO_HHO_FIX_PLAN
+        if it > 0 and it % 10 == 0:
+            best = _apply_2opt_to_route(best, duration_func, max_iter=20)
+            best_cost = _route_cost(best, duration_func)
+
         population = updated
 
-    return best
+    # Final polishing - GWO_HHO_FIX_PLAN
+    return _apply_2opt_to_route(best, duration_func, max_iter=50)
 
 
 def _run_meta_heuristic(

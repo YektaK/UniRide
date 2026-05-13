@@ -1,0 +1,214 @@
+{
+  "timestamp": "20260513_003803",
+  "db_path": "C:\\Users\\yekta\\Masa\u00fcst\u00fc\\AiCode\\FirebaseUniRide\\UniRide\\academic_benchmark\\bildiri2026\\data\\tuned_parameters_db.json",
+  "output_dir": "C:\\Users\\yekta\\Masa\u00fcst\u00fc\\AiCode\\FirebaseUniRide\\UniRide\\academic_benchmark\\numba_results\\bildiri_import",
+  "runs": 10,
+  "workers": 4,
+  "ignored_params": [
+    {
+      "problem": "berlin52",
+      "algorithm": "2-opt",
+      "ignored": [
+        "first_improvement",
+        "num_starts"
+      ]
+    },
+    {
+      "problem": "berlin52",
+      "algorithm": "GA",
+      "ignored": [
+        "crossover_rate"
+      ]
+    },
+    {
+      "problem": "eil51",
+      "algorithm": "2-opt",
+      "ignored": [
+        "first_improvement",
+        "num_starts"
+      ]
+    },
+    {
+      "problem": "eil51",
+      "algorithm": "GA",
+      "ignored": [
+        "crossover_rate"
+      ]
+    },
+    {
+      "problem": "kroa100",
+      "algorithm": "2-opt",
+      "ignored": [
+        "first_improvement",
+        "num_starts"
+      ]
+    },
+    {
+      "problem": "kroa100",
+      "algorithm": "GA",
+      "ignored": [
+        "crossover_rate"
+      ]
+    },
+    {
+      "problem": "rd100",
+      "algorithm": "2-opt",
+      "ignored": [
+        "first_improvement",
+        "num_starts"
+      ]
+    },
+    {
+      "problem": "rd100",
+      "algorithm": "GA",
+      "ignored": [
+        "crossover_rate"
+      ]
+    },
+    {
+      "problem": "st70",
+      "algorithm": "2-opt",
+      "ignored": [
+        "first_improvement",
+        "num_starts"
+      ]
+    },
+    {
+      "problem": "st70",
+      "algorithm": "GA",
+      "ignored": [
+        "crossover_rate"
+      ]
+    },
+    {
+      "problem": "berlin52",
+      "algorithm": "3-opt",
+      "ignored": [
+        "first_improvement",
+        "num_starts"
+      ]
+    },
+    {
+      "problem": "eil51",
+      "algorithm": "3-opt",
+      "ignored": [
+        "first_improvement",
+        "num_starts"
+      ]
+    },
+    {
+      "problem": "kroa100",
+      "algorithm": "3-opt",
+      "ignored": [
+        "first_improvement",
+        "num_starts"
+      ]
+    },
+    {
+      "problem": "rd100",
+      "algorithm": "3-opt",
+      "ignored": [
+        "first_improvement",
+        "num_starts"
+      ]
+    },
+    {
+      "problem": "st70",
+      "algorithm": "3-opt",
+      "ignored": [
+        "first_improvement",
+        "num_starts"
+      ]
+    },
+    {
+      "problem": "berlin52",
+      "algorithm": "Or-opt",
+      "ignored": [
+        "max_segment_size",
+        "num_starts"
+      ]
+    },
+    {
+      "problem": "eil51",
+      "algorithm": "Or-opt",
+      "ignored": [
+        "max_segment_size",
+        "num_starts"
+      ]
+    },
+    {
+      "problem": "kroa100",
+      "algorithm": "Or-opt",
+      "ignored": [
+        "max_segment_size",
+        "num_starts"
+      ]
+    },
+    {
+      "problem": "rd100",
+      "algorithm": "Or-opt",
+      "ignored": [
+        "max_segment_size",
+        "num_starts"
+      ]
+    },
+    {
+      "problem": "st70",
+      "algorithm": "Or-opt",
+      "ignored": [
+        "max_segment_size",
+        "num_starts"
+      ]
+    },
+    {
+      "problem": "eil76",
+      "algorithm": "2-opt",
+      "ignored": [
+        "first_improvement",
+        "num_starts"
+      ]
+    },
+    {
+      "problem": "eil76",
+      "algorithm": "3-opt",
+      "ignored": [
+        "first_improvement",
+        "num_starts"
+      ]
+    },
+    {
+      "problem": "eil76",
+      "algorithm": "Or-opt",
+      "ignored": [
+        "max_segment_size",
+        "num_starts"
+      ]
+    },
+    {
+      "problem": "eil76",
+      "algorithm": "GA",
+      "ignored": [
+        "crossover_rate"
+      ]
+    }
+  ],
+  "skipped": [
+    {
+      "problem": "universal_small_scale",
+      "algorithm": "2-opt",
+      "reason": "problem_not_found_in_master_engine"
+    },
+    {
+      "problem": "universal_small_scale",
+      "algorithm": "GA",
+      "reason": "problem_not_found_in_master_engine"
+    },
+    {
+      "problem": "universal_small_scale",
+      "algorithm": "PSO",
+      "reason": "problem_not_found_in_master_engine"
+    }
+  ],
+  "elapsed_sec": 42.11,
+  "tasks": 30
+}

@@ -36,10 +36,16 @@ try:
         set_num_threads(min(4, numba.config.NUMBA_NUM_THREADS))
     except (AttributeError, RuntimeError):
         pass  # FIX-06: Numba config may not expose NUMBA_NUM_THREADS in all builds
-    # Disable Numba disk cache to avoid "No module named 'local_search_numba'" errors
-    # when multiprocessing workers try to reload cached JIT artefacts in different import contexts.
-    # This MUST be set before any numba JIT compilation happens.
-    os.environ["NUMBA_CACHE_DIR"] = os.devnull
+    # Numba disk cache — use a stable, project-local directory so that
+    # multiprocessing workers can share pre-compiled JIT artefacts.
+    # Falls back gracefully when the directory cannot be created.
+    _cache_base = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".numba_cache")
+    try:
+        os.makedirs(_cache_base, exist_ok=True)
+    except (OSError, PermissionError):
+        _cache_base = os.path.join(os.path.expanduser("~"), ".UniRide_numba_cache")
+        os.makedirs(_cache_base, exist_ok=True)
+    os.environ.setdefault("NUMBA_CACHE_DIR", _cache_base)
 except ImportError:
     NUMBA_AVAILABLE = False
     # Fallback: create a no-op decorator
@@ -51,6 +57,84 @@ except ImportError:
         return decorator
     prange = range
     print("[WARNING] Numba not available. Using pure Python (slower). Install with: pip install numba")
+
+
+# ============================================================
+# DISTANCE MATRIX CACHE (module-level, shared across LS classes)
+# ============================================================
+# Key: (frozenset_of_location_strings, id_of_duration_func)
+# Value: (index_map: dict, dist_matrix: np.ndarray, unique_locs: list)
+#
+# Motivation: _prepare_numba_inputs() rebuilds an O(n²) distance matrix
+# on EVERY improve() call.  For metaheuristics that call improve() hundreds
+# of times on the same problem instance this is the dominant overhead.
+# Cache size is bounded in practice (one entry per problem × algorithm).
+_DIST_MATRIX_CACHE: Dict[Tuple, Any] = {}
+
+
+def _build_or_get_dist_matrix(
+    route: List[str],
+    duration_func: Callable
+) -> Tuple[Dict[str, int], np.ndarray, List[str]]:
+    """
+    Build (or retrieve from cache) the distance matrix for `route`.
+
+    Cache key is based on the *set* of locations in the route plus the
+    identity of the duration_func object, so that different problems (or
+    different function instances) never share a matrix.
+
+    Fast path (Step 4): if the duration_func was built by create_np_duration_func()
+    it carries a pre-built numpy array in _np_dist_matrix / _np_unique_locs.
+    We reuse that array directly, avoiding the O(n²) call-by-call reconstruction.
+
+    Returns:
+        index_map  – {location: integer_index}
+        dist_matrix – np.ndarray shape (n, n)
+        unique_locs – ordered list matching index_map
+    """
+    unique_locs = list(dict.fromkeys(route))
+    cache_key = (frozenset(unique_locs), id(duration_func))
+
+    if cache_key in _DIST_MATRIX_CACHE:
+        return _DIST_MATRIX_CACHE[cache_key]
+
+    # Step 4 fast path: numpy-backed duration_func already has the matrix.
+    if hasattr(duration_func, '_np_dist_matrix') and hasattr(duration_func, '_np_unique_locs'):
+        prebuilt_locs: List[str] = duration_func._np_unique_locs  # type: ignore[attr-defined]
+        prebuilt_dm: np.ndarray = duration_func._np_dist_matrix   # type: ignore[attr-defined]
+        # Re-order if route's unique_locs ordering differs (e.g. shuffled route)
+        if prebuilt_locs == unique_locs:
+            index_map = {loc: i for i, loc in enumerate(unique_locs)}
+            result = (index_map, prebuilt_dm, unique_locs)
+        else:
+            # Build a reordering view so indices match unique_locs
+            src_map = {loc: i for i, loc in enumerate(prebuilt_locs)}
+            index_map = {loc: i for i, loc in enumerate(unique_locs)}
+            n = len(unique_locs)
+            dist_matrix = np.zeros((n, n), dtype=np.float64)
+            for i, loc_i in enumerate(unique_locs):
+                for j, loc_j in enumerate(unique_locs):
+                    if i != j:
+                        dist_matrix[i, j] = prebuilt_dm[src_map[loc_i], src_map[loc_j]]
+            result = (index_map, dist_matrix, unique_locs)
+        _DIST_MATRIX_CACHE[cache_key] = result
+        return result
+
+    # Standard path: build matrix by querying the duration_func.
+    n = len(unique_locs)
+    index_map = {loc: i for i, loc in enumerate(unique_locs)}
+    dist_matrix = np.zeros((n, n), dtype=np.float64)
+    for i, loc_i in enumerate(unique_locs):
+        for j, loc_j in enumerate(unique_locs):
+            if i != j:
+                dist_matrix[i, j] = duration_func([loc_i, loc_j]) - duration_func([loc_i])
+    # Diagonal already 0 by np.zeros
+
+    result = (index_map, dist_matrix, unique_locs)
+    _DIST_MATRIX_CACHE[cache_key] = result
+    return result
+
+
 
 
 class LocalSearchType(str, Enum):
@@ -69,7 +153,7 @@ class LocalSearchType(str, Enum):
 # NUMBA-OPTIMIZED CORE FUNCTIONS
 # ============================================================
 
-@jit(nopython=True, cache=False)
+@jit(nopython=True, cache=True)
 def _calculate_tour_length_numba(route: np.ndarray, dist_matrix: np.ndarray) -> float:
     """
     Calculate total tour length using precomputed distance matrix.
@@ -94,34 +178,33 @@ def _calculate_tour_length_numba(route: np.ndarray, dist_matrix: np.ndarray) -> 
     return total
 
 
-@jit(nopython=True, cache=False)
+@jit(nopython=True, cache=True)
 def _two_opt_delta_numba(route: np.ndarray, dist_matrix: np.ndarray, i: int, j: int) -> float:
     """
-    Calculate the change in tour length for a 2-opt move.
+    ATSP-aware 2-opt delta.
     
-    Original: ... A -> B ... C -> D ...
-    New:      ... A -> C ... B -> D ...
-    
-    Delta = (d[A,C] + d[B,D]) - (d[A,B] + d[C,D])
+    Reverses segment route[i+1 : j+1]. For asymmetric distances, every
+    internal edge inside the reversed segment must have its cost corrected
+    (d[a,b] becomes d[b,a]). For symmetric distances the correction loop
+    sums to zero, so the formula is safe for both TSP and ATSP.
     """
     n = len(route)
-    
-    # Indices
     a = route[i]
     b = route[(i + 1) % n]
     c = route[j]
     d = route[(j + 1) % n]
-    
-    # Original edges cost
-    original = dist_matrix[a, b] + dist_matrix[c, d]
-    
-    # New edges cost
+
+    original_cost = dist_matrix[a, b] + dist_matrix[c, d]
     new_cost = dist_matrix[a, c] + dist_matrix[b, d]
-    
-    return new_cost - original
+
+    delta = new_cost - original_cost
+    for k in range(i + 1, j):
+        delta += dist_matrix[route[k + 1], route[k]] - dist_matrix[route[k], route[k + 1]]
+
+    return delta
 
 
-@jit(nopython=True, cache=False)
+@jit(nopython=True, cache=True)
 def _apply_two_opt_numba(route: np.ndarray, i: int, j: int) -> np.ndarray:
     """
     Apply 2-opt move: reverse segment between i+1 and j.
@@ -137,7 +220,7 @@ def _apply_two_opt_numba(route: np.ndarray, i: int, j: int) -> np.ndarray:
     return new_route
 
 
-@jit(nopython=True, cache=False)
+@jit(nopython=True, cache=True)
 def _two_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray, 
                            max_iterations: int, first_improvement: bool) -> Tuple[np.ndarray, float]:
     """
@@ -189,7 +272,7 @@ def _two_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
     return best_route, best_length
 
 
-@jit(nopython=True, cache=False)
+@jit(nopython=True, cache=True)
 def _three_opt_cases_numba(route: np.ndarray, i: int, j: int, k: int) -> np.ndarray:
     """
     Generate all 7 3-opt reconnection patterns and return the best one.
@@ -297,7 +380,7 @@ def _three_opt_cases_numba(route: np.ndarray, i: int, j: int, k: int) -> np.ndar
     return candidates
 
 
-@jit(nopython=True, cache=False)
+@jit(nopython=True, cache=True)
 def _three_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
                              max_iterations: int, first_improvement: bool) -> Tuple[np.ndarray, float]:
     """
@@ -319,8 +402,10 @@ def _three_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
         iterations += 1
         
         for i in range(n - 4):
-            for j in range(i + 2, n - 2):
-                for k in range(j + 2, n):
+            j_max = min(n - 2, i + 12)
+            for j in range(i + 2, j_max + 1):
+                k_max = min(n - 1, j + 12)
+                for k in range(j + 2, k_max + 1):
                     candidates = _three_opt_cases_numba(best_route, i, j, k)
                     
                     for c in range(7):
@@ -344,7 +429,7 @@ def _three_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
     return best_route, best_length
 
 
-@jit(nopython=True, cache=False)
+@jit(nopython=True, cache=True)
 def _or_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
                           max_iterations: int, max_segment_size: int) -> Tuple[np.ndarray, float]:
     """
@@ -421,7 +506,7 @@ def _or_opt_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
     return best_route, best_length
 
 
-@jit(nopython=True, cache=False)
+@jit(nopython=True, cache=True)
 def _swap_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
                         max_iterations: int, first_improvement: bool) -> Tuple[np.ndarray, float]:
     """
@@ -469,7 +554,7 @@ def _swap_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
     return best_route, best_length
 
 
-@jit(nopython=True, cache=False)
+@jit(nopython=True, cache=True)
 def _cross_exchange_improve_numba(route: np.ndarray, dist_matrix: np.ndarray,
                                   max_iterations: int, max_segment_size: int,
                                   first_improvement: bool) -> Tuple[np.ndarray, float]:
@@ -598,27 +683,13 @@ class TwoOptLocalSearch(BaseLocalSearch):
         self._dist_matrix = None
 
     def _prepare_numba_inputs(self, route: List[str], duration_func: Callable) -> Tuple[np.ndarray, np.ndarray]:
-        """Convert route and duration function to Numba-compatible format."""
-        # Create index mapping
-        unique_locs = list(dict.fromkeys(route))
-        self._index_map = {loc: i for i, loc in enumerate(unique_locs)}
-        n = len(unique_locs)
-        
-        # Build distance matrix
-        self._dist_matrix = np.zeros((n, n), dtype=np.float64)
-        for i, loc_i in enumerate(unique_locs):
-            for j, loc_j in enumerate(unique_locs):
-                if i != j:
-                    # Single edge distance
-                    self._dist_matrix[i, j] = duration_func([loc_i, loc_j]) - duration_func([loc_i])
-        
-        # Fix diagonal
-        for i in range(n):
-            self._dist_matrix[i, i] = 0.0
-        
-        # Convert route to indices
+        """Convert route and duration function to Numba-compatible format.
+
+        Uses module-level _build_or_get_dist_matrix() to avoid O(n²) rebuild
+        on every improve() call for the same problem (Step 3).
+        """
+        self._index_map, self._dist_matrix, unique_locs = _build_or_get_dist_matrix(route, duration_func)
         route_indices = np.array([self._index_map[loc] for loc in route], dtype=np.int64)
-        
         return route_indices, self._dist_matrix
 
     def _indices_to_route(self, route_indices: np.ndarray, original_route: List[str]) -> List[str]:
@@ -663,20 +734,8 @@ class ThreeOptLocalSearch(BaseLocalSearch):
         self._index_map = None
 
     def _prepare_numba_inputs(self, route: List[str], duration_func: Callable) -> Tuple[np.ndarray, np.ndarray]:
-        """Convert route and duration function to Numba-compatible format."""
-        unique_locs = list(dict.fromkeys(route))
-        self._index_map = {loc: i for i, loc in enumerate(unique_locs)}
-        n = len(unique_locs)
-        
-        self._dist_matrix = np.zeros((n, n), dtype=np.float64)
-        for i, loc_i in enumerate(unique_locs):
-            for j, loc_j in enumerate(unique_locs):
-                if i != j:
-                    self._dist_matrix[i, j] = duration_func([loc_i, loc_j]) - duration_func([loc_i])
-        
-        for i in range(n):
-            self._dist_matrix[i, i] = 0.0
-        
+        """Convert route and duration function to Numba-compatible format (cached)."""
+        self._index_map, self._dist_matrix, unique_locs = _build_or_get_dist_matrix(route, duration_func)
         route_indices = np.array([self._index_map[loc] for loc in route], dtype=np.int64)
         return route_indices, self._dist_matrix
 
@@ -717,19 +776,8 @@ class OrOptLocalSearch(BaseLocalSearch):
         self._index_map = None
 
     def _prepare_numba_inputs(self, route: List[str], duration_func: Callable) -> Tuple[np.ndarray, np.ndarray]:
-        unique_locs = list(dict.fromkeys(route))
-        self._index_map = {loc: i for i, loc in enumerate(unique_locs)}
-        n = len(unique_locs)
-        
-        self._dist_matrix = np.zeros((n, n), dtype=np.float64)
-        for i, loc_i in enumerate(unique_locs):
-            for j, loc_j in enumerate(unique_locs):
-                if i != j:
-                    self._dist_matrix[i, j] = duration_func([loc_i, loc_j]) - duration_func([loc_i])
-        
-        for i in range(n):
-            self._dist_matrix[i, i] = 0.0
-        
+        """Convert route and duration function to Numba-compatible format (cached)."""
+        self._index_map, self._dist_matrix, _ = _build_or_get_dist_matrix(route, duration_func)
         return np.array([self._index_map[loc] for loc in route], dtype=np.int64), self._dist_matrix
 
     def _indices_to_route(self, route_indices: np.ndarray, original_route: List[str]) -> List[str]:
@@ -767,19 +815,8 @@ class SwapLocalSearch(BaseLocalSearch):
         self._index_map = None
 
     def _prepare_numba_inputs(self, route: List[str], duration_func: Callable) -> Tuple[np.ndarray, np.ndarray]:
-        unique_locs = list(dict.fromkeys(route))
-        self._index_map = {loc: i for i, loc in enumerate(unique_locs)}
-        n = len(unique_locs)
-        
-        self._dist_matrix = np.zeros((n, n), dtype=np.float64)
-        for i, loc_i in enumerate(unique_locs):
-            for j, loc_j in enumerate(unique_locs):
-                if i != j:
-                    self._dist_matrix[i, j] = duration_func([loc_i, loc_j]) - duration_func([loc_i])
-        
-        for i in range(n):
-            self._dist_matrix[i, i] = 0.0
-        
+        """Convert route and duration function to Numba-compatible format (cached)."""
+        self._index_map, self._dist_matrix, _ = _build_or_get_dist_matrix(route, duration_func)
         return np.array([self._index_map[loc] for loc in route], dtype=np.int64), self._dist_matrix
 
     def _indices_to_route(self, route_indices: np.ndarray, original_route: List[str]) -> List[str]:
@@ -823,19 +860,8 @@ class CrossExchangeLocalSearch(BaseLocalSearch):
         self._index_map = None
 
     def _prepare_numba_inputs(self, route: List[str], duration_func: Callable) -> Tuple[np.ndarray, np.ndarray]:
-        unique_locs = list(dict.fromkeys(route))
-        self._index_map = {loc: i for i, loc in enumerate(unique_locs)}
-        n = len(unique_locs)
-        
-        self._dist_matrix = np.zeros((n, n), dtype=np.float64)
-        for i, loc_i in enumerate(unique_locs):
-            for j, loc_j in enumerate(unique_locs):
-                if i != j:
-                    self._dist_matrix[i, j] = duration_func([loc_i, loc_j]) - duration_func([loc_i])
-        
-        for i in range(n):
-            self._dist_matrix[i, i] = 0.0
-        
+        """Convert route and duration function to Numba-compatible format (cached)."""
+        self._index_map, self._dist_matrix, _ = _build_or_get_dist_matrix(route, duration_func)
         return np.array([self._index_map[loc] for loc in route], dtype=np.int64), self._dist_matrix
 
     def _indices_to_route(self, route_indices: np.ndarray, original_route: List[str]) -> List[str]:

@@ -434,7 +434,7 @@ def create_distance_matrix(coordinates: List[Tuple[float, float]]) -> Dict[str, 
 
 
 def create_duration_func(matrix: Dict[str, Dict[str, float]]) -> Callable[[List[str]], float]:
-    """Create duration function"""
+    """Create duration function backed by string dict (legacy — use create_np_duration_func for performance)."""
     def duration_func(route: List[str]) -> float:
         if not route:
             return 0.0
@@ -445,6 +445,68 @@ def create_duration_func(matrix: Dict[str, Dict[str, float]]) -> Callable[[List[
             prev = loc
         total += matrix.get(prev, {}).get(route[0], 0.0)
         return total
+    return duration_func
+
+
+import numpy as _np
+
+
+def create_np_distance_matrix(coordinates: List[Tuple[float, float]]) -> '_np.ndarray':
+    """Build an (n, n) float64 numpy distance matrix using TSPLIB EUC_2D rounding.
+
+    Avoids the O(n²) string-key dict allocations of create_distance_matrix().
+    The returned array is the canonical form expected by Numba JIT kernels.
+    """
+    n = len(coordinates)
+    dm = _np.zeros((n, n), dtype=_np.float64)
+    for i in range(n):
+        xi, yi = coordinates[i]
+        for j in range(i + 1, n):
+            xj, yj = coordinates[j]
+            d = float(int(round(_np.hypot(xi - xj, yi - yj))))
+            dm[i, j] = d
+            dm[j, i] = d
+    return dm
+
+
+def create_np_duration_func(
+    dist_matrix_np: '_np.ndarray',
+    unique_locs: List[str],
+) -> Callable[[List[str]], float]:
+    """Create a duration function backed by a numpy distance matrix.
+
+    The closure uses O(1) integer-index lookups instead of nested dict.get().
+    The function object itself is stable (same identity for the same problem),
+    so the _DIST_MATRIX_CACHE in local_search_numba.py hits on first use
+    and never rebuilds the matrix.
+
+    Args:
+        dist_matrix_np: (n, n) float64 array from create_np_distance_matrix()
+        unique_locs: ordered list of location strings, e.g. ["L1", "L2", ...]
+    """
+    index_map: Dict[str, int] = {loc: i for i, loc in enumerate(unique_locs)}
+    _dm = dist_matrix_np  # local ref to avoid global lookup in closure
+
+    def duration_func(route: List[str]) -> float:
+        if not route:
+            return 0.0
+        try:
+            total = 0.0
+            prev_idx = index_map[route[0]]
+            for loc in route[1:]:
+                curr_idx = index_map[loc]
+                total += _dm[prev_idx, curr_idx]
+                prev_idx = curr_idx
+            total += _dm[prev_idx, index_map[route[0]]]
+            return total
+        except KeyError:
+            # Fallback: unknown location — return 0
+            return 0.0
+
+    # Attach metadata so _build_or_get_dist_matrix can reuse the prebuilt matrix.
+    # This avoids a second O(n²) matrix reconstruction inside local_search_numba.
+    duration_func._np_dist_matrix = dist_matrix_np  # type: ignore[attr-defined]
+    duration_func._np_unique_locs = unique_locs      # type: ignore[attr-defined]
     return duration_func
 
 
@@ -497,6 +559,12 @@ def _apply_2opt_to_route(
         return route
 
 
+def _tournament_select(scored: List[Tuple], rng: random.Random, k: int = 3) -> List[str]:
+    """Tournament selection: pick the best of k random candidates."""
+    candidates = rng.sample(scored, min(k, len(scored)))
+    return min(candidates, key=lambda x: x[1])[0]
+
+
 def _run_ga(initial_route: List[str], duration_func: Callable[[List[str]], float], params: Dict[str, Any], seed: int) -> List[str]:
     rng = random.Random(seed)
     pop_size = int(params.get("pop_size", 50))
@@ -504,6 +572,7 @@ def _run_ga(initial_route: List[str], duration_func: Callable[[List[str]], float
     mutation_rate = float(params.get("mutation_rate", 0.1))
     elite_size = max(1, int(params.get("elite_size", 4)))
     crossover_rate = float(params.get("crossover_rate", 0.85))
+    max_no_improvement = int(params.get("max_no_improvement", 50))
 
     population = []
     for _ in range(pop_size):
@@ -516,20 +585,40 @@ def _run_ga(initial_route: List[str], duration_func: Callable[[List[str]], float
     if population:
         population[0] = _apply_2opt_to_route(initial_route[:], duration_func, max_iter=10)
 
+    best_cost = float('inf')
+    no_improve_count = 0
+
     for _ in range(generations):
         scored = sorted(((route, _route_cost(route, duration_func)) for route in population), key=lambda x: x[1])
         elites = [r[:] for r, _ in scored[:elite_size]]
         next_pop = elites[:]
 
+        # Track best for early stop
+        gen_best = scored[0][1]
+        if gen_best < best_cost:
+            best_cost = gen_best
+            no_improve_count = 0
+        else:
+            no_improve_count += 1
+
+        if no_improve_count >= max_no_improvement:
+            break
+
         while len(next_pop) < pop_size:
-            parent_a = rng.choice(scored[: max(2, pop_size // 2)])[0]
-            parent_b = rng.choice(scored[: max(2, pop_size // 2)])[0]
+            # Tournament selection k=3 (bildiri2026 uyumlu)
+            parent_a = _tournament_select(scored, rng, k=3)
+            parent_b = _tournament_select(scored, rng, k=3)
             if rng.random() < crossover_rate:
                 child = _ordered_crossover(parent_a, parent_b, rng)
             else:
                 child = parent_a[:]
             if rng.random() < mutation_rate:
-                child = _random_swap(child, rng)
+                # Balanced swap/inversion mutation 50/50 (bildiri2026 _mutate)
+                if rng.random() < 0.5:
+                    child = _random_swap(child, rng)
+                else:
+                    i, j = sorted(rng.sample(range(len(child)), 2))
+                    child[i:j + 1] = list(reversed(child[i:j + 1]))
             next_pop.append(child)
 
         population = next_pop
@@ -557,38 +646,73 @@ def _towards_route(current: List[str], target: List[str], rng: random.Random, st
     return route
 
 
-def _reinit_swarm_pso(
-    swarm: List[Dict], global_best: List[str],
-    rng: random.Random, duration_func: Callable,
-) -> List[Dict]:
-    """PSO surusunu cesitlilik icin yeniden baslatir (Bildiri2026 uyumlu)."""
-    new_swarm = []
-    for p in swarm:
-        if rng.random() < 0.9:
-            pos = p["best"][:]
-            for _ in range(rng.randint(1, 3)):
-                i, j = rng.sample(range(len(pos)), 2)
-                pos[i], pos[j] = pos[j], pos[i]
-        else:
-            pos = global_best[:]
-            rng.shuffle(pos)
-        pos = _apply_2opt_to_route(pos, duration_func, max_iter=30)
-        cost = _route_cost(pos, duration_func)
-        entry = {"route": pos, "best": p["best"][:], "best_cost": p["best_cost"]}
-        if cost < entry["best_cost"]:
-            entry["best"] = pos[:]
-            entry["best_cost"] = cost
-        new_swarm.append(entry)
-    return new_swarm
+# ---------------------------------------------------------------
+# Swap-sequence PSO velocity helpers (bildiri2026 pattern)
+# ---------------------------------------------------------------
+
+def _diff_swaps_str(current: List[str], target: List[str]) -> List[Tuple[int, int]]:
+    """Return swap list that transforms `current` into `target` (string route version).
+
+    Deterministic walk: left-to-right, find target[i] in tail of temp, swap into i.
+    Mirrors bildiri2026 PSOOptimizer._diff_swaps but works on List[str].
+    """
+    swaps: List[Tuple[int, int]] = []
+    temp = current[:]
+    for i in range(len(target)):
+        if temp[i] != target[i]:
+            try:
+                j = temp.index(target[i], i)
+            except ValueError:
+                continue
+            temp[i], temp[j] = temp[j], temp[i]
+            swaps.append((i, j))
+    return swaps
+
+
+def _apply_swaps_str(position: List[str], swaps: List[Tuple[int, int]]) -> List[str]:
+    """Apply swap sequence deterministically to a string-route."""
+    pos = position[:]
+    for i, j in swaps:
+        if 0 <= i < len(pos) and 0 <= j < len(pos):
+            pos[i], pos[j] = pos[j], pos[i]
+    return pos
+
+
+def _combine_velocities_str(
+    inertia_v: List[Tuple[int, int]],
+    cog_v: List[Tuple[int, int]],
+    soc_v: List[Tuple[int, int]],
+    rng: random.Random,
+    w: float,
+    c1: float,
+    c2: float,
+    max_vel: int,
+) -> List[Tuple[int, int]]:
+    """Clerc-style probabilistic combination (bildiri2026 _combine_velocities)."""
+    new_v: List[Tuple[int, int]] = []
+    for swap in inertia_v:
+        if rng.random() < w:
+            new_v.append(swap)
+    for swap in cog_v:
+        if rng.random() < c1 / 3.0:
+            new_v.append(swap)
+    for swap in soc_v:
+        if rng.random() < c2 / 3.0:
+            new_v.append(swap)
+    if len(new_v) > max_vel:
+        new_v = rng.sample(new_v, max_vel)
+    return new_v
 
 
 def _run_pso(initial_route: List[str], duration_func: Callable[[List[str]], float], params: Dict[str, Any], seed: int) -> List[str]:
+    """Swap-sequence PSO — bildiri2026 pattern (Step 7)."""
     rng = random.Random(seed)
     swarm_size = int(params.get("swarm_size", 30))
     iterations = int(params.get("iterations", 100))
-    w = float(params.get("w", 0.7))
-    c1 = float(params.get("c1", 1.5))
-    c2 = float(params.get("c2", 1.5))
+    w = float(params.get("w", 0.729))
+    c1 = float(params.get("c1", 1.49445))
+    c2 = float(params.get("c2", 1.49445))
+    max_vel = int(params.get("max_velocity_size", 5))
     reinit_interval = int(params.get("reinit_interval", 50))
 
     swarm = []
@@ -597,7 +721,8 @@ def _run_pso(initial_route: List[str], duration_func: Callable[[List[str]], floa
         rng.shuffle(route)
         # Memetic 2-opt initialization (Bildiri2026 ile uyumlu)
         route = _apply_2opt_to_route(route, duration_func, max_iter=30)
-        swarm.append({"route": route, "best": route[:], "best_cost": _route_cost(route, duration_func)})
+        swarm.append({"route": route, "best": route[:], "best_cost": _route_cost(route, duration_func),
+                      "velocity": []})
 
     if swarm:
         init_opt = _apply_2opt_to_route(initial_route[:], duration_func, max_iter=30)
@@ -606,35 +731,46 @@ def _run_pso(initial_route: List[str], duration_func: Callable[[List[str]], floa
         swarm[0]["best_cost"] = _route_cost(init_opt, duration_func)
 
     gbest = min(swarm, key=lambda p: p["best_cost"])["best"][:]
+    n = len(initial_route)
 
     for it in range(iterations):
         for particle in swarm:
-            route = particle["route"][:]
-            if rng.random() < w:
-                route = _random_swap(route, rng)
-            if rng.random() < min(1.0, c1 / 2.0):
-                route = _towards_route(route, particle["best"], rng, strength=c1)
-            if rng.random() < min(1.0, c2 / 2.0):
-                route = _towards_route(route, gbest, rng, strength=c2)
+            cog_v = _diff_swaps_str(particle["route"], particle["best"])
+            soc_v = _diff_swaps_str(particle["route"], gbest)
+            new_vel = _combine_velocities_str(
+                particle["velocity"], cog_v, soc_v, rng, w, c1, c2, max_vel
+            )
+            new_route = _apply_swaps_str(particle["route"], new_vel)
 
-            cost = _route_cost(route, duration_func)
-            particle["route"] = route
+            cost = _route_cost(new_route, duration_func)
+            particle["route"] = new_route
+            particle["velocity"] = new_vel
             if cost < particle["best_cost"]:
-                particle["best"] = route[:]
+                particle["best"] = new_route[:]
                 particle["best_cost"] = cost
 
         gbest = min(swarm, key=lambda p: p["best_cost"])["best"][:]
 
         # Periyodik re-initialization (Bildiri2026 ile uyumlu)
         if it > 0 and it % reinit_interval == 0:
-            swarm = _reinit_swarm_pso(swarm, gbest, rng, duration_func)
-            for p in swarm:
-                p["current_len"] = _route_cost(p["route"], duration_func)
-                if p["current_len"] < p["best_cost"]:
-                    p["best"] = p["route"][:]
-                    p["best_cost"] = p["current_len"]
-                if p["current_len"] < _route_cost(gbest, duration_func):
-                    gbest = p["route"][:]
+            for particle in swarm:
+                if rng.random() < 0.9:
+                    pos = particle["best"][:]
+                    for _ in range(rng.randint(1, 3)):
+                        a, b = rng.sample(range(n), 2)
+                        pos[a], pos[b] = pos[b], pos[a]
+                else:
+                    pos = gbest[:]
+                    rng.shuffle(pos)
+                pos = _apply_2opt_to_route(pos, duration_func, max_iter=30)
+                cost = _route_cost(pos, duration_func)
+                particle["route"] = pos
+                particle["velocity"] = []
+                if cost < particle["best_cost"]:
+                    particle["best"] = pos[:]
+                    particle["best_cost"] = cost
+                if cost < _route_cost(gbest, duration_func):
+                    gbest = pos[:]
             gbest = min(swarm, key=lambda p: p["best_cost"])["best"][:]
 
     return gbest
@@ -685,21 +821,28 @@ def _run_gwo(initial_route: List[str], duration_func: Callable[[List[str]], floa
             wolf = rng.choice(pack)[:]
 
             # Her lider için güncelleme (Mirjalili Eq. 3.5-3.7)
+            # Discrete GWO-TSP: swap-sequence position update (bildiri2026 PSO pattern)
             for leader in [alpha, beta, delta]:
                 r1 = rng.random()
                 r2 = rng.random()
                 A = 2.0 * a * r1 - a        # |A|>1 → keşif, |A|<1 → sömürü
-                C = 2.0 * r2                 # rastgele ağırlık
+                C = 2.0 * r2                 # rastgele ağırlık [0, 2]
 
                 if abs(A) > 1.0:
-                    # Keşif: rastgele pak üyesine doğru hareket
-                    random_wolf = rng.choice(pack)
-                    strength = min(0.9, abs(A) * 0.3)
-                    wolf = _towards_route(wolf, random_wolf, rng, strength=strength)
+                    # Keşif: rastgele pak üyesine doğru swap-sequence hareketi
+                    target = rng.choice(pack)
+                    swaps = _diff_swaps_str(wolf, target)
+                    # |A| ∈ [1,2] → küçük prob ile keşif
+                    prob = min(0.5, abs(A) / 6.0)
+                    selected = [s for s in swaps if rng.random() < prob]
+                    wolf = _apply_swaps_str(wolf, selected)
                 else:
-                    # Sömürü: liderlere doğru hareket
-                    strength = max(0.1, abs(C) * 0.5)
-                    wolf = _towards_route(wolf, leader, rng, strength=strength)
+                    # Sömürü: lider farkının C/3 olasılıklı örneklenmesi
+                    # Mirrors bildiri2026 PSO _combine_velocities social term (c/3)
+                    swaps = _diff_swaps_str(wolf, leader)
+                    prob = min(0.9, abs(C) / 3.0)  # C ∈ [0,2] → prob ∈ [0, 0.67]
+                    selected = [s for s in swaps if rng.random() < prob]
+                    wolf = _apply_swaps_str(wolf, selected)
 
             # Düşük olasılıkla rastgele swap (çeşitlilik)
             if rng.random() < 0.3 * a / 2.0:
@@ -708,9 +851,9 @@ def _run_gwo(initial_route: List[str], duration_func: Callable[[List[str]], floa
             new_pack.append(wolf)
         pack = new_pack
 
-    # Final polishing - GWO_HHO_FIX_PLAN
+    # Final 300-iter 2-opt polishing (bildiri2026 uyumlu)
     best_route = min(pack, key=lambda r: _route_cost(r, duration_func))
-    return _apply_2opt_to_route(best_route, duration_func, max_iter=50)
+    return _apply_2opt_to_route(best_route, duration_func, max_iter=300)
 
 
 def _levy_flight(route: List[str], rng: random.Random, scale: float = 0.3) -> List[str]:
@@ -737,6 +880,31 @@ def _levy_flight(route: List[str], rng: random.Random, scale: float = 0.3) -> Li
     return result
 
 
+def _hho_move_towards(
+    hawk: List[str],
+    target: List[str],
+    rng: random.Random,
+    intensity: float,
+    max_vel: int = 15,
+) -> List[str]:
+    """Discrete HHO position update toward `target` using swap-sequence.
+
+    Maps the continuous HHO update X(t+1) = Prey - E·|...| to the permutation
+    domain via swap-sequence (bildiri2026 PSO pattern):
+    - Compute full swap sequence: current → target
+    - Sample each swap with probability proportional to intensity
+    - intensity ∈ [0, 2] → prob = min(0.9, intensity/2) ∈ [0, 0.9]
+    """
+    swaps = _diff_swaps_str(hawk, target)
+    if not swaps:
+        return hawk[:]
+    prob = min(0.9, intensity / 2.0)
+    selected = [s for s in swaps if rng.random() < prob]
+    if len(selected) > max_vel:
+        selected = rng.sample(selected, max_vel)
+    return _apply_swaps_str(hawk, selected)
+
+
 def _run_hho(initial_route: List[str], duration_func: Callable[[List[str]], float], params: Dict[str, Any], seed: int) -> List[str]:
     """Harris Hawks Optimization — Heidari et al. (2019) uyumlu TSP adaptasyonu.
 
@@ -744,8 +912,10 @@ def _run_hho(initial_route: List[str], duration_func: Callable[[List[str]], floa
     - Kaçış enerjisi: E = 2·E₀·(1-t/T), E₀ ∈ [-1,1]
     - Keşif fazı: |E| ≥ 1 — rastgele konumlanma
     - Sömürü fazı: 4 strateji (soft/hard besiege, with/without rapid dives)
-    - Lévy flight: uzun atlama ile lokal optimumdan kaçış
+    - Lévy flight: uzun atlama ile lokal optimumdan kaçış (Mantegna 1994, β=1.5)
     - r (kaçış olasılığı): strateji seçimi
+
+    Discrete position update: _hho_move_towards (swap-sequence, bildiri2026 uyumlu)
     """
     rng = random.Random(seed)
     hawks = int(params.get("hawks", 30))
@@ -755,7 +925,6 @@ def _run_hho(initial_route: List[str], duration_func: Callable[[List[str]], floa
     for _ in range(hawks):
         route = initial_route[:]
         rng.shuffle(route)
-        # Memetic 2-opt initialization (GOREV 7)
         route = _apply_2opt_to_route(route, duration_func, max_iter=10)
         population.append(route)
 
@@ -780,38 +949,33 @@ def _run_hho(initial_route: List[str], duration_func: Callable[[List[str]], floa
 
             if abs(E) >= 1:
                 # ═══ KEŞİF FAZI ═══ (|E| ≥ 1)
-                # Rastgele konumlanma: ya rastgele pak üyesine ya da Lévy flight
                 if rng.random() < 0.5:
-                    # Rastgele bir şahine doğru hareket
+                    # Rastgele bir şahine doğru swap-sequence hareketi
                     random_hawk = rng.choice(population)
-                    strength = rng.random() * 0.5
-                    hawk = _towards_route(hawk, random_hawk, rng, strength=strength)
+                    intensity = rng.random() * 1.0  # küçük adım
+                    hawk = _hho_move_towards(hawk, random_hawk, rng, intensity)
                 else:
-                    # Lévy flight ile rastgele keşif
+                    # Lévy flight ile rastgele keşif (Mantegna, doğru)
                     hawk = _levy_flight(hawk, rng, scale=0.3)
             else:
                 # ═══ SÖMÜRÜ FAZI ═══ (|E| < 1)
                 if r >= 0.5:
                     if abs(E) >= 0.5:
-                        # Soft besiege: av enerjisi var ama yakalanır
-                        # X(t+1) = ΔX - E·|J·Prey - X(t)|
+                        # Soft besiege: X(t+1) = ΔX - E·|J·Prey - X(t)|
                         J = 2 * (1 - rng.random())
                         intensity = abs(E * J)
-                        hawk = _towards_route(hawk, best, rng, strength=intensity)
+                        hawk = _hho_move_towards(hawk, best, rng, intensity)
                     else:
-                        # Hard besiege: av yorgun, sıkı çevreleme
-                        # X(t+1) = Prey - E·|Prey - X(t)|
-                        intensity = abs(E)
-                        hawk = _towards_route(hawk, best, rng, strength=intensity)
+                        # Hard besiege: X(t+1) = Prey - E·|Prey - X(t)|
+                        hawk = _hho_move_towards(hawk, best, rng, abs(E))
                 else:
                     if abs(E) >= 0.5:
                         # Soft besiege + progressive rapid dives (Lévy)
-                        # Hawks dive toward prey with Lévy flight
                         best_dive = hawk[:]
                         best_dive_cost = hawk_cost
                         for _ in range(3):
                             intensity = abs(E) * rng.random()
-                            candidate = _towards_route(hawk, best, rng, strength=intensity)
+                            candidate = _hho_move_towards(hawk, best, rng, intensity)
                             candidate = _levy_flight(candidate, rng, scale=0.3)
                             candidate_cost = _route_cost(candidate, duration_func)
                             if candidate_cost < best_dive_cost:
@@ -820,9 +984,7 @@ def _run_hho(initial_route: List[str], duration_func: Callable[[List[str]], floa
                         hawk = best_dive
                     else:
                         # Hard besiege + progressive rapid dives (Lévy)
-                        # X(t+1) = Prey - E·|mean_pos - X(t)| + Lévy
-                        intensity = abs(E)
-                        hawk = _towards_route(hawk, best, rng, strength=intensity)
+                        hawk = _hho_move_towards(hawk, best, rng, abs(E))
                         hawk = _levy_flight(hawk, rng, scale=0.2)
 
             # Değerlendir ve güncelle
@@ -837,15 +999,15 @@ def _run_hho(initial_route: List[str], duration_func: Callable[[List[str]], floa
                 best = hawk[:]
                 best_cost = new_cost
 
-        # Periyodik memetic refinement (her 10 iterasyonda) - GWO_HHO_FIX_PLAN
+        # Periyodik memetic refinement (her 10 iterasyonda)
         if it > 0 and it % 10 == 0:
             best = _apply_2opt_to_route(best, duration_func, max_iter=20)
             best_cost = _route_cost(best, duration_func)
 
         population = updated
 
-    # Final polishing - GWO_HHO_FIX_PLAN
-    return _apply_2opt_to_route(best, duration_func, max_iter=50)
+    # Final 300-iter 2-opt polishing (bildiri2026 uyumlu)
+    return _apply_2opt_to_route(best, duration_func, max_iter=300)
 
 
 def _run_meta_heuristic(
@@ -868,9 +1030,14 @@ def _run_meta_heuristic(
     else:
         raise ValueError(f"Unknown meta-heuristic strategy: {strategy_name}")
 
-    refined_route, refined_cost = _refine_route(route, duration_func, _current_benchmark_profile())
-    if refined_cost < _route_cost(route, duration_func):
-        return refined_route
+    # Step 9: Final aggressive 2-opt polishing — always-on, 300 iter (matching bildiri2026).
+    # bildiri2026 applies 300-iter 2-opt specifically to the best solution after the
+    # metaheuristic completes; this replicates that behaviour regardless of profile.
+    polished_route, polished_cost = apply_local_search(
+        route, duration_func, LocalSearchType.TWO_OPT, max_iterations=300
+    )
+    if polished_cost < _route_cost(route, duration_func):
+        return polished_route
     return route
 
 
@@ -884,7 +1051,13 @@ def run_single_test(
     seed: int,
     params: Union[Dict[str, Any], int, None] = None
 ) -> Dict:
-    """Run single test with specific seed for local-search or meta-heuristic"""
+    """Run single test with specific seed for local-search or meta-heuristic.
+
+    Step 4: Uses create_np_distance_matrix + create_np_duration_func to avoid
+    the O(n^2) Dict string-key allocation of create_distance_matrix() on every
+    single test run.  The numpy-backed duration_func also benefits from the
+    _DIST_MATRIX_CACHE in local_search_numba.py (no second matrix rebuild).
+    """
     coordinates = problem.coordinates
     dimension = problem.dimension
     run_params: Dict[str, Any] = {}
@@ -892,18 +1065,18 @@ def run_single_test(
         run_params = params.copy()
     elif isinstance(params, int):
         run_params = {"max_iterations": params}
-    
-    # Create distance matrix
-    matrix = create_distance_matrix(coordinates)
-    duration_func = create_duration_func(matrix)
-    
+
+    # Step 4: numpy-backed distance matrix (replaces O(n²) dict creation)
+    unique_locs = [f"L{i+1}" for i in range(dimension)]
+    np_matrix = create_np_distance_matrix(coordinates)
+    duration_func = create_np_duration_func(np_matrix, unique_locs)
+
     # Create initial tour with random permutation
     indices = list(range(1, dimension + 1))
     random.seed(seed)
     random.shuffle(indices)
-    
     initial_route = [f"L{i}" for i in indices]
-    
+
     # Apply selected optimization strategy
     start_time = time.time()
     if isinstance(strategy_instance, LocalSearchType):
@@ -924,13 +1097,13 @@ def run_single_test(
         )
         algorithm_type = "meta_heuristic"
     elapsed = time.time() - start_time
-    
+
     # Calculate tour length
     tour_indices = convert_route_to_indices(improved_route)
     tour_length = calculate_tour_length(tour_indices, coordinates)
-    
+
     gap = ((tour_length - problem.optimal) / problem.optimal) * 100
-    
+
     return {
         "tour_length": tour_length,
         "gap": gap,

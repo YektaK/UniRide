@@ -51,7 +51,7 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
         "mutation_rate": 0.15,
         "elite_count": 2,
         "tournament_size": 3,
-        "max_no_improvement": 20,
+        "max_no_improvement": 50,  # bildiri2026: 100; keep 50 for routing responsiveness
         "seed": None,
         "local_search_type": "two_opt",  # Local search to apply after GA
     }
@@ -229,7 +229,15 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
         time_matrix: Dict,
         coordinates: Dict
     ) -> Tuple[List[str], float]:
-        """Solve TSP for a single vehicle"""
+        """Solve TSP for a single vehicle.
+
+        Upgraded to match bildiri2026 GAOptimizer logic:
+        - Memetic 2-opt initialization (10 iter per individual)
+        - Elites carried without re-evaluation
+        - New children evaluated immediately
+        - Early stop via max_no_improvement
+        - Final 300-iter 2-opt polish (bildiri2026 canonical)
+        """
         if not waypoints:
             return [], 0.0
 
@@ -240,21 +248,53 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
             )
             return waypoints, duration
 
-        # Initialize population
-        population = self._initialize_population(waypoints)
-        population = self._evaluate_population(population, depot, time_matrix, coordinates)
+        def duration_func(route: List[str]) -> float:
+            return self._calculate_route_duration(route, depot, time_matrix, coordinates)
 
-        best = min(population, key=lambda x: x.total_duration)
+        def _2opt(route: List[str], max_iter: int = 10) -> List[str]:
+            """Inline 2-opt helper mirroring bildiri2026's _nb.nb_two_opt usage."""
+            try:
+                improved, _ = apply_local_search(
+                    route, duration_func, LocalSearchType.TWO_OPT,
+                    max_iterations=max_iter,
+                )
+                return improved
+            except Exception:
+                return route
+
+        # ── Memetic initialization (bildiri2026: 2-opt on every individual, 10 iter) ──
+        pop_size = self.config["population_size"]
+        population: List[Individual] = []
+        for _ in range(pop_size):
+            chrom = waypoints.copy()
+            self.rng.shuffle(chrom)
+            chrom = _2opt(chrom, max_iter=10)
+            dur = duration_func(chrom)
+            population.append(Individual(
+                chromosome=chrom,
+                fitness=1.0 / (dur + 1e-10),
+                total_duration=dur,
+            ))
+
+        population.sort(key=lambda x: x.total_duration)
+        best = Individual(
+            chromosome=population[0].chromosome[:],
+            fitness=population[0].fitness,
+            total_duration=population[0].total_duration,
+        )
         no_improvement = 0
+        elite_count = min(self.config["elite_count"], pop_size)
 
-        for generation in range(self.config["max_iterations"]):
-            population = self._evolve(population)
-            population = self._evaluate_population(population, depot, time_matrix, coordinates)
+        # ── Evolution loop (bildiri2026: sort → elites → offspring → evaluate only new) ──
+        for _ in range(self.config["max_iterations"]):
+            population.sort(key=lambda x: x.total_duration)
 
-            current_best = min(population, key=lambda x: x.total_duration)
-
-            if current_best.total_duration < best.total_duration:
-                best = current_best
+            if population[0].total_duration < best.total_duration:
+                best = Individual(
+                    chromosome=population[0].chromosome[:],
+                    fitness=population[0].fitness,
+                    total_duration=population[0].total_duration,
+                )
                 no_improvement = 0
             else:
                 no_improvement += 1
@@ -262,27 +302,40 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
             if no_improvement >= self.config["max_no_improvement"]:
                 break
 
-        # Apply local search to best solution
-        best_route = best.chromosome
-        best_duration = best.total_duration
+            # Elites carried verbatim (bildiri2026: no re-evaluation)
+            new_pop: List[Individual] = [
+                Individual(e.chromosome[:], e.fitness, e.total_duration)
+                for e in population[:elite_count]
+            ]
 
-        # Get local search type
-        ls_type_str = self.config.get("local_search_type", "two_opt")
-        try:
-            ls_type = LocalSearchType(ls_type_str)
-        except ValueError:
-            ls_type = LocalSearchType.TWO_OPT
+            # Offspring: tournament → OX → mutate → evaluate immediately
+            while len(new_pop) < pop_size:
+                p1 = self._tournament_selection(population)
+                p2 = self._tournament_selection(population)
+                if self.rng.random() < self.config["crossover_rate"]:
+                    child_chrom, _ = self._order_crossover(p1.chromosome, p2.chromosome)
+                else:
+                    child_chrom = p1.chromosome[:]
+                if self.rng.random() < self.config["mutation_rate"]:
+                    child_chrom = self._mutate(child_chrom)
+                dur = duration_func(child_chrom)
+                new_pop.append(Individual(
+                    chromosome=child_chrom,
+                    fitness=1.0 / (dur + 1e-10),
+                    total_duration=dur,
+                ))
 
-        def duration_func(route):
-            return self._calculate_route_duration(route, depot, time_matrix, coordinates)
+            population = new_pop
 
-        improved_route, improved_duration = apply_local_search(
-            best_route, duration_func, ls_type
-        )
-
-        if improved_duration < best_duration:
-            best_route = improved_route
-            best_duration = improved_duration
+        # ── Final 300-iter 2-opt polish (bildiri2026 canonical) ──
+        polished = _2opt(best.chromosome, max_iter=300)
+        polished_dur = duration_func(polished)
+        if polished_dur < best.total_duration:
+            best_route = polished
+            best_duration = polished_dur
+        else:
+            best_route = best.chromosome
+            best_duration = best.total_duration
 
         return best_route, best_duration
 

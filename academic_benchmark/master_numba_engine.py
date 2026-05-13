@@ -117,6 +117,8 @@ from optimizer_api.tests.run_interactive_benchmark_v2_numba import (
     _run_meta_heuristic,
     apply_local_search,
     convert_route_to_indices,
+    create_np_distance_matrix,
+    create_np_duration_func,
     create_duration_func,
     run_single_test,
 )
@@ -346,8 +348,20 @@ def _normalize_strategy_entry(entry: Tuple[Any, ...]) -> StrategySpec:
     return StrategySpec(name=name, payload=payload, default_params=params, algorithm_type=algo_type)
 
 def _all_strategy_specs() -> List[StrategySpec]:
-    """Tüm Numba stratejilerini normalize edilmiş spesifikasyonlara dönüştürür."""
-    return [_normalize_strategy_entry(entry) for entry in STRATEGIES]
+    """Tüm Numba stratejilerini normalize edilmiş spesifikasyonlara dönüştürür.
+
+    Includes both standard STRATEGIES (from benchmark runner) and
+    BILDIRI_STRATEGIES (bildiri2026 native solvers, Step 5).
+    """
+    specs = [_normalize_strategy_entry(entry) for entry in STRATEGIES]
+    for name, payload, params in BILDIRI_STRATEGIES:
+        specs.append(StrategySpec(
+            name=name,
+            payload=payload,
+            default_params=params,
+            algorithm_type="bildiri_meta",
+        ))
+    return specs
 
 def _build_numba_parameter_space(spec: StrategySpec) -> Dict[str, List[Any]]:
     """DoE için Numba algoritmalarına özel hiperparametre uzayını oluşturur."""
@@ -379,6 +393,29 @@ def _build_numba_parameter_space(spec: StrategySpec) -> Dict[str, List[Any]]:
             "hawks": [50, 80, 120],
             "iterations": [200, 300, 450],
         }
+    if name == "B-PSO":
+        # bildiri2026 PSOOptimizer DoE parameter space
+        return {
+            "swarm_size": [30, 50, 80],
+            "max_iterations": [300, 500],
+            "inertia_weight": [0.729],
+            "cognitive_coeff": [1.49445],
+            "social_coeff": [1.49445],
+            "max_velocity_size": [5, 8],
+            "reinit_interval": [30, 50],
+            "max_no_improvement": [100],
+        }
+    if name == "B-GA":
+        # bildiri2026 GAOptimizer DoE parameter space
+        return {
+            "population_size": [80, 100, 150],
+            "generations": [300, 500],
+            "crossover_rate": [0.80, 0.85, 0.90],
+            "mutation_rate": [0.12, 0.15, 0.18],
+            "elite_count": [2, 4],
+            "tournament_size": [3, 5],
+            "max_no_improvement": [100],
+        }
     return {
         "max_iterations": [spec.default_params.get("max_iterations", 300)],
     }
@@ -394,7 +431,14 @@ def run_single_test_with_matrix(
     params: Dict[str, Any],
     time_matrix: List[List[float]],
 ) -> Dict[str, Any]:
-    """Numba için 'Time Matrix' tabanlı özel problem çözümleyicisi."""
+    """Numba için 'Time Matrix' tabanlı özel problem çözümleyicisi.
+
+    Step 4: Uses create_np_duration_func() backed by a numpy ndarray instead
+    of the O(n²) Dict[str, Dict[str, float]] construction.  The numpy closure
+    is stable, so _DIST_MATRIX_CACHE in local_search_numba.py gives a cache
+    hit on the first improve() call within the same run.
+    """
+    import numpy as _np
     dimension = problem.dimension
     run_params: Dict[str, Any] = {}
     if isinstance(params, dict):
@@ -402,14 +446,11 @@ def run_single_test_with_matrix(
     elif isinstance(params, int):
         run_params = {"max_iterations": params}
 
-    matrix: Dict[str, Dict[str, float]] = {}
-    for i in range(dimension):
-        key_i = f"L{i+1}"
-        matrix[key_i] = {}
-        for j in range(dimension):
-            matrix[key_i][f"L{j+1}"] = float(time_matrix[i][j])
+    # Step 4: build numpy matrix directly from List[List[float]]
+    unique_locs = [f"L{i+1}" for i in range(dimension)]
+    np_matrix = _np.array(time_matrix, dtype=_np.float64)
+    duration_func = create_np_duration_func(np_matrix, unique_locs)
 
-    duration_func = create_duration_func(matrix)
     indices = list(range(1, dimension + 1))
     random.seed(seed)
     random.shuffle(indices)
@@ -500,7 +541,13 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
     t0 = time.perf_counter()
     for run_idx in range(n_runs):
         seed = 1000 + combo_idx * 100 + run_idx
-        if is_time_matrix and time_matrix_data:
+        # Step 5: route bildiri2026 strategies through their dedicated adapters
+        if str(strategy_payload) in ("BILDIRI_PSO", "BILDIRI_GA"):
+            if str(strategy_payload) == "BILDIRI_PSO":
+                result = _run_bildiri_pso(problem_dict, seed, strategy_params)
+            else:
+                result = _run_bildiri_ga(problem_dict, seed, strategy_params)
+        elif is_time_matrix and time_matrix_data:
             result = run_single_test_with_matrix(
                 effective_problem, strategy_payload, seed, strategy_params, time_matrix_data
             )
@@ -569,6 +616,141 @@ def _run_pool(tasks: List[Tuple], workers: int, on_result=None) -> List[Dict[str
                     "per_run_lengths": []
                 })
     return results
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BÖLÜM 3b: bildiri2026 Adapter (Step 5)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _run_bildiri_solver(
+    solver_cls,
+    solver_kwargs: Dict[str, Any],
+    problem_dict: Dict[str, Any],
+    seed: int,
+) -> Dict[str, Any]:
+    """Generic adapter: run a bildiri2026 BaseTSPSolver on a DOEProblem dict.
+
+    bildiri2026 convention:
+      - Node 0 = depot (implicit; tour excludes depot)
+      - tour: List[int] of 1..n waypoint indices in full_coords/full_tm
+
+    Our convention:
+      - No depot; all nodes are waypoints 1..n ("L1".."Ln")
+      - coords[i] = node L(i+1), i.e. 0-indexed in the original list.
+    """
+    import time as _time
+    is_tm = problem_dict.get("is_time_matrix", False)
+    coords = problem_dict.get("coordinates", [])
+    optimal = problem_dict.get("optimal")
+
+    solver = solver_cls(**solver_kwargs, random_seed=seed)
+
+    t0 = _time.perf_counter()
+
+    if is_tm:
+        tm = problem_dict["time_matrix"]
+        n = len(tm)
+        # Insert depot row/col (all zeros) at index 0
+        full_tm = [[0.0] * (n + 1) for _ in range(n + 1)]
+        for i in range(n):
+            for j in range(n):
+                full_tm[i + 1][j + 1] = float(tm[i][j])
+        result = solver.solve_with_matrix(full_tm)
+        tour_nodes = result.tour  # 1-indexed in full_tm (0 = depot)
+        tour_length = float(sum(
+            tm[tour_nodes[k] - 1][tour_nodes[(k + 1) % len(tour_nodes)] - 1]
+            for k in range(len(tour_nodes))
+        ))
+    else:
+        # Prepend dummy depot (0.0, 0.0) so bildiri2026 indices align
+        full_coords = [(0.0, 0.0)] + list(coords)
+        result = solver.solve(full_coords)
+        tour_nodes = result.tour  # 1-indexed in full_coords
+        np_dm = create_np_distance_matrix(coords)
+        tour_length = float(sum(
+            np_dm[tour_nodes[k] - 1, tour_nodes[(k + 1) % len(tour_nodes)] - 1]
+            for k in range(len(tour_nodes))
+        ))
+
+    elapsed_ms = (_time.perf_counter() - t0) * 1000.0
+
+    if optimal and optimal > 0:
+        gap = ((tour_length - optimal) / optimal) * 100.0
+    else:
+        gap = float("nan")
+
+    return {
+        "tour_length": tour_length,
+        "gap": gap,
+        "time_ms": elapsed_ms,
+        "algorithm_type": "bildiri_meta",
+    }
+
+
+def _run_bildiri_pso(
+    problem_dict: Dict[str, Any],
+    seed: int,
+    params: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Run bildiri2026 PSOOptimizer on a DOEProblem dict."""
+    try:
+        from academic_benchmark.bildiri2026.core import PSOOptimizer
+    except ModuleNotFoundError:
+        from bildiri2026.core import PSOOptimizer  # type: ignore[no-redef]
+    p = params or {}
+    kwargs = {
+        "swarm_size": int(p.get("swarm_size", 50)),
+        "max_iterations": int(p.get("max_iterations", 500)),
+        "inertia_weight": float(p.get("inertia_weight", 0.729)),
+        "cognitive_coeff": float(p.get("cognitive_coeff", 1.49445)),
+        "social_coeff": float(p.get("social_coeff", 1.49445)),
+        "max_velocity_size": int(p.get("max_velocity_size", 5)),
+        "max_no_improvement": int(p.get("max_no_improvement", 100)),
+        "reinit_interval": int(p.get("reinit_interval", 50)),
+    }
+    return _run_bildiri_solver(PSOOptimizer, kwargs, problem_dict, seed)
+
+
+def _run_bildiri_ga(
+    problem_dict: Dict[str, Any],
+    seed: int,
+    params: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Run bildiri2026 GAOptimizer on a DOEProblem dict."""
+    try:
+        from academic_benchmark.bildiri2026.core import GAOptimizer
+    except ModuleNotFoundError:
+        from bildiri2026.core import GAOptimizer  # type: ignore[no-redef]
+    p = params or {}
+    kwargs = {
+        "population_size": int(p.get("population_size", 100)),
+        "generations": int(p.get("generations", 500)),
+        "crossover_rate": float(p.get("crossover_rate", 0.85)),
+        "mutation_rate": float(p.get("mutation_rate", 0.15)),
+        "elite_count": int(p.get("elite_count", 2)),
+        "tournament_size": int(p.get("tournament_size", 3)),
+        "max_no_improvement": int(p.get("max_no_improvement", 100)),
+    }
+    return _run_bildiri_solver(GAOptimizer, kwargs, problem_dict, seed)
+
+
+# Bildiri2026 strateji tanımları — master_numba_engine'e özgü ek stratejiler.
+BILDIRI_STRATEGIES: List[Tuple[str, str, Dict[str, Any]]] = [
+    ("B-PSO", "BILDIRI_PSO", {
+        "swarm_size": 50, "max_iterations": 500,
+        "inertia_weight": 0.729, "cognitive_coeff": 1.49445,
+        "social_coeff": 1.49445, "max_velocity_size": 5,
+        "max_no_improvement": 100, "reinit_interval": 50,
+        "algorithm_type": "bildiri_meta",
+    }),
+    ("B-GA", "BILDIRI_GA", {
+        "population_size": 100, "generations": 500,
+        "crossover_rate": 0.85, "mutation_rate": 0.15,
+        "elite_count": 2, "tournament_size": 3,
+        "max_no_improvement": 100,
+        "algorithm_type": "bildiri_meta",
+    }),
+]
 
 
 # ─────────────────────────────────────────────────────────────────────────────

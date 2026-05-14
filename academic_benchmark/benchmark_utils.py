@@ -29,7 +29,7 @@ from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 TSPLIB_OPTIMALS: Dict[str, int] = {
     "berlin52": 7542, "eil51": 426, "eil76": 538, "st70": 675,
     "kroa100": 21282, "krob100": 22141, "kroc100": 20749, "krod100": 21294,
-    "kroe100": 22068, "eil101": 629, "pr107": 44303, "pr124": 59030,
+    "kroe100": 22068, "eil101": 629, "pr76": 108159, "pr107": 44303, "pr124": 59030,
     "bier127": 118282, "ch130": 6110, "ch150": 6528, "kroa150": 26524,
     "krob150": 26130, "pr152": 73682, "u159": 42080, "rat195": 2323,
     "d198": 15780, "kroa200": 29368, "krob200": 29437, "ts225": 126643,

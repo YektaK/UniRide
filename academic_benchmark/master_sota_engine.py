@@ -48,10 +48,14 @@ from enum import Enum
 from multiprocessing import cpu_count
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
-# Windows stdout encoding düzeltmesi
+# Windows stdout encoding düzeltmesi — reconfigure() avoids Python 3.14 GC crash
 if sys.platform == "win32":
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 # Proje root'unu Python path'e ekle (import academic_benchmark.sota_tsp için)
 _ENGINE_DIR = os.path.dirname(os.path.abspath(__file__))

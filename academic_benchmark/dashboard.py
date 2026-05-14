@@ -137,20 +137,43 @@ with tab1:
         )
         
         st.markdown("### 📜 Export as LaTeX Table")
-        st.markdown("This version **bolds** the best values for each problem (academic standard).")
+        st.markdown("Generates a **paper-ready** LaTeX table with best values in bold.")
         
-        if st.button("Generate Academic LaTeX Code"):
-            # LaTeX icin best degerleri bold yapacak bir kopya olustur
-            latex_df = filtered_summary.copy()
-            for prob in latex_df['problem'].unique():
-                prob_mask = (latex_df['problem'] == prob)
-                for col in ['avg_gap', 'avg_time_ms']:
-                    min_val = latex_df.loc[prob_mask, col].min()
-                    latex_df.loc[prob_mask & (latex_df[col] == min_val), col] = \
-                        latex_df.loc[prob_mask & (latex_df[col] == min_val), col].apply(lambda x: f"\\textbf{{{x:.4f}}}")
-            
-            latex_code = latex_df.to_latex(index=False, escape=False)
-            st.code(latex_code, language='latex')
+        col_latex_type, col_latex_btn = st.columns([1, 1])
+        with col_latex_type:
+            latex_format = st.selectbox("LaTeX Target", ["booktabs (journal)", "longtable (many rows)"], index=0)
+        
+        with col_latex_btn:
+            st.markdown("&nbsp;")
+            if st.button("Generate Academic LaTeX Code"):
+                # Build a string-typed copy so \textbf{} does not mix with numeric cells
+                latex_df = filtered_summary.copy()
+                fmt_cols = [c for c in ['avg_gap', 'avg_time_ms'] if c in latex_df.columns]
+                
+                for col in fmt_cols:
+                    latex_df[col] = latex_df[col].apply(lambda x: f"{x:.4f}" if pd.notna(x) else "N/A")
+                
+                for prob in latex_df['problem'].unique():
+                    prob_mask = (latex_df['problem'] == prob)
+                    orig = filtered_summary[prob_mask]
+                    for col in fmt_cols:
+                        min_val = orig[col].min()
+                        cell_mask = prob_mask & (orig[col] == min_val)
+                        for idx in latex_df[cell_mask].index:
+                            raw = latex_df.at[idx, col]
+                            latex_df.at[idx, col] = f"\\textbf{{{raw}}}"
+                
+                if latex_format == "longtable (many rows)":
+                    latex_code = latex_df.to_latex(
+                        index=False, escape=False, longtable=True,
+                        column_format="l" + "c" * (len(latex_df.columns) - 1)
+                    )
+                else:
+                    latex_code = latex_df.to_latex(
+                        index=False, escape=False,
+                        column_format="l" + "c" * (len(latex_df.columns) - 1)
+                    )
+                st.code(latex_code, language='latex')
     else:
         st.info("Please select at least one problem and one algorithm from the sidebar.")
 
@@ -253,8 +276,25 @@ with tab4:
                         ties = len(sig_df[sig_df['Winner'] == 'Tie'])
                         losses = len(sig_df[sig_df['Winner'] == algo_A])
                         
-                        st.markdown(f"### LaTeX Automated Statement")
-                        st.code(f"\\textbf{{{algo_B}}} statistically significantly outperforms {algo_A} on {wins} out of {len(results)} instances (Wilcoxon Signed-Rank, $p < 0.05$), with {ties} statistical ties.", language="latex")
+                        st.markdown("### LaTeX Summary")
+                        st.code(
+                            f"\\textbf{{{algo_B}}} significantly outperforms {algo_A} "
+                            f"on {wins}/{len(results)} instances "
+                            f"(Wilcoxon $p < 0.05$), with {ties} ties.",
+                            language="latex"
+                        )
+                        
+                        st.markdown("### Full LaTeX Table")
+                        # Format p-values for LaTeX
+                        sig_table = sig_df.copy()
+                        sig_table['p-value'] = sig_table['p-value'].apply(
+                            lambda p: f"$<0.001$" if p < 0.001 else f"${p:.4f}$"
+                        )
+                        latex_wilcoxon = sig_table.to_latex(
+                            index=False, escape=False,
+                            column_format="lrrrrl"
+                        )
+                        st.code(latex_wilcoxon, language="latex")
                     else:
                         st.warning("Not enough matched multi-run data to perform Wilcoxon test.")
                 except ImportError:

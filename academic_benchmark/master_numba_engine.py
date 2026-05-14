@@ -46,10 +46,14 @@ from enum import Enum
 from multiprocessing import cpu_count
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
-# Windows stdout encoding düzeltmesi
+# Windows stdout encoding düzeltmesi — reconfigure() avoids Python 3.14 GC crash
 if sys.platform == "win32":
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 _ENGINE_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_ROOT = os.path.abspath(os.path.join(_ENGINE_DIR, ".."))
@@ -933,11 +937,13 @@ def _execute_benchmark_tasks(tasks, workers, metadata, stage_label):
         remain = format_time(remain_sec) if remain_sec is not None else "N/A"
         
         sym = "*" if (result.get("avg_gap") or 100) <= 1 else ("+" if (result.get("avg_gap") or 100) <= 5 else "o")
-        print(f"  [{idx+1:>3}/{total}] {result['problem']:<12} {result['strategy']:<8} "
-              f"GAP: {result.get('avg_gap', 0):>6.2f}% {sym} {result.get('avg_time_ms', 0):>7.0f}ms "
-              f"[{stage_label} ETA: {remain}]", flush=True)
+        sys.stdout.write(f"\r  [{idx+1:>3}/{total}] {result['problem']:<12} {result['strategy']:<8} "
+                         f"GAP: {result.get('avg_gap', 0):>6.2f}% {sym} {result.get('avg_time_ms', 0):>7.0f}ms "
+                         f"[{stage_label} ETA: {remain:<9}]")
+        sys.stdout.flush()
 
     _run_pool(tasks, workers, on_result=on_result)
+    print()
     
     metadata["results"] = {f"{row['problem']}::{row['strategy']}": row for row in rows}
     save_metadata(METADATA_PATH, metadata)

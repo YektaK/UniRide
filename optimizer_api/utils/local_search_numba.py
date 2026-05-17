@@ -687,15 +687,17 @@ class TwoOptLocalSearch(BaseLocalSearch):
 
         Uses module-level _build_or_get_dist_matrix() to avoid O(n²) rebuild
         on every improve() call for the same problem (Step 3).
+
+        Stores self._unique_locs so that _indices_to_route uses the same
+        ordering as the cached distance matrix index_map.
         """
-        self._index_map, self._dist_matrix, unique_locs = _build_or_get_dist_matrix(route, duration_func)
+        self._index_map, self._dist_matrix, self._unique_locs = _build_or_get_dist_matrix(route, duration_func)
         route_indices = np.array([self._index_map[loc] for loc in route], dtype=np.int64)
         return route_indices, self._dist_matrix
 
     def _indices_to_route(self, route_indices: np.ndarray, original_route: List[str]) -> List[str]:
-        """Convert indices back to route strings."""
-        unique_locs = list(dict.fromkeys(original_route))
-        return [unique_locs[idx] for idx in route_indices]
+        """Convert indices back to route strings using cached location ordering."""
+        return [self._unique_locs[idx] for idx in route_indices]
 
     def improve(
         self,
@@ -735,13 +737,12 @@ class ThreeOptLocalSearch(BaseLocalSearch):
 
     def _prepare_numba_inputs(self, route: List[str], duration_func: Callable) -> Tuple[np.ndarray, np.ndarray]:
         """Convert route and duration function to Numba-compatible format (cached)."""
-        self._index_map, self._dist_matrix, unique_locs = _build_or_get_dist_matrix(route, duration_func)
+        self._index_map, self._dist_matrix, self._unique_locs = _build_or_get_dist_matrix(route, duration_func)
         route_indices = np.array([self._index_map[loc] for loc in route], dtype=np.int64)
         return route_indices, self._dist_matrix
 
     def _indices_to_route(self, route_indices: np.ndarray, original_route: List[str]) -> List[str]:
-        unique_locs = list(dict.fromkeys(original_route))
-        return [unique_locs[idx] for idx in route_indices]
+        return [self._unique_locs[idx] for idx in route_indices]
 
     def improve(
         self,
@@ -777,12 +778,11 @@ class OrOptLocalSearch(BaseLocalSearch):
 
     def _prepare_numba_inputs(self, route: List[str], duration_func: Callable) -> Tuple[np.ndarray, np.ndarray]:
         """Convert route and duration function to Numba-compatible format (cached)."""
-        self._index_map, self._dist_matrix, _ = _build_or_get_dist_matrix(route, duration_func)
+        self._index_map, self._dist_matrix, self._unique_locs = _build_or_get_dist_matrix(route, duration_func)
         return np.array([self._index_map[loc] for loc in route], dtype=np.int64), self._dist_matrix
 
     def _indices_to_route(self, route_indices: np.ndarray, original_route: List[str]) -> List[str]:
-        unique_locs = list(dict.fromkeys(original_route))
-        return [unique_locs[idx] for idx in route_indices]
+        return [self._unique_locs[idx] for idx in route_indices]
 
     def improve(
         self,
@@ -816,12 +816,11 @@ class SwapLocalSearch(BaseLocalSearch):
 
     def _prepare_numba_inputs(self, route: List[str], duration_func: Callable) -> Tuple[np.ndarray, np.ndarray]:
         """Convert route and duration function to Numba-compatible format (cached)."""
-        self._index_map, self._dist_matrix, _ = _build_or_get_dist_matrix(route, duration_func)
+        self._index_map, self._dist_matrix, self._unique_locs = _build_or_get_dist_matrix(route, duration_func)
         return np.array([self._index_map[loc] for loc in route], dtype=np.int64), self._dist_matrix
 
     def _indices_to_route(self, route_indices: np.ndarray, original_route: List[str]) -> List[str]:
-        unique_locs = list(dict.fromkeys(original_route))
-        return [unique_locs[idx] for idx in route_indices]
+        return [self._unique_locs[idx] for idx in route_indices]
 
     def improve(
         self,
@@ -861,12 +860,11 @@ class CrossExchangeLocalSearch(BaseLocalSearch):
 
     def _prepare_numba_inputs(self, route: List[str], duration_func: Callable) -> Tuple[np.ndarray, np.ndarray]:
         """Convert route and duration function to Numba-compatible format (cached)."""
-        self._index_map, self._dist_matrix, _ = _build_or_get_dist_matrix(route, duration_func)
+        self._index_map, self._dist_matrix, self._unique_locs = _build_or_get_dist_matrix(route, duration_func)
         return np.array([self._index_map[loc] for loc in route], dtype=np.int64), self._dist_matrix
 
     def _indices_to_route(self, route_indices: np.ndarray, original_route: List[str]) -> List[str]:
-        unique_locs = list(dict.fromkeys(original_route))
-        return [unique_locs[idx] for idx in route_indices]
+        return [self._unique_locs[idx] for idx in route_indices]
 
     def improve(
         self,

@@ -14,9 +14,12 @@ Usage:
 """
 
 from .base_solver import BaseTSPSolver, TSPResult
-from .e2bso_tsp import E2BSO_TSP, E2BSOTSPConfig
+from .base_solver import BaseTSPSolver, TSPResult
+from .e2bso_tsp import E2BSO_TSP, E2BSOTSPConfig, E2BSO_TSP_CPSO, E2BSOCPSPConfig
 from .r2dma_tsp import R2DMA_TSP, R2DMATSPConfig
 from .paoea_tsp import PAOEA_TSP, PAOEAConfig
+from .cgo_tsp import CGO_TSP, CGOConfig
+from .run_tsp import RUN_TSP, RUNConfig
 from .ls_engine import MultiLayerLS
 
 __all__ = [
@@ -24,10 +27,16 @@ __all__ = [
     "TSPResult",
     "E2BSO_TSP",
     "E2BSOTSPConfig",
+    "E2BSO_TSP_CPSO",
+    "E2BSOCPSPConfig",
     "R2DMA_TSP",
     "R2DMATSPConfig",
     "PAOEA_TSP",
     "PAOEAConfig",
+    "CGO_TSP",
+    "CGOConfig",
+    "RUN_TSP",
+    "RUNConfig",
     "MultiLayerLS",
 ]
 

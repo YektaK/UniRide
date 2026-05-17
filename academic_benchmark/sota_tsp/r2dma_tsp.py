@@ -34,6 +34,67 @@ from .repair_ops import GreedyInsertion, Regret2Insertion, Regret3Insertion
 
 from academic_benchmark.benchmark_utils import compute_population_diversity
 
+# ── Numba JIT for pos_match (O(n²) bottleneck) ───────────────────────────────
+try:
+    import numba
+    _NUMBA_OK = True
+except ImportError:
+    _NUMBA_OK = False
+
+if _NUMBA_OK:
+    @numba.njit(cache=True)
+    def _pos_match_numba(t1, t2, n):
+        """Rotation-normalized position match via Numba JIT.
+        Uses position lookup array (O(1) per lookup) instead of dict.
+        Returns best_match / n as float.
+        """
+        # Build position lookup: t2_pos[city] = index
+        t2_pos = numba.typed.Dict.empty(key_type=numba.int64, value_type=numba.int64)
+        for idx in range(n):
+            t2_pos[numba.int64(t2[idx])] = numba.int64(idx)
+
+        best = 0
+        for r in range(n):
+            match = 0
+            for i in range(n):
+                city = t1[(i + r) % n]
+                if t2_pos.get(numba.int64(city), -1) == i:
+                    match += 1
+            if match > best:
+                best = match
+        return float(best) / float(n)
+
+    def _fast_pos_match(t1, t2, n):
+        """Numba-accelerated pos_match with pure-Python fallback."""
+        if n > 2000:
+            return 0.0
+        t2_set = set(t2)
+        if len(t2_set) != n:
+            return 0.0
+        best_ratio = _pos_match_numba(
+            numba.typed.List(t1), numba.typed.List(t2), n
+        )
+        return best_ratio if best_ratio > 0.0 else sum(1 for i in range(n) if t1[i] == t2[i]) / n
+else:
+    def _fast_pos_match(t1, t2, n):
+        """Pure-Python fallback when Numba is unavailable."""
+        if n > 2000:
+            return 0.0
+        t2_set = set(t2)
+        if len(t2_set) != n:
+            return 0.0
+        t2_pos = {city: idx for idx, city in enumerate(t2)}
+        best = 0
+        for r in range(n):
+            match = 0
+            for i in range(n):
+                if t2_pos.get(t1[(i + r) % n]) == i:
+                    match += 1
+            if match > best:
+                best = match
+        best_ratio = best / n
+        return best_ratio if best_ratio > 0.0 else sum(1 for i in range(n) if t1[i] == t2[i]) / n
+
 
 @dataclass
 class R2DMATSPConfig:
@@ -46,6 +107,7 @@ class R2DMATSPConfig:
     ls_intensity_moderate: str = "light"
     ls_intensity_destructive: str = "moderate"
     ls_time_limit: float = 0.5
+    three_opt_window: int = 12
     sa_start_temp_factor: float = 0.4
     sa_end_temp: float = 0.0001
     sa_cooling_rate: float = 0.9995
@@ -54,6 +116,7 @@ class R2DMATSPConfig:
     pulse_injection_rate: float = 0.25
     diversity_check_interval: int = 50
     tournament_k: int = 5
+    time_limit: float = 300.0
     seed: int = 42
 
 
@@ -100,22 +163,8 @@ def _compute_resonance(t1: List[int], t2: List[int], n: int, dm: Optional[List[L
     total_edges = len(edges1 | edges2)
     edge_sim = common_edges / total_edges if total_edges > 0 else 0.0
 
-    # (2) Position match: rotation-normalized — max over all n rotations O(n²)
-    pos_match = 0.0
-    if n <= 2000:
-        t2_set = set(t2)
-        if len(t2_set) == n:
-            t2_pos = {city: idx for idx, city in enumerate(t2)}
-            for r in range(n):
-                match = 0
-                for i in range(n):
-                    if t2_pos.get(t1[(i + r) % n]) == i:
-                        match += 1
-                if match > pos_match:
-                    pos_match = match
-            pos_match /= n
-    if pos_match == 0.0:
-        pos_match = sum(1 for i in range(n) if t1[i] == t2[i]) / n
+    # (2) Position match: rotation-normalized — Numba JIT accelerated
+    pos_match = _fast_pos_match(t1, t2, n)
 
     # (3) Distance-profile similarity — O(n)
     dist_sim = 0.5
@@ -223,11 +272,11 @@ class R2DMA_TSP(BaseTSPSolver):
         edges1 = set()
         for i in range(len(p1)):
             a, b = p1[i], p1[(i + 1) % len(p1)]
-            edges1.add((a, b))
+            edges1.add((min(a, b), max(a, b)))  # Undirected edges for consistency with resonance
         edges2 = set()
         for i in range(len(p2)):
             a, b = p2[i], p2[(i + 1) % len(p2)]
-            edges2.add((a, b))
+            edges2.add((min(a, b), max(a, b)))  # Undirected edges for consistency with resonance
         common = list(edges1 & edges2)
         rng.shuffle(common)
         if not common:
@@ -330,13 +379,16 @@ class R2DMA_TSP(BaseTSPSolver):
 
                 if mode == "constructive":
                     child, child_cost, _ = MultiLayerLS.improve(
-                        child, self._dist_matrix, dm_np, self.cfg.ls_intensity_constructive, 200, self.cfg.ls_time_limit)
+                        child, self._dist_matrix, dm_np, self.cfg.ls_intensity_constructive, 200, self.cfg.ls_time_limit,
+                        self.cfg.three_opt_window)
                 elif mode == "moderate":
                     child, child_cost, _ = MultiLayerLS.improve(
-                        child, self._dist_matrix, dm_np, self.cfg.ls_intensity_moderate, 100, self.cfg.ls_time_limit)
+                        child, self._dist_matrix, dm_np, self.cfg.ls_intensity_moderate, 100, self.cfg.ls_time_limit,
+                        self.cfg.three_opt_window)
                 elif mode == "destructive":
                     child, child_cost, _ = MultiLayerLS.improve(
-                        child, self._dist_matrix, dm_np, self.cfg.ls_intensity_destructive, 200, self.cfg.ls_time_limit)
+                        child, self._dist_matrix, dm_np, self.cfg.ls_intensity_destructive, 200, self.cfg.ls_time_limit,
+                        self.cfg.three_opt_window)
 
                 worse_parent = max(pop_costs[i], pop_costs[best_partner] if best_partner is not None else pop_costs[i])
                 is_dissonant = child_cost > worse_parent * (1 + self.cfg.delta_threshold)
@@ -379,10 +431,11 @@ class R2DMA_TSP(BaseTSPSolver):
                         pop_costs[idx] = _tour_cost(population[idx], self._dist_matrix)
 
             history.append(gbest_cost)
-            if time.monotonic() - t_start > 300:
+            if time.monotonic() - t_start > self.cfg.time_limit:
                 break
 
-        gbest, gbest_cost, _ = MultiLayerLS.improve(gbest, self._dist_matrix, dm_np, "full", 500, 5.0)
+        gbest, gbest_cost, _ = MultiLayerLS.improve(gbest, self._dist_matrix, dm_np, "full", 500, 5.0,
+                                                        self.cfg.three_opt_window)
 
         elapsed_ms = (time.monotonic() - t_start) * 1000
         return TSPResult(

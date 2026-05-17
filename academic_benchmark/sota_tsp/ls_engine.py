@@ -147,14 +147,14 @@ def improve_swap(tour: List[int], dm: List[List[float]], dm_np=None,
 
 
 def improve_3opt(tour: List[int], dm: List[List[float]], dm_np=None,
-                 max_iterations: int = 200) -> Tuple[List[int], float]:
+                 max_iterations: int = 200, window: int = 12) -> Tuple[List[int], float]:
     """Simple bounded 3-opt style improvement (reverse-middle neighborhood)."""
     if _NUMBA_OK and dm_np is not None:
         route_np = _nb._prepare_route(tour)
-        improved_np, length = _nb._three_opt_improve_atsp_numba(route_np, dm_np, max_iterations, False)
+        improved_np, length = _nb._three_opt_improve_atsp_numba(route_np, dm_np, max_iterations, False, window)
         return _nb._extract_route(improved_np, tour), float(length)
     if _NUMBA_OK and dm is not None:
-        return _nb.nb_three_opt(tour, dm, max_iterations, False)
+        return _nb.nb_three_opt(tour, dm, max_iterations, False, window)
     best_tour = tour[:]
     best_length = _tour_cost(best_tour, dm)
     n = len(best_tour)
@@ -167,9 +167,9 @@ def improve_3opt(tour: List[int], dm: List[List[float]], dm_np=None,
         iters += 1
         for i in range(0, n - 3):
             # Bound inner scan to keep runtime under control.
-            j_max = min(n - 2, i + 12)
+            j_max = min(n - 2, i + window)
             for j in range(i + 2, j_max + 1):
-                k_max = min(n - 1, j + 12)
+                k_max = min(n - 1, j + window)
                 for k in range(j + 1, k_max + 1):
                     # 3-opt inspired reconnect: keep prefix/suffix, reverse middle chunks.
                     cand = (
@@ -201,6 +201,7 @@ class MultiLayerLS:
         intensity: str = "full",
         max_iterations: int = 1000,
         time_limit: float = 5.0,
+        three_opt_window: int = 12,
     ) -> Tuple[List[int], float, Dict[str, Any]]:
         current_tour = list(tour)
         current_cost = _tour_cost(current_tour, dm)
@@ -212,7 +213,7 @@ class MultiLayerLS:
         if intensity in ("moderate", "full"):
             layers.append(("or-opt", improve_or_opt))
         if intensity == "full":
-            layers.append(("3-opt", improve_3opt))
+            layers.append(("3-opt-bounded", improve_3opt))
             layers.append(("swap", improve_swap))
 
         max_ls_pass_iterations = 5
@@ -221,7 +222,9 @@ class MultiLayerLS:
             for layer_name, layer_fn in layers:
                 if time.monotonic() - t0 > time_limit:
                     break
-                if layer_name in ("2-opt", "or-opt", "3-opt", "swap"):
+                if layer_name == "3-opt-bounded":
+                    new_tour, new_cost = layer_fn(current_tour, dm, dm_np, max_iterations, three_opt_window)
+                elif layer_name in ("2-opt", "or-opt", "swap"):
                     new_tour, new_cost = layer_fn(current_tour, dm, dm_np, max_iterations)
                 else:
                     new_tour, new_cost = layer_fn(current_tour, dm, max_iterations)

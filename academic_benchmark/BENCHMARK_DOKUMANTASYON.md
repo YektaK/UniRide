@@ -1,371 +1,65 @@
-# TSPLIB Benchmark Sistemi - Detaylı Dokümantasyon
+# UniRide Akademik Benchmark Framework — Kapsamlı Dokümantasyon
 
-## 📋 İçindekiler
-
-1. [Sistem Genel Bakış](#sistem-genel-bakış)
-2. [Dosya Yapısı ve Sorumluluklar](#dosya-yapısı-ve-sorumluluklar)
-3. [Özellikler](#özellikler)
-4. [Yapılan Düzeltmeler](#yapılan-düzeltmeler)
-5. [Çalışma Akışı](#çalışma-akışı)
-6. [Kullanım Kılavuzu](#kullanım-kılavuzu)
-7. [Benchmark Profilleri](#benchmark-profilleri)
-8. [Güncelleme Yaparken Dikkat Edilmesi Gerekenler](#güncelleme-yaparken-dikkat-edilmesi-gerekenler)
-9. [Sorun Giderme](#sorun-giderme)
-10. [Genişletme Rehberi](#genişletme-rehberi)
+> **Versiyon:** 3.3 | **Tarih:** 2026-05-16
+> **İngilizce özet ve akademik metodoloji için [Bölüm 6](#6-academic-methodology-english)'ya bakın.**
 
 ---
 
-## 🏗️ Sistem Genel Bakış
+## 1. Sistem Genel Bakış
 
-Bu benchmark sistemi, TSP (Traveling Salesman Problem) algoritmalarını TSPLIB problemleri üzerinde test etmek için tasarlanmıştır. Sistem şu özellikleri sağlar:
+UniRide Akademik Benchmark Framework, Gezgin Satıcı Problemi (TSP) ve Asimetrik TSP (ATSP) algoritmalarını TSPLIB problemleri üzerinde test etmek için tasarlanmış **çift motorlu (dual-engine)** bir sistemdir.
 
-- **Gerçek TSPLIB Koordinatları**: GitHub'dan otomatik indirilen gerçek TSPLIB verileri
-- **Çoklu Local Search Stratejileri**: 2-opt, 3-opt, Or-opt, Swap, Hybrid
-- **Akıllı Önbellek**: İndirilen dosyalar ve test sonuçları önbelleğe alınır
-- **Dosya Değişiklik Takibi**: Hash tabanlı değişiklik algılama
-- **Kategorize Edilmiş Problemler**: Küçük (≤100), Orta (≤500), Büyük (≤2000) düğüm
-- **Benchmark Profilleri**: `baseline` ve `quality_first` ile ayrı bütçe ayarları
-- **Güvenli Çıkış**: Ctrl+C ile sonuçlar kaybolmadan çıkış
-- **Anlık Kayıt**: Her algoritma sonucu hemen kaydedilir
-- **Tahmini Süre**: Test öncesi süre tahmini
-
-### Mimari Diyagramı
+### 1.1 Mimari
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    academic_benchmark/                               │
-│                   run_smart_benchmark.py                             │
-│                    (Ana Kontrol Merkezi)                            │
-└───────────────────────────┬─────────────────────────────────────────┘
-                            │
-            ┌───────────────┼───────────────┐
-            ▼               ▼               ▼
-┌───────────────────┐ ┌──────────────────┐ ┌───────────────────────────┐
-│  dataset_loader   │ │ utils_benchmark  │ │ optimizer_api/utils/      │
-│   (Veri Yükleme)  │ │  (Hash/Meta)     │ │ local_search.py (ALGORİTMA)│
-└─────────┬─────────┘ └──────────────────┘ └───────────────────────────┘
-          │
-          ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│           optimizer_api/tests/                                       │
-│           run_interactive_benchmark_v2.py                           │
-│        (TSPLIB İndirme, Koordinat Parse, Test Çalıştırma)           │
-└─────────────────────────────────────────────────────────────────────┘
-          │
-          ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                  TSPLIB GitHub Repository                           │
-│           https://raw.githubusercontent.com/mastqe/tsplib/          │
-└─────────────────────────────────────────────────────────────────────┘
+academic_benchmark/
+├── smart_benchmark.py          # Unified CLI (tek giriş noktası)
+├── master_numba_engine.py      # Numba Motoru (klasik meta-sezgiseller)
+├── master_sota_engine.py       # SOTA Motoru (modern çözücüler)
+├── engine_core.py              # AlgorithmRegistry (merkezi kayıt)
+├── benchmark_utils.py          # Paylaşılan yardımcı fonksiyonlar
+├── tsplib_manager.py           # SQLite DB yöneticisi
+├── param_db.py                 # JSON parametre veritabanı
+├── dashboard.py                # Streamlit görselleştirme
+├── bildiri2026/core/           # Numba hızlandırılmış solver'lar
+├── sota_tsp/                   # SOTA çözücü implementasyonları
+└── tests/                      # Test paketi (45 test)
 ```
 
----
+### 1.2 İki Motor Karşılaştırma
 
-## 📁 Dosya Yapısı ve Sorumluluklar
+| Özellik | Numba Motoru | SOTA Motoru |
+|---------|-------------|-------------|
+| **Algoritmalar** | GA, PSO, GWO, HHO, 2-opt, 3-opt-bounded, Or-opt, Swap, Hybrid, B-PSO, B-GA | E2BSO-TSP, E2BSO-TSP-CPSO, R2DMA-TSP, P-AOEA-TSP, CGO-TSP, RUN-TSP |
+| **Hızlandırma** | Numba JIT (`@njit(nogil=True)`) | Saf Python + Numba destekli LS |
+| **Parametre** | Grid/Fractional/Bayesian (Optuna) | Grid/Fractional/Bayesian (Optuna) |
+| **Paralel** | ProcessPoolExecutor | ProcessPoolExecutor |
+| **ATSP** | ✅ Tam destek | ✅ Tam destek |
+| **Toplam** | 11 algoritma | 6 algoritma |
 
-### Proje Dizin Yapısı
+### 1.3 Algoritma Listesi (17 Toplam)
 
-```
-FirebaseUniRide/UniRide/
-├── optimizer_api/
-│   ├── utils/
-│   │   └── local_search.py          # Local Search algoritmaları (MERKEZİ)
-│   ├── tests/
-│   │   ├── run_interactive_benchmark_v2.py  # V2 benchmark (öncelikli)
-│   │   ├── run_interactive_benchmark.py     # V1 benchmark (fallback)
-│   │   ├── tsplib_data/             # TSPLIB cache
-│   │   └── benchmark_results/       # JSON/CSV sonuçlar
-│   └── strategies/
-│       └── cvrptw_wrapper.py
-└── academic_benchmark/
-    ├── run_smart_benchmark.py       # Ana çalıştırma dosyası
-    ├── dataset_loader.py            # Veri yükleyici
-    ├── utils_benchmark.py           # Yardımcı fonksiyonlar
-    ├── BENCHMARK_DOKUMANTASYON.md   # Bu dokümantasyon
-    ├── benchmark_db/
-    │   ├── latest_metadata.json     # Test sonuçları ve hash'ler
-    │   └── history/                 # Geçmiş CSV logları
-    └── tsplib_data/                 # TSPLIB cache (alternatif)
-```
+| # | Algoritma | Motor | Tür | ATSP | Karmaşıklık |
+|---|-----------|-------|-----|------|-------------|
+| 1 | Numba-2-opt | Numba | Local Search | ✅ | O(n²) |
+| 2 | Numba-3-opt-bounded | Numba | Local Search | ✅ | O(n·w²) |
+| 3 | Numba-Or-opt | Numba | Local Search | ✅ | O(n²) |
+| 4 | Numba-Swap | Numba | Local Search | ✅ | O(n²) |
+| 5 | Numba-Hybrid | Numba | Local Search | ✅ | O(n³) |
+| 6 | Numba-GA | Numba | Meta-sezgisel | ✅ | O(pop·gen·n) |
+| 7 | Numba-PSO | Numba | Meta-sezgisel | ✅ | O(swarm·iter·n) |
+| 8 | Numba-GWO | Numba | Meta-sezgisel | ✅ | O(pop·iter·n) |
+| 9 | Numba-HHO | Numba | Meta-sezgisel | ✅ | O(pop·iter·n) |
+| 10 | B-PSO | bildiri2026 | Meta-sezgisel | ✅ | O(swarm·iter·n) |
+| 11 | B-GA | bildiri2026 | Meta-sezgisel | ✅ | O(pop·gen·n) |
+| 12 | E2BSO-TSP | SOTA | Hibrit (Entropy+ALNS) | ✅ | O(pop·iter·n²) |
+| 13 | E2BSO-TSP-CPSO | SOTA | Hibrit (Canonical PSO) | ✅ | O(pop·iter·n²) |
+| 14 | R2DMA-TSP | SOTA | Hibrit (Rezonans+ALNS) | ✅ | O(pop·iter·n²) |
+| 15 | P-AOEA-TSP | SOTA | Hibrit (Genom+ALNS) | ✅ | O(pop·iter·n²) |
+| 16 | CGO-TSP | SOTA | Hibrit (Chaos Game+OX) | ✅ | O(pop·iter·n²) |
+| 17 | RUN-TSP | SOTA | Hibrit (RK4+ESQ) | ✅ | O(pop·iter·n²) |
 
-### Ana Dosyalar ve Sorumlulukları
-
-| Dosya | Konum | Sorumluluk |
-|-------|-------|------------|
-| `local_search.py` | `optimizer_api/utils/` | Local Search algoritma implementasyonları (MERKEZİ) |
-| `run_smart_benchmark.py` | `academic_benchmark/` | Ana kontrol merkezi, menü sistemi, test koordinasyonu |
-| `run_interactive_benchmark_v2.py` | `optimizer_api/tests/` | TSPLIB dosyası indirme, parse etme, test çalıştırma |
-| `run_interactive_benchmark.py` | `optimizer_api/tests/` | V1 fallback (hardcoded koordinatlar) |
-| `dataset_loader.py` | `academic_benchmark/` | Veri seti yükleme, .tsp/.opt.tour dosyası okuma |
-| `utils_benchmark.py` | `academic_benchmark/` | Hash hesaplama, metadata yönetimi |
-
----
-
-## ✨ Özellikler
-
-### Temel Özellikler
-
-| Özellik | Açıklama |
-|---------|----------|
-| **Ctrl+C Güvenli Çıkış** | Signal handler ile kesintide sonuçlar otomatik kaydedilir |
-| **Incremental Save** | Her algoritma sonucu anında `latest_metadata.json`'a kaydedilir |
-| **Tahmini Süre** | Test öncesi problem boyutu ve algoritma karmaşıklığına göre süre tahmini |
-| **Test Öncesi Özet** | Onay ekranı ile problem/algoritma sayısı ve tahmini süre gösterimi |
-| **Progress Gösterimi** | Kalan test sayısı ve tahmini kalan süre |
-| **Çoklu Seçim** | İstenen problemler ve algoritmalar seçilebilir |
-| **Algoritma Kataloğu** | Her algoritma için detaylı bilgi |
-| **Multiprocessing** | 4 worker ile paralel test çalıştırma (4x hız artışı) |
-| **Dinamik Süre Tahmini** | Gerçek ölçümlere dayalı süre tahmini |
-
-### Menü Seçenekleri
-
-| Seçenek | Açıklama | Kullanım Senaryosu |
-|---------|----------|-------------------|
-| **A** | Değişen kodları test et | local_search.py güncellendiğinde |
-| **B** | Eksik testleri tamamla | Yeni problem/strateji eklendiğinde |
-| **C** | Hızlı mod | Hızlı doğrulama için |
-| **D** | Kapsamlı test | Tam raporlama için |
-| **E** | Özel seçim | Belirli testler için |
-| **S** | Detay modu | Problem bazlı sonuç görüntüleme |
-| **H** | Algoritma bilgileri | Algoritma detayları |
-| **Q** | Çıkış | - |
-
-### Önbellek Seçenekleri (Cache Options)
-
-Test öncesi özette, daha önce yapılmış testler varsa şu seçenekler sunulur:
-
-| Seçenek | Açıklama | Kullanım |
-|---------|----------|----------|
-| **[S] Atla** | Sadece yeni testleri yap | Önerilen - zaman kazandırır |
-| **[R] Yenile** | Tüm testleri baştan yap | Mevcut sonuçları geçersiz kılar |
-| **[A] Arttır** | Mevcut sonuçlara yeni koşumlar ekle | Daha fazla istatistik için |
-
----
-
-## 🔧 Yapılan Düzeltmeler
-
-### 1. IndexError Sorunu (Kritik)
-
-**Sorun:** LIN105 ve diğer problemlerde `list index out of range` hatası
-
-**Kök Neden:** TSPLIB 1-based indeksleme kullanırken, Python listeleri 0-based'dir. Bounds checking yoktu.
-
-**Çözüm:** `compute_tour_length()` ve `calculate_tour_length()` fonksiyonlarına güvenli indeksleme eklendi:
-
-```python
-def safe_get_coord(idx: int):
-    """Safe coordinate access with bounds checking"""
-    real_idx = idx - 1 if idx > 0 else idx
-    if 0 <= real_idx < n_coords:
-        return coordinates[real_idx]
-    return None
-```
-
-**Etkilenen Dosyalar:**
-- `dataset_loader.py` (satır 92-152)
-- `run_interactive_benchmark.py` (satır 453-495)
-- `run_interactive_benchmark_v2.py` (satır 316-358)
-
-### 2. Negatif GAP Değerleri Sorunu (Kritik)
-
-**Sorun:** EIL76 için -16.17%, ST70 için -12.74% gibi imkansız negatif GAP değerleri
-
-**Kök Neden:** 
-- V1'de MEDIUM ve LARGE problemlerin koordinatları algoritmik olarak üretiliyordu
-- Hardcoded optimal değerler bu üretilmiş koordinatlarla uyuşmuyordu
-- Örnek: `PR226` için optimal=80369 ama koordinatlar `(i*100 + (i % 17) * 23, ...)` formülüyle üretiliyordu
-
-**Çözüm:** V2 öncelikli kullanım - gerçek TSPLIB dosyaları GitHub'dan indiriliyor
-
-```python
-# run_smart_benchmark.py - V2 öncelikli import
-try:
-    from optimizer_api.tests.run_interactive_benchmark_v2 import (...)
-    USE_V2 = True
-except ImportError:
-    from optimizer_api.tests.run_interactive_benchmark import (...)
-    USE_V2 = False
-```
-
-**Etkilenen Dosyalar:**
-- `run_smart_benchmark.py` (satır 15-35)
-- `dataset_loader.py` (satır 10-35, 171-211)
-
-### 3. Koordinat Tutarlılığı
-
-**Sorun:** V1'de MEDIUM ve LARGE problemler gerçek TSPLIB koordinatlarını içermiyordu
-
-**Çözüm:** `run_interactive_benchmark_v2.py` ile:
-- TSPLIB dosyaları `https://raw.githubusercontent.com/mastqe/tsplib/master/` adresinden indiriliyor
-- Dosyalar `tsplib_data/` klasörüne cache'leniyor
-- Gerçek koordinatlar parse ediliyor
-
----
-
-## 🔄 Çalışma Akışı
-
-### Benchmark Çalıştırma Süreci
-
-```
-1. run_smart_benchmark.py başlatılır
-           │
-           ▼
-2. Algoritma dosyalarının hash'leri kontrol edilir
-   (local_search.py, split_decoder.py, vb.)
-           │
-           ▼
-3. Problemler yüklenir (V2 öncelikli)
-   - GitHub'dan TSPLIB .tsp dosyaları indirilir
-   - Koordinatlar parse edilir
-   - Optimal değerler atanır
-           │
-           ▼
-4. Kullanıcı menüden seçim yapar
-   [A] Değişen kodları test et
-   [B] Eksik testleri tamamla
-   [C] Hızlı mod (küçük problemler)
-   [D] Kapsamlı test
-   [E] Özel seçim
-   [S] Detay modu
-   [H] Algoritma bilgileri
-   [Q] Çıkış
-           │
-           ▼
-5. Test öncesi özet gösterilir
-   - Problem/algoritma sayısı
-   - Tahmini süre
-   - Onay beklenir
-           │
-           ▼
-6. Her problem için her strateji çalıştırılır
-   - 3 farklı seed ile test
-   - HER ALGORİTMA SONUCU ANINDA KAYDEDİLİR
-   - Progress gösterilir
-           │
-           ▼
-7. Sonuçlar kaydedilir
-   - latest_metadata.json (önbellek)
-   - history/smart_run_TIMESTAMP.csv (geçmiş)
-```
-
-### Ctrl+C ile Güvenli Çıkış Akışı
-
-```
-Kullanıcı Ctrl+C'e basar
-           │
-           ▼
-signal_handler() tetiklenir
-           │
-           ▼
-_shutdown_requested = True
-           │
-           ▼
-Mevcut sonuçlar kaydedilir:
-   - latest_metadata.json güncellenir
-   - interrupted_TIMESTAMP.csv oluşturulur
-           │
-           ▼
-"Güvenli çıkış yapıldı" mesajı
-```
-
-### TSPLIB Dosyası İndirme Akışı
-
-```
-load_tsplib_problem("berlin52", 7542, "small")
-           │
-           ▼
-download_tsplib_file("berlin52")
-           │
-           ├── tsplib_data/berlin52.tsp var mı?
-           │       │
-           │       ├── EVET → Dosya yolunu döndür
-           │       │
-           │       └── HAYIR → İndir
-           │               │
-           │               ▼
-           │       https://raw.githubusercontent.com/mastqe/tsplib/master/berlin52.tsp
-           │               │
-           │               ▼
-           │       tsplib_data/berlin52.tsp olarak kaydet
-           │
-           ▼
-parse_tsplib_file(filepath)
-           │
-           ├── NAME: berlin52
-           ├── DIMENSION: 52
-           ├── NODE_COORD_SECTION
-           │       1 565.0 575.0
-           │       2 25.0 185.0
-           │       ...
-           │
-           ▼
-TSPLIBProblem(
-    name="berlin52",
-    dimension=52,
-    optimal=7542,
-    coordinates=[(565,575), (25,185), ...],
-    category="small",
-    source="tsplib"
-)
-```
-
----
-
-## 📖 Kullanım Kılavuzu
-
-### Hızlı Başlangıç
-
-```bash
-# Proje dizinine git
-cd /home/z/my-project/academic_benchmark
-
-# Benchmark'ı çalıştır
-python run_smart_benchmark.py
-```
-
-### Benchmark Profili Seçimi
-
-Benchmark runner, `BENCHMARK_PROFILE` ortam değişkenini okuyarak profil seçer. Varsayılan profil `quality_first`'tir.
-
-| Profil | Açıklama |
-|--------|----------|
-| `quality_first` | Paper/rapor odaklı varsayılan profil. Meta-sezgiseller daha güçlü bütçelerle çalışır ve final local search rafinmanı uygular. |
-| `baseline` | Karşılaştırma için daha muhafazakar profil. Klasik bütçe davranışını görmek için kullanılır. |
-
-PowerShell örnekleri:
-
-```powershell
-$env:BENCHMARK_PROFILE = "quality_first"
-python academic_benchmark/run_smart_benchmark_numba.py
-```
-
-```powershell
-$env:BENCHMARK_PROFILE = "baseline"
-python academic_benchmark/run_smart_benchmark_numba.py
-```
-
-Kalıcı ayar için:
-
-```powershell
-setx BENCHMARK_PROFILE quality_first
-```
-
-### Benchmark Profili Davranışı
-
-- `baseline`: Daha küçük popülasyon ve iterasyon sayılarıyla çalışır.
-- `quality_first`: Daha yüksek bütçe, daha iyi başlangıç adayları ve final local search rafinmanı kullanır.
-- İki profil de aynı benchmark akışını kullanır; fark sadece arama bütçesi ve son iyileştirme aşamasındadır.
-
-### Algoritma Durum Sembolleri
-
-| Sembol | Durum | Anlam |
-|--------|-------|-------|
-| ✅ | GUNCEL | Dosya değişmedi, önbellek geçerli |
-| ⚠️ | DEGISMIS | Dosya değişti, yeniden test önerilir |
-| ✨ | YENI | Dosya yeni eklendi, test edilmemiş |
-| ❌ | DOSYA_YOK | Dosya bulunamadı |
-
-### Test Sonuç Durumu
+### 1.4 Sonuç Değerlendirme Sembolleri
 
 | Sembol | GAP | Anlam |
 |--------|-----|-------|
@@ -374,316 +68,392 @@ setx BENCHMARK_PROFILE quality_first
 | ○ | ≤ 10% | Orta |
 | ✗ | > 10% | Zayıf |
 
-### Özel Seçim Modu [E]
-
-#### Problem Seçimi
-
-| Giriş | Anlamı |
-|-------|-------|
-| `1, 3, 5` | Tekil seçim |
-| `5-8` | Aralık seçimi (5, 6, 7, 8) |
-| `all`, `tüm`, `hepsi` | Tüm problemler |
-| `k`, `küçük`, `kucuk`, `small` | Küçük problemler (n≤100) |
-| `o`, `orta`, `medium` | Orta problemler (100<n≤500) |
-| `b`, `büyük`, `buyuk`, `large` | Büyük problemler (n>500) |
-
-**Cache Durumu Gösterimi:**
-- `✓` = Tüm algoritmalar test edilmiş
-- `(3/5)` = 5 algoritmadan 3'ü test edilmiş
-- Boş = Hiç test edilmemiş
-
-**Örnek:**
-```
-[KÜÇÜK PROBLEMLER]
-   1. eil51        (n=51   ) ✓
-   2. berlin52     (n=52   ) (3/5)
-   3. st70         (n=70   )
-```
-
-#### Algoritma Seçimi
-
-| Giriş | Anlamı |
-|-------|-------|
-| `1, 2, 4` | Tekil seçim |
-| `1-3` | Aralık seçimi (1, 2, 3) |
-| `all`, `tüm` | Tüm algoritmalar |
-
-**Karmaşıklık Gösterimi:**
-```
-   1. 2-opt      [O(n²)]
-   2. 3-opt      [O(n³)]
-   3. Or-opt     [O(n²)]
-   4. Swap       [O(n²)]
-   5. Hybrid     [O(n³)]
-```
+**Bilinmeyen optimal problemler için:** `BSF Gap` gösterilir — mevcut çalıştırmadaki en iyi çözüme göre relatif fark.
 
 ---
 
-## ⚠️ Güncelleme Yaparken Dikkat Edilmesi Gerekenler
+## 2. Kurulum ve Çalıştırma
 
-### 1. Yeni Problem Eklerken
-
-**Dosya:** `run_interactive_benchmark_v2.py` - `TSPLIB_PROBLEMS` dict
-
-```python
-TSPLIB_PROBLEMS = {
-    "small": [
-        ("yeni_problem", 12345),  # (problem_adı, optimal_değer)
-        ...
-    ],
-    ...
-}
-```
-
-**Dikkat Edilmesi Gerekenler:**
-- Problem adı TSPLIB'de var olmalı: https://github.com/mastqe/tsplib
-- Optimal değer doğru olmalı (TSPLIB dokümantasyonundan doğrulayın)
-- Kategori boyuta göre doğru seçilmeli (small ≤100, medium ≤500, large ≤2000)
-
-### 2. Yeni Local Search Stratejisi Eklerken
-
-**Dosyalar:**
-1. `optimizer_api/utils/local_search.py` - Algoritma implementasyonu (MERKEZİ KONUM)
-2. `optimizer_api/tests/run_interactive_benchmark_v2.py` - STRATEGIES listesi
-3. `academic_benchmark/run_smart_benchmark.py` - ALGORITHM_INFO dict
-
-**Adımlar:**
-
-```python
-# 1. optimizer_api/utils/local_search.py - Yeni sınıf ekle
-class YeniLocalSearch(BaseLocalSearch):
-    def improve(self, route, duration_func):
-        # Implementasyon
-        pass
-
-# 2. optimizer_api/utils/local_search.py - LocalSearchType enum'a ekle
-class LocalSearchType(str, Enum):
-    YENI_ALGO = "yeni_algo"
-    ...
-
-# 3. optimizer_api/utils/local_search.py - get_local_search()'e ekle
-ls_map = {
-    LocalSearchType.YENI_ALGO: YeniLocalSearch,
-    ...
-}
-
-# 4. optimizer_api/tests/run_interactive_benchmark_v2.py - STRATEGIES'e ekle
-STRATEGIES = [
-    ("Yeni-Algo", LocalSearchType.YENI_ALGO, 500),  # (isim, tip, max_iter)
-    ...
-]
-
-# 5. academic_benchmark/run_smart_benchmark.py - ALGORITHM_INFO'ya ekle
-ALGORITHM_INFO = {
-    "Yeni-Algo": {
-        "name": "Yeni-Algo",
-        "description": "Açıklama",
-        "complexity": "O(n²)",
-        "best_for": "Kullanım senaryosu",
-        "how_it_works": "Çalışma prensibi",
-        "iterations": 500,
-    },
-    ...
-}
-```
-
-**Önemli:** `local_search.py` dosyası `optimizer_api/utils/` klasöründe olmalıdır. Bu dosya merkezi konumdadır ve hem benchmark sistemi hem de diğer modüller tarafından kullanılır.
-
-### 3. Dosya Yolu Değişikliklerinde
-
-**ALGORITHMS_TO_CHECK** dict'i güncelleyin:
-
-```python
-# run_smart_benchmark.py
-ALGORITHMS_TO_CHECK = {
-    "LocalSearchEngine": "optimizer_api/utils/local_search.py",
-    "SplitDecoder": "optimizer_api/utils/split_decoder.py",
-    # Yeni dosya eklemek için:
-    "YeniModul": "optimizer_api/utils/yeni_modul.py",
-}
-```
-
-### 4. TSPLIB Kaynağı Değişikliği
-
-**Dosya:** `run_interactive_benchmark_v2.py`
-
-```python
-TSPLIB_BASE_URL = "https://raw.githubusercontent.com/mastqe/tsplib/master/"
-```
-
-**Alternatif Kaynaklar:**
-- http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/
-- http://elib.zib.de/pub/mp-testdata/tsp/tsplib/tsp/
-
-### 5. Test Sayısını Değiştirme
-
-```python
-# run_interactive_benchmark_v2.py
-N_RUNS = 3  # Her problem için çalıştırma sayısı
-```
-
-### 6. Önbelleği Temizleme
+### 2.1 Bağımlılıklar
 
 ```bash
-# TSPLIB dosyalarını temizle
-rm -rf optimizer_api/tests/tsplib_data/*
-
-# Test sonuçlarını temizle
-rm academic_benchmark/benchmark_db/latest_metadata.json
-
-# Geçmişi temizle
-rm -rf academic_benchmark/benchmark_db/history/*
+pip install numpy numba scipy streamlit plotly pandas
 ```
 
----
+### 2.2 Çalışma Modları
 
-## 🔍 Sorun Giderme
+Her iki motor da iki modda çalışır:
 
-### IndexError: list index out of range
+| Mod | Açıklama | Kullanım |
+|-----|----------|----------|
+| **DEFAULT** | Adaptif varsayılan parametrelerle doğrudan benchmark | Final performans değerlendirmesi |
+| **TUNING** | Parametre optimizasyonu → en iyi parametrelerle benchmark | Parametre optimizasyonu |
 
-**Belirti:** LIN105 veya diğer problemlerde crash
+### 2.3 Tuning Stratejileri
 
-**Çözüm:** 
-- `calculate_tour_length()` fonksiyonunun güncel olduğundan emin olun
-- Bounds checking ekli olmalı
+TUNING modunda 3 strateji mevcuttur:
 
-### Negatif GAP Değerleri
+| Strateji | Açıklama | Avantaj | Dezavantaj |
+|----------|----------|---------|------------|
+| **[G] Grid Search** | Tüm kombinasyonları test eder, en iyi testi seçer | Kapsamlı, deterministik | Çok yavaş (kombinasyon sayısı üssel) |
+| **[F] Fractional** | Grid'den random alt-örneklem | Daha hızlı | Optimal kombinasyonu kaçırabilir |
+| **[B] Bayesian (Optuna)** | TPE surrogate model, test edilmemiş noktaları keşfeder | En iyi sonuç, arada değer bulur | Probabilistik, tekrarlar farklı sonuç verebilir |
 
-**Belirti:** -10%, -20% gibi imkansız sonuçlar
+**Optuna vs Response Surface (Design-Expert) Karşılaştırması:**
 
-**Çözüm:**
-1. V2'nin kullanıldığından emin olun (`USE_V2 = True`)
-2. TSPLIB dosyalarının doğru indirildiğini kontrol edin
-3. `tsplib_data/` klasörünü temizleyip yeniden indirin
+| Özellik | Optuna (TPE) | Response Surface (Design-Expert) |
+|---------|-------------|----------------------------------|
+| **Model** | Probabilistik (kernel density) | Deterministik (kuadratik polinom) |
+| **Optimum konumu** | Uzayda herhangi bir yer | Kuadratik yüzey ile sınırlı |
+| **Kategorik parametreler** | Doğal destek | Dummy değişkenler gerekir |
+| **Doğrusal olmayan etkileşimler** | Karmaşık paternleri yakalar | Sadece kuadratik etkileşimler |
+| **Örnek verimliliği** | Yüksek (adaptif örnekleme) | Yapılandırılmış tasarım noktaları gerekir |
+| **Çıktı** | En iyi nokta + belirsizlik | Denklem: y = β₀ + Σβᵢxᵢ + Σβᵢᵢxᵢ² |
 
-### ImportError
+> **Not:** Meta-sezgisel algoritma tuning için Optuna genellikle daha iyidir çünkü yanıt yüzeyleri nadiren kuadratiktir — platolar, uçurumlar ve düzensiz bölgeler içerir. Pratikte Optuna, grid noktaları arasında arama yapabildiği ve kategorik parametreleri doğal olarak işleyebildiği için %5-15 daha iyi çözümler bulur. Response Surface yalnızca akademik analiz için analitik denklem gerekiyorsa eklenmelidir (örn. "population_size en güçlü ana etkiye sahiptir, β=0.42").
 
-**Belirti:** Module not found hataları
+### 2.4 Problem Sıralama
 
-**Çözüm:**
+Problemler boyutlarına göre küçükten büyüğe sıralanır:
+
+```
+[01] eil51      n=   51  Optimal: 426       [small ]
+[02] berlin52   n=   52  Optimal: 7542      [small ]
+[03] eil76      n=   76  Optimal: 538       [small ]
+[04] kroA100    n=  100  Optimal: 21282     [small ]
+...
+[15] pr1002     n= 1002  Optimal: 259045    [large ]
+```
+
+Bu sıralama, kullanıcıların küçük problemlerle başlayıp kademeli olarak büyük problemlere geçmesini kolaylaştırır.
+
+### 2.5 CLI Argümanları
+
+| Argüman | Açıklama | Örnek |
+|---------|----------|-------|
+| `--mode` | Çalışma modu (`default` veya `tuning`) | `--mode default` |
+| `--algos` | Virgülle ayrılmış algoritma listesi | `--algos GA,PSO,E2BSO-TSP` |
+| `--problems` | Virgülle ayrılmış problem listesi | `--problems berlin52,eil51` |
+| `--select` | Evrensel problem seçim sentaksı | `--select "small,medium"` |
+| `--runs` | Tekrar sayısı | `--runs 5` |
+| `--size-limit` | Maksimum problem boyutu | `--size-limit 200` |
+| `--workers` | Paralel worker sayısı | `--workers 4` |
+
+### 2.4 Örnek Komutlar
+
 ```bash
-# Proje kök dizininden çalıştırın
-cd /home/z/my-project
-python academic_benchmark/run_smart_benchmark.py
+# Numba motoru — DEFAULT mod, GA+PSO, 3 tekrar, n≤150
+python academic_benchmark/master_numba_engine.py --mode default --algos GA,PSO --runs 3 --size-limit 150
+
+# SOTA motoru — TUNING mod, tüm algoritmalar
+python academic_benchmark/master_sota_engine.py --mode tuning --runs 3
+
+# Interaktif menü (varsayılan)
+python academic_benchmark/master_numba_engine.py
+python academic_benchmark/master_sota_engine.py
 ```
 
-### Ağ Bağlantı Hatası
+### 2.6 E2BSO-TSP vs E2BSO-TSP-CPSO
 
-**Belirti:** TSPLIB dosyaları indirilemiyor
-
-**Çözüm:**
-1. İnternet bağlantısını kontrol edin
-2. GitHub erişilebilirliği kontrol edin
-3. Proxy gerekiyorsa ayarlayın
-
-### Sonuçlar Kayboldu
-
-**Belirti:** Ctrl+C sonrası veya crash sonrası sonuçlar yok
-
-**Çözüm:**
-- Yeni versiyonda her algoritma sonucu anında kaydedilir
-- `benchmark_db/history/` klasöründe `interrupted_*.csv` dosyasını kontrol edin
+| Özellik | E2BSO-TSP (Edge-Heritage) | E2BSO-TSP-CPSO (Canonical PSO) |
+|---------|--------------------------|-------------------------------|
+| **Swarm Update** | Edge-force injection (3-5 kenar) | Swap-sequence velocity (v = w·v + c1·r1·Δpbest + c2·r2·Δgbest) |
+| **Parametreler** | `p_best`, `p_gbest`, `n_edges` | `c1`, `c2`, `inertia`, `velocity_max_ratio` |
+| **DoE Uzayı** | gamma, injection_rate, remove_ratio | c1:[1.0,1.5,2.0], c2:[1.0,1.5,2.0], inertia:[0.5,0.7,0.9] |
+| **Kullanım** | TSP-native, kenar yapısına odaklı | Genel amaçlı, momentum tabanlı yakınsama |
 
 ---
 
-## 🚀 Genişletme Rehberi
+## 3. Sonuç Yönetimi
 
-### Yeni Kategori Ekleme
+### 3.1 Çıktı Dosyaları
 
-```python
-# run_interactive_benchmark_v2.py
-TSPLIB_PROBLEMS = {
-    "small": [...],
-    "medium": [...],
-    "large": [...],
-    "xlarge": [  # Yeni kategori
-        ("d2103", 80450),
-        ("u2319", 234256),
-    ]
-}
+| Dosya | Konum | İçerik |
+|-------|-------|--------|
+| `benchmark_summary.csv` | `sota_results/` veya `numba_results/` | Agrega sonuçlar (ortalama gap, süre) |
+| `benchmark_progress.csv` | `sota_results/` veya `numba_results/` | Ham çalışma verileri (box-plot için) |
+| `tuning_progress.csv` | `sota_results/doe_sota/` veya `numba_results/doe/` | DoE tarama sonuçları |
+| `metadata.json` | `benchmark_db/` | Önbellek durumu, hash takibi |
+| `smart_*.csv` | `benchmark_db/history/` | Convergence profilleri |
+| `param_db.json` | `benchmark_db/` | En iyi parametre kayıtları |
+| `tsplib.db` | `tsplib_data/` | SQLite: problemler, mesafe matrisleri, en iyi çözümler |
 
-# Kategori belirleme fonksiyonunu güncelle
-def determine_category(dimension):
-    if dimension <= 100:
-        return "small"
-    elif dimension <= 500:
-        return "medium"
-    elif dimension <= 2000:
-        return "large"
-    else:
-        return "xlarge"
+### 3.2 CSV Şemaları
+
+**benchmark_summary.csv:**
+```
+problem, strategy, avg_length, avg_gap, avg_time_ms, n_runs
 ```
 
-### Özel Mesafe Fonksiyonu Ekleme
+**benchmark_progress.csv:**
+```
+timestamp, problem, strategy, avg_length, avg_gap, avg_time_ms, n_runs, result_type, params_json
+```
+- `result_type = "raw"`: tekil çalışma (SOTA motoru)
+- `result_type = "aggregate"`: parametre combo ortalaması (Numba motoru)
 
-```python
-def custom_distance(p1, p2):
-    """Özel mesafe hesaplama (örn: Haversine)"""
-    # Implementasyon
-    return distance
+### 3.3 Önbellek ve Devam Ettirme
 
-def calculate_tour_length(tour, coordinates, distance_func=tsplib_distance):
-    # distance_func parametresi eklendi
-    ...
+- `metadata.json` dosya hash'lerini takip eder — kod değişince otomatik yeniden test
+- `skip_cached=True` ile tamamlanmış çalışmalar atlanır
+- `Ctrl+C` ile güvenli çıkış — tamamlanan sonuçlar kaydedilir
+- Yarım kalan çalışmalar `interrupted_*.csv` olarak kaydedilir
+
+### 3.4 TSPLIB SQLite DB
+
+`tsplib_manager.py` ile yönetilir:
+
+```bash
+# Problemleri arşivden çıkar (tek sefer)
+python academic_benchmark/tsplib_manager.py extract
+
+# Mesafe matrislerini önceden hesapla (tek sefer, ~5-15 dk)
+python academic_benchmark/tsplib_manager.py compute-dm
+
+# Durum kontrolü
+python academic_benchmark/tsplib_manager.py status
 ```
 
-### Performans Metrikleri Ekleme
-
-```python
-# run_smart_benchmark.py - Sonuç dict'ine ekle
-result = {
-    ...
-    "memory_usage_mb": memory_usage,
-    "iterations": iterations,
-    "convergence_rate": convergence_rate,
-}
-```
+DB tabloları:
+- `problems`: problem metadata (ad, boyut, optimal, edge_weight_type)
+- `coordinates`: düğüm koordinatları
+- `distance_matrices`: önceden hesaplanmış mesafe matrisleri (zlib sıkıştırılmış)
+- `opt_tours`: bilinen optimal turlar
+- `best_solutions`: benchmark sırasında bulunan en iyi çözümler
 
 ---
 
-## 📊 Bilinen TSPLIB Optimal Değerleri
+## 4. Developer Guide
 
-| Problem | Boyut | Optimal | Kategori |
-|---------|-------|---------|----------|
-| berlin52 | 52 | 7542 | small |
-| eil51 | 51 | 426 | small |
-| eil76 | 76 | 538 | small |
-| st70 | 70 | 675 | small |
-| kroA100 | 100 | 21282 | small |
-| kroC100 | 100 | 20749 | small |
-| eil101 | 101 | 629 | small |
-| lin105 | 105 | 14379 | small |
-| kroA150 | 150 | 26524 | medium |
-| kroA200 | 200 | 29368 | medium |
-| pr226 | 226 | 80369 | medium |
-| pr439 | 439 | 107217 | medium |
-| d493 | 493 | 35002 | large |
-| u724 | 724 | 41910 | large |
-| rat783 | 783 | 8806 | large |
-| pr1002 | 1002 | 259045 | large |
+### 4.1 Yeni Algoritma Ekleme (5 Adım)
+
+**Adım 1:** Solver sınıfını yazın (`sota_tsp/yeni_algo.py` veya `bildiri2026/core/yeni_algo.py`)
+
+```python
+from .base_solver import BaseTSPSolver, TSPResult
+
+@dataclass
+class YeniAlgoConfig:
+    population_size: int = 40
+    max_iterations: int = 500
+    seed: int = 42
+
+class YeniAlgo(BaseTSPSolver):
+    def __init__(self, config=None):
+        super().__init__("YeniAlgo", config.seed if config else 42)
+        self.cfg = config or YeniAlgoConfig()
+
+    def solve(self, coordinates):
+        self._set_problem(coordinates)
+        # ... algoritma implementasyonu ...
+        return TSPResult(algorithm="YeniAlgo", tour=best, tour_length=best_cost, ...)
+```
+
+**Adım 2:** `sota_tsp/__init__.py` (veya `bildiri2026/core/__init__.py`) içine export ekleyin
+
+```python
+from .yeni_algo import YeniAlgo, YeniAlgoConfig
+__all__ = [..., "YeniAlgo", "YeniAlgoConfig"]
+```
+
+**Adım 3:** `master_sota_engine.py` (veya `master_numba_engine.py`) içinde:
+
+```python
+# ALL_ALGOS listesine ekle
+ALL_ALGOS = [..., "YENI-ALGO"]
+
+# _make_solver_config'e ekle
+"YENI-ALGO": {"population_size": pop, "max_iterations": max_iter, ...}
+
+# _build_sota_parameter_space'e ekle
+if algo_name == "YENI-ALGO":
+    return {"population_size": [24, 36, 48], ...}
+
+# _make_solver factory'e ekle
+if algo_name == "YENI-ALGO":
+    return YeniAlgo(YeniAlgoConfig(seed=seed, **cfg))
+```
+
+**Adım 4:** Test yazın (`tests/test_yeni_algo.py`)
+
+**Adım 5:** Testleri çalıştırın
+
+```bash
+python -m pytest academic_benchmark/tests/ -v --tb=short
+```
+
+### 4.2 Yeni Problem Ekleme
+
+TSPLIB problemleri `ALL_tsp.tar.gz` arşivinden otomatik yüklenir. Manuel eklemek için:
+
+```bash
+# Tek bir problem ekle
+python academic_benchmark/tsplib_manager.py extract --problems berlin52
+
+# Boyut limiti ile
+python academic_benchmark/tsplib_manager.py extract --size-limit 200
+```
+
+Özel time_matrix JSON problemleri için `academic_benchmark/data/` klasörüne JSON dosyası ekleyin.
+
+### 4.3 Test Çalıştırma
+
+```bash
+# Tüm testler
+python -m pytest academic_benchmark/tests/ -v --tb=short
+
+# Belirli test dosyası
+python -m pytest academic_benchmark/tests/test_sota_e2e.py -v
+
+# Coverage ile
+python -m pytest academic_benchmark/tests/ --cov=academic_benchmark
+```
+
+### 4.4 Sorun Giderme
+
+| Sorun | Çözüm |
+|-------|-------|
+| `ImportError: No module named ...` | Proje kökünden çalıştırın (`cd UniRide`) |
+| `Gap: ERR` veya `nan` | Problem `TSPLIB_OPTIMALS` dict'inde yok — BSF Gap gösterilir |
+| `Matrix comes back None` | `tsplib_manager.py compute-dm` çalıştırın |
+| `Numba compilation error` | `pip install --upgrade numba numpy` |
+| `ProcessPoolExecutor hang` | `--workers 1` ile tek worker deneyin |
+| `Streamlit dashboard açılmıyor` | `pip install streamlit plotly scipy` |
 
 ---
 
-## 📝 Versiyon Geçmişi
+## 5. Görselleştirme (Dashboard)
+
+### 5.1 Çalıştırma
+
+```bash
+streamlit run academic_benchmark/dashboard.py
+```
+
+Veya engine menüsünden `[D] Dashboard` seçeneğini kullanın.
+
+### 5.2 Sekmeler
+
+| Sekme | İçerik |
+|-------|--------|
+| 🏆 **Leaderboard & LaTeX** | Performans özeti, en iyi değerler yeşil, LaTeX export |
+| 📊 **Statistical Robustness** | Box-plot ile varyans analizi (çoklu çalıştırma verisi) |
+| 🎛️ **DoE Parameter Analysis** | Parametre tarama sonuçları, scatter plot |
+| 🔬 **Wilcoxon Test** | Pairwise istatistiksel anlamlılık testi (p < 0.05) |
+| 📉 **Convergence Curves** | İterasyon bazlı yakınsama grafikleri |
+| ⚔️ **Algorithm Comparison** | Pairwise gap karşılaştırma matrisi (all vs all) |
+
+### 5.3 LaTeX Export
+
+Dashboard otomatik olarak makale-hazır LaTeX tabloları üretir:
+- `booktabs` formatı (journal için)
+- `longtable` formatı (çok satır için)
+- En iyi değerler `\textbf{}` ile vurgulanır
+- Wilcoxon test sonuçları LaTeX formatında
+
+---
+
+## 6. Academic Methodology (English)
+
+### 6.1 Classical Paper Methodology
+
+*The following section is adapted from `CLASSICAL_PAPER_METHODOLOGY.md` and is ready for inclusion in academic publications.*
+
+To rigorously evaluate the performance of classical meta-heuristic algorithms (e.g., Genetic Algorithm, Particle Swarm Optimization, Grey Wolf Optimizer, and Harris Hawks Optimization) on the Traveling Salesman Problem (TSP), a custom, high-performance computational infrastructure was developed. This custom-built "Numba-Accelerated Benchmark Engine" was designed to bridge the gap between high-level algorithmic flexibility and low-level computational efficiency, establishing a standardized environment for fair comparative analysis.
+
+#### 6.1.1 JIT-Optimized Meta-heuristic Implementation
+
+A primary challenge in benchmarking complex meta-heuristics using high-level interpreted languages, such as Python, is the inherent execution overhead that can skew computational time analyses. To resolve this, the proposed framework integrates Just-In-Time (JIT) compilation technology via the Numba library. Core algorithmic routines, including fitness evaluations, population updates, and local search operations, were compiled directly into optimized machine code (`@njit(nogil=True)`). This approach effectively eliminated interpreter latency, achieving execution speeds comparable to native C++ implementations while preserving the dynamic adaptability required for algorithmic modifications.
+
+To maintain strict computational rigor, a mandatory "Warm-up" protocol was instituted. Since JIT compilation requires an initial overhead during the first execution of any compiled function, this compilation time was explicitly isolated and excluded from all benchmark measurements. Consequently, the reported execution times strictly reflect the mathematical efficiency and convergence speed of the algorithms, rather than the underlying language mechanics.
+
+#### 6.1.2 Parameter Standardization via Design of Experiments
+
+In heuristic-based optimization, algorithm performance is highly sensitive to hyperparameter configurations. To eliminate human bias and prevent overfitting to specific problem topologies, hyperparameters were neither manually selected nor randomly assigned. Instead, a rigorous "Design of Experiments" (DoE) methodology was implemented.
+
+Prior to the formal benchmarking phase, a dedicated DoE module performed a systematic grid search across the multidimensional parameter space of each algorithm. This procedure evaluated various combinations of parameters across a representative subset of TSPLIB instances. The configurations yielding the optimal balance between solution quality (gap percentage) and convergence stability were extracted and uniformly applied during the final evaluation phase.
+
+#### 6.1.3 Parallel Execution and Computational Stability
+
+Given the combinatorial explosion inherent to the TSP and the necessity for statistically significant trial repetitions, the framework was engineered for massive scalability. A robust, Windows-safe parallel processing architecture was deployed utilizing a `ProcessPoolExecutor`. Unlike traditional multi-processing models that are prone to memory leaks and synchronization deadlocks on certain operating systems, this isolated memory-space approach ensured high throughput and process stability across multi-core architectures.
+
+Furthermore, strict protocols for data integrity and reproducibility were established. An incremental result persistence mechanism was designed to log experimental outputs (e.g., route lengths, convergence gaps, and execution times) into distinct Comma-Separated Values (CSV) files in real time. This was coupled with a metadata-driven state management system (`metadata.json`) that continuously tracked the execution status of the benchmark matrix.
+
+### 6.2 SOTA Paper Methodology
+
+*The following section is adapted from `SOTA_PAPER_METHODOLOGY.md` and is ready for inclusion in academic publications.*
+
+To ensure a high-fidelity evaluation of complex, modern solvers for the Traveling Salesman Problem (TSP)—specifically State-of-the-Art (SOTA) algorithms such as E²BSO, R²DMA, P-AOEA, CGO, and RUN—a custom "Unified SOTA Benchmark Engine" was conceptualized and developed.
+
+#### 6.2.1 Unified Evaluation Framework for SOTA Solvers
+
+Evaluating SOTA algorithms necessitates an architecture that accommodates significant variations in algorithmic complexity, structural memory footprints, and search paradigms. The developed framework employs a consolidated architectural pattern, standardizing the input-output interfaces across entirely different solver topologies.
+
+To bridge the operational differences between these algorithms, an adaptive evaluation methodology was introduced. This methodology incorporates dynamically assigned local search budgets and time-matrix integrations, ensuring that algorithms are not only tested under idealized distance models but also under realistic, varied constraint scenarios.
+
+#### 6.2.2 Algorithmic Adaptations for Large-Scale Stability
+
+While the core generative mechanisms and mathematical operators of E²BSO, R²DMA, P-AOEA, CGO, and RUN were strictly preserved to ensure theoretical fidelity, several critical architectural adaptations were engineered to facilitate large-scale, production-grade execution:
+
+1. **Adaptive Local Search Budgets:** Canonical implementations frequently rely on unbounded local search neighborhoods. On massive instances (exceeding 1,000 nodes), this induces a combinatorial explosion (O(N²) to O(N³)), leading to severe computational deadlocks. To resolve this, a dimension-adaptive budget manager was integrated, dynamically bounding search depths based on the problem size (N).
+
+2. **Distance Metric Agnosticism (Asymmetric Capability):** Original SOTA solvers are predominantly hardcoded to process symmetric 2D Euclidean spatial graphs. Our framework abstracts the evaluation objective function entirely, rendering the solvers "metric agnostic." This adaptation allows the algorithms to seamlessly transition from standard TSPLIB Euclidean calculations to processing custom, non-Euclidean, and asymmetric real-world transit networks.
+
+3. **Dynamic Parameter Abstraction:** In conventional academic codebases, hyperparameters are typically hardcoded or statically assigned. Our implementation entirely decoupled the hyperparameter definitions from the core solver logic. By abstracting variables into a dynamic `StrategySpec` payload, the algorithms were rendered fully compatible with our external Design of Experiments (DoE) module.
+
+---
+
+## 7. Roadmap & Future Work
+
+### 7.1 RL Parameter Control (Öncelikli — 3. Makale Adayı)
+
+**Durum:** Tasarım aşamasında. Detaylar için `.opencode/plans/2026-05-15-docs-dashboard-roadmap-plan.md`
+
+**Özet:** Q-Learning tabanlı dinamik parametre adaptasyonu. Algoritma çalışırken stagnasyon, çeşitlilik ve gap durumuna göre mutation rate, popülasyon boyutu ve local search bütçesini otomatik ayarlar.
+
+**Mimari:**
+- **State space:** 144 durum (çeşitlilik × stagnasyon × gap × ilerleme)
+- **Action space:** 6 aksiyon (↑mutation, ↓mutation, ↑ls, ↓ls, ↑exploration, ↓exploration)
+- **Reward:** `-Δgap` (iyileşme = pozitif ödül)
+
+**Tahmini süre:** 2-3 hafta
+**Makale potansiyeli:** Yüksek — RL tabanlı meta-sezgisel kontrol TSP literatüründe az çalışılmış bir alandır.
+
+### 7.2 LKH-3 Entegrasyonu (Gelecek Çalışma Notu)
+
+**Durum:** Düşük öncelikli, not olarak saklanmıştır.
+
+**Özet:** Lin-Kernighan-Helsgaun (LKH-3) heuristic'inin local search operatörü olarak entegrasyonu.
+
+**Değerlendirme:**
+- n > 2000 problemlerde ~1-2% gap iyileştirmesi beklenir
+- C tabanlı, wrapper gerektirir
+- Mevcut SOTA algoritmalar n ≤ 1000'de zaten rekabetçi sonuçlar veriyor
+- **Öneri:** Makale odaklı çalışmalar için gerekli değil, büyük ölçekli endüstriyel uygulamalar için değerlendirilebilir
+
+### 7.3 GPU Hızlandırma (Düşük Öncelik)
+
+**Durum:** Öncelik dışı.
+
+**Değerlendirme:**
+- Numba CUDA (`@cuda.jit`) ile fitness eval loop'larının GPU'ya taşınması
+- NVIDIA GPU gerektirir
+- TSP'de bottleneck local search (memory-bound), fitness compute (compute-bound) değil
+- **Öneri:** ROI düşük — CPU Numba JIT zaten yeterli performans sağlıyor
+
+---
+
+## 8. Versiyon Geçmişi
 
 | Versiyon | Tarih | Değişiklikler |
 |----------|-------|---------------|
-| 3.2 | 2026-04-06 | Multiprocessing (4 worker), dinamik süre tahmini, gerçekçi süre değerleri |
-| 3.1 | 2026-04-05 | Alias seçimi (k/orta/büyük), cache durumu gösterimi, önbellek seçenekleri (Atla/Yenile/Arttır), algoritma karmaşıklık bilgisi |
-| 3.0 | 2026-04-05 | [E] Özel seçim, [H] Algoritma bilgileri, Ctrl+C güvenli çıkış, incremental save, tahmini süre |
-| 2.0 | 2026-04-03 | IndexError düzeltmesi, V2 entegrasyonu, negatif GAP düzeltmesi |
-| 1.0 | - | İlk sürüm (hardcoded koordinatlar) |
+| 3.3 | 2026-05-16 | 3 tuning stratejisi (Grid/Fractional/Bayesian), Optuna SOTA'ya eklendi, problem boyut sıralaması |
+| 3.2 | 2026-05-16 | RUN-TSP eklendi (Runge Kutta Optimizer), 17 algoritma, metaphor-free solver |
+| 3.1 | 2026-05-16 | CGO-TSP eklendi (Chaos Game Optimization), 16 algoritma, 45 test |
+| 3.0 | 2026-05-15 | Çift motor mimari, 15 algoritma, CPSO variant, BSF fallback, Streamlit dashboard, RL roadmap |
+| 2.0 | 2026-05-09 | SOTA engine konsolidasyonu, DoE tuning, ProcessPoolExecutor |
+| 1.0 | 2026-04-06 | İlk benchmark sistemi, V1/V2, multiprocessing |
 
 ---
 
-## 📞 İletişim ve Destek
-
-Sorunlar için:
-1. Bu dokümantasyonu kontrol edin
-2. `benchmark_db/latest_metadata.json` içeriğini inceleyin
-3. `tsplib_data/` klasöründeki dosyaların bütünlüğünü doğrulayın
-4. `benchmark_db/history/` klasöründeki CSV dosyalarını kontrol edin
-
----
-
-*Bu dokümantasyon 2026-04-05 tarihinde güncellenmiştir.*
+*Bu dokümantasyon 2026-05-16 tarihinde güncellenmiştir (v3.3).*

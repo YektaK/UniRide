@@ -9,15 +9,26 @@ _NUMBA_OK = _nb.NUMBA_AVAILABLE
 
 
 class ThreeOptSolver(BaseTSPSolver):
-    """3-opt Local Search for TSP. Uses Numba JIT if available."""
+    """3-opt Local Search for TSP. Uses Numba JIT if available.
+    
+    Bounded window: for each breakpoint i, j and k are limited to
+    [i+2, i+window] and [j+2, j+window]. Reduces O(n^3) to O(n*window^2).
+    
+    Literature guidance (LKH candidate sets):
+      - Symmetric TSP: window=5-20
+      - Asymmetric TSP: window=20-50
+      - Default=12 for mixed workloads.
+    """
 
     def __init__(self, max_iterations: int = 1000, first_improvement: bool = False,
-                 multi_start: bool = False, num_starts: int = 5, random_seed: Optional[int] = None):
-        super().__init__("3-opt", random_seed)
+                 multi_start: bool = False, num_starts: int = 5,
+                 window: int = 12, random_seed: Optional[int] = None):
+        super().__init__("3-opt-bounded", random_seed)
         self.max_iterations = max_iterations
         self.first_improvement = first_improvement
         self.multi_start = multi_start
         self.num_starts = num_starts
+        self.window = window
 
     def _three_opt_cases(self, tour, i, j, k):
         A = tour[:i + 1]
@@ -41,7 +52,7 @@ class ThreeOptSolver(BaseTSPSolver):
         if _NUMBA_OK and self._dist_matrix is not None:
             improved, length = _nb.nb_three_opt(
                 tour, self._dist_matrix,
-                self.max_iterations, self.first_improvement
+                self.max_iterations, self.first_improvement, self.window
             )
             return improved, length, 0
 
@@ -99,7 +110,7 @@ class ThreeOptSolver(BaseTSPSolver):
             final_t, final_l, iters = self._improve_tour(nodes)
         elapsed = (time.perf_counter() - t0) * 1000
         return TSPResult(
-            algorithm="3-opt", tour=final_t, tour_length=final_l,
+            algorithm="3-opt-bounded", tour=final_t, tour_length=final_l,
             elapsed_ms=elapsed, iterations=iters,
             params={
                 "max_iterations": self.max_iterations,

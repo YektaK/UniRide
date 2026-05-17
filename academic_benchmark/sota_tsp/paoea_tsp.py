@@ -89,6 +89,7 @@ class PAOEAConfig:
     repair_ops_pool: Tuple[str, ...] = ("greedy", "regret2", "regret3")
     acceptance_types: Tuple[str, ...] = ("sa", "lahc")
     ls_time_limit: float = 0.5
+    three_opt_window: int = 12
     remove_ratio_range: Tuple[float, float] = (0.10, 0.30)
     sa_start_temp_factor: float = 0.4
     sa_end_temp: float = 0.0001
@@ -96,6 +97,7 @@ class PAOEAConfig:
     diversity_check_interval: int = 50
     entropy_threshold: float = 0.15
     diversity_injection_rate: float = 0.2
+    time_limit: float = 300.0
     seed: int = 42
 
 
@@ -181,7 +183,8 @@ class PAOEA_TSP(BaseTSPSolver):
         repaired = repairer.repair(remaining, removed, self._dist_matrix)
         dm_np = self._dist_matrix_np if self._dist_matrix_np is not None else None
         repaired, cost, _ = MultiLayerLS.improve(repaired, self._dist_matrix, dm_np,
-                                                  genome.ls_intensity, 100, self.cfg.ls_time_limit)
+                                                  genome.ls_intensity, 100, self.cfg.ls_time_limit,
+                                                  self.cfg.three_opt_window)
         return repaired, cost
 
     def _evolve_genomes(self, genomes: List[OperatorGenome], rng: random.Random) -> List[OperatorGenome]:
@@ -212,13 +215,20 @@ class PAOEA_TSP(BaseTSPSolver):
         return new_genomes[:self.cfg.genome_population_size]
 
     def _inject_diversity(self, population: List[List[int]], pop_costs: List[float],
+                          best_tour: List[int], best_cost: float,
                           rng: random.Random) -> Tuple[List[List[int]], List[float]]:
         n_inject = max(1, int(self.cfg.diversity_injection_rate * len(population)))
         worst = sorted(range(len(pop_costs)), key=lambda i: pop_costs[i], reverse=True)[:n_inject]
         dm_np = self._dist_matrix_np if self._dist_matrix_np is not None else None
         for idx in worst:
-            tour = list(range(self._n))
-            rng.shuffle(tour)
+            # Mutate from best tour instead of random initialization
+            tour = list(best_tour)
+            # Apply random swaps to diversify
+            n_swaps = max(3, self._n // 10)
+            for _ in range(n_swaps):
+                i, j = rng.sample(range(self._n), 2)
+                tour[i], tour[j] = tour[j], tour[i]
+            # Local search polish
             tour, _ = improve_2opt(tour, self._dist_matrix, dm_np, 50, True)
             population[idx] = tour
             pop_costs[idx] = _tour_cost(tour, self._dist_matrix)
@@ -277,13 +287,14 @@ class PAOEA_TSP(BaseTSPSolver):
             if t % self.cfg.diversity_check_interval == 0:
                 diversity = compute_population_diversity(population, self._n)
                 if diversity < self.cfg.entropy_threshold:
-                    population, pop_costs = self._inject_diversity(population, pop_costs, rng)
+                    population, pop_costs = self._inject_diversity(population, pop_costs, gbest, gbest_cost, rng)
 
             history.append(gbest_cost)
-            if time.monotonic() - t_start > 300:
+            if time.monotonic() - t_start > self.cfg.time_limit:
                 break
 
-        gbest, gbest_cost, _ = MultiLayerLS.improve(gbest, self._dist_matrix, dm_np, "full", 500, 5.0)
+        gbest, gbest_cost, _ = MultiLayerLS.improve(gbest, self._dist_matrix, dm_np, "full", 500, 5.0,
+                                                        self.cfg.three_opt_window)
 
         elapsed_ms = (time.monotonic() - t_start) * 1000
         return TSPResult(

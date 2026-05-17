@@ -60,6 +60,7 @@ class RunResult:
     iterations: int = 0
     evaluations: int = 0
     convergence_profile: List[float] = field(default_factory=list)
+    tour: Optional[List[int]] = None
     error: Optional[str] = None
 
 @dataclass
@@ -97,20 +98,47 @@ class BenchmarkConfig:
 class AlgorithmRegistry:
     """Registry to route algorithm strings to their respective implementations."""
     _registry: Dict[str, Callable] = {}
-    
+    _param_spaces: Dict[str, Callable] = {}
+    _warmup_fns: Dict[str, Callable] = {}
+
     @classmethod
     def register(cls, name: str):
         def wrapper(func: Callable):
             cls._registry[name] = func
             return func
         return wrapper
-    
+
+    @classmethod
+    def register_param_space(cls, name: str):
+        def wrapper(func: Callable):
+            cls._param_spaces[name] = func
+            return func
+        return wrapper
+
+    @classmethod
+    def get_param_space(cls, name: str) -> Optional[Dict[str, List[Any]]]:
+        if name not in cls._param_spaces:
+            return None
+        return cls._param_spaces[name]()
+
+    @classmethod
+    def register_warmup(cls, name: str):
+        def wrapper(func: Callable):
+            cls._warmup_fns[name] = func
+            return func
+        return wrapper
+
+    @classmethod
+    def warmup(cls, name: str, probe_problem) -> None:
+        if name in cls._warmup_fns:
+            cls._warmup_fns[name](probe_problem)
+
     @classmethod
     def get_executor(cls, name: str) -> Callable:
         if name not in cls._registry:
             raise ValueError(f"Algorithm '{name}' not found in registry.")
         return cls._registry[name]
-        
+
     @classmethod
     def list_algorithms(cls) -> List[str]:
         return list(cls._registry.keys())

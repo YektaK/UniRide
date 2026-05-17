@@ -6,7 +6,7 @@ from academic_benchmark.sota_tsp.r2dma_tsp import _compute_resonance
 def test_full_intensity_runs_3opt_layer(monkeypatch):
     calls = {"3opt": 0}
 
-    def fake_3opt(tour, dm, dm_np=None, max_iterations=200):  # pragma: no cover - monkeypatch target
+    def fake_3opt(tour, dm, dm_np=None, max_iterations=200, window=12):  # pragma: no cover - monkeypatch target
         calls["3opt"] += 1
         return tour[:], 10.0
 

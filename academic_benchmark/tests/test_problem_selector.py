@@ -54,43 +54,43 @@ def test_prob_optimal_dict_fallback():
         assert benchmark_utils.TSPLIB_OPTIMALS.get("berlin52") == original or original == 7542
 
 
-def test_sorted_alphabetically():
+def test_sorted_by_dimension():
     selector = ProblemSelector(MOCK_PROBLEMS)
     assert [_prob_name(problem) for problem in selector.sorted] == [
-        "a280", "berlin52", "eil101", "eil51", "eil76", "kroA100", "pr1002", "rd100"
+        "eil51", "berlin52", "eil76", "kroA100", "rd100", "eil101", "a280", "pr1002"
     ]
 
 
 def test_token_all():
     selector = ProblemSelector(MOCK_PROBLEMS)
     assert [p.name for p in selector.quick_select("all")] == [
-        "a280", "berlin52", "eil101", "eil51", "eil76", "kroA100", "pr1002", "rd100"
+        "eil51", "berlin52", "eil76", "kroA100", "rd100", "eil101", "a280", "pr1002"
     ]
 
 
 def test_token_single_index():
     selector = ProblemSelector(MOCK_PROBLEMS)
-    assert [p.name for p in selector.quick_select("1")] == ["a280"]
+    assert [p.name for p in selector.quick_select("1")] == ["eil51"]
 
 
 def test_token_multiple_indices():
     selector = ProblemSelector(MOCK_PROBLEMS)
-    assert [p.name for p in selector.quick_select("1,3,5")] == ["a280", "eil101", "eil76"]
+    assert [p.name for p in selector.quick_select("1,3,5")] == ["eil51", "eil76", "rd100"]
 
 
 def test_token_range():
     selector = ProblemSelector(MOCK_PROBLEMS)
-    assert [p.name for p in selector.quick_select("1-4")] == ["a280", "berlin52", "eil101", "eil51"]
+    assert [p.name for p in selector.quick_select("1-4")] == ["eil51", "berlin52", "eil76", "kroA100"]
 
 
 def test_token_range_reversed():
     selector = ProblemSelector(MOCK_PROBLEMS)
-    assert [p.name for p in selector.quick_select("4-1")] == ["a280", "berlin52", "eil101", "eil51"]
+    assert [p.name for p in selector.quick_select("4-1")] == ["eil51", "berlin52", "eil76", "kroA100"]
 
 
 def test_token_category():
     selector = ProblemSelector(MOCK_PROBLEMS)
-    assert [p.name for p in selector.quick_select("small")] == ["berlin52", "eil51", "eil76", "kroA100", "rd100"]
+    assert [p.name for p in selector.quick_select("small")] == ["eil51", "berlin52", "eil76", "kroA100", "rd100"]
 
 
 def test_token_name_exact():
@@ -117,7 +117,7 @@ def test_token_unknown_warns():
 
 def test_token_dedup():
     selector = ProblemSelector(MOCK_PROBLEMS)
-    assert [p.name for p in selector.quick_select("1,1,2")] == ["a280", "berlin52"]
+    assert [p.name for p in selector.quick_select("1,1,2")] == ["eil51", "berlin52"]
 
 
 def test_interactive_done_confirmation(monkeypatch):
@@ -130,10 +130,10 @@ def test_interactive_done_confirmation(monkeypatch):
 def test_sota_problem_selection_priority():
     args = SimpleNamespace(select="small", problems="berlin52", size_limit=100)
     selected = select_sota_problems(args, MOCK_PROBLEMS)
-    assert [p.name for p in selected] == ["berlin52", "eil51", "eil76", "kroA100", "rd100"]
+    assert [p.name for p in selected] == ["eil51", "berlin52", "eil76", "kroA100", "rd100"]
 
 
 def test_numba_problem_selection_priority():
     args = SimpleNamespace(select="small", problems="berlin52", size_limit=100)
     selected = select_numba_problems(args, MOCK_PROBLEMS)
-    assert [p.name for p in selected] == ["berlin52", "eil51", "eil76", "kroA100", "rd100"]
+    assert [p.name for p in selected] == ["eil51", "berlin52", "eil76", "kroA100", "rd100"]

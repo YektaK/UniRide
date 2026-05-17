@@ -1,6 +1,6 @@
 # 3. Experimental Framework and SOTA Evaluation Methodology
 
-To ensure a high-fidelity evaluation of complex, modern solvers for the Traveling Salesman Problem (TSP)—specifically State-of-the-Art (SOTA) algorithms such as E²BSO, R²DMA, and P-AOEA—a custom "Unified SOTA Benchmark Engine" was conceptualized and developed. The primary objective of this architecture was to establish a rigorous, highly scalable, and equitable computational environment capable of managing the intense processing requirements of modern meta-heuristics on massive problem instances.
+To ensure a high-fidelity evaluation of complex, modern solvers for the Traveling Salesman Problem (TSP)—specifically State-of-the-Art (SOTA) algorithms such as E²BSO, R²DMA, P-AOEA, CGO, and RUN—a custom "Unified SOTA Benchmark Engine" was conceptualized and developed. The primary objective of this architecture was to establish a rigorous, highly scalable, and equitable computational environment capable of managing the intense processing requirements of modern meta-heuristics on massive problem instances.
 
 ### 3.1. Unified Evaluation Framework for SOTA Solvers
 
@@ -22,11 +22,13 @@ flowchart TD
     S1[E²BSO Algorithm]
     S2[R²DMA Algorithm]
     S3[P-AOEA Algorithm]
+    S4[CGO Algorithm]
+    S5[RUN Algorithm]
     end
 
     T1 & T2 --> M
     M --> B
-    B -->|Synchronized Seeds & Budgets| S1 & S2 & S3
+    B -->|Synchronized Seeds & Budgets| S1 & S2 & S3 & S4 & S5
 
     style M fill:#fbf,stroke:#333,stroke-width:2px
     style B fill:#ffd,stroke:#333,stroke-width:2px
@@ -49,6 +51,8 @@ graph LR
     C1 -->|Independent Memory Space| D1[E²BSO on pr1002]
     C2 -->|Independent Memory Space| D2[R²DMA on pr2392]
     C3 -->|Independent Memory Space| D3[P-AOEA on u1060]
+    C3 -->|Independent Memory Space| D4[CGO on fl1577]
+    C3 -->|Independent Memory Space| D5[RUN on rl1889]
 
     style B fill:#9cf,stroke:#333,stroke-width:2px
     style C1 fill:#dfd,stroke:#333,stroke-width:1px
@@ -83,7 +87,7 @@ Furthermore, an incremental data persistence system was embedded into the core l
 
 ### 3.4. Algorithmic Adaptations for Large-Scale Stability
 
-While the core generative mechanisms and mathematical operators of E²BSO, R²DMA, and P-AOEA were strictly preserved to ensure theoretical fidelity, several critical architectural adaptations were engineered to facilitate large-scale, production-grade execution. The canonical implementations provided by original authors are typically designed for idealized conditions; thus, the following enhancements were introduced to bridge the gap between theoretical algorithms and scalable benchmarking:
+While the core generative mechanisms and mathematical operators of E²BSO, R²DMA, P-AOEA, CGO, and RUN were strictly preserved to ensure theoretical fidelity, several critical architectural adaptations were engineered to facilitate large-scale, production-grade execution. The canonical implementations provided by original authors are typically designed for idealized conditions; thus, the following enhancements were introduced to bridge the gap between theoretical algorithms and scalable benchmarking:
 
 1. **Adaptive Local Search Budgets:** Canonical implementations frequently rely on unbounded local search neighborhoods (e.g., executing 2-opt or 3-opt until a strict local optimum is reached). On massive instances (exceeding 1,000 nodes), this induces a combinatorial explosion (O(N²) to O(N³)), leading to severe computational deadlocks. To resolve this, a dimension-adaptive budget manager was integrated, dynamically bounding search depths based on the problem size (N). This critical safety mechanism prevents algorithms from stagnating in micro-optimization loops while preserving macroscopic exploration efficiency.
 

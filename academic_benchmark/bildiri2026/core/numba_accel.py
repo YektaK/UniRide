@@ -161,7 +161,18 @@ def _or_opt_improve_atsp_numba(route: np.ndarray, dist_matrix: np.ndarray,
 
 @jit(nopython=True, cache=True)
 def _three_opt_improve_atsp_numba(route: np.ndarray, dist_matrix: np.ndarray,
-                                  max_iterations: int, first_improvement: bool) -> Tuple[np.ndarray, float]:
+                                  max_iterations: int, first_improvement: bool,
+                                  window: int = 12) -> Tuple[np.ndarray, float]:
+    """3-opt local search with configurable bounded window.
+    
+    For each breakpoint i, j and k are limited to [i+2, i+window] and [j+2, j+window]
+    respectively. This reduces complexity from O(n^3) to O(n * window^2).
+    
+    Literature guidance (LKH candidate sets):
+      - Symmetric TSP (EUC_2D, ATT): window=5-20
+      - Asymmetric TSP: window=20-50 (cheap edges may be far apart)
+      - Default window=12 balances quality and speed for mixed workloads.
+    """
     n = len(route)
     if n < 5:
         return route.copy(), _calculate_tour_length_atsp_numba(route, dist_matrix)
@@ -176,9 +187,9 @@ def _three_opt_improve_atsp_numba(route: np.ndarray, dist_matrix: np.ndarray,
         iters += 1
 
         for i in range(0, n - 3):
-            j_max = min(n - 2, i + 12)
+            j_max = min(n - 2, i + window)
             for j in range(i + 2, j_max + 1):
-                k_max = min(n - 1, j + 12)
+                k_max = min(n - 1, j + window)
                 for k in range(j + 1, k_max + 1):
                     seg_a_len = i + 1
                     b_start = i + 1
@@ -188,12 +199,12 @@ def _three_opt_improve_atsp_numba(route: np.ndarray, dist_matrix: np.ndarray,
                     d_start = k + 1
 
                     current_cost = (
-                        dist_matrix[route[i], route[b_start]] +
-                        dist_matrix[route[b_end], route[c_start]] +
-                        dist_matrix[route[c_end], route[d_start] if d_start < n else route[0]]
+                        dist_matrix[best_route[i], best_route[b_start]] +
+                        dist_matrix[best_route[b_end], best_route[c_start]] +
+                        dist_matrix[best_route[c_end], best_route[d_start] if d_start < n else best_route[0]]
                     )
                     if d_start < n:
-                        current_cost += dist_matrix[route[d_start], route[i]]
+                        current_cost += dist_matrix[best_route[d_start], best_route[i]]
 
                     best_case_cost = best_length
                     best_case_route = None
@@ -204,104 +215,104 @@ def _three_opt_improve_atsp_numba(route: np.ndarray, dist_matrix: np.ndarray,
                         if case_idx == 0:
                             pos = 0
                             for p in range(seg_a_len):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(b_end, b_start - 1, -1):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(c_end, c_start - 1, -1):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(d_start, n):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                         elif case_idx == 1:
                             pos = 0
                             for p in range(seg_a_len):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(b_end, b_start - 1, -1):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(c_start, c_end + 1):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(n - 1, d_start - 1, -1):
                                 if p >= d_start:
-                                    new_route[pos] = route[p]
+                                    new_route[pos] = best_route[p]
                                     pos += 1
                         elif case_idx == 2:
                             pos = 0
                             for p in range(seg_a_len):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(b_start, b_end + 1):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(c_end, c_start - 1, -1):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(n - 1, d_start - 1, -1):
                                 if p >= d_start:
-                                    new_route[pos] = route[p]
+                                    new_route[pos] = best_route[p]
                                     pos += 1
                         elif case_idx == 3:
                             pos = 0
                             for p in range(seg_a_len):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(b_end, b_start - 1, -1):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(c_start, c_end + 1):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(d_start, n):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                         elif case_idx == 4:
                             pos = 0
                             for p in range(seg_a_len):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(b_start, b_end + 1):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(c_end, c_start - 1, -1):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(d_start, n):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                         elif case_idx == 5:
                             pos = 0
                             for p in range(seg_a_len):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(b_start, b_end + 1):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(c_start, c_end + 1):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(n - 1, d_start - 1, -1):
                                 if p >= d_start:
-                                    new_route[pos] = route[p]
+                                    new_route[pos] = best_route[p]
                                     pos += 1
                         else:
                             pos = 0
                             for p in range(seg_a_len):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(b_end, b_start - 1, -1):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(c_end, c_start - 1, -1):
-                                new_route[pos] = route[p]
+                                new_route[pos] = best_route[p]
                                 pos += 1
                             for p in range(n - 1, d_start - 1, -1):
                                 if p >= d_start:
-                                    new_route[pos] = route[p]
+                                    new_route[pos] = best_route[p]
                                     pos += 1
 
                         new_length = _calculate_tour_length_atsp_numba(new_route, dist_matrix)
@@ -348,10 +359,10 @@ def nb_two_opt(student_nodes: List[int], dist_matrix_2d: List[List[float]],
     return _extract_route(improved_route, student_nodes), float(length)
 
 def nb_three_opt(student_nodes: List[int], dist_matrix_2d: List[List[float]],
-                 max_iterations: int, first_improvement: bool) -> Tuple[List[int], float]:
+                  max_iterations: int, first_improvement: bool, window: int = 12) -> Tuple[List[int], float]:
     route = _prepare_route(student_nodes)
     dm = np.array(dist_matrix_2d, dtype=np.float64)
-    improved_route, length = _three_opt_improve_atsp_numba(route, dm, max_iterations, first_improvement)
+    improved_route, length = _three_opt_improve_atsp_numba(route, dm, max_iterations, first_improvement, window)
     return _extract_route(improved_route, student_nodes), float(length)
 
 def nb_or_opt(student_nodes: List[int], dist_matrix_2d: List[List[float]],

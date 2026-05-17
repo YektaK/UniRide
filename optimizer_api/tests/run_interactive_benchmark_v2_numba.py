@@ -69,7 +69,7 @@ VALID_BENCHMARK_PROFILES = {"baseline", "quality_first", "bildiri_aligned"}
 # ============================================================
 LOCAL_SEARCH_STRATEGIES = [
     ("2-opt", LocalSearchType.TWO_OPT, {"max_iterations": 3000, "algorithm_type": "local_search"}),
-    ("3-opt", LocalSearchType.THREE_OPT, {"max_iterations": 400, "algorithm_type": "local_search"}),
+    ("3-opt-bounded", LocalSearchType.THREE_OPT, {"max_iterations": 400, "algorithm_type": "local_search"}),
     ("Or-opt", LocalSearchType.OR_OPT, {"max_iterations": 1500, "algorithm_type": "local_search"}),
     ("Swap", LocalSearchType.SWAP, {"max_iterations": 8000, "algorithm_type": "local_search"}),
     ("Hybrid", LocalSearchType.HYBRID, {"max_iterations": 10, "algorithm_type": "local_search"}),
@@ -383,8 +383,24 @@ def tsplib_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> int:
     return int(round(euclidean_distance(p1, p2)))
 
 
-def calculate_tour_length(tour: List[int], coordinates: List[Tuple[float, float]]) -> int:
-    """Calculate total tour length using TSPLIB EUC_2D distance."""
+def calculate_tour_length(tour: List[int], coordinates: List[Tuple[float, float]], dist_matrix: Optional[Any] = None) -> int:
+    """Calculate total tour length.
+
+    When a precomputed dist_matrix is provided, uses matrix lookup (handles
+    all TSPLIB edge weight types). Otherwise falls back to EUC_2D coordinate
+    computation for backward compatibility.
+    """
+    if dist_matrix is not None:
+        if not tour:
+            return 0
+        total = 0.0
+        n = len(tour)
+        for i in range(n):
+            idx1 = tour[i] - 1
+            idx2 = tour[(i + 1) % n] - 1
+            total += dist_matrix[idx1][idx2]
+        return int(total)
+
     if not tour or not coordinates:
         return 0
     
@@ -1049,14 +1065,19 @@ def run_single_test(
     problem: TSPLIBProblem,
     strategy_instance: Union[LocalSearchType, str],
     seed: int,
-    params: Union[Dict[str, Any], int, None] = None
+    params: Union[Dict[str, Any], int, None] = None,
+    dist_matrix: Optional[Any] = None,
 ) -> Dict:
     """Run single test with specific seed for local-search or meta-heuristic.
 
-    Step 4: Uses create_np_distance_matrix + create_np_duration_func to avoid
-    the O(n^2) Dict string-key allocation of create_distance_matrix() on every
-    single test run.  The numpy-backed duration_func also benefits from the
-    _DIST_MATRIX_CACHE in local_search_numba.py (no second matrix rebuild).
+    When a precomputed *dist_matrix* (numpy array or list-of-lists) is
+    provided, it is used directly — this enables correct handling of **all**
+    TSPLIB edge weight types (EUC_2D, GEO, ATT, …).  Otherwise the matrix is
+    computed from coordinates via the EUC_2D-only ``create_np_distance_matrix``
+    for backward compatibility.
+
+    The numpy-backed duration_func also benefits from the _DIST_MATRIX_CACHE in
+    local_search_numba.py (no second matrix rebuild).
     """
     coordinates = problem.coordinates
     dimension = problem.dimension
@@ -1066,9 +1087,12 @@ def run_single_test(
     elif isinstance(params, int):
         run_params = {"max_iterations": params}
 
-    # Step 4: numpy-backed distance matrix (replaces O(n²) dict creation)
+    # Use precomputed matrix when provided, otherwise build from coordinates
     unique_locs = [f"L{i+1}" for i in range(dimension)]
-    np_matrix = create_np_distance_matrix(coordinates)
+    if dist_matrix is not None:
+        np_matrix = _np.array(dist_matrix, dtype=_np.float64)
+    else:
+        np_matrix = create_np_distance_matrix(coordinates)
     duration_func = create_np_duration_func(np_matrix, unique_locs)
 
     # Create initial tour with random permutation
@@ -1100,7 +1124,7 @@ def run_single_test(
 
     # Calculate tour length
     tour_indices = convert_route_to_indices(improved_route)
-    tour_length = calculate_tour_length(tour_indices, coordinates)
+    tour_length = calculate_tour_length(tour_indices, coordinates, dist_matrix=np_matrix)
 
     gap = ((tour_length - problem.optimal) / problem.optimal) * 100
 
@@ -1109,6 +1133,7 @@ def run_single_test(
         "gap": gap,
         "time_ms": elapsed * 1000,
         "algorithm_type": algorithm_type,
+        "tour": tour_indices,
     }
 
 

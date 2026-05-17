@@ -70,14 +70,14 @@ try:
         TSPLIB_OPTIMALS,
         append_csv_row,
         check_algorithms_status,
-        clear_screen,
+        clear_screen as _clear,
         compute_population_diversity,
         format_time,
         generate_combinations,
         get_cpu_info,
         get_file_hash,
         load_metadata,
-        log_environment_info,
+        log_environment_info as _log_environment_info,
         make_deterministic_seed,
         multi_select,
         param_signature,
@@ -90,6 +90,11 @@ try:
         select_worker_count,
         stdev_safe,
         update_algorithm_hashes,
+        resolve_dist_matrix as _resolve_dist_matrix,
+        save_tuning_params_and_solution as _save_best_solution,
+        load_best_params as _load_best_params,
+        get_bsf_tracker,
+        compute_gap,
     )
 except ModuleNotFoundError:
     from academic_benchmark.benchmark_utils import (
@@ -97,14 +102,14 @@ except ModuleNotFoundError:
         TSPLIB_OPTIMALS,
         append_csv_row,
         check_algorithms_status,
-        clear_screen,
+        clear_screen as _clear,
         compute_population_diversity,
         format_time,
         generate_combinations,
         get_cpu_info,
         get_file_hash,
         load_metadata,
-        log_environment_info,
+        log_environment_info as _log_environment_info,
         make_deterministic_seed,
         multi_select,
         param_signature,
@@ -117,11 +122,53 @@ except ModuleNotFoundError:
         select_worker_count,
         stdev_safe,
         update_algorithm_hashes,
+        resolve_dist_matrix as _resolve_dist_matrix,
+        save_tuning_params_and_solution as _save_best_solution,
+        load_best_params as _load_best_params,
+        get_bsf_tracker,
+        compute_gap,
     )
+
+try:
+    from academic_benchmark.engine_core import AlgorithmRegistry as _AlgoReg
+    _HAS_REGISTRY = True
+except ImportError:
+    _AlgoReg = None
+    _HAS_REGISTRY = False
+
+from academic_benchmark.param_db import (
+    save_entry as _param_db_save,
+    get_best_for as _param_db_get_best,
+    list_entries as _param_db_list,
+    analyze_patterns as _param_db_analyze,
+    delete_entry as _param_db_delete,
+    set_db_path as _param_db_set,
+)
 
 # ── Versiyon ve yollar ────────────────────────────────────────────────────────
 
 VERSION = "2.0.0"
+
+# --- DB cache integration ---
+try:
+    from tsplib_manager import (
+        get_distance_matrix as _dm_from_cache,
+        get_all_problems    as _problems_from_db,
+        is_db_populated     as _db_ready,
+    )
+except ImportError:
+    try:
+        from academic_benchmark.tsplib_manager import (
+            get_distance_matrix as _dm_from_cache,
+            get_all_problems    as _problems_from_db,
+            is_db_populated     as _db_ready,
+        )
+    except ImportError:
+        _dm_from_cache   = lambda name, **kw: None
+        _problems_from_db = lambda **kw: []
+        _db_ready        = lambda **kw: False
+
+TSPLIB_DB = os.path.join(_ENGINE_DIR, "tsplib_data", "tsplib.db")
 
 # TSPLIB veri kaynakları (öncelik sırası)
 TSPLIB_ARCHIVE = os.path.join(_ENGINE_DIR, "tsplib_problems", "ALL_tsp.tar.gz")
@@ -138,7 +185,7 @@ HISTORY_DIR = os.path.join(BENCHMARK_DB, "history")
 
 # ── Engine sabitleri ──────────────────────────────────────────────────────────
 
-ALL_ALGOS: List[str] = ["E2BSO-TSP", "R2DMA-TSP", "P-AOEA-TSP"]
+ALL_ALGOS: List[str] = ["E2BSO-TSP", "E2BSO-TSP-CPSO", "R2DMA-TSP", "P-AOEA-TSP", "CGO-TSP", "RUN-TSP"]
 
 # Numba aktifken adaptif bütçe sınırları
 _NUMBA_POP_MIN, _NUMBA_POP_MAX, _NUMBA_POP_DIV = 20, 60, 2
@@ -153,6 +200,8 @@ ALGORITHMS_TO_CHECK: Dict[str, str] = {
     "E2BSO_TSP": os.path.join(_ENGINE_DIR, "sota_tsp", "e2bso_tsp.py"),
     "R2DMA_TSP": os.path.join(_ENGINE_DIR, "sota_tsp", "r2dma_tsp.py"),
     "PAOEA_TSP": os.path.join(_ENGINE_DIR, "sota_tsp", "paoea_tsp.py"),
+    "CGO_TSP": os.path.join(_ENGINE_DIR, "sota_tsp", "cgo_tsp.py"),
+    "RUN_TSP": os.path.join(_ENGINE_DIR, "sota_tsp", "run_tsp.py"),
     "LSEngine":  os.path.join(_ENGINE_DIR, "sota_tsp", "ls_engine.py"),
     "RepairOps": os.path.join(_ENGINE_DIR, "sota_tsp", "repair_ops.py"),
     "DestroyOps": os.path.join(_ENGINE_DIR, "sota_tsp", "destroy_ops.py"),
@@ -318,6 +367,20 @@ def load_problems(size_limit: int = 500) -> List[TSPProblem]:
       1. tsplib_problems/ALL_tsp.tar.gz  (.tsp.gz girdileri)
       2. tsplib_data/*.tsp               (düz dosyalar, fallback)
     """
+    # --- DB fast path ---
+    if _db_ready(TSPLIB_DB):
+        rows = _problems_from_db(db_path=TSPLIB_DB,
+                                 max_dim=size_limit if size_limit > 0 else 99999)
+        if rows:
+            return sorted([
+                TSPProblem(
+                    name=r["name"], dimension=r["dimension"],
+                    coordinates=r["coordinates"], optimal=r["optimal"],
+                    category=r["category"]
+                )
+                for r in rows
+            ], key=lambda p: p.dimension)
+    # --- END DB fast path ---
     problems: Dict[str, TSPProblem] = {}
 
     # ── Kaynak 1: ALL_tsp.tar.gz ──────────────────────────────────────────────
@@ -405,6 +468,9 @@ def _make_solver_config(algo_name: str, n: int, numba_ok: bool) -> Dict[str, Any
         pop = max(_PY_POP_MIN, min(_PY_POP_MAX, n // _PY_POP_DIV))
         max_iter = max(_PY_ITER_MIN, min(_PY_ITER_MAX, n * _PY_ITER_FACTOR))
 
+    # Timeout default: n × 5 seconds (e.g. 100-city → 500s, 500-city → 2500s)
+    time_limit_default = max(60.0, n * 5.0)
+
     configs: Dict[str, Dict[str, Any]] = {
         "E2BSO-TSP": {
             "population_size": pop,
@@ -412,16 +478,39 @@ def _make_solver_config(algo_name: str, n: int, numba_ok: bool) -> Dict[str, Any
             "ls_time_limit": ls_limit,
             "ls_intensity_normal": "light",
             "ls_intensity_compress": "moderate",
+            "time_limit": time_limit_default,
+        },
+        "E2BSO-TSP-CPSO": {
+            "population_size": pop,
+            "max_iterations": max_iter,
+            "ls_time_limit": ls_limit,
+            "ls_intensity_normal": "light",
+            "ls_intensity_compress": "moderate",
+            "time_limit": time_limit_default,
         },
         "R2DMA-TSP": {
             "population_size": pop,
             "max_iterations": max_iter,
             "ls_time_limit": ls_limit,
+            "time_limit": time_limit_default,
         },
         "P-AOEA-TSP": {
             "population_size": pop,
             "max_iterations": max_iter,
             "ls_time_limit": ls_limit,
+            "time_limit": time_limit_default,
+        },
+        "CGO-TSP": {
+            "population_size": pop,
+            "max_iterations": max_iter,
+            "ls_time_limit": ls_limit,
+            "time_limit": time_limit_default,
+        },
+        "RUN-TSP": {
+            "population_size": pop,
+            "max_iterations": max_iter,
+            "ls_time_limit": ls_limit,
+            "time_limit": time_limit_default,
         },
     }
     return configs.get(algo_name, {})
@@ -436,6 +525,19 @@ def _build_sota_parameter_space(algo_name: str) -> Dict[str, List[Any]]:
             "gamma": [0.15, 0.20, 0.30],
             "injection_rate": [0.08, 0.12, 0.18],
             "remove_ratio": [0.10, 0.15, 0.20],
+            "time_limit": [300.0, 600.0, 1200.0],
+        }
+    if algo_name == "E2BSO-TSP-CPSO":
+        return {
+            "population_size": [24, 36, 48],
+            "max_iterations": [200, 320, 450],
+            "gamma": [0.15, 0.20, 0.30],
+            "injection_rate": [0.08, 0.12, 0.18],
+            "remove_ratio": [0.10, 0.15, 0.20],
+            "c1": [1.0, 1.5, 2.0],
+            "c2": [1.0, 1.5, 2.0],
+            "inertia": [0.5, 0.7, 0.9],
+            "time_limit": [300.0, 600.0, 1200.0],
         }
     if algo_name == "R2DMA-TSP":
         return {
@@ -444,6 +546,23 @@ def _build_sota_parameter_space(algo_name: str) -> Dict[str, List[Any]]:
             "theta_base": [0.15, 0.25, 0.35],
             "remove_ratio": [0.10, 0.15, 0.20],
             "pulse_injection_rate": [0.05, 0.10, 0.15],
+            "time_limit": [300.0, 600.0, 1200.0],
+        }
+    if algo_name == "CGO-TSP":
+        return {
+            "population_size": [24, 36, 48],
+            "max_iterations": [200, 320, 450],
+            "chaos_rate": [3.80, 3.90, 3.99],
+            "seed_length_ratio": [0.15, 0.25, 0.35],
+            "time_limit": [300.0, 600.0, 1200.0],
+        }
+    if algo_name == "RUN-TSP":
+        return {
+            "population_size": [24, 36, 48],
+            "max_iterations": [200, 320, 450],
+            "beta": [0.3, 0.5, 0.7],
+            "esq_probability": [0.1, 0.2, 0.3],
+            "time_limit": [300.0, 600.0, 1200.0],
         }
     return {
         "population_size": [24, 36, 48],
@@ -451,6 +570,7 @@ def _build_sota_parameter_space(algo_name: str) -> Dict[str, List[Any]]:
         "genome_population_size": [8, 12, 16],
         "crossover_rate": [0.75, 0.85, 0.95],
         "mutation_rate": [0.10, 0.18, 0.26],
+        "time_limit": [300.0, 600.0, 1200.0],
     }
 
 
@@ -462,16 +582,16 @@ def _make_solver(algo_name: str, params: Dict[str, Any]):
     """Parametrelere gore SOTA solver instance dondurur."""
     try:
         from sota_tsp import (
-            E2BSO_TSP, R2DMA_TSP, PAOEA_TSP,
-            E2BSOTSPConfig, R2DMATSPConfig, PAOEAConfig,
+            E2BSO_TSP, E2BSO_TSP_CPSO, R2DMA_TSP, PAOEA_TSP, CGO_TSP, RUN_TSP,
+            E2BSOTSPConfig, E2BSOCPSPConfig, R2DMATSPConfig, PAOEAConfig, CGOConfig, RUNConfig,
         )
     except ImportError:
         # Fallback if _PROJECT_ROOT wasn't attached in worker
         if _PROJECT_ROOT not in sys.path:
             sys.path.insert(0, _PROJECT_ROOT)
         from academic_benchmark.sota_tsp import (
-            E2BSO_TSP, R2DMA_TSP, PAOEA_TSP,
-            E2BSOTSPConfig, R2DMATSPConfig, PAOEAConfig,
+            E2BSO_TSP, E2BSO_TSP_CPSO, R2DMA_TSP, PAOEA_TSP, CGO_TSP, RUN_TSP,
+            E2BSOTSPConfig, E2BSOCPSPConfig, R2DMATSPConfig, PAOEAConfig, CGOConfig, RUNConfig,
         )
 
     seed = int(params.get("seed", 42))
@@ -480,10 +600,16 @@ def _make_solver(algo_name: str, params: Dict[str, Any]):
     
     if algo_name == "E2BSO-TSP":
         return E2BSO_TSP(E2BSOTSPConfig(seed=seed, **cfg))
+    if algo_name == "E2BSO-TSP-CPSO":
+        return E2BSO_TSP_CPSO(E2BSOCPSPConfig(seed=seed, **cfg))
     if algo_name == "R2DMA-TSP":
         return R2DMA_TSP(R2DMATSPConfig(seed=seed, **cfg))
     if algo_name == "P-AOEA-TSP":
         return PAOEA_TSP(PAOEAConfig(seed=seed, **cfg))
+    if algo_name == "CGO-TSP":
+        return CGO_TSP(CGOConfig(seed=seed, **cfg))
+    if algo_name == "RUN-TSP":
+        return RUN_TSP(RUNConfig(seed=seed, **cfg))
     raise ValueError(f"Bilinmeyen algoritma: {algo_name}")
 
 
@@ -501,6 +627,9 @@ def _run_solver_task(args: Tuple) -> Dict[str, Any]:
 
     try:
         t0 = time.perf_counter()
+        matrix = _dm_from_cache(problem_name, TSPLIB_DB)
+        if matrix is not None and len(matrix) == len(coordinates):
+            solver.set_dist_matrix(matrix)
         result = solver.solve(coordinates)
         elapsed = time.perf_counter() - t0
     except Exception as exc:
@@ -511,9 +640,17 @@ def _run_solver_task(args: Tuple) -> Dict[str, Any]:
             "problem": problem_name,
         }
 
-    gap = float("nan")
-    if optimal and optimal > 0:
-        gap = (result.tour_length - optimal) / optimal * 100.0
+    # Tour validation: ensure permutation is valid
+    tour = getattr(result, "tour", [])
+    if tour and len(tour) == n_nodes:
+        assert len(set(tour)) == n_nodes, f"[{algo_name}/{problem_name}] Invalid tour: duplicate nodes"
+        assert min(tour) == 0, f"[{algo_name}/{problem_name}] Invalid tour: min node {min(tour)} != 0"
+        assert max(tour) == n_nodes - 1, f"[{algo_name}/{problem_name}] Invalid tour: max node {max(tour)} != {n_nodes-1}"
+
+    # Update BSF tracker and compute gap (optimal or BSF fallback)
+    bsf = get_bsf_tracker()
+    bsf.update(problem_name, result.tour_length)
+    gap_pct, gap_type = compute_gap(problem_name, result.tour_length, optimal)
 
     return {
         "problem": problem_name,
@@ -523,9 +660,11 @@ def _run_solver_task(args: Tuple) -> Dict[str, Any]:
         "dimension": n_nodes,
         "optimal": optimal,
         "tour_cost": int(result.tour_length),
-        "gap_pct": round(gap, 4) if not math.isnan(gap) else None,
+        "gap_pct": round(gap_pct, 4) if not math.isnan(gap_pct) else None,
+        "gap_type": gap_type,
         "elapsed_sec": round(elapsed, 3),
         "iterations": getattr(result, "iterations", 0),
+        "tour": tour,
     }
 
 
@@ -538,13 +677,18 @@ def _evaluate_sota_combo(task: Tuple[Dict[str, Any], str, Dict[str, Any], int, i
 
     costs: List[float] = []
     times_sec: List[float] = []
+    cached_matrix = _dm_from_cache(problem_dict["name"], TSPLIB_DB)
+    if cached_matrix is not None and len(cached_matrix) != n_nodes:
+        cached_matrix = None
     for run_idx in range(n_runs):
         seed = make_deterministic_seed(problem_dict["name"], algo_name, run_idx, combo_idx, 5000)
         run_params = params.copy()
         run_params["seed"] = seed
-        
+
         try:
             solver = _make_solver(algo_name, run_params)
+            if cached_matrix is not None:
+                solver.set_dist_matrix(cached_matrix)
             t0 = time.perf_counter()
             result = solver.solve(coordinates)
             elapsed = time.perf_counter() - t0
@@ -597,13 +741,14 @@ def _save_incremental(result: Dict[str, Any], metadata: Dict[str, Any]) -> None:
         "costs": [], "gaps": [], "times_sec": [],
         "best_cost": None, "best_gap": None,
         "avg_cost": None, "avg_gap": None, "avg_time_sec": None,
-        "n_runs": 0, "timestamp": "",
+        "n_runs": 0, "timestamp": "", "gap_type": "unknown",
     })
     
     a_saved["costs"].append(result["tour_cost"])
     if result["gap_pct"] is not None:
         a_saved["gaps"].append(result["gap_pct"])
     a_saved["times_sec"].append(result["elapsed_sec"])
+    a_saved["gap_type"] = result.get("gap_type", "unknown")
     
     a_saved["n_runs"] = len(a_saved["costs"])
     a_saved["best_cost"] = min(a_saved["costs"])
@@ -622,7 +767,7 @@ def _save_incremental(result: Dict[str, Any], metadata: Dict[str, Any]) -> None:
     file_exists = os.path.isfile(progress_path)
     
     with open(progress_path, "a", newline="", encoding="utf-8") as f:
-        fields = ["timestamp", "problem", "strategy", "avg_length", "avg_gap", "avg_time_ms", "n_runs", "result_type", "params_json"]
+        fields = ["timestamp", "problem", "strategy", "avg_length", "avg_gap", "avg_time_ms", "n_runs", "result_type", "params_json", "gap_type"]
         writer = csv.DictWriter(f, fieldnames=fields)
         if not file_exists:
             writer.writeheader()
@@ -636,7 +781,8 @@ def _save_incremental(result: Dict[str, Any], metadata: Dict[str, Any]) -> None:
             "avg_time_ms": result["elapsed_sec"] * 1000.0,
             "n_runs": 1,
             "result_type": "raw",
-            "params_json": json.dumps(result.get("params", {}), ensure_ascii=False)
+            "params_json": json.dumps(result.get("params", {}), ensure_ascii=False),
+            "gap_type": result.get("gap_type", "unknown")
         })
 
 
@@ -829,12 +975,12 @@ def _run_engine_tuning(
         return best_params
 
     print(f"\n[START] TUNING Mod Basliyor ({len(tasks)} kombinasyon, {workers} worker)...")
-    
+
     tuning_fields = [
-        "timestamp", "problem", "strategy", "combo_idx", "avg_length", "avg_gap", 
+        "timestamp", "problem", "strategy", "combo_idx", "avg_length", "avg_gap",
         "avg_time_ms", "n_runs", "param_signature", "params_json"
     ]
-    
+
     def _save_tuning_result(res: Dict[str, Any]):
         sig = param_signature(res["params"])
         row = {
@@ -849,14 +995,14 @@ def _run_engine_tuning(
             "param_signature": sig,
             "params_json": json.dumps(res["params"], ensure_ascii=False, sort_keys=True),
         }
-        
+
         exists = os.path.exists(tuning_csv)
         with open(tuning_csv, "a", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=tuning_fields)
             if not exists:
                 writer.writeheader()
             writer.writerow(row)
-            
+
         best_key = f"{res['problem']}::{res['strategy']}"
         current_best = best_params.get(best_key)
         if current_best is None or res["avg_length"] < float(current_best["avg_length"]):
@@ -869,13 +1015,13 @@ def _run_engine_tuning(
                 "params": res["params"],
                 "convergence_profile": res.get("convergence_profile", []),
             }
-            
+
         metadata["best_params"] = best_params
         save_metadata(METADATA_PATH, metadata)
 
     completed = 0
     total_tasks = len(tasks)
-    
+
     if workers <= 1:
         for task in tasks:
             res = _evaluate_sota_combo(task)
@@ -893,9 +1039,510 @@ def _run_engine_tuning(
 
     return best_params
 
-# ─────────────────────────────────────────────────────────────────────────────
-# BÖLÜM 6: Interaktif Menü ve Main
-# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Optuna Bayesian Optimization for SOTA ─────────────────────────────────────
+
+def _build_sota_optuna_space(algo_name: str, trial: Any) -> Dict[str, Any]:
+    """Map SOTA parameter space to Optuna suggest_* calls."""
+    params = {}
+    if algo_name == "E2BSO-TSP":
+        params["population_size"] = trial.suggest_int("population_size", 20, 60)
+        params["max_iterations"] = trial.suggest_int("max_iterations", 150, 500)
+        params["gamma"] = trial.suggest_float("gamma", 0.10, 0.35)
+        params["injection_rate"] = trial.suggest_float("injection_rate", 0.05, 0.25)
+        params["remove_ratio"] = trial.suggest_float("remove_ratio", 0.05, 0.25)
+    elif algo_name == "E2BSO-TSP-CPSO":
+        params["population_size"] = trial.suggest_int("population_size", 20, 60)
+        params["max_iterations"] = trial.suggest_int("max_iterations", 150, 500)
+        params["gamma"] = trial.suggest_float("gamma", 0.10, 0.35)
+        params["injection_rate"] = trial.suggest_float("injection_rate", 0.05, 0.25)
+        params["remove_ratio"] = trial.suggest_float("remove_ratio", 0.05, 0.25)
+        params["c1"] = trial.suggest_float("c1", 0.5, 2.5)
+        params["c2"] = trial.suggest_float("c2", 0.5, 2.5)
+        params["inertia"] = trial.suggest_float("inertia", 0.3, 0.95)
+    elif algo_name == "R2DMA-TSP":
+        params["population_size"] = trial.suggest_int("population_size", 20, 60)
+        params["max_iterations"] = trial.suggest_int("max_iterations", 150, 500)
+        params["theta_base"] = trial.suggest_float("theta_base", 0.10, 0.40)
+        params["remove_ratio"] = trial.suggest_float("remove_ratio", 0.05, 0.25)
+        params["pulse_injection_rate"] = trial.suggest_float("pulse_injection_rate", 0.02, 0.20)
+    elif algo_name == "P-AOEA-TSP":
+        params["population_size"] = trial.suggest_int("population_size", 20, 60)
+        params["max_iterations"] = trial.suggest_int("max_iterations", 150, 500)
+        params["genome_population_size"] = trial.suggest_int("genome_population_size", 6, 20)
+        params["crossover_rate"] = trial.suggest_float("crossover_rate", 0.60, 0.99)
+        params["mutation_rate"] = trial.suggest_float("mutation_rate", 0.05, 0.30)
+    elif algo_name == "CGO-TSP":
+        params["population_size"] = trial.suggest_int("population_size", 20, 60)
+        params["max_iterations"] = trial.suggest_int("max_iterations", 150, 500)
+        params["chaos_rate"] = trial.suggest_float("chaos_rate", 3.57, 4.0)
+        params["seed_length_ratio"] = trial.suggest_float("seed_length_ratio", 0.10, 0.40)
+    elif algo_name == "RUN-TSP":
+        params["population_size"] = trial.suggest_int("population_size", 20, 60)
+        params["max_iterations"] = trial.suggest_int("max_iterations", 150, 500)
+        params["beta"] = trial.suggest_float("beta", 0.1, 0.9)
+        params["esq_probability"] = trial.suggest_float("esq_probability", 0.05, 0.40)
+    else:
+        params["population_size"] = trial.suggest_int("population_size", 20, 60)
+        params["max_iterations"] = trial.suggest_int("max_iterations", 150, 500)
+    return params
+
+
+def _sota_optuna_objective(
+    trial: Any,
+    problem: 'TSPProblem',
+    algo_name: str,
+    n_runs: int,
+) -> float:
+    """Optuna objective function for SOTA algorithms."""
+    defaults = _make_solver_config(algo_name, problem.dimension, _NUMBA_AVAILABLE)
+    params = defaults.copy()
+    params.update(_build_sota_optuna_space(algo_name, trial))
+
+    costs: List[float] = []
+    for run_idx in range(n_runs):
+        seed = make_deterministic_seed(problem.name, algo_name, run_idx, trial.number, 5000)
+        run_params = params.copy()
+        run_params["seed"] = seed
+        try:
+            solver = _make_solver(algo_name, run_params)
+            matrix = _dm_from_cache(problem.name, TSPLIB_DB)
+            if matrix is not None and len(matrix) == problem.dimension:
+                solver.set_dist_matrix(matrix)
+            result = solver.solve(problem.coordinates)
+            costs.append(float(result.tour_length))
+        except Exception:
+            return float("inf")
+
+    if not costs:
+        return float("inf")
+    avg_cost = sum(costs) / len(costs)
+    optimal = problem.optimal
+    if optimal and optimal > 0:
+        return ((avg_cost - optimal) / optimal) * 100.0
+    return avg_cost
+
+
+def _run_sota_optuna_tuning(
+    problems: List['TSPProblem'],
+    algos: List[str],
+    n_runs: int,
+    n_trials: int,
+    workers: int,
+    metadata: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Run Optuna Bayesian optimization for SOTA algorithms."""
+    import optuna
+
+    best_params: Dict[str, Any] = {}
+
+    for problem in problems:
+        for algo in algos:
+            print(f"\n[OPTUNA] {problem.name} / {algo} — basliyor ({n_trials} trials)...")
+            study = optuna.create_study(
+                direction="minimize",
+                study_name=f"{problem.name}_{algo}",
+                sampler=optuna.samplers.TPESampler(seed=42),
+            )
+
+            def make_objective(p, a, n):
+                def objective(trial):
+                    return _sota_optuna_objective(trial, p, a, n)
+                return objective
+
+            study.optimize(make_objective(problem, algo, n_runs), n_trials=n_trials, show_progress_bar=False)
+
+            print(f"\n[OPTUNA] {problem.name} / {algo} — En iyi gap: {study.best_value:.2f}%")
+            print(f"  En iyi parametreler: {study.best_params}")
+
+            key = f"{problem.name}::{algo}"
+            defaults = _make_solver_config(algo, problem.dimension, _NUMBA_AVAILABLE)
+            best_params[key] = {
+                "params": {**defaults, **study.best_params},
+                "avg_length": study.best_value,
+                "avg_gap": study.best_value,
+                "n_runs": n_runs,
+            }
+
+    print("\n[OPTUNA] SOTA tuning tamamlandi.")
+    metadata["best_params"] = best_params
+    return best_params
+
+
+def _save_best_solutions_post_tuning(best_params, problems, algos):
+    """Save tuning best params to best_solutions table in DB."""
+    saved = 0
+    prob_map = {p.name: p for p in problems}
+    for key, entry in best_params.items():
+        parts = key.split("::", 1)
+        if len(parts) != 2:
+            continue
+        prob_name, algo_name = parts
+        prob = prob_map.get(prob_name)
+        if not prob:
+            continue
+        _save_best_solution(
+            problem_name=prob_name,
+            algorithm=algo_name,
+            params=entry.get("params", {}),
+            tour=[],
+            tour_length=float(entry.get("avg_length", 0)),
+            gap=float(entry.get("avg_gap", 0)) if not math.isnan(entry.get("avg_gap", float("nan"))) else 0.0,
+            db_path=TSPLIB_DB,
+        )
+        saved += 1
+    if saved:
+        print(f"[PARAM_DB] {saved} parametre seti best_solutions tablosuna kaydedildi.")
+
+
+# ── Param DB Integration (Feature Parity with Numba Engine) ───────────────────
+
+def _save_best_to_param_db(
+    best_params: Dict[str, Dict[str, Any]],
+    problems: List[TSPProblem],
+    algos: List[str],
+) -> int:
+    """Save best tuning results to persistent parameter database.
+    Also saves to tsplib.db best_solutions table for cross-engine queries.
+    Returns number of entries saved.
+    """
+    saved = 0
+    problem_map = {p.name: p for p in problems}
+    for key, entry in best_params.items():
+        parts = key.split("::", 1)
+        if len(parts) != 2:
+            continue
+        prob_name, algo_name = parts
+        prob = problem_map.get(prob_name)
+        if not prob:
+            continue
+        params = entry.get("params", {})
+        best_score = entry.get("avg_length", float("inf"))
+        gap = entry.get("avg_gap", float("nan"))
+        runs = entry.get("n_runs", 3)
+        _param_db_save(
+            problem=prob_name,
+            algorithm=algo_name,
+            params=params,
+            best_score=best_score,
+            gap=gap if not math.isnan(gap) else 0.0,
+            runs=runs,
+            dimension=prob.dimension,
+            category=prob.category,
+        )
+        _save_best_solution(
+            problem_name=prob_name,
+            algorithm=algo_name,
+            params=params,
+            tour=[],
+            tour_length=float(best_score),
+            gap=float(gap) if not math.isnan(gap) else 0.0,
+            db_path=TSPLIB_DB,
+        )
+        saved += 1
+    return saved
+
+
+def _edit_param_space_interactive(algo_name: str) -> Dict[str, List[Any]]:
+    """Interactively edit the parameter space for a SOTA algorithm."""
+    space = _build_sota_parameter_space(algo_name)
+    print(f"\n[PARAM] {algo_name} parametre uzayini duzenleyin (Enter = kabul):")
+    # Show guidance for time_limit parameter
+    if "time_limit" in space:
+        print("  [INFO] Zaman asimi (time_limit) önerileri:")
+        print("    - Varsayilan: n × 5 saniye (örn: 100-sehir → 500s)")
+        print("    - Kucuk problemler (n<50): 60-300s")
+        print("    - Orta problemler (50≤n<200): 300-1200s")
+        print("    - Buyuk problemler (n≥200): 1200-3600s")
+    result: Dict[str, List[Any]] = {}
+    for key, vals in space.items():
+        print(f"  {key} = {vals}")
+        raw = input(f"    Yeni degerler (virgul) [{','.join(str(v) for v in vals)}]: ").strip()
+        if not raw:
+            result[key] = vals
+            continue
+        parts = [x.strip() for x in raw.split(",")]
+        new_vals: List[Any] = []
+        sample_type = type(vals[0]) if vals else str
+        valid = True
+        for p in parts:
+            if not p:
+                continue
+            try:
+                if sample_type == int:
+                    new_vals.append(int(p))
+                elif sample_type == float:
+                    new_vals.append(float(p))
+                else:
+                    new_vals.append(p)
+            except ValueError:
+                valid = False
+                break
+        if valid and new_vals:
+            result[key] = new_vals
+        else:
+            print(f"    [!] Gecersiz, mevcut korunuyor: {vals}")
+            result[key] = vals
+    return result
+
+
+def _manual_param_entry_interactive(algos: List[str]) -> Dict[str, Dict[str, Any]]:
+    """Interactive manual parameter entry like bildiri2026 Stage 1.
+    Shows defaults → asks for edits.
+    Returns {algo_name: {param_key: value, ...}, ...}
+    """
+    result: Dict[str, Dict[str, Any]] = {}
+    print("\n" + "=" * 70)
+    print("MANUEL PARAMETRE GIRISI (SOTA)")
+    print("Her parametre icin varsayilan deger gosterilir.")
+    print("Degistirmek istemiyorsaniz [ENTER] tusuna basin.")
+    print("=" * 70)
+    for algo_name in algos:
+        print(f"\n--- {algo_name} ---")
+        defaults = _make_solver_config(algo_name, 100, _NUMBA_AVAILABLE)
+        space = _build_sota_parameter_space(algo_name)
+        current_params = defaults.copy()
+        # Show guidance for time_limit parameter
+        if "time_limit" in current_params:
+            n_hint = 100
+            suggested = max(60.0, n_hint * 5.0)
+            print(f"  [INFO] Zaman asimi (time_limit) önerileri:")
+            print(f"    - Varsayilan: n × 5 saniye (n={n_hint} → {suggested:.0f}s)")
+            print(f"    - Kucuk problemler (n<50): 60-300s")
+            print(f"    - Orta problemler (50≤n<200): 300-1200s")
+            print(f"    - Buyuk problemler (n≥200): 1200-3600s")
+        print(f"  Varsayilan parametreler: {current_params}")
+        edit_raw = input("  Bu algoritma icin parametreleri degistirmek ister misiniz? [e/H]: ").strip().upper()
+        if edit_raw != 'E':
+            result[algo_name] = current_params
+            continue
+        manual_params = {}
+        for key, vals in space.items():
+            default_val = vals[0] if vals else current_params.get(key)
+            raw = input(f"  {key} (oneri: {default_val}) = ").strip()
+            if raw:
+                try:
+                    if isinstance(default_val, float):
+                        manual_params[key] = float(raw)
+                    elif isinstance(default_val, int):
+                        manual_params[key] = int(raw)
+                    else:
+                        manual_params[key] = raw
+                except ValueError:
+                    print(f"    [!] Gecersiz deger, varsayilan ({default_val}) kullanildi.")
+                    manual_params[key] = default_val
+            else:
+                manual_params[key] = default_val
+        for key in current_params:
+            if key not in manual_params:
+                manual_params[key] = current_params[key]
+        result[algo_name] = manual_params
+    return result
+
+
+def _load_params_from_db_interactive(
+    problems: List[TSPProblem],
+    algos: List[str],
+) -> Dict[str, Dict[str, Any]]:
+    """Interactive selection: for each (problem, algorithm) pair, load best params from DB.
+    Returns {algo_name: {param_key: value, ...}} merging defaults with loaded values.
+    """
+    db_entries = _param_db_list()
+    if not db_entries:
+        print("[INFO] Parametre DB'sinde kayit bulunamadi. Varsayilan parametreler kullanilacak.")
+        return {}
+
+    print("\n" + "=" * 70)
+    print("PARAMETRE DB'DEN YUKLEME (SOTA)")
+    print("=" * 70)
+    for prob in problems:
+        for algo in algos:
+            best = _param_db_get_best(prob.name, algo)
+            if best:
+                print(f"  {prob.name} / {algo}: best_score={best['best_score']:.1f}, params={best['params']}")
+            else:
+                print(f"  {prob.name} / {algo}: (DB'de kayit yok, varsayilan kullanilacak)")
+
+    raw = input("\nDB'deki parametreleri kullanmak icin [E], manuel girmek icin [M], varsayilan icin [D]: ").strip().upper()
+    if raw == 'E':
+        result: Dict[str, Dict[str, Any]] = {}
+        for prob in problems:
+            for algo in algos:
+                best = _param_db_get_best(prob.name, algo)
+                if best:
+                    result[algo] = best["params"]
+                else:
+                    result[algo] = _make_solver_config(algo, prob.dimension, _NUMBA_AVAILABLE)
+        return result
+    elif raw == 'M':
+        return _manual_param_entry_interactive(algos)
+    else:
+        result = {}
+        for algo in algos:
+            result[algo] = _make_solver_config(algo, 100, _NUMBA_AVAILABLE)
+        return result
+
+
+def _run_engine_with_params(
+    problems: List[TSPProblem],
+    algos: List[str],
+    custom_params: Dict[str, Dict[str, Any]],
+    n_runs: int,
+    workers: int,
+    metadata: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    """Run benchmark with explicitly provided parameters.
+    custom_params: {algo_name: {param_key: value, ...}}
+    """
+    tasks = []
+    total_runs = len(problems) * len(algos) * n_runs
+    completed = 0
+
+    for problem in problems:
+        for algo in algos:
+            p_saved = metadata.get("results", {}).get(problem.name, {}).get(algo, {})
+            saved_runs = p_saved.get("n_runs", 0)
+            runs_to_do = n_runs
+            completed += saved_runs
+
+            for run_idx in range(runs_to_do):
+                global_run_idx = saved_runs + run_idx
+                seed = make_deterministic_seed(problem.name, algo, global_run_idx, 0, 5000)
+                params = custom_params.get(algo, _make_solver_config(algo, problem.dimension, _NUMBA_AVAILABLE)).copy()
+                params["seed"] = seed
+                tasks.append((
+                    algo, problem.coordinates, seed, global_run_idx,
+                    problem.dimension, problem.optimal, _NUMBA_AVAILABLE, problem.name
+                ))
+
+    if not tasks:
+        print("[CACHE] Tum gorevler onbellekte mevcut.")
+        return []
+
+    results = []
+    print(f"\n[START] Benchmark with Custom Params ({len(tasks)} gorev, {workers} worker)...")
+
+    with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
+        future_to_task = {executor.submit(_run_solver_task, task): task for task in tasks}
+        for future in concurrent.futures.as_completed(future_to_task):
+            res = future.result()
+            results.append(res)
+            _active_results.append(res)
+            completed += 1
+            _save_incremental(res, metadata)
+            _print_progress_line(completed, total_runs, res, "BENCH")
+
+    aggregated = {}
+    for r in results:
+        if "error" in r:
+            continue
+        key = (r["problem"], r["algorithm"])
+        if key not in aggregated:
+            aggregated[key] = {"problem": r["problem"], "strategy": r["algorithm"], "costs": [], "gaps": [], "times": []}
+        aggregated[key]["costs"].append(r["tour_cost"])
+        if r["gap_pct"] is not None:
+            aggregated[key]["gaps"].append(r["gap_pct"])
+        aggregated[key]["times"].append(r["elapsed_sec"])
+
+    final_rows = []
+    for key, data in aggregated.items():
+        n = len(data["costs"])
+        if n == 0:
+            continue
+        row = {
+            "problem": data["problem"],
+            "strategy": data["strategy"],
+            "avg_length": sum(data["costs"]) / n,
+            "avg_gap": sum(data["gaps"]) / len(data["gaps"]) if data["gaps"] else None,
+            "avg_time_ms": (sum(data["times"]) / n) * 1000.0,
+            "n_runs": n,
+        }
+        final_rows.append(row)
+
+    return final_rows
+
+
+def _param_db_menu() -> None:
+    """Sub-menu for parameter database management."""
+    while True:
+        _clear()
+        print("\n" + "=" * 60)
+        print("PARAMETRE DB YONETIMI (SOTA)".center(60))
+        print("=" * 60)
+        print("  [1] Kayitli parametreleri listele")
+        print("  [2] Analiz (problem boyutuna gore ortak parametreler)")
+        print("  [3] Kayit sil")
+        print("  [Q] Ana menuye don")
+        choice = input("\nSeciminiz: ").strip().upper()
+
+        if choice == 'Q':
+            break
+        elif choice == '1':
+            entries = _param_db_list()
+            if not entries:
+                print("[INFO] Parametre DB'si bos.")
+            else:
+                print(f"\n{'ID':>3} {'Tarih':<20} {'Problem':<12} {'Algoritma':<12} {'Skor':<10} {'Gap%':<8} {'Boyut':<6}")
+                print("-" * 72)
+                for e in entries:
+                    gap_str = f"{e.get('gap', 0):.2f}" if e.get('gap') is not None else "N/A"
+                    print(f"{e['id']:>3} {e.get('timestamp', '?'):<20} {e['problem']:<12} {e['algorithm']:<12} {e.get('best_score', 0):<10.1f} {gap_str:<8} {e.get('dimension', 0):<6}")
+            input("\nDevam icin Enter...")
+        elif choice == '2':
+            analysis = _param_db_analyze()
+            print(f"\n{analysis}")
+            input("\nDevam icin Enter...")
+        elif choice == '3':
+            raw = input("Silmek istediginiz kayit ID'si: ").strip()
+            if raw.isdigit():
+                if _param_db_delete(int(raw)):
+                    print("[OK] Kayit silindi.")
+                else:
+                    print("[HATA] Kayit bulunamadi.")
+            input("Devam icin Enter...")
+
+
+# ── AlgorithmRegistry Registration ─────────────────────────────────────────────
+
+def _make_sota_executor(algo_name: str):
+    """Create an AlgorithmRegistry-compatible executor for a SOTA solver.
+    Signature: (problem, params, seed, run_idx) -> result dict.
+    """
+    def executor(problem, params, seed, run_idx):
+        run_params = params.copy()
+        run_params["seed"] = seed
+        solver = _make_solver(algo_name, run_params)
+        matrix = _dm_from_cache(problem.name, TSPLIB_DB)
+        if matrix is not None and len(matrix) == len(problem.coordinates):
+            solver.set_dist_matrix(matrix)
+        result = solver.solve(problem.coordinates)
+        # Tour validation: ensure permutation is valid
+        tour = getattr(result, "tour", [])
+        n = problem.dimension
+        if tour and len(tour) == n:
+            assert len(set(tour)) == n, f"[{algo_name}] Invalid tour: duplicate nodes"
+            assert min(tour) == 0, f"[{algo_name}] Invalid tour: min node {min(tour)} != 0"
+            assert max(tour) == n - 1, f"[{algo_name}] Invalid tour: max node {max(tour)} != {n-1}"
+        gap = ((result.tour_length - (problem.optimal or 0)) / max(problem.optimal or 1, 1)) * 100
+        from academic_benchmark.engine_core import RunResult
+        return RunResult(
+            problem=problem.name, algorithm=algo_name,
+            run=run_idx, seed=seed, dimension=problem.dimension,
+            optimal=problem.optimal, tour_cost=int(result.tour_length),
+            gap_pct=round(gap, 4), elapsed_sec=result.elapsed_ms / 1000.0,
+            iterations=result.iterations,
+            tour=tour,
+        )
+    executor.__name__ = f"sota_{algo_name.lower().replace('-', '_')}_executor"
+    return executor
+
+if _HAS_REGISTRY:
+    for algo in ALL_ALGOS:
+        algo_name = f"SOTA-{algo}"
+        _AlgoReg.register(algo_name)(_make_sota_executor(algo))
+        _AlgoReg.register_param_space(algo_name)(lambda a=algo: _build_sota_parameter_space(a))
+
+# ── Interaktif Menü ve Main ───────────────────────────────────────────────────
 
 def _clear() -> None:
     if sys.stdin.isatty():
@@ -992,7 +1639,8 @@ def _main_loop() -> int:
         if args.mode == "default":
             rows = _run_engine_default(selected_problems, selected_algos, runs, workers, metadata, skip_cached=True)
         else:
-            rows = _run_engine_tuning(selected_problems, selected_algos, runs, 12, workers, metadata, skip_cached=True)
+            best_params = _run_engine_tuning(selected_problems, selected_algos, runs, 12, workers, metadata, skip_cached=True)
+            _save_best_solutions_post_tuning(best_params, selected_problems, selected_algos)
             
         # SOTA summary dosyasini yaz (TUM GECMISI DAHIL ET)
         summary_path = os.path.join(RESULTS_DIR, "benchmark_summary.csv")
@@ -1008,11 +1656,12 @@ def _main_loop() -> int:
                     "avg_length": stats.get("avg_cost"),
                     "avg_gap": stats.get("avg_gap"),
                     "avg_time_ms": stats.get("avg_time_sec", 0) * 1000.0,
-                    "n_runs": stats.get("n_runs")
+                    "n_runs": stats.get("n_runs"),
+                    "gap_type": stats.get("gap_type", "unknown")
                 })
 
         with open(summary_path, "w", newline="", encoding="utf-8") as f:
-            fields = ["problem", "strategy", "avg_length", "avg_gap", "avg_time_ms", "n_runs"]
+            fields = ["problem", "strategy", "avg_length", "avg_gap", "avg_time_ms", "n_runs", "gap_type"]
             writer = csv.DictWriter(f, fieldnames=fields)
             writer.writeheader()
             for r in all_rows:
@@ -1033,12 +1682,23 @@ def _main_loop() -> int:
         print("  [1] DEFAULT (Standart/Best Parametrelerle Calistir)")
         print("  [2] TUNING  (DoE ile Parametre Optimizasyonu Yap)")
         print("\n--- DIGER ---")
+        print("  [D] DASHBOARD (Streamlit ile Sonuclari Gorsellestir)")
         print("  [Q] Cikis")
         
         choice = input("\nSeciminiz: ").strip().upper()
         if choice == "Q":
             print("Cikis yapiliyor...")
             return 0
+        if choice == "D":
+            import subprocess
+            print("\nDashboard aciliyor... Tarayicinizda http://localhost:8501 adresine gidin.")
+            print("Durdurmak icin Ctrl+C basin.")
+            try:
+                subprocess.run(["streamlit", "run", str(Path(__file__).resolve().parent / "dashboard.py")])
+            except KeyboardInterrupt:
+                print("\nDashboard kapatildi.")
+            input("Devam etmek icin Enter...")
+            continue
             
         if choice not in {"1", "2"}:
             print("Gecersiz secim.")
@@ -1091,7 +1751,7 @@ def _main_loop() -> int:
                 
             skip = input("Onbellekte olanlari atla? [E/h]: ").strip().upper() != "H"
             
-            _run_engine_tuning(
+            best_params = _run_engine_tuning(
                 problems=selected_problems,
                 algos=selected_algos,
                 n_runs=runs,
@@ -1100,6 +1760,7 @@ def _main_loop() -> int:
                 metadata=metadata,
                 skip_cached=skip
             )
+            _save_best_solutions_post_tuning(best_params, selected_problems, selected_algos)
             
         input("\nIslem tamamlandi. Menuye donmek icin Enter...")
 

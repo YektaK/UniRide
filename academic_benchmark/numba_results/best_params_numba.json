@@ -1,344 +1,226 @@
 {
-  "st70::Swap": {
-    "problem": "st70",
-    "strategy": "Swap",
-    "avg_length": 1148.8,
-    "avg_gap": 70.19259259259259,
-    "avg_time_ms": 176.00153999956092,
-    "params": {
-      "max_iterations": 8000,
-      "algorithm_type": "local_search"
-    },
-    "per_run_lengths": [
-      1188.0,
-      1158.0,
-      1127.0,
-      1170.0,
-      1101.0
-    ]
-  },
-  "st70::2-opt": {
-    "problem": "st70",
+  "bier127::2-opt": {
+    "problem": "bier127",
     "strategy": "2-opt",
-    "avg_length": 749.8,
-    "avg_gap": 11.08148148148148,
-    "avg_time_ms": 229.24929999935557,
+    "avg_length": 128092.8,
+    "avg_gap": 8.294415042018226,
+    "avg_time_ms": 443.33891999995103,
     "params": {
       "max_iterations": 3000,
       "algorithm_type": "local_search"
     },
     "per_run_lengths": [
-      745.0,
-      763.0,
-      754.0,
-      757.0,
-      730.0
+      129345.0,
+      125455.0,
+      128754.0,
+      126292.0,
+      130618.0
     ]
   },
-  "st70::Or-opt": {
-    "problem": "st70",
-    "strategy": "Or-opt",
-    "avg_length": 788.8,
-    "avg_gap": 16.859259259259257,
-    "avg_time_ms": 350.30798000007053,
+  "bier127::3-opt-bounded": {
+    "problem": "bier127",
+    "strategy": "3-opt-bounded",
+    "avg_length": 201588.2,
+    "avg_gap": 70.43015843492671,
+    "avg_time_ms": 300.56646000011824,
     "params": {
-      "max_iterations": 1500,
+      "max_iterations": 1000,
+      "algorithm_type": "local_search",
+      "first_improvement": true,
+      "window": 8
+    },
+    "per_run_lengths": [
+      200479.0,
+      207962.0,
+      198000.0,
+      193127.0,
+      208373.0
+    ]
+  },
+  "bier127::Swap": {
+    "problem": "bier127",
+    "strategy": "Swap",
+    "avg_length": 188270.0,
+    "avg_gap": 59.170457043337116,
+    "avg_time_ms": 73.70121999992989,
+    "params": {
+      "max_iterations": 8000,
       "algorithm_type": "local_search"
     },
     "per_run_lengths": [
-      794.0,
-      822.0,
-      750.0,
-      794.0,
-      784.0
+      190492.0,
+      194409.0,
+      199574.0,
+      169006.0,
+      187869.0
     ]
   },
-  "st70::3-opt": {
-    "problem": "st70",
-    "strategy": "3-opt",
-    "avg_length": 741.6,
-    "avg_gap": 9.866666666666665,
-    "avg_time_ms": 983.1084400000691,
-    "params": {
-      "max_iterations": 400,
-      "algorithm_type": "local_search"
-    },
-    "per_run_lengths": [
-      726.0,
-      764.0,
-      728.0,
-      777.0,
-      713.0
-    ]
-  },
-  "st70::Hybrid": {
-    "problem": "st70",
+  "bier127::Hybrid": {
+    "problem": "bier127",
     "strategy": "Hybrid",
-    "avg_length": 703.2,
-    "avg_gap": 4.177777777777778,
-    "avg_time_ms": 1403.6983599995438,
+    "avg_length": 124145.4,
+    "avg_gap": 4.957136335198931,
+    "avg_time_ms": 553.963400000066,
     "params": {
       "max_iterations": 10,
       "algorithm_type": "local_search"
     },
     "per_run_lengths": [
-      685.0,
-      688.0,
-      725.0,
-      687.0,
-      731.0
+      125934.0,
+      125220.0,
+      123388.0,
+      122605.0,
+      123580.0
     ]
   },
-  "st70::GA": {
-    "problem": "st70",
+  "bier127::GA": {
+    "problem": "bier127",
     "strategy": "GA",
-    "avg_length": 686.0,
-    "avg_gap": 1.6296296296296298,
-    "avg_time_ms": 830.942060000234,
+    "avg_length": 121516.8,
+    "avg_gap": 2.7348201755127577,
+    "avg_time_ms": 1413.9107999999396,
     "params": {
       "pop_size": 80,
       "generations": 250,
-      "mutation_rate": 0.16,
+      "mutation_rate": 0.12,
       "elite_size": 8,
-      "algorithm_type": "meta_heuristic"
+      "algorithm_type": "meta_heuristic",
+      "crossover_rate": 0.85
     },
     "per_run_lengths": [
-      682.0,
-      683.0,
-      684.0,
-      701.0,
-      680.0
+      122733.0,
+      120924.0,
+      121196.0,
+      121159.0,
+      121572.0
     ]
   },
-  "st70::PSO": {
-    "problem": "st70",
-    "strategy": "PSO",
-    "avg_length": 689.4,
-    "avg_gap": 2.1333333333333333,
-    "avg_time_ms": 998.7473000001046,
+  "bier127::Or-opt": {
+    "problem": "bier127",
+    "strategy": "Or-opt",
+    "avg_length": 137190.6,
+    "avg_gap": 15.98603337785969,
+    "avg_time_ms": 1775.2176800000598,
     "params": {
-      "swarm_size": 50,
-      "iterations": 200,
-      "w": 0.8,
+      "max_iterations": 1500,
+      "algorithm_type": "local_search"
+    },
+    "per_run_lengths": [
+      145636.0,
+      128620.0,
+      142972.0,
+      138497.0,
+      130228.0
+    ]
+  },
+  "bier127::PSO": {
+    "problem": "bier127",
+    "strategy": "PSO",
+    "avg_length": 118923.0,
+    "avg_gap": 0.5419252295361933,
+    "avg_time_ms": 36265.38008000025,
+    "params": {
+      "swarm_size": 120,
+      "iterations": 450,
+      "w": 0.65,
       "c1": 1.9,
       "c2": 1.4,
-      "algorithm_type": "meta_heuristic"
+      "algorithm_type": "meta_heuristic",
+      "reinit_interval": 30
     },
     "per_run_lengths": [
-      687.0,
-      690.0,
-      694.0,
-      691.0,
-      685.0
+      118783.0,
+      118751.0,
+      118926.0,
+      119339.0,
+      118816.0
     ]
   },
-  "st70::GWO": {
-    "problem": "st70",
+  "bier127::GWO": {
+    "problem": "bier127",
     "strategy": "GWO",
-    "avg_length": 692.0,
-    "avg_gap": 2.5185185185185186,
-    "avg_time_ms": 1281.798620000336,
+    "avg_length": 121678.8,
+    "avg_gap": 2.871780997954042,
+    "avg_time_ms": 29617.139319999842,
     "params": {
-      "pack_size": 80,
-      "iterations": 200,
+      "pack_size": 120,
+      "iterations": 450,
       "algorithm_type": "meta_heuristic"
     },
     "per_run_lengths": [
-      714.0,
-      688.0,
-      684.0,
-      686.0,
-      688.0
+      121259.0,
+      121777.0,
+      122416.0,
+      121521.0,
+      121421.0
     ]
   },
-  "st70::HHO": {
-    "problem": "st70",
+  "bier127::HHO": {
+    "problem": "bier127",
     "strategy": "HHO",
-    "avg_length": 692.8,
-    "avg_gap": 2.637037037037037,
-    "avg_time_ms": 4114.642719999392,
+    "avg_length": 121678.8,
+    "avg_gap": 2.871780997954042,
+    "avg_time_ms": 20447.22013999999,
     "params": {
       "hawks": 120,
       "iterations": 450,
       "algorithm_type": "meta_heuristic"
     },
     "per_run_lengths": [
-      696.0,
-      685.0,
-      697.0,
-      684.0,
-      702.0
+      121259.0,
+      121777.0,
+      122416.0,
+      121521.0,
+      121421.0
     ]
   },
-  "eil51::Swap": {
-    "problem": "eil51",
-    "strategy": "Swap",
-    "avg_length": 584.6,
-    "avg_gap": 37.230046948356815,
-    "avg_time_ms": 173.86568000001716,
+  "bier127::B-PSO": {
+    "problem": "bier127",
+    "strategy": "B-PSO",
+    "avg_length": 132904.0,
+    "avg_gap": 12.36198238108926,
+    "avg_time_ms": 5738.499519999823,
     "params": {
-      "max_iterations": 8000,
-      "algorithm_type": "local_search"
+      "swarm_size": 80,
+      "max_iterations": 300,
+      "inertia_weight": 0.729,
+      "cognitive_coeff": 1.49445,
+      "social_coeff": 1.49445,
+      "max_velocity_size": 5,
+      "max_no_improvement": 100,
+      "reinit_interval": 30,
+      "algorithm_type": "bildiri_meta"
     },
     "per_run_lengths": [
-      548.0,
-      650.0,
-      537.0,
-      581.0,
-      607.0
+      133983.0,
+      132213.0,
+      133245.0,
+      132685.0,
+      132394.0
     ]
   },
-  "eil51::2-opt": {
-    "problem": "eil51",
-    "strategy": "2-opt",
-    "avg_length": 455.2,
-    "avg_gap": 6.854460093896714,
-    "avg_time_ms": 237.47996000020066,
+  "bier127::B-GA": {
+    "problem": "bier127",
+    "strategy": "B-GA",
+    "avg_length": 133353.8,
+    "avg_gap": 12.742260022657716,
+    "avg_time_ms": 3810.735399999976,
     "params": {
-      "max_iterations": 3000,
-      "algorithm_type": "local_search"
+      "population_size": 150,
+      "generations": 300,
+      "crossover_rate": 0.8,
+      "mutation_rate": 0.15,
+      "elite_count": 4,
+      "tournament_size": 5,
+      "max_no_improvement": 100,
+      "algorithm_type": "bildiri_meta"
     },
     "per_run_lengths": [
-      455.0,
-      452.0,
-      455.0,
-      433.0,
-      481.0
-    ]
-  },
-  "eil51::Or-opt": {
-    "problem": "eil51",
-    "strategy": "Or-opt",
-    "avg_length": 472.6,
-    "avg_gap": 10.938967136150236,
-    "avg_time_ms": 291.3139999996929,
-    "params": {
-      "max_iterations": 1500,
-      "algorithm_type": "local_search"
-    },
-    "per_run_lengths": [
-      467.0,
-      461.0,
-      471.0,
-      487.0,
-      477.0
-    ]
-  },
-  "eil51::3-opt": {
-    "problem": "eil51",
-    "strategy": "3-opt",
-    "avg_length": 448.0,
-    "avg_gap": 5.164319248826291,
-    "avg_time_ms": 907.7652199994191,
-    "params": {
-      "max_iterations": 400,
-      "algorithm_type": "local_search"
-    },
-    "per_run_lengths": [
-      459.0,
-      453.0,
-      442.0,
-      435.0,
-      451.0
-    ]
-  },
-  "eil51::Hybrid": {
-    "problem": "eil51",
-    "strategy": "Hybrid",
-    "avg_length": 437.6,
-    "avg_gap": 2.723004694835681,
-    "avg_time_ms": 1487.2384199996304,
-    "params": {
-      "max_iterations": 10,
-      "algorithm_type": "local_search"
-    },
-    "per_run_lengths": [
-      442.0,
-      434.0,
-      437.0,
-      432.0,
-      443.0
-    ]
-  },
-  "eil51::GA": {
-    "problem": "eil51",
-    "strategy": "GA",
-    "avg_length": 433.0,
-    "avg_gap": 1.6431924882629108,
-    "avg_time_ms": 1520.9209799999371,
-    "params": {
-      "pop_size": 80,
-      "generations": 250,
-      "mutation_rate": 0.12,
-      "elite_size": 6,
-      "algorithm_type": "meta_heuristic"
-    },
-    "per_run_lengths": [
-      433.0,
-      429.0,
-      432.0,
-      436.0,
-      435.0
-    ]
-  },
-  "eil51::PSO": {
-    "problem": "eil51",
-    "strategy": "PSO",
-    "avg_length": 433.6,
-    "avg_gap": 1.784037558685446,
-    "avg_time_ms": 655.102999999508,
-    "params": {
-      "swarm_size": 50,
-      "iterations": 300,
-      "w": 0.72,
-      "c1": 1.6,
-      "c2": 1.4,
-      "algorithm_type": "meta_heuristic"
-    },
-    "per_run_lengths": [
-      438.0,
-      431.0,
-      431.0,
-      435.0,
-      433.0
-    ]
-  },
-  "eil51::GWO": {
-    "problem": "eil51",
-    "strategy": "GWO",
-    "avg_length": 436.2,
-    "avg_gap": 2.3943661971830985,
-    "avg_time_ms": 1347.6961799999117,
-    "params": {
-      "pack_size": 80,
-      "iterations": 300,
-      "algorithm_type": "meta_heuristic"
-    },
-    "per_run_lengths": [
-      437.0,
-      439.0,
-      435.0,
-      436.0,
-      434.0
-    ]
-  },
-  "eil51::HHO": {
-    "problem": "eil51",
-    "strategy": "HHO",
-    "avg_length": 437.2,
-    "avg_gap": 2.6291079812206575,
-    "avg_time_ms": 1675.8967399997346,
-    "params": {
-      "hawks": 50,
-      "iterations": 450,
-      "algorithm_type": "meta_heuristic"
-    },
-    "per_run_lengths": [
-      430.0,
-      441.0,
-      427.0,
-      450.0,
-      438.0
+      133280.0,
+      132029.0,
+      133692.0,
+      134238.0,
+      133530.0
     ]
   }
 }

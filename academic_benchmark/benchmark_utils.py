@@ -27,6 +27,7 @@ from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 # ── TSPLIB Bilinen Optimal Değerler ──────────────────────────────────────────
 
 TSPLIB_OPTIMALS: Dict[str, int] = {
+    # ── Symmetric TSP (STSP) — from Heidelberg TSPLIB95 / mastqe/tsplib ──
     "berlin52": 7542, "eil51": 426, "eil76": 538, "st70": 675,
     "kroa100": 21282, "krob100": 22141, "kroc100": 20749, "krod100": 21294,
     "kroe100": 22068, "eil101": 629, "pr76": 108159, "pr107": 44303, "pr124": 59030,
@@ -50,7 +51,83 @@ TSPLIB_OPTIMALS: Dict[str, int] = {
     "gr120": 6942, "gr137": 69853, "gr202": 40160, "gr229": 134602,
     "gr431": 171414, "gr666": 294358, "hk48": 11461, "swiss42": 1273,
     "ulysses16": 6859, "ulysses22": 7013,
+    # Additional STSP from mastqe/tsplib solutions
+    "ali535": 202339, "brd14051": 469385, "brg180": 1950,
+    "d15112": 1573084, "d18512": 645238, "dsj1000": 18660188,
+    "fri26": 937, "linhp318": 41345, "pa561": 2763,
+    "pla7397": 23260728, "pla33810": 66048945, "pla85900": 142382641,
+    "rat99": 1211, "rl5915": 565530, "rl5934": 556045,
+    "rl11849": 923288, "si175": 21407, "si535": 48450, "si1032": 92650,
+    "usa13509": 19982859,
+    # ── Asymmetric TSP (ATSP) — proven optimal ──
+    "br17": 39, "ft53": 6905, "ft70": 38673, "ftv33": 1286,
+    "ftv35": 1473, "ftv38": 1530, "ftv44": 1613, "ftv47": 1776,
+    "ftv55": 1608, "ftv64": 1839, "ftv70": 1950, "ftv170": 2755,
+    "kro124p": 36230, "p43": 28140, "rbg323": 1326,
+    "rbg358": 1163, "rbg403": 2465, "rbg443": 2720,
 }
+
+
+# ── Best-So-Far (BSF) Tracker for Unknown-Optimal Problems ───────────────────
+
+class BSFTracker:
+    """Thread-safe tracker for best-so-far tour cost per problem.
+    Used when optimal value is unknown — gap is computed relative to BSF.
+    """
+    def __init__(self):
+        self._best: Dict[str, float] = {}
+
+    def update(self, problem: str, cost: float) -> float:
+        """Update BSF for a problem. Returns the current BSF."""
+        prev = self._best.get(problem)
+        if prev is None or cost < prev:
+            self._best[problem] = cost
+        return self._best[problem]
+
+    def get(self, problem: str) -> Optional[float]:
+        """Get current BSF for a problem. None if not yet recorded."""
+        return self._best.get(problem)
+
+    def compute_gap(self, problem: str, cost: float) -> Tuple[float, str]:
+        """Compute gap. Returns (gap_pct, gap_type).
+        If optimal known: gap vs optimal, type='optimal'
+        If optimal unknown: gap vs BSF, type='bsf'
+        """
+        optimal = TSPLIB_OPTIMALS.get(problem.lower())
+        if optimal and optimal > 0:
+            gap = (cost - optimal) / optimal * 100.0
+            return gap, "optimal"
+        bsf = self._best.get(problem)
+        if bsf and bsf > 0:
+            gap = (cost - bsf) / bsf * 100.0
+            return gap, "bsf"
+        return float("nan"), "unknown"
+
+
+# Global BSF tracker instance (shared across engine runs)
+_bsf_tracker = BSFTracker()
+
+
+def get_bsf_tracker() -> BSFTracker:
+    """Get the global BSF tracker instance."""
+    return _bsf_tracker
+
+
+def compute_gap(problem: str, cost: float, optimal: Optional[int] = None) -> Tuple[float, str]:
+    """Compute gap percentage. Returns (gap_pct, gap_type).
+    gap_type: 'optimal' | 'bsf' | 'unknown'
+    """
+    opt = optimal or TSPLIB_OPTIMALS.get(problem.lower())
+    if opt and opt > 0:
+        gap = (cost - opt) / opt * 100.0
+        return gap, "optimal"
+    # Fallback to BSF
+    bsf = _bsf_tracker.get(problem)
+    if bsf and bsf > 0:
+        gap = (cost - bsf) / bsf * 100.0
+        return gap, "bsf"
+    return float("nan"), "unknown"
+
 
 _MAX_RECOMMENDED_WORKERS = 16
 
@@ -269,28 +346,28 @@ def select_worker_count() -> int:
     print(f"   Mantiksal Cekirdek: {info['logical']}")
     print(f"\n[ONERI] Optimal worker sayisi: {rec}")
     print("\n[SECIM] Worker sayisi belirleyin:")
-    print(f"   [1] {rec} (Onerilen)")
-    print(f"   [2] {min(info['logical'], 8)} (Standart)")
-    print(f"   [3] {min(info['logical'], _MAX_RECOMMENDED_WORKERS)} (Yuksek)")
-    print(f"   [4] {info['logical']} (Maksimum)")
-    print("   [C] Custom")
-    print(f"   [Enter] Varsayilan: {min(cpu_count(), 4)}")
+    print(f"   [A] {rec} (Onerilen)")
+    print(f"   [B] {min(info['logical'], 8)} (Standart)")
+    print(f"   [C] {min(info['logical'], _MAX_RECOMMENDED_WORKERS)} (Yuksek)")
+    print(f"   [D] {info['logical']} (Maksimum)")
+    print("   [Sayi] Dogrudan sayi girin (1-{})".format(info['logical']))
+    print(f"   [Enter] Varsayilan: {rec}")
     choice = input("\nSeciminiz: ").strip().upper()
-    if choice in ("", "1"):
+    if choice == "":
         return rec
-    if choice == "2":
+    if choice == "A":
+        return rec
+    if choice == "B":
         return min(info["logical"], 8)
-    if choice == "3":
-        return min(info["logical"], _MAX_RECOMMENDED_WORKERS)
-    if choice == "4":
-        return info["logical"]
     if choice == "C":
-        try:
-            v = int(input(f"   Worker sayisi (1-{info['logical']}): ").strip())
-            return max(1, min(v, info["logical"]))
-        except ValueError:
-            return rec
-    return min(cpu_count(), 4)
+        return min(info["logical"], _MAX_RECOMMENDED_WORKERS)
+    if choice == "D":
+        return info["logical"]
+    try:
+        v = int(choice)
+        return max(1, min(v, info["logical"]))
+    except ValueError:
+        return rec
 
 
 def select_run_count(label: str, default: int, allow_zero: bool = False) -> int:
@@ -389,7 +466,7 @@ class ProblemSelector:
         self._build_index()
 
     def _build_index(self) -> None:
-        self.sorted = sorted(self.all_problems, key=lambda p: _prob_name(p).lower())
+        self.sorted = sorted(self.all_problems, key=lambda p: _prob_dim(p))
         self.name_map: Dict[str, int] = {}
         self.cat_indices: Dict[str, List[int]] = {"small": [], "medium": [], "large": []}
 
@@ -824,3 +901,99 @@ def categorize_dimension(n: int) -> str:
 def stdev_safe(vals: List[float]) -> float:
     """Güvenli standart sapma (n<2 için 0.0)."""
     return statistics.stdev(vals) if len(vals) >= 2 else 0.0
+
+
+# ── Shared Infrastructure (consumed by all engines) ──────────────────────────
+
+def resolve_dist_matrix(
+    problem_name: str,
+    db_path: str,
+    dimension: Optional[int] = None,
+) -> Optional[object]:
+    """Load correct distance matrix from TSPLib DB cache.
+    Handles all edge weight types (EUC_2D, GEO, ATT, CEIL_2D, EXPLICIT/ATSP).
+
+    Args:
+        problem_name: TSPLIB problem name (e.g. burma14, eil51)
+        db_path: Path to tsplib.db
+        dimension: If provided, validates matrix dimension matches
+
+    Returns:
+        numpy int32 array (n, n) on cache hit, None on miss
+    """
+    try:
+        from academic_benchmark.tsplib_manager import get_distance_matrix as _dm
+        matrix = _dm(problem_name, db_path)
+        if matrix is not None and dimension is not None and len(matrix) != dimension:
+            return None
+        return matrix
+    except Exception:
+        return None
+
+
+def validate_param_value(key: str, value_str: str, sample_type: type) -> Optional[object]:
+    """Validate and convert a single parameter value string.
+    Returns converted value or None on error.
+    """
+    try:
+        if sample_type == bool:
+            return value_str.lower() in ("true", "t", "1", "yes", "e", "evet")
+        if sample_type == int:
+            return int(value_str)
+        if sample_type == float:
+            return float(value_str)
+        return value_str
+    except (ValueError, TypeError):
+        return None
+
+
+def parse_param_list(val_str: str, current_list: List) -> List:
+    """Parse a comma-separated parameter value string into a typed list.
+    Like bildiri2026 Stage 1: user enters '10,20,50' → [10, 20, 50].
+    Returns current_list if val_str is empty.
+    """
+    if not val_str.strip():
+        return current_list
+    parts = [x.strip() for x in val_str.split(",")]
+    sample_type = type(current_list[0]) if current_list else str
+    result = []
+    for p in parts:
+        v = validate_param_value("", p, sample_type)
+        if v is not None:
+            result.append(v)
+    return result if result else current_list
+
+
+def save_tuning_params_and_solution(
+    problem_name: str,
+    algorithm: str,
+    params: Dict[str, Any],
+    tour: List[int],
+    tour_length: float,
+    gap: float,
+    db_path: str,
+) -> int:
+    """Save tuning params + best solution to the best_solutions table.
+    Returns entry id.
+    """
+    try:
+        from academic_benchmark.tsplib_manager import save_best_solution as _save
+        return _save(problem_name, algorithm, params, tour, tour_length, gap, db_path)
+    except Exception:
+        return -1
+
+
+def load_best_params(
+    problem_name: str,
+    algorithm: str,
+    db_path: str,
+) -> Optional[Dict[str, Any]]:
+    """Load best known params for (problem, algorithm) from best_solutions table.
+    Returns params dict or None.
+    """
+    try:
+        from academic_benchmark.tsplib_manager import get_best_solution as _load
+        entry = _load(problem_name, algorithm, db_path)
+        return entry["params"] if entry else None
+    except Exception:
+        return None

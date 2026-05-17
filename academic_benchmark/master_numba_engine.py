@@ -113,6 +113,29 @@ except ModuleNotFoundError:
         update_algorithm_hashes,
     )
 
+from academic_benchmark.param_db import (
+    save_entry as _param_db_save,
+    get_best_for as _param_db_get_best,
+    list_entries as _param_db_list,
+    analyze_patterns as _param_db_analyze,
+    delete_entry as _param_db_delete,
+    set_db_path as _param_db_set,
+)
+try:
+    from academic_benchmark.engine_core import AlgorithmRegistry as _AlgoReg
+    _HAS_NUMBA_REGISTRY = True
+except ImportError:
+    _AlgoReg = None
+    _HAS_NUMBA_REGISTRY = False
+
+try:
+    from academic_benchmark.benchmark_utils import (
+        save_tuning_params_and_solution as _save_best_solution,
+    )
+except ImportError:
+    def _save_best_solution(*a, **kw):
+        return -1
+
 # Numba modüllerini import edelim
 from optimizer_api.tests.run_interactive_benchmark_v2_numba import (
     BENCHMARK_PROFILE as DEFAULT_PROFILE,
@@ -127,6 +150,27 @@ from optimizer_api.tests.run_interactive_benchmark_v2_numba import (
     run_single_test,
 )
 from optimizer_api.utils.local_search_numba import LocalSearchType
+
+# --- DB cache integration ---
+try:
+    from tsplib_manager import (
+        get_distance_matrix as _dm_from_cache,
+        get_all_problems    as _problems_from_db,
+        is_db_populated     as _db_ready,
+    )
+except ImportError:
+    try:
+        from academic_benchmark.tsplib_manager import (
+            get_distance_matrix as _dm_from_cache,
+            get_all_problems    as _problems_from_db,
+            is_db_populated     as _db_ready,
+        )
+    except ImportError:
+        _dm_from_cache   = lambda name, **kw: None
+        _problems_from_db = lambda **kw: []
+        _db_ready        = lambda **kw: False
+
+TSPLIB_DB = os.path.join(_ENGINE_DIR, "tsplib_data", "tsplib.db")
 
 VERSION = "2.0.0"
 
@@ -268,6 +312,43 @@ def _parse_tsplib_text(content: str, name_hint: str = "") -> Optional[Dict[str, 
 
 def load_problems(size_limit: int = 0) -> List[DOEProblem]:
     """TSPLIB arşivinden veya özel time_matrix JSON'larından problemleri yükler."""
+    # --- DB fast path ---
+    if _db_ready(TSPLIB_DB):
+        rows = _problems_from_db(db_path=TSPLIB_DB,
+                                 max_dim=size_limit if size_limit > 0 else 99999)
+        if rows:
+            out = []
+            for r in rows:
+                dim = r["dimension"]
+                cat = "small" if dim <= 100 else ("medium" if dim <= 500 else "large")
+                out.append(DOEProblem(
+                    name=r["name"], dimension=dim, coordinates=r["coordinates"],
+                    optimal=r["optimal"], category=cat, source="tsplib"
+                ))
+            # Append time_matrix JSON problems (existing logic)
+            data_dir = os.path.join(_ENGINE_DIR, "data")
+            if os.path.exists(data_dir):
+                for f in os.listdir(data_dir):
+                    if f.endswith(".json") and f != "tuned_parameters_db.json":
+                        try:
+                            with open(os.path.join(data_dir, f), encoding="utf-8") as fh:
+                                data = json.load(fh)
+                            if "time_matrix" in data:
+                                matrix = data["time_matrix"]
+                                name = data.get("name", f.replace(".json", ""))
+                                dim = len(matrix)
+                                cat = "small" if dim <= 100 else ("medium" if dim <= 500 else "large")
+                                out.append(DOEProblem(
+                                    name=name, dimension=dim,
+                                    coordinates=[(0.0, 0.0)] * dim,
+                                    optimal=data.get("optimal"), category=cat,
+                                    source="time_matrix", is_time_matrix=True,
+                                    time_matrix=matrix
+                                ))
+                        except Exception:
+                            continue
+            return sorted(out, key=lambda p: p.dimension)
+    # --- END DB fast path: fall through to tar.gz logic below ---
     problems: Dict[str, DOEProblem] = {}
 
     def _add(p: DOEProblem) -> None:
@@ -420,6 +501,12 @@ def _build_numba_parameter_space(spec: StrategySpec) -> Dict[str, List[Any]]:
             "tournament_size": [3, 5],
             "max_no_improvement": [100],
         }
+    if name == "3-OPT-BOUNDED":
+        return {
+            "max_iterations": [300, 500, 1000],
+            "first_improvement": [True, False],
+            "window": [8, 12, 20, 50],
+        }
     return {
         "max_iterations": [spec.default_params.get("max_iterations", 300)],
     }
@@ -541,6 +628,21 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
                 self.optimal = 1
         effective_problem = _ProblemWithSafeOptimal(problem_dict)
 
+    # Load correct distance matrix from TSPLib DB cache for non-time-matrix problems.
+    # This is CRITICAL: run_single_test falls back to create_np_distance_matrix
+    # which only does EUC_2D, producing wrong distances for GEO/ATT/etc problems
+    # (e.g. burma14 GEO optimal=3323km would be ~30 using EUC_2D on lat/lon).
+    dist_matrix_np = None
+    if not is_time_matrix:
+        problem_name = problem_dict.get("name", "")
+        if problem_name:
+            try:
+                db_matrix = _dm_from_cache(problem_name, TSPLIB_DB)
+                if db_matrix is not None:
+                    dist_matrix_np = db_matrix
+            except Exception:
+                pass
+
     run_results: List[Dict[str, Any]] = []
     t0 = time.perf_counter()
     for run_idx in range(n_runs):
@@ -556,7 +658,8 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
                 effective_problem, strategy_payload, seed, strategy_params, time_matrix_data
             )
         else:
-            result = run_single_test(effective_problem, strategy_payload, seed, strategy_params)
+            result = run_single_test(effective_problem, strategy_payload, seed, strategy_params,
+                                     dist_matrix=dist_matrix_np)
             
         if not optimal:
             result = result.copy()
@@ -670,7 +773,9 @@ def _run_bildiri_solver(
         full_coords = [(0.0, 0.0)] + list(coords)
         result = solver.solve(full_coords)
         tour_nodes = result.tour  # 1-indexed in full_coords
-        np_dm = create_np_distance_matrix(coords)
+        np_dm = _dm_from_cache(problem_dict.get("name", ""), db_path=TSPLIB_DB)
+        if np_dm is None:
+            np_dm = create_np_distance_matrix(coords)
         tour_length = float(sum(
             np_dm[tour_nodes[k] - 1, tour_nodes[(k + 1) % len(tour_nodes)] - 1]
             for k in range(len(tour_nodes))
@@ -776,6 +881,148 @@ def _load_tuning_cache() -> set[Tuple[str, str, str]]:
         pass
     return completed
 
+
+# ── DOE Config Management ─────────────────────────────────────────────────────
+
+def _edit_param_space_interactive(spec: StrategySpec) -> Dict[str, List[Any]]:
+    """Interactively edit the parameter space for a given strategy spec.
+
+    Delegates to benchmark_utils.edit_param_space for validation logic,
+    returning the (possibly edited) space dict.
+    """
+    space = _build_numba_parameter_space(spec)
+    print(f"\n[PARAM] {spec.name} parametre uzayini duzenleyin (Enter = kabul):")
+    # Show guidance for 3-opt-bounded window parameter
+    if spec.name.upper() == "3-OPT-BOUNDED" and "window" in space:
+        print("  [INFO] 3-opt pencere boyutu (window) önerileri:")
+        print("    - Simetrik TSP (EUC_2D, ATT): 5-20")
+        print("    - Asimetrik TSP (ATSP): 20-50")
+        print("    - Varsayilan: 12 (karisik is yükleri için dengeli)")
+    result: Dict[str, List[Any]] = {}
+    for key, vals in space.items():
+        print(f"  {key} = {vals}")
+        raw = input(f"    Yeni degerler (virgul) [{','.join(str(v) for v in vals)}]: ").strip()
+        if not raw:
+            result[key] = vals
+            continue
+        parts = [x.strip() for x in raw.split(",")]
+        new_vals: List[Any] = []
+        sample_type = type(vals[0]) if vals else str
+        valid = True
+        for p in parts:
+            if not p:
+                continue
+            v = validate_param_value(key, p, sample_type)
+            if v is None:
+                valid = False
+                break
+            new_vals.append(v)
+        if valid and new_vals:
+            result[key] = new_vals
+        else:
+            print(f"    [!] Gecersiz, mevcut korunuyor: {vals}")
+            result[key] = vals
+    return result
+
+
+def _validate_tuning_config(config: Dict, all_problems: List[DOEProblem], all_specs: List[StrategySpec]) -> Tuple[bool, str]:
+    if not isinstance(config, dict):
+        return False, "Config bir dict olmali"
+    if config.get("version", 0) != 1:
+        return False, f"Desteklenmeyen config versiyonu: {config.get('version')}"
+    for section in ("problems", "algorithms", "settings"):
+        if section not in config:
+            return False, f"{section} alani eksik"
+    return True, "OK"
+
+
+def _save_tuning_config(
+    selected_problems: List[DOEProblem],
+    selected_specs: List[StrategySpec],
+    runs: int,
+    workers: int,
+    param_overrides: Optional[Dict[str, Dict[str, Any]]] = None,
+) -> str:
+    scope_parts = [p.name for p in selected_problems[:3]]
+    if len(selected_problems) > 3:
+        scope_parts.append(f"and{len(selected_problems)-3}more")
+    scope_str = "_".join(scope_parts) if scope_parts else "custom"
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{ts}_{scope_str}.json"
+    filepath = os.path.join(CONFIGS_DIR, filename)
+
+    all_problems_full = load_problems()
+    problem_indices = []
+    for p in selected_problems:
+        for idx, ap in enumerate(all_problems_full):
+            if ap.name == p.name:
+                problem_indices.append(idx + 1)
+                break
+    all_specs_full = _all_strategy_specs()
+    algo_indices = []
+    for s in selected_specs:
+        for idx, spec in enumerate(all_specs_full):
+            if spec.name == s.name:
+                algo_indices.append(idx + 1)
+                break
+
+    config = {
+        "version": 1,
+        "created_at": datetime.now().isoformat(),
+        "problems": {"mode": "index", "selection": problem_indices},
+        "algorithms": {"selection": algo_indices},
+        "settings": {"runs": runs, "workers": workers},
+    }
+    if param_overrides:
+        config["param_overrides"] = param_overrides
+    with open(filepath, "w", encoding="utf-8") as f:
+        json.dump(config, f, indent=2, ensure_ascii=False)
+    return filepath
+
+
+def _load_tuning_config(filepath: str, all_problems: List[DOEProblem], all_specs: List[StrategySpec]) -> Optional[Dict[str, Any]]:
+    if not os.path.exists(filepath):
+        print(f"[HATA] Config dosyasi bulunamadi: {filepath}")
+        return None
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            config = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"[HATA] Config JSON hatasi: {e}")
+        return None
+    ok, msg = _validate_tuning_config(config, all_problems, all_specs)
+    if not ok:
+        print(f"[HATA] Config dogrulama basarisiz: {msg}")
+        return None
+    return config
+
+
+def _list_tuning_configs() -> List[str]:
+    if not os.path.exists(CONFIGS_DIR):
+        return []
+    return sorted([f for f in os.listdir(CONFIGS_DIR) if f.endswith(".json")])
+
+
+def _resolve_tuning_config(
+    cfg: Dict[str, Any],
+    all_problems: List[DOEProblem],
+    all_specs: List[StrategySpec],
+) -> Tuple[List[DOEProblem], List[StrategySpec], Dict[str, Any]]:
+    prob_sel = cfg["problems"]
+    algo_sel = cfg["algorithms"]
+    settings = cfg.get("settings", {})
+    if prob_sel.get("mode") == "index":
+        indices = [i - 1 for i in prob_sel.get("selection", []) if 0 <= i - 1 < len(all_problems)]
+        selected_problems = [all_problems[i] for i in indices]
+    else:
+        selected_problems = list(all_problems)
+    algo_indices = [i - 1 for i in algo_sel.get("selection", []) if 0 <= i - 1 < len(all_specs)]
+    selected_specs = [all_specs[i] for i in algo_indices]
+    return selected_problems, selected_specs, settings
+
+
+# ── Tuning Engine ─────────────────────────────────────────────────────────────
+
 def _tune_parameters(
     problems: List[DOEProblem],
     specs: List[StrategySpec],
@@ -784,6 +1031,8 @@ def _tune_parameters(
     workers: int,
     metadata: Dict[str, Any],
     skip_cached: bool,
+    use_fractional: bool = False,
+    param_overrides: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> Dict[str, Dict[str, Any]]:
     completed = _load_tuning_cache()
     best_params: Dict[str, Dict[str, Any]] = metadata.get("best_params", {})
@@ -792,7 +1041,13 @@ def _tune_parameters(
     for problem in problems:
         for spec in specs:
             space = _build_numba_parameter_space(spec)
-            combos = generate_combinations(space, max_combinations)
+            # Merge any runtime param_overrides for this algorithm
+            if param_overrides and spec.name in param_overrides:
+                for key, vals in param_overrides[spec.name].items():
+                    if key in space:
+                        space[key] = vals
+            strategy = "fractional_fallback" if use_fractional else "sequential"
+            combos = generate_combinations(space, max_combinations, strategy=strategy)
             for combo_idx, combo in enumerate(combos, 1):
                 params = spec.default_params.copy()
                 params.update(combo)
@@ -808,6 +1063,8 @@ def _tune_parameters(
     if not tuning_tasks:
         print("[INFO] Tum tuning tasklari onbellekte mevcut.")
         return best_params
+
+    print(f"\n[START] NUMBA TUNING Mod Basliyor ({len(tuning_tasks)} kombinasyon, {workers} worker)...")
 
     csv_path = os.path.join(RESULTS_DIR, "tuning_progress.csv")
     fields = [
@@ -911,12 +1168,14 @@ def _execute_benchmark_tasks(tasks, workers, metadata, stage_label):
         return []
         
     csv_path = os.path.join(RESULTS_DIR, "benchmark_progress.csv")
-    fields = ["timestamp", "problem", "strategy", "avg_length", "avg_gap", "avg_time_ms", "n_runs", "result_type", "params_json"]
+    fields = ["timestamp", "problem", "strategy", "avg_length", "avg_gap", "avg_time_ms", "n_runs", "result_type", "params_json", "gap_type"]
 
     tracker = ETATracker()
     rows = []
 
     def on_result(idx, result, total):
+        optimal = result.get("optimal")
+        gap_type_val = "optimal" if (optimal and optimal > 0) else "unknown"
         row = {
             "timestamp": datetime.now().isoformat(),
             "problem": result["problem"],
@@ -927,6 +1186,7 @@ def _execute_benchmark_tasks(tasks, workers, metadata, stage_label):
             "n_runs": result["n_runs"],
             "result_type": "aggregate",
             "params_json": json.dumps(result["params"], ensure_ascii=False, sort_keys=True),
+            "gap_type": gap_type_val,
         }
         rows.append(row)
         _active_results.append(row)
@@ -953,7 +1213,7 @@ def _write_summary(rows: List[Dict[str, Any]]) -> None:
     path = os.path.join(RESULTS_DIR, "benchmark_summary.csv")
     import csv
     with open(path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["problem", "strategy", "avg_length", "avg_gap", "avg_time_ms", "n_runs"])
+        writer = csv.DictWriter(f, fieldnames=["problem", "strategy", "avg_length", "avg_gap", "avg_time_ms", "n_runs", "gap_type"])
         writer.writeheader()
         for row in rows:
             writer.writerow({
@@ -963,7 +1223,466 @@ def _write_summary(rows: List[Dict[str, Any]]) -> None:
                 "avg_gap": row["avg_gap"],
                 "avg_time_ms": row["avg_time_ms"],
                 "n_runs": row["n_runs"],
+                "gap_type": row.get("gap_type", "unknown"),
             })
+
+
+def _run_interactive_tuning_flow(
+    selected_problems: List[DOEProblem],
+    selected_specs: List[StrategySpec],
+    runs: int,
+    workers: int,
+    metadata: Dict[str, Any],
+    use_fractional: bool = False,
+    param_overrides: Optional[Dict[str, List[Any]]] = None,
+    all_problems: Optional[List[DOEProblem]] = None,
+) -> Dict[str, Dict[str, Any]]:
+    """Tuning flow: tune, save to param DB, optionally benchmark on different problems.
+    Returns best_params dict."""
+    mode_raw = input("Tuning modu: [G]rid search / [B]ayesian (Optuna) [G]: ").strip().upper()
+    use_bayesian = (mode_raw == 'B')
+
+    if use_bayesian:
+        _run_optuna_tuning_flow(selected_problems, selected_specs, runs, workers, metadata,
+                                param_overrides=param_overrides)
+        # For bayesian, best params handled inside; return metadata defaults
+        best_params = metadata.get("best_params", {})
+    else:
+        print("\n[START] NUMBA TUNING Mod Basliyor...")
+        best_params = _tune_parameters(
+            selected_problems, selected_specs, runs, DOE_MAX_COMBINATIONS, workers, metadata,
+            skip_cached=True, use_fractional=use_fractional, param_overrides=param_overrides,
+        )
+        save_convergence_history(best_params, HISTORIES_DIR)
+
+    # Save best params to persistent parameter DB
+    saved = _save_best_to_param_db(best_params, selected_problems, selected_specs)
+    print(f"[PARAM_DB] {saved} parametre seti kaydedildi.")
+
+    cfg_path = _save_tuning_config(selected_problems, selected_specs, runs, workers,
+                                   param_overrides=param_overrides)
+    print(f"[CONFIG] Tuning config kaydedildi: {cfg_path}")
+
+    # Ask whether to run benchmark (possibly on different problems)
+    bm_raw = input("\nBenchmark da kosmak ister misiniz? [E/H]: ").strip().upper()
+    if bm_raw != 'E':
+        print(f"\n[OK] Tuning tamamlandi! (Benchmark atlandi)")
+        return best_params
+
+    # Select benchmark problems (can differ from training)
+    if all_problems:
+        print("\nBenchmark icin problem secimi (Egitim problemlerinden farkli olabilir):")
+        bm_probs = _select_benchmark_problems_interactive(all_problems)
+    else:
+        bm_probs = selected_problems
+
+    if not bm_probs:
+        bm_probs = selected_problems
+
+    bm_runs_raw = input(f"Benchmark tekrar sayisi [varsayilan {runs}]: ").strip()
+    bm_runs = int(bm_runs_raw) if bm_runs_raw.isdigit() else runs
+
+    print(f"\n[2/2] EN IYI PARAMETRELERLE BENCHMARK BASLIYOR ({len(bm_probs)} problem)...")
+    rows = _run_benchmark_with_best(bm_probs, selected_specs, best_params, bm_runs, workers, metadata)
+    _write_summary(rows)
+
+    print(f"\n[OK] Tuning + Benchmark tamamlandi!")
+    print("\n=== SONUÇLAR (En Iyi Parametrelerle) ===")
+    print(f"{'Problem':<15} {'Algoritma':<15} {'Uzunluk':<10} {'Gap %':<10} {'Sure (ms)':<10}")
+    print("-" * 65)
+    for r in rows:
+        gap_str = f"{r['avg_gap']:.2f}" if r['avg_gap'] is not None else "N/A"
+        print(f"{r['problem']:<15} {r['strategy']:<15} {r['avg_length']:<10.1f} {gap_str:<10} {r['avg_time_ms']:<10.0f}")
+
+    return best_params
+
+
+# ── Optuna Bayesian Tuning ────────────────────────────────────────────────────
+
+def _build_optuna_search_space(spec: StrategySpec, trial: Any) -> Dict[str, Any]:
+    """Map parameter space to Optuna suggest_* calls."""
+    params = {}
+    name = spec.name.upper()
+    if name == "GA":
+        params["pop_size"] = trial.suggest_int("pop_size", 80, 150)
+        params["generations"] = trial.suggest_int("generations", 200, 500)
+        params["mutation_rate"] = trial.suggest_float("mutation_rate", 0.05, 0.20)
+        params["elite_size"] = trial.suggest_int("elite_size", 2, 8)
+        params["crossover_rate"] = trial.suggest_float("crossover_rate", 0.75, 0.95)
+    elif name == "PSO":
+        params["swarm_size"] = trial.suggest_int("swarm_size", 30, 120)
+        params["iterations"] = trial.suggest_int("iterations", 200, 500)
+        params["w"] = trial.suggest_float("w", 0.4, 0.9)
+        params["c1"] = trial.suggest_float("c1", 1.0, 2.5)
+        params["c2"] = trial.suggest_float("c2", 1.0, 2.5)
+    elif name == "GWO":
+        params["pack_size"] = trial.suggest_int("pack_size", 20, 120)
+        params["iterations"] = trial.suggest_int("iterations", 200, 500)
+    elif name == "HHO":
+        params["hawks"] = trial.suggest_int("hawks", 20, 120)
+        params["iterations"] = trial.suggest_int("iterations", 200, 500)
+    elif name == "B-PSO":
+        params["swarm_size"] = trial.suggest_int("swarm_size", 20, 80)
+        params["max_iterations"] = trial.suggest_int("max_iterations", 200, 500)
+        params["inertia_weight"] = trial.suggest_float("inertia_weight", 0.4, 0.9)
+        params["cognitive_coeff"] = trial.suggest_float("cognitive_coeff", 1.0, 2.5)
+        params["social_coeff"] = trial.suggest_float("social_coeff", 1.0, 2.5)
+        params["max_velocity_size"] = trial.suggest_int("max_velocity_size", 3, 10)
+    elif name == "B-GA":
+        params["population_size"] = trial.suggest_int("population_size", 50, 150)
+        params["generations"] = trial.suggest_int("generations", 200, 500)
+        params["crossover_rate"] = trial.suggest_float("crossover_rate", 0.75, 0.95)
+        params["mutation_rate"] = trial.suggest_float("mutation_rate", 0.05, 0.25)
+        params["elite_count"] = trial.suggest_int("elite_count", 1, 6)
+        params["tournament_size"] = trial.suggest_int("tournament_size", 2, 6)
+    else:
+        params["max_iterations"] = trial.suggest_int("max_iterations", 100, 1000)
+    return params
+
+
+def _optuna_objective(
+    trial: Any,
+    problem: DOEProblem,
+    spec: StrategySpec,
+    n_runs: int,
+) -> float:
+    params = spec.default_params.copy()
+    params.update(_build_optuna_search_space(spec, trial))
+    params["algorithm_type"] = spec.algorithm_type
+
+    task = (_make_problem_dict(problem), spec.name, _resolve_strategy_payload(spec), params, 1, n_runs)
+    try:
+        result = _evaluate_param_combo(task)
+        avg_gap = result.get("avg_gap")
+        if avg_gap is None or math.isnan(avg_gap):
+            return float("inf")
+        return float(avg_gap)
+    except Exception:
+        return float("inf")
+
+
+def _run_optuna_tuning_flow(
+    problems: List[DOEProblem],
+    specs: List[StrategySpec],
+    n_runs: int,
+    workers: int,
+    metadata: Dict[str, Any],
+    param_overrides: Optional[Dict[str, List[Any]]] = None,
+) -> None:
+    import optuna
+
+    for problem in problems:
+        for spec in specs:
+            print(f"\n[OPTUNA] {problem.name} / {spec.name} — basliyor...")
+            study = optuna.create_study(
+                direction="minimize",
+                study_name=f"{problem.name}_{spec.name}",
+                sampler=optuna.samplers.TPESampler(seed=42),
+            )
+
+            def make_objective(p, s):
+                def objective(trial):
+                    return _optuna_objective(trial, p, s, n_runs)
+                return objective
+
+            study.optimize(make_objective(problem, spec), n_trials=DOE_MAX_COMBINATIONS)
+
+            print(f"\n[OPTUNA] {problem.name} / {spec.name} — En iyi gap: {study.best_value:.2f}%")
+            print(f"  En iyi parametreler: {study.best_params}")
+
+    print("\n[OPTUNA] Tum tuning tamamlandi.")
+
+
+# ── Param DB Integration ──────────────────────────────────────────────────────
+
+def _save_best_to_param_db(
+    best_params: Dict[str, Dict[str, Any]],
+    problems: List[DOEProblem],
+    specs: List[StrategySpec],
+) -> int:
+    """Save best tuning results to the persistent parameter database.
+    Also saves to the tsplib.db best_solutions table for cross-engine queries.
+    Returns number of entries saved.
+    """
+    saved = 0
+    problem_map = {p.name: p for p in problems}
+    for key, entry in best_params.items():
+        parts = key.split("::", 1)
+        if len(parts) != 2:
+            continue
+        prob_name, algo_name = parts
+        prob = problem_map.get(prob_name)
+        if not prob:
+            continue
+        params = entry.get("params", {})
+        best_score = entry.get("avg_length", float("inf"))
+        gap = entry.get("avg_gap", float("nan"))
+        runs = entry.get("n_runs", 0) or entry.get("completed", 0)
+        if not runs:
+            runs = 3
+        # Save to param_db (legacy)
+        _param_db_save(
+            problem=prob_name,
+            algorithm=algo_name,
+            params=params,
+            best_score=best_score,
+            gap=gap if not math.isnan(gap) else 0.0,
+            runs=runs,
+            dimension=prob.dimension,
+            category=prob.category,
+        )
+        # Save to best_solutions table (cross-engine)
+        _save_best_solution(
+            problem_name=prob_name,
+            algorithm=algo_name,
+            params=params,
+            tour=[],
+            tour_length=float(best_score),
+            gap=float(gap) if not math.isnan(gap) else 0.0,
+            db_path=TSPLIB_DB,
+        )
+        saved += 1
+    return saved
+
+
+def _manual_param_entry_interactive(specs: List[StrategySpec]) -> Dict[str, Dict[str, Any]]:
+    """Interactive manual parameter entry like bildiri2026 Stage 1.
+    Shows defaults → asks for edits.
+    Returns {spec.name: {param_key: value, ...}, ...}
+    """
+    result: Dict[str, Dict[str, Any]] = {}
+    print("\n" + "=" * 70)
+    print("MANUEL PARAMETRE GIRISI")
+    print("Her parametre icin varsayilan deger gosterilir.")
+    print("Degistirmek istemiyorsaniz [ENTER] tusuna basin.")
+    print("=" * 70)
+    for spec in specs:
+        print(f"\n--- {spec.name} ---")
+        manual_params = {}
+        space = _build_numba_parameter_space(spec)
+        current_params = spec.default_params.copy()
+        # Show guidance for 3-opt-bounded window parameter
+        if spec.name.upper() == "3-OPT-BOUNDED" and "window" in space:
+            print("  [INFO] 3-opt pencere boyutu (window) önerileri:")
+            print("    - Simetrik TSP (EUC_2D, ATT): 5-20")
+            print("    - Asimetrik TSP (ATSP): 20-50")
+            print("    - Varsayilan: 12 (karisik is yükleri için dengeli)")
+        print(f"  Varsayilan parametreler: {current_params}")
+        edit_raw = input("  Bu algoritma icin parametreleri degistirmek ister misiniz? [e/H]: ").strip().upper()
+        if edit_raw != 'E':
+            result[spec.name] = current_params
+            continue
+        # Show each param from the space and let user enter a single value
+        for key, vals in space.items():
+            default_val = vals[0] if vals else current_params.get(key)
+            raw = input(f"  {key} (oneri: {default_val}) = ").strip()
+            if raw:
+                try:
+                    if isinstance(default_val, bool):
+                        manual_params[key] = raw.lower() in ('true', 't', '1', 'e', 'evet')
+                    elif isinstance(default_val, int):
+                        manual_params[key] = int(raw)
+                    elif isinstance(default_val, float):
+                        manual_params[key] = float(raw)
+                    else:
+                        manual_params[key] = raw
+                except ValueError:
+                    print(f"    [!] Gecersiz deger, varsayilan ({default_val}) kullanildi.")
+                    manual_params[key] = default_val
+            else:
+                manual_params[key] = default_val
+        # Also allow setting params not in the space (algorithm_type etc.)
+        for key in current_params:
+            if key not in manual_params:
+                manual_params[key] = current_params[key]
+        result[spec.name] = manual_params
+    return result
+
+
+def _run_benchmark_with_params(
+    problems: List[DOEProblem],
+    specs: List[StrategySpec],
+    custom_params: Dict[str, Dict[str, Any]],
+    runs: int,
+    workers: int,
+    metadata: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    """Run benchmark with explicitly provided parameters.
+    custom_params: {spec.name: {param_key: value, ...}}
+    """
+    benchmark_tasks = []
+    for problem in problems:
+        for spec in specs:
+            params = spec.default_params.copy()
+            # Merge custom params if available
+            if spec.name in custom_params:
+                params.update(custom_params[spec.name])
+            params["algorithm_type"] = spec.algorithm_type
+            benchmark_tasks.append(
+                (_make_problem_dict(problem), spec.name, _resolve_strategy_payload(spec), params, 1, runs)
+            )
+    return _execute_benchmark_tasks(benchmark_tasks, workers, metadata, "BENCH")
+
+
+def _load_params_from_db_interactive(
+    problems: List[DOEProblem],
+    specs: List[StrategySpec],
+) -> Dict[str, Dict[str, Any]]:
+    """Interactive selection: for each (problem, algorithm) pair, load best params from DB.
+    Returns {spec.name: {param_key: value, ...}} merging defaults with loaded values.
+    """
+    db_entries = _param_db_list()
+    if not db_entries:
+        print("[INFO] Parametre DB'sinde kayit bulunamadi. Varsayilan parametreler kullanilacak.")
+        return {}
+
+    print("\n" + "=" * 70)
+    print("PARAMETRE DB'DEN YUKLEME")
+    print("=" * 70)
+    for prob in problems:
+        for spec in specs:
+            best = _param_db_get_best(prob.name, spec.name)
+            if best:
+                print(f"  {prob.name} / {spec.name}: best_score={best['best_score']:.1f}, params={best['params']}")
+            else:
+                print(f"  {prob.name} / {spec.name}: (DB'de kayit yok, varsayilan kullanilacak)")
+
+    raw = input("\nDB'deki parametreleri kullanmak icin [E], kendi girmek icin [M], varsayilan icin [D]: ").strip().upper()
+    if raw == 'E':
+        result: Dict[str, Dict[str, Any]] = {}
+        for prob in problems:
+            for spec in specs:
+                best = _param_db_get_best(prob.name, spec.name)
+                if best:
+                    result[spec.name] = best["params"]
+                else:
+                    result[spec.name] = spec.default_params.copy()
+                    result[spec.name]["algorithm_type"] = spec.algorithm_type
+        return result
+    elif raw == 'M':
+        return _manual_param_entry_interactive(specs)
+    else:
+        result = {}
+        for spec in specs:
+            params = spec.default_params.copy()
+            params["algorithm_type"] = spec.algorithm_type
+            result[spec.name] = params
+        return result
+
+
+def _select_benchmark_problems_interactive(all_problems: List[DOEProblem]) -> List[DOEProblem]:
+    """Interactive problem selection for benchmark (can differ from tuning problems)."""
+    selector = ProblemSelector(all_problems)
+    return selector.interactive_select()
+
+
+# ── AlgorithmRegistry Registration ─────────────────────────────────────────────
+
+def _make_numba_executor(spec_name: str, spec_payload: Any):
+    """Create AlgorithmRegistry-compatible executor for a numba strategy."""
+    def executor(problem, params, seed, run_idx):
+        from optimizer_api.tests.run_interactive_benchmark_v2_numba import run_single_test, TSPLIBProblem
+        tsp_prob = TSPLIBProblem(
+            name=problem.name, dimension=problem.dimension,
+            optimal=problem.optimal or 0,
+            coordinates=problem.coordinates,
+            category=getattr(problem, 'category', 'small'),
+            source=getattr(problem, 'source', 'tsplib'),
+        )
+        if hasattr(problem, 'dist_matrix') and problem.dist_matrix is not None:
+            result = run_single_test(tsp_prob, spec_payload, seed, params, dist_matrix=problem.dist_matrix)
+        else:
+            matrix = _dm_from_cache(problem.name, TSPLIB_DB)
+            result = run_single_test(tsp_prob, spec_payload, seed, params, dist_matrix=matrix)
+        # Tour validation: ensure permutation is valid
+        tour = result.get("tour", [])
+        n = problem.dimension
+        if tour and len(tour) == n:
+            assert len(set(tour)) == n, f"[{spec_name}] Invalid tour: duplicate nodes in {tour}"
+            assert min(tour) == 0, f"[{spec_name}] Invalid tour: min node {min(tour)} != 0"
+            assert max(tour) == n - 1, f"[{spec_name}] Invalid tour: max node {max(tour)} != {n-1}"
+        from academic_benchmark.engine_core import RunResult
+        return RunResult(
+            problem=problem.name, algorithm=spec_name,
+            run=run_idx, seed=seed, dimension=problem.dimension,
+            optimal=problem.optimal, tour_cost=int(result["tour_length"]),
+            gap_pct=result.get("gap"), elapsed_sec=result.get("time_ms", 0) / 1000.0,
+            iterations=result.get("iterations", 0),
+            tour=tour if tour else None,
+        )
+    executor.__name__ = f"numba_{spec_name.lower().replace('-', '_')}_executor"
+    return executor
+
+def _make_numba_warmup_fn(strategy_payload):
+    """Create a warmup function that JIT-compiles Numba kernels on a small problem."""
+    def warmup_fn(probe_problem):
+        try:
+            from optimizer_api.tests.run_interactive_benchmark_v2_numba import run_single_test, TSPLIBProblem
+            tsp_prob = TSPLIBProblem(
+                name=probe_problem.name, dimension=probe_problem.dimension,
+                optimal=probe_problem.optimal or 0,
+                coordinates=probe_problem.coordinates,
+                category=getattr(probe_problem, 'category', 'small'),
+                source=getattr(probe_problem, 'source', 'tsplib'),
+            )
+            run_single_test(tsp_prob, strategy_payload, 42, {"max_iterations": 1})
+        except Exception:
+            pass
+    warmup_fn.__name__ = f"numba_{strategy_payload}_warmup"
+    return warmup_fn
+
+if _HAS_NUMBA_REGISTRY:
+    for _sname, _spayload, _sparams in STRATEGIES:
+        _algoname = f"Numba-{_sname}"
+        _AlgoReg.register(_algoname)(_make_numba_executor(_algoname, _spayload))
+        _spec = _normalize_strategy_entry((_sname, _spayload, _sparams))
+        _AlgoReg.register_param_space(_algoname)(lambda s=_spec: _build_numba_parameter_space(s))
+        _AlgoReg.register_warmup(_algoname)(_make_numba_warmup_fn(_spayload))
+    for _sname, _spayload, _sparams in BILDIRI_STRATEGIES:
+        _AlgoReg.register(_sname)(_make_numba_executor(_sname, _spayload))
+        _spec = StrategySpec(name=_sname, payload=_spayload, default_params=_sparams, algorithm_type="bildiri_meta")
+        _AlgoReg.register_param_space(_sname)(lambda s=_spec: _build_numba_parameter_space(s))
+        _AlgoReg.register_warmup(_sname)(_make_numba_warmup_fn(_spayload))
+
+
+def _param_db_menu() -> None:
+    """Sub-menu for parameter database management."""
+    while True:
+        clear_screen()
+        print("\n" + "="*60)
+        print("PARAMETRE DB YONETIMI".center(60))
+        print("="*60)
+        print("  [1] Kayitli parametreleri listele")
+        print("  [2] Analiz (problem boyutuna gore ortak parametreler)")
+        print("  [3] Kayit sil")
+        print("  [Q] Ana menuye don")
+        choice = input("\nSeciminiz: ").strip().upper()
+
+        if choice == 'Q':
+            break
+        elif choice == '1':
+            entries = _param_db_list()
+            if not entries:
+                print("[INFO] Parametre DB'si bos.")
+            else:
+                print(f"\n{'ID':>3} {'Tarih':<20} {'Problem':<12} {'Algoritma':<8} {'Skor':<10} {'Gap%':<8} {'Boyut':<6}")
+                print("-" * 70)
+                for e in entries:
+                    gap_str = f"{e.get('gap', 0):.2f}" if e.get('gap') is not None else "N/A"
+                    print(f"{e['id']:>3} {e.get('timestamp', '?'):<20} {e['problem']:<12} {e['algorithm']:<8} {e.get('best_score', 0):<10.1f} {gap_str:<8} {e.get('dimension', 0):<6}")
+            input("\nDevam icin Enter...")
+        elif choice == '2':
+            analysis = _param_db_analyze()
+            print(f"\n{analysis}")
+            input("\nDevam icin Enter...")
+        elif choice == '3':
+            raw = input("Silmek istediginiz kayit ID'si: ").strip()
+            if raw.isdigit():
+                if _param_db_delete(int(raw)):
+                    print("[OK] Kayit silindi.")
+                else:
+                    print("[HATA] Kayit bulunamadi.")
+            input("Devam icin Enter...")
 
 
 def _select_problems_from_args(args, all_problems, interactive: bool = False):
@@ -984,10 +1703,12 @@ def _select_problems_from_args(args, all_problems, interactive: bool = False):
 
     return list(all_problems)
 
+
 def main() -> int:
     global _active_metadata
     
     _ensure_dirs()
+    _param_db_set(os.path.join(BENCHMARK_DB, "param_db.json"))
     metadata = load_metadata(METADATA_PATH)
     _active_metadata = metadata
 
@@ -1006,7 +1727,28 @@ def main() -> int:
     parser.add_argument("--select", help="Universal problem selection syntax")
     parser.add_argument("--runs", type=int, help="Tekrar sayısı")
     parser.add_argument("--size-limit", type=int, help="Problem boyutu limiti")
+    parser.add_argument("--config", help="Config dosyasi yolu (DOE ayarlarini yukler)")
+    parser.add_argument("--fractional-fallback", action="store_true", help="Fractional fallback stratejisi")
+    parser.add_argument("--edit-params", action="store_true", help="Tuning öncesi parametre uzayini duzenle")
     args, _ = parser.parse_known_args()
+
+    # If --config is provided, load tuning config and route to tuning mode
+    if args.config:
+        cfg = _load_tuning_config(args.config, all_problems, all_specs)
+        if not cfg:
+            return 1
+        selected_problems, selected_specs, settings = _resolve_tuning_config(cfg, all_problems, all_specs)
+        mode = EngineMode.TUNING
+        runs = settings.get("runs", args.runs or 3)
+        workers = settings.get("workers", min(cpu_count(), 6))
+        print(f"=== CONFIG MODE: {args.config} ===")
+        print(f"   Problemler: {len(selected_problems)}, Algoritmalar: {len(selected_specs)}, Runs: {runs}")
+        best = _tune_parameters(selected_problems, selected_specs, runs, DOE_MAX_COMBINATIONS, workers, metadata,
+                                skip_cached=True, use_fractional=args.fractional_fallback)
+        save_convergence_history(best, HISTORIES_DIR)
+        rows = _run_benchmark_with_best(selected_problems, selected_specs, best, runs, workers, metadata)
+        _write_summary(rows)
+        return 0
 
     if args.mode:
         mode = EngineMode(args.mode)
@@ -1021,7 +1763,17 @@ def main() -> int:
         
         print(f"=== NON-INTERACTIVE NUMBA BENCHMARK ({mode.value}) ===")
         if mode == EngineMode.TUNING:
-            best = _tune_parameters(selected_problems, selected_specs, runs, DOE_MAX_COMBINATIONS, workers, metadata, skip_cached=True)
+            # Optionally edit parameter spaces before tuning
+            param_overrides = None
+            if args.edit_params:
+                param_overrides = {}
+                for spec in selected_specs:
+                    edited = _edit_param_space_interactive(spec)
+                    param_overrides[spec.name] = edited
+            best = _tune_parameters(selected_problems, selected_specs, runs, DOE_MAX_COMBINATIONS, workers, metadata,
+                                    skip_cached=True, use_fractional=args.fractional_fallback,
+                                    param_overrides=param_overrides)
+            save_convergence_history(best, HISTORIES_DIR)
             rows = _run_benchmark_with_best(selected_problems, selected_specs, best, runs, workers, metadata)
         else:
             rows = _run_benchmark_direct(selected_problems, selected_specs, runs, workers, metadata)
@@ -1043,80 +1795,223 @@ def main() -> int:
         print(f"UniRide Master NUMBA Engine v{VERSION}".center(80))
         print("="*80)
         
-        print("\n--- ÇALIŞMA MODLARI ---")
-        print("  [1] DEFAULT: Direkt Benchmark (Varsayılan Parametrelerle)")
-        print("  [2] TUNING: DoE Grid/Fractional Parametre Taraması (Optimizasyon)")
-        print("\n--- DİĞER ---")
-        print("  [Q] Çıkış")
+        print("\n--- CALISMA MODLARI ---")
+        print("  [1] PARAMETRE TUNING (DOE/Bayesian)")
+        print("      -> Tuning yap, en iyi parametreleri DB'ye kaydet")
+        print("      -> Sonra farkli problemlerde benchmark kos (istege bagli)")
+        print("  [2] BENCHMARK")
+        print("      -> Secilen problemlerde, istedigin parametrelerle kos")
+        print("      -> Kaynak: [DB'den en iyi] / [Manuel] / [Varsayilan]")
+        print("  [3] HIZLI BENCHMARK (Varsayilan parametrelerle, eski DEFAULT)")
+        print("\n--- YAPILANDIRMA & ARAÇLAR ---")
+        print("  [4] Config Yukle (Kaydedilmis DOE ayarlarini yukle)")
+        print("  [5] Parametre DB Araclari (Listele, Analiz, Sil)")
+        print("\n--- DIGER ---")
+        print("  [D] DASHBOARD (Streamlit ile Sonuclari Gorsellestir)")
+        print("  [Q] Cikis")
         
         choice = input("\nSeçiminiz: ").strip().upper()
         
         if choice == 'Q':
-            print("Çıkış yapılıyor...")
+            print("Cikis yapiliyor...")
             return 0
-        if choice not in ('1', '2'):
+        if choice == 'D':
+            import subprocess
+            print("\nDashboard aciliyor... Tarayicinizda http://localhost:8501 adresine gidin.")
+            print("Durdurmak icin Ctrl+C basin.")
+            try:
+                subprocess.run(["streamlit", "run", str(Path(__file__).resolve().parent / "dashboard.py")])
+            except KeyboardInterrupt:
+                print("\nDashboard kapatildi.")
+            input("Devam etmek icin Enter...")
             continue
-            
-        mode = EngineMode.DEFAULT if choice == '1' else EngineMode.TUNING
+
+        # ── 4: Load Config ────────────────────────────────────────────────
+        if choice == '4':
+            configs = _list_tuning_configs()
+            if not configs:
+                print("[HATA] Kayitli config dosyasi bulunamadi.")
+                input("Devam etmek icin Enter'a basin...")
+                continue
+            print("\n--- Mevcut Config Dosyalari ---")
+            for idx, c in enumerate(configs, 1):
+                print(f"  [{idx}] {c}")
+            raw = input("\nSeciminiz: ").strip()
+            if not raw.isdigit() or int(raw) < 1 or int(raw) > len(configs):
+                print("[HATA] Gecersiz secim.")
+                input("Devam etmek icin Enter'a basin...")
+                continue
+            cfg_path = os.path.join(CONFIGS_DIR, configs[int(raw) - 1])
+            cfg = _load_tuning_config(cfg_path, all_problems, all_specs)
+            if not cfg:
+                input("Devam etmek icin Enter'a basin...")
+                continue
+            selected_problems, selected_specs, settings = _resolve_tuning_config(cfg, all_problems, all_specs)
+            runs = settings.get("runs", 3)
+            workers = settings.get("workers", min(cpu_count(), 6))
+            print(f"\n[CONFIG] Config yuklendi: {configs[int(raw) - 1]}")
+            print(f"   Problemler: {len(selected_problems)}, Algoritmalar: {len(selected_specs)}")
+            print(f"   Runs: {runs}, Workers: {workers}")
+
+            _run_interactive_tuning_flow(selected_problems, selected_specs, runs, workers, metadata,
+                                         all_problems=all_problems)
+            continue
+
+        # ── 5: Param DB Tools ─────────────────────────────────────────────
+        if choice == '5':
+            _param_db_menu()
+            continue
+
+        if choice not in ('1', '2', '3'):
+            continue
+
+        # ── Common: Problem + Algorithm Selection ─────────────────────────
+        if choice == '1':
+            print("\n[1] PARAMETRE TUNING")
+            print("Egitim problemlerini secin (tuning bu problemler uzerinde yapilacak):")
+        elif choice == '2':
+            print("\n[2] BENCHMARK")
+            print("Benchmark yapilacak problemleri secin:")
+        else:
+            print("\n[3] HIZLI BENCHMARK (Varsayilan Parametrelerle)")
+            print("Benchmark yapilacak problemleri secin:")
 
         selected_problems = _select_problems_from_args(args, all_problems, interactive=True)
 
         if not selected_problems:
-            print("Seçilen kriterlere uygun problem bulunamadı.")
-            input("Devam etmek için Enter'a basın...")
+            print("Secilen kriterlere uygun problem bulunamadi.")
+            input("Devam etmek icin Enter'a basin...")
             continue
-            
-        selected_names = multi_select(selectable_algos, "ALGORİTMA SEÇİMİ")
+
+        selected_names = multi_select(selectable_algos, "ALGORITMA SECIMI")
         if not selected_names:
             continue
-            
+
         selected_specs = [s for s in all_specs if s.name in selected_names]
-        
+
         workers = select_worker_count()
         runs = select_run_count("BENCHMARK", 3)
-        
-        clear_screen()
-        print("=" * 70)
-        print(f"BENCHMARK ÖZETİ - {mode.value.upper()}")
-        print("=" * 70)
-        print(f"Problemler : {len(selected_problems)} adet")
-        print(f"Algoritmalar: {', '.join(selected_names)}")
-        print(f"Run Sayısı : {runs}")
-        print(f"Worker     : {workers}")
-        
-        if mode == EngineMode.TUNING:
-            print(f"Max Komb.  : {DOE_MAX_COMBINATIONS}")
-            
-        if input("\nBaşlamak için [Y/y], iptal için herhangi bir tuş: ").strip().upper() != 'Y':
+
+        # ── Choice 1: Tuning Flow ─────────────────────────────────────────
+        if choice == '1':
+            use_fractional = False
+            param_overrides = None
+            frac_raw = input("Fractional fallback kullanilsin mi? (full factorial yerine random ornekleme) [e/H]: ").strip().upper()
+            use_fractional = (frac_raw == 'E')
+            edit_raw = input("Parametre uzayini duzenlemek ister misiniz? [e/H]: ").strip().upper()
+            if edit_raw == 'E':
+                param_overrides = {}
+                for spec in selected_specs:
+                    edited = _edit_param_space_interactive(spec)
+                    param_overrides[spec.name] = edited
+
+            clear_screen()
+            print("=" * 70)
+            print("TUNING OZETI")
+            print("=" * 70)
+            print(f"Egitim Problemleri : {len(selected_problems)} adet")
+            print(f"Algoritmalar       : {', '.join(selected_names)}")
+            print(f"Run Sayisi         : {runs}")
+            print(f"Worker             : {workers}")
+            print(f"Max Komb.          : {DOE_MAX_COMBINATIONS}")
+            print(f"Strateji           : {'Fractional' if use_fractional else 'Sequential'}")
+            if param_overrides:
+                print(f"Param. Ed.         : {' '.join(param_overrides.keys())}")
+
+            if input("\nBaslamak icin [Y/y]: ").strip().upper() != 'Y':
+                continue
+
+            start_time = time.time()
+            _run_interactive_tuning_flow(
+                selected_problems, selected_specs, runs, workers, metadata,
+                use_fractional=use_fractional, param_overrides=param_overrides,
+                all_problems=all_problems,
+            )
+            elapsed = time.time() - start_time
+            print(f"\n[OK] Toplam sure: {format_time(elapsed)}")
+            input("\nDevam etmek icin Enter'a basin...")
             continue
-            
-        start_time = time.time()
-        
-        if mode == EngineMode.TUNING:
-            print("\n[1/2] DOE TUNING BAŞLIYOR...")
-            best_params = _tune_parameters(selected_problems, selected_specs, runs, DOE_MAX_COMBINATIONS, workers, metadata, skip_cached=True)
-            
-            save_convergence_history(best_params, HISTORIES_DIR)
-            
-            print("\n[2/2] EN İYİ PARAMETRELERLE BENCHMARK BAŞLIYOR...")
-            rows = _run_benchmark_with_best(selected_problems, selected_specs, best_params, runs, workers, metadata)
-        else:
-            print("\n[START] DİREKT BENCHMARK BAŞLIYOR...")
+
+        # ── Choice 2: Benchmark with Param Source Selection ───────────────
+        if choice == '2':
+            print("\nParametre Kaynagi Secimi:")
+            print("  [B] En iyi parametreleri DB'den yukle")
+            print("  [M] Manuel parametre girisi (bildiri2026 stili)")
+            print("  [D] Varsayilan parametreler")
+            ps_raw = input("Seciminiz [B/M/D]: ").strip().upper()
+
+            custom_params = None
+            if ps_raw == 'B':
+                custom_params = _load_params_from_db_interactive(selected_problems, selected_specs)
+            elif ps_raw == 'M':
+                custom_params = _manual_param_entry_interactive(selected_specs)
+
+            clear_screen()
+            print("=" * 70)
+            print("BENCHMARK OZETI")
+            print("=" * 70)
+            print(f"Problemler : {len(selected_problems)} adet")
+            print(f"Algoritmalar: {', '.join(selected_names)}")
+            print(f"Run Sayisi : {runs}")
+            print(f"Worker     : {workers}")
+            print(f"Parametre  : {'DB yuklendi' if ps_raw == 'B' else 'Manuel' if ps_raw == 'M' else 'Varsayilan'}")
+
+            if input("\nBaslamak icin [Y/y]: ").strip().upper() != 'Y':
+                continue
+
+            start_time = time.time()
+            print("\n[START] BENCHMARK BASLIYOR...")
+            if custom_params is not None:
+                rows = _run_benchmark_with_params(selected_problems, selected_specs, custom_params, runs, workers, metadata)
+            else:
+                rows = _run_benchmark_direct(selected_problems, selected_specs, runs, workers, metadata)
+            _write_summary(rows)
+
+            elapsed = time.time() - start_time
+            print(f"\n[OK] Islem tamamlandi! Toplam Sure: {format_time(elapsed)}")
+            print("\n=== SONUCLAR ===")
+            print(f"{'Problem':<15} {'Algoritma':<15} {'Uzunluk':<10} {'Gap %':<10} {'Sure (ms)':<10}")
+            print("-" * 65)
+            for r in rows:
+                gap_str = f"{r['avg_gap']:.2f}" if r['avg_gap'] is not None else "N/A"
+                print(f"{r['problem']:<15} {r['strategy']:<15} {r['avg_length']:<10.1f} {gap_str:<10} {r['avg_time_ms']:<10.0f}")
+
+            input("\nDevam etmek icin Enter'a basin...")
+            continue
+
+        # ── Choice 3: Quick Default Benchmark (old DEFAULT) ───────────────
+        if choice == '3':
+            clear_screen()
+            print("=" * 70)
+            print("HIZLI BENCHMARK OZETI - VARSAYILAN PARAMETRELER")
+            print("=" * 70)
+            print(f"Problemler : {len(selected_problems)} adet")
+            print(f"Algoritmalar: {', '.join(selected_names)}")
+            print(f"Run Sayisi : {runs}")
+            print(f"Worker     : {workers}")
+
+            if input("\nBaslamak icin [Y/y], iptal icin herhangi bir tus: ").strip().upper() != 'Y':
+                continue
+
+            start_time = time.time()
+            print("\n[START] DIREKT BENCHMARK BASLIYOR...")
             rows = _run_benchmark_direct(selected_problems, selected_specs, runs, workers, metadata)
-            
-        _write_summary(rows)
-        
-        elapsed = time.time() - start_time
-        print(f"\n[OK] İşlem tamamlandı! Toplam Süre: {format_time(elapsed)}")
-        
-        print("\n=== SONUÇLAR ===")
-        print(f"{'Problem':<15} {'Algoritma':<15} {'Uzunluk':<10} {'Gap %':<10} {'Süre (ms)':<10}")
-        print("-" * 65)
-        for r in rows:
-            gap_str = f"{r['avg_gap']:.2f}" if r['avg_gap'] is not None else "N/A"
-            print(f"{r['problem']:<15} {r['strategy']:<15} {r['avg_length']:<10.1f} {gap_str:<10} {r['avg_time_ms']:<10.0f}")
-            
-        input("\nAna menüye dönmek için Enter'a basın...")
+            _write_summary(rows)
+
+            elapsed = time.time() - start_time
+            print(f"\n[OK] Islem tamamlandi! Toplam Sure: {format_time(elapsed)}")
+            print("\n=== SONUCLAR ===")
+            print(f"{'Problem':<15} {'Algoritma':<15} {'Uzunluk':<10} {'Gap %':<10} {'Sure (ms)':<10}")
+            print("-" * 65)
+            for r in rows:
+                gap_str = f"{r['avg_gap']:.2f}" if r['avg_gap'] is not None else "N/A"
+                print(f"{r['problem']:<15} {r['strategy']:<15} {r['avg_length']:<10.1f} {gap_str:<10} {r['avg_time_ms']:<10.0f}")
+
+            input("\nAna menuye donmek icin Enter'a basin...")
+            continue
+
+        # Fallback (should not reach here)
+        input("Devam etmek icin Enter'a basin...")
 
 if __name__ == "__main__":
     raise SystemExit(main())

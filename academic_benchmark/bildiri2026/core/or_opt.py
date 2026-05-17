@@ -1,6 +1,7 @@
 """Or-opt Local Search Algorithm for TSP (with optional Numba JIT)."""
 import time
 import random
+import warnings
 from typing import List, Tuple, Optional
 from .base_solver import BaseTSPSolver, TSPResult
 from . import numba_accel as _nb
@@ -20,6 +21,11 @@ class OrOptSolver(BaseTSPSolver):
         random_seed: Optional[int] = None
     ):
         super().__init__("Or-opt", random_seed)
+        if max_segment_size > 3:
+            warnings.warn(
+                f"Or-opt: max_segment_size={max_segment_size} capped to 3 (algorithm limitation)",
+                UserWarning
+            )
         self.max_iterations = max_iterations
         self.max_segment_size = min(max_segment_size, 3)
         self.first_improvement = first_improvement

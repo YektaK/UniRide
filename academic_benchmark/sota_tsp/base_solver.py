@@ -39,10 +39,37 @@ class BaseTSPSolver(ABC):
         self._n: int = 0
         self._dist_matrix: Optional[List[List[float]]] = None
         self._dist_matrix_np = None
+        self._precomputed_matrix: Optional[object] = None
+
+    def set_dist_matrix(self, dm: object) -> None:
+        """Inject precomputed distance matrix (correct for all edge weight types).
+
+        Call BEFORE solve(). When set, _set_problem() uses this matrix
+        directly instead of building a Euclidean distance matrix from coordinates.
+        Pass None to clear and revert to default Euclidean build.
+
+        Args:
+            dm: numpy array (n, n) or list-of-lists of distances. Must match
+                the problem dimension. The solver will convert to its internal
+                format (List[List[float]] + optional np.ndarray).
+        """
+        self._precomputed_matrix = dm
 
     def _set_problem(self, coordinates: List[Tuple[float, float]]):
         self._coordinates = coordinates
         self._n = len(coordinates)
+        if self._precomputed_matrix is not None:
+            pm = self._precomputed_matrix
+            if _NUMPY_AVAILABLE and hasattr(pm, 'dtype'):
+                self._dist_matrix_np = pm.astype(np.float64, copy=False)
+                self._dist_matrix = pm.tolist()
+            elif _NUMPY_AVAILABLE:
+                self._dist_matrix_np = np.array(pm, dtype=np.float64)
+                self._dist_matrix = pm
+            else:
+                self._dist_matrix = pm
+                self._dist_matrix_np = None
+            return
         self._dist_matrix = self._build_dist_matrix(coordinates)
         if _NUMPY_AVAILABLE and self._dist_matrix is not None:
             self._dist_matrix_np = np.array(self._dist_matrix, dtype=np.float64)

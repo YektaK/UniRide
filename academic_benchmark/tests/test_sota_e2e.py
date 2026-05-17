@@ -23,7 +23,7 @@ from academic_benchmark.sota_tsp.r2dma_tsp import R2DMA_TSP, R2DMATSPConfig, _co
 from academic_benchmark.sota_tsp.paoea_tsp import PAOEA_TSP, PAOEAConfig, OperatorGenome
 from academic_benchmark.sota_tsp.destroy_ops import RandomRemoval, WorstRemoval, ShawRemoval
 from academic_benchmark.sota_tsp.repair_ops import GreedyInsertion, Regret2Insertion, Regret3Insertion
-from academic_benchmark.utils_benchmark import compute_population_diversity
+from academic_benchmark.benchmark_utils import compute_population_diversity
 
 
 # --- Yardımcı: küçük test problemi ---

@@ -567,7 +567,7 @@ def run_single_test_with_matrix(
         a = tour_indices[k]
         b = tour_indices[(k + 1) % len(tour_indices)]
         tour_length += time_matrix[a - 1][b - 1]
-    tour_length = int(tour_length)
+    tour_length = int(tour_length) if not is_time_matrix else round(tour_length, 2)
 
     optimal = getattr(problem, "optimal", None)
     if optimal and optimal > 0:
@@ -620,13 +620,6 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
             self.time_matrix = data.get("time_matrix")
 
     problem = _Problem(problem_dict)
-    effective_problem = problem
-    if not optimal:
-        class _ProblemWithSafeOptimal(_Problem):
-            def __init__(self, data: Dict[str, Any]):
-                super().__init__(data)
-                self.optimal = 1
-        effective_problem = _ProblemWithSafeOptimal(problem_dict)
 
     # Load correct distance matrix from TSPLib DB cache for non-time-matrix problems.
     # This is CRITICAL: run_single_test falls back to create_np_distance_matrix
@@ -655,10 +648,10 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
                 result = _run_bildiri_ga(problem_dict, seed, strategy_params)
         elif is_time_matrix and time_matrix_data:
             result = run_single_test_with_matrix(
-                effective_problem, strategy_payload, seed, strategy_params, time_matrix_data
+                problem, strategy_payload, seed, strategy_params, time_matrix_data
             )
         else:
-            result = run_single_test(effective_problem, strategy_payload, seed, strategy_params,
+            result = run_single_test(problem, strategy_payload, seed, strategy_params,
                                      dist_matrix=dist_matrix_np)
             
         if not optimal:
@@ -1110,7 +1103,9 @@ def _tune_parameters(
         remain_sec = tracker.estimate_remaining(total - (idx + 1))
         remain = format_time(remain_sec) if remain_sec is not None else "N/A"
         
-        sym = "*" if (result.get("avg_gap") or 100) <= 1 else ("+" if (result.get("avg_gap") or 100) <= 5 else "o")
+        gap_val = result.get("avg_gap")
+        sym = "*" if gap_val is not None and not math.isnan(gap_val) and gap_val <= 1 else (
+              "+" if gap_val is not None and not math.isnan(gap_val) and gap_val <= 5 else "o")
         print(f"  [{idx+1:>3}/{total}] {problem_name:<12} {strategy_name:<8} "
               f"GAP: {result.get('avg_gap', 0):>6.2f}% {sym} {result.get('avg_time_ms', 0):>7.0f}ms "
               f"[ETA: {remain}]", flush=True)
@@ -1196,7 +1191,9 @@ def _execute_benchmark_tasks(tasks, workers, metadata, stage_label):
         remain_sec = tracker.estimate_remaining(total - (idx + 1))
         remain = format_time(remain_sec) if remain_sec is not None else "N/A"
         
-        sym = "*" if (result.get("avg_gap") or 100) <= 1 else ("+" if (result.get("avg_gap") or 100) <= 5 else "o")
+        gap_val = result.get("avg_gap")
+        sym = "*" if gap_val is not None and not math.isnan(gap_val) and gap_val <= 1 else (
+              "+" if gap_val is not None and not math.isnan(gap_val) and gap_val <= 5 else "o")
         sys.stdout.write(f"\r  [{idx+1:>3}/{total}] {result['problem']:<12} {result['strategy']:<8} "
                          f"GAP: {result.get('avg_gap', 0):>6.2f}% {sym} {result.get('avg_time_ms', 0):>7.0f}ms "
                          f"[{stage_label} ETA: {remain:<9}]")
@@ -1390,6 +1387,16 @@ def _run_optuna_tuning_flow(
             print(f"\n[OPTUNA] {problem.name} / {spec.name} — En iyi gap: {study.best_value:.2f}%")
             print(f"  En iyi parametreler: {study.best_params}")
 
+            key = f"{problem.name}::{spec.name}"
+            defaults = spec.default_params.copy()
+            metadata.setdefault("best_params", {})[key] = {
+                "params": {**defaults, **study.best_params},
+                "avg_gap": study.best_value,
+                "n_runs": n_runs,
+                "tuning_method": "optuna",
+            }
+            save_metadata(METADATA_PATH, metadata)
+
     print("\n[OPTUNA] Tum tuning tamamlandi.")
 
 
@@ -1508,15 +1515,19 @@ def _run_benchmark_with_params(
     metadata: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
     """Run benchmark with explicitly provided parameters.
-    custom_params: {spec.name: {param_key: value, ...}}
+    custom_params: {f"{prob.name}::{spec.name}": {param_key: value, ...}}
+    Falls back to {spec.name: params} for backward compat with pre-2026-05-19 metadata.
     """
     benchmark_tasks = []
     for problem in problems:
         for spec in specs:
             params = spec.default_params.copy()
-            # Merge custom params if available
-            if spec.name in custom_params:
-                params.update(custom_params[spec.name])
+            per_problem_key = f"{problem.name}::{spec.name}"
+            legacy_key = spec.name
+            if per_problem_key in custom_params:
+                params.update(custom_params[per_problem_key])
+            elif legacy_key in custom_params:
+                params.update(custom_params[legacy_key])
             params["algorithm_type"] = spec.algorithm_type
             benchmark_tasks.append(
                 (_make_problem_dict(problem), spec.name, _resolve_strategy_payload(spec), params, 1, runs)
@@ -1529,7 +1540,11 @@ def _load_params_from_db_interactive(
     specs: List[StrategySpec],
 ) -> Dict[str, Dict[str, Any]]:
     """Interactive selection: for each (problem, algorithm) pair, load best params from DB.
-    Returns {spec.name: {param_key: value, ...}} merging defaults with loaded values.
+    Returns {f"{prob.name}::{spec.name}": {param_key: value, ...}}.
+
+    NOTE (2026-05-19): Key format changed from {spec.name: params} to per-problem keys.
+    Previously, multi-problem DB loads silently overwrote params (last problem won).
+    See IMPLEMENTATION_PLAN_2026-05-19.md § H-04 for migration details.
     """
     db_entries = _param_db_list()
     if not db_entries:
@@ -1553,20 +1568,23 @@ def _load_params_from_db_interactive(
         for prob in problems:
             for spec in specs:
                 best = _param_db_get_best(prob.name, spec.name)
+                key = f"{prob.name}::{spec.name}"
                 if best:
-                    result[spec.name] = best["params"]
+                    result[key] = best["params"]
                 else:
-                    result[spec.name] = spec.default_params.copy()
-                    result[spec.name]["algorithm_type"] = spec.algorithm_type
+                    result[key] = spec.default_params.copy()
+                    result[key]["algorithm_type"] = spec.algorithm_type
         return result
     elif raw == 'M':
         return _manual_param_entry_interactive(specs)
     else:
         result = {}
-        for spec in specs:
-            params = spec.default_params.copy()
-            params["algorithm_type"] = spec.algorithm_type
-            result[spec.name] = params
+        for prob in problems:
+            for spec in specs:
+                key = f"{prob.name}::{spec.name}"
+                params = spec.default_params.copy()
+                params["algorithm_type"] = spec.algorithm_type
+                result[key] = params
         return result
 
 

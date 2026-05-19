@@ -47,6 +47,7 @@ from datetime import datetime
 from enum import Enum
 from multiprocessing import cpu_count
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from pathlib import Path
 
 # Windows stdout encoding düzeltmesi — reconfigure() avoids Python 3.14 GC crash
 if sys.platform == "win32":
@@ -707,7 +708,7 @@ def _evaluate_sota_combo(task: Tuple[Dict[str, Any], str, Dict[str, Any], int, i
         avg_time = 0.0
     else:
         avg_cost = sum(costs) / len(costs)
-        avg_gap = ((avg_cost - optimal) / optimal * 100.0) if optimal else float("nan")
+        avg_gap = ((avg_cost - optimal) / optimal * 100.0) if (optimal is not None and optimal > 0) else float("nan")
         avg_time = sum(times_sec) / len(times_sec)
 
     return {
@@ -1159,8 +1160,9 @@ def _run_sota_optuna_tuning(
             defaults = _make_solver_config(algo, problem.dimension, _NUMBA_AVAILABLE)
             best_params[key] = {
                 "params": {**defaults, **study.best_params},
-                "avg_length": study.best_value,
+                "objective_value": study.best_value,
                 "avg_gap": study.best_value,
+                "avg_length": None,
                 "n_runs": n_runs,
             }
 
@@ -1345,7 +1347,11 @@ def _load_params_from_db_interactive(
     algos: List[str],
 ) -> Dict[str, Dict[str, Any]]:
     """Interactive selection: for each (problem, algorithm) pair, load best params from DB.
-    Returns {algo_name: {param_key: value, ...}} merging defaults with loaded values.
+    Returns {f"{prob.name}::{algo_name}": {param_key: value, ...}}.
+
+    NOTE (2026-05-19): Key format changed from {algo: params} to per-problem keys.
+    Previously, multi-problem DB loads silently overwrote params (last problem won).
+    See IMPLEMENTATION_PLAN_2026-05-19.md § H-04 for migration details.
     """
     db_entries = _param_db_list()
     if not db_entries:
@@ -1369,17 +1375,20 @@ def _load_params_from_db_interactive(
         for prob in problems:
             for algo in algos:
                 best = _param_db_get_best(prob.name, algo)
+                key = f"{prob.name}::{algo}"
                 if best:
-                    result[algo] = best["params"]
+                    result[key] = best["params"]
                 else:
-                    result[algo] = _make_solver_config(algo, prob.dimension, _NUMBA_AVAILABLE)
+                    result[key] = _make_solver_config(algo, prob.dimension, _NUMBA_AVAILABLE)
         return result
     elif raw == 'M':
         return _manual_param_entry_interactive(algos)
     else:
         result = {}
-        for algo in algos:
-            result[algo] = _make_solver_config(algo, 100, _NUMBA_AVAILABLE)
+        for prob in problems:
+            for algo in algos:
+                key = f"{prob.name}::{algo}"
+                result[key] = _make_solver_config(algo, prob.dimension, _NUMBA_AVAILABLE)
         return result
 
 
@@ -1392,7 +1401,8 @@ def _run_engine_with_params(
     metadata: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
     """Run benchmark with explicitly provided parameters.
-    custom_params: {algo_name: {param_key: value, ...}}
+    custom_params: {f"{prob.name}::{algo_name}": {param_key: value, ...}}
+    Falls back to {algo_name: params} for backward compat with pre-2026-05-19 metadata.
     """
     tasks = []
     total_runs = len(problems) * len(algos) * n_runs
@@ -1405,10 +1415,18 @@ def _run_engine_with_params(
             runs_to_do = n_runs
             completed += saved_runs
 
+            per_problem_key = f"{problem.name}::{algo}"
+            legacy_key = algo
+
             for run_idx in range(runs_to_do):
                 global_run_idx = saved_runs + run_idx
                 seed = make_deterministic_seed(problem.name, algo, global_run_idx, 0, 5000)
-                params = custom_params.get(algo, _make_solver_config(algo, problem.dimension, _NUMBA_AVAILABLE)).copy()
+                if per_problem_key in custom_params:
+                    params = custom_params[per_problem_key].copy()
+                elif legacy_key in custom_params:
+                    params = custom_params[legacy_key].copy()
+                else:
+                    params = _make_solver_config(algo, problem.dimension, _NUMBA_AVAILABLE).copy()
                 params["seed"] = seed
                 tasks.append((
                     algo, problem.coordinates, seed, global_run_idx,
@@ -1513,23 +1531,26 @@ def _make_sota_executor(algo_name: str):
         run_params["seed"] = seed
         solver = _make_solver(algo_name, run_params)
         matrix = _dm_from_cache(problem.name, TSPLIB_DB)
-        if matrix is not None and len(matrix) == len(problem.coordinates):
+        n = problem.dimension
+        if matrix is not None and len(matrix) == n and all(len(r) == n for r in matrix):
             solver.set_dist_matrix(matrix)
+        t0 = time.perf_counter()
         result = solver.solve(problem.coordinates)
+        elapsed = time.perf_counter() - t0
         # Tour validation: ensure permutation is valid
         tour = getattr(result, "tour", [])
-        n = problem.dimension
         if tour and len(tour) == n:
             assert len(set(tour)) == n, f"[{algo_name}] Invalid tour: duplicate nodes"
             assert min(tour) == 0, f"[{algo_name}] Invalid tour: min node {min(tour)} != 0"
             assert max(tour) == n - 1, f"[{algo_name}] Invalid tour: max node {max(tour)} != {n-1}"
-        gap = ((result.tour_length - (problem.optimal or 0)) / max(problem.optimal or 1, 1)) * 100
+        gap_pct, gap_type = compute_gap(problem.name, result.tour_length, problem.optimal)
         from academic_benchmark.engine_core import RunResult
         return RunResult(
             problem=problem.name, algorithm=algo_name,
             run=run_idx, seed=seed, dimension=problem.dimension,
             optimal=problem.optimal, tour_cost=int(result.tour_length),
-            gap_pct=round(gap, 4), elapsed_sec=result.elapsed_ms / 1000.0,
+            gap_pct=round(gap_pct, 4) if not math.isnan(gap_pct) else None,
+            elapsed_sec=round(elapsed, 3),
             iterations=result.iterations,
             tour=tour,
         )

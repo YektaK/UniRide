@@ -117,7 +117,7 @@ def compute_gap(problem: str, cost: float, optimal: Optional[int] = None) -> Tup
     """Compute gap percentage. Returns (gap_pct, gap_type).
     gap_type: 'optimal' | 'bsf' | 'unknown'
     """
-    opt = optimal or TSPLIB_OPTIMALS.get(problem.lower())
+    opt = optimal if optimal is not None else TSPLIB_OPTIMALS.get(problem.lower())
     if opt and opt > 0:
         gap = (cost - opt) / opt * 100.0
         return gap, "optimal"

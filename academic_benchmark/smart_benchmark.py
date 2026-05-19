@@ -22,7 +22,7 @@ import concurrent.futures
 import math
 import numpy as np
 from datetime import datetime
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Any
 from multiprocessing import cpu_count
 from concurrent.futures import ProcessPoolExecutor
 
@@ -139,7 +139,7 @@ signal.signal(signal.SIGINT, signal_handler)
 def graceful_shutdown():
     global _shutdown_requested
     _shutdown_requested = True
-    print("\n\n[!] STOP REQUEST RECEIVED!")
+    print("\n\n[!] STOP REQUESTED!")
     print("[NOTE] Saving current results, please wait...")
     if _current_metadata and _current_results:
         save_metadata(METADATA_PATH, _current_metadata)
@@ -153,6 +153,35 @@ def graceful_shutdown():
         print(f"[OK] {len(_current_results)} results saved to: {csv_path}")
     print("Graceful shutdown complete.")
     sys.exit(0)
+
+def _check_interrupt_key():
+    """Check for Ctrl+Q / Ctrl+X / q / x without blocking.
+    Cross-platform: msvcrt on Windows, select+termios on Unix.
+    Ctrl+C is intentionally NOT checked here (safe for copy-paste).
+    Graceful degradation: returns False if stdin unavailable (CI, piped input).
+    """
+    if sys.platform == 'win32':
+        import msvcrt
+        if msvcrt.kbhit():
+            key = msvcrt.getch()
+            return key in (b'\x18', b'\x11', b'q', b'x', b'Q', b'X')
+    else:
+        try:
+            import select, termios, tty
+            if not sys.stdin.isatty():
+                return False
+            fd = sys.stdin.fileno()
+            old = termios.tcgetattr(fd)
+            try:
+                tty.setcbreak(fd)
+                if select.select([sys.stdin], [], [], 0.0)[0]:
+                    ch = sys.stdin.read(1)
+                    return ch in ('\x11', '\x18', 'q', 'x', 'Q', 'X')
+            finally:
+                termios.tcsetattr(fd, termios.TCSADRAIN, old)
+        except (ImportError, OSError, AttributeError):
+            pass
+    return False
 
 # ── Problem Loading ──────────────────────────────────────────────────────────
 
@@ -410,16 +439,16 @@ def run_unified_benchmark(problems, algorithms, param_source, n_runs, workers, m
     """
     global _current_results, _current_metadata, _shutdown_requested
 
-    # Resolve params per algorithm
+    # Resolve params per (problem, algorithm) pair
     algo_params = {}
-    for algo in algorithms:
-        if param_source == 'db':
-            best = _db_get_best(problems[0].name if problems else "", algo, TSPLIB_DB)
-            algo_params[algo] = best["params"] if best else {}
-        elif param_source == 'manual':
-            algo_params[algo] = {}
-        else:
-            algo_params[algo] = {}
+    for p in problems:
+        for algo in algorithms:
+            key = f"{p.name}::{algo}"
+            if param_source == 'db':
+                best = _db_get_best(p.name, algo, TSPLIB_DB)
+                algo_params[key] = best["params"] if best else {}
+            else:
+                algo_params[key] = {}
 
     # Build tasks
     prob_dict = {p.name: p for p in problems}
@@ -436,7 +465,7 @@ def run_unified_benchmark(problems, algorithms, param_source, n_runs, workers, m
         for algo in algorithms:
             for run_idx in range(1, n_runs + 1):
                 seed = 42 + run_idx
-                params = algo_params.get(algo, {}).copy()
+                params = algo_params.get(f"{p.name}::{algo}", {}).copy()
                 tasks.append(BenchmarkTask(
                     problem_name=p.name, algorithm=algo,
                     run_idx=run_idx, seed=seed, params=params,
@@ -467,12 +496,8 @@ def run_unified_benchmark(problems, algorithms, param_source, n_runs, workers, m
                 print(f"\n[ERROR] Task failed: {exc}")
                 continue
 
-            if sys.platform == 'win32':
-                import msvcrt
-                if msvcrt.kbhit():
-                    key = msvcrt.getch()
-                    if key in (b'\x18', b'\x11', b'q', b'x'):
-                        _shutdown_requested = True
+            if _check_interrupt_key():
+                _shutdown_requested = True
 
             if _shutdown_requested:
                 graceful_shutdown()
@@ -721,8 +746,9 @@ def _menu_benchmark_only(all_problems, metadata):
     if input("\nBaslamak icin [Y/y]: ").strip().upper() != 'Y':
         return
 
-    run_unified_benchmark(problems, algos, ps_raw.lower() if ps_raw in ('B', 'M', 'D') else 'default',
-                          runs, workers, metadata)
+    param_map = {'B': 'db', 'M': 'manual', 'D': 'default'}
+    param_source = param_map.get(ps_raw, 'default')
+    run_unified_benchmark(problems, algos, param_source, runs, workers, metadata)
     input("\nDevam icin Enter...")
 
 def _menu_load_config(all_problems, metadata):
@@ -831,12 +857,8 @@ def run_benchmark(config: BenchmarkConfig, all_problems: List[ProblemInstance], 
             except Exception as exc:
                 print(f"\n[ERROR] Task failed: {exc}")
                 continue
-            if sys.platform == 'win32':
-                import msvcrt
-                if msvcrt.kbhit():
-                    key = msvcrt.getch()
-                    if key in (b'\x18', b'\x11', b'q', b'x'):
-                        _shutdown_requested = True
+            if _check_interrupt_key():
+                _shutdown_requested = True
             if _shutdown_requested:
                 graceful_shutdown()
                 break

@@ -70,6 +70,18 @@ except ImportError:
 # of times on the same problem instance this is the dominant overhead.
 # Cache size is bounded in practice (one entry per problem × algorithm).
 _DIST_MATRIX_CACHE: Dict[Tuple, Any] = {}
+import threading as _threading
+_DIST_MATRIX_CACHE_LOCK = _threading.Lock()
+
+
+def _get_cached_matrix(key: Tuple):
+    with _DIST_MATRIX_CACHE_LOCK:
+        return _DIST_MATRIX_CACHE.get(key)
+
+
+def _set_cached_matrix(key: Tuple, value: Any) -> None:
+    with _DIST_MATRIX_CACHE_LOCK:
+        _DIST_MATRIX_CACHE[key] = value
 
 
 def _build_or_get_dist_matrix(
@@ -95,8 +107,9 @@ def _build_or_get_dist_matrix(
     unique_locs = list(dict.fromkeys(route))
     cache_key = (frozenset(unique_locs), id(duration_func))
 
-    if cache_key in _DIST_MATRIX_CACHE:
-        return _DIST_MATRIX_CACHE[cache_key]
+    cached = _get_cached_matrix(cache_key)
+    if cached is not None:
+        return cached
 
     # Step 4 fast path: numpy-backed duration_func already has the matrix.
     if hasattr(duration_func, '_np_dist_matrix') and hasattr(duration_func, '_np_unique_locs'):
@@ -117,7 +130,7 @@ def _build_or_get_dist_matrix(
                     if i != j:
                         dist_matrix[i, j] = prebuilt_dm[src_map[loc_i], src_map[loc_j]]
             result = (index_map, dist_matrix, unique_locs)
-        _DIST_MATRIX_CACHE[cache_key] = result
+        _set_cached_matrix(cache_key, result)
         return result
 
     # Standard path: build matrix by querying the duration_func.
@@ -131,7 +144,7 @@ def _build_or_get_dist_matrix(
     # Diagonal already 0 by np.zeros
 
     result = (index_map, dist_matrix, unique_locs)
-    _DIST_MATRIX_CACHE[cache_key] = result
+    _set_cached_matrix(cache_key, result)
     return result
 
 
@@ -967,13 +980,23 @@ class HybridLocalSearch(BaseLocalSearch):
         - Updated internal iteration limits for better performance
     """
 
+    DEFAULT_ITERATION_LIMITS: Dict[LocalSearchType, int] = {
+        LocalSearchType.SWAP: 100,
+        LocalSearchType.TWO_OPT: 80,
+        LocalSearchType.OR_OPT: 60,
+        LocalSearchType.CROSS_EXCHANGE: 40,
+        LocalSearchType.THREE_OPT: 25,
+        LocalSearchType.TIME_WINDOW_AWARE: 50,
+    }
+
     def __init__(
         self,
         methods: Optional[List[LocalSearchType]] = None,
-        max_iterations: int = 5,  # Now represents number of cycles
+        max_iterations: int = 5,
         use_random_order: bool = False,
         include_cross_exchange: bool = True,
-        include_time_window: bool = True
+        include_time_window: bool = True,
+        iteration_limits: Optional[Dict[LocalSearchType, int]] = None,
     ):
         if methods is None:
             self.methods = [
@@ -991,6 +1014,7 @@ class HybridLocalSearch(BaseLocalSearch):
         self.use_random_order = use_random_order
         self.include_cross_exchange = include_cross_exchange
         self.include_time_window = include_time_window
+        self.iteration_limits = {**self.DEFAULT_ITERATION_LIMITS, **(iteration_limits or {})}
         self.rng = random.Random()
 
     def improve(
@@ -1015,25 +1039,11 @@ class HybridLocalSearch(BaseLocalSearch):
         if self.use_random_order:
             self.rng.shuffle(methods)
 
-        # ============================================================
-        # UPDATED ITERATION LIMITS PER METHOD (2024-04)
-        # ============================================================
-        # Increased limits for better quality, especially for Swap
-        # ============================================================
-        iteration_limits = {
-            LocalSearchType.SWAP: 100,           # Increased from 30
-            LocalSearchType.TWO_OPT: 80,         # Increased from 40
-            LocalSearchType.OR_OPT: 60,          # Increased from 30
-            LocalSearchType.CROSS_EXCHANGE: 40,  # Increased from 20
-            LocalSearchType.THREE_OPT: 25,       # Increased from 15
-            LocalSearchType.TIME_WINDOW_AWARE: 50,  # Increased from 25
-        }
-
         for iteration in range(self.max_iterations):
             improved_this_round = False
 
             for method in methods:
-                max_iter = iteration_limits.get(method, 30)
+                max_iter = self.iteration_limits.get(method, 30)
 
                 if method == LocalSearchType.TWO_OPT:
                     ls = TwoOptLocalSearch(max_iterations=max_iter)

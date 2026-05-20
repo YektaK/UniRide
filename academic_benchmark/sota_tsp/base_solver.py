@@ -8,7 +8,6 @@ interchangeable in the benchmark runner.
 import math
 import time
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from typing import List, Tuple, Optional
 
 try:
@@ -17,18 +16,7 @@ try:
 except ImportError:
     _NUMPY_AVAILABLE = False
 
-
-@dataclass
-class TSPResult:
-    algorithm: str
-    tour: List[int]
-    tour_length: float
-    elapsed_ms: float
-    iterations: int
-    params: dict
-    history: Optional[List[float]] = None
-    seed: Optional[int] = None
-
+from academic_benchmark.engine_core import TSPResult
 
 class BaseTSPSolver(ABC):
 

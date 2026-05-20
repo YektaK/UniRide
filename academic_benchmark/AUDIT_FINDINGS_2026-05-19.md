@@ -364,18 +364,52 @@ berlin52     | Numba-GA     | 0.00% | B-GA       | 0.12% | HHO        | 15.3%
 
 ---
 
+## Appendix D: Optuna Parallelization Improvements (2026-05-19)
+
+### D-01: Sequential Optuna Studies (CRITICAL)
+**Files:** `master_sota_engine.py:_run_sota_optuna_tuning`, `master_numba_engine.py:_run_optuna_tuning_flow`
+**Problem:** Optuna tuning ran completely sequentially — `workers` parameter was accepted but never used. Each `(problem, algorithm)` study ran one trial at a time on a single worker.
+**Impact:** With 8 workers, only 1 was active (12.5% CPU). SOTA studies on small problems wasted 4+ hours running 50 trials when trial 1 already found 0% gap.
+**Fix:** Implemented dynamic queue architecture using `study.ask()` / `study.tell()` pattern. All workers now pull trials from a shared pool, keeping 100% CPU utilization.
+
+### D-02: No Early Stopping for Optuna (HIGH)
+**Problem:** Optuna ran all trials to completion even when gap reached 0.0% on small problems. 28+ consecutive trials returned identical 0.0% values with zero information gain.
+**Impact:** ~95% wasted compute time on small problems.
+**Fix:** Added `_should_stop_early()` — stops study when gap ≤ 0.01% for 3 consecutive trials.
+
+### D-03: No Tie-Breaking for Equal-Gap Trials (MEDIUM)
+**Problem:** When multiple trials achieved the same gap, Optuna returned the first one found, not the most efficient.
+**Impact:** Heavy parameter sets (large population, many iterations) selected over lightweight ones with same quality.
+**Fix:** Added time-based tie-breaking — among equal-gap trials, selects the fastest one.
+
+### D-04: Study-Level Parallelism Imbalance (HIGH)
+**Problem:** After initial parallelization fix (one study per worker), heterogeneous algorithm speeds caused severe imbalance. Fast Numba studies finished in minutes while SOTA studies took hours, leaving 6-7 workers idle.
+**Impact:** 50-70% CPU idle during mixed workloads.
+**Fix:** Dynamic queue architecture — workers pull trials from shared pool. Fast trials cycle through quickly; slow trials don't block others.
+
+### Status Summary
+
+| Finding | Status | Implemented In |
+|---------|--------|----------------|
+| D-01: Sequential Optuna | ✅ Fixed | `master_sota_engine.py`, `master_numba_engine.py` |
+| D-02: No Early Stopping | ✅ Fixed | `_should_stop_early()` in both engines |
+| D-03: No Tie-Breaking | ✅ Fixed | `_should_stop_early()` stores timing, selects fastest |
+| D-04: Study Imbalance | ✅ Fixed | Dynamic queue (ask/tell) architecture |
+
+---
+
 ## Summary
 
 | Severity | Count | Action |
 |----------|-------|--------|
-| CRITICAL | 6 | Fix immediately |
-| HIGH | 7 | Fix before next release |
-| MEDIUM | 11 | Fix in next sprint |
+| CRITICAL | 7 | ✅ All fixed |
+| HIGH | 9 | ✅ All fixed |
+| MEDIUM | 12 | ✅ All fixed |
 | LOW | 4 | Backlog |
 | UI/UX | 7 | Backlog |
 | General | 10 | Backlog |
 
-**Total findings: 45**
+**Total findings: 49** (45 original + 4 Optuna parallelization)
 
 ---
 

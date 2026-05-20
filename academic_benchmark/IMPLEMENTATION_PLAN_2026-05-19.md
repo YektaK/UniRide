@@ -505,6 +505,33 @@ Same replacement in `run_benchmark` (lines 834-839).
 
 ---
 
+## Phase 5: Optuna Parallelization & Optimization (4 items) — ✅ COMPLETED 2026-05-19
+
+### P5-1: Dynamic Queue Architecture for Optuna (D-01 + D-04)
+**Files:** `master_sota_engine.py`, `master_numba_engine.py`
+**Status:** ✅ COMPLETED
+**Time:** ~2 hours
+**Description:** Replaced `study.optimize()` loop with `study.ask()` / `study.tell()` pattern. Main process holds all studies, workers pull trials from shared pool. All workers stay busy 100% of time regardless of algorithm speed differences.
+
+**Key Functions:**
+- `_run_sota_trial_task()` — worker function for SOTA trials
+- `_run_numba_trial_task()` — worker function for Numba trials
+- `_should_stop_early()` — early stopping check (gap ≤ 0.01% for 3 consecutive trials)
+
+### P5-2: Early Stopping for Optuna Studies (D-02)
+**Status:** ✅ COMPLETED
+**Description:** Stops study when gap ≤ 0.01% for 3 consecutive trials. Prevents wasting hours on small problems where optimal is already found.
+
+### P5-3: Time-Based Tie-Breaking (D-03)
+**Status:** ✅ COMPLETED
+**Description:** Among equal-gap trials, selects the fastest one. Stores `avg_time_sec` during trial execution.
+
+### P5-4: Progress Reporting
+**Status:** ✅ COMPLETED
+**Description:** Real-time progress: `[OPTUNA] 47 trials done | 8 active | 2/6 studies stopped`
+
+---
+
 ## Phase 4: Low Severity + UI/UX + General (21 items) — Backlog
 
 All items from sections 4, 5, 6 of audit report. Prioritize based on user feedback.
@@ -541,17 +568,18 @@ All items from sections 4, 5, 6 of audit report. Prioritize based on user feedba
 
 ## Estimated Timeline
 
-| Phase | Items | Est. Time | Cumulative |
-|-------|-------|-----------|------------|
-| Phase 1 (Critical) | 7 | ~2 hours | 2 hours |
-| Phase 2 (High) | 5 (+ 1 postponed) | ~45 min | 2.75 hours |
-| Phase 3 (Medium) | 11 | ~2 hours | 4.75 hours |
-| Phase 4 (Backlog) | 21 | ~4 hours | 8.75 hours |
-| Regression tests | 4 new tests | ~30 min | 9.25 hours |
-| Cross-platform verification | C-06 | ~1 hour | 10.25 hours |
-| Buffer (20%) | — | ~2 hours | **~12 hours** |
+| Phase | Items | Est. Time | Cumulative | Status |
+|-------|-------|-----------|------------|--------|
+| Phase 1 (Critical) | 7 | ~2 hours | 2 hours | ✅ Done |
+| Phase 2 (High) | 5 (+ 1 postponed) | ~45 min | 2.75 hours | ✅ Done |
+| Phase 3 (Medium) | 11 | ~2 hours | 4.75 hours | ✅ Done |
+| Phase 5 (Optuna) | 4 | ~2 hours | 6.75 hours | ✅ Done |
+| Phase 4 (Backlog) | 21 | ~4 hours | 10.75 hours | Pending |
+| Regression tests | 4 new tests | ~30 min | 11.25 hours | Pending |
+| Cross-platform verification | C-06 | ~1 hour | 12.25 hours | Pending |
+| Buffer (20%) | — | ~2 hours | **~14.25 hours** | — |
 
-**Total estimated effort: ~12 hours** (revised from 8.5h — added regression tests, cross-platform verification, and 20% buffer)
+**Total estimated effort: ~14.25 hours** (revised from 12h — added Optuna parallelization phase)
 
 ---
 

@@ -496,6 +496,11 @@ def _coords_hash(coords) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
+def build_distance_matrix(coords, ewt: str):
+    """Public wrapper for _build_matrix. Computes distance matrix using tsplib_distance_by_type."""
+    return _build_matrix(coords, ewt)
+
+
 def _build_matrix(coords, ewt: str):
     n = len(coords)
     dm = np.zeros((n, n), dtype=np.int32)

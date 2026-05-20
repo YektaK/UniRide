@@ -8,7 +8,6 @@ Supports both:
 """
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from typing import List, Tuple, Optional
 import time
 import math
@@ -18,18 +17,7 @@ try:
 except ImportError:
     _NUMPY_AVAILABLE = False
 
-
-@dataclass
-class TSPResult:
-    """Standardized result format for all TSP solvers."""
-    algorithm: str
-    tour: List[int]           # Node indices in visit order (0 = depot)
-    tour_length: float        # Total distance or time
-    elapsed_ms: float         # Execution time in milliseconds
-    iterations: int           # Number of iterations/generations
-    params: dict              # Algorithm parameters used
-    history: Optional[List[float]] = None # Convergence history (optional)
-    seed: Optional[int] = None
+from academic_benchmark.engine_core import TSPResult
 
 
 class BaseTSPSolver(ABC):

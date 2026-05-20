@@ -26,8 +26,11 @@ import json
 import math
 import os
 
-# OpenBLAS / NumPy multiprocessing çökmesini (Memory allocation failed) engellemek için
-# her process'in kendi içinde tek thread kullanmasını zorluyoruz.
+# Prevent OpenBLAS/NumPy crashes when using ProcessPoolExecutor on Linux/macOS.
+# Each worker process would otherwise try to spawn its own BLAS thread pool,
+# causing massive oversubscription and deadlocks. Setting to 1 forces single-threaded
+# BLAS in each worker, which is optimal for our embarrassingly parallel workload.
+# Windows is less affected but benefits from the same constraint.
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -121,6 +124,11 @@ from academic_benchmark.param_db import (
     delete_entry as _param_db_delete,
     set_db_path as _param_db_set,
 )
+
+from academic_benchmark.param_spaces import (
+    build_doe_space as _build_doe_space,
+)
+
 try:
     from academic_benchmark.engine_core import AlgorithmRegistry as _AlgoReg
     _HAS_NUMBA_REGISTRY = True
@@ -135,6 +143,42 @@ try:
 except ImportError:
     def _save_best_solution(*a, **kw):
         return -1
+
+def _detect_numba() -> bool:
+    """Numba aktif mi tespit et — once dogrudan import numba, sonra bildiri2026."""
+    try:
+        import numba  # pylint: disable=unused-import
+        return True
+    except ImportError:
+        pass
+    import importlib.util
+    _ab_dir = os.path.join(_PROJECT_ROOT, "academic_benchmark", "bildiri2026")
+    try:
+        spec = importlib.util.find_spec("core.numba_accel")
+    except (ImportError, ModuleNotFoundError, ValueError):
+        spec = None
+    if spec is None and os.path.isdir(_ab_dir):
+        sys.path.insert(0, _ab_dir)
+        try:
+            from core import numba_accel as _nb  # type: ignore
+            return bool(_nb.NUMBA_AVAILABLE)
+        except Exception:
+            pass
+        finally:
+            try:
+                sys.path.remove(_ab_dir)
+            except ValueError:
+                pass
+    elif spec is not None:
+        try:
+            from core import numba_accel as _nb  # type: ignore
+            return bool(_nb.NUMBA_AVAILABLE)
+        except Exception:
+            pass
+    return False
+
+
+_NUMBA_AVAILABLE = _detect_numba()
 
 # Numba modüllerini import edelim
 from optimizer_api.tests.run_interactive_benchmark_v2_numba import (
@@ -238,17 +282,8 @@ signal.signal(signal.SIGINT, _signal_handler)
 # BÖLÜM 2: TSPLIB Yükleyici ve Strateji Yönetimi
 # ─────────────────────────────────────────────────────────────────────────────
 
-@dataclass
-class DOEProblem:
-    """Numba Engine için genişletilmiş problem veri modeli."""
-    name: str
-    dimension: int
-    coordinates: List[Tuple[float, float]]
-    optimal: Optional[float]
-    category: str
-    source: str = "tsplib"
-    is_time_matrix: bool = False
-    time_matrix: Optional[List[List[float]]] = None
+from academic_benchmark.engine_core import ProblemInstance, ConfigSchema
+DOEProblem = ProblemInstance  # Alias: standardize on unified data model
 
 @dataclass
 class StrategySpec:
@@ -450,66 +485,7 @@ def _all_strategy_specs() -> List[StrategySpec]:
 
 def _build_numba_parameter_space(spec: StrategySpec) -> Dict[str, List[Any]]:
     """DoE için Numba algoritmalarına özel hiperparametre uzayını oluşturur."""
-    name = spec.name.upper()
-    if name == "GA":
-        return {
-            "pop_size": [80, 120, 150],
-            "generations": [250, 350, 500],
-            "mutation_rate": [0.08, 0.12, 0.16],
-            "elite_size": [2, 4, 6, 8],  # GOREV 6: 2 eklendi (bildiri2026: 2)
-            "crossover_rate": [0.80, 0.85, 0.90],  # GOREV 6: eklendi (bildiri2026: 0.85)
-        }
-    if name == "PSO":
-        return {
-            "swarm_size": [50, 80, 120],
-            "iterations": [200, 300, 450, 500],  # GOREV 6: 500 eklendi (bildiri2026: 500)
-            "w": [0.65, 0.72, 0.80],
-            "c1": [1.4, 1.6, 1.9],
-            "c2": [1.4, 1.6, 1.9],
-            "reinit_interval": [30, 50, 70],  # GOREV 6: eklendi (bildiri2026: 50)
-        }
-    if name == "GWO":
-        return {
-            "pack_size": [50, 80, 120],
-            "iterations": [200, 300, 450],
-        }
-    if name == "HHO":
-        return {
-            "hawks": [50, 80, 120],
-            "iterations": [200, 300, 450],
-        }
-    if name == "B-PSO":
-        # bildiri2026 PSOOptimizer DoE parameter space
-        return {
-            "swarm_size": [30, 50, 80],
-            "max_iterations": [300, 500],
-            "inertia_weight": [0.729],
-            "cognitive_coeff": [1.49445],
-            "social_coeff": [1.49445],
-            "max_velocity_size": [5, 8],
-            "reinit_interval": [30, 50],
-            "max_no_improvement": [100],
-        }
-    if name == "B-GA":
-        # bildiri2026 GAOptimizer DoE parameter space
-        return {
-            "population_size": [80, 100, 150],
-            "generations": [300, 500],
-            "crossover_rate": [0.80, 0.85, 0.90],
-            "mutation_rate": [0.12, 0.15, 0.18],
-            "elite_count": [2, 4],
-            "tournament_size": [3, 5],
-            "max_no_improvement": [100],
-        }
-    if name == "3-OPT-BOUNDED":
-        return {
-            "max_iterations": [300, 500, 1000],
-            "first_improvement": [True, False],
-            "window": [8, 12, 20, 50],
-        }
-    return {
-        "max_iterations": [spec.default_params.get("max_iterations", 300)],
-    }
+    return _build_doe_space(spec.name.upper(), source="numba")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # BÖLÜM 3: Çekirdek Çalıştırıcılar ve Paralel İşleme (Runner & Pool)
@@ -600,6 +576,22 @@ def _make_problem_dict(problem: DOEProblem) -> Dict[str, Any]:
 def _resolve_strategy_payload(spec: StrategySpec) -> Any:
     return spec.payload
 
+
+def _query_edge_weight_type(problem_name: str, db_path: str):
+    """Query the TSPLIB DB for a problem's edge_weight_type. Returns None on miss."""
+    import sqlite3
+    try:
+        conn = sqlite3.connect(db_path)
+        row = conn.execute(
+            "SELECT edge_weight_type FROM problems WHERE name=?",
+            (problem_name,)
+        ).fetchone()
+        conn.close()
+        return row[0] if row else None
+    except Exception:
+        return None
+
+
 def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], int, int]) -> Dict[str, Any]:
     """Bir parametre kombinasyonunu belirli run sayısınca test eder."""
     problem_dict, strategy_name, strategy_payload, strategy_params, combo_idx, n_runs = task
@@ -633,6 +625,20 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
                 db_matrix = _dm_from_cache(problem_name, TSPLIB_DB)
                 if db_matrix is not None:
                     dist_matrix_np = db_matrix
+                else:
+                    _ewt = _query_edge_weight_type(problem_name, TSPLIB_DB)
+                    if _ewt is not None and _ewt != "EUC_2D":
+                        coords = problem_dict.get("coordinates", [])
+                        if coords:
+                            try:
+                                from academic_benchmark.tsplib_manager import (
+                                    _DIST_OK as _tm_dist_ok,
+                                    build_distance_matrix,
+                                )
+                                if _tm_dist_ok:
+                                    dist_matrix_np = build_distance_matrix(coords, _ewt)
+                            except ImportError:
+                                pass
             except Exception:
                 pass
 
@@ -640,8 +646,31 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
     t0 = time.perf_counter()
     for run_idx in range(n_runs):
         seed = 1000 + combo_idx * 100 + run_idx
-        # Step 5: route bildiri2026 strategies through their dedicated adapters
+        # Step 5a: try AlgorithmRegistry first (unified routing)
+        if _HAS_NUMBA_REGISTRY:
+            reg_key = str(strategy_payload)
+            if reg_key in _AlgoReg.list_algorithms():
+                try:
+                    executor = _AlgoReg.get_executor(reg_key)
+                    reg_result = executor(problem, strategy_params, seed, run_idx)
+                    result = {
+                        "tour_length": reg_result.tour_cost,
+                        "gap": reg_result.gap_pct if reg_result.gap_pct is not None else float("nan"),
+                        "time_ms": reg_result.elapsed_sec * 1000,
+                        "algorithm_type": "registry",
+                    }
+                    run_results.append(result)
+                    continue
+                except Exception:
+                    pass  # fall through to legacy dispatch
+        # Step 5b: legacy dispatch for bildiri2026 and direct engine calls
         if str(strategy_payload) in ("BILDIRI_PSO", "BILDIRI_GA"):
+            if not BILDIRI_STRATEGIES:
+                raise ImportError(
+                    "Strategy {} requires bildiri2026 which is not installed. "
+                    "Either install bildiri2026 or exclude B-PSO/B-GA from the benchmark."
+                    .format(strategy_payload)
+                )
             if str(strategy_payload) == "BILDIRI_PSO":
                 result = _run_bildiri_pso(problem_dict, seed, strategy_params)
             else:
@@ -836,23 +865,62 @@ def _run_bildiri_ga(
     return _run_bildiri_solver(GAOptimizer, kwargs, problem_dict, seed)
 
 
-# Bildiri2026 strateji tanımları — master_numba_engine'e özgü ek stratejiler.
-BILDIRI_STRATEGIES: List[Tuple[str, str, Dict[str, Any]]] = [
-    ("B-PSO", "BILDIRI_PSO", {
-        "swarm_size": 50, "max_iterations": 500,
-        "inertia_weight": 0.729, "cognitive_coeff": 1.49445,
-        "social_coeff": 1.49445, "max_velocity_size": 5,
-        "max_no_improvement": 100, "reinit_interval": 50,
-        "algorithm_type": "bildiri_meta",
-    }),
-    ("B-GA", "BILDIRI_GA", {
-        "population_size": 100, "generations": 500,
-        "crossover_rate": 0.85, "mutation_rate": 0.15,
-        "elite_count": 2, "tournament_size": 3,
-        "max_no_improvement": 100,
-        "algorithm_type": "bildiri_meta",
-    }),
-]
+def _get_bildiri_strategies() -> List[Tuple[str, str, Dict[str, Any]]]:
+    """Return bildiri2026 strategies only if bildiri2026 is importable."""
+    import importlib.util
+    try:
+        if importlib.util.find_spec("core.pso_solver") is not None:
+            return [
+                ("B-PSO", "BILDIRI_PSO", {
+                    "swarm_size": 50, "max_iterations": 500,
+                    "inertia_weight": 0.729, "cognitive_coeff": 1.49445,
+                    "social_coeff": 1.49445, "max_velocity_size": 5,
+                    "max_no_improvement": 100, "reinit_interval": 50,
+                    "algorithm_type": "bildiri_meta",
+                }),
+                ("B-GA", "BILDIRI_GA", {
+                    "population_size": 100, "generations": 500,
+                    "crossover_rate": 0.85, "mutation_rate": 0.15,
+                    "elite_count": 2, "tournament_size": 3,
+                    "max_no_improvement": 100,
+                    "algorithm_type": "bildiri_meta",
+                }),
+            ]
+    except (ImportError, ModuleNotFoundError, ValueError):
+        pass
+    _ab_dir = os.path.join(_PROJECT_ROOT, "academic_benchmark", "bildiri2026")
+    if os.path.isdir(_ab_dir):
+        if _ab_dir not in sys.path:
+            sys.path.insert(0, _ab_dir)
+        try:
+            from core import pso_solver, ga_solver  # pylint: disable=unused-import
+            return [
+                ("B-PSO", "BILDIRI_PSO", {
+                    "swarm_size": 50, "max_iterations": 500,
+                    "inertia_weight": 0.729, "cognitive_coeff": 1.49445,
+                    "social_coeff": 1.49445, "max_velocity_size": 5,
+                    "max_no_improvement": 100, "reinit_interval": 50,
+                    "algorithm_type": "bildiri_meta",
+                }),
+                ("B-GA", "BILDIRI_GA", {
+                    "population_size": 100, "generations": 500,
+                    "crossover_rate": 0.85, "mutation_rate": 0.15,
+                    "elite_count": 2, "tournament_size": 3,
+                    "max_no_improvement": 100,
+                    "algorithm_type": "bildiri_meta",
+                }),
+            ]
+        except Exception:
+            pass
+        finally:
+            try:
+                sys.path.remove(_ab_dir)
+            except ValueError:
+                pass
+    return []
+
+
+BILDIRI_STRATEGIES: List[Tuple[str, str, Dict[str, Any]]] = _get_bildiri_strategies()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -919,14 +987,12 @@ def _edit_param_space_interactive(spec: StrategySpec) -> Dict[str, List[Any]]:
 
 
 def _validate_tuning_config(config: Dict, all_problems: List[DOEProblem], all_specs: List[StrategySpec]) -> Tuple[bool, str]:
-    if not isinstance(config, dict):
-        return False, "Config bir dict olmali"
-    if config.get("version", 0) != 1:
-        return False, f"Desteklenmeyen config versiyonu: {config.get('version')}"
-    for section in ("problems", "algorithms", "settings"):
-        if section not in config:
-            return False, f"{section} alani eksik"
-    return True, "OK"
+    prob_names = [p.name for p in all_problems]
+    algo_names = [s.name for s in all_specs]
+    ok, errors = ConfigSchema.validate(config, problems=prob_names, algorithms=algo_names)
+    if ok:
+        return True, "OK"
+    return False, "; ".join(errors)
 
 
 def _save_tuning_config(
@@ -1337,25 +1403,62 @@ def _build_optuna_search_space(spec: StrategySpec, trial: Any) -> Dict[str, Any]
     return params
 
 
-def _optuna_objective(
-    trial: Any,
-    problem: DOEProblem,
-    spec: StrategySpec,
-    n_runs: int,
-) -> float:
-    params = spec.default_params.copy()
-    params.update(_build_optuna_search_space(spec, trial))
-    params["algorithm_type"] = spec.algorithm_type
+def _should_stop_early_numba(study, patience: int = 3, threshold: float = 0.01) -> bool:
+    """Check if study should stop early: best_value <= threshold for `patience` consecutive trials."""
+    if study.best_value is None:
+        return False
+    if study.best_value > threshold:
+        return False
+    consecutive = 0
+    for t in reversed(study.trials):
+        if t.value is not None and t.value <= threshold:
+            consecutive += 1
+        else:
+            break
+    return consecutive >= patience
 
-    task = (_make_problem_dict(problem), spec.name, _resolve_strategy_payload(spec), params, 1, n_runs)
+
+def _run_numba_trial_task(task: Dict[str, Any]) -> Dict[str, Any]:
+    """Run a single Numba trial in a worker process. Multiprocessing-safe.
+    Returns: {study_name, trial_number, value, avg_time_sec, params}
+    """
+    problem_dict = task["problem_dict"]
+    spec_name = task["spec_name"]
+    spec_payload = task["spec_payload"]
+    spec_defaults = task["spec_defaults"]
+    algorithm_type = task["algorithm_type"]
+    params = task["params"]
+    n_runs = task["n_runs"]
+    trial_number = task["trial_number"]
+
+    full_params = {**spec_defaults, **params}
+    full_params["algorithm_type"] = algorithm_type
+
+    combo_task = (problem_dict, spec_name, spec_payload, full_params, 1, n_runs)
+
     try:
-        result = _evaluate_param_combo(task)
+        result = _evaluate_param_combo(combo_task)
         avg_gap = result.get("avg_gap")
+        avg_time_ms = result.get("avg_time_ms", 0)
         if avg_gap is None or math.isnan(avg_gap):
-            return float("inf")
-        return float(avg_gap)
-    except Exception:
-        return float("inf")
+            value = float("inf")
+        else:
+            value = float(avg_gap)
+        error_msg = ""
+    except Exception as e:
+        value = float("inf")
+        avg_time_ms = 0
+        import traceback
+        error_msg = f"{type(e).__name__}: {e}\n{traceback.format_exc()}"
+
+    return {
+        "study_name": task["study_name"],
+        "trial_number": trial_number,
+        "value": value,
+        "avg_time_sec": round(avg_time_ms / 1000.0, 2) if avg_time_ms else 0.0,
+        "params": params,
+        "error": error_msg,
+    }
 
 
 def _run_optuna_tuning_flow(
@@ -1366,36 +1469,272 @@ def _run_optuna_tuning_flow(
     metadata: Dict[str, Any],
     param_overrides: Optional[Dict[str, List[Any]]] = None,
 ) -> None:
-    import optuna
+    """Run Optuna Bayesian optimization for Numba algorithms using dynamic queue.
 
+    Architecture:
+    - Main process holds all Optuna studies and calls study.ask() to generate trials
+    - Workers pull trial tasks from a shared pool and execute solvers
+    - Main process calls study.tell() with results to update TPE sampler
+    - Workers are dynamically assigned: fast trials cycle through, slow ones don't block
+    - Early stopping: stops study when gap <= 0.01% for 3 consecutive trials
+    """
+    import optuna
+    from concurrent.futures import ProcessPoolExecutor, wait, FIRST_COMPLETED
+
+    # Create studies and tracking info
+    studies: Dict[str, Dict[str, Any]] = {}
     for problem in problems:
         for spec in specs:
-            print(f"\n[OPTUNA] {problem.name} / {spec.name} — basliyor...")
+            study_name = f"{problem.name}_{spec.name}"
             study = optuna.create_study(
                 direction="minimize",
-                study_name=f"{problem.name}_{spec.name}",
+                study_name=study_name,
                 sampler=optuna.samplers.TPESampler(seed=42),
             )
-
-            def make_objective(p, s):
-                def objective(trial):
-                    return _optuna_objective(trial, p, s, n_runs)
-                return objective
-
-            study.optimize(make_objective(problem, spec), n_trials=DOE_MAX_COMBINATIONS)
-
-            print(f"\n[OPTUNA] {problem.name} / {spec.name} — En iyi gap: {study.best_value:.2f}%")
-            print(f"  En iyi parametreler: {study.best_params}")
-
-            key = f"{problem.name}::{spec.name}"
+            problem_dict = _make_problem_dict(problem)
             defaults = spec.default_params.copy()
-            metadata.setdefault("best_params", {})[key] = {
-                "params": {**defaults, **study.best_params},
-                "avg_gap": study.best_value,
+            if param_overrides and spec.name in param_overrides:
+                defaults.update({k: v[0] for k, v in param_overrides[spec.name].items()})
+
+            studies[study_name] = {
+                "study": study,
+                "problem_dict": problem_dict,
+                "spec_name": spec.name,
+                "spec_payload": spec.payload,
+                "spec_defaults": defaults,
+                "algorithm_type": spec.algorithm_type,
+                "n_runs": n_runs,
+                "numba_ok": _NUMBA_AVAILABLE,
+                "submitted": 0,
+                "completed": 0,
+                "max_trials": DOE_MAX_COMBINATIONS,
+                "stopped": False,
+            }
+
+    total_studies = len(studies)
+    total_trials_target = total_studies * DOE_MAX_COMBINATIONS
+    print(f"\n[OPTUNA] {total_studies} studies, up to {total_trials_target} trials across {workers} workers (dynamic queue)...")
+
+    def create_task(study_name: str) -> Dict[str, Any]:
+        """Ask Optuna for next trial params and create worker task."""
+        info = studies[study_name]
+        trial = info["study"].ask()
+        return {
+            "study_name": study_name,
+            "trial_number": trial.number,
+            "params": trial.params,
+            "problem_dict": info["problem_dict"],
+            "spec_name": info["spec_name"],
+            "spec_payload": info["spec_payload"],
+            "spec_defaults": info["spec_defaults"],
+            "algorithm_type": info["algorithm_type"],
+            "n_runs": info["n_runs"],
+        }
+
+    def can_submit(study_name: str) -> bool:
+        """Check if study can accept more trials."""
+        info = studies[study_name]
+        return not info["stopped"] and info["submitted"] < info["max_trials"]
+
+    best_params = metadata.setdefault("best_params", {})
+    interrupted = False
+
+    def _save_progress():
+        """Save current best_params to metadata on interrupt."""
+        for study_name, info in studies.items():
+            study = info["study"]
+            key = f"{info['problem_dict']['name']}::{info['spec_name']}"
+            defaults = info["spec_defaults"]
+            if len(study.trials) > 0:
+                try:
+                    best_params[key] = {
+                        "params": {**defaults, **study.best_params},
+                        "avg_gap": study.best_value,
+                        "n_runs": n_runs,
+                        "tuning_method": "optuna",
+                        "trials_used": info["completed"],
+                        "early_stopped": info["stopped"],
+                    }
+                except ValueError:
+                    pass
+        save_metadata(METADATA_PATH, metadata)
+        print("\n[INTERRUPT] Progress saved. Run again to resume.")
+
+    executor = None
+    try:
+        executor = ProcessPoolExecutor(max_workers=workers)
+        futures: Dict[concurrent.futures.Future, Dict[str, Any]] = {}
+
+        # Initial submission: fill workers round-robin across studies
+        study_names = list(studies.keys())
+        idx = 0
+        while len(futures) < workers:
+            submitted_any = False
+            for _ in range(len(study_names)):
+                sn = study_names[idx % len(study_names)]
+                idx += 1
+                if can_submit(sn):
+                    task = create_task(sn)
+                    future = executor.submit(_run_numba_trial_task, task)
+                    futures[future] = task
+                    studies[sn]["submitted"] += 1
+                    submitted_any = True
+                    break
+            if not submitted_any:
+                break
+
+        # Process results as they complete
+        completed_total = 0
+        while futures:
+            done, _ = wait(futures.keys(), return_when=FIRST_COMPLETED)
+            for future in done:
+                task = futures.pop(future)
+                sn = task["study_name"]
+                info = studies[sn]
+
+                try:
+                    result = future.result()
+                    error = result.get("error", "")
+                    if error:
+                        print(f"\n[WORKER ERROR] Trial {result['trial_number']} ({sn}): {error}")
+                    info["study"].tell(result["trial_number"], result["value"])
+                    info["completed"] += 1
+                    completed_total += 1
+
+                    # Check early stopping
+                    if _should_stop_early_numba(info["study"]):
+                        info["stopped"] = True
+
+                    # Submit next trial for this study if available
+                    if can_submit(sn):
+                        new_task = create_task(sn)
+                        new_future = executor.submit(_run_numba_trial_task, new_task)
+                        futures[new_future] = new_task
+                        info["submitted"] += 1
+
+                except KeyboardInterrupt:
+                    raise
+                except Exception:
+                    # Worker crashed — mark trial as failed
+                    try:
+                        info["study"].tell(task["trial_number"], float("inf"))
+                    except Exception:
+                        pass
+                    info["completed"] += 1
+                    completed_total += 1
+
+                    # Submit replacement if available
+                    if can_submit(sn):
+                        try:
+                            new_task = create_task(sn)
+                            new_future = executor.submit(_run_numba_trial_task, new_task)
+                            futures[new_future] = new_task
+                            info["submitted"] += 1
+                        except Exception:
+                            pass
+
+            # Refill free worker slots from any study that still has trials
+            while len(futures) < workers:
+                filled = False
+                for sn in study_names:
+                    if can_submit(sn) and len(futures) < workers:
+                        new_task = create_task(sn)
+                        new_future = executor.submit(_run_numba_trial_task, new_task)
+                        futures[new_future] = new_task
+                        studies[sn]["submitted"] += 1
+                        filled = True
+                if not filled:
+                    break
+
+            # Progress report
+            active = len(futures)
+            stopped_count = sum(1 for s in studies.values() if s["stopped"])
+            print(f"\r[OPTUNA] {completed_total} trials done | {active} active | {stopped_count}/{total_studies} studies stopped", end="", flush=True)
+
+    except (KeyboardInterrupt, Exception) as e:
+        interrupted = True
+        print("\n\n[INTERRUPT] Stopping... Saving progress...")
+        for f in futures:
+            f.cancel()
+        if executor:
+            try:
+                executor.shutdown(wait=False, cancel_futures=True)
+            except Exception:
+                pass
+        _save_progress()
+        return
+
+    # Normal completion — ensure executor is fully terminated
+    if executor:
+        try:
+            executor.shutdown(wait=True)
+        except Exception:
+            pass
+
+    print()  # Newline after progress
+
+    # Collect results
+    csv_path = os.path.join(RESULTS_DIR, "tuning_progress.csv")
+    fields = [
+        "timestamp", "problem", "strategy", "trial_number", "avg_gap", "avg_time_ms", "n_runs", "params_json", "tuning_method"
+    ]
+
+    for study_name, info in studies.items():
+        study = info["study"]
+        key = f"{info['problem_dict']['name']}::{info['spec_name']}"
+        defaults = info["spec_defaults"]
+
+        if len(study.trials) > 0:
+            try:
+                best_trial = study.best_trial
+                best_params[key] = {
+                    "params": {**defaults, **best_trial.params},
+                    "avg_gap": study.best_value,
+                    "n_runs": n_runs,
+                    "tuning_method": "optuna",
+                    "trials_used": info["completed"],
+                    "early_stopped": info["stopped"],
+                }
+                status = "EARLY" if info["stopped"] else "FULL"
+                print(f"  {key} — gap: {study.best_value:.2f}% ({info['completed']} trials, {status})")
+            except ValueError:
+                best_params[key] = {
+                    "params": defaults,
+                    "avg_gap": float("inf"),
+                    "n_runs": n_runs,
+                    "tuning_method": "optuna",
+                    "trials_used": info["completed"],
+                    "early_stopped": info["stopped"],
+                }
+                print(f"  {key} — gap: inf% ({info['completed']} trials, ALL FAILED)")
+        else:
+            best_params[key] = {
+                "params": defaults,
+                "avg_gap": float("inf"),
                 "n_runs": n_runs,
                 "tuning_method": "optuna",
+                "trials_used": 0,
+                "early_stopped": False,
             }
-            save_metadata(METADATA_PATH, metadata)
+            print(f"  {key} — ALL FAILED (0 trials completed)")
+
+        # Write all completed trials to tuning_progress.csv for dashboard
+        for trial in study.trials:
+            if trial.value is not None and not math.isinf(trial.value):
+                row = {
+                    "timestamp": datetime.now().isoformat(),
+                    "problem": info["problem_dict"]["name"],
+                    "strategy": info["spec_name"],
+                    "trial_number": trial.number,
+                    "avg_gap": round(trial.value, 6) if not math.isinf(trial.value) else None,
+                    "avg_time_ms": 0,
+                    "n_runs": n_runs,
+                    "params_json": json.dumps(trial.params, ensure_ascii=False, sort_keys=True),
+                    "tuning_method": "optuna",
+                }
+                append_csv_row(csv_path, fields, row)
+
+        save_metadata(METADATA_PATH, metadata)
 
     print("\n[OPTUNA] Tum tuning tamamlandi.")
 
@@ -1413,17 +1752,24 @@ def _save_best_to_param_db(
     """
     saved = 0
     problem_map = {p.name: p for p in problems}
+    valid_algos = {s.name for s in specs}
     for key, entry in best_params.items():
         parts = key.split("::", 1)
         if len(parts) != 2:
             continue
         prob_name, algo_name = parts
+        if algo_name not in valid_algos:
+            continue
         prob = problem_map.get(prob_name)
         if not prob:
             continue
         params = entry.get("params", {})
         best_score = entry.get("avg_length", float("inf"))
-        gap = entry.get("avg_gap", float("nan"))
+        raw_gap = entry.get("avg_gap")
+        if raw_gap is None or (isinstance(raw_gap, float) and math.isnan(raw_gap)):
+            gap = float("nan")
+        else:
+            gap = float(raw_gap)
         runs = entry.get("n_runs", 0) or entry.get("completed", 0)
         if not runs:
             runs = 3

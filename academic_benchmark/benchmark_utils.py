@@ -695,8 +695,10 @@ def generate_combinations(space: Dict[str, List[Any]], max_combos: int,
 
 
 def param_signature(params: Dict[str, Any]) -> str:
-    """Parametre setinin benzersiz imzasını döner."""
-    return json.dumps(params, sort_keys=True, ensure_ascii=False)
+    """Parametre setinin benzersiz imzasını döner (SHA256 hash)."""
+    import hashlib
+    normalized = json.dumps(params, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(normalized.encode()).hexdigest()[:16]
 
 
 def make_deterministic_seed(problem_name: str, algo_name: str,
@@ -750,23 +752,34 @@ def multi_select(items: Sequence[str], title: str) -> List[str]:
     print(f"\n[{title}]")
     for idx, item in enumerate(items, 1):
         print(f"   [{idx}] {item}")
-    raw = input("Secimler (virgul) / Enter=all: ").strip()
-    if not raw:
-        return list(items)
-    selected: List[str] = []
-    for part in raw.split(","):
-        part = part.strip()
-        if not part:
-            continue
-        if part.isdigit():
-            idx = int(part) - 1
-            if 0 <= idx < len(items):
-                selected.append(items[idx])
+    while True:
+        raw = input("Secimler (virgul) / Enter=all / 'all'=tumunu sec: ").strip()
+        if not raw or raw.lower() == "all":
+            return list(items)
+        selected: List[str] = []
+        valid = True
+        for part in raw.split(","):
+            part = part.strip()
+            if not part:
                 continue
-        matches = [item for item in items if part.lower() in item.lower()]
-        selected.extend(matches)
-    seen: set = set()
-    return [item for item in selected if not (item in seen or seen.add(item))]
+            if part.isdigit():
+                idx = int(part) - 1
+                if 0 <= idx < len(items):
+                    selected.append(items[idx])
+                else:
+                    valid = False
+                    break
+                continue
+            matches = [item for item in items if part.lower() in item.lower()]
+            if matches:
+                selected.extend(matches)
+            else:
+                valid = False
+                break
+        if valid and selected:
+            seen: set = set()
+            return [item for item in selected if not (item in seen or seen.add(item))]
+        print("  Gecersiz secim. Tekrar giriniz veya Enter ile tumunu secin.")
 
 
 # ── CSV Araçları ─────────────────────────────────────────────────────────────

@@ -30,7 +30,11 @@ import io
 import math
 import os
 
-# OpenBLAS / NumPy multiprocessing çökmesini engellemek için
+# Prevent OpenBLAS/NumPy crashes when using ProcessPoolExecutor on Linux/macOS.
+# Each worker process would otherwise try to spawn its own BLAS thread pool,
+# causing massive oversubscription and deadlocks. Setting to 1 forces single-threaded
+# BLAS in each worker, which is optimal for our embarrassingly parallel workload.
+# Windows is less affected but benefits from the same constraint.
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -131,7 +135,7 @@ except ModuleNotFoundError:
     )
 
 try:
-    from academic_benchmark.engine_core import AlgorithmRegistry as _AlgoReg
+    from academic_benchmark.engine_core import AlgorithmRegistry as _AlgoReg, ProblemInstance
     _HAS_REGISTRY = True
 except ImportError:
     _AlgoReg = None
@@ -143,7 +147,11 @@ from academic_benchmark.param_db import (
     list_entries as _param_db_list,
     analyze_patterns as _param_db_analyze,
     delete_entry as _param_db_delete,
-    set_db_path as _param_db_set,
+)
+
+from academic_benchmark.param_spaces import (
+    build_doe_space as _build_doe_space,
+    build_optuna_space as _build_optuna_space,
 )
 
 # ── Versiyon ve yollar ────────────────────────────────────────────────────────
@@ -443,16 +451,37 @@ def load_problems(size_limit: int = 500) -> List[TSPProblem]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _detect_numba() -> bool:
-    """Numba'nin aktif olup olmadigini tespit eder."""
+    """Numba aktif mi tespit et — once dogrudan import numba, sonra bildiri2026."""
     try:
-        # bildiri2026/core/numba_accel.py kontrolu
-        _ab_dir = os.path.join(_PROJECT_ROOT, "academic_benchmark", "bildiri2026")
-        if os.path.isdir(_ab_dir) and _ab_dir not in sys.path:
-            sys.path.insert(0, _ab_dir)
-        from core import numba_accel as _nb  # type: ignore
-        return bool(_nb.NUMBA_AVAILABLE)
-    except Exception:
-        return False
+        import numba  # pylint: disable=unused-import
+        return True
+    except ImportError:
+        pass
+    import importlib.util
+    _ab_dir = os.path.join(_PROJECT_ROOT, "academic_benchmark", "bildiri2026")
+    try:
+        spec = importlib.util.find_spec("core.numba_accel")
+    except (ImportError, ModuleNotFoundError, ValueError):
+        spec = None
+    if spec is None and os.path.isdir(_ab_dir):
+        sys.path.insert(0, _ab_dir)
+        try:
+            from core import numba_accel as _nb  # type: ignore
+            return bool(_nb.NUMBA_AVAILABLE)
+        except Exception:
+            pass
+        finally:
+            try:
+                sys.path.remove(_ab_dir)
+            except ValueError:
+                pass
+    elif spec is not None:
+        try:
+            from core import numba_accel as _nb  # type: ignore
+            return bool(_nb.NUMBA_AVAILABLE)
+        except Exception:
+            pass
+    return False
 
 
 _NUMBA_AVAILABLE = _detect_numba()
@@ -519,60 +548,7 @@ def _make_solver_config(algo_name: str, n: int, numba_ok: bool) -> Dict[str, Any
 
 def _build_sota_parameter_space(algo_name: str) -> Dict[str, List[Any]]:
     """DoE modunda Grid Search icin test edilecek parametre uzaylari."""
-    if algo_name == "E2BSO-TSP":
-        return {
-            "population_size": [24, 36, 48],
-            "max_iterations": [200, 320, 450],
-            "gamma": [0.15, 0.20, 0.30],
-            "injection_rate": [0.08, 0.12, 0.18],
-            "remove_ratio": [0.10, 0.15, 0.20],
-            "time_limit": [300.0, 600.0, 1200.0],
-        }
-    if algo_name == "E2BSO-TSP-CPSO":
-        return {
-            "population_size": [24, 36, 48],
-            "max_iterations": [200, 320, 450],
-            "gamma": [0.15, 0.20, 0.30],
-            "injection_rate": [0.08, 0.12, 0.18],
-            "remove_ratio": [0.10, 0.15, 0.20],
-            "c1": [1.0, 1.5, 2.0],
-            "c2": [1.0, 1.5, 2.0],
-            "inertia": [0.5, 0.7, 0.9],
-            "time_limit": [300.0, 600.0, 1200.0],
-        }
-    if algo_name == "R2DMA-TSP":
-        return {
-            "population_size": [24, 36, 48],
-            "max_iterations": [200, 320, 450],
-            "theta_base": [0.15, 0.25, 0.35],
-            "remove_ratio": [0.10, 0.15, 0.20],
-            "pulse_injection_rate": [0.05, 0.10, 0.15],
-            "time_limit": [300.0, 600.0, 1200.0],
-        }
-    if algo_name == "CGO-TSP":
-        return {
-            "population_size": [24, 36, 48],
-            "max_iterations": [200, 320, 450],
-            "chaos_rate": [3.80, 3.90, 3.99],
-            "seed_length_ratio": [0.15, 0.25, 0.35],
-            "time_limit": [300.0, 600.0, 1200.0],
-        }
-    if algo_name == "RUN-TSP":
-        return {
-            "population_size": [24, 36, 48],
-            "max_iterations": [200, 320, 450],
-            "beta": [0.3, 0.5, 0.7],
-            "esq_probability": [0.1, 0.2, 0.3],
-            "time_limit": [300.0, 600.0, 1200.0],
-        }
-    return {
-        "population_size": [24, 36, 48],
-        "max_iterations": [200, 320, 450],
-        "genome_population_size": [8, 12, 16],
-        "crossover_rate": [0.75, 0.85, 0.95],
-        "mutation_rate": [0.10, 0.18, 0.26],
-        "time_limit": [300.0, 600.0, 1200.0],
-    }
+    return _build_doe_space(algo_name, source="sota")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -685,6 +661,25 @@ def _evaluate_sota_combo(task: Tuple[Dict[str, Any], str, Dict[str, Any], int, i
         seed = make_deterministic_seed(problem_dict["name"], algo_name, run_idx, combo_idx, 5000)
         run_params = params.copy()
         run_params["seed"] = seed
+
+        # Try AlgorithmRegistry first
+        if _HAS_REGISTRY and algo_name in _AlgoReg.list_algorithms():
+            try:
+                executor = _AlgoReg.get_executor(algo_name)
+                prob = ProblemInstance(
+                    name=problem_dict["name"],
+                    dimension=n_nodes,
+                    coordinates=coordinates,
+                    optimal=optimal,
+                    category=problem_dict.get("category", "unknown"),
+                    source=problem_dict.get("source", "tsplib"),
+                )
+                reg_result = executor(prob, run_params, seed, run_idx)
+                costs.append(reg_result.tour_cost)
+                times_sec.append(reg_result.elapsed_sec)
+                continue
+            except Exception:
+                pass  # fall through to legacy solver
 
         try:
             solver = _make_solver(algo_name, run_params)
@@ -1045,83 +1040,87 @@ def _run_engine_tuning(
 
 def _build_sota_optuna_space(algo_name: str, trial: Any) -> Dict[str, Any]:
     """Map SOTA parameter space to Optuna suggest_* calls."""
-    params = {}
-    if algo_name == "E2BSO-TSP":
-        params["population_size"] = trial.suggest_int("population_size", 20, 60)
-        params["max_iterations"] = trial.suggest_int("max_iterations", 150, 500)
-        params["gamma"] = trial.suggest_float("gamma", 0.10, 0.35)
-        params["injection_rate"] = trial.suggest_float("injection_rate", 0.05, 0.25)
-        params["remove_ratio"] = trial.suggest_float("remove_ratio", 0.05, 0.25)
-    elif algo_name == "E2BSO-TSP-CPSO":
-        params["population_size"] = trial.suggest_int("population_size", 20, 60)
-        params["max_iterations"] = trial.suggest_int("max_iterations", 150, 500)
-        params["gamma"] = trial.suggest_float("gamma", 0.10, 0.35)
-        params["injection_rate"] = trial.suggest_float("injection_rate", 0.05, 0.25)
-        params["remove_ratio"] = trial.suggest_float("remove_ratio", 0.05, 0.25)
-        params["c1"] = trial.suggest_float("c1", 0.5, 2.5)
-        params["c2"] = trial.suggest_float("c2", 0.5, 2.5)
-        params["inertia"] = trial.suggest_float("inertia", 0.3, 0.95)
-    elif algo_name == "R2DMA-TSP":
-        params["population_size"] = trial.suggest_int("population_size", 20, 60)
-        params["max_iterations"] = trial.suggest_int("max_iterations", 150, 500)
-        params["theta_base"] = trial.suggest_float("theta_base", 0.10, 0.40)
-        params["remove_ratio"] = trial.suggest_float("remove_ratio", 0.05, 0.25)
-        params["pulse_injection_rate"] = trial.suggest_float("pulse_injection_rate", 0.02, 0.20)
-    elif algo_name == "P-AOEA-TSP":
-        params["population_size"] = trial.suggest_int("population_size", 20, 60)
-        params["max_iterations"] = trial.suggest_int("max_iterations", 150, 500)
-        params["genome_population_size"] = trial.suggest_int("genome_population_size", 6, 20)
-        params["crossover_rate"] = trial.suggest_float("crossover_rate", 0.60, 0.99)
-        params["mutation_rate"] = trial.suggest_float("mutation_rate", 0.05, 0.30)
-    elif algo_name == "CGO-TSP":
-        params["population_size"] = trial.suggest_int("population_size", 20, 60)
-        params["max_iterations"] = trial.suggest_int("max_iterations", 150, 500)
-        params["chaos_rate"] = trial.suggest_float("chaos_rate", 3.57, 4.0)
-        params["seed_length_ratio"] = trial.suggest_float("seed_length_ratio", 0.10, 0.40)
-    elif algo_name == "RUN-TSP":
-        params["population_size"] = trial.suggest_int("population_size", 20, 60)
-        params["max_iterations"] = trial.suggest_int("max_iterations", 150, 500)
-        params["beta"] = trial.suggest_float("beta", 0.1, 0.9)
-        params["esq_probability"] = trial.suggest_float("esq_probability", 0.05, 0.40)
-    else:
-        params["population_size"] = trial.suggest_int("population_size", 20, 60)
-        params["max_iterations"] = trial.suggest_int("max_iterations", 150, 500)
-    return params
+    return _build_optuna_space(algo_name, trial)
 
 
-def _sota_optuna_objective(
-    trial: Any,
-    problem: 'TSPProblem',
-    algo_name: str,
-    n_runs: int,
-) -> float:
-    """Optuna objective function for SOTA algorithms."""
-    defaults = _make_solver_config(algo_name, problem.dimension, _NUMBA_AVAILABLE)
-    params = defaults.copy()
-    params.update(_build_sota_optuna_space(algo_name, trial))
+def _should_stop_early(study, patience: int = 3, threshold: float = 0.01) -> bool:
+    """Check if study should stop early: best_value <= threshold for `patience` consecutive trials."""
+    if study.best_value is None:
+        return False
+    if study.best_value > threshold:
+        return False
+    consecutive = 0
+    for t in reversed(study.trials):
+        if t.value is not None and t.value <= threshold:
+            consecutive += 1
+        else:
+            break
+    return consecutive >= patience
+
+
+def _run_sota_trial_task(task: Dict[str, Any]) -> Dict[str, Any]:
+    """Run a single SOTA trial in a worker process. Multiprocessing-safe.
+    Returns: {study_name, trial_number, value, avg_time_sec, params}
+    """
+    problem_dict = task["problem_dict"]
+    algo_name = task["algo_name"]
+    params = task["params"]
+    n_runs = task["n_runs"]
+    numba_ok = task["numba_ok"]
+    trial_number = task["trial_number"]
+
+    defaults = _make_solver_config(algo_name, problem_dict["dimension"], numba_ok)
+    full_params = {**defaults, **params}
 
     costs: List[float] = []
+    times: List[float] = []
     for run_idx in range(n_runs):
-        seed = make_deterministic_seed(problem.name, algo_name, run_idx, trial.number, 5000)
-        run_params = params.copy()
-        run_params["seed"] = seed
+        seed = make_deterministic_seed(problem_dict["name"], algo_name, run_idx, trial_number, 5000)
+        run_params = {**full_params, "seed": seed}
         try:
             solver = _make_solver(algo_name, run_params)
-            matrix = _dm_from_cache(problem.name, TSPLIB_DB)
-            if matrix is not None and len(matrix) == problem.dimension:
+            matrix = _dm_from_cache(problem_dict["name"], TSPLIB_DB)
+            if matrix is not None and len(matrix) == problem_dict["dimension"]:
                 solver.set_dist_matrix(matrix)
-            result = solver.solve(problem.coordinates)
+            t0 = time.perf_counter()
+            result = solver.solve(problem_dict["coordinates"])
+            elapsed = time.perf_counter() - t0
             costs.append(float(result.tour_length))
+            times.append(elapsed)
         except Exception:
-            return float("inf")
+            return {
+                "study_name": task["study_name"],
+                "trial_number": trial_number,
+                "value": float("inf"),
+                "avg_time_sec": 0.0,
+                "params": params,
+            }
 
     if not costs:
-        return float("inf")
+        return {
+            "study_name": task["study_name"],
+            "trial_number": trial_number,
+            "value": float("inf"),
+            "avg_time_sec": 0.0,
+            "params": params,
+        }
+
     avg_cost = sum(costs) / len(costs)
-    optimal = problem.optimal
+    avg_time = sum(times) / len(times)
+    optimal = problem_dict["optimal"]
+
     if optimal and optimal > 0:
-        return ((avg_cost - optimal) / optimal) * 100.0
-    return avg_cost
+        value = ((avg_cost - optimal) / optimal) * 100.0
+    else:
+        value = avg_cost
+
+    return {
+        "study_name": task["study_name"],
+        "trial_number": trial_number,
+        "value": value,
+        "avg_time_sec": round(avg_time, 2),
+        "params": params,
+    }
 
 
 def _run_sota_optuna_tuning(
@@ -1132,39 +1131,266 @@ def _run_sota_optuna_tuning(
     workers: int,
     metadata: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Run Optuna Bayesian optimization for SOTA algorithms."""
+    """Run Optuna Bayesian optimization for SOTA algorithms using dynamic queue.
+
+    Architecture:
+    - Main process holds all Optuna studies and calls study.ask() to generate trials
+    - Workers pull trial tasks from a shared pool and execute solvers
+    - Main process calls study.tell() with results to update TPE sampler
+    - Workers are dynamically assigned: fast trials cycle through, slow ones don't block
+    - Early stopping: stops study when gap <= 0.01% for 3 consecutive trials
+
+    This keeps all workers busy even when algorithms have vastly different speeds.
+    """
     import optuna
+    from concurrent.futures import ProcessPoolExecutor, wait, FIRST_COMPLETED
 
-    best_params: Dict[str, Any] = {}
-
+    # Create studies and tracking info
+    studies: Dict[str, Dict[str, Any]] = {}
     for problem in problems:
         for algo in algos:
-            print(f"\n[OPTUNA] {problem.name} / {algo} — basliyor ({n_trials} trials)...")
+            study_name = f"{problem.name}_{algo}"
             study = optuna.create_study(
                 direction="minimize",
-                study_name=f"{problem.name}_{algo}",
+                study_name=study_name,
                 sampler=optuna.samplers.TPESampler(seed=42),
             )
+            problem_dict = {
+                "name": problem.name,
+                "dimension": problem.dimension,
+                "coordinates": problem.coordinates,
+                "optimal": problem.optimal,
+            }
+            studies[study_name] = {
+                "study": study,
+                "problem_dict": problem_dict,
+                "algo_name": algo,
+                "n_runs": n_runs,
+                "numba_ok": _NUMBA_AVAILABLE,
+                "submitted": 0,
+                "completed": 0,
+                "max_trials": n_trials,
+                "stopped": False,
+            }
 
-            def make_objective(p, a, n):
-                def objective(trial):
-                    return _sota_optuna_objective(trial, p, a, n)
-                return objective
+    total_studies = len(studies)
+    total_trials_target = total_studies * n_trials
+    print(f"\n[OPTUNA] {total_studies} studies, up to {total_trials_target} trials across {workers} workers (dynamic queue)...")
 
-            study.optimize(make_objective(problem, algo, n_runs), n_trials=n_trials, show_progress_bar=False)
+    def create_task(study_name: str) -> Dict[str, Any]:
+        """Ask Optuna for next trial params and create worker task."""
+        info = studies[study_name]
+        trial = info["study"].ask()
+        return {
+            "study_name": study_name,
+            "trial_number": trial.number,
+            "params": trial.params,
+            "problem_dict": info["problem_dict"],
+            "algo_name": info["algo_name"],
+            "n_runs": info["n_runs"],
+            "numba_ok": info["numba_ok"],
+        }
 
-            print(f"\n[OPTUNA] {problem.name} / {algo} — En iyi gap: {study.best_value:.2f}%")
-            print(f"  En iyi parametreler: {study.best_params}")
+    def can_submit(study_name: str) -> bool:
+        """Check if study can accept more trials."""
+        info = studies[study_name]
+        return not info["stopped"] and info["submitted"] < info["max_trials"]
 
-            key = f"{problem.name}::{algo}"
-            defaults = _make_solver_config(algo, problem.dimension, _NUMBA_AVAILABLE)
+    def _save_progress():
+        """Save current best_params to metadata on interrupt."""
+        bp: Dict[str, Any] = {}
+        for study_name, info in studies.items():
+            study = info["study"]
+            key = f"{info['problem_dict']['name']}::{info['algo_name']}"
+            defaults = _make_solver_config(info["algo_name"], info["problem_dict"]["dimension"], info["numba_ok"])
+            if len(study.trials) > 0:
+                try:
+                    bp[key] = {
+                        "params": {**defaults, **study.best_params},
+                        "objective_value": study.best_value,
+                        "avg_gap": study.best_value,
+                        "avg_length": None,
+                        "n_runs": n_runs,
+                        "trials_used": info["completed"],
+                        "early_stopped": info["stopped"],
+                    }
+                except ValueError:
+                    pass
+        metadata["best_params"] = bp
+        save_metadata(METADATA_PATH, metadata)
+        print("\n[INTERRUPT] Progress saved. Run again to resume.")
+
+    executor = None
+    try:
+        executor = ProcessPoolExecutor(max_workers=workers)
+        futures: Dict[concurrent.futures.Future, Dict[str, Any]] = {}
+
+        # Initial submission: fill workers round-robin across studies
+        study_names = list(studies.keys())
+        idx = 0
+        while len(futures) < workers:
+            submitted_any = False
+            for _ in range(len(study_names)):
+                sn = study_names[idx % len(study_names)]
+                idx += 1
+                if can_submit(sn):
+                    task = create_task(sn)
+                    future = executor.submit(_run_sota_trial_task, task)
+                    futures[future] = task
+                    studies[sn]["submitted"] += 1
+                    submitted_any = True
+                    break
+            if not submitted_any:
+                break
+
+        # Process results as they complete
+        completed_total = 0
+        while futures:
+            done, _ = wait(futures.keys(), return_when=FIRST_COMPLETED)
+            for future in done:
+                task = futures.pop(future)
+                sn = task["study_name"]
+                info = studies[sn]
+
+                try:
+                    result = future.result()
+                    info["study"].tell(result["trial_number"], result["value"])
+                    info["completed"] += 1
+                    completed_total += 1
+
+                    # Check early stopping
+                    if _should_stop_early(info["study"]):
+                        info["stopped"] = True
+
+                    # Submit next trial for this study if available
+                    if can_submit(sn):
+                        new_task = create_task(sn)
+                        new_future = executor.submit(_run_sota_trial_task, new_task)
+                        futures[new_future] = new_task
+                        info["submitted"] += 1
+
+                except KeyboardInterrupt:
+                    raise
+                except Exception:
+                    # Worker crashed — mark trial as failed
+                    try:
+                        info["study"].tell(task["trial_number"], float("inf"))
+                    except Exception:
+                        pass
+                    info["completed"] += 1
+                    completed_total += 1
+
+                    # Submit replacement if available
+                    if can_submit(sn):
+                        try:
+                            new_task = create_task(sn)
+                            new_future = executor.submit(_run_sota_trial_task, new_task)
+                            futures[new_future] = new_task
+                            info["submitted"] += 1
+                        except Exception:
+                            pass
+
+            # Refill free worker slots from any study that still has trials
+            while len(futures) < workers:
+                filled = False
+                for sn in study_names:
+                    if can_submit(sn) and len(futures) < workers:
+                        new_task = create_task(sn)
+                        new_future = executor.submit(_run_sota_trial_task, new_task)
+                        futures[new_future] = new_task
+                        studies[sn]["submitted"] += 1
+                        filled = True
+                if not filled:
+                    break
+
+            # Progress report (AFTER refill so active count is accurate)
+            active = len(futures)
+            stopped_count = sum(1 for s in studies.values() if s["stopped"])
+            print(f"\r[OPTUNA] {completed_total} trials done | {active} active | {stopped_count}/{total_studies} studies stopped", end="", flush=True)
+
+    except (KeyboardInterrupt, Exception) as e:
+        print("\n\n[INTERRUPT] Stopping... Saving progress...")
+        for f in futures:
+            f.cancel()
+        if executor:
+            try:
+                executor.shutdown(wait=False, cancel_futures=True)
+            except Exception:
+                pass
+        _save_progress()
+        return {}
+
+    # Normal completion — ensure executor is fully terminated
+    if executor:
+        try:
+            executor.shutdown(wait=True)
+        except Exception:
+            pass
+
+    # Collect results
+    tuning_csv = os.path.join(DOE_RESULTS_DIR, "tuning_progress.csv")
+    fields = [
+        "timestamp", "problem", "strategy", "trial_number", "avg_gap", "avg_time_ms", "n_runs", "params_json", "tuning_method"
+    ]
+
+    best_params: Dict[str, Any] = {}
+    for study_name, info in studies.items():
+        study = info["study"]
+        key = f"{info['problem_dict']['name']}::{info['algo_name']}"
+        defaults = _make_solver_config(info["algo_name"], info["problem_dict"]["dimension"], info["numba_ok"])
+
+        if len(study.trials) > 0:
+            try:
+                best_trial = study.best_trial
+                best_params[key] = {
+                    "params": {**defaults, **best_trial.params},
+                    "objective_value": study.best_value,
+                    "avg_gap": study.best_value,
+                    "avg_length": None,
+                    "n_runs": n_runs,
+                    "trials_used": info["completed"],
+                    "early_stopped": info["stopped"],
+                }
+                status = "EARLY" if info["stopped"] else "FULL"
+                print(f"  {key} — gap: {study.best_value:.2f}% ({info['completed']} trials, {status})")
+            except ValueError:
+                best_params[key] = {
+                    "params": defaults,
+                    "objective_value": float("inf"),
+                    "avg_gap": float("inf"),
+                    "avg_length": None,
+                    "n_runs": n_runs,
+                    "trials_used": info["completed"],
+                    "early_stopped": info["stopped"],
+                }
+                print(f"  {key} — gap: inf% ({info['completed']} trials, ALL FAILED)")
+        else:
             best_params[key] = {
-                "params": {**defaults, **study.best_params},
-                "objective_value": study.best_value,
-                "avg_gap": study.best_value,
+                "params": defaults,
+                "objective_value": float("inf"),
+                "avg_gap": float("inf"),
                 "avg_length": None,
                 "n_runs": n_runs,
+                "trials_used": 0,
+                "early_stopped": False,
             }
+            print(f"  {key} — ALL FAILED (0 trials completed)")
+
+        # Write all completed trials to tuning_progress.csv for dashboard
+        for trial in study.trials:
+            if trial.value is not None and not math.isinf(trial.value):
+                row = {
+                    "timestamp": datetime.now().isoformat(),
+                    "problem": info["problem_dict"]["name"],
+                    "strategy": info["algo_name"],
+                    "trial_number": trial.number,
+                    "avg_gap": round(trial.value, 6) if not math.isinf(trial.value) else None,
+                    "avg_time_ms": 0,
+                    "n_runs": n_runs,
+                    "params_json": json.dumps(trial.params, ensure_ascii=False, sort_keys=True),
+                    "tuning_method": "optuna",
+                }
+                append_csv_row(tuning_csv, fields, row)
 
     print("\n[OPTUNA] SOTA tuning tamamlandi.")
     metadata["best_params"] = best_params
@@ -1210,17 +1436,24 @@ def _save_best_to_param_db(
     """
     saved = 0
     problem_map = {p.name: p for p in problems}
+    valid_algos = set(algos)
     for key, entry in best_params.items():
         parts = key.split("::", 1)
         if len(parts) != 2:
             continue
         prob_name, algo_name = parts
+        if algo_name not in valid_algos:
+            continue
         prob = problem_map.get(prob_name)
         if not prob:
             continue
         params = entry.get("params", {})
         best_score = entry.get("avg_length", float("inf"))
-        gap = entry.get("avg_gap", float("nan"))
+        raw_gap = entry.get("avg_gap")
+        if raw_gap is None or (isinstance(raw_gap, float) and math.isnan(raw_gap)):
+            gap = float("nan")
+        else:
+            gap = float(raw_gap)
         runs = entry.get("n_runs", 3)
         _param_db_save(
             problem=prob_name,

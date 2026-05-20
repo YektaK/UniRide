@@ -21,19 +21,43 @@ try:
 except ImportError:
     _NUMPY_AVAILABLE = False
 
+_NUMBA_OK = False
+_nb = None
+
 try:
-    # sys.path hack: bildiri2026/core is not a pip-installable package,
-    # so we add its parent to the path for Numba-accelerated kernels.
-    import sys as _sys
-    _ls_dir = os.path.dirname(os.path.abspath(__file__))
-    _ab_dir = os.path.join(_ls_dir, "..", "bildiri2026")
-    if os.path.isdir(_ab_dir):
-        _sys.path.insert(0, _ab_dir)
-    from core import numba_accel as _nb
-    _NUMBA_OK = _nb.NUMBA_AVAILABLE
-except Exception:
-    _NUMBA_OK = False
-    _nb = None
+    import numba  # pylint: disable=unused-import
+    _NUMBA_OK = True
+except ImportError:
+    pass
+
+if not _NUMBA_OK:
+    try:
+        import importlib.util
+        _ls_dir = os.path.dirname(os.path.abspath(__file__))
+        _ab_dir = os.path.join(_ls_dir, "..", "bildiri2026")
+        try:
+            spec = importlib.util.find_spec("core.numba_accel")
+        except (ImportError, ModuleNotFoundError, ValueError):
+            spec = None
+        if spec is None and os.path.isdir(_ab_dir):
+            import sys as _sys
+            _sys.path.insert(0, _ab_dir)
+            try:
+                from core import numba_accel as _nb
+                _NUMBA_OK = _nb.NUMBA_AVAILABLE
+            except Exception:
+                pass
+            finally:
+                try:
+                    _sys.path.remove(_ab_dir)
+                except ValueError:
+                    pass
+        elif spec is not None:
+            from core import numba_accel as _nb
+            _NUMBA_OK = _nb.NUMBA_AVAILABLE
+    except Exception:
+        _NUMBA_OK = False
+        _nb = None
 
 
 def _two_opt_swap(tour: List[int], i: int, j: int) -> List[int]:

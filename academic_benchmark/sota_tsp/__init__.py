@@ -14,7 +14,6 @@ Usage:
 """
 
 from .base_solver import BaseTSPSolver, TSPResult
-from .base_solver import BaseTSPSolver, TSPResult
 from .e2bso_tsp import E2BSO_TSP, E2BSOTSPConfig, E2BSO_TSP_CPSO, E2BSOCPSPConfig
 from .r2dma_tsp import R2DMA_TSP, R2DMATSPConfig
 from .paoea_tsp import PAOEA_TSP, PAOEAConfig

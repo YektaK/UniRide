@@ -505,6 +505,9 @@ def run_unified_benchmark(problems, algorithms, param_source, n_runs, workers, m
             _current_results.append(res.__dict__)
             completed += 1
 
+            if getattr(res, 'error', None):
+                print(f"\n[ERROR] {res.algorithm} on {res.problem}: {res.error}")
+
             gap_str = f"{res.gap_pct:.4f}%" if res.gap_pct is not None else "ERR"
             msg = f"[PROGRESS] {completed}/{len(worker_args)} | {res.algorithm} on {res.problem} -> Gap: {gap_str}"
             sys.stdout.write(f"\r{msg:<110}")
@@ -865,6 +868,8 @@ def run_benchmark(config: BenchmarkConfig, all_problems: List[ProblemInstance], 
                 break
             _current_results.append(res.__dict__)
             completed += 1
+            if getattr(res, 'error', None):
+                print(f"\n[ERROR] {res.algorithm} on {res.problem}: {res.error}")
             gap_str = f"{res.gap_pct:.4f}%" if res.gap_pct is not None else "ERR"
             msg = f"[PROGRESS] {completed}/{len(worker_args)} | {res.algorithm} on {res.problem} -> Gap: {gap_str}"
             sys.stdout.write(f"\r{msg:<110}")

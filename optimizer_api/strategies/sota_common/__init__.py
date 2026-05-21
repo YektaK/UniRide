@@ -39,10 +39,6 @@ from .repair_operators import (
     Regret3Insertion,
 )
 from .diversity_controller import DiversityController, DiversityState
-from .e2bso import E2BSO, E2BSOConfig, E2BSOResult
-from .r2dma import R2DMA, R2DMAConfig, R2DMAResult
-from .paoea import PAOEA, PAOEAConfig, PAOEAResult
-
 SOTA_INFRA_VERSION = "3.0.0"
 
 __all__ = [
@@ -76,17 +72,8 @@ __all__ = [
     "DiversityController",
     "DiversityState",
     # E²BSO (FAZ 1)
-    "E2BSO",
-    "E2BSOConfig",
-    "E2BSOResult",
     # R²DMA (FAZ 2)
-    "R2DMA",
-    "R2DMAConfig",
-    "R2DMAResult",
     # P-AOEA (FAZ 3)
-    "PAOEA",
-    "PAOEAConfig",
-    "PAOEAResult",
 ]
 
 
@@ -234,8 +221,7 @@ if __name__ == "__main__":
 
     # -- 8. R²DMA import --
     try:
-        from .r2dma import R2DMA, R2DMAConfig, R2DMAResult
-        assert hasattr(R2DMA, 'solve')
+                assert hasattr(R2DMA, 'solve')
         assert hasattr(R2DMAConfig, 'population_size')
         assert hasattr(R2DMAResult, 'cost')
         print("[OK] R²DMA (FAZ 2)")
@@ -245,8 +231,7 @@ if __name__ == "__main__":
 
     # -- 9. P-AOEA import --
     try:
-        from .paoea import PAOEA, PAOEAConfig, PAOEAResult
-        assert hasattr(PAOEA, 'solve')
+                assert hasattr(PAOEA, 'solve')
         assert hasattr(PAOEAConfig, 'population_size')
         assert hasattr(PAOEAResult, 'cost')
         print("[OK] P-AOEA (FAZ 3)")

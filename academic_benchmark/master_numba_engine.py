@@ -1,3 +1,5 @@
+import os
+_ENGINE_DIR = os.path.dirname(os.path.abspath(__file__))
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -58,12 +60,8 @@ if sys.platform == "win32":
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
         sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-_ENGINE_DIR = os.path.dirname(os.path.abspath(__file__))
-_PROJECT_ROOT = os.path.abspath(os.path.join(_ENGINE_DIR, ".."))
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
-if os.path.join(_PROJECT_ROOT, "optimizer_api") not in sys.path:
-    sys.path.insert(0, os.path.join(_PROJECT_ROOT, "optimizer_api"))
+
+
 
 try:
     from benchmark_utils import (
@@ -152,13 +150,13 @@ def _detect_numba() -> bool:
     except ImportError:
         pass
     import importlib.util
-    _ab_dir = os.path.join(_PROJECT_ROOT, "academic_benchmark", "bildiri2026")
+
     try:
         spec = importlib.util.find_spec("core.numba_accel")
     except (ImportError, ModuleNotFoundError, ValueError):
         spec = None
     if spec is None and os.path.isdir(_ab_dir):
-        sys.path.insert(0, _ab_dir)
+
         try:
             from core import numba_accel as _nb  # type: ignore
             return bool(_nb.NUMBA_AVAILABLE)
@@ -233,11 +231,11 @@ HISTORY_DIR = os.path.join(BENCHMARK_DB, "history")
 
 # Hash tracking için izlenen kaynak dosyalar
 ALGORITHMS_TO_CHECK: Dict[str, str] = {
-    "BenchmarkRunner_NUMBA": os.path.join(_PROJECT_ROOT, "optimizer_api", "tests", "run_interactive_benchmark_v2_numba.py"),
-    "GA_Strategy": os.path.join(_PROJECT_ROOT, "optimizer_api", "strategies", "ga_strategy.py"),
-    "PSO_Strategy": os.path.join(_PROJECT_ROOT, "optimizer_api", "strategies", "pso_strategy.py"),
-    "GWO_Strategy": os.path.join(_PROJECT_ROOT, "optimizer_api", "strategies", "gwo_strategy.py"),
-    "HHO_Strategy": os.path.join(_PROJECT_ROOT, "optimizer_api", "strategies", "hho_strategy.py"),
+
+
+
+
+
 }
 
 DOE_MAX_COMBINATIONS = 50
@@ -888,10 +886,11 @@ def _get_bildiri_strategies() -> List[Tuple[str, str, Dict[str, Any]]]:
             ]
     except (ImportError, ModuleNotFoundError, ValueError):
         pass
-    _ab_dir = os.path.join(_PROJECT_ROOT, "academic_benchmark", "bildiri2026")
+
+    _ab_dir = os.path.join(_ENGINE_DIR, 'bildiri2026')
     if os.path.isdir(_ab_dir):
-        if _ab_dir not in sys.path:
-            sys.path.insert(0, _ab_dir)
+        
+
         try:
             from core import pso_solver, ga_solver  # pylint: disable=unused-import
             return [
@@ -1904,7 +1903,9 @@ def _load_params_from_db_interactive(
         for spec in specs:
             best = _param_db_get_best(prob.name, spec.name)
             if best:
-                print(f"  {prob.name} / {spec.name}: best_score={best['best_score']:.1f}, params={best['params']}")
+                score = best['best_score']
+                score_str = f"{score:.1f}" if isinstance(score, (int, float)) and not math.isinf(score) else str(score)
+                print(f"  {prob.name} / {spec.name}: best_score={score_str}, params={best['params']}")
             else:
                 print(f"  {prob.name} / {spec.name}: (DB'de kayit yok, varsayilan kullanilacak)")
 
@@ -2033,7 +2034,9 @@ def _param_db_menu() -> None:
                 print("-" * 70)
                 for e in entries:
                     gap_str = f"{e.get('gap', 0):.2f}" if e.get('gap') is not None else "N/A"
-                    print(f"{e['id']:>3} {e.get('timestamp', '?'):<20} {e['problem']:<12} {e['algorithm']:<8} {e.get('best_score', 0):<10.1f} {gap_str:<8} {e.get('dimension', 0):<6}")
+                    score = e.get('best_score', 0)
+                    score_str = f"{score:<10.1f}" if isinstance(score, (int, float)) and not math.isinf(score) else f"{str(score):<10}"
+                    print(f"{e['id']:>3} {e.get('timestamp', '?'):<20} {e['problem']:<12} {e['algorithm']:<8} {score_str} {gap_str:<8} {e.get('dimension', 0):<6}")
             input("\nDevam icin Enter...")
         elif choice == '2':
             analysis = _param_db_analyze()

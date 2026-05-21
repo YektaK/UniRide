@@ -1,2 +1,0 @@
-problem,algorithm,run,seed,dimension,optimal,tour_cost,gap_pct,elapsed_sec,iterations
-eil51,E2BSO-TSP,1,1409,51,426,427,0.2347,30.357,153

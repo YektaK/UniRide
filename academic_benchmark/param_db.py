@@ -14,6 +14,7 @@ Schema:
 """
 
 import json
+import math
 import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -71,7 +72,14 @@ def get_best_for(problem: str, algorithm: str) -> Optional[Dict[str, Any]]:
     matches = [e for e in db if e["problem"] == problem and e["algorithm"] == algorithm]
     if not matches:
         return None
-    return min(matches, key=lambda e: e["best_score"])
+    valid = [e for e in matches if e.get("best_score") is not None and not math.isinf(e["best_score"])]
+    if valid:
+        return min(valid, key=lambda e: e["best_score"])
+    # Fallback: best_score inf/null ise gap'e göre seç
+    finite_gap = [e for e in matches if e.get("gap") is not None and not math.isinf(e.get("gap", 0))]
+    if finite_gap:
+        return min(finite_gap, key=lambda e: e["gap"])
+    return matches[0]
 
 def list_entries() -> List[Dict[str, Any]]:
     return _load()

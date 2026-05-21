@@ -1,3 +1,5 @@
+import os
+_ENGINE_DIR = os.path.dirname(os.path.abspath(__file__))
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -36,9 +38,6 @@ if sys.platform == 'win32' or 'pypy' in sys.implementation.name.lower():
         sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
-
 from academic_benchmark.engine_core import ProblemInstance, RunResult, AlgorithmRegistry, BenchmarkTask, BenchmarkConfig
 from academic_benchmark.benchmark_utils import (
     load_metadata, save_metadata, get_cpu_info, format_time,
@@ -804,7 +803,9 @@ def _menu_param_db():
                 print("-" * 72)
                 for e in entries:
                     gap_str = f"{e.get('gap', 0):.2f}" if e.get('gap') is not None else "N/A"
-                    print(f"{e['id']:>3} {e.get('timestamp', '?'):<20} {e['problem']:<12} {e['algorithm']:<12} {e.get('best_score', 0):<10.1f} {gap_str:<8} {e.get('dimension', 0):<6}")
+                    score = e.get('best_score', 0)
+                    score_str = f"{score:<10.1f}" if isinstance(score, (int, float)) and not math.isinf(score) else f"{str(score):<10}"
+                    print(f"{e['id']:>3} {e.get('timestamp', '?'):<20} {e['problem']:<12} {e['algorithm']:<12} {score_str} {gap_str:<8} {e.get('dimension', 0):<6}")
             input("\nDevam icin Enter...")
         elif choice == '2':
             analysis = _analyze()

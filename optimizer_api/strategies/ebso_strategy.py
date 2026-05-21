@@ -25,7 +25,7 @@ from models.schemas import (
     RouteStep,
 )
 from strategies.base_strategy import BaseRoutingStrategy
-from strategies.sota_common.e2bso import E2BSO, E2BSOConfig
+from uniride_core.algorithms.sota_tsp import E2BSO_TSP, E2BSOTSPConfig
 from utils.data_loader import DataLoader, euclidean_distance, estimate_travel_time
 from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
 
@@ -46,8 +46,8 @@ class E2BSoStrategy(BaseRoutingStrategy):
     - Multi-start initialization with 4 heuristics
     """
 
-    def __init__(self, config: Optional[E2BSOConfig] = None):
-        self._config = config or E2BSOConfig()
+    def __init__(self, config: Optional[E2BSOTSPConfig] = None):
+        self._config = config or E2BSOTSPConfig(population_size=10, max_iterations=100)
 
     @property
     def name(self) -> str:
@@ -148,31 +148,16 @@ class E2BSoStrategy(BaseRoutingStrategy):
                 else:
                     int_dm[i][j] = 0
 
-        class _ProblemWrapper:
-            """Thin wrapper matching E²BSO's expected interface."""
-            def __init__(self):
-                self.node_names = [str(i) for i in range(n)]
-                self.dimension = n
-                self.dist_matrix = int_dm
-                self.optimal = None
-
-            def cost_fn(self, tour):
-                total = 0
-                for i in range(len(tour) - 1):
-                    total += int_dm[int(tour[i])][int(tour[i + 1])]
-                if len(tour) >= 2:
-                    total += int_dm[int(tour[-1])][int(tour[0])]
-                return float(total)
-
-        prob = _ProblemWrapper()
-
         # ── Run E²BSO ──
         try:
-            e2bso = E2BSO(self._config)
-            result = e2bso.solve(prob)
+            e2bso = E2BSO_TSP(self._config)
+            matrix = [[float(int_dm[i][j]) for j in range(n)] for i in range(n)]
+            e2bso.set_dist_matrix(matrix)
+            dummy_coords = [(0.0, 0.0) for _ in range(n)]
+            result = e2bso.solve(dummy_coords)
 
             # Convert E²BSO result tour to student order
-            best_order = [student_ids[int(idx)] for idx in result.tour]
+            best_order = [student_ids[idx] for idx in result.tour]
         except Exception as e:
             logger.error(f"E²BSO optimization failed: {e}")
             # Fallback to greedy
@@ -237,7 +222,7 @@ class E2BSoStrategy(BaseRoutingStrategy):
 
     def _greedy_fallback(self, students, depot, time_matrix, coordinates):
         """Simple greedy fallback if E²BSO fails."""
-        from strategies.sota_common.e2bso import E2BSO
+        from uniride_core.algorithms.sota_tsp import E2BSO_TSP
 
         unassigned = list(students)
         order = []

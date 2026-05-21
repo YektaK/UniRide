@@ -23,7 +23,7 @@ from models.schemas import (
     RouteStep,
 )
 from strategies.base_strategy import BaseRoutingStrategy
-from strategies.sota_common.paoea import PAOEA, PAOEAConfig
+from uniride_core.algorithms.sota_tsp import PAOEA_TSP, PAOEAConfig
 from utils.data_loader import DataLoader, euclidean_distance, estimate_travel_time
 from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
 
@@ -46,7 +46,7 @@ class PAOEAStrategy(BaseRoutingStrategy):
     """
 
     def __init__(self, config: Optional[PAOEAConfig] = None):
-        self._config = config or PAOEAConfig()
+        self._config = config or PAOEAConfig(population_size=10, max_iterations=100)
 
     @property
     def name(self) -> str:

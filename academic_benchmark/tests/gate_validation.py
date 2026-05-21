@@ -26,7 +26,7 @@ assert _signal_handler is not None
 print("[Gate A] Interruption persistence handler: OK")
 
 # ── Gate D: R2DMA rotation-invariant position_match ──
-from academic_benchmark.sota_tsp.r2dma_tsp import _compute_resonance
+from uniride_core.algorithms.sota_tsp.r2dma_tsp import _compute_resonance
 t1 = [0, 1, 2, 3, 4]
 t2 = [2, 3, 4, 0, 1]  # rotation of t1 by 2
 n = len(t1)

@@ -1,3 +1,5 @@
+import os
+_ENGINE_DIR = os.path.dirname(os.path.abspath(__file__))
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -62,11 +64,7 @@ if sys.platform == "win32":
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
         sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-# Proje root'unu Python path'e ekle (import academic_benchmark.sota_tsp için)
-_ENGINE_DIR = os.path.dirname(os.path.abspath(__file__))
-_PROJECT_ROOT = os.path.abspath(os.path.join(_ENGINE_DIR, ".."))
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
+# Proje root'unu Python path'e ekle (import uniride_core.algorithms.sota_tsp için)
 
 # ── benchmark_utils import ────────────────────────────────────────────────────
 try:
@@ -565,8 +563,7 @@ def _make_solver(algo_name: str, params: Dict[str, Any]):
     except ImportError:
         # Fallback if _PROJECT_ROOT wasn't attached in worker
         if _PROJECT_ROOT not in sys.path:
-            sys.path.insert(0, _PROJECT_ROOT)
-        from academic_benchmark.sota_tsp import (
+                    from uniride_core.algorithms.sota_tsp import (
             E2BSO_TSP, E2BSO_TSP_CPSO, R2DMA_TSP, PAOEA_TSP, CGO_TSP, RUN_TSP,
             E2BSOTSPConfig, E2BSOCPSPConfig, R2DMATSPConfig, PAOEAConfig, CGOConfig, RUNConfig,
         )
@@ -1087,7 +1084,9 @@ def _run_sota_trial_task(task: Dict[str, Any]) -> Dict[str, Any]:
             elapsed = time.perf_counter() - t0
             costs.append(float(result.tour_length))
             times.append(elapsed)
-        except Exception:
+        except Exception as e:
+            import traceback
+            print(f"\n[ERROR] Worker trial failed: {e}\n{traceback.format_exc()}", flush=True)
             return {
                 "study_name": task["study_name"],
                 "trial_number": trial_number,
@@ -1205,11 +1204,18 @@ def _run_sota_optuna_tuning(
             defaults = _make_solver_config(info["algo_name"], info["problem_dict"]["dimension"], info["numba_ok"])
             if len(study.trials) > 0:
                 try:
+                    optimal = info["problem_dict"].get("optimal")
+                    avg_length = float("inf")
+                    if study.best_value is not None and not math.isinf(study.best_value):
+                        if optimal and optimal > 0:
+                            avg_length = optimal * (1.0 + study.best_value / 100.0)
+                        else:
+                            avg_length = study.best_value
                     bp[key] = {
                         "params": {**defaults, **study.best_params},
                         "objective_value": study.best_value,
                         "avg_gap": study.best_value,
-                        "avg_length": None,
+                        "avg_length": avg_length,
                         "n_runs": n_runs,
                         "trials_used": info["completed"],
                         "early_stopped": info["stopped"],
@@ -1342,11 +1348,18 @@ def _run_sota_optuna_tuning(
         if len(study.trials) > 0:
             try:
                 best_trial = study.best_trial
+                optimal = info["problem_dict"].get("optimal")
+                avg_length = float("inf")
+                if study.best_value is not None and not math.isinf(study.best_value):
+                    if optimal and optimal > 0:
+                        avg_length = optimal * (1.0 + study.best_value / 100.0)
+                    else:
+                        avg_length = study.best_value
                 best_params[key] = {
                     "params": {**defaults, **best_trial.params},
                     "objective_value": study.best_value,
                     "avg_gap": study.best_value,
-                    "avg_length": None,
+                    "avg_length": avg_length,
                     "n_runs": n_runs,
                     "trials_used": info["completed"],
                     "early_stopped": info["stopped"],
@@ -1358,7 +1371,7 @@ def _run_sota_optuna_tuning(
                     "params": defaults,
                     "objective_value": float("inf"),
                     "avg_gap": float("inf"),
-                    "avg_length": None,
+                    "avg_length": float("inf"),
                     "n_runs": n_runs,
                     "trials_used": info["completed"],
                     "early_stopped": info["stopped"],
@@ -1369,7 +1382,7 @@ def _run_sota_optuna_tuning(
                 "params": defaults,
                 "objective_value": float("inf"),
                 "avg_gap": float("inf"),
-                "avg_length": None,
+                "avg_length": float("inf"),
                 "n_runs": n_runs,
                 "trials_used": 0,
                 "early_stopped": False,
@@ -1409,13 +1422,20 @@ def _save_best_solutions_post_tuning(best_params, problems, algos):
         prob = prob_map.get(prob_name)
         if not prob:
             continue
+        avg_len_raw = entry.get("avg_length")
+        avg_len = float(avg_len_raw) if avg_len_raw is not None else 0.0
+        avg_gap_raw = entry.get("avg_gap")
+        if avg_gap_raw is None or (isinstance(avg_gap_raw, float) and math.isnan(avg_gap_raw)):
+            avg_gap = 0.0
+        else:
+            avg_gap = float(avg_gap_raw)
         _save_best_solution(
             problem_name=prob_name,
             algorithm=algo_name,
             params=entry.get("params", {}),
             tour=[],
-            tour_length=float(entry.get("avg_length", 0)),
-            gap=float(entry.get("avg_gap", 0)) if not math.isnan(entry.get("avg_gap", float("nan"))) else 0.0,
+            tour_length=avg_len,
+            gap=avg_gap,
             db_path=TSPLIB_DB,
         )
         saved += 1
@@ -1448,7 +1468,8 @@ def _save_best_to_param_db(
         if not prob:
             continue
         params = entry.get("params", {})
-        best_score = entry.get("avg_length", float("inf"))
+        best_score_raw = entry.get("avg_length")
+        best_score = float(best_score_raw) if best_score_raw is not None else float("inf")
         raw_gap = entry.get("avg_gap")
         if raw_gap is None or (isinstance(raw_gap, float) and math.isnan(raw_gap)):
             gap = float("nan")
@@ -1470,7 +1491,7 @@ def _save_best_to_param_db(
             algorithm=algo_name,
             params=params,
             tour=[],
-            tour_length=float(best_score),
+            tour_length=best_score,
             gap=float(gap) if not math.isnan(gap) else 0.0,
             db_path=TSPLIB_DB,
         )
@@ -1598,7 +1619,9 @@ def _load_params_from_db_interactive(
         for algo in algos:
             best = _param_db_get_best(prob.name, algo)
             if best:
-                print(f"  {prob.name} / {algo}: best_score={best['best_score']:.1f}, params={best['params']}")
+                score = best['best_score']
+                score_str = f"{score:.1f}" if isinstance(score, (int, float)) and not math.isinf(score) else str(score)
+                print(f"  {prob.name} / {algo}: best_score={score_str}, params={best['params']}")
             else:
                 print(f"  {prob.name} / {algo}: (DB'de kayit yok, varsayilan kullanilacak)")
 
@@ -1737,7 +1760,9 @@ def _param_db_menu() -> None:
                 print("-" * 72)
                 for e in entries:
                     gap_str = f"{e.get('gap', 0):.2f}" if e.get('gap') is not None else "N/A"
-                    print(f"{e['id']:>3} {e.get('timestamp', '?'):<20} {e['problem']:<12} {e['algorithm']:<12} {e.get('best_score', 0):<10.1f} {gap_str:<8} {e.get('dimension', 0):<6}")
+                    score = e.get('best_score', 0)
+                    score_str = f"{score:<10.1f}" if isinstance(score, (int, float)) and not math.isinf(score) else f"{str(score):<10}"
+                    print(f"{e['id']:>3} {e.get('timestamp', '?'):<20} {e['problem']:<12} {e['algorithm']:<12} {score_str} {gap_str:<8} {e.get('dimension', 0):<6}")
             input("\nDevam icin Enter...")
         elif choice == '2':
             analysis = _param_db_analyze()

@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "uniride"
+version = "3.1.0"
+description = "CVRPTW Optimization Framework and Academic Benchmark Suite"
+dependencies = [
+    "pydantic",
+    "numpy",
+    "numba"
+]
+
+[tool.setuptools.packages.find]
+include = ["uniride_core*", "optimizer_api*", "academic_benchmark*"]

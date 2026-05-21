@@ -1,6 +1,6 @@
-from academic_benchmark.sota_tsp import ls_engine
-from academic_benchmark.sota_tsp.repair_ops import Regret3Insertion
-from academic_benchmark.sota_tsp.r2dma_tsp import _compute_resonance
+from uniride_core.algorithms.sota_tsp import ls_engine
+from uniride_core.algorithms.sota_tsp.repair_ops import Regret3Insertion
+from uniride_core.algorithms.sota_tsp.r2dma_tsp import _compute_resonance
 
 
 def test_full_intensity_runs_3opt_layer(monkeypatch):

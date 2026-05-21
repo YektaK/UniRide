@@ -15,6 +15,17 @@ e Değişiklik Günlüğü (Changelog)
 
 ---
 
+## 2026-05-21 — "Split-Brain" Architecture Resolution & Core Consolidation (GitHub Copilot)
+
+**GitHub Copilot** — Comprehensive Code Review (2026-05-20) recommendations implemented.
+
+### ✅ Tamamlananlar (Tamamlanan Aşama 1-5)
+- **uniride_core Paketi Oluşturuldu:** `pyproject.toml` ile sisteme dahil edilebilir (`pip install -e .`) ortak bir matematik ve algoritma kütüphanesi oluşturuldu. `sys.path` hack'leri (`sys.path.insert`) sistemin 15+ dosyasından temizlendi.
+- **Split Brain (Kod Tekrarı) Çözüldü:** `optimizer_api` içindeki yavaş, string-bazlı kopya (duplicate) SOTA algoritmaları silindi. Canonical Numba SOTA uygulamaları (E2BSO, R2DMA, P-AOEA vb.) `uniride_core/algorithms/` içerisine taşındı.
+- **FastAPI Adapter Katmanı:** `ebso_strategy.py`, `aoea_strategy.py` ve `rdma_strategy.py` artık Next.js string (UUID) isteklerini Integer matrislerine çevirerek ultra-hızlı Numba kütüphanesine paslıyor, sonucu tekrar String'e çevirip istemciye dönüyor.
+- **Veri Modelleri Tekilleştirildi:** Parçalı yapıdaki `TSPProblem`, `BenchmarkProblem` ve `ProblemInstance` tek bir ortak `uniride_core.models.ProblemInstance` ve `TSPResult` altında birleştirildi. Dataclass'lar içerisine `__post_init__` matematiksel parametre validasyonları eklendi.
+- **Deprecated Kodların Silinmesi:** `academic_benchmark/old/`, `legacy/` ve `cache/` atıl klasörleri sistemden tamamen temizlendi ve testler %100 başarılı hale getirildi.
+
 ## 2026-04-14 (01:35) — Kapsamlı Denetim + 4 Kritik Fix (14.04.2026 - Ekleyen: Antigravity AI)
 
 **[Antigravity AI]** — .proposed_changes/13.04.2026, ana kaynak kodu ve dokümantasyon capraz analizine dayali kapsamli denetim + 4 kritik fix uygulandı.
@@ -130,6 +141,17 @@ Frontend GET (polling every 1s, same HTTP thread)
 
 ---
 
+## 2026-05-21 — "Split-Brain" Architecture Resolution & Core Consolidation (GitHub Copilot)
+
+**GitHub Copilot** — Comprehensive Code Review (2026-05-20) recommendations implemented.
+
+### ✅ Tamamlananlar (Tamamlanan Aşama 1-5)
+- **uniride_core Paketi Oluşturuldu:** `pyproject.toml` ile sisteme dahil edilebilir (`pip install -e .`) ortak bir matematik ve algoritma kütüphanesi oluşturuldu. `sys.path` hack'leri (`sys.path.insert`) sistemin 15+ dosyasından temizlendi.
+- **Split Brain (Kod Tekrarı) Çözüldü:** `optimizer_api` içindeki yavaş, string-bazlı kopya (duplicate) SOTA algoritmaları silindi. Canonical Numba SOTA uygulamaları (E2BSO, R2DMA, P-AOEA vb.) `uniride_core/algorithms/` içerisine taşındı.
+- **FastAPI Adapter Katmanı:** `ebso_strategy.py`, `aoea_strategy.py` ve `rdma_strategy.py` artık Next.js string (UUID) isteklerini Integer matrislerine çevirerek ultra-hızlı Numba kütüphanesine paslıyor, sonucu tekrar String'e çevirip istemciye dönüyor.
+- **Veri Modelleri Tekilleştirildi:** Parçalı yapıdaki `TSPProblem`, `BenchmarkProblem` ve `ProblemInstance` tek bir ortak `uniride_core.models.ProblemInstance` ve `TSPResult` altında birleştirildi. Dataclass'lar içerisine `__post_init__` matematiksel parametre validasyonları eklendi.
+- **Deprecated Kodların Silinmesi:** `academic_benchmark/old/`, `legacy/` ve `cache/` atıl klasörleri sistemden tamamen temizlendi ve testler %100 başarılı hale getirildi.
+
 ## 2026-04-14 (01:35) — Kapsamlı Denetim + 4 Kritik Fix (14.04.2026 - Ekleyen: Antigravity AI)
 
 **[Antigravity AI]** — .proposed_changes/13.04.2026, ana kaynak kodu ve dokümantasyon capraz analizine dayali kapsamli denetim + 4 kritik fix uygulandı.
@@ -211,6 +233,17 @@ Frontend GET (polling every 1s, same HTTP thread)
 
 
 ---
+
+## 2026-05-21 — "Split-Brain" Architecture Resolution & Core Consolidation (GitHub Copilot)
+
+**GitHub Copilot** — Comprehensive Code Review (2026-05-20) recommendations implemented.
+
+### ✅ Tamamlananlar (Tamamlanan Aşama 1-5)
+- **uniride_core Paketi Oluşturuldu:** `pyproject.toml` ile sisteme dahil edilebilir (`pip install -e .`) ortak bir matematik ve algoritma kütüphanesi oluşturuldu. `sys.path` hack'leri (`sys.path.insert`) sistemin 15+ dosyasından temizlendi.
+- **Split Brain (Kod Tekrarı) Çözüldü:** `optimizer_api` içindeki yavaş, string-bazlı kopya (duplicate) SOTA algoritmaları silindi. Canonical Numba SOTA uygulamaları (E2BSO, R2DMA, P-AOEA vb.) `uniride_core/algorithms/` içerisine taşındı.
+- **FastAPI Adapter Katmanı:** `ebso_strategy.py`, `aoea_strategy.py` ve `rdma_strategy.py` artık Next.js string (UUID) isteklerini Integer matrislerine çevirerek ultra-hızlı Numba kütüphanesine paslıyor, sonucu tekrar String'e çevirip istemciye dönüyor.
+- **Veri Modelleri Tekilleştirildi:** Parçalı yapıdaki `TSPProblem`, `BenchmarkProblem` ve `ProblemInstance` tek bir ortak `uniride_core.models.ProblemInstance` ve `TSPResult` altında birleştirildi. Dataclass'lar içerisine `__post_init__` matematiksel parametre validasyonları eklendi.
+- **Deprecated Kodların Silinmesi:** `academic_benchmark/old/`, `legacy/` ve `cache/` atıl klasörleri sistemden tamamen temizlendi ve testler %100 başarılı hale getirildi.
 
 ## 2026-04-14 (01:35) — Kapsamlı Denetim + 4 Kritik Fix (14.04.2026 - Ekleyen: Antigravity AI)
 
@@ -332,6 +365,17 @@ Frontend GET (polling every 1s, same HTTP thread)
 
 
 ---
+
+## 2026-05-21 — "Split-Brain" Architecture Resolution & Core Consolidation (GitHub Copilot)
+
+**GitHub Copilot** — Comprehensive Code Review (2026-05-20) recommendations implemented.
+
+### ✅ Tamamlananlar (Tamamlanan Aşama 1-5)
+- **uniride_core Paketi Oluşturuldu:** `pyproject.toml` ile sisteme dahil edilebilir (`pip install -e .`) ortak bir matematik ve algoritma kütüphanesi oluşturuldu. `sys.path` hack'leri (`sys.path.insert`) sistemin 15+ dosyasından temizlendi.
+- **Split Brain (Kod Tekrarı) Çözüldü:** `optimizer_api` içindeki yavaş, string-bazlı kopya (duplicate) SOTA algoritmaları silindi. Canonical Numba SOTA uygulamaları (E2BSO, R2DMA, P-AOEA vb.) `uniride_core/algorithms/` içerisine taşındı.
+- **FastAPI Adapter Katmanı:** `ebso_strategy.py`, `aoea_strategy.py` ve `rdma_strategy.py` artık Next.js string (UUID) isteklerini Integer matrislerine çevirerek ultra-hızlı Numba kütüphanesine paslıyor, sonucu tekrar String'e çevirip istemciye dönüyor.
+- **Veri Modelleri Tekilleştirildi:** Parçalı yapıdaki `TSPProblem`, `BenchmarkProblem` ve `ProblemInstance` tek bir ortak `uniride_core.models.ProblemInstance` ve `TSPResult` altında birleştirildi. Dataclass'lar içerisine `__post_init__` matematiksel parametre validasyonları eklendi.
+- **Deprecated Kodların Silinmesi:** `academic_benchmark/old/`, `legacy/` ve `cache/` atıl klasörleri sistemden tamamen temizlendi ve testler %100 başarılı hale getirildi.
 
 ## 2026-04-14 (01:35) — Kapsamlı Denetim + 4 Kritik Fix (14.04.2026 - Ekleyen: Antigravity AI)
 

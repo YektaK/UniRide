@@ -18,11 +18,11 @@ import os
 # Proje kökünü path'e ekle
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from academic_benchmark.sota_tsp.e2bso_tsp import E2BSO_TSP, E2BSOTSPConfig
-from academic_benchmark.sota_tsp.r2dma_tsp import R2DMA_TSP, R2DMATSPConfig, _compute_resonance
-from academic_benchmark.sota_tsp.paoea_tsp import PAOEA_TSP, PAOEAConfig, OperatorGenome
-from academic_benchmark.sota_tsp.destroy_ops import RandomRemoval, WorstRemoval, ShawRemoval
-from academic_benchmark.sota_tsp.repair_ops import GreedyInsertion, Regret2Insertion, Regret3Insertion
+from uniride_core.algorithms.sota_tsp.e2bso_tsp import E2BSO_TSP, E2BSOTSPConfig
+from uniride_core.algorithms.sota_tsp.r2dma_tsp import R2DMA_TSP, R2DMATSPConfig, _compute_resonance
+from uniride_core.algorithms.sota_tsp.paoea_tsp import PAOEA_TSP, PAOEAConfig, OperatorGenome
+from uniride_core.algorithms.sota_tsp.destroy_ops import RandomRemoval, WorstRemoval, ShawRemoval
+from uniride_core.algorithms.sota_tsp.repair_ops import GreedyInsertion, Regret2Insertion, Regret3Insertion
 from academic_benchmark.benchmark_utils import compute_population_diversity
 
 

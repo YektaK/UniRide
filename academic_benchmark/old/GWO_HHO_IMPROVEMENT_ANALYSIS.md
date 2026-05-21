@@ -1,1 +1,0 @@
-GWO_HHO_IMPROVEMENT_ANALYSIS.md dokümanı oluşturuluyor

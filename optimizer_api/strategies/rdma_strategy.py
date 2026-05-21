@@ -23,7 +23,7 @@ from models.schemas import (
     RouteStep,
 )
 from strategies.base_strategy import BaseRoutingStrategy
-from strategies.sota_common.r2dma import R2DMA, R2DMAConfig
+from uniride_core.algorithms.sota_tsp import R2DMA_TSP, R2DMATSPConfig
 from utils.data_loader import DataLoader, euclidean_distance, estimate_travel_time
 from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
 
@@ -44,8 +44,8 @@ class R2DMAStrategy(BaseRoutingStrategy):
     - Adaptive theta mechanism for crossover mode selection
     """
 
-    def __init__(self, config: Optional[R2DMAConfig] = None):
-        self._config = config or R2DMAConfig()
+    def __init__(self, config: Optional[R2DMATSPConfig] = None):
+        self._config = config or R2DMATSPConfig(population_size=10, max_iterations=100)
 
     @property
     def name(self) -> str:

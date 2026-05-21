@@ -38,10 +38,19 @@ UniRide, mikroservis tabanlı bir mimari ile tasarlanmış olup, frontend ve bac
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │         Python Optimization Engine (Port 8099)           │   │
 │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────────┐ │   │
-│  │  │ Pipeline │ │ Pipeline │ │ Holistic │ │ SOTA v3.0  │ │   │
-│  │  │    A     │ │    B     │ │ Solvers  │ │ E²BSO/R²DMA│ │   │
-│  │  │(GA,PSO..)│ │(GA-Split)│ │ OR-Tools │ │ P-AOEA     │ │   │
+│  │  │ Pipeline │ │ Pipeline │ │ Holistic │ │ API Adapter│ │   │
+│  │  │    A     │ │    B     │ │ Solvers  │ │ Layer      │ │   │
 │  │  └──────────┘ └──────────┘ └──────────┘ └────────────┘ │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                              │                                  │
+│                              │ Python Imports (Int Matrices)    │
+│                              ▼                                  │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │            uniride_core (Math & Algorithms)              │   │
+│  │  ┌──────────┐ ┌──────────┐ ┌─────────────────────────┐ │   │
+│  │  │ SOTA v3.0│ │ Models   │ │ Numba Accelerated Ops   │ │   │
+│  │  │(E2BSO...)│ │          │ │ Local Search (2opt...)  │ │   │
+│  │  └──────────┘ └──────────┘ └─────────────────────────┘ │   │
 │  └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                               │

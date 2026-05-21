@@ -1,4 +1,0 @@
-timestamp,algorithm,problem,run,seed,dimension,edge_weight_type,optimal,optimal_source,tour_cost,gap_pct,elapsed_sec
-2026-04-29 17:00:21,E2BSO,berlin52,1,42,52,EUC_2D,7542,known,7542,0.0,85.628
-2026-04-29 17:00:27,R2DMA,berlin52,1,42,52,EUC_2D,7542,known,7885,4.55,6.211
-2026-04-29 17:00:51,P-AOEA,berlin52,1,42,52,EUC_2D,7542,known,7542,0.0,24.152

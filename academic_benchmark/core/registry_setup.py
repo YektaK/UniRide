@@ -15,7 +15,7 @@ def _make_legacy_executor(strategy_payload: any, algorithm_type: str):
         import math
         
         # Build duration func
-        from optimizer_api.tests.run_interactive_benchmark_v2_numba import create_np_duration_func, convert_route_to_indices
+        from uniride_core.algorithms.numba_utils import create_np_duration_func, convert_route_to_indices
         from optimizer_api.utils.local_search_numba import apply_local_search
         import numpy as np
         
@@ -41,7 +41,7 @@ def _make_legacy_executor(strategy_payload: any, algorithm_type: str):
             unique_locs = [f"L{i+1}" for i in range(dimension)]
             if dist_matrix_np is None:
                 # Use coordinates fallback
-                from optimizer_api.tests.run_interactive_benchmark_v2_numba import create_np_distance_matrix
+                from uniride_core.algorithms.numba_utils import create_np_distance_matrix
                 dist_matrix_np = create_np_distance_matrix(problem.coordinates)
             duration_func = create_np_duration_func(dist_matrix_np, unique_locs)
             dist_matrix = dist_matrix_np.tolist()

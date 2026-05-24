@@ -467,7 +467,8 @@ def run_single_test_with_matrix(
     hit on the first improve() call within the same run.
     """
     import numpy as _np
-    from optimizer_api.tests.run_interactive_benchmark_v2_numba import create_np_duration_func, convert_route_to_indices, _run_meta_heuristic
+    from uniride_core.algorithms.numba_utils import create_np_duration_func, convert_route_to_indices
+    from optimizer_api.tests.run_interactive_benchmark_v2_numba import _run_meta_heuristic
     dimension = problem.dimension
     run_params: Dict[str, Any] = {}
     if isinstance(params, dict):
@@ -728,7 +729,7 @@ def _run_bildiri_solver(
       - coords[i] = node L(i+1), i.e. 0-indexed in the original list.
     """
     import time as _time
-    from optimizer_api.tests.run_interactive_benchmark_v2_numba import create_np_distance_matrix
+    from uniride_core.algorithms.numba_utils import create_np_distance_matrix
     is_tm = problem_dict.get("is_time_matrix", False)
     coords = problem_dict.get("coordinates", [])
     optimal = problem_dict.get("optimal")

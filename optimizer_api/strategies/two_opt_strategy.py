@@ -59,7 +59,6 @@ class TwoOptStrategy(BaseRoutingStrategy):
     def __init__(self, config: Optional[Dict] = None):
         self.config = {**self.DEFAULT_CONFIG, **(config or {})}
         self.seed = self.config.get("seed") or int(time.time() * 1000)
-        self.rng = random.Random(self.seed)
 
     @property
     def name(self) -> str:
@@ -73,11 +72,11 @@ class TwoOptStrategy(BaseRoutingStrategy):
     def description(self) -> str:
         return "Klasik 2-opt yerel arama algoritması. Küçük-orta ölçekli problemler için ideal."
 
-    def _shuffle(self, items: List) -> List:
-        """Shuffle list using internal RNG"""
+    def _shuffle(self, items: List, rng: random.Random) -> List:
+        """Shuffle list using provided RNG"""
         result = items.copy()
         for i in range(len(result) - 1, 0, -1):
-            j = self.rng.randint(0, i)
+            j = rng.randint(0, i)
             result[i], result[j] = result[j], result[i]
         return result
 
@@ -114,7 +113,9 @@ class TwoOptStrategy(BaseRoutingStrategy):
         waypoints: List[str],
         depot: str,
         time_matrix: Dict,
-        coordinates: Dict
+        coordinates: Dict,
+        config: Dict,
+        rng: random.Random,
     ) -> Tuple[List[str], float]:
         """Solve TSP for a single vehicle using 2-opt"""
         if not waypoints:
@@ -137,8 +138,8 @@ class TwoOptStrategy(BaseRoutingStrategy):
 
         # Create 2-opt local search instance
         two_opt = TwoOptLocalSearch(
-            max_iterations=self.config["max_iterations"],
-            first_improvement=self.config["first_improvement"]
+            max_iterations=config["max_iterations"],
+            first_improvement=config["first_improvement"]
         )
 
         def duration_func(route):
@@ -147,7 +148,7 @@ class TwoOptStrategy(BaseRoutingStrategy):
         best_route: Optional[List[str]] = None
         best_duration = float('inf')
 
-        if self.config["multi_start"]:
+        if config["multi_start"]:
             # Multi-start optimization
             starts_completed = 0
 
@@ -161,8 +162,8 @@ class TwoOptStrategy(BaseRoutingStrategy):
             starts_completed += 1
 
             # Random starts
-            while starts_completed < self.config["num_starts"]:
-                random_route = self._shuffle(waypoints)
+            while starts_completed < config["num_starts"]:
+                random_route = self._shuffle(waypoints, rng)
                 improved_route, improved_duration = two_opt.improve(random_route, duration_func)
 
                 if improved_duration < best_duration:
@@ -195,15 +196,13 @@ class TwoOptStrategy(BaseRoutingStrategy):
                 execution_time_seconds=time.time() - start_time
             )
 
-        # Singleton self.config korunuyor; her istek icin local kopya
+        # Per-request local config & RNG (singleton-safe)
         effective_config = dict(self.config)
         if hasattr(request, 'two_opt_config') and request.two_opt_config:
             effective_config = {**self.config, **request.two_opt_config}
             rng = random.Random(effective_config.get("seed", self.seed))
         else:
             rng = random.Random(self.seed)
-        self.rng = rng
-        self.config = effective_config
 
         # Build time matrix and coordinates
         data_loader = DataLoader.get_instance()
@@ -255,7 +254,7 @@ class TwoOptStrategy(BaseRoutingStrategy):
                 return {"route_details": [], "total_duration": 0}
 
             optimized_route, duration = self._solve_tsp(
-                location_codes, depot.id, time_matrix, coordinates
+                location_codes, depot.id, time_matrix, coordinates, effective_config, rng
             )
 
             route_details = []

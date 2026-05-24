@@ -466,69 +466,11 @@ def create_duration_func(matrix: Dict[str, Dict[str, float]]) -> Callable[[List[
 
 import numpy as _np
 
-
-def create_np_distance_matrix(coordinates: List[Tuple[float, float]]) -> '_np.ndarray':
-    """Build an (n, n) float64 numpy distance matrix using TSPLIB EUC_2D rounding.
-
-    Avoids the O(n²) string-key dict allocations of create_distance_matrix().
-    The returned array is the canonical form expected by Numba JIT kernels.
-    """
-    n = len(coordinates)
-    dm = _np.zeros((n, n), dtype=_np.float64)
-    for i in range(n):
-        xi, yi = coordinates[i]
-        for j in range(i + 1, n):
-            xj, yj = coordinates[j]
-            d = float(int(round(_np.hypot(xi - xj, yi - yj))))
-            dm[i, j] = d
-            dm[j, i] = d
-    return dm
-
-
-def create_np_duration_func(
-    dist_matrix_np: '_np.ndarray',
-    unique_locs: List[str],
-) -> Callable[[List[str]], float]:
-    """Create a duration function backed by a numpy distance matrix.
-
-    The closure uses O(1) integer-index lookups instead of nested dict.get().
-    The function object itself is stable (same identity for the same problem),
-    so the _DIST_MATRIX_CACHE in local_search_numba.py hits on first use
-    and never rebuilds the matrix.
-
-    Args:
-        dist_matrix_np: (n, n) float64 array from create_np_distance_matrix()
-        unique_locs: ordered list of location strings, e.g. ["L1", "L2", ...]
-    """
-    index_map: Dict[str, int] = {loc: i for i, loc in enumerate(unique_locs)}
-    _dm = dist_matrix_np  # local ref to avoid global lookup in closure
-
-    def duration_func(route: List[str]) -> float:
-        if not route:
-            return 0.0
-        try:
-            total = 0.0
-            prev_idx = index_map[route[0]]
-            for loc in route[1:]:
-                curr_idx = index_map[loc]
-                total += _dm[prev_idx, curr_idx]
-                prev_idx = curr_idx
-            total += _dm[prev_idx, index_map[route[0]]]
-            return total
-        except KeyError:
-            # Fallback: unknown location — return 0
-            return 0.0
-
-    # Attach metadata so _build_or_get_dist_matrix can reuse the prebuilt matrix.
-    # This avoids a second O(n²) matrix reconstruction inside local_search_numba.
-    duration_func._np_dist_matrix = dist_matrix_np  # type: ignore[attr-defined]
-    duration_func._np_unique_locs = unique_locs      # type: ignore[attr-defined]
-    return duration_func
-
-
-def convert_route_to_indices(route: List[str]) -> List[int]:
-    """Convert string route to integer indices"""
-    return [int(loc[1:]) for loc in route]
+from uniride_core.algorithms.numba_utils import (
+    create_np_distance_matrix,
+    create_np_duration_func,
+    convert_route_to_indices,
+)
 
 
 def _route_cost(route: List[str], duration_func: Callable[[List[str]], float]) -> float:

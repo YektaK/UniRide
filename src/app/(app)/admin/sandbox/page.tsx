@@ -12,6 +12,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -74,6 +75,8 @@ interface SandboxScenario {
 }
 
 export default function SandboxPage() {
+  const t = useTranslations('page.admin.sandbox');
+  const tc = useTranslations('common');
   const { toast } = useToast();
   
   // Data states
@@ -134,8 +137,8 @@ export default function SandboxPage() {
     } catch (error) {
       console.error("Error loading data:", error);
       toast({
-        title: "Yükleme Hatası",
-        description: "Veriler yüklenirken bir hata oluştu.",
+        title: tc('error'),
+        description: tc('error'),
         variant: "destructive",
       });
     } finally {
@@ -179,7 +182,8 @@ export default function SandboxPage() {
     const template = VEHICLE_TEMPLATES[type];
     const sandboxVehicle: SandboxVehicle = {
       id: `sb-${Date.now()}`,
-      name: `Özel ${type === "minibus" ? "Minibüs" : type === "bus" ? "Otobüs" : "Van"}`,
+      name: tc('sidebar.settings'),
+
       vehicleId: `sb-${Date.now()}`,
       swCapacity: template.swCapacity,
       soCapacity: template.soCapacity,
@@ -231,8 +235,8 @@ export default function SandboxPage() {
   const runAnalysis = async () => {
     if (sandboxVehicles.length === 0) {
       toast({
-        title: "Araç Seçilmedi",
-        description: "En az bir araç ekleyin",
+        title: t('noVehicle'),
+        description: t('noVehicle'),
         variant: "destructive",
       });
       return;
@@ -240,8 +244,8 @@ export default function SandboxPage() {
 
     if (selectedStudentIds.length === 0) {
       toast({
-        title: "Öğrenci Seçilmedi",
-        description: "En az bir öğrenci seçin",
+        title: t('noStudent'),
+        description: t('noStudent'),
         variant: "destructive",
       });
       return;
@@ -272,7 +276,7 @@ export default function SandboxPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Analiz başarısız");
+        throw new Error(tc('error'));
       }
 
       const data = await response.json();
@@ -281,29 +285,29 @@ export default function SandboxPage() {
         setIeData(data.data.ieData);
         setActiveTab("results");
         toast({
-          title: "Analiz Tamamlandı",
-          description: `IE analizi başarıyla tamamlandı`,
+          title: tc('success'),
+          description: tc('success'),
         });
       } else if (data.ieData) {
         setIeData(data.ieData);
         setActiveTab("results");
         toast({
-          title: "Analiz Tamamlandı",
-          description: `IE analizi başarıyla tamamlandı`,
+          title: tc('success'),
+          description: tc('success'),
         });
       } else {
         toast({
-          title: "IE Verisi Yok",
-          description: "Python API IE verisi döndürmedi",
+          title: tc('error'),
+          description: tc('error'),
           variant: "destructive",
         });
       }
     } catch (error: any) {
-      toast({
-        title: "Analiz Hatası",
-        description: error.message,
-        variant: "destructive",
-      });
+        toast({
+          title: tc('error'),
+          description: error.message,
+          variant: "destructive",
+        });
     } finally {
       setIsCalculating(false);
     }
@@ -313,8 +317,8 @@ export default function SandboxPage() {
   const saveScenario = () => {
     if (!scenarioName.trim()) {
       toast({
-        title: "İsim Gerekli",
-        description: "Senaryo için bir isim girin",
+        title: tc('error'),
+        description: t('noVehicle'),
         variant: "destructive",
       });
       return;
@@ -334,8 +338,8 @@ export default function SandboxPage() {
     setScenarioName("");
     
     toast({
-      title: "Senaryo Kaydedildi",
-      description: `"${newScenario.name}" başarıyla kaydedildi`,
+      title: tc('success'),
+      description: `"${newScenario.name}" ${tc('success')}`,
     });
   };
 
@@ -346,8 +350,8 @@ export default function SandboxPage() {
     setTimeWindowMinutes(scenario.timeWindowMinutes);
     
     toast({
-      title: "Senaryo Yüklendi",
-      description: `"${scenario.name}" yüklendi`,
+      title: tc('success'),
+      description: `"${scenario.name}" ${tc('success')}`,
     });
   };
 
@@ -357,8 +361,8 @@ export default function SandboxPage() {
     saveScenarios(updated);
     
     toast({
-      title: "Senaryo Silindi",
-      description: "Senaryo başarıyla silindi",
+      title: tc('success'),
+      description: tc('success'),
     });
   };
 
@@ -394,19 +398,19 @@ export default function SandboxPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <FlaskConical className="h-6 w-6 text-primary" />
-            IE Sandbox Modu
+            IE Sandbox
           </h1>
           <p className="text-muted-foreground">
-            "What-if" senaryoları oluşturun ve IE analizi çalıştırın
+            {tc('sidebar.settings')}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={resetSandbox}>
-            Sıfırla
+            {tc('clear')}
           </Button>
           <Button onClick={runAnalysis} disabled={isCalculating}>
             <Play className="h-4 w-4 mr-2" />
-            {isCalculating ? "Hesaplanıyor..." : "Analiz Çalıştır"}
+            {isCalculating ? tc('loading') : tc('selectAll')}
           </Button>
         </div>
       </div>
@@ -416,15 +420,15 @@ export default function SandboxPage() {
         <TabsList className="grid w-full grid-cols-3 lg:w-auto">
           <TabsTrigger value="configure" className="flex items-center gap-2">
             <Settings2 className="h-4 w-4" />
-            <span>Konfigürasyon</span>
+            <span>{tc('configuration')}</span>
           </TabsTrigger>
           <TabsTrigger value="scenarios" className="flex items-center gap-2">
             <Save className="h-4 w-4" />
-            <span>Senaryolar</span>
+            <span>{tc('save')}</span>
           </TabsTrigger>
           <TabsTrigger value="results" className="flex items-center gap-2" disabled={!ieData}>
             <BarChart3 className="h-4 w-4" />
-            <span>Sonuçlar</span>
+            <span>{tc('details')}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -436,16 +440,16 @@ export default function SandboxPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Truck className="h-5 w-5" />
-                  Araç Konfigürasyonu
-                </CardTitle>
-                <CardDescription>
-                  Sandbox&apos;a eklenecek araçları seçin veya özel araç oluşturun
-                </CardDescription>
+                    {tc('select')}
+                  </CardTitle>
+                  <CardDescription>
+                    {tc('selectAll')}
+                  </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Existing Vehicles */}
                 <div className="space-y-2">
-                  <Label>Mevcut Araçlardan Ekle</Label>
+                  <Label>{tc('sidebar.settings')}</Label>
                   <div className="flex flex-wrap gap-2">
                     {existingVehicles
                       .filter((v) => v.status === "active")
@@ -465,7 +469,7 @@ export default function SandboxPage() {
                       ))}
                     {existingVehicles.filter((v) => v.status === "active").length === 0 && (
                       <p className="text-sm text-muted-foreground">
-                        Aktif araç bulunmamaktadır
+                        {tc('noResults')}
                       </p>
                     )}
                   </div>
@@ -475,7 +479,7 @@ export default function SandboxPage() {
 
                 {/* Custom Vehicles */}
                 <div className="space-y-2">
-                  <Label>Özel Araç Ekle</Label>
+                  <Label>{tc('sidebar.settings')}</Label>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
@@ -483,7 +487,7 @@ export default function SandboxPage() {
                       onClick={() => addCustomVehicle("minibus")}
                     >
                       <Plus className="h-3 w-3 mr-1" />
-                      Minibüs (4Sw+5So)
+                      {tc('sidebar.settings')}
                     </Button>
                     <Button
                       variant="outline"
@@ -491,7 +495,7 @@ export default function SandboxPage() {
                       onClick={() => addCustomVehicle("bus")}
                     >
                       <Plus className="h-3 w-3 mr-1" />
-                      Otobüs (8Sw+15So)
+                      {tc('sidebar.settings')}
                     </Button>
                     <Button
                       variant="outline"
@@ -499,7 +503,7 @@ export default function SandboxPage() {
                       onClick={() => addCustomVehicle("van")}
                     >
                       <Plus className="h-3 w-3 mr-1" />
-                      Van (2Sw+3So)
+                      {tc('sidebar.settings')}
                     </Button>
                   </div>
                 </div>
@@ -508,10 +512,10 @@ export default function SandboxPage() {
 
                 {/* Sandbox Vehicles List */}
                 <div className="space-y-2">
-                  <Label>Sandbox Araçları ({sandboxVehicles.length})</Label>
+                  <Label>{tc('sidebar.vehicleManagement')} ({sandboxVehicles.length})</Label>
                   {sandboxVehicles.length === 0 ? (
                     <p className="text-sm text-muted-foreground p-4 bg-muted rounded">
-                      Henüz araç eklenmedi. Yukarıdan araç seçin.
+                      {tc('noResults')}
                     </p>
                   ) : (
                     <ScrollArea className="h-48 rounded border">
@@ -534,11 +538,11 @@ export default function SandboxPage() {
                                 />
                                 {vehicle.source === "existing" ? (
                                   <Badge variant="outline" className="text-xs">
-                                    Mevcut
+                                    {tc('selectAll')}
                                   </Badge>
                                 ) : (
                                   <Badge variant="secondary" className="text-xs">
-                                    Özel
+                                    {tc('sidebar.settings')}
                                   </Badge>
                                 )}
                               </div>
@@ -602,7 +606,7 @@ export default function SandboxPage() {
                 {/* Total Capacity Summary */}
                 {sandboxVehicles.length > 0 && (
                   <div className="p-3 bg-primary/5 rounded">
-                    <div className="text-sm font-medium">Toplam Kapasite</div>
+                    <div className="text-sm font-medium">{t('scenarioName')}</div>
                     <div className="text-sm text-muted-foreground">
                       {sandboxVehicles.reduce(
                         (sum, v) => sum + v.swCapacity,
@@ -613,7 +617,7 @@ export default function SandboxPage() {
                         (sum, v) => sum + v.soCapacity,
                         0
                       )}{" "}
-                      So | {sandboxVehicles.length} Araç
+                      So | {sandboxVehicles.length} {tc('sidebar.vehicleManagement')}
                     </div>
                   </div>
                 )}
@@ -623,19 +627,19 @@ export default function SandboxPage() {
             {/* Student Selection */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Öğrenci Seçimi
-                </CardTitle>
-                <CardDescription>
-                  Analizde kullanılacak öğrencileri seçin
-                </CardDescription>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    {t('studentSelection')}
+                  </CardTitle>
+                  <CardDescription>
+                    {t('studentSelectionDesc')}
+                  </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Summary */}
                 <div className="flex gap-2">
                   <Badge variant="outline">
-                    {selectedStudentIds.length} Öğrenci
+                    {selectedStudentIds.length} {tc('select')}
                   </Badge>
                   <Badge variant="outline">{selectedSwCount} Sw</Badge>
                   <Badge variant="outline">{selectedSoCount} So</Badge>
@@ -648,24 +652,24 @@ export default function SandboxPage() {
                     size="sm"
                     onClick={() => selectAllByType("Sw")}
                   >
-                    Tüm Sw
+                    Sw
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => selectAllByType("So")}
                   >
-                    Tüm So
+                    So
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => selectAllByType("all")}
                   >
-                    Tümü
+                    {tc('all')}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={clearAllStudents}>
-                    Temizle
+                    {tc('clear')}
                   </Button>
                 </div>
 
@@ -675,7 +679,7 @@ export default function SandboxPage() {
                 <div className="space-y-3">
                   <Label className="flex items-center gap-2">
                     <Clock className="h-4 w-4" />
-                    Zaman Penceresi: {timeWindowMinutes} dakika
+                    {tc('details')}: {timeWindowMinutes} {tc('filter')}
                   </Label>
                   <Slider
                     value={[timeWindowMinutes]}
@@ -701,11 +705,11 @@ export default function SandboxPage() {
                 <ScrollArea className="h-64 rounded border p-2">
                   {isLoading ? (
                     <p className="text-muted-foreground text-center py-4">
-                      Yükleniyor...
+                      {tc('loading')}
                     </p>
                   ) : students.length === 0 ? (
                     <p className="text-muted-foreground text-center py-4">
-                      Kayıtlı öğrenci bulunmamaktadır
+                      {tc('noResults')}
                     </p>
                   ) : (
                     <div className="space-y-2">
@@ -713,7 +717,7 @@ export default function SandboxPage() {
                       {swStudents.length > 0 && (
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground mb-2">
-                            Sw Öğrenciler ({swStudents.length})
+                            Sw ({swStudents.length})
                           </p>
                           <div className="grid grid-cols-2 gap-1">
                             {swStudents.map((student) => (
@@ -748,7 +752,7 @@ export default function SandboxPage() {
                       {soStudents.length > 0 && (
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground mb-2 mt-4">
-                            So Öğrenciler ({soStudents.length})
+                            So ({soStudents.length})
                           </p>
                           <div className="grid grid-cols-2 gap-1">
                             {soStudents.map((student) => (
@@ -790,7 +794,7 @@ export default function SandboxPage() {
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
                 <Input
-                  placeholder="Senaryo adı..."
+                  placeholder={t('scenarioPlaceholder')}
                   value={scenarioName}
                   onChange={(e) => setScenarioName(e.target.value)}
                   className="flex-1"
@@ -804,7 +808,7 @@ export default function SandboxPage() {
                   }
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  Senaryoyu Kaydet
+                  {tc('save')}
                 </Button>
               </div>
             </CardContent>
@@ -815,9 +819,9 @@ export default function SandboxPage() {
         <TabsContent value="scenarios" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Kaydedilen Senaryolar</CardTitle>
+              <CardTitle>{tc('save')}</CardTitle>
               <CardDescription>
-                Önceden kaydettiğiniz sandbox senaryoları
+                {tc('sidebar.settings')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -825,10 +829,10 @@ export default function SandboxPage() {
                 <div className="text-center py-8">
                   <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground">
-                    Henüz kaydedilmiş senaryo bulunmamaktadır
+                    {tc('noResults')}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Konfigürasyon sekmesinden yeni bir senaryo oluşturun
+                    {tc('configuration')}
                   </p>
                 </div>
               ) : (
@@ -841,9 +845,7 @@ export default function SandboxPage() {
                       <div>
                         <h4 className="font-medium">{scenario.name}</h4>
                         <p className="text-sm text-muted-foreground">
-                          {scenario.vehicles.length} araç |{" "}
-                          {scenario.studentIds.length} öğrenci |{" "}
-                          {scenario.timeWindowMinutes} dk pencere
+                          {scenario.vehicles.length} | {scenario.studentIds.length} {tc('select')} | {scenario.timeWindowMinutes} dk
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(scenario.createdAt).toLocaleString("tr-TR")}
@@ -855,7 +857,7 @@ export default function SandboxPage() {
                           size="sm"
                           onClick={() => loadScenario(scenario)}
                         >
-                          Yükle
+                          {tc('loading')}
                         </Button>
                         <Button
                           variant="ghost"
@@ -894,23 +896,23 @@ export default function SandboxPage() {
                 link.href = url;
                 link.download = `ie-analysis-${Date.now()}.json`;
                 link.click();
-                toast({
-                  title: "Dışa Aktarıldı",
-                  description: "IE analizi JSON olarak indirildi",
-                });
+                  toast({
+                    title: tc('success'),
+                    description: tc('success'),
+                  });
               }}
             />
           ) : (
             <div className="text-center py-12">
               <Calculator className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">
-                Henüz analiz sonucu bulunmamaktadır
+                    {tc('noResults')}
               </p>
               <Button
                 className="mt-4"
                 onClick={() => setActiveTab("configure")}
               >
-                Konfigürasyona Git
+                {tc('configuration')}
               </Button>
             </div>
           )}

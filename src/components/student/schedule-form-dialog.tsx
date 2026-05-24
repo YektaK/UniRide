@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { ScheduleEntry } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -36,7 +37,7 @@ interface ScheduleFormDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (entryData: Omit<ScheduleEntry, 'id'>, entryId?: string) => void;
-  entry: ScheduleEntry | null; // null for new entry, ScheduleEntry object for editing
+  entry: ScheduleEntry | null;
 }
 
 const dayOfWeekSchema = z.enum(["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]);
@@ -54,19 +55,11 @@ const scheduleEntrySchema = z.object({
 
 type ScheduleFormValues = z.infer<typeof scheduleEntrySchema>;
 
-const dayTranslations: Record<ScheduleEntry["dayOfWeek"], string> = {
-  monday: "Pazartesi",
-  tuesday: "Salı",
-  wednesday: "Çarşamba",
-  thursday: "Perşembe",
-  friday: "Cuma",
-  saturday: "Cumartesi",
-  sunday: "Pazar",
-};
-
+const daysOrder: ScheduleEntry["dayOfWeek"][] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const locationOptions: ScheduleFormValues["location"][] = ["Dudullu", "Çengelköy"];
 
 export default function ScheduleFormDialog({ isOpen, onClose, onSave, entry }: ScheduleFormDialogProps) {
+  const t = useTranslations("page.student.schedule");
   const form = useForm<ScheduleFormValues>({
     resolver: zodResolver(scheduleEntrySchema),
     defaultValues: {
@@ -103,9 +96,9 @@ export default function ScheduleFormDialog({ isOpen, onClose, onSave, entry }: S
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>{entry ? "Ders Girişini Düzenle" : "Yeni Ders Girişi Ekle"}</DialogTitle>
+          <DialogTitle>{entry ? t("editTitle") : t("addTitle")}</DialogTitle>
           <DialogDescription>
-            Haftalık ders programınıza yeni bir ders veya etkinlik ekleyin/düzenleyin.
+            {t("dialogDescription")}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -115,16 +108,16 @@ export default function ScheduleFormDialog({ isOpen, onClose, onSave, entry }: S
               name="dayOfWeek"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Gün</FormLabel>
+                  <FormLabel>{t("dayLabel")}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Gün seçin" />
+                        <SelectValue placeholder={t("dayPlaceholder")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {Object.entries(dayTranslations).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      {daysOrder.map((day) => (
+                        <SelectItem key={day} value={day}>{t(day)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -137,9 +130,9 @@ export default function ScheduleFormDialog({ isOpen, onClose, onSave, entry }: S
               name="courseName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Ders Adı / Etkinlik (Opsiyonel)</FormLabel>
+                  <FormLabel>{t("courseLabel")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Örn: MAT101 Calculus I" {...field} />
+                    <Input placeholder={t("coursePlaceholder")} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -151,7 +144,7 @@ export default function ScheduleFormDialog({ isOpen, onClose, onSave, entry }: S
                 name="startTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Başlangıç Saati</FormLabel>
+                    <FormLabel>{t("startTimeLabel")}</FormLabel>
                     <FormControl>
                       <Input type="time" {...field} />
                     </FormControl>
@@ -164,7 +157,7 @@ export default function ScheduleFormDialog({ isOpen, onClose, onSave, entry }: S
                 name="endTime"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Bitiş Saati</FormLabel>
+                    <FormLabel>{t("endTimeLabel")}</FormLabel>
                     <FormControl>
                       <Input type="time" {...field} />
                     </FormControl>
@@ -178,11 +171,11 @@ export default function ScheduleFormDialog({ isOpen, onClose, onSave, entry }: S
               name="location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Konum</FormLabel>
+                  <FormLabel>{t("locationLabel")}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Konum seçin" />
+                        <SelectValue placeholder={t("locationPlaceholder")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -197,9 +190,9 @@ export default function ScheduleFormDialog({ isOpen, onClose, onSave, entry }: S
             />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
-                İptal
+                {t("cancel")}
               </Button>
-              <Button type="submit">Kaydet</Button>
+              <Button type="submit">{t("save")}</Button>
             </DialogFooter>
           </form>
         </Form>

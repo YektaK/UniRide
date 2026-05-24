@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useTranslations } from 'next-intl';
 import type { User } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users as UsersIcon, PlusCircle, Edit, Trash2, Search, KeyRound } from "lucide-react";
@@ -32,6 +33,8 @@ import { useToast } from "@/hooks/use-toast";
 
 
 export default function AdminUsersPage() {
+  const t = useTranslations('page.admin.users');
+  const tc = useTranslations('common');
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
@@ -64,8 +67,8 @@ export default function AdminUsersPage() {
       } catch (error) {
         console.error("Error loading users:", error);
         toast({
-          title: "Yükleme Hatası",
-          description: "Kullanıcılar yüklenirken bir hata oluştu.",
+          title: tc('error'),
+          description: tc('loading'),
           variant: "destructive",
         });
       } finally {
@@ -94,22 +97,22 @@ export default function AdminUsersPage() {
 
       setAllUsers(prevUsers => prevUsers.map(u => u.id === id ? updatedUserData : u));
       toast({
-        title: "Kullanıcı Güncellendi",
-        description: `${updatedUserData.name} adlı kullanıcının bilgileri başarıyla güncellendi.`,
+        title: tc('success'),
+        description: `${updatedUserData.name} ${tc('success')}`,
       });
       handleCloseUserFormDialog();
     } catch (error) {
       console.error("Error updating user:", error);
       toast({
-        title: "Güncelleme Başarısız",
-        description: "Kullanıcı güncellenirken bir hata oluştu.",
+        title: t('updateFailed'),
+        description: t('updateFailed'),
         variant: "destructive",
       });
     }
   };
 
   const handleDeleteUser = async (userId: string, userName: string) => {
-    if (!confirm(`${userName} adlı kullanıcıyı silmek istediğinize emin misiniz?`)) {
+    if (!confirm(`${userName} - ${tc('delete')}?`)) {
       return;
     }
 
@@ -117,14 +120,14 @@ export default function AdminUsersPage() {
       await adminApi.users.delete(userId);
       setAllUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
       toast({
-        title: "Kullanıcı Silindi",
-        description: `${userName} adlı kullanıcı başarıyla silindi.`,
+        title: tc('success'),
+        description: `${userName} - ${tc('delete')}`,
       });
     } catch (error) {
       console.error("Error deleting user:", error);
       toast({
-        title: "Silme Başarısız",
-        description: "Kullanıcı silinirken bir hata oluştu.",
+        title: t('deleteFailed'),
+        description: t('deleteFailed'),
         variant: "destructive",
       });
     }
@@ -137,16 +140,16 @@ export default function AdminUsersPage() {
 
   const handlePasswordReset = async () => {
     if (!passwordResetUser || newPassword.length < 6) {
-      toast({ title: "Hata", description: "Şifre en az 6 karakter olmalıdır.", variant: "destructive" });
+      toast({ title: tc('error'), description: t('passwordMinError'), variant: "destructive" });
       return;
     }
     setIsResettingPassword(true);
     try {
       await adminApi.users.resetPassword(passwordResetUser.id, newPassword);
-      toast({ title: "Başarılı", description: `${passwordResetUser.name} için şifre güncellendi.` });
+      toast({ title: tc('success'), description: t('passwordUpdated', { name: passwordResetUser!.name }) });
       setPasswordResetUser(null);
     } catch (err: any) {
-      toast({ title: "Hata", description: err.message, variant: "destructive" });
+      toast({ title: tc('error'), description: err.message, variant: "destructive" });
     } finally {
       setIsResettingPassword(false);
     }
@@ -174,14 +177,14 @@ export default function AdminUsersPage() {
       };
       setAllUsers(prevUsers => [...prevUsers, convertedUser]);
       toast({
-        title: "Kullanıcı Eklendi",
-        description: `${userData.name} adlı kullanıcı başarıyla oluşturuldu.`,
+        title: tc('success'),
+        description: `${userData.name} ${tc('success')}`,
       });
     } catch (error: any) {
       console.error("Error adding user:", error);
       toast({
-        title: "Ekleme Başarısız",
-        description: error.message || "Kullanıcı eklenirken bir hata oluştu.",
+        title: t('addFailed'),
+        description: error.message || t('addFailed'),
         variant: "destructive",
       });
       throw error; // Re-throw to let dialog know it failed
@@ -200,10 +203,10 @@ export default function AdminUsersPage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="text-2xl flex items-center gap-2"><UsersIcon className="text-primary" />Kullanıcı Yönetimi</CardTitle>
-            <CardDescription>Kullanıcılar yükleniyor...</CardDescription>
+            <CardDescription>{tc('loading')}</CardDescription>
           </CardHeader>
           <CardContent>
-            <p>Lütfen bekleyin...</p>
+            <p>{tc('loading')}</p>
           </CardContent>
         </Card>
       </div>
@@ -227,14 +230,14 @@ export default function AdminUsersPage() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Ad, Öğrenci No veya E-posta ile Ara..."
+                placeholder={t('placeholders.search')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8 w-full"
               />
             </div>
             <Button onClick={() => setIsAddUserOpen(true)} className="w-full md:w-auto">
-              <PlusCircle className="mr-2 h-4 w-4" /> Yeni Kullanıcı Ekle
+              <PlusCircle className="mr-2 h-4 w-4" /> Kullanıcı Ekle
             </Button>
           </div>
 
@@ -253,11 +256,11 @@ export default function AdminUsersPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Ad Soyad</TableHead>
+                    <TableHead>{tc('select')}</TableHead>
                     <TableHead>Öğrenci No</TableHead>
                     <TableHead>E-posta</TableHead>
                     <TableHead>Rol</TableHead>
-                    <TableHead className="text-right">İşlemler</TableHead>
+                    <TableHead className="text-right">{tc('details')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -271,21 +274,21 @@ export default function AdminUsersPage() {
                           variant={user.role === "admin" ? "destructive" : user.role === "driver" ? "default" : "secondary"}
                           className={user.role === "driver" ? "bg-blue-600 hover:bg-blue-700" : ""}
                         >
-                          {user.role === "admin" ? "Admin" : user.role === "driver" ? "Şoför" : "Öğrenci"}
+                          {user.role === "admin" ? t('roles.admin') : user.role === "driver" ? t('roles.driver') : t('roles.student')}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(user)} className="mr-1" title="Düzenle">
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(user)} className="mr-1" title={t('changePassword.title')}>
                           <Edit className="h-4 w-4" />
-                          <span className="sr-only">Düzenle</span>
+                          <span className="sr-only">{t('changePassword.title')}</span>
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenPasswordReset(user)} className="mr-1 text-amber-600 hover:text-amber-700" title="Şifre Değiştir">
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenPasswordReset(user)} className="mr-1 text-amber-600 hover:text-amber-700" title={t('changePassword.passwordTitle')}>
                           <KeyRound className="h-4 w-4" />
-                          <span className="sr-only">Şifre Değiştir</span>
+                          <span className="sr-only">{t('changePassword.passwordTitle')}</span>
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id, user.name)} className="text-destructive hover:text-destructive" title="Sil">
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id, user.name)} className="text-destructive hover:text-destructive" title={t('changePassword.deleteTitle')}>
                           <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Sil</span>
+                          <span className="sr-only">{t('changePassword.deleteTitle')}</span>
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -315,26 +318,26 @@ export default function AdminUsersPage() {
       <Dialog open={!!passwordResetUser} onOpenChange={(open) => !open && setPasswordResetUser(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5 text-amber-500" /> Şifre Değiştir</DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5 text-amber-500" /> {t('changePassword.passwordTitle')}</DialogTitle>
             <DialogDescription>
               <strong>{passwordResetUser?.name}</strong> ({passwordResetUser?.email}) için yeni bir şifre belirleyin.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-2">
-            <Label htmlFor="new-password">Yeni Şifre (min. 6 karakter)</Label>
+            <Label htmlFor="new-password">{t('passwordMinError')}</Label>
             <Input
               id="new-password"
               type="password"
-              placeholder="Yeni şifreyi girin..."
+              placeholder={t('changePassword.newPasswordPlaceholder')}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handlePasswordReset()}
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPasswordResetUser(null)}>İptal</Button>
+            <Button variant="outline" onClick={() => setPasswordResetUser(null)}>{tc('cancel')}</Button>
             <Button onClick={handlePasswordReset} disabled={isResettingPassword} className="bg-amber-600 hover:bg-amber-700">
-              {isResettingPassword ? "Güncelleniyor..." : "Şifreyi Güncelle"}
+              {isResettingPassword ? t('changePassword.updating') : t('changePassword.submit')}
             </Button>
           </DialogFooter>
         </DialogContent>

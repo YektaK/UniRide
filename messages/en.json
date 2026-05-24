@@ -1,0 +1,789 @@
+{
+  "common": {
+    "appName": "UniRide Assist",
+    "appDescription": "University Transport Support System",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "search": "Search",
+    "filter": "Filter",
+    "all": "All",
+    "none": "None",
+    "select": "Select",
+    "clear": "Clear",
+    "confirm": "Confirm",
+    "retry": "Retry",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "submit": "Submit",
+    "noResults": "No results found.",
+    "lightMode": "Light mode",
+    "darkMode": "Dark mode",
+    "recommended": "Recommended",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "compact": "Compact",
+    "details": "Details",
+    "configuration": "Configuration",
+    "sidebar": {
+      "dashboard": "Dashboard",
+      "profile": "My Profile",
+      "mySchedule": "My Schedule",
+      "rideRequest": "Ride Request",
+      "myRequests": "My Requests",
+      "trackRide": "Track Ride",
+      "vehicleManagement": "Vehicle Management",
+      "userManagement": "User Management",
+      "schedules": "Schedules",
+      "rideRequests": "Ride Requests",
+      "driverAssignments": "Driver Assignments",
+      "vehiclePlanning": "Vehicle Planning",
+      "algorithmCompare": "Algorithm Comparison",
+      "benchmarkSuite": "Benchmark Suite",
+      "routeTest": "Route Test",
+      "reports": "Reports",
+      "settings": "Settings",
+      "myTasks": "My Tasks",
+      "navigation": "Navigation",
+      "pastTrips": "Past Trips",
+      "logout": "Log Out"
+    },
+    "status": {
+      "running": "Running",
+      "completed": "Completed",
+      "failed": "Failed",
+      "stopped": "Stopped",
+      "queued": "Queued",
+      "loading": "Loading...",
+      "planned": "Planned",
+      "inProgress": "In Progress",
+      "cancelled": "Cancelled",
+      "waitingStudent": "Awaiting Student Confirmation",
+      "waitingAdmin": "Awaiting Admin Confirmation",
+      "confirmed": "Confirmed",
+      "studentCancelled": "Student Cancelled",
+      "adminCancelled": "Admin Cancelled",
+      "youCancelled": "You Cancelled",
+      "enRoute": "En Route",
+      "completedTrip": "Completed"
+    }
+  },
+  "page": {
+    "error": {
+      "title": "An error occurred",
+      "description": "Please try again.",
+      "retry": "Try Again"
+    },
+    "auth": {
+      "login": {
+        "title": "Sign In",
+        "loading": "Signing In...",
+        "submit": "Sign In",
+        "success": "Login Successful",
+        "failed": "Login Failed",
+        "failedDesc": "Email/username or password is incorrect. Please check your credentials."
+      },
+      "register": {
+        "title": "Sign Up",
+        "loading": "Signing Up...",
+        "submit": "Sign Up",
+        "namePlaceholder": "Your Full Name",
+        "studentNoPlaceholder": "e.g. 202003002016",
+        "passwordHintPlaceholder": "e.g. My first pet's name",
+        "studentNoError": "Student number must be a 12-digit number.",
+        "passwordMinError": "Password must be at least 6 characters.",
+        "passwordRepeatError": "Password must be at least 6 characters.",
+        "passwordMismatch": "Passwords do not match.",
+        "successTitle": "Registration Successful"
+      },
+      "forgotPassword": {
+        "title": "Forgot Password",
+        "description": "Enter your registered email address. We'll send you a link to reset your password.",
+        "emailLabel": "Email Address",
+        "emailPlaceholder": "example@uniride.com",
+        "sending": "Sending...",
+        "submit": "Send Reset Link",
+        "emailSentTitle": "Email Sent!",
+        "emailSentDesc": "Please check your email inbox (and Spam folder if needed) and click the link to reset your password.",
+        "backToLogin": "Back to Sign In",
+        "validEmailError": "Please enter a valid email address.",
+        "emailSentToast": "Password reset link sent to your email. Please check your inbox.",
+        "errorToast": "An error occurred while sending the password reset email.",
+        "emailRequiredToast": "Please enter an email.",
+        "devResetTitle": "Dev Reset Successful",
+        "devResetDesc": "Test password changed instantly. You can now sign in.",
+        "devResetError": "Insufficient permissions or error occurred.",
+        "devResetConnectionError": "Could not reach the server.",
+        "devSection": "[Developer] Direct Password Assignment (For Test Accounts)"
+      },
+      "resetPassword": {
+        "title": "Reset Password",
+        "minLengthError": "Password must be at least 6 characters.",
+        "mismatchError": "Passwords do not match.",
+        "updating": "Updating...",
+        "submit": "Update Password",
+        "successTitle": "Password Updated",
+        "successDesc": "Your password has been changed successfully. You can now sign in.",
+        "failedTitle": "Update Failed",
+        "failedDesc": "An error occurred while updating your password. The link may have expired."
+      }
+    },
+    "profile": {
+      "loading": "Loading your profile information.",
+      "notFound": "User not found. Please sign in again.",
+      "title": "My Profile Information",
+      "description": "Manage your personal information, address, and accessibility preferences here."
+    },
+    "rideHistory": {
+      "loading": "Loading your ride requests.",
+      "title": "My Ride Requests",
+      "description": "Track your current and past ride requests and their statuses here.",
+      "empty": "You have no ride requests yet.",
+      "emptyHint": "Go to the \"Ride Request\" page to create a new request.",
+      "accessDenied": "Access Denied",
+      "accessDeniedDesc": "You do not have permission to view this page. Please sign in with a student account.",
+      "dateCol": "Request Date",
+      "pickupTimeCol": "Pickup Time",
+      "pickupLocCol": "Pickup Location",
+      "dropoffLocCol": "Dropoff Location",
+      "statusCol": "Status"
+    },
+    "trackRide": {
+      "placeholder": "Map display will appear here.",
+      "mapAlt": "Map Location",
+      "noActiveRide": "You currently have no active ride, or this feature is under development.",
+      "description": "Track your active ride on the map in real-time. This feature will be available soon."
+    },
+    "student": {
+      "schedule": {
+        "empty": "No courses have been added to your schedule yet.",
+        "editEntry": "Edit Course Entry",
+        "addEntry": "Add New Course Entry",
+        "dayPlaceholder": "Select day",
+        "coursePlaceholder": "e.g. MAT101 Calculus I",
+        "locationPlaceholder": "Select location",
+        "displayEmpty": "No courses have been added to your schedule yet.",
+        "defaultCourseName": "Course/Activity",
+        "editAria": "Edit {courseName}",
+        "deleteAria": "Delete {courseName}",
+        "dayLabel": "Day",
+        "courseLabel": "Course Name / Activity (Optional)",
+        "startTimeLabel": "Start Time",
+        "endTimeLabel": "End Time",
+        "locationLabel": "Location",
+        "editTitle": "Edit Course Entry",
+        "addTitle": "Add New Course Entry",
+        "dialogDescription": "Add or edit a course or activity in your weekly schedule.",
+        "cancel": "Cancel",
+        "save": "Save",
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday",
+        "saturday": "Saturday",
+        "sunday": "Sunday"
+      },
+      "rideForm": {
+        "successTitle": "Ride Request Sent",
+        "errorDesc": "An error occurred while creating your ride request. Please try again.",
+        "pickupPlaceholder": "Your full pickup address",
+        "dropoffPlaceholder": "Your full dropoff address (e.g. University Campus)",
+        "notesPlaceholder": "Any special instructions or notes for the driver...",
+        "dateLabel": "Ride Date",
+        "datePlaceholder": "Select a date",
+        "pickupTimeLabel": "Pickup Time",
+        "pickupAddressLabel": "Pickup Address",
+        "pickupAddressDesc": "Usually your home address.",
+        "dropoffAddressLabel": "Dropoff Address",
+        "dropoffAddressDesc": "Usually the school or a specific location.",
+        "notesLabel": "Additional Notes (Optional)",
+        "submitButton": "Send Request",
+        "successDesc": "Your request has been received. Check your notifications and requests page for approval status.",
+        "errorTitle": "Request Could Not Be Created",
+        "defaultDropoff": "Yıldız Technical University, Davutpaşa Campus",
+        "timeFormatError": "Time must be in HH:MM format.",
+        "dateRequired": "Please select a date.",
+        "addressMinError": "Pickup address must be at least 5 characters.",
+        "dropoffMinError": "Dropoff address must be at least 5 characters."
+      },
+      "scheduleConfirmation": {
+        "confirmed": "Ride Confirmed",
+        "cancelled": "Ride Cancelled",
+        "changeRequested": "Change Requested",
+        "cardConfirmed": "Confirmed",
+        "cardCancelled": "Cancelled"
+      }
+    },
+    "admin": {
+      "benchmark": {
+        "title": "Benchmark Suite",
+        "description": "Run algorithm comparison tests on TSPLIB standard datasets. Measure quality and performance systematically.",
+        "configTab": "Configuration",
+        "runTab": "Run",
+        "resultsTab": "Results",
+        "problemSelection": "Problem Selection",
+        "problemSelectionDesc": "Select TSPLIB test problems for benchmarking",
+        "category": "Category:",
+        "problemTable": {
+          "problem": "Problem",
+          "size": "Size",
+          "optimal": "Optimal",
+          "category": "Category",
+          "type": "Type"
+        },
+        "algorithmSelection": "Algorithm Selection",
+        "algorithmSelectionDesc": "Select algorithms to test",
+        "selectedN": "{n} selected",
+        "settingsTitle": "Settings",
+        "runsLabel": "Repeat Count (n_runs)",
+        "runsDesc": "How many times each algorithm-problem pair will be run",
+        "seedLabel": "Random Seed",
+        "seedDesc": "Fixed seed for reproducible results",
+        "summary": "Summary",
+        "totalExperiments": "Total Experiments",
+        "experimentsCount": "{n} experiments",
+        "starting": "Starting...",
+        "startBenchmark": "Start Benchmark",
+        "emptyHistory": "No Run History",
+        "emptyHistoryHint": "Go to the \"Configuration\" tab to select algorithms and problems, then run.",
+        "runId": "Run ID:",
+        "successCount": "Completed",
+        "resultCount": "Results",
+        "startTime": "Start Time",
+        "duration": "Duration",
+        "stopping": "Stopping...",
+        "stopBenchmark": "Stop Benchmark",
+        "resultsLoading": "Loading results...",
+        "overallStats": {
+          "totalExperiments": "Total Experiments",
+          "totalDuration": "Total Duration",
+          "successRate": "Success Rate",
+          "testedAlgorithms": "Tested Algorithms"
+        },
+        "charts": {
+          "meanDeviation": "Mean Deviation (%) — By Algorithm",
+          "meanDeviationDesc": "Average percentage deviation from optimal solution",
+          "meanRuntime": "Mean Runtime (ms) — By Algorithm",
+          "meanRuntimeDesc": "Average runtimes per algorithm"
+        },
+        "comparisonTable": {
+          "title": "Algorithm Comparison Table",
+          "desc": "Average, minimum, and maximum deviation/runtime values for each algorithm",
+          "algorithm": "Algorithm",
+          "testCount": "Test Count",
+          "meanDev": "Mean Dev %",
+          "minDev": "Min Dev %",
+          "maxDev": "Max Dev %",
+          "meanTime": "Mean Time (ms)",
+          "bestTour": "Best Tour"
+        },
+        "problemTable2": {
+          "title": "Per-Problem Comparison",
+          "desc": "Best algorithm and optimal deviation for each problem",
+          "problem": "Problem",
+          "optimal": "Optimal",
+          "bestTour": "Best Tour",
+          "deviation": "Deviation %",
+          "bestAlgorithm": "Best Algorithm",
+          "algorithmsTested": "Algorithms Tested"
+        },
+        "rawResults": "Raw Results ({n} records)",
+        "rawColumns": {
+          "algorithm": "Algorithm",
+          "problem": "Problem",
+          "run": "Run #",
+          "tourLength": "Tour Length",
+          "deviation": "Deviation %",
+          "time": "Time (ms)"
+        },
+        "downloadJson": "Download as JSON",
+        "noResults": "No Results Yet",
+        "noResultsHint": "Results will appear here once the benchmark completes.",
+        "connectionCheck": "Checking connection...",
+        "apiOnline": "Python Optimizer API Online",
+        "apiOffline": "Python Optimizer API Offline",
+        "problemsLoading": "Loading problems...",
+        "toast": {
+          "resultsFailed": "Results could not be loaded",
+          "started": "Benchmark started",
+          "startedDesc": "Run ID: {id} — {n} experiments queued",
+          "startFailed": "Benchmark could not be started",
+          "stopped": "Benchmark stopped",
+          "stoppingDesc": "Stopping run...",
+          "stopFailed": "Failed to stop",
+          "exportedJson": "Results downloaded as JSON",
+          "resultsLoaded": "{n} results loaded",
+          "resultsLoadFailed": "Failed to load results",
+          "historyCleared": "All run history cleared"
+        }
+      },
+      "vehicles": {
+        "loadError": "An error occurred while loading vehicles.",
+        "deleted": "Vehicle deleted successfully.",
+        "deleteError": "An error occurred while deleting the vehicle.",
+        "updated": "Vehicle updated successfully.",
+        "added": "Vehicle added successfully.",
+        "saveError": "An error occurred while saving the vehicle."
+      },
+      "users": {
+        "updateFailed": "Update Failed",
+        "deleteFailed": "Delete Failed",
+        "passwordMinError": "Password must be at least 6 characters.",
+        "passwordUpdated": "Password updated for {name}.",
+        "addFailed": "Add Failed",
+        "placeholders": {
+          "search": "Search by Name, Student No, or Email..."
+        },
+        "roles": {
+          "admin": "Admin",
+          "driver": "Driver",
+          "student": "Student"
+        },
+        "changePassword": {
+          "title": "Edit",
+          "passwordTitle": "Change Password",
+          "deleteTitle": "Delete",
+          "newPasswordPlaceholder": "Enter new password...",
+          "updating": "Updating...",
+          "submit": "Update Password"
+        }
+      },
+      "rideRequests": {
+        "description": "Approve or reject real-time and scheduled ride requests from students.",
+        "searchPlaceholder": "Search by Student Name, Date, Status, or Location..."
+      },
+      "sandbox": {
+        "vehicleNaming": "Custom {type}",
+        "vehicleTypes": {
+          "minibus": "Minibus",
+          "bus": "Bus",
+          "van": "Van"
+        },
+        "noVehicle": "No Vehicle Selected",
+        "noStudent": "No Student Selected",
+        "scenarioPlaceholder": "Scenario name...",
+        "studentSelection": "Student Selection",
+        "studentSelectionDesc": "Select students for analysis"
+      },
+      "vehiclePlanning": {
+        "studentLoadError": "Failed to load students",
+        "saveError": "Save Error"
+      },
+      "compare": {
+        "loadError": "Failed to load students",
+        "studentNotFound": "Student Not Found",
+        "usingNStudents": "Testing with {n} users registered as \"Student\" role.",
+        "noRouteDetails": "This algorithm did not return detailed route steps. Only vehicle assignments were made."
+      },
+      "settings": {
+        "notificationTime": "Time to send students their next day's ride plan notification."
+      },
+      "drivers": {
+        "historyDescription": "Your completed and cancelled service tasks"
+      },
+      "dashboard": {
+        "rideRequests": "Approve/reject incoming ride requests."
+      },
+      "driverAssignments": {
+        "cancel": "Cancel",
+        "noVehicle": "No Vehicle Assigned"
+      }
+    },
+    "benchmark": {
+      "sizeLabels": {
+        "small": "Small",
+        "medium": "Medium",
+        "large": "Large"
+      },
+      "solverGroup": "Holistic Solvers (Native CVRP)",
+      "toast": {
+        "selectWarning": "Please select at least one problem and one algorithm.",
+        "aiUnavailable": "AI advisor is currently unavailable. Please try again later.",
+        "connectionError": "Connection error. Please try again later.",
+        "benchmarkComplete": "Benchmark Complete!",
+        "benchmarkCompleteDesc": "{n} results retrieved successfully.",
+        "resultsFailed": "Results could not be loaded",
+        "demoRunning": "Running benchmark in demo mode...",
+        "demoComplete": "Demo benchmark completed",
+        "processing": "Processing: {completed}/{totalExp} experiments",
+        "demoCompleteDesc": "{n} results generated.",
+        "benchmarkStarted": "Benchmark Started",
+        "benchmarkStartedDesc": "{n} experiments queued.",
+        "serverError": "Server error",
+        "benchmarkStopped": "Benchmark Stopped",
+        "stoppingDesc": "Stopping run...",
+        "stopFailed": "Stop Failed",
+        "exportedJson": "Results downloaded as JSON.",
+        "exportedCsv": "Results exported as CSV.",
+        "resultsLoaded": "{n} results loaded.",
+        "resultsLoadFailed": "Failed to load results",
+        "historyLoaded": "Loaded results for run {run_id}.",
+        "historyCleared": "All run history cleared."
+      },
+      "radarChart": {
+        "quality": "Quality",
+        "speed": "Speed",
+        "consistency": "Consistency",
+        "coverage": "Coverage"
+      },
+      "advisor": {
+        "title": "AI Advisor",
+        "description": "Get AI-powered algorithm recommendations based on your selections.",
+        "connecting": "Connecting...",
+        "apiActive": "API Active",
+        "apiOffline": "API Offline",
+        "aiTitle": "AI Algorithm Advisor",
+        "aiSubtitle": "Personalized recommendations for your selections",
+        "goals": {
+          "quality": "Quality",
+          "balanced": "Balanced",
+          "speed": "Speed"
+        },
+        "analyzing": "AI is analyzing...",
+        "selectGoal": "Select your goal and run the advisor again",
+        "analyzingBtn": "Analyzing...",
+        "getAdvice": "Get Advice ({n} algo)"
+      },
+      "hero": {
+        "title": "Compare routing algorithms on TSPLIB standard datasets.",
+        "subtitle": "Run systematic benchmarks to measure quality and performance.",
+        "sweepTitle": "Sweep/CW Clustering + TSP Routing",
+        "sweepDesc": "Geographic clustering first, then route optimization per cluster",
+        "giantTourDesc": "Giant Tour for all points first, then optimal vehicle splitting",
+        "holisticTitle": "Holistic Solvers",
+        "holisticSubtitle": "Industry Standard CVRP",
+        "holisticDesc": "Native CVRP solving, highest quality",
+        "startBenchmark": "Start Benchmark",
+        "hideHero": "Hide hero",
+        "showHero": "Show hero section",
+        "connectionWarning": "Cannot connect to Optimizer API. You can run benchmarks with demo data.",
+        "configHeader": "Benchmark Configuration",
+        "configDesc": "Select algorithms and problems, then run the benchmark"
+      },
+      "results": {
+        "tabTables": "Tables",
+        "tabCharts": "Charts",
+        "tabComparison": "Comparison",
+        "tabSummary": "Summary",
+        "performanceTitle": "Algorithm Performance Comparison",
+        "downloadCsv": "Download CSV",
+        "downloadJson": "Download JSON",
+        "tableHeaders": {
+          "algorithm": "Algorithm",
+          "meanDev": "Mean Dev",
+          "minDev": "Min Dev",
+          "maxDev": "Max Dev",
+          "meanTime": "Mean Time",
+          "quality": "Quality"
+        },
+        "problemTable": {
+          "title": "Per-Problem Results",
+          "problem": "Problem",
+          "optimal": "Optimal",
+          "bestTour": "Best Tour",
+          "bestAlgorithm": "Best Algorithm",
+          "deviation": "Deviation",
+          "algoDistribution": "Algo. Distribution"
+        },
+        "bubbleChartDesc": "X = Mean time (ms), Y = Mean deviation (%), Bubble = experiment count",
+        "pieChartDesc": "Each algorithm's share of total experiments",
+        "experimentCount": "{value} experiments",
+        "noResults": "No benchmark results available."
+      },
+      "problemPanel": {
+        "header": "Problem Selection",
+        "desc": "Select from TSPLIB test problems",
+        "search": "Search problems...",
+        "notFound": "Problem Not Found",
+        "notFoundDesc": "No problems match your criteria.",
+        "summary": "Total: {len} problems",
+        "smallCount": "Small: {n}",
+        "mediumCount": "Medium: {n}",
+        "largeCount": "Large: {n}"
+      },
+      "algorithmPanel": {
+        "header": "Algorithm Selection",
+        "desc": "Select algorithms to test",
+        "all": "All",
+        "recommended": "Recommended",
+        "details": "Algorithm details and complexity info",
+        "description": "Description",
+        "noDescription": "No detailed information available for this algorithm.",
+        "complexity": "Complexity",
+        "category": {
+          "holistic": "Holistic Solver",
+          "heuristic": "Heuristic"
+        },
+        "recommendedBadge": "This algorithm is in the recommended list",
+        "configLabel": "Configuration",
+        "runLabel": "Run",
+        "resultsLabel": "Results"
+      },
+      "runPanel": {
+        "header": "Run History",
+        "empty": "No run history yet",
+        "experimentsCount": "{entry.experimentCount} experiments",
+        "clearHistory": "Clear History",
+        "newRun": "New Run",
+        "statusLoading": "Loading status...",
+        "progress": "Progress",
+        "elapsed": "Elapsed: {n}s",
+        "viewResults": "View Results"
+      },
+      "settingsPanel": {
+        "header": "Settings",
+        "repeats": "Repeat Count",
+        "seed": "Random Seed",
+        "experimentSummary": "Experiment Summary",
+        "totalExperiments": "Total: {n} experiments",
+        "demoMode": "Demo mode generates simulated results"
+      }
+    }
+  },
+  "component": {
+    "profileForm": {
+      "passwordMinError": "Password must be at least 6 characters.",
+      "hintMaxError": "Password hint can be at most 100 characters.",
+      "passwordMismatch": "Passwords do not match.",
+      "passwordUpdateFailed": "Password could not be updated.",
+      "updateFailedTitle": "Update Failed",
+      "namePlaceholder": "Your Full Name",
+      "studentNoPlaceholder": "e.g. 202003002016",
+      "addressPlaceholder": "Please specify...",
+      "newPasswordPlaceholder": "Enter your new password (min. 6 characters)",
+      "repeatPasswordPlaceholder": "Re-enter your password",
+      "hintPlaceholder": "A hint to help you remember your password...",
+      "nameLabel": "Full Name",
+      "emailLabel": "Email Address",
+      "emailNotChangeable": "Your email address cannot be changed.",
+      "studentNoLabel": "Student Number",
+      "studentNoDescription": "Your student number.",
+      "addressLabel": "Home Address",
+      "addressDescription": "Your location will be used for ride planning.",
+      "accessibilityLabel": "Accessibility Needs",
+      "accessibilityDescription": "Please select relevant options so we can serve you better.",
+      "wheelchair": "Wheelchair User",
+      "visualImpairment": "Visually Impaired",
+      "hearingImpairment": "Hearing Impaired",
+      "otherAccessibility": "Other (Please specify)",
+      "otherAccLabel": "Other Accessibility Need",
+      "otherAccPlaceholder": "Please specify...",
+      "securitySection": "Password & Security",
+      "securityDescription": "Leave these fields blank if you do not want to change your password.",
+      "newPasswordLabel": "New Password",
+      "confirmPasswordLabel": "Confirm Password",
+      "hintLabel": "Password Hint",
+      "hintDescription": "This hint will be shown when you forget your password. Don't write the password directly.",
+      "saveButton": "Save Information",
+      "profileUpdated": "Profile Updated",
+      "profileUpdatedDesc": "Your information has been saved successfully.",
+      "updateErrorDesc": "An error occurred while updating your profile.",
+      "sessionNotFound": "Session not found. Please sign in again.",
+      "nameMinError": "Name must be at least 2 characters.",
+      "validEmailError": "Please enter a valid email address.",
+      "addressMinError": "Home address must be at least 10 characters."
+    },
+    "adminVehicleForm": {
+      "nameMinError": "Vehicle name must be at least 2 characters.",
+      "typeRequired": "Vehicle type must be selected.",
+      "capacityMinError": "Capacity must be 0 or greater.",
+      "capacityZeroError": "At least one capacity (Sw or So) must be greater than 0.",
+      "editTitle": "Edit Vehicle",
+      "addTitle": "Add New Vehicle",
+      "editDesc": "Update vehicle information.",
+      "addDesc": "Enter new vehicle information.",
+      "nameLabel": "Vehicle Name / Description",
+      "namePlaceholder": "e.g. Service A, Blue Minibus",
+      "plateLabel": "Plate Number (Optional)",
+      "platePlaceholder": "e.g. 06 ABC 123",
+      "typeLabel": "Vehicle Type",
+      "typePlaceholder": "Select vehicle type",
+      "typeMinibus": "Minibus",
+      "typeBus": "Bus",
+      "typeVan": "Van",
+      "statusLabel": "Status",
+      "statusPlaceholder": "Select status",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "statusMaintenance": "Maintenance",
+      "wheelchairCapacityLabel": "Sw Capacity",
+      "seatingCapacityLabel": "So Capacity",
+      "wheelchairSubtitle": "Wheelchair",
+      "seatingSubtitle": "Non-wheelchair disabled",
+      "defaultHint": "Default: {sw} Sw + {so} So",
+      "cooldownLabel": "Turnaround Time (Cooldown)",
+      "cooldownMin": "0 min",
+      "cooldownMax": "60 min",
+      "cooldownValue": "{value} minutes",
+      "cooldownDesc": "Waiting time between pickup and dropoff routes (default: {default} min)"
+    },
+    "adminUserForm": {
+      "nameMinError": "Full name must be at least 2 characters.",
+      "emailInvalid": "Please enter a valid email address.",
+      "studentNoRequired": "Student number is required for the Student role.",
+      "userLoadFailed": "User could not be loaded.",
+      "editTitle": "Edit User: {name} ({role})",
+      "editDesc": "Update user information. Email changes should be done carefully. Role cannot be changed from this screen.",
+      "nameLabel": "Full Name",
+      "emailLabel": "Email",
+      "studentNumberLabel": "Student Number",
+      "studentNumberPlaceholder": "12-digit number",
+      "disabilityTypeLabel": "Disability Type",
+      "disabilityTypeWheelchair": "Wheelchair",
+      "disabilityTypeOther": "Other Disability Type",
+      "homeAddressLabel": "Home Address",
+      "addressPlaceholder": "Full home address",
+      "accessibilityNeedsLabel": "Accessibility Needs",
+      "accessibilityVisual": "Visually Impaired",
+      "accessibilityHearing": "Hearing Impaired",
+      "accessibilityMobility": "Walking Aid",
+      "accessibilityOther": "Other",
+      "otherLabel": "Other Accessibility Need",
+      "otherPlaceholder": "Please specify...",
+      "roleAdmin": "Admin",
+      "roleDriver": "Driver",
+      "roleStudent": "Student"
+    },
+    "adminAddUserDialog": {
+      "title": "Add New User",
+      "description": "Add a new user to the system.",
+      "nameMinError": "Full name must be at least 2 characters.",
+      "emailInvalid": "Please enter a valid email address.",
+      "passwordMinError": "Password must be at least 6 characters.",
+      "studentNoRequired": "Student number is required for the Student role.",
+      "nameLabel": "Full Name",
+      "namePlaceholder": "e.g. Ahmet Yilmaz",
+      "emailLabel": "Email",
+      "emailPlaceholder": "example@uniride.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "At least 6 characters",
+      "roleLabel": "Role",
+      "rolePlaceholder": "Select role",
+      "roleStudent": "Student",
+      "roleDriver": "Driver",
+      "roleAdmin": "Admin",
+      "studentNumberLabel": "Student Number",
+      "studentNumberPlaceholder": "12-digit number",
+      "adding": "Adding...",
+      "submit": "Add User"
+    },
+    "authLoginForm": {
+      "successTitle": "Login Successful",
+      "failedTitle": "Login Failed",
+      "failedDesc": "Email/username or password is incorrect. Please check your credentials.",
+      "signingIn": "Signing In...",
+      "submit": "Sign In"
+    },
+    "authRegisterForm": {
+      "studentNoError": "Student number must be a 12-digit number.",
+      "passwordMinError": "Password must be at least 6 characters.",
+      "passwordRepeatError": "Password must be at least 6 characters.",
+      "passwordMismatch": "Passwords do not match.",
+      "namePlaceholder": "Your Full Name",
+      "studentNoPlaceholder": "e.g. 202003002016",
+      "hintPlaceholder": "e.g. My first pet's name",
+      "signingUp": "Signing Up...",
+      "submit": "Sign Up"
+    },
+      "scheduleConfirmationCard": {
+        "rideConfirmed": "Ride Confirmed",
+        "rideCancelled": "Ride Cancelled",
+        "changeRequested": "Change Requested",
+        "confirmed": "Confirmed",
+        "cancelled": "Cancelled",
+        "cardTitle": "Ride Plan Approval: {relevantDate}",
+        "pastDeadline": "Approval deadline has passed. Changes require admin approval.",
+        "deadlineInfo": "Approval deadline: Today until {deadlineTime}",
+        "defaultDescription": "Below are your suggested ride times for {relevantDate}.",
+        "pickupLabel": "Estimated Pickup Time:",
+        "dropoffLabel": "Estimated Dropoff Time (Home):",
+        "cancelButton": "Cancel",
+        "changeButton": "Change",
+        "confirmButton": "Confirm",
+        "reconfirmButton": "Re-confirm",
+        "operationFailed": "Operation failed",
+        "statusPending": "Awaiting Approval",
+        "statusCancelled": "Cancelled",
+        "statusAwaiting": "Awaiting Confirmation"
+      }
+  },
+  "api": {
+    "benchmark": {
+      "route": {
+        "started": "Benchmark started",
+        "algoRequired": "At least one algorithm must be selected",
+        "problemRequired": "At least one problem must be selected",
+        "invalidRunId": "Invalid run_id format. Only letters, numbers, \"_\" and \"-\" are allowed (max 64 characters).",
+        "runIdTaken": "This run_id is already in use. Please try a different one.",
+        "validationError": "An error occurred during run_id validation.",
+        "connectionFailed": "Could not connect to benchmark service",
+        "startFailed": "Benchmark could not be started"
+      },
+      "stop": {
+        "failed": "Benchmark could not be stopped"
+      },
+      "results": {
+        "loadFailed": "Could not load benchmark results",
+        "unreachable": "Could not reach benchmark results"
+      },
+      "problems": {
+        "unreachable": "Could not reach benchmark server"
+      }
+    },
+    "auth": {
+      "hint": {
+        "invalidFormat": "Invalid user info format",
+        "notFound": "User not found or no hint set."
+      },
+      "devReset": {
+        "devOnly": "This endpoint is only available in development environment.",
+        "userNotFound": "User not found."
+      }
+    },
+    "admin": {
+      "users": {
+        "passwordMin": "Password must be at least 6 characters",
+        "invalidRole": "Invalid role selection",
+        "validUuid": "A valid user ID (UUID) is required"
+      },
+      "password": {
+        "minLength": "Password must be at least 6 characters",
+        "updated": "Password updated successfully."
+      }
+    },
+    "profile": {
+      "password": {
+        "minLength": "Password must be at least 6 characters."
+      }
+    },
+    "sandbox": {
+      "studentsRequired": "Student list is required",
+      "vehicleConfigRequired": "Vehicle configuration is required"
+    },
+    "rideConfirmation": {
+      "confirmed": "Your ride has been confirmed successfully.",
+      "cancelled": "Your ride has been cancelled."
+    },
+    "service": {
+      "connectionFailed": "Could not connect to benchmark service",
+      "statusFailed": "Could not retrieve status"
+    },
+    "adminApi": {
+      "passwordUpdateFailed": "Password could not be updated."
+    },
+    "schedule": {
+      "missingAddress": "Student's home address or weekly schedule is missing"
+    },
+    "profileForm": {
+      "updateFailed": "Password could not be updated."
+    }
+  }
+}

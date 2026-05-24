@@ -102,7 +102,6 @@ class HHOSplitStrategy(HybridSplitBaseStrategy):
         """
         self.config = {**self.DEFAULT_CONFIG, **(config or {})}
         self.seed = self.config.get("seed") or int(time.time() * 1000)
-        self.rng = random.Random(self.seed)
         self._prey: Optional[Hawk] = None  # Best solution
         self._generation_stats = []
 
@@ -120,15 +119,15 @@ class HHOSplitStrategy(HybridSplitBaseStrategy):
 
 
 
-    def _shuffle(self, items: List) -> List:
-        """Shuffle list using internal RNG (Fisher-Yates)"""
+    def _shuffle(self, items: List, rng: random.Random) -> List:
+        """Shuffle list using provided RNG (Fisher-Yates)"""
         result = items.copy()
         for i in range(len(result) - 1, 0, -1):
-            j = self.rng.randint(0, i)
+            j = rng.randint(0, i)
             result[i], result[j] = result[j], result[i]
         return result
 
-    def _initialize_population(self, waypoints: List[str]) -> List[Hawk]:
+    def _initialize_population(self, waypoints: List[str], rng: random.Random) -> List[Hawk]:
         """Initialize hawk population with random positions"""
         hawks = []
         
@@ -143,7 +142,7 @@ class HHOSplitStrategy(HybridSplitBaseStrategy):
         
         # Random permutations
         for _ in range(self.config["population_size"] - 1):
-            position = self._shuffle(waypoints)
+            position = self._shuffle(waypoints, rng)
             hawks.append(Hawk(
                 position=position,
                 fitness=0.0,
@@ -153,7 +152,7 @@ class HHOSplitStrategy(HybridSplitBaseStrategy):
         return hawks
 
 
-    def _levy_flight(self, position: List[str], scale: Optional[float] = None) -> List[str]:
+    def _levy_flight(self, position: List[str], rng: random.Random, scale: Optional[float] = None) -> List[str]:
         """
         Perform Lévy flight mutation for escaping local optima.
         
@@ -172,20 +171,20 @@ class HHOSplitStrategy(HybridSplitBaseStrategy):
                  (math.gamma((1 + beta) / 2) * beta * 2 ** ((beta - 1) / 2))) ** (1 / beta)
         
         # Number of swaps based on Lévy distribution
-        u = self.rng.gauss(0, sigma)
-        v = self.rng.gauss(0, 1)
+        u = rng.gauss(0, sigma)
+        v = rng.gauss(0, 1)
         step = u / (abs(v) ** (1 / beta))
-        
+
         num_swaps = max(1, min(int(abs(step) * scale * n), n // 2))
-        
+
         for _ in range(num_swaps):
-            i, j = self.rng.sample(range(n), 2)
+            i, j = rng.sample(range(n), 2)
             new_position[i], new_position[j] = new_position[j], new_position[i]
         
         return new_position
 
     def _get_difference_swaps(self, current: List[str], target: List[str],
-                               intensity: float) -> List[Tuple[int, int]]:
+                                intensity: float, rng: random.Random) -> List[Tuple[int, int]]:
         """Get swaps to move current toward target with given intensity"""
         swaps = []
         n = len(current)
@@ -194,7 +193,7 @@ class HHOSplitStrategy(HybridSplitBaseStrategy):
             if current[i] != target[i]:
                 try:
                     j = current.index(target[i])
-                    if self.rng.random() < intensity:
+                    if rng.random() < intensity:
                         swaps.append((i, j))
                 except ValueError:
                     pass
@@ -211,32 +210,32 @@ class HHOSplitStrategy(HybridSplitBaseStrategy):
         
         return new_position
 
-    def _soft_besiege(self, hawk: Hawk, prey: Hawk, escape_energy: float) -> List[str]:
+    def _soft_besiege(self, hawk: Hawk, prey: Hawk, escape_energy: float, rng: random.Random) -> List[str]:
         """
         Soft besiege: When prey has enough energy to escape but still gets caught.
         Position update: X(t+1) = ΔX(t) - E * |J * Prey - X(t)|
         """
         # J is random jump strength (2 * rand in [0,2])
-        J = 2 * (1 - self.rng.random())
-        
+        J = 2 * (1 - rng.random())
+
         # Calculate movement toward prey
         intensity = abs(escape_energy * J)
-        swaps = self._get_difference_swaps(hawk.position, prey.position, intensity)
+        swaps = self._get_difference_swaps(hawk.position, prey.position, intensity, rng)
         
         return self._apply_swaps(hawk.position, swaps)
 
-    def _hard_besiege(self, hawk: Hawk, prey: Hawk, escape_energy: float) -> List[str]:
+    def _hard_besiege(self, hawk: Hawk, prey: Hawk, escape_energy: float, rng: random.Random) -> List[str]:
         """
         Hard besiege: When prey is exhausted, hawks tightly surround it.
         Position update: X(t+1) = Prey - E * |Prey - X(t)|
         """
         intensity = abs(escape_energy)
-        swaps = self._get_difference_swaps(hawk.position, prey.position, intensity)
+        swaps = self._get_difference_swaps(hawk.position, prey.position, intensity, rng)
         
         return self._apply_swaps(hawk.position, swaps)
 
     def _soft_besiege_with_dives(self, hawk: Hawk, prey: Hawk, escape_energy: float,
-                                  depot: str, distance_matrix: Dict) -> List[str]:
+                                  depot: str, distance_matrix: Dict, rng: random.Random) -> List[str]:
         """
         Soft besiege with progressive rapid dives.
         Hawks make rapid dives toward prey with Lévy flight movements.
@@ -247,12 +246,12 @@ class HHOSplitStrategy(HybridSplitBaseStrategy):
         # Attempt multiple dives
         for _ in range(3):
             # Move toward prey
-            intensity = abs(escape_energy) * self.rng.random()
-            swaps = self._get_difference_swaps(hawk.position, prey.position, intensity)
+            intensity = abs(escape_energy) * rng.random()
+            swaps = self._get_difference_swaps(hawk.position, prey.position, intensity, rng)
             candidate = self._apply_swaps(hawk.position, swaps)
-            
+
             # Add Lévy flight perturbation
-            candidate = self._levy_flight(candidate, scale=0.3)
+            candidate = self._levy_flight(candidate, rng, scale=0.3)
             
             # Evaluate using giant tour approximation
             cost = self._calculate_giant_tour_cost(candidate, depot, distance_matrix)
@@ -263,18 +262,18 @@ class HHOSplitStrategy(HybridSplitBaseStrategy):
         
         return best_position
 
-    def _hard_besiege_with_dives(self, hawk: Hawk, prey: Hawk, escape_energy: float) -> List[str]:
+    def _hard_besiege_with_dives(self, hawk: Hawk, prey: Hawk, escape_energy: float, rng: random.Random) -> List[str]:
         """
         Hard besiege with progressive rapid dives.
         Combined besiege with Lévy flights for final exploitation.
         """
         # Calculate mean position
         mean_intensity = abs(escape_energy)
-        swaps = self._get_difference_swaps(hawk.position, prey.position, mean_intensity)
+        swaps = self._get_difference_swaps(hawk.position, prey.position, mean_intensity, rng)
         candidate = self._apply_swaps(hawk.position, swaps)
-        
+
         # Apply strong Lévy flight
-        candidate = self._levy_flight(candidate, scale=0.2)
+        candidate = self._levy_flight(candidate, rng, scale=0.2)
         
         return candidate
 
@@ -362,11 +361,12 @@ class HHOSplitStrategy(HybridSplitBaseStrategy):
         # Override config if provided (user-customizable)
         # Singleton self.config korunuyor; her istek icin local kopya
         effective_config = dict(self.config)
-        rng = random.Random(self.seed)
         if hasattr(request, 'hho_config') and request.hho_config:
             effective_config = {**self.config, **request.hho_config}
             rng = random.Random(effective_config.get("seed", self.seed))
-        
+        else:
+            rng = random.Random(self.seed)
+
         # Load data
         data_loader = DataLoader.get_instance()
         location_ids = [depot.id] + [s.location_code for s in students]
@@ -402,7 +402,7 @@ class HHOSplitStrategy(HybridSplitBaseStrategy):
         waypoints = [s.location_code for s in students]
         
         # Initialize population
-        hawks = self._initialize_population(waypoints)
+        hawks = self._initialize_population(waypoints, rng)
         
         # Evaluate initial population
         for hawk in hawks:
@@ -422,46 +422,46 @@ class HHOSplitStrategy(HybridSplitBaseStrategy):
         # Main HHO loop
         for iteration in range(self.config["max_iterations"]):
             # Calculate escape energy (decreases over iterations)
-            E0 = 2 * self.rng.random() - 1  # In [-1, 1]
+            E0 = 2 * rng.random() - 1  # In [-1, 1]
             energy_decay = iteration / self.config["max_iterations"]
             E = 2 * E0 * (1 - energy_decay) * self.config["initial_energy"]
-            
+
             improved = False
-            
+
             for hawk in hawks:
                 # Random escape probability
-                r = self.rng.random()
-                
+                r = rng.random()
+
                 # Exploration phase (|E| >= 1)
                 if abs(E) >= 1:
                     # Random perching
-                    if self.rng.random() < 0.5:
+                    if rng.random() < 0.5:
                         # Perch near prey
-                        intensity = self.rng.random()
-                        swaps = self._get_difference_swaps(hawk.position, prey.position, intensity)
+                        intensity = rng.random()
+                        swaps = self._get_difference_swaps(hawk.position, prey.position, intensity, rng)
                         new_position = self._apply_swaps(hawk.position, swaps)
                     else:
                         # Random perch (Lévy flight)
-                        new_position = self._levy_flight(hawk.position)
-                
+                        new_position = self._levy_flight(hawk.position, rng)
+
                 # Exploitation phase (|E| < 1)
                 else:
                     if r >= self.config["jump_probability"]:
                         # Soft besiege
                         if abs(E) >= 0.5:
-                            new_position = self._soft_besiege(hawk, prey, E)
+                            new_position = self._soft_besiege(hawk, prey, E, rng)
                         # Hard besiege
                         else:
-                            new_position = self._hard_besiege(hawk, prey, E)
+                            new_position = self._hard_besiege(hawk, prey, E, rng)
                     else:
                         # Soft besiege with progressive rapid dives
                         if abs(E) >= 0.5:
                             new_position = self._soft_besiege_with_dives(
-                                hawk, prey, E, depot.id, distance_matrix
+                                hawk, prey, E, depot.id, distance_matrix, rng
                             )
                         # Hard besiege with progressive rapid dives
                         else:
-                            new_position = self._hard_besiege_with_dives(hawk, prey, E)
+                            new_position = self._hard_besiege_with_dives(hawk, prey, E, rng)
                 
                 # Local search (every N generations)
                 if iteration % self.config.get("local_search_interval", 15) == 0:

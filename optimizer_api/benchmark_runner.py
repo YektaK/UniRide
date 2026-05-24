@@ -26,25 +26,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class BenchmarkProblem:
-    """
-    A single benchmark problem instance.
-    
-    Supports both TSP and CVRPTW problem types:
-    - TSP (default): name, dimension, coordinates, optimal_score
-    - CVRPTW (optional): adds problem_type='cvrptw', capacity, num_vehicles, time_windows
-    """
-    name: str
-    dimension: int
-    coordinates: List[Tuple[float, float]]
-    optimal_score: Optional[int] = None
-    category: str = "medium"  # small, medium, large
-    problem_type: str = "tsp"  # "tsp" or "cvrptw"
-    capacity: Optional[int] = None  # Vehicle capacity for CVRPTW
-    num_vehicles: Optional[int] = None  # Number of vehicles for CVRPTW
-    time_windows: Optional[List[Tuple[int, int]]] = None  # Time window tuples (start, end) in minutes
-    depot_index: int = 0  # Which coordinate index represents the depot?
+from uniride_core.models import ProblemInstance
 
 
 @dataclass
@@ -101,7 +83,7 @@ class BenchmarkRunner:
     # D-1: TSPLIB-native distance calculation
     # ============================================================
     
-    def _build_coord_index(self, problem: BenchmarkProblem) -> Dict[str, Tuple[float, float]]:
+    def _build_coord_index(self, problem: ProblemInstance) -> Dict[str, Tuple[float, float]]:
         """
         Build mapping from location_id -> (x, y) for distance calculation.
         
@@ -118,7 +100,7 @@ class BenchmarkRunner:
             coord_index[f"student_{i}"] = coord
         return coord_index
     
-    def _compute_tsplib_tour_distance(self, problem: BenchmarkProblem, response) -> float:
+    def _compute_tsplib_tour_distance(self, problem: ProblemInstance, response) -> float:
         """
         Compute actual TSPLIB EUC_2D tour distance from strategy response.
 
@@ -130,7 +112,7 @@ class BenchmarkRunner:
         the TSPLIB-compliant distance directly from original coordinates.
 
         Args:
-            problem: Original BenchmarkProblem with TSPLIB coordinates
+            problem: Original ProblemInstance with TSPLIB coordinates
             response: OptimizationResponse from strategy.optimize()
 
         Returns:
@@ -170,9 +152,9 @@ class BenchmarkRunner:
     # Problem -> Request conversion
     # ============================================================
     
-    def _benchmark_problem_to_optimization_request(self, problem: BenchmarkProblem, algorithm_id: str):
+    def _benchmark_problem_to_optimization_request(self, problem: ProblemInstance, algorithm_id: str):
         """
-        Convert BenchmarkProblem -> OptimizationRequest for real strategy dispatch.
+        Convert ProblemInstance -> OptimizationRequest for real strategy dispatch.
         
         Handles both TSP (single tour) and CVRPTW (multi-vehicle) problem formats.
         
@@ -248,7 +230,7 @@ class BenchmarkRunner:
     
     def run(
         self,
-        problems: List[BenchmarkProblem],
+        problems: List[ProblemInstance],
         algorithms: List[AlgorithmConfig],
         n_runs: int = 3,
         seed: int = 42,
@@ -350,7 +332,7 @@ class BenchmarkRunner:
     
     def _run_single_experiment(
         self,
-        problem: BenchmarkProblem,
+        problem: ProblemInstance,
         algorithm: AlgorithmConfig,
         run_number: int
     ) -> ExperimentResult:
@@ -415,8 +397,8 @@ class BenchmarkRunner:
         elapsed_ms = (time.time() - start_time) * 1000
         
         gap_percent = None
-        if problem.optimal_score and not (isinstance(tour_length, float) and tour_length != tour_length):
-            gap_percent = ((tour_length - problem.optimal_score) / problem.optimal_score) * 100
+        if problem.optimal and not (isinstance(tour_length, float) and tour_length != tour_length):
+            gap_percent = ((tour_length - problem.optimal) / problem.optimal) * 100
         
         routes_count = len(response.routes) if response else 0
         
@@ -490,7 +472,7 @@ class BenchmarkRunner:
 
 __all__ = [
     "BenchmarkRunner",
-    "BenchmarkProblem",
+    "ProblemInstance",
     "AlgorithmConfig",
     "ExperimentResult"
 ]

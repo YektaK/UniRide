@@ -148,13 +148,13 @@ export const parseExcelFile = async (file: File): Promise<ExcelImportRow[]> => {
         }
 
         // First row is headers
-        const headers = (jsonData[0] as any[]).map((h: any) => String(h).trim());
+        const headers = (jsonData[0] as unknown[]).map((h) => String(h ?? "").trim());
 
         // Create object rows
         const rows: ExcelImportRow[] = [];
         for (let i = 1; i < jsonData.length; i++) {
-          const rowData: any = {};
-          const row = jsonData[i] as any[];
+          const rowData: Record<string, unknown> = {};
+          const row = jsonData[i] as unknown[];
 
           headers.forEach((header, index) => {
             rowData[header] = row[index];

@@ -63,18 +63,7 @@ class PAOEAStrategy(BaseRoutingStrategy):
             "Operatör genomlarının meta-evrimi, yapılandırılmış enjeksiyon."
         )
 
-    def _get_duration(self, from_loc: str, to_loc: str, time_matrix: Dict, coordinates: Dict) -> float:
-        """Get duration between locations using time matrix or coordinates."""
-        if from_loc in time_matrix and to_loc in time_matrix[from_loc]:
-            return time_matrix[from_loc][to_loc]
-
-        if from_loc in coordinates and to_loc in coordinates:
-            c1 = coordinates[from_loc]
-            c2 = coordinates[to_loc]
-            dist = euclidean_distance(c1["lat"], c1["lng"], c2["lat"], c2["lng"])
-            return estimate_travel_time(dist)
-
-        return DEFAULT_TRAVEL_FALLBACK_MINUTES
+    # _get_duration inherited from BaseRoutingStrategy
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:
         """Execute P-AOEA optimization on the routing problem."""
@@ -135,28 +124,12 @@ class PAOEAStrategy(BaseRoutingStrategy):
                 else:
                     int_dm[i][j] = 0
 
-        class _ProblemWrapper:
-            def __init__(self):
-                self.node_names = [str(i) for i in range(n)]
-                self.dimension = n
-                self.dist_matrix = int_dm
-                self.optimal = None
-
-            def cost_fn(self, tour):
-                total = 0
-                for i in range(len(tour) - 1):
-                    total += int_dm[int(tour[i])][int(tour[i + 1])]
-                if len(tour) >= 2:
-                    total += int_dm[int(tour[-1])][int(tour[0])]
-                return float(total)
-
-        prob = _ProblemWrapper()
-
         # Run P-AOEA
         try:
-            solver = PAOEA(self._config)
-            result = solver.solve(prob)
-            best_order = [student_ids[int(idx)] for idx in result.tour]
+            solver = PAOEA_TSP(self._config)
+            matrix = [[float(int_dm[i][j]) for j in range(n)] for i in range(n)]
+            result = solver.solve_with_matrix(matrix)
+            best_order = [student_ids[idx] for idx in result.tour]
         except Exception as e:
             logger.error(f"P-AOEA optimization failed: {e}")
             best_order = self._greedy_fallback(students, depot, time_matrix, coordinates)

@@ -2,48 +2,7 @@ from dataclasses import dataclass, field
 from typing import List, Tuple, Dict, Any, Callable, Optional
 import time
 
-@dataclass
-class ProblemInstance:
-    """Unified representation of a TSP/ATSP problem."""
-    name: str
-    dimension: int
-    coordinates: List[Tuple[float, float]] = field(default_factory=list)
-    optimal: Optional[float] = None
-    category: str = "small"
-    source: str = "tsplib"
-    is_time_matrix: bool = False
-    time_matrix: Optional[List[List[float]]] = None
-    dist_matrix: Any = None
-    knn_mask: Optional[Dict[int, List[int]]] = None
-    
-    def prepare_matrices(self, k: int = 20):
-        import math
-        
-        # Build distance matrix if not present
-        if self.dist_matrix is None and not self.is_time_matrix and self.coordinates:
-            matrix = []
-            for i, (x1, y1) in enumerate(self.coordinates):
-                row = []
-                for j, (x2, y2) in enumerate(self.coordinates):
-                    if i == j:
-                        row.append(0.0)
-                    else:
-                        row.append(math.sqrt((x1 - x2)**2 + (y1 - y2)**2))
-                matrix.append(row)
-            self.dist_matrix = matrix
-            
-        # Build KNN mask
-        matrix_to_use = self.time_matrix if self.is_time_matrix else self.dist_matrix
-        if matrix_to_use and len(matrix_to_use) > 0 and self.knn_mask is None:
-            self.knn_mask = {}
-            for i, row in enumerate(matrix_to_use):
-                # Get indices sorted by distance, excluding self (which is 0 distance)
-                # Keep top K
-                neighbors = sorted(
-                    [(j, dist) for j, dist in enumerate(row) if i != j],
-                    key=lambda x: x[1]
-                )
-                self.knn_mask[i] = [j for j, dist in neighbors[:k]]
+from uniride_core.models import ProblemInstance, TSPResult
 
 @dataclass
 class RunResult:
@@ -63,17 +22,7 @@ class RunResult:
     tour: Optional[List[int]] = None
     error: Optional[str] = None
 
-@dataclass
-class TSPResult:
-    """Standardized result format for all TSP solvers."""
-    algorithm: str
-    tour: List[int]
-    tour_length: float
-    elapsed_ms: float
-    iterations: int
-    params: Dict[str, Any]
-    history: Optional[List[float]] = None
-    seed: Optional[int] = None
+
 
 @dataclass
 class BenchmarkTask:

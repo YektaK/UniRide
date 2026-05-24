@@ -235,8 +235,7 @@ class E2BSO_TSP(BaseTSPSolver):
             pop_costs[idx] = _tour_cost(repaired, self._dist_matrix)
         return population, pop_costs
 
-    def solve(self, coordinates: List[Tuple[float, float]]) -> TSPResult:
-        self._set_problem(coordinates)
+    def _solve(self) -> TSPResult:
         rng = random.Random(self.cfg.seed)
         t_start = time.monotonic()
         dm_np = self._dist_matrix_np if self._dist_matrix_np is not None else None
@@ -260,7 +259,6 @@ class E2BSO_TSP(BaseTSPSolver):
         current_entropy = self._edge_entropy(population)
 
         for t in range(1, self.cfg.max_iterations + 1):
-            prev_best = gbest_cost
             if t % self.cfg.entropy_check_interval == 0 or t == 1:
                 current_entropy = self._edge_entropy(population)
 
@@ -443,8 +441,7 @@ class E2BSO_TSP_CPSO(E2BSO_TSP):
         new_tour = _apply_swaps(individual, new_velocity)
         return new_tour, new_velocity
 
-    def solve(self, coordinates: List[Tuple[float, float]]) -> TSPResult:
-        self._set_problem(coordinates)
+    def _solve(self) -> TSPResult:
         rng = random.Random(self.cfg.seed)
         t_start = time.monotonic()
         dm_np = self._dist_matrix_np if self._dist_matrix_np is not None else None
@@ -471,7 +468,6 @@ class E2BSO_TSP_CPSO(E2BSO_TSP):
         current_entropy = self._edge_entropy(population)
 
         for t in range(1, self.cfg.max_iterations + 1):
-            prev_best = gbest_cost
             if t % self.cfg.entropy_check_interval == 0 or t == 1:
                 current_entropy = self._edge_entropy(population)
 

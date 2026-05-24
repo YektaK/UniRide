@@ -234,8 +234,7 @@ class PAOEA_TSP(BaseTSPSolver):
             pop_costs[idx] = _tour_cost(tour, self._dist_matrix)
         return population, pop_costs
 
-    def solve(self, coordinates: List[Tuple[float, float]]) -> TSPResult:
-        self._set_problem(coordinates)
+    def _solve(self) -> TSPResult:
         rng = random.Random(self.cfg.seed)
         t_start = time.monotonic()
         dm_np = self._dist_matrix_np if self._dist_matrix_np is not None else None

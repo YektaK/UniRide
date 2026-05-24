@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslations } from 'next-intl';
 import {
   Card,
   CardContent,
@@ -99,43 +100,8 @@ const CHART_COLORS = [
 ];
 
 // ============================================================
-// Category label helpers
+// Category label helpers (moved inside component for i18n)
 // ============================================================
-
-function getCategoryLabel(cat: string): string {
-  switch (cat) {
-    case "small": return "Küçük";
-    case "medium": return "Orta";
-    case "large": return "Büyük";
-    default: return cat;
-  }
-}
-
-function getCategoryBadgeVariant(cat: string): "default" | "secondary" | "outline" | "destructive" {
-  switch (cat) {
-    case "small": return "secondary";
-    case "medium": return "default";
-    case "large": return "destructive";
-    default: return "outline";
-  }
-}
-
-function getStatusBadge(status: string) {
-  switch (status) {
-    case "running":
-      return <Badge className="bg-blue-600 hover:bg-blue-700"><Activity className="h-3 w-3 mr-1 animate-pulse" /> Çalışıyor</Badge>;
-    case "completed":
-      return <Badge className="bg-green-600 hover:bg-green-700"><CheckCircle2 className="h-3 w-3 mr-1" /> Tamamlandı</Badge>;
-    case "failed":
-      return <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" /> Başarısız</Badge>;
-    case "stopped":
-      return <Badge variant="outline" className="border-amber-500 text-amber-700"><Square className="h-3 w-3 mr-1" /> Durduruldu</Badge>;
-    case "queued":
-      return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" /> Sıraya Alındı</Badge>;
-    default:
-      return <Badge variant="outline">{status}</Badge>;
-  }
-}
 
 // ============================================================
 // Main Page Component
@@ -143,6 +109,43 @@ function getStatusBadge(status: string) {
 
 export default function BenchmarkPage() {
   const { toast } = useToast();
+  const t = useTranslations('page.admin.benchmark');
+  const tc = useTranslations('common');
+
+  function getCategoryLabel(cat: string): string {
+    switch (cat) {
+      case "small": return t('categories.small');
+      case "medium": return t('categories.medium');
+      case "large": return t('categories.large');
+      default: return cat;
+    }
+  }
+
+  function getCategoryBadgeVariant(cat: string): "default" | "secondary" | "outline" | "destructive" {
+    switch (cat) {
+      case "small": return "secondary";
+      case "medium": return "default";
+      case "large": return "destructive";
+      default: return "outline";
+    }
+  }
+
+  function getStatusBadge(status: string) {
+    switch (status) {
+      case "running":
+        return <Badge className="bg-blue-600 hover:bg-blue-700"><Activity className="h-3 w-3 mr-1 animate-pulse" /> {tc('status.running')}</Badge>;
+      case "completed":
+        return <Badge className="bg-green-600 hover:bg-green-700"><CheckCircle2 className="h-3 w-3 mr-1" /> {tc('status.completed')}</Badge>;
+      case "failed":
+        return <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" /> {tc('status.failed')}</Badge>;
+      case "stopped":
+        return <Badge variant="outline" className="border-amber-500 text-amber-700"><Square className="h-3 w-3 mr-1" /> {tc('status.stopped')}</Badge>;
+      case "queued":
+        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" /> {tc('status.queued')}</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  }
 
   // ---- State ----
   const [activeTab, setActiveTab] = useState("config");
@@ -199,8 +202,8 @@ export default function BenchmarkPage() {
       } catch (err) {
         console.error("Failed to load problems:", err);
         toast({
-          title: "Problemler Yüklenemedi",
-          description: err instanceof Error ? err.message : "Sunucuya ulaşılamadı",
+          title: t('toast.problemsLoadFailed'),
+          description: err instanceof Error ? err.message : t('toast.serverUnreachable'),
           variant: "destructive",
         });
       } finally {
@@ -239,8 +242,8 @@ export default function BenchmarkPage() {
               setResults(res);
             } catch {
               toast({
-                title: "Sonuçlar Alınamadı",
-                description: "Benchmark tamamlandı ancak sonuçlar yüklenemedi.",
+                title: t('toast.resultsFetchFailed'),
+                description: t('toast.resultsFetchFailedDesc'),
                 variant: "destructive",
               });
             } finally {
@@ -269,16 +272,16 @@ export default function BenchmarkPage() {
       setActiveTab("execution");
 
       toast({
-        title: "Benchmark Başlatıldı",
-        description: `Çalışma ID: ${response.run_id} — ${response.total_experiments} deney kuyruğa alındı.`,
+        title: t('toast.startedTitle'),
+        description: t('toast.startedDesc', { id: response.run_id, n: response.total_experiments }),
       });
 
       // Start polling
       startPolling(response.run_id);
     } catch (err) {
       toast({
-        title: "Benchmark Başlatılamadı",
-        description: err instanceof Error ? err.message : "Sunucu hatası",
+        title: t('toast.startFailedTitle'),
+        description: err instanceof Error ? err.message : t('toast.serverError'),
         variant: "destructive",
       });
     } finally {
@@ -292,13 +295,13 @@ export default function BenchmarkPage() {
     try {
       await stopBenchmark(runId);
       toast({
-        title: "Benchmark Durduruldu",
-        description: "Çalışma sonlandırılıyor...",
+        title: t('toast.stoppedTitle'),
+        description: t('toast.stoppedDesc'),
       });
     } catch (err) {
       toast({
-        title: "Durdurma Başarısız",
-        description: err instanceof Error ? err.message : "Sunucu hatası",
+        title: t('toast.stopFailedTitle'),
+        description: err instanceof Error ? err.message : t('toast.serverError'),
         variant: "destructive",
       });
     } finally {
@@ -315,7 +318,7 @@ export default function BenchmarkPage() {
     a.download = `benchmark-${runId || "results"}-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast({ title: "Dışa Aktarıldı", description: "Sonuçlar JSON olarak indirildi." });
+    toast({ title: t('toast.exportedTitle'), description: t('toast.exportedDesc') });
   };
 
   const handleManualFetchResults = async () => {
@@ -324,11 +327,11 @@ export default function BenchmarkPage() {
     try {
       const res = await fetchResults(runId);
       setResults(res);
-      toast({ title: "Sonuçlar Yüklendi", description: `${res.results.length} sonuç getirildi.` });
+      toast({ title: t('toast.resultsLoadedTitle'), description: t('toast.resultsLoadedDesc', { n: res.results.length }) });
     } catch (err) {
       toast({
-        title: "Sonuçlar Alınamadı",
-        description: err instanceof Error ? err.message : "Sunucu hatası",
+        title: t('toast.resultsFetchFailed'),
+        description: err instanceof Error ? err.message : t('toast.serverError'),
         variant: "destructive",
       });
     } finally {
@@ -471,18 +474,17 @@ export default function BenchmarkPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-2xl flex items-center gap-2">
-            <FlaskConical className="text-primary" /> Benchmark Suite
+            <FlaskConical className="text-primary" /> {t('title')}
           </CardTitle>
           <CardDescription>
-            TSPLIB standart veri setleri üzerinde algoritma karşılaştırma testleri çalıştırın.
-            Sistematik benchmark ile algoritmaların kalite ve performansını ölçün.
+            {t('description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2">
             <div className={`h-2 w-2 rounded-full ${isApiOnline === null ? "bg-gray-400" : isApiOnline ? "bg-green-500" : "bg-red-500"}`} />
             <span className="text-sm text-muted-foreground">
-              {isApiOnline === null ? "Bağlantı kontrol ediliyor..." : isApiOnline ? "Python Optimizer API çevrimiçi" : "Python Optimizer API çevrimdışı"}
+              {isApiOnline === null ? t('connectionCheck') : isApiOnline ? t('apiOnline') : t('apiOffline')}
             </span>
           </div>
         </CardContent>
@@ -493,18 +495,18 @@ export default function BenchmarkPage() {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="config">
             <Target className="h-4 w-4 mr-1.5 hidden sm:inline" />
-            Yapılandırma
+            {t('configTab')}
           </TabsTrigger>
           <TabsTrigger value="execution" disabled={!runId}>
             <Activity className="h-4 w-4 mr-1.5 hidden sm:inline" />
-            Çalışma
+            {t('runTab')}
             {runStatus?.status === "running" && (
               <span className="ml-1.5 h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
             )}
           </TabsTrigger>
           <TabsTrigger value="results" disabled={!results}>
             <BarChart3 className="h-4 w-4 mr-1.5 hidden sm:inline" />
-            Sonuçlar
+            {t('resultsTab')}
           </TabsTrigger>
         </TabsList>
 
@@ -519,21 +521,21 @@ export default function BenchmarkPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <ScrollText className="h-5 w-5 text-primary" /> Problem Seçimi
+                      <ScrollText className="h-5 w-5 text-primary" /> {t('problemSelection')}
                     </CardTitle>
                     <CardDescription className="mt-1">
-                      TSPLIB test problemlerinden benchmark için seçim yapın
+                      {t('problemSelectionDesc')}
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline">{selectedProblems.size} seçili</Badge>
+                    <Badge variant="outline">{t('selectedN', { n: selectedProblems.size })}</Badge>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Category filter */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-medium text-muted-foreground mr-1">Kategori:</span>
+                  <span className="text-sm font-medium text-muted-foreground mr-1">{t('category')}:</span>
                   {["all", "small", "medium", "large"].map((cat) => (
                     <Button
                       key={cat}
@@ -541,15 +543,15 @@ export default function BenchmarkPage() {
                       variant={problemCategoryFilter === cat ? "default" : "outline"}
                       onClick={() => setProblemCategoryFilter(cat)}
                     >
-                      {cat === "all" ? "Tümü" : getCategoryLabel(cat)}
+                      {cat === "all" ? tc('all') : getCategoryLabel(cat)}
                     </Button>
                   ))}
                   <div className="ml-auto flex gap-2">
                     <Button size="sm" variant="ghost" onClick={selectAllProblems}>
-                      Tümünü Seç
+                      {tc('selectAll')}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={deselectAllProblems}>
-                      Seçimi Kaldır
+                      {tc('deselectAll')}
                     </Button>
                   </div>
                 </div>
@@ -558,14 +560,14 @@ export default function BenchmarkPage() {
                 {problemsLoading ? (
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    <span className="ml-2 text-muted-foreground">Problemler yükleniyor...</span>
+                    <span className="ml-2 text-muted-foreground">{t('problemsLoading')}</span>
                   </div>
                 ) : filteredProblems.length === 0 ? (
                   <Alert>
                     <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Problem Bulunamadı</AlertTitle>
+                    <AlertTitle>{t('noProblems')}</AlertTitle>
                     <AlertDescription>
-                      Bu kategoride uyumlu problem bulunamadı.
+                      {t('noProblemsHint')}
                     </AlertDescription>
                   </Alert>
                 ) : (
@@ -574,11 +576,11 @@ export default function BenchmarkPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-10">✓</TableHead>
-                          <TableHead>Problem</TableHead>
-                          <TableHead className="text-center">Boyut</TableHead>
-                          <TableHead className="text-center">Optimal</TableHead>
-                          <TableHead className="text-center">Kategori</TableHead>
-                          <TableHead className="text-center">Tip</TableHead>
+                          <TableHead>{t('problemTable.problem')}</TableHead>
+                          <TableHead className="text-center">{t('problemTable.size')}</TableHead>
+                          <TableHead className="text-center">{t('problemTable.optimal')}</TableHead>
+                          <TableHead className="text-center">{t('problemTable.category')}</TableHead>
+                          <TableHead className="text-center">{t('problemTable.type')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -624,25 +626,25 @@ export default function BenchmarkPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="text-lg flex items-center gap-2">
-                        <Zap className="h-5 w-5 text-primary" /> Algoritma Seçimi
+                        <Zap className="h-5 w-5 text-primary" /> {t('algorithmSelection')}
                       </CardTitle>
                       <CardDescription className="mt-1">
-                        Test edilecek algoritmaları seçin
+                        {t('algorithmSelectionDesc')}
                       </CardDescription>
                     </div>
-                    <Badge variant="outline">{selectedAlgorithms.size} seçili</Badge>
+                    <Badge variant="outline">{t('selectedN', { n: selectedAlgorithms.size })}</Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex gap-2 flex-wrap">
                     <Button size="sm" variant="ghost" onClick={selectAllAlgorithms}>
-                      Hepsini Seç
+                      {tc('selectAll')}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={selectRecommendedAlgorithms}>
-                      Önerilenler
+                      {tc('recommended')}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => setSelectedAlgorithms(new Set())}>
-                      Seçimi Kaldır
+                      {tc('deselectAll')}
                     </Button>
                   </div>
 
@@ -667,7 +669,7 @@ export default function BenchmarkPage() {
                                   <span className="text-sm font-medium truncate">{alg.label}</span>
                                   {alg.recommended && (
                                     <Badge variant="default" className="text-[9px] px-1 py-0 h-3.5 bg-emerald-600 hover:bg-emerald-700">
-                                      Önerilen
+                                      {tc('recommended')}
                                     </Badge>
                                   )}
                                   {"badge" in alg && alg.badge && (
@@ -690,12 +692,12 @@ export default function BenchmarkPage() {
               <Card className="shadow-md">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Timer className="h-5 w-5 text-primary" /> Ayarlar
+                    <Timer className="h-5 w-5 text-primary" /> {t('settingsTitle')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="n_runs">Tekrar Sayısı (n_runs)</Label>
+                    <Label htmlFor="n_runs">{t('runsLabel')}</Label>
                     <Input
                       id="n_runs"
                       type="number"
@@ -705,11 +707,11 @@ export default function BenchmarkPage() {
                       onChange={(e) => setNRuns(Math.max(1, parseInt(e.target.value) || 1))}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Her algoritma-problem çifti için kaç kez çalıştırılacak
+                      {t('runsDesc')}
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="seed">Rastgele Tohum (seed)</Label>
+                    <Label htmlFor="seed">{t('seedLabel')}</Label>
                     <Input
                       id="seed"
                       type="number"
@@ -717,21 +719,22 @@ export default function BenchmarkPage() {
                       onChange={(e) => setSeed(parseInt(e.target.value) || 0)}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Tekrarlanabilir sonuçlar için sabit tohum
+                      {t('seedDesc')}
                     </p>
                   </div>
 
                   {/* Summary */}
                   <div className="p-3 rounded-md bg-muted text-sm space-y-1">
-                    <p className="font-semibold">Özet</p>
+                    <p className="font-semibold">{t('summary')}</p>
                     <p className="text-muted-foreground">
-                      <span className="font-medium text-foreground">{selectedAlgorithms.size}</span> algoritma ×{" "}
-                      <span className="font-medium text-foreground">{selectedProblems.size}</span> problem ×{" "}
-                      <span className="font-medium text-foreground">{nRuns}</span> çalışma ={" "}
-                      <span className="font-bold text-foreground">
-                        {selectedAlgorithms.size * selectedProblems.size * nRuns}
-                      </span>{" "}
-                      deney
+                      {t.rich('experimentsCount', {
+                        algorithms: selectedAlgorithms.size,
+                        problems: selectedProblems.size,
+                        runs: nRuns,
+                        total: selectedAlgorithms.size * selectedProblems.size * nRuns,
+                        important: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
+                        bold: (chunks) => <span className="font-bold text-foreground">{chunks}</span>,
+                      })}
                     </p>
                   </div>
                 </CardContent>
@@ -752,12 +755,12 @@ export default function BenchmarkPage() {
                 {isStarting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Başlatılıyor...
+                    {t('starting')}
                   </>
                 ) : (
                   <>
                     <Play className="mr-2 h-4 w-4" />
-                    Benchmark Başlat
+                    {t('startBenchmark')}
                   </>
                 )}
               </Button>
@@ -773,9 +776,9 @@ export default function BenchmarkPage() {
             <Card className="shadow-md">
               <CardContent className="py-16 text-center">
                 <FlaskConical className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Henüz Çalışma Yok</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('emptyHistory')}</h3>
                 <p className="text-muted-foreground">
-                  Benchmark başlatmak için &quot;Yapılandırma&quot; sekmesine gidin ve algoritmaları problemleri seçip çalıştırın.
+                  {t('emptyHistoryHint')}
                 </p>
               </CardContent>
             </Card>
@@ -785,10 +788,10 @@ export default function BenchmarkPage() {
               <Card className="shadow-md">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-primary" /> Benchmark Çalışması
+                    <Activity className="h-5 w-5 text-primary" /> {t('runTitle')}
                   </CardTitle>
                   <CardDescription>
-                    Çalışma ID: <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{runId}</span>
+                    {t('runId')}: <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{runId}</span>
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -809,19 +812,19 @@ export default function BenchmarkPage() {
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                           <div className="p-3 rounded-md bg-muted">
-                            <p className="text-muted-foreground text-xs">Toplam Deney</p>
+                            <p className="text-muted-foreground text-xs">{t('totalExperiments')}</p>
                             <p className="font-semibold text-lg">{runStatus.total_experiments}</p>
                           </div>
                           <div className="p-3 rounded-md bg-muted">
-                            <p className="text-muted-foreground text-xs">Tamamlanan</p>
+                            <p className="text-muted-foreground text-xs">{t('successCount')}</p>
                             <p className="font-semibold text-lg">{runStatus.completed_experiments}</p>
                           </div>
                           <div className="p-3 rounded-md bg-muted">
-                            <p className="text-muted-foreground text-xs">Sonuç Sayısı</p>
+                            <p className="text-muted-foreground text-xs">{t('resultCount')}</p>
                             <p className="font-semibold text-lg">{runStatus.results_count}</p>
                           </div>
                           <div className="p-3 rounded-md bg-muted">
-                            <p className="text-muted-foreground text-xs">Başlangıç</p>
+                            <p className="text-muted-foreground text-xs">{t('startTime')}</p>
                             <p className="font-semibold text-xs">{new Date(runStatus.start_time).toLocaleTimeString("tr-TR")}</p>
                           </div>
                         </div>
@@ -830,7 +833,7 @@ export default function BenchmarkPage() {
                         {runStatus.message && (
                           <Alert>
                             <Activity className="h-4 w-4" />
-                            <AlertTitle>Durum</AlertTitle>
+                            <AlertTitle>{t('status')}</AlertTitle>
                             <AlertDescription className="font-mono text-xs">{runStatus.message}</AlertDescription>
                           </Alert>
                         )}
@@ -845,18 +848,18 @@ export default function BenchmarkPage() {
                             disabled={isStopping}
                           >
                             {isStopping ? (
-                              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Durduruluyor...</>
+                              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('stopping')}</>
                             ) : (
-                              <><Square className="mr-2 h-4 w-4" /> Benchmark Durdur</>
+                              <><Square className="mr-2 h-4 w-4" /> {t('stopBenchmark')}</>
                             )}
                           </Button>
                         )}
                         {(runStatus.status === "completed" || runStatus.status === "stopped" || runStatus.status === "failed") && (
                           <Button onClick={handleManualFetchResults} disabled={resultsLoading}>
                             {resultsLoading ? (
-                              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Yükleniyor...</>
+                              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {tc('loading')}</>
                             ) : (
-                              <><BarChart3 className="mr-2 h-4 w-4" /> Sonuçları Görüntüle</>
+                              <><BarChart3 className="mr-2 h-4 w-4" /> {t('viewResults')}</>
                             )}
                           </Button>
                         )}
@@ -867,7 +870,7 @@ export default function BenchmarkPage() {
                   {!runStatus && (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                      <span className="ml-2 text-muted-foreground">Durum yükleniyor...</span>
+                      <span className="ml-2 text-muted-foreground">{t('statusLoading')}</span>
                     </div>
                   )}
                 </CardContent>
@@ -884,7 +887,7 @@ export default function BenchmarkPage() {
             <Card className="shadow-md">
               <CardContent className="py-16 text-center">
                 <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-4" />
-                <p className="text-muted-foreground">Sonuçlar yükleniyor...</p>
+                <p className="text-muted-foreground">{t('resultsLoading')}</p>
               </CardContent>
             </Card>
           ) : results && results.results.length > 0 ? (() => {
@@ -901,7 +904,7 @@ export default function BenchmarkPage() {
                           <Activity className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Toplam Deney</p>
+                          <p className="text-sm text-muted-foreground">{t('overallStats.totalExperiments')}</p>
                           <p className="text-2xl font-bold">{analytics.totalExperiments}</p>
                         </div>
                       </div>
@@ -914,7 +917,7 @@ export default function BenchmarkPage() {
                           <Clock className="h-5 w-5 text-blue-600" />
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Toplam Süre</p>
+                          <p className="text-sm text-muted-foreground">{t('overallStats.totalTime')}</p>
                           <p className="text-2xl font-bold">{(analytics.totalTimeMs / 1000).toFixed(1)}s</p>
                         </div>
                       </div>
@@ -927,7 +930,7 @@ export default function BenchmarkPage() {
                           <CheckCircle2 className="h-5 w-5 text-green-600" />
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Başarı Oranı</p>
+                          <p className="text-sm text-muted-foreground">{t('overallStats.successRate')}</p>
                           <p className="text-2xl font-bold">{analytics.successRate.toFixed(1)}%</p>
                         </div>
                       </div>
@@ -940,8 +943,8 @@ export default function BenchmarkPage() {
                           <TrendingUp className="h-5 w-5 text-amber-600" />
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Test Edilen</p>
-                          <p className="text-2xl font-bold">{analytics.algorithmStats.length} Algo</p>
+                          <p className="text-sm text-muted-foreground">{t('overallStats.tested')}</p>
+                          <p className="text-2xl font-bold">{t('overallStats.testedAlgo', { count: analytics.algorithmStats.length })}</p>
                         </div>
                       </div>
                     </CardContent>
@@ -954,8 +957,8 @@ export default function BenchmarkPage() {
                   {gapChartData && gapChartData.length > 0 && (
                     <Card className="shadow-md">
                       <CardHeader>
-                        <CardTitle className="text-base">Ortalama Sapma (%) — Algoritma Bazlı</CardTitle>
-                        <CardDescription>Optimal çözüme olan ortalama yüzde sapma</CardDescription>
+                        <CardTitle className="text-base">{t('charts.avgGapTitle')}</CardTitle>
+                        <CardDescription>{t('charts.avgGapDesc')}</CardDescription>
                       </CardHeader>
                       <CardContent>
                         <ChartContainer
@@ -978,8 +981,8 @@ export default function BenchmarkPage() {
                   {timeChartData && timeChartData.length > 0 && (
                     <Card className="shadow-md">
                       <CardHeader>
-                        <CardTitle className="text-base">Ortalama Çalışma Süresi (ms) — Algoritma Bazlı</CardTitle>
-                        <CardDescription>Algoritmaların ortalama çalışma süreleri</CardDescription>
+                        <CardTitle className="text-base">{t('charts.avgTimeTitle')}</CardTitle>
+                        <CardDescription>{t('charts.avgTimeDesc')}</CardDescription>
                       </CardHeader>
                       <CardContent>
                         <ChartContainer
@@ -1002,9 +1005,9 @@ export default function BenchmarkPage() {
                 {/* Algorithm Stats Table */}
                 <Card className="shadow-md">
                   <CardHeader>
-                    <CardTitle className="text-lg">Algoritma Karşılaştırma Tablosu</CardTitle>
+                    <CardTitle className="text-lg">{t('comparisonTable.title')}</CardTitle>
                     <CardDescription>
-                      Her algoritmanın ortalama, minimum ve maksimum sapma/süre değerleri
+                      {t('comparisonTable.description')}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -1012,13 +1015,13 @@ export default function BenchmarkPage() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Algoritma</TableHead>
-                            <TableHead className="text-center">Test Sayısı</TableHead>
-                            <TableHead className="text-center">Ort. Sapma %</TableHead>
-                            <TableHead className="text-center">Min Sapma %</TableHead>
-                            <TableHead className="text-center">Max Sapma %</TableHead>
-                            <TableHead className="text-center">Ort. Süre (ms)</TableHead>
-                            <TableHead className="text-center">En İyi Tur</TableHead>
+                            <TableHead>{t('comparisonTable.algorithm')}</TableHead>
+                            <TableHead className="text-center">{t('comparisonTable.testsCount')}</TableHead>
+                            <TableHead className="text-center">{t('comparisonTable.avgGap')}</TableHead>
+                            <TableHead className="text-center">{t('comparisonTable.minGap')}</TableHead>
+                            <TableHead className="text-center">{t('comparisonTable.maxGap')}</TableHead>
+                            <TableHead className="text-center">{t('comparisonTable.avgTime')}</TableHead>
+                            <TableHead className="text-center">{t('comparisonTable.bestTour')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1055,9 +1058,9 @@ export default function BenchmarkPage() {
                 {/* Problem Comparison Table */}
                 <Card className="shadow-md">
                   <CardHeader>
-                    <CardTitle className="text-lg">Problem Bazlı Karşılaştırma</CardTitle>
+                    <CardTitle className="text-lg">{t('problemTable2.title')}</CardTitle>
                     <CardDescription>
-                      Her problem için en iyi algoritma ve optimal sapma
+                      {t('problemTable2.description')}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -1065,12 +1068,12 @@ export default function BenchmarkPage() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Problem</TableHead>
-                            <TableHead className="text-center">Optimal</TableHead>
-                            <TableHead className="text-center">En İyi Tur</TableHead>
-                            <TableHead className="text-center">Sapma %</TableHead>
-                            <TableHead className="text-center">En İyi Algoritma</TableHead>
-                            <TableHead className="text-center">Test Edilen Algo.</TableHead>
+                            <TableHead>{t('problemTable2.problem')}</TableHead>
+                            <TableHead className="text-center">{t('problemTable2.optimal')}</TableHead>
+                            <TableHead className="text-center">{t('problemTable2.bestTour')}</TableHead>
+                            <TableHead className="text-center">{t('problemTable2.gap')}</TableHead>
+                            <TableHead className="text-center">{t('problemTable2.bestAlgorithm')}</TableHead>
+                            <TableHead className="text-center">{t('problemTable2.algorithmsTested')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1108,7 +1111,7 @@ export default function BenchmarkPage() {
                 <details className="group">
                   <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2">
                     <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
-                    Ham Sonuçlar ({results.results.length} kayıt)
+                    {t('rawResults', { count: results.results.length })}
                   </summary>
                   <Card className="shadow-md mt-2">
                     <CardContent className="p-0">
@@ -1116,12 +1119,12 @@ export default function BenchmarkPage() {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead>Algoritma</TableHead>
-                              <TableHead>Problem</TableHead>
-                              <TableHead className="text-center">Çalışma #</TableHead>
-                              <TableHead className="text-center">Tur Uzunluğu</TableHead>
-                              <TableHead className="text-center">Sapma %</TableHead>
-                              <TableHead className="text-right">Süre (ms)</TableHead>
+                              <TableHead>{t('rawColumns.algorithm')}</TableHead>
+                              <TableHead>{t('rawColumns.problem')}</TableHead>
+                              <TableHead className="text-center">{t('rawColumns.run')}</TableHead>
+                              <TableHead className="text-center">{t('rawColumns.tourLength')}</TableHead>
+                              <TableHead className="text-center">{t('rawColumns.gap')}</TableHead>
+                              <TableHead className="text-right">{t('rawColumns.duration')}</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -1154,7 +1157,7 @@ export default function BenchmarkPage() {
                 <div className="flex justify-end">
                   <Button variant="outline" onClick={handleExportResults}>
                     <Download className="mr-2 h-4 w-4" />
-                    JSON Olarak İndir
+                    {t('downloadJson')}
                   </Button>
                 </div>
               </>
@@ -1163,9 +1166,9 @@ export default function BenchmarkPage() {
             <Card className="shadow-md">
               <CardContent className="py-16 text-center">
                 <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Henüz Sonuç Yok</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('noResults')}</h3>
                 <p className="text-muted-foreground">
-                  Benchmark tamamlandığında sonuçlar burada görüntülenecek.
+                  {t('noResultsHint')}
                 </p>
               </CardContent>
             </Card>

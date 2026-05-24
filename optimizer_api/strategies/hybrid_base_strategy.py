@@ -32,39 +32,7 @@ class HybridSplitBaseStrategy(BaseRoutingStrategy):
 
     # ── Shared helpers ────────────────────────────────────────────────────────
 
-    def _get_duration(
-        self,
-        from_loc: str,
-        to_loc: str,
-        time_matrix: Dict,
-        coordinates: Dict,
-    ) -> float:
-        """
-        Return travel time between two locations in minutes.
-
-        Resolution order:
-        1. Supabase time_matrix lookup (exact)
-        2. Haversine + speed estimate (coordinate fallback)
-        3. DEFAULT_TRAVEL_FALLBACK_MINUTES with a warning log (last resort)
-        """
-        if from_loc in time_matrix and to_loc in time_matrix[from_loc]:
-            return time_matrix[from_loc][to_loc]
-
-        if from_loc in coordinates and to_loc in coordinates:
-            c1 = coordinates[from_loc]
-            c2 = coordinates[to_loc]
-            dist = haversine_distance(c1["lat"], c1["lng"], c2["lat"], c2["lng"])
-            return estimate_travel_time(dist)
-
-        # FIX-04 (shared): named constant + warning so missing matrix entries
-        # are visible in logs instead of silently returning 15.0.
-        logger.warning(
-            "Distance matrix miss: %s \u2192 %s, using fallback %.1f min",
-            from_loc,
-            to_loc,
-            DEFAULT_TRAVEL_FALLBACK_MINUTES,
-        )
-        return DEFAULT_TRAVEL_FALLBACK_MINUTES
+    # _get_duration is inherited from BaseRoutingStrategy
 
     def _build_distance_matrix(
         self,

@@ -66,7 +66,7 @@ if _NUMBA_OK:
 
     def _fast_pos_match(t1, t2, n):
         """Numba-accelerated pos_match with pure-Python fallback."""
-        if n > 2000:
+        if n > 200:
             return 0.0
         t2_set = set(t2)
         if len(t2_set) != n:
@@ -78,7 +78,7 @@ if _NUMBA_OK:
 else:
     def _fast_pos_match(t1, t2, n):
         """Pure-Python fallback when Numba is unavailable."""
-        if n > 2000:
+        if n > 200:
             return 0.0
         t2_set = set(t2)
         if len(t2_set) != n:
@@ -319,8 +319,7 @@ class R2DMA_TSP(BaseTSPSolver):
         result[a], result[b] = result[b], result[a]
         return result
 
-    def solve(self, coordinates: List[Tuple[float, float]]) -> TSPResult:
-        self._set_problem(coordinates)
+    def _solve(self) -> TSPResult:
         rng = random.Random(self.cfg.seed)
         t_start = time.monotonic()
         dm_np = self._dist_matrix_np if self._dist_matrix_np is not None else None
@@ -341,7 +340,6 @@ class R2DMA_TSP(BaseTSPSolver):
         construct_count = moderate_count = destruct_count = 0
 
         for t in range(1, self.cfg.max_iterations + 1):
-            prev_best = gbest_cost
             offspring = []
             offspring_costs = []
 

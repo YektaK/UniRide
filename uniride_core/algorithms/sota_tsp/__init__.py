@@ -20,6 +20,7 @@ from .paoea_tsp import PAOEA_TSP, PAOEAConfig
 from .cgo_tsp import CGO_TSP, CGOConfig
 from .run_tsp import RUN_TSP, RUNConfig
 from .ls_engine import MultiLayerLS
+from .alns_tsp import ALNS_TSP, ALNSConfig
 
 __all__ = [
     "BaseTSPSolver",
@@ -37,6 +38,8 @@ __all__ = [
     "RUN_TSP",
     "RUNConfig",
     "MultiLayerLS",
+    "ALNS_TSP",
+    "ALNSConfig",
 ]
 
 SOTA_TSP_VERSION = "1.0.0"

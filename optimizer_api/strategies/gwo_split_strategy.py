@@ -100,7 +100,6 @@ class GWOSplitStrategy(HybridSplitBaseStrategy):
         """
         self.config = {**self.DEFAULT_CONFIG, **(config or {})}
         self.seed = self.config.get("seed") or int(time.time() * 1000)
-        self.rng = random.Random(self.seed)
         self._alpha: Optional[Wolf] = None  # Best solution
         self._beta: Optional[Wolf] = None   # Second best
         self._delta: Optional[Wolf] = None  # Third best
@@ -118,15 +117,15 @@ class GWOSplitStrategy(HybridSplitBaseStrategy):
     def description(self) -> str:
         return "Gri Kurt + Optimal Split. Sosyal hiyerarşi ile arama."
 
-    def _shuffle(self, items: List) -> List:
-        """Shuffle list using internal RNG (Fisher-Yates)"""
+    def _shuffle(self, items: List, rng: random.Random) -> List:
+        """Shuffle list using provided RNG (Fisher-Yates)"""
         result = items.copy()
         for i in range(len(result) - 1, 0, -1):
-            j = self.rng.randint(0, i)
+            j = rng.randint(0, i)
             result[i], result[j] = result[j], result[i]
         return result
 
-    def _initialize_pack(self, waypoints: List[str]) -> List[Wolf]:
+    def _initialize_pack(self, waypoints: List[str], rng: random.Random) -> List[Wolf]:
         """Initialize wolf pack with random positions"""
         pack = []
         
@@ -141,7 +140,7 @@ class GWOSplitStrategy(HybridSplitBaseStrategy):
         
         # Random permutations
         for _ in range(self.config["population_size"] - 1):
-            position = self._shuffle(waypoints)
+            position = self._shuffle(waypoints, rng)
             pack.append(Wolf(
                 position=position,
                 fitness=0.0,
@@ -151,8 +150,8 @@ class GWOSplitStrategy(HybridSplitBaseStrategy):
         return pack
 
 
-    def _get_difference_swaps(self, current: List[str], leader: List[str], 
-                               a: float) -> List[Tuple[int, int]]:
+    def _get_difference_swaps(self, current: List[str], leader: List[str],
+                                a: float, rng: random.Random) -> List[Tuple[int, int]]:
         """
         Calculate swaps to move wolf toward leader.
         In continuous GWO, this would be a vector difference.
@@ -166,7 +165,7 @@ class GWOSplitStrategy(HybridSplitBaseStrategy):
                 try:
                     j = current.index(leader[i])
                     # Random factor based on 'a' (exploration-exploitation balance)
-                    if self.rng.random() < a / 2:
+                    if rng.random() < a / 2:
                         swaps.append((i, j))
                 except ValueError:
                     pass
@@ -183,8 +182,8 @@ class GWOSplitStrategy(HybridSplitBaseStrategy):
         
         return new_position
 
-    def _update_position(self, wolf: Wolf, alpha: Wolf, beta: Wolf, delta: Wolf, 
-                         a: float) -> List[str]:
+    def _update_position(self, wolf: Wolf, alpha: Wolf, beta: Wolf, delta: Wolf,
+                         a: float, rng: random.Random) -> List[str]:
         """
         Update wolf position based on alpha, beta, delta.
         
@@ -197,33 +196,33 @@ class GWOSplitStrategy(HybridSplitBaseStrategy):
         new_position = wolf.position.copy()
         
         # Get swap suggestions from each leader
-        alpha_swaps = self._get_difference_swaps(wolf.position, alpha.position, a)
-        beta_swaps = self._get_difference_swaps(wolf.position, beta.position, a)
-        delta_swaps = self._get_difference_swaps(wolf.position, delta.position, a)
-        
+        alpha_swaps = self._get_difference_swaps(wolf.position, alpha.position, a, rng)
+        beta_swaps = self._get_difference_swaps(wolf.position, beta.position, a, rng)
+        delta_swaps = self._get_difference_swaps(wolf.position, delta.position, a, rng)
+
         # Combine swaps with weights (alpha has highest weight)
         all_swaps = []
-        
+
         # Alpha has highest weight (0.7 probability)
         for swap in alpha_swaps:
-            if self.rng.random() < 0.7:
+            if rng.random() < 0.7:
                 all_swaps.append(swap)
-        
+
         # Beta has medium weight (0.5 probability)
         for swap in beta_swaps:
-            if self.rng.random() < 0.5:
+            if rng.random() < 0.5:
                 all_swaps.append(swap)
-        
+
         # Delta has lower weight (0.3 probability)
         for swap in delta_swaps:
-            if self.rng.random() < 0.3:
+            if rng.random() < 0.3:
                 all_swaps.append(swap)
-        
+
         # Apply swaps
         if all_swaps:
             # Apply only a subset of swaps to maintain diversity
             num_swaps = min(len(all_swaps), max(1, int(len(all_swaps) * a / 2)))
-            selected_swaps = self.rng.sample(all_swaps, min(num_swaps, len(all_swaps)))
+            selected_swaps = rng.sample(all_swaps, min(num_swaps, len(all_swaps)))
             new_position = self._apply_swaps(wolf.position, selected_swaps)
         
         return new_position
@@ -312,11 +311,12 @@ class GWOSplitStrategy(HybridSplitBaseStrategy):
         # Override config if provided (user-customizable)
         # Singleton self.config korunuyor; her istek icin local kopya
         effective_config = dict(self.config)
-        rng = random.Random(self.seed)
         if hasattr(request, 'gwo_config') and request.gwo_config:
             effective_config = {**self.config, **request.gwo_config}
             rng = random.Random(effective_config.get("seed", self.seed))
-        
+        else:
+            rng = random.Random(self.seed)
+
         # Load data
         data_loader = DataLoader.get_instance()
         location_ids = [depot.id] + [s.location_code for s in students]
@@ -352,7 +352,7 @@ class GWOSplitStrategy(HybridSplitBaseStrategy):
         waypoints = [s.location_code for s in students]
         
         # Initialize pack
-        pack = self._initialize_pack(waypoints)
+        pack = self._initialize_pack(waypoints, rng)
         
         # Evaluate initial pack and identify leaders
         for wolf in pack:
@@ -380,12 +380,12 @@ class GWOSplitStrategy(HybridSplitBaseStrategy):
             
             for wolf in pack:
                 # Exploration: random search
-                if self.rng.random() < self.config["exploration_rate"] * a / self.config["initial_a"]:
+                if rng.random() < self.config["exploration_rate"] * a / self.config["initial_a"]:
                     # Random perturbation
-                    new_position = self._shuffle(wolf.position)
+                    new_position = self._shuffle(wolf.position, rng)
                 else:
                     # Exploitation: move toward leaders
-                    new_position = self._update_position(wolf, alpha, beta, delta, a)
+                    new_position = self._update_position(wolf, alpha, beta, delta, a, rng)
                 
                 # Local search (every N generations)
                 if iteration % self.config.get("local_search_interval", 15) == 0:

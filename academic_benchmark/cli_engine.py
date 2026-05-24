@@ -114,6 +114,8 @@ except ModuleNotFoundError:
         update_algorithm_hashes,
     )
 
+from uniride_core.algorithms.tsplib_parser import parse_tsplib_text
+
 from academic_benchmark.param_db import (
     save_entry as _param_db_save,
     get_best_for as _param_db_get_best,
@@ -129,13 +131,14 @@ from academic_benchmark.param_spaces import (
 
 try:
     from academic_benchmark.engine_core import AlgorithmRegistry as _AlgoReg
+    import academic_benchmark.core.registry_setup  # Ensure registry is populated in worker processes
     _HAS_NUMBA_REGISTRY = True
 except ImportError:
     _AlgoReg = None
     _HAS_NUMBA_REGISTRY = False
 
 try:
-    from academic_benchmark.benchmark_utils import (
+    from academic_benchmark.tsplib_manager import (
         save_tuning_params_and_solution as _save_best_solution,
     )
 except ImportError:
@@ -179,19 +182,8 @@ def _detect_numba() -> bool:
 _NUMBA_AVAILABLE = _detect_numba()
 
 # Numba modüllerini import edelim
-from optimizer_api.tests.run_interactive_benchmark_v2_numba import (
-    BENCHMARK_PROFILE as DEFAULT_PROFILE,
-    STRATEGIES,
-    VALID_BENCHMARK_PROFILES,
-    _run_meta_heuristic,
-    apply_local_search,
-    convert_route_to_indices,
-    create_np_distance_matrix,
-    create_np_duration_func,
-    create_duration_func,
-    run_single_test,
-)
-from optimizer_api.utils.local_search_numba import LocalSearchType
+from uniride_core.algorithms.numba_strategies import STRATEGIES
+from optimizer_api.utils.local_search_numba import LocalSearchType, apply_local_search
 
 # --- DB cache integration ---
 try:
@@ -291,57 +283,8 @@ class StrategySpec:
     default_params: Dict[str, Any]
     algorithm_type: str
 
-def _clean_tsplib_name(raw: str) -> str:
-    name = raw.lower().strip()
-    for suffix in (".opt.tour", ".opt", ".tsp"):
-        if name.endswith(suffix):
-            name = name[: -len(suffix)]
-    return name.split("/")[-1].split("\\")[-1]
-
-def _parse_tsplib_text(content: str, name_hint: str = "") -> Optional[Dict[str, Any]]:
-    content = content.replace("\r\n", "\n").replace("\r", "\n")
-    coord_m = re.search(r"NODE_COORD_SECTION\s*\n(.*?)(?:\n(?:EOF|DISPLAY_DATA_SECTION)|\Z)", content, re.DOTALL | re.I)
-    if not coord_m:
-        return None
-    header = content[: coord_m.start()]
-    dim_m = re.search(r"DIMENSION\s*[:\s]\s*(\d+)", header, re.I)
-    ewt_m = re.search(r"EDGE_WEIGHT_TYPE\s*[:\s]\s*(\S+)", header, re.I)
-    name_matches = list(re.finditer(r"^NAME\s*[:\s]\s*(\S+)", header, re.I | re.M))
-    
-    if not dim_m:
-        return None
-    
-    raw_name = name_matches[-1].group(1) if name_matches else name_hint
-    name = _clean_tsplib_name(raw_name) or _clean_tsplib_name(name_hint)
-    if not name:
-        return None
-        
-    dimension = int(dim_m.group(1))
-    ewt = ewt_m.group(1).upper() if ewt_m else "EUC_2D"
-    
-    _SUPPORTED_EWT = ("EUC_2D", "EUC_3D", "CEIL_2D", "ATT", "GEO", "GEOM", "NEU_2D")
-    if ewt not in _SUPPORTED_EWT:
-        return None
-
-    coords = []
-    for line in coord_m.group(1).strip().splitlines():
-        parts = line.strip().split()
-        if len(parts) >= 3:
-            try:
-                coords.append((float(parts[1]), float(parts[2])))
-            except ValueError:
-                pass
-                
-    if not coords:
-        return None
-
-    return {
-        "name": name,
-        "dimension": dimension,
-        "edge_weight_type": ewt,
-        "coordinates": coords,
-        "optimal": TSPLIB_OPTIMALS.get(name)
-    }
+# _parse_tsplib_text removed in P3-4 consolidation.
+# Use the canonical version from uniride_core.algorithms.tsplib_parser.
 
 def load_problems(size_limit: int = 0) -> List[DOEProblem]:
     """TSPLIB arşivinden veya özel time_matrix JSON'larından problemleri yükler."""
@@ -407,13 +350,13 @@ def load_problems(size_limit: int = 0) -> List[DOEProblem]:
                             continue
                     except Exception:
                         continue
-                    pdata = _parse_tsplib_text(content, member.name)
+                    pdata = parse_tsplib_text(content, member.name)
                     if pdata and pdata["dimension"] <= (size_limit if size_limit > 0 else pdata["dimension"]):
                         dim = pdata["dimension"]
                         cat = "small" if dim <= 100 else ("medium" if dim <= 500 else "large")
                         _add(DOEProblem(
                             name=pdata["name"], dimension=dim,
-                            coordinates=pdata["coordinates"], optimal=pdata["optimal"],
+                            coordinates=pdata["coordinates"], optimal=TSPLIB_OPTIMALS.get(pdata["name"]),
                             category=cat, source="tsplib"
                         ))
         except Exception as e:
@@ -424,13 +367,13 @@ def load_problems(size_limit: int = 0) -> List[DOEProblem]:
         for fname in os.listdir(TSPLIB_DIR_FALLBACK):
             if fname.lower().endswith(".tsp"):
                 with open(os.path.join(TSPLIB_DIR_FALLBACK, fname), "r", encoding="utf-8") as f:
-                    pdata = _parse_tsplib_text(f.read(), fname)
+                    pdata = parse_tsplib_text(f.read(), fname)
                     if pdata and pdata["dimension"] <= (size_limit if size_limit > 0 else pdata["dimension"]):
                         dim = pdata["dimension"]
                         cat = "small" if dim <= 100 else ("medium" if dim <= 500 else "large")
                         _add(DOEProblem(
                             name=pdata["name"], dimension=dim,
-                            coordinates=pdata["coordinates"], optimal=pdata["optimal"],
+                            coordinates=pdata["coordinates"], optimal=TSPLIB_OPTIMALS.get(pdata["name"]),
                             category=cat, source="tsplib"
                         ))
 
@@ -466,24 +409,44 @@ def _normalize_strategy_entry(entry: Tuple[Any, ...]) -> StrategySpec:
     return StrategySpec(name=name, payload=payload, default_params=params, algorithm_type=algo_type)
 
 def _all_strategy_specs() -> List[StrategySpec]:
-    """Tüm Numba stratejilerini normalize edilmiş spesifikasyonlara dönüştürür.
-
-    Includes both standard STRATEGIES (from benchmark runner) and
-    BILDIRI_STRATEGIES (bildiri2026 native solvers, Step 5).
-    """
-    specs = [_normalize_strategy_entry(entry) for entry in STRATEGIES]
-    for name, payload, params in BILDIRI_STRATEGIES:
+    """Tüm stratejileri (SOTA ve Numba) AlgorithmRegistry'den yükler."""
+    from academic_benchmark.param_spaces import SOTA_PARAM_SPACES, NUMBA_PARAM_SPACES
+    
+    specs = []
+    for algo_name in _AlgoReg.list_algorithms():
+        # Belirle: algoritma türü ve parametre uzayı kaynağı
+        is_sota = algo_name.startswith("SOTA-")
+        source_dict = SOTA_PARAM_SPACES if is_sota else NUMBA_PARAM_SPACES
+        raw_name = algo_name.replace("SOTA-", "").replace("Numba-", "")
+        
+        # Orijinal Numba isimlerine eşleştir (örn. "GA", "PSO")
+        if not is_sota and raw_name in source_dict:
+            lookup_name = raw_name
+        else:
+            lookup_name = raw_name.upper() if is_sota else raw_name
+            
+        space = source_dict.get(lookup_name, {})
+        
+        # Uzaydaki "doe" değerlerinin ilkini varsayılan parametre olarak ata
+        defaults = {}
+        for k, v in space.items():
+            if "doe" in v and v["doe"]:
+                defaults[k] = v["doe"][0]
+                
         specs.append(StrategySpec(
-            name=name,
-            payload=payload,
-            default_params=params,
-            algorithm_type="bildiri_meta",
+            name=algo_name,
+            payload=algo_name,
+            default_params=defaults,
+            algorithm_type="meta_heuristic" if is_sota else "local_search"
         ))
     return specs
 
 def _build_numba_parameter_space(spec: StrategySpec) -> Dict[str, List[Any]]:
-    """DoE için Numba algoritmalarına özel hiperparametre uzayını oluşturur."""
-    return _build_doe_space(spec.name.upper(), source="numba")
+    """DoE için algoritmalara özel hiperparametre uzayını oluşturur."""
+    is_sota = spec.name.startswith("SOTA-")
+    raw_name = spec.name.replace("SOTA-", "").replace("Numba-", "")
+    lookup_name = raw_name.upper() if is_sota else raw_name
+    return _build_doe_space(lookup_name, source="sota" if is_sota else "numba")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # BÖLÜM 3: Çekirdek Çalıştırıcılar ve Paralel İşleme (Runner & Pool)
@@ -504,6 +467,7 @@ def run_single_test_with_matrix(
     hit on the first improve() call within the same run.
     """
     import numpy as _np
+    from optimizer_api.tests.run_interactive_benchmark_v2_numba import create_np_duration_func, convert_route_to_indices, _run_meta_heuristic
     dimension = problem.dimension
     run_params: Dict[str, Any] = {}
     if isinstance(params, dict):
@@ -592,6 +556,7 @@ def _query_edge_weight_type(problem_name: str, db_path: str):
 
 def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], int, int]) -> Dict[str, Any]:
     """Bir parametre kombinasyonunu belirli run sayısınca test eder."""
+    from optimizer_api.tests.run_interactive_benchmark_v2_numba import run_single_test
     problem_dict, strategy_name, strategy_payload, strategy_params, combo_idx, n_runs = task
 
     is_time_matrix = problem_dict.get("is_time_matrix", False)
@@ -646,21 +611,18 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
         seed = 1000 + combo_idx * 100 + run_idx
         # Step 5a: try AlgorithmRegistry first (unified routing)
         if _HAS_NUMBA_REGISTRY:
-            reg_key = str(strategy_payload)
+            reg_key = str(strategy_name)
             if reg_key in _AlgoReg.list_algorithms():
-                try:
-                    executor = _AlgoReg.get_executor(reg_key)
-                    reg_result = executor(problem, strategy_params, seed, run_idx)
-                    result = {
-                        "tour_length": reg_result.tour_cost,
-                        "gap": reg_result.gap_pct if reg_result.gap_pct is not None else float("nan"),
-                        "time_ms": reg_result.elapsed_sec * 1000,
-                        "algorithm_type": "registry",
-                    }
-                    run_results.append(result)
-                    continue
-                except Exception:
-                    pass  # fall through to legacy dispatch
+                executor = _AlgoReg.get_executor(reg_key)
+                reg_result = executor(problem, strategy_params, seed, run_idx)
+                result = {
+                    "tour_length": reg_result.tour_cost,
+                    "gap": reg_result.gap_pct if reg_result.gap_pct is not None else float("nan"),
+                    "time_ms": reg_result.elapsed_sec * 1000,
+                    "algorithm_type": "registry",
+                }
+                run_results.append(result)
+                continue
         # Step 5b: legacy dispatch for bildiri2026 and direct engine calls
         if str(strategy_payload) in ("BILDIRI_PSO", "BILDIRI_GA"):
             if not BILDIRI_STRATEGIES:
@@ -766,6 +728,7 @@ def _run_bildiri_solver(
       - coords[i] = node L(i+1), i.e. 0-indexed in the original list.
     """
     import time as _time
+    from optimizer_api.tests.run_interactive_benchmark_v2_numba import create_np_distance_matrix
     is_tm = problem_dict.get("is_time_matrix", False)
     coords = problem_dict.get("coordinates", [])
     optimal = problem_dict.get("optimal")
@@ -1296,13 +1259,14 @@ def _run_interactive_tuning_flow(
     workers: int,
     metadata: Dict[str, Any],
     use_fractional: bool = False,
+    tuning_method: str = "grid",
     param_overrides: Optional[Dict[str, List[Any]]] = None,
     all_problems: Optional[List[DOEProblem]] = None,
+    skip_cached: bool = True,
 ) -> Dict[str, Dict[str, Any]]:
     """Tuning flow: tune, save to param DB, optionally benchmark on different problems.
     Returns best_params dict."""
-    mode_raw = input("Tuning modu: [G]rid search / [B]ayesian (Optuna) [G]: ").strip().upper()
-    use_bayesian = (mode_raw == 'B')
+    use_bayesian = (tuning_method == 'optuna')
 
     if use_bayesian:
         _run_optuna_tuning_flow(selected_problems, selected_specs, runs, workers, metadata,
@@ -1313,7 +1277,7 @@ def _run_interactive_tuning_flow(
         print("\n[START] NUMBA TUNING Mod Basliyor...")
         best_params = _tune_parameters(
             selected_problems, selected_specs, runs, DOE_MAX_COMBINATIONS, workers, metadata,
-            skip_cached=True, use_fractional=use_fractional, param_overrides=param_overrides,
+            skip_cached=skip_cached, use_fractional=use_fractional, param_overrides=param_overrides,
         )
         save_convergence_history(best_params, HISTORIES_DIR)
 
@@ -1769,6 +1733,10 @@ def _save_best_to_param_db(
             gap = float("nan")
         else:
             gap = float(raw_gap)
+            
+        if math.isinf(best_score) or math.isinf(gap):
+            continue
+            
         runs = entry.get("n_runs", 0) or entry.get("completed", 0)
         if not runs:
             runs = 3
@@ -1941,74 +1909,7 @@ def _select_benchmark_problems_interactive(all_problems: List[DOEProblem]) -> Li
     return selector.interactive_select()
 
 
-# ── AlgorithmRegistry Registration ─────────────────────────────────────────────
-
-def _make_numba_executor(spec_name: str, spec_payload: Any):
-    """Create AlgorithmRegistry-compatible executor for a numba strategy."""
-    def executor(problem, params, seed, run_idx):
-        from optimizer_api.tests.run_interactive_benchmark_v2_numba import run_single_test, TSPLIBProblem
-        tsp_prob = TSPLIBProblem(
-            name=problem.name, dimension=problem.dimension,
-            optimal=problem.optimal or 0,
-            coordinates=problem.coordinates,
-            category=getattr(problem, 'category', 'small'),
-            source=getattr(problem, 'source', 'tsplib'),
-        )
-        if hasattr(problem, 'dist_matrix') and problem.dist_matrix is not None:
-            result = run_single_test(tsp_prob, spec_payload, seed, params, dist_matrix=problem.dist_matrix)
-        else:
-            matrix = _dm_from_cache(problem.name, TSPLIB_DB)
-            result = run_single_test(tsp_prob, spec_payload, seed, params, dist_matrix=matrix)
-        # Tour validation: ensure permutation is valid
-        tour = result.get("tour", [])
-        n = problem.dimension
-        if tour and len(tour) == n:
-            assert len(set(tour)) == n, f"[{spec_name}] Invalid tour: duplicate nodes in {tour}"
-            assert min(tour) == 0, f"[{spec_name}] Invalid tour: min node {min(tour)} != 0"
-            assert max(tour) == n - 1, f"[{spec_name}] Invalid tour: max node {max(tour)} != {n-1}"
-        from academic_benchmark.engine_core import RunResult
-        return RunResult(
-            problem=problem.name, algorithm=spec_name,
-            run=run_idx, seed=seed, dimension=problem.dimension,
-            optimal=problem.optimal, tour_cost=int(result["tour_length"]),
-            gap_pct=result.get("gap"), elapsed_sec=result.get("time_ms", 0) / 1000.0,
-            iterations=result.get("iterations", 0),
-            tour=tour if tour else None,
-        )
-    executor.__name__ = f"numba_{spec_name.lower().replace('-', '_')}_executor"
-    return executor
-
-def _make_numba_warmup_fn(strategy_payload):
-    """Create a warmup function that JIT-compiles Numba kernels on a small problem."""
-    def warmup_fn(probe_problem):
-        try:
-            from optimizer_api.tests.run_interactive_benchmark_v2_numba import run_single_test, TSPLIBProblem
-            tsp_prob = TSPLIBProblem(
-                name=probe_problem.name, dimension=probe_problem.dimension,
-                optimal=probe_problem.optimal or 0,
-                coordinates=probe_problem.coordinates,
-                category=getattr(probe_problem, 'category', 'small'),
-                source=getattr(probe_problem, 'source', 'tsplib'),
-            )
-            run_single_test(tsp_prob, strategy_payload, 42, {"max_iterations": 1})
-        except Exception:
-            pass
-    warmup_fn.__name__ = f"numba_{strategy_payload}_warmup"
-    return warmup_fn
-
-if _HAS_NUMBA_REGISTRY:
-    for _sname, _spayload, _sparams in STRATEGIES:
-        _algoname = f"Numba-{_sname}"
-        _AlgoReg.register(_algoname)(_make_numba_executor(_algoname, _spayload))
-        _spec = _normalize_strategy_entry((_sname, _spayload, _sparams))
-        _AlgoReg.register_param_space(_algoname)(lambda s=_spec: _build_numba_parameter_space(s))
-        _AlgoReg.register_warmup(_algoname)(_make_numba_warmup_fn(_spayload))
-    for _sname, _spayload, _sparams in BILDIRI_STRATEGIES:
-        _AlgoReg.register(_sname)(_make_numba_executor(_sname, _spayload))
-        _spec = StrategySpec(name=_sname, payload=_spayload, default_params=_sparams, algorithm_type="bildiri_meta")
-        _AlgoReg.register_param_space(_sname)(lambda s=_spec: _build_numba_parameter_space(s))
-        _AlgoReg.register_warmup(_sname)(_make_numba_warmup_fn(_spayload))
-
+# ── Parameter Database Submenu ───────────────────────────────────────────────
 
 def _param_db_menu() -> None:
     """Sub-menu for parameter database management."""
@@ -2261,10 +2162,19 @@ def main() -> int:
 
         # ── Choice 1: Tuning Flow ─────────────────────────────────────────
         if choice == '1':
-            use_fractional = False
+            print("\nTuning Stratejisi Secimi:")
+            print("  [1] Optuna / Bayesian (Onerilen - Akilli Arama)")
+            print("  [2] Grid Search (Full Factorial - Tum Kombinasyonlar)")
+            print("  [3] Fractional Grid Search (Rastgele Orneklem)")
+            t_raw = input("Seciminiz [1/2/3]: ").strip()
+            
+            tuning_method = "optuna" if t_raw == '1' else "grid"
+            use_fractional = (t_raw == '3')
+            
+            skip_raw = input("Onceden tuning yapilmis algoritmalar atlansin mi? [E/h]: ").strip().upper()
+            skip_cached = (skip_raw != 'H')
+            
             param_overrides = None
-            frac_raw = input("Fractional fallback kullanilsin mi? (full factorial yerine random ornekleme) [e/H]: ").strip().upper()
-            use_fractional = (frac_raw == 'E')
             edit_raw = input("Parametre uzayini duzenlemek ister misiniz? [e/H]: ").strip().upper()
             if edit_raw == 'E':
                 param_overrides = {}
@@ -2281,7 +2191,8 @@ def main() -> int:
             print(f"Run Sayisi         : {runs}")
             print(f"Worker             : {workers}")
             print(f"Max Komb.          : {DOE_MAX_COMBINATIONS}")
-            print(f"Strateji           : {'Fractional' if use_fractional else 'Sequential'}")
+            print(f"Metod              : {tuning_method.upper()} {'(Fractional)' if use_fractional else ''}")
+            print(f"Onceden Yapilanlari: {'Atla' if skip_cached else 'Uzerine Yaz'}")
             if param_overrides:
                 print(f"Param. Ed.         : {' '.join(param_overrides.keys())}")
 
@@ -2291,11 +2202,13 @@ def main() -> int:
             start_time = time.time()
             _run_interactive_tuning_flow(
                 selected_problems, selected_specs, runs, workers, metadata,
-                use_fractional=use_fractional, param_overrides=param_overrides,
-                all_problems=all_problems,
+                use_fractional=use_fractional, tuning_method=tuning_method, 
+                param_overrides=param_overrides, all_problems=all_problems,
+                skip_cached=skip_cached
             )
             elapsed = time.time() - start_time
             print(f"\n[OK] Toplam sure: {format_time(elapsed)}")
+            print("[BILGI] En iyi parametreler tsplib_data/tsplib.db icine de basariyla kaydedildi.")
             input("\nDevam etmek icin Enter'a basin...")
             continue
 

@@ -21,28 +21,31 @@ import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { register } from "@/lib/supabase-auth";
 import type { DbUser } from "@/types/db";
-
-const registerFormSchema = z.object({
-  name: z.string().min(2, { message: "Ad Soyad en az 2 karakter olmalıdır." }),
-  studentNumber: z.string().regex(/^\d{12}$/, { message: "Öğrenci numarası 12 haneli bir sayı olmalıdır." }),
-  email: z.string().email({ message: "Geçerli bir e-posta adresi girin." })
-    .refine(email => email.endsWith(".edu.tr") || email.endsWith(".edu"), {
-      message: "Lütfen geçerli bir okul e-posta adresi girin (örn: kullanici@okul.edu.tr)."
-    }),
-  password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
-  confirmPassword: z.string().min(6, { message: "Şifre tekrarı en az 6 karakter olmalıdır." }),
-  passwordHint: z.string().min(2, { message: "Lütfen şifrenizi hatırlamak için bir ipucu girin." }).optional().or(z.literal('')),
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Şifreler eşleşmiyor.",
-  path: ["confirmPassword"],
-});
-
-type RegisterFormValues = z.infer<typeof registerFormSchema>;
+import { useTranslations } from "next-intl";
 
 export default function RegisterForm() {
+  const t = useTranslations("component.authRegisterForm");
+  const tc = useTranslations("common");
   const { toast } = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+
+  const registerFormSchema = z.object({
+    name: z.string().min(2, { message: "Name must be at least 2 characters." }),
+    studentNumber: z.string().regex(/^\d{12}$/, { message: t("studentNoError") }),
+    email: z.string().email({ message: "Please enter a valid email address." })
+      .refine(email => email.endsWith(".edu.tr") || email.endsWith(".edu"), {
+        message: "Please enter a valid school email address (e.g. user@school.edu.tr).",
+      }),
+    password: z.string().min(6, { message: t("passwordMinError") }),
+    confirmPassword: z.string().min(6, { message: t("passwordRepeatError") }),
+    passwordHint: z.string().min(2, { message: "Please enter a password hint." }).optional().or(z.literal("")),
+  }).refine(data => data.password === data.confirmPassword, {
+    message: t("passwordMismatch"),
+    path: ["confirmPassword"],
+  });
+
+  type RegisterFormValues = z.infer<typeof registerFormSchema>;
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
@@ -60,30 +63,27 @@ export default function RegisterForm() {
     setIsLoading(true);
 
     try {
-      // Prepare user data for Supabase registration
-      const newUserPayload: Omit<DbUser, 'id' | 'email' | 'createdAt' | 'updatedAt' | 'passwordHash' | 'weeklyScheduleId'> = {
+      const newUserPayload: Omit<DbUser, "id" | "email" | "createdAt" | "updatedAt" | "passwordHash" | "weeklyScheduleId"> = {
         name: data.name,
         studentNumber: data.studentNumber,
-        role: "student", // All registrations are students
+        role: "student",
         passwordHint: data.passwordHint,
         homeAddress: "",
         accessibilityNeeds: [],
       };
 
-      // Register user with Supabase Auth and create Db document
-      // The register function automatically creates the weekly schedule
       const createdUser = await register(data.email, data.password, newUserPayload);
 
       toast({
-        title: "Kayıt Başarılı",
-        description: `Hesabınız başarıyla oluşturuldu: ${createdUser.name}. Giriş sayfasına yönlendiriliyorsunuz.`,
+        title: tc("success"),
+        description: `Account created: ${createdUser.name}. Redirecting to sign in.`,
       });
       router.push("/login");
     } catch (error: any) {
       console.error("Registration error:", error);
       toast({
-        title: "Kayıt Başarısız",
-        description: error.message || "Kullanıcı oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.",
+        title: tc("error"),
+        description: error.message || "An error occurred while creating the account. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -99,9 +99,9 @@ export default function RegisterForm() {
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Ad Soyad</FormLabel>
+              <FormLabel>Full Name</FormLabel>
               <FormControl>
-                <Input placeholder="Adınız Soyadınız" {...field} />
+                <Input placeholder={t("namePlaceholder")} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -112,12 +112,12 @@ export default function RegisterForm() {
           name="studentNumber"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Öğrenci Numarası</FormLabel>
+              <FormLabel>Student Number</FormLabel>
               <FormControl>
-                <Input placeholder="Örn: 202003002016" {...field} />
+                <Input placeholder={t("studentNoPlaceholder")} {...field} />
               </FormControl>
               <FormDescription className="flex items-center gap-1">
-                <Hash className="h-4 w-4" /> 12 haneli okul numaranız.
+                <Hash className="h-4 w-4" /> 12-digit school number.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -128,12 +128,12 @@ export default function RegisterForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Okul E-posta Adresi</FormLabel>
+              <FormLabel>School Email</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="ornek@okul.edu.tr" {...field} />
+                <Input type="email" placeholder="example@school.edu.tr" {...field} />
               </FormControl>
               <FormDescription>
-                Lütfen geçerli okul e-posta adresinizi girin.
+                Please enter your valid school email address.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -144,7 +144,7 @@ export default function RegisterForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Şifre</FormLabel>
+              <FormLabel>Password</FormLabel>
               <FormControl>
                 <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
@@ -157,7 +157,7 @@ export default function RegisterForm() {
           name="confirmPassword"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Şifre Tekrarı</FormLabel>
+              <FormLabel>Confirm Password</FormLabel>
               <FormControl>
                 <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
@@ -170,19 +170,19 @@ export default function RegisterForm() {
           name="passwordHint"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Şifre İpucu (İsteğe Bağlı)</FormLabel>
+              <FormLabel>Password Hint (Optional)</FormLabel>
               <FormControl>
-                <Input placeholder="Örn: İlk evcil hayvanımın adı" {...field} />
+                <Input placeholder={t("hintPlaceholder")} {...field} />
               </FormControl>
               <FormDescription>
-                Şifrenizi unutursanız size gösterilecek bir hatırlatıcı.
+                A reminder shown if you forget your password.
               </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
         <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? "Kayıt Olunuyor..." : "Kayıt Ol"}
+          {isLoading ? t("signingUp") : t("submit")}
           {!isLoading && <UserPlus className="ml-2 h-4 w-4" />}
         </Button>
       </form>

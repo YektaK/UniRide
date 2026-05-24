@@ -87,5 +87,35 @@ class BaseTSPSolver(ABC):
         return total
 
     @abstractmethod
-    def solve(self, coordinates: List[Tuple[float, float]]) -> TSPResult:
-        pass
+    def _solve(self) -> TSPResult:
+        """Subclass implements this — self._dist_matrix and self._n are guaranteed ready."""
+
+    def solve(self, coordinates: Optional[List[Tuple[float, float]]] = None) -> TSPResult:
+        """Solve TSP instance.
+
+        Args:
+            coordinates: Optional list of (x, y) tuples. If omitted, a distance
+                matrix must have been set via set_dist_matrix() first.
+
+        Returns:
+            TSPResult with tour, cost, and stats.
+        """
+        if coordinates is not None:
+            self._set_problem(coordinates)
+        elif self._precomputed_matrix is not None:
+            pm = self._precomputed_matrix
+            if _NUMPY_AVAILABLE and hasattr(pm, 'shape') and len(pm.shape) == 2:
+                n = pm.shape[0]
+            else:
+                n = len(pm)
+            self._set_problem([(0.0, 0.0) for _ in range(n)])
+        else:
+            raise ValueError(
+                "Provide coordinates or call set_dist_matrix() before solve()"
+            )
+        return self._solve()
+
+    def solve_with_matrix(self, dm: object) -> TSPResult:
+        """Helper to solve directly from a precomputed distance matrix."""
+        self.set_dist_matrix(dm)
+        return self.solve()

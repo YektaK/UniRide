@@ -102,7 +102,6 @@ class PSOSplitStrategy(HybridSplitBaseStrategy):
         """
         self.config = {**self.DEFAULT_CONFIG, **(config or {})}
         self.seed = self.config.get("seed") or int(time.time() * 1000)
-        self.rng = random.Random(self.seed)
         self._global_best: Optional[List[str]] = None
         self._generation_stats = []
 
@@ -118,15 +117,15 @@ class PSOSplitStrategy(HybridSplitBaseStrategy):
     def description(self) -> str:
         return "Parçacık Sürü + Optimal Split. Hızlı yakınsama, yüksek kalite."
 
-    def _shuffle(self, items: List) -> List:
-        """Shuffle list using internal RNG (Fisher-Yates)"""
+    def _shuffle(self, items: List, rng: random.Random) -> List:
+        """Shuffle list using provided RNG (Fisher-Yates)"""
         result = items.copy()
         for i in range(len(result) - 1, 0, -1):
-            j = self.rng.randint(0, i)
+            j = rng.randint(0, i)
             result[i], result[j] = result[j], result[i]
         return result
 
-    def _initialize_swarm(self, waypoints: List[str]) -> List[Particle]:
+    def _initialize_swarm(self, waypoints: List[str], rng: random.Random) -> List[Particle]:
         """Initialize swarm with random positions and empty velocities"""
         swarm = []
         
@@ -143,7 +142,7 @@ class PSOSplitStrategy(HybridSplitBaseStrategy):
         
         # Random permutations
         for _ in range(self.config["swarm_size"] - 1):
-            position = self._shuffle(waypoints)
+            position = self._shuffle(waypoints, rng)
             swarm.append(Particle(
                 position=position,
                 velocity=[],
@@ -168,7 +167,7 @@ class PSOSplitStrategy(HybridSplitBaseStrategy):
         return total
 
     def _get_difference_swaps(self, current: List[str], target: List[str],
-                               weight: float) -> List[Tuple[int, int, float]]:
+                                weight: float, rng: random.Random) -> List[Tuple[int, int, float]]:
         """
         Get weighted swaps to transform current toward target.
         Returns: List of (i, j, probability) tuples.
@@ -181,20 +180,20 @@ class PSOSplitStrategy(HybridSplitBaseStrategy):
                 try:
                     j = current.index(target[i])
                     if j != i:
-                        swaps.append((i, j, weight * self.rng.random()))
+                        swaps.append((i, j, weight * rng.random()))
                 except ValueError:
                     pass
         
         return swaps
 
-    def _apply_velocity(self, position: List[str], 
-                        velocity: List[Tuple[int, int, float]]) -> List[str]:
+    def _apply_velocity(self, position: List[str],
+                        velocity: List[Tuple[int, int, float]], rng: random.Random) -> List[str]:
         """Apply velocity swaps probabilistically"""
         new_position = position.copy()
         n = len(new_position)
-        
+
         for swap in velocity:
-            if len(swap) >= 3 and self.rng.random() < swap[2]:
+            if len(swap) >= 3 and rng.random() < swap[2]:
                 i, j = swap[0], swap[1]
                 if 0 <= i < n and 0 <= j < n:
                     new_position[i], new_position[j] = new_position[j], new_position[i]
@@ -202,7 +201,7 @@ class PSOSplitStrategy(HybridSplitBaseStrategy):
         return new_position
 
     def _update_velocity(self, particle: Particle, global_best: Optional[List[str]],
-                         inertia: float) -> List[Tuple[int, int, float]]:
+                         inertia: float, rng: random.Random) -> List[Tuple[int, int, float]]:
         """
         Calculate new velocity using PSO equation:
         v(t+1) = w*v(t) + c1*r1*(pbest-x) + c2*r2*(gbest-x)
@@ -220,15 +219,15 @@ class PSOSplitStrategy(HybridSplitBaseStrategy):
         # Cognitive component: toward personal best
         c1_swaps = self._get_difference_swaps(
             particle.position, particle.personal_best,
-            self.config["cognitive_weight"]
+            self.config["cognitive_weight"], rng
         )
         new_velocity.extend(c1_swaps)
-        
+
         # Social component: toward global best
         if global_best is not None:
             c2_swaps = self._get_difference_swaps(
                 particle.position, global_best,
-                self.config["social_weight"]
+                self.config["social_weight"], rng
             )
             new_velocity.extend(c2_swaps)
         
@@ -308,11 +307,12 @@ class PSOSplitStrategy(HybridSplitBaseStrategy):
         # Override config if provided (user-customizable)
         # Singleton self.config korunuyor; her istek icin local kopya
         effective_config = dict(self.config)
-        rng = random.Random(self.seed)
         if request.pso_config:
             effective_config = {**self.config, **request.pso_config}
             rng = random.Random(effective_config.get("seed", self.seed))
-        
+        else:
+            rng = random.Random(self.seed)
+
         # Load data
         data_loader = DataLoader.get_instance()
         location_ids = [depot.id] + [s.location_code for s in students]
@@ -348,7 +348,7 @@ class PSOSplitStrategy(HybridSplitBaseStrategy):
         waypoints = [s.location_code for s in students]
         
         # Initialize swarm
-        swarm = self._initialize_swarm(waypoints)
+        swarm = self._initialize_swarm(waypoints, rng)
         
         # Evaluate initial swarm
         global_best = None
@@ -380,10 +380,10 @@ class PSOSplitStrategy(HybridSplitBaseStrategy):
             
             for particle in swarm:
                 # Update velocity
-                particle.velocity = self._update_velocity(particle, global_best, inertia)
-                
+                particle.velocity = self._update_velocity(particle, global_best, inertia, rng)
+
                 # Apply velocity
-                new_position = self._apply_velocity(particle.position, particle.velocity)
+                new_position = self._apply_velocity(particle.position, particle.velocity, rng)
                 
                 # Local search (every N generations)
                 if iteration % self.config.get("local_search_interval", 20) == 0:

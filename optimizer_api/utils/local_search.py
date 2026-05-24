@@ -152,16 +152,18 @@ class ThreeOptLocalSearch(BaseLocalSearch):
     Reference: Lin, S. (1965). Computer solutions of the traveling salesman problem.
     """
 
-    def __init__(self, max_iterations: int = 500, first_improvement: bool = False):
+    def __init__(self, max_iterations: int = 500, first_improvement: bool = False, window: int = 12):
         """
         Initialize 3-opt local search.
 
         Args:
             max_iterations: Maximum number of improvement iterations
             first_improvement: If True, accept first improvement found
+            window: Maximum index distance for 3-opt moves to bound complexity
         """
         self.max_iterations = max_iterations
         self.first_improvement = first_improvement
+        self.window = window
 
     def _three_opt_cases(
         self,
@@ -177,32 +179,30 @@ class ThreeOptLocalSearch(BaseLocalSearch):
         A = route[0:i+1], B = route[i+1:j+1], C = route[j+1:k+1], D = route[k+1:]
 
         The 7 reconnection patterns are:
-        1. A-B'-C'-D (2-opt between i and j)
-        2. A-B'-C-D' (2-opt between i and j, reverse end)
-        3. A-B-C'-D' (2-opt between j and k)
-        4. A-B-C-D (original)
-        5. A-B'-C-D (reverse B)
-        6. A-B-C'-D (reverse C)
-        7. A-B'-C'-D (reverse B and C)
+        1. A + B_rev + C_rev + D (reverse B and C)
+        2. A + B_rev + C + D (reverse B only)
+        3. A + B + C_rev + D (reverse C only)
+        4. A + B + C + D (original)
+        5. A + C + B + D (swap B and C)
+        6. A + C_rev + B + D (swap, reverse C)
+        7. A + C + B_rev + D (swap, reverse B)
         """
-        # Segments
         A = route[:i + 1]
         B = route[i + 1:j + 1]
         C = route[j + 1:k + 1]
         D = route[k + 1:]
 
-        # Reversed segments
         B_rev = list(reversed(B))
         C_rev = list(reversed(C))
 
         cases = [
-            A + B_rev + C_rev + D,      # Case 1
-            A + B_rev + C + D,          # Case 5
-            A + B + C_rev + D,          # Case 6
-            A + B_rev + C_rev + D,      # Case 7
-            A + B + C_rev + D,          # Case 3 variant
-            A + B_rev + C + D,          # Case 2 variant
-            A + B + C + D,              # Original
+            A + B_rev + C_rev + D,
+            A + B_rev + C + D,
+            A + B + C_rev + D,
+            A + B + C + D,
+            A + C + B + D,
+            A + C_rev + B + D,
+            A + C + B_rev + D,
         ]
 
         return cases
@@ -228,8 +228,8 @@ class ThreeOptLocalSearch(BaseLocalSearch):
             iterations += 1
 
             for i in range(len(best_route) - 3):
-                for j in range(i + 2, len(best_route) - 1):
-                    for k in range(j + 2, len(best_route)):
+                for j in range(i + 2, min(i + 2 + self.window, len(best_route) - 1)):
+                    for k in range(j + 2, min(j + 2 + self.window, len(best_route))):
                         # Try all reconnection patterns
                         candidates = self._three_opt_cases(best_route, i, j, k)
 

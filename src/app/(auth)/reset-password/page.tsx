@@ -26,35 +26,34 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { getSupabaseClient } from "@/lib/supabase";
-
-const resetPasswordSchema = z.object({
-    password: z.string().min(6, { message: "Şifreniz en az 6 karakter olmalıdır." }),
-    confirmPassword: z.string().min(6, { message: "Lütfen şifrenizi tekrar girin." }),
-}).refine((data) => data.password === data.confirmPassword, {
-    message: "Şifreler eşleşmiyor.",
-    path: ["confirmPassword"],
-});
-
-type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;
+import { useTranslations } from "next-intl";
 
 export default function ResetPasswordPage() {
+    const t = useTranslations("page.auth.resetPassword");
+    const tc = useTranslations("common");
     const { toast } = useToast();
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [hasSessionError, setHasSessionError] = useState(false);
 
+    const resetPasswordSchema = z.object({
+        password: z.string().min(6, { message: t("minLengthError") }),
+        confirmPassword: z.string().min(6, { message: t("minLengthError") }),
+    }).refine((data) => data.password === data.confirmPassword, {
+        message: t("mismatchError"),
+        path: ["confirmPassword"],
+    });
+
+    type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;
+
     useEffect(() => {
-        // Check if the user arrived here with a valid recovery token URL
         const checkSession = async () => {
             try {
                 const supabase = getSupabaseClient();
                 const { data, error } = await supabase.auth.getSession();
 
-                // When clicking a reset link, Supabase magically creates a session via the hash token
                 if (error || !data.session) {
-                    // It's possible the URL logic hasn't parsed the hash yet in some manual flows, 
-                    // but for simplicity we rely on Supabase's automatic hash parsing in auth.getSession().
                     console.warn("No active session found. The reset link may be invalid or expired.");
                 }
             } catch (err) {
@@ -78,16 +77,16 @@ export default function ResetPasswordPage() {
             await updatePassword(data.password);
             setIsSuccess(true);
             toast({
-                title: "Şifre Güncellendi",
-                description: "Şifreniz başarıyla değiştirildi. Şimdi giriş yapabilirsiniz.",
+                title: t("successTitle"),
+                description: t("successDesc"),
             });
             setTimeout(() => {
                 router.push("/login");
             }, 3000);
         } catch (error: any) {
             toast({
-                title: "Güncelleme Başarısız",
-                description: error.message || "Şifre güncellenirken bir hata oluştu. Linkin süresi dolmuş olabilir.",
+                title: t("failedTitle"),
+                description: error.message || t("failedDesc"),
                 variant: "destructive",
             });
         } finally {
@@ -99,9 +98,9 @@ export default function ResetPasswordPage() {
         <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-background">
             <Card className="w-full max-w-md shadow-xl">
                 <CardHeader className="text-center">
-                    <CardTitle className="text-2xl font-bold text-primary">Yeni Şifre Belirle</CardTitle>
+                    <CardTitle className="text-2xl font-bold text-primary">{t("title")}</CardTitle>
                     <CardDescription>
-                        Lütfen hesabınız için yeni bir şifre girin.
+                        Please enter a new password for your account.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -113,7 +112,7 @@ export default function ResetPasswordPage() {
                                     name="password"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Yeni Şifre</FormLabel>
+                                            <FormLabel>New Password</FormLabel>
                                             <FormControl>
                                                 <Input type="password" placeholder="••••••••" {...field} />
                                             </FormControl>
@@ -127,7 +126,7 @@ export default function ResetPasswordPage() {
                                     name="confirmPassword"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Yeni Şifre (Tekrar)</FormLabel>
+                                            <FormLabel>Confirm New Password</FormLabel>
                                             <FormControl>
                                                 <Input type="password" placeholder="••••••••" {...field} />
                                             </FormControl>
@@ -137,7 +136,7 @@ export default function ResetPasswordPage() {
                                 />
 
                                 <Button type="submit" className="w-full" disabled={isLoading}>
-                                    {isLoading ? "Güncelleniyor..." : "Şifremi Güncelle"}
+                                    {isLoading ? t("updating") : t("submit")}
                                     {!isLoading && <Lock className="ml-2 h-4 w-4" />}
                                 </Button>
                             </form>
@@ -145,9 +144,9 @@ export default function ResetPasswordPage() {
                     ) : (
                         <div className="text-center p-4 bg-green-50 text-green-800 rounded-lg dark:bg-green-900/20 dark:text-green-400">
                             <CheckCircle className="mx-auto h-8 w-8 mb-2" />
-                            <h3 className="font-semibold text-lg mb-1">Başarılı!</h3>
+                            <h3 className="font-semibold text-lg mb-1">{tc("success")}</h3>
                             <p className="text-sm">
-                                Şifreniz güncellendi. Giriş sayfasına yönlendiriliyorsunuz...
+                                Password updated. Redirecting to sign in...
                             </p>
                         </div>
                     )}

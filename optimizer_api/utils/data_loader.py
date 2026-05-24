@@ -105,6 +105,7 @@ class DataLoader(metaclass=SingletonMeta):
         request_locations: List[str],
         coordinates: Optional[Dict[str, Dict[str, float]]] = None,
         geo_coords: bool = False,
+        asymmetric_haversine: bool = False,
     ) -> List[List[float]]:
         """
         Extracts an NxN time submatrix for the given subset of location IDs.
@@ -117,13 +118,19 @@ class DataLoader(metaclass=SingletonMeta):
                         converted to estimated travel minutes (for real geographic lat/lng).
                         When False (default), uses L2 euclidean distance, which is correct
                         for TSPLIB EUC_2D abstract X-Y coordinates.
+            asymmetric_haversine: When True, applies deterministic per-edge perturbation
+                        to the haversine matrix to model real-world asymmetric travel times.
+                        Enabled by default when geo_coords=True.
         """
         n = len(request_locations)
 
         if self._use_coordinates or self.time_matrix is None:
             if coordinates:
                 if geo_coords:
-                    return self.build_haversine_matrix(request_locations, coordinates)
+                    return self.build_haversine_matrix(
+                        request_locations, coordinates,
+                        asymmetric=asymmetric_haversine if not geo_coords else True,
+                    )
                 return self.build_euclidean_matrix(request_locations, coordinates)
             return [[0.0] * n for _ in range(n)]
 
@@ -178,6 +185,8 @@ class DataLoader(metaclass=SingletonMeta):
         locations: List[str],
         coordinates: Dict[str, Dict[str, float]],
         avg_speed_kmh: float = 40.0,
+        asymmetric: bool = False,
+        asymmetry_range: float = 0.15,
     ) -> List[List[float]]:
         """
         Build NxN travel-time matrix (minutes) from real geographic lat/lng coordinates
@@ -187,6 +196,9 @@ class DataLoader(metaclass=SingletonMeta):
             locations: Ordered list of location IDs
             coordinates: Dict mapping location_id -> {"lat": float, "lng": float}
             avg_speed_kmh: Average vehicle speed used to convert distance to time
+            asymmetric: When True, applies deterministic per-edge perturbation to model
+                        real-world asymmetric travel times (one-way streets, turns, etc.).
+            asymmetry_range: Max fractional asymmetry (±15% by default).
 
         Returns:
             NxN matrix where matrix[i][j] = estimated travel time in minutes
@@ -201,8 +213,16 @@ class DataLoader(metaclass=SingletonMeta):
                 lat2, lng2 = c2.get("lat", 0.0), c2.get("lng", 0.0)
                 dist_m = haversine_distance(lat1, lng1, lat2, lng2)
                 travel_min = estimate_travel_time(dist_m, avg_speed_kmh)
-                matrix[i][j] = travel_min
-                matrix[j][i] = travel_min
+                if asymmetric:
+                    h_ij = hash((locations[i], locations[j])) & 0xFFFFFFFF
+                    f_ij = 1.0 + asymmetry_range * (2.0 * (h_ij % 1000) / 1000.0 - 1.0)
+                    h_ji = hash((locations[j], locations[i])) & 0xFFFFFFFF
+                    f_ji = 1.0 + asymmetry_range * (2.0 * (h_ji % 1000) / 1000.0 - 1.0)
+                    matrix[i][j] = travel_min * f_ij
+                    matrix[j][i] = travel_min * f_ji
+                else:
+                    matrix[i][j] = travel_min
+                    matrix[j][i] = travel_min
         return matrix
 
     def get_duration(self, from_loc: str, to_loc: str) -> float:
@@ -236,12 +256,3 @@ def euclidean_distance(x1: float, y1: float, x2: float, y2: float) -> float:
 
 
 from utils.haversine import haversine_distance, estimate_travel_time
-
-
-def euclidean_distance(x1: float, y1: float, x2: float, y2: float) -> float:
-    """
-    Calculate euclidean (L2) distance between two 2D points.
-    This is the standard distance metric for TSPLIB EUC_2D problems.
-    """
-    import math
-    return math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)

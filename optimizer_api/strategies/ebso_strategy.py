@@ -64,18 +64,7 @@ class E2BSoStrategy(BaseRoutingStrategy):
             "Kenar entropisi ile keşif/sömürü dengesi, ALNS + çok katmanlı LS."
         )
 
-    def _get_duration(self, from_loc: str, to_loc: str, time_matrix: Dict, coordinates: Dict) -> float:
-        """Get duration between locations using time matrix or coordinates."""
-        if from_loc in time_matrix and to_loc in time_matrix[from_loc]:
-            return time_matrix[from_loc][to_loc]
-
-        if from_loc in coordinates and to_loc in coordinates:
-            c1 = coordinates[from_loc]
-            c2 = coordinates[to_loc]
-            dist = euclidean_distance(c1["lat"], c1["lng"], c2["lat"], c2["lng"])
-            return estimate_travel_time(dist)
-
-        return DEFAULT_TRAVEL_FALLBACK_MINUTES
+    # _get_duration inherited from BaseRoutingStrategy
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:
         """Execute E²BSO optimization on the routing problem.
@@ -152,9 +141,7 @@ class E2BSoStrategy(BaseRoutingStrategy):
         try:
             e2bso = E2BSO_TSP(self._config)
             matrix = [[float(int_dm[i][j]) for j in range(n)] for i in range(n)]
-            e2bso.set_dist_matrix(matrix)
-            dummy_coords = [(0.0, 0.0) for _ in range(n)]
-            result = e2bso.solve(dummy_coords)
+            result = e2bso.solve_with_matrix(matrix)
 
             # Convert E²BSO result tour to student order
             best_order = [student_ids[idx] for idx in result.tour]

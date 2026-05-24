@@ -82,7 +82,7 @@ def _random_tour(n: int, rng: random.Random) -> List[int]:
 
 
 def _chaos_merge(tour_a: List[int], tour_b: List[int], chaos_seq: List[float],
-                 dist_matrix: List[List[float]]) -> List[int]:
+                 dist_matrix: List[List[float]], rng: random.Random) -> List[int]:
     """Merge two partial tours by interleaving cities with chaos-controlled randomness.
 
     Uses chaos values to decide which tour to pick next city from,
@@ -120,7 +120,7 @@ def _chaos_merge(tour_a: List[int], tour_b: List[int], chaos_seq: List[float],
 
     # Add missing cities
     missing = [c for c in range(n_total) if c not in seen]
-    random.shuffle(missing)
+    rng.shuffle(missing)
     cleaned.extend(missing)
 
     return cleaned
@@ -233,7 +233,7 @@ class CGO_TSP(BaseTSPSolver):
         """Expand seeds by merging pairs using chaos-controlled interleaving."""
         new_seeds = []
         for i in range(0, len(seeds) - 1, 2):
-            merged = _chaos_merge(seeds[i], seeds[i + 1], chaos_seq, self._dist_matrix)
+            merged = _chaos_merge(seeds[i], seeds[i + 1], chaos_seq, self._dist_matrix, self._rng)
             new_seeds.append(merged)
         # If odd number, keep last seed
         if len(seeds) % 2 == 1:
@@ -248,29 +248,25 @@ class CGO_TSP(BaseTSPSolver):
         if not missing:
             return seed[:n]  # Already full
 
-        # Insert missing cities at best positions
         tour = seed[:]
         for city in missing:
             best_pos = len(tour)
-            best_cost = float("inf")
-            for pos in range(len(tour) + 1):
-                # Calculate cost of inserting city at pos
-                test_tour = tour[:pos] + [city] + tour[pos:]
-                cost = 0.0
-                for k in range(len(test_tour)):
-                    cost += self._dist_matrix[test_tour[k]][test_tour[(k + 1) % len(test_tour)]]
-                if cost < best_cost:
-                    best_cost = cost
+            best_delta = float("inf")
+            n_t = len(tour)
+            for pos in range(n_t + 1):
+                pred = tour[(pos - 1) % n_t]
+                succ = tour[pos % n_t]
+                delta = self._dist_matrix[pred][city] + self._dist_matrix[city][succ] - self._dist_matrix[pred][succ]
+                if delta < best_delta:
+                    best_delta = delta
                     best_pos = pos
             tour = tour[:best_pos] + [city] + tour[best_pos:]
 
         return tour
 
-    def solve(self, coordinates: List[Tuple[float, float]]) -> TSPResult:
-        """Run CGO optimization on the TSP instance."""
+    def _solve(self) -> TSPResult:
         t_start = time.perf_counter()
-        n = len(coordinates)
-        self._set_problem(coordinates)
+        n = self._n
 
         if n < 3:
             tour = list(range(n))
@@ -332,7 +328,7 @@ class CGO_TSP(BaseTSPSolver):
                     seeds_a = self._create_seeds(parent_a, n)
                     seeds_b = self._create_seeds(parent_b, n)
                     iter_chaos = _chaos_sequence(n, self.cfg.chaos_rate, self._rng)
-                    merged = _chaos_merge(seeds_a[0], seeds_b[0], iter_chaos, self._dist_matrix)
+                    merged = _chaos_merge(seeds_a[0], seeds_b[0], iter_chaos, self._dist_matrix, self._rng)
                     child = self._seed_to_full_tour(merged, n)
                 elif c_val > 0.3:
                     # OX crossover
@@ -347,7 +343,7 @@ class CGO_TSP(BaseTSPSolver):
                         child = _mutate_2opt(parent_a, self._rng)
 
                 # Local search refinement (lightweight)
-                child, _, _ = MultiLayerLS.improve(child, self._dist_matrix, intensity="light", time_limit=self.cfg.ls_time_limit, three_opt_window=self.cfg.three_opt_window)
+                child, _, _ = MultiLayerLS.improve(child, self._dist_matrix, dm_np=None, intensity="light", time_limit=self.cfg.ls_time_limit, three_opt_window=self.cfg.three_opt_window)
                 child_cost = self.tour_length(child)
 
                 new_population.append(child)
@@ -369,7 +365,7 @@ class CGO_TSP(BaseTSPSolver):
             if iteration > 0 and abs(history[-1] - history[-2]) < 1e-6:
                 # Stagnation: apply chaos-based perturbation
                 perturbed = _mutate_swap(best_tour, self._rng, max(1, int(n * 0.1)))
-                perturbed, _, _ = MultiLayerLS.improve(perturbed, self._dist_matrix, intensity="light", time_limit=self.cfg.ls_time_limit, three_opt_window=self.cfg.three_opt_window)
+                perturbed, _, _ = MultiLayerLS.improve(perturbed, self._dist_matrix, dm_np=None, intensity="light", time_limit=self.cfg.ls_time_limit, three_opt_window=self.cfg.three_opt_window)
                 perturbed_cost = self.tour_length(perturbed)
                 if perturbed_cost <= best_cost:
                     best_tour = perturbed[:]

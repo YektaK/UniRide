@@ -46,7 +46,7 @@ from strategies.rdma_strategy import R2DMAStrategy
 from strategies.aoea_strategy import PAOEAStrategy
 
 # Pipeline B: Split-based strategies
-from strategies.ga_split_strategy import GASplitStrategy
+from strategies.ga_split_strategy import GASplitStrategy, GAEnhancedSplitStrategy
 from strategies.pso_split_strategy import PSOSplitStrategy
 from strategies.hho_split_strategy import HHOSplitStrategy
 from strategies.gwo_split_strategy import GWOSplitStrategy
@@ -87,6 +87,7 @@ _ortools_strategy = ORToolsCVRPStrategy()
 
 # Pipeline B instances
 _ga_split_strategy = GASplitStrategy()
+_ga_split_enhanced_strategy = GAEnhancedSplitStrategy()
 _pso_split_strategy = PSOSplitStrategy()
 _hho_split_strategy = HHOSplitStrategy()
 _gwo_split_strategy = GWOSplitStrategy()
@@ -143,6 +144,8 @@ STRATEGY_REGISTRY: Dict[str, Optional[BaseRoutingStrategy]] = {
     # GA + Split
     "ga_split": _ga_split_strategy,
     "ga-split": _ga_split_strategy,  # Alias
+    "ga_split_enhanced": _ga_split_enhanced_strategy,
+    "ga-split-enhanced": _ga_split_enhanced_strategy,  # Alias
     
     # PSO + Split
     "pso_split": _pso_split_strategy,

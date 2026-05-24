@@ -15,32 +15,31 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-// RadioGroup importları kaldırıldı
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
-// UserRole importu kaldırıldı
 import { LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-const loginFormSchema = z.object({
-  emailOrUsername: z.string().min(1, { message: "Lütfen e-posta veya kullanıcı adınızı girin." }),
-  password: z.string().min(1, { message: "Lütfen şifrenizi girin." }),
-  // role alanı kaldırıldı
-});
-
-type LoginFormValues = z.infer<typeof loginFormSchema>;
+import { useTranslations } from "next-intl";
 
 export default function LoginForm() {
+  const t = useTranslations("component.authLoginForm");
+  const tc = useTranslations("common");
   const { login, isLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+
+  const loginFormSchema = z.object({
+    emailOrUsername: z.string().min(1, { message: "Please enter your email or username." }),
+    password: z.string().min(1, { message: "Please enter your password." }),
+  });
+
+  type LoginFormValues = z.infer<typeof loginFormSchema>;
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
       emailOrUsername: "",
       password: "",
-      // role default değeri kaldırıldı
     },
   });
 
@@ -48,9 +47,9 @@ export default function LoginForm() {
     const emailOrNum = form.getValues().emailOrUsername;
     if (!emailOrNum) {
       toast({
-        title: "Bilgi Eksik",
-        description: "Lütfen ipucunu görmek için e-posta adresinizi veya öğrenci numaranızı girin.",
-        variant: "destructive"
+        title: "Information Missing",
+        description: "Please enter your email or student number to see the hint.",
+        variant: "destructive",
       });
       return;
     }
@@ -59,19 +58,19 @@ export default function LoginForm() {
       const res = await fetch("/api/auth/hint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ emailOrStudentNumber: emailOrNum })
+        body: JSON.stringify({ emailOrStudentNumber: emailOrNum }),
       });
       const data = await res.json();
 
       toast({
-        title: "💡 Şifre İpucu",
-        description: data.hint || "Özel bir ipucu bulunamadı.",
+        title: "\uD83D\uDCA1 Password Hint",
+        description: data.hint || "No custom hint found.",
       });
     } catch (e) {
       toast({
-        title: "Hata",
-        description: "İpucu getirilemedi.",
-        variant: "destructive"
+        title: tc("error"),
+        description: "Could not fetch hint.",
+        variant: "destructive",
       });
     }
   }
@@ -80,14 +79,14 @@ export default function LoginForm() {
     try {
       await login(data.emailOrUsername, data.password);
       toast({
-        title: "Giriş Başarılı",
-        description: "Kontrol paneline yönlendiriliyorsunuz...",
+        title: t("successTitle"),
+        description: "Redirecting to dashboard...",
       });
       router.push("/dashboard");
     } catch (error: any) {
       toast({
-        title: "Giriş Başarısız",
-        description: error.message || "E-posta/kullanıcı adı veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.",
+        title: t("failedTitle"),
+        description: error.message || t("failedDesc"),
         variant: "destructive",
       });
     }
@@ -101,9 +100,9 @@ export default function LoginForm() {
           name="emailOrUsername"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>E-posta veya Kullanıcı Adı</FormLabel>
+              <FormLabel>Email or Username</FormLabel>
               <FormControl>
-                <Input placeholder="ornek@uniride.com veya kullanici_adim" {...field} />
+                <Input placeholder="example@uniride.com or your_username" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -115,12 +114,12 @@ export default function LoginForm() {
           render={({ field }) => (
             <FormItem>
               <div className="flex items-center justify-between">
-                <FormLabel>Şifre</FormLabel>
+                <FormLabel>Password</FormLabel>
                 <Link
                   href="/forgot-password"
                   className="text-sm font-medium text-primary hover:underline"
                 >
-                  Şifremi unuttum
+                  Forgot password?
                 </Link>
               </div>
               <FormControl>
@@ -133,15 +132,14 @@ export default function LoginForm() {
                   onClick={fetchHint}
                   className="text-xs text-muted-foreground hover:text-primary transition-colors"
                 >
-                  Şifre ipucu göster
+                  Show password hint
                 </button>
               </div>
             </FormItem>
           )}
         />
-        {/* Rol seçimi FormField'ı kaldırıldı */}
         <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? "Giriş Yapılıyor..." : "Giriş Yap"}
+          {isLoading ? t("signingIn") : t("submit")}
           {!isLoading && <LogIn className="ml-2 h-4 w-4" />}
         </Button>
       </form>

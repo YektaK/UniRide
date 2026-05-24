@@ -64,11 +64,35 @@ class BenchmarkRunState:
 
 class BenchmarkStateManager:
     """Thread-safe manager for benchmark runs with concurrent limit enforcement."""
-    
-    def __init__(self):
+
+    DEFAULT_TTL_SECONDS = 7200
+    DEFAULT_MAX_RUNS = 100
+
+    def __init__(self, ttl_seconds: int = DEFAULT_TTL_SECONDS, max_runs: int = DEFAULT_MAX_RUNS):
         self._runs: Dict[str, BenchmarkRunState] = {}
         self._lock = threading.Lock()
+        self._ttl = ttl_seconds
+        self._max_runs = max_runs
     
+    def _evict_expired(self):
+        now = datetime.now(timezone.utc)
+        cutoff = now.timestamp() - self._ttl
+        terminal = {BenchmarkStatus.COMPLETED, BenchmarkStatus.FAILED, BenchmarkStatus.STOPPED}
+        expired = [
+            rid for rid, s in self._runs.items()
+            if s.status in terminal and s.end_time
+            and datetime.fromisoformat(s.end_time).timestamp() < cutoff
+        ]
+        for rid in expired:
+            del self._runs[rid]
+        terminal_runs = sorted(
+            [(rid, s) for rid, s in self._runs.items() if s.status in terminal],
+            key=lambda x: x[1].end_time or ""
+        )
+        while len(terminal_runs) > self._max_runs:
+            rid, _ = terminal_runs.pop(0)
+            del self._runs[rid]
+
     def can_start_run(self) -> bool:
         """
         Check if a new benchmark run can start without exceeding concurrent limit.
@@ -77,6 +101,7 @@ class BenchmarkStateManager:
             True if running count < MAX_CONCURRENT_BENCHMARKS, False otherwise
         """
         with self._lock:
+            self._evict_expired()
             running_count = len([
                 s for s in self._runs.values()
                 if s.status == BenchmarkStatus.RUNNING
@@ -86,6 +111,7 @@ class BenchmarkStateManager:
     def create_run(self, run_id: str, total_experiments: int, parameters: Dict) -> BenchmarkRunState:
         """Create a new benchmark run"""
         with self._lock:
+            self._evict_expired()
             state = BenchmarkRunState(
                 run_id=run_id,
                 total_experiments=total_experiments,
@@ -97,6 +123,7 @@ class BenchmarkStateManager:
     def get_run(self, run_id: str) -> Optional[BenchmarkRunState]:
         """Get a benchmark run state"""
         with self._lock:
+            self._evict_expired()
             return self._runs.get(run_id)
     
     def update_progress(self, run_id: str, completed: int, message: str = ""):
@@ -146,6 +173,7 @@ class BenchmarkStateManager:
     def list_runs(self) -> List[BenchmarkRunState]:
         """List all benchmark runs"""
         with self._lock:
+            self._evict_expired()
             return list(self._runs.values())
 
 

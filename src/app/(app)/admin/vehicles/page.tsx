@@ -3,6 +3,7 @@
 
 import type { Vehicle } from "@/types";
 import React, { useState, useEffect } from "react";
+import { useTranslations } from 'next-intl';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, Bus } from "lucide-react";
@@ -12,6 +13,8 @@ import { adminApi } from "@/lib/admin-api";
 import { useToast } from "@/hooks/use-toast";
 
 export default function VehiclesPage() {
+  const t = useTranslations('page.admin.vehicles');
+  const tc = useTranslations('common');
   const { toast } = useToast();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,8 +41,8 @@ export default function VehiclesPage() {
       } catch (error) {
         console.error("Error loading vehicles:", error);
         toast({
-          title: "Yükleme Hatası",
-          description: "Araçlar yüklenirken bir hata oluştu.",
+          title: tc('error'),
+          description: t('loadError'),
           variant: "destructive",
         });
       } finally {
@@ -65,14 +68,14 @@ export default function VehiclesPage() {
         await adminApi.vehicles.delete(vehicleId);
         setVehicles(vehicles.filter((v) => v.id !== vehicleId));
         toast({
-          title: "Araç Silindi",
-          description: "Araç başarıyla silindi.",
+          title: tc('success'),
+          description: t('deleted'),
         });
       } catch (error) {
         console.error("Error deleting vehicle:", error);
         toast({
-          title: "Silme Hatası",
-          description: "Araç silinirken bir hata oluştu.",
+          title: tc('error'),
+          description: t('deleteError'),
           variant: "destructive",
         });
       }
@@ -89,8 +92,8 @@ export default function VehiclesPage() {
           vehicles.map((v) => (v.id === vehicleData.id ? vehicleData : v))
         );
         toast({
-          title: "Araç Güncellendi",
-          description: `${vehicleData.name} başarıyla güncellendi.`,
+          title: tc('success'),
+          description: t('updated'),
         });
       } else {
         // Create new vehicle
@@ -109,19 +112,19 @@ export default function VehiclesPage() {
         };
         setVehicles([...vehicles, convertedVehicle]);
         toast({
-          title: "Araç Eklendi",
-          description: `${vehicleData.name} başarıyla eklendi.`,
+          title: tc('success'),
+          description: t('added'),
         });
       }
       setIsDialogOpen(false);
       setEditingVehicle(null);
     } catch (error) {
       console.error("Error saving vehicle:", error);
-      toast({
-        title: "Kaydetme Hatası",
-        description: "Araç kaydedilirken bir hata oluştu.",
-        variant: "destructive",
-      });
+        toast({
+          title: tc('error'),
+          description: t('saveError'),
+          variant: "destructive",
+        });
     }
   };
 

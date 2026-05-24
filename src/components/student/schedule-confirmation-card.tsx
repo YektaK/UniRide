@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ interface ScheduleConfirmationCardProps {
   dropoffTime: string;
   notificationMessage: string;
   relevantDate: string;
-  rideDate?: string; // ISO date string for API
+  rideDate?: string;
   hasRide?: boolean;
 }
 
@@ -29,6 +30,8 @@ export default function ScheduleConfirmationCard({
   relevantDate,
   rideDate,
 }: ScheduleConfirmationCardProps) {
+  const t = useTranslations("component.scheduleConfirmationCard");
+  const tc = useTranslations("common");
   const { toast } = useToast();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -36,7 +39,6 @@ export default function ScheduleConfirmationCard({
   const [isPastDeadline, setIsPastDeadline] = useState(false);
   const [deadlineTime, setDeadlineTime] = useState<string>("");
 
-  // Helper to get auth headers for API calls
   const getAuthHeaders = async (): Promise<Record<string, string>> => {
     const supabase = getSupabaseClient();
     const { data: { session } } = await supabase.auth.getSession();
@@ -47,7 +49,6 @@ export default function ScheduleConfirmationCard({
     };
   };
 
-  // Check existing ride status on mount
   useEffect(() => {
     const checkStatus = async () => {
       if (!user?.id || !rideDate) return;
@@ -96,21 +97,21 @@ export default function ScheduleConfirmationCard({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "İşlem başarısız");
+        throw new Error(data.error || t("operationFailed"));
       }
 
       setStatus(data.status);
       setIsPastDeadline(data.isPastDeadline);
 
       toast({
-        title: action === "confirm" ? "Servis Onaylandı" :
-          action === "cancel" ? "Servis İptal Edildi" : "Değişiklik Talebi",
+        title: action === "confirm" ? t("rideConfirmed") :
+          action === "cancel" ? t("rideCancelled") : t("changeRequested"),
         description: data.message,
         variant: action === "cancel" ? "destructive" : "default",
       });
     } catch (error: any) {
       toast({
-        title: "Hata",
+        title: tc("error"),
         description: error.message,
         variant: "destructive",
       });
@@ -123,17 +124,16 @@ export default function ScheduleConfirmationCard({
     if (!status) return null;
 
     const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-      confirmed: { label: "Onaylandı", variant: "default" },
-      pending_admin_approval: { label: "Onay Bekliyor", variant: "secondary" },
-      cancelled_by_student: { label: "İptal Edildi", variant: "destructive" },
-      pending_student_confirmation: { label: "Onay Bekleniyor", variant: "outline" },
+      confirmed: { label: t("confirmed"), variant: "default" },
+      pending_admin_approval: { label: t("statusPending"), variant: "secondary" },
+      cancelled_by_student: { label: t("statusCancelled"), variant: "destructive" },
+      pending_student_confirmation: { label: t("statusAwaiting"), variant: "outline" },
     };
 
     const info = statusMap[status] || { label: status, variant: "outline" as const };
     return <Badge variant={info.variant}>{info.label}</Badge>;
   };
 
-  // Get next weekday for default date
   const getNextWeekday = () => {
     const date = new Date();
     date.setDate(date.getDate() + 1);
@@ -149,7 +149,7 @@ export default function ScheduleConfirmationCard({
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-xl">
             <BellRing className="h-6 w-6 text-accent" />
-            Servis Planı Onayı: {relevantDate}
+            {t("cardTitle", { relevantDate })}
           </CardTitle>
           {getStatusBadge()}
         </div>
@@ -157,14 +157,14 @@ export default function ScheduleConfirmationCard({
           {isPastDeadline ? (
             <span className="text-yellow-600 flex items-center gap-1">
               <Clock className="h-4 w-4" />
-              Onay süresi geçti. Değişiklikler yönetici onayı gerektirir.
+              {t("pastDeadline")}
             </span>
           ) : deadlineTime ? (
             <span className="text-muted-foreground">
-              Onay süresi: Bugün saat {deadlineTime}'a kadar
+              {t("deadlineInfo", { deadlineTime })}
             </span>
           ) : (
-            `Aşağıda ${relevantDate} için önerilen servis saatleriniz bulunmaktadır.`
+            t("defaultDescription", { relevantDate })
           )}
         </CardDescription>
       </CardHeader>
@@ -172,13 +172,13 @@ export default function ScheduleConfirmationCard({
         <p className="text-sm">{notificationMessage}</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 bg-background/50 rounded-md">
           <div className="font-medium">
-            <p className="text-muted-foreground text-xs">Tahmini Alınış Saati:</p>
+            <p className="text-muted-foreground text-xs">{t("pickupLabel")}</p>
             <p className="text-lg text-primary flex items-center gap-1">
               <CalendarClock className="h-5 w-5" />{pickupTime}
             </p>
           </div>
           <div className="font-medium">
-            <p className="text-muted-foreground text-xs">Tahmini Bırakılış Saati (Eve):</p>
+            <p className="text-muted-foreground text-xs">{t("dropoffLabel")}</p>
             <p className="text-lg text-primary flex items-center gap-1">
               <CalendarClock className="h-5 w-5" />{dropoffTime}
             </p>
@@ -194,7 +194,7 @@ export default function ScheduleConfirmationCard({
             className="w-full sm:w-auto"
           >
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
-            İptal Et
+            {t("cancelButton")}
           </Button>
         )}
         {!isConfirmed && !isCancelled && (
@@ -205,7 +205,7 @@ export default function ScheduleConfirmationCard({
               disabled={loading}
               className="w-full sm:w-auto"
             >
-              <Edit3 className="mr-2 h-4 w-4" /> Değiştir
+              <Edit3 className="mr-2 h-4 w-4" /> {t("changeButton")}
             </Button>
             <Button
               onClick={() => handleAction("confirm")}
@@ -213,7 +213,7 @@ export default function ScheduleConfirmationCard({
               className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto"
             >
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-              Onayla
+              {t("confirmButton")}
             </Button>
           </>
         )}
@@ -224,7 +224,7 @@ export default function ScheduleConfirmationCard({
             className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto"
           >
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-            Yeniden Onayla
+            {t("reconfirmButton")}
           </Button>
         )}
       </CardFooter>

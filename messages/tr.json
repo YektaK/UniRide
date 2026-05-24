@@ -1,0 +1,789 @@
+{
+  "common": {
+    "appName": "UniRide",
+    "appDescription": "Üniversite Ulaşım Destek Sistemi",
+    "loading": "Yükleniyor...",
+    "error": "Hata",
+    "success": "Başarılı",
+    "warning": "Uyarı",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "edit": "Düzenle",
+    "close": "Kapat",
+    "search": "Ara",
+    "filter": "Filtrele",
+    "all": "Tümü",
+    "none": "Hiçbiri",
+    "select": "Seç",
+    "clear": "Temizle",
+    "confirm": "Onayla",
+    "retry": "Tekrar Dene",
+    "back": "Geri",
+    "next": "İleri",
+    "done": "Tamam",
+    "submit": "Gönder",
+    "noResults": "Sonuç bulunamadı.",
+    "lightMode": "Aydınlık mod",
+    "darkMode": "Karanlık mod",
+    "recommended": "Önerilen",
+    "selectAll": "Tümünü Seç",
+    "deselectAll": "Seçimi Kaldır",
+    "compact": "Kompakt",
+    "details": "Detaylar",
+    "configuration": "Yapılandırma",
+    "sidebar": {
+      "dashboard": "Kontrol Paneli",
+      "profile": "Profilim",
+      "mySchedule": "Ders Programım",
+      "rideRequest": "Servis Talebi",
+      "myRequests": "Taleplerim",
+      "trackRide": "Servis Takibi",
+      "vehicleManagement": "Araç Yönetimi",
+      "userManagement": "Kullanıcı Yönetimi",
+      "schedules": "Ders Programları",
+      "rideRequests": "Servis Talepleri",
+      "driverAssignments": "Şoför Görevlendirmeleri",
+      "vehiclePlanning": "Araç Planlama",
+      "algorithmCompare": "Algoritma Karşılaştırma",
+      "benchmarkSuite": "Benchmark Suite",
+      "routeTest": "Rota Testi",
+      "reports": "Raporlar",
+      "settings": "Ayarlar",
+      "myTasks": "Görevlerim",
+      "navigation": "Navigasyon",
+      "pastTrips": "Geçmiş Seferler",
+      "logout": "Çıkış Yap"
+    },
+    "status": {
+      "running": "Çalışıyor",
+      "completed": "Tamamlandı",
+      "failed": "Başarısız",
+      "stopped": "Durduruldu",
+      "queued": "Sıraya Alındı",
+      "loading": "Yükleniyor...",
+      "planned": "Planlandı",
+      "inProgress": "Devam Ediyor",
+      "cancelled": "İptal Edildi",
+      "waitingStudent": "Öğrenci Onayı Bekliyor",
+      "waitingAdmin": "Admin Onayı Bekliyor",
+      "confirmed": "Onaylandı",
+      "studentCancelled": "Öğrenci İptal Etti",
+      "adminCancelled": "Admin İptal Etti",
+      "youCancelled": "İptal Ettiniz",
+      "enRoute": "Yolda",
+      "completedTrip": "Tamamlandı"
+    }
+  },
+  "page": {
+    "error": {
+      "title": "Bir hata oluştu",
+      "description": "Lütfen tekrar deneyin.",
+      "retry": "Tekrar Dene"
+    },
+    "auth": {
+      "login": {
+        "title": "Giriş Yap",
+        "loading": "Giriş Yapılıyor...",
+        "submit": "Giriş Yap",
+        "success": "Giriş Başarılı",
+        "failed": "Giriş Başarısız",
+        "failedDesc": "E-posta/kullanıcı adı veya şifre hatalı. Lütfen bilgilerinizi kontrol edin."
+      },
+      "register": {
+        "title": "Kayıt Ol",
+        "loading": "Kayıt Olunuyor...",
+        "submit": "Kayıt Ol",
+        "namePlaceholder": "Adınız Soyadınız",
+        "studentNoPlaceholder": "Örn: 202003002016",
+        "passwordHintPlaceholder": "Örn: İlk evcil hayvanımın adı",
+        "studentNoError": "Öğrenci numarası 12 haneli bir sayı olmalıdır.",
+        "passwordMinError": "Şifre en az 6 karakter olmalıdır.",
+        "passwordRepeatError": "Şifre tekrarı en az 6 karakter olmalıdır.",
+        "passwordMismatch": "Şifreler eşleşmiyor.",
+        "successTitle": "Kayıt Başarılı"
+      },
+      "forgotPassword": {
+        "title": "Şifremi Unuttum",
+        "description": "Sisteme kayıtlı e-posta adresinizi girin. Size şifrenizi sıfırlayabilmeniz için bir bağlantı göndereceğiz.",
+        "emailLabel": "E-posta Adresi",
+        "emailPlaceholder": "ornek@uniride.com",
+        "sending": "Gönderiliyor...",
+        "submit": "Sıfırlama Bağlantısı Gönder",
+        "emailSentTitle": "E-posta Gönderildi!",
+        "emailSentDesc": "Lütfen e-posta kutunuzu (ve gerekiyorsa Spam klasörünü) kontrol edin ve gelen bağlantıya tıklayarak şifrenizi sıfırlayın.",
+        "backToLogin": "Giriş sayfasına geri dön",
+        "validEmailError": "Geçerli bir e-posta adresi giriniz.",
+        "emailSentToast": "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Lütfen gelen kutunuzu kontrol edin.",
+        "errorToast": "Şifre sıfırlama e-postası gönderilirken bir hata oluştu.",
+        "emailRequiredToast": "Lütfen bir email girin.",
+        "devResetTitle": "Dev Reset Başarılı",
+        "devResetDesc": "Test şifresi anında değiştirildi. Giriş yapabilirsiniz.",
+        "devResetError": "Yetki eksik veya hata oluştu.",
+        "devResetConnectionError": "Sunucuya ulaşılamadı.",
+        "devSection": "[Geliştirici] Doğrudan Şifre Atama (Test Hesapları İçin)"
+      },
+      "resetPassword": {
+        "title": "Şifre Sıfırlama",
+        "minLengthError": "Şifreniz en az 6 karakter olmalıdır.",
+        "mismatchError": "Şifreler eşleşmiyor.",
+        "updating": "Güncelleniyor...",
+        "submit": "Şifremi Güncelle",
+        "successTitle": "Şifre Güncellendi",
+        "successDesc": "Şifreniz başarıyla değiştirildi. Şimdi giriş yapabilirsiniz.",
+        "failedTitle": "Güncelleme Başarısız",
+        "failedDesc": "Şifre güncellenirken bir hata oluştu. Linkin süresi dolmuş olabilir."
+      }
+    },
+    "profile": {
+      "loading": "Profil bilgileriniz yükleniyor.",
+      "notFound": "Kullanıcı bulunamadı. Lütfen tekrar giriş yapın.",
+      "title": "Profil Bilgilerim",
+      "description": "Kişisel bilgilerinizi, adresinizi ve erişilebilirlik tercihlerinizi buradan yönetebilirsiniz."
+    },
+    "rideHistory": {
+      "loading": "Servis talepleriniz yükleniyor.",
+      "title": "Servis Taleplerim",
+      "description": "Geçmiş ve mevcut servis taleplerinizi ve durumlarını buradan takip edebilirsiniz.",
+      "empty": "Henüz oluşturulmuş bir servis talebiniz bulunmamaktadır.",
+      "emptyHint": "Yeni bir talep oluşturmak için \"Servis Talebi\" sayfasına gidebilirsiniz.",
+      "accessDenied": "Erişim Reddedildi",
+      "accessDeniedDesc": "Bu sayfayı görüntüleme yetkiniz yok. Lütfen öğrenci hesabınızla giriş yapın.",
+      "dateCol": "Talep Tarihi",
+      "pickupTimeCol": "Alınış Saati",
+      "pickupLocCol": "Alınış Yeri",
+      "dropoffLocCol": "Bırakılış Yeri",
+      "statusCol": "Durum"
+    },
+    "trackRide": {
+      "placeholder": "Harita gösterimi burada yer alacaktır.",
+      "mapAlt": "Harita Yeri",
+      "noActiveRide": "Şu anda aktif bir servis yolculuğunuz bulunmamaktadır veya bu özellik geliştirme aşamasındadır.",
+      "description": "Aktif servisinizin konumunu harita üzerinden canlı olarak takip edin. Bu özellik yakında kullanıma sunulacaktır."
+    },
+    "student": {
+      "schedule": {
+        "empty": "Henüz ders programınıza giriş yapılmamış.",
+        "editEntry": "Ders Girişini Düzenle",
+        "addEntry": "Yeni Ders Girişi Ekle",
+        "dayPlaceholder": "Gün seçin",
+        "coursePlaceholder": "Örn: MAT101 Calculus I",
+        "locationPlaceholder": "Konum seçin",
+        "displayEmpty": "Henüz ders programınıza giriş yapılmamış.",
+        "defaultCourseName": "Ders/Etkinlik",
+        "editAria": "{courseName} düzenle",
+        "deleteAria": "{courseName} sil",
+        "dayLabel": "Gün",
+        "courseLabel": "Ders Adı / Etkinlik (Opsiyonel)",
+        "startTimeLabel": "Başlangıç Saati",
+        "endTimeLabel": "Bitiş Saati",
+        "locationLabel": "Konum",
+        "editTitle": "Ders Girişini Düzenle",
+        "addTitle": "Yeni Ders Girişi Ekle",
+        "dialogDescription": "Haftalık ders programınıza yeni bir ders veya etkinlik ekleyin/düzenleyin.",
+        "cancel": "İptal",
+        "save": "Kaydet",
+        "monday": "Pazartesi",
+        "tuesday": "Salı",
+        "wednesday": "Çarşamba",
+        "thursday": "Perşembe",
+        "friday": "Cuma",
+        "saturday": "Cumartesi",
+        "sunday": "Pazar"
+      },
+      "rideForm": {
+        "successTitle": "Servis Talebi Gönderildi",
+        "errorDesc": "Servis talebi oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.",
+        "pickupPlaceholder": "Tam alınış adresiniz",
+        "dropoffPlaceholder": "Tam bırakılış adresiniz (örn: Üniversite Kampüsü)",
+        "notesPlaceholder": "Sürücüye iletmek istediğiniz özel bir durum veya notunuz varsa...",
+        "dateLabel": "Servis Tarihi",
+        "datePlaceholder": "Tarih seçin",
+        "pickupTimeLabel": "Alınış Saati",
+        "pickupAddressLabel": "Alınış Adresi",
+        "pickupAddressDesc": "Genellikle ev adresiniz.",
+        "dropoffAddressLabel": "Bırakılış Adresi",
+        "dropoffAddressDesc": "Genellikle okul veya özel bir konum.",
+        "notesLabel": "Ek Notlar (Opsiyonel)",
+        "submitButton": "Talep Gönder",
+        "successDesc": "Talebiniz başarıyla alındı. Onay durumu için bildirimlerinizi ve taleplerim sayfasını kontrol edin.",
+        "errorTitle": "Talep Oluşturulamadı",
+        "defaultDropoff": "Yıldız Teknik Üniversitesi, Davutpaşa Kampüsü",
+        "timeFormatError": "Saat SS:DD formatında olmalıdır.",
+        "dateRequired": "Lütfen bir tarih seçin.",
+        "addressMinError": "Alınış adresi en az 5 karakter olmalıdır.",
+        "dropoffMinError": "Bırakılış adresi en az 5 karakter olmalıdır."
+      },
+      "scheduleConfirmation": {
+        "confirmed": "Servis Onaylandı",
+        "cancelled": "Servis İptal Edildi",
+        "changeRequested": "Değişiklik Talebi",
+        "cardConfirmed": "Onaylandı",
+        "cardCancelled": "İptal Edildi"
+      }
+    },
+    "admin": {
+      "benchmark": {
+        "title": "Benchmark Suite",
+        "description": "TSPLIB standart veri setleri üzerinde algoritma karşılaştırma testleri çalıştırın. Sistematik benchmark ile algoritmaların kalite ve performansını ölçün.",
+        "configTab": "Yapılandırma",
+        "runTab": "Çalışma",
+        "resultsTab": "Sonuçlar",
+        "problemSelection": "Problem Seçimi",
+        "problemSelectionDesc": "TSPLIB test problemlerinden benchmark için seçim yapın",
+        "category": "Kategori:",
+        "problemTable": {
+          "problem": "Problem",
+          "size": "Boyut",
+          "optimal": "Optimal",
+          "category": "Kategori",
+          "type": "Tip"
+        },
+        "algorithmSelection": "Algoritma Seçimi",
+        "algorithmSelectionDesc": "Test edilecek algoritmaları seçin",
+        "selectedN": "{n} seçili",
+        "settingsTitle": "Ayarlar",
+        "runsLabel": "Tekrar Sayısı (n_runs)",
+        "runsDesc": "Her algoritma-problem çifti için kaç kez çalıştırılacak",
+        "seedLabel": "Rastgele Tohum (seed)",
+        "seedDesc": "Tekrarlanabilir sonuçlar için sabit tohum",
+        "summary": "Özet",
+        "totalExperiments": "Toplam Deney",
+        "experimentsCount": "{n} deney",
+        "starting": "Başlatılıyor...",
+        "startBenchmark": "Benchmark Başlat",
+        "emptyHistory": "Henüz Çalışma Yok",
+        "emptyHistoryHint": "Benchmark başlatmak için \"Yapılandırma\" sekmesine gidin ve algoritmaları problemleri seçip çalıştırın.",
+        "runId": "Çalışma ID:",
+        "successCount": "Tamamlanan",
+        "resultCount": "Sonuç Sayısı",
+        "startTime": "Başlangıç",
+        "duration": "Süre",
+        "stopping": "Durduruluyor...",
+        "stopBenchmark": "Benchmark Durdur",
+        "resultsLoading": "Sonuçlar yükleniyor...",
+        "overallStats": {
+          "totalExperiments": "Toplam Deney",
+          "totalDuration": "Toplam Süre",
+          "successRate": "Başarı Oranı",
+          "testedAlgorithms": "Test Edilen"
+        },
+        "charts": {
+          "meanDeviation": "Ortalama Sapma (%) — Algoritma Bazlı",
+          "meanDeviationDesc": "Optimal çözüme olan ortalama yüzde sapma",
+          "meanRuntime": "Ortalama Çalışma Süresi (ms) — Algoritma Bazlı",
+          "meanRuntimeDesc": "Algoritmaların ortalama çalışma süreleri"
+        },
+        "comparisonTable": {
+          "title": "Algoritma Karşılaştırma Tablosu",
+          "desc": "Her algoritmanın ortalama, minimum ve maksimum sapma/süre değerleri",
+          "algorithm": "Algoritma",
+          "testCount": "Test Sayısı",
+          "meanDev": "Ort. Sapma %",
+          "minDev": "Min Sapma %",
+          "maxDev": "Max Sapma %",
+          "meanTime": "Ort. Süre (ms)",
+          "bestTour": "En İyi Tur"
+        },
+        "problemTable2": {
+          "title": "Problem Bazlı Karşılaştırma",
+          "desc": "Her problem için en iyi algoritma ve optimal sapma",
+          "problem": "Problem",
+          "optimal": "Optimal",
+          "bestTour": "En İyi Tur",
+          "deviation": "Sapma %",
+          "bestAlgorithm": "En İyi Algoritma",
+          "algorithmsTested": "Test Edilen Algo."
+        },
+        "rawResults": "Ham Sonuçlar ({n} kayıt)",
+        "rawColumns": {
+          "algorithm": "Algoritma",
+          "problem": "Problem",
+          "run": "Çalışma #",
+          "tourLength": "Tur Uzunluğu",
+          "deviation": "Sapma %",
+          "time": "Süre (ms)"
+        },
+        "downloadJson": "JSON Olarak İndir",
+        "noResults": "Henüz Sonuç Yok",
+        "noResultsHint": "Benchmark tamamlandığında sonuçlar burada görüntülenecek.",
+        "connectionCheck": "Bağlantı kontrol ediliyor...",
+        "apiOnline": "Python Optimizer API çevrimiçi",
+        "apiOffline": "Python Optimizer API çevrimdışı",
+        "problemsLoading": "Problemler yükleniyor...",
+        "toast": {
+          "resultsFailed": "Sonuçlar Alınamadı",
+          "started": "Benchmark Başlatıldı",
+          "startedDesc": "Çalışma ID: {id} - {n} deney kuyruğa alındı.",
+          "startFailed": "Benchmark Başlatılamadı",
+          "stopped": "Benchmark Durduruldu",
+          "stoppingDesc": "Çalışma sonlandırılıyor...",
+          "stopFailed": "Durdurma Başarısız",
+          "exportedJson": "Sonuçlar JSON olarak indirildi.",
+          "resultsLoaded": "{n} sonuç getirildi.",
+          "resultsLoadFailed": "Sonuçlar Alınamadı",
+          "historyCleared": "Tüm çalışma geçmişi silindi."
+        }
+      },
+      "vehicles": {
+        "loadError": "Araçlar yüklenirken bir hata oluştu.",
+        "deleted": "Araç başarıyla silindi.",
+        "deleteError": "Araç silinirken bir hata oluştu.",
+        "updated": "Araç başarıyla güncellendi.",
+        "added": "Araç başarıyla eklendi.",
+        "saveError": "Araç kaydedilirken bir hata oluştu."
+      },
+      "users": {
+        "updateFailed": "Güncelleme Başarısız",
+        "deleteFailed": "Silme Başarısız",
+        "passwordMinError": "Şifre en az 6 karakter olmalıdır.",
+        "passwordUpdated": "{name} için şifre güncellendi.",
+        "addFailed": "Ekleme Başarısız",
+        "placeholders": {
+          "search": "Ad, Öğrenci No veya E-posta ile Ara..."
+        },
+        "roles": {
+          "admin": "Admin",
+          "driver": "Şoför",
+          "student": "Öğrenci"
+        },
+        "changePassword": {
+          "title": "Düzenle",
+          "passwordTitle": "Şifre Değiştir",
+          "deleteTitle": "Sil",
+          "newPasswordPlaceholder": "Yeni şifreyi girin...",
+          "updating": "Güncelleniyor...",
+          "submit": "Şifreyi Güncelle"
+        }
+      },
+      "rideRequests": {
+        "description": "Öğrencilerden gelen anlık ve programlı servis taleplerini onaylayın veya reddedin.",
+        "searchPlaceholder": "Öğrenci Adı, Tarih, Durum veya Konum ile Ara..."
+      },
+      "sandbox": {
+        "vehicleNaming": "Özel {type}",
+        "vehicleTypes": {
+          "minibus": "Minibüs",
+          "bus": "Otobüs",
+          "van": "Van"
+        },
+        "noVehicle": "Araç Seçilmedi",
+        "noStudent": "Öğrenci Seçilmedi",
+        "scenarioPlaceholder": "Senaryo adı...",
+        "studentSelection": "Öğrenci Seçimi",
+        "studentSelectionDesc": "Analizde kullanılacak öğrencileri seçin"
+      },
+      "vehiclePlanning": {
+        "studentLoadError": "Öğrenciler Yüklenemedi",
+        "saveError": "Kaydetme Hatası"
+      },
+      "compare": {
+        "loadError": "Öğrenciler Yüklenemedi",
+        "studentNotFound": "Öğrenci Bulunamadı",
+        "usingNStudents": "Sistemde kayıtlı {n} adet \"Öğrenci\" rolündeki kullanıcı kullanılarak test edilecektir.",
+        "noRouteDetails": "Bu algoritma rota adımlarını detaylı döndürmedi. Sadece araç ataması yapıldı."
+      },
+      "settings": {
+        "notificationTime": "Öğrencilere bir sonraki günün servis planı için bildirim gönderilme zamanı."
+      },
+      "drivers": {
+        "historyDescription": "Tamamlanan ve iptal edilen servis görevleriniz"
+      },
+      "dashboard": {
+        "rideRequests": "Gelen servis taleplerini onayla/reddet."
+      },
+      "driverAssignments": {
+        "cancel": "İptal",
+        "noVehicle": "Araç Atanmadı"
+      }
+    },
+    "benchmark": {
+      "sizeLabels": {
+        "small": "Küçük",
+        "medium": "Orta",
+        "large": "Büyük"
+      },
+      "solverGroup": "Holistik Çözücüler (Native CVRP)",
+      "toast": {
+        "selectWarning": "Lütfen en az bir problem ve algoritma seçin.",
+        "aiUnavailable": "AI danışman şu anda yanıt veremiyor. Lütfen daha sonra tekrar deneyin.",
+        "connectionError": "Bağlantı hatası. Lütfen daha sonra tekrar deneyin.",
+        "benchmarkComplete": "Benchmark Tamamlandı!",
+        "benchmarkCompleteDesc": "{n} sonuç başarıyla getirildi.",
+        "resultsFailed": "Sonuçlar Alınamadı",
+        "demoRunning": "Demo modunda benchmark çalıştırılıyor...",
+        "demoComplete": "Demo benchmark tamamlandı",
+        "processing": "İşleniyor: {completed}/{totalExp} deney",
+        "demoCompleteDesc": "{n} sonuç oluşturuldu.",
+        "benchmarkStarted": "Benchmark Başlatıldı",
+        "benchmarkStartedDesc": "{n} deney kuyruğa alındı.",
+        "serverError": "Sunucu hatası",
+        "benchmarkStopped": "Benchmark Durduruldu",
+        "stoppingDesc": "Çalışma sonlandırılıyor.",
+        "stopFailed": "Durdurma Başarısız",
+        "exportedJson": "Sonuçlar JSON olarak indirildi.",
+        "exportedCsv": "Sonuçlar CSV formatında dışa aktarıldı.",
+        "resultsLoaded": "{n} sonuç getirildi.",
+        "resultsLoadFailed": "Sonuçlar Alınamadı",
+        "historyLoaded": "{run_id} sonuçları yüklendi.",
+        "historyCleared": "Tüm çalışma geçmişi silindi."
+      },
+      "radarChart": {
+        "quality": "Kalite",
+        "speed": "Hız",
+        "consistency": "Tutarlılık",
+        "coverage": "Kapsam"
+      },
+      "advisor": {
+        "title": "AI Danışman",
+        "description": "Seçimlerinize göre AI ile algoritma önerisi alın",
+        "connecting": "Bağlanıyor...",
+        "apiActive": "API Aktif",
+        "apiOffline": "API Kapalı",
+        "aiTitle": "AI Algoritma Danışmanı",
+        "aiSubtitle": "Seçimlerinize özel öneriler",
+        "goals": {
+          "quality": "Kalite",
+          "balanced": "Dengeli",
+          "speed": "Hız"
+        },
+        "analyzing": "AI analiz yapıyor...",
+        "selectGoal": "Hedefinizi seçin ve danışmanı yeniden çalıştırın",
+        "analyzingBtn": "Analiz Ediliyor...",
+        "getAdvice": "Öneri Al ({n} algo)"
+      },
+      "hero": {
+        "title": "Rotalama algoritmalarını TSPLIB standart veri setleri üzerinde karşılaştırın.",
+        "subtitle": "Sistematik benchmark ile kalite ve performans ölçümleri yapın.",
+        "sweepTitle": "Sweep/CW Kümeleme + TSP Rotalama",
+        "sweepDesc": "Önce coğrafi kümeleme, sonra her küme içinde rota optimizasyonu",
+        "giantTourDesc": "Önce tüm noktalar için Giant Tour, sonra optimal araç bölme",
+        "holisticTitle": "Holistik Çözücüler",
+        "holisticSubtitle": "Endüstri Standardı CVRP",
+        "holisticDesc": "Doğal CVRP çözümü, en yüksek kalite",
+        "startBenchmark": "Benchmark Başlat",
+        "hideHero": "Hero gizle",
+        "showHero": "Hero bölümünü göster",
+        "connectionWarning": "Optimizer API'ye bağlantı kurulamıyor. Demo verileriyle benchmark çalıştırabilirsiniz.",
+        "configHeader": "Benchmark Yapılandırması",
+        "configDesc": "Algoritmalar ve problemler seçin, ardından benchmark çalıştırın"
+      },
+      "results": {
+        "tabTables": "Tablolar",
+        "tabCharts": "Grafikler",
+        "tabComparison": "Karşılaştırma",
+        "tabSummary": "Özet",
+        "performanceTitle": "Algoritma Performans Karşılaştırması",
+        "downloadCsv": "CSV İndir",
+        "downloadJson": "JSON İndir",
+        "tableHeaders": {
+          "algorithm": "Algoritma",
+          "meanDev": "Ort. Sapma",
+          "minDev": "Min Sapma",
+          "maxDev": "Max Sapma",
+          "meanTime": "Ort. Süre",
+          "quality": "Kalite"
+        },
+        "problemTable": {
+          "title": "Problem Bazlı Sonuçlar",
+          "problem": "Problem",
+          "optimal": "Optimal",
+          "bestTour": "En İyi Tur",
+          "bestAlgorithm": "En İyi Algoritma",
+          "deviation": "Opt. Sapma",
+          "algoDistribution": "Algo. Dağılımı"
+        },
+        "bubbleChartDesc": "X = Ort. süre (ms), Y = Ort. sapma (%), Kabarcık = deney sayısı",
+        "pieChartDesc": "Her algoritmanın toplam deney sayısındaki payı",
+        "experimentCount": "{value} deney",
+        "noResults": "Benchmark sonuçları mevcut değil."
+      },
+      "problemPanel": {
+        "header": "Problem Seçimi",
+        "desc": "TSPLIB test problemlerinden seçim yapın",
+        "search": "Problem ara...",
+        "notFound": "Problem Bulunamadı",
+        "notFoundDesc": "Bu kriterlere uygun problem bulunamadı.",
+        "summary": "Toplam: {len} problem",
+        "smallCount": "Küçük: {n}",
+        "mediumCount": "Orta: {n}",
+        "largeCount": "Büyük: {n}"
+      },
+      "algorithmPanel": {
+        "header": "Algoritma Seçimi",
+        "desc": "Test edilecek algoritmalar",
+        "all": "Tümü",
+        "recommended": "Önerilenler",
+        "details": "Algoritma detayları",
+        "description": "Açıklama",
+        "noDescription": "Bu algoritma hakkında detaylı bilgi mevcut değil.",
+        "complexity": "Karmaşıklık",
+        "category": {
+          "holistic": "Holistik Çözücü",
+          "heuristic": "Sezgisel"
+        },
+        "recommendedBadge": "Bu algoritma önerilenler listesinde",
+        "configLabel": "Yapılandırma",
+        "runLabel": "Çalışma",
+        "resultsLabel": "Sonuçlar"
+      },
+      "runPanel": {
+        "header": "Çalışma Geçmişi",
+        "empty": "Henüz çalışma geçmişi yok",
+        "experimentsCount": "{entry.experimentCount} deney",
+        "clearHistory": "Geçmişi Temizle",
+        "newRun": "Yeni Çalışma",
+        "statusLoading": "Durum yükleniyor...",
+        "progress": "İlerleme",
+        "elapsed": "Geçen süre: {n}s",
+        "viewResults": "Sonuçları Görüntüle"
+      },
+      "settingsPanel": {
+        "header": "Ayarlar",
+        "repeats": "Tekrar Sayısı",
+        "seed": "Rastgele Tohum",
+        "experimentSummary": "Deney Özeti",
+        "totalExperiments": "Toplam: {n} deney",
+        "demoMode": "Demo modunda simüle edilmiş sonuçlar oluşturulur"
+      }
+    }
+  },
+  "component": {
+    "profileForm": {
+      "passwordMinError": "Şifre en az 6 karakter olmalıdır.",
+      "hintMaxError": "Şifre ipucu en fazla 100 karakter olabilir.",
+      "passwordMismatch": "Şifreler eşleşmiyor.",
+      "passwordUpdateFailed": "Şifre güncellenemedi.",
+      "updateFailedTitle": "Güncelleme Başarısız",
+      "namePlaceholder": "Adınız Soyadınız",
+      "studentNoPlaceholder": "Örn: 202003002016",
+      "addressPlaceholder": "Lütfen belirtin...",
+      "newPasswordPlaceholder": "Yeni şifrenizi girin (min. 6 karakter)",
+      "repeatPasswordPlaceholder": "Şifrenizi tekrar girin",
+      "hintPlaceholder": "Şifrenizi hatırlamanıza yardımcı olacak bir ipucu...",
+      "nameLabel": "Ad Soyad",
+      "emailLabel": "E-posta Adresi",
+      "emailNotChangeable": "E-posta adresiniz değiştirilemez.",
+      "studentNoLabel": "Öğrenci Numarası",
+      "studentNoDescription": "Öğrenci numaranız.",
+      "addressLabel": "Ev Adresi",
+      "addressDescription": "Konumunuz servis planlaması için kullanılacaktır.",
+      "accessibilityLabel": "Erişilebilirlik İhtiyaçları",
+      "accessibilityDescription": "Size daha iyi hizmet verebilmemiz için lütfen ilgili seçenekleri işaretleyin.",
+      "wheelchair": "Tekerlekli Sandalye Kullanıcısı",
+      "visualImpairment": "Görme Engelli",
+      "hearingImpairment": "İşitme Engelli",
+      "otherAccessibility": "Diğer (Lütfen belirtin)",
+      "otherAccLabel": "Diğer Erişilebilirlik İhtiyacı",
+      "otherAccPlaceholder": "Lütfen belirtin...",
+      "securitySection": "Şifre ve Güvenlik",
+      "securityDescription": "Şifrenizi değiştirmek istemiyorsanız bu alanları boş bırakın.",
+      "newPasswordLabel": "Yeni Şifre",
+      "confirmPasswordLabel": "Şifre Tekrar",
+      "hintLabel": "Şifre İpucu",
+      "hintDescription": "Bu ipucu şifrelerinizi unuttuğunuzda size gösterilir. Şifreyi direkt yazmayın.",
+      "saveButton": "Bilgileri Kaydet",
+      "profileUpdated": "Profil Güncellendi",
+      "profileUpdatedDesc": "Bilgileriniz başarıyla kaydedildi.",
+      "updateErrorDesc": "Profiliniz güncellenirken bir hata oluştu.",
+      "sessionNotFound": "Oturum bulunamadı. Lütfen tekrar giriş yapın.",
+      "nameMinError": "İsim en az 2 karakter olmalıdır.",
+      "validEmailError": "Geçerli bir e-posta adresi girin.",
+      "addressMinError": "Ev adresi en az 10 karakter olmalıdır."
+    },
+    "adminVehicleForm": {
+      "nameMinError": "Araç adı en az 2 karakter olmalıdır.",
+      "typeRequired": "Araç tipi seçilmelidir.",
+      "capacityMinError": "Kapasite 0 veya daha büyük olmalıdır.",
+      "capacityZeroError": "En az bir kapasite (Sw veya So) 0'dan büyük olmalıdır.",
+      "editTitle": "Aracı Düzenle",
+      "addTitle": "Yeni Araç Ekle",
+      "editDesc": "Araç bilgilerini güncelleyin.",
+      "addDesc": "Yeni bir servis aracı için bilgileri girin.",
+      "nameLabel": "Araç Adı / Tanımı",
+      "namePlaceholder": "Örn: Servis A, Mavi Minibüs",
+      "plateLabel": "Plaka Numarası (Opsiyonel)",
+      "platePlaceholder": "Örn: 06 ABC 123",
+      "typeLabel": "Araç Tipi",
+      "typePlaceholder": "Araç tipi seçin",
+      "typeMinibus": "Minibüs",
+      "typeBus": "Otobüs",
+      "typeVan": "Van",
+      "statusLabel": "Durum",
+      "statusPlaceholder": "Durum seçin",
+      "statusActive": "Aktif",
+      "statusInactive": "Pasif",
+      "statusMaintenance": "Bakımda",
+      "wheelchairCapacityLabel": "Sw Kapasitesi",
+      "seatingCapacityLabel": "So Kapasitesi",
+      "wheelchairSubtitle": "Tekerlekli sandalye",
+      "seatingSubtitle": "Tekerlekli sandalye kullanmayan engelli",
+      "defaultHint": "Varsayılan: {sw} Sw + {so} So",
+      "cooldownLabel": "Dönüş Arası Süre (Cooldown)",
+      "cooldownMin": "0 dk",
+      "cooldownMax": "60 dk",
+      "cooldownValue": "{value} dakika",
+      "cooldownDesc": "Pickup ve dropoff rotaları arasındaki bekleme süresi (varsayılan: {default} dk)"
+    },
+    "adminUserForm": {
+      "nameMinError": "Ad Soyad en az 2 karakter olmalıdır.",
+      "emailInvalid": "Geçerli bir e-posta adresi girin.",
+      "studentNoRequired": "Öğrenci rolü için 12 haneli öğrenci numarası gereklidir.",
+      "userLoadFailed": "Kullanıcı yüklenemedi.",
+      "editTitle": "Kullanıcıyı Düzenle: {name} ({role})",
+      "editDesc": "Kullanıcı bilgilerini güncelleyin. E-posta değişikliği dikkatli yapılmalıdır. Rol bu ekrandan değiştirilemez.",
+      "nameLabel": "Ad Soyad",
+      "emailLabel": "E-posta",
+      "studentNumberLabel": "Öğrenci Numarası",
+      "studentNumberPlaceholder": "12 haneli numara",
+      "disabilityTypeLabel": "Engel Tipi",
+      "disabilityTypeWheelchair": "Tekerlekli Sandalye",
+      "disabilityTypeOther": "Diğer Engel Tipi",
+      "homeAddressLabel": "Ev Adresi",
+      "addressPlaceholder": "Tam ev adresi",
+      "accessibilityNeedsLabel": "Erişilebilirlik İhtiyaçları",
+      "accessibilityVisual": "Görme Engelli",
+      "accessibilityHearing": "İşitme Engelli",
+      "accessibilityMobility": "Yürüme Desteği",
+      "accessibilityOther": "Diğer",
+      "otherLabel": "Diğer Erişilebilirlik İhtiyacı",
+      "otherPlaceholder": "Lütfen belirtin...",
+      "roleAdmin": "Admin",
+      "roleDriver": "Şoför",
+      "roleStudent": "Öğrenci"
+    },
+    "adminAddUserDialog": {
+      "title": "Yeni Kullanıcı Ekle",
+      "description": "Sisteme yeni bir kullanıcı ekleyin.",
+      "nameMinError": "Ad Soyad en az 2 karakter olmalıdır.",
+      "emailInvalid": "Geçerli bir e-posta adresi girin.",
+      "passwordMinError": "Şifre en az 6 karakter olmalıdır.",
+      "studentNoRequired": "Öğrenci rolü için 12 haneli öğrenci numarası gereklidir.",
+      "nameLabel": "Ad Soyad",
+      "namePlaceholder": "Örn: Ahmet Yılmaz",
+      "emailLabel": "E-posta",
+      "emailPlaceholder": "ornek@dogus.edu.tr",
+      "passwordLabel": "Şifre",
+      "passwordPlaceholder": "En az 6 karakter",
+      "roleLabel": "Rol",
+      "rolePlaceholder": "Rol seçin",
+      "roleStudent": "Öğrenci",
+      "roleDriver": "Şoför",
+      "roleAdmin": "Admin",
+      "studentNumberLabel": "Öğrenci Numarası",
+      "studentNumberPlaceholder": "12 haneli numara",
+      "adding": "Ekleniyor...",
+      "submit": "Kullanıcı Ekle"
+    },
+    "authLoginForm": {
+      "successTitle": "Giriş Başarılı",
+      "failedTitle": "Giriş Başarısız",
+      "failedDesc": "E-posta/kullanıcı adı veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.",
+      "signingIn": "Giriş Yapılıyor...",
+      "submit": "Giriş Yap"
+    },
+    "authRegisterForm": {
+      "studentNoError": "Öğrenci numarası 12 haneli bir sayı olmalıdır.",
+      "passwordMinError": "Şifre en az 6 karakter olmalıdır.",
+      "passwordRepeatError": "Şifre tekrarı en az 6 karakter olmalıdır.",
+      "passwordMismatch": "Şifreler eşleşmiyor.",
+      "namePlaceholder": "Adınız Soyadınız",
+      "studentNoPlaceholder": "Örn: 202003002016",
+      "hintPlaceholder": "Örn: İlk evcil hayvanımın adı",
+      "signingUp": "Kayıt Olunuyor...",
+      "submit": "Kayıt Ol"
+    },
+      "scheduleConfirmationCard": {
+        "rideConfirmed": "Servis Onaylandı",
+        "rideCancelled": "Servis İptal Edildi",
+        "changeRequested": "Değişiklik Talebi",
+        "confirmed": "Onaylandı",
+        "cancelled": "İptal Edildi",
+        "cardTitle": "Servis Planı Onayı: {relevantDate}",
+        "pastDeadline": "Onay süresi geçti. Değişiklikler yönetici onayı gerektirir.",
+        "deadlineInfo": "Onay süresi: Bugün saat {deadlineTime}'a kadar",
+        "defaultDescription": "Aşağıda {relevantDate} için önerilen servis saatleriniz bulunmaktadır.",
+        "pickupLabel": "Tahmini Alınış Saati:",
+        "dropoffLabel": "Tahmini Bırakılış Saati (Eve):",
+        "cancelButton": "İptal Et",
+        "changeButton": "Değiştir",
+        "confirmButton": "Onayla",
+        "reconfirmButton": "Yeniden Onayla",
+        "operationFailed": "İşlem başarısız",
+        "statusPending": "Onay Bekliyor",
+        "statusCancelled": "İptal Edildi",
+        "statusAwaiting": "Onay Bekleniyor"
+      }
+  },
+  "api": {
+    "benchmark": {
+      "route": {
+        "started": "Benchmark başlatıldı",
+        "algoRequired": "En az bir algoritma seçilmelidir",
+        "problemRequired": "En az bir problem seçilmelidir",
+        "invalidRunId": "Geçersiz run_id formatı. Sadece harf, rakam, \"_\" ve \"-\" kullanılabilir (maksimum 64 karakter).",
+        "runIdTaken": "Bu run_id zaten kullanılıyor. Lütfen farklı bir run_id deneyin.",
+        "validationError": "run_id doğrulaması sırasında backend erişim hatası oluştu.",
+        "connectionFailed": "Benchmark servisine bağlanılamadı",
+        "startFailed": "Benchmark başlatılamadı"
+      },
+      "stop": {
+        "failed": "Benchmark durdurulamadı"
+      },
+      "results": {
+        "loadFailed": "Benchmark sonuçları alınamadı",
+        "unreachable": "Benchmark sonuçlarına ulaşılamadı"
+      },
+      "problems": {
+        "unreachable": "Benchmark sunucusuna ulaşılamadı"
+      }
+    },
+    "auth": {
+      "hint": {
+        "invalidFormat": "Geçersiz kullanıcı bilgisi formatı",
+        "notFound": "Kullanıcı bulunamadı veya ipucu ayarlanmamış."
+      },
+      "devReset": {
+        "devOnly": "Bu endpoint yalnızca geliştirme ortamında kullanılabilir.",
+        "userNotFound": "Kullanıcı bulunamadı."
+      }
+    },
+    "admin": {
+      "users": {
+        "passwordMin": "Şifre en az 6 karakter olmalıdır",
+        "invalidRole": "Geçersiz rol seçimi",
+        "validUuid": "Geçerli bir kullanıcı kimliği (UUID) gerekli"
+      },
+      "password": {
+        "minLength": "Şifre en az 6 karakter olmalıdır",
+        "updated": "Şifre başarıyla güncellendi."
+      }
+    },
+    "profile": {
+      "password": {
+        "minLength": "Şifre en az 6 karakter olmalıdır."
+      }
+    },
+    "sandbox": {
+      "studentsRequired": "Öğrenci listesi gerekli",
+      "vehicleConfigRequired": "Araç konfigürasyonu gerekli"
+    },
+    "rideConfirmation": {
+      "confirmed": "Servisiniz başarıyla onaylandı.",
+      "cancelled": "Servisiniz iptal edildi."
+    },
+    "service": {
+      "connectionFailed": "Benchmark servisine bağlanılamadı",
+      "statusFailed": "Durum alınamadı"
+    },
+    "adminApi": {
+      "passwordUpdateFailed": "Şifre güncellenemedi."
+    },
+    "schedule": {
+      "missingAddress": "Öğrencinin ev adresi veya haftalık programı eksik"
+    },
+    "profileForm": {
+      "updateFailed": "Şifre güncellenemedi."
+    }
+  }
+}

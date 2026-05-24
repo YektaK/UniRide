@@ -1,27 +1,28 @@
-
-"use client";
-
+import { getTranslations } from "next-intl/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Map, Route } from "lucide-react";
 import Image from "next/image";
 
-export default function TrackRidePage() {
+export default async function TrackRidePage() {
+  const t = await getTranslations("page.trackRide");
+  const tc = await getTranslations("common");
+
   return (
     <div className="space-y-6">
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl flex items-center gap-2"><Route className="text-primary"/>Servis Takibi</CardTitle>
+          <CardTitle className="text-2xl flex items-center gap-2"><Route className="text-primary"/>{tc("sidebar.trackRide")}</CardTitle>
           <CardDescription>
-            Aktif servisinizin konumunu harita üzerinden canlı olarak takip edin. Bu özellik yakında kullanıma sunulacaktır.
+            {t("description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center">
           <div className="my-6 p-4 border border-dashed rounded-lg aspect-video bg-muted flex flex-col items-center justify-center">
             <Map className="h-16 w-16 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Harita gösterimi burada yer alacaktır.</p>
+            <p className="text-muted-foreground">{t("placeholder")}</p>
              <Image 
                 src="https://placehold.co/600x400.png" 
-                alt="Harita Yeri" 
+                alt={t("mapAlt")} 
                 width={600} 
                 height={400} 
                 className="mt-4 rounded-md object-cover opacity-50"
@@ -29,7 +30,7 @@ export default function TrackRidePage() {
             />
           </div>
           <p className="text-muted-foreground">
-            Şu anda aktif bir servis yolculuğunuz bulunmamaktadır veya bu özellik geliştirme aşamasındadır.
+            {t("noActiveRide")}
           </p>
         </CardContent>
       </Card>

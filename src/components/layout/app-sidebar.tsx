@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   Sidebar,
   SidebarHeader,
@@ -27,51 +28,52 @@ import {
   HelpingHand,
   ListChecks,
   FilePenLine,
-  BarChartHorizontal, // Icon for Reports
-  Navigation, // Icon for Driver navigation
-  Route, // Icon for Driver routes
-  Cpu, // Icon for Algorithms
-  FlaskConical, // Icon for Sandbox
-  BarChart3, // Icon for Benchmark
+  BarChartHorizontal,
+  Navigation,
+  Route,
+  Cpu,
+  FlaskConical,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "../ui/button";
 
 const commonMenuItems = [
-  { href: "/dashboard", label: "Kontrol Paneli", icon: LayoutDashboard },
-  { href: "/profile", label: "Profilim", icon: User },
+  { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
+  { href: "/profile", labelKey: "profile", icon: User },
 ];
 
 const studentMenuItems = [
-  { href: "/schedule", label: "Ders Programım", icon: CalendarDays },
-  { href: "/request-ride", label: "Servis Talebi", icon: ClipboardList },
-  { href: "/ride-history", label: "Taleplerim", icon: ListChecks },
-  { href: "/track-ride", label: "Servis Takibi", icon: MapPin },
+  { href: "/schedule", labelKey: "mySchedule", icon: CalendarDays },
+  { href: "/request-ride", labelKey: "rideRequest", icon: ClipboardList },
+  { href: "/ride-history", labelKey: "myRequests", icon: ListChecks },
+  { href: "/track-ride", labelKey: "trackRide", icon: MapPin },
 ];
 
 const adminMenuItems = [
-  { href: "/admin/vehicles", label: "Araç Yönetimi", icon: Bus },
-  { href: "/admin/users", label: "Kullanıcı Yönetimi", icon: Users },
-  { href: "/admin/schedules", label: "Ders Programları", icon: FilePenLine },
-  { href: "/admin/ride-requests", label: "Servis Talepleri", icon: ShieldAlert },
-  { href: "/admin/drivers", label: "Şoför Görevlendirmeleri", icon: Users },
-  { href: "/admin/vehicle-planning", label: "Araç Planlama", icon: Route },
-  { href: "/admin/sandbox", label: "IE Sandbox", icon: FlaskConical },
-  { href: "/admin/compare", label: "Algoritma Karşılaştırma", icon: Cpu },
-  { href: "/admin/benchmark", label: "Benchmark Suite", icon: BarChart3 },
-  { href: "/admin/route-test", label: "Rota Testi", icon: Navigation },
-  { href: "/admin/reports", label: "Raporlar", icon: BarChartHorizontal },
-  { href: "/admin/settings", label: "Ayarlar", icon: Settings },
+  { href: "/admin/vehicles", labelKey: "vehicleManagement", icon: Bus },
+  { href: "/admin/users", labelKey: "userManagement", icon: Users },
+  { href: "/admin/schedules", labelKey: "schedules", icon: FilePenLine },
+  { href: "/admin/ride-requests", labelKey: "rideRequests", icon: ShieldAlert },
+  { href: "/admin/drivers", labelKey: "driverAssignments", icon: Users },
+  { href: "/admin/vehicle-planning", labelKey: "vehiclePlanning", icon: Route },
+  { href: "/admin/sandbox", labelKey: "sandbox", icon: FlaskConical },
+  { href: "/admin/compare", labelKey: "algorithmCompare", icon: Cpu },
+  { href: "/admin/benchmark", labelKey: "benchmarkSuite", icon: BarChart3 },
+  { href: "/admin/route-test", labelKey: "routeTest", icon: Navigation },
+  { href: "/admin/reports", labelKey: "reports", icon: BarChartHorizontal },
+  { href: "/admin/settings", labelKey: "settings", icon: Settings },
 ];
 
 const driverMenuItems = [
-  { href: "/driver/assignments", label: "Görevlerim", icon: Route },
-  { href: "/driver/navigation", label: "Navigasyon", icon: Navigation },
-  { href: "/driver/history", label: "Geçmiş Seferler", icon: ListChecks },
+  { href: "/driver/assignments", labelKey: "myTasks", icon: Route },
+  { href: "/driver/navigation", labelKey: "navigation", icon: Navigation },
+  { href: "/driver/history", labelKey: "pastTrips", icon: ListChecks },
 ];
 
 export default function AppSidebar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const t = useTranslations("common.sidebar");
 
   if (!user) return null;
 
@@ -106,12 +108,12 @@ export default function AppSidebar() {
               <SidebarMenuButton
                 asChild
                 isActive={pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))}
-                tooltip={{ children: item.label, side: "right", align: "center" }}
-                aria-label={item.label}
+                tooltip={{ children: t(item.labelKey), side: "right", align: "center" }}
+                aria-label={t(item.labelKey)}
               >
                 <Link href={item.href}>
                   <item.icon />
-                  <span>{item.label}</span>
+                  <span>{t(item.labelKey)}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -121,7 +123,7 @@ export default function AppSidebar() {
       <SidebarFooter className="p-4 border-t">
         <Button variant="ghost" onClick={logout} className="w-full justify-start group-data-[collapsible=icon]:justify-center">
           <LogOut className="mr-2 group-data-[collapsible=icon]:mr-0 h-4 w-4" />
-          <span className="group-data-[collapsible=icon]:hidden">Çıkış Yap</span>
+          <span className="group-data-[collapsible=icon]:hidden">{t("logout")}</span>
         </Button>
       </SidebarFooter>
     </Sidebar>

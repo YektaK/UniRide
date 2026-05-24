@@ -69,7 +69,6 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
     def __init__(self, config: Optional[Dict] = None):
         self.config = {**self.DEFAULT_CONFIG, **(config or {})}
         self.seed = self.config.get("seed") or int(time.time() * 1000)
-        self.rng = random.Random(self.seed)
 
     @property
     def name(self) -> str:
@@ -83,20 +82,20 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
     def description(self) -> str:
         return "Sosyal hiyerarşi tabanlı meta-sezgisel. Keşif-sömürü dengesi güçlü."
 
-    def _shuffle(self, items: List) -> List:
-        """Shuffle list using internal RNG"""
+    def _shuffle(self, items: List, rng: random.Random) -> List:
+        """Shuffle list using provided RNG"""
         result = items.copy()
         for i in range(len(result) - 1, 0, -1):
-            j = self.rng.randint(0, i)
+            j = rng.randint(0, i)
             result[i], result[j] = result[j], result[i]
         return result
 
-    def _initialize_pack(self, waypoints: List[str]) -> List[Wolf]:
+    def _initialize_pack(self, waypoints: List[str], rng: random.Random) -> List[Wolf]:
         """Initialize wolf pack with random positions"""
         pack = []
 
         for _ in range(self.config["population_size"]):
-            position = self._shuffle(waypoints)
+            position = self._shuffle(waypoints, rng)
             pack.append(Wolf(
                 position=position,
                 fitness=0.0,
@@ -105,7 +104,7 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
 
         return pack
 
-    def _get_difference_vector(self, leader: List[str], wolf: List[str], a: float) -> List[Tuple[int, int]]:
+    def _get_difference_vector(self, leader: List[str], wolf: List[str], a: float, rng: random.Random) -> List[Tuple[int, int]]:
         """
         Calculate swaps to move wolf toward leader.
 
@@ -120,7 +119,7 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
                 try:
                     j = wolf.index(leader[i])
                     # Random factor based on 'a'
-                    if self.rng.random() < a / 2:
+                    if rng.random() < a / 2:
                         swaps.append((i, j))
                 except ValueError:
                     pass
@@ -143,7 +142,8 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
         alpha: Wolf,
         beta: Wolf,
         delta: Wolf,
-        a: float
+        a: float,
+        rng: random.Random
     ) -> List[str]:
         """
         Update wolf position based on alpha, beta, delta.
@@ -156,33 +156,33 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
         new_position = wolf.position.copy()
 
         # Get swap suggestions from each leader
-        alpha_swaps = self._get_difference_vector(alpha.position, wolf.position, a)
-        beta_swaps = self._get_difference_vector(beta.position, wolf.position, a)
-        delta_swaps = self._get_difference_vector(delta.position, wolf.position, a)
+        alpha_swaps = self._get_difference_vector(alpha.position, wolf.position, a, rng)
+        beta_swaps = self._get_difference_vector(beta.position, wolf.position, a, rng)
+        delta_swaps = self._get_difference_vector(delta.position, wolf.position, a, rng)
 
         # Combine swaps with weights
         all_swaps = []
 
         # Alpha has highest weight
         for swap in alpha_swaps:
-            if self.rng.random() < 0.7:
+            if rng.random() < 0.7:
                 all_swaps.append(swap)
 
         # Beta has medium weight
         for swap in beta_swaps:
-            if self.rng.random() < 0.5:
+            if rng.random() < 0.5:
                 all_swaps.append(swap)
 
         # Delta has lower weight
         for swap in delta_swaps:
-            if self.rng.random() < 0.3:
+            if rng.random() < 0.3:
                 all_swaps.append(swap)
 
         # Apply swaps
         if all_swaps:
             # Apply only a subset of swaps to maintain diversity
             num_swaps = min(len(all_swaps), max(1, int(len(all_swaps) * a / 2)))
-            selected_swaps = self.rng.sample(all_swaps, min(num_swaps, len(all_swaps)))
+            selected_swaps = rng.sample(all_swaps, min(num_swaps, len(all_swaps)))
             new_position = self._apply_swaps(wolf.position, selected_swaps)
 
         return new_position
@@ -192,7 +192,8 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
         waypoints: List[str],
         depot: str,
         time_matrix: Dict,
-        coordinates: Dict
+        coordinates: Dict,
+        rng: random.Random,
     ) -> Tuple[List[str], float]:
         """Solve TSP for a single vehicle using GWO"""
         if not waypoints:
@@ -206,7 +207,7 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
             return waypoints, duration
 
         # Initialize pack
-        pack = self._initialize_pack(waypoints)
+        pack = self._initialize_pack(waypoints, rng)
 
         # Evaluate initial pack
         for wolf in pack:
@@ -231,12 +232,12 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
 
             for wolf in pack:
                 # Exploration: random search
-                if self.rng.random() < self.config["exploration_rate"] * a / self.config["initial_a"]:
+                if rng.random() < self.config["exploration_rate"] * a / self.config["initial_a"]:
                     # Random perturbation
-                    new_position = self._shuffle(wolf.position)
+                    new_position = self._shuffle(wolf.position, rng)
                 else:
                     # Exploitation: move toward leaders
-                    new_position = self._update_position(wolf, alpha, beta, delta, a)
+                    new_position = self._update_position(wolf, alpha, beta, delta, a, rng)
 
                 # Evaluate new position
                 duration = self._calculate_route_duration(new_position, depot, time_matrix, coordinates)
@@ -309,12 +310,13 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
                 execution_time_seconds=time.time() - start_time
             )
 
-                # Singleton self.config korunuyor; her istek icin local kopya
+        # Singleton self.config korunuyor; her istek icin local kopya
         effective_config = dict(self.config)
-        rng = random.Random(self.seed)
         if hasattr(request, 'gwo_config') and request.gwo_config:
             effective_config = {**self.config, **request.gwo_config}
             rng = random.Random(effective_config.get("seed", self.seed))
+        else:
+            rng = random.Random(self.seed)
 
         # Build time matrix and coordinates
         data_loader = DataLoader.get_instance()
@@ -366,7 +368,7 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
                 return {"route_details": [], "total_duration": 0}
 
             optimized_route, duration = self._solve_tsp(
-                location_codes, depot.id, time_matrix, coordinates
+                location_codes, depot.id, time_matrix, coordinates, rng
             )
 
             route_details = []

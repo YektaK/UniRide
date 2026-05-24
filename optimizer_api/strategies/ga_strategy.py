@@ -59,7 +59,6 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
     def __init__(self, config: Optional[Dict] = None):
         self.config = {**self.DEFAULT_CONFIG, **(config or {})}
         self.seed = self.config.get("seed") or int(time.time() * 1000)
-        self.rng = random.Random(self.seed)
 
     @property
     def name(self) -> str:
@@ -73,13 +72,13 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
     def description(self) -> str:
         return "Popülasyon tabanlı meta-sezgisel optimizasyon. Büyük problemler için ideal."
 
-    def _initialize_population(self, waypoints: List[str]) -> List[Individual]:
+    def _initialize_population(self, waypoints: List[str], rng: random.Random) -> List[Individual]:
         """Initialize population with random permutations"""
         population = []
 
         for _ in range(self.config["population_size"]):
             chromosome = waypoints.copy()
-            self.rng.shuffle(chromosome)
+            rng.shuffle(chromosome)
             population.append(Individual(
                 chromosome=chromosome,
                 fitness=0.0,
@@ -111,9 +110,9 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
 
         return evaluated
 
-    def _tournament_selection(self, population: List[Individual]) -> Individual:
+    def _tournament_selection(self, population: List[Individual], rng: random.Random) -> Individual:
         """Select individual using tournament selection"""
-        tournament = self.rng.sample(
+        tournament = rng.sample(
             population,
             min(self.config["tournament_size"], len(population))
         )
@@ -122,7 +121,8 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
     def _order_crossover(
         self,
         parent1: List[str],
-        parent2: List[str]
+        parent2: List[str],
+        rng: random.Random,
     ) -> Tuple[List[str], List[str]]:
         """
         Order Crossover (OX1) - preserves relative order.
@@ -133,8 +133,8 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
             return parent1.copy(), parent2.copy()
 
         # Select random segment
-        start = self.rng.randint(0, n - 1)
-        end = self.rng.randint(start, n - 1)
+        start = rng.randint(0, n - 1)
+        end = rng.randint(start, n - 1)
 
         # Initialize children with proper type
         child1: List[Optional[str]] = [None] * n
@@ -161,23 +161,23 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
         # Cast to List[str] - all positions filled
         return cast(List[str], child1), cast(List[str], child2)
 
-    def _mutate(self, chromosome: List[str]) -> List[str]:
+    def _mutate(self, chromosome: List[str], rng: random.Random) -> List[str]:
         """Apply mutation (swap or inversion)"""
         mutated = chromosome.copy()
 
-        if self.rng.random() < 0.5:
+        if rng.random() < 0.5:
             # Swap mutation
-            i, j = self.rng.sample(range(len(mutated)), 2)
+            i, j = rng.sample(range(len(mutated)), 2)
             mutated[i], mutated[j] = mutated[j], mutated[i]
         else:
             # Inversion mutation
-            i, j = self.rng.sample(range(len(mutated)), 2)
+            i, j = rng.sample(range(len(mutated)), 2)
             start, end = min(i, j), max(i, j)
             mutated[start:end + 1] = reversed(mutated[start:end + 1])
 
         return mutated
 
-    def _evolve(self, population: List[Individual]) -> List[Individual]:
+    def _evolve(self, population: List[Individual], rng: random.Random) -> List[Individual]:
         """Create next generation"""
         new_population = []
 
@@ -194,23 +194,23 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
 
         # Generate offspring
         while len(new_population) < self.config["population_size"]:
-            parent1 = self._tournament_selection(sorted_pop)
-            parent2 = self._tournament_selection(sorted_pop)
+            parent1 = self._tournament_selection(sorted_pop, rng)
+            parent2 = self._tournament_selection(sorted_pop, rng)
 
             # Crossover
-            if self.rng.random() < self.config["crossover_rate"]:
+            if rng.random() < self.config["crossover_rate"]:
                 child1, child2 = self._order_crossover(
-                    parent1.chromosome, parent2.chromosome
+                    parent1.chromosome, parent2.chromosome, rng
                 )
             else:
                 child1 = parent1.chromosome.copy()
                 child2 = parent2.chromosome.copy()
 
             # Mutation
-            if self.rng.random() < self.config["mutation_rate"]:
-                child1 = self._mutate(child1)
-            if self.rng.random() < self.config["mutation_rate"]:
-                child2 = self._mutate(child2)
+            if rng.random() < self.config["mutation_rate"]:
+                child1 = self._mutate(child1, rng)
+            if rng.random() < self.config["mutation_rate"]:
+                child2 = self._mutate(child2, rng)
 
             new_population.append(Individual(
                 chromosome=child1, fitness=0.0, total_duration=float('inf')
@@ -227,7 +227,8 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
         waypoints: List[str],
         depot: str,
         time_matrix: Dict,
-        coordinates: Dict
+        coordinates: Dict,
+        rng: random.Random,
     ) -> Tuple[List[str], float]:
         """Solve TSP for a single vehicle.
 
@@ -267,7 +268,7 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
         population: List[Individual] = []
         for _ in range(pop_size):
             chrom = waypoints.copy()
-            self.rng.shuffle(chrom)
+            rng.shuffle(chrom)
             chrom = _2opt(chrom, max_iter=10)
             dur = duration_func(chrom)
             population.append(Individual(
@@ -310,14 +311,14 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
 
             # Offspring: tournament → OX → mutate → evaluate immediately
             while len(new_pop) < pop_size:
-                p1 = self._tournament_selection(population)
-                p2 = self._tournament_selection(population)
-                if self.rng.random() < self.config["crossover_rate"]:
-                    child_chrom, _ = self._order_crossover(p1.chromosome, p2.chromosome)
+                p1 = self._tournament_selection(population, rng)
+                p2 = self._tournament_selection(population, rng)
+                if rng.random() < self.config["crossover_rate"]:
+                    child_chrom, _ = self._order_crossover(p1.chromosome, p2.chromosome, rng)
                 else:
                     child_chrom = p1.chromosome[:]
-                if self.rng.random() < self.config["mutation_rate"]:
-                    child_chrom = self._mutate(child_chrom)
+                if rng.random() < self.config["mutation_rate"]:
+                    child_chrom = self._mutate(child_chrom, rng)
                 dur = duration_func(child_chrom)
                 new_pop.append(Individual(
                     chromosome=child_chrom,
@@ -357,10 +358,11 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
 
         # Singleton self.config korunuyor; her istek icin local kopya
         effective_config = dict(self.config)
-        rng = random.Random(self.seed)
         if request.ga_config:
             effective_config.update(request.ga_config)
             rng = random.Random(effective_config.get("seed", self.seed))
+        else:
+            rng = random.Random(self.seed)
 
         # Set local search type from request
         if request.local_search_type:
@@ -418,7 +420,7 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
                 return {"route_details": [], "total_duration": 0}
 
             optimized_route, duration = self._solve_tsp(
-                location_codes, depot.id, time_matrix, coordinates
+                location_codes, depot.id, time_matrix, coordinates, rng
             )
 
             # Build route details

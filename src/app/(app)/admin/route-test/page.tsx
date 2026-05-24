@@ -29,7 +29,7 @@ import {
     algorithmSupportsLocalSearch,
     type LocalSearchType
 } from "@/lib/algorithm-constants";
-import { optimizeRoutes, type StudentForOptimization, type Depot } from "@/services/optimizer-service";
+import { optimizeRoutes, type StudentForOptimization, type Depot, type OptimizationOptions } from "@/services/optimizer-service";
 
 type AlgorithmType = (typeof ALGORITHM_KEYS)[keyof typeof ALGORITHM_KEYS];
 
@@ -125,7 +125,7 @@ export default function RouteTestPage() {
 
             // Call Python API with correct payload
             const response = await optimizeRoutes(students, depot, {
-                algorithm: normalizeAlgorithmName(algorithm) as any,
+                algorithm: normalizeAlgorithmName(algorithm) as OptimizationOptions['algorithm'],
                 local_search_type: algorithmSupportsLocalSearch(algorithm) ? localSearchType : undefined,
                 max_travel_time: 180,
             });

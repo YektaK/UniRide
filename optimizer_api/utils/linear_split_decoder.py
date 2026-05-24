@@ -11,11 +11,7 @@ Features:
 import copy
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
-from enum import Enum
-
-class Direction(str, Enum):
-    PICKUP = "pickup"
-    DROPOFF = "dropoff"
+from models.schemas import Direction
 
 @dataclass
 class PenaltyConfig:

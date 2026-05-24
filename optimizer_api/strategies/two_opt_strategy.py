@@ -73,40 +73,6 @@ class TwoOptStrategy(BaseRoutingStrategy):
     def description(self) -> str:
         return "Klasik 2-opt yerel arama algoritması. Küçük-orta ölçekli problemler için ideal."
 
-    def _get_duration(self, from_loc: str, to_loc: str, time_matrix: Dict, coordinates: Dict) -> float:
-        """Get duration between two locations"""
-        if from_loc in time_matrix and to_loc in time_matrix[from_loc]:
-            return time_matrix[from_loc][to_loc]
-
-        if from_loc in coordinates and to_loc in coordinates:
-            c1 = coordinates[from_loc]
-            c2 = coordinates[to_loc]
-            dist = haversine_distance(c1["lat"], c1["lng"], c2["lat"], c2["lng"])
-            return estimate_travel_time(dist)
-
-        logger.warning(f"Distance matrix miss for {from_loc} to {to_loc}. Using default fallback: {DEFAULT_TRAVEL_FALLBACK_MINUTES} mins")
-        return DEFAULT_TRAVEL_FALLBACK_MINUTES
-
-    def _calculate_route_duration(
-        self,
-        route: List[str],
-        depot: str,
-        time_matrix: Dict,
-        coordinates: Dict
-    ) -> float:
-        """Calculate total route duration"""
-        if not route:
-            return 0.0
-
-        total = 0.0
-        total += self._get_duration(depot, route[0], time_matrix, coordinates)
-
-        for i in range(len(route) - 1):
-            total += self._get_duration(route[i], route[i + 1], time_matrix, coordinates)
-
-        total += self._get_duration(route[-1], depot, time_matrix, coordinates)
-        return total
-
     def _shuffle(self, items: List) -> List:
         """Shuffle list using internal RNG"""
         result = items.copy()
@@ -229,11 +195,15 @@ class TwoOptStrategy(BaseRoutingStrategy):
                 execution_time_seconds=time.time() - start_time
             )
 
-                # Singleton self.config korunuyor; her istek icin local kopya
+        # Singleton self.config korunuyor; her istek icin local kopya
         effective_config = dict(self.config)
         if hasattr(request, 'two_opt_config') and request.two_opt_config:
             effective_config = {**self.config, **request.two_opt_config}
             rng = random.Random(effective_config.get("seed", self.seed))
+        else:
+            rng = random.Random(self.seed)
+        self.rng = rng
+        self.config = effective_config
 
         # Build time matrix and coordinates
         data_loader = DataLoader.get_instance()

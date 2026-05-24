@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
         // Update password via Supabase Admin Auth
         const { error: authError } = await supabase.auth.admin.updateUserById(
-            (users as any).id,
+            (users as { id: string; email: string }).id,
             { password: newPassword }
         );
 

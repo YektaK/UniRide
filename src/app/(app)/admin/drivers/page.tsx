@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +17,8 @@ import type { DbUser } from "@/types/db";
 import { exportDriverAssignmentsToExcel, exportDriverAssignmentsToPDF } from "@/services/excel/driver-export";
 
 export default function DriverAssignmentsPage() {
+  const t = useTranslations('page.admin.driverAssignments');
+  const tc = useTranslations('common');
   const [assignments, setAssignments] = useState<RouteAssignment[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [users, setUsers] = useState<DbUser[]>([]);
@@ -42,8 +45,8 @@ export default function DriverAssignmentsPage() {
       setUsers(usersData);
     } catch (error: any) {
       toast({
-        title: "Veri Yükleme Hatası",
-        description: error.message || "Görevlendirmeler yüklenirken bir hata oluştu.",
+        title: tc('error'),
+        description: error.message || tc('error'),
         variant: "destructive",
       });
       console.error("Error loading data:", error);
@@ -76,13 +79,13 @@ export default function DriverAssignmentsPage() {
 
       await exportDriverAssignmentsToExcel(assignmentsWithDetails, selectedDate);
       toast({
-        title: "Excel Export Başarılı",
-        description: "Görevlendirmeler Excel dosyası olarak indirildi.",
+        title: tc('success'),
+        description: tc('success'),
       });
     } catch (error: any) {
       toast({
-        title: "Export Hatası",
-        description: error.message || "Excel export sırasında bir hata oluştu.",
+        title: tc('error'),
+        description: error.message || tc('error'),
         variant: "destructive",
       });
       console.error("Error exporting to Excel:", error);
@@ -100,13 +103,13 @@ export default function DriverAssignmentsPage() {
 
       await exportDriverAssignmentsToPDF(assignmentsWithDetails, selectedDate);
       toast({
-        title: "PDF Export Başarılı",
-        description: "Görevlendirmeler PDF dosyası olarak indirildi.",
+        title: tc('success'),
+        description: tc('success'),
       });
     } catch (error: any) {
       toast({
-        title: "Export Hatası",
-        description: error.message || "PDF export sırasında bir hata oluştu.",
+        title: tc('error'),
+        description: error.message || tc('error'),
         variant: "destructive",
       });
       console.error("Error exporting to PDF:", error);
@@ -121,10 +124,10 @@ export default function DriverAssignmentsPage() {
       cancelled: "destructive",
     };
     const labels: Record<RouteAssignment["status"], string> = {
-      scheduled: "Planlandı",
-      in_progress: "Devam Ediyor",
-      completed: "Tamamlandı",
-      cancelled: "İptal Edildi",
+      scheduled: tc('status.planned'),
+      in_progress: tc('status.inProgress'),
+      completed: tc('status.completed'),
+      cancelled: tc('status.cancelled'),
     };
     return (
       <Badge variant={variants[status]}>
@@ -141,10 +144,10 @@ export default function DriverAssignmentsPage() {
             <div>
               <CardTitle className="text-2xl flex items-center gap-2">
                 <Users className="text-primary" />
-                Şoför Görevlendirmeleri
+                {tc('sidebar.driverAssignments')}
               </CardTitle>
               <CardDescription>
-                Tarih bazlı şoför görevlendirmelerini görüntüleyin ve export edin.
+                {tc('sidebar.driverAssignments')}
               </CardDescription>
             </div>
             <div className="flex gap-2">
@@ -167,10 +170,10 @@ export default function DriverAssignmentsPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-8">Yükleniyor...</div>
+            <div className="text-center py-8">{tc('loading')}</div>
           ) : assignments.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              {format(parseISO(selectedDate), "dd MMMM yyyy", { locale: tr })} tarihi için görevlendirme bulunamadı.
+              {tc('noResults')}
             </div>
           ) : (
             <div className="space-y-4">
@@ -178,11 +181,11 @@ export default function DriverAssignmentsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Araç</TableHead>
-                    <TableHead>Şoför</TableHead>
+                    <TableHead>{tc('select')}</TableHead>
                     <TableHead>Alış Saati</TableHead>
                     <TableHead>Tahmini Varış</TableHead>
                     <TableHead>Öğrenci Sayısı</TableHead>
-                    <TableHead>Durum</TableHead>
+                    <TableHead>{tc('status.completed')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -197,7 +200,7 @@ export default function DriverAssignmentsPage() {
                           <div className="flex items-center gap-2">
                             <MapPin className="h-4 w-4 text-muted-foreground" />
                             <span className="font-medium">
-                              {vehicle?.name || "Bilinmeyen Araç"}
+                              {vehicle?.name || t('noVehicle')}
                             </span>
                             {vehicle?.plateNumber && (
                               <Badge variant="outline" className="text-xs">
@@ -210,7 +213,7 @@ export default function DriverAssignmentsPage() {
                           {driver ? (
                             <span className="font-medium">{driver.name}</span>
                           ) : (
-                            <span className="text-muted-foreground">Atanmamış</span>
+                            <span className="text-muted-foreground">{t('noVehicle')}</span>
                           )}
                         </TableCell>
                         <TableCell>
@@ -225,7 +228,7 @@ export default function DriverAssignmentsPage() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Users className="h-4 w-4 text-muted-foreground" />
-                            {students.length} öğrenci
+                            {students.length} {tc('select')}
                           </div>
                         </TableCell>
                         <TableCell>{getStatusBadge(assignment.status)}</TableCell>
@@ -248,11 +251,11 @@ export default function DriverAssignmentsPage() {
                         <div className="flex justify-between items-start">
                           <div>
                             <CardTitle className="text-lg">
-                              {vehicle?.name || "Bilinmeyen Araç"}
+                              {vehicle?.name || t('noVehicle')}
                               {vehicle?.plateNumber && ` (${vehicle.plateNumber})`}
                             </CardTitle>
                             <CardDescription>
-                              {driver ? `Şoför: ${driver.name}` : "Şoför atanmamış"}
+                              {driver ? `${tc('select')}: ${driver.name}` : t('noVehicle')}
                             </CardDescription>
                           </div>
                           {getStatusBadge(assignment.status)}
@@ -263,7 +266,7 @@ export default function DriverAssignmentsPage() {
                           <div>
                             <div className="text-sm text-muted-foreground flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
-                              Tarih
+                              {tc('filter')}
                             </div>
                             <div className="font-medium">
                               {format(parseISO(assignment.date), "dd MMMM yyyy", { locale: tr })}
@@ -272,27 +275,27 @@ export default function DriverAssignmentsPage() {
                           <div>
                             <div className="text-sm text-muted-foreground flex items-center gap-1">
                               <Clock className="h-3 w-3" />
-                              Alış Saati
+                              {tc('details')}
                             </div>
                             <div className="font-medium">
                               {format(parseISO(assignment.pickupTime), "HH:mm", { locale: tr })}
                             </div>
                           </div>
                           <div>
-                            <div className="text-sm text-muted-foreground">Tahmini Varış</div>
+                            <div className="text-sm text-muted-foreground">{tc('details')}</div>
                             <div className="font-medium">
                               {format(parseISO(assignment.estimatedDropoffTime), "HH:mm", { locale: tr })}
                             </div>
                           </div>
                           <div>
-                            <div className="text-sm text-muted-foreground">Kapasite</div>
+                            <div className="text-sm text-muted-foreground">{tc('configuration')}</div>
                             <div className="font-medium">
                               {students.length} / {vehicle ? vehicle.seatingCapacity + vehicle.wheelchairCapacity : "-"}
                             </div>
                           </div>
                         </div>
                         <div>
-                          <div className="text-sm text-muted-foreground mb-2">Öğrenciler:</div>
+                          <div className="text-sm text-muted-foreground mb-2">{tc('select')}:</div>
                           <div className="flex flex-wrap gap-2">
                             {students.map((student) => (
                               <Badge key={student.id} variant="outline">

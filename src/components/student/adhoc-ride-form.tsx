@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useTranslations } from "next-intl";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -19,12 +20,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Send, MapPin } from "lucide-react";
-import { format, addHours } from "date-fns"; // addHours eklendi
+import { format, addHours } from "date-fns";
 import { tr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { addRideRequest } from "@/lib/database";
-import type { RideRequest } from "@/types"; // RideRequest tipi import edildi
+import type { RideRequest } from "@/types";
 
 interface AdhocRideFormProps {
   userId: string;
@@ -42,6 +43,7 @@ const adhocRideFormSchema = z.object({
 type AdhocRideFormValues = z.infer<typeof adhocRideFormSchema>;
 
 export default function AdhocRideForm({ userId, defaultPickupAddress }: AdhocRideFormProps) {
+  const t = useTranslations("page.student.rideForm");
   const { toast } = useToast();
   const form = useForm<AdhocRideFormValues>({
     resolver: zodResolver(adhocRideFormSchema),
@@ -49,7 +51,7 @@ export default function AdhocRideForm({ userId, defaultPickupAddress }: AdhocRid
       rideDate: undefined,
       pickupTime: "",
       pickupAddress: defaultPickupAddress || "",
-      dropoffAddress: "Yıldız Teknik Üniversitesi, Davutpaşa Kampüsü",
+      dropoffAddress: t("defaultDropoff"),
       notes: "",
     },
   });
@@ -58,41 +60,39 @@ export default function AdhocRideForm({ userId, defaultPickupAddress }: AdhocRid
     try {
       const requestedPickupDateTime = new Date(data.rideDate);
       const [hours, minutes] = data.pickupTime.split(":").map(Number);
-      requestedPickupDateTime.setHours(hours, minutes, 0, 0); // Saniye ve milisaniyeyi sıfırla
+      requestedPickupDateTime.setHours(hours, minutes, 0, 0);
 
-      // Bırakılış saati için basit bir tahmin: Alınıştan 2 saat sonrası (örnek)
       const requestedDropoffDateTime = addHours(requestedPickupDateTime, 2);
 
-      // Omit<RideRequest, 'id' | 'createdAt'> tipine uygun bir nesne oluştur
       const rideRequestPayload: Omit<RideRequest, 'id' | 'createdAt'> = {
         userId,
         type: "adhoc",
         requestedPickupTime: requestedPickupDateTime.toISOString(),
-        requestedDropoffTime: requestedDropoffDateTime.toISOString(), // Örnek bırakılış saati
+        requestedDropoffTime: requestedDropoffDateTime.toISOString(),
         pickupLocation: { address: data.pickupAddress },
         dropoffLocation: { address: data.dropoffAddress },
         status: "pending_admin_approval",
-        notes: data.notes || "", // Notlar boşsa boş string ata
+        notes: data.notes || "",
       };
 
-      await addRideRequest(rideRequestPayload); // Supabase'e ekle
+      await addRideRequest(rideRequestPayload);
 
       toast({
-        title: "Servis Talebi Gönderildi",
-        description: "Talebiniz başarıyla alındı. Onay durumu için bildirimlerinizi ve taleplerim sayfasını kontrol edin.",
+        title: t("successTitle"),
+        description: t("successDesc"),
       });
       form.reset({
         rideDate: undefined,
         pickupTime: "",
         pickupAddress: defaultPickupAddress || "",
-        dropoffAddress: "Yıldız Teknik Üniversitesi, Davutpaşa Kampüsü",
+        dropoffAddress: t("defaultDropoff"),
         notes: "",
       });
     } catch (error) {
       console.error("Error creating ride request:", error);
       toast({
-        title: "Talep Oluşturulamadı",
-        description: "Servis talebi oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.",
+        title: t("errorTitle"),
+        description: t("errorDesc"),
         variant: "destructive",
       });
     }
@@ -107,7 +107,7 @@ export default function AdhocRideForm({ userId, defaultPickupAddress }: AdhocRid
             name="rideDate"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel>Servis Tarihi</FormLabel>
+                <FormLabel>{t("dateLabel")}</FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -121,7 +121,7 @@ export default function AdhocRideForm({ userId, defaultPickupAddress }: AdhocRid
                         {field.value ? (
                           format(field.value, "PPP", { locale: tr })
                         ) : (
-                          <span>Tarih seçin</span>
+                          <span>{t("datePlaceholder")}</span>
                         )}
                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                       </Button>
@@ -147,7 +147,7 @@ export default function AdhocRideForm({ userId, defaultPickupAddress }: AdhocRid
             name="pickupTime"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Alınış Saati</FormLabel>
+                <FormLabel>{t("pickupTimeLabel")}</FormLabel>
                 <FormControl>
                   <Input type="time" {...field} />
                 </FormControl>
@@ -162,12 +162,12 @@ export default function AdhocRideForm({ userId, defaultPickupAddress }: AdhocRid
           name="pickupAddress"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Alınış Adresi</FormLabel>
+              <FormLabel>{t("pickupAddressLabel")}</FormLabel>
               <FormControl>
-                <Input placeholder="Tam alınış adresiniz" {...field} />
+                <Input placeholder={t("pickupPlaceholder")} {...field} />
               </FormControl>
               <FormDescription className="flex items-center gap-1">
-                <MapPin className="h-4 w-4" /> Genellikle ev adresiniz.
+                <MapPin className="h-4 w-4" /> {t("pickupAddressDesc")}
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -179,12 +179,12 @@ export default function AdhocRideForm({ userId, defaultPickupAddress }: AdhocRid
           name="dropoffAddress"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Bırakılış Adresi</FormLabel>
+              <FormLabel>{t("dropoffAddressLabel")}</FormLabel>
               <FormControl>
-                <Input placeholder="Tam bırakılış adresiniz (örn: Üniversite Kampüsü)" {...field} />
+                <Input placeholder={t("dropoffPlaceholder")} {...field} />
               </FormControl>
               <FormDescription className="flex items-center gap-1">
-                <MapPin className="h-4 w-4" /> Genellikle okul veya özel bir konum.
+                <MapPin className="h-4 w-4" /> {t("dropoffAddressDesc")}
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -196,9 +196,9 @@ export default function AdhocRideForm({ userId, defaultPickupAddress }: AdhocRid
           name="notes"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Ek Notlar (Opsiyonel)</FormLabel>
+              <FormLabel>{t("notesLabel")}</FormLabel>
               <FormControl>
-                <Textarea placeholder="Sürücüye iletmek istediğiniz özel bir durum veya notunuz varsa..." {...field} />
+                <Textarea placeholder={t("notesPlaceholder")} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -206,7 +206,7 @@ export default function AdhocRideForm({ userId, defaultPickupAddress }: AdhocRid
         />
 
         <Button type="submit" className="w-full sm:w-auto">
-          <Send className="mr-2 h-4 w-4" /> Talep Gönder
+          <Send className="mr-2 h-4 w-4" /> {t("submitButton")}
         </Button>
       </form>
     </Form>

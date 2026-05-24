@@ -25,8 +25,8 @@ class LocalSearchType(str, Enum):
 # --- Models ---
 class LocationNode(BaseModel):
     id: str
-    lat: float
-    lng: float
+    lat: float = Field(..., ge=-90.0, le=90.0, description="Latitude (-90 to 90)")
+    lng: float = Field(..., ge=-180.0, le=180.0, description="Longitude (-180 to 180)")
     type: str = "So"
 
 class StudentNode(BaseModel):

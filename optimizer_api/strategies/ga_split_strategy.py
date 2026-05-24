@@ -81,7 +81,6 @@ class GASplitStrategy(HybridSplitBaseStrategy):
     def __init__(self, config: Optional[Dict] = None):
         self.config = {**self.DEFAULT_CONFIG, **(config or {})}
         self.seed = self.config.get("seed") or int(time.time() * 1000)
-        self.rng = random.Random(self.seed)
         self._best_individual = None
         self._generation_stats = []
 
@@ -99,21 +98,21 @@ class GASplitStrategy(HybridSplitBaseStrategy):
 
 
 
-    def _initialize_population(self, waypoints: List[str]) -> List[Individual]:
+    def _initialize_population(self, waypoints: List[str], rng: random.Random) -> List[Individual]:
         """Initialize population with random and heuristic permutations"""
         population = []
-        
+
         # Random permutations
         for _ in range(self.config["population_size"] - 2):
             chromosome = waypoints.copy()
-            self.rng.shuffle(chromosome)
+            rng.shuffle(chromosome)
             population.append(Individual(
                 chromosome=chromosome,
                 fitness=0.0,
                 total_cost=float('inf'),
                 num_vehicles=0
             ))
-        
+
         # Nearest neighbor heuristic
         nn_tour = self._nearest_neighbor_tour(waypoints)
         if nn_tour:
@@ -123,10 +122,10 @@ class GASplitStrategy(HybridSplitBaseStrategy):
                 total_cost=float('inf'),
                 num_vehicles=0
             ))
-        
+
         # Sorted by coordinates (clustering effect)
         sorted_tour = waypoints.copy()
-        self.rng.shuffle(sorted_tour)  # Just add another random for now
+        rng.shuffle(sorted_tour)  # Just add another random for now
         population.append(Individual(
             chromosome=sorted_tour,
             fitness=0.0,
@@ -200,22 +199,22 @@ class GASplitStrategy(HybridSplitBaseStrategy):
             for ind in population
         ]
 
-    def _tournament_selection(self, population: List[Individual]) -> Individual:
+    def _tournament_selection(self, population: List[Individual], rng: random.Random) -> Individual:
         """Tournament selection"""
-        tournament = self.rng.sample(
+        tournament = rng.sample(
             population,
             min(self.config["tournament_size"], len(population))
         )
         return max(tournament, key=lambda x: x.fitness)
 
-    def _order_crossover(self, parent1: List[str], parent2: List[str]) -> Tuple[List[str], List[str]]:
+    def _order_crossover(self, parent1: List[str], parent2: List[str], rng: random.Random) -> Tuple[List[str], List[str]]:
         """Order Crossover (OX1)"""
         n = len(parent1)
         if n < 2:
             return parent1.copy(), parent2.copy()
-        
-        start = self.rng.randint(0, n - 1)
-        end = self.rng.randint(start, n - 1)
+
+        start = rng.randint(0, n - 1)
+        end = rng.randint(start, n - 1)
         
         child1: List[Optional[str]] = [None] * n
         child2: List[Optional[str]] = [None] * n
@@ -242,28 +241,28 @@ class GASplitStrategy(HybridSplitBaseStrategy):
         
         return cast(List[str], child1), cast(List[str], child2)
 
-    def _mutate(self, chromosome: List[str]) -> List[str]:
+    def _mutate(self, chromosome: List[str], rng: random.Random) -> List[str]:
         """Apply mutation operators"""
         mutated = chromosome.copy()
-        mutation_type = self.rng.choice(["swap", "inversion", "scramble"])
-        
+        mutation_type = rng.choice(["swap", "inversion", "scramble"])
+
         if mutation_type == "swap":
             # Swap two random positions
-            i, j = self.rng.sample(range(len(mutated)), 2)
+            i, j = rng.sample(range(len(mutated)), 2)
             mutated[i], mutated[j] = mutated[j], mutated[i]
-        
+
         elif mutation_type == "inversion":
             # Reverse a segment
-            i, j = self.rng.sample(range(len(mutated)), 2)
+            i, j = rng.sample(range(len(mutated)), 2)
             start, end = min(i, j), max(i, j)
             mutated[start:end + 1] = reversed(mutated[start:end + 1])
-        
+
         else:  # scramble
             # Shuffle a segment
-            i, j = self.rng.sample(range(len(mutated)), 2)
+            i, j = rng.sample(range(len(mutated)), 2)
             start, end = min(i, j), max(i, j)
             segment = mutated[start:end + 1]
-            self.rng.shuffle(segment)
+            rng.shuffle(segment)
             mutated[start:end + 1] = segment
         
         return mutated
@@ -299,7 +298,7 @@ class GASplitStrategy(HybridSplitBaseStrategy):
             logger.debug("Local search failed for individual: %s", exc)
             return individual
 
-    def _diversify(self, population: List[Individual]) -> List[Individual]:
+    def _diversify(self, population: List[Individual], rng: random.Random) -> List[Individual]:
         """
         Diversification when stuck.
         Keep best, replace worst with new random individuals.
@@ -314,7 +313,7 @@ class GASplitStrategy(HybridSplitBaseStrategy):
         waypoints = sorted_pop[0].chromosome.copy() if sorted_pop else []
         while len(new_population) < len(population):
             chromosome = waypoints.copy()
-            self.rng.shuffle(chromosome)
+            rng.shuffle(chromosome)
             new_population.append(Individual(
                 chromosome=chromosome,
                 fitness=0.0,
@@ -324,7 +323,7 @@ class GASplitStrategy(HybridSplitBaseStrategy):
         
         return new_population
 
-    def _evolve(self, population: List[Individual]) -> List[Individual]:
+    def _evolve(self, population: List[Individual], rng: random.Random) -> List[Individual]:
         """Create next generation"""
         new_population = []
         sorted_pop = sorted(population, key=lambda x: x.fitness, reverse=True)
@@ -340,21 +339,21 @@ class GASplitStrategy(HybridSplitBaseStrategy):
         
         # Generate offspring
         while len(new_population) < self.config["population_size"]:
-            parent1 = self._tournament_selection(sorted_pop)
-            parent2 = self._tournament_selection(sorted_pop)
-            
-            if self.rng.random() < self.config["crossover_rate"]:
+            parent1 = self._tournament_selection(sorted_pop, rng)
+            parent2 = self._tournament_selection(sorted_pop, rng)
+
+            if rng.random() < self.config["crossover_rate"]:
                 child1, child2 = self._order_crossover(
-                    parent1.chromosome, parent2.chromosome
+                    parent1.chromosome, parent2.chromosome, rng
                 )
             else:
                 child1 = parent1.chromosome.copy()
                 child2 = parent2.chromosome.copy()
-            
-            if self.rng.random() < self.config["mutation_rate"]:
-                child1 = self._mutate(child1)
-            if self.rng.random() < self.config["mutation_rate"]:
-                child2 = self._mutate(child2)
+
+            if rng.random() < self.config["mutation_rate"]:
+                child1 = self._mutate(child1, rng)
+            if rng.random() < self.config["mutation_rate"]:
+                child2 = self._mutate(child2, rng)
             
             new_population.append(Individual(
                 chromosome=child1, fitness=0.0, total_cost=float('inf'), num_vehicles=0
@@ -400,11 +399,12 @@ class GASplitStrategy(HybridSplitBaseStrategy):
         # Override config
         # Singleton self.config korunuyor; her istek icin local kopya
         effective_config = dict(self.config)
-        rng = random.Random(self.seed)
         if request.ga_config:
             effective_config = {**self.config, **request.ga_config}
             rng = random.Random(effective_config.get("seed", self.seed))
-        
+        else:
+            rng = random.Random(self.seed)
+
         # Load data
         data_loader = DataLoader.get_instance()
         location_ids = [depot.id] + [s.location_code for s in students]
@@ -440,7 +440,7 @@ class GASplitStrategy(HybridSplitBaseStrategy):
         waypoints = [s.location_code for s in students]
         
         # Initialize population
-        population = self._initialize_population(waypoints)
+        population = self._initialize_population(waypoints, rng)
         population = self._evaluate_population(
             population, depot.id, distance_matrix, demands,
             request.sw_capacity, request.so_capacity, request.max_travel_time
@@ -451,7 +451,7 @@ class GASplitStrategy(HybridSplitBaseStrategy):
         generation = 0
         
         for generation in range(self.config["max_iterations"]):
-            population = self._evolve(population)
+            population = self._evolve(population, rng)
             population = self._evaluate_population(
                 population, depot.id, distance_matrix, demands,
                 request.sw_capacity, request.so_capacity, request.max_travel_time
@@ -478,7 +478,7 @@ class GASplitStrategy(HybridSplitBaseStrategy):
             
             # Diversify if stuck
             if no_improvement >= self.config.get("diversify_threshold", 30):
-                population = self._diversify(population)
+                population = self._diversify(population, rng)
                 population = self._evaluate_population(
                     population, depot.id, distance_matrix, demands,
                     request.sw_capacity, request.so_capacity, request.max_travel_time
@@ -604,7 +604,7 @@ class GAEnhancedSplitStrategy(GASplitStrategy):
     def display_name(self) -> str:
         return "GA-Split Enhanced (HGS-style)"
     
-    def _crossover_pmx(self, parent1: List[str], parent2: List[str]) -> List[str]:
+    def _crossover_pmx(self, parent1: List[str], parent2: List[str], rng: random.Random) -> List[str]:
         """
         Partially Mapped Crossover (PMX) - Corrected Implementation
         
@@ -619,8 +619,8 @@ class GAEnhancedSplitStrategy(GASplitStrategy):
         if n < 2:
             return parent1.copy()
 
-        start = self.rng.randint(0, n - 2)
-        end = self.rng.randint(start + 1, n - 1)
+        start = rng.randint(0, n - 2)
+        end = rng.randint(start + 1, n - 1)
 
         child: List[Optional[str]] = [None] * n
 
@@ -651,7 +651,7 @@ class GAEnhancedSplitStrategy(GASplitStrategy):
 
         return cast(List[str], child)
     
-    def _crossover_cx2(self, parent1: List[str], parent2: List[str]) -> List[str]:
+    def _crossover_cx2(self, parent1: List[str], parent2: List[str], rng: random.Random) -> List[str]:
         """
         Cycle Crossover 2 (CX2) - Corrected Implementation
         
@@ -693,7 +693,7 @@ class GAEnhancedSplitStrategy(GASplitStrategy):
                         break
                 
                 # CX2 feature: Alternate cycle direction randomly
-                if len(cycle_values) > 1 and self.rng.random() < 0.5:
+                if len(cycle_values) > 1 and rng.random() < 0.5:
                     cycle_values = cycle_values[::-1]
                 
                 # Place at ORIGINAL indices (correct CX behavior)

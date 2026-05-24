@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { User } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -30,13 +31,6 @@ interface ProfileFormProps {
   onUpdateProfile: (updatedUser: User) => void;
 }
 
-const accessibilityNeedsOptions = [
-  { id: "wheelchair", label: "Tekerlekli Sandalye Kullanıcısı" },
-  { id: "visual_impairment", label: "Görme Engelli" },
-  { id: "hearing_impairment", label: "İşitme Engelli" },
-  { id: "other", label: "Diğer (Lütfen belirtin)" },
-];
-
 const profileFormSchema = z.object({
   name: z.string().min(2, { message: "İsim en az 2 karakter olmalıdır." }),
   email: z.string().email({ message: "Geçerli bir e-posta adresi girin." }),
@@ -44,7 +38,6 @@ const profileFormSchema = z.object({
   homeAddress: z.string().min(10, { message: "Ev adresi en az 10 karakter olmalıdır." }).optional().or(z.literal("")),
   accessibilityNeeds: z.array(z.string()).optional(),
   otherAccessibilityNeed: z.string().optional(),
-  // Password change fields (optional — only sent if filled)
   newPassword: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }).optional().or(z.literal("")),
   confirmPassword: z.string().optional().or(z.literal("")),
   passwordHint: z.string().max(100, { message: "Şifre ipucu en fazla 100 karakter olabilir." }).optional().or(z.literal("")),
@@ -61,9 +54,18 @@ const profileFormSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFormProps) {
+  const t = useTranslations("component.profileForm");
+  const tc = useTranslations("common");
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  const accessibilityNeedsOptions = [
+    { id: "wheelchair", label: t("wheelchair") },
+    { id: "visual_impairment", label: t("visualImpairment") },
+    { id: "hearing_impairment", label: t("hearingImpairment") },
+    { id: "other", label: t("otherAccessibility") },
+  ];
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -76,7 +78,7 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
       otherAccessibilityNeed: currentUser.accessibilityNeeds?.includes("other") ? currentUser.accessibilityNeeds.find(n => n.startsWith("other:"))?.split(":")[1] || "" : "",
       newPassword: "",
       confirmPassword: "",
-      passwordHint: (currentUser as any).passwordHint || "",
+      passwordHint: currentUser.passwordHint || "",
     },
   });
 
@@ -87,7 +89,6 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
     }
 
     try {
-      // 1. Update basic profile in DB
       const updates: Partial<User> = { name: data.name };
       if (currentUser.role === "student") {
         updates.studentNumber = data.studentNumber;
@@ -96,7 +97,6 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
       }
       await dbUpdateUser(currentUser.id, updates);
 
-      // 2. Update password and/or hint if provided
       const hasPasswordChange = data.newPassword && data.newPassword.length >= 6;
       const hasHintChange = data.passwordHint !== undefined;
 
@@ -105,7 +105,7 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
 
-        if (!token) throw new Error("Oturum bulunamadı. Lütfen tekrar giriş yapın.");
+        if (!token) throw new Error(t("sessionNotFound"));
 
         const patchBody: any = {};
         if (hasPasswordChange) patchBody.newPassword = data.newPassword;
@@ -120,25 +120,23 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
           body: JSON.stringify(patchBody),
         });
         const resData = await res.json();
-        if (!res.ok) throw new Error(resData.error || "Şifre güncellenemedi.");
+        if (!res.ok) throw new Error(resData.error || t("passwordUpdateFailed"));
 
-        // Clear password fields after save
         form.setValue("newPassword", "");
         form.setValue("confirmPassword", "");
       }
 
-      // 3. Update context
       onUpdateProfile({ ...currentUser, ...updates });
 
       toast({
-        title: "Profil Güncellendi",
-        description: "Bilgileriniz başarıyla kaydedildi.",
+        title: t("profileUpdated"),
+        description: t("profileUpdatedDesc"),
       });
     } catch (error: any) {
       console.error("Error updating profile:", error);
       toast({
-        title: "Güncelleme Başarısız",
-        description: error.message || "Profiliniz güncellenirken bir hata oluştu.",
+        title: t("updateFailedTitle"),
+        description: error.message || t("updateErrorDesc"),
         variant: "destructive",
       });
     }
@@ -147,15 +145,14 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        {/* ── Basic Info ── */}
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Ad Soyad</FormLabel>
+              <FormLabel>{t("nameLabel")}</FormLabel>
               <FormControl>
-                <Input placeholder="Adınız Soyadınız" {...field} />
+                <Input placeholder={t("namePlaceholder")} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -166,17 +163,16 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>E-posta Adresi</FormLabel>
+              <FormLabel>{t("emailLabel")}</FormLabel>
               <FormControl>
                 <Input type="email" {...field} readOnly disabled />
               </FormControl>
-              <FormDescription>E-posta adresiniz değiştirilemez.</FormDescription>
+              <FormDescription>{t("emailNotChangeable")}</FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        {/* ── Student-only fields ── */}
         {currentUser.role === "student" && (
           <>
             <FormField
@@ -184,12 +180,12 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
               name="studentNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Öğrenci Numarası</FormLabel>
+                  <FormLabel>{t("studentNoLabel")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Örn: 202003002016" {...field} />
+                    <Input placeholder={t("studentNoPlaceholder")} {...field} />
                   </FormControl>
                   <FormDescription className="flex items-center gap-1">
-                    <Hash className="h-4 w-4" /> Öğrenci numaranız.
+                    <Hash className="h-4 w-4" /> {t("studentNoDescription")}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -200,12 +196,12 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
               name="homeAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Ev Adresi</FormLabel>
+                  <FormLabel>{t("addressLabel")}</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Tam ev adresinizi girin..." {...field} rows={3} />
+                    <Textarea placeholder={t("addressPlaceholder")} {...field} rows={3} />
                   </FormControl>
                   <FormDescription className="flex items-center gap-1">
-                    <MapPin className="h-4 w-4" /> Konumunuz servis planlaması için kullanılacaktır.
+                    <MapPin className="h-4 w-4" /> {t("addressDescription")}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -217,9 +213,9 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
               render={() => (
                 <FormItem>
                   <div className="mb-4">
-                    <FormLabel className="text-base">Erişilebilirlik İhtiyaçları</FormLabel>
+                    <FormLabel className="text-base">{t("accessibilityLabel")}</FormLabel>
                     <FormDescription>
-                      Size daha iyi hizmet verebilmemiz için lütfen ilgili seçenekleri işaretleyin.
+                      {t("accessibilityDescription")}
                     </FormDescription>
                   </div>
                   {accessibilityNeedsOptions.map((item) => (
@@ -254,9 +250,9 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
                 name="otherAccessibilityNeed"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Diğer Erişilebilirlik İhtiyacı</FormLabel>
+                    <FormLabel>{t("otherAccLabel")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Lütfen belirtin..." {...field} />
+                      <Input placeholder={t("otherAccPlaceholder")} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -266,14 +262,13 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
           </>
         )}
 
-        {/* ── Password & Hint Section (all roles) ── */}
         <Separator />
         <div>
           <h3 className="text-base font-semibold flex items-center gap-2 mb-1">
-            <KeyRound className="h-4 w-4 text-amber-500" /> Şifre ve Güvenlik
+            <KeyRound className="h-4 w-4 text-amber-500" /> {t("securitySection")}
           </h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Şifrenizi değiştirmek istemiyorsanız bu alanları boş bırakın.
+            {t("securityDescription")}
           </p>
           <div className="space-y-4">
             <FormField
@@ -281,12 +276,12 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
               name="newPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Yeni Şifre</FormLabel>
+                  <FormLabel>{t("newPasswordLabel")}</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Input
                         type={showPassword ? "text" : "password"}
-                        placeholder="Yeni şifrenizi girin (min. 6 karakter)"
+                        placeholder={t("newPasswordPlaceholder")}
                         {...field}
                         className="pr-10"
                       />
@@ -309,12 +304,12 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
               name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Şifre Tekrar</FormLabel>
+                  <FormLabel>{t("confirmPasswordLabel")}</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Input
                         type={showConfirm ? "text" : "password"}
-                        placeholder="Şifrenizi tekrar girin"
+                        placeholder={t("repeatPasswordPlaceholder")}
                         {...field}
                         className="pr-10"
                       />
@@ -337,12 +332,12 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
               name="passwordHint"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Şifre İpucu</FormLabel>
+                  <FormLabel>{t("hintLabel")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Şifrenizi hatırlamanıza yardımcı olacak bir ipucu..." {...field} />
+                    <Input placeholder={t("hintPlaceholder")} {...field} />
                   </FormControl>
                   <FormDescription>
-                    Bu ipucu şifrelerinizi unuttuğunuzda size gösterilir. Şifreyi direkt yazmayın.
+                    {t("hintDescription")}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -352,7 +347,7 @@ export default function ProfileForm({ currentUser, onUpdateProfile }: ProfileFor
         </div>
 
         <Button type="submit" className="w-full sm:w-auto">
-          <Save className="mr-2 h-4 w-4" /> Bilgileri Kaydet
+          <Save className="mr-2 h-4 w-4" /> {t("saveButton")}
         </Button>
       </form>
     </Form>

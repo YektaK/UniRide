@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useTranslations } from 'next-intl';
 import type { User, UserRole } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -34,46 +35,55 @@ interface UserFormDialogProps {
   user: User | null;
 }
 
-const disabilityTypeOptions = [
-  { id: "Sw", label: "Sw - Tekerlekli Sandalye" },
-  { id: "So", label: "So - Diğer Engel Tipi" },
-];
-
-const accessibilityNeedsOptions = [
-  { id: "visual_impairment", label: "Görme Engelli" },
-  { id: "hearing_impairment", label: "İşitme Engelli" },
-  { id: "mobility_aid", label: "Yürüme Desteği" },
-  { id: "other", label: "Diğer" },
-];
-
-// Role is no longer part of the editable form values
-const userFormSchema = z.object({
-  id: z.string(),
-  name: z.string().min(2, { message: "Ad Soyad en az 2 karakter olmalıdır." }),
-  email: z.string().email({ message: "Geçerli bir e-posta adresi girin." }),
-  studentNumber: z.string().optional(),
-  homeAddress: z.string().optional(),
-  disabilityType: z.enum(["Sw", "So"]).nullable().optional(),
-  accessibilityNeeds: z.array(z.string()).optional(),
-  otherAccessibilityNeed: z.string().optional(),
-  locationCode: z.string().optional(),
-  password: z.string().optional(),
-  weeklyScheduleId: z.string().optional(),
-  role: z.enum(["student", "admin", "driver"]) as z.ZodType<UserRole>, // Extended roles
-}).refine(data => {
-  // Student number validation only if the user's role is "student"
-  if (data.role === "student" && (!data.studentNumber || !/^\d{12}$/.test(data.studentNumber))) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Öğrenci rolü için 12 haneli öğrenci numarası gereklidir.",
-  path: ["studentNumber"],
-});
-
-type UserFormValues = z.infer<typeof userFormSchema>;
-
 export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFormDialogProps) {
+  const t = useTranslations('component.adminUserForm');
+  const tc = useTranslations('common');
+
+  const disabilityTypeOptions = [
+    { id: "Sw", label: `Sw - ${t('disabilityTypeWheelchair')}` },
+    { id: "So", label: `So - ${t('disabilityTypeOther')}` },
+  ];
+
+  const accessibilityNeedsOptions = [
+    { id: "visual_impairment", label: t('accessibilityVisual') },
+    { id: "hearing_impairment", label: t('accessibilityHearing') },
+    { id: "mobility_aid", label: t('accessibilityMobility') },
+    { id: "other", label: t('accessibilityOther') },
+  ];
+
+  const roleLabels: Record<string, string> = {
+    admin: t('roleAdmin'),
+    driver: t('roleDriver'),
+    student: t('roleStudent'),
+  };
+
+  // Role is no longer part of the editable form values
+  const userFormSchema = z.object({
+    id: z.string(),
+    name: z.string().min(2, { message: t('nameMinError') }),
+    email: z.string().email({ message: t('emailInvalid') }),
+    studentNumber: z.string().optional(),
+    homeAddress: z.string().optional(),
+    disabilityType: z.enum(["Sw", "So"]).nullable().optional(),
+    accessibilityNeeds: z.array(z.string()).optional(),
+    otherAccessibilityNeed: z.string().optional(),
+    locationCode: z.string().optional(),
+    password: z.string().optional(),
+    weeklyScheduleId: z.string().optional(),
+    role: z.enum(["student", "admin", "driver"]) as z.ZodType<UserRole>, // Extended roles
+  }).refine(data => {
+    // Student number validation only if the user's role is "student"
+    if (data.role === "student" && (!data.studentNumber || !/^\d{12}$/.test(data.studentNumber))) {
+      return false;
+    }
+    return true;
+  }, {
+    message: t('studentNoRequired'),
+    path: ["studentNumber"],
+  });
+
+  type UserFormValues = z.infer<typeof userFormSchema>;
+
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
   });
@@ -85,7 +95,7 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
         studentNumber: user.studentNumber || "",
         homeAddress: user.homeAddress || "",
         disabilityType: user.disabilityType || null,
-        locationCode: (user as any).locationCode || "",
+        locationCode: user.locationCode || "",
         accessibilityNeeds: user.accessibilityNeeds || [],
         otherAccessibilityNeed: user.accessibilityNeeds?.includes("other")
           ? user.accessibilityNeeds.find(n => n.startsWith("other:"))?.split(":")[1] || ""
@@ -133,16 +143,16 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
     onSave(userDataToSave);
   };
 
-  if (!user && isOpen) return <Dialog open={isOpen} onOpenChange={onClose}><DialogContent><p>Kullanıcı yüklenemedi.</p></DialogContent></Dialog>;
+  if (!user && isOpen) return <Dialog open={isOpen} onOpenChange={onClose}><DialogContent><p>{t('userLoadFailed')}</p></DialogContent></Dialog>;
 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Kullanıcıyı Düzenle: {user?.name} ({user?.role === "admin" ? "Admin" : user?.role === "driver" ? "Şoför" : "Öğrenci"})</DialogTitle>
+          <DialogTitle>{t('editTitle', { name: user?.name ?? '', role: roleLabels[user?.role || ''] || '' })}</DialogTitle>
           <DialogDescription>
-            Kullanıcı bilgilerini güncelleyin. E-posta değişikliği dikkatli yapılmalıdır. Rol bu ekrandan değiştirilemez.
+            {t('editDesc')}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -152,7 +162,7 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Ad Soyad</FormLabel>
+                  <FormLabel>{t('nameLabel')}</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -165,7 +175,7 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>E-posta</FormLabel>
+                  <FormLabel>{t('emailLabel')}</FormLabel>
                   <FormControl>
                     <Input type="email" {...field} />
                   </FormControl>
@@ -183,9 +193,9 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
                   name="studentNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Öğrenci Numarası</FormLabel>
+                      <FormLabel>{t('studentNumberLabel')}</FormLabel>
                       <FormControl>
-                        <Input placeholder="12 haneli numara" {...field} />
+                        <Input placeholder={t('studentNumberPlaceholder')} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -196,7 +206,7 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
                   name="disabilityType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Engel Tipi</FormLabel>
+                      <FormLabel>{t('disabilityTypeLabel')}</FormLabel>
                       <div className="flex gap-4">
                         {disabilityTypeOptions.map((option) => (
                           <label key={option.id} className="flex items-center gap-2 cursor-pointer">
@@ -221,9 +231,9 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
                   name="homeAddress"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Ev Adresi</FormLabel>
+                      <FormLabel>{t('homeAddressLabel')}</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Tam ev adresi" {...field} />
+                        <Textarea placeholder={t('addressPlaceholder')} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -235,7 +245,7 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
                   render={() => (
                     <FormItem>
                       <div className="mb-2">
-                        <FormLabel className="text-base">Erişilebilirlik İhtiyaçları</FormLabel>
+                        <FormLabel className="text-base">{t('accessibilityNeedsLabel')}</FormLabel>
                       </div>
                       {accessibilityNeedsOptions.map((item) => (
                         <FormField
@@ -280,9 +290,9 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
                     name="otherAccessibilityNeed"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Diğer Erişilebilirlik İhtiyacı</FormLabel>
+                        <FormLabel>{t('otherLabel')}</FormLabel>
                         <FormControl>
-                          <Input placeholder="Lütfen belirtin..." {...field} />
+                          <Input placeholder={t('otherPlaceholder')} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -294,9 +304,9 @@ export default function UserFormDialog({ isOpen, onClose, onSave, user }: UserFo
 
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={onClose}>
-                İptal
+                {tc('cancel')}
               </Button>
-              <Button type="submit">Kaydet</Button>
+              <Button type="submit">{tc('save')}</Button>
             </DialogFooter>
           </form>
         </Form>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -29,6 +30,8 @@ const clusteringAlgorithms = [
 ];
 
 export default function AlgorithmComparisonPage() {
+    const t = useTranslations('page.admin.compare');
+    const tc = useTranslations('common');
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const [isFetchingUsers, setIsFetchingUsers] = useState(true);
@@ -56,8 +59,8 @@ export default function AlgorithmComparisonPage() {
         } catch (error) {
             console.error("[Compare UI] Error loading students:", error);
             toast({
-                title: "Öğrenciler Yüklenemedi",
-                description: "Test verisi için öğrenci listesi alınamadı.",
+                title: t('loadError'),
+                description: t('loadError'),
                 variant: "destructive"
             });
         } finally {
@@ -69,8 +72,8 @@ export default function AlgorithmComparisonPage() {
     const runComparison = async () => {
         if (students.length === 0) {
             toast({
-                title: "Öğrenci Bulunamadı",
-                description: "Sistemde kayıtlı öğrenci yok. Karşılaştırma yapılamaz.",
+                title: t('studentNotFound'),
+                description: t('studentNotFound'),
                 variant: "destructive"
             });
             return;
@@ -104,15 +107,15 @@ export default function AlgorithmComparisonPage() {
             setSelectedResult(null); // Reset selection on new run
             
             toast({
-                title: "Karşılaştırma Tamamlandı",
-                description: `${data.results.length} farklı algoritma test edildi.`
+                title: tc('success'),
+                description: `${data.results.length} ${tc('success')}`
             });
 
         } catch (error: any) {
             console.error("Comparison error:", error);
             toast({
-                title: "Optimizasyon Hatası",
-                description: error.message || "Algoritma sunucusu yanıt vermedi.",
+                title: tc('error'),
+                description: error.message || tc('error'),
                 variant: "destructive"
             });
         } finally {
@@ -126,10 +129,10 @@ export default function AlgorithmComparisonPage() {
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
                         <CardTitle className="text-2xl flex items-center gap-2">
-                            <Cpu className="text-primary" /> Algoritma Karşılaştırması
+                            <Cpu className="text-primary" /> {tc('sidebar.algorithmCompare')}
                         </CardTitle>
                         <CardDescription>
-                            Tüm optimizasyon algoritmalarını (GA, PSO, Greedy, OR-Tools vb.) aynı veri seti üzerinde yarıştırın ve performanslarını karşılaştırın.
+                            {tc('sidebar.algorithmCompare')}
                         </CardDescription>
                     </div>
                 </CardHeader>
@@ -138,9 +141,9 @@ export default function AlgorithmComparisonPage() {
                         <div className="flex items-center gap-3 text-sm">
                             <Target className="h-5 w-5 text-muted-foreground" />
                             <div>
-                                <p className="font-semibold">Test Verisi</p>
+                                <p className="font-semibold">{tc('selectAll')}</p>
                                 <p className="text-muted-foreground">
-                                    {isFetchingUsers ? "Sistemdeki öğrenciler yükleniyor..." : `Sistemde kayıtlı ${students.length} adet "Öğrenci" rolündeki kullanıcı kullanılarak test edilecektir.`}
+                                    {isFetchingUsers ? tc('loading') : t('usingNStudents', { n: students.length })}
                                 </p>
                             </div>
                         </div>
@@ -152,18 +155,18 @@ export default function AlgorithmComparisonPage() {
                         >
                             {isLoading ? (
                                 <>
-                                    <Activity className="mr-2 h-4 w-4 animate-spin" /> Analiz Ediliyor...
+                                    <Activity className="mr-2 h-4 w-4 animate-spin" /> {tc('loading')}
                                 </>
                             ) : (
                                 <>
-                                    <Play className="mr-2 h-4 w-4" /> Tümünü Yarıştır
+                                    <Play className="mr-2 h-4 w-4" /> {tc('selectAll')}
                                 </>
                             )}
                         </Button>
                     </div>
                     
                     <div className="mb-6 w-full md:w-64">
-                        <label className="text-sm font-medium mb-2 block text-muted-foreground"><Target className="h-4 w-4 inline mr-1" /> Kümeleme Yöntemi</label>
+                        <label className="text-sm font-medium mb-2 block text-muted-foreground"><Target className="h-4 w-4 inline mr-1" /> {tc('configuration')}</label>
                         <Select value={clusteringAlgorithm} onValueChange={setClusteringAlgorithm} disabled={isLoading}>
                             <SelectTrigger>
                                 <SelectValue />
@@ -187,7 +190,7 @@ export default function AlgorithmComparisonPage() {
                                             <CheckCircle2 className="h-6 w-6 text-green-700" />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-medium text-green-800">En Verimli Rota</p>
+                                            <p className="text-sm font-medium text-green-800">{tc('details')}</p>
                                             <p className="text-2xl font-bold text-green-900 capitalize">
                                                 {compareResult.best_algorithm?.replace('_', ' ') || "-"}
                                             </p>
@@ -200,7 +203,7 @@ export default function AlgorithmComparisonPage() {
                                             <Activity className="h-6 w-6 text-blue-700" />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-medium text-blue-800">En Hızlı Çözümcü</p>
+                                            <p className="text-sm font-medium text-blue-800">{tc('details')}</p>
                                             <p className="text-2xl font-bold text-blue-900 capitalize">
                                                 {compareResult.fastest_algorithm?.replace('_', ' ') || "-"}
                                             </p>
@@ -213,12 +216,12 @@ export default function AlgorithmComparisonPage() {
                                 <Table>
                                     <TableHeader className="bg-muted/50">
                                         <TableRow>
-                                            <TableHead className="w-[200px]">Algoritma</TableHead>
-                                            <TableHead className="text-center">Durum</TableHead>
-                                            <TableHead className="text-center"><div className="flex items-center justify-center gap-1"><Truck className="h-4 w-4"/> Araç</div></TableHead>
-                                            <TableHead className="text-center"><div className="flex items-center justify-center gap-1"><Clock className="h-4 w-4"/> Süre (Dk)</div></TableHead>
-                                            <TableHead className="text-right">Hız (sn)</TableHead>
-                                            <TableHead className="text-center w-[100px]">Detay</TableHead>
+                                            <TableHead className="w-[200px]">{tc('selectAll')}</TableHead>
+                                            <TableHead className="text-center">{tc('status.completed')}</TableHead>
+                                            <TableHead className="text-center"><div className="flex items-center justify-center gap-1"><Truck className="h-4 w-4"/> {tc('configuration')}</div></TableHead>
+                                            <TableHead className="text-center"><div className="flex items-center justify-center gap-1"><Clock className="h-4 w-4"/> {tc('details')}</div></TableHead>
+                                            <TableHead className="text-right">{tc('details')}</TableHead>
+                                            <TableHead className="text-center w-[100px]">{tc('details')}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -236,9 +239,9 @@ export default function AlgorithmComparisonPage() {
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     {res.success ? (
-                                                        <Badge variant="outline" className="border-green-500 text-green-700">Başarılı</Badge>
+                                                        <Badge variant="outline" className="border-green-500 text-green-700">{tc('success')}</Badge>
                                                     ) : (
-                                                        <Badge variant="destructive">Hata Çıktı</Badge>
+                                                        <Badge variant="destructive">{tc('error')}</Badge>
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="text-center font-semibold">{res.total_vehicles || "-"}</TableCell>
@@ -268,11 +271,11 @@ export default function AlgorithmComparisonPage() {
                                                 {selectedResult.algorithm.replace('_', ' ')} - Rota ve Araç Çözüm Detayları
                                             </span>
                                             <Badge variant="outline" className="text-sm">
-                                                Toplam Süre: {selectedResult.total_duration_minutes.toFixed(1)} Dk
+                                                        {tc('details')}: {selectedResult.total_duration_minutes.toFixed(1)} Dk
                                             </Badge>
                                         </CardTitle>
                                         <CardDescription>
-                                            Algoritmanın oluşturduğu rotaların araca atanmış öğrenci detayları, sıralamaları ve hesaplanan mesafeler/süreler.
+                                            {t('noRouteDetails')}
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent className="p-6 space-y-8">
@@ -292,8 +295,8 @@ export default function AlgorithmComparisonPage() {
                                                     <div className="bg-slate-100 p-3 px-4 flex flex-col md:flex-row md:items-center justify-between gap-2 border-b">
                                                         <div className="flex items-center gap-2">
                                                             <Truck className="h-5 w-5 text-slate-600" />
-                                                            <span className="font-semibold text-slate-800">Araç {vId}</span>
-                                                            <span className="text-sm text-slate-500 ml-2">({students.length} Öğrenci)</span>
+                                                            <span className="font-semibold text-slate-800">{tc('configuration')} {vId}</span>
+                                                            <span className="text-sm text-slate-500 ml-2">({students.length} {tc('select')})</span>
                                                         </div>
                                                         <div className="flex items-center gap-3 text-sm">
                                                             <Badge variant="secondary" className="bg-slate-200">
@@ -307,11 +310,11 @@ export default function AlgorithmComparisonPage() {
                                                     
                                                     <div className="p-4 bg-white">
                                                         <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                                            <MapPin className="h-4 w-4" /> Optimizasyon Rotası
+                                                            <MapPin className="h-4 w-4" /> {tc('details')}
                                                         </h4>
                                                         
                                                         {!hasValidDetails ? (
-                                                            <p className="text-sm text-amber-600 italic">Bu algoritma rota adımlarını detaylı döndürmedi. Sadece araç ataması yapıldı.</p>
+                                                            <p className="text-sm text-amber-600 italic">{t('noRouteDetails')}</p>
                                                         ) : (
                                                             <div className="flex flex-wrap items-center gap-y-2 text-sm">
                                                                 {details.map((step: any, sIdx: number) => (
@@ -348,7 +351,7 @@ export default function AlgorithmComparisonPage() {
                                         })}
                                     </CardContent>
                                     <CardFooter className="bg-slate-50 border-t py-3 text-sm text-slate-500">
-                                        * Yukarıdaki grafikte her durak arası tahmini seyahat süresi (dk) olarak hesaplanmıştır. Toplam süre, aracın kampüsten çıkıp öğrencileri bırakarak tekrar kampüse döndüğü toplam operasyon süresidir.
+                                        {tc('details')}
                                     </CardFooter>
                                 </Card>
                             )}

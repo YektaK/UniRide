@@ -392,11 +392,9 @@ class RUN_TSP(BaseTSPSolver):
 
         return result
 
-    def solve(self, coordinates: List[Tuple[float, float]]) -> TSPResult:
-        """Run RUN optimization on the TSP instance."""
+    def _solve(self) -> TSPResult:
         t_start = time.perf_counter()
-        n = len(coordinates)
-        self._set_problem(coordinates)
+        n = self._n
 
         if n < 3:
             tour = list(range(n))
@@ -458,7 +456,7 @@ class RUN_TSP(BaseTSPSolver):
 
                 # Local search refinement (lightweight)
                 candidate, _, _ = MultiLayerLS.improve(
-                    candidate, self._dist_matrix, intensity="light",
+                    candidate, self._dist_matrix, dm_np=None, intensity="light",
                     time_limit=self.cfg.ls_time_limit,
                     three_opt_window=self.cfg.three_opt_window,
                 )
@@ -484,7 +482,7 @@ class RUN_TSP(BaseTSPSolver):
                 perturbed = _esq_perturbation(best_tour, best_tour, self._dist_matrix,
                                               self._rng, intensity=0.15)
                 perturbed, _, _ = MultiLayerLS.improve(
-                    perturbed, self._dist_matrix, intensity="light",
+                    perturbed, self._dist_matrix, dm_np=None, intensity="light",
                     time_limit=self.cfg.ls_time_limit,
                     three_opt_window=self.cfg.three_opt_window,
                 )

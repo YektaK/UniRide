@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from 'next-intl';
 import type { Vehicle } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
@@ -47,26 +48,29 @@ const defaultCapacities = {
   van: { wheelchairCapacity: 2, seatingCapacity: 3 },
 };
 
-const vehicleFormSchema = z.object({
-  id: z.string().optional(),
-  name: z.string().min(2, { message: "Araç adı en az 2 karakter olmalıdır." }),
-  type: z.enum(["minibus", "bus", "van"], { required_error: "Araç tipi seçilmelidir." }),
-  plateNumber: z.string().optional(),
-  wheelchairCapacity: z.coerce.number().min(0, { message: "Kapasite 0 veya daha büyük olmalıdır." }),
-  seatingCapacity: z.coerce.number().min(0, { message: "Kapasite 0 veya daha büyük olmalıdır." }),
-  cooldownMinutes: z.number().min(0).max(60).default(10),
-  status: z.enum(["active", "inactive", "maintenance"], { required_error: "Durum seçilmelidir." }),
-}).refine(
-  (data) => data.wheelchairCapacity > 0 || data.seatingCapacity > 0,
-  {
-    message: "En az bir kapasite (Sw veya So) 0'dan büyük olmalıdır",
-    path: ["wheelchairCapacity"],
-  }
-);
-
-type VehicleFormValues = z.infer<typeof vehicleFormSchema>;
-
 export default function VehicleFormDialog({ isOpen, onClose, onSave, vehicle }: VehicleFormDialogProps) {
+  const t = useTranslations('component.adminVehicleForm');
+  const tc = useTranslations('common');
+
+  const vehicleFormSchema = z.object({
+    id: z.string().optional(),
+    name: z.string().min(2, { message: t('nameMinError') }),
+    type: z.enum(["minibus", "bus", "van"], { required_error: t('typeRequired') }),
+    plateNumber: z.string().optional(),
+    wheelchairCapacity: z.coerce.number().min(0, { message: t('capacityMinError') }),
+    seatingCapacity: z.coerce.number().min(0, { message: t('capacityMinError') }),
+    cooldownMinutes: z.number().min(0).max(60).default(10),
+    status: z.enum(["active", "inactive", "maintenance"], { required_error: t('statusPlaceholder') }),
+  }).refine(
+    (data) => data.wheelchairCapacity > 0 || data.seatingCapacity > 0,
+    {
+      message: t('capacityZeroError'),
+      path: ["wheelchairCapacity"],
+    }
+  );
+
+  type VehicleFormValues = z.infer<typeof vehicleFormSchema>;
+
   const form = useForm<VehicleFormValues>(
     {
       resolver: zodResolver(vehicleFormSchema),
@@ -131,9 +135,9 @@ export default function VehicleFormDialog({ isOpen, onClose, onSave, vehicle }: 
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
-          <DialogTitle>{vehicle ? "Aracı Düzenle" : "Yeni Araç Ekle"}</DialogTitle>
+          <DialogTitle>{vehicle ? t('editTitle') : t('addTitle')}</DialogTitle>
           <DialogDescription>
-            {vehicle ? "Araç bilgilerini güncelleyin." : "Yeni bir servis aracı için bilgileri girin."}
+            {vehicle ? t('editDesc') : t('addDesc')}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -143,9 +147,9 @@ export default function VehicleFormDialog({ isOpen, onClose, onSave, vehicle }: 
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Araç Adı / Tanımı</FormLabel>
+                  <FormLabel>{t('nameLabel')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Örn: Servis A, Mavi Minibüs" {...field} />
+                    <Input placeholder={t('namePlaceholder')} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -156,9 +160,9 @@ export default function VehicleFormDialog({ isOpen, onClose, onSave, vehicle }: 
               name="plateNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Plaka Numarası (Opsiyonel)</FormLabel>
+                  <FormLabel>{t('plateLabel')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Örn: 06 ABC 123" {...field} />
+                    <Input placeholder={t('platePlaceholder')} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -170,23 +174,23 @@ export default function VehicleFormDialog({ isOpen, onClose, onSave, vehicle }: 
                 name="type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Araç Tipi</FormLabel>
+                    <FormLabel>{t('typeLabel')}</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Araç tipi seçin" />
+                          <SelectValue placeholder={t('typePlaceholder')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="minibus">Minibüs</SelectItem>
-                        <SelectItem value="bus">Otobüs</SelectItem>
-                        <SelectItem value="van">Van</SelectItem>
+                        <SelectItem value="minibus">{t('typeMinibus')}</SelectItem>
+                        <SelectItem value="bus">{t('typeBus')}</SelectItem>
+                        <SelectItem value="van">{t('typeVan')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {field.value === "minibus" && "Varsayılan: 4 Sw + 5 So"}
-                      {field.value === "bus" && "Varsayılan: 8 Sw + 15 So"}
-                      {field.value === "van" && "Varsayılan: 2 Sw + 3 So"}
+                      {field.value === "minibus" && t('defaultHint', { sw: 4, so: 5 })}
+                      {field.value === "bus" && t('defaultHint', { sw: 8, so: 15 })}
+                      {field.value === "van" && t('defaultHint', { sw: 2, so: 3 })}
                     </p>
                     <FormMessage />
                   </FormItem>
@@ -197,17 +201,17 @@ export default function VehicleFormDialog({ isOpen, onClose, onSave, vehicle }: 
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Durum</FormLabel>
+                    <FormLabel>{t('statusLabel')}</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Durum seçin" />
+                          <SelectValue placeholder={t('statusPlaceholder')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="active">Aktif</SelectItem>
-                        <SelectItem value="inactive">Pasif</SelectItem>
-                        <SelectItem value="maintenance">Bakımda</SelectItem>
+                        <SelectItem value="active">{t('statusActive')}</SelectItem>
+                        <SelectItem value="inactive">{t('statusInactive')}</SelectItem>
+                        <SelectItem value="maintenance">{t('statusMaintenance')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -223,7 +227,7 @@ export default function VehicleFormDialog({ isOpen, onClose, onSave, vehicle }: 
                 name="wheelchairCapacity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Sw Kapasitesi</FormLabel>
+                    <FormLabel>{t('wheelchairCapacityLabel')}</FormLabel>
                     <FormControl>
                       <Input 
                         type="number" 
@@ -232,7 +236,7 @@ export default function VehicleFormDialog({ isOpen, onClose, onSave, vehicle }: 
                         onChange={event => field.onChange(+event.target.value)} 
                       />
                     </FormControl>
-                    <p className="text-xs text-muted-foreground">Tekerlekli sandalye</p>
+                    <p className="text-xs text-muted-foreground">{t('wheelchairSubtitle')}</p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -242,7 +246,7 @@ export default function VehicleFormDialog({ isOpen, onClose, onSave, vehicle }: 
                 name="seatingCapacity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>So Kapasitesi</FormLabel>
+                    <FormLabel>{t('seatingCapacityLabel')}</FormLabel>
                     <FormControl>
                       <Input 
                         type="number" 
@@ -251,7 +255,7 @@ export default function VehicleFormDialog({ isOpen, onClose, onSave, vehicle }: 
                         onChange={event => field.onChange(+event.target.value)} 
                       />
                     </FormControl>
-                    <p className="text-xs text-muted-foreground">Tekerlekli sandalye kullanmayan engelli</p>
+                    <p className="text-xs text-muted-foreground">{t('seatingSubtitle')}</p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -262,7 +266,7 @@ export default function VehicleFormDialog({ isOpen, onClose, onSave, vehicle }: 
             {hasCapacityError && (
               <div className="flex items-center gap-2 text-sm text-red-500 bg-red-50 p-2 rounded">
                 <AlertCircle className="h-4 w-4" />
-                <span>En az bir kapasite 0&apos;dan büyük olmalıdır</span>
+                <span>{t('capacityZeroError')}</span>
               </div>
             )}
 
@@ -274,7 +278,7 @@ export default function VehicleFormDialog({ isOpen, onClose, onSave, vehicle }: 
                 <FormItem>
                   <FormLabel className="flex items-center gap-2">
                     <Clock className="h-4 w-4" />
-                    Dönüş Arası Süre (Cooldown)
+                    {t('cooldownLabel')}
                   </FormLabel>
                   <FormControl>
                     <div className="space-y-3">
@@ -287,16 +291,16 @@ export default function VehicleFormDialog({ isOpen, onClose, onSave, vehicle }: 
                         className="w-full"
                       />
                       <div className="flex justify-between items-center">
-                        <span className="text-xs text-muted-foreground">0 dk</span>
+                        <span className="text-xs text-muted-foreground">{t('cooldownMin')}</span>
                         <span className="text-sm font-medium bg-primary/10 text-primary px-2 py-1 rounded">
-                          {field.value} dakika
+                          {t('cooldownValue', { value: field.value })}
                         </span>
-                        <span className="text-xs text-muted-foreground">60 dk</span>
+                        <span className="text-xs text-muted-foreground">{t('cooldownMax')}</span>
                       </div>
                     </div>
                   </FormControl>
                   <p className="text-xs text-muted-foreground">
-                    Pickup ve dropoff rotaları arasındaki bekleme süresi (varsayılan: 10 dk)
+                    {t('cooldownDesc', { default: 10 })}
                   </p>
                   <FormMessage />
                 </FormItem>
@@ -305,10 +309,10 @@ export default function VehicleFormDialog({ isOpen, onClose, onSave, vehicle }: 
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
-                İptal
+                {tc('cancel')}
               </Button>
               <Button type="submit" disabled={hasCapacityError}>
-                Kaydet
+                {tc('save')}
               </Button>
             </DialogFooter>
           </form>

@@ -29,12 +29,21 @@ except ImportError:
     from academic_benchmark.benchmark_utils import TSPLIB_OPTIMALS
 
 try:
-    from optimizer_api.utils.tsplib_parser import tsplib_distance_by_type
+    from uniride_core.algorithms.tsplib_parser import (
+        tsplib_distance_by_type, parse_tsplib_text,
+        parse_opt_tour_text, parse_atsp_text,
+    )
     _DIST_OK = True
 except ImportError:
     _DIST_OK = False
     def tsplib_distance_by_type(ewt, p1, p2):
         raise RuntimeError("tsplib_distance_by_type not available")
+    def parse_tsplib_text(content, name_hint=""):
+        raise RuntimeError("parse_tsplib_text not available")
+    def parse_opt_tour_text(content):
+        raise RuntimeError("parse_opt_tour_text not available")
+    def parse_atsp_text(content, name_hint=""):
+        raise RuntimeError("parse_atsp_text not available")
 
 # ── DB helpers ────────────────────────────────────────────────────────────────
 
@@ -328,163 +337,11 @@ def analyze_solution_patterns(db_path: str = DB_PATH) -> str:
     return "\n".join(lines)
 
 
-# ── Parsing helpers ───────────────────────────────────────────────────────────
+# ── Parsing helpers — delegated to canonical parser ─────────────────────────
 
-def _parse_tsp_text(content: str, name_hint: str = ""):
-    content = content.replace("\r\n", "\n").replace("\r", "\n")
-    m = re.search(
-        r"NODE_COORD_SECTION\s*\n(.*?)(?:\n(?:EOF|DISPLAY_DATA_SECTION)|\Z)",
-        content, re.DOTALL | re.IGNORECASE
-    )
-    if not m:
-        return None  # EXPLICIT type - skip
-    header = content[:m.start()]
-    dm = re.search(r"DIMENSION\s*[:\s]\s*(\d+)", header, re.IGNORECASE)
-    em = re.search(r"EDGE_WEIGHT_TYPE\s*[:\s]\s*(\S+)", header, re.IGNORECASE)
-    nm = re.findall(r"^NAME\s*[:\s]\s*(\S+)", header, re.IGNORECASE | re.MULTILINE)
-    tm = re.search(r"TYPE\s*[:\s]\s*(\S+)", header, re.IGNORECASE)
-    if not dm:
-        return None
-    raw = (nm[-1] if nm else name_hint).lower().strip()
-    for sfx in (".opt.tour", ".opt", ".tsp"):
-        if raw.endswith(sfx):
-            raw = raw[:-len(sfx)]
-    name = raw.split("/")[-1].split("\\")[-1]
-    if not name:
-        name = name_hint.lower().replace(".tsp", "").split("/")[-1].split("\\")[-1]
-    if not name:
-        return None
-    ewt = em.group(1).upper() if em else "EUC_2D"
-    supported = ("EUC_2D", "EUC_3D", "CEIL_2D", "ATT", "GEO", "GEOM", "NEU_2D")
-    if ewt not in supported:
-        return None
-    coords = []
-    for line in m.group(1).strip().splitlines():
-        parts = line.strip().split()
-        if len(parts) >= 3:
-            try:
-                coords.append((float(parts[1]), float(parts[2])))
-            except ValueError:
-                pass
-    if not coords:
-        return None
-    return {
-        "name": name, "dimension": int(dm.group(1)),
-        "edge_weight_type": ewt,
-        "problem_type": tm.group(1).upper() if tm else "TSP",
-        "coordinates": coords,
-    }
-
-
-def _parse_opt_tour_text(content: str):
-    content = content.replace("\r\n", "\n").replace("\r", "\n")
-    m = re.search(r"TOUR_SECTION\s*\n(.*?)(?:\n-1|\nEOF|\Z)", content, re.DOTALL | re.IGNORECASE)
-    if not m:
-        return None
-    nodes = []
-    for tok in m.group(1).split():
-        try:
-            v = int(tok)
-            if v == -1:
-                break
-            nodes.append(v)
-        except ValueError:
-            pass
-    return nodes if nodes else None
-
-
-def _parse_atsp_text(content: str, name_hint: str = ""):
-    """Parse ATSP (.atsp) file with EXPLICIT edge weight type.
-    Supports EDGE_WEIGHT_FORMAT: FULL_MATRIX (most common).
-    Returns dict with keys: name, dimension, edge_weight_type, problem_type,
-    explicit_matrix (n x n list of ints).
-    Returns None if parsing fails.
-    """
-    content = content.replace("\r\n", "\n").replace("\r", "\n")
-    header_end = re.search(
-        r"EDGE_WEIGHT_SECTION\s*\n", content, re.IGNORECASE
-    )
-    if not header_end:
-        return None
-    header = content[:header_end.start()]
-    dm = re.search(r"DIMENSION\s*[:\s]\s*(\d+)", header, re.IGNORECASE)
-    if not dm:
-        return None
-    dimension = int(dm.group(1))
-    nm = re.findall(r"^NAME\s*[:\s]\s*(\S+)", header, re.IGNORECASE | re.MULTILINE)
-    em = re.search(r"EDGE_WEIGHT_TYPE\s*[:\s]\s*(\S+)", header, re.IGNORECASE)
-    ef = re.search(r"EDGE_WEIGHT_FORMAT\s*[:\s]\s*(\S+)", header, re.IGNORECASE)
-    tm = re.search(r"TYPE\s*[:\s]\s*(\S+)", header, re.IGNORECASE)
-    ewt = em.group(1).upper() if em else "EXPLICIT"
-    fmt = ef.group(1).upper() if ef else "FULL_MATRIX"
-    raw_name = (nm[-1] if nm else name_hint).lower().strip()
-    for sfx in (".atsp", ".tsp"):
-        if raw_name.endswith(sfx):
-            raw_name = raw_name[:-len(sfx)]
-    name = raw_name.split("/")[-1].split("\\")[-1]
-    if not name:
-        name = name_hint.lower().replace(".atsp", "").replace(".tsp", "").split("/")[-1].split("\\")[-1]
-    if not name:
-        return None
-    matrix_section = content[header_end.end():]
-    eof_m = re.search(r"\bEOF\b", matrix_section, re.IGNORECASE)
-    if eof_m:
-        matrix_section = matrix_section[:eof_m.start()]
-    tokens = matrix_section.split()
-    n_expected = dimension * dimension
-    if fmt == "FULL_MATRIX":
-        if len(tokens) < n_expected:
-            return None
-        vals = []
-        for tok in tokens[:n_expected]:
-            try:
-                vals.append(int(tok))
-            except ValueError:
-                return None
-        matrix = [vals[i * dimension:(i + 1) * dimension] for i in range(dimension)]
-    elif fmt == "UPPER_ROW":
-        n_vals = dimension * (dimension - 1) // 2
-        if len(tokens) < n_vals:
-            return None
-        vals = []
-        for tok in tokens[:n_vals]:
-            try:
-                vals.append(int(tok))
-            except ValueError:
-                return None
-        matrix = [[0] * dimension for _ in range(dimension)]
-        idx = 0
-        for i in range(dimension):
-            for j in range(i + 1, dimension):
-                matrix[i][j] = vals[idx]
-                matrix[j][i] = vals[idx]
-                idx += 1
-    elif fmt == "LOWER_ROW":
-        n_vals = dimension * (dimension - 1) // 2
-        if len(tokens) < n_vals:
-            return None
-        vals = []
-        for tok in tokens[:n_vals]:
-            try:
-                vals.append(int(tok))
-            except ValueError:
-                return None
-        matrix = [[0] * dimension for _ in range(dimension)]
-        idx = 0
-        for i in range(dimension):
-            for j in range(i):
-                matrix[i][j] = vals[idx]
-                matrix[j][i] = vals[idx]
-                idx += 1
-    else:
-        return None
-    return {
-        "name": name,
-        "dimension": dimension,
-        "edge_weight_type": ewt,
-        "problem_type": tm.group(1).upper() if tm else "ATSP",
-        "explicit_matrix": matrix,
-    }
+# All TSPLIB parsing now lives in uniride_core.algorithms.tsplib_parser.
+# The local _parse_tsp_text / _parse_opt_tour_text / _parse_atsp_text functions
+# were removed in the P3-4 consolidation.  Use the imported canonical versions:
 
 
 def _category(n: int) -> str:
@@ -597,7 +454,7 @@ def cmd_extract(args):
                     continue
                 if fname.endswith(".tsp.gz"):
                     rn = os.path.basename(fname).replace(".tsp.gz", "")
-                    info = _parse_tsp_text(text, rn)
+                    info = parse_tsplib_text(text, rn)
                     if info and upsert(info):
                         inserted += 1
                         print(f"  +{info['name']} n={info['dimension']} {info['edge_weight_type']}", flush=True)
@@ -605,7 +462,7 @@ def cmd_extract(args):
                         skipped += 1
                 elif fname.endswith(".opt.tour.gz"):
                     rn = os.path.basename(fname).replace(".opt.tour.gz", "")
-                    tour = _parse_opt_tour_text(text)
+                    tour = parse_opt_tour_text(text)
                     if tour:
                         pending_tours[rn] = tour
         conn.commit()
@@ -621,12 +478,12 @@ def cmd_extract(args):
                 except Exception:
                     continue
                 rn = fname_lower.replace(".tsp", "")
-                info = _parse_tsp_text(text, rn)
+                info = parse_tsplib_text(text, rn)
                 if info and upsert(info, os.path.relpath(fp, TSPLIB_DATA_DIR)):
                     inserted += 1
                 opt_p = fp.replace(".tsp", ".opt.tour")
                 if os.path.exists(opt_p) and info:
-                    tour = _parse_opt_tour_text(open(opt_p, encoding="utf-8", errors="replace").read())
+                    tour = parse_opt_tour_text(open(opt_p, encoding="utf-8", errors="replace").read())
                     if tour:
                         pending_tours[info["name"]] = tour
             elif fname_lower.endswith(".atsp"):
@@ -635,7 +492,7 @@ def cmd_extract(args):
                 except Exception:
                     continue
                 rn = fname_lower.replace(".atsp", "")
-                info = _parse_atsp_text(text, rn)
+                info = parse_atsp_text(text, rn)
                 if info and upsert_atsp(info, os.path.relpath(fp, TSPLIB_DATA_DIR)):
                     inserted += 1
                     print(f"  +{info['name']} n={info['dimension']} ATSP", flush=True)

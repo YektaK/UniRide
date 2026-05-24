@@ -1,1 +1,15 @@
-problem,strategy,avg_length,avg_gap,avg_time_ms,n_runs
+problem,strategy,avg_length,avg_gap,avg_time_ms,n_runs,gap_type
+att48,Numba-2-opt,11136.3333,4.782963,182.3188,3,unknown
+att48,Numba-Swap,14941.3333,40.584619,183.3765,3,unknown
+att48,Numba-3-opt-bounded,12807.6667,20.508719,198.3114,3,unknown
+att48,Numba-Or-opt,11094.6667,4.390917,205.0474,3,unknown
+att48,Numba-Hybrid,10775.3333,1.386275,226.0991,3,unknown
+att48,Numba-GA,10679.6667,0.486137,333.2007,3,unknown
+att48,Numba-PSO,10664.3333,0.341864,1036.1522,3,unknown
+att48,Numba-GWO,10679.6667,0.486137,1060.6327,3,unknown
+att48,Numba-HHO,10679.6667,0.486137,1076.6975,3,unknown
+att48,SOTA-E2BSO-TSP,10628.0,0.0,1241.2751,3,unknown
+att48,SOTA-CGO-TSP,10628.0,0.0,2978.2965,3,unknown
+att48,SOTA-P-AOEA-TSP,10628.0,0.0,8695.9586,3,unknown
+att48,SOTA-R2DMA-TSP,10628.0,0.0,20075.5179,3,unknown
+att48,SOTA-RUN-TSP,10628.0,0.0,23182.8783,3,unknown

@@ -364,3 +364,17 @@ timestamp,problem,strategy,avg_length,avg_gap,avg_time_ms,n_runs,params_json
 2026-05-14T23:13:10.376757,burma14,HHO,3323.0,0.0,1095.8556,3,aggregate,"{""algorithm_type"": ""meta_heuristic"", ""hawks"": 50, ""iterations"": 200}"
 2026-05-14T23:13:10.948290,ulysses16,GWO,6862.6667,0.053458,333.9443,3,aggregate,"{""algorithm_type"": ""meta_heuristic"", ""iterations"": 200, ""pack_size"": 50}"
 2026-05-14T23:13:11.839785,ulysses16,HHO,6862.6667,0.053458,478.9348,3,aggregate,"{""algorithm_type"": ""meta_heuristic"", ""hawks"": 50, ""iterations"": 200}"
+2026-05-23T02:50:43.615778,att48,Numba-2-opt,11136.3333,4.782963,182.3188,3,aggregate,"{""algorithm_type"": ""local_search""}",unknown
+2026-05-23T02:50:43.640096,att48,Numba-Swap,14941.3333,40.584619,183.3765,3,aggregate,"{""algorithm_type"": ""local_search""}",unknown
+2026-05-23T02:50:43.699832,att48,Numba-3-opt-bounded,12807.6667,20.508719,198.3114,3,aggregate,"{""algorithm_type"": ""local_search""}",unknown
+2026-05-23T02:50:43.740603,att48,Numba-Or-opt,11094.6667,4.390917,205.0474,3,aggregate,"{""algorithm_type"": ""local_search""}",unknown
+2026-05-23T02:50:43.803623,att48,Numba-Hybrid,10775.3333,1.386275,226.0991,3,aggregate,"{""algorithm_type"": ""local_search""}",unknown
+2026-05-23T02:50:44.122612,att48,Numba-GA,10679.6667,0.486137,333.2007,3,aggregate,"{""algorithm_type"": ""local_search"", ""crossover_rate"": 0.8, ""elite_size"": 2, ""generations"": 250, ""mutation_rate"": 0.08, ""pop_size"": 80}",unknown
+2026-05-23T02:50:46.249281,att48,Numba-PSO,10664.3333,0.341864,1036.1522,3,aggregate,"{""algorithm_type"": ""local_search"", ""c1"": 1.4, ""c2"": 1.4, ""iterations"": 200, ""reinit_interval"": 30, ""swarm_size"": 50, ""w"": 0.65}",unknown
+2026-05-23T02:50:46.342280,att48,Numba-GWO,10679.6667,0.486137,1060.6327,3,aggregate,"{""algorithm_type"": ""local_search"", ""iterations"": 200, ""pack_size"": 50}",unknown
+2026-05-23T02:50:46.850423,att48,Numba-HHO,10679.6667,0.486137,1076.6975,3,aggregate,"{""algorithm_type"": ""local_search"", ""hawks"": 50, ""iterations"": 200}",unknown
+2026-05-23T02:50:47.367875,att48,SOTA-E2BSO-TSP,10628.0,0.0,1241.2751,3,aggregate,"{""algorithm_type"": ""meta_heuristic"", ""gamma"": 0.15, ""injection_rate"": 0.08, ""max_iterations"": 200, ""population_size"": 24, ""remove_ratio"": 0.1, ""time_limit"": 300.0}",unknown
+2026-05-23T02:50:52.742790,att48,SOTA-CGO-TSP,10628.0,0.0,2978.2965,3,aggregate,"{""algorithm_type"": ""meta_heuristic"", ""chaos_rate"": 3.8, ""max_iterations"": 200, ""population_size"": 24, ""seed_length_ratio"": 0.15, ""time_limit"": 300.0}",unknown
+2026-05-23T02:51:09.832567,att48,SOTA-P-AOEA-TSP,10628.0,0.0,8695.9586,3,aggregate,"{""algorithm_type"": ""meta_heuristic"", ""crossover_rate"": 0.75, ""genome_population_size"": 8, ""max_iterations"": 200, ""mutation_rate"": 0.1, ""population_size"": 24, ""time_limit"": 300.0}",unknown
+2026-05-23T02:51:43.930542,att48,SOTA-R2DMA-TSP,10628.0,0.0,20075.5179,3,aggregate,"{""algorithm_type"": ""meta_heuristic"", ""max_iterations"": 200, ""population_size"": 24, ""pulse_injection_rate"": 0.05, ""remove_ratio"": 0.1, ""theta_base"": 0.15, ""time_limit"": 300.0}",unknown
+2026-05-23T02:51:53.674795,att48,SOTA-RUN-TSP,10628.0,0.0,23182.8783,3,aggregate,"{""algorithm_type"": ""meta_heuristic"", ""beta"": 0.3, ""esq_probability"": 0.1, ""max_iterations"": 200, ""population_size"": 24, ""time_limit"": 300.0}",unknown

@@ -16,17 +16,7 @@ import math
 import logging
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass, field
-from enum import Enum
-
-from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
-
-logger = logging.getLogger(__name__)
-
-
-class Direction(Enum):
-    """Direction for route optimization"""
-    PICKUP = "pickup"
-    DROPOFF = "dropoff"
+from models.schemas import Direction
 
 
 @dataclass

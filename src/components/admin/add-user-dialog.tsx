@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useTranslations } from 'next-intl';
 import type { UserRole } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -41,13 +42,14 @@ interface AddUserDialogProps {
         name: string;
         role: string;
         studentNumber?: string;
+        disabilityType?: string | null;
     }) => void;
 }
 
 const addUserFormSchema = z.object({
-    name: z.string().min(2, { message: "Ad Soyad en az 2 karakter olmalıdır." }),
-    email: z.string().email({ message: "Geçerli bir e-posta adresi girin." }),
-    password: z.string().min(6, { message: "Şifre en az 6 karakter olmalıdır." }),
+    name: z.string().min(2, { message: "Full name must be at least 2 characters." }),
+    email: z.string().email({ message: "Please enter a valid email address." }),
+    password: z.string().min(6, { message: "Password must be at least 6 characters." }),
     role: z.enum(["student", "admin", "driver"]),
     studentNumber: z.string().optional(),
     disabilityType: z.enum(["Sw", "So"]).nullable().optional(),
@@ -57,7 +59,7 @@ const addUserFormSchema = z.object({
     }
     return true;
 }, {
-    message: "Öğrenci rolü için 12 haneli öğrenci numarası gereklidir.",
+    message: "Student number is required for the Student role.",
     path: ["studentNumber"],
 });
 
@@ -65,6 +67,8 @@ type AddUserFormValues = z.infer<typeof addUserFormSchema>;
 
 export default function AddUserDialog({ isOpen, onClose, onSave }: AddUserDialogProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const t = useTranslations('component.adminAddUserDialog');
+    const tc = useTranslations('common');
 
     const form = useForm<AddUserFormValues>({
         resolver: zodResolver(addUserFormSchema),
@@ -104,7 +108,7 @@ export default function AddUserDialog({ isOpen, onClose, onSave }: AddUserDialog
                 studentNumber: data.role === "student" ? data.studentNumber : undefined,
                 // Ensure null for admin/driver
                 disabilityType: data.role === "student" ? data.disabilityType : null,
-            } as any);
+            });
             onClose();
         } finally {
             setIsSubmitting(false);
@@ -115,9 +119,9 @@ export default function AddUserDialog({ isOpen, onClose, onSave }: AddUserDialog
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
-                    <DialogTitle>Yeni Kullanıcı Ekle</DialogTitle>
+                    <DialogTitle>{t('title')}</DialogTitle>
                     <DialogDescription>
-                        Sisteme yeni bir kullanıcı ekleyin. Şifre güvenli bir şekilde oluşturulacaktır.
+                        {t('description')}
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
@@ -127,9 +131,9 @@ export default function AddUserDialog({ isOpen, onClose, onSave }: AddUserDialog
                             name="name"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Ad Soyad</FormLabel>
+                                    <FormLabel>{t('nameLabel')}</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Örn: Ahmet Yılmaz" {...field} />
+                                        <Input placeholder={t('namePlaceholder')} {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -140,9 +144,9 @@ export default function AddUserDialog({ isOpen, onClose, onSave }: AddUserDialog
                             name="email"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>E-posta</FormLabel>
+                                    <FormLabel>{t('emailLabel')}</FormLabel>
                                     <FormControl>
-                                        <Input type="email" placeholder="ornek@dogus.edu.tr" {...field} />
+                                        <Input type="email" placeholder={t('emailPlaceholder')} {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -153,9 +157,9 @@ export default function AddUserDialog({ isOpen, onClose, onSave }: AddUserDialog
                             name="password"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Şifre</FormLabel>
+                                    <FormLabel>{t('passwordLabel')}</FormLabel>
                                     <FormControl>
-                                        <Input type="password" placeholder="En az 6 karakter" {...field} />
+                                        <Input type="password" placeholder={t('passwordPlaceholder')} {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -166,17 +170,17 @@ export default function AddUserDialog({ isOpen, onClose, onSave }: AddUserDialog
                             name="role"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Rol</FormLabel>
+                                    <FormLabel>{t('roleLabel')}</FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl>
                                             <SelectTrigger>
-                                                <SelectValue placeholder="Rol seçin" />
+                                                <SelectValue placeholder={t('rolePlaceholder')} />
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            <SelectItem value="student">Öğrenci</SelectItem>
-                                            <SelectItem value="driver">Şoför</SelectItem>
-                                            <SelectItem value="admin">Admin</SelectItem>
+                                            <SelectItem value="student">{t('roleStudent')}</SelectItem>
+                                            <SelectItem value="driver">{t('roleDriver')}</SelectItem>
+                                            <SelectItem value="admin">{t('roleAdmin')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />
@@ -189,9 +193,9 @@ export default function AddUserDialog({ isOpen, onClose, onSave }: AddUserDialog
                                 name="studentNumber"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Öğrenci Numarası</FormLabel>
+                                        <FormLabel>{t('studentNumberLabel')}</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="12 haneli numara" {...field} />
+                                            <Input placeholder={t('studentNumberPlaceholder')} {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -200,10 +204,10 @@ export default function AddUserDialog({ isOpen, onClose, onSave }: AddUserDialog
                         )}
                         <DialogFooter className="pt-4">
                             <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-                                İptal
+                                {tc('cancel')}
                             </Button>
                             <Button type="submit" disabled={isSubmitting}>
-                                {isSubmitting ? "Ekleniyor..." : "Kullanıcı Ekle"}
+                                {isSubmitting ? t('adding') : t('submit')}
                             </Button>
                         </DialogFooter>
                     </form>

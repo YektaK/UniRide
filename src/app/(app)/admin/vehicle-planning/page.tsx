@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +40,8 @@ const clusteringAlgorithms = [
 ];
 
 export default function VehiclePlanningPage() {
+    const t = useTranslations('page.admin.vehiclePlanning');
+    const tc = useTranslations('common');
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
     const [isLoadingStudents, setIsLoadingStudents] = useState(true);
@@ -69,8 +72,8 @@ export default function VehiclePlanningPage() {
         } catch (error) {
             console.error("Error loading students:", error);
             toast({
-                title: "Öğrenciler Yüklenemedi",
-                description: "Veritabanından öğrenci listesi alınamadı.",
+                title: t('studentLoadError'),
+                description: t('studentLoadError'),
                 variant: "destructive"
             });
         } finally {
@@ -108,8 +111,8 @@ export default function VehiclePlanningPage() {
 
             if (activeStudents.length === 0) {
                 toast({
-                    title: "Hata",
-                    description: "En az bir öğrenci seçin",
+                    title: tc('error'),
+                    description: t('studentLoadError'),
                     variant: "destructive",
                 });
                 return;
@@ -129,7 +132,7 @@ export default function VehiclePlanningPage() {
             });
 
             if (!response.ok) {
-                throw new Error("Hesaplama başarısız");
+                throw new Error(tc('error'));
             }
 
             const data = await response.json();
@@ -137,13 +140,13 @@ export default function VehiclePlanningPage() {
             setIeData(data.ieData);
 
             toast({
-                title: "Hesaplama Tamamlandı",
-                description: `${data.requiredVehicles} araç gerekli`,
+                title: tc('success'),
+                description: `${data.requiredVehicles} ${tc('sidebar.vehicleManagement')}`,
             });
         } catch (error: unknown) {
             toast({
-                title: "Hata",
-                description: error instanceof Error ? error.message : "Bilinmeyen hata",
+                title: tc('error'),
+                description: error instanceof Error ? error.message : tc('error'),
                 variant: "destructive",
             });
         } finally {
@@ -154,8 +157,8 @@ export default function VehiclePlanningPage() {
     const handleSavePlan = async () => {
         if (!result || !result.success) {
             toast({
-                title: "Hata",
-                description: "Önce hesaplama yapın",
+                title: tc('error'),
+                description: t('saveError'),
                 variant: "destructive",
             });
             return;
@@ -168,13 +171,13 @@ export default function VehiclePlanningPage() {
             await saveRoutePlan(planData);
 
             toast({
-                title: "Plan Kaydedildi",
-                description: `${planDate} tarihli ${direction} planı başarıyla kaydedildi`,
+                title: tc('success'),
+                description: `${planDate} ${tc('success')}`,
             });
         } catch (error: unknown) {
             toast({
-                title: "Kaydetme Hatası",
-                description: error instanceof Error ? error.message : "Bilinmeyen hata",
+                title: t('saveError'),
+                description: error instanceof Error ? error.message : t('saveError'),
                 variant: "destructive",
             });
         } finally {
@@ -193,47 +196,47 @@ export default function VehiclePlanningPage() {
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Truck className="text-primary" />
-                        Araç Planlama
+                        {tc('sidebar.vehiclePlanning')}
                     </CardTitle>
                     <CardDescription>
-                        Öğrencileri seçin, kapasite ve kısıtları belirleyin, gerekli araç sayısını hesaplayın
+                        {tc('sidebar.vehiclePlanning')}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                     {/* Parameters */}
                     <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
                         <div className="space-y-2">
-                            <Label>Sw Kapasitesi</Label>
+                            <Label>{tc('configuration')}</Label>
                             <Input
                                 type="number"
                                 value={swCapacity}
                                 onChange={(e) => setSwCapacity(Number(e.target.value))}
                                 min={1}
                             />
-                            <p className="text-xs text-muted-foreground">Tekerlekli sandalye</p>
+                            <p className="text-xs text-muted-foreground">{tc('details')}</p>
                         </div>
                         <div className="space-y-2">
-                            <Label>So Kapasitesi</Label>
+                            <Label>{tc('configuration')}</Label>
                             <Input
                                 type="number"
                                 value={soCapacity}
                                 onChange={(e) => setSoCapacity(Number(e.target.value))}
                                 min={1}
                             />
-                            <p className="text-xs text-muted-foreground">Normal koltuk</p>
+                            <p className="text-xs text-muted-foreground">{tc('details')}</p>
                         </div>
                         <div className="space-y-2">
-                            <Label>Max Tur Süresi</Label>
+                            <Label>{tc('selectAll')}</Label>
                             <Input
                                 type="number"
                                 value={maxTourTime}
                                 onChange={(e) => setMaxTourTime(Number(e.target.value))}
                                 min={30}
                             />
-                            <p className="text-xs text-muted-foreground">Dakika</p>
+                            <p className="text-xs text-muted-foreground">{tc('details')}</p>
                         </div>
                         <div className="space-y-2">
-                            <Label>Strateji</Label>
+                            <Label>{tc('selectAll')}</Label>
                             <Select value={strategy} onValueChange={setStrategy}>
                                 <SelectTrigger>
                                     <SelectValue />
@@ -248,7 +251,7 @@ export default function VehiclePlanningPage() {
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label>Kümeleme Yöntemi</Label>
+                            <Label>{tc('configuration')}</Label>
                             <Select value={clusteringAlgorithm} onValueChange={setClusteringAlgorithm}>
                                 <SelectTrigger>
                                     <SelectValue />
@@ -263,7 +266,7 @@ export default function VehiclePlanningPage() {
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label>Tarih</Label>
+                            <Label>{tc('filter')}</Label>
                             <Input
                                 type="date"
                                 value={planDate}
@@ -271,14 +274,14 @@ export default function VehiclePlanningPage() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Yön</Label>
+                            <Label>{tc('details')}</Label>
                             <Select value={direction} onValueChange={(v) => setDirection(v as "pickup" | "dropoff")}>
                                 <SelectTrigger>
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="pickup">Pickup (Okula Gidiş)</SelectItem>
-                                    <SelectItem value="dropoff">Dropoff (Okuldan Dönüş)</SelectItem>
+                                    <SelectItem value="pickup">{tc('details')}</SelectItem>
+                                    <SelectItem value="dropoff">{tc('details')}</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -286,13 +289,13 @@ export default function VehiclePlanningPage() {
                             <Label>&nbsp;</Label>
                             <Button onClick={handleCalculate} disabled={loading} className="w-full">
                                 <Calculator className="h-4 w-4 mr-2" />
-                                {loading ? "Hesaplanıyor..." : "Hesapla"}
+                                {loading ? tc('loading') : tc('selectAll')}
                             </Button>
                         </div>
                         <div className="space-y-2">
                             <Label>&nbsp;</Label>
                             <Button onClick={handleSavePlan} disabled={isSaving || !result} variant="outline" className="w-full">
-                                {isSaving ? "Kaydediliyor..." : "Planı Kaydet"}
+                                {isSaving ? tc('loading') : tc('save')}
                             </Button>
                         </div>
                     </div>
@@ -301,21 +304,21 @@ export default function VehiclePlanningPage() {
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
                             <Label>
-                                Öğrenci Seçimi ({selectedStudents.length} seçili:
+                                {tc('select')} ({selectedStudents.length} {tc('select')}:
                                 {selectedSwCount} Sw, {selectedSoCount} So)
                             </Label>
                             <div className="flex gap-2">
                                 <Button variant="outline" size="sm" onClick={() => selectAll("Sw")}>
-                                    Tüm Sw
+                                    Sw
                                 </Button>
                                 <Button variant="outline" size="sm" onClick={() => selectAll("So")}>
-                                    Tüm So
+                                    So
                                 </Button>
                                 <Button variant="outline" size="sm" onClick={() => selectAll("all")}>
-                                    Tümü
+                                    {tc('all')}
                                 </Button>
                                 <Button variant="ghost" size="sm" onClick={clearAll}>
-                                    Temizle
+                                    {tc('clear')}
                                 </Button>
                             </div>
                         </div>
@@ -323,17 +326,17 @@ export default function VehiclePlanningPage() {
                             {isLoadingStudents ? (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/50 z-10">
                                     <Activity className="h-6 w-6 text-primary animate-spin mb-2" />
-                                    <p className="text-sm text-muted-foreground">Öğrenciler yükleniyor...</p>
+                                    <p className="text-sm text-muted-foreground">{tc('loading')}</p>
                                 </div>
                             ) : students.length === 0 ? (
                                 <div className="text-center py-8 text-muted-foreground text-sm">
-                                    Sistemde bulunabilen kayıtlı öğrenci yok.
+                                    {tc('noResults')}
                                 </div>
                             ) : (
                                 <>
                                     <div className="mb-3">
                                         <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center justify-between">
-                                            <span>Sw Öğrenciler (Tekerlekli Sandalye)</span>
+                                            <span>{tc('details')}</span>
                                             <Badge variant="outline">{swStudents.length}</Badge>
                                         </p>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
@@ -344,34 +347,36 @@ export default function VehiclePlanningPage() {
                                                         checked={selectedStudents.includes(student.id)}
                                                         onCheckedChange={() => handleStudentToggle(student.id)}
                                                     />
-                                                    <Label htmlFor={student.id} className="text-xs cursor-pointer truncate" title={student.name || "Öğrenci"}>
-                                                        {(student as any).location_code || student.locationCode || "Bilinmiyor"}
+                                                    <Label htmlFor={student.id} className="text-xs cursor-pointer truncate" title={student.name || tc('select')}>
+                                                        {(student as User & { location_code?: string }).location_code || student.locationCode || tc('details')}
                                                     </Label>
                                                 </div>
                                             ))}
-                                            {swStudents.length === 0 && <span className="text-xs italic text-muted-foreground">Kayıtlı Sw yok.</span>}
+                                            {swStudents.length === 0 && <span className="text-xs italic text-muted-foreground">{tc('noResults')}</span>}
                                         </div>
                                     </div>
-                                    <Separator className="my-3" />
-                                    <div>
-                                        <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center justify-between">
-                                            <span>So Öğrenciler (Diğer Engel Tipi)</span>
-                                            <Badge variant="outline">{soStudents.length}</Badge>
-                                        </p>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                                            {soStudents.map((student) => (
-                                                <div key={student.id} className="flex items-center space-x-1 border rounded p-1 bg-white hover:bg-slate-50 transition-colors">
-                                                    <Checkbox
-                                                        id={student.id}
-                                                        checked={selectedStudents.includes(student.id)}
-                                                        onCheckedChange={() => handleStudentToggle(student.id)}
-                                                    />
-                                                    <Label htmlFor={student.id} className="text-xs cursor-pointer truncate" title={student.name || "Öğrenci"}>
-                                                        {(student as any).location_code || student.locationCode || "Bilinmiyor"}
+                                ))}
+                            </div>
+                        ))}
+                    </div>
+                    {/* SO Students */}
+                    {soStudents.length > 0 && (
+                        <div>
+                            <h4 className="font-semibold text-sm mb-2">{tc('wheelchairStudents')} ({soStudents.length})</h4>
+                            <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-[80px]">
+                                {soStudents.filter(student => driverStudentMap[driverIndex]?.includes(student.id)).map((student) => (
+                                    <div key={student.id} className="flex items-center gap-1.5 bg-muted p-1 rounded">
+                                        <Checkbox
+                                            id={student.id}
+                                            checked={selectedStudents.has(student.id)}
+                                            onCheckedChange={() => handleStudentToggle(student.id)}
+                                        />
+                                        <Label htmlFor={student.id} className="text-xs cursor-pointer truncate" title={student.name || tc('select')}>
+                                                        {(student as User & { location_code?: string }).location_code || student.locationCode || tc('details')}
                                                     </Label>
                                                 </div>
                                             ))}
-                                            {soStudents.length === 0 && <span className="text-xs italic text-muted-foreground">Kayıtlı So yok.</span>}
+                                            {soStudents.length === 0 && <span className="text-xs italic text-muted-foreground">{tc('noResults')}</span>}
                                         </div>
                                     </div>
                                 </>
@@ -387,7 +392,7 @@ export default function VehiclePlanningPage() {
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Truck className={result.success ? "text-green-500" : "text-red-500"} />
-                            Sonuç: {result.requiredVehicles} Araç
+                            {tc('details')}: {result.requiredVehicles} {tc('sidebar.vehicleManagement')}
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -395,24 +400,24 @@ export default function VehiclePlanningPage() {
                         <div className="grid gap-4 md:grid-cols-4">
                             <div className="p-4 rounded-lg bg-muted">
                                 <div className="text-sm text-muted-foreground flex items-center gap-1">
-                                    <Truck className="h-3 w-3" /> Araç Sayısı
+                                    <Truck className="h-3 w-3" /> {tc('sidebar.vehicleManagement')}
                                 </div>
                                 <div className="text-2xl font-bold">{result.requiredVehicles}</div>
                             </div>
                             <div className="p-4 rounded-lg bg-muted">
                                 <div className="text-sm text-muted-foreground flex items-center gap-1">
-                                    <Users className="h-3 w-3" /> Öğrenci
+                                    <Users className="h-3 w-3" /> {tc('select')}
                                 </div>
                                 <div className="text-2xl font-bold">{result.meta?.validStudentCount || 0}</div>
                             </div>
                             <div className="p-4 rounded-lg bg-muted">
                                 <div className="text-sm text-muted-foreground flex items-center gap-1">
-                                    <Clock className="h-3 w-3" /> Toplam Süre
+                                    <Clock className="h-3 w-3" /> {tc('details')}
                                 </div>
                                 <div className="text-2xl font-bold">{result.totalDuration} dk</div>
                             </div>
                             <div className="p-4 rounded-lg bg-muted">
-                                <div className="text-sm text-muted-foreground">Hesaplama</div>
+                                <div className="text-sm text-muted-foreground">{tc('edit')}</div>
                                 <div className="text-2xl font-bold">{result.meta?.calculationTimeMs || 0} ms</div>
                             </div>
                         </div>
@@ -420,13 +425,13 @@ export default function VehiclePlanningPage() {
                         {/* Vehicle Assignments */}
                         {result.assignments && result.assignments.length > 0 && (
                             <div className="space-y-4">
-                                <Label>Araç Atamaları</Label>
+                                <Label>{tc('sidebar.vehicleManagement')}</Label>
                                 {result.assignments.map((assignment: any) => (
                                     <div key={assignment.vehicleIndex} className="border rounded-lg p-4">
                                         <div className="flex items-center justify-between mb-2">
                                             <div className="font-semibold flex items-center gap-2">
                                                 <Truck className="h-4 w-4" />
-                                                Araç {assignment.vehicleIndex}
+                                                {tc('sidebar.vehicleManagement')} {assignment.vehicleIndex}
                                             </div>
                                             <div className="flex gap-2">
                                                 <Badge variant="outline">Sw: {assignment.swCount}</Badge>
@@ -446,7 +451,7 @@ export default function VehiclePlanningPage() {
                                         </div>
                                         {assignment.route && assignment.route.length > 0 && (
                                             <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-1">
-                                                <span className="font-medium">Rota:</span>
+                                                <span className="font-medium">{tc('details')}:</span>
                                                 {assignment.route.map((r: any, i: number) => (
                                                     <span key={i} className="flex items-center gap-1">
                                                         {i === 0 && <span>{r.location1}</span>}

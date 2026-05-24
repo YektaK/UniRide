@@ -41,41 +41,6 @@ class PermutationTSPStrategy(BaseRoutingStrategy):
     def description(self) -> str:
         return "Tüm kombinasyonları dener, en iyi sonucu garanti eder. n ≤ 10 için kullanılabilir."
 
-    def _get_duration(self, from_loc: str, to_loc: str, time_matrix: Dict, coordinates: Dict) -> float:
-        """Get duration between locations"""
-        if from_loc in time_matrix and to_loc in time_matrix[from_loc]:
-            return time_matrix[from_loc][to_loc]
-
-        if from_loc in coordinates and to_loc in coordinates:
-            c1 = coordinates[from_loc]
-            c2 = coordinates[to_loc]
-            dist = haversine_distance(c1["lat"], c1["lng"], c2["lat"], c2["lng"])
-            return estimate_travel_time(dist)
-
-        logger.warning(f"Distance matrix miss for {from_loc} to {to_loc}. Using default fallback: {DEFAULT_TRAVEL_FALLBACK_MINUTES} mins")
-        return DEFAULT_TRAVEL_FALLBACK_MINUTES
-
-    def _calculate_route_duration(
-        self,
-        permutation: tuple,
-        depot: str,
-        time_matrix: Dict,
-        coordinates: Dict
-    ) -> float:
-        """Calculate total duration for a permutation"""
-        if not permutation:
-            return 0.0
-
-        total = self._get_duration(depot, permutation[0], time_matrix, coordinates)
-
-        for i in range(len(permutation) - 1):
-            total += self._get_duration(
-                permutation[i], permutation[i + 1], time_matrix, coordinates
-            )
-
-        total += self._get_duration(permutation[-1], depot, time_matrix, coordinates)
-        return total
-
     def _solve_tsp_optimal(
         self,
         waypoints: List[str],

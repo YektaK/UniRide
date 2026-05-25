@@ -450,7 +450,8 @@ class PSOSplitStrategy(HybridSplitBaseStrategy):
                 offset_minutes=offset_minutes,
                 sw_capacity=request.sw_capacity,
                 so_capacity=request.so_capacity,
-                max_tour_duration=request.max_travel_time
+                max_tour_duration=request.max_travel_time,
+                is_asymmetric=request.is_asymmetric
             )
         else:
             final_result = decode_giant_tour(
@@ -460,7 +461,8 @@ class PSOSplitStrategy(HybridSplitBaseStrategy):
                 demands=demands,
                 sw_capacity=request.sw_capacity,
                 so_capacity=request.so_capacity,
-                max_tour_duration=request.max_travel_time
+                max_tour_duration=request.max_travel_time,
+                is_asymmetric=request.is_asymmetric
             )
         
         # Build response routes

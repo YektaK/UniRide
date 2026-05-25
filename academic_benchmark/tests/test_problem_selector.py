@@ -3,8 +3,8 @@ from types import SimpleNamespace
 
 import academic_benchmark.benchmark_utils as benchmark_utils
 from academic_benchmark.benchmark_utils import ProblemSelector, _prob_category, _prob_dim, _prob_name, _prob_optimal
-from academic_benchmark.master_numba_engine import _select_problems_from_args as select_numba_problems
-from academic_benchmark.master_sota_engine import _select_problems_from_args as select_sota_problems
+from academic_benchmark.cli_engine import _select_problems_from_args as select_numba_problems
+from academic_benchmark.sota_engine import _select_problems_from_args as select_sota_problems
 
 
 @dataclass

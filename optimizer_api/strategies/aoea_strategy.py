@@ -46,7 +46,7 @@ class PAOEAStrategy(BaseRoutingStrategy):
     """
 
     def __init__(self, config: Optional[PAOEAConfig] = None):
-        self._config = config or PAOEAConfig(population_size=10, max_iterations=100)
+        self._config = config or PAOEAConfig(population_size=24, max_iterations=200)
 
     @property
     def name(self) -> str:

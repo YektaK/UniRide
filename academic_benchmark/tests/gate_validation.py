@@ -2,7 +2,7 @@
 import sys, os, csv, inspect
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from master_numba_engine import load_problems, _execute_benchmark_tasks
+from academic_benchmark.cli_engine import load_problems, _execute_benchmark_tasks
 
 # ── Gate A: Resume continuity (loader dedup) ──
 probs = load_problems()
@@ -21,7 +21,7 @@ assert 'aggregate' in source, "aggregate value missing"
 print("[Gate C] Numba engine result_type='aggregate': OK")
 
 # ── Gate A: Interruption persistence handler ──
-from master_numba_engine import _signal_handler, _active_results, _active_metadata
+from academic_benchmark.cli_engine import _signal_handler, _active_results, _active_metadata
 assert _signal_handler is not None
 print("[Gate A] Interruption persistence handler: OK")
 

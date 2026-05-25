@@ -16,7 +16,7 @@ Konsolidasyon FAZ 3 çıktısı. Eski `run_smart_benchmark_numba.py` ve
   - DEFAULT (direkt benchmark) ve TUNING (DoE) modları.
 
 Kullanım:
-    python academic_benchmark/master_numba_engine.py
+    python academic_benchmark/cli_engine.py
 """
 
 import argparse
@@ -51,14 +51,8 @@ from enum import Enum
 from multiprocessing import cpu_count
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
-# Windows stdout encoding düzeltmesi — reconfigure() avoids Python 3.14 GC crash
-if sys.platform == "win32":
-    try:
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-    except Exception:
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+from uniride_core.algorithms._platform import fix_windows_encoding
+fix_windows_encoding()
 
 
 
@@ -1728,17 +1722,24 @@ def _save_best_to_param_db(
         if not prob:
             continue
         params = entry.get("params", {})
+        # Support both DoE format (avg_length) and Optuna format (avg_gap)
         best_score = entry.get("avg_length", float("inf"))
         raw_gap = entry.get("avg_gap")
+        if best_score == float("inf") and raw_gap is not None:
+            # Optuna tuning: use gap as the score metric
+            try:
+                best_score = float(raw_gap)
+            except (TypeError, ValueError):
+                best_score = float("inf")
         if raw_gap is None or (isinstance(raw_gap, float) and math.isnan(raw_gap)):
             gap = float("nan")
         else:
             gap = float(raw_gap)
-            
+
         if math.isinf(best_score) or math.isinf(gap):
             continue
-            
-        runs = entry.get("n_runs", 0) or entry.get("completed", 0)
+
+        runs = entry.get("n_runs", 0) or entry.get("completed", 0) or entry.get("trials_used", 0)
         if not runs:
             runs = 3
         # Save to param_db (legacy)
@@ -1951,7 +1952,7 @@ def _param_db_menu() -> None:
                     print("[OK] Kayit silindi.")
                 else:
                     print("[HATA] Kayit bulunamadi.")
-            input("Devam icin Enter...")
+            input("Devam etmek icin Enter...")
 
 
 def _select_problems_from_args(args, all_problems, interactive: bool = False):

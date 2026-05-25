@@ -168,13 +168,14 @@ STRATEGY_REGISTRY: Dict[str, Optional[BaseRoutingStrategy]] = {
     "ortools": _ortools_strategy,  # Alias
     
     # PyVRP (HGS - DIMACS 2021 Winner)
-    "pyvrp": _pyvrp_strategy if _PYVRP_AVAILABLE else _ortools_strategy,
-    "hgs": _pyvrp_strategy if _PYVRP_AVAILABLE else _ortools_strategy,  # Alias
-    "pyvrp_alt": _pyvrp_alt_strategy if _PYVRP_AVAILABLE else _ortools_strategy,
+    # When unavailable, maps to None — routes must check strategy is not None
+    "pyvrp": _pyvrp_strategy,
+    "hgs": _pyvrp_strategy,  # Alias
+    "pyvrp_alt": _pyvrp_alt_strategy,
     
     # VROOM (Ultra-fast C++)
-    "vroom": _vroom_strategy if _VROOM_AVAILABLE else _ortools_strategy,
-    "vroom_fallback": _vroom_fallback_strategy if _VROOM_AVAILABLE else _ortools_strategy,
+    "vroom": _vroom_strategy,
+    "vroom_fallback": _vroom_fallback_strategy,
 
     # =====================================================
     # =====================================================
@@ -239,21 +240,43 @@ def get_all_strategies() -> List[BaseRoutingStrategy]:
 def get_strategy_info() -> List[dict]:
     """
     Get information about all strategies.
-    
+
     Returns:
-        List of strategy info dicts with name, display_name, description
+        List of strategy info dicts with name, display_name, description, available
     """
     seen = set()
     info = []
 
+    # Metadata for strategies that may be None (unavailable optional deps)
+    _OPTIONAL_META = {
+        "pyvrp":         ("pyvrp",         "PyVRP (HGS — DIMACS 2021 Winner)",         "PyVRP HGS algorithm (DIMACS 2021 Winner). Requires `pyvrp` package."),
+        "hgs":           ("hgs",           "PyVRP / HGS (DIMACS 2021 Winner)",          "PyVRP HGS algorithm. Requires `pyvrp` package."),
+        "pyvrp_alt":     ("pyvrp_alt",     "PyVRP (Alternative Configuration)",          "PyVRP with alternative parameter tuning. Requires `pyvrp` package."),
+        "vroom":         ("vroom",         "VROOM (Ultra-Fast C++ Solver)",              "VROOM high-performance C++ solver. Requires `vroom` package."),
+        "vroom_fallback":("vroom_fallback","VROOM (Fallback Mode)",                      "VROOM with relaxed constraints. Requires `vroom` package."),
+    }
+
     for name, strategy in STRATEGY_REGISTRY.items():
-        if strategy and strategy.name not in seen:
-            seen.add(strategy.name)
-            info.append({
-                "name": strategy.name,
-                "display_name": strategy.display_name,
-                "description": strategy.description
-            })
+        if strategy is not None:
+            if strategy.name not in seen:
+                seen.add(strategy.name)
+                info.append({
+                    "name": strategy.name,
+                    "display_name": strategy.display_name,
+                    "description": strategy.description,
+                    "available": True,
+                })
+        else:
+            # Unavailable optional strategy — include with available=False
+            meta = _OPTIONAL_META.get(name)
+            if meta and meta[0] not in seen:
+                seen.add(meta[0])
+                info.append({
+                    "name": meta[0],
+                    "display_name": meta[1],
+                    "description": meta[2],
+                    "available": False,
+                })
 
     return info
 

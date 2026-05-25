@@ -191,12 +191,13 @@ class BenchmarkRunner:
         
         # Step 3: Detect problem type
         use_time_windows = problem.problem_type == "cvrptw" and problem.time_windows is not None
+        is_asymmetric = problem.problem_type == "atsp"
         
-        # Step 4: For TSP, force single-vehicle tour by setting capacity = dimension
+        # Step 4: For TSP/ATSP, force single-vehicle tour by setting capacity = dimension
         # This ensures the strategy produces ONE tour visiting ALL nodes,
         # which is directly comparable to the TSPLIB optimal solution.
-        is_tsp = problem.problem_type == "tsp"
-        if is_tsp:
+        is_single_tour = problem.problem_type in ("tsp", "atsp")
+        if is_single_tour:
             capacity = problem.dimension  # All nodes in one vehicle
             max_travel = 99999  # No time constraint for pure TSP
         else:
@@ -219,7 +220,8 @@ class BenchmarkRunner:
             so_capacity=capacity,
             direction=Direction.PICKUP,
             use_time_windows=use_time_windows,
-            mode=OptimizationMode.BENCHMARK
+            mode=OptimizationMode.BENCHMARK,
+            is_asymmetric=is_asymmetric
         )
         
         return request

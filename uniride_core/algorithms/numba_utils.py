@@ -1,18 +1,8 @@
 import numpy as np
 from typing import List, Tuple, Callable, Dict
 
-
-def create_np_distance_matrix(coordinates: List[Tuple[float, float]]) -> np.ndarray:
-    n = len(coordinates)
-    dm = np.zeros((n, n), dtype=np.float64)
-    for i in range(n):
-        xi, yi = coordinates[i]
-        for j in range(i + 1, n):
-            xj, yj = coordinates[j]
-            d = float(int(round(np.hypot(xi - xj, yi - yj))))
-            dm[i, j] = d
-            dm[j, i] = d
-    return dm
+# Re-export from consolidated distance module for backward compatibility
+from uniride_core.algorithms.distance import create_np_distance_matrix
 
 
 def create_np_duration_func(

@@ -4,19 +4,14 @@ Loads time matrix from Supabase and provides efficient access
 """
 
 import os
-import sys
+import time
+import threading
 import logging
 import numpy as np
 from typing import Dict, List, Optional
 
-# Windows ortaminda Unicode karakterlerin konsola yazilmasinda
-# charmap encoding hatasi olusmasini onler
-if sys.platform == 'win32':
-    try:
-        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
-    except Exception:
-        pass
+from uniride_core.algorithms._platform import fix_windows_encoding
+fix_windows_encoding()
 
 logger = logging.getLogger(__name__)
 
@@ -32,12 +27,16 @@ class DataLoader(metaclass=SingletonMeta):
     """
 
     def __init__(self):
-        # Try Supabase first
-        supabase_url = os.environ.get("SUPABASE_URL", "")
-        supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+        self._lock = threading.RLock()
+        self._cache_ttl_seconds = int(os.environ.get("TIME_MATRIX_CACHE_TTL_SECONDS", "600"))
+        self._loaded_at: Optional[float] = None
 
-        if supabase_url and supabase_key:
-            self._load_from_supabase(supabase_url, supabase_key)
+        # Try Supabase first
+        self._supabase_url = os.environ.get("SUPABASE_URL", "")
+        self._supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+
+        if self._supabase_url and self._supabase_key:
+            self._load_from_supabase(self._supabase_url, self._supabase_key)
         else:
             # Fallback to local CSV/JSON or generate synthetic matrix
             logger.warning("SUPABASE credentials not found. Using coordinate-based distance calculation.")
@@ -84,6 +83,7 @@ class DataLoader(metaclass=SingletonMeta):
 
             np.fill_diagonal(matrix, 0.0)
             self.time_matrix = matrix
+            self._loaded_at = time.time()
 
             logger.info("Time Matrix loaded: %d locations, %d edges", n, len(rows))
 
@@ -94,6 +94,31 @@ class DataLoader(metaclass=SingletonMeta):
             self.loc_to_idx = {}
             self.time_matrix = None
             self._use_coordinates = True
+            self._loaded_at = None
+
+    def _is_cache_stale(self) -> bool:
+        """Return True if the cached time matrix is older than TTL."""
+        with self._lock:
+            if not self._loaded_at or self._cache_ttl_seconds <= 0:
+                return False
+            return (time.time() - self._loaded_at) > self._cache_ttl_seconds
+
+    def refresh(self, force: bool = False) -> None:
+        """Refresh time matrix from Supabase if cache is stale or force=True.
+
+        Thread-safe with double-checked locking: checks staleness outside
+        the lock to avoid contention on the common (not-stale) path, then
+        re-checks inside the lock before reloading.
+        """
+        if not self._supabase_url or not self._supabase_key:
+            return
+        if not force and not self._is_cache_stale():
+            return
+        with self._lock:
+            if not force and not self._is_cache_stale():
+                return
+            logger.info("Refreshing time matrix cache from Supabase...")
+            self._load_from_supabase(self._supabase_url, self._supabase_key)
 
     @classmethod
     def get_instance(cls) -> "DataLoader":
@@ -124,26 +149,30 @@ class DataLoader(metaclass=SingletonMeta):
         """
         n = len(request_locations)
 
-        if self._use_coordinates or self.time_matrix is None:
-            if coordinates:
-                if geo_coords:
-                    return self.build_haversine_matrix(
-                        request_locations, coordinates,
-                        asymmetric=asymmetric_haversine if not geo_coords else True,
-                    )
-                return self.build_euclidean_matrix(request_locations, coordinates)
-            return [[0.0] * n for _ in range(n)]
+        with self._lock:
+            if not self._use_coordinates and self.time_matrix is not None:
+                self.refresh()
 
-        submatrix = [[0.0] * n for _ in range(n)]
+            if self._use_coordinates or self.time_matrix is None:
+                if coordinates:
+                    if geo_coords:
+                        return self.build_haversine_matrix(
+                            request_locations, coordinates,
+                            asymmetric=asymmetric_haversine if not geo_coords else True,
+                        )
+                    return self.build_euclidean_matrix(request_locations, coordinates)
+                return [[0.0] * n for _ in range(n)]
 
-        for i, from_loc in enumerate(request_locations):
-            for j, to_loc in enumerate(request_locations):
-                idx_from = self.loc_to_idx.get(from_loc)
-                idx_to = self.loc_to_idx.get(to_loc)
-                if idx_from is not None and idx_to is not None:
-                    submatrix[i][j] = float(self.time_matrix[idx_from][idx_to])
+            submatrix = [[0.0] * n for _ in range(n)]
 
-        return submatrix
+            for i, from_loc in enumerate(request_locations):
+                for j, to_loc in enumerate(request_locations):
+                    idx_from = self.loc_to_idx.get(from_loc)
+                    idx_to = self.loc_to_idx.get(to_loc)
+                    if idx_from is not None and idx_to is not None:
+                        submatrix[i][j] = float(self.time_matrix[idx_from][idx_to])
+
+            return submatrix
 
     @staticmethod
     def build_euclidean_matrix(
@@ -230,29 +259,31 @@ class DataLoader(metaclass=SingletonMeta):
         Get duration between two locations.
         Returns 0 if not found (same location or unknown).
         """
-        if self._use_coordinates or self.time_matrix is None:
+        with self._lock:
+            if self._use_coordinates or self.time_matrix is None:
+                return 0.0
+
+            idx_from = self.loc_to_idx.get(from_loc)
+            idx_to = self.loc_to_idx.get(to_loc)
+
+            if idx_from is not None and idx_to is not None:
+                return float(self.time_matrix[idx_from][idx_to])
+
             return 0.0
-
-        idx_from = self.loc_to_idx.get(from_loc)
-        idx_to = self.loc_to_idx.get(to_loc)
-
-        if idx_from is not None and idx_to is not None:
-            return float(self.time_matrix[idx_from][idx_to])
-
-        return 0.0
 
     def has_location(self, loc_id: str) -> bool:
         """Check if location exists in time matrix"""
-        return loc_id in self.loc_to_idx
+        with self._lock:
+            return loc_id in self.loc_to_idx
 
+
+# Distance functions re-exported from consolidated module for backward compatibility
+from uniride_core.algorithms.distance import (
+    euclidean_distance_2d as _euclidean_distance_2d,
+    haversine_distance,
+    estimate_travel_time,
+)
 
 def euclidean_distance(x1: float, y1: float, x2: float, y2: float) -> float:
-    """
-    Calculate euclidean (L2) distance between two 2D points.
-    This is the standard distance metric for TSPLIB EUC_2D problems.
-    """
-    import math
-    return math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
-
-
-from utils.haversine import haversine_distance, estimate_travel_time
+    """Calculate euclidean (L2) distance between two 2D points. Backward-compatible wrapper."""
+    return _euclidean_distance_2d((x1, y1), (x2, y2))

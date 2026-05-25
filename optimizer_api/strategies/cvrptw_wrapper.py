@@ -34,7 +34,9 @@ class CVRPTWDecoder:
         max_tour_duration: float = 120.0,
         time_windows: Optional[Dict[str, Tuple[int, int]]] = None,
         use_time_windows: bool = True,
-        use_sota_engine: bool = False
+        use_sota_engine: bool = False,
+        direction: Direction = Direction.PICKUP,
+        is_asymmetric: bool = False
     ):
         """
         Initialize CVRPTW Decoder.
@@ -46,6 +48,8 @@ class CVRPTWDecoder:
             time_windows: Dict mapping location -> (earliest, latest) in minutes from start
             use_time_windows: Whether to enforce time window constraints
             use_sota_engine: Whether to use experimental LinearSplitDecoder (SOTA) or stable SplitDecoder
+            direction: PICKUP (backward from school arrival) or DROPOFF (forward from school departure)
+            is_asymmetric: When True, respects asymmetric distance matrix (d(i,j) != d(j,i))
         """
         self.time_windows = time_windows or {}
         self.use_time_windows = use_time_windows
@@ -57,6 +61,7 @@ class CVRPTWDecoder:
                 so_capacity=so_capacity,
                 max_tour_duration=max_tour_duration,
                 time_windows=time_windows,
+                direction=direction,
                 penalty_config=PenaltyConfig(allow_time_warp=True, allow_capacity_overflow=True)
             )
         else:
@@ -64,7 +69,10 @@ class CVRPTWDecoder:
                 sw_capacity=sw_capacity,
                 so_capacity=so_capacity,
                 max_tour_duration=max_tour_duration,
-                direction=Direction.PICKUP
+                time_windows=time_windows,
+                use_time_windows=use_time_windows,
+                direction=direction,
+                is_asymmetric=is_asymmetric
             )
     
     def decode(

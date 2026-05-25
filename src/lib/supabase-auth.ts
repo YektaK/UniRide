@@ -185,7 +185,7 @@ export const signUp = async (
 export const register = async (
   email: string,
   password: string,
-  userData: Omit<DbUser, 'id' | 'email' | 'createdAt' | 'updatedAt' | 'passwordHash' | 'weeklyScheduleId'>
+  userData: Omit<DbUser, 'id' | 'email' | 'createdAt' | 'updatedAt' | 'weeklyScheduleId'>
 ): Promise<User> => {
   const result = await signUp(
     email,

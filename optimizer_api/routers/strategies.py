@@ -34,7 +34,8 @@ def list_strategies() -> List[StrategyInfo]:
             display_name=s["display_name"],
             description=s["description"],
             complexity=_get_complexity(s["name"]),
-            recommended=s["name"] in recommended
+            recommended=s["name"] in recommended,
+            available=s.get("available", True),
         )
         for s in strategies
     ]

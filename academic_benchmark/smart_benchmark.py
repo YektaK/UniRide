@@ -28,14 +28,8 @@ from typing import List, Dict, Tuple, Optional, Any
 from multiprocessing import cpu_count
 from concurrent.futures import ProcessPoolExecutor
 
-# Windows encoding fix
-if sys.platform == 'win32' or 'pypy' in sys.implementation.name.lower():
-    try:
-        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
-    except Exception:
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+from uniride_core.algorithms._platform import fix_windows_encoding
+fix_windows_encoding()
 
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 from academic_benchmark.engine_core import ProblemInstance, RunResult, AlgorithmRegistry, BenchmarkTask, BenchmarkConfig
@@ -48,7 +42,9 @@ from academic_benchmark.benchmark_utils import (
 )
 
 # Import engine library functions
-from academic_benchmark.master_numba_engine import (
+# NOTE: master_numba_engine.py was consolidated into cli_engine.py during refactoring.
+# All Numba engine functions are now sourced from cli_engine.
+from academic_benchmark.cli_engine import (
     _all_strategy_specs as _numba_specs,
     _tune_parameters as _numba_tune,
     _run_benchmark_with_best as _numba_bench_best,
@@ -63,16 +59,20 @@ from academic_benchmark.master_numba_engine import (
     load_problems as _numba_load_problems,
     DOEProblem,
 )
-from academic_benchmark.master_sota_engine import (
-    _run_engine_tuning as _sota_tune,
-    _run_engine_default as _sota_bench_default,
-    _run_engine_with_params as _sota_bench_params,
+
+# SOTA engine functions — re-implemented in sota_engine.py
+# Sources SOTA solvers from uniride_core.algorithms.sota_tsp/
+from academic_benchmark.sota_engine import (
+    run_engine_tuning as _sota_tune,
+    run_engine_default as _sota_bench_default,
+    run_engine_with_params as _sota_bench_params,
     _manual_param_entry_interactive as _sota_manual_params,
     _load_params_from_db_interactive as _sota_load_db_params,
     _save_best_to_param_db as _sota_save_db,
     _edit_param_space_interactive as _sota_edit_space,
     _param_db_menu as _sota_param_db_menu,
     load_problems as _sota_load_problems,
+    run_sota_optuna_tuning as _run_sota_optuna_tuning,
     TSPProblem,
     ALL_ALGOS as _SOTA_ALL_ALGOS,
 )
@@ -255,7 +255,7 @@ class TuningOrchestrator:
         if self.use_bayesian:
             return 0  # Bayesian doesn't use grid combos
         if spec:
-            from academic_benchmark.master_numba_engine import _build_numba_parameter_space
+            from academic_benchmark.cli_engine import _build_numba_parameter_space
             space = _build_numba_parameter_space(spec)
             if self.param_overrides and spec.name in self.param_overrides:
                 for key, vals in self.param_overrides[spec.name].items():
@@ -265,7 +265,7 @@ class TuningOrchestrator:
                                            strategy="fractional_fallback" if self.use_fractional else "sequential")
             return len(combos)
         else:
-            from academic_benchmark.master_sota_engine import _build_sota_parameter_space
+            from academic_benchmark.sota_engine import _build_sota_parameter_space
             space = _build_sota_parameter_space(algo_name)
             combos = generate_combinations(space, self.max_combos)
             return len(combos)
@@ -378,7 +378,7 @@ class TuningOrchestrator:
         ) for p in self.problems]
 
         if self.use_bayesian:
-            from academic_benchmark.master_numba_engine import _run_optuna_tuning_flow
+            from academic_benchmark.cli_engine import _run_optuna_tuning_flow
             metadata = {"best_params": {}}
             _run_optuna_tuning_flow(prob_instances, selected_specs, self.n_runs, self.workers, metadata,
                                     param_overrides=self.param_overrides)
@@ -401,17 +401,16 @@ class TuningOrchestrator:
 
         metadata = {"best_params": {}}
         if self.use_bayesian:
-            from academic_benchmark.master_sota_engine import _run_sota_optuna_tuning
-            best = _run_sota_optuna_tuning(
+            _run_sota_optuna_tuning(
                 prob_instances, clean_algos, self.n_runs, self.max_combos,
                 self.workers, metadata,
             )
         else:
-            best = _sota_tune(
+            _sota_tune(
                 prob_instances, clean_algos, self.n_runs, self.max_combos, self.workers,
                 metadata, skip_cached=True,
             )
-        self.best_params.update(best)
+        self.best_params.update(metadata.get("best_params", {}))
 
 # ── Unified Benchmark Runner ─────────────────────────────────────────────────
 
@@ -629,14 +628,14 @@ def _menu_tuning(all_problems, metadata):
     numba_algos = [a for a in selected_algos if a.startswith("Numba-") or a in ("B-PSO", "B-GA")]
     sota_algos = [a for a in selected_algos if a.startswith("SOTA-")]
     if numba_algos:
-        from academic_benchmark.master_numba_engine import DOEProblem as DP
+        from academic_benchmark.cli_engine import DOEProblem as DP
         numba_probs = [DP(name=p.name, dimension=p.dimension, coordinates=p.coordinates,
                           optimal=p.optimal, category=p.category) for p in train_problems]
         numba_specs = [s for s in _numba_specs() if f"Numba-{s.name}" in numba_algos or s.name in numba_algos]
         saved = _numba_save_db(best_params, numba_probs, numba_specs)
         print(f"[PARAM_DB] {saved} numba parametre seti kaydedildi.")
     if sota_algos:
-        from academic_benchmark.master_sota_engine import TSPProblem as SP
+        from academic_benchmark.sota_engine import TSPProblem as SP
         sota_probs = [SP(name=p.name, dimension=p.dimension, coordinates=p.coordinates,
                          optimal=p.optimal, category=p.category) for p in train_problems]
         clean_sota = [a.replace("SOTA-", "") for a in sota_algos]
@@ -712,13 +711,13 @@ def _menu_benchmark_only(all_problems, metadata):
         numba_algos = [a for a in algos if a.startswith("Numba-") or a in ("B-PSO", "B-GA")]
         sota_algos = [a for a in algos if a.startswith("SOTA-")]
         if numba_algos:
-            from academic_benchmark.master_numba_engine import DOEProblem as DP
+            from academic_benchmark.cli_engine import DOEProblem as DP
             numba_probs = [DP(name=p.name, dimension=p.dimension, coordinates=p.coordinates,
                               optimal=p.optimal, category=p.category) for p in problems]
             numba_specs = [s for s in _numba_specs() if f"Numba-{s.name}" in numba_algos or s.name in numba_algos]
             _numba_load_db_params(numba_probs, numba_specs)
         if sota_algos:
-            from academic_benchmark.master_sota_engine import TSPProblem as SP
+            from academic_benchmark.sota_engine import TSPProblem as SP
             sota_probs = [SP(name=p.name, dimension=p.dimension, coordinates=p.coordinates,
                              optimal=p.optimal, category=p.category) for p in problems]
             clean_sota = [a.replace("SOTA-", "") for a in sota_algos]

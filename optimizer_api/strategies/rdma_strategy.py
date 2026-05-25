@@ -45,7 +45,7 @@ class R2DMAStrategy(BaseRoutingStrategy):
     """
 
     def __init__(self, config: Optional[R2DMATSPConfig] = None):
-        self._config = config or R2DMATSPConfig(population_size=10, max_iterations=100)
+        self._config = config or R2DMATSPConfig(population_size=24, max_iterations=200)
 
     @property
     def name(self) -> str:

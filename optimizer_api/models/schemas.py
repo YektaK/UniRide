@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from enum import Enum
 
 # --- Enums ---
@@ -37,6 +37,22 @@ class StudentNode(BaseModel):
     disability_type: str = "So"
     pickup_time: Optional[str] = None
     dropoff_time: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_coordinates(self) -> "StudentNode":
+        """Validate that student coordinates are within geographic bounds."""
+        if self.coordinates is not None:
+            lat = self.coordinates.get("lat")
+            lng = self.coordinates.get("lng")
+            if lat is not None and not (-90.0 <= lat <= 90.0):
+                raise ValueError(
+                    f"Student {self.id}: latitude {lat} out of range [-90, 90]"
+                )
+            if lng is not None and not (-180.0 <= lng <= 180.0):
+                raise ValueError(
+                    f"Student {self.id}: longitude {lng} out of range [-180, 180]"
+                )
+        return self
 
 class TimeWindow(BaseModel):
     earliest: int
@@ -120,6 +136,19 @@ class OptimizationRequest(BaseModel):
     hho_config: Optional[Dict[str, Any]] = None
     two_opt_config: Optional[Dict[str, Any]] = None
     clustering_algorithm: Optional[str] = "sweep"
+    is_asymmetric: bool = False
+
+    @model_validator(mode="after")
+    def validate_students(self) -> "OptimizationRequest":
+        """Validate student data integrity."""
+        if self.students:
+            for student in self.students:
+                if student.coordinates is None:
+                    raise ValueError(
+                        f"Student {student.id} ({student.location_code}) "
+                        f"has no coordinates — all students must have valid coordinates"
+                    )
+        return self
 
     def get_time_windows(self) -> Dict[str, TimeWindow]:
         """Helper to get time windows from students if applicable
@@ -148,12 +177,19 @@ class OptimizationRequest(BaseModel):
                 try:
                     parts = time_str.strip().split(':')
                     total_minutes = int(parts[0]) * 60 + int(parts[1])
-                    # Default window: ±15 minutes around the target time
-                    window_size = 30  # 30 minute window
-                    time_windows[student.location_code] = TimeWindow(
-                        earliest=max(0, total_minutes - window_size // 2),
-                        latest=total_minutes + window_size // 2
-                    )
+                    # Asymmetric windows based on direction:
+                    # PICKUP: (target-30, target) — must arrive by target
+                    # DROPOFF: (target, target+30) — can depart after target
+                    if self.direction == Direction.PICKUP:
+                        time_windows[student.location_code] = TimeWindow(
+                            earliest=max(0, total_minutes - 30),
+                            latest=total_minutes,
+                        )
+                    else:
+                        time_windows[student.location_code] = TimeWindow(
+                            earliest=total_minutes,
+                            latest=total_minutes + 30,
+                        )
                 except (ValueError, IndexError):
                     pass
         
@@ -204,6 +240,7 @@ class StrategyInfo(BaseModel):
     description: str
     complexity: str
     recommended: bool = False
+    available: bool = True
 
 
 class BenchmarkRunRequest(BaseModel):

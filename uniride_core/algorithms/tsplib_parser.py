@@ -206,60 +206,15 @@ def parse_atsp_text(content: str, name_hint: str = "") -> Optional[Dict]:
     }
 
 
-def euclidean_distance_2d(p1: Tuple[float, float], p2: Tuple[float, float]) -> float:
-    return math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
-
-
-def tsplib_euc_2d_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> int:
-    """NINT( sqrt( (xi-xj)² + (yi-yj)² ) )"""
-    raw = math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
-    return int(raw + 0.5)
-
-
-def tsplib_ceil_2d_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> int:
-    raw = math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
-    return int(math.ceil(raw))
-
-
-def tsplib_att_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> int:
-    dx = p1[0] - p2[0]
-    dy = p1[1] - p2[1]
-    rij = math.sqrt((dx * dx + dy * dy) / 10.0)
-    tij = int(rij + 0.5)
-    return tij if tij >= rij else tij + 1
-
-
-def tsplib_geo_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> int:
-    def _to_geo(x: float) -> float:
-        deg = int(x)
-        minute = x - deg
-        return math.pi * (deg + 5.0 * minute / 3.0) / 180.0
-    rrr = 6378.388
-    lat1 = _to_geo(p1[0])
-    lon1 = _to_geo(p1[1])
-    lat2 = _to_geo(p2[0])
-    lon2 = _to_geo(p2[1])
-    q1 = math.cos(lon1 - lon2)
-    q2 = math.cos(lat1 - lat2)
-    q3 = math.cos(lat1 + lat2)
-    return int(rrr * math.acos(0.5 * ((1.0 + q1) * q2 - (1.0 - q1) * q3)) + 1.0)
-
-
-def tsplib_distance_by_type(
-    edge_weight_type: str,
-    p1: Tuple[float, float],
-    p2: Tuple[float, float]
-) -> int:
-    et = (edge_weight_type or "EUC_2D").upper()
-    if et == "EUC_2D":
-        return tsplib_euc_2d_distance(p1, p2)
-    if et == "CEIL_2D":
-        return tsplib_ceil_2d_distance(p1, p2)
-    if et == "ATT":
-        return tsplib_att_distance(p1, p2)
-    if et == "GEO":
-        return tsplib_geo_distance(p1, p2)
-    raise ValueError(f"Unsupported EDGE_WEIGHT_TYPE: {edge_weight_type}")
+# Distance functions — import from consolidated module
+from uniride_core.algorithms.distance import (
+    euclidean_distance_2d,
+    tsplib_euc_2d_distance,
+    tsplib_ceil_2d_distance,
+    tsplib_att_distance,
+    tsplib_geo_distance,
+    tsplib_distance_by_type,
+)
 
 
 def tsplib_tour_distance(coords: List[Tuple[float, float]], tour: List[int]) -> float:

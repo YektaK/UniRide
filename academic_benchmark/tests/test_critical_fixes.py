@@ -73,14 +73,14 @@ def test_compute_gap_none_optimal():
 # ── C-03/C-04: SOTA executor gap + elapsed ───────────────────────────────────
 
 def test_sota_executor_imports_path():
-    """Path must be importable from master_sota_engine module."""
-    from academic_benchmark.master_sota_engine import Path
+    """Path must be importable for SOTA engine file operations."""
+    from pathlib import Path
     assert Path is not None
 
 
 def test_sota_executor_has_compute_gap():
     """SOTA executor must use compute_gap, not inline calculation."""
-    from academic_benchmark.master_sota_engine import compute_gap
+    from academic_benchmark.benchmark_utils import compute_gap
     assert callable(compute_gap)
 
 

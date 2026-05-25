@@ -105,6 +105,33 @@ NUMBA_PARAM_SPACES: Dict[str, Dict[str, Dict[str, Any]]] = {
         "reinit_interval": {"type": "int", "doe": [30, 50]},
         "max_no_improvement": {"type": "int", "doe": [100]},
     },
+    "GA-Split": {
+        "pop_size":        {"type": "int", "doe": [80, 120, 150]},
+        "generations":     {"type": "int", "doe": [250, 350, 500]},
+        "mutation_rate":   {"type": "float", "doe": [0.08, 0.12, 0.16]},
+        "elite_size":      {"type": "int", "doe": [2, 4, 6, 8]},
+        "crossover_rate":  {"type": "float", "doe": [0.80, 0.85, 0.90]},
+        "max_stops_bounded": {"type": "int", "doe": [10, 15, 20]},
+    },
+    "PSO-Split": {
+        "swarm_size":      {"type": "int", "doe": [50, 80, 120]},
+        "iterations":      {"type": "int", "doe": [200, 300, 450, 500]},
+        "w":               {"type": "float", "doe": [0.65, 0.72, 0.80]},
+        "c1":              {"type": "float", "doe": [1.4, 1.6, 1.9]},
+        "c2":              {"type": "float", "doe": [1.4, 1.6, 1.9]},
+        "reinit_interval": {"type": "int", "doe": [30, 50, 70]},
+        "max_stops_bounded": {"type": "int", "doe": [10, 15, 20]},
+    },
+    "GWO-Split": {
+        "pack_size":       {"type": "int", "doe": [50, 80, 120]},
+        "iterations":      {"type": "int", "doe": [200, 300, 450]},
+        "max_stops_bounded": {"type": "int", "doe": [10, 15, 20]},
+    },
+    "HHO-Split": {
+        "hawks":           {"type": "int", "doe": [50, 80, 120]},
+        "iterations":      {"type": "int", "doe": [200, 300, 450]},
+        "max_stops_bounded": {"type": "int", "doe": [10, 15, 20]},
+    },
     "B-GA": {
         "population_size": {"type": "int", "doe": [80, 100, 150]},
         "generations":     {"type": "int", "doe": [300, 500]},

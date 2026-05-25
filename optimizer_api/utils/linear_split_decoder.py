@@ -40,7 +40,12 @@ class LinearSplitResult:
 
 class LinearSplitDecoder:
     """
-    O(N) Split Algorithm through bounded sequence (Max Stops = B).
+    Split Decoder with bounded lookback.
+
+    Time complexity: O(N × B²) where B = max_stops_bounded.
+    The B² factor arises from computing trip cost for each candidate segment.
+    For small B (≤ 15), this is effectively linear in practice.
+
     Includes Time-Warp (Infeasibility Relaxation) enabling Genetic Algorithms to cross the "infeasible valley".
     """
     
@@ -105,11 +110,9 @@ class LinearSplitDecoder:
             curr_travel_time = 0.0
             prev_loc = depot
             
-            # Forward simulation variables for Time Windows
-            # For simplicity in this O(N*B) forward DP, we accumulate Forward Time Warp
-            current_time_forward = 480  # Default 08:00 if no time target
-            if self.direction == Direction.DROPOFF and self.target_time:
-                current_time_forward = self.target_time
+            current_time_forward = 0
+            if self.direction == Direction.DROPOFF:
+                current_time_forward = self.target_time if self.target_time else 480
             
             # Bound the forward look by max stops (B) -> O(N*B) ~ O(N)
             limit = min(n, i + self.penalties.max_stops_bounded)
@@ -186,11 +189,11 @@ class LinearSplitDecoder:
                     cap_viols_arr[j + 1] = cap_viols_arr[i] + total_cap_violations
                     
                     # Schedule tracking (Simplified Departure Approximation)
-                    dep_time = 0
+                    dep_time = 480
                     if self.direction == Direction.PICKUP and self.target_time:
-                        dep_time = self.target_time - int(total_route_dur) - self.offset_minutes
-                    else:
-                        dep_time = 480 # 08:00
+                        dep_time = max(0, self.target_time - int(total_route_dur) - self.offset_minutes)
+                    elif self.direction == Direction.DROPOFF and self.target_time:
+                        dep_time = self.target_time
                     
                     best_sched_arr[j + 1] = {
                         "departure_time": max(0, dep_time),

@@ -103,8 +103,14 @@ def _calculate_scheduled_times(
     return routes
 
 def _minutes_to_time(minutes: float) -> str:
-    hours = int(minutes // 60)
-    mins = int(minutes % 60)
+    """Convert minutes from midnight to HH:MM string.
+    
+    Clamps to valid range [00:00, 23:59] to handle overflow from
+    backward/forward scheduling calculations.
+    """
+    total = max(0, min(int(minutes), 23 * 60 + 59))
+    hours = total // 60
+    mins = total % 60
     return f"{hours:02d}:{mins:02d}"
 
 @router.post("/optimize", response_model=OptimizationResponse)
@@ -119,6 +125,12 @@ def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
         )
 
     strategy = STRATEGY_REGISTRY[algorithm_key]
+
+    if strategy is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Algorithm '{algorithm_key}' is not available — missing optional dependency (pyvrp/vroom package)"
+        )
 
     try:
         start_time = time.time()
@@ -216,9 +228,10 @@ def _run_single_algorithm(algorithm_name: str, request: OptimizationRequest) -> 
             routes=result.routes, error_message=result.error_message
         )
     except Exception as e:
+        logger.exception("Algorithm %s failed during compare", algorithm_name)
         return AlgorithmResult(
             algorithm=algorithm_name, success=False, total_vehicles=0,
-            total_duration_minutes=0, execution_time_seconds=0, routes=[], error_message=str(e)
+            total_duration_minutes=0, execution_time_seconds=0, routes=[], error_message=f"Algorithm '{algorithm_name}' failed — check server logs"
         )
 
 @router.post("/compare", response_model=CompareResponse)

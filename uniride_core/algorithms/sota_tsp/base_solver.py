@@ -73,9 +73,8 @@ class BaseTSPSolver(ABC):
 
     @staticmethod
     def euclidean_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> float:
-        dx = p1[0] - p2[0]
-        dy = p1[1] - p2[1]
-        return int(math.sqrt(dx * dx + dy * dy) + 0.5)
+        from uniride_core.algorithms.distance import tsplib_euc_2d_distance
+        return float(tsplib_euc_2d_distance(p1, p2))
 
     def tour_length(self, tour: List[int]) -> float:
         if not tour or len(tour) < 2:

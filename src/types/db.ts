@@ -33,7 +33,6 @@ export interface DbUserRow {
  */
 
 export interface DbUser extends Omit<User, "password"> {
-  passwordHash?: string; // Hashed password (for future use if needed)
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
 }

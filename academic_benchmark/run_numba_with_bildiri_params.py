@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Run master_numba_engine benchmark using tuned parameters from bildiri2026.
+Run Numba engine benchmark using tuned parameters from bildiri2026.
 
 This script does not modify any existing engine logic or defaults. It only
 loads tuned parameters, maps them to the Numba engine parameter schema, and
@@ -20,8 +20,9 @@ from typing import Any, Dict, List, Tuple
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_ROOT = os.path.abspath(os.path.join(_SCRIPT_DIR, ".."))
 if _PROJECT_ROOT not in sys.path:
-    
-from academic_benchmark import master_numba_engine as mne
+    sys.path.insert(0, _PROJECT_ROOT)
+
+from academic_benchmark import cli_engine as mne
 
 DEFAULT_DB_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -105,7 +106,7 @@ def _map_params(algorithm: str, params: Dict[str, Any]) -> Tuple[Dict[str, Any],
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run master_numba_engine with tuned parameters from bildiri2026"
+        description="Run Numba engine with tuned parameters from bildiri2026"
     )
     parser.add_argument("--db", default=DEFAULT_DB_PATH, help="Path to tuned_parameters_db.json")
     parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory")

@@ -18,6 +18,9 @@ from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass, field
 from models.schemas import Direction
 
+logger = logging.getLogger(__name__)
+from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
+
 
 @dataclass
 class Trip:
@@ -64,22 +67,10 @@ class SplitDecoder:
         time_windows: Optional[Dict[str, Tuple[int, int]]] = None,
         use_time_windows: bool = False,
         direction: Direction = Direction.PICKUP,
-        target_time: Optional[int] = None,  # Target time in minutes from midnight
-        offset_minutes: int = 10  # Buffer time for driver notification
+        target_time: Optional[int] = None,
+        offset_minutes: int = 10,
+        is_asymmetric: bool = False,
     ):
-        """
-        Initialize Split Decoder.
-        
-        Args:
-            sw_capacity: Maximum wheelchair passengers per vehicle
-            so_capacity: Maximum other disability passengers per vehicle
-            max_tour_duration: Maximum tour duration in minutes
-            time_windows: Dict mapping location -> (earliest, latest) in minutes from midnight
-            use_time_windows: If True, enforce time window constraints
-            direction: PICKUP or DROPOFF - determines scheduling approach
-            target_time: Global target time for all students (minutes from midnight)
-            offset_minutes: Buffer time added before departure for driver notification
-        """
         self.sw_capacity = sw_capacity
         self.so_capacity = so_capacity
         self.max_tour_duration = max_tour_duration
@@ -88,6 +79,7 @@ class SplitDecoder:
         self.direction = direction
         self.target_time = target_time
         self.offset_minutes = offset_minutes
+        self.is_asymmetric = is_asymmetric
     
     def decode(
         self,
@@ -196,6 +188,22 @@ class SplitDecoder:
             result["trips"] = trips
         
         return result
+
+    def _get_dist(
+        self,
+        from_loc: str,
+        to_loc: str,
+        distance_matrix: Dict[str, Dict[str, float]],
+    ) -> float:
+        """Get distance between two locations, respecting ATSP asymmetry."""
+        direct = distance_matrix.get(from_loc, {}).get(to_loc)
+        if direct is not None:
+            return direct
+        if not self.is_asymmetric:
+            reverse = distance_matrix.get(to_loc, {}).get(from_loc)
+            if reverse is not None:
+                return reverse
+        return DEFAULT_TRAVEL_FALLBACK_MINUTES
     
     def _build_trips(
         self,
@@ -224,16 +232,11 @@ class SplitDecoder:
                     break
 
                 # FIX-04: named constant instead of magic 15.0
-                if prev in distance_matrix and loc in distance_matrix[prev]:
-                    cost += distance_matrix[prev][loc]
-                else:
-                    cost += DEFAULT_TRAVEL_FALLBACK_MINUTES
+                cost += self._get_dist(prev, loc, distance_matrix)
 
                 prev = loc
 
-                return_cost = distance_matrix.get(loc, {}).get(
-                    depot, DEFAULT_TRAVEL_FALLBACK_MINUTES
-                )
+                return_cost = self._get_dist(loc, depot, distance_matrix)
                 total_trip_cost = cost + return_cost
 
                 if total_trip_cost > self.max_tour_duration:
@@ -298,18 +301,13 @@ class SplitDecoder:
                         break
 
                     # FIX-04: use named constant instead of magic 15.0
-                    travel_time = distance_matrix.get(prev, {}).get(
-                        loc, DEFAULT_TRAVEL_FALLBACK_MINUTES
-                    )
+                    travel_time = self._get_dist(prev, loc, distance_matrix)
                     cost += travel_time
                     prev = loc
                     trip_end = k  # commit: this stop is within capacity
 
                 # Return-to-depot segment
-                if prev in distance_matrix and depot in distance_matrix[prev]:
-                    return_cost = distance_matrix[prev][depot]
-                else:
-                    return_cost = DEFAULT_TRAVEL_FALLBACK_MINUTES
+                return_cost = self._get_dist(prev, depot, distance_matrix)
 
                 total_trip_cost = cost + return_cost
 
@@ -344,9 +342,7 @@ class SplitDecoder:
 
                 for k in range(i, trip_end + 1):  # FIX-03: bounded by trip_end
                     loc = giant_tour[k]
-                    travel_time = distance_matrix.get(prev, {}).get(
-                        loc, DEFAULT_TRAVEL_FALLBACK_MINUTES
-                    )
+                    travel_time = self._get_dist(prev, loc, distance_matrix)
                     current_time += int(travel_time)
 
                     if loc in self.time_windows:
@@ -387,9 +383,7 @@ class SplitDecoder:
                     if sw_load > self.sw_capacity or so_load > self.so_capacity:
                         break
 
-                    travel_time = distance_matrix.get(prev, {}).get(
-                        loc, DEFAULT_TRAVEL_FALLBACK_MINUTES
-                    )
+                    travel_time = self._get_dist(prev, loc, distance_matrix)
                     cost += travel_time
                     current_time += int(travel_time)
 
@@ -404,9 +398,7 @@ class SplitDecoder:
                     arrival_times[loc] = current_time  # record after possible wait
                     prev = loc
 
-                    return_cost = distance_matrix.get(loc, {}).get(
-                        depot, DEFAULT_TRAVEL_FALLBACK_MINUTES
-                    )
+                    return_cost = self._get_dist(loc, depot, distance_matrix)
                     total_trip_cost = cost + return_cost
 
                     if total_trip_cost > self.max_tour_duration:
@@ -494,7 +486,7 @@ class SplitDecoder:
             for j in range(len(route_stops) - 1):
                 from_loc = route_stops[j]
                 to_loc = route_stops[j + 1]
-                dur = distance_matrix.get(from_loc, {}).get(to_loc, 15.0)
+                dur = self._get_dist(from_loc, to_loc, distance_matrix)
                 segments.append({
                     "from": from_loc,
                     "to": to_loc,
@@ -533,13 +525,15 @@ def decode_giant_tour(
     demands: Dict[str, Tuple[int, int]],
     sw_capacity: int = 4,
     so_capacity: int = 5,
-    max_tour_duration: float = 120.0
+    max_tour_duration: float = 120.0,
+    is_asymmetric: bool = False
 ) -> Dict:
     """Convenience function for basic split decoding."""
     decoder = SplitDecoder(
         sw_capacity=sw_capacity,
         so_capacity=so_capacity,
-        max_tour_duration=max_tour_duration
+        max_tour_duration=max_tour_duration,
+        is_asymmetric=is_asymmetric
     )
     return decoder.decode(giant_tour, depot, distance_matrix, demands)
 
@@ -555,7 +549,8 @@ def decode_with_time_windows(
     offset_minutes: int = 10,
     sw_capacity: int = 4,
     so_capacity: int = 5,
-    max_tour_duration: float = 120.0
+    max_tour_duration: float = 120.0,
+    is_asymmetric: bool = False
 ) -> Dict:
     """
     Convenience function for CVRPTW decoding.
@@ -569,6 +564,7 @@ def decode_with_time_windows(
         direction: PICKUP or DROPOFF
         target_time: Global target time in minutes from midnight
         offset_minutes: Buffer for driver notification
+        is_asymmetric: When True, respects asymmetric distance matrix (d(i,j) != d(j,i))
     
     Returns:
         Dict with routes, schedules, and time window info
@@ -581,7 +577,8 @@ def decode_with_time_windows(
         use_time_windows=True,
         direction=direction,
         target_time=target_time,
-        offset_minutes=offset_minutes
+        offset_minutes=offset_minutes,
+        is_asymmetric=is_asymmetric
     )
     return decoder.decode_with_details(giant_tour, depot, distance_matrix, demands)
 

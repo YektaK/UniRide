@@ -47,7 +47,7 @@ class E2BSoStrategy(BaseRoutingStrategy):
     """
 
     def __init__(self, config: Optional[E2BSOTSPConfig] = None):
-        self._config = config or E2BSOTSPConfig(population_size=10, max_iterations=100)
+        self._config = config or E2BSOTSPConfig(population_size=24, max_iterations=200)
 
     @property
     def name(self) -> str:

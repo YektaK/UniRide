@@ -1,7 +1,7 @@
 """
 R²DMA-TSP — Resonance-Reinforced Destroy-and-Merge Algorithm (TSP variant)
 
-Adapted from optimizer_api/strategies/sota_common/r2dma.py for pure TSP.
+Core pure-TSP implementation.
 Uses integer-indexed tours and Numba-accelerated distance matrix.
 
 Core DNA:

@@ -5,12 +5,8 @@ All optimization algorithms must inherit from this class
 
 from abc import ABC, abstractmethod
 from typing import List, Dict
-import logging
 from models.schemas import OptimizationRequest, OptimizationResponse
-from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
-from utils.haversine import haversine_distance, estimate_travel_time
-
-logger = logging.getLogger(__name__)
+from uniride_core.algorithms.route_metrics import calculate_route_duration, get_duration
 
 
 class BaseRoutingStrategy(ABC):
@@ -90,23 +86,7 @@ class BaseRoutingStrategy(ABC):
         Returns:
             Travel time in minutes (float)
         """
-        # Priority 1: Time matrix
-        if from_loc in time_matrix and to_loc in time_matrix[from_loc]:
-            return time_matrix[from_loc][to_loc]
-
-        # Priority 2: Haversine calculation from coordinates
-        if from_loc in coordinates and to_loc in coordinates:
-            c1 = coordinates[from_loc]
-            c2 = coordinates[to_loc]
-            dist = haversine_distance(c1["lat"], c1["lng"], c2["lat"], c2["lng"])
-            return estimate_travel_time(dist)
-
-        # Priority 3: Fallback constant (no data available)
-        logger.warning(
-            f"Distance matrix miss for {from_loc} to {to_loc}. "
-            f"Using default fallback: {DEFAULT_TRAVEL_FALLBACK_MINUTES} mins"
-        )
-        return DEFAULT_TRAVEL_FALLBACK_MINUTES
+        return get_duration(from_loc, to_loc, time_matrix, coordinates)
 
     def _calculate_route_duration(
         self,
@@ -130,19 +110,4 @@ class BaseRoutingStrategy(ABC):
         Returns:
             Total route duration in minutes (float)
         """
-        if not route:
-            return 0.0
-
-        total = 0.0
-        
-        # Depot to first location
-        total += self._get_duration(depot, route[0], time_matrix, coordinates)
-
-        # Between consecutive locations
-        for i in range(len(route) - 1):
-            total += self._get_duration(route[i], route[i + 1], time_matrix, coordinates)
-
-        # Last location back to depot
-        total += self._get_duration(route[-1], depot, time_matrix, coordinates)
-
-        return total
+        return calculate_route_duration(route, depot, time_matrix, coordinates)

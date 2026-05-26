@@ -14,25 +14,19 @@ Croes, G. (1958). A method for solving traveling salesman problems.
 Operations Research, 6(6), 791-812.
 """
 
-import logging
 import random
 import time
-from typing import List, Dict, Tuple, Optional, cast
-from dataclasses import dataclass
+from typing import List, Dict, Tuple, Optional
 
 from models.schemas import (
     OptimizationRequest, OptimizationResponse,
     VehicleRoute, RouteStep
 )
 from strategies.base_strategy import BaseRoutingStrategy
-from utils.data_loader import DataLoader, euclidean_distance, haversine_distance, estimate_travel_time
-from utils.patterns import SingletonMeta
-from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
+from utils.data_loader import DataLoader, euclidean_distance
 from utils.clustering import VehicleCalculator
-from utils.local_search import TwoOptLocalSearch, LocalSearchType
-
-logger = logging.getLogger(__name__)
-
+from uniride_core.algorithms.meta_split_common import shuffle_permutation
+from uniride_core.algorithms.tsp_meta_engines import nearest_neighbor_route, solve_two_opt_tsp
 
 class TwoOptStrategy(BaseRoutingStrategy):
     """
@@ -74,11 +68,7 @@ class TwoOptStrategy(BaseRoutingStrategy):
 
     def _shuffle(self, items: List, rng: random.Random) -> List:
         """Shuffle list using provided RNG"""
-        result = items.copy()
-        for i in range(len(result) - 1, 0, -1):
-            j = rng.randint(0, i)
-            result[i], result[j] = result[j], result[i]
-        return result
+        return shuffle_permutation(items, rng)
 
     def _nearest_neighbor_initial(
         self,
@@ -92,21 +82,11 @@ class TwoOptStrategy(BaseRoutingStrategy):
 
         This provides a good starting point for 2-opt.
         """
-        if not waypoints:
-            return []
-
-        remaining = waypoints.copy()
-        route = []
-        current = depot
-
-        while remaining:
-            # Find nearest unvisited
-            nearest = min(remaining, key=lambda loc: self._get_duration(current, loc, time_matrix, coordinates))
-            route.append(nearest)
-            remaining.remove(nearest)
-            current = nearest
-
-        return route
+        return nearest_neighbor_route(
+            waypoints,
+            depot,
+            lambda current, location: self._get_duration(current, location, time_matrix, coordinates),
+        )
 
     def _solve_tsp(
         self,
@@ -118,67 +98,11 @@ class TwoOptStrategy(BaseRoutingStrategy):
         rng: random.Random,
     ) -> Tuple[List[str], float]:
         """Solve TSP for a single vehicle using 2-opt"""
-        if not waypoints:
-            return [], 0.0
-
-        if len(waypoints) == 1:
-            duration = (
-                self._get_duration(depot, waypoints[0], time_matrix, coordinates) +
-                self._get_duration(waypoints[0], depot, time_matrix, coordinates)
-            )
-            return waypoints, duration
-
-        if len(waypoints) == 2:
-            # Only 2 permutations possible
-            d1 = self._calculate_route_duration(waypoints, depot, time_matrix, coordinates)
-            d2 = self._calculate_route_duration([waypoints[1], waypoints[0]], depot, time_matrix, coordinates)
-            if d1 <= d2:
-                return waypoints, d1
-            return [waypoints[1], waypoints[0]], d2
-
-        # Create 2-opt local search instance
-        two_opt = TwoOptLocalSearch(
-            max_iterations=config["max_iterations"],
-            first_improvement=config["first_improvement"]
-        )
-
         def duration_func(route):
             return self._calculate_route_duration(route, depot, time_matrix, coordinates)
 
-        best_route: Optional[List[str]] = None
-        best_duration = float('inf')
-
-        if config["multi_start"]:
-            # Multi-start optimization
-            starts_completed = 0
-
-            # First start: nearest neighbor initial solution
-            initial_route = self._nearest_neighbor_initial(waypoints, depot, time_matrix, coordinates)
-            improved_route, improved_duration = two_opt.improve(initial_route, duration_func)
-
-            if improved_duration < best_duration:
-                best_route = improved_route
-                best_duration = improved_duration
-            starts_completed += 1
-
-            # Random starts
-            while starts_completed < config["num_starts"]:
-                random_route = self._shuffle(waypoints, rng)
-                improved_route, improved_duration = two_opt.improve(random_route, duration_func)
-
-                if improved_duration < best_duration:
-                    best_route = improved_route
-                    best_duration = improved_duration
-                starts_completed += 1
-
-        else:
-            # Single run from nearest neighbor
-            initial_route = self._nearest_neighbor_initial(waypoints, depot, time_matrix, coordinates)
-            best_route, best_duration = two_opt.improve(initial_route, duration_func)
-
-        # best_route is guaranteed to be set (either multi-start or single run)
-        assert best_route is not None, "best_route should be set by optimization loop"
-        return best_route, best_duration
+        initial_route = self._nearest_neighbor_initial(waypoints, depot, time_matrix, coordinates)
+        return solve_two_opt_tsp(waypoints, duration_func, rng, config, initial_route=initial_route)
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:
         """Main optimization entry point"""

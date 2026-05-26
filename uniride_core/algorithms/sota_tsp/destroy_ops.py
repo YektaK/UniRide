@@ -1,7 +1,7 @@
 """
 ALNS Destroy Operators — TSP variant.
 
-Adapted from optimizer_api/strategies/sota_common/destroy_operators.py.
+Core TSP destroy operators for SOTA algorithms.
 Works on List[int] tours with List[List[float]] distance matrix.
 """
 

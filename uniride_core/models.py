@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Tuple, Dict, Any, Optional
+from typing import List, Tuple, Dict, Any, Optional, Sequence
 
 @dataclass
 class ProblemInstance:
@@ -21,6 +21,13 @@ class ProblemInstance:
     # CVRPTW specific fields
     capacity: Optional[int] = None
     num_vehicles: Optional[int] = None
+    demands: Optional[List[Any]] = None
+    capacities: Optional[List[int]] = None
+    service_times: Optional[List[int]] = None
+    num_vehicles_bks: Optional[int] = None
+    max_route_duration: Optional[float] = None
+    matrix_kind: str = "distance"
+    direction: str = "pickup"
     time_windows: Optional[List[Tuple[int, int]]] = None
     depot_index: int = 0
     
@@ -93,3 +100,96 @@ class TSPResult:
             self.convergence_curve = self.history
         elif self.convergence_curve is not None and self.history is None:
             self.history = self.convergence_curve
+
+
+@dataclass
+class CostMatrix:
+    """Matrix-first representation used by all core solvers."""
+    values: Any
+    kind: str = "distance"  # distance | travel_time | synthetic_travel_time
+    is_asymmetric: bool = False
+    labels: Optional[List[str]] = None
+
+
+@dataclass
+class ConstraintProfile:
+    """Routing constraints shared by academic and production problems.
+
+    Demands and capacities are vector-valued. Standard CVRP maps to a one-item
+    vector, while UniRide maps to [sw, so].
+    """
+    demands: Optional[List[Sequence[int]]] = None
+    capacities: Optional[Sequence[int]] = None
+    time_windows: Optional[List[Tuple[int, int]]] = None
+    service_times: Optional[List[int]] = None
+    depot_index: int = 0
+    max_route_duration: Optional[float] = None
+    direction: str = "pickup"
+    target_time: Optional[int] = None
+    offset_minutes: int = 10
+
+
+@dataclass
+class RoutingProblem:
+    """Core-first problem object for TSP, ATSP, CVRP, CVRPTW, and UniRide data."""
+    name: str
+    problem_type: str
+    matrix: CostMatrix
+    constraints: ConstraintProfile = field(default_factory=ConstraintProfile)
+    coordinates: Optional[List[Tuple[float, float]]] = None
+    optimal: Optional[float] = None
+    category: str = "small"
+    source: str = "core"
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def dimension(self) -> int:
+        try:
+            return int(len(self.matrix.values))
+        except TypeError:
+            return 0
+
+
+@dataclass
+class PermutationResult:
+    """Output from a permutation engine before problem-specific decoding."""
+    algorithm: str
+    permutation: List[int]
+    cost: float
+    time_ms: float = 0.0
+    iterations: int = 0
+    seed: Optional[int] = None
+    params: Dict[str, Any] = field(default_factory=dict)
+    convergence_curve: Optional[List[float]] = None
+
+
+@dataclass
+class RoutingResult:
+    """Unified output for TSP, ATSP, CVRP, CVRPTW, and UniRide optimization."""
+    algorithm: str
+    problem_type: str
+    objective_cost: float
+    total_cost: Optional[float] = None
+    routes: List[List[int]] = field(default_factory=list)
+    tour: Optional[List[int]] = None
+    num_vehicles: int = 0
+    time_ms: float = 0.0
+    optimal_gap: Optional[float] = None
+    capacity_violations: int = 0
+    tw_violations: int = 0
+    route_costs: Optional[List[float]] = None
+    route_loads: Optional[List[List[int]]] = None
+    convergence_curve: Optional[List[float]] = None
+    iterations: int = 0
+    seed: Optional[int] = None
+    params: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if self.total_cost is None:
+            self.total_cost = self.objective_cost
+
+
+@dataclass
+class CVRPResult(RoutingResult):
+    """Backward-compatible named result for CVRP/CVRPTW workflows."""

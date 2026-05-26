@@ -9,44 +9,27 @@ Implements:
 - Optional local search (2-opt, 3-opt, Or-opt, Hybrid)
 """
 
-import logging
 import random
 import time
 from typing import List, Dict, Tuple, Optional
-from dataclasses import dataclass
 
 from models.schemas import (
     OptimizationRequest, OptimizationResponse,
     VehicleRoute, RouteStep
 )
 from strategies.base_strategy import BaseRoutingStrategy
-from utils.data_loader import DataLoader, euclidean_distance, haversine_distance, estimate_travel_time
+from utils.data_loader import DataLoader, euclidean_distance
 from utils.clustering import VehicleCalculator
-from utils.local_search import LocalSearchType, apply_local_search
-from utils.patterns import SingletonMeta
-from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
-
-logger = logging.getLogger(__name__)
-
-
-@dataclass
-class SwapOperation:
-    """Represents a swap (i, j) in the velocity sequence."""
-    i: int
-    j: int
-    # Note: probability field removed — Clerc combination handles stochasticity
-    # at the velocity-combination level, not per-swap.
-
-
-@dataclass
-class Particle:
-    """Particle in the swarm"""
-    position: List[str]
-    velocity: List[SwapOperation]   # deterministic swap sequence
-    personal_best: List[str]
-    personal_best_duration: float
-    current_duration: float
-
+from uniride_core.algorithms.meta_split_common import shuffle_permutation
+from uniride_core.algorithms.tsp_meta_engines import (
+    SwapOperation,
+    TSPParticle as Particle,
+    apply_swaps,
+    combine_velocities,
+    diff_swaps,
+    generate_random_velocity,
+    solve_pso_tsp,
+)
 
 class PSOStrategy(BaseRoutingStrategy):
     """
@@ -87,23 +70,11 @@ class PSOStrategy(BaseRoutingStrategy):
 
     def _shuffle(self, items: List) -> List:
         """Shuffle list using internal RNG"""
-        result = items.copy()
-        for i in range(len(result) - 1, 0, -1):
-            j = self.rng.randint(0, i)
-            result[i], result[j] = result[j], result[i]
-        return result
+        return shuffle_permutation(items, self.rng)
 
     def _generate_random_velocity(self, n: int) -> List[SwapOperation]:
         """Generate random velocity (swap sequence) for initialization."""
-        max_vel = int(self.config.get("max_velocity_size", 5))
-        num_swaps = self.rng.randint(1, max(1, max_vel))
-        velocity = []
-        for _ in range(num_swaps):
-            velocity.append(SwapOperation(
-                i=self.rng.randint(0, n - 1),
-                j=self.rng.randint(0, n - 1),
-            ))
-        return velocity
+        return generate_random_velocity(n, int(self.config.get("max_velocity_size", 5)), self.rng)
 
     def _initialize_swarm(self, waypoints: List[str]) -> List[Particle]:
         """Initialize swarm with random positions and velocities"""
@@ -134,25 +105,11 @@ class PSOStrategy(BaseRoutingStrategy):
         left-to-right; whenever current[i] != target[i], find target[i] in the tail of
         current and swap it into position i.
         """
-        swaps: List[SwapOperation] = []
-        temp = current[:]
-        for i in range(len(target)):
-            if temp[i] != target[i]:
-                try:
-                    j = temp.index(target[i], i)
-                except ValueError:
-                    continue
-                temp[i], temp[j] = temp[j], temp[i]
-                swaps.append(SwapOperation(i=i, j=j))
-        return swaps
+        return diff_swaps(current, target)
 
     def _apply_swaps(self, position: List[str], swaps: List[SwapOperation]) -> List[str]:
         """Apply swap sequence deterministically."""
-        new_pos = position[:]
-        for swap in swaps:
-            if 0 <= swap.i < len(new_pos) and 0 <= swap.j < len(new_pos):
-                new_pos[swap.i], new_pos[swap.j] = new_pos[swap.j], new_pos[swap.i]
-        return new_pos
+        return apply_swaps(position, swaps)
 
     def _combine_velocities(
         self,
@@ -165,25 +122,7 @@ class PSOStrategy(BaseRoutingStrategy):
         Each component swap is included with probability equal to the
         corresponding weight / 3.0, mirroring bildiri2026 _combine_velocities.
         """
-        w = self.config["inertia_weight"]
-        c1 = self.config["cognitive_weight"]
-        c2 = self.config["social_weight"]
-        max_vel = int(self.config.get("max_velocity_size", 5))
-
-        new_v: List[SwapOperation] = []
-        for swap in inertia_v:
-            if self.rng.random() < w:
-                new_v.append(swap)
-        for swap in cog_v:
-            if self.rng.random() < c1 / 3.0:
-                new_v.append(swap)
-        for swap in soc_v:
-            if self.rng.random() < c2 / 3.0:
-                new_v.append(swap)
-
-        if len(new_v) > max_vel:
-            new_v = self.rng.sample(new_v, max_vel)
-        return new_v
+        return combine_velocities(inertia_v, cog_v, soc_v, self.config, self.rng)
 
     # ----------------------------------------------------------------
     # Legacy helpers (kept for backward compat, no longer used in PSO loop)
@@ -220,135 +159,15 @@ class PSOStrategy(BaseRoutingStrategy):
         waypoints: List[str],
         depot: str,
         time_matrix: Dict,
-        coordinates: Dict
+        coordinates: Dict,
+        config: Optional[Dict] = None,
+        rng: Optional[random.Random] = None,
     ) -> Tuple[List[str], float]:
         """Solve TSP for a single vehicle using swap-sequence PSO (bildiri2026 pattern)."""
-        if not waypoints:
-            return [], 0.0
-
-        if len(waypoints) == 1:
-            duration = (
-                self._get_duration(depot, waypoints[0], time_matrix, coordinates) +
-                self._get_duration(waypoints[0], depot, time_matrix, coordinates)
-            )
-            return waypoints, duration
-
-        if len(waypoints) == 2:
-            d1 = self._calculate_route_duration(waypoints, depot, time_matrix, coordinates)
-            d2 = self._calculate_route_duration(
-                [waypoints[1], waypoints[0]], depot, time_matrix, coordinates
-            )
-            if d1 <= d2:
-                return waypoints, d1
-            return [waypoints[1], waypoints[0]], d2
-
-        reinit_interval = int(self.config.get("reinit_interval", 50))
-        max_vel = int(self.config.get("max_velocity_size", 5))
-        n = len(waypoints)
-
-        # Initialize swarm
-        swarm = self._initialize_swarm(waypoints)
-        global_best = waypoints.copy()
-        global_best_duration = float('inf')
-
-        # Evaluate initial swarm
-        for particle in swarm:
-            duration = self._calculate_route_duration(
-                particle.position, depot, time_matrix, coordinates
-            )
-            particle.current_duration = duration
-            particle.personal_best_duration = duration
-
-            if duration < global_best_duration:
-                global_best = particle.position.copy()
-                global_best_duration = duration
-
-        no_improvement = 0
-
-        # Main PSO loop — swap-sequence velocity (bildiri2026 pattern)
-        for iteration in range(self.config["max_iterations"]):
-            improved = False
-
-            for particle in swarm:
-                # Compute velocity components
-                cog_v = self._diff_swaps(particle.position, particle.personal_best)
-                soc_v = self._diff_swaps(particle.position, global_best)
-                new_velocity = self._combine_velocities(particle.velocity, cog_v, soc_v)
-
-                # Apply velocity (deterministic)
-                new_position = self._apply_swaps(particle.position, new_velocity)
-
-                # Evaluate
-                duration = self._calculate_route_duration(
-                    new_position, depot, time_matrix, coordinates
-                )
-
-                particle.position = new_position
-                particle.velocity = new_velocity
-                particle.current_duration = duration
-
-                # Update personal best
-                if duration < particle.personal_best_duration:
-                    particle.personal_best = new_position.copy()
-                    particle.personal_best_duration = duration
-
-                    # Update global best
-                    if duration < global_best_duration:
-                        global_best = new_position.copy()
-                        global_best_duration = duration
-                        improved = True
-
-            if improved:
-                no_improvement = 0
-            else:
-                no_improvement += 1
-
-            # Periodic swarm re-initialization for diversity (bildiri2026 pattern)
-            if iteration > 0 and iteration % reinit_interval == 0:
-                for particle in swarm:
-                    if self.rng.random() < 0.9:
-                        pos = particle.personal_best[:]
-                        for _ in range(self.rng.randint(1, 3)):
-                            a, b = self.rng.sample(range(n), 2)
-                            pos[a], pos[b] = pos[b], pos[a]
-                    else:
-                        pos = global_best[:]
-                        self.rng.shuffle(pos)
-                    cost = self._calculate_route_duration(pos, depot, time_matrix, coordinates)
-                    particle.position = pos
-                    particle.velocity = self._generate_random_velocity(n)
-                    if cost < particle.personal_best_duration:
-                        particle.personal_best = pos[:]
-                        particle.personal_best_duration = cost
-                    if cost < global_best_duration:
-                        global_best = pos[:]
-                        global_best_duration = cost
-
-            if no_improvement >= self.config["max_no_improvement"]:
-                break
-
-        # Apply local search to best solution
-        best_route = global_best
-        best_duration = global_best_duration
-
-        ls_type_str = self.config.get("local_search_type", "two_opt")
-        try:
-            ls_type = LocalSearchType(ls_type_str)
-        except ValueError:
-            ls_type = LocalSearchType.TWO_OPT
-
         def duration_func(route):
             return self._calculate_route_duration(route, depot, time_matrix, coordinates)
 
-        improved_route, improved_duration = apply_local_search(
-            best_route, duration_func, ls_type
-        )
-
-        if improved_duration < best_duration:
-            best_route = improved_route
-            best_duration = improved_duration
-
-        return best_route, best_duration
+        return solve_pso_tsp(waypoints, duration_func, rng or self.rng, config or self.config)
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:
         """Main optimization entry point"""
@@ -427,7 +246,7 @@ class PSOStrategy(BaseRoutingStrategy):
                 return {"route_details": [], "total_duration": 0}
 
             optimized_route, duration = self._solve_tsp(
-                location_codes, depot.id, time_matrix, coordinates
+                location_codes, depot.id, time_matrix, coordinates, effective_config, rng
             )
 
             route_details = []

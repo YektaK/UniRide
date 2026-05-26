@@ -1,5 +1,5 @@
 from typing import List, Tuple, Any
-from optimizer_api.utils.local_search_numba import LocalSearchType
+from uniride_core.algorithms.local_search_numba import LocalSearchType
 
 LOCAL_SEARCH_STRATEGIES: List[Tuple[str, Any, dict]] = [
     ("2-opt", LocalSearchType.TWO_OPT, {"max_iterations": 3000, "algorithm_type": "local_search"}),

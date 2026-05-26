@@ -3,7 +3,7 @@ import json
 import logging
 import threading
 import glob as glob_mod
-from typing import List, Dict, Optional
+from typing import Any, List, Dict, Optional
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Query
@@ -24,6 +24,112 @@ router = APIRouter(prefix="/api/v1/benchmark", tags=["Benchmark"])
 
 CLI_RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "tests", "benchmark_results")
 CLI_RESULTS_NUMBA_DIR = os.path.join(os.path.dirname(__file__), "..", "tests", "benchmark_results_numba")
+
+
+def _infer_param_type(value: Any) -> str:
+    if isinstance(value, bool):
+        return "bool"
+    if isinstance(value, int) and not isinstance(value, bool):
+        return "int"
+    if isinstance(value, float):
+        return "float"
+    return "string"
+
+
+def _space_from_config(config: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    return {
+        key: {"type": _infer_param_type(value), "default": value, "source": "production"}
+        for key, value in sorted(config.items())
+        if isinstance(value, (bool, int, float, str))
+    }
+
+
+def _academic_param_spaces() -> Dict[str, Dict[str, Dict[str, Any]]]:
+    try:
+        from academic_benchmark.param_spaces import NUMBA_PARAM_SPACES, SOTA_PARAM_SPACES
+    except Exception:
+        logger.exception("Academic parameter spaces could not be loaded")
+        return {}
+
+    spaces: Dict[str, Dict[str, Dict[str, Any]]] = {}
+    for source, raw_spaces in (("numba", NUMBA_PARAM_SPACES), ("sota", SOTA_PARAM_SPACES)):
+        for algo_name, raw_space in raw_spaces.items():
+            spaces[algo_name] = {
+                key: {**spec, "source": source}
+                for key, spec in raw_space.items()
+            }
+    return spaces
+
+
+def _strategy_param_spaces() -> Dict[str, Dict[str, Dict[str, Any]]]:
+    spaces: Dict[str, Dict[str, Dict[str, Any]]] = {}
+    for key, strategy in STRATEGY_REGISTRY.items():
+        config = getattr(strategy, "config", None)
+        if isinstance(config, dict) and config:
+            spaces[key] = _space_from_config(config)
+    return spaces
+
+
+@router.get("/param-spaces")
+def list_benchmark_param_spaces() -> Dict:
+    """Expose editable benchmark parameters without making web the source of truth."""
+    production_spaces = _strategy_param_spaces()
+    academic_spaces = _academic_param_spaces()
+    return {
+        "spaces": {**academic_spaces, **production_spaces},
+        "production_spaces": production_spaces,
+        "academic_spaces": academic_spaces,
+    }
+
+
+@router.get("/academic/leaderboard")
+def get_academic_leaderboard(
+    algorithm: Optional[str] = Query(None, description="Filter by algorithm"),
+    category: Optional[str] = Query(None, description="Filter by problem category"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum rows to return"),
+) -> Dict:
+    """Read-only leaderboard backed by the academic benchmark database."""
+    try:
+        from academic_benchmark.results_reader import get_leaderboard
+
+        return get_leaderboard(algorithm=algorithm, category=category, limit=limit)
+    except Exception as exc:
+        logger.exception("Academic leaderboard query failed")
+        raise HTTPException(status_code=503, detail=f"Academic DB unavailable: {exc}")
+
+
+@router.get("/academic/best")
+def get_academic_best_result(
+    problem: str = Query(..., description="Problem name"),
+    algorithm: str = Query(..., description="Algorithm name"),
+) -> Dict:
+    """Read-only best result lookup backed by the academic benchmark database."""
+    try:
+        from academic_benchmark.results_reader import get_best_result
+
+        result = get_best_result(problem=problem, algorithm=algorithm)
+        if result.get("result") is None:
+            raise HTTPException(status_code=404, detail="No academic result found")
+        return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Academic best-result query failed")
+        raise HTTPException(status_code=503, detail=f"Academic DB unavailable: {exc}")
+
+
+@router.get("/academic/benchmark-results")
+def get_academic_benchmark_results(
+    limit: int = Query(100, ge=1, le=1000, description="Maximum rows to return"),
+) -> Dict:
+    """Read-only benchmark CSV rows, including CVRP/CVRPTW routing fields."""
+    try:
+        from academic_benchmark.results_reader import get_benchmark_rows
+
+        return get_benchmark_rows(limit=limit)
+    except Exception as exc:
+        logger.exception("Academic benchmark-results query failed")
+        raise HTTPException(status_code=503, detail=f"Academic benchmark results unavailable: {exc}")
 
 
 @router.get("/problems")
@@ -85,22 +191,18 @@ def _start_benchmark_impl(run_id: str, algorithms: List[Dict], problems: List[st
                 status_code=429,
                 detail={"error": "Maximum concurrent benchmarks reached", "max_concurrent": MAX_CONCURRENT_BENCHMARKS}
             )
+
+        if settings.get("execution_mode") in {"matrix_native", "academic_matrix"}:
+            return _start_matrix_native_benchmark_impl(run_id, algorithms, problems, settings)
         
         n_runs = settings.get("n_runs", 3)
         total_experiments = len(algorithms) * len(problems) * n_runs
         
         benchmark_problems: List[ProblemInstance] = []
         for problem_name in problems:
-            info = get_problem_by_name(problem_name)
-            if not info or not info.file_path:
+            bp = _load_benchmark_problem(problem_name)
+            if bp is None:
                 continue
-            coords = load_problem_coordinates(problem_name)
-            if not coords:
-                continue
-            bp = ProblemInstance(
-                name=info.name, dimension=info.dimension, coordinates=coords,
-                optimal=info.optimal, category=info.category, problem_type="tsp", depot_index=0,
-            )
             benchmark_problems.append(bp)
         
         if not benchmark_problems:
@@ -139,6 +241,157 @@ def _start_benchmark_impl(run_id: str, algorithms: List[Dict], problems: List[st
     except Exception as e:
         logger.exception("Benchmark run failed for run_id=%s", run_id)
         raise HTTPException(status_code=500, detail="Internal benchmark error")
+
+
+def _start_matrix_native_benchmark_impl(run_id: str, algorithms: List[Dict], problems: List[str], settings: Dict) -> Dict:
+    from dataclasses import asdict
+
+    from academic_benchmark.tsplib_manager import load_routing_problem, save_benchmark_result, save_benchmark_run
+    from uniride_core.algorithms.greedy_engine import GreedyMatrixEngine
+    from uniride_core.benchmark_runner import MatrixAlgorithmConfig, MatrixBenchmarkRunner
+
+    n_runs = int(settings.get("n_runs", 1))
+    routing_problems = []
+    for problem_name in problems:
+        loaded = load_routing_problem(problem_name)
+        if loaded is not None:
+            routing_problems.append(loaded)
+
+    if not routing_problems:
+        raise HTTPException(status_code=400, detail={"error": "No matrix-native academic problems found"})
+
+    matrix_algorithms: List[MatrixAlgorithmConfig] = []
+    for algo_dict in algorithms:
+        algo_id = algo_dict.get("id", algo_dict.get("name", "Core-Greedy-Routing"))
+        if algo_id not in {"Core-Greedy-Routing", "Greedy", "greedy", "core_greedy"}:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": f"Matrix-native algorithm not available yet: {algo_id}"},
+            )
+        matrix_algorithms.append(MatrixAlgorithmConfig(
+            name=algo_id,
+            engine=GreedyMatrixEngine(),
+            params=algo_dict.get("params", {}),
+        ))
+
+    total_experiments = len(routing_problems) * len(matrix_algorithms) * n_runs
+    state = benchmark_state_manager.create_run(
+        run_id=run_id,
+        total_experiments=total_experiments,
+        parameters={
+            "algorithms": algorithms,
+            "problems": problems,
+            "settings": {**settings, "execution_mode": "matrix_native"},
+        },
+    )
+    save_benchmark_run(
+        run_id,
+        source="web_matrix_native",
+        status="running",
+        settings=state.parameters,
+    )
+
+    def run_matrix_task():
+        try:
+            runner = MatrixBenchmarkRunner(matrix_algorithms)
+            completed = 0
+            collected = []
+            for problem in routing_problems:
+                for algorithm in matrix_algorithms:
+                    for run_number in range(1, n_runs + 1):
+                        result = runner.run_one(
+                            problem,
+                            algorithm,
+                            run_number=run_number,
+                            seed=int(settings.get("seed", 42)) + run_number - 1,
+                        )
+                        result_dict = asdict(result)
+                        collected.append(result_dict)
+                        save_benchmark_result(run_id, result_dict)
+                        completed += 1
+                        benchmark_state_manager.add_result(run_id, result_dict)
+                        benchmark_state_manager.update_progress(
+                            run_id,
+                            completed,
+                            f"Completed matrix-native: {algorithm.name} on {problem.name} ({completed}/{total_experiments})",
+                        )
+            save_benchmark_run(
+                run_id,
+                source="web_matrix_native",
+                status="completed",
+                settings=state.parameters,
+                metadata={"results": len(collected)},
+            )
+            benchmark_state_manager.complete_run(
+                run_id,
+                len(collected),
+                f"Matrix-native benchmark completed: {len(collected)} results",
+            )
+        except Exception as exc:
+            save_benchmark_run(
+                run_id,
+                source="web_matrix_native",
+                status="failed",
+                settings=state.parameters,
+                metadata={"error": str(exc)},
+            )
+            benchmark_state_manager.fail_run(run_id, f"Error: {str(exc)}")
+
+    executor_thread = threading.Thread(target=run_matrix_task, daemon=True, name=f"matrix-benchmark-executor-{run_id}")
+    executor_thread.start()
+    return {
+        "run_id": run_id,
+        "status": "running",
+        "execution_mode": "matrix_native",
+        "total_experiments": total_experiments,
+        "problems_count": len(routing_problems),
+        "algorithms_count": len(matrix_algorithms),
+        "message": f"Matrix-native benchmark run {run_id} started in background",
+        "start_time": state.start_time,
+    }
+
+
+def _load_benchmark_problem(problem_name: str) -> Optional[ProblemInstance]:
+    """Load an academic benchmark problem without flattening its metadata to TSP."""
+    info = get_problem_by_name(problem_name)
+    if not info or not info.file_path:
+        return None
+
+    problem_type = str(getattr(info, "problem_type", "tsp") or "tsp").lower()
+    coords = load_problem_coordinates(problem_name) or list(getattr(info, "coordinates", []) or [])
+    dist_matrix = getattr(info, "dist_matrix", None)
+    time_matrix = getattr(info, "time_matrix", None)
+
+    # The current web quick-runner still dispatches through production
+    # OptimizationRequest objects, which need coordinates for response mapping.
+    # Matrix-native academic runs are owned by uniride_core/academic_benchmark.
+    if not coords:
+        return None
+
+    return ProblemInstance(
+        name=info.name,
+        dimension=info.dimension,
+        coordinates=coords,
+        optimal=info.optimal,
+        category=info.category,
+        source=getattr(info, "source", "tsplib"),
+        problem_type=problem_type,
+        is_time_matrix=bool(getattr(info, "is_time_matrix", False) or time_matrix is not None),
+        time_matrix=time_matrix,
+        dist_matrix=dist_matrix,
+        edge_weight_type=getattr(info, "edge_weight_type", "EUC_2D"),
+        capacity=getattr(info, "capacity", None),
+        capacities=getattr(info, "capacities", None),
+        demands=getattr(info, "demands", None),
+        service_times=getattr(info, "service_times", None),
+        num_vehicles=getattr(info, "num_vehicles", None),
+        max_route_duration=getattr(info, "max_route_duration", None),
+        matrix_kind=getattr(info, "matrix_kind", "distance"),
+        direction=getattr(info, "direction", "pickup"),
+        time_windows=getattr(info, "time_windows", None),
+        depot_index=getattr(info, "depot_index", 0),
+        file_path=info.file_path,
+    )
 
 @router.post("/import")
 def import_benchmark(body: BenchmarkImportRequest) -> Dict:
@@ -203,6 +456,16 @@ def download_benchmark_problem(problem_name: str) -> Dict:
 
 def _convert_cli_record_to_web(cli_record: Dict, run_number: int = 1) -> Dict:
     is_best_run = (run_number == 1)
+    problem_type = cli_record.get("problem_type", "tsp")
+    matrix_kind = cli_record.get("matrix_kind", "distance")
+    num_vehicles = cli_record.get("num_vehicles")
+    routes = cli_record.get("routes")
+    if routes is None and cli_record.get("routes_json"):
+        try:
+            routes = json.loads(cli_record.get("routes_json") or "null")
+        except (TypeError, json.JSONDecodeError):
+            routes = None
+    routes_count = len(routes) if isinstance(routes, list) else (num_vehicles or 1)
     return {
         "algorithm": cli_record.get("strategy", "unknown"),
         "problem": cli_record.get("problem", "unknown"),
@@ -213,12 +476,21 @@ def _convert_cli_record_to_web(cli_record: Dict, run_number: int = 1) -> Dict:
         "timestamp": cli_record.get("timestamp", datetime.now(timezone.utc).isoformat()),
         "metadata": {
             "problem_dimension": cli_record.get("dimension", 0),
-            "problem_type": "tsp", "problem_category": cli_record.get("category", "unknown"),
+            "problem_type": problem_type,
+            "matrix_kind": matrix_kind,
+            "problem_category": cli_record.get("category", "unknown"),
             "optimal_score": cli_record.get("optimal"), "n_runs": cli_record.get("n_runs", 3),
             "numba_optimized": cli_record.get("numba_optimized", True),
             "algorithm_type": cli_record.get("algorithm_type", "local_search"),
             "source": "cli_import", "execution_failed": False,
-            "routes_count": 1, "vehicles_used": 1,
+            "routes_count": routes_count,
+            "vehicles_used": num_vehicles or routes_count,
+            "routes": routes,
+            "route_loads": cli_record.get("route_loads"),
+            "route_costs": cli_record.get("route_costs"),
+            "objective_cost": cli_record.get("objective_cost"),
+            "capacity_violations": cli_record.get("capacity_violations", 0),
+            "tw_violations": cli_record.get("tw_violations", 0),
             "cli_avg_length": cli_record.get("avg_length"), "cli_best_length": cli_record.get("best_length"),
             "cli_avg_gap": cli_record.get("avg_gap"), "cli_best_gap": cli_record.get("best_gap"),
             "cli_avg_time_ms": cli_record.get("avg_time_ms"),

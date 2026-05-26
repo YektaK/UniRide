@@ -6,7 +6,7 @@ Chains (by intensity):
   moderate : 2-opt → Or-opt
   full     : 2-opt → Or-opt → Swap
 
-Adapted from optimizer_api/strategies/sota_common/multi_layer_ls.py
+Core multi-layer local search helpers for SOTA algorithms.
 but operates on List[int] tours with Numba-accelerated kernels.
 """
 

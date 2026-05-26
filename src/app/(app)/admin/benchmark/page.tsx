@@ -43,6 +43,7 @@ import {
   ScrollText,
   Timer,
   TrendingUp,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -53,10 +54,13 @@ import {
   type BenchmarkProblem,
   type BenchmarkAlgorithm,
   type BenchmarkRunSettings,
+  type BenchmarkParamSpace,
+  type BenchmarkParamSpec,
   type BenchmarkStatus,
   type BenchmarkResult,
   type BenchmarkResultsResponse,
   fetchProblems,
+  fetchParamSpaces,
   startBenchmark,
   pollStatus,
   stopBenchmark,
@@ -159,6 +163,9 @@ export default function BenchmarkPage() {
 
   // Algorithms
   const [selectedAlgorithms, setSelectedAlgorithms] = useState<Set<string>>(new Set());
+  const [paramSpaces, setParamSpaces] = useState<Record<string, BenchmarkParamSpace>>({});
+  const [paramSpacesLoading, setParamSpacesLoading] = useState(false);
+  const [algorithmParams, setAlgorithmParams] = useState<Record<string, Record<string, unknown>>>({});
 
   // Settings
   const [nRuns, setNRuns] = useState(3);
@@ -213,6 +220,22 @@ export default function BenchmarkPage() {
     load();
   }, [toast]);
 
+  // ---- Fetch editable benchmark parameter spaces ----
+  useEffect(() => {
+    const load = async () => {
+      setParamSpacesLoading(true);
+      try {
+        const data = await fetchParamSpaces();
+        setParamSpaces(data.spaces || {});
+      } catch (err) {
+        console.warn("Failed to load benchmark param spaces:", err);
+      } finally {
+        setParamSpacesLoading(false);
+      }
+    };
+    load();
+  }, []);
+
   // ---- Cleanup polling ----
   useEffect(() => {
     return () => {
@@ -263,7 +286,10 @@ export default function BenchmarkPage() {
 
     setIsStarting(true);
     try {
-      const algorithms: BenchmarkAlgorithm[] = Array.from(selectedAlgorithms).map((id) => ({ id }));
+      const algorithms: BenchmarkAlgorithm[] = Array.from(selectedAlgorithms).map((id) => ({
+        id,
+        params: algorithmParams[id] || {},
+      }));
       const problemsArr = Array.from(selectedProblems);
       const settings: BenchmarkRunSettings = { n_runs: nRuns, seed };
 
@@ -388,6 +414,33 @@ export default function BenchmarkPage() {
     const keys: string[] = allAlgos.filter((a) => a.recommended).map((a) => String(a.key));
     setSelectedAlgorithms(new Set(keys));
   };
+
+  const getParamSpaceForAlgorithm = (algorithmId: string): BenchmarkParamSpace => {
+    return paramSpaces[algorithmId] || {};
+  };
+
+  const coerceParamValue = (spec: BenchmarkParamSpec, rawValue: string): unknown => {
+    if (rawValue === "") return undefined;
+    if (spec.type === "int") return parseInt(rawValue, 10);
+    if (spec.type === "float") return parseFloat(rawValue);
+    return rawValue;
+  };
+
+  const updateAlgorithmParam = (algorithmId: string, paramName: string, value: unknown) => {
+    setAlgorithmParams((prev) => {
+      const current = { ...(prev[algorithmId] || {}) };
+      if (value === undefined || value === "") {
+        delete current[paramName];
+      } else {
+        current[paramName] = value;
+      }
+      return { ...prev, [algorithmId]: current };
+    });
+  };
+
+  const selectedAlgorithmsWithParams = Array.from(selectedAlgorithms).filter(
+    (algorithmId) => Object.keys(getParamSpaceForAlgorithm(algorithmId)).length > 0
+  );
 
   // ---- Result analytics ----
   const getAnalytics = useCallback(() => {
@@ -685,6 +738,91 @@ export default function BenchmarkPage() {
                       </div>
                     ))}
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Algorithm Parameters */}
+              <Card className="shadow-md">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <SlidersHorizontal className="h-5 w-5 text-primary" /> Algoritma Parametreleri
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Seçili algoritmalar için hızlı benchmark ayarları. Boş alanlar stratejinin varsayılanını kullanır.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {paramSpacesLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Parametreler yükleniyor
+                    </div>
+                  ) : selectedAlgorithmsWithParams.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Parametre düzenlemek için GA, PSO, GWO, HHO veya split algoritmalarından birini seçin.
+                    </p>
+                  ) : (
+                    <div className="space-y-5">
+                      {selectedAlgorithmsWithParams.map((algorithmId) => {
+                        const space = getParamSpaceForAlgorithm(algorithmId);
+                        return (
+                          <div key={algorithmId} className="space-y-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="text-sm font-semibold">
+                                {ALGORITHM_DISPLAY_NAMES[algorithmId] || algorithmId}
+                              </p>
+                              <Badge variant="outline">{Object.keys(space).length}</Badge>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {Object.entries(space).map(([paramName, spec]) => {
+                                const currentValue = algorithmParams[algorithmId]?.[paramName];
+                                const inputId = `param-${algorithmId}-${paramName}`;
+                                if (spec.type === "bool") {
+                                  return (
+                                    <label
+                                      key={paramName}
+                                      htmlFor={inputId}
+                                      className="flex items-center gap-2 rounded-md border p-2 text-sm"
+                                    >
+                                      <Checkbox
+                                        id={inputId}
+                                        checked={Boolean(currentValue ?? spec.default ?? false)}
+                                        onCheckedChange={(checked) =>
+                                          updateAlgorithmParam(algorithmId, paramName, checked === true)
+                                        }
+                                      />
+                                      <span className="truncate">{paramName}</span>
+                                    </label>
+                                  );
+                                }
+                                return (
+                                  <div key={paramName} className="space-y-1.5">
+                                    <Label htmlFor={inputId} className="text-xs">
+                                      {paramName}
+                                    </Label>
+                                    <Input
+                                      id={inputId}
+                                      type={spec.type === "int" || spec.type === "float" ? "number" : "text"}
+                                      step={spec.type === "float" ? "0.01" : "1"}
+                                      value={(currentValue as string | number | undefined) ?? ""}
+                                      placeholder={spec.default !== undefined ? String(spec.default) : ""}
+                                      onChange={(event) =>
+                                        updateAlgorithmParam(
+                                          algorithmId,
+                                          paramName,
+                                          coerceParamValue(spec, event.target.value)
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 

@@ -13,32 +13,25 @@ Mirjalili, S., Mirjalili, S. M., & Lewis, A. (2014).
 Grey wolf optimizer. Advances in Engineering Software, 69, 46-61.
 """
 
-import logging
 import random
 import time
 from typing import List, Dict, Tuple, Optional
-from dataclasses import dataclass
 
 from models.schemas import (
     OptimizationRequest, OptimizationResponse,
     VehicleRoute, RouteStep
 )
 from strategies.base_strategy import BaseRoutingStrategy
-from utils.data_loader import DataLoader, euclidean_distance, haversine_distance, estimate_travel_time
+from utils.data_loader import DataLoader, euclidean_distance
 from utils.clustering import VehicleCalculator
-from utils.local_search import LocalSearchType, apply_local_search
-from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
-
-logger = logging.getLogger(__name__)
-
-
-@dataclass
-class Wolf:
-    """Wolf individual in the pack"""
-    position: List[str]  # Route permutation
-    fitness: float  # 1 / total_duration
-    total_duration: float
-
+from uniride_core.algorithms.meta_split_common import shuffle_permutation
+from uniride_core.algorithms.tsp_meta_engines import (
+    TSPWolf as Wolf,
+    apply_tuple_swaps,
+    gwo_difference_swaps,
+    solve_gwo_tsp,
+    update_gwo_position,
+)
 
 class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
     """
@@ -84,11 +77,7 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
 
     def _shuffle(self, items: List, rng: random.Random) -> List:
         """Shuffle list using provided RNG"""
-        result = items.copy()
-        for i in range(len(result) - 1, 0, -1):
-            j = rng.randint(0, i)
-            result[i], result[j] = result[j], result[i]
-        return result
+        return shuffle_permutation(items, rng)
 
     def _initialize_pack(self, waypoints: List[str], rng: random.Random) -> List[Wolf]:
         """Initialize wolf pack with random positions"""
@@ -111,30 +100,11 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
         In continuous GWO, this would be a vector difference.
         For TSP (permutation), we use swap operations.
         """
-        swaps = []
-        n = len(wolf)
-
-        for i in range(n):
-            if wolf[i] != leader[i]:
-                try:
-                    j = wolf.index(leader[i])
-                    # Random factor based on 'a'
-                    if rng.random() < a / 2:
-                        swaps.append((i, j))
-                except ValueError:
-                    pass
-
-        return swaps
+        return gwo_difference_swaps(leader, wolf, a, rng)
 
     def _apply_swaps(self, position: List[str], swaps: List[Tuple[int, int]]) -> List[str]:
         """Apply swap operations to position"""
-        new_position = position.copy()
-
-        for i, j in swaps:
-            if 0 <= i < len(new_position) and 0 <= j < len(new_position):
-                new_position[i], new_position[j] = new_position[j], new_position[i]
-
-        return new_position
+        return apply_tuple_swaps(position, swaps)
 
     def _update_position(
         self,
@@ -153,39 +123,7 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
 
         For permutation problems, we combine swap suggestions from each leader.
         """
-        new_position = wolf.position.copy()
-
-        # Get swap suggestions from each leader
-        alpha_swaps = self._get_difference_vector(alpha.position, wolf.position, a, rng)
-        beta_swaps = self._get_difference_vector(beta.position, wolf.position, a, rng)
-        delta_swaps = self._get_difference_vector(delta.position, wolf.position, a, rng)
-
-        # Combine swaps with weights
-        all_swaps = []
-
-        # Alpha has highest weight
-        for swap in alpha_swaps:
-            if rng.random() < 0.7:
-                all_swaps.append(swap)
-
-        # Beta has medium weight
-        for swap in beta_swaps:
-            if rng.random() < 0.5:
-                all_swaps.append(swap)
-
-        # Delta has lower weight
-        for swap in delta_swaps:
-            if rng.random() < 0.3:
-                all_swaps.append(swap)
-
-        # Apply swaps
-        if all_swaps:
-            # Apply only a subset of swaps to maintain diversity
-            num_swaps = min(len(all_swaps), max(1, int(len(all_swaps) * a / 2)))
-            selected_swaps = rng.sample(all_swaps, min(num_swaps, len(all_swaps)))
-            new_position = self._apply_swaps(wolf.position, selected_swaps)
-
-        return new_position
+        return update_gwo_position(wolf, alpha, beta, delta, a, rng)
 
     def _solve_tsp(
         self,
@@ -194,105 +132,13 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
         time_matrix: Dict,
         coordinates: Dict,
         rng: random.Random,
+        config: Optional[Dict] = None,
     ) -> Tuple[List[str], float]:
         """Solve TSP for a single vehicle using GWO"""
-        if not waypoints:
-            return [], 0.0
-
-        if len(waypoints) == 1:
-            duration = (
-                self._get_duration(depot, waypoints[0], time_matrix, coordinates) +
-                self._get_duration(waypoints[0], depot, time_matrix, coordinates)
-            )
-            return waypoints, duration
-
-        # Initialize pack
-        pack = self._initialize_pack(waypoints, rng)
-
-        # Evaluate initial pack
-        for wolf in pack:
-            duration = self._calculate_route_duration(wolf.position, depot, time_matrix, coordinates)
-            wolf.total_duration = duration
-            wolf.fitness = 1.0 / duration if duration > 0 else 0.0
-
-        # Sort and identify alpha, beta, delta
-        pack.sort(key=lambda w: w.total_duration)
-        alpha = Wolf(position=pack[0].position.copy(), fitness=pack[0].fitness, total_duration=pack[0].total_duration)
-        beta = Wolf(position=pack[1].position.copy(), fitness=pack[1].fitness, total_duration=pack[1].total_duration) if len(pack) > 1 else alpha
-        delta = Wolf(position=pack[2].position.copy(), fitness=pack[2].fitness, total_duration=pack[2].total_duration) if len(pack) > 2 else beta
-
-        no_improvement = 0
-
-        # Main GWO loop
-        for iteration in range(self.config["max_iterations"]):
-            # Calculate 'a' (decreases linearly from initial_a to 0)
-            a = self.config["initial_a"] * (1 - iteration / self.config["max_iterations"])
-
-            improved = False
-
-            for wolf in pack:
-                # Exploration: random search
-                if rng.random() < self.config["exploration_rate"] * a / self.config["initial_a"]:
-                    # Random perturbation
-                    new_position = self._shuffle(wolf.position, rng)
-                else:
-                    # Exploitation: move toward leaders
-                    new_position = self._update_position(wolf, alpha, beta, delta, a, rng)
-
-                # Evaluate new position
-                duration = self._calculate_route_duration(new_position, depot, time_matrix, coordinates)
-
-                # Update if better
-                if duration < wolf.total_duration:
-                    wolf.position = new_position
-                    wolf.total_duration = duration
-                    wolf.fitness = 1.0 / duration if duration > 0 else 0.0
-
-                # Update leaders
-                if wolf.total_duration < alpha.total_duration:
-                    delta = Wolf(position=beta.position.copy(), fitness=beta.fitness, total_duration=beta.total_duration)
-                    beta = Wolf(position=alpha.position.copy(), fitness=alpha.fitness, total_duration=alpha.total_duration)
-                    alpha = Wolf(position=wolf.position.copy(), fitness=wolf.fitness, total_duration=wolf.total_duration)
-                    improved = True
-                elif wolf.total_duration < beta.total_duration:
-                    delta = Wolf(position=beta.position.copy(), fitness=beta.fitness, total_duration=beta.total_duration)
-                    beta = Wolf(position=wolf.position.copy(), fitness=wolf.fitness, total_duration=wolf.total_duration)
-                    improved = True
-                elif wolf.total_duration < delta.total_duration:
-                    delta = Wolf(position=wolf.position.copy(), fitness=wolf.fitness, total_duration=wolf.total_duration)
-                    improved = True
-
-            if improved:
-                no_improvement = 0
-            else:
-                no_improvement += 1
-
-            if no_improvement >= self.config["max_no_improvement"]:
-                break
-
-        # Apply local search to best solution
-        best_route = alpha.position
-        best_duration = alpha.total_duration
-
-        # Get local search type
-        ls_type_str = self.config.get("local_search_type", "two_opt")
-        try:
-            ls_type = LocalSearchType(ls_type_str)
-        except ValueError:
-            ls_type = LocalSearchType.TWO_OPT
-
         def duration_func(route):
             return self._calculate_route_duration(route, depot, time_matrix, coordinates)
 
-        improved_route, improved_duration = apply_local_search(
-            best_route, duration_func, ls_type
-        )
-
-        if improved_duration < best_duration:
-            best_route = improved_route
-            best_duration = improved_duration
-
-        return best_route, best_duration
+        return solve_gwo_tsp(waypoints, duration_func, rng, config or self.config)
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:
         """Main optimization entry point"""
@@ -368,7 +214,7 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
                 return {"route_details": [], "total_duration": 0}
 
             optimized_route, duration = self._solve_tsp(
-                location_codes, depot.id, time_matrix, coordinates, rng
+                location_codes, depot.id, time_matrix, coordinates, rng, effective_config
             )
 
             route_details = []

@@ -67,6 +67,12 @@ SOTA_PARAM_SPACES: Dict[str, Dict[str, Dict[str, Any]]] = {
         "esq_probability":     {"type": "float", "doe": [0.1, 0.2, 0.3],     "optuna": (0.05, 0.40)},
         "time_limit":          {"type": "float", "doe": [300.0, 600.0, 1200.0], "optuna": None},
     },
+    "ALNS-TSP": {
+        "population_size":     {"type": "int",   "doe": [24, 36, 48],        "optuna": (20, 60)},
+        "max_iterations":      {"type": "int",   "doe": [200, 320, 450],     "optuna": (150, 500)},
+        "remove_ratio":        {"type": "float", "doe": [0.10, 0.15, 0.20],  "optuna": (0.05, 0.25)},
+        "time_limit":          {"type": "float", "doe": [300.0, 600.0, 1200.0], "optuna": None},
+    },
 }
 
 # ── Numba Engine Parameter Spaces ────────────────────────────────────────────

@@ -24,8 +24,7 @@ from models.schemas import (
 )
 from strategies.base_strategy import BaseRoutingStrategy
 from uniride_core.algorithms.sota_tsp import R2DMA_TSP, R2DMATSPConfig
-from utils.data_loader import DataLoader, euclidean_distance, estimate_travel_time
-from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
+from utils.data_loader import DataLoader, euclidean_distance
 
 logger = logging.getLogger(__name__)
 

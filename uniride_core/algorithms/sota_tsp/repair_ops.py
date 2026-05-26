@@ -1,7 +1,7 @@
 """
 ALNS Repair Operators — TSP variant.
 
-Adapted from optimizer_api/strategies/sota_common/repair_operators.py.
+Core TSP repair operators for SOTA algorithms.
 Works on List[int] tours with List[List[float]] distance matrix.
 """
 

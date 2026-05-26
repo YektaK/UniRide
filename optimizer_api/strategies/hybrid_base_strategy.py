@@ -12,14 +12,9 @@ Extracts duplicated helper methods into a single place (FIX-08 / P9 tech debt):
 Inheriting strategies keep ONLY their algorithm-specific logic.
 """
 
-import logging
 from typing import List, Dict, Optional, cast
 
 from strategies.base_strategy import BaseRoutingStrategy
-from utils.data_loader import haversine_distance, estimate_travel_time
-from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
-
-logger = logging.getLogger(__name__)
 
 
 class HybridSplitBaseStrategy(BaseRoutingStrategy):

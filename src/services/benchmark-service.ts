@@ -26,6 +26,22 @@ export interface BenchmarkAlgorithm {
   params?: Record<string, unknown>;
 }
 
+export interface BenchmarkParamSpec {
+  type: "bool" | "int" | "float" | "string";
+  default?: unknown;
+  doe?: unknown[];
+  optuna?: [number, number] | null;
+  source?: string;
+}
+
+export type BenchmarkParamSpace = Record<string, BenchmarkParamSpec>;
+
+export interface BenchmarkParamSpacesResponse {
+  spaces: Record<string, BenchmarkParamSpace>;
+  production_spaces?: Record<string, BenchmarkParamSpace>;
+  academic_spaces?: Record<string, BenchmarkParamSpace>;
+}
+
 export interface BenchmarkRunSettings {
   n_runs: number;
   seed: number;
@@ -52,6 +68,33 @@ export interface BenchmarkResult {
   gap_percent: number | null;
   timestamp: string;
   metadata: Record<string, unknown>;
+}
+
+export interface AcademicBenchmarkResult {
+  id: number;
+  problem: string;
+  algorithm: string;
+  params: Record<string, unknown>;
+  tour: number[];
+  tour_length: number;
+  gap: number | null;
+  dimension?: number | null;
+  category?: string | null;
+  timestamp: string;
+}
+
+export interface AcademicLeaderboardResponse {
+  source: "academic_db";
+  count: number;
+  limit: number;
+  results: AcademicBenchmarkResult[];
+}
+
+export interface AcademicBestResultResponse {
+  source: "academic_db";
+  problem: string;
+  algorithm: string;
+  result: AcademicBenchmarkResult | null;
 }
 
 export interface BenchmarkResultsResponse {
@@ -147,6 +190,28 @@ export async function fetchStrategies(): Promise<string[]> {
 }
 
 /**
+ * Fetch editable algorithm parameter spaces for quick benchmark runs
+ */
+export async function fetchParamSpaces(): Promise<BenchmarkParamSpacesResponse> {
+  const response = await fetch(`${BENCHMARK_API_BASE}/param-spaces`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!response.ok) {
+    throw new Error("Parametre alanları alınamadı");
+  }
+
+  const data = await response.json();
+  return {
+    spaces: data.spaces || {},
+    production_spaces: data.production_spaces || {},
+    academic_spaces: data.academic_spaces || {},
+  };
+}
+
+/**
  * Start a benchmark run
  */
 export async function startBenchmark(
@@ -235,6 +300,56 @@ export async function fetchResults(runId: string): Promise<BenchmarkResultsRespo
     throw new Error(
       (errorData as { detail?: string }).detail || `Sonuçlar alınamadı: ${response.status}`
     );
+  }
+
+  return await response.json();
+}
+
+/**
+ * Fetch read-only academic DB leaderboard results
+ */
+export async function fetchAcademicLeaderboard(options: {
+  algorithm?: string;
+  category?: string;
+  limit?: number;
+} = {}): Promise<AcademicLeaderboardResponse> {
+  const params = new URLSearchParams();
+  if (options.algorithm) params.set("algorithm", options.algorithm);
+  if (options.category) params.set("category", options.category);
+  if (options.limit) params.set("limit", String(options.limit));
+
+  const response = await fetch(
+    `${BENCHMARK_API_BASE}/academic/leaderboard${params.toString() ? `?${params.toString()}` : ""}`,
+    {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(10000),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Akademik leaderboard alınamadı: ${response.status}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Fetch the academic DB best known result for a problem/algorithm pair
+ */
+export async function fetchAcademicBestResult(
+  problem: string,
+  algorithm: string
+): Promise<AcademicBestResultResponse> {
+  const params = new URLSearchParams({ problem, algorithm });
+  const response = await fetch(`${BENCHMARK_API_BASE}/academic/best?${params.toString()}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Akademik sonuç alınamadı: ${response.status}`);
   }
 
   return await response.json();

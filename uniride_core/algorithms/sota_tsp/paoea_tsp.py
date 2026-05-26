@@ -1,7 +1,7 @@
 """
 P-AOEA-TSP — Production Adaptive Operator Evolution Algorithm (TSP variant)
 
-Adapted from optimizer_api/strategies/sota_common/paoea.py for pure TSP.
+Core pure-TSP implementation.
 Uses integer-indexed tours and Numba-accelerated distance matrix.
 
 Core DNA:

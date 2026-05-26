@@ -85,6 +85,7 @@ try:
         is_db_populated as _db_ready,
         save_best_solution as _db_save_best,
         get_best_solution as _db_get_best,
+        problem_row_to_instance as _problem_row_to_instance,
     )
 except ImportError:
     try:
@@ -94,6 +95,7 @@ except ImportError:
             is_db_populated as _db_ready,
             save_best_solution as _db_save_best,
             get_best_solution as _db_get_best,
+            problem_row_to_instance as _problem_row_to_instance,
         )
     except ImportError:
         _dm_from_cache = lambda name, **kw: None
@@ -101,6 +103,7 @@ except ImportError:
         _db_ready = lambda **kw: False
         _db_save_best = lambda *a, **kw: -1
         _db_get_best = lambda *a, **kw: None
+        _problem_row_to_instance = None
 
 TSPLIB_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tsplib_data", "tsplib.db")
 
@@ -130,8 +133,12 @@ _shutdown_requested = False
 _current_metadata = None
 _current_results = []
 
+_previous_sigint_handler = signal.getsignal(signal.SIGINT)
+
 def signal_handler(signum, frame):
-    pass
+    graceful_shutdown()
+    if callable(_previous_sigint_handler):
+        _previous_sigint_handler(signum, frame)
 
 signal.signal(signal.SIGINT, signal_handler)
 
@@ -192,12 +199,15 @@ def load_problems() -> List[ProblemInstance]:
             print(f"[INFO] Loaded {len(rows)} problems from DB cache.")
             problems = []
             for r in rows:
-                prob = ProblemInstance(
-                    name=r["name"], dimension=r["dimension"],
-                    coordinates=r["coordinates"], optimal=r["optimal"],
-                    category=r["category"], source="tsplib",
-                    dist_matrix=None,
-                )
+                if _problem_row_to_instance is not None:
+                    prob = _problem_row_to_instance(r)
+                else:
+                    prob = ProblemInstance(
+                        name=r["name"], dimension=r["dimension"],
+                        coordinates=r["coordinates"], optimal=r["optimal"],
+                        category=r["category"], source=r.get("source", "tsplib"),
+                        problem_type=str(r.get("problem_type", "tsp")).lower(),
+                    )
                 problems.append(prob)
             return sorted(problems, key=lambda p: p.dimension)
 
@@ -484,6 +494,18 @@ def run_unified_benchmark(problems, algorithms, param_source, n_runs, workers, m
     completed = 0
     start_time = time.time()
     saved_results = metadata.get("results", {})
+    run_id = f"smart-benchmark-{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    try:
+        from academic_benchmark.tsplib_manager import save_benchmark_run
+        save_benchmark_run(
+            run_id,
+            source="academic_smart",
+            status="running",
+            settings={"param_source": param_source, "tasks": len(worker_args), "workers": workers},
+            db_path=TSPLIB_DB,
+        )
+    except Exception:
+        pass
 
     with ProcessPoolExecutor(max_workers=workers) as executor:
         fut_maps = {executor.submit(_run_single_task, wa): wa for wa in worker_args}
@@ -515,6 +537,34 @@ def run_unified_benchmark(problems, algorithms, param_source, n_runs, workers, m
             if res.problem not in saved_results:
                 saved_results[res.problem] = {}
             saved_results[res.problem][res.algorithm] = res.__dict__
+            try:
+                from academic_benchmark.tsplib_manager import save_benchmark_result
+                save_benchmark_result(
+                    run_id,
+                    {
+                        "problem": res.problem,
+                        "algorithm": res.algorithm,
+                        "run_number": res.run,
+                        "problem_type": getattr(res, "problem_type", "tsp"),
+                        "matrix_kind": getattr(res, "matrix_kind", "distance"),
+                        "objective_cost": getattr(res, "objective_cost", res.tour_cost),
+                        "tour_cost": res.tour_cost,
+                        "gap": res.gap_pct,
+                        "elapsed_ms": res.elapsed_sec * 1000,
+                        "tour": res.tour,
+                        "routes": getattr(res, "routes", None),
+                        "route_loads": getattr(res, "route_loads", None),
+                        "route_costs": getattr(res, "route_costs", None),
+                        "num_vehicles": getattr(res, "num_vehicles", None),
+                        "capacity_violations": getattr(res, "capacity_violations", 0),
+                        "tw_violations": getattr(res, "tw_violations", 0),
+                        "params": {"seed": res.seed},
+                        "metadata": {"param_source": param_source},
+                    },
+                    db_path=TSPLIB_DB,
+                )
+            except Exception:
+                pass
 
             if res.tour_cost > 0:
                 _save_best_solution(
@@ -527,6 +577,18 @@ def run_unified_benchmark(problems, algorithms, param_source, n_runs, workers, m
 
     total_time = time.time() - start_time
     print(f"\n\n[DONE] Completed in {format_time(total_time)}")
+    try:
+        from academic_benchmark.tsplib_manager import save_benchmark_run
+        save_benchmark_run(
+            run_id,
+            source="academic_smart",
+            status="completed",
+            settings={"param_source": param_source, "tasks": len(worker_args), "workers": workers},
+            metadata={"results": completed, "elapsed_seconds": total_time},
+            db_path=TSPLIB_DB,
+        )
+    except Exception:
+        pass
     _current_metadata["results"] = saved_results
     save_metadata(METADATA_PATH, _current_metadata)
 

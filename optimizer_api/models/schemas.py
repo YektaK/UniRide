@@ -112,6 +112,19 @@ class IEResponseData(BaseModel):
     bottlenecks: List[BottleneckInfo] = []
     time_shift_suggestions: List[TimeShiftSuggestion] = []
 
+
+def _matrix_is_asymmetric(matrix: Any) -> bool:
+    if not isinstance(matrix, dict):
+        return False
+    for origin, row in matrix.items():
+        if not isinstance(row, dict):
+            continue
+        for destination, value in row.items():
+            reverse = matrix.get(destination, {}).get(origin) if isinstance(matrix.get(destination), dict) else value
+            if reverse != value:
+                return True
+    return False
+
 # --- Request / Response ---
 class OptimizationRequest(BaseModel):
     algorithm: str = "ga_split"
@@ -138,6 +151,64 @@ class OptimizationRequest(BaseModel):
     clustering_algorithm: Optional[str] = "sweep"
     is_asymmetric: bool = False
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_legacy_payload(cls, data: Any) -> Any:
+        """Accept old benchmark/smoke-test payloads and map them to current schema."""
+        if not isinstance(data, dict):
+            return data
+        if "students" in data and isinstance(data.get("depot"), dict):
+            return data
+
+        locations = data.get("locations")
+        depot = data.get("depot")
+        if not isinstance(locations, list) or not isinstance(depot, str):
+            return data
+
+        distance_matrix = data.get("distance_matrix") or {}
+        all_locations = [depot] + [str(loc) for loc in locations]
+        coords = {
+            loc: {"lat": float(idx), "lng": 0.0}
+            for idx, loc in enumerate(all_locations)
+        }
+        demands = data.get("demands") or {}
+        students = []
+        for loc in locations:
+            loc_code = str(loc)
+            demand = demands.get(loc_code, (0, 1))
+            sw_count = demand[0] if isinstance(demand, (list, tuple)) and demand else 0
+            disability_type = "Sw" if sw_count else "So"
+            students.append({
+                "id": loc_code,
+                "name": loc_code,
+                "location_code": loc_code,
+                "coordinates": coords[loc_code],
+                "disability_type": disability_type,
+            })
+
+        vehicles = []
+        for vehicle in data.get("vehicles") or []:
+            if isinstance(vehicle, dict):
+                vehicles.append({
+                    "vehicle_id": vehicle.get("vehicle_id") or vehicle.get("id") or f"V{len(vehicles) + 1}",
+                    "sw_capacity": vehicle.get("sw_capacity", vehicle.get("capacity_sw", 4)),
+                    "so_capacity": vehicle.get("so_capacity", vehicle.get("capacity_so", 5)),
+                    "cooldown_minutes": vehicle.get("cooldown_minutes", 15),
+                })
+
+        target_time = data.get("target_time")
+        if isinstance(target_time, int):
+            target_time = f"{target_time // 60:02d}:{target_time % 60:02d}"
+
+        normalized = dict(data)
+        normalized["depot"] = {"id": depot, **coords[depot]}
+        normalized["students"] = students
+        normalized["vehicles"] = vehicles or None
+        normalized["target_time"] = target_time
+        normalized["algorithm"] = data.get("algorithm") or data.get("strategy") or "ga_split"
+        normalized["is_asymmetric"] = bool(normalized.get("is_asymmetric") or _matrix_is_asymmetric(distance_matrix))
+        return normalized
+
     @model_validator(mode="after")
     def validate_students(self) -> "OptimizationRequest":
         """Validate student data integrity."""
@@ -149,6 +220,14 @@ class OptimizationRequest(BaseModel):
                         f"has no coordinates — all students must have valid coordinates"
                     )
         return self
+
+    @property
+    def strategy(self) -> str:
+        return self.algorithm
+
+    @strategy.setter
+    def strategy(self, value: str) -> None:
+        self.algorithm = value
 
     def get_time_windows(self) -> Dict[str, TimeWindow]:
         """Helper to get time windows from students if applicable

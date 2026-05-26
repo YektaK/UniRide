@@ -1,6 +1,6 @@
 # uniride\_core
 
-Framework-agnostic shared kernel for UniRide's dual-engine TSP/CVRPTW optimization system. Used by `optimizer_api` (production FastAPI microservice) and `academic_benchmark` (research harness).
+Framework-agnostic shared kernel for UniRide's dual-engine TSP/CVRPTW optimization system. Used by the production FastAPI compatibility layer and `academic_benchmark` research harness.
 
 ## Structure
 

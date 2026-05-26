@@ -18,7 +18,7 @@ import random
 import math
 import numpy as np
 from dataclasses import dataclass, asdict, field
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from enum import Enum
 from datetime import datetime, timezone
 import logging
@@ -366,6 +366,7 @@ class BenchmarkRunner:
                 problem,
                 algorithm.algorithm_id
             )
+            self._apply_algorithm_params(request, algorithm.algorithm_id, algorithm.params)
             
             # Call real strategy
             response = strategy.optimize(request)
@@ -421,6 +422,32 @@ class BenchmarkRunner:
                 "vehicles_used": routes_count,
             }
         )
+
+    def _apply_algorithm_params(self, request, algorithm_id: str, params: Dict[str, Any]) -> None:
+        """Attach benchmark overrides to existing strategy-specific request config fields."""
+        if not params:
+            return
+
+        clean_params = {key: value for key, value in params.items() if value is not None and value != ""}
+        if not clean_params:
+            return
+
+        if "local_search_type" in clean_params:
+            request.local_search_type = str(clean_params["local_search_type"])
+
+        config_params = {key: value for key, value in clean_params.items() if key != "local_search_type"}
+        key = algorithm_id.lower().replace("-", "_")
+
+        if key in {"genetic_algorithm", "ga", "ga_split"}:
+            request.ga_config = config_params
+        elif key in {"pso", "pso_split"}:
+            request.pso_config = config_params
+        elif key in {"gwo", "grey_wolf", "gwo_split"}:
+            request.gwo_config = config_params
+        elif key in {"hho", "harris_hawks", "hho_split"}:
+            request.hho_config = config_params
+        elif key in {"two_opt", "2opt"}:
+            request.two_opt_config = config_params
     
     def stop(self):
         """Stop benchmark execution."""

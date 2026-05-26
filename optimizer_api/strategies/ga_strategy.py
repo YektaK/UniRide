@@ -10,32 +10,23 @@ Implements:
 - Optional local search (2-opt, 3-opt, Or-opt, Hybrid)
 """
 
-import logging
 import random
 import time
-from typing import List, Dict, Tuple, Callable, Optional, cast
-from dataclasses import dataclass
+from typing import List, Dict, Tuple, Optional
 
 from models.schemas import (
     OptimizationRequest, OptimizationResponse,
-    VehicleRoute, RouteStep, StudentNode
+    VehicleRoute, RouteStep
 )
 from strategies.base_strategy import BaseRoutingStrategy
-from utils.data_loader import DataLoader, euclidean_distance, haversine_distance, estimate_travel_time
-from utils.clustering import VehicleCalculator, Point
-from utils.local_search import LocalSearchType, apply_local_search
-from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
-
-logger = logging.getLogger(__name__)
-
-
-@dataclass
-class Individual:
-    """Individual in population representing a route permutation"""
-    chromosome: List[str]  # Ordered location codes
-    fitness: float  # 1 / total_duration
-    total_duration: float
-
+from utils.data_loader import DataLoader, euclidean_distance
+from utils.clustering import VehicleCalculator
+from uniride_core.algorithms.ga_operators import mutate_permutation, order_crossover
+from uniride_core.algorithms.tsp_meta_engines import (
+    TSPIndividual as Individual,
+    solve_ga_tsp,
+    tournament_selection,
+)
 
 class GeneticAlgorithmStrategy(BaseRoutingStrategy):
     """
@@ -112,11 +103,7 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
 
     def _tournament_selection(self, population: List[Individual], rng: random.Random) -> Individual:
         """Select individual using tournament selection"""
-        tournament = rng.sample(
-            population,
-            min(self.config["tournament_size"], len(population))
-        )
-        return max(tournament, key=lambda x: x.fitness)
+        return tournament_selection(population, self.config["tournament_size"], rng)
 
     def _order_crossover(
         self,
@@ -128,54 +115,11 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
         Order Crossover (OX1) - preserves relative order.
         Davis, L. (1985). Applying Adaptive Algorithms to Epistatic Domains.
         """
-        n = len(parent1)
-        if n < 2:
-            return parent1.copy(), parent2.copy()
-
-        # Select random segment
-        start = rng.randint(0, n - 1)
-        end = rng.randint(start, n - 1)
-
-        # Initialize children with proper type
-        child1: List[Optional[str]] = [None] * n
-        child2: List[Optional[str]] = [None] * n
-
-        # Copy segment
-        for i in range(start, end + 1):
-            child1[i] = parent1[i]
-            child2[i] = parent2[i]
-
-        # Fill remaining positions
-        def fill_child(child, other_parent):
-            segment = set(x for x in child if x is not None)
-            remaining = [x for x in other_parent if x not in segment]
-            idx = 0
-            for i in range(n):
-                if child[i] is None:
-                    child[i] = remaining[idx]
-                    idx += 1
-
-        fill_child(child1, parent2)
-        fill_child(child2, parent1)
-
-        # Cast to List[str] - all positions filled
-        return cast(List[str], child1), cast(List[str], child2)
+        return order_crossover(parent1, parent2, rng)
 
     def _mutate(self, chromosome: List[str], rng: random.Random) -> List[str]:
         """Apply mutation (swap or inversion)"""
-        mutated = chromosome.copy()
-
-        if rng.random() < 0.5:
-            # Swap mutation
-            i, j = rng.sample(range(len(mutated)), 2)
-            mutated[i], mutated[j] = mutated[j], mutated[i]
-        else:
-            # Inversion mutation
-            i, j = rng.sample(range(len(mutated)), 2)
-            start, end = min(i, j), max(i, j)
-            mutated[start:end + 1] = reversed(mutated[start:end + 1])
-
-        return mutated
+        return mutate_permutation(chromosome, rng, mutation_type="swap" if rng.random() < 0.5 else "inversion")
 
     def _evolve(self, population: List[Individual], rng: random.Random) -> List[Individual]:
         """Create next generation"""
@@ -229,6 +173,7 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
         time_matrix: Dict,
         coordinates: Dict,
         rng: random.Random,
+        config: Optional[Dict] = None,
     ) -> Tuple[List[str], float]:
         """Solve TSP for a single vehicle.
 
@@ -242,103 +187,10 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
         if not waypoints:
             return [], 0.0
 
-        if len(waypoints) == 1:
-            duration = (
-                self._get_duration(depot, waypoints[0], time_matrix, coordinates) +
-                self._get_duration(waypoints[0], depot, time_matrix, coordinates)
-            )
-            return waypoints, duration
-
         def duration_func(route: List[str]) -> float:
             return self._calculate_route_duration(route, depot, time_matrix, coordinates)
 
-        def _2opt(route: List[str], max_iter: int = 10) -> List[str]:
-            """Inline 2-opt helper mirroring bildiri2026's _nb.nb_two_opt usage."""
-            try:
-                improved, _ = apply_local_search(
-                    route, duration_func, LocalSearchType.TWO_OPT,
-                    max_iterations=max_iter,
-                )
-                return improved
-            except Exception:
-                return route
-
-        # ── Memetic initialization (bildiri2026: 2-opt on every individual, 10 iter) ──
-        pop_size = self.config["population_size"]
-        population: List[Individual] = []
-        for _ in range(pop_size):
-            chrom = waypoints.copy()
-            rng.shuffle(chrom)
-            chrom = _2opt(chrom, max_iter=10)
-            dur = duration_func(chrom)
-            population.append(Individual(
-                chromosome=chrom,
-                fitness=1.0 / (dur + 1e-10),
-                total_duration=dur,
-            ))
-
-        population.sort(key=lambda x: x.total_duration)
-        best = Individual(
-            chromosome=population[0].chromosome[:],
-            fitness=population[0].fitness,
-            total_duration=population[0].total_duration,
-        )
-        no_improvement = 0
-        elite_count = min(self.config["elite_count"], pop_size)
-
-        # ── Evolution loop (bildiri2026: sort → elites → offspring → evaluate only new) ──
-        for _ in range(self.config["max_iterations"]):
-            population.sort(key=lambda x: x.total_duration)
-
-            if population[0].total_duration < best.total_duration:
-                best = Individual(
-                    chromosome=population[0].chromosome[:],
-                    fitness=population[0].fitness,
-                    total_duration=population[0].total_duration,
-                )
-                no_improvement = 0
-            else:
-                no_improvement += 1
-
-            if no_improvement >= self.config["max_no_improvement"]:
-                break
-
-            # Elites carried verbatim (bildiri2026: no re-evaluation)
-            new_pop: List[Individual] = [
-                Individual(e.chromosome[:], e.fitness, e.total_duration)
-                for e in population[:elite_count]
-            ]
-
-            # Offspring: tournament → OX → mutate → evaluate immediately
-            while len(new_pop) < pop_size:
-                p1 = self._tournament_selection(population, rng)
-                p2 = self._tournament_selection(population, rng)
-                if rng.random() < self.config["crossover_rate"]:
-                    child_chrom, _ = self._order_crossover(p1.chromosome, p2.chromosome, rng)
-                else:
-                    child_chrom = p1.chromosome[:]
-                if rng.random() < self.config["mutation_rate"]:
-                    child_chrom = self._mutate(child_chrom, rng)
-                dur = duration_func(child_chrom)
-                new_pop.append(Individual(
-                    chromosome=child_chrom,
-                    fitness=1.0 / (dur + 1e-10),
-                    total_duration=dur,
-                ))
-
-            population = new_pop
-
-        # ── Final 300-iter 2-opt polish (bildiri2026 canonical) ──
-        polished = _2opt(best.chromosome, max_iter=300)
-        polished_dur = duration_func(polished)
-        if polished_dur < best.total_duration:
-            best_route = polished
-            best_duration = polished_dur
-        else:
-            best_route = best.chromosome
-            best_duration = best.total_duration
-
-        return best_route, best_duration
+        return solve_ga_tsp(waypoints, duration_func, rng, config or self.config)
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:
         """Main optimization entry point"""
@@ -420,7 +272,7 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
                 return {"route_details": [], "total_duration": 0}
 
             optimized_route, duration = self._solve_tsp(
-                location_codes, depot.id, time_matrix, coordinates, rng
+                location_codes, depot.id, time_matrix, coordinates, rng, effective_config
             )
 
             # Build route details

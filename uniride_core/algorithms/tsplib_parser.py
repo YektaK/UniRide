@@ -32,8 +32,10 @@ from uniride_core.models import ProblemInstance
 
 logger = logging.getLogger(__name__)
 
-TSPLIB_DATA_DIR = os.path.join(os.path.dirname(__file__), '..', '..',
-                                'optimizer_api', 'tests', 'tsplib_data')
+TSPLIB_DATA_DIR = os.environ.get(
+    "TSPLIB_DATA_DIR",
+    os.path.join(os.path.dirname(__file__), '..', '..', 'tsplib_data'),
+)
 TSPLIB_DOWNLOAD_URL = "http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/"
 ATSP_DOWNLOAD_URL = "http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/atsp/"
 _DOWNLOAD_TIMEOUT = 30
@@ -61,6 +63,28 @@ TSPLIB_OPTIMALS: Dict[str, int] = {
     "kro124p": 36230, "p43": 28140, "rbg323": 1326,
     "rbg358": 1163, "rbg403": 2465, "rbg443": 2720,
 }
+
+TSPLIB_OPTIMALS.update({
+    "pr76": 108159, "bier127": 118282, "ch130": 6110, "ch150": 6528,
+    "u159": 42080, "rat195": 2323, "d198": 15780, "tsp225": 3916,
+    "fl417": 11861, "pcb442": 50778, "u574": 36905, "rat575": 6773,
+    "p654": 34643, "d657": 48912, "d1291": 50801, "rl1304": 252948,
+    "rl1323": 270199, "fl1400": 20127, "fl1577": 22249, "rl1889": 316536,
+    "pcb3038": 137694, "fl3795": 28772, "fnl4461": 182566,
+    "att48": 10628, "att532": 27686, "burma14": 3323, "bayg29": 1610,
+    "bays29": 2020, "brazil58": 25395, "dantzig42": 699, "gr17": 2085,
+    "gr21": 2707, "gr24": 1272, "gr48": 5046, "gr96": 55209,
+    "gr120": 6942, "gr137": 69853, "gr202": 40160, "gr229": 134602,
+    "gr431": 171414, "gr666": 294358, "hk48": 11461, "swiss42": 1273,
+    "ulysses16": 6859, "ulysses22": 7013, "ali535": 202339,
+    "brd14051": 469385, "brg180": 1950, "d15112": 1573084,
+    "d18512": 645238, "dsj1000": 18660188, "fri26": 937,
+    "linhp318": 41345, "pa561": 2763, "pla7397": 23260728,
+    "pla33810": 66048945, "pla85900": 142382641, "rat99": 1211,
+    "rl5915": 565530, "rl5934": 556045, "rl11849": 923288,
+    "si175": 21407, "si535": 48450, "si1032": 92650,
+    "usa13509": 19982859,
+})
 
 _SUPPORTED_EWT = ("EUC_2D", "EUC_3D", "CEIL_2D", "ATT", "GEO", "GEOM", "NEU_2D")
 

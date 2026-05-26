@@ -133,7 +133,7 @@ except ImportError:
 
 try:
     from academic_benchmark.tsplib_manager import (
-        save_tuning_params_and_solution as _save_best_solution,
+        save_best_solution as _save_best_solution,
     )
 except ImportError:
     def _save_best_solution(*a, **kw):
@@ -177,7 +177,7 @@ _NUMBA_AVAILABLE = _detect_numba()
 
 # Numba modüllerini import edelim
 from uniride_core.algorithms.numba_strategies import STRATEGIES
-from optimizer_api.utils.local_search_numba import LocalSearchType, apply_local_search
+from uniride_core.algorithms.local_search_numba import LocalSearchType, apply_local_search
 
 # --- DB cache integration ---
 try:
@@ -185,6 +185,7 @@ try:
         get_distance_matrix as _dm_from_cache,
         get_all_problems    as _problems_from_db,
         is_db_populated     as _db_ready,
+        problem_row_to_instance as _problem_row_to_instance,
     )
 except ImportError:
     try:
@@ -192,11 +193,13 @@ except ImportError:
             get_distance_matrix as _dm_from_cache,
             get_all_problems    as _problems_from_db,
             is_db_populated     as _db_ready,
+            problem_row_to_instance as _problem_row_to_instance,
         )
     except ImportError:
         _dm_from_cache   = lambda name, **kw: None
         _problems_from_db = lambda **kw: []
         _db_ready        = lambda **kw: False
+        _problem_row_to_instance = None
 
 TSPLIB_DB = os.path.join(_ENGINE_DIR, "tsplib_data", "tsplib.db")
 
@@ -260,7 +263,14 @@ def _signal_handler(signum, frame) -> None:
             print(f"[OK] {len(_active_results)} sonuc kaydedildi: {csv_path}")
     sys.exit(130)
 
-signal.signal(signal.SIGINT, _signal_handler)
+_previous_sigint_handler = signal.getsignal(signal.SIGINT)
+
+def _chained_signal_handler(signum, frame) -> None:
+    _signal_handler(signum, frame)
+    if callable(_previous_sigint_handler):
+        _previous_sigint_handler(signum, frame)
+
+signal.signal(signal.SIGINT, _chained_signal_handler)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # BÖLÜM 2: TSPLIB Yükleyici ve Strateji Yönetimi
@@ -289,12 +299,16 @@ def load_problems(size_limit: int = 0) -> List[DOEProblem]:
         if rows:
             out = []
             for r in rows:
-                dim = r["dimension"]
-                cat = "small" if dim <= 100 else ("medium" if dim <= 500 else "large")
-                out.append(DOEProblem(
-                    name=r["name"], dimension=dim, coordinates=r["coordinates"],
-                    optimal=r["optimal"], category=cat, source="tsplib"
-                ))
+                if _problem_row_to_instance is not None:
+                    out.append(_problem_row_to_instance(r))
+                else:
+                    dim = r["dimension"]
+                    cat = "small" if dim <= 100 else ("medium" if dim <= 500 else "large")
+                    out.append(DOEProblem(
+                        name=r["name"], dimension=dim, coordinates=r["coordinates"],
+                        optimal=r["optimal"], category=cat, source=r.get("source", "tsplib"),
+                        problem_type=str(r.get("problem_type", "tsp")).lower(),
+                    ))
             # Append time_matrix JSON problems (existing logic)
             data_dir = os.path.join(_ENGINE_DIR, "data")
             if os.path.exists(data_dir):
@@ -410,6 +424,7 @@ def _all_strategy_specs() -> List[StrategySpec]:
     for algo_name in _AlgoReg.list_algorithms():
         # Belirle: algoritma türü ve parametre uzayı kaynağı
         is_sota = algo_name.startswith("SOTA-")
+        is_core_routing = algo_name == "Core-Greedy-Routing"
         source_dict = SOTA_PARAM_SPACES if is_sota else NUMBA_PARAM_SPACES
         raw_name = algo_name.replace("SOTA-", "").replace("Numba-", "")
         
@@ -419,7 +434,7 @@ def _all_strategy_specs() -> List[StrategySpec]:
         else:
             lookup_name = raw_name.upper() if is_sota else raw_name
             
-        space = source_dict.get(lookup_name, {})
+        space = {} if is_core_routing else source_dict.get(lookup_name, {})
         
         # Uzaydaki "doe" değerlerinin ilkini varsayılan parametre olarak ata
         defaults = {}
@@ -431,13 +446,15 @@ def _all_strategy_specs() -> List[StrategySpec]:
             name=algo_name,
             payload=algo_name,
             default_params=defaults,
-            algorithm_type="meta_heuristic" if is_sota else "local_search"
+            algorithm_type="matrix_routing" if is_core_routing else "meta_heuristic" if is_sota else "local_search"
         ))
     return specs
 
 def _build_numba_parameter_space(spec: StrategySpec) -> Dict[str, List[Any]]:
     """DoE için algoritmalara özel hiperparametre uzayını oluşturur."""
     is_sota = spec.name.startswith("SOTA-")
+    if spec.name == "Core-Greedy-Routing":
+        return {}
     raw_name = spec.name.replace("SOTA-", "").replace("Numba-", "")
     lookup_name = raw_name.upper() if is_sota else raw_name
     return _build_doe_space(lookup_name, source="sota" if is_sota else "numba")
@@ -461,8 +478,8 @@ def run_single_test_with_matrix(
     hit on the first improve() call within the same run.
     """
     import numpy as _np
+    from uniride_core.algorithms.numba_metaheuristics import run_meta_heuristic
     from uniride_core.algorithms.numba_utils import create_np_duration_func, convert_route_to_indices
-    from optimizer_api.tests.run_interactive_benchmark_v2_numba import _run_meta_heuristic
     dimension = problem.dimension
     run_params: Dict[str, Any] = {}
     if isinstance(params, dict):
@@ -488,7 +505,7 @@ def run_single_test_with_matrix(
         )
         algorithm_type = "local_search"
     else:
-        improved_route = _run_meta_heuristic(
+        improved_route = run_meta_heuristic(
             str(strategy_instance), initial_route, duration_func, run_params, seed,
         )
         algorithm_type = "meta_heuristic"
@@ -500,7 +517,7 @@ def run_single_test_with_matrix(
         a = tour_indices[k]
         b = tour_indices[(k + 1) % len(tour_indices)]
         tour_length += time_matrix[a - 1][b - 1]
-    tour_length = int(tour_length) if not is_time_matrix else round(tour_length, 2)
+    tour_length = round(tour_length, 2) if getattr(problem, "is_time_matrix", False) else int(tour_length)
 
     optimal = getattr(problem, "optimal", None)
     if optimal and optimal > 0:
@@ -525,6 +542,18 @@ def _make_problem_dict(problem: DOEProblem) -> Dict[str, Any]:
         "category": problem.category,
         "source": problem.source,
         "is_time_matrix": problem.is_time_matrix,
+        "problem_type": getattr(problem, "problem_type", "tsp"),
+        "dist_matrix": getattr(problem, "dist_matrix", None),
+        "demands": getattr(problem, "demands", None),
+        "capacity": getattr(problem, "capacity", None),
+        "capacities": getattr(problem, "capacities", None),
+        "service_times": getattr(problem, "service_times", None),
+        "num_vehicles": getattr(problem, "num_vehicles", None),
+        "max_route_duration": getattr(problem, "max_route_duration", None),
+        "matrix_kind": getattr(problem, "matrix_kind", "distance"),
+        "direction": getattr(problem, "direction", "pickup"),
+        "time_windows": getattr(problem, "time_windows", None),
+        "depot_index": getattr(problem, "depot_index", 0),
     }
     if problem.is_time_matrix and problem.time_matrix is not None:
         d["time_matrix"] = problem.time_matrix
@@ -551,7 +580,7 @@ def _query_edge_weight_type(problem_name: str, db_path: str):
 
 def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], int, int]) -> Dict[str, Any]:
     """Bir parametre kombinasyonunu belirli run sayısınca test eder."""
-    from optimizer_api.tests.run_interactive_benchmark_v2_numba import run_single_test
+    from uniride_core.algorithms.numba_metaheuristics import run_single_test
     problem_dict, strategy_name, strategy_payload, strategy_params, combo_idx, n_runs = task
 
     is_time_matrix = problem_dict.get("is_time_matrix", False)
@@ -568,6 +597,18 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
             self.source = data.get("source", "tsplib")
             self.is_time_matrix = data.get("is_time_matrix", False)
             self.time_matrix = data.get("time_matrix")
+            self.problem_type = data.get("problem_type", "tsp")
+            self.dist_matrix = data.get("dist_matrix")
+            self.demands = data.get("demands")
+            self.capacity = data.get("capacity")
+            self.capacities = data.get("capacities")
+            self.service_times = data.get("service_times")
+            self.num_vehicles = data.get("num_vehicles")
+            self.max_route_duration = data.get("max_route_duration")
+            self.matrix_kind = data.get("matrix_kind", "distance")
+            self.direction = data.get("direction", "pickup")
+            self.time_windows = data.get("time_windows")
+            self.depot_index = data.get("depot_index", 0)
 
     problem = _Problem(problem_dict)
 
@@ -612,9 +653,18 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
                 reg_result = executor(problem, strategy_params, seed, run_idx)
                 result = {
                     "tour_length": reg_result.tour_cost,
+                    "objective_cost": reg_result.objective_cost,
                     "gap": reg_result.gap_pct if reg_result.gap_pct is not None else float("nan"),
                     "time_ms": reg_result.elapsed_sec * 1000,
                     "algorithm_type": "registry",
+                    "routes": reg_result.routes,
+                    "num_vehicles": reg_result.num_vehicles,
+                    "route_loads": reg_result.route_loads,
+                    "route_costs": reg_result.route_costs,
+                    "capacity_violations": reg_result.capacity_violations,
+                    "tw_violations": reg_result.tw_violations,
+                    "problem_type": reg_result.problem_type,
+                    "matrix_kind": reg_result.matrix_kind,
                 }
                 run_results.append(result)
                 continue
@@ -649,6 +699,7 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
     valid_gaps = [float(r["gap"]) for r in run_results if not math.isnan(float(r["gap"]))]
     avg_gap = sum(valid_gaps) / len(valid_gaps) if valid_gaps else float("nan")
     convergence_profile = [float(r["tour_length"]) for r in run_results]
+    best_run = min(run_results, key=lambda r: float(r["tour_length"])) if run_results else {}
 
     return {
         "problem": problem.name,
@@ -660,6 +711,15 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
         "avg_time_ms": elapsed_ms / max(1, len(run_results)),
         "n_runs": n_runs,
         "per_run_lengths": convergence_profile,
+        "objective_cost": best_run.get("objective_cost", avg_length),
+        "routes": best_run.get("routes"),
+        "num_vehicles": best_run.get("num_vehicles"),
+        "route_loads": best_run.get("route_loads"),
+        "route_costs": best_run.get("route_costs"),
+        "capacity_violations": best_run.get("capacity_violations", 0),
+        "tw_violations": best_run.get("tw_violations", 0),
+        "problem_type": best_run.get("problem_type", getattr(problem, "problem_type", "tsp")),
+        "matrix_kind": best_run.get("matrix_kind", getattr(problem, "matrix_kind", "distance")),
     }
 
 def _run_pool(tasks: List[Tuple], workers: int, on_result=None) -> List[Dict[str, Any]]:
@@ -1186,7 +1246,24 @@ def _execute_benchmark_tasks(tasks, workers, metadata, stage_label):
         return []
         
     csv_path = os.path.join(RESULTS_DIR, "benchmark_progress.csv")
-    fields = ["timestamp", "problem", "strategy", "avg_length", "avg_gap", "avg_time_ms", "n_runs", "result_type", "params_json", "gap_type"]
+    run_id = f"cli-{stage_label.lower()}-{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    try:
+        from academic_benchmark.tsplib_manager import save_benchmark_run
+        save_benchmark_run(
+            run_id,
+            source="academic_cli",
+            status="running",
+            settings={"stage": stage_label, "tasks": len(tasks), "workers": workers},
+            db_path=TSPLIB_DB,
+        )
+    except Exception:
+        pass
+    fields = [
+        "timestamp", "problem", "strategy", "avg_length", "avg_gap", "avg_time_ms", "n_runs",
+        "result_type", "params_json", "gap_type", "problem_type", "matrix_kind", "objective_cost",
+        "num_vehicles", "capacity_violations", "tw_violations", "routes_json", "route_loads_json",
+        "route_costs_json",
+    ]
 
     tracker = ETATracker()
     rows = []
@@ -1205,10 +1282,47 @@ def _execute_benchmark_tasks(tasks, workers, metadata, stage_label):
             "result_type": "aggregate",
             "params_json": json.dumps(result["params"], ensure_ascii=False, sort_keys=True),
             "gap_type": gap_type_val,
+            "problem_type": result.get("problem_type", "tsp"),
+            "matrix_kind": result.get("matrix_kind", "distance"),
+            "objective_cost": round(float(result.get("objective_cost", result["avg_length"])), 4),
+            "num_vehicles": result.get("num_vehicles"),
+            "capacity_violations": result.get("capacity_violations", 0),
+            "tw_violations": result.get("tw_violations", 0),
+            "routes_json": json.dumps(result.get("routes"), ensure_ascii=False),
+            "route_loads_json": json.dumps(result.get("route_loads"), ensure_ascii=False),
+            "route_costs_json": json.dumps(result.get("route_costs"), ensure_ascii=False),
         }
         rows.append(row)
         _active_results.append(row)
         append_csv_row(csv_path, fields, row)
+        try:
+            from academic_benchmark.tsplib_manager import save_benchmark_result
+            save_benchmark_result(
+                run_id,
+                {
+                    "problem": row["problem"],
+                    "algorithm": row["strategy"],
+                    "run_number": 1,
+                    "problem_type": row.get("problem_type", "tsp"),
+                    "matrix_kind": row.get("matrix_kind", "distance"),
+                    "objective_cost": row.get("objective_cost"),
+                    "tour_cost": row.get("avg_length"),
+                    "gap": row.get("avg_gap"),
+                    "elapsed_ms": row.get("avg_time_ms"),
+                    "routes": result.get("routes"),
+                    "route_loads": result.get("route_loads"),
+                    "route_costs": result.get("route_costs"),
+                    "num_vehicles": result.get("num_vehicles"),
+                    "capacity_violations": row.get("capacity_violations", 0),
+                    "tw_violations": row.get("tw_violations", 0),
+                    "params": result.get("params", {}),
+                    "metadata": {"n_runs": result.get("n_runs"), "stage": stage_label},
+                    "timestamp": row["timestamp"],
+                },
+                db_path=TSPLIB_DB,
+            )
+        except Exception:
+            pass
         
         tracker.record(result.get("avg_time_ms", 0.0) / 1000.0, result["strategy"], result["problem"])
         remain_sec = tracker.estimate_remaining(total - (idx + 1))
@@ -1224,6 +1338,18 @@ def _execute_benchmark_tasks(tasks, workers, metadata, stage_label):
 
     _run_pool(tasks, workers, on_result=on_result)
     print()
+    try:
+        from academic_benchmark.tsplib_manager import save_benchmark_run
+        save_benchmark_run(
+            run_id,
+            source="academic_cli",
+            status="completed",
+            settings={"stage": stage_label, "tasks": len(tasks), "workers": workers},
+            metadata={"results": len(rows)},
+            db_path=TSPLIB_DB,
+        )
+    except Exception:
+        pass
     
     metadata["results"] = {f"{row['problem']}::{row['strategy']}": row for row in rows}
     save_metadata(METADATA_PATH, metadata)
@@ -1233,7 +1359,14 @@ def _write_summary(rows: List[Dict[str, Any]]) -> None:
     path = os.path.join(RESULTS_DIR, "benchmark_summary.csv")
     import csv
     with open(path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["problem", "strategy", "avg_length", "avg_gap", "avg_time_ms", "n_runs", "gap_type"])
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "problem", "strategy", "avg_length", "avg_gap", "avg_time_ms", "n_runs",
+                "gap_type", "problem_type", "matrix_kind", "objective_cost", "num_vehicles",
+                "capacity_violations", "tw_violations",
+            ],
+        )
         writer.writeheader()
         for row in rows:
             writer.writerow({
@@ -1244,6 +1377,12 @@ def _write_summary(rows: List[Dict[str, Any]]) -> None:
                 "avg_time_ms": row["avg_time_ms"],
                 "n_runs": row["n_runs"],
                 "gap_type": row.get("gap_type", "unknown"),
+                "problem_type": row.get("problem_type", "tsp"),
+                "matrix_kind": row.get("matrix_kind", "distance"),
+                "objective_cost": row.get("objective_cost", row.get("avg_length")),
+                "num_vehicles": row.get("num_vehicles"),
+                "capacity_violations": row.get("capacity_violations", 0),
+                "tw_violations": row.get("tw_violations", 0),
             })
 
 
@@ -1705,12 +1844,20 @@ def _save_best_to_param_db(
     specs: List[StrategySpec],
 ) -> int:
     """Save best tuning results to the persistent parameter database.
-    Also saves to the tsplib.db best_solutions table for cross-engine queries.
+    Mirrors rows with a real route/objective length to tsplib.db best_solutions.
     Returns number of entries saved.
     """
     saved = 0
     problem_map = {p.name: p for p in problems}
     valid_algos = {s.name for s in specs}
+
+    def _finite_float(value: Any) -> Optional[float]:
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return None
+        return number if math.isfinite(number) else None
+
     for key, entry in best_params.items():
         parts = key.split("::", 1)
         if len(parts) != 2:
@@ -1722,21 +1869,24 @@ def _save_best_to_param_db(
         if not prob:
             continue
         params = entry.get("params", {})
-        # Support both DoE format (avg_length) and Optuna format (avg_gap)
-        best_score = entry.get("avg_length", float("inf"))
-        raw_gap = entry.get("avg_gap")
-        if best_score == float("inf") and raw_gap is not None:
-            # Optuna tuning: use gap as the score metric
-            try:
-                best_score = float(raw_gap)
-            except (TypeError, ValueError):
-                best_score = float("inf")
-        if raw_gap is None or (isinstance(raw_gap, float) and math.isnan(raw_gap)):
-            gap = float("nan")
-        else:
-            gap = float(raw_gap)
 
-        if math.isinf(best_score) or math.isinf(gap):
+        route_score = None
+        for score_key in ("avg_length", "best_length", "tour_length", "objective_cost", "total_cost"):
+            route_score = _finite_float(entry.get(score_key))
+            if route_score is not None:
+                break
+
+        gap = _finite_float(entry.get("avg_gap"))
+        if gap is None:
+            gap = _finite_float(entry.get("best_gap"))
+        if gap is None:
+            gap = _finite_float(entry.get("gap"))
+
+        # Optuna tuning optimizes gap directly. Store that as the parameter DB
+        # score when no route length was benchmarked, but do not mirror it as a
+        # fake tour_length in best_solutions.
+        param_score = route_score if route_score is not None else gap
+        if param_score is None:
             continue
 
         runs = entry.get("n_runs", 0) or entry.get("completed", 0) or entry.get("trials_used", 0)
@@ -1747,22 +1897,23 @@ def _save_best_to_param_db(
             problem=prob_name,
             algorithm=algo_name,
             params=params,
-            best_score=best_score,
-            gap=gap if not math.isnan(gap) else 0.0,
+            best_score=param_score,
+            gap=gap if gap is not None else 0.0,
             runs=runs,
             dimension=prob.dimension,
             category=prob.category,
         )
-        # Save to best_solutions table (cross-engine)
-        _save_best_solution(
-            problem_name=prob_name,
-            algorithm=algo_name,
-            params=params,
-            tour=[],
-            tour_length=float(best_score),
-            gap=float(gap) if not math.isnan(gap) else 0.0,
-            db_path=TSPLIB_DB,
-        )
+        if route_score is not None:
+            # Save to best_solutions only when the score is a real route cost.
+            _save_best_solution(
+                problem_name=prob_name,
+                algorithm=algo_name,
+                params=params,
+                tour=entry.get("tour", []),
+                tour_length=route_score,
+                gap=gap if gap is not None else 0.0,
+                db_path=TSPLIB_DB,
+            )
         saved += 1
     return saved
 
@@ -2210,7 +2361,8 @@ def main() -> int:
             )
             elapsed = time.time() - start_time
             print(f"\n[OK] Toplam sure: {format_time(elapsed)}")
-            print("[BILGI] En iyi parametreler tsplib_data/tsplib.db icine de basariyla kaydedildi.")
+            print("[BILGI] En iyi parametreler benchmark_db/param_db.json icine kaydedildi.")
+            print("[BILGI] Gercek tur uzunlugu olan kayitlar tsplib_data/tsplib.db best_solutions tablosuna da yansitildi.")
             input("\nDevam etmek icin Enter'a basin...")
             continue
 

@@ -2,8 +2,8 @@
 Distance calculation utilities — Single source of truth.
 
 Consolidates all distance functions that were previously duplicated across:
-  - optimizer_api/utils/haversine.py
-  - optimizer_api/utils/data_loader.py (module-level euclidean_distance)
+  - legacy API haversine helpers
+  - legacy API data loading helpers
   - uniride_core/algorithms/tsplib_parser.py
   - uniride_core/algorithms/numba_utils.py (create_np_distance_matrix)
   - uniride_core/algorithms/sota_tsp/base_solver.py (static euclidean_distance)

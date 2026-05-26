@@ -1,7 +1,7 @@
 """
 E²BSO-TSP — Enhanced Entropy-Balanced Swarm Optimization (TSP variant)
 
-Adapted from optimizer_api/strategies/sota_common/e2bso.py for pure TSP.
+Core pure-TSP implementation.
 Uses integer-indexed tours and Numba-accelerated distance matrix.
 
 Core DNA:

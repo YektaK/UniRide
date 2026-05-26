@@ -21,6 +21,23 @@ class RunResult:
     convergence_profile: List[float] = field(default_factory=list)
     tour: Optional[List[int]] = None
     error: Optional[str] = None
+    # Routing-general fields for CVRP/CVRPTW while keeping TSP compatibility.
+    objective_cost: Optional[float] = None
+    routes: Optional[List[List[int]]] = None
+    num_vehicles: Optional[int] = None
+    route_loads: Optional[List[List[int]]] = None
+    route_costs: Optional[List[float]] = None
+    capacity_violations: int = 0
+    tw_violations: int = 0
+    problem_type: str = "tsp"
+    matrix_kind: str = "distance"
+    constraint_profile: Dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self):
+        if self.objective_cost is None:
+            self.objective_cost = self.tour_cost
+        if self.num_vehicles is None and self.routes is not None:
+            self.num_vehicles = len(self.routes)
 
 
 

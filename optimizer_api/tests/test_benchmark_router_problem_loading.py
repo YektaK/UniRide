@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from optimizer_api.routers import benchmark
 from uniride_core.models import ConstraintProfile, CostMatrix, RoutingProblem
 import numpy as np
+import pytest
 
 
 def test_load_benchmark_problem_preserves_academic_problem_metadata(monkeypatch):
@@ -141,4 +142,93 @@ def test_matrix_native_benchmark_run_executes_and_persists(monkeypatch):
     assert saved_results[0][0][0] == run_id
     assert saved_results[0][0][1]["problem_type"] == "cvrp"
     assert saved_results[0][0][1]["routes"]
+    assert saved_runs[-1][1]["status"] == "completed"
+
+
+@pytest.mark.parametrize(
+    ("algorithm", "params"),
+    [
+        ("Core-TwoOpt-TSP", {"max_iterations": 12}),
+        (
+            "Core-GA-TSP",
+            {
+                "population_size": 8,
+                "max_iterations": 5,
+                "crossover_rate": 0.8,
+                "mutation_rate": 0.2,
+                "elite_count": 2,
+                "tournament_size": 3,
+                "max_no_improvement": 4,
+            },
+        ),
+        (
+            "Core-PSO-TSP",
+            {
+                "num_particles": 8,
+                "max_iterations": 5,
+                "cognitive_weight": 1.2,
+                "social_weight": 1.2,
+                "inertia_weight": 0.7,
+                "max_velocity_size": 3,
+                "local_search_rate": 0.0,
+            },
+        ),
+        (
+            "Core-GWO-TSP",
+            {
+                "num_wolves": 8,
+                "max_iterations": 5,
+                "a_initial": 2.0,
+                "local_search_rate": 0.0,
+            },
+        ),
+        (
+            "Core-HHO-TSP",
+            {
+                "num_hawks": 8,
+                "max_iterations": 5,
+                "escape_energy_factor": 2.0,
+                "jump_probability": 0.5,
+                "levy_beta": 1.5,
+                "local_search_rate": 0.0,
+            },
+        ),
+    ],
+)
+def test_matrix_native_benchmark_run_accepts_core_tsp_engines(monkeypatch, algorithm, params):
+    class ImmediateThread:
+        def __init__(self, target, daemon=True, name=None):
+            self.target = target
+
+        def start(self):
+            self.target()
+
+    saved_runs = []
+    saved_results = []
+    problem = RoutingProblem(
+        name="tiny-tsp",
+        problem_type="tsp",
+        matrix=CostMatrix(np.array([[0, 1, 2, 1], [1, 0, 1, 2], [2, 1, 0, 1], [1, 2, 1, 0]], dtype=float)),
+        optimal=4.0,
+    )
+
+    monkeypatch.setattr(benchmark.threading, "Thread", ImmediateThread)
+    monkeypatch.setattr("academic_benchmark.tsplib_manager.load_routing_problem", lambda name: problem)
+    monkeypatch.setattr("academic_benchmark.tsplib_manager.save_benchmark_run", lambda *args, **kwargs: saved_runs.append((args, kwargs)) or args[0])
+    monkeypatch.setattr("academic_benchmark.tsplib_manager.save_benchmark_result", lambda *args, **kwargs: saved_results.append((args, kwargs)) or 1)
+
+    run_id = f"matrix-native-{algorithm.lower()}-test"
+    result = benchmark._start_benchmark_impl(
+        run_id,
+        algorithms=[{"id": algorithm, "params": params}],
+        problems=["tiny-tsp"],
+        settings={"execution_mode": "matrix_native", "n_runs": 1, "seed": 7},
+    )
+    state = benchmark.benchmark_state_manager.get_run(run_id)
+
+    assert result["execution_mode"] == "matrix_native"
+    assert state.status.value == "completed"
+    assert saved_results[0][0][1]["algorithm"] == algorithm
+    assert saved_results[0][0][1]["problem_type"] == "tsp"
+    assert saved_results[0][0][1]["tour"]
     assert saved_runs[-1][1]["status"] == "completed"

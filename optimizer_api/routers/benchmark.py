@@ -247,7 +247,7 @@ def _start_matrix_native_benchmark_impl(run_id: str, algorithms: List[Dict], pro
     from dataclasses import asdict
 
     from academic_benchmark.tsplib_manager import load_routing_problem, save_benchmark_result, save_benchmark_run
-    from uniride_core.algorithms.greedy_engine import GreedyMatrixEngine
+    from uniride_core.algorithms.engine_factory import canonical_matrix_engine_name, create_matrix_engine
     from uniride_core.benchmark_runner import MatrixAlgorithmConfig, MatrixBenchmarkRunner
 
     n_runs = int(settings.get("n_runs", 1))
@@ -263,15 +263,19 @@ def _start_matrix_native_benchmark_impl(run_id: str, algorithms: List[Dict], pro
     matrix_algorithms: List[MatrixAlgorithmConfig] = []
     for algo_dict in algorithms:
         algo_id = algo_dict.get("id", algo_dict.get("name", "Core-Greedy-Routing"))
-        if algo_id not in {"Core-Greedy-Routing", "Greedy", "greedy", "core_greedy"}:
+        params = algo_dict.get("params", {})
+        try:
+            canonical_algo_id = canonical_matrix_engine_name(algo_id)
+            engine = create_matrix_engine(algo_id)
+        except KeyError:
             raise HTTPException(
                 status_code=400,
                 detail={"error": f"Matrix-native algorithm not available yet: {algo_id}"},
             )
         matrix_algorithms.append(MatrixAlgorithmConfig(
-            name=algo_id,
-            engine=GreedyMatrixEngine(),
-            params=algo_dict.get("params", {}),
+            name=canonical_algo_id,
+            engine=engine,
+            params=params,
         ))
 
     total_experiments = len(routing_problems) * len(matrix_algorithms) * n_runs

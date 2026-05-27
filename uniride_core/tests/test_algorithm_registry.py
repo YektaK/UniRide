@@ -9,6 +9,7 @@ from uniride_core.algorithms.registry import (
 def test_core_registry_exposes_required_algorithm_families():
     names = set(list_algorithm_names())
     assert {"GA", "PSO", "GWO", "HHO"}.issubset(names)
+    assert {"Core-GA-TSP", "Core-PSO-TSP", "Core-GWO-TSP", "Core-HHO-TSP", "Core-TwoOpt-TSP"}.issubset(names)
     assert {"GA-Split", "PSO-Split", "GWO-Split", "HHO-Split"}.issubset(names)
     assert {"OR-Tools", "PyVRP", "VROOM", "Greedy"}.issubset(names)
     assert {"2-OPT", "3-OPT", "OR-OPT", "SWAP", "HYBRID"}.issubset(names)
@@ -27,6 +28,7 @@ def test_core_registry_normalizes_compatibility_aliases():
     assert aliases["ga_split"] == "GA-Split"
     assert aliases["genetic_algorithm"] == "GA"
     assert aliases["Numba-GA"] == "GA"
+    assert aliases["Core-2OPT-TSP"] == "Core-TwoOpt-TSP"
     assert aliases["Numba-Or-opt"] == "OR-OPT"
     assert aliases["Numba-Hybrid"] == "HYBRID"
     assert aliases["ortools_cvrp"] == "OR-Tools"

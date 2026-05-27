@@ -4,9 +4,7 @@ Exhaustive search for small problems (n ≤ 10)
 Guarantees optimal solution
 """
 
-import logging
 import time
-from itertools import permutations
 from typing import List, Dict
 
 from models.schemas import (
@@ -14,11 +12,9 @@ from models.schemas import (
     VehicleRoute, RouteStep
 )
 from strategies.base_strategy import BaseRoutingStrategy
-from utils.data_loader import DataLoader, euclidean_distance, haversine_distance, estimate_travel_time
+from strategies.sota_response_builder import build_sota_request_context
+from uniride_core.algorithms.string_exact_tsp import solve_exact_tsp_route
 from utils.clustering import VehicleCalculator
-from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
-
-logger = logging.getLogger(__name__)
 
 
 class PermutationTSPStrategy(BaseRoutingStrategy):
@@ -49,30 +45,12 @@ class PermutationTSPStrategy(BaseRoutingStrategy):
         coordinates: Dict
     ):
         """Find optimal TSP solution by complete search"""
-        if not waypoints:
-            return [], 0.0
-
-        if len(waypoints) == 1:
-            duration = (
-                self._get_duration(depot, waypoints[0], time_matrix, coordinates) +
-                self._get_duration(waypoints[0], depot, time_matrix, coordinates)
-            )
-            return waypoints, duration
-
-        if len(waypoints) > self.MAX_PERMUTATION_SIZE:
-            # Fall back to first n items or raise error
-            waypoints = waypoints[:self.MAX_PERMUTATION_SIZE]
-
-        best_perm = None
-        best_duration = float('inf')
-
-        for perm in permutations(waypoints):
-            duration = self._calculate_route_duration(perm, depot, time_matrix, coordinates)
-            if duration < best_duration:
-                best_duration = duration
-                best_perm = perm
-
-        return list(best_perm), best_duration
+        return solve_exact_tsp_route(
+            waypoints,
+            depot,
+            lambda origin, destination: self._get_duration(origin, destination, time_matrix, coordinates),
+            max_permutation_size=self.MAX_PERMUTATION_SIZE,
+        )
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:
         """Main optimization entry point"""
@@ -90,30 +68,10 @@ class PermutationTSPStrategy(BaseRoutingStrategy):
                 execution_time_seconds=time.time() - start_time
             )
 
-        # Build time matrix and coordinates
-        data_loader = DataLoader.get_instance()
-        location_ids = [depot.id] + [s.location_code for s in students]
-
-        # Build coordinates BEFORE get_submatrix for euclidean distance fallback
-        coordinates = {depot.id: {"lat": depot.lat, "lng": depot.lng}}
-        for s in students:
-            coords = s.coordinates or {"lat": 0, "lng": 0}
-            coordinates[s.location_code] = coords
-
-        raw_matrix = data_loader.get_submatrix(location_ids, coordinates)
-        time_matrix = {
-            location_ids[i]: {
-                location_ids[j]: raw_matrix[i][j]
-                for j in range(len(location_ids))
-            }
-            for i in range(len(location_ids))
-        }
-
-        # Helper to compute euclidean distance between two location IDs
-        def _dist(loc1: str, loc2: str) -> float:
-            c1 = coordinates.get(loc1, {})
-            c2 = coordinates.get(loc2, {})
-            return round(euclidean_distance(c1.get("lat", 0), c1.get("lng", 0), c2.get("lat", 0), c2.get("lng", 0)), 2)
+        context = build_sota_request_context(students, depot)
+        coordinates = context["coordinates"]
+        time_matrix = context["time_matrix"]
+        distance_lookup = context["distance_lookup"]
 
         # Convert students
         student_dicts = []
@@ -172,7 +130,7 @@ class PermutationTSPStrategy(BaseRoutingStrategy):
                     location1=step["location1"],
                     location2=step["location2"],
                     duration=round(step["duration"], 2),
-                    distance=_dist(step["location1"], step["location2"])
+                    distance=distance_lookup(step["location1"], step["location2"])
                 )
                 for step in assignment["route"]
             ]

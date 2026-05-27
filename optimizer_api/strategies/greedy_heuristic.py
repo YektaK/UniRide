@@ -3,19 +3,15 @@ Greedy (Nearest Neighbor) Heuristic Strategy
 Constructs routes by always visiting the nearest valid student
 """
 
-import logging
 import time
-from typing import List, Dict
 
 from models.schemas import (
     OptimizationRequest, OptimizationResponse,
     VehicleRoute, RouteStep
 )
 from strategies.base_strategy import BaseRoutingStrategy
-from utils.data_loader import DataLoader, euclidean_distance, haversine_distance, estimate_travel_time
-from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
-
-logger = logging.getLogger(__name__)
+from strategies.sota_response_builder import build_sota_request_context
+from uniride_core.algorithms.string_greedy_routing import solve_string_greedy_routes
 
 
 class GreedyHeuristicStrategy(BaseRoutingStrategy):
@@ -52,127 +48,45 @@ class GreedyHeuristicStrategy(BaseRoutingStrategy):
                 execution_time_seconds=time.time() - start_time
             )
 
-        # Build time matrix
-        data_loader = DataLoader.get_instance()
-        location_ids = [depot.id] + [s.location_code for s in students]
+        context = build_sota_request_context(students, depot)
+        coordinates = context["coordinates"]
+        time_matrix = context["time_matrix"]
+        distance_lookup = context["distance_lookup"]
+        duration_lookup = lambda origin, destination: self._get_duration(origin, destination, time_matrix, coordinates)
+        student_by_location = {student.location_code: student for student in students}
+        route_plans = solve_string_greedy_routes(
+            customer_locations=context["student_ids"],
+            disability_types={student.location_code: student.disability_type for student in students},
+            depot_id=depot.id,
+            duration_lookup=duration_lookup,
+            sw_capacity=request.sw_capacity,
+            so_capacity=request.so_capacity,
+            max_route_duration=request.max_travel_time,
+        )
 
-        # Build coordinates BEFORE get_submatrix for euclidean distance fallback
-        coordinates = {depot.id: {"lat": depot.lat, "lng": depot.lng}}
-        for s in students:
-            coords = s.coordinates or {"lat": 0, "lng": 0}
-            coordinates[s.location_code] = coords
-
-        raw_matrix = data_loader.get_submatrix(location_ids, coordinates)
-        time_matrix = {
-            location_ids[i]: {
-                location_ids[j]: raw_matrix[i][j]
-                for j in range(len(location_ids))
-            }
-            for i in range(len(location_ids))
-        }
-
-        # Helper to compute euclidean distance between two location IDs
-        def _dist(loc1: str, loc2: str) -> float:
-            c1 = coordinates.get(loc1, {})
-            c2 = coordinates.get(loc2, {})
-            return round(euclidean_distance(c1.get("lat", 0), c1.get("lng", 0), c2.get("lat", 0), c2.get("lng", 0)), 2)
-
-        # Greedy assignment
-        unassigned = list(students)
         routes = []
-        vehicle_idx = 1
-
-        while unassigned:
-            current_loc = depot.id
-            current_sw = 0
-            current_so = 0
-            current_time = 0.0
+        for vehicle_idx, route_plan in enumerate(route_plans, start=1):
             route_details = []
-            route_students = []
-            sw_count = 0
-            so_count = 0
-
             route_distance = 0.0
-
-            while unassigned:
-                best_student = None
-                best_time = float('inf')
-                best_idx = -1
-
-                for idx, student in enumerate(unassigned):
-                    # Check capacity
-                    sw_needed = 1 if student.disability_type == "Sw" else 0
-                    so_needed = 1 if student.disability_type == "So" else 0
-
-                    if current_sw + sw_needed > request.sw_capacity:
-                        continue
-                    if current_so + so_needed > request.so_capacity:
-                        continue
-
-                    # Check time constraint
-                    travel_time = self._get_duration(
-                        current_loc, student.location_code, time_matrix, coordinates
-                    )
-                    return_time = self._get_duration(
-                        student.location_code, depot.id, time_matrix, coordinates
-                    )
-
-                    if current_time + travel_time + return_time > request.max_travel_time:
-                        continue
-
-                    if travel_time < best_time:
-                        best_time = travel_time
-                        best_student = student
-                        best_idx = idx
-
-                if best_student is None:
-                    break
-
-                # Add to route
-                step_dist = _dist(current_loc, best_student.location_code)
+            for step in route_plan.steps:
+                step_dist = distance_lookup(step.location1, step.location2)
                 route_details.append(RouteStep(
-                    location1=current_loc,
-                    location2=best_student.location_code,
-                    duration=round(best_time, 2),
+                    location1=step.location1,
+                    location2=step.location2,
+                    duration=step.duration,
                     distance=step_dist
                 ))
                 route_distance += step_dist
 
-                current_time += best_time
-                current_loc = best_student.location_code
-
-                if best_student.disability_type == "Sw":
-                    current_sw += 1
-                    sw_count += 1
-                else:
-                    current_so += 1
-                    so_count += 1
-
-                route_students.append(best_student)
-                unassigned.pop(best_idx)
-
-            # Return to depot
-            return_time = self._get_duration(current_loc, depot.id, time_matrix, coordinates)
-            return_dist = _dist(current_loc, depot.id)
-            route_details.append(RouteStep(
-                location1=current_loc,
-                location2=depot.id,
-                duration=round(return_time, 2),
-                distance=return_dist
-            ))
-            current_time += return_time
-            route_distance += return_dist
-
             routes.append(VehicleRoute(
                 vehicle_id=f"Araç {vehicle_idx} (Greedy)",
                 route_details=route_details,
-                total_duration_minutes=round(current_time, 2),
+                total_duration_minutes=route_plan.total_duration,
                 total_distance_km=round(route_distance, 2),
-                sw_count=sw_count,
-                so_count=so_count,
-                student_ids=[s.id for s in route_students]
+                sw_count=route_plan.sw_count,
+                so_count=route_plan.so_count,
+                student_ids=[student_by_location[location].id for location in route_plan.student_locations]
             ))
-            vehicle_idx += 1
 
         execution_time = time.time() - start_time
 

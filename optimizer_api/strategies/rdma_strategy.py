@@ -12,21 +12,17 @@ The R²DMA algorithm integrates:
 - ALNS-inspired destroy/repair
 """
 
-import logging
 import time
-from typing import Dict, List, Optional
+from typing import Optional
 
 from models.schemas import (
     OptimizationRequest,
     OptimizationResponse,
-    VehicleRoute,
-    RouteStep,
 )
 from strategies.base_strategy import BaseRoutingStrategy
+from strategies.sota_response_builder import build_single_route_response, build_sota_request_context
 from uniride_core.algorithms.sota_tsp import R2DMA_TSP, R2DMATSPConfig
-from utils.data_loader import DataLoader, euclidean_distance
-
-logger = logging.getLogger(__name__)
+from uniride_core.adapters.sota_tsp_strategy_adapter import solve_student_order_with_sota_tsp
 
 
 class R2DMAStrategy(BaseRoutingStrategy):
@@ -79,137 +75,27 @@ class R2DMAStrategy(BaseRoutingStrategy):
                 execution_time_seconds=time.time() - start_time,
             )
 
-        # Build distance data
-        data_loader = DataLoader.get_instance()
-        location_ids = [depot.id] + [s.location_code for s in students]
-
-        coordinates = {depot.id: {"lat": depot.lat, "lng": depot.lng}}
-        for s in students:
-            coords = s.coordinates or {"lat": 0, "lng": 0}
-            coordinates[s.location_code] = coords
-
-        raw_matrix = data_loader.get_submatrix(location_ids, coordinates)
-        time_matrix = {
-            location_ids[i]: {
-                location_ids[j]: raw_matrix[i][j]
-                for j in range(len(location_ids))
-            }
-            for i in range(len(location_ids))
-        }
-
-        def _dist(loc1: str, loc2: str) -> float:
-            c1 = coordinates.get(loc1, {})
-            c2 = coordinates.get(loc2, {})
-            return round(
-                euclidean_distance(
-                    c1.get("lat", 0), c1.get("lng", 0),
-                    c2.get("lat", 0), c2.get("lng", 0),
-                ),
-                2,
-            )
-
-        # Build R²DMA-compatible problem wrapper
-        student_ids = [s.location_code for s in students]
-        n = len(student_ids)
-
-        int_dm: Dict[int, Dict[int, int]] = {}
-        for i in range(n):
-            int_dm[i] = {}
-            for j in range(n):
-                if i != j:
-                    d = _dist(student_ids[i], student_ids[j])
-                    int_dm[i][j] = max(1, int(d * 1000))
-                else:
-                    int_dm[i][j] = 0
-
-        # Run R²DMA
-        try:
-            solver = R2DMA_TSP(self._config)
-            matrix = [[float(int_dm[i][j]) for j in range(n)] for i in range(n)]
-            result = solver.solve_with_matrix(matrix)
-            best_order = [student_ids[idx] for idx in result.tour]
-        except Exception as e:
-            logger.error(f"R²DMA optimization failed: {e}")
-            best_order = self._greedy_fallback(students, depot, time_matrix, coordinates)
-
-        # Build route steps
-        route_details = []
-        route_distance = 0.0
-
-        current = depot.id
-        for student_id in best_order:
-            duration = self._get_duration(current, student_id, time_matrix, coordinates)
-            dist = _dist(current, student_id)
-            route_details.append(
-                RouteStep(
-                    location1=current,
-                    location2=student_id,
-                    duration=round(duration, 2),
-                    distance=dist,
-                )
-            )
-            route_distance += dist
-            current = student_id
-
-        # Return to depot
-        ret_duration = self._get_duration(current, depot.id, time_matrix, coordinates)
-        ret_dist = _dist(current, depot.id)
-        route_details.append(
-            RouteStep(
-                location1=current,
-                location2=depot.id,
-                duration=round(ret_duration, 2),
-                distance=ret_dist,
-            )
-        )
-        route_distance += ret_dist
-
-        total_duration = sum(step.duration for step in route_details)
-
-        route = VehicleRoute(
-            vehicle_id="Araç 1 (R²DMA)",
-            route_details=route_details,
-            total_duration_minutes=round(total_duration, 2),
-            total_distance_km=round(route_distance, 2),
-            sw_count=sum(1 for s in best_order if any(st.location_code == s for st in students if st.disability_type == "Sw")),
-            so_count=sum(1 for s in best_order if any(st.location_code == s for st in students if st.disability_type == "So")),
-            student_ids=best_order,
+        context = build_sota_request_context(students, depot)
+        time_matrix = context["time_matrix"]
+        coordinates = context["coordinates"]
+        distance_lookup = context["distance_lookup"]
+        best_order = solve_student_order_with_sota_tsp(
+            context["student_ids"],
+            depot.id,
+            distance_lookup,
+            lambda origin, destination: self._get_duration(origin, destination, time_matrix, coordinates),
+            R2DMA_TSP,
+            self._config,
         )
 
-        execution_time = time.time() - start_time
-
-        return OptimizationResponse(
-            algorithm_used=self.name,
-            success=True,
-            routes=[route],
-            total_vehicles=1,
-            total_duration_minutes=round(total_duration, 2),
-            execution_time_seconds=round(execution_time, 4),
+        return build_single_route_response(
+            algorithm_name=self.name,
+            vehicle_label="R²DMA",
+            students=students,
+            depot_id=depot.id,
+            best_order=best_order,
+            duration_lookup=lambda origin, destination: self._get_duration(origin, destination, time_matrix, coordinates),
+            distance_lookup=distance_lookup,
+            execution_time_seconds=time.time() - start_time,
         )
 
-    def _greedy_fallback(self, students, depot, time_matrix, coordinates):
-        """Simple greedy fallback if R²DMA fails."""
-        unassigned = list(students)
-        order = []
-
-        current = depot.id
-        while unassigned:
-            best = None
-            best_time = float("inf")
-            best_idx = -1
-
-            for idx, student in enumerate(unassigned):
-                t = self._get_duration(current, student.location_code, time_matrix, coordinates)
-                if t < best_time:
-                    best_time = t
-                    best = student
-                    best_idx = idx
-
-            if best is None:
-                break
-
-            order.append(best.location_code)
-            unassigned.pop(best_idx)
-            current = best.location_code
-
-        return order

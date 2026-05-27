@@ -8,6 +8,7 @@ from uniride_core.algorithms.registry import list_algorithm_names
 from uniride_core.adapters.matrix_builder import MatrixBuilder
 from uniride_core.algorithms.greedy_engine import GreedyMatrixEngine
 from uniride_core.algorithms.sota_tsp.base_solver import BaseTSPSolver
+from uniride_core.algorithms.engine_factory import CORE_TSP_SOLVERS
 import importlib
 
 
@@ -56,6 +57,80 @@ def _run_core_routing_executor(problem, params, seed, run_idx, algorithm_name):
             "depot_index": routing_problem.constraints.depot_index,
         },
     )
+
+
+def _problem_matrix(problem):
+    """Return the explicit matrix backing a TSP/ATSP academic problem."""
+    if getattr(problem, "is_time_matrix", False) and getattr(problem, "time_matrix", None) is not None:
+        return problem.time_matrix, "travel_time"
+    if getattr(problem, "dist_matrix", None) is not None:
+        matrix = problem.dist_matrix
+        return matrix.tolist() if hasattr(matrix, "tolist") else matrix, "distance"
+
+    problem.prepare_matrices()
+    matrix = problem.dist_matrix
+    if matrix is None:
+        raise ValueError(f"Problem {problem.name} has no matrix or coordinates")
+    return matrix.tolist() if hasattr(matrix, "tolist") else matrix, "distance"
+
+
+def _route_cost(route, matrix):
+    if not route:
+        return 0.0
+    indices = [int(location[1:]) - 1 if isinstance(location, str) and location.startswith("L") else int(location) for location in route]
+    total = 0.0
+    for idx, current in enumerate(indices):
+        nxt = indices[(idx + 1) % len(indices)]
+        total += float(matrix[current][nxt])
+    return total
+
+
+def _make_core_tsp_executor(algorithm_name, solver):
+    def executor(problem, params, seed, run_idx):
+        import random
+        import time
+        from academic_benchmark.engine_core import RunResult
+
+        if _is_routing_problem(problem):
+            return _run_core_routing_executor(problem, params, seed, run_idx, f"{algorithm_name}:core-greedy-routing")
+
+        matrix, matrix_kind = _problem_matrix(problem)
+        waypoints = [f"L{i + 1}" for i in range(problem.dimension)]
+
+        def duration_func(route):
+            return _route_cost(route, matrix)
+
+        start_time = time.perf_counter()
+        route, cost = solver(waypoints, duration_func, random.Random(seed), params)
+        elapsed = time.perf_counter() - start_time
+
+        tour_indices = [
+            int(location[1:]) if isinstance(location, str) and location.startswith("L") else int(location) + 1
+            for location in route
+        ]
+        optimal = getattr(problem, "optimal", None)
+        gap = None
+        if optimal and optimal > 0:
+            gap = ((cost - optimal) / optimal) * 100
+
+        return RunResult(
+            problem=problem.name,
+            algorithm=algorithm_name,
+            run=run_idx,
+            seed=seed,
+            dimension=problem.dimension,
+            optimal=optimal,
+            tour_cost=round(float(cost), 2),
+            gap_pct=round(gap, 4) if gap is not None else None,
+            elapsed_sec=round(elapsed, 4),
+            iterations=int(params.get("max_iterations", 0) or 0),
+            tour=tour_indices,
+            objective_cost=round(float(cost), 2),
+            problem_type=str(getattr(problem, "problem_type", "tsp") or "tsp").lower(),
+            matrix_kind=matrix_kind,
+        )
+
+    return executor
 
 # 1. Register Numba (Legacy) Algorithms
 def _make_legacy_executor(strategy_payload: any, algorithm_type: str):
@@ -234,5 +309,9 @@ def _core_greedy_executor(problem, params, seed, run_idx):
 
 
 AlgorithmRegistry.register("Core-Greedy-Routing")(_core_greedy_executor)
+
+
+for algo_name, solver in CORE_TSP_SOLVERS.items():
+    AlgorithmRegistry.register(algo_name)(_make_core_tsp_executor(algo_name, solver))
 
 logger.info("Loaded %d algorithms.", len(AlgorithmRegistry.list_algorithms()))

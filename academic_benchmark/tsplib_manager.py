@@ -429,23 +429,36 @@ def save_benchmark_run(
     now = datetime.now().isoformat()
     conn = get_db(db_path)
     init_db(conn)
-    existing = conn.execute("SELECT started_at FROM benchmark_runs WHERE run_id=?", (run_id,)).fetchone()
+    existing = conn.execute(
+        "SELECT started_at, settings_json, metadata_json FROM benchmark_runs WHERE run_id=?",
+        (run_id,),
+    ).fetchone()
     started_at = existing["started_at"] if existing else now
     completed_at = now if status in {"completed", "failed", "stopped"} else None
-    conn.execute(
-        "INSERT OR REPLACE INTO benchmark_runs "
-        "(run_id, source, status, started_at, completed_at, settings_json, metadata_json) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (
-            run_id,
-            source,
-            status,
-            started_at,
-            completed_at,
-            json.dumps(settings or {}, sort_keys=True),
-            json.dumps(metadata or {}, sort_keys=True),
-        ),
+    settings_json = (
+        json.dumps(settings, sort_keys=True)
+        if settings is not None
+        else (existing["settings_json"] if existing else json.dumps({}, sort_keys=True))
     )
+    metadata_json = (
+        json.dumps(metadata, sort_keys=True)
+        if metadata is not None
+        else (existing["metadata_json"] if existing else json.dumps({}, sort_keys=True))
+    )
+    if existing:
+        conn.execute(
+            "UPDATE benchmark_runs "
+            "SET source=?, status=?, completed_at=?, settings_json=?, metadata_json=? "
+            "WHERE run_id=?",
+            (source, status, completed_at, settings_json, metadata_json, run_id),
+        )
+    else:
+        conn.execute(
+            "INSERT INTO benchmark_runs "
+            "(run_id, source, status, started_at, completed_at, settings_json, metadata_json) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (run_id, source, status, started_at, completed_at, settings_json, metadata_json),
+        )
     conn.commit()
     conn.close()
     return run_id

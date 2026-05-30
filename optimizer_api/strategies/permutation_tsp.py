@@ -14,7 +14,7 @@ from models.schemas import (
 from strategies.base_strategy import BaseRoutingStrategy
 from strategies.sota_response_builder import build_sota_request_context
 from uniride_core.algorithms.string_exact_tsp import solve_exact_tsp_route
-from utils.clustering import VehicleCalculator
+from uniride_core.algorithms.vehicle_assignment import VehicleCalculator
 
 
 class PermutationTSPStrategy(BaseRoutingStrategy):

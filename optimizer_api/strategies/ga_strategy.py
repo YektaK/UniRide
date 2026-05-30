@@ -20,7 +20,7 @@ from models.schemas import (
 )
 from strategies.base_strategy import BaseRoutingStrategy
 from utils.data_loader import DataLoader, euclidean_distance
-from utils.clustering import VehicleCalculator
+from uniride_core.algorithms.vehicle_assignment import VehicleCalculator
 from uniride_core.algorithms.ga_operators import mutate_permutation, order_crossover
 from uniride_core.algorithms.tsp_meta_engines import (
     TSPIndividual as Individual,

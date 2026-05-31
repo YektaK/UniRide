@@ -844,18 +844,45 @@ Stale imports (`logging`, `SingletonMeta`, unused `BaseRoutingStrategy`) cleaned
 
 ---
 
+## Independent Review Follow-up (2026-05-31)
+
+The independent v4 verification report is broadly correct on the core-first
+architecture, but the following verified follow-ups remain:
+
+| Finding | Status | Priority | Notes |
+|:--------|:-------|:---------|:------|
+| Frontend typecheck failure in `src/app/(app)/admin/vehicle-planning/page.tsx` | VERIFIED | High, non-academic | `npm run typecheck` currently fails with malformed JSX around `ScrollArea` and closing tags near line 325. This blocks full frontend build health but does not block academic benchmark CLI testing. |
+| PSO production wrapper still has instance-level `self.rng` helper paths | VERIFIED | Medium | `optimizer_api/strategies/pso_strategy.py` still has `_shuffle()`, `_generate_random_velocity()`, `_combine_velocities()`, and fallback solver paths using `self.rng`. Remove or thread request-local rng through helpers. |
+| HHO production wrapper still creates `self.rng` | VERIFIED / lower impact | Low | `hho_strategy.py` assigns `self.rng`, but active helper usage is much smaller than PSO. Remove if unused after confirming tests. |
+| Duplicate `Direction` enum names | VERIFIED | Low/Medium | `optimizer_api.models.schemas.Direction` and `uniride_core.algorithms.string_split_decoder.Direction` are separate concepts. Rename production enum to `TripDirection` with backward-compatible alias later. |
+| Duplicate SOTA Euclidean helper | VERIFIED | Low | `uniride_core.algorithms.sota_tsp.base_solver.BaseTSPSolver.euclidean_distance()` duplicates `distance.euclidean_distance_2d`; replace with canonical import. |
+| `ProblemInstance` legacy/god-model shape | VERIFIED | Low now, medium later | Keep as legacy academic adapter until benchmark suite is stable. Model subpackage split is useful but should not precede today's academic benchmark readiness work. |
+| `registry_setup.py` import claim in review was over-broad | CORRECTED | Informational | It imports from `academic_benchmark.engine_core` as expected. The important invariant remains: `uniride_core` does not import `academic_benchmark` or `optimizer_api`. |
+
+---
+
 ## Remaining Tasks (Logical Order)
 
-This list is the current execution queue after the completed core-first migrations above.
+This list is reordered for today's priority: make the `academic_benchmark`
+suite runnable end-to-end first, then return to production hardening.
 
 | Order | Task | Phase | Dependency | Notes |
 |:------|:-----|:------|:-----------|:------|
-| 1 | Install and pin `vrplib` | 3.1 | Independent | Needed only for direct CVRPLIB/Solomon download/parsing workflows. Current text import path works through `MatrixBuilder` + `tsplib_manager.py`, but `vrplib` is still the planned library-backed source importer. |
-| 2 | Decide CVRPLIB storage shape: keep integrated `tsplib_manager.py` path or add dedicated `cvrplib_manager.py` facade | 3.2 | Depends on Phase 2; blocks 3.4/3.6 polish | Current implementation stores CVRPLIB/Solomon text in the unified academic DB shape. If a dedicated manager is added, it should call the existing unified storage functions rather than introduce a separate DB truth. |
-| 3 | Add dedicated CVRP/CVRPTW dashboard polish | 3.6 | Depends on finalized CVRPLIB/Solomon importer | Optional follow-up: dataset-family grouping, BKS vehicle comparisons, and CVRP-specific LaTeX columns. |
-| 4 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After task 4 or when touching wrappers | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue, or whether a core matrix/context adapter should own more of it. |
+| 1 | Run full academic/core verification and fix failures | Academic readiness | Independent | Run `python -m pytest academic_benchmark/tests uniride_core/tests -q`. Triage failures into real regressions vs optional dependency skips. This is the gate before benchmark runs. |
+| 2 | Install/pin optional academic importer dependencies | 3.1 | Independent; may need network approval | Add/verify `vrplib` for CVRPLIB/Solomon workflows. Also verify optional `ortools`, `pyvrp`, and `pyvroom`; adapters already degrade gracefully when missing, but full holistic comparisons need installed packages. |
+| 3 | Decide/implement CVRPLIB storage facade | 3.2 | Depends on Phase 2; useful after dependency check | Keep unified SQLite truth. If adding `academic_benchmark/cvrplib_manager.py`, make it a facade over `tsplib_manager.store_academic_text()` / `store_routing_problem()`, not a second schema. |
+| 4 | Seed/import small academic datasets | 3.2 / 3.3 | Depends on tasks 1-3 | Ensure at least one TSPLIB TSP, one TSPLIB ATSP, one CVRPLIB CVRP, one Solomon CVRPTW, and one UniRide travel-time export are available in SQLite. |
+| 5 | Run matrix-native academic smoke benchmark | Academic readiness | Depends on task 4 | Run a small deterministic benchmark over TSP, ATSP, CVRP, CVRPTW, and UniRide matrix problems. Confirm `benchmark_runs` / `benchmark_results` persist route fields. |
+| 6 | Generate promoted configs from academic DB | 4.1 / 4.2 | Depends on task 5 | Run promotion manager dry-run, then emit `promoted_configs.json` only if validation passes and configs are meaningful. |
+| 7 | Run quick web/API benchmark sanity path | 5.2 | Depends on task 5 | Verify matrix-native web execution can use editable params and academic read endpoints remain source-of-truth for historical results. |
+| 8 | Add dedicated CVRP/CVRPTW dashboard polish | 3.6 | Depends on finalized importer and populated DB | Dataset-family grouping, BKS vehicle comparisons, CVRP/CVRPTW-specific columns. Nice-to-have after runnable suite. |
+| 9 | Fix frontend typecheck failure | Review follow-up | Independent, non-academic | Repair malformed JSX in `src/app/(app)/admin/vehicle-planning/page.tsx` so full `npm run typecheck` is green. |
+| 10 | PSO/HHO rng cleanup | Review follow-up | Independent | Remove instance-level RNG from production wrappers where still present; keep per-request rng behavior. |
+| 11 | Direction enum rename | Review follow-up | Depends on API compatibility care | Introduce `TripDirection`, keep `Direction = TripDirection` alias until v5 cleanup. |
+| 12 | SOTA Euclidean helper consolidation | Review follow-up | Independent | Replace duplicate static method with canonical `euclidean_distance_2d`. |
+| 13 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After academic readiness | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue or whether a core adapter owns more of it. |
 
-Recommended next task: **DataLoader ownership cleanup**, because most remaining solver-critical logic is already core-owned and this is the last notable app/core boundary decision.
+Recommended next task: **Task 1, run full academic/core verification and fix failures**, because the immediate goal is to complete `academic_benchmark` readiness today and run real tests.
 
 ---
 

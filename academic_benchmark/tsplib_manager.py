@@ -165,7 +165,7 @@ def get_distance_matrix(problem_name: str, db_path: str = DB_PATH):
     try:
         conn = get_db(db_path)
         row = conn.execute(
-            "SELECT matrix_blob, shape_n FROM distance_matrices WHERE problem_name=?",
+            "SELECT matrix_blob, shape_n, dtype FROM distance_matrices WHERE problem_name=?",
             (problem_name,)
         ).fetchone()
         conn.close()
@@ -173,7 +173,7 @@ def get_distance_matrix(problem_name: str, db_path: str = DB_PATH):
             return None
         flat = zlib.decompress(bytes(row["matrix_blob"]))
         n = row["shape_n"]
-        dtype = np.dtype(row["dtype"] if "dtype" in row.keys() else "int32")
+        dtype = np.dtype(row["dtype"] if "dtype" in row.keys() and row["dtype"] else "int32")
         return np.frombuffer(flat, dtype=dtype).reshape(n, n).copy()
     except Exception:
         return None
@@ -798,7 +798,7 @@ def load_routing_problem(problem_name: str, db_path: str = DB_PATH):
             matrix=CostMatrix(
                 matrix,
                 kind=matrix_kind,
-                is_asymmetric=str(row["problem_type"]).upper() == "ATSP",
+                is_asymmetric=str(row["problem_type"]).upper() == "ATSP" or not np.allclose(matrix, np.asarray(matrix).T),
             ),
             constraints=constraints,
             coordinates=coords,

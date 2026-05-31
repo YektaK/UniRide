@@ -922,7 +922,18 @@ suite runnable end-to-end first, then return to production hardening.
 | 13 | SOTA Euclidean helper consolidation | Review follow-up | Independent | Replace duplicate static method with canonical `euclidean_distance_2d`. |
 | 14 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After academic readiness | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue or whether a core adapter owns more of it. |
 
-Recommended next task: **Task 1, run full academic/core verification and fix failures**, because the immediate goal is to complete `academic_benchmark` readiness today and run real tests.
+### Progress Update (2026-05-31)
+
+Completed today:
+
+- Task 1: full academic/core verification is green — `python -m pytest academic_benchmark/tests uniride_core/tests -q` passes with 310 tests.
+- Task 2: optional dependency check completed — `vrplib`, `ortools`, `pyvrp`, and the `pyvroom` package's `vroom` module are importable/available for current adapters.
+- Task 3: `academic_benchmark.cvrplib_manager` added as a facade over unified SQLite storage; it does not introduce a second schema.
+- Task 4: smoke seed utility added and executed locally. Real DB now has `smoke-tsp`, `smoke-atsp`, `smoke-cvrp`, `smoke-solomon`, and `smoke-uniride`.
+- Task 5: matrix-native academic smoke benchmark added and executed locally with run id `academic-matrix-smoke-20260531`; 5 results persisted, 0 errors.
+- Task 6: promotion manager dry-run and write completed locally; 26 configs generated from existing `best_solutions`, not smoke params. The generated JSON is ignored/untracked.
+
+Recommended next task: **Task 7, run quick web/API benchmark sanity path**, because the DB-backed academic benchmark path is now runnable end-to-end and should be checked through the web/API compatibility layer.
 
 ---
 

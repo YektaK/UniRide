@@ -470,36 +470,21 @@ CREATE TABLE IF NOT EXISTS cvrp_best_solutions (
 
 **BKS Dictionary:** Include `CVRP_BKS` dict with known optimal values for Augerat A/B, CMT, and Solomon instances. Fetch complete values from CVRPLIB website or from `.sol` files.
 
-### Task 3.3: Register CVRP Executors — PARTIAL / INTEGRATED
+### Task 3.3: Register CVRP Executors — DONE / INTEGRATED
 
-**File:** `academic_benchmark/core/cvrp_registry_setup.py` (NEW — ~200 lines)
+**Files:** `academic_benchmark/core/registry_setup.py`, `academic_benchmark/tests/test_academic_cvrp_execution.py`
 
-Registers `CVRP-{algo}` executors for all existing TSP algorithms. Each executor:
+Registers `CVRP-{algo}` and `CVRPTW-{algo}` executors through the unified academic registry. Each executor:
 
 1. Receives `ProblemInstance` with CVRP fields
 2. Builds distance matrix via `MatrixBuilder`
-3. Calls TSP solver → giant tour permutation
-4. Runs `optimal_split()` → CVRP routes
-5. Returns `RunResult` with CVRP metrics
+3. Calls a matrix-native `UnifiedEngine.solve_problem()` path or a holistic core adapter
+4. Runs core split/decoder behavior through the unified engine where applicable
+5. Returns `RunResult` with CVRP/CVRPTW metrics
 
-```python
-# Executor signature: (problem, params, seed, run_idx) → RunResult
-def _make_cvrp_executor(base_algo, solver_factory):
-    def executor(problem, params, seed, run_idx):
-        dm = build_distance_matrix(problem)
-        customer_dm = dm[customers_only]
-        solver = solver_factory(params, seed)
-        tsp_result = solver.solve_with_matrix(customer_dm)
-        giant_tour = map_back_to_original_indices(tsp_result.tour)
-        routes = optimal_split(giant_tour, dm, problem.demands, problem.capacity)
-        total_cost = calculate_total_cost(routes, dm)
-        return RunResult(problem=problem.name, algorithm=f"CVRP-{base_algo}", ...)
-    return executor
-```
+**Registers:** core greedy, core TSP meta engines, Numba compatibility aliases, split compatibility aliases, and holistic `OR-Tools`, `PyVRP`, and `VROOM` aliases for both CVRP and CVRPTW.
 
-**Registers:** `CVRP-E2BSO-TSP`, `CVRP-R2DMA-TSP`, `CVRP-P-AOEA-TSP`, `CVRP-CGO-TSP`, `CVRP-RUN-TSP`, `CVRP-ALNS-TSP`, `CVRP-Numba-GA`, `CVRP-Numba-PSO`, `CVRP-Numba-GWO`, `CVRP-Numba-HHO`, etc.
-
-**Integration:** Import in `academic_benchmark/core/__init__.py` AFTER `registry_setup.py`.
+**Integration:** Implemented directly in `registry_setup.py` to avoid a second academic registry source.
 
 ### Task 3.4: Add CVRP Parameter Spaces — DONE
 
@@ -859,13 +844,12 @@ This list is the current execution queue after the completed core-first migratio
 |:------|:-----|:------|:-----------|:------|
 | 1 | Install and pin `vrplib` | 3.1 | Independent | Needed only for direct CVRPLIB/Solomon download/parsing workflows. Current text import path works through `MatrixBuilder` + `tsplib_manager.py`, but `vrplib` is still the planned library-backed source importer. |
 | 2 | Decide CVRPLIB storage shape: keep integrated `tsplib_manager.py` path or add dedicated `cvrplib_manager.py` facade | 3.2 | Depends on Phase 2; blocks 3.4/3.6 polish | Current implementation stores CVRPLIB/Solomon text in the unified academic DB shape. If a dedicated manager is added, it should call the existing unified storage functions rather than introduce a separate DB truth. |
-| 3 | Add/verify CVRP and CVRPTW algorithm registry coverage for all required families | 3.3 | Depends on Phase 2 and task 2 above | Existing `registry_setup.py` supports routing problems through the core matrix runner. Confirm full families: Pipeline A/B, holistic OR-Tools/PyVRP/VROOM, greedy, 2-opt/3-opt/Or-opt, GA, PSO, GWO, HHO. |
-| 4 | Decide promoted config policy for non-SOTA wrappers | 4.3 / 4.4 | Depends on current SOTA injection behavior | SOTA wrappers consume promoted configs automatically. For GA/PSO/GWO/HHO and split wrappers, decide whether promotion should be automatic or only surfaced through web/request params. |
-| 5 | Add dedicated CVRP/CVRPTW dashboard polish | 3.6 | Depends on finalized CVRPLIB/Solomon importer | Optional follow-up: dataset-family grouping, BKS vehicle comparisons, and CVRP-specific LaTeX columns. |
-| 6 | Extract scheduling utility module | 5.5 | Independent | Move scheduling calculations from route response code into a reusable app/core boundary module if they remain production-critical. |
-| 7 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After task 4 or when touching wrappers | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue, or whether a core matrix/context adapter should own more of it. |
+| 3 | Decide promoted config policy for non-SOTA wrappers | 4.3 / 4.4 | Depends on current SOTA injection behavior | SOTA wrappers consume promoted configs automatically. For GA/PSO/GWO/HHO and split wrappers, decide whether promotion should be automatic or only surfaced through web/request params. |
+| 4 | Add dedicated CVRP/CVRPTW dashboard polish | 3.6 | Depends on finalized CVRPLIB/Solomon importer | Optional follow-up: dataset-family grouping, BKS vehicle comparisons, and CVRP-specific LaTeX columns. |
+| 5 | Extract scheduling utility module | 5.5 | Independent | Move scheduling calculations from route response code into a reusable app/core boundary module if they remain production-critical. |
+| 6 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After task 4 or when touching wrappers | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue, or whether a core matrix/context adapter should own more of it. |
 
-Recommended next task: **Task 3.3, verify CVRP/CVRPTW algorithm registry coverage**, because core problem storage, matrix-native execution, web reads, and UniRide export are now in place.
+Recommended next task: **Task 4.3/4.4, decide promoted config policy for non-SOTA wrappers**, because academic CVRP/CVRPTW registry coverage now reaches the executable core routes.
 
 ---
 

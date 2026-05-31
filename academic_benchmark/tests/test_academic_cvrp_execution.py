@@ -65,6 +65,59 @@ def test_core_greedy_routing_is_registered_for_academic_selection():
     assert specs["Core-Greedy-Routing"].algorithm_type == "matrix_routing"
 
 
+def test_cvrp_and_cvrptw_algorithm_families_are_registered():
+    names = set(AlgorithmRegistry.list_algorithms())
+    required = {
+        "CVRP-Core-Greedy-Routing",
+        "CVRPTW-Core-Greedy-Routing",
+        "CVRP-Core-TwoOpt-TSP",
+        "CVRPTW-Core-TwoOpt-TSP",
+        "CVRP-Core-GA-TSP",
+        "CVRPTW-Core-GA-TSP",
+        "CVRP-Core-PSO-TSP",
+        "CVRPTW-Core-PSO-TSP",
+        "CVRP-Core-GWO-TSP",
+        "CVRPTW-Core-GWO-TSP",
+        "CVRP-Core-HHO-TSP",
+        "CVRPTW-Core-HHO-TSP",
+        "CVRP-Numba-GA",
+        "CVRPTW-Numba-HHO",
+        "CVRP-GA-Split",
+        "CVRPTW-HHO-Split",
+        "CVRP-OR-Tools",
+        "CVRPTW-PyVRP",
+        "CVRP-VROOM",
+    }
+
+    assert required.issubset(names)
+
+
+def test_routing_alias_uses_named_core_engine_not_always_greedy():
+    problem = ProblemInstance(
+        name="tiny-cvrp",
+        dimension=4,
+        coordinates=[],
+        problem_type="cvrp",
+        dist_matrix=[
+            [0, 10, 10, 10],
+            [10, 0, 1, 1],
+            [10, 1, 0, 1],
+            [10, 1, 1, 0],
+        ],
+        demands=[0, 1, 1, 1],
+        capacities=[2],
+        capacity=2,
+    )
+
+    executor = AlgorithmRegistry.get_executor("CVRP-Core-TwoOpt-TSP")
+    result = executor(problem, {"max_iterations": 5}, seed=42, run_idx=1)
+
+    assert result.algorithm == "CVRP-Core-TwoOpt-TSP"
+    assert result.problem_type == "cvrp"
+    assert result.routes
+    assert result.capacity_violations == 0
+
+
 def test_cli_evaluate_param_combo_preserves_routing_result_fields():
     problem = ProblemInstance(
         name="tiny-cvrp",

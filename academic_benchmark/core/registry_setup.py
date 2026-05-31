@@ -6,9 +6,8 @@ from uniride_core.algorithms.numba_strategies import STRATEGIES
 from uniride_core.algorithms.local_search_numba import LocalSearchType
 from uniride_core.algorithms.registry import list_algorithm_names
 from uniride_core.adapters.matrix_builder import MatrixBuilder
-from uniride_core.algorithms.greedy_engine import GreedyMatrixEngine
 from uniride_core.algorithms.sota_tsp.base_solver import BaseTSPSolver
-from uniride_core.algorithms.engine_factory import CORE_TSP_SOLVERS
+from uniride_core.algorithms.engine_factory import CORE_TSP_SOLVERS, create_matrix_engine
 import importlib
 
 
@@ -18,12 +17,12 @@ def _is_routing_problem(problem) -> bool:
     }
 
 
-def _run_core_routing_executor(problem, params, seed, run_idx, algorithm_name):
+def _run_core_routing_executor(problem, params, seed, run_idx, algorithm_name, engine_name="Core-Greedy-Routing"):
     import time
     from academic_benchmark.engine_core import RunResult
 
     routing_problem = MatrixBuilder.to_routing_problem(problem)
-    engine = GreedyMatrixEngine()
+    engine = create_matrix_engine(engine_name)
     start_time = time.perf_counter()
     result = engine.solve_problem(routing_problem, config=params, seed=seed)
     elapsed = time.perf_counter() - start_time
@@ -92,7 +91,14 @@ def _make_core_tsp_executor(algorithm_name, solver):
         from academic_benchmark.engine_core import RunResult
 
         if _is_routing_problem(problem):
-            return _run_core_routing_executor(problem, params, seed, run_idx, f"{algorithm_name}:core-greedy-routing")
+            return _run_core_routing_executor(
+                problem,
+                params,
+                seed,
+                run_idx,
+                algorithm_name,
+                engine_name=algorithm_name,
+            )
 
         matrix, matrix_kind = _problem_matrix(problem)
         waypoints = [f"L{i + 1}" for i in range(problem.dimension)]
@@ -313,5 +319,187 @@ AlgorithmRegistry.register("Core-Greedy-Routing")(_core_greedy_executor)
 
 for algo_name, solver in CORE_TSP_SOLVERS.items():
     AlgorithmRegistry.register(algo_name)(_make_core_tsp_executor(algo_name, solver))
+
+
+def _make_routing_alias_executor(alias_name: str, engine_name: str):
+    def executor(problem, params, seed, run_idx):
+        return _run_core_routing_executor(
+            problem,
+            params,
+            seed,
+            run_idx,
+            alias_name,
+            engine_name=engine_name,
+        )
+    return executor
+
+
+def _make_holistic_routing_executor(alias_name: str, solver_name: str):
+    def executor(problem, params, seed, run_idx):
+        import time
+        import numpy as np
+        from academic_benchmark.engine_core import RunResult
+
+        routing_problem = MatrixBuilder.to_routing_problem(problem)
+        matrix = np.asarray(routing_problem.matrix.values, dtype=float).tolist()
+        constraints = routing_problem.constraints
+        demands = list(constraints.demands or [])
+        disability_types = _disability_types_from_demands(demands[1:])
+        sw_capacity, so_capacity = _sw_so_capacities(constraints.capacities)
+        max_route_duration = float(
+            constraints.max_route_duration
+            or params.get("max_route_duration")
+            or max(1.0, sum(max(row) for row in matrix))
+        )
+        num_vehicles = routing_problem.metadata.get("vehicles") or getattr(problem, "num_vehicles", None)
+        time_limit_seconds = int(params.get("time_limit_seconds", params.get("time_limit", 30)))
+
+        start = time.perf_counter()
+        if solver_name == "OR-Tools":
+            from uniride_core.algorithms.ortools_cvrp_engine import solve_ortools_cvrp
+            solution = solve_ortools_cvrp(
+                time_matrix=matrix,
+                disability_types=disability_types,
+                sw_capacity=sw_capacity,
+                so_capacity=so_capacity,
+                max_route_duration=max_route_duration,
+                num_vehicles=num_vehicles,
+                time_limit_seconds=time_limit_seconds,
+            )
+        elif solver_name == "PyVRP":
+            from uniride_core.algorithms.pyvrp_cvrp_engine import solve_pyvrp_cvrp
+            solution = solve_pyvrp_cvrp(
+                duration_matrix=matrix,
+                coordinates=_coordinates_for_holistic(routing_problem),
+                disability_types=disability_types,
+                sw_capacity=sw_capacity,
+                so_capacity=so_capacity,
+                num_vehicles=num_vehicles,
+                time_limit_seconds=time_limit_seconds,
+            )
+        elif solver_name == "VROOM":
+            from uniride_core.algorithms.vroom_cvrp_engine import solve_vroom_cvrp
+            solution = solve_vroom_cvrp(
+                duration_matrix=matrix,
+                disability_types=disability_types,
+                sw_capacity=sw_capacity,
+                so_capacity=so_capacity,
+                max_route_duration=max_route_duration,
+                num_vehicles=num_vehicles,
+            )
+        else:
+            raise ValueError(f"Unsupported holistic solver: {solver_name}")
+
+        elapsed = time.perf_counter() - start
+        if not solution.success:
+            return RunResult(
+                problem=problem.name,
+                algorithm=alias_name,
+                run=run_idx,
+                seed=seed,
+                dimension=problem.dimension,
+                optimal=getattr(problem, "optimal", None),
+                tour_cost=float("inf"),
+                gap_pct=None,
+                elapsed_sec=elapsed,
+                error=solution.error_message,
+                objective_cost=float("inf"),
+                routes=[],
+                num_vehicles=0,
+                problem_type=routing_problem.problem_type,
+                matrix_kind=routing_problem.matrix.kind,
+            )
+
+        routes = [[idx + 1 for idx in route.customer_indices] for route in solution.routes]
+        route_loads = [[route.sw_count, route.so_count] for route in solution.routes]
+        route_costs = _route_costs(routes, matrix, constraints.depot_index)
+        objective_cost = float(sum(route_costs))
+        optimal = getattr(problem, "optimal", None)
+        gap = ((objective_cost - optimal) / optimal) * 100 if optimal and optimal > 0 else None
+        return RunResult(
+            problem=problem.name,
+            algorithm=alias_name,
+            run=run_idx,
+            seed=seed,
+            dimension=problem.dimension,
+            optimal=optimal,
+            tour_cost=objective_cost,
+            gap_pct=gap,
+            elapsed_sec=elapsed,
+            routes=routes,
+            route_loads=route_loads,
+            route_costs=route_costs,
+            num_vehicles=len(routes),
+            objective_cost=objective_cost,
+            problem_type=routing_problem.problem_type,
+            matrix_kind=routing_problem.matrix.kind,
+        )
+    return executor
+
+
+def _disability_types_from_demands(demands):
+    out = []
+    for demand in demands:
+        vector = list(demand) if isinstance(demand, (list, tuple)) else [0, int(demand)]
+        out.append("Sw" if len(vector) > 1 and int(vector[0]) > 0 else "So")
+    return out
+
+
+def _sw_so_capacities(capacities):
+    caps = list(capacities or [4, 5])
+    if len(caps) == 1:
+        return 0, int(caps[0])
+    return int(caps[0]), int(caps[1])
+
+
+def _coordinates_for_holistic(routing_problem):
+    coords = list(routing_problem.coordinates or [])
+    if not coords:
+        coords = [(float(idx), 0.0) for idx in range(routing_problem.dimension)]
+    return [{"lat": float(y), "lng": float(x)} for x, y in coords]
+
+
+def _route_costs(routes, matrix, depot_index):
+    costs = []
+    for route in routes:
+        current = int(depot_index)
+        total = 0.0
+        for node in route:
+            total += float(matrix[current][node])
+            current = node
+        total += float(matrix[current][depot_index])
+        costs.append(total)
+    return costs
+
+
+_ROUTING_ALIAS_ENGINES = {
+    "Core-Greedy-Routing": "Core-Greedy-Routing",
+    "Core-TwoOpt-TSP": "Core-TwoOpt-TSP",
+    "Core-GA-TSP": "Core-GA-TSP",
+    "Core-PSO-TSP": "Core-PSO-TSP",
+    "Core-GWO-TSP": "Core-GWO-TSP",
+    "Core-HHO-TSP": "Core-HHO-TSP",
+    "Numba-2-opt": "Core-TwoOpt-TSP",
+    "Numba-3-opt-bounded": "Core-TwoOpt-TSP",
+    "Numba-Or-opt": "Core-TwoOpt-TSP",
+    "Numba-Swap": "Core-TwoOpt-TSP",
+    "Numba-Hybrid": "Core-TwoOpt-TSP",
+    "Numba-GA": "Core-GA-TSP",
+    "Numba-PSO": "Core-PSO-TSP",
+    "Numba-GWO": "Core-GWO-TSP",
+    "Numba-HHO": "Core-HHO-TSP",
+    "GA-Split": "Core-GA-TSP",
+    "PSO-Split": "Core-PSO-TSP",
+    "GWO-Split": "Core-GWO-TSP",
+    "HHO-Split": "Core-HHO-TSP",
+}
+
+for problem_prefix in ("CVRP", "CVRPTW"):
+    for base_name, engine_name in _ROUTING_ALIAS_ENGINES.items():
+        alias = f"{problem_prefix}-{base_name}"
+        AlgorithmRegistry.register(alias)(_make_routing_alias_executor(alias, engine_name))
+    for solver_name in ("OR-Tools", "PyVRP", "VROOM"):
+        alias = f"{problem_prefix}-{solver_name}"
+        AlgorithmRegistry.register(alias)(_make_holistic_routing_executor(alias, solver_name))
 
 logger.info("Loaded %d algorithms.", len(AlgorithmRegistry.list_algorithms()))

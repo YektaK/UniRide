@@ -155,6 +155,109 @@ NUMBA_PARAM_SPACES: Dict[str, Dict[str, Dict[str, Any]]] = {
 }
 
 
+# ── Routing Problem Parameter Spaces ─────────────────────────────────────────
+
+ROUTING_SPLIT_PARAM_SPACE: Dict[str, Dict[str, Any]] = {
+    "split_method": {
+        "type": "categorical",
+        "doe": ["optimal_split"],
+        "optuna": ["optimal_split"],
+    },
+    "vehicle_penalty": {
+        "type": "float",
+        "doe": [25.0, 50.0, 100.0],
+        "optuna": (10.0, 150.0),
+    },
+    "capacity_penalty": {
+        "type": "float",
+        "doe": [100.0, 500.0, 1000.0],
+        "optuna": (50.0, 2000.0),
+    },
+    "tw_penalty_rate": {
+        "type": "float",
+        "doe": [5.0, 10.0, 25.0],
+        "optuna": (1.0, 50.0),
+    },
+    "max_route_duration_penalty": {
+        "type": "float",
+        "doe": [5.0, 10.0, 25.0],
+        "optuna": (1.0, 50.0),
+    },
+    "max_stops_bounded": {
+        "type": "int",
+        "doe": [10, 15, 20],
+        "optuna": (5, 30),
+    },
+}
+
+
+def _with_routing_params(base: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Dict[str, Any]]:
+    params: Dict[str, Dict[str, Any]] = {}
+    if base:
+        params.update({key: value.copy() for key, value in base.items()})
+    params.update({key: value.copy() for key, value in ROUTING_SPLIT_PARAM_SPACE.items()})
+    return params
+
+
+_SOTA_ROUTING_BASES = {
+    name: SOTA_PARAM_SPACES[name]
+    for name in [
+        "E2BSO-TSP",
+        "R2DMA-TSP",
+        "P-AOEA-TSP",
+        "CGO-TSP",
+        "RUN-TSP",
+        "ALNS-TSP",
+    ]
+}
+
+_NUMBA_ROUTING_BASES = {
+    "Numba-2-opt": NUMBA_PARAM_SPACES.get("3-OPT-BOUNDED", {}),
+    "Numba-3-opt-bounded": NUMBA_PARAM_SPACES.get("3-OPT-BOUNDED", {}),
+    "Numba-Or-opt": NUMBA_PARAM_SPACES.get("3-OPT-BOUNDED", {}),
+    "Numba-Swap": NUMBA_PARAM_SPACES.get("3-OPT-BOUNDED", {}),
+    "Numba-Hybrid": NUMBA_PARAM_SPACES.get("3-OPT-BOUNDED", {}),
+    "Numba-GA": NUMBA_PARAM_SPACES["GA"],
+    "Numba-PSO": NUMBA_PARAM_SPACES["PSO"],
+    "Numba-GWO": NUMBA_PARAM_SPACES["GWO"],
+    "Numba-HHO": NUMBA_PARAM_SPACES["HHO"],
+    "Core-Greedy-Routing": {},
+    "Core-TwoOpt-TSP": NUMBA_PARAM_SPACES.get("3-OPT-BOUNDED", {}),
+    "Core-GA-TSP": NUMBA_PARAM_SPACES["GA"],
+    "Core-PSO-TSP": NUMBA_PARAM_SPACES["PSO"],
+    "Core-GWO-TSP": NUMBA_PARAM_SPACES["GWO"],
+    "Core-HHO-TSP": NUMBA_PARAM_SPACES["HHO"],
+}
+
+CVRP_PARAM_SPACES: Dict[str, Dict[str, Dict[str, Any]]] = {}
+CVRPTW_PARAM_SPACES: Dict[str, Dict[str, Dict[str, Any]]] = {}
+
+for base_name, base_space in _SOTA_ROUTING_BASES.items():
+    for prefix in ("SOTA-", ""):
+        name = f"{prefix}{base_name}"
+        CVRP_PARAM_SPACES[f"CVRP-{name}"] = _with_routing_params(base_space)
+        CVRPTW_PARAM_SPACES[f"CVRPTW-{name}"] = _with_routing_params(base_space)
+
+for base_name, base_space in _NUMBA_ROUTING_BASES.items():
+    CVRP_PARAM_SPACES[f"CVRP-{base_name}"] = _with_routing_params(base_space)
+    CVRPTW_PARAM_SPACES[f"CVRPTW-{base_name}"] = _with_routing_params(base_space)
+
+SOTA_PARAM_SPACES.update(
+    {
+        key: value
+        for key, value in {**CVRP_PARAM_SPACES, **CVRPTW_PARAM_SPACES}.items()
+        if "SOTA-" in key or any(algo in key for algo in _SOTA_ROUTING_BASES)
+    }
+)
+NUMBA_PARAM_SPACES.update(
+    {
+        key: value
+        for key, value in {**CVRP_PARAM_SPACES, **CVRPTW_PARAM_SPACES}.items()
+        if key not in SOTA_PARAM_SPACES
+    }
+)
+
+
 # ── Builder Functions ────────────────────────────────────────────────────────
 
 def build_doe_space(algo_name: str, source: str = "sota") -> Dict[str, List[Any]]:
@@ -172,9 +275,12 @@ def build_optuna_space(algo_name: str, trial) -> Dict[str, Any]:
         optuna_range = val.get("optuna")
         if optuna_range is None:
             continue
-        lo, hi = optuna_range
         if val["type"] == "int":
+            lo, hi = optuna_range
             params[key] = trial.suggest_int(key, lo, hi)
         elif val["type"] == "float":
+            lo, hi = optuna_range
             params[key] = trial.suggest_float(key, lo, hi)
+        elif val["type"] in {"categorical", "bool"}:
+            params[key] = trial.suggest_categorical(key, optuna_range)
     return params

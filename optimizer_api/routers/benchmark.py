@@ -153,6 +153,28 @@ def get_academic_benchmark_results(
         raise HTTPException(status_code=503, detail=f"Academic benchmark results unavailable: {exc}")
 
 
+@router.get("/academic/problems")
+def get_academic_problems(
+    problem_type: Optional[str] = Query(None, description="Filter by problem type"),
+    category: Optional[str] = Query(None, description="Filter by problem category"),
+    max_dim: int = Query(0, ge=0, description="Maximum dimension; 0 means no limit"),
+    limit: int = Query(1000, ge=1, le=5000, description="Maximum rows to return"),
+) -> Dict:
+    """Read-only academic problem inventory backed by SQLite."""
+    try:
+        from academic_benchmark.results_reader import get_academic_problems as _get_problems
+
+        return _get_problems(
+            problem_type=problem_type,
+            category=category,
+            max_dim=max_dim,
+            limit=limit,
+        )
+    except Exception as exc:
+        logger.exception("Academic problems query failed")
+        raise HTTPException(status_code=503, detail=f"Academic problems unavailable: {exc}")
+
+
 @router.get("/problems")
 def list_benchmark_problems(category: Optional[str] = Query(None, description="Filter by category")) -> List[Dict]:
     problems = get_tsplib_problems()

@@ -92,6 +92,24 @@ def test_convert_cli_record_to_web_preserves_routing_fields():
     assert converted["metadata"]["tw_violations"] == 1
 
 
+def test_academic_problems_endpoint_returns_reader_payload(monkeypatch):
+    monkeypatch.setattr(
+        "academic_benchmark.results_reader.get_academic_problems",
+        lambda **kwargs: {"source": "academic_db", "count": 1, "results": [{"name": "tiny"}], "kwargs": kwargs},
+    )
+
+    result = benchmark.get_academic_problems(problem_type="cvrp", category="synthetic", max_dim=10, limit=5)
+
+    assert result["source"] == "academic_db"
+    assert result["count"] == 1
+    assert result["kwargs"] == {
+        "problem_type": "cvrp",
+        "category": "synthetic",
+        "max_dim": 10,
+        "limit": 5,
+    }
+
+
 def test_academic_benchmark_results_endpoint_uses_results_reader(monkeypatch):
     monkeypatch.setattr(
         "academic_benchmark.results_reader.get_benchmark_rows",

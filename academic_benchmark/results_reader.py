@@ -10,6 +10,7 @@ from typing import Dict, List, Optional
 
 from academic_benchmark.tsplib_manager import (
     DB_PATH,
+    get_all_problems,
     get_best_solution,
     query_benchmark_results,
     query_best_solutions,
@@ -86,6 +87,30 @@ def get_benchmark_rows(
     }
 
 
+def get_academic_problems(
+    problem_type: Optional[str] = None,
+    category: Optional[str] = None,
+    max_dim: int = 0,
+    limit: int = 1000,
+    db_path: str = DB_PATH,
+) -> Dict[str, object]:
+    """Read academic problem inventory from SQLite source-of-truth."""
+    safe_limit = max(1, min(int(limit), 5000))
+    rows = get_all_problems(db_path=db_path, max_dim=max(0, int(max_dim)), exclude_explicit=False)
+    if problem_type:
+        requested_type = problem_type.lower()
+        rows = [row for row in rows if str(row.get("problem_type", "")).lower() == requested_type]
+    if category:
+        rows = [row for row in rows if row.get("category") == category]
+
+    return {
+        "source": "academic_db",
+        "count": min(len(rows), safe_limit),
+        "limit": safe_limit,
+        "results": [_normalize_problem_row(row) for row in rows[:safe_limit]],
+    }
+
+
 def _normalize_benchmark_row(row: Dict[str, str]) -> Dict[str, object]:
     return {
         "timestamp": row.get("timestamp"),
@@ -106,6 +131,32 @@ def _normalize_benchmark_row(row: Dict[str, str]) -> Dict[str, object]:
         "route_costs": _json_or_none(row.get("route_costs_json")),
         "params": _json_or_none(row.get("params_json")),
         "gap_type": row.get("gap_type") or "unknown",
+    }
+
+
+def _normalize_problem_row(row: Dict[str, object]) -> Dict[str, object]:
+    demands = row.get("demands")
+    capacities = row.get("capacities")
+    time_windows = row.get("time_windows")
+    service_times = row.get("service_times")
+    return {
+        "name": row.get("name"),
+        "dimension": _int_or_none(row.get("dimension")),
+        "optimal": _float_or_none(row.get("optimal")),
+        "category": row.get("category"),
+        "edge_weight_type": row.get("edge_weight_type"),
+        "problem_type": str(row.get("problem_type") or "tsp").lower(),
+        "matrix_kind": row.get("matrix_kind") or "distance",
+        "has_coordinates": bool(row.get("coordinates")),
+        "has_matrix": bool(row.get("dist_matrix") is not None or row.get("time_matrix") is not None),
+        "has_demands": demands is not None,
+        "has_capacities": capacities is not None,
+        "has_time_windows": time_windows is not None,
+        "has_service_times": service_times is not None,
+        "num_vehicles": _int_or_none(row.get("num_vehicles")),
+        "direction": row.get("direction"),
+        "depot_index": _int_or_none(row.get("depot_index")),
+        "max_route_duration": _float_or_none(row.get("max_route_duration")),
     }
 
 
@@ -138,4 +189,9 @@ def _json_or_none(value):
         return None
 
 
-__all__: List[str] = ["get_leaderboard", "get_best_result", "get_benchmark_rows"]
+__all__: List[str] = [
+    "get_academic_problems",
+    "get_leaderboard",
+    "get_best_result",
+    "get_benchmark_rows",
+]

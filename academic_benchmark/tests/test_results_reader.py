@@ -1,7 +1,12 @@
 import csv
 import json
 
-from academic_benchmark.results_reader import get_benchmark_rows, get_best_result, get_leaderboard
+from academic_benchmark.results_reader import (
+    get_academic_problems,
+    get_benchmark_rows,
+    get_best_result,
+    get_leaderboard,
+)
 from academic_benchmark.tsplib_manager import get_db, init_db, save_best_solution
 from academic_benchmark.tsplib_manager import save_benchmark_result, save_benchmark_run
 
@@ -142,3 +147,34 @@ def test_query_benchmark_results_filters_rows(tmp_path):
     assert len(rows) == 1
     assert rows[0]["problem"] == "p2"
     assert rows[0]["algorithm"] == "B"
+
+
+def test_results_reader_returns_academic_problem_inventory(tmp_path):
+    db_path = str(tmp_path / "tsplib.db")
+    conn = get_db(db_path)
+    init_db(conn)
+    conn.execute(
+        "INSERT INTO problems (name, dimension, optimal, category, edge_weight_type, problem_type) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        ("tiny-cvrp", 4, None, "synthetic", "EXPLICIT", "CVRP"),
+    )
+    conn.execute(
+        "INSERT INTO routing_constraints "
+        "(problem_name, demands_json, capacities_json, time_windows_json, service_times_json, "
+        "depot_index, max_route_duration, matrix_kind, direction, num_vehicles, metadata_json) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        ("tiny-cvrp", "[0,1,2,3]", "[4]", None, None, 0, None, "distance", "pickup", 1, "{}"),
+    )
+    conn.commit()
+    conn.close()
+
+    result = get_academic_problems(problem_type="cvrp", db_path=db_path)
+
+    assert result["source"] == "academic_db"
+    assert result["count"] == 1
+    row = result["results"][0]
+    assert row["name"] == "tiny-cvrp"
+    assert row["problem_type"] == "cvrp"
+    assert row["has_demands"] is True
+    assert row["has_capacities"] is True
+    assert row["num_vehicles"] == 1

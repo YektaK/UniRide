@@ -416,7 +416,10 @@ application can start when one of these packages is missing on another machine.
 
 **File:** `academic_benchmark/cvrplib_manager.py` (NEW — ~450 lines)
 
-Mirrors `tsplib_manager.py` structure exactly.
+Implemented as a facade over the unified academic SQLite schema, not as a
+second CVRP-only database. It exposes file/text import helpers, CVRP/CVRPTW
+listing, legacy `ProblemInstance` conversion, and a small CLI:
+`python -m academic_benchmark.cvrplib_manager <import|list|status>`.
 
 **Directory layout:**
 ```
@@ -485,16 +488,15 @@ CREATE TABLE IF NOT EXISTS cvrp_best_solutions (
 
 | Function | Description |
 |:---------|:-----------|
-| `download_cvrplib_instances(datasets, max_dimension, force)` | Download .vrp and .sol files using `vrplib.download()` |
-| `download_solomon_instances(types, force)` | Download Solomon VRPTW instances |
-| `cmd_extract(args)` | Parse downloaded files → SQLite DB. Use `vrplib.read_instance()` and `vrplib.read_solution()` |
-| `cmd_compute_dm(args)` | Compute and cache distance matrices (zlib-compressed int32) |
-| `cmd_status(args)` | Print DB statistics |
-| `get_cvrp_problems(db_path, max_dim, dataset, problem_type)` | Return list of problem dicts (coords, demands, time_windows) |
-| `get_cvrp_distance_matrix(problem_name, db_path)` | Load cached n×n int32 matrix |
-| `get_cvrp_problem_as_instance(problem_name, db_path)` | Return as `ProblemInstance` — the bridge to engine system |
+| `import_cvrplib_text()` / `import_cvrplib_file()` | Parse and store CVRPLIB CVRP instances through unified academic storage |
+| `import_solomon_text()` / `import_solomon_file()` | Parse and store Solomon CVRPTW instances through unified academic storage |
+| `import_cvrp_paths(paths)` | Import supported `.vrp`, `.txt`, and `.solomon` files from files/directories |
+| `load_cvrp_problem(name)` | Load a CVRP/CVRPTW problem as a core `RoutingProblem` |
+| `get_cvrp_problems(db_path, max_dim, as_legacy)` | Return stored CVRP/CVRPTW rows, optionally as legacy `ProblemInstance` objects |
+| `get_cvrp_problem_as_instance(problem_name, db_path)` | Return one CVRP/CVRPTW problem as legacy `ProblemInstance` |
+| `summarize_cvrp_store()` | Print/count stored CVRP/CVRPTW problems |
 
-**CLI entry point:** `python academic_benchmark/cvrplib_manager.py <download|extract|compute-dm|status|download-solomon>`
+**CLI entry point:** `python -m academic_benchmark.cvrplib_manager <import|list|status>`
 
 **BKS Dictionary:** Include `CVRP_BKS` dict with known optimal values for Augerat A/B, CMT, and Solomon instances. Fetch complete values from CVRPLIB website or from `.sol` files.
 
@@ -946,7 +948,7 @@ suite runnable end-to-end first, then return to production hardening.
 
 | Order | Task | Phase | Dependency | Notes |
 |:------|:-----|:------|:-----------|:------|
-| 1 | Broad CVRPLIB/Solomon import and benchmark execution | 3.2 / 3.3 | Depends on verified optional deps and seeded smoke path | Smoke coverage exists. Next step is importing real dataset families and running CVRP/CVRPTW benchmark batches through SQLite source-of-truth. |
+| 1 | Broad CVRPLIB/Solomon import and benchmark execution | 3.2 / 3.3 | Depends on verified optional deps, seeded smoke path, and local/downloaded instance files | Import CLI is available. Next step is acquiring real `.vrp`/Solomon files, importing dataset families, and running CVRP/CVRPTW benchmark batches through SQLite source-of-truth. |
 | 2 | Holistic solver comparison pass | 3.3 / 4.2 | Depends on task 1 and optional solver availability | Run OR-Tools, PyVRP, and VROOM on comparable CVRP/CVRPTW instances; record infeasible/unsupported cases explicitly rather than hiding them. |
 | 3 | Additional controlled FCM-SRS validation | Phase 6 candidate | Independent after current controlled runs | DONE for first controlled pass on 144-node GA/PSO and 256-node PSO. Continue only if targeting FCM promotion; add more seeds, dimensions, and real TSPLIB-style instances before promoting. |
 | 4 | Promotion-quality config generation | 4.1 / 4.2 | Depends on tasks 1-2 | Existing promotion manager works; rerun after real benchmark data is populated so generated configs are based on meaningful CVRP/CVRPTW evidence. |
@@ -973,6 +975,7 @@ Completed today:
 - Task 13: SOTA Euclidean helper consolidation completed. `BaseTSPSolver.euclidean_distance()` now delegates to the canonical raw `euclidean_distance_2d` helper and regression tests cover direct coordinate matrix construction.
 - Task 14: DataLoader ownership cleanup completed. `optimizer_api.utils.data_loader` remains app-owned because it owns Supabase credentials, cache TTL, and request-time matrix glue; its fallback Euclidean/haversine matrix helpers now use canonical `uniride_core.algorithms.distance` functions.
 - Task 9: FCM-SRS large-TSP research extension implemented as a research preview. `FCMSplitMatrixEngine` lives in `uniride_core`, `FCM-GA/PSO/GWO/HHO-TSP` are available in the core factory and academic registry, and DoE/Optuna parameter spaces include FCM controls. Added `academic_benchmark.run_fcm_srs_comparison` as a repeatable SQLite validation gate with CLI runtime controls. Local run `fcm-srs-comparison-20260601` completed with 2 saved results and no errors; `Core-GA-TSP` beat `FCM-GA-TSP` on the 24-node synthetic smoke. Local run `fcm-srs-default-20260601` completed with 4 saved results and no errors on 36 nodes; `FCM-GA-TSP` slightly beat `Core-GA-TSP`, while `Core-PSO-TSP` beat `FCM-PSO-TSP`. Local run `fcm-srs-medium-20260601` completed with 4 saved results and no errors on 100 nodes; pure core GA/PSO remained slightly better. A 500-node paired pure-vs-FCM run timed out before persisting rows, but FCM-only `fcm-srs-large-fcm-pso-only-20260601` completed with 1 saved result and no errors, showing large-instance feasibility for the split path. Controlled run `fcm-srs-controlled-144-20260601` completed with 4 saved results and no errors using population 8, max iterations 5, and FCM polish 10: `FCM-GA-TSP` improved objective/runtime versus `Core-GA-TSP` (328.416 vs 348.220; 7.6s vs 36.8s), and `FCM-PSO-TSP` slightly improved objective versus `Core-PSO-TSP` with similar runtime (346.743 vs 349.776; 4.3s vs 4.2s). Controlled run `fcm-srs-controlled-256-pso-20260601` completed with 2 saved results and no errors: `FCM-PSO-TSP` was effectively tied on objective and somewhat faster than `Core-PSO-TSP` (384.194 vs 384.216; 31.0s vs 35.5s). Promotion still requires multi-seed and real benchmark-family validation.
+- Task 15: CVRPLIB/Solomon facade CLI added. `python -m academic_benchmark.cvrplib_manager status` works against the local academic DB and reports the current smoke CVRP/CVRPTW counts (`total=2`, `CVRP=1`, `CVRPTW=1`). `import` supports supported files/directories without creating a second schema.
 
 Recommended next task: run controlled SQLite academic comparisons of `FCM-*` versus pure `Core-*` solvers on medium/large TSP instances before considering any promotion.
 

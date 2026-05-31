@@ -1,9 +1,11 @@
 from academic_benchmark.cvrplib_manager import (
     get_cvrp_problem_as_instance,
     get_cvrp_problems,
+    import_cvrp_paths,
     import_cvrplib_text,
     import_solomon_text,
     load_cvrp_problem,
+    summarize_cvrp_store,
 )
 
 
@@ -68,3 +70,29 @@ def test_solomon_facade_uses_unified_storage(tmp_path):
     assert loaded.problem_type == "cvrptw"
     assert loaded.constraints.time_windows == [(0, 1000), (10, 50), (20, 70)]
     assert [row["name"] for row in rows] == ["R101"]
+
+
+def test_import_cvrp_paths_imports_supported_files_from_directory(tmp_path):
+    db_path = str(tmp_path / "academic.db")
+    input_dir = tmp_path / "instances"
+    input_dir.mkdir()
+    (input_dir / "tiny-cvrp.vrp").write_text(CVRPLIB_TEXT, encoding="utf-8")
+    (input_dir / "R101.txt").write_text(SOLOMON_TEXT, encoding="utf-8")
+    (input_dir / "ignore.md").write_text("not a routing instance", encoding="utf-8")
+
+    result = import_cvrp_paths([input_dir], db_path=db_path)
+
+    assert result == {"imported": ["R101", "tiny-cvrp"], "skipped": ["ignore.md"]}
+    rows = get_cvrp_problems(db_path=db_path)
+    assert [row["problem_type"] for row in rows] == ["CVRPTW", "CVRP"]
+
+
+def test_summarize_cvrp_store_counts_cvrp_and_cvrptw(tmp_path):
+    db_path = str(tmp_path / "academic.db")
+    import_cvrplib_text(CVRPLIB_TEXT, db_path=db_path)
+    import_solomon_text(SOLOMON_TEXT, db_path=db_path)
+
+    summary = summarize_cvrp_store(db_path=db_path)
+
+    assert summary["total"] == 2
+    assert summary["by_type"] == {"CVRP": 1, "CVRPTW": 1}

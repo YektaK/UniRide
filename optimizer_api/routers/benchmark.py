@@ -58,7 +58,28 @@ def _academic_param_spaces() -> Dict[str, Dict[str, Dict[str, Any]]]:
                 key: {**spec, "source": source}
                 for key, spec in raw_space.items()
             }
+    _add_param_space_aliases(spaces, {
+        "e2bso": "E2BSO-TSP",
+        "entropy_bso": "E2BSO-TSP",
+        "e2b": "E2BSO-TSP",
+        "r2dma": "R2DMA-TSP",
+        "rdma": "R2DMA-TSP",
+        "paoea": "P-AOEA-TSP",
+        "aoea": "P-AOEA-TSP",
+    })
     return spaces
+
+
+def _add_param_space_aliases(
+    spaces: Dict[str, Dict[str, Dict[str, Any]]],
+    aliases: Dict[str, str],
+) -> None:
+    for alias, canonical in aliases.items():
+        if alias not in spaces and canonical in spaces:
+            spaces[alias] = {
+                key: {**spec, "alias_of": canonical}
+                for key, spec in spaces[canonical].items()
+            }
 
 
 def _strategy_param_spaces() -> Dict[str, Dict[str, Dict[str, Any]]]:

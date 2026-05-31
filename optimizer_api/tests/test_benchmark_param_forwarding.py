@@ -1,4 +1,5 @@
 from optimizer_api.benchmark_runner import BenchmarkRunner
+from optimizer_api.routers.benchmark import _academic_param_spaces
 
 
 class DummyRequest:
@@ -47,3 +48,12 @@ def test_benchmark_params_forward_to_sota_config():
 
     assert request.local_search_type == "or_opt"
     assert request.sota_config == {"population_size": 12, "max_iterations": 20}
+
+
+def test_academic_param_spaces_include_web_sota_aliases():
+    spaces = _academic_param_spaces()
+
+    for alias in ("e2bso", "r2dma", "paoea"):
+        assert alias in spaces
+        assert "population_size" in spaces[alias]
+        assert spaces[alias]["population_size"]["source"] == "sota"

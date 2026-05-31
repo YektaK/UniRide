@@ -54,6 +54,28 @@ FCM_TSP_SOLVERS: Dict[str, TSPSolver] = {
     "FCM-HHO-TSP": solve_hho_tsp,
 }
 
+SPLIT_TSP_COMPAT_SOLVERS: Dict[str, TSPSolver] = {
+    "GA-Split": solve_ga_tsp,
+    "PSO-Split": solve_pso_tsp,
+    "GWO-Split": solve_gwo_tsp,
+    "HHO-Split": solve_hho_tsp,
+}
+
+SPLIT_TSP_COMPAT_ALIASES = {
+    "GA-Split": "GA-Split",
+    "ga_split": "GA-Split",
+    "ga-split": "GA-Split",
+    "PSO-Split": "PSO-Split",
+    "pso_split": "PSO-Split",
+    "pso-split": "PSO-Split",
+    "GWO-Split": "GWO-Split",
+    "gwo_split": "GWO-Split",
+    "gwo-split": "GWO-Split",
+    "HHO-Split": "HHO-Split",
+    "hho_split": "HHO-Split",
+    "hho-split": "HHO-Split",
+}
+
 
 def canonical_matrix_engine_name(name: str) -> str:
     """Return the canonical core matrix-native engine name for an alias."""
@@ -61,6 +83,8 @@ def canonical_matrix_engine_name(name: str) -> str:
         return CORE_GREEDY_ALIASES[name]
     if name in CORE_TSP_ALIASES:
         return CORE_TSP_ALIASES[name]
+    if name in SPLIT_TSP_COMPAT_ALIASES:
+        return SPLIT_TSP_COMPAT_ALIASES[name]
     raise KeyError(name)
 
 
@@ -71,6 +95,8 @@ def create_matrix_engine(name: str) -> UnifiedEngine:
         return GreedyMatrixEngine()
     if canonical_name in FCM_TSP_SOLVERS:
         return FCMSplitMatrixEngine(canonical_name, FCM_TSP_SOLVERS[canonical_name])
+    if canonical_name in SPLIT_TSP_COMPAT_SOLVERS:
+        return TSPMetaMatrixEngine(canonical_name, SPLIT_TSP_COMPAT_SOLVERS[canonical_name])
     if canonical_name in CORE_TSP_SOLVERS:
         return TSPMetaMatrixEngine(canonical_name, CORE_TSP_SOLVERS[canonical_name])
     raise KeyError(name)
@@ -78,7 +104,12 @@ def create_matrix_engine(name: str) -> UnifiedEngine:
 
 def list_matrix_engine_names() -> list[str]:
     """List canonical core matrix-native engine names."""
-    return ["Core-Greedy-Routing", *CORE_TSP_SOLVERS.keys(), *FCM_TSP_SOLVERS.keys()]
+    return [
+        "Core-Greedy-Routing",
+        *CORE_TSP_SOLVERS.keys(),
+        *FCM_TSP_SOLVERS.keys(),
+        *SPLIT_TSP_COMPAT_SOLVERS.keys(),
+    ]
 
 
 __all__ = [
@@ -86,6 +117,8 @@ __all__ = [
     "CORE_TSP_ALIASES",
     "CORE_TSP_SOLVERS",
     "FCM_TSP_SOLVERS",
+    "SPLIT_TSP_COMPAT_ALIASES",
+    "SPLIT_TSP_COMPAT_SOLVERS",
     "canonical_matrix_engine_name",
     "create_matrix_engine",
     "list_matrix_engine_names",

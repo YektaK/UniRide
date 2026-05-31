@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Dict, List
 
-from models.schemas import Direction, OptimizationRequest, VehicleRoute
+from models.schemas import OptimizationRequest, TripDirection, VehicleRoute
 from utils.constants import DEFAULT_TRAVEL_FALLBACK_MINUTES
 
 
@@ -34,7 +34,7 @@ def calculate_scheduled_times(
 
         arrival_times = {}
 
-        if request.direction == Direction.PICKUP:
+        if request.direction == TripDirection.PICKUP:
             target_minutes = None
             for loc in reversed(locations):
                 if loc in time_windows:

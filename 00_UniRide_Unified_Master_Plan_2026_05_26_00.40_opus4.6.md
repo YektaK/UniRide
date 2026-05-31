@@ -943,7 +943,7 @@ suite runnable end-to-end first, then return to production hardening.
 | 9 | Implement FCM-SRS large-TSP research extension | Phase 6 candidate | Depends on tasks 1-8 | Use the corrected core-first roadmap above. This is not required for today's academic suite, but it belongs in the benchmark research backlog. |
 | 10 | Fix frontend typecheck failure | Review follow-up | Independent, non-academic | Repair malformed JSX in `src/app/(app)/admin/vehicle-planning/page.tsx` so full `npm run typecheck` is green. |
 | 11 | PSO/HHO rng cleanup | Review follow-up | Independent | DONE: removed instance-level RNG from production wrappers; request-local/core RNG behavior is preserved. |
-| 12 | Direction enum rename | Review follow-up | Depends on API compatibility care | Introduce `TripDirection`, keep `Direction = TripDirection` alias until v5 cleanup. |
+| 12 | Direction enum rename | Review follow-up | Depends on API compatibility care | DONE: introduced API-level `TripDirection`; kept `Direction = TripDirection` alias for backward compatibility. |
 | 13 | SOTA Euclidean helper consolidation | Review follow-up | Independent | Replace duplicate static method with canonical `euclidean_distance_2d`. |
 | 14 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After academic readiness | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue or whether a core adapter owns more of it. |
 
@@ -961,8 +961,9 @@ Completed today:
 - Task 8: CVRP/CVRPTW dashboard polish added. Dashboard utilities now derive dataset family, routing feasibility, constraint status, and vehicle gap; the Streamlit dashboard has a dedicated routing diagnostics tab.
 - Task 10: frontend typecheck failure fixed. `src/app/(app)/admin/vehicle-planning/page.tsx` had a corrupted student-selection JSX block; `npm run typecheck` now passes.
 - Task 11: PSO/HHO rng cleanup completed. `pso_strategy.py` and `hho_strategy.py` no longer keep `self.rng`; PSO legacy helpers use local RNG instances and active optimization keeps per-request RNG forwarding into `uniride_core`.
+- Task 12: Direction enum rename completed. `optimizer_api.models.schemas.TripDirection` is now the canonical API enum and `Direction = TripDirection` remains as a compatibility alias for existing callers/tests.
 
-Recommended next task: **Task 9, implement FCM-SRS large-TSP research extension**, if academic research features remain the priority. Otherwise move to **Task 12, Direction enum rename**, because it is the next contained review-follow-up and needs careful compatibility aliases.
+Recommended next task: **Task 9, implement FCM-SRS large-TSP research extension**, if academic research features remain the priority. Otherwise move to **Task 13, SOTA Euclidean helper consolidation**, because it is the next independent review-follow-up.
 
 ---
 

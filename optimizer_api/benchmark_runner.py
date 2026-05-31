@@ -162,7 +162,7 @@ class BenchmarkRunner:
         fit in a single vehicle — producing a single tour comparable to TSPLIB optimal.
         """
         from models.schemas import (
-            OptimizationRequest, OptimizationMode, Direction,
+            OptimizationRequest, OptimizationMode, TripDirection,
             LocationNode, StudentNode
         )
         
@@ -218,7 +218,7 @@ class BenchmarkRunner:
             max_travel_time=max_travel,
             sw_capacity=capacity,
             so_capacity=capacity,
-            direction=Direction.PICKUP,
+            direction=TripDirection.PICKUP,
             use_time_windows=use_time_windows,
             mode=OptimizationMode.BENCHMARK,
             is_asymmetric=is_asymmetric

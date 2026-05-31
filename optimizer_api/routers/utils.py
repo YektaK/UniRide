@@ -2,7 +2,7 @@ from typing import List, Dict
 from fastapi import APIRouter, Query
 
 from models.schemas import (
-    TimeWindow, Direction, WeeklyScheduleEntry, StudentNode
+    TimeWindow, TripDirection, WeeklyScheduleEntry, StudentNode
 )
 from utils.time_window_extractor import TimeWindowExtractor
 
@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/v1", tags=["Utils"])
 @router.post("/extract-time-windows", response_model=Dict[str, TimeWindow])
 def extract_time_windows(
     entries: List[WeeklyScheduleEntry],
-    direction: Direction = Query(..., description="pickup or dropoff"),
+    direction: TripDirection = Query(..., description="pickup or dropoff"),
     target_day: str = Query(..., description="Day of week (monday, tuesday, etc.)"),
     window_minutes: int = Query(30, description="Time window size in minutes")
 ) -> Dict[str, TimeWindow]:

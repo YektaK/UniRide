@@ -3,9 +3,13 @@ from pydantic import BaseModel, Field, model_validator
 from enum import Enum
 
 # --- Enums ---
-class Direction(str, Enum):
+class TripDirection(str, Enum):
     PICKUP = "pickup"
     DROPOFF = "dropoff"
+
+
+# Backward-compatible alias. Prefer TripDirection in new optimizer_api code.
+Direction = TripDirection
 
 class DisabilityType(str, Enum):
     SW = "Sw"
@@ -75,7 +79,7 @@ class WeeklyScheduleEntry(BaseModel):
 class WeeklyScheduleRequest(BaseModel):
     entries: List[WeeklyScheduleEntry]
     target_day: str
-    direction: Direction
+    direction: TripDirection
 
 class RouteStep(BaseModel):
     location1: str
@@ -133,7 +137,7 @@ class OptimizationRequest(BaseModel):
     max_travel_time: int = 120
     sw_capacity: int = 4
     so_capacity: int = 5
-    direction: Direction = Direction.PICKUP
+    direction: TripDirection = TripDirection.PICKUP
     use_time_windows: bool = False
     target_time: Optional[str] = None
     offset_minutes: int = 15
@@ -244,9 +248,9 @@ class OptimizationRequest(BaseModel):
         for student in self.students:
             # Use pickup_time for PICKUP direction, dropoff_time for DROPOFF
             time_str = None
-            if self.direction == Direction.PICKUP and student.pickup_time:
+            if self.direction == TripDirection.PICKUP and student.pickup_time:
                 time_str = student.pickup_time
-            elif self.direction == Direction.DROPOFF and student.dropoff_time:
+            elif self.direction == TripDirection.DROPOFF and student.dropoff_time:
                 time_str = student.dropoff_time
             elif student.pickup_time:
                 time_str = student.pickup_time
@@ -260,7 +264,7 @@ class OptimizationRequest(BaseModel):
                     # Asymmetric windows based on direction:
                     # PICKUP: (target-30, target) — must arrive by target
                     # DROPOFF: (target, target+30) — can depart after target
-                    if self.direction == Direction.PICKUP:
+                    if self.direction == TripDirection.PICKUP:
                         time_windows[student.location_code] = TimeWindow(
                             earliest=max(0, total_minutes - 30),
                             latest=total_minutes,
@@ -283,7 +287,7 @@ class OptimizationResponse(BaseModel):
     total_duration_minutes: float = 0.0
     error_message: Optional[str] = None
     execution_time_seconds: float = 0.0
-    direction: Optional[Direction] = None
+    direction: Optional[TripDirection] = None
     time_windows_used: bool = False
     ie_data: Optional[IEResponseData] = None
     total_time_window_violations: Optional[int] = None
@@ -303,7 +307,7 @@ class CompareRequest(BaseModel):
     max_travel_time: int = 120
     sw_capacity: int = 4
     so_capacity: int = 5
-    direction: Direction = Direction.PICKUP
+    direction: TripDirection = TripDirection.PICKUP
     use_time_windows: bool = False
     algorithms: Optional[List[str]] = None
 

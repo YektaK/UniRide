@@ -57,7 +57,7 @@ class TestHaversine:
 
     @given(GEO_POINT, GEO_POINT)
     def test_reasonable_range(self, p1, p2):
-        EARTH_HALF_CIRC = 20_014_000
+        EARTH_HALF_CIRC = math.pi * 6_371_000
         assert haversine_distance(*p1, *p2) <= EARTH_HALF_CIRC + GEO_TOL
 
 

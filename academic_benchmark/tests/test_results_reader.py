@@ -67,7 +67,7 @@ def test_results_reader_returns_routing_benchmark_rows(tmp_path):
             "gap_type": "unknown",
         })
 
-    rows = get_benchmark_rows(results_dir=str(tmp_path), limit=10)
+    rows = get_benchmark_rows(results_dir=str(tmp_path), limit=10, prefer_db=False)
 
     assert rows["source"] == "academic_csv"
     assert rows["count"] == 1

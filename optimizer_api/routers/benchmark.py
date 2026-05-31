@@ -7,6 +7,7 @@ from typing import Any, List, Dict, Optional
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.params import Query as QueryParam
 
 from models.schemas import BenchmarkRunRequest, BenchmarkImportRequest
 from benchmark_runner import BenchmarkRunner, ProblemInstance, AlgorithmConfig
@@ -42,6 +43,11 @@ def _space_from_config(config: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
         for key, value in sorted(config.items())
         if isinstance(value, (bool, int, float, str))
     }
+
+
+def _query_value(value: Any) -> Any:
+    """Resolve FastAPI Query defaults when router functions are called directly."""
+    return value.default if isinstance(value, QueryParam) else value
 
 
 def _academic_param_spaces() -> Dict[str, Dict[str, Dict[str, Any]]]:
@@ -113,7 +119,11 @@ def get_academic_leaderboard(
     try:
         from academic_benchmark.results_reader import get_leaderboard
 
-        return get_leaderboard(algorithm=algorithm, category=category, limit=limit)
+        return get_leaderboard(
+            algorithm=_query_value(algorithm),
+            category=_query_value(category),
+            limit=_query_value(limit),
+        )
     except Exception as exc:
         logger.exception("Academic leaderboard query failed")
         raise HTTPException(status_code=503, detail=f"Academic DB unavailable: {exc}")
@@ -147,7 +157,7 @@ def get_academic_benchmark_results(
     try:
         from academic_benchmark.results_reader import get_benchmark_rows
 
-        return get_benchmark_rows(limit=limit)
+        return get_benchmark_rows(limit=_query_value(limit))
     except Exception as exc:
         logger.exception("Academic benchmark-results query failed")
         raise HTTPException(status_code=503, detail=f"Academic benchmark results unavailable: {exc}")
@@ -165,10 +175,10 @@ def get_academic_problems(
         from academic_benchmark.results_reader import get_academic_problems as _get_problems
 
         return _get_problems(
-            problem_type=problem_type,
-            category=category,
-            max_dim=max_dim,
-            limit=limit,
+            problem_type=_query_value(problem_type),
+            category=_query_value(category),
+            max_dim=_query_value(max_dim),
+            limit=_query_value(limit),
         )
     except Exception as exc:
         logger.exception("Academic problems query failed")

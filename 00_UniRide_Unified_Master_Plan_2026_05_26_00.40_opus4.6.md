@@ -957,8 +957,9 @@ Completed today:
 - Task 4: smoke seed utility added and executed locally. Real DB now has `smoke-tsp`, `smoke-atsp`, `smoke-cvrp`, `smoke-solomon`, and `smoke-uniride`.
 - Task 5: matrix-native academic smoke benchmark added and executed locally with run id `academic-matrix-smoke-20260531`; 5 results persisted, 0 errors.
 - Task 6: promotion manager dry-run and write completed locally; 26 configs generated from existing `best_solutions`, not smoke params. The generated JSON is ignored/untracked.
+- Task 7: web/API sanity path verified locally. Academic problem/result endpoints read from SQLite, param spaces expose editable params, and matrix-native web execution persisted run id `web-matrix-sanity-20260531-r2` with editable `Core-TwoOpt-TSP` params.
 
-Recommended next task: **Task 7, run quick web/API benchmark sanity path**, because the DB-backed academic benchmark path is now runnable end-to-end and should be checked through the web/API compatibility layer.
+Recommended next task: **Task 8, add dedicated CVRP/CVRPTW dashboard polish**, because the DB-backed academic benchmark and web/API sanity paths are now runnable end-to-end.
 
 ---
 

@@ -110,6 +110,26 @@ def test_academic_problems_endpoint_returns_reader_payload(monkeypatch):
     }
 
 
+def test_academic_problems_endpoint_direct_call_resolves_query_defaults(monkeypatch):
+    captured = {}
+
+    def fake_get_problems(**kwargs):
+        captured.update(kwargs)
+        return {"source": "academic_db", "count": 1, "results": [{"name": "tiny-cvrp"}]}
+
+    monkeypatch.setattr("academic_benchmark.results_reader.get_academic_problems", fake_get_problems)
+
+    result = benchmark.get_academic_problems(problem_type="cvrp", max_dim=10)
+
+    assert result["source"] == "academic_db"
+    assert captured == {
+        "problem_type": "cvrp",
+        "category": None,
+        "max_dim": 10,
+        "limit": 1000,
+    }
+
+
 def test_academic_benchmark_results_endpoint_uses_results_reader(monkeypatch):
     monkeypatch.setattr(
         "academic_benchmark.results_reader.get_benchmark_rows",
@@ -120,6 +140,18 @@ def test_academic_benchmark_results_endpoint_uses_results_reader(monkeypatch):
 
     assert result["source"] == "academic_csv"
     assert result["limit"] == 5
+
+
+def test_academic_benchmark_results_endpoint_direct_call_resolves_query_default(monkeypatch):
+    monkeypatch.setattr(
+        "academic_benchmark.results_reader.get_benchmark_rows",
+        lambda limit=100: {"source": "academic_db", "count": 0, "limit": limit, "results": []},
+    )
+
+    result = benchmark.get_academic_benchmark_results()
+
+    assert result["source"] == "academic_db"
+    assert result["limit"] == 100
 
 
 def test_matrix_native_benchmark_run_executes_and_persists(monkeypatch):

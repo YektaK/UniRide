@@ -5,7 +5,6 @@ Same interface as bildiri2026/core/base_solver.py so solvers are
 interchangeable in the benchmark runner.
 """
 
-import math
 import time
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Optional
@@ -17,6 +16,7 @@ except ImportError:
     _NUMPY_AVAILABLE = False
 
 from uniride_core.models import TSPResult
+from uniride_core.algorithms.distance import euclidean_distance_2d
 
 class BaseTSPSolver(ABC):
 
@@ -73,8 +73,7 @@ class BaseTSPSolver(ABC):
 
     @staticmethod
     def euclidean_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> float:
-        from uniride_core.algorithms.distance import tsplib_euc_2d_distance
-        return float(tsplib_euc_2d_distance(p1, p2))
+        return float(euclidean_distance_2d(p1, p2))
 
     def tour_length(self, tour: List[int]) -> float:
         if not tour or len(tour) < 2:

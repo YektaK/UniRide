@@ -944,7 +944,7 @@ suite runnable end-to-end first, then return to production hardening.
 | 10 | Fix frontend typecheck failure | Review follow-up | Independent, non-academic | Repair malformed JSX in `src/app/(app)/admin/vehicle-planning/page.tsx` so full `npm run typecheck` is green. |
 | 11 | PSO/HHO rng cleanup | Review follow-up | Independent | DONE: removed instance-level RNG from production wrappers; request-local/core RNG behavior is preserved. |
 | 12 | Direction enum rename | Review follow-up | Depends on API compatibility care | DONE: introduced API-level `TripDirection`; kept `Direction = TripDirection` alias for backward compatibility. |
-| 13 | SOTA Euclidean helper consolidation | Review follow-up | Independent | Replace duplicate static method with canonical `euclidean_distance_2d`. |
+| 13 | SOTA Euclidean helper consolidation | Review follow-up | Independent | DONE: SOTA base solver now delegates Euclidean coordinate distance to canonical `euclidean_distance_2d`; compatibility wrapper remains. |
 | 14 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After academic readiness | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue or whether a core adapter owns more of it. |
 
 ### Progress Update (2026-05-31)
@@ -962,8 +962,9 @@ Completed today:
 - Task 10: frontend typecheck failure fixed. `src/app/(app)/admin/vehicle-planning/page.tsx` had a corrupted student-selection JSX block; `npm run typecheck` now passes.
 - Task 11: PSO/HHO rng cleanup completed. `pso_strategy.py` and `hho_strategy.py` no longer keep `self.rng`; PSO legacy helpers use local RNG instances and active optimization keeps per-request RNG forwarding into `uniride_core`.
 - Task 12: Direction enum rename completed. `optimizer_api.models.schemas.TripDirection` is now the canonical API enum and `Direction = TripDirection` remains as a compatibility alias for existing callers/tests.
+- Task 13: SOTA Euclidean helper consolidation completed. `BaseTSPSolver.euclidean_distance()` now delegates to the canonical raw `euclidean_distance_2d` helper and regression tests cover direct coordinate matrix construction.
 
-Recommended next task: **Task 9, implement FCM-SRS large-TSP research extension**, if academic research features remain the priority. Otherwise move to **Task 13, SOTA Euclidean helper consolidation**, because it is the next independent review-follow-up.
+Recommended next task: **Task 9, implement FCM-SRS large-TSP research extension**, if academic research features remain the priority. Otherwise move to **Task 14, remaining DataLoader ownership cleanup**, which is broader and should start with an ownership audit before edits.
 
 ---
 

@@ -716,10 +716,16 @@ Implemented:
 
 **File:** `optimizer_api/strategies/__init__.py` (already in Phase 4)
 
-### Task 5.5: Scheduling Logic Extraction — PENDING
+### Task 5.5: Scheduling Logic Extraction — DONE
 
-**File:** `optimizer_api/utils/scheduling.py` (NEW)  
+**Files:** `optimizer_api/utils/scheduling.py`, `optimizer_api/tests/test_scheduling_utils.py`  
 Extract `_calculate_scheduled_times()` + `_minutes_to_time()` from `optimization.py`.
+
+Implemented:
+- `calculate_scheduled_times()` utility for pickup backward scheduling and dropoff forward scheduling.
+- `minutes_to_time()` clamped HH:MM conversion.
+- `optimization.py` imports the utility instead of owning scheduling internals.
+- Tests cover pickup, dropoff, and day-bound clamping behavior.
 
 ---
 
@@ -847,10 +853,9 @@ This list is the current execution queue after the completed core-first migratio
 | 1 | Install and pin `vrplib` | 3.1 | Independent | Needed only for direct CVRPLIB/Solomon download/parsing workflows. Current text import path works through `MatrixBuilder` + `tsplib_manager.py`, but `vrplib` is still the planned library-backed source importer. |
 | 2 | Decide CVRPLIB storage shape: keep integrated `tsplib_manager.py` path or add dedicated `cvrplib_manager.py` facade | 3.2 | Depends on Phase 2; blocks 3.4/3.6 polish | Current implementation stores CVRPLIB/Solomon text in the unified academic DB shape. If a dedicated manager is added, it should call the existing unified storage functions rather than introduce a separate DB truth. |
 | 3 | Add dedicated CVRP/CVRPTW dashboard polish | 3.6 | Depends on finalized CVRPLIB/Solomon importer | Optional follow-up: dataset-family grouping, BKS vehicle comparisons, and CVRP-specific LaTeX columns. |
-| 4 | Extract scheduling utility module | 5.5 | Independent | Move scheduling calculations from route response code into a reusable app/core boundary module if they remain production-critical. |
-| 5 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After task 4 or when touching wrappers | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue, or whether a core matrix/context adapter should own more of it. |
+| 4 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After task 4 or when touching wrappers | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue, or whether a core matrix/context adapter should own more of it. |
 
-Recommended next task: **Task 5.5, scheduling utility extraction**, because it is independent, production-critical, and keeps optimizer response logic thin.
+Recommended next task: **DataLoader ownership cleanup**, because most remaining solver-critical logic is already core-owned and this is the last notable app/core boundary decision.
 
 ---
 

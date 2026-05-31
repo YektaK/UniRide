@@ -20,6 +20,7 @@ from models.schemas import (
     OptimizationResponse,
 )
 from strategies.base_strategy import BaseRoutingStrategy
+from strategies.promoted_config_loader import get_promoted_params
 from strategies.sota_config_utils import merge_sota_config
 from strategies.sota_response_builder import build_single_route_response, build_sota_request_context
 from uniride_core.algorithms.sota_tsp import R2DMA_TSP, R2DMATSPConfig
@@ -41,7 +42,9 @@ class R2DMAStrategy(BaseRoutingStrategy):
     """
 
     def __init__(self, config: Optional[R2DMATSPConfig] = None):
-        self._config = config or R2DMATSPConfig(population_size=24, max_iterations=200)
+        default_config = config or R2DMATSPConfig(population_size=24, max_iterations=200)
+        promoted = {} if config is not None else get_promoted_params(("r2dma", "rdma"))
+        self._config = merge_sota_config(default_config, promoted)
 
     @property
     def name(self) -> str:

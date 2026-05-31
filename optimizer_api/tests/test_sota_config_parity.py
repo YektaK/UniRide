@@ -1,5 +1,11 @@
-from optimizer_api.models.schemas import OptimizationRequest
-from optimizer_api.strategies.sota_config_utils import merge_sota_config
+from models.schemas import OptimizationRequest
+from strategies.ebso_strategy import E2BSoStrategy
+from strategies.promoted_config_loader import (
+    PROMOTED_CONFIG_PATH_ENV,
+    clear_promoted_config_cache,
+    get_promoted_params,
+)
+from strategies.sota_config_utils import merge_sota_config
 from uniride_core.algorithms.sota_tsp import E2BSOTSPConfig, PAOEAConfig
 
 
@@ -44,3 +50,56 @@ def test_optimization_request_accepts_sota_config():
     )
 
     assert request.sota_config == {"population_size": 8, "max_iterations": 10}
+
+
+def test_promoted_params_load_from_runtime_config_path(tmp_path, monkeypatch):
+    path = tmp_path / "promoted_configs.json"
+    path.write_text(
+        """
+{
+  "schema_version": 1,
+  "source": "test",
+  "configs": [
+    {
+      "algorithm": "e2bso",
+      "problem_type": "tsp",
+      "matrix_kind": "distance",
+      "params": {"population_size": 12, "max_iterations": 14}
+    }
+  ]
+}
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(PROMOTED_CONFIG_PATH_ENV, str(path))
+    clear_promoted_config_cache()
+
+    assert get_promoted_params("e2bso") == {"population_size": 12, "max_iterations": 14}
+
+
+def test_sota_strategy_constructor_uses_promoted_params(tmp_path, monkeypatch):
+    path = tmp_path / "promoted_configs.json"
+    path.write_text(
+        """
+{
+  "schema_version": 1,
+  "source": "test",
+  "configs": [
+    {
+      "algorithm": "e2bso",
+      "problem_type": "tsp",
+      "matrix_kind": "distance",
+      "params": {"population_size": 12, "max_iterations": 14}
+    }
+  ]
+}
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(PROMOTED_CONFIG_PATH_ENV, str(path))
+    clear_promoted_config_cache()
+
+    strategy = E2BSoStrategy()
+
+    assert strategy._config.population_size == 12
+    assert strategy._config.max_iterations == 14

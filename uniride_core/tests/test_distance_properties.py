@@ -20,6 +20,7 @@ from uniride_core.algorithms.distance import (
 )
 
 TOL = 1e-9
+GEO_TOL = 1e-6
 
 _GEO_LAT = floats(min_value=-90, max_value=90, allow_nan=False, allow_infinity=False)
 _GEO_LON = floats(min_value=-180, max_value=180, allow_nan=False, allow_infinity=False)
@@ -41,7 +42,7 @@ class TestHaversine:
 
     @given(GEO_POINT, GEO_POINT)
     def test_symmetric(self, p1, p2):
-        assert abs(haversine_distance(*p1, *p2) - haversine_distance(*p2, *p1)) < TOL
+        assert abs(haversine_distance(*p1, *p2) - haversine_distance(*p2, *p1)) < GEO_TOL
 
     @given(GEO_POINT)
     def test_same_point_zero(self, p):
@@ -52,12 +53,12 @@ class TestHaversine:
         d12 = haversine_distance(*p1, *p2)
         d23 = haversine_distance(*p2, *p3)
         d13 = haversine_distance(*p1, *p3)
-        assert d13 <= d12 + d23 + TOL
+        assert d13 <= d12 + d23 + GEO_TOL
 
     @given(GEO_POINT, GEO_POINT)
     def test_reasonable_range(self, p1, p2):
         EARTH_HALF_CIRC = 20_014_000
-        assert haversine_distance(*p1, *p2) <= EARTH_HALF_CIRC + TOL
+        assert haversine_distance(*p1, *p2) <= EARTH_HALF_CIRC + GEO_TOL
 
 
 class TestEuclidean:

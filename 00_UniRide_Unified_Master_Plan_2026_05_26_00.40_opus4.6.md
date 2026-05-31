@@ -624,24 +624,26 @@ Implemented promotion workflow:
 - supports `--dry-run`, `--allow-empty-params`, `--db-path`, `--output`, and `--limit`,
 - exits non-zero with a validation message instead of writing empty promotion files.
 
-### Task 4.3: Update Strategy Registry — PARTIAL
+### Task 4.3: Update Strategy Registry — DONE
 
-**File:** `optimizer_api/strategies/__init__.py` (MODIFY)
+**Files:** `optimizer_api/strategies/__init__.py`, production wrappers, `promoted_config_loader.py`
 
 - DONE: add `STRATEGY_FACTORIES` for every compatibility registry key.
 - DONE: make `get_strategy()` return fresh strategy instances instead of reusing mutable singleton objects.
 - DONE: keep backward-compatible `STRATEGY_REGISTRY` for read-only lookups and optional dependency availability checks.
 - DONE: load promoted configs into SOTA strategy construction through fresh factories and request-local config merge.
-- REMAINING: decide whether non-SOTA wrappers should also consume promoted configs automatically, or only through web/request parameters.
+- DONE: non-SOTA wrappers consume promoted configs automatically as default-only constructor values; explicit constructor config and request-level configs still win.
+- DONE: academic parameter names (`pop_size`, `generations`, `pack_size`, `hawks`, etc.) are normalized to production wrapper keys.
 
-### Task 4.4: Simplify SOTA Wrappers — PARTIAL
+### Task 4.4: Simplify SOTA Wrappers — PARTIAL / PROMOTION COMPLETE
 
-**Files:** `ebso_strategy.py`, `rdma_strategy.py`, `aoea_strategy.py`, `sota_config_utils.py` (MODIFY/NEW)
+**Files:** `ebso_strategy.py`, `rdma_strategy.py`, `aoea_strategy.py`, `sota_config_utils.py`, non-SOTA strategy wrappers (MODIFY/NEW)
 
 - DONE: add request-level `sota_config` to `OptimizationRequest`.
 - DONE: add dataclass-safe SOTA config merge helper that ignores unknown keys and preserves typed tuple fields.
 - DONE: make E²BSO, R²DMA, and P-AOEA wrappers use request-local effective configs instead of mutating constructor configs.
 - DONE: load optional promoted config JSON via `UNIRIDE_PROMOTED_CONFIG_PATH` / default academic benchmark path.
+- DONE: GA/PSO/GWO/HHO, TwoOpt, and GA/PSO/GWO/HHO-Split wrappers load promoted defaults when no explicit constructor config is supplied.
 - REMAINING: optionally route these wrappers through `UnifiedEngine` once promoted config injection and native routing variants are fully wired.
 
 ### Task 4.5: Update Web Algorithm Constants — DONE
@@ -844,12 +846,11 @@ This list is the current execution queue after the completed core-first migratio
 |:------|:-----|:------|:-----------|:------|
 | 1 | Install and pin `vrplib` | 3.1 | Independent | Needed only for direct CVRPLIB/Solomon download/parsing workflows. Current text import path works through `MatrixBuilder` + `tsplib_manager.py`, but `vrplib` is still the planned library-backed source importer. |
 | 2 | Decide CVRPLIB storage shape: keep integrated `tsplib_manager.py` path or add dedicated `cvrplib_manager.py` facade | 3.2 | Depends on Phase 2; blocks 3.4/3.6 polish | Current implementation stores CVRPLIB/Solomon text in the unified academic DB shape. If a dedicated manager is added, it should call the existing unified storage functions rather than introduce a separate DB truth. |
-| 3 | Decide promoted config policy for non-SOTA wrappers | 4.3 / 4.4 | Depends on current SOTA injection behavior | SOTA wrappers consume promoted configs automatically. For GA/PSO/GWO/HHO and split wrappers, decide whether promotion should be automatic or only surfaced through web/request params. |
-| 4 | Add dedicated CVRP/CVRPTW dashboard polish | 3.6 | Depends on finalized CVRPLIB/Solomon importer | Optional follow-up: dataset-family grouping, BKS vehicle comparisons, and CVRP-specific LaTeX columns. |
-| 5 | Extract scheduling utility module | 5.5 | Independent | Move scheduling calculations from route response code into a reusable app/core boundary module if they remain production-critical. |
-| 6 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After task 4 or when touching wrappers | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue, or whether a core matrix/context adapter should own more of it. |
+| 3 | Add dedicated CVRP/CVRPTW dashboard polish | 3.6 | Depends on finalized CVRPLIB/Solomon importer | Optional follow-up: dataset-family grouping, BKS vehicle comparisons, and CVRP-specific LaTeX columns. |
+| 4 | Extract scheduling utility module | 5.5 | Independent | Move scheduling calculations from route response code into a reusable app/core boundary module if they remain production-critical. |
+| 5 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After task 4 or when touching wrappers | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue, or whether a core matrix/context adapter should own more of it. |
 
-Recommended next task: **Task 4.3/4.4, decide promoted config policy for non-SOTA wrappers**, because academic CVRP/CVRPTW registry coverage now reaches the executable core routes.
+Recommended next task: **Task 5.5, scheduling utility extraction**, because it is independent, production-critical, and keeps optimizer response logic thin.
 
 ---
 

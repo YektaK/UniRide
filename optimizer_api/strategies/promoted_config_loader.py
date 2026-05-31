@@ -14,6 +14,15 @@ from academic_benchmark.promoted_configs import (
 
 PROMOTED_CONFIG_PATH_ENV = "UNIRIDE_PROMOTED_CONFIG_PATH"
 
+ACADEMIC_TO_STRATEGY_PARAM_KEYS = {
+    "pop_size": "population_size",
+    "generations": "max_iterations",
+    "iterations": "max_iterations",
+    "elite_size": "elite_count",
+    "pack_size": "population_size",
+    "hawks": "population_size",
+}
+
 
 def get_promoted_config_path() -> str:
     return os.environ.get(PROMOTED_CONFIG_PATH_ENV, DEFAULT_PROMOTED_CONFIG_PATH)
@@ -49,6 +58,31 @@ def get_promoted_params(
     return {}
 
 
+def get_promoted_strategy_params(
+    algorithms: Iterable[str] | str,
+    *,
+    problem_type: str = "tsp",
+    matrix_kind: str = "distance",
+    path: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Return promoted params normalized for production strategy config dicts."""
+    params = get_promoted_params(
+        algorithms,
+        problem_type=problem_type,
+        matrix_kind=matrix_kind,
+        path=path,
+    )
+    return normalize_strategy_params(params)
+
+
+def normalize_strategy_params(params: Dict[str, Any]) -> Dict[str, Any]:
+    """Map academic benchmark parameter names to production strategy names."""
+    normalized: Dict[str, Any] = {}
+    for key, value in dict(params or {}).items():
+        normalized[ACADEMIC_TO_STRATEGY_PARAM_KEYS.get(key, key)] = value
+    return normalized
+
+
 def clear_promoted_config_cache() -> None:
     load_runtime_promoted_configs.cache_clear()
 
@@ -58,5 +92,7 @@ __all__ = [
     "clear_promoted_config_cache",
     "get_promoted_config_path",
     "get_promoted_params",
+    "get_promoted_strategy_params",
     "load_runtime_promoted_configs",
+    "normalize_strategy_params",
 ]

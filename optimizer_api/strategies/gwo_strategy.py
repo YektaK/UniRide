@@ -32,6 +32,7 @@ from uniride_core.algorithms.tsp_meta_engines import (
     solve_gwo_tsp,
     update_gwo_position,
 )
+from strategies.promoted_config_loader import get_promoted_strategy_params
 
 class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
     """
@@ -60,7 +61,10 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
     }
 
     def __init__(self, config: Optional[Dict] = None):
-        self.config = {**self.DEFAULT_CONFIG, **(config or {})}
+        promoted = {} if config is not None else get_promoted_strategy_params(
+            ("gwo", "grey_wolf", "Numba-GWO", "Core-GWO-TSP")
+        )
+        self.config = {**self.DEFAULT_CONFIG, **promoted, **(config or {})}
         self.seed = self.config.get("seed") or int(time.time() * 1000)
 
     @property

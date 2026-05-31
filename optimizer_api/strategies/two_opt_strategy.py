@@ -27,6 +27,7 @@ from utils.data_loader import DataLoader, euclidean_distance
 from uniride_core.algorithms.vehicle_assignment import VehicleCalculator
 from uniride_core.algorithms.meta_split_common import shuffle_permutation
 from uniride_core.algorithms.tsp_meta_engines import nearest_neighbor_route, solve_two_opt_tsp
+from strategies.promoted_config_loader import get_promoted_strategy_params
 
 class TwoOptStrategy(BaseRoutingStrategy):
     """
@@ -51,7 +52,10 @@ class TwoOptStrategy(BaseRoutingStrategy):
     }
 
     def __init__(self, config: Optional[Dict] = None):
-        self.config = {**self.DEFAULT_CONFIG, **(config or {})}
+        promoted = {} if config is not None else get_promoted_strategy_params(
+            ("two_opt", "2opt", "Numba-2-opt", "Core-TwoOpt-TSP")
+        )
+        self.config = {**self.DEFAULT_CONFIG, **promoted, **(config or {})}
         self.seed = self.config.get("seed") or int(time.time() * 1000)
 
     @property

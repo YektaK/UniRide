@@ -27,6 +27,7 @@ from models.schemas import (
     VehicleRoute, RouteStep
 )
 from strategies.hybrid_base_strategy import HybridSplitBaseStrategy
+from strategies.promoted_config_loader import get_promoted_strategy_params
 from utils.data_loader import DataLoader
 from uniride_core.adapters.demand_builder import build_student_demands, build_student_map
 from uniride_core.algorithms.gwo_split_engine import (
@@ -98,7 +99,12 @@ class GWOSplitStrategy(HybridSplitBaseStrategy):
             config: Optional configuration override.
                    Example: {"population_size": 60, "initial_a": 3.0}
         """
-        self.config = {**self.DEFAULT_CONFIG, **(config or {})}
+        promoted = {} if config is not None else get_promoted_strategy_params(
+            ("gwo_split", "gwo-split", "GWO-Split", "CVRPTW-GWO-Split", "CVRP-GWO-Split"),
+            problem_type="cvrptw",
+            matrix_kind="travel_time",
+        )
+        self.config = {**self.DEFAULT_CONFIG, **promoted, **(config or {})}
         self.seed = self.config.get("seed") or int(time.time() * 1000)
         self._alpha: Optional[Wolf] = None  # Best solution
         self._beta: Optional[Wolf] = None   # Second best

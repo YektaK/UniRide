@@ -1,9 +1,12 @@
 from models.schemas import OptimizationRequest
 from strategies.ebso_strategy import E2BSoStrategy
+from strategies.ga_strategy import GeneticAlgorithmStrategy
+from strategies.hho_split_strategy import HHOSplitStrategy
 from strategies.promoted_config_loader import (
     PROMOTED_CONFIG_PATH_ENV,
     clear_promoted_config_cache,
     get_promoted_params,
+    get_promoted_strategy_params,
 )
 from strategies.sota_config_utils import merge_sota_config
 from uniride_core.algorithms.sota_tsp import E2BSOTSPConfig, PAOEAConfig
@@ -103,3 +106,90 @@ def test_sota_strategy_constructor_uses_promoted_params(tmp_path, monkeypatch):
 
     assert strategy._config.population_size == 12
     assert strategy._config.max_iterations == 14
+
+
+def test_promoted_strategy_params_normalize_academic_numba_keys(tmp_path, monkeypatch):
+    path = tmp_path / "promoted_configs.json"
+    path.write_text(
+        """
+{
+  "schema_version": 1,
+  "source": "test",
+  "configs": [
+    {
+      "algorithm": "Numba-GA",
+      "problem_type": "tsp",
+      "matrix_kind": "distance",
+      "params": {"pop_size": 44, "generations": 55, "elite_size": 6}
+    }
+  ]
+}
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(PROMOTED_CONFIG_PATH_ENV, str(path))
+    clear_promoted_config_cache()
+
+    assert get_promoted_strategy_params(("genetic_algorithm", "ga", "Numba-GA")) == {
+        "population_size": 44,
+        "max_iterations": 55,
+        "elite_count": 6,
+    }
+
+
+def test_ga_strategy_constructor_uses_promoted_defaults_but_explicit_config_wins(tmp_path, monkeypatch):
+    path = tmp_path / "promoted_configs.json"
+    path.write_text(
+        """
+{
+  "schema_version": 1,
+  "source": "test",
+  "configs": [
+    {
+      "algorithm": "Numba-GA",
+      "problem_type": "tsp",
+      "matrix_kind": "distance",
+      "params": {"pop_size": 44, "generations": 55}
+    }
+  ]
+}
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(PROMOTED_CONFIG_PATH_ENV, str(path))
+    clear_promoted_config_cache()
+
+    promoted_strategy = GeneticAlgorithmStrategy()
+    explicit_strategy = GeneticAlgorithmStrategy({"population_size": 12})
+
+    assert promoted_strategy.config["population_size"] == 44
+    assert promoted_strategy.config["max_iterations"] == 55
+    assert explicit_strategy.config["population_size"] == 12
+
+
+def test_split_strategy_constructor_uses_promoted_routing_defaults(tmp_path, monkeypatch):
+    path = tmp_path / "promoted_configs.json"
+    path.write_text(
+        """
+{
+  "schema_version": 1,
+  "source": "test",
+  "configs": [
+    {
+      "algorithm": "CVRPTW-HHO-Split",
+      "problem_type": "cvrptw",
+      "matrix_kind": "travel_time",
+      "params": {"hawks": 33, "iterations": 44}
+    }
+  ]
+}
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(PROMOTED_CONFIG_PATH_ENV, str(path))
+    clear_promoted_config_cache()
+
+    strategy = HHOSplitStrategy()
+
+    assert strategy.config["population_size"] == 33
+    assert strategy.config["max_iterations"] == 44

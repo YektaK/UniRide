@@ -29,6 +29,7 @@ from strategies.base_strategy import BaseRoutingStrategy
 from utils.data_loader import DataLoader, euclidean_distance
 from uniride_core.algorithms.vehicle_assignment import VehicleCalculator
 from uniride_core.algorithms.tsp_meta_engines import solve_hho_tsp
+from strategies.promoted_config_loader import get_promoted_strategy_params
 
 class HarrisHawksOptimizerStrategy(BaseRoutingStrategy):
     """
@@ -57,7 +58,10 @@ class HarrisHawksOptimizerStrategy(BaseRoutingStrategy):
     }
 
     def __init__(self, config: Optional[Dict] = None):
-        self.config = {**self.DEFAULT_CONFIG, **(config or {})}
+        promoted = {} if config is not None else get_promoted_strategy_params(
+            ("hho", "harris_hawks", "Numba-HHO", "Core-HHO-TSP")
+        )
+        self.config = {**self.DEFAULT_CONFIG, **promoted, **(config or {})}
         self.seed = self.config.get("seed") or int(time.time() * 1000)
         self.rng = random.Random(self.seed)
 

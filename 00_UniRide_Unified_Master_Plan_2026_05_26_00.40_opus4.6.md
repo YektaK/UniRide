@@ -623,14 +623,21 @@ Implemented as a generator/reader instead of committing a stale static JSON snap
 - `resolve_promoted_params()` gives core/API callers a neutral parameter lookup by algorithm, problem type, and matrix kind,
 - no `optimizer_api` ownership or imports are introduced.
 
-### Task 4.2: Create Promotion Manager — PENDING
+### Task 4.2: Create Promotion Manager — DONE
 
-**File:** `academic_benchmark/promotion_manager.py` (NEW — ~150 lines)
+**File:** `academic_benchmark/promotion_manager.py` (NEW)
 
 ```python
-# CLI: python -m academic_benchmark promote --algo E2BSO-TSP --params best_doe
-# Reads best results from benchmark_db, validates criteria, writes to promoted_configs.json
+# CLI:
+# python -m academic_benchmark.promotion_manager --dry-run
+# python -m academic_benchmark.promotion_manager --output academic_benchmark/benchmark_db/promoted_configs.json
 ```
+
+Implemented promotion workflow:
+- builds promoted configs from academic SQLite rows,
+- validates minimum config count and parameter presence,
+- supports `--dry-run`, `--allow-empty-params`, `--db-path`, `--output`, and `--limit`,
+- exits non-zero with a validation message instead of writing empty promotion files.
 
 ### Task 4.3: Update Strategy Registry — PARTIAL
 
@@ -827,19 +834,18 @@ This list is the current execution queue after the completed core-first migratio
 | 1 | Install and pin `vrplib` | 3.1 | Independent | Needed only for direct CVRPLIB/Solomon download/parsing workflows. Current text import path works through `MatrixBuilder` + `tsplib_manager.py`, but `vrplib` is still the planned library-backed source importer. |
 | 2 | Decide CVRPLIB storage shape: keep integrated `tsplib_manager.py` path or add dedicated `cvrplib_manager.py` facade | 3.2 | Depends on Phase 2; blocks 3.4/3.6 polish | Current implementation stores CVRPLIB/Solomon text in the unified academic DB shape. If a dedicated manager is added, it should call the existing unified storage functions rather than introduce a separate DB truth. |
 | 3 | Add/verify CVRP and CVRPTW algorithm registry coverage for all required families | 3.3 | Depends on Phase 2 and task 2 above | Existing `registry_setup.py` supports routing problems through the core matrix runner. Confirm full families: Pipeline A/B, holistic OR-Tools/PyVRP/VROOM, greedy, 2-opt/3-opt/Or-opt, GA, PSO, GWO, HHO. |
-| 4 | Create promotion manager CLI | 4.2 | Depends on promoted config builder and academic DB | Select best results from SQLite/param DB, validate promotion criteria, and write promoted configs. |
-| 5 | Finish strategy registry thread-safety/factory cleanup | 4.3 / 5.4 | Can proceed after core wrappers are stable | Replace mutable singleton assumptions with factory/thread-local access while preserving existing strategy keys. |
-| 6 | Finish SOTA wrapper simplification and per-request config parity | 4.4 | Depends on promoted config shape | E2BSO/R2DMA/P-AOEA wrappers are thin, but still use typed constructor configs. Decide whether to support request-level config overrides consistently with GA/PSO/GWO/HHO. |
-| 7 | Update web algorithm constants/categories | 4.5 | Depends on registry and promoted config shape | Add Research-Promoted/SOTA and routing-problem categories without breaking current UI keys. |
-| 8 | Complete web benchmark adjustable-parameter UI | 4.6 | Depends on parameter-space API | Web quick benchmarks should remain editable/demo-friendly; academic DB remains source of truth. |
-| 9 | Complete academic read endpoints | 5.1 | Depends on canonical DB queries | Current API exposes leaderboard/best/benchmark-results. Add or verify `/academic/problems` and any missing problem/result filters needed by the UI. |
-| 10 | Complete web academic DB integration | 5.2 | Depends on task 9 | UI should read historical results from SQLite-backed endpoints and live quick runs from benchmark state. |
-| 11 | Add real UniRide data export tool | 5.3 | Independent of promotion; depends on data access | Export anonymized production-like CVRPTW/UniRide matrices and constraints for academic benchmarking. |
-| 12 | Add dedicated CVRP/CVRPTW dashboard polish | 3.6 | Depends on finalized CVRPLIB/Solomon importer | Optional follow-up: dataset-family grouping, BKS vehicle comparisons, and CVRP-specific LaTeX columns. |
-| 13 | Extract scheduling utility module | 5.5 | Independent | Move scheduling calculations from route response code into a reusable app/core boundary module if they remain production-critical. |
-| 14 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After task 5 or when touching wrappers | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue, or whether a core matrix/context adapter should own more of it. |
+| 4 | Finish strategy registry thread-safety/factory cleanup | 4.3 / 5.4 | Can proceed after core wrappers are stable | Replace mutable singleton assumptions with factory/thread-local access while preserving existing strategy keys. |
+| 5 | Finish SOTA wrapper simplification and per-request config parity | 4.4 | Depends on promoted config shape | E2BSO/R2DMA/P-AOEA wrappers are thin, but still use typed constructor configs. Decide whether to support request-level config overrides consistently with GA/PSO/GWO/HHO. |
+| 6 | Update web algorithm constants/categories | 4.5 | Depends on registry and promoted config shape | Add Research-Promoted/SOTA and routing-problem categories without breaking current UI keys. |
+| 7 | Complete web benchmark adjustable-parameter UI | 4.6 | Depends on parameter-space API | Web quick benchmarks should remain editable/demo-friendly; academic DB remains source of truth. |
+| 8 | Complete academic read endpoints | 5.1 | Depends on canonical DB queries | Current API exposes leaderboard/best/benchmark-results. Add or verify `/academic/problems` and any missing problem/result filters needed by the UI. |
+| 9 | Complete web academic DB integration | 5.2 | Depends on task 8 | UI should read historical results from SQLite-backed endpoints and live quick runs from benchmark state. |
+| 10 | Add real UniRide data export tool | 5.3 | Independent of promotion; depends on data access | Export anonymized production-like CVRPTW/UniRide matrices and constraints for academic benchmarking. |
+| 11 | Add dedicated CVRP/CVRPTW dashboard polish | 3.6 | Depends on finalized CVRPLIB/Solomon importer | Optional follow-up: dataset-family grouping, BKS vehicle comparisons, and CVRP-specific LaTeX columns. |
+| 12 | Extract scheduling utility module | 5.5 | Independent | Move scheduling calculations from route response code into a reusable app/core boundary module if they remain production-critical. |
+| 13 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After task 4 or when touching wrappers | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue, or whether a core matrix/context adapter should own more of it. |
 
-Recommended next task: **Task 4.2, create the promotion manager CLI**, because the core-promoted config builder now exists and needs a command-line workflow for repeatable promotion.
+Recommended next task: **Task 4.3 / 5.4, strategy registry thread-safety and factory cleanup**, because promoted configs can now be produced repeatably and the runtime registry is the next production integration boundary.
 
 ---
 

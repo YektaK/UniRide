@@ -10,6 +10,8 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 from academic_benchmark.tsplib_manager import (
     DB_PATH,
+    get_db,
+    init_db,
     query_benchmark_results,
     query_best_solutions,
 )
@@ -28,6 +30,7 @@ def build_promoted_configs(
     generated_at: Optional[str] = None,
 ) -> Dict[str, object]:
     """Build a neutral promoted-config document from academic DB rows."""
+    _ensure_db_schema(db_path)
     candidates = []
     candidates.extend(_best_solution_candidates(query_best_solutions(limit=limit, db_path=db_path)))
     candidates.extend(_benchmark_result_candidates(query_benchmark_results(limit=limit, db_path=db_path)))
@@ -40,6 +43,12 @@ def build_promoted_configs(
         "selection_rule": "best finite gap, then best finite objective/tour cost per algorithm/problem_type/matrix_kind",
         "configs": selected,
     }
+
+
+def _ensure_db_schema(db_path: str) -> None:
+    conn = get_db(db_path)
+    init_db(conn)
+    conn.close()
 
 
 def write_promoted_configs(

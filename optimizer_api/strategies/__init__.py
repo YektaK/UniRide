@@ -30,7 +30,7 @@ Archived (not registered):
 - _archived/kmeans_tsp.py: Retired proof-of-concept K-Means+TSP skeleton
 """
 
-from typing import Dict, List, Type, Optional, Union
+from typing import Callable, Dict, List, Type, Optional, Union
 
 from strategies.base_strategy import BaseRoutingStrategy
 from strategies.ga_strategy import GeneticAlgorithmStrategy
@@ -75,7 +75,7 @@ except ImportError:
     _VROOM_AVAILABLE = False
 
 
-# Strategy instances (Singleton pattern for efficiency)
+# Strategy instances kept for backward-compatible registry reads.
 _ga_strategy = GeneticAlgorithmStrategy()
 _pso_strategy = PSOStrategy()
 _gwo_strategy = GreyWolfOptimizerStrategy()
@@ -214,6 +214,48 @@ STRATEGY_REGISTRY: Dict[str, Optional[BaseRoutingStrategy]] = {
 }
 
 
+STRATEGY_FACTORIES: Dict[str, Optional[Callable[[], BaseRoutingStrategy]]] = {
+    "genetic_algorithm": GeneticAlgorithmStrategy,
+    "ga": GeneticAlgorithmStrategy,
+    "pso": PSOStrategy,
+    "gwo": GreyWolfOptimizerStrategy,
+    "grey_wolf": GreyWolfOptimizerStrategy,
+    "hho": HarrisHawksOptimizerStrategy,
+    "harris_hawks": HarrisHawksOptimizerStrategy,
+    "ga_split": GASplitStrategy,
+    "ga-split": GASplitStrategy,
+    "ga_split_enhanced": GAEnhancedSplitStrategy,
+    "ga-split-enhanced": GAEnhancedSplitStrategy,
+    "pso_split": PSOSplitStrategy,
+    "pso-split": PSOSplitStrategy,
+    "gwo_split": GWOSplitStrategy,
+    "gwo-split": GWOSplitStrategy,
+    "hho_split": HHOSplitStrategy,
+    "hho-split": HHOSplitStrategy,
+    "ortools_cvrp": ORToolsCVRPStrategy,
+    "ortools": ORToolsCVRPStrategy,
+    "pyvrp": PyVRPStrategy if _PYVRP_AVAILABLE and PyVRPStrategy is not None else None,
+    "hgs": PyVRPStrategy if _PYVRP_AVAILABLE and PyVRPStrategy is not None else None,
+    "pyvrp_alt": PyVRPAlternativeStrategy if _PYVRP_AVAILABLE and PyVRPAlternativeStrategy is not None else None,
+    "vroom": VROOMStrategy if _VROOM_AVAILABLE and VROOMStrategy is not None else None,
+    "vroom_fallback": VROOMFallbackStrategy if _VROOM_AVAILABLE and VROOMFallbackStrategy is not None else None,
+    "e2bso": E2BSoStrategy,
+    "entropy_bso": E2BSoStrategy,
+    "e2b": E2BSoStrategy,
+    "r2dma": R2DMAStrategy,
+    "rdma": R2DMAStrategy,
+    "paoea": PAOEAStrategy,
+    "aoea": PAOEAStrategy,
+    "two_opt": TwoOptStrategy,
+    "2opt": TwoOptStrategy,
+    "greedy": GreedyHeuristicStrategy,
+    "nearest_neighbor": GreedyHeuristicStrategy,
+    "permutation_tsp": PermutationTSPStrategy,
+    "permutation": PermutationTSPStrategy,
+    "exact": PermutationTSPStrategy,
+}
+
+
 def get_strategy(name: str) -> Optional[BaseRoutingStrategy]:
     """
     Get strategy by name.
@@ -224,7 +266,8 @@ def get_strategy(name: str) -> Optional[BaseRoutingStrategy]:
     Returns:
         Strategy instance or None if not found
     """
-    return STRATEGY_REGISTRY.get(name.lower())
+    factory = STRATEGY_FACTORIES.get(name.lower())
+    return factory() if factory is not None else None
 
 
 def get_all_strategies() -> List[BaseRoutingStrategy]:
@@ -234,7 +277,12 @@ def get_all_strategies() -> List[BaseRoutingStrategy]:
     Returns:
         List of unique strategy instances (excluding None)
     """
-    return list(set(s for s in STRATEGY_REGISTRY.values() if s is not None))
+    unique = {}
+    for name in STRATEGY_FACTORIES:
+        strategy = get_strategy(name)
+        if strategy is not None:
+            unique.setdefault(strategy.name, strategy)
+    return list(unique.values())
 
 
 def get_strategy_info() -> List[dict]:

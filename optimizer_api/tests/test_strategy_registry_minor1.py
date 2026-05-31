@@ -1,6 +1,6 @@
 """Test MINOR-1 fix: Unavailable strategies map to None, not fallback."""
 import pytest
-from strategies import STRATEGY_REGISTRY, get_strategy_info
+from strategies import STRATEGY_FACTORIES, STRATEGY_REGISTRY, get_strategy_info
 
 
 def test_unavailable_optional_deps_map_to_none():
@@ -39,3 +39,21 @@ def test_get_strategy_returns_none_for_unavailable():
         val = get_strategy(key)
         # Must be either None (unavailable) or a strategy instance (available)
         assert val is None or hasattr(val, "optimize")
+
+
+def test_get_strategy_returns_fresh_instances_for_thread_safety():
+    """Production lookups should not share mutable strategy instances."""
+    from strategies import get_strategy
+
+    first = get_strategy("ga")
+    second = get_strategy("ga")
+
+    assert first is not None
+    assert second is not None
+    assert first is not second
+    assert first.__class__ is second.__class__
+
+
+def test_strategy_factories_cover_registry_keys():
+    """Compatibility registry keys should all have a factory entry, including optional None."""
+    assert set(STRATEGY_REGISTRY) == set(STRATEGY_FACTORIES)

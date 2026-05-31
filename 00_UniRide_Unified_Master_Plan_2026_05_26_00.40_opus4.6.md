@@ -643,9 +643,10 @@ Implemented promotion workflow:
 
 **File:** `optimizer_api/strategies/__init__.py` (MODIFY)
 
-- Replace 15 module-level singletons with thread-local factory pattern
-- Load promoted configs at startup
-- Keep backward-compatible `STRATEGY_REGISTRY` for read-only lookups
+- DONE: add `STRATEGY_FACTORIES` for every compatibility registry key.
+- DONE: make `get_strategy()` return fresh strategy instances instead of reusing mutable singleton objects.
+- DONE: keep backward-compatible `STRATEGY_REGISTRY` for read-only lookups and optional dependency availability checks.
+- REMAINING: load promoted configs into the strategies/wrappers once SOTA per-request config parity is finalized.
 
 ### Task 4.4: Simplify SOTA Wrappers — PARTIAL
 
@@ -834,7 +835,7 @@ This list is the current execution queue after the completed core-first migratio
 | 1 | Install and pin `vrplib` | 3.1 | Independent | Needed only for direct CVRPLIB/Solomon download/parsing workflows. Current text import path works through `MatrixBuilder` + `tsplib_manager.py`, but `vrplib` is still the planned library-backed source importer. |
 | 2 | Decide CVRPLIB storage shape: keep integrated `tsplib_manager.py` path or add dedicated `cvrplib_manager.py` facade | 3.2 | Depends on Phase 2; blocks 3.4/3.6 polish | Current implementation stores CVRPLIB/Solomon text in the unified academic DB shape. If a dedicated manager is added, it should call the existing unified storage functions rather than introduce a separate DB truth. |
 | 3 | Add/verify CVRP and CVRPTW algorithm registry coverage for all required families | 3.3 | Depends on Phase 2 and task 2 above | Existing `registry_setup.py` supports routing problems through the core matrix runner. Confirm full families: Pipeline A/B, holistic OR-Tools/PyVRP/VROOM, greedy, 2-opt/3-opt/Or-opt, GA, PSO, GWO, HHO. |
-| 4 | Finish strategy registry thread-safety/factory cleanup | 4.3 / 5.4 | Can proceed after core wrappers are stable | Replace mutable singleton assumptions with factory/thread-local access while preserving existing strategy keys. |
+| 4 | Load promoted configs into runtime strategy construction | 4.3 / 4.4 | Depends on promoted config builder and SOTA config parity decision | Factory lookup now returns fresh instances. Next step is deciding how promoted params are injected, especially for typed SOTA configs. |
 | 5 | Finish SOTA wrapper simplification and per-request config parity | 4.4 | Depends on promoted config shape | E2BSO/R2DMA/P-AOEA wrappers are thin, but still use typed constructor configs. Decide whether to support request-level config overrides consistently with GA/PSO/GWO/HHO. |
 | 6 | Update web algorithm constants/categories | 4.5 | Depends on registry and promoted config shape | Add Research-Promoted/SOTA and routing-problem categories without breaking current UI keys. |
 | 7 | Complete web benchmark adjustable-parameter UI | 4.6 | Depends on parameter-space API | Web quick benchmarks should remain editable/demo-friendly; academic DB remains source of truth. |
@@ -845,7 +846,7 @@ This list is the current execution queue after the completed core-first migratio
 | 12 | Extract scheduling utility module | 5.5 | Independent | Move scheduling calculations from route response code into a reusable app/core boundary module if they remain production-critical. |
 | 13 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After task 4 or when touching wrappers | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue, or whether a core matrix/context adapter should own more of it. |
 
-Recommended next task: **Task 4.3 / 5.4, strategy registry thread-safety and factory cleanup**, because promoted configs can now be produced repeatably and the runtime registry is the next production integration boundary.
+Recommended next task: **Task 4.4, SOTA wrapper config parity**, because factory lookup is now fresh-instance safe and promoted config injection depends on a consistent runtime config path.
 
 ---
 

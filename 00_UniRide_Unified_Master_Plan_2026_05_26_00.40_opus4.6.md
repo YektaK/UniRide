@@ -405,9 +405,12 @@ print(f'Phase 2 OK: dm={dm.shape}, routes={len(routes)}')
 | [registry_setup.py](file:///c:/Users/yekta/Masaüstü/AiCode/FirebaseUniRide/UniRide/academic_benchmark/core/registry_setup.py) | Pattern for CVRP executor registration |
 | [param_spaces.py](file:///c:/Users/yekta/Masaüstü/AiCode/FirebaseUniRide/UniRide/academic_benchmark/param_spaces.py) | Pattern for param space addition |
 
-### Task 3.1: Install `vrplib` — PENDING
+### Task 3.1: Install / Verify Optional Importer Dependencies — DONE / ENVIRONMENT VERIFIED
 
-Add `vrplib>=2.2.0` to Python dependencies.
+`vrplib`, `ortools`, `pyvrp`, and the `pyvroom` package's `vroom` module are
+importable in the current environment. The academic importer and holistic
+adapter code should still keep graceful optional-dependency handling so the
+application can start when one of these packages is missing on another machine.
 
 ### Task 3.2: Create CVRPLIB Manager — PARTIAL / INTEGRATED
 
@@ -737,9 +740,19 @@ Implemented:
 - `store_uniride_export()` storage through the unified academic SQLite problem schema.
 - CLI paths for `--input-json` and optional `--from-supabase` export using `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`.
 
-### Task 5.4: Thread-Safety Fix — PENDING
+### Task 5.4: Thread-Safety Fix — DONE
 
 **File:** `optimizer_api/strategies/__init__.py` (already in Phase 4)
+
+Implemented:
+
+- `STRATEGY_FACTORIES` returns fresh strategy instances from `get_strategy()`,
+  avoiding shared mutable strategy objects on active request paths.
+- `optimizer_api.utils.patterns.SingletonMeta` provides thread-safe
+  double-checked singleton construction for app-owned shared utilities.
+- `optimizer_api.utils.data_loader.DataLoader` uses `SingletonMeta` plus an
+  `RLock` around matrix cache access and refresh.
+- Focused verification: `python -m pytest optimizer_api\tests\test_strategy_registry_minor1.py academic_benchmark\tests\test_cvrplib_manager.py academic_benchmark\tests\test_seed_smoke_datasets.py -q` passes with 9 tests.
 
 ### Task 5.5: Scheduling Logic Extraction — DONE
 
@@ -933,20 +946,14 @@ suite runnable end-to-end first, then return to production hardening.
 
 | Order | Task | Phase | Dependency | Notes |
 |:------|:-----|:------|:-----------|:------|
-| 1 | Run full academic/core verification and fix failures | Academic readiness | Independent | Run `python -m pytest academic_benchmark/tests uniride_core/tests -q`. Triage failures into real regressions vs optional dependency skips. This is the gate before benchmark runs. |
-| 2 | Install/pin optional academic importer dependencies | 3.1 | Independent; may need network approval | Add/verify `vrplib` for CVRPLIB/Solomon workflows. Also verify optional `ortools`, `pyvrp`, and `pyvroom`; adapters already degrade gracefully when missing, but full holistic comparisons need installed packages. |
-| 3 | Decide/implement CVRPLIB storage facade | 3.2 | Depends on Phase 2; useful after dependency check | Keep unified SQLite truth. If adding `academic_benchmark/cvrplib_manager.py`, make it a facade over `tsplib_manager.store_academic_text()` / `store_routing_problem()`, not a second schema. |
-| 4 | Seed/import small academic datasets | 3.2 / 3.3 | Depends on tasks 1-3 | Ensure at least one TSPLIB TSP, one TSPLIB ATSP, one CVRPLIB CVRP, one Solomon CVRPTW, and one UniRide travel-time export are available in SQLite. |
-| 5 | Run matrix-native academic smoke benchmark | Academic readiness | Depends on task 4 | Run a small deterministic benchmark over TSP, ATSP, CVRP, CVRPTW, and UniRide matrix problems. Confirm `benchmark_runs` / `benchmark_results` persist route fields. |
-| 6 | Generate promoted configs from academic DB | 4.1 / 4.2 | Depends on task 5 | Run promotion manager dry-run, then emit `promoted_configs.json` only if validation passes and configs are meaningful. |
-| 7 | Run quick web/API benchmark sanity path | 5.2 | Depends on task 5 | Verify matrix-native web execution can use editable params and academic read endpoints remain source-of-truth for historical results. |
-| 8 | Add dedicated CVRP/CVRPTW dashboard polish | 3.6 | Depends on finalized importer and populated DB | Dataset-family grouping, BKS vehicle comparisons, CVRP/CVRPTW-specific columns. Nice-to-have after runnable suite. |
-| 9 | Implement FCM-SRS large-TSP research extension | Phase 6 candidate | Depends on tasks 1-8 | DONE for research preview: core engine, academic registry, and parameter spaces are implemented. Large-instance comparison remains pending validation. |
-| 10 | Fix frontend typecheck failure | Review follow-up | Independent, non-academic | Repair malformed JSX in `src/app/(app)/admin/vehicle-planning/page.tsx` so full `npm run typecheck` is green. |
-| 11 | PSO/HHO rng cleanup | Review follow-up | Independent | DONE: removed instance-level RNG from production wrappers; request-local/core RNG behavior is preserved. |
-| 12 | Direction enum rename | Review follow-up | Depends on API compatibility care | DONE: introduced API-level `TripDirection`; kept `Direction = TripDirection` alias for backward compatibility. |
-| 13 | SOTA Euclidean helper consolidation | Review follow-up | Independent | DONE: SOTA base solver now delegates Euclidean coordinate distance to canonical `euclidean_distance_2d`; compatibility wrapper remains. |
-| 14 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After academic readiness | DONE: keep `optimizer_api.utils.data_loader` app-owned for Supabase/cache/request glue; fallback distance math delegates to core helpers. |
+| 1 | Controlled FCM-SRS medium/large SQLite comparisons | Phase 6 candidate | Depends on completed FCM research preview | Run repeatable `Core-*` vs `FCM-*` comparisons with bounded runtime controls. Do not promote FCM until it shows defensible quality/runtime value across more than smoke cases. |
+| 2 | Broad CVRPLIB/Solomon import and benchmark execution | 3.2 / 3.3 | Depends on verified optional deps and seeded smoke path | Smoke coverage exists. Next step is importing real dataset families and running CVRP/CVRPTW benchmark batches through SQLite source-of-truth. |
+| 3 | Holistic solver comparison pass | 3.3 / 4.2 | Depends on task 2 and optional solver availability | Run OR-Tools, PyVRP, and VROOM on comparable CVRP/CVRPTW instances; record infeasible/unsupported cases explicitly rather than hiding them. |
+| 4 | Promotion-quality config generation | 4.1 / 4.2 | Depends on tasks 2-3 | Existing promotion manager works; rerun after real benchmark data is populated so generated configs are based on meaningful CVRP/CVRPTW evidence. |
+| 5 | Production strategy migration: remaining SOTA wrappers | 4.x | Independent of academic runs, lower priority | E2BSO/R2DMA/P-AOEA wrappers delegate to core TSP solvers but still use typed constructor configs. Decide whether per-request SOTA config overrides are needed before changing behavior. |
+| 6 | Production strategy migration: holistic wrapper thinning | 4.x | Depends on holistic comparison clarity | Keep `optimizer_api` responsible for API mapping only; move any remaining algorithm-critical OR-Tools/PyVRP/VROOM logic into `uniride_core` if found during comparison runs. |
+| 7 | Packaging and requirements cleanup | Cross-phase | After dependency decisions | Pin or document optional packages (`vrplib`, `ortools`, `pyvrp`, `pyvroom`) consistently for local dev, CI, and production. Keep graceful fallback imports. |
+| 8 | Full regression gate before release branch | Cross-phase | Depends on chosen release scope | Run academic/core pytest, focused optimizer API tests, and frontend typecheck together; document known optional skips/failures separately. |
 
 ### Progress Update (2026-05-31)
 

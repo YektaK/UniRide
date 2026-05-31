@@ -7,7 +7,12 @@ import glob
 import numpy as np
 from pathlib import Path
 from datetime import datetime
-from dashboard_utils import derive_filter_options
+from dashboard_utils import (
+    available_routing_metrics,
+    benchmark_rows_to_progress_frame,
+    derive_filter_options,
+)
+from tsplib_manager import DB_PATH, query_benchmark_results
 
 # Sayfa yapılandırması
 st.set_page_config(page_title="UniRide Academic Dashboard", page_icon="🎓", layout="wide")
@@ -27,7 +32,7 @@ def load_data():
     all_summary = []
     all_progress = []
     all_tuning = []
-    loaded_sources = {"summary": [], "progress": [], "tuning": []}
+    loaded_sources = {"summary": [], "progress": [], "tuning": [], "sqlite": []}
 
     for d in RESULT_DIRS:
         summary_path = os.path.join(d, "benchmark_summary.csv")
@@ -77,12 +82,21 @@ def load_data():
             all_tuning.append(pd.read_csv(tuning_path))
             loaded_sources["tuning"].append(tuning_path)
 
+    db_rows = query_benchmark_results(limit=5000, db_path=DB_PATH)
+    if db_rows:
+        all_progress.append(benchmark_rows_to_progress_frame(db_rows))
+        loaded_sources["sqlite"].append(f"{DB_PATH} ({len(db_rows)} rows)")
+
     summary_df = pd.concat(all_summary, ignore_index=True) if all_summary else pd.DataFrame()
     progress_df = pd.concat(all_progress, ignore_index=True) if all_progress else pd.DataFrame()
     tuning_df = pd.concat(all_tuning, ignore_index=True) if all_tuning else pd.DataFrame()
 
     # Coerce numeric columns (handles schema mismatches from CSV normalization)
-    for col in ['avg_length', 'avg_gap', 'avg_time_ms', 'n_runs']:
+    for col in [
+        'avg_length', 'avg_gap', 'avg_time_ms', 'n_runs', 'objective_cost',
+        'tour_cost', 'elapsed_ms', 'num_vehicles', 'capacity_violations',
+        'tw_violations',
+    ]:
         if col in progress_df.columns:
             progress_df[col] = pd.to_numeric(progress_df[col], errors='coerce')
     for col in ['avg_length', 'avg_gap', 'avg_time_ms', 'n_runs']:
@@ -110,7 +124,7 @@ def load_data():
 
 summary_df, progress_df, tuning_df, history_df, loaded_sources = load_data()
 
-st.title("🎓 UniRide Academic TSP Benchmark Dashboard")
+st.title("🎓 UniRide Academic Routing Benchmark Dashboard")
 
 # Last updated timestamp
 st.caption(f"🕒 Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -123,7 +137,7 @@ if summary_df.empty and progress_df.empty and tuning_df.empty:
 st.sidebar.header("🛠️ Data Filters")
 all_probs, all_algos = derive_filter_options(summary_df, progress_df)
 
-selected_probs = st.sidebar.multiselect("Select TSP Problems", all_probs, default=all_probs)
+selected_probs = st.sidebar.multiselect("Select Problems", all_probs, default=all_probs)
 selected_algos = st.sidebar.multiselect("Select Algorithms", all_algos, default=all_algos)
 
 with st.sidebar.expander("📁 Source Diagnostics"):
@@ -135,6 +149,9 @@ with st.sidebar.expander("📁 Source Diagnostics"):
         st.code(s, language="")
     st.markdown(f"**Tuning files:** {len(loaded_sources['tuning'])}")
     for s in loaded_sources['tuning']:
+        st.code(s, language="")
+    st.markdown(f"**SQLite sources:** {len(loaded_sources['sqlite'])}")
+    for s in loaded_sources['sqlite']:
         st.code(s, language="")
     if not progress_df.empty:
         st.markdown(f"**Progress rows:** {len(progress_df)}")
@@ -251,7 +268,10 @@ with tab2:
     if not filtered_progress.empty:
         col1, col2 = st.columns([1, 3])
         with col1:
-            metric = st.radio("Select Evaluation Metric:", ["avg_gap", "avg_time_ms", "avg_length"])
+            metric_options = available_routing_metrics(filtered_progress)
+            if not metric_options:
+                metric_options = ["avg_gap", "avg_time_ms", "avg_length"]
+            metric = st.radio("Select Evaluation Metric:", metric_options)
 
         with col2:
             fig = px.box(
@@ -268,7 +288,7 @@ with tab2:
             fig.update_yaxes(showline=True, linewidth=1, linecolor='black', gridcolor='lightgrey')
             st.plotly_chart(fig, use_container_width=True)
     else:
-        st.info("No raw multi-run data available. Ensure `benchmark_progress.csv` contains data.")
+        st.info("No raw multi-run data available. Ensure SQLite benchmark rows or `benchmark_progress.csv` contain data.")
 
 # SEKME 3: Parametre Optimizasyonu (DoE Tuning)
 with tab3:

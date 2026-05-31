@@ -1,6 +1,6 @@
 # Implementation Plan — FCM Split-Route-Stitch (FCM-SRS) Meta-Solver Wrapper
 
-**Status:** Implemented as a core-first research preview (as of 31 May 2026). The active implementation is `uniride_core/algorithms/fcm_split_engine.py` with academic registry entries for `FCM-GA-TSP`, `FCM-PSO-TSP`, `FCM-GWO-TSP`, and `FCM-HHO-TSP`. A repeatable SQLite comparison runner exists at `academic_benchmark/run_fcm_srs_comparison.py`; medium/large comparison evidence is still required before promotion.
+**Status:** Implemented as a core-first research preview (as of 31 May 2026). The active implementation is `uniride_core/algorithms/fcm_split_engine.py` with academic registry entries for `FCM-GA-TSP`, `FCM-PSO-TSP`, `FCM-GWO-TSP`, and `FCM-HHO-TSP`. A repeatable SQLite comparison runner exists at `academic_benchmark/run_fcm_srs_comparison.py` with CLI runtime controls; medium/large quality evidence is still required before promotion.
 **Prerequisites:** BaseTSPSolver refactoring ✅, all 5 solver `_solve()` migration ✅, `solve_with_matrix()` API ✅
 
 Introduce a unified `FCMSplitSolverWrapper` inside `uniride_core` that applies Fuzzy C-Means (FCM) clustering to dynamically partition large TSP problems into $K$ spatial sub-problems, routes them in parallel using PSO/GA/HHO/GWO variants, stitches them using fuzzy border heuristics, and polishes the connections with JIT local search.

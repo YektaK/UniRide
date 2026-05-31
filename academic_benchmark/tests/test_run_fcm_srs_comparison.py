@@ -23,6 +23,9 @@ def test_run_fcm_srs_comparison_persists_core_and_fcm_results(tmp_path):
         run_id="fcm-comparison-test",
         dimension=12,
         algorithms=["Core-GA-TSP", "FCM-GA-TSP"],
+        population_size=6,
+        max_iterations=4,
+        fcm_polish_iterations=10,
     )
 
     rows = query_benchmark_results(run_id="fcm-comparison-test", limit=10, db_path=db_path)

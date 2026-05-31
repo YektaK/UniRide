@@ -959,8 +959,9 @@ Completed today:
 - Task 6: promotion manager dry-run and write completed locally; 26 configs generated from existing `best_solutions`, not smoke params. The generated JSON is ignored/untracked.
 - Task 7: web/API sanity path verified locally. Academic problem/result endpoints read from SQLite, param spaces expose editable params, and matrix-native web execution persisted run id `web-matrix-sanity-20260531-r2` with editable `Core-TwoOpt-TSP` params.
 - Task 8: CVRP/CVRPTW dashboard polish added. Dashboard utilities now derive dataset family, routing feasibility, constraint status, and vehicle gap; the Streamlit dashboard has a dedicated routing diagnostics tab.
+- Task 10: frontend typecheck failure fixed. `src/app/(app)/admin/vehicle-planning/page.tsx` had a corrupted student-selection JSX block; `npm run typecheck` now passes.
 
-Recommended next task: **Task 9, implement FCM-SRS large-TSP research extension**, if academic research features remain the priority. Otherwise move to **Task 10, frontend typecheck failure**, because the academic benchmark path is now runnable end-to-end.
+Recommended next task: **Task 9, implement FCM-SRS large-TSP research extension**, if academic research features remain the priority. Otherwise move to **Task 11, PSO/HHO rng cleanup**, because the academic benchmark path and frontend typecheck are now green.
 
 ---
 

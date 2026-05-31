@@ -333,10 +333,10 @@ export default function VehiclePlanningPage() {
                                     {tc('noResults')}
                                 </div>
                             ) : (
-                                <>
-                                    <div className="mb-3">
+                                <div className="space-y-4">
+                                    <div>
                                         <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center justify-between">
-                                            <span>{tc('details')}</span>
+                                            <span>Sw</span>
                                             <Badge variant="outline">{swStudents.length}</Badge>
                                         </p>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
@@ -355,23 +355,21 @@ export default function VehiclePlanningPage() {
                                             {swStudents.length === 0 && <span className="text-xs italic text-muted-foreground">{tc('noResults')}</span>}
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        ))}
-                    </div>
-                    {/* SO Students */}
-                    {soStudents.length > 0 && (
-                        <div>
-                            <h4 className="font-semibold text-sm mb-2">{tc('wheelchairStudents')} ({soStudents.length})</h4>
-                            <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-[80px]">
-                                {soStudents.filter(student => driverStudentMap[driverIndex]?.includes(student.id)).map((student) => (
-                                    <div key={student.id} className="flex items-center gap-1.5 bg-muted p-1 rounded">
-                                        <Checkbox
-                                            id={student.id}
-                                            checked={selectedStudents.has(student.id)}
-                                            onCheckedChange={() => handleStudentToggle(student.id)}
-                                        />
-                                        <Label htmlFor={student.id} className="text-xs cursor-pointer truncate" title={student.name || tc('select')}>
+
+                                    <div>
+                                        <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center justify-between">
+                                            <span>So</span>
+                                            <Badge variant="outline">{soStudents.length}</Badge>
+                                        </p>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                                            {soStudents.map((student) => (
+                                                <div key={student.id} className="flex items-center space-x-1 border rounded p-1 bg-white hover:bg-slate-50 transition-colors">
+                                                    <Checkbox
+                                                        id={student.id}
+                                                        checked={selectedStudents.includes(student.id)}
+                                                        onCheckedChange={() => handleStudentToggle(student.id)}
+                                                    />
+                                                    <Label htmlFor={student.id} className="text-xs cursor-pointer truncate" title={student.name || tc('select')}>
                                                         {(student as User & { location_code?: string }).location_code || student.locationCode || tc('details')}
                                                     </Label>
                                                 </div>
@@ -379,7 +377,7 @@ export default function VehiclePlanningPage() {
                                             {soStudents.length === 0 && <span className="text-xs italic text-muted-foreground">{tc('noResults')}</span>}
                                         </div>
                                     </div>
-                                </>
+                                </div>
                             )}
                         </ScrollArea>
                     </div>

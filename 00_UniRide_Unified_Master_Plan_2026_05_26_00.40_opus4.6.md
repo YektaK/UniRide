@@ -922,7 +922,7 @@ Implementation roadmap:
 | FCM-2 | Add deterministic stitching and polish tests | DONE | Tests verify every node appears once and factory-created FCM engines solve matrix-native TSP problems. |
 | FCM-3 | Register `FCM-GA-TSP`, `FCM-PSO-TSP`, `FCM-GWO-TSP`, `FCM-HHO-TSP` | DONE | Registered through academic/core registry construction without adding optimizer-api dependencies. |
 | FCM-4 | Add Optuna/grid parameter spaces | DONE | Includes `fcm_clusters`, `fcm_m`, `fcm_iterations`, `fcm_min_cluster_size`, and polish controls with inherited base params. |
-| FCM-5 | Run academic benchmark comparison versus pure base solvers | PENDING VALIDATION | Target large TSP instances only first; promote only if SQLite results show consistent gap/time benefit. |
+| FCM-5 | Run academic benchmark comparison versus pure base solvers | SMOKE COMPLETE / LARGE VALIDATION PENDING | `run_fcm_srs_comparison` persists paired core-vs-FCM results to SQLite. Initial 24-node smoke completed; medium/large sweeps are still required before promotion. |
 
 ---
 
@@ -965,9 +965,9 @@ Completed today:
 - Task 12: Direction enum rename completed. `optimizer_api.models.schemas.TripDirection` is now the canonical API enum and `Direction = TripDirection` remains as a compatibility alias for existing callers/tests.
 - Task 13: SOTA Euclidean helper consolidation completed. `BaseTSPSolver.euclidean_distance()` now delegates to the canonical raw `euclidean_distance_2d` helper and regression tests cover direct coordinate matrix construction.
 - Task 14: DataLoader ownership cleanup completed. `optimizer_api.utils.data_loader` remains app-owned because it owns Supabase credentials, cache TTL, and request-time matrix glue; its fallback Euclidean/haversine matrix helpers now use canonical `uniride_core.algorithms.distance` functions.
-- Task 9: FCM-SRS large-TSP research extension implemented as a research preview. `FCMSplitMatrixEngine` lives in `uniride_core`, `FCM-GA/PSO/GWO/HHO-TSP` are available in the core factory and academic registry, and DoE/Optuna parameter spaces include FCM controls. Large-instance SQLite comparison is still the next validation gate before promotion.
+- Task 9: FCM-SRS large-TSP research extension implemented as a research preview. `FCMSplitMatrixEngine` lives in `uniride_core`, `FCM-GA/PSO/GWO/HHO-TSP` are available in the core factory and academic registry, and DoE/Optuna parameter spaces include FCM controls. Added `academic_benchmark.run_fcm_srs_comparison` as a repeatable SQLite validation gate. Local run `fcm-srs-comparison-20260601` completed with 2 saved results and no errors; `Core-GA-TSP` beat `FCM-GA-TSP` on the 24-node synthetic smoke, so promotion still requires medium/large evidence.
 
-Recommended next task: run a final full verification sweep, then run a controlled SQLite academic comparison of `FCM-*` versus pure `Core-*` solvers on medium/large TSP instances before considering any promotion.
+Recommended next task: run controlled SQLite academic comparisons of `FCM-*` versus pure `Core-*` solvers on medium/large TSP instances before considering any promotion.
 
 ---
 

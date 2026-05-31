@@ -103,7 +103,7 @@ graph TB
 
 ---
 
-## 3. Algorithm Inventory — Current State
+## 3. Algorithm Inventory — Baseline State at Plan Start
 
 ### In `uniride_core/algorithms/sota_tsp/` (Pure Python)
 
@@ -128,7 +128,32 @@ graph TB
 | Numba-2opt, 3opt, Or-opt, Swap, Hybrid, GA, PSO, GWO, HHO | ✅ | ✅ | ❌ | Local search + metaheuristic |
 | SOTA-E2BSO, R2DMA, P-AOEA, CGO, RUN, ALNS | ✅ | ✅ | ❌ | Via SOTA executor |
 
-**The Gap:** No algorithm can currently be benchmarked on CVRP/CVRPTW in `academic_benchmark`.
+**Original Gap at Plan Start:** No algorithm could be benchmarked on CVRP/CVRPTW in `academic_benchmark`.
+
+## 3A. Algorithm Inventory — Current Status as of 2026-05-31
+
+### In `uniride_core/algorithms/`
+
+| Capability | TSP | ATSP | CVRP | CVRPTW | UniRide | Current Status |
+|:-----------|:---:|:----:|:----:|:------:|:-------:|:---------------|
+| Core matrix engines (`GreedyMatrixEngine`, TSP/local-search engines) | ✅ | ✅ | ✅ | ✅ | ✅ | Matrix-first execution path is available through `RoutingProblem` and `MatrixBenchmarkRunner`. |
+| Metaheuristic TSP engines (GA, PSO, GWO, HHO, TwoOpt) | ✅ | ✅ | via split | via split | via split | Critical TSP/metaheuristic logic moved to `uniride_core`; production wrappers delegate. |
+| Split engines (GA/PSO/GWO/HHO Split) | ❌ | ❌ | ✅ | ✅ | ✅ | Split strategy internals moved to `uniride_core`; wrappers remain in `optimizer_api`. |
+| Holistic CVRP adapters (OR-Tools, PyVRP, VROOM) | ❌ | ❌ | ✅ | partial | partial | Core-owned adapters exist. Optional dependency coverage verified locally for OR-Tools, PyVRP, and VROOM's `vroom` module. |
+| SOTA TSP solvers (E²BSO, R²DMA, P-AOEA, CGO, RUN, ALNS) | ✅ | ✅ | via registry/split wrapper path | via registry/split wrapper path | via registry/split wrapper path | Academic CVRP/CVRPTW registry entries exist, but full large-dataset validation remains pending. |
+
+### In `academic_benchmark/`
+
+| Capability | Status | Evidence / Notes |
+|:-----------|:-------|:-----------------|
+| SQLite problem source of truth | ✅ Available | Unified storage handles TSP, ATSP, CVRP, CVRPTW, and UniRide problem shapes. |
+| CVRPLIB/Solomon facade | ✅ Available | `academic_benchmark.cvrplib_manager` delegates to `tsplib_manager.store_academic_text()` / `store_routing_problem()`. |
+| Smoke dataset coverage | ✅ Available locally | Real DB seeded with `smoke-tsp`, `smoke-atsp`, `smoke-cvrp`, `smoke-solomon`, and `smoke-uniride`. |
+| Matrix-native smoke benchmark | ✅ Passed locally | Run id `academic-matrix-smoke-20260531`: 5 persisted results, 0 errors. |
+| Full academic/core test gate | ✅ Passed | `python -m pytest academic_benchmark/tests uniride_core/tests -q` passes with 310 tests. |
+| Promoted config generation | ✅ Available | Promotion manager generated 26 configs from existing `best_solutions`; generated JSON is local/ignored. |
+| Web/API sanity path | ⏳ Next | Verify matrix-native web execution with editable params and academic read endpoints. |
+| Full CVRPLIB/Solomon dataset scale | ⏳ Remaining | Smoke instances are seeded; broad real dataset import/benchmarking still needs execution. |
 
 ---
 

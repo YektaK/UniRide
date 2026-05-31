@@ -861,6 +861,45 @@ architecture, but the following verified follow-ups remain:
 
 ---
 
+## Candidate Research Extension: FCM-SRS Large-TSP Meta-Solver (2026-05-31)
+
+Source document: `implementation_plan_fcm_hybrid.md`.
+
+Status: **ROADMAP / NOT IMPLEMENTED**. The reusable FCM clustering pieces exist in
+`uniride_core.algorithms.clustering_strategies`, and `optimizer_api` keeps
+compatibility exports. The proposed FCM Split-Route-Stitch meta-solver itself is
+not present: there is no `FCMSplitSolverWrapper`, no `FCM-GA-TSP` /
+`FCM-PSO-TSP` / `FCM-GWO-TSP` / `FCM-HHO-TSP` registry entries, no Optuna
+parameter spaces for `fcm_clusters` / `fcm_m`, and no benchmark/dashboard tests.
+
+Design correction before implementation:
+
+- Use only `uniride_core.algorithms.clustering_strategies.*` for FCM. The
+  original plan's `optimizer_api.utils.clustering_strategies.fuzzy_cmeans`
+  import is no longer acceptable under the core-first architecture.
+- Keep FCM-SRS academic-first and matrix-first. It should not become a
+  production default until it proves value in SQLite-backed academic runs.
+- Start with coordinate-backed TSP large-instance decomposition. Explicit
+  matrix-only ATSP needs a separate clustering/embedding decision; CVRP/CVRPTW
+  decomposition needs capacity and time-window aware stitching and should be a
+  later extension.
+- Avoid nested oversubscription: prefer outer benchmark workers by default;
+  only enable subproblem parallelism when the outer worker count is one.
+- Clamp `fcm_m` above `1.0`. Initial tuning bounds should stay conservative,
+  for example `[1.5, 2.5]`, with implementation guards for `[1.1, 3.0]`.
+
+Implementation roadmap:
+
+| Order | Task | Dependency | Notes |
+|:------|:-----|:-----------|:------|
+| FCM-1 | Add core `FCMSplitSolverWrapper` / engine | After academic benchmark readiness | Place in `uniride_core`; wrap existing core TSP solvers rather than duplicating GA/PSO/GWO/HHO logic. |
+| FCM-2 | Add deterministic stitching and polish tests | Depends on FCM-1 | Verify tour contains every node once, preserves matrix cost accounting, and handles small-cluster fallbacks. |
+| FCM-3 | Register `FCM-GA-TSP`, `FCM-PSO-TSP`, `FCM-GWO-TSP`, `FCM-HHO-TSP` | Depends on FCM-1 | Register through academic/core registry construction without adding optimizer-api dependencies. |
+| FCM-4 | Add Optuna/grid parameter spaces | Depends on FCM-3 | Include `fcm_clusters`, `fcm_m`, and inherited base solver params. |
+| FCM-5 | Run academic benchmark comparison versus pure base solvers | Depends on FCM-4 | Target large TSP instances only first; promote only if SQLite results show consistent gap/time benefit. |
+
+---
+
 ## Remaining Tasks (Logical Order)
 
 This list is reordered for today's priority: make the `academic_benchmark`
@@ -876,11 +915,12 @@ suite runnable end-to-end first, then return to production hardening.
 | 6 | Generate promoted configs from academic DB | 4.1 / 4.2 | Depends on task 5 | Run promotion manager dry-run, then emit `promoted_configs.json` only if validation passes and configs are meaningful. |
 | 7 | Run quick web/API benchmark sanity path | 5.2 | Depends on task 5 | Verify matrix-native web execution can use editable params and academic read endpoints remain source-of-truth for historical results. |
 | 8 | Add dedicated CVRP/CVRPTW dashboard polish | 3.6 | Depends on finalized importer and populated DB | Dataset-family grouping, BKS vehicle comparisons, CVRP/CVRPTW-specific columns. Nice-to-have after runnable suite. |
-| 9 | Fix frontend typecheck failure | Review follow-up | Independent, non-academic | Repair malformed JSX in `src/app/(app)/admin/vehicle-planning/page.tsx` so full `npm run typecheck` is green. |
-| 10 | PSO/HHO rng cleanup | Review follow-up | Independent | Remove instance-level RNG from production wrappers where still present; keep per-request rng behavior. |
-| 11 | Direction enum rename | Review follow-up | Depends on API compatibility care | Introduce `TripDirection`, keep `Direction = TripDirection` alias until v5 cleanup. |
-| 12 | SOTA Euclidean helper consolidation | Review follow-up | Independent | Replace duplicate static method with canonical `euclidean_distance_2d`. |
-| 13 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After academic readiness | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue or whether a core adapter owns more of it. |
+| 9 | Implement FCM-SRS large-TSP research extension | Phase 6 candidate | Depends on tasks 1-8 | Use the corrected core-first roadmap above. This is not required for today's academic suite, but it belongs in the benchmark research backlog. |
+| 10 | Fix frontend typecheck failure | Review follow-up | Independent, non-academic | Repair malformed JSX in `src/app/(app)/admin/vehicle-planning/page.tsx` so full `npm run typecheck` is green. |
+| 11 | PSO/HHO rng cleanup | Review follow-up | Independent | Remove instance-level RNG from production wrappers where still present; keep per-request rng behavior. |
+| 12 | Direction enum rename | Review follow-up | Depends on API compatibility care | Introduce `TripDirection`, keep `Direction = TripDirection` alias until v5 cleanup. |
+| 13 | SOTA Euclidean helper consolidation | Review follow-up | Independent | Replace duplicate static method with canonical `euclidean_distance_2d`. |
+| 14 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After academic readiness | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue or whether a core adapter owns more of it. |
 
 Recommended next task: **Task 1, run full academic/core verification and fix failures**, because the immediate goal is to complete `academic_benchmark` readiness today and run real tests.
 

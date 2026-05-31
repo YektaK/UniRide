@@ -61,12 +61,24 @@ export const HEURISTIC_KEYS = {
   EXACT: "exact", // Alias for permutation_tsp
 } as const;
 
+// Research-Promoted SOTA Algorithms
+export const SOTA_KEYS = {
+  E2BSO: "e2bso",
+  ENTROPY_BSO: "entropy_bso", // Alias
+  E2B: "e2b", // Alias
+  R2DMA: "r2dma",
+  RDMA: "rdma", // Alias
+  PAOEA: "paoea",
+  AOEA: "aoea", // Alias
+} as const;
+
 // Combined algorithm keys
 export const ALGORITHM_KEYS = {
   ...PIPELINE_A_KEYS,
   ...PIPELINE_B_KEYS,
   ...HOLISTIC_KEYS,
   ...HEURISTIC_KEYS,
+  ...SOTA_KEYS,
 } as const;
 
 // Local Search Type keys - MUST match Python LocalSearchType enum
@@ -176,12 +188,24 @@ export const HEURISTIC_DISPLAY_NAMES: Record<string, string> = {
   [HEURISTIC_KEYS.EXACT]: "Permütasyon (Optimal n≤10)",
 };
 
+// Research-Promoted SOTA Display Names
+export const SOTA_DISPLAY_NAMES: Record<string, string> = {
+  [SOTA_KEYS.E2BSO]: "E²BSO (Promoted SOTA)",
+  [SOTA_KEYS.ENTROPY_BSO]: "E²BSO (Promoted SOTA)",
+  [SOTA_KEYS.E2B]: "E²BSO (Promoted SOTA)",
+  [SOTA_KEYS.R2DMA]: "R²DMA (Promoted SOTA)",
+  [SOTA_KEYS.RDMA]: "R²DMA (Promoted SOTA)",
+  [SOTA_KEYS.PAOEA]: "P-AOEA (Promoted SOTA)",
+  [SOTA_KEYS.AOEA]: "P-AOEA (Promoted SOTA)",
+};
+
 // Combined display names
 export const ALGORITHM_DISPLAY_NAMES: Record<string, string> = {
   ...PIPELINE_A_DISPLAY_NAMES,
   ...PIPELINE_B_DISPLAY_NAMES,
   ...HOLISTIC_DISPLAY_NAMES,
   ...HEURISTIC_DISPLAY_NAMES,
+  ...SOTA_DISPLAY_NAMES,
 };
 
 // Local Search display names for UI
@@ -221,6 +245,11 @@ export const ALGORITHM_DESCRIPTIONS: Record<string, string> = {
   [HEURISTIC_KEYS.TWO_OPT]: "Klasik 2-opt yerel arama. Küçük-orta ölçekli.",
   [HEURISTIC_KEYS.GREEDY]: "Hızlı sezgisel. En yakın komşu stratejisi.",
   [HEURISTIC_KEYS.PERMUTATION_TSP]: "Tüm kombinasyonları dener. n ≤ 10 için optimal.",
+
+  // Research-Promoted SOTA
+  [SOTA_KEYS.E2BSO]: "Akademik benchmark ile promote edilen E²BSO. Entropi dengeli swarm + ALNS + çok katmanlı yerel arama.",
+  [SOTA_KEYS.R2DMA]: "Akademik benchmark ile promote edilen R²DMA. Rezonans destekli destroy-and-merge memetik arama.",
+  [SOTA_KEYS.PAOEA]: "Akademik benchmark ile promote edilen P-AOEA. Adaptif operatör evrimi ve elite injection.",
 };
 
 // Local Search descriptions
@@ -258,6 +287,11 @@ export const ALGORITHM_COMPLEXITY: Record<string, string> = {
   [HEURISTIC_KEYS.TWO_OPT]: "O(n²)",
   [HEURISTIC_KEYS.GREEDY]: "O(n²)",
   [HEURISTIC_KEYS.PERMUTATION_TSP]: "O(n!)",
+
+  // Research-Promoted SOTA
+  [SOTA_KEYS.E2BSO]: "O(i × p × n²) + ALNS",
+  [SOTA_KEYS.R2DMA]: "O(i × p × n²) + SA/LS",
+  [SOTA_KEYS.PAOEA]: "O(i × p × n²) + meta-evolution",
 };
 
 // ============================================================
@@ -405,6 +439,39 @@ export const ALGORITHM_OPTIONS_GROUPED = [
       },
     ],
   },
+  {
+    category: "Research-Promoted (SOTA)",
+    description: "Akademik SQLite sonuçları ve promoted config hattı ile yönetilen araştırma algoritmaları",
+    algorithms: [
+      {
+        key: SOTA_KEYS.E2BSO,
+        label: SOTA_DISPLAY_NAMES[SOTA_KEYS.E2BSO],
+        description: ALGORITHM_DESCRIPTIONS[SOTA_KEYS.E2BSO],
+        complexity: ALGORITHM_COMPLEXITY[SOTA_KEYS.E2BSO],
+        recommended: false,
+        pipeline: "sota",
+        badge: "Promoted",
+      },
+      {
+        key: SOTA_KEYS.R2DMA,
+        label: SOTA_DISPLAY_NAMES[SOTA_KEYS.R2DMA],
+        description: ALGORITHM_DESCRIPTIONS[SOTA_KEYS.R2DMA],
+        complexity: ALGORITHM_COMPLEXITY[SOTA_KEYS.R2DMA],
+        recommended: false,
+        pipeline: "sota",
+        badge: "Promoted",
+      },
+      {
+        key: SOTA_KEYS.PAOEA,
+        label: SOTA_DISPLAY_NAMES[SOTA_KEYS.PAOEA],
+        description: ALGORITHM_DESCRIPTIONS[SOTA_KEYS.PAOEA],
+        complexity: ALGORITHM_COMPLEXITY[SOTA_KEYS.PAOEA],
+        recommended: false,
+        pipeline: "sota",
+        badge: "Promoted",
+      },
+    ],
+  },
 ];
 
 // Flattened options for backward compatibility
@@ -465,6 +532,10 @@ export const LEGACY_ALGORITHM_MAP: Record<string, string> = {
   "hgs": HOLISTIC_KEYS.PYVRP,
   "2opt": HEURISTIC_KEYS.TWO_OPT,
   "exact": HEURISTIC_KEYS.PERMUTATION_TSP,
+  "entropy_bso": SOTA_KEYS.E2BSO,
+  "e2b": SOTA_KEYS.E2BSO,
+  "rdma": SOTA_KEYS.R2DMA,
+  "aoea": SOTA_KEYS.PAOEA,
 };
 
 /**

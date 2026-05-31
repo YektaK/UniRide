@@ -446,6 +446,8 @@ class BenchmarkRunner:
             request.gwo_config = config_params
         elif key in {"hho", "harris_hawks", "hho_split"}:
             request.hho_config = config_params
+        elif key in {"e2bso", "entropy_bso", "e2b", "r2dma", "rdma", "paoea", "aoea"}:
+            request.sota_config = config_params
         elif key in {"two_opt", "2opt"}:
             request.two_opt_config = config_params
     

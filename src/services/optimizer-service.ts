@@ -36,7 +36,7 @@ export interface VehicleConfig {
 }
 
 export interface OptimizationOptions {
-    algorithm?: "genetic_algorithm" | "ga" | "pso" | "gwo" | "grey_wolf" | "hho" | "harris_hawks" | "two_opt" | "greedy" | "permutation_tsp" | "ortools_cvrp" | "ga_split" | "pso_split" | "gwo_split" | "hho_split";
+    algorithm?: "genetic_algorithm" | "ga" | "pso" | "gwo" | "grey_wolf" | "hho" | "harris_hawks" | "two_opt" | "greedy" | "permutation_tsp" | "ortools_cvrp" | "ga_split" | "pso_split" | "gwo_split" | "hho_split" | "e2bso" | "entropy_bso" | "e2b" | "r2dma" | "rdma" | "paoea" | "aoea";
     max_travel_time?: number;  // minutes
     sw_capacity?: number;
     so_capacity?: number;
@@ -457,6 +457,14 @@ export const ALGORITHM_DISPLAY_NAMES: Record<string, string> = {
     "pso_split": "PSO-Split (Route-First)",
     "gwo_split": "GWO-Split (Route-First)",
     "hho_split": "HHO-Split (Route-First)",
+    // Research-promoted SOTA
+    "e2bso": "E²BSO (Promoted SOTA)",
+    "entropy_bso": "E²BSO (Promoted SOTA)",
+    "e2b": "E²BSO (Promoted SOTA)",
+    "r2dma": "R²DMA (Promoted SOTA)",
+    "rdma": "R²DMA (Promoted SOTA)",
+    "paoea": "P-AOEA (Promoted SOTA)",
+    "aoea": "P-AOEA (Promoted SOTA)",
 };
 
 /**

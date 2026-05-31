@@ -148,6 +148,7 @@ class OptimizationRequest(BaseModel):
     gwo_config: Optional[Dict[str, Any]] = None
     hho_config: Optional[Dict[str, Any]] = None
     two_opt_config: Optional[Dict[str, Any]] = None
+    sota_config: Optional[Dict[str, Any]] = None
     clustering_algorithm: Optional[str] = "sweep"
     is_asymmetric: bool = False
 

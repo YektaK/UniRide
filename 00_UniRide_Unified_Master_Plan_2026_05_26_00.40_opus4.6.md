@@ -650,17 +650,12 @@ Implemented promotion workflow:
 
 ### Task 4.4: Simplify SOTA Wrappers — PARTIAL
 
-**Files:** `ebso_strategy.py`, `rdma_strategy.py`, `aoea_strategy.py` (MODIFY)
+**Files:** `ebso_strategy.py`, `rdma_strategy.py`, `aoea_strategy.py`, `sota_config_utils.py` (MODIFY/NEW)
 
-After `UnifiedEngine` exists, these become thin wrappers:
-```python
-class E2BSoStrategy(BaseRoutingStrategy):
-    def optimize(self, request):
-        dm = MatrixBuilder.from_travel_times(request.time_matrix)
-        engine = E2BSO_TSP(config=self._promoted_config)
-        result = engine.solve_cvrp(dm, config, seed, demands, capacity)
-        return self._convert_to_response(result, request)
-```
+- DONE: add request-level `sota_config` to `OptimizationRequest`.
+- DONE: add dataclass-safe SOTA config merge helper that ignores unknown keys and preserves typed tuple fields.
+- DONE: make E²BSO, R²DMA, and P-AOEA wrappers use request-local effective configs instead of mutating constructor configs.
+- REMAINING: optionally route these wrappers through `UnifiedEngine` once promoted config injection and native routing variants are fully wired.
 
 ### Task 4.5: Update Web Algorithm Constants — PENDING
 
@@ -835,18 +830,17 @@ This list is the current execution queue after the completed core-first migratio
 | 1 | Install and pin `vrplib` | 3.1 | Independent | Needed only for direct CVRPLIB/Solomon download/parsing workflows. Current text import path works through `MatrixBuilder` + `tsplib_manager.py`, but `vrplib` is still the planned library-backed source importer. |
 | 2 | Decide CVRPLIB storage shape: keep integrated `tsplib_manager.py` path or add dedicated `cvrplib_manager.py` facade | 3.2 | Depends on Phase 2; blocks 3.4/3.6 polish | Current implementation stores CVRPLIB/Solomon text in the unified academic DB shape. If a dedicated manager is added, it should call the existing unified storage functions rather than introduce a separate DB truth. |
 | 3 | Add/verify CVRP and CVRPTW algorithm registry coverage for all required families | 3.3 | Depends on Phase 2 and task 2 above | Existing `registry_setup.py` supports routing problems through the core matrix runner. Confirm full families: Pipeline A/B, holistic OR-Tools/PyVRP/VROOM, greedy, 2-opt/3-opt/Or-opt, GA, PSO, GWO, HHO. |
-| 4 | Load promoted configs into runtime strategy construction | 4.3 / 4.4 | Depends on promoted config builder and SOTA config parity decision | Factory lookup now returns fresh instances. Next step is deciding how promoted params are injected, especially for typed SOTA configs. |
-| 5 | Finish SOTA wrapper simplification and per-request config parity | 4.4 | Depends on promoted config shape | E2BSO/R2DMA/P-AOEA wrappers are thin, but still use typed constructor configs. Decide whether to support request-level config overrides consistently with GA/PSO/GWO/HHO. |
-| 6 | Update web algorithm constants/categories | 4.5 | Depends on registry and promoted config shape | Add Research-Promoted/SOTA and routing-problem categories without breaking current UI keys. |
-| 7 | Complete web benchmark adjustable-parameter UI | 4.6 | Depends on parameter-space API | Web quick benchmarks should remain editable/demo-friendly; academic DB remains source of truth. |
-| 8 | Complete academic read endpoints | 5.1 | Depends on canonical DB queries | Current API exposes leaderboard/best/benchmark-results. Add or verify `/academic/problems` and any missing problem/result filters needed by the UI. |
-| 9 | Complete web academic DB integration | 5.2 | Depends on task 8 | UI should read historical results from SQLite-backed endpoints and live quick runs from benchmark state. |
-| 10 | Add real UniRide data export tool | 5.3 | Independent of promotion; depends on data access | Export anonymized production-like CVRPTW/UniRide matrices and constraints for academic benchmarking. |
-| 11 | Add dedicated CVRP/CVRPTW dashboard polish | 3.6 | Depends on finalized CVRPLIB/Solomon importer | Optional follow-up: dataset-family grouping, BKS vehicle comparisons, and CVRP-specific LaTeX columns. |
-| 12 | Extract scheduling utility module | 5.5 | Independent | Move scheduling calculations from route response code into a reusable app/core boundary module if they remain production-critical. |
-| 13 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After task 4 or when touching wrappers | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue, or whether a core matrix/context adapter should own more of it. |
+| 4 | Load promoted configs into runtime strategy construction | 4.3 / 4.4 | Depends on promoted config builder and request-local SOTA config merge | Factory lookup now returns fresh instances, and SOTA wrappers can accept dict params. Next step is promoted-param injection. |
+| 5 | Update web algorithm constants/categories | 4.5 | Depends on registry and promoted config shape | Add Research-Promoted/SOTA and routing-problem categories without breaking current UI keys. |
+| 6 | Complete web benchmark adjustable-parameter UI | 4.6 | Depends on parameter-space API | Web quick benchmarks should remain editable/demo-friendly; academic DB remains source of truth. |
+| 7 | Complete academic read endpoints | 5.1 | Depends on canonical DB queries | Current API exposes leaderboard/best/benchmark-results. Add or verify `/academic/problems` and any missing problem/result filters needed by the UI. |
+| 8 | Complete web academic DB integration | 5.2 | Depends on task 7 | UI should read historical results from SQLite-backed endpoints and live quick runs from benchmark state. |
+| 9 | Add real UniRide data export tool | 5.3 | Independent of promotion; depends on data access | Export anonymized production-like CVRPTW/UniRide matrices and constraints for academic benchmarking. |
+| 10 | Add dedicated CVRP/CVRPTW dashboard polish | 3.6 | Depends on finalized CVRPLIB/Solomon importer | Optional follow-up: dataset-family grouping, BKS vehicle comparisons, and CVRP-specific LaTeX columns. |
+| 11 | Extract scheduling utility module | 5.5 | Independent | Move scheduling calculations from route response code into a reusable app/core boundary module if they remain production-critical. |
+| 12 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After task 4 or when touching wrappers | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue, or whether a core matrix/context adapter should own more of it. |
 
-Recommended next task: **Task 4.4, SOTA wrapper config parity**, because factory lookup is now fresh-instance safe and promoted config injection depends on a consistent runtime config path.
+Recommended next task: **promoted-config runtime injection**, because strategy factories are fresh-instance safe and SOTA wrappers now support request-local dict params.
 
 ---
 

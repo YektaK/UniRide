@@ -20,6 +20,7 @@ from models.schemas import (
     OptimizationResponse,
 )
 from strategies.base_strategy import BaseRoutingStrategy
+from strategies.sota_config_utils import merge_sota_config
 from strategies.sota_response_builder import build_single_route_response, build_sota_request_context
 from uniride_core.algorithms.sota_tsp import R2DMA_TSP, R2DMATSPConfig
 from uniride_core.adapters.sota_tsp_strategy_adapter import solve_student_order_with_sota_tsp
@@ -76,6 +77,7 @@ class R2DMAStrategy(BaseRoutingStrategy):
             )
 
         context = build_sota_request_context(students, depot)
+        effective_config = merge_sota_config(self._config, request.sota_config)
         time_matrix = context["time_matrix"]
         coordinates = context["coordinates"]
         distance_lookup = context["distance_lookup"]
@@ -85,7 +87,7 @@ class R2DMAStrategy(BaseRoutingStrategy):
             distance_lookup,
             lambda origin, destination: self._get_duration(origin, destination, time_matrix, coordinates),
             R2DMA_TSP,
-            self._config,
+            effective_config,
         )
 
         return build_single_route_response(

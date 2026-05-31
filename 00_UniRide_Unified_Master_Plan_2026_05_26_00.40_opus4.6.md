@@ -713,11 +713,17 @@ Implemented web-side academic problem inventory:
 - `src/app/(app)/admin/benchmark/page.tsx` merges live quick-run TSPLIB inventory with academic DB inventory, preserving academic routing metadata.
 - `src/services/benchmark-service.test.ts` verifies the academic problem API contract and metadata mapping.
 
-### Task 5.3: Real Data Export Tool — PENDING
+### Task 5.3: Real Data Export Tool — DONE
 
-**File:** `academic_benchmark/data_export.py` (NEW — ~100 lines)
+**Files:** `academic_benchmark/data_export.py`, `academic_benchmark/tests/test_data_export.py`
 
 Export anonymized UniRide production data from Supabase for CVRPTW benchmarking.
+
+Implemented:
+- Pure `build_uniride_export_problem()` builder that converts UniRide-style depot, students, SW/SO demand, pickup/dropoff time windows, and travel-time matrices into core `RoutingProblem`.
+- Anonymized matrix labels (`depot`, `student_001`, ...) and metadata that avoids original student IDs/names.
+- `store_uniride_export()` storage through the unified academic SQLite problem schema.
+- CLI paths for `--input-json` and optional `--from-supabase` export using `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`.
 
 ### Task 5.4: Thread-Safety Fix — PENDING
 
@@ -762,7 +768,8 @@ Extract `_calculate_scheduled_times()` + `_minutes_to_time()` from `optimization
 | 5 | `src/app/api/benchmark/academic/problems/route.ts` | NEW | ~40 |
 | 5 | `src/services/benchmark-service.ts` | MODIFY | +70 |
 | 5 | `src/services/benchmark-service.test.ts` | NEW | ~50 |
-| 5 | `academic_benchmark/data_export.py` | NEW | ~100 |
+| 5 | `academic_benchmark/data_export.py` | NEW | ~350 |
+| 5 | `academic_benchmark/tests/test_data_export.py` | NEW | ~80 |
 | 5 | `optimizer_api/utils/scheduling.py` | NEW | ~50 |
 
 ---
@@ -854,12 +861,11 @@ This list is the current execution queue after the completed core-first migratio
 | 2 | Decide CVRPLIB storage shape: keep integrated `tsplib_manager.py` path or add dedicated `cvrplib_manager.py` facade | 3.2 | Depends on Phase 2; blocks 3.4/3.6 polish | Current implementation stores CVRPLIB/Solomon text in the unified academic DB shape. If a dedicated manager is added, it should call the existing unified storage functions rather than introduce a separate DB truth. |
 | 3 | Add/verify CVRP and CVRPTW algorithm registry coverage for all required families | 3.3 | Depends on Phase 2 and task 2 above | Existing `registry_setup.py` supports routing problems through the core matrix runner. Confirm full families: Pipeline A/B, holistic OR-Tools/PyVRP/VROOM, greedy, 2-opt/3-opt/Or-opt, GA, PSO, GWO, HHO. |
 | 4 | Decide promoted config policy for non-SOTA wrappers | 4.3 / 4.4 | Depends on current SOTA injection behavior | SOTA wrappers consume promoted configs automatically. For GA/PSO/GWO/HHO and split wrappers, decide whether promotion should be automatic or only surfaced through web/request params. |
-| 5 | Add real UniRide data export tool | 5.3 | Independent of promotion; depends on data access | Export anonymized production-like CVRPTW/UniRide matrices and constraints for academic benchmarking. |
-| 6 | Add dedicated CVRP/CVRPTW dashboard polish | 3.6 | Depends on finalized CVRPLIB/Solomon importer | Optional follow-up: dataset-family grouping, BKS vehicle comparisons, and CVRP-specific LaTeX columns. |
-| 7 | Extract scheduling utility module | 5.5 | Independent | Move scheduling calculations from route response code into a reusable app/core boundary module if they remain production-critical. |
-| 8 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After task 4 or when touching wrappers | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue, or whether a core matrix/context adapter should own more of it. |
+| 5 | Add dedicated CVRP/CVRPTW dashboard polish | 3.6 | Depends on finalized CVRPLIB/Solomon importer | Optional follow-up: dataset-family grouping, BKS vehicle comparisons, and CVRP-specific LaTeX columns. |
+| 6 | Extract scheduling utility module | 5.5 | Independent | Move scheduling calculations from route response code into a reusable app/core boundary module if they remain production-critical. |
+| 7 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After task 4 or when touching wrappers | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue, or whether a core matrix/context adapter should own more of it. |
 
-Recommended next task: **Task 5.3, real UniRide data export tool**, because SQLite/web read paths are now in place and need production-like CVRPTW/UniRide datasets.
+Recommended next task: **Task 3.3, verify CVRP/CVRPTW algorithm registry coverage**, because core problem storage, matrix-native execution, web reads, and UniRide export are now in place.
 
 ---
 

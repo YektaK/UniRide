@@ -63,7 +63,6 @@ class HarrisHawksOptimizerStrategy(BaseRoutingStrategy):
         )
         self.config = {**self.DEFAULT_CONFIG, **promoted, **(config or {})}
         self.seed = self.config.get("seed") or int(time.time() * 1000)
-        self.rng = random.Random(self.seed)
 
     @property
     def name(self) -> str:

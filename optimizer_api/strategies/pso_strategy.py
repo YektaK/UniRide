@@ -58,7 +58,6 @@ class PSOStrategy(BaseRoutingStrategy):
         )
         self.config = {**self.DEFAULT_CONFIG, **promoted, **(config or {})}
         self.seed = self.config.get("seed") or int(time.time() * 1000)
-        self.rng = random.Random(self.seed)
 
     @property
     def name(self) -> str:
@@ -72,21 +71,26 @@ class PSOStrategy(BaseRoutingStrategy):
     def description(self) -> str:
         return "Sürü zekası tabanlı meta-sezgisel. Hızlı yakınsama özelliği."
 
-    def _shuffle(self, items: List) -> List:
-        """Shuffle list using internal RNG"""
-        return shuffle_permutation(items, self.rng)
+    def _rng_for_config(self, config: Optional[Dict] = None) -> random.Random:
+        seed = (config or self.config).get("seed") or self.seed
+        return random.Random(seed)
 
-    def _generate_random_velocity(self, n: int) -> List[SwapOperation]:
+    def _shuffle(self, items: List, rng: Optional[random.Random] = None) -> List:
+        """Shuffle list using request-local RNG."""
+        return shuffle_permutation(items, rng or self._rng_for_config())
+
+    def _generate_random_velocity(self, n: int, rng: Optional[random.Random] = None) -> List[SwapOperation]:
         """Generate random velocity (swap sequence) for initialization."""
-        return generate_random_velocity(n, int(self.config.get("max_velocity_size", 5)), self.rng)
+        return generate_random_velocity(n, int(self.config.get("max_velocity_size", 5)), rng or self._rng_for_config())
 
-    def _initialize_swarm(self, waypoints: List[str]) -> List[Particle]:
+    def _initialize_swarm(self, waypoints: List[str], rng: Optional[random.Random] = None) -> List[Particle]:
         """Initialize swarm with random positions and velocities"""
+        rng = rng or self._rng_for_config()
         swarm = []
 
         for _ in range(self.config["swarm_size"]):
-            position = self._shuffle(waypoints)
-            velocity = self._generate_random_velocity(len(waypoints))
+            position = self._shuffle(waypoints, rng)
+            velocity = self._generate_random_velocity(len(waypoints), rng)
 
             swarm.append(Particle(
                 position=position,
@@ -120,13 +124,14 @@ class PSOStrategy(BaseRoutingStrategy):
         inertia_v: List[SwapOperation],
         cog_v: List[SwapOperation],
         soc_v: List[SwapOperation],
+        rng: Optional[random.Random] = None,
     ) -> List[SwapOperation]:
         """Clerc-style probabilistic combination of velocity components.
 
         Each component swap is included with probability equal to the
         corresponding weight / 3.0, mirroring bildiri2026 _combine_velocities.
         """
-        return combine_velocities(inertia_v, cog_v, soc_v, self.config, self.rng)
+        return combine_velocities(inertia_v, cog_v, soc_v, self.config, rng or self._rng_for_config())
 
     # ----------------------------------------------------------------
     # Legacy helpers (kept for backward compat, no longer used in PSO loop)
@@ -171,7 +176,7 @@ class PSOStrategy(BaseRoutingStrategy):
         def duration_func(route):
             return self._calculate_route_duration(route, depot, time_matrix, coordinates)
 
-        return solve_pso_tsp(waypoints, duration_func, rng or self.rng, config or self.config)
+        return solve_pso_tsp(waypoints, duration_func, rng or self._rng_for_config(config), config or self.config)
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:
         """Main optimization entry point"""

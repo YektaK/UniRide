@@ -942,7 +942,7 @@ suite runnable end-to-end first, then return to production hardening.
 | 8 | Add dedicated CVRP/CVRPTW dashboard polish | 3.6 | Depends on finalized importer and populated DB | Dataset-family grouping, BKS vehicle comparisons, CVRP/CVRPTW-specific columns. Nice-to-have after runnable suite. |
 | 9 | Implement FCM-SRS large-TSP research extension | Phase 6 candidate | Depends on tasks 1-8 | Use the corrected core-first roadmap above. This is not required for today's academic suite, but it belongs in the benchmark research backlog. |
 | 10 | Fix frontend typecheck failure | Review follow-up | Independent, non-academic | Repair malformed JSX in `src/app/(app)/admin/vehicle-planning/page.tsx` so full `npm run typecheck` is green. |
-| 11 | PSO/HHO rng cleanup | Review follow-up | Independent | Remove instance-level RNG from production wrappers where still present; keep per-request rng behavior. |
+| 11 | PSO/HHO rng cleanup | Review follow-up | Independent | DONE: removed instance-level RNG from production wrappers; request-local/core RNG behavior is preserved. |
 | 12 | Direction enum rename | Review follow-up | Depends on API compatibility care | Introduce `TripDirection`, keep `Direction = TripDirection` alias until v5 cleanup. |
 | 13 | SOTA Euclidean helper consolidation | Review follow-up | Independent | Replace duplicate static method with canonical `euclidean_distance_2d`. |
 | 14 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After academic readiness | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue or whether a core adapter owns more of it. |
@@ -960,8 +960,9 @@ Completed today:
 - Task 7: web/API sanity path verified locally. Academic problem/result endpoints read from SQLite, param spaces expose editable params, and matrix-native web execution persisted run id `web-matrix-sanity-20260531-r2` with editable `Core-TwoOpt-TSP` params.
 - Task 8: CVRP/CVRPTW dashboard polish added. Dashboard utilities now derive dataset family, routing feasibility, constraint status, and vehicle gap; the Streamlit dashboard has a dedicated routing diagnostics tab.
 - Task 10: frontend typecheck failure fixed. `src/app/(app)/admin/vehicle-planning/page.tsx` had a corrupted student-selection JSX block; `npm run typecheck` now passes.
+- Task 11: PSO/HHO rng cleanup completed. `pso_strategy.py` and `hho_strategy.py` no longer keep `self.rng`; PSO legacy helpers use local RNG instances and active optimization keeps per-request RNG forwarding into `uniride_core`.
 
-Recommended next task: **Task 9, implement FCM-SRS large-TSP research extension**, if academic research features remain the priority. Otherwise move to **Task 11, PSO/HHO rng cleanup**, because the academic benchmark path and frontend typecheck are now green.
+Recommended next task: **Task 9, implement FCM-SRS large-TSP research extension**, if academic research features remain the priority. Otherwise move to **Task 12, Direction enum rename**, because it is the next contained review-follow-up and needs careful compatibility aliases.
 
 ---
 

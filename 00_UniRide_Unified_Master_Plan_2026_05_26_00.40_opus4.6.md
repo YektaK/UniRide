@@ -132,7 +132,7 @@ graph TB
 
 ---
 
-## Phase 1: Foundation Cleanup (CRITICAL)
+## Phase 1: Foundation Cleanup (CRITICAL) — Status: DONE
 
 > **Risk:** 🟢 Zero to Low — No behavioral changes to production.  
 > **Goal:** Delete dead code, fix security, fix reverse dependencies.
@@ -146,20 +146,20 @@ graph TB
 | [param_spaces.py](file:///c:/Users/yekta/Masaüstü/AiCode/FirebaseUniRide/UniRide/academic_benchmark/param_spaces.py) | Missing ALNS-TSP entry |
 | [benchmark_utils.py](file:///c:/Users/yekta/Masaüstü/AiCode/FirebaseUniRide/UniRide/academic_benchmark/benchmark_utils.py) | TSPLIB_OPTIMALS (129 entries) to merge into core |
 
-### Task 1.1: Delete Dead Files
+### Task 1.1: Delete Dead Files — DONE
 
 | File | Action | Reason |
 |:-----|:-------|:-------|
 | `optimizer_api/faz0_interactive.py` | **DELETE** | 3,142 lines, broken imports (`TSPLIBProblemInfo`), superseded by `cli_engine.py` |
 | `optimizer_api/run_sota_benchmark.py` | **DELETE** | Broken import: `from academic_benchmark.run_sota_benchmark import main`. Web uses `benchmark_runner.py`. |
 
-### Task 1.2: Fix Hardcoded API Key
+### Task 1.2: Fix Hardcoded API Key — DONE
 
 **File:** `test_direct.py`  
 **Change:** Replace hardcoded Azure API key with `os.environ.get("AZURE_OPENAI_API_KEY")`  
 **User action:** Rotate key in Azure portal.
 
-### Task 1.3: Fix Reverse Dependency
+### Task 1.3: Fix Reverse Dependency — DONE
 
 **File:** `uniride_core/algorithms/tsplib_parser.py` (line 35-36)  
 **Change:** Replace `../../optimizer_api/tests/tsplib_data` with env var fallback:
@@ -171,7 +171,7 @@ TSPLIB_DATA_DIR = os.environ.get(
 ```
 **Purpose:** Core must never import from `optimizer_api`.
 
-### Task 1.4: Add Missing ALNS-TSP Parameter Space
+### Task 1.4: Add Missing ALNS-TSP Parameter Space — DONE
 
 **File:** `academic_benchmark/param_spaces.py`  
 **Change:** Add entry:
@@ -184,7 +184,7 @@ TSPLIB_DATA_DIR = os.environ.get(
 }
 ```
 
-### Task 1.5: Merge TSPLIB_OPTIMALS Into Core
+### Task 1.5: Merge TSPLIB_OPTIMALS Into Core — DONE
 
 **Files:** `uniride_core/algorithms/tsplib_parser.py` (47 entries) ← `academic_benchmark/benchmark_utils.py` (129 entries)  
 **Change:** Merge the comprehensive 129-entry dict into core. Update `benchmark_utils.py` to import from core:
@@ -192,7 +192,7 @@ TSPLIB_DATA_DIR = os.environ.get(
 from uniride_core.algorithms.tsplib_parser import TSPLIB_OPTIMALS
 ```
 
-### Task 1.6: Fix Signal Handler Conflicts
+### Task 1.6: Fix Signal Handler Conflicts — DONE
 
 **Files:** `academic_benchmark/smart_benchmark.py` (line 136), `academic_benchmark/cli_engine.py` (line 263)  
 **Change:** Use a guard to chain signal handlers instead of overwriting.
@@ -208,7 +208,7 @@ python -c "from uniride_core.algorithms.tsplib_parser import TSPLIB_OPTIMALS; as
 
 ---
 
-## Phase 2: Unified Engine + Core Infrastructure (HIGH)
+## Phase 2: Unified Engine + Core Infrastructure (HIGH) — Status: DONE
 
 > **Risk:** 🟡 Medium — New abstractions, but backward compatible.  
 > **Goal:** Create `UnifiedEngine`, `MatrixBuilder`, `SplitDecoder`, and `CVRPResult` in `uniride_core`.  
@@ -222,7 +222,7 @@ python -c "from uniride_core.algorithms.tsplib_parser import TSPLIB_OPTIMALS; as
 | [models.py](file:///c:/Users/yekta/Masaüstü/AiCode/FirebaseUniRide/UniRide/uniride_core/models.py) | `ProblemInstance`, `TSPResult` — extend with CVRP fields |
 | [hybrid_base_strategy.py](file:///c:/Users/yekta/Masaüstü/AiCode/FirebaseUniRide/UniRide/optimizer_api/strategies/hybrid_base_strategy.py) | Contains Split logic to extract into core |
 
-### Task 2.1: Extend `ProblemInstance` and Create `CVRPResult`
+### Task 2.1: Extend `ProblemInstance` and Create `CVRPResult` — DONE
 
 **File:** `uniride_core/models.py` (MODIFY — add ~30 lines)
 
@@ -254,7 +254,7 @@ class CVRPResult:
     route_loads: Optional[List[int]] = None
 ```
 
-### Task 2.2: Create `MatrixBuilder` Adapter
+### Task 2.2: Create `MatrixBuilder` Adapter — DONE
 
 **File:** `uniride_core/adapters/__init__.py` (NEW — empty)  
 **File:** `uniride_core/adapters/matrix_builder.py` (NEW — ~120 lines)
@@ -282,7 +282,7 @@ class MatrixBuilder:
 
 **MUST use** `uniride_core.algorithms.tsplib_parser.tsplib_distance_by_type` for distance calculation.
 
-### Task 2.3: Create Split Decoder
+### Task 2.3: Create Split Decoder — DONE
 
 **File:** `uniride_core/algorithms/split_decoder.py` (NEW — ~200 lines)
 
@@ -310,7 +310,7 @@ def validate_cvrptw_solution(routes, dm, demands, capacity, time_windows, servic
 
 **Implementation hint:** Extract the Split logic from `optimizer_api/strategies/ga_split_strategy.py` and/or `hybrid_base_strategy.py`.
 
-### Task 2.4: Create `UnifiedEngine` ABC
+### Task 2.4: Create `UnifiedEngine` ABC — DONE
 
 **File:** `uniride_core/algorithms/base_engine.py` (NEW — ~60 lines)
 
@@ -365,7 +365,7 @@ print(f'Phase 2 OK: dm={dm.shape}, routes={len(routes)}')
 
 ---
 
-## Phase 3: CVRPLIB Integration + CVRP Benchmark Support (HIGH)
+## Phase 3: CVRPLIB Integration + CVRP Benchmark Support (HIGH) — Status: PARTIAL
 
 > **Risk:** 🟡 Medium — New external dependency (`vrplib`), new DB, new executors.  
 > **Goal:** Download CVRPLIB/Solomon instances, store in SQLite, register CVRP executors, extend dashboard.  
@@ -380,11 +380,11 @@ print(f'Phase 2 OK: dm={dm.shape}, routes={len(routes)}')
 | [registry_setup.py](file:///c:/Users/yekta/Masaüstü/AiCode/FirebaseUniRide/UniRide/academic_benchmark/core/registry_setup.py) | Pattern for CVRP executor registration |
 | [param_spaces.py](file:///c:/Users/yekta/Masaüstü/AiCode/FirebaseUniRide/UniRide/academic_benchmark/param_spaces.py) | Pattern for param space addition |
 
-### Task 3.1: Install `vrplib`
+### Task 3.1: Install `vrplib` — PENDING
 
 Add `vrplib>=2.2.0` to Python dependencies.
 
-### Task 3.2: Create CVRPLIB Manager
+### Task 3.2: Create CVRPLIB Manager — PARTIAL / INTEGRATED
 
 **File:** `academic_benchmark/cvrplib_manager.py` (NEW — ~450 lines)
 
@@ -470,7 +470,7 @@ CREATE TABLE IF NOT EXISTS cvrp_best_solutions (
 
 **BKS Dictionary:** Include `CVRP_BKS` dict with known optimal values for Augerat A/B, CMT, and Solomon instances. Fetch complete values from CVRPLIB website or from `.sol` files.
 
-### Task 3.3: Register CVRP Executors
+### Task 3.3: Register CVRP Executors — PARTIAL / INTEGRATED
 
 **File:** `academic_benchmark/core/cvrp_registry_setup.py` (NEW — ~200 lines)
 
@@ -501,7 +501,7 @@ def _make_cvrp_executor(base_algo, solver_factory):
 
 **Integration:** Import in `academic_benchmark/core/__init__.py` AFTER `registry_setup.py`.
 
-### Task 3.4: Add CVRP Parameter Spaces
+### Task 3.4: Add CVRP Parameter Spaces — PENDING
 
 **File:** `academic_benchmark/param_spaces.py` (MODIFY — add ~40 lines)
 
@@ -516,7 +516,7 @@ CVRP_PARAM_SPACES = {
 SOTA_PARAM_SPACES.update(CVRP_PARAM_SPACES)
 ```
 
-### Task 3.5: Create Synthetic CVRP/CVRPTW Generator
+### Task 3.5: Create Synthetic CVRP/CVRPTW Generator — PENDING
 
 **File:** `academic_benchmark/synthetic_cvrp_generator.py` (NEW — ~150 lines)
 
@@ -531,7 +531,7 @@ def batch_generate_cvrp(problem_names=None, max_dim=500, seed=42):
     """Generate CVRP instances for all eligible TSPLIB problems."""
 ```
 
-### Task 3.6: Extend Dashboard for CVRP Metrics
+### Task 3.6: Extend Dashboard for CVRP Metrics — PENDING
 
 **File:** `academic_benchmark/dashboard.py` (MODIFY — add ~100 lines)
 
@@ -584,13 +584,13 @@ print(f'E2E OK: {result.algorithm} cost={result.tour_cost} gap={result.gap_pct}%
 
 ---
 
-## Phase 4: Promotion Gate + Production Integration (MEDIUM)
+## Phase 4: Promotion Gate + Production Integration (MEDIUM) — Status: PARTIAL
 
 > **Risk:** 🟡 Medium — Changes production algorithm loading.  
 > **Goal:** Formalize the research → production pipeline. Promoted algorithms get locked params.  
 > **Dependencies:** Phase 2 complete.
 
-### Task 4.1: Create `promoted_configs.json`
+### Task 4.1: Create `promoted_configs.json` — PENDING
 
 **File:** `promoted_configs.json` (NEW — project root)
 
@@ -625,7 +625,7 @@ print(f'E2E OK: {result.algorithm} cost={result.tour_cost} gap={result.gap_pct}%
 }
 ```
 
-### Task 4.2: Create Promotion Manager
+### Task 4.2: Create Promotion Manager — PENDING
 
 **File:** `academic_benchmark/promotion_manager.py` (NEW — ~150 lines)
 
@@ -634,7 +634,7 @@ print(f'E2E OK: {result.algorithm} cost={result.tour_cost} gap={result.gap_pct}%
 # Reads best results from benchmark_db, validates criteria, writes to promoted_configs.json
 ```
 
-### Task 4.3: Update Strategy Registry
+### Task 4.3: Update Strategy Registry — PARTIAL
 
 **File:** `optimizer_api/strategies/__init__.py` (MODIFY)
 
@@ -642,7 +642,7 @@ print(f'E2E OK: {result.algorithm} cost={result.tour_cost} gap={result.gap_pct}%
 - Load promoted configs at startup
 - Keep backward-compatible `STRATEGY_REGISTRY` for read-only lookups
 
-### Task 4.4: Simplify SOTA Wrappers
+### Task 4.4: Simplify SOTA Wrappers — PARTIAL
 
 **Files:** `ebso_strategy.py`, `rdma_strategy.py`, `aoea_strategy.py` (MODIFY)
 
@@ -656,13 +656,13 @@ class E2BSoStrategy(BaseRoutingStrategy):
         return self._convert_to_response(result, request)
 ```
 
-### Task 4.5: Update Web Algorithm Constants
+### Task 4.5: Update Web Algorithm Constants — PENDING
 
 **File:** `src/lib/algorithm-constants.ts` (MODIFY)
 
 Add new "Research-Promoted (SOTA)" category populated from promoted configs.
 
-### Task 4.6: Web Benchmark Adjustable Parameters
+### Task 4.6: Web Benchmark Adjustable Parameters — PARTIAL
 
 **File:** `src/app/(app)/admin/benchmark/page.tsx` (MODIFY)
 
@@ -670,13 +670,13 @@ Add parameter adjustment UI (population_size, max_iterations, etc.) to the bench
 
 ---
 
-## Phase 5: Data & Web Dashboard Unification (MEDIUM)
+## Phase 5: Data & Web Dashboard Unification (MEDIUM) — Status: PARTIAL
 
 > **Risk:** 🟢 Low — Read-only integration, no changes to write paths.  
 > **Goal:** Web app reads from academic SQLite DB. Both quick benchmarks and academic results visible.  
 > **Dependencies:** Phases 2-3 complete.
 
-### Task 5.1: New API Endpoints for Academic Results
+### Task 5.1: New API Endpoints for Academic Results — PARTIAL
 
 **File:** `optimizer_api/routers/benchmark.py` (MODIFY)
 
@@ -686,23 +686,23 @@ Add parameter adjustment UI (population_size, max_iterations, etc.) to the bench
 @router.get("/academic/leaderboard") # Algorithm comparison
 ```
 
-### Task 5.2: Web Benchmark Reads Academic DB
+### Task 5.2: Web Benchmark Reads Academic DB — PARTIAL
 
 **File:** Admin benchmark page reads from both:
 - In-memory `benchmark_state.py` for live runs
 - SQLite DB for historical academic results
 
-### Task 5.3: Real Data Export Tool
+### Task 5.3: Real Data Export Tool — PENDING
 
 **File:** `academic_benchmark/data_export.py` (NEW — ~100 lines)
 
 Export anonymized UniRide production data from Supabase for CVRPTW benchmarking.
 
-### Task 5.4: Thread-Safety Fix
+### Task 5.4: Thread-Safety Fix — PENDING
 
 **File:** `optimizer_api/strategies/__init__.py` (already in Phase 4)
 
-### Task 5.5: Scheduling Logic Extraction
+### Task 5.5: Scheduling Logic Extraction — PENDING
 
 **File:** `optimizer_api/utils/scheduling.py` (NEW)  
 Extract `_calculate_scheduled_times()` + `_minutes_to_time()` from `optimization.py`.
@@ -817,6 +817,34 @@ Stale imports (`logging`, `SingletonMeta`, unused `BaseRoutingStrategy`) cleaned
 - `uniride_core/tests/test_meta_split_engines.py` — 3 tests covering GWO-Split, HHO-Split, PSO-Split.
 - `uniride_core/tests/test_algorithm_imports.py` — Smoke test verifying all `__all__` exports are importable across 6 core modules.
 - `optimizer_api/tests/test_all_strategies_smoke.py` — Integration smoke test for all strategy wrappers.
+
+---
+
+## Remaining Tasks (Logical Order)
+
+This list is the current execution queue after the completed core-first migrations above.
+
+| Order | Task | Phase | Dependency | Notes |
+|:------|:-----|:------|:-----------|:------|
+| 1 | Install and pin `vrplib` | 3.1 | Independent | Needed only for direct CVRPLIB/Solomon download/parsing workflows. Current text import path works through `MatrixBuilder` + `tsplib_manager.py`, but `vrplib` is still the planned library-backed source importer. |
+| 2 | Decide CVRPLIB storage shape: keep integrated `tsplib_manager.py` path or add dedicated `cvrplib_manager.py` facade | 3.2 | Depends on Phase 2; blocks 3.4/3.6 polish | Current implementation stores CVRPLIB/Solomon text in the unified academic DB shape. If a dedicated manager is added, it should call the existing unified storage functions rather than introduce a separate DB truth. |
+| 3 | Add/verify CVRP and CVRPTW algorithm registry coverage for all required families | 3.3 | Depends on Phase 2 and task 2 above | Existing `registry_setup.py` supports routing problems through the core matrix runner. Confirm full families: Pipeline A/B, holistic OR-Tools/PyVRP/VROOM, greedy, 2-opt/3-opt/Or-opt, GA, PSO, GWO, HHO. |
+| 4 | Add CVRP/CVRPTW parameter spaces | 3.4 | Depends on task 3 | Mirror TSP parameter spaces where valid and add route/split-specific params such as split method, capacity penalty, time-window penalty, vehicle penalty, and max-route-duration handling. |
+| 5 | Add synthetic CVRP/CVRPTW generator | 3.5 | Depends on MatrixBuilder and unified DB storage | Generate controlled CVRP/CVRPTW/UniRide-like matrices for academic experiments where TSPLIB TSP cannot directly represent UniRide constraints. |
+| 6 | Extend academic dashboard/reporting for routing metrics | 3.6 | Depends on canonical SQLite result rows | Add CVRP/CVRPTW columns: objective cost, vehicles, route loads, capacity violations, time-window violations, matrix kind, and problem type. |
+| 7 | Create `promoted_configs.json` | 4.1 | Depends on stable benchmark result rows | Store promoted algorithm params in a core-consumable shape. Do not encode optimizer_api-only config here. |
+| 8 | Create promotion manager CLI | 4.2 | Depends on task 7 and academic DB | Select best params from SQLite/param DB, validate promotion criteria, and write promoted configs. |
+| 9 | Finish strategy registry thread-safety/factory cleanup | 4.3 / 5.4 | Can proceed after core wrappers are stable | Replace mutable singleton assumptions with factory/thread-local access while preserving existing strategy keys. |
+| 10 | Finish SOTA wrapper simplification and per-request config parity | 4.4 | Depends on promoted config shape | E2BSO/R2DMA/P-AOEA wrappers are thin, but still use typed constructor configs. Decide whether to support request-level config overrides consistently with GA/PSO/GWO/HHO. |
+| 11 | Update web algorithm constants/categories | 4.5 | Depends on registry and promoted config shape | Add Research-Promoted/SOTA and routing-problem categories without breaking current UI keys. |
+| 12 | Complete web benchmark adjustable-parameter UI | 4.6 | Depends on parameter-space API | Web quick benchmarks should remain editable/demo-friendly; academic DB remains source of truth. |
+| 13 | Complete academic read endpoints | 5.1 | Depends on canonical DB queries | Current API exposes leaderboard/best/benchmark-results. Add or verify `/academic/problems` and any missing problem/result filters needed by the UI. |
+| 14 | Complete web academic DB integration | 5.2 | Depends on task 13 | UI should read historical results from SQLite-backed endpoints and live quick runs from benchmark state. |
+| 15 | Add real UniRide data export tool | 5.3 | Independent of promotion; depends on data access | Export anonymized production-like CVRPTW/UniRide matrices and constraints for academic benchmarking. |
+| 16 | Extract scheduling utility module | 5.5 | Independent | Move scheduling calculations from route response code into a reusable app/core boundary module if they remain production-critical. |
+| 17 | Continue cleanup of remaining `DataLoader` ownership | Cross-phase | After task 9 or when touching wrappers | Decide whether `optimizer_api.utils.data_loader` remains app-owned request/matrix glue, or whether a core matrix/context adapter should own more of it. |
+
+Recommended next task: **Task 3.4, CVRP/CVRPTW parameter spaces**, because it directly improves academic benchmark usefulness and does not require risky production changes.
 
 ---
 

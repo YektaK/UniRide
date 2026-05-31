@@ -10,6 +10,11 @@ import logging
 import numpy as np
 from typing import Dict, List, Optional
 
+from uniride_core.algorithms.distance import (
+    estimate_travel_time,
+    euclidean_distance_2d,
+    haversine_distance,
+)
 from uniride_core.algorithms._platform import fix_windows_encoding
 fix_windows_encoding()
 
@@ -194,8 +199,6 @@ class DataLoader(metaclass=SingletonMeta):
         Returns:
             NxN symmetric matrix where matrix[i][j] = euclidean distance
         """
-        import math
-
         n = len(locations)
         matrix = [[0.0] * n for _ in range(n)]
         for i in range(n):
@@ -204,7 +207,7 @@ class DataLoader(metaclass=SingletonMeta):
             for j in range(i + 1, n):
                 c2 = coordinates.get(locations[j], {})
                 x2, y2 = c2.get("lat", 0.0), c2.get("lng", 0.0)
-                dist = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+                dist = euclidean_distance_2d((x1, y1), (x2, y2))
                 matrix[i][j] = dist
                 matrix[j][i] = dist
         return matrix
@@ -277,13 +280,6 @@ class DataLoader(metaclass=SingletonMeta):
             return loc_id in self.loc_to_idx
 
 
-# Distance functions re-exported from consolidated module for backward compatibility
-from uniride_core.algorithms.distance import (
-    euclidean_distance_2d as _euclidean_distance_2d,
-    haversine_distance,
-    estimate_travel_time,
-)
-
 def euclidean_distance(x1: float, y1: float, x2: float, y2: float) -> float:
     """Calculate euclidean (L2) distance between two 2D points. Backward-compatible wrapper."""
-    return _euclidean_distance_2d((x1, y1), (x2, y2))
+    return euclidean_distance_2d((x1, y1), (x2, y2))

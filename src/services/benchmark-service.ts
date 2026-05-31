@@ -19,6 +19,18 @@ export interface BenchmarkProblem {
   edge_weight_type: string;
   available: boolean;
   comment?: string;
+  matrix_kind?: string;
+  has_coordinates?: boolean;
+  has_matrix?: boolean;
+  has_demands?: boolean;
+  has_capacities?: boolean;
+  has_time_windows?: boolean;
+  has_service_times?: boolean;
+  num_vehicles?: number | null;
+  direction?: string | null;
+  depot_index?: number | null;
+  max_route_duration?: number | null;
+  source?: "tsplib" | "academic_db";
 }
 
 export interface BenchmarkAlgorithm {
@@ -95,6 +107,18 @@ export interface AcademicBestResultResponse {
   problem: string;
   algorithm: string;
   result: AcademicBenchmarkResult | null;
+}
+
+export type AcademicProblem = BenchmarkProblem & {
+  matrix_kind: string;
+  source: "academic_db";
+};
+
+export interface AcademicProblemsResponse {
+  source: "academic_db";
+  count: number;
+  limit: number;
+  results: AcademicProblem[];
 }
 
 export interface BenchmarkResultsResponse {
@@ -187,6 +211,42 @@ export async function fetchStrategies(): Promise<string[]> {
     return data.strategies.map((s: string | { name: string }) => typeof s === "string" ? s : s.name);
   }
   return [];
+}
+
+/**
+ * Fetch academic DB problem inventory across TSP, ATSP, CVRP, and CVRPTW.
+ */
+export async function fetchAcademicProblems(options: {
+  problem_type?: string;
+  category?: string;
+  max_dim?: number;
+  limit?: number;
+} = {}): Promise<AcademicProblem[]> {
+  const params = new URLSearchParams();
+  if (options.problem_type) params.set("problem_type", options.problem_type);
+  if (options.category) params.set("category", options.category);
+  if (options.max_dim) params.set("max_dim", String(options.max_dim));
+  if (options.limit) params.set("limit", String(options.limit));
+
+  const response = await fetch(
+    `${BENCHMARK_API_BASE}/academic/problems${params.toString() ? `?${params.toString()}` : ""}`,
+    {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(10000),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Akademik problem listesi alınamadı: ${response.status}`);
+  }
+
+  const data = (await response.json()) as AcademicProblemsResponse;
+  return (data.results || []).map((problem) => ({
+    ...problem,
+    source: "academic_db",
+    available: problem.available ?? true,
+  }));
 }
 
 /**

@@ -60,6 +60,7 @@ import {
   type BenchmarkResult,
   type BenchmarkResultsResponse,
   fetchProblems,
+  fetchAcademicProblems,
   fetchParamSpaces,
   startBenchmark,
   pollStatus,
@@ -204,8 +205,34 @@ export default function BenchmarkPage() {
     const load = async () => {
       setProblemsLoading(true);
       try {
-        const data = await fetchProblems();
-        setProblems(data);
+        const [liveResult, academicResult] = await Promise.allSettled([
+          fetchProblems(),
+          fetchAcademicProblems({ limit: 5000 }),
+        ]);
+
+        if (liveResult.status === "rejected" && academicResult.status === "rejected") {
+          throw liveResult.reason;
+        }
+
+        const merged = new Map<string, BenchmarkProblem>();
+        if (liveResult.status === "fulfilled") {
+          for (const problem of liveResult.value) {
+            merged.set(problem.name, { ...problem, source: problem.source || "tsplib" });
+          }
+        }
+        if (academicResult.status === "fulfilled") {
+          for (const problem of academicResult.value) {
+            const existing = merged.get(problem.name);
+            merged.set(problem.name, {
+              ...existing,
+              ...problem,
+              available: problem.available ?? existing?.available ?? true,
+              source: "academic_db",
+            });
+          }
+        }
+
+        setProblems(Array.from(merged.values()));
       } catch (err) {
         console.error("Failed to load problems:", err);
         toast({

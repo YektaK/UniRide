@@ -321,6 +321,7 @@ export async function optimizeRoutes(
             total_duration_minutes: data.total_duration_minutes || 0,
             execution_time_seconds: data.execution_time_seconds || 0,
             error_message: data.error_message,
+            ie_data: data.ie_data,
             // CVRPTW fields
             direction: data.direction,
             time_windows_used: data.time_windows_used,

@@ -1,6 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fetchAcademicProblems } from "./benchmark-service";
+vi.mock("@/lib/benchmark-run-id", () => ({
+  generateBenchmarkRunId: () => "bench-test-run",
+}));
+
+import {
+  fetchAcademicProblems,
+  fetchResults,
+  pollStatus,
+  startBenchmark,
+} from "./benchmark-service";
 
 describe("benchmark-service academic problems", () => {
   afterEach(() => {
@@ -52,5 +61,91 @@ describe("benchmark-service academic problems", () => {
       source: "academic_db",
       available: true,
     });
+  });
+
+  it("starts benchmark runs with generated run id and requested payload", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        run_id: "bench-test-run",
+        status: "queued",
+        message: "queued",
+        total_experiments: 2,
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await startBenchmark(
+      [{ id: "Core-Greedy-Routing", params: { max_iterations: 10 } }],
+      ["smoke-cvrp"],
+      { n_runs: 2, seed: 42 }
+    );
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/benchmark/run",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          run_id: "bench-test-run",
+          algorithms: [{ id: "Core-Greedy-Routing", params: { max_iterations: 10 } }],
+          problems: ["smoke-cvrp"],
+          settings: { n_runs: 2, seed: 42 },
+        }),
+      })
+    );
+    expect(result.run_id).toBe("bench-test-run");
+  });
+
+  it("polls status with URL-encoded run id", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        run_id: "run id/1",
+        status: "running",
+        total_experiments: 1,
+        completed_experiments: 0,
+        results_count: 0,
+        message: "running",
+        progress_percent: 0,
+        start_time: "2026-06-01T00:00:00Z",
+        end_time: null,
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await pollStatus("run id/1");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/benchmark/status?run_id=run+id%2F1",
+      expect.objectContaining({ method: "GET" })
+    );
+  });
+
+  it("throws API detail when starting a benchmark fails", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ detail: "invalid benchmark request" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      startBenchmark([{ id: "Core-Greedy-Routing" }], ["missing"], { n_runs: 1, seed: 1 })
+    ).rejects.toThrow("invalid benchmark request");
+  });
+
+  it("throws API detail when fetching benchmark results fails", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({ detail: "run not found" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchResults("missing/run")).rejects.toThrow("run not found");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/benchmark/results/missing%2Frun",
+      expect.objectContaining({ method: "GET" })
+    );
   });
 });

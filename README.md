@@ -22,7 +22,7 @@ Sistem; yönetici, sürücü ve öğrenci akışlarını tek uygulamada toplar, 
 - Zaman pencereli planlama (pickup/dropoff yönleri)
 - Route planları ve sandbox senaryoları için kalıcılık API'leri
 - IE (Industrial Engineering) Resource Dashboard
-- Akademik benchmark suit (TSPLib, Numba JIT)
+- Akademik benchmark paketi (TSPLib, Numba JIT)
 - CLI→Web Import Bridge (`/api/v1/benchmark/cli/import`)
 
 \*PyVRP ve VROOM opsiyonel; `pip install -r requirements-benchmark.txt` ile etkinleştirilebilir.
@@ -97,7 +97,7 @@ pip install -r requirements-benchmark.txt
 npm run dev
 ```
 
-- Web: `http://localhost:3000`
+- Web: `http://localhost:9002`
 - Optimizer API: `http://127.0.0.1:8000` (prod: 8099)
 
 ## Veritabanı

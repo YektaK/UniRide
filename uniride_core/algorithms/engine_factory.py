@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Dict
 
 from uniride_core.algorithms.base_engine import UnifiedEngine
+from uniride_core.algorithms.fcm_split_engine import FCMSplitMatrixEngine
 from uniride_core.algorithms.greedy_engine import GreedyMatrixEngine
 from uniride_core.algorithms.tsp_meta_engines import (
     solve_ga_tsp,
@@ -40,6 +41,17 @@ CORE_TSP_ALIASES = {
     "Core-PSO-TSP": "Core-PSO-TSP",
     "Core-GWO-TSP": "Core-GWO-TSP",
     "Core-HHO-TSP": "Core-HHO-TSP",
+    "FCM-GA-TSP": "FCM-GA-TSP",
+    "FCM-PSO-TSP": "FCM-PSO-TSP",
+    "FCM-GWO-TSP": "FCM-GWO-TSP",
+    "FCM-HHO-TSP": "FCM-HHO-TSP",
+}
+
+FCM_TSP_SOLVERS: Dict[str, TSPSolver] = {
+    "FCM-GA-TSP": solve_ga_tsp,
+    "FCM-PSO-TSP": solve_pso_tsp,
+    "FCM-GWO-TSP": solve_gwo_tsp,
+    "FCM-HHO-TSP": solve_hho_tsp,
 }
 
 
@@ -57,6 +69,8 @@ def create_matrix_engine(name: str) -> UnifiedEngine:
     canonical_name = canonical_matrix_engine_name(name)
     if canonical_name == "Core-Greedy-Routing":
         return GreedyMatrixEngine()
+    if canonical_name in FCM_TSP_SOLVERS:
+        return FCMSplitMatrixEngine(canonical_name, FCM_TSP_SOLVERS[canonical_name])
     if canonical_name in CORE_TSP_SOLVERS:
         return TSPMetaMatrixEngine(canonical_name, CORE_TSP_SOLVERS[canonical_name])
     raise KeyError(name)
@@ -64,13 +78,14 @@ def create_matrix_engine(name: str) -> UnifiedEngine:
 
 def list_matrix_engine_names() -> list[str]:
     """List canonical core matrix-native engine names."""
-    return ["Core-Greedy-Routing", *CORE_TSP_SOLVERS.keys()]
+    return ["Core-Greedy-Routing", *CORE_TSP_SOLVERS.keys(), *FCM_TSP_SOLVERS.keys()]
 
 
 __all__ = [
     "CORE_GREEDY_ALIASES",
     "CORE_TSP_ALIASES",
     "CORE_TSP_SOLVERS",
+    "FCM_TSP_SOLVERS",
     "canonical_matrix_engine_name",
     "create_matrix_engine",
     "list_matrix_engine_names",

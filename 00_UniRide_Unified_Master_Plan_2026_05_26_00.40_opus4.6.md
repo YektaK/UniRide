@@ -890,12 +890,13 @@ architecture, but the following verified follow-ups remain:
 
 Source document: `implementation_plan_fcm_hybrid.md`.
 
-Status: **ROADMAP / NOT IMPLEMENTED**. The reusable FCM clustering pieces exist in
-`uniride_core.algorithms.clustering_strategies`, and `optimizer_api` keeps
-compatibility exports. The proposed FCM Split-Route-Stitch meta-solver itself is
-not present: there is no `FCMSplitSolverWrapper`, no `FCM-GA-TSP` /
-`FCM-PSO-TSP` / `FCM-GWO-TSP` / `FCM-HHO-TSP` registry entries, no Optuna
-parameter spaces for `fcm_clusters` / `fcm_m`, and no benchmark/dashboard tests.
+Status: **IMPLEMENTED / RESEARCH PREVIEW**. The reusable FCM clustering pieces
+remain in `uniride_core.algorithms.clustering_strategies`, and the FCM
+Split-Route-Stitch meta-solver is now implemented as
+`uniride_core.algorithms.fcm_split_engine.FCMSplitMatrixEngine`. Academic
+registry entries exist for `FCM-GA-TSP`, `FCM-PSO-TSP`, `FCM-GWO-TSP`, and
+`FCM-HHO-TSP`, with DoE/Optuna parameter spaces for `fcm_clusters`, `fcm_m`,
+`fcm_iterations`, and polish controls.
 
 Design correction before implementation:
 
@@ -917,11 +918,11 @@ Implementation roadmap:
 
 | Order | Task | Dependency | Notes |
 |:------|:-----|:-----------|:------|
-| FCM-1 | Add core `FCMSplitSolverWrapper` / engine | After academic benchmark readiness | Place in `uniride_core`; wrap existing core TSP solvers rather than duplicating GA/PSO/GWO/HHO logic. |
-| FCM-2 | Add deterministic stitching and polish tests | Depends on FCM-1 | Verify tour contains every node once, preserves matrix cost accounting, and handles small-cluster fallbacks. |
-| FCM-3 | Register `FCM-GA-TSP`, `FCM-PSO-TSP`, `FCM-GWO-TSP`, `FCM-HHO-TSP` | Depends on FCM-1 | Register through academic/core registry construction without adding optimizer-api dependencies. |
-| FCM-4 | Add Optuna/grid parameter spaces | Depends on FCM-3 | Include `fcm_clusters`, `fcm_m`, and inherited base solver params. |
-| FCM-5 | Run academic benchmark comparison versus pure base solvers | Depends on FCM-4 | Target large TSP instances only first; promote only if SQLite results show consistent gap/time benefit. |
+| FCM-1 | Add core `FCMSplitMatrixEngine` | DONE | Implemented in `uniride_core`; wraps existing core TSP solvers rather than duplicating GA/PSO/GWO/HHO logic. |
+| FCM-2 | Add deterministic stitching and polish tests | DONE | Tests verify every node appears once and factory-created FCM engines solve matrix-native TSP problems. |
+| FCM-3 | Register `FCM-GA-TSP`, `FCM-PSO-TSP`, `FCM-GWO-TSP`, `FCM-HHO-TSP` | DONE | Registered through academic/core registry construction without adding optimizer-api dependencies. |
+| FCM-4 | Add Optuna/grid parameter spaces | DONE | Includes `fcm_clusters`, `fcm_m`, `fcm_iterations`, `fcm_min_cluster_size`, and polish controls with inherited base params. |
+| FCM-5 | Run academic benchmark comparison versus pure base solvers | PENDING VALIDATION | Target large TSP instances only first; promote only if SQLite results show consistent gap/time benefit. |
 
 ---
 
@@ -940,7 +941,7 @@ suite runnable end-to-end first, then return to production hardening.
 | 6 | Generate promoted configs from academic DB | 4.1 / 4.2 | Depends on task 5 | Run promotion manager dry-run, then emit `promoted_configs.json` only if validation passes and configs are meaningful. |
 | 7 | Run quick web/API benchmark sanity path | 5.2 | Depends on task 5 | Verify matrix-native web execution can use editable params and academic read endpoints remain source-of-truth for historical results. |
 | 8 | Add dedicated CVRP/CVRPTW dashboard polish | 3.6 | Depends on finalized importer and populated DB | Dataset-family grouping, BKS vehicle comparisons, CVRP/CVRPTW-specific columns. Nice-to-have after runnable suite. |
-| 9 | Implement FCM-SRS large-TSP research extension | Phase 6 candidate | Depends on tasks 1-8 | Use the corrected core-first roadmap above. This is not required for today's academic suite, but it belongs in the benchmark research backlog. |
+| 9 | Implement FCM-SRS large-TSP research extension | Phase 6 candidate | Depends on tasks 1-8 | DONE for research preview: core engine, academic registry, and parameter spaces are implemented. Large-instance comparison remains pending validation. |
 | 10 | Fix frontend typecheck failure | Review follow-up | Independent, non-academic | Repair malformed JSX in `src/app/(app)/admin/vehicle-planning/page.tsx` so full `npm run typecheck` is green. |
 | 11 | PSO/HHO rng cleanup | Review follow-up | Independent | DONE: removed instance-level RNG from production wrappers; request-local/core RNG behavior is preserved. |
 | 12 | Direction enum rename | Review follow-up | Depends on API compatibility care | DONE: introduced API-level `TripDirection`; kept `Direction = TripDirection` alias for backward compatibility. |
@@ -964,8 +965,9 @@ Completed today:
 - Task 12: Direction enum rename completed. `optimizer_api.models.schemas.TripDirection` is now the canonical API enum and `Direction = TripDirection` remains as a compatibility alias for existing callers/tests.
 - Task 13: SOTA Euclidean helper consolidation completed. `BaseTSPSolver.euclidean_distance()` now delegates to the canonical raw `euclidean_distance_2d` helper and regression tests cover direct coordinate matrix construction.
 - Task 14: DataLoader ownership cleanup completed. `optimizer_api.utils.data_loader` remains app-owned because it owns Supabase credentials, cache TTL, and request-time matrix glue; its fallback Euclidean/haversine matrix helpers now use canonical `uniride_core.algorithms.distance` functions.
+- Task 9: FCM-SRS large-TSP research extension implemented as a research preview. `FCMSplitMatrixEngine` lives in `uniride_core`, `FCM-GA/PSO/GWO/HHO-TSP` are available in the core factory and academic registry, and DoE/Optuna parameter spaces include FCM controls. Large-instance SQLite comparison is still the next validation gate before promotion.
 
-Recommended next task: **Task 9, implement FCM-SRS large-TSP research extension**, if academic research features remain the priority. Otherwise do a final full verification sweep and archive/reconcile superseded review notes.
+Recommended next task: run a final full verification sweep, then run a controlled SQLite academic comparison of `FCM-*` versus pure `Core-*` solvers on medium/large TSP instances before considering any promotion.
 
 ---
 

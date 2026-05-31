@@ -7,7 +7,7 @@ from uniride_core.algorithms.local_search_numba import LocalSearchType
 from uniride_core.algorithms.registry import list_algorithm_names
 from uniride_core.adapters.matrix_builder import MatrixBuilder
 from uniride_core.algorithms.sota_tsp.base_solver import BaseTSPSolver
-from uniride_core.algorithms.engine_factory import CORE_TSP_SOLVERS, create_matrix_engine
+from uniride_core.algorithms.engine_factory import CORE_TSP_SOLVERS, FCM_TSP_SOLVERS, create_matrix_engine
 import importlib
 
 
@@ -134,6 +134,43 @@ def _make_core_tsp_executor(algorithm_name, solver):
             objective_cost=round(float(cost), 2),
             problem_type=str(getattr(problem, "problem_type", "tsp") or "tsp").lower(),
             matrix_kind=matrix_kind,
+        )
+
+    return executor
+
+
+def _make_matrix_tsp_executor(algorithm_name: str):
+    def executor(problem, params, seed, run_idx):
+        import time
+        from academic_benchmark.engine_core import RunResult
+
+        routing_problem = MatrixBuilder.to_routing_problem(problem)
+        engine = create_matrix_engine(algorithm_name)
+        start_time = time.perf_counter()
+        result = engine.solve_problem(routing_problem, config=params, seed=seed)
+        elapsed = time.perf_counter() - start_time
+
+        cost = float(getattr(result, "tour_length", getattr(result, "objective_cost", 0.0)))
+        optimal = getattr(problem, "optimal", None)
+        gap = None
+        if optimal and optimal > 0:
+            gap = ((cost - optimal) / optimal) * 100
+
+        return RunResult(
+            problem=problem.name,
+            algorithm=algorithm_name,
+            run=run_idx,
+            seed=seed,
+            dimension=problem.dimension,
+            optimal=optimal,
+            tour_cost=round(cost, 2),
+            gap_pct=round(gap, 4) if gap is not None else None,
+            elapsed_sec=round(elapsed, 4),
+            iterations=int(params.get("max_iterations", params.get("iterations", 0)) or 0),
+            tour=[int(node) + 1 for node in getattr(result, "tour", [])] if getattr(result, "tour", None) else None,
+            objective_cost=round(cost, 2),
+            problem_type=str(getattr(problem, "problem_type", "tsp") or "tsp").lower(),
+            matrix_kind=getattr(routing_problem.matrix, "kind", "distance"),
         )
 
     return executor
@@ -319,6 +356,9 @@ AlgorithmRegistry.register("Core-Greedy-Routing")(_core_greedy_executor)
 
 for algo_name, solver in CORE_TSP_SOLVERS.items():
     AlgorithmRegistry.register(algo_name)(_make_core_tsp_executor(algo_name, solver))
+
+for algo_name in FCM_TSP_SOLVERS:
+    AlgorithmRegistry.register(algo_name)(_make_matrix_tsp_executor(algo_name))
 
 
 def _make_routing_alias_executor(alias_name: str, engine_name: str):

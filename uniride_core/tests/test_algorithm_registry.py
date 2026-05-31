@@ -10,6 +10,7 @@ def test_core_registry_exposes_required_algorithm_families():
     names = set(list_algorithm_names())
     assert {"GA", "PSO", "GWO", "HHO"}.issubset(names)
     assert {"Core-GA-TSP", "Core-PSO-TSP", "Core-GWO-TSP", "Core-HHO-TSP", "Core-TwoOpt-TSP"}.issubset(names)
+    assert {"FCM-GA-TSP", "FCM-PSO-TSP", "FCM-GWO-TSP", "FCM-HHO-TSP"}.issubset(names)
     assert {"GA-Split", "PSO-Split", "GWO-Split", "HHO-Split"}.issubset(names)
     assert {"OR-Tools", "PyVRP", "VROOM", "Greedy"}.issubset(names)
     assert {"2-OPT", "3-OPT", "OR-OPT", "SWAP", "HYBRID"}.issubset(names)

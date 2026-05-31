@@ -229,6 +229,29 @@ _NUMBA_ROUTING_BASES = {
     "Core-HHO-TSP": NUMBA_PARAM_SPACES["HHO"],
 }
 
+FCM_PARAM_SPACE = {
+    "fcm_clusters": {"type": "int", "doe": [2, 3, 4], "optuna": (2, 6)},
+    "fcm_m": {"type": "float", "doe": [1.5, 2.0, 2.5], "optuna": (1.1, 3.0)},
+    "fcm_iterations": {"type": "int", "doe": [50, 100], "optuna": (25, 150)},
+    "fcm_min_cluster_size": {"type": "int", "doe": [4, 8], "optuna": (2, 20)},
+    "fcm_polish_iterations": {"type": "int", "doe": [100, 200], "optuna": (50, 400)},
+}
+
+
+def _with_fcm_params(base: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    params = {key: value.copy() for key, value in base.items()}
+    params.update({key: value.copy() for key, value in FCM_PARAM_SPACE.items()})
+    return params
+
+
+for _name, _base_key in {
+    "FCM-GA-TSP": "GA",
+    "FCM-PSO-TSP": "PSO",
+    "FCM-GWO-TSP": "GWO",
+    "FCM-HHO-TSP": "HHO",
+}.items():
+    NUMBA_PARAM_SPACES[_name] = _with_fcm_params(NUMBA_PARAM_SPACES[_base_key])
+
 CVRP_PARAM_SPACES: Dict[str, Dict[str, Dict[str, Any]]] = {}
 CVRPTW_PARAM_SPACES: Dict[str, Dict[str, Dict[str, Any]]] = {}
 
@@ -269,7 +292,7 @@ def build_doe_space(algo_name: str, source: str = "sota") -> Dict[str, List[Any]
 
 def build_optuna_space(algo_name: str, trial) -> Dict[str, Any]:
     """Build Optuna trial parameter space from unified definitions."""
-    space = SOTA_PARAM_SPACES.get(algo_name, {})
+    space = SOTA_PARAM_SPACES.get(algo_name) or NUMBA_PARAM_SPACES.get(algo_name, {})
     params = {}
     for key, val in space.items():
         optuna_range = val.get("optuna")

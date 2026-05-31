@@ -30,6 +30,10 @@ def test_academic_registry_exposes_core_tsp_engines():
         "Core-PSO-TSP",
         "Core-GWO-TSP",
         "Core-HHO-TSP",
+        "FCM-GA-TSP",
+        "FCM-PSO-TSP",
+        "FCM-GWO-TSP",
+        "FCM-HHO-TSP",
     }.issubset(algorithms)
 
 
@@ -96,5 +100,29 @@ def test_core_tsp_executors_run_matrix_native_problem(algorithm, params):
     assert result.algorithm == algorithm
     assert result.problem_type == "tsp"
     assert result.matrix_kind == "distance"
+    assert result.objective_cost == result.tour_cost
+    assert set(result.tour) == {1, 2, 3, 4}
+
+
+def test_fcm_tsp_executor_runs_matrix_native_problem():
+    executor = AlgorithmRegistry.get_executor("FCM-GA-TSP")
+
+    result = executor(
+        _tiny_tsp_problem(),
+        {
+            "population_size": 8,
+            "max_iterations": 5,
+            "elite_count": 2,
+            "tournament_size": 3,
+            "fcm_clusters": 2,
+            "fcm_min_cluster_size": 2,
+            "fcm_iterations": 8,
+        },
+        seed=123,
+        run_idx=1,
+    )
+
+    assert result.algorithm == "FCM-GA-TSP"
+    assert result.problem_type == "tsp"
     assert result.objective_cost == result.tour_cost
     assert set(result.tour) == {1, 2, 3, 4}

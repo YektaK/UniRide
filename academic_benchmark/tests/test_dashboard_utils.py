@@ -3,9 +3,12 @@ import json
 import pandas as pd
 
 from academic_benchmark.dashboard_utils import (
+    add_routing_analysis_columns,
     available_routing_metrics,
     benchmark_rows_to_progress_frame,
     derive_filter_options,
+    infer_dataset_family,
+    routing_dashboard_columns,
 )
 
 
@@ -72,3 +75,54 @@ def test_derive_filter_options_uses_progress_when_summary_empty():
 
     assert problems == ["p1", "p2"]
     assert algorithms == ["A", "B"]
+
+
+def test_add_routing_analysis_columns_derives_family_feasibility_and_vehicle_gap():
+    frame = pd.DataFrame({
+        "problem": ["R101", "A-n32-k5", "smoke-uniride"],
+        "problem_type": ["cvrptw", "cvrp", "uniride"],
+        "strategy": ["A", "B", "C"],
+        "num_vehicles": [2, 6, 1],
+        "num_vehicles_bks": [2, 5, None],
+        "capacity_violations": [0, 1, 0],
+        "tw_violations": [0, 0, 2],
+    })
+
+    enriched = add_routing_analysis_columns(frame)
+
+    assert enriched["dataset_family"].tolist() == ["Solomon-R", "A", "smoke"]
+    assert enriched["is_routing_problem"].tolist() == [True, True, True]
+    assert enriched["is_feasible"].tolist() == [True, False, False]
+    assert enriched["constraint_status"].tolist() == [
+        "feasible",
+        "capacity=1",
+        "time_window=2",
+    ]
+    assert enriched["vehicle_gap"].tolist()[:2] == [0, 1]
+
+
+def test_routing_dashboard_columns_returns_existing_preferred_columns():
+    frame = pd.DataFrame(columns=[
+        "problem",
+        "dataset_family",
+        "problem_type",
+        "strategy",
+        "objective_cost",
+        "unrelated",
+    ])
+
+    assert routing_dashboard_columns(frame) == [
+        "problem",
+        "dataset_family",
+        "problem_type",
+        "strategy",
+        "objective_cost",
+    ]
+
+
+def test_infer_dataset_family_handles_common_routing_names():
+    assert infer_dataset_family("RC101", "cvrptw") == "Solomon-RC"
+    assert infer_dataset_family("C101", "cvrptw") == "Solomon-C"
+    assert infer_dataset_family("A-n32-k5", "cvrp") == "A"
+    assert infer_dataset_family("smoke-cvrp", "cvrp") == "smoke"
+    assert infer_dataset_family("uniride-export", "uniride") == "uniride"

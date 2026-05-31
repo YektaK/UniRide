@@ -958,8 +958,9 @@ Completed today:
 - Task 5: matrix-native academic smoke benchmark added and executed locally with run id `academic-matrix-smoke-20260531`; 5 results persisted, 0 errors.
 - Task 6: promotion manager dry-run and write completed locally; 26 configs generated from existing `best_solutions`, not smoke params. The generated JSON is ignored/untracked.
 - Task 7: web/API sanity path verified locally. Academic problem/result endpoints read from SQLite, param spaces expose editable params, and matrix-native web execution persisted run id `web-matrix-sanity-20260531-r2` with editable `Core-TwoOpt-TSP` params.
+- Task 8: CVRP/CVRPTW dashboard polish added. Dashboard utilities now derive dataset family, routing feasibility, constraint status, and vehicle gap; the Streamlit dashboard has a dedicated routing diagnostics tab.
 
-Recommended next task: **Task 8, add dedicated CVRP/CVRPTW dashboard polish**, because the DB-backed academic benchmark and web/API sanity paths are now runnable end-to-end.
+Recommended next task: **Task 9, implement FCM-SRS large-TSP research extension**, if academic research features remain the priority. Otherwise move to **Task 10, frontend typecheck failure**, because the academic benchmark path is now runnable end-to-end.
 
 ---
 

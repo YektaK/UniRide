@@ -8,9 +8,11 @@ import numpy as np
 from pathlib import Path
 from datetime import datetime
 from dashboard_utils import (
+    add_routing_analysis_columns,
     available_routing_metrics,
     benchmark_rows_to_progress_frame,
     derive_filter_options,
+    routing_dashboard_columns,
 )
 from tsplib_manager import DB_PATH, query_benchmark_results
 
@@ -174,16 +176,18 @@ if not summary_df.empty:
 if not progress_df.empty:
     raw_progress = progress_df[progress_df['result_type'] == 'raw'] if 'result_type' in progress_df.columns else progress_df
     filtered_progress = raw_progress[raw_progress['problem'].isin(selected_probs) & raw_progress['strategy'].isin(selected_algos)]
+    filtered_progress = add_routing_analysis_columns(filtered_progress)
 
 # --- SEKMELER (TABS) ---
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "🏆 Leaderboard & LaTeX",
     "📊 Statistical Robustness",
     "🎛️ DoE Parameter Analysis",
     "🔬 Statistical Significance (Wilcoxon)",
     "📉 Convergence Curves",
     "⚔️ Algorithm Comparison",
-    "🔥 Edge Frequency Heatmap"
+    "🔥 Edge Frequency Heatmap",
+    "🚐 Routing Diagnostics"
 ])
 
 # SEKME 1: Liderlik Tablosu ve LaTeX
@@ -587,3 +591,48 @@ with tab7:
             st.info("No progress data available for edge analysis.")
     else:
         st.info("Select at least one problem to analyze edge frequencies.")
+
+# SEKME 8: Routing Diagnostics
+with tab8:
+    st.subheader("CVRP / CVRPTW / UniRide Routing Diagnostics")
+    routing_df = filtered_progress[
+        filtered_progress.get("is_routing_problem", pd.Series(False, index=filtered_progress.index)) == True
+    ] if not filtered_progress.empty else pd.DataFrame()
+
+    if not routing_df.empty:
+        family_counts = (
+            routing_df.groupby(["problem_type", "dataset_family"], dropna=False)
+            .size()
+            .reset_index(name="runs")
+            .sort_values(["problem_type", "dataset_family"])
+        )
+        st.markdown("### Dataset Family Coverage")
+        st.dataframe(family_counts, use_container_width=True)
+
+        feasible_count = int(routing_df["is_feasible"].sum()) if "is_feasible" in routing_df.columns else 0
+        st.markdown(
+            f"### Constraint Health\n"
+            f"{feasible_count}/{len(routing_df)} routing runs have zero capacity and time-window violations."
+        )
+
+        cols = routing_dashboard_columns(routing_df)
+        st.markdown("### Routing Result Rows")
+        st.dataframe(
+            routing_df[cols].sort_values(["problem_type", "dataset_family", "problem", "strategy"]),
+            use_container_width=True,
+        )
+
+        if "num_vehicles" in routing_df.columns:
+            fig_vehicle = px.bar(
+                routing_df,
+                x="problem",
+                y="num_vehicles",
+                color="strategy",
+                facet_col="problem_type",
+                title="Vehicles Used by Routing Problem",
+                barmode="group",
+            )
+            fig_vehicle.update_layout(plot_bgcolor="white", paper_bgcolor="white")
+            st.plotly_chart(fig_vehicle, use_container_width=True)
+    else:
+        st.info("No CVRP, CVRPTW, or UniRide routing rows are available under the current filters.")

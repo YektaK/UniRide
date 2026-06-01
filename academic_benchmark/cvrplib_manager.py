@@ -19,6 +19,9 @@ from academic_benchmark.tsplib_manager import (
     store_academic_text,
 )
 
+CVRPLIB_EXTENSIONS = {".vrp"}
+SOLOMON_EXTENSIONS = {".solomon", ".txt", ".vrptw"}
+
 
 def import_cvrplib_text(
     text: str,
@@ -69,17 +72,40 @@ def import_cvrp_paths(paths: Iterable[str | Path], *, db_path: str = DB_PATH) ->
     imported: List[str] = []
     skipped: List[str] = []
     for file_path in _iter_candidate_files(paths):
-        suffix = file_path.suffix.lower()
+        kind = _candidate_kind(file_path)
         try:
-            if suffix == ".vrp":
+            if kind == "cvrplib":
                 imported.append(import_cvrplib_file(file_path, db_path=db_path).name)
-            elif suffix in {".solomon", ".txt"}:
+            elif kind == "solomon":
                 imported.append(import_solomon_file(file_path, db_path=db_path).name)
             else:
                 skipped.append(file_path.name)
         except Exception:
             skipped.append(file_path.name)
     return {"imported": sorted(imported), "skipped": sorted(skipped)}
+
+
+def scan_cvrp_paths(paths: Iterable[str | Path]) -> Dict[str, List[object]]:
+    """Return a non-mutating import-readiness report for files/directories."""
+    supported: List[Dict[str, str]] = []
+    skipped: List[str] = []
+    missing: List[str] = []
+    for raw_path in paths:
+        path = Path(raw_path)
+        if not path.exists():
+            missing.append(str(path))
+            continue
+        for file_path in _iter_candidate_files([path]):
+            kind = _candidate_kind(file_path)
+            if kind:
+                supported.append({"path": str(file_path), "kind": kind})
+            else:
+                skipped.append(str(file_path))
+    return {
+        "supported": sorted(supported, key=lambda item: item["path"]),
+        "skipped": sorted(skipped),
+        "missing": sorted(missing),
+    }
 
 
 def load_cvrp_problem(name: str, *, db_path: str = DB_PATH):
@@ -133,14 +159,26 @@ def _iter_candidate_files(paths: Iterable[str | Path]) -> List[Path]:
     return sorted(files, key=lambda item: str(item))
 
 
+def _candidate_kind(path: Path) -> Optional[str]:
+    suffix = path.suffix.lower()
+    if suffix in CVRPLIB_EXTENSIONS:
+        return "cvrplib"
+    if suffix in SOLOMON_EXTENSIONS:
+        return "solomon"
+    return None
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """CLI facade for importing/listing CVRP and CVRPTW academic problems."""
     parser = argparse.ArgumentParser(description="CVRPLIB/Solomon facade over unified academic SQLite storage")
     parser.add_argument("--db-path", default=DB_PATH)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    import_parser = subparsers.add_parser("import", help="Import .vrp/.txt/.solomon files from files or directories")
+    import_parser = subparsers.add_parser("import", help="Import .vrp/.txt/.vrptw/.solomon files from files or directories")
     import_parser.add_argument("paths", nargs="+")
+
+    scan_parser = subparsers.add_parser("scan", help="Scan paths and report importable CVRPLIB/Solomon files without writing DB")
+    scan_parser.add_argument("paths", nargs="+")
 
     subparsers.add_parser("list", help="List stored CVRP/CVRPTW problem names")
     subparsers.add_parser("status", help="Print CVRP/CVRPTW store counts")
@@ -150,6 +188,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         result = import_cvrp_paths(args.paths, db_path=args.db_path)
         print(f"imported={result['imported']}")
         print(f"skipped={result['skipped']}")
+        return 0
+    if args.command == "scan":
+        result = scan_cvrp_paths(args.paths)
+        print(f"supported={result['supported']}")
+        print(f"skipped={result['skipped']}")
+        print(f"missing={result['missing']}")
         return 0
     if args.command == "list":
         for row in get_cvrp_problems(db_path=args.db_path):
@@ -171,6 +215,7 @@ __all__ = [
     "load_cvrp_problem",
     "get_cvrp_problem_as_instance",
     "get_cvrp_problems",
+    "scan_cvrp_paths",
     "summarize_cvrp_store",
 ]
 

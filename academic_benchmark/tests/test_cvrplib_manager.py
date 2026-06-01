@@ -5,6 +5,7 @@ from academic_benchmark.cvrplib_manager import (
     import_cvrplib_text,
     import_solomon_text,
     load_cvrp_problem,
+    scan_cvrp_paths,
     summarize_cvrp_store,
 )
 
@@ -85,6 +86,35 @@ def test_import_cvrp_paths_imports_supported_files_from_directory(tmp_path):
     assert result == {"imported": ["R101", "tiny-cvrp"], "skipped": ["ignore.md"]}
     rows = get_cvrp_problems(db_path=db_path)
     assert [row["problem_type"] for row in rows] == ["CVRPTW", "CVRP"]
+
+
+def test_scan_cvrp_paths_reports_supported_and_skipped_files(tmp_path):
+    input_dir = tmp_path / "instances"
+    input_dir.mkdir()
+    (input_dir / "tiny-cvrp.vrp").write_text(CVRPLIB_TEXT, encoding="utf-8")
+    (input_dir / "R101.vrptw").write_text(SOLOMON_TEXT, encoding="utf-8")
+    (input_dir / "ignore.md").write_text("not a routing instance", encoding="utf-8")
+
+    result = scan_cvrp_paths([input_dir])
+
+    assert result["supported"] == [
+        {"path": str(input_dir / "R101.vrptw"), "kind": "solomon"},
+        {"path": str(input_dir / "tiny-cvrp.vrp"), "kind": "cvrplib"},
+    ]
+    assert result["skipped"] == [str(input_dir / "ignore.md")]
+    assert result["missing"] == []
+
+
+def test_import_cvrp_paths_supports_vrptw_solomon_extension(tmp_path):
+    db_path = str(tmp_path / "academic.db")
+    input_dir = tmp_path / "instances"
+    input_dir.mkdir()
+    (input_dir / "R101.vrptw").write_text(SOLOMON_TEXT, encoding="utf-8")
+
+    result = import_cvrp_paths([input_dir], db_path=db_path)
+
+    assert result == {"imported": ["R101"], "skipped": []}
+    assert load_cvrp_problem("R101", db_path=db_path).problem_type == "cvrptw"
 
 
 def test_summarize_cvrp_store_counts_cvrp_and_cvrptw(tmp_path):

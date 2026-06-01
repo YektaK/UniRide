@@ -603,7 +603,7 @@ def validate_param_value(key: str, raw: str, expected_type: type,
                 print(f"    [!] {key} aralik disi [{vmin}, {vmax}]: {val}")
                 return None
         return val
-    except ValueError:
+    except (TypeError, ValueError):
         print(f"    [!] {key} icin gecersiz deger: {raw}")
         return None
 
@@ -902,22 +902,6 @@ def resolve_dist_matrix(
             return None
         return matrix
     except Exception:
-        return None
-
-
-def validate_param_value(key: str, value_str: str, sample_type: type) -> Optional[object]:
-    """Validate and convert a single parameter value string.
-    Returns converted value or None on error.
-    """
-    try:
-        if sample_type == bool:
-            return value_str.lower() in ("true", "t", "1", "yes", "e", "evet")
-        if sample_type == int:
-            return int(value_str)
-        if sample_type == float:
-            return float(value_str)
-        return value_str
-    except (ValueError, TypeError):
         return None
 
 

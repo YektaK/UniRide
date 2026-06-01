@@ -6,10 +6,11 @@ from datetime import datetime
 from typing import Dict, List, Any
 
 def compute_gap(actual_cost: float, optimal_cost: float) -> float:
-    """Compute percentage gap from optimal."""
-    if optimal_cost is None or optimal_cost <= 0:
-        return float('nan')
-    return ((actual_cost - optimal_cost) / optimal_cost) * 100.0
+    """Compute percentage gap from optimal using the canonical benchmark helper."""
+    from academic_benchmark import benchmark_utils
+
+    gap_pct, _ = benchmark_utils.compute_gap("__direct__", actual_cost, optimal=optimal_cost)
+    return gap_pct
 
 def export_summary_csv(results: List[Dict[str, Any]], filepath: str) -> None:
     """Export benchmark results to a summary CSV."""

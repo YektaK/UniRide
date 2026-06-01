@@ -1,10 +1,13 @@
 import subprocess
-import time
-import os
+import sys
+from pathlib import Path
 
-def run_cmd(cmd):
-    print(f"Executing: {cmd}")
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+SCRIPT_DIR = Path(__file__).resolve().parent
+
+
+def run_cmd(args):
+    print(f"Executing: {' '.join(args)}")
+    result = subprocess.run(args, capture_output=True, cwd=SCRIPT_DIR, text=True)
     if result.returncode != 0:
         print(f"Error: {result.stderr}")
     else:
@@ -14,11 +17,11 @@ def run_cmd(cmd):
 def main():
     # 1. Tuning Step (Configs 1 to 5)
     print("--- STEP 1: TUNING ---")
-    run_cmd("python 2_run_tuning.py 1,2,3,4,5")
+    run_cmd([sys.executable, "2_run_tuning.py", "1,2,3,4,5"])
     
     # 2. Analyze Tuning
     print("--- STEP 2: ANALYZE TUNING ---")
-    run_cmd("python analyze_tuning.py")
+    run_cmd([sys.executable, "analyze_tuning.py"])
     
     # 3. Benchmark Step
     # Problem IDs: berlin52: 2, eil51: 7, kroA100: 10, rd100: 35, st70: 37
@@ -34,15 +37,15 @@ def main():
     ]
     
     for models, problem in benchmarks:
-        run_cmd(f"python 3_run_benchmark.py {models} {problem} 30")
+        run_cmd([sys.executable, "3_run_benchmark.py", models, problem, "30"])
         
     # 4. Final Analysis
     print("--- STEP 4: FINAL ANALYSIS ---")
-    run_cmd("python analyze_benchmark.py")
+    run_cmd([sys.executable, "analyze_benchmark.py"])
     
     # 5. Visualize
     print("--- STEP 5: VISUALIZATION ---")
-    run_cmd("python 5_visualize.py")
+    run_cmd([sys.executable, "5_visualize.py"])
     
     print("--- BATCH PROCESS COMPLETE ---")
 

@@ -7,6 +7,7 @@ from typing import Dict
 from uniride_core.algorithms.base_engine import UnifiedEngine
 from uniride_core.algorithms.fcm_split_engine import FCMSplitMatrixEngine
 from uniride_core.algorithms.greedy_engine import GreedyMatrixEngine
+from uniride_core.algorithms.holistic_matrix_engine import HolisticMatrixEngine
 from uniride_core.algorithms.tsp_meta_engines import (
     solve_ga_tsp,
     solve_gwo_tsp,
@@ -76,6 +77,19 @@ SPLIT_TSP_COMPAT_ALIASES = {
     "hho-split": "HHO-Split",
 }
 
+HOLISTIC_ENGINE_ALIASES = {
+    "OR-Tools": "OR-Tools",
+    "OR-Tools-CVRP": "OR-Tools",
+    "ortools": "OR-Tools",
+    "ortools_cvrp": "OR-Tools",
+    "PyVRP": "PyVRP",
+    "pyvrp": "PyVRP",
+    "HGS": "PyVRP",
+    "hgs": "PyVRP",
+    "VROOM": "VROOM",
+    "vroom": "VROOM",
+}
+
 
 def canonical_matrix_engine_name(name: str) -> str:
     """Return the canonical core matrix-native engine name for an alias."""
@@ -85,6 +99,8 @@ def canonical_matrix_engine_name(name: str) -> str:
         return CORE_TSP_ALIASES[name]
     if name in SPLIT_TSP_COMPAT_ALIASES:
         return SPLIT_TSP_COMPAT_ALIASES[name]
+    if name in HOLISTIC_ENGINE_ALIASES:
+        return HOLISTIC_ENGINE_ALIASES[name]
     raise KeyError(name)
 
 
@@ -97,6 +113,8 @@ def create_matrix_engine(name: str) -> UnifiedEngine:
         return FCMSplitMatrixEngine(canonical_name, FCM_TSP_SOLVERS[canonical_name])
     if canonical_name in SPLIT_TSP_COMPAT_SOLVERS:
         return TSPMetaMatrixEngine(canonical_name, SPLIT_TSP_COMPAT_SOLVERS[canonical_name])
+    if canonical_name in {"OR-Tools", "PyVRP", "VROOM"}:
+        return HolisticMatrixEngine(canonical_name)
     if canonical_name in CORE_TSP_SOLVERS:
         return TSPMetaMatrixEngine(canonical_name, CORE_TSP_SOLVERS[canonical_name])
     raise KeyError(name)
@@ -109,6 +127,9 @@ def list_matrix_engine_names() -> list[str]:
         *CORE_TSP_SOLVERS.keys(),
         *FCM_TSP_SOLVERS.keys(),
         *SPLIT_TSP_COMPAT_SOLVERS.keys(),
+        "OR-Tools",
+        "PyVRP",
+        "VROOM",
     ]
 
 
@@ -117,6 +138,7 @@ __all__ = [
     "CORE_TSP_ALIASES",
     "CORE_TSP_SOLVERS",
     "FCM_TSP_SOLVERS",
+    "HOLISTIC_ENGINE_ALIASES",
     "SPLIT_TSP_COMPAT_ALIASES",
     "SPLIT_TSP_COMPAT_SOLVERS",
     "canonical_matrix_engine_name",

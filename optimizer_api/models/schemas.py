@@ -329,10 +329,48 @@ class StrategyInfo(BaseModel):
 
 class BenchmarkRunRequest(BaseModel):
     """Request body for POST /api/v1/benchmark/run"""
-    run_id: str
-    algorithms: List[Dict[str, Any]]
-    problems: List[str]
-    settings: Dict[str, Any] = {}
+    run_id: str = Field(..., min_length=1, max_length=128)
+    algorithms: List[Dict[str, Any]] = Field(..., min_length=1)
+    problems: List[str] = Field(..., min_length=1)
+    settings: Dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_benchmark_contract(self) -> "BenchmarkRunRequest":
+        for index, algorithm in enumerate(self.algorithms):
+            if not isinstance(algorithm, dict):
+                raise ValueError(f"algorithms[{index}] must be an object")
+            algorithm_id = algorithm.get("id", algorithm.get("name"))
+            if not isinstance(algorithm_id, str) or not algorithm_id.strip():
+                raise ValueError(f"algorithms[{index}] must include non-empty id or name")
+            params = algorithm.get("params", {})
+            if params is not None and not isinstance(params, dict):
+                raise ValueError(f"algorithms[{index}].params must be an object when provided")
+
+        for index, problem in enumerate(self.problems):
+            if not isinstance(problem, str) or not problem.strip():
+                raise ValueError(f"problems[{index}] must be a non-empty string")
+
+        execution_mode = self.settings.get("execution_mode")
+        if execution_mode is not None and execution_mode not in {"matrix_native", "academic_matrix"}:
+            raise ValueError("settings.execution_mode must be 'matrix_native' or 'academic_matrix' when provided")
+
+        n_runs = self.settings.get("n_runs", 1)
+        if not isinstance(n_runs, int) or isinstance(n_runs, bool) or n_runs < 1:
+            raise ValueError("settings.n_runs must be an integer greater than or equal to 1")
+
+        workers = self.settings.get("workers")
+        if workers is not None and (not isinstance(workers, int) or isinstance(workers, bool) or workers < 1):
+            raise ValueError("settings.workers must be an integer greater than or equal to 1 when provided")
+
+        seed = self.settings.get("seed")
+        if seed is not None and (not isinstance(seed, int) or isinstance(seed, bool)):
+            raise ValueError("settings.seed must be an integer when provided")
+
+        skip_cached = self.settings.get("skip_cached")
+        if skip_cached is not None and not isinstance(skip_cached, bool):
+            raise ValueError("settings.skip_cached must be a boolean when provided")
+
+        return self
 class BenchmarkResult(BaseModel):
     """Single experiment result for import"""
     algorithm: str

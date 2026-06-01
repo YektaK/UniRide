@@ -36,6 +36,17 @@ class MatrixBuilder:
         return dm
 
     @staticmethod
+    def from_euclidean_coordinates(coords: Sequence[Coordinate]) -> np.ndarray:
+        """Build a double-precision Euclidean matrix.
+
+        Solomon VRPTW best-known values use double precision distances and
+        round only the final route total, not each edge as TSPLIB EUC_2D does.
+        """
+        points = np.asarray(coords, dtype=np.float64)
+        diff = points[:, np.newaxis, :] - points[np.newaxis, :, :]
+        return np.sqrt((diff ** 2).sum(axis=2))
+
+    @staticmethod
     def from_explicit_matrix(matrix: Sequence[Sequence[float]]) -> np.ndarray:
         return MatrixBuilder._validate_square(np.asarray(matrix, dtype=np.float64))
 
@@ -312,7 +323,7 @@ class MatrixBuilder:
 
         customers.sort(key=lambda row: row[0])
         coords = [row[1] for row in customers]
-        matrix = MatrixBuilder.from_coordinates(coords, "EUC_2D")
+        matrix = MatrixBuilder.from_euclidean_coordinates(coords)
 
         return RoutingProblem(
             name=lines[0] if lines else name,

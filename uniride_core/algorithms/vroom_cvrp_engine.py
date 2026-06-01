@@ -6,6 +6,8 @@ import math
 from dataclasses import dataclass, field
 from typing import Callable, List, Mapping, Sequence
 
+from uniride_core.algorithms.routing_demand_utils import load_for_route, normalize_demand_vectors
+
 
 @dataclass
 class VROOMRoutePlan:
@@ -13,6 +15,7 @@ class VROOMRoutePlan:
     customer_indices: List[int] = field(default_factory=list)
     sw_count: int = 0
     so_count: int = 0
+    load: List[int] = field(default_factory=list)
 
 
 @dataclass
@@ -25,11 +28,13 @@ class VROOMCVRPSolution:
 def solve_vroom_cvrp(
     *,
     duration_matrix: Sequence[Sequence[float]],
-    disability_types: Sequence[str],
-    sw_capacity: int,
-    so_capacity: int,
-    max_route_duration: float,
+    disability_types: Sequence[str] | None = None,
+    sw_capacity: int | None = None,
+    so_capacity: int | None = None,
+    max_route_duration: float = 1_000_000,
     num_vehicles: int | None = None,
+    demand_vectors: Sequence[Sequence[int] | int] | None = None,
+    capacities: Sequence[int] | None = None,
 ) -> VROOMCVRPSolution:
     """Try solving a depot-first CVRP with pyvroom's `vroom` module."""
     try:
@@ -39,25 +44,34 @@ def solve_vroom_cvrp(
         return VROOMCVRPSolution(success=False, error_message="VROOM not installed. Run: pip install pyvroom")
 
     try:
+        customer_count = max(0, len(duration_matrix) - 1)
+        normalized_demands, normalized_capacities = normalize_demand_vectors(
+            customer_count=customer_count,
+            demand_vectors=demand_vectors,
+            capacities=capacities,
+            disability_types=disability_types,
+            sw_capacity=sw_capacity,
+            so_capacity=so_capacity,
+        )
         problem = vroom.Input()
-        vehicle_count = int(num_vehicles or min(len(disability_types), 15) or 1)
+        vehicle_count = int(num_vehicles or min(len(normalized_demands), 15) or 1)
         for vehicle_id in range(vehicle_count):
             problem.add_vehicle(
                 vroom.Vehicle(
                     id=vehicle_id,
                     start=0,
                     end=0,
-                    capacity=[sw_capacity, so_capacity],
+                    capacity=list(normalized_capacities),
                     time_window=vroom.TimeWindow(0, int(max_route_duration * 60)),
                 )
             )
 
-        for idx, disability_type in enumerate(disability_types):
+        for idx, demand in enumerate(normalized_demands):
             problem.add_job(
                 vroom.Job(
                     id=idx + 1,
                     location=idx + 1,
-                    delivery=[1 if disability_type == "Sw" else 0, 0 if disability_type == "Sw" else 1],
+                    delivery=list(demand),
                 )
             )
 
@@ -75,17 +89,22 @@ def solve_vroom_cvrp(
                 if getattr(step, "type", None) != "job":
                     continue
                 customer_idx = int(getattr(step, "job")) - 1
-                if not 0 <= customer_idx < len(disability_types):
+                if not 0 <= customer_idx < len(normalized_demands):
                     continue
                 customer_indices.append(customer_idx)
-                if disability_types[customer_idx] == "Sw":
-                    sw_count += 1
-                else:
-                    so_count += 1
             if customer_indices:
-                routes.append(VROOMRoutePlan(route_idx, customer_indices, sw_count, so_count))
+                load = load_for_route(customer_indices, normalized_demands)
+                routes.append(
+                    VROOMRoutePlan(
+                        route_idx,
+                        customer_indices,
+                        load[0] if load else 0,
+                        load[1] if len(load) > 1 else 0,
+                        load,
+                    )
+                )
 
-        if sorted(idx for route in routes for idx in route.customer_indices) != list(range(len(disability_types))):
+        if sorted(idx for route in routes for idx in route.customer_indices) != list(range(len(normalized_demands))):
             return VROOMCVRPSolution(success=False, error_message="VROOM did not return a complete feasible assignment")
         return VROOMCVRPSolution(success=True, routes=routes)
     except Exception as exc:
@@ -96,12 +115,14 @@ def solve_sweep_fallback_routes(
     *,
     customer_indices: Sequence[int],
     coordinates: Sequence[Mapping[str, float]],
-    disability_types: Sequence[str],
     depot_index: int,
     duration_lookup: Callable[[int, int], float],
-    sw_capacity: int,
-    so_capacity: int,
     max_route_duration: float,
+    disability_types: Sequence[str] | None = None,
+    sw_capacity: int | None = None,
+    so_capacity: int | None = None,
+    demand_vectors: Sequence[Sequence[int] | int] | None = None,
+    capacities: Sequence[int] | None = None,
 ) -> List[VROOMRoutePlan]:
     """Build deterministic sweep fallback routes over indexed customers."""
     depot_coords = coordinates[depot_index]
@@ -114,31 +135,48 @@ def solve_sweep_fallback_routes(
         )
 
     sorted_customers = sorted(customer_indices, key=angle)
+    normalized_demands, normalized_capacities = normalize_demand_vectors(
+        customer_count=len(coordinates) - 1,
+        demand_vectors=demand_vectors,
+        capacities=capacities,
+        disability_types=disability_types,
+        sw_capacity=sw_capacity,
+        so_capacity=so_capacity,
+    )
     routes: List[VROOMRoutePlan] = []
     current: List[int] = []
-    current_sw = 0
-    current_so = 0
+    current_load = [0] * len(normalized_capacities)
     current_duration = 0.0
     previous_node = depot_index
 
     def flush() -> None:
-        nonlocal current, current_sw, current_so, current_duration, previous_node
+        nonlocal current, current_load, current_duration, previous_node
         if not current:
             return
-        routes.append(VROOMRoutePlan(len(routes) + 1, list(current), current_sw, current_so))
+        load = list(current_load)
+        routes.append(
+            VROOMRoutePlan(
+                len(routes) + 1,
+                list(current),
+                load[0] if load else 0,
+                load[1] if len(load) > 1 else 0,
+                load,
+            )
+        )
         current = []
-        current_sw = 0
-        current_so = 0
+        current_load = [0] * len(normalized_capacities)
         current_duration = 0.0
         previous_node = depot_index
 
     for customer_idx in sorted_customers:
         node_idx = customer_idx + 1
-        sw_needed = 1 if disability_types[customer_idx] == "Sw" else 0
-        so_needed = 1 if disability_types[customer_idx] == "So" else 0
+        demand = normalized_demands[customer_idx]
         travel = duration_lookup(previous_node, node_idx)
         back = duration_lookup(node_idx, depot_index)
-        capacity_ok = current_sw + sw_needed <= sw_capacity and current_so + so_needed <= so_capacity
+        capacity_ok = all(
+            current_load[dim] + demand[dim] <= normalized_capacities[dim]
+            for dim in range(len(normalized_capacities))
+        )
         time_ok = current_duration + travel + back <= max_route_duration
 
         if current and not (capacity_ok and time_ok):
@@ -146,8 +184,8 @@ def solve_sweep_fallback_routes(
             travel = duration_lookup(depot_index, node_idx)
 
         current.append(customer_idx)
-        current_sw += sw_needed
-        current_so += so_needed
+        for dim, value in enumerate(demand):
+            current_load[dim] += int(value)
         current_duration += travel
         previous_node = node_idx
 

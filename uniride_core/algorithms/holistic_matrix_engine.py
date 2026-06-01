@@ -53,6 +53,7 @@ class HolisticMatrixEngine(UnifiedEngine):
         solution = self._solve_cvrp(matrix, problem, cfg)
         routes = solution_to_node_routes(solution)
         route_costs = [_route_cost(route, matrix, constraints.depot_index) for route in routes]
+        tw_violations = _time_window_violations(routes, matrix, problem)
         return RoutingResult(
             algorithm=self.name,
             problem_type=problem.problem_type.upper(),
@@ -62,6 +63,7 @@ class HolisticMatrixEngine(UnifiedEngine):
             num_vehicles=len(routes),
             route_costs=route_costs,
             route_loads=[_route_load(route, constraints.demands) for route in routes],
+            tw_violations=tw_violations,
             params=cfg,
         )
 
@@ -101,8 +103,7 @@ class HolisticMatrixEngine(UnifiedEngine):
         capacities: Sequence[int],
         num_vehicles: int,
     ):
-        disability_types = _disability_types(demands)
-        sw_capacity, so_capacity = _sw_so_capacity(capacities, fallback=max(1, len(disability_types)))
+        customer_count = max(0, int(matrix.shape[0]) - 1)
         max_route_duration = float(problem.constraints.max_route_duration or config.get("max_route_duration") or 1_000_000)
         time_limit_seconds = int(config.get("time_limit_seconds", 1))
 
@@ -111,9 +112,8 @@ class HolisticMatrixEngine(UnifiedEngine):
 
             solution = solve_ortools_cvrp(
                 time_matrix=matrix.tolist(),
-                disability_types=disability_types,
-                sw_capacity=sw_capacity,
-                so_capacity=so_capacity,
+                demand_vectors=demands,
+                capacities=capacities,
                 max_route_duration=max_route_duration,
                 num_vehicles=num_vehicles,
                 time_limit_seconds=time_limit_seconds,
@@ -124,9 +124,8 @@ class HolisticMatrixEngine(UnifiedEngine):
             solution = solve_pyvrp_cvrp(
                 duration_matrix=matrix.tolist(),
                 coordinates=_coordinates(problem),
-                disability_types=disability_types,
-                sw_capacity=sw_capacity,
-                so_capacity=so_capacity,
+                demand_vectors=demands,
+                capacities=capacities,
                 num_vehicles=num_vehicles,
                 time_limit_seconds=time_limit_seconds,
             )
@@ -135,22 +134,20 @@ class HolisticMatrixEngine(UnifiedEngine):
 
             solution = solve_vroom_cvrp(
                 duration_matrix=matrix.tolist(),
-                disability_types=disability_types,
-                sw_capacity=sw_capacity,
-                so_capacity=so_capacity,
+                demand_vectors=demands,
+                capacities=capacities,
                 max_route_duration=max_route_duration,
                 num_vehicles=num_vehicles,
             )
             if not solution.success:
                 fallback_routes = solve_sweep_fallback_routes(
-                    customer_indices=list(range(len(disability_types))),
+                    customer_indices=list(range(customer_count)),
                     coordinates=_coordinates(problem),
-                    disability_types=disability_types,
                     depot_index=0,
                     duration_lookup=lambda origin, destination: float(matrix[origin, destination]),
-                    sw_capacity=sw_capacity,
-                    so_capacity=so_capacity,
                     max_route_duration=max_route_duration,
+                    demand_vectors=demands,
+                    capacities=capacities,
                 )
                 solution = _AdHocSolution(
                     bool(fallback_routes),
@@ -241,6 +238,41 @@ def _route_load(route: Sequence[int], demands: Sequence) -> List[int]:
         else:
             load[0] += int(demand)
     return load
+
+
+def _time_window_violations(
+    routes: Sequence[Sequence[int]],
+    matrix: np.ndarray,
+    problem: RoutingProblem,
+) -> int:
+    constraints = problem.constraints
+    if not constraints.time_windows:
+        return 0
+    depot = int(constraints.depot_index)
+    windows = list(constraints.time_windows)
+    service_times = list(constraints.service_times or [0] * len(windows))
+    violations = 0
+
+    for route in routes:
+        current = depot
+        current_time = float(windows[depot][0]) if depot < len(windows) else 0.0
+        for node in route:
+            current_time += float(matrix[current, node])
+            if node < len(windows):
+                ready, due = windows[node]
+                if current_time > float(due):
+                    violations += 1
+                if current_time < float(ready):
+                    current_time = float(ready)
+            if node < len(service_times):
+                current_time += float(service_times[node])
+            current = node
+
+        current_time += float(matrix[current, depot])
+        if depot < len(windows) and current_time > float(windows[depot][1]):
+            violations += 1
+
+    return violations
 
 
 __all__ = ["HolisticMatrixEngine", "solution_to_node_routes"]

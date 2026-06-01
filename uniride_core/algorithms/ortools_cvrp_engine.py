@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Sequence
 
+from uniride_core.algorithms.routing_demand_utils import load_for_route, normalize_demand_vectors
+
 
 @dataclass
 class ORToolsRouteStep:
@@ -21,6 +23,7 @@ class ORToolsRoutePlan:
     total_duration: float = 0.0
     sw_count: int = 0
     so_count: int = 0
+    load: List[int] = field(default_factory=list)
 
 
 @dataclass
@@ -33,13 +36,15 @@ class ORToolsCVRPSolution:
 def solve_ortools_cvrp(
     *,
     time_matrix: Sequence[Sequence[float]],
-    disability_types: Sequence[str],
-    sw_capacity: int,
-    so_capacity: int,
-    max_route_duration: float,
+    disability_types: Sequence[str] | None = None,
+    sw_capacity: int | None = None,
+    so_capacity: int | None = None,
+    max_route_duration: float = 1_000_000,
     num_vehicles: int | None = None,
     time_limit_seconds: int = 30,
     scale: int = 10,
+    demand_vectors: Sequence[Sequence[int] | int] | None = None,
+    capacities: Sequence[int] | None = None,
 ) -> ORToolsCVRPSolution:
     """Solve a depot-first string-compatible CVRP using OR-Tools."""
     try:
@@ -56,6 +61,14 @@ def solve_ortools_cvrp(
     matrix = [[int(float(value) * scale) for value in row] for row in time_matrix]
     num_locations = len(matrix)
     customer_count = max(0, num_locations - 1)
+    normalized_demands, normalized_capacities = normalize_demand_vectors(
+        customer_count=customer_count,
+        demand_vectors=demand_vectors,
+        capacities=capacities,
+        disability_types=disability_types,
+        sw_capacity=sw_capacity,
+        so_capacity=so_capacity,
+    )
     vehicle_count = int(num_vehicles or min(customer_count, 10) or 1)
     depot_index = 0
 
@@ -67,9 +80,6 @@ def solve_ortools_cvrp(
 
     transit_callback_index = routing.RegisterTransitCallback(transit_callback)
     routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
-
-    sw_demands = [0] + [scale if disability_type == "Sw" else 0 for disability_type in disability_types]
-    so_demands = [0] + [scale if disability_type == "So" else 0 for disability_type in disability_types]
 
     def add_capacity_dimension(name: str, demands: List[int], capacity: int) -> None:
         def demand_callback(from_index):
@@ -84,8 +94,9 @@ def solve_ortools_cvrp(
             name,
         )
 
-    add_capacity_dimension("SwCapacity", sw_demands, sw_capacity)
-    add_capacity_dimension("SoCapacity", so_demands, so_capacity)
+    for dim, capacity in enumerate(normalized_capacities):
+        dimension_demands = [0] + [row[dim] * scale for row in normalized_demands]
+        add_capacity_dimension(f"Capacity{dim}", dimension_demands, capacity)
     routing.AddDimension(
         transit_callback_index,
         0,
@@ -120,14 +131,13 @@ def solve_ortools_cvrp(
             if to_node > 0:
                 customer_idx = to_node - 1
                 route.customer_indices.append(customer_idx)
-                if disability_types[customer_idx] == "Sw":
-                    route.sw_count += 1
-                else:
-                    route.so_count += 1
 
             index = to_index
 
         if route.customer_indices:
+            route.load = load_for_route(route.customer_indices, normalized_demands)
+            route.sw_count = route.load[0] if route.load else 0
+            route.so_count = route.load[1] if len(route.load) > 1 else 0
             route.total_duration = round(route.total_duration, 2)
             routes.append(route)
 

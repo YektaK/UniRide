@@ -22,6 +22,13 @@ def test_matrix_builder_from_coordinates_uses_tsplib_rounding():
     assert dm[1, 2] == 5
 
 
+def test_matrix_builder_from_euclidean_coordinates_keeps_float_precision():
+    dm = MatrixBuilder.from_euclidean_coordinates([(0, 0), (1, 1)])
+
+    assert dm.dtype == np.float64
+    assert dm[0, 1] == np.sqrt(2)
+
+
 def test_matrix_builder_parses_tsplib_text_into_routing_problem():
     text = """
 NAME : tiny-tsp
@@ -114,6 +121,9 @@ CUST NO.  XCOORD.  YCOORD.  DEMAND  READY TIME  DUE DATE  SERVICE TIME
 
     assert problem.problem_type == "cvrptw"
     assert problem.matrix.values.shape == (3, 3)
+    assert problem.matrix.values.dtype == np.float64
+    assert problem.matrix.values[0, 1] == 5.0
+    assert problem.matrix.values[1, 2] == 5.0
     assert problem.constraints.capacities == [10]
     assert problem.constraints.time_windows == [(0, 1000), (10, 50), (20, 70)]
     assert problem.constraints.service_times == [0, 5, 5]
@@ -138,7 +148,7 @@ CUST NO.  XCOORD.  YCOORD.  DEMAND  READY TIME  DUE DATE  SERVICE TIME
 
     assert legacy.name == "R101"
     assert legacy.problem_type == "cvrptw"
-    assert legacy.dist_matrix[0][1] == 5
+    assert legacy.dist_matrix[0][1] == 5.0
     assert legacy.demands == [0, 2, 3]
     assert legacy.capacity == 10
     assert legacy.capacities == [10]

@@ -78,3 +78,39 @@ def test_solve_ortools_cvrptw_allows_waiting_for_ready_time():
 
     assert solution.success is True
     assert [route.customer_indices for route in solution.routes] == [[0]]
+
+
+def test_solve_ortools_cvrp_accepts_search_strategy_names():
+    solution = solve_ortools_cvrp(
+        time_matrix=[
+            [0, 2, 3],
+            [2, 0, 1],
+            [3, 1, 0],
+        ],
+        demand_vectors=[[0], [1], [1]],
+        capacities=[2],
+        max_route_duration=20,
+        num_vehicles=1,
+        time_limit_seconds=1,
+        first_solution_strategy="parallel_cheapest_insertion",
+        local_search_metaheuristic="guided_local_search",
+    )
+
+    assert solution.success is True
+    assert sorted(idx for route in solution.routes for idx in route.customer_indices) == [0, 1]
+
+
+def test_solve_ortools_cvrp_reports_invalid_search_strategy_name():
+    solution = solve_ortools_cvrp(
+        time_matrix=[
+            [0, 2],
+            [2, 0],
+        ],
+        demand_vectors=[[0], [1]],
+        capacities=[1],
+        num_vehicles=1,
+        first_solution_strategy="not-a-strategy",
+    )
+
+    assert solution.success is False
+    assert "first_solution_strategy" in str(solution.error_message)

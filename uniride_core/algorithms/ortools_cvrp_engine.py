@@ -47,6 +47,8 @@ def solve_ortools_cvrp(
     capacities: Sequence[int] | None = None,
     time_windows: Sequence[Sequence[float]] | None = None,
     service_times: Sequence[float] | None = None,
+    first_solution_strategy: str | int | None = None,
+    local_search_metaheuristic: str | int | None = None,
 ) -> ORToolsCVRPSolution:
     """Solve a depot-first string-compatible CVRP using OR-Tools."""
     try:
@@ -139,8 +141,21 @@ def solve_ortools_cvrp(
             routing.AddVariableMinimizedByFinalizer(time_dimension.CumulVar(routing.End(vehicle_index)))
 
     search_parameters = pywrapcp.DefaultRoutingSearchParameters()
-    search_parameters.first_solution_strategy = routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
-    search_parameters.local_search_metaheuristic = routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+    try:
+        search_parameters.first_solution_strategy = _routing_enum_value(
+            routing_enums_pb2.FirstSolutionStrategy,
+            first_solution_strategy,
+            routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC,
+            "first_solution_strategy",
+        )
+        search_parameters.local_search_metaheuristic = _routing_enum_value(
+            routing_enums_pb2.LocalSearchMetaheuristic,
+            local_search_metaheuristic,
+            routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH,
+            "local_search_metaheuristic",
+        )
+    except ValueError as exc:
+        return ORToolsCVRPSolution(success=False, error_message=str(exc))
     search_parameters.time_limit.seconds = int(time_limit_seconds)
 
     solution = routing.SolveWithParameters(search_parameters)
@@ -175,6 +190,18 @@ def solve_ortools_cvrp(
             routes.append(route)
 
     return ORToolsCVRPSolution(success=True, routes=routes)
+
+
+def _routing_enum_value(enum_type, value: str | int | None, default: int, label: str) -> int:
+    if value is None:
+        return int(default)
+    if isinstance(value, int):
+        return value
+    normalized = str(value).strip().upper().replace("-", "_").replace(" ", "_")
+    resolved = getattr(enum_type, normalized, None)
+    if resolved is None:
+        raise ValueError(f"Unsupported OR-Tools {label}: {value}")
+    return int(resolved)
 
 
 __all__ = ["ORToolsCVRPSolution", "ORToolsRoutePlan", "ORToolsRouteStep", "solve_ortools_cvrp"]

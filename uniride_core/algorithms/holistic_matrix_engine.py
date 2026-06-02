@@ -119,6 +119,8 @@ class HolisticMatrixEngine(UnifiedEngine):
                 time_limit_seconds=time_limit_seconds,
                 time_windows=problem.constraints.time_windows,
                 service_times=problem.constraints.service_times,
+                first_solution_strategy=config.get("first_solution_strategy"),
+                local_search_metaheuristic=config.get("local_search_metaheuristic"),
             )
         elif self.name == "PyVRP":
             from uniride_core.algorithms.pyvrp_cvrp_engine import solve_pyvrp_cvrp

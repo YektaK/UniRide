@@ -114,6 +114,52 @@ def test_results_reader_prefers_sqlite_benchmark_rows(tmp_path):
     assert result["params"] == {"mode": "test"}
 
 
+def test_results_reader_can_filter_to_feasible_benchmark_rows(tmp_path):
+    db_path = str(tmp_path / "tsplib.db")
+    save_benchmark_run("run-1", source="web_matrix_native", db_path=db_path)
+    save_benchmark_result(
+        "run-1",
+        {
+            "problem": "bad-cvrptw",
+            "algorithm": "OR-Tools",
+            "run_number": 1,
+            "problem_type": "cvrptw",
+            "matrix_kind": "distance",
+            "objective_cost": 10.0,
+            "tw_violations": 1,
+            "params": {"time_limit_seconds": 1},
+        },
+        db_path=db_path,
+    )
+    save_benchmark_result(
+        "run-1",
+        {
+            "problem": "good-cvrptw",
+            "algorithm": "OR-Tools",
+            "run_number": 1,
+            "problem_type": "cvrptw",
+            "matrix_kind": "distance",
+            "objective_cost": 100.0,
+            "capacity_violations": 0,
+            "tw_violations": 0,
+            "params": {"time_limit_seconds": 30},
+        },
+        db_path=db_path,
+    )
+
+    raw_rows = get_benchmark_rows(db_path=db_path, results_dir=str(tmp_path), limit=10)
+    feasible_rows = get_benchmark_rows(
+        db_path=db_path,
+        results_dir=str(tmp_path),
+        limit=10,
+        feasible_only=True,
+    )
+
+    assert raw_rows["count"] == 2
+    assert feasible_rows["count"] == 1
+    assert feasible_rows["results"][0]["problem"] == "good-cvrptw"
+
+
 def test_query_benchmark_results_filters_rows(tmp_path):
     from academic_benchmark.tsplib_manager import query_benchmark_results
 

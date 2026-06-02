@@ -74,6 +74,61 @@ def test_promoted_configs_include_routing_benchmark_result_params(tmp_path):
     assert config["selected_from"]["run_id"] == "run-1"
 
 
+def test_promoted_configs_ignore_failed_or_infeasible_routing_results(tmp_path):
+    db_path = str(tmp_path / "tsplib.db")
+    save_benchmark_run("run-1", source="web_matrix_native", db_path=db_path)
+    save_benchmark_result(
+        "run-1",
+        {
+            "problem": "bad-cvrptw",
+            "algorithm": "OR-Tools",
+            "problem_type": "cvrptw",
+            "matrix_kind": "distance",
+            "objective_cost": 10.0,
+            "gap": -90.0,
+            "tw_violations": 2,
+            "params": {"time_limit_seconds": 1},
+        },
+        db_path=db_path,
+    )
+    save_benchmark_result(
+        "run-1",
+        {
+            "problem": "failed-cvrptw",
+            "algorithm": "OR-Tools",
+            "problem_type": "cvrptw",
+            "matrix_kind": "distance",
+            "objective_cost": None,
+            "metadata": {"execution_failed": True},
+            "params": {"time_limit_seconds": 2},
+        },
+        db_path=db_path,
+    )
+    save_benchmark_result(
+        "run-1",
+        {
+            "problem": "good-cvrptw",
+            "algorithm": "OR-Tools",
+            "problem_type": "cvrptw",
+            "matrix_kind": "distance",
+            "objective_cost": 100.0,
+            "gap": 5.0,
+            "capacity_violations": 0,
+            "tw_violations": 0,
+            "params": {"time_limit_seconds": 30},
+        },
+        db_path=db_path,
+    )
+
+    document = build_promoted_configs(db_path=db_path)
+
+    assert resolve_promoted_params(document, "OR-Tools", problem_type="cvrptw") == {
+        "time_limit_seconds": 30,
+    }
+    config = document["configs"][0]
+    assert config["selected_from"]["problem"] == "good-cvrptw"
+
+
 def test_write_and_load_promoted_configs_round_trip(tmp_path):
     db_path = str(tmp_path / "tsplib.db")
     output_path = str(tmp_path / "promoted_configs.json")

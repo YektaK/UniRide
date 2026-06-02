@@ -15,6 +15,7 @@ from academic_benchmark.tsplib_manager import (
     query_benchmark_results,
     query_best_solutions,
 )
+from academic_benchmark.results_reader import is_feasible_benchmark_row
 
 DEFAULT_PROMOTED_CONFIG_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -116,6 +117,8 @@ def _best_solution_candidates(rows: Iterable[Dict]) -> List[Dict]:
 def _benchmark_result_candidates(rows: Iterable[Dict]) -> List[Dict]:
     candidates = []
     for row in rows:
+        if not is_feasible_benchmark_row(row):
+            continue
         params = row.get("params") or {}
         if not params:
             continue

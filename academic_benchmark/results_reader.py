@@ -57,11 +57,14 @@ def get_benchmark_rows(
     limit: int = 100,
     db_path: str = DB_PATH,
     prefer_db: bool = True,
+    feasible_only: bool = False,
 ) -> Dict[str, object]:
     """Read benchmark rows from SQLite source-of-truth, with CSV fallback."""
     safe_limit = max(1, min(int(limit), 5000))
     if prefer_db:
         db_rows = query_benchmark_results(limit=safe_limit, db_path=db_path)
+        if feasible_only:
+            db_rows = [row for row in db_rows if is_feasible_benchmark_row(row)]
         if db_rows:
             return {
                 "source": "academic_db",
@@ -76,6 +79,8 @@ def get_benchmark_rows(
 
     with open(path, newline="", encoding="utf-8") as handle:
         rows = [_normalize_benchmark_row(row) for row in csv.DictReader(handle)]
+    if feasible_only:
+        rows = [row for row in rows if is_feasible_benchmark_row(row)]
 
     rows = rows[-safe_limit:]
     return {
@@ -160,6 +165,22 @@ def _normalize_problem_row(row: Dict[str, object]) -> Dict[str, object]:
     }
 
 
+def is_feasible_benchmark_row(row: Dict[str, object]) -> bool:
+    """Return True when a benchmark row is safe for ranking/promotion."""
+    metadata = row.get("metadata") or {}
+    if isinstance(metadata, str):
+        metadata = _json_or_none(metadata) or {}
+    if isinstance(metadata, dict) and metadata.get("execution_failed"):
+        return False
+    if _int_or_zero(row.get("capacity_violations")) != 0:
+        return False
+    if _int_or_zero(row.get("tw_violations")) != 0:
+        return False
+    objective = _float_or_none(row.get("objective_cost"))
+    tour_cost = _float_or_none(row.get("tour_cost"))
+    return objective is not None or tour_cost is not None
+
+
 def _float_or_none(value):
     try:
         number = float(value)
@@ -194,4 +215,5 @@ __all__: List[str] = [
     "get_leaderboard",
     "get_best_result",
     "get_benchmark_rows",
+    "is_feasible_benchmark_row",
 ]

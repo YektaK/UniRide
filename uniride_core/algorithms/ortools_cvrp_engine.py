@@ -62,7 +62,7 @@ def solve_ortools_cvrp(
     if not time_matrix:
         return ORToolsCVRPSolution(success=True, routes=[])
 
-    matrix = [[int(float(value) * scale) for value in row] for row in time_matrix]
+    matrix = [[int(round(float(value) * scale)) for value in row] for row in time_matrix]
     num_locations = len(matrix)
     customer_count = max(0, num_locations - 1)
     normalized_demands, normalized_capacities = normalize_demand_vectors(
@@ -79,7 +79,7 @@ def solve_ortools_cvrp(
     manager = pywrapcp.RoutingIndexManager(num_locations, vehicle_count, depot_index)
     routing = pywrapcp.RoutingModel(manager)
 
-    scaled_service_times = [int(float(value) * scale) for value in service_times or []]
+    scaled_service_times = [int(round(float(value) * scale)) for value in service_times or []]
     if len(scaled_service_times) < num_locations:
         scaled_service_times.extend([0] * (num_locations - len(scaled_service_times)))
 
@@ -117,7 +117,7 @@ def solve_ortools_cvrp(
     time_dimension = routing.GetDimensionOrDie("Time")
     if time_windows:
         scaled_windows = [
-            (int(float(window[0]) * scale), int(float(window[1]) * scale))
+            (int(round(float(window[0]) * scale)), int(round(float(window[1]) * scale)))
             for window in time_windows
         ]
         if len(scaled_windows) != num_locations:

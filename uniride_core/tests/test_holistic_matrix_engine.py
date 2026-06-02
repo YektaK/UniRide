@@ -115,6 +115,22 @@ def test_holistic_engines_enforce_scalar_cvrp_demands(engine_name):
     assert result.num_vehicles == 2
 
 
+def test_holistic_ortools_preserves_search_and_scale_params():
+    engine = create_matrix_engine("OR-Tools")
+    config = {
+        "time_limit_seconds": 1,
+        "scale": 100,
+        "first_solution_strategy": "PARALLEL_CHEAPEST_INSERTION",
+        "local_search_metaheuristic": "GUIDED_LOCAL_SEARCH",
+    }
+
+    result = engine.solve_problem(_cvrp_problem(), config=config)
+
+    assert isinstance(result, RoutingResult)
+    assert result.params == config
+    assert sorted(node for route in result.routes for node in route) == [1, 2]
+
+
 def test_holistic_time_window_post_validation_counts_late_arrivals():
     problem = RoutingProblem(
         name="tw-check",

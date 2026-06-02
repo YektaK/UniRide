@@ -53,7 +53,12 @@ def promote_configs(
     dry_run: bool = False,
 ) -> Dict[str, object]:
     """Build, validate, and optionally write promoted configs."""
-    document = build_promoted_configs(db_path=db_path, limit=limit)
+    include_empty_params = not require_params
+    document = build_promoted_configs(
+        db_path=db_path,
+        limit=limit,
+        include_empty_params=include_empty_params,
+    )
     errors = validate_promoted_document(
         document,
         min_configs=min_configs,
@@ -67,6 +72,7 @@ def promote_configs(
             output_path=output_path,
             limit=limit,
             generated_at=str(document["generated_at"]),
+            include_empty_params=include_empty_params,
         )
     return document
 

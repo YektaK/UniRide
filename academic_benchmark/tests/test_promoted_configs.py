@@ -74,6 +74,32 @@ def test_promoted_configs_include_routing_benchmark_result_params(tmp_path):
     assert config["selected_from"]["run_id"] == "run-1"
 
 
+def test_promoted_configs_can_include_empty_param_routing_results(tmp_path):
+    db_path = str(tmp_path / "tsplib.db")
+    save_benchmark_run("run-1", source="web_matrix_native", db_path=db_path)
+    save_benchmark_result(
+        "run-1",
+        {
+            "problem": "tiny-cvrp",
+            "algorithm": "OR-Tools",
+            "problem_type": "cvrp",
+            "matrix_kind": "distance",
+            "objective_cost": 50.0,
+            "capacity_violations": 0,
+            "tw_violations": 0,
+            "params": {},
+        },
+        db_path=db_path,
+    )
+
+    strict_document = build_promoted_configs(db_path=db_path)
+    allowed_document = build_promoted_configs(db_path=db_path, include_empty_params=True)
+
+    assert resolve_promoted_params(strict_document, "OR-Tools", problem_type="cvrp") is None
+    assert resolve_promoted_params(allowed_document, "OR-Tools", problem_type="cvrp") == {}
+    assert allowed_document["configs"][0]["source_table"] == "benchmark_results"
+
+
 def test_promoted_configs_ignore_failed_or_infeasible_routing_results(tmp_path):
     db_path = str(tmp_path / "tsplib.db")
     save_benchmark_run("run-1", source="web_matrix_native", db_path=db_path)

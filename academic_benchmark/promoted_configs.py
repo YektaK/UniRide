@@ -29,12 +29,18 @@ def build_promoted_configs(
     db_path: str = DB_PATH,
     limit: int = 5000,
     generated_at: Optional[str] = None,
+    include_empty_params: bool = False,
 ) -> Dict[str, object]:
     """Build a neutral promoted-config document from academic DB rows."""
     _ensure_db_schema(db_path)
     candidates = []
     candidates.extend(_best_solution_candidates(query_best_solutions(limit=limit, db_path=db_path)))
-    candidates.extend(_benchmark_result_candidates(query_benchmark_results(limit=limit, db_path=db_path)))
+    candidates.extend(
+        _benchmark_result_candidates(
+            query_benchmark_results(limit=limit, db_path=db_path),
+            include_empty_params=include_empty_params,
+        )
+    )
 
     selected = _select_best_candidates(candidates)
     return {
@@ -58,9 +64,15 @@ def write_promoted_configs(
     db_path: str = DB_PATH,
     limit: int = 5000,
     generated_at: Optional[str] = None,
+    include_empty_params: bool = False,
 ) -> Dict[str, object]:
     """Write promoted configs and return the emitted document."""
-    document = build_promoted_configs(db_path=db_path, limit=limit, generated_at=generated_at)
+    document = build_promoted_configs(
+        db_path=db_path,
+        limit=limit,
+        generated_at=generated_at,
+        include_empty_params=include_empty_params,
+    )
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as handle:
         json.dump(document, handle, indent=2, ensure_ascii=False, sort_keys=True)
@@ -114,13 +126,13 @@ def _best_solution_candidates(rows: Iterable[Dict]) -> List[Dict]:
     return candidates
 
 
-def _benchmark_result_candidates(rows: Iterable[Dict]) -> List[Dict]:
+def _benchmark_result_candidates(rows: Iterable[Dict], *, include_empty_params: bool = False) -> List[Dict]:
     candidates = []
     for row in rows:
         if not is_feasible_benchmark_row(row):
             continue
         params = row.get("params") or {}
-        if not params:
+        if not params and not include_empty_params:
             continue
         score = row.get("objective_cost")
         if score is None:

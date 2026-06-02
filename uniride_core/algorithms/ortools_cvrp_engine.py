@@ -45,6 +45,8 @@ def solve_ortools_cvrp(
     scale: int = 10,
     demand_vectors: Sequence[Sequence[int] | int] | None = None,
     capacities: Sequence[int] | None = None,
+    time_windows: Sequence[Sequence[float]] | None = None,
+    service_times: Sequence[float] | None = None,
 ) -> ORToolsCVRPSolution:
     """Solve a depot-first string-compatible CVRP using OR-Tools."""
     try:
@@ -75,8 +77,13 @@ def solve_ortools_cvrp(
     manager = pywrapcp.RoutingIndexManager(num_locations, vehicle_count, depot_index)
     routing = pywrapcp.RoutingModel(manager)
 
+    scaled_service_times = [int(float(value) * scale) for value in service_times or []]
+    if len(scaled_service_times) < num_locations:
+        scaled_service_times.extend([0] * (num_locations - len(scaled_service_times)))
+
     def transit_callback(from_index, to_index):
-        return matrix[manager.IndexToNode(from_index)][manager.IndexToNode(to_index)]
+        from_node = manager.IndexToNode(from_index)
+        return matrix[from_node][manager.IndexToNode(to_index)] + scaled_service_times[from_node]
 
     transit_callback_index = routing.RegisterTransitCallback(transit_callback)
     routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
@@ -97,13 +104,39 @@ def solve_ortools_cvrp(
     for dim, capacity in enumerate(normalized_capacities):
         dimension_demands = [0] + [row[dim] * scale for row in normalized_demands]
         add_capacity_dimension(f"Capacity{dim}", dimension_demands, capacity)
+    slack_max = int(max_route_duration * scale) if time_windows else 0
     routing.AddDimension(
         transit_callback_index,
-        0,
+        slack_max,
         int(max_route_duration * scale),
         False,
         "Time",
     )
+    time_dimension = routing.GetDimensionOrDie("Time")
+    if time_windows:
+        scaled_windows = [
+            (int(float(window[0]) * scale), int(float(window[1]) * scale))
+            for window in time_windows
+        ]
+        if len(scaled_windows) != num_locations:
+            return ORToolsCVRPSolution(
+                success=False,
+                error_message=(
+                    "OR-Tools CVRPTW requires one time-window row per location; "
+                    f"got {len(scaled_windows)} for {num_locations} locations"
+                ),
+            )
+
+        for node in range(1, num_locations):
+            index = manager.NodeToIndex(node)
+            time_dimension.CumulVar(index).SetRange(*scaled_windows[node])
+
+        depot_window = scaled_windows[depot_index]
+        for vehicle_index in range(vehicle_count):
+            time_dimension.CumulVar(routing.Start(vehicle_index)).SetRange(*depot_window)
+            time_dimension.CumulVar(routing.End(vehicle_index)).SetRange(*depot_window)
+            routing.AddVariableMinimizedByFinalizer(time_dimension.CumulVar(routing.Start(vehicle_index)))
+            routing.AddVariableMinimizedByFinalizer(time_dimension.CumulVar(routing.End(vehicle_index)))
 
     search_parameters = pywrapcp.DefaultRoutingSearchParameters()
     search_parameters.first_solution_strategy = routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC

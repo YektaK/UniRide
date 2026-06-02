@@ -40,3 +40,41 @@ def test_solve_ortools_cvrp_reports_infeasible_problem():
 
     assert solution.success is False
     assert solution.error_message
+
+
+def test_solve_ortools_cvrptw_enforces_time_windows():
+    solution = solve_ortools_cvrp(
+        time_matrix=[
+            [0, 10],
+            [10, 0],
+        ],
+        demand_vectors=[[0], [1]],
+        capacities=[1],
+        time_windows=[(0, 100), (0, 5)],
+        service_times=[0, 0],
+        max_route_duration=100,
+        num_vehicles=1,
+        time_limit_seconds=1,
+    )
+
+    assert solution.success is False
+    assert solution.error_message
+
+
+def test_solve_ortools_cvrptw_allows_waiting_for_ready_time():
+    solution = solve_ortools_cvrp(
+        time_matrix=[
+            [0, 5],
+            [5, 0],
+        ],
+        demand_vectors=[[0], [1]],
+        capacities=[1],
+        time_windows=[(0, 100), (10, 20)],
+        service_times=[0, 0],
+        max_route_duration=100,
+        num_vehicles=1,
+        time_limit_seconds=1,
+    )
+
+    assert solution.success is True
+    assert [route.customer_indices for route in solution.routes] == [[0]]

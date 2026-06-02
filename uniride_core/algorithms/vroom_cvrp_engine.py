@@ -35,6 +35,8 @@ def solve_vroom_cvrp(
     num_vehicles: int | None = None,
     demand_vectors: Sequence[Sequence[int] | int] | None = None,
     capacities: Sequence[int] | None = None,
+    time_windows: Sequence[Sequence[float]] | None = None,
+    service_times: Sequence[float] | None = None,
 ) -> VROOMCVRPSolution:
     """Try solving a depot-first CVRP with pyvroom's `vroom` module."""
     try:
@@ -53,8 +55,27 @@ def solve_vroom_cvrp(
             sw_capacity=sw_capacity,
             so_capacity=so_capacity,
         )
+        scaled_windows = None
+        if time_windows is not None:
+            scaled_windows = [
+                (int(float(window[0]) * 60), int(float(window[1]) * 60))
+                for window in time_windows
+            ]
+            if len(scaled_windows) != len(duration_matrix):
+                return VROOMCVRPSolution(
+                    success=False,
+                    error_message=(
+                        "VROOM CVRPTW requires one time-window row per location; "
+                        f"got {len(scaled_windows)} for {len(duration_matrix)} locations"
+                    ),
+                )
+        scaled_service_times = [int(float(value) * 60) for value in service_times or []]
+        if len(scaled_service_times) < len(duration_matrix):
+            scaled_service_times.extend([0] * (len(duration_matrix) - len(scaled_service_times)))
+
         problem = vroom.Input()
         vehicle_count = int(num_vehicles or min(len(normalized_demands), 15) or 1)
+        depot_window = scaled_windows[0] if scaled_windows is not None else (0, int(max_route_duration * 60))
         for vehicle_id in range(vehicle_count):
             problem.add_vehicle(
                 vroom.Vehicle(
@@ -62,16 +83,20 @@ def solve_vroom_cvrp(
                     start=0,
                     end=0,
                     capacity=list(normalized_capacities),
-                    time_window=vroom.TimeWindow(0, int(max_route_duration * 60)),
+                    time_window=vroom.TimeWindow(*depot_window),
+                    max_travel_time=int(max_route_duration * 60),
                 )
             )
 
         for idx, demand in enumerate(normalized_demands):
+            job_windows = [vroom.TimeWindow(*scaled_windows[idx + 1])] if scaled_windows is not None else []
             problem.add_job(
                 vroom.Job(
                     id=idx + 1,
                     location=idx + 1,
+                    default_service=scaled_service_times[idx + 1],
                     delivery=list(demand),
+                    time_windows=job_windows,
                 )
             )
 
@@ -94,6 +119,16 @@ def solve_vroom_cvrp(
                 customer_indices.append(customer_idx)
             if customer_indices:
                 load = load_for_route(customer_indices, normalized_demands)
+                if time_windows is not None and _time_window_violations(
+                    customer_indices,
+                    duration_matrix,
+                    time_windows,
+                    service_times or [],
+                ):
+                    return VROOMCVRPSolution(
+                        success=False,
+                        error_message="VROOM returned a route that violates time-window constraints",
+                    )
                 routes.append(
                     VROOMRoutePlan(
                         route_idx,
@@ -191,6 +226,37 @@ def solve_sweep_fallback_routes(
 
     flush()
     return routes
+
+
+def _time_window_violations(
+    customer_indices: Sequence[int],
+    duration_matrix: Sequence[Sequence[float]],
+    time_windows: Sequence[Sequence[float]],
+    service_times: Sequence[float],
+) -> int:
+    if not customer_indices:
+        return 0
+    services = list(service_times)
+    if len(services) < len(time_windows):
+        services.extend([0] * (len(time_windows) - len(services)))
+
+    current_node = 0
+    current_time = float(time_windows[0][0])
+    violations = 0
+    for customer_idx in customer_indices:
+        node = customer_idx + 1
+        current_time += float(duration_matrix[current_node][node])
+        ready, due = time_windows[node]
+        if current_time > float(due):
+            violations += 1
+        if current_time < float(ready):
+            current_time = float(ready)
+        current_time += float(services[node])
+        current_node = node
+    current_time += float(duration_matrix[current_node][0])
+    if current_time > float(time_windows[0][1]):
+        violations += 1
+    return violations
 
 
 __all__ = ["VROOMCVRPSolution", "VROOMRoutePlan", "solve_sweep_fallback_routes", "solve_vroom_cvrp"]

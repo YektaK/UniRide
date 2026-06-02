@@ -117,6 +117,8 @@ class HolisticMatrixEngine(UnifiedEngine):
                 max_route_duration=max_route_duration,
                 num_vehicles=num_vehicles,
                 time_limit_seconds=time_limit_seconds,
+                time_windows=problem.constraints.time_windows,
+                service_times=problem.constraints.service_times,
             )
         elif self.name == "PyVRP":
             from uniride_core.algorithms.pyvrp_cvrp_engine import solve_pyvrp_cvrp
@@ -128,6 +130,9 @@ class HolisticMatrixEngine(UnifiedEngine):
                 capacities=capacities,
                 num_vehicles=num_vehicles,
                 time_limit_seconds=time_limit_seconds,
+                time_windows=problem.constraints.time_windows,
+                service_times=problem.constraints.service_times,
+                max_route_duration=max_route_duration,
             )
         elif self.name == "VROOM":
             from uniride_core.algorithms.vroom_cvrp_engine import solve_sweep_fallback_routes, solve_vroom_cvrp
@@ -138,8 +143,10 @@ class HolisticMatrixEngine(UnifiedEngine):
                 capacities=capacities,
                 max_route_duration=max_route_duration,
                 num_vehicles=num_vehicles,
+                time_windows=problem.constraints.time_windows,
+                service_times=problem.constraints.service_times,
             )
-            if not solution.success:
+            if not solution.success and not problem.constraints.time_windows:
                 fallback_routes = solve_sweep_fallback_routes(
                     customer_indices=list(range(customer_count)),
                     coordinates=_coordinates(problem),

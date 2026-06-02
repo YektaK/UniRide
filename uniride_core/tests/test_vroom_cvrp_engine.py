@@ -41,3 +41,41 @@ def test_solve_vroom_cvrp_has_clean_failure_or_complete_solution():
         assert [idx for route in solution.routes for idx in route.customer_indices] == [0]
     else:
         assert solution.error_message
+
+
+def test_solve_vroom_cvrptw_enforces_time_windows():
+    solution = solve_vroom_cvrp(
+        duration_matrix=[
+            [0, 10],
+            [10, 0],
+        ],
+        demand_vectors=[[0], [1]],
+        capacities=[1],
+        time_windows=[(0, 100), (0, 5)],
+        service_times=[0, 0],
+        max_route_duration=100,
+        num_vehicles=1,
+    )
+
+    assert solution.success is False
+    assert solution.error_message
+
+
+def test_solve_vroom_cvrptw_allows_waiting_for_ready_time():
+    solution = solve_vroom_cvrp(
+        duration_matrix=[
+            [0, 5],
+            [5, 0],
+        ],
+        demand_vectors=[[0], [1]],
+        capacities=[1],
+        time_windows=[(0, 100), (10, 20)],
+        service_times=[0, 0],
+        max_route_duration=100,
+        num_vehicles=1,
+    )
+
+    if solution.success:
+        assert [route.customer_indices for route in solution.routes] == [[0]]
+    else:
+        assert solution.error_message

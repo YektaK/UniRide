@@ -133,25 +133,39 @@ def test_academic_problems_endpoint_direct_call_resolves_query_defaults(monkeypa
 def test_academic_benchmark_results_endpoint_uses_results_reader(monkeypatch):
     monkeypatch.setattr(
         "academic_benchmark.results_reader.get_benchmark_rows",
-        lambda limit=100: {"source": "academic_csv", "count": 1, "limit": limit, "results": []},
+        lambda limit=100, feasible_only=False: {
+            "source": "academic_csv",
+            "count": 1,
+            "limit": limit,
+            "feasible_only": feasible_only,
+            "results": [],
+        },
     )
 
-    result = benchmark.get_academic_benchmark_results(limit=5)
+    result = benchmark.get_academic_benchmark_results(limit=5, feasible_only=True)
 
     assert result["source"] == "academic_csv"
     assert result["limit"] == 5
+    assert result["feasible_only"] is True
 
 
 def test_academic_benchmark_results_endpoint_direct_call_resolves_query_default(monkeypatch):
     monkeypatch.setattr(
         "academic_benchmark.results_reader.get_benchmark_rows",
-        lambda limit=100: {"source": "academic_db", "count": 0, "limit": limit, "results": []},
+        lambda limit=100, feasible_only=False: {
+            "source": "academic_db",
+            "count": 0,
+            "limit": limit,
+            "feasible_only": feasible_only,
+            "results": [],
+        },
     )
 
     result = benchmark.get_academic_benchmark_results()
 
     assert result["source"] == "academic_db"
     assert result["limit"] == 100
+    assert result["feasible_only"] is False
 
 
 def test_matrix_native_benchmark_run_executes_and_persists(monkeypatch):

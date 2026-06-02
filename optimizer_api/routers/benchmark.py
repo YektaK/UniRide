@@ -152,12 +152,16 @@ def get_academic_best_result(
 @router.get("/academic/benchmark-results")
 def get_academic_benchmark_results(
     limit: int = Query(100, ge=1, le=1000, description="Maximum rows to return"),
+    feasible_only: bool = Query(False, description="Return only successful, constraint-feasible rows"),
 ) -> Dict:
     """Read-only benchmark CSV rows, including CVRP/CVRPTW routing fields."""
     try:
         from academic_benchmark.results_reader import get_benchmark_rows
 
-        return get_benchmark_rows(limit=_query_value(limit))
+        return get_benchmark_rows(
+            limit=_query_value(limit),
+            feasible_only=bool(_query_value(feasible_only)),
+        )
     except Exception as exc:
         logger.exception("Academic benchmark-results query failed")
         raise HTTPException(status_code=503, detail=f"Academic benchmark results unavailable: {exc}")

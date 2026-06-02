@@ -100,6 +100,118 @@ def test_promoted_configs_can_include_empty_param_routing_results(tmp_path):
     assert allowed_document["configs"][0]["source_table"] == "benchmark_results"
 
 
+def test_promoted_configs_prefer_real_rows_over_lower_cost_smoke_rows(tmp_path):
+    db_path = str(tmp_path / "tsplib.db")
+    save_benchmark_run("matrix-smoke-run", source="web_matrix_native", db_path=db_path)
+    save_benchmark_run("matrix-real-run", source="web_matrix_native", db_path=db_path)
+    save_benchmark_result(
+        "matrix-smoke-run",
+        {
+            "problem": "smoke-solomon",
+            "algorithm": "OR-Tools",
+            "problem_type": "cvrptw",
+            "matrix_kind": "distance",
+            "objective_cost": 22.0,
+            "capacity_violations": 0,
+            "tw_violations": 0,
+            "params": {},
+        },
+        db_path=db_path,
+    )
+    save_benchmark_result(
+        "matrix-real-run",
+        {
+            "problem": "C101",
+            "algorithm": "OR-Tools",
+            "problem_type": "cvrptw",
+            "matrix_kind": "distance",
+            "objective_cost": 828.9,
+            "capacity_violations": 0,
+            "tw_violations": 0,
+            "params": {"scale": 1000},
+        },
+        db_path=db_path,
+    )
+
+    document = build_promoted_configs(db_path=db_path, include_empty_params=True)
+
+    assert resolve_promoted_params(document, "OR-Tools", problem_type="cvrptw") == {"scale": 1000}
+    assert document["configs"][0]["selected_from"]["problem"] == "C101"
+
+
+def test_promoted_configs_prefer_latest_no_gap_real_row_over_lower_old_cost(tmp_path):
+    db_path = str(tmp_path / "tsplib.db")
+    save_benchmark_run("old-run", source="web_matrix_native", db_path=db_path)
+    save_benchmark_run("new-run", source="web_matrix_native", db_path=db_path)
+    save_benchmark_result(
+        "old-run",
+        {
+            "problem": "C101",
+            "algorithm": "OR-Tools",
+            "problem_type": "cvrptw",
+            "matrix_kind": "distance",
+            "objective_cost": 507.0,
+            "capacity_violations": 0,
+            "tw_violations": 0,
+            "params": {},
+            "timestamp": "2026-06-01T15:32:46+00:00",
+        },
+        db_path=db_path,
+    )
+    save_benchmark_result(
+        "new-run",
+        {
+            "problem": "C101",
+            "algorithm": "OR-Tools",
+            "problem_type": "cvrptw",
+            "matrix_kind": "distance",
+            "objective_cost": 828.9369,
+            "capacity_violations": 0,
+            "tw_violations": 0,
+            "params": {"scale": 1000},
+            "timestamp": "2026-06-02T02:56:07+00:00",
+        },
+        db_path=db_path,
+    )
+
+    document = build_promoted_configs(db_path=db_path, include_empty_params=True)
+
+    assert resolve_promoted_params(document, "OR-Tools", problem_type="cvrptw") == {"scale": 1000}
+    assert document["configs"][0]["score"] == 828.9369
+
+
+def test_promoted_configs_use_metadata_algorithm_params_when_top_level_params_empty(tmp_path):
+    db_path = str(tmp_path / "tsplib.db")
+    save_benchmark_run("run-1", source="web_matrix_native", db_path=db_path)
+    save_benchmark_result(
+        "run-1",
+        {
+            "problem": "C101",
+            "algorithm": "OR-Tools",
+            "problem_type": "cvrptw",
+            "matrix_kind": "distance",
+            "objective_cost": 828.9369,
+            "capacity_violations": 0,
+            "tw_violations": 0,
+            "params": {},
+            "metadata": {
+                "algorithm_params": {
+                    "first_solution_strategy": "PARALLEL_CHEAPEST_INSERTION",
+                    "scale": 1000,
+                }
+            },
+        },
+        db_path=db_path,
+    )
+
+    document = build_promoted_configs(db_path=db_path)
+
+    assert resolve_promoted_params(document, "OR-Tools", problem_type="cvrptw") == {
+        "first_solution_strategy": "PARALLEL_CHEAPEST_INSERTION",
+        "scale": 1000,
+    }
+
+
 def test_promoted_configs_ignore_failed_or_infeasible_routing_results(tmp_path):
     db_path = str(tmp_path / "tsplib.db")
     save_benchmark_run("run-1", source="web_matrix_native", db_path=db_path)

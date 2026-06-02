@@ -2,7 +2,11 @@ import argparse
 
 import pytest
 
-from academic_benchmark.run_matrix_benchmark import _parse_params_json, run_matrix_benchmark
+from academic_benchmark.run_matrix_benchmark import (
+    _parse_algorithm_params_json,
+    _parse_params_json,
+    run_matrix_benchmark,
+)
 from academic_benchmark.tsplib_manager import query_benchmark_results
 
 
@@ -65,7 +69,43 @@ def test_run_matrix_benchmark_persists_algorithm_params(tmp_path):
     }
 
 
+def test_run_matrix_benchmark_merges_per_algorithm_params(tmp_path):
+    db_path = str(tmp_path / "academic.db")
+
+    run_matrix_benchmark(
+        db_path=db_path,
+        run_id="matrix-cli-per-algo-params-test",
+        algorithms=["Core-Greedy-Routing", "Core-TwoOpt-TSP"],
+        problem_types=["cvrp"],
+        seed_missing_smoke=True,
+        algorithm_params={"time_limit_seconds": 3},
+        per_algorithm_params={
+            "Core-TwoOpt-TSP": {"time_limit_seconds": 5, "max_passes": 2},
+        },
+    )
+
+    rows = query_benchmark_results(run_id="matrix-cli-per-algo-params-test", limit=10, db_path=db_path)
+    params_by_algorithm = {
+        row["algorithm"]: row["metadata"]["algorithm_params"]
+        for row in rows
+    }
+
+    assert params_by_algorithm["Core-Greedy-Routing"] == {"time_limit_seconds": 3}
+    assert params_by_algorithm["Core-TwoOpt-TSP"] == {
+        "time_limit_seconds": 5,
+        "max_passes": 2,
+    }
+
+
 def test_parse_params_json_requires_object():
     assert _parse_params_json('{"time_limit_seconds": 3}') == {"time_limit_seconds": 3}
     with pytest.raises(argparse.ArgumentTypeError):
         _parse_params_json("[1, 2, 3]")
+
+
+def test_parse_algorithm_params_json_requires_object_values():
+    assert _parse_algorithm_params_json('{"OR-Tools": {"scale": 1000}}') == {
+        "OR-Tools": {"scale": 1000},
+    }
+    with pytest.raises(argparse.ArgumentTypeError):
+        _parse_algorithm_params_json('{"OR-Tools": 1000}')

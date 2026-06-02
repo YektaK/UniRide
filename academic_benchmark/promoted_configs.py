@@ -47,7 +47,10 @@ def build_promoted_configs(
         "schema_version": 1,
         "source": "academic_db",
         "generated_at": generated_at or datetime.now().isoformat(timespec="seconds"),
-        "selection_rule": "best finite gap, then best finite objective/tour cost per algorithm/problem_type/matrix_kind",
+        "selection_rule": (
+            "prefer non-smoke evidence; use finite gap when present; otherwise prefer latest "
+            "no-gap validation before objective/tour cost per algorithm/problem_type/matrix_kind"
+        ),
         "configs": selected,
     }
 
@@ -131,7 +134,7 @@ def _benchmark_result_candidates(rows: Iterable[Dict], *, include_empty_params: 
     for row in rows:
         if not is_feasible_benchmark_row(row):
             continue
-        params = row.get("params") or {}
+        params = _benchmark_params(row)
         if not params and not include_empty_params:
             continue
         score = row.get("objective_cost")
@@ -153,6 +156,15 @@ def _benchmark_result_candidates(rows: Iterable[Dict], *, include_empty_params: 
             },
         })
     return candidates
+
+
+def _benchmark_params(row: Dict) -> Dict:
+    params = row.get("params") or {}
+    if params:
+        return dict(params)
+    metadata = row.get("metadata") or {}
+    algorithm_params = metadata.get("algorithm_params") or {}
+    return dict(algorithm_params) if isinstance(algorithm_params, dict) else {}
 
 
 def _select_best_candidates(candidates: Iterable[Dict]) -> List[Dict]:
@@ -184,11 +196,32 @@ def _select_best_candidates(candidates: Iterable[Dict]) -> List[Dict]:
     return selected
 
 
-def _rank(candidate: Dict) -> Tuple[float, float]:
-    return (
-        _finite_or_inf(candidate.get("gap")),
-        _finite_or_inf(candidate.get("score")),
-    )
+def _rank(candidate: Dict) -> Tuple[float, float, float, float, float]:
+    gap = _finite_or_inf(candidate.get("gap"))
+    score = _finite_or_inf(candidate.get("score"))
+    if math.isfinite(gap):
+        quality = (0.0, gap, score, 0.0)
+    else:
+        quality = (1.0, 0.0, -_timestamp_value(candidate), score)
+    return (1.0 if _is_smoke_candidate(candidate) else 0.0, *quality)
+
+
+def _is_smoke_candidate(candidate: Dict) -> bool:
+    selected_from = candidate.get("selected_from") or {}
+    problem = str(selected_from.get("problem") or "").lower()
+    run_id = str(selected_from.get("run_id") or "").lower()
+    return problem.startswith("smoke-") or "smoke" in run_id
+
+
+def _timestamp_value(candidate: Dict) -> float:
+    selected_from = candidate.get("selected_from") or {}
+    raw = selected_from.get("timestamp")
+    if not raw:
+        return 0.0
+    try:
+        return datetime.fromisoformat(str(raw).replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return 0.0
 
 
 def _finite_or_inf(value) -> float:

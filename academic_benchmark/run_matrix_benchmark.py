@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import json
 from dataclasses import asdict
 from datetime import datetime, timezone
-from typing import Dict, Iterable, List, Sequence
+from typing import Dict, Iterable, List, Mapping, Sequence
 
 from academic_benchmark.seed_smoke_datasets import seed_smoke_datasets
 from academic_benchmark.tsplib_manager import (
@@ -35,6 +36,7 @@ def run_matrix_benchmark(
     limit: int = 100,
     seed_missing_smoke: bool = False,
     source: str = "academic_matrix_cli",
+    algorithm_params: Mapping[str, object] | None = None,
 ) -> Dict[str, object]:
     """Run named matrix-native engines on stored academic RoutingProblems."""
     if seed_missing_smoke:
@@ -61,7 +63,8 @@ def run_matrix_benchmark(
     if missing:
         raise RuntimeError(f"Stored problem rows could not be loaded as RoutingProblem objects: {missing}")
 
-    algorithm_configs = [_build_algorithm_config(name) for name in algorithms]
+    effective_algorithm_params = dict(algorithm_params or {})
+    algorithm_configs = [_build_algorithm_config(name, params=effective_algorithm_params) for name in algorithms]
     if not algorithm_configs:
         raise RuntimeError("No matrix-native algorithms were requested")
 
@@ -74,6 +77,7 @@ def run_matrix_benchmark(
         "seed": int(seed),
         "max_dim": int(max_dim),
         "limit": int(limit),
+        "algorithm_params": effective_algorithm_params,
     }
     save_benchmark_run(effective_run_id, source=source, status="running", settings=settings, db_path=db_path)
 
@@ -96,9 +100,9 @@ def run_matrix_benchmark(
     return {"run_id": effective_run_id, "saved_results": saved, "errors": errors}
 
 
-def _build_algorithm_config(name: str) -> MatrixAlgorithmConfig:
+def _build_algorithm_config(name: str, *, params: Mapping[str, object] | None = None) -> MatrixAlgorithmConfig:
     canonical = canonical_matrix_engine_name(name)
-    return MatrixAlgorithmConfig(name=canonical, engine=create_matrix_engine(name), params={})
+    return MatrixAlgorithmConfig(name=canonical, engine=create_matrix_engine(name), params=dict(params or {}))
 
 
 def _select_problem_names(
@@ -126,6 +130,16 @@ def _split_csv(values: Sequence[str]) -> List[str]:
     return result
 
 
+def _parse_params_json(value: str) -> Dict[str, object]:
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise argparse.ArgumentTypeError(f"invalid JSON: {exc.msg}") from exc
+    if not isinstance(parsed, dict):
+        raise argparse.ArgumentTypeError("--params-json must decode to a JSON object")
+    return dict(parsed)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run matrix-native academic benchmarks from SQLite")
     parser.add_argument("--db-path", default=DB_PATH)
@@ -138,6 +152,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--max-dim", type=int, default=10_000)
     parser.add_argument("--limit", type=int, default=100)
     parser.add_argument("--seed-smoke", action="store_true")
+    parser.add_argument(
+        "--params-json",
+        type=_parse_params_json,
+        default={},
+        help="JSON object passed as params to every selected matrix-native algorithm.",
+    )
     args = parser.parse_args(argv)
 
     result = run_matrix_benchmark(
@@ -151,6 +171,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         max_dim=args.max_dim,
         limit=args.limit,
         seed_missing_smoke=args.seed_smoke,
+        algorithm_params=args.params_json,
     )
     print(f"run_id={result['run_id']}")
     print(f"saved_results={result['saved_results']}")

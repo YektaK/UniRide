@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import time
 
-from models.schemas import OptimizationRequest, OptimizationResponse, RouteStep, VehicleRoute
+from models.schemas import OptimizationRequest, OptimizationResponse
 from strategies.base_strategy import BaseRoutingStrategy
+from strategies.holistic_response_builder import build_sequence_routes_response
 from strategies.sota_response_builder import build_sota_request_context
 from uniride_core.algorithms.vroom_cvrp_engine import (
     VROOMRoutePlan,
@@ -145,65 +146,21 @@ def _routes_to_response(
     vehicle_label: str,
     execution_time_seconds: float,
 ) -> OptimizationResponse:
-    depot = request.depot
-    students = request.students
     time_matrix = context["time_matrix"]
     coordinates = context["coordinates"]
     distance_lookup = context["distance_lookup"]
-    routes = []
 
-    for route_plan in route_plans:
-        route_details = []
-        route_students = []
-        total_duration = 0.0
-        previous_location = depot.id
-
-        for customer_idx in route_plan.customer_indices:
-            student = students[customer_idx]
-            current_location = student.location_code
-            duration = strategy._get_duration(previous_location, current_location, time_matrix, coordinates)
-            total_duration += duration
-            route_details.append(
-                RouteStep(
-                    location1=previous_location,
-                    location2=current_location,
-                    duration=round(duration, 2),
-                    distance=distance_lookup(previous_location, current_location),
-                )
-            )
-            route_students.append(student)
-            previous_location = current_location
-
-        if not route_students:
-            continue
-
-        return_duration = strategy._get_duration(previous_location, depot.id, time_matrix, coordinates)
-        total_duration += return_duration
-        route_details.append(
-            RouteStep(
-                location1=previous_location,
-                location2=depot.id,
-                duration=round(return_duration, 2),
-                distance=distance_lookup(previous_location, depot.id),
-            )
-        )
-        routes.append(
-            VehicleRoute(
-                vehicle_id=f"Araç {len(routes) + 1} ({vehicle_label})",
-                route_details=route_details,
-                total_duration_minutes=round(total_duration, 2),
-                total_distance_km=round(sum(step.distance for step in route_details), 2),
-                sw_count=route_plan.sw_count,
-                so_count=route_plan.so_count,
-                student_ids=[student.id for student in route_students],
-            )
-        )
-
-    return OptimizationResponse(
-        algorithm_used=algorithm_name,
-        success=True,
-        routes=routes,
-        total_vehicles=len(routes),
-        total_duration_minutes=sum(route.total_duration_minutes for route in routes),
-        execution_time_seconds=round(execution_time_seconds, 4),
+    return build_sequence_routes_response(
+        request=request,
+        route_plans=route_plans,
+        duration_lookup=lambda origin, destination: strategy._get_duration(
+            origin,
+            destination,
+            time_matrix,
+            coordinates,
+        ),
+        distance_lookup=distance_lookup,
+        algorithm_name=algorithm_name,
+        vehicle_label=vehicle_label,
+        execution_time_seconds=execution_time_seconds,
     )

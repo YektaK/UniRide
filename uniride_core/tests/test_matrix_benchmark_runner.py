@@ -62,6 +62,40 @@ def test_matrix_benchmark_runner_solves_cvrptw_with_routes_and_violations():
     assert result.error is None
 
 
+def test_matrix_benchmark_runner_suppresses_cvrptw_distance_gap_when_vehicle_count_differs():
+    problem = RoutingProblem(
+        name="tiny-cvrptw-bks",
+        problem_type="cvrptw",
+        matrix=CostMatrix(
+            np.array(
+                [
+                    [0, 10, 10],
+                    [10, 0, 10],
+                    [10, 10, 0],
+                ],
+                dtype=np.float64,
+            )
+        ),
+        constraints=ConstraintProfile(
+            demands=[[0], [1], [1]],
+            capacities=[2],
+            time_windows=[(0, 999), (0, 999), (0, 999)],
+            service_times=[0, 0, 0],
+        ),
+        optimal=40,
+        metadata={"bks_vehicles": 2},
+    )
+    runner = MatrixBenchmarkRunner({"static": StaticPermutationEngine([1, 2])})
+
+    result = runner.run([problem])[0]
+
+    assert result.num_vehicles == 1
+    assert result.gap_percent is None
+    assert result.metadata["bks_cost"] == 40
+    assert result.metadata["bks_vehicles"] == 2
+    assert result.metadata["vehicle_gap"] == -1
+
+
 def test_matrix_benchmark_runner_returns_error_rows_for_invalid_instances():
     problem = RoutingProblem(
         name="bad-cvrp",

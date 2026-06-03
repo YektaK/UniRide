@@ -142,6 +142,19 @@ class MatrixBenchmarkRunner:
 
         objective = float(result.objective_cost)
         gap = _gap(objective, problem.optimal)
+        metadata = {
+            "problem_dimension": problem.dimension,
+            "algorithm_params": algorithm.params,
+            "execution_failed": False,
+            "route_costs": result.route_costs,
+        }
+        bks_vehicles = _int_or_none(problem.metadata.get("bks_vehicles"))
+        if problem.problem_type.lower() == "cvrptw" and bks_vehicles is not None:
+            metadata["bks_vehicles"] = bks_vehicles
+            metadata["bks_cost"] = problem.optimal
+            metadata["vehicle_gap"] = int(result.num_vehicles) - bks_vehicles
+            if int(result.num_vehicles) != bks_vehicles:
+                gap = None
         return MatrixBenchmarkResult(
             algorithm=algorithm.name,
             problem=problem.name,
@@ -158,19 +171,22 @@ class MatrixBenchmarkRunner:
             tw_violations=result.tw_violations,
             gap_percent=gap,
             elapsed_ms=elapsed_ms if elapsed_ms else result.time_ms,
-            metadata={
-                "problem_dimension": problem.dimension,
-                "algorithm_params": algorithm.params,
-                "execution_failed": False,
-                "route_costs": result.route_costs,
-            },
+            metadata=metadata,
         )
 
 
 def _gap(value: float, optimal: Optional[float]) -> Optional[float]:
     if optimal is None or optimal <= 0 or not math.isfinite(value):
         return None
-    return ((value - optimal) / optimal) * 100.0
+    gap = ((value - optimal) / optimal) * 100.0
+    return 0.0 if abs(gap) < 1e-9 else gap
+
+
+def _int_or_none(value) -> Optional[int]:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 __all__ = ["MatrixAlgorithmConfig", "MatrixBenchmarkResult", "MatrixBenchmarkRunner"]

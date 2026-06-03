@@ -1,4 +1,8 @@
+import pytest
+
 from models.schemas import OptimizationRequest
+from models.schemas import OptimizationResponse
+from strategies.aoea_strategy import PAOEAStrategy
 from strategies.ebso_strategy import E2BSoStrategy
 from strategies.ga_strategy import GeneticAlgorithmStrategy
 from strategies.hho_split_strategy import HHOSplitStrategy
@@ -8,8 +12,9 @@ from strategies.promoted_config_loader import (
     get_promoted_params,
     get_promoted_strategy_params,
 )
+from strategies.rdma_strategy import R2DMAStrategy
 from strategies.sota_config_utils import merge_sota_config
-from uniride_core.algorithms.sota_tsp import E2BSOTSPConfig, PAOEAConfig
+from uniride_core.algorithms.sota_tsp import E2BSOTSPConfig, PAOEAConfig, R2DMATSPConfig
 
 
 def test_merge_sota_config_applies_valid_request_overrides():
@@ -106,6 +111,139 @@ def test_sota_strategy_constructor_uses_promoted_params(tmp_path, monkeypatch):
 
     assert strategy._config.population_size == 12
     assert strategy._config.max_iterations == 14
+
+
+@pytest.mark.parametrize(
+    ("strategy_cls", "config", "module_path", "algorithm"),
+    [
+        (
+            E2BSoStrategy,
+            E2BSOTSPConfig(population_size=24, max_iterations=200, seed=42),
+            "strategies.ebso_strategy",
+            "e2bso",
+        ),
+        (
+            R2DMAStrategy,
+            R2DMATSPConfig(population_size=24, max_iterations=200, seed=42),
+            "strategies.rdma_strategy",
+            "r2dma",
+        ),
+        (
+            PAOEAStrategy,
+            PAOEAConfig(population_size=24, max_iterations=200, seed=42),
+            "strategies.aoea_strategy",
+            "paoea",
+        ),
+    ],
+)
+def test_sota_strategy_optimize_merges_request_config(
+    monkeypatch,
+    strategy_cls,
+    config,
+    module_path,
+    algorithm,
+):
+    captured = {}
+
+    def fake_context(students, depot):
+        return {
+            "student_ids": [student.id for student in students],
+            "time_matrix": {
+                "A": {"A": 0.0, "S1": 1.0},
+                "S1": {"A": 1.0, "S1": 0.0},
+            },
+            "coordinates": {},
+            "distance_lookup": lambda origin, destination: 0.0 if origin == destination else 1.0,
+        }
+
+    def fake_solve(student_ids, depot_id, distance_lookup, duration_lookup, solver_cls, config):
+        captured["solver_cls"] = solver_cls
+        captured["config"] = config
+        return list(student_ids)
+
+    def fake_response(**kwargs):
+        return OptimizationResponse(
+            algorithm_used=kwargs["algorithm_name"],
+            success=True,
+            routes=[],
+            total_vehicles=0,
+            execution_time_seconds=kwargs["execution_time_seconds"],
+        )
+
+    monkeypatch.setattr(f"{module_path}.build_sota_request_context", fake_context)
+    monkeypatch.setattr(f"{module_path}.solve_student_order_with_sota_tsp", fake_solve)
+    monkeypatch.setattr(f"{module_path}.build_single_route_response", fake_response)
+
+    strategy = strategy_cls(config)
+    request = OptimizationRequest(
+        depot={"id": "A", "lat": 0.0, "lng": 0.0},
+        students=[
+            {
+                "id": "S1",
+                "location_code": "S1",
+                "coordinates": {"lat": 1.0, "lng": 1.0},
+                "disability_type": "Sw",
+            }
+        ],
+        algorithm=algorithm,
+        sota_config={"population_size": 8, "max_iterations": 10, "seed": 7},
+    )
+
+    response = strategy.optimize(request)
+
+    assert response.success is True
+    assert captured["config"].population_size == 8
+    assert captured["config"].max_iterations == 10
+    assert captured["config"].seed == 7
+    assert strategy._config.population_size == 24
+    assert strategy._config.seed == 42
+
+
+def test_all_sota_strategy_constructors_accept_promoted_params(tmp_path, monkeypatch):
+    path = tmp_path / "promoted_configs.json"
+    path.write_text(
+        """
+{
+  "schema_version": 1,
+  "source": "test",
+  "configs": [
+    {
+      "algorithm": "e2bso",
+      "problem_type": "tsp",
+      "matrix_kind": "distance",
+      "params": {"population_size": 11, "max_iterations": 12}
+    },
+    {
+      "algorithm": "r2dma",
+      "problem_type": "tsp",
+      "matrix_kind": "distance",
+      "params": {"population_size": 13, "max_iterations": 14}
+    },
+    {
+      "algorithm": "paoea",
+      "problem_type": "tsp",
+      "matrix_kind": "distance",
+      "params": {"population_size": 15, "max_iterations": 16}
+    }
+  ]
+}
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(PROMOTED_CONFIG_PATH_ENV, str(path))
+    clear_promoted_config_cache()
+
+    strategies = [
+        E2BSoStrategy(),
+        R2DMAStrategy(),
+        PAOEAStrategy(),
+    ]
+
+    assert [(s._config.population_size, s._config.max_iterations) for s in strategies] == [
+        (11, 12),
+        (13, 14),
+        (15, 16),
+    ]
 
 
 def test_promoted_strategy_params_normalize_academic_numba_keys(tmp_path, monkeypatch):

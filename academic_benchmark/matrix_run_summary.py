@@ -99,11 +99,11 @@ def _finite(value: Any) -> bool:
         return False
 
 
-def _json_ready(value: Any) -> Any:
+def make_json_ready(value: Any) -> Any:
     if isinstance(value, dict):
-        return {_json_key(key): _json_ready(item) for key, item in value.items()}
+        return {_json_key(key): make_json_ready(item) for key, item in value.items()}
     if isinstance(value, list):
-        return [_json_ready(item) for item in value]
+        return [make_json_ready(item) for item in value]
     return value
 
 
@@ -120,7 +120,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--limit", type=int, default=10_000)
     args = parser.parse_args(argv)
 
-    print(json.dumps(_json_ready(summarize_run(args.run_id, db_path=args.db_path, limit=args.limit)), indent=2, sort_keys=True))
+    print(json.dumps(make_json_ready(summarize_run(args.run_id, db_path=args.db_path, limit=args.limit)), indent=2, sort_keys=True))
     return 0
 
 
@@ -128,4 +128,4 @@ if __name__ == "__main__":
     raise SystemExit(main())
 
 
-__all__ = ["summarize_benchmark_rows", "summarize_run"]
+__all__ = ["make_json_ready", "summarize_benchmark_rows", "summarize_run"]

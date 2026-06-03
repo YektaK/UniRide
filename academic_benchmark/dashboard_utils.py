@@ -41,6 +41,10 @@ def benchmark_rows_to_progress_frame(rows: Iterable[dict]) -> pd.DataFrame:
         objective = row.get("objective_cost")
         tour_cost = row.get("tour_cost")
         elapsed = row.get("elapsed_ms")
+        metadata = row.get("metadata") or {}
+        bks_cost = row.get("bks_cost", metadata.get("bks_cost"))
+        bks_vehicles = row.get("bks_vehicles", metadata.get("bks_vehicles"))
+        vehicle_gap = row.get("vehicle_gap", metadata.get("vehicle_gap"))
         normalized.append({
             "timestamp": row.get("timestamp"),
             "problem": row.get("problem"),
@@ -56,6 +60,11 @@ def benchmark_rows_to_progress_frame(rows: Iterable[dict]) -> pd.DataFrame:
             "problem_type": row.get("problem_type") or "tsp",
             "matrix_kind": row.get("matrix_kind") or "distance",
             "num_vehicles": row.get("num_vehicles"),
+            "bks_cost": bks_cost,
+            "bks_vehicles": bks_vehicles,
+            "num_vehicles_bks": row.get("num_vehicles_bks", bks_vehicles),
+            "vehicle_gap": vehicle_gap,
+            "bks_source": row.get("bks_source", metadata.get("bks_source")),
             "capacity_violations": row.get("capacity_violations", 0),
             "tw_violations": row.get("tw_violations", 0),
             "tour": _json_text(row.get("tour")),

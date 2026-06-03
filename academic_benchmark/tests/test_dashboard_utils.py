@@ -31,6 +31,12 @@ def test_benchmark_rows_to_progress_frame_maps_sqlite_routing_fields():
             "num_vehicles": 1,
             "capacity_violations": 0,
             "tw_violations": 1,
+            "metadata": {
+                "bks_cost": 41.0,
+                "bks_vehicles": 1,
+                "vehicle_gap": 0,
+                "bks_source": "solomon_sintef",
+            },
             "params": {"seed": 7},
             "source": "web_matrix_native",
             "run_id": "run-1",
@@ -44,6 +50,11 @@ def test_benchmark_rows_to_progress_frame_maps_sqlite_routing_fields():
     assert row["problem_type"] == "cvrptw"
     assert row["matrix_kind"] == "travel_time"
     assert row["num_vehicles"] == 1
+    assert row["bks_cost"] == 41.0
+    assert row["bks_vehicles"] == 1
+    assert row["num_vehicles_bks"] == 1
+    assert row["vehicle_gap"] == 0
+    assert row["bks_source"] == "solomon_sintef"
     assert row["tw_violations"] == 1
     assert json.loads(row["routes_json"]) == [[1, 2]]
     assert json.loads(row["params_json"]) == {"seed": 7}

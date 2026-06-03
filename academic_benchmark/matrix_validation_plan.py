@@ -29,21 +29,27 @@ DEFAULT_VARIANTS = (
     ("time10-scale1000", 10),
     ("time20-scale1000", 20),
 )
+ALL_IMPORTED_VARIANTS = (("time10-scale1000", 10),)
 ORTOOLS_SEARCH_PARAMS = {
     "first_solution_strategy": "PARALLEL_CHEAPEST_INSERTION",
     "local_search_metaheuristic": "GUIDED_LOCAL_SEARCH",
 }
+VALIDATION_PROFILES = ("quick-real", "all-imported")
 
 
 @dataclass(frozen=True)
 class ValidationJob:
     run_id: str
     problems: tuple[str, ...]
+    problem_types: tuple[str, ...]
     algorithms: tuple[str, ...]
     n_runs: int
     seed: int
+    max_dim: int
+    limit: int
     params: dict[str, Any]
     per_algorithm_params: dict[str, dict[str, Any]]
+    source: str = "academic_matrix_validation"
 
 
 def build_validation_jobs(
@@ -52,8 +58,12 @@ def build_validation_jobs(
     n_runs: int = 3,
     seed: int = 2000,
     problems: Sequence[str] = DEFAULT_PROBLEMS,
+    problem_types: Sequence[str] = (),
     algorithms: Sequence[str] = DEFAULT_ALGORITHMS,
     variants: Sequence[tuple[str, int]] = DEFAULT_VARIANTS,
+    max_dim: int = 10_000,
+    limit: int = 100,
+    source: str = "academic_matrix_validation",
 ) -> list[ValidationJob]:
     """Create named validation jobs for solver time-limit variants."""
     jobs: list[ValidationJob] = []
@@ -62,11 +72,15 @@ def build_validation_jobs(
             ValidationJob(
                 run_id=f"{run_id_prefix}-{variant_name}",
                 problems=tuple(problems),
+                problem_types=tuple(problem_types),
                 algorithms=tuple(algorithms),
                 n_runs=int(n_runs),
                 seed=int(seed) + index * 100,
+                max_dim=int(max_dim),
+                limit=int(limit),
                 params={"time_limit_seconds": int(time_limit_seconds), "scale": 1000},
                 per_algorithm_params={"OR-Tools": dict(ORTOOLS_SEARCH_PARAMS)},
+                source=source,
             )
         )
     return jobs
@@ -88,11 +102,14 @@ def run_validation_jobs(
                 run_id=job.run_id,
                 algorithms=job.algorithms,
                 problems=job.problems,
+                problem_types=job.problem_types,
                 n_runs=job.n_runs,
                 seed=job.seed,
+                max_dim=job.max_dim,
+                limit=job.limit,
                 algorithm_params=job.params,
                 per_algorithm_params=job.per_algorithm_params,
-                source="academic_matrix_validation",
+                source=job.source,
             )
         )
         summary = dict(summarizer(job.run_id, db_path=db_path, limit=100_000))
@@ -102,30 +119,67 @@ def run_validation_jobs(
 
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Run repeatable matrix-native validation variants")
+    parser.add_argument(
+        "--profile",
+        choices=VALIDATION_PROFILES,
+        default="quick-real",
+        help="Named validation profile. all-imported selects all stored CVRP/CVRPTW rows from SQLite.",
+    )
     parser.add_argument("--run-id-prefix", required=True)
     parser.add_argument("--db-path", default=DB_PATH)
-    parser.add_argument("--n-runs", type=int, default=3)
-    parser.add_argument("--seed", type=int, default=2000)
-    parser.add_argument("--problems", nargs="*", default=list(DEFAULT_PROBLEMS))
-    parser.add_argument("--algorithms", nargs="*", default=list(DEFAULT_ALGORITHMS))
+    parser.add_argument("--n-runs", type=int)
+    parser.add_argument("--seed", type=int)
+    parser.add_argument("--problems", nargs="*")
+    parser.add_argument("--problem-types", nargs="*")
+    parser.add_argument("--algorithms", nargs="*")
+    parser.add_argument("--max-dim", type=int)
+    parser.add_argument("--limit", type=int)
     parser.add_argument(
         "--variants",
         nargs="*",
-        default=[f"{name}:{seconds}" for name, seconds in DEFAULT_VARIANTS],
+        default=None,
         help="Variant specs as name:time_limit_seconds",
     )
     args = parser.parse_args(argv)
+    defaults = _profile_defaults(args.profile)
 
     jobs = build_validation_jobs(
         run_id_prefix=args.run_id_prefix,
-        n_runs=args.n_runs,
-        seed=args.seed,
-        problems=tuple(args.problems),
-        algorithms=tuple(args.algorithms),
-        variants=_parse_variants(args.variants),
+        n_runs=args.n_runs if args.n_runs is not None else defaults["n_runs"],
+        seed=args.seed if args.seed is not None else defaults["seed"],
+        problems=tuple(args.problems) if args.problems is not None else defaults["problems"],
+        problem_types=tuple(args.problem_types) if args.problem_types is not None else defaults["problem_types"],
+        algorithms=tuple(args.algorithms) if args.algorithms is not None else defaults["algorithms"],
+        variants=_parse_variants(args.variants) if args.variants is not None else defaults["variants"],
+        max_dim=args.max_dim if args.max_dim is not None else defaults["max_dim"],
+        limit=args.limit if args.limit is not None else defaults["limit"],
     )
     print(json.dumps(make_json_ready(run_validation_jobs(jobs, db_path=args.db_path)), indent=2, sort_keys=True))
     return 0
+
+
+def _profile_defaults(profile: str) -> dict[str, Any]:
+    if profile == "all-imported":
+        return {
+            "n_runs": 1,
+            "seed": 2000,
+            "problems": (),
+            "problem_types": ("cvrp", "cvrptw"),
+            "algorithms": DEFAULT_ALGORITHMS,
+            "variants": ALL_IMPORTED_VARIANTS,
+            "max_dim": 10_000,
+            "limit": 100_000,
+        }
+    return {
+        "n_runs": 3,
+        "seed": 2000,
+        "problems": DEFAULT_PROBLEMS,
+        "problem_types": (),
+        "algorithms": DEFAULT_ALGORITHMS,
+        "variants": DEFAULT_VARIANTS,
+        "max_dim": 10_000,
+        "limit": 100,
+    }
 
 
 def _parse_variants(values: Sequence[str]) -> tuple[tuple[str, int], ...]:

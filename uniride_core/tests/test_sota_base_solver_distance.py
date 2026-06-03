@@ -17,6 +17,22 @@ def test_base_solver_euclidean_distance_uses_canonical_raw_helper():
     assert math.isclose(_DummySolver.euclidean_distance(p1, p2), math.sqrt(2.0))
 
 
+def test_base_solver_euclidean_distance_delegates_to_canonical_helper(monkeypatch):
+    calls = []
+
+    def fake_distance(p1, p2):
+        calls.append((p1, p2))
+        return 123.5
+
+    monkeypatch.setattr(
+        "uniride_core.algorithms.sota_tsp.base_solver.euclidean_distance_2d",
+        fake_distance,
+    )
+
+    assert _DummySolver.euclidean_distance((2.0, 3.0), (5.0, 7.0)) == 123.5
+    assert calls == [((2.0, 3.0), (5.0, 7.0))]
+
+
 def test_base_solver_build_distance_matrix_uses_raw_euclidean_distance():
     solver = _DummySolver("dummy")
 

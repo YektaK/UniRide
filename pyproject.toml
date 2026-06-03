@@ -7,9 +7,18 @@ name = "uniride"
 version = "3.1.0"
 description = "CVRPTW Optimization Framework and Academic Benchmark Suite"
 dependencies = [
-    "pydantic",
+    "pydantic==2.13.4",
+    "pydantic-core==2.46.4",
     "numpy",
     "numba"
+]
+
+[project.optional-dependencies]
+solvers = [
+    "ortools",
+    "pyvrp",
+    "pyvroom",
+    "vrplib"
 ]
 
 [tool.setuptools.packages.find]

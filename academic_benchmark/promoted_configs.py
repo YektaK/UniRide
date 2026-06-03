@@ -117,7 +117,7 @@ def _best_solution_candidates(rows: Iterable[Dict]) -> List[Dict]:
             "matrix_kind": "distance",
             "params": row.get("params") or {},
             "score": row.get("tour_length"),
-            "gap": row.get("gap"),
+            "gap": _normalize_gap(row.get("gap")),
             "source_table": "best_solutions",
             "selected_from": {
                 "problem": row.get("problem"),
@@ -146,7 +146,7 @@ def _benchmark_result_candidates(rows: Iterable[Dict], *, include_empty_params: 
             "matrix_kind": str(row.get("matrix_kind") or "distance").lower(),
             "params": params,
             "score": score,
-            "gap": row.get("gap"),
+            "gap": _normalize_gap(row.get("gap")),
             "source_table": "benchmark_results",
             "selected_from": {
                 "problem": row.get("problem"),
@@ -230,6 +230,13 @@ def _finite_or_inf(value) -> float:
     except (TypeError, ValueError):
         return math.inf
     return number if math.isfinite(number) else math.inf
+
+
+def _normalize_gap(value):
+    number = _finite_or_inf(value)
+    if math.isinf(number):
+        return value
+    return 0.0 if abs(number) < 1e-9 else number
 
 
 def _finite_or_none(value):

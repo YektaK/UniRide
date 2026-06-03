@@ -212,6 +212,30 @@ def test_promoted_configs_use_metadata_algorithm_params_when_top_level_params_em
     }
 
 
+def test_promoted_configs_normalize_near_zero_gap(tmp_path):
+    db_path = str(tmp_path / "tsplib.db")
+    save_benchmark_run("run-1", source="web_matrix_native", db_path=db_path)
+    save_benchmark_result(
+        "run-1",
+        {
+            "problem": "C101",
+            "algorithm": "OR-Tools",
+            "problem_type": "cvrptw",
+            "matrix_kind": "distance",
+            "objective_cost": 828.9369,
+            "gap": -2.7429552781480087e-14,
+            "capacity_violations": 0,
+            "tw_violations": 0,
+            "params": {"scale": 1000},
+        },
+        db_path=db_path,
+    )
+
+    document = build_promoted_configs(db_path=db_path)
+
+    assert document["configs"][0]["gap"] == 0.0
+
+
 def test_promoted_configs_ignore_failed_or_infeasible_routing_results(tmp_path):
     db_path = str(tmp_path / "tsplib.db")
     save_benchmark_run("run-1", source="web_matrix_native", db_path=db_path)

@@ -30,6 +30,7 @@ def build_promoted_configs(
     limit: int = 5000,
     generated_at: Optional[str] = None,
     include_empty_params: bool = False,
+    min_evidence_runs: int = 1,
 ) -> Dict[str, object]:
     """Build a neutral promoted-config document from academic DB rows."""
     _ensure_db_schema(db_path)
@@ -42,6 +43,7 @@ def build_promoted_configs(
         )
     )
 
+    candidates = _filter_by_min_evidence(candidates, min_evidence_runs=max(1, int(min_evidence_runs)))
     selected = _select_best_candidates(candidates)
     return {
         "schema_version": 1,
@@ -49,7 +51,8 @@ def build_promoted_configs(
         "generated_at": generated_at or datetime.now().isoformat(timespec="seconds"),
         "selection_rule": (
             "prefer non-smoke evidence; use finite gap when present; otherwise prefer latest "
-            "no-gap validation before objective/tour cost per algorithm/problem_type/matrix_kind"
+            "no-gap validation before objective/tour cost per algorithm/problem_type/matrix_kind; "
+            f"require at least {max(1, int(min_evidence_runs))} evidence row(s) per promoted param set"
         ),
         "configs": selected,
     }
@@ -68,6 +71,7 @@ def write_promoted_configs(
     limit: int = 5000,
     generated_at: Optional[str] = None,
     include_empty_params: bool = False,
+    min_evidence_runs: int = 1,
 ) -> Dict[str, object]:
     """Write promoted configs and return the emitted document."""
     document = build_promoted_configs(
@@ -75,6 +79,7 @@ def write_promoted_configs(
         limit=limit,
         generated_at=generated_at,
         include_empty_params=include_empty_params,
+        min_evidence_runs=min_evidence_runs,
     )
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as handle:
@@ -167,6 +172,51 @@ def _benchmark_params(row: Dict) -> Dict:
     return dict(algorithm_params) if isinstance(algorithm_params, dict) else {}
 
 
+def _filter_by_min_evidence(candidates: Iterable[Dict], *, min_evidence_runs: int) -> List[Dict]:
+    materialized = list(candidates)
+    if min_evidence_runs <= 1:
+        for candidate in materialized:
+            candidate["evidence_count"] = 1
+        return materialized
+
+    evidence_ids_by_key: Dict[Tuple[str, str, str, str], set] = {}
+    for candidate in materialized:
+        key = _candidate_evidence_key(candidate)
+        evidence_ids_by_key.setdefault(key, set()).add(_candidate_evidence_id(candidate))
+
+    filtered = []
+    for candidate in materialized:
+        evidence_count = len(evidence_ids_by_key.get(_candidate_evidence_key(candidate), set()))
+        if evidence_count >= min_evidence_runs:
+            candidate["evidence_count"] = evidence_count
+            filtered.append(candidate)
+    return filtered
+
+
+def _candidate_evidence_key(candidate: Dict) -> Tuple[str, str, str, str]:
+    return (
+        str(candidate.get("algorithm") or ""),
+        str(candidate.get("problem_type") or "tsp").lower(),
+        str(candidate.get("matrix_kind") or "distance").lower(),
+        _stable_json(candidate.get("params") or {}),
+    )
+
+
+def _candidate_evidence_id(candidate: Dict) -> Tuple[str, str, str, str, str]:
+    selected_from = candidate.get("selected_from") or {}
+    return (
+        str(candidate.get("source_table") or ""),
+        str(selected_from.get("problem") or ""),
+        str(selected_from.get("run_id") or ""),
+        str(selected_from.get("run_number") or ""),
+        str(selected_from.get("timestamp") or ""),
+    )
+
+
+def _stable_json(value: object) -> str:
+    return json.dumps(value, sort_keys=True, ensure_ascii=False, default=str)
+
+
 def _select_best_candidates(candidates: Iterable[Dict]) -> List[Dict]:
     best_by_key: Dict[Tuple[str, str, str], Dict] = {}
     for candidate in candidates:
@@ -190,6 +240,7 @@ def _select_best_candidates(candidates: Iterable[Dict]) -> List[Dict]:
             "params": dict(candidate.get("params") or {}),
             "score": _finite_or_none(candidate.get("score")),
             "gap": _finite_or_none(candidate.get("gap")),
+            "evidence_count": int(candidate.get("evidence_count") or 1),
             "source_table": candidate.get("source_table"),
             "selected_from": candidate.get("selected_from") or {},
         })

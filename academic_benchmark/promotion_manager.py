@@ -19,6 +19,7 @@ def validate_promoted_document(
     *,
     min_configs: int = 1,
     require_params: bool = True,
+    min_evidence_runs: int = 1,
 ) -> List[str]:
     """Return validation errors for a promoted-config document."""
     errors: List[str] = []
@@ -40,6 +41,17 @@ def validate_promoted_document(
             errors.append(f"configs[{idx}] has empty params")
         if params is not None and not isinstance(params, dict):
             errors.append(f"configs[{idx}].params must be an object")
+        evidence_count = config.get("evidence_count", 1)
+        try:
+            evidence_count_int = int(evidence_count)
+        except (TypeError, ValueError):
+            errors.append(f"configs[{idx}].evidence_count must be an integer")
+            continue
+        if evidence_count_int < min_evidence_runs:
+            errors.append(
+                f"configs[{idx}] has evidence_count {evidence_count_int}, "
+                f"expected at least {min_evidence_runs}"
+            )
     return errors
 
 
@@ -50,6 +62,7 @@ def promote_configs(
     limit: int = 5000,
     min_configs: int = 1,
     require_params: bool = True,
+    min_evidence_runs: int = 1,
     dry_run: bool = False,
 ) -> Dict[str, object]:
     """Build, validate, and optionally write promoted configs."""
@@ -58,11 +71,13 @@ def promote_configs(
         db_path=db_path,
         limit=limit,
         include_empty_params=include_empty_params,
+        min_evidence_runs=min_evidence_runs,
     )
     errors = validate_promoted_document(
         document,
         min_configs=min_configs,
         require_params=require_params,
+        min_evidence_runs=min_evidence_runs,
     )
     if errors:
         raise ValueError("; ".join(errors))
@@ -73,6 +88,7 @@ def promote_configs(
             limit=limit,
             generated_at=str(document["generated_at"]),
             include_empty_params=include_empty_params,
+            min_evidence_runs=min_evidence_runs,
         )
     return document
 
@@ -88,6 +104,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--limit", type=int, default=5000, help="Maximum rows to inspect from each source table.")
     parser.add_argument("--min-configs", type=int, default=1, help="Minimum promoted configs required.")
     parser.add_argument(
+        "--min-evidence-runs",
+        type=int,
+        default=1,
+        help="Minimum feasible evidence rows required per promoted parameter set.",
+    )
+    parser.add_argument(
         "--allow-empty-params",
         action="store_true",
         help="Allow configs without params. Useful for deterministic algorithms.",
@@ -102,6 +124,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             limit=args.limit,
             min_configs=args.min_configs,
             require_params=not args.allow_empty_params,
+            min_evidence_runs=args.min_evidence_runs,
             dry_run=args.dry_run,
         )
     except ValueError as exc:

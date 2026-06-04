@@ -291,6 +291,48 @@ def test_promoted_configs_ignore_failed_or_infeasible_routing_results(tmp_path):
     assert config["selected_from"]["problem"] == "good-cvrptw"
 
 
+def test_promoted_configs_can_require_multiple_evidence_rows_per_param_set(tmp_path):
+    db_path = str(tmp_path / "tsplib.db")
+    save_benchmark_run("run-1", source="web_matrix_native", db_path=db_path)
+    save_benchmark_run("run-2", source="web_matrix_native", db_path=db_path)
+    common_result = {
+        "problem": "A-n32-k5",
+        "algorithm": "OR-Tools",
+        "problem_type": "cvrp",
+        "matrix_kind": "distance",
+        "objective_cost": 784.0,
+        "gap": 0.0,
+        "capacity_violations": 0,
+        "tw_violations": 0,
+        "params": {"time_limit_seconds": 5, "scale": 1000},
+    }
+    save_benchmark_result("run-1", common_result, db_path=db_path)
+    save_benchmark_result("run-2", {**common_result, "objective_cost": 790.0}, db_path=db_path)
+    save_benchmark_result(
+        "run-2",
+        {
+            "problem": "A-n32-k5",
+            "algorithm": "Core-Greedy-Routing",
+            "problem_type": "cvrp",
+            "matrix_kind": "distance",
+            "objective_cost": 900.0,
+            "capacity_violations": 0,
+            "tw_violations": 0,
+            "params": {"split": "linear"},
+        },
+        db_path=db_path,
+    )
+
+    document = build_promoted_configs(db_path=db_path, min_evidence_runs=2)
+
+    assert resolve_promoted_params(document, "OR-Tools", problem_type="cvrp") == {
+        "time_limit_seconds": 5,
+        "scale": 1000,
+    }
+    assert resolve_promoted_params(document, "Core-Greedy-Routing", problem_type="cvrp") is None
+    assert document["configs"][0]["evidence_count"] == 2
+
+
 def test_write_and_load_promoted_configs_round_trip(tmp_path):
     db_path = str(tmp_path / "tsplib.db")
     output_path = str(tmp_path / "promoted_configs.json")

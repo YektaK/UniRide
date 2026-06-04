@@ -103,3 +103,50 @@ def test_validate_promoted_document_can_allow_empty_params():
     )
 
     assert errors == []
+
+
+def test_validate_promoted_document_rejects_low_evidence_count():
+    errors = validate_promoted_document(
+        {
+            "configs": [
+                {
+                    "algorithm": "OR-Tools",
+                    "problem_type": "cvrp",
+                    "matrix_kind": "distance",
+                    "params": {"scale": 1000},
+                    "evidence_count": 1,
+                }
+            ]
+        },
+        min_evidence_runs=2,
+    )
+
+    assert errors == ["configs[0] has evidence_count 1, expected at least 2"]
+
+
+def test_promote_configs_honors_min_evidence_runs(tmp_path):
+    db_path = str(tmp_path / "tsplib.db")
+    output_path = str(tmp_path / "promoted_configs.json")
+    result = {
+        "problem": "A-n32-k5",
+        "algorithm": "OR-Tools",
+        "problem_type": "cvrp",
+        "matrix_kind": "distance",
+        "objective_cost": 784.0,
+        "capacity_violations": 0,
+        "tw_violations": 0,
+        "params": {"time_limit_seconds": 5},
+    }
+    save_benchmark_run("run-1", db_path=db_path)
+    save_benchmark_run("run-2", db_path=db_path)
+    save_benchmark_result("run-1", result, db_path=db_path)
+    save_benchmark_result("run-2", result, db_path=db_path)
+
+    document = promote_configs(
+        db_path=db_path,
+        output_path=output_path,
+        min_evidence_runs=2,
+    )
+
+    assert document["configs"][0]["evidence_count"] == 2
+    assert load_promoted_configs(output_path) == document

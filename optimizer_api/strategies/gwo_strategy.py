@@ -24,13 +24,8 @@ from models.schemas import (
 from strategies.base_strategy import BaseRoutingStrategy
 from utils.data_loader import DataLoader, euclidean_distance
 from uniride_core.algorithms.vehicle_assignment import VehicleCalculator
-from uniride_core.algorithms.meta_split_common import shuffle_permutation
 from uniride_core.algorithms.tsp_meta_engines import (
-    TSPWolf as Wolf,
-    apply_tuple_swaps,
-    gwo_difference_swaps,
     solve_gwo_tsp,
-    update_gwo_position,
 )
 from strategies.promoted_config_loader import get_promoted_strategy_params
 
@@ -78,56 +73,6 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
     @property
     def description(self) -> str:
         return "Sosyal hiyerarşi tabanlı meta-sezgisel. Keşif-sömürü dengesi güçlü."
-
-    def _shuffle(self, items: List, rng: random.Random) -> List:
-        """Shuffle list using provided RNG"""
-        return shuffle_permutation(items, rng)
-
-    def _initialize_pack(self, waypoints: List[str], rng: random.Random) -> List[Wolf]:
-        """Initialize wolf pack with random positions"""
-        pack = []
-
-        for _ in range(self.config["population_size"]):
-            position = self._shuffle(waypoints, rng)
-            pack.append(Wolf(
-                position=position,
-                fitness=0.0,
-                total_duration=float('inf')
-            ))
-
-        return pack
-
-    def _get_difference_vector(self, leader: List[str], wolf: List[str], a: float, rng: random.Random) -> List[Tuple[int, int]]:
-        """
-        Calculate swaps to move wolf toward leader.
-
-        In continuous GWO, this would be a vector difference.
-        For TSP (permutation), we use swap operations.
-        """
-        return gwo_difference_swaps(leader, wolf, a, rng)
-
-    def _apply_swaps(self, position: List[str], swaps: List[Tuple[int, int]]) -> List[str]:
-        """Apply swap operations to position"""
-        return apply_tuple_swaps(position, swaps)
-
-    def _update_position(
-        self,
-        wolf: Wolf,
-        alpha: Wolf,
-        beta: Wolf,
-        delta: Wolf,
-        a: float,
-        rng: random.Random
-    ) -> List[str]:
-        """
-        Update wolf position based on alpha, beta, delta.
-
-        In GWO, each wolf updates its position based on the three best wolves:
-        X(t+1) = (X1 + X2 + X3) / 3
-
-        For permutation problems, we combine swap suggestions from each leader.
-        """
-        return update_gwo_position(wolf, alpha, beta, delta, a, rng)
 
     def _solve_tsp(
         self,

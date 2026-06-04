@@ -4,6 +4,16 @@ import ast
 from pathlib import Path
 
 
+def _read_python_source(path: Path) -> str:
+    data = path.read_bytes()
+    for encoding in ("utf-8", "utf-8-sig", "utf-16"):
+        try:
+            return data.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return data.decode("utf-8", errors="replace")
+
+
 def test_uniride_core_does_not_import_optimizer_api():
     root = Path(__file__).resolve().parents[1]
     offenders: list[str] = []
@@ -19,5 +29,41 @@ def test_uniride_core_does_not_import_optimizer_api():
                 continue
             if any(name == "optimizer_api" or name.startswith("optimizer_api.") for name in names):
                 offenders.append(str(path.relative_to(root)))
+
+    assert offenders == []
+
+
+def test_active_benchmark_helpers_do_not_import_optimizer_api_algorithm_shims():
+    project_root = Path(__file__).resolve().parents[1].parent
+    benchmark_helpers = [
+        project_root / ".temp_master_numba.py",
+        project_root / "optimizer_api" / "tests" / "run_interactive_benchmark_v2_numba.py",
+        project_root / "optimizer_api" / "tests" / "run_smart_benchmark_numba.py",
+    ]
+    disallowed_modules = {
+        "optimizer_api.utils.local_search",
+        "optimizer_api.utils.local_search_numba",
+        "optimizer_api.utils.split_decoder",
+        "optimizer_api.utils.linear_split_decoder",
+        "optimizer_api.utils.clustering",
+        "optimizer_api.utils.clustering_strategies",
+    }
+    offenders: list[str] = []
+
+    for path in benchmark_helpers:
+        tree = ast.parse(_read_python_source(path), filename=str(path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                names = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom):
+                names = [node.module or ""]
+            else:
+                continue
+            if any(
+                name in disallowed_modules
+                or any(name.startswith(f"{module}.") for module in disallowed_modules)
+                for name in names
+            ):
+                offenders.append(str(path.relative_to(project_root)))
 
     assert offenders == []

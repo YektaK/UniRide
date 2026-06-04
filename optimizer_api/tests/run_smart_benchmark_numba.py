@@ -95,7 +95,9 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 
 ALGORITHMS_TO_CHECK = {
-    "LocalSearchEngine_NUMBA": os.path.join(SCRIPT_DIR, "..", "utils", "local_search_numba.py"),
+    "LocalSearchEngine_NUMBA": os.path.join(
+        SCRIPT_DIR, "..", "..", "uniride_core", "algorithms", "local_search_numba.py"
+    ),
 }
 
 # ============================================================
@@ -847,7 +849,7 @@ def run_single_benchmark_task(args):
         TSPLIBProblem, 
         run_single_test,
     )
-    from optimizer_api.utils.local_search_numba import LocalSearchType
+    from uniride_core.algorithms.local_search_numba import LocalSearchType
     
     # args: (problem_dict, strat_name, ls_type_value, max_iter, task_id, n_runs)
     if len(args) == 6:

@@ -35,8 +35,8 @@ from urllib.error import URLError, HTTPError
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# NUMBA OPTIMIZED local_search import - use consistent absolute paths
-from optimizer_api.utils.local_search_numba import (
+# NUMBA OPTIMIZED local_search import - core owns algorithm logic
+from uniride_core.algorithms.local_search_numba import (
     LocalSearchType,
     apply_local_search,
     NUMBA_AVAILABLE,

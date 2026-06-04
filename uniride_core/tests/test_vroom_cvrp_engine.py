@@ -1,4 +1,11 @@
-from uniride_core.algorithms.vroom_cvrp_engine import solve_sweep_fallback_routes, solve_vroom_cvrp
+import numpy as np
+import pytest
+
+from uniride_core.algorithms.vroom_cvrp_engine import (
+    _build_vroom_uint32_matrix,
+    solve_sweep_fallback_routes,
+    solve_vroom_cvrp,
+)
 
 
 def test_solve_sweep_fallback_routes_respects_capacity():
@@ -22,6 +29,29 @@ def test_solve_sweep_fallback_routes_respects_capacity():
     assert visited == [0, 1, 2]
     assert all(route.sw_count <= 1 for route in routes)
     assert all(route.so_count <= 1 for route in routes)
+
+
+def test_build_vroom_uint32_matrix_is_c_contiguous_seconds_matrix():
+    matrix = _build_vroom_uint32_matrix(
+        [
+            [0.0, 1.5, -2.0],
+            [2.25, 0.0, 3.0],
+            [4.0, 5.5, 0.0],
+        ]
+    )
+
+    assert matrix.dtype == np.dtype("uint32")
+    assert matrix.flags.c_contiguous
+    assert matrix.tolist() == [
+        [0, 90, 0],
+        [135, 0, 180],
+        [240, 330, 0],
+    ]
+
+
+def test_build_vroom_uint32_matrix_rejects_non_square_input():
+    with pytest.raises(ValueError, match="VROOM matrix must be square"):
+        _build_vroom_uint32_matrix([[0, 1, 2], [1, 0, 3]])
 
 
 def test_solve_vroom_cvrp_has_clean_failure_or_complete_solution():

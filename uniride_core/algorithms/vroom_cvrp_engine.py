@@ -40,7 +40,6 @@ def solve_vroom_cvrp(
 ) -> VROOMCVRPSolution:
     """Try solving a depot-first CVRP with pyvroom's `vroom` module."""
     try:
-        import numpy as np
         import vroom
     except ImportError:
         return VROOMCVRPSolution(success=False, error_message="VROOM not installed. Run: pip install pyvroom")
@@ -100,7 +99,7 @@ def solve_vroom_cvrp(
                 )
             )
 
-        matrix = np.asarray([[int(max(0, float(value) * 60)) for value in row] for row in duration_matrix], dtype=np.uint32)
+        matrix = _build_vroom_uint32_matrix(duration_matrix)
         problem.set_durations_matrix("car", matrix)
         problem.set_distances_matrix("car", matrix)
         solution = problem.solve(exploration_level=5, nb_threads=4)
@@ -257,6 +256,17 @@ def _time_window_violations(
     if current_time > float(time_windows[0][1]):
         violations += 1
     return violations
+
+
+def _build_vroom_uint32_matrix(duration_matrix: Sequence[Sequence[float]]):
+    """Return a square C-contiguous uint32 seconds matrix for pyvroom."""
+    import numpy as np
+
+    rows = [[int(max(0, float(value) * 60)) for value in row] for row in duration_matrix]
+    matrix = np.asarray(rows, dtype=np.uint32)
+    if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
+        raise ValueError(f"VROOM matrix must be square; got shape {matrix.shape}")
+    return np.ascontiguousarray(matrix, dtype=np.uint32)
 
 
 __all__ = ["VROOMCVRPSolution", "VROOMRoutePlan", "solve_sweep_fallback_routes", "solve_vroom_cvrp"]

@@ -21,11 +21,8 @@ from models.schemas import (
 from strategies.base_strategy import BaseRoutingStrategy
 from utils.data_loader import DataLoader, euclidean_distance
 from uniride_core.algorithms.vehicle_assignment import VehicleCalculator
-from uniride_core.algorithms.ga_operators import mutate_permutation, order_crossover
 from uniride_core.algorithms.tsp_meta_engines import (
-    TSPIndividual as Individual,
     solve_ga_tsp,
-    tournament_selection,
 )
 from strategies.promoted_config_loader import get_promoted_strategy_params
 
@@ -66,109 +63,6 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
     @property
     def description(self) -> str:
         return "Popülasyon tabanlı meta-sezgisel optimizasyon. Büyük problemler için ideal."
-
-    def _initialize_population(self, waypoints: List[str], rng: random.Random) -> List[Individual]:
-        """Initialize population with random permutations"""
-        population = []
-
-        for _ in range(self.config["population_size"]):
-            chromosome = waypoints.copy()
-            rng.shuffle(chromosome)
-            population.append(Individual(
-                chromosome=chromosome,
-                fitness=0.0,
-                total_duration=float('inf')
-            ))
-
-        return population
-
-    def _evaluate_population(
-        self,
-        population: List[Individual],
-        depot: str,
-        time_matrix: Dict,
-        coordinates: Dict
-    ) -> List[Individual]:
-        """Evaluate fitness for all individuals"""
-        evaluated = []
-
-        for ind in population:
-            duration = self._calculate_route_duration(
-                ind.chromosome, depot, time_matrix, coordinates
-            )
-            fitness = 1.0 / duration if duration > 0 else 0.0
-            evaluated.append(Individual(
-                chromosome=ind.chromosome,
-                fitness=fitness,
-                total_duration=duration
-            ))
-
-        return evaluated
-
-    def _tournament_selection(self, population: List[Individual], rng: random.Random) -> Individual:
-        """Select individual using tournament selection"""
-        return tournament_selection(population, self.config["tournament_size"], rng)
-
-    def _order_crossover(
-        self,
-        parent1: List[str],
-        parent2: List[str],
-        rng: random.Random,
-    ) -> Tuple[List[str], List[str]]:
-        """
-        Order Crossover (OX1) - preserves relative order.
-        Davis, L. (1985). Applying Adaptive Algorithms to Epistatic Domains.
-        """
-        return order_crossover(parent1, parent2, rng)
-
-    def _mutate(self, chromosome: List[str], rng: random.Random) -> List[str]:
-        """Apply mutation (swap or inversion)"""
-        return mutate_permutation(chromosome, rng, mutation_type="swap" if rng.random() < 0.5 else "inversion")
-
-    def _evolve(self, population: List[Individual], rng: random.Random) -> List[Individual]:
-        """Create next generation"""
-        new_population = []
-
-        # Sort by fitness
-        sorted_pop = sorted(population, key=lambda x: x.fitness, reverse=True)
-
-        # Elitism: preserve best
-        for i in range(min(self.config["elite_count"], len(sorted_pop))):
-            new_population.append(Individual(
-                chromosome=sorted_pop[i].chromosome.copy(),
-                fitness=sorted_pop[i].fitness,
-                total_duration=sorted_pop[i].total_duration
-            ))
-
-        # Generate offspring
-        while len(new_population) < self.config["population_size"]:
-            parent1 = self._tournament_selection(sorted_pop, rng)
-            parent2 = self._tournament_selection(sorted_pop, rng)
-
-            # Crossover
-            if rng.random() < self.config["crossover_rate"]:
-                child1, child2 = self._order_crossover(
-                    parent1.chromosome, parent2.chromosome, rng
-                )
-            else:
-                child1 = parent1.chromosome.copy()
-                child2 = parent2.chromosome.copy()
-
-            # Mutation
-            if rng.random() < self.config["mutation_rate"]:
-                child1 = self._mutate(child1, rng)
-            if rng.random() < self.config["mutation_rate"]:
-                child2 = self._mutate(child2, rng)
-
-            new_population.append(Individual(
-                chromosome=child1, fitness=0.0, total_duration=float('inf')
-            ))
-            if len(new_population) < self.config["population_size"]:
-                new_population.append(Individual(
-                    chromosome=child2, fitness=0.0, total_duration=float('inf')
-                ))
-
-        return new_population[:self.config["population_size"]]
 
     def _solve_tsp(
         self,

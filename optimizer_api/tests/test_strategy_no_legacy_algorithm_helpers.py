@@ -7,6 +7,7 @@ from optimizer_api.strategies.ga_split_strategy import GAEnhancedSplitStrategy, 
 from optimizer_api.strategies.gwo_strategy import GreyWolfOptimizerStrategy
 from optimizer_api.strategies.gwo_split_strategy import GWOSplitStrategy
 from optimizer_api.strategies.hho_split_strategy import HHOSplitStrategy
+from optimizer_api.strategies.hybrid_base_strategy import HybridSplitBaseStrategy
 from optimizer_api.strategies.pso_strategy import PSOStrategy
 from optimizer_api.strategies.pso_split_strategy import PSOSplitStrategy
 from optimizer_api.strategies.two_opt_strategy import TwoOptStrategy
@@ -140,3 +141,7 @@ def test_hho_split_strategy_does_not_own_legacy_operator_helpers():
         "_evaluate_hawk",
         "_local_search_improve",
     } & _wrapper_methods(HHOSplitStrategy)
+
+
+def test_hybrid_split_base_does_not_own_unused_nearest_neighbor_helper():
+    assert "_nearest_neighbor_tour" not in _wrapper_methods(HybridSplitBaseStrategy)

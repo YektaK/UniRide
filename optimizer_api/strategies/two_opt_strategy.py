@@ -25,7 +25,6 @@ from models.schemas import (
 from strategies.base_strategy import BaseRoutingStrategy
 from utils.data_loader import DataLoader, euclidean_distance
 from uniride_core.algorithms.vehicle_assignment import VehicleCalculator
-from uniride_core.algorithms.meta_split_common import shuffle_permutation
 from uniride_core.algorithms.tsp_meta_engines import nearest_neighbor_route, solve_two_opt_tsp
 from strategies.promoted_config_loader import get_promoted_strategy_params
 
@@ -69,10 +68,6 @@ class TwoOptStrategy(BaseRoutingStrategy):
     @property
     def description(self) -> str:
         return "Klasik 2-opt yerel arama algoritması. Küçük-orta ölçekli problemler için ideal."
-
-    def _shuffle(self, items: List, rng: random.Random) -> List:
-        """Shuffle list using provided RNG"""
-        return shuffle_permutation(items, rng)
 
     def _nearest_neighbor_initial(
         self,

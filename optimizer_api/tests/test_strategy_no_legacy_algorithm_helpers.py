@@ -5,6 +5,7 @@ import inspect
 from optimizer_api.strategies.ga_strategy import GeneticAlgorithmStrategy
 from optimizer_api.strategies.gwo_strategy import GreyWolfOptimizerStrategy
 from optimizer_api.strategies.pso_strategy import PSOStrategy
+from optimizer_api.strategies.two_opt_strategy import TwoOptStrategy
 
 
 def test_ga_strategy_does_not_own_legacy_ga_operator_helpers():
@@ -58,3 +59,13 @@ def test_gwo_strategy_does_not_own_legacy_gwo_operator_helpers():
         "_apply_swaps",
         "_update_position",
     } & wrapper_methods
+
+
+def test_two_opt_strategy_does_not_own_unused_shuffle_helper():
+    wrapper_methods = {
+        name
+        for name, member in inspect.getmembers(TwoOptStrategy, predicate=inspect.isfunction)
+        if member.__qualname__.startswith("TwoOptStrategy.")
+    }
+
+    assert "_shuffle" not in wrapper_methods

@@ -20,14 +20,7 @@ from models.schemas import (
 from strategies.base_strategy import BaseRoutingStrategy
 from utils.data_loader import DataLoader, euclidean_distance
 from uniride_core.algorithms.vehicle_assignment import VehicleCalculator
-from uniride_core.algorithms.meta_split_common import shuffle_permutation
 from uniride_core.algorithms.tsp_meta_engines import (
-    SwapOperation,
-    TSPParticle as Particle,
-    apply_swaps,
-    combine_velocities,
-    diff_swaps,
-    generate_random_velocity,
     solve_pso_tsp,
 )
 from strategies.promoted_config_loader import get_promoted_strategy_params
@@ -74,94 +67,6 @@ class PSOStrategy(BaseRoutingStrategy):
     def _rng_for_config(self, config: Optional[Dict] = None) -> random.Random:
         seed = (config or self.config).get("seed") or self.seed
         return random.Random(seed)
-
-    def _shuffle(self, items: List, rng: Optional[random.Random] = None) -> List:
-        """Shuffle list using request-local RNG."""
-        return shuffle_permutation(items, rng or self._rng_for_config())
-
-    def _generate_random_velocity(self, n: int, rng: Optional[random.Random] = None) -> List[SwapOperation]:
-        """Generate random velocity (swap sequence) for initialization."""
-        return generate_random_velocity(n, int(self.config.get("max_velocity_size", 5)), rng or self._rng_for_config())
-
-    def _initialize_swarm(self, waypoints: List[str], rng: Optional[random.Random] = None) -> List[Particle]:
-        """Initialize swarm with random positions and velocities"""
-        rng = rng or self._rng_for_config()
-        swarm = []
-
-        for _ in range(self.config["swarm_size"]):
-            position = self._shuffle(waypoints, rng)
-            velocity = self._generate_random_velocity(len(waypoints), rng)
-
-            swarm.append(Particle(
-                position=position,
-                velocity=velocity,
-                personal_best=position.copy(),
-                personal_best_duration=float('inf'),
-                current_duration=float('inf')
-            ))
-
-        return swarm
-
-    # ----------------------------------------------------------------
-    # Swap-sequence velocity helpers (bildiri2026 pattern)
-    # ----------------------------------------------------------------
-
-    def _diff_swaps(self, current: List[str], target: List[str]) -> List[SwapOperation]:
-        """Return the deterministic list of swaps that transforms `current` into `target`.
-
-        This is the exact algorithm from bildiri2026/core/pso_solver.py: walk positions
-        left-to-right; whenever current[i] != target[i], find target[i] in the tail of
-        current and swap it into position i.
-        """
-        return diff_swaps(current, target)
-
-    def _apply_swaps(self, position: List[str], swaps: List[SwapOperation]) -> List[str]:
-        """Apply swap sequence deterministically."""
-        return apply_swaps(position, swaps)
-
-    def _combine_velocities(
-        self,
-        inertia_v: List[SwapOperation],
-        cog_v: List[SwapOperation],
-        soc_v: List[SwapOperation],
-        rng: Optional[random.Random] = None,
-    ) -> List[SwapOperation]:
-        """Clerc-style probabilistic combination of velocity components.
-
-        Each component swap is included with probability equal to the
-        corresponding weight / 3.0, mirroring bildiri2026 _combine_velocities.
-        """
-        return combine_velocities(inertia_v, cog_v, soc_v, self.config, rng or self._rng_for_config())
-
-    # ----------------------------------------------------------------
-    # Legacy helpers (kept for backward compat, no longer used in PSO loop)
-    # ----------------------------------------------------------------
-
-    def _get_difference_swaps(
-        self,
-        current: List[str],
-        target: List[str],
-        weight: float
-    ) -> List[SwapOperation]:
-        """Legacy probabilistic-weight version (superseded by _diff_swaps)."""
-        return self._diff_swaps(current, target)
-
-    def _apply_velocity(self, position: List[str], velocity: List[SwapOperation]) -> List[str]:
-        """Legacy API: apply velocity (delegates to _apply_swaps)."""
-        return self._apply_swaps(position, velocity)
-
-    def _update_velocity(
-        self,
-        current_velocity: List[SwapOperation],
-        current_position: List[str],
-        personal_best: List[str],
-        global_best: List[str],
-    ) -> List[SwapOperation]:
-        """Legacy API: compute new velocity (delegates to _combine_velocities)."""
-        cog_v = self._diff_swaps(current_position, personal_best)
-        soc_v = self._diff_swaps(current_position, global_best)
-        return self._combine_velocities(current_velocity, cog_v, soc_v)
-
 
     def _solve_tsp(
         self,

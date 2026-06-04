@@ -34,7 +34,7 @@ ORTOOLS_SEARCH_PARAMS = {
     "first_solution_strategy": "PARALLEL_CHEAPEST_INSERTION",
     "local_search_metaheuristic": "GUIDED_LOCAL_SEARCH",
 }
-VALIDATION_PROFILES = ("quick-real", "all-imported")
+VALIDATION_PROFILES = ("quick-real", "all-imported", "all-imported-multiseed")
 
 
 @dataclass(frozen=True)
@@ -159,9 +159,9 @@ def main(argv: Optional[list[str]] = None) -> int:
 
 
 def _profile_defaults(profile: str) -> dict[str, Any]:
-    if profile == "all-imported":
+    if profile in {"all-imported", "all-imported-multiseed"}:
         return {
-            "n_runs": 1,
+            "n_runs": 2 if profile == "all-imported-multiseed" else 1,
             "seed": 2000,
             "problems": (),
             "problem_types": ("cvrp", "cvrptw"),

@@ -115,6 +115,28 @@ def test_main_all_imported_profile_uses_cvrp_cvrptw_selection(monkeypatch):
     assert job.params == {"time_limit_seconds": 10, "scale": 1000}
 
 
+def test_main_all_imported_multiseed_profile_defaults_to_two_runs(monkeypatch):
+    captured_jobs = []
+
+    monkeypatch.setattr(
+        "academic_benchmark.matrix_validation_plan.run_validation_jobs",
+        lambda jobs, db_path: captured_jobs.extend(jobs) or [],
+    )
+
+    exit_code = main(["--profile", "all-imported-multiseed", "--run-id-prefix", "validation"])
+
+    assert exit_code == 0
+    assert len(captured_jobs) == 1
+    job = captured_jobs[0]
+    assert job.run_id == "validation-time10-scale1000"
+    assert job.problems == ()
+    assert job.problem_types == ("cvrp", "cvrptw")
+    assert job.algorithms == ("OR-Tools", "PyVRP")
+    assert job.n_runs == 2
+    assert job.limit == 100_000
+    assert job.params == {"time_limit_seconds": 10, "scale": 1000}
+
+
 def test_main_all_imported_profile_allows_explicit_overrides(monkeypatch):
     captured_jobs = []
 

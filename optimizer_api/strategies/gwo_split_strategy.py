@@ -20,7 +20,7 @@ References:
 
 import random
 import time
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Optional
 
 from models.schemas import (
     OptimizationRequest, OptimizationResponse,
@@ -30,21 +30,7 @@ from strategies.hybrid_base_strategy import HybridSplitBaseStrategy
 from strategies.promoted_config_loader import get_promoted_strategy_params
 from utils.data_loader import DataLoader
 from uniride_core.adapters.demand_builder import build_student_demands, build_student_map
-from uniride_core.algorithms.gwo_split_engine import (
-    Wolf,
-    apply_swaps,
-    difference_swaps,
-    evaluate_wolf,
-    initialize_pack,
-    solve_gwo_split,
-    update_position,
-)
-from uniride_core.algorithms.meta_split_common import (
-    giant_tour_cost,
-    local_search_improve,
-    shuffle_permutation,
-    split_penalized_cost,
-)
+from uniride_core.algorithms.gwo_split_engine import solve_gwo_split
 from uniride_core.algorithms.string_split_decoder import Direction
 
 
@@ -106,9 +92,6 @@ class GWOSplitStrategy(HybridSplitBaseStrategy):
         )
         self.config = {**self.DEFAULT_CONFIG, **promoted, **(config or {})}
         self.seed = self.config.get("seed") or int(time.time() * 1000)
-        self._alpha: Optional[Wolf] = None  # Best solution
-        self._beta: Optional[Wolf] = None   # Second best
-        self._delta: Optional[Wolf] = None  # Third best
         self._generation_stats = []
 
     @property
@@ -122,66 +105,6 @@ class GWOSplitStrategy(HybridSplitBaseStrategy):
     @property
     def description(self) -> str:
         return "Gri Kurt + Optimal Split. Sosyal hiyerarşi ile arama."
-
-    def _shuffle(self, items: List, rng: random.Random) -> List:
-        """Shuffle list using provided RNG (Fisher-Yates)"""
-        return shuffle_permutation(items, rng)
-
-    def _initialize_pack(self, waypoints: List[str], rng: random.Random) -> List[Wolf]:
-        """Initialize wolf pack with random positions"""
-        return initialize_pack(waypoints, self.config, rng)
-
-
-    def _get_difference_swaps(self, current: List[str], leader: List[str],
-                                a: float, rng: random.Random) -> List[Tuple[int, int]]:
-        """
-        Calculate swaps to move wolf toward leader.
-        In continuous GWO, this would be a vector difference.
-        For TSP (permutation), we use swap operations weighted by 'a'.
-        """
-        return difference_swaps(current, leader, a, rng)
-
-    def _apply_swaps(self, position: List[str], swaps: List[Tuple[int, int]]) -> List[str]:
-        """Apply swap operations to position"""
-        return apply_swaps(position, swaps)
-
-    def _update_position(self, wolf: Wolf, alpha: Wolf, beta: Wolf, delta: Wolf,
-                         a: float, rng: random.Random) -> List[str]:
-        """
-        Update wolf position based on alpha, beta, delta.
-        
-        In GWO, each wolf updates its position based on the three best wolves:
-        X(t+1) = (X1 + X2 + X3) / 3
-        
-        For permutation problems, we combine swap suggestions from each leader
-        with different weights (alpha > beta > delta).
-        """
-        return update_position(wolf, alpha, beta, delta, a, rng)
-
-    def _calculate_giant_tour_cost(self, tour: List[str], depot: str,
-                                    distance_matrix: Dict) -> float:
-        """Calculate approximate cost of giant tour"""
-        return giant_tour_cost(tour, depot, distance_matrix)
-
-    def _evaluate_wolf(self, wolf: Wolf, depot: str,
-                       distance_matrix: Dict, demands: Dict,
-                       sw_capacity: int, so_capacity: int,
-                       max_tour_duration: float) -> float:
-        """Evaluate wolf using Split Decoder"""
-        return split_penalized_cost(
-            wolf.position,
-            depot,
-            distance_matrix,
-            demands,
-            sw_capacity,
-            so_capacity,
-            max_tour_duration,
-        )
-
-    def _local_search_improve(self, tour: List[str], depot: str,
-                               distance_matrix: Dict) -> List[str]:
-        """Apply configurable local search to giant tour"""
-        return local_search_improve(tour, depot, distance_matrix, str(self.config.get("local_search_type", "hybrid")))
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:
         """Main optimization entry point with CVRPTW support"""

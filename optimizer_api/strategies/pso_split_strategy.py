@@ -22,7 +22,7 @@ References:
 
 import random
 import time
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Optional
 
 from models.schemas import (
     OptimizationRequest, OptimizationResponse,
@@ -32,20 +32,7 @@ from strategies.hybrid_base_strategy import HybridSplitBaseStrategy
 from strategies.promoted_config_loader import get_promoted_strategy_params
 from utils.data_loader import DataLoader
 from uniride_core.adapters.demand_builder import build_student_demands, build_student_map
-from uniride_core.algorithms.pso_split_engine import (
-    Particle,
-    apply_velocity,
-    difference_swaps,
-    initialize_swarm,
-    solve_pso_split,
-    update_velocity,
-)
-from uniride_core.algorithms.meta_split_common import (
-    giant_tour_cost,
-    local_search_improve,
-    shuffle_permutation,
-    split_penalized_cost,
-)
+from uniride_core.algorithms.pso_split_engine import solve_pso_split
 from uniride_core.algorithms.string_split_decoder import Direction
 
 
@@ -119,61 +106,6 @@ class PSOSplitStrategy(HybridSplitBaseStrategy):
     @property
     def description(self) -> str:
         return "Parçacık Sürü + Optimal Split. Hızlı yakınsama, yüksek kalite."
-
-    def _shuffle(self, items: List, rng: random.Random) -> List:
-        """Shuffle list using provided RNG (Fisher-Yates)"""
-        return shuffle_permutation(items, rng)
-
-    def _initialize_swarm(self, waypoints: List[str], rng: random.Random) -> List[Particle]:
-        """Initialize swarm with random positions and empty velocities"""
-        return initialize_swarm(waypoints, self.config, rng)
-
-
-    def _calculate_giant_tour_cost(self, tour: List[str], depot: str,
-                                    distance_matrix: Dict) -> float:
-        """Calculate approximate cost of giant tour (for velocity updates)"""
-        return giant_tour_cost(tour, depot, distance_matrix)
-
-    def _get_difference_swaps(self, current: List[str], target: List[str],
-                                weight: float, rng: random.Random) -> List[Tuple[int, int, float]]:
-        """
-        Get weighted swaps to transform current toward target.
-        Returns: List of (i, j, probability) tuples.
-        """
-        return difference_swaps(current, target, weight, rng)
-
-    def _apply_velocity(self, position: List[str],
-                        velocity: List[Tuple[int, int, float]], rng: random.Random) -> List[str]:
-        """Apply velocity swaps probabilistically"""
-        return apply_velocity(position, velocity, rng)
-
-    def _update_velocity(self, particle: Particle, global_best: Optional[List[str]],
-                         inertia: float, rng: random.Random) -> List[Tuple[int, int, float]]:
-        """
-        Calculate new velocity using PSO equation:
-        v(t+1) = w*v(t) + c1*r1*(pbest-x) + c2*r2*(gbest-x)
-        """
-        return update_velocity(particle, global_best, self.config, inertia, rng)
-
-    def _evaluate_particle(self, particle: Particle, depot: str,
-                           distance_matrix: Dict, demands: Dict,
-                           sw_capacity: int, so_capacity: int,
-                           max_tour_duration: float) -> float:
-        """Evaluate particle using Split Decoder"""
-        return split_penalized_cost(
-            particle.position,
-            depot,
-            distance_matrix,
-            demands,
-            sw_capacity,
-            so_capacity,
-            max_tour_duration,
-        )
-
-    def _local_search_improve(self, tour: List[str], depot: str,
-                               distance_matrix: Dict) -> List[str]:
-        """Apply configurable local search to giant tour"""
-        return local_search_improve(tour, depot, distance_matrix, str(self.config.get("local_search_type", "hybrid")))
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:
         """Main optimization entry point with CVRPTW support"""

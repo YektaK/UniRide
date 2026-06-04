@@ -21,7 +21,7 @@ References:
 
 import random
 import time
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Optional
 
 from models.schemas import (
     OptimizationRequest, OptimizationResponse,
@@ -31,25 +31,7 @@ from strategies.hybrid_base_strategy import HybridSplitBaseStrategy
 from strategies.promoted_config_loader import get_promoted_strategy_params
 from utils.data_loader import DataLoader
 from uniride_core.adapters.demand_builder import build_student_demands, build_student_map
-from uniride_core.algorithms.hho_split_engine import (
-    Hawk,
-    difference_swaps,
-    evaluate_hawk,
-    hard_besiege,
-    hard_besiege_with_dives,
-    initialize_population,
-    levy_flight,
-    soft_besiege,
-    soft_besiege_with_dives,
-    solve_hho_split,
-)
-from uniride_core.algorithms.gwo_split_engine import apply_swaps
-from uniride_core.algorithms.meta_split_common import (
-    giant_tour_cost,
-    local_search_improve,
-    shuffle_permutation,
-    split_penalized_cost,
-)
+from uniride_core.algorithms.hho_split_engine import solve_hho_split
 from uniride_core.algorithms.string_split_decoder import Direction
 
 
@@ -111,7 +93,6 @@ class HHOSplitStrategy(HybridSplitBaseStrategy):
         )
         self.config = {**self.DEFAULT_CONFIG, **promoted, **(config or {})}
         self.seed = self.config.get("seed") or int(time.time() * 1000)
-        self._prey: Optional[Hawk] = None  # Best solution
         self._generation_stats = []
 
     @property
@@ -127,87 +108,6 @@ class HHOSplitStrategy(HybridSplitBaseStrategy):
         return "Harris Hawks + Optimal Split. Kaçış enerjisi ile adaptif arama."
 
 
-
-    def _shuffle(self, items: List, rng: random.Random) -> List:
-        """Shuffle list using provided RNG (Fisher-Yates)"""
-        return shuffle_permutation(items, rng)
-
-    def _initialize_population(self, waypoints: List[str], rng: random.Random) -> List[Hawk]:
-        """Initialize hawk population with random positions"""
-        return initialize_population(waypoints, self.config, rng)
-
-
-    def _levy_flight(self, position: List[str], rng: random.Random, scale: Optional[float] = None) -> List[str]:
-        """
-        Perform Lévy flight mutation for escaping local optima.
-        
-        Lévy distribution provides random walks with occasional long jumps,
-        useful for exploration in permutation problems.
-        """
-        return levy_flight(position, rng, self.config["levy_flight_scale"] if scale is None else scale)
-
-    def _get_difference_swaps(self, current: List[str], target: List[str],
-                                intensity: float, rng: random.Random) -> List[Tuple[int, int]]:
-        """Get swaps to move current toward target with given intensity"""
-        return difference_swaps(current, target, intensity, rng)
-
-    def _apply_swaps(self, position: List[str], swaps: List[Tuple[int, int]]) -> List[str]:
-        """Apply swap operations to position"""
-        return apply_swaps(position, swaps)
-
-    def _soft_besiege(self, hawk: Hawk, prey: Hawk, escape_energy: float, rng: random.Random) -> List[str]:
-        """
-        Soft besiege: When prey has enough energy to escape but still gets caught.
-        Position update: X(t+1) = ΔX(t) - E * |J * Prey - X(t)|
-        """
-        return soft_besiege(hawk, prey, escape_energy, rng)
-
-    def _hard_besiege(self, hawk: Hawk, prey: Hawk, escape_energy: float, rng: random.Random) -> List[str]:
-        """
-        Hard besiege: When prey is exhausted, hawks tightly surround it.
-        Position update: X(t+1) = Prey - E * |Prey - X(t)|
-        """
-        return hard_besiege(hawk, prey, escape_energy, rng)
-
-    def _soft_besiege_with_dives(self, hawk: Hawk, prey: Hawk, escape_energy: float,
-                                  depot: str, distance_matrix: Dict, rng: random.Random) -> List[str]:
-        """
-        Soft besiege with progressive rapid dives.
-        Hawks make rapid dives toward prey with Lévy flight movements.
-        """
-        return soft_besiege_with_dives(hawk, prey, escape_energy, depot, distance_matrix, rng)
-
-    def _hard_besiege_with_dives(self, hawk: Hawk, prey: Hawk, escape_energy: float, rng: random.Random) -> List[str]:
-        """
-        Hard besiege with progressive rapid dives.
-        Combined besiege with Lévy flights for final exploitation.
-        """
-        return hard_besiege_with_dives(hawk, prey, escape_energy, rng)
-
-    def _calculate_giant_tour_cost(self, tour: List[str], depot: str,
-                                    distance_matrix: Dict) -> float:
-        """Calculate approximate cost of giant tour"""
-        return giant_tour_cost(tour, depot, distance_matrix)
-
-    def _evaluate_hawk(self, hawk: Hawk, depot: str,
-                       distance_matrix: Dict, demands: Dict,
-                       sw_capacity: int, so_capacity: int,
-                       max_tour_duration: float) -> float:
-        """Evaluate hawk using Split Decoder"""
-        return split_penalized_cost(
-            hawk.position,
-            depot,
-            distance_matrix,
-            demands,
-            sw_capacity,
-            so_capacity,
-            max_tour_duration,
-        )
-
-    def _local_search_improve(self, tour: List[str], depot: str,
-                               distance_matrix: Dict) -> List[str]:
-        """Apply configurable local search to giant tour"""
-        return local_search_improve(tour, depot, distance_matrix, str(self.config.get("local_search_type", "hybrid")))
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:
         """Main optimization entry point with CVRPTW support"""

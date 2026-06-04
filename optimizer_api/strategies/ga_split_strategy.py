@@ -18,7 +18,7 @@ Computers & Operations Research, 31(12), 1985-2002.
 
 import random
 import time
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Optional
 
 from models.schemas import (
     OptimizationRequest, OptimizationResponse,
@@ -28,23 +28,7 @@ from strategies.hybrid_base_strategy import HybridSplitBaseStrategy
 from strategies.promoted_config_loader import get_promoted_strategy_params
 from utils.data_loader import DataLoader
 from uniride_core.adapters.demand_builder import build_student_demands, build_student_map
-from uniride_core.algorithms.ga_operators import (
-    cycle_crossover_2,
-    mutate_permutation,
-    order_crossover,
-    partially_mapped_crossover,
-)
-from uniride_core.algorithms.ga_split_engine import (
-    GAIndividual as Individual,
-    diversify_population,
-    educate_individual,
-    evaluate_individual,
-    evaluate_population,
-    evolve_population,
-    initialize_population,
-    solve_ga_split,
-    tournament_selection,
-)
+from uniride_core.algorithms.ga_split_engine import solve_ga_split
 from uniride_core.algorithms.string_split_decoder import Direction
 
 
@@ -104,89 +88,6 @@ class GASplitStrategy(HybridSplitBaseStrategy):
         return "Route-first yaklaşımı. GA giant tour + Optimal Split decoder."
 
 
-
-    def _initialize_population(self, waypoints: List[str], rng: random.Random) -> List[Individual]:
-        """Initialize population with random and heuristic permutations"""
-        return initialize_population(waypoints, self.config, rng)
-
-
-    def _evaluate_individual(
-        self,
-        individual: Individual,
-        depot: str,
-        distance_matrix: Dict,
-        demands: Dict,
-        sw_capacity: int,
-        so_capacity: int,
-        max_tour_duration: float
-    ) -> Individual:
-        """Evaluate fitness using Split Decoder"""
-        return evaluate_individual(
-            individual,
-            depot,
-            distance_matrix,
-            demands,
-            sw_capacity,
-            so_capacity,
-            max_tour_duration,
-        )
-
-    def _evaluate_population(
-        self,
-        population: List[Individual],
-        depot: str,
-        distance_matrix: Dict,
-        demands: Dict,
-        sw_capacity: int,
-        so_capacity: int,
-        max_tour_duration: float
-    ) -> List[Individual]:
-        """Evaluate all individuals"""
-        return evaluate_population(
-            population,
-            depot,
-            distance_matrix,
-            demands,
-            sw_capacity,
-            so_capacity,
-            max_tour_duration,
-        )
-
-    def _tournament_selection(self, population: List[Individual], rng: random.Random) -> Individual:
-        """Tournament selection"""
-        return tournament_selection(population, self.config["tournament_size"], rng)
-
-    def _order_crossover(self, parent1: List[str], parent2: List[str], rng: random.Random) -> Tuple[List[str], List[str]]:
-        """Order Crossover (OX1)"""
-        return order_crossover(parent1, parent2, rng)
-
-    def _mutate(self, chromosome: List[str], rng: random.Random) -> List[str]:
-        """Apply mutation operators"""
-        return mutate_permutation(chromosome, rng)
-
-    def _educate(self, individual: Individual, depot: str, 
-                 distance_matrix: Dict) -> Individual:
-        """
-        Local search education (improvement).
-        Apply 2-opt or similar to the giant tour.
-        """
-        return educate_individual(
-            individual,
-            depot,
-            distance_matrix,
-            str(self.config.get("local_search_type", "two_opt")),
-        )
-
-    def _diversify(self, population: List[Individual], rng: random.Random) -> List[Individual]:
-        """
-        Diversification when stuck.
-        Keep best, replace worst with new random individuals.
-        """
-        return diversify_population(population, rng)
-
-    def _evolve(self, population: List[Individual], rng: random.Random) -> List[Individual]:
-        """Create next generation"""
-        return evolve_population(population, self.config, rng)
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:
         """Main optimization entry point with CVRPTW support"""
@@ -368,11 +269,3 @@ class GAEnhancedSplitStrategy(GASplitStrategy):
     @property
     def display_name(self) -> str:
         return "GA-Split Enhanced (HGS-style)"
-    
-    def _crossover_pmx(self, parent1: List[str], parent2: List[str], rng: random.Random) -> List[str]:
-        """Partially Mapped Crossover (PMX)."""
-        return partially_mapped_crossover(parent1, parent2, rng)
-    
-    def _crossover_cx2(self, parent1: List[str], parent2: List[str], rng: random.Random) -> List[str]:
-        """Cycle Crossover 2 (CX2)."""
-        return cycle_crossover_2(parent1, parent2, rng)

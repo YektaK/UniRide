@@ -59,6 +59,7 @@ import {
   type BenchmarkStatus,
   type BenchmarkResult,
   type BenchmarkResultsResponse,
+  checkBenchmarkApiHealth,
   fetchProblems,
   fetchAcademicProblems,
   fetchParamSpaces,
@@ -187,15 +188,7 @@ export default function BenchmarkPage() {
   // ---- Check API availability ----
   useEffect(() => {
     const checkApi = async () => {
-      try {
-        const res = await fetch("/api/v1/strategies?XTransformPort=8099", {
-          method: "GET",
-          signal: AbortSignal.timeout(5000),
-        });
-        setIsApiOnline(res.ok);
-      } catch {
-        setIsApiOnline(false);
-      }
+      setIsApiOnline(await checkBenchmarkApiHealth());
     };
     checkApi();
   }, []);

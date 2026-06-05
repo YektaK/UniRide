@@ -5,6 +5,7 @@ vi.mock("@/lib/benchmark-run-id", () => ({
 }));
 
 import {
+  checkBenchmarkApiHealth,
   fetchAcademicBestResult,
   fetchAcademicLeaderboard,
   fetchAcademicProblems,
@@ -16,6 +17,23 @@ import {
 describe("benchmark-service academic problems", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("checks benchmark API health through the Next proxy", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(checkBenchmarkApiHealth()).resolves.toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/benchmark/health",
+      expect.objectContaining({ method: "GET" })
+    );
+  });
+
+  it("reports benchmark API health as false when proxy fetch fails", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+
+    await expect(checkBenchmarkApiHealth()).resolves.toBe(false);
   });
 
   it("fetches academic DB problems with routing metadata", async () => {

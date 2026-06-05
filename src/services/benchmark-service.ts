@@ -163,6 +163,22 @@ export interface BenchmarkRunResponse {
 const BENCHMARK_API_BASE = "/api/benchmark";
 
 /**
+ * Check whether the benchmark backend proxy can reach the Python API.
+ */
+export async function checkBenchmarkApiHealth(): Promise<boolean> {
+  try {
+    const response = await fetch(`${BENCHMARK_API_BASE}/health`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(5000),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Fetch available TSPLIB problems
  */
 export async function fetchProblems(category?: string): Promise<BenchmarkProblem[]> {

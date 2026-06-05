@@ -14,8 +14,9 @@ def _read_python_source(path: Path) -> str:
     return data.decode("utf-8", errors="replace")
 
 
-def test_uniride_core_does_not_import_optimizer_api():
+def test_uniride_core_does_not_import_application_layers():
     root = Path(__file__).resolve().parents[1]
+    disallowed_roots = ("optimizer_api", "academic_benchmark")
     offenders: list[str] = []
 
     for path in root.rglob("*.py"):
@@ -27,8 +28,9 @@ def test_uniride_core_does_not_import_optimizer_api():
                 names = [node.module or ""]
             else:
                 continue
-            if any(name == "optimizer_api" or name.startswith("optimizer_api.") for name in names):
-                offenders.append(str(path.relative_to(root)))
+            for name in names:
+                if any(name == root_name or name.startswith(f"{root_name}.") for root_name in disallowed_roots):
+                    offenders.append(f"{path.relative_to(root)} imports {name}")
 
     assert offenders == []
 

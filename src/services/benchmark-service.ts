@@ -57,6 +57,9 @@ export interface BenchmarkParamSpacesResponse {
 export interface BenchmarkRunSettings {
   n_runs: number;
   seed: number;
+  workers?: number;
+  skip_cached?: boolean;
+  execution_mode?: "matrix_native" | "academic_matrix";
 }
 
 export interface BenchmarkStatus {

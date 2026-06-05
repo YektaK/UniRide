@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateBenchmarkRunId, isValidBenchmarkRunId } from '@/lib/benchmark-run-id';
+import { buildBenchmarkBackendRequest } from '@/lib/benchmark-backend-request';
 
 const BACKEND_URL = process.env.OPTIMIZER_API_URL || 'http://localhost:8000';
 
@@ -54,13 +55,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate settings
-    const settings = body.settings || {};
-    const nRuns = Math.max(1, Math.min(10, settings.nRuns ?? 3));
-    const workers = Math.max(1, Math.min(8, settings.workers ?? 4));
-    const seed = settings.seed ?? 42;
-    const skipCached = Boolean(settings.skipCached ?? false);
-
     // Use caller-provided run ID if available; otherwise generate one
     const now = new Date();
     const providedRunIdRaw = body.run_id ?? body.runId;
@@ -105,20 +99,7 @@ export async function POST(request: NextRequest) {
     const runId = providedRunId || generateBenchmarkRunId(now);
 
     // Build benchmark request for Python backend
-    const benchmarkRequest = {
-      run_id: runId,
-      algorithms: body.algorithms.map((algo: any) => ({
-        id: algo.id,
-        params: algo.params || {},
-      })),
-      problems: body.problems,
-      settings: {
-        n_runs: nRuns,
-        workers: workers,
-        seed: seed,
-        skip_cached: skipCached,
-      },
-    };
+    const benchmarkRequest = buildBenchmarkBackendRequest(body, runId);
 
     // Forward to Python backend
     console.log(`[Benchmark /api/benchmark/run] Starting: ${runId}`);
@@ -145,10 +126,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       run_id: runId,
-      total_experiments: body.algorithms.length * body.problems.length * nRuns,
+      total_experiments: body.algorithms.length * body.problems.length * benchmarkRequest.settings.n_runs,
       problems_count: body.problems.length,
       algorithms_count: body.algorithms.length,
-      n_runs: nRuns,
+      n_runs: benchmarkRequest.settings.n_runs,
       status: 'running',
       message: 'Benchmark başlatıldı',
       start_time: now.toISOString(),

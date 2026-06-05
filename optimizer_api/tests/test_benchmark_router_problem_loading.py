@@ -168,6 +168,77 @@ def test_academic_benchmark_results_endpoint_direct_call_resolves_query_default(
     assert result["feasible_only"] is False
 
 
+def test_academic_leaderboard_endpoint_uses_results_reader(monkeypatch):
+    captured = {}
+
+    def fake_get_leaderboard(algorithm=None, category=None, limit=100):
+        captured.update({"algorithm": algorithm, "category": category, "limit": limit})
+        return {
+            "source": "academic_db",
+            "count": 1,
+            "leaderboard": [{"algorithm": algorithm, "category": category}],
+        }
+
+    monkeypatch.setattr("academic_benchmark.results_reader.get_leaderboard", fake_get_leaderboard)
+
+    result = benchmark.get_academic_leaderboard(algorithm="Core-PSO-TSP", category="tsplib", limit=7)
+
+    assert result["source"] == "academic_db"
+    assert result["count"] == 1
+    assert captured == {"algorithm": "Core-PSO-TSP", "category": "tsplib", "limit": 7}
+
+
+def test_academic_leaderboard_endpoint_direct_call_resolves_query_defaults(monkeypatch):
+    monkeypatch.setattr(
+        "academic_benchmark.results_reader.get_leaderboard",
+        lambda algorithm=None, category=None, limit=100: {
+            "source": "academic_db",
+            "algorithm": algorithm,
+            "category": category,
+            "limit": limit,
+            "leaderboard": [],
+        },
+    )
+
+    result = benchmark.get_academic_leaderboard()
+
+    assert result["source"] == "academic_db"
+    assert result["algorithm"] is None
+    assert result["category"] is None
+    assert result["limit"] == 100
+
+
+def test_academic_best_result_endpoint_uses_results_reader(monkeypatch):
+    captured = {}
+
+    def fake_get_best_result(problem, algorithm):
+        captured.update({"problem": problem, "algorithm": algorithm})
+        return {
+            "source": "academic_db",
+            "result": {"problem": problem, "algorithm": algorithm, "objective_cost": 123.0},
+        }
+
+    monkeypatch.setattr("academic_benchmark.results_reader.get_best_result", fake_get_best_result)
+
+    result = benchmark.get_academic_best_result(problem="eil51", algorithm="Core-GA-TSP")
+
+    assert result["result"]["objective_cost"] == 123.0
+    assert captured == {"problem": "eil51", "algorithm": "Core-GA-TSP"}
+
+
+def test_academic_best_result_endpoint_returns_404_for_missing_result(monkeypatch):
+    monkeypatch.setattr(
+        "academic_benchmark.results_reader.get_best_result",
+        lambda problem, algorithm: {"source": "academic_db", "result": None},
+    )
+
+    with pytest.raises(benchmark.HTTPException) as exc_info:
+        benchmark.get_academic_best_result(problem="missing", algorithm="Core-GA-TSP")
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "No academic result found"
+
+
 def test_matrix_native_benchmark_run_executes_and_persists(monkeypatch):
     class ImmediateThread:
         def __init__(self, target, daemon=True, name=None):

@@ -5,6 +5,7 @@ import inspect
 from optimizer_api.strategies.ga_strategy import GeneticAlgorithmStrategy
 from optimizer_api.strategies.ga_split_strategy import GAEnhancedSplitStrategy, GASplitStrategy
 from optimizer_api.strategies.gwo_strategy import GreyWolfOptimizerStrategy
+from optimizer_api.strategies.hho_strategy import HarrisHawksOptimizerStrategy
 from optimizer_api.strategies.gwo_split_strategy import GWOSplitStrategy
 from optimizer_api.strategies.hho_split_strategy import HHOSplitStrategy
 from optimizer_api.strategies.hybrid_base_strategy import HybridSplitBaseStrategy
@@ -63,6 +64,28 @@ def test_gwo_strategy_does_not_own_legacy_gwo_operator_helpers():
         "_get_difference_vector",
         "_apply_swaps",
         "_update_position",
+    } & wrapper_methods
+
+
+def test_hho_strategy_does_not_own_legacy_hho_operator_helpers():
+    wrapper_methods = {
+        name
+        for name, member in inspect.getmembers(HarrisHawksOptimizerStrategy, predicate=inspect.isfunction)
+        if member.__qualname__.startswith("HarrisHawksOptimizerStrategy.")
+    }
+
+    assert not {
+        "_shuffle",
+        "_initialize_population",
+        "_levy_flight",
+        "_get_difference_swaps",
+        "_apply_swaps",
+        "_soft_besiege",
+        "_hard_besiege",
+        "_soft_besiege_with_dives",
+        "_hard_besiege_with_dives",
+        "_calculate_fitness",
+        "_evaluate_hawk",
     } & wrapper_methods
 
 

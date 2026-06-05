@@ -684,7 +684,7 @@ Implemented promotion workflow:
 - DONE: add SOTA keys, aliases, display names, descriptions, and complexity entries for E²BSO, R²DMA, and P-AOEA.
 - DONE: keep alias normalization for `entropy_bso`, `e2b`, `rdma`, and `aoea`.
 - DONE: forward quick-benchmark params for SOTA algorithms into `request.sota_config`.
-- REMAINING: optionally render promoted-config evidence/status in the UI once academic read endpoints expose promotion metadata.
+- OPTIONAL FUTURE: render promoted-config evidence/status in the UI once academic read endpoints expose promotion metadata.
 
 ### Task 4.6: Web Benchmark Adjustable Parameters — DONE
 

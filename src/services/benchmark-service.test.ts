@@ -5,6 +5,8 @@ vi.mock("@/lib/benchmark-run-id", () => ({
 }));
 
 import {
+  fetchAcademicBestResult,
+  fetchAcademicLeaderboard,
   fetchAcademicProblems,
   fetchResults,
   pollStatus,
@@ -146,6 +148,82 @@ describe("benchmark-service academic problems", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/benchmark/results/missing%2Frun",
       expect.objectContaining({ method: "GET" })
+    );
+  });
+
+  it("fetches academic leaderboard with optional filters", async () => {
+    const payload = {
+      source: "academic_db",
+      count: 1,
+      results: [
+        {
+          problem: "ulysses22",
+          algorithm: "Core-TwoOpt-TSP",
+          category: "small",
+          best_gap: 0.1,
+        },
+      ],
+    };
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => payload,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchAcademicLeaderboard({
+      algorithm: "Core TwoOpt/TSP",
+      category: "small",
+      limit: 25,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/benchmark/academic/leaderboard?algorithm=Core+TwoOpt%2FTSP&category=small&limit=25",
+      expect.objectContaining({ method: "GET" })
+    );
+    expect(result).toEqual(payload);
+  });
+
+  it("throws status error when academic leaderboard fetch fails", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchAcademicLeaderboard()).rejects.toThrow("Akademik leaderboard alınamadı: 503");
+  });
+
+  it("fetches academic best result with encoded problem and algorithm", async () => {
+    const payload = {
+      source: "academic_db",
+      problem: "solomon/r101",
+      algorithm: "OR-Tools",
+      result: { objective_cost: 123.4 },
+    };
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => payload,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchAcademicBestResult("solomon/r101", "OR Tools");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/benchmark/academic/best?problem=solomon%2Fr101&algorithm=OR+Tools",
+      expect.objectContaining({ method: "GET" })
+    );
+    expect(result).toEqual(payload);
+  });
+
+  it("throws status error when academic best result fetch fails", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchAcademicBestResult("missing", "algorithm")).rejects.toThrow(
+      "Akademik sonuç alınamadı: 404"
     );
   });
 });

@@ -6,6 +6,10 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const nextConfig: NextConfig = {
   /* config options here */
   // eslint config removed - use .eslintrc.json or eslint.config.js instead
+  outputFileTracingRoot: process.cwd(),
+  turbopack: {
+    root: process.cwd(),
+  },
   images: {
     remotePatterns: [
       {

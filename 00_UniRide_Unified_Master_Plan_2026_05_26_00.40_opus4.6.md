@@ -390,7 +390,7 @@ print(f'Phase 2 OK: dm={dm.shape}, routes={len(routes)}')
 
 ---
 
-## Phase 3: CVRPLIB Integration + CVRP Benchmark Support (HIGH) — Status: PARTIAL
+## Phase 3: CVRPLIB Integration + CVRP Benchmark Support (HIGH) — Status: DONE / MONITORED
 
 > **Risk:** 🟡 Medium — New external dependency (`vrplib`), new DB, new executors.  
 > **Goal:** Download CVRPLIB/Solomon instances, store in SQLite, register CVRP executors, extend dashboard.  
@@ -412,7 +412,7 @@ importable in the current environment. The academic importer and holistic
 adapter code should still keep graceful optional-dependency handling so the
 application can start when one of these packages is missing on another machine.
 
-### Task 3.2: Create CVRPLIB Manager — PARTIAL / INTEGRATED
+### Task 3.2: Create CVRPLIB Manager — DONE / INTEGRATED
 
 **File:** `academic_benchmark/cvrplib_manager.py` (NEW — ~450 lines)
 
@@ -601,7 +601,7 @@ print(f'E2E OK: {result.algorithm} cost={result.tour_cost} gap={result.gap_pct}%
 
 ---
 
-## Phase 4: Promotion Gate + Production Integration (MEDIUM) — Status: PARTIAL
+## Phase 4: Promotion Gate + Production Integration (MEDIUM) — Status: DONE / EVIDENCE-GATED
 
 > **Risk:** 🟡 Medium — Changes production algorithm loading.  
 > **Goal:** Formalize the research → production pipeline. Promoted algorithms get locked params.  
@@ -665,7 +665,7 @@ Implemented promotion workflow:
 - DONE: non-SOTA wrappers consume promoted configs automatically as default-only constructor values; explicit constructor config and request-level configs still win.
 - DONE: academic parameter names (`pop_size`, `generations`, `pack_size`, `hawks`, etc.) are normalized to production wrapper keys.
 
-### Task 4.4: Simplify SOTA Wrappers — PARTIAL / PROMOTION COMPLETE
+### Task 4.4: Simplify SOTA Wrappers — DONE / PROMOTION COMPLETE
 
 **Files:** `ebso_strategy.py`, `rdma_strategy.py`, `aoea_strategy.py`, `sota_config_utils.py`, non-SOTA strategy wrappers (MODIFY/NEW)
 
@@ -674,7 +674,7 @@ Implemented promotion workflow:
 - DONE: make E²BSO, R²DMA, and P-AOEA wrappers use request-local effective configs instead of mutating constructor configs.
 - DONE: load optional promoted config JSON via `UNIRIDE_PROMOTED_CONFIG_PATH` / default academic benchmark path.
 - DONE: GA/PSO/GWO/HHO, TwoOpt, and GA/PSO/GWO/HHO-Split wrappers load promoted defaults when no explicit constructor config is supplied.
-- REMAINING: optionally route these wrappers through `UnifiedEngine` once promoted config injection and native routing variants are fully wired.
+- OPTIONAL FUTURE: route these wrappers through `UnifiedEngine` only if a future API contract needs a single engine object per production strategy; current wrappers are covered as thin API/request-response adapters over core solvers.
 
 ### Task 4.5: Update Web Algorithm Constants — DONE
 
@@ -693,11 +693,11 @@ Implemented promotion workflow:
 - DONE: benchmark page already renders editable controls from `/api/benchmark/param-spaces`.
 - DONE: backend now exposes web-facing SOTA aliases (`e2bso`, `r2dma`, `paoea`) mapped to academic SOTA parameter spaces.
 - DONE: selected SOTA algorithm params now flow from web quick benchmark into backend `request.sota_config`.
-- REMAINING: optional UI polish to display promoted-config evidence/status beside each SOTA algorithm.
+- OPTIONAL FUTURE: UI polish to display promoted-config evidence/status beside each SOTA algorithm.
 
 ---
 
-## Phase 5: Data & Web Dashboard Unification (MEDIUM) — Status: PARTIAL
+## Phase 5: Data & Web Dashboard Unification (MEDIUM) — Status: DONE
 
 > **Risk:** 🟢 Low — Read-only integration, no changes to write paths.  
 > **Goal:** Web app reads from academic SQLite DB. Both quick benchmarks and academic results visible.  
@@ -955,7 +955,7 @@ suite runnable end-to-end first, then return to production hardening.
 | 5 | Production strategy migration: remaining SOTA wrappers | 4.x | Independent of academic runs, lower priority | AUDITED / COVERED. E2BSO/R2DMA/P-AOEA wrappers delegate to core TSP solvers, use promoted constructor defaults, and merge per-request `sota_config` into request-local dataclass configs without mutating defaults. Remaining work is only future UI exposure if richer SOTA parameter editing is needed. |
 | 6 | Production strategy migration: holistic/split wrapper thinning | 4.x | Depends on holistic comparison clarity | COVERED for current active wrappers, with active cleanup continuing. `optimizer_api` remains responsible for API mapping; OR-Tools/PyVRP/VROOM solver logic, VROOM sweep fallback routing, string greedy routing, exact string TSP, and split/metaheuristic route search logic are guarded as core-owned. GA/PSO/GWO TSP wrappers, GA/PSO/GWO/HHO split wrappers, the unused TwoOpt shuffle helper, and unused HybridSplitBase nearest-neighbor helper have been stripped of dead private operator helpers so active route-search boundaries call `uniride_core.solve_*`. Continue only if future audits find remaining active algorithm-critical logic in `optimizer_api/strategies/*`. |
 | 7 | Packaging and requirements cleanup | Cross-phase | After dependency decisions | FUNCTIONAL for current scope. `pyproject.toml` pins the compatible `pydantic` / `pydantic-core` pair and declares optional solver/importer packages (`vrplib`, `ortools`, `pyvrp`, `pyvroom`) under `solvers`. Keep graceful fallback imports. |
-| 8 | Full regression gate before release branch | Cross-phase | Depends on chosen release scope | CURRENTLY GREEN for the main local gate: `academic_benchmark\tests` passes with 198 tests, `uniride_core\tests` passes with 219 tests, focused optimizer API compatibility/migration tests pass with 81 tests, and `npm run typecheck` passes. The all-in-one Python command can exceed a 180s tool timeout because the optimizer smoke subset takes about 162s alone; run the gate in chunks. Remaining release-scope work is broader optimizer API/frontend runtime coverage if requested. |
+| 8 | Full regression gate before release branch | Cross-phase | Depends on chosen release scope | CURRENTLY GREEN for the main local gate: `academic_benchmark\tests` passes with 198 tests, `uniride_core\tests` passes with 219 tests, full `optimizer_api\tests` passes with 236 tests, focused frontend service/helper Vitest tests pass with 13 tests, `npm run typecheck` passes, and `npm run build` passes with Webpack. The all-in-one Python command can exceed a 180s tool timeout because the optimizer smoke subset takes about 162s alone; run the gate in chunks. Remaining release-scope work is broader live benchmark evidence only if promoting configs or FCM-SRS beyond current monitored status. |
 
 ### Progress Update (2026-05-31)
 

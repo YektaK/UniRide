@@ -5,43 +5,66 @@ Ensures TSPLIB and other required datasets are copied locally to bildiri2026/dat
 """
 import os
 import shutil
+from typing import Iterable, Optional
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 LOCAL_DATA_DIR = os.path.join(SCRIPT_DIR, "data")
 LOCAL_TSPLIB_DIR = os.path.join(LOCAL_DATA_DIR, "tsplib")
 
-# Path to the parent project's TSPLIB repository
-EXTERNAL_TSPLIB_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "..", "optimizer_api", "tests", "tsplib_data"))
+DEFAULT_TSPLIB_SOURCE_DIRS = (
+    LOCAL_TSPLIB_DIR,
+    os.path.normpath(os.path.join(SCRIPT_DIR, "..", "datasets", "raw", "tsplib")),
+)
 
-def localize_tsplib():
+
+def _iter_tsp_files(directory: str) -> Iterable[str]:
+    if not os.path.isdir(directory):
+        return ()
+    return sorted(
+        os.path.join(directory, f)
+        for f in os.listdir(directory)
+        if f.lower().endswith(".tsp")
+    )
+
+
+def _find_tsplib_source(source_dir: Optional[str]) -> Optional[str]:
+    candidates = (source_dir,) if source_dir else DEFAULT_TSPLIB_SOURCE_DIRS
+    for candidate in candidates:
+        if candidate and list(_iter_tsp_files(candidate)):
+            return candidate
+    return None
+
+
+def localize_tsplib(source_dir: Optional[str] = None) -> int:
     print("=" * 60)
     print("TSPLIB Veri Yöneticisi Başlatıldı")
     print("=" * 60)
     
     os.makedirs(LOCAL_TSPLIB_DIR, exist_ok=True)
-    
-    if not os.path.exists(EXTERNAL_TSPLIB_DIR):
-        print(f"[HATA] Dış TSPLIB dizini bulunamadı: {EXTERNAL_TSPLIB_DIR}")
-        print("Lütfen dosyaları manuel olarak 'data/tsplib' klasörüne ekleyin.")
-        return
-        
-    files = os.listdir(EXTERNAL_TSPLIB_DIR)
-    tsp_files = [f for f in files if f.endswith(".tsp")]
-    
+
+    selected_source = _find_tsplib_source(source_dir)
+    if not selected_source:
+        print("[HATA] Kopyalanacak akademik TSPLIB dizini bulunamadı.")
+        print("Lütfen dosyaları 'academic_benchmark/bildiri2026/data/tsplib' klasörüne ekleyin.")
+        return 0
+
+    tsp_files = list(_iter_tsp_files(selected_source))
     if not tsp_files:
-        print("[HATA] Dış dizinde kopyalanacak .tsp dosyası bulunamadı.")
-        return
+        print("[HATA] Akademik veri dizininde kopyalanacak .tsp dosyası bulunamadı.")
+        return 0
         
     copied = 0
-    for f in tsp_files:
-        src = os.path.join(EXTERNAL_TSPLIB_DIR, f)
-        dst = os.path.join(LOCAL_TSPLIB_DIR, f)
+    for src in tsp_files:
+        dst = os.path.join(LOCAL_TSPLIB_DIR, os.path.basename(src))
+        if os.path.abspath(src) == os.path.abspath(dst):
+            continue
         if not os.path.exists(dst):
             shutil.copy2(src, dst)
             copied += 1
             
     print(f"[✓] İşlem tamamlandı. {copied} yeni .tsp dosyası yerel dizine kopyalandı.")
     print(f"Yerel dizin: {LOCAL_TSPLIB_DIR}")
+    return copied
 
 def list_local_problems():
     problems = []

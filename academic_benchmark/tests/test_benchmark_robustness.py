@@ -2,10 +2,10 @@ from academic_benchmark.benchmark_utils import make_deterministic_seed
 
 
 def test_worker_backend_selection_supports_fallback():
-    """Verify that both numba and fallback backends are importable."""
+    """Verify that academic-owned worker backends are importable."""
     candidates = [
-        "optimizer_api.tests.run_interactive_benchmark_v2_numba",
-        "optimizer_api.tests.run_interactive_benchmark_v2",
+        "academic_benchmark.cli_engine",
+        "academic_benchmark.smart_benchmark",
     ]
     importable = []
     for mod in candidates:

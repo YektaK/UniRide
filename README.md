@@ -115,7 +115,7 @@ Supabase tarafında ilgili SQL dosyalarını sırasıyla uygulayın:
 | `npm run dev` | Geliştirme sunucusu (Turbopack, port 9002) | ✅ |
 | `npm run build` | Production build | ✅ (ağ kısıtlarında font fetch hatası görülebilir) |
 | `npm run start` | Production sunucusu | ✅ (`build` sonrası) |
-| `npm run typecheck` | TypeScript tip kontrolü | ⚠️ repo'da mevcut baseline hata var |
+| `npm run typecheck` | TypeScript tip kontrolü | ✅ |
 | `npm run test` | Vitest | ⚠️ test dosyası yoksa başarısız döner |
 | `npm run lint` | Next.js lint komutu | ⚠️ mevcut script bu ortamda hataya düşebiliyor |
 
@@ -162,7 +162,7 @@ cd optimizer_api && python faz0_standalone_demo.py berlin52
 ## Bilinen Durum Notları
 
 - `npm run lint` bu sandbox ortamında başarısız olabiliyor (bkz. NPM Komutları tablosu)
-- Typecheck'te birkaç baseline hata mevcut (bkz. `docs/01_Implementation_Status.md`)
+- `npm run typecheck` mevcut durumda temiz geçiyor; `npm run build` sonrasında çalıştırmak Next.js tarafından üretilen `.next/types` dosyalarının güncel kalmasını sağlar.
 - `docs/09_04_2026_Codebase_Analysis_Report.md` — tespit edilen sorunlar ve düzeltme planı
 
 ## Lisans

@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from pydantic import BaseModel, Field, model_validator
 from enum import Enum
 
@@ -26,6 +26,32 @@ class LocalSearchType(str, Enum):
     OR_OPT = "or_opt"
     HYBRID = "hybrid"
 
+
+def _parse_hhmm(time_str: str) -> int:
+    """Parse HH:MM into minutes after midnight."""
+    parts = str(time_str).strip().split(":")
+    if len(parts) != 2:
+        raise ValueError(f"Invalid time format: {time_str!r}")
+    hour = int(parts[0])
+    minute = int(parts[1])
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        raise ValueError(f"Invalid time value: {time_str!r}")
+    return hour * 60 + minute
+
+
+def _minutes_to_hhmm(total_minutes: int) -> str:
+    """Format minutes after midnight as HH:MM, clamped to one day."""
+    clamped = max(0, min(24 * 60, int(total_minutes)))
+    if clamped == 24 * 60:
+        return "24:00"
+    return f"{clamped // 60:02d}:{clamped % 60:02d}"
+
+
+def _round_up_to_hour(total_minutes: int) -> int:
+    if total_minutes % 60 == 0:
+        return total_minutes
+    return min(24 * 60, ((total_minutes // 60) + 1) * 60)
+
 # --- Models ---
 class LocationNode(BaseModel):
     id: str
@@ -41,10 +67,11 @@ class StudentNode(BaseModel):
     disability_type: str = "So"
     pickup_time: Optional[str] = None
     dropoff_time: Optional[str] = None
+    direction: TripDirection = TripDirection.PICKUP
 
     @model_validator(mode="after")
-    def validate_coordinates(self) -> "StudentNode":
-        """Validate that student coordinates are within geographic bounds."""
+    def validate_student_fields(self) -> "StudentNode":
+        """Validate optional student fields without requiring app-loaded coordinates."""
         if self.coordinates is not None:
             lat = self.coordinates.get("lat")
             lng = self.coordinates.get("lng")
@@ -56,11 +83,36 @@ class StudentNode(BaseModel):
                 raise ValueError(
                     f"Student {self.id}: longitude {lng} out of range [-180, 180]"
                 )
+        for field_name in ("pickup_time", "dropoff_time"):
+            value = getattr(self, field_name)
+            if value is not None:
+                _parse_hhmm(value)
         return self
+
+    def get_time_window(self, direction: TripDirection, window_minutes: int = 30) -> Optional["TimeWindow"]:
+        """Return the student's centered pickup/dropoff time window when present."""
+        time_str = self.pickup_time if direction == TripDirection.PICKUP else self.dropoff_time
+        if not time_str:
+            return None
+        return TimeWindow.from_time_string(time_str, window_minutes=window_minutes)
 
 class TimeWindow(BaseModel):
     earliest: int
     latest: int
+
+    @classmethod
+    def from_time_string(cls, time_str: str, window_minutes: int = 30) -> "TimeWindow":
+        """Create a centered time window from an HH:MM target time."""
+        total_minutes = _parse_hhmm(time_str)
+        half_window = window_minutes // 2
+        return cls(
+            earliest=max(0, total_minutes - half_window),
+            latest=min(24 * 60, total_minutes + half_window),
+        )
+
+    def to_time_string(self) -> Tuple[str, str]:
+        """Return earliest/latest as HH:MM strings."""
+        return _minutes_to_hhmm(self.earliest), _minutes_to_hhmm(self.latest)
 
 class VehicleConfig(BaseModel):
     """Vehicle configuration for heterogeneous fleet support"""
@@ -75,6 +127,19 @@ class WeeklyScheduleEntry(BaseModel):
     startTime: str
     endTime: str
     location_code: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_schedule_times(self) -> "WeeklyScheduleEntry":
+        _parse_hhmm(self.startTime)
+        _parse_hhmm(self.endTime)
+        return self
+
+    def get_pickup_time_window(self, window_minutes: int = 30) -> TimeWindow:
+        return TimeWindow.from_time_string(self.startTime, window_minutes=window_minutes)
+
+    def get_dropoff_time_window(self, window_minutes: int = 30) -> TimeWindow:
+        rounded_end = _round_up_to_hour(_parse_hhmm(self.endTime))
+        return TimeWindow.from_time_string(_minutes_to_hhmm(rounded_end), window_minutes=window_minutes)
 
 class WeeklyScheduleRequest(BaseModel):
     entries: List[WeeklyScheduleEntry]
@@ -216,14 +281,9 @@ class OptimizationRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_students(self) -> "OptimizationRequest":
-        """Validate student data integrity."""
-        if self.students:
-            for student in self.students:
-                if student.coordinates is None:
-                    raise ValueError(
-                        f"Student {student.id} ({student.location_code}) "
-                        f"has no coordinates — all students must have valid coordinates"
-                    )
+        """Validate request-level time fields."""
+        if self.target_time is not None:
+            _parse_hhmm(self.target_time)
         return self
 
     @property
@@ -256,11 +316,12 @@ class OptimizationRequest(BaseModel):
                 time_str = student.pickup_time
             elif student.dropoff_time:
                 time_str = student.dropoff_time
+            elif self.use_time_windows and self.target_time:
+                time_str = self.target_time
             
-            if time_str and isinstance(time_str, str) and ':' in time_str:
+            if time_str and isinstance(time_str, str) and ":" in time_str:
                 try:
-                    parts = time_str.strip().split(':')
-                    total_minutes = int(parts[0]) * 60 + int(parts[1])
+                    total_minutes = _parse_hhmm(time_str)
                     # Asymmetric windows based on direction:
                     # PICKUP: (target-30, target) — must arrive by target
                     # DROPOFF: (target, target+30) — can depart after target

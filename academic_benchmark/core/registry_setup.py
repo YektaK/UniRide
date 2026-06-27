@@ -357,6 +357,135 @@ AlgorithmRegistry.register("Core-Greedy-Routing")(_core_greedy_executor)
 for algo_name, solver in CORE_TSP_SOLVERS.items():
     AlgorithmRegistry.register(algo_name)(_make_core_tsp_executor(algo_name, solver))
 
+
+def _make_numba_metah_executor(algorithm_name, solver_cls, default_params, routing_engine_name=None):
+    """Executor for Numba-accelerated Bildiri2026 metaheuristics (GWO/HHO).
+
+    Uses the cached-numpy + JIT-kernel path from BaseTSPSolver
+    (solve_with_matrix) rather than the slow string-route duration_func
+    path used by _make_core_tsp_executor. This routes Core-GWO-TSP and
+    Core-HHO-TSP to the fast numba_accel pipeline.
+
+    ``routing_engine_name`` overrides the engine used for CVRP/CVRPTW routing
+    problems (defaults to ``algorithm_name``). Set it to a canonical matrix
+    engine name (e.g. "Core-GWO-TSP") when the algorithm alias itself is not
+    directly resolvable by ``create_matrix_engine``.
+    """
+    _eng_name = routing_engine_name or algorithm_name
+    # Legacy param aliases used by the old tsp_meta_engines executors → new
+    # GWOOptimizer / HHOOptimizer constructor names.
+    _ALIASES = {
+        "num_wolves": "pack_size",
+        "num_hawks": "hawks",
+        "a_initial": "initial_a",
+        "escape_energy_factor": "initial_energy",
+        "iterations": "max_iterations",
+        "levy_beta": "levy_beta",  # accepted via _levy_flight scale, not a kwarg
+        "local_search_rate": "local_search_rate",  # ignored by new solvers
+    }
+    import inspect as _inspect
+    _valid_kwargs = set(_inspect.signature(solver_cls).parameters)
+
+    def executor(problem, params, seed, run_idx):
+        import time as _time
+        from academic_benchmark.engine_core import RunResult
+
+        if _is_routing_problem(problem):
+            return _run_core_routing_executor(
+                problem, params, seed, run_idx, algorithm_name,
+                engine_name=_eng_name,
+            )
+
+        matrix, matrix_kind = _problem_matrix(problem)
+
+        cfg = dict(default_params)
+        for k, v in params.items():
+            new_k = _ALIASES.get(k, k)
+            if new_k in _valid_kwargs:
+                cfg[new_k] = v
+        # Always honor explicit max_iterations overrides.
+        if "max_iterations" in params:
+            cfg["max_iterations"] = int(params["max_iterations"])
+        cfg["random_seed"] = seed
+
+        solver = solver_cls(**cfg)
+        start_time = _time.perf_counter()
+        result = solver.solve_with_matrix(matrix)
+        elapsed = _time.perf_counter() - start_time
+
+        cost = float(getattr(result, "tour_length", 0.0))
+        optimal = getattr(problem, "optimal", None)
+        gap = None
+        if optimal and optimal > 0:
+            gap = ((cost - optimal) / optimal) * 100
+
+        tour = getattr(result, "tour", None)
+        if tour is not None:
+            # solve_with_matrix returns a 0-indexed tour. For matrix problems
+            # the BaseTSPSolver excludes the depot (node 0) from the working
+            # tour, so the returned permutation covers customers only.
+            # Legacy executors represent tours as 1-indexed full visits
+            # (depot == 1 included); prepend the depot and shift everything.
+            one_indexed = [int(node) + 1 for node in tour]
+            if 1 not in one_indexed and len(one_indexed) + 1 == problem.dimension:
+                tour = [1] + one_indexed
+            else:
+                tour = one_indexed
+
+        return RunResult(
+            problem=problem.name,
+            algorithm=algorithm_name,
+            run=run_idx,
+            seed=seed,
+            dimension=problem.dimension,
+            optimal=optimal,
+            tour_cost=round(cost, 2),
+            gap_pct=round(gap, 4) if gap is not None else None,
+            elapsed_sec=round(elapsed, 4),
+            iterations=int(getattr(result, "iterations", 0) or 0),
+            tour=tour,
+            objective_cost=round(cost, 2),
+            problem_type=str(getattr(problem, "problem_type", "tsp") or "tsp").lower(),
+            matrix_kind=matrix_kind,
+        )
+    return executor
+
+
+# Override Core-GWO-TSP, Core-HHO-TSP, Numba-GWO, Numba-HHO with
+# Numba-accelerated Bildiri2026 solvers. Both Core-* and Numba-* entry
+# points now resolve to GWOOptimizer / HHOOptimizer which use the cached
+# numpy matrix + numba JIT kernel path via BaseTSPSolver.solve_with_matrix.
+_NUMBA_METAH_OVERRIDES = None
+try:
+    from academic_benchmark.bildiri2026.core.gwo_solver import GWOOptimizer
+    from academic_benchmark.bildiri2026.core.hho_solver import HHOOptimizer
+    _NUMBA_METAH_OVERRIDES = {
+        "Core-GWO-TSP": (GWOOptimizer, {
+            "pack_size": 50, "max_iterations": 250, "initial_a": 2.0,
+            "exploration_rate": 0.4, "max_no_improvement": 75,
+        }, None),
+        "Core-HHO-TSP": (HHOOptimizer, {
+            "hawks": 50, "max_iterations": 250, "initial_energy": 1.0,
+            "jump_probability": 0.5, "max_no_improvement": 75,
+        }, None),
+        "Numba-GWO": (GWOOptimizer, {
+            "pack_size": 80, "max_iterations": 250, "initial_a": 2.0,
+            "exploration_rate": 0.4, "max_no_improvement": 75,
+        }, "Core-GWO-TSP"),
+        "Numba-HHO": (HHOOptimizer, {
+            "hawks": 80, "max_iterations": 250, "initial_energy": 1.0,
+            "jump_probability": 0.5, "max_no_improvement": 75,
+        }, "Core-HHO-TSP"),
+    }
+except Exception as _e:  # ImportError or missing numpy/numba deps
+    logger.warning("Numba-accelerated GWO/HHO solvers unavailable: %s", _e)
+
+if _NUMBA_METAH_OVERRIDES:
+    for _algo_name, (_cls, _defaults, _routing_eng) in _NUMBA_METAH_OVERRIDES.items():
+        AlgorithmRegistry.register(_algo_name)(
+            _make_numba_metah_executor(_algo_name, _cls, _defaults, _routing_eng)
+        )
+
 for algo_name in FCM_TSP_SOLVERS:
     AlgorithmRegistry.register(algo_name)(_make_matrix_tsp_executor(algo_name))
 

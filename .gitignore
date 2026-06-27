@@ -99,3 +99,19 @@ cache/
 .github/skills/writing-plans/SKILL.md
 .github/skills/xlsx/SKILL.md
 antigravity-god-mode
+
+# Archive / legacy snapshots — not active source, excluded from codegraph index
+.proposed_changes/
+archive/
+scratch/
+
+# Tool / editor state — regenerable, not source code
+.codegraph/
+.opencode/
+.cursor/
+.hypothesis/
+.sixth/
+.kilo/
+.idx/
+.temp/
+.wrongstack/

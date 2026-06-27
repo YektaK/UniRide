@@ -16,6 +16,8 @@ from .three_opt import ThreeOptSolver
 from .or_opt import OrOptSolver
 from .ga_solver import GAOptimizer
 from .pso_solver import PSOOptimizer
+from .gwo_solver import GWOOptimizer
+from .hho_solver import HHOOptimizer
 from .base_solver import BaseTSPSolver, TSPResult
 
 __all__ = [
@@ -26,4 +28,6 @@ __all__ = [
     "OrOptSolver",
     "GAOptimizer",
     "PSOOptimizer",
+    "GWOOptimizer",
+    "HHOOptimizer",
 ]

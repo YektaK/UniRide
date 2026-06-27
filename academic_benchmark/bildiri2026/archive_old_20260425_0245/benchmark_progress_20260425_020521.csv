@@ -1,5 +1,0 @@
-timestamp,problem,model_id,algorithm,run_idx,duration,elapsed_ms,seed
-02:05:30,eil76,9,GA,2,560.0,8259,9901
-02:05:31,eil76,9,GA,1,560.0,8280,9900
-02:05:37,eil76,10,PSO,1,565.0,3173,10000
-02:05:37,eil76,10,PSO,2,548.0,3129,10001

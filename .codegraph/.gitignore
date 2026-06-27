@@ -1,16 +1,14 @@
-# CodeGraph data files
-# These are local to each machine and should not be committed
-
-# Database
-*.db
-*.db-wal
-*.db-shm
-
-# Cache
-cache/
-
-# Logs
-*.log
-
-# Hook markers
-.dirty
+# CodeGraph data files — local to each machine, not for committing.
+# Ignore everything in .codegraph/ except this file itself, so transient
+# files (the database, daemon.pid, sockets, logs) never show up in git.
+#
+# Source-tree exclusions (controlling what codegraph INDEXES) live in the
+# project root .gitignore, not here. The following paths are excluded from
+# the codegraph index via the root .gitignore:
+#   .proposed_changes/   — archive snapshots (March–April 2026)
+#   archive/             — legacy code and old reports
+#   scratch/             — ad-hoc test files
+#   .codegraph/          — this directory (self)
+#   .opencode/ .cursor/ .hypothesis/ .sixth/ .kilo/ .idx/ .temp/ — tool state
+*
+!.gitignore

@@ -241,14 +241,15 @@ from uniride_core.algorithms.distance import (
 )
 
 
-def tsplib_tour_distance(coords: List[Tuple[float, float]], tour: List[int]) -> float:
+def tsplib_tour_distance(coords: List[Tuple[float, float]], tour: List[int],
+                         edge_weight_type: str = "EUC_2D") -> float:
     if not tour or len(tour) < 2:
         return 0.0
     total = 0
     for i in range(len(tour)):
         p1 = coords[tour[i]]
         p2 = coords[tour[(i + 1) % len(tour)]]
-        total += tsplib_euc_2d_distance(p1, p2)
+        total += tsplib_distance_by_type(edge_weight_type, p1, p2)
     return float(total)
 
 

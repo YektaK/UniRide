@@ -102,24 +102,21 @@ class BenchmarkRunner:
     
     def _compute_tsplib_tour_distance(self, problem: ProblemInstance, response) -> float:
         """
-        Compute actual TSPLIB EUC_2D tour distance from strategy response.
+        Compute actual TSPLIB tour distance from strategy response.
 
-        Uses per-edge NINT rounding as required by the TSPLIB standard:
-            d(i,j) = NINT( sqrt( (xi-xj)² + (yi-yj)² ) )
-
-        Instead of relying on VehicleRoute.total_distance_km (which may be 0.0),
-        this method extracts the visit sequence from route_details and computes
-        the TSPLIB-compliant distance directly from original coordinates.
+        Uses the correct TSPLIB distance function based on the problem's
+        edge_weight_type (EUC_2D, GEO, ATT, CEIL_2D), not just EUC_2D.
 
         Args:
             problem: Original ProblemInstance with TSPLIB coordinates
             response: OptimizationResponse from strategy.optimize()
 
         Returns:
-            Total EUC_2D tour distance (float, integer-valued). NaN if failed.
+            Total tour distance (float, integer-valued for EUC_2D/GEO/ATT). NaN if failed.
         """
-        from utils.tsplib_parser import tsplib_euc_2d_distance
+        from utils.tsplib_parser import tsplib_distance_by_type
 
+        ewt = getattr(problem, "edge_weight_type", "EUC_2D")
         coord_index = self._build_coord_index(problem)
         total_distance = 0
         steps_found = 0
@@ -132,7 +129,7 @@ class BenchmarkRunner:
                 c1 = coord_index.get(step.location1)
                 c2 = coord_index.get(step.location2)
                 if c1 and c2:
-                    total_distance += tsplib_euc_2d_distance(c1, c2)
+                    total_distance += tsplib_distance_by_type(ewt, c1, c2)
                     steps_found += 1
                 else:
                     steps_missing += 1

@@ -324,7 +324,22 @@ def _make_sota_executor(algo: str):
             if dist_matrix_np is not None:
                 result = solver.solve_with_matrix(dist_matrix_np)
             else:
-                result = solver.solve(problem.coordinates)
+                # Build correct distance matrix using edge_weight_type dispatch.
+                # Using solver.solve(coordinates) would default to EUC_2D NINT,
+                # producing wrong distances for GEO/ATT/CEIL_2D problems.
+                ewt = getattr(problem, "edge_weight_type", "EUC_2D")
+                if ewt == "EUC_2D":
+                    result = solver.solve(problem.coordinates)
+                else:
+                    from uniride_core.algorithms.distance import tsplib_distance_by_type
+                    coords = problem.coordinates
+                    n = len(coords)
+                    dm = [[0.0] * n for _ in range(n)]
+                    for i in range(n):
+                        for j in range(n):
+                            if i != j:
+                                dm[i][j] = float(tsplib_distance_by_type(ewt, coords[i], coords[j]))
+                    result = solver.solve_with_matrix(dm)
             
         elapsed = time.perf_counter() - start_time
         gap_pct, _ = compute_gap(problem.name, result.tour_length, problem.optimal)

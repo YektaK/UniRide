@@ -75,11 +75,15 @@ def tsplib_ceil_2d_distance(p1: Tuple[float, float], p2: Tuple[float, float]) ->
 
 
 def tsplib_att_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> int:
-    """TSPLIB ATT: pseudo-Euclidean distance for ATT TSP instances."""
+    """TSPLIB ATT: pseudo-Euclidean distance for ATT TSP instances.
+
+    Uses NINT (int(x+0.5)) rounding to match tsplib95 reference, NOT
+    Python's round() which uses banker's rounding (round half to even).
+    """
     dx = p1[0] - p2[0]
     dy = p1[1] - p2[1]
     rij = math.sqrt((dx * dx + dy * dy) / 10.0)
-    tij = int(round(rij))
+    tij = int(rij + 0.5)
     if tij < rij:
         return tij + 1
     return tij

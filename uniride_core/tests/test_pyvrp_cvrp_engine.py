@@ -1,3 +1,7 @@
+import pytest
+
+pytest.importorskip("pyvrp")
+
 from uniride_core.algorithms.pyvrp_cvrp_engine import solve_pyvrp_cvrp
 
 

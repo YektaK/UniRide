@@ -20,6 +20,10 @@ solvers = [
     "pyvroom",
     "vrplib"
 ]
+test = [
+    "pytest",
+    "hypothesis"
+]
 
 [tool.setuptools.packages.find]
 include = ["uniride_core*", "optimizer_api*", "academic_benchmark*"]

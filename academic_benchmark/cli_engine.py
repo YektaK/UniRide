@@ -1,5 +1,6 @@
 import os
 _ENGINE_DIR = os.path.dirname(os.path.abspath(__file__))
+_AB_DIR = os.path.join(_ENGINE_DIR, 'bildiri2026')
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -152,7 +153,7 @@ def _detect_numba() -> bool:
         spec = importlib.util.find_spec("core.numba_accel")
     except (ImportError, ModuleNotFoundError, ValueError):
         spec = None
-    if spec is None and os.path.isdir(_ab_dir):
+    if spec is None and os.path.isdir(_AB_DIR):
 
         try:
             from core import numba_accel as _nb  # type: ignore
@@ -161,7 +162,7 @@ def _detect_numba() -> bool:
             pass
         finally:
             try:
-                sys.path.remove(_ab_dir)
+                sys.path.remove(_AB_DIR)
             except ValueError:
                 pass
     elif spec is not None:
@@ -905,9 +906,7 @@ def _get_bildiri_strategies() -> List[Tuple[str, str, Dict[str, Any]]]:
     except (ImportError, ModuleNotFoundError, ValueError):
         pass
 
-    _ab_dir = os.path.join(_ENGINE_DIR, 'bildiri2026')
-    if os.path.isdir(_ab_dir):
-        
+    if os.path.isdir(_AB_DIR):
 
         try:
             from core import pso_solver, ga_solver  # pylint: disable=unused-import
@@ -931,7 +930,7 @@ def _get_bildiri_strategies() -> List[Tuple[str, str, Dict[str, Any]]]:
             pass
         finally:
             try:
-                sys.path.remove(_ab_dir)
+                sys.path.remove(_AB_DIR)
             except ValueError:
                 pass
     return []

@@ -1,3 +1,5 @@
+import importlib
+
 import numpy as np
 import pytest
 
@@ -6,7 +8,15 @@ from uniride_core.algorithms.engine_factory import create_matrix_engine
 from uniride_core.models import ConstraintProfile, CostMatrix, RoutingProblem, RoutingResult, TSPResult
 
 
-HOLISTIC_ENGINES = ["OR-Tools", "PyVRP", "VROOM"]
+def _engine_available(name: str) -> bool:
+    mod_map = {"PyVRP": "pyvrp", "VROOM": "pyvroom"}
+    mod = mod_map.get(name)
+    if mod is None:
+        return True  # OR-Tools is always available
+    return importlib.util.find_spec(mod) is not None
+
+
+HOLISTIC_ENGINES = [e for e in ["OR-Tools", "PyVRP", "VROOM"] if _engine_available(e)]
 
 
 def _tsp_problem(problem_type: str = "tsp") -> RoutingProblem:

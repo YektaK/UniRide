@@ -1,7 +1,7 @@
 # UniRide Academic Benchmark — How to Use
 
-**Date:** 2026-05-19
-**Version:** 3.4
+**Date:** 2026-06-25
+**Version:** 3.5
 **Location:** `academic_benchmark/`
 
 ---
@@ -27,31 +27,26 @@ python -m pytest academic_benchmark/tests/ -v
 ┌─────────────────────────────────────────────────────────────────┐
 │                     smart_benchmark.py                          │
 │              (Main Unified CLI — Start Here)                     │
-├──────────────────────────┬──────────────────────────────────────┤
-│   master_numba_engine    │    master_sota_engine                │
-│   ┌──────────────────┐   │   ┌──────────────────────────────┐   │
-│   │ 2-opt            │   │   │ E2BSO-TSP                    │   │
-│   │ 3-opt-bounded    │   │   │ E2BSO-TSP-CPSO               │   │
-│   │ swap             │   │   │ R2DMA-TSP                    │   │
-│   │ insert           │   │   │ P-AOEA-TSP                   │   │
-│   │ or-opt           │   │   │ CGO-TSP                      │   │
-│   │ 2.5-opt          │   │   │ RUN-TSP                      │   │
-│   │ B-PSO            │   │   └──────────────────────────────┘   │
-│   │ B-GA             │   │                                      │
-│   │ B-ACO            │   │   AlgorithmRegistry (shared)         │
-│   │ B-SA             │   │   ┌──────────────────────────────┐   │
-│   │ B-TS             │   │   │ register()                   │   │
-│   │ B-DE             │   │   │ register_param_space()       │   │
-│   │ B-HHO            │   │   │ register_warmup()            │   │
-│   │ B-GWO            │   │   │ execute()                    │   │
-│   │ B-WOA            │   │   └──────────────────────────────┘   │
-│   │ B-MFO            │   │                                      │
-│   │ B-LS             │   │   Engine Interface                   │
-│   └──────────────────┘   │   ┌──────────────────────────────┐   │
-│                          │   │ solve(coordinates) -> Result │   │
-│                          │   │ set_dist_matrix(matrix)      │   │
-│                          │   └──────────────────────────────┘   │
-└──────────────────────────┴──────────────────────────────────────┘
+├─────────────────────────────────────────────────────────────────┤
+│                      cli_engine.py                              │
+│              (Consolidated Engine — 2196 lines)                  │
+│   ┌──────────────────┐   ┌──────────────────────────────┐       │
+│   │ Numba Strategies │   │ SOTA Solvers (via registry)  │       │
+│   │ 2-opt            │   │ E2BSO-TSP                    │       │
+│   │ 3-opt-bounded    │   │ E2BSO-TSP-CPSO               │       │
+│   │ swap, insert     │   │ R2DMA-TSP                    │       │
+│   │ or-opt, 2.5-opt  │   │ P-AOEA-TSP                   │       │
+│   │ B-PSO, B-GA      │   │ CGO-TSP, RUN-TSP             │       │
+│   │ B-ACO, B-SA      │   │ ALNS-TSP                     │       │
+│   │ B-TS, B-DE       │   └──────────────────────────────┘       │
+│   │ B-HHO, B-GWO     │                                          │
+│   │ B-WOA, B-MFO     │   AlgorithmRegistry (shared)             │
+│   │ B-LS             │   ┌──────────────────────────────┐       │
+│   └──────────────────┘   │ register()                   │       │
+│                          │ register_param_space()       │       │
+│                          │ execute()                    │       │
+│                          └──────────────────────────────┘       │
+└─────────────────────────────────────────────────────────────────┘
          │                              │
          ▼                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
@@ -75,36 +70,37 @@ python -m pytest academic_benchmark/tests/ -v
 
 ---
 
-## Algorithm List (17 Total)
+## Algorithm List (18 Total)
 
-| # | Algorithm | Engine | Type | ATSP | Complexity |
-|---|-----------|--------|------|------|------------|
-| 1 | Numba-2-opt | Numba | Local Search | ✅ | O(n²) |
-| 2 | Numba-3-opt-bounded | Numba | Local Search | ✅ | O(n·w²) |
-| 3 | Numba-Or-opt | Numba | Local Search | ✅ | O(n²) |
-| 4 | Numba-Swap | Numba | Local Search | ✅ | O(n²) |
-| 5 | Numba-Hybrid | Numba | Local Search | ✅ | O(n³) |
-| 6 | Numba-GA | Numba | Meta-heuristic | ✅ | O(pop·gen·n) |
-| 7 | Numba-PSO | Numba | Meta-heuristic | ✅ | O(swarm·iter·n) |
-| 8 | Numba-GWO | Numba | Meta-heuristic | ✅ | O(pop·iter·n) |
-| 9 | Numba-HHO | Numba | Meta-heuristic | ✅ | O(pop·iter·n) |
-| 10 | B-PSO | bildiri2026 | Meta-heuristic | ✅ | O(swarm·iter·n) |
-| 11 | B-GA | bildiri2026 | Meta-heuristic | ✅ | O(pop·gen·n) |
-| 12 | E2BSO-TSP | SOTA | Hybrid (Entropy+ALNS) | ✅ | O(pop·iter·n²) |
-| 13 | E2BSO-TSP-CPSO | SOTA | Hybrid (Canonical PSO) | ✅ | O(pop·iter·n²) |
-| 14 | R2DMA-TSP | SOTA | Hybrid (Resonance+ALNS) | ✅ | O(pop·iter·n²) |
-| 15 | P-AOEA-TSP | SOTA | Hybrid (Genome+ALNS) | ✅ | O(pop·iter·n²) |
-| 16 | CGO-TSP | SOTA | Hybrid (Chaos Game+OX) | ✅ | O(pop·iter·n²) |
-| 17 | RUN-TSP | SOTA | Hybrid (RK4+ESQ) | ✅ | O(pop·iter·n²) |
+| #   | Algorithm           | Engine      | Type                    | ATSP | Complexity      |
+| --- | ------------------- | ----------- | ----------------------- | ---- | --------------- |
+| 1   | Numba-2-opt         | Numba       | Local Search            | ✅    | O(n²)           |
+| 2   | Numba-3-opt-bounded | Numba       | Local Search            | ✅    | O(n·w²)         |
+| 3   | Numba-Or-opt        | Numba       | Local Search            | ✅    | O(n²)           |
+| 4   | Numba-Swap          | Numba       | Local Search            | ✅    | O(n²)           |
+| 5   | Numba-Hybrid        | Numba       | Local Search            | ✅    | O(n³)           |
+| 6   | Numba-GA            | Numba       | Meta-heuristic          | ✅    | O(pop·gen·n)    |
+| 7   | Numba-PSO           | Numba       | Meta-heuristic          | ✅    | O(swarm·iter·n) |
+| 8   | Numba-GWO           | Numba       | Meta-heuristic          | ✅    | O(pop·iter·n)   |
+| 9   | Numba-HHO           | Numba       | Meta-heuristic          | ✅    | O(pop·iter·n)   |
+| 10  | B-PSO               | bildiri2026 | Meta-heuristic          | ✅    | O(swarm·iter·n) |
+| 11  | B-GA                | bildiri2026 | Meta-heuristic          | ✅    | O(pop·gen·n)    |
+| 12  | E2BSO-TSP           | SOTA        | Hybrid (Entropy+ALNS)   | ✅    | O(pop·iter·n²)  |
+| 13  | E2BSO-TSP-CPSO      | SOTA        | Hybrid (Canonical PSO)  | ✅    | O(pop·iter·n²)  |
+| 14  | R2DMA-TSP           | SOTA        | Hybrid (Resonance+ALNS) | ✅    | O(pop·iter·n²)  |
+| 15  | P-AOEA-TSP          | SOTA        | Hybrid (Genome+ALNS)    | ✅    | O(pop·iter·n²)  |
+| 16  | CGO-TSP             | SOTA        | Hybrid (Chaos Game+OX)  | ✅    | O(pop·iter·n²)  |
+| 17  | RUN-TSP             | SOTA        | Hybrid (RK4+ESQ)        | ✅    | O(pop·iter·n²)  |
+| 18  | ALNS-TSP            | SOTA        | Adaptive LNS + SA       | ✅    | O(iter·n²)      |
 
 ### E2BSO-TSP vs E2BSO-TSP-CPSO
 
-| Feature | E2BSO-TSP (Edge-Heritage) | E2BSO-TSP-CPSO (Canonical PSO) |
-|---------|--------------------------|-------------------------------|
-| **Swarm Update** | Edge-force injection (3-5 edges) | Swap-sequence velocity (v = w·v + c1·r1·Δpbest + c2·r2·Δgbest) |
-| **Parameters** | `p_best`, `p_gbest`, `n_edges` | `c1`, `c2`, `inertia`, `velocity_max_ratio` |
-| **DoE Space** | gamma, injection_rate, remove_ratio | c1:[1.0,1.5,2.0], c2:[1.0,1.5,2.0], inertia:[0.5,0.7,0.9] |
-| **Use Case** | TSP-native, focuses on edge structure | General purpose, momentum-based convergence |
+| Feature          | E2BSO-TSP (Edge-Heritage)             | E2BSO-TSP-CPSO (Canonical PSO)                                 |
+| ---------------- | ------------------------------------- | -------------------------------------------------------------- |
+| **Swarm Update** | Edge-force injection (3-5 edges)      | Swap-sequence velocity (v = w·v + c1·r1·Δpbest + c2·r2·Δgbest) |
+| **Parameters**   | `p_best`, `p_gbest`, `n_edges`        | `c1`, `c2`, `inertia`, `velocity_max_ratio`                    |
+| **DoE Space**    | gamma, injection_rate, remove_ratio   | c1:[1.0,1.5,2.0], c2:[1.0,1.5,2.0], inertia:[0.5,0.7,0.9]      |
+| **Use Case**     | TSP-native, focuses on edge structure | General purpose, momentum-based convergence                    |
 
 ---
 
@@ -115,11 +111,13 @@ python -m pytest academic_benchmark/tests/ -v
 **Purpose:** Single entry point for all benchmark operations. Manages both Numba and SOTA engines through a unified menu.
 
 **Run:**
+
 ```bash
 python -m academic_benchmark.smart_benchmark
 ```
 
 **Menu Flow:**
+
 ```
 ┌─────────────────────────────────────────────┐
 │         UNIRIDE AKADEMIK BENCHMARK          │
@@ -135,6 +133,7 @@ python -m academic_benchmark.smart_benchmark
 ```
 
 **Option 1 — Tuning:**
+
 - Select problems (by dimension range, category, or individual)
 - Select algorithms (Numba, SOTA, or both)
 - Choose tuning strategy:
@@ -144,6 +143,7 @@ python -m academic_benchmark.smart_benchmark
 - Results saved to `benchmark_db/metadata.json` and `param_db`
 
 **Option 2 — Benchmark:**
+
 - Select problems and algorithms
 - Choose parameter source:
   - `[B]` Load best from DB (uses tuned params)
@@ -153,39 +153,44 @@ python -m academic_benchmark.smart_benchmark
 - Results saved to CSV and metadata
 
 **Option 3 — Comparative (Numba vs SOTA):**
+
 - Runs both engines side-by-side on same problems
 - Same param selection flow as Option 2
 - Best for paper comparisons
 
 **Option 4 — Load Config:**
+
 - Load previously saved benchmark configurations
 - Re-run with same settings
 
 **Option 5 — Parametre DB:**
+
 - View, export, or clear stored parameter sets
 - See which problem/algorithm combos have tuned params
 
 **Keyboard Controls During Execution:**
+
 - `Ctrl+C` — No-op (intentional, safe for copy-paste from terminal)
 - `Ctrl+Q` or `Ctrl+X` — Graceful shutdown (saves results, exits cleanly)
 - `q` or `x` — Also triggers graceful shutdown
 
 ---
 
-### 2. `master_numba_engine.py` — Numba Engine Standalone
+### 2. `cli_engine.py` — Consolidated Engine
 
-**Purpose:** Run Numba-optimized algorithms directly. 11 algorithms with JIT compilation.
+**Purpose:** Single engine for all Numba + SOTA algorithms. Replaces the old `master_numba_engine.py` and `master_sota_engine.py`. This is the engine that `smart_benchmark.py` delegates to.
 
-**Algorithms:** 2-opt, 3-opt-bounded, swap, insert, or-opt, 2.5-opt, B-PSO, B-GA, B-ACO, B-SA, B-TS, B-DE, B-HHO, B-GWO, B-WOA, B-MFO, B-LS
+**Algorithms:** All 18 algorithms (Numba, bildiri2026, SOTA) are registered through `core/registry_setup.py` and dispatched by `cli_engine.py`.
 
 **Run:**
+
 ```bash
 # Interactive mode
-python -m academic_benchmark.master_numba_engine
+python -m academic_benchmark.cli_engine
 
 # CLI mode
-python -m academic_benchmark.master_numba_engine --mode tuning --problems berlin52,eil51 --runs 5
-python -m academic_benchmark.master_numba_engine --mode default --problems berlin52 --algos B-PSO,B-GA --runs 3
+python -m academic_benchmark.cli_engine --mode tuning --problems berlin52,eil51 --runs 5
+python -m academic_benchmark.cli_engine --mode default --problems berlin52 --algos B-PSO,E2BSO-TSP --runs 3
 ```
 
 **CLI Arguments:**
@@ -193,15 +198,16 @@ python -m academic_benchmark.master_numba_engine --mode default --problems berli
 |------|-------------|---------|
 | `--mode` | `tuning`, `default`, or `benchmark` | `--mode tuning` |
 | `--problems` | Comma-separated problem names | `--problems berlin52,eil51` |
-| `--algos` | Comma-separated algorithm names | `--algos B-PSO,B-GA` |
+| `--algos` | Comma-separated algorithm names (Numba + SOTA mixed) | `--algos B-PSO,E2BSO-TSP` |
 | `--runs` | Number of runs per combo | `--runs 5` |
 | `--workers` | Parallel worker count | `--workers 4` |
 | `--size-limit` | Max problem dimension | `--size-limit 100` |
 
 **Menu Flow:**
+
 ```
 ┌─────────────────────────────────────────────┐
-│       NUMBA ENGINE — Ana Menu               │
+│       CLI ENGINE — Ana Menu                 │
 ├─────────────────────────────────────────────┤
 │ [1] TUNING (Grid/Fractional/Bayesian)       │
 │ [2] BENCHMARK (DB/Manual/Default params)    │
@@ -213,48 +219,18 @@ python -m academic_benchmark.master_numba_engine --mode default --problems berli
 
 ---
 
-### 3. `master_sota_engine.py` — SOTA Engine Standalone
-
-**Purpose:** Run state-of-the-art metaheuristics. 6 algorithms.
-
-**Algorithms:** E2BSO-TSP, E2BSO-TSP-CPSO, R2DMA-TSP, P-AOEA-TSP, CGO-TSP, RUN-TSP
-
-**Run:**
-```bash
-# Interactive mode
-python -m academic_benchmark.master_sota_engine
-
-# CLI mode
-python -m academic_benchmark.master_sota_engine --mode tuning --problems berlin52 --algos E2BSO-TSP,R2DMA-TSP --runs 5
-```
-
-**CLI Arguments:** Same as numba engine.
-
-**Menu Flow:**
-```
-┌─────────────────────────────────────────────┐
-│       SOTA ENGINE — Ana Menu                │
-├─────────────────────────────────────────────┤
-│ [1] TUNING (Grid/Fractional/Bayesian)       │
-│ [2] BENCHMARK (DB/Manual/Default params)    │
-│ [3] QUICK BENCHMARK (Default params only)   │
-│ [D] DASHBOARD                               │
-│ [Q] CIKIS                                   │
-└─────────────────────────────────────────────┘
-```
-
----
-
-### 4. `dashboard.py` — Streamlit Dashboard
+### 3. `dashboard.py` — Streamlit Dashboard
 
 **Purpose:** Visualize benchmark results with interactive charts.
 
 **Run:**
+
 ```bash
 streamlit run academic_benchmark/dashboard.py
 ```
 
 **Tabs:**
+
 1. **Overview** — Summary stats, total runs, algorithms, problems
 2. **Results** — Full result table with filtering
 3. **Comparison** — Side-by-side algorithm comparison
@@ -264,17 +240,19 @@ streamlit run academic_benchmark/dashboard.py
 7. **Progress** — Benchmark completion status
 
 **Data Sources:**
+
 - `benchmark_db/benchmark_progress.csv` — All run results
 - `benchmark_db/results.csv` — Aggregated results
 - `benchmark_db/metadata.json` — Tuning metadata
 
 ---
 
-### 5. `tsplib_manager.py` — TSPLIB Database Manager
+### 4. `tsplib_manager.py` — TSPLIB Database Manager
 
 **Purpose:** Manage the TSPLIB SQLite database (`tsplib.db`). Load, verify, and query problem instances.
 
 **Run:**
+
 ```bash
 python -m academic_benchmark.tsplib_manager --help
 ```
@@ -290,6 +268,7 @@ python -m academic_benchmark.tsplib_manager --help
 | `stats` | Show database statistics |
 
 **Example:**
+
 ```bash
 python -m academic_benchmark.tsplib_manager list
 python -m academic_benchmark.tsplib_manager show berlin52
@@ -298,11 +277,12 @@ python -m academic_benchmark.tsplib_manager verify
 
 ---
 
-### 6. `run_numba_with_bildiri_params.py` — Bildiri2026 Param Runner
+### 5. `run_numba_with_bildiri_params.py` — Bildiri2026 Param Runner
 
 **Purpose:** Run Numba algorithms with parameters from the bildiri2026 paper experiments.
 
 **Run:**
+
 ```bash
 python -m academic_benchmark.run_numba_with_bildiri_params --problems berlin52 --algos B-PSO,B-GA --runs 10
 ```
@@ -318,7 +298,7 @@ python -m academic_benchmark.run_numba_with_bildiri_params --problems berlin52 -
 
 ---
 
-### 7. `param_db.py` — Parameter Database Module
+### 6. `param_db.py` — Parameter Database Module
 
 **Purpose:** SQLite-backed storage for tuned parameters. Not a standalone CLI — used by engines.
 
@@ -334,7 +314,7 @@ python -m academic_benchmark.run_numba_with_bildiri_params --problems berlin52 -
 
 ---
 
-### 8. `benchmark_utils.py` — Shared Utilities
+### 7. `benchmark_utils.py` — Shared Utilities
 
 **Purpose:** Common functions used across all benchmark components. Not a standalone CLI.
 
@@ -351,7 +331,7 @@ python -m academic_benchmark.run_numba_with_bildiri_params --problems berlin52 -
 
 ---
 
-### 9. `engine_core.py` — Core Dataclasses
+### 8. `engine_core.py` — Core Dataclasses
 
 **Purpose:** Shared data structures. Not a standalone CLI.
 
@@ -370,10 +350,10 @@ python -m academic_benchmark.run_numba_with_bildiri_params --problems berlin52 -
 
 TUNING modunda 3 strateji mevcuttur:
 
-| Strategy | Description | Advantage | Disadvantage |
-|----------|-------------|-----------|--------------|
-| **[G] Grid Search** | Tests every combo, picks best tested | Comprehensive, deterministic | Very slow (exponential combos) |
-| **[F] Fractional** | Random subsample of grid | Faster | May miss optimal combo |
+| Strategy                  | Description                                             | Advantage                                      | Disadvantage                      |
+| ------------------------- | ------------------------------------------------------- | ---------------------------------------------- | --------------------------------- |
+| **[G] Grid Search**       | Tests every combo, picks best tested                    | Comprehensive, deterministic                   | Very slow (exponential combos)    |
+| **[F] Fractional**        | Random subsample of grid                                | Faster                                         | May miss optimal combo            |
 | **[B] Bayesian (Optuna)** | TPE surrogate model, finds optima between tested points | Best results, finds values between grid points | Probabilistic, repeats may differ |
 
 ### Optuna Dynamic Queue Architecture (v3.4+)
@@ -400,14 +380,14 @@ Workers (e.g., 8 cores):
 
 ### Optuna vs Response Surface (Design-Expert)
 
-| Feature | Optuna (TPE) | Response Surface (Design-Expert) |
-|---------|-------------|----------------------------------|
-| **Model** | Probabilistic (kernel density) | Deterministic (quadratic polynomial) |
-| **Optimum location** | Anywhere in space | Limited to quadratic surface |
-| **Categorical params** | Native support | Requires dummy variables |
-| **Non-linear interactions** | Captures complex patterns | Only quadratic interactions |
-| **Sample efficiency** | High (adaptive sampling) | Requires structured design points |
-| **Output** | Best point + uncertainty | Equation: y = β₀ + Σβᵢxᵢ + Σβᵢᵢxᵢ² |
+| Feature                     | Optuna (TPE)                   | Response Surface (Design-Expert)     |
+| --------------------------- | ------------------------------ | ------------------------------------ |
+| **Model**                   | Probabilistic (kernel density) | Deterministic (quadratic polynomial) |
+| **Optimum location**        | Anywhere in space              | Limited to quadratic surface         |
+| **Categorical params**      | Native support                 | Requires dummy variables             |
+| **Non-linear interactions** | Captures complex patterns      | Only quadratic interactions          |
+| **Sample efficiency**       | High (adaptive sampling)       | Requires structured design points    |
+| **Output**                  | Best point + uncertainty       | Equation: y = β₀ + Σβᵢxᵢ + Σβᵢᵢxᵢ²   |
 
 > **Note:** For meta-heuristic tuning, Optuna is generally superior because response surfaces are rarely quadratic — they contain plateaus, cliffs, and irregular regions. In practice, Optuna finds 5-15% better solutions because it can search between grid points and handle categorical params naturally. Response Surface should only be added if an analytical equation is needed for academic analysis (e.g., "population_size has the strongest main effect, β=0.42").
 
@@ -418,43 +398,53 @@ Workers (e.g., 8 cores):
 The `bildiri2026/` directory contains the original paper experiment pipeline. Run in order:
 
 ### Step 1: Generate Config
+
 ```bash
 python -m academic_benchmark.bildiri2026.1_generate_config
 ```
+
 Generates tuning configurations for all problem/algorithm combinations.
 
 ### Step 2: Run Tuning
+
 ```bash
 python -m academic_benchmark.bildiri2026.2_run_tuning
 ```
+
 Executes parameter tuning. Outputs: `bildiri2026/results/tuning/`
 
 ### Step 3: Run Benchmark
+
 ```bash
 python -m academic_benchmark.bildiri2026.3_run_benchmark
 ```
+
 Runs benchmarks with tuned params. Outputs: `bildiri2026/results/benchmark/`
 
 ### Step 4: Analyze (optional)
+
 ```bash
 python -m academic_benchmark.bildiri2026.analyze_tuning
 python -m academic_benchmark.bildiri2026.analyze_benchmark
 ```
 
 ### Step 5: Visualize
+
 ```bash
 python -m academic_benchmark.bildiri2026.5_visualize
 ```
+
 Generates plots and tables for the paper.
 
 ### Additional Tools:
-| Script | Purpose |
-|--------|---------|
-| `orchestrate_batch.py` | Run full pipeline end-to-end |
-| `run_targeted.py` | Run specific problem/algorithm combos |
-| `data_manager.py` | Manage bildiri2026 result data |
-| `benchmarks/tsplib_benchmark.py` | Standalone TSPLIB benchmark runner |
-| `benchmarks/timematrix_benchmark.py` | Time-matrix problem benchmark |
+
+| Script                               | Purpose                               |
+| ------------------------------------ | ------------------------------------- |
+| `orchestrate_batch.py`               | Run full pipeline end-to-end          |
+| `run_targeted.py`                    | Run specific problem/algorithm combos |
+| `data_manager.py`                    | Manage bildiri2026 result data        |
+| `benchmarks/tsplib_benchmark.py`     | Standalone TSPLIB benchmark runner    |
+| `benchmarks/timematrix_benchmark.py` | Time-matrix problem benchmark         |
 
 ---
 
@@ -519,7 +509,7 @@ Generates plots and tables for the paper.
 ### Flow 4: Single Algorithm Deep Dive
 
 ```
-1. master_numba_engine.py (or master_sota_engine.py)
+1. cli_engine.py
    ├── [1] TUNING
    │   ├── Select one problem (e.g., berlin52)
    │   ├── Select one algorithm (e.g., B-PSO)
@@ -567,14 +557,17 @@ Generates plots and tables for the paper.
 ## CSV Schemas
 
 **benchmark_summary.csv:**
+
 ```
 problem, strategy, avg_length, avg_gap, avg_time_ms, n_runs
 ```
 
 **benchmark_progress.csv:**
+
 ```
 timestamp, problem, strategy, avg_length, avg_gap, avg_time_ms, n_runs, result_type, params_json
 ```
+
 - `result_type = "raw"`: single run (SOTA engine)
 - `result_type = "aggregate"`: param combo average (Numba engine)
 
@@ -584,27 +577,27 @@ timestamp, problem, strategy, avg_length, avg_gap, avg_time_ms, n_runs, result_t
 
 ### Environment Variables
 
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `OPENBLAS_NUM_THREADS` | 1 | Prevent OpenBLAS multiprocessing crashes |
-| `NUMEXPR_NUM_THREADS` | 1 | Prevent NumExpr thread conflicts |
-| `OMP_NUM_THREADS` | 1 | Prevent OpenMP thread conflicts |
-| `MKL_NUM_THREADS` | 1 | Prevent MKL thread conflicts |
+| Variable               | Default | Purpose                                  |
+| ---------------------- | ------- | ---------------------------------------- |
+| `OPENBLAS_NUM_THREADS` | 1       | Prevent OpenBLAS multiprocessing crashes |
+| `NUMEXPR_NUM_THREADS`  | 1       | Prevent NumExpr thread conflicts         |
+| `OMP_NUM_THREADS`      | 1       | Prevent OpenMP thread conflicts          |
+| `MKL_NUM_THREADS`      | 1       | Prevent MKL thread conflicts             |
 
-**Note:** These are set automatically at module top in both master engines. Do not override unless you know what you're doing.
+**Note:** These are set automatically at module top in `cli_engine.py`. Do not override unless you know what you're doing.
 
 ### File Locations
 
-| Path | Purpose |
-|------|---------|
-| `academic_benchmark/tsplib.db` | TSPLIB problem database (SQLite) |
-| `academic_benchmark/benchmark_db/` | Benchmark results directory |
-| `academic_benchmark/benchmark_db/benchmark_progress.csv` | All run results |
-| `academic_benchmark/benchmark_db/results.csv` | Aggregated results |
-| `academic_benchmark/benchmark_db/metadata.json` | Tuning metadata + best params |
-| `academic_benchmark/benchmark_db/param_db.sqlite` | Parameter database |
-| `academic_benchmark/benchmark_db/configs/` | Saved benchmark configurations |
-| `academic_benchmark/benchmark_db/history/` | Interrupted benchmark saves |
+| Path                                                     | Purpose                          |
+| -------------------------------------------------------- | -------------------------------- |
+| `academic_benchmark/tsplib.db`                           | TSPLIB problem database (SQLite) |
+| `academic_benchmark/benchmark_db/`                       | Benchmark results directory      |
+| `academic_benchmark/benchmark_db/benchmark_progress.csv` | All run results                  |
+| `academic_benchmark/benchmark_db/results.csv`            | Aggregated results               |
+| `academic_benchmark/benchmark_db/metadata.json`          | Tuning metadata + best params    |
+| `academic_benchmark/benchmark_db/param_db.sqlite`        | Parameter database               |
+| `academic_benchmark/benchmark_db/configs/`               | Saved benchmark configurations   |
+| `academic_benchmark/benchmark_db/history/`               | Interrupted benchmark saves      |
 
 ---
 
@@ -641,7 +634,7 @@ from .yeni_algo import YeniAlgo, YeniAlgoConfig
 __all__ = [..., "YeniAlgo", "YeniAlgoConfig"]
 ```
 
-**Step 3:** In `master_sota_engine.py` (or `master_numba_engine.py`):
+**Step 3:** In `cli_engine.py`:
 
 ```python
 # Add to ALL_ALGOS list
@@ -686,46 +679,58 @@ For custom time_matrix JSON problems, add JSON file to `academic_benchmark/data/
 ## Troubleshooting
 
 ### "No module named 'academic_benchmark'"
+
 Run from the project root (`UniRide/`), not from inside `academic_benchmark/`.
 
 ### "Pickle error: cannot pickle local class"
+
 This was the C-02 bug. Fixed in 2026-05-19. If you still see it, update your code.
 
 ### "AttributeError: 'Result' object has no attribute 'elapsed_ms'"
+
 This was the C-04 bug. Fixed in 2026-05-19.
 
 ### "Gap shows 754200%"
+
 This was the C-03 bug. Fixed in 2026-05-19. Unknown-optimal problems now show "N/A".
 
 ### "NameError: name 'Path' is not defined"
+
 This was the C-05 bug. Fixed in 2026-05-19.
 
 ### Dashboard shows no data
+
 Check that `benchmark_db/benchmark_progress.csv` exists and has data. Run a benchmark first.
 
 ### Ctrl+C crashes the benchmark
+
 Ctrl+C is intentionally a no-op (safe for copy-paste). Use `Ctrl+Q` or `Ctrl+X` to stop gracefully.
 
 ### Streamlit dashboard won't open
+
 ```bash
 pip install streamlit
 streamlit run academic_benchmark/dashboard.py
 ```
 
 ### Optuna not installed
+
 ```bash
 pip install optuna
 ```
 
 ### ProcessPoolExecutor hang
+
 Try `--workers 1` with a single worker to isolate the issue.
 
 ### Numba compilation error
+
 ```bash
 pip install --upgrade numba numpy
 ```
 
 ### Matrix comes back None
+
 Run `tsplib_manager.py compute-dm` to precompute distance matrices.
 
 ---
@@ -739,6 +744,7 @@ Run `tsplib_manager.py compute-dm` to precompute distance matrices.
 **Why:** Multi-problem DB loads silently overwrote params (last problem won). New format stores per-problem params correctly.
 
 **Impact:**
+
 - Old metadata files still work via legacy fallback
 - New tuning runs produce per-problem keys
 - To get correct per-problem params: re-run tuning
@@ -758,6 +764,7 @@ Run `tsplib_manager.py compute-dm` to precompute distance matrices.
 **Why:** Previous approach ran studies sequentially (1 worker active, rest idle). Now all workers stay busy regardless of algorithm speed differences.
 
 **Impact:**
+
 - 5-10x faster tuning for mixed workloads (Numba + SOTA together)
 - Early stopping: small problems stop after 3-4 trials instead of 50
 - Tie-breaking: fastest params selected among equal-gap trials
@@ -851,6 +858,7 @@ While the core generative mechanisms and mathematical operators of E²BSO, R²DM
 **Summary:** Q-Learning based dynamic parameter adaptation. The algorithm automatically adjusts mutation rate, population size, and local search budget based on stagnation, diversity, and gap status during execution.
 
 **Architecture:**
+
 - **State space:** 144 states (diversity × stagnation × gap × progress)
 - **Action space:** 6 actions (↑mutation, ↓mutation, ↑ls, ↓ls, ↑exploration, ↓exploration)
 - **Reward:** `-Δgap` (improvement = positive reward)
@@ -865,6 +873,7 @@ While the core generative mechanisms and mathematical operators of E²BSO, R²DM
 **Summary:** Integration of Lin-Kernighan-Helsgaun (LKH-3) heuristic as a local search operator.
 
 **Assessment:**
+
 - Expected ~1-2% gap improvement on n > 2000 problems
 - C-based, requires wrapper
 - Current SOTA algorithms already give competitive results at n ≤ 1000
@@ -875,6 +884,7 @@ While the core generative mechanisms and mathematical operators of E²BSO, R²DM
 **Status:** Out of priority.
 
 **Assessment:**
+
 - Numba CUDA (`@cuda.jit`) for fitness eval loops on GPU
 - Requires NVIDIA GPU
 - TSP bottleneck is local search (memory-bound), not fitness compute (compute-bound)
@@ -884,15 +894,15 @@ While the core generative mechanisms and mathematical operators of E²BSO, R²DM
 
 ## Version History
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 3.4 | 2026-05-19 | Optuna dynamic queue architecture (ask/tell), early stopping, tie-based tie-breaking, parallel execution optimization |
-| 3.3 | 2026-05-16 | 3 tuning strategies (Grid/Fractional/Bayesian), Optuna added to SOTA, problem size sorting |
-| 3.2 | 2026-05-16 | RUN-TSP added (Runge Kutta Optimizer), 17 algorithms, metaphor-free solver |
-| 3.1 | 2026-05-16 | CGO-TSP added (Chaos Game Optimization), 16 algorithms, 45 tests |
-| 3.0 | 2026-05-15 | Dual-engine architecture, 15 algorithms, CPSO variant, BSF fallback, Streamlit dashboard, RL roadmap |
-| 2.0 | 2026-05-09 | SOTA engine consolidation, DoE tuning, ProcessPoolExecutor |
-| 1.0 | 2026-04-06 | Initial benchmark system, V1/V2, multiprocessing |
+| Version | Date       | Changes                                                                                                               |
+| ------- | ---------- | --------------------------------------------------------------------------------------------------------------------- |
+| 3.4     | 2026-05-19 | Optuna dynamic queue architecture (ask/tell), early stopping, tie-based tie-breaking, parallel execution optimization |
+| 3.3     | 2026-05-16 | 3 tuning strategies (Grid/Fractional/Bayesian), Optuna added to SOTA, problem size sorting                            |
+| 3.2     | 2026-05-16 | RUN-TSP added (Runge Kutta Optimizer), 17 algorithms, metaphor-free solver                                            |
+| 3.1     | 2026-05-16 | CGO-TSP added (Chaos Game Optimization), 16 algorithms, 45 tests                                                      |
+| 3.0     | 2026-05-15 | Dual-engine architecture, 15 algorithms, CPSO variant, BSF fallback, Streamlit dashboard, RL roadmap                  |
+| 2.0     | 2026-05-09 | SOTA engine consolidation, DoE tuning, ProcessPoolExecutor                                                            |
+| 1.0     | 2026-04-06 | Initial benchmark system, V1/V2, multiprocessing                                                                      |
 
 ---
 

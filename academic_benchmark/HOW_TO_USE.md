@@ -1,6 +1,6 @@
 # UniRide Academic Benchmark — How to Use
 
-**Date:** 2026-06-25
+**Date:** 2026-06-30
 **Version:** 3.5
 **Location:** `academic_benchmark/`
 
@@ -70,7 +70,7 @@ python -m pytest academic_benchmark/tests/ -v
 
 ---
 
-## Algorithm List (18 Total)
+## Algorithm List (22 Total)
 
 | #   | Algorithm           | Engine      | Type                    | ATSP | Complexity      |
 | --- | ------------------- | ----------- | ----------------------- | ---- | --------------- |
@@ -81,17 +81,37 @@ python -m pytest academic_benchmark/tests/ -v
 | 5   | Numba-Hybrid        | Numba       | Local Search            | ✅    | O(n³)           |
 | 6   | Numba-GA            | Numba       | Meta-heuristic          | ✅    | O(pop·gen·n)    |
 | 7   | Numba-PSO           | Numba       | Meta-heuristic          | ✅    | O(swarm·iter·n) |
-| 8   | Numba-GWO           | Numba       | Meta-heuristic          | ✅    | O(pop·iter·n)   |
-| 9   | Numba-HHO           | Numba       | Meta-heuristic          | ✅    | O(pop·iter·n)   |
-| 10  | B-PSO               | bildiri2026 | Meta-heuristic          | ✅    | O(swarm·iter·n) |
-| 11  | B-GA                | bildiri2026 | Meta-heuristic          | ✅    | O(pop·gen·n)    |
-| 12  | E2BSO-TSP           | SOTA        | Hybrid (Entropy+ALNS)   | ✅    | O(pop·iter·n²)  |
-| 13  | E2BSO-TSP-CPSO      | SOTA        | Hybrid (Canonical PSO)  | ✅    | O(pop·iter·n²)  |
-| 14  | R2DMA-TSP           | SOTA        | Hybrid (Resonance+ALNS) | ✅    | O(pop·iter·n²)  |
-| 15  | P-AOEA-TSP          | SOTA        | Hybrid (Genome+ALNS)    | ✅    | O(pop·iter·n²)  |
-| 16  | CGO-TSP             | SOTA        | Hybrid (Chaos Game+OX)  | ✅    | O(pop·iter·n²)  |
-| 17  | RUN-TSP             | SOTA        | Hybrid (RK4+ESQ)        | ✅    | O(pop·iter·n²)  |
-| 18  | ALNS-TSP            | SOTA        | Adaptive LNS + SA       | ✅    | O(iter·n²)      |
+| 8   | Numba-GWO           | bildiri2026 | Meta-heuristic (memetic)| ✅    | O(pop·iter·n)   |
+| 9   | Numba-HHO           | bildiri2026 | Meta-heuristic (memetic)| ✅    | O(pop·iter·n)   |
+| 10  | Core-GWO-TSP        | bildiri2026 | Meta-heuristic (memetic)| ✅    | O(pop·iter·n)   |
+| 11  | Core-HHO-TSP        | bildiri2026 | Meta-heuristic (memetic)| ✅    | O(pop·iter·n)   |
+| 12  | B-PSO               | bildiri2026 | Meta-heuristic          | ✅    | O(swarm·iter·n) |
+| 13  | B-GA                | bildiri2026 | Meta-heuristic          | ✅    | O(pop·gen·n)    |
+| 14  | E2BSO-TSP           | SOTA        | Hybrid (Entropy+ALNS)   | ✅    | O(pop·iter·n²)  |
+| 15  | E2BSO-TSP-CPSO      | SOTA        | Hybrid (Canonical PSO)  | ✅    | O(pop·iter·n²)  |
+| 16  | R2DMA-TSP           | SOTA        | Hybrid (Resonance+ALNS) | ✅    | O(pop·iter·n²)  |
+| 17  | P-AOEA-TSP          | SOTA        | Hybrid (Genome+ALNS)    | ✅    | O(pop·iter·n²)  |
+| 18  | CGO-TSP             | SOTA        | Hybrid (Chaos Game+OX)  | ✅    | O(pop·iter·n²)  |
+| 19  | RUN-TSP             | SOTA        | Hybrid (RK4+ESQ)        | ✅    | O(pop·iter·n²)  |
+| 20  | ALNS-TSP            | SOTA        | Adaptive LNS + SA       | ✅    | O(iter·n²)      |
+
+### GWO/HHO Algorithm Naming
+
+The GWO (Grey Wolf Optimizer) and HHO (Harris Hawks Optimization) algorithms have two naming conventions:
+
+| CLI Name        | Implementation                      | Use This                              |
+| --------------- | ----------------------------------- | ------------------------------------- |
+| `Numba-GWO`     | bildiri2026 `GWOOptimizer` (memetic)| ✅ Recommended                        |
+| `Numba-HHO`     | bildiri2026 `HHOOptimizer` (memetic)| ✅ Recommended                        |
+| `Core-GWO-TSP`  | bildiri2026 `GWOOptimizer` (memetic)| ✅ Equivalent to Numba-GWO            |
+| `Core-HHO-TSP`  | bildiri2026 `HHOOptimizer` (memetic)| ✅ Equivalent to Numba-HHO            |
+| `GWO`           | Legacy Numba `_run_gwo`             | ⚠️ Deprecated — use Numba-GWO instead |
+| `HHO`           | Legacy Numba `_run_hho`             | ⚠️ Deprecated — use Numba-HHO instead |
+
+> **Note:** `Numba-GWO`/`Numba-HHO` and `Core-GWO-TSP`/`Core-HHO-TSP` all resolve to the same
+> bildiri2026 `GWOOptimizer`/`HHOOptimizer` implementations via `AlgorithmRegistry` overrides in
+> `core/registry_setup.py`. These use the Numba-accelerated memetic solver with periodic 2-opt polish.
+> Plain `GWO`/`HHO` fall through to a legacy Numba path and produce worse results (~5-7% gap vs ~1.8%).
 
 ### E2BSO-TSP vs E2BSO-TSP-CPSO
 
@@ -729,6 +749,21 @@ Try `--workers 1` with a single worker to isolate the issue.
 pip install --upgrade numba numpy
 ```
 
+**Known environment issue (2026-06):** The current Python environment has NumPy 2.5.0 installed,
+but Numba requires NumPy ≤ 2.4. Numba is not installed and the JIT-accelerated paths
+(`@njit` kernels in `numba_accel.py`) degrade to pure Python fallbacks. The algorithms still
+work correctly but run ~10-50x slower than with Numba. To restore JIT acceleration:
+
+```bash
+pip install "numpy<2.5" numba
+```
+
+### "'_Problem' object has no attribute 'prepare_matrices'"
+
+This was fixed on 2026-06-30. The CLI worker's internal `_Problem` wrapper in `cli_engine.py`
+was missing the `prepare_matrices()` method needed by registry-backed algorithms (GWO, HHO).
+Update your code to get the fix.
+
 ### Matrix comes back None
 
 Run `tsplib_manager.py compute-dm` to precompute distance matrices.
@@ -791,13 +826,14 @@ python -m pytest academic_benchmark/tests/ --cov=academic_benchmark -v
 | File | Coverage |
 |------|----------|
 | `test_critical_fixes.py` | C-01, C-03, C-04, C-05, C-06, H-06 regression tests |
+| `test_core_tsp_registry.py` | Registry executors (Core-*, Numba-*, FCM-*, GWO/HHO bildiri2026) |
 | `test_sota_e2e.py` | SOTA solver end-to-end tests |
 | `test_sota_parity.py` | SOTA algorithm parity tests |
 | `test_numba_three_opt.py` | 3-opt-bounded correctness |
 | `test_benchmark_robustness.py` | Worker backend + seed stability |
 | `test_problem_selector.py` | Problem selection logic |
 
-**Current status:** 55/55 tests passing.
+**Current status:** 209/209 tests passing (1 skipped — optional dependency).
 
 ---
 
@@ -896,6 +932,7 @@ While the core generative mechanisms and mathematical operators of E²BSO, R²DM
 
 | Version | Date       | Changes                                                                                                               |
 | ------- | ---------- | --------------------------------------------------------------------------------------------------------------------- |
+| 3.5     | 2026-06-30 | Fix _Problem.prepare_matrices() for registry GWO/HHO, clarify algorithm naming (Numba-GWO vs GWO), Numba env docs    |
 | 3.4     | 2026-05-19 | Optuna dynamic queue architecture (ask/tell), early stopping, tie-based tie-breaking, parallel execution optimization |
 | 3.3     | 2026-05-16 | 3 tuning strategies (Grid/Fractional/Bayesian), Optuna added to SOTA, problem size sorting                            |
 | 3.2     | 2026-05-16 | RUN-TSP added (Runge Kutta Optimizer), 17 algorithms, metaphor-free solver                                            |
@@ -906,4 +943,4 @@ While the core generative mechanisms and mathematical operators of E²BSO, R²DM
 
 ---
 
-*This document was last updated on 2026-05-19 (v3.4).*
+*This document was last updated on 2026-06-30 (v3.5).*

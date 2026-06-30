@@ -126,3 +126,86 @@ def test_fcm_tsp_executor_runs_matrix_native_problem():
     assert result.problem_type == "tsp"
     assert result.objective_cost == result.tour_cost
     assert set(result.tour) == {1, 2, 3, 4}
+
+
+def _coord_only_problem():
+    """ProblemInstance with coordinates but no pre-computed dist_matrix.
+
+    This forces _problem_matrix → prepare_matrices() path that the CLI
+    worker uses when no TSPLIB DB cache entry exists.
+    """
+    return ProblemInstance(
+        name="coord_only_4",
+        dimension=4,
+        coordinates=[(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)],
+        optimal=4.0,
+        category="tiny",
+        problem_type="tsp",
+    )
+
+
+@pytest.mark.parametrize(
+    "algorithm",
+    ["Core-GWO-TSP", "Core-HHO-TSP", "Numba-GWO", "Numba-HHO"],
+)
+def test_bildiri2026_registry_executors_run_coordinate_only_problem(algorithm):
+    """Regression: GWO/HHO via registry must work when dist_matrix is not pre-set.
+
+    The CLI worker (_evaluate_param_combo) builds a _Problem wrapper from a
+    problem_dict that typically has no dist_matrix.  The registry executor
+    calls _problem_matrix → prepare_matrices() which was missing from _Problem.
+    This test exercises the same path through the real ProblemInstance.
+    """
+    algorithms = set(AlgorithmRegistry.list_algorithms())
+    if algorithm not in algorithms:
+        pytest.skip(f"{algorithm} not registered (missing bildiri2026 deps?)")
+
+    executor = AlgorithmRegistry.get_executor(algorithm)
+    result = executor(
+        _coord_only_problem(),
+        {"max_iterations": 3},
+        seed=42,
+        run_idx=0,
+    )
+
+    assert result.tour_cost > 0
+    assert result.tour is not None
+    assert len(result.tour) == 4
+    assert result.problem_type == "tsp"
+
+
+@pytest.mark.parametrize(
+    "algorithm",
+    ["Core-GWO-TSP", "Core-HHO-TSP", "Numba-GWO", "Numba-HHO"],
+)
+def test_bildiri2026_registry_executors_run_problem_dict_wrapper(algorithm):
+    """Regression: exercise the exact _Problem wrapper path from cli_engine.
+
+    Simulates what _evaluate_param_combo does: build a _Problem from a dict
+    with no dist_matrix, call prepare_matrices(), then pass to the registry.
+    """
+    algorithms = set(AlgorithmRegistry.list_algorithms())
+    if algorithm not in algorithms:
+        pytest.skip(f"{algorithm} not registered (missing bildiri2026 deps?)")
+
+    from academic_benchmark.cli_engine import _evaluate_param_combo
+    import math
+
+    problem_dict = {
+        "name": "cli_wrap_4",
+        "dimension": 4,
+        "optimal": 4.0,
+        "coordinates": [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)],
+        "category": "tiny",
+        "source": "test",
+        "is_time_matrix": False,
+        "time_matrix": None,
+        "problem_type": "tsp",
+        "dist_matrix": None,
+    }
+
+    task = (problem_dict, algorithm, algorithm, {"max_iterations": 3}, 1, 1)
+    result = _evaluate_param_combo(task)
+
+    assert result["avg_length"] > 0
+    assert not math.isnan(result["avg_gap"])

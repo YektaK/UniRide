@@ -610,6 +610,29 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
             self.direction = data.get("direction", "pickup")
             self.time_windows = data.get("time_windows")
             self.depot_index = data.get("depot_index", 0)
+            self.knn_mask = None
+
+        def prepare_matrices(self, k: int = 20):
+            """Build dist_matrix from coordinates (mirrors ProblemInstance.prepare_matrices)."""
+            if self.dist_matrix is not None or self.is_time_matrix:
+                return
+            coords = self.coordinates
+            if not coords:
+                return
+            n = len(coords)
+            import math
+            matrix = []
+            for i in range(n):
+                row = []
+                x1, y1 = coords[i]
+                for j in range(n):
+                    if i == j:
+                        row.append(0.0)
+                    else:
+                        x2, y2 = coords[j]
+                        row.append(math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2))
+                matrix.append(row)
+            self.dist_matrix = matrix
 
     problem = _Problem(problem_dict)
 
@@ -670,6 +693,15 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
                 run_results.append(result)
                 continue
         # Step 5b: legacy dispatch for bildiri2026 and direct engine calls
+        if str(strategy_name) in ("GWO", "HHO") and str(strategy_payload) in ("GWO", "HHO"):
+            import warnings
+            warnings.warn(
+                f"Algorithm '{strategy_name}' uses the legacy Numba path. "
+                f"Use 'Numba-{strategy_name}' or 'Core-{strategy_name}-TSP' for the "
+                f"bildiri2026-accelerated solver.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         if str(strategy_payload) in ("BILDIRI_PSO", "BILDIRI_GA"):
             if not BILDIRI_STRATEGIES:
                 raise ImportError(

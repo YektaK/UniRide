@@ -309,6 +309,7 @@ def load_problems(size_limit: int = 0) -> List[DOEProblem]:
                         name=r["name"], dimension=dim, coordinates=r["coordinates"],
                         optimal=r["optimal"], category=cat, source=r.get("source", "tsplib"),
                         problem_type=str(r.get("problem_type", "tsp")).lower(),
+                        edge_weight_type=r.get("edge_weight_type", "EUC_2D"),
                     ))
             # Append time_matrix JSON problems (existing logic)
             data_dir = os.path.join(_ENGINE_DIR, "data")
@@ -366,7 +367,8 @@ def load_problems(size_limit: int = 0) -> List[DOEProblem]:
                         _add(DOEProblem(
                             name=pdata["name"], dimension=dim,
                             coordinates=pdata["coordinates"], optimal=TSPLIB_OPTIMALS.get(pdata["name"]),
-                            category=cat, source="tsplib"
+                            category=cat, source="tsplib",
+                            edge_weight_type=pdata.get("edge_weight_type", "EUC_2D"),
                         ))
         except Exception as e:
             print(f"[UYARI] tar.gz okunamadi: {e}")
@@ -383,7 +385,8 @@ def load_problems(size_limit: int = 0) -> List[DOEProblem]:
                         _add(DOEProblem(
                             name=pdata["name"], dimension=dim,
                             coordinates=pdata["coordinates"], optimal=TSPLIB_OPTIMALS.get(pdata["name"]),
-                            category=cat, source="tsplib"
+                            category=cat, source="tsplib",
+                            edge_weight_type=pdata.get("edge_weight_type", "EUC_2D"),
                         ))
 
     # 3. Özel Time Matrix JSON'ları
@@ -555,6 +558,7 @@ def _make_problem_dict(problem: DOEProblem) -> Dict[str, Any]:
         "direction": getattr(problem, "direction", "pickup"),
         "time_windows": getattr(problem, "time_windows", None),
         "depot_index": getattr(problem, "depot_index", 0),
+        "edge_weight_type": getattr(problem, "edge_weight_type", "EUC_2D"),
     }
     if problem.is_time_matrix and problem.time_matrix is not None:
         d["time_matrix"] = problem.time_matrix
@@ -610,27 +614,29 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
             self.direction = data.get("direction", "pickup")
             self.time_windows = data.get("time_windows")
             self.depot_index = data.get("depot_index", 0)
+            self.edge_weight_type = data.get("edge_weight_type", "EUC_2D")
             self.knn_mask = None
 
         def prepare_matrices(self, k: int = 20):
-            """Build dist_matrix from coordinates (mirrors ProblemInstance.prepare_matrices)."""
+            """Build dist_matrix from coordinates using the correct TSPLIB distance function."""
             if self.dist_matrix is not None or self.is_time_matrix:
                 return
             coords = self.coordinates
             if not coords:
                 return
             n = len(coords)
-            import math
+            from uniride_core.algorithms.distance import tsplib_distance_by_type
+            ewt = getattr(self, "edge_weight_type", "EUC_2D")
             matrix = []
             for i in range(n):
                 row = []
-                x1, y1 = coords[i]
+                p1 = coords[i]
                 for j in range(n):
                     if i == j:
                         row.append(0.0)
                     else:
-                        x2, y2 = coords[j]
-                        row.append(math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2))
+                        p2 = coords[j]
+                        row.append(float(tsplib_distance_by_type(ewt, p1, p2)))
                 matrix.append(row)
             self.dist_matrix = matrix
 
@@ -648,6 +654,7 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
                 db_matrix = _dm_from_cache(problem_name, TSPLIB_DB)
                 if db_matrix is not None:
                     dist_matrix_np = db_matrix
+                    problem.dist_matrix = db_matrix.tolist() if hasattr(db_matrix, "tolist") else db_matrix
                 else:
                     _ewt = _query_edge_weight_type(problem_name, TSPLIB_DB)
                     if _ewt is not None and _ewt != "EUC_2D":
@@ -660,6 +667,10 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
                                 )
                                 if _tm_dist_ok:
                                     dist_matrix_np = build_distance_matrix(coords, _ewt)
+                                    problem.dist_matrix = (
+                                        dist_matrix_np.tolist() if hasattr(dist_matrix_np, "tolist")
+                                        else dist_matrix_np
+                                    )
                             except ImportError:
                                 pass
             except Exception:

@@ -65,8 +65,8 @@ def euclidean_distance_2d(p1: Tuple[float, float], p2: Tuple[float, float]) -> f
 # ── TSPLIB distance functions ─────────────────────────────────────────────────
 
 def tsplib_euc_2d_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> int:
-    """TSPLIB EUC_2D: NINT(Euclidean distance) — rounds to nearest integer."""
-    return int(round(euclidean_distance_2d(p1, p2)))
+    """TSPLIB EUC_2D: NINT(Euclidean distance) — round half UP, not banker's rounding."""
+    return int(euclidean_distance_2d(p1, p2) + 0.5)
 
 
 def tsplib_ceil_2d_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> int:
@@ -86,19 +86,26 @@ def tsplib_att_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> int
 
 
 def tsplib_geo_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> int:
-    """TSPLIB GEO: great-circle distance on a sphere (lat/lng in degrees)."""
-    from math import pi, cos, sin, acos, floor
+    """TSPLIB GEO: great-circle distance in km on a sphere (R=6378.388 km).
 
-    def to_rad(deg: float) -> float:
-        return deg * pi / 180.0
+    TSPLIB GEO coordinates are in DD.MM format (degrees.minutes), NOT decimal
+    degrees. E.g. 16.47 means 16 degrees 47 minutes = 16.7833 decimal degrees.
+    """
+    from math import pi, cos, acos
 
-    lat1, lon1 = to_rad(p1[0]), to_rad(p1[1])
-    lat2, lon2 = to_rad(p2[0]), to_rad(p2[1])
+    def ddmm_to_radians(coord: float) -> float:
+        deg = int(coord)
+        minutes = (coord - deg) * 100.0
+        decimal_deg = deg + minutes / 60.0
+        return decimal_deg * pi / 180.0
+
+    lat1, lon1 = ddmm_to_radians(p1[0]), ddmm_to_radians(p1[1])
+    lat2, lon2 = ddmm_to_radians(p2[0]), ddmm_to_radians(p2[1])
     q1 = cos(lon1 - lon2)
     q2 = cos(lat1 - lat2)
     q3 = cos(lat1 + lat2)
-    d = acos(0.5 * ((1.0 + q1) * q2 - (1.0 - q1) * q3)) + 1e-9
-    return int(floor(d))
+    d = acos(max(-1.0, min(1.0, 0.5 * ((1.0 + q1) * q2 - (1.0 - q1) * q3))))
+    return int(d * 6378.388 + 0.5)
 
 
 def tsplib_distance_by_type(
@@ -140,7 +147,7 @@ def create_np_distance_matrix(coordinates: List[Tuple[float, float]]) -> "np.nda
         xi, yi = coordinates[i]
         for j in range(i + 1, n):
             xj, yj = coordinates[j]
-            d = float(int(round(math.hypot(xi - xj, yi - yj))))
+            d = float(int(math.hypot(xi - xj, yi - yj) + 0.5))
             dm[i, j] = d
             dm[j, i] = d
     return dm

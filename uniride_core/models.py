@@ -35,22 +35,31 @@ class ProblemInstance:
         n = len(self.coordinates) if self.coordinates else 0
         # Build distance matrix if not present
         if self.dist_matrix is None and not self.is_time_matrix and self.coordinates:
+            from uniride_core.algorithms.distance import tsplib_distance_by_type
+            ewt = self.edge_weight_type or "EUC_2D"
             if n > 100:
                 import numpy as np
-                coords = np.array(self.coordinates, dtype=np.float64)
-                diff = coords[:, np.newaxis, :] - coords[np.newaxis, :, :]
-                dist = np.sqrt((diff ** 2).sum(axis=2))
-                self.dist_matrix = dist.tolist()
+                matrix = []
+                for i in range(n):
+                    row = []
+                    p1 = self.coordinates[i]
+                    for j in range(n):
+                        if i == j:
+                            row.append(0.0)
+                        else:
+                            p2 = self.coordinates[j]
+                            row.append(float(tsplib_distance_by_type(ewt, p1, p2)))
+                    matrix.append(row)
+                self.dist_matrix = matrix
             else:
                 matrix = []
-                import math
                 for i, (x1, y1) in enumerate(self.coordinates):
                     row = []
                     for j, (x2, y2) in enumerate(self.coordinates):
                         if i == j:
                             row.append(0.0)
                         else:
-                            row.append(math.sqrt((x1 - x2)**2 + (y1 - y2)**2))
+                            row.append(float(tsplib_distance_by_type(ewt, (x1, y1), (x2, y2))))
                     matrix.append(row)
                 self.dist_matrix = matrix
 

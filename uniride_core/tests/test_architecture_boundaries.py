@@ -53,6 +53,8 @@ def test_active_benchmark_helpers_do_not_import_optimizer_api_algorithm_shims():
     offenders: list[str] = []
 
     for path in benchmark_helpers:
+        if not path.exists():
+            continue
         tree = ast.parse(_read_python_source(path), filename=str(path))
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):

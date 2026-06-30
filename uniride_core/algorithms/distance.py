@@ -90,13 +90,18 @@ def tsplib_geo_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> int
 
     TSPLIB GEO coordinates are in DD.MM format (degrees.minutes), NOT decimal
     degrees. E.g. 16.47 means 16 degrees 47 minutes = 16.7833 decimal degrees.
+
+    Uses int(R * acos(...) + 1) rounding to match the canonical tsplib95
+    reference implementation and TSPLIB benchmark optimal values.
     """
-    from math import pi, cos, acos
+    if p1 == p2:
+        return 0
+    from math import pi, cos, acos, trunc
 
     def ddmm_to_radians(coord: float) -> float:
-        deg = int(coord)
-        minutes = (coord - deg) * 100.0
-        decimal_deg = deg + minutes / 60.0
+        deg = trunc(coord)
+        minutes = coord - deg
+        decimal_deg = deg + minutes * 5.0 / 3.0
         return decimal_deg * pi / 180.0
 
     lat1, lon1 = ddmm_to_radians(p1[0]), ddmm_to_radians(p1[1])
@@ -105,7 +110,7 @@ def tsplib_geo_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> int
     q2 = cos(lat1 - lat2)
     q3 = cos(lat1 + lat2)
     d = acos(max(-1.0, min(1.0, 0.5 * ((1.0 + q1) * q2 - (1.0 - q1) * q3))))
-    return int(d * 6378.388 + 0.5)
+    return int(d * 6378.388 + 1)
 
 
 def tsplib_distance_by_type(

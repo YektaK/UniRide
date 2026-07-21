@@ -23,6 +23,11 @@ from typing import List, Tuple, Optional
 from dataclasses import dataclass
 from .base_solver import BaseTSPSolver, TSPResult
 from . import numba_accel as _nb
+from academic_benchmark.fairness import (
+    ObjectiveEvaluationBudget,
+    improve_two_opt_budgeted,
+    two_opt_evaluation_upper_bound,
+)
 
 
 @dataclass
@@ -58,6 +63,8 @@ class HHOOptimizer(BaseTSPSolver):
         polish_iters: int = 10,
         final_polish_iters: int = 300,
         random_seed: Optional[int] = None,
+        polish_enabled: bool = True,
+        evaluation_budget: Optional[int] = None,
     ):
         super().__init__("HHO", random_seed)
         self.hawks = hawks
@@ -71,6 +78,9 @@ class HHOOptimizer(BaseTSPSolver):
         self.polish_iters = polish_iters
         self.final_polish_iters = final_polish_iters
         self._rng = random.Random(self.random_seed)
+        self.polish_enabled = polish_enabled
+        self._fair_mode = evaluation_budget is not None
+        self._objective_budget = ObjectiveEvaluationBudget(evaluation_budget)
 
     # ----- Discrete Lévy flight (Mantegna) -------------------------
     def _levy_flight(self, route: List[int], scale: float = 0.3) -> List[int]:
@@ -137,19 +147,23 @@ class HHOOptimizer(BaseTSPSolver):
         kept = [s for s in swaps if self._rng.random() < intensity]
         return self._apply_swaps(hawk, kept)
 
+    def _evaluate(self, route: List[int]) -> float:
+        self._objective_budget.consume()
+        return self._tour_length_fast(route)
+
     def _soft_besiege_with_dives(
         self, hawk: List[int], prey: List[int], escape_energy: float
     ) -> List[int]:
         """Progressive rapid dives: try ``dive_count`` Lévy-perturbed candidates."""
         best_pos = hawk[:]
-        best_len = self._tour_length_fast(hawk)
+        best_len = self._evaluate(hawk)
         for _ in range(self.dive_count):
             intensity = abs(escape_energy) * self._rng.random()
             swaps = self._diff_swaps(hawk, prey)
             kept = [s for s in swaps if self._rng.random() < intensity]
             candidate = self._apply_swaps(hawk, kept)
             candidate = self._levy_flight(candidate, scale=self.levy_scale)
-            clen = self._tour_length_fast(candidate)
+            clen = self._evaluate(candidate)
             if clen < best_len:
                 best_pos = candidate
                 best_len = clen
@@ -165,17 +179,26 @@ class HHOOptimizer(BaseTSPSolver):
         return self._levy_flight(candidate, scale=self.levy_scale * 0.7)
 
     # ----- Two-opt polish helper (Numba-accelerated) ---------------
-    def _polish(self, route: List[int], iters: int) -> Tuple[List[int], float]:
+    def _polish(
+        self, route: List[int], iters: int, initial_cost: Optional[float] = None
+    ) -> Tuple[List[int], float, bool]:
+        if self._fair_mode:
+            result = improve_two_opt_budgeted(
+                route, self._dist_matrix, self._objective_budget,
+                max_iterations=iters, first_improvement=False,
+                initial_cost=initial_cost,
+            )
+            return result.route, result.cost, result.budget_exhausted
         if self._dist_matrix_np is not None:
             route_np = _nb._prepare_route(route)
             improved_np, length = _nb._two_opt_improve_atsp_numba(
                 route_np, self._dist_matrix_np, iters, False
             )
-            return _nb._extract_route(improved_np, route), float(length)
+            return _nb._extract_route(improved_np, route), float(length), False
         if self._dist_matrix is not None:
             improved, length = _nb.nb_two_opt(route, self._dist_matrix, iters, False)
-            return improved, float(length)
-        return route[:], self.tour_length(route)
+            return improved, float(length), False
+        return route[:], self.tour_length(route), False
 
     @staticmethod
     def _escape_energy(e0: float, iteration: int, max_iterations: int) -> float:
@@ -183,15 +206,36 @@ class HHOOptimizer(BaseTSPSolver):
 
     # ----- Main solve ---------------------------------------------
     def solve(self, coordinates: List[Tuple[float, float]]) -> TSPResult:
+        self._rng = random.Random(self.random_seed)
+        self._objective_budget.used = 0
         self._set_problem(coordinates)
         t0 = time.perf_counter()
 
         base = self._initial_tour_nodes()
+        if self._fair_mode:
+            init_required = self.hawks
+            if self.polish_enabled:
+                init_required = self.hawks * two_opt_evaluation_upper_bound(
+                    len(base), self.polish_iters
+                )
+            if not self._objective_budget.can_spend(init_required):
+                raise ValueError(
+                    "fair HHO budget cannot complete atomic population initialization: "
+                    f"required_upper_bound={init_required}, "
+                    f"budget={self._objective_budget.limit}"
+                )
+        budget_terminated = False
         population: List[_Hawk] = []
         for _ in range(self.hawks):
             perm = base[:]
             self._rng.shuffle(perm)
-            polished, plen = self._polish(perm, self.polish_iters)
+            if self.polish_enabled:
+                polished, plen, polish_exhausted = self._polish(
+                    perm, self.polish_iters
+                )
+                budget_terminated = budget_terminated or polish_exhausted
+            else:
+                polished, plen = perm, self._evaluate(perm)
             population.append(_Hawk(polished, 1.0 / (plen + 1e-10), plen))
 
         prey = min(population, key=lambda h: h.tour_length)
@@ -200,10 +244,14 @@ class HHOOptimizer(BaseTSPSolver):
         best_chrom = prey.position[:]
         no_improve = 0
         history: List[float] = []
-        last_iter = 0
+        iterations_completed = 0
 
         for it in range(self.max_iterations):
-            last_iter = it
+            # Safe maximum for a complete population phase.
+            phase_upper_bound = self.hawks * (self.dive_count + 2)
+            if not self._objective_budget.can_spend(phase_upper_bound):
+                budget_terminated = True
+                break
             history.append(float(best_len))
             e0 = 2 * self._rng.random() - 1
             E = self._escape_energy(e0, it, self.max_iterations) * self.initial_energy
@@ -238,7 +286,7 @@ class HHOOptimizer(BaseTSPSolver):
                                 hawk.position, prey.position, E
                             )
 
-                clen = self._tour_length_fast(new_pos)
+                clen = self._evaluate(new_pos)
                 if clen < hawk.tour_length:
                     hawk.position = new_pos
                     hawk.tour_length = clen
@@ -255,29 +303,30 @@ class HHOOptimizer(BaseTSPSolver):
                 no_improve += 1
 
             # Periodic memetic polish on the prey.
-            if it > 0 and it % self.polish_interval == 0:
-                polished, plen = self._polish(prey.position, self.polish_iters)
+            if self.polish_enabled and self.polish_interval > 0 and it > 0 and it % self.polish_interval == 0:
+                polished, plen, polish_exhausted = self._polish(
+                    prey.position, self.polish_iters, prey.tour_length
+                )
+                budget_terminated = budget_terminated or polish_exhausted
                 if plen < prey.tour_length:
                     prey = _Hawk(polished[:], 1.0 / (plen + 1e-10), plen)
                     if plen < best_len:
                         best_len = plen
                         best_chrom = polished[:]
                         no_improve = 0
+                if polish_exhausted:
+                    break
 
+            iterations_completed += 1
             if no_improve >= self.max_no_improvement:
                 break
 
         # Final aggressive 2-opt on best.
-        if self._dist_matrix_np is not None:
-            route_np = _nb._prepare_route(best_chrom)
-            improved_np, best_len = _nb._two_opt_improve_atsp_numba(
-                route_np, self._dist_matrix_np, self.final_polish_iters, False
+        if self.polish_enabled:
+            best_chrom, best_len, polish_exhausted = self._polish(
+                best_chrom, self.final_polish_iters, best_len
             )
-            best_chrom = _nb._extract_route(improved_np, best_chrom)
-        elif self._dist_matrix is not None:
-            best_chrom, best_len = _nb.nb_two_opt(
-                best_chrom, self._dist_matrix, self.final_polish_iters, False
-            )
+            budget_terminated = budget_terminated or polish_exhausted
 
         elapsed_ms = (time.perf_counter() - t0) * 1000
         return TSPResult(
@@ -285,16 +334,29 @@ class HHOOptimizer(BaseTSPSolver):
             tour=best_chrom,
             tour_length=best_len,
             elapsed_ms=elapsed_ms,
-            iterations=last_iter + 1,
+            iterations=iterations_completed,
             params={
                 "hawks": self.hawks,
-                "iterations": last_iter + 1,
+                "iterations": iterations_completed,
                 "initial_energy": self.initial_energy,
                 "jump_probability": self.jump_probability,
                 "dive_count": self.dive_count,
-                "memetic": True,
+                "memetic": self.polish_enabled,
                 "levy_flight": True,
                 "polish_interval": self.polish_interval,
+            },
+            extra_stats={
+                "objective_evaluations": self._objective_budget.used,
+                "evaluation_budget": self._objective_budget.limit,
+                "budget_terminated": budget_terminated,
+                "variant": "memetic_2opt" if self.polish_enabled else "pure",
+                "execution_backend": (
+                    "mixed-numba-objective-python-polish"
+                    if getattr(_nb, "NUMBA_AVAILABLE", False) and self.polish_enabled
+                    else "numba-objective"
+                    if getattr(_nb, "NUMBA_AVAILABLE", False)
+                    else "python"
+                ),
             },
             history=history,
             seed=self.random_seed,

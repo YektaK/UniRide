@@ -102,7 +102,10 @@ antigravity-god-mode
 
 # Archive / legacy snapshots — not active source, excluded from codegraph index
 .proposed_changes/
-archive/
+archive/*
+!archive/README.md
+!archive/docs/
+!archive/docs/**
 scratch/
 
 # Tool / editor state — regenerable, not source code

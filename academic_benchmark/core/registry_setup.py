@@ -373,6 +373,25 @@ for algo_name, solver in CORE_TSP_SOLVERS.items():
     AlgorithmRegistry.register(algo_name)(_make_core_tsp_executor(algo_name, solver))
 
 
+# ── Pure (non-memetic) GWO/HHO for academic comparison (YAEM 2026) ────────────
+
+def _make_pure_tsp_executor(algorithm_name, solver):
+    """Executor that defaults local_search_type to "none" for pure algorithms."""
+    _core_exe = _make_core_tsp_executor(algorithm_name, solver)
+    def executor(problem, params, seed, run_idx):
+        pure_params = dict(params)
+        pure_params.setdefault("local_search_type", "none")
+        return _core_exe(problem, pure_params, seed, run_idx)
+    return executor
+
+_YAEM_PURE_ALGOS = {
+    "Core-GWO-TSP-Pure": CORE_TSP_SOLVERS["Core-GWO-TSP"],
+    "Core-HHO-TSP-Pure": CORE_TSP_SOLVERS["Core-HHO-TSP"],
+}
+for algo_name, solver in _YAEM_PURE_ALGOS.items():
+    AlgorithmRegistry.register(algo_name)(_make_pure_tsp_executor(algo_name, solver))
+
+
 def _make_numba_metah_executor(algorithm_name, solver_cls, default_params, routing_engine_name=None):
     """Executor for Numba-accelerated Bildiri2026 metaheuristics (GWO/HHO).
 

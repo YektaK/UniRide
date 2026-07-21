@@ -1,0 +1,196 @@
+"""
+Particle Swarm Optimization for TSP
+"""
+import time
+import random
+from dataclasses import dataclass
+from typing import List, Tuple, Optional
+from .base_solver import BaseTSPSolver, TSPResult
+from . import numba_accel as _nb
+
+
+@dataclass
+class _Particle:
+    position: List[int]
+    velocity: List[Tuple[int, int]]
+    personal_best: List[int]
+    personal_best_len: float
+    current_len: float
+
+
+class PSOOptimizer(BaseTSPSolver):
+    """Memetic Discrete PSO for TSP."""
+
+    def __init__(
+        self,
+        swarm_size: int = 50,
+        max_iterations: int = 500,
+        inertia_weight: float = 0.729,
+        cognitive_coeff: float = 1.49445,
+        social_coeff: float = 1.49445,
+        max_velocity_size: int = 5,
+        max_no_improvement: int = 100,
+        reinit_interval: int = 50,
+        random_seed: Optional[int] = None,
+    ):
+        super().__init__("PSO", random_seed)
+        self.swarm_size = swarm_size
+        self.max_iterations = max_iterations
+        self.inertia_weight = inertia_weight
+        self.cognitive_coeff = cognitive_coeff
+        self.social_coeff = social_coeff
+        self.max_velocity_size = max_velocity_size
+        self.max_no_improvement = max_no_improvement
+        self.reinit_interval = reinit_interval
+        self._rng = random.Random(self.random_seed)
+
+    def _diff_swaps(self, current: List[int], target: List[int]) -> List[Tuple[int, int]]:
+        swaps = []
+        temp = current[:]
+        for i in range(len(target)):
+            if temp[i] != target[i]:
+                try:
+                    j = temp.index(target[i], i)
+                except ValueError:
+                    continue
+                temp[i], temp[j] = temp[j], temp[i]
+                swaps.append((i, j))
+        return swaps
+
+    def _apply_swaps(self, position: List[int], swaps: List[Tuple[int, int]]) -> List[int]:
+        new_pos = position[:]
+        for i, j in swaps:
+            new_pos[i], new_pos[j] = new_pos[j], new_pos[i]
+        return new_pos
+
+    def _combine_velocities(
+        self, inertia_v: List[Tuple[int, int]], cog_v: List[Tuple[int, int]], soc_v: List[Tuple[int, int]]
+    ) -> List[Tuple[int, int]]:
+        new_v = []
+        for swap in inertia_v:
+            if self._rng.random() < self.inertia_weight:
+                new_v.append(swap)
+        for swap in cog_v:
+            if self._rng.random() < self.cognitive_coeff / 3.0:
+                new_v.append(swap)
+        for swap in soc_v:
+            if self._rng.random() < self.social_coeff / 3.0:
+                new_v.append(swap)
+        if len(new_v) > self.max_velocity_size:
+            new_v = self._rng.sample(new_v, self.max_velocity_size)
+        return new_v
+
+    def _reinit_swarm(self, swarm: List[_Particle], global_best: List[int]) -> List[_Particle]:
+        new_swarm = []
+        for p in swarm:
+            if self._rng.random() < 0.9:
+                pos = p.personal_best[:]
+                for _ in range(self._rng.randint(1, 3)):
+                    i, j = self._rng.sample(range(len(pos)), 2)
+                    pos[i], pos[j] = pos[j], pos[i]
+            else:
+                pos = self._initial_tour_nodes()
+                self._rng.shuffle(pos)
+            if self._dist_matrix is not None:
+                pos, plen = _nb.nb_two_opt(pos, self._dist_matrix, 30, False)
+            else:
+                plen = self.tour_length(pos)
+            vel = [(self._rng.randint(0, len(pos)-1), self._rng.randint(0, len(pos)-1)) for _ in range(self.max_velocity_size)]
+            new_swarm.append(_Particle(pos, vel, p.personal_best, p.personal_best_len, plen))
+        return new_swarm
+
+    def solve(self, coordinates: List[Tuple[float, float]]) -> TSPResult:
+        self._set_problem(coordinates)
+        t0 = time.perf_counter()
+
+        swarm = []
+        global_best = self._initial_tour_nodes()
+        global_best_len = float("inf")
+        history = []
+
+        for _ in range(self.swarm_size):
+            pos = self._initial_tour_nodes()
+            self._rng.shuffle(pos)
+            if self._dist_matrix_np is not None:
+                route_np = _nb._prepare_route(pos)
+                improved_np, plen = _nb._two_opt_improve_atsp_numba(route_np, self._dist_matrix_np, 30, False)
+                pos = _nb._extract_route(improved_np, pos)
+            elif self._dist_matrix is not None:
+                pos, plen = _nb.nb_two_opt(pos, self._dist_matrix, 30, False)
+            else:
+                plen = self.tour_length(pos)
+            vel = [(self._rng.randint(0, len(pos)-1), self._rng.randint(0, len(pos)-1)) for _ in range(self.max_velocity_size)]
+            p = _Particle(pos, vel, pos[:], plen, plen)
+            swarm.append(p)
+            if plen < global_best_len:
+                global_best_len = plen
+                global_best = pos[:]
+
+        no_improve_count = 0
+
+        for iteration in range(self.max_iterations):
+            history.append(float(global_best_len))
+            improved = False
+
+            for p in swarm:
+                cog_v = self._diff_swaps(p.position, p.personal_best)
+                soc_v = self._diff_swaps(p.position, global_best)
+                p.velocity = self._combine_velocities(p.velocity, cog_v, soc_v)
+
+                p.position = self._apply_swaps(p.position, p.velocity)
+                p.current_len = self._tour_length_fast(p.position)
+
+                if p.current_len < p.personal_best_len:
+                    p.personal_best = p.position[:]
+                    p.personal_best_len = p.current_len
+
+                if p.current_len < global_best_len:
+                    global_best_len = p.current_len
+                    global_best = p.position[:]
+                    improved = True
+
+            if improved:
+                no_improve_count = 0
+            else:
+                no_improve_count += 1
+
+            if iteration > 0 and iteration % self.reinit_interval == 0:
+                swarm = self._reinit_swarm(swarm, global_best)
+                for p in swarm:
+                    p.current_len = self._tour_length_fast(p.position)
+                    if p.current_len < p.personal_best_len:
+                        p.personal_best = p.position[:]
+                        p.personal_best_len = p.current_len
+                    if p.current_len < global_best_len:
+                        global_best_len = p.current_len
+                        global_best = p.position[:]
+
+            if no_improve_count >= self.max_no_improvement:
+                break
+
+        if self._dist_matrix_np is not None:
+            route_np = _nb._prepare_route(global_best)
+            improved_np, global_best_len = _nb._two_opt_improve_atsp_numba(route_np, self._dist_matrix_np, 300, False)
+            global_best = _nb._extract_route(improved_np, global_best)
+        elif self._dist_matrix is not None:
+            global_best, global_best_len = _nb.nb_two_opt(global_best, self._dist_matrix, 300, False)
+
+        elapsed_ms = (time.perf_counter() - t0) * 1000
+        return TSPResult(
+            algorithm="PSO",
+            tour=global_best,
+            tour_length=global_best_len,
+            elapsed_ms=elapsed_ms,
+            iterations=iteration + 1,
+            params={
+                "swarm_size": self.swarm_size,
+                "iterations": iteration + 1,
+                "inertia_weight": self.inertia_weight,
+                "cognitive_coeff": self.cognitive_coeff,
+                "social_coeff": self.social_coeff,
+                "memetic": True,
+                "reinit_interval": self.reinit_interval,
+            },
+            history=history,
+            seed=self.random_seed,
+        )

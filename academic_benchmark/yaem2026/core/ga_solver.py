@@ -1,0 +1,153 @@
+"""
+Genetic Algorithm for TSP
+"""
+import time
+import random
+from typing import List, Tuple, Optional
+from dataclasses import dataclass
+from .base_solver import BaseTSPSolver, TSPResult
+from . import numba_accel as _nb
+
+
+@dataclass
+class Individual:
+    chromosome: List[int]
+    fitness: float
+    tour_length: float
+
+
+class GAOptimizer(BaseTSPSolver):
+    def __init__(
+        self,
+        population_size: int = 100,
+        generations: int = 500,
+        crossover_rate: float = 0.85,
+        mutation_rate: float = 0.15,
+        elite_count: int = 2,
+        tournament_size: int = 3,
+        max_no_improvement: int = 100,
+        random_seed: Optional[int] = None,
+    ):
+        super().__init__("GA", random_seed)
+        self.population_size = population_size
+        self.generations = generations
+        self.crossover_rate = crossover_rate
+        self.mutation_rate = mutation_rate
+        self.elite_count = elite_count
+        self.tournament_size = tournament_size
+        self.max_no_improvement = max_no_improvement
+        self._rng = random.Random(self.random_seed)
+
+    def _init_population(self) -> List[Individual]:
+        pop = []
+        base = self._initial_tour_nodes()
+        for _ in range(self.population_size):
+            perm = base[:]
+            self._rng.shuffle(perm)
+            if self._dist_matrix_np is not None:
+                route_np = _nb._prepare_route(perm)
+                improved_np, length = _nb._two_opt_improve_atsp_numba(route_np, self._dist_matrix_np, 10, False)
+                perm = _nb._extract_route(improved_np, perm)
+            elif self._dist_matrix is not None:
+                perm, length = _nb.nb_two_opt(perm, self._dist_matrix, 10, False)
+            else:
+                length = self.tour_length(perm)
+            pop.append(Individual(perm, 1.0 / (length + 1e-10), length))
+        return pop
+
+    def _tournament(self, pop: List[Individual]) -> Individual:
+        k = min(self.tournament_size, len(pop))
+        return min(self._rng.sample(pop, k), key=lambda x: x.tour_length)
+
+    def _ox(self, p1: List[int], p2: List[int]) -> List[int]:
+        sz = len(p1)
+        if sz < 2:
+            return p1[:]
+        a, b = sorted(self._rng.sample(range(sz), 2))
+        child = [None] * sz
+        child[a:b] = p1[a:b]
+        segment = set(child[a:b])
+        idx = b % sz
+        for gene in p2:
+            if gene not in segment:
+                while child[idx] is not None:
+                    idx = (idx + 1) % sz
+                child[idx] = gene
+        return child
+
+    def _mutate(self, chrom: List[int]) -> List[int]:
+        c = chrom[:]
+        if self._rng.random() < 0.5:
+            i, j = self._rng.sample(range(len(c)), 2)
+            c[i], c[j] = c[j], c[i]
+        else:
+            i, j = sorted(self._rng.sample(range(len(c)), 2))
+            c[i:j + 1] = reversed(c[i:j + 1])
+        return c
+
+    def solve(self, coordinates: List[Tuple[float, float]]) -> TSPResult:
+        self._set_problem(coordinates)
+        t0 = time.perf_counter()
+
+        pop = self._init_population()
+        pop.sort(key=lambda x: x.tour_length)
+
+        best_len = pop[0].tour_length
+        best_chrom = pop[0].chromosome[:]
+        no_improve = 0
+        history = []
+
+        for gen in range(self.generations):
+            pop.sort(key=lambda x: x.tour_length)
+
+            if pop[0].tour_length < best_len:
+                best_len = pop[0].tour_length
+                best_chrom = pop[0].chromosome[:]
+                no_improve = 0
+            else:
+                no_improve += 1
+            
+            history.append(float(best_len))
+
+            if no_improve >= self.max_no_improvement:
+                break
+
+            new_pop = []
+            new_pop.extend(Individual(e.chromosome[:], e.fitness, e.tour_length) for e in pop[:self.elite_count])
+
+            while len(new_pop) < self.population_size:
+                p1 = self._tournament(pop)
+                p2 = self._tournament(pop)
+                child = self._ox(p1.chromosome, p2.chromosome) if self._rng.random() < self.crossover_rate else p1.chromosome[:]
+                if self._rng.random() < self.mutation_rate:
+                    child = self._mutate(child)
+                clen = self._tour_length_fast(child)
+                new_pop.append(Individual(child, 1.0 / (clen + 1e-10), clen))
+
+            pop = new_pop
+
+        if self._dist_matrix_np is not None:
+            route_np = _nb._prepare_route(best_chrom)
+            improved_np, best_len = _nb._two_opt_improve_atsp_numba(route_np, self._dist_matrix_np, 300, False)
+            best_chrom = _nb._extract_route(improved_np, best_chrom)
+        elif self._dist_matrix is not None:
+            best_chrom, best_len = _nb.nb_two_opt(best_chrom, self._dist_matrix, 300, False)
+
+        elapsed_ms = (time.perf_counter() - t0) * 1000
+        return TSPResult(
+            algorithm="GA",
+            tour=best_chrom,
+            tour_length=best_len,
+            elapsed_ms=elapsed_ms,
+            iterations=gen + 1,
+            params={
+                "population_size": self.population_size,
+                "generations": gen + 1,
+                "crossover_rate": self.crossover_rate,
+                "mutation_rate": self.mutation_rate,
+                "elite_count": self.elite_count,
+                "hybrid_2opt": True,
+            },
+            history=history,
+            seed=self.random_seed,
+        )

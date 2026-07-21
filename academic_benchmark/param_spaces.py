@@ -94,12 +94,44 @@ NUMBA_PARAM_SPACES: Dict[str, Dict[str, Dict[str, Any]]] = {
         "reinit_interval": {"type": "int", "doe": [30, 50, 70]},
     },
     "GWO": {
-        "pack_size":       {"type": "int", "doe": [50, 80, 120]},
-        "iterations":      {"type": "int", "doe": [200, 300, 450]},
+        "pack_size":           {"type": "int",   "doe": [50, 80, 120],          "optuna": (30, 150)},
+        "iterations":          {"type": "int",   "doe": [200, 300, 450],        "optuna": (100, 500)},
+        "initial_a":           {"type": "float", "doe": [1.5, 2.0, 2.5],        "optuna": (1.0, 3.0)},
+        "exploration_rate":    {"type": "float", "doe": [0.2, 0.4, 0.6],        "optuna": (0.1, 0.8)},
+        "max_no_improvement":  {"type": "int",   "doe": [30, 50, 75],           "optuna": (10, 100)},
     },
     "HHO": {
-        "hawks":           {"type": "int", "doe": [50, 80, 120]},
-        "iterations":      {"type": "int", "doe": [200, 300, 450]},
+        "hawks":               {"type": "int",   "doe": [50, 80, 120],          "optuna": (30, 150)},
+        "iterations":          {"type": "int",   "doe": [200, 300, 450],        "optuna": (100, 500)},
+        "initial_energy":      {"type": "float", "doe": [0.5, 1.0, 1.5],        "optuna": (0.3, 2.0)},
+        "jump_probability":    {"type": "float", "doe": [0.3, 0.5, 0.7],        "optuna": (0.1, 0.9)},
+        "max_no_improvement":  {"type": "int",   "doe": [30, 50, 75],           "optuna": (10, 100)},
+        "dive_count":          {"type": "int",   "doe": [2, 3, 5],              "optuna": (1, 8)},
+        "levy_scale":          {"type": "float", "doe": [0.2, 0.3, 0.5],        "optuna": (0.1, 0.8)},
+    },
+    # ── Pure (non-memetic) metaheuristic parameter spaces (YAEM 2026) ─────────────
+    "GWO-Pure": {
+        "population_size":     {"type": "int",   "doe": [24, 36, 48],           "optuna": (20, 60)},
+        "max_iterations":      {"type": "int",   "doe": [200, 320, 450],        "optuna": (150, 500)},
+        "initial_a":           {"type": "float", "doe": [1.0, 2.0, 3.0],        "optuna": (0.5, 3.5)},
+        "exploration_rate":    {"type": "float", "doe": [0.2, 0.4, 0.6],        "optuna": (0.1, 0.8)},
+        "max_no_improvement":  {"type": "int",   "doe": [15, 25, 40],           "optuna": (5, 75)},
+    },
+    "HHO-Pure": {
+        "population_size":     {"type": "int",   "doe": [24, 36, 48],           "optuna": (20, 60)},
+        "max_iterations":      {"type": "int",   "doe": [200, 320, 450],        "optuna": (150, 500)},
+        "initial_energy":      {"type": "float", "doe": [0.5, 1.0, 1.5],        "optuna": (0.3, 2.0)},
+        "jump_probability":    {"type": "float", "doe": [0.3, 0.5, 0.7],        "optuna": (0.1, 0.9)},
+        "max_no_improvement":  {"type": "int",   "doe": [15, 25, 40],           "optuna": (5, 75)},
+        "dive_count":          {"type": "int",   "doe": [2, 3, 5],              "optuna": (1, 8)},
+        "levy_scale":          {"type": "float", "doe": [0.2, 0.3, 0.5],        "optuna": (0.1, 0.8)},
+    },
+    # ── ISARC-compatible local search parameter spaces (YAEM 2026) ────────────────
+    "ISARC-LS": {
+        "max_iterations":      {"type": "int",   "doe": [1000, 3000, 5000],     "optuna": (500, 10000)},
+        "first_improvement":   {"type": "bool",  "doe": [True, False]},
+        "num_starts":          {"type": "int",   "doe": [5, 10, 20],            "optuna": (1, 50)},
+        "window":              {"type": "int",   "doe": [0, 8, 20],             "optuna": (0, 50)},
     },
     "B-PSO": {
         "swarm_size":      {"type": "int", "doe": [30, 50, 80]},
@@ -227,6 +259,8 @@ _NUMBA_ROUTING_BASES = {
     "Core-PSO-TSP": NUMBA_PARAM_SPACES["PSO"],
     "Core-GWO-TSP": NUMBA_PARAM_SPACES["GWO"],
     "Core-HHO-TSP": NUMBA_PARAM_SPACES["HHO"],
+    "Core-GWO-TSP-Pure": NUMBA_PARAM_SPACES["GWO-Pure"],
+    "Core-HHO-TSP-Pure": NUMBA_PARAM_SPACES["HHO-Pure"],
 }
 
 FCM_PARAM_SPACE = {

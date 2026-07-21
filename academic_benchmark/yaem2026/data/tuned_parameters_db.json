@@ -1,0 +1,2414 @@
+[
+    {
+        "algorithm": "2-opt",
+        "problem": "berlin52",
+        "dimension": 52,
+        "runs_per_combination": 5,
+        "best_mean_length": 7766.8,
+        "parameters": {
+            "max_iterations": 500,
+            "first_improvement": true,
+            "num_starts": 10
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                500,
+                1000,
+                2000
+            ],
+            "first_improvement": [
+                true,
+                false
+            ],
+            "num_starts": [
+                1,
+                5,
+                10
+            ]
+        },
+        "id": 1,
+        "timestamp": "2026-07-01 01:28:06"
+    },
+    {
+        "algorithm": "3-opt",
+        "problem": "berlin52",
+        "dimension": 52,
+        "runs_per_combination": 5,
+        "best_mean_length": 7792.0,
+        "parameters": {
+            "max_iterations": 800,
+            "first_improvement": true,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                200,
+                400,
+                800
+            ],
+            "first_improvement": [
+                true,
+                false
+            ],
+            "num_starts": [
+                1,
+                3,
+                5
+            ]
+        },
+        "id": 2,
+        "timestamp": "2026-07-01 01:29:45"
+    },
+    {
+        "algorithm": "Or-opt",
+        "problem": "berlin52",
+        "dimension": 52,
+        "runs_per_combination": 5,
+        "best_mean_length": 7895.0,
+        "parameters": {
+            "max_iterations": 600,
+            "max_segment_size": 3,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                300,
+                600,
+                1000
+            ],
+            "max_segment_size": [
+                1,
+                2,
+                3
+            ],
+            "num_starts": [
+                1,
+                3,
+                5
+            ]
+        },
+        "id": 3,
+        "timestamp": "2026-07-01 01:30:58"
+    },
+    {
+        "algorithm": "GWO-2opt",
+        "problem": "berlin52",
+        "dimension": 52,
+        "runs_per_combination": 5,
+        "best_mean_length": 7670.2,
+        "parameters": {
+            "pack_size": 70,
+            "max_iterations": 250,
+            "initial_a": 3.0,
+            "exploration_rate": 0.4,
+            "max_no_improvement": 75,
+            "polish_interval": 15,
+            "polish_iters": 5,
+            "final_polish_iters": 300
+        },
+        "search_space_bounds": {
+            "pack_size": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_a": [
+                1.0,
+                2.0,
+                3.0
+            ],
+            "exploration_rate": [
+                0.2,
+                0.4,
+                0.6
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "polish_iters": [
+                5,
+                10,
+                15
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 4,
+        "timestamp": "2026-07-01 01:32:31"
+    },
+    {
+        "algorithm": "GWO-Pure",
+        "problem": "berlin52",
+        "dimension": 52,
+        "runs_per_combination": 5,
+        "best_mean_length": 14209.4,
+        "parameters": {
+            "pack_size": 70,
+            "max_iterations": 150,
+            "initial_a": 2.0,
+            "exploration_rate": 0.2,
+            "max_no_improvement": 75
+        },
+        "search_space_bounds": {
+            "pack_size": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_a": [
+                1.0,
+                2.0,
+                3.0
+            ],
+            "exploration_rate": [
+                0.2,
+                0.4,
+                0.6
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ]
+        },
+        "id": 5,
+        "timestamp": "2026-07-01 01:34:31"
+    },
+    {
+        "algorithm": "HHO-2opt",
+        "problem": "berlin52",
+        "dimension": 52,
+        "runs_per_combination": 5,
+        "best_mean_length": 7670.2,
+        "parameters": {
+            "hawks": 70,
+            "max_iterations": 150,
+            "initial_energy": 0.5,
+            "jump_probability": 0.5,
+            "max_no_improvement": 100,
+            "dive_count": 5,
+            "levy_scale": 0.3,
+            "polish_interval": 15,
+            "polish_iters": 15,
+            "final_polish_iters": 300
+        },
+        "search_space_bounds": {
+            "hawks": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_energy": [
+                0.5,
+                1.0,
+                1.5
+            ],
+            "jump_probability": [
+                0.3,
+                0.5,
+                0.7
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "dive_count": [
+                2,
+                3,
+                5
+            ],
+            "levy_scale": [
+                0.2,
+                0.3,
+                0.5
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "polish_iters": [
+                5,
+                10,
+                15
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 6,
+        "timestamp": "2026-07-01 01:36:09"
+    },
+    {
+        "algorithm": "HHO-Pure",
+        "problem": "berlin52",
+        "dimension": 52,
+        "runs_per_combination": 5,
+        "best_mean_length": 18551.2,
+        "parameters": {
+            "hawks": 70,
+            "max_iterations": 250,
+            "initial_energy": 1.5,
+            "jump_probability": 0.5,
+            "max_no_improvement": 100,
+            "dive_count": 2,
+            "levy_scale": 0.2
+        },
+        "search_space_bounds": {
+            "hawks": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_energy": [
+                0.5,
+                1.0,
+                1.5
+            ],
+            "jump_probability": [
+                0.3,
+                0.5,
+                0.7
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "dive_count": [
+                2,
+                3,
+                5
+            ],
+            "levy_scale": [
+                0.2,
+                0.3,
+                0.5
+            ]
+        },
+        "id": 7,
+        "timestamp": "2026-07-01 01:38:11"
+    },
+    {
+        "algorithm": "GWO-LKH",
+        "problem": "berlin52",
+        "dimension": 52,
+        "runs_per_combination": 5,
+        "best_mean_length": 7748.4,
+        "parameters": {
+            "pack_size": 50,
+            "max_iterations": 150,
+            "initial_a": 2.0,
+            "exploration_rate": 0.4,
+            "max_no_improvement": 100,
+            "polish_interval": 15,
+            "polish_iters": 10,
+            "final_polish_iters": 200
+        },
+        "search_space_bounds": {
+            "pack_size": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_a": [
+                1.0,
+                2.0,
+                3.0
+            ],
+            "exploration_rate": [
+                0.2,
+                0.4,
+                0.6
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "polish_iters": [
+                5,
+                10,
+                15
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 8,
+        "timestamp": "2026-07-01 01:40:47"
+    },
+    {
+        "algorithm": "GWO-ALNS",
+        "problem": "berlin52",
+        "dimension": 52,
+        "runs_per_combination": 5,
+        "best_mean_length": 7542.0,
+        "parameters": {
+            "pack_size": 50,
+            "max_iterations": 150,
+            "initial_a": 2.0,
+            "exploration_rate": 0.6,
+            "max_no_improvement": 50,
+            "polish_interval": 35,
+            "alns_iterations": 150,
+            "alns_remove_ratio": 0.2,
+            "final_polish_iters": 200
+        },
+        "search_space_bounds": {
+            "pack_size": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_a": [
+                1.0,
+                2.0,
+                3.0
+            ],
+            "exploration_rate": [
+                0.2,
+                0.4,
+                0.6
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "alns_iterations": [
+                50,
+                100,
+                150
+            ],
+            "alns_remove_ratio": [
+                0.1,
+                0.15,
+                0.2
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 9,
+        "timestamp": "2026-07-01 01:45:25"
+    },
+    {
+        "algorithm": "HHO-LKH",
+        "problem": "berlin52",
+        "dimension": 52,
+        "runs_per_combination": 5,
+        "best_mean_length": 7622.0,
+        "parameters": {
+            "hawks": 70,
+            "max_iterations": 250,
+            "initial_energy": 1.0,
+            "jump_probability": 0.5,
+            "max_no_improvement": 75,
+            "dive_count": 5,
+            "levy_scale": 0.2,
+            "polish_interval": 35,
+            "polish_iters": 15,
+            "final_polish_iters": 300
+        },
+        "search_space_bounds": {
+            "hawks": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_energy": [
+                0.5,
+                1.0,
+                1.5
+            ],
+            "jump_probability": [
+                0.3,
+                0.5,
+                0.7
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "dive_count": [
+                2,
+                3,
+                5
+            ],
+            "levy_scale": [
+                0.2,
+                0.3,
+                0.5
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "polish_iters": [
+                5,
+                10,
+                15
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 10,
+        "timestamp": "2026-07-01 01:48:19"
+    },
+    {
+        "algorithm": "HHO-ALNS",
+        "problem": "berlin52",
+        "dimension": 52,
+        "runs_per_combination": 5,
+        "best_mean_length": 7542.0,
+        "parameters": {
+            "hawks": 50,
+            "max_iterations": 150,
+            "initial_energy": 1.0,
+            "jump_probability": 0.7,
+            "max_no_improvement": 50,
+            "dive_count": 5,
+            "levy_scale": 0.5,
+            "polish_interval": 35,
+            "alns_iterations": 100,
+            "alns_remove_ratio": 0.15,
+            "final_polish_iters": 100
+        },
+        "search_space_bounds": {
+            "hawks": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_energy": [
+                0.5,
+                1.0,
+                1.5
+            ],
+            "jump_probability": [
+                0.3,
+                0.5,
+                0.7
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "dive_count": [
+                2,
+                3,
+                5
+            ],
+            "levy_scale": [
+                0.2,
+                0.3,
+                0.5
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "alns_iterations": [
+                50,
+                100,
+                150
+            ],
+            "alns_remove_ratio": [
+                0.1,
+                0.15,
+                0.2
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 11,
+        "timestamp": "2026-07-01 01:53:09"
+    },
+    {
+        "algorithm": "2-opt",
+        "problem": "eil51",
+        "dimension": 51,
+        "runs_per_combination": 5,
+        "best_mean_length": 434.0,
+        "parameters": {
+            "max_iterations": 1000,
+            "first_improvement": true,
+            "num_starts": 10
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                500,
+                1000,
+                2000
+            ],
+            "first_improvement": [
+                true,
+                false
+            ],
+            "num_starts": [
+                1,
+                5,
+                10
+            ]
+        },
+        "id": 12,
+        "timestamp": "2026-07-01 01:54:44"
+    },
+    {
+        "algorithm": "3-opt",
+        "problem": "eil51",
+        "dimension": 51,
+        "runs_per_combination": 5,
+        "best_mean_length": 445.0,
+        "parameters": {
+            "max_iterations": 400,
+            "first_improvement": true,
+            "num_starts": 1
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                200,
+                400,
+                800
+            ],
+            "first_improvement": [
+                true,
+                false
+            ],
+            "num_starts": [
+                1,
+                3,
+                5
+            ]
+        },
+        "id": 13,
+        "timestamp": "2026-07-01 01:56:24"
+    },
+    {
+        "algorithm": "Or-opt",
+        "problem": "eil51",
+        "dimension": 51,
+        "runs_per_combination": 5,
+        "best_mean_length": 447.6,
+        "parameters": {
+            "max_iterations": 300,
+            "max_segment_size": 3,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                300,
+                600,
+                1000
+            ],
+            "max_segment_size": [
+                1,
+                2,
+                3
+            ],
+            "num_starts": [
+                1,
+                3,
+                5
+            ]
+        },
+        "id": 14,
+        "timestamp": "2026-07-01 01:58:07"
+    },
+    {
+        "algorithm": "GWO-2opt",
+        "problem": "eil51",
+        "dimension": 51,
+        "runs_per_combination": 5,
+        "best_mean_length": 432.2,
+        "parameters": {
+            "pack_size": 70,
+            "max_iterations": 150,
+            "initial_a": 1.0,
+            "exploration_rate": 0.4,
+            "max_no_improvement": 75,
+            "polish_interval": 15,
+            "polish_iters": 5,
+            "final_polish_iters": 100
+        },
+        "search_space_bounds": {
+            "pack_size": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_a": [
+                1.0,
+                2.0,
+                3.0
+            ],
+            "exploration_rate": [
+                0.2,
+                0.4,
+                0.6
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "polish_iters": [
+                5,
+                10,
+                15
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 15,
+        "timestamp": "2026-07-01 01:59:38"
+    },
+    {
+        "algorithm": "GWO-Pure",
+        "problem": "eil51",
+        "dimension": 51,
+        "runs_per_combination": 5,
+        "best_mean_length": 748.8,
+        "parameters": {
+            "pack_size": 70,
+            "max_iterations": 350,
+            "initial_a": 2.0,
+            "exploration_rate": 0.2,
+            "max_no_improvement": 75
+        },
+        "search_space_bounds": {
+            "pack_size": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_a": [
+                1.0,
+                2.0,
+                3.0
+            ],
+            "exploration_rate": [
+                0.2,
+                0.4,
+                0.6
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ]
+        },
+        "id": 16,
+        "timestamp": "2026-07-01 02:01:34"
+    },
+    {
+        "algorithm": "HHO-2opt",
+        "problem": "eil51",
+        "dimension": 51,
+        "runs_per_combination": 5,
+        "best_mean_length": 432.0,
+        "parameters": {
+            "hawks": 70,
+            "max_iterations": 150,
+            "initial_energy": 0.5,
+            "jump_probability": 0.5,
+            "max_no_improvement": 50,
+            "dive_count": 5,
+            "levy_scale": 0.2,
+            "polish_interval": 35,
+            "polish_iters": 5,
+            "final_polish_iters": 100
+        },
+        "search_space_bounds": {
+            "hawks": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_energy": [
+                0.5,
+                1.0,
+                1.5
+            ],
+            "jump_probability": [
+                0.3,
+                0.5,
+                0.7
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "dive_count": [
+                2,
+                3,
+                5
+            ],
+            "levy_scale": [
+                0.2,
+                0.3,
+                0.5
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "polish_iters": [
+                5,
+                10,
+                15
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 17,
+        "timestamp": "2026-07-01 02:02:50"
+    },
+    {
+        "algorithm": "HHO-Pure",
+        "problem": "eil51",
+        "dimension": 51,
+        "runs_per_combination": 5,
+        "best_mean_length": 1028.2,
+        "parameters": {
+            "hawks": 70,
+            "max_iterations": 250,
+            "initial_energy": 1.0,
+            "jump_probability": 0.3,
+            "max_no_improvement": 100,
+            "dive_count": 2,
+            "levy_scale": 0.3
+        },
+        "search_space_bounds": {
+            "hawks": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_energy": [
+                0.5,
+                1.0,
+                1.5
+            ],
+            "jump_probability": [
+                0.3,
+                0.5,
+                0.7
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "dive_count": [
+                2,
+                3,
+                5
+            ],
+            "levy_scale": [
+                0.2,
+                0.3,
+                0.5
+            ]
+        },
+        "id": 18,
+        "timestamp": "2026-07-01 02:04:36"
+    },
+    {
+        "algorithm": "GWO-LKH",
+        "problem": "eil51",
+        "dimension": 51,
+        "runs_per_combination": 5,
+        "best_mean_length": 433.2,
+        "parameters": {
+            "pack_size": 70,
+            "max_iterations": 150,
+            "initial_a": 1.0,
+            "exploration_rate": 0.6,
+            "max_no_improvement": 75,
+            "polish_interval": 35,
+            "polish_iters": 5,
+            "final_polish_iters": 100
+        },
+        "search_space_bounds": {
+            "pack_size": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_a": [
+                1.0,
+                2.0,
+                3.0
+            ],
+            "exploration_rate": [
+                0.2,
+                0.4,
+                0.6
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "polish_iters": [
+                5,
+                10,
+                15
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 19,
+        "timestamp": "2026-07-01 02:07:18"
+    },
+    {
+        "algorithm": "GWO-ALNS",
+        "problem": "eil51",
+        "dimension": 51,
+        "runs_per_combination": 5,
+        "best_mean_length": 426.4,
+        "parameters": {
+            "pack_size": 30,
+            "max_iterations": 250,
+            "initial_a": 2.0,
+            "exploration_rate": 0.6,
+            "max_no_improvement": 100,
+            "polish_interval": 35,
+            "alns_iterations": 150,
+            "alns_remove_ratio": 0.2,
+            "final_polish_iters": 100
+        },
+        "search_space_bounds": {
+            "pack_size": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_a": [
+                1.0,
+                2.0,
+                3.0
+            ],
+            "exploration_rate": [
+                0.2,
+                0.4,
+                0.6
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "alns_iterations": [
+                50,
+                100,
+                150
+            ],
+            "alns_remove_ratio": [
+                0.1,
+                0.15,
+                0.2
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 20,
+        "timestamp": "2026-07-01 02:11:02"
+    },
+    {
+        "algorithm": "HHO-LKH",
+        "problem": "eil51",
+        "dimension": 51,
+        "runs_per_combination": 5,
+        "best_mean_length": 433.2,
+        "parameters": {
+            "hawks": 70,
+            "max_iterations": 150,
+            "initial_energy": 0.5,
+            "jump_probability": 0.5,
+            "max_no_improvement": 100,
+            "dive_count": 5,
+            "levy_scale": 0.3,
+            "polish_interval": 25,
+            "polish_iters": 15,
+            "final_polish_iters": 200
+        },
+        "search_space_bounds": {
+            "hawks": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_energy": [
+                0.5,
+                1.0,
+                1.5
+            ],
+            "jump_probability": [
+                0.3,
+                0.5,
+                0.7
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "dive_count": [
+                2,
+                3,
+                5
+            ],
+            "levy_scale": [
+                0.2,
+                0.3,
+                0.5
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "polish_iters": [
+                5,
+                10,
+                15
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 21,
+        "timestamp": "2026-07-01 02:13:39"
+    },
+    {
+        "algorithm": "HHO-ALNS",
+        "problem": "eil51",
+        "dimension": 51,
+        "runs_per_combination": 5,
+        "best_mean_length": 426.6,
+        "parameters": {
+            "hawks": 50,
+            "max_iterations": 250,
+            "initial_energy": 1.5,
+            "jump_probability": 0.5,
+            "max_no_improvement": 50,
+            "dive_count": 2,
+            "levy_scale": 0.3,
+            "polish_interval": 25,
+            "alns_iterations": 150,
+            "alns_remove_ratio": 0.2,
+            "final_polish_iters": 300
+        },
+        "search_space_bounds": {
+            "hawks": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_energy": [
+                0.5,
+                1.0,
+                1.5
+            ],
+            "jump_probability": [
+                0.3,
+                0.5,
+                0.7
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "dive_count": [
+                2,
+                3,
+                5
+            ],
+            "levy_scale": [
+                0.2,
+                0.3,
+                0.5
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "alns_iterations": [
+                50,
+                100,
+                150
+            ],
+            "alns_remove_ratio": [
+                0.1,
+                0.15,
+                0.2
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 22,
+        "timestamp": "2026-07-01 02:18:30"
+    },
+    {
+        "algorithm": "2-opt",
+        "problem": "kroA100",
+        "dimension": 100,
+        "runs_per_combination": 5,
+        "best_mean_length": 21559.6,
+        "parameters": {
+            "max_iterations": 500,
+            "first_improvement": true,
+            "num_starts": 10
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                500,
+                1000,
+                2000
+            ],
+            "first_improvement": [
+                true,
+                false
+            ],
+            "num_starts": [
+                1,
+                5,
+                10
+            ]
+        },
+        "id": 23,
+        "timestamp": "2026-07-01 02:20:01"
+    },
+    {
+        "algorithm": "3-opt",
+        "problem": "kroA100",
+        "dimension": 100,
+        "runs_per_combination": 5,
+        "best_mean_length": 26751.8,
+        "parameters": {
+            "max_iterations": 800,
+            "first_improvement": true,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                200,
+                400,
+                800
+            ],
+            "first_improvement": [
+                true,
+                false
+            ],
+            "num_starts": [
+                1,
+                3,
+                5
+            ]
+        },
+        "id": 24,
+        "timestamp": "2026-07-01 02:27:30"
+    },
+    {
+        "algorithm": "Or-opt",
+        "problem": "kroA100",
+        "dimension": 100,
+        "runs_per_combination": 5,
+        "best_mean_length": 23907.0,
+        "parameters": {
+            "max_iterations": 1000,
+            "max_segment_size": 3,
+            "num_starts": 3
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                300,
+                600,
+                1000
+            ],
+            "max_segment_size": [
+                1,
+                2,
+                3
+            ],
+            "num_starts": [
+                1,
+                3,
+                5
+            ]
+        },
+        "id": 25,
+        "timestamp": "2026-07-01 02:29:10"
+    },
+    {
+        "algorithm": "GWO-2opt",
+        "problem": "kroA100",
+        "dimension": 100,
+        "runs_per_combination": 5,
+        "best_mean_length": 21612.4,
+        "parameters": {
+            "pack_size": 70,
+            "max_iterations": 150,
+            "initial_a": 1.0,
+            "exploration_rate": 0.6,
+            "max_no_improvement": 75,
+            "polish_interval": 35,
+            "polish_iters": 15,
+            "final_polish_iters": 100
+        },
+        "search_space_bounds": {
+            "pack_size": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_a": [
+                1.0,
+                2.0,
+                3.0
+            ],
+            "exploration_rate": [
+                0.2,
+                0.4,
+                0.6
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "polish_iters": [
+                5,
+                10,
+                15
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 26,
+        "timestamp": "2026-07-01 02:30:43"
+    },
+    {
+        "algorithm": "GWO-Pure",
+        "problem": "kroA100",
+        "dimension": 100,
+        "runs_per_combination": 5,
+        "best_mean_length": 85263.6,
+        "parameters": {
+            "pack_size": 30,
+            "max_iterations": 350,
+            "initial_a": 2.0,
+            "exploration_rate": 0.4,
+            "max_no_improvement": 100
+        },
+        "search_space_bounds": {
+            "pack_size": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_a": [
+                1.0,
+                2.0,
+                3.0
+            ],
+            "exploration_rate": [
+                0.2,
+                0.4,
+                0.6
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ]
+        },
+        "id": 27,
+        "timestamp": "2026-07-01 02:32:45"
+    },
+    {
+        "algorithm": "HHO-2opt",
+        "problem": "kroA100",
+        "dimension": 100,
+        "runs_per_combination": 5,
+        "best_mean_length": 21612.4,
+        "parameters": {
+            "hawks": 70,
+            "max_iterations": 150,
+            "initial_energy": 1.0,
+            "jump_probability": 0.5,
+            "max_no_improvement": 50,
+            "dive_count": 5,
+            "levy_scale": 0.5,
+            "polish_interval": 35,
+            "polish_iters": 5,
+            "final_polish_iters": 100
+        },
+        "search_space_bounds": {
+            "hawks": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_energy": [
+                0.5,
+                1.0,
+                1.5
+            ],
+            "jump_probability": [
+                0.3,
+                0.5,
+                0.7
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "dive_count": [
+                2,
+                3,
+                5
+            ],
+            "levy_scale": [
+                0.2,
+                0.3,
+                0.5
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "polish_iters": [
+                5,
+                10,
+                15
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 28,
+        "timestamp": "2026-07-01 02:34:16"
+    },
+    {
+        "algorithm": "HHO-Pure",
+        "problem": "kroA100",
+        "dimension": 100,
+        "runs_per_combination": 5,
+        "best_mean_length": 115332.0,
+        "parameters": {
+            "hawks": 70,
+            "max_iterations": 350,
+            "initial_energy": 1.0,
+            "jump_probability": 0.7,
+            "max_no_improvement": 75,
+            "dive_count": 3,
+            "levy_scale": 0.5
+        },
+        "search_space_bounds": {
+            "hawks": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_energy": [
+                0.5,
+                1.0,
+                1.5
+            ],
+            "jump_probability": [
+                0.3,
+                0.5,
+                0.7
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "dive_count": [
+                2,
+                3,
+                5
+            ],
+            "levy_scale": [
+                0.2,
+                0.3,
+                0.5
+            ]
+        },
+        "id": 29,
+        "timestamp": "2026-07-01 02:36:17"
+    },
+    {
+        "algorithm": "GWO-LKH",
+        "problem": "kroA100",
+        "dimension": 100,
+        "runs_per_combination": 5,
+        "best_mean_length": 27163.0,
+        "parameters": {
+            "pack_size": 70,
+            "max_iterations": 350,
+            "initial_a": 1.0,
+            "exploration_rate": 0.6,
+            "max_no_improvement": 50,
+            "polish_interval": 15,
+            "polish_iters": 5,
+            "final_polish_iters": 200
+        },
+        "search_space_bounds": {
+            "pack_size": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_a": [
+                1.0,
+                2.0,
+                3.0
+            ],
+            "exploration_rate": [
+                0.2,
+                0.4,
+                0.6
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "polish_iters": [
+                5,
+                10,
+                15
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 30,
+        "timestamp": "2026-07-01 02:42:17"
+    },
+    {
+        "algorithm": "GWO-ALNS",
+        "problem": "kroA100",
+        "dimension": 100,
+        "runs_per_combination": 5,
+        "best_mean_length": 21282.0,
+        "parameters": {
+            "pack_size": 50,
+            "max_iterations": 150,
+            "initial_a": 2.0,
+            "exploration_rate": 0.6,
+            "max_no_improvement": 50,
+            "polish_interval": 35,
+            "alns_iterations": 150,
+            "alns_remove_ratio": 0.2,
+            "final_polish_iters": 200
+        },
+        "search_space_bounds": {
+            "pack_size": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_a": [
+                1.0,
+                2.0,
+                3.0
+            ],
+            "exploration_rate": [
+                0.2,
+                0.4,
+                0.6
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "alns_iterations": [
+                50,
+                100,
+                150
+            ],
+            "alns_remove_ratio": [
+                0.1,
+                0.15,
+                0.2
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 31,
+        "timestamp": "2026-07-01 03:05:48"
+    },
+    {
+        "algorithm": "HHO-LKH",
+        "problem": "kroA100",
+        "dimension": 100,
+        "runs_per_combination": 5,
+        "best_mean_length": 27195.2,
+        "parameters": {
+            "hawks": 70,
+            "max_iterations": 150,
+            "initial_energy": 1.0,
+            "jump_probability": 0.7,
+            "max_no_improvement": 75,
+            "dive_count": 3,
+            "levy_scale": 0.5,
+            "polish_interval": 15,
+            "polish_iters": 15,
+            "final_polish_iters": 200
+        },
+        "search_space_bounds": {
+            "hawks": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_energy": [
+                0.5,
+                1.0,
+                1.5
+            ],
+            "jump_probability": [
+                0.3,
+                0.5,
+                0.7
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "dive_count": [
+                2,
+                3,
+                5
+            ],
+            "levy_scale": [
+                0.2,
+                0.3,
+                0.5
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "polish_iters": [
+                5,
+                10,
+                15
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 32,
+        "timestamp": "2026-07-01 03:11:10"
+    },
+    {
+        "algorithm": "HHO-ALNS",
+        "problem": "kroA100",
+        "dimension": 100,
+        "runs_per_combination": 5,
+        "best_mean_length": 21282.0,
+        "parameters": {
+            "hawks": 70,
+            "max_iterations": 350,
+            "initial_energy": 1.5,
+            "jump_probability": 0.7,
+            "max_no_improvement": 75,
+            "dive_count": 3,
+            "levy_scale": 0.3,
+            "polish_interval": 25,
+            "alns_iterations": 150,
+            "alns_remove_ratio": 0.15,
+            "final_polish_iters": 100
+        },
+        "search_space_bounds": {
+            "hawks": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_energy": [
+                0.5,
+                1.0,
+                1.5
+            ],
+            "jump_probability": [
+                0.3,
+                0.5,
+                0.7
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "dive_count": [
+                2,
+                3,
+                5
+            ],
+            "levy_scale": [
+                0.2,
+                0.3,
+                0.5
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "alns_iterations": [
+                50,
+                100,
+                150
+            ],
+            "alns_remove_ratio": [
+                0.1,
+                0.15,
+                0.2
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 33,
+        "timestamp": "2026-07-01 03:38:07"
+    },
+    {
+        "algorithm": "2-opt",
+        "problem": "st70",
+        "dimension": 70,
+        "runs_per_combination": 5,
+        "best_mean_length": 683.0,
+        "parameters": {
+            "max_iterations": 500,
+            "first_improvement": true,
+            "num_starts": 10
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                500,
+                1000,
+                2000
+            ],
+            "first_improvement": [
+                true,
+                false
+            ],
+            "num_starts": [
+                1,
+                5,
+                10
+            ]
+        },
+        "id": 34,
+        "timestamp": "2026-07-01 03:39:16"
+    },
+    {
+        "algorithm": "3-opt",
+        "problem": "st70",
+        "dimension": 70,
+        "runs_per_combination": 5,
+        "best_mean_length": 736.2,
+        "parameters": {
+            "max_iterations": 800,
+            "first_improvement": true,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                200,
+                400,
+                800
+            ],
+            "first_improvement": [
+                true,
+                false
+            ],
+            "num_starts": [
+                1,
+                3,
+                5
+            ]
+        },
+        "id": 35,
+        "timestamp": "2026-07-01 03:41:50"
+    },
+    {
+        "algorithm": "Or-opt",
+        "problem": "st70",
+        "dimension": 70,
+        "runs_per_combination": 5,
+        "best_mean_length": 728.2,
+        "parameters": {
+            "max_iterations": 600,
+            "max_segment_size": 3,
+            "num_starts": 5
+        },
+        "search_space_bounds": {
+            "max_iterations": [
+                300,
+                600,
+                1000
+            ],
+            "max_segment_size": [
+                1,
+                2,
+                3
+            ],
+            "num_starts": [
+                1,
+                3,
+                5
+            ]
+        },
+        "id": 36,
+        "timestamp": "2026-07-01 03:43:03"
+    },
+    {
+        "algorithm": "GWO-2opt",
+        "problem": "st70",
+        "dimension": 70,
+        "runs_per_combination": 5,
+        "best_mean_length": 682.4,
+        "parameters": {
+            "pack_size": 30,
+            "max_iterations": 350,
+            "initial_a": 3.0,
+            "exploration_rate": 0.2,
+            "max_no_improvement": 75,
+            "polish_interval": 25,
+            "polish_iters": 5,
+            "final_polish_iters": 300
+        },
+        "search_space_bounds": {
+            "pack_size": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_a": [
+                1.0,
+                2.0,
+                3.0
+            ],
+            "exploration_rate": [
+                0.2,
+                0.4,
+                0.6
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "polish_iters": [
+                5,
+                10,
+                15
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 37,
+        "timestamp": "2026-07-01 03:44:23"
+    },
+    {
+        "algorithm": "GWO-Pure",
+        "problem": "st70",
+        "dimension": 70,
+        "runs_per_combination": 5,
+        "best_mean_length": 1769.8,
+        "parameters": {
+            "pack_size": 70,
+            "max_iterations": 350,
+            "initial_a": 2.0,
+            "exploration_rate": 0.2,
+            "max_no_improvement": 75
+        },
+        "search_space_bounds": {
+            "pack_size": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_a": [
+                1.0,
+                2.0,
+                3.0
+            ],
+            "exploration_rate": [
+                0.2,
+                0.4,
+                0.6
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ]
+        },
+        "id": 38,
+        "timestamp": "2026-07-01 03:46:08"
+    },
+    {
+        "algorithm": "HHO-2opt",
+        "problem": "st70",
+        "dimension": 70,
+        "runs_per_combination": 5,
+        "best_mean_length": 681.8,
+        "parameters": {
+            "hawks": 70,
+            "max_iterations": 150,
+            "initial_energy": 0.5,
+            "jump_probability": 0.5,
+            "max_no_improvement": 50,
+            "dive_count": 5,
+            "levy_scale": 0.2,
+            "polish_interval": 35,
+            "polish_iters": 5,
+            "final_polish_iters": 100
+        },
+        "search_space_bounds": {
+            "hawks": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_energy": [
+                0.5,
+                1.0,
+                1.5
+            ],
+            "jump_probability": [
+                0.3,
+                0.5,
+                0.7
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "dive_count": [
+                2,
+                3,
+                5
+            ],
+            "levy_scale": [
+                0.2,
+                0.3,
+                0.5
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "polish_iters": [
+                5,
+                10,
+                15
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 39,
+        "timestamp": "2026-07-01 03:47:25"
+    },
+    {
+        "algorithm": "HHO-Pure",
+        "problem": "st70",
+        "dimension": 70,
+        "runs_per_combination": 5,
+        "best_mean_length": 2486.0,
+        "parameters": {
+            "hawks": 70,
+            "max_iterations": 250,
+            "initial_energy": 1.5,
+            "jump_probability": 0.5,
+            "max_no_improvement": 50,
+            "dive_count": 5,
+            "levy_scale": 0.5
+        },
+        "search_space_bounds": {
+            "hawks": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_energy": [
+                0.5,
+                1.0,
+                1.5
+            ],
+            "jump_probability": [
+                0.3,
+                0.5,
+                0.7
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "dive_count": [
+                2,
+                3,
+                5
+            ],
+            "levy_scale": [
+                0.2,
+                0.3,
+                0.5
+            ]
+        },
+        "id": 40,
+        "timestamp": "2026-07-01 03:49:00"
+    },
+    {
+        "algorithm": "GWO-LKH",
+        "problem": "st70",
+        "dimension": 70,
+        "runs_per_combination": 5,
+        "best_mean_length": 724.8,
+        "parameters": {
+            "pack_size": 70,
+            "max_iterations": 150,
+            "initial_a": 3.0,
+            "exploration_rate": 0.2,
+            "max_no_improvement": 50,
+            "polish_interval": 35,
+            "polish_iters": 5,
+            "final_polish_iters": 300
+        },
+        "search_space_bounds": {
+            "pack_size": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_a": [
+                1.0,
+                2.0,
+                3.0
+            ],
+            "exploration_rate": [
+                0.2,
+                0.4,
+                0.6
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "polish_iters": [
+                5,
+                10,
+                15
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 41,
+        "timestamp": "2026-07-01 03:52:19"
+    },
+    {
+        "algorithm": "GWO-ALNS",
+        "problem": "st70",
+        "dimension": 70,
+        "runs_per_combination": 5,
+        "best_mean_length": 675.8,
+        "parameters": {
+            "pack_size": 30,
+            "max_iterations": 350,
+            "initial_a": 2.0,
+            "exploration_rate": 0.6,
+            "max_no_improvement": 75,
+            "polish_interval": 15,
+            "alns_iterations": 150,
+            "alns_remove_ratio": 0.2,
+            "final_polish_iters": 300
+        },
+        "search_space_bounds": {
+            "pack_size": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_a": [
+                1.0,
+                2.0,
+                3.0
+            ],
+            "exploration_rate": [
+                0.2,
+                0.4,
+                0.6
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "alns_iterations": [
+                50,
+                100,
+                150
+            ],
+            "alns_remove_ratio": [
+                0.1,
+                0.15,
+                0.2
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 42,
+        "timestamp": "2026-07-01 04:00:06"
+    },
+    {
+        "algorithm": "HHO-LKH",
+        "problem": "st70",
+        "dimension": 70,
+        "runs_per_combination": 5,
+        "best_mean_length": 715.6,
+        "parameters": {
+            "hawks": 70,
+            "max_iterations": 350,
+            "initial_energy": 1.5,
+            "jump_probability": 0.5,
+            "max_no_improvement": 100,
+            "dive_count": 3,
+            "levy_scale": 0.3,
+            "polish_interval": 15,
+            "polish_iters": 10,
+            "final_polish_iters": 300
+        },
+        "search_space_bounds": {
+            "hawks": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_energy": [
+                0.5,
+                1.0,
+                1.5
+            ],
+            "jump_probability": [
+                0.3,
+                0.5,
+                0.7
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "dive_count": [
+                2,
+                3,
+                5
+            ],
+            "levy_scale": [
+                0.2,
+                0.3,
+                0.5
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "polish_iters": [
+                5,
+                10,
+                15
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 43,
+        "timestamp": "2026-07-01 04:03:18"
+    },
+    {
+        "algorithm": "HHO-ALNS",
+        "problem": "st70",
+        "dimension": 70,
+        "runs_per_combination": 5,
+        "best_mean_length": 675.0,
+        "parameters": {
+            "hawks": 70,
+            "max_iterations": 150,
+            "initial_energy": 1.5,
+            "jump_probability": 0.5,
+            "max_no_improvement": 100,
+            "dive_count": 2,
+            "levy_scale": 0.5,
+            "polish_interval": 25,
+            "alns_iterations": 150,
+            "alns_remove_ratio": 0.2,
+            "final_polish_iters": 300
+        },
+        "search_space_bounds": {
+            "hawks": [
+                30,
+                50,
+                70
+            ],
+            "max_iterations": [
+                150,
+                250,
+                350
+            ],
+            "initial_energy": [
+                0.5,
+                1.0,
+                1.5
+            ],
+            "jump_probability": [
+                0.3,
+                0.5,
+                0.7
+            ],
+            "max_no_improvement": [
+                50,
+                75,
+                100
+            ],
+            "dive_count": [
+                2,
+                3,
+                5
+            ],
+            "levy_scale": [
+                0.2,
+                0.3,
+                0.5
+            ],
+            "polish_interval": [
+                15,
+                25,
+                35
+            ],
+            "alns_iterations": [
+                50,
+                100,
+                150
+            ],
+            "alns_remove_ratio": [
+                0.1,
+                0.15,
+                0.2
+            ],
+            "final_polish_iters": [
+                100,
+                200,
+                300
+            ]
+        },
+        "id": 44,
+        "timestamp": "2026-07-01 04:12:34"
+    }
+]

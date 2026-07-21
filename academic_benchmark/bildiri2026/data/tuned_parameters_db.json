@@ -1429,5 +1429,81 @@
         },
         "id": 48,
         "timestamp": "2026-04-25 09:40:58"
+    },
+    {
+        "algorithm": "GA",
+        "problem": "eil51",
+        "dimension": 51,
+        "runs_per_combination": 5,
+        "best_mean_length": 430.6,
+        "parameters": {
+            "population_size": 120,
+            "generations": 200,
+            "crossover_rate": 0.85,
+            "mutation_rate": 0.1,
+            "elite_count": 1
+        },
+        "search_space_bounds": {
+            "population_size": [
+                40,
+                80,
+                120
+            ],
+            "generations": [
+                100,
+                200
+            ],
+            "crossover_rate": [
+                0.75,
+                0.85
+            ],
+            "mutation_rate": [
+                0.1,
+                0.25
+            ],
+            "elite_count": [
+                1,
+                3
+            ]
+        },
+        "id": 49,
+        "timestamp": "2026-06-30 22:53:18"
+    },
+    {
+        "algorithm": "PSO",
+        "problem": "eil51",
+        "dimension": 51,
+        "runs_per_combination": 5,
+        "best_mean_length": 431.8,
+        "parameters": {
+            "swarm_size": 40,
+            "max_iterations": 100,
+            "inertia_weight": 0.6,
+            "cognitive_coeff": 1.0
+        },
+        "search_space_bounds": {
+            "swarm_size": [
+                20,
+                40,
+                60
+            ],
+            "max_iterations": [
+                100,
+                200,
+                300
+            ],
+            "inertia_weight": [
+                0.6,
+                0.729,
+                0.9
+            ],
+            "cognitive_coeff": [
+                1.0,
+                1.49445,
+                2.0
+            ]
+        },
+        "id": 50,
+        "timestamp": "2026-06-30 22:53:27"
     }
 ]

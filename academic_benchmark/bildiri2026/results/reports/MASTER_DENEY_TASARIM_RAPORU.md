@@ -286,48 +286,56 @@
   - Seviye 5: 442.66
 
 ### GA (Problem: eil51)
-- **Havuzdaki Toplam Kombinasyon Kaydı**: 4
-- **En İyi Ortalama Sonuç**: 432.33
-- **Taguchi S/N Oranı**: -52.7549 dB
+- **Havuzdaki Toplam Kombinasyon Kaydı**: 31
+- **En İyi Ortalama Sonuç**: 430.6
+- **Taguchi S/N Oranı**: -52.7487 dB
 
 **En İyi Parametre Seti**:
 ```json
 {
-  "population_size": 100,
+  "population_size": 120,
   "generations": 200,
-  "crossover_rate": 0.8,
+  "crossover_rate": 0.85,
   "mutation_rate": 0.1,
-  "elite_count": 2
+  "elite_count": 1
 }
 ```
 
 **Parametre Önem Sırası (ANOVA F-İstatistiğine Göre)**:
 | Sıralama | Parametre | F Değeri | %5 Anlamlılık | %1 Anlamlılık |
 |----------|-----------|----------|---------------|---------------|
-| 1 | population_size | 72.061 | Evet | Evet |
-| 2 | generations | 0.0056 | Hayır | Hayır |
-| 3 | crossover_rate | 0.0 | Hayır | Hayır |
-| 4 | mutation_rate | 0.0 | Hayır | Hayır |
-| 5 | elite_count | 0.0 | Hayır | Hayır |
+| 1 | population_size | 9.9069 | Evet | Evet |
+| 2 | generations | 0.5106 | Hayır | Hayır |
+| 3 | crossover_rate | 0.1413 | Hayır | Hayır |
+| 4 | elite_count | 0.1257 | Hayır | Hayır |
+| 5 | mutation_rate | 0.0119 | Hayır | Hayır |
 
 **Parametre Seviye Etkileri (Ortalama Değerler)**:
 
 *population_size*:
   - Seviye 100: 432.66
+  - Seviye 120: 432.48
+  - Seviye 40: 435.32
   - Seviye 50: 435.84
+  - Seviye 80: 433.89
 
 *generations*:
-  - Seviye 100: 434.34
-  - Seviye 200: 434.16
+  - Seviye 100: 434.13
+  - Seviye 200: 433.69
 
 *crossover_rate*:
+  - Seviye 0.75: 433.77
   - Seviye 0.8: 434.25
+  - Seviye 0.85: 434.01
 
 *mutation_rate*:
-  - Seviye 0.1: 434.25
+  - Seviye 0.1: 433.97
+  - Seviye 0.25: 433.90
 
 *elite_count*:
+  - Seviye 1: 433.80
   - Seviye 2: 434.25
+  - Seviye 3: 434.02
 
 ### Or-opt (Problem: eil51)
 - **Havuzdaki Toplam Kombinasyon Kaydı**: 4
@@ -365,43 +373,51 @@
   - Seviye 5: 455.66
 
 ### PSO (Problem: eil51)
-- **Havuzdaki Toplam Kombinasyon Kaydı**: 4
-- **En İyi Ortalama Sonuç**: 432.33
-- **Taguchi S/N Oranı**: -52.7815 dB
+- **Havuzdaki Toplam Kombinasyon Kaydı**: 31
+- **En İyi Ortalama Sonuç**: 431.8
+- **Taguchi S/N Oranı**: -52.7524 dB
 
 **En İyi Parametre Seti**:
 ```json
 {
-  "swarm_size": 50,
-  "max_iterations": 200,
-  "inertia_weight": 0.729,
-  "cognitive_coeff": 1.494
+  "swarm_size": 40,
+  "max_iterations": 100,
+  "inertia_weight": 0.6,
+  "cognitive_coeff": 1.0
 }
 ```
 
 **Parametre Önem Sırası (ANOVA F-İstatistiğine Göre)**:
 | Sıralama | Parametre | F Değeri | %5 Anlamlılık | %1 Anlamlılık |
 |----------|-----------|----------|---------------|---------------|
-| 1 | swarm_size | 4.6673 | Evet | Evet |
-| 2 | max_iterations | 0.0026 | Hayır | Hayır |
-| 3 | inertia_weight | 0.0 | Hayır | Hayır |
-| 4 | cognitive_coeff | 0.0 | Hayır | Hayır |
+| 1 | swarm_size | 11.4548 | Evet | Evet |
+| 2 | inertia_weight | 2.4138 | Hayır | Hayır |
+| 3 | cognitive_coeff | 1.1711 | Hayır | Hayır |
+| 4 | max_iterations | 0.3829 | Hayır | Hayır |
 
 **Parametre Seviye Etkileri (Ortalama Değerler)**:
 
 *swarm_size*:
-  - Seviye 20: 437.50
+  - Seviye 20: 436.14
+  - Seviye 40: 433.16
   - Seviye 50: 433.66
+  - Seviye 60: 433.07
 
 *max_iterations*:
-  - Seviye 100: 435.66
-  - Seviye 200: 435.50
+  - Seviye 100: 434.12
+  - Seviye 200: 434.47
+  - Seviye 300: 433.71
 
 *inertia_weight*:
-  - Seviye 0.729: 435.58
+  - Seviye 0.6: 433.14
+  - Seviye 0.729: 434.83
+  - Seviye 0.9: 434.29
 
 *cognitive_coeff*:
+  - Seviye 1.0: 433.54
   - Seviye 1.494: 435.58
+  - Seviye 1.49445: 433.80
+  - Seviye 2.0: 434.33
 
 ### 2-opt (Problem: eil76)
 - **Havuzdaki Toplam Kombinasyon Kaydı**: 26

@@ -31,6 +31,7 @@ class BaseTSPSolver(ABC):
         self._n: int = 0
         self._time_matrix: Optional[List[List[float]]] = None
         self._use_time_matrix: bool = False
+        self._matrix_as_closed_tsp: bool = False
         self._dist_matrix: Optional[List[List[float]]] = None  # cached for numba speedup
         # Gelistirme #1: Numpy önbelleği — matris bir kez np.ndarray'e dönüştürülür.
         # Bu, her nb_two_opt / tour_length çağrısındaki dönüşüm yükünü ortadan kaldırır.
@@ -38,7 +39,7 @@ class BaseTSPSolver(ABC):
 
     def _initial_tour_nodes(self) -> List[int]:
         """Return initial node list. For time matrix, exclude depot(0); for TSP use all nodes."""
-        if self._exclude_depot or self._use_time_matrix:
+        if self._exclude_depot or (self._use_time_matrix and not self._matrix_as_closed_tsp):
             return list(range(1, self._n))
         return list(range(self._n))
     
@@ -105,9 +106,15 @@ class BaseTSPSolver(ABC):
             try:
                 from . import numba_accel as _nb
                 import numpy as _np
-                # 0 depot içermeyen turlar için: Numba kerneli depot dahil tam tur bekler.
+                # Closed TSP/ATSP cycles may place node 0 anywhere. Rotate the
+                # cycle before the legacy kernel prepares its depot-shaped
+                # representation; rotation preserves directed cycle cost.
+                kernel_tour = list(tour)
+                if not self._exclude_depot and 0 in kernel_tour and kernel_tour[0] != 0:
+                    zero_idx = kernel_tour.index(0)
+                    kernel_tour = kernel_tour[zero_idx:] + kernel_tour[:zero_idx]
                 # _nb içindeki _prepare_route helper'ı bu dönüşümü yapıyor.
-                route_np = _nb._prepare_route(tour)
+                route_np = _nb._prepare_route(kernel_tour)
                 length = _nb._calculate_tour_length_atsp_numba(route_np, self._dist_matrix_np)
                 return float(length)
             except Exception:
@@ -169,6 +176,13 @@ class BaseTSPSolver(ABC):
     
     def _tour_length_matrix(self, tour: List[int]) -> float:
         """Calculate total tour duration using time matrix."""
+        if not tour:
+            return 0.0
+        if self._matrix_as_closed_tsp:
+            return sum(
+                float(self._time_matrix[node][tour[(idx + 1) % len(tour)]])
+                for idx, node in enumerate(tour)
+            )
         total = 0.0
         nodes = [0] + tour + [0]  # Start and end at depot (0)
         for i in range(len(nodes) - 1):
@@ -190,7 +204,12 @@ class BaseTSPSolver(ABC):
         """
         pass
     
-    def solve_with_matrix(self, time_matrix: List[List[float]], recalculate: bool = True) -> TSPResult:
+    def solve_with_matrix(
+        self,
+        time_matrix: List[List[float]],
+        recalculate: bool = True,
+        closed_tsp: bool = False,
+    ) -> TSPResult:
         """
         Solve using time/distance matrix instead of coordinates.
         
@@ -198,10 +217,13 @@ class BaseTSPSolver(ABC):
             time_matrix: Square matrix where time_matrix[i][j] is the cost from i to j.
                          Index 0 is the depot.
             recalculate: If True, recalculate tour_length using the matrix after solving.
+            closed_tsp: If True, optimize every matrix node as a closed TSP/ATSP
+                        cycle. If False, preserve the historical fixed-depot mode.
         
         Returns:
             TSPResult with tour_length recalculated from time matrix if recalculate=True.
         """
+        self._matrix_as_closed_tsp = bool(closed_tsp)
         self._set_time_matrix(time_matrix)
         result = self.solve(self._coordinates)
         if recalculate:

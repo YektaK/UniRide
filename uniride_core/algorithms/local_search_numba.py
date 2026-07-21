@@ -26,6 +26,8 @@ import random
 import time
 import numpy as np
 
+from uniride_core.algorithms.three_opt import improve_three_opt
+
 # Numba imports with fallback
 try:
     from numba import jit, prange, set_num_threads, get_num_threads
@@ -738,18 +740,26 @@ class TwoOptLocalSearch(BaseLocalSearch):
 
 class ThreeOptLocalSearch(BaseLocalSearch):
     """
-    3-opt Local Search - Numba Optimized Version.
-    
-    Performance: 10-50x faster than pure Python version.
+    Canonical matrix-native 3-opt local search.
+
+    The historical Numba kernel used a different and incomplete neighborhood.
+    This compatibility wrapper delegates to the correctness-first shared core
+    until a JIT implementation passes semantic-parity tests.
     """
 
-    def __init__(self, max_iterations: int = 500, first_improvement: bool = False):
+    def __init__(
+        self,
+        max_iterations: int = 500,
+        first_improvement: bool = False,
+        window: int = 12,
+    ):
         self.max_iterations = max_iterations
         self.first_improvement = first_improvement
+        self.window = window
         self._index_map = None
 
     def _prepare_numba_inputs(self, route: List[str], duration_func: Callable) -> Tuple[np.ndarray, np.ndarray]:
-        """Convert route and duration function to Numba-compatible format (cached)."""
+        """Convert route and duration function to canonical matrix inputs."""
         self._index_map, self._dist_matrix, self._unique_locs = _build_or_get_dist_matrix(route, duration_func)
         route_indices = np.array([self._index_map[loc] for loc in route], dtype=np.int64)
         return route_indices, self._dist_matrix
@@ -762,20 +772,21 @@ class ThreeOptLocalSearch(BaseLocalSearch):
         route: List[str],
         duration_func: Callable[[List[str]], float]
     ) -> Tuple[List[str], float]:
-        """Improve route using Numba-optimized 3-opt"""
-        if len(route) < 4:
-            two_opt = TwoOptLocalSearch(self.max_iterations)
-            return two_opt.improve(route, duration_func)
-        
+        """Improve a route using canonical symmetric or directed 3-opt."""
         route_indices, dist_matrix = self._prepare_numba_inputs(route, duration_func)
-        
-        improved_indices, _ = _three_opt_improve_numba(
-            route_indices, dist_matrix, self.max_iterations, self.first_improvement
+
+        result = improve_three_opt(
+            route_indices.tolist(),
+            dist_matrix,
+            max_iterations=self.max_iterations,
+            first_improvement=self.first_improvement,
+            window=self.window,
         )
-        
+
+        improved_indices = np.asarray(result.route, dtype=np.int64)
         improved_route = self._indices_to_route(improved_indices, route)
         improved_duration = duration_func(improved_route)
-        
+
         return improved_route, improved_duration
 
 
@@ -1166,7 +1177,10 @@ def improve_route_numba(
     if ls_type == "two_opt":
         return _two_opt_improve_numba(route, dist_matrix, max_iterations, False)
     elif ls_type == "three_opt":
-        return _three_opt_improve_numba(route, dist_matrix, max_iterations, False)
+        result = improve_three_opt(
+            route.tolist(), dist_matrix, max_iterations=max_iterations
+        )
+        return np.asarray(result.route, dtype=np.int64), result.cost
     elif ls_type == "or_opt":
         return _or_opt_improve_numba(route, dist_matrix, max_iterations, 3)
     elif ls_type == "swap":
@@ -1175,7 +1189,11 @@ def improve_route_numba(
         # Apply methods in sequence
         best_route, best_length = _two_opt_improve_numba(route, dist_matrix, max_iterations // 3, False)
         best_route, best_length = _or_opt_improve_numba(best_route, dist_matrix, max_iterations // 3, 3)
-        best_route, best_length = _three_opt_improve_numba(best_route, dist_matrix, max_iterations // 3, False)
-        return best_route, best_length
+        result = improve_three_opt(
+            best_route.tolist(),
+            dist_matrix,
+            max_iterations=max_iterations // 3,
+        )
+        return np.asarray(result.route, dtype=np.int64), result.cost
     else:
         return _two_opt_improve_numba(route, dist_matrix, max_iterations, False)

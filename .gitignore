@@ -65,6 +65,7 @@ test-results/
 .idea/
 
 __pycache__/
+.numba_cache/
 *.pyc
 *.pyo
 *.pyd

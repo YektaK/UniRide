@@ -66,6 +66,8 @@ test-results/
 
 __pycache__/
 .numba_cache/
+*.nbc
+*.nbi
 *.pyc
 *.pyo
 *.pyd

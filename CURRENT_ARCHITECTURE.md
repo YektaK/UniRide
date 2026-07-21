@@ -1,179 +1,211 @@
-# CURRENT_ARCHITECTURE.md
-# UniRide Dual-Engine — Current System Architecture
-# Generated: 2026-06-01 | Codegraph-verified against 540 indexed files
+# UniRide Current Architecture
 
-## 1. System Overview
+**Verified:** 2026-07-16
+**Audit baseline:** branch `WIP`, commit `3534ae8c22057249c597bfbd38890e1e237c16ad`
 
-UniRide is a vehicle-routing platform for special-education student transportation. It solves CVRP/CVRPTW problems with a heterogeneous fleet (wheelchair-bound "Sw" and standard "So" passengers). The system has two execution surfaces that share a single algorithmic core:
+This document describes the current code structure, not the intended end state. Known defects are explicit so diagrams are not mistaken for production certification.
 
-- **Production API** (`optimizer_api/`) — FastAPI microservice serving the Next.js frontend
-- **Academic Benchmark** (`academic_benchmark/`) — CLI + tuning pipeline for TSPLIB/CVRPLIB research
+## 1. Dual-Engine System
 
-Both surfaces import the same pure-Python algorithm library (`uniride_core/`), ensuring **write-once, use-everywhere** algorithm logic.
+UniRide has three principal layers:
 
-## 2. Three-Layer Architecture
+1. **Production engine:** Next.js application, Next.js API routes, Supabase, and FastAPI optimization service.
+2. **Academic engine:** dataset management, DOE/tuning, repeated experiments, and result analysis.
+3. **Shared kernel:** `uniride_core`.
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  PRESENTATION (Next.js 16, Port 3000)                   │
-│  Admin Panel · Driver UI · Student UI · SOTA Dashboard  │
-└──────────────────────────┬──────────────────────────────┘
-                           │ HTTP/REST
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│  API LAYER                                              │
-│  ┌────────────────────┐  ┌─────────────────────────┐    │
-│  │ Next.js API Routes  │  │ Python FastAPI (Port    │    │
-│  │ /api/optimize-route │  │ 8000) optimizer_api/    │    │
-│  │ /api/admin/*        │  │  /api/v1/optimize       │    │
-│  │ /api/benchmark/*    │  │  /api/v1/compare        │    │
-│  └─────────┬──────────┘  │  /api/v1/benchmark/*    │    │
-│            │             │  /api/v1/strategies     │    │
-│            └────────────►│  /api/v1/extract-tw     │    │
-│                          └────────────┬────────────┘    │
-└───────────────────────────────────────┼─────────────────┘
-                                        │ Python imports
-                                        ▼
-┌─────────────────────────────────────────────────────────┐
-│  ALGORITHMIC CORE (uniride_core/)                       │
-│  No HTTP, no I/O, no FastAPI — pure algorithms          │
-│                                                         │
-│  algorithms/                    adapters/               │
-│  ├── sota_common/ (ALNS infra)  ├── matrix_builder      │
-│  ├── sota_tsp/ (6 SOTA solvers) ├── demand_builder      │
-│  ├── clustering_strategies/    ├── string_matrix_builder│
-│  ├── split_decoder (Prins DP)   └── uniride_adapter     │
-│  ├── local_search + numba       models.py               │
-│  ├── ga/gwo/hho/pso engines     benchmark_runner.py     │
-│  ├── ortools/vroom/pyvrp engines                        │
-│  └── engine_factory · registry                          │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    UI["Next.js browser UI"] --> BFF["Next.js API routes"]
+    BFF --> DB["Supabase"]
+    BFF --> FAST["FastAPI optimizer"]
+    FAST --> PA["Production adapters and strategies"]
+    CLI["Academic CLI / DOE / benchmark jobs"] --> AA["Academic adapters and registry"]
+    PA --> CORE["uniride_core"]
+    AA --> CORE
 ```
 
-**Key invariant:** `uniride_core/` never imports `optimizer_api/` or `academic_benchmark/`. It is a pure leaf library.
+The Next.js layer is intended to be a backend-for-frontend that owns user authorization and translates application data into optimizer requests. Some current paths bypass this boundary, and FastAPI lacks service-level authentication.
 
-## 3. Algorithm Inventory
+## 2. Source Boundaries
 
-### 3.1 Pipeline A — Cluster-First, Route-Second
+### `src/`: web application and BFF
 
-| Algorithm | Strategy File | Core Engine | Clustering |
-|-----------|--------------|-------------|------------|
-| GA | `ga_strategy.py` | `tsp_meta_engines.solve_ga_tsp` | Sweep/CW/FCM |
-| PSO | `pso_strategy.py` | `tsp_meta_engines.solve_pso_tsp` | Sweep/CW/FCM |
-| GWO | `gwo_strategy.py` | `tsp_meta_engines.solve_gwo_tsp` | Sweep/CW/FCM |
-| HHO | `hho_strategy.py` | `tsp_meta_engines.solve_hho_tsp` | Sweep/CW/FCM |
+Responsibilities:
 
-Flow: Students → **Clustering** (Sweep/Clarke-Wright/K-Means/FCM) → Per-cluster TSP solve → Response.
+- administrator, student, and driver interfaces;
+- same-origin API routes under `src/app/api`;
+- Supabase browser/server clients;
+- production request translation;
+- benchmark control and polling pages.
 
-### 3.2 Pipeline B — Route-First, Cluster-Second (Split)
+Verified limitations:
 
-| Algorithm | Strategy File | Core Engine | Split Decoder |
-|-----------|--------------|-------------|---------------|
-| GA-Split | `ga_split_strategy.py` | `ga_split_engine.solve_ga_split` | `split_decoder` (Prins DP) |
-| PSO-Split | `pso_split_strategy.py` | `pso_split_engine.solve_pso_split` | `split_decoder` |
-| GWO-Split | `gwo_split_strategy.py` | `gwo_split_engine.solve_gwo_split` | `split_decoder` |
-| HHO-Split | `hho_split_strategy.py` | `hho_split_engine.solve_hho_split` | `split_decoder` |
+- Vehicle Planning and Sandbox have missing bearer-token paths.
+- Direction is not propagated consistently through optimization and persistence.
+- Benchmark polling is duplicated and permits overlapping requests.
+- Track Ride is a placeholder: no map SDK or route-geometry contract exists.
+- Some browser code calls FastAPI directly.
 
-Flow: Giant tour → **Split Decoder** (Prins 2004 DP, O(n²) or O(n·B) bounded) → Vehicle routes.
+### `optimizer_api/`: production optimizer and benchmark control plane
 
-Strategy files are **thin wrappers**: they parse the HTTP request, build matrices/demands, call the core engine, and format the response. All algorithm logic lives in `uniride_core/algorithms/`.
+Responsibilities:
 
-### 3.3 Holistic Solvers
+- FastAPI application and routers;
+- Pydantic production DTOs;
+- executable strategy adapters;
+- travel-matrix loading;
+- web benchmark orchestration.
 
-| Solver | Strategy File | Core Engine | Optional? |
-|--------|--------------|-------------|-----------|
-| OR-Tools | `ortools_cvrp.py` | `ortools_cvrp_engine.solve_ortools_cvrp` | No |
-| PyVRP (HGS) | `pyvrp_strategy.py` | `pyvrp_cvrp_engine.solve_pyvrp_cvrp` | Yes (graceful fallback) |
-| VROOM | `vroom_strategy.py` | `vroom_cvrp_engine.solve_vroom_cvrp` | Yes (graceful fallback) |
+Verified limitations:
 
-### 3.4 SOTA Algorithms (ALNS-based)
+- Shared executable strategy instances coexist with fresh-instance factories.
+- Request sizes and algorithm configurations are insufficiently bounded.
+- Benchmark admission and creation are non-atomic; stop does not cancel work.
+- CLI preview/import accepted caller-selected filesystem paths.
+- `DataLoader.get_instance()` returns a new object, defeating its stated singleton cache.
+- FastAPI routers have no authentication dependency.
 
-6 SOTA TSP solvers in `uniride_core/algorithms/sota_tsp/`:
+### `uniride_core/`: shared mathematical kernel
 
-| Algorithm | Class | DNA Components |
-|-----------|-------|----------------|
-| E²BSO | `E2BSO_TSP` | Entropy-balanced swarm + destroy/repair |
-| R²DMA | `R2DMA_TSP` | Resonance-supported destroy-and-merge |
-| P-AOEA | `PAOEA_TSP` | Production adaptive operator evolution |
-| CGO | `CGO_TSP` | Chaos game optimization |
-| RUN | `RUN_TSP` | Runge-Kutta optimization |
-| ALNS | `ALNS_TSP` | Standard ALNS |
+Contains distance functions, clustering, split decoders, metaheuristic engines, local search, Numba kernels, ALNS/SOTA operators, solver adapters, and routing models.
 
-All share infrastructure from `sota_common/`:
-- **Destroy operators**: RandomRemoval, WorstRemoval, ShawRemoval, RelatedRemoval
-- **Repair operators**: GreedyInsertion, Regret2Insertion, Regret3Insertion
-- **Acceptance criteria**: SimulatedAnnealing, LateAcceptanceHC, RecordToRecordTravel
-- **Penalty manager**: 3-phase IPM (relax → moderate → strict)
-- **Diversity controller**: Edge-based Shannon entropy
-- **Multi-layer LS**: 2-opt + 3-opt + Or-opt + Cross-exchange
-- **Multi-start initializer**: Nearest-neighbor + random + sweep
+The dependency direction is mostly sound: the core does not intentionally depend on FastAPI or academic orchestration. The model boundary remains incomplete because legacy core models combine TSPLIB metadata, benchmark fields, and production constraints.
 
-### 3.5 Heuristics
+### `academic_benchmark/`: experiment system
 
-| Heuristic | File | Use Case |
-|-----------|------|----------|
-| Greedy/NN | `greedy_heuristic.py` | Fast baseline |
-| 2-opt | `two_opt_strategy.py` | Local search polish |
-| Permutation | `permutation_tsp.py` | Exact for n ≤ 10 |
+Contains the academic registry, CLI orchestration, dataset managers, DOE/tuning, parameter promotion, persistence, analysis, and visualization.
 
-## 4. Strategy Registry
+It should share solver implementations and neutral problem/result models, but not production request state, web-job state, or mutable executable instances.
 
-`optimizer_api/strategies/__init__.py` maintains two parallel registries:
+## 3. Production Request Flow
 
-- **`STRATEGY_REGISTRY`** — `Dict[str, Optional[BaseRoutingStrategy]]` mapping name→singleton instance. Used by routers for dispatch.
-- **`STRATEGY_FACTORIES`** — `Dict[str, Optional[Type]]` mapping name→class. Used to create fresh instances.
+```text
+UI action
+  -> authenticated Next.js API route
+  -> application-to-optimizer translation
+  -> FastAPI OptimizationRequest
+  -> request-scoped strategy
+  -> matrix/data adapter
+  -> uniride_core solver
+  -> feasibility certificate
+  -> OptimizationResponse
+  -> application persistence/UI
+```
 
-The `optimize` method on `BaseRoutingStrategy` is a **runtime dispatch point** — 17 implementations are registered, and the specific target is chosen by the algorithm key in the HTTP request.
+The request-scoped strategy and feasibility-certificate steps are target-state requirements; current code still uses shared registry instances and lacks a universal final certificate.
 
-## 5. Academic Benchmark Pipeline
+## 4. Algorithm Pipelines
 
-### 5.1 Core Components
+### Pipeline A: cluster first, route second
 
-| Component | File | Role |
-|-----------|------|------|
-| `RunResult` | `engine_core.py` | Standardized result dataclass |
-| `AlgorithmRegistry` | `engine_core.py` | Name→executor dispatch |
-| `ConfigSchema` | `engine_core.py` | Validation for tuning configs |
-| `registry_setup.py` | `core/registry_setup.py` | Import-time registration of all executors |
-| `param_spaces.py` | `param_spaces.py` | Unified DoE/Optuna parameter spaces |
-| `cli_engine.py` | `cli_engine.py` | Main CLI (1400+ lines, tuning + benchmark modes) |
-| `sota_engine.py` | `sota_engine.py` | SOTA-specific benchmark orchestration |
+GA, PSO, GWO, and HHO group students and optimize a route inside each group. This is an active production path, not obsolete code.
 
-### 5.2 bildiri2026 Pipeline (Paper Experiment)
+Current risks:
 
-5-stage pipeline for academic paper experiments:
-1. `1_generate_config.py` — Generate DoE configs
-2. `2_run_tuning.py` — Taguchi/Optuna parameter tuning
-3. `3_run_benchmark.py` — Resilient batch benchmark (append-only CSV)
-4. (Stage 4: analyze_benchmark.py)
-5. `5_visualize.py` — Convergence plots, box plots, Taguchi effect plots
+- duration violations can be returned as successful best-effort assignments;
+- time windows are not enforced consistently during route construction;
+- clustering randomness is not fully controlled;
+- repeated physical locations are represented inconsistently.
 
-## 6. Data Layer
+### Pipeline B: giant tour plus split
 
-- **Supabase (PostgreSQL)** — User, vehicle, route, ride request tables with RLS policies
-- **TSPLIB SQLite DB** — `academic_benchmark/tsplib_data/tsplib.db` — canonical TSPLIB problem store (coordinates, optima, distance matrices)
-- **Parameter DB** — `benchmark_db/param_db.json` — tuned parameters per (problem, algorithm)
-- **Best Solutions** — SQLite table in tsplib.db — best known solutions per (problem, algorithm)
+GA-Split, PSO-Split, GWO-Split, and HHO-Split build a giant tour and partition it into vehicle routes.
 
-## 7. Key Design Decisions (from Unified Master Plan, verified as executed)
+Current risks:
 
-| Decision | Status | Evidence |
-|----------|--------|----------|
-| Core-First migration (all algorithms in `uniride_core/`) | ✅ Done | Strategy files delegate to core engines |
-| `faz0_interactive.py` DELETE | ✅ Done | File does not exist |
-| `run_sota_benchmark.py` DELETE | ✅ Done | File does not exist |
-| TSPLIB SQLite DB-first | ✅ Done | `tsplib_manager.py` + `tsplib.db` |
-| Capacity is vector-first `[sw, so]` | ✅ Done | `DemandVector` in core models |
-| CORS env-configured | ✅ Done | `ALLOWED_ORIGINS` in `main.py` |
-| Auth guard on calculate-vehicles | ✅ Done | `requireAdmin` in route.ts |
-| `total_time_window_violations` in schema | ✅ Done | `schemas.py:293` |
-| `haversine.py` is re-export from core | ✅ Done | `from uniride_core.algorithms.distance import haversine_distance` |
-| `compute_gap` unified via delegation | ✅ Done | `evaluation.py` delegates to `benchmark_utils.py` |
-| Benchmark daemon thread + state manager | ✅ Done | `benchmark_runner.py` + `benchmark_state.py` |
+- demand and student maps use physical `location_code` instead of unique customer identity;
+- duplicate stops can overwrite records or break permutation crossover;
+- time-window DP initialization and pickup-prefix construction are incorrect;
+- soft penalties and hard feasibility are not consistently separated.
 
-## 8. Test Infrastructure
+### Reference and research solvers
 
-- **`uniride_core/tests/`** — 38 tests covering core algorithms, clustering, local search, split decoder, SOTA solvers, engine factory
-- **`optimizer_api/tests/`** — 27 tests covering strategies, benchmark router, CVRPTW phases, clustering, split decoder, scheduling, resource profiler, SOTA compat
-- **`academic_benchmark/tests/`** — 26 tests covering CVRP execution, problem storage, regression gates, promotion, SOTA parity, dashboard, data export
-- **Test framework:** pytest with conftest.py fixtures
+OR-Tools, PyVRP, and VROOM were selected as industry, quality, and scalability baselines. PyVRP and VROOM are optional. ALNS and original metaheuristic variants are research assets, not evidence of production correctness.
+
+## 5. Shared-Core Contract
+
+```text
+Production DTO --------> production adapter --+
+                                            |
+Academic dataset ------> academic adapter -----+--> RoutingProblem
+                                                     |
+                                                     v
+                                                  Solver
+                                                     |
+                                                     v
+                                            FeasibilityCertificate
+                                                     |
+                                                     v
+                                                RoutingResult
+```
+
+The core should own:
+
+- unique customer identity distinct from physical stop identity;
+- cost matrix with units, directionality, provenance, and completeness;
+- constraint profile;
+- deterministic solver inputs;
+- neutral result/violation structures;
+- one independent final feasibility certificate.
+
+Production owns authentication, user DTOs, provider-specific geography, route geometry, and operational errors. Academic tooling owns dataset paths, BKS/optima, gaps, seeds, DOE metadata, environment manifests, and persistence.
+
+## 6. Matrix Architecture
+
+Current critical risk: missing directed arcs can become zero-valued, Euclidean-degree, or generic fallback edges. This silently changes route order, feasibility, and benchmark rankings.
+
+Required rules:
+
+1. Every matrix declares domain, units, directionality, source, generated-at time, and hash.
+2. Missing, non-finite, negative, or off-diagonal zero arcs fail closed unless explicitly modeled.
+3. Production geography uses an explicit travel-time provider or labeled approximation.
+4. Academic instances use their declared TSPLIB/CVRPLIB metric.
+5. Adapters never change metric domains silently.
+
+## 7. Job and Concurrency Architecture
+
+Current benchmark jobs run as daemon threads and store status in one process-local singleton. This is a development prototype.
+
+Production target:
+
+- durable job queue and worker processes;
+- atomic admission and idempotent creation;
+- cooperative cancellation;
+- persistent status, heartbeat, owner, result location, and failure details;
+- request-local RNG objects;
+- server-side work budgets and rate limits.
+
+## 8. Frontend and GIS
+
+There is no current GIS renderer. Route steps contain logical endpoints, duration, and distance, not road geometry.
+
+Required sequence:
+
+1. establish one authoritative location catalog;
+2. return encoded polyline or GeoJSON from a trusted backend;
+3. add a real map component;
+4. memoize derived layers and stabilize handlers;
+5. update CSP only for the selected provider.
+
+The missing geometry contract—not map memoization—is the present blocker.
+
+## 9. Historical Design Decisions Preserved
+
+- Dual-engine separation was intentional because operational stability and academic experimentation have different success criteria.
+- Pipeline A and Pipeline B were retained to explore different speed, scale, and quality trade-offs.
+- External solvers were selected as baselines rather than novel contributions.
+- ALNS was favored for interpretable problem-aware destroy/repair, adaptive scoring, simulated annealing, and local search.
+- FCM exploration emphasized preserving memberships and transferring ambiguous border customers.
+- Reproducibility planning consistently called for fixed seeds, common resource limits, code-change invalidation, repeated runs, and statistical comparison.
+- Alternative paths included HHO-guided operator probabilities, operator-policy co-evolution, entropy-driven diversity, structural/resonance crossover, and Pareto scenario presentation. None is a selected production architecture.
+
+## 10. Architectural Invariants
+
+1. No response reports success without a shared feasibility certificate.
+2. Customer identity and physical location identity are separate.
+3. Matrix provenance and completeness are mandatory.
+4. Executable strategies are request/job scoped; registry metadata is immutable.
+5. Production and academic lifecycles remain separate.
+6. Browser requests use authenticated same-origin routes.
+7. Benchmark results require reproducible environment, dataset, seed, configuration, and feasibility evidence.
+8. Archived documentation is historical evidence, never current authority.

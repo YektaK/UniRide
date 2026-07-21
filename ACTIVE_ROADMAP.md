@@ -1,239 +1,184 @@
-# ACTIVE_ROADMAP.md
-# UniRide — Active Technical Debt & Future Development
-# Generated: 2026-06-01 | All items verified against codegraph (540 files indexed)
-#
-# Every item below was verified as UNRESOLVED in the current codebase.
-# Items that were found to be already fixed have been excluded.
+# UniRide Active Roadmap
 
----
+**Reset:** 2026-07-16
+**Source:** [UniRide_Ultimate_Audit.md](./UniRide_Ultimate_Audit.md)
 
-## P0 — Critical (do first)
+This roadmap contains only work supported by the live audit. Older completion lists, speculative gains, and superseded review tasks have been removed.
 
-### 1. Strategy 4× optimize() body duplication
-- **Files:** `optimizer_api/strategies/{ga,gwo,hho,pso}_strategy.py`
-- **Issue:** ~150 lines of nearly identical `optimize()` body across 4 files. Only differences: config attribute name, strategy label, TSP solver function.
-- **Fix target:** Hoist `optimize()` to `HybridSplitBaseStrategy` (exists but empty). Parameterize by `_solve_tsp_func`, `_strategy_label`, `_config_attr`.
-- **Blast radius:** 16 subclasses, `optimize` is runtime dispatch (17 targets). No external caller calls `optimize` directly on a subclass — all go through `STRATEGY_REGISTRY`.
-- **Test coverage:** ✅ `test_strategy_no_legacy_algorithm_helpers.py`, `test_strategy_rng_state.py` exist.
-- **Effort:** 4–6h
-- **Source:** `docs/01.06.2026_UniRide_Comprehensive_Code_Review.md` §4.1, §6.1
+## Release Policy
 
-### 2. ShawRemoval max_dist normalization bug
-- **File:** `uniride_core/algorithms/sota_common/destroy_operators.py:222–226`
-- **Issue:** `max_dist` initialized to 1.0, updated by iterating `remaining` using `dist.get(seed_node, {}).get(node, 0.0)`. If any edges are missing (returns 0.0), `max_dist` never updates, normalization collapses to 0 for all nodes. ShawRemoval silently degrades to RandomRemoval.
-- **Fix:** `max_dist = max((dist.get(seed_node, {}).get(node, 0.0) for node in remaining), default=1.0) or 1.0`
-- **Blast radius:** 2 callers (`__init__.py` re-export + `test_sota_e2e.py`). 1-line fix.
-- **Note:** The `sota_tsp/destroy_ops.py` version of ShawRemoval does NOT have this bug (uses `List[List[float]]` matrix with direct index access, no normalization).
-- **Effort:** 15 min
-- **Source:** `docs/01.06.2026_UniRide_Comprehensive_Code_Review.md` §5.1, §6.9
+UniRide remains **experimental and not production-ready** until Phase 1 is complete. Algorithm promotion and publication are blocked until feasibility, matrix provenance, deterministic replay, and environment reproducibility gates exist.
 
-### 3. BenchmarkRunRequest schema-less
-- **File:** `optimizer_api/models/schemas.py:330`
-- **Issue:** Uses `Dict[str, Any]` for `algorithms`, `problems`, `settings`. Any typo in API payload surfaces as runtime 500, not validation 400.
-- **Fix:** Replace with strict typed Pydantic models (`AlgorithmSetting`, `ProblemEntry`, etc.).
-- **Blast radius:** 1 caller (`routers/benchmark.py:237`).
-- **Effort:** 2h
-- **Source:** `docs/01.06.2026_UniRide_Comprehensive_Code_Review.md` §4.3, §6.2
+## Phase 0: Containment and Reproducible Baseline
 
-### 4. Sync `def` endpoints block event loop
-- **File:** `optimizer_api/routers/optimization.py:22, 143`
-- **Issue:** `optimize_route` and `compare_algorithms` are `def` (not `async def`). FastAPI runs blocking algorithm in event loop thread. Under load, `/health` and `/strategies` become unresponsive.
-- **Fix:** `async def` + `await run_in_threadpool(optimize_route_impl, request)`.
-- **Blast radius:** 1 internal caller (`calculate_vehicles`).
-- **Effort:** 30 min
-- **Source:** `docs/01.06.2026_UniRide_Comprehensive_Code_Review.md` §5.4, §6.4
+Target: 1-2 days.
 
----
+- [ ] Restrict FastAPI to a trusted network boundary.
+- [ ] Authenticate benchmark and CLI-import/preview endpoints.
+- [ ] Remove arbitrary `filepath` support.
+- [ ] Create a clean supported Python environment and lock compatible Pydantic packages.
+- [ ] Restore the frontend dependency tree with `npm ci`.
+- [ ] Replace obsolete `next lint` with a working ESLint gate.
+- [ ] Re-enable hooks, purity, undefined-name, unreachable-code, fallthrough, and unused-disable rules.
+- [ ] Establish CI for frontend tests, typecheck, lint, Python collection, and focused solver regressions.
 
-## P1 — High (do soon)
+Acceptance:
 
-### 5. Dead `_is_tw_feasible` in repair operators
-- **File:** `uniride_core/algorithms/sota_common/repair_operators.py:118–128`
-- **Issue:** `_is_tw_feasible` always returns `True` regardless of time windows. Comment admits "simplified". If anyone relies on this for feasibility checking, it silently passes any solution.
-- **Fix:** Implement proper TW feasibility check or raise `NotImplementedError` to prevent silent misuse.
-- **Blast radius:** Called in `GreedyInsertion.repair()` only.
-- **Effort:** 2h
-- **Source:** `docs/01.06.2026_UniRide_Comprehensive_Code_Review.md` §4.7
+- all suites collect in a clean environment;
+- lint and typecheck execute normally;
+- no unauthenticated endpoint can read caller-selected files or start unbounded compute.
 
-### 6. Two parallel benchmark execution paths
-- **Files:** `optimizer_api/routers/benchmark.py` (`_start_benchmark_impl` vs `_start_matrix_native_benchmark_impl`), `academic_benchmark/cli_engine.py` (`_run_benchmark_with_best` vs `_run_benchmark_direct`), `academic_benchmark/sota_engine.py` (`_run_engine_tuning/default/with_params`)
-- **Issue:** Multiple near-identical runner functions with duplicated thread-spawn, pool dispatch, exception handling, and persistence logic.
-- **Fix:** Consolidate into a single `BenchmarkRunner.run(config)` method. Existing aliases become thin wrappers.
-- **Effort:** 4h
-- **Source:** `docs/01.06.2026_UniRide_Comprehensive_Code_Review.md` §4.5, §6.6
+## Phase 1: Mathematical Correctness and Feasibility
 
-### 7. Runtime imports in hot paths
-- **Files:** `optimizer_api/routers/benchmark.py:_academic_param_spaces()`, `academic_benchmark/core/registry_setup.py` executors
-- **Issue:** `from academic_benchmark.param_spaces import ...` executed inside function body on every call. `importlib.import_module(...)` inside executor closures dispatches SOTA solvers per call.
-- **Fix:** Hoist all imports to module level. Replace `importlib.import_module` with a precomputed dispatch table.
-- **Effort:** 1h
-- **Source:** `docs/01.06.2026_UniRide_Comprehensive_Code_Review.md` §4.6, §6.5
+Target: week 1. These are release blockers.
 
-### 8. God function `optimize_route`
-- **File:** `optimizer_api/routers/optimization.py:22–117`
-- **Issue:** Mixes 5 concerns: algorithm dispatch, time-window post-processing, ResourceProfiler IE telemetry, bottleneck detection, time-shift suggestions. ~117 lines, hard to test.
-- **Fix:** Split into `dispatch_algorithm`, `apply_time_windows`, `profile_resources`, `detect_bottlenecks`.
-- **Blast radius:** 1 caller (`calculate_vehicles`).
-- **Effort:** 2h
-- **Source:** `docs/01.06.2026_UniRide_Comprehensive_Code_Review.md` §4.4, §6.7
+### Customer occurrence identity
 
-### 9. Missing test coverage for critical SOTA infrastructure
-- **Symbols:** `ConfigSchema.validate`, `DiversityController`, `PenaltyManager`, `MultiStartInitializer`, `MultiLayerLS`
-- **Issue:** Codegraph blast-radius analysis flags these as having ⚠️ no covering tests in the active code path.
-- **Fix:** Write unit tests for each.
-- **Effort:** 4h
-- **Source:** `docs/01.06.2026_UniRide_Codegraph_Analysis_Report.md` §11, `docs/01.06.2026_UniRide_Blast_Radius_Verification.md` §6.8
+- [ ] Use unique customer/request IDs as solver nodes.
+- [ ] Map customer ID to physical location separately.
+- [ ] Build demand, time-window, and response maps by customer ID.
+- [ ] Support multiple customers at one stop without aggregation or crossover failure.
 
-### 10. Daemon thread benchmark — no graceful cancellation
-- **File:** `optimizer_api/routers/benchmark.py:283`
-- **Issue:** Daemon threads are killed on process shutdown. No `try/finally` cleanup. Half-written CSV files, stuck `"running"` DB state, partial SQLite state.
-- **Fix:** Use `asyncio.create_task` with proper cleanup, or add `threading.Event` cancellation token + `try/finally` in worker.
-- **Effort:** 2h
-- **Source:** `docs/01.06.2026_UniRide_Comprehensive_Code_Review.md` §5.5, §6.14
+### Shared feasibility certificate
 
-### 11. Benchmark exception swallowing (silent failures)
-- **File:** `optimizer_api/routers/benchmark.py:280–281`
-- **Issue:** `run_benchmark_task` catches all exceptions via state manager `fail_run()`, but never logs the exception type, message, or stack trace at error level.
-- **Fix:** `except Exception as e: logger.exception("benchmark failed: %s", e); fail_run(...)`.
-- **Effort:** 30 min
-- **Source:** `docs/01.06.2026_UniRide_Comprehensive_Code_Review.md` §5.6
+- [ ] Add a solver-independent validator in `uniride_core`.
+- [ ] Verify exact coverage, depot closure, vector capacity, duration, time windows, matrix validity, and continuity.
+- [ ] Return structured violations.
+- [ ] Prohibit `success=True` for hard-constraint violations.
 
-### 12. `_make_legacy_executor` re-reads distance matrix from disk per call
-- **File:** `academic_benchmark/core/registry_setup.py:179`
-- **Issue:** Inside the executor closure, `get_distance_matrix(...)` is called for every benchmark run, even though the matrix is loaded once and reused across all algorithms. 10–100× I/O amplification.
-- **Fix:** Pre-load matrix at task dispatch time, pass as argument.
-- **Effort:** 30 min
-- **Source:** `docs/01.06.2026_UniRide_Comprehensive_Code_Review.md` §5.7
+### Split-decoder repair
 
----
+- [ ] Initialize unreachable TW-violation DP states to infinity.
+- [ ] Define explicit strict and soft modes.
+- [ ] Generate every capacity-feasible pickup prefix.
+- [ ] Separate TW warp, route-duration excess, and capacity overflow.
+- [ ] Reject missing ATSP arcs.
 
-## P2 — Medium (plan carefully)
+### Objective and RNG consistency
 
-### 13. Two parallel strategy registries
-- **File:** `optimizer_api/strategies/__init__.py`
-- **Issue:** `STRATEGY_REGISTRY` (instances) and `STRATEGY_FACTORIES` (classes) hold the same data. Plus hardcoded `pipeline_map`, `_OPTIONAL_META`, and alias dicts.
-- **Fix:** Single decorator-based registration: `@StrategyRegistry.register(name, pipeline, label)`.
-- **Blast radius:** HIGH — all routers and BenchmarkRunner depend on `STRATEGY_REGISTRY`.
-- **Effort:** 3h
-- **Source:** `docs/01.06.2026_UniRide_Comprehensive_Code_Review.md` §4.2, §6.3
+- [ ] Use one objective for fitness, incumbent selection, and reporting.
+- [ ] Prefer lexicographic feasibility/vehicle-count/travel-cost ordering in production.
+- [ ] Correct cyclic ALNS insertion deltas.
+- [ ] Preserve seed `0`.
+- [ ] Pass request-local Python and NumPy RNGs through all stochastic components.
+- [ ] Remove process-global reseeding from concurrent jobs.
 
-### 14. `shell=True` in orchestrate_batch.py
-- **File:** `academic_benchmark/bildiri2026/orchestrate_batch.py`
-- **Issue:** `subprocess.run(cmd, shell=True)` — injection risk if any argument includes user input.
-- **Fix:** `subprocess.run([sys.executable, str(script_path), *args], shell=False, ...)`.
-- **Effort:** 15 min
-- **Source:** `docs/01.06.2026_UniRide_Comprehensive_Code_Review.md` §4.11, §6.10
+Acceptance:
 
-### 15. Hardcoded model IDs in orchestrate_batch.py
-- **File:** `academic_benchmark/bildiri2026/orchestrate_batch.py:28–34`
-- **Issue:** Model IDs `"1,2,3"`, `"4,5,6"` etc. hardcoded. Breaks on DB change.
-- **Fix:** Query DB for model IDs by problem name at runtime.
-- **Effort:** 1h
-- **Source:** `docs/01.06.2026_UniRide_Comprehensive_Code_Review.md` §4.12
+- regression tests cover duplicate stops, mixed disability classes, duration/TW violations, feasible short prefixes, incomplete ATSP matrices, and seed replay;
+- every strategy result carries a feasibility certificate;
+- small instances agree with exact/reference solvers where applicable.
 
-### 16. `convert_schedule_to_students` mutable default
-- **File:** `optimizer_api/routers/utils.py:35`
-- **Issue:** `user_mapping: Dict[str, Dict] = None` — type hint says non-Optional but default is `None`.
-- **Fix:** `user_mapping: Optional[Dict[str, Dict]] = None`.
-- **Effort:** 5 min
+## Phase 2: Matrix and Production-API Hardening
 
-### 17. `get_time_windows` silent IndexError
-- **File:** `optimizer_api/models/schemas.py:262–278`
-- **Issue:** `parts[0] * 60 + parts[1]` with bare `except (ValueError, IndexError): pass` — malformed time strings silently produce no time window.
-- **Fix:** Raise `ValueError` with meaningful message.
-- **Effort:** 15 min
+Target: weeks 2-3.
 
-### 18. TSPLIB DB path via `os.path.dirname(os.path.dirname(__file__))`
-- **Files:** `academic_benchmark/core/registry_setup.py:206, 319`, `academic_benchmark/cli_engine.py`, `academic_benchmark/sota_engine.py:125`
-- **Issue:** Brittle path computation. Breaks on symlink/namespace package/install changes.
-- **Fix:** Centralize in `academic_benchmark/__init__.py:tsplib_db_path()`.
-- **Effort:** 30 min
-- **Source:** `docs/01.06.2026_UniRide_Comprehensive_Code_Review.md` §6.11
+- [ ] Replace the false DataLoader singleton with one injected matrix repository.
+- [ ] Add provider timeouts, cache TTL, last-known-good behavior, and health metadata.
+- [ ] Reject missing or invalid off-diagonal arcs.
+- [ ] Separate production geographic travel time from academic metrics.
+- [ ] Create bounded typed algorithm configurations.
+- [ ] Bound students, vehicles, algorithms, problems, repetitions, workers, and iterations.
+- [ ] Deduplicate compare aliases and enforce a fixed worker ceiling.
+- [ ] Replace shared executable strategies with request-scoped factories.
+- [ ] Make optional-solver health/listing null-safe.
+- [ ] Add service authentication, authorization, rate limiting, and structured errors.
 
-### 19. Side-effect imports (BLAS thread env vars)
-- **File:** `academic_benchmark/sota_engine.py:37–40`, `academic_benchmark/cli_engine.py:36–39`
-- **Issue:** `os.environ.setdefault("OMP_NUM_THREADS", "1")` at module top-level. Importing mutates process environment.
-- **Fix:** Guard with function-level initialization in `main()`.
-- **Effort:** 30 min
+Acceptance:
 
-### 20. Mixed time sources
-- **Files:** Various — `time.time()` for timestamps, `time.perf_counter()` for elapsed, `datetime.now(timezone.utc)` for serialization
-- **Issue:** `time.time()` is wall-clock, jumps on NTP correction. Used for elapsed measurements in some files.
-- **Fix:** Use `time.perf_counter()` universally for elapsed, `datetime.now(timezone.utc)` for timestamps.
-- **Effort:** 1h
+- every optimization records matrix provenance;
+- invalid matrices fail closed;
+- load tests cannot exceed configured budgets;
+- production routers contain no caller-controlled filesystem access.
 
----
+## Phase 3: Durable Benchmark Execution
 
-## P3 — Low (backlog)
+Target: weeks 3-5.
 
-### 21. Turkish-language strings in academic_benchmark
-- **Issue:** `UYARI`, `SECIM`, `BILGI`, `HATA` throughout `benchmark_utils.py`, `cli_engine.py`. Blocks i18n.
-- **Fix:** Extract to `messages_tr.py` / `messages_en.py`.
-- **Effort:** 4h
+- [ ] Replace daemon threads with a durable queue and worker process.
+- [ ] Make admission and run creation atomic.
+- [ ] Enforce unique/idempotent run IDs.
+- [ ] Add cooperative cancellation inside every experiment loop.
+- [ ] Persist status, heartbeat, owner, progress, termination reason, results, and failures.
+- [ ] Prevent stopped runs from becoming completed.
+- [ ] Record code/dependency/dataset hashes, environment, seeds, parameters, warm-up, and evaluation count.
+- [ ] Keep raw generated benchmark outputs uncommitted by default; publish curated reports.
 
-### 22. Interactive `input()` calls block CI/testing
-- **Issue:** `select_worker_count`, `select_run_count`, `select_mode`, `edit_param_space`, `_edit_param_space_interactive`, `_param_db_menu` — all use `input()`.
-- **Fix:** Factor into `prompter.py` that can be monkey-patched in tests.
-- **Effort:** 4h
+Acceptance:
 
-### 23. O(n²) `_matrix_is_asymmetric` validation
-- **File:** `optimizer_api/models/schemas.py:120–130`
-- **Issue:** O(n²) over distance matrix at request validation time. For 1000-node problems, 1M comparisons per request.
-- **Fix:** Move to `model_validator(mode="after")` with `DEBUG` guard, or cache.
-- **Effort:** 1h
+- jobs survive API restart;
+- multiple API workers share consistent state;
+- cancellation stops computation;
+- concurrent jobs cannot reseed one another.
 
-### 24. Duplicate `validate_param_value` in benchmark_utils.py
-- **File:** `academic_benchmark/benchmark_utils.py:588` (4-arg) and `:908` (3-arg)
-- **Issue:** Two definitions with different arity and behavior.
-- **Fix:** Remove one, update all call sites.
-- **Effort:** 15 min
+## Phase 4: Frontend State, Direction, and Security
 
-### 25. Add structured logging
-- **Issue:** `print()` used for all user-facing output in `cli_engine.py` and `benchmark_utils.py`.
-- **Fix:** Adopt `structlog` or `loguru`. Add `request_id` via `contextvars`.
-- **Effort:** 4h
+Target: weeks 3-5.
 
-### 26. Superseded code cleanup (from Archive Classification Report)
-- **Files to archive:** 4 non-split strategies, 8 sota_common re-export shims, 9 duplicate clustering_strategies, 7 duplicate utils
-- **Prerequisite:** Run grep verification from `docs/01.06.2026_UniRide_Archive_Classification_Report.md` §10
-- **Effort:** 2h (after grep verification)
+- [ ] Route Vehicle Planning and Sandbox through authenticated wrappers.
+- [ ] Preserve 401/403 responses.
+- [ ] Propagate pickup/dropoff and time-window settings end to end.
+- [ ] Persist the effective backend direction.
+- [ ] Replace async intervals with one serialized, cancellable React Query hook.
+- [ ] Add abort signals, timeouts, retry budgets, backoff, and visible errors.
+- [ ] Avoid React-state mutation during render.
+- [ ] Remove full user-response logs.
+- [ ] Remove production `unsafe-eval` and plan nonce-based CSP.
+- [ ] Eliminate browser-direct FastAPI calls.
 
----
+Acceptance:
 
-## Resolved Items (verified — NOT in this roadmap)
+- authenticated admin flows preserve role errors;
+- benchmark polls never overlap for the same run;
+- saved plans match backend direction and feasibility.
 
-The following items from older documentation were **verified as already fixed** via codegraph:
+## Phase 5: GIS Foundation
 
-| Old Claim | Source Doc | Verification |
-|-----------|-----------|--------------|
-| CORS wildcard `["*"]` | `05_Code_Quality_Roadmap.md` A-2 | ✅ `ALLOWED_ORIGINS` env var in `main.py:74–87` |
-| Missing auth guard on calculate-vehicles | `05_Code_Quality_Roadmap.md` A-1 | ✅ `requireAdmin` at `route.ts:22,148` |
-| Broken sandbox IE endpoint | `05_Code_Quality_Roadmap.md` A-3 | ✅ `ie_data` embedded in optimize response (`route.ts:196`) |
-| `total_time_window_violations` missing | `05_Code_Quality_Roadmap.md` B-1 | ✅ `schemas.py:293` |
-| `strategy` → `algorithm` field name | `05_Code_Quality_Roadmap.md` B-2/B-3 | ✅ Both APIs send `algorithm:` |
-| `max_tour_time` → `max_travel_time` | `05_Code_Quality_Roadmap.md` B-4 | ✅ Both APIs send `max_travel_time:` |
-| Benchmark runner not executing | `BENCHMARK_ARCHITECTURE_DEBT.md` | ✅ Daemon thread + state manager operational |
-| `compute_gap` duplication | `06_COMPREHENSIVE_REVIEW` | ✅ `evaluation.py` delegates to `benchmark_utils.py` |
-| Haversine copy in clustering.py | `01_Implementation_Status.md` FIX-07 | ✅ Now re-exports from `uniride_core.algorithms.distance` |
-| Core-First migration incomplete | `00_Unified_Master_Plan` | ✅ All strategy files delegate to `uniride_core/algorithms/` |
-| `faz0_interactive.py` to delete | `00_Unified_Master_Plan` | ✅ File deleted |
-| 3-opt missing in ls_engine | `docs_dev/findings.md` | ✅ Fixed (2026-04-30) |
-| Regret3Insertion missing | `docs_dev/findings.md` | ✅ Fixed (2026-04-30) |
-| R2DMA resonance simplified | `docs_dev/findings.md` | ✅ Fixed (2026-04-30) |
-| Non-deterministic seeds | `docs_dev/findings.md` | ✅ `make_deterministic_seed()` via hashlib |
-| 19 benchmark fix issues | `docs_dev/task_plan.md` | ✅ ALL RESOLVED (2026-05-06) |
-| All 15 v1–v3 review findings | `00_code_review_reportOpus4.6` | ✅ ALL RESOLVED (v4, May 31) |
+Target: weeks 5-7; starts after Phase 2.
 
----
+- [ ] Establish one authoritative depot/location catalog.
+- [ ] Remove conflicting `D.Kampus` coordinates.
+- [ ] Define encoded-polyline or GeoJSON route geometry.
+- [ ] Select and threat-model a map provider.
+- [ ] Implement the map after the geometry contract exists.
+- [ ] Memoize layer derivation and stabilize handlers.
+- [ ] Add route/stop/direction/staleness UI tests.
 
-## Execution Priority
+## Phase 6: Core Unification
 
-| Phase | Items | Total Effort |
-|-------|-------|-------------|
-| **Phase 1** (Quick wins) | #2 ShawRemoval fix, #4 threadpool, #11 exception logging, #14 shell=True, #16 mutable default, #17 silent IndexError, #24 duplicate validate | ~2h |
-| **Phase 2** (Strategy dedup) | #1 hoist optimize to HybridSplitBase | 4–6h |
-| **Phase 3** (Schema + API) | #3 BenchmarkRunRequest, #8 split god function | 4h |
-| **Phase 4** (Benchmark unification) | #6 consolidate runners, #7 hoist imports, #10 cancellation, #12 disk re-read | 6h |
-| **Phase 5** (Test coverage) | #9 SOTA infra tests, #5 dead _is_tw_feasible | 6h |
-| **Phase 6** (Registry + cleanup) | #13 unify registries, #18 TSPLIB path, #19 env side-effects, #20 time sources, #26 superseded code | 5h |
-| **Phase 7** (Backlog) | #21 i18n, #22 input() calls, #23 O(n²) validation, #25 structured logging | 13h |
+Target: months 2-3.
+
+- [ ] Standardize neutral `RoutingProblem`, `CostMatrix`, `ConstraintProfile`, `RoutingResult`, and `FeasibilityCertificate`.
+- [ ] Migrate production DTOs through production adapters.
+- [ ] Migrate academic records through academic adapters.
+- [ ] Remove TSPLIB paths, BKS/gaps, and DOE metadata from neutral core models.
+- [ ] Consolidate duplicate Numba and repair implementations.
+- [ ] Keep compatibility shims temporary and tested.
+
+Acceptance:
+
+- `uniride_core` imports neither production DTOs nor academic persistence;
+- both engines execute the same solver implementations through explicit adapters.
+
+## Phase 7: Academic Validation and Promotion
+
+- [ ] Publish versioned instance manifests for synthesized constraints.
+- [ ] Use fixed paired seeds and held-out instance families.
+- [ ] Compare project baselines, ablations, classical methods, and external solvers.
+- [ ] Report feasibility first, then vehicles, cost, evaluations, runtime distribution, and effect size.
+- [ ] Use appropriate paired Wilcoxon/Friedman/multiple-comparison procedures.
+- [ ] Promote only after replay, ablation, occurrence-safety, feasibility, and held-out gates.
+- [ ] Recreate a verified Smart Benchmark manual after CLI and instrumentation repair.
+
+## Deferred Research Backlog
+
+These are hypotheses, not commitments:
+
+- conventional ALNS with problem-aware destroy/repair;
+- entropy-based diversity control;
+- structural/resonance-guided crossover;
+- operator-policy co-evolution;
+- FCM border-customer transfer;
+- Pareto scenario presentation after a versioned multi-objective contract.
+
+Neural, quantum-inspired, or metaphor-heavy algorithms require independent literature review and evidence before receiving implementation priority.

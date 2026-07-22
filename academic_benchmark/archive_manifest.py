@@ -556,7 +556,10 @@ def _safe_verify_manifest(repo_root: Path, manifest_path: Path) -> tuple[Archive
     _checked_path(canonical, archived_root, archived_root)
     for entry in manifest.entries:
         if entry.archive_path:
-            relative = PurePosixPath(entry.archive_path).relative_to(archive_root)
+            try:
+                relative = PurePosixPath(entry.archive_path).relative_to(archive_root)
+            except ValueError:
+                continue
             _checked_path(canonical, archived_root, archived_root / Path(*relative.parts))
     return manifest, archived_root, verify_manifest(manifest, archived_root)
 
@@ -623,7 +626,7 @@ def main(argv: list[str] | None = None) -> int:
         manifest, archived_root, errors = _safe_verify_manifest(args.repo_root, manifest_path)
         if errors:
             for error in errors:
-                print(error, file=sys.stderr)
+                print("manifest mapping error" if "path outside" in error else error, file=sys.stderr)
             return 1
         print(f"verified {len(manifest.entries)} entries")
         return 0

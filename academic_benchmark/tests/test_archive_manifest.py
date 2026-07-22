@@ -573,3 +573,23 @@ def test_non_ascii_repository_path_quarantine(tmp_path: Path):
     repo = _legacy_repo(tmp_path / "café")
     manifest = quarantine_tracked_tree(repo_root=repo, source_root=PurePosixPath("academic_benchmark/yaem2026"), archive_root=PurePosixPath("archive/legacy"), archive_id="legacy")
     assert manifest.entries
+
+def test_cli_verify_redacts_archive_path_outside_mapping_without_file_access(tmp_path: Path, monkeypatch, capsys):
+    import academic_benchmark.archive_manifest as module
+
+    repo = _legacy_repo(tmp_path)
+    sentinel = "CLI_MAPPING_SECRET_SENTINEL"
+    entry = module.ArchiveEntry(
+        original_path="academic_benchmark/yaem2026/core/solver.py",
+        archive_path=f"outside/{sentinel}",
+        byte_size=0,
+        sha256="0" * 64,
+        classification=EvidenceClass.REFERENCE_ONLY,
+    )
+    manifest = module.ArchiveManifest(schema_version="uniride-archive/v1", archive_id="legacy", source_root="academic_benchmark/yaem2026", archive_root="archive/legacy", entries=[entry])
+    (repo / "manifest.json").write_text(manifest.model_dump_json(), encoding="utf-8")
+    monkeypatch.setattr(module, "sha256_file", lambda path: (_ for _ in ()).throw(AssertionError("unexpected filesystem access")))
+    assert main(["verify", "--repo-root", str(repo), "--manifest", "manifest.json"]) == 1
+    output = capsys.readouterr()
+    assert output.err == "manifest mapping error\n"
+    assert sentinel not in output.err

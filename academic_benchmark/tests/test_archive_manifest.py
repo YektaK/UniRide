@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import json
+import subprocess
 from pathlib import Path, PurePosixPath
 
 import pytest
 
 from academic_benchmark.archive_manifest import (
     EvidenceClass,
+    QuarantineBlocked,
     build_manifest,
     classify_yaem_evidence,
+    main,
+    quarantine_tracked_tree,
     scan_sensitive_file,
     verify_manifest,
 )
@@ -203,3 +208,101 @@ def test_verify_manifest_rejects_unsafe_archive_path_without_file_access(tmp_pat
     assert verify_manifest(manifest, tmp_path / "does-not-exist") == [
         r"unsafe archive path: ..\\secret.txt"
     ]
+
+
+def _git(cwd: Path, *args: str) -> None:
+    subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True)
+
+
+def _legacy_repo(tmp_path: Path) -> Path:
+    repo = tmp_path / "repo"
+    source = repo / "academic_benchmark" / "yaem2026"
+    (source / "core").mkdir(parents=True)
+    (source / "results" / "reports").mkdir(parents=True)
+    (source / "core" / "solver.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (source / "results" / "reports" / "analysis.md").write_text("legacy\n", encoding="utf-8")
+    (source / "ignored.pyc").write_bytes(b"cache")
+    (repo / ".gitignore").write_text("*.pyc\n", encoding="utf-8")
+    _git(repo, "init")
+    _git(repo, "add", ".gitignore", "academic_benchmark/yaem2026/core/solver.py", "academic_benchmark/yaem2026/results/reports/analysis.md")
+    return repo
+
+
+def test_quarantine_moves_only_tracked_files_and_writes_reproducible_manifest(tmp_path: Path):
+    repo = _legacy_repo(tmp_path)
+    manifest = quarantine_tracked_tree(
+        repo_root=repo,
+        source_root=PurePosixPath("academic_benchmark/yaem2026"),
+        archive_root=PurePosixPath("archive/academic_benchmark/yaem2026_legacy"),
+        archive_id="yaem2026_legacy",
+    )
+    archive = repo / "archive" / "academic_benchmark" / "yaem2026_legacy"
+    assert (archive / "core" / "solver.py").is_file()
+    assert (archive / "results" / "reports" / "analysis.md").is_file()
+    assert not (archive / "ignored.pyc").exists()
+    assert not (repo / "academic_benchmark" / "yaem2026" / "ignored.pyc").exists()
+    assert verify_manifest(manifest, archive) == []
+    assert json.loads((archive / "manifest.json").read_text(encoding="utf-8"))["entries"]
+
+
+def test_ambiguous_sensitive_match_aborts_before_any_move(tmp_path: Path):
+    repo = _legacy_repo(tmp_path)
+    risky = repo / "academic_benchmark" / "yaem2026" / "config.json"
+    risky.write_text('{"api_key": "ambiguous-real-looking-value-123"}', encoding="utf-8")
+    _git(repo, "add", "academic_benchmark/yaem2026/config.json")
+    with pytest.raises(QuarantineBlocked, match="ambiguous high-risk match"):
+        quarantine_tracked_tree(repo_root=repo, source_root=PurePosixPath("academic_benchmark/yaem2026"), archive_root=PurePosixPath("archive/academic_benchmark/yaem2026_legacy"), archive_id="yaem2026_legacy")
+    assert risky.is_file()
+    assert not (repo / "archive").exists()
+
+
+def test_confirmed_secret_is_withheld_without_secret_content(tmp_path: Path):
+    repo = _legacy_repo(tmp_path)
+    secret = "ghp_" + "A" * 36
+    risky = repo / "academic_benchmark" / "yaem2026" / "credential.txt"
+    risky.write_text(secret, encoding="utf-8")
+    _git(repo, "add", "academic_benchmark/yaem2026/credential.txt")
+    manifest = quarantine_tracked_tree(repo_root=repo, source_root=PurePosixPath("academic_benchmark/yaem2026"), archive_root=PurePosixPath("archive/academic_benchmark/yaem2026_legacy"), archive_id="yaem2026_legacy")
+    entry = next(item for item in manifest.entries if item.original_path.endswith("credential.txt"))
+    assert entry.classification is EvidenceClass.WITHHELD_SENSITIVE
+    assert entry.archive_path is None
+    assert not risky.exists()
+    assert secret not in (repo / "archive" / "academic_benchmark" / "yaem2026_legacy" / "manifest.json").read_text(encoding="utf-8")
+
+
+def test_untracked_user_file_blocks_without_mutation(tmp_path: Path):
+    repo = _legacy_repo(tmp_path)
+    note = repo / "academic_benchmark" / "yaem2026" / "local-note.bin"
+    note.write_bytes(b"user data")
+    with pytest.raises(QuarantineBlocked, match="untracked non-ignored"):
+        quarantine_tracked_tree(repo_root=repo, source_root=PurePosixPath("academic_benchmark/yaem2026"), archive_root=PurePosixPath("archive/academic_benchmark/yaem2026_legacy"), archive_id="yaem2026_legacy")
+    assert note.is_file()
+    assert not (repo / "archive").exists()
+
+
+def test_manifest_failure_restores_moved_and_withheld_files(tmp_path: Path, monkeypatch):
+    import academic_benchmark.archive_manifest as archive_module
+
+    repo = _legacy_repo(tmp_path)
+    secret = "ghp_" + "A" * 36
+    credential = repo / "academic_benchmark" / "yaem2026" / "credential.txt"
+    credential.write_text(secret, encoding="utf-8")
+    _git(repo, "add", "academic_benchmark/yaem2026/credential.txt")
+
+    def fail_write(*args, **kwargs):
+        raise OSError("simulated manifest failure")
+
+    monkeypatch.setattr(archive_module, "write_manifest", fail_write)
+    with pytest.raises(OSError, match="simulated manifest failure"):
+        quarantine_tracked_tree(repo_root=repo, source_root=PurePosixPath("academic_benchmark/yaem2026"), archive_root=PurePosixPath("archive/academic_benchmark/yaem2026_legacy"), archive_id="yaem2026_legacy")
+    assert credential.read_text(encoding="utf-8") == secret
+    assert (repo / "academic_benchmark" / "yaem2026" / "core" / "solver.py").is_file()
+    assert not (repo / "archive").exists()
+
+
+def test_cli_help_lists_transaction_subcommands(capsys):
+    with pytest.raises(SystemExit) as result:
+        main(["--help"])
+    assert result.value.code == 0
+    output = capsys.readouterr().out
+    assert all(command in output for command in ("scan", "quarantine", "verify"))

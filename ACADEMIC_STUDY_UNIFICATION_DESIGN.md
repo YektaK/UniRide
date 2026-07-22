@@ -1,7 +1,7 @@
 # Academic Study Unification and Evidence Quarantine Design
 
 Date: 2026-07-22  
-Status: Approved for specification review  
+Status: Approved for implementation planning
 Scope: `uniride_core`, `academic_benchmark`, the Bildiri 2026 and YAEM 2026 research subtrees, their historical evidence, and the Git delivery boundary
 
 ## Objective

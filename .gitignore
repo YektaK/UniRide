@@ -109,6 +109,10 @@ archive/*
 !archive/README.md
 !archive/docs/
 !archive/docs/**
+!archive/academic_benchmark/
+archive/academic_benchmark/*
+!archive/academic_benchmark/yaem2026_legacy/
+!archive/academic_benchmark/yaem2026_legacy/**
 scratch/
 
 # Tool / editor state — regenerable, not source code

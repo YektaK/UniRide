@@ -32,6 +32,12 @@ Current authority is maintained at the repository root and in the two active `do
 
 Paths are relative to `archive/`; the original internal `docs/` structure was preserved.
 
+## Archived on 2026-07-22
+
+- `academic_benchmark/yaem2026_legacy/` — YAEM 2026 legacy evidence quarantine.
+  Manifest: `academic_benchmark/yaem2026_legacy/manifest.json`.
+  No archived result is active scientific evidence.
+
 ## Use Policy
 
 - Cite archived material only as dated historical evidence.

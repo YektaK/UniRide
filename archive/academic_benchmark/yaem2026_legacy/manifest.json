@@ -1,0 +1,1121 @@
+{
+  "archive_id": "yaem2026_legacy",
+  "archive_root": "archive/academic_benchmark/yaem2026_legacy",
+  "entries": [
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/1_generate_config.py",
+      "byte_size": 8619,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/1_generate_config.py",
+      "sha256": "e1b388d9c07923ff2e855f38ce56113a5606d1745cdefb6b5b4ed2e816d7a3ef"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/2_run_tuning.py",
+      "byte_size": 15008,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/2_run_tuning.py",
+      "sha256": "a833c43a354a220078eaa1d44759373a43aa154322b7ce115c4e03be6cdae286"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/3_run_benchmark.py",
+      "byte_size": 10231,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/3_run_benchmark.py",
+      "sha256": "a77f776acc276d969b56ba30c86d622e99a7cd505c07e08528bd71e3d1f94b0c"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/5_visualize.py",
+      "byte_size": 5861,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/5_visualize.py",
+      "sha256": "6dd3ed7fb3d09c783a3f163d5c20947178b47db755205a401dea3abbe3ac8799"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/README.md",
+      "byte_size": 2552,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/README.md",
+      "sha256": "68d08d0ef19189d7b969c8cd6c714f8542b5abc951886f1b09144a8401ed38c0"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/analyze_benchmark.py",
+      "byte_size": 13755,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/analyze_benchmark.py",
+      "sha256": "cf532a7aa03628704a5bcbd483e3df21116c821d9014d8e840e56d2dc25cf9fe"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/analyze_tuning.py",
+      "byte_size": 9195,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/analyze_tuning.py",
+      "sha256": "dbea7ec2cfe0eff8f5962943b13a198de42af353b6369ec50aa58d2d9c75db0a"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/configs/config_berlin52_20260701_003609.json",
+      "byte_size": 10249,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/configs/config_berlin52_20260701_003609.json",
+      "sha256": "8f37ac5c7265dfe46007fd940e33919286ea63d69487e529e9799da9aedbe0b1"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/configs/config_berlin52_20260701_004500.json",
+      "byte_size": 10259,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/configs/config_berlin52_20260701_004500.json",
+      "sha256": "6a6a8c4c5dbd6f505848f73d6795d2cf140aa6d11f6a41f72eedf8cac886a1ef"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/data/tuned_parameters_db.json",
+      "byte_size": 16727,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/data/tuned_parameters_db.json",
+      "sha256": "4eaf8f62423a64819f98dd3e528fcfa83a7d6c6de63a63941cd8966c1fa68a77"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/data/universal_parameters_db.json",
+      "byte_size": 5862,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/data/universal_parameters_db.json",
+      "sha256": "6fcb244897166b06d275cb9b4245db287a34f548181794266464c5d959267289"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/benchmark_progress_20260701_004150.csv",
+      "byte_size": 6888,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/benchmark_progress_20260701_004150.csv",
+      "sha256": "c5a55784a4ab521da126415aeeec4d92453bba8915b7beff0b1152f9fc8d99ad"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/benchmark_progress_20260701_004937.csv",
+      "byte_size": 95510,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/benchmark_progress_20260701_004937.csv",
+      "sha256": "3b730c4c8af1409528b43fe8b8fc0a4dca78e5cce3c6857773e4885cbfd66871"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/benchmark_summary_20260701_004937.csv",
+      "byte_size": 5462,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/benchmark_summary_20260701_004937.csv",
+      "sha256": "87897673585fb3bc7b76148ac16df1af13b342ca25e6fae167aa99cd171eb7d9"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/histories/convergence_20260701_004937.json",
+      "byte_size": 100716,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/histories/convergence_20260701_004937.json",
+      "sha256": "cc9b4f443dc1355eb61d469a45e1b69fd933da2e2ef63413beb09441078c7461"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/plots/boxplot_berlin52.png",
+      "byte_size": 176848,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/plots/boxplot_berlin52.png",
+      "sha256": "025005fc5abfbc114bae12122fa64aa3f0a4330ba9cdb4623a9e596b13325b73"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/plots/boxplot_eil51.png",
+      "byte_size": 157401,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/plots/boxplot_eil51.png",
+      "sha256": "59ad69bef08de9e2f8872bb031db5687a8e86fd612fe31bbb7eb36f13d813579"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/plots/boxplot_kroA100.png",
+      "byte_size": 166093,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/plots/boxplot_kroA100.png",
+      "sha256": "030b03f9c8932a49b0692fdf5925f6f8818d1544ab89399e579ae178442c8d12"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/plots/boxplot_st70.png",
+      "byte_size": 167084,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/plots/boxplot_st70.png",
+      "sha256": "51f24f78cdec62f630b831b9fcccec78cdb607785a8577cad57db44e8dfe629d"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/plots/boxplot_student_matrix.png",
+      "byte_size": 156175,
+      "classification": "INVALID",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/plots/boxplot_student_matrix.png",
+      "sha256": "486181a18813db3fc10e14bff59f5e356fe038af8e70d58440d5d7d233c0b18a"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/plots/convergence_berlin52.png",
+      "byte_size": 185502,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/plots/convergence_berlin52.png",
+      "sha256": "78484a81b662a9db9bce5b4ba6a749b961c6b6b8e68a75cd111346122963001f"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/plots/convergence_eil51.png",
+      "byte_size": 172664,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/plots/convergence_eil51.png",
+      "sha256": "9bcfe628dd9d6d6470e3355b6b0cca217fd7b118f81479675b8cf6ebca169da7"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/plots/convergence_kroA100.png",
+      "byte_size": 178233,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/plots/convergence_kroA100.png",
+      "sha256": "15fb9770c30a6fbf6fb74e2c16134d3a79839799509f7d124d4e6942bfa4a7e4"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/plots/convergence_st70.png",
+      "byte_size": 171988,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/plots/convergence_st70.png",
+      "sha256": "f213d041f789bb27b8883f90f0a477145fca8ea5ebf396282165efe171f4218c"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/plots/convergence_student_matrix.png",
+      "byte_size": 172038,
+      "classification": "INVALID",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/plots/convergence_student_matrix.png",
+      "sha256": "21ed4754f2025c2665f96620b86cf2587ca478184621e9ff85383b41015c6bcb"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/plots/taguchi_2-opt_berlin52.png",
+      "byte_size": 690307,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/plots/taguchi_2-opt_berlin52.png",
+      "sha256": "170187fce77f7f8b308c18649aac813726676d742ad7b634c124897b4eac0ffb"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/plots/taguchi_3-opt_berlin52.png",
+      "byte_size": 673090,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/plots/taguchi_3-opt_berlin52.png",
+      "sha256": "0d4751f07537bdaf66c33e35f13a618851bd140e6c01c1e45ec78e5e3562d7e7"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/plots/taguchi_GA_berlin52.png",
+      "byte_size": 679578,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/plots/taguchi_GA_berlin52.png",
+      "sha256": "970846e6c5e6715e9b4546f05faa54b4de36105d7d105e6ddcc0890158f5b444"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/plots/taguchi_GWO-2opt_berlin52.png",
+      "byte_size": 773122,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/plots/taguchi_GWO-2opt_berlin52.png",
+      "sha256": "4f6046f58837e9e7417840384efeca4923a836bffaeed60f377f226c01ccb36a"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/plots/taguchi_GWO-Pure_berlin52.png",
+      "byte_size": 741991,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/plots/taguchi_GWO-Pure_berlin52.png",
+      "sha256": "6c38ba71187e479f7bba27612643b63ba950ce982a14cd757ca8f1f917dd5982"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/plots/taguchi_HHO-2opt_berlin52.png",
+      "byte_size": 873620,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/plots/taguchi_HHO-2opt_berlin52.png",
+      "sha256": "6dfceaba455d9507af5553cbfcc2fafe6909a43bc9814879405a0e6e2d6eebf6"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/plots/taguchi_HHO-Pure_berlin52.png",
+      "byte_size": 783075,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/plots/taguchi_HHO-Pure_berlin52.png",
+      "sha256": "de0c7bf425eb08d4ce0484dd1480b6141a68ebd58579230deab06e6b629186da"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/plots/taguchi_Or-opt_berlin52.png",
+      "byte_size": 709346,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/plots/taguchi_Or-opt_berlin52.png",
+      "sha256": "7d870894f117ddc1474cda2ace7d70dcbd1f846a01bc4d446a68ef819feb7963"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/plots/taguchi_PSO_berlin52.png",
+      "byte_size": 713193,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/plots/taguchi_PSO_berlin52.png",
+      "sha256": "226d6a362a8b1f739d5683cd1780510ccdd711b9f71a20993845cc066fa6a335"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/reports/DENEY_TASARIMI_20260701_003615.md",
+      "byte_size": 16737,
+      "classification": "INVALID",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/reports/DENEY_TASARIMI_20260701_003615.md",
+      "sha256": "fd4468584cb3a073bf247c7a67d9d5ab0d00f5aaf78cd73ef4458f8b3e203933"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/reports/FINAL_BENCHMARK_ANALYSIS_berlin52_20260701_011500.md",
+      "byte_size": 10950,
+      "classification": "INVALID",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/reports/FINAL_BENCHMARK_ANALYSIS_berlin52_20260701_011500.md",
+      "sha256": "c04185dd912656fae97100a6e3b12716381eb65c6d318ddbd41d66d27385a00b"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/reports/FINAL_BENCHMARK_ANALYSIS_eil51_20260701_011500.md",
+      "byte_size": 10712,
+      "classification": "INVALID",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/reports/FINAL_BENCHMARK_ANALYSIS_eil51_20260701_011500.md",
+      "sha256": "fba94196a34c06d2ba1067ee5d7a3ab1c73f9288a594e396bcba75ecfceeae26"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/reports/FINAL_BENCHMARK_ANALYSIS_kroA100_20260701_011500.md",
+      "byte_size": 11006,
+      "classification": "INVALID",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/reports/FINAL_BENCHMARK_ANALYSIS_kroA100_20260701_011500.md",
+      "sha256": "066bf809a0cd1eb6cadcf26c9e2b73058c528dc5a2815661cf43fb735238077d"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/reports/FINAL_BENCHMARK_ANALYSIS_st70_20260701_011500.md",
+      "byte_size": 10774,
+      "classification": "INVALID",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/reports/FINAL_BENCHMARK_ANALYSIS_st70_20260701_011500.md",
+      "sha256": "4c3994a42dadb2199f1962e70cd78b9625fd2ccbe85a3b10393920f800fb60d3"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/reports/FINAL_BENCHMARK_ANALYSIS_student_matrix_20260701_011500.md",
+      "byte_size": 10511,
+      "classification": "INVALID",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/reports/FINAL_BENCHMARK_ANALYSIS_student_matrix_20260701_011500.md",
+      "sha256": "2a4a79401c7b1422a2246db403d4eb5d7d42386ca2ca160de3420ceec2aee71e"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/reports/MASTER_DENEY_TASARIM_RAPORU.md",
+      "byte_size": 16844,
+      "classification": "INVALID",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/reports/MASTER_DENEY_TASARIM_RAPORU.md",
+      "sha256": "4dc4f1a84a5593d795950e0e946d32b225b2b7518bbb83903c6a2fbf986298f7"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/tuning_progress_20260701_003615.csv",
+      "byte_size": 64994,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/tuning_progress_20260701_003615.csv",
+      "sha256": "6ffa84cbf6bb4465d424b31517d3d3bd328dbb422bb28a636010c12f917efb2a"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/tuning_progress_20260701_004501.csv",
+      "byte_size": 51229,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/tuning_progress_20260701_004501.csv",
+      "sha256": "b35de4ef36fed7583af85f7f20b18157ef29e7cbefd42e3a2c1358f8141d9431"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/benchmark_runner.py",
+      "byte_size": 22231,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/benchmark_runner.py",
+      "sha256": "7f1f4b3f61ff750552e07b8c7b1cb198eb92738cbcff5f84f01d1614dc042c59"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/benchmarks/tsplib_benchmark.py",
+      "byte_size": 9062,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/benchmarks/tsplib_benchmark.py",
+      "sha256": "e58b70e4508df8f5c8a0e369a9b46560705c381693ddf622f8ed709e83da0540"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/clean_db.py",
+      "byte_size": 1067,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/clean_db.py",
+      "sha256": "6c69eadc1598188b2abe00f88f61a4cbd99c95d66fcd5a94e6cd5f8fd3862d28"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/config_manager.py",
+      "byte_size": 2094,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/config_manager.py",
+      "sha256": "4c2d92baa64aa603baa05e827fc6c1e7ef9562b2fd65ead99c411e263f866d35"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/configs/config_berlin52_20260701_012653.json",
+      "byte_size": 9264,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/configs/config_berlin52_20260701_012653.json",
+      "sha256": "151ab6a16904dd4bf1223d7e3f187d58bbe020062734d54675e52881047dbbf9"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/configs/config_eil51_20260701_012653.json",
+      "byte_size": 9258,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/configs/config_eil51_20260701_012653.json",
+      "sha256": "7a5b9800e1c7dd72021bbc19e6ccaf6ddceb4e0647b06c161505659bc4127000"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/configs/config_kroA100_20260701_012653.json",
+      "byte_size": 9262,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/configs/config_kroA100_20260701_012653.json",
+      "sha256": "a11b14a7a4eeae0ed4aa24bce563ea8c8473241666576818cdcc5de350b5fd26"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/configs/config_st70_20260701_012653.json",
+      "byte_size": 9256,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/configs/config_st70_20260701_012653.json",
+      "sha256": "52eb0a29d56c41d314f9139b7c842effb38025dc6804860a2ddd478bb3f0674b"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/core/__init__.py",
+      "byte_size": 1128,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/core/__init__.py",
+      "sha256": "b93c84185d60fc114ae9880f4fe93e8c1c1e7d23af327c267ce73aa07dd012f0"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/core/base_solver.py",
+      "byte_size": 5640,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/core/base_solver.py",
+      "sha256": "202ed638a0b402a7385a71f571d62400d91226c72cc1e7c6b554e46de361d87e"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/core/ga_solver.py",
+      "byte_size": 5598,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/core/ga_solver.py",
+      "sha256": "1b92cfcb1880ebae6799385e8e591025271c2972bde57b8125e443e72a96c52b"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/core/gwo_solver.py",
+      "byte_size": 12965,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/core/gwo_solver.py",
+      "sha256": "5813395321440869fed5ddd8d6734b2e771c3bea85382360eaeecfe8aa52d3d3"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/core/hho_solver.py",
+      "byte_size": 14057,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/core/hho_solver.py",
+      "sha256": "de285b21d77e6634e2b62a83b3d8f0377e94b49f880be2f1c449da6a98e92f51"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/core/numba_accel.py",
+      "byte_size": 16707,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/core/numba_accel.py",
+      "sha256": "88be2a5ab9804ea7bb0fb8749121d54aebd90c1c65b4d42f555bdbb00af4db74"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/core/or_opt.py",
+      "byte_size": 5360,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/core/or_opt.py",
+      "sha256": "0657fbe9d08290794bc31e69cd8395eed43c242592d8c912f81e44985e4e1a42"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/core/pso_solver.py",
+      "byte_size": 7851,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/core/pso_solver.py",
+      "sha256": "428a98f4d52a7e930b72a1b774ee91d139551c049244ad6845fc28b2afa1b414"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/core/three_opt.py",
+      "byte_size": 4388,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/core/three_opt.py",
+      "sha256": "c8de84493ad58271fcc7bc8ce1cf175ce1d4113f692bf600dea525282fcca085"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/core/two_opt.py",
+      "byte_size": 4340,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/core/two_opt.py",
+      "sha256": "37c9ef4c8dc33e9241cf1d68aca2c17c9727dd2c1770a12d01f7b02e74ed05f4"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/data/student_matrix.json",
+      "byte_size": 10138,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/data/student_matrix.json",
+      "sha256": "049cb7c0174699e12d65475388c997d4532d34a4a7734b1e4f55ff82a32b5aa5"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/data/tuned_parameters_db.json",
+      "byte_size": 59280,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/data/tuned_parameters_db.json",
+      "sha256": "63acee4513b51f75bd8afb9c6907f60fead29d0dec2c2261520bdbed1f5a327d"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/data/universal_parameters_db.json",
+      "byte_size": 5113,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/data/universal_parameters_db.json",
+      "sha256": "746fcc0def3c50d3662acf8553220d114b1627b2ca4174409ce476c2e33f673b"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/data_manager.py",
+      "byte_size": 2987,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/data_manager.py",
+      "sha256": "dbe224d05c3090c2a6fbb48c2562da1f918f5e2bbddd53fcc77813f2ce3af77c"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/extract_universal_params.py",
+      "byte_size": 3299,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/extract_universal_params.py",
+      "sha256": "5f28f3ef629091a2b25da9c5980fbaca0f83c8cb3999e73bd8a7bf7e5c507751"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/fix_db.py",
+      "byte_size": 900,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/fix_db.py",
+      "sha256": "d4f733c74577da85d14eeaf4b9284fcfae526a8358d3367a5887e69d400de11a"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/implementation_plan.md",
+      "byte_size": 3790,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/implementation_plan.md",
+      "sha256": "dece988736b12066a7842a543bd88c0769651bb3b7cf076875b5cfabf48465fa"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/orchestrate_batch.py",
+      "byte_size": 1640,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/orchestrate_batch.py",
+      "sha256": "23e8f62c62aad69a496565c6f396ab870a146b2788947c257740d1dea980a9b8"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/plot_radar_chart.py",
+      "byte_size": 2710,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/plot_radar_chart.py",
+      "sha256": "d0707e91e3c84ba832939014189a6a9d6d4d2fc58399d5234d4d0482d0bc6f40"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/requirements.txt",
+      "byte_size": 157,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/requirements.txt",
+      "sha256": "d2e4475b175de464b1ff13ea46f56997d2929d28c32194c9a18f1a26bf4a7875"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/benchmark_progress_20260701_041235.csv",
+      "byte_size": 16338,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/benchmark_progress_20260701_041235.csv",
+      "sha256": "a00c6a6076f81c88950082b32a386c122937826a13fb3d856eac6ae9263756e2"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/benchmark_progress_20260701_041729.csv",
+      "byte_size": 14993,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/benchmark_progress_20260701_041729.csv",
+      "sha256": "63ca3ec404ca1a60497aad7b6dc4b21de1c514a5c6dc7459f951e4b254c0ec09"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/benchmark_progress_20260701_042210.csv",
+      "byte_size": 14714,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/benchmark_progress_20260701_042210.csv",
+      "sha256": "adcd39f4002c946619e67d22685c21c1215fae6b15b7f1dfc55ad42b2e81d2cc"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/benchmark_progress_20260701_042835.csv",
+      "byte_size": 16494,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/benchmark_progress_20260701_042835.csv",
+      "sha256": "c9ff7f3f2a256e5eef710ad2dc6d98e957e0893c875a687cc0bdd5e29344f8cb"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/benchmark_progress_20260701_044102.csv",
+      "byte_size": 17824,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/benchmark_progress_20260701_044102.csv",
+      "sha256": "2ce97a39fca25dabd645e8d52e05d0e5a812aec02487d6c72fb64405327697e9"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/benchmark_summary_20260701_041235.csv",
+      "byte_size": 963,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/benchmark_summary_20260701_041235.csv",
+      "sha256": "577c10c3ff556ac93865fabc30b02b1acef23b5f84079f92131ff25c2b856c38"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/benchmark_summary_20260701_041729.csv",
+      "byte_size": 982,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/benchmark_summary_20260701_041729.csv",
+      "sha256": "ebc69384ee2b625bf3c0d0c8c8d83bf36f129d5024b033d5f1efe6f5f46ba25f"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/benchmark_summary_20260701_042210.csv",
+      "byte_size": 904,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/benchmark_summary_20260701_042210.csv",
+      "sha256": "aaaec7fb0e4917b27a4c429d989b3db50e3c48d631cbf4419c628eae4db1f1ee"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/benchmark_summary_20260701_042835.csv",
+      "byte_size": 1006,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/benchmark_summary_20260701_042835.csv",
+      "sha256": "88ed440198560c8d5363334837ede97aedaa6173254b2e5949ff5eaa118c9bb7"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/benchmark_summary_20260701_044102.csv",
+      "byte_size": 962,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/benchmark_summary_20260701_044102.csv",
+      "sha256": "edae1f8ece0a7bc8b6fc83c0115c904cb4428f3d7519447f1a9ca225436f5ec1"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/histories/convergence_20260701_041235.json",
+      "byte_size": 16598,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/histories/convergence_20260701_041235.json",
+      "sha256": "ed8c68c90ab28a23216a1104fe9f85309351b446a274b81bd97df707b569b267"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/histories/convergence_20260701_041729.json",
+      "byte_size": 15124,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/histories/convergence_20260701_041729.json",
+      "sha256": "67e48e88edb2e9bffd9c110a4b25e0cc96b4e559b7f99a21c3943f86477da0e8"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/histories/convergence_20260701_042210.json",
+      "byte_size": 15326,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/histories/convergence_20260701_042210.json",
+      "sha256": "f92411d4827b83bad2cd47c1d64a8811adc5c28a978050aa6b3d7cb399c797f8"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/histories/convergence_20260701_042835.json",
+      "byte_size": 17379,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/histories/convergence_20260701_042835.json",
+      "sha256": "fe178f3188307f02d69709954ec4723b18bc8d33273908d71e8a72f6d94ee8c5"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/histories/convergence_20260701_044102.json",
+      "byte_size": 12855,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/histories/convergence_20260701_044102.json",
+      "sha256": "8767c627e48dab1ce3a5653c30ba6383b0bafde2d2d0fe851e2ad5f3c2475690"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/boxplot_berlin52.png",
+      "byte_size": 174917,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/boxplot_berlin52.png",
+      "sha256": "95697111ab1caf9c0c5b1f5195591709bc17d6b08ded77397782d6204122616e"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/boxplot_eil51.png",
+      "byte_size": 160131,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/boxplot_eil51.png",
+      "sha256": "a0ea71ba712cb030048fc55ed58013380518169e6a79c38cbe3f9bd5b8185076"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/boxplot_kroA100.png",
+      "byte_size": 163730,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/boxplot_kroA100.png",
+      "sha256": "f6ba6ebbfe2d4cbf342d58f16295374b3281b62bf7751c018c70f1a41270ee22"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/boxplot_st70.png",
+      "byte_size": 159630,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/boxplot_st70.png",
+      "sha256": "d15f35f6e7425a061dcd1fc95b9b29e1c3a69c02f6d6c3fbffc9a22d86d20b2a"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/boxplot_student_matrix.png",
+      "byte_size": 155810,
+      "classification": "INVALID",
+      "original_path": "academic_benchmark/yaem2026/results/plots/boxplot_student_matrix.png",
+      "sha256": "8bc4c47f1baff5a9d51bfe796ece5702c5771e1fb9bfe44b2348e0e5a7d45b37"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/boxplot_student_matrix_sunum.png",
+      "byte_size": 120415,
+      "classification": "INVALID",
+      "original_path": "academic_benchmark/yaem2026/results/plots/boxplot_student_matrix_sunum.png",
+      "sha256": "48cec83944ef9bdd792be30aaf51a744d834a8de7a01e558953106ea1d183b7e"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/convergence_berlin52.png",
+      "byte_size": 170708,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/convergence_berlin52.png",
+      "sha256": "25bd6dcc62e1684ab1fadd16826cb605a239b6f832623917d1d404f89b7f7cf1"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/convergence_eil51.png",
+      "byte_size": 156699,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/convergence_eil51.png",
+      "sha256": "e69fb679c8ae1ba64283486f6df8ac5ef1839f3689a0e779111cf875fa9f766b"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/convergence_kroA100.png",
+      "byte_size": 163431,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/convergence_kroA100.png",
+      "sha256": "150c01991b7a627f99aeaca189be25ba02d4a278844438bfcde68d78b1c1c432"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/convergence_st70.png",
+      "byte_size": 157816,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/convergence_st70.png",
+      "sha256": "70ca9b7777c556551a68a98fb81db6f3b94792183e005053b0398642af8654d2"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/convergence_student_matrix.png",
+      "byte_size": 89539,
+      "classification": "INVALID",
+      "original_path": "academic_benchmark/yaem2026/results/plots/convergence_student_matrix.png",
+      "sha256": "6058997968b8ebcc46738b5ee49cd5b10fb4bb1fb23553d5d1df36e11ed7d886"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/radar_chart_yaem2026.png",
+      "byte_size": 520207,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/radar_chart_yaem2026.png",
+      "sha256": "e8116d280e67602090067f07e68b3005adeb8db4e25ea23d4586e1197232e494"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_2-opt_berlin52.png",
+      "byte_size": 569986,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_2-opt_berlin52.png",
+      "sha256": "657c619c9771835f7f3bd5d1555541a17760d551bac07a554a44eb6adacecedd"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_2-opt_eil51.png",
+      "byte_size": 532466,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_2-opt_eil51.png",
+      "sha256": "0752d763e04edffe86ed2631cdef2f38d2c25f1c61f3260eedc9d1465196fe33"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_2-opt_kroA100.png",
+      "byte_size": 573942,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_2-opt_kroA100.png",
+      "sha256": "c60177b17628585b508c055a1a73f128a44364a8a9dac7288f713d201d4a3c01"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_2-opt_st70.png",
+      "byte_size": 576397,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_2-opt_st70.png",
+      "sha256": "4d59a0c44007592863772e55ef9fafd214e305ae028ba4101bd24bada1cc30e5"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_3-opt_berlin52.png",
+      "byte_size": 552788,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_3-opt_berlin52.png",
+      "sha256": "90faa76cbcc5a7a2333daa45ee69df281595a3886b7ad431c70f0094384c6f78"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_3-opt_eil51.png",
+      "byte_size": 514808,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_3-opt_eil51.png",
+      "sha256": "a3f47225080849065f6b952b82d8bad65ed5fc42608e19afe77b8cba698ebea1"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_3-opt_kroA100.png",
+      "byte_size": 536497,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_3-opt_kroA100.png",
+      "sha256": "2daecbc812fd1e4fcdd3c87b538bbbfba058c8710df8cdedb12a210df986c412"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_3-opt_st70.png",
+      "byte_size": 520256,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_3-opt_st70.png",
+      "sha256": "f53504676e6e5b0bb2b0e5f74ff49bcaaaa62585796fe4252a56b9e8767b8c18"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_GWO-2opt_berlin52.png",
+      "byte_size": 655751,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_GWO-2opt_berlin52.png",
+      "sha256": "547c5dd8fca347fcbc0cf3224d6e516392b90c3d09e4ce371eb71e5727189f1f"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_GWO-2opt_eil51.png",
+      "byte_size": 700838,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_GWO-2opt_eil51.png",
+      "sha256": "d0e357d116ee2b78ab04d00abdacc4a396eb925b4204db7f2e3a39e0b07efd45"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_GWO-2opt_kroA100.png",
+      "byte_size": 733948,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_GWO-2opt_kroA100.png",
+      "sha256": "595e298f286d170377a58634ce6aae58202504cfb72e3be92c8fe3a57bb95323"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_GWO-2opt_st70.png",
+      "byte_size": 685733,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_GWO-2opt_st70.png",
+      "sha256": "68b4ca908d4f9d085015aa154b9a2d9e6eca9772946657eea51ec7022dedf0f8"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_GWO-ALNS_berlin52.png",
+      "byte_size": 719390,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_GWO-ALNS_berlin52.png",
+      "sha256": "5adbca2577638aeb55f00be65fbcf30cc62da513feb6c137e810031ed150dbad"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_GWO-ALNS_eil51.png",
+      "byte_size": 727309,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_GWO-ALNS_eil51.png",
+      "sha256": "ff8a8c2e8de8abbcfe4c1e6612a1e9b7797179b221f88d2196900de3c855bcf5"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_GWO-ALNS_kroA100.png",
+      "byte_size": 756701,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_GWO-ALNS_kroA100.png",
+      "sha256": "5139896c33005d7767c8564ff993f20f23a4da5be2e88171f26d075943a40307"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_GWO-ALNS_st70.png",
+      "byte_size": 765699,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_GWO-ALNS_st70.png",
+      "sha256": "1e18617a5a253559b6c0b297080d4488b4a3d843733e179c4617fd9eb6004e1a"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_GWO-LKH_berlin52.png",
+      "byte_size": 680832,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_GWO-LKH_berlin52.png",
+      "sha256": "c3b97e9b79f2d6ad23a2a8faf655ecef6d55037e86a18b25c67d3203feceb703"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_GWO-LKH_eil51.png",
+      "byte_size": 681595,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_GWO-LKH_eil51.png",
+      "sha256": "ed7f67290dd71d3786d441e680d94798421ced40b188eddc9f57683714a2ab5d"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_GWO-LKH_kroA100.png",
+      "byte_size": 671752,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_GWO-LKH_kroA100.png",
+      "sha256": "c447a17c3e3ece1c30ce03e46e4519c22b2e1d84ed16e0e9b80210c5af53effe"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_GWO-LKH_st70.png",
+      "byte_size": 729372,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_GWO-LKH_st70.png",
+      "sha256": "31b08728e4c547271d1c2981ff82c9e54a38ea26348096ce0862fbfa58694def"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_GWO-Pure_berlin52.png",
+      "byte_size": 653369,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_GWO-Pure_berlin52.png",
+      "sha256": "7b11b694a8e94b7260785734c21566ef84fe4e75f202c230f54f0223167d7072"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_GWO-Pure_eil51.png",
+      "byte_size": 629067,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_GWO-Pure_eil51.png",
+      "sha256": "7b8c70549bd449b45803ff29ef0216180d6b9969b2dc8bf611c01f860f6d43e0"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_GWO-Pure_kroA100.png",
+      "byte_size": 607122,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_GWO-Pure_kroA100.png",
+      "sha256": "ccec5e635b68cca7746cd07513341877b28ce7e34b2a14089c9db0c138b3afbf"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_GWO-Pure_st70.png",
+      "byte_size": 606100,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_GWO-Pure_st70.png",
+      "sha256": "5680d7f63001d304b7ec7928a73753aa20eb3d853f92a17664cb3c7e1bb6ab13"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_HHO-2opt_berlin52.png",
+      "byte_size": 740337,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_HHO-2opt_berlin52.png",
+      "sha256": "ae3fb4cfdf764ae3355ceb497cc6276158ef6006b51bdb0db928d0ee447be17d"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_HHO-2opt_eil51.png",
+      "byte_size": 761872,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_HHO-2opt_eil51.png",
+      "sha256": "9fa5c6989e05987834f1340b9eb92133db9e74fdc65f8059c8116ef1b05e9c47"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_HHO-2opt_kroA100.png",
+      "byte_size": 758950,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_HHO-2opt_kroA100.png",
+      "sha256": "f39d9cdd338126dba1b951de50f268d11ce02bef0b99b126c93d8437c609b7a4"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_HHO-2opt_st70.png",
+      "byte_size": 775492,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_HHO-2opt_st70.png",
+      "sha256": "fb13a6c7ca297affaea7ff6400a43654f564ade3ae68d5978cd82c651983245a"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_HHO-ALNS_berlin52.png",
+      "byte_size": 802774,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_HHO-ALNS_berlin52.png",
+      "sha256": "ac626add5483ed0c2f75a44604f03d281da2a60455cc2290f635b811881b349c"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_HHO-ALNS_eil51.png",
+      "byte_size": 824041,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_HHO-ALNS_eil51.png",
+      "sha256": "953453411ff0141dc8d78264522259b50706170fa5d6150235d1d91ee9c94c87"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_HHO-ALNS_kroA100.png",
+      "byte_size": 773497,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_HHO-ALNS_kroA100.png",
+      "sha256": "756945c853128747a3899c7f9483e644b5e3c33c7613e5ec5da5c81c67847b76"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_HHO-ALNS_st70.png",
+      "byte_size": 758102,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_HHO-ALNS_st70.png",
+      "sha256": "98968e0cf5d1d1b10f7fcfdcb1c9311374b0bb03b14ebb238c4cb071d391a83d"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_HHO-LKH_berlin52.png",
+      "byte_size": 753043,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_HHO-LKH_berlin52.png",
+      "sha256": "b5036fa81b925e26c1403f6ba7bbfb69ab4d17bd14044519ed629d64566a7be8"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_HHO-LKH_eil51.png",
+      "byte_size": 782166,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_HHO-LKH_eil51.png",
+      "sha256": "5ea0daa102d1137c6b585d84da7588c466004ae2786718a86349bebd1e8c63f5"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_HHO-LKH_kroA100.png",
+      "byte_size": 770820,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_HHO-LKH_kroA100.png",
+      "sha256": "2b2a211d58f64c2a17b4f4b17a49ba691e7ab09026f4a972ad7eab5191701ad0"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_HHO-LKH_st70.png",
+      "byte_size": 807725,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_HHO-LKH_st70.png",
+      "sha256": "1dc014f4d2d9a5f5e5517fa62c683bbaad6df6c1837aa661c91071b808c528fb"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_HHO-Pure_berlin52.png",
+      "byte_size": 655091,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_HHO-Pure_berlin52.png",
+      "sha256": "a3bfa2e98ada0da9895794281f7a3e034fe1d19c74459055e77315936b94ae66"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_HHO-Pure_eil51.png",
+      "byte_size": 651593,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_HHO-Pure_eil51.png",
+      "sha256": "f5e470e783457c3337ef226ac98f0fc62ee0295311bb6cf4d9b4adf49711d1c9"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_HHO-Pure_kroA100.png",
+      "byte_size": 666075,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_HHO-Pure_kroA100.png",
+      "sha256": "db559bf7cc4fa2bc47c7888b26986140ecede42410fa5b75a5e2784f9a410b75"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_HHO-Pure_st70.png",
+      "byte_size": 640272,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_HHO-Pure_st70.png",
+      "sha256": "9ba3e6a07867f54f25861679f56e0cf90709181443a918f4f81f767437fe06c1"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_Or-opt_berlin52.png",
+      "byte_size": 560099,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_Or-opt_berlin52.png",
+      "sha256": "990e41632a2b1980b308b3d01c442ea10fac48f2c06922fa7b8c818167fb4204"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_Or-opt_eil51.png",
+      "byte_size": 563470,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_Or-opt_eil51.png",
+      "sha256": "f1b37c06230d534e3693af6fded388f9592d002e5d3c2ffc453c99bb765b7333"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_Or-opt_kroA100.png",
+      "byte_size": 541021,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_Or-opt_kroA100.png",
+      "sha256": "1a488f68df22c79c8d7b2667ee7e65e0a7b8cdf048457776e1f27d5c0d8c4286"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/taguchi_Or-opt_st70.png",
+      "byte_size": 548561,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/plots/taguchi_Or-opt_st70.png",
+      "sha256": "303147eafd26ad71807afe329960da163c220caab633d4c28c1bdb14ad7675a7"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/reports/DENEY_TASARIMI_20260701_012329.md",
+      "byte_size": 1113,
+      "classification": "INVALID",
+      "original_path": "academic_benchmark/yaem2026/results/reports/DENEY_TASARIMI_20260701_012329.md",
+      "sha256": "f739192523f2f7decbac537c3b8a60053d5cd415e441fb7f79fa6cb7097f2b25"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/reports/DENEY_TASARIMI_20260701_012654.md",
+      "byte_size": 71278,
+      "classification": "INVALID",
+      "original_path": "academic_benchmark/yaem2026/results/reports/DENEY_TASARIMI_20260701_012654.md",
+      "sha256": "23ff3c8956f223939cb81d0a7a19c2c61defa263d2139dac83640f50049c6d05"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/reports/FINAL_BENCHMARK_ANALYSIS_berlin52_20260701_041502.md",
+      "byte_size": 8585,
+      "classification": "INVALID",
+      "original_path": "academic_benchmark/yaem2026/results/reports/FINAL_BENCHMARK_ANALYSIS_berlin52_20260701_041502.md",
+      "sha256": "c395088d8759db2355d6a78633489c45b6dde526ed2b9f3383b1526824593f6c"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/reports/FINAL_BENCHMARK_ANALYSIS_eil51_20260701_041943.md",
+      "byte_size": 8411,
+      "classification": "INVALID",
+      "original_path": "academic_benchmark/yaem2026/results/reports/FINAL_BENCHMARK_ANALYSIS_eil51_20260701_041943.md",
+      "sha256": "3308ac3fc419a56ed3c5c5468d0c3ad92db429baee44ffded79cf6ac9a39e186"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/reports/FINAL_BENCHMARK_ANALYSIS_kroA100_20260701_043836.md",
+      "byte_size": 8680,
+      "classification": "INVALID",
+      "original_path": "academic_benchmark/yaem2026/results/reports/FINAL_BENCHMARK_ANALYSIS_kroA100_20260701_043836.md",
+      "sha256": "a37c2b6cb83d88ff9f070c9ae1c0b5ecd760a24ab793651f71188d9af0eae5ec"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/reports/FINAL_BENCHMARK_ANALYSIS_st70_20260701_042608.md",
+      "byte_size": 8451,
+      "classification": "INVALID",
+      "original_path": "academic_benchmark/yaem2026/results/reports/FINAL_BENCHMARK_ANALYSIS_st70_20260701_042608.md",
+      "sha256": "497aeb1eb8878bac4eb9a579f254f84572e077ba6493477263dbc035d987bc67"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/reports/FINAL_BENCHMARK_ANALYSIS_student_matrix_20260701_044216.md",
+      "byte_size": 8301,
+      "classification": "INVALID",
+      "original_path": "academic_benchmark/yaem2026/results/reports/FINAL_BENCHMARK_ANALYSIS_student_matrix_20260701_044216.md",
+      "sha256": "0a7adc2233a1265f0f0dce178652e4a15ad5604b22ef5a6c84696e2fe22a43ab"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/reports/MASTER_DENEY_TASARIM_RAPORU.md",
+      "byte_size": 71385,
+      "classification": "INVALID",
+      "original_path": "academic_benchmark/yaem2026/results/reports/MASTER_DENEY_TASARIM_RAPORU.md",
+      "sha256": "0eaf84a33470597a48a052bc95db6a9dd8e1e3cafbbf34450b794c444f4d7450"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/tuning_progress_20260701_012329.csv",
+      "byte_size": 221,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/tuning_progress_20260701_012329.csv",
+      "sha256": "58a6fef0a01c35d94c6541b4616c8cac4842dde0d11def4ac91c0e9068b1cbb2"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/tuning_progress_20260701_012654.csv",
+      "byte_size": 318540,
+      "classification": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/yaem2026/results/tuning_progress_20260701_012654.csv",
+      "sha256": "f8f0d45714746f53fcf2bf69cf423d525314e1756e8db5a22692a892913edde2"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/run_benchmark_only.py",
+      "byte_size": 1200,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/run_benchmark_only.py",
+      "sha256": "ac43c33ee8d29f13998eda9b7df0b46f57b2186a1a22d6f1f3fb040075b99027"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/run_yaem2026_experiments.py",
+      "byte_size": 4561,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/run_yaem2026_experiments.py",
+      "sha256": "b6a9c0346e587af3d52304fc6e2291dda07dc872d675775d2a5653f78dde1c76"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/task.md",
+      "byte_size": 1078,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/task.md",
+      "sha256": "8a269aae4cfa1f0f5a757b24676483202972b18fe98a39b552c339e88443ee0a"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/test_berlin.py",
+      "byte_size": 1145,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/test_berlin.py",
+      "sha256": "22b5f802a62b0ad14fd05ee30abf9b9fdb31e75776c0321a6bdc94449b1342dd"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/visualize_student_matrix.py",
+      "byte_size": 2980,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/visualize_student_matrix.py",
+      "sha256": "a1581b57a7b7ec5acfd4f8858b9fb895accd3cf35df4846130573ca5735803f2"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/yaem2026_sunum_slayt_sablonu.md",
+      "byte_size": 15026,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/yaem2026_sunum_slayt_sablonu.md",
+      "sha256": "b3eba5b9fae959897b98eb843af733ec011d9665c996dc00f66fecd1970bb6ce"
+    },
+    {
+      "archive_path": "archive/academic_benchmark/yaem2026_legacy/yaem2026_uygulama_ozeti.md",
+      "byte_size": 7378,
+      "classification": "REFERENCE_ONLY",
+      "original_path": "academic_benchmark/yaem2026/yaem2026_uygulama_ozeti.md",
+      "sha256": "07e33ba624ba9e417a37938b1845cdeb1e282be975df347b8eeabf14530dd166"
+    }
+  ],
+  "schema_version": "uniride-archive/v1",
+  "source_root": "academic_benchmark/yaem2026"
+}

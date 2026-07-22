@@ -306,3 +306,114 @@ def test_cli_help_lists_transaction_subcommands(capsys):
     assert result.value.code == 0
     output = capsys.readouterr().out
     assert all(command in output for command in ("scan", "quarantine", "verify"))
+
+def _snapshot_tree(root: Path) -> dict[str, bytes]:
+    return {
+        path.relative_to(root).as_posix(): path.read_bytes()
+        for path in root.rglob("*")
+        if path.is_file()
+    }
+
+
+@pytest.mark.parametrize(
+    ("source_root", "archive_root", "message"),
+    [
+        (".git", "archive/legacy", ".git"),
+        ("academic_benchmark/yaem2026", ".git/legacy", ".git"),
+        ("academic_benchmark/yaem2026", "academic_benchmark/yaem2026/archive", "overlap"),
+    ],
+)
+def test_quarantine_rejects_git_and_overlapping_roots_before_mutation(
+    tmp_path: Path, source_root: str, archive_root: str, message: str
+):
+    repo = _legacy_repo(tmp_path)
+    before = _snapshot_tree(repo)
+    with pytest.raises(QuarantineBlocked, match=message):
+        quarantine_tracked_tree(
+            repo_root=repo,
+            source_root=PurePosixPath(source_root),
+            archive_root=PurePosixPath(archive_root),
+            archive_id="legacy",
+        )
+    assert _snapshot_tree(repo) == before
+
+
+def test_quarantine_rejects_repo_root_that_is_not_git_toplevel(tmp_path: Path):
+    repo = _legacy_repo(tmp_path)
+    with pytest.raises(QuarantineBlocked, match="git toplevel"):
+        quarantine_tracked_tree(
+            repo_root=repo / "academic_benchmark",
+            source_root=PurePosixPath("yaem2026"),
+            archive_root=PurePosixPath("archive/legacy"),
+            archive_id="legacy",
+        )
+
+
+def test_ignored_non_cache_data_inside_cache_named_directory_blocks(tmp_path: Path):
+    repo = _legacy_repo(tmp_path)
+    cache_data = repo / "academic_benchmark" / "yaem2026" / ".numba_cache" / "note.txt"
+    cache_data.parent.mkdir()
+    cache_data.write_text("must not be deleted", encoding="utf-8")
+    (repo / ".gitignore").write_text("*.pyc\n.numba_cache/\n", encoding="utf-8")
+    with pytest.raises(QuarantineBlocked, match="ignored non-cache"):
+        quarantine_tracked_tree(
+            repo_root=repo,
+            source_root=PurePosixPath("academic_benchmark/yaem2026"),
+            archive_root=PurePosixPath("archive/legacy"),
+            archive_id="legacy",
+        )
+    assert cache_data.read_text(encoding="utf-8") == "must not be deleted"
+
+
+def test_keyboard_interrupt_restores_files_and_staged_caches(tmp_path: Path, monkeypatch):
+    import academic_benchmark.archive_manifest as archive_module
+
+    repo = _legacy_repo(tmp_path)
+    source = repo / "academic_benchmark" / "yaem2026"
+    before = _snapshot_tree(source)
+
+    def interrupt_after_cache_stage(_source_root: Path) -> None:
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(archive_module, "_prune_empty_directories", interrupt_after_cache_stage)
+    with pytest.raises(KeyboardInterrupt):
+        quarantine_tracked_tree(
+            repo_root=repo,
+            source_root=PurePosixPath("academic_benchmark/yaem2026"),
+            archive_root=PurePosixPath("archive/legacy"),
+            archive_id="legacy",
+        )
+    assert _snapshot_tree(source) == before
+    assert not (repo / "archive").exists()
+
+
+def test_cli_validation_error_is_redacted(tmp_path: Path, capsys):
+    repo = _legacy_repo(tmp_path)
+    manifest = repo / "manifest.json"
+    sentinel = "CLI_SECRET_SENTINEL"
+    manifest.write_text('{"archive_id": "' + sentinel + '"}', encoding="utf-8")
+    assert main(["verify", "--repo-root", str(repo), "--manifest", "manifest.json"]) == 2
+    output = capsys.readouterr()
+    assert sentinel not in output.out
+    assert sentinel not in output.err
+    assert output.err.startswith("manifest validation failed:")
+
+
+def test_quarantine_rejects_symlinked_tracked_entry_when_supported(tmp_path: Path):
+    repo = _legacy_repo(tmp_path)
+    source = repo / "academic_benchmark" / "yaem2026"
+    target = tmp_path / "outside.py"
+    target.write_text("outside\n", encoding="utf-8")
+    linked = source / "core" / "solver.py"
+    linked.unlink()
+    try:
+        linked.symlink_to(target)
+    except OSError as exc:
+        pytest.skip(f"symlink creation unavailable: {exc}")
+    with pytest.raises(QuarantineBlocked, match="reparse"):
+        quarantine_tracked_tree(
+            repo_root=repo,
+            source_root=PurePosixPath("academic_benchmark/yaem2026"),
+            archive_root=PurePosixPath("archive/legacy"),
+            archive_id="legacy",
+        )

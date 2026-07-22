@@ -3,9 +3,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
+import stat
 import sys
 import tempfile
 from collections import Counter
@@ -14,7 +16,7 @@ from enum import StrEnum
 from pathlib import Path, PurePosixPath
 from typing import Iterable, Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, ValidationError, model_validator
 
 from academic_benchmark.contracts.common import RepositoryRelativePath, Sha256Digest, StrictContract
 
@@ -219,15 +221,14 @@ def _require_repository_relative(value: PurePosixPath | str) -> PurePosixPath:
     path = PurePosixPath(value)
     if not _is_repository_relative_path(path):
         raise QuarantineBlocked("expected a repository-relative path without traversal")
+    if ".git" in {part.lower() for part in path.parts}:
+        raise QuarantineBlocked(".git containment is forbidden")
     return path
 
 
 def _git_paths(repo_root: Path, *arguments: str) -> list[PurePosixPath]:
     completed = subprocess.run(
-        ["git", *arguments],
-        cwd=repo_root,
-        check=True,
-        capture_output=True,
+        ["git", *arguments], cwd=repo_root, check=True, capture_output=True
     )
     return sorted(
         (PurePosixPath(raw.decode("utf-8")) for raw in completed.stdout.split(b"\0") if raw),
@@ -238,12 +239,75 @@ def _git_paths(repo_root: Path, *arguments: str) -> list[PurePosixPath]:
 def _git_directory(repo_root: Path) -> Path:
     completed = subprocess.run(
         ["git", "rev-parse", "--absolute-git-dir"],
-        cwd=repo_root,
-        check=True,
-        capture_output=True,
-        text=True,
+        cwd=repo_root, check=True, capture_output=True, text=True,
     )
     return Path(completed.stdout.strip()).resolve()
+
+
+def _canonical_repo_root(repo_root: Path) -> Path:
+    candidate = repo_root.resolve()
+    completed = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"], cwd=candidate,
+        check=True, capture_output=True, text=True,
+    )
+    top_level = Path(completed.stdout.strip()).resolve()
+    if candidate != top_level:
+        raise QuarantineBlocked("repo_root must resolve exactly to the git toplevel")
+    return top_level
+
+
+def _is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _is_reparse_point(path: Path) -> bool:
+    try:
+        metadata = os.lstat(path)
+    except FileNotFoundError:
+        return False
+    attributes = getattr(metadata, "st_file_attributes", 0)
+    return stat.S_ISLNK(metadata.st_mode) or bool(
+        attributes & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    )
+
+
+def _checked_path(repo_root: Path, intended_root: Path, path: Path) -> Path:
+    root = repo_root.resolve()
+    if not _is_relative_to(path, root) or not _is_relative_to(path, intended_root):
+        raise QuarantineBlocked("path escapes its intended repository root")
+    current = root
+    for component in path.relative_to(root).parts:
+        current = current / component
+        if _is_reparse_point(current):
+            raise QuarantineBlocked("reparse-point components are forbidden")
+    resolved = path.resolve(strict=False)
+    intended_resolved = intended_root.resolve(strict=False)
+    if not _is_relative_to(resolved, root) or not _is_relative_to(resolved, intended_resolved):
+        raise QuarantineBlocked("resolved path escapes its intended repository root")
+    return path
+
+
+def _paths_overlap(left: PurePosixPath, right: PurePosixPath) -> bool:
+    return left == right or left.is_relative_to(right) or right.is_relative_to(left)
+
+
+def _transaction_roots(
+    repo_root: Path, source_root: PurePosixPath, archive_root: PurePosixPath
+) -> tuple[Path, PurePosixPath, PurePosixPath, Path, Path]:
+    canonical = _canonical_repo_root(repo_root)
+    source_root = _require_repository_relative(source_root)
+    archive_root = _require_repository_relative(archive_root)
+    if _paths_overlap(source_root, archive_root):
+        raise QuarantineBlocked("source and archive roots overlap")
+    source_fs = canonical / Path(*source_root.parts)
+    destination_root = canonical / Path(*archive_root.parts)
+    _checked_path(canonical, source_fs, source_fs)
+    _checked_path(canonical, destination_root, destination_root)
+    return canonical, source_root, archive_root, source_fs, destination_root
 
 
 def _relative_paths(paths: Iterable[PurePosixPath], source_root: PurePosixPath) -> list[PurePosixPath]:
@@ -260,82 +324,43 @@ def _relative_paths(paths: Iterable[PurePosixPath], source_root: PurePosixPath) 
 
 
 def git_tracked_files(repo_root: Path, source_root: PurePosixPath) -> list[PurePosixPath]:
+    canonical = _canonical_repo_root(repo_root)
     source_root = _require_repository_relative(source_root)
-    return _relative_paths(
-        _git_paths(repo_root, "ls-files", "-z", "--", source_root.as_posix()),
-        source_root,
-    )
+    return _relative_paths(_git_paths(canonical, "ls-files", "-z", "--", source_root.as_posix()), source_root)
 
 
 def _git_untracked_files(repo_root: Path, source_root: PurePosixPath) -> list[PurePosixPath]:
-    source_root = _require_repository_relative(source_root)
-    return _relative_paths(
-        _git_paths(
-            repo_root,
-            "ls-files",
-            "-z",
-            "--others",
-            "--exclude-standard",
-            "--",
-            source_root.as_posix(),
-        ),
-        source_root,
-    )
+    return _relative_paths(_git_paths(repo_root, "ls-files", "-z", "--others", "--exclude-standard", "--", source_root.as_posix()), source_root)
 
 
 def _git_ignored_files(repo_root: Path, source_root: PurePosixPath) -> list[PurePosixPath]:
-    source_root = _require_repository_relative(source_root)
-    return _relative_paths(
-        _git_paths(
-            repo_root,
-            "ls-files",
-            "-z",
-            "--others",
-            "--ignored",
-            "--exclude-standard",
-            "--",
-            source_root.as_posix(),
-        ),
-        source_root,
-    )
+    return _relative_paths(_git_paths(repo_root, "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--", source_root.as_posix()), source_root)
 
 
 def _is_disposable_cache(path: PurePosixPath) -> bool:
-    return (
-        "__pycache__" in path.parts
-        or ".numba_cache" in path.parts
-        or path.suffix.lower() in {".pyc", ".pyo", ".nbc", ".nbi"}
-    )
+    return path.suffix.lower() in {".pyc", ".pyo", ".nbc", ".nbi"}
 
 
-def scan_tracked_tree(
-    repo_root: Path,
-    source_root: PurePosixPath,
-) -> tuple[list[PurePosixPath], list[SensitiveFinding]]:
+def _source_path(repo_root: Path, source_fs: Path, relative: PurePosixPath) -> Path:
+    return _checked_path(repo_root, source_fs, source_fs / Path(*relative.parts))
+
+
+def scan_tracked_tree(repo_root: Path, source_root: PurePosixPath) -> tuple[list[PurePosixPath], list[SensitiveFinding]]:
+    canonical = _canonical_repo_root(repo_root)
     source_root = _require_repository_relative(source_root)
-    tracked = git_tracked_files(repo_root, source_root)
-    source_fs = repo_root / Path(*source_root.parts)
+    source_fs = canonical / Path(*source_root.parts)
+    _checked_path(canonical, source_fs, source_fs)
+    tracked = git_tracked_files(canonical, source_root)
     findings: list[SensitiveFinding] = []
     for relative in tracked:
-        for finding in scan_sensitive_file(source_fs / Path(*relative.parts)):
-            findings.append(
-                SensitiveFinding(
-                    path=(source_root / relative).as_posix(),
-                    line=finding.line,
-                    rule=finding.rule,
-                    severity=finding.severity,
-                )
-            )
+        source = _source_path(canonical, source_fs, relative)
+        for finding in scan_sensitive_file(source):
+            findings.append(SensitiveFinding((source_root / relative).as_posix(), finding.line, finding.rule, finding.severity))
     return tracked, findings
 
 
 def write_manifest(manifest: ArchiveManifest, path: Path) -> None:
-    content = json.dumps(
-        manifest.model_dump(mode="json"),
-        indent=2,
-        sort_keys=True,
-        ensure_ascii=False,
-    ) + "\n"
+    content = json.dumps(manifest.model_dump(mode="json"), indent=2, sort_keys=True, ensure_ascii=False) + "\n"
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_text(content, encoding="utf-8", newline="\n")
     temporary.replace(path)
@@ -348,134 +373,162 @@ def load_manifest(path: Path) -> ArchiveManifest:
 def _prune_empty_directories(source_root: Path) -> None:
     if not source_root.exists():
         return
-    directories = sorted(
-        (path for path in source_root.rglob("*") if path.is_dir()),
-        key=lambda path: len(path.parts),
-        reverse=True,
-    )
-    for directory in directories:
+    for directory in sorted((item for item in source_root.rglob("*") if item.is_dir()), key=lambda item: len(item.parts), reverse=True):
         if not any(directory.iterdir()):
             directory.rmdir()
     if source_root.is_dir() and not any(source_root.iterdir()):
         source_root.rmdir()
 
 
-def quarantine_tracked_tree(
-    *,
-    repo_root: Path,
-    source_root: PurePosixPath,
-    archive_root: PurePosixPath,
-    archive_id: str,
-) -> ArchiveManifest:
-    repo_root = repo_root.resolve()
-    source_root = _require_repository_relative(source_root)
-    archive_root = _require_repository_relative(archive_root)
-    source_fs = repo_root / Path(*source_root.parts)
-    destination_root = repo_root / Path(*archive_root.parts)
+def _cleanup_empty_parents(path: Path, stop_at: Path) -> None:
+    current = path.parent
+    while current != stop_at and current.exists():
+        if any(current.iterdir()):
+            return
+        current.rmdir()
+        current = current.parent
+
+
+def _rollback(
+    *, repo_root: Path, source_fs: Path, destination_root: Path, backup_root: Path,
+    moved: list[PurePosixPath], withheld: list[PurePosixPath], staged_caches: list[PurePosixPath],
+    expected: dict[PurePosixPath, str], existing_destination_parent: Path,
+) -> list[str]:
+    errors: list[str] = []
+
+    def attempt(label: str, operation) -> None:
+        try:
+            operation()
+        except BaseException as exc:
+            errors.append(f"{label}: {type(exc).__name__}")
+
+    for relative in reversed(moved):
+        def restore_moved(relative: PurePosixPath = relative) -> None:
+            source = _source_path(repo_root, source_fs, relative)
+            destination = _checked_path(repo_root, destination_root, destination_root / Path(*relative.parts))
+            if destination.exists():
+                source.parent.mkdir(parents=True, exist_ok=True)
+                destination.replace(source)
+        attempt("restore moved", restore_moved)
+    for relative in withheld:
+        def restore_withheld(relative: PurePosixPath = relative) -> None:
+            source = _source_path(repo_root, source_fs, relative)
+            backup = backup_root / "sensitive" / Path(*relative.parts)
+            if backup.exists():
+                source.parent.mkdir(parents=True, exist_ok=True)
+                backup.replace(source)
+        attempt("restore withheld", restore_withheld)
+    for relative in staged_caches:
+        def restore_cache(relative: PurePosixPath = relative) -> None:
+            source = _source_path(repo_root, source_fs, relative)
+            backup = backup_root / "cache" / Path(*relative.parts)
+            if backup.exists():
+                source.parent.mkdir(parents=True, exist_ok=True)
+                backup.replace(source)
+        attempt("restore cache", restore_cache)
+    attempt("remove destination", lambda: shutil.rmtree(destination_root) if destination_root.exists() else None)
+    attempt("remove empty parents", lambda: _cleanup_empty_parents(destination_root, existing_destination_parent))
+    for relative, digest in expected.items():
+        def verify_restore(relative: PurePosixPath = relative, digest: str = digest) -> None:
+            source = _source_path(repo_root, source_fs, relative)
+            if not source.is_file() or sha256_file(source) != digest:
+                raise OSError("restoration mismatch")
+        attempt("verify restoration", verify_restore)
+    if destination_root.exists():
+        errors.append("destination cleanup incomplete")
+    return errors
+
+
+def quarantine_tracked_tree(*, repo_root: Path, source_root: PurePosixPath, archive_root: PurePosixPath, archive_id: str) -> ArchiveManifest:
+    repo_root, source_root, archive_root, source_fs, destination_root = _transaction_roots(repo_root, source_root, archive_root)
     tracked, findings = scan_tracked_tree(repo_root, source_root)
     if not tracked:
         raise QuarantineBlocked(f"no tracked files under {source_root}")
     if destination_root.exists():
         raise QuarantineBlocked(f"archive destination already exists: {archive_root}")
-
     untracked = _git_untracked_files(repo_root, source_root)
-    if untracked:
-        names = ", ".join(path.as_posix() for path in untracked)
-        raise QuarantineBlocked("untracked non-ignored files require review: " + names)
     ignored = _git_ignored_files(repo_root, source_root)
-    unsafe_ignored = [path for path in ignored if not _is_disposable_cache(path)]
+    for relative in [*tracked, *untracked, *ignored]:
+        _source_path(repo_root, source_fs, relative)
+    if untracked:
+        raise QuarantineBlocked("untracked non-ignored files require review: " + ", ".join(item.as_posix() for item in untracked))
+    unsafe_ignored = [item for item in ignored if not _is_disposable_cache(item)]
     if unsafe_ignored:
-        names = ", ".join(path.as_posix() for path in unsafe_ignored)
-        raise QuarantineBlocked("ignored non-cache files require review: " + names)
-
-    ambiguous = [finding for finding in findings if finding.severity == "ambiguous"]
+        raise QuarantineBlocked("ignored non-cache files require review: " + ", ".join(item.as_posix() for item in unsafe_ignored))
+    ambiguous = [item for item in findings if item.severity == "ambiguous"]
     if ambiguous:
-        summary = ", ".join(
-            f"{finding.path}:{finding.line}:{finding.rule}" for finding in ambiguous
-        )
-        raise QuarantineBlocked("ambiguous high-risk match; no files moved: " + summary)
-
-    confirmed_paths = {
-        PurePosixPath(finding.path).relative_to(source_root)
-        for finding in findings
-        if finding.severity == "confirmed"
-    }
-    moved: list[PurePosixPath] = []
-    withheld: list[ArchiveEntry] = []
+        raise QuarantineBlocked("ambiguous high-risk match; no files moved: " + ", ".join(f"{item.path}:{item.line}:{item.rule}" for item in ambiguous))
+    confirmed_paths = sorted({PurePosixPath(item.path).relative_to(source_root) for item in findings if item.severity == "confirmed"}, key=lambda item: item.as_posix())
+    all_mutating = [*tracked, *ignored]
+    expected = {relative: sha256_file(_source_path(repo_root, source_fs, relative)) for relative in all_mutating}
     existing_destination_parent = destination_root.parent
     while not existing_destination_parent.exists():
         existing_destination_parent = existing_destination_parent.parent
+    backup_root = Path(tempfile.mkdtemp(prefix="uniride-quarantine-", dir=_git_directory(repo_root)))
+    moved: list[PurePosixPath] = []
+    withheld: list[PurePosixPath] = []
+    staged_caches: list[PurePosixPath] = []
+    try:
+        for relative in all_mutating:
+            _source_path(repo_root, source_fs, relative)
+        _checked_path(repo_root, destination_root, destination_root)
+        for relative in confirmed_paths:
+            source = _source_path(repo_root, source_fs, relative)
+            backup = backup_root / "sensitive" / Path(*relative.parts)
+            backup.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, backup)
+        destination_root.mkdir(parents=True)
+        withheld_entries: list[ArchiveEntry] = []
+        for relative in tracked:
+            source = _source_path(repo_root, source_fs, relative)
+            if relative in confirmed_paths:
+                withheld_entries.append(ArchiveEntry(original_path=(source_root / relative).as_posix(), archive_path=None, byte_size=source.stat().st_size, sha256=sha256_file(source), classification=EvidenceClass.WITHHELD_SENSITIVE))
+                source.unlink()
+                withheld.append(relative)
+                continue
+            destination = _checked_path(repo_root, destination_root, destination_root / Path(*relative.parts))
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            source.replace(destination)
+            moved.append(relative)
+        for relative in moved:
+            _checked_path(repo_root, destination_root, destination_root / Path(*relative.parts))
+        manifest = build_manifest(archive_id=archive_id, source_root=source_root, archive_root=archive_root, archived_root=destination_root, original_paths=moved, withheld=withheld_entries)
+        write_manifest(manifest, _checked_path(repo_root, destination_root, destination_root / "manifest.json"))
+        errors = verify_manifest(manifest, destination_root)
+        if errors:
+            raise QuarantineBlocked("; ".join(errors))
+        for relative in ignored:
+            source = _source_path(repo_root, source_fs, relative)
+            backup = backup_root / "cache" / Path(*relative.parts)
+            backup.parent.mkdir(parents=True, exist_ok=True)
+            source.replace(backup)
+            staged_caches.append(relative)
+        _prune_empty_directories(source_fs)
+    except BaseException as original:
+        recovery_errors = _rollback(repo_root=repo_root, source_fs=source_fs, destination_root=destination_root, backup_root=backup_root, moved=moved, withheld=withheld, staged_caches=staged_caches, expected=expected, existing_destination_parent=existing_destination_parent)
+        if recovery_errors:
+            raise QuarantineBlocked(f"recovery incomplete; backup retained at {backup_root}: {'; '.join(recovery_errors)}") from original
+        shutil.rmtree(backup_root)
+        raise
+    try:
+        shutil.rmtree(backup_root)
+    except OSError as exc:
+        raise QuarantineBlocked(f"backup cleanup incomplete; backup retained at {backup_root}") from exc
+    return manifest
 
-    with tempfile.TemporaryDirectory(
-        prefix="uniride-quarantine-", dir=_git_directory(repo_root)
-    ) as backup_name:
-        backup_root = Path(backup_name)
-        try:
-            for relative in confirmed_paths:
-                source = source_fs / Path(*relative.parts)
-                backup = backup_root / Path(*relative.parts)
-                backup.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(source, backup)
 
-            destination_root.mkdir(parents=True)
-            for relative in tracked:
-                source = source_fs / Path(*relative.parts)
-                if relative in confirmed_paths:
-                    withheld.append(
-                        ArchiveEntry(
-                            original_path=(source_root / relative).as_posix(),
-                            archive_path=None,
-                            byte_size=source.stat().st_size,
-                            sha256=sha256_file(source),
-                            classification=EvidenceClass.WITHHELD_SENSITIVE,
-                        )
-                    )
-                    source.unlink()
-                    continue
-                destination = destination_root / Path(*relative.parts)
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                source.replace(destination)
-                moved.append(relative)
-
-            manifest = build_manifest(
-                archive_id=archive_id,
-                source_root=source_root,
-                archive_root=archive_root,
-                archived_root=destination_root,
-                original_paths=moved,
-                withheld=withheld,
-            )
-            write_manifest(manifest, destination_root / "manifest.json")
-            integrity_errors = verify_manifest(manifest, destination_root)
-            if integrity_errors:
-                raise QuarantineBlocked("; ".join(integrity_errors))
-
-            for relative in ignored:
-                (source_fs / Path(*relative.parts)).unlink(missing_ok=True)
-            _prune_empty_directories(source_fs)
-            return manifest
-        except Exception:
-            for relative in reversed(moved):
-                destination = destination_root / Path(*relative.parts)
-                source = source_fs / Path(*relative.parts)
-                if destination.exists():
-                    source.parent.mkdir(parents=True, exist_ok=True)
-                    destination.replace(source)
-            for relative in confirmed_paths:
-                backup = backup_root / Path(*relative.parts)
-                source = source_fs / Path(*relative.parts)
-                if backup.exists():
-                    source.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(backup, source)
-            shutil.rmtree(destination_root, ignore_errors=True)
-            cleanup_parent = destination_root.parent
-            while cleanup_parent != existing_destination_parent and cleanup_parent.exists():
-                if any(cleanup_parent.iterdir()):
-                    break
-                cleanup_parent.rmdir()
-                cleanup_parent = cleanup_parent.parent
-            raise
-
+def _safe_verify_manifest(repo_root: Path, manifest_path: Path) -> tuple[ArchiveManifest, Path, list[str]]:
+    canonical = _canonical_repo_root(repo_root)
+    _checked_path(canonical, canonical, manifest_path)
+    manifest = load_manifest(manifest_path)
+    archive_root = _require_repository_relative(PurePosixPath(manifest.archive_root))
+    archived_root = canonical / Path(*archive_root.parts)
+    _checked_path(canonical, archived_root, archived_root)
+    for entry in manifest.entries:
+        if entry.archive_path:
+            relative = PurePosixPath(entry.archive_path).relative_to(archive_root)
+            _checked_path(canonical, archived_root, archived_root / Path(*relative.parts))
+    return manifest, archived_root, verify_manifest(manifest, archived_root)
 
 def _as_repo_path(value: str) -> PurePosixPath:
     normalized = value.replace("\\", "/")
@@ -546,6 +599,10 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(f"verified {len(manifest.entries)} entries")
         return 0
+    except ValidationError as exc:
+        locations = sorted('.'.join(str(part) for part in item['loc']) for item in exc.errors(include_input=False))
+        print('manifest validation failed: ' + (', '.join(locations) or 'invalid manifest'), file=sys.stderr)
+        return 2
     except (OSError, subprocess.CalledProcessError, QuarantineBlocked, ValueError) as exc:
         print(str(exc), file=sys.stderr)
         return 2

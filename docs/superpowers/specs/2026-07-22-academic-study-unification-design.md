@@ -124,7 +124,7 @@ The following target IDs and values are normative for this remediation. `exact-f
 | `Core-HHO-TSP-Pure` | `HHO-Pure` | TSP, ATSP | yes | exact-fixed | yes | false |
 | `Core-GWO-TSP-Memetic-2opt` | `GWO-2opt` | TSP, ATSP | yes | exact-fixed | yes | false |
 | `Core-HHO-TSP-Memetic-2opt` | `HHO-2opt` | TSP, ATSP | yes | exact-fixed | yes | false |
-| `SOTA-ALNS-TSP` | `ALNS` | TSP, ATSP | yes | exact-fixed | yes | false |
+| `ALNS-TSP` | `ALNS` | TSP, ATSP | yes | exact-fixed | yes | false |
 | `Core-GWO-TSP-Memetic-3opt` | `GWO-3opt` | TSP, ATSP | yes | exact-fixed | yes | false |
 | `Core-HHO-TSP-Memetic-3opt` | `HHO-3opt` | TSP, ATSP | yes | exact-fixed | yes | false |
 | `Core-GWO-TSP-Memetic-ALNS` | `GWO-ALNS` | TSP, ATSP | yes | exact-fixed | yes | false |
@@ -141,8 +141,11 @@ The active production strategy registry is a separate CVRP/CVRPTW/UniRide surfac
 | `Numba-Or-opt` | `Core-OrOpt-TSP` | deprecated input alias with warning |
 | `Numba-GA` | `Core-GA-TSP` | deprecated input alias with warning |
 | `Numba-PSO` | `Core-PSO-TSP` | deprecated input alias with warning |
+| `GWO` | `Core-GWO-TSP-Pure` | unqualified active study label means the pure variant |
+| `HHO` | `Core-HHO-TSP-Pure` | unqualified active study label means the pure variant |
 | `Numba-GWO`, `Core-GWO-TSP` | `Core-GWO-TSP-Memetic-2opt` | backward-compatible alias preserving current semantics |
 | `Numba-HHO`, `Core-HHO-TSP` | `Core-HHO-TSP-Memetic-2opt` | backward-compatible alias preserving current semantics |
+| `SOTA-ALNS-TSP` | `ALNS-TSP` | backward-compatible alias; manifests emit `ALNS-TSP` |
 | `GWO-LKH` | `Core-GWO-TSP-Memetic-3opt` | hard error identifying the truthful replacement; no executable alias |
 | `HHO-LKH` | `Core-HHO-TSP-Memetic-3opt` | hard error identifying the truthful replacement; no executable alias |
 
@@ -152,8 +155,8 @@ Stored manifests and new reports always emit canonical IDs, never compatibility 
 
 The unified TSP/ATSP catalog exposes:
 
-- GWO;
-- HHO;
+- GWO-Pure, with `GWO` as its unqualified study label;
+- HHO-Pure, with `HHO` as its unqualified study label;
 - GA;
 - PSO;
 - 2-opt;
@@ -179,7 +182,7 @@ The new `GWO-3opt`, `HHO-3opt`, `GWO-ALNS`, and `HHO-ALNS` compositions use thes
 
 1. The global stage is the corresponding pure canonical GWO or HHO implementation; it performs no hidden polish.
 2. The polish stage runs once on the global stage's best complete validated tour. It receives the same matrix, problem identity, directionality, and objective evaluator.
-3. Three-opt compositions call `Core-ThreeOpt-TSP`. ALNS compositions call `SOTA-ALNS-TSP`. No YAEM class is promoted.
+3. Three-opt compositions call `Core-ThreeOpt-TSP`. ALNS compositions call `ALNS-TSP`. No YAEM class is promoted.
 4. Parameters use separate `global` and `polish` namespaces. Paper-scale manifests may not rely on implicit hyperparameter defaults.
 5. The default smoke allocation is `global_fraction=0.80`. The global stage has a maximum of `floor(B * 0.80)` evaluations; the polish stage may consume the remaining `B - used_global`. Other allocations must be explicit manifest values.
 6. Both stages share the same atomic counter. Neither stage may start an atomic phase that would exceed its stage or total limit.
@@ -188,6 +191,16 @@ The new `GWO-3opt`, `HHO-3opt`, `GWO-ALNS`, and `HHO-ALNS` compositions use thes
 9. The final result records stage identities, parameters, seeds, allocated and consumed evaluations, termination reasons, and whether the polish changed the tour.
 
 These rules define algorithm identity. Changing invocation timing, stage algorithm, transfer semantics, seed derivation, or allocation policy requires a new variant or protocol version.
+
+In native-termination mode, rules 1-4 and 7-9 remain in force, but no fixed budget `B`, `global_fraction`, or shared upper-bound allocation is imposed:
+
+1. The pure global stage runs to its explicitly configured canonical native stopping conditions.
+2. After a valid global result, the final polish stage runs once using its own explicitly configured native iteration, no-improvement, or time limits.
+3. Native 3-opt uses its declared local-search termination. Native ALNS uses its declared ALNS termination and stable derived polish seed.
+4. Objective-evaluation counts and runtimes remain measured separately for both stages and are summed for descriptive reporting, not capped.
+5. The aggregate termination is `composite_complete` only when both stages complete validly, with both stage termination reasons retained. A failed or invalid stage fails the composite run.
+
+Fixed-budget and native hybrid results therefore represent different declared protocols and cannot be pooled or ranked as one sample.
 
 ## Study Profile Schema
 
@@ -334,7 +347,9 @@ Each pilot or experiment records:
 - budget levels, budget policy, actual objective-evaluation count, and stage allocation;
 - termination reason and runtime;
 - independent validation result;
-- output file checksums.
+- output file checksums, excluding the run manifest itself.
+
+A detached `<manifest>.sha256` file contains the run manifest's checksum. This prevents self-referential hashing while still making the manifest independently verifiable.
 
 Paper-scale mode requires a clean tree. Smoke mode may run on a dirty tree only when the manifest and report label that state prominently.
 

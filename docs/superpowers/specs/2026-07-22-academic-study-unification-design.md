@@ -1,0 +1,365 @@
+# Academic Study Unification and Evidence Quarantine Design
+
+Date: 2026-07-22  
+Status: Approved for specification review  
+Scope: `uniride_core`, `academic_benchmark`, the Bildiri 2026 and YAEM 2026 research subtrees, their historical evidence, and the Git delivery boundary
+
+## Objective
+
+Replace the independent Bildiri 2026 and YAEM 2026 research engines with reproducible study profiles over one canonical algorithm kernel and one academic experiment platform.
+
+The remediation must:
+
+- physically quarantine invalid or historically unverifiable research artifacts without deleting them;
+- remove active solver ownership from paper-specific packages;
+- preserve current validated GWO/HHO behavior while relocating it from `academic_benchmark.bildiri2026`;
+- expose all approved algorithm families under truthful names;
+- make fixed objective-evaluation budgets the primary comparison protocol and native termination a separately labelled secondary protocol;
+- support future TSP, ATSP, CVRP, CVRPTW, and UniRide studies without coupling the production application to academic configuration;
+- stop after code, tests, manifests, and small smoke/pilot validation;
+- publish the completed remediation on a branch and draft pull request without modifying `WIP` directly.
+
+## Approved Decisions
+
+1. Use physical archival rather than in-place warnings.
+2. Unify both YAEM 2026 and Bildiri 2026; neither remains an independent active engine.
+3. Keep GWO, HHO, 2-opt, 3-opt, GA, PSO, Or-opt, standalone ALNS, GWO-ALNS, HHO-ALNS, GWO-3opt, and HHO-3opt available to active studies.
+4. Rename pseudo-LKH variants to `GWO-3opt` and `HHO-3opt`. The active system must not expose an LKH identity unless it calls a genuine LKH implementation.
+5. Use fixed evaluation budgets for the primary paper comparison and native termination for secondary analysis.
+6. Generate only deterministic tests and small smoke/pilot evidence during remediation. Full paper experiments will run later on a more powerful computer.
+7. Preserve the current rescue checkout and perform work on `codex/reconcile-native-protocol`.
+
+## Non-Goals
+
+This remediation does not:
+
+- run full paper-scale experiments;
+- implement genuine LKH;
+- implement new CVRP or CVRPTW algorithms;
+- force permutation TSP solvers into vehicle-routing contracts;
+- rewrite Git history to remove historical binary size;
+- repair old numerical results by relabelling them;
+- change the Next.js user experience or FastAPI request surface except where an import boundary or production-readiness check requires it;
+- claim algorithm superiority from smoke/pilot data.
+
+## Target Architecture
+
+### Canonical kernel
+
+`uniride_core` owns:
+
+- canonical problem and result contracts;
+- objective, distance, feasibility, and route-completeness validation;
+- canonical algorithm implementations;
+- capability metadata;
+- reusable fixed-budget accounting primitives;
+- no paper names, report templates, TSPLIB database orchestration, FastAPI handlers, or frontend DTOs.
+
+Algorithms remain grouped by problem contract rather than forced through one weak universal interface:
+
+- `PermutationSolver` covers TSP and ATSP Hamiltonian cycles;
+- `VehicleRoutingSolver` covers CVRP, CVRPTW, and UniRide multi-route problems;
+- both return a common result envelope containing identity, objective, termination, accounting, backend, and audit metadata.
+
+### Academic experiment platform
+
+`academic_benchmark` owns:
+
+- dataset adapters and problem manifests;
+- algorithm selection through the canonical registry;
+- fixed-budget and native-termination execution protocols;
+- run scheduling and deterministic seed derivation;
+- independent result validation;
+- reproducibility manifests;
+- statistically valid analysis and report generation;
+- study-profile loading.
+
+### Study profiles
+
+Paper-specific active material moves under:
+
+```text
+academic_benchmark/studies/
+|-- bildiri2026/
+`-- yaem2026/
+```
+
+A study profile may contain configuration, dataset selection, protocol selection, paper metadata, and report templates. It may not contain algorithms, objective implementations, distance functions, budget counters, statistical tests, copied benchmark runners, or generated research conclusions.
+
+### Production application
+
+`optimizer_api` consumes canonical algorithms only through the production registry. A strategy must declare `production_ready=true` before it can be exposed to the API. The API, frontend, and map-provider code must not import study profiles or academic result artifacts.
+
+The academic platform may evaluate production-capable algorithms; production must never depend on academic study configuration.
+
+## Capability Model
+
+Every canonical algorithm registration declares at least:
+
+- canonical public name and family;
+- problem contracts supported: TSP, ATSP, CVRP, CVRPTW, or UniRide;
+- directed-cost support;
+- capacity and time-window support;
+- deterministic or stochastic behavior;
+- supported termination protocols;
+- exact objective-accounting support;
+- execution backend truthfulness;
+- production-readiness state;
+- optional composition stages.
+
+Preflight validation rejects unsupported algorithm/problem combinations before a run begins. A symmetric-only solver cannot accept an asymmetric matrix, and a permutation-only solver cannot claim CVRP support.
+
+## Canonical Algorithm Set
+
+The unified TSP/ATSP catalog exposes:
+
+- GWO;
+- HHO;
+- GA;
+- PSO;
+- 2-opt;
+- canonical 3-opt;
+- Or-opt;
+- standalone ALNS;
+- GWO-3opt;
+- HHO-3opt;
+- GWO-ALNS;
+- HHO-ALNS.
+
+`GWO-3opt` and `HHO-3opt` are explicit bounded-3-opt compositions. They must not cite or imply Helsgaun LKH.
+
+Hybrid algorithms are compositions of registered canonical stages rather than copied paper-specific classes. Global search and polishing share one injected budget counter and one result/audit contract.
+
+## Bildiri 2026 Migration
+
+Bildiri 2026 cannot be archived in one step because active registry and fairness code import its GWO/HHO and Numba functionality.
+
+Migration proceeds in this order:
+
+1. Characterize existing seeded behavior with parity fixtures for route, cost, objective-evaluation count, termination reason, and backend.
+2. Mechanically relocate still-authoritative GWO/HHO and required Numba kernels into canonical `uniride_core` modules without changing equations or results.
+3. Replace Bildiri 2-opt and 3-opt ownership with the existing canonical core implementations.
+4. Reuse canonical GA/PSO implementations where parity and contract requirements are satisfied; relocate only behavior that is both required and not already canonical.
+5. Redirect registry, CLI, fair/native pilots, and tests to canonical imports.
+6. Prove that no active code imports `academic_benchmark.bildiri2026`.
+7. Archive the remaining runner, tuning, reporting, data-management, result, presentation, and paper material.
+8. Create the thin `academic_benchmark/studies/bildiri2026` profile.
+
+The mandatory rule is: relocate with exact parity first, redesign composition second, and rerun evidence last.
+
+## YAEM 2026 Migration
+
+The complete legacy `academic_benchmark/yaem2026` tree is moved to:
+
+`archive/academic_benchmark/yaem2026_legacy/`
+
+No legacy YAEM solver or statistical implementation is promoted into active code. Canonical algorithms and platform services replace those implementations.
+
+The new `academic_benchmark/studies/yaem2026` profile selects algorithms, problem sets, primary and secondary protocols, run counts, budget levels, and report templates.
+
+False legacy labels are not retained as active aliases. Historical files preserve their original text for provenance, but active configuration rejects `GWO-LKH` and `HHO-LKH` and points users to the truthful migration names.
+
+## Evidence Quarantine
+
+The remaining Bildiri tree is moved to:
+
+`archive/academic_benchmark/bildiri2026_legacy/`
+
+Each legacy archive contains:
+
+- `QUARANTINE.md` describing confirmed defects and permitted uses;
+- a machine-readable manifest with original relative path, archive path, byte size, SHA-256, and evidence classification;
+- the preserved historical directory structure.
+
+Evidence classifications are:
+
+- `INVALID`: structurally or mathematically invalid outputs, including all YAEM `student_matrix` results derived from incomplete tours and reports derived from invalid statistical pairing;
+- `HISTORICAL_UNVERIFIED`: coordinate-based or otherwise plausible results that lack a complete current provenance, fair-budget, environment, or validation chain;
+- `REFERENCE_ONLY`: legacy source, configurations, presentation material, and evaluated design paths that may inform engineering history but cannot support numerical claims.
+
+Moving files does not rehabilitate results. Archived evidence must not be used in current reports, imported by active Python packages, or discovered as default benchmark input.
+
+Physical archival does not reduce Git history size. Any future history rewrite requires a separate decision and authorization.
+
+## Experimental Protocol
+
+### Primary protocol
+
+The primary comparison uses the existing `atomic_upper_bound_v1` fixed objective-evaluation policy.
+
+One evaluation is one complete closed-solution objective calculation for one candidate. Iterations, neighborhood loops, swaps, random draws, and delta checks are not silently substituted for this unit.
+
+Initialization, global search, local search, and hybrid polishing consume the same declared cap. An atomic phase starts only when its proven upper bound fits in the remaining budget. Results record configured and consumed evaluations.
+
+Because one budget level may favor some algorithm families, study manifests may predeclare multiple budget levels. Results at different levels remain separate and are not pooled.
+
+### Secondary protocol
+
+Native termination is reported separately with explicit stopping conditions, runtime, objective-evaluation count, and backend. Native results cannot be merged into fixed-budget rankings.
+
+### Seed protocol
+
+Seeds are derived deterministically from protocol version, base seed, normalized problem identity, and replicate index. Python's randomized `hash()` is prohibited.
+
+The manifest records the complete schedule. Equal numeric seeds are not by themselves treated as proof of statistical pairing across unrelated algorithms.
+
+## Result Validation
+
+Every accepted result is independently checked for:
+
+- exact node membership and uniqueness;
+- route completeness;
+- closed-cycle objective recomputation;
+- directed arc orientation for ATSP;
+- capacity, time-window, and route feasibility for vehicle-routing contracts;
+- algorithm identity and capability consistency;
+- evaluation-budget compliance;
+- backend truthfulness;
+- termination-reason consistency.
+
+A failed validation invalidates the run and prevents aggregation. The platform records the failure boundary and does not fabricate or repair a tour for reporting.
+
+## Statistical Protocol
+
+The active platform does not retain fixed F thresholds, handwritten approximate p-values, or pairing by coincidental run index.
+
+For independent repeated-run distributions on one problem:
+
+- use a justified independent-sample omnibus test such as Kruskal-Wallis;
+- perform pairwise Mann-Whitney comparisons only when justified;
+- apply Holm correction over the declared comparison family;
+- report effect sizes and exact sample counts.
+
+For genuinely matched cross-instance comparisons:
+
+- use a justified matched omnibus test such as Friedman;
+- use paired post-hoc tests only over the same experimental units;
+- report assumptions, corrections, effect sizes, and exclusions.
+
+The implementation uses a proven statistical library under a pinned scientific environment. Smoke pilots produce descriptive summaries only and cannot emit superiority, causality, or proof language.
+
+## Reproducibility Manifest
+
+Each pilot or experiment records:
+
+- schema and protocol versions;
+- Git commit and dirty-tree state;
+- Python, operating system, CPU, NumPy, Numba, llvmlite, and statistical-library versions;
+- dataset source, checksum, type, dimension, optimum or BKS provenance, and matrix semantics;
+- canonical algorithm identity, capability declaration, configuration, and composition stages;
+- base seed and complete derived seed schedule;
+- budget levels, budget policy, actual objective-evaluation count, and stage allocation;
+- termination reason and runtime;
+- independent validation result;
+- output file checksums.
+
+Paper-scale mode requires a clean tree. Smoke mode may run on a dirty tree only when the manifest and report label that state prominently.
+
+## Error Handling
+
+The platform fails before execution when a manifest, dataset, capability, budget, or backend requirement is unsatisfied.
+
+Runtime failures produce a structured failed-run record containing algorithm, problem, seed, stage, exception category, and consumed budget. Failed runs are never converted into worst-case numeric observations without an explicit predeclared statistical policy.
+
+Manifests and result files use atomic write/replace behavior so interrupted experiments cannot masquerade as complete runs. Resumption validates the existing manifest and rejects incompatible configuration changes.
+
+## Verification Strategy
+
+### Import boundaries
+
+- `uniride_core` cannot import `academic_benchmark` or study profiles.
+- production code cannot import study profiles or archives.
+- active code cannot import legacy Bildiri or YAEM paths.
+- packaging smoke tests prove archives are excluded and study profiles are included.
+
+### Relocation parity
+
+- fixed matrices and seeds compare pre-extraction and canonical GWO/HHO route, cost, evaluation count, termination, and backend;
+- Python fallback and JIT paths retain deterministic parity where the supported environment permits it;
+- canonical imports replace all active Bildiri imports before archival.
+
+### Algorithm contracts
+
+- every TSP and ATSP result is a complete permutation;
+- directed costs are independently preserved;
+- unsupported CVRP/CVRPTW requests fail clearly;
+- truthful names are enforced and legacy LKH names are rejected.
+
+### Fairness and composition
+
+- objective use never exceeds the configured cap;
+- global and polish stages share one atomic counter;
+- boundary tests cover one unit below, exactly at, and one unit above an atomic phase requirement;
+- fixed and native results cannot be accidentally aggregated together.
+
+### Study and evidence integrity
+
+- Bildiri and YAEM profiles validate against one versioned schema;
+- archive manifests reproduce file checksums;
+- invalid evidence cannot be loaded by active report generation;
+- personal paths and secret-like material receive a quarantine scan without silently changing preserved raw evidence.
+
+### Statistical integrity
+
+- known synthetic fixtures verify omnibus, post-hoc, correction, and effect-size outputs;
+- mismatched or falsely paired designs are rejected;
+- undersized smoke pilots cannot produce inferential claims.
+
+### Smoke pilots and regression suites
+
+- run a small symmetric TSPLIB case;
+- run a small directed ATSP fixture and minimal-budget `ft53` case;
+- exercise fixed-budget primary and native secondary paths;
+- run the full academic suite;
+- run `uniride_core` tests with optional-solver environment failures separated from source defects;
+- run API tests in the proper FastAPI environment;
+- run packaging/import smoke checks and `git diff --check`.
+
+No full TSPLIB/CVRPLIB experiment is generated during remediation.
+
+## Delivery Plan
+
+Work remains on `codex/reconcile-native-protocol` and is divided into reviewable commits:
+
+1. archive manifests and evidence quarantine;
+2. canonical Bildiri solver extraction and parity tests;
+3. registry capabilities and truthful hybrid compositions;
+4. reusable experiment platform and study profiles;
+5. statistical safeguards, manifests, and regression coverage;
+6. documentation synchronization.
+
+Before publication, fetch the remote, inspect divergence, and reconcile only in the integration worktree. Never pull directly into the rescue checkout.
+
+After proportionate local checks pass, push the branch and open a draft pull request. The draft remains unmerged until the user returns the powerful-computer full-suite and pilot results.
+
+## Expected Risks and Required Mitigations
+
+- **Behavior drift during Bildiri extraction:** mechanical relocation and parity gates precede refactoring.
+- **Incommensurate evaluation accounting:** a single documented complete-objective unit and injected counter are mandatory.
+- **Hybrid budget leakage:** all stages share one cap and boundary tests.
+- **Over-generalized problem abstraction:** use separate permutation and vehicle-routing protocols.
+- **Irrecoverable legacy evidence:** archive rather than relabel; rerun all publishable results.
+- **Budget-dependent rankings:** predeclare multiple levels and separate native results.
+- **Broken legacy names:** provide a migration table but no false active alias.
+- **Large archival diff:** isolate `git mv` operations from code changes.
+- **Repository size retention:** do not rewrite history in this scope.
+- **Scientific-environment incompatibility:** pin and record versions; separate environment blockers from defects.
+- **JIT platform variance:** maintain focused deterministic parity tests and require powerful-computer verification.
+- **Production contamination:** import-boundary and `production_ready` gates.
+- **Remote branch drift:** fetch and inspect before push; preserve the rescue checkout.
+- **Premature CVRP expansion:** define contracts now and implement future adapters in separately scoped work.
+
+## Completion Criteria
+
+The remediation is complete when:
+
+1. Both legacy research engines are physically archived with reproducible manifests and evidence classifications.
+2. No active code imports a legacy research engine.
+3. Required GWO/HHO behavior resides canonically in `uniride_core` and passes relocation parity tests.
+4. Both paper projects exist as schema-valid study profiles.
+5. All approved algorithm families are selectable under truthful names and valid capabilities.
+6. Fixed-budget and native protocols remain distinct and validated.
+7. Small TSP/ATSP smoke pilots produce complete, independently verified results and reproducibility manifests without scientific superiority claims.
+8. Proportionate local suites pass, with external environment blockers identified precisely.
+9. Master documentation describes the verified architecture and quarantined evidence truthfully.
+10. The branch is pushed and a draft pull request is opened for powerful-computer verification.

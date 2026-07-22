@@ -517,3 +517,59 @@ def test_backup_cleanup_failure_after_commit_warns_but_returns_manifest(tmp_path
         manifest = quarantine_tracked_tree(repo_root=repo, source_root=PurePosixPath("academic_benchmark/yaem2026"), archive_root=PurePosixPath("archive/legacy"), archive_id="legacy")
     assert manifest.entries
     assert (repo / "archive" / "legacy" / "manifest.json").is_file()
+
+def test_directory_restore_failure_is_collected_and_retains_recovery(tmp_path: Path, monkeypatch):
+    import academic_benchmark.archive_manifest as module
+
+    repo = _legacy_repo(tmp_path)
+    source = repo / "academic_benchmark" / "yaem2026"
+    (source / "empty" / "nested").mkdir(parents=True)
+    monkeypatch.setattr(module, "_prune_empty_directories", lambda root: (_ for _ in ()).throw(OSError("trigger rollback")))
+    original_mkdir = Path.mkdir
+
+    def fail_empty_restore(self: Path, *args, **kwargs):
+        if self.name == "empty":
+            raise OSError("directory restore failure")
+        return original_mkdir(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "mkdir", fail_empty_restore)
+    with pytest.raises(QuarantineBlocked, match="recovery incomplete; backup retained"):
+        quarantine_tracked_tree(repo_root=repo, source_root=PurePosixPath("academic_benchmark/yaem2026"), archive_root=PurePosixPath("archive/legacy"), archive_id="legacy")
+
+
+def test_empty_symlink_directory_blocks_before_mutation_when_supported(tmp_path: Path):
+    repo = _legacy_repo(tmp_path)
+    source = repo / "academic_benchmark" / "yaem2026"
+    target = tmp_path / "outside-dir"
+    target.mkdir()
+    linked = source / "empty-link"
+    try:
+        linked.symlink_to(target, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"directory symlink unavailable: {exc}")
+    with pytest.raises(QuarantineBlocked, match="reparse"):
+        quarantine_tracked_tree(repo_root=repo, source_root=PurePosixPath("academic_benchmark/yaem2026"), archive_root=PurePosixPath("archive/legacy"), archive_id="legacy")
+
+
+@pytest.mark.parametrize("after_commit", [False, True])
+def test_backup_retention_warning_never_raises_when_warnings_are_errors(tmp_path: Path, monkeypatch, after_commit: bool):
+    import academic_benchmark.archive_manifest as module
+
+    repo = _legacy_repo(tmp_path)
+    if not after_commit:
+        monkeypatch.setattr(module, "write_manifest", lambda *args, **kwargs: (_ for _ in ()).throw(OSError("original failure")))
+    original_rmtree = module.shutil.rmtree
+    monkeypatch.setattr(module.shutil, "rmtree", lambda path, *args, **kwargs: (_ for _ in ()).throw(OSError("cleanup")) if Path(path).name.startswith("uniride-quarantine-") else original_rmtree(path, *args, **kwargs))
+    with pytest.MonkeyPatch.context() as context:
+        context.setattr(module.warnings, "warn", lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeWarning("warnings error")))
+        if after_commit:
+            assert quarantine_tracked_tree(repo_root=repo, source_root=PurePosixPath("academic_benchmark/yaem2026"), archive_root=PurePosixPath("archive/legacy"), archive_id="legacy").entries
+        else:
+            with pytest.raises(OSError, match="original failure"):
+                quarantine_tracked_tree(repo_root=repo, source_root=PurePosixPath("academic_benchmark/yaem2026"), archive_root=PurePosixPath("archive/legacy"), archive_id="legacy")
+
+
+def test_non_ascii_repository_path_quarantine(tmp_path: Path):
+    repo = _legacy_repo(tmp_path / "café")
+    manifest = quarantine_tracked_tree(repo_root=repo, source_root=PurePosixPath("academic_benchmark/yaem2026"), archive_root=PurePosixPath("archive/legacy"), archive_id="legacy")
+    assert manifest.entries

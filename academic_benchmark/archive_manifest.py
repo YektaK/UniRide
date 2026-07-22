@@ -240,7 +240,7 @@ def _git_paths(repo_root: Path, *arguments: str) -> list[PurePosixPath]:
 def _git_directory(repo_root: Path) -> Path:
     completed = subprocess.run(
         ["git", "rev-parse", "--absolute-git-dir"],
-        cwd=repo_root, check=True, capture_output=True, text=True,
+        cwd=repo_root, check=True, capture_output=True, text=True, encoding="utf-8", errors="strict",
     )
     return Path(completed.stdout.strip()).resolve()
 
@@ -249,7 +249,7 @@ def _canonical_repo_root(repo_root: Path) -> Path:
     candidate = repo_root.resolve()
     completed = subprocess.run(
         ["git", "rev-parse", "--show-toplevel"], cwd=candidate,
-        check=True, capture_output=True, text=True,
+        check=True, capture_output=True, text=True, encoding="utf-8", errors="strict",
     )
     top_level = Path(completed.stdout.strip()).resolve()
     if candidate != top_level:
@@ -374,12 +374,34 @@ def load_manifest(path: Path) -> ArchiveManifest:
 def _prune_empty_directories(source_root: Path) -> None:
     if not source_root.exists():
         return
-    for directory in sorted((item for item in source_root.rglob("*") if item.is_dir()), key=lambda item: len(item.parts), reverse=True):
+    for directory in sorted(_safe_directories(source_root.parents[2], source_root), key=lambda item: len(item.parts), reverse=True):
         if not any(directory.iterdir()):
             directory.rmdir()
     if source_root.is_dir() and not any(source_root.iterdir()):
         source_root.rmdir()
 
+
+def _retention_warning(message: str) -> None:
+    try:
+        warnings.warn(message, RuntimeWarning)
+    except BaseException:
+        pass
+
+
+def _safe_directories(repo_root: Path, source_root: Path) -> list[Path]:
+    directories = [source_root]
+    pending = [source_root]
+    while pending:
+        directory = pending.pop()
+        _checked_path(repo_root, source_root, directory)
+        with os.scandir(directory) as entries:
+            for entry in entries:
+                child = Path(entry.path)
+                _checked_path(repo_root, source_root, child)
+                if entry.is_dir(follow_symlinks=False):
+                    directories.append(child)
+                    pending.append(child)
+    return directories
 
 def _cleanup_empty_parents(path: Path, stop_at: Path) -> None:
     current = path.parent
@@ -428,7 +450,7 @@ def _rollback(
                 backup.replace(source)
         attempt("restore cache", restore_cache)
     for directory in source_directories:
-        (source_fs / Path(*directory.parts)).mkdir(parents=True, exist_ok=True)
+        attempt("restore directory", lambda directory=directory: (source_fs / Path(*directory.parts)).mkdir(parents=True, exist_ok=True))
     for relative, digest in expected.items():
         def verify_restore(relative: PurePosixPath = relative, digest: str = digest) -> None:
             source = _source_path(repo_root, source_fs, relative)
@@ -465,7 +487,7 @@ def quarantine_tracked_tree(*, repo_root: Path, source_root: PurePosixPath, arch
     confirmed_paths = sorted({PurePosixPath(item.path).relative_to(source_root) for item in findings if item.severity == "confirmed"}, key=lambda item: item.as_posix())
     all_mutating = [*tracked, *ignored]
     expected = {relative: sha256_file(_source_path(repo_root, source_fs, relative)) for relative in all_mutating}
-    source_directories = sorted((PurePosixPath(path.relative_to(source_fs).as_posix()) for path in source_fs.rglob("*") if path.is_dir()), key=lambda item: (len(item.parts), item.as_posix()))
+    source_directories = sorted((PurePosixPath(path.relative_to(source_fs).as_posix()) for path in _safe_directories(repo_root, source_fs) if path != source_fs), key=lambda item: (len(item.parts), item.as_posix()))
     existing_destination_parent = destination_root.parent
     while not existing_destination_parent.exists():
         existing_destination_parent = existing_destination_parent.parent
@@ -516,12 +538,12 @@ def quarantine_tracked_tree(*, repo_root: Path, source_root: PurePosixPath, arch
         try:
             shutil.rmtree(backup_root)
         except OSError:
-            warnings.warn("backup retained after rollback cleanup failure", RuntimeWarning)
+            _retention_warning("backup retained after rollback cleanup failure")
         raise
     try:
         shutil.rmtree(backup_root)
     except OSError:
-        warnings.warn("backup retained after commit cleanup failure", RuntimeWarning)
+        _retention_warning("backup retained after commit cleanup failure")
     return manifest
 
 

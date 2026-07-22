@@ -109,6 +109,45 @@ Every canonical algorithm registration declares at least:
 
 Preflight validation rejects unsupported algorithm/problem combinations before a run begins. A symmetric-only solver cannot accept an asymmetric matrix, and a permutation-only solver cannot claim CVRP support.
 
+### Initial academic capability matrix
+
+The following target IDs and values are normative for this remediation. `exact-fixed` means the adapter must pass objective-accounting tests before the capability is enabled.
+
+| Canonical ID | Study label | Problems | Directed | Fixed | Native | Production ready |
+|---|---|---|---|---|---|---|
+| `Core-TwoOpt-TSP` | `2-opt` | TSP, ATSP | yes | exact-fixed | yes | false |
+| `Core-ThreeOpt-TSP` | `3-opt` | TSP, ATSP | yes | exact-fixed | yes | false |
+| `Core-OrOpt-TSP` | `Or-opt` | TSP, ATSP | yes | exact-fixed | yes | false |
+| `Core-GA-TSP` | `GA` | TSP, ATSP | yes | exact-fixed | yes | false |
+| `Core-PSO-TSP` | `PSO` | TSP, ATSP | yes | exact-fixed | yes | false |
+| `Core-GWO-TSP-Pure` | `GWO-Pure` | TSP, ATSP | yes | exact-fixed | yes | false |
+| `Core-HHO-TSP-Pure` | `HHO-Pure` | TSP, ATSP | yes | exact-fixed | yes | false |
+| `Core-GWO-TSP-Memetic-2opt` | `GWO-2opt` | TSP, ATSP | yes | exact-fixed | yes | false |
+| `Core-HHO-TSP-Memetic-2opt` | `HHO-2opt` | TSP, ATSP | yes | exact-fixed | yes | false |
+| `SOTA-ALNS-TSP` | `ALNS` | TSP, ATSP | yes | exact-fixed | yes | false |
+| `Core-GWO-TSP-Memetic-3opt` | `GWO-3opt` | TSP, ATSP | yes | exact-fixed | yes | false |
+| `Core-HHO-TSP-Memetic-3opt` | `HHO-3opt` | TSP, ATSP | yes | exact-fixed | yes | false |
+| `Core-GWO-TSP-Memetic-ALNS` | `GWO-ALNS` | TSP, ATSP | yes | exact-fixed | yes | false |
+| `Core-HHO-TSP-Memetic-ALNS` | `HHO-ALNS` | TSP, ATSP | yes | exact-fixed | yes | false |
+
+The active production strategy registry is a separate CVRP/CVRPTW/UniRide surface. This remediation snapshots every currently exposed production strategy key and preserves it. No existing API strategy is removed or made unavailable merely because academic TSP IDs default to `production_ready=false`. The production-readiness gate initially marks the existing API inventory as grandfathered `true`, subject to its current optional-dependency availability, and requires an explicit reviewed decision for any new strategy. Snapshot tests prevent accidental exposure changes.
+
+### ID migration rules
+
+| Legacy academic name | Canonical target | Policy |
+|---|---|---|
+| `Numba-2-opt` | `Core-TwoOpt-TSP` | deprecated input alias with warning |
+| `Numba-3-opt-bounded` | `Core-ThreeOpt-TSP` | deprecated input alias with warning |
+| `Numba-Or-opt` | `Core-OrOpt-TSP` | deprecated input alias with warning |
+| `Numba-GA` | `Core-GA-TSP` | deprecated input alias with warning |
+| `Numba-PSO` | `Core-PSO-TSP` | deprecated input alias with warning |
+| `Numba-GWO`, `Core-GWO-TSP` | `Core-GWO-TSP-Memetic-2opt` | backward-compatible alias preserving current semantics |
+| `Numba-HHO`, `Core-HHO-TSP` | `Core-HHO-TSP-Memetic-2opt` | backward-compatible alias preserving current semantics |
+| `GWO-LKH` | `Core-GWO-TSP-Memetic-3opt` | hard error identifying the truthful replacement; no executable alias |
+| `HHO-LKH` | `Core-HHO-TSP-Memetic-3opt` | hard error identifying the truthful replacement; no executable alias |
+
+Stored manifests and new reports always emit canonical IDs, never compatibility aliases.
+
 ## Canonical Algorithm Set
 
 The unified TSP/ATSP catalog exposes:
@@ -121,6 +160,8 @@ The unified TSP/ATSP catalog exposes:
 - canonical 3-opt;
 - Or-opt;
 - standalone ALNS;
+- GWO-2opt;
+- HHO-2opt;
 - GWO-3opt;
 - HHO-3opt;
 - GWO-ALNS;
@@ -129,6 +170,41 @@ The unified TSP/ATSP catalog exposes:
 `GWO-3opt` and `HHO-3opt` are explicit bounded-3-opt compositions. They must not cite or imply Helsgaun LKH.
 
 Hybrid algorithms are compositions of registered canonical stages rather than copied paper-specific classes. Global search and polishing share one injected budget counter and one result/audit contract.
+
+### Hybrid composition semantics
+
+`GWO-2opt` and `HHO-2opt` preserve the already validated initial/periodic/final 2-opt policy during mechanical relocation. Their exact polish schedule and evaluation accounting are emitted in the result metadata.
+
+The new `GWO-3opt`, `HHO-3opt`, `GWO-ALNS`, and `HHO-ALNS` compositions use these rules:
+
+1. The global stage is the corresponding pure canonical GWO or HHO implementation; it performs no hidden polish.
+2. The polish stage runs once on the global stage's best complete validated tour. It receives the same matrix, problem identity, directionality, and objective evaluator.
+3. Three-opt compositions call `Core-ThreeOpt-TSP`. ALNS compositions call `SOTA-ALNS-TSP`. No YAEM class is promoted.
+4. Parameters use separate `global` and `polish` namespaces. Paper-scale manifests may not rely on implicit hyperparameter defaults.
+5. The default smoke allocation is `global_fraction=0.80`. The global stage has a maximum of `floor(B * 0.80)` evaluations; the polish stage may consume the remaining `B - used_global`. Other allocations must be explicit manifest values.
+6. Both stages share the same atomic counter. Neither stage may start an atomic phase that would exceed its stage or total limit.
+7. The global stage uses the run seed. Deterministic 3-opt records no secondary seed. Stochastic ALNS receives a stable derived seed from `SHA-256(protocol_version, run_seed, "polish")`, never Python `hash()`.
+8. Budget exhaustion is normal termination. If the global stage cannot produce a valid tour, the composition fails. A polish exception or invalid result fails the run instead of silently returning an unpolished result.
+9. The final result records stage identities, parameters, seeds, allocated and consumed evaluations, termination reasons, and whether the polish changed the tour.
+
+These rules define algorithm identity. Changing invocation timing, stage algorithm, transfer semantics, seed derivation, or allocation policy requires a new variant or protocol version.
+
+## Study Profile Schema
+
+Study profiles use UTF-8 JSON validated against `academic_benchmark/schemas/study-v1.schema.json`. The schema ID is `uniride-study/v1`, uses `additionalProperties: false` at contract objects, and requires:
+
+- `schema_version`, `study_id`, `title`, and `status`;
+- canonical `algorithm_ids` and explicit parameter objects;
+- dataset-manifest references by stable dataset ID;
+- `primary_protocol` and optional `secondary_protocol`;
+- fixed-budget levels, run count, base seed, and seed-protocol version;
+- problem families permitted by the study;
+- an analysis-plan ID;
+- output policy and paper metadata.
+
+References resolve only through the canonical registry and repository-relative dataset manifests; absolute paths and path traversal are rejected. Unknown IDs, compatibility aliases, capability mismatches, missing required values, and unsupported schema versions fail before execution.
+
+Dataset manifests use `uniride-dataset/v1` and require ID, source, checksum, problem type, dimension, matrix/distance semantics, and optimum/BKS provenance. Run manifests use `uniride-run/v1` and contain the reproducibility fields defined below. Schema migrations create a new version; active files are never interpreted heuristically.
 
 ## Bildiri 2026 Migration
 
@@ -146,6 +222,8 @@ Migration proceeds in this order:
 8. Create the thin `academic_benchmark/studies/bildiri2026` profile.
 
 The mandatory rule is: relocate with exact parity first, redesign composition second, and rerun evidence last.
+
+For parity, symmetric Hamiltonian cycles are compared after canonical rotation and reversal normalization. Directed cycles are compared after rotation only because reversal changes ATSP semantics. Objective, evaluation count, termination reason, and backend must match exactly; numeric objectives may use only the existing tested floating-point tolerance.
 
 ## YAEM 2026 Migration
 
@@ -177,6 +255,8 @@ Evidence classifications are:
 - `HISTORICAL_UNVERIFIED`: coordinate-based or otherwise plausible results that lack a complete current provenance, fair-budget, environment, or validation chain;
 - `REFERENCE_ONLY`: legacy source, configurations, presentation material, and evaluated design paths that may inform engineering history but cannot support numerical claims.
 
+Before any archive file is staged, a credential and sensitive-data scan runs. A confirmed credential is never committed. Its archive manifest entry is recorded as `WITHHELD_SENSITIVE` with original relative path, byte size, and SHA-256 but no secret content; the original remains untouched in the rescue checkout pending user-directed revocation or secure storage. Personal absolute paths without credentials may remain in preserved raw evidence but are prohibited from active documentation and generated reports. Ambiguous high-risk matches block publication and require user review.
+
 Moving files does not rehabilitate results. Archived evidence must not be used in current reports, imported by active Python packages, or discovered as default benchmark input.
 
 Physical archival does not reduce Git history size. Any future history rewrite requires a separate decision and authorization.
@@ -205,17 +285,20 @@ The manifest records the complete schedule. Equal numeric seeds are not by thems
 
 ## Result Validation
 
-Every accepted result is independently checked for:
+The common result envelope includes `solution_kind`, canonical algorithm identity, problem identity, objective, protocol/accounting fields, backend, termination, audit metadata, and exactly one problem-specific solution payload.
+
+For `hamiltonian_cycle`, every accepted result is independently checked for:
 
 - exact node membership and uniqueness;
 - route completeness;
 - closed-cycle objective recomputation;
 - directed arc orientation for ATSP;
-- capacity, time-window, and route feasibility for vehicle-routing contracts;
 - algorithm identity and capability consistency;
 - evaluation-budget compliance;
 - backend truthfulness;
 - termination-reason consistency.
+
+For `vehicle_routes`, the payload is a list of routes. Depot repetition at route boundaries is valid; customers must appear exactly once across all routes unless the problem contract explicitly permits optional service. Validation independently checks depot placement, customer coverage, capacity, time windows, vehicle limits, route closure, and aggregate objective. Hamiltonian uniqueness rules are never applied to vehicle-routing solutions.
 
 A failed validation invalidates the run and prevents aggregation. The platform records the failure boundary and does not fabricate or repair a tour for reporting.
 
@@ -310,7 +393,7 @@ Manifests and result files use atomic write/replace behavior so interrupted expe
 - run a small symmetric TSPLIB case;
 - run a small directed ATSP fixture and minimal-budget `ft53` case;
 - exercise fixed-budget primary and native secondary paths;
-- run the full academic suite;
+- run the full automated `academic_benchmark/tests` suite, not paper-scale benchmark execution;
 - run `uniride_core` tests with optional-solver environment failures separated from source defects;
 - run API tests in the proper FastAPI environment;
 - run packaging/import smoke checks and `git diff --check`.
@@ -319,14 +402,49 @@ No full TSPLIB/CVRPLIB experiment is generated during remediation.
 
 ## Delivery Plan
 
-Work remains on `codex/reconcile-native-protocol` and is divided into reviewable commits:
+Work remains on `codex/reconcile-native-protocol` and is decomposed into four separately planned and gated work packages. A later package cannot begin until the prior package's acceptance gate passes.
 
-1. archive manifests and evidence quarantine;
-2. canonical Bildiri solver extraction and parity tests;
-3. registry capabilities and truthful hybrid compositions;
-4. reusable experiment platform and study profiles;
-5. statistical safeguards, manifests, and regression coverage;
-6. documentation synchronization.
+### Package A: YAEM quarantine and contract foundation
+
+- scan and physically archive YAEM;
+- create archive classification/checksum manifest;
+- add study, dataset, and run schema contracts;
+- add import/package boundary tests.
+
+Gate A: YAEM is non-importable, archive checksums reproduce, no sensitive material is staged, and existing automated academic tests remain green.
+
+### Package B: Bildiri canonical extraction
+
+- add characterization/parity fixtures;
+- mechanically relocate required GWO/HHO and Numba behavior;
+- redirect registry, pilots, CLI, and tests;
+- prove zero active Bildiri imports;
+- only then archive the remaining Bildiri tree and create its study profile.
+
+Gate B: parity passes, JIT/fallback checks are reported accurately, zero-import proof passes, archive checksums reproduce, and existing production registry exposure is unchanged.
+
+### Package C: catalog, composition, and experiment services
+
+- implement the normative canonical-ID/capability table;
+- add truthful 3-opt and ALNS hybrid compositions;
+- enforce shared budget and result contracts;
+- implement study loading, result validation, and fixed/native separation;
+- create the YAEM active study profile.
+
+Gate C: all capability, accounting, hybrid-boundary, TSP/ATSP, schema, and smoke-pilot tests pass.
+
+### Package D: analysis, documentation, and publication
+
+- implement statistically guarded analysis over validated results;
+- add reproducibility manifests and descriptive smoke reports;
+- synchronize master documentation and migration tables;
+- run proportionate automated suites and packaging checks;
+- fetch and inspect remote divergence;
+- push the branch and open a draft pull request.
+
+Gate D: no invalid evidence is reachable from active reporting, local checks are recorded exactly, documentation is consistent, the integration worktree is clean, and the draft PR explicitly awaits powerful-computer verification.
+
+Each package receives its own implementation plan and reviewable commits. Bildiri archival can never precede Gate B's relocation parity and zero-import checks.
 
 Before publication, fetch the remote, inspect divergence, and reconcile only in the integration worktree. Never pull directly into the rescue checkout.
 

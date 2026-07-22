@@ -43,16 +43,89 @@ def test_sha256_contract_rejects_non_hex_or_wrong_length():
 
 
 def _study_payload() -> dict:
-    return {"schema_version": "uniride-study/v1", "study_id": "yaem2026", "title": "YAEM 2026 Reproducible Study", "status": "draft", "algorithm_ids": ["Core-GWO-TSP-Pure"], "algorithm_parameters": {"Core-GWO-TSP-Pure": {"pack_size": 20}}, "dataset_manifest_refs": ["academic_benchmark/datasets/ft53.json"], "primary_protocol": {"protocol_id": "fixed_evaluation_budget", "protocol_version": "uniride-fair-tsp-v2", "budget_policy": "atomic_upper_bound_v1"}, "secondary_protocol": {"protocol_id": "algorithm_native_termination", "protocol_version": "uniride-native-tsp-v1", "termination": {"max_iterations": 250}}, "fixed_budget_levels": [1000, 5000], "run_count": 30, "base_seed": 2026, "seed_protocol_version": "sha256-seed-v1", "problem_families": ["TSP", "ATSP"], "analysis_plan_id": "yaem2026-analysis-v1", "output_policy": {"repository_outputs": "smoke_only", "paper_scale_location": "external"}, "paper_metadata": {"paper_id": "yaem2026", "year": 2026, "venue": "YAEM"}}
+    return {
+        "schema_version": "uniride-study/v1",
+        "study_id": "yaem2026",
+        "title": "YAEM 2026 Reproducible Study",
+        "status": "draft",
+        "algorithm_ids": ["Core-GWO-TSP-Pure"],
+        "algorithm_parameters": {"Core-GWO-TSP-Pure": {"pack_size": 20}},
+        "dataset_manifest_refs": ["academic_benchmark/datasets/ft53.json"],
+        "primary_protocol": {
+            "protocol_id": "fixed_evaluation_budget",
+            "protocol_version": "uniride-fair-tsp-v2",
+            "budget_policy": "atomic_upper_bound_v1",
+        },
+        "secondary_protocol": {
+            "protocol_id": "algorithm_native_termination",
+            "protocol_version": "uniride-native-tsp-v1",
+            "termination": {"max_iterations": 250},
+        },
+        "fixed_budget_levels": [1000, 5000],
+        "run_count": 30,
+        "base_seed": 2026,
+        "seed_protocol_version": "sha256-seed-v1",
+        "problem_families": ["TSP", "ATSP"],
+        "analysis_plan_id": "yaem2026-analysis-v1",
+        "output_policy": {"repository_outputs": "smoke_only", "paper_scale_location": "external"},
+        "paper_metadata": {"paper_id": "yaem2026", "year": 2026, "venue": "YAEM"},
+    }
 
 
 def _dataset_payload() -> dict:
-    return {"schema_version": "uniride-dataset/v1", "dataset_id": "tsplib-ft53", "artifact_path": "academic_benchmark/tsplib_data/ft53.atsp", "source": {"authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/atsp/ft53.atsp.gz", "retrieved_on": "2026-07-20"}, "checksum": {"algorithm": "sha256", "value": "6" * 64}, "problem_type": "ATSP", "dimension": 53, "matrix_semantics": {"directed": True, "edge_weight_type": "EXPLICIT", "edge_weight_format": "FULL_MATRIX", "diagonal_semantics": "sentinel"}, "best_known": {"status": "optimal", "value": 6905.0, "provenance": "TSPLIB canonical optimum"}}
+    return {
+        "schema_version": "uniride-dataset/v1",
+        "dataset_id": "tsplib-ft53",
+        "artifact_path": "academic_benchmark/tsplib_data/ft53.atsp",
+        "source": {
+            "authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/atsp/ft53.atsp.gz",
+            "retrieved_on": "2026-07-20",
+        },
+        "checksum": {"algorithm": "sha256", "value": "6" * 64},
+        "problem_type": "ATSP",
+        "dimension": 53,
+        "matrix_semantics": {
+            "directed": True,
+            "edge_weight_type": "EXPLICIT",
+            "edge_weight_format": "FULL_MATRIX",
+            "diagonal_semantics": "sentinel",
+        },
+        "best_known": {
+            "status": "optimal",
+            "value": 6905.0,
+            "provenance": "TSPLIB canonical optimum",
+        },
+    }
 
 
 def _run_payload() -> dict:
-    return {"schema_version": "uniride-run/v1", "run_id": "yaem2026-ft53-gwo-r00-b1000", "study_id": "yaem2026", "protocol_version": "uniride-fair-tsp-v2", "git": {"commit": "a" * 40, "dirty": False}, "environment": {"python": "3.14.3", "operating_system": "Windows", "cpu": "test-cpu", "numpy": "2.4.6", "numba": "0.66.0", "llvmlite": "0.48.0", "statistics_library": "scipy-unavailable"}, "dataset": _dataset_payload(), "algorithm": {"algorithm_id": "Core-GWO-TSP-Pure", "capabilities": {"problem_types": ["TSP", "ATSP"], "directed_costs": True}, "configuration": {"pack_size": 20}, "composition_stages": []}, "seeds": {"base_seed": 2026, "derived": {"replicate_0": 17}}, "budget": {"levels": [1000], "policy": "atomic_upper_bound_v1", "objective_evaluations": 998, "stage_allocation": {}}, "termination": {"reason": "evaluation_budget_exhausted", "runtime_seconds": 0.25}, "validation": {"passed": True, "checks": ["complete_tour", "closed_cycle_cost"]}, "outputs": [{"path": "academic_benchmark/results/smoke.json", "checksum": {"algorithm": "sha256", "value": "b" * 64}}]}
-
+    return {
+        "schema_version": "uniride-run/v1",
+        "run_id": "yaem2026-ft53-gwo-r00-b1000",
+        "study_id": "yaem2026",
+        "protocol_version": "uniride-fair-tsp-v2",
+        "git": {"commit": "a" * 40, "dirty": False},
+        "environment": {
+            "python": "3.14.3", "operating_system": "Windows", "cpu": "test-cpu",
+            "numpy": "2.4.6", "numba": "0.66.0", "llvmlite": "0.48.0",
+            "statistics_library": "scipy-unavailable",
+        },
+        "dataset": _dataset_payload(),
+        "algorithm": {
+            "algorithm_id": "Core-GWO-TSP-Pure",
+            "capabilities": {"problem_types": ["TSP", "ATSP"], "directed_costs": True},
+            "configuration": {"pack_size": 20},
+            "composition_stages": [],
+        },
+        "seeds": {"base_seed": 2026, "derived": {"replicate_0": 17}},
+        "budget": {
+            "levels": [1000], "policy": "atomic_upper_bound_v1",
+            "objective_evaluations": 998, "stage_allocation": {},
+        },
+        "termination": {"reason": "evaluation_budget_exhausted", "runtime_seconds": 0.25},
+        "validation": {"passed": True, "checks": ["complete_tour", "closed_cycle_cost"]},
+        "outputs": [{"path": "academic_benchmark/results/smoke.json", "checksum": {"algorithm": "sha256", "value": "b" * 64}}],
+    }
 
 def test_all_v1_contracts_accept_complete_payloads():
     assert StudyManifestV1.model_validate(_study_payload()).study_id == "yaem2026"

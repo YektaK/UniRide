@@ -10,6 +10,7 @@ import subprocess
 import stat
 import sys
 import tempfile
+import warnings
 from collections import Counter
 from dataclasses import dataclass
 from enum import StrEnum
@@ -392,7 +393,7 @@ def _cleanup_empty_parents(path: Path, stop_at: Path) -> None:
 def _rollback(
     *, repo_root: Path, source_fs: Path, destination_root: Path, backup_root: Path,
     moved: list[PurePosixPath], withheld: list[PurePosixPath], staged_caches: list[PurePosixPath],
-    expected: dict[PurePosixPath, str], existing_destination_parent: Path,
+    expected: dict[PurePosixPath, str], existing_destination_parent: Path, source_directories: list[PurePosixPath],
 ) -> list[str]:
     errors: list[str] = []
 
@@ -426,15 +427,18 @@ def _rollback(
                 source.parent.mkdir(parents=True, exist_ok=True)
                 backup.replace(source)
         attempt("restore cache", restore_cache)
-    attempt("remove destination", lambda: shutil.rmtree(destination_root) if destination_root.exists() else None)
-    attempt("remove empty parents", lambda: _cleanup_empty_parents(destination_root, existing_destination_parent))
+    for directory in source_directories:
+        (source_fs / Path(*directory.parts)).mkdir(parents=True, exist_ok=True)
     for relative, digest in expected.items():
         def verify_restore(relative: PurePosixPath = relative, digest: str = digest) -> None:
             source = _source_path(repo_root, source_fs, relative)
             if not source.is_file() or sha256_file(source) != digest:
                 raise OSError("restoration mismatch")
         attempt("verify restoration", verify_restore)
-    if destination_root.exists():
+    if not errors:
+        attempt("remove destination", lambda: shutil.rmtree(destination_root) if destination_root.exists() else None)
+        attempt("remove empty parents", lambda: _cleanup_empty_parents(destination_root, existing_destination_parent))
+    if destination_root.exists() and not errors:
         errors.append("destination cleanup incomplete")
     return errors
 
@@ -461,6 +465,7 @@ def quarantine_tracked_tree(*, repo_root: Path, source_root: PurePosixPath, arch
     confirmed_paths = sorted({PurePosixPath(item.path).relative_to(source_root) for item in findings if item.severity == "confirmed"}, key=lambda item: item.as_posix())
     all_mutating = [*tracked, *ignored]
     expected = {relative: sha256_file(_source_path(repo_root, source_fs, relative)) for relative in all_mutating}
+    source_directories = sorted((PurePosixPath(path.relative_to(source_fs).as_posix()) for path in source_fs.rglob("*") if path.is_dir()), key=lambda item: (len(item.parts), item.as_posix()))
     existing_destination_parent = destination_root.parent
     while not existing_destination_parent.exists():
         existing_destination_parent = existing_destination_parent.parent
@@ -505,15 +510,18 @@ def quarantine_tracked_tree(*, repo_root: Path, source_root: PurePosixPath, arch
             staged_caches.append(relative)
         _prune_empty_directories(source_fs)
     except BaseException as original:
-        recovery_errors = _rollback(repo_root=repo_root, source_fs=source_fs, destination_root=destination_root, backup_root=backup_root, moved=moved, withheld=withheld, staged_caches=staged_caches, expected=expected, existing_destination_parent=existing_destination_parent)
+        recovery_errors = _rollback(repo_root=repo_root, source_fs=source_fs, destination_root=destination_root, backup_root=backup_root, moved=moved, withheld=withheld, staged_caches=staged_caches, expected=expected, existing_destination_parent=existing_destination_parent, source_directories=source_directories)
         if recovery_errors:
             raise QuarantineBlocked(f"recovery incomplete; backup retained at {backup_root}: {'; '.join(recovery_errors)}") from original
-        shutil.rmtree(backup_root)
+        try:
+            shutil.rmtree(backup_root)
+        except OSError:
+            warnings.warn("backup retained after rollback cleanup failure", RuntimeWarning)
         raise
     try:
         shutil.rmtree(backup_root)
-    except OSError as exc:
-        raise QuarantineBlocked(f"backup cleanup incomplete; backup retained at {backup_root}") from exc
+    except OSError:
+        warnings.warn("backup retained after commit cleanup failure", RuntimeWarning)
     return manifest
 
 
@@ -590,9 +598,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         manifest_path = args.repo_root.resolve() / Path(*args.manifest.parts)
-        manifest = load_manifest(manifest_path)
-        archived_root = args.repo_root.resolve() / Path(*PurePosixPath(manifest.archive_root).parts)
-        errors = verify_manifest(manifest, archived_root)
+        manifest, archived_root, errors = _safe_verify_manifest(args.repo_root, manifest_path)
         if errors:
             for error in errors:
                 print(error, file=sys.stderr)

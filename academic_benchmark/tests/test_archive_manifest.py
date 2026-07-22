@@ -417,3 +417,103 @@ def test_quarantine_rejects_symlinked_tracked_entry_when_supported(tmp_path: Pat
             archive_root=PurePosixPath("archive/legacy"),
             archive_id="legacy",
         )
+
+def test_failed_move_back_retains_destination_and_backup(tmp_path: Path, monkeypatch):
+    import academic_benchmark.archive_manifest as module
+
+    repo = _legacy_repo(tmp_path)
+    source = repo / "academic_benchmark" / "yaem2026"
+    original_replace = Path.replace
+    calls = 0
+
+    def fail_move_back(self: Path, target: Path):
+        nonlocal calls
+        if self.is_relative_to(repo / "archive") and target.is_relative_to(source):
+            calls += 1
+            raise OSError("injected move-back failure")
+        return original_replace(self, target)
+
+    monkeypatch.setattr(module, "write_manifest", lambda *args, **kwargs: (_ for _ in ()).throw(OSError("trigger rollback")))
+    monkeypatch.setattr(Path, "replace", fail_move_back)
+    with pytest.raises(QuarantineBlocked, match="recovery incomplete; backup retained") as raised:
+        quarantine_tracked_tree(repo_root=repo, source_root=PurePosixPath("academic_benchmark/yaem2026"), archive_root=PurePosixPath("archive/legacy"), archive_id="legacy")
+    assert calls
+    assert (repo / "archive" / "legacy" / "core" / "solver.py").is_file()
+    assert "VALUE = 1" not in str(raised.value)
+
+
+def test_cli_verify_uses_safe_verify_and_reports_success(tmp_path: Path, monkeypatch, capsys):
+    import academic_benchmark.archive_manifest as module
+
+    repo = _legacy_repo(tmp_path)
+    called = False
+
+    def safe_verify(repo_root: Path, manifest_path: Path):
+        nonlocal called
+        called = True
+        return module.ArchiveManifest.model_construct(entries=[]), repo, []
+
+    monkeypatch.setattr(module, "_safe_verify_manifest", safe_verify)
+    assert main(["verify", "--repo-root", str(repo), "--manifest", "manifest.json"]) == 0
+    assert called
+    assert capsys.readouterr().out == "verified 0 entries\n"
+
+def _directory_snapshot(root: Path) -> set[str]:
+    return {path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_dir()}
+
+
+def test_partial_prune_failure_restores_original_empty_directories(tmp_path: Path, monkeypatch):
+    import academic_benchmark.archive_manifest as module
+
+    repo = _legacy_repo(tmp_path)
+    source = repo / "academic_benchmark" / "yaem2026"
+    (source / "empty" / "nested").mkdir(parents=True)
+    before_files = _snapshot_tree(source)
+    before_directories = _directory_snapshot(source)
+    original = module._prune_empty_directories
+
+    def prune_then_fail(root: Path) -> None:
+        original(root)
+        raise OSError("injected post-prune failure")
+
+    monkeypatch.setattr(module, "_prune_empty_directories", prune_then_fail)
+    with pytest.raises(OSError, match="injected post-prune failure"):
+        quarantine_tracked_tree(repo_root=repo, source_root=PurePosixPath("academic_benchmark/yaem2026"), archive_root=PurePosixPath("archive/legacy"), archive_id="legacy")
+    assert _snapshot_tree(source) == before_files
+    assert _directory_snapshot(source) == before_directories
+
+
+def test_backup_cleanup_failure_after_rollback_warns_without_masking_original(tmp_path: Path, monkeypatch):
+    import academic_benchmark.archive_manifest as module
+
+    repo = _legacy_repo(tmp_path)
+    monkeypatch.setattr(module, "write_manifest", lambda *args, **kwargs: (_ for _ in ()).throw(OSError("original failure")))
+    original_rmtree = module.shutil.rmtree
+
+    def fail_backup_cleanup(path: Path, *args, **kwargs):
+        if Path(path).name.startswith("uniride-quarantine-"):
+            raise OSError("cleanup failure")
+        return original_rmtree(path, *args, **kwargs)
+
+    monkeypatch.setattr(module.shutil, "rmtree", fail_backup_cleanup)
+    with pytest.warns(RuntimeWarning, match="backup retained"):
+        with pytest.raises(OSError, match="original failure"):
+            quarantine_tracked_tree(repo_root=repo, source_root=PurePosixPath("academic_benchmark/yaem2026"), archive_root=PurePosixPath("archive/legacy"), archive_id="legacy")
+
+
+def test_backup_cleanup_failure_after_commit_warns_but_returns_manifest(tmp_path: Path, monkeypatch):
+    import academic_benchmark.archive_manifest as module
+
+    repo = _legacy_repo(tmp_path)
+    original_rmtree = module.shutil.rmtree
+
+    def fail_backup_cleanup(path: Path, *args, **kwargs):
+        if Path(path).name.startswith("uniride-quarantine-"):
+            raise OSError("cleanup failure")
+        return original_rmtree(path, *args, **kwargs)
+
+    monkeypatch.setattr(module.shutil, "rmtree", fail_backup_cleanup)
+    with pytest.warns(RuntimeWarning, match="backup retained"):
+        manifest = quarantine_tracked_tree(repo_root=repo, source_root=PurePosixPath("academic_benchmark/yaem2026"), archive_root=PurePosixPath("archive/legacy"), archive_id="legacy")
+    assert manifest.entries
+    assert (repo / "archive" / "legacy" / "manifest.json").is_file()

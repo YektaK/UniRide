@@ -1,0 +1,187 @@
+{
+  "$defs": {
+    "BestKnownV1": {
+      "additionalProperties": false,
+      "properties": {
+        "provenance": {
+          "minLength": 1,
+          "title": "Provenance",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "optimal",
+            "best_known",
+            "unknown"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "status",
+        "value",
+        "provenance"
+      ],
+      "title": "BestKnownV1",
+      "type": "object"
+    },
+    "ChecksumV1": {
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "const": "sha256",
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "value": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "title": "ChecksumV1",
+      "type": "object"
+    },
+    "DatasetSourceV1": {
+      "additionalProperties": false,
+      "properties": {
+        "authority_url": {
+          "minLength": 1,
+          "title": "Authority Url",
+          "type": "string"
+        },
+        "retrieved_on": {
+          "format": "date",
+          "title": "Retrieved On",
+          "type": "string"
+        }
+      },
+      "required": [
+        "authority_url",
+        "retrieved_on"
+      ],
+      "title": "DatasetSourceV1",
+      "type": "object"
+    },
+    "MatrixSemanticsV1": {
+      "additionalProperties": false,
+      "properties": {
+        "diagonal_semantics": {
+          "enum": [
+            "zero",
+            "sentinel",
+            "problem_defined"
+          ],
+          "title": "Diagonal Semantics",
+          "type": "string"
+        },
+        "directed": {
+          "title": "Directed",
+          "type": "boolean"
+        },
+        "edge_weight_format": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Edge Weight Format"
+        },
+        "edge_weight_type": {
+          "minLength": 1,
+          "title": "Edge Weight Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "directed",
+        "edge_weight_type",
+        "diagonal_semantics"
+      ],
+      "title": "MatrixSemanticsV1",
+      "type": "object"
+    }
+  },
+  "$id": "uniride-dataset/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact_path": {
+      "format": "uniride-repository-relative-path",
+      "title": "Artifact Path",
+      "type": "string"
+    },
+    "best_known": {
+      "$ref": "#/$defs/BestKnownV1"
+    },
+    "checksum": {
+      "$ref": "#/$defs/ChecksumV1"
+    },
+    "dataset_id": {
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "title": "Dataset Id",
+      "type": "string"
+    },
+    "dimension": {
+      "exclusiveMinimum": 0,
+      "title": "Dimension",
+      "type": "integer"
+    },
+    "matrix_semantics": {
+      "$ref": "#/$defs/MatrixSemanticsV1"
+    },
+    "problem_type": {
+      "enum": [
+        "TSP",
+        "ATSP",
+        "CVRP",
+        "CVRPTW",
+        "UniRide"
+      ],
+      "title": "Problem Type",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "uniride-dataset/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/DatasetSourceV1"
+    }
+  },
+  "required": [
+    "schema_version",
+    "dataset_id",
+    "artifact_path",
+    "source",
+    "checksum",
+    "problem_type",
+    "dimension",
+    "matrix_semantics",
+    "best_known"
+  ],
+  "title": "DatasetManifestV1",
+  "type": "object"
+}

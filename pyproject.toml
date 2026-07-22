@@ -27,3 +27,6 @@ test = [
 
 [tool.setuptools.packages.find]
 include = ["uniride_core*", "optimizer_api*", "academic_benchmark*"]
+
+[tool.setuptools.package-data]
+"academic_benchmark.schemas" = ["*.schema.json"]

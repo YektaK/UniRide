@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import json
+from importlib.resources import files
+
 import pytest
 from pydantic import ValidationError
 
 from academic_benchmark.contracts import DatasetManifestV1, RunManifestV1, StudyManifestV1
+from academic_benchmark.contracts.export_schemas import check_schemas, render_schemas
 from academic_benchmark.contracts.common import (
     ChecksumV1,
     RepositoryRelativePath,
@@ -153,3 +157,23 @@ def test_schema_versions_are_exact_not_heuristic():
     payload["schema_version"] = "uniride-study/v2"
     with pytest.raises(ValidationError):
         StudyManifestV1.model_validate(payload)
+
+
+def test_schema_snapshots_match_models_and_have_exact_ids():
+    assert check_schemas() == []
+    expected_ids = {
+        "study-v1.schema.json": "uniride-study/v1",
+        "dataset-v1.schema.json": "uniride-dataset/v1",
+        "run-v1.schema.json": "uniride-run/v1",
+    }
+    for name, rendered in render_schemas().items():
+        schema = json.loads(rendered)
+        assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+        assert schema["$id"] == expected_ids[name]
+        assert schema["additionalProperties"] is False
+
+
+def test_schema_snapshots_are_package_resources():
+    root = files("academic_benchmark.schemas")
+    for name in ("study-v1.schema.json", "dataset-v1.schema.json", "run-v1.schema.json"):
+        assert json.loads(root.joinpath(name).read_text(encoding="utf-8"))["$id"]

@@ -1,0 +1,252 @@
+{
+  "$defs": {
+    "FixedBudgetProtocolV1": {
+      "additionalProperties": false,
+      "properties": {
+        "budget_policy": {
+          "const": "atomic_upper_bound_v1",
+          "title": "Budget Policy",
+          "type": "string"
+        },
+        "protocol_id": {
+          "const": "fixed_evaluation_budget",
+          "title": "Protocol Id",
+          "type": "string"
+        },
+        "protocol_version": {
+          "minLength": 1,
+          "title": "Protocol Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "protocol_id",
+        "protocol_version",
+        "budget_policy"
+      ],
+      "title": "FixedBudgetProtocolV1",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "NativeProtocolV1": {
+      "additionalProperties": false,
+      "properties": {
+        "protocol_id": {
+          "const": "algorithm_native_termination",
+          "title": "Protocol Id",
+          "type": "string"
+        },
+        "protocol_version": {
+          "minLength": 1,
+          "title": "Protocol Version",
+          "type": "string"
+        },
+        "termination": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Termination",
+          "type": "object"
+        }
+      },
+      "required": [
+        "protocol_id",
+        "protocol_version",
+        "termination"
+      ],
+      "title": "NativeProtocolV1",
+      "type": "object"
+    },
+    "OutputPolicyV1": {
+      "additionalProperties": false,
+      "properties": {
+        "paper_scale_location": {
+          "const": "external",
+          "title": "Paper Scale Location",
+          "type": "string"
+        },
+        "repository_outputs": {
+          "enum": [
+            "smoke_only",
+            "none"
+          ],
+          "title": "Repository Outputs",
+          "type": "string"
+        }
+      },
+      "required": [
+        "repository_outputs",
+        "paper_scale_location"
+      ],
+      "title": "OutputPolicyV1",
+      "type": "object"
+    },
+    "PaperMetadataV1": {
+      "additionalProperties": false,
+      "properties": {
+        "paper_id": {
+          "minLength": 1,
+          "title": "Paper Id",
+          "type": "string"
+        },
+        "venue": {
+          "minLength": 1,
+          "title": "Venue",
+          "type": "string"
+        },
+        "year": {
+          "exclusiveMinimum": 0,
+          "title": "Year",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "paper_id",
+        "year",
+        "venue"
+      ],
+      "title": "PaperMetadataV1",
+      "type": "object"
+    }
+  },
+  "$id": "uniride-study/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "algorithm_ids": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Algorithm Ids",
+      "type": "array"
+    },
+    "algorithm_parameters": {
+      "additionalProperties": {
+        "additionalProperties": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "type": "object"
+      },
+      "title": "Algorithm Parameters",
+      "type": "object"
+    },
+    "analysis_plan_id": {
+      "minLength": 1,
+      "title": "Analysis Plan Id",
+      "type": "string"
+    },
+    "base_seed": {
+      "title": "Base Seed",
+      "type": "integer"
+    },
+    "dataset_manifest_refs": {
+      "items": {
+        "format": "uniride-repository-relative-path",
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Dataset Manifest Refs",
+      "type": "array"
+    },
+    "fixed_budget_levels": {
+      "items": {
+        "exclusiveMinimum": 0,
+        "type": "integer"
+      },
+      "minItems": 1,
+      "title": "Fixed Budget Levels",
+      "type": "array"
+    },
+    "output_policy": {
+      "$ref": "#/$defs/OutputPolicyV1"
+    },
+    "paper_metadata": {
+      "$ref": "#/$defs/PaperMetadataV1"
+    },
+    "primary_protocol": {
+      "$ref": "#/$defs/FixedBudgetProtocolV1"
+    },
+    "problem_families": {
+      "items": {
+        "enum": [
+          "TSP",
+          "ATSP",
+          "CVRP",
+          "CVRPTW",
+          "UniRide"
+        ],
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Problem Families",
+      "type": "array"
+    },
+    "run_count": {
+      "exclusiveMinimum": 0,
+      "title": "Run Count",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "uniride-study/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "secondary_protocol": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NativeProtocolV1"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "seed_protocol_version": {
+      "minLength": 1,
+      "title": "Seed Protocol Version",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "active",
+        "archived"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "study_id": {
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "title": "Study Id",
+      "type": "string"
+    },
+    "title": {
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "study_id",
+    "title",
+    "status",
+    "algorithm_ids",
+    "algorithm_parameters",
+    "dataset_manifest_refs",
+    "primary_protocol",
+    "fixed_budget_levels",
+    "run_count",
+    "base_seed",
+    "seed_protocol_version",
+    "problem_families",
+    "analysis_plan_id",
+    "output_policy",
+    "paper_metadata"
+  ],
+  "title": "StudyManifestV1",
+  "type": "object"
+}

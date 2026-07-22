@@ -1,0 +1,495 @@
+{
+  "$defs": {
+    "AlgorithmRunV1": {
+      "additionalProperties": false,
+      "properties": {
+        "algorithm_id": {
+          "minLength": 1,
+          "title": "Algorithm Id",
+          "type": "string"
+        },
+        "capabilities": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Capabilities",
+          "type": "object"
+        },
+        "composition_stages": {
+          "items": {
+            "additionalProperties": {
+              "$ref": "#/$defs/JsonValue"
+            },
+            "type": "object"
+          },
+          "title": "Composition Stages",
+          "type": "array"
+        },
+        "configuration": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Configuration",
+          "type": "object"
+        }
+      },
+      "required": [
+        "algorithm_id",
+        "capabilities",
+        "configuration",
+        "composition_stages"
+      ],
+      "title": "AlgorithmRunV1",
+      "type": "object"
+    },
+    "BestKnownV1": {
+      "additionalProperties": false,
+      "properties": {
+        "provenance": {
+          "minLength": 1,
+          "title": "Provenance",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "optimal",
+            "best_known",
+            "unknown"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "status",
+        "value",
+        "provenance"
+      ],
+      "title": "BestKnownV1",
+      "type": "object"
+    },
+    "BudgetRecordV1": {
+      "additionalProperties": false,
+      "properties": {
+        "levels": {
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 1,
+          "title": "Levels",
+          "type": "array"
+        },
+        "objective_evaluations": {
+          "minimum": 0,
+          "title": "Objective Evaluations",
+          "type": "integer"
+        },
+        "policy": {
+          "enum": [
+            "atomic_upper_bound_v1",
+            "native_uncapped"
+          ],
+          "title": "Policy",
+          "type": "string"
+        },
+        "stage_allocation": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "title": "Stage Allocation",
+          "type": "object"
+        }
+      },
+      "required": [
+        "levels",
+        "policy",
+        "objective_evaluations",
+        "stage_allocation"
+      ],
+      "title": "BudgetRecordV1",
+      "type": "object"
+    },
+    "ChecksumV1": {
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "const": "sha256",
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "value": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "title": "ChecksumV1",
+      "type": "object"
+    },
+    "DatasetManifestV1": {
+      "$id": "uniride-dataset/v1",
+      "additionalProperties": false,
+      "properties": {
+        "artifact_path": {
+          "format": "uniride-repository-relative-path",
+          "title": "Artifact Path",
+          "type": "string"
+        },
+        "best_known": {
+          "$ref": "#/$defs/BestKnownV1"
+        },
+        "checksum": {
+          "$ref": "#/$defs/ChecksumV1"
+        },
+        "dataset_id": {
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
+          "title": "Dataset Id",
+          "type": "string"
+        },
+        "dimension": {
+          "exclusiveMinimum": 0,
+          "title": "Dimension",
+          "type": "integer"
+        },
+        "matrix_semantics": {
+          "$ref": "#/$defs/MatrixSemanticsV1"
+        },
+        "problem_type": {
+          "enum": [
+            "TSP",
+            "ATSP",
+            "CVRP",
+            "CVRPTW",
+            "UniRide"
+          ],
+          "title": "Problem Type",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "uniride-dataset/v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/DatasetSourceV1"
+        }
+      },
+      "required": [
+        "schema_version",
+        "dataset_id",
+        "artifact_path",
+        "source",
+        "checksum",
+        "problem_type",
+        "dimension",
+        "matrix_semantics",
+        "best_known"
+      ],
+      "title": "DatasetManifestV1",
+      "type": "object"
+    },
+    "DatasetSourceV1": {
+      "additionalProperties": false,
+      "properties": {
+        "authority_url": {
+          "minLength": 1,
+          "title": "Authority Url",
+          "type": "string"
+        },
+        "retrieved_on": {
+          "format": "date",
+          "title": "Retrieved On",
+          "type": "string"
+        }
+      },
+      "required": [
+        "authority_url",
+        "retrieved_on"
+      ],
+      "title": "DatasetSourceV1",
+      "type": "object"
+    },
+    "EnvironmentV1": {
+      "additionalProperties": false,
+      "properties": {
+        "cpu": {
+          "title": "Cpu",
+          "type": "string"
+        },
+        "llvmlite": {
+          "title": "Llvmlite",
+          "type": "string"
+        },
+        "numba": {
+          "title": "Numba",
+          "type": "string"
+        },
+        "numpy": {
+          "title": "Numpy",
+          "type": "string"
+        },
+        "operating_system": {
+          "title": "Operating System",
+          "type": "string"
+        },
+        "python": {
+          "title": "Python",
+          "type": "string"
+        },
+        "statistics_library": {
+          "title": "Statistics Library",
+          "type": "string"
+        }
+      },
+      "required": [
+        "python",
+        "operating_system",
+        "cpu",
+        "numpy",
+        "numba",
+        "llvmlite",
+        "statistics_library"
+      ],
+      "title": "EnvironmentV1",
+      "type": "object"
+    },
+    "GitStateV1": {
+      "additionalProperties": false,
+      "properties": {
+        "commit": {
+          "pattern": "^[0-9a-f]{40}$",
+          "title": "Commit",
+          "type": "string"
+        },
+        "dirty": {
+          "title": "Dirty",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "commit",
+        "dirty"
+      ],
+      "title": "GitStateV1",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "MatrixSemanticsV1": {
+      "additionalProperties": false,
+      "properties": {
+        "diagonal_semantics": {
+          "enum": [
+            "zero",
+            "sentinel",
+            "problem_defined"
+          ],
+          "title": "Diagonal Semantics",
+          "type": "string"
+        },
+        "directed": {
+          "title": "Directed",
+          "type": "boolean"
+        },
+        "edge_weight_format": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Edge Weight Format"
+        },
+        "edge_weight_type": {
+          "minLength": 1,
+          "title": "Edge Weight Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "directed",
+        "edge_weight_type",
+        "diagonal_semantics"
+      ],
+      "title": "MatrixSemanticsV1",
+      "type": "object"
+    },
+    "OutputChecksumV1": {
+      "additionalProperties": false,
+      "properties": {
+        "checksum": {
+          "$ref": "#/$defs/ChecksumV1"
+        },
+        "path": {
+          "format": "uniride-repository-relative-path",
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "checksum"
+      ],
+      "title": "OutputChecksumV1",
+      "type": "object"
+    },
+    "SeedScheduleV1": {
+      "additionalProperties": false,
+      "properties": {
+        "base_seed": {
+          "title": "Base Seed",
+          "type": "integer"
+        },
+        "derived": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Derived",
+          "type": "object"
+        }
+      },
+      "required": [
+        "base_seed",
+        "derived"
+      ],
+      "title": "SeedScheduleV1",
+      "type": "object"
+    },
+    "TerminationRecordV1": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "runtime_seconds": {
+          "minimum": 0,
+          "title": "Runtime Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "reason",
+        "runtime_seconds"
+      ],
+      "title": "TerminationRecordV1",
+      "type": "object"
+    },
+    "ValidationRecordV1": {
+      "additionalProperties": false,
+      "properties": {
+        "checks": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Checks",
+          "type": "array"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "passed",
+        "checks"
+      ],
+      "title": "ValidationRecordV1",
+      "type": "object"
+    }
+  },
+  "$id": "uniride-run/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "algorithm": {
+      "$ref": "#/$defs/AlgorithmRunV1"
+    },
+    "budget": {
+      "$ref": "#/$defs/BudgetRecordV1"
+    },
+    "dataset": {
+      "$ref": "#/$defs/DatasetManifestV1"
+    },
+    "environment": {
+      "$ref": "#/$defs/EnvironmentV1"
+    },
+    "git": {
+      "$ref": "#/$defs/GitStateV1"
+    },
+    "outputs": {
+      "items": {
+        "$ref": "#/$defs/OutputChecksumV1"
+      },
+      "title": "Outputs",
+      "type": "array"
+    },
+    "protocol_version": {
+      "minLength": 1,
+      "title": "Protocol Version",
+      "type": "string"
+    },
+    "run_id": {
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "uniride-run/v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "seeds": {
+      "$ref": "#/$defs/SeedScheduleV1"
+    },
+    "study_id": {
+      "minLength": 1,
+      "title": "Study Id",
+      "type": "string"
+    },
+    "termination": {
+      "$ref": "#/$defs/TerminationRecordV1"
+    },
+    "validation": {
+      "$ref": "#/$defs/ValidationRecordV1"
+    }
+  },
+  "required": [
+    "schema_version",
+    "run_id",
+    "study_id",
+    "protocol_version",
+    "git",
+    "environment",
+    "dataset",
+    "algorithm",
+    "seeds",
+    "budget",
+    "termination",
+    "validation",
+    "outputs"
+  ],
+  "title": "RunManifestV1",
+  "type": "object"
+}

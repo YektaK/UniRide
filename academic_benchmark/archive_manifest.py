@@ -64,7 +64,7 @@ _AMBIGUOUS = (
         ),
     ),
 )
-_TEXT_SUFFIXES = {".py", ".json", ".csv", ".md", ".txt", ".toml", ".yaml", ".yml", ".ini", ".env"}
+_TEXT_SUFFIXES = {".py", ".js", ".ts", ".json", ".csv", ".md", ".txt", ".toml", ".yaml", ".yml", ".ini", ".cfg", ".conf", ".sh", ".env"}
 
 
 def sha256_file(path: Path) -> str:
@@ -87,8 +87,24 @@ def classify_yaem_evidence(path: PurePosixPath) -> EvidenceClass:
     return EvidenceClass.REFERENCE_ONLY
 
 
+def _is_text_file(path: Path) -> bool:
+    name = path.name.lower()
+    return name == ".env" or name.startswith(".env.") or path.suffix.lower() in _TEXT_SUFFIXES
+
+
+def _is_placeholder_value(value: str) -> bool:
+    return bool(re.fullmatch(
+        r"(?i)(?:placeholder|example|change[-_ ]?me|your[-_ ]?(?:api[_-]?key|token|secret)|replace[-_ ]?me)[-_a-z0-9]*",
+        value,
+    ))
+
+
+def _is_value_expression(value: str) -> bool:
+    return bool(re.fullmatch(r"(?i)(?:os\.environ(?:\[[^\]]+\])?|(?:os\.)?getenv\([^)]*\))", value))
+
+
 def scan_sensitive_file(path: Path) -> list[SensitiveFinding]:
-    if path.suffix.lower() not in _TEXT_SUFFIXES:
+    if not _is_text_file(path):
         return []
     findings: list[SensitiveFinding] = []
     with path.open("r", encoding="utf-8", errors="replace") as handle:
@@ -101,14 +117,10 @@ def scan_sensitive_file(path: Path) -> list[SensitiveFinding]:
             if not confirmed_on_line:
                 for rule, pattern in _AMBIGUOUS:
                     match = pattern.search(line)
-                    if (
-                        match
-                        and not re.search(r"(?i)(os\.environ|getenv)", line)
-                        and not re.fullmatch(
-                            r"(?i)(?:example|placeholder|change[-_ ]?me|your[-_ ]?)", match.group(1)
-                        )
-                    ):
-                        findings.append(SensitiveFinding(path.as_posix(), line_number, rule, "ambiguous"))
+                    if match:
+                        value = match.group(1)
+                        if not _is_value_expression(value) and not _is_placeholder_value(value):
+                            findings.append(SensitiveFinding(path.as_posix(), line_number, rule, "ambiguous"))
     return findings
 
 
@@ -121,8 +133,12 @@ def build_manifest(
     original_paths: Iterable[PurePosixPath],
     withheld: Iterable[ArchiveEntry],
 ) -> ArchiveManifest:
+    paths = sorted(original_paths, key=lambda item: item.as_posix())
+    for relative in paths:
+        if relative.is_absolute() or ".." in relative.parts or relative.as_posix() in {"", "."}:
+            raise ValueError("original paths must be repository-relative")
     entries = list(withheld)
-    for relative in sorted(original_paths, key=lambda item: item.as_posix()):
+    for relative in paths:
         archived = archived_root / Path(*relative.parts)
         entries.append(
             ArchiveEntry(
@@ -142,19 +158,30 @@ def build_manifest(
         entries=entries,
     )
 
-
 def verify_manifest(manifest: ArchiveManifest, archived_root: Path) -> list[str]:
     errors: list[str] = []
     source_root = PurePosixPath(manifest.source_root)
+    archive_root = PurePosixPath(manifest.archive_root)
     for entry in manifest.entries:
-        relative = PurePosixPath(entry.original_path).relative_to(source_root)
         if entry.classification is EvidenceClass.WITHHELD_SENSITIVE:
             continue
-        path = archived_root / Path(*relative.parts)
+        original = PurePosixPath(entry.original_path)
+        archive_path = PurePosixPath(entry.archive_path or "")
+        try:
+            relative = original.relative_to(source_root)
+        except ValueError:
+            errors.append(f"original path outside source root: {original.as_posix()}")
+            continue
+        try:
+            archived_relative = archive_path.relative_to(archive_root)
+        except ValueError:
+            errors.append(f"archive path outside archive root: {archive_path.as_posix()}")
+            continue
+        path = archived_root / Path(*archived_relative.parts)
         if not path.is_file():
             errors.append(f"missing: {relative.as_posix()}")
-        elif sha256_file(path) != entry.sha256:
-            errors.append(f"checksum mismatch: {relative.as_posix()}")
         elif path.stat().st_size != entry.byte_size:
             errors.append(f"size mismatch: {relative.as_posix()}")
+        elif sha256_file(path) != entry.sha256:
+            errors.append(f"checksum mismatch: {relative.as_posix()}")
     return errors

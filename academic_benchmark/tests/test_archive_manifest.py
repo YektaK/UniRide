@@ -168,3 +168,38 @@ def test_verify_manifest_uses_archive_path_and_returns_mapping_errors(tmp_path: 
         "original path outside source root: outside/source.py",
         "archive path outside archive root: other/mapped.py",
     ]
+
+@pytest.mark.parametrize(
+    "relative",
+    [PurePosixPath(r"C:\\secret.txt"), PurePosixPath("C:/secret.txt"), PurePosixPath(r"..\\secret.txt")],
+)
+def test_build_manifest_rejects_windows_unsafe_paths_before_file_access(tmp_path: Path, relative: PurePosixPath):
+    with pytest.raises(ValueError, match="repository-relative"):
+        build_manifest(
+            archive_id="yaem2026_legacy",
+            source_root=PurePosixPath("academic_benchmark/yaem2026"),
+            archive_root=PurePosixPath("archive/academic_benchmark/yaem2026_legacy"),
+            archived_root=tmp_path,
+            original_paths=[relative],
+            withheld=[],
+        )
+
+
+def test_verify_manifest_rejects_unsafe_archive_path_without_file_access(tmp_path: Path):
+    archive_entry = __import__("academic_benchmark.archive_manifest", fromlist=["ArchiveEntry"]).ArchiveEntry.model_construct(
+        original_path="academic_benchmark/yaem2026/core/solver.py",
+        archive_path=r"..\\secret.txt",
+        byte_size=0,
+        sha256="0" * 64,
+        classification=EvidenceClass.REFERENCE_ONLY,
+    )
+    manifest = __import__("academic_benchmark.archive_manifest", fromlist=["ArchiveManifest"]).ArchiveManifest.model_construct(
+        schema_version="uniride-archive/v1",
+        archive_id="yaem2026_legacy",
+        source_root="academic_benchmark/yaem2026",
+        archive_root="archive/yaem2026_legacy",
+        entries=[archive_entry],
+    )
+    assert verify_manifest(manifest, tmp_path / "does-not-exist") == [
+        r"unsafe archive path: ..\\secret.txt"
+    ]

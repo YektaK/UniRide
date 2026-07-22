@@ -124,6 +124,18 @@ def scan_sensitive_file(path: Path) -> list[SensitiveFinding]:
     return findings
 
 
+def _is_repository_relative_path(value: PurePosixPath | str) -> bool:
+    raw = str(value)
+    path = PurePosixPath(raw)
+    return bool(
+        raw
+        and "\\" not in raw
+        and ":" not in raw
+        and not path.is_absolute()
+        and ".." not in path.parts
+        and path.as_posix() not in {"", "."}
+    )
+
 def build_manifest(
     *,
     archive_id: str,
@@ -134,9 +146,9 @@ def build_manifest(
     withheld: Iterable[ArchiveEntry],
 ) -> ArchiveManifest:
     paths = sorted(original_paths, key=lambda item: item.as_posix())
-    for relative in paths:
-        if relative.is_absolute() or ".." in relative.parts or relative.as_posix() in {"", "."}:
-            raise ValueError("original paths must be repository-relative")
+    for value in (source_root, archive_root, *paths):
+        if not _is_repository_relative_path(value):
+            raise ValueError("paths must be repository-relative")
     entries = list(withheld)
     for relative in paths:
         archived = archived_root / Path(*relative.parts)
@@ -165,8 +177,14 @@ def verify_manifest(manifest: ArchiveManifest, archived_root: Path) -> list[str]
     for entry in manifest.entries:
         if entry.classification is EvidenceClass.WITHHELD_SENSITIVE:
             continue
+        if not _is_repository_relative_path(entry.original_path):
+            errors.append(f"unsafe original path: {entry.original_path}")
+            continue
+        if not _is_repository_relative_path(entry.archive_path or ""):
+            errors.append(f"unsafe archive path: {entry.archive_path or ''}")
+            continue
         original = PurePosixPath(entry.original_path)
-        archive_path = PurePosixPath(entry.archive_path or "")
+        archive_path = PurePosixPath(entry.archive_path)
         try:
             relative = original.relative_to(source_root)
         except ValueError:

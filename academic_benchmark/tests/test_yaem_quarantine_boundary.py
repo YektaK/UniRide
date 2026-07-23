@@ -145,4 +145,3 @@ def test_pytest_norecursedirs_preserves_defaults_and_excludes_archive():
     norecursedirs = set(pyproject["tool"]["pytest"]["ini_options"]["norecursedirs"])
     assert PYTEST_DEFAULT_NORECURSEDIRS <= norecursedirs
     assert "archive" in norecursedirs
-

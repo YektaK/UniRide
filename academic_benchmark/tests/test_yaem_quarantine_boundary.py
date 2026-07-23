@@ -32,23 +32,26 @@ PYTEST_DEFAULT_NORECURSEDIRS = {
 }
 
 
-def _module_name(path: Path) -> str:
-    relative = path.relative_to(REPO).with_suffix("")
-    parts = relative.parts[:-1] if relative.name == "__init__" else relative.parts
-    return ".".join(parts)
+def _package_parts(path: Path) -> tuple[str, ...]:
+    return path.relative_to(REPO).with_suffix("").parts[:-1]
+
+
+QUARANTINED_IMPORT_ROOTS = (
+    "academic_benchmark.yaem2026",
+    "archive.academic_benchmark.yaem2026_legacy",
+)
 
 
 def _is_quarantined_import(name: str) -> bool:
-    return (
-        name == "yaem2026"
-        or name.startswith("academic_benchmark.yaem2026")
-        or name.startswith("archive.academic_benchmark.yaem2026_legacy")
+    return name == "yaem2026" or any(
+        name == root or name.startswith(f"{root}.")
+        for root in QUARANTINED_IMPORT_ROOTS
     )
 
 
 def _import_violations(path: Path, source: str) -> list[int]:
     violations = []
-    package = _module_name(path).split(".")[:-1]
+    package = _package_parts(path)
     tree = ast.parse(source, filename=str(path))
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
@@ -77,6 +80,7 @@ QUARANTINED_PACKAGE_NAMES = {
     "archive",
     "archive.academic_benchmark",
     "archive.academic_benchmark.yaem2026_legacy",
+    "archive.academic_benchmark.yaem2026_legacy.core",
 }
 
 
@@ -110,8 +114,38 @@ def test_import_violation_helper_catches_aliases_and_relative_imports():
     ) == [1, 2, 3, 4, 5]
 
 
-def test_package_pattern_validation_rejects_archive_wildcard():
+def test_import_violation_helper_resolves_relative_imports_from_package_inits():
+    assert _import_violations(
+        REPO / "academic_benchmark" / "__init__.py", "from . import yaem2026"
+    ) == [1]
+    assert _import_violations(
+        REPO / "academic_benchmark" / "core" / "__init__.py",
+        "from .. import yaem2026",
+    ) == [1]
+    assert _import_violations(
+        REPO / "academic_benchmark" / "core" / "regular_module.py",
+        "from .. import yaem2026",
+    ) == [1]
+
+
+def test_import_violation_helper_respects_component_boundaries():
+    source = "\n".join(
+        (
+            "import academic_benchmark.yaem2026_safe",
+            "import archive.academic_benchmark.yaem2026_legacy_tools",
+        )
+    )
+
+    assert _import_violations(
+        REPO / "academic_benchmark" / "boundary_probe.py", source
+    ) == []
+
+
+def test_package_pattern_validation_rejects_archive_wildcard_and_descendant_only_pattern():
     assert _patterns_expose_quarantined_packages(["archive*"])
+    assert _patterns_expose_quarantined_packages(
+        ["archive.academic_benchmark.yaem2026_legacy.*"]
+    )
 
 
 def test_historical_archive_file_classification_only_excludes_root_metadata():
@@ -153,8 +187,8 @@ def test_distribution_discovery_excludes_archive_and_yaem():
         packages = set(
             PEP420PackageFinder.find(str(REPO), include=PACKAGE_INCLUDE_PATTERNS)
         )
-        assert not any("yaem2026" in package for package in packages)
-        assert not any(package.startswith("archive") for package in packages)
+        assert not any(_is_quarantined_import(package) for package in packages)
+        assert not any(package == "archive" or package.startswith("archive.") for package in packages)
 def test_archive_manifest_covers_the_original_tracked_inventory_and_verifies():
     manifest = load_manifest(ARCHIVE / "manifest.json")
     assert manifest.schema_version == "uniride-archive/v1"

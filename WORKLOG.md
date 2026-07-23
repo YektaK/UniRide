@@ -51,6 +51,15 @@ This is the curated project chronology. Entries record work and evidence availab
 - Recreated only `docs/API_REFERENCE.md` and `docs/GITHUB_WORKFLOW.md` as active runbooks.
 - Archived the Smart Benchmark manual pending environment, CLI, seed, and evaluation-accounting repair.
 
+## 2026-07-22 — Package A: YAEM quarantine and contract foundation
+
+- Quarantined the legacy YAEM evidence tree at `archive/academic_benchmark/yaem2026_legacy/`; its manifest represents 159 entries: 93 `HISTORICAL_UNVERIFIED`, 20 `INVALID`, 46 `REFERENCE_ONLY`, and 0 `WITHHELD_SENSITIVE`.
+- `python -m academic_benchmark.contracts.export_schemas check` exited 0. `python -m academic_benchmark.archive_manifest verify --repo-root . --manifest archive/academic_benchmark/yaem2026_legacy/manifest.json` exited 0 and reported `verified 159 entries`.
+- The Package A focused suite, `python -m pytest academic_benchmark/tests/test_manifest_contracts.py academic_benchmark/tests/test_archive_manifest.py academic_benchmark/tests/test_yaem_quarantine_boundary.py -q -p no:cacheprovider --tb=short`, passed: 81 passed in 15.96s. The full academic suite, `python -m pytest academic_benchmark/tests -q -p no:cacheprovider --tb=short`, passed: 409 passed in 34.44s. Both pytest commands used a newly isolated elevated `C:\tmp` `--basetemp`.
+- Package/import smokes passed: the schema-resource import check printed `PACKAGE_OK`, and `find_spec('academic_benchmark.yaem2026')` printed `YAEM_NON_IMPORTABLE`.
+- Initial subagent test attempts were blocked only by sandbox `tmp_path` permissions for the default user Temp directory and then `C:\tmp`; the elevated isolated-basetemp rerun resolved that environment constraint. It was not a source-test failure.
+- No benchmark experiments ran. GitHub push remains deferred to Package D.
+
 ## Curated Historical Milestones
 
 ### April 2026 - Dual-engine and SOTA exploration

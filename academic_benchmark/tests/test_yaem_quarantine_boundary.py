@@ -32,6 +32,94 @@ PYTEST_DEFAULT_NORECURSEDIRS = {
 }
 
 
+def _module_name(path: Path) -> str:
+    relative = path.relative_to(REPO).with_suffix("")
+    parts = relative.parts[:-1] if relative.name == "__init__" else relative.parts
+    return ".".join(parts)
+
+
+def _is_quarantined_import(name: str) -> bool:
+    return (
+        name == "yaem2026"
+        or name.startswith("academic_benchmark.yaem2026")
+        or name.startswith("archive.academic_benchmark.yaem2026_legacy")
+    )
+
+
+def _import_violations(path: Path, source: str) -> list[int]:
+    violations = []
+    package = _module_name(path).split(".")[:-1]
+    tree = ast.parse(source, filename=str(path))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            candidates = [alias.name for alias in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            if node.level:
+                base = package[: 1 - node.level] if node.level > 1 else package
+                module = ".".join((*base, *(node.module or "").split("."))).strip(".")
+            else:
+                module = node.module or ""
+            candidates = [module, *(f"{module}.{alias.name}" for alias in node.names)]
+        else:
+            continue
+        if any(_is_quarantined_import(name) for name in candidates):
+            violations.append(node.lineno)
+    return sorted(violations)
+
+
+def _configured_package_include_patterns() -> list[str]:
+    pyproject = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))
+    return pyproject["tool"]["setuptools"]["packages"]["find"]["include"]
+
+
+PACKAGE_INCLUDE_PATTERNS = _configured_package_include_patterns()
+QUARANTINED_PACKAGE_NAMES = {
+    "archive",
+    "archive.academic_benchmark",
+    "archive.academic_benchmark.yaem2026_legacy",
+}
+
+
+def _patterns_expose_quarantined_packages(patterns: list[str]) -> bool:
+    return any(
+        fnmatchcase(namespace, pattern)
+        for namespace in QUARANTINED_PACKAGE_NAMES
+        for pattern in patterns
+    )
+
+
+def _is_historical_archive_file(path: Path) -> bool:
+    return path.relative_to(ARCHIVE) not in {
+        Path("manifest.json"),
+        Path("QUARANTINE.md"),
+    }
+
+def test_import_violation_helper_catches_aliases_and_relative_imports():
+    source = "\n".join(
+        (
+            "import academic_benchmark.yaem2026 as legacy",
+            "from academic_benchmark.yaem2026 import solver as legacy_solver",
+            "from academic_benchmark import yaem2026 as legacy_package",
+            "from . import yaem2026 as relative_legacy",
+            "from archive.academic_benchmark.yaem2026_legacy import old_solver",
+        )
+    )
+
+    assert _import_violations(
+        REPO / "academic_benchmark" / "boundary_probe.py", source
+    ) == [1, 2, 3, 4, 5]
+
+
+def test_package_pattern_validation_rejects_archive_wildcard():
+    assert _patterns_expose_quarantined_packages(["archive*"])
+
+
+def test_historical_archive_file_classification_only_excludes_root_metadata():
+    assert not _is_historical_archive_file(ARCHIVE / "manifest.json")
+    assert not _is_historical_archive_file(ARCHIVE / "QUARANTINE.md")
+    assert _is_historical_archive_file(ARCHIVE / "nested" / "manifest.json")
+    assert _is_historical_archive_file(ARCHIVE / "nested" / "QUARANTINE.md")
+
 def _active_python_files():
     for root in (
         REPO / "academic_benchmark",
@@ -49,47 +137,24 @@ def test_legacy_yaem_package_is_absent_and_not_importable():
 
 
 def test_active_python_has_no_yaem_imports():
-    violations = []
-    for path in _active_python_files():
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                names = [alias.name for alias in node.names]
-            elif isinstance(node, ast.ImportFrom):
-                names = [node.module or ""]
-            else:
-                continue
-            if any(
-                name == "yaem2026" or name.startswith("academic_benchmark.yaem2026")
-                for name in names
-            ):
-                violations.append(f"{path.relative_to(REPO)}:{node.lineno}")
+    violations = [
+        f"{path.relative_to(REPO)}:{lineno}"
+        for path in _active_python_files()
+        for lineno in _import_violations(path, path.read_text(encoding="utf-8"))
+    ]
     assert violations == []
-
-
 def test_distribution_discovery_excludes_archive_and_yaem():
+    assert not _patterns_expose_quarantined_packages(PACKAGE_INCLUDE_PATTERNS)
     try:
         from setuptools.discovery import PEP420PackageFinder
     except ModuleNotFoundError:
-        pyproject = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))
-        patterns = pyproject["tool"]["setuptools"]["packages"]["find"]["include"]
-        archive_namespaces = {
-            "archive",
-            "archive.academic_benchmark",
-            "archive.academic_benchmark.yaem2026_legacy",
-        }
-        assert not any(
-            fnmatchcase(namespace, pattern)
-            for namespace in archive_namespaces
-            for pattern in patterns
-        )
         assert not ACTIVE_YAEM.exists()
     else:
-        packages = set(PEP420PackageFinder.find(str(REPO), include=["academic_benchmark*"]))
+        packages = set(
+            PEP420PackageFinder.find(str(REPO), include=PACKAGE_INCLUDE_PATTERNS)
+        )
         assert not any("yaem2026" in package for package in packages)
         assert not any(package.startswith("archive") for package in packages)
-
-
 def test_archive_manifest_covers_the_original_tracked_inventory_and_verifies():
     manifest = load_manifest(ARCHIVE / "manifest.json")
     assert manifest.schema_version == "uniride-archive/v1"
@@ -109,7 +174,7 @@ def test_archive_contains_no_unmanifested_historical_files():
     actual = {
         path.relative_to(ARCHIVE).as_posix()
         for path in ARCHIVE.rglob("*")
-        if path.is_file() and path.name not in {"manifest.json", "QUARANTINE.md"}
+        if path.is_file() and _is_historical_archive_file(path)
     }
     assert actual == expected
 
@@ -118,7 +183,7 @@ def test_archive_rescan_has_no_sensitive_findings():
     findings = [
         finding
         for path in ARCHIVE.rglob("*")
-        if path.is_file() and path.name != "manifest.json"
+        if path.is_file()
         for finding in scan_sensitive_file(path)
     ]
     assert findings == []

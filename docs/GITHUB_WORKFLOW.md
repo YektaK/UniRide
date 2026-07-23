@@ -1,275 +1,193 @@
-# GitHub İş Akışı - AI Agent ile Takım Çalışması
+# UniRide GitHub Workflow
 
-> **Oluşturulma:** 04.04.2026 - Ekleyen: Z.ai
-> **Amaç:** Birden fazla AI agent ve geliştiricinin aynı repo üzerinde güvenli çalışması
+**Verified:** 2026-07-16
 
----
+This runbook defines the contribution and review process. It does not claim the current CI gates are green; known failures are listed below.
 
-## 1. Genel Yapı
+## 1. Branch and Change Discipline
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│   GITHUB (Bulut)                    LOKAL (Senin Bilgisayar)   │
-│   ──────────────                    ────────────────────────   │
-│                                                                 │
-│   main branch                       main branch (kopya)        │
-│   (ana kodlar)                      (çalışma alanı)            │
-│       │                                  │                     │
-│       │  ←──── git pull ─────            │                     │
-│       │                                  │                     │
-│       │  ────── git push ────→           │                     │
-│                                                                 │
-│   PR #15 (Z.ai'nin değişikliği)                                │
-│   PR #16 (Başka AI'nın değişikliği)                            │
-│   PR #17 (Developer değişikliği)                               │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+- Start from the repository's designated integration branch.
+- Use a focused branch for each change; Codex-created branches should use the `codex/` prefix.
+- Do not combine mathematical corrections, dependency upgrades, UI redesign, and generated benchmark results in one review.
+- Preserve unrelated dirty-tree changes.
+- Never commit credentials, local environment files, databases, logs, caches, or raw benchmark outputs unless explicitly approved.
+
+Before work:
+
+```powershell
+git status --short --branch
+git rev-parse HEAD
 ```
 
----
+Record the starting commit in audit-sensitive work.
 
-## 2. AI Agent Kuralları
+## 2. Documentation Authority
 
-### 2.1 Branch İsimlendirme
+Reviewers should resolve conflicts in this order:
 
-```
-feature/zai-KONU-TARİH
-feature/copilot-KONU-TARİH
-feature/dev-İSİM-KONU
+1. live code and reproducible verification;
+2. `UniRide_Ultimate_Audit.md`;
+3. `CURRENT_ARCHITECTURE.md`;
+4. `ACTIVE_ROADMAP.md`;
+5. current operational runbooks;
+6. archived historical material.
 
-Örnekler:
-- feature/zai-sota-solvers-04.04.2026
-- feature/zai-alns-operators-05.04.2026
-- feature/copilot-bugfix-indexerror
-- feature/dev-yekta-ui-fix
-```
+Nothing under `archive/` is a current implementation instruction.
 
-### 2.2 Commit Mesaj Formatı
+## 3. Local Verification
 
-```
-[TİP]: Kısa açıklama (GG.AA.YYYY - Ekleyen: İsim)
+### Frontend
 
-Tipler:
-- feat: Yeni özellik
-- fix: Hata düzeltme
-- docs: Dokümantasyon
-- refactor: Kod iyileştirme
-- test: Test ekleme/düzeltme
-- chore: Bakım işleri
-
-Örnek:
-feat: PyVRP benchmark entegrasyonu (04.04.2026 - Z.ai)
+```powershell
+npm ci
+npm test -- --run
+npm run typecheck
+npm run lint
 ```
 
-### 2.3 PR Açma Formatı
+Current baseline:
 
-```markdown
-## Değişiklikler
-- Madde 1
-- Madde 2
+- unit tests pass;
+- typecheck is blocked by an inconsistent local dependency install plus source typing errors;
+- lint script/configuration requires repair.
 
-## Test
-- [ ] Test 1
-- [ ] Test 2
+A pull request must not describe these gates as passing unless the posted command output comes from a clean install.
 
-## Dokümantasyon
-- [ ] Güncellendi
+### Python
 
-## Reviewer
-@YektaK
+Use a clean supported virtual environment:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r optimizer_api\requirements.txt
+python -m pip install -e ".[test]"
+python -m pytest uniride_core\tests optimizer_api\tests academic_benchmark\tests -q --tb=short
 ```
 
----
+Current baseline is blocked by an incompatible Pydantic installation in the audit environment. Dependency/environment failure must be separated from source-test failure.
 
-## 3. Lokalde PR Test Etme (VS Code)
+### Focused correctness gates
 
-### 3.1 PR'ı İndirme
+Mathematical changes require targeted tests for:
 
-```
-1. VS Code aç
-2. Sol tarafta "Source Control" ikonu (Ctrl+Shift+G)
-3. "..." menüsü → "Pull Request" → "Checkout Pull Request"
-4. Listeden PR'ı seç
-5. VS Code otomatik dosyaları günceller
-```
+- duplicate customer occurrences at one location;
+- exact customer coverage;
+- SW/SO capacity;
+- maximum duration;
+- pickup/dropoff time windows;
+- missing and asymmetric arcs;
+- deterministic seed replay;
+- comparison with exact/reference solvers on small instances.
 
-### 3.2 Terminal ile
+### Diff checks
 
-```bash
-# PR'ları listele
-gh pr list
-
-# PR'ı lokale çek
-gh pr checkout 15
-
-# Artık o branch'tasın, dosyalar değişti
-# Test et
-python -m pytest
-python run_smart_benchmark.py
+```powershell
+git diff --check
+git status --short
+git diff --stat
 ```
 
----
+Inspect the full diff before staging.
 
-## 4. PR Onaylama / Reddetme
+## 4. Benchmark Evidence Policy
 
-### 4.1 Onaylama (Merge)
+Raw generated CSV/JSON/database outputs are evidence artifacts, not source code.
 
-```
-VS Code:
-1. "Source Control" → "..." → "Pull"
-2. GitHub.com'a git → PR → "Merge Pull Request"
+Default policy:
 
-Terminal:
-gh pr merge 15 --squash
-git checkout main
-git pull origin main
-```
+- keep raw outputs untracked;
+- publish a curated Markdown report;
+- record command, commit, dataset, matrix semantics, seed schedule, parameters, environment, and hardware;
+- report all failed/infeasible runs;
+- never compute/promote a gap without feasibility certification.
 
-### 4.2 Reddetme
+If raw evidence must be versioned, use an explicitly approved path and explain retention/size policy in the pull request.
 
-```
-VS Code:
-1. Sol alt köşede branch ismine tıkla
-2. "main" seç → Dosyalar eski haline döner
-3. GitHub.com'da PR → "Close Pull Request"
+## 5. Pull Request Requirements
 
-Terminal:
-git checkout main           # Eski hale dön
-gh pr close 15 -c "Sebep"   # GitHub'da kapat
-```
+Every pull request should include:
 
----
+- objective and scope;
+- exact affected components;
+- risk and rollback notes;
+- test commands and results;
+- environment/dependency caveats;
+- screenshots for visible UI changes;
+- before/after evidence for performance claims;
+- matrix/dataset/seed provenance for algorithm changes;
+- documentation updates where contracts or architecture change.
 
-## 5. Önemli Kurallar
+For algorithmic changes, also include:
 
-### 5.1 Branch Protection (GitHub Ayarları)
+- objective definition;
+- hard versus soft constraint policy;
+- feasibility-certificate result;
+- deterministic replay evidence;
+- reference-solver or exact-instance comparison;
+- ablation where a new research mechanism is claimed.
 
-```
-Settings → Branches → Add rule (main için)
+## 6. Review Discipline
 
-✅ Require pull request reviews before merging
-   └── Required approving reviews: 1
+Reviewers must:
 
-✅ Require status checks to pass before merging
+- require exact file/line references;
+- separate confirmed defects from hypotheses;
+- verify severity independently;
+- reject unsupported P0/P1 claims;
+- check runtime dispatch and blast radius before approving removals;
+- confirm archived documents were not used as current truth;
+- verify migrations and DTO changes end to end;
+- check that optional dependencies fail gracefully.
 
-✅ Do not allow bypassing settings
-```
+No strategy may be archived merely because a historical report called it superseded. Pipeline A remains active.
 
-### 5.2 Silme Yasağı (Dokümantasyon için)
+## 7. Required CI Target State
 
-```
-Kod veya dokümantasyon silmek yerine:
+Branch protection should eventually require:
 
-1. Olumsuz görüş ekle:
-   "Eski yaklaşım (04.04.2026 - Z.ai: X nedeniyle önerilmiyor)"
+1. frontend unit tests;
+2. TypeScript typecheck;
+3. ESLint with zero warnings for correctness rules;
+4. Python import/collection check;
+5. core unit/regression suite;
+6. optimizer API contract tests;
+7. academic benchmark tests that do not require network;
+8. feasibility and deterministic-replay gates;
+9. secret scanning;
+10. dependency vulnerability review;
+11. documentation-link/contract drift checks.
 
-2. İptal işareti koy:
-   "- [İPTAL] Eski madde (04.04.2026 - Z.ai: Sebep)"
+CPU-heavy publications and large DOE runs belong in scheduled/manual workflows, not every pull request.
 
-3. Görüş çakışması:
-   "• Yaklaşım A (01.04.2026 - X: Öneriliyor)"
-   "• Yaklaşım A (04.04.2026 - Z.ai: Testlerde başarısız)"
-```
+## 8. Secrets and Environments
 
----
+- Store repository/deployment secrets in the platform's encrypted secret store.
+- Use minimum scope and expiration/rotation policies.
+- Never place service-role keys in `NEXT_PUBLIC_*` variables.
+- Never paste real keys into issues, pull requests, test output, documentation, or benchmark metadata.
+- Treat previously exposed credentials as compromised and rotate them.
+- Development reset must remain disabled by default.
 
-## 6. Tam İş Akışı Şeması
+## 9. Merge and Release
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                                                                     │
-│  DURUM                    YAPILACAK                 SONUÇ           │
-│  ─────                    ─────────                 ─────           │
-│                                                                     │
-│  AI PR açtı  ────→  gh pr checkout N  ────→  Dosyalar değişti      │
-│                                                                     │
-│  Test ediyorum  ────→  python test.py  ────→  Başarılı mı?         │
-│                                                                     │
-│  ┌─────────────┴─────────────┐                                      │
-│  │                           │                                      │
-│  ▼                           ▼                                      │
-│ BEĞENDM                     BEĞENMEDM                              │
-│  │                           │                                      │
-│  ▼                           ▼                                      │
-│ gh pr merge N             git checkout main                         │
-│ git pull origin main      gh pr close N                             │
-│  │                           │                                      │
-│  ▼                           ▼                                      │
-│ Değişiklikler            Eski hale döndü                           │
-│ main'de artık             Reddedildi                                │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
+Before merge:
 
----
+- required checks pass in a clean environment;
+- approvals are complete;
+- generated artifacts and dirty-tree state are understood;
+- documentation matches the changed behavior;
+- no unresolved feasibility or security regression exists.
 
-## 7. VS Code Eklentileri
+For releases:
 
-```
-1. "GitHub Pull Requests and Issues"
-   → PR'ları VS Code içinde yönet
+- record and verify the release commit;
+- use an annotated tag when tags are required;
+- verify both `git rev-parse HEAD` and the peeled tag commit;
+- attach reproducibility manifests to academic releases;
+- do not label UniRide production-ready while Phase 1 release blockers remain open.
 
-2. "GitLens"
-   → Kim ne değiştirmiş gör
+## 10. Historical Workflow Material
 
-3. "Git Graph"
-   → Branch geçmişi görselleştir
-```
-
----
-
-## 8. Sık Kullanılan Komutlar
-
-```bash
-# Repo'yu ilk kez al
-git clone https://github.com/YektaK/UniRide.git
-
-# Değişiklikleri al
-git pull origin main
-
-# PR'ları gör
-gh pr list
-
-# PR'ı test et
-gh pr checkout 15
-
-# main'e dön
-git checkout main
-
-# PR onayla
-gh pr merge 15 --squash
-
-# PR reddet
-gh pr close 15 -c "Sebep"
-
-# Mevcut durumu gör
-git status
-git branch
-```
-
----
-
-## 9. Güvenlik
-
-| Konu | Açıklama |
-|------|----------|
-| Token | `ghp_` ile başlar, gizli tutulmalı |
-| Scope | Sadece `repo` yetkisi yeterli |
-| Süre | 90 gün veya No expiration |
-| İptal | Settings → Developer settings → Tokens → Delete |
-
----
-
-## 10. Sorun Giderme
-
-| Sorun | Çözüm |
-|-------|-------|
-| "Merge conflict" | PR sahibi düzeltmeli |
-| "Branch out of date" | `git fetch` + `git rebase origin/main` |
-| "Push rejected" | `git pull` önce, sonra tekrar push |
-| Yanlış merge ettim | `git revert MERGE_COMMIT_HASH` |
-
----
-
-*Bu doküman, AI agent'lar ve geliştiriciler arası işbirliği için oluşturulmuştur.*
+The prior workflow document is preserved at `archive/docs/GITHUB_WORKFLOW.md`. It contains useful historical review discipline but also obsolete commands and unsafe credential-lifetime advice. It must not be followed directly.

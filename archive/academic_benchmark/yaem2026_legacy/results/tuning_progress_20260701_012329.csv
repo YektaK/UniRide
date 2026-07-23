@@ -1,0 +1,2 @@
+timestamp,config_file,problem,algorithm,combo_idx,mean_duration,params
+01:23:31,config_berlin52_20260701_012328.json,berlin52,2-opt,1,7822.4,"{""max_iterations"": 1000, ""first_improvement"": true, ""num_starts"": 10}"

@@ -27,3 +27,20 @@ test = [
 
 [tool.setuptools.packages.find]
 include = ["uniride_core*", "optimizer_api*", "academic_benchmark*"]
+
+[tool.setuptools.package-data]
+"academic_benchmark.schemas" = ["*.schema.json"]
+
+[tool.pytest.ini_options]
+norecursedirs = [
+    "*.egg",
+    ".*",
+    "_darcs",
+    "build",
+    "CVS",
+    "dist",
+    "node_modules",
+    "venv",
+    "{arch}",
+    "archive",
+]

@@ -65,6 +65,9 @@ test-results/
 .idea/
 
 __pycache__/
+.numba_cache/
+*.nbc
+*.nbi
 *.pyc
 *.pyo
 *.pyd
@@ -102,7 +105,14 @@ antigravity-god-mode
 
 # Archive / legacy snapshots — not active source, excluded from codegraph index
 .proposed_changes/
-archive/
+archive/*
+!archive/README.md
+!archive/docs/
+!archive/docs/**
+!archive/academic_benchmark/
+archive/academic_benchmark/*
+!archive/academic_benchmark/yaem2026_legacy/
+!archive/academic_benchmark/yaem2026_legacy/**
 scratch/
 
 # Tool / editor state — regenerable, not source code

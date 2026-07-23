@@ -692,6 +692,18 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
                     "gap": reg_result.gap_pct if reg_result.gap_pct is not None else float("nan"),
                     "time_ms": reg_result.elapsed_sec * 1000,
                     "algorithm_type": "registry",
+                    "algorithm_id": getattr(reg_result, "algorithm_id", reg_result.algorithm),
+                    "algorithm_family": getattr(reg_result, "algorithm_family", None),
+                    "variant": getattr(reg_result, "variant", None),
+                    "seed": reg_result.seed,
+                    "seed_group": getattr(reg_result, "seed_group", None),
+                    "objective_evaluations": getattr(reg_result, "objective_evaluations", reg_result.evaluations),
+                    "evaluation_budget": getattr(reg_result, "evaluation_budget", None),
+                    "budget_terminated": getattr(reg_result, "budget_terminated", None),
+                    "initialization_policy": getattr(reg_result, "initialization_policy", None),
+                    "termination_policy": getattr(reg_result, "termination_policy", None),
+                    "execution_backend": getattr(reg_result, "execution_backend", None),
+                    "polish_policy": getattr(reg_result, "polish_policy", None),
                     "routes": reg_result.routes,
                     "num_vehicles": reg_result.num_vehicles,
                     "route_loads": reg_result.route_loads,
@@ -756,6 +768,31 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
         "n_runs": n_runs,
         "per_run_lengths": convergence_profile,
         "objective_cost": best_run.get("objective_cost", avg_length),
+        "algorithm_id": best_run.get("algorithm_id"),
+        "algorithm_family": best_run.get("algorithm_family"),
+        "variant": best_run.get("variant"),
+        "seed": best_run.get("seed"),
+        "seed_group": best_run.get("seed_group"),
+        "objective_evaluations": best_run.get("objective_evaluations"),
+        "evaluation_budget": best_run.get("evaluation_budget"),
+        "budget_terminated": best_run.get("budget_terminated"),
+        "initialization_policy": best_run.get("initialization_policy"),
+        "termination_policy": best_run.get("termination_policy"),
+        "execution_backend": best_run.get("execution_backend"),
+        "polish_policy": best_run.get("polish_policy"),
+        "per_run_fairness": [
+            {
+                key: run.get(key)
+                for key in (
+                    "algorithm_id", "algorithm_family", "variant", "seed",
+                    "seed_group", "objective_evaluations", "evaluation_budget",
+                    "budget_terminated",
+                    "initialization_policy", "termination_policy",
+                    "execution_backend", "polish_policy",
+                )
+            }
+            for run in run_results
+        ],
         "routes": best_run.get("routes"),
         "num_vehicles": best_run.get("num_vehicles"),
         "route_loads": best_run.get("route_loads"),
@@ -2167,7 +2204,20 @@ def _select_problems_from_args(args, all_problems, interactive: bool = False):
     return list(all_problems)
 
 
-def main() -> int:
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    # The fair pilot must bypass all legacy directory, DB, metadata and CSV setup.
+    fair_parser = argparse.ArgumentParser(add_help=False)
+    fair_parser.add_argument("--fair-config")
+    fair_parser.add_argument("--output-dir")
+    fair_args, _ = fair_parser.parse_known_args(argv)
+    if fair_args.fair_config or fair_args.output_dir:
+        if not (fair_args.fair_config and fair_args.output_dir):
+            print("[FAIR PILOT ERROR] --fair-config and --output-dir must be provided together")
+            return 2
+        from academic_benchmark.fair_pilot import run_fair_pilot_from_cli
+        return run_fair_pilot_from_cli(
+            fair_args.fair_config, fair_args.output_dir, problem_loader=load_problems,
+        )
     global _active_metadata
     
     _ensure_dirs()
@@ -2191,9 +2241,11 @@ def main() -> int:
     parser.add_argument("--runs", type=int, help="Tekrar sayısı")
     parser.add_argument("--size-limit", type=int, help="Problem boyutu limiti")
     parser.add_argument("--config", help="Config dosyasi yolu (DOE ayarlarini yukler)")
+    parser.add_argument("--fair-config", help="Strict fair-pilot JSON config (requires --output-dir)")
+    parser.add_argument("--output-dir", help="External output directory for --fair-config")
     parser.add_argument("--fractional-fallback", action="store_true", help="Fractional fallback stratejisi")
     parser.add_argument("--edit-params", action="store_true", help="Tuning öncesi parametre uzayini duzenle")
-    args, _ = parser.parse_known_args()
+    args, _ = parser.parse_known_args(argv)
 
     # If --config is provided, load tuning config and route to tuning mode
     if args.config:

@@ -1,777 +1,178 @@
 # UniRide API Reference
 
-**Base URLs:**
-- **Frontend API:** `http://localhost:9002/api`
-- **Python Backend:** `http://127.0.0.1:8000/api/v1`
-
----
-
-## Next.js Route Handlers (Frontend → Backend Layer)
-
-### Route Optimization
-
-#### `POST /api/optimize-route`
-**Purpose:** Optimize a single set of students into routes using one algorithm
-
-**Authentication:** Admin required
-
-**Request Body:**
-```json
-{
-  "students": [
-    {
-      "id": "student_001",
-      "student_id": "2024001",
-      "name": "Ahmet Yılmaz",
-      "location_code": "K123",
-      "coordinates": { "lat": 41.0082, "lng": 28.9784 },
-      "home_coordinates": { "lat": 41.0100, "lng": 28.9800 },
-      "disability_type": "Sw",
-      "pickup_time": "09:00",
-      "dropoff_time": "16:00"
-    }
-  ],
-  "depot": {
-    "id": "depot_01",
-    "lat": 41.0050,
-    "lng": 28.9700
-  },
-  "algorithm": "ga_split",
-  "max_travel_time": 120,
-  "sw_capacity": 4,
-  "so_capacity": 5,
-  "direction": "pickup",
-  "use_time_windows": true,
-  "target_time": "09:00",
-  "time_window_size": 30,
-  "local_search_type": "two_opt",
-  "ga_config": {
-    "population_size": 100,
-    "max_iterations": 200,
-    "crossover_rate": 0.8,
-    "mutation_rate": 0.1
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "algorithm_used": "ga_split",
-  "routes": [
-    {
-      "vehicle_id": "v1",
-      "route_details": [
-        {
-          "location1": "depot_01",
-          "location2": "K123",
-          "duration": 15,
-          "distance": 3.2
-        }
-      ],
-      "total_duration_minutes": 45,
-      "total_distance_km": 28.5,
-      "sw_count": 2,
-      "so_count": 3,
-      "student_ids": ["student_001", "student_002"],
-      "departure_time": "09:00",
-      "arrival_times": {
-        "student_001": "09:15",
-        "student_002": "09:42"
-      },
-      "time_window_violations": 0
-    }
-  ],
-  "total_vehicles": 2,
-  "total_duration_minutes": 45,
-  "execution_time_seconds": 2.3
-}
-```
-
-**Status Codes:**
-- `200` - Success
-- `400` - Invalid request body
-- `401` - Unauthorized (not admin)
-- `500` - Server error
-
-**Implementation:** `src/app/api/optimize-route/route.ts`
-
----
-
-### Algorithm Comparison
-
-#### `POST /api/compare-algorithms`
-**Purpose:** Compare all available algorithms on the same problem
-
-**Authentication:** Admin required
-
-**Request Body:**
-```json
-{
-  "students": [...],  // Same as optimize-route
-  "depot": {...},
-  "algorithms": ["ga_split", "pso_split", "gwo_split"],  // Optional: defaults to all
-  "clusteringAlgorithm": "sweep"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "comparisons": [
-    {
-      "algorithm": "ga_split",
-      "total_vehicles": 2,
-      "total_duration_minutes": 45,
-      "total_distance_km": 28.5,
-      "execution_time_seconds": 2.3,
-      "routes": [...]
-    },
-    {
-      "algorithm": "pso_split",
-      "total_vehicles": 2,
-      "total_duration_minutes": 48,
-      "total_distance_km": 29.1,
-      "execution_time_seconds": 1.9,
-      "routes": [...]
-    }
-  ]
-}
-```
-
-**Implementation:** `src/app/api/compare-algorithms/route.ts`
-
----
-
-### Vehicle Calculations
-
-#### `POST /api/calculate-vehicles`
-**Purpose:** Calculate minimum vehicles needed
-
-**Request Body:**
-```json
-{
-  "students": [...],
-  "sw_capacity": 4,
-  "so_capacity": 5,
-  "max_travel_time": 120
-}
-```
-
-**Response:**
-```json
-{
-  "min_vehicles": 2,
-  "recommended_vehicles": 3,
-  "analysis": {
-    "sw_students": 5,
-    "so_students": 8,
-    "total_students": 13,
-    "vehicles_for_sw": 2,
-    "vehicles_for_so": 2,
-    "time_based_vehicles": 1
-  }
-}
-```
-
-**Implementation:** `src/app/api/calculate-vehicles/route.ts`
-
----
-
-### Route Plans Management
-
-#### `GET /api/route-plans`
-**Purpose:** Fetch all route plans for current user
-
-**Query Parameters:**
-- `date` (optional): Filter by date
-- `status` (optional): "draft" | "confirmed" | "active" | "completed" | "cancelled"
-
-**Response:**
-```json
-{
-  "route_plans": [
-    {
-      "id": "rp_001",
-      "date": "2026-04-10",
-      "status": "confirmed",
-      "routes": [...],
-      "created_at": "2026-04-10T10:00:00Z"
-    }
-  ]
-}
-```
-
-**Implementation:** `src/app/api/route-plans/route.ts`
-
----
-
-#### `POST /api/route-plans`
-**Purpose:** Create new route plan
-
-**Request Body:**
-```json
-{
-  "date": "2026-04-10",
-  "routes": [...],  // From optimization result
-  "notes": "Morning pickup routes"
-}
-```
-
-**Response:**
-```json
-{
-  "id": "rp_001",
-  "date": "2026-04-10",
-  "status": "draft",
-  "routes": [...],
-  "created_at": "2026-04-10T10:00:00Z"
-}
-```
-
----
-
-#### `PATCH /api/route-plans/{id}`
-**Purpose:** Update route plan status
-
-**Request Body:**
-```json
-{
-  "status": "confirmed",
-  "notes": "Approved for execution"
-}
-```
-
----
-
-### Ride Confirmation
-
-#### `POST /api/ride-confirmation`
-**Purpose:** Confirm or reject a ride request
-
-**Request Body:**
-```json
-{
-  "ride_request_id": "rr_001",
-  "action": "confirm",  // "confirm" | "reject"
-  "notes": "Optional confirmation notes"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "ride_request_id": "rr_001",
-  "status": "confirmed"
-}
-```
-
----
-
-### Sandbox / IE Mode
-
-#### `POST /api/sandbox/calculate`
-**Purpose:** Calculate with custom vehicle configurations (IE Sandbox)
-
-**Request Body:**
-```json
-{
-  "students": [...],
-  "vehicles": [
-    {
-      "vehicleId": "v1",
-      "swCapacity": 4,
-      "soCapacity": 5,
-      "cooldownMinutes": 15
-    }
-  ],
-  "algorithm": "ga_split"
-}
-```
-
-**Response:** Same as `/api/optimize-route`
-
-**Implementation:** `src/app/api/sandbox/route.ts`
-
----
-
-### Admin Operations
-
-#### `GET /api/admin/users`
-**Purpose:** List all users (admin only)
-
-**Authentication:** Admin required
-
-**Query Parameters:**
-- `role` (optional): "student" | "admin" | "driver"
-- `limit` (optional): Number of results
-
-**Response:**
-```json
-{
-  "users": [
-    {
-      "id": "user_001",
-      "email": "student@university.edu",
-      "name": "Ahmet Yılmaz",
-      "role": "student",
-      "student_number": "2024001"
-    }
-  ],
-  "total": 150
-}
-```
-
----
-
-#### `POST /api/admin/users`
-**Purpose:** Create new user (admin only)
-
-**Request Body:**
-```json
-{
-  "email": "student@university.edu",
-  "name": "Ahmet Yılmaz",
-  "role": "student",
-  "student_number": "2024001",
-  "disability_type": "Sw",
-  "location_code": "K123"
-}
-```
-
----
-
-#### `PATCH /api/admin/users/{id}`
-**Purpose:** Update user info
-
-**Request Body:**
-```json
-{
-  "name": "New Name",
-  "role": "admin",
-  "disability_type": "So"
-}
-```
-
----
-
-#### `DELETE /api/admin/users/{id}`
-**Purpose:** Delete user (soft delete)
-
----
-
-### Driver Operations
-
-#### `GET /api/driver/assignments`
-**Purpose:** Get driver's assigned routes
-
-**Query Parameters:**
-- `date` (optional): Filter by date
-- `status` (optional): "scheduled" | "in_progress" | "completed"
-
-**Response:**
-```json
-{
-  "assignments": [
-    {
-      "id": "ra_001",
-      "date": "2026-04-10",
-      "vehicle_id": "v1",
-      "route_id": "r_001",
-      "student_ids": ["s1", "s2"],
-      "pickup_time": "09:00",
-      "estimated_dropoff_time": "16:00",
-      "status": "scheduled"
-    }
-  ]
-}
-```
-
----
-
-#### `PATCH /api/driver/assignments/{id}`
-**Purpose:** Update assignment status
-
-**Request Body:**
-```json
-{
-  "status": "in_progress",
-  "current_location": { "lat": 41.0082, "lng": 28.9784 },
-  "notes": "Running 5 minutes late"
-}
-```
-
----
-
-### Profile
-
-#### `GET /api/profile`
-**Purpose:** Get current user's profile
-
-**Response:**
-```json
-{
-  "id": "user_001",
-  "email": "student@university.edu",
-  "name": "Ahmet Yılmaz",
-  "role": "student",
-  "student_number": "2024001",
-  "home_coordinates": { "lat": 41.0100, "lng": 28.9800 },
-  "disability_type": "Sw",
-  "location_code": "K123",
-  "weekly_schedule": {
-    "Monday": { "start": "09:00", "end": "16:30" },
-    "Tuesday": { "start": "09:00", "end": "16:30" }
-  }
-}
-```
-
----
-
-#### `PATCH /api/profile`
-**Purpose:** Update current user's profile
-
-**Request Body:**
-```json
-{
-  "name": "New Name",
-  "home_coordinates": { "lat": 41.0100, "lng": 28.9800 },
-  "disability_type": "So",
-  "location_code": "K456",
-  "weekly_schedule": {
-    "Monday": { "start": "09:00", "end": "16:30" }
-  }
-}
-```
-
----
-
-### Authentication
-
-#### `POST /api/auth/login`
-**Purpose:** User login
-
-**Request Body:**
-```json
-{
-  "email": "student@university.edu",
-  "password": "password123"
-}
-```
-
-**Response:**
-```json
-{
-  "user": {
-    "id": "user_001",
-    "email": "student@university.edu",
-    "name": "Ahmet Yılmaz",
-    "role": "student"
-  },
-  "session": {
-    "access_token": "eyJhbGc...",
-    "expires_in": 3600
-  }
-}
-```
-
----
-
-#### `POST /api/auth/logout`
-**Purpose:** User logout
-
----
-
-#### `GET /api/auth/session`
-**Purpose:** Get current session info
-
-**Response:**
-```json
-{
-  "user": {...},
-  "session": {...}
-}
-```
-
----
-
-## Python FastAPI Endpoints (Backend)
-
-### Core Endpoints
-
-#### `GET /health`
-**Purpose:** Health check
-
-**Response:**
-```json
-{
-  "status": "ok",
-  "message": "UniRide Optimization Engine is running.",
-  "version": "3.1.0",
-  "features": ["CVRP", "CVRPTW", "Heterogeneous Fleet", "IE Resource Analysis"],
-  "algorithms": ["genetic_algorithm", "pso", "gwo", "hho", ...]
-}
-```
-
----
-
-#### `GET /api/v1/strategies`
-**Purpose:** List all available optimization strategies
-
-**Response:**
-```json
-[
-  {
-    "name": "ga_split",
-    "display_name": "Genetic Algorithm with Split",
-    "description": "Route-first approach using GA + optimal split decoder",
-    "complexity": "O(generations × population × n²)",
-    "recommended": true
-  },
-  {
-    "name": "pso",
-    "display_name": "Particle Swarm Optimization",
-    "description": "Swarm intelligence metaheuristic",
-    "complexity": "O(iterations × swarm × n²)",
-    "recommended": true
-  }
-]
-```
-
----
-
-#### `POST /api/v1/optimize`
-**Purpose:** Optimize routes with specified algorithm
-
-**Request Body:**
-```json
-{
-  "students": [
-    {
-      "id": "s1",
-      "name": "Student 1",
-      "location_code": "K123",
-      "coordinates": { "lat": 41.0082, "lng": 28.9784 },
-      "disability_type": "Sw",
-      "pickup_time": "09:00",
-      "dropoff_time": "16:00"
-    }
-  ],
-  "vehicles": [
-    {
-      "vehicle_id": "v1",
-      "sw_capacity": 4,
-      "so_capacity": 5,
-      "cooldown_minutes": 15
-    }
-  ],
-  "optimizer_config": {
-    "algorithm": "ga_split",
-    "local_search_type": "two_opt",
-    "use_time_windows": true,
-    "direction": "pickup",
-    "target_time": "09:00",
-    "ga_config": {
-      "population_size": 100,
-      "max_iterations": 200
-    }
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "algorithm_used": "ga_split",
-  "routes": [
-    {
-      "vehicle_id": "v1",
-      "route_details": [...],
-      "total_duration_minutes": 45,
-      "total_distance_km": 28.5,
-      "sw_count": 2,
-      "so_count": 3,
-      "student_ids": ["s1", "s2"],
-      "departure_time": "09:00",
-      "arrival_times": { "s1": "09:15", "s2": "09:42" },
-      "time_window_violations": 0
-    }
-  ],
-  "total_vehicles": 2,
-  "total_duration_minutes": 45,
-  "execution_time_seconds": 2.3,
-  "ie_data": null
-}
-```
-
----
-
-#### `POST /api/v1/compare`
-**Purpose:** Compare multiple algorithms on same problem
-
-**Request Body:**
-```json
-{
-  "students": [...],
-  "vehicles": [...],
-  "optimizer_config": {
-    "algorithms": ["ga_split", "pso_split", "gwo_split"],
-    "direction": "pickup"
-  }
-}
-```
-
-**Response:**
-```json
-[
-  {
-    "algorithm": "ga_split",
-    "success": true,
-    "routes": [...],
-    "execution_time_seconds": 2.3
-  },
-  {
-    "algorithm": "pso_split",
-    "success": true,
-    "routes": [...],
-    "execution_time_seconds": 1.9
-  }
-]
-```
-
----
-
-#### `POST /api/v1/extract-time-windows`
-**Purpose:** Extract and validate time windows from weekly schedule
-
-**Request Body:**
-```json
-{
-  "weekly_schedule": {
-    "Monday": { "start": "09:00", "end": "16:30" },
-    "Tuesday": { "start": "09:00", "end": "16:30" }
-  },
-  "target_time": "09:00",
-  "time_window_size": 30,
-  "offset_minutes": 10,
-  "direction": "pickup"
-}
-```
-
-**Response:**
-```json
-{
-  "time_windows": [
-    {
-      "day": "Monday",
-      "earliest": 540,
-      "latest": 570,
-      "target": 555
-    }
-  ],
-  "extraction_status": "success"
-}
-```
-
----
-
-## Error Responses
-
-### Standard Error Format
-```json
-{
-  "detail": "Error message",
-  "status_code": 400
-}
-```
-
-### Common Status Codes
-| Code | Meaning |
-|------|---------|
-| 200 | Success |
-| 400 | Bad request (invalid input) |
-| 401 | Unauthorized (missing auth) |
-| 403 | Forbidden (insufficient permissions) |
-| 404 | Not found |
-| 422 | Unprocessable entity (validation error) |
-| 500 | Server error |
-
----
-
-## Request/Response Timing
-
-| Operation | Typical Duration |
-|-----------|-----------------|
-| Health check | < 10ms |
-| List strategies | < 50ms |
-| Small optimization (n=10) | 100-500ms |
-| Medium optimization (n=30) | 500ms-2s |
-| Large optimization (n=100) | 2-10s |
-| Algorithm comparison | 5-30s (all algorithms) |
-
----
-
-## Rate Limits (Planned)
-
-Currently not enforced, but designed limit:
-- **60 requests per minute** per API key
-
----
-
-## Example Client Usage
-
-### Using optimizer-service.ts (Recommended)
-```typescript
-import { optimizeRoutes } from "@/services/optimizer-service";
-
-const result = await optimizeRoutes(students, depot, {
-  algorithm: "ga_split",
-  sw_capacity: 4,
-  so_capacity: 5
-});
-
-console.log(`Total vehicles: ${result.total_vehicles}`);
-console.log(`Execution time: ${result.execution_time_seconds}s`);
-```
-
-### Using Fetch Directly (Not Recommended)
-```typescript
-const response = await fetch("/api/optimize-route", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    students: [...],
-    depot: {...},
-    algorithm: "ga_split"
-  })
-});
-
-const result = await response.json();
-```
-
-### Using Python Requests
-```python
-import requests
-
-response = requests.post(
-  "http://127.0.0.1:8000/api/v1/optimize",
-  json={
-    "students": [...],
-    "vehicles": [...],
-    "optimizer_config": {
-      "algorithm": "ga_split"
-    }
-  }
-)
-
-result = response.json()
-print(f"Total vehicles: {result['total_vehicles']}")
-```
-
----
-
-**Last Updated:** April 10, 2026 | **UniRide API v3.1.0**
+**Verified:** 2026-07-16
+**Status:** endpoint inventory and integration guide, not a production-security certification
+
+The archived predecessor described obsolete payloads. This reference is intentionally concise and reflects the live route inventory. Generate detailed schemas from FastAPI OpenAPI after the Python environment is repaired.
+
+## 1. Service Boundaries
+
+- Browser clients should call same-origin Next.js routes under `/api/*`.
+- Next.js routes authenticate users and translate application payloads.
+- Next.js server routes call the FastAPI optimizer through `OPTIMIZER_API_URL`.
+- Direct browser calls to FastAPI are a known defect and must not be used in production.
+- FastAPI currently has no service-authentication dependency; deploy it only on a trusted private boundary until Phase 2 of the roadmap.
+
+## 2. FastAPI Endpoints
+
+Default local base: `http://127.0.0.1:8000`
+
+### Core optimization
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/health` | Process/feature summary; currently vulnerable to optional-null strategy enumeration |
+| GET | `/api/v1/strategies` | Strategy metadata and availability |
+| POST | `/api/v1/optimize` | Run one optimization strategy |
+| POST | `/api/v1/compare` | Compare requested strategies |
+| POST | `/api/v1/vehicle-calculator` | Alias to the optimize flow |
+| POST | `/api/v1/extract-time-windows` | Extract windows from schedule entries |
+| POST | `/api/v1/schedule-to-students` | Convert schedule entries to student DTOs |
+
+### Benchmark control and data
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/v1/benchmark/problems` | List benchmark problems |
+| GET | `/api/v1/benchmark/problems/{problem_name}` | Get problem metadata |
+| POST | `/api/v1/benchmark/download/{problem_name}` | Download/register a problem |
+| POST | `/api/v1/benchmark/import` | Import benchmark data |
+| GET | `/api/v1/benchmark/param-spaces` | Parameter-space metadata |
+| POST | `/api/v1/benchmark/run` | Start a benchmark run |
+| GET | `/api/v1/benchmark/status` | Read run status |
+| GET | `/api/v1/benchmark/results/{run_id}` | Read run results |
+| POST | `/api/v1/benchmark/stop` | Request stop; currently does not cancel computation reliably |
+| GET | `/api/v1/benchmark/academic/problems` | Academic problem inventory |
+| GET | `/api/v1/benchmark/academic/leaderboard` | Academic leaderboard rows |
+| GET | `/api/v1/benchmark/academic/best` | Best academic rows |
+| GET | `/api/v1/benchmark/academic/benchmark-results` | Academic benchmark rows |
+| GET | `/api/v1/benchmark/cli/files` | List CLI result files in configured directories |
+| POST | `/api/v1/benchmark/cli/import` | Import CLI result JSON |
+| GET | `/api/v1/benchmark/cli/preview` | Preview CLI result JSON |
+
+### FastAPI security warning
+
+The benchmark and CLI endpoints are not safe for untrusted exposure. In particular, the archived implementation of CLI preview/import accepted caller-selected paths. Phase 0 must remove this behavior and add service/admin authentication.
+
+## 3. Core FastAPI Contracts
+
+### Optimization request
+
+The live `OptimizationRequest` uses top-level fields, not the obsolete nested `optimizer_config` structure.
+
+Principal fields:
+
+| Field | Meaning |
+|---|---|
+| `algorithm` | Strategy key; default currently `ga_split` |
+| `students` | Student/customer nodes |
+| `depot` | Depot node |
+| `max_travel_time` | Maximum route duration |
+| `sw_capacity`, `so_capacity` | Vector capacity dimensions |
+| `direction` | `pickup` or `dropoff` |
+| `use_time_windows` | Enables time-window extraction/scheduling |
+| `target_time`, `offset_minutes` | Scheduling inputs |
+| `vehicles` | Optional heterogeneous fleet configuration |
+| `local_search_type` | Local-search selection |
+| `ga_config`, `pso_config`, `gwo_config`, `hho_config` | Algorithm overrides |
+| `two_opt_config`, `sota_config` | Additional overrides |
+| `clustering_algorithm` | Cluster-first strategy choice |
+| `is_asymmetric` | Directed-cost flag |
+
+Current caveat: algorithm configuration dictionaries and major list fields need strict typed upper bounds.
+
+### Optimization response
+
+Principal fields:
+
+- `algorithm_used`
+- `success`
+- `routes`
+- `total_vehicles`
+- `total_duration_minutes`
+- `error_message`
+- `execution_time_seconds`
+- `direction`
+- `time_windows_used`
+- `ie_data`
+- `total_time_window_violations`
+
+Current caveat: `success=True` is not yet a reliable feasibility certificate.
+
+### Compare request/response
+
+`/api/v1/compare` accepts a `CompareRequest` and returns `CompareResponse`, including per-algorithm results, best/fastest keys, and a summary. It does not return the obsolete raw list described by the archived API reference.
+
+## 4. Next.js Same-Origin API Routes
+
+| Methods | Path |
+|---|---|
+| GET | `/api/` |
+| GET, PUT, DELETE | `/api/admin/ride-requests` |
+| GET, POST, PUT, DELETE | `/api/admin/users` |
+| PATCH | `/api/admin/users/password` |
+| GET, POST, PUT, DELETE | `/api/admin/vehicles` |
+| POST | `/api/auth/dev-reset` |
+| POST | `/api/auth/hint` |
+| GET | `/api/benchmark/academic/best` |
+| GET | `/api/benchmark/academic/leaderboard` |
+| GET | `/api/benchmark/academic/problems` |
+| GET | `/api/benchmark/health` |
+| GET | `/api/benchmark/param-spaces` |
+| GET | `/api/benchmark/problems` |
+| GET | `/api/benchmark/results/[runId]` |
+| POST | `/api/benchmark/run` |
+| GET | `/api/benchmark/run/status` |
+| POST | `/api/benchmark/run/stop` |
+| GET | `/api/benchmark/status` |
+| POST | `/api/benchmark/stop` |
+| GET | `/api/benchmark/strategies` |
+| POST | `/api/calculate-vehicles` |
+| POST | `/api/compare-algorithms` |
+| GET, PUT | `/api/driver/assignments` |
+| GET, POST | `/api/optimize-route` |
+| PATCH | `/api/profile/password` |
+| GET, POST | `/api/ride-confirmation` |
+| GET, POST, PATCH, DELETE | `/api/route-plans` |
+| GET, POST, PUT, DELETE | `/api/sandbox` |
+
+Dynamic-segment notation follows filesystem route names.
+
+## 5. Authentication Model
+
+- Browser Supabase sessions produce bearer tokens.
+- Administrative Next.js routes should call the central role/auth helpers.
+- `SUPABASE_SERVICE_ROLE_KEY` is server-only.
+- Public anonymous keys are not secrets; authorization depends on validated sessions and RLS.
+- Development-reset endpoints must require both explicit enablement and a secret.
+- FastAPI requires a future service credential or private gateway policy.
+
+Known integration defects are tracked in `ACTIVE_ROADMAP.md`; this reference does not imply every route currently applies its intended guard correctly.
+
+## 6. Error and Timeout Conventions
+
+Target convention:
+
+- `400`: invalid request or unsupported strategy
+- `401`: missing/invalid authentication
+- `403`: insufficient role
+- `404`: missing resource
+- `409`: duplicate/idempotency conflict
+- `422`: schema validation
+- `429`: rate/work-budget limit
+- `500`: sanitized internal failure
+- `502/503/504`: upstream optimizer/provider failures
+
+Clients must use abort signals and operation-specific timeouts. Long benchmark execution should return a run ID and be observed through durable job state.
+
+## 7. OpenAPI Regeneration
+
+After repairing the Python environment:
+
+1. start FastAPI;
+2. save/inspect `/openapi.json`;
+3. compare generated paths and schemas with this inventory;
+4. generate typed clients if adopted;
+5. fail CI when committed API documentation drifts from OpenAPI.
+
+Do not copy secrets or production URLs into generated artifacts.

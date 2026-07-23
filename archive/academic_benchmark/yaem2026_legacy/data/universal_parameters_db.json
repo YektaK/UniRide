@@ -1,0 +1,178 @@
+[
+    {
+        "id": 1,
+        "algorithm": "2-opt",
+        "problem": "Universal_Scale_Independent",
+        "dimension": "Mixed",
+        "best_mean_length": "N/A",
+        "parameters": {
+            "max_iterations": 500,
+            "first_improvement": true,
+            "num_starts": 10
+        }
+    },
+    {
+        "id": 2,
+        "algorithm": "3-opt",
+        "problem": "Universal_Scale_Independent",
+        "dimension": "Mixed",
+        "best_mean_length": "N/A",
+        "parameters": {
+            "max_iterations": 800,
+            "first_improvement": true,
+            "num_starts": 5
+        }
+    },
+    {
+        "id": 3,
+        "algorithm": "Or-opt",
+        "problem": "Universal_Scale_Independent",
+        "dimension": "Mixed",
+        "best_mean_length": "N/A",
+        "parameters": {
+            "max_iterations": 600,
+            "max_segment_size": 3,
+            "num_starts": 5
+        }
+    },
+    {
+        "id": 4,
+        "algorithm": "GWO-2opt",
+        "problem": "Universal_Scale_Independent",
+        "dimension": "Mixed",
+        "best_mean_length": "N/A",
+        "parameters": {
+            "pack_size": 70,
+            "max_iterations": 150,
+            "initial_a": 3.0,
+            "exploration_rate": 0.4,
+            "max_no_improvement": 75,
+            "polish_interval": 15,
+            "polish_iters": 5,
+            "final_polish_iters": 300
+        }
+    },
+    {
+        "id": 5,
+        "algorithm": "GWO-Pure",
+        "problem": "Universal_Scale_Independent",
+        "dimension": "Mixed",
+        "best_mean_length": "N/A",
+        "parameters": {
+            "pack_size": 70,
+            "max_iterations": 350,
+            "initial_a": 2.0,
+            "exploration_rate": 0.2,
+            "max_no_improvement": 75
+        }
+    },
+    {
+        "id": 6,
+        "algorithm": "HHO-2opt",
+        "problem": "Universal_Scale_Independent",
+        "dimension": "Mixed",
+        "best_mean_length": "N/A",
+        "parameters": {
+            "hawks": 70,
+            "max_iterations": 150,
+            "initial_energy": 0.5,
+            "jump_probability": 0.5,
+            "max_no_improvement": 50,
+            "dive_count": 5,
+            "levy_scale": 0.2,
+            "polish_interval": 35,
+            "polish_iters": 5,
+            "final_polish_iters": 100
+        }
+    },
+    {
+        "id": 7,
+        "algorithm": "HHO-Pure",
+        "problem": "Universal_Scale_Independent",
+        "dimension": "Mixed",
+        "best_mean_length": "N/A",
+        "parameters": {
+            "hawks": 70,
+            "max_iterations": 250,
+            "initial_energy": 1.5,
+            "jump_probability": 0.5,
+            "max_no_improvement": 100,
+            "dive_count": 2,
+            "levy_scale": 0.5
+        }
+    },
+    {
+        "id": 8,
+        "algorithm": "GWO-LKH",
+        "problem": "Universal_Scale_Independent",
+        "dimension": "Mixed",
+        "best_mean_length": "N/A",
+        "parameters": {
+            "pack_size": 70,
+            "max_iterations": 150,
+            "initial_a": 1.0,
+            "exploration_rate": 0.6,
+            "max_no_improvement": 50,
+            "polish_interval": 35,
+            "polish_iters": 5,
+            "final_polish_iters": 200
+        }
+    },
+    {
+        "id": 9,
+        "algorithm": "GWO-ALNS",
+        "problem": "Universal_Scale_Independent",
+        "dimension": "Mixed",
+        "best_mean_length": "N/A",
+        "parameters": {
+            "pack_size": 50,
+            "max_iterations": 150,
+            "initial_a": 2.0,
+            "exploration_rate": 0.6,
+            "max_no_improvement": 50,
+            "polish_interval": 35,
+            "alns_iterations": 150,
+            "alns_remove_ratio": 0.2,
+            "final_polish_iters": 200
+        }
+    },
+    {
+        "id": 10,
+        "algorithm": "HHO-LKH",
+        "problem": "Universal_Scale_Independent",
+        "dimension": "Mixed",
+        "best_mean_length": "N/A",
+        "parameters": {
+            "hawks": 70,
+            "max_iterations": 150,
+            "initial_energy": 1.0,
+            "jump_probability": 0.5,
+            "max_no_improvement": 100,
+            "dive_count": 5,
+            "levy_scale": 0.3,
+            "polish_interval": 15,
+            "polish_iters": 15,
+            "final_polish_iters": 300
+        }
+    },
+    {
+        "id": 11,
+        "algorithm": "HHO-ALNS",
+        "problem": "Universal_Scale_Independent",
+        "dimension": "Mixed",
+        "best_mean_length": "N/A",
+        "parameters": {
+            "hawks": 70,
+            "max_iterations": 150,
+            "initial_energy": 1.5,
+            "jump_probability": 0.7,
+            "max_no_improvement": 50,
+            "dive_count": 2,
+            "levy_scale": 0.5,
+            "polish_interval": 25,
+            "alns_iterations": 150,
+            "alns_remove_ratio": 0.2,
+            "final_polish_iters": 300
+        }
+    }
+]

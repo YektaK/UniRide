@@ -175,14 +175,195 @@ def _make_matrix_tsp_executor(algorithm_name: str):
 
     return executor
 
+
+def _run_fair_local_search(problem, params, run_idx, algorithm_name, strategy_payload, manifest):
+    """Execute exactly-accounted 2-opt/3-opt under a shared fair budget."""
+    import random
+    import time
+    from academic_benchmark.fairness import (
+        FairRunResult,
+        ObjectiveEvaluationBudget,
+        improve_three_opt_budgeted,
+        improve_two_opt_budgeted,
+    )
+
+    if strategy_payload not in {LocalSearchType.TWO_OPT, LocalSearchType.THREE_OPT}:
+        raise ValueError(
+            f"{algorithm_name} does not expose exact objective accounting in fair mode"
+        )
+
+    matrix, matrix_kind = _problem_matrix(problem)
+    seed = manifest.paired_seed(problem.name, run_idx)
+    route = list(range(problem.dimension))
+    random.Random(seed).shuffle(route)
+    budget = ObjectiveEvaluationBudget(manifest.evaluation_budget)
+    max_iterations = int(params.get("max_iterations", 1000))
+    first_improvement = bool(params.get("first_improvement", False))
+    acceptance_policy = "first_improvement" if first_improvement else "best_improvement"
+    neighborhood_window = None
+
+    started = time.perf_counter()
+    if strategy_payload == LocalSearchType.TWO_OPT:
+        search = improve_two_opt_budgeted(
+            route, matrix, budget, max_iterations=max_iterations,
+            first_improvement=first_improvement,
+        )
+        family = "2-opt"
+    else:
+        neighborhood_window = params.get("window", params.get("max_segment_length", 12))
+        search = improve_three_opt_budgeted(
+            route, matrix, budget, max_iterations=max_iterations,
+            first_improvement=first_improvement,
+            window=neighborhood_window,
+        )
+        family = "3-opt"
+    elapsed = time.perf_counter() - started
+    if search.budget_exhausted:
+        termination_reason = "evaluation_budget_exhausted"
+    elif search.iterations >= max_iterations:
+        termination_reason = "max_iterations"
+    else:
+        termination_reason = "no_improving_move"
+
+    optimal = getattr(problem, "optimal", None)
+    gap = ((search.cost - optimal) / optimal) * 100 if optimal and optimal > 0 else None
+    result = FairRunResult(
+        problem=problem.name, algorithm=algorithm_name, algorithm_id=algorithm_name,
+        algorithm_family=family, variant="pure", run=run_idx, seed=seed,
+        seed_group=manifest.seed_group(problem.name, run_idx),
+        dimension=problem.dimension, optimal=optimal, tour_cost=float(search.cost),
+        objective_cost=float(search.cost), gap_pct=gap, elapsed_sec=elapsed,
+        iterations=search.iterations, evaluations=budget.used,
+        objective_evaluations=budget.used, evaluation_budget=manifest.evaluation_budget,
+        budget_terminated=search.budget_exhausted,
+        tour=[node + 1 for node in search.route],
+        problem_type=str(getattr(problem, "problem_type", "tsp") or "tsp").lower(),
+        matrix_kind=matrix_kind,
+        initialization_policy="paired_seed_random_permutation_all_nodes",
+        termination_policy=(
+            f"{manifest.budget_policy};max_iterations={max_iterations};"
+            f"budget_exhausted={search.budget_exhausted}"
+        ),
+        execution_backend="python-canonical-matrix",
+        polish_policy={
+            "enabled": False, "initial": False, "periodic": False,
+            "final": False, "operator": None,
+        },
+        comparison_regime=(
+            manifest.comparison_regime or "fixed_evaluation_budget"
+        ),
+        acceptance_policy=acceptance_policy,
+        neighborhood_window=neighborhood_window,
+        termination_reason=termination_reason,
+    )
+    manifest.validate_result(result)
+    return result
+
+
+def _run_native_local_search(problem, params, run_idx, algorithm_name, strategy_payload, manifest):
+    """Execute canonical local search to its configured native stopping rule."""
+    import random
+    import time
+    from academic_benchmark.fairness import (
+        ObjectiveEvaluationBudget,
+        improve_three_opt_budgeted,
+        improve_two_opt_budgeted,
+    )
+    from academic_benchmark.native_protocol import NativeRunResult
+
+    if strategy_payload not in {LocalSearchType.TWO_OPT, LocalSearchType.THREE_OPT}:
+        raise ValueError(
+            f"{algorithm_name} does not expose exact objective accounting in native mode"
+        )
+    if "max_iterations" not in params or "first_improvement" not in params:
+        raise ValueError("native local search requires max_iterations and first_improvement")
+    if strategy_payload == LocalSearchType.THREE_OPT and "window" not in params:
+        raise ValueError("native 3-opt requires window")
+
+    matrix, matrix_kind = _problem_matrix(problem)
+    seed = manifest.paired_seed(problem.name, run_idx)
+    route = list(range(problem.dimension))
+    random.Random(seed).shuffle(route)
+    accounting = ObjectiveEvaluationBudget(None)
+    max_iterations = int(params["max_iterations"])
+    first_improvement = params["first_improvement"]
+    acceptance_policy = "first_improvement" if first_improvement else "best_improvement"
+    neighborhood_window = None
+
+    started = time.perf_counter()
+    if strategy_payload == LocalSearchType.TWO_OPT:
+        search = improve_two_opt_budgeted(
+            route, matrix, accounting, max_iterations=max_iterations,
+            first_improvement=first_improvement,
+        )
+        family = "2-opt"
+    else:
+        neighborhood_window = int(params["window"])
+        search = improve_three_opt_budgeted(
+            route, matrix, accounting, max_iterations=max_iterations,
+            first_improvement=first_improvement, window=neighborhood_window,
+        )
+        family = "3-opt"
+    elapsed = time.perf_counter() - started
+    if search.budget_exhausted or search.termination_reason == "evaluation_budget_exhausted":
+        raise ValueError("native local search unexpectedly exhausted a measurement counter")
+
+    optimal = getattr(problem, "optimal", None)
+    gap = ((search.cost - optimal) / optimal) * 100 if optimal and optimal > 0 else None
+    result = NativeRunResult(
+        problem=problem.name, algorithm=algorithm_name, algorithm_id=algorithm_name,
+        algorithm_family=family, variant="pure", run=run_idx, seed=seed,
+        seed_group=manifest.seed_group(problem.name, run_idx),
+        dimension=problem.dimension, optimal=optimal, tour_cost=float(search.cost),
+        objective_cost=float(search.cost), gap_pct=gap, elapsed_sec=elapsed,
+        iterations=search.iterations, evaluations=accounting.used,
+        objective_evaluations=accounting.used, evaluation_budget=None,
+        budget_terminated=False, tour=[node + 1 for node in search.route],
+        problem_type=str(getattr(problem, "problem_type", "tsp") or "tsp").lower(),
+        matrix_kind=matrix_kind,
+        initialization_policy="paired_seed_random_permutation_all_nodes",
+        termination_policy=f"algorithm_native_termination;max_iterations={max_iterations}",
+        execution_backend="python-canonical-matrix",
+        polish_policy={
+            "enabled": False, "initial": False, "periodic": False,
+            "final": False, "operator": None,
+        },
+        comparison_regime=manifest.comparison_regime,
+        acceptance_policy=acceptance_policy,
+        neighborhood_window=neighborhood_window,
+        termination_reason=search.termination_reason,
+    )
+    manifest.validate_result(result)
+    return result
+
+
 # 1. Register Numba (Legacy) Algorithms
-def _make_legacy_executor(strategy_payload: any, algorithm_type: str):
+def _make_legacy_executor(strategy_payload: any, algorithm_type: str, algorithm_name: str):
     def executor(problem, params, seed, run_idx):
         import time
         from academic_benchmark.engine_core import RunResult
+        from academic_benchmark.fairness import fair_manifest_from_params
+        from academic_benchmark.native_protocol import native_manifest_from_params
         import math
+        manifest = fair_manifest_from_params(params)
+        native_manifest = native_manifest_from_params(params)
+        if manifest is not None and native_manifest is not None:
+            raise ValueError("fair_comparison and native_comparison are mutually exclusive")
+        if manifest is not None:
+            if _is_routing_problem(problem):
+                raise ValueError("fair TSP comparison mode does not accept routing problems")
+            return _run_fair_local_search(
+                problem, params, run_idx, algorithm_name, strategy_payload, manifest
+            )
+        if native_manifest is not None:
+            if _is_routing_problem(problem):
+                raise ValueError("native TSP comparison mode does not accept routing problems")
+            return _run_native_local_search(
+                problem, params, run_idx, algorithm_name, strategy_payload,
+                native_manifest,
+            )
         if _is_routing_problem(problem):
-            return _run_core_routing_executor(problem, params, seed, run_idx, "core-greedy-routing")
+            return _run_core_routing_executor(problem, params, seed, run_idx, algorithm_name)
         
         # Build duration func
         from uniride_core.algorithms.numba_utils import create_np_duration_func, convert_route_to_indices
@@ -199,20 +380,25 @@ def _make_legacy_executor(strategy_payload: any, algorithm_type: str):
             duration_func = create_np_duration_func(np_matrix, unique_locs)
             dist_matrix = time_matrix
         else:
-            # Fallback for standard TSPLIB
-            try:
-                from academic_benchmark.tsplib_manager import get_distance_matrix
-                import os
-                db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tsplib_data", "tsplib.db")
-                dist_matrix_np = get_distance_matrix(problem.name, db_path)
-            except Exception:
-                dist_matrix_np = None
-                
             unique_locs = [f"L{i+1}" for i in range(dimension)]
-            if dist_matrix_np is None:
-                # Use coordinates fallback
-                from uniride_core.algorithms.numba_utils import create_np_distance_matrix
-                dist_matrix_np = create_np_distance_matrix(problem.coordinates)
+
+            dist_matrix_np = None
+            problem_dm = getattr(problem, 'dist_matrix', None)
+            if problem_dm is not None:
+                dist_matrix_np = np.array(problem_dm, dtype=np.float64)
+            else:
+                # Fallback for standard TSPLIB
+                try:
+                    from academic_benchmark.tsplib_manager import get_distance_matrix
+                    import os
+                    db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tsplib_data", "tsplib.db")
+                    dist_matrix_np = get_distance_matrix(problem.name, db_path)
+                except Exception:
+                    dist_matrix_np = None
+                if dist_matrix_np is None:
+                    from uniride_core.algorithms.numba_utils import create_np_distance_matrix
+                    dist_matrix_np = create_np_distance_matrix(problem.coordinates)
+
             duration_func = create_np_duration_func(dist_matrix_np, unique_locs)
             dist_matrix = dist_matrix_np.tolist()
             
@@ -250,17 +436,21 @@ def _make_legacy_executor(strategy_payload: any, algorithm_type: str):
             gap = ((tour_length - optimal) / optimal) * 100
             
         return RunResult(
-            problem=problem.name, algorithm="legacy",
+            problem=problem.name, algorithm=algorithm_name,
             run=run_idx, seed=seed, dimension=problem.dimension,
             optimal=optimal, tour_cost=tour_length,
             gap_pct=gap, elapsed_sec=elapsed,
-            iterations=0, tour=tour_indices
+            iterations=0, tour=tour_indices,
+            objective_cost=tour_length,
+            problem_type=str(getattr(problem, "problem_type", "tsp") or "tsp").lower(),
+            matrix_kind="travel_time" if is_tm else "distance",
         )
     return executor
 
 for name, payload, default_params in STRATEGIES:
     algo_type = default_params.get("algorithm_type", "local_search")
-    AlgorithmRegistry.register(f"Numba-{name}")(_make_legacy_executor(payload, algo_type))
+    public_name = f"Numba-{name}"
+    AlgorithmRegistry.register(public_name)(_make_legacy_executor(payload, algo_type, public_name))
     # We could register param spaces here too, but for simplicity we rely on the old _build_doe_space inside cli_engine
 
 # 2. Register SOTA Algorithms
@@ -373,7 +563,10 @@ for algo_name, solver in CORE_TSP_SOLVERS.items():
     AlgorithmRegistry.register(algo_name)(_make_core_tsp_executor(algo_name, solver))
 
 
-def _make_numba_metah_executor(algorithm_name, solver_cls, default_params, routing_engine_name=None):
+def _make_numba_metah_executor(
+    algorithm_name, solver_cls, default_params, routing_engine_name=None,
+    variant="memetic_2opt", polish_enabled=True,
+):
     """Executor for Numba-accelerated Bildiri2026 metaheuristics (GWO/HHO).
 
     Uses the cached-numpy + JIT-kernel path from BaseTSPSolver
@@ -404,6 +597,18 @@ def _make_numba_metah_executor(algorithm_name, solver_cls, default_params, routi
     def executor(problem, params, seed, run_idx):
         import time as _time
         from academic_benchmark.engine_core import RunResult
+        from academic_benchmark.fairness import FairRunResult, fair_manifest_from_params
+        from academic_benchmark.native_protocol import native_manifest_from_params
+
+        manifest = fair_manifest_from_params(params)
+        native_manifest = native_manifest_from_params(params)
+        if manifest is not None and native_manifest is not None:
+            raise ValueError("fair_comparison and native_comparison are mutually exclusive")
+        protocol_manifest = manifest or native_manifest
+        if protocol_manifest is not None:
+            if _is_routing_problem(problem):
+                raise ValueError("academic TSP comparison mode does not accept routing problems")
+            seed = protocol_manifest.paired_seed(problem.name, run_idx)
 
         if _is_routing_problem(problem):
             return _run_core_routing_executor(
@@ -422,10 +627,15 @@ def _make_numba_metah_executor(algorithm_name, solver_cls, default_params, routi
         if "max_iterations" in params:
             cfg["max_iterations"] = int(params["max_iterations"])
         cfg["random_seed"] = seed
+        cfg["polish_enabled"] = polish_enabled
+        if manifest is not None:
+            cfg["evaluation_budget"] = manifest.evaluation_budget
 
         solver = solver_cls(**cfg)
         start_time = _time.perf_counter()
-        result = solver.solve_with_matrix(matrix)
+        result = solver.solve_with_matrix(
+            matrix, recalculate=protocol_manifest is None, closed_tsp=True
+        )
         elapsed = _time.perf_counter() - start_time
 
         cost = float(getattr(result, "tour_length", 0.0))
@@ -436,18 +646,18 @@ def _make_numba_metah_executor(algorithm_name, solver_cls, default_params, routi
 
         tour = getattr(result, "tour", None)
         if tour is not None:
-            # solve_with_matrix returns a 0-indexed tour. For matrix problems
-            # the BaseTSPSolver excludes the depot (node 0) from the working
-            # tour, so the returned permutation covers customers only.
-            # Legacy executors represent tours as 1-indexed full visits
-            # (depot == 1 included); prepend the depot and shift everything.
-            one_indexed = [int(node) + 1 for node in tour]
-            if 1 not in one_indexed and len(one_indexed) + 1 == problem.dimension:
-                tour = [1] + one_indexed
-            else:
-                tour = one_indexed
+            tour = [int(node) + 1 for node in tour]
 
-        return RunResult(
+        extra_stats = dict(getattr(result, "extra_stats", {}) or {})
+        evaluations = int(extra_stats.get("objective_evaluations") or 0)
+        budget_terminated = bool(extra_stats.get("budget_terminated", False))
+        if budget_terminated:
+            termination_reason = "evaluation_budget_exhausted"
+        elif int(getattr(result, "iterations", 0) or 0) >= int(cfg.get("max_iterations", 0) or 0):
+            termination_reason = "max_iterations"
+        else:
+            termination_reason = "stagnation_limit"
+        common_kwargs = dict(
             problem=problem.name,
             algorithm=algorithm_name,
             run=run_idx,
@@ -462,7 +672,72 @@ def _make_numba_metah_executor(algorithm_name, solver_cls, default_params, routi
             objective_cost=round(cost, 2),
             problem_type=str(getattr(problem, "problem_type", "tsp") or "tsp").lower(),
             matrix_kind=matrix_kind,
+            evaluations=evaluations,
         )
+        if protocol_manifest is None:
+            return RunResult(**common_kwargs)
+
+        if native_manifest is not None:
+            native_result = FairRunResult(
+                **common_kwargs,
+                algorithm_id=algorithm_name,
+                algorithm_family="GWO" if "GWO" in algorithm_name else "HHO",
+                variant=variant,
+                seed_group=native_manifest.seed_group(problem.name, run_idx),
+                objective_evaluations=evaluations,
+                evaluation_budget=None,
+                budget_terminated=False,
+                comparison_regime=native_manifest.comparison_regime,
+                acceptance_policy="population_evolution",
+                neighborhood_window=None,
+                termination_reason=termination_reason,
+                initialization_policy="paired_seed_random_population_all_nodes",
+                termination_policy=(
+                    f"algorithm_native_termination;max_iterations={cfg.get('max_iterations')};"
+                    f"max_no_improvement={cfg.get('max_no_improvement')}"
+                ),
+                execution_backend=str(extra_stats.get("execution_backend", "unknown")),
+                polish_policy={
+                    "enabled": polish_enabled, "initial": polish_enabled,
+                    "periodic": polish_enabled, "final": polish_enabled,
+                    "operator": "2-opt" if polish_enabled else None,
+                },
+            )
+            native_manifest.validate_result(native_result)
+            return native_result
+
+        fair_result = FairRunResult(
+            **common_kwargs,
+            algorithm_id=algorithm_name,
+            algorithm_family="GWO" if "GWO" in algorithm_name else "HHO",
+            variant=variant,
+            seed_group=manifest.seed_group(problem.name, run_idx),
+            objective_evaluations=evaluations,
+            evaluation_budget=manifest.evaluation_budget,
+            budget_terminated=budget_terminated,
+            comparison_regime=(
+                manifest.comparison_regime or "fixed_evaluation_budget"
+            ),
+            acceptance_policy="population_evolution",
+            neighborhood_window=None,
+            termination_reason=termination_reason,
+            initialization_policy=(
+                "paired_seed_random_population_all_nodes_with_initial_2opt"
+                if polish_enabled else "paired_seed_random_population_all_nodes"
+            ),
+            termination_policy=(
+                f"{manifest.budget_policy};max_iterations={cfg.get('max_iterations')};"
+                f"max_no_improvement={cfg.get('max_no_improvement')}"
+            ),
+            execution_backend=str(extra_stats.get("execution_backend", "unknown")),
+            polish_policy={
+                "enabled": polish_enabled, "initial": polish_enabled,
+                "periodic": polish_enabled, "final": polish_enabled,
+                "operator": "2-opt" if polish_enabled else None,
+            },
+        )
+        manifest.validate_result(fair_result)
+        return fair_result
     return executor
 
 
@@ -478,27 +753,45 @@ try:
         "Core-GWO-TSP": (GWOOptimizer, {
             "pack_size": 50, "max_iterations": 250, "initial_a": 2.0,
             "exploration_rate": 0.4, "max_no_improvement": 75,
-        }, None),
+        }, None, "memetic_2opt", True),
+        "Core-GWO-TSP-Pure": (GWOOptimizer, {
+            "pack_size": 50, "max_iterations": 250, "initial_a": 2.0,
+            "exploration_rate": 0.4, "max_no_improvement": 75,
+        }, "Core-GWO-TSP", "pure", False),
+        "Core-GWO-TSP-Memetic-2opt": (GWOOptimizer, {
+            "pack_size": 50, "max_iterations": 250, "initial_a": 2.0,
+            "exploration_rate": 0.4, "max_no_improvement": 75,
+        }, "Core-GWO-TSP", "memetic_2opt", True),
         "Core-HHO-TSP": (HHOOptimizer, {
             "hawks": 50, "max_iterations": 250, "initial_energy": 1.0,
             "jump_probability": 0.5, "max_no_improvement": 75,
-        }, None),
+        }, None, "memetic_2opt", True),
+        "Core-HHO-TSP-Pure": (HHOOptimizer, {
+            "hawks": 50, "max_iterations": 250, "initial_energy": 1.0,
+            "jump_probability": 0.5, "max_no_improvement": 75,
+        }, "Core-HHO-TSP", "pure", False),
+        "Core-HHO-TSP-Memetic-2opt": (HHOOptimizer, {
+            "hawks": 50, "max_iterations": 250, "initial_energy": 1.0,
+            "jump_probability": 0.5, "max_no_improvement": 75,
+        }, "Core-HHO-TSP", "memetic_2opt", True),
         "Numba-GWO": (GWOOptimizer, {
             "pack_size": 80, "max_iterations": 250, "initial_a": 2.0,
             "exploration_rate": 0.4, "max_no_improvement": 75,
-        }, "Core-GWO-TSP"),
+        }, "Core-GWO-TSP", "memetic_2opt", True),
         "Numba-HHO": (HHOOptimizer, {
             "hawks": 80, "max_iterations": 250, "initial_energy": 1.0,
             "jump_probability": 0.5, "max_no_improvement": 75,
-        }, "Core-HHO-TSP"),
+        }, "Core-HHO-TSP", "memetic_2opt", True),
     }
 except Exception as _e:  # ImportError or missing numpy/numba deps
     logger.warning("Numba-accelerated GWO/HHO solvers unavailable: %s", _e)
 
 if _NUMBA_METAH_OVERRIDES:
-    for _algo_name, (_cls, _defaults, _routing_eng) in _NUMBA_METAH_OVERRIDES.items():
+    for _algo_name, (_cls, _defaults, _routing_eng, _variant, _polish_enabled) in _NUMBA_METAH_OVERRIDES.items():
         AlgorithmRegistry.register(_algo_name)(
-            _make_numba_metah_executor(_algo_name, _cls, _defaults, _routing_eng)
+            _make_numba_metah_executor(
+                _algo_name, _cls, _defaults, _routing_eng, _variant, _polish_enabled
+            )
         )
 
 for algo_name in FCM_TSP_SOLVERS:

@@ -1,180 +1,99 @@
 # UniRide Worklog
 
-## Phase 1–6: Refactoring & Bugfixing (Completed)
+This is the curated project chronology. Entries record work and evidence available at that time; they do not override the current architecture, roadmap, or audit.
 
-### NameError Fixes
-- `paoea_tsp.py`, `e2bso_tsp.py`: Fixed undefined `rng`, `pd`, `np`, `random` references
-- `cgo_tsp.py`: Fixed undefined `_rank_selection`, `_merge_solutions`, `_chaos_merge`
-- `run_tsp.py`: Fixed undefined `np`, `_merge_solutions`
-- `r2dma_tsp.py`: Fixed undefined `adjacency_mutate`, `_merge_solutions`, `np`
-- All `sota_common/` strategies: Fixed import-based NameErrors
+## 2026-07-16 - Ultimate Audit and Documentation Consolidation
 
-### Integration & Pinning
-- `base_solver.py`: Hardcoded `num_vehicles=3` removed → uses solver default
-- `e2bso_tsp.py`: `_improve_population` bound to `e2bso_improve` (was pointing to local_search)
-- `run_tsp.py`: `_improve_population` bound to `run_improve` (was pointing to local_search)
-- `paoea_tsp.py`: `_improve_population` bound to `paoea_improve`
-- `cgo_tsp.py`: `_solve` no longer re-wraps `dm_np`
+### Scope
 
-### Test Infrastructure
-- `test_all_solvers.py`: Created with 5-solver test + `brute_force_optimal()` reference solver
-- `test_known_optimal_4node`: All 5 solvers pass at <5% gap on optimal 4-node tour
-- `00walkthrough.v2.md`: Status document kept current
+- Completed a verification-only audit of the Next.js frontend, FastAPI backend, shared routing core, and academic benchmark framework.
+- Used CodeGraph for AST source, call paths, callers, and blast radius.
+- Ran targeted frontend and Python verification without editing application source.
+- Read and classified all eligible root/`docs` Markdown files and the historical PDF report.
 
-### Dead Code Removal
-- `e2bso_tsp.py` (2x), `r2dma_tsp.py` (1x): `prev_best = gbest_cost` removed (never read)
+### Major verified findings
 
-### CGO O(n³) Fix
-- `_seed_to_full_tour` in `cgo_tsp.py`: Replaced full-tour recompute with delta insertion cost (O(n²))
+- Duplicate students at one physical `location_code` can overwrite identity/demand and break permutation crossover.
+- Cluster-first strategies can return duration-violating routes as successful.
+- The time-window split decoder mishandles positive-violation state and can omit feasible pickup prefixes.
+- Missing travel arcs can silently become zero, Euclidean-degree, or generic fallback edges.
+- FastAPI benchmark/CLI endpoints lack service authentication; CLI preview/import accepted caller-selected paths.
+- Strategy factories exist, but production dispatch still uses shared executable instances.
+- The DataLoader's claimed singleton lifecycle is ineffective.
+- Benchmark admission is raceable and stop does not cancel work.
+- Vehicle Planning and Sandbox contain missing-auth paths; direction propagation is incomplete.
+- No active GIS renderer or route-geometry contract exists.
+- Lint and typecheck gates are not healthy.
 
-### Repair Operations
-- `repair_ops.py`: Added `_regret_k_insertion(k)` factory; `RegretKInsertion(k)` base class already existed
+### Verification evidence
 
-### Documentation
-- `uniride_core/README.md`: Structure, usage, solver table, test command
+- Frontend unit tests: 15 passed across three files.
+- Typecheck: failed because the installed tree lacked declared `next-intl`; implicit-`any` errors remained.
+- Lint: failed because `next lint` is obsolete under the installed Next.js version.
+- FastAPI/Python collection: blocked by incompatible `pydantic` and `pydantic-core`.
+- Core/academic run: reached 370 passed and 2 skipped before 46 environment/temp-path errors.
 
----
+### Historical knowledge preserved
 
-## Phase 3.4: TSPLIB Parser Consolidation
-- `tsplib_parser.py` moved to `uniride_core/algorithms/` as canonical location
-- `optimizer_api/utils/tsplib_parser.py` → re-export shim for backward compatibility
-- Duplicate parsing functions removed from `tsplib_manager.py`, `cli_engine.py`
+- Dual-engine separation was intentional: production reliability and academic exploration have different criteria and lifecycles.
+- Cluster-first and giant-tour/split pipelines were retained as alternative strategies.
+- OR-Tools, PyVRP, and VROOM were chosen as reference solvers.
+- ALNS, adaptive operator scoring, diversity control, layered local search, soft infeasibility, FCM ambiguity, and candidate metaheuristics were evaluated as research directions.
+- Durable experimental principles include fixed/paired seeds, common budgets, repeated runs, held-out instances, effect sizes, and code/environment/dataset provenance.
+- Unsupported performance percentages, “always feasible” claims, and stale completion statuses were excluded from current documentation.
 
-## Phase 3.5: API Error Response Sanitization
-- `routers/optimization.py`: `traceback.print_exc()` → `logger.exception()`
-- `routers/benchmark.py`: Raw `str(e)` leaks → generic error messages
-- `main.py`: Global exception handler added
+### Documentation consolidation
 
-## Phase 3.6: TTL/Eviction for BenchmarkStateManager
-- `BenchmarkStateManager._evict_expired()`: Configurable TTL (default 2h) + `max_runs` cap (100)
-- Lazy eviction on `create_run`, `get_run`, `list_runs`
+- Created `UniRide_Ultimate_Audit.md`.
+- Rewrote `CURRENT_ARCHITECTURE.md`, `ACTIVE_ROADMAP.md`, and `README.md`.
+- Replaced this worklog with a curated chronology.
+- Archived 22 superseded Markdown files and one historical PDF while preserving their former paths under `archive/docs/`.
+- Recreated only `docs/API_REFERENCE.md` and `docs/GITHUB_WORKFLOW.md` as active runbooks.
+- Archived the Smart Benchmark manual pending environment, CLI, seed, and evaluation-accounting repair.
 
----
+## 2026-07-22 — Package A: YAEM quarantine and contract foundation
 
-## Phase 4: Cleanup & Polish (Completed)
+- Quarantined the legacy YAEM evidence tree at `archive/academic_benchmark/yaem2026_legacy/`; its manifest represents 159 entries: 93 `HISTORICAL_UNVERIFIED`, 20 `INVALID`, 46 `REFERENCE_ONLY`, and 0 `WITHHELD_SENSITIVE`.
+- `python -m academic_benchmark.contracts.export_schemas check` exited 0. `python -m academic_benchmark.archive_manifest verify --repo-root . --manifest archive/academic_benchmark/yaem2026_legacy/manifest.json` exited 0 and reported `verified 159 entries`.
+- The Package A focused suite, `python -m pytest academic_benchmark/tests/test_manifest_contracts.py academic_benchmark/tests/test_archive_manifest.py academic_benchmark/tests/test_yaem_quarantine_boundary.py -q -p no:cacheprovider --tb=short`, passed: 81 passed in 15.96s. The full academic suite, `python -m pytest academic_benchmark/tests -q -p no:cacheprovider --tb=short`, passed: 409 passed in 34.44s. Both pytest commands used a newly isolated elevated `C:\tmp` `--basetemp`.
+- Package/import smokes passed: the schema-resource import check printed `PACKAGE_OK`, and `find_spec('academic_benchmark.yaem2026')` printed `YAEM_NON_IMPORTABLE`.
+- Initial subagent test attempts were blocked only by sandbox `tmp_path` permissions for the default user Temp directory and then `C:\tmp`; the elevated isolated-basetemp rerun resolved that environment constraint. It was not a source-test failure.
+- No benchmark experiments ran. GitHub push remains deferred to Package D.
 
-### P4-1: Remove stale docs from root
-- `00walkthrough.md`, `code_review.md`, `turkish_code_review.md` removed
+## Curated Historical Milestones
 
-### P4-2: 3-opt deduplication in numba_accel.py
-- `_build_3opt_candidate()` helper — 7 reconnection cases → 1 parametrized call
+### April 2026 - Dual-engine and SOTA exploration
 
-### P4-3: py.typed marker
-- Added `py.typed` to `uniride_core`
+- Established the production-versus-academic track rationale.
+- Compared cluster-first and giant-tour/split pipelines.
+- Evaluated ALNS, adaptive acceptance, entropy/diversity control, operator evolution, and external baselines.
+- Developed initial DOE and statistical-analysis concepts.
 
-### P4-4: i18n (next-intl)
-- `messages/en.json`, `messages/tr.json` — ~300 keys each
-- Locale routing via middleware (`as-needed`, Turkish default)
-- `NextIntlClientProvider` in layout
-- All ~45 frontend files migrated to `useTranslations()`
-- Build + type-check pass clean
+Raw documents contained projected improvements and speculative status; they are preserved in `archive/docs/`.
 
----
+### May-June 2026 - Core migration and benchmark expansion
 
-## Code Review Quick Wins (All Applied)
+- Moved substantial algorithm functionality toward `uniride_core`.
+- Expanded TSPLIB/ATSP parsing, distance semantics, benchmark registries, solver adapters, and regression tests.
+- Added benchmark progress and configuration-promotion tooling.
+- Consolidated parts of distance calculation and local search.
 
-| # | Issue | Fix |
-|---|-------|-----|
-| Q1 | Duplicate `euclidean_distance` in `data_loader.py` | Second definition (lines 241–247) deleted |
-| Q2 | 3 `Direction` enums across codebase | Unified import: both `split_decoder.py` + `linear_split_decoder.py` import from `models.schemas` |
-| Q3 | `_get_duration` duplicate in `HybridSplitBaseStrategy` | Deleted (inherited from `BaseRoutingStrategy`) |
-| Q4 | `LocationNode.lat/lng` no validation | Added `ge=-90/90`, `le=-180/180` validators |
-| Q5 | `TSPResult.__post_init__` falsy-value bug | Explicit `is not None` + `!= 0.0` instead of truthiness |
-| Q6 | `print()` in `registry_setup.py` | → `logger.info()` |
-| Q7 | `GAEnhancedSplitStrategy` not in registry | Registered as `"ga_split_enhanced"` / `"ga-split-enhanced"` in `STRATEGY_REGISTRY` |
+Later evidence showed several “complete” claims were premature, especially for feasibility, deterministic seeding, cache lifecycle, cancellation, and constraint-aware repair.
 
----
+### 2026-06-30 - Distance and registry corrections
 
-## S2: 3-opt Reconnection Pattern Fix
-- `local_search.py`: Replaced 4 duplicate patterns with 3 missing relocation variants (swap B/C, swap+reverse B, swap+reverse C)
-- All 7 patterns are now unique and correct
+- Corrected TSPLIB distance formulas toward reference metric behavior.
+- Corrected registry-backed GWO/HHO benchmark execution paths.
 
----
+These did not close the broader production matrix-domain and feasibility issues found on 2026-07-16.
 
-## S1: Thread-Safe Optimize (Completed)
+## Documentation Rule
 
-Per-request `self.rng` override added to all 6 strategies that had a local `rng` variable but never assigned it back:
+Current truth is defined by:
 
-| Strategy | File | Change |
-|----------|------|--------|
-| GASplitStrategy | `ga_split_strategy.py:407` | `self.rng = rng` |
-| PSOSplitStrategy | `pso_split_strategy.py:315` | `self.rng = rng` |
-| GWOSplitStrategy | `gwo_split_strategy.py:319` | `self.rng = rng` |
-| HHOSplitStrategy | `hho_split_strategy.py:369` | `self.rng = rng` |
-| GAStrategy | `ga_strategy.py:369` | `self.rng = rng` |
-| GWOStrategy | `gwo_strategy.py:318` | `self.rng = rng` |
+1. `UniRide_Ultimate_Audit.md`
+2. `CURRENT_ARCHITECTURE.md`
+3. `ACTIVE_ROADMAP.md`
+4. current code and verification output
 
-**Skipped (negligible race window):** PSO Pipeline A, HHO Pipeline A (no per-request RNG variable); TwoOptStrategy (2 RNG uses in `_initialize_population`, called once per `optimize()`)
-
----
-
-## S3: Asymmetric Haversine Fallback (Completed)
-
-- `build_haversine_matrix()`: Added `asymmetric` + `asymmetry_range` params
-- When `asymmetric=True`, applies deterministic per-edge perturbation via `hash()` of location ID pair — same request always produces same asymmetry
-- Plumbed through `get_submatrix()` as `asymmetric_haversine` parameter
-- Matrix remains symmetric by default (`asymmetric=False`)
-
----
-
-## L3: ATSP Benchmark Coverage in DOE (Completed)
-
-### ATSP download infrastructure (`uniride_core/algorithms/tsplib_parser.py`)
-- Added `ATSP_DOWNLOAD_URL` (Heidelberg ATSP archive)
-- Added `ATSP_PROBLEM_NAMES` list (18 ATSP instances: br17, ft53, ft70, ftv33–ftv170, kro124p, p43, rbg323–rbg443)
-- Added `download_atsp_problem()` — downloads `.atsp` files (via tgz or direct) to `tsplib_data/`
-- Added `ensure_atsp_problems()` — batch download/verify all ATSP instances
-- Added ATSP optimal values (19 entries) to `TSPLIB_OPTIMALS`
-- Updated `get_available_problems()` to scan both `.tsp` and `.atsp` files
-- Updated `__all__` exports with new symbols
-
-### ATSP integration tests (`academic_benchmark/tests/test_atsp_integration.py`)
-- 10 tests covering: ATSP parsing, asymmetric matrix verification, ProblemInstance creation, SOTA solver compatibility (E2BSO, R2DMA, ALNS) on asymmetric matrices, optimal value presence, deterministic tour cost computation
-- All tests run offline (no network) using synthetic ATSP matrix
-
----
-
-## L5: CI Pipeline with Strategy Regression Tests (Completed)
-
-### Regression gate test (`academic_benchmark/tests/test_regression_gate.py`)
-- 6 SOTA solvers (E2BSO, R2DMA, P-AOEA, CGO, RUN, ALNS) × 5 synthetic problems (4 to 8 nodes) = 30 parametrized test cases
-- Each problem's optimal computed via brute-force permutation
-- Gap threshold: 15% (conservative for low-iteration CI config)
-- No network or TSPLIB data required — runs entirely on synthetic data
-- Execution time: ~3.5s for all 30 tests
-
-### GitHub Actions workflow (`.github/workflows/benchmark.yml`)
-- Triggers on PR + push to main/master
-- Matrix build: Python 3.12 + 3.13 on ubuntu-latest
-- Four test stages: SOTA smoke tests → ATSP integration → Regression gate (5×6) → SOTA E2E
-- Fails CI if any solver exceeds gap threshold on any problem
-
----
-
-## L2: Vectorize ProblemInstance.prepare_matrices (Completed)
-
-- `uniride_core/models.py`: Distance matrix uses NumPy broadcasting for n > 100:
-  - `coords[:, np.newaxis, :] - coords[np.newaxis, :, :]` → fully vectorized O(n²)
-  - KNN mask uses `np.argsort(arr, axis=1)` → `indices[i, 1:k+1]`
-- Falls back to pure-Python loops for n ≤ 100 (avoids NumPy import overhead)
-- Backward compatible — method signature unchanged
-
----
-
-## L6: ALNS Destroy/Repair Operators (Completed)
-
-### New file: `uniride_core/algorithms/sota_tsp/alns_tsp.py`
-- `ALNSConfig` dataclass: iterations (5000), max_no_improve (500), remove_ratio (0.2), segment_length (100), weight_update_factor (0.8), noise_scale (0.05), SA params (start_temp=100, cooling_rate=0.995)
-- `ALNS_TSP(BaseTSPSolver)`: Standalone ALNS solver with:
-  - **Initial solution**: Nearest-neighbor heuristic
-  - **Operator pool**: 4 destroy (Random, Worst, Shaw, Related) + 3 repair (Greedy, Regret-2, Regret-3)
-  - **Adaptive selection**: Roulette-wheel based on cumulative segment scores
-  - **Weight updates**: Every `segment_length` iterations, weights decay via `w * (1-ρ) + ρ * (score/count)`
-  - **SA acceptance**: `exp(-Δ/T)` probability for worsening moves, temperature cools geometrically
-  - **Sigma scoring**: 5 (new best), 2 (better than current), 0 (rejected)
-  - **Early stopping**: `max_no_improve` iterations without improvement
-- Exported from `sota_tsp/__init__.py` as `ALNS_TSP`, `ALNSConfig`
-- Registered in `academic_benchmark/core/registry_setup.py` as `SOTA-ALNS-TSP` (in `SOTA_ALGOS` + `mod_map`)
-
-### Remaining backlog items
-- (none — all backlog items complete)
+Archived reports are historical reasoning only.

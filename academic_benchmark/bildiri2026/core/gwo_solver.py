@@ -18,6 +18,11 @@ from typing import List, Tuple, Optional
 from dataclasses import dataclass
 from .base_solver import BaseTSPSolver, TSPResult
 from . import numba_accel as _nb
+from academic_benchmark.fairness import (
+    ObjectiveEvaluationBudget,
+    improve_two_opt_budgeted,
+    two_opt_evaluation_upper_bound,
+)
 
 
 @dataclass
@@ -50,6 +55,8 @@ class GWOOptimizer(BaseTSPSolver):
         polish_iters: int = 10,
         final_polish_iters: int = 300,
         random_seed: Optional[int] = None,
+        polish_enabled: bool = True,
+        evaluation_budget: Optional[int] = None,
     ):
         super().__init__("GWO", random_seed)
         self.pack_size = pack_size
@@ -61,6 +68,9 @@ class GWOOptimizer(BaseTSPSolver):
         self.polish_iters = polish_iters
         self.final_polish_iters = final_polish_iters
         self._rng = random.Random(self.random_seed)
+        self.polish_enabled = polish_enabled
+        self._fair_mode = evaluation_budget is not None
+        self._objective_budget = ObjectiveEvaluationBudget(evaluation_budget)
 
     # ----- Swap-sequence movement (discrete GWO velocity) ----------
     def _diff_swaps(self, current: List[int], target: List[int]) -> List[Tuple[int, int]]:
@@ -98,30 +108,64 @@ class GWOOptimizer(BaseTSPSolver):
             keep = [self._rng.choice(swaps)]
         return self._apply_swaps(wolf, keep)
 
+    def _evaluate(self, route: List[int]) -> float:
+        self._objective_budget.consume()
+        return self._tour_length_fast(route)
+
     # ----- Two-opt polish helper (Numba-accelerated) ---------------
-    def _polish(self, route: List[int], iters: int) -> Tuple[List[int], float]:
+    def _polish(
+        self, route: List[int], iters: int, initial_cost: Optional[float] = None
+    ) -> Tuple[List[int], float, bool]:
+        if self._fair_mode:
+            result = improve_two_opt_budgeted(
+                route, self._dist_matrix, self._objective_budget,
+                max_iterations=iters, first_improvement=False,
+                initial_cost=initial_cost,
+            )
+            return result.route, result.cost, result.budget_exhausted
         if self._dist_matrix_np is not None:
             route_np = _nb._prepare_route(route)
             improved_np, length = _nb._two_opt_improve_atsp_numba(
                 route_np, self._dist_matrix_np, iters, False
             )
-            return _nb._extract_route(improved_np, route), float(length)
+            return _nb._extract_route(improved_np, route), float(length), False
         if self._dist_matrix is not None:
             improved, length = _nb.nb_two_opt(route, self._dist_matrix, iters, False)
-            return improved, float(length)
-        return route[:], self.tour_length(route)
+            return improved, float(length), False
+        return route[:], self.tour_length(route), False
 
     # ----- Main solve ---------------------------------------------
     def solve(self, coordinates: List[Tuple[float, float]]) -> TSPResult:
+        self._rng = random.Random(self.random_seed)
+        self._objective_budget.used = 0
         self._set_problem(coordinates)
         t0 = time.perf_counter()
 
         base = self._initial_tour_nodes()
+        if self._fair_mode:
+            init_required = self.pack_size
+            if self.polish_enabled:
+                init_required = self.pack_size * two_opt_evaluation_upper_bound(
+                    len(base), self.polish_iters
+                )
+            if not self._objective_budget.can_spend(init_required):
+                raise ValueError(
+                    "fair GWO budget cannot complete atomic population initialization: "
+                    f"required_upper_bound={init_required}, "
+                    f"budget={self._objective_budget.limit}"
+                )
+        budget_terminated = False
         pack: List[_Wolf] = []
         for _ in range(self.pack_size):
             perm = base[:]
             self._rng.shuffle(perm)
-            polished, plen = self._polish(perm, self.polish_iters)
+            if self.polish_enabled:
+                polished, plen, polish_exhausted = self._polish(
+                    perm, self.polish_iters
+                )
+                budget_terminated = budget_terminated or polish_exhausted
+            else:
+                polished, plen = perm, self._evaluate(perm)
             pack.append(_Wolf(polished, 1.0 / (plen + 1e-10), plen))
 
         pack.sort(key=lambda w: w.tour_length)
@@ -141,10 +185,13 @@ class GWOOptimizer(BaseTSPSolver):
         best_chrom = alpha.position[:]
         no_improve = 0
         history: List[float] = []
-        last_iter = 0
+        iterations_completed = 0
 
         for it in range(self.max_iterations):
-            last_iter = it
+            phase_evaluations = max(0, len(pack) - 3)
+            if not self._objective_budget.can_spend(phase_evaluations):
+                budget_terminated = True
+                break
             history.append(float(best_len))
             a = self.initial_a * (1.0 - it / max(1, self.max_iterations))
             improved = False
@@ -170,7 +217,7 @@ class GWOOptimizer(BaseTSPSolver):
                     candidate = self._move_toward_leader(candidate, beta.position, a)
                     candidate = self._move_toward_leader(candidate, delta.position, a)
 
-                clen = self._tour_length_fast(candidate)
+                clen = self._evaluate(candidate)
                 new_pack.append(_Wolf(candidate, 1.0 / (clen + 1e-10), clen))
 
                 if clen < wolf.tour_length:
@@ -198,8 +245,11 @@ class GWOOptimizer(BaseTSPSolver):
                 no_improve += 1
 
             # Periodic memetic polish on the alpha wolf.
-            if it > 0 and it % self.polish_interval == 0:
-                polished, plen = self._polish(alpha.position, self.polish_iters)
+            if self.polish_enabled and self.polish_interval > 0 and it > 0 and it % self.polish_interval == 0:
+                polished, plen, polish_exhausted = self._polish(
+                    alpha.position, self.polish_iters, alpha.tour_length
+                )
+                budget_terminated = budget_terminated or polish_exhausted
                 if plen < alpha.tour_length:
                     alpha = _Wolf(polished[:], 1.0 / (plen + 1e-10), plen)
                     pack[0] = alpha
@@ -207,21 +257,19 @@ class GWOOptimizer(BaseTSPSolver):
                         best_len = plen
                         best_chrom = polished[:]
                         no_improve = 0
+                if polish_exhausted:
+                    break
 
+            iterations_completed += 1
             if no_improve >= self.max_no_improvement:
                 break
 
         # Final aggressive 2-opt on best.
-        if self._dist_matrix_np is not None:
-            route_np = _nb._prepare_route(best_chrom)
-            improved_np, best_len = _nb._two_opt_improve_atsp_numba(
-                route_np, self._dist_matrix_np, self.final_polish_iters, False
+        if self.polish_enabled:
+            best_chrom, best_len, polish_exhausted = self._polish(
+                best_chrom, self.final_polish_iters, best_len
             )
-            best_chrom = _nb._extract_route(improved_np, best_chrom)
-        elif self._dist_matrix is not None:
-            best_chrom, best_len = _nb.nb_two_opt(
-                best_chrom, self._dist_matrix, self.final_polish_iters, False
-            )
+            budget_terminated = budget_terminated or polish_exhausted
 
         elapsed_ms = (time.perf_counter() - t0) * 1000
         return TSPResult(
@@ -229,14 +277,27 @@ class GWOOptimizer(BaseTSPSolver):
             tour=best_chrom,
             tour_length=best_len,
             elapsed_ms=elapsed_ms,
-            iterations=last_iter + 1,
+            iterations=iterations_completed,
             params={
                 "pack_size": self.pack_size,
-                "iterations": last_iter + 1,
+                "iterations": iterations_completed,
                 "initial_a": self.initial_a,
                 "exploration_rate": self.exploration_rate,
-                "memetic": True,
+                "memetic": self.polish_enabled,
                 "polish_interval": self.polish_interval,
+            },
+            extra_stats={
+                "objective_evaluations": self._objective_budget.used,
+                "evaluation_budget": self._objective_budget.limit,
+                "budget_terminated": budget_terminated,
+                "variant": "memetic_2opt" if self.polish_enabled else "pure",
+                "execution_backend": (
+                    "mixed-numba-objective-python-polish"
+                    if getattr(_nb, "NUMBA_AVAILABLE", False) and self.polish_enabled
+                    else "numba-objective"
+                    if getattr(_nb, "NUMBA_AVAILABLE", False)
+                    else "python"
+                ),
             },
             history=history,
             seed=self.random_seed,

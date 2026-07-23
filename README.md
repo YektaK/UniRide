@@ -1,170 +1,171 @@
-# UniRide
+# UniRide Dual-Engine Routing Platform
 
-UniRide, üniversite içi öğrenci taşımacılığını optimize etmek için geliştirilmiş bir **CVRPTW (Capacitated Vehicle Routing Problem with Time Windows)** platformudur.
-Sistem; yönetici, sürücü ve öğrenci akışlarını tek uygulamada toplar, rota planlamayı Python tabanlı optimizasyon servisine delege eder.
+UniRide is a vehicle-routing research and operations repository with two execution surfaces:
 
-## Öne Çıkanlar
+- **Production engine:** a Next.js application and FastAPI optimization service for student transportation planning.
+- **Academic engine:** a TSPLIB/CVRPLIB/DOE benchmark framework for controlled algorithm experiments.
 
-- Next.js 16 tabanlı web uygulaması (admin/driver/student akışları)
-- Supabase (PostgreSQL + Auth) entegrasyonu
-- FastAPI tabanlı optimizasyon mikroservisi
-- **20+ algoritma desteği:**
-  - Pipeline A (Cluster-First): GA, PSO, GWO (Grey Wolf), HHO (Harris Hawks)
-  - Pipeline B (Split + Optimal Decoder): GA-Split, PSO-Split, GWO-Split, HHO-Split
-  - Holistic Solvers: OR-Tools, PyVRP\* (HGS), VROOM\*
-  - Heuristics: Two-Opt, Greedy / Nearest Neighbor, Permutation TSP
-- **SOTA Framework FAZ 0-3 TAMAMLANDI** 🏆
-  - E²BSO: eil51=%0.47, berlin52=%0.00 (OPTIMAL)
-  - R²DMA: 6-boyutlu rezonans metriği, eil51=%0.47, berlin52=%0.00 (OPTIMAL)
-  - P-AOEA: eil51=**%0.00 OPTIMAL**, berlin52=**%0.00 OPTIMAL**
-  - SOTA Infrastructure v3.0.0, DNA Coverage 10/10
-- 7 clustering stratejisi: K-Means, Fuzzy C-Means, K-Medoids, Clarke-Wright, Sweep, FCM-Enhanced, Hierarchical-FCM
-- Zaman pencereli planlama (pickup/dropoff yönleri)
-- Route planları ve sandbox senaryoları için kalıcılık API'leri
-- IE (Industrial Engineering) Resource Dashboard
-- Akademik benchmark paketi (TSPLib, Numba JIT)
-- CLI→Web Import Bridge (`/api/v1/benchmark/cli/import`)
+Both surfaces reuse `uniride_core`, but they have different contracts, lifecycle requirements, and evidence standards.
 
-\*PyVRP ve VROOM opsiyonel; `pip install -r requirements-benchmark.txt` ile etkinleştirilebilir.
+> **Current status (audited 2026-07-16): not production-ready.** Critical feasibility, matrix-integrity, authentication, benchmark-lifecycle, and frontend integration defects remain open. Treat solver output as experimental until it passes the planned shared feasibility certificate. See [UniRide_Ultimate_Audit.md](./UniRide_Ultimate_Audit.md) and [ACTIVE_ROADMAP.md](./ACTIVE_ROADMAP.md).
 
-## Mimari Özeti
+## Repository Map
 
-1. **Frontend + API Katmanı (Next.js 16)**
-   `src/app` altındaki sayfalar ve `src/app/api/*` endpoint'leri istekleri yönetir.
-2. **Optimizasyon Katmanı (Python/FastAPI)**
-   `optimizer_api/main.py` üzerinden optimize, compare, strategies servisleri sunulur.
-3. **Veri Katmanı (Supabase/PostgreSQL)**
-   Şema ve migration dosyaları `supabase/` altında yer alır.
+| Path | Responsibility |
+|---|---|
+| `src/` | Next.js UI, browser services, and same-origin API routes |
+| `optimizer_api/` | FastAPI production optimizer and web benchmark control plane |
+| `uniride_core/` | Shared algorithms, decoders, adapters, distance functions, and routing models |
+| `academic_benchmark/` | Dataset management, algorithm registry, DOE/tuning, repeated runs, and result analysis |
+| `supabase/` | Database schema, migrations, and row-level-security policies |
+| `docs/` | Verified operational references only |
+| `archive/` | Superseded audits, speculative designs, and historical documentation; never a current source of truth |
 
-## Depo Yapısı
+## Architectural Summary
 
 ```text
-src/                 # Next.js uygulaması (UI, API routes, servisler)
-optimizer_api/       # Python optimizasyon motoru
-supabase/            # SQL şema, RLS ve migration dosyaları
-docs/                # Mimari, yol haritası, changelog ve teknik notlar
-academic_benchmark/  # Akademik benchmark araçları (TSPLib + Numba)
+Browser / Next.js UI
+        |
+        v
+Next.js API routes -----> Supabase
+        |
+        v
+FastAPI production service -----> production adapters ----+
+                                                         |
+Academic CLI / DOE -------------> academic adapters ------+--> uniride_core
 ```
 
-## Gereksinimler
+The intended dependency rule is inward-only: production and academic adapters may import the shared core; the core must not depend on FastAPI, Next.js, TSPLIB persistence, or benchmark orchestration.
 
-- Node.js 18+ (öneri: 20+)
-- npm
-- Python 3.9+
-- Supabase projesi (uygulamayı gerçek veriyle çalıştırmak için)
+## Solver Families
 
-## Kurulum
+- Cluster-first strategies: GA, PSO, GWO, and HHO followed by per-cluster TSP optimization.
+- Giant-tour/split strategies: GA-Split, PSO-Split, GWO-Split, and HHO-Split.
+- Reference and holistic solvers: OR-Tools and optional PyVRP/VROOM integrations.
+- Local and exact baselines: greedy, 2-opt, and permutation search for very small instances.
+- Research solvers and ALNS-related components under `uniride_core/algorithms/sota_*`.
 
-### 1) Frontend bağımlılıkları
+Algorithm availability is not evidence of correctness. Current blockers include duplicate-customer identity handling, incorrect feasibility reporting, time-window split defects, incomplete travel matrices, and inconsistent deterministic seeding.
 
-```bash
-npm install --legacy-peer-deps
+## Prerequisites
+
+- Node.js 20 or newer
+- npm with the committed lockfile
+- Python 3.12 or 3.13 in a clean virtual environment
+- A Supabase project for database-backed application flows
+
+Optional academic solvers may require native build tools or external binaries.
+
+## Installation
+
+### Frontend
+
+```powershell
+npm ci
 ```
 
-> Not: Next.js 16 ve @genkit-ai/next arasında peer dependency çakışması olduğu için `--legacy-peer-deps` gereklidir.
+### Python
 
-### 2) Ortam değişkenleri
-
-Kök dizinde `.env.local` oluşturun:
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
-SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
-
-# Opsiyonel (default: http://127.0.0.1:8000)
-OPTIMIZER_API_URL=http://127.0.0.1:8000
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r optimizer_api\requirements.txt
+python -m pip install -e ".[test]"
 ```
 
-### 3) Python optimizasyon servisi
+Install optional solvers only when required:
 
-```bash
-cd optimizer_api
-pip install -r requirements.txt
+```powershell
+python -m pip install -e ".[solvers]"
+```
+
+Use a fresh environment. The audit machine had incompatible `pydantic` and `pydantic-core` installations, which prevented FastAPI test collection.
+
+## Environment Variables
+
+Create local environment files outside version control. Never commit credentials or copy real values into documentation.
+
+| Variable | Surface | Purpose |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Browser | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser | Public anonymous Supabase key; security must rely on RLS |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server only | Privileged Supabase operations; never expose to the browser |
+| `SUPABASE_URL` | Python/server | Supabase URL for backend data access where supported |
+| `OPTIMIZER_API_URL` | Next.js server | FastAPI service URL used by server-side routes |
+| `NEXT_PUBLIC_OPTIMIZER_API_URL` | Legacy browser path | Direct browser optimizer URL; avoid in production |
+| `ALLOWED_ORIGINS` | FastAPI | Comma-separated CORS allowlist |
+| `OPTIMIZER_PORT` | FastAPI | Optimizer service port; default is `8000` |
+| `TIME_MATRIX_CACHE_TTL_SECONDS` | FastAPI | Matrix cache lifetime; current loader lifecycle requires remediation |
+| `ENABLE_DEV_RESET` | Next.js server | Enables the development reset endpoint |
+| `DEV_RESET_SECRET` | Next.js server | Authorization secret for development reset |
+| `AZURE_AI_ENDPOINT` | Optional utility | Azure AI endpoint |
+| `AZURE_AI_API_KEY` | Optional utility | Azure AI credential |
+| `AZURE_AI_API_VERSION` | Optional utility | Azure AI API version |
+
+Other narrow utilities read `AZURE_OPENAI_API_KEY`, `BENCHMARK_PROFILE`, default pickup/dropoff-hour variables, `NODE_ENV`, and `VERCEL_ENV`.
+
+## Running Locally
+
+FastAPI service:
+
+```powershell
+Push-Location optimizer_api
 python main.py
+Pop-Location
 ```
 
-Opsiyonel SOTA benchmark bağımlılıkları (PyVRP, VROOM):
+Next.js development server:
 
-```bash
-pip install -r requirements-benchmark.txt
-```
-
-### 4) Next.js uygulamasını başlatma
-
-```bash
-# repo root
+```powershell
 npm run dev
 ```
 
-- Web: `http://localhost:9002`
-- Optimizer API: `http://127.0.0.1:8000` (prod: 8099)
+Defaults:
 
-## Veritabanı
+- Web application: `http://localhost:9002`
+- FastAPI service: `http://127.0.0.1:8000`
 
-Supabase tarafında ilgili SQL dosyalarını sırasıyla uygulayın:
+Academic entry point:
 
-- `supabase/schema.sql`
-- `supabase/migrations/*`
-- `supabase/rls_policies.sql`
-
-## NPM Komutları
-
-| Komut | Açıklama | Durum |
-|---|---|---|
-| `npm run dev` | Geliştirme sunucusu (Turbopack, port 9002) | ✅ |
-| `npm run build` | Production build | ✅ (ağ kısıtlarında font fetch hatası görülebilir) |
-| `npm run start` | Production sunucusu | ✅ (`build` sonrası) |
-| `npm run typecheck` | TypeScript tip kontrolü | ✅ |
-| `npm run test` | Vitest | ⚠️ test dosyası yoksa başarısız döner |
-| `npm run lint` | Next.js lint komutu | ⚠️ mevcut script bu ortamda hataya düşebiliyor |
-
-## Optimizer API Uç Noktaları
-
-| Method | Path | Açıklama |
-|---|---|---|
-| GET | `/health` | Sağlık kontrolü |
-| GET | `/api/v1/strategies` | Kullanılabilir stratejiler |
-| POST | `/api/v1/optimize` | Tek algoritmayla rota optimizasyonu |
-| POST | `/api/v1/compare` | Tüm algoritmaları karşılaştır |
-| POST | `/api/v1/extract-time-windows` | Haftalık programdan zaman penceresi çıkar |
-| POST | `/api/v1/schedule-to-students` | Program → öğrenci node listesi |
-| POST | `/api/v1/vehicle-calculator` | Araç kapasitesi hesaplama |
-| GET | `/api/v1/benchmark/cli/files` | CLI JSON dosyalarını listele |
-| POST | `/api/v1/benchmark/cli/import` | CLI → Web format dönüşümü |
-| GET | `/api/v1/benchmark/cli/preview` | Import önizlemesi |
-
-## SOTA CLI Araçları
-
-```bash
-# FAZ 0-3 interaktif optimizasyon
-cd optimizer_api && python faz0_interactive.py
-
-# Standalone demo (web gerekmez)
-cd optimizer_api && python faz0_standalone_demo.py
-
-# Belirli problem
-cd optimizer_api && python faz0_standalone_demo.py berlin52
+```powershell
+python -m academic_benchmark
 ```
 
-## Dokümantasyon Haritası
+Do not publish benchmark results until environment, seed schedule, matrix provenance, configuration, and independent feasibility are recorded.
 
-- `docs/01_Implementation_Status.md` → güncel tamamlanma durumu ve eksikler
-- `docs/02_Architecture.md` → mimari açıklamalar
-- `docs/03_Roadmap.md` → geliştirme yol haritası
-- `docs/04_Changelog.md` → sürüm/değişiklik geçmişi
-- `docs/05_Code_Quality_Roadmap.md` → kod kalitesi düzeltme yol haritası (09.04.2026)
-- `docs/09_04_2026_Codebase_Analysis_Report.md` → kapsamlı kod tabanı analiz raporu
-- `docs/ALGORITHM_COMPARISON.md` → algoritma karşılaştırmaları
-- `docs/sota_framework_plan_2026/` → SOTA algoritma ve akademik makale vizyonu
-- `optimizer_api/README_TESTS.md` → Python test ve benchmark notları
+## Verification Commands and Current Baseline
 
-## Bilinen Durum Notları
+```powershell
+npm test -- --run
+npm run typecheck
+npm run lint
+python -m pytest uniride_core\tests optimizer_api\tests academic_benchmark\tests -q --tb=short
+```
 
-- `npm run lint` bu sandbox ortamında başarısız olabiliyor (bkz. NPM Komutları tablosu)
-- `npm run typecheck` mevcut durumda temiz geçiyor; `npm run build` sonrasında çalıştırmak Next.js tarafından üretilen `.next/types` dosyalarının güncel kalmasını sağlar.
-- `docs/09_04_2026_Codebase_Analysis_Report.md` — tespit edilen sorunlar ve düzeltme planı
+Audit results on 2026-07-16:
 
-## Lisans
+| Gate | Result |
+|---|---|
+| Frontend unit tests | 15 passed across 3 files |
+| TypeScript typecheck | Failed: local install lacked declared `next-intl`; two implicit-`any` errors remained |
+| Lint | Failed: obsolete `next lint` script and disabled correctness rules |
+| FastAPI/Python collection | Blocked by incompatible `pydantic`/`pydantic-core` environment |
+| Core and academic tests | Reached 370 passed and 2 skipped before 46 temp-path/environment errors |
 
-Depoda açık bir lisans dosyası bulunmuyor. Kullanım koşulları için depo sahibiyle iletişime geçin.
+These are audit observations, not release certification.
+
+## Documentation Authority
+
+1. [UniRide_Ultimate_Audit.md](./UniRide_Ultimate_Audit.md) — definitive audit and historical rationale.
+2. [CURRENT_ARCHITECTURE.md](./CURRENT_ARCHITECTURE.md) — current structural truth.
+3. [ACTIVE_ROADMAP.md](./ACTIVE_ROADMAP.md) — prioritized remediation plan.
+4. [WORKLOG.md](./WORKLOG.md) — curated chronology.
+5. [docs/API_REFERENCE.md](./docs/API_REFERENCE.md) — verified endpoint inventory.
+6. [docs/GITHUB_WORKFLOW.md](./docs/GITHUB_WORKFLOW.md) — contribution and verification workflow.
+
+Everything under `archive/` is historical evidence and may contain false, contradictory, or superseded claims.
+
+## License
+
+No repository license file is currently present. Confirm usage and redistribution terms with the repository owner.

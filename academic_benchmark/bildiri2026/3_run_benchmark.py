@@ -179,7 +179,8 @@ def main():
             
             with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
                 for run in range(num_runs):
-                    seed = 9000 + run + model_id * 100
+                    # Paired seed: model identity never changes a problem/replicate stream.
+                    seed = 9000 + run
                     futures.append(executor.submit(solve_run, algo_name, params, run + 1, seed, p_data, is_time, p_name, model_id))
                 
                 completed = 0

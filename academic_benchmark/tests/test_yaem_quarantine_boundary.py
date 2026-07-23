@@ -37,6 +37,7 @@ def _package_parts(path: Path) -> tuple[str, ...]:
 
 
 QUARANTINED_IMPORT_ROOTS = (
+    "yaem2026",
     "academic_benchmark.yaem2026",
     "archive.academic_benchmark.yaem2026_legacy",
 )
@@ -76,18 +77,20 @@ def _configured_package_include_patterns() -> list[str]:
 
 
 PACKAGE_INCLUDE_PATTERNS = _configured_package_include_patterns()
-QUARANTINED_PACKAGE_NAMES = {
-    "archive",
-    "archive.academic_benchmark",
-    "archive.academic_benchmark.yaem2026_legacy",
-    "archive.academic_benchmark.yaem2026_legacy.core",
-}
+
+
+def _quarantined_package_names() -> set[str]:
+    namespaces = set()
+    for directory in (ARCHIVE, *(path for path in ARCHIVE.rglob("*") if path.is_dir())):
+        parts = directory.relative_to(REPO).parts
+        namespaces.update(".".join(parts[:depth]) for depth in range(1, len(parts) + 1))
+    return namespaces
 
 
 def _patterns_expose_quarantined_packages(patterns: list[str]) -> bool:
     return any(
         fnmatchcase(namespace, pattern)
-        for namespace in QUARANTINED_PACKAGE_NAMES
+        for namespace in _quarantined_package_names()
         for pattern in patterns
     )
 
@@ -141,10 +144,26 @@ def test_import_violation_helper_respects_component_boundaries():
     ) == []
 
 
+def test_import_violation_helper_catches_bare_yaem2026_descendants_only():
+    source = "\n".join(
+        (
+            "import yaem2026.solver",
+            "import yaem2026_safe",
+        )
+    )
+
+    assert _import_violations(
+        REPO / "academic_benchmark" / "boundary_probe.py", source
+    ) == [1]
+
+
 def test_package_pattern_validation_rejects_archive_wildcard_and_descendant_only_pattern():
     assert _patterns_expose_quarantined_packages(["archive*"])
     assert _patterns_expose_quarantined_packages(
         ["archive.academic_benchmark.yaem2026_legacy.*"]
+    )
+    assert _patterns_expose_quarantined_packages(
+        ["archive.academic_benchmark.yaem2026_legacy.archive_20260701_0120.results.*"]
     )
 
 

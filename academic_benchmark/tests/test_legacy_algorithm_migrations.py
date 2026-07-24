@@ -32,19 +32,17 @@ def test_legacy_algorithms_are_rejected_before_any_solver_execution(
     class ExplodingRegistry:
         @staticmethod
         def list_algorithms():
-            return [legacy_id]
+            raise AssertionError("retired legacy solver must not enumerate the registry")
 
         @staticmethod
         def get_executor(_algorithm_id):
-            def execute(*_args, **_kwargs):
-                raise AssertionError("retired legacy solver must not execute")
-
-            return execute
+            raise AssertionError("retired legacy solver must not request a registry executor")
 
     monkeypatch.setattr(cli_engine, "_HAS_NUMBA_REGISTRY", True)
     monkeypatch.setattr(cli_engine, "_AlgoReg", ExplodingRegistry)
 
-    task = (        {
+    task = (
+        {
             "name": "legacy-rejection",
             "dimension": 0,
             "coordinates": [],

@@ -192,21 +192,20 @@ class HHOOptimizer(BaseTSPSolver):
             self._backend_observation.polish.add("python")
             return polished
         if self._dist_matrix_np is not None:
+            polish_kernel = _nb._two_opt_improve_atsp_numba
             route_np = _nb._prepare_route(route)
-            improved_np, length = _nb._two_opt_improve_atsp_numba(
+            improved_np, length = polish_kernel(
                 route_np, self._dist_matrix_np, iters, False
             )
             polished = _nb._extract_route(improved_np, route), float(length), False
-            self._backend_observation.polish.add("numba")
+            backend = self._runtime_backend(polish_kernel)
+            self._backend_observation.polish.add(backend)
             return polished
         if self._dist_matrix is not None:
+            polish_kernel = _nb._two_opt_improve_atsp_numba
             improved, length = _nb.nb_two_opt(route, self._dist_matrix, iters, False)
             polished = improved, float(length), False
-            backend = (
-                "numba"
-                if getattr(_nb._two_opt_improve_atsp_numba, "nopython_signatures", ())
-                else "python"
-            )
+            backend = self._runtime_backend(polish_kernel)
             self._backend_observation.polish.add(backend)
             return polished
         polished = route[:], self.tour_length(route), False

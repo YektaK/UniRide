@@ -9,7 +9,7 @@ Supports both:
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import List, Tuple, Optional
+from typing import Callable, List, Tuple, Optional
 import time
 import math
 try:
@@ -112,6 +112,29 @@ class BaseTSPSolver(ABC):
         else:
             self._dist_matrix_np = None
 
+    @staticmethod
+    def _runtime_backend(callable_obj: object) -> str:
+        return (
+            "numba"
+            if getattr(callable_obj, "nopython_signatures", ())
+            else "python"
+        )
+
+    def _invoke_objective_kernel(
+        self, objective_kernel: Callable[..., object], tour: List[int]
+    ) -> object:
+        import numpy as _np
+        # Closed TSP/ATSP cycles may place node 0 anywhere. Rotate the
+        # cycle before the legacy kernel prepares its depot-shaped
+        # representation; rotation preserves directed cycle cost.
+        kernel_tour = list(tour)
+        if not self._exclude_depot and 0 in kernel_tour and kernel_tour[0] != 0:
+            zero_idx = kernel_tour.index(0)
+            kernel_tour = kernel_tour[zero_idx:] + kernel_tour[:zero_idx]
+        # _nb içindeki _prepare_route helper'ı bu dönüşümü yapıyor.
+        route_np = _nb._prepare_route(kernel_tour)
+        return objective_kernel(route_np, self._dist_matrix_np)
+
     def _tour_length_fast(self, tour: List[int]) -> float:
         """Gelistirme #2 — Hızlı Tur Uzunluğu Hesabı.
 
@@ -121,23 +144,18 @@ class BaseTSPSolver(ABC):
         Mevcut tour_length() metodu değişmeden korunur — geriye dönük uyumluluk sağlanır.
         """
         if self._dist_matrix_np is not None:
+            objective_kernel = _nb._calculate_tour_length_atsp_numba
+            kernel_succeeded = False
             try:
-                import numpy as _np
-                # Closed TSP/ATSP cycles may place node 0 anywhere. Rotate the
-                # cycle before the legacy kernel prepares its depot-shaped
-                # representation; rotation preserves directed cycle cost.
-                kernel_tour = list(tour)
-                if not self._exclude_depot and 0 in kernel_tour and kernel_tour[0] != 0:
-                    zero_idx = kernel_tour.index(0)
-                    kernel_tour = kernel_tour[zero_idx:] + kernel_tour[:zero_idx]
-                # _nb içindeki _prepare_route helper'ı bu dönüşümü yapıyor.
-                route_np = _nb._prepare_route(kernel_tour)
-                length = _nb._calculate_tour_length_atsp_numba(route_np, self._dist_matrix_np)
-                result = float(length)
-                self._backend_observation.objective.add("numba")
-                return result
+                result = float(self._invoke_objective_kernel(objective_kernel, tour))
             except Exception:
                 pass  # Fallback: herhangi bir hata olursa yavaş yola dön
+            else:
+                kernel_succeeded = True
+            if kernel_succeeded:
+                backend = self._runtime_backend(objective_kernel)
+                self._backend_observation.objective.add(backend)
+                return result
         # Fallback: orijinal Python tabanlı hesaplama (güvenli)
         result = self.tour_length(tour)
         self._backend_observation.objective.add("python")

@@ -131,6 +131,26 @@ def test_forced_objective_failure_reports_successful_python_fallback(
 
 
 @pytest.mark.parametrize("solver_type", [GWOOptimizer, HHOOptimizer], ids=["gwo", "hho"])
+def test_cached_objective_plain_python_shim_reports_python(
+    monkeypatch: pytest.MonkeyPatch, solver_type: SolverType
+) -> None:
+    monkeypatch.setattr(_nb, "NUMBA_AVAILABLE", False)
+
+    def _python_objective(route: np.ndarray, matrix: np.ndarray) -> float:
+        return sum(
+            float(matrix[node, route[(index + 1) % len(route)]])
+            for index, node in enumerate(route)
+        )
+
+    monkeypatch.setattr(_nb, "_calculate_tour_length_atsp_numba", _python_objective)
+    solver = _solver(solver_type, polish_enabled=False, fair=True)
+    result = _solve(solver, _symmetric_matrix())
+
+    assert solver._dist_matrix_np is not None
+    assert result.extra_stats["execution_backend"] == "objective=python;polish=none"
+
+
+@pytest.mark.parametrize("solver_type", [GWOOptimizer, HHOOptimizer], ids=["gwo", "hho"])
 def test_pure_python_objective_path_reports_python(
     monkeypatch: pytest.MonkeyPatch, solver_type: SolverType
 ) -> None:
@@ -172,6 +192,39 @@ def test_direct_compiled_polish_reports_numba(
 
     assert result.extra_stats["execution_backend"] == "objective=unused;polish=numba"
     assert _nb._two_opt_improve_atsp_numba.nopython_signatures
+
+
+@pytest.mark.parametrize("solver_type", [GWOOptimizer, HHOOptimizer], ids=["gwo", "hho"])
+def test_cached_polish_plain_python_shim_reports_python(
+    monkeypatch: pytest.MonkeyPatch, solver_type: SolverType
+) -> None:
+    monkeypatch.setattr(_nb, "NUMBA_AVAILABLE", False)
+
+    def _python_two_opt(
+        route: np.ndarray,
+        matrix: np.ndarray,
+        _max_iterations: int,
+        _first_improvement: bool,
+    ) -> tuple[np.ndarray, float]:
+        cost = sum(
+            float(matrix[node, route[(index + 1) % len(route)]])
+            for index, node in enumerate(route)
+        )
+        return route.copy(), cost
+
+    monkeypatch.setattr(_nb, "_two_opt_improve_atsp_numba", _python_two_opt)
+    solver = _solver(
+        solver_type,
+        polish_enabled=True,
+        fair=False,
+        max_iterations=0,
+    )
+    result = _solve(solver, _symmetric_matrix())
+
+    assert solver._dist_matrix_np is not None
+    assert result.extra_stats["execution_backend"] == (
+        "objective=unused;polish=python"
+    )
 
 
 @pytest.mark.parametrize("solver_type", [GWOOptimizer, HHOOptimizer], ids=["gwo", "hho"])
@@ -220,17 +273,19 @@ def test_mixed_objective_execution_is_preserved_and_reset_per_solve(
     compiled_objective = _nb._calculate_tour_length_atsp_numba
     call_count = 0
 
-    def _fail_once(*args: object, **kwargs: object) -> float:
+    def _fail_once(*_args: object, **_kwargs: object) -> float:
         nonlocal call_count
         call_count += 1
-        if call_count == 1:
-            raise RuntimeError("test-local first objective call failure")
-        return float(compiled_objective(*args, **kwargs))
+        monkeypatch.setattr(
+            _nb, "_calculate_tour_length_atsp_numba", compiled_objective
+        )
+        raise RuntimeError("test-local first objective call failure")
 
     monkeypatch.setattr(_nb, "_calculate_tour_length_atsp_numba", _fail_once)
     solver = _solver(solver_type, polish_enabled=False, fair=True)
     mixed_result = _solve(solver, _symmetric_matrix())
 
+    assert call_count == 1
     assert mixed_result.extra_stats["execution_backend"] == (
         "objective=numba+python;polish=none"
     )

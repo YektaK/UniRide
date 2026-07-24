@@ -747,8 +747,7 @@ def _make_numba_metah_executor(
 # numpy matrix + numba JIT kernel path via BaseTSPSolver.solve_with_matrix.
 _NUMBA_METAH_OVERRIDES = None
 try:
-    from academic_benchmark.bildiri2026.core.gwo_solver import GWOOptimizer
-    from academic_benchmark.bildiri2026.core.hho_solver import HHOOptimizer
+    from uniride_core.algorithms.tsp_matrix_metaheuristics import GWOOptimizer, HHOOptimizer
     _NUMBA_METAH_OVERRIDES = {
         "Core-GWO-TSP": (GWOOptimizer, {
             "pack_size": 50, "max_iterations": 250, "initial_a": 2.0,

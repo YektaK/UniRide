@@ -4,8 +4,8 @@ import pytest
 
 from academic_benchmark.cli_engine import _evaluate_param_combo
 from academic_benchmark.core import registry_setup  # noqa: F401
-from academic_benchmark.bildiri2026.core.gwo_solver import GWOOptimizer
-from academic_benchmark.bildiri2026.core.hho_solver import HHOOptimizer
+from uniride_core.algorithms.tsp_matrix_metaheuristics.gwo_solver import GWOOptimizer
+from uniride_core.algorithms.tsp_matrix_metaheuristics.hho_solver import HHOOptimizer
 from academic_benchmark.engine_core import AlgorithmRegistry
 from academic_benchmark.fairness import (
     FairComparisonManifest,
@@ -24,6 +24,15 @@ EXPLICIT_VARIANTS = (
     "Numba-2-opt",
     "Numba-3-opt-bounded",
 )
+
+
+def test_scientific_integrity_uses_canonical_gwo_hho_classes():
+    assert GWOOptimizer.__module__.startswith(
+        "uniride_core.algorithms.tsp_matrix_metaheuristics"
+    )
+    assert HHOOptimizer.__module__.startswith(
+        "uniride_core.algorithms.tsp_matrix_metaheuristics"
+    )
 
 
 def _asymmetric_matrix(n=8):

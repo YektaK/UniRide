@@ -262,7 +262,7 @@ def preflight_numba_objective() -> None:
     """Require an importable nopython Numba ATSP objective before any benchmark run."""
     try:
         import numpy as np
-        from academic_benchmark.bildiri2026.core import numba_accel
+        from uniride_core.algorithms import numba_accel
     except Exception as exc:  # pragma: no cover - version/environment dependent
         raise FairPilotError(f"Numba objective import failed: {exc}") from exc
     if not getattr(numba_accel, "NUMBA_AVAILABLE", False):

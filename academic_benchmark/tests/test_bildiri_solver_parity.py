@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import inspect
 import json
 import math
 from pathlib import Path
@@ -17,6 +18,8 @@ from academic_benchmark.bildiri2026.core.gwo_solver import (
 from academic_benchmark.bildiri2026.core.hho_solver import (
     HHOOptimizer as LegacyHHOOptimizer,
 )
+from academic_benchmark.core import registry_setup  # noqa: F401 - register executors
+from academic_benchmark.engine_core import AlgorithmRegistry
 from uniride_core.algorithms import numba_accel as _canonical_nb
 from uniride_core.algorithms.tsp_matrix_metaheuristics.gwo_solver import (
     GWOOptimizer as CanonicalGWOOptimizer,
@@ -29,6 +32,26 @@ FIXTURE_SCHEMA_VERSION = "uniride-bildiri-parity/v1"
 FIXTURE_PATH = Path(__file__).with_name("fixtures") / "bildiri_gwo_hho_v1.json"
 SEED = 1729
 EVALUATION_BUDGET = 100
+
+PUBLIC_GWO_HHO_EXECUTORS = (
+    "Core-GWO-TSP",
+    "Core-GWO-TSP-Pure",
+    "Core-GWO-TSP-Memetic-2opt",
+    "Core-HHO-TSP",
+    "Core-HHO-TSP-Pure",
+    "Core-HHO-TSP-Memetic-2opt",
+    "Numba-GWO",
+    "Numba-HHO",
+)
+
+
+@pytest.mark.parametrize("algorithm_id", PUBLIC_GWO_HHO_EXECUTORS)
+def test_public_gwo_hho_executors_instantiate_canonical_classes(algorithm_id: str) -> None:
+    executor = AlgorithmRegistry.get_executor(algorithm_id)
+    solver_cls = inspect.getclosurevars(executor).nonlocals["solver_cls"]
+    assert solver_cls.__module__.startswith(
+        "uniride_core.algorithms.tsp_matrix_metaheuristics"
+    )
 
 
 class ParityRecord(TypedDict):

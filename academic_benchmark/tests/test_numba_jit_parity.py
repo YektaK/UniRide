@@ -12,13 +12,38 @@ from typing import Callable, Type
 import numpy as np
 import pytest
 
-from academic_benchmark.bildiri2026.core import numba_accel as _nb
-from academic_benchmark.bildiri2026.core.base_solver import BaseTSPSolver
-from academic_benchmark.bildiri2026.core.gwo_solver import GWOOptimizer
-from academic_benchmark.bildiri2026.core.hho_solver import HHOOptimizer
+from academic_benchmark import fair_pilot
+from academic_benchmark.fair_pilot import FairPilotError
+from uniride_core.algorithms import numba_accel as _nb
+from uniride_core.algorithms.tsp_matrix_metaheuristics.base_solver import BaseTSPSolver
+from uniride_core.algorithms.tsp_matrix_metaheuristics.gwo_solver import GWOOptimizer
+from uniride_core.algorithms.tsp_matrix_metaheuristics.hho_solver import HHOOptimizer
+from uniride_core.algorithms import numba_accel as _canonical_nb
 
 
 SolverType = Type[GWOOptimizer] | Type[HHOOptimizer]
+
+
+def test_jit_parity_uses_canonical_gwo_hho_and_numba_helpers() -> None:
+    assert _nb.__name__ == "uniride_core.algorithms.numba_accel"
+    assert BaseTSPSolver.__module__.startswith(
+        "uniride_core.algorithms.tsp_matrix_metaheuristics"
+    )
+    assert GWOOptimizer.__module__.startswith(
+        "uniride_core.algorithms.tsp_matrix_metaheuristics"
+    )
+    assert HHOOptimizer.__module__.startswith(
+        "uniride_core.algorithms.tsp_matrix_metaheuristics"
+    )
+
+
+def test_fair_pilot_preflight_uses_canonical_numba_helper(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(_canonical_nb, "NUMBA_AVAILABLE", False)
+
+    with pytest.raises(FairPilotError, match="Numba is unavailable"):
+        fair_pilot.preflight_numba_objective()
 
 
 def _symmetric_matrix() -> list[list[float]]:

@@ -93,9 +93,14 @@ def _validate_record(record: Mapping[str, Any], *, matrix_size: int) -> None:
     if set(record) != expected_keys:
         raise ValueError(f"record keys must be exactly {sorted(expected_keys)}")
 
+    if not isinstance(record["directed"], bool):
+        raise ValueError("capture directed flag must be bool")
+
     normalized_tour = record["normalized_tour"]
     if not isinstance(normalized_tour, list) or len(normalized_tour) != matrix_size:
         raise ValueError("capture route must contain every matrix node exactly once")
+    if any(not isinstance(node, int) or isinstance(node, bool) for node in normalized_tour):
+        raise ValueError("capture route nodes must be non-bool integers")
     if set(normalized_tour) != set(range(matrix_size)):
         raise ValueError("capture route must contain every matrix node exactly once")
 
@@ -103,16 +108,36 @@ def _validate_record(record: Mapping[str, Any], *, matrix_size: int) -> None:
     if not isinstance(cost, (int, float)) or isinstance(cost, bool) or not math.isfinite(cost):
         raise ValueError("capture cost must be finite")
 
+    iterations = record["iterations"]
+    if not isinstance(iterations, int) or isinstance(iterations, bool) or iterations < 0:
+        raise ValueError("capture iterations must be a non-bool integer >= 0")
+
     evaluations = record["objective_evaluations"]
     if not isinstance(evaluations, int) or isinstance(evaluations, bool) or evaluations <= 0:
         raise ValueError("capture objective evaluation count must be positive")
-    if record["evaluation_budget"] != EVALUATION_BUDGET:
+
+    evaluation_budget = record["evaluation_budget"]
+    if (
+        not isinstance(evaluation_budget, int)
+        or isinstance(evaluation_budget, bool)
+        or evaluation_budget != EVALUATION_BUDGET
+    ):
         raise ValueError(f"capture evaluation budget must be {EVALUATION_BUDGET}")
+
+    if not isinstance(record["budget_terminated"], bool):
+        raise ValueError("capture budget_terminated flag must be bool")
+
+    variant = record["variant"]
+    if variant not in {"pure", "memetic_2opt"}:
+        raise ValueError("capture variant must be pure or memetic_2opt")
 
     backend = record["observed_execution_backend"]
     if not isinstance(backend, str) or not backend.strip():
         raise ValueError("capture execution backend label is required")
 
+    seed = record["seed"]
+    if not isinstance(seed, int) or isinstance(seed, bool) or seed != SEED:
+        raise ValueError(f"capture seed must be {SEED}")
 
 def test_capture_record_rejects_missing_backend_label() -> None:
     record: ParityRecord = {
@@ -132,6 +157,57 @@ def test_capture_record_rejects_missing_backend_label() -> None:
         _validate_record(record, matrix_size=3)
 
 
+
+def _valid_record() -> ParityRecord:
+    return {
+        "directed": False,
+        "normalized_tour": [0, 1, 2],
+        "tour_length": 3.0,
+        "iterations": 1,
+        "objective_evaluations": 1,
+        "evaluation_budget": 100,
+        "budget_terminated": False,
+        "variant": "pure",
+        "observed_execution_backend": "numba-objective",
+        "seed": 1729,
+    }
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("directed", 1, "directed"),
+        ("normalized_tour", [False, 1, 2], "route"),
+        ("normalized_tour", [0, 1, 1], "route"),
+        ("tour_length", float("inf"), "finite"),
+        ("iterations", -1, "iterations"),
+        ("objective_evaluations", True, "objective"),
+        ("evaluation_budget", True, "budget"),
+        ("budget_terminated", "false", "budget_terminated"),
+        ("variant", "other", "variant"),
+        ("seed", 0, "seed"),
+    ],
+)
+def test_capture_record_rejects_complete_contract(
+    field: str, value: object, message: str
+) -> None:
+    record = _valid_record()
+    record[field] = value
+    with pytest.raises(ValueError, match=message):
+        _validate_record(record, matrix_size=3)
+
+
+def test_read_fixture_rejects_forbidden_record_field(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payload = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+    payload["records"]["gwo_pure_symmetric_tsp"]["elapsed_ms"] = 1.0
+    malformed_fixture = tmp_path / "malformed_fixture.json"
+    malformed_fixture.write_text(json.dumps(payload), encoding="utf-8")
+    monkeypatch.setattr(__import__(__name__), "FIXTURE_PATH", malformed_fixture)
+
+    with pytest.raises(ValueError, match="keys"):
+        _read_fixture()
 def _require_working_jit() -> None:
     """Skip only before JIT is available; compilation problems must fail."""
     if not _nb.NUMBA_AVAILABLE:
@@ -219,10 +295,25 @@ def _write_capture(path: Path) -> None:
 
 def _read_fixture() -> dict[str, object]:
     payload = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
-    assert set(payload) == {"schema_version", "records"}
-    assert payload["schema_version"] == FIXTURE_SCHEMA_VERSION
-    assert isinstance(payload["records"], dict)
-    assert set(payload["records"]) == {case_name for case_name, *_ in CASE_SPECS}
+    if set(payload) != {"schema_version", "records"}:
+        raise ValueError("fixture top-level keys are invalid")
+    if payload["schema_version"] != FIXTURE_SCHEMA_VERSION:
+        raise ValueError("fixture schema version is invalid")
+    records = payload["records"]
+    if not isinstance(records, dict):
+        raise ValueError("fixture records must be an object")
+    if set(records) != {case_name for case_name, *_ in CASE_SPECS}:
+        raise ValueError("fixture must contain exactly the eight named Bildiri cases")
+
+    for case_name, _solver_name, variant, directed in CASE_SPECS:
+        record = records[case_name]
+        if not isinstance(record, Mapping):
+            raise ValueError(f"fixture record {case_name} must be an object")
+        _validate_record(record, matrix_size=6)
+        if record["directed"] is not directed:
+            raise ValueError(f"fixture record {case_name} has inconsistent directed metadata")
+        if record["variant"] != variant:
+            raise ValueError(f"fixture record {case_name} has inconsistent variant metadata")
     return payload
 
 

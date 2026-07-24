@@ -9,6 +9,7 @@ from uniride_core.algorithms import numba_accel
 def test_numba_three_opt_has_no_bildiri_import_ownership():
     source = inspect.getsource(sys.modules[__name__])
     assert "academic_benchmark." + "bildiri2026" not in source
+    assert numba_accel.__name__ == "uniride_core.algorithms.numba_accel"
 
 
 @pytest.mark.skipif(not numba_accel.NUMBA_AVAILABLE, reason="Numba not available")

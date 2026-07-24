@@ -14,6 +14,7 @@ from uniride_core.models import ProblemInstance
 def test_three_opt_integration_has_no_bildiri_import_ownership():
     source = inspect.getsource(sys.modules[__name__])
     assert "academic_benchmark." + "bildiri2026" not in source
+    assert improve_three_opt.__module__ == "uniride_core.algorithms.three_opt"
 
 
 def _asymmetric_matrix() -> list[list[float]]:

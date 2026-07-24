@@ -295,12 +295,46 @@ def _capture_case(
         "objective_evaluations": int(extra_stats["objective_evaluations"]),
         "evaluation_budget": int(extra_stats["evaluation_budget"]),
         "budget_terminated": bool(extra_stats["budget_terminated"]),
-        "variant": variant,
+        "variant": str(extra_stats["variant"]),
         "observed_execution_backend": str(extra_stats.get("execution_backend", "")),
         "seed": int(result.seed),
     }
     _validate_record(record, matrix_size=len(matrix))
     return record
+
+
+def test_capture_case_uses_solver_reported_variant(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tour = list(range(6))
+
+    class FakeSolver:
+        def solve_with_matrix(self, *_args: object, **_kwargs: object) -> object:
+            return type(
+                "FakeResult",
+                (),
+                {
+                    "tour": tour,
+                    "tour_length": closed_cost(tour, _symmetric_matrix()),
+                    "iterations": 1,
+                    "extra_stats": {
+                        "objective_evaluations": 1,
+                        "evaluation_budget": EVALUATION_BUDGET,
+                        "budget_terminated": False,
+                        "variant": "memetic_2opt",
+                        "execution_backend": "python",
+                    },
+                    "seed": SEED,
+                },
+            )()
+
+    monkeypatch.setitem(
+        globals(), "_solver_for_case", lambda *_args, **_kwargs: FakeSolver()
+    )
+
+    record = _capture_case("gwo", "pure", False)
+
+    assert record["variant"] == "memetic_2opt"
 
 
 def _capture_all_cases() -> dict[str, ParityRecord]:

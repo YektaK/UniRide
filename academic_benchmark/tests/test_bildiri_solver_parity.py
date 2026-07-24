@@ -1,0 +1,252 @@
+"""Freeze deterministic Bildiri GWO/HHO behavior before solver relocation."""
+from __future__ import annotations
+
+import argparse
+import json
+import math
+from pathlib import Path
+from typing import Any, Literal, Mapping, TypedDict
+
+import numpy as np
+import pytest
+
+from academic_benchmark.bildiri2026.core import numba_accel as _nb
+from academic_benchmark.bildiri2026.core.gwo_solver import GWOOptimizer
+from academic_benchmark.bildiri2026.core.hho_solver import HHOOptimizer
+
+FIXTURE_SCHEMA_VERSION = "uniride-bildiri-parity/v1"
+FIXTURE_PATH = Path(__file__).with_name("fixtures") / "bildiri_gwo_hho_v1.json"
+SEED = 1729
+EVALUATION_BUDGET = 100
+
+
+class ParityRecord(TypedDict):
+    directed: bool
+    normalized_tour: list[int]
+    tour_length: float
+    iterations: int
+    objective_evaluations: int
+    evaluation_budget: int
+    budget_terminated: bool
+    variant: Literal["pure", "memetic_2opt"]
+    observed_execution_backend: str
+    seed: int
+
+
+def _symmetric_matrix() -> list[list[float]]:
+    return [
+        [0, 7, 9, 11, 8, 10],
+        [7, 0, 6, 5, 12, 9],
+        [9, 6, 0, 4, 7, 13],
+        [11, 5, 4, 0, 6, 8],
+        [8, 12, 7, 6, 0, 5],
+        [10, 9, 13, 8, 5, 0],
+    ]
+
+
+def _directed_matrix() -> list[list[float]]:
+    return [
+        [0, 9, 4, 12, 7, 15],
+        [3, 0, 11, 5, 14, 6],
+        [13, 8, 0, 10, 2, 9],
+        [6, 16, 3, 0, 8, 4],
+        [11, 5, 17, 1, 0, 12],
+        [7, 14, 6, 13, 3, 0],
+    ]
+
+
+def closed_cost(tour: list[int], matrix: list[list[float]]) -> float:
+    return sum(
+        float(matrix[node][tour[(index + 1) % len(tour)]])
+        for index, node in enumerate(tour)
+    )
+
+
+def normalize_cycle(tour: list[int], *, directed: bool) -> tuple[int, ...]:
+    route = tuple(tour)
+    rotations = [route[index:] + route[:index] for index in range(len(route))]
+    candidates = rotations
+    if not directed:
+        reversed_route = tuple(reversed(route))
+        candidates += [
+            reversed_route[index:] + reversed_route[:index]
+            for index in range(len(route))
+        ]
+    return min(candidates)
+
+
+CASE_SPECS = (
+    ("gwo_pure_symmetric_tsp", "gwo", "pure", False),
+    ("gwo_pure_directed_atsp", "gwo", "pure", True),
+    ("gwo_memetic_2opt_symmetric_tsp", "gwo", "memetic_2opt", False),
+    ("gwo_memetic_2opt_directed_atsp", "gwo", "memetic_2opt", True),
+    ("hho_pure_symmetric_tsp", "hho", "pure", False),
+    ("hho_pure_directed_atsp", "hho", "pure", True),
+    ("hho_memetic_2opt_symmetric_tsp", "hho", "memetic_2opt", False),
+    ("hho_memetic_2opt_directed_atsp", "hho", "memetic_2opt", True),
+)
+
+
+def _validate_record(record: Mapping[str, Any], *, matrix_size: int) -> None:
+    """Reject incomplete or non-replayable capture records before persistence."""
+    expected_keys = set(ParityRecord.__annotations__)
+    if set(record) != expected_keys:
+        raise ValueError(f"record keys must be exactly {sorted(expected_keys)}")
+
+    normalized_tour = record["normalized_tour"]
+    if not isinstance(normalized_tour, list) or len(normalized_tour) != matrix_size:
+        raise ValueError("capture route must contain every matrix node exactly once")
+    if set(normalized_tour) != set(range(matrix_size)):
+        raise ValueError("capture route must contain every matrix node exactly once")
+
+    cost = record["tour_length"]
+    if not isinstance(cost, (int, float)) or isinstance(cost, bool) or not math.isfinite(cost):
+        raise ValueError("capture cost must be finite")
+
+    evaluations = record["objective_evaluations"]
+    if not isinstance(evaluations, int) or isinstance(evaluations, bool) or evaluations <= 0:
+        raise ValueError("capture objective evaluation count must be positive")
+    if record["evaluation_budget"] != EVALUATION_BUDGET:
+        raise ValueError(f"capture evaluation budget must be {EVALUATION_BUDGET}")
+
+    backend = record["observed_execution_backend"]
+    if not isinstance(backend, str) or not backend.strip():
+        raise ValueError("capture execution backend label is required")
+
+
+def test_capture_record_rejects_missing_backend_label() -> None:
+    record: ParityRecord = {
+        "directed": False,
+        "normalized_tour": [0, 1, 2],
+        "tour_length": 3.0,
+        "iterations": 1,
+        "objective_evaluations": 1,
+        "evaluation_budget": 100,
+        "budget_terminated": False,
+        "variant": "pure",
+        "observed_execution_backend": "",
+        "seed": 1729,
+    }
+
+    with pytest.raises(ValueError, match="backend"):
+        _validate_record(record, matrix_size=3)
+
+
+def _require_working_jit() -> None:
+    """Skip only before JIT is available; compilation problems must fail."""
+    if not _nb.NUMBA_AVAILABLE:
+        pytest.skip("Numba JIT unavailable: parity is not JIT-validated in this interpreter")
+
+    matrix = np.ascontiguousarray(
+        np.array([[0.0, 2.0, 7.0], [5.0, 0.0, 3.0], [4.0, 9.0, 0.0]]),
+        dtype=np.float64,
+    )
+    route = np.ascontiguousarray(np.array([0, 1, 2], dtype=np.int64))
+    assert _nb._calculate_tour_length_atsp_numba(route, matrix) == pytest.approx(9.0)
+    assert _nb._calculate_tour_length_atsp_numba.nopython_signatures, (
+        "Numba reported available but the matrix objective did not compile in nopython mode"
+    )
+
+
+def _solver_for_case(solver_name: str, variant: Literal["pure", "memetic_2opt"]):
+    common = {
+        "max_iterations": 1,
+        "random_seed": SEED,
+        "polish_enabled": variant == "memetic_2opt",
+        "polish_interval": 1,
+        "polish_iters": 1,
+        "final_polish_iters": 1,
+        "evaluation_budget": EVALUATION_BUDGET,
+    }
+    if solver_name == "gwo":
+        return GWOOptimizer(pack_size=4, **common)
+    if solver_name == "hho":
+        return HHOOptimizer(hawks=4, dive_count=0, **common)
+    raise ValueError(f"unknown Bildiri solver {solver_name!r}")
+
+
+def _capture_case(
+    solver_name: str,
+    variant: Literal["pure", "memetic_2opt"],
+    directed: bool,
+) -> ParityRecord:
+    matrix = _directed_matrix() if directed else _symmetric_matrix()
+    result = _solver_for_case(solver_name, variant).solve_with_matrix(
+        matrix, closed_tsp=True, recalculate=False
+    )
+
+    assert len(result.tour) == len(matrix)
+    assert set(result.tour) == set(range(len(matrix)))
+    assert result.tour_length == pytest.approx(closed_cost(result.tour, matrix), abs=0.0)
+
+    extra_stats = result.extra_stats
+    record: ParityRecord = {
+        "directed": directed,
+        "normalized_tour": list(normalize_cycle(result.tour, directed=directed)),
+        "tour_length": float(result.tour_length),
+        "iterations": int(result.iterations),
+        "objective_evaluations": int(extra_stats["objective_evaluations"]),
+        "evaluation_budget": int(extra_stats["evaluation_budget"]),
+        "budget_terminated": bool(extra_stats["budget_terminated"]),
+        "variant": variant,
+        "observed_execution_backend": str(extra_stats.get("execution_backend", "")),
+        "seed": int(result.seed),
+    }
+    _validate_record(record, matrix_size=len(matrix))
+    return record
+
+
+def _capture_all_cases() -> dict[str, ParityRecord]:
+    _require_working_jit()
+    return {
+        case_name: _capture_case(solver_name, variant, directed)
+        for case_name, solver_name, variant, directed in CASE_SPECS
+    }
+
+
+def _fixture_payload(records: Mapping[str, ParityRecord]) -> dict[str, object]:
+    expected_names = {case_name for case_name, *_ in CASE_SPECS}
+    if set(records) != expected_names:
+        raise ValueError("fixture must contain exactly the eight named Bildiri cases")
+    return {"schema_version": FIXTURE_SCHEMA_VERSION, "records": dict(records)}
+
+
+def _write_capture(path: Path) -> None:
+    payload = _fixture_payload(_capture_all_cases())
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _read_fixture() -> dict[str, object]:
+    payload = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+    assert set(payload) == {"schema_version", "records"}
+    assert payload["schema_version"] == FIXTURE_SCHEMA_VERSION
+    assert isinstance(payload["records"], dict)
+    assert set(payload["records"]) == {case_name for case_name, *_ in CASE_SPECS}
+    return payload
+
+
+@pytest.mark.parametrize("case_name,solver_name,variant,directed", CASE_SPECS)
+def test_fixed_seed_bildiri_solver_matches_golden_fixture(
+    case_name: str,
+    solver_name: str,
+    variant: Literal["pure", "memetic_2opt"],
+    directed: bool,
+) -> None:
+    """The legacy solver must preserve its deterministic direct-matrix output."""
+    _require_working_jit()
+    expected = _read_fixture()["records"][case_name]
+    actual = _capture_case(solver_name, variant, directed)
+    for field in ParityRecord.__annotations__:
+        assert actual[field] == expected[field]
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--capture", type=Path, required=True)
+    args = parser.parse_args()
+    _write_capture(args.capture)
+
+
+if __name__ == "__main__":
+    main()

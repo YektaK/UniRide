@@ -1,0 +1,157 @@
+{
+  "records": {
+    "gwo_memetic_2opt_directed_atsp": {
+      "budget_terminated": false,
+      "directed": true,
+      "evaluation_budget": 100,
+      "iterations": 1,
+      "normalized_tour": [
+        0,
+        4,
+        3,
+        5,
+        2,
+        1
+      ],
+      "objective_evaluations": 80,
+      "observed_execution_backend": "mixed-numba-objective-python-polish",
+      "seed": 1729,
+      "tour_length": 29.0,
+      "variant": "memetic_2opt"
+    },
+    "gwo_memetic_2opt_symmetric_tsp": {
+      "budget_terminated": false,
+      "directed": false,
+      "evaluation_budget": 100,
+      "iterations": 1,
+      "normalized_tour": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "objective_evaluations": 80,
+      "observed_execution_backend": "mixed-numba-objective-python-polish",
+      "seed": 1729,
+      "tour_length": 38.0,
+      "variant": "memetic_2opt"
+    },
+    "gwo_pure_directed_atsp": {
+      "budget_terminated": false,
+      "directed": true,
+      "evaluation_budget": 100,
+      "iterations": 1,
+      "normalized_tour": [
+        0,
+        1,
+        2,
+        5,
+        4,
+        3
+      ],
+      "objective_evaluations": 5,
+      "observed_execution_backend": "numba-objective",
+      "seed": 1729,
+      "tour_length": 39.0,
+      "variant": "pure"
+    },
+    "gwo_pure_symmetric_tsp": {
+      "budget_terminated": false,
+      "directed": false,
+      "evaluation_budget": 100,
+      "iterations": 1,
+      "normalized_tour": [
+        0,
+        4,
+        3,
+        2,
+        1,
+        5
+      ],
+      "objective_evaluations": 5,
+      "observed_execution_backend": "numba-objective",
+      "seed": 1729,
+      "tour_length": 43.0,
+      "variant": "pure"
+    },
+    "hho_memetic_2opt_directed_atsp": {
+      "budget_terminated": false,
+      "directed": true,
+      "evaluation_budget": 100,
+      "iterations": 1,
+      "normalized_tour": [
+        0,
+        4,
+        3,
+        5,
+        2,
+        1
+      ],
+      "objective_evaluations": 83,
+      "observed_execution_backend": "mixed-numba-objective-python-polish",
+      "seed": 1729,
+      "tour_length": 29.0,
+      "variant": "memetic_2opt"
+    },
+    "hho_memetic_2opt_symmetric_tsp": {
+      "budget_terminated": false,
+      "directed": false,
+      "evaluation_budget": 100,
+      "iterations": 1,
+      "normalized_tour": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "objective_evaluations": 83,
+      "observed_execution_backend": "mixed-numba-objective-python-polish",
+      "seed": 1729,
+      "tour_length": 38.0,
+      "variant": "memetic_2opt"
+    },
+    "hho_pure_directed_atsp": {
+      "budget_terminated": false,
+      "directed": true,
+      "evaluation_budget": 100,
+      "iterations": 1,
+      "normalized_tour": [
+        0,
+        3,
+        5,
+        4,
+        1,
+        2
+      ],
+      "objective_evaluations": 9,
+      "observed_execution_backend": "numba-objective",
+      "seed": 1729,
+      "tour_length": 48.0,
+      "variant": "pure"
+    },
+    "hho_pure_symmetric_tsp": {
+      "budget_terminated": false,
+      "directed": false,
+      "evaluation_budget": 100,
+      "iterations": 1,
+      "normalized_tour": [
+        0,
+        3,
+        2,
+        1,
+        4,
+        5
+      ],
+      "objective_evaluations": 8,
+      "observed_execution_backend": "numba-objective",
+      "seed": 1729,
+      "tour_length": 48.0,
+      "variant": "pure"
+    }
+  },
+  "schema_version": "uniride-bildiri-parity/v1"
+}

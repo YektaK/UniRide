@@ -23,7 +23,7 @@ from uniride_core.algorithms import numba_accel as _nb
 
 class BaseTSPSolver(ABC):
     """Abstract base class for all TSP solvers."""
-    
+
     def __init__(self, name: str, random_seed: Optional[int] = None, exclude_depot: bool = False):
         self.name = name
         self.random_seed = random_seed
@@ -43,7 +43,7 @@ class BaseTSPSolver(ABC):
         if self._exclude_depot or (self._use_time_matrix and not self._matrix_as_closed_tsp):
             return list(range(1, self._n))
         return list(range(self._n))
-    
+
     def _set_problem(self, coordinates: List[Tuple[float, float]]):
         """Load problem coordinates and cache distance matrix."""
         self._coordinates = coordinates
@@ -56,7 +56,7 @@ class BaseTSPSolver(ABC):
             self._dist_matrix = self._build_dist_matrix(coordinates)
         # Gelistirme #1: Python list hazır olduktan sonra numpy önbelleğini bir kez oluştur.
         self._build_np_cache()
-    
+
     def _build_dist_matrix(self, coordinates: List[Tuple[float, float]]) -> List[List[float]]:
         """Pre-compute full Euclidean distance matrix for numba JIT."""
         n = len(coordinates)
@@ -66,7 +66,7 @@ class BaseTSPSolver(ABC):
                 if i != j:
                     dm[i][j] = self.euclidean_distance(coordinates[i], coordinates[j])
         return dm
-    
+
     def _set_time_matrix(self, time_matrix: List[List[float]]):
         """
         Load problem as time/distance matrix.
@@ -81,12 +81,12 @@ class BaseTSPSolver(ABC):
         self._dist_matrix = time_matrix
         # Gelistirme #1: Zaman matrisi yüklendiğinde numpy önbelleğini de hemen oluştur.
         self._build_np_cache()
-    
+
     def _build_np_cache(self):
         """Gelistirme #1 — Numpy Veri Transferi Optimizasyonu.
-        
-        dist_matrix (Python list-of-lists) bir kez np.ndarray'e dönüştürülür ve 
-        _dist_matrix_np olarak önbelleklenir. Bu sayede her nb_two_opt / _tour_length_fast 
+
+        dist_matrix (Python list-of-lists) bir kez np.ndarray'e dönüştürülür ve
+        _dist_matrix_np olarak önbelleklenir. Bu sayede her nb_two_opt / _tour_length_fast
         çağrısında tekrarlanan np.array() maliyeti ortadan kalkar.
         Numpy mevcut değilse sessizce atlanır; mevcut davranış korunur.
         """
@@ -97,8 +97,8 @@ class BaseTSPSolver(ABC):
 
     def _tour_length_fast(self, tour: List[int]) -> float:
         """Gelistirme #2 — Hızlı Tur Uzunluğu Hesabı.
-        
-        Önce numpy önbelleği (_dist_matrix_np) ve numba_accel JIT kerneli kullanılmaya 
+
+        Önce numpy önbelleği (_dist_matrix_np) ve numba_accel JIT kerneli kullanılmaya
         çalışılır. Başarısız olursa mevcut Python tabanlı hesaplamaya düşer (fallback).
         Bu sayede GA döngüsündeki her `self.tour_length(child)` çağrısı Numba ile hızlanır.
         Mevcut tour_length() metodu değişmeden korunur — geriye dönük uyumluluk sağlanır.
@@ -140,11 +140,11 @@ class BaseTSPSolver(ABC):
         eigenvectors = eigenvectors[:, idx]
         coords = eigenvectors[:, :2] * np.sqrt(np.maximum(eigenvalues[:2], 0))
         return [(float(coords[i, 0]), float(coords[i, 1])) for i in range(n)]
-    
+
     @staticmethod
     def euclidean_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> float:
         """Calculate NINT Euclidean distance (TSPLIB EUC_2D standard).
-        
+
         TSPLIB standard: d(i,j) = NINT( sqrt( (xi-xj)^2 + (yi-yj)^2 ) )
         Uses int(x + 0.5) NOT round() — Python round() uses banker's rounding
         which rounds 0.5 to the nearest EVEN integer, causing incorrect distances.
@@ -152,14 +152,14 @@ class BaseTSPSolver(ABC):
         dx = p1[0] - p2[0]
         dy = p1[1] - p2[1]
         return int(math.sqrt(dx * dx + dy * dy) + 0.5)
-    
+
     def tour_length(self, tour: List[int]) -> float:
         """Calculate total tour length (Euclidean) or duration (time matrix)."""
         if self._use_time_matrix and self._time_matrix is not None:
             return self._tour_length_matrix(tour)
         else:
             return self._tour_length_euclidean(tour)
-    
+
     def _tour_length_euclidean(self, tour: List[int]) -> float:
         """Calculate total tour length for a given tour using Euclidean distances."""
         if not tour or len(tour) < 2:
@@ -173,7 +173,7 @@ class BaseTSPSolver(ABC):
                 self._coordinates[to_node]
             )
         return total
-    
+
     def _tour_length_matrix(self, tour: List[int]) -> float:
         """Calculate total tour duration using time matrix."""
         if not tour:
@@ -190,20 +190,20 @@ class BaseTSPSolver(ABC):
             to_node = nodes[i + 1]
             total += self._time_matrix[from_node][to_node]
         return total
-    
+
     @abstractmethod
     def solve(self, coordinates: List[Tuple[float, float]]) -> TSPResult:
         """
         Solve a TSP instance.
-        
+
         Args:
             coordinates: List of (x, y) coordinates. Index 0 is the depot.
-            
+
         Returns:
             TSPResult with standardized output format.
         """
         pass
-    
+
     def solve_with_matrix(
         self,
         time_matrix: List[List[float]],
@@ -212,14 +212,14 @@ class BaseTSPSolver(ABC):
     ) -> TSPResult:
         """
         Solve using time/distance matrix instead of coordinates.
-        
+
         Args:
             time_matrix: Square matrix where time_matrix[i][j] is the cost from i to j.
                          Index 0 is the depot.
             recalculate: If True, recalculate tour_length using the matrix after solving.
             closed_tsp: If True, optimize every matrix node as a closed TSP/ATSP
                         cycle. If False, preserve the historical fixed-depot mode.
-        
+
         Returns:
             TSPResult with tour_length recalculated from time matrix if recalculate=True.
         """
@@ -229,7 +229,7 @@ class BaseTSPSolver(ABC):
         if recalculate:
             result.tour_length = self._tour_length_matrix(result.tour)
         return result
-    
+
     def _random_tour(self) -> List[int]:
         """Generate a random tour starting and ending at depot (0)."""
         import random

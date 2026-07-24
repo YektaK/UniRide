@@ -133,16 +133,6 @@ NUMBA_PARAM_SPACES: Dict[str, Dict[str, Dict[str, Any]]] = {
         "num_starts":          {"type": "int",   "doe": [5, 10, 20],            "optuna": (1, 50)},
         "window":              {"type": "int",   "doe": [0, 8, 20],             "optuna": (0, 50)},
     },
-    "B-PSO": {
-        "swarm_size":      {"type": "int", "doe": [30, 50, 80]},
-        "max_iterations":  {"type": "int", "doe": [300, 500]},
-        "inertia_weight":  {"type": "float", "doe": [0.729]},
-        "cognitive_coeff": {"type": "float", "doe": [1.49445]},
-        "social_coeff":    {"type": "float", "doe": [1.49445]},
-        "max_velocity_size": {"type": "int", "doe": [5, 8]},
-        "reinit_interval": {"type": "int", "doe": [30, 50]},
-        "max_no_improvement": {"type": "int", "doe": [100]},
-    },
     "GA-Split": {
         "pop_size":        {"type": "int", "doe": [80, 120, 150]},
         "generations":     {"type": "int", "doe": [250, 350, 500]},
@@ -169,15 +159,6 @@ NUMBA_PARAM_SPACES: Dict[str, Dict[str, Dict[str, Any]]] = {
         "hawks":           {"type": "int", "doe": [50, 80, 120]},
         "iterations":      {"type": "int", "doe": [200, 300, 450]},
         "max_stops_bounded": {"type": "int", "doe": [10, 15, 20]},
-    },
-    "B-GA": {
-        "population_size": {"type": "int", "doe": [80, 100, 150]},
-        "generations":     {"type": "int", "doe": [300, 500]},
-        "crossover_rate":  {"type": "float", "doe": [0.80, 0.85, 0.90]},
-        "mutation_rate":   {"type": "float", "doe": [0.12, 0.15, 0.18]},
-        "elite_count":     {"type": "int", "doe": [2, 4]},
-        "tournament_size": {"type": "int", "doe": [3, 5]},
-        "max_no_improvement": {"type": "int", "doe": [100]},
     },
     "3-OPT-BOUNDED": {
         "max_iterations":  {"type": "int", "doe": [300, 500, 1000]},

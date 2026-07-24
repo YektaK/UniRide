@@ -1,6 +1,3 @@
-import os
-_ENGINE_DIR = os.path.dirname(os.path.abspath(__file__))
-_AB_DIR = os.path.join(_ENGINE_DIR, 'bildiri2026')
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -29,6 +26,8 @@ import json
 import math
 import os
 
+_ENGINE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # Prevent OpenBLAS/NumPy crashes when using ProcessPoolExecutor on Linux/macOS.
 # Each worker process would otherwise try to spawn its own BLAS thread pool,
 # causing massive oversubscription and deadlocks. Setting to 1 forces single-threaded
@@ -55,7 +54,19 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 from uniride_core.algorithms._platform import fix_windows_encoding
 fix_windows_encoding()
 
+LEGACY_ALGORITHM_MIGRATIONS = {
+    "B-GA": "Core-GA-TSP",
+    "B-PSO": "Core-PSO-TSP",
+}
 
+
+def _validate_algorithm_migration(algorithm_id: Any) -> None:
+    """Reject retired CLI identities with their canonical replacement."""
+    replacement = LEGACY_ALGORITHM_MIGRATIONS.get(str(algorithm_id))
+    if replacement:
+        raise ValueError(
+            f"Algorithm '{algorithm_id}' has been retired. Use '{replacement}' instead."
+        )
 
 
 try:
@@ -141,37 +152,12 @@ except ImportError:
         return -1
 
 def _detect_numba() -> bool:
-    """Numba aktif mi tespit et — once dogrudan import numba, sonra bildiri2026."""
+    """Report the canonical acceleration module's availability."""
     try:
-        import numba  # pylint: disable=unused-import
-        return True
-    except ImportError:
-        pass
-    import importlib.util
-
-    try:
-        spec = importlib.util.find_spec("core.numba_accel")
-    except (ImportError, ModuleNotFoundError, ValueError):
-        spec = None
-    if spec is None and os.path.isdir(_AB_DIR):
-
-        try:
-            from core import numba_accel as _nb  # type: ignore
-            return bool(_nb.NUMBA_AVAILABLE)
-        except Exception:
-            pass
-        finally:
-            try:
-                sys.path.remove(_AB_DIR)
-            except ValueError:
-                pass
-    elif spec is not None:
-        try:
-            from core import numba_accel as _nb  # type: ignore
-            return bool(_nb.NUMBA_AVAILABLE)
-        except Exception:
-            pass
-    return False
+        from uniride_core.algorithms import numba_accel
+    except Exception:
+        return False
+    return bool(numba_accel.NUMBA_AVAILABLE)
 
 
 _NUMBA_AVAILABLE = _detect_numba()
@@ -585,8 +571,11 @@ def _query_edge_weight_type(problem_name: str, db_path: str):
 
 def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], int, int]) -> Dict[str, Any]:
     """Bir parametre kombinasyonunu belirli run sayısınca test eder."""
-    from uniride_core.algorithms.numba_metaheuristics import run_single_test
     problem_dict, strategy_name, strategy_payload, strategy_params, combo_idx, n_runs = task
+    _validate_algorithm_migration(strategy_name)
+    if strategy_payload != strategy_name:
+        _validate_algorithm_migration(strategy_payload)
+    from uniride_core.algorithms.numba_metaheuristics import run_single_test
 
     is_time_matrix = problem_dict.get("is_time_matrix", False)
     time_matrix_data = problem_dict.get("time_matrix")
@@ -715,28 +704,17 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
                 }
                 run_results.append(result)
                 continue
-        # Step 5b: legacy dispatch for bildiri2026 and direct engine calls
+        # Step 5b: direct engine fallback for unregistered legacy names.
         if str(strategy_name) in ("GWO", "HHO") and str(strategy_payload) in ("GWO", "HHO"):
             import warnings
             warnings.warn(
                 f"Algorithm '{strategy_name}' uses the legacy Numba path. "
-                f"Use 'Numba-{strategy_name}' or 'Core-{strategy_name}-TSP' for the "
-                f"bildiri2026-accelerated solver.",
+                f"Use 'Numba-{strategy_name}' or 'Core-{strategy_name}-TSP' for canonical "
+                f"matrix-solver execution.",
                 DeprecationWarning,
                 stacklevel=2,
             )
-        if str(strategy_payload) in ("BILDIRI_PSO", "BILDIRI_GA"):
-            if not BILDIRI_STRATEGIES:
-                raise ImportError(
-                    "Strategy {} requires bildiri2026 which is not installed. "
-                    "Either install bildiri2026 or exclude B-PSO/B-GA from the benchmark."
-                    .format(strategy_payload)
-                )
-            if str(strategy_payload) == "BILDIRI_PSO":
-                result = _run_bildiri_pso(problem_dict, seed, strategy_params)
-            else:
-                result = _run_bildiri_ga(problem_dict, seed, strategy_params)
-        elif is_time_matrix and time_matrix_data:
+        if is_time_matrix and time_matrix_data:
             result = run_single_test_with_matrix(
                 problem, strategy_payload, seed, strategy_params, time_matrix_data
             )
@@ -841,182 +819,6 @@ def _run_pool(tasks: List[Tuple], workers: int, on_result=None) -> List[Dict[str
                     "per_run_lengths": []
                 })
     return results
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# BÖLÜM 3b: bildiri2026 Adapter (Step 5)
-# ─────────────────────────────────────────────────────────────────────────────
-
-def _run_bildiri_solver(
-    solver_cls,
-    solver_kwargs: Dict[str, Any],
-    problem_dict: Dict[str, Any],
-    seed: int,
-) -> Dict[str, Any]:
-    """Generic adapter: run a bildiri2026 BaseTSPSolver on a DOEProblem dict.
-
-    bildiri2026 convention:
-      - Node 0 = depot (implicit; tour excludes depot)
-      - tour: List[int] of 1..n waypoint indices in full_coords/full_tm
-
-    Our convention:
-      - No depot; all nodes are waypoints 1..n ("L1".."Ln")
-      - coords[i] = node L(i+1), i.e. 0-indexed in the original list.
-    """
-    import time as _time
-    from uniride_core.algorithms.numba_utils import create_np_distance_matrix
-    is_tm = problem_dict.get("is_time_matrix", False)
-    coords = problem_dict.get("coordinates", [])
-    optimal = problem_dict.get("optimal")
-
-    solver = solver_cls(**solver_kwargs, random_seed=seed)
-
-    t0 = _time.perf_counter()
-
-    if is_tm:
-        tm = problem_dict["time_matrix"]
-        n = len(tm)
-        # Insert depot row/col (all zeros) at index 0
-        full_tm = [[0.0] * (n + 1) for _ in range(n + 1)]
-        for i in range(n):
-            for j in range(n):
-                full_tm[i + 1][j + 1] = float(tm[i][j])
-        result = solver.solve_with_matrix(full_tm)
-        tour_nodes = result.tour  # 1-indexed in full_tm (0 = depot)
-        tour_length = float(sum(
-            tm[tour_nodes[k] - 1][tour_nodes[(k + 1) % len(tour_nodes)] - 1]
-            for k in range(len(tour_nodes))
-        ))
-    else:
-        # Prepend dummy depot (0.0, 0.0) so bildiri2026 indices align
-        full_coords = [(0.0, 0.0)] + list(coords)
-        result = solver.solve(full_coords)
-        tour_nodes = result.tour  # 1-indexed in full_coords
-        np_dm = _dm_from_cache(problem_dict.get("name", ""), db_path=TSPLIB_DB)
-        if np_dm is None:
-            np_dm = create_np_distance_matrix(coords)
-        tour_length = float(sum(
-            np_dm[tour_nodes[k] - 1, tour_nodes[(k + 1) % len(tour_nodes)] - 1]
-            for k in range(len(tour_nodes))
-        ))
-
-    elapsed_ms = (_time.perf_counter() - t0) * 1000.0
-
-    if optimal and optimal > 0:
-        gap = ((tour_length - optimal) / optimal) * 100.0
-    else:
-        gap = float("nan")
-
-    return {
-        "tour_length": tour_length,
-        "gap": gap,
-        "time_ms": elapsed_ms,
-        "algorithm_type": "bildiri_meta",
-    }
-
-
-def _run_bildiri_pso(
-    problem_dict: Dict[str, Any],
-    seed: int,
-    params: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
-    """Run bildiri2026 PSOOptimizer on a DOEProblem dict."""
-    try:
-        from academic_benchmark.bildiri2026.core import PSOOptimizer
-    except ModuleNotFoundError:
-        from bildiri2026.core import PSOOptimizer  # type: ignore[no-redef]
-    p = params or {}
-    kwargs = {
-        "swarm_size": int(p.get("swarm_size", 50)),
-        "max_iterations": int(p.get("max_iterations", 500)),
-        "inertia_weight": float(p.get("inertia_weight", 0.729)),
-        "cognitive_coeff": float(p.get("cognitive_coeff", 1.49445)),
-        "social_coeff": float(p.get("social_coeff", 1.49445)),
-        "max_velocity_size": int(p.get("max_velocity_size", 5)),
-        "max_no_improvement": int(p.get("max_no_improvement", 100)),
-        "reinit_interval": int(p.get("reinit_interval", 50)),
-    }
-    return _run_bildiri_solver(PSOOptimizer, kwargs, problem_dict, seed)
-
-
-def _run_bildiri_ga(
-    problem_dict: Dict[str, Any],
-    seed: int,
-    params: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
-    """Run bildiri2026 GAOptimizer on a DOEProblem dict."""
-    try:
-        from academic_benchmark.bildiri2026.core import GAOptimizer
-    except ModuleNotFoundError:
-        from bildiri2026.core import GAOptimizer  # type: ignore[no-redef]
-    p = params or {}
-    kwargs = {
-        "population_size": int(p.get("population_size", 100)),
-        "generations": int(p.get("generations", 500)),
-        "crossover_rate": float(p.get("crossover_rate", 0.85)),
-        "mutation_rate": float(p.get("mutation_rate", 0.15)),
-        "elite_count": int(p.get("elite_count", 2)),
-        "tournament_size": int(p.get("tournament_size", 3)),
-        "max_no_improvement": int(p.get("max_no_improvement", 100)),
-    }
-    return _run_bildiri_solver(GAOptimizer, kwargs, problem_dict, seed)
-
-
-def _get_bildiri_strategies() -> List[Tuple[str, str, Dict[str, Any]]]:
-    """Return bildiri2026 strategies only if bildiri2026 is importable."""
-    import importlib.util
-    try:
-        if importlib.util.find_spec("core.pso_solver") is not None:
-            return [
-                ("B-PSO", "BILDIRI_PSO", {
-                    "swarm_size": 50, "max_iterations": 500,
-                    "inertia_weight": 0.729, "cognitive_coeff": 1.49445,
-                    "social_coeff": 1.49445, "max_velocity_size": 5,
-                    "max_no_improvement": 100, "reinit_interval": 50,
-                    "algorithm_type": "bildiri_meta",
-                }),
-                ("B-GA", "BILDIRI_GA", {
-                    "population_size": 100, "generations": 500,
-                    "crossover_rate": 0.85, "mutation_rate": 0.15,
-                    "elite_count": 2, "tournament_size": 3,
-                    "max_no_improvement": 100,
-                    "algorithm_type": "bildiri_meta",
-                }),
-            ]
-    except (ImportError, ModuleNotFoundError, ValueError):
-        pass
-
-    if os.path.isdir(_AB_DIR):
-
-        try:
-            from core import pso_solver, ga_solver  # pylint: disable=unused-import
-            return [
-                ("B-PSO", "BILDIRI_PSO", {
-                    "swarm_size": 50, "max_iterations": 500,
-                    "inertia_weight": 0.729, "cognitive_coeff": 1.49445,
-                    "social_coeff": 1.49445, "max_velocity_size": 5,
-                    "max_no_improvement": 100, "reinit_interval": 50,
-                    "algorithm_type": "bildiri_meta",
-                }),
-                ("B-GA", "BILDIRI_GA", {
-                    "population_size": 100, "generations": 500,
-                    "crossover_rate": 0.85, "mutation_rate": 0.15,
-                    "elite_count": 2, "tournament_size": 3,
-                    "max_no_improvement": 100,
-                    "algorithm_type": "bildiri_meta",
-                }),
-            ]
-        except Exception:
-            pass
-        finally:
-            try:
-                sys.path.remove(_AB_DIR)
-            except ValueError:
-                pass
-    return []
-
-
-BILDIRI_STRATEGIES: List[Tuple[str, str, Dict[str, Any]]] = _get_bildiri_strategies()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1560,20 +1362,6 @@ def _build_optuna_search_space(spec: StrategySpec, trial: Any) -> Dict[str, Any]
     elif name == "HHO":
         params["hawks"] = trial.suggest_int("hawks", 20, 120)
         params["iterations"] = trial.suggest_int("iterations", 200, 500)
-    elif name == "B-PSO":
-        params["swarm_size"] = trial.suggest_int("swarm_size", 20, 80)
-        params["max_iterations"] = trial.suggest_int("max_iterations", 200, 500)
-        params["inertia_weight"] = trial.suggest_float("inertia_weight", 0.4, 0.9)
-        params["cognitive_coeff"] = trial.suggest_float("cognitive_coeff", 1.0, 2.5)
-        params["social_coeff"] = trial.suggest_float("social_coeff", 1.0, 2.5)
-        params["max_velocity_size"] = trial.suggest_int("max_velocity_size", 3, 10)
-    elif name == "B-GA":
-        params["population_size"] = trial.suggest_int("population_size", 50, 150)
-        params["generations"] = trial.suggest_int("generations", 200, 500)
-        params["crossover_rate"] = trial.suggest_float("crossover_rate", 0.75, 0.95)
-        params["mutation_rate"] = trial.suggest_float("mutation_rate", 0.05, 0.25)
-        params["elite_count"] = trial.suggest_int("elite_count", 1, 6)
-        params["tournament_size"] = trial.suggest_int("tournament_size", 2, 6)
     else:
         params["max_iterations"] = trial.suggest_int("max_iterations", 100, 1000)
     return params
@@ -1998,7 +1786,7 @@ def _save_best_to_param_db(
 
 
 def _manual_param_entry_interactive(specs: List[StrategySpec]) -> Dict[str, Dict[str, Any]]:
-    """Interactive manual parameter entry like bildiri2026 Stage 1.
+    """Interactive manual parameter entry.
     Shows defaults → asks for edits.
     Returns {spec.name: {param_key: value, ...}, ...}
     """
@@ -2464,7 +2252,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if choice == '2':
             print("\nParametre Kaynagi Secimi:")
             print("  [B] En iyi parametreleri DB'den yukle")
-            print("  [M] Manuel parametre girisi (bildiri2026 stili)")
+            print("  [M] Manuel parametre girisi")
             print("  [D] Varsayilan parametreler")
             ps_raw = input("Seciminiz [B/M/D]: ").strip().upper()
 

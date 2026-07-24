@@ -227,7 +227,7 @@ def run_warmup(algorithms: List[str], all_problems: List[ProblemInstance]):
     burma = next((p for p in all_problems if p.name == "burma14"), None)
     if not burma:
         return
-    numba_algos = [a for a in algorithms if a.startswith("Numba-") or a in ("B-PSO", "B-GA")]
+    numba_algos = [a for a in algorithms if a.startswith("Numba-")]
     if not numba_algos:
         return
     print("\n[WARMUP] Compiling Numba JIT kernels sequentially...")
@@ -342,7 +342,7 @@ class TuningOrchestrator:
         print("=" * 70)
 
     def run(self) -> Dict[str, Dict[str, Any]]:
-        numba_algos = [a for a in self.algorithms if a.startswith("Numba-") or a in ("B-PSO", "B-GA")]
+        numba_algos = [a for a in self.algorithms if a.startswith("Numba-")]
         sota_algos = [a for a in self.algorithms if a.startswith("SOTA-")]
 
         # Print pre-run summary
@@ -625,10 +625,7 @@ def _menu_tuning(all_problems, metadata):
     all_algos = AlgorithmRegistry.list_algorithms()
     print("\n" + "-" * 60)
     print("ALGORITMA NOTLARI:")
-    print("  B-PSO  : Bildiri2026 PSO — Discrete swap-sequence velocity,")
-    print("           memetic 2-opt, Clerc constriction, periodic re-init")
-    print("  B-GA   : Bildiri2026 GA  — Tournament selection, elite preserve,")
-    print("           dedicated TSP crossover, built-in 2-opt polishing")
+
     print("  Numba-GA/PSO : Classical meta-heuristics with Numba JIT")
     print("-" * 60)
     selected_algos = multi_select(all_algos, "ALGORITMA SECIMI")
@@ -683,11 +680,11 @@ def _menu_tuning(all_problems, metadata):
         param_overrides=param_overrides,
     )
     best_params = orchestrator.run()
-    if not best_params and not any(a.startswith("Numba-") or a.startswith("SOTA-") or a in ("B-PSO", "B-GA") for a in selected_algos):
+    if not best_params and not any(a.startswith("Numba-") or a.startswith("SOTA-") for a in selected_algos):
         return
 
     # Save to DB
-    numba_algos = [a for a in selected_algos if a.startswith("Numba-") or a in ("B-PSO", "B-GA")]
+    numba_algos = [a for a in selected_algos if a.startswith("Numba-")]
     sota_algos = [a for a in selected_algos if a.startswith("SOTA-")]
     if numba_algos:
         from academic_benchmark.cli_engine import DOEProblem as DP
@@ -765,12 +762,12 @@ def _menu_benchmark_only(all_problems, metadata):
 
     print("\nParametre Kaynagi Secimi:")
     print("  [B] En iyi parametreleri DB'den yukle")
-    print("  [M] Manuel parametre girisi (bildiri2026 stili)")
+    print("  [M] Manuel parametre girisi")
     print("  [D] Varsayilan parametreler")
     ps_raw = input("Seciminiz [B/M/D]: ").strip().upper()
 
     if ps_raw == 'B':
-        numba_algos = [a for a in algos if a.startswith("Numba-") or a in ("B-PSO", "B-GA")]
+        numba_algos = [a for a in algos if a.startswith("Numba-")]
         sota_algos = [a for a in algos if a.startswith("SOTA-")]
         if numba_algos:
             from academic_benchmark.cli_engine import DOEProblem as DP
@@ -785,7 +782,7 @@ def _menu_benchmark_only(all_problems, metadata):
             clean_sota = [a.replace("SOTA-", "") for a in sota_algos]
             _sota_load_db_params(sota_probs, clean_sota)
     elif ps_raw == 'M':
-        numba_algos = [a for a in algos if a.startswith("Numba-") or a in ("B-PSO", "B-GA")]
+        numba_algos = [a for a in algos if a.startswith("Numba-")]
         sota_algos = [a for a in algos if a.startswith("SOTA-")]
         if numba_algos:
             numba_specs = [s for s in _numba_specs() if f"Numba-{s.name}" in numba_algos or s.name in numba_algos]

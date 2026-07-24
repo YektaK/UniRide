@@ -130,6 +130,18 @@ def test_forced_objective_failure_reports_successful_python_fallback(
     assert result.extra_stats["execution_backend"] == "objective=python;polish=none"
 
 
+def test_missing_cached_objective_kernel_reports_python(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delattr(_nb, "_calculate_tour_length_atsp_numba")
+    solver = _solver(GWOOptimizer, polish_enabled=False, fair=True)
+
+    result = _solve(solver, _symmetric_matrix())
+
+    assert solver._dist_matrix_np is not None
+    assert result.extra_stats["execution_backend"] == "objective=python;polish=none"
+
+
 @pytest.mark.parametrize("solver_type", [GWOOptimizer, HHOOptimizer], ids=["gwo", "hho"])
 def test_cached_objective_plain_python_shim_reports_python(
     monkeypatch: pytest.MonkeyPatch, solver_type: SolverType

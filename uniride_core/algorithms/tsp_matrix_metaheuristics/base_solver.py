@@ -144,15 +144,16 @@ class BaseTSPSolver(ABC):
         Mevcut tour_length() metodu değişmeden korunur — geriye dönük uyumluluk sağlanır.
         """
         if self._dist_matrix_np is not None:
-            objective_kernel = _nb._calculate_tour_length_atsp_numba
+            objective_kernel: Optional[Callable[..., object]] = None
             kernel_succeeded = False
             try:
+                objective_kernel = _nb._calculate_tour_length_atsp_numba
                 result = float(self._invoke_objective_kernel(objective_kernel, tour))
             except Exception:
                 pass  # Fallback: herhangi bir hata olursa yavaş yola dön
             else:
                 kernel_succeeded = True
-            if kernel_succeeded:
+            if kernel_succeeded and objective_kernel is not None:
                 backend = self._runtime_backend(objective_kernel)
                 self._backend_observation.objective.add(backend)
                 return result

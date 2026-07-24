@@ -122,20 +122,34 @@ class GWOOptimizer(BaseTSPSolver):
                 max_iterations=iters, first_improvement=False,
                 initial_cost=initial_cost,
             )
-            return result.route, result.cost, result.budget_exhausted
+            polished = result.route, result.cost, result.budget_exhausted
+            self._backend_observation.polish.add("python")
+            return polished
         if self._dist_matrix_np is not None:
             route_np = _nb._prepare_route(route)
             improved_np, length = _nb._two_opt_improve_atsp_numba(
                 route_np, self._dist_matrix_np, iters, False
             )
-            return _nb._extract_route(improved_np, route), float(length), False
+            polished = _nb._extract_route(improved_np, route), float(length), False
+            self._backend_observation.polish.add("numba")
+            return polished
         if self._dist_matrix is not None:
             improved, length = _nb.nb_two_opt(route, self._dist_matrix, iters, False)
-            return improved, float(length), False
-        return route[:], self.tour_length(route), False
+            polished = improved, float(length), False
+            backend = (
+                "numba"
+                if getattr(_nb._two_opt_improve_atsp_numba, "nopython_signatures", ())
+                else "python"
+            )
+            self._backend_observation.polish.add(backend)
+            return polished
+        polished = route[:], self.tour_length(route), False
+        self._backend_observation.polish.add("python")
+        return polished
 
     # ----- Main solve ---------------------------------------------
     def solve(self, coordinates: List[Tuple[float, float]]) -> TSPResult:
+        self._backend_observation.reset()
         self._rng = random.Random(self.random_seed)
         self._objective_budget.used = 0
         self._set_problem(coordinates)
@@ -291,13 +305,7 @@ class GWOOptimizer(BaseTSPSolver):
                 "evaluation_budget": self._objective_budget.limit,
                 "budget_terminated": budget_terminated,
                 "variant": "memetic_2opt" if self.polish_enabled else "pure",
-                "execution_backend": (
-                    "mixed-numba-objective-python-polish"
-                    if getattr(_nb, "NUMBA_AVAILABLE", False) and self.polish_enabled
-                    else "numba-objective"
-                    if getattr(_nb, "NUMBA_AVAILABLE", False)
-                    else "python"
-                ),
+                "execution_backend": self._backend_observation.label(),
             },
             history=history,
             seed=self.random_seed,

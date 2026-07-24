@@ -97,6 +97,18 @@ CASE_SPECS = (
     ("hho_memetic_2opt_directed_atsp", "hho", "memetic_2opt", True),
 )
 
+MATHEMATICAL_AND_ACCOUNTING_FIELDS = (
+    "directed",
+    "normalized_tour",
+    "tour_length",
+    "iterations",
+    "objective_evaluations",
+    "evaluation_budget",
+    "budget_terminated",
+    "variant",
+    "seed",
+)
+
 
 def _validate_record(record: Mapping[str, Any], *, matrix_size: int) -> None:
     """Reject incomplete or non-replayable capture records before persistence."""
@@ -398,19 +410,30 @@ def test_fixed_seed_bildiri_solver_matches_golden_fixture(
 
 
 @pytest.mark.parametrize("case_name,solver_name,variant,directed", CASE_SPECS)
-def test_relocated_solver_matches_legacy_exactly(
+def test_relocated_solver_preserves_math_with_runtime_backend(
     case_name: str,
     solver_name: str,
     variant: Literal["pure", "memetic_2opt"],
     directed: bool,
 ) -> None:
-    """The canonical relocation must preserve every characterized field."""
+    """Canonical math stays frozen while runtime metadata supersedes provenance."""
     _require_working_jit()
+    expected = _read_fixture()["records"][case_name]
     legacy = _capture_case(solver_name, variant, directed, implementation="legacy")
     canonical = _capture_case(
         solver_name, variant, directed, implementation="canonical"
     )
-    assert canonical == legacy, case_name
+    for field in MATHEMATICAL_AND_ACCOUNTING_FIELDS:
+        assert legacy[field] == expected[field], (case_name, field)
+        assert canonical[field] == expected[field], (case_name, field)
+
+    assert legacy["observed_execution_backend"] == expected[
+        "observed_execution_backend"
+    ]
+    expected_polish = "python" if variant == "memetic_2opt" else "none"
+    assert canonical["observed_execution_backend"] == (
+        f"objective=numba;polish={expected_polish}"
+    )
 
 
 def main() -> None:

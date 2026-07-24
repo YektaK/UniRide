@@ -8,6 +8,7 @@ Supports both:
 """
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from typing import List, Tuple, Optional
 import time
 import math
@@ -19,6 +20,21 @@ except ImportError:
 
 from uniride_core.models import TSPResult
 from uniride_core.algorithms import numba_accel as _nb
+
+
+@dataclass
+class BackendObservation:
+    objective: set[str] = field(default_factory=set)
+    polish: set[str] = field(default_factory=set)
+
+    def reset(self) -> None:
+        self.objective.clear()
+        self.polish.clear()
+
+    def label(self) -> str:
+        objective = "+".join(sorted(self.objective)) or "unused"
+        polish = "+".join(sorted(self.polish)) or "none"
+        return "objective={};polish={}".format(objective, polish)
 
 
 class BaseTSPSolver(ABC):
@@ -37,6 +53,7 @@ class BaseTSPSolver(ABC):
         # Gelistirme #1: Numpy önbelleği — matris bir kez np.ndarray'e dönüştürülür.
         # Bu, her nb_two_opt / tour_length çağrısındaki dönüşüm yükünü ortadan kaldırır.
         self._dist_matrix_np = None  # np.ndarray veya None
+        self._backend_observation = BackendObservation()
 
     def _initial_tour_nodes(self) -> List[int]:
         """Return initial node list. For time matrix, exclude depot(0); for TSP use all nodes."""
@@ -116,11 +133,15 @@ class BaseTSPSolver(ABC):
                 # _nb içindeki _prepare_route helper'ı bu dönüşümü yapıyor.
                 route_np = _nb._prepare_route(kernel_tour)
                 length = _nb._calculate_tour_length_atsp_numba(route_np, self._dist_matrix_np)
-                return float(length)
+                result = float(length)
+                self._backend_observation.objective.add("numba")
+                return result
             except Exception:
                 pass  # Fallback: herhangi bir hata olursa yavaş yola dön
         # Fallback: orijinal Python tabanlı hesaplama (güvenli)
-        return self.tour_length(tour)
+        result = self.tour_length(tour)
+        self._backend_observation.objective.add("python")
+        return result
 
     @staticmethod
     def _matrix_to_coordinates(time_matrix: List[List[float]]) -> List[Tuple[float, float]]:

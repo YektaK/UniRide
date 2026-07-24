@@ -1,9 +1,11 @@
 import builtins
 import sys
+from types import SimpleNamespace
 
 import pytest
 
 from academic_benchmark import cli_engine
+from academic_benchmark import smart_benchmark
 from uniride_core.algorithms import numba_accel
 
 
@@ -75,3 +77,46 @@ def test_detect_numba_imports_canonical_module_without_mutating_sys_path(monkeyp
     assert cli_engine._detect_numba() is bool(numba_accel.NUMBA_AVAILABLE)
     assert "uniride_core.algorithms" in imports
     assert sys.path == before
+
+@pytest.mark.parametrize("legacy_id,replacement_id", LEGACY_ALGORITHM_MIGRATIONS.items())
+def test_cli_main_rejects_retired_ids_before_setup_or_registry_enumeration(
+    monkeypatch, legacy_id, replacement_id
+):
+    def explode(*_args, **_kwargs):
+        raise AssertionError("legacy id reached CLI setup or registry enumeration")
+
+    monkeypatch.setattr(cli_engine, "_ensure_dirs", explode)
+    monkeypatch.setattr(cli_engine, "_param_db_set", explode)
+    monkeypatch.setattr(cli_engine, "_all_strategy_specs", explode)
+    monkeypatch.setattr(cli_engine, "load_problems", explode)
+
+    with pytest.raises(ValueError, match=replacement_id):
+        cli_engine.main(["--mode", "default", "--algos", legacy_id])
+
+
+@pytest.mark.parametrize("legacy_id,replacement_id", LEGACY_ALGORITHM_MIGRATIONS.items())
+def test_smart_benchmark_rejects_retired_ids_before_db_matrix_registry_or_warmup(
+    monkeypatch, legacy_id, replacement_id
+):
+    def explode(*_args, **_kwargs):
+        raise AssertionError("retired id reached smart benchmark setup")
+
+    class ExplodingRegistry:
+        @staticmethod
+        def list_algorithms():
+            explode()
+
+        @staticmethod
+        def get_executor(_algorithm_id):
+            explode()
+
+    monkeypatch.setattr(smart_benchmark, "_db_get_best", explode)
+    monkeypatch.setattr(smart_benchmark, "_dm_from_cache", explode)
+    monkeypatch.setattr(smart_benchmark, "run_warmup", explode)
+    monkeypatch.setattr(smart_benchmark, "AlgorithmRegistry", ExplodingRegistry)
+
+    problem = SimpleNamespace(name="legacy-boundary", dist_matrix=None, coordinates=[])
+    with pytest.raises(ValueError, match=replacement_id):
+        smart_benchmark.run_unified_benchmark(
+            [problem], [legacy_id], "db", 1, 1, {"results": {}}
+        )

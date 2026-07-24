@@ -55,6 +55,7 @@ from academic_benchmark.cli_engine import (
     _save_best_to_param_db as _numba_save_db,
     _edit_param_space_interactive as _numba_edit_space,
     _select_benchmark_problems_interactive as _numba_select_bench_probs,
+    _validate_algorithm_migration,
     DOE_MAX_COMBINATIONS as _NUMBA_MAX_COMBOS,
     load_problems as _numba_load_problems,
     DOEProblem,
@@ -445,6 +446,9 @@ def run_unified_benchmark(problems, algorithms, param_source, n_runs, workers, m
 
     param_source: 'db', 'manual', or 'default'
     """
+    for algorithm_id in algorithms:
+        _validate_algorithm_migration(algorithm_id)
+
     global _current_results, _current_metadata, _shutdown_requested
 
     # Resolve params per (problem, algorithm) pair

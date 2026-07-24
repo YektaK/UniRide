@@ -2006,21 +2006,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return run_fair_pilot_from_cli(
             fair_args.fair_config, fair_args.output_dir, problem_loader=load_problems,
         )
-    global _active_metadata
-    
-    _ensure_dirs()
-    _param_db_set(os.path.join(BENCHMARK_DB, "param_db.json"))
-    metadata = load_metadata(METADATA_PATH)
-    _active_metadata = metadata
-
-    all_specs = _all_strategy_specs()
-    selectable_algos = [spec.name for spec in all_specs]
-    
-    all_problems = load_problems()
-    if not all_problems:
-        print("[ERROR] Problem bulunamadi. TSPLIB_DIR veya tar.gz kontrol edin.")
-        return 1
-
     parser = argparse.ArgumentParser(description="UniRide Master NUMBA Engine")
     parser.add_argument("--mode", choices=["default", "tuning"], help="Çalışma modu")
     parser.add_argument("--algos", help="Algoritma listesi (virgülle ayrılmış)")
@@ -2035,6 +2020,24 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--edit-params", action="store_true", help="Tuning öncesi parametre uzayini duzenle")
     args, _ = parser.parse_known_args(argv)
 
+    if args.algos:
+        for algorithm_id in args.algos.split(","):
+            _validate_algorithm_migration(algorithm_id.strip())
+
+    global _active_metadata
+
+    _ensure_dirs()
+    _param_db_set(os.path.join(BENCHMARK_DB, "param_db.json"))
+    metadata = load_metadata(METADATA_PATH)
+    _active_metadata = metadata
+
+    all_specs = _all_strategy_specs()
+    selectable_algos = [spec.name for spec in all_specs]
+
+    all_problems = load_problems()
+    if not all_problems:
+        print("[ERROR] Problem bulunamadi. TSPLIB_DIR veya tar.gz kontrol edin.")
+        return 1
     # If --config is provided, load tuning config and route to tuning mode
     if args.config:
         cfg = _load_tuning_config(args.config, all_problems, all_specs)
@@ -2055,7 +2058,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     if args.mode:
         mode = EngineMode(args.mode)
-        algos = args.algos.split(",") if args.algos else selectable_algos
+        algos = [algorithm_id.strip() for algorithm_id in args.algos.split(",")] if args.algos else selectable_algos
         runs = args.runs or 3
         workers = min(cpu_count(), 6)
         

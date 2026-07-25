@@ -15,7 +15,7 @@ from collections import Counter
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path, PurePosixPath
-from typing import Iterable, Literal
+from typing import Callable, Iterable, Literal
 
 from pydantic import Field, ValidationError, model_validator
 
@@ -85,6 +85,9 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+EvidenceClassifier = Callable[[PurePosixPath], EvidenceClass]
+
+
 def classify_yaem_evidence(path: PurePosixPath) -> EvidenceClass:
     parts = tuple(part.lower() for part in path.parts)
     name = path.name.lower()
@@ -93,6 +96,16 @@ def classify_yaem_evidence(path: PurePosixPath) -> EvidenceClass:
     if in_reports or (in_results and "student_matrix" in name):
         return EvidenceClass.INVALID
     if in_results:
+        return EvidenceClass.HISTORICAL_UNVERIFIED
+    return EvidenceClass.REFERENCE_ONLY
+
+
+def classify_bildiri_evidence(path: PurePosixPath) -> EvidenceClass:
+    parts = tuple(part.lower() for part in path.parts)
+    name = path.name.lower()
+    if "results" in parts and "student_matrix" in name:
+        return EvidenceClass.INVALID
+    if "results" in parts or name == "tuned_parameters_db.json":
         return EvidenceClass.HISTORICAL_UNVERIFIED
     return EvidenceClass.REFERENCE_ONLY
 
@@ -154,7 +167,9 @@ def build_manifest(
     archived_root: Path,
     original_paths: Iterable[PurePosixPath],
     withheld: Iterable[ArchiveEntry],
+    classifier: EvidenceClassifier | None = None,
 ) -> ArchiveManifest:
+    classify = classifier if classifier is not None else classify_yaem_evidence
     paths = sorted(original_paths, key=lambda item: item.as_posix())
     for value in (source_root, archive_root, *paths):
         if not _is_repository_relative_path(value):
@@ -168,7 +183,7 @@ def build_manifest(
                 archive_path=(archive_root / relative).as_posix(),
                 byte_size=archived.stat().st_size,
                 sha256=sha256_file(archived),
-                classification=classify_yaem_evidence(relative),
+                classification=classify(relative),
             )
         )
     entries.sort(key=lambda entry: entry.original_path)
@@ -465,11 +480,29 @@ def _rollback(
     return errors
 
 
-def quarantine_tracked_tree(*, repo_root: Path, source_root: PurePosixPath, archive_root: PurePosixPath, archive_id: str) -> ArchiveManifest:
+def quarantine_tracked_tree(
+    *,
+    repo_root: Path,
+    source_root: PurePosixPath,
+    archive_root: PurePosixPath,
+    archive_id: str,
+    classifier: EvidenceClassifier | None = None,
+    include_paths: list[PurePosixPath] | None = None,
+) -> ArchiveManifest:
     repo_root, source_root, archive_root, source_fs, destination_root = _transaction_roots(repo_root, source_root, archive_root)
     tracked, findings = scan_tracked_tree(repo_root, source_root)
     if not tracked:
         raise QuarantineBlocked(f"no tracked files under {source_root}")
+    if include_paths is not None:
+        validated_includes: list[PurePosixPath] = []
+        for include_path in [PurePosixPath(p) for p in include_paths]:
+            if not _is_repository_relative_path(include_path):
+                raise QuarantineBlocked("include path must be repository-relative")
+            source = _source_path(repo_root, source_fs, include_path)
+            if not source.is_file():
+                raise QuarantineBlocked(f"include path not found: {include_path.as_posix()}")
+            validated_includes.append(include_path)
+        tracked = validated_includes
     if destination_root.exists():
         raise QuarantineBlocked(f"archive destination already exists: {archive_root}")
     untracked = _git_untracked_files(repo_root, source_root)
@@ -519,7 +552,15 @@ def quarantine_tracked_tree(*, repo_root: Path, source_root: PurePosixPath, arch
             moved.append(relative)
         for relative in moved:
             _checked_path(repo_root, destination_root, destination_root / Path(*relative.parts))
-        manifest = build_manifest(archive_id=archive_id, source_root=source_root, archive_root=archive_root, archived_root=destination_root, original_paths=moved, withheld=withheld_entries)
+        manifest = build_manifest(
+            archive_id=archive_id,
+            source_root=source_root,
+            archive_root=archive_root,
+            archived_root=destination_root,
+            original_paths=moved,
+            withheld=withheld_entries,
+            classifier=classifier,
+        )
         write_manifest(manifest, _checked_path(repo_root, destination_root, destination_root / "manifest.json"))
         errors = verify_manifest(manifest, destination_root)
         if errors:
@@ -588,6 +629,8 @@ def main(argv: list[str] | None = None) -> int:
     quarantine_parser.add_argument("--source", type=_as_repo_path, required=True)
     quarantine_parser.add_argument("--archive", type=_as_repo_path, required=True)
     quarantine_parser.add_argument("--archive-id", required=True)
+    quarantine_parser.add_argument("--profile", choices=["yaem", "bildiri"], default="yaem")
+    quarantine_parser.add_argument("--include", action="append", type=_as_repo_path, dest="include_paths")
 
     verify_parser = subparsers.add_parser("verify")
     verify_parser.add_argument("--repo-root", type=Path, required=True)
@@ -612,11 +655,14 @@ def main(argv: list[str] | None = None) -> int:
             return 2 if any(item.severity == "ambiguous" for item in findings) or untracked or unsafe_ignored else 0
 
         if args.command == "quarantine":
+            classifier = classify_bildiri_evidence if args.profile == "bildiri" else classify_yaem_evidence
             manifest = quarantine_tracked_tree(
                 repo_root=args.repo_root,
                 source_root=args.source,
                 archive_root=args.archive,
                 archive_id=args.archive_id,
+                classifier=classifier,
+                include_paths=args.include_paths,
             )
             counts = Counter(entry.classification.value for entry in manifest.entries)
             print(f"archived={len(manifest.entries)} classifications={dict(sorted(counts.items()))}")

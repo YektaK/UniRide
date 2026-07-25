@@ -10,6 +10,7 @@ from academic_benchmark.archive_manifest import (
     EvidenceClass,
     QuarantineBlocked,
     build_manifest,
+    classify_bildiri_evidence,
     classify_yaem_evidence,
     main,
     quarantine_tracked_tree,
@@ -593,3 +594,164 @@ def test_cli_verify_redacts_archive_path_outside_mapping_without_file_access(tmp
     output = capsys.readouterr()
     assert output.err == "manifest mapping error\n"
     assert sentinel not in output.err
+
+
+# --- Task 7: Generalize Safe Archive Classification and Includes ---
+
+
+@pytest.mark.parametrize(
+    ("path", "expected"),
+    [
+        ("results/student_matrix_output.csv", EvidenceClass.INVALID),
+        ("results/student_matrix_v2.csv", EvidenceClass.INVALID),
+        ("results/benchmark_results.json", EvidenceClass.HISTORICAL_UNVERIFIED),
+        ("tuned_parameters_db.json", EvidenceClass.HISTORICAL_UNVERIFIED),
+        ("src/gwo_solver.py", EvidenceClass.REFERENCE_ONLY),
+        ("paper/bildiri_2026.pdf", EvidenceClass.REFERENCE_ONLY),
+        ("README.md", EvidenceClass.REFERENCE_ONLY),
+    ],
+)
+def test_bildiri_evidence_classification(path: str, expected: EvidenceClass):
+    assert classify_bildiri_evidence(PurePosixPath(path)) is expected
+
+
+def test_build_manifest_accepts_injected_classifier(tmp_path: Path):
+    archive = tmp_path / "archive"
+    (archive / "core").mkdir(parents=True)
+    (archive / "core" / "solver.py").write_text("print('legacy')\n", encoding="utf-8")
+
+    def custom_classifier(path: PurePosixPath) -> EvidenceClass:
+        return EvidenceClass.REFERENCE_ONLY
+
+    manifest = build_manifest(
+        archive_id="test_profile",
+        source_root=PurePosixPath("academic_benchmark/test"),
+        archive_root=PurePosixPath("archive/test"),
+        archived_root=archive,
+        original_paths=[PurePosixPath("core/solver.py")],
+        withheld=[],
+        classifier=custom_classifier,
+    )
+    assert manifest.entries[0].classification is EvidenceClass.REFERENCE_ONLY
+
+
+def test_build_manifest_defaults_to_yaem_classifier(tmp_path: Path):
+    archive = tmp_path / "archive"
+    (archive / "results" / "reports").mkdir(parents=True)
+    (archive / "results" / "reports" / "analysis.md").write_text("report\n", encoding="utf-8")
+
+    manifest = build_manifest(
+        archive_id="yaem2026_legacy",
+        source_root=PurePosixPath("academic_benchmark/yaem2026"),
+        archive_root=PurePosixPath("archive/yaem2026_legacy"),
+        archived_root=archive,
+        original_paths=[PurePosixPath("results/reports/analysis.md")],
+        withheld=[],
+    )
+    assert manifest.entries[0].classification is EvidenceClass.INVALID
+
+
+def test_quarantine_tracked_tree_with_include_paths(tmp_path: Path):
+    repo = _legacy_repo(tmp_path)
+    extra = repo / "academic_benchmark" / "yaem2026" / "extra"
+    extra.mkdir()
+    (extra / "data.json").write_text('{"key": "value"}', encoding="utf-8")
+    _git(repo, "add", "academic_benchmark/yaem2026/extra/data.json")
+
+    manifest = quarantine_tracked_tree(
+        repo_root=repo,
+        source_root=PurePosixPath("academic_benchmark/yaem2026"),
+        archive_root=PurePosixPath("archive/academic_benchmark/yaem2026_legacy"),
+        archive_id="yaem2026_legacy",
+        include_paths=[PurePosixPath("core/solver.py")],
+    )
+    archived_files = {entry.original_path for entry in manifest.entries}
+    assert any("core/solver.py" in path for path in archived_files)
+    assert not any("extra/data.json" in path for path in archived_files)
+
+
+def test_quarantine_include_paths_rejects_nonexistent_file(tmp_path: Path):
+    repo = _legacy_repo(tmp_path)
+    with pytest.raises(QuarantineBlocked, match="include path not found"):
+        quarantine_tracked_tree(
+            repo_root=repo,
+            source_root=PurePosixPath("academic_benchmark/yaem2026"),
+            archive_root=PurePosixPath("archive/legacy"),
+            archive_id="legacy",
+            include_paths=[PurePosixPath("nonexistent/file.py")],
+        )
+
+
+def test_quarantine_include_paths_rejects_unsafe_path(tmp_path: Path):
+    repo = _legacy_repo(tmp_path)
+    with pytest.raises(QuarantineBlocked, match="include path must be repository-relative"):
+        quarantine_tracked_tree(
+            repo_root=repo,
+            source_root=PurePosixPath("academic_benchmark/yaem2026"),
+            archive_root=PurePosixPath("archive/legacy"),
+            archive_id="legacy",
+            include_paths=[PurePosixPath("../../../etc/passwd")],
+        )
+
+
+def test_cli_quarantine_profile_bildiri(tmp_path: Path, monkeypatch):
+    import academic_benchmark.archive_manifest as module
+
+    repo = _legacy_repo(tmp_path)
+    called_with = {}
+
+    def fake_quarantine(**kwargs):
+        called_with.update(kwargs)
+        return module.ArchiveManifest(
+            schema_version="uniride-archive/v1",
+            archive_id="test",
+            source_root="academic_benchmark/yaem2026",
+            archive_root="archive/legacy",
+            entries=[],
+        )
+
+    monkeypatch.setattr(module, "quarantine_tracked_tree", fake_quarantine)
+    assert main(["quarantine", "--repo-root", str(repo), "--source", "academic_benchmark/yaem2026", "--archive", "archive/legacy", "--archive-id", "test", "--profile", "bildiri"]) == 0
+    assert called_with.get("classifier") is module.classify_bildiri_evidence
+
+
+def test_cli_quarantine_include_flag(tmp_path: Path, monkeypatch):
+    import academic_benchmark.archive_manifest as module
+
+    repo = _legacy_repo(tmp_path)
+    called_with = {}
+
+    def fake_quarantine(**kwargs):
+        called_with.update(kwargs)
+        return module.ArchiveManifest(
+            schema_version="uniride-archive/v1",
+            archive_id="test",
+            source_root="academic_benchmark/yaem2026",
+            archive_root="archive/legacy",
+            entries=[],
+        )
+
+    monkeypatch.setattr(module, "quarantine_tracked_tree", fake_quarantine)
+    assert main(["quarantine", "--repo-root", str(repo), "--source", "academic_benchmark/yaem2026", "--archive", "archive/legacy", "--archive-id", "test", "--include", "core/solver.py", "--include", "results/reports/analysis.md"]) == 0
+    assert called_with.get("include_paths") == [PurePosixPath("core/solver.py"), PurePosixPath("results/reports/analysis.md")]
+
+
+def test_cli_quarantine_default_profile_is_yaem(tmp_path: Path, monkeypatch):
+    import academic_benchmark.archive_manifest as module
+
+    repo = _legacy_repo(tmp_path)
+    called_with = {}
+
+    def fake_quarantine(**kwargs):
+        called_with.update(kwargs)
+        return module.ArchiveManifest(
+            schema_version="uniride-archive/v1",
+            archive_id="test",
+            source_root="academic_benchmark/yaem2026",
+            archive_root="archive/legacy",
+            entries=[],
+        )
+
+    monkeypatch.setattr(module, "quarantine_tracked_tree", fake_quarantine)
+    assert main(["quarantine", "--repo-root", str(repo), "--source", "academic_benchmark/yaem2026", "--archive", "archive/legacy", "--archive-id", "test"]) == 0
+    assert called_with.get("classifier") is module.classify_yaem_evidence

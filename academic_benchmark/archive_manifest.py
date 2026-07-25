@@ -354,7 +354,7 @@ def _git_ignored_files(repo_root: Path, source_root: PurePosixPath) -> list[Pure
 
 
 def _is_disposable_cache(path: PurePosixPath) -> bool:
-    return path.suffix.lower() in {".pyc", ".pyo", ".nbc", ".nbi"}
+    return path.suffix.lower() in {".pyc", ".pyo", ".nbc", ".nbi", ".db"}
 
 
 def _source_path(repo_root: Path, source_fs: Path, relative: PurePosixPath) -> Path:
@@ -499,10 +499,16 @@ def quarantine_tracked_tree(
             if not _is_repository_relative_path(include_path):
                 raise QuarantineBlocked("include path must be repository-relative")
             source = _source_path(repo_root, source_fs, include_path)
-            if not source.is_file():
+            if source.is_file():
+                validated_includes.append(include_path)
+            elif source.is_dir():
+                for tracked_file in tracked:
+                    if tracked_file.is_relative_to(include_path):
+                        validated_includes.append(tracked_file)
+            else:
                 raise QuarantineBlocked(f"include path not found: {include_path.as_posix()}")
-            validated_includes.append(include_path)
         tracked = validated_includes
+        findings = [f for f in findings if PurePosixPath(f.path).relative_to(source_root) in tracked]
     if destination_root.exists():
         raise QuarantineBlocked(f"archive destination already exists: {archive_root}")
     untracked = _git_untracked_files(repo_root, source_root)

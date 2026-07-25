@@ -11,13 +11,6 @@ from typing import Any, Literal, Mapping, TypedDict
 import numpy as np
 import pytest
 
-from academic_benchmark.bildiri2026.core import numba_accel as _legacy_nb
-from academic_benchmark.bildiri2026.core.gwo_solver import (
-    GWOOptimizer as LegacyGWOOptimizer,
-)
-from academic_benchmark.bildiri2026.core.hho_solver import (
-    HHOOptimizer as LegacyHHOOptimizer,
-)
 from academic_benchmark.core import registry_setup  # noqa: F401 - register executors
 from academic_benchmark.engine_core import AlgorithmRegistry
 from uniride_core.algorithms import numba_accel as _canonical_nb
@@ -256,7 +249,7 @@ def test_read_fixture_rejects_forbidden_record_field(
         _read_fixture()
 def _require_working_jit() -> None:
     """Skip only before JIT is available; compilation problems must fail."""
-    if not _legacy_nb.NUMBA_AVAILABLE or not _canonical_nb.NUMBA_AVAILABLE:
+    if not _canonical_nb.NUMBA_AVAILABLE:
         pytest.skip("Numba JIT unavailable: parity is not JIT-validated in this interpreter")
 
     matrix = np.ascontiguousarray(
@@ -264,19 +257,16 @@ def _require_working_jit() -> None:
         dtype=np.float64,
     )
     route = np.ascontiguousarray(np.array([0, 1, 2], dtype=np.int64))
-    for backend in (_legacy_nb, _canonical_nb):
-        assert backend._calculate_tour_length_atsp_numba(route, matrix) == pytest.approx(9.0)
-        assert backend._calculate_tour_length_atsp_numba.nopython_signatures, (
-            "Numba reported available but the matrix objective did not compile in "
-            "nopython mode"
-        )
+    assert _canonical_nb._calculate_tour_length_atsp_numba(route, matrix) == pytest.approx(9.0)
+    assert _canonical_nb._calculate_tour_length_atsp_numba.nopython_signatures, (
+        "Numba reported available but the matrix objective did not compile in "
+        "nopython mode"
+    )
 
 
 def _solver_for_case(
     solver_name: str,
     variant: Literal["pure", "memetic_2opt"],
-    *,
-    implementation: Literal["legacy", "canonical"] = "legacy",
 ):
     common = {
         "max_iterations": 1,
@@ -288,16 +278,13 @@ def _solver_for_case(
         "evaluation_budget": EVALUATION_BUDGET,
     }
     solver_classes = {
-        "legacy": {"gwo": LegacyGWOOptimizer, "hho": LegacyHHOOptimizer},
-        "canonical": {
-            "gwo": CanonicalGWOOptimizer,
-            "hho": CanonicalHHOOptimizer,
-        },
+        "gwo": CanonicalGWOOptimizer,
+        "hho": CanonicalHHOOptimizer,
     }
     if solver_name == "gwo":
-        return solver_classes[implementation][solver_name](pack_size=4, **common)
+        return solver_classes[solver_name](pack_size=4, **common)
     if solver_name == "hho":
-        return solver_classes[implementation][solver_name](
+        return solver_classes[solver_name](
             hawks=4, dive_count=0, **common
         )
     raise ValueError(f"unknown Bildiri solver {solver_name!r}")
@@ -307,12 +294,10 @@ def _capture_case(
     solver_name: str,
     variant: Literal["pure", "memetic_2opt"],
     directed: bool,
-    *,
-    implementation: Literal["legacy", "canonical"] = "legacy",
 ) -> ParityRecord:
     matrix = _directed_matrix() if directed else _symmetric_matrix()
     result = _solver_for_case(
-        solver_name, variant, implementation=implementation
+        solver_name, variant
     ).solve_with_matrix(
         matrix, closed_tsp=True, recalculate=False
     )
@@ -418,21 +403,6 @@ def _read_fixture() -> dict[str, object]:
 
 
 @pytest.mark.parametrize("case_name,solver_name,variant,directed", CASE_SPECS)
-def test_fixed_seed_bildiri_solver_matches_golden_fixture(
-    case_name: str,
-    solver_name: str,
-    variant: Literal["pure", "memetic_2opt"],
-    directed: bool,
-) -> None:
-    """The legacy solver must preserve its deterministic direct-matrix output."""
-    _require_working_jit()
-    expected = _read_fixture()["records"][case_name]
-    actual = _capture_case(solver_name, variant, directed)
-    for field in ParityRecord.__annotations__:
-        assert actual[field] == expected[field]
-
-
-@pytest.mark.parametrize("case_name,solver_name,variant,directed", CASE_SPECS)
 def test_relocated_solver_preserves_math_with_runtime_backend(
     case_name: str,
     solver_name: str,
@@ -442,17 +412,12 @@ def test_relocated_solver_preserves_math_with_runtime_backend(
     """Canonical math stays frozen while runtime metadata supersedes provenance."""
     _require_working_jit()
     expected = _read_fixture()["records"][case_name]
-    legacy = _capture_case(solver_name, variant, directed, implementation="legacy")
     canonical = _capture_case(
-        solver_name, variant, directed, implementation="canonical"
+        solver_name, variant, directed
     )
     for field in MATHEMATICAL_AND_ACCOUNTING_FIELDS:
-        assert legacy[field] == expected[field], (case_name, field)
         assert canonical[field] == expected[field], (case_name, field)
 
-    assert legacy["observed_execution_backend"] == expected[
-        "observed_execution_backend"
-    ]
     expected_polish = "python" if variant == "memetic_2opt" else "none"
     assert canonical["observed_execution_backend"] == (
         f"objective=numba;polish={expected_polish}"

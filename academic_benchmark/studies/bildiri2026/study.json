@@ -1,0 +1,37 @@
+{
+  "schema_version": "uniride-study/v1",
+  "study_id": "bildiri2026",
+  "title": "Bildiri 2026 Canonical ATSP Reproduction Profile",
+  "status": "draft",
+  "algorithm_ids": [
+    "Core-GWO-TSP-Pure",
+    "Core-GWO-TSP-Memetic-2opt",
+    "Core-HHO-TSP-Pure",
+    "Core-HHO-TSP-Memetic-2opt"
+  ],
+  "algorithm_parameters": {
+    "Core-GWO-TSP-Pure": {"pack_size": 4, "max_iterations": 2},
+    "Core-GWO-TSP-Memetic-2opt": {"pack_size": 4, "max_iterations": 2, "polish_iters": 0, "final_polish_iters": 0},
+    "Core-HHO-TSP-Pure": {"hawks": 4, "dive_count": 0, "max_iterations": 2},
+    "Core-HHO-TSP-Memetic-2opt": {"hawks": 4, "dive_count": 0, "max_iterations": 2, "polish_iters": 0, "final_polish_iters": 0}
+  },
+  "dataset_manifest_refs": ["academic_benchmark/datasets/ft53.json"],
+  "primary_protocol": {
+    "protocol_id": "fixed_evaluation_budget",
+    "protocol_version": "uniride-fair-tsp-v2",
+    "budget_policy": "atomic_upper_bound_v1"
+  },
+  "secondary_protocol": {
+    "protocol_id": "algorithm_native_termination",
+    "protocol_version": "uniride-native-tsp-v1",
+    "termination": {"max_iterations": 2}
+  },
+  "fixed_budget_levels": [100, 500],
+  "run_count": 3,
+  "base_seed": 2026,
+  "seed_protocol_version": "sha256-seed-v1",
+  "problem_families": ["ATSP"],
+  "analysis_plan_id": "bildiri2026-reproduction-v1",
+  "output_policy": {"repository_outputs": "smoke_only", "paper_scale_location": "external"},
+  "paper_metadata": {"paper_id": "bildiri2026", "year": 2026, "venue": "draft"}
+}

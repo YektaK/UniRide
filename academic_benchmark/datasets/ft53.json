@@ -1,0 +1,26 @@
+{
+  "schema_version": "uniride-dataset/v1",
+  "dataset_id": "tsplib-ft53",
+  "artifact_path": "academic_benchmark/tsplib_data/ft53.atsp",
+  "source": {
+    "authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/atsp/ft53.atsp.gz",
+    "retrieved_on": "2026-07-20"
+  },
+  "checksum": {
+    "algorithm": "sha256",
+    "value": "692ae545e226d88aa095e3e726c8a1dadf4ecc9b97852d0cdbb2ca2a98dd2634"
+  },
+  "problem_type": "ATSP",
+  "dimension": 53,
+  "matrix_semantics": {
+    "directed": true,
+    "edge_weight_type": "EXPLICIT",
+    "edge_weight_format": "FULL_MATRIX",
+    "diagonal_semantics": "sentinel"
+  },
+  "best_known": {
+    "status": "optimal",
+    "value": 6905.0,
+    "provenance": "TSPLIB95 canonical ATSP optimum"
+  }
+}

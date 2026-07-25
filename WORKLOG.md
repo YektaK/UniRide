@@ -60,6 +60,92 @@ This is the curated project chronology. Entries record work and evidence availab
 - Initial subagent test attempts were blocked only by sandbox `tmp_path` permissions for the default user Temp directory and then `C:\tmp`; the elevated isolated-basetemp rerun resolved that environment constraint. It was not a source-test failure.
 - No benchmark experiments ran. GitHub push remains deferred to Package D.
 
+## 2026-07-24 — Package B Gate B: Bildiri Canonical Extraction Complete
+
+### Summary
+
+All 11 tasks of the Bildiri Canonical Extraction plan are complete. GWO/HHO solvers have been mechanically relocated from `academic_benchmark/bildiri2026/core/` to `uniride_core/algorithms/tsp_matrix_metaheuristics/` with exact mathematical parity. All active callers have been redirected. Legacy Bildiri material (233 files) has been physically archived with manifest verification.
+
+### Commits
+
+| Hash | Description |
+|------|-------------|
+| `d959e84` | test(academic): freeze Bildiri solver parity (8-case golden fixture) |
+| `38d097f` | refactor(core): own objective budget accounting |
+| `e5de75c` | refactor(academic): relocate GWO/HHO to uniride_core |
+| `37578f1` | fix(core): report executed solver backends |
+| `3d197b2` | refactor(academic): route solvers through canonical core |
+| `0ec1a9d` | refactor(academic): retire Bildiri CLI identities |
+| `fb51e19` | test(academic): enforce pre-registry migration rejection |
+| `bfc101d` | refactor(academic): generalize evidence quarantine classification and includes |
+| `d157257` | feat(academic): add Bildiri study profile and ft53 dataset manifest |
+| `fe5ffcf` | test(academic): enforce Bildiri extraction boundary |
+| `de29083` | chore(academic): quarantine legacy Bildiri evidence |
+
+### Backend Metadata Correction
+
+The `observed_execution_backend` field was updated from availability-based labels (e.g. `mixed-numba-objective-python-polish`) to runtime-observed labels (e.g. `objective=numba;polish=python`). This is an intentional contract correction — the old labels were a known defect. Both the golden fixture and the native_pilot guard have been updated to match the truthful runtime format.
+
+### Verification
+
+**Environment:** Python 3.14.3, NumPy 2.4.6, Numba 0.66.0, llvmlite 0.48.0 (`.venv-jit`)
+
+**Focused JIT/fallback and fair-protocol suite:**
+```
+pytest test_numba_jit_parity.py test_fair_comparison_protocol.py test_fair_comparison_scientific_integrity.py test_atsp_integration.py test_solver_backend_reporting.py test_bildiri_solver_parity.py -q
+```
+Result: **115 passed** in 10.12s. No JIT parity skip. Objective kernel has nopython signatures.
+
+**Contract, archive, CLI, production guards:**
+```
+academic_benchmark.archive_manifest verify --manifest archive/academic_benchmark/bildiri2026_legacy/manifest.json
+```
+Result: **verified 233 entries**.
+
+```
+pytest test_manifest_contracts.py test_archive_manifest.py test_yaem_quarantine_boundary.py test_bildiri_quarantine_boundary.py test_bildiri_study_profile.py test_production_registry_snapshot.py test_legacy_algorithm_migrations.py -q
+```
+Result: **141 passed** in 19.49s.
+
+`python -m academic_benchmark.cli_engine --help` exits 0.
+
+**Complete academic suite:**
+```
+pytest academic_benchmark/tests -q
+```
+Result: **529 passed** in 28.93s. Zero failures.
+
+### Archive Inventory
+
+- 233 entries archived to `archive/academic_benchmark/bildiri2026_legacy/`
+- Evidence classes: code=42, config=37, data=33, results=93, docs=25, tests=3
+- SHA-256 checksums verified for all non-withheld entries
+- Zero unresolved sensitive findings
+
+### Active Import Audit
+
+- Zero active Python files import `academic_benchmark.bildiri2026`
+- `academic_benchmark/bildiri2026` directory is absent from the working tree
+- AST boundary tests enforce zero Bildiri reachability
+
+### Production Registry
+
+- STRATEGY_REGISTRY and STRATEGY_FACTORIES remain exactly the approved 38-key set
+- B-GA and B-PSO are retired with truthful migration guidance at CLI/smart_benchmark boundaries
+
+### Bildiri Study Profile
+
+- `academic_benchmark/studies/bildiri2026/study.json` is strict, explicit-ID-only, and ATSP-only
+- ft53 is the only tracked TSP-family artifact with complete provenance (SHA-256: `692ae545...`)
+- No TSP provenance was fabricated
+
+### Explicit Statements
+
+- No paper-scale benchmark ran
+- No benchmark CSV or report was generated as part of Package B
+- No dependencies, lockfiles, databases, frontend, FastAPI surface, Package A schemas, or YAEM archive were modified
+- Rescue checkout (`codex/local-rescue-20260721`) retains its pre-existing dirty files; no Package B edits were merged into it
+
 ## Curated Historical Milestones
 
 ### April 2026 - Dual-engine and SOTA exploration

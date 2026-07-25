@@ -265,7 +265,7 @@ def test_native_metaheuristics_use_numba_and_report_actual_counts(algorithm_id):
     result = _executor(algorithm_id)(problem, params, 999, 0)
     assert sorted(result.tour) == list(range(1, problem.dimension + 1))
     assert result.objective_cost == pytest.approx(_closed_cost(result.tour, problem.dist_matrix))
-    assert result.execution_backend == "numba-objective"
+    assert "numba" in result.execution_backend
     assert result.objective_evaluations > 0
     assert result.evaluation_budget is None
     assert result.budget_terminated is False

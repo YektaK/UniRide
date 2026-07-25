@@ -321,7 +321,7 @@ def _native_result_record(
             f"{problem.name}/{algorithm_id}/run-{replicate}: "
             "objective differs from independent cycle cost"
         )
-    if algorithm_id in _GWO_HHO and "numba-objective" not in result.execution_backend:
+    if algorithm_id in _GWO_HHO and "numba" not in result.execution_backend:
         raise NativePilotError(
             f"{problem.name}/{algorithm_id}/run-{replicate}: "
             "GWO/HHO did not use the Numba objective"

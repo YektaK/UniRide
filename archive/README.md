@@ -38,6 +38,16 @@ Paths are relative to `archive/`; the original internal `docs/` structure was pr
   Manifest: `academic_benchmark/yaem2026_legacy/manifest.json`.
   No archived result is active scientific evidence.
 
+## Archived on 2026-07-24
+
+- `academic_benchmark/bildiri2026_legacy/` — Bildiri 2026 legacy pipeline and evidence quarantine.
+  Its manifest covers 233 entries: 133 `HISTORICAL_UNVERIFIED`, 7 `INVALID`,
+  93 `REFERENCE_ONLY`, and 0 `WITHHELD_SENSITIVE`.
+  Canonical GWO/HHO classes are active only under
+  `uniride_core/algorithms/tsp_matrix_metaheuristics/`; archived runners, data
+  managers, orchestration scripts, tuned databases, and benchmark outputs are
+  not executable guidance or active scientific evidence.
+
 ## Use Policy
 
 - Cite archived material only as dated historical evidence.

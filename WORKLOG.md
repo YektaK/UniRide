@@ -84,7 +84,7 @@ All 11 tasks of the Bildiri Canonical Extraction plan are complete. GWO/HHO solv
 
 ### Backend Metadata Correction
 
-The `observed_execution_backend` field was updated from availability-based labels (e.g. `mixed-numba-objective-python-polish`) to runtime-observed labels (e.g. `objective=numba;polish=python`). This is an intentional contract correction — the old labels were a known defect. Both the golden fixture and the native_pilot guard have been updated to match the truthful runtime format.
+The `observed_execution_backend` field was updated from availability-based labels (e.g. `mixed-numba-objective-python-polish`) to runtime-observed labels (e.g. `objective=numba;polish=python`). This is an intentional contract correction — the old labels were a known defect. The immutable golden mathematical/accounting fixture remains unchanged and intentionally excludes backend metadata from equality; runtime backend behavior is asserted separately. The native-pilot pure-JIT guard now requires the exact label `objective=numba;polish=none`.
 
 ### Verification
 
@@ -113,12 +113,12 @@ Result: **141 passed** in 19.49s.
 ```
 pytest academic_benchmark/tests -q
 ```
-Result: **529 passed** in 28.93s. Zero failures.
+Historical pre-fix baseline: **529 passed** in 28.93s. Zero failures. This count is superseded by the 2026-07-27 corrective verification below.
 
 ### Archive Inventory
 
 - 233 entries archived to `archive/academic_benchmark/bildiri2026_legacy/`
-- Evidence classes: code=42, config=37, data=33, results=93, docs=25, tests=3
+- Manifest evidence classes: 133 `HISTORICAL_UNVERIFIED`, 7 `INVALID`, 93 `REFERENCE_ONLY`, and 0 `WITHHELD_SENSITIVE`
 - SHA-256 checksums verified for all non-withheld entries
 - Zero unresolved sensitive findings
 
@@ -145,6 +145,49 @@ Result: **529 passed** in 28.93s. Zero failures.
 - No benchmark CSV or report was generated as part of Package B
 - No dependencies, lockfiles, databases, frontend, FastAPI surface, Package A schemas, or YAEM archive were modified
 - Rescue checkout (`codex/local-rescue-20260721`) retains its pre-existing dirty files; no Package B edits were merged into it
+
+## 2026-07-27 — Package B Tasks 9–11 Corrective Verification
+
+This corrective pass used strict red-green TDD. The initial red gate produced five expected failures: one ignored arbitrary `.db` evidence file was not blocked, and four inexact native backend labels were accepted. The minimal fixes narrowed disposable caches to actual Python/Numba cache suffixes and required the exact pure-native label `objective=numba;polish=none`. Completion review found two further boundary gaps; mutation tests then produced one expected exact-alias failure and two expected nested-control-filename failures before their fixes.
+
+The final Bildiri boundary gate now fails closed on missing or malformed manifests, parses active Python without suppressing syntax/decode failures, constrains package discovery to this worktree, rejects legacy and fallback imports (including top-level `core.*`), rejects executable `B-GA`/`B-PSO` outside the explicit CLI migration map and migration-contract test, inspects canonical GWO/HHO modules, and verifies all 233 archive hashes and the exact manifest/archive content set. Only the archive-root `manifest.json` and `QUARANTINE.md` control files are excluded from that content comparison. Generated packaging metadata no longer lists removed Bildiri modules.
+
+**Pinned `.venv-jit` verification:**
+
+Focused JIT/fallback and fair-protocol suite:
+
+```powershell
+& 'C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe' -m pytest academic_benchmark/tests/test_numba_jit_parity.py academic_benchmark/tests/test_fair_comparison_protocol.py academic_benchmark/tests/test_fair_comparison_scientific_integrity.py academic_benchmark/tests/test_atsp_integration.py academic_benchmark/tests/test_solver_backend_reporting.py academic_benchmark/tests/test_bildiri_solver_parity.py -q -p no:cacheprovider --tb=short --basetemp=C:\tmp\pytest-package-b-final-focused
+```
+
+Result: **115 passed** in 2.71s.
+
+Contract, archive, study, registry, and migration suite after completion-review fixes:
+
+```powershell
+& 'C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe' -m pytest academic_benchmark/tests/test_manifest_contracts.py academic_benchmark/tests/test_archive_manifest.py academic_benchmark/tests/test_yaem_quarantine_boundary.py academic_benchmark/tests/test_bildiri_quarantine_boundary.py academic_benchmark/tests/test_bildiri_study_profile.py academic_benchmark/tests/test_production_registry_snapshot.py academic_benchmark/tests/test_legacy_algorithm_migrations.py -q -p no:cacheprovider --tb=short --basetemp=C:\tmp\pytest-package-b-final-contracts-v2
+```
+
+Result: **145 passed** in 31.20s.
+
+Complete academic suite after completion-review fixes:
+
+```powershell
+& 'C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe' -m pytest academic_benchmark/tests -q -p no:cacheprovider --tb=short --basetemp=C:\tmp\pytest-package-b-final-full-v2
+```
+
+Result: **537 passed** in 45.33s.
+
+Archive and schema checks:
+
+```powershell
+& 'C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe' -m academic_benchmark.archive_manifest verify --repo-root . --manifest archive/academic_benchmark/bildiri2026_legacy/manifest.json
+& 'C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe' -m academic_benchmark.contracts.export_schemas check
+```
+
+Results: **verified 233 entries**; schema check exit 0.
+
+No paper-scale benchmark ran, no benchmark output was generated, and archive payload bytes, study/profile contracts, registries, dependencies, databases, and unrelated generated artifacts were not modified.
 
 ## Curated Historical Milestones
 

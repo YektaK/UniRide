@@ -1,7 +1,7 @@
 # UniRide Academic Benchmark — How to Use
 
-**Date:** 2026-06-30
-**Version:** 3.5
+**Date:** 2026-07-27
+**Version:** 3.6
 **Location:** `academic_benchmark/`
 
 ---
@@ -29,19 +29,19 @@ python -m pytest academic_benchmark/tests/ -v
 │              (Main Unified CLI — Start Here)                     │
 ├─────────────────────────────────────────────────────────────────┤
 │                      cli_engine.py                              │
-│              (Consolidated Engine — 2196 lines)                  │
+│                    (Consolidated Engine)                         │
 │   ┌──────────────────┐   ┌──────────────────────────────┐       │
 │   │ Numba Strategies │   │ SOTA Solvers (via registry)  │       │
 │   │ 2-opt            │   │ E2BSO-TSP                    │       │
 │   │ 3-opt-bounded    │   │ E2BSO-TSP-CPSO               │       │
 │   │ swap, insert     │   │ R2DMA-TSP                    │       │
 │   │ or-opt, 2.5-opt  │   │ P-AOEA-TSP                   │       │
-│   │ B-PSO, B-GA      │   │ CGO-TSP, RUN-TSP             │       │
-│   │ B-ACO, B-SA      │   │ ALNS-TSP                     │       │
-│   │ B-TS, B-DE       │   └──────────────────────────────┘       │
-│   │ B-HHO, B-GWO     │                                          │
-│   │ B-WOA, B-MFO     │   AlgorithmRegistry (shared)             │
-│   │ B-LS             │   ┌──────────────────────────────┐       │
+│   │ Numba-GA/PSO     │   │ CGO-TSP, RUN-TSP             │       │
+│   │ Numba-GWO/HHO    │   │ ALNS-TSP                     │       │
+│   │ Core-GWO/HHO     │   └──────────────────────────────┘       │
+│   │ Split aliases    │                                          │
+│   │                  │   AlgorithmRegistry (shared)             │
+│   │                  │   ┌──────────────────────────────┐       │
 │   └──────────────────┘   │ register()                   │       │
 │                          │ register_param_space()       │       │
 │                          │ execute()                    │       │
@@ -70,48 +70,44 @@ python -m pytest academic_benchmark/tests/ -v
 
 ---
 
-## Algorithm List (22 Total)
+## Algorithm List (18 Listed TSP/ATSP Entries)
 
-| #   | Algorithm           | Engine      | Type                    | ATSP | Complexity      |
-| --- | ------------------- | ----------- | ----------------------- | ---- | --------------- |
-| 1   | Numba-2-opt         | Numba       | Local Search            | ✅    | O(n²)           |
-| 2   | Numba-3-opt-bounded | Numba       | Local Search            | ✅    | O(n·w²)         |
-| 3   | Numba-Or-opt        | Numba       | Local Search            | ✅    | O(n²)           |
-| 4   | Numba-Swap          | Numba       | Local Search            | ✅    | O(n²)           |
-| 5   | Numba-Hybrid        | Numba       | Local Search            | ✅    | O(n³)           |
-| 6   | Numba-GA            | Numba       | Meta-heuristic          | ✅    | O(pop·gen·n)    |
-| 7   | Numba-PSO           | Numba       | Meta-heuristic          | ✅    | O(swarm·iter·n) |
-| 8   | Numba-GWO           | bildiri2026 | Meta-heuristic (memetic)| ✅    | O(pop·iter·n)   |
-| 9   | Numba-HHO           | bildiri2026 | Meta-heuristic (memetic)| ✅    | O(pop·iter·n)   |
-| 10  | Core-GWO-TSP        | bildiri2026 | Meta-heuristic (memetic)| ✅    | O(pop·iter·n)   |
-| 11  | Core-HHO-TSP        | bildiri2026 | Meta-heuristic (memetic)| ✅    | O(pop·iter·n)   |
-| 12  | B-PSO               | bildiri2026 | Meta-heuristic          | ✅    | O(swarm·iter·n) |
-| 13  | B-GA                | bildiri2026 | Meta-heuristic          | ✅    | O(pop·gen·n)    |
-| 14  | E2BSO-TSP           | SOTA        | Hybrid (Entropy+ALNS)   | ✅    | O(pop·iter·n²)  |
-| 15  | E2BSO-TSP-CPSO      | SOTA        | Hybrid (Canonical PSO)  | ✅    | O(pop·iter·n²)  |
-| 16  | R2DMA-TSP           | SOTA        | Hybrid (Resonance+ALNS) | ✅    | O(pop·iter·n²)  |
-| 17  | P-AOEA-TSP          | SOTA        | Hybrid (Genome+ALNS)    | ✅    | O(pop·iter·n²)  |
-| 18  | CGO-TSP             | SOTA        | Hybrid (Chaos Game+OX)  | ✅    | O(pop·iter·n²)  |
-| 19  | RUN-TSP             | SOTA        | Hybrid (RK4+ESQ)        | ✅    | O(pop·iter·n²)  |
-| 20  | ALNS-TSP            | SOTA        | Adaptive LNS + SA       | ✅    | O(iter·n²)      |
+| #   | Algorithm           | Engine        | Type                     | ATSP | Complexity      |
+| --- | ------------------- | ------------- | ------------------------ | ---- | --------------- |
+| 1   | Numba-2-opt         | Numba         | Local Search             | ✅    | O(n²)           |
+| 2   | Numba-3-opt-bounded | Numba         | Local Search             | ✅    | O(n·w²)         |
+| 3   | Numba-Or-opt        | Numba         | Local Search             | ✅    | O(n²)           |
+| 4   | Numba-Swap          | Numba         | Local Search             | ✅    | O(n²)           |
+| 5   | Numba-Hybrid        | Numba         | Local Search             | ✅    | O(n³)           |
+| 6   | Numba-GA            | Numba         | Meta-heuristic           | ✅    | O(pop·gen·n)    |
+| 7   | Numba-PSO           | Numba         | Meta-heuristic           | ✅    | O(swarm·iter·n) |
+| 8   | Numba-GWO           | `uniride_core` | Meta-heuristic (memetic) | ✅    | O(pop·iter·n)   |
+| 9   | Numba-HHO           | `uniride_core` | Meta-heuristic (memetic) | ✅    | O(pop·iter·n)   |
+| 10  | Core-GWO-TSP        | `uniride_core` | Meta-heuristic (memetic) | ✅    | O(pop·iter·n)   |
+| 11  | Core-HHO-TSP        | `uniride_core` | Meta-heuristic (memetic) | ✅    | O(pop·iter·n)   |
+| 12  | E2BSO-TSP           | SOTA          | Hybrid (Entropy+ALNS)    | ✅    | O(pop·iter·n²)  |
+| 13  | E2BSO-TSP-CPSO      | SOTA          | Hybrid (Canonical PSO)   | ✅    | O(pop·iter·n²)  |
+| 14  | R2DMA-TSP           | SOTA          | Hybrid (Resonance+ALNS)  | ✅    | O(pop·iter·n²)  |
+| 15  | P-AOEA-TSP          | SOTA          | Hybrid (Genome+ALNS)     | ✅    | O(pop·iter·n²)  |
+| 16  | CGO-TSP             | SOTA          | Hybrid (Chaos Game+OX)   | ✅    | O(pop·iter·n²)  |
+| 17  | RUN-TSP             | SOTA          | Hybrid (RK4+ESQ)         | ✅    | O(pop·iter·n²)  |
+| 18  | ALNS-TSP            | SOTA          | Adaptive LNS + SA        | ✅    | O(iter·n²)      |
 
 ### GWO/HHO Algorithm Naming
 
-The GWO (Grey Wolf Optimizer) and HHO (Harris Hawks Optimization) algorithms have two naming conventions:
+The active GWO/HHO identities resolve to the canonical classes in
+`uniride_core/algorithms/tsp_matrix_metaheuristics/`:
 
-| CLI Name        | Implementation                      | Use This                              |
-| --------------- | ----------------------------------- | ------------------------------------- |
-| `Numba-GWO`     | bildiri2026 `GWOOptimizer` (memetic)| ✅ Recommended                        |
-| `Numba-HHO`     | bildiri2026 `HHOOptimizer` (memetic)| ✅ Recommended                        |
-| `Core-GWO-TSP`  | bildiri2026 `GWOOptimizer` (memetic)| ✅ Equivalent to Numba-GWO            |
-| `Core-HHO-TSP`  | bildiri2026 `HHOOptimizer` (memetic)| ✅ Equivalent to Numba-HHO            |
-| `GWO`           | Legacy Numba `_run_gwo`             | ⚠️ Deprecated — use Numba-GWO instead |
-| `HHO`           | Legacy Numba `_run_hho`             | ⚠️ Deprecated — use Numba-HHO instead |
+| CLI Name       | Canonical class | Guidance |
+| -------------- | --------------- | -------- |
+| `Numba-GWO`    | `GWOOptimizer`  | Compatibility registry identity |
+| `Numba-HHO`    | `HHOOptimizer`  | Compatibility registry identity |
+| `Core-GWO-TSP` | `GWOOptimizer`  | Canonical core identity |
+| `Core-HHO-TSP` | `HHOOptimizer`  | Canonical core identity |
 
-> **Note:** `Numba-GWO`/`Numba-HHO` and `Core-GWO-TSP`/`Core-HHO-TSP` all resolve to the same
-> bildiri2026 `GWOOptimizer`/`HHOOptimizer` implementations via `AlgorithmRegistry` overrides in
-> `core/registry_setup.py`. These use the Numba-accelerated memetic solver with periodic 2-opt polish.
-> Plain `GWO`/`HHO` fall through to a legacy Numba path and produce worse results (~5-7% gap vs ~1.8%).
+`B-GA` and `B-PSO` are retired aliases. Do not route them to archived Bildiri
+classes or revive top-level `core.*` fallback imports. Select explicit canonical
+pure or memetic variants when a study contract requires that distinction.
 
 ### E2BSO-TSP vs E2BSO-TSP-CPSO
 
@@ -200,7 +196,7 @@ python -m academic_benchmark.smart_benchmark
 
 **Purpose:** Single engine for all Numba + SOTA algorithms. Replaces the old `master_numba_engine.py` and `master_sota_engine.py`. This is the engine that `smart_benchmark.py` delegates to.
 
-**Algorithms:** All 18 algorithms (Numba, bildiri2026, SOTA) are registered through `core/registry_setup.py` and dispatched by `cli_engine.py`.
+**Algorithms:** Active Numba, canonical `uniride_core` GWO/HHO, and SOTA identities are registered through `core/registry_setup.py` and dispatched by `cli_engine.py`.
 
 **Run:**
 
@@ -210,7 +206,7 @@ python -m academic_benchmark.cli_engine
 
 # CLI mode
 python -m academic_benchmark.cli_engine --mode tuning --problems berlin52,eil51 --runs 5
-python -m academic_benchmark.cli_engine --mode default --problems berlin52 --algos B-PSO,E2BSO-TSP --runs 3
+python -m academic_benchmark.cli_engine --mode default --problems berlin52 --algos Core-GWO-TSP,E2BSO-TSP --runs 3
 ```
 
 **CLI Arguments:**
@@ -218,7 +214,7 @@ python -m academic_benchmark.cli_engine --mode default --problems berlin52 --alg
 |------|-------------|---------|
 | `--mode` | `tuning`, `default`, or `benchmark` | `--mode tuning` |
 | `--problems` | Comma-separated problem names | `--problems berlin52,eil51` |
-| `--algos` | Comma-separated algorithm names (Numba + SOTA mixed) | `--algos B-PSO,E2BSO-TSP` |
+| `--algos` | Comma-separated canonical algorithm names | `--algos Core-GWO-TSP,E2BSO-TSP` |
 | `--runs` | Number of runs per combo | `--runs 5` |
 | `--workers` | Parallel worker count | `--workers 4` |
 | `--size-limit` | Max problem dimension | `--size-limit 100` |
@@ -297,24 +293,25 @@ python -m academic_benchmark.tsplib_manager verify
 
 ---
 
-### 5. `run_numba_with_bildiri_params.py` — Bildiri2026 Param Runner
+### 5. Bildiri2026 Canonical Study Profile
 
-**Purpose:** Run Numba algorithms with parameters from the bildiri2026 paper experiments.
+The removed `run_numba_with_bildiri_params.py` runner is quarantined and must
+not be executed. The active, reviewable contract is
+`academic_benchmark/studies/bildiri2026/study.json`, which pins the ft53 ATSP
+dataset manifest, canonical GWO/HHO variant IDs, paired seeds, fixed-budget
+primary protocol, native-termination secondary protocol, and smoke-only
+repository output policy.
 
-**Run:**
+Validate the profile and quarantine before preparing any run:
 
 ```bash
-python -m academic_benchmark.run_numba_with_bildiri_params --problems berlin52 --algos B-PSO,B-GA --runs 10
+python -m pytest academic_benchmark/tests/test_bildiri_study_profile.py -q -p no:cacheprovider
+python -m academic_benchmark.archive_manifest verify --repo-root . --manifest archive/academic_benchmark/bildiri2026_legacy/manifest.json
 ```
 
-**CLI Arguments:**
-| Flag | Description |
-|------|-------------|
-| `--problems` | Comma-separated problem names |
-| `--algos` | Comma-separated algorithm names |
-| `--runs` | Number of runs |
-| `--workers` | Parallel workers |
-| `--output` | Output CSV path |
+The profile is a draft study contract, not a standalone runner and not proof of
+paper-scale reproduction. Use only the canonical registry IDs declared by the
+profile; keep paper-scale outputs outside the repository.
 
 ---
 
@@ -413,58 +410,27 @@ Workers (e.g., 8 cores):
 
 ---
 
-## Bildiri2026 Pipeline (Legacy but Active)
+## Bildiri2026 Quarantine and Canonical Profile
 
-The `bildiri2026/` directory contains the original paper experiment pipeline. Run in order:
+The original pipeline is archived at
+`archive/academic_benchmark/bildiri2026_legacy/` and is historical evidence
+only. Its 233-entry manifest classifies 133 files as
+`HISTORICAL_UNVERIFIED`, 7 as `INVALID`, and 93 as `REFERENCE_ONLY`. Archived
+configuration generators, tuning/benchmark runners, analyzers, visualizers,
+data managers, orchestrators, tuned databases, and result files are not active
+commands.
 
-### Step 1: Generate Config
+Current authority is split deliberately:
 
-```bash
-python -m academic_benchmark.bildiri2026.1_generate_config
-```
+- Solver code: `uniride_core/algorithms/tsp_matrix_metaheuristics/`.
+- Study contract: `academic_benchmark/studies/bildiri2026/study.json`.
+- Dataset contract: `academic_benchmark/datasets/ft53.json` plus the pinned
+  `academic_benchmark/tsplib_data/ft53.atsp` artifact.
+- Quarantine integrity: `archive/academic_benchmark/bildiri2026_legacy/manifest.json`.
 
-Generates tuning configurations for all problem/algorithm combinations.
-
-### Step 2: Run Tuning
-
-```bash
-python -m academic_benchmark.bildiri2026.2_run_tuning
-```
-
-Executes parameter tuning. Outputs: `bildiri2026/results/tuning/`
-
-### Step 3: Run Benchmark
-
-```bash
-python -m academic_benchmark.bildiri2026.3_run_benchmark
-```
-
-Runs benchmarks with tuned params. Outputs: `bildiri2026/results/benchmark/`
-
-### Step 4: Analyze (optional)
-
-```bash
-python -m academic_benchmark.bildiri2026.analyze_tuning
-python -m academic_benchmark.bildiri2026.analyze_benchmark
-```
-
-### Step 5: Visualize
-
-```bash
-python -m academic_benchmark.bildiri2026.5_visualize
-```
-
-Generates plots and tables for the paper.
-
-### Additional Tools:
-
-| Script                               | Purpose                               |
-| ------------------------------------ | ------------------------------------- |
-| `orchestrate_batch.py`               | Run full pipeline end-to-end          |
-| `run_targeted.py`                    | Run specific problem/algorithm combos |
-| `data_manager.py`                    | Manage bildiri2026 result data        |
-| `benchmarks/tsplib_benchmark.py`     | Standalone TSPLIB benchmark runner    |
-| `benchmarks/timematrix_benchmark.py` | Time-matrix problem benchmark         |
+Do not import from `academic_benchmark.bildiri2026`, top-level `core.*`, or any
+archived runner. Validate the study/profile tests and manifest before using a
+canonical registry executor.
 
 ---
 
@@ -476,7 +442,7 @@ Generates plots and tables for the paper.
 1. smart_benchmark.py
    ├── [1] TUNING
    │   ├── Select problems (e.g., berlin52, eil51, st70)
-   │   ├── Select algorithms (e.g., B-PSO, B-GA, E2BSO-TSP)
+   │   ├── Select algorithms (e.g., Core-GWO-TSP, Core-HHO-TSP, E2BSO-TSP)
    │   ├── Choose [B]ayesian (Optuna) — best for most cases
    │   └── Wait for tuning to complete (~5-30 min)
    │
@@ -511,20 +477,17 @@ Generates plots and tables for the paper.
        └── Quick comparison view
 ```
 
-### Flow 3: Reproduce Paper Results
+### Flow 3: Prepare a Bildiri2026 Reproduction Study
 
 ```
-1. bildiri2026/orchestrate_batch.py
-   └── Runs full pipeline: config → tuning → benchmark → analyze
-
-2. Or step-by-step:
-   ├── 1_generate_config.py
-   ├── 2_run_tuning.py
-   ├── 3_run_benchmark.py
-   ├── analyze_tuning.py
-   ├── analyze_benchmark.py
-   └── 5_visualize.py
+1. Validate the canonical study and ft53 dataset manifests.
+2. Verify the 233-entry legacy quarantine manifest.
+3. Use only the canonical GWO/HHO IDs declared in study.json.
+4. Keep repository runs smoke-only; place paper-scale artifacts externally.
+5. Report the exact commands, environment, seeds, and validation results.
 ```
+
+The archived pipeline cannot establish reproducibility and must not be run.
 
 ### Flow 4: Single Algorithm Deep Dive
 
@@ -532,7 +495,7 @@ Generates plots and tables for the paper.
 1. cli_engine.py
    ├── [1] TUNING
    │   ├── Select one problem (e.g., berlin52)
-   │   ├── Select one algorithm (e.g., B-PSO)
+   │   ├── Select one algorithm (e.g., Core-GWO-TSP)
    │   ├── Choose [G] Grid Search (exhaustive)
    │   └── Wait for tuning
    │
@@ -625,7 +588,7 @@ timestamp, problem, strategy, avg_length, avg_gap, avg_time_ms, n_runs, result_t
 
 ### Adding a New Algorithm (5 Steps)
 
-**Step 1:** Write solver class (`sota_tsp/new_algo.py` or `bildiri2026/core/new_algo.py`)
+**Step 1:** Write the solver in an active package (`uniride_core/algorithms/sota_tsp/new_algo.py` or `uniride_core/algorithms/<family>/new_algo.py`)
 
 ```python
 from .base_solver import BaseTSPSolver, TSPResult
@@ -647,7 +610,7 @@ class YeniAlgo(BaseTSPSolver):
         return TSPResult(algorithm="YeniAlgo", tour=best, tour_length=best_cost, ...)
 ```
 
-**Step 2:** Add export to `sota_tsp/__init__.py` (or `bildiri2026/core/__init__.py`)
+**Step 2:** Export it from the active package `__init__.py`; never add code under the archived Bildiri tree.
 
 ```python
 from .yeni_algo import YeniAlgo, YeniAlgoConfig
@@ -826,14 +789,14 @@ python -m pytest academic_benchmark/tests/ --cov=academic_benchmark -v
 | File | Coverage |
 |------|----------|
 | `test_critical_fixes.py` | C-01, C-03, C-04, C-05, C-06, H-06 regression tests |
-| `test_core_tsp_registry.py` | Registry executors (Core-*, Numba-*, FCM-*, GWO/HHO bildiri2026) |
+| `test_core_tsp_registry.py` | Registry executors, including canonical `uniride_core` GWO/HHO classes |
 | `test_sota_e2e.py` | SOTA solver end-to-end tests |
 | `test_sota_parity.py` | SOTA algorithm parity tests |
 | `test_numba_three_opt.py` | 3-opt-bounded correctness |
 | `test_benchmark_robustness.py` | Worker backend + seed stability |
 | `test_problem_selector.py` | Problem selection logic |
 
-**Current status:** 209/209 tests passing (1 skipped — optional dependency).
+**Current status:** Run the pinned verification commands in `WORKLOG.md`; do not rely on a static count in this guide.
 
 ---
 

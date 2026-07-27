@@ -764,6 +764,32 @@ def test_quarantine_validates_all_includes_before_scanning_or_mutating(tmp_path:
     assert not (repo / "archive").exists()
 
 
+def test_quarantine_invalid_later_include_fails_before_git_enumeration(
+    tmp_path: Path, monkeypatch
+):
+    import academic_benchmark.archive_manifest as module
+
+    repo = _legacy_repo(tmp_path)
+    source = repo / "academic_benchmark" / "yaem2026"
+    before = _snapshot_tree(source)
+
+    def fail_git_enumeration(*_args, **_kwargs):
+        raise AssertionError("Git enumeration occurred before include validation")
+
+    monkeypatch.setattr(module, "git_tracked_files", fail_git_enumeration)
+    with pytest.raises(QuarantineBlocked, match="include path not found"):
+        module.quarantine_tracked_tree(
+            repo_root=repo,
+            source_root=PurePosixPath("academic_benchmark/yaem2026"),
+            archive_root=PurePosixPath("archive/legacy"),
+            archive_id="legacy",
+            include_paths=[PurePosixPath("core/solver.py"), PurePosixPath("missing/later.py")],
+        )
+
+    assert _snapshot_tree(source) == before
+    assert not (repo / "archive").exists()
+
+
 def test_cli_quarantine_profile_bildiri(tmp_path: Path, monkeypatch):
     import academic_benchmark.archive_manifest as module
 

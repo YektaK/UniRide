@@ -148,9 +148,9 @@ Historical pre-fix baseline: **529 passed** in 28.93s. Zero failures. This count
 
 ## 2026-07-27 — Package B Tasks 9–11 Corrective Verification
 
-This corrective pass used strict red-green TDD. The initial red gate produced five expected failures: one ignored arbitrary `.db` evidence file was not blocked, and four inexact native backend labels were accepted. The minimal fixes narrowed disposable caches to actual Python/Numba cache suffixes and required the exact pure-native label `objective=numba;polish=none`. Completion review found two further boundary gaps; mutation tests then produced one expected exact-alias failure and two expected nested-control-filename failures before their fixes.
+This corrective pass used strict red-green TDD. The initial red gate produced five expected failures: one ignored arbitrary `.db` evidence file was not blocked, and four inexact native backend labels were accepted. The minimal fixes narrowed disposable caches to actual Python/Numba cache suffixes and required the exact pure-native label `objective=numba;polish=none`. Completion review found two further boundary gaps; mutation tests then produced one expected exact-alias failure and two expected nested-control-filename failures before their fixes. A final independent review found incomplete executable-identity coverage and substring false positives; its focused mutation pair failed twice before the exact AST matcher was implemented.
 
-The final Bildiri boundary gate now fails closed on missing or malformed manifests, parses active Python without suppressing syntax/decode failures, constrains package discovery to this worktree, rejects legacy and fallback imports (including top-level `core.*`), rejects executable `B-GA`/`B-PSO` outside the explicit CLI migration map and migration-contract test, inspects canonical GWO/HHO modules, and verifies all 233 archive hashes and the exact manifest/archive content set. Only the archive-root `manifest.json` and `QUARANTINE.md` control files are excluded from that content comparison. Generated packaging metadata no longer lists removed Bildiri modules.
+The final Bildiri boundary gate now fails closed on missing or malformed manifests, parses active Python without suppressing syntax/decode failures, constrains package discovery to this worktree, rejects legacy and fallback imports (including top-level `core.*`), rejects exact executable `B-GA`/`B-PSO` string identities and `BILDIRI_GA`/`BILDIRI_PSO` identifier identities outside the explicit CLI migration map and migration-contract test, while ignoring comments, docstrings, and unrelated substrings, inspects canonical GWO/HHO modules, and verifies all 233 archive hashes and the exact manifest/archive content set. Only the archive-root `manifest.json` and `QUARANTINE.md` control files are excluded from that content comparison. Generated packaging metadata no longer lists removed Bildiri modules.
 
 **Pinned `.venv-jit` verification:**
 
@@ -165,18 +165,18 @@ Result: **115 passed** in 2.71s.
 Contract, archive, study, registry, and migration suite after completion-review fixes:
 
 ```powershell
-& 'C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe' -m pytest academic_benchmark/tests/test_manifest_contracts.py academic_benchmark/tests/test_archive_manifest.py academic_benchmark/tests/test_yaem_quarantine_boundary.py academic_benchmark/tests/test_bildiri_quarantine_boundary.py academic_benchmark/tests/test_bildiri_study_profile.py academic_benchmark/tests/test_production_registry_snapshot.py academic_benchmark/tests/test_legacy_algorithm_migrations.py -q -p no:cacheprovider --tb=short --basetemp=C:\tmp\pytest-package-b-final-contracts-v2
+& 'C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe' -m pytest academic_benchmark/tests/test_manifest_contracts.py academic_benchmark/tests/test_archive_manifest.py academic_benchmark/tests/test_yaem_quarantine_boundary.py academic_benchmark/tests/test_bildiri_quarantine_boundary.py academic_benchmark/tests/test_bildiri_study_profile.py academic_benchmark/tests/test_production_registry_snapshot.py academic_benchmark/tests/test_legacy_algorithm_migrations.py -q -p no:cacheprovider --tb=short --basetemp=C:\tmp\pytest-package-b-final-contracts-v3
 ```
 
-Result: **145 passed** in 31.20s.
+Result: **146 passed** in 34.68s.
 
 Complete academic suite after completion-review fixes:
 
 ```powershell
-& 'C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe' -m pytest academic_benchmark/tests -q -p no:cacheprovider --tb=short --basetemp=C:\tmp\pytest-package-b-final-full-v2
+& 'C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe' -m pytest academic_benchmark/tests -q -p no:cacheprovider --tb=short --basetemp=C:\tmp\pytest-package-b-final-full-v3
 ```
 
-Result: **537 passed** in 45.33s.
+Result: **538 passed** in 50.19s.
 
 Archive and schema checks:
 

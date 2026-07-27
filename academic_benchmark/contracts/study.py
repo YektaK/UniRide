@@ -19,6 +19,7 @@ class NativeProtocolV1(StrictContract):
     protocol_id: Literal["algorithm_native_termination"]
     protocol_version: str = Field(min_length=1)
     termination: dict[str, JsonValue]
+    algorithm_ids: list[str] | None = None
 
 
 class OutputPolicyV1(StrictContract):
@@ -61,4 +62,15 @@ class StudyManifestV1(StrictContract):
             raise ValueError("algorithm_parameters keys must exactly match algorithm_ids")
         if len(set(self.fixed_budget_levels)) != len(self.fixed_budget_levels):
             raise ValueError("fixed_budget_levels must be unique")
+        if self.secondary_protocol is not None:
+            secondary_ids = self.secondary_protocol.algorithm_ids
+            if secondary_ids is not None:
+                if not secondary_ids:
+                    raise ValueError("secondary_protocol.algorithm_ids must be non-empty")
+                if len(set(secondary_ids)) != len(secondary_ids):
+                    raise ValueError("secondary_protocol.algorithm_ids must be unique")
+                if not set(secondary_ids).issubset(self.algorithm_ids):
+                    raise ValueError(
+                        "secondary_protocol.algorithm_ids must be a subset of algorithm_ids"
+                    )
         return self

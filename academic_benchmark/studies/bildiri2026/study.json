@@ -24,6 +24,7 @@
   "secondary_protocol": {
     "protocol_id": "algorithm_native_termination",
     "protocol_version": "uniride-native-tsp-v1",
+    "algorithm_ids": ["Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"],
     "termination": {"max_iterations": 2}
   },
   "fixed_budget_levels": [100, 500],

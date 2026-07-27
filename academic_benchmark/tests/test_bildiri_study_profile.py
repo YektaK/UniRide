@@ -1,123 +1,210 @@
 from __future__ import annotations
 
+import hashlib
 import json
+from copy import deepcopy
+from datetime import date
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
+
+from academic_benchmark.contracts import DatasetManifestV1, StudyManifestV1
+from academic_benchmark.native_protocol import APPROVED_NATIVE_ALGORITHMS, NATIVE_PROTOCOL
+from uniride_core.algorithms.tsplib_parser import parse_atsp_text
 
 
-@pytest.fixture
-def dataset_manifest() -> dict:
-    path = Path(__file__).resolve().parent.parent / "datasets" / "ft53.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+DATASET_MANIFEST_PATH = REPOSITORY_ROOT / "academic_benchmark" / "datasets" / "ft53.json"
+STUDY_MANIFEST_PATH = (
+    REPOSITORY_ROOT / "academic_benchmark" / "studies" / "bildiri2026" / "study.json"
+)
+APPROVED_ARTIFACT_RELATIVE_PATH = "academic_benchmark/tsplib_data/ft53.atsp"
+APPROVED_ARTIFACT_PATH = REPOSITORY_ROOT / APPROVED_ARTIFACT_RELATIVE_PATH
+APPROVED_SHA256 = "692ae545e226d88aa095e3e726c8a1dadf4ecc9b97852d0cdbb2ca2a98dd2634"
+APPROVED_AUTHORITY_URL = (
+    "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/atsp/ft53.atsp.gz"
+)
+APPROVED_OPTIMUM_PROVENANCE = "TSPLIB95 canonical ATSP optimum"
+PRIMARY_ALGORITHM_IDS = [
+    "Core-GWO-TSP-Pure",
+    "Core-GWO-TSP-Memetic-2opt",
+    "Core-HHO-TSP-Pure",
+    "Core-HHO-TSP-Memetic-2opt",
+]
+SECONDARY_ALGORITHM_IDS = ["Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"]
 
 
-@pytest.fixture
-def study_manifest() -> dict:
-    path = Path(__file__).resolve().parent.parent / "studies" / "bildiri2026" / "study.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+@pytest.fixture(scope="module")
+def dataset_manifest_payload() -> dict:
+    payload = json.loads(DATASET_MANIFEST_PATH.read_text(encoding="utf-8"))
+    DatasetManifestV1.model_validate(payload)
+    return payload
+
+
+@pytest.fixture(scope="module")
+def dataset_manifest(dataset_manifest_payload: dict) -> DatasetManifestV1:
+    return DatasetManifestV1.model_validate(dataset_manifest_payload)
+
+
+@pytest.fixture(scope="module")
+def study_manifest_payload() -> dict:
+    payload = json.loads(STUDY_MANIFEST_PATH.read_text(encoding="utf-8"))
+    StudyManifestV1.model_validate(payload)
+    return payload
+
+
+@pytest.fixture(scope="module")
+def study_manifest(study_manifest_payload: dict) -> StudyManifestV1:
+    return StudyManifestV1.model_validate(study_manifest_payload)
+
+
+@pytest.fixture(scope="module")
+def declared_artifact_path(dataset_manifest: DatasetManifestV1) -> Path:
+    resolved = (REPOSITORY_ROOT / dataset_manifest.artifact_path).resolve()
+    assert dataset_manifest.artifact_path == APPROVED_ARTIFACT_RELATIVE_PATH
+    assert resolved == APPROVED_ARTIFACT_PATH.resolve()
+    assert resolved.is_file(), f"Missing manifest-declared dataset artifact: {resolved}"
+    return resolved
 
 
 class TestDatasetManifest:
-    def test_schema_version_is_v1(self, dataset_manifest: dict):
-        assert dataset_manifest["schema_version"] == "uniride-dataset/v1"
+    def test_identity_and_atsp_shape(self, dataset_manifest: DatasetManifestV1):
+        assert dataset_manifest.schema_version == "uniride-dataset/v1"
+        assert dataset_manifest.dataset_id == "tsplib-ft53"
+        assert dataset_manifest.problem_type == "ATSP"
+        assert dataset_manifest.dimension == 53
 
-    def test_dataset_id_matches_ft53(self, dataset_manifest: dict):
-        assert dataset_manifest["dataset_id"] == "tsplib-ft53"
+    def test_pins_approved_checksum(self, dataset_manifest: DatasetManifestV1):
+        assert dataset_manifest.checksum.algorithm == "sha256"
+        assert dataset_manifest.checksum.value == APPROVED_SHA256
 
-    def test_artifact_path_is_relative(self, dataset_manifest: dict):
-        artifact = dataset_manifest["artifact_path"]
-        assert not Path(artifact).is_absolute()
-        assert ".." not in Path(artifact).parts
+    def test_pins_source_provenance(self, dataset_manifest: DatasetManifestV1):
+        assert dataset_manifest.source.authority_url == APPROVED_AUTHORITY_URL
+        assert dataset_manifest.source.retrieved_on == date(2026, 7, 20)
+        assert dataset_manifest.best_known.status == "optimal"
+        assert dataset_manifest.best_known.value == 6905.0
+        assert dataset_manifest.best_known.provenance == APPROVED_OPTIMUM_PROVENANCE
 
-    def test_checksum_is_sha256(self, dataset_manifest: dict):
-        checksum = dataset_manifest["checksum"]
-        assert checksum["algorithm"] == "sha256"
-        assert len(checksum["value"]) == 64
-        assert all(c in "0123456789abcdef" for c in checksum["value"])
-
-    def test_problem_type_is_atsp(self, dataset_manifest: dict):
-        assert dataset_manifest["problem_type"] == "ATSP"
-
-    def test_dimension_is_53(self, dataset_manifest: dict):
-        assert dataset_manifest["dimension"] == 53
-
-    def test_matrix_semantics_directed(self, dataset_manifest: dict):
-        semantics = dataset_manifest["matrix_semantics"]
-        assert semantics["directed"] is True
-        assert semantics["edge_weight_type"] == "EXPLICIT"
-        assert semantics["edge_weight_format"] == "FULL_MATRIX"
-        assert semantics["diagonal_semantics"] == "sentinel"
-
-    def test_best_known_optimal(self, dataset_manifest: dict):
-        best = dataset_manifest["best_known"]
-        assert best["status"] == "optimal"
-        assert best["value"] == 6905.0
-
-    def test_source_has_authority_url(self, dataset_manifest: dict):
-        source = dataset_manifest["source"]
-        assert source["authority_url"].startswith("https://")
-        assert "retrieved_on" in source
+    def test_pins_directed_full_matrix_semantics(self, dataset_manifest: DatasetManifestV1):
+        semantics = dataset_manifest.matrix_semantics
+        assert semantics.directed is True
+        assert semantics.edge_weight_type == "EXPLICIT"
+        assert semantics.edge_weight_format == "FULL_MATRIX"
+        assert semantics.diagonal_semantics == "sentinel"
 
 
 class TestStudyManifest:
-    def test_schema_version_is_v1(self, study_manifest: dict):
-        assert study_manifest["schema_version"] == "uniride-study/v1"
+    def test_profile_identity_and_scope(self, study_manifest: StudyManifestV1):
+        assert study_manifest.schema_version == "uniride-study/v1"
+        assert study_manifest.study_id == "bildiri2026"
+        assert study_manifest.status == "draft"
+        assert study_manifest.problem_families == ["ATSP"]
+        assert study_manifest.seed_protocol_version == "sha256-seed-v1"
+        assert study_manifest.output_policy.repository_outputs == "smoke_only"
 
-    def test_study_id_is_bildiri2026(self, study_manifest: dict):
-        assert study_manifest["study_id"] == "bildiri2026"
+    def test_primary_protocol_retains_all_four_variants(self, study_manifest: StudyManifestV1):
+        assert study_manifest.algorithm_ids == PRIMARY_ALGORITHM_IDS
+        assert set(study_manifest.algorithm_parameters) == set(PRIMARY_ALGORITHM_IDS)
+        assert study_manifest.primary_protocol.protocol_id == "fixed_evaluation_budget"
 
-    def test_status_is_draft(self, study_manifest: dict):
-        assert study_manifest["status"] == "draft"
+    def test_secondary_protocol_selects_native_compatible_intersection(
+        self, study_manifest: StudyManifestV1
+    ):
+        secondary = study_manifest.secondary_protocol
+        assert secondary is not None
+        assert secondary.protocol_version == NATIVE_PROTOCOL
+        assert secondary.algorithm_ids == SECONDARY_ALGORITHM_IDS
+        assert set(secondary.algorithm_ids) == (
+            set(study_manifest.algorithm_ids) & APPROVED_NATIVE_ALGORITHMS
+        )
+        assert set(secondary.algorithm_ids) <= APPROVED_NATIVE_ALGORITHMS
 
-    def test_algorithm_ids_are_explicit(self, study_manifest: dict):
-        ids = study_manifest["algorithm_ids"]
-        assert len(ids) == 4
-        assert all(id.startswith("Core-") for id in ids)
-        assert all("GWO" in id or "HHO" in id for id in ids)
+    def test_dataset_manifest_reference_is_the_validated_ft53_manifest(
+        self, study_manifest: StudyManifestV1
+    ):
+        assert study_manifest.dataset_manifest_refs == [
+            "academic_benchmark/datasets/ft53.json"
+        ]
 
-    def test_algorithm_parameters_match_ids(self, study_manifest: dict):
-        ids = set(study_manifest["algorithm_ids"])
-        params = set(study_manifest["algorithm_parameters"].keys())
-        assert ids == params
+    def test_secondary_algorithm_ids_remain_optional_for_existing_manifests(
+        self, study_manifest_payload: dict
+    ):
+        payload = deepcopy(study_manifest_payload)
+        payload["secondary_protocol"].pop("algorithm_ids", None)
+        validated = StudyManifestV1.model_validate(payload)
+        assert validated.secondary_protocol is not None
+        assert validated.secondary_protocol.algorithm_ids is None
 
-    def test_dataset_manifest_refs_relative(self, study_manifest: dict):
-        for ref in study_manifest["dataset_manifest_refs"]:
-            assert not Path(ref).is_absolute()
-            assert ".." not in Path(ref).parts
+    @pytest.mark.parametrize(
+        "algorithm_ids,error",
+        [
+            ([], "secondary_protocol.algorithm_ids must be non-empty"),
+            (
+                ["Core-GWO-TSP-Pure", "Core-GWO-TSP-Pure"],
+                "secondary_protocol.algorithm_ids must be unique",
+            ),
+            (["Numba-2-opt"], "secondary_protocol.algorithm_ids must be a subset"),
+        ],
+    )
+    def test_secondary_algorithm_ids_are_a_non_empty_unique_study_subset(
+        self,
+        study_manifest_payload: dict,
+        algorithm_ids: list[str],
+        error: str,
+    ):
+        payload = deepcopy(study_manifest_payload)
+        payload["secondary_protocol"]["algorithm_ids"] = algorithm_ids
+        with pytest.raises(ValidationError, match=error):
+            StudyManifestV1.model_validate(payload)
 
-    def test_primary_protocol_present(self, study_manifest: dict):
-        protocol = study_manifest["primary_protocol"]
-        assert protocol["protocol_id"] == "fixed_evaluation_budget"
-        assert "protocol_version" in protocol
-
-    def test_secondary_protocol_present(self, study_manifest: dict):
-        protocol = study_manifest["secondary_protocol"]
-        assert protocol["protocol_id"] == "algorithm_native_termination"
-
-    def test_problem_families_atsp_only(self, study_manifest: dict):
-        assert study_manifest["problem_families"] == ["ATSP"]
-
-    def test_seed_protocol_version(self, study_manifest: dict):
-        assert study_manifest["seed_protocol_version"] == "sha256-seed-v1"
-
-    def test_output_policy_smoke_only(self, study_manifest: dict):
-        policy = study_manifest["output_policy"]
-        assert policy["repository_outputs"] == "smoke_only"
+    def test_secondary_protocol_still_rejects_unknown_fields(
+        self, study_manifest_payload: dict
+    ):
+        payload = deepcopy(study_manifest_payload)
+        payload["secondary_protocol"]["unknown"] = True
+        with pytest.raises(ValidationError, match="extra_forbidden"):
+            StudyManifestV1.model_validate(payload)
 
 
-class TestDatasetArtifactExists:
-    def test_ft53_atsp_file_exists(self):
-        path = Path(__file__).resolve().parent.parent / "tsplib_data" / "ft53.atsp"
-        assert path.exists(), f"Missing dataset artifact: {path}"
+class TestManifestDeclaredArtifact:
+    def test_exact_sha256(
+        self,
+        dataset_manifest: DatasetManifestV1,
+        declared_artifact_path: Path,
+    ):
+        digest = hashlib.sha256(declared_artifact_path.read_bytes()).hexdigest()
+        assert digest == APPROVED_SHA256
+        assert digest == dataset_manifest.checksum.value
 
-    def test_ft53_atsp_file_matches_checksum(self, dataset_manifest: dict):
-        import hashlib
-        path = Path(__file__).resolve().parent.parent / "tsplib_data" / "ft53.atsp"
-        if not path.exists():
-            pytest.skip("ft53.atsp not present")
-        digest = hashlib.sha256()
-        with path.open("rb") as f:
-            for block in iter(lambda: f.read(1024 * 1024), b""):
-                digest.update(block)
-        assert digest.hexdigest() == dataset_manifest["checksum"]["value"]
+    def test_parsed_atsp_metadata_and_matrix(
+        self,
+        dataset_manifest: DatasetManifestV1,
+        declared_artifact_path: Path,
+    ):
+        text = declared_artifact_path.read_text(encoding="utf-8")
+        header, weight_section = text.split("EDGE_WEIGHT_SECTION", maxsplit=1)
+        weight_text = weight_section.split("EOF", maxsplit=1)[0]
+        weights = [int(token) for token in weight_text.split()]
+
+        assert "TYPE: ATSP" in header
+        assert "DIMENSION: 53" in header
+        assert "EDGE_WEIGHT_TYPE: EXPLICIT" in header
+        assert "EDGE_WEIGHT_FORMAT: FULL_MATRIX" in header
+        assert len(weights) == 53 * 53 == 2809
+
+        parsed = parse_atsp_text(text, "ft53")
+        assert parsed is not None
+        assert parsed["problem_type"] == dataset_manifest.problem_type == "ATSP"
+        assert parsed["dimension"] == dataset_manifest.dimension == 53
+        assert parsed["edge_weight_type"] == "EXPLICIT"
+
+        matrix = parsed["explicit_matrix"]
+        assert len(matrix) == 53
+        assert all(len(row) == 53 for row in matrix)
+        assert all(matrix[index][index] == 9999999 for index in range(53))
+        assert any(
+            matrix[row][column] != matrix[column][row]
+            for row in range(53)
+            for column in range(row + 1, 53)
+        )

@@ -31,6 +31,21 @@
     "NativeProtocolV1": {
       "additionalProperties": false,
       "properties": {
+        "algorithm_ids": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Algorithm Ids"
+        },
         "protocol_id": {
           "const": "algorithm_native_termination",
           "title": "Protocol Id",

@@ -148,9 +148,9 @@ Historical pre-fix baseline: **529 passed** in 28.93s. Zero failures. This count
 
 ## 2026-07-27 — Package B Tasks 9–11 Corrective Verification
 
-This corrective pass used strict red-green TDD. The initial red gate produced five expected failures: one ignored arbitrary `.db` evidence file was not blocked, and four inexact native backend labels were accepted. The minimal fixes narrowed disposable caches to actual Python/Numba cache suffixes and required the exact pure-native label `objective=numba;polish=none`. Completion review found two further boundary gaps; mutation tests then produced one expected exact-alias failure and two expected nested-control-filename failures before their fixes. A final independent review found incomplete executable-identity coverage and substring false positives; its focused mutation pair failed twice before the exact AST matcher was implemented.
+This corrective pass used strict red-green TDD. The initial red gate produced five expected failures: one ignored arbitrary `.db` evidence file was not blocked, and four inexact native backend labels were accepted. The minimal fixes narrowed disposable caches to actual Python/Numba cache suffixes and required the exact pure-native label `objective=numba;polish=none`. Completion review found two further boundary gaps; mutation tests then produced one expected exact-alias failure and two expected nested-control-filename failures before their fixes. A final independent review found incomplete executable-identity coverage and substring false positives; its focused mutation pair failed twice before the exact AST matcher was implemented. A subsequent strictness mutation then failed three times, proving the former whole-file exemptions hid executable identities appended outside the approved assignments.
 
-The final Bildiri boundary gate now fails closed on missing or malformed manifests, parses active Python without suppressing syntax/decode failures, constrains package discovery to this worktree, rejects legacy and fallback imports (including top-level `core.*`), rejects exact executable `B-GA`/`B-PSO` string identities and `BILDIRI_GA`/`BILDIRI_PSO` identifier identities outside the explicit CLI migration map and migration-contract test, while ignoring comments, docstrings, and unrelated substrings, inspects canonical GWO/HHO modules, and verifies all 233 archive hashes and the exact manifest/archive content set. Only the archive-root `manifest.json` and `QUARANTINE.md` control files are excluded from that content comparison. Generated packaging metadata no longer lists removed Bildiri modules.
+The final Bildiri boundary gate now fails closed on missing or malformed manifests, parses active Python without suppressing syntax/decode failures, constrains package discovery to this worktree, rejects legacy and fallback imports (including top-level `core.*`), and rejects exact executable `B-GA`/`B-PSO` string identities plus `BILDIRI_GA`/`BILDIRI_PSO` identifier identities. Exemptions are limited to value nodes of the exact two-entry CLI/migration-test assignments and the boundary test's exact matcher-definition assignment; comments, docstrings, unrelated substrings, and executable identities elsewhere in those files remain fully scanned. The gate also inspects canonical GWO/HHO modules and verifies all 233 archive hashes and the exact manifest/archive content set. Only the archive-root `manifest.json` and `QUARANTINE.md` control files are excluded from that content comparison. Generated packaging metadata no longer lists removed Bildiri modules.
 
 **Pinned `.venv-jit` verification:**
 
@@ -162,21 +162,29 @@ Focused JIT/fallback and fair-protocol suite:
 
 Result: **115 passed** in 2.71s.
 
+Final assignment-scoped Bildiri boundary suite:
+
+```powershell
+& 'C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe' -m pytest academic_benchmark/tests/test_bildiri_quarantine_boundary.py -q -p no:cacheprovider --tb=short --basetemp=C:\tmp\pytest-package-b-scoped-boundary
+```
+
+Result: **21 passed** in 8.25s. The focused three-file mutation was red with 3 failures before the node-scoped fix and green with 3 passes afterward.
+
 Contract, archive, study, registry, and migration suite after completion-review fixes:
 
 ```powershell
-& 'C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe' -m pytest academic_benchmark/tests/test_manifest_contracts.py academic_benchmark/tests/test_archive_manifest.py academic_benchmark/tests/test_yaem_quarantine_boundary.py academic_benchmark/tests/test_bildiri_quarantine_boundary.py academic_benchmark/tests/test_bildiri_study_profile.py academic_benchmark/tests/test_production_registry_snapshot.py academic_benchmark/tests/test_legacy_algorithm_migrations.py -q -p no:cacheprovider --tb=short --basetemp=C:\tmp\pytest-package-b-final-contracts-v3
+& 'C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe' -m pytest academic_benchmark/tests/test_manifest_contracts.py academic_benchmark/tests/test_archive_manifest.py academic_benchmark/tests/test_yaem_quarantine_boundary.py academic_benchmark/tests/test_bildiri_quarantine_boundary.py academic_benchmark/tests/test_bildiri_study_profile.py academic_benchmark/tests/test_production_registry_snapshot.py academic_benchmark/tests/test_legacy_algorithm_migrations.py -q -p no:cacheprovider --tb=short --basetemp=C:\tmp\pytest-package-b-final-contracts-v4
 ```
 
-Result: **146 passed** in 34.68s.
+Result: **149 passed** in 38.66s.
 
 Complete academic suite after completion-review fixes:
 
 ```powershell
-& 'C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe' -m pytest academic_benchmark/tests -q -p no:cacheprovider --tb=short --basetemp=C:\tmp\pytest-package-b-final-full-v3
+& 'C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe' -m pytest academic_benchmark/tests -q -p no:cacheprovider --tb=short --basetemp=C:\tmp\pytest-package-b-final-full-v4
 ```
 
-Result: **538 passed** in 50.19s.
+Result: **541 passed** in 50.56s.
 
 Archive and schema checks:
 

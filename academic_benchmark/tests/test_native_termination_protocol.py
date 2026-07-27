@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +11,7 @@ import pytest
 from academic_benchmark.fairness import FairComparisonManifest
 from academic_benchmark.native_pilot import (
     NativePilotError,
+    _native_result_record,
     aggregate_native_records,
     load_native_pilot_config,
     run_native_pilot,
@@ -265,7 +266,7 @@ def test_native_metaheuristics_use_numba_and_report_actual_counts(algorithm_id):
     result = _executor(algorithm_id)(problem, params, 999, 0)
     assert sorted(result.tour) == list(range(1, problem.dimension + 1))
     assert result.objective_cost == pytest.approx(_closed_cost(result.tour, problem.dist_matrix))
-    assert "numba" in result.execution_backend
+    assert result.execution_backend == "objective=numba;polish=none"
     assert result.objective_evaluations > 0
     assert result.evaluation_budget is None
     assert result.budget_terminated is False
@@ -277,6 +278,40 @@ def test_native_metaheuristics_use_numba_and_report_actual_counts(algorithm_id):
         "operator": None,
     }
     assert result.termination_reason == "stagnation_limit"
+
+
+@pytest.mark.parametrize(
+    "execution_backend",
+    [
+        "numba-objective",
+        "objective=numba;polish=python",
+        "objective=python+numba;polish=none",
+        "objective=numba;polish=none;fallback=python",
+    ],
+)
+def test_native_pilot_rejects_inexact_pure_metaheuristic_backend(
+    tmp_path: Path, execution_backend: str
+):
+    algorithm_id = "Core-GWO-TSP-Pure"
+    problem = _problem("uniform-tsp", uniform=True)
+    params = copy.deepcopy(_algorithm_config()[algorithm_id])
+    params["native_comparison"] = _native_payload()
+    result = _executor(algorithm_id)(problem, params, 999, 0)
+    config = load_native_pilot_config(_write_config(tmp_path, _config()))
+
+    with pytest.raises(NativePilotError, match="exact pure Numba backend"):
+        _native_result_record(
+            result=replace(result, execution_backend=execution_backend),
+            problem=problem,
+            matrix=problem.dist_matrix,
+            matrix_sha256="0" * 64,
+            algorithm_id=algorithm_id,
+            replicate=0,
+            seed=999,
+            config=config,
+            elapsed_ms=0.0,
+            record_kind="primary",
+        )
 
 
 @pytest.mark.parametrize("algorithm_id", ["Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"])

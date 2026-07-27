@@ -366,6 +366,27 @@ def test_ignored_non_cache_data_inside_cache_named_directory_blocks(tmp_path: Pa
     assert cache_data.read_text(encoding="utf-8") == "must not be deleted"
 
 
+def test_ignored_database_evidence_blocks_without_mutating_bytes(tmp_path: Path):
+    repo = _legacy_repo(tmp_path)
+    source = repo / "academic_benchmark" / "yaem2026"
+    database = source / "research-evidence.db"
+    database.write_bytes(b"SQLite format 3\x00user evidence\xff")
+    (repo / ".gitignore").write_text("*.pyc\n*.db\n", encoding="utf-8")
+    before = _snapshot_tree(source)
+
+    with pytest.raises(QuarantineBlocked, match="ignored non-cache"):
+        quarantine_tracked_tree(
+            repo_root=repo,
+            source_root=PurePosixPath("academic_benchmark/yaem2026"),
+            archive_root=PurePosixPath("archive/legacy"),
+            archive_id="legacy",
+        )
+
+    assert _snapshot_tree(source) == before
+    assert database.read_bytes() == b"SQLite format 3\x00user evidence\xff"
+    assert not (repo / "archive").exists()
+
+
 def test_keyboard_interrupt_restores_files_and_staged_caches(tmp_path: Path, monkeypatch):
     import academic_benchmark.archive_manifest as archive_module
 

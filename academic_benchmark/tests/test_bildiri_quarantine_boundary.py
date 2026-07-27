@@ -2,45 +2,68 @@ from __future__ import annotations
 
 import ast
 import json
-import sys
-import textwrap
-from pathlib import Path, PurePosixPath
+from importlib.metadata import PathDistribution
+from importlib.machinery import PathFinder
+from pathlib import Path
 
 import pytest
 
+from academic_benchmark.archive_manifest import load_manifest, verify_manifest
+
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-ACTIVE_ROOTS = [
+ACTIVE_ROOTS = (
     REPO_ROOT / "academic_benchmark",
     REPO_ROOT / "uniride_core",
     REPO_ROOT / "optimizer_api",
-]
-
+)
 ARCHIVE_ROOT = REPO_ROOT / "archive"
 BILDIRI_SOURCE_TREE = REPO_ROOT / "academic_benchmark" / "bildiri2026"
+BILDIRI_ARCHIVE_ROOT = ARCHIVE_ROOT / "academic_benchmark" / "bildiri2026_legacy"
+MANIFEST_PATH = BILDIRI_ARCHIVE_ROOT / "manifest.json"
+BOUNDARY_TEST_FILE = Path(__file__).resolve()
+CANONICAL_SOLVER_FILES = (
+    REPO_ROOT / "uniride_core" / "algorithms" / "tsp_matrix_metaheuristics" / "gwo_solver.py",
+    REPO_ROOT / "uniride_core" / "algorithms" / "tsp_matrix_metaheuristics" / "hho_solver.py",
+)
 
-PENDING_LEGACY_FILES = [
+# These legacy entry points must remain quarantined and unreachable from active code.
+QUARANTINED_LEGACY_FILES = (
     REPO_ROOT / "academic_benchmark" / "run_numba_with_bildiri_params.py",
     REPO_ROOT / "academic_benchmark" / "tests" / "test_bildiri_data_manager.py",
     REPO_ROOT / "academic_benchmark" / "tests" / "test_bildiri2026_benchmark_script_smoke.py",
     REPO_ROOT / "academic_benchmark" / "tests" / "test_orchestrate_batch.py",
-]
+    BILDIRI_SOURCE_TREE / "data_manager.py",
+    BILDIRI_SOURCE_TREE / "orchestrate_batch.py",
+    BILDIRI_SOURCE_TREE / "benchmarks" / "tsplib_benchmark.py",
+    BILDIRI_SOURCE_TREE / "benchmarks" / "timematrix_benchmark.py",
+    BILDIRI_SOURCE_TREE / "data" / "tuned_parameters_db.json",
+)
 
-MIGRATION_TABLE_MODULES = {
-    REPO_ROOT / "academic_benchmark" / "core" / "registry_setup.py",
-    REPO_ROOT / "academic_benchmark" / "cli_engine.py",
-}
-
-PARITY_TEST_FILES = {
-    REPO_ROOT / "academic_benchmark" / "tests" / "test_bildiri_solver_parity.py",
-}
-
-BOUNDARY_TEST_FILE = REPO_ROOT / "academic_benchmark" / "tests" / "test_bildiri_quarantine_boundary.py"
-
-MIGRATION_TEST_FILES = {
-    REPO_ROOT / "academic_benchmark" / "tests" / "test_legacy_algorithm_migrations.py",
-}
-
-ALLOWED_EXECUTABLE_TOKEN_FILES = MIGRATION_TABLE_MODULES | set(PENDING_LEGACY_FILES) | PARITY_TEST_FILES | {BOUNDARY_TEST_FILE} | MIGRATION_TEST_FILES
+FORBIDDEN_IMPORT_PREFIXES = (
+    "academic_benchmark.bildiri2026",
+    "bildiri2026",
+)
+FORBIDDEN_TOP_LEVEL_IMPORT_PREFIXES = (
+    "core",
+    "data_manager",
+    "orchestrate_batch",
+    "tsplib_benchmark",
+    "timematrix_benchmark",
+    "benchmarks.tsplib_benchmark",
+    "benchmarks.timematrix_benchmark",
+)
+FORBIDDEN_EXECUTABLE_TOKENS = {"bildiri_ga", "bildiri_pso"}
+LEGACY_PIPELINE_MARKERS = (
+    "academic_benchmark.bildiri2026.data_manager",
+    "academic_benchmark.bildiri2026.orchestrate_batch",
+    "academic_benchmark.bildiri2026.benchmarks.tsplib_benchmark",
+    "academic_benchmark.bildiri2026.benchmarks.timematrix_benchmark",
+    "academic_benchmark/bildiri2026/data_manager.py",
+    "academic_benchmark/bildiri2026/orchestrate_batch.py",
+    "academic_benchmark/bildiri2026/benchmarks/tsplib_benchmark.py",
+    "academic_benchmark/bildiri2026/benchmarks/timematrix_benchmark.py",
+    "academic_benchmark/bildiri2026/data/tuned_parameters_db.json",
+)
 
 
 def _collect_active_python() -> list[Path]:
@@ -53,9 +76,7 @@ def _collect_active_python() -> list[Path]:
                 continue
             if path.is_relative_to(ARCHIVE_ROOT):
                 continue
-            if path.is_relative_to(REPO_ROOT / "archive"):
-                continue
-            files.append(path)
+            files.append(path.resolve())
     return sorted(set(files))
 
 
@@ -63,161 +84,124 @@ def _normalize_token(token: str) -> str:
     return token.lower().replace("-", "_").replace(" ", "_")
 
 
-FORBIDDEN_IMPORTS = {
-    "academic_benchmark.bildiri2026",
-    "academic_benchmark.bildiri2026.core",
-    "academic_benchmark.bildiri2026.core.gwo_solver",
-    "academic_benchmark.bildiri2026.core.hho_solver",
-    "academic_benchmark.bildiri2026.core.numba_accel",
-    "bildiri2026",
-    "bildiri2026.core",
-    "bildiri2026.core.gwo_solver",
-    "bildiri2026.core.hho_solver",
-    "bildiri2026.core.numba_accel",
-}
-
-FORBIDDEN_EXECUTABLE_TOKENS = {"b_ga", "b_pso", "biliri_ga", "biliri_pso"}
+def _module_matches(module: str, prefix: str) -> bool:
+    lowered = module.lower()
+    return lowered == prefix or lowered.startswith(prefix + ".")
 
 
 def _check_ast_imports(path: Path) -> list[str]:
-    try:
-        source = path.read_text(encoding="utf-8")
-        tree = ast.parse(source, filename=str(path))
-    except (SyntaxError, UnicodeDecodeError):
-        return []
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     violations: list[str] = []
     for node in ast.walk(tree):
+        candidates: list[tuple[str, int]] = []
         if isinstance(node, ast.Import):
-            for alias in node.names:
-                normalized = _normalize_token(alias.name)
-                if any(normalized.startswith(forbidden) for forbidden in FORBIDDEN_IMPORTS):
-                    violations.append(f"import {alias.name} at line {node.lineno}")
-        elif isinstance(node, ast.ImportFrom):
-            if node.module:
-                normalized = _normalize_token(node.module)
-                if any(normalized.startswith(forbidden) for forbidden in FORBIDDEN_IMPORTS):
-                    violations.append(f"from {node.module} import ... at line {node.lineno}")
+            candidates.extend((alias.name, 0) for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            candidates.append((node.module, node.level))
+        for module, level in candidates:
+            forbidden_bildiri = any(
+                _module_matches(module, prefix) for prefix in FORBIDDEN_IMPORT_PREFIXES
+            )
+            forbidden_fallback = level == 0 and any(
+                _module_matches(module, prefix)
+                for prefix in FORBIDDEN_TOP_LEVEL_IMPORT_PREFIXES
+            )
+            if forbidden_bildiri or forbidden_fallback:
+                violations.append(f"forbidden import {module} at line {node.lineno}")
     return violations
 
 
-def _check_string_injection(path: Path) -> list[str]:
-    try:
-        source = path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        return []
+def _check_academic_imports(path: Path) -> list[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     violations: list[str] = []
-    for i, line in enumerate(source.splitlines(), start=1):
-        stripped = line.strip()
-        if stripped.startswith("#"):
-            continue
-        if "academic_benchmark/bildiri2026" in line or "academic_benchmark\\bildiri2026" in line:
-            if path in MIGRATION_TABLE_MODULES or path in PENDING_LEGACY_FILES or path == BOUNDARY_TEST_FILE:
-                continue
-            violations.append(f"string path injection at line {i}")
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            modules = [alias.name for alias in node.names]
+        elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
+            modules = [node.module]
+        else:
+            modules = []
+        for module in modules:
+            if _module_matches(module, "academic_benchmark"):
+                violations.append(f"academic_benchmark import {module} at line {node.lineno}")
+    return violations
+
+
+def _check_string_reachability(path: Path) -> list[str]:
+    if path == BOUNDARY_TEST_FILE:
+        return []
+    source = path.read_text(encoding="utf-8").lower().replace("\\", "/")
+    violations: list[str] = []
+    for marker in LEGACY_PIPELINE_MARKERS:
+        if marker in source:
+            violations.append(f"legacy pipeline marker {marker}")
+    if "academic_benchmark/bildiri2026" in source:
+        violations.append("legacy Bildiri source-tree path")
     return violations
 
 
 def _check_executable_tokens(path: Path) -> list[str]:
-    if path in ALLOWED_EXECUTABLE_TOKEN_FILES:
+    if path == BOUNDARY_TEST_FILE:
         return []
-    try:
-        source = path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        return []
+    source = path.read_text(encoding="utf-8")
     violations: list[str] = []
-    for i, line in enumerate(source.splitlines(), start=1):
-        stripped = line.strip()
-        if stripped.startswith("#"):
+    for line_number, line in enumerate(source.splitlines(), start=1):
+        if line.strip().startswith("#"):
             continue
+        normalized = _normalize_token(line)
         for token in FORBIDDEN_EXECUTABLE_TOKENS:
-            if token in _normalize_token(stripped):
-                violations.append(f"executable token '{token}' at line {i}")
+            if token in normalized:
+                violations.append(f"executable token {token} at line {line_number}")
     return violations
 
 
-def _check_solver_imports_bildiri(path: Path) -> list[str]:
-    try:
-        source = path.read_text(encoding="utf-8")
-        tree = ast.parse(source, filename=str(path))
-    except (SyntaxError, UnicodeDecodeError):
-        return []
-    violations: list[str] = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom):
-            if node.module and "tsp_matrix_metaheuristics" in (node.module or ""):
-                for alias in node.names:
-                    if alias.name in ("GWOOptimizer", "HHOOptimizer"):
-                        violations.append(f"canonical solver imports academic_benchmark at line {node.lineno}")
-    return violations
+def _assert_no_violations(label: str, checker) -> None:
+    violations: dict[str, list[str]] = {}
+    for path in _collect_active_python():
+        issues = checker(path)
+        if issues:
+            violations[path.relative_to(REPO_ROOT).as_posix()] = issues
+    assert not violations, label + ":\n" + "\n".join(
+        f"  {path}: {'; '.join(issues)}" for path, issues in violations.items()
+    )
 
 
 class TestZeroActiveBildiriReachability:
-    @pytest.fixture(autouse=True)
-    def _setup(self):
-        self.active_files = _collect_active_python()
+    def test_no_legacy_or_top_level_fallback_imports(self):
+        # No active file, including parity tests, is exempt from legacy import checks.
+        _assert_no_violations("Active code has a forbidden import", _check_ast_imports)
 
-    def test_no_import_of_bildiri2026_in_active_code(self):
-        violations: dict[str, list[str]] = {}
-        for path in self.active_files:
-            if any(path == f for f in PENDING_LEGACY_FILES):
-                continue
-            issues = _check_ast_imports(path)
-            if issues:
-                violations[str(path.relative_to(REPO_ROOT))] = issues
-        assert not violations, "Active code imports bildiri2026:\n" + "\n".join(
-            f"  {f}: {'; '.join(v)}" for f, v in violations.items()
+    def test_no_legacy_pipeline_or_source_path_reachability(self):
+        _assert_no_violations(
+            "Active code reaches quarantined pipeline material", _check_string_reachability
         )
 
-    def test_no_string_injection_of_bildiri2026_path(self):
-        violations: dict[str, list[str]] = {}
-        for path in self.active_files:
-            issues = _check_string_injection(path)
-            if issues:
-                violations[str(path.relative_to(REPO_ROOT))] = issues
-        assert not violations, "Active code contains string path injection:\n" + "\n".join(
-            f"  {f}: {'; '.join(v)}" for f, v in violations.items()
+    def test_no_bildiri_ga_or_bildiri_pso_executable_aliases(self):
+        _assert_no_violations(
+            "Active code contains executable Bildiri aliases", _check_executable_tokens
         )
 
-    def test_no_executable_bildiri_tokens(self):
-        violations: dict[str, list[str]] = {}
-        for path in self.active_files:
-            issues = _check_executable_tokens(path)
-            if issues:
-                violations[str(path.relative_to(REPO_ROOT))] = issues
-        assert not violations, "Active code contains executable Bildiri tokens:\n" + "\n".join(
-            f"  {f}: {'; '.join(v)}" for f, v in violations.items()
+    def test_import_guard_detects_core_and_legacy_pipeline_fallbacks(self, tmp_path: Path):
+        sample = tmp_path / "fallbacks.py"
+        sample.write_text(
+            "import core\n"
+            "import core.gwo_solver\n"
+            "from data_manager import DataManager\n"
+            "from benchmarks.tsplib_benchmark import run\n",
+            encoding="utf-8",
         )
+        issues = _check_ast_imports(sample)
+        assert len(issues) == 4
 
-    def test_pending_legacy_files_are_declared(self):
-        archive_root = REPO_ROOT / "archive" / "academic_benchmark" / "bildiri2026_legacy"
-        source_root = PurePosixPath("academic_benchmark")
-        for path in PENDING_LEGACY_FILES:
-            rel = PurePosixPath(path.relative_to(REPO_ROOT).as_posix())
-            source_relative = rel.relative_to(source_root)
-            archive_path = archive_root / Path(*source_relative.parts)
-            assert path.exists() or archive_path.exists(), f"Declared legacy file missing: {path.relative_to(REPO_ROOT)}"
-
-    def test_pending_legacy_files_are_not_imported_by_active_code(self):
-        for path in self.active_files:
-            if any(path == f for f in PENDING_LEGACY_FILES):
-                continue
-            try:
-                source = path.read_text(encoding="utf-8")
-                tree = ast.parse(source, filename=str(path))
-            except (SyntaxError, UnicodeDecodeError):
-                continue
-            for node in ast.walk(tree):
-                if isinstance(node, (ast.Import, ast.ImportFrom)):
-                    module = node.module if isinstance(node, ast.ImportFrom) else None
-                    if isinstance(node, ast.Import):
-                        for alias in node.names:
-                            for legacy in PENDING_LEGACY_FILES:
-                                if legacy.stem in alias.name:
-                                    pytest.fail(f"{path.relative_to(REPO_ROOT)} imports {alias.name} at line {node.lineno}")
-                    elif module:
-                        for legacy in PENDING_LEGACY_FILES:
-                            if legacy.stem in module:
-                                pytest.fail(f"{path.relative_to(REPO_ROOT)} imports from {module} at line {node.lineno}")
+    def test_alias_guard_detects_exact_legacy_aliases(self, tmp_path: Path):
+        sample = tmp_path / "aliases.py"
+        sample.write_text(
+            'first = "BILDIRI_GA"\nsecond = "BILDIRI_PSO"\n', encoding="utf-8"
+        )
+        issues = _check_executable_tokens(sample)
+        assert {"bildiri_ga", "bildiri_pso"} == {
+            token for issue in issues for token in FORBIDDEN_EXECUTABLE_TOKENS if token in issue
+        }
 
 
 class TestRegistryResolvesFromCanonicalCore:
@@ -232,79 +216,86 @@ class TestRegistryResolvesFromCanonicalCore:
         source = registry_path.read_text(encoding="utf-8")
         assert "GWOOptimizer" in source
         assert "HHOOptimizer" in source
-        lines = source.splitlines()
-        for i, line in enumerate(lines, start=1):
-            if "GWOOptimizer" in line or "HHOOptimizer" in line:
-                if "import" in line:
-                    assert "uniride_core" in line, f"Line {i}: solver import not from uniride_core: {line.strip()}"
+        for line_number, line in enumerate(source.splitlines(), start=1):
+            if ("GWOOptimizer" in line or "HHOOptimizer" in line) and "import" in line:
+                assert "uniride_core" in line, (
+                    f"Line {line_number}: solver import not from uniride_core: {line.strip()}"
+                )
+
+    @pytest.mark.parametrize("solver_path", CANONICAL_SOLVER_FILES)
+    def test_canonical_solver_has_no_academic_benchmark_dependency(self, solver_path: Path):
+        assert solver_path.is_file(), f"Canonical solver missing: {solver_path}"
+        assert not _check_academic_imports(solver_path)
+
+    def test_canonical_dependency_guard_detects_academic_import(self, tmp_path: Path):
+        sample = tmp_path / "solver.py"
+        sample.write_text(
+            "from academic_benchmark.engine_core import RunResult\n", encoding="utf-8"
+        )
+        assert _check_academic_imports(sample)
 
 
 class TestPostArchivalBoundary:
-    @pytest.fixture(autouse=True)
-    def _setup(self):
-        self.active_files = _collect_active_python()
-
-    def test_bildiri_source_tree_is_absent(self):
-        assert not BILDIRI_SOURCE_TREE.exists(), f"Bildiri source tree still exists: {BILDIRI_SOURCE_TREE}"
-
-    def test_bildiri_source_tree_is_not_importable(self):
-        for path in self.active_files:
-            try:
-                source = path.read_text(encoding="utf-8")
-                tree = ast.parse(source, filename=str(path))
-            except (SyntaxError, UnicodeDecodeError):
-                continue
-            for node in ast.walk(tree):
-                if isinstance(node, (ast.Import, ast.ImportFrom)):
-                    module = node.module if isinstance(node, ast.ImportFrom) else None
-                    names = [alias.name for alias in node.names] if isinstance(node, ast.Import) else [module or ""]
-                    for name in names:
-                        if "bildiri2026" in name.lower():
-                            pytest.fail(f"{path.relative_to(REPO_ROOT)} imports bildiri2026: {name} at line {node.lineno}")
+    def test_bildiri_source_tree_and_active_legacy_files_are_absent(self):
+        assert not BILDIRI_SOURCE_TREE.exists(), (
+            f"Bildiri source tree still exists: {BILDIRI_SOURCE_TREE}"
+        )
+        present = [
+            path.relative_to(REPO_ROOT).as_posix()
+            for path in QUARANTINED_LEGACY_FILES
+            if path.exists()
+        ]
+        assert not present, f"Quarantined legacy files remain active: {present}"
 
     def test_archive_manifest_covers_all_233_files(self):
-        manifest_path = REPO_ROOT / "archive" / "academic_benchmark" / "bildiri2026_legacy" / "manifest.json"
-        if not manifest_path.exists():
-            pytest.skip("Archive manifest not found")
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        assert MANIFEST_PATH.is_file(), f"Archive manifest missing: {MANIFEST_PATH}"
+        manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
         entries = manifest.get("entries", [])
         original_paths = {entry["original_path"] for entry in entries}
-        assert len(original_paths) == 233, f"Expected 233 unique paths, got {len(original_paths)}"
+        assert len(entries) == 233, f"Expected 233 entries, got {len(entries)}"
+        assert len(original_paths) == 233, (
+            f"Expected 233 unique original paths, got {len(original_paths)}"
+        )
 
     def test_archive_verification_passes(self):
-        manifest_path = REPO_ROOT / "archive" / "academic_benchmark" / "bildiri2026_legacy" / "manifest.json"
-        if not manifest_path.exists():
-            pytest.skip("Archive manifest not found")
-        import sys
-        sys.path.insert(0, str(REPO_ROOT))
-        from academic_benchmark.archive_manifest import verify_manifest, load_manifest
-        manifest = load_manifest(manifest_path)
-        archived_root = REPO_ROOT / "archive" / "academic_benchmark" / "bildiri2026_legacy"
-        errors = verify_manifest(manifest, archived_root)
+        assert MANIFEST_PATH.is_file(), f"Archive manifest missing: {MANIFEST_PATH}"
+        manifest = load_manifest(MANIFEST_PATH)
+        errors = verify_manifest(manifest, BILDIRI_ARCHIVE_ROOT)
         assert not errors, f"Archive verification failed: {errors}"
 
     def test_no_unmanifested_historical_files(self):
-        archive_root = REPO_ROOT / "archive" / "academic_benchmark" / "bildiri2026_legacy"
-        manifest_path = archive_root / "manifest.json"
-        if not manifest_path.exists():
-            pytest.skip("Archive manifest not found")
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        assert MANIFEST_PATH.is_file(), f"Archive manifest missing: {MANIFEST_PATH}"
+        manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
         archive_prefix = "archive/academic_benchmark/bildiri2026_legacy/"
-        manifest_paths = set()
-        for entry in manifest.get("entries", []):
-            ap = entry["archive_path"]
-            if ap.startswith(archive_prefix):
-                manifest_paths.add(ap[len(archive_prefix):])
-        actual_files = set()
-        for path in archive_root.rglob("*"):
-            if path.is_file() and path.name != "manifest.json" and path.name != "QUARANTINE.md":
-                actual_files.add(path.relative_to(archive_root).as_posix())
-        unmanifested = actual_files - manifest_paths
-        assert not unmanifested, f"Unmanifested files in archive: {unmanifested}"
+        manifest_paths = {
+            entry["archive_path"][len(archive_prefix):]
+            for entry in manifest.get("entries", [])
+            if entry.get("archive_path", "").startswith(archive_prefix)
+        }
+        actual_files = {
+            path.relative_to(BILDIRI_ARCHIVE_ROOT).as_posix()
+            for path in BILDIRI_ARCHIVE_ROOT.rglob("*")
+            if path.is_file() and path.name not in {"manifest.json", "QUARANTINE.md"}
+        }
+        assert actual_files == manifest_paths, (
+            f"Archive/manifest mismatch: unmanifested={sorted(actual_files - manifest_paths)}, "
+            f"missing={sorted(manifest_paths - actual_files)}"
+        )
 
-    def test_package_discovery_excludes_archive_and_bildiri(self):
-        pyproject_path = REPO_ROOT / "pyproject.toml"
-        if not pyproject_path.exists():
-            pytest.skip("pyproject.toml not found")
-        content = pyproject_path.read_text(encoding="utf-8")
-        assert '"archive"' in content, "archive should be in pyproject.toml exclude list"
+    def test_distribution_package_discovery_excludes_archive_and_bildiri(self):
+        distribution = PathDistribution(REPO_ROOT / "uniride.egg-info")
+        top_levels = {
+            line.strip()
+            for line in (distribution.read_text("top_level.txt") or "").splitlines()
+            if line.strip()
+        }
+        assert top_levels == {"academic_benchmark", "optimizer_api", "uniride_core"}
+        assert "archive" not in top_levels
+        assert all(
+            PathFinder.find_spec(package, [str(REPO_ROOT)]) is not None
+            for package in top_levels
+        )
+        academic_spec = PathFinder.find_spec("academic_benchmark", [str(REPO_ROOT)])
+        assert academic_spec is not None
+        academic_locations = list(academic_spec.submodule_search_locations or ())
+        assert PathFinder.find_spec("bildiri2026", academic_locations) is None

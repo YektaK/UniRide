@@ -354,7 +354,7 @@ def _git_ignored_files(repo_root: Path, source_root: PurePosixPath) -> list[Pure
 
 
 def _is_disposable_cache(path: PurePosixPath) -> bool:
-    return path.suffix.lower() in {".pyc", ".pyo", ".nbc", ".nbi", ".db"}
+    return path.suffix.lower() in {".pyc", ".pyo", ".nbc", ".nbi"}
 
 
 def _source_path(repo_root: Path, source_fs: Path, relative: PurePosixPath) -> Path:

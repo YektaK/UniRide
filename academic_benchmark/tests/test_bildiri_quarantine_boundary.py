@@ -52,7 +52,11 @@ FORBIDDEN_TOP_LEVEL_IMPORT_PREFIXES = (
     "benchmarks.tsplib_benchmark",
     "benchmarks.timematrix_benchmark",
 )
-FORBIDDEN_EXECUTABLE_TOKENS = {"b_ga", "b_pso"}
+FORBIDDEN_STRING_IDENTITIES = {"b_ga": "B-GA", "b_pso": "B-PSO"}
+FORBIDDEN_IDENTIFIER_IDENTITIES = {
+    "bildiri_ga": "BILDIRI_GA",
+    "bildiri_pso": "BILDIRI_PSO",
+}
 EXECUTABLE_TOKEN_ALLOWLIST = {
     BOUNDARY_TEST_FILE,
     (REPO_ROOT / "academic_benchmark" / "cli_engine.py").resolve(),
@@ -159,15 +163,54 @@ def _check_string_reachability(path: Path) -> list[str]:
 def _check_executable_tokens(path: Path) -> list[str]:
     if path in EXECUTABLE_TOKEN_ALLOWLIST:
         return []
-    source = path.read_text(encoding="utf-8")
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    docstring_values = {
+        id(parent.body[0].value)
+        for parent in ast.walk(tree)
+        if isinstance(parent, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        and parent.body
+        and isinstance(parent.body[0], ast.Expr)
+        and isinstance(parent.body[0].value, ast.Constant)
+        and isinstance(parent.body[0].value.value, str)
+    }
     violations: list[str] = []
-    for line_number, line in enumerate(source.splitlines(), start=1):
-        if line.strip().startswith("#"):
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            if id(node) in docstring_values:
+                continue
+            canonical = FORBIDDEN_STRING_IDENTITIES.get(
+                _normalize_token(node.value.strip())
+            )
+            if canonical:
+                violations.append(
+                    f"retired executable identity {canonical} at line {node.lineno}"
+                )
             continue
-        normalized = _normalize_token(line)
-        for token in FORBIDDEN_EXECUTABLE_TOKENS:
-            if token in normalized:
-                violations.append(f"executable token {token} at line {line_number}")
+
+        identifiers: list[str] = []
+        if isinstance(node, ast.Name):
+            identifiers.append(node.id)
+        elif isinstance(node, ast.Attribute):
+            identifiers.append(node.attr)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            identifiers.append(node.name)
+        elif isinstance(node, ast.arg):
+            identifiers.append(node.arg)
+        elif isinstance(node, ast.keyword) and node.arg:
+            identifiers.append(node.arg)
+        elif isinstance(node, ast.alias):
+            identifiers.append(node.name.rsplit(".", 1)[-1])
+            if node.asname:
+                identifiers.append(node.asname)
+
+        for identifier in identifiers:
+            canonical = FORBIDDEN_IDENTIFIER_IDENTITIES.get(
+                _normalize_token(identifier)
+            )
+            if canonical:
+                violations.append(
+                    f"retired executable identity {canonical} at line {node.lineno}"
+                )
     return violations
 
 
@@ -209,16 +252,33 @@ class TestZeroActiveBildiriReachability:
         issues = _check_ast_imports(sample)
         assert len(issues) == 4
 
-    def test_alias_guard_detects_exact_legacy_aliases(self, tmp_path: Path):
+    def test_alias_guard_detects_all_exact_retired_identities(self, tmp_path: Path):
         sample = tmp_path / "aliases.py"
         sample.write_text(
-            'first = "B-GA"\nsecond = "B-PSO"\n', encoding="utf-8"
+            'ga_alias = "B-GA"\n'
+            'pso_alias = "B-PSO"\n'
+            "BILDIRI_GA = object()\n"
+            "execute(BILDIRI_PSO)\n",
+            encoding="utf-8",
         )
-        issues = _check_executable_tokens(sample)
-        assert {"b_ga", "b_pso"} == {
-            token for issue in issues for token in FORBIDDEN_EXECUTABLE_TOKENS if token in issue
+        assert set(_check_executable_tokens(sample)) == {
+            "retired executable identity B-GA at line 1",
+            "retired executable identity B-PSO at line 2",
+            "retired executable identity BILDIRI_GA at line 3",
+            "retired executable identity BILDIRI_PSO at line 4",
         }
 
+    def test_alias_guard_ignores_comments_docstrings_and_substrings(self, tmp_path: Path):
+        sample = tmp_path / "near_misses.py"
+        sample.write_text(
+            '# B-GA B-PSO BILDIRI_GA BILDIRI_PSO\n'
+            '"""B-GA B-PSO BILDIRI_GA BILDIRI_PSO documentation."""\n'
+            "not_b_ga_suffix = 1\n"
+            "BILDIRI_GA_SUFFIX = 2\n"
+            'message = "prefix B-PSO suffix"\n',
+            encoding="utf-8",
+        )
+        assert _check_executable_tokens(sample) == []
 
 class TestRegistryResolvesFromCanonicalCore:
     def test_registry_setup_imports_from_uniride_core(self):

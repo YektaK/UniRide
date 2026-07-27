@@ -694,6 +694,76 @@ def test_quarantine_include_paths_rejects_unsafe_path(tmp_path: Path):
         )
 
 
+def _include_repo(tmp_path: Path) -> Path:
+    repo = _legacy_repo(tmp_path)
+    source = repo / "academic_benchmark" / "yaem2026" / "core"
+    (source / "nested").mkdir()
+    (source / "nested" / "helper.py").write_text("HELPER = 1\n", encoding="utf-8")
+    _git(repo, "add", "academic_benchmark/yaem2026/core/nested/helper.py")
+    return repo
+
+
+@pytest.mark.parametrize(
+    ("include_paths", "expected_relative_paths"),
+    [
+        ([PurePosixPath("core")], ["core/nested/helper.py", "core/solver.py"]),
+        ([PurePosixPath("core/solver.py"), PurePosixPath("core/solver.py")], ["core/solver.py"]),
+        ([PurePosixPath("core"), PurePosixPath("core")], ["core/nested/helper.py", "core/solver.py"]),
+        ([PurePosixPath("core"), PurePosixPath("core/solver.py")], ["core/nested/helper.py", "core/solver.py"]),
+    ],
+    ids=["tracked-directory", "duplicate-file", "repeated-directory", "overlapping-directory-and-file"],
+)
+def test_quarantine_include_paths_expand_and_deduplicate_files_once(
+    tmp_path: Path,
+    include_paths: list[PurePosixPath],
+    expected_relative_paths: list[str],
+):
+    repo = _include_repo(tmp_path)
+    source = repo / "academic_benchmark" / "yaem2026"
+    archive = repo / "archive" / "legacy"
+
+    manifest = quarantine_tracked_tree(
+        repo_root=repo,
+        source_root=PurePosixPath("academic_benchmark/yaem2026"),
+        archive_root=PurePosixPath("archive/legacy"),
+        archive_id="legacy",
+        include_paths=include_paths,
+    )
+
+    manifest_paths = [entry.original_path.removeprefix("academic_benchmark/yaem2026/") for entry in manifest.entries]
+    assert manifest_paths == expected_relative_paths
+    assert len(manifest_paths) == len(set(manifest_paths))
+    for relative_path in expected_relative_paths:
+        assert (archive / relative_path).is_file()
+        assert not (source / relative_path).exists()
+
+
+def test_quarantine_validates_all_includes_before_scanning_or_mutating(tmp_path: Path):
+    repo = _legacy_repo(tmp_path)
+    source = repo / "academic_benchmark" / "yaem2026"
+    target = tmp_path / "outside.py"
+    target.write_text("outside\n", encoding="utf-8")
+    linked = source / "results" / "reports" / "analysis.md"
+    linked.unlink()
+    try:
+        linked.symlink_to(target)
+    except OSError as exc:
+        pytest.skip(f"symlink creation unavailable: {exc}")
+    before = _snapshot_tree(source)
+
+    with pytest.raises(QuarantineBlocked, match="include path not found"):
+        quarantine_tracked_tree(
+            repo_root=repo,
+            source_root=PurePosixPath("academic_benchmark/yaem2026"),
+            archive_root=PurePosixPath("archive/legacy"),
+            archive_id="legacy",
+            include_paths=[PurePosixPath("core/solver.py"), PurePosixPath("missing/later.py")],
+        )
+
+    assert _snapshot_tree(source) == before
+    assert not (repo / "archive").exists()
+
+
 def test_cli_quarantine_profile_bildiri(tmp_path: Path, monkeypatch):
     import academic_benchmark.archive_manifest as module
 

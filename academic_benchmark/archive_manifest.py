@@ -361,18 +361,56 @@ def _source_path(repo_root: Path, source_fs: Path, relative: PurePosixPath) -> P
     return _checked_path(repo_root, source_fs, source_fs / Path(*relative.parts))
 
 
-def scan_tracked_tree(repo_root: Path, source_root: PurePosixPath) -> tuple[list[PurePosixPath], list[SensitiveFinding]]:
+def _validate_include_paths(
+    repo_root: Path, source_fs: Path, include_paths: list[PurePosixPath] | None
+) -> list[PurePosixPath] | None:
+    if include_paths is None:
+        return None
+    resolved_includes: list[PurePosixPath] = []
+    for raw_include in include_paths:
+        include_path = PurePosixPath(raw_include)
+        if not _is_repository_relative_path(include_path):
+            raise QuarantineBlocked("include path must be repository-relative")
+        source = _source_path(repo_root, source_fs, include_path)
+        if not (source.is_file() or source.is_dir()):
+            raise QuarantineBlocked(f"include path not found: {include_path.as_posix()}")
+        resolved_includes.append(
+            PurePosixPath(source.resolve(strict=False).relative_to(source_fs.resolve(strict=False)).as_posix())
+        )
+    return sorted(set(resolved_includes), key=lambda path: path.as_posix())
+
+
+def _expand_tracked_includes(
+    tracked: list[PurePosixPath], include_paths: list[PurePosixPath]
+) -> list[PurePosixPath]:
+    return sorted(
+        {
+            tracked_file
+            for include_path in include_paths
+            for tracked_file in tracked
+            if tracked_file.is_relative_to(include_path)
+        },
+        key=lambda path: path.as_posix(),
+    )
+
+
+def scan_tracked_tree(
+    repo_root: Path,
+    source_root: PurePosixPath,
+    *,
+    tracked: list[PurePosixPath] | None = None,
+) -> tuple[list[PurePosixPath], list[SensitiveFinding]]:
     canonical = _canonical_repo_root(repo_root)
     source_root = _require_repository_relative(source_root)
     source_fs = canonical / Path(*source_root.parts)
     _checked_path(canonical, source_fs, source_fs)
-    tracked = git_tracked_files(canonical, source_root)
+    tracked_files = git_tracked_files(canonical, source_root) if tracked is None else tracked
     findings: list[SensitiveFinding] = []
-    for relative in tracked:
+    for relative in tracked_files:
         source = _source_path(canonical, source_fs, relative)
         for finding in scan_sensitive_file(source):
             findings.append(SensitiveFinding((source_root / relative).as_posix(), finding.line, finding.rule, finding.severity))
-    return tracked, findings
+    return tracked_files, findings
 
 
 def write_manifest(manifest: ArchiveManifest, path: Path) -> None:
@@ -490,25 +528,13 @@ def quarantine_tracked_tree(
     include_paths: list[PurePosixPath] | None = None,
 ) -> ArchiveManifest:
     repo_root, source_root, archive_root, source_fs, destination_root = _transaction_roots(repo_root, source_root, archive_root)
-    tracked, findings = scan_tracked_tree(repo_root, source_root)
+    validated_includes = _validate_include_paths(repo_root, source_fs, include_paths)
+    tracked = git_tracked_files(repo_root, source_root)
     if not tracked:
         raise QuarantineBlocked(f"no tracked files under {source_root}")
-    if include_paths is not None:
-        validated_includes: list[PurePosixPath] = []
-        for include_path in [PurePosixPath(p) for p in include_paths]:
-            if not _is_repository_relative_path(include_path):
-                raise QuarantineBlocked("include path must be repository-relative")
-            source = _source_path(repo_root, source_fs, include_path)
-            if source.is_file():
-                validated_includes.append(include_path)
-            elif source.is_dir():
-                for tracked_file in tracked:
-                    if tracked_file.is_relative_to(include_path):
-                        validated_includes.append(tracked_file)
-            else:
-                raise QuarantineBlocked(f"include path not found: {include_path.as_posix()}")
-        tracked = validated_includes
-        findings = [f for f in findings if PurePosixPath(f.path).relative_to(source_root) in tracked]
+    if validated_includes is not None:
+        tracked = _expand_tracked_includes(tracked, validated_includes)
+    tracked, findings = scan_tracked_tree(repo_root, source_root, tracked=tracked)
     if destination_root.exists():
         raise QuarantineBlocked(f"archive destination already exists: {archive_root}")
     untracked = _git_untracked_files(repo_root, source_root)

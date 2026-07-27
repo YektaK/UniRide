@@ -57,10 +57,18 @@ FORBIDDEN_IDENTIFIER_IDENTITIES = {
     "bildiri_ga": "BILDIRI_GA",
     "bildiri_pso": "BILDIRI_PSO",
 }
-EXECUTABLE_TOKEN_ALLOWLIST = {
-    BOUNDARY_TEST_FILE,
-    (REPO_ROOT / "academic_benchmark" / "cli_engine.py").resolve(),
-    (REPO_ROOT / "academic_benchmark" / "tests" / "test_legacy_algorithm_migrations.py").resolve(),
+CLI_ENGINE_FILE = (REPO_ROOT / "academic_benchmark" / "cli_engine.py").resolve()
+MIGRATION_TEST_FILE = (
+    REPO_ROOT / "academic_benchmark" / "tests" / "test_legacy_algorithm_migrations.py"
+).resolve()
+APPROVED_MIGRATION_MAPPING = {
+    canonical: f"Core-{canonical.removeprefix('B-')}-TSP"
+    for canonical in FORBIDDEN_STRING_IDENTITIES.values()
+}
+APPROVED_IDENTITY_ASSIGNMENTS = {
+    CLI_ENGINE_FILE: {"LEGACY_ALGORITHM_MIGRATIONS": APPROVED_MIGRATION_MAPPING},
+    MIGRATION_TEST_FILE: {"LEGACY_ALGORITHM_MIGRATIONS": APPROVED_MIGRATION_MAPPING},
+    BOUNDARY_TEST_FILE: {"FORBIDDEN_STRING_IDENTITIES": FORBIDDEN_STRING_IDENTITIES},
 }
 LEGACY_PIPELINE_MARKERS = (
     "academic_benchmark.bildiri2026.data_manager",
@@ -160,10 +168,33 @@ def _check_string_reachability(path: Path) -> list[str]:
     return violations
 
 
+def _approved_identity_node_ids(path: Path, tree: ast.Module) -> set[int]:
+    approved_assignments = APPROVED_IDENTITY_ASSIGNMENTS.get(path.resolve(), {})
+    exempt_node_ids: set[int] = set()
+    for assignment_name, approved_value in approved_assignments.items():
+        assignments = [
+            node
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+            and node.targets[0].id == assignment_name
+        ]
+        if len(assignments) != 1:
+            continue
+        assignment = assignments[0]
+        try:
+            observed_value = ast.literal_eval(assignment.value)
+        except (TypeError, ValueError):
+            continue
+        if observed_value == approved_value:
+            exempt_node_ids.update(id(node) for node in ast.walk(assignment.value))
+    return exempt_node_ids
+
+
 def _check_executable_tokens(path: Path) -> list[str]:
-    if path in EXECUTABLE_TOKEN_ALLOWLIST:
-        return []
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    exempt_node_ids = _approved_identity_node_ids(path, tree)
     docstring_values = {
         id(parent.body[0].value)
         for parent in ast.walk(tree)
@@ -175,6 +206,8 @@ def _check_executable_tokens(path: Path) -> list[str]:
     }
     violations: list[str] = []
     for node in ast.walk(tree):
+        if id(node) in exempt_node_ids:
+            continue
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
             if id(node) in docstring_values:
                 continue
@@ -279,6 +312,38 @@ class TestZeroActiveBildiriReachability:
             encoding="utf-8",
         )
         assert _check_executable_tokens(sample) == []
+
+    @pytest.mark.parametrize(
+        "target_path",
+        [
+            REPO_ROOT / "academic_benchmark" / "cli_engine.py",
+            REPO_ROOT / "academic_benchmark" / "tests" / "test_legacy_algorithm_migrations.py",
+            BOUNDARY_TEST_FILE,
+        ],
+    )
+    def test_identity_exemptions_are_assignment_scoped(
+        self, target_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        original_read_text = Path.read_text
+        original_source = original_read_text(target_path, encoding="utf-8")
+        source_without_trailing_newlines = original_source.rstrip("\r\n")
+        injected_line = len(source_without_trailing_newlines.splitlines()) + 1
+        mutated_source = (
+            source_without_trailing_newlines
+            + "\nBILDIRI_GA = object()\nexecute(BILDIRI_PSO)\n"
+        )
+
+        def mutated_read_text(path: Path, *args, **kwargs) -> str:
+            if path.resolve() == target_path.resolve():
+                return mutated_source
+            return original_read_text(path, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "read_text", mutated_read_text)
+        assert set(_check_executable_tokens(target_path)) == {
+            f"retired executable identity BILDIRI_GA at line {injected_line}",
+            f"retired executable identity BILDIRI_PSO at line {injected_line + 1}",
+        }
+
 
 class TestRegistryResolvesFromCanonicalCore:
     def test_registry_setup_imports_from_uniride_core(self):

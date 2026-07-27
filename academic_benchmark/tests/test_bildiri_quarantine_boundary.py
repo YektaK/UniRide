@@ -52,7 +52,12 @@ FORBIDDEN_TOP_LEVEL_IMPORT_PREFIXES = (
     "benchmarks.tsplib_benchmark",
     "benchmarks.timematrix_benchmark",
 )
-FORBIDDEN_EXECUTABLE_TOKENS = {"bildiri_ga", "bildiri_pso"}
+FORBIDDEN_EXECUTABLE_TOKENS = {"b_ga", "b_pso"}
+EXECUTABLE_TOKEN_ALLOWLIST = {
+    BOUNDARY_TEST_FILE,
+    (REPO_ROOT / "academic_benchmark" / "cli_engine.py").resolve(),
+    (REPO_ROOT / "academic_benchmark" / "tests" / "test_legacy_algorithm_migrations.py").resolve(),
+}
 LEGACY_PIPELINE_MARKERS = (
     "academic_benchmark.bildiri2026.data_manager",
     "academic_benchmark.bildiri2026.orchestrate_batch",
@@ -78,6 +83,17 @@ def _collect_active_python() -> list[Path]:
                 continue
             files.append(path.resolve())
     return sorted(set(files))
+
+
+def _archive_payload_paths(archive_root: Path) -> set[str]:
+    control_paths = {"manifest.json", "QUARANTINE.md"}
+    return {
+        relative_path
+        for path in archive_root.rglob("*")
+        if path.is_file()
+        for relative_path in [path.relative_to(archive_root).as_posix()]
+        if relative_path not in control_paths
+    }
 
 
 def _normalize_token(token: str) -> str:
@@ -141,7 +157,7 @@ def _check_string_reachability(path: Path) -> list[str]:
 
 
 def _check_executable_tokens(path: Path) -> list[str]:
-    if path == BOUNDARY_TEST_FILE:
+    if path in EXECUTABLE_TOKEN_ALLOWLIST:
         return []
     source = path.read_text(encoding="utf-8")
     violations: list[str] = []
@@ -196,10 +212,10 @@ class TestZeroActiveBildiriReachability:
     def test_alias_guard_detects_exact_legacy_aliases(self, tmp_path: Path):
         sample = tmp_path / "aliases.py"
         sample.write_text(
-            'first = "BILDIRI_GA"\nsecond = "BILDIRI_PSO"\n', encoding="utf-8"
+            'first = "B-GA"\nsecond = "B-PSO"\n', encoding="utf-8"
         )
         issues = _check_executable_tokens(sample)
-        assert {"bildiri_ga", "bildiri_pso"} == {
+        assert {"b_ga", "b_pso"} == {
             token for issue in issues for token in FORBIDDEN_EXECUTABLE_TOKENS if token in issue
         }
 
@@ -272,15 +288,20 @@ class TestPostArchivalBoundary:
             for entry in manifest.get("entries", [])
             if entry.get("archive_path", "").startswith(archive_prefix)
         }
-        actual_files = {
-            path.relative_to(BILDIRI_ARCHIVE_ROOT).as_posix()
-            for path in BILDIRI_ARCHIVE_ROOT.rglob("*")
-            if path.is_file() and path.name not in {"manifest.json", "QUARANTINE.md"}
-        }
+        actual_files = _archive_payload_paths(BILDIRI_ARCHIVE_ROOT)
         assert actual_files == manifest_paths, (
             f"Archive/manifest mismatch: unmanifested={sorted(actual_files - manifest_paths)}, "
             f"missing={sorted(manifest_paths - actual_files)}"
         )
+
+    @pytest.mark.parametrize("control_name", ["manifest.json", "QUARANTINE.md"])
+    def test_nested_control_filename_is_archive_payload(
+        self, tmp_path: Path, control_name: str
+    ):
+        nested = tmp_path / "historical" / control_name
+        nested.parent.mkdir(parents=True)
+        nested.write_text("historical evidence", encoding="utf-8")
+        assert _archive_payload_paths(tmp_path) == {f"historical/{control_name}"}
 
     def test_distribution_package_discovery_excludes_archive_and_bildiri(self):
         distribution = PathDistribution(REPO_ROOT / "uniride.egg-info")

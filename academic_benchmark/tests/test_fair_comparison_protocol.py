@@ -138,6 +138,22 @@ def test_legacy_executor_never_emits_legacy_identity(algorithm):
     assert result.algorithm == algorithm
     assert result.algorithm != "legacy"
 
+@pytest.mark.parametrize(
+    "algorithm",
+    (
+        "Numba-2-opt",
+        "Numba-3-opt-bounded",
+        "Core-TwoOpt-TSP",
+        "Core-ThreeOpt-TSP",
+    ),
+)
+def test_fair_validator_accepts_historical_and_canonical_local_search_ids(algorithm):
+    result = _run(algorithm)
+
+    assert result.algorithm_id == result.algorithm == algorithm
+    assert result.execution_backend == "objective=python;polish=none"
+
+
 
 def test_directed_three_opt_reports_independently_recomputed_closed_cost():
     problem = _asymmetric_problem()

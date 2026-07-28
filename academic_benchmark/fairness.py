@@ -85,6 +85,8 @@ class FairComparisonManifest:
         "Core-HHO-TSP-Memetic-2opt": "HHO",
         "Core-TwoOpt-TSP": "2-opt",
         "Core-ThreeOpt-TSP": "3-opt",
+        "Numba-2-opt": "2-opt",
+        "Numba-3-opt-bounded": "3-opt",
         "Core-GWO-TSP": "GWO",
         "Core-HHO-TSP": "HHO",
         "Numba-GWO": "GWO",

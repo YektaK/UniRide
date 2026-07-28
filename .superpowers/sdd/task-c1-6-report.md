@@ -29,6 +29,9 @@ The two published evidence functions each execute a symmetric six-node TSP and a
 - Focused evidence plus catalog: `17 passed in 3.34s`.
 - Changed canonical fair-local nodes: `8 passed in 2.43s`.
 - Historical native local metadata function: `2 passed in 2.81s`; this proves native execution metadata but not canonical result identity.
+- Fair validator compatibility RED: historical IDs failed while canonical IDs passed (`2 failed, 2 passed`).
+- Fair validator compatibility GREEN: historical and canonical IDs both accepted (`4 passed in 2.33s`).
+- Focused evidence, catalog, and compatibility regression: `21 passed in 2.63s`.
 - AST parse over every Task 6 touched Python file: `AST_OK`.
 - `git diff --check` and `git diff --cached --check`: clean (line-ending warnings only).
 
@@ -36,7 +39,7 @@ The two published evidence functions each execute a symmetric six-node TSP and a
 
 - No GWO/HHO claim was promoted. Import, collection, a prior report, or a timeout is not executable nopython evidence.
 - No Python-objective GWO/HHO claim was added.
-- No canonical local-search native claim was added. The current native pilot and approved algorithm set still use the historical `Numba-2-opt` and `Numba-3-opt-bounded` identities. Migrating that complete boundary belongs to Task 8; accepting both sets here would falsely make both identities scientifically canonical.
+- No canonical local-search native claim was added. The current native pilot and approved algorithm set still use the historical `Numba-2-opt` and `Numba-3-opt-bounded` identities. Migrating that complete boundary belongs to Task 8; adding both identity sets to the scientific native approved set here would falsely make both identities canonical.
 - `Core-OrOpt-TSP`, `Core-GA-TSP`, `Core-PSO-TSP`, and `ALNS-TSP` remain `CANDIDATE`.
 
 ## Changed files
@@ -51,7 +54,7 @@ The two published evidence functions each execute a symmetric six-node TSP and a
 - `academic_benchmark/tests/test_native_termination_protocol.py`
 - `.superpowers/sdd/task-c1-6-report.md`
 
-Historical registry keys remain registered. The fair protocol now uses canonical `Core-TwoOpt-TSP` / `Core-ThreeOpt-TSP` identities. Both fixed and historical native local-search result metadata now report exactly `objective=python;polish=none`.
+Historical registry keys remain registered. Evidence and canonical callers use `Core-TwoOpt-TSP` / `Core-ThreeOpt-TSP`; `FairComparisonManifest` also accepts the current fair-pilot result identities `Numba-2-opt` / `Numba-3-opt-bounded` as a temporary compatibility boundary until Task 8. Those validator entries do not create catalog claims, resolver aliases, or scientific selectability. Both fixed and historical native local-search result metadata report exactly `objective=python;polish=none`.
 
 ## Remaining blockers and next action
 

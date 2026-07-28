@@ -177,16 +177,65 @@ def _evidenced_claims(
             f"Algorithm '{capability.canonical_id}' has no complete executable "
             "evidence for the requested problem and protocol."
         )
+    compositions = frozenset(claim.composition for claim in evidenced)
+    if len(compositions) != 1:
+        raise CapabilityEvidenceError(
+            f"Algorithm '{capability.canonical_id}' publishes mixed composition "
+            "claims for the exact problem and protocol."
+        )
     return evidenced
 
 
-def _claim_with_objective(
-    claims: tuple[CapabilityClaim, ...], objective: BackendKind
-) -> CapabilityClaim | None:
-    return next(
-        (claim for claim in claims if claim.backend_profile.objective is objective),
-        None,
+def _python_policy_claims(
+    claims: tuple[CapabilityClaim, ...],
+) -> tuple[CapabilityClaim, ...]:
+    return tuple(
+        claim
+        for claim in claims
+        if claim.backend_profile.objective is BackendKind.PYTHON
+        and claim.backend_profile.polish in (BackendKind.NONE, BackendKind.PYTHON)
     )
+
+
+def _numba_objective_claims(
+    claims: tuple[CapabilityClaim, ...],
+) -> tuple[CapabilityClaim, ...]:
+    return tuple(
+        claim
+        for claim in claims
+        if claim.backend_profile.objective is BackendKind.NUMBA_NOPYTHON
+    )
+
+
+def _runtime_stage_error(
+    claim: CapabilityClaim,
+    request: PreflightRequest,
+) -> str | None:
+    runtime = request.runtime_backends
+    profile = claim.backend_profile
+    if profile.objective is BackendKind.PYTHON and not runtime.python:
+        return f"Python objective runtime is unavailable: {runtime.detail}"
+    if profile.objective is BackendKind.NUMBA_NOPYTHON and not runtime.numba_nopython:
+        return f"Numba nopython objective is unavailable: {runtime.detail}"
+    if profile.polish is BackendKind.PYTHON and not runtime.python:
+        return f"Python polish runtime is unavailable: {runtime.detail}"
+    if profile.polish is BackendKind.NUMBA_NOPYTHON and not runtime.numba_nopython:
+        return f"Numba nopython polish runtime is unavailable: {runtime.detail}"
+    return None
+
+
+def _runtime_available_claim(
+    claims: tuple[CapabilityClaim, ...],
+    request: PreflightRequest,
+) -> tuple[CapabilityClaim | None, str | None]:
+    first_error: str | None = None
+    for claim in claims:
+        error = _runtime_stage_error(claim, request)
+        if error is None:
+            return claim, None
+        if first_error is None:
+            first_error = error
+    return None, first_error
 
 
 def _select_backend_claim(
@@ -194,18 +243,18 @@ def _select_backend_claim(
     claims: tuple[CapabilityClaim, ...],
 ) -> tuple[CapabilityClaim, str | None]:
     runtime = request.runtime_backends
-    python_claim = _claim_with_objective(claims, BackendKind.PYTHON)
-    numba_claim = _claim_with_objective(claims, BackendKind.NUMBA_NOPYTHON)
+    python_claims = _python_policy_claims(claims)
+    numba_claims = _numba_objective_claims(claims)
 
     if request.backend_policy is BackendPolicy.PYTHON_ONLY:
-        if not runtime.python:
-            raise BackendUnavailableError(
-                f"Python objective runtime is unavailable: {runtime.detail}"
-            )
-        if python_claim is None:
+        if not python_claims:
             raise CapabilityEvidenceError(
-                "No evidenced Python objective claim matches the exact request."
+                "No evidenced Python objective claim with policy-compatible polish "
+                "matches the exact request."
             )
+        python_claim, runtime_error = _runtime_available_claim(python_claims, request)
+        if python_claim is None:
+            raise BackendUnavailableError(runtime_error or runtime.detail)
         return python_claim, None
 
     if request.backend_policy is BackendPolicy.REQUIRE_NUMBA_OBJECTIVE:
@@ -213,28 +262,44 @@ def _select_backend_claim(
             raise BackendUnavailableError(
                 f"Numba nopython objective is unavailable: {runtime.detail}"
             )
-        if numba_claim is None:
+        if not numba_claims:
             raise CapabilityEvidenceError(
                 "No evidenced Numba nopython objective claim matches the exact request."
             )
+        numba_claim, runtime_error = _runtime_available_claim(numba_claims, request)
+        if numba_claim is None:
+            raise BackendUnavailableError(runtime_error or runtime.detail)
         return numba_claim, None
 
     if request.backend_policy is BackendPolicy.PREFER_NUMBA_OBJECTIVE:
-        if runtime.numba_nopython and numba_claim is not None:
-            return numba_claim, None
+        numba_runtime_error: str | None = None
+        if runtime.numba_nopython and numba_claims:
+            numba_claim, numba_runtime_error = _runtime_available_claim(
+                numba_claims, request
+            )
+            if numba_claim is not None:
+                return numba_claim, None
         if not runtime.python:
             raise BackendUnavailableError(
-                "Neither the preferred Numba objective nor Python fallback runtime "
-                f"is available: {runtime.detail}"
+                numba_runtime_error
+                or (
+                    "Neither the preferred Numba objective nor Python fallback "
+                    f"runtime is available: {runtime.detail}"
+                )
             )
-        if python_claim is None:
+        if not python_claims:
             raise CapabilityEvidenceError(
-                "No evidenced Python objective claim is available for explicit fallback."
+                "No evidenced Python objective claim with policy-compatible polish "
+                "is available for explicit fallback."
             )
+        python_claim, runtime_error = _runtime_available_claim(python_claims, request)
+        if python_claim is None:
+            raise BackendUnavailableError(runtime_error or runtime.detail)
         if runtime.numba_nopython:
             reason = (
-                "No evidenced Numba nopython objective claim matched; selected the "
-                "evidenced Python objective claim before execution."
+                "No runtime-compatible evidenced Numba nopython objective claim "
+                "matched; selected the evidenced Python objective claim before "
+                "execution."
             )
         else:
             reason = (

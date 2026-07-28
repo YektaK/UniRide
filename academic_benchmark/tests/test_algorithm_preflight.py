@@ -15,6 +15,7 @@ from academic_benchmark.core.algorithm_errors import (
     PlannedAlgorithmError,
     UnsupportedProblemContractError,
     UnsupportedProtocolError,
+    UnknownAlgorithmError,
 )
 from academic_benchmark.core.algorithm_resolution import IdentifierSource, ResolutionResult
 from academic_benchmark.core.preflight import (
@@ -205,7 +206,12 @@ def test_fixed_evidence_does_not_authorize_native_termination() -> None:
 
 
 def test_python_only_selects_an_exact_evidenced_python_profile() -> None:
-    numba = _claim(objective=BackendKind.NUMBA_NOPYTHON, evidence_id="numba")
+    numba = _claim(
+        objective=BackendKind.NUMBA_NOPYTHON,
+        polish=BackendKind.PYTHON,
+        composition=CompositionKind.MEMETIC_2OPT,
+        evidence_id="numba",
+    )
     python = _claim(
         objective=BackendKind.PYTHON,
         polish=BackendKind.PYTHON,
@@ -236,7 +242,11 @@ def test_python_only_requires_python_runtime_availability() -> None:
 
 
 def test_prefer_numba_selects_exact_evidenced_numba_profile_when_available() -> None:
-    python = _claim(evidence_id="python")
+    python = _claim(
+        polish=BackendKind.PYTHON,
+        composition=CompositionKind.MEMETIC_2OPT,
+        evidence_id="python",
+    )
     numba_memetic = _claim(
         objective=BackendKind.NUMBA_NOPYTHON,
         polish=BackendKind.PYTHON,
@@ -394,4 +404,91 @@ def test_production_catalog_entries_remain_non_selectable_in_task_five() -> None
                 registered_algorithm_ids=frozenset({"Core-TwoOpt-TSP"}),
                 runtime_backends=RuntimeBackendAvailability(True, False, "test"),
             )
+        )
+
+
+def test_unknown_algorithm_error_precedes_problem_validation() -> None:
+    empty_lookup = build_capability_catalog(()).get
+
+    with pytest.raises(UnknownAlgorithmError) as caught:
+        preflight_run(
+            _request(problem=object()),
+            capability_lookup=empty_lookup,
+        )
+
+    assert caught.value.code == "unknown_algorithm"
+
+
+def test_mixed_composition_claims_are_rejected_before_backend_selection() -> None:
+    pure_python = _claim(
+        objective=BackendKind.PYTHON,
+        composition=CompositionKind.PURE,
+        evidence_id="pure-python",
+    )
+    memetic_numba = _claim(
+        objective=BackendKind.NUMBA_NOPYTHON,
+        polish=BackendKind.PYTHON,
+        composition=CompositionKind.MEMETIC_2OPT,
+        evidence_id="memetic-numba",
+    )
+    lookup = _lookup_for(_capability((pure_python, memetic_numba)))
+
+    with pytest.raises(CapabilityEvidenceError, match="mixed composition"):
+        preflight_run(
+            _request(policy=BackendPolicy.PREFER_NUMBA_OBJECTIVE, numba=True),
+            capability_lookup=lookup,
+        )
+
+
+def test_python_only_rejects_numba_polish_even_when_numba_is_available() -> None:
+    python_objective_numba_polish = _claim(
+        objective=BackendKind.PYTHON,
+        polish=BackendKind.NUMBA_NOPYTHON,
+        composition=CompositionKind.MEMETIC_2OPT,
+    )
+    lookup = _lookup_for(_capability((python_objective_numba_polish,)))
+
+    with pytest.raises(CapabilityEvidenceError, match="Python objective"):
+        preflight_run(
+            _request(policy=BackendPolicy.PYTHON_ONLY, numba=True),
+            capability_lookup=lookup,
+        )
+
+
+def test_prefer_numba_python_fallback_rejects_numba_polish() -> None:
+    python_objective_numba_polish = _claim(
+        objective=BackendKind.PYTHON,
+        polish=BackendKind.NUMBA_NOPYTHON,
+        composition=CompositionKind.MEMETIC_2OPT,
+    )
+    lookup = _lookup_for(_capability((python_objective_numba_polish,)))
+
+    with pytest.raises(CapabilityEvidenceError, match="Python objective"):
+        preflight_run(
+            _request(policy=BackendPolicy.PREFER_NUMBA_OBJECTIVE, numba=False),
+            capability_lookup=lookup,
+        )
+
+
+@pytest.mark.parametrize(
+    "policy",
+    [
+        BackendPolicy.PREFER_NUMBA_OBJECTIVE,
+        BackendPolicy.REQUIRE_NUMBA_OBJECTIVE,
+    ],
+)
+def test_numba_objective_with_python_polish_requires_python_runtime(
+    policy: BackendPolicy,
+) -> None:
+    numba_objective_python_polish = _claim(
+        objective=BackendKind.NUMBA_NOPYTHON,
+        polish=BackendKind.PYTHON,
+        composition=CompositionKind.MEMETIC_2OPT,
+    )
+    lookup = _lookup_for(_capability((numba_objective_python_polish,)))
+
+    with pytest.raises(BackendUnavailableError, match="Python polish"):
+        preflight_run(
+            _request(policy=policy, python=False, numba=True),
+            capability_lookup=lookup,
         )

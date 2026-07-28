@@ -14,6 +14,15 @@ LEGACY_ALGORITHM_MIGRATIONS = {
     "B-GA": "Core-GA-TSP",
     "B-PSO": "Core-PSO-TSP",
 }
+def test_non_c1_routing_identifier_bypasses_tsp_resolver(monkeypatch):
+    def resolver_must_not_run(*_args, **_kwargs):
+        raise AssertionError("non-C1 routing identifier reached TSP resolver")
+
+    monkeypatch.setattr(cli_engine, "resolve_algorithm_id", resolver_must_not_run)
+
+    assert cli_engine._validate_algorithm_migration("Core-Greedy-Routing") is None
+
+
 
 
 @pytest.mark.parametrize(

@@ -71,6 +71,11 @@ FORBIDDEN_ALGORITHM_REPLACEMENTS: Mapping[str, str] = MappingProxyType(
     }
 )
 
+RESOLVER_GOVERNED_IDENTIFIERS: frozenset[str] = (
+    frozenset(CAPABILITY_CATALOG)
+    | frozenset(CLI_ALIAS_TARGETS)
+    | frozenset(FORBIDDEN_ALGORITHM_REPLACEMENTS)
+)
 
 def validate_alias_catalog_compatibility(
     catalog: Mapping[str, AlgorithmCapability],

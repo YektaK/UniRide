@@ -54,7 +54,11 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 from uniride_core.algorithms._platform import fix_windows_encoding
 fix_windows_encoding()
 
-from academic_benchmark.core.algorithm_resolution import IdentifierSource, resolve_algorithm_id
+from academic_benchmark.core.algorithm_resolution import (
+    IdentifierSource,
+    RESOLVER_GOVERNED_IDENTIFIERS,
+    resolve_algorithm_id,
+)
 
 LEGACY_ALGORITHM_MIGRATIONS = {
     "B-GA": "Core-GA-TSP",
@@ -64,7 +68,10 @@ LEGACY_ALGORITHM_MIGRATIONS = {
 
 def _validate_algorithm_migration(algorithm_id: Any) -> None:
     """Resolve CLI identities at the existing migration compatibility boundary."""
-    resolve_algorithm_id(str(algorithm_id), IdentifierSource.CLI)
+    requested_id = str(algorithm_id)
+    if requested_id not in RESOLVER_GOVERNED_IDENTIFIERS:
+        return
+    resolve_algorithm_id(requested_id, IdentifierSource.CLI)
 
 
 try:

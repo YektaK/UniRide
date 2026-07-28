@@ -6,6 +6,7 @@ import pytest
 
 from academic_benchmark import cli_engine
 from academic_benchmark import smart_benchmark
+from academic_benchmark.core.algorithm_resolution import FORBIDDEN_ALGORITHM_REPLACEMENTS
 from uniride_core.algorithms import numba_accel
 
 
@@ -13,6 +14,37 @@ LEGACY_ALGORITHM_MIGRATIONS = {
     "B-GA": "Core-GA-TSP",
     "B-PSO": "Core-PSO-TSP",
 }
+
+
+@pytest.mark.parametrize(
+    "legacy_id,replacement_id", FORBIDDEN_ALGORITHM_REPLACEMENTS.items()
+)
+def test_forbidden_ids_are_rejected_before_cli_registry_enumeration(
+    monkeypatch, legacy_id, replacement_id
+):
+    class ExplodingRegistry:
+        @staticmethod
+        def list_algorithms():
+            raise AssertionError("forbidden identifier must not enumerate the registry")
+
+        @staticmethod
+        def get_executor(_algorithm_id):
+            raise AssertionError("forbidden identifier must not request a registry executor")
+
+    monkeypatch.setattr(cli_engine, "_HAS_NUMBA_REGISTRY", True)
+    monkeypatch.setattr(cli_engine, "_AlgoReg", ExplodingRegistry)
+
+    task = (
+        {"name": "forbidden-rejection", "dimension": 0, "coordinates": [], "optimal": None},
+        legacy_id,
+        legacy_id,
+        {},
+        0,
+        1,
+    )
+
+    with pytest.raises(ValueError, match=replacement_id):
+        cli_engine._evaluate_param_combo(task)
 
 
 @pytest.mark.parametrize("legacy_id,replacement_id", LEGACY_ALGORITHM_MIGRATIONS.items())

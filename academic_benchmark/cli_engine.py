@@ -54,6 +54,8 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 from uniride_core.algorithms._platform import fix_windows_encoding
 fix_windows_encoding()
 
+from academic_benchmark.core.algorithm_resolution import IdentifierSource, resolve_algorithm_id
+
 LEGACY_ALGORITHM_MIGRATIONS = {
     "B-GA": "Core-GA-TSP",
     "B-PSO": "Core-PSO-TSP",
@@ -61,12 +63,8 @@ LEGACY_ALGORITHM_MIGRATIONS = {
 
 
 def _validate_algorithm_migration(algorithm_id: Any) -> None:
-    """Reject retired CLI identities with their canonical replacement."""
-    replacement = LEGACY_ALGORITHM_MIGRATIONS.get(str(algorithm_id))
-    if replacement:
-        raise ValueError(
-            f"Algorithm '{algorithm_id}' has been retired. Use '{replacement}' instead."
-        )
+    """Resolve CLI identities at the existing migration compatibility boundary."""
+    resolve_algorithm_id(str(algorithm_id), IdentifierSource.CLI)
 
 
 try:

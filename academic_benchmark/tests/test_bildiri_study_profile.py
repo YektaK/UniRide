@@ -120,6 +120,16 @@ class TestStudyManifest:
         )
         assert set(secondary.algorithm_ids) <= APPROVED_NATIVE_ALGORITHMS
 
+    def test_candidate_ids_are_canonical_structural_declarations_not_selectability_claims(
+        self, study_manifest: StudyManifestV1
+    ):
+        from uniride_core.algorithms.capabilities import LifecycleStatus, get_algorithm_capability
+
+        assert all(
+            get_algorithm_capability(algorithm_id).lifecycle is LifecycleStatus.CANDIDATE
+            for algorithm_id in study_manifest.algorithm_ids
+        )
+
     def test_dataset_manifest_reference_is_the_validated_ft53_manifest(
         self, study_manifest: StudyManifestV1
     ):
@@ -144,7 +154,7 @@ class TestStudyManifest:
                 ["Core-GWO-TSP-Pure", "Core-GWO-TSP-Pure"],
                 "secondary_protocol.algorithm_ids must be unique",
             ),
-            (["Numba-2-opt"], "secondary_protocol.algorithm_ids must be a subset"),
+            (["Numba-2-opt"], "is not canonical"),
         ],
     )
     def test_secondary_algorithm_ids_are_a_non_empty_unique_study_subset(

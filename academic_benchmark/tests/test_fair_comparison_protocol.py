@@ -208,3 +208,11 @@ def test_atomic_population_initialization_rejects_too_small_budget(algorithm):
             seed=123,
             run_idx=0,
         )
+
+
+def test_fair_result_requested_algorithm_id_is_optional_provenance():
+    canonical = _run("Core-TwoOpt-TSP")
+    assert canonical.requested_algorithm_id is None
+
+    canonical.requested_algorithm_id = "Numba-2-opt"
+    assert asdict(canonical)["requested_algorithm_id"] == "Numba-2-opt"

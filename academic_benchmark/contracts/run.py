@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 from typing import Literal
+from typing_extensions import TypedDict
 
 from pydantic import Field, NonNegativeFloat, NonNegativeInt
 
 from .common import JsonValue, OutputChecksumV1, StrictContract
 from .dataset import DatasetManifestV1
+
+
+class ExecutionBackendProfileV1(TypedDict):
+    objective: Literal["python", "numba"]
+    polish: Literal["none", "python", "numba"]
 
 
 class GitStateV1(StrictContract):
@@ -26,6 +32,10 @@ class EnvironmentV1(StrictContract):
 class AlgorithmRunV1(StrictContract):
     algorithm_id: str = Field(min_length=1)
     capabilities: dict[str, JsonValue]
+    requested_algorithm_id: str | None = Field(default=None, min_length=1)
+    backend_policy: Literal["python_only", "prefer_numba", "require_numba"]
+    backend_profile: ExecutionBackendProfileV1
+    capability_evidence_ids: list[str] = Field(min_length=1, strict=True)
     configuration: dict[str, JsonValue]
     composition_stages: list[dict[str, JsonValue]]
 

@@ -6,6 +6,9 @@ from importlib.resources import files
 import pytest
 from pydantic import ValidationError
 
+from academic_benchmark.core.algorithm_errors import CandidateAlgorithmError
+from academic_benchmark.core.algorithm_resolution import IdentifierSource, resolve_algorithm_id
+from academic_benchmark.core.preflight import PreflightRequest, RuntimeBackendAvailability, preflight_run
 from academic_benchmark.contracts import DatasetManifestV1, RunManifestV1, StudyManifestV1
 from academic_benchmark.contracts.export_schemas import check_schemas, render_schemas
 from academic_benchmark.contracts.common import (
@@ -13,6 +16,7 @@ from academic_benchmark.contracts.common import (
     RepositoryRelativePath,
     StrictContract,
 )
+from uniride_core.algorithms.capabilities import BackendPolicy, ExecutionProtocol
 
 
 class _PathProbe(StrictContract):
@@ -117,6 +121,10 @@ def _run_payload() -> dict:
         "dataset": _dataset_payload(),
         "algorithm": {
             "algorithm_id": "Core-GWO-TSP-Pure",
+            "requested_algorithm_id": None,
+            "backend_policy": "require_numba",
+            "backend_profile": {"objective": "numba", "polish": "none"},
+            "capability_evidence_ids": ["test_exact_capability"],
             "capabilities": {"problem_types": ["TSP", "ATSP"], "directed_costs": True},
             "configuration": {"pack_size": 20},
             "composition_stages": [],
@@ -144,6 +152,90 @@ def test_study_requires_exact_parameter_keys_for_algorithm_ids():
         StudyManifestV1.model_validate(payload)
 
 
+
+@pytest.mark.parametrize(
+    "algorithm_id",
+    ["Numba-GWO", "GWO", "unknown", "Core-GWO-TSP-Memetic-3opt"],
+)
+def test_study_rejects_alias_unknown_and_planned_primary_ids(algorithm_id: str):
+    payload = _study_payload()
+    payload["algorithm_ids"] = [algorithm_id]
+    payload["algorithm_parameters"] = {algorithm_id: {}}
+    with pytest.raises(ValidationError):
+        StudyManifestV1.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    "algorithm_id", ["Numba-GWO", "unknown", "Core-GWO-TSP-Memetic-3opt"]
+)
+def test_study_rejects_alias_unknown_and_planned_secondary_ids(algorithm_id: str):
+    payload = _study_payload()
+    payload["secondary_protocol"]["algorithm_ids"] = [algorithm_id]
+    with pytest.raises(ValidationError):
+        StudyManifestV1.model_validate(payload)
+
+
+def test_canonical_candidate_manifest_id_is_structurally_valid_but_preflight_rejects_it():
+    manifest = StudyManifestV1.model_validate(_study_payload())
+    candidate_id = manifest.algorithm_ids[0]
+    problem = type(
+        "Problem",
+        (),
+        {
+            "name": "candidate-boundary",
+            "problem_type": "atsp",
+            "dimension": 3,
+            "dist_matrix": [[0.0, 2.0, 7.0], [5.0, 0.0, 3.0], [4.0, 9.0, 0.0]],
+        },
+    )()
+    with pytest.raises(CandidateAlgorithmError):
+        preflight_run(
+            PreflightRequest(
+                resolution=resolve_algorithm_id(candidate_id, IdentifierSource.MANIFEST),
+                problem=problem,
+                protocol=ExecutionProtocol.FIXED_BUDGET,
+                backend_policy=BackendPolicy.REQUIRE_NUMBA_OBJECTIVE,
+                evaluation_budget=10,
+                registered_algorithm_ids=frozenset({candidate_id}),
+                runtime_backends=RuntimeBackendAvailability(True, True, "unit test"),
+            )
+        )
+
+
+def test_algorithm_run_requires_strict_decision_provenance():
+    for field in ("backend_policy", "backend_profile", "capability_evidence_ids"):
+        invalid = _run_payload()
+        invalid["algorithm"].pop(field)
+        with pytest.raises(ValidationError):
+            RunManifestV1.model_validate(invalid)
+
+    for backend_profile in (
+        {"objective": "python"},
+        {"objective": "python", "polish": "none", "extra": "no"},
+        {"objective": "unused", "polish": "none"},
+        {"objective": "python", "polish": "mixed"},
+    ):
+        invalid = _run_payload()
+        invalid["algorithm"]["backend_profile"] = backend_profile
+        with pytest.raises(ValidationError):
+            RunManifestV1.model_validate(invalid)
+
+    payload = _run_payload()
+    payload["algorithm"]["requested_algorithm_id"] = "Numba-GWO"
+    validated = RunManifestV1.model_validate(payload)
+    assert validated.algorithm.requested_algorithm_id == "Numba-GWO"
+
+
+def test_algorithm_run_rejects_nonliteral_policy_and_nonlist_evidence():
+    invalid_policy = _run_payload()
+    invalid_policy["algorithm"]["backend_policy"] = "prefer_numba_objective"
+    with pytest.raises(ValidationError):
+        RunManifestV1.model_validate(invalid_policy)
+
+    invalid_evidence = _run_payload()
+    invalid_evidence["algorithm"]["capability_evidence_ids"] = ("test",)
+    with pytest.raises(ValidationError):
+        RunManifestV1.model_validate(invalid_evidence)
 @pytest.mark.parametrize("model,payload", [(StudyManifestV1, _study_payload), (DatasetManifestV1, _dataset_payload), (RunManifestV1, _run_payload)])
 def test_v1_contracts_reject_unknown_top_level_fields(model, payload):
     value = payload()

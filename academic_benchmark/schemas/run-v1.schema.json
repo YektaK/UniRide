@@ -8,12 +8,32 @@
           "title": "Algorithm Id",
           "type": "string"
         },
+        "backend_policy": {
+          "enum": [
+            "python_only",
+            "prefer_numba",
+            "require_numba"
+          ],
+          "title": "Backend Policy",
+          "type": "string"
+        },
+        "backend_profile": {
+          "$ref": "#/$defs/ExecutionBackendProfileV1"
+        },
         "capabilities": {
           "additionalProperties": {
             "$ref": "#/$defs/JsonValue"
           },
           "title": "Capabilities",
           "type": "object"
+        },
+        "capability_evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Capability Evidence Ids",
+          "type": "array"
         },
         "composition_stages": {
           "items": {
@@ -31,11 +51,27 @@
           },
           "title": "Configuration",
           "type": "object"
+        },
+        "requested_algorithm_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Requested Algorithm Id"
         }
       },
       "required": [
         "algorithm_id",
         "capabilities",
+        "backend_policy",
+        "backend_profile",
+        "capability_evidence_ids",
         "configuration",
         "composition_stages"
       ],
@@ -268,6 +304,34 @@
         "statistics_library"
       ],
       "title": "EnvironmentV1",
+      "type": "object"
+    },
+    "ExecutionBackendProfileV1": {
+      "additionalProperties": false,
+      "properties": {
+        "objective": {
+          "enum": [
+            "python",
+            "numba"
+          ],
+          "title": "Objective",
+          "type": "string"
+        },
+        "polish": {
+          "enum": [
+            "none",
+            "python",
+            "numba"
+          ],
+          "title": "Polish",
+          "type": "string"
+        }
+      },
+      "required": [
+        "objective",
+        "polish"
+      ],
+      "title": "ExecutionBackendProfileV1",
       "type": "object"
     },
     "GitStateV1": {

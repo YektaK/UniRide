@@ -56,6 +56,7 @@ class PreflightDecision:
     problem: ProblemValidationReport
     protocol: ExecutionProtocol
     backend_policy: BackendPolicy
+    evaluation_budget: int | None
     selected_claim: CapabilityClaim
     selected_backend: ExecutionBackendProfile
     fallback_reason: str | None
@@ -355,6 +356,7 @@ def preflight_run(
         problem=report,
         protocol=request.protocol,
         backend_policy=request.backend_policy,
+        evaluation_budget=request.evaluation_budget,
         selected_claim=selected_claim,
         selected_backend=selected_claim.backend_profile,
         fallback_reason=fallback_reason,

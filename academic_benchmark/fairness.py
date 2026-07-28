@@ -30,6 +30,7 @@ class FairRunResult(RunResult):
     """Backward-compatible RunResult carrying the academic fairness contract."""
 
     algorithm_id: str = ""
+    requested_algorithm_id: Optional[str] = None
     algorithm_family: str = ""
     variant: str = ""
     seed_group: str = ""

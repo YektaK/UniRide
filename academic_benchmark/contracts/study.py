@@ -3,10 +3,24 @@ from __future__ import annotations
 from typing import Literal
 
 from pydantic import Field, PositiveInt, model_validator
+from pydantic import field_validator
+
+from academic_benchmark.core.algorithm_errors import PlannedAlgorithmError
+from academic_benchmark.core.algorithm_resolution import IdentifierSource, resolve_algorithm_id
+from uniride_core.algorithms.capabilities import LifecycleStatus, get_algorithm_capability
 
 from .common import JsonValue, RepositoryRelativePath, StrictContract
 
 ProblemFamily = Literal["TSP", "ATSP", "CVRP", "CVRPTW", "UniRide"]
+
+
+def _validate_manifest_algorithm_ids(algorithm_ids: list[str]) -> list[str]:
+    for algorithm_id in algorithm_ids:
+        resolution = resolve_algorithm_id(algorithm_id, IdentifierSource.MANIFEST)
+        capability = get_algorithm_capability(resolution.canonical_id)
+        if capability is not None and capability.lifecycle is LifecycleStatus.PLANNED:
+            raise PlannedAlgorithmError(capability.canonical_id)
+    return algorithm_ids
 
 
 class FixedBudgetProtocolV1(StrictContract):
@@ -22,6 +36,11 @@ class NativeProtocolV1(StrictContract):
     algorithm_ids: list[str] | None = None
 
 
+
+    @field_validator("algorithm_ids")
+    @classmethod
+    def validate_canonical_algorithm_ids(cls, value: list[str] | None):
+        return None if value is None else _validate_manifest_algorithm_ids(value)
 class OutputPolicyV1(StrictContract):
     repository_outputs: Literal["smoke_only", "none"]
     paper_scale_location: Literal["external"]
@@ -54,6 +73,11 @@ class StudyManifestV1(StrictContract):
     output_policy: OutputPolicyV1
     paper_metadata: PaperMetadataV1
 
+
+    @field_validator("algorithm_ids")
+    @classmethod
+    def validate_canonical_algorithm_ids(cls, value: list[str]) -> list[str]:
+        return _validate_manifest_algorithm_ids(value)
     @model_validator(mode="after")
     def validate_algorithm_parameter_keys(self) -> "StudyManifestV1":
         if len(set(self.algorithm_ids)) != len(self.algorithm_ids):

@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 from academic_benchmark.fairness import FairComparisonManifest, FairRunResult
+from academic_benchmark.core.preflight import probe_runtime_backends
 from academic_benchmark.core.problem_validation import validate_problem_for_preflight
 
 
@@ -235,20 +236,10 @@ def resolve_problems(config: FairPilotConfig, available: Iterable[Any]) -> List[
 
 
 def preflight_numba_objective() -> None:
-    """Require an importable nopython Numba ATSP objective before any benchmark run."""
-    try:
-        import numpy as np
-        from uniride_core.algorithms import numba_accel
-    except Exception as exc:  # pragma: no cover - version/environment dependent
-        raise FairPilotError(f"Numba objective import failed: {exc}") from exc
-    if not getattr(numba_accel, "NUMBA_AVAILABLE", False):
-        raise FairPilotError("Numba is unavailable; fair accelerated timing is ineligible")
-    kernel = numba_accel._calculate_tour_length_atsp_numba
-    matrix = np.array([[0.0, 2.0, 4.0], [3.0, 0.0, 3.0], [5.0, 2.0, 0.0]], dtype=np.float64)
-    route = np.array([0, 1, 2], dtype=np.int64)
-    cost = float(kernel(route, matrix))
-    if cost != 10.0 or not getattr(kernel, "nopython_signatures", ()):
-        raise FairPilotError("Numba ATSP objective did not compile in nopython mode")
+    """Compatibility wrapper requiring the canonical runtime Numba probe."""
+    availability = probe_runtime_backends()
+    if not availability.numba_nopython:
+        raise FairPilotError(availability.detail)
 
 
 def _is_within(path: Path, parent: Path) -> bool:

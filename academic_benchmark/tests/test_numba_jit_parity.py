@@ -13,6 +13,7 @@ import numpy as np
 import pytest
 
 from academic_benchmark import fair_pilot
+from academic_benchmark.core.preflight import probe_runtime_backends
 from academic_benchmark.fair_pilot import FairPilotError
 from uniride_core.algorithms import numba_accel as _nb
 from uniride_core.algorithms.tsp_matrix_metaheuristics.base_solver import BaseTSPSolver
@@ -42,8 +43,66 @@ def test_fair_pilot_preflight_uses_canonical_numba_helper(
 ) -> None:
     monkeypatch.setattr(_canonical_nb, "NUMBA_AVAILABLE", False)
 
+    availability = probe_runtime_backends()
+
+    assert availability.python is True
+    assert availability.numba_nopython is False
+    assert "Numba is unavailable" in availability.detail
     with pytest.raises(FairPilotError, match="Numba is unavailable"):
         fair_pilot.preflight_numba_objective()
+
+
+def test_runtime_probe_requires_a_nonempty_nopython_signature(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _plain_python_kernel(route: np.ndarray, matrix: np.ndarray) -> float:
+        return float(
+            matrix[route[0], route[1]]
+            + matrix[route[1], route[2]]
+            + matrix[route[2], route[0]]
+        )
+
+    _plain_python_kernel.nopython_signatures = ()  # type: ignore[attr-defined]
+    monkeypatch.setattr(_canonical_nb, "NUMBA_AVAILABLE", True)
+    monkeypatch.setattr(
+        _canonical_nb,
+        "_calculate_tour_length_atsp_numba",
+        _plain_python_kernel,
+    )
+
+    availability = probe_runtime_backends()
+
+    assert availability.numba_nopython is False
+    assert "nopython" in availability.detail
+
+
+def test_runtime_probe_catches_kernel_failures_as_false_availability(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _broken_kernel(*_args: object) -> float:
+        raise RuntimeError("synthetic compilation failure")
+
+    _broken_kernel.nopython_signatures = ("stale-signature",)  # type: ignore[attr-defined]
+    monkeypatch.setattr(_canonical_nb, "NUMBA_AVAILABLE", True)
+    monkeypatch.setattr(
+        _canonical_nb,
+        "_calculate_tour_length_atsp_numba",
+        _broken_kernel,
+    )
+
+    availability = probe_runtime_backends()
+
+    assert availability.numba_nopython is False
+    assert "synthetic compilation failure" in availability.detail
+
+
+def test_runtime_probe_reports_live_nopython_truth() -> None:
+    availability = probe_runtime_backends()
+    if not availability.numba_nopython:
+        pytest.skip(availability.detail)
+
+    assert _canonical_nb._calculate_tour_length_atsp_numba.nopython_signatures
+    assert "passed" in availability.detail
 
 
 def _symmetric_matrix() -> list[list[float]]:

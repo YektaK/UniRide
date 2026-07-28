@@ -335,8 +335,6 @@ def preflight_run(
             f"Algorithm '{canonical_id}' has an unsupported lifecycle state."
         )
 
-    _validate_capability_composition(capability)
-
     try:
         report = validate_problem_for_preflight(request.problem)
     except ValueError as exc:
@@ -349,6 +347,7 @@ def preflight_run(
             f"Canonical executor '{canonical_id}' is not registered."
         )
 
+    _validate_capability_composition(capability)
     claims = _evidenced_claims(capability, report, request.protocol)
     selected_claim, fallback_reason = _select_backend_claim(request, claims)
     return PreflightDecision(

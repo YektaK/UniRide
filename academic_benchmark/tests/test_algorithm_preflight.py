@@ -528,3 +528,45 @@ def test_mixed_composition_across_problems_is_rejected_capability_wide() -> None
 
     with pytest.raises(CapabilityEvidenceError, match="mixed composition"):
         preflight_run(_request(problem=_TSP), capability_lookup=lookup)
+
+
+def test_invalid_problem_precedes_global_mixed_composition_error() -> None:
+    fixed_pure = _claim(
+        protocol=ExecutionProtocol.FIXED_BUDGET,
+        composition=CompositionKind.PURE,
+        evidence_id="fixed-pure",
+    )
+    native_memetic = _claim(
+        protocol=ExecutionProtocol.NATIVE_TERMINATION,
+        polish=BackendKind.PYTHON,
+        composition=CompositionKind.MEMETIC_2OPT,
+        evidence_id="native-memetic",
+    )
+    lookup = _lookup_for(_capability((fixed_pure, native_memetic)))
+
+    with pytest.raises(UnsupportedProblemContractError):
+        preflight_run(
+            _request(problem=object()),
+            capability_lookup=lookup,
+        )
+
+
+def test_missing_executor_precedes_global_mixed_composition_error() -> None:
+    tsp_pure = _claim(
+        problem=ProblemContract.TSP,
+        composition=CompositionKind.PURE,
+        evidence_id="tsp-pure",
+    )
+    atsp_memetic = _claim(
+        problem=ProblemContract.ATSP,
+        polish=BackendKind.PYTHON,
+        composition=CompositionKind.MEMETIC_2OPT,
+        evidence_id="atsp-memetic",
+    )
+    lookup = _lookup_for(_capability((tsp_pure, atsp_memetic)))
+
+    with pytest.raises(ExecutorUnavailableError):
+        preflight_run(
+            _request(problem=_TSP, registered=frozenset()),
+            capability_lookup=lookup,
+        )

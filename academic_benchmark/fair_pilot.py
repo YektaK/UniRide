@@ -7,7 +7,6 @@ validated, self-contained artifacts to a caller-selected external directory.
 from __future__ import annotations
 
 import csv
-import hashlib
 import json
 import math
 import os
@@ -20,6 +19,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 from academic_benchmark.fairness import FairComparisonManifest, FairRunResult
+from academic_benchmark.core.problem_validation import validate_problem_for_preflight
 
 
 
@@ -197,34 +197,10 @@ def load_fair_pilot_config(path: str | Path) -> FairPilotConfig:
 
 
 def _matrix_for_problem(problem: Any) -> List[List[float]]:
-    matrix = getattr(problem, "dist_matrix", None)
-    if matrix is None:
-        matrix = getattr(problem, "time_matrix", None)
-    if matrix is None:
-        prepare = getattr(problem, "prepare_matrices", None)
-        if callable(prepare):
-            prepare()
-        matrix = getattr(problem, "dist_matrix", None)
-        if matrix is None:
-            matrix = getattr(problem, "time_matrix", None)
-    if matrix is None:
-        raise FairPilotError(f"{getattr(problem, 'name', '<unknown>')}: no matrix is available")
-    rows = [list(row) for row in matrix]
-    dimension = len(rows)
-    if dimension < 3 or any(len(row) != dimension for row in rows):
-        raise FairPilotError(f"{getattr(problem, 'name', '<unknown>')}: matrix must be square with n >= 3")
     try:
-        normalized = [[float(value) for value in row] for row in rows]
-    except (TypeError, ValueError) as exc:
-        raise FairPilotError(f"{getattr(problem, 'name', '<unknown>')}: matrix must be numeric") from exc
-    if any(not math.isfinite(value) or value < 0 for row in normalized for value in row):
-        raise FairPilotError(f"{getattr(problem, 'name', '<unknown>')}: matrix contains invalid costs")
-    return normalized
-
-
-def _matrix_hash(matrix: Sequence[Sequence[float]]) -> str:
-    payload = json.dumps(matrix, separators=(",", ":"), ensure_ascii=True).encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()
+        return [list(row) for row in validate_problem_for_preflight(problem).matrix]
+    except ValueError as exc:
+        raise FairPilotError(str(exc)) from exc
 
 
 def resolve_problems(config: FairPilotConfig, available: Iterable[Any]) -> List[Tuple[Any, List[List[float]], str]]:
@@ -236,23 +212,23 @@ def resolve_problems(config: FairPilotConfig, available: Iterable[Any]) -> List[
         problem = by_name.get(name)
         if problem is None:
             raise FairPilotError(f"requested problem is unavailable: {name}")
-        problem_type = str(getattr(problem, "problem_type", "")).lower()
-        if problem_type not in {"tsp", "atsp"}:
-            raise FairPilotError(f"{name}: problem_type must be tsp or atsp")
         optimum = getattr(problem, "optimal", None)
         if not isinstance(optimum, (int, float)) or not math.isfinite(float(optimum)) or optimum <= 0:
             raise FairPilotError(f"{name}: a positive canonical optimum is required")
-        matrix = _matrix_for_problem(problem)
-        asymmetric = any(
-            abs(matrix[i][j] - matrix[j][i]) > 1e-12
-            for i in range(len(matrix)) for j in range(i + 1, len(matrix))
-        )
-        if problem_type == "tsp" and asymmetric:
+        try:
+            report = validate_problem_for_preflight(problem)
+        except ValueError as exc:
+            raise FairPilotError(str(exc)) from exc
+        matrix = report.matrix
+        if report.dimension < 3:
+            raise FairPilotError(f"{name}: matrix must be square with n >= 3")
+        problem_type = report.contract.value
+        if problem_type == "tsp" and report.observed_asymmetric:
             raise FairPilotError(f"{name}: TSP matrix is not symmetric")
-        if problem_type == "atsp" and not asymmetric:
+        if problem_type == "atsp" and not report.observed_asymmetric:
             raise FairPilotError(f"{name}: ATSP matrix has no directed asymmetry")
         types.add(problem_type)
-        resolved.append((problem, matrix, _matrix_hash(matrix)))
+        resolved.append((problem, matrix, report.matrix_sha256))
     if types != {"tsp", "atsp"}:
         raise FairPilotError("the pilot configuration must include at least one TSP and one ATSP")
     return resolved

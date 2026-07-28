@@ -79,6 +79,8 @@ class AlgorithmCapability:
 
 
 def _validate_claim(claim: CapabilityClaim) -> None:
+    if not isinstance(claim.evidence_ids, tuple):
+        raise ValueError("claim evidence_ids must be a tuple")
     if not claim.evidence_ids or any(not evidence_id for evidence_id in claim.evidence_ids):
         raise ValueError("capability claims require executable evidence")
     if claim.backend_profile.objective is BackendKind.NONE:
@@ -101,6 +103,8 @@ def build_capability_catalog(
     entries = tuple(capabilities)
     catalog: dict[str, AlgorithmCapability] = {}
     for capability in entries:
+        if not isinstance(capability.claims, tuple):
+            raise ValueError("capability claims must be a tuple")
         if capability.canonical_id in catalog:
             raise ValueError("canonical capability IDs must be unique")
         if capability.production_ready:

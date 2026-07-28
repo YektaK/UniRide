@@ -151,6 +151,29 @@ def test_catalog_and_nested_values_are_immutable():
         capability.claims[0].backend_profile.objective = BackendKind.NUMBA_NOPYTHON
 
 
+def test_catalog_rejects_mutable_claim_and_evidence_collections():
+    mutable_evidence = ["test_capability_contract"]
+    claim = valid_claim(evidence_ids=mutable_evidence)
+    mutable_claims = [claim]
+    capability = verified_capability(claims=mutable_claims)
+
+    with pytest.raises(ValueError, match="tuple"):
+        build_capability_catalog([capability])
+
+    mutable_evidence.append("later_evidence")
+    mutable_claims.clear()
+    assert claim.evidence_ids == ["test_capability_contract", "later_evidence"]
+    assert capability.claims == []
+
+
+def test_catalog_rejects_mutable_evidence_collection_with_tuple_claims():
+    claim = valid_claim(evidence_ids=["test_capability_contract"])
+    capability = verified_capability(claims=(claim,))
+
+    with pytest.raises(ValueError, match="tuple"):
+        build_capability_catalog([capability])
+
+
 def test_default_catalog_contains_only_candidate_or_planned_entries():
     catalog = list_algorithm_capabilities()
 

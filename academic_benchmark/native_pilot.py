@@ -9,6 +9,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
+from academic_benchmark.core.algorithm_resolution import IdentifierSource
+from academic_benchmark.core.execution_gateway import execute_preflighted
+from academic_benchmark.core.preflight import RuntimeBackendAvailability, probe_runtime_backends
+from uniride_core.algorithms.capabilities import BackendPolicy, ExecutionProtocol
+
 from academic_benchmark.fair_pilot import (
     FairPilotError,
     _closed_cost,
@@ -18,9 +23,10 @@ from academic_benchmark.fair_pilot import (
     _json_atomic,
     _jsonl_atomic,
     _prepare_output_dir,
+    _decision_metadata,
+    _execute_preflighted_run,
+    _registered_algorithm_ids,
     _registry_executor,
-    _run_executor,
-    preflight_numba_objective,
     resolve_problems,
 )
 from academic_benchmark.native_protocol import (
@@ -54,8 +60,8 @@ _ALLOWED_ALGORITHM_KEYS = {
         "hawks", "max_iterations", "initial_energy", "jump_probability",
         "max_no_improvement", "dive_count", "levy_scale",
     }),
-    "Numba-2-opt": frozenset({"max_iterations", "first_improvement"}),
-    "Numba-3-opt-bounded": frozenset({
+    "Core-TwoOpt-TSP": frozenset({"max_iterations", "first_improvement"}),
+    "Core-ThreeOpt-TSP": frozenset({
         "max_iterations", "first_improvement", "window",
     }),
 }
@@ -66,8 +72,8 @@ _REQUIRED_ALGORITHM_KEYS = {
     "Core-HHO-TSP-Pure": frozenset({
         "hawks", "max_iterations", "max_no_improvement",
     }),
-    "Numba-2-opt": frozenset({"max_iterations", "first_improvement"}),
-    "Numba-3-opt-bounded": frozenset({
+    "Core-TwoOpt-TSP": frozenset({"max_iterations", "first_improvement"}),
+    "Core-ThreeOpt-TSP": frozenset({
         "max_iterations", "first_improvement", "window",
     }),
 }
@@ -200,19 +206,19 @@ def _validate_algorithm_parameters(
     if "levy_scale" in hho:
         _strict_number(hho["levy_scale"], "Core-HHO-TSP-Pure.levy_scale")
 
-    two_opt = algorithms["Numba-2-opt"]
+    two_opt = algorithms["Core-TwoOpt-TSP"]
     _strict_bool(
         two_opt["first_improvement"],
-        "Numba-2-opt.first_improvement",
+        "Core-TwoOpt-TSP.first_improvement",
     )
-    three_opt = algorithms["Numba-3-opt-bounded"]
+    three_opt = algorithms["Core-ThreeOpt-TSP"]
     _strict_bool(
         three_opt["first_improvement"],
-        "Numba-3-opt-bounded.first_improvement",
+        "Core-ThreeOpt-TSP.first_improvement",
     )
     _strict_int(
         three_opt["window"],
-        "Numba-3-opt-bounded.window",
+        "Core-ThreeOpt-TSP.window",
         2,
     )
 
@@ -303,6 +309,7 @@ def _native_result_record(
     replicate: int,
     seed: int,
     config: NativePilotConfig,
+    decision: Any,
     elapsed_ms: float,
     record_kind: str,
 ) -> Dict[str, Any]:
@@ -320,11 +327,6 @@ def _native_result_record(
         raise NativePilotError(
             f"{problem.name}/{algorithm_id}/run-{replicate}: "
             "objective differs from independent cycle cost"
-        )
-    if algorithm_id in _GWO_HHO and result.execution_backend != "objective=numba;polish=none":
-        raise NativePilotError(
-            f"{problem.name}/{algorithm_id}/run-{replicate}: "
-            "GWO/HHO did not use the exact pure Numba backend"
         )
     optimum = float(problem.optimal)
     return {
@@ -360,6 +362,7 @@ def _native_result_record(
         "independent_objective_cost": independent,
         "gap_pct": ((float(result.objective_cost) - optimum) / optimum) * 100.0,
         "elapsed_ms": elapsed_ms,
+        **_decision_metadata(decision),
         "validation_status": "passed",
     }
 
@@ -414,7 +417,9 @@ def run_native_pilot(
     problem_loader: Callable[[], Iterable[Any]],
     registry_getter: Callable[[str], Any] = _registry_executor,
     repo_root: Optional[Path] = None,
-    jit_preflight: Callable[[], None] = preflight_numba_objective,
+    runtime_probe: Callable[[], RuntimeBackendAvailability] = probe_runtime_backends,
+    registered_algorithms_provider: Callable[[], Iterable[str]] = _registered_algorithm_ids,
+    gateway_executor: Callable[..., Any] = execute_preflighted,
 ) -> Dict[str, Any]:
     """Execute a deterministic, validated algorithm-native TSP/ATSP pilot."""
     config = load_native_pilot_config(config_path)
@@ -423,15 +428,8 @@ def run_native_pilot(
     validation: Dict[str, Any] = {"status": "failed", "checks": [], "error": None}
     try:
         resolved = resolve_problems(config, list(problem_loader()))
-        executors: Dict[str, Callable[..., NativeRunResult]] = {}
-        for algorithm_id in sorted(APPROVED_NATIVE_ALGORITHMS):
-            executor = registry_getter(algorithm_id)
-            if executor is None:
-                raise NativePilotError(
-                    f"approved algorithm is not registered: {algorithm_id}"
-                )
-            executors[algorithm_id] = executor
-        jit_preflight()
+        runtime_backends = runtime_probe()
+        registered_algorithm_ids = frozenset(registered_algorithms_provider())
 
         rows: List[Dict[str, Any]] = []
         for problem, matrix, matrix_sha256 in resolved:
@@ -441,8 +439,20 @@ def run_native_pilot(
                 for algorithm_id in sorted(APPROVED_NATIVE_ALGORITHMS):
                     params = dict(config.algorithms[algorithm_id])
                     params["native_comparison"] = config.native_comparison
-                    result, elapsed_ms = _run_executor(
-                        executors[algorithm_id], problem, params, seed, replicate
+                    result, decision, elapsed_ms = _execute_preflighted_run(
+                        requested_algorithm_id=algorithm_id,
+                        identifier_source=IdentifierSource.MANIFEST,
+                        problem=problem,
+                        params=params,
+                        seed=seed,
+                        run_idx=replicate,
+                        protocol=ExecutionProtocol.NATIVE_TERMINATION,
+                        backend_policy=(BackendPolicy.REQUIRE_NUMBA_OBJECTIVE if algorithm_id in _GWO_HHO else BackendPolicy.PYTHON_ONLY),
+                        evaluation_budget=None,
+                        registered_algorithm_ids=registered_algorithm_ids,
+                        runtime_backends=runtime_backends,
+                        registry_getter=registry_getter,
+                        gateway_executor=gateway_executor,
                     )
                     row = _native_result_record(
                         result,
@@ -453,6 +463,7 @@ def run_native_pilot(
                         replicate=replicate,
                         seed=seed,
                         config=config,
+                        decision=decision,
                         elapsed_ms=elapsed_ms,
                         record_kind="primary",
                     )
@@ -462,8 +473,20 @@ def run_native_pilot(
                     for algorithm_id in sorted(APPROVED_NATIVE_ALGORITHMS):
                         params = dict(config.algorithms[algorithm_id])
                         params["native_comparison"] = config.native_comparison
-                        result, elapsed_ms = _run_executor(
-                            executors[algorithm_id], problem, params, seed, replicate
+                        result, decision, elapsed_ms = _execute_preflighted_run(
+                            requested_algorithm_id=algorithm_id,
+                            identifier_source=IdentifierSource.MANIFEST,
+                            problem=problem,
+                            params=params,
+                            seed=seed,
+                            run_idx=replicate,
+                            protocol=ExecutionProtocol.NATIVE_TERMINATION,
+                            backend_policy=(BackendPolicy.REQUIRE_NUMBA_OBJECTIVE if algorithm_id in _GWO_HHO else BackendPolicy.PYTHON_ONLY),
+                            evaluation_budget=None,
+                            registered_algorithm_ids=registered_algorithm_ids,
+                            runtime_backends=runtime_backends,
+                            registry_getter=registry_getter,
+                            gateway_executor=gateway_executor,
                         )
                         replay = _native_result_record(
                             result,
@@ -474,6 +497,7 @@ def run_native_pilot(
                             replicate=replicate,
                             seed=seed,
                             config=config,
+                            decision=decision,
                             elapsed_ms=elapsed_ms,
                             record_kind="replay",
                         )
@@ -491,7 +515,8 @@ def run_native_pilot(
             "checks": [
                 "strict-native-config",
                 "problem-integrity",
-                "numba-nopython",
+                "runtime-backend-probe",
+                "preflight-gateway",
                 "native-manifest",
                 "independent-objective",
                 "paired-seeds",

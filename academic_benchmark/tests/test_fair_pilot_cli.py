@@ -3,12 +3,18 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from academic_benchmark.core.preflight import RuntimeBackendAvailability
 
 from academic_benchmark.fairness import FairComparisonManifest, FairRunResult
 from academic_benchmark.fair_pilot import APPROVED_ALGORITHMS, FairPilotError, run_fair_pilot
+from uniride_core.algorithms.capabilities import BackendKind, ExecutionBackendProfile
+
+
+RUNTIME = RuntimeBackendAvailability(True, True, "deterministic pilot fixture")
 
 
 @dataclass
@@ -52,7 +58,7 @@ def _problems() -> list[_Problem]:
 def _registry(algorithm_id: str):
     family = {
         "Core-GWO-TSP-Pure": "GWO", "Core-HHO-TSP-Pure": "HHO",
-        "Numba-2-opt": "2-opt", "Numba-3-opt-bounded": "3-opt",
+        "Core-TwoOpt-TSP": "2-opt", "Core-ThreeOpt-TSP": "3-opt",
     }[algorithm_id]
 
     def execute(problem, params, seed, run_idx):
@@ -77,12 +83,32 @@ def _registry(algorithm_id: str):
 
     return execute
 
+def _gateway(**kwargs: Any):
+    algorithm_id = kwargs["requested_algorithm_id"]
+    executor = kwargs["registry_getter"](algorithm_id)
+    result = executor(
+        kwargs["problem"], kwargs["params"], kwargs["seed"], kwargs["run_idx"]
+    )
+    backend = BackendKind.NUMBA_NOPYTHON if algorithm_id in {
+        "Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"
+    } else BackendKind.PYTHON
+    decision = SimpleNamespace(
+        backend_policy=kwargs["backend_policy"],
+        selected_backend=ExecutionBackendProfile(backend),
+        fallback_reason=None,
+        executor_registry_id=algorithm_id,
+        evidence_ids=(f"fixture::{algorithm_id}",),
+    )
+    return result, decision
+
+
+
 
 def test_fair_pilot_writes_only_validated_external_artifacts(tmp_path: Path):
     output = tmp_path / "external-output"
     result = run_fair_pilot(
         _config(tmp_path), output, problem_loader=_problems, registry_getter=_registry,
-        repo_root=tmp_path / "repository", jit_preflight=lambda: None,
+        repo_root=tmp_path / "repository", runtime_probe=lambda: RUNTIME, registered_algorithms_provider=lambda: APPROVED_ALGORITHMS, gateway_executor=_gateway,
     )
     assert result["records"] == 24  # 2 problems x 4 algorithms x (2 primary + replay run 0)
     assert {path.name for path in output.iterdir()} == {
@@ -100,7 +126,7 @@ def test_fair_pilot_rejects_repository_output_without_creating_it(tmp_path: Path
     repository.mkdir()
     with pytest.raises(FairPilotError, match="repository-contained"):
         run_fair_pilot(_config(tmp_path), repository / "results", problem_loader=_problems,
-                       registry_getter=_registry, repo_root=repository, jit_preflight=lambda: None)
+                       registry_getter=_registry, repo_root=repository, runtime_probe=lambda: RUNTIME, registered_algorithms_provider=lambda: APPROVED_ALGORITHMS, gateway_executor=_gateway)
     assert not (repository / "results").exists()
 
 
@@ -108,7 +134,7 @@ def test_fair_pilot_fails_cleanly_before_execution_when_atsp_missing(tmp_path: P
     output = tmp_path / "external-output"
     with pytest.raises(FairPilotError, match="at least one TSP and one ATSP"):
         run_fair_pilot(_config(tmp_path, problems=["tiny-tsp"]), output, problem_loader=_problems,
-                       registry_getter=_registry, repo_root=tmp_path / "repository", jit_preflight=lambda: None)
+                       registry_getter=_registry, repo_root=tmp_path / "repository", runtime_probe=lambda: RUNTIME, registered_algorithms_provider=lambda: APPROVED_ALGORITHMS, gateway_executor=_gateway)
     assert {path.name for path in output.iterdir()} == {"validation.json"}
     assert json.loads((output / "validation.json").read_text(encoding="utf-8"))["status"] == "failed"
 

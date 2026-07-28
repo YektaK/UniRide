@@ -14,8 +14,8 @@ NATIVE_TERMINATION_REGIME = "algorithm_native_termination"
 APPROVED_NATIVE_ALGORITHMS = frozenset({
     "Core-GWO-TSP-Pure",
     "Core-HHO-TSP-Pure",
-    "Numba-2-opt",
-    "Numba-3-opt-bounded",
+    "Core-TwoOpt-TSP",
+    "Core-ThreeOpt-TSP",
 })
 
 
@@ -30,6 +30,8 @@ class NativeComparisonManifest:
     ALGORITHM_FAMILIES = {
         "Core-GWO-TSP-Pure": "GWO",
         "Core-HHO-TSP-Pure": "HHO",
+        "Core-TwoOpt-TSP": "2-opt",
+        "Core-ThreeOpt-TSP": "3-opt",
         "Numba-2-opt": "2-opt",
         "Numba-3-opt-bounded": "3-opt",
     }

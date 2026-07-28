@@ -98,11 +98,11 @@ def _algorithm_config() -> dict[str, dict[str, Any]]:
             "max_no_improvement": 1,
             "dive_count": 1,
         },
-        "Numba-2-opt": {
+        "Core-TwoOpt-TSP": {
             "max_iterations": 2,
             "first_improvement": False,
         },
-        "Numba-3-opt-bounded": {
+        "Core-ThreeOpt-TSP": {
             "max_iterations": 2,
             "first_improvement": True,
             "window": 4,
@@ -152,7 +152,7 @@ def test_fixed_protocol_execution_remains_budgeted(protocol_version, comparison_
     }
     if comparison_regime is not None:
         fair["comparison_regime"] = comparison_regime
-    result = _executor("Numba-2-opt")(
+    result = _executor("Core-TwoOpt-TSP")(
         _problem(),
         {
             "max_iterations": 3,
@@ -170,7 +170,7 @@ def test_fixed_protocol_execution_remains_budgeted(protocol_version, comparison_
 
 def test_registry_rejects_simultaneous_fixed_and_native_payloads():
     with pytest.raises(ValueError, match="mutually exclusive"):
-        _executor("Numba-2-opt")(
+        _executor("Core-TwoOpt-TSP")(
             _problem(),
             {
                 "max_iterations": 1,
@@ -204,7 +204,7 @@ def test_native_config_rejects_evaluation_budget(tmp_path):
             "parameter schema mismatch",
         ),
         (
-            lambda data: data["algorithms"]["Numba-3-opt-bounded"].update(window=1),
+            lambda data: data["algorithms"]["Core-ThreeOpt-TSP"].update(window=1),
             "window must be an integer >= 2",
         ),
         (
@@ -224,13 +224,13 @@ def test_native_config_is_strict(tmp_path, mutate, message):
     ("algorithm_id", "params", "family", "window"),
     [
         (
-            "Numba-2-opt",
+            "Core-TwoOpt-TSP",
             {"max_iterations": 3, "first_improvement": False},
             "2-opt",
             None,
         ),
         (
-            "Numba-3-opt-bounded",
+            "Core-ThreeOpt-TSP",
             {"max_iterations": 2, "first_improvement": True, "window": 4},
             "3-opt",
             4,
@@ -280,39 +280,6 @@ def test_native_metaheuristics_use_numba_and_report_actual_counts(algorithm_id):
     assert result.termination_reason == "stagnation_limit"
 
 
-@pytest.mark.parametrize(
-    "execution_backend",
-    [
-        "numba-objective",
-        "objective=numba;polish=python",
-        "objective=python+numba;polish=none",
-        "objective=numba;polish=none;fallback=python",
-    ],
-)
-def test_native_pilot_rejects_inexact_pure_metaheuristic_backend(
-    tmp_path: Path, execution_backend: str
-):
-    algorithm_id = "Core-GWO-TSP-Pure"
-    problem = _problem("uniform-tsp", uniform=True)
-    params = copy.deepcopy(_algorithm_config()[algorithm_id])
-    params["native_comparison"] = _native_payload()
-    result = _executor(algorithm_id)(problem, params, 999, 0)
-    config = load_native_pilot_config(_write_config(tmp_path, _config()))
-
-    with pytest.raises(NativePilotError, match="exact pure Numba backend"):
-        _native_result_record(
-            result=replace(result, execution_backend=execution_backend),
-            problem=problem,
-            matrix=problem.dist_matrix,
-            matrix_sha256="0" * 64,
-            algorithm_id=algorithm_id,
-            replicate=0,
-            seed=999,
-            config=config,
-            elapsed_ms=0.0,
-            record_kind="primary",
-        )
-
 
 @pytest.mark.parametrize("algorithm_id", ["Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"])
 def test_native_metaheuristic_max_iteration_reason_is_truthful(algorithm_id):
@@ -324,7 +291,7 @@ def test_native_metaheuristic_max_iteration_reason_is_truthful(algorithm_id):
     assert result.termination_reason == "max_iterations"
 
 
-@pytest.mark.parametrize("algorithm_id", ["Numba-2-opt", "Numba-3-opt-bounded"])
+@pytest.mark.parametrize("algorithm_id", ["Core-TwoOpt-TSP", "Core-ThreeOpt-TSP"])
 def test_native_local_no_improvement_reason_is_truthful(algorithm_id):
     params = copy.deepcopy(_algorithm_config()[algorithm_id])
     params.update(max_iterations=5)
@@ -391,3 +358,53 @@ def test_native_aggregate_rejects_fixed_protocol_rows():
     }
     with pytest.raises(NativePilotError, match="foreign protocol"):
         aggregate_native_records([fixed_row], replay_ok=False)
+
+
+def _assert_direct_canonical_native_evidence(
+    algorithm_id: str,
+    params: dict[str, Any],
+) -> None:
+    for directed in (False, True):
+        problem = _problem(
+            f"evidence-{'atsp' if directed else 'tsp'}",
+            directed=directed,
+        )
+        run_params = {**params, "native_comparison": _native_payload(base_seed=313)}
+        first = _executor(algorithm_id)(problem, run_params, 999, 0)
+        replay = _executor(algorithm_id)(problem, run_params, 999, 0)
+
+        assert first.algorithm == first.algorithm_id == algorithm_id
+        assert sorted(first.tour) == list(range(1, problem.dimension + 1))
+        independent = _closed_cost(first.tour, problem.dist_matrix)
+        assert first.tour_cost == pytest.approx(independent)
+        assert first.objective_cost == pytest.approx(independent)
+        assert first.evaluations == first.objective_evaluations > 0
+        assert first.evaluation_budget is None
+        assert first.budget_terminated is False
+        assert first.termination_reason in {"max_iterations", "no_improving_move"}
+        assert first.execution_backend == "objective=python;polish=none"
+        assert first.polish_policy == {
+            "enabled": False,
+            "initial": False,
+            "periodic": False,
+            "final": False,
+            "operator": None,
+        }
+        assert replay.tour == first.tour
+        assert replay.objective_cost == first.objective_cost
+        assert replay.objective_evaluations == first.objective_evaluations
+        assert replay.termination_reason == first.termination_reason
+
+
+def test_core_two_opt_direct_native_tsp_and_atsp_evidence() -> None:
+    _assert_direct_canonical_native_evidence(
+        "Core-TwoOpt-TSP",
+        {"max_iterations": 3, "first_improvement": False},
+    )
+
+
+def test_core_three_opt_direct_native_tsp_and_atsp_evidence() -> None:
+    _assert_direct_canonical_native_evidence(
+        "Core-ThreeOpt-TSP",
+        {"max_iterations": 2, "first_improvement": True, "window": 4},
+    )

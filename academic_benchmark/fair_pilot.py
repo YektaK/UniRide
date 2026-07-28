@@ -19,10 +19,14 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 from academic_benchmark.fairness import FairComparisonManifest, FairRunResult
-from academic_benchmark.core.preflight import probe_runtime_backends
+from academic_benchmark.core.algorithm_resolution import IdentifierSource
+from academic_benchmark.core.execution_gateway import execute_preflighted
+from academic_benchmark.core.preflight import (
+    RuntimeBackendAvailability,
+    probe_runtime_backends,
+)
 from academic_benchmark.core.problem_validation import validate_problem_for_preflight
-
-
+from uniride_core.algorithms.capabilities import BackendPolicy, ExecutionProtocol
 
 V1_PROTOCOL = "uniride-fair-tsp-v1"
 V2_PROTOCOL = "uniride-fair-tsp-v2"
@@ -32,8 +36,8 @@ NATIVE_TERMINATION_REGIME = "algorithm_native_termination"
 APPROVED_ALGORITHMS = frozenset({
     "Core-GWO-TSP-Pure",
     "Core-HHO-TSP-Pure",
-    "Numba-2-opt",
-    "Numba-3-opt-bounded",
+    "Core-TwoOpt-TSP",
+    "Core-ThreeOpt-TSP",
 })
 _GWO_HHO = frozenset({"Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"})
 _CONFIG_KEYS_V1 = frozenset({
@@ -107,22 +111,22 @@ def _validate_v2_algorithm_policy(algorithms: Mapping[str, Mapping[str, Any]]) -
                 f"{algorithm_id} cannot declare local-search policy fields: {sorted(forbidden)}"
             )
 
-    two_opt = algorithms["Numba-2-opt"]
-    _strict_bool(two_opt.get("first_improvement"), "Numba-2-opt.first_improvement")
+    two_opt = algorithms["Core-TwoOpt-TSP"]
+    _strict_bool(two_opt.get("first_improvement"), "Core-TwoOpt-TSP.first_improvement")
     forbidden = {"window", "max_segment_length"} & two_opt.keys()
     if forbidden:
         raise FairPilotError(
-            f"Numba-2-opt cannot declare neighborhood-window fields: {sorted(forbidden)}"
+            f"Core-TwoOpt-TSP cannot declare neighborhood-window fields: {sorted(forbidden)}"
         )
 
-    three_opt = algorithms["Numba-3-opt-bounded"]
-    _strict_bool(three_opt.get("first_improvement"), "Numba-3-opt-bounded.first_improvement")
+    three_opt = algorithms["Core-ThreeOpt-TSP"]
+    _strict_bool(three_opt.get("first_improvement"), "Core-ThreeOpt-TSP.first_improvement")
     if "window" not in three_opt:
-        raise FairPilotError("Numba-3-opt-bounded.window is required for protocol v2")
-    _strict_int(three_opt["window"], "Numba-3-opt-bounded.window", 2)
+        raise FairPilotError("Core-ThreeOpt-TSP.window is required for protocol v2")
+    _strict_int(three_opt["window"], "Core-ThreeOpt-TSP.window", 2)
     if "max_segment_length" in three_opt:
         raise FairPilotError(
-            "Numba-3-opt-bounded.max_segment_length is ambiguous; use window"
+            "Core-ThreeOpt-TSP.max_segment_length is ambiguous; use window"
         )
 
 
@@ -300,6 +304,7 @@ def _result_record(
     replicate: int,
     seed: int,
     config: FairPilotConfig,
+    decision: Any,
     elapsed_ms: float,
     record_kind: str,
 ) -> Dict[str, Any]:
@@ -311,10 +316,6 @@ def _result_record(
     independent = _closed_cost(result.tour, matrix)
     if not math.isclose(float(result.objective_cost), independent, rel_tol=0.0, abs_tol=1e-8):
         raise FairPilotError(f"{problem.name}/{algorithm_id}/run-{replicate}: objective differs from independent cycle cost")
-    if algorithm_id in _GWO_HHO and "numba-objective" not in result.execution_backend:
-        raise FairPilotError(f"{problem.name}/{algorithm_id}/run-{replicate}: GWO/HHO did not use the Numba objective")
-    if algorithm_id not in _GWO_HHO and result.execution_backend in {"", "unknown"}:
-        raise FairPilotError(f"{problem.name}/{algorithm_id}/run-{replicate}: local-search backend is not recorded")
     optimum = float(problem.optimal)
     return {
         "record_kind": record_kind,
@@ -349,6 +350,7 @@ def _result_record(
         "independent_objective_cost": independent,
         "gap_pct": ((float(result.objective_cost) - optimum) / optimum) * 100.0,
         "elapsed_ms": elapsed_ms,
+        **_decision_metadata(decision),
         "validation_status": "passed",
     }
 
@@ -357,6 +359,68 @@ def _run_executor(executor: Callable[..., FairRunResult], problem: Any, params: 
     started = time.perf_counter()
     result = executor(problem, dict(params), seed, replicate)
     return result, (time.perf_counter() - started) * 1000.0
+
+
+def _execute_preflighted_run(
+    *,
+    requested_algorithm_id: str,
+    identifier_source: IdentifierSource,
+    problem: object,
+    params: Mapping[str, Any],
+    seed: int,
+    run_idx: int,
+    protocol: ExecutionProtocol,
+    backend_policy: BackendPolicy,
+    evaluation_budget: int | None,
+    registered_algorithm_ids: frozenset[str],
+    runtime_backends: RuntimeBackendAvailability,
+    registry_getter: Callable[[str], Callable[..., FairRunResult]],
+    gateway_executor: Callable[..., Any] = execute_preflighted,
+) -> tuple[FairRunResult, Any, float]:
+    """Execute one pilot run only through the decision-bound gateway."""
+    started = time.perf_counter()
+    result, decision = gateway_executor(
+        requested_algorithm_id=requested_algorithm_id,
+        identifier_source=identifier_source,
+        problem=problem,
+        params=params,
+        seed=seed,
+        run_idx=run_idx,
+        protocol=protocol,
+        backend_policy=backend_policy,
+        evaluation_budget=evaluation_budget,
+        registered_algorithm_ids=registered_algorithm_ids,
+        runtime_backends=runtime_backends,
+        registry_getter=registry_getter,
+    )
+    return result, decision, (time.perf_counter() - started) * 1000.0
+
+
+def _decision_metadata(decision: Any) -> Dict[str, Any]:
+    return {
+        "backend_policy": decision.backend_policy.value,
+        "backend_profile": {
+            "objective": decision.selected_backend.objective.value,
+            "polish": decision.selected_backend.polish.value,
+        },
+        "backend_fallback_used": decision.fallback_reason is not None,
+        "backend_fallback_reason": decision.fallback_reason,
+        "executor_registry_id": decision.executor_registry_id,
+        "capability_evidence_ids": list(decision.evidence_ids),
+    }
+
+
+def _registered_algorithm_ids() -> frozenset[str]:
+    from academic_benchmark.engine_core import AlgorithmRegistry
+    import academic_benchmark.core.registry_setup  # noqa: F401
+
+    return frozenset(AlgorithmRegistry.list_algorithms())
+
+
+def _backend_policy(algorithm_id: str) -> BackendPolicy:
+    if algorithm_id in _GWO_HHO:
+        return BackendPolicy.REQUIRE_NUMBA_OBJECTIVE
+    return BackendPolicy.PYTHON_ONLY
 
 
 def _git_metadata(repo_root: Path) -> Dict[str, Any]:
@@ -416,7 +480,9 @@ def run_fair_pilot(
     problem_loader: Callable[[], Iterable[Any]],
     registry_getter: Callable[[str], Any] = _registry_executor,
     repo_root: Optional[Path] = None,
-    jit_preflight: Callable[[], None] = preflight_numba_objective,
+    runtime_probe: Callable[[], RuntimeBackendAvailability] = probe_runtime_backends,
+    registered_algorithms_provider: Callable[[], Iterable[str]] = _registered_algorithm_ids,
+    gateway_executor: Callable[..., Any] = execute_preflighted,
 ) -> Dict[str, Any]:
     """Execute a small, deterministic, validated fair TSP/ATSP pilot."""
     config = load_fair_pilot_config(config_path)
@@ -426,13 +492,8 @@ def run_fair_pilot(
     try:
         available = list(problem_loader())
         resolved = resolve_problems(config, available)
-        executors: Dict[str, Callable[..., FairRunResult]] = {}
-        for algorithm_id in sorted(APPROVED_ALGORITHMS):
-            executor = registry_getter(algorithm_id)
-            if executor is None:
-                raise FairPilotError(f"approved algorithm is not registered: {algorithm_id}")
-            executors[algorithm_id] = executor
-        jit_preflight()
+        runtime_backends = runtime_probe()
+        registered_algorithm_ids = frozenset(registered_algorithms_provider())
         rows: List[Dict[str, Any]] = []
         replay_ok = True
         for problem, matrix, matrix_sha256 in resolved:
@@ -442,26 +503,56 @@ def run_fair_pilot(
                 for algorithm_id in sorted(APPROVED_ALGORITHMS):
                     params = dict(config.algorithms[algorithm_id])
                     params["fair_comparison"] = config.fair_comparison
-                    result, elapsed_ms = _run_executor(executors[algorithm_id], problem, params, seed, replicate)
+                    result, decision, elapsed_ms = _execute_preflighted_run(
+                        requested_algorithm_id=algorithm_id,
+                        identifier_source=IdentifierSource.MANIFEST,
+                        problem=problem,
+                        params=params,
+                        seed=seed,
+                        run_idx=replicate,
+                        protocol=ExecutionProtocol.FIXED_BUDGET,
+                        backend_policy=_backend_policy(algorithm_id),
+                        evaluation_budget=config.evaluation_budget,
+                        registered_algorithm_ids=registered_algorithm_ids,
+                        runtime_backends=runtime_backends,
+                        registry_getter=registry_getter,
+                        gateway_executor=gateway_executor,
+                    )
                     row = _result_record(result, problem=problem, matrix=matrix, matrix_sha256=matrix_sha256,
                                          algorithm_id=algorithm_id, replicate=replicate, seed=seed,
-                                         config=config, elapsed_ms=elapsed_ms, record_kind="primary")
+                                         config=config, decision=decision,
+                                         elapsed_ms=elapsed_ms, record_kind="primary")
                     rows.append(row)
                     primary[algorithm_id] = row
                 if replicate in config.replay_replicates:
                     for algorithm_id in sorted(APPROVED_ALGORITHMS):
                         params = dict(config.algorithms[algorithm_id])
                         params["fair_comparison"] = config.fair_comparison
-                        result, elapsed_ms = _run_executor(executors[algorithm_id], problem, params, seed, replicate)
+                        result, decision, elapsed_ms = _execute_preflighted_run(
+                            requested_algorithm_id=algorithm_id,
+                            identifier_source=IdentifierSource.MANIFEST,
+                            problem=problem,
+                            params=params,
+                            seed=seed,
+                            run_idx=replicate,
+                            protocol=ExecutionProtocol.FIXED_BUDGET,
+                            backend_policy=_backend_policy(algorithm_id),
+                            evaluation_budget=config.evaluation_budget,
+                            registered_algorithm_ids=registered_algorithm_ids,
+                            runtime_backends=runtime_backends,
+                            registry_getter=registry_getter,
+                            gateway_executor=gateway_executor,
+                        )
                         replay = _result_record(result, problem=problem, matrix=matrix, matrix_sha256=matrix_sha256,
                                                 algorithm_id=algorithm_id, replicate=replicate, seed=seed,
-                                                config=config, elapsed_ms=elapsed_ms, record_kind="replay")
+                                                config=config, decision=decision,
+                                                elapsed_ms=elapsed_ms, record_kind="replay")
                         expected = primary[algorithm_id]
                         for field in ("tour", "objective_cost", "objective_evaluations", "budget_terminated", "seed", "seed_group"):
                             if replay[field] != expected[field]:
                                 raise FairPilotError(f"replay mismatch for {problem.name}/{algorithm_id}/run-{replicate}: {field}")
                         rows.append(replay)
-        validation.update({"status": "passed", "checks": ["strict-config", "problem-integrity", "numba-nopython", "fairness-manifest", "independent-objective", "replay"]})
+        validation.update({"status": "passed", "checks": ["strict-config", "problem-integrity", "runtime-backend-probe", "preflight-gateway", "fairness-manifest", "independent-objective", "replay"]})
         manifest = {
             "protocol_version": config.protocol_version,
             "configuration": {

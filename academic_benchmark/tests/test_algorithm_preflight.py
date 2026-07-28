@@ -492,3 +492,39 @@ def test_numba_objective_with_python_polish_requires_python_runtime(
             _request(policy=policy, python=False, numba=True),
             capability_lookup=lookup,
         )
+
+
+def test_mixed_composition_across_protocols_is_rejected_capability_wide() -> None:
+    fixed_pure = _claim(
+        protocol=ExecutionProtocol.FIXED_BUDGET,
+        composition=CompositionKind.PURE,
+        evidence_id="fixed-pure",
+    )
+    native_memetic = _claim(
+        protocol=ExecutionProtocol.NATIVE_TERMINATION,
+        polish=BackendKind.PYTHON,
+        composition=CompositionKind.MEMETIC_2OPT,
+        evidence_id="native-memetic",
+    )
+    lookup = _lookup_for(_capability((fixed_pure, native_memetic)))
+
+    with pytest.raises(CapabilityEvidenceError, match="mixed composition"):
+        preflight_run(_request(), capability_lookup=lookup)
+
+
+def test_mixed_composition_across_problems_is_rejected_capability_wide() -> None:
+    tsp_pure = _claim(
+        problem=ProblemContract.TSP,
+        composition=CompositionKind.PURE,
+        evidence_id="tsp-pure",
+    )
+    atsp_memetic = _claim(
+        problem=ProblemContract.ATSP,
+        polish=BackendKind.PYTHON,
+        composition=CompositionKind.MEMETIC_2OPT,
+        evidence_id="atsp-memetic",
+    )
+    lookup = _lookup_for(_capability((tsp_pure, atsp_memetic)))
+
+    with pytest.raises(CapabilityEvidenceError, match="mixed composition"):
+        preflight_run(_request(problem=_TSP), capability_lookup=lookup)

@@ -177,13 +177,16 @@ def _evidenced_claims(
             f"Algorithm '{capability.canonical_id}' has no complete executable "
             "evidence for the requested problem and protocol."
         )
-    compositions = frozenset(claim.composition for claim in evidenced)
-    if len(compositions) != 1:
+    return evidenced
+
+
+def _validate_capability_composition(capability: AlgorithmCapability) -> None:
+    compositions = frozenset(claim.composition for claim in capability.claims)
+    if len(compositions) > 1:
         raise CapabilityEvidenceError(
             f"Algorithm '{capability.canonical_id}' publishes mixed composition "
-            "claims for the exact problem and protocol."
+            "claims across its capability definition."
         )
-    return evidenced
 
 
 def _python_policy_claims(
@@ -331,6 +334,8 @@ def preflight_run(
         raise CapabilityEvidenceError(
             f"Algorithm '{canonical_id}' has an unsupported lifecycle state."
         )
+
+    _validate_capability_composition(capability)
 
     try:
         report = validate_problem_for_preflight(request.problem)

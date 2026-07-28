@@ -174,7 +174,7 @@ def test_catalog_rejects_mutable_evidence_collection_with_tuple_claims():
         build_capability_catalog([capability])
 
 
-def test_default_catalog_contains_only_candidate_or_planned_entries():
+def test_default_catalog_contains_only_evidence_gated_lifecycles():
     catalog = list_algorithm_capabilities()
 
     assert isinstance(catalog, tuple)
@@ -194,7 +194,16 @@ def test_default_catalog_contains_only_candidate_or_planned_entries():
         "Core-GWO-TSP-Memetic-ALNS",
         "Core-HHO-TSP-Memetic-ALNS",
     }
-    assert all(not capability.claims for capability in catalog)
+    verified = {
+        capability.canonical_id
+        for capability in catalog
+        if capability.lifecycle is LifecycleStatus.VERIFIED
+    }
+    assert verified == {"Core-TwoOpt-TSP", "Core-ThreeOpt-TSP"}
+    assert all(
+        bool(capability.claims) is (capability.canonical_id in verified)
+        for capability in catalog
+    )
     assert get_algorithm_capability("Core-TwoOpt-TSP") is not None
     assert find_capability_claim(
         "Core-TwoOpt-TSP",
@@ -202,4 +211,4 @@ def test_default_catalog_contains_only_candidate_or_planned_entries():
         protocol=ExecutionProtocol.FIXED_BUDGET,
         backend_profile=ExecutionBackendProfile(BackendKind.PYTHON),
         composition=CompositionKind.LOCAL_SEARCH,
-    ) is None
+    ) is not None

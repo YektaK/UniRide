@@ -244,7 +244,7 @@ def _run_fair_local_search(problem, params, run_idx, algorithm_name, strategy_pa
             f"{manifest.budget_policy};max_iterations={max_iterations};"
             f"budget_exhausted={search.budget_exhausted}"
         ),
-        execution_backend="python-canonical-matrix",
+        execution_backend="objective=python;polish=none",
         polish_policy={
             "enabled": False, "initial": False, "periodic": False,
             "final": False, "operator": None,
@@ -323,7 +323,7 @@ def _run_native_local_search(problem, params, run_idx, algorithm_name, strategy_
         matrix_kind=matrix_kind,
         initialization_policy="paired_seed_random_permutation_all_nodes",
         termination_policy=f"algorithm_native_termination;max_iterations={max_iterations}",
-        execution_backend="python-canonical-matrix",
+        execution_backend="objective=python;polish=none",
         polish_policy={
             "enabled": False, "initial": False, "periodic": False,
             "final": False, "operator": None,

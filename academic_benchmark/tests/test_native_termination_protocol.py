@@ -246,7 +246,7 @@ def test_native_local_search_preserves_directed_cycle_and_metadata(
     assert sorted(result.tour) == list(range(1, problem.dimension + 1))
     assert result.objective_cost == pytest.approx(_closed_cost(result.tour, problem.dist_matrix))
     assert result.algorithm_family == family
-    assert result.execution_backend == "python-canonical-matrix"
+    assert result.execution_backend == "objective=python;polish=none"
     assert result.neighborhood_window == window
     assert result.acceptance_policy == (
         "first_improvement" if params["first_improvement"] else "best_improvement"

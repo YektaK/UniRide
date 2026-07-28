@@ -21,8 +21,8 @@ EXPLICIT_VARIANTS = (
     "Core-GWO-TSP-Memetic-2opt",
     "Core-HHO-TSP-Pure",
     "Core-HHO-TSP-Memetic-2opt",
-    "Numba-2-opt",
-    "Numba-3-opt-bounded",
+    "Core-TwoOpt-TSP",
+    "Core-ThreeOpt-TSP",
 )
 
 
@@ -137,8 +137,8 @@ def test_manifest_rejects_variant_polish_contradiction():
     (
         ("Core-GWO-TSP-Pure", "HHO"),
         ("Core-HHO-TSP-Pure", "GWO"),
-        ("Numba-2-opt", "3-opt"),
-        ("Numba-3-opt-bounded", "2-opt"),
+        ("Core-TwoOpt-TSP", "3-opt"),
+        ("Core-ThreeOpt-TSP", "2-opt"),
     ),
 )
 def test_manifest_rejects_algorithm_family_mismatches(algorithm, wrong_family):

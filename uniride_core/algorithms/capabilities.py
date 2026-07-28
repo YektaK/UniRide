@@ -126,9 +126,42 @@ def build_capability_catalog(
     return MappingProxyType(catalog)
 
 
+def _fixed_local_search_claims(
+    evidence_function: str,
+) -> tuple[CapabilityClaim, ...]:
+    evidence_id = (
+        "academic_benchmark/tests/test_algorithm_capability_evidence.py::"
+        + evidence_function
+    )
+    return tuple(
+        CapabilityClaim(
+            problem=problem,
+            protocol=ExecutionProtocol.FIXED_BUDGET,
+            backend_profile=ExecutionBackendProfile(BackendKind.PYTHON),
+            composition=CompositionKind.LOCAL_SEARCH,
+            directed_cost_preserved=problem is ProblemContract.ATSP,
+            exact_objective_accounting=True,
+            fixed_seed_deterministic=True,
+            truthful_result_reporting=True,
+            evidence_ids=(evidence_id,),
+        )
+        for problem in (ProblemContract.TSP, ProblemContract.ATSP)
+    )
+
+
 _INITIAL_CAPABILITIES: tuple[AlgorithmCapability, ...] = (
-    AlgorithmCapability("Core-TwoOpt-TSP", "TwoOpt", "2-opt", LifecycleStatus.CANDIDATE),
-    AlgorithmCapability("Core-ThreeOpt-TSP", "ThreeOpt", "3-opt", LifecycleStatus.CANDIDATE),
+    AlgorithmCapability(
+        "Core-TwoOpt-TSP", "TwoOpt", "2-opt", LifecycleStatus.VERIFIED,
+        claims=_fixed_local_search_claims(
+            "test_core_two_opt_fixed_tsp_and_atsp_evidence"
+        ),
+    ),
+    AlgorithmCapability(
+        "Core-ThreeOpt-TSP", "ThreeOpt", "3-opt", LifecycleStatus.VERIFIED,
+        claims=_fixed_local_search_claims(
+            "test_core_three_opt_fixed_tsp_and_atsp_evidence"
+        ),
+    ),
     AlgorithmCapability("Core-OrOpt-TSP", "OrOpt", "Or-opt", LifecycleStatus.CANDIDATE),
     AlgorithmCapability("Core-GA-TSP", "GA", "Genetic Algorithm", LifecycleStatus.CANDIDATE),
     AlgorithmCapability("Core-PSO-TSP", "PSO", "Particle Swarm Optimization", LifecycleStatus.CANDIDATE),

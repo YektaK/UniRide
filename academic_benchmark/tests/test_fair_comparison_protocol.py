@@ -19,8 +19,8 @@ FAIR_ALGORITHMS = (
     "Core-GWO-TSP-Memetic-2opt",
     "Core-HHO-TSP-Pure",
     "Core-HHO-TSP-Memetic-2opt",
-    "Numba-2-opt",
-    "Numba-3-opt-bounded",
+    "Core-TwoOpt-TSP",
+    "Core-ThreeOpt-TSP",
 )
 
 
@@ -141,7 +141,7 @@ def test_legacy_executor_never_emits_legacy_identity(algorithm):
 
 def test_directed_three_opt_reports_independently_recomputed_closed_cost():
     problem = _asymmetric_problem()
-    result = _run("Numba-3-opt-bounded", problem=problem)
+    result = _run("Core-ThreeOpt-TSP", problem=problem)
 
     assert result.algorithm_family == "3-opt"
     assert result.matrix_kind == "distance"

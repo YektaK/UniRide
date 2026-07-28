@@ -392,16 +392,16 @@ def test_decision_and_provenance_are_immutable() -> None:
         decision.problem.matrix[0][0] = 99.0  # type: ignore[index]
 
 
-def test_production_catalog_entries_remain_non_selectable_in_task_five() -> None:
+def test_current_candidate_catalog_entry_remains_non_selectable() -> None:
     with pytest.raises(CandidateAlgorithmError):
         preflight_run(
             PreflightRequest(
-                resolution=_resolution("Core-TwoOpt-TSP"),
+                resolution=_resolution("Core-OrOpt-TSP"),
                 problem=_TSP,
                 protocol=ExecutionProtocol.FIXED_BUDGET,
                 backend_policy=BackendPolicy.PYTHON_ONLY,
                 evaluation_budget=10,
-                registered_algorithm_ids=frozenset({"Core-TwoOpt-TSP"}),
+                registered_algorithm_ids=frozenset({"Core-OrOpt-TSP"}),
                 runtime_backends=RuntimeBackendAvailability(True, False, "test"),
             )
         )

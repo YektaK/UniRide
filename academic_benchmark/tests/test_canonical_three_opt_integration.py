@@ -44,13 +44,14 @@ def test_registry_three_opt_is_deterministic_and_preserves_directed_cost():
         problem_type="atsp",
         dist_matrix=matrix,
     )
-    executor = AlgorithmRegistry.get_executor("Numba-3-opt-bounded")
+    executor = AlgorithmRegistry.get_executor("Core-ThreeOpt-TSP")
 
     first = executor(problem, {"max_iterations": 20}, seed=41, run_idx=0)
     second = executor(problem, {"max_iterations": 20}, seed=41, run_idx=1)
 
     assert first.tour == second.tour
     assert first.tour_cost == second.tour_cost
+    assert first.algorithm == "Core-ThreeOpt-TSP"
     assert set(first.tour) == set(range(1, 7))
     assert first.tour_cost == pytest.approx(_closed_cost(first.tour, matrix))
 

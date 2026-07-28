@@ -26,6 +26,8 @@ def test_academic_registry_exposes_core_tsp_engines():
 
     assert {
         "Core-TwoOpt-TSP",
+        "Core-ThreeOpt-TSP",
+        "Core-OrOpt-TSP",
         "Core-GA-TSP",
         "Core-PSO-TSP",
         "Core-GWO-TSP",

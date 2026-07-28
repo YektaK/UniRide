@@ -456,14 +456,15 @@ for name, payload, default_params in STRATEGIES:
 # 2. Register SOTA Algorithms
 _SUPPORTED_SOTA_ALGOS = {"E2BSO-TSP", "R2DMA-TSP", "P-AOEA-TSP", "CGO-TSP", "RUN-TSP", "ALNS-TSP"}
 SOTA_ALGOS = [name for name in list_algorithm_names("sota_tsp") if name in _SUPPORTED_SOTA_ALGOS]
-def _make_sota_executor(algo: str):
+def _make_sota_executor(algo: str, reported_algorithm_id: str | None = None):
+    public_id = reported_algorithm_id or f"SOTA-{algo}"
     def executor(problem, params, seed, run_idx):
         import time
         import math
         from academic_benchmark.engine_core import RunResult
         from academic_benchmark.benchmark_utils import compute_gap
         if _is_routing_problem(problem):
-            return _run_core_routing_executor(problem, params, seed, run_idx, f"SOTA-{algo}:core-greedy-routing")
+            return _run_core_routing_executor(problem, params, seed, run_idx, f"{public_id}:core-greedy-routing")
         
         # Map SOTA algorithm names to their actual module, class, and config names
         mod_map = {
@@ -538,7 +539,7 @@ def _make_sota_executor(algo: str):
         tour_1indexed = [idx + 1 for idx in result.tour] if result.tour else None
         
         return RunResult(
-            problem=problem.name, algorithm=f"SOTA-{algo}",
+            problem=problem.name, algorithm=public_id,
             run=run_idx, seed=seed, dimension=problem.dimension,
             optimal=problem.optimal, tour_cost=int(result.tour_length),
             gap_pct=round(gap_pct, 4) if not math.isnan(gap_pct) else None,
@@ -550,6 +551,7 @@ def _make_sota_executor(algo: str):
 
 for algo in SOTA_ALGOS:
     AlgorithmRegistry.register(f"SOTA-{algo}")(_make_sota_executor(algo))
+AlgorithmRegistry.register("ALNS-TSP")(_make_sota_executor("ALNS-TSP", "ALNS-TSP"))
 
 
 def _core_greedy_executor(problem, params, seed, run_idx):
@@ -561,6 +563,17 @@ AlgorithmRegistry.register("Core-Greedy-Routing")(_core_greedy_executor)
 
 for algo_name, solver in CORE_TSP_SOLVERS.items():
     AlgorithmRegistry.register(algo_name)(_make_core_tsp_executor(algo_name, solver))
+
+_CANONICAL_LOCAL_SEARCH_REGISTRATIONS = {
+    "Core-TwoOpt-TSP": LocalSearchType.TWO_OPT,
+    "Core-ThreeOpt-TSP": LocalSearchType.THREE_OPT,
+    "Core-OrOpt-TSP": LocalSearchType.OR_OPT,
+}
+
+for canonical_id, payload in _CANONICAL_LOCAL_SEARCH_REGISTRATIONS.items():
+    AlgorithmRegistry.register(canonical_id)(
+        _make_legacy_executor(payload, "local_search", canonical_id)
+    )
 
 
 def _make_numba_metah_executor(

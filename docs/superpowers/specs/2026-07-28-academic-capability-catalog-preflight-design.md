@@ -1,8 +1,8 @@
 # Academic Capability Catalog and Preflight Design
 
-**Date:** 2026-07-28  
-**Status:** Approved for implementation planning  
-**Package:** C1 — Capability catalog and preflight validation  
+**Date:** 2026-07-28
+**Status:** Approved for implementation planning
+**Package:** C1 — Capability catalog and preflight validation
 **Depends on:** Package A study contracts and Package B Bildiri canonical extraction
 
 ## 1. Context

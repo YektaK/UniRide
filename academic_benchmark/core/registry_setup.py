@@ -501,6 +501,11 @@ def _make_sota_executor(algo: str, reported_algorithm_id: str | None = None):
                 for j in range(n):
                     full_tm[i + 1][j + 1] = float(tm[i][j])
             result = solver.solve_with_matrix(full_tm)
+        elif getattr(problem, "dist_matrix", None) is not None:
+            matrix = problem.dist_matrix
+            result = solver.solve_with_matrix(
+                matrix.tolist() if hasattr(matrix, "tolist") else matrix
+            )
         else:
             # Load correct distance matrix from TSPLIB DB cache
             dist_matrix_np = None
@@ -533,7 +538,8 @@ def _make_sota_executor(algo: str, reported_algorithm_id: str | None = None):
                     result = solver.solve_with_matrix(dm)
             
         elapsed = time.perf_counter() - start_time
-        gap_pct, _ = compute_gap(problem.name, result.tour_length, problem.optimal)
+        objective_cost = float(result.tour_length)
+        gap_pct, _ = compute_gap(problem.name, objective_cost, problem.optimal)
         
         # SOTA solvers return 0-indexed tours (0..N-1). Convert to 1-indexed to align with legacy executor.
         tour_1indexed = [idx + 1 for idx in result.tour] if result.tour else None
@@ -541,7 +547,8 @@ def _make_sota_executor(algo: str, reported_algorithm_id: str | None = None):
         return RunResult(
             problem=problem.name, algorithm=public_id,
             run=run_idx, seed=seed, dimension=problem.dimension,
-            optimal=problem.optimal, tour_cost=int(result.tour_length),
+            optimal=problem.optimal, tour_cost=objective_cost,
+            objective_cost=objective_cost,
             gap_pct=round(gap_pct, 4) if not math.isnan(gap_pct) else None,
             elapsed_sec=round(elapsed, 3),
             iterations=result.iterations,

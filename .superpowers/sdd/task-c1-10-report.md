@@ -67,7 +67,7 @@ C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\py
 
 ### GWO/HHO evidence-gate closure (2026-07-29)
 
-The formerly deferred GWO/HHO evidence action is now closed. Six exact `.venv-jit` nodes passed together (`6 passed in 2.32s`, no skips), covering symmetric TSP and directed ATSP across pure fixed/native and memetic-2opt fixed claims. The catalog/evidence/preflight set passed `74` tests, and backend/JIT/native/fair regression passed `82` tests. The current Task 10 status remains **PARTIAL** solely for its independent full-suite capacity and manifest-lifecycle gates; this result does not claim those gates complete.
+The formerly deferred GWO/HHO evidence action is now closed. Six exact `.venv-jit` nodes passed together (`6 passed in 2.32s`, no skips), covering symmetric TSP and directed ATSP across pure fixed/native and memetic-2opt fixed claims. The catalog/evidence/preflight set passed `74` tests, and backend/JIT/native/fair regression passed `82` tests. At that historical checkpoint, Task 10 was **PARTIAL** for independent full-suite capacity and manifest-lifecycle gates; this result did not claim those gates complete.
 
 ### Manifest-lifecycle gate closure (2026-07-29)
 

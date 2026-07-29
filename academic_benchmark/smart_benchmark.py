@@ -431,7 +431,13 @@ class TuningOrchestrator:
 
 # ── Unified Benchmark Runner ─────────────────────────────────────────────────
 
-def _governed_request_for_smart(algorithm_id: str) -> GovernedExecutionRequest | None:
+_SMART_BACKEND_POLICY = BackendPolicy.PREFER_NUMBA_OBJECTIVE
+
+
+def _governed_request_for_smart(
+    algorithm_id: str,
+    backend_policy: BackendPolicy,
+) -> GovernedExecutionRequest | None:
     """Canonicalize every resolver-governed Smart selection before execution."""
     if algorithm_id not in RESOLVER_GOVERNED_IDENTIFIERS:
         return None
@@ -441,7 +447,7 @@ def _governed_request_for_smart(algorithm_id: str) -> GovernedExecutionRequest |
         resolution.canonical_id,
         ExecutionProtocol.FIXED_BUDGET,
         1000,
-        BackendPolicy.PYTHON_ONLY,
+        backend_policy,
     )
 
 
@@ -549,7 +555,16 @@ def _run_single_task(args):
         return executor(problem, task.params, task.seed, task.run_idx)
     except Exception as e:
         return RunResult(problem=task.problem_name, algorithm=task.algorithm, run=task.run_idx, seed=task.seed, dimension=problem.dimension if problem else 0, optimal=problem.optimal if problem else None, tour_cost=float('inf'), gap_pct=None, elapsed_sec=0.0, error=str(e),)
-def run_unified_benchmark(problems, algorithms, param_source, n_runs, workers, metadata, skip_cached=False):
+def run_unified_benchmark(
+    problems,
+    algorithms,
+    param_source,
+    n_runs,
+    workers,
+    metadata,
+    skip_cached=False,
+    backend_policy: BackendPolicy = _SMART_BACKEND_POLICY,
+):
     """Run benchmark with params from DB, manual entry, or defaults.
 
     param_source: 'db', 'manual', or 'default'
@@ -557,7 +572,7 @@ def run_unified_benchmark(problems, algorithms, param_source, n_runs, workers, m
     selections = []
     for algorithm_id in algorithms:
         _validate_algorithm_migration(algorithm_id)
-        request = _governed_request_for_smart(algorithm_id)
+        request = _governed_request_for_smart(algorithm_id, backend_policy)
         selections.append((request.canonical_algorithm_id if request else algorithm_id, request))
     for algorithm_id, request in selections:
         domain = classify_academic_algorithm_id(

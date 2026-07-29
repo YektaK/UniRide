@@ -14,7 +14,12 @@ from academic_benchmark import cli_engine, smart_benchmark
 from academic_benchmark.core.algorithm_errors import (BackendUnavailableError, CandidateAlgorithmError, ExecutorUnavailableError, PlannedAlgorithmError, ResultContractViolation, UnsupportedProtocolError)
 from academic_benchmark.engine_core import BenchmarkConfig, BenchmarkTask, GovernedExecutionRequest, RunResult
 from academic_benchmark.core.preflight import RuntimeBackendAvailability
-from uniride_core.algorithms.capabilities import BackendPolicy, ExecutionProtocol
+from uniride_core.algorithms.capabilities import (
+    BackendPolicy,
+    CAPABILITY_CATALOG,
+    ExecutionProtocol,
+    LifecycleStatus,
+)
 
 
 @dataclass
@@ -108,10 +113,10 @@ def test_cli_governed_candidate_rejects_before_registry_or_direct_fallback(monke
     monkeypatch.setattr(cli_engine, "_AlgoReg", ExplodingRegistry)
     monkeypatch.setattr(cli_engine, "_HAS_NUMBA_REGISTRY", True)
     task = (
-        cli_engine._make_problem_dict(_Problem()), "Core-GWO-TSP-Pure", "Core-GWO-TSP-Pure",
+        cli_engine._make_problem_dict(_Problem()), "Core-OrOpt-TSP", "Core-OrOpt-TSP",
         {}, 0, 1, _request(
-            requested_algorithm_id="Core-GWO-TSP-Pure",
-            canonical_algorithm_id="Core-GWO-TSP-Pure",
+            requested_algorithm_id="Core-OrOpt-TSP",
+            canonical_algorithm_id="Core-OrOpt-TSP",
         ),
     )
 
@@ -181,7 +186,8 @@ def test_smart_selection_excludes_candidate_catalog_ids(monkeypatch) -> None:
     monkeypatch.setattr(smart_benchmark, "AlgorithmRegistry", Registry)
 
     assert smart_benchmark._selectable_algorithm_ids() == [
-        "Core-TwoOpt-TSP", "Core-ThreeOpt-TSP", "Core-Greedy-Routing"
+        "Core-TwoOpt-TSP", "Core-ThreeOpt-TSP", "Core-GWO-TSP-Pure",
+        "Core-Greedy-Routing",
     ]
 
 
@@ -194,24 +200,33 @@ def test_cli_task_builder_preserves_legacy_tuple_and_adds_governed_request() -> 
     assert task[6] == governed.governed_request
 
 def test_smart_selection_excludes_every_raw_governed_alias_and_preserves_non_c1(monkeypatch) -> None:
+    verified_ids = [
+        algorithm_id
+        for algorithm_id, capability in CAPABILITY_CATALOG.items()
+        if capability.lifecycle is LifecycleStatus.VERIFIED
+    ]
+
     class Registry:
         @staticmethod
         def list_algorithms():
             return [
-                "Core-TwoOpt-TSP", "Core-ThreeOpt-TSP", "Numba-2-opt",
-                "Numba-3-opt-bounded", "GWO", "HHO", "SOTA-ALNS-TSP",
-                "Core-GWO-TSP-Pure", "Core-GWO-TSP-Memetic-3opt",
+                *CAPABILITY_CATALOG,
+                "Numba-2-opt", "Numba-3-opt-bounded", "Numba-Or-opt",
+                "Numba-GA", "Numba-PSO", "GWO", "HHO", "Numba-GWO",
+                "Core-GWO-TSP", "Numba-HHO", "Core-HHO-TSP",
+                "SOTA-ALNS-TSP",
                 "Core-Greedy-Routing",
             ]
 
     monkeypatch.setattr(smart_benchmark, "AlgorithmRegistry", Registry)
 
     assert smart_benchmark._selectable_algorithm_ids() == [
-        "Core-TwoOpt-TSP", "Core-ThreeOpt-TSP", "Core-Greedy-Routing"
+        *verified_ids,
+        "Core-Greedy-Routing",
     ]
 
 
-@pytest.mark.parametrize("algorithm_id", ["Core-GWO-TSP-Pure", "GWO"])
+@pytest.mark.parametrize("algorithm_id", ["Core-OrOpt-TSP", "Numba-Or-opt"])
 def test_smart_public_runner_rejects_governed_candidate_before_setup(monkeypatch, algorithm_id) -> None:
     def explode(*_args, **_kwargs):
         raise AssertionError("governed candidate reached Smart setup")
@@ -286,7 +301,7 @@ def test_cli_alias_selection_uses_canonical_spec_and_governed_request() -> None:
 def test_cli_candidate_alias_fails_instead_of_becoming_zero_tasks() -> None:
     with pytest.raises(CandidateAlgorithmError):
         cli_engine._select_cli_specs(
-            [], ["GWO"], "fixed_evaluation_budget", 10, "python_only"
+            [], ["Numba-Or-opt"], "fixed_evaluation_budget", 10, "python_only"
         )
 
 
@@ -299,7 +314,7 @@ def test_cli_config_governed_spec_requires_explicit_execution_request() -> None:
 @pytest.mark.parametrize(
     ("algorithm_id", "error_type"),
     [
-        ("GWO", CandidateAlgorithmError),
+        ("Numba-Or-opt", CandidateAlgorithmError),
         ("Core-GWO-TSP-Memetic-3opt", PlannedAlgorithmError),
     ],
 )
@@ -312,6 +327,17 @@ def test_smart_selection_rejects_lifecycle_before_runtime_or_registry(monkeypatc
 
     with pytest.raises(error_type):
         smart_benchmark.run_unified_benchmark([_Problem()], [algorithm_id], "default", 1, 1, {"results": {}})
+
+
+def test_smart_governed_request_uses_caller_declared_backend_policy() -> None:
+    request = smart_benchmark._governed_request_for_smart(
+        "GWO", BackendPolicy.REQUIRE_NUMBA_OBJECTIVE
+    )
+
+    assert request is not None
+    assert request.requested_algorithm_id == "GWO"
+    assert request.canonical_algorithm_id == "Core-GWO-TSP-Pure"
+    assert request.backend_policy is BackendPolicy.REQUIRE_NUMBA_OBJECTIVE
 
 
 def test_smart_protocol_preflight_rejects_before_runtime_or_registry(monkeypatch) -> None:

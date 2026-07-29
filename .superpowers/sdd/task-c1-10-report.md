@@ -30,3 +30,30 @@
 
 - No production registry, capability catalog, solver, manifest-contract, or study-profile implementation changed.
 - No generated benchmark/report/database artifacts were created.
+
+### Task 10 command traceability
+
+These are the literal commands from the corresponding Task 10 plan steps: **Run focused gate**, **Run Package A/B/JIT regression**, and **Run full local suite and hygiene**. The drift/isolation command is the scoped verification of the Task 10 **Add drift tests** and **Strengthen production isolation** work.
+
+```powershell
+python -m pytest academic_benchmark\tests\test_algorithm_capability_catalog.py academic_benchmark\tests\test_algorithm_capability_evidence.py academic_benchmark\tests\test_production_registry_snapshot.py -q -p no:cacheprovider --basetemp C:\tmp\pytest-c1-task10-final --tb=short
+C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe -m pytest academic_benchmark\tests\test_algorithm_capability_catalog.py academic_benchmark\tests\test_algorithm_resolution.py academic_benchmark\tests\test_algorithm_problem_validation.py academic_benchmark\tests\test_algorithm_preflight.py academic_benchmark\tests\test_algorithm_capability_evidence.py academic_benchmark\tests\test_algorithm_execution_gateway.py academic_benchmark\tests\test_algorithm_preflight_boundaries.py academic_benchmark\tests\test_smart_benchmark_preflight.py academic_benchmark\tests\test_manifest_contracts.py academic_benchmark\tests\test_bildiri_study_profile.py academic_benchmark\tests\test_production_registry_snapshot.py -q -p no:cacheprovider --basetemp C:\tmp\pytest-c1-focused --tb=short
+C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe -m pytest academic_benchmark\tests\test_bildiri_solver_parity.py academic_benchmark\tests\test_numba_jit_parity.py academic_benchmark\tests\test_solver_backend_reporting.py academic_benchmark\tests\test_fair_comparison_protocol.py academic_benchmark\tests\test_fair_comparison_scientific_integrity.py academic_benchmark\tests\test_native_termination_protocol.py academic_benchmark\tests\test_manifest_contracts.py academic_benchmark\tests\test_archive_manifest.py academic_benchmark\tests\test_yaem_quarantine_boundary.py -q -p no:cacheprovider --basetemp C:\tmp\pytest-c1-regression --tb=short
+C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe -m pytest academic_benchmark\tests uniride_core\tests -q -p no:cacheprovider --basetemp C:\tmp\pytest-c1-full --tb=short
+```
+
+- Drift/isolation result: **24 passed in 10.10s**.
+- Focused-gate result: **230 passed in 20.35s**; 22 expected deprecated-alias warnings; no promoted evidence node skipped.
+- Package A/B/JIT regression result: **248 passed in 33.21s**.
+- Full-suite result: **no output within the 60-second bound; process terminated**. This timeout is a blocker, not a pass.
+
+### Post-review correction verification
+
+```powershell
+C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe -m pytest academic_benchmark\tests\test_algorithm_capability_catalog.py academic_benchmark\tests\test_algorithm_capability_evidence.py academic_benchmark\tests\test_production_registry_snapshot.py -q -p no:cacheprovider --basetemp C:\tmp\pytest-c1-task10-traceability --tb=short
+C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe -m pytest academic_benchmark\tests\test_algorithm_capability_catalog.py academic_benchmark\tests\test_algorithm_resolution.py academic_benchmark\tests\test_algorithm_problem_validation.py academic_benchmark\tests\test_algorithm_preflight.py academic_benchmark\tests\test_algorithm_capability_evidence.py academic_benchmark\tests\test_algorithm_execution_gateway.py academic_benchmark\tests\test_algorithm_preflight_boundaries.py academic_benchmark\tests\test_smart_benchmark_preflight.py academic_benchmark\tests\test_manifest_contracts.py academic_benchmark\tests\test_bildiri_study_profile.py academic_benchmark\tests\test_production_registry_snapshot.py -q -p no:cacheprovider --basetemp C:\tmp\pytest-c1-focused-traceability --tb=short
+```
+
+- Controlled RED: replacing the registry snapshot with an empty set produced `implemented CANDIDATE canonical IDs must retain academic executors` and named all eight missing candidate IDs.
+- GREEN scoped drift/isolation result: **24 passed in 15.27s**.
+- GREEN focused-gate result: **230 passed in 17.25s** with the same 22 expected deprecated-alias warnings.

@@ -315,3 +315,14 @@ def test_catalog_lifecycle_truth_matches_academic_executor_availability():
         for canonical_id, lifecycle in lifecycle_by_id.items()
         if lifecycle is LifecycleStatus.PLANNED
     }
+
+    missing_candidate_executors = candidate_ids - registry_ids
+    unexpected_planned_executors = planned_ids & registry_ids
+    assert not missing_candidate_executors, (
+        "implemented CANDIDATE canonical IDs must retain academic executors: "
+        f"{sorted(missing_candidate_executors)}"
+    )
+    assert not unexpected_planned_executors, (
+        "PLANNED canonical IDs must not acquire academic executors: "
+        f"{sorted(unexpected_planned_executors)}"
+    )

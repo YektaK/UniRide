@@ -172,6 +172,30 @@ def _native_local_search_claims(
     )
 
 
+
+def _numba_metaheuristic_claims(
+    *,
+    fixed_evidence: str | None,
+    native_evidence: str | None,
+    composition: CompositionKind,
+    polish: BackendKind,
+) -> tuple[CapabilityClaim, ...]:
+    evidence_by_protocol = (
+        (ExecutionProtocol.FIXED_BUDGET, fixed_evidence),
+        (ExecutionProtocol.NATIVE_TERMINATION, native_evidence),
+    )
+    claims: list[CapabilityClaim] = []
+    for protocol, evidence_function in evidence_by_protocol:
+        if evidence_function is None:
+            continue
+        evidence_id = (
+            "academic_benchmark/tests/test_algorithm_capability_evidence.py::"
+            + evidence_function
+        )
+        for problem in (ProblemContract.TSP, ProblemContract.ATSP):
+            claims.append(CapabilityClaim(problem=problem, protocol=protocol, backend_profile=ExecutionBackendProfile(BackendKind.NUMBA_NOPYTHON, polish), composition=composition, directed_cost_preserved=problem is ProblemContract.ATSP, exact_objective_accounting=True, fixed_seed_deterministic=True, truthful_result_reporting=True, evidence_ids=(evidence_id,)))
+    return tuple(claims)
+
 _INITIAL_CAPABILITIES: tuple[AlgorithmCapability, ...] = (
     AlgorithmCapability(
         "Core-TwoOpt-TSP", "TwoOpt", "2-opt", LifecycleStatus.VERIFIED,
@@ -192,10 +216,10 @@ _INITIAL_CAPABILITIES: tuple[AlgorithmCapability, ...] = (
     AlgorithmCapability("Core-OrOpt-TSP", "OrOpt", "Or-opt", LifecycleStatus.CANDIDATE),
     AlgorithmCapability("Core-GA-TSP", "GA", "Genetic Algorithm", LifecycleStatus.CANDIDATE),
     AlgorithmCapability("Core-PSO-TSP", "PSO", "Particle Swarm Optimization", LifecycleStatus.CANDIDATE),
-    AlgorithmCapability("Core-GWO-TSP-Pure", "GWO", "Grey Wolf Optimizer (pure)", LifecycleStatus.CANDIDATE),
-    AlgorithmCapability("Core-HHO-TSP-Pure", "HHO", "Harris Hawks Optimizer (pure)", LifecycleStatus.CANDIDATE),
-    AlgorithmCapability("Core-GWO-TSP-Memetic-2opt", "GWO", "Grey Wolf Optimizer (memetic 2-opt)", LifecycleStatus.CANDIDATE),
-    AlgorithmCapability("Core-HHO-TSP-Memetic-2opt", "HHO", "Harris Hawks Optimizer (memetic 2-opt)", LifecycleStatus.CANDIDATE),
+    AlgorithmCapability("Core-GWO-TSP-Pure", "GWO", "Grey Wolf Optimizer (pure)", LifecycleStatus.VERIFIED, claims=_numba_metaheuristic_claims(fixed_evidence="test_core_gwo_pure_fixed_tsp_and_atsp_numba_evidence", native_evidence="test_core_gwo_pure_native_tsp_and_atsp_numba_evidence", composition=CompositionKind.PURE, polish=BackendKind.NONE)),
+    AlgorithmCapability("Core-HHO-TSP-Pure", "HHO", "Harris Hawks Optimizer (pure)", LifecycleStatus.VERIFIED, claims=_numba_metaheuristic_claims(fixed_evidence="test_core_hho_pure_fixed_tsp_and_atsp_numba_evidence", native_evidence="test_core_hho_pure_native_tsp_and_atsp_numba_evidence", composition=CompositionKind.PURE, polish=BackendKind.NONE)),
+    AlgorithmCapability("Core-GWO-TSP-Memetic-2opt", "GWO", "Grey Wolf Optimizer (memetic 2-opt)", LifecycleStatus.VERIFIED, claims=_numba_metaheuristic_claims(fixed_evidence="test_core_gwo_memetic_2opt_fixed_tsp_and_atsp_numba_evidence", native_evidence=None, composition=CompositionKind.MEMETIC_2OPT, polish=BackendKind.PYTHON)),
+    AlgorithmCapability("Core-HHO-TSP-Memetic-2opt", "HHO", "Harris Hawks Optimizer (memetic 2-opt)", LifecycleStatus.VERIFIED, claims=_numba_metaheuristic_claims(fixed_evidence="test_core_hho_memetic_2opt_fixed_tsp_and_atsp_numba_evidence", native_evidence=None, composition=CompositionKind.MEMETIC_2OPT, polish=BackendKind.PYTHON)),
     AlgorithmCapability("ALNS-TSP", "ALNS", "Adaptive Large Neighborhood Search", LifecycleStatus.CANDIDATE),
     AlgorithmCapability("Core-GWO-TSP-Memetic-3opt", "GWO", "Grey Wolf Optimizer (memetic 3-opt)", LifecycleStatus.PLANNED, planning_note="Reserved for the approved C2 3-opt composition."),
     AlgorithmCapability("Core-HHO-TSP-Memetic-3opt", "HHO", "Harris Hawks Optimizer (memetic 3-opt)", LifecycleStatus.PLANNED, planning_note="Reserved for the approved C2 3-opt composition."),

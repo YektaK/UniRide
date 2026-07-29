@@ -346,3 +346,70 @@ def test_published_claim_evidence_ids_are_exact_passing_pytest_nodes(tmp_path) -
         output = completed.stdout.lower() + completed.stderr.lower()
         assert " skipped" not in output and "skipped " not in output, output
         assert " passed" in output, output
+
+
+def _require_live_numba_objective() -> None:
+    from academic_benchmark.core.preflight import probe_runtime_backends
+
+    availability = probe_runtime_backends()
+    assert availability.numba_nopython, availability.detail
+
+
+def _assert_metaheuristic_claims_published(
+    algorithm_id: str,
+    protocol: ExecutionProtocol,
+    backend_profile: ExecutionBackendProfile,
+    composition: CompositionKind,
+    evidence_function: str,
+) -> None:
+    capability = get_algorithm_capability(algorithm_id)
+    assert capability is not None
+    assert capability.lifecycle is LifecycleStatus.VERIFIED
+    claims = [claim for claim in capability.claims if claim.protocol is protocol]
+    assert len(claims) == 2
+    assert {claim.problem for claim in claims} == {ProblemContract.TSP, ProblemContract.ATSP}
+    evidence_id = "academic_benchmark/tests/test_algorithm_capability_evidence.py::" + evidence_function
+    for claim in claims:
+        assert claim.backend_profile == backend_profile
+        assert claim.composition is composition
+        assert claim.directed_cost_preserved is (claim.problem is ProblemContract.ATSP)
+        assert claim.exact_objective_accounting is True
+        assert claim.fixed_seed_deterministic is True
+        assert claim.truthful_result_reporting is True
+        assert claim.evidence_ids == (evidence_id,)
+
+
+def test_core_gwo_pure_fixed_tsp_and_atsp_numba_evidence() -> None:
+    _require_live_numba_objective()
+    _prove_fixed("Core-GWO-TSP-Pure", expected_backend="objective=numba;polish=none", expected_variant="pure", polish_enabled=False)
+    _assert_metaheuristic_claims_published("Core-GWO-TSP-Pure", ExecutionProtocol.FIXED_BUDGET, ExecutionBackendProfile(BackendKind.NUMBA_NOPYTHON), CompositionKind.PURE, "test_core_gwo_pure_fixed_tsp_and_atsp_numba_evidence")
+
+
+def test_core_hho_pure_fixed_tsp_and_atsp_numba_evidence() -> None:
+    _require_live_numba_objective()
+    _prove_fixed("Core-HHO-TSP-Pure", expected_backend="objective=numba;polish=none", expected_variant="pure", polish_enabled=False)
+    _assert_metaheuristic_claims_published("Core-HHO-TSP-Pure", ExecutionProtocol.FIXED_BUDGET, ExecutionBackendProfile(BackendKind.NUMBA_NOPYTHON), CompositionKind.PURE, "test_core_hho_pure_fixed_tsp_and_atsp_numba_evidence")
+
+
+def test_core_gwo_pure_native_tsp_and_atsp_numba_evidence() -> None:
+    _require_live_numba_objective()
+    _prove_native_metaheuristic("Core-GWO-TSP-Pure", expected_evaluations=5)
+    _assert_metaheuristic_claims_published("Core-GWO-TSP-Pure", ExecutionProtocol.NATIVE_TERMINATION, ExecutionBackendProfile(BackendKind.NUMBA_NOPYTHON), CompositionKind.PURE, "test_core_gwo_pure_native_tsp_and_atsp_numba_evidence")
+
+
+def test_core_hho_pure_native_tsp_and_atsp_numba_evidence() -> None:
+    _require_live_numba_objective()
+    _prove_native_metaheuristic("Core-HHO-TSP-Pure", expected_evaluations=8)
+    _assert_metaheuristic_claims_published("Core-HHO-TSP-Pure", ExecutionProtocol.NATIVE_TERMINATION, ExecutionBackendProfile(BackendKind.NUMBA_NOPYTHON), CompositionKind.PURE, "test_core_hho_pure_native_tsp_and_atsp_numba_evidence")
+
+
+def test_core_gwo_memetic_2opt_fixed_tsp_and_atsp_numba_evidence() -> None:
+    _require_live_numba_objective()
+    _prove_fixed("Core-GWO-TSP-Memetic-2opt", expected_backend="objective=numba;polish=python", expected_variant="memetic_2opt", polish_enabled=True)
+    _assert_metaheuristic_claims_published("Core-GWO-TSP-Memetic-2opt", ExecutionProtocol.FIXED_BUDGET, ExecutionBackendProfile(BackendKind.NUMBA_NOPYTHON, BackendKind.PYTHON), CompositionKind.MEMETIC_2OPT, "test_core_gwo_memetic_2opt_fixed_tsp_and_atsp_numba_evidence")
+
+
+def test_core_hho_memetic_2opt_fixed_tsp_and_atsp_numba_evidence() -> None:
+    _require_live_numba_objective()
+    _prove_fixed("Core-HHO-TSP-Memetic-2opt", expected_backend="objective=numba;polish=python", expected_variant="memetic_2opt", polish_enabled=True)
+    _assert_metaheuristic_claims_published("Core-HHO-TSP-Memetic-2opt", ExecutionProtocol.FIXED_BUDGET, ExecutionBackendProfile(BackendKind.NUMBA_NOPYTHON, BackendKind.PYTHON), CompositionKind.MEMETIC_2OPT, "test_core_hho_memetic_2opt_fixed_tsp_and_atsp_numba_evidence")

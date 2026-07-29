@@ -207,7 +207,14 @@ def test_default_catalog_contains_only_evidence_gated_lifecycles():
         for capability in catalog
         if capability.lifecycle is LifecycleStatus.VERIFIED
     }
-    assert verified == {"Core-TwoOpt-TSP", "Core-ThreeOpt-TSP"}
+    assert verified == {
+        "Core-TwoOpt-TSP",
+        "Core-ThreeOpt-TSP",
+        "Core-GWO-TSP-Pure",
+        "Core-HHO-TSP-Pure",
+        "Core-GWO-TSP-Memetic-2opt",
+        "Core-HHO-TSP-Memetic-2opt",
+    }
     assert all(
         bool(capability.claims) is (capability.canonical_id in verified)
         for capability in catalog
@@ -274,7 +281,14 @@ def test_verified_capabilities_have_exact_canonical_academic_executors():
         if capability.lifecycle is LifecycleStatus.VERIFIED
     }
 
-    assert verified_ids == {"Core-TwoOpt-TSP", "Core-ThreeOpt-TSP"}
+    assert verified_ids == {
+        "Core-TwoOpt-TSP",
+        "Core-ThreeOpt-TSP",
+        "Core-GWO-TSP-Pure",
+        "Core-HHO-TSP-Pure",
+        "Core-GWO-TSP-Memetic-2opt",
+        "Core-HHO-TSP-Memetic-2opt",
+    }
     assert verified_ids <= registry_ids
     for canonical_id in verified_ids:
         assert callable(AlgorithmRegistry.get_executor(canonical_id))
@@ -294,10 +308,10 @@ def test_catalog_lifecycle_truth_matches_academic_executor_availability():
         "Core-OrOpt-TSP": LifecycleStatus.CANDIDATE,
         "Core-GA-TSP": LifecycleStatus.CANDIDATE,
         "Core-PSO-TSP": LifecycleStatus.CANDIDATE,
-        "Core-GWO-TSP-Pure": LifecycleStatus.CANDIDATE,
-        "Core-HHO-TSP-Pure": LifecycleStatus.CANDIDATE,
-        "Core-GWO-TSP-Memetic-2opt": LifecycleStatus.CANDIDATE,
-        "Core-HHO-TSP-Memetic-2opt": LifecycleStatus.CANDIDATE,
+        "Core-GWO-TSP-Pure": LifecycleStatus.VERIFIED,
+        "Core-HHO-TSP-Pure": LifecycleStatus.VERIFIED,
+        "Core-GWO-TSP-Memetic-2opt": LifecycleStatus.VERIFIED,
+        "Core-HHO-TSP-Memetic-2opt": LifecycleStatus.VERIFIED,
         "ALNS-TSP": LifecycleStatus.CANDIDATE,
         "Core-GWO-TSP-Memetic-3opt": LifecycleStatus.PLANNED,
         "Core-HHO-TSP-Memetic-3opt": LifecycleStatus.PLANNED,

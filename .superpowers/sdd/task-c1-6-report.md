@@ -88,3 +88,44 @@ No GWO/HHO, OrOpt, GA, PSO, or ALNS claim was changed.
   returned `21 passed in 0.92s`.
 - Static parse of the changed Python files returned `AST_OK`; `git diff --check`
   was clean.
+
+## GWO/HHO executable-evidence closure (2026-07-29)
+
+**Status:** complete for the six requested canonical GWO/HHO tuples. All claims below executed through the production academic registry under `.venv-jit`; none used monkeypatched backend labels, objective functions, accounting, or claims.
+
+### Exact claim matrix
+
+| Canonical ID | Protocol | TSP + ATSP backend | Polish/composition | Exact evidence node | Result |
+|---|---|---|---|---|---|
+| `Core-GWO-TSP-Pure` | fixed budget | `objective=numba;polish=none` | `pure` | `test_core_gwo_pure_fixed_tsp_and_atsp_numba_evidence` | PASS |
+| `Core-HHO-TSP-Pure` | fixed budget | `objective=numba;polish=none` | `pure` | `test_core_hho_pure_fixed_tsp_and_atsp_numba_evidence` | PASS |
+| `Core-GWO-TSP-Pure` | native termination | `objective=numba;polish=none` | `pure` | `test_core_gwo_pure_native_tsp_and_atsp_numba_evidence` | PASS |
+| `Core-HHO-TSP-Pure` | native termination | `objective=numba;polish=none` | `pure` | `test_core_hho_pure_native_tsp_and_atsp_numba_evidence` | PASS |
+| `Core-GWO-TSP-Memetic-2opt` | fixed budget | `objective=numba;polish=python` | `memetic_2opt` | `test_core_gwo_memetic_2opt_fixed_tsp_and_atsp_numba_evidence` | PASS |
+| `Core-HHO-TSP-Memetic-2opt` | fixed budget | `objective=numba;polish=python` | `memetic_2opt` | `test_core_hho_memetic_2opt_fixed_tsp_and_atsp_numba_evidence` | PASS |
+
+Each node executes a symmetric TSP and genuinely directed ATSP twice, requires the canonical identity and complete 1-indexed tour, independently recomputes the directed closed cycle, checks deterministic paired-seed replay, exact positive evaluation counts with no fixed-budget overshoot, truthful termination, composition/polish flags, and a live Numba nopython objective probe. A missing nopython signature fails the evidence test; it does not skip.
+
+### TDD and literal command results
+
+RED nodes each reached their final lifecycle assertion only after the real executor completed its scientific assertions: GWO fixed `1 failed in 3.61s`; HHO fixed `1 failed in 2.25s`; GWO native `1 failed in 2.70s`; HHO native `1 failed in 2.44s`; GWO memetic fixed `1 failed in 1.87s`; HHO memetic fixed `1 failed in 2.33s`. Every RED failure was the intended `CANDIDATE` lifecycle mismatch, with no earlier solver/backend/cost/accounting/termination failure.
+
+```powershell
+$env:NUMBA_CACHE_DIR='C:\tmp\uniride-numba-cache-c1-gwo-hho'; & 'C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe' -m pytest academic_benchmark\tests\test_algorithm_capability_evidence.py::test_core_gwo_pure_fixed_tsp_and_atsp_numba_evidence academic_benchmark\tests\test_algorithm_capability_evidence.py::test_core_hho_pure_fixed_tsp_and_atsp_numba_evidence academic_benchmark\tests\test_algorithm_capability_evidence.py::test_core_gwo_pure_native_tsp_and_atsp_numba_evidence academic_benchmark\tests\test_algorithm_capability_evidence.py::test_core_hho_pure_native_tsp_and_atsp_numba_evidence academic_benchmark\tests\test_algorithm_capability_evidence.py::test_core_gwo_memetic_2opt_fixed_tsp_and_atsp_numba_evidence academic_benchmark\tests\test_algorithm_capability_evidence.py::test_core_hho_memetic_2opt_fixed_tsp_and_atsp_numba_evidence -q -p no:cacheprovider --basetemp C:\tmp\pytest-c1-gwo-hho-green --tb=short
+```
+
+Result: `6 passed in 2.32s`; no skipped tests.
+
+```powershell
+$env:NUMBA_CACHE_DIR='C:\tmp\uniride-numba-cache-c1-gwo-hho'; & 'C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe' -m pytest academic_benchmark\tests\test_algorithm_capability_catalog.py academic_benchmark\tests\test_algorithm_capability_evidence.py academic_benchmark\tests\test_algorithm_preflight.py academic_benchmark\tests\test_algorithm_preflight_boundaries.py -q -p no:cacheprovider --basetemp C:\tmp\pytest-c1-gwo-hho-catalog-green --tb=short
+```
+
+Result: `74 passed in 31.64s`.
+
+```powershell
+$env:NUMBA_CACHE_DIR='C:\tmp\uniride-numba-cache-c1-gwo-hho'; & 'C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe' -m pytest academic_benchmark\tests\test_solver_backend_reporting.py academic_benchmark\tests\test_numba_jit_parity.py academic_benchmark\tests\test_native_termination_protocol.py academic_benchmark\tests\test_fair_comparison_protocol.py -q -p no:cacheprovider --basetemp C:\tmp\pytest-c1-gwo-hho-regression-green --tb=short
+```
+
+Result: `82 passed in 2.75s`.
+
+The catalog promotes only the six rows above. OrOpt, GA, PSO, ALNS, and the 3-opt/ALNS reservations retain their previous lifecycle states. Task 10 remains partial for its independent full-suite and manifest-lifecycle gates.

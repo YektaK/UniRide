@@ -57,3 +57,7 @@ C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\py
 - Controlled RED: replacing the registry snapshot with an empty set produced `implemented CANDIDATE canonical IDs must retain academic executors` and named all eight missing candidate IDs.
 - GREEN scoped drift/isolation result: **24 passed in 15.27s**.
 - GREEN focused-gate result: **230 passed in 17.25s** with the same 22 expected deprecated-alias warnings.
+
+### GWO/HHO evidence-gate closure (2026-07-29)
+
+The formerly deferred GWO/HHO evidence action is now closed. Six exact `.venv-jit` nodes passed together (`6 passed in 2.32s`, no skips), covering symmetric TSP and directed ATSP across pure fixed/native and memetic-2opt fixed claims. The catalog/evidence/preflight set passed `74` tests, and backend/JIT/native/fair regression passed `82` tests. The current Task 10 status remains **PARTIAL** solely for its independent full-suite capacity and manifest-lifecycle gates; this result does not claim those gates complete.

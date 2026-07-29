@@ -53,11 +53,11 @@ _PYTHON = RuntimeBackendAvailability(
     ("algorithm_id", "problem", "protocol", "budget", "registered", "runtime", "error"),
     [
         (
-            "Core-GWO-TSP-Pure",
+            "Core-OrOpt-TSP",
             _Problem(),
             ExecutionProtocol.FIXED_BUDGET,
-            10,
-            frozenset({"Core-GWO-TSP-Pure"}),
+             10,
+            frozenset({"Core-OrOpt-TSP"}),
             _PYTHON,
             CandidateAlgorithmError,
         ),

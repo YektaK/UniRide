@@ -305,21 +305,21 @@ def test_native_local_no_improvement_reason_is_truthful(algorithm_id):
     assert result.termination_reason == "no_improving_move"
 
 
-def test_native_pilot_rejects_candidate_before_registry_getter(tmp_path):
+def test_native_pilot_rejects_unavailable_numba_before_registry_getter(tmp_path):
     config_path = _write_config(tmp_path, _config())
     output = tmp_path / "native-output"
     lookups: list[str] = []
 
     def getter(algorithm_id: str):
         lookups.append(algorithm_id)
-        raise AssertionError("candidate reached registry getter")
+        raise AssertionError("unavailable runtime reached registry getter")
 
     runtime = RuntimeBackendAvailability(
         python=True,
         numba_nopython=False,
         detail="deterministic Phase B candidate boundary",
     )
-    with pytest.raises(NativePilotError, match="candidate") as exc_info:
+    with pytest.raises(NativePilotError, match="Numba nopython objective is unavailable") as exc_info:
         run_native_pilot(
             config_path,
             output,
@@ -334,12 +334,10 @@ def test_native_pilot_rejects_candidate_before_registry_getter(tmp_path):
         )
 
     assert lookups == []
-    assert "Core-GWO-TSP-Pure" in str(exc_info.value)
-    assert "candidate" in str(exc_info.value).lower()
+    assert "Numba nopython objective is unavailable" in str(exc_info.value)
     validation = json.loads((output / "validation.json").read_text())
     assert validation["status"] == "failed"
-    assert "candidate" in validation["error"].lower()
-    assert "Core-GWO-TSP-Pure" in validation["error"]
+    assert "Numba nopython objective is unavailable" in validation["error"]
 
 
 def test_native_aggregate_rejects_fixed_protocol_rows():

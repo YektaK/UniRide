@@ -212,3 +212,44 @@ def test_default_catalog_contains_only_evidence_gated_lifecycles():
         backend_profile=ExecutionBackendProfile(BackendKind.PYTHON),
         composition=CompositionKind.LOCAL_SEARCH,
     ) is not None
+
+
+@pytest.mark.parametrize(
+    ("algorithm_id", "evidence_function"),
+    [
+        (
+            "Core-TwoOpt-TSP",
+            "test_core_two_opt_direct_native_tsp_and_atsp_evidence",
+        ),
+        (
+            "Core-ThreeOpt-TSP",
+            "test_core_three_opt_direct_native_tsp_and_atsp_evidence",
+        ),
+    ],
+)
+def test_canonical_local_search_native_claims_are_evidence_gated(
+    algorithm_id, evidence_function
+):
+    capability = get_algorithm_capability(algorithm_id)
+    assert capability is not None
+
+    native_claims = [
+        claim
+        for claim in capability.claims
+        if claim.protocol is ExecutionProtocol.NATIVE_TERMINATION
+    ]
+    assert {claim.problem for claim in native_claims} == {
+        ProblemContract.TSP,
+        ProblemContract.ATSP,
+    }
+    for claim in native_claims:
+        assert claim.backend_profile == ExecutionBackendProfile(BackendKind.PYTHON)
+        assert claim.composition is CompositionKind.LOCAL_SEARCH
+        assert claim.directed_cost_preserved is (claim.problem is ProblemContract.ATSP)
+        assert claim.exact_objective_accounting is True
+        assert claim.fixed_seed_deterministic is True
+        assert claim.truthful_result_reporting is True
+        assert claim.evidence_ids == (
+            "academic_benchmark/tests/test_native_termination_protocol.py::"
+            + evidence_function,
+        )

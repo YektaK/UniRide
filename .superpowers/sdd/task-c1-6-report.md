@@ -61,3 +61,30 @@ Historical registry keys remain registered. Evidence and canonical callers use `
 1. Task 8 must migrate the native pilot's configuration schema, approved set, and result identity atomically before canonical local-search native evidence can be executed and published.
 2. GWO/HHO exact evidence nodes must execute to completion under a working `.venv-jit` nopython environment. Each TSP/ATSP and fixed/native/memetic tuple must pass independently before promotion.
 3. After those blockers close, rerun the exact Task 6 five-file command and the later Gate C1 suites. Do not infer full Task 6 completion from this partial commit.
+
+## Canonical native local-search promotion follow-up
+
+The Task 8 Phase A direct canonical evidence bridge has closed the prior local-search
+native-claim identity blocker. The immutable catalog now publishes, for both
+`Core-TwoOpt-TSP` and `Core-ThreeOpt-TSP`, TSP and ATSP
+`NATIVE_TERMINATION` claims with `objective=python;polish=none` and
+`LOCAL_SEARCH` composition. Each claim names its exact direct evidence node:
+
+- `academic_benchmark/tests/test_native_termination_protocol.py::test_core_two_opt_direct_native_tsp_and_atsp_evidence`
+- `academic_benchmark/tests/test_native_termination_protocol.py::test_core_three_opt_direct_native_tsp_and_atsp_evidence`
+
+The published flags match the direct evidence: ATSP claims preserve directed
+costs; all four claims have exact objective accounting, fixed-seed deterministic
+replay, and truthful result reporting. The fixed-budget claims remain unchanged.
+No GWO/HHO, OrOpt, GA, PSO, or ALNS claim was changed.
+
+### TDD and verification
+
+- RED: the new catalog native-claim expectation failed as intended with `2 failed
+  in 2.45s`, because neither canonical local-search capability had a native
+  claim.
+- GREEN:
+  `python -m pytest academic_benchmark\tests\test_algorithm_capability_catalog.py academic_benchmark\tests\test_algorithm_capability_evidence.py academic_benchmark\tests\test_native_termination_protocol.py::test_core_two_opt_direct_native_tsp_and_atsp_evidence academic_benchmark\tests\test_native_termination_protocol.py::test_core_three_opt_direct_native_tsp_and_atsp_evidence -q -p no:cacheprovider --basetemp C:\tmp\pytest-c1-task6-native-promotion-green --tb=short`
+  returned `21 passed in 0.92s`.
+- Static parse of the changed Python files returned `AST_OK`; `git diff --check`
+  was clean.

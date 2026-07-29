@@ -237,12 +237,17 @@ def _assert_fixed_local_claims_published(
     capability = get_algorithm_capability(algorithm_id)
     assert capability is not None
     assert capability.lifecycle is LifecycleStatus.VERIFIED
-    assert len(capability.claims) == 2
-    assert {claim.problem for claim in capability.claims} == {
+    fixed_claims = [
+        claim
+        for claim in capability.claims
+        if claim.protocol is ExecutionProtocol.FIXED_BUDGET
+    ]
+    assert len(fixed_claims) == 2
+    assert {claim.problem for claim in fixed_claims} == {
         ProblemContract.TSP,
         ProblemContract.ATSP,
     }
-    for claim in capability.claims:
+    for claim in fixed_claims:
         assert claim.protocol is ExecutionProtocol.FIXED_BUDGET
         assert claim.backend_profile == ExecutionBackendProfile(
             objective=BackendKind.PYTHON,

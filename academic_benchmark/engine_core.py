@@ -1,9 +1,41 @@
 from dataclasses import dataclass, field
-from typing import List, Tuple, Dict, Any, Callable, Optional
+from typing import Collection, List, Tuple, Dict, Any, Callable, Optional
+from enum import Enum
 import time
 
 from uniride_core.models import ProblemInstance, TSPResult
 from uniride_core.algorithms.capabilities import BackendPolicy, ExecutionProtocol
+
+class AcademicAlgorithmDomain(str, Enum):
+    GOVERNED_TSP_ATSP = "governed_tsp_atsp"
+    UNCATALOGED_TSP_ATSP = "uncataloged_tsp_atsp"
+    NON_C1_ROUTING = "non_c1_routing"
+    UNKNOWN = "unknown"
+
+
+_UNCATALOGED_TSP_ATSP_IDS = frozenset({
+    "Numba-Swap", "Numba-Hybrid",
+    "SOTA-E2BSO-TSP", "SOTA-R2DMA-TSP", "SOTA-P-AOEA-TSP",
+    "SOTA-CGO-TSP", "SOTA-RUN-TSP", "SOTA-ALNS-TSP",
+    "FCM-GA-TSP", "FCM-PSO-TSP", "FCM-GWO-TSP", "FCM-HHO-TSP",
+})
+_ROUTING_IDS = frozenset({"Core-Greedy-Routing"})
+_ROUTING_PREFIXES = ("CVRP-", "CVRPTW-")
+
+
+def classify_academic_algorithm_id(
+    algorithm_id: str,
+    resolver_governed_ids: Collection[str],
+) -> AcademicAlgorithmDomain:
+    """Classify an academic registry ID without granting execution authority."""
+    if algorithm_id in resolver_governed_ids:
+        return AcademicAlgorithmDomain.GOVERNED_TSP_ATSP
+    if algorithm_id.startswith(_ROUTING_PREFIXES) or algorithm_id in _ROUTING_IDS:
+        return AcademicAlgorithmDomain.NON_C1_ROUTING
+    if algorithm_id in _UNCATALOGED_TSP_ATSP_IDS:
+        return AcademicAlgorithmDomain.UNCATALOGED_TSP_ATSP
+    return AcademicAlgorithmDomain.UNKNOWN
+
 
 @dataclass
 class RunResult:

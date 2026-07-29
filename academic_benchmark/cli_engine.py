@@ -62,7 +62,7 @@ from academic_benchmark.core.algorithm_resolution import (
 from academic_benchmark.core.algorithm_errors import AlgorithmSelectionError, CandidateAlgorithmError, ExecutorUnavailableError, PlannedAlgorithmError
 from academic_benchmark.core.execution_gateway import execute_preflighted
 from academic_benchmark.core.preflight import PreflightRequest, probe_runtime_backends, preflight_run
-from academic_benchmark.engine_core import GovernedExecutionRequest
+from academic_benchmark.engine_core import AcademicAlgorithmDomain, GovernedExecutionRequest, classify_academic_algorithm_id
 from uniride_core.algorithms.capabilities import BackendPolicy, CAPABILITY_CATALOG, ExecutionProtocol, LifecycleStatus
 
 LEGACY_ALGORITHM_MIGRATIONS = {
@@ -308,16 +308,6 @@ def _cli_governed_request(algorithm_id: str, execution_protocol: Optional[str], 
     return GovernedExecutionRequest(resolution.requested_id, resolution.canonical_id, protocol, evaluation_budget, _CLI_BACKEND_POLICIES[backend_policy])
 
 
-def _is_unapproved_tsp_atsp_strategy_id(algorithm_id: str) -> bool:
-    """Reject legacy TSP/ATSP registry names that have no catalog contract."""
-    if algorithm_id in RESOLVER_GOVERNED_IDENTIFIERS:
-        return False
-    return (
-        algorithm_id.startswith(("Numba-", "SOTA-"))
-        or algorithm_id.endswith("-TSP")
-    )
-
-
 def _validate_governed_lifecycle(request: GovernedExecutionRequest) -> None:
     capability = CAPABILITY_CATALOG[request.canonical_algorithm_id]
     if capability.lifecycle is LifecycleStatus.CANDIDATE:
@@ -339,6 +329,16 @@ def _govern_selected_specs(
     """Attach explicit governed requests before a config can create work."""
     governed_specs: List[StrategySpec] = []
     for spec in specs:
+        domain = classify_academic_algorithm_id(
+            spec.name, RESOLVER_GOVERNED_IDENTIFIERS
+        )
+        if domain in (
+            AcademicAlgorithmDomain.UNCATALOGED_TSP_ATSP,
+            AcademicAlgorithmDomain.UNKNOWN,
+        ):
+            raise ExecutorUnavailableError(
+                f"TSP/ATSP strategy '{spec.name}' is not catalog-governed."
+            )
         request = _cli_governed_request(
             spec.name,
             execution_protocol,
@@ -364,7 +364,13 @@ def _select_cli_specs(
     for requested_id in algorithm_ids:
         requested_id = requested_id.strip()
         _validate_algorithm_migration(requested_id)
-        if _is_unapproved_tsp_atsp_strategy_id(requested_id):
+        domain = classify_academic_algorithm_id(
+            requested_id, RESOLVER_GOVERNED_IDENTIFIERS
+        )
+        if domain in (
+            AcademicAlgorithmDomain.UNCATALOGED_TSP_ATSP,
+            AcademicAlgorithmDomain.UNKNOWN,
+        ):
             raise ExecutorUnavailableError(
                 f"TSP/ATSP strategy '{requested_id}' is not catalog-governed."
             )
@@ -2396,7 +2402,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             continue
 
         selected_names = multi_select(
-            [name for name in selectable_algos if not _is_catalog_governed_identifier(name)],
+            [
+                name for name in selectable_algos
+                if classify_academic_algorithm_id(
+                    name, RESOLVER_GOVERNED_IDENTIFIERS
+                ) is AcademicAlgorithmDomain.NON_C1_ROUTING
+            ],
             "ALGORITMA SECIMI",
         )
         if not selected_names:

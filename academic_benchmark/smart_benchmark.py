@@ -13,6 +13,7 @@ Usage:
     python academic_benchmark/smart_benchmark.py
 """
 
+import copy
 import sys
 import os
 import io
@@ -32,7 +33,7 @@ from uniride_core.algorithms._platform import fix_windows_encoding
 fix_windows_encoding()
 
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-from academic_benchmark.engine_core import BenchmarkConfig, BenchmarkTask, GovernedExecutionRequest, ProblemInstance, RunResult, AlgorithmRegistry
+from academic_benchmark.engine_core import AcademicAlgorithmDomain, AlgorithmRegistry, BenchmarkConfig, BenchmarkTask, GovernedExecutionRequest, ProblemInstance, RunResult, classify_academic_algorithm_id
 from academic_benchmark.benchmark_utils import (
     load_metadata, save_metadata, get_cpu_info, format_time,
     save_tuning_params_and_solution as _save_best_solution,
@@ -430,16 +431,6 @@ class TuningOrchestrator:
 
 # ── Unified Benchmark Runner ─────────────────────────────────────────────────
 
-def _is_unapproved_tsp_atsp_strategy_id(algorithm_id: str) -> bool:
-    """Classify active legacy TSP/ATSP registry names without authorizing them."""
-    if algorithm_id in RESOLVER_GOVERNED_IDENTIFIERS:
-        return False
-    return (
-        algorithm_id.startswith(("Numba-", "SOTA-"))
-        or algorithm_id.endswith("-TSP")
-    )
-
-
 def _governed_request_for_smart(algorithm_id: str) -> GovernedExecutionRequest | None:
     """Canonicalize every resolver-governed Smart selection before execution."""
     if algorithm_id not in RESOLVER_GOVERNED_IDENTIFIERS:
@@ -458,12 +449,14 @@ def _selectable_algorithm_ids() -> List[str]:
     """Expose only verified canonical C1 IDs and genuinely non-C1 entries."""
     selectable: List[str] = []
     for algorithm_id in AlgorithmRegistry.list_algorithms():
-        if _is_unapproved_tsp_atsp_strategy_id(algorithm_id):
-            continue
-        if algorithm_id not in RESOLVER_GOVERNED_IDENTIFIERS:
+        domain = classify_academic_algorithm_id(
+            algorithm_id, RESOLVER_GOVERNED_IDENTIFIERS
+        )
+        if domain is AcademicAlgorithmDomain.NON_C1_ROUTING:
             selectable.append(algorithm_id)
         elif (
-            algorithm_id in CAPABILITY_CATALOG
+            domain is AcademicAlgorithmDomain.GOVERNED_TSP_ATSP
+            and algorithm_id in CAPABILITY_CATALOG
             and CAPABILITY_CATALOG[algorithm_id].lifecycle is LifecycleStatus.VERIFIED
         ):
             selectable.append(algorithm_id)
@@ -567,7 +560,10 @@ def run_unified_benchmark(problems, algorithms, param_source, n_runs, workers, m
         request = _governed_request_for_smart(algorithm_id)
         selections.append((request.canonical_algorithm_id if request else algorithm_id, request))
     for algorithm_id, request in selections:
-        if request is None and _is_unapproved_tsp_atsp_strategy_id(algorithm_id):
+        domain = classify_academic_algorithm_id(
+            algorithm_id, RESOLVER_GOVERNED_IDENTIFIERS
+        )
+        if request is None and domain is not AcademicAlgorithmDomain.NON_C1_ROUTING:
             raise ExecutorUnavailableError(
                 f"TSP/ATSP strategy '{algorithm_id}' is not catalog-governed."
             )
@@ -618,21 +614,70 @@ def run_unified_benchmark(problems, algorithms, param_source, n_runs, workers, m
     print(f"\n[INFO] Executing {len(worker_args)} tasks across {workers} workers...")
     print("[INFO] Press Ctrl+X or Ctrl+Q to safely stop.")
 
+    governed_batch = any(task.governed_request is not None for task in tasks)
+    governed_successes: List[RunResult] = []
     completed = 0
     start_time = time.time()
-    saved_results = metadata.get("results", {})
+    saved_results = copy.deepcopy(metadata.get("results", {}))
     run_id = f"smart-benchmark-{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    try:
-        from academic_benchmark.tsplib_manager import save_benchmark_run
-        save_benchmark_run(
-            run_id,
-            source="academic_smart",
-            status="running",
-            settings={"param_source": param_source, "tasks": len(worker_args), "workers": workers},
-            db_path=TSPLIB_DB,
-        )
-    except Exception:
-        pass
+
+    def persist_run(status: str, result_count: Optional[int] = None) -> None:
+        try:
+            from academic_benchmark.tsplib_manager import save_benchmark_run
+            kwargs = {
+                "source": "academic_smart",
+                "status": status,
+                "settings": {"param_source": param_source, "tasks": len(worker_args), "workers": workers},
+                "db_path": TSPLIB_DB,
+            }
+            if result_count is not None:
+                kwargs["metadata"] = {"results": result_count}
+            save_benchmark_run(run_id, **kwargs)
+        except Exception:
+            pass
+
+    def persist_result(res: RunResult) -> None:
+        try:
+            from academic_benchmark.tsplib_manager import save_benchmark_result
+            save_benchmark_result(
+                run_id,
+                {
+                    "problem": res.problem,
+                    "algorithm": res.algorithm,
+                    "run_number": res.run,
+                    "problem_type": getattr(res, "problem_type", "tsp"),
+                    "matrix_kind": getattr(res, "matrix_kind", "distance"),
+                    "objective_cost": getattr(res, "objective_cost", res.tour_cost),
+                    "tour_cost": res.tour_cost,
+                    "gap": res.gap_pct,
+                    "elapsed_ms": res.elapsed_sec * 1000,
+                    "tour": res.tour,
+                    "routes": getattr(res, "routes", None),
+                    "route_loads": getattr(res, "route_loads", None),
+                    "route_costs": getattr(res, "route_costs", None),
+                    "num_vehicles": getattr(res, "num_vehicles", None),
+                    "capacity_violations": getattr(res, "capacity_violations", 0),
+                    "tw_violations": getattr(res, "tw_violations", 0),
+                    "params": {"seed": res.seed},
+                    "metadata": {"param_source": param_source},
+                },
+                db_path=TSPLIB_DB,
+            )
+        except Exception:
+            pass
+        if res.tour_cost > 0:
+            _save_best_solution(
+                problem_name=res.problem,
+                algorithm=res.algorithm,
+                params={"seed": res.seed},
+                tour=res.tour or [],
+                tour_length=float(res.tour_cost),
+                gap=float(res.gap_pct) if res.gap_pct is not None else 0.0,
+                db_path=TSPLIB_DB,
+            )
+
+    if not governed_batch:
+        persist_run("running")
 
     with ProcessPoolExecutor(max_workers=workers) as executor:
         fut_maps = {executor.submit(_run_single_task, wa): wa for wa in worker_args}
@@ -650,62 +695,35 @@ def run_unified_benchmark(problems, algorithms, param_source, n_runs, workers, m
 
             if _check_interrupt_key():
                 _shutdown_requested = True
-
             if _shutdown_requested:
                 graceful_shutdown()
                 break
 
-            _current_results.append(res.__dict__)
             completed += 1
-
-            if getattr(res, 'error', None):
+            if getattr(res, "error", None):
                 print(f"\n[ERROR] {res.algorithm} on {res.problem}: {res.error}")
-
             gap_str = f"{res.gap_pct:.4f}%" if res.gap_pct is not None else "ERR"
             msg = f"[PROGRESS] {completed}/{len(worker_args)} | {res.algorithm} on {res.problem} -> Gap: {gap_str}"
             sys.stdout.write(f"\r{msg:<110}")
             sys.stdout.flush()
 
+            if governed_batch:
+                governed_successes.append(res)
+            else:
+                _current_results.append(res.__dict__)
+                if res.problem not in saved_results:
+                    saved_results[res.problem] = {}
+                saved_results[res.problem][res.algorithm] = res.__dict__
+                persist_result(res)
+
+    if governed_batch:
+        persist_run("running")
+        for res in governed_successes:
+            _current_results.append(res.__dict__)
             if res.problem not in saved_results:
                 saved_results[res.problem] = {}
             saved_results[res.problem][res.algorithm] = res.__dict__
-            try:
-                from academic_benchmark.tsplib_manager import save_benchmark_result
-                save_benchmark_result(
-                    run_id,
-                    {
-                        "problem": res.problem,
-                        "algorithm": res.algorithm,
-                        "run_number": res.run,
-                        "problem_type": getattr(res, "problem_type", "tsp"),
-                        "matrix_kind": getattr(res, "matrix_kind", "distance"),
-                        "objective_cost": getattr(res, "objective_cost", res.tour_cost),
-                        "tour_cost": res.tour_cost,
-                        "gap": res.gap_pct,
-                        "elapsed_ms": res.elapsed_sec * 1000,
-                        "tour": res.tour,
-                        "routes": getattr(res, "routes", None),
-                        "route_loads": getattr(res, "route_loads", None),
-                        "route_costs": getattr(res, "route_costs", None),
-                        "num_vehicles": getattr(res, "num_vehicles", None),
-                        "capacity_violations": getattr(res, "capacity_violations", 0),
-                        "tw_violations": getattr(res, "tw_violations", 0),
-                        "params": {"seed": res.seed},
-                        "metadata": {"param_source": param_source},
-                    },
-                    db_path=TSPLIB_DB,
-                )
-            except Exception:
-                pass
-
-            if res.tour_cost > 0:
-                _save_best_solution(
-                    problem_name=res.problem, algorithm=res.algorithm,
-                    params={"seed": res.seed}, tour=res.tour or [],
-                    tour_length=float(res.tour_cost),
-                    gap=float(res.gap_pct) if res.gap_pct is not None else 0.0,
-                    db_path=TSPLIB_DB,
-                )
+            persist_result(res)
 
     total_time = time.time() - start_time
     print(f"\n\n[DONE] Completed in {format_time(total_time)}")

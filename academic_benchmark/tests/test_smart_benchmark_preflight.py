@@ -453,3 +453,72 @@ def test_optuna_coordinator_reraises_governed_failure_without_tell_or_save(monke
 
     assert future.cancelled
     assert executor.shutdown_called
+
+def test_smart_governed_batch_is_atomic_after_success_then_failure(monkeypatch) -> None:
+    success = _valid_result()
+
+    class Future:
+        def __init__(self, result=None, error=None):
+            self._result = result
+            self._error = error
+        def cancel(self):
+            return True
+        def result(self):
+            if self._error:
+                raise self._error
+            return self._result
+
+    futures = [Future(success), Future(error=ResultContractViolation("postflight mismatch"))]
+
+    class Executor:
+        def __init__(self, **_kwargs):
+            self.index = 0
+        def __enter__(self):
+            return self
+        def __exit__(self, *_args):
+            return False
+        def submit(self, *_args):
+            future = futures[self.index]
+            self.index += 1
+            return future
+        def shutdown(self, **_kwargs):
+            return None
+
+    writes = []
+    import academic_benchmark.tsplib_manager as tsplib_manager
+    monkeypatch.setattr(smart_benchmark, "_preflight_smart_selections", lambda *_args: (frozenset(), RuntimeBackendAvailability(True, True, "test")))
+    monkeypatch.setattr(smart_benchmark, "run_warmup", lambda *_args: None)
+    monkeypatch.setattr(smart_benchmark, "ProcessPoolExecutor", Executor)
+    monkeypatch.setattr(smart_benchmark.concurrent.futures, "as_completed", lambda submitted: list(submitted))
+    monkeypatch.setattr(smart_benchmark, "save_metadata", lambda *_args, **_kwargs: writes.append("metadata"))
+    monkeypatch.setattr(smart_benchmark, "_save_best_solution", lambda *_args, **_kwargs: writes.append("best"))
+    monkeypatch.setattr(tsplib_manager, "save_benchmark_run", lambda *_args, **_kwargs: writes.append("run"))
+    monkeypatch.setattr(tsplib_manager, "save_benchmark_result", lambda *_args, **_kwargs: writes.append("result"))
+
+    with pytest.raises(ResultContractViolation):
+        smart_benchmark.run_unified_benchmark([_Problem()], ["Core-TwoOpt-TSP"], "default", 2, 1, {"results": {}})
+
+    assert writes == []
+
+
+def test_shared_algorithm_domain_contract_classifies_live_registry_and_routing_aliases() -> None:
+    from academic_benchmark.core import registry_setup
+    from academic_benchmark.engine_core import (
+        AcademicAlgorithmDomain,
+        AlgorithmRegistry,
+        classify_academic_algorithm_id,
+    )
+    from academic_benchmark.core.algorithm_resolution import RESOLVER_GOVERNED_IDENTIFIERS
+
+    assert registry_setup is not None
+    for algorithm_id in AlgorithmRegistry.list_algorithms():
+        assert classify_academic_algorithm_id(algorithm_id, RESOLVER_GOVERNED_IDENTIFIERS) is not AcademicAlgorithmDomain.UNKNOWN
+    assert classify_academic_algorithm_id("CVRP-Core-TwoOpt-TSP", RESOLVER_GOVERNED_IDENTIFIERS) is AcademicAlgorithmDomain.NON_C1_ROUTING
+    assert classify_academic_algorithm_id("CVRPTW-Core-GA-TSP", RESOLVER_GOVERNED_IDENTIFIERS) is AcademicAlgorithmDomain.NON_C1_ROUTING
+    assert classify_academic_algorithm_id("Numba-Swap", RESOLVER_GOVERNED_IDENTIFIERS) is AcademicAlgorithmDomain.UNCATALOGED_TSP_ATSP
+    assert classify_academic_algorithm_id("Numba-Hybrid", RESOLVER_GOVERNED_IDENTIFIERS) is AcademicAlgorithmDomain.UNCATALOGED_TSP_ATSP
+    assert classify_academic_algorithm_id("Future-TSP", RESOLVER_GOVERNED_IDENTIFIERS) is AcademicAlgorithmDomain.UNKNOWN
+    routing_spec = cli_engine.StrategySpec("CVRP-Core-TwoOpt-TSP", "CVRP-Core-TwoOpt-TSP", {}, "routing")
+    assert cli_engine._select_cli_specs(
+        [routing_spec], [routing_spec.name], None, None, None
+    )[0].governed_request is None

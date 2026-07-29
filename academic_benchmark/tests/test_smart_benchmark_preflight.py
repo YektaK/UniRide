@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import pickle
+import sys
 from dataclasses import dataclass
 from types import SimpleNamespace
 
@@ -353,3 +355,101 @@ def test_smart_preflight_uses_registry_snapshot_for_executor_and_backend(monkeyp
     )
     with pytest.raises(BackendUnavailableError):
         smart_benchmark._preflight_smart_selections([_Problem()], [_request()])
+
+def test_smart_public_runner_reraises_governed_postflight_without_persistence(monkeypatch) -> None:
+    class Future:
+        def cancel(self):
+            self.cancelled = True
+        def result(self):
+            raise ResultContractViolation("postflight mismatch")
+
+    future = Future()
+
+    class Executor:
+        def __init__(self, **_kwargs):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *_args):
+            return False
+        def submit(self, *_args):
+            return future
+        def shutdown(self, **_kwargs):
+            return None
+
+    def explode(*_args, **_kwargs):
+        raise AssertionError("governed failure reached persistence")
+
+    monkeypatch.setattr(smart_benchmark, "_preflight_smart_selections", lambda *_args: (frozenset(), RuntimeBackendAvailability(True, True, "test")))
+    monkeypatch.setattr(smart_benchmark, "run_warmup", lambda *_args: None)
+    monkeypatch.setattr(smart_benchmark, "ProcessPoolExecutor", Executor)
+    monkeypatch.setattr(smart_benchmark.concurrent.futures, "as_completed", lambda futures: list(futures))
+    monkeypatch.setattr(smart_benchmark, "save_metadata", explode)
+    monkeypatch.setattr(smart_benchmark, "_save_best_solution", explode)
+
+    with pytest.raises(ResultContractViolation):
+        smart_benchmark.run_unified_benchmark([_Problem()], ["Core-TwoOpt-TSP"], "default", 1, 1, {"results": {}})
+
+    assert future.cancelled
+
+
+def test_cli_and_smart_reject_unapproved_numba_tsp_ids(monkeypatch) -> None:
+    class Registry:
+        @staticmethod
+        def list_algorithms():
+            return ["Core-TwoOpt-TSP", "Numba-Swap", "Numba-Hybrid", "Core-Greedy-Routing"]
+
+    monkeypatch.setattr(smart_benchmark, "AlgorithmRegistry", Registry)
+    assert smart_benchmark._selectable_algorithm_ids() == ["Core-TwoOpt-TSP", "Core-Greedy-Routing"]
+
+    with pytest.raises(ExecutorUnavailableError):
+        cli_engine._select_cli_specs([], ["Numba-Swap"], "fixed_evaluation_budget", 10, "python_only")
+    with pytest.raises(ExecutorUnavailableError):
+        smart_benchmark.run_unified_benchmark(
+            [_Problem()], ["Numba-Hybrid"], "default", 1, 1, {"results": {}}
+        )
+
+
+def test_optuna_coordinator_reraises_governed_failure_without_tell_or_save(monkeypatch) -> None:
+    class Study:
+        trials = []
+        def ask(self):
+            return SimpleNamespace(number=1, params={})
+        def tell(self, *_args):
+            pytest.fail("governed failure was told as an infinite trial")
+
+    study = Study()
+    fake_optuna = SimpleNamespace(
+        create_study=lambda **_kwargs: study,
+        samplers=SimpleNamespace(TPESampler=lambda **_kwargs: object()),
+    )
+
+    class Future:
+        cancelled = False
+        def cancel(self):
+            self.cancelled = True
+        def result(self):
+            raise ResultContractViolation("postflight mismatch")
+
+    future = Future()
+
+    class Executor:
+        def __init__(self, **_kwargs):
+            self.shutdown_called = False
+        def submit(self, *_args):
+            return future
+        def shutdown(self, **_kwargs):
+            self.shutdown_called = True
+
+    executor = Executor()
+    monkeypatch.setitem(sys.modules, "optuna", fake_optuna)
+    monkeypatch.setattr(concurrent.futures, "ProcessPoolExecutor", lambda **_kwargs: executor)
+    monkeypatch.setattr(concurrent.futures, "wait", lambda futures, **_kwargs: (set(futures), set()))
+    monkeypatch.setattr(cli_engine, "save_metadata", lambda *_args, **_kwargs: pytest.fail("governed failure saved progress"))
+    spec = cli_engine.StrategySpec("Core-TwoOpt-TSP", "Core-TwoOpt-TSP", {}, "local_search", _request())
+
+    with pytest.raises(ResultContractViolation):
+        cli_engine._run_optuna_tuning_flow([_Problem()], [spec], 1, 1, {})
+
+    assert future.cancelled
+    assert executor.shutdown_called

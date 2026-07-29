@@ -64,7 +64,7 @@ from academic_benchmark.cli_engine import (
 # SOTA engine functions — re-implemented in sota_engine.py
 # Sources SOTA solvers from uniride_core.algorithms.sota_tsp/
 from academic_benchmark.core.algorithm_resolution import IdentifierSource, RESOLVER_GOVERNED_IDENTIFIERS, resolve_algorithm_id
-from academic_benchmark.core.algorithm_errors import AlgorithmSelectionError
+from academic_benchmark.core.algorithm_errors import AlgorithmSelectionError, ExecutorUnavailableError
 from academic_benchmark.core.execution_gateway import execute_preflighted
 from academic_benchmark.core.preflight import PreflightRequest, RuntimeBackendAvailability, preflight_run, probe_runtime_backends
 from uniride_core.algorithms.capabilities import BackendPolicy, CAPABILITY_CATALOG, ExecutionProtocol, LifecycleStatus
@@ -430,6 +430,16 @@ class TuningOrchestrator:
 
 # ── Unified Benchmark Runner ─────────────────────────────────────────────────
 
+def _is_unapproved_tsp_atsp_strategy_id(algorithm_id: str) -> bool:
+    """Classify active legacy TSP/ATSP registry names without authorizing them."""
+    if algorithm_id in RESOLVER_GOVERNED_IDENTIFIERS:
+        return False
+    return (
+        algorithm_id.startswith(("Numba-", "SOTA-"))
+        or algorithm_id.endswith("-TSP")
+    )
+
+
 def _governed_request_for_smart(algorithm_id: str) -> GovernedExecutionRequest | None:
     """Canonicalize every resolver-governed Smart selection before execution."""
     if algorithm_id not in RESOLVER_GOVERNED_IDENTIFIERS:
@@ -448,6 +458,8 @@ def _selectable_algorithm_ids() -> List[str]:
     """Expose only verified canonical C1 IDs and genuinely non-C1 entries."""
     selectable: List[str] = []
     for algorithm_id in AlgorithmRegistry.list_algorithms():
+        if _is_unapproved_tsp_atsp_strategy_id(algorithm_id):
+            continue
         if algorithm_id not in RESOLVER_GOVERNED_IDENTIFIERS:
             selectable.append(algorithm_id)
         elif (
@@ -554,6 +566,11 @@ def run_unified_benchmark(problems, algorithms, param_source, n_runs, workers, m
         _validate_algorithm_migration(algorithm_id)
         request = _governed_request_for_smart(algorithm_id)
         selections.append((request.canonical_algorithm_id if request else algorithm_id, request))
+    for algorithm_id, request in selections:
+        if request is None and _is_unapproved_tsp_atsp_strategy_id(algorithm_id):
+            raise ExecutorUnavailableError(
+                f"TSP/ATSP strategy '{algorithm_id}' is not catalog-governed."
+            )
     _preflight_smart_selections(problems, [request for _, request in selections])
     algorithms = [algorithm_id for algorithm_id, _ in selections]
     governed_requests = {algorithm_id: request for algorithm_id, request in selections if request is not None}
@@ -622,6 +639,11 @@ def run_unified_benchmark(problems, algorithms, param_source, n_runs, workers, m
         for future in concurrent.futures.as_completed(fut_maps):
             try:
                 res = future.result()
+            except AlgorithmSelectionError:
+                for pending in fut_maps:
+                    pending.cancel()
+                executor.shutdown(wait=False, cancel_futures=True)
+                raise
             except Exception as exc:
                 print(f"\n[ERROR] Task failed: {exc}")
                 continue
@@ -1026,6 +1048,11 @@ def run_benchmark(config: BenchmarkConfig, all_problems: List[ProblemInstance], 
         for future in concurrent.futures.as_completed(fut_maps):
             try:
                 res = future.result()
+            except AlgorithmSelectionError:
+                for pending in fut_maps:
+                    pending.cancel()
+                executor.shutdown(wait=False, cancel_futures=True)
+                raise
             except Exception as exc:
                 print(f"\n[ERROR] Task failed: {exc}")
                 continue

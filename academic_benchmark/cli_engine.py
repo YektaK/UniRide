@@ -59,7 +59,7 @@ from academic_benchmark.core.algorithm_resolution import (
     RESOLVER_GOVERNED_IDENTIFIERS,
     resolve_algorithm_id,
 )
-from academic_benchmark.core.algorithm_errors import AlgorithmSelectionError, CandidateAlgorithmError, PlannedAlgorithmError
+from academic_benchmark.core.algorithm_errors import AlgorithmSelectionError, CandidateAlgorithmError, ExecutorUnavailableError, PlannedAlgorithmError
 from academic_benchmark.core.execution_gateway import execute_preflighted
 from academic_benchmark.core.preflight import PreflightRequest, probe_runtime_backends, preflight_run
 from academic_benchmark.engine_core import GovernedExecutionRequest
@@ -308,6 +308,16 @@ def _cli_governed_request(algorithm_id: str, execution_protocol: Optional[str], 
     return GovernedExecutionRequest(resolution.requested_id, resolution.canonical_id, protocol, evaluation_budget, _CLI_BACKEND_POLICIES[backend_policy])
 
 
+def _is_unapproved_tsp_atsp_strategy_id(algorithm_id: str) -> bool:
+    """Reject legacy TSP/ATSP registry names that have no catalog contract."""
+    if algorithm_id in RESOLVER_GOVERNED_IDENTIFIERS:
+        return False
+    return (
+        algorithm_id.startswith(("Numba-", "SOTA-"))
+        or algorithm_id.endswith("-TSP")
+    )
+
+
 def _validate_governed_lifecycle(request: GovernedExecutionRequest) -> None:
     capability = CAPABILITY_CATALOG[request.canonical_algorithm_id]
     if capability.lifecycle is LifecycleStatus.CANDIDATE:
@@ -354,6 +364,10 @@ def _select_cli_specs(
     for requested_id in algorithm_ids:
         requested_id = requested_id.strip()
         _validate_algorithm_migration(requested_id)
+        if _is_unapproved_tsp_atsp_strategy_id(requested_id):
+            raise ExecutorUnavailableError(
+                f"TSP/ATSP strategy '{requested_id}' is not catalog-governed."
+            )
         request = _cli_governed_request(
             requested_id,
             execution_protocol,
@@ -1710,6 +1724,13 @@ def _run_optuna_tuning_flow(
                         futures[new_future] = new_task
                         info["submitted"] += 1
 
+                except AlgorithmSelectionError:
+                    future.cancel()
+                    for pending in futures:
+                        pending.cancel()
+                    if executor:
+                        executor.shutdown(wait=False, cancel_futures=True)
+                    raise
                 except KeyboardInterrupt:
                     raise
                 except Exception:
@@ -1749,6 +1770,15 @@ def _run_optuna_tuning_flow(
             stopped_count = sum(1 for s in studies.values() if s["stopped"])
             print(f"\r[OPTUNA] {completed_total} trials done | {active} active | {stopped_count}/{total_studies} studies stopped", end="", flush=True)
 
+    except AlgorithmSelectionError:
+        for future in futures:
+            future.cancel()
+        if executor:
+            try:
+                executor.shutdown(wait=False, cancel_futures=True)
+            except Exception:
+                pass
+        raise
     except (KeyboardInterrupt, Exception) as e:
         interrupted = True
         print("\n\n[INTERRUPT] Stopping... Saving progress...")

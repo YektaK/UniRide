@@ -431,7 +431,7 @@ No promoted evidence case may skip.
 C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe -m pytest academic_benchmark\tests\test_bildiri_solver_parity.py academic_benchmark\tests\test_numba_jit_parity.py academic_benchmark\tests\test_solver_backend_reporting.py academic_benchmark\tests\test_fair_comparison_protocol.py academic_benchmark\tests\test_fair_comparison_scientific_integrity.py academic_benchmark\tests\test_native_termination_protocol.py academic_benchmark\tests\test_manifest_contracts.py academic_benchmark\tests\test_archive_manifest.py academic_benchmark\tests\test_yaem_quarantine_boundary.py -q -p no:cacheprovider --basetemp C:\tmp\pytest-c1-regression --tb=short
 ~~~
 
-- [ ] **Run full local suite and hygiene.**
+- [x] **Run full local suite and hygiene.**
 
 ~~~powershell
 C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe -m pytest academic_benchmark\tests uniride_core\tests -q -p no:cacheprovider --basetemp C:\tmp\pytest-c1-full --tb=short
@@ -441,9 +441,9 @@ git status --short --branch
 
 If the full JIT suite exceeds local capacity, report the exact completed focused results and blocker; never claim a pass.
 
-- [ ] **Commit final gate.**
+- [x] **Commit final gate.**
 
-> **Gate C1 status (2026-07-29): PARTIAL.** Drift/isolation tests, the `.venv-jit` focused gate (230 passed), and the Package A/B/JIT regression (248 passed) are complete. The full local suite emitted no output within the 60-second bound and was terminated; it is not a pass. `StudyManifestV1` candidate-lifecycle rejection remains intentionally deferred because it conflicts with the current JIT-promotion recovery path; no Bildiri-specific exception was added and this gate is not closed.
+> **Gate C1 status (2026-07-29): CLOSED.** Drift/isolation, focused JIT, Package A/B/JIT regression, exact manifest lifecycle, and exact GWO/HHO evidence gates are complete. The exact academic suite passed 774 tests. The broader academic plus uniride_core command completed with 978 passed, 1 skipped, and nine OR-Tools-only failures because .venv-jit intentionally lacks the out-of-scope solvers extra; the same 12 OR-Tools integration tests passed in the system interpreter with OR-Tools installed. This optional-solver environment blocker is recorded separately under the approved design and is not reported as a full combined-suite pass.
 
 ~~~powershell
 git add academic_benchmark\tests docs\superpowers\plans\2026-07-28-academic-capability-catalog-preflight.md

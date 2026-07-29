@@ -1,13 +1,13 @@
 # Package C1 Task 10 Gate Report
 
-## Status: PARTIAL (2026-07-29)
+## Status: COMPLETE (2026-07-29)
 
 ## Current executive state
 
 - `406a1ab` promoted the evidenced GWO/HHO pure and memetic-2opt canonical IDs to `VERIFIED`.
 - `15a45ff` closed the manifest-lifecycle gate: primary and native manifest lists accept only exact canonical `VERIFIED` IDs and reject all candidates, plans, aliases, forbidden IDs, and unknown IDs.
 - The unchanged Bildiri profile validates with its four verified canonical declarations; no study-specific exception exists.
-- The full suite and the post-change exact focused command remain unclaimed after their bounded no-output terminations.
+- The academic suite is green at 774 passed. The broader academic plus uniride_core command completed with 978 passed, 1 skipped, and 9 OR-Tools-only failures caused by OR-Tools being absent from .venv-jit; the same 12 OR-Tools integration tests pass in the system interpreter where OR-Tools is installed.
 
 ### Historical checkpoint (superseded by 406a1ab and 15a45ff)
 
@@ -76,3 +76,23 @@ The unchanged Bildiri profile validates with its four verified declarations; no 
 The exact Task 10 focused command was then bounded at 60 seconds and emitted no pytest output before termination, so it is not reported as a pass.
 The directly relevant `.venv-jit` manifest/profile/resolution subset passed `102` tests in `1.61s`, and the schema check exited `0`.
 **Task 10 remains PARTIAL:** the full suite is unrun and unclaimed.
+
+### Final Gate C1 closure (2026-07-29)
+
+Gate C1 is complete for its approved canonical academic TSP/ATSP scope.
+
+- Compatibility closure commit b458cba migrated only historical V1 local-search IDs, preserved strict V2 canonical manifests, and passed 19 focused plus 89 related tests.
+- Smart-policy closure commit f43d0fd replaced stale candidate fixtures, made Smart carry the caller-declared backend policy, and passed 35 Smart plus 117 resolver/preflight/gateway tests.
+- Exact academic gate:
+  C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe -m pytest academic_benchmark/tests -q -p no:cacheprovider --tb=short
+  Result: 774 passed, 34 expected deprecated-alias warnings in 97.95s.
+- Exact broader gate:
+  C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe -m pytest academic_benchmark\tests uniride_core\tests -q -p no:cacheprovider --basetemp C:\tmp\pytest-c1-full-final --tb=short
+  Result: 978 passed, 1 skipped, 9 failed, 34 warnings in 115.53s. All nine failures report the single environment cause OR-Tools not installed; no C1 TSP/ATSP capability or preflight test failed.
+- Optional-solver separation:
+  python -m pytest uniride_core/tests/test_ortools_cvrp_engine.py uniride_core/tests/test_holistic_matrix_engine.py -q -p no:cacheprovider --basetemp C:\tmp\pytest-c1-ortools-system --tb=short
+  Result: 12 passed, 3 upstream SWIG deprecation warnings in 10.36s using the system interpreter with OR-Tools 9.15.6755.
+- pyproject.toml keeps OR-Tools in the excluded solvers extra rather than the .venv-jit test extra. This is a reproducibility follow-up outside C1, not a hidden test pass or a source defect.
+- git diff --check and final branch hygiene are required immediately before the closure commit.
+
+This closure follows the approved design requirement to separate optional-solver environment failures from source defects and its acceptance criterion that proportionate local suites pass with external environment blockers identified precisely.

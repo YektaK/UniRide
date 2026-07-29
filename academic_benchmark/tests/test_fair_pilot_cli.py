@@ -213,7 +213,7 @@ def test_canonical_local_search_fixed_primary_and_replay_use_real_gateway(
             runtime_backends=RuntimeBackendAvailability(True, False, "Python fixture"),
             registry_getter=getter,
         )
-        replay, replay_decision, _ = _execute_preflighted_run(
+        replay, replay_decision, replay_elapsed_ms = _execute_preflighted_run(
             requested_algorithm_id=algorithm_id,
             identifier_source=IdentifierSource.MANIFEST,
             problem=problem,
@@ -240,6 +240,20 @@ def test_canonical_local_search_fixed_primary_and_replay_use_real_gateway(
             elapsed_ms=elapsed_ms,
             record_kind="primary",
         )
+        replay_row = _result_record(
+            replay,
+            problem=problem,
+            matrix=problem.dist_matrix,
+            matrix_sha256="0" * 64,
+            algorithm_id=algorithm_id,
+            replicate=0,
+            seed=seed,
+            config=config,
+            decision=replay_decision,
+            elapsed_ms=replay_elapsed_ms,
+            record_kind="replay",
+        )
+
 
         assert lookups == [algorithm_id, algorithm_id]
         independent = _closed_cost(primary.tour, problem.dist_matrix)
@@ -262,3 +276,11 @@ def test_canonical_local_search_fixed_primary_and_replay_use_real_gateway(
         assert row["executor_registry_id"] == algorithm_id
         assert row["capability_evidence_ids"] == [expected_evidence]
         assert 0 < row["objective_evaluations"] <= config.evaluation_budget
+        assert replay_row["record_kind"] == "replay"
+        assert replay_row["algorithm_id"] == algorithm_id
+        assert replay_row["backend_policy"] == "python_only"
+        assert replay_row["backend_profile"] == {
+            "objective": "python", "polish": "none"
+        }
+        assert replay_row["executor_registry_id"] == algorithm_id
+        assert replay_row["capability_evidence_ids"] == [expected_evidence]

@@ -183,3 +183,26 @@ Result: 14 passed in 0.70s; AST parse: AST_OK; git diff --check: clean.
   proven through the real gateway and pilot persistence boundary.
 - Phase B changes only pilot tests and this report; no catalog, solver,
   production registry, protocol, or pilot implementation file changed.
+
+
+### Phase B review coverage closure
+
+The review-only follow-up added no production or catalog changes.
+
+- Both real-gateway tests now serialize replay through the same pilot record
+  helper with record_kind=replay and the replay decision. Replay records assert
+  canonical algorithm and executor identity, python_only policy, the exact
+  objective=python;polish=none profile, and the promoted capability evidence ID.
+- The strict native full-pilot rejection now asserts both the raised error and
+  validation.json identify Core-GWO-TSP-Pure as the CANDIDATE rejected before
+  registry lookup.
+
+Focused ordinary-Python review command result: 5 passed in 0.64s.
+
+Bounded deterministic Task 8 result: 33 passed, 2 explicitly Numba-only
+GWO/HHO evidence cases deselected, in 0.77s.
+
+The single bounded exact .venv-jit Task 8 command for this follow-up passed:
+35 passed in 1.16s.
+
+Final syntax and hygiene: AST_OK; git diff --check clean.

@@ -319,7 +319,7 @@ def test_native_pilot_rejects_candidate_before_registry_getter(tmp_path):
         numba_nopython=False,
         detail="deterministic Phase B candidate boundary",
     )
-    with pytest.raises(NativePilotError, match="candidate"):
+    with pytest.raises(NativePilotError, match="candidate") as exc_info:
         run_native_pilot(
             config_path,
             output,
@@ -334,9 +334,12 @@ def test_native_pilot_rejects_candidate_before_registry_getter(tmp_path):
         )
 
     assert lookups == []
+    assert "Core-GWO-TSP-Pure" in str(exc_info.value)
+    assert "candidate" in str(exc_info.value).lower()
     validation = json.loads((output / "validation.json").read_text())
     assert validation["status"] == "failed"
     assert "candidate" in validation["error"].lower()
+    assert "Core-GWO-TSP-Pure" in validation["error"]
 
 
 def test_native_aggregate_rejects_fixed_protocol_rows():
@@ -453,7 +456,7 @@ def test_canonical_local_search_native_primary_and_replay_use_real_gateway(
             runtime_backends=RuntimeBackendAvailability(True, False, "Python fixture"),
             registry_getter=getter,
         )
-        replay, replay_decision, _ = _execute_preflighted_run(
+        replay, replay_decision, replay_elapsed_ms = _execute_preflighted_run(
             requested_algorithm_id=algorithm_id,
             identifier_source=IdentifierSource.MANIFEST,
             problem=problem,
@@ -480,6 +483,20 @@ def test_canonical_local_search_native_primary_and_replay_use_real_gateway(
             elapsed_ms=elapsed_ms,
             record_kind="primary",
         )
+        replay_row = _native_result_record(
+            replay,
+            problem=problem,
+            matrix=problem.dist_matrix,
+            matrix_sha256="0" * 64,
+            algorithm_id=algorithm_id,
+            replicate=0,
+            seed=seed,
+            config=config,
+            decision=replay_decision,
+            elapsed_ms=replay_elapsed_ms,
+            record_kind="replay",
+        )
+
 
         assert lookups == [algorithm_id, algorithm_id]
         independent = _closed_cost(primary.tour, problem.dist_matrix)
@@ -501,3 +518,11 @@ def test_canonical_local_search_native_primary_and_replay_use_real_gateway(
         assert row["backend_fallback_reason"] is None
         assert row["executor_registry_id"] == algorithm_id
         assert row["capability_evidence_ids"] == [expected_evidence]
+        assert replay_row["record_kind"] == "replay"
+        assert replay_row["algorithm_id"] == algorithm_id
+        assert replay_row["backend_policy"] == "python_only"
+        assert replay_row["backend_profile"] == {
+            "objective": "python", "polish": "none"
+        }
+        assert replay_row["executor_registry_id"] == algorithm_id
+        assert replay_row["capability_evidence_ids"] == [expected_evidence]

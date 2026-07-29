@@ -12,7 +12,7 @@ import pytest
 
 from academic_benchmark import cli_engine, smart_benchmark
 from academic_benchmark.core.algorithm_errors import (BackendUnavailableError, CandidateAlgorithmError, ExecutorUnavailableError, PlannedAlgorithmError, ResultContractViolation, UnsupportedProtocolError)
-from academic_benchmark.engine_core import BenchmarkTask, GovernedExecutionRequest, RunResult
+from academic_benchmark.engine_core import BenchmarkConfig, BenchmarkTask, GovernedExecutionRequest, RunResult
 from academic_benchmark.core.preflight import RuntimeBackendAvailability
 from uniride_core.algorithms.capabilities import BackendPolicy, ExecutionProtocol
 
@@ -522,3 +522,48 @@ def test_shared_algorithm_domain_contract_classifies_live_registry_and_routing_a
     assert cli_engine._select_cli_specs(
         [routing_spec], [routing_spec.name], None, None, None
     )[0].governed_request is None
+
+def test_benchmark_config_json_roundtrips_governed_and_legacy_tasks() -> None:
+    governed = BenchmarkTask("p", "Core-TwoOpt-TSP", 1, 42, {}, _request())
+    legacy = BenchmarkTask("routing", "CVRP-Core-TwoOpt-TSP", 1, 43, {})
+
+    restored = BenchmarkConfig.from_json(BenchmarkConfig("cfg", "now", [governed, legacy]).to_json())
+
+    assert restored.tasks == [governed, legacy]
+    assert pickle.loads(pickle.dumps(restored.tasks[0].governed_request)) == _request()
+
+
+@pytest.mark.parametrize(
+    "request_payload",
+    [
+        {"requested_algorithm_id": "Core-TwoOpt-TSP"},
+        {"requested_algorithm_id": "Core-TwoOpt-TSP", "canonical_algorithm_id": "Core-TwoOpt-TSP", "protocol": "bad", "evaluation_budget": 1, "backend_policy": "python_only"},
+    ],
+)
+def test_benchmark_config_rejects_malformed_governed_request(request_payload) -> None:
+    import json
+    payload = {"name": "bad", "created_at": "now", "tasks": [{"problem_name": "p", "algorithm": "Core-TwoOpt-TSP", "run_idx": 1, "seed": 1, "params": {}, "governed_request": request_payload}]}
+
+    with pytest.raises(ValueError, match="governed_request"):
+        BenchmarkConfig.from_json(json.dumps(payload))
+
+
+@pytest.mark.parametrize("algorithm", ["Numba-Swap", "Numba-Hybrid"])
+def test_legacy_smart_config_rejects_uncataloged_tsp_before_setup(monkeypatch, algorithm) -> None:
+    def explode(*_args, **_kwargs):
+        raise AssertionError("legacy config reached setup")
+
+    monkeypatch.setattr(smart_benchmark, "_dm_from_cache", explode)
+    monkeypatch.setattr(smart_benchmark, "run_warmup", explode)
+    config = BenchmarkConfig("bad", "now", [BenchmarkTask("entrypoint-atsp", algorithm, 1, 1, {})])
+
+    with pytest.raises(ExecutorUnavailableError):
+        smart_benchmark.run_benchmark(config, [_Problem()], {}, 1)
+
+
+def test_legacy_smart_config_requires_request_for_catalog_task_before_setup(monkeypatch) -> None:
+    monkeypatch.setattr(smart_benchmark, "run_warmup", lambda *_args: pytest.fail("ungoverned catalog config reached warmup"))
+    config = BenchmarkConfig("bad", "now", [BenchmarkTask("entrypoint-atsp", "Core-TwoOpt-TSP", 1, 1, {})])
+
+    with pytest.raises(ValueError, match="GovernedExecutionRequest"):
+        smart_benchmark.run_benchmark(config, [_Problem()], {}, 1)

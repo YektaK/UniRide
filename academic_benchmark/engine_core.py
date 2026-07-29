@@ -101,20 +101,74 @@ class BenchmarkConfig:
     created_at: str
     tasks: List[BenchmarkTask]
     
+    @staticmethod
+    def _request_to_primitive(request: Optional[GovernedExecutionRequest]) -> Optional[Dict[str, Any]]:
+        if request is None:
+            return None
+        return {
+            "requested_algorithm_id": request.requested_algorithm_id,
+            "canonical_algorithm_id": request.canonical_algorithm_id,
+            "protocol": request.protocol.value,
+            "evaluation_budget": request.evaluation_budget,
+            "backend_policy": request.backend_policy.value,
+        }
+
+    @staticmethod
+    def _request_from_primitive(value: object) -> Optional[GovernedExecutionRequest]:
+        if value is None:
+            return None
+        if not isinstance(value, dict):
+            raise ValueError("governed_request must be an object or null")
+        expected = {"requested_algorithm_id", "canonical_algorithm_id", "protocol", "evaluation_budget", "backend_policy"}
+        if set(value) != expected:
+            raise ValueError("governed_request must contain exactly the governed request fields")
+        try:
+            requested_id = value["requested_algorithm_id"]
+            canonical_id = value["canonical_algorithm_id"]
+            budget = value["evaluation_budget"]
+            if not isinstance(requested_id, str) or not isinstance(canonical_id, str):
+                raise ValueError("algorithm IDs must be strings")
+            if budget is not None and (isinstance(budget, bool) or not isinstance(budget, int)):
+                raise ValueError("evaluation_budget must be an integer or null")
+            return GovernedExecutionRequest(
+                requested_id,
+                canonical_id,
+                ExecutionProtocol(value["protocol"]),
+                budget,
+                BackendPolicy(value["backend_policy"]),
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"invalid governed_request: {exc}") from exc
+
     def to_json(self) -> str:
         import json
         data = {
             "name": self.name,
             "created_at": self.created_at,
-            "tasks": [t.__dict__ for t in self.tasks]
+            "tasks": [{
+                "problem_name": task.problem_name,
+                "algorithm": task.algorithm,
+                "run_idx": task.run_idx,
+                "seed": task.seed,
+                "params": task.params,
+                "governed_request": self._request_to_primitive(task.governed_request),
+            } for task in self.tasks],
         }
         return json.dumps(data, indent=4)
-        
+
     @classmethod
     def from_json(cls, json_str: str) -> 'BenchmarkConfig':
         import json
         data = json.loads(json_str)
-        tasks = [BenchmarkTask(**t) for t in data["tasks"]]
+        if not isinstance(data, dict) or not isinstance(data.get("tasks"), list):
+            raise ValueError("BenchmarkConfig JSON must contain a tasks list")
+        tasks = []
+        for task_data in data["tasks"]:
+            if not isinstance(task_data, dict):
+                raise ValueError("BenchmarkConfig task must be an object")
+            task_data = dict(task_data)
+            task_data["governed_request"] = cls._request_from_primitive(task_data.get("governed_request"))
+            tasks.append(BenchmarkTask(**task_data))
         return cls(name=data.get("name", "Unnamed"), created_at=data.get("created_at", ""), tasks=tasks)
 
 class AlgorithmRegistry:

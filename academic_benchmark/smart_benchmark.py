@@ -1035,6 +1035,35 @@ def _menu_param_db():
 
 # ── Legacy Benchmark Runner (for config loading) ─────────────────────────────
 
+def _preflight_legacy_benchmark_config(
+    config: BenchmarkConfig,
+    problems_by_name: Dict[str, ProblemInstance],
+) -> None:
+    """Authorize legacy config tasks before cache, matrix, warmup, or workers."""
+    for task in config.tasks:
+        problem = problems_by_name.get(task.problem_name)
+        if problem is None:
+            continue
+        domain = classify_academic_algorithm_id(
+            task.algorithm, RESOLVER_GOVERNED_IDENTIFIERS
+        )
+        if domain is AcademicAlgorithmDomain.NON_C1_ROUTING:
+            continue
+        if domain is not AcademicAlgorithmDomain.GOVERNED_TSP_ATSP:
+            raise ExecutorUnavailableError(
+                f"TSP/ATSP strategy '{task.algorithm}' is not catalog-governed."
+            )
+        request = task.governed_request
+        if request is None:
+            raise ValueError(
+                f"catalog-governed config task '{task.algorithm}' requires GovernedExecutionRequest"
+            )
+        resolution = resolve_algorithm_id(request.requested_algorithm_id, IdentifierSource.CLI)
+        if resolution.canonical_id != request.canonical_algorithm_id or task.algorithm != resolution.canonical_id:
+            raise ValueError("governed config task canonical ID does not match request")
+        _preflight_smart_selections([problem], [request])
+
+
 def run_benchmark(config: BenchmarkConfig, all_problems: List[ProblemInstance], saved_results: Dict, num_workers: int = 4):
     """Execute benchmark from a BenchmarkConfig (legacy compatibility)."""
     global _current_results, _current_metadata, _shutdown_requested
@@ -1044,6 +1073,7 @@ def run_benchmark(config: BenchmarkConfig, all_problems: List[ProblemInstance], 
 
     print(f"\n[INFO] Executing {len(config.tasks)} tasks across {num_workers} workers...")
     prob_dict = {p.name: p for p in all_problems}
+    _preflight_legacy_benchmark_config(config, prob_dict)
     worker_args = []
     for task in config.tasks:
         if task.problem_name in prob_dict:
@@ -1058,6 +1088,8 @@ def run_benchmark(config: BenchmarkConfig, all_problems: List[ProblemInstance], 
 
     run_warmup(list(set(t.algorithm for t in config.tasks)), all_problems)
 
+    governed_batch = any(task.governed_request is not None for task in config.tasks)
+    governed_successes: List[RunResult] = []
     completed = 0
     start_time = time.time()
 
@@ -1079,7 +1111,6 @@ def run_benchmark(config: BenchmarkConfig, all_problems: List[ProblemInstance], 
             if _shutdown_requested:
                 graceful_shutdown()
                 break
-            _current_results.append(res.__dict__)
             completed += 1
             if getattr(res, 'error', None):
                 print(f"\n[ERROR] {res.algorithm} on {res.problem}: {res.error}")
@@ -1087,6 +1118,25 @@ def run_benchmark(config: BenchmarkConfig, all_problems: List[ProblemInstance], 
             msg = f"[PROGRESS] {completed}/{len(worker_args)} | {res.algorithm} on {res.problem} -> Gap: {gap_str}"
             sys.stdout.write(f"\r{msg:<110}")
             sys.stdout.flush()
+            if governed_batch:
+                governed_successes.append(res)
+            else:
+                _current_results.append(res.__dict__)
+                if res.problem not in saved_results:
+                    saved_results[res.problem] = {}
+                saved_results[res.problem][res.algorithm] = res.__dict__
+                if res.tour_cost > 0:
+                    _save_best_solution(
+                        problem_name=res.problem, algorithm=res.algorithm,
+                        params={"seed": res.seed}, tour=res.tour or [],
+                        tour_length=float(res.tour_cost),
+                        gap=float(res.gap_pct) if res.gap_pct is not None else 0.0,
+                        db_path=TSPLIB_DB,
+                    )
+
+    if governed_batch:
+        for res in governed_successes:
+            _current_results.append(res.__dict__)
             if res.problem not in saved_results:
                 saved_results[res.problem] = {}
             saved_results[res.problem][res.algorithm] = res.__dict__

@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import Field, PositiveInt, model_validator
 from pydantic import field_validator
 
-from academic_benchmark.core.algorithm_errors import PlannedAlgorithmError
+from academic_benchmark.core.algorithm_errors import CandidateAlgorithmError, PlannedAlgorithmError
 from academic_benchmark.core.algorithm_resolution import IdentifierSource, resolve_algorithm_id
 from uniride_core.algorithms.capabilities import LifecycleStatus, get_algorithm_capability
 
@@ -18,8 +18,11 @@ def _validate_manifest_algorithm_ids(algorithm_ids: list[str]) -> list[str]:
     for algorithm_id in algorithm_ids:
         resolution = resolve_algorithm_id(algorithm_id, IdentifierSource.MANIFEST)
         capability = get_algorithm_capability(resolution.canonical_id)
-        if capability is not None and capability.lifecycle is LifecycleStatus.PLANNED:
-            raise PlannedAlgorithmError(capability.canonical_id)
+        if capability is not None:
+            if capability.lifecycle is LifecycleStatus.CANDIDATE:
+                raise CandidateAlgorithmError(capability.canonical_id)
+            if capability.lifecycle is LifecycleStatus.PLANNED:
+                raise PlannedAlgorithmError(capability.canonical_id)
     return algorithm_ids
 
 

@@ -87,3 +87,14 @@ The next gate is Task 6 JIT evidence: execute the exact GWO/HHO TSP/ATSP, fixed/
 and pure/memetic evidence nodes to completion. Promote only the exact passing claims;
 then enable candidate lifecycle rejection in `StudyManifestV1`, regenerate schemas if
 the model shape changes, and rerun the complete Task 7 and Gate C1 suites.
+
+## Manifest lifecycle closure (2026-07-29)
+
+**Status update:** the deferred manifest-lifecycle item is now complete. This does
+not change the report's broader partial status: the registry-heavy fairness run and
+the bounded full suite remain unclaimed.
+
+- Primary `algorithm_ids` and `secondary_protocol.algorithm_ids` resolve as manifest identifiers and now reject every canonical `CANDIDATE` with the stable `candidate_algorithm` Pydantic error.
+- `PLANNED`, unknown, forbidden, and alias IDs remain rejected by the resolver/validator; parameter-key equality remains exact.
+- The unchanged Bildiri profile validates because all four declared canonical algorithms are now `VERIFIED`; no study or ID special case exists.
+- The deterministic schema check passed; runtime validators changed no JSON schema shape, so no schema regeneration was needed.

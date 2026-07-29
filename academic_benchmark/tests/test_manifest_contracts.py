@@ -175,31 +175,56 @@ def test_study_rejects_alias_unknown_and_planned_secondary_ids(algorithm_id: str
         StudyManifestV1.model_validate(payload)
 
 
-def test_canonical_candidate_manifest_id_is_structurally_valid_but_preflight_rejects_it():
-    manifest = StudyManifestV1.model_validate(_study_payload())
-    candidate_id = manifest.algorithm_ids[0]
-    problem = type(
-        "Problem",
-        (),
-        {
-            "name": "candidate-boundary",
-            "problem_type": "atsp",
-            "dimension": 3,
-            "dist_matrix": [[0.0, 2.0, 7.0], [5.0, 0.0, 3.0], [4.0, 9.0, 0.0]],
-        },
-    )()
-    with pytest.raises(CandidateAlgorithmError):
-        preflight_run(
-            PreflightRequest(
-                resolution=resolve_algorithm_id(candidate_id, IdentifierSource.MANIFEST),
-                problem=problem,
-                protocol=ExecutionProtocol.FIXED_BUDGET,
-                backend_policy=BackendPolicy.REQUIRE_NUMBA_OBJECTIVE,
-                evaluation_budget=10,
-                registered_algorithm_ids=frozenset({candidate_id}),
-                runtime_backends=RuntimeBackendAvailability(True, True, "unit test"),
-            )
-        )
+@pytest.mark.parametrize("candidate_id", ["Core-OrOpt-TSP", "ALNS-TSP"])
+def test_study_rejects_canonical_candidate_primary_ids_with_typed_error(
+    candidate_id: str,
+):
+    payload = _study_payload()
+    payload["algorithm_ids"] = [candidate_id]
+    payload["algorithm_parameters"] = {candidate_id: {}}
+
+    with pytest.raises(ValidationError, match="candidate and cannot be selected") as exc_info:
+        StudyManifestV1.model_validate(payload)
+
+    error = exc_info.value.errors()[0]
+    assert error["loc"] == ("algorithm_ids",)
+    assert isinstance(error["ctx"]["error"], CandidateAlgorithmError)
+    assert error["ctx"]["error"].code == "candidate_algorithm"
+
+
+@pytest.mark.parametrize("candidate_id", ["Core-OrOpt-TSP", "ALNS-TSP"])
+def test_study_rejects_canonical_candidate_secondary_ids_with_typed_error(
+    candidate_id: str,
+):
+    payload = _study_payload()
+    payload["secondary_protocol"]["algorithm_ids"] = [candidate_id]
+
+    with pytest.raises(ValidationError, match="candidate and cannot be selected") as exc_info:
+        StudyManifestV1.model_validate(payload)
+
+    error = exc_info.value.errors()[0]
+    assert error["loc"] == ("secondary_protocol", "algorithm_ids")
+    assert isinstance(error["ctx"]["error"], CandidateAlgorithmError)
+    assert error["ctx"]["error"].code == "candidate_algorithm"
+
+
+@pytest.mark.parametrize(
+    "algorithm_id",
+    [
+        "Core-TwoOpt-TSP",
+        "Core-ThreeOpt-TSP",
+        "Core-GWO-TSP-Pure",
+        "Core-HHO-TSP-Pure",
+        "Core-GWO-TSP-Memetic-2opt",
+        "Core-HHO-TSP-Memetic-2opt",
+    ],
+)
+def test_study_accepts_verified_canonical_primary_ids(algorithm_id: str):
+    payload = _study_payload()
+    payload["algorithm_ids"] = [algorithm_id]
+    payload["algorithm_parameters"] = {algorithm_id: {}}
+
+    assert StudyManifestV1.model_validate(payload).algorithm_ids == [algorithm_id]
 
 
 def test_algorithm_run_requires_strict_decision_provenance():

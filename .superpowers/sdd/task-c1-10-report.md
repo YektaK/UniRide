@@ -61,3 +61,11 @@ C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\py
 ### GWO/HHO evidence-gate closure (2026-07-29)
 
 The formerly deferred GWO/HHO evidence action is now closed. Six exact `.venv-jit` nodes passed together (`6 passed in 2.32s`, no skips), covering symmetric TSP and directed ATSP across pure fixed/native and memetic-2opt fixed claims. The catalog/evidence/preflight set passed `74` tests, and backend/JIT/native/fair regression passed `82` tests. The current Task 10 status remains **PARTIAL** solely for its independent full-suite capacity and manifest-lifecycle gates; this result does not claim those gates complete.
+
+### Manifest-lifecycle gate closure (2026-07-29)
+
+The independent manifest-lifecycle gate is closed: `StudyManifestV1` and `NativeProtocolV1` accept only canonical `VERIFIED` IDs through `IdentifierSource.MANIFEST`, and canonical candidates fail Pydantic validation with stable `candidate_algorithm` semantics.
+The unchanged Bildiri profile validates with its four verified declarations; no schema shape changed.
+The exact Task 10 focused command was then bounded at 60 seconds and emitted no pytest output before termination, so it is not reported as a pass.
+The directly relevant `.venv-jit` manifest/profile/resolution subset passed `102` tests in `1.61s`, and the schema check exited `0`.
+**Task 10 remains PARTIAL:** the full suite is unrun and unclaimed.

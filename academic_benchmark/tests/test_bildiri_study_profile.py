@@ -120,13 +120,13 @@ class TestStudyManifest:
         )
         assert set(secondary.algorithm_ids) <= APPROVED_NATIVE_ALGORITHMS
 
-    def test_candidate_ids_are_canonical_structural_declarations_not_selectability_claims(
+    def test_verified_ids_are_canonical_manifest_declarations(
         self, study_manifest: StudyManifestV1
     ):
         from uniride_core.algorithms.capabilities import LifecycleStatus, get_algorithm_capability
 
         assert all(
-            get_algorithm_capability(algorithm_id).lifecycle is LifecycleStatus.CANDIDATE
+            get_algorithm_capability(algorithm_id).lifecycle is LifecycleStatus.VERIFIED
             for algorithm_id in study_manifest.algorithm_ids
         )
 

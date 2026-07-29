@@ -109,3 +109,77 @@ The exact broad command was not repeated after cleanup, per the bounded-JIT rule
 
 No generated benchmark CSV, database, capability-catalog edit, or unrelated
 working-tree change is included.
+
+
+## Phase B - canonical pilot preflight closure
+
+Phase B began from commit 6d42be7, which promoted the exact canonical native
+TwoOpt/ThreeOpt TSP and ATSP claims backed by the two direct evidence nodes
+above. Task 8 did not modify that catalog commit.
+
+### Real gateway pilot-boundary integration
+
+The following new tests use the real execute_preflighted gateway, real
+canonical registry executors, and pilot record serializers:
+
+1. academic_benchmark/tests/test_fair_pilot_cli.py::test_canonical_local_search_fixed_primary_and_replay_use_real_gateway
+2. academic_benchmark/tests/test_native_termination_protocol.py::test_canonical_local_search_native_primary_and_replay_use_real_gateway
+
+Both are parametrized for Core-TwoOpt-TSP and Core-ThreeOpt-TSP; each case
+covers symmetric TSP and directed ATSP and executes both primary and replay.
+They prove exact two-call registry lookup, canonical identity, independent
+closed-cycle cost, replay equality, exact positive accounting, fixed/native
+termination semantics, objective=python;polish=none, PYTHON_ONLY, no fallback,
+canonical executor registry ID, and the exact persisted capability evidence ID.
+
+Initial real-gateway command:
+
+~~~powershell
+python -m pytest academic_benchmark\tests\test_fair_pilot_cli.py::test_canonical_local_search_fixed_primary_and_replay_use_real_gateway academic_benchmark\tests\test_native_termination_protocol.py::test_canonical_local_search_native_primary_and_replay_use_real_gateway -q -p no:cacheprovider --basetemp C:\tmp\pytest-c1-task8-phase-b-real-gateway-red --tb=short
+~~~
+
+Result: 4 passed in 0.73s. No production fix was required after claim
+promotion.
+
+The strict full native pilot test was corrected to assert the scientifically
+current boundary: mandatory Core-GWO-TSP-Pure is still CANDIDATE, the exploding
+registry getter is never called, and validation.json records the failed
+candidate decision. The strict algorithm set was not weakened.
+
+### Phase B bounded verification
+
+Existing boundary plus direct evidence before new tests: 9 passed in 1.05s.
+
+Ordinary-Python deterministic Task 8 command:
+
+~~~powershell
+python -m pytest academic_benchmark\tests\test_algorithm_preflight_boundaries.py academic_benchmark\tests\test_fair_pilot_cli.py academic_benchmark\tests\test_native_termination_protocol.py -k "not native_metaheuristics_use_numba_and_report_actual_counts" -q -p no:cacheprovider --basetemp C:\tmp\pytest-c1-task8-phase-b-deterministic --tb=short
+~~~
+
+Result: 33 passed, 2 deselected in 0.82s. Only the two explicitly
+Numba-specific GWO/HHO executor evidence cases were deselected.
+
+The single permitted exact .venv-jit Task 8 attempt:
+
+~~~powershell
+C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe -m pytest academic_benchmark\tests\test_algorithm_preflight_boundaries.py academic_benchmark\tests\test_fair_pilot_cli.py academic_benchmark\tests\test_native_termination_protocol.py -q -p no:cacheprovider --basetemp C:\tmp\pytest-c1-task8-phase-b-jit-exact --tb=short
+~~~
+
+Result: 35 passed in 3.83s. This exact JIT command was run once only.
+
+Final focused command after strengthening explicit cost/backend/accounting
+assertions covered the seven no-bypass cases, both fixed real-gateway cases,
+the strict full-pilot candidate rejection, both native real-gateway cases, and
+both direct evidence nodes.
+
+Result: 14 passed in 0.70s; AST parse: AST_OK; git diff --check: clean.
+
+### Remaining boundary
+
+- GWO/HHO remain untouched CANDIDATE entries. Full strict fair/native pilot
+  success remains blocked before registry lookup until separately evidenced
+  and promoted; Task 8 grants no exemption.
+- Canonical TwoOpt/ThreeOpt fixed and native local-search executions are now
+  proven through the real gateway and pilot persistence boundary.
+- Phase B changes only pilot tests and this report; no catalog, solver,
+  production registry, protocol, or pilot implementation file changed.

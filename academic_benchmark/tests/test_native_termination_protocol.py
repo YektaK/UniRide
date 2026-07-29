@@ -2,16 +2,19 @@ from __future__ import annotations
 
 import copy
 import json
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import pytest
+from academic_benchmark.core.algorithm_resolution import IdentifierSource
+from academic_benchmark.core.preflight import RuntimeBackendAvailability
 
 from academic_benchmark.fairness import FairComparisonManifest
 from academic_benchmark.native_pilot import (
     NativePilotError,
     _native_result_record,
+    _execute_preflighted_run,
     aggregate_native_records,
     load_native_pilot_config,
     run_native_pilot,
@@ -22,6 +25,7 @@ from academic_benchmark.native_protocol import (
     NATIVE_TERMINATION_REGIME,
     NativeComparisonManifest,
 )
+from uniride_core.algorithms.capabilities import BackendPolicy, ExecutionProtocol
 
 
 @dataclass
@@ -301,53 +305,38 @@ def test_native_local_no_improvement_reason_is_truthful(algorithm_id):
     assert result.termination_reason == "no_improving_move"
 
 
-def test_native_pilot_pairs_seeds_and_replays_all_metadata(tmp_path):
+def test_native_pilot_rejects_candidate_before_registry_getter(tmp_path):
     config_path = _write_config(tmp_path, _config())
     output = tmp_path / "native-output"
-    result = run_native_pilot(
-        config_path,
-        output,
-        problem_loader=lambda: [
-            _problem("tiny-tsp"),
-            _problem("tiny-atsp", directed=True),
-        ],
-        repo_root=tmp_path / "separate-repository-root",
+    lookups: list[str] = []
+
+    def getter(algorithm_id: str):
+        lookups.append(algorithm_id)
+        raise AssertionError("candidate reached registry getter")
+
+    runtime = RuntimeBackendAvailability(
+        python=True,
+        numba_nopython=False,
+        detail="deterministic Phase B candidate boundary",
     )
-    assert result["validation"]["status"] == "passed"
-    rows = [json.loads(line) for line in (output / "runs.jsonl").read_text().splitlines()]
-    assert len(rows) == 16
-    assert {row["algorithm_id"] for row in rows} == APPROVED_NATIVE_ALGORITHMS
-    assert {row["protocol_version"] for row in rows} == {NATIVE_PROTOCOL}
-    assert {row["comparison_regime"] for row in rows} == {NATIVE_TERMINATION_REGIME}
-    assert {row["evaluation_budget"] for row in rows} == {None}
-    assert not any(row["budget_terminated"] for row in rows)
+    with pytest.raises(NativePilotError, match="candidate"):
+        run_native_pilot(
+            config_path,
+            output,
+            problem_loader=lambda: [
+                _problem("tiny-tsp"),
+                _problem("tiny-atsp", directed=True),
+            ],
+            repo_root=tmp_path / "separate-repository-root",
+            registry_getter=getter,
+            runtime_probe=lambda: runtime,
+            registered_algorithms_provider=lambda: APPROVED_NATIVE_ALGORITHMS,
+        )
 
-    for problem_name in {row["problem"] for row in rows}:
-        primary = [
-            row for row in rows
-            if row["problem"] == problem_name and row["record_kind"] == "primary"
-        ]
-        assert len({row["seed"] for row in primary}) == 1
-        assert len({row["seed_group"] for row in primary}) == 1
-        for row in primary:
-            replay = next(
-                item for item in rows
-                if item["problem"] == problem_name
-                and item["algorithm_id"] == row["algorithm_id"]
-                and item["record_kind"] == "replay"
-            )
-            for field in (
-                "tour", "objective_cost", "objective_evaluations",
-                "termination_reason", "seed", "seed_group",
-                "acceptance_policy", "neighborhood_window",
-                "initialization_policy", "execution_backend", "polish_policy",
-            ):
-                assert replay[field] == row[field]
-
-    manifest = json.loads((output / "manifest.json").read_text())
-    assert manifest["protocol_version"] == NATIVE_PROTOCOL
-    assert manifest["comparison_regime"] == NATIVE_TERMINATION_REGIME
-    assert "evaluation_budget" not in manifest["configuration"]
+    assert lookups == []
+    validation = json.loads((output / "validation.json").read_text())
+    assert validation["status"] == "failed"
+    assert "candidate" in validation["error"].lower()
 
 
 def test_native_aggregate_rejects_fixed_protocol_rows():
@@ -408,3 +397,107 @@ def test_core_three_opt_direct_native_tsp_and_atsp_evidence() -> None:
         "Core-ThreeOpt-TSP",
         {"max_iterations": 2, "first_improvement": True, "window": 4},
     )
+
+
+@pytest.mark.parametrize(
+    ("algorithm_id", "params", "evidence_function"),
+    [
+        (
+            "Core-TwoOpt-TSP",
+            {"max_iterations": 3, "first_improvement": False},
+            "test_core_two_opt_direct_native_tsp_and_atsp_evidence",
+        ),
+        (
+            "Core-ThreeOpt-TSP",
+            {"max_iterations": 2, "first_improvement": True, "window": 4},
+            "test_core_three_opt_direct_native_tsp_and_atsp_evidence",
+        ),
+    ],
+)
+def test_canonical_local_search_native_primary_and_replay_use_real_gateway(
+    tmp_path: Path,
+    algorithm_id: str,
+    params: dict[str, Any],
+    evidence_function: str,
+) -> None:
+    config = load_native_pilot_config(_write_config(tmp_path, _config()))
+    expected_evidence = (
+        "academic_benchmark/tests/test_native_termination_protocol.py::"
+        + evidence_function
+    )
+
+    for directed in (False, True):
+        problem = _problem(
+            f"gateway-{'atsp' if directed else 'tsp'}",
+            directed=directed,
+        )
+        seed = config.manifest.paired_seed(problem.name, 0)
+        run_params = {**params, "native_comparison": config.native_comparison}
+        lookups: list[str] = []
+
+        def getter(requested_id: str):
+            lookups.append(requested_id)
+            return _executor(requested_id)
+
+        primary, decision, elapsed_ms = _execute_preflighted_run(
+            requested_algorithm_id=algorithm_id,
+            identifier_source=IdentifierSource.MANIFEST,
+            problem=problem,
+            params=run_params,
+            seed=seed,
+            run_idx=0,
+            protocol=ExecutionProtocol.NATIVE_TERMINATION,
+            backend_policy=BackendPolicy.PYTHON_ONLY,
+            evaluation_budget=None,
+            registered_algorithm_ids=frozenset({algorithm_id}),
+            runtime_backends=RuntimeBackendAvailability(True, False, "Python fixture"),
+            registry_getter=getter,
+        )
+        replay, replay_decision, _ = _execute_preflighted_run(
+            requested_algorithm_id=algorithm_id,
+            identifier_source=IdentifierSource.MANIFEST,
+            problem=problem,
+            params=run_params,
+            seed=seed,
+            run_idx=0,
+            protocol=ExecutionProtocol.NATIVE_TERMINATION,
+            backend_policy=BackendPolicy.PYTHON_ONLY,
+            evaluation_budget=None,
+            registered_algorithm_ids=frozenset({algorithm_id}),
+            runtime_backends=RuntimeBackendAvailability(True, False, "Python fixture"),
+            registry_getter=getter,
+        )
+        row = _native_result_record(
+            primary,
+            problem=problem,
+            matrix=problem.dist_matrix,
+            matrix_sha256="0" * 64,
+            algorithm_id=algorithm_id,
+            replicate=0,
+            seed=seed,
+            config=config,
+            decision=decision,
+            elapsed_ms=elapsed_ms,
+            record_kind="primary",
+        )
+
+        assert lookups == [algorithm_id, algorithm_id]
+        independent = _closed_cost(primary.tour, problem.dist_matrix)
+        assert primary.tour_cost == pytest.approx(independent)
+        assert primary.objective_cost == pytest.approx(independent)
+        assert replay_decision == decision
+        assert replay.tour == primary.tour
+        assert replay.objective_cost == primary.objective_cost
+        assert replay.objective_evaluations == primary.objective_evaluations
+        assert replay.termination_reason == primary.termination_reason
+        assert primary.execution_backend == "objective=python;polish=none"
+        assert primary.evaluations == primary.objective_evaluations > 0
+        assert primary.evaluation_budget is None
+        assert primary.budget_terminated is False
+        assert primary.termination_reason in {"max_iterations", "no_improving_move"}
+        assert row["backend_policy"] == "python_only"
+        assert row["backend_profile"] == {"objective": "python", "polish": "none"}
+        assert row["backend_fallback_used"] is False
+        assert row["backend_fallback_reason"] is None
+        assert row["executor_registry_id"] == algorithm_id
+        assert row["capability_evidence_ids"] == [expected_evidence]

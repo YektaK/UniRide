@@ -7,11 +7,22 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from academic_benchmark.core.algorithm_resolution import IdentifierSource
 from academic_benchmark.core.preflight import RuntimeBackendAvailability
 
 from academic_benchmark.fairness import FairComparisonManifest, FairRunResult
-from academic_benchmark.fair_pilot import APPROVED_ALGORITHMS, FairPilotError, run_fair_pilot
-from uniride_core.algorithms.capabilities import BackendKind, ExecutionBackendProfile
+from academic_benchmark.fair_pilot import (
+    APPROVED_ALGORITHMS,
+    _closed_cost,
+    FairPilotError,
+    _execute_preflighted_run,
+    _result_record,
+    load_fair_pilot_config,
+    run_fair_pilot,
+)
+from uniride_core.algorithms.capabilities import (
+    BackendKind, BackendPolicy, ExecutionBackendProfile, ExecutionProtocol,
+)
 
 
 RUNTIME = RuntimeBackendAvailability(True, True, "deterministic pilot fixture")
@@ -143,3 +154,111 @@ def test_cli_fair_argument_pair_is_rejected_before_legacy_initialization(monkeyp
     from academic_benchmark import cli_engine
     monkeypatch.setattr(cli_engine, "_ensure_dirs", lambda: pytest.fail("legacy initialization ran"))
     assert cli_engine.main(["--fair-config", "fair.json"]) == 2
+
+
+def _canonical_registry(algorithm_id: str):
+    from academic_benchmark.engine_core import AlgorithmRegistry
+    import academic_benchmark.core.registry_setup  # noqa: F401
+
+    return AlgorithmRegistry.get_executor(algorithm_id)
+
+
+@pytest.mark.parametrize(
+    ("algorithm_id", "params", "evidence_function"),
+    [
+        (
+            "Core-TwoOpt-TSP",
+            {"max_iterations": 3, "first_improvement": False},
+            "test_core_two_opt_fixed_tsp_and_atsp_evidence",
+        ),
+        (
+            "Core-ThreeOpt-TSP",
+            {"max_iterations": 2, "first_improvement": True, "window": 4},
+            "test_core_three_opt_fixed_tsp_and_atsp_evidence",
+        ),
+    ],
+)
+def test_canonical_local_search_fixed_primary_and_replay_use_real_gateway(
+    tmp_path: Path,
+    algorithm_id: str,
+    params: dict[str, Any],
+    evidence_function: str,
+) -> None:
+    config = load_fair_pilot_config(_config(tmp_path))
+    expected_evidence = (
+        "academic_benchmark/tests/test_algorithm_capability_evidence.py::"
+        + evidence_function
+    )
+
+    for problem in _problems():
+        seed = config.manifest.paired_seed(problem.name, 0)
+        run_params = {**params, "fair_comparison": config.fair_comparison}
+        lookups: list[str] = []
+
+        def getter(requested_id: str):
+            lookups.append(requested_id)
+            return _canonical_registry(requested_id)
+
+        primary, decision, elapsed_ms = _execute_preflighted_run(
+            requested_algorithm_id=algorithm_id,
+            identifier_source=IdentifierSource.MANIFEST,
+            problem=problem,
+            params=run_params,
+            seed=seed,
+            run_idx=0,
+            protocol=ExecutionProtocol.FIXED_BUDGET,
+            backend_policy=BackendPolicy.PYTHON_ONLY,
+            evaluation_budget=config.evaluation_budget,
+            registered_algorithm_ids=frozenset({algorithm_id}),
+            runtime_backends=RuntimeBackendAvailability(True, False, "Python fixture"),
+            registry_getter=getter,
+        )
+        replay, replay_decision, _ = _execute_preflighted_run(
+            requested_algorithm_id=algorithm_id,
+            identifier_source=IdentifierSource.MANIFEST,
+            problem=problem,
+            params=run_params,
+            seed=seed,
+            run_idx=0,
+            protocol=ExecutionProtocol.FIXED_BUDGET,
+            backend_policy=BackendPolicy.PYTHON_ONLY,
+            evaluation_budget=config.evaluation_budget,
+            registered_algorithm_ids=frozenset({algorithm_id}),
+            runtime_backends=RuntimeBackendAvailability(True, False, "Python fixture"),
+            registry_getter=getter,
+        )
+        row = _result_record(
+            primary,
+            problem=problem,
+            matrix=problem.dist_matrix,
+            matrix_sha256="0" * 64,
+            algorithm_id=algorithm_id,
+            replicate=0,
+            seed=seed,
+            config=config,
+            decision=decision,
+            elapsed_ms=elapsed_ms,
+            record_kind="primary",
+        )
+
+        assert lookups == [algorithm_id, algorithm_id]
+        independent = _closed_cost(primary.tour, problem.dist_matrix)
+        assert primary.tour_cost == pytest.approx(independent)
+        assert primary.objective_cost == pytest.approx(independent)
+        assert primary.execution_backend == "objective=python;polish=none"
+        assert primary.evaluations == primary.objective_evaluations > 0
+        assert primary.evaluation_budget == config.evaluation_budget
+        assert primary.termination_reason in {
+            "evaluation_budget_exhausted", "max_iterations", "no_improving_move"
+        }
+        assert replay_decision == decision
+        assert replay.tour == primary.tour
+        assert replay.objective_cost == primary.objective_cost
+        assert replay.objective_evaluations == primary.objective_evaluations
+        assert row["backend_policy"] == "python_only"
+        assert row["backend_profile"] == {"objective": "python", "polish": "none"}
+        assert row["backend_fallback_used"] is False
+        assert row["backend_fallback_reason"] is None
+        assert row["executor_registry_id"] == algorithm_id
+        assert row["capability_evidence_ids"] == [expected_evidence]
+        assert 0 < row["objective_evaluations"] <= config.evaluation_budget

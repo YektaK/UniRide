@@ -129,8 +129,7 @@ def test_cli_main_rejects_retired_ids_before_setup_or_registry_enumeration(
     monkeypatch.setattr(cli_engine, "_all_strategy_specs", explode)
     monkeypatch.setattr(cli_engine, "load_problems", explode)
 
-    with pytest.raises(ValueError, match=replacement_id):
-        cli_engine.main(["--mode", "default", "--algos", legacy_id])
+    assert cli_engine.main(["--mode", "default", "--algos", legacy_id]) == 2
 
 
 @pytest.mark.parametrize("legacy_id,replacement_id", LEGACY_ALGORITHM_MIGRATIONS.items())

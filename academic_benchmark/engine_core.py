@@ -3,6 +3,7 @@ from typing import List, Tuple, Dict, Any, Callable, Optional
 import time
 
 from uniride_core.models import ProblemInstance, TSPResult
+from uniride_core.algorithms.capabilities import BackendPolicy, ExecutionProtocol
 
 @dataclass
 class RunResult:
@@ -49,6 +50,17 @@ class BenchmarkTask:
     run_idx: int
     seed: int
     params: Dict[str, Any] = field(default_factory=dict)
+    governed_request: Optional['GovernedExecutionRequest'] = None
+
+
+@dataclass(frozen=True)
+class GovernedExecutionRequest:
+    """Picklable, immutable authorization inputs for catalog-governed runs."""
+    requested_algorithm_id: str
+    canonical_algorithm_id: str
+    protocol: ExecutionProtocol
+    evaluation_budget: Optional[int]
+    backend_policy: BackendPolicy
     
 @dataclass
 class BenchmarkConfig:

@@ -45,7 +45,7 @@ import statistics
 import sys
 import tarfile
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from enum import Enum
 from multiprocessing import cpu_count
@@ -59,6 +59,10 @@ from academic_benchmark.core.algorithm_resolution import (
     RESOLVER_GOVERNED_IDENTIFIERS,
     resolve_algorithm_id,
 )
+from academic_benchmark.core.execution_gateway import execute_preflighted
+from academic_benchmark.core.preflight import PreflightRequest, probe_runtime_backends, preflight_run
+from academic_benchmark.engine_core import GovernedExecutionRequest
+from uniride_core.algorithms.capabilities import BackendPolicy, CAPABILITY_CATALOG, ExecutionProtocol
 
 LEGACY_ALGORITHM_MIGRATIONS = {
     "B-GA": "Core-GA-TSP",
@@ -278,6 +282,38 @@ class StrategySpec:
     payload: Any
     default_params: Dict[str, Any]
     algorithm_type: str
+    governed_request: Optional[GovernedExecutionRequest] = None
+
+
+_CLI_PROTOCOLS = {"fixed_evaluation_budget": ExecutionProtocol.FIXED_BUDGET, "algorithm_native_termination": ExecutionProtocol.NATIVE_TERMINATION}
+_CLI_BACKEND_POLICIES = {"python_only": BackendPolicy.PYTHON_ONLY, "prefer_numba": BackendPolicy.PREFER_NUMBA_OBJECTIVE, "require_numba": BackendPolicy.REQUIRE_NUMBA_OBJECTIVE}
+
+
+def _is_catalog_governed_identifier(algorithm_id: object) -> bool:
+    return str(algorithm_id) in RESOLVER_GOVERNED_IDENTIFIERS
+
+
+def _cli_governed_request(algorithm_id: str, execution_protocol: Optional[str], evaluation_budget: Optional[int], backend_policy: Optional[str]) -> Optional[GovernedExecutionRequest]:
+    if not _is_catalog_governed_identifier(algorithm_id):
+        return None
+    resolution = resolve_algorithm_id(algorithm_id, IdentifierSource.CLI)
+    if execution_protocol is None or backend_policy is None:
+        raise ValueError("catalog-governed TSP/ATSP algorithms require --execution-protocol and --backend-policy")
+    protocol = _CLI_PROTOCOLS[execution_protocol]
+    if protocol is ExecutionProtocol.FIXED_BUDGET and (isinstance(evaluation_budget, bool) or not isinstance(evaluation_budget, int) or evaluation_budget <= 0):
+        raise ValueError("fixed_evaluation_budget requires a positive --evaluation-budget")
+    if protocol is ExecutionProtocol.NATIVE_TERMINATION and evaluation_budget is not None:
+        raise ValueError("algorithm_native_termination forbids --evaluation-budget")
+    return GovernedExecutionRequest(resolution.requested_id, resolution.canonical_id, protocol, evaluation_budget, _CLI_BACKEND_POLICIES[backend_policy])
+
+
+def _with_governed_requests(specs: Sequence[StrategySpec], requests: Dict[str, GovernedExecutionRequest]) -> List[StrategySpec]:
+    return [replace(spec, governed_request=requests.get(spec.name)) for spec in specs]
+
+
+def _make_param_combo_task(problem: DOEProblem, spec: StrategySpec, params: Dict[str, Any], combo_idx: int, n_runs: int) -> Tuple[Any, ...]:
+    task = (_make_problem_dict(problem), spec.name, _resolve_strategy_payload(spec), params, combo_idx, n_runs)
+    return task if spec.governed_request is None else task + (spec.governed_request,)
 
 # _parse_tsplib_text removed in P3-4 consolidation.
 # Use the canonical version from uniride_core.algorithms.tsplib_parser.
@@ -574,13 +610,13 @@ def _query_edge_weight_type(problem_name: str, db_path: str):
         return None
 
 
-def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], int, int]) -> Dict[str, Any]:
+def _evaluate_param_combo(task: Tuple[Any, ...]) -> Dict[str, Any]:
     """Bir parametre kombinasyonunu belirli run sayısınca test eder."""
-    problem_dict, strategy_name, strategy_payload, strategy_params, combo_idx, n_runs = task
+    problem_dict, strategy_name, strategy_payload, strategy_params, combo_idx, n_runs = task[:6]
+    governed_request = task[6] if len(task) == 7 else None
     _validate_algorithm_migration(strategy_name)
     if strategy_payload != strategy_name:
         _validate_algorithm_migration(strategy_payload)
-    from uniride_core.algorithms.numba_metaheuristics import run_single_test
 
     is_time_matrix = problem_dict.get("is_time_matrix", False)
     time_matrix_data = problem_dict.get("time_matrix")
@@ -635,6 +671,9 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
             self.dist_matrix = matrix
 
     problem = _Problem(problem_dict)
+    if governed_request is not None:
+        return _evaluate_governed_param_combo(problem, strategy_params, combo_idx, n_runs, governed_request)
+    from uniride_core.algorithms.numba_metaheuristics import run_single_test
 
     # Load correct distance matrix from TSPLib DB cache for non-time-matrix problems.
     # This is CRITICAL: run_single_test falls back to create_np_distance_matrix
@@ -785,6 +824,24 @@ def _evaluate_param_combo(task: Tuple[Dict[str, Any], str, Any, Dict[str, Any], 
         "problem_type": best_run.get("problem_type", getattr(problem, "problem_type", "tsp")),
         "matrix_kind": best_run.get("matrix_kind", getattr(problem, "matrix_kind", "distance")),
     }
+
+def _evaluate_governed_param_combo(problem: object, params: Dict[str, Any], combo_idx: int, n_runs: int, request: GovernedExecutionRequest) -> Dict[str, Any]:
+    runtime = probe_runtime_backends()
+    resolution = resolve_algorithm_id(request.requested_algorithm_id, IdentifierSource.CLI)
+    if resolution.canonical_id != request.canonical_algorithm_id:
+        raise ValueError("governed task canonical ID does not match its requested ID")
+    preflight_run(PreflightRequest(resolution, problem, request.protocol, request.backend_policy, request.evaluation_budget, frozenset(CAPABILITY_CATALOG), runtime))
+    registered = frozenset(_AlgoReg.list_algorithms()) if _HAS_NUMBA_REGISTRY else frozenset()
+    rows = []
+    started = time.perf_counter()
+    for run_idx in range(n_runs):
+        seed = 1000 + combo_idx * 100 + run_idx
+        result, _ = execute_preflighted(requested_algorithm_id=request.requested_algorithm_id, identifier_source=IdentifierSource.CLI, problem=problem, params=params, seed=seed, run_idx=run_idx, protocol=request.protocol, backend_policy=request.backend_policy, evaluation_budget=request.evaluation_budget, registered_algorithm_ids=registered, runtime_backends=runtime, registry_getter=_AlgoReg.get_executor)
+        rows.append({"tour_length": result.tour_cost, "gap": result.gap_pct if result.gap_pct is not None else float("nan"), "objective_cost": result.objective_cost, "algorithm_id": getattr(result, "algorithm_id", result.algorithm), "objective_evaluations": getattr(result, "objective_evaluations", result.evaluations), "evaluation_budget": getattr(result, "evaluation_budget", None), "execution_backend": getattr(result, "execution_backend", None)})
+    average = sum(float(row["tour_length"]) for row in rows) / len(rows)
+    gaps = [float(row["gap"]) for row in rows if not math.isnan(float(row["gap"]))]
+    best = min(rows, key=lambda row: float(row["tour_length"]))
+    return {"problem": problem.name, "strategy": request.canonical_algorithm_id, "combo_idx": combo_idx, "params": params, "avg_length": average, "avg_gap": sum(gaps) / len(gaps) if gaps else float("nan"), "avg_time_ms": (time.perf_counter() - started) * 1000.0 / len(rows), "n_runs": n_runs, "per_run_lengths": [float(row["tour_length"]) for row in rows], "objective_cost": best["objective_cost"], "algorithm_id": best["algorithm_id"], "objective_evaluations": best["objective_evaluations"], "evaluation_budget": best["evaluation_budget"], "execution_backend": best["execution_backend"]}
 
 def _run_pool(tasks: List[Tuple], workers: int, on_result=None) -> List[Dict[str, Any]]:
     """Windows-safe ProcessPoolExecutor ile paralel çalıştırma."""
@@ -1019,7 +1076,7 @@ def _tune_parameters(
                 if skip_cached and key in completed:
                     continue
                 tuning_tasks.append(
-                    (_make_problem_dict(problem), spec.name, _resolve_strategy_payload(spec), params, combo_idx, n_runs)
+                    _make_param_combo_task(problem, spec, params, combo_idx, n_runs)
                 )
 
     if not tuning_tasks:
@@ -1103,7 +1160,7 @@ def _run_benchmark_with_best(
             if not best_entry:
                 continue
             benchmark_tasks.append(
-                (_make_problem_dict(problem), spec.name, _resolve_strategy_payload(spec), best_entry["params"], 1, benchmark_runs)
+                _make_param_combo_task(problem, spec, best_entry["params"], 1, benchmark_runs)
             )
 
     return _execute_benchmark_tasks(benchmark_tasks, workers, metadata, "FINAL")
@@ -1122,7 +1179,7 @@ def _run_benchmark_direct(
             params = spec.default_params.copy()
             params["algorithm_type"] = spec.algorithm_type
             benchmark_tasks.append(
-                (_make_problem_dict(problem), spec.name, _resolve_strategy_payload(spec), params, 1, benchmark_runs)
+                _make_param_combo_task(problem, spec, params, 1, benchmark_runs)
             )
 
     return _execute_benchmark_tasks(benchmark_tasks, workers, metadata, "BENCH")
@@ -1404,6 +1461,8 @@ def _run_numba_trial_task(task: Dict[str, Any]) -> Dict[str, Any]:
     full_params["algorithm_type"] = algorithm_type
 
     combo_task = (problem_dict, spec_name, spec_payload, full_params, 1, n_runs)
+    if task.get("governed_request") is not None:
+        combo_task += (task["governed_request"],)
 
     try:
         result = _evaluate_param_combo(combo_task)
@@ -1474,6 +1533,7 @@ def _run_optuna_tuning_flow(
                 "algorithm_type": spec.algorithm_type,
                 "n_runs": n_runs,
                 "numba_ok": _NUMBA_AVAILABLE,
+                "governed_request": spec.governed_request,
                 "submitted": 0,
                 "completed": 0,
                 "max_trials": DOE_MAX_COMBINATIONS,
@@ -1498,6 +1558,7 @@ def _run_optuna_tuning_flow(
             "spec_defaults": info["spec_defaults"],
             "algorithm_type": info["algorithm_type"],
             "n_runs": info["n_runs"],
+            "governed_request": info["governed_request"],
         }
 
     def can_submit(study_name: str) -> bool:
@@ -1868,7 +1929,7 @@ def _run_benchmark_with_params(
                 params.update(custom_params[legacy_key])
             params["algorithm_type"] = spec.algorithm_type
             benchmark_tasks.append(
-                (_make_problem_dict(problem), spec.name, _resolve_strategy_payload(spec), params, 1, runs)
+                _make_param_combo_task(problem, spec, params, 1, runs)
             )
     return _execute_benchmark_tasks(benchmark_tasks, workers, metadata, "BENCH")
 
@@ -2023,11 +2084,23 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--output-dir", help="External output directory for --fair-config")
     parser.add_argument("--fractional-fallback", action="store_true", help="Fractional fallback stratejisi")
     parser.add_argument("--edit-params", action="store_true", help="Tuning öncesi parametre uzayini duzenle")
+    parser.add_argument("--execution-protocol", choices=["fixed_evaluation_budget", "algorithm_native_termination"])
+    parser.add_argument("--evaluation-budget", type=int)
+    parser.add_argument("--backend-policy", choices=["python_only", "prefer_numba", "require_numba"])
     args, _ = parser.parse_known_args(argv)
 
+    governed_requests = {}
     if args.algos:
-        for algorithm_id in args.algos.split(","):
-            _validate_algorithm_migration(algorithm_id.strip())
+        try:
+            for algorithm_id in args.algos.split(","):
+                algorithm_id = algorithm_id.strip()
+                _validate_algorithm_migration(algorithm_id)
+                request = _cli_governed_request(algorithm_id, args.execution_protocol, args.evaluation_budget, args.backend_policy)
+                if request is not None:
+                    governed_requests[algorithm_id] = request
+        except ValueError as exc:
+            print(f"[CLI ERROR] {exc}")
+            return 2
 
     global _active_metadata
 
@@ -2069,7 +2142,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         
         selected_problems = _select_problems_from_args(args, all_problems)
             
-        selected_specs = [s for s in all_specs if s.name in algos]
+        selected_specs = _with_governed_requests([s for s in all_specs if s.name in algos], governed_requests)
 
         
         print(f"=== NON-INTERACTIVE NUMBA BENCHMARK ({mode.value}) ===")

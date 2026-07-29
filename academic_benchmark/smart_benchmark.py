@@ -32,7 +32,7 @@ from uniride_core.algorithms._platform import fix_windows_encoding
 fix_windows_encoding()
 
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-from academic_benchmark.engine_core import ProblemInstance, RunResult, AlgorithmRegistry, BenchmarkTask, BenchmarkConfig
+from academic_benchmark.engine_core import BenchmarkConfig, BenchmarkTask, GovernedExecutionRequest, ProblemInstance, RunResult, AlgorithmRegistry
 from academic_benchmark.benchmark_utils import (
     load_metadata, save_metadata, get_cpu_info, format_time,
     save_tuning_params_and_solution as _save_best_solution,
@@ -63,6 +63,10 @@ from academic_benchmark.cli_engine import (
 
 # SOTA engine functions — re-implemented in sota_engine.py
 # Sources SOTA solvers from uniride_core.algorithms.sota_tsp/
+from academic_benchmark.core.algorithm_resolution import IdentifierSource, resolve_algorithm_id
+from academic_benchmark.core.execution_gateway import execute_preflighted
+from academic_benchmark.core.preflight import PreflightRequest, preflight_run, probe_runtime_backends
+from uniride_core.algorithms.capabilities import BackendPolicy, CAPABILITY_CATALOG, ExecutionProtocol, LifecycleStatus
 from academic_benchmark.sota_engine import (
     run_engine_tuning as _sota_tune,
     run_engine_default as _sota_bench_default,
@@ -425,22 +429,54 @@ class TuningOrchestrator:
 
 # ── Unified Benchmark Runner ─────────────────────────────────────────────────
 
+def _governed_request_for_smart(algorithm_id: str) -> GovernedExecutionRequest | None:
+    """Build the explicit default caller policy for canonical C1 Smart runs."""
+    if algorithm_id not in CAPABILITY_CATALOG:
+        return None
+    resolution = resolve_algorithm_id(algorithm_id, IdentifierSource.INTERNAL)
+    return GovernedExecutionRequest(resolution.requested_id, resolution.canonical_id, ExecutionProtocol.FIXED_BUDGET, 1000, BackendPolicy.PYTHON_ONLY)
+
+
+def _selectable_algorithm_ids() -> List[str]:
+    """Return registry IDs excluding non-selectable C1 candidates and plans."""
+    return [algorithm_id for algorithm_id in AlgorithmRegistry.list_algorithms() if algorithm_id not in CAPABILITY_CATALOG or CAPABILITY_CATALOG[algorithm_id].lifecycle is LifecycleStatus.VERIFIED]
+
+
+def _run_governed_task(task: BenchmarkTask, problem: object) -> RunResult:
+    request = task.governed_request
+    if request is None:
+        raise ValueError("governed task requires GovernedExecutionRequest")
+    runtime = probe_runtime_backends()
+    resolution = resolve_algorithm_id(request.requested_algorithm_id, IdentifierSource.INTERNAL)
+    if resolution.canonical_id != request.canonical_algorithm_id:
+        raise ValueError("governed task canonical ID does not match its requested ID")
+    preflight_run(PreflightRequest(resolution, problem, request.protocol, request.backend_policy, request.evaluation_budget, frozenset(CAPABILITY_CATALOG), runtime))
+    return execute_preflighted(
+        requested_algorithm_id=request.requested_algorithm_id,
+        identifier_source=IdentifierSource.INTERNAL,
+        problem=problem,
+        params=task.params,
+        seed=task.seed,
+        run_idx=task.run_idx,
+        protocol=request.protocol,
+        backend_policy=request.backend_policy,
+        evaluation_budget=request.evaluation_budget,
+        registered_algorithm_ids=frozenset(AlgorithmRegistry.list_algorithms()),
+        runtime_backends=runtime,
+        registry_getter=AlgorithmRegistry.get_executor,
+    )[0]
+
+
 def _run_single_task(args):
     """Worker task for ProcessPoolExecutor."""
     task, problem = args
-    executor = AlgorithmRegistry.get_executor(task.algorithm)
+    if task.governed_request is not None:
+        return _run_governed_task(task, problem)
     try:
-        result = executor(problem, task.params, task.seed, task.run_idx)
-        return result
+        executor = AlgorithmRegistry.get_executor(task.algorithm)
+        return executor(problem, task.params, task.seed, task.run_idx)
     except Exception as e:
-        return RunResult(
-            problem=task.problem_name, algorithm=task.algorithm,
-            run=task.run_idx, seed=task.seed,
-            dimension=problem.dimension if problem else 0,
-            optimal=problem.optimal if problem else None,
-            tour_cost=float('inf'), gap_pct=None, elapsed_sec=0.0, error=str(e),
-        )
-
+        return RunResult(problem=task.problem_name, algorithm=task.algorithm, run=task.run_idx, seed=task.seed, dimension=problem.dimension if problem else 0, optimal=problem.optimal if problem else None, tour_cost=float('inf'), gap_pct=None, elapsed_sec=0.0, error=str(e),)
 def run_unified_benchmark(problems, algorithms, param_source, n_runs, workers, metadata, skip_cached=False):
     """Run benchmark with params from DB, manual entry, or defaults.
 
@@ -478,10 +514,7 @@ def run_unified_benchmark(problems, algorithms, param_source, n_runs, workers, m
             for run_idx in range(1, n_runs + 1):
                 seed = 42 + run_idx
                 params = algo_params.get(f"{p.name}::{algo}", {}).copy()
-                tasks.append(BenchmarkTask(
-                    problem_name=p.name, algorithm=algo,
-                    run_idx=run_idx, seed=seed, params=params,
-                ))
+                tasks.append(BenchmarkTask(problem_name=p.name, algorithm=algo, run_idx=run_idx, seed=seed, params=params, governed_request=_governed_request_for_smart(algo)))
 
     # Warmup
     run_warmup(algorithms, problems)
@@ -626,7 +659,7 @@ def _menu_tuning(all_problems, metadata):
         return
 
     # Select algorithms
-    all_algos = AlgorithmRegistry.list_algorithms()
+    all_algos = _selectable_algorithm_ids()
     print("\n" + "-" * 60)
     print("ALGORITMA NOTLARI:")
 
@@ -724,7 +757,7 @@ def _menu_tune_and_benchmark(all_problems, metadata, train_problems=None, select
         train_problems = selector.interactive_select()
         if not train_problems:
             return
-        all_algos = AlgorithmRegistry.list_algorithms()
+        all_algos = _selectable_algorithm_ids()
         selected_algos = multi_select(all_algos, "ALGORITMA SECIMI")
         if not selected_algos:
             return
@@ -759,7 +792,7 @@ def _menu_benchmark_only(all_problems, metadata):
     if not problems:
         return
 
-    all_algos = AlgorithmRegistry.list_algorithms()
+    all_algos = _selectable_algorithm_ids()
     algos = multi_select(all_algos, "ALGORITMA SECIMI")
     if not algos:
         return
@@ -981,7 +1014,7 @@ def main():
         print("[ERROR] No TSPLIB problems found.")
         return
 
-    all_algos = AlgorithmRegistry.list_algorithms()
+    all_algos = _selectable_algorithm_ids()
     if not all_algos:
         print("[WARNING] No algorithms registered.")
         return

@@ -1,12 +1,11 @@
 # Package C1 Task 7 Partial Report
 
-**Status:** scientifically truthful partial completion. The decision-bound gateway,
-postflight checks, canonical manifest structure, run provenance contracts, and schema
-snapshot are complete. Manifest lifecycle rejection remains partial because the
-current Bildiri GWO/HHO declarations are canonical `CANDIDATE` IDs pending the Task 6
-JIT evidence gate.
+**Current status:** partial overall, with the manifest-lifecycle gate closed by `15a45ff` after the GWO/HHO evidence promotion in `406a1ab`.
+GWO/HHO declarations are `VERIFIED`; strict primary and native manifests reject all `CANDIDATE` and `PLANNED` identifiers, aliases, forbidden IDs, and unknown IDs.
+The unchanged Bildiri profile is valid because its four canonical declarations are verified.
+The registry-heavy fairness run and bounded full suite remain unclaimed; no full-gate pass is asserted.
 
-## Outcome matrix
+## Historical checkpoint (superseded by 406a1ab and 15a45ff)
 
 | Requirement | Result | Evidence |
 |---|---|---|
@@ -19,7 +18,7 @@ JIT evidence gate.
 | Canonical result identity and alias provenance | PASS | `algorithm` and `algorithm_id` must equal the decision's canonical ID; requested input is attached only for a resolved alias and stale provenance is cleared for canonical requests. |
 | Strict run contract provenance | PASS | `requested_algorithm_id` is optional; backend policy is exactly `python_only`, `prefer_numba`, or `require_numba`; backend profile is a closed two-stage mapping; evidence is a non-empty strict list. |
 | Canonical manifest spelling | PASS | Primary and secondary lists reject aliases and unknown identifiers through `IdentifierSource.MANIFEST`; planned canonical IDs are rejected. |
-| Candidate manifest lifecycle rejection | DEFERRED | Canonical candidate IDs remain structurally valid so the unchanged Bildiri profile stays truthful; execution preflight rejects them with `CandidateAlgorithmError`. |
+| Historical candidate manifest lifecycle rejection | DEFERRED | At this superseded checkpoint, canonical candidate IDs remained structurally valid so the unchanged Bildiri profile stayed truthful; execution preflight rejected them with `CandidateAlgorithmError`. |
 | Bildiri profile | PASS | Existing four primary and two secondary GWO/HHO IDs remain unchanged and structurally valid as canonical candidate declarations. |
 | Fairness provenance field | PASS | Ordinary Python direct dataclass check printed `FAIR_PROVENANCE_OK`. The registry-heavy fairness pytest module did not complete in the bounded JIT run. |
 
@@ -73,7 +72,7 @@ do not change its JSON shape.
 No solver mathematics, study algorithms, production registry, dependencies, datasets,
 archives, generated benchmark results, or unrelated files changed.
 
-## Conflict and next gate
+## Historical conflict and next gate (superseded by 406a1ab and 15a45ff)
 
 The approved global constraint says candidates are non-selectable and manifests reject
 candidates, while the current canonical Bildiri manifest names four GWO/HHO candidates.
@@ -88,7 +87,7 @@ and pure/memetic evidence nodes to completion. Promote only the exact passing cl
 then enable candidate lifecycle rejection in `StudyManifestV1`, regenerate schemas if
 the model shape changes, and rerun the complete Task 7 and Gate C1 suites.
 
-## Manifest lifecycle closure (2026-07-29)
+## Current manifest-lifecycle closure (2026-07-29)
 
 **Status update:** the deferred manifest-lifecycle item is now complete. This does
 not change the report's broader partial status: the registry-heavy fairness run and

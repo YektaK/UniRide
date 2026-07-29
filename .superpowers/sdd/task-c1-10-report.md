@@ -2,10 +2,17 @@
 
 ## Status: PARTIAL (2026-07-29)
 
-### Completed checks
+## Current executive state
+
+- `406a1ab` promoted the evidenced GWO/HHO pure and memetic-2opt canonical IDs to `VERIFIED`.
+- `15a45ff` closed the manifest-lifecycle gate: primary and native manifest lists accept only exact canonical `VERIFIED` IDs and reject all candidates, plans, aliases, forbidden IDs, and unknown IDs.
+- The unchanged Bildiri profile validates with its four verified canonical declarations; no study-specific exception exists.
+- The full suite and the post-change exact focused command remain unclaimed after their bounded no-output terminations.
+
+### Historical checkpoint (superseded by 406a1ab and 15a45ff)
 
 - Catalog drift tests prove each VERIFIED canonical ID has a direct academic registry executor; all implemented CANDIDATE IDs have executors; and all PLANNED IDs have none.
-- Lifecycle truth is frozen: TwoOpt and ThreeOpt are VERIFIED; OrOpt, GA, PSO, GWO/HHO pure and memetic-2opt, and ALNS are CANDIDATE; four 3-opt/ALNS hybrids are PLANNED.
+- Historical lifecycle truth: TwoOpt and ThreeOpt were VERIFIED; OrOpt, GA, PSO, GWO/HHO pure and memetic-2opt, and ALNS were CANDIDATE; four 3-opt/ALNS hybrids were PLANNED.
 - Every published claim evidence ID must name an exact `test_` function in its declared source file and is executed in a subprocess. All promoted evidence nodes passed without skipping.
 - Both production mappings retain the exact 38-key snapshot. A fresh subprocess import of `optimizer_api.strategies` leaves `uniride_core.algorithms.capabilities` unloaded.
 
@@ -17,21 +24,21 @@
 - Full `.venv-jit` suite command was started with a 60-second bound, emitted no output, and was terminated. It is an unresolved no-output/capacity blocker, not a pass.
 - `git diff --check` was clean before this status note; rerun after adding it is required before commit.
 
-### Deferred gates
+### Historical deferred gates (superseded by 406a1ab and 15a45ff)
 
-- `StudyManifestV1` still permits canonical CANDIDATE IDs structurally; their rejection remains at preflight. Moving lifecycle rejection into manifest validation is deferred because it conflicts with the JIT-promotion recovery path. No Bildiri-specific special case was added.
+- Historical checkpoint: `StudyManifestV1` still permitted canonical CANDIDATE IDs structurally and deferred their rejection to preflight because of the JIT-promotion recovery path. No Bildiri-specific special case was added.
 - Gate C1 is not closed until the full suite completes and the manifest-lifecycle conflict is resolved.
 
-### Next evidence action
+### Historical next evidence action (superseded by 406a1ab and 15a45ff)
 
 - Run separately bounded GWO/HHO native JIT evidence for each requested problem/protocol/backend tuple, then review the resulting exact accounting, termination, route, and backend data before any lifecycle promotion. Task 10 makes no promotion.
 
-### Scope
+### Historical scope (superseded by 406a1ab and 15a45ff)
 
-- No production registry, capability catalog, solver, manifest-contract, or study-profile implementation changed.
+- At this historical checkpoint, no production registry, capability catalog, solver, manifest-contract, or study-profile implementation changed.
 - No generated benchmark/report/database artifacts were created.
 
-### Task 10 command traceability
+### Historical Task 10 command traceability
 
 These are the literal commands from the corresponding Task 10 plan steps: **Run focused gate**, **Run Package A/B/JIT regression**, and **Run full local suite and hygiene**. The drift/isolation command is the scoped verification of the Task 10 **Add drift tests** and **Strengthen production isolation** work.
 

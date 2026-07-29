@@ -165,7 +165,14 @@ def test_bildiri2026_registry_executors_run_coordinate_only_problem(algorithm):
     executor = AlgorithmRegistry.get_executor(algorithm)
     result = executor(
         _coord_only_problem(),
-        {"max_iterations": 3},
+        {
+            "max_iterations": 3,
+            "pack_size": 4,
+            "hawks": 4,
+            "polish_iters": 1,
+            "final_polish_iters": 1,
+            "fair_comparison": {"evaluation_budget": 500, "base_seed": 1000},
+        },
         seed=42,
         run_idx=0,
     )
@@ -191,6 +198,12 @@ def test_bildiri2026_registry_executors_run_problem_dict_wrapper(algorithm):
         pytest.skip(f"{algorithm} not registered (missing bildiri2026 deps?)")
 
     from academic_benchmark.cli_engine import _evaluate_param_combo
+    from academic_benchmark.core.algorithm_resolution import (
+        IdentifierSource,
+        resolve_algorithm_id,
+    )
+    from academic_benchmark.engine_core import GovernedExecutionRequest
+    from uniride_core.algorithms.capabilities import BackendPolicy, ExecutionProtocol
     import math
 
     problem_dict = {
@@ -206,7 +219,30 @@ def test_bildiri2026_registry_executors_run_problem_dict_wrapper(algorithm):
         "dist_matrix": None,
     }
 
-    task = (problem_dict, algorithm, algorithm, {"max_iterations": 3}, 1, 1)
+    resolution = resolve_algorithm_id(algorithm, IdentifierSource.CLI)
+    request = GovernedExecutionRequest(
+        requested_algorithm_id=resolution.requested_id,
+        canonical_algorithm_id=resolution.canonical_id,
+        protocol=ExecutionProtocol.FIXED_BUDGET,
+        evaluation_budget=500,
+        backend_policy=BackendPolicy.PREFER_NUMBA_OBJECTIVE,
+    )
+    task = (
+        problem_dict,
+        resolution.canonical_id,
+        resolution.canonical_id,
+        {
+            "max_iterations": 3,
+            "pack_size": 4,
+            "hawks": 4,
+            "polish_iters": 1,
+            "final_polish_iters": 1,
+            "fair_comparison": {"evaluation_budget": 500, "base_seed": 1000},
+        },
+        1,
+        1,
+        request,
+    )
     result = _evaluate_param_combo(task)
 
     assert result["avg_length"] > 0

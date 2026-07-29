@@ -104,6 +104,10 @@ def _gateway(**kwargs: Any):
         "Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"
     } else BackendKind.PYTHON
     decision = SimpleNamespace(
+        resolution=SimpleNamespace(
+            requested_id=algorithm_id,
+            canonical_id=algorithm_id,
+        ),
         backend_policy=kwargs["backend_policy"],
         selected_backend=ExecutionBackendProfile(backend),
         fallback_reason=None,

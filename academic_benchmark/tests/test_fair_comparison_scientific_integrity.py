@@ -6,7 +6,7 @@ from academic_benchmark.cli_engine import _evaluate_param_combo
 from academic_benchmark.core import registry_setup  # noqa: F401
 from uniride_core.algorithms.tsp_matrix_metaheuristics.gwo_solver import GWOOptimizer
 from uniride_core.algorithms.tsp_matrix_metaheuristics.hho_solver import HHOOptimizer
-from academic_benchmark.engine_core import AlgorithmRegistry
+from academic_benchmark.engine_core import AlgorithmRegistry, GovernedExecutionRequest
 from academic_benchmark.fairness import (
     FairComparisonManifest,
     FairnessValidationError,
@@ -14,6 +14,7 @@ from academic_benchmark.fairness import (
     improve_two_opt_budgeted,
 )
 from uniride_core.models import ProblemInstance
+from uniride_core.algorithms.capabilities import BackendPolicy, ExecutionProtocol
 
 
 EXPLICIT_VARIANTS = (
@@ -272,7 +273,21 @@ def test_cli_aggregate_preserves_full_contract_for_every_replicate():
     params = _params()
     params.update({"max_iterations": 1, "pack_size": 4})
     aggregate = _evaluate_param_combo(
-        (problem_dict, "Core-GWO-TSP-Pure", "Core-GWO-TSP-Pure", params, 9, 2)
+        (
+            problem_dict,
+            "Core-TwoOpt-TSP",
+            "Core-TwoOpt-TSP",
+            params,
+            9,
+            2,
+            GovernedExecutionRequest(
+                requested_algorithm_id="Core-TwoOpt-TSP",
+                canonical_algorithm_id="Core-TwoOpt-TSP",
+                protocol=ExecutionProtocol.FIXED_BUDGET,
+                evaluation_budget=500,
+                backend_policy=BackendPolicy.PYTHON_ONLY,
+            ),
+        )
     )
 
     required = {

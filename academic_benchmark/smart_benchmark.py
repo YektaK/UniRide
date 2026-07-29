@@ -66,7 +66,7 @@ from academic_benchmark.cli_engine import (
 # Sources SOTA solvers from uniride_core.algorithms.sota_tsp/
 from academic_benchmark.core.algorithm_resolution import IdentifierSource, RESOLVER_GOVERNED_IDENTIFIERS, resolve_algorithm_id
 from academic_benchmark.core.algorithm_errors import AlgorithmSelectionError, ExecutorUnavailableError
-from academic_benchmark.core.execution_gateway import execute_preflighted
+from academic_benchmark.core.execution_gateway import execute_preflighted, serialize_preflight_decision
 from academic_benchmark.core.preflight import PreflightRequest, RuntimeBackendAvailability, preflight_run, probe_runtime_backends
 from uniride_core.algorithms.capabilities import BackendPolicy, CAPABILITY_CATALOG, ExecutionProtocol, LifecycleStatus
 from academic_benchmark.sota_engine import (
@@ -525,12 +525,47 @@ def _preflight_smart_selections(
     return registered_algorithm_ids, runtime
 
 
-def _run_governed_task(task: BenchmarkTask, problem: object) -> RunResult:
+def _validated_task_request(
+    task: BenchmarkTask,
+) -> GovernedExecutionRequest | None:
+    """Bind a worker request to its task ID before any registry observation."""
+    _validate_algorithm_migration(str(task.algorithm))
+    domain = classify_academic_algorithm_id(
+        str(task.algorithm), RESOLVER_GOVERNED_IDENTIFIERS
+    )
     request = task.governed_request
+    if domain is AcademicAlgorithmDomain.NON_C1_ROUTING:
+        if request is not None:
+            raise ExecutorUnavailableError(
+                f"A governed TSP/ATSP request cannot be attached to non-C1 task "
+                f"'{task.algorithm}'."
+            )
+        return None
+    if not isinstance(request, GovernedExecutionRequest):
+        raise ExecutorUnavailableError(
+            f"Catalog-governed TSP/ATSP task '{task.algorithm}' requires "
+            "GovernedExecutionRequest at the worker boundary."
+        )
+    task_resolution = resolve_algorithm_id(str(task.algorithm), IdentifierSource.CLI)
+    if task_resolution.canonical_id != request.canonical_algorithm_id:
+        raise ExecutorUnavailableError(
+            f"Governed request canonical ID '{request.canonical_algorithm_id}' "
+            f"does not match task algorithm '{task.algorithm}' "
+            f"(canonical '{task_resolution.canonical_id}')."
+        )
+    return request
+
+
+def _run_governed_task(
+    task: BenchmarkTask,
+    problem: object,
+    request: GovernedExecutionRequest | None = None,
+) -> RunResult:
+    request = request or _validated_task_request(task)
     if request is None:
-        raise ValueError("governed task requires GovernedExecutionRequest")
+        raise ExecutorUnavailableError("non-C1 task cannot use governed execution")
     registered_algorithm_ids, runtime = _preflight_smart_selections([problem], [request])
-    return execute_preflighted(
+    result, decision = execute_preflighted(
         requested_algorithm_id=request.requested_algorithm_id,
         identifier_source=IdentifierSource.CLI,
         problem=problem,
@@ -543,18 +578,33 @@ def _run_governed_task(task: BenchmarkTask, problem: object) -> RunResult:
         registered_algorithm_ids=registered_algorithm_ids,
         runtime_backends=runtime,
         registry_getter=AlgorithmRegistry.get_executor,
-    )[0]
+    )
+    result.preflight_decision_metadata = serialize_preflight_decision(decision)
+    return result
+
 
 def _run_single_task(args):
     """Worker task for ProcessPoolExecutor."""
     task, problem = args
-    if task.governed_request is not None:
-        return _run_governed_task(task, problem)
+    request = _validated_task_request(task)
+    if request is not None:
+        return _run_governed_task(task, problem, request)
     try:
         executor = AlgorithmRegistry.get_executor(task.algorithm)
         return executor(problem, task.params, task.seed, task.run_idx)
     except Exception as e:
-        return RunResult(problem=task.problem_name, algorithm=task.algorithm, run=task.run_idx, seed=task.seed, dimension=problem.dimension if problem else 0, optimal=problem.optimal if problem else None, tour_cost=float('inf'), gap_pct=None, elapsed_sec=0.0, error=str(e),)
+        return RunResult(
+            problem=task.problem_name,
+            algorithm=task.algorithm,
+            run=task.run_idx,
+            seed=task.seed,
+            dimension=problem.dimension if problem else 0,
+            optimal=problem.optimal if problem else None,
+            tour_cost=float("inf"),
+            gap_pct=None,
+            elapsed_sec=0.0,
+            error=str(e),
+        )
 def run_unified_benchmark(
     problems,
     algorithms,
@@ -652,6 +702,9 @@ def run_unified_benchmark(
             pass
 
     def persist_result(res: RunResult) -> None:
+        decision_metadata = getattr(res, "preflight_decision_metadata", {})
+        if not isinstance(decision_metadata, dict):
+            decision_metadata = {}
         try:
             from academic_benchmark.tsplib_manager import save_benchmark_result
             save_benchmark_result(
@@ -674,7 +727,7 @@ def run_unified_benchmark(
                     "capacity_violations": getattr(res, "capacity_violations", 0),
                     "tw_violations": getattr(res, "tw_violations", 0),
                     "params": {"seed": res.seed},
-                    "metadata": {"param_source": param_source},
+                    "metadata": {"param_source": param_source, **decision_metadata},
                 },
                 db_path=TSPLIB_DB,
             )

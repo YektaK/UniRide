@@ -160,6 +160,22 @@ def _validate_protocol(result: RunResult, decision: PreflightDecision) -> None:
     raise _violation("result protocol does not match a supported preflight protocol")
 
 
+def serialize_preflight_decision(decision: PreflightDecision) -> dict[str, Any]:
+    """Return stable primitive provenance for persistence and result transport."""
+    return {
+        "requested_algorithm_id": decision.resolution.requested_id,
+        "canonical_algorithm_id": decision.resolution.canonical_id,
+        "backend_policy": decision.backend_policy.value,
+        "backend_profile": {
+            "objective": decision.selected_backend.objective.value,
+            "polish": decision.selected_backend.polish.value,
+        },
+        "backend_fallback_used": decision.fallback_reason is not None,
+        "backend_fallback_reason": decision.fallback_reason,
+        "executor_registry_id": decision.executor_registry_id,
+        "capability_evidence_ids": list(decision.evidence_ids),
+    }
+
 def validate_preflighted_result(result: RunResult, decision: PreflightDecision) -> None:
     """Reject any result that contradicts the immutable preflight decision."""
     _validate_identity(result, decision)
@@ -208,4 +224,8 @@ def execute_preflighted(
     return result, decision
 
 
-__all__ = ["execute_preflighted", "validate_preflighted_result"]
+__all__ = [
+    "execute_preflighted",
+    "serialize_preflight_decision",
+    "validate_preflighted_result",
+]

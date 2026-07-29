@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import concurrent.futures
+import csv
+import json
 import pickle
 import sys
 from dataclasses import dataclass
@@ -68,6 +70,27 @@ def _valid_result() -> RunResult:
     return result
 
 
+def _decision(
+    *,
+    requested_id: str = "Core-TwoOpt-TSP",
+    backend_policy: BackendPolicy = BackendPolicy.PYTHON_ONLY,
+    fallback_reason: str | None = None,
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        resolution=SimpleNamespace(
+            requested_id=requested_id,
+            canonical_id="Core-TwoOpt-TSP",
+        ),
+        backend_policy=backend_policy,
+        selected_backend=SimpleNamespace(
+            objective=SimpleNamespace(value="python"),
+            polish=SimpleNamespace(value="none"),
+        ),
+        fallback_reason=fallback_reason,
+        executor_registry_id="Core-TwoOpt-TSP",
+        evidence_ids=("test-evidence-node",),
+    )
+
 def test_governed_request_and_task_are_picklable() -> None:
     request = _request()
     task = BenchmarkTask("p", "Core-TwoOpt-TSP", 1, 42, {}, request)
@@ -89,20 +112,198 @@ def test_cli_governed_task_uses_gateway_without_legacy_direct_fallback(monkeypat
 
     def gateway(**kwargs):
         observed.update(kwargs)
-        return _valid_result(), SimpleNamespace()
+        return _valid_result(), _decision(requested_id="Numba-2-opt")
 
     monkeypatch.setattr(cli_engine, "execute_preflighted", gateway)
     task = (
         cli_engine._make_problem_dict(_Problem()), "Core-TwoOpt-TSP", "Core-TwoOpt-TSP",
-        {}, 0, 1, _request(),
+        {}, 0, 1, _request(requested_algorithm_id="Numba-2-opt"),
     )
 
-    result = cli_engine._evaluate_param_combo(task)
+    with pytest.warns(DeprecationWarning, match="Numba-2-opt"):
+        result = cli_engine._evaluate_param_combo(task)
 
     assert result["algorithm_id"] == "Core-TwoOpt-TSP"
-    assert observed["requested_algorithm_id"] == "Core-TwoOpt-TSP"
+    assert observed["requested_algorithm_id"] == "Numba-2-opt"
     assert observed["evaluation_budget"] == 10
+    assert result["preflight_decision_metadata"] == {
+        "requested_algorithm_id": "Numba-2-opt",
+        "canonical_algorithm_id": "Core-TwoOpt-TSP",
+        "backend_policy": "python_only",
+        "backend_profile": {"objective": "python", "polish": "none"},
+        "backend_fallback_used": False,
+        "backend_fallback_reason": None,
+        "executor_registry_id": "Core-TwoOpt-TSP",
+        "capability_evidence_ids": ["test-evidence-node"],
+    }
 
+
+def test_cli_worker_rejects_ungoverned_catalog_task_before_registry_access(monkeypatch) -> None:
+    class ExplodingRegistry:
+        @staticmethod
+        def list_algorithms():
+            raise AssertionError("registry enumeration occurred")
+
+        @staticmethod
+        def get_executor(_algorithm_id):
+            raise AssertionError("registry lookup occurred")
+
+    monkeypatch.setattr(cli_engine, "_AlgoReg", ExplodingRegistry)
+    monkeypatch.setattr(cli_engine, "_HAS_NUMBA_REGISTRY", True)
+    task = (
+        cli_engine._make_problem_dict(_Problem()),
+        "Core-TwoOpt-TSP",
+        "Core-TwoOpt-TSP",
+        {},
+        0,
+        1,
+    )
+
+    with pytest.raises(ExecutorUnavailableError, match="GovernedExecutionRequest"):
+        cli_engine._evaluate_param_combo(task)
+
+
+def test_smart_worker_rejects_ungoverned_catalog_task_before_registry_access(monkeypatch) -> None:
+    class ExplodingRegistry:
+        @staticmethod
+        def list_algorithms():
+            raise AssertionError("registry enumeration occurred")
+
+        @staticmethod
+        def get_executor(_algorithm_id):
+            raise AssertionError("registry lookup occurred")
+
+    monkeypatch.setattr(smart_benchmark, "AlgorithmRegistry", ExplodingRegistry)
+    task = BenchmarkTask("entrypoint-atsp", "Core-TwoOpt-TSP", 0, 42, {})
+
+    with pytest.raises(ExecutorUnavailableError, match="GovernedExecutionRequest"):
+        smart_benchmark._run_single_task((task, _Problem()))
+
+def test_smart_governed_task_carries_prefer_numba_fallback_provenance(monkeypatch) -> None:
+    fallback_reason = "Preferred Numba objective unavailable; selected evidenced Python objective."
+    decision = _decision(
+        backend_policy=BackendPolicy.PREFER_NUMBA_OBJECTIVE,
+        fallback_reason=fallback_reason,
+    )
+    monkeypatch.setattr(
+        smart_benchmark,
+        "_preflight_smart_selections",
+        lambda *_args: (
+            frozenset({"Core-TwoOpt-TSP"}),
+            RuntimeBackendAvailability(True, True, "test runtime"),
+        ),
+    )
+    monkeypatch.setattr(
+        smart_benchmark,
+        "execute_preflighted",
+        lambda **_kwargs: (_valid_result(), decision),
+    )
+    task = BenchmarkTask(
+        "entrypoint-atsp",
+        "Core-TwoOpt-TSP",
+        0,
+        42,
+        {},
+        _request(backend_policy=BackendPolicy.PREFER_NUMBA_OBJECTIVE),
+    )
+
+    result = smart_benchmark._run_governed_task(task, _Problem())
+
+    assert result.preflight_decision_metadata == {
+        "requested_algorithm_id": "Core-TwoOpt-TSP",
+        "canonical_algorithm_id": "Core-TwoOpt-TSP",
+        "backend_policy": "prefer_numba_objective",
+        "backend_profile": {"objective": "python", "polish": "none"},
+        "backend_fallback_used": True,
+        "backend_fallback_reason": fallback_reason,
+        "executor_registry_id": "Core-TwoOpt-TSP",
+        "capability_evidence_ids": ["test-evidence-node"],
+    }
+
+
+def test_smart_persistence_includes_preflight_decision_metadata(monkeypatch) -> None:
+    result = _valid_result()
+    result.preflight_decision_metadata = {
+        "requested_algorithm_id": "Core-TwoOpt-TSP",
+        "canonical_algorithm_id": "Core-TwoOpt-TSP",
+        "backend_policy": "prefer_numba_objective",
+        "backend_profile": {"objective": "python", "polish": "none"},
+        "backend_fallback_used": True,
+        "backend_fallback_reason": "Preferred Numba objective unavailable.",
+        "executor_registry_id": "Core-TwoOpt-TSP",
+        "capability_evidence_ids": ["test-evidence-node"],
+    }
+
+    class Future:
+        def result(self):
+            return result
+
+        def cancel(self):
+            return True
+
+    future = Future()
+
+    class Executor:
+        def __init__(self, **_kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def submit(self, *_args):
+            return future
+
+        def shutdown(self, **_kwargs):
+            return None
+
+    saved_results = []
+    import academic_benchmark.tsplib_manager as tsplib_manager
+
+    monkeypatch.setattr(
+        smart_benchmark,
+        "_preflight_smart_selections",
+        lambda *_args: (
+            frozenset({"Core-TwoOpt-TSP"}),
+            RuntimeBackendAvailability(True, True, "test runtime"),
+        ),
+    )
+    monkeypatch.setattr(smart_benchmark, "run_warmup", lambda *_args: None)
+    monkeypatch.setattr(smart_benchmark, "ProcessPoolExecutor", Executor)
+    monkeypatch.setattr(
+        smart_benchmark.concurrent.futures,
+        "as_completed",
+        lambda futures: list(futures),
+    )
+    monkeypatch.setattr(smart_benchmark, "_check_interrupt_key", lambda: False)
+    monkeypatch.setattr(smart_benchmark, "_save_best_solution", lambda **_kwargs: None)
+    monkeypatch.setattr(smart_benchmark, "save_metadata", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(smart_benchmark, "_current_results", [])
+    monkeypatch.setattr(smart_benchmark, "_current_metadata", {})
+    monkeypatch.setattr(smart_benchmark, "_shutdown_requested", False)
+    monkeypatch.setattr(tsplib_manager, "save_benchmark_run", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        tsplib_manager,
+        "save_benchmark_result",
+        lambda _run_id, payload, **_kwargs: saved_results.append(payload),
+    )
+
+    smart_benchmark.run_unified_benchmark(
+        [_Problem()],
+        ["Core-TwoOpt-TSP"],
+        "default",
+        1,
+        1,
+        {"results": {}},
+    )
+
+    assert len(saved_results) == 1
+    assert saved_results[0]["metadata"] == {
+        "param_source": "default",
+        **result.preflight_decision_metadata,
+    }
 
 def test_cli_governed_candidate_rejects_before_registry_or_direct_fallback(monkeypatch) -> None:
     class ExplodingRegistry:
@@ -593,3 +794,209 @@ def test_legacy_smart_config_requires_request_for_catalog_task_before_setup(monk
 
     with pytest.raises(ValueError, match="GovernedExecutionRequest"):
         smart_benchmark.run_benchmark(config, [_Problem()], {}, 1)
+
+def test_cli_persistence_includes_preflight_decision_metadata(monkeypatch) -> None:
+    decision_metadata = {
+        "requested_algorithm_id": "Numba-2-opt",
+        "canonical_algorithm_id": "Core-TwoOpt-TSP",
+        "backend_policy": "prefer_numba_objective",
+        "backend_profile": {"objective": "python", "polish": "none"},
+        "backend_fallback_used": True,
+        "backend_fallback_reason": "Preferred Numba objective unavailable.",
+        "executor_registry_id": "Core-TwoOpt-TSP",
+        "capability_evidence_ids": ["test-evidence-node"],
+    }
+    aggregate = {
+        "problem": "entrypoint-atsp",
+        "strategy": "Core-TwoOpt-TSP",
+        "avg_length": 9.0,
+        "avg_gap": float("nan"),
+        "avg_time_ms": 1.0,
+        "n_runs": 1,
+        "params": {},
+        "problem_type": "atsp",
+        "matrix_kind": "distance",
+        "objective_cost": 9.0,
+        "routes": [[1, 2, 3]],
+        "route_loads": None,
+        "route_costs": [9.0],
+        "num_vehicles": 1,
+        "capacity_violations": 0,
+        "tw_violations": 0,
+        "preflight_decision_metadata": decision_metadata,
+    }
+    task = (
+        cli_engine._make_problem_dict(_Problem()),
+        "Core-TwoOpt-TSP",
+        "Core-TwoOpt-TSP",
+        {},
+        0,
+        1,
+        _request(requested_algorithm_id="Numba-2-opt"),
+    )
+    saved_results = []
+    import academic_benchmark.tsplib_manager as tsplib_manager
+
+    monkeypatch.setattr(cli_engine, "_run_pool", lambda *_args, **_kwargs: [aggregate])
+    monkeypatch.setattr(cli_engine, "append_csv_row", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(cli_engine, "save_metadata", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(cli_engine, "_active_results", [])
+    monkeypatch.setattr(tsplib_manager, "save_benchmark_run", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        tsplib_manager,
+        "save_benchmark_result",
+        lambda _run_id, payload, **_kwargs: saved_results.append(payload),
+    )
+
+    rows = cli_engine._execute_benchmark_tasks([task], 1, {}, "C1")
+
+    assert len(saved_results) == 1
+    assert saved_results[0]["metadata"] == {
+        "n_runs": 1,
+        "stage": "C1",
+        **decision_metadata,
+    }
+    assert json.loads(rows[0]["preflight_decision_metadata_json"]) == decision_metadata
+
+def test_cli_worker_rejects_mismatched_governed_request_before_registry(monkeypatch) -> None:
+    class ExplodingRegistry:
+        @staticmethod
+        def list_algorithms():
+            raise AssertionError("mismatched request reached registry enumeration")
+
+    monkeypatch.setattr(cli_engine, "_AlgoReg", ExplodingRegistry)
+    monkeypatch.setattr(cli_engine, "_HAS_NUMBA_REGISTRY", True)
+    task = (
+        cli_engine._make_problem_dict(_Problem()),
+        "Core-TwoOpt-TSP",
+        "Core-TwoOpt-TSP",
+        {},
+        0,
+        1,
+        _request(
+            requested_algorithm_id="Core-ThreeOpt-TSP",
+            canonical_algorithm_id="Core-ThreeOpt-TSP",
+        ),
+    )
+
+    with pytest.raises(ExecutorUnavailableError, match="does not match task"):
+        cli_engine._evaluate_param_combo(task)
+
+
+def test_cli_worker_rejects_governed_request_on_non_c1_task(monkeypatch) -> None:
+    class ExplodingRegistry:
+        @staticmethod
+        def list_algorithms():
+            raise AssertionError("non-C1 request reached registry enumeration")
+
+    monkeypatch.setattr(cli_engine, "_AlgoReg", ExplodingRegistry)
+    monkeypatch.setattr(cli_engine, "_HAS_NUMBA_REGISTRY", True)
+    task = (
+        cli_engine._make_problem_dict(_Problem()),
+        "Core-Greedy-Routing",
+        "Core-Greedy-Routing",
+        {},
+        0,
+        1,
+        _request(),
+    )
+
+    with pytest.raises(ExecutorUnavailableError, match="non-C1"):
+        cli_engine._evaluate_param_combo(task)
+
+
+def test_smart_worker_rejects_mismatched_governed_request_before_registry(monkeypatch) -> None:
+    class ExplodingRegistry:
+        @staticmethod
+        def list_algorithms():
+            raise AssertionError("mismatched request reached registry enumeration")
+
+    monkeypatch.setattr(smart_benchmark, "AlgorithmRegistry", ExplodingRegistry)
+    task = BenchmarkTask(
+        "entrypoint-atsp",
+        "Core-TwoOpt-TSP",
+        0,
+        42,
+        {},
+        _request(
+            requested_algorithm_id="Core-ThreeOpt-TSP",
+            canonical_algorithm_id="Core-ThreeOpt-TSP",
+        ),
+    )
+
+    with pytest.raises(ExecutorUnavailableError, match="does not match task"):
+        smart_benchmark._run_single_task((task, _Problem()))
+
+
+def test_smart_worker_rejects_governed_request_on_non_c1_task(monkeypatch) -> None:
+    class ExplodingRegistry:
+        @staticmethod
+        def get_executor(_algorithm_id):
+            raise AssertionError("non-C1 request reached registry lookup")
+
+    monkeypatch.setattr(smart_benchmark, "AlgorithmRegistry", ExplodingRegistry)
+    task = BenchmarkTask(
+        "entrypoint-atsp",
+        "Core-Greedy-Routing",
+        0,
+        42,
+        {},
+        _request(),
+    )
+
+    with pytest.raises(ExecutorUnavailableError, match="non-C1"):
+        smart_benchmark._run_single_task((task, _Problem()))
+
+
+def test_smart_worker_preserves_forbidden_migration_error_ordering() -> None:
+    replacement_id = "Core-GA-TSP"
+    legacy_id = next(
+        algorithm_id
+        for algorithm_id, replacement in cli_engine.LEGACY_ALGORITHM_MIGRATIONS.items()
+        if replacement == replacement_id
+    )
+    task = BenchmarkTask("entrypoint-atsp", legacy_id, 0, 42, {})
+
+    with pytest.raises(ValueError, match=replacement_id):
+        smart_benchmark._run_single_task((task, _Problem()))
+
+
+def test_append_csv_row_migrates_existing_header_for_preflight_provenance(
+    tmp_path,
+) -> None:
+    from academic_benchmark.benchmark_utils import append_csv_row
+
+    path = tmp_path / "benchmark_progress.csv"
+    old_fields = ["problem", "strategy"]
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=old_fields)
+        writer.writeheader()
+        writer.writerow({"problem": "old", "strategy": "Core-TwoOpt-TSP"})
+
+    new_fields = [*old_fields, "preflight_decision_metadata_json"]
+    append_csv_row(
+        str(path),
+        new_fields,
+        {
+            "problem": "new",
+            "strategy": "Core-ThreeOpt-TSP",
+            "preflight_decision_metadata_json": '{"canonical_algorithm_id":"Core-ThreeOpt-TSP"}',
+        },
+    )
+
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        rows = list(reader)
+        assert reader.fieldnames == new_fields
+    assert rows == [
+        {
+            "problem": "old",
+            "strategy": "Core-TwoOpt-TSP",
+            "preflight_decision_metadata_json": "",
+        },
+        {
+            "problem": "new",
+            "strategy": "Core-ThreeOpt-TSP",
+            "preflight_decision_metadata_json": '{"canonical_algorithm_id":"Core-ThreeOpt-TSP"}',
+        },
+    ]

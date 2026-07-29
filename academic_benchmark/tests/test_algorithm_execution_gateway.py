@@ -12,7 +12,11 @@ from academic_benchmark.core.algorithm_errors import (
     UnsupportedProblemContractError,
 )
 from academic_benchmark.core.algorithm_resolution import IdentifierSource, resolve_algorithm_id
-from academic_benchmark.core.execution_gateway import execute_preflighted, validate_preflighted_result
+from academic_benchmark.core.execution_gateway import (
+    execute_preflighted,
+    serialize_preflight_decision,
+    validate_preflighted_result,
+)
 from academic_benchmark.core.preflight import PreflightRequest, RuntimeBackendAvailability, preflight_run
 from academic_benchmark.fairness import FairRunResult
 from uniride_core.algorithms.capabilities import BackendPolicy, ExecutionProtocol
@@ -130,6 +134,23 @@ def test_gateway_uses_exact_lookup_then_execute_order_after_preflight() -> None:
     assert result.tour_cost == 9.0
     assert decision.executor_registry_id == CANONICAL_ID
 
+
+def test_preflight_decision_serializer_preserves_complete_provenance() -> None:
+    _, decision = _execute()
+
+    assert serialize_preflight_decision(decision) == {
+        "requested_algorithm_id": CANONICAL_ID,
+        "canonical_algorithm_id": CANONICAL_ID,
+        "backend_policy": "python_only",
+        "backend_profile": {"objective": "python", "polish": "none"},
+        "backend_fallback_used": False,
+        "backend_fallback_reason": None,
+        "executor_registry_id": CANONICAL_ID,
+        "capability_evidence_ids": [
+            "academic_benchmark/tests/test_algorithm_capability_evidence.py::"
+            "test_core_two_opt_fixed_tsp_and_atsp_evidence"
+        ],
+    }
 
 @pytest.mark.parametrize(
     "changes,match",

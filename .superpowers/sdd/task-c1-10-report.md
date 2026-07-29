@@ -7,7 +7,7 @@
 - `406a1ab` promoted the evidenced GWO/HHO pure and memetic-2opt canonical IDs to `VERIFIED`.
 - `15a45ff` closed the manifest-lifecycle gate: primary and native manifest lists accept only exact canonical `VERIFIED` IDs and reject all candidates, plans, aliases, forbidden IDs, and unknown IDs.
 - The unchanged Bildiri profile validates with its four verified canonical declarations; no study-specific exception exists.
-- The academic suite is green at 774 passed. The broader academic plus uniride_core command completed with 978 passed, 1 skipped, and 9 OR-Tools-only failures caused by OR-Tools being absent from .venv-jit; the same 12 OR-Tools integration tests pass in the system interpreter where OR-Tools is installed.
+- The academic suite is green at 786 passed after final worker-boundary, decision-provenance, and CSV-compatibility review remediation. The broader academic plus uniride_core command completed with 978 passed, 1 skipped, and 9 OR-Tools-only failures caused by OR-Tools being absent from .venv-jit; the same 12 OR-Tools integration tests pass in the system interpreter where OR-Tools is installed.
 
 ### Historical checkpoint (superseded by 406a1ab and 15a45ff)
 
@@ -96,3 +96,14 @@ Gate C1 is complete for its approved canonical academic TSP/ATSP scope.
 - Final hygiene passed after the closure commit: git diff --check exited 0 with no output, and git status --short --branch reported only the clean branch header.
 
 This closure is consistent with C1's academic-only scope and the approved acceptance criterion that proportionate local suites pass with external environment blockers identified precisely.
+### Post-review boundary and provenance closure (2026-07-29)
+
+A whole-branch review found that governed CLI and Smart worker functions could still be called without immutable requests and that successful decisions were not fully persisted. The remediation now fails closed before registry access, binds each request canonical ID to the task's resolved canonical ID, rejects governed requests on non-C1 routing tasks, preserves migration-specific error ordering, and persists complete preflight provenance through CLI/Smart database records and CSV output. Existing progress CSV headers are atomically widened while retaining prior rows.
+
+- Boundary/provenance controlled RED: missing guards and serializer produced two boundary failures plus a serializer collection error.
+- Second-review controlled RED: six request-binding/migration/CSV compatibility tests failed before hardening.
+- Second-review GREEN: `6 passed in 2.88s`.
+- Expanded focused GREEN: `275 passed, 42 warnings in 6.55s`.
+- Final academic gate: `786 passed, 42 warnings in 149.58s`; no skips or failures.
+- Final independent re-review: no Critical, Important, or Minor findings; ready to commit.
+- No solver equations, capability claims, manifests, production registry exposure, dependencies, databases, archives, frontend code, or generated benchmark outputs changed.

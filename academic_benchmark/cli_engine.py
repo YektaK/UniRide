@@ -60,7 +60,7 @@ from academic_benchmark.core.algorithm_resolution import (
     resolve_algorithm_id,
 )
 from academic_benchmark.core.algorithm_errors import AlgorithmSelectionError, CandidateAlgorithmError, ExecutorUnavailableError, PlannedAlgorithmError
-from academic_benchmark.core.execution_gateway import execute_preflighted
+from academic_benchmark.core.execution_gateway import execute_preflighted, serialize_preflight_decision
 from academic_benchmark.core.preflight import PreflightRequest, probe_runtime_backends, preflight_run
 from academic_benchmark.engine_core import AcademicAlgorithmDomain, GovernedExecutionRequest, classify_academic_algorithm_id
 from uniride_core.algorithms.capabilities import BackendPolicy, CAPABILITY_CATALOG, ExecutionProtocol, LifecycleStatus
@@ -695,6 +695,27 @@ def _evaluate_param_combo(task: Tuple[Any, ...]) -> Dict[str, Any]:
     _validate_algorithm_migration(strategy_name)
     if strategy_payload != strategy_name:
         _validate_algorithm_migration(strategy_payload)
+    domain = classify_academic_algorithm_id(
+        str(strategy_name), RESOLVER_GOVERNED_IDENTIFIERS
+    )
+    if domain is AcademicAlgorithmDomain.GOVERNED_TSP_ATSP:
+        if not isinstance(governed_request, GovernedExecutionRequest):
+            raise ExecutorUnavailableError(
+                f"Catalog-governed TSP/ATSP strategy '{strategy_name}' requires "
+                "GovernedExecutionRequest at the worker boundary."
+            )
+        task_resolution = resolve_algorithm_id(str(strategy_name), IdentifierSource.CLI)
+        if task_resolution.canonical_id != governed_request.canonical_algorithm_id:
+            raise ExecutorUnavailableError(
+                f"Governed request canonical ID '{governed_request.canonical_algorithm_id}' "
+                f"does not match task strategy '{strategy_name}' "
+                f"(canonical '{task_resolution.canonical_id}')."
+            )
+    elif governed_request is not None:
+        raise ExecutorUnavailableError(
+            f"A governed TSP/ATSP request cannot be attached to non-C1 task "
+            f"'{strategy_name}'."
+        )
 
     is_time_matrix = problem_dict.get("is_time_matrix", False)
     time_matrix_data = problem_dict.get("time_matrix")
@@ -903,23 +924,140 @@ def _evaluate_param_combo(task: Tuple[Any, ...]) -> Dict[str, Any]:
         "matrix_kind": best_run.get("matrix_kind", getattr(problem, "matrix_kind", "distance")),
     }
 
-def _evaluate_governed_param_combo(problem: object, params: Dict[str, Any], combo_idx: int, n_runs: int, request: GovernedExecutionRequest) -> Dict[str, Any]:
+def _evaluate_governed_param_combo(
+    problem: object,
+    params: Dict[str, Any],
+    combo_idx: int,
+    n_runs: int,
+    request: GovernedExecutionRequest,
+) -> Dict[str, Any]:
     runtime = probe_runtime_backends()
     resolution = resolve_algorithm_id(request.requested_algorithm_id, IdentifierSource.CLI)
     if resolution.canonical_id != request.canonical_algorithm_id:
         raise ValueError("governed task canonical ID does not match its requested ID")
-    preflight_run(PreflightRequest(resolution, problem, request.protocol, request.backend_policy, request.evaluation_budget, frozenset(CAPABILITY_CATALOG), runtime))
-    registered = frozenset(_AlgoReg.list_algorithms()) if _HAS_NUMBA_REGISTRY else frozenset()
-    rows = []
+    preflight_run(
+        PreflightRequest(
+            resolution,
+            problem,
+            request.protocol,
+            request.backend_policy,
+            request.evaluation_budget,
+            frozenset(CAPABILITY_CATALOG),
+            runtime,
+        )
+    )
+    registered = (
+        frozenset(_AlgoReg.list_algorithms()) if _HAS_NUMBA_REGISTRY else frozenset()
+    )
+    rows: List[Dict[str, Any]] = []
+    decision_metadata: Dict[str, Any] = {}
     started = time.perf_counter()
     for run_idx in range(n_runs):
         seed = 1000 + combo_idx * 100 + run_idx
-        result, _ = execute_preflighted(requested_algorithm_id=request.requested_algorithm_id, identifier_source=IdentifierSource.CLI, problem=problem, params=params, seed=seed, run_idx=run_idx, protocol=request.protocol, backend_policy=request.backend_policy, evaluation_budget=request.evaluation_budget, registered_algorithm_ids=registered, runtime_backends=runtime, registry_getter=_AlgoReg.get_executor)
-        rows.append({"tour_length": result.tour_cost, "gap": result.gap_pct if result.gap_pct is not None else float("nan"), "objective_cost": result.objective_cost, "algorithm_id": getattr(result, "algorithm_id", result.algorithm), "objective_evaluations": getattr(result, "objective_evaluations", result.evaluations), "evaluation_budget": getattr(result, "evaluation_budget", None), "execution_backend": getattr(result, "execution_backend", None)})
+        result, decision = execute_preflighted(
+            requested_algorithm_id=request.requested_algorithm_id,
+            identifier_source=IdentifierSource.CLI,
+            problem=problem,
+            params=params,
+            seed=seed,
+            run_idx=run_idx,
+            protocol=request.protocol,
+            backend_policy=request.backend_policy,
+            evaluation_budget=request.evaluation_budget,
+            registered_algorithm_ids=registered,
+            runtime_backends=runtime,
+            registry_getter=_AlgoReg.get_executor,
+        )
+        decision_metadata = serialize_preflight_decision(decision)
+        rows.append(
+            {
+                "tour_length": result.tour_cost,
+                "gap": result.gap_pct if result.gap_pct is not None else float("nan"),
+                "objective_cost": result.objective_cost,
+                "algorithm_id": getattr(result, "algorithm_id", result.algorithm),
+                "algorithm_family": getattr(result, "algorithm_family", None),
+                "variant": getattr(result, "variant", None),
+                "seed": result.seed,
+                "seed_group": getattr(result, "seed_group", None),
+                "objective_evaluations": getattr(
+                    result, "objective_evaluations", result.evaluations
+                ),
+                "evaluation_budget": getattr(result, "evaluation_budget", None),
+                "budget_terminated": getattr(result, "budget_terminated", None),
+                "initialization_policy": getattr(
+                    result, "initialization_policy", None
+                ),
+                "termination_policy": getattr(result, "termination_policy", None),
+                "execution_backend": getattr(result, "execution_backend", None),
+                "polish_policy": getattr(result, "polish_policy", None),
+                "routes": result.routes,
+                "num_vehicles": result.num_vehicles,
+                "route_loads": result.route_loads,
+                "route_costs": result.route_costs,
+                "capacity_violations": result.capacity_violations,
+                "tw_violations": result.tw_violations,
+                "problem_type": result.problem_type,
+                "matrix_kind": result.matrix_kind,
+            }
+        )
+
     average = sum(float(row["tour_length"]) for row in rows) / len(rows)
-    gaps = [float(row["gap"]) for row in rows if not math.isnan(float(row["gap"]))]
+    gaps = [
+        float(row["gap"])
+        for row in rows
+        if not math.isnan(float(row["gap"]))
+    ]
     best = min(rows, key=lambda row: float(row["tour_length"]))
-    return {"problem": problem.name, "strategy": request.canonical_algorithm_id, "combo_idx": combo_idx, "params": params, "avg_length": average, "avg_gap": sum(gaps) / len(gaps) if gaps else float("nan"), "avg_time_ms": (time.perf_counter() - started) * 1000.0 / len(rows), "n_runs": n_runs, "per_run_lengths": [float(row["tour_length"]) for row in rows], "objective_cost": best["objective_cost"], "algorithm_id": best["algorithm_id"], "objective_evaluations": best["objective_evaluations"], "evaluation_budget": best["evaluation_budget"], "execution_backend": best["execution_backend"]}
+    fairness_keys = (
+        "algorithm_id",
+        "algorithm_family",
+        "variant",
+        "seed",
+        "seed_group",
+        "objective_evaluations",
+        "evaluation_budget",
+        "budget_terminated",
+        "initialization_policy",
+        "termination_policy",
+        "execution_backend",
+        "polish_policy",
+    )
+    return {
+        "problem": problem.name,
+        "strategy": request.canonical_algorithm_id,
+        "combo_idx": combo_idx,
+        "params": params,
+        "avg_length": average,
+        "avg_gap": sum(gaps) / len(gaps) if gaps else float("nan"),
+        "avg_time_ms": (time.perf_counter() - started) * 1000.0 / len(rows),
+        "n_runs": n_runs,
+        "per_run_lengths": [float(row["tour_length"]) for row in rows],
+        "objective_cost": best["objective_cost"],
+        "algorithm_id": best["algorithm_id"],
+        "algorithm_family": best["algorithm_family"],
+        "variant": best["variant"],
+        "seed": best["seed"],
+        "seed_group": best["seed_group"],
+        "objective_evaluations": best["objective_evaluations"],
+        "evaluation_budget": best["evaluation_budget"],
+        "budget_terminated": best["budget_terminated"],
+        "initialization_policy": best["initialization_policy"],
+        "termination_policy": best["termination_policy"],
+        "execution_backend": best["execution_backend"],
+        "polish_policy": best["polish_policy"],
+        "per_run_fairness": [
+            {key: row.get(key) for key in fairness_keys} for row in rows
+        ],
+        "routes": best["routes"],
+        "num_vehicles": best["num_vehicles"],
+        "route_loads": best["route_loads"],
+        "route_costs": best["route_costs"],
+        "capacity_violations": best["capacity_violations"],
+        "tw_violations": best["tw_violations"],
+        "problem_type": best["problem_type"],
+        "matrix_kind": best["matrix_kind"],
+        "preflight_decision_metadata": decision_metadata,
+    }
 
 def _run_pool(tasks: List[Tuple], workers: int, on_result=None) -> List[Dict[str, Any]]:
     """Windows-safe ProcessPoolExecutor ile paralel çalıştırma."""
@@ -1293,7 +1431,7 @@ def _execute_benchmark_tasks(tasks, workers, metadata, stage_label):
         "timestamp", "problem", "strategy", "avg_length", "avg_gap", "avg_time_ms", "n_runs",
         "result_type", "params_json", "gap_type", "problem_type", "matrix_kind", "objective_cost",
         "num_vehicles", "capacity_violations", "tw_violations", "routes_json", "route_loads_json",
-        "route_costs_json",
+        "route_costs_json", "preflight_decision_metadata_json",
     ]
 
     tracker = ETATracker()
@@ -1302,6 +1440,9 @@ def _execute_benchmark_tasks(tasks, workers, metadata, stage_label):
     def on_result(idx, result, total):
         optimal = result.get("optimal")
         gap_type_val = "optimal" if (optimal and optimal > 0) else "unknown"
+        decision_metadata = result.get("preflight_decision_metadata", {})
+        if not isinstance(decision_metadata, dict):
+            decision_metadata = {}
         row = {
             "timestamp": datetime.now().isoformat(),
             "problem": result["problem"],
@@ -1322,6 +1463,9 @@ def _execute_benchmark_tasks(tasks, workers, metadata, stage_label):
             "routes_json": json.dumps(result.get("routes"), ensure_ascii=False),
             "route_loads_json": json.dumps(result.get("route_loads"), ensure_ascii=False),
             "route_costs_json": json.dumps(result.get("route_costs"), ensure_ascii=False),
+            "preflight_decision_metadata_json": json.dumps(
+                decision_metadata, ensure_ascii=False, sort_keys=True
+            ),
         }
         rows.append(row)
         _active_results.append(row)
@@ -1347,7 +1491,11 @@ def _execute_benchmark_tasks(tasks, workers, metadata, stage_label):
                     "capacity_violations": row.get("capacity_violations", 0),
                     "tw_violations": row.get("tw_violations", 0),
                     "params": result.get("params", {}),
-                    "metadata": {"n_runs": result.get("n_runs"), "stage": stage_label},
+                    "metadata": {
+                        "n_runs": result.get("n_runs"),
+                        "stage": stage_label,
+                        **decision_metadata,
+                    },
                     "timestamp": row["timestamp"],
                 },
                 db_path=TSPLIB_DB,

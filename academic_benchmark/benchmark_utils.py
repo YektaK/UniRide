@@ -17,6 +17,7 @@ import random
 import signal
 import statistics
 import sys
+import tempfile
 import time
 from dataclasses import dataclass
 from datetime import datetime
@@ -747,11 +748,45 @@ def multi_select(items: Sequence[str], title: str) -> List[str]:
 
 def append_csv_row(path: str, fieldnames: Sequence[str],
                    row: Dict[str, Any]) -> None:
-    """CSV dosyasına tek satır ekler. Dosya yoksa header yazar."""
-    exists = os.path.exists(path)
-    with open(path, "a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=list(fieldnames))
-        if not exists:
+    """Append a row, atomically widening an existing CSV header when needed."""
+    target_fields = list(fieldnames)
+    write_header = not os.path.exists(path) or os.path.getsize(path) == 0
+    if not write_header:
+        with open(path, newline="", encoding="utf-8") as existing_handle:
+            reader = csv.DictReader(existing_handle)
+            existing_fields = list(reader.fieldnames or ())
+            existing_rows = list(reader)
+        if existing_fields != target_fields:
+            merged_fields = existing_fields + [
+                field for field in target_fields if field not in existing_fields
+            ]
+            directory = os.path.dirname(os.path.abspath(path))
+            temporary_path = ""
+            try:
+                with tempfile.NamedTemporaryFile(
+                    "w",
+                    newline="",
+                    encoding="utf-8",
+                    delete=False,
+                    dir=directory,
+                    prefix=".csv-header-migration-",
+                    suffix=".tmp",
+                ) as temporary_handle:
+                    temporary_path = temporary_handle.name
+                    writer = csv.DictWriter(
+                        temporary_handle, fieldnames=merged_fields
+                    )
+                    writer.writeheader()
+                    writer.writerows(existing_rows)
+                os.replace(temporary_path, path)
+                temporary_path = ""
+            finally:
+                if temporary_path and os.path.exists(temporary_path):
+                    os.unlink(temporary_path)
+            target_fields = merged_fields
+    with open(path, "a", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=target_fields)
+        if write_header:
             writer.writeheader()
         writer.writerow(row)
 

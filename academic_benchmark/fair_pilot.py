@@ -20,7 +20,10 @@ from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Seque
 
 from academic_benchmark.fairness import FairComparisonManifest, FairRunResult
 from academic_benchmark.core.algorithm_resolution import IdentifierSource
-from academic_benchmark.core.execution_gateway import execute_preflighted
+from academic_benchmark.core.execution_gateway import (
+    execute_preflighted,
+    serialize_preflight_decision as _decision_metadata,
+)
 from academic_benchmark.core.preflight import (
     RuntimeBackendAvailability,
     probe_runtime_backends,
@@ -409,19 +412,6 @@ def _execute_preflighted_run(
     )
     return result, decision, (time.perf_counter() - started) * 1000.0
 
-
-def _decision_metadata(decision: Any) -> Dict[str, Any]:
-    return {
-        "backend_policy": decision.backend_policy.value,
-        "backend_profile": {
-            "objective": decision.selected_backend.objective.value,
-            "polish": decision.selected_backend.polish.value,
-        },
-        "backend_fallback_used": decision.fallback_reason is not None,
-        "backend_fallback_reason": decision.fallback_reason,
-        "executor_registry_id": decision.executor_registry_id,
-        "capability_evidence_ids": list(decision.evidence_ids),
-    }
 
 
 def _registered_algorithm_ids() -> frozenset[str]:

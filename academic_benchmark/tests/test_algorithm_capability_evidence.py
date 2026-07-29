@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import ast
+from pathlib import Path
+import subprocess
+import sys
 from dataclasses import dataclass
 from typing import Any
 
@@ -19,6 +23,7 @@ from uniride_core.algorithms.capabilities import (
     LifecycleStatus,
     ProblemContract,
     get_algorithm_capability,
+    list_algorithm_capabilities,
 )
 
 
@@ -288,3 +293,56 @@ def test_core_three_opt_fixed_tsp_and_atsp_evidence() -> None:
     _assert_fixed_local_claims_published(
         "Core-ThreeOpt-TSP", "test_core_three_opt_fixed_tsp_and_atsp_evidence"
     )
+
+
+def _evidence_node_parts(evidence_id: str) -> tuple[Path, str]:
+    relative_path, separator, function_name = evidence_id.partition("::")
+    assert separator == "::", f"evidence ID must name one pytest node: {evidence_id}"
+    assert function_name.startswith("test_") and "[" not in function_name, (
+        f"evidence ID must name a concrete test function: {evidence_id}"
+    )
+    root = Path(__file__).resolve().parents[2]
+    path = root / relative_path
+    assert path.is_file(), f"evidence file is missing: {relative_path}"
+    return path, function_name
+
+
+def test_published_claim_evidence_ids_are_exact_passing_pytest_nodes(tmp_path) -> None:
+    """Evidence is a real, unskipped pytest function, never a helper or substring."""
+    evidence_ids = {
+        evidence_id
+        for capability in list_algorithm_capabilities()
+        if capability.lifecycle is LifecycleStatus.VERIFIED
+        for claim in capability.claims
+        for evidence_id in claim.evidence_ids
+    }
+    assert evidence_ids
+
+    root = Path(__file__).resolve().parents[2]
+    for index, evidence_id in enumerate(sorted(evidence_ids)):
+        path, function_name = _evidence_node_parts(evidence_id)
+        functions = {
+            node.name
+            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+        assert function_name in functions, (
+            f"evidence ID must match a named test function exactly: {evidence_id}"
+        )
+
+        completed = subprocess.run(
+            [
+                sys.executable, "-m", "pytest", evidence_id, "-q",
+                "-p", "no:cacheprovider", "--tb=short",
+                "--basetemp", str(tmp_path / f"evidence-{index}"),
+            ],
+            cwd=root,
+            text=True,
+            capture_output=True,
+            timeout=30,
+            check=False,
+        )
+        assert completed.returncode == 0, completed.stdout + completed.stderr
+        output = completed.stdout.lower() + completed.stderr.lower()
+        assert " skipped" not in output and "skipped " not in output, output
+        assert " passed" in output, output

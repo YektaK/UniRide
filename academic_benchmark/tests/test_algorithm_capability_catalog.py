@@ -20,6 +20,14 @@ from uniride_core.algorithms.capabilities import (
 )
 
 
+def _academic_registry_ids() -> frozenset[str]:
+    """Return academic executor keys after canonical setup registration."""
+    from academic_benchmark.core import registry_setup  # noqa: F401
+    from academic_benchmark.engine_core import AlgorithmRegistry
+
+    return frozenset(AlgorithmRegistry.list_algorithms())
+
+
 def valid_claim(**overrides):
     values = {
         "problem": ProblemContract.TSP,
@@ -253,3 +261,57 @@ def test_canonical_local_search_native_claims_are_evidence_gated(
             "academic_benchmark/tests/test_native_termination_protocol.py::"
             + evidence_function,
         )
+
+
+def test_verified_capabilities_have_exact_canonical_academic_executors():
+    """Selectable catalog identities must remain direct academic registry keys."""
+    from academic_benchmark.engine_core import AlgorithmRegistry
+
+    registry_ids = _academic_registry_ids()
+    verified_ids = {
+        capability.canonical_id
+        for capability in list_algorithm_capabilities()
+        if capability.lifecycle is LifecycleStatus.VERIFIED
+    }
+
+    assert verified_ids == {"Core-TwoOpt-TSP", "Core-ThreeOpt-TSP"}
+    assert verified_ids <= registry_ids
+    for canonical_id in verified_ids:
+        assert callable(AlgorithmRegistry.get_executor(canonical_id))
+
+
+def test_catalog_lifecycle_truth_matches_academic_executor_availability():
+    """C1 candidates are implemented but unselectable; C2 reservations are absent."""
+    registry_ids = _academic_registry_ids()
+    lifecycle_by_id = {
+        capability.canonical_id: capability.lifecycle
+        for capability in list_algorithm_capabilities()
+    }
+
+    assert lifecycle_by_id == {
+        "Core-TwoOpt-TSP": LifecycleStatus.VERIFIED,
+        "Core-ThreeOpt-TSP": LifecycleStatus.VERIFIED,
+        "Core-OrOpt-TSP": LifecycleStatus.CANDIDATE,
+        "Core-GA-TSP": LifecycleStatus.CANDIDATE,
+        "Core-PSO-TSP": LifecycleStatus.CANDIDATE,
+        "Core-GWO-TSP-Pure": LifecycleStatus.CANDIDATE,
+        "Core-HHO-TSP-Pure": LifecycleStatus.CANDIDATE,
+        "Core-GWO-TSP-Memetic-2opt": LifecycleStatus.CANDIDATE,
+        "Core-HHO-TSP-Memetic-2opt": LifecycleStatus.CANDIDATE,
+        "ALNS-TSP": LifecycleStatus.CANDIDATE,
+        "Core-GWO-TSP-Memetic-3opt": LifecycleStatus.PLANNED,
+        "Core-HHO-TSP-Memetic-3opt": LifecycleStatus.PLANNED,
+        "Core-GWO-TSP-Memetic-ALNS": LifecycleStatus.PLANNED,
+        "Core-HHO-TSP-Memetic-ALNS": LifecycleStatus.PLANNED,
+    }
+
+    candidate_ids = {
+        canonical_id
+        for canonical_id, lifecycle in lifecycle_by_id.items()
+        if lifecycle is LifecycleStatus.CANDIDATE
+    }
+    planned_ids = {
+        canonical_id
+        for canonical_id, lifecycle in lifecycle_by_id.items()
+        if lifecycle is LifecycleStatus.PLANNED
+    }

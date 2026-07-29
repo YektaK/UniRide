@@ -413,11 +413,11 @@ git commit -m "feat(academic): enforce preflight across benchmark entrypoints"
 
 **Files:** Modify catalog/evidence/production/profile tests and check this plan’s boxes.
 
-- [ ] **Add drift tests:** every VERIFIED ID is registered; every claim has a real named evidence function; implemented candidates have canonical executors; planned IDs do not.
+- [x] **Add drift tests:** every VERIFIED ID is registered; every claim has a real named evidence function; implemented candidates have canonical executors; planned IDs do not.
 
-- [ ] **Strengthen production isolation:** assert 38 exact keys for both production mappings and use a subprocess to prove importing `optimizer_api.strategies` does not import capabilities.
+- [x] **Strengthen production isolation:** assert 38 exact keys for both production mappings and use a subprocess to prove importing `optimizer_api.strategies` does not import capabilities.
 
-- [ ] **Run focused gate.**
+- [x] **Run focused gate.**
 
 ~~~powershell
 C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe -m pytest academic_benchmark\tests\test_algorithm_capability_catalog.py academic_benchmark\tests\test_algorithm_resolution.py academic_benchmark\tests\test_algorithm_problem_validation.py academic_benchmark\tests\test_algorithm_preflight.py academic_benchmark\tests\test_algorithm_capability_evidence.py academic_benchmark\tests\test_algorithm_execution_gateway.py academic_benchmark\tests\test_algorithm_preflight_boundaries.py academic_benchmark\tests\test_smart_benchmark_preflight.py academic_benchmark\tests\test_manifest_contracts.py academic_benchmark\tests\test_bildiri_study_profile.py academic_benchmark\tests\test_production_registry_snapshot.py -q -p no:cacheprovider --basetemp C:\tmp\pytest-c1-focused --tb=short
@@ -425,7 +425,7 @@ C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\py
 
 No promoted evidence case may skip.
 
-- [ ] **Run Package A/B/JIT regression.**
+- [x] **Run Package A/B/JIT regression.**
 
 ~~~powershell
 C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe -m pytest academic_benchmark\tests\test_bildiri_solver_parity.py academic_benchmark\tests\test_numba_jit_parity.py academic_benchmark\tests\test_solver_backend_reporting.py academic_benchmark\tests\test_fair_comparison_protocol.py academic_benchmark\tests\test_fair_comparison_scientific_integrity.py academic_benchmark\tests\test_native_termination_protocol.py academic_benchmark\tests\test_manifest_contracts.py academic_benchmark\tests\test_archive_manifest.py academic_benchmark\tests\test_yaem_quarantine_boundary.py -q -p no:cacheprovider --basetemp C:\tmp\pytest-c1-regression --tb=short
@@ -442,6 +442,8 @@ git status --short --branch
 If the full JIT suite exceeds local capacity, report the exact completed focused results and blocker; never claim a pass.
 
 - [ ] **Commit final gate.**
+
+> **Gate C1 status (2026-07-29): PARTIAL.** Drift/isolation tests, the `.venv-jit` focused gate (230 passed), and the Package A/B/JIT regression (248 passed) are complete. The full local suite emitted no output within the 60-second bound and was terminated; it is not a pass. `StudyManifestV1` candidate-lifecycle rejection remains intentionally deferred because it conflicts with the current JIT-promotion recovery path; no Bildiri-specific exception was added and this gate is not closed.
 
 ~~~powershell
 git add academic_benchmark\tests docs\superpowers\plans\2026-07-28-academic-capability-catalog-preflight.md

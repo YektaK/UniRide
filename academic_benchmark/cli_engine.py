@@ -59,10 +59,11 @@ from academic_benchmark.core.algorithm_resolution import (
     RESOLVER_GOVERNED_IDENTIFIERS,
     resolve_algorithm_id,
 )
+from academic_benchmark.core.algorithm_errors import AlgorithmSelectionError, CandidateAlgorithmError, PlannedAlgorithmError
 from academic_benchmark.core.execution_gateway import execute_preflighted
 from academic_benchmark.core.preflight import PreflightRequest, probe_runtime_backends, preflight_run
 from academic_benchmark.engine_core import GovernedExecutionRequest
-from uniride_core.algorithms.capabilities import BackendPolicy, CAPABILITY_CATALOG, ExecutionProtocol
+from uniride_core.algorithms.capabilities import BackendPolicy, CAPABILITY_CATALOG, ExecutionProtocol, LifecycleStatus
 
 LEGACY_ALGORITHM_MIGRATIONS = {
     "B-GA": "Core-GA-TSP",
@@ -307,8 +308,65 @@ def _cli_governed_request(algorithm_id: str, execution_protocol: Optional[str], 
     return GovernedExecutionRequest(resolution.requested_id, resolution.canonical_id, protocol, evaluation_budget, _CLI_BACKEND_POLICIES[backend_policy])
 
 
+def _validate_governed_lifecycle(request: GovernedExecutionRequest) -> None:
+    capability = CAPABILITY_CATALOG[request.canonical_algorithm_id]
+    if capability.lifecycle is LifecycleStatus.CANDIDATE:
+        raise CandidateAlgorithmError(request.canonical_algorithm_id)
+    if capability.lifecycle is LifecycleStatus.PLANNED:
+        raise PlannedAlgorithmError(request.canonical_algorithm_id)
+
+
 def _with_governed_requests(specs: Sequence[StrategySpec], requests: Dict[str, GovernedExecutionRequest]) -> List[StrategySpec]:
     return [replace(spec, governed_request=requests.get(spec.name)) for spec in specs]
+
+
+def _govern_selected_specs(
+    specs: Sequence[StrategySpec],
+    execution_protocol: Optional[str],
+    evaluation_budget: Optional[int],
+    backend_policy: Optional[str],
+) -> List[StrategySpec]:
+    """Attach explicit governed requests before a config can create work."""
+    governed_specs: List[StrategySpec] = []
+    for spec in specs:
+        request = _cli_governed_request(
+            spec.name,
+            execution_protocol,
+            evaluation_budget,
+            backend_policy,
+        )
+        if request is not None:
+            _validate_governed_lifecycle(request)
+        governed_specs.append(replace(spec, governed_request=request))
+    return governed_specs
+
+
+def _select_cli_specs(
+    specs: Sequence[StrategySpec],
+    algorithm_ids: Sequence[str],
+    execution_protocol: Optional[str],
+    evaluation_budget: Optional[int],
+    backend_policy: Optional[str],
+) -> List[StrategySpec]:
+    """Resolve CLI aliases to canonical specs and preserve request provenance."""
+    specs_by_name = {spec.name: spec for spec in specs}
+    selected: List[StrategySpec] = []
+    for requested_id in algorithm_ids:
+        requested_id = requested_id.strip()
+        _validate_algorithm_migration(requested_id)
+        request = _cli_governed_request(
+            requested_id,
+            execution_protocol,
+            evaluation_budget,
+            backend_policy,
+        )
+        if request is not None:
+            _validate_governed_lifecycle(request)
+        canonical_id = request.canonical_algorithm_id if request else requested_id
+        spec = specs_by_name.get(canonical_id)
+        if spec is not None:
+            selected.append(replace(spec, governed_request=request))
+    return selected
 
 
 def _make_param_combo_task(problem: DOEProblem, spec: StrategySpec, params: Dict[str, Any], combo_idx: int, n_runs: int) -> Tuple[Any, ...]:
@@ -866,9 +924,11 @@ def _run_pool(tasks: List[Tuple], workers: int, on_result=None) -> List[Dict[str
                 results.append(result)
                 if on_result:
                     on_result(i, result, len(tasks))
-            except Exception as e:
+            except Exception as exc:
                 t_info = tasks[i]
-                print(f"\n[Worker Hata] Problem: {t_info[0]['name']} - Algoritma: {t_info[1]} | Hata: {str(e)}")
+                if isinstance(exc, AlgorithmSelectionError) and len(t_info) > 6 and t_info[6] is not None:
+                    raise
+                print(f"\n[Worker Hata] Problem: {t_info[0]['name']} - Algoritma: {t_info[1]} | Hata: {str(exc)}")
                 results.append({
                     "problem": t_info[0]['name'],
                     "strategy": t_info[1],
@@ -1188,19 +1248,27 @@ def _execute_benchmark_tasks(tasks, workers, metadata, stage_label):
     if not tasks:
         return []
         
+    governed_batch = any(len(task) > 6 and task[6] is not None for task in tasks)
     csv_path = os.path.join(RESULTS_DIR, "benchmark_progress.csv")
     run_id = f"cli-{stage_label.lower()}-{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    try:
-        from academic_benchmark.tsplib_manager import save_benchmark_run
-        save_benchmark_run(
-            run_id,
-            source="academic_cli",
-            status="running",
-            settings={"stage": stage_label, "tasks": len(tasks), "workers": workers},
-            db_path=TSPLIB_DB,
-        )
-    except Exception:
-        pass
+
+    def persist_run(status: str, result_count: Optional[int] = None) -> None:
+        try:
+            from academic_benchmark.tsplib_manager import save_benchmark_run
+            kwargs = {
+                "source": "academic_cli",
+                "status": status,
+                "settings": {"stage": stage_label, "tasks": len(tasks), "workers": workers},
+                "db_path": TSPLIB_DB,
+            }
+            if result_count is not None:
+                kwargs["metadata"] = {"results": result_count}
+            save_benchmark_run(run_id, **kwargs)
+        except Exception:
+            pass
+
+    if not governed_batch:
+        persist_run("running")
     fields = [
         "timestamp", "problem", "strategy", "avg_length", "avg_gap", "avg_time_ms", "n_runs",
         "result_type", "params_json", "gap_type", "problem_type", "matrix_kind", "objective_cost",
@@ -1279,20 +1347,13 @@ def _execute_benchmark_tasks(tasks, workers, metadata, stage_label):
                          f"[{stage_label} ETA: {remain:<9}]")
         sys.stdout.flush()
 
-    _run_pool(tasks, workers, on_result=on_result)
+    completed = _run_pool(tasks, workers, on_result=None if governed_batch else on_result)
+    if governed_batch:
+        persist_run("running")
+        for index, result in enumerate(completed):
+            on_result(index, result, len(completed))
     print()
-    try:
-        from academic_benchmark.tsplib_manager import save_benchmark_run
-        save_benchmark_run(
-            run_id,
-            source="academic_cli",
-            status="completed",
-            settings={"stage": stage_label, "tasks": len(tasks), "workers": workers},
-            metadata={"results": len(rows)},
-            db_path=TSPLIB_DB,
-        )
-    except Exception:
-        pass
+    persist_run("completed", len(rows))
     
     metadata["results"] = {f"{row['problem']}::{row['strategy']}": row for row in rows}
     save_metadata(METADATA_PATH, metadata)
@@ -1473,6 +1534,13 @@ def _run_numba_trial_task(task: Dict[str, Any]) -> Dict[str, Any]:
         else:
             value = float(avg_gap)
         error_msg = ""
+    except AlgorithmSelectionError:
+        if task.get("governed_request") is not None:
+            raise
+        value = float("inf")
+        avg_time_ms = 0
+        import traceback
+        error_msg = traceback.format_exc()
     except Exception as e:
         value = float("inf")
         avg_time_ms = 0
@@ -2122,6 +2190,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if not cfg:
             return 1
         selected_problems, selected_specs, settings = _resolve_tuning_config(cfg, all_problems, all_specs)
+        try:
+            selected_specs = _govern_selected_specs(
+                selected_specs,
+                args.execution_protocol,
+                args.evaluation_budget,
+                args.backend_policy,
+            )
+        except ValueError as exc:
+            print(f"[CLI ERROR] {exc}")
+            return 2
         mode = EngineMode.TUNING
         runs = settings.get("runs", args.runs or 3)
         workers = settings.get("workers", min(cpu_count(), 6))
@@ -2142,7 +2220,17 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         
         selected_problems = _select_problems_from_args(args, all_problems)
             
-        selected_specs = _with_governed_requests([s for s in all_specs if s.name in algos], governed_requests)
+        try:
+            selected_specs = _select_cli_specs(
+                all_specs,
+                algos,
+                args.execution_protocol,
+                args.evaluation_budget,
+                args.backend_policy,
+            )
+        except ValueError as exc:
+            print(f"[CLI ERROR] {exc}")
+            return 2
 
         
         print(f"=== NON-INTERACTIVE NUMBA BENCHMARK ({mode.value}) ===")
@@ -2231,6 +2319,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 input("Devam etmek icin Enter'a basin...")
                 continue
             selected_problems, selected_specs, settings = _resolve_tuning_config(cfg, all_problems, all_specs)
+            try:
+                selected_specs = _govern_selected_specs(
+                    selected_specs,
+                    args.execution_protocol,
+                    args.evaluation_budget,
+                    args.backend_policy,
+                )
+            except ValueError as exc:
+                print(f"[CLI ERROR] {exc}")
+                return 2
             runs = settings.get("runs", 3)
             workers = settings.get("workers", min(cpu_count(), 6))
             print(f"\n[CONFIG] Config yuklendi: {configs[int(raw) - 1]}")
@@ -2267,7 +2365,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             input("Devam etmek icin Enter'a basin...")
             continue
 
-        selected_names = multi_select(selectable_algos, "ALGORITMA SECIMI")
+        selected_names = multi_select(
+            [name for name in selectable_algos if not _is_catalog_governed_identifier(name)],
+            "ALGORITMA SECIMI",
+        )
         if not selected_names:
             continue
 

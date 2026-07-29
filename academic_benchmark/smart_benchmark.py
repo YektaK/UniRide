@@ -63,9 +63,10 @@ from academic_benchmark.cli_engine import (
 
 # SOTA engine functions — re-implemented in sota_engine.py
 # Sources SOTA solvers from uniride_core.algorithms.sota_tsp/
-from academic_benchmark.core.algorithm_resolution import IdentifierSource, resolve_algorithm_id
+from academic_benchmark.core.algorithm_resolution import IdentifierSource, RESOLVER_GOVERNED_IDENTIFIERS, resolve_algorithm_id
+from academic_benchmark.core.algorithm_errors import AlgorithmSelectionError
 from academic_benchmark.core.execution_gateway import execute_preflighted
-from academic_benchmark.core.preflight import PreflightRequest, preflight_run, probe_runtime_backends
+from academic_benchmark.core.preflight import PreflightRequest, RuntimeBackendAvailability, preflight_run, probe_runtime_backends
 from uniride_core.algorithms.capabilities import BackendPolicy, CAPABILITY_CATALOG, ExecutionProtocol, LifecycleStatus
 from academic_benchmark.sota_engine import (
     run_engine_tuning as _sota_tune,
@@ -430,30 +431,97 @@ class TuningOrchestrator:
 # ── Unified Benchmark Runner ─────────────────────────────────────────────────
 
 def _governed_request_for_smart(algorithm_id: str) -> GovernedExecutionRequest | None:
-    """Build the explicit default caller policy for canonical C1 Smart runs."""
-    if algorithm_id not in CAPABILITY_CATALOG:
+    """Canonicalize every resolver-governed Smart selection before execution."""
+    if algorithm_id not in RESOLVER_GOVERNED_IDENTIFIERS:
         return None
-    resolution = resolve_algorithm_id(algorithm_id, IdentifierSource.INTERNAL)
-    return GovernedExecutionRequest(resolution.requested_id, resolution.canonical_id, ExecutionProtocol.FIXED_BUDGET, 1000, BackendPolicy.PYTHON_ONLY)
+    resolution = resolve_algorithm_id(algorithm_id, IdentifierSource.CLI)
+    return GovernedExecutionRequest(
+        resolution.requested_id,
+        resolution.canonical_id,
+        ExecutionProtocol.FIXED_BUDGET,
+        1000,
+        BackendPolicy.PYTHON_ONLY,
+    )
 
 
 def _selectable_algorithm_ids() -> List[str]:
-    """Return registry IDs excluding non-selectable C1 candidates and plans."""
-    return [algorithm_id for algorithm_id in AlgorithmRegistry.list_algorithms() if algorithm_id not in CAPABILITY_CATALOG or CAPABILITY_CATALOG[algorithm_id].lifecycle is LifecycleStatus.VERIFIED]
+    """Expose only verified canonical C1 IDs and genuinely non-C1 entries."""
+    selectable: List[str] = []
+    for algorithm_id in AlgorithmRegistry.list_algorithms():
+        if algorithm_id not in RESOLVER_GOVERNED_IDENTIFIERS:
+            selectable.append(algorithm_id)
+        elif (
+            algorithm_id in CAPABILITY_CATALOG
+            and CAPABILITY_CATALOG[algorithm_id].lifecycle is LifecycleStatus.VERIFIED
+        ):
+            selectable.append(algorithm_id)
+    return selectable
+
+
+_SELECTION_RUNTIME = RuntimeBackendAvailability(
+    python=True,
+    numba_nopython=True,
+    detail="selection authorization does not probe runtime backends",
+)
+
+
+def _preflight_smart_selections(
+    problems: List[object],
+    requests: List[GovernedExecutionRequest | None],
+) -> tuple[frozenset[str], RuntimeBackendAvailability]:
+    """Authorize selections before setup, then preflight against one registry snapshot."""
+    resolved_requests = []
+    for request in requests:
+        if request is None:
+            continue
+        resolution = resolve_algorithm_id(request.requested_algorithm_id, IdentifierSource.CLI)
+        if resolution.canonical_id != request.canonical_algorithm_id:
+            raise ValueError("governed Smart selection canonical ID does not match request")
+        resolved_requests.append((resolution, request))
+
+    # Lifecycle, problem contract, and protocol failures must occur before a
+    # runtime probe or registry observation.  The temporary canonical ID merely
+    # permits preflight to reach those checks; it is never used for execution.
+    for resolution, request in resolved_requests:
+        for problem in problems:
+            preflight_run(
+                PreflightRequest(
+                    resolution,
+                    problem,
+                    request.protocol,
+                    request.backend_policy,
+                    request.evaluation_budget,
+                    frozenset({resolution.canonical_id}),
+                    _SELECTION_RUNTIME,
+                )
+            )
+
+    registered_algorithm_ids = frozenset(AlgorithmRegistry.list_algorithms())
+    runtime = probe_runtime_backends()
+    for resolution, request in resolved_requests:
+        for problem in problems:
+            preflight_run(
+                PreflightRequest(
+                    resolution,
+                    problem,
+                    request.protocol,
+                    request.backend_policy,
+                    request.evaluation_budget,
+                    registered_algorithm_ids,
+                    runtime,
+                )
+            )
+    return registered_algorithm_ids, runtime
 
 
 def _run_governed_task(task: BenchmarkTask, problem: object) -> RunResult:
     request = task.governed_request
     if request is None:
         raise ValueError("governed task requires GovernedExecutionRequest")
-    runtime = probe_runtime_backends()
-    resolution = resolve_algorithm_id(request.requested_algorithm_id, IdentifierSource.INTERNAL)
-    if resolution.canonical_id != request.canonical_algorithm_id:
-        raise ValueError("governed task canonical ID does not match its requested ID")
-    preflight_run(PreflightRequest(resolution, problem, request.protocol, request.backend_policy, request.evaluation_budget, frozenset(CAPABILITY_CATALOG), runtime))
+    registered_algorithm_ids, runtime = _preflight_smart_selections([problem], [request])
     return execute_preflighted(
         requested_algorithm_id=request.requested_algorithm_id,
-        identifier_source=IdentifierSource.INTERNAL,
+        identifier_source=IdentifierSource.CLI,
         problem=problem,
         params=task.params,
         seed=task.seed,
@@ -461,11 +529,10 @@ def _run_governed_task(task: BenchmarkTask, problem: object) -> RunResult:
         protocol=request.protocol,
         backend_policy=request.backend_policy,
         evaluation_budget=request.evaluation_budget,
-        registered_algorithm_ids=frozenset(AlgorithmRegistry.list_algorithms()),
+        registered_algorithm_ids=registered_algorithm_ids,
         runtime_backends=runtime,
         registry_getter=AlgorithmRegistry.get_executor,
     )[0]
-
 
 def _run_single_task(args):
     """Worker task for ProcessPoolExecutor."""
@@ -482,8 +549,14 @@ def run_unified_benchmark(problems, algorithms, param_source, n_runs, workers, m
 
     param_source: 'db', 'manual', or 'default'
     """
+    selections = []
     for algorithm_id in algorithms:
         _validate_algorithm_migration(algorithm_id)
+        request = _governed_request_for_smart(algorithm_id)
+        selections.append((request.canonical_algorithm_id if request else algorithm_id, request))
+    _preflight_smart_selections(problems, [request for _, request in selections])
+    algorithms = [algorithm_id for algorithm_id, _ in selections]
+    governed_requests = {algorithm_id: request for algorithm_id, request in selections if request is not None}
 
     global _current_results, _current_metadata, _shutdown_requested
 
@@ -514,7 +587,7 @@ def run_unified_benchmark(problems, algorithms, param_source, n_runs, workers, m
             for run_idx in range(1, n_runs + 1):
                 seed = 42 + run_idx
                 params = algo_params.get(f"{p.name}::{algo}", {}).copy()
-                tasks.append(BenchmarkTask(problem_name=p.name, algorithm=algo, run_idx=run_idx, seed=seed, params=params, governed_request=_governed_request_for_smart(algo)))
+                tasks.append(BenchmarkTask(problem_name=p.name, algorithm=algo, run_idx=run_idx, seed=seed, params=params, governed_request=governed_requests.get(algo)))
 
     # Warmup
     run_warmup(algorithms, problems)

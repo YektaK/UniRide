@@ -9,8 +9,9 @@ from types import SimpleNamespace
 import pytest
 
 from academic_benchmark import cli_engine, smart_benchmark
-from academic_benchmark.core.algorithm_errors import CandidateAlgorithmError, ResultContractViolation
+from academic_benchmark.core.algorithm_errors import (BackendUnavailableError, CandidateAlgorithmError, ExecutorUnavailableError, PlannedAlgorithmError, ResultContractViolation, UnsupportedProtocolError)
 from academic_benchmark.engine_core import BenchmarkTask, GovernedExecutionRequest, RunResult
+from academic_benchmark.core.preflight import RuntimeBackendAvailability
 from uniride_core.algorithms.capabilities import BackendPolicy, ExecutionProtocol
 
 
@@ -189,3 +190,166 @@ def test_cli_task_builder_preserves_legacy_tuple_and_adds_governed_request() -> 
     assert len(cli_engine._make_param_combo_task(_Problem(), legacy, {}, 1, 1)) == 6
     task = cli_engine._make_param_combo_task(_Problem(), governed, {}, 1, 1)
     assert task[6] == governed.governed_request
+
+def test_smart_selection_excludes_every_raw_governed_alias_and_preserves_non_c1(monkeypatch) -> None:
+    class Registry:
+        @staticmethod
+        def list_algorithms():
+            return [
+                "Core-TwoOpt-TSP", "Core-ThreeOpt-TSP", "Numba-2-opt",
+                "Numba-3-opt-bounded", "GWO", "HHO", "SOTA-ALNS-TSP",
+                "Core-GWO-TSP-Pure", "Core-GWO-TSP-Memetic-3opt",
+                "Core-Greedy-Routing",
+            ]
+
+    monkeypatch.setattr(smart_benchmark, "AlgorithmRegistry", Registry)
+
+    assert smart_benchmark._selectable_algorithm_ids() == [
+        "Core-TwoOpt-TSP", "Core-ThreeOpt-TSP", "Core-Greedy-Routing"
+    ]
+
+
+@pytest.mark.parametrize("algorithm_id", ["Core-GWO-TSP-Pure", "GWO"])
+def test_smart_public_runner_rejects_governed_candidate_before_setup(monkeypatch, algorithm_id) -> None:
+    def explode(*_args, **_kwargs):
+        raise AssertionError("governed candidate reached Smart setup")
+
+    monkeypatch.setattr(smart_benchmark, "_db_get_best", explode)
+    monkeypatch.setattr(smart_benchmark, "_dm_from_cache", explode)
+    monkeypatch.setattr(smart_benchmark, "run_warmup", explode)
+    monkeypatch.setattr(smart_benchmark, "AlgorithmRegistry", type("Registry", (), {"list_algorithms": staticmethod(explode)}))
+
+    with pytest.raises(CandidateAlgorithmError):
+        smart_benchmark.run_unified_benchmark([_Problem()], [algorithm_id], "db", 1, 1, {"results": {}})
+
+
+def test_optuna_governed_contract_failure_is_not_converted_to_infinite_trial(monkeypatch) -> None:
+    def fail(*_args, **_kwargs):
+        raise ResultContractViolation("postflight mismatch")
+
+    monkeypatch.setattr(cli_engine, "_evaluate_param_combo", fail)
+    with pytest.raises(ResultContractViolation):
+        cli_engine._run_numba_trial_task({
+            "problem_dict": {}, "spec_name": "Core-TwoOpt-TSP", "spec_payload": "Core-TwoOpt-TSP",
+            "spec_defaults": {}, "algorithm_type": "local_search", "params": {}, "n_runs": 1,
+            "trial_number": 1, "study_name": "governed", "governed_request": _request(),
+        })
+
+def test_cli_pool_reraises_governed_selection_failure(monkeypatch) -> None:
+    class Future:
+        def result(self):
+            raise ResultContractViolation("contract failure")
+
+    class Executor:
+        def __init__(self, **_kwargs):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *_args):
+            return False
+        def submit(self, *_args):
+            return Future()
+
+    monkeypatch.setattr(cli_engine.concurrent.futures, "ProcessPoolExecutor", Executor)
+    monkeypatch.setattr(cli_engine.concurrent.futures, "as_completed", lambda futures: list(futures))
+    task = (cli_engine._make_problem_dict(_Problem()), "Core-TwoOpt-TSP", "Core-TwoOpt-TSP", {}, 0, 1, _request())
+
+    with pytest.raises(ResultContractViolation):
+        cli_engine._run_pool([task], 2)
+
+
+def test_cli_batch_aborts_before_metadata_persistence_on_governed_failure(monkeypatch) -> None:
+    def fail(*_args, **_kwargs):
+        raise ResultContractViolation("contract failure")
+
+    monkeypatch.setattr(cli_engine, "_run_pool", fail)
+    monkeypatch.setattr(cli_engine, "save_metadata", lambda *_args, **_kwargs: pytest.fail("governed failure persisted metadata"))
+    task = (cli_engine._make_problem_dict(_Problem()), "Core-TwoOpt-TSP", "Core-TwoOpt-TSP", {}, 0, 1, _request())
+
+    with pytest.raises(ResultContractViolation):
+        cli_engine._execute_benchmark_tasks([task], 1, {}, "TEST")
+
+def test_cli_alias_selection_uses_canonical_spec_and_governed_request() -> None:
+    spec = cli_engine.StrategySpec("Core-TwoOpt-TSP", "Core-TwoOpt-TSP", {}, "local_search")
+
+    selected = cli_engine._select_cli_specs(
+        [spec], ["Numba-2-opt"], "fixed_evaluation_budget", 10, "python_only"
+    )
+
+    assert selected[0].name == "Core-TwoOpt-TSP"
+    assert selected[0].governed_request is not None
+    assert selected[0].governed_request.requested_algorithm_id == "Numba-2-opt"
+
+
+def test_cli_candidate_alias_fails_instead_of_becoming_zero_tasks() -> None:
+    with pytest.raises(CandidateAlgorithmError):
+        cli_engine._select_cli_specs(
+            [], ["GWO"], "fixed_evaluation_budget", 10, "python_only"
+        )
+
+
+def test_cli_config_governed_spec_requires_explicit_execution_request() -> None:
+    spec = cli_engine.StrategySpec("Core-TwoOpt-TSP", "Core-TwoOpt-TSP", {}, "local_search")
+
+    with pytest.raises(ValueError, match="execution-protocol"):
+        cli_engine._govern_selected_specs([spec], None, None, None)
+
+@pytest.mark.parametrize(
+    ("algorithm_id", "error_type"),
+    [
+        ("GWO", CandidateAlgorithmError),
+        ("Core-GWO-TSP-Memetic-3opt", PlannedAlgorithmError),
+    ],
+)
+def test_smart_selection_rejects_lifecycle_before_runtime_or_registry(monkeypatch, algorithm_id, error_type) -> None:
+    def explode(*_args, **_kwargs):
+        raise AssertionError("selection reached runtime or registry setup")
+
+    monkeypatch.setattr(smart_benchmark, "probe_runtime_backends", explode)
+    monkeypatch.setattr(smart_benchmark, "AlgorithmRegistry", type("Registry", (), {"list_algorithms": staticmethod(explode)}))
+
+    with pytest.raises(error_type):
+        smart_benchmark.run_unified_benchmark([_Problem()], [algorithm_id], "default", 1, 1, {"results": {}})
+
+
+def test_smart_protocol_preflight_rejects_before_runtime_or_registry(monkeypatch) -> None:
+    def explode(*_args, **_kwargs):
+        raise AssertionError("protocol failure reached runtime or registry setup")
+
+    monkeypatch.setattr(smart_benchmark, "probe_runtime_backends", explode)
+    monkeypatch.setattr(smart_benchmark, "AlgorithmRegistry", type("Registry", (), {"list_algorithms": staticmethod(explode)}))
+
+    with pytest.raises(UnsupportedProtocolError):
+        smart_benchmark._preflight_smart_selections(
+            [_Problem()],
+            [_request(evaluation_budget=None)],
+        )
+
+
+def test_smart_preflight_uses_registry_snapshot_for_executor_and_backend(monkeypatch) -> None:
+    monkeypatch.setattr(
+        smart_benchmark,
+        "probe_runtime_backends",
+        lambda: RuntimeBackendAvailability(True, False, "test runtime"),
+    )
+    monkeypatch.setattr(
+        smart_benchmark,
+        "AlgorithmRegistry",
+        type("Registry", (), {"list_algorithms": staticmethod(lambda: [])}),
+    )
+
+    with pytest.raises(ExecutorUnavailableError):
+        smart_benchmark._preflight_smart_selections([_Problem()], [_request()])
+
+    monkeypatch.setattr(
+        smart_benchmark,
+        "AlgorithmRegistry",
+        type("Registry", (), {"list_algorithms": staticmethod(lambda: ["Core-TwoOpt-TSP"])}),
+    )
+    monkeypatch.setattr(
+        smart_benchmark,
+        "probe_runtime_backends",
+        lambda: RuntimeBackendAvailability(False, False, "test runtime"),
+    )
+    with pytest.raises(BackendUnavailableError):
+        smart_benchmark._preflight_smart_selections([_Problem()], [_request()])

@@ -93,6 +93,6 @@ Gate C1 is complete for its approved canonical academic TSP/ATSP scope.
   python -m pytest uniride_core/tests/test_ortools_cvrp_engine.py uniride_core/tests/test_holistic_matrix_engine.py -q -p no:cacheprovider --basetemp C:\tmp\pytest-c1-ortools-system --tb=short
   Result: 12 passed, 3 upstream SWIG deprecation warnings in 10.36s using the system interpreter with OR-Tools 9.15.6755.
 - pyproject.toml keeps OR-Tools in the excluded solvers extra rather than the .venv-jit test extra. This is a reproducibility follow-up outside C1, not a hidden test pass or a source defect.
-- git diff --check and final branch hygiene are required immediately before the closure commit.
+- Final hygiene passed after the closure commit: git diff --check exited 0 with no output, and git status --short --branch reported only the clean branch header.
 
-This closure follows the approved design requirement to separate optional-solver environment failures from source defects and its acceptance criterion that proportionate local suites pass with external environment blockers identified precisely.
+This closure is consistent with C1's academic-only scope and the approved acceptance criterion that proportionate local suites pass with external environment blockers identified precisely.

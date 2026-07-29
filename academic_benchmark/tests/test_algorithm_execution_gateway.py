@@ -98,7 +98,7 @@ class _ExplodingGetter:
     "requested_id,problem,error",
     [
         ("unknown", PROBLEM, UnknownAlgorithmError),
-        ("Core-GWO-TSP-Pure", PROBLEM, CandidateAlgorithmError),
+        ("Core-OrOpt-TSP", PROBLEM, CandidateAlgorithmError),
         (CANONICAL_ID, _Problem(problem_type="cvrp"), UnsupportedProblemContractError),
     ],
 )

@@ -39,6 +39,10 @@ APPROVED_ALGORITHMS = frozenset({
     "Core-TwoOpt-TSP",
     "Core-ThreeOpt-TSP",
 })
+_V1_ALGORITHM_ALIASES = {
+    "Numba-2-opt": "Core-TwoOpt-TSP",
+    "Numba-3-opt-bounded": "Core-ThreeOpt-TSP",
+}
 _GWO_HHO = frozenset({"Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"})
 _CONFIG_KEYS_V1 = frozenset({
     "protocol_version", "problems", "algorithms", "runs", "evaluation_budget",
@@ -166,6 +170,16 @@ def load_fair_pilot_config(path: str | Path) -> FairPilotConfig:
             len(set(problems)) != len(problems)):
         raise FairPilotError("problems must be a non-empty list of unique names")
     algorithms = data["algorithms"]
+    if protocol_version == V1_PROTOCOL and isinstance(algorithms, dict):
+        canonical_algorithms: Dict[str, Any] = {}
+        for requested_id, block in algorithms.items():
+            canonical_id = _V1_ALGORITHM_ALIASES.get(requested_id, requested_id)
+            if canonical_id in canonical_algorithms:
+                raise FairPilotError(
+                    f"duplicate canonical algorithm after v1 migration: {canonical_id}"
+                )
+            canonical_algorithms[canonical_id] = block
+        algorithms = canonical_algorithms
     if not isinstance(algorithms, dict) or set(algorithms) != APPROVED_ALGORITHMS:
         raise FairPilotError(
             "algorithms must contain exactly the approved pure variants: "

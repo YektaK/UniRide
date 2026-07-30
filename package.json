@@ -8,7 +8,7 @@
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint src/ --ext .ts,.tsx",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "typecheck": "tsc --noEmit"
@@ -83,6 +83,8 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@vitejs/plugin-react": "^5.1.4",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.2.12",
     "genkit-cli": "^1.8.0",
     "jsdom": "^28.1.0",
     "postcss": "^8",

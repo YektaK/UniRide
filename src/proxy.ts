@@ -31,9 +31,12 @@ export async function proxy(request: NextRequest) {
     // Forward user info via headers for downstream use
     const headers = new Headers(request.headers);
     headers.set('x-user-id', user.id);
+    if (process.env.INTERNAL_API_KEY) {
+        headers.set('x-internal-api-key', process.env.INTERNAL_API_KEY);
+    }
     return NextResponse.next({ request: { headers } });
 }
 
 export const config = {
-    matcher: ['/api/admin/:path*'],
+    matcher: ['/api/admin/:path*', '/api/benchmark/:path*'],
 };

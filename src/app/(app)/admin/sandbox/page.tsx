@@ -2,13 +2,13 @@
 
 /**
  * Sandbox Mode Page - IE Fine-tune Interface
- * Endüstri Mühendisliği Sandbox Modu
+ * EndÃ¼stri MÃ¼hendisliÄŸi Sandbox Modu
  * 
- * Özellikler:
- * - Tanımlı araçların seçimi ve konfigürasyonu
- * - Özel araç kapasiteleri ile "what-if" senaryoları
+ * Ã–zellikler:
+ * - TanÄ±mlÄ± araÃ§larÄ±n seÃ§imi ve konfigÃ¼rasyonu
+ * - Ã–zel araÃ§ kapasiteleri ile "what-if" senaryolarÄ±
  * - IE analizi ve optimizasyon
- * - Senaryo kaydetme/yükleme
+ * - Senaryo kaydetme/yÃ¼kleme
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -58,6 +58,11 @@ const VEHICLE_TEMPLATES = {
   van: { swCapacity: 2, soCapacity: 3, cooldownMinutes: 10 },
 };
 
+// Monotonic module-scope counter for sandbox vehicle ids â€” avoids
+// Date.now()/Math.random() in component code (react-hooks/purity)
+let sandboxVehicleSeq = 0;
+const nextSandboxVehicleId = () => `sb-${++sandboxVehicleSeq}`;
+
 interface SandboxVehicle extends VehicleConfig {
   id: string;
   name: string;
@@ -99,11 +104,6 @@ export default function SandboxPage() {
   const [activeTab, setActiveTab] = useState("configure");
 
   // Load initial data
-  useEffect(() => {
-    loadData();
-    loadSavedScenarios();
-  }, []);
-
   const loadData = async () => {
     setIsLoading(true);
     try {
@@ -157,6 +157,12 @@ export default function SandboxPage() {
     }
   };
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount initial data load; loading flag flips synchronously. Upstream fix: data-fetching framework.
+    loadData();
+    loadSavedScenarios();
+  }, []);
+
   const saveScenarios = (scenarios: SandboxScenario[]) => {
     localStorage.setItem("uniride_sandbox_scenarios", JSON.stringify(scenarios));
     setSavedScenarios(scenarios);
@@ -165,9 +171,9 @@ export default function SandboxPage() {
   // Add vehicle from existing fleet
   const addExistingVehicle = (vehicle: Vehicle) => {
     const sandboxVehicle: SandboxVehicle = {
-      id: `sb-${Date.now()}`,
+      id: nextSandboxVehicleId(),
       name: vehicle.name,
-      vehicleId: `sb-${Date.now()}`,
+      vehicleId: nextSandboxVehicleId(),
       swCapacity: vehicle.wheelchairCapacity,
       soCapacity: vehicle.seatingCapacity,
       cooldownMinutes: vehicle.cooldownMinutes,
@@ -181,10 +187,10 @@ export default function SandboxPage() {
   const addCustomVehicle = (type: "minibus" | "bus" | "van") => {
     const template = VEHICLE_TEMPLATES[type];
     const sandboxVehicle: SandboxVehicle = {
-      id: `sb-${Date.now()}`,
+      id: nextSandboxVehicleId(),
       name: tc('sidebar.settings'),
 
-      vehicleId: `sb-${Date.now()}`,
+      vehicleId: nextSandboxVehicleId(),
       swCapacity: template.swCapacity,
       soCapacity: template.soCapacity,
       cooldownMinutes: template.cooldownMinutes,

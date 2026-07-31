@@ -6,45 +6,36 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
-  rules: {
-    // TypeScript rules
-    "@typescript-eslint/no-explicit-any": "off",
-    "@typescript-eslint/no-unused-vars": "off",
-    "@typescript-eslint/no-non-null-assertion": "off",
-    "@typescript-eslint/ban-ts-comment": "off",
-    "@typescript-eslint/prefer-as-const": "off",
-    "@typescript-eslint/no-unused-disable-directive": "off",
-    
-    // React rules
-    "react-hooks/exhaustive-deps": "off",
-    "react-hooks/purity": "off",
-    "react/no-unescaped-entities": "off",
-    "react/display-name": "off",
-    "react/prop-types": "off",
-    "react-compiler/react-compiler": "off",
-    
-    // Next.js rules
-    "@next/next/no-img-element": "off",
-    "@next/next/no-html-link-for-pages": "off",
-    
-    // General JavaScript rules
-    "prefer-const": "off",
-    "no-unused-vars": "off",
-    "no-console": "off",
-    "no-debugger": "off",
-    "no-empty": "off",
-    "no-irregular-whitespace": "off",
-    "no-case-declarations": "off",
-    "no-fallthrough": "off",
-    "no-mixed-spaces-and-tabs": "off",
-    "no-redeclare": "off",
-    "no-undef": "off",
-    "no-unreachable": "off",
-    "no-useless-escape": "off",
+const eslintConfig = [
+  ...nextCoreWebVitals,
+  ...nextTypescript,
+  {
+    linterOptions: {
+      reportUnusedDisableDirectives: "warn",
+    },
+    rules: {
+      // TypeScript rules
+      "@typescript-eslint/no-explicit-any": "warn",
+
+      // React hooks rules — set-state-in-effect and purity were previously
+      // disabled because their disables were believed to require Flow-style
+      // comments. Standard eslint-disable-next-line works (verified 2026-07-31);
+      // remaining intentional suppressions are marked inline where the pattern
+      // is deliberate (fetch-on-mount, subscription notifications).
+      "react-hooks/set-state-in-effect": "error",
+      "react-hooks/purity": "error",
+
+      // react/no-unescaped-entities flags `'` in JSX — pre-existing pattern
+      "react/no-unescaped-entities": "off",
+
+      // General JavaScript rules
+      "no-fallthrough": "error",
+      "no-unreachable": "error",
+    },
   },
-}, {
-  ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "examples/**", "skills"]
-}];
+  {
+    ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "examples/**", "skills"]
+  }
+];
 
 export default eslintConfig;

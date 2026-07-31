@@ -417,21 +417,14 @@ export default function BenchmarkPage() {
     });
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const selectAllAlgorithms = () => {
-    const keys: string[] = ALGORITHM_OPTIONS_GROUPED.flatMap((g) => g.algorithms.map((a: any) => String(a.key)));
+    const keys: string[] = ALGORITHM_OPTIONS_GROUPED.flatMap((g) => g.algorithms.map((a) => String(a.key)));
     setSelectedAlgorithms(new Set(keys));
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const selectRecommendedAlgorithms = () => {
-    const allAlgos: any[] = [];
-    for (const g of ALGORITHM_OPTIONS_GROUPED) {
-      for (const a of g.algorithms) {
-        allAlgos.push(a);
-      }
-    }
-    const keys: string[] = allAlgos.filter((a) => a.recommended).map((a) => String(a.key));
+    const allAlgos = ALGORITHM_OPTIONS_GROUPED.flatMap((g) => g.algorithms as Array<{key: string; recommended: boolean}>);
+    const keys: string[] = allAlgos.filter((a) => a.recommended).map((a) => a.key);
     setSelectedAlgorithms(new Set(keys));
   };
 

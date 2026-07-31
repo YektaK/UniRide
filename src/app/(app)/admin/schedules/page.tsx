@@ -28,7 +28,6 @@ export default function AdminStudentSchedulesPage() {
   const router = useRouter(); // Initialize router
 
   useEffect(() => {
-    setIsLoading(true);
     const loadStudents = async () => {
       try {
         const allUsers = await dbGetUsers();

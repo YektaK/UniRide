@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run typecheck
+
+      - run: npm test
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      # requirements-lock.txt is the hash-locked runtime baseline (Phase 0.4).
+      # hypothesis is the remaining test-only dependency not covered by the lock.
+      - name: Install locked runtime dependencies
+        run: pip install -r requirements-lock.txt
+
+      - name: Install test dependencies
+        run: pip install hypothesis==6.164.0
+
+      - name: Python test collection
+        run: python -m pytest --collect-only -q optimizer_api/tests uniride_core/tests academic_benchmark/tests
+
+      - name: Focused solver regression suite
+        run: python -m pytest -q uniride_core/tests/test_cvrptw_decoder.py uniride_core/tests/test_split_engine_tsp_atsp_dispatch.py uniride_core/tests/test_ortools_cvrp_engine.py optimizer_api/tests/test_split_decoder_unit.py optimizer_api/tests/test_split_decoder_audit.py optimizer_api/tests/test_greedy_strategy_core_delegation.py academic_benchmark/tests/test_ft53_atsp_ingestion.py

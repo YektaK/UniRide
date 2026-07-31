@@ -22,7 +22,6 @@ export default function VehiclesPage() {
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
 
   useEffect(() => {
-    setIsLoading(true);
     const loadVehicles = async () => {
       try {
         const fetchedVehicles = await adminApi.vehicles.getAll();

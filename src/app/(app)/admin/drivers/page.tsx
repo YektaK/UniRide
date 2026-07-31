@@ -28,10 +28,6 @@ export default function DriverAssignmentsPage() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadData();
-  }, [selectedDate]);
-
   const loadData = async () => {
     try {
       setLoading(true);
@@ -54,6 +50,11 @@ export default function DriverAssignmentsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount initial data load; loading flag flips synchronously. Upstream fix: data-fetching framework.
+    loadData();
+  }, [selectedDate]);
 
   const getVehicle = (vehicleId: string) => {
     return vehicles.find((v) => v.id === vehicleId);

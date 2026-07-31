@@ -35,12 +35,6 @@ export default function DriverAssignmentsPage() {
     const [assignments, setAssignments] = useState<AssignmentWithDetails[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (user?.id) {
-            loadAssignments();
-        }
-    }, [user?.id]);
-
     const loadAssignments = async () => {
         try {
             setLoading(true);
@@ -84,6 +78,13 @@ export default function DriverAssignmentsPage() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (user?.id) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount initial data load; loading flag flips synchronously. Upstream fix: data-fetching framework.
+            loadAssignments();
+        }
+    }, [user?.id]);
 
     const getStatusBadge = (status: RouteAssignment["status"]) => {
         const config = {

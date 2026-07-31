@@ -30,12 +30,6 @@ export default function DriverHistoryPage() {
     const [assignments, setAssignments] = useState<AssignmentWithDetails[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (user?.id) {
-            loadHistory();
-        }
-    }, [user?.id]);
-
     const loadHistory = async () => {
         try {
             setLoading(true);
@@ -79,6 +73,13 @@ export default function DriverHistoryPage() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (user?.id) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount initial data load; loading flag flips synchronously. Upstream fix: data-fetching framework.
+            loadHistory();
+        }
+    }, [user?.id]);
 
     if (!user || user.role !== "driver") {
         return (

@@ -36,7 +36,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (user && user.role === "student" && user.weeklyScheduleId) {
-      setIsScheduleLoading(true);
       const loadSchedule = async () => {
         try {
           // Fetch schedule from Supabase
@@ -110,6 +109,7 @@ export default function DashboardPage() {
       };
       loadSchedule();
     } else if (user && user.role !== "student") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync initial loading state once auth resolves (not a data fetch)
       setIsScheduleLoading(false);
     } else if (!user && !authIsLoading) {
       setIsScheduleLoading(false);

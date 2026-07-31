@@ -89,20 +89,17 @@ function Carousel({
   )
 
   React.useEffect(() => {
-    if (!api || !setApi) return
-    setApi(api)
-  }, [api, setApi])
-
-  React.useEffect(() => {
     if (!api) return
-    onSelect(api)
+    setApi?.(api)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- subscribe embla instance: notify parent callback of current slide on (re)init
+    onSelect?.(api)
     api.on("reInit", onSelect)
     api.on("select", onSelect)
 
     return () => {
       api?.off("select", onSelect)
     }
-  }, [api, onSelect])
+  }, [api, onSelect, setApi])
 
   return (
     <CarouselContext.Provider

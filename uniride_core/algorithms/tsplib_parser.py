@@ -362,8 +362,16 @@ def _extract_tgz_to_dest(tgz_data: bytes, dest_dir: str, problem_name: str) -> O
         return None
 
 
+def _sanitize_problem_name(name: str) -> str:
+    sanitized = name.lower().strip()
+    sanitized = re.sub(r'[^a-z0-9_-]', '', sanitized)
+    if not sanitized:
+        raise ValueError(f"Invalid problem name: '{name}' — contains no safe characters")
+    return sanitized
+
+
 def download_tsplib_problem(name: str, dest_dir: Optional[str] = None) -> Optional[str]:
-    name = name.lower().strip()
+    name = _sanitize_problem_name(name)
     if dest_dir is None:
         dest_dir = TSPLIB_DATA_DIR
     os.makedirs(dest_dir, exist_ok=True)
@@ -412,7 +420,7 @@ ATSP_PROBLEM_NAMES = [
 
 
 def download_atsp_problem(name: str, dest_dir: Optional[str] = None) -> Optional[str]:
-    name = name.lower().strip()
+    name = _sanitize_problem_name(name)
     if dest_dir is None:
         dest_dir = TSPLIB_DATA_DIR
     os.makedirs(dest_dir, exist_ok=True)

@@ -212,6 +212,12 @@ const ANIMATION_STYLES = `
 const POLL_INTERVAL_MS = 2000;
 const RUN_HISTORY_KEY = "uniride_run_history";
 
+// Wall-clock helpers — kept at module scope so Date.now() is not called
+// during render (react-hooks/purity). Recomputed per poll-driven render.
+const elapsedSeconds = (startTimeIso: string) => Math.round((Date.now() - new Date(startTimeIso).getTime()) / 1000);
+const estimateRemainingSeconds = (startTimeIso: string, progressPercent: number) =>
+  Math.round(elapsedSeconds(startTimeIso) * ((100 - progressPercent) / progressPercent));
+
 const CHART_COLORS = [
   "hsl(var(--chart-1))",
   "hsl(var(--chart-2))",
@@ -497,14 +503,16 @@ export default function BenchmarkSuitePage() {
   const [resultsLoading, setResultsLoading] = useState(false);
 
   // Run History
-  const [runHistory, setRunHistory] = useState<RunHistoryEntry[]>([]);
+  const [runHistory, setRunHistory] = useState<RunHistoryEntry[]>(() => loadRunHistory());
   const [showHistory, setShowHistory] = useState(false);
 
   // Animation trigger for counters
   const [animateResults, setAnimateResults] = useState(false);
 
   // Dark mode
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    try { return document.documentElement.classList.contains("dark"); } catch { return false; }
+  });
 
   // AI Advisor
   const [showAdvisor, setShowAdvisor] = useState(false);
@@ -518,13 +526,6 @@ export default function BenchmarkSuitePage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const demoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const benchmarkRef = useRef<HTMLDivElement>(null);
-
-  // Load run history on mount
-  useEffect(() => {
-    setRunHistory(loadRunHistory());
-    // Check initial dark mode
-    setIsDark(document.documentElement.classList.contains("dark"));
-  }, []);
 
   // Dark mode toggle
   const toggleDarkMode = useCallback(() => {
@@ -624,13 +625,6 @@ export default function BenchmarkSuitePage() {
     }
   }, [isApiOnline]);
 
-  // ---- Auto-switch to results when results are set ----
-  useEffect(() => {
-    if (results && activeTab !== "results") {
-      setActiveTab("results");
-    }
-  }, [results]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // ---- Cleanup ----
   useEffect(() => {
     return () => {
@@ -638,6 +632,37 @@ export default function BenchmarkSuitePage() {
       if (demoTimerRef.current) clearInterval(demoTimerRef.current);
     };
   }, []);
+
+  // ---- Save run to history ----
+  const saveRunToHistory = (res: BenchmarkResultsResponse) => {
+    const byAlgorithm = new Map<string, BenchmarkResult[]>();
+    for (const r of res.results) {
+      if (!byAlgorithm.has(r.algorithm)) byAlgorithm.set(r.algorithm, []);
+      byAlgorithm.get(r.algorithm)!.push(r);
+    }
+    let bestAlgo = "";
+    let bestGap: number | null = null;
+    for (const [algo, results_list] of byAlgorithm) {
+      const gaps = results_list.filter((r) => r.gap_percent !== null).map((r) => r.gap_percent!);
+      const avgGap = gaps.length > 0 ? gaps.reduce((s, g) => s + g, 0) / gaps.length : null;
+      if (avgGap !== null && (bestGap === null || avgGap < bestGap)) {
+        bestGap = avgGap;
+        bestAlgo = ALGORITHM_DISPLAY_NAMES[algo] || algo;
+      }
+    }
+    const entry: RunHistoryEntry = {
+      run_id: res.run_id,
+      date: new Date().toISOString(),
+      algorithmCount: byAlgorithm.size,
+      problemCount: new Set(res.results.map((r) => r.problem)).size,
+      experimentCount: res.results.length,
+      bestAlgorithm: bestAlgo,
+      bestGap: bestGap !== null ? Number(bestGap.toFixed(2)) : null,
+      results: res,
+    };
+    saveRunHistory(entry);
+    setRunHistory(loadRunHistory());
+  };
 
   // ---- Real API Polling ----
   const startPolling = useCallback((rid: string) => {
@@ -670,37 +695,6 @@ export default function BenchmarkSuitePage() {
       }
     }, POLL_INTERVAL_MS);
   }, [toast]);
-
-  // ---- Save run to history ----
-  const saveRunToHistory = useCallback((res: BenchmarkResultsResponse) => {
-    const byAlgorithm = new Map<string, BenchmarkResult[]>();
-    for (const r of res.results) {
-      if (!byAlgorithm.has(r.algorithm)) byAlgorithm.set(r.algorithm, []);
-      byAlgorithm.get(r.algorithm)!.push(r);
-    }
-    let bestAlgo = "";
-    let bestGap: number | null = null;
-    for (const [algo, results_list] of byAlgorithm) {
-      const gaps = results_list.filter((r) => r.gap_percent !== null).map((r) => r.gap_percent!);
-      const avgGap = gaps.length > 0 ? gaps.reduce((s, g) => s + g, 0) / gaps.length : null;
-      if (avgGap !== null && (bestGap === null || avgGap < bestGap)) {
-        bestGap = avgGap;
-        bestAlgo = ALGORITHM_DISPLAY_NAMES[algo] || algo;
-      }
-    }
-    const entry: RunHistoryEntry = {
-      run_id: res.run_id,
-      date: new Date().toISOString(),
-      algorithmCount: byAlgorithm.size,
-      problemCount: new Set(res.results.map((r) => r.problem)).size,
-      experimentCount: res.results.length,
-      bestAlgorithm: bestAlgo,
-      bestGap: bestGap !== null ? Number(bestGap.toFixed(2)) : null,
-      results: res,
-    };
-    saveRunHistory(entry);
-    setRunHistory(loadRunHistory());
-  }, []);
 
   // ---- Demo Benchmark Simulation ----
   const startDemoBenchmark = useCallback(() => {
@@ -1999,9 +1993,9 @@ export default function BenchmarkSuitePage() {
                           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                             <Clock className="h-3.5 w-3.5" />
                             <span>
-                              {t('runPanel.elapsedTime', { seconds: Math.round((Date.now() - new Date(runStatus.start_time).getTime()) / 1000) })}
+                              {t('runPanel.elapsedTime', { seconds: elapsedSeconds(runStatus.start_time) })}
                               {runStatus.progress_percent > 5 && (
-                                <> &middot; {t('runPanel.estimatedTime', { seconds: Math.round(((Date.now() - new Date(runStatus.start_time).getTime()) / 1000) * ((100 - runStatus.progress_percent) / runStatus.progress_percent)) })}</>
+                                <> &middot; {t('runPanel.estimatedTime', { seconds: estimateRemainingSeconds(runStatus.start_time, runStatus.progress_percent) })}</>
                               )}
                             </span>
                           </div>

@@ -238,7 +238,7 @@ def get_benchmark_results(run_id: str) -> Dict:
         "parameters": state.parameters, "results": state.results,
     }
 
-@router.post("/run")
+@router.post("/run", dependencies=[Depends(require_internal_api_key)])
 def start_benchmark(body: BenchmarkRunRequest) -> Dict:
     return _start_benchmark_impl(body.run_id, body.algorithms, body.problems, body.settings)
 
@@ -455,7 +455,7 @@ def _load_benchmark_problem(problem_name: str) -> Optional[ProblemInstance]:
         file_path=info.file_path,
     )
 
-@router.post("/import")
+@router.post("/import", dependencies=[Depends(require_internal_api_key)])
 def import_benchmark(body: BenchmarkImportRequest) -> Dict:
     try:
         data = body.model_dump()
@@ -485,7 +485,7 @@ def get_benchmark_status(run_id: str) -> Dict:
         "start_time": state.start_time, "end_time": state.end_time
     }
 
-@router.post("/stop")
+@router.post("/stop", dependencies=[Depends(require_internal_api_key)])
 def stop_benchmark(run_id: str) -> Dict:
     state = benchmark_state_manager.get_run(run_id)
     if not state:
@@ -496,7 +496,7 @@ def stop_benchmark(run_id: str) -> Dict:
         "message": f"Benchmark {run_id} stopped"
     }
 
-@router.post("/download/{problem_name}")
+@router.post("/download/{problem_name}", dependencies=[Depends(require_internal_api_key)])
 def download_benchmark_problem(problem_name: str) -> Dict:
     name_lower = problem_name.lower().strip()
     info = get_problem_by_name(name_lower)

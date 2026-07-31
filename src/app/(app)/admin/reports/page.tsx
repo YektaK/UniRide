@@ -157,7 +157,6 @@ export default function AdminReportsPage() {
   const [currentWeekDisplay, setCurrentWeekDisplay] = useState<string>("");
 
   useEffect(() => {
-    setIsLoading(true);
     const loadReports = async () => {
       try {
         const allUsers = await getUsers();

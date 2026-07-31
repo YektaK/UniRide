@@ -40,10 +40,6 @@ export default function AlgorithmComparisonPage() {
     const [selectedResult, setSelectedResult] = useState<AlgorithmCompareResult | null>(null);
     const [clusteringAlgorithm, setClusteringAlgorithm] = useState("sweep");
 
-    useEffect(() => {
-        loadStudents();
-    }, []);
-
     const loadStudents = async () => {
         setIsFetchingUsers(true);
         console.log("[Compare UI] Starting loadStudents...");
@@ -68,6 +64,11 @@ export default function AlgorithmComparisonPage() {
             setIsFetchingUsers(false);
         }
     };
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount initial data load; loading flag flips synchronously. Upstream fix: data-fetching framework.
+        loadStudents();
+    }, []);
 
     const runComparison = async () => {
         if (students.length === 0) {

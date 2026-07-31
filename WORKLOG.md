@@ -2,6 +2,36 @@
 
 This is the curated project chronology. Entries record work and evidence available at that time; they do not override the current architecture, roadmap, or audit.
 
+## 2026-07-30 to 2026-07-31 - Phase 0 Completion (Containment & Reproducible Baseline)
+
+### Scope
+
+- Closed the remaining Phase 0 security and reproducibility items from `ACTIVE_ROADMAP.md`.
+- Confirmed earlier containment work via `git log`: localhost binding (`main.py` `OPTIMIZER_HOST`), CLI endpoint auth, and the `_resolve_cli_filepath` path-traversal guard were already in place (commit `61c36c1`); the ESLint gate (`ea75581`) and Pydantic pins (`dcd5896`) were also committed.
+
+### Changes made this session
+
+- **Benchmark endpoint authentication:** Added `Depends(require_internal_api_key)` to `POST /api/v1/benchmark/run`, `/stop`, `/import`, and `/download/{problem_name}` in `optimizer_api/routers/benchmark.py`. Previously only the CLI endpoints were gated.
+- **Path traversal hardening:** Added `_sanitize_problem_name()` in `uniride_core/algorithms/tsplib_parser.py` and applied it in `download_tsplib_problem()` and `download_atsp_problem()`, stripping everything outside `[a-z0-9_-]` so caller-supplied names cannot escape `TSPLIB_DATA_DIR`.
+- **Python lock file:** Generated `requirements-lock.txt` via `pip-compile --generate-hashes` from `optimizer_api/requirements.txt`, pinning the full transitive closure (FastAPI, uvicorn, supabase, numpy, ortools, pandas, pytest, etc.) with SHA-256 hashes.
+- **Lint rules re-enabled:** `react-hooks/purity` and `react-hooks/set-state-in-effect` set to `error` in `eslint.config.mjs` after clearing all 14 pre-existing violations. Verified that the react-hooks 7.x individual rules DO honor standard `eslint-disable-next-line` (an earlier config comment claiming they required Flow-style suppressions was wrong and was removed).
+  - Purity fixes (4 sites): sandbox vehicle ids now come from a module-scope monotonic counter (`nextSandboxVehicleId`); the benchmark run panel's elapsed/estimated ETA moved to module-scope wall-clock helpers (`elapsedSeconds`, `estimateRemainingSeconds` in `src/app/page.tsx`); the sidebar skeleton width uses a lazy `useState` initializer instead of `useMemo` + `Math.random()`.
+  - set-state-in-effect (10 sites): documented `eslint-disable-next-line` comments on deliberate fetch-on-mount loads (compare, drivers, sandbox, schedules edit, vehicle-planning, driver assignments, driver history) and auth-resolved loading-state syncs (dashboard, ride-history), plus the shadcn carousel embla subscription.
+- **CI for Python:** Added a `python` job to `.github/workflows/ci.yml` — Python 3.14 (matching the lock), installs `requirements-lock.txt` + `hypothesis==6.164.0`, collects all three pytest suites, and runs a focused solver-regression subset.
+
+### Verification
+
+- Both edited Python files parse cleanly (`ast.parse`).
+- `npm run lint`: 0 errors (159 pre-existing warnings; no unused-disable warnings, confirming every suppression comment is live).
+- `npm run typecheck` (`tsc --noEmit`): clean.
+- Python collection: **780 tests collected** across `optimizer_api`, `uniride_core`, and `academic_benchmark` (after repairing a corrupt partial `scipy` install and adding `hypothesis`/`pandas`).
+- Focused solver regression subset (decoder, split-engine TSP/ATSP dispatch, ortools engine, split-decoder unit/audit, greedy strategy delegation, ft53 ATSP ingestion): **48 passed in ~9s**.
+- Local environment aligned to the lock for `protobuf==6.33.6` (ortools requires `<6.34`).
+
+### Roadmap updates
+
+- `ACTIVE_ROADMAP.md` Phase 0: all 8 items complete. Notes document the inline disable comments, the `no-undef`-off rationale (TS/`tsc --noEmit` is the undefined-name gate), and the CI job shape.
+
 ## 2026-07-16 - Ultimate Audit and Documentation Consolidation
 
 ### Scope

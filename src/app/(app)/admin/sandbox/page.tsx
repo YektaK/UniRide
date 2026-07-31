@@ -2,13 +2,13 @@
 
 /**
  * Sandbox Mode Page - IE Fine-tune Interface
- * EndÃ¼stri MÃ¼hendisliÄŸi Sandbox Modu
+ * Endüstri Mühendisliği Sandbox Modu
  * 
- * Ã–zellikler:
- * - TanÄ±mlÄ± araÃ§larÄ±n seÃ§imi ve konfigÃ¼rasyonu
- * - Ã–zel araÃ§ kapasiteleri ile "what-if" senaryolarÄ±
+ * Özellikler:
+ * - Tanımlı araçların seçimi ve konfigürasyonu
+ * - Özel araç kapasiteleri ile "what-if" senaryoları
  * - IE analizi ve optimizasyon
- * - Senaryo kaydetme/yÃ¼kleme
+ * - Senaryo kaydetme/yükleme
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -58,7 +58,7 @@ const VEHICLE_TEMPLATES = {
   van: { swCapacity: 2, soCapacity: 3, cooldownMinutes: 10 },
 };
 
-// Monotonic module-scope counter for sandbox vehicle ids â€” avoids
+// Monotonic module-scope counter for sandbox vehicle ids — avoids
 // Date.now()/Math.random() in component code (react-hooks/purity)
 let sandboxVehicleSeq = 0;
 const nextSandboxVehicleId = () => `sb-${++sandboxVehicleSeq}`;

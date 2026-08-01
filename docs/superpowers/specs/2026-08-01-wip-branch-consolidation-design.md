@@ -24,7 +24,7 @@ The following topology was verified after `git fetch --prune origin`:
 | `codex/package-c1-capability-preflight-design` | `0882081` | 69 commits after `WIP` | Authoritative spine |
 | `origin/copilot/evaluate-implementations` | `9efaa91` | Exact Package B duplicate | Do not merge |
 | `origin/copilot/check-implementations-and-refactor` | `0882081` | Exact C1 duplicate | Do not merge |
-| `codex/local-rescue-20260721` | `e0824b4` | Diverged from `3534ae8`; 8 unique commits and 34 WIP-only commits | Selective reconstruction only |
+| `codex/local-rescue-20260721` | `e0824b4` | Diverged from `3534ae8`; 8 branch-only commits, 6 patch-unique, and 34 WIP-only commits | Selective reconstruction only |
 | `origin/copilot/evaluate-last-15-commits` | `90cd1bb` | One unique documentation-only commit | Evidence only; do not merge |
 | older Copilot evaluation refs | various | Already ancestors of `WIP` | Do not merge |
 | `origin/main` | `b6e9220` | Divergent legacy line with merge base `ab0232e` | Never merge into `WIP` |

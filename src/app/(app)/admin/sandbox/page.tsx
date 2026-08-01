@@ -50,7 +50,7 @@ import {
 import { IEDashboard } from "@/components/admin/ie-dashboard";
 import type { Vehicle } from "@/types";
 import type { IEResponseData, VehicleConfig } from "@/types/ie-resource";
-import { nextSandboxVehicleId } from "./sandbox-vehicle-id";
+import { appendSandboxVehicle } from "./sandbox-vehicle-id";
 
 // Default vehicle templates
 const VEHICLE_TEMPLATES = {
@@ -167,44 +167,30 @@ export default function SandboxPage() {
 
   // Add vehicle from existing fleet
   const addExistingVehicle = (vehicle: Vehicle) => {
-    setSandboxVehicles((currentVehicles) => {
-      const usedIds = new Set(currentVehicles.flatMap((item) => [item.id, item.vehicleId]));
-      const id = nextSandboxVehicleId(usedIds);
-      usedIds.add(id);
-      const vehicleId = nextSandboxVehicleId(usedIds);
-      const sandboxVehicle: SandboxVehicle = {
-        id,
-        name: vehicle.name,
-        vehicleId,
-        swCapacity: vehicle.wheelchairCapacity,
-        soCapacity: vehicle.seatingCapacity,
-        cooldownMinutes: vehicle.cooldownMinutes,
-        source: "existing",
-        originalId: vehicle.id,
-      };
-      return [...currentVehicles, sandboxVehicle];
-    });
+    setSandboxVehicles((currentVehicles) => appendSandboxVehicle(currentVehicles, ({ id, vehicleId }) => ({
+      id,
+      name: vehicle.name,
+      vehicleId,
+      swCapacity: vehicle.wheelchairCapacity,
+      soCapacity: vehicle.seatingCapacity,
+      cooldownMinutes: vehicle.cooldownMinutes,
+      source: "existing",
+      originalId: vehicle.id,
+    })));
   };
 
   // Add custom vehicle
   const addCustomVehicle = (type: "minibus" | "bus" | "van") => {
     const template = VEHICLE_TEMPLATES[type];
-    setSandboxVehicles((currentVehicles) => {
-      const usedIds = new Set(currentVehicles.flatMap((item) => [item.id, item.vehicleId]));
-      const id = nextSandboxVehicleId(usedIds);
-      usedIds.add(id);
-      const vehicleId = nextSandboxVehicleId(usedIds);
-      const sandboxVehicle: SandboxVehicle = {
-        id,
-        name: tc('sidebar.settings'),
-        vehicleId,
-        swCapacity: template.swCapacity,
-        soCapacity: template.soCapacity,
-        cooldownMinutes: template.cooldownMinutes,
-        source: "custom",
-      };
-      return [...currentVehicles, sandboxVehicle];
-    });
+    setSandboxVehicles((currentVehicles) => appendSandboxVehicle(currentVehicles, ({ id, vehicleId }) => ({
+      id,
+      name: tc('sidebar.settings'),
+      vehicleId,
+      swCapacity: template.swCapacity,
+      soCapacity: template.soCapacity,
+      cooldownMinutes: template.cooldownMinutes,
+      source: "custom",
+    })));
   };
 
   // Update vehicle in sandbox

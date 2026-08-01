@@ -14,7 +14,9 @@
 - `git fetch --prune origin` completed without output; `git status --short --branch` reported only `## codex/wip-consolidation-20260801`.
 - `git merge-base --is-ancestor 08820813a4657d62bb81c44a6a671984c846e28b HEAD` and `git merge-base --is-ancestor origin/WIP HEAD` both exited `0`.
 - Neither required tag name existed before creation. Local tag peeling verifies `archive/pre-wip-consolidation-20260801^{}` = `a44d50631d826f81fd2a6bb1b73baa4a46e5fa1f` and `archive/local-rescue-20260721^{}` = `e0824b42d2251cfd479207d756798913a2313b31`.
-- Remote tag push and `git ls-remote --tags` verification are externally blocked in this task environment: the safety reviewer rejected transmission to `https://github.com/YektaK/UniRide.git` despite the approved plan. The orchestrator must push **only** `refs/tags/archive/pre-wip-consolidation-20260801` and `refs/tags/archive/local-rescue-20260721`, then record the remote peeled targets before any WIP promotion. No branch was pushed or moved here.
+- `archive/pre-wip-consolidation-20260801` was pushed and remotely verified: annotated object `309f0e8987339205d9809471b0b8bbcf7dc0f620`, peeled target `a44d50631d826f81fd2a6bb1b73baa4a46e5fa1f`.
+- GitHub rejected `archive/local-rescue-20260721`: `refusing to allow an OAuth App to create or update workflow .github/workflows/ci.yml without workflow scope`. A subsequent remote archive-tag listing confirms this tag is absent. This is a WIP-promotion blocker requiring workflow-scoped authentication; independent consolidation Tasks 2–6 may continue.
+- No branch was pushed or moved in Task 1.
 
 ## Rescue admission ledger
 
@@ -77,4 +79,4 @@ These are Git blob hashes computed from `0882081`, not workspace copies. No benc
 
 - This commit is documentation/evidence only. It does not modify production code, tests, dependencies, lockfiles, generated artifacts, source branches, or WIP.
 - Before admitting any `admit` ledger item, reconstruct only the listed behavior in current C1 files and run its listed focused validation plus the full matrix.
-- Before WIP promotion, the orchestrator must complete the two-tag remote push/peel check and resolve the `fastapi` baseline environment blocker according to the design's waiver policy.
+- Before WIP promotion, workflow-scoped authentication must push and remotely peel-verify `archive/local-rescue-20260721`; the `fastapi` baseline environment blocker must also be resolved or handled through the design's explicit user-waiver policy.

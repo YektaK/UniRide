@@ -3,11 +3,17 @@ import json
 import logging
 import threading
 import glob as glob_mod
+from pathlib import Path
 from typing import Any, List, Dict, Optional
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.params import Query as QueryParam
+
+try:
+    from optimizer_api.auth import require_internal_api_key
+except ModuleNotFoundError:
+    from auth import require_internal_api_key
 
 from models.schemas import BenchmarkRunRequest, BenchmarkImportRequest
 from benchmark_runner import BenchmarkRunner, ProblemInstance, AlgorithmConfig
@@ -564,14 +570,34 @@ def _find_cli_json_files() -> List[Dict]:
         if not os.path.isdir(search_dir): continue
         for filepath in sorted(glob_mod.glob(os.path.join(search_dir, "*.json"))):
             try:
+                Path(filepath).resolve().relative_to(Path(search_dir).resolve())
                 stat = os.stat(filepath)
                 files.append({
-                    "filename": os.path.basename(filepath), "filepath": filepath, "size_bytes": stat.st_size,
+                    "filename": os.path.basename(filepath), "size_bytes": stat.st_size,
                     "modified_time": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
                     "source_dir": os.path.basename(search_dir),
                 })
-            except OSError: continue
+            except (OSError, ValueError): continue
     return files
+
+
+def _resolve_cli_filename(filename: str) -> str:
+    path = Path(filename)
+    if not filename or path.is_absolute() or path.name != filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    for configured_root in (CLI_RESULTS_DIR, CLI_RESULTS_NUMBA_DIR):
+        root = Path(configured_root).resolve()
+        candidate = (root / path).resolve()
+        try:
+            candidate.relative_to(root)
+        except ValueError:
+            continue
+        if candidate.is_file():
+            return str(candidate)
+
+    raise HTTPException(status_code=404, detail="File not found")
+
 
 def _load_and_validate_cli_json(filepath: str) -> List[Dict]:
     if not os.path.isfile(filepath): raise HTTPException(status_code=404, detail=f"File not found: {filepath}")
@@ -583,7 +609,7 @@ def _load_and_validate_cli_json(filepath: str) -> List[Dict]:
     if missing: raise HTTPException(status_code=400, detail=f"Missing fields: {missing}")
     return data
 
-@router.get("/cli/files")
+@router.get("/cli/files", dependencies=[Depends(require_internal_api_key)])
 def list_cli_benchmark_files() -> Dict:
     files = _find_cli_json_files()
     return {
@@ -592,14 +618,9 @@ def list_cli_benchmark_files() -> Dict:
         "files": files,
     }
 
-@router.post("/cli/import")
-def import_cli_benchmark_results(filepath: str = "", filename: str = "", run_id: Optional[str] = None, label: Optional[str] = None) -> Dict:
-    if not filepath and not filename: raise HTTPException(status_code=400, detail="Required filepath or filename")
-    if filename and not filepath:
-        for search_dir in [CLI_RESULTS_DIR, CLI_RESULTS_NUMBA_DIR]:
-            if os.path.isfile(os.path.join(search_dir, filename)): filepath = os.path.join(search_dir, filename); break
-        if not filepath: raise HTTPException(status_code=404, detail="File not found")
-    filepath = os.path.abspath(filepath)
+@router.post("/cli/import", dependencies=[Depends(require_internal_api_key)])
+def import_cli_benchmark_results(filename: str = "", run_id: Optional[str] = None, label: Optional[str] = None) -> Dict:
+    filepath = _resolve_cli_filename(filename)
     cli_records = _load_and_validate_cli_json(filepath)
     if not run_id: run_id = f"cli-import-{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
     if benchmark_state_manager.get_run(run_id): raise HTTPException(status_code=409, detail="run_id already exists")
@@ -624,13 +645,9 @@ def import_cli_benchmark_results(filepath: str = "", filename: str = "", run_id:
         "source_file": os.path.basename(filepath), "summary": {"unique_problems": len(unique_problems)}
     }
 
-@router.get("/cli/preview")
-def preview_cli_import(filepath: str = "", filename: str = "") -> Dict:
-    if not filepath and filename:
-        for search_dir in [CLI_RESULTS_DIR, CLI_RESULTS_NUMBA_DIR]:
-            if os.path.isfile(os.path.join(search_dir, filename)): filepath = os.path.join(search_dir, filename); break
-    if not filepath: raise HTTPException(status_code=400, detail="Required")
-    filepath = os.path.abspath(filepath)
+@router.get("/cli/preview", dependencies=[Depends(require_internal_api_key)])
+def preview_cli_import(filename: str = "") -> Dict:
+    filepath = _resolve_cli_filename(filename)
     cli_records = _load_and_validate_cli_json(filepath)
     preview = [{"original": r, "converted_web": _convert_cli_record_to_web(r, 1)} for r in cli_records[:3]]
     return {"file": {"name": os.path.basename(filepath)}, "total_records": len(cli_records), "preview": preview}

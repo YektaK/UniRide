@@ -17,6 +17,10 @@ from dotenv import load_dotenv
 
 from routers import optimization, utils, strategies, benchmark
 from strategies import STRATEGY_REGISTRY
+try:
+    from optimizer_api.runtime_config import optimizer_host
+except ModuleNotFoundError:
+    from runtime_config import optimizer_host
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -106,4 +110,4 @@ app.include_router(benchmark.router)
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("OPTIMIZER_PORT", "8000"))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+    uvicorn.run("main:app", host=optimizer_host(), port=port, reload=True)

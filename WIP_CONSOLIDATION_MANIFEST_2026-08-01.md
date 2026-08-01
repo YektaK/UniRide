@@ -80,3 +80,13 @@ These are Git blob hashes computed from `0882081`, not workspace copies. No benc
 - This commit is documentation/evidence only. It does not modify production code, tests, dependencies, lockfiles, generated artifacts, source branches, or WIP.
 - Before admitting any `admit` ledger item, reconstruct only the listed behavior in current C1 files and run its listed focused validation plus the full matrix.
 - Before WIP promotion, workflow-scoped authentication must push and remotely peel-verify `archive/local-rescue-20260721`; the `fastapi` baseline environment blocker must also be resolved or handled through the design's explicit user-waiver policy.
+
+## Task 2 containment reconstruction evidence
+
+- Admitted `61c36c1` localhost binding through dynamic `optimizer_host()`; the default is loopback and `OPTIMIZER_HOST` remains an explicit runtime override.
+- Admitted CLI arbitrary-path removal: `/cli/import` and `/cli/preview` now accept only a filename resolved beneath `CLI_RESULTS_DIR` or `CLI_RESULTS_NUMBA_DIR`; traversal and resolved symlink escapes are rejected. CLI listings no longer expose `filepath`.
+- Admitted optional internal-key protection only on `/api/v1/benchmark/cli/files`, `/cli/import`, and `/cli/preview`; `INTERNAL_API_KEY` is read at request time and compared with `secrets.compare_digest`.
+- Rejected `src/proxy.ts` internal-key forwarding remains unchanged because the historical header was not forwarded by the Next route fetches to the Python backend.
+- RED: `& .\\.venv-consolidation\\Scripts\\python.exe -m pytest optimizer_api/tests/test_phase0_containment.py -q -p no:cacheprovider --tb=short` failed at collection with `ModuleNotFoundError: No module named 'optimizer_api.auth'`, before implementation.
+- GREEN: `& .\\.venv-consolidation\\Scripts\\python.exe -m pytest optimizer_api/tests/test_phase0_containment.py optimizer_api/tests/test_benchmark_router_problem_loading.py -q -p no:cacheprovider --tb=short` passed: 23 passed in 3.59s.
+- Scope check: no academic code, dependency files, `src/proxy.ts`, refs, tags, remotes, or pre-existing `uniride.egg-info` changes were modified by this task.

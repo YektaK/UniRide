@@ -1,0 +1,82 @@
+import asyncio
+from pathlib import Path
+
+import pytest
+from fastapi import HTTPException
+
+from optimizer_api.auth import require_internal_api_key
+from optimizer_api.runtime_config import optimizer_host
+from optimizer_api.routers import benchmark
+
+
+def test_optimizer_host_defaults_to_loopback(monkeypatch):
+    monkeypatch.delenv("OPTIMIZER_HOST", raising=False)
+
+    assert optimizer_host() == "127.0.0.1"
+
+
+def test_internal_key_is_optional_but_rejects_mismatch(monkeypatch):
+    monkeypatch.delenv("INTERNAL_API_KEY", raising=False)
+    asyncio.run(require_internal_api_key(None))
+    monkeypatch.setenv("INTERNAL_API_KEY", "expected")
+
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(require_internal_api_key("wrong"))
+
+    assert exc.value.status_code == 403
+
+
+def test_cli_filename_cannot_escape_result_roots(tmp_path, monkeypatch):
+    root = tmp_path / "results"
+    root.mkdir()
+    (root / "valid.json").write_text("[]", encoding="utf-8")
+    outside = tmp_path / "outside.json"
+    outside.write_text("[]", encoding="utf-8")
+    monkeypatch.setattr(benchmark, "CLI_RESULTS_DIR", str(root))
+    monkeypatch.setattr(benchmark, "CLI_RESULTS_NUMBA_DIR", str(tmp_path / "missing"))
+
+    assert benchmark._resolve_cli_filename("valid.json") == str((root / "valid.json").resolve())
+
+    with pytest.raises(HTTPException):
+        benchmark._resolve_cli_filename("../outside.json")
+
+
+def test_cli_filename_cannot_follow_symlink_outside_result_roots(tmp_path, monkeypatch):
+    root = tmp_path / "results"
+    root.mkdir()
+    outside = tmp_path / "outside.json"
+    outside.write_text("[]", encoding="utf-8")
+    (root / "outside-link.json").symlink_to(outside)
+    monkeypatch.setattr(benchmark, "CLI_RESULTS_DIR", str(root))
+    monkeypatch.setattr(benchmark, "CLI_RESULTS_NUMBA_DIR", str(tmp_path / "missing"))
+
+    with pytest.raises(HTTPException):
+        benchmark._resolve_cli_filename("outside-link.json")
+
+
+def test_cli_file_listing_does_not_expose_absolute_paths(tmp_path, monkeypatch):
+    root = tmp_path / "results"
+    root.mkdir()
+    (root / "valid.json").write_text("[]", encoding="utf-8")
+    monkeypatch.setattr(benchmark, "CLI_RESULTS_DIR", str(root))
+    monkeypatch.setattr(benchmark, "CLI_RESULTS_NUMBA_DIR", str(tmp_path / "missing"))
+
+    rows = benchmark._find_cli_json_files()
+
+    assert rows[0]["filename"] == "valid.json"
+    assert "filepath" not in rows[0]
+
+
+def test_only_cli_file_routes_require_the_internal_api_key():
+    cli_routes = {
+        route.path: route
+        for route in benchmark.router.routes
+        if route.path.startswith("/api/v1/benchmark/cli/")
+    }
+
+    assert set(cli_routes) == {
+        "/api/v1/benchmark/cli/files",
+        "/api/v1/benchmark/cli/import",
+        "/api/v1/benchmark/cli/preview",
+    }
+    assert all(route.dependencies for route in cli_routes.values())

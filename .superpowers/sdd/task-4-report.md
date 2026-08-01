@@ -30,3 +30,9 @@ The original cap of seven warnings cannot coexist with the brief-mandated global
 ## Scope statement
 
 Only Task 4's authorized package/config files, exact admitted UI lint paths, duplicated hook modules, hook test, manifest, and this ignored report were changed. No unrelated user changes, generated artifacts, API or academic code, refs/remotes, branches, workflow, roadmap, or worklog were modified.
+
+## Deterministic-render follow-up
+
+- RED: the new page render-contract test failed 2/2 because initial state read browser storage/document state and elapsed-time helpers called Date.now during render.
+- GREEN: initial run history and dark mode are SSR-stable ([] and false), then synchronize after mount with one required narrow set-state-in-effect disable and one transparent non-suppression comment; elapsed/ETA calculations consume an observed timestamp updated by real polling and demo callbacks.
+- Validation: focused page/hook tests passed 4/4; lint passed with 0 errors and the existing 159-warning debt; typecheck passed; full Vitest passed 5 files / 19 tests; git diff --check passed.

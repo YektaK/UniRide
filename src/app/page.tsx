@@ -212,11 +212,10 @@ const ANIMATION_STYLES = `
 const POLL_INTERVAL_MS = 2000;
 const RUN_HISTORY_KEY = "uniride_run_history";
 
-// Wall-clock helpers — kept at module scope so Date.now() is not called
-// during render (react-hooks/purity). Recomputed per poll-driven render.
-const elapsedSeconds = (startTimeIso: string) => Math.round((Date.now() - new Date(startTimeIso).getTime()) / 1000);
-const estimateRemainingSeconds = (startTimeIso: string, progressPercent: number) =>
-  Math.round(elapsedSeconds(startTimeIso) * ((100 - progressPercent) / progressPercent));
+const elapsedSeconds = (startTimeIso: string, observedAt: number) =>
+  Math.round((observedAt - new Date(startTimeIso).getTime()) / 1000);
+const estimateRemainingSeconds = (startTimeIso: string, progressPercent: number, observedAt: number) =>
+  Math.round(elapsedSeconds(startTimeIso, observedAt) * ((100 - progressPercent) / progressPercent));
 
 const CHART_COLORS = [
   "hsl(var(--chart-1))",
@@ -495,6 +494,7 @@ export default function BenchmarkSuitePage() {
   // Run
   const [runId, setRunId] = useState<string | null>(null);
   const [runStatus, setRunStatus] = useState<BenchmarkStatus | null>(null);
+  const [observedAt, setObservedAt] = useState(0);
   const [isStarting, setIsStarting] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
 
@@ -503,16 +503,14 @@ export default function BenchmarkSuitePage() {
   const [resultsLoading, setResultsLoading] = useState(false);
 
   // Run History
-  const [runHistory, setRunHistory] = useState<RunHistoryEntry[]>(() => loadRunHistory());
+  const [runHistory, setRunHistory] = useState<RunHistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
   // Animation trigger for counters
   const [animateResults, setAnimateResults] = useState(false);
 
   // Dark mode
-  const [isDark, setIsDark] = useState(() => {
-    try { return document.documentElement.classList.contains("dark"); } catch { return false; }
-  });
+  const [isDark, setIsDark] = useState(false);
 
   // AI Advisor
   const [showAdvisor, setShowAdvisor] = useState(false);
@@ -526,6 +524,13 @@ export default function BenchmarkSuitePage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const demoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const benchmarkRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate browser-only saved history after the SSR-stable initial render.
+    setRunHistory(loadRunHistory());
+    // Hydrate the browser-only document theme after the SSR-stable initial render.
+    setIsDark(document.documentElement.classList.contains("dark"));
+  }, []);
 
   // Dark mode toggle
   const toggleDarkMode = useCallback(() => {
@@ -670,6 +675,7 @@ export default function BenchmarkSuitePage() {
     pollRef.current = setInterval(async () => {
       try {
         const status = await pollStatus(rid);
+        setObservedAt(Date.now());
         setRunStatus(status);
         if (status.status === "completed" || status.status === "failed" || status.status === "stopped") {
           if (pollRef.current) clearInterval(pollRef.current);
@@ -730,6 +736,7 @@ export default function BenchmarkSuitePage() {
       start_time: startTime,
       end_time: null,
     });
+    setObservedAt(Date.now());
 
     if (demoTimerRef.current) clearInterval(demoTimerRef.current);
     const stepSize = Math.max(1, Math.ceil(totalExp / 40));
@@ -739,6 +746,7 @@ export default function BenchmarkSuitePage() {
       completed = Math.min(completed + stepSize, totalExp);
       const progress = (completed / totalExp) * 100;
 
+      setObservedAt(Date.now());
       setRunStatus({
         run_id: demoRunId,
         status: progress >= 100 ? "completed" : "running",
@@ -812,6 +820,7 @@ export default function BenchmarkSuitePage() {
       if (isDemoMode) {
         if (demoTimerRef.current) clearInterval(demoTimerRef.current);
         demoTimerRef.current = null;
+        setObservedAt(Date.now());
         setRunStatus((prev) => prev ? { ...prev, status: "stopped", end_time: new Date().toISOString() } : null);
         toast({ title: t('toast.benchmarkStoppedTitle'), description: t('toast.benchmarkStoppedDesc') });
       } else {
@@ -1993,9 +2002,9 @@ export default function BenchmarkSuitePage() {
                           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                             <Clock className="h-3.5 w-3.5" />
                             <span>
-                              {t('runPanel.elapsedTime', { seconds: elapsedSeconds(runStatus.start_time) })}
+                              {t('runPanel.elapsedTime', { seconds: elapsedSeconds(runStatus.start_time, observedAt) })}
                               {runStatus.progress_percent > 5 && (
-                                <> &middot; {t('runPanel.estimatedTime', { seconds: estimateRemainingSeconds(runStatus.start_time, runStatus.progress_percent) })}</>
+                                <> &middot; {t('runPanel.estimatedTime', { seconds: estimateRemainingSeconds(runStatus.start_time, runStatus.progress_percent, observedAt) })}</>
                               )}
                             </span>
                           </div>

@@ -451,4 +451,3 @@ git commit -m "test(academic): close Package C1 capability gate"
 ~~~
 
 Do not push, merge, or mark the Package B draft PR ready until the user reviews the completed C1 verification package.
-

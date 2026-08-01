@@ -118,3 +118,11 @@ These are Git blob hashes computed from `0882081`, not workspace copies. No benc
 - RED: `test_ci_contract.py` failed because `.github/workflows/ci.yml` was absent.
 - GREEN: `test_ci_contract.py` passed after the workflow was added. YAML is static CI configuration; no workflow run is generated during local consolidation.
 - Scope check: only the CI workflow, its contract test, and this manifest changed; `.github/workflows/benchmark.yml`, dependencies, lockfiles, refs, remotes, and source branches remain untouched.
+
+### Task 5 review hardening
+
+- The workflow now declares top-level `permissions: contents: read`.
+- The CI contract independently checks the `push` and `pull_request` blocks, each requiring the immediately nested `branches: [WIP]` value. Mutation coverage changes each trigger separately to `[main]` and proves that its dedicated assertion rejects it without a YAML-test dependency.
+- The ad hoc API package install was replaced by the repository-declared `optimizer_api/requirements.txt` contract under the same academic JIT constraints as the editable test install.
+- RED: the strengthened test failed on missing top-level permissions while the mutation test already passed; GREEN: `2 passed in 0.30s` after workflow hardening.
+- Static YAML parsing returned `YAML_OK`; `git diff --check` passed; `.github/workflows/benchmark.yml` remains unchanged.

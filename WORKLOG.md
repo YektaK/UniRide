@@ -19,7 +19,7 @@ This is the curated project chronology. Entries record work and evidence availab
 - Missing travel arcs can silently become zero, Euclidean-degree, or generic fallback edges.
 - FastAPI benchmark/CLI endpoints lack service authentication; CLI preview/import accepted caller-selected paths.
 - Strategy factories exist, but production dispatch still uses shared executable instances.
-- The DataLoader's claimed singleton lifecycle is ineffective.
+- This audit initially reported the DataLoader singleton lifecycle as ineffective; the 2026-08-01 direct-source re-verification refuted that claim and retained only the separate provider-timeout/cache-health risks.
 - Benchmark admission is raceable and stop does not cancel work.
 - Vehicle Planning and Sandbox contain missing-auth paths; direction propagation is incomplete.
 - No active GIS renderer or route-geometry contract exists.
@@ -197,6 +197,27 @@ Results: **verified 233 entries**; schema check exit 0.
 
 No paper-scale benchmark ran, no benchmark output was generated, and archive payload bytes, study/profile contracts, registries, dependencies, databases, and unrelated generated artifacts were not modified.
 
+
+## 2026-08-01 — WIP Consolidation, Rescue Preservation, and Audit Correction
+
+### Consolidation outcome
+
+- The validated consolidation spine was promoted to local and remote `WIP` at `0ebd63d337dc3fca1a1c9e7644910ecf2e620a79` after rescue tags were pushed and remotely peel-verified.
+- Final promotion evidence passed: academic suite 790 tests; `uniride_core` plus `optimizer_api` 461 tests with 1 skip; Numba JIT parity 9 tests with zero skips; frontend 21 tests; TypeScript passed; ESLint reported 0 errors and 159 warnings.
+- The user explicitly approved the Supabase-configured production-build waiver and temporary 159-warning lint-cap waiver.
+- The user accepted the 99 npm-audit advisories as consolidation debt. These dispositions are not build success, warning remediation, or vulnerability remediation.
+
+### Dirty-checkout preservation
+
+- The original `codex/local-rescue-20260721` checkout was not cleaned, restored, switched, staged, or committed.
+- Eleven dirty files were copied with their relative paths to `C:\tmp\UniRide-dirty-preservation-20260801`; independently generated source and copied SHA-256 manifests matched exactly.
+- The complete tracked binary patch was preserved as `tracked-diff.patch` with SHA-256 `9736B1604509DBFE3AB2B8F6C74D18B0D4483E2AD82EC6EA5268E7415D72152A`. The original status before and after preservation was identical.
+
+### Audit corrections
+
+- Direct source confirms `DataLoader` uses the thread-safe `SingletonMeta`; the old “new object on every `get_instance()` call” claim is retired.
+- Still-open verified risks include PSO's wall-clock fallback seed, missing explicit Supabase provider timeout, stale predecessor handling after a depot token, production import of academic promoted configurations, promoted-name no-op risk, and the absence of a verified reusable GIS map/geometry abstraction.
+- The master audit, current architecture, active roadmap, worklog, and consolidation manifest were synchronized while preserving historical evidence as dated context.
 ## Curated Historical Milestones
 
 ### April 2026 - Dual-engine and SOTA exploration

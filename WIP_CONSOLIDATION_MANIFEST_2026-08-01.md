@@ -1,13 +1,15 @@
 # WIP Consolidation Manifest — 2026-08-01
 
-## Immutable heads
+## Pre-consolidation immutable heads
 
 | Ref | Full SHA | Treatment |
 |---|---|---|
-| `origin/WIP` | `a44d50631d826f81fd2a6bb1b73baa4a46e5fa1f` | Preserve as annotated `archive/pre-wip-consolidation-20260801`; do not move in this task. |
+| `origin/WIP` at consolidation start | `a44d50631d826f81fd2a6bb1b73baa4a46e5fa1f` | Preserve as annotated `archive/pre-wip-consolidation-20260801`; the post-promotion WIP identity is recorded in Task 6. |
 | `codex/local-rescue-20260721` | `e0824b42d2251cfd479207d756798913a2313b31` | Preserve as annotated `archive/local-rescue-20260721`; selective reconstruction only. |
 | C1 validated spine | `08820813a4657d62bb81c44a6a671984c846e28b` | Authoritative academic spine and hash baseline. |
 | Consolidation branch at baseline | `7ffe49c9e249752b8a7f1cf0663d10b6a37e968b` | Descends from C1 and `origin/WIP`; documentation/plan commits only before this manifest. |
+
+This table is the frozen pre-consolidation baseline, not the current remote-head report.
 
 ### Preservation record
 
@@ -15,7 +17,7 @@
 - `git merge-base --is-ancestor 08820813a4657d62bb81c44a6a671984c846e28b HEAD` and `git merge-base --is-ancestor origin/WIP HEAD` both exited `0`.
 - Neither required tag name existed before creation. Local tag peeling verifies `archive/pre-wip-consolidation-20260801^{}` = `a44d50631d826f81fd2a6bb1b73baa4a46e5fa1f` and `archive/local-rescue-20260721^{}` = `e0824b42d2251cfd479207d756798913a2313b31`.
 - `archive/pre-wip-consolidation-20260801` was pushed and remotely verified: annotated object `309f0e8987339205d9809471b0b8bbcf7dc0f620`, peeled target `a44d50631d826f81fd2a6bb1b73baa4a46e5fa1f`.
-- GitHub rejected `archive/local-rescue-20260721`: `refusing to allow an OAuth App to create or update workflow .github/workflows/ci.yml without workflow scope`. A subsequent remote archive-tag listing confirms this tag is absent. This is a WIP-promotion blocker requiring workflow-scoped authentication; independent consolidation Tasks 2–6 may continue.
+- At this Task 1 checkpoint, GitHub rejected `archive/local-rescue-20260721`: `refusing to allow an OAuth App to create or update workflow .github/workflows/ci.yml without workflow scope`. The later Task 6 closure records the successful workflow-scoped push and remote peel verification.
 - No branch was pushed or moved in Task 1.
 
 ## Rescue admission ledger
@@ -143,6 +145,14 @@ These are Git blob hashes computed from `0882081`, not workspace copies. No benc
 - Isolated frontend results: `npm run lint` passed with `0 errors, 159 warnings` (the Task 4 warning debt); typecheck passed; Vitest passed `5 files / 19 tests` in 2.98s. `npm run build` compiled and TypeScript-checked successfully, then failed page-data collection for `/api/driver/assignments` because the environment lacks a Supabase URL (`Error: supabaseUrl is required`). No dummy credential or source/config workaround was introduced.
 - Whole-branch review (`git log --oneline`, `git diff --stat`, `git diff --check`, and status for `0882081..HEAD`) found no whitespace errors or product artifacts. Admitted rescue decisions remain API containment, dependency alignment, bounded lint/hydration, and WIP CI; proxy forwarding, platform lockfile, parser, stale roadmap/worklog, and other rescue content remain excluded.
 - Final post-remediation HEAD frontend validation: `npm test -- --run` passed `7 files / 21 tests`; typecheck passed; lint reported `0 errors, 159 warnings`; and `git diff --check` plus `git status --short` were clean.
-- Promotion decision: **conditional hold**. Do not move WIP until all remaining conditions are resolved or explicitly waived by the user: (1) `archive/local-rescue-20260721` is successfully pushed and remotely peel-verified with workflow-scoped authentication; (2) the Supabase-configured production build passes; (3) the 159-warning result is reduced to the approved at-most-7 cap; and (4) the 99 npm-audit advisories receive an explicit disposition. The Supabase build, warning-cap, and npm-audit conditions may be waived only by the user; no waiver is recorded by this manifest.
+- Promotion decision: **completed after verification and explicit user dispositions**.
+  - `archive/local-rescue-20260721` was pushed and remotely peel-verified: annotated tag object `79f7dc41e5689c42950fcb1b91bd81bb2e017f66`, peeled commit `e0824b42d2251cfd479207d756798913a2313b31`.
+  - The user explicitly approved the Supabase-configured production-build waiver for consolidation. The build compiled and typechecked but did not pass page-data collection without Supabase configuration.
+  - The user explicitly approved the temporary 159-warning lint-cap waiver. ESLint still reported 0 errors and 159 warnings; the warning debt remains open.
+  - The user explicitly accepted the 99 npm-audit advisories as consolidation debt. This is a disposition, not remediation.
+  - Final promotion validation on the actual WIP head passed: frontend 21 tests, TypeScript, academic 790 tests, core/API 461 tests with 1 skip, and JIT parity 9 tests with zero skips.
+  - Local and remote `WIP` were then verified at `0ebd63d337dc3fca1a1c9e7644910ecf2e620a79`.
+
+The three user waivers close the consolidation hold only. They must not be cited as a successful Supabase production build, warning-cap compliance, or dependency-vulnerability remediation.
 - Open post-consolidation audit backlog: wall-clock fallback seeds; Supabase explicit timeouts; CVRPTW depot `prev` feasibility; production imports of academic promoted configurations; unrecognized promoted-name pass-through; and no reusable GIS map implementation.
-- Original dirty checkout reinspection showed its pre-existing dirty set unchanged. This task changes only this manifest; isolated `node_modules` and `.next` are ignored local artifacts.
+- Original dirty checkout reinspection showed its pre-existing dirty set unchanged. A later documentation-only synchronization created a checksum-verified external preservation package without cleaning or switching that checkout; isolated `node_modules` and `.next` remain ignored local artifacts.

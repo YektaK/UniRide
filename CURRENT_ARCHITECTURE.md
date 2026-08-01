@@ -1,7 +1,7 @@
 # UniRide Current Architecture
 
-**Verified:** 2026-07-16
-**Audit baseline:** branch `WIP`, commit `3534ae8c22057249c597bfbd38890e1e237c16ad`
+**Verified:** 2026-07-16; corrected and synchronized 2026-08-01
+**Current baseline:** branch `WIP`, commit `0ebd63d337dc3fca1a1c9e7644910ecf2e620a79`
 
 This document describes the current code structure, not the intended end state. Known defects are explicit so diagrams are not mistaken for production certification.
 
@@ -62,7 +62,8 @@ Verified limitations:
 - Request sizes and algorithm configurations are insufficiently bounded.
 - Benchmark admission and creation are non-atomic; stop does not cancel work.
 - CLI preview/import accepted caller-selected filesystem paths.
-- `DataLoader.get_instance()` returns a new object, defeating its stated singleton cache.
+- `DataLoader` is a verified process-level singleton, but Supabase construction has no explicit provider timeout and cache health/last-known-good behavior remains incomplete.
+- Production promoted-config loading imports `academic_benchmark.promoted_configs`, leaving the production-to-academic dependency boundary porous.
 - FastAPI routers have no authentication dependency.
 
 ### `uniride_core/`: shared mathematical kernel
@@ -70,6 +71,7 @@ Verified limitations:
 Contains distance functions, clustering, split decoders, metaheuristic engines, local search, Numba kernels, ALNS/SOTA operators, solver adapters, and routing models.
 
 The dependency direction is mostly sound: the core does not intentionally depend on FastAPI or academic orchestration. The model boundary remains incomplete because legacy core models combine TSPLIB metadata, benchmark fields, and production constraints.
+The 2026-08-01 re-verification refuted the earlier “broken DataLoader singleton” claim. It did not remove the separate provider-timeout, matrix provenance, cache-health, or production/academic isolation risks.
 
 ### `academic_benchmark/`: experiment system
 

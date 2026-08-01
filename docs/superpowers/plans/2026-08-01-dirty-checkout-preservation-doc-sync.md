@@ -75,6 +75,7 @@ original git status is byte-for-byte unchanged
 
 **Files:**
 - Modify: `UniRide_Ultimate_Audit.md`
+- Modify: `CURRENT_ARCHITECTURE.md`
 - Modify: `ACTIVE_ROADMAP.md`
 - Modify: `WORKLOG.md`
 - Reference only: `C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\UNIRIDE_ULTIMATE_AUDIT_REVISED_2026-07-31_opencode.md`
@@ -100,11 +101,15 @@ optimizer_api/strategies/promoted_config_loader.py:9-13 — production imports a
 
 Distinguish the permissive CVRPTW penalty mode as latent unless a production caller enables it.
 
-- [ ] **Step 3: Correct the roadmap**
+- [ ] **Step 3: Correct the architecture document**
+
+Replace the false DataLoader-singleton statement with the verified process-level singleton behavior. Retain the real missing-timeout, cache-health, and dependency-boundary risks without implying that `get_instance()` constructs a new loader.
+
+- [ ] **Step 4: Correct the roadmap**
 
 Remove the false DataLoader-singleton replacement task. Retain provider timeout/cache work as a separate real task. Add explicit tasks for deterministic PSO fallback, depot-transition feasibility, promoted-config boundary isolation, and shared GIS rendering only where supported by live source.
 
-- [ ] **Step 4: Record the documentation correction in WORKLOG**
+- [ ] **Step 5: Record the documentation correction in WORKLOG**
 
 Add a dated entry explaining that a revised audit corrected prior false positives while preserving still-open verified risks.
 
@@ -180,7 +185,7 @@ Confirm that no source, tests, dependencies, databases, generated results, archi
 Run:
 
 ```powershell
-git add docs/superpowers/plans/2026-08-01-dirty-checkout-preservation-doc-sync.md UniRide_Ultimate_Audit.md ACTIVE_ROADMAP.md WORKLOG.md WIP_CONSOLIDATION_MANIFEST_2026-08-01.md
+git add docs/superpowers/plans/2026-08-01-dirty-checkout-preservation-doc-sync.md UniRide_Ultimate_Audit.md CURRENT_ARCHITECTURE.md ACTIVE_ROADMAP.md WORKLOG.md WIP_CONSOLIDATION_MANIFEST_2026-08-01.md
 git commit -m "docs: preserve rescue evidence and synchronize WIP audit"
 ```
 

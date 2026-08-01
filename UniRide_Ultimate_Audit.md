@@ -1,9 +1,10 @@
 # UniRide Ultimate Audit
 
-**Audit date:** 2026-07-16
-**Baseline:** branch `WIP`, commit `3534ae8c22057249c597bfbd38890e1e237c16ad`
+**Audit date:** 2026-07-16; live re-verification synchronized 2026-08-01
+**Current baseline:** branch `WIP`, commit `0ebd63d337dc3fca1a1c9e7644910ecf2e620a79`
+**Historical baseline:** `3534ae8c22057249c597bfbd38890e1e237c16ad`
 **Scope:** Next.js frontend, Next.js API routes, FastAPI service, `uniride_core`, and academic benchmark framework
-**Method:** live CodeGraph source/call-path analysis plus targeted test and environment verification
+**Method:** live source/call-path analysis plus targeted and consolidated test/environment verification; historical reports are not treated as current evidence
 
 ## 1. Executive Reality Check
 
@@ -16,12 +17,12 @@ The dual-engine dependency direction is mostly sound: production and academic ad
 ### Verified claims that must be retired
 
 - “CVRPTW support complete”: cluster-first solvers do not enforce time windows inside route construction.
-- “DataLoader singleton”: `get_instance()` returns a new loader.
+- “DataLoader singleton is broken”: refuted. `DataLoader` uses the thread-safe `SingletonMeta`, and `get_instance()` delegates to the cached `cls()` instance. Provider timeout and cache-health risks remain separate concerns.
 - “No benchmark race conditions”: admission and creation are separate critical sections.
 - “Stop benchmark”: the endpoint changes status but does not stop computation.
 - “Production-grade core”: live feasibility and matrix defects contradict this status.
 - “GIS map”: no active map renderer or route-geometry contract exists.
-- “Clean frontend gates”: lint and typecheck do not currently pass.
+- “All frontend release gates are clean”: typecheck and unit tests pass, while lint still carries 159 temporarily waived warnings and the production build remains environment-waived at Supabase page-data collection.
 
 ### Positive findings
 
@@ -30,6 +31,30 @@ The dual-engine dependency direction is mostly sound: production and academic ad
 - TSPLIB download code uses a timeout and safe archive extraction.
 - Frontend unit tests passed.
 - The repository contains useful test infrastructure and several neutral model concepts suitable for the target architecture.
+
+### 2026-08-01 re-verification corrections
+
+The revised direct-source review corrected several claims from the original audit while preserving the defects that still reproduce on WIP:
+
+- `optimizer_api/utils/patterns.py:10-31` implements a thread-safe singleton metaclass, and `optimizer_api/utils/data_loader.py:128-131` returns `cls()` through that metaclass. Repeated `get_instance()` construction is not the defect.
+- `optimizer_api/strategies/pso_strategy.py:53` still falls back to `int(time.time() * 1000)` when no seed is supplied. This blocks deterministic replay unless every caller supplies a seed.
+- `optimizer_api/utils/data_loader.py:53-59` constructs the Supabase client without an explicit provider timeout. A stalled external request can therefore block loading.
+- `uniride_core/algorithms/cvrptw_decoder.py:95-111` skips a depot token without updating `prev`, so travel after a mid-route depot can be measured from a stale predecessor.
+- `optimizer_api/strategies/promoted_config_loader.py:9-13` still imports academic promoted-config code into production strategy construction.
+- `normalize_strategy_params` preserves unknown names rather than dropping them; the remaining risk is that downstream strategies silently ignore academic names they do not consume.
+- Permissive time-warp/capacity penalty defaults in the optional CVRPTW decoder are a latent hardening concern. The re-verification did not find a production caller enabling that optional path, so it is not classified as an active production failure.
+- The Package A/B/C1 branch work described by the July audit has since been consolidated and promoted into WIP. Historical branch-topology and “unmerged” statements are not current architecture evidence.
+
+Verified consolidation gates at promotion:
+
+| Gate | Current evidence |
+| --- | --- |
+| Academic benchmark suite | 790 passed, 42 warnings |
+| `uniride_core` plus `optimizer_api` | 461 passed, 1 skipped, 3 warnings |
+| Numba JIT parity | 9 passed, zero skips |
+| Frontend unit tests | 21 passed across 7 files |
+| TypeScript | Passed |
+| ESLint | 0 errors, 159 warnings; temporary warning-cap waiver approved |
 
 ## 2. Critical Vulnerabilities
 
@@ -172,7 +197,7 @@ The backend result must be the authority for effective direction, feasibility, m
 ### Backend/API
 
 - Production uses shared `STRATEGY_REGISTRY` instances although fresh factories exist.
-- The DataLoader “cache” can reload Supabase per strategy execution.
+- `DataLoader` is a process-level singleton, but its Supabase client has no explicit provider timeout and its cache/repository boundary still lacks durable health and last-known-good semantics.
 - `/compare` creates a thread pool sized from input and does not truly cancel timed-out work.
 - Optional `None` strategies can break health/default comparison enumeration.
 - Benchmark state is process-local.
@@ -181,7 +206,7 @@ The backend result must be the authority for effective direction, feasibility, m
 
 ### Frontend/GIS
 
-- No live map exists; memoization is not yet the dominant GIS concern.
+- No verified reusable map/route-geometry abstraction exists; page-specific GIS rendering and state must not be mistaken for a shared map foundation.
 - `D.Kampus` has multiple incompatible coordinate definitions.
 - Async interval polling overlaps requests and permits stale responses to overwrite terminal state.
 - Server state is duplicated despite React Query being installed.
@@ -192,15 +217,18 @@ The backend result must be the authority for effective direction, feasibility, m
 
 ### Quality gates
 
-| Gate                      | Audit result                                                     |
-| ------------------------- | ---------------------------------------------------------------- |
-| Frontend unit tests       | 15 passed across 3 files                                         |
-| Typecheck                 | Failed: missing installed `next-intl` plus implicit-`any` errors |
-| Lint                      | Failed: obsolete script and disabled correctness rules           |
-| FastAPI/Python collection | Blocked by Pydantic package mismatch                             |
-| Core/academic run         | 370 passed, 2 skipped, then 46 environment/temp-path errors      |
+| Gate | Current result |
+| --- | --- |
+| Frontend unit tests | 21 passed across 7 files |
+| Typecheck | Passed |
+| Lint | 0 errors, 159 warnings; temporary cap waiver approved, debt remains |
+| Production build | Compilation and typecheck passed; Supabase-configured page-data collection was environment-waived, not passed |
+| Academic suite | 790 passed, 42 warnings |
+| Core/API suite | 461 passed, 1 skipped, 3 warnings |
+| Numba JIT parity | 9 passed, zero skips |
+| Python dependency check | Passed in the combined validation environment |
 
-The test counts show useful coverage but do not certify production feasibility.
+These gates validate the consolidated branch and execution environments; they do not certify production feasibility, remove the warning debt, remediate npm advisories, or convert an environment waiver into a successful Supabase build.
 
 ## 4. Unification Strategy
 

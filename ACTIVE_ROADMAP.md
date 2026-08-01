@@ -1,7 +1,7 @@
 # UniRide Active Roadmap
 
-**Reset:** 2026-07-16
-**Source:** [UniRide_Ultimate_Audit.md](./UniRide_Ultimate_Audit.md)
+**Reset:** 2026-07-16; synchronized after live re-verification on 2026-08-01
+**Source:** [UniRide_Ultimate_Audit.md](./UniRide_Ultimate_Audit.md) and the verified WIP consolidation manifest
 
 This roadmap contains only work supported by the live audit. Older completion lists, speculative gains, and superseded review tasks have been removed.
 
@@ -16,11 +16,13 @@ Target: 1-2 days.
 - [ ] Restrict FastAPI to a trusted network boundary.
 - [ ] Authenticate benchmark and CLI-import/preview endpoints.
 - [ ] Remove arbitrary `filepath` support.
-- [ ] Create a clean supported Python environment and lock compatible Pydantic packages.
-- [ ] Restore the frontend dependency tree with `npm ci`.
-- [ ] Replace obsolete `next lint` with a working ESLint gate.
-- [ ] Re-enable hooks, purity, undefined-name, unreachable-code, fallthrough, and unused-disable rules.
-- [ ] Establish CI for frontend tests, typecheck, lint, Python collection, and focused solver regressions.
+- [x] Create a clean combined Python validation environment and align compatible Pydantic packages.
+- [x] Restore the frontend dependency tree with `npm ci`.
+- [x] Replace obsolete `next lint` with a working ESLint gate.
+- [x] Re-enable hooks, purity, undefined-name, unreachable-code, fallthrough, and unused-disable rules.
+- [x] Establish WIP CI for frontend tests, typecheck, lint, Python collection, and focused solver regressions.
+
+The toolchain gates now execute normally. The 159 lint warnings and 99 npm-audit advisories remain explicit debt accepted only for consolidation; they are not remediated.
 
 Acceptance:
 
@@ -53,6 +55,7 @@ Target: week 1. These are release blockers.
 - [ ] Generate every capacity-feasible pickup prefix.
 - [ ] Separate TW warp, route-duration excess, and capacity overflow.
 - [ ] Reject missing ATSP arcs.
+- [ ] Update `prev` when a route revisits the depot and add a regression proving that the next directed arc begins at the depot.
 
 ### Objective and RNG consistency
 
@@ -60,6 +63,7 @@ Target: week 1. These are release blockers.
 - [ ] Prefer lexicographic feasibility/vehicle-count/travel-cost ordering in production.
 - [ ] Correct cyclic ALNS insertion deltas.
 - [ ] Preserve seed `0`.
+- [ ] Replace PSO's wall-clock fallback seed with a deterministic caller/default contract and test omitted-seed plus seed-`0` replay.
 - [ ] Pass request-local Python and NumPy RNGs through all stochastic components.
 - [ ] Remove process-global reseeding from concurrent jobs.
 
@@ -73,12 +77,13 @@ Acceptance:
 
 Target: weeks 2-3.
 
-- [ ] Replace the false DataLoader singleton with one injected matrix repository.
+- [ ] Preserve the verified process-level singleton while extracting an injectable matrix repository with explicit lifecycle, cache-health, and test boundaries.
 - [ ] Add provider timeouts, cache TTL, last-known-good behavior, and health metadata.
 - [ ] Reject missing or invalid off-diagonal arcs.
 - [ ] Separate production geographic travel time from academic metrics.
 - [ ] Create bounded typed algorithm configurations.
 - [ ] Bound students, vehicles, algorithms, problems, repetitions, workers, and iterations.
+- [ ] Remove the production import of `academic_benchmark.promoted_configs`; consume a neutral, versioned promoted-configuration contract instead.
 - [ ] Deduplicate compare aliases and enforce a fixed worker ceiling.
 - [ ] Replace shared executable strategies with request-scoped factories.
 - [ ] Make optional-solver health/listing null-safe.

@@ -109,3 +109,12 @@ These are Git blob hashes computed from `0882081`, not workspace copies. No benc
 - GREEN: focused hook test passed 2/2; `npm run typecheck` passed; `npm test -- --run` passed 4 files / 17 tests; and `git diff --check` passed.
 - GREEN: `npm run lint` exited 0 with 0 errors. The original at-most-7 warning cap was incompatible with the required global `@typescript-eslint/no-explicit-any: warn` on the current tree: 159 warnings surfaced (69 `@typescript-eslint/no-unused-vars`, 67 `@typescript-eslint/no-explicit-any`, 19 `react-hooks/exhaustive-deps`, 4 `react-hooks/incompatible-library`). This non-blocking debt is carried explicitly to Task 6; no warning rule was suppressed and only `react/no-unescaped-entities` remains disabled.
 - Scope check: no generated artifacts, unrelated dependencies or installed environment artifacts, refs, remotes, source branches, API files, academic code, CI workflow, roadmap, or worklog were modified by Task 4.
+
+## Task 5 WIP CI evidence
+
+- Admitted the bounded `1e42652` CI candidate as a new `.github/workflows/ci.yml`; the pre-existing `benchmark.yml` remains unchanged.
+- The workflow runs on pushes and pull requests targeting only `WIP`. Its frontend job uses Node 22 with `npm ci`, lint, typecheck, and Vitest. Its Python job uses Python 3.14, the declared JIT constraints install contract, `pip check`, collection of the active suites, and focused academic, core, and API integration tests.
+- Python installs the small runtime dependency set required by the selected API tests after the constrained project test extra; it does not introduce a platform-specific `requirements-lock.txt`.
+- RED: `test_ci_contract.py` failed because `.github/workflows/ci.yml` was absent.
+- GREEN: `test_ci_contract.py` passed after the workflow was added. YAML is static CI configuration; no workflow run is generated during local consolidation.
+- Scope check: only the CI workflow, its contract test, and this manifest changed; `.github/workflows/benchmark.yml`, dependencies, lockfiles, refs, remotes, and source branches remain untouched.

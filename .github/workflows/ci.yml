@@ -1,0 +1,57 @@
+name: WIP integration
+
+on:
+  push:
+    branches: [WIP]
+  pull_request:
+    branches: [WIP]
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Frontend tests
+        run: npm test -- --run
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[test]" -c academic_benchmark/jit-benchmark-constraints.txt
+          pip install fastapi uvicorn python-dotenv httpx
+      - name: Verify dependency graph
+        run: python -m pip check
+      - name: Collect integration suites
+        run: >-
+          python -m pytest --collect-only academic_benchmark/tests
+          uniride_core/tests optimizer_api/tests -q -p no:cacheprovider
+      - name: Run focused Python integration tests
+        run: >-
+          python -m pytest
+          academic_benchmark/tests/test_manifest_contracts.py
+          academic_benchmark/tests/test_algorithm_capability_catalog.py
+          academic_benchmark/tests/test_atsp_integration.py
+          academic_benchmark/tests/test_fair_comparison_protocol.py
+          academic_benchmark/tests/test_fair_comparison_scientific_integrity.py
+          uniride_core/tests/test_matrix_benchmark_runner.py
+          optimizer_api/tests/test_phase0_containment.py
+          optimizer_api/tests/test_benchmark_router_problem_loading.py
+          -q -p no:cacheprovider --tb=short

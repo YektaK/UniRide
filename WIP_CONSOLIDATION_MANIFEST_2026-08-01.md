@@ -1,0 +1,80 @@
+# WIP Consolidation Manifest — 2026-08-01
+
+## Immutable heads
+
+| Ref | Full SHA | Treatment |
+|---|---|---|
+| `origin/WIP` | `a44d50631d826f81fd2a6bb1b73baa4a46e5fa1f` | Preserve as annotated `archive/pre-wip-consolidation-20260801`; do not move in this task. |
+| `codex/local-rescue-20260721` | `e0824b42d2251cfd479207d756798913a2313b31` | Preserve as annotated `archive/local-rescue-20260721`; selective reconstruction only. |
+| C1 validated spine | `08820813a4657d62bb81c44a6a671984c846e28b` | Authoritative academic spine and hash baseline. |
+| Consolidation branch at baseline | `7ffe49c9e249752b8a7f1cf0663d10b6a37e968b` | Descends from C1 and `origin/WIP`; documentation/plan commits only before this manifest. |
+
+### Preservation record
+
+- `git fetch --prune origin` completed without output; `git status --short --branch` reported only `## codex/wip-consolidation-20260801`.
+- `git merge-base --is-ancestor 08820813a4657d62bb81c44a6a671984c846e28b HEAD` and `git merge-base --is-ancestor origin/WIP HEAD` both exited `0`.
+- Neither required tag name existed before creation. Local tag peeling verifies `archive/pre-wip-consolidation-20260801^{}` = `a44d50631d826f81fd2a6bb1b73baa4a46e5fa1f` and `archive/local-rescue-20260721^{}` = `e0824b42d2251cfd479207d756798913a2313b31`.
+- Remote tag push and `git ls-remote --tags` verification are externally blocked in this task environment: the safety reviewer rejected transmission to `https://github.com/YektaK/UniRide.git` despite the approved plan. The orchestrator must push **only** `refs/tags/archive/pre-wip-consolidation-20260801` and `refs/tags/archive/local-rescue-20260721`, then record the remote peeled targets before any WIP promotion. No branch was pushed or moved here.
+
+## Rescue admission ledger
+
+| Commit | Path/hunk | Decision | Live evidence | Validation |
+|---|---|---|---|---|
+| `3eea998` | all academic hunks | superseded | Package B/C1 ancestry | academic baseline |
+| `092efe3` | entire patch | superseded | `git cherry` reports patch-equivalent | none |
+| `253155c` | entire patch | superseded | `git cherry` reports patch-equivalent | none |
+| `61c36c1` | optimizer API localhost binding | admit | C1 binds `0.0.0.0` | runtime config tests |
+| `61c36c1` | CLI arbitrary-path removal | admit | C1 accepts `filepath` | containment tests |
+| `61c36c1` | optional CLI internal key | admit | C1 CLI endpoints unguarded | auth tests |
+| `61c36c1` | `src/proxy.ts` internal-key forwarding | reject | header is not forwarded by Next route fetches | source trace |
+| `dcd5896` | Pydantic pair alignment | admit | pyproject pinned, optimizer requirements broad | dependency tests |
+| `dcd5896` | NumPy/Numba minimums | admit | pyproject names unbounded | dependency tests |
+| `ea75581` | direct ESLint gate and declared packages | admit | `next lint` script is invalid on Next 16 | npm/lint gate |
+| `1e42652` | `requirements-lock.txt` | reject | historical platform lock is not independently required | manifest check |
+| `1e42652` | `optimizer_api/routers/benchmark.py` | reject as a historical hunk | Task 2 recreates tested security behavior | containment tests |
+| `1e42652` | `uniride_core/algorithms/tsplib_parser.py` | reject | canonical C1 academic spine | unchanged hash |
+| `1e42652` | `ACTIVE_ROADMAP.md` and `WORKLOG.md` | reject | stale historical text | current manifest only |
+| `1e42652` | CI, flat ESLint config, bounded UI lint hunks | admit per listed path | reproducible lint errors | lint/type/test gates |
+| `e0824b4` | use-mobile hydration fix | admit | current hook mutates state in effect and differs on SSR | hook test and lint |
+| `e0824b4` | sandbox encoding repair | admit only for six verified mojibake literals | current source reproduces the text corruption | focused diff and typecheck |
+
+`git cherry -v origin/WIP codex/local-rescue-20260721` reported `- 092efe367aa9e98be59d37b25c0b9c1cdfe3b667` and `- 253155cba81504da347271e46fd20eecff64d6e8`, confirming patch equivalence. All `+` entries remain candidates governed by the table above; no rescue patch was cherry-picked or merged.
+
+## C1 evidence inventory
+
+| Path | Git blob hash |
+|---|---|
+| `academic_benchmark/numba_results/benchmark_progress.csv` | `62c8e0cf9be90558200a8343be3424db858ee056` |
+| `academic_benchmark/numba_results/benchmark_summary.csv` | `72a1c47f1dce038cbe16d46e21095de239f8ac28` |
+| `academic_benchmark/numba_results/best_params_numba.json` | `bafa25680ce7c79df9117d09756c0f09b400bc52` |
+| `academic_benchmark/numba_results/bildiri_import/benchmark_progress_20260513_003803.csv` | `1b2f3b199dc2d656f19c26ea740124dfc1f35508` |
+| `academic_benchmark/numba_results/bildiri_import/benchmark_summary_20260513_003803.csv` | `e95989c34a4e6d04ca3ec211ff365909acf6bc9c` |
+| `academic_benchmark/numba_results/bildiri_import/import_report_20260513_003803.json` | `8d29822256c61d77a1332bc2acbb948ff786bf83` |
+| `academic_benchmark/numba_results/tuning_progress.csv` | `76dd50dcd4b73ff75f34f735f0b8178af9eed710` |
+| `academic_benchmark/sota_results/benchmark_progress.csv` | `f7314f75aac6fa86d5d33d08311f2f2123f0178d` |
+| `academic_benchmark/sota_results/benchmark_summary.csv` | `4bf42a5049efb26f4f3421181dc5d079d415b77a` |
+| `academic_benchmark/sota_results/doe_sota/tuning_progress.csv` | `f4c0d2e038d729fed55444f81fc2b4e7a1fd9437` |
+
+These are Git blob hashes computed from `0882081`, not workspace copies. No benchmark output was generated or added to the index by this task.
+
+## Baseline environment and results
+
+- Working directory: `C:\\tmp\\UniRide-consolidate-20260801`
+- JIT interpreter: `C:\\Users\\yektakayman\\Desktop\\AiCode\\FirebaseUniRide\\UniRide\\.venv-jit\\Scripts\\python.exe` (`Python 3.14.3`)
+- pip: `pip 26.1.2` from the JIT environment (Python 3.14)
+- Ignored `node_modules` junction: diagnostics only; `npm ci` was not run.
+
+| Command | Result |
+|---|---|
+| `& $JIT_PY -m pip check` | PASS — `No broken requirements found.` |
+| `& $JIT_PY -m pytest academic_benchmark/tests -q -p no:cacheprovider --tb=short` | PASS — 786 passed, 42 warnings, 50.26s. Warnings are deprecation warnings for legacy algorithm identifiers. |
+| `& $JIT_PY -m pytest uniride_core/tests optimizer_api/tests -q -p no:cacheprovider --tb=short` | BLOCKED — 2 collection errors and 1 skipped in 2.78s: `ModuleNotFoundError: No module named 'fastapi'` when importing `optimizer_api.routers.benchmark`. |
+| `.\\node_modules\\.bin\\eslint.cmd src --ext .ts,.tsx` | BASELINE RED — 24 errors, 7 warnings (31 problems), matching the expected lint baseline. |
+| `.\\node_modules\\.bin\\tsc.cmd --noEmit` | PASS — exit 0, no diagnostics. |
+| `.\\node_modules\\.bin\\vitest.cmd run` | PASS — 3 test files and 15 tests passed (Vitest 4.0.18; 1.17s). |
+
+## Boundaries and next checks
+
+- This commit is documentation/evidence only. It does not modify production code, tests, dependencies, lockfiles, generated artifacts, source branches, or WIP.
+- Before admitting any `admit` ledger item, reconstruct only the listed behavior in current C1 files and run its listed focused validation plus the full matrix.
+- Before WIP promotion, the orchestrator must complete the two-tag remote push/peel check and resolve the `fastapi` baseline environment blocker according to the design's waiver policy.

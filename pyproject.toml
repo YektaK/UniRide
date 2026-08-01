@@ -9,8 +9,8 @@ description = "CVRPTW Optimization Framework and Academic Benchmark Suite"
 dependencies = [
     "pydantic==2.13.4",
     "pydantic-core==2.46.4",
-    "numpy",
-    "numba"
+    "numpy>=1.24.0",
+    "numba>=0.58.0"
 ]
 
 [project.optional-dependencies]

@@ -92,3 +92,10 @@ These are Git blob hashes computed from `0882081`, not workspace copies. No benc
 - Scope check: no academic code, dependency files, `src/proxy.ts`, refs, tags, remotes, or pre-existing `uniride.egg-info` changes were modified by this task.
 - Follow-up RED: the new response-level listing test failed because `scan_directories` returned absolute temporary result roots. Follow-up GREEN: the focused suite passed `24 passed in 1.13s` after mapping configured roots to basenames while preserving the list key and shape.
 - Follow-up files: `optimizer_api/routers/benchmark.py` and `optimizer_api/tests/test_phase0_containment.py`; no other behavior changed.
+
+## Task 3 dependency-contract evidence
+
+- RED: `& .\.venv-consolidation\Scripts\python.exe -m pytest academic_benchmark/tests/test_dependency_manifest.py -q -p no:cacheprovider --tb=short` failed as intended: the new NumPy/Numba-floor and optimizer Pydantic-pair assertions failed; the two existing assertions passed.
+- GREEN: the same manifest test passed: `4 passed in 0.34s`.
+- Environment consistency: `& .\.venv-consolidation\Scripts\python.exe -m pip check` passed: `No broken requirements found.`
+- Scope check: only the manifest test, `pyproject.toml`, and `optimizer_api/requirements.txt` changed; no lockfile, generated metadata, environment, or academic solver code was touched.

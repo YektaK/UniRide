@@ -48,7 +48,6 @@ export default function AdminUsersPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    setIsLoading(true);
     const loadUsers = async () => {
       try {
         const usersFromDb = await adminApi.users.getAll();

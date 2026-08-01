@@ -69,6 +69,7 @@ export default function AdminEditStudentSchedulePage() {
 
   useEffect(() => {
     if (adminUser && adminUser.role === 'admin') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount initial data load; loading flag flips synchronously. Upstream fix: data-fetching framework.
       fetchStudentAndSchedule();
     }
   }, [adminUser, fetchStudentAndSchedule]);

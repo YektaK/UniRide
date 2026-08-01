@@ -21,7 +21,6 @@ export default function SchedulePage() {
   const [editingEntry, setEditingEntry] = useState<ScheduleEntry | null>(null);
 
   useEffect(() => {
-    setIsLoading(true);
     const loadSchedule = async () => {
       if (user && user.role === "student" && user.weeklyScheduleId) {
         try {

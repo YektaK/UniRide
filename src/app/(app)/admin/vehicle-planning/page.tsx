@@ -58,10 +58,6 @@ export default function VehiclePlanningPage() {
     const [result, setResult] = useState<any>(null);
     const [ieData, setIeData] = useState<IEResponseData | null>(null);
 
-    useEffect(() => {
-        loadStudents();
-    }, []);
-
     const loadStudents = async () => {
         setIsLoadingStudents(true);
         try {
@@ -80,6 +76,11 @@ export default function VehiclePlanningPage() {
             setIsLoadingStudents(false);
         }
     };
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount initial data load; loading flag flips synchronously. Upstream fix: data-fetching framework.
+        loadStudents();
+    }, []);
 
     const handleStudentToggle = (studentId: string) => {
         setSelectedStudents((prev) => {

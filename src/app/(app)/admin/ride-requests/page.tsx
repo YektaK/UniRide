@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslations } from 'next-intl';
 import type { RideRequest, RideStatus, User } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,13 +38,11 @@ export default function AdminRideRequestsPage() {
   const tc = useTranslations('common');
   const { toast } = useToast();
   const [allRequests, setAllRequests] = useState<RideRequest[]>([]);
-  const [filteredRequests, setFilteredRequests] = useState<RideRequest[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    setIsLoading(true);
     const loadData = async () => {
       try {
         // Load users and ride requests via admin API
@@ -77,7 +75,6 @@ export default function AdminRideRequestsPage() {
 
         setUsers(convertedUsers);
         setAllRequests(convertedRequests);
-        setFilteredRequests(convertedRequests);
       } catch (error) {
         console.error("Error loading data:", error);
         toast({
@@ -92,9 +89,10 @@ export default function AdminRideRequestsPage() {
     loadData();
   }, []);
 
-  useEffect(() => {
+  const filteredRequests = useMemo(() => {
+    if (searchTerm === "") return allRequests;
     const lowerSearchTerm = searchTerm.toLowerCase();
-    const filtered = allRequests.filter(request => {
+    return allRequests.filter(request => {
       const student = users.find(u => u.id === request.userId);
       const studentName = student?.name.toLowerCase() || "";
       const requestDate = format(new Date(request.requestedPickupTime), "dd MMMM yyyy HH:mm", { locale: tr }).toLowerCase();
@@ -106,8 +104,7 @@ export default function AdminRideRequestsPage() {
         statusLabel.includes(lowerSearchTerm) ||
         pickupLocation.includes(lowerSearchTerm);
     });
-    setFilteredRequests(filtered);
-  }, [searchTerm, allRequests, users]);
+  }, [searchTerm, allRequests, users, tc]);
 
 
   const handleUpdateRequestStatus = async (requestId: string, newStatus: RideStatus, studentName: string | undefined) => {
@@ -115,11 +112,6 @@ export default function AdminRideRequestsPage() {
       await adminApi.rideRequests.updateStatus(requestId, { status: newStatus });
 
       setAllRequests(prevRequests =>
-        prevRequests.map(req =>
-          req.id === requestId ? { ...req, status: newStatus } : req
-        )
-      );
-      setFilteredRequests(prevRequests =>
         prevRequests.map(req =>
           req.id === requestId ? { ...req, status: newStatus } : req
         )

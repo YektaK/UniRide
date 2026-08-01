@@ -40,7 +40,6 @@ export default function RideHistoryPage() {
 
   useEffect(() => {
     if (user && !isLoading) {
-      setIsDataLoading(true);
       const loadRequests = async () => {
         try {
           const allRequests = await dbGetRideRequests({ userId: user.id });
@@ -54,6 +53,7 @@ export default function RideHistoryPage() {
       };
       loadRequests();
     } else if (!user && !isLoading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync initial loading state once auth resolves (not a data fetch)
       setIsDataLoading(false);
     }
   }, [user, isLoading]);

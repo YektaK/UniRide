@@ -600,7 +600,7 @@ def _resolve_cli_filename(filename: str) -> str:
 
 
 def _load_and_validate_cli_json(filepath: str) -> List[Dict]:
-    if not os.path.isfile(filepath): raise HTTPException(status_code=404, detail=f"File not found: {filepath}")
+    if not os.path.isfile(filepath): raise HTTPException(status_code=404, detail="File not found")
     try:
         with open(filepath, "r", encoding="utf-8") as f: data = json.load(f)
     except json.JSONDecodeError as e: raise HTTPException(status_code=400, detail=f"JSON error: {e}")

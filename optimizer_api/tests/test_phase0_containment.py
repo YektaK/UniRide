@@ -1,8 +1,10 @@
 import asyncio
+import json
 from pathlib import Path
 
 import pytest
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
+from fastapi.exception_handlers import http_exception_handler
 
 from optimizer_api.auth import require_internal_api_key
 from optimizer_api.runtime_config import optimizer_host
@@ -79,6 +81,41 @@ def test_cli_file_listing_hides_absolute_scan_directories(tmp_path, monkeypatch)
 
     assert response["scan_directories"] == ["results", "numba-results"]
     assert all(str(tmp_path) not in value for value in response["scan_directories"])
+
+
+def test_cli_preview_hides_resolved_path_when_file_disappears_after_resolution(tmp_path, monkeypatch):
+    root = tmp_path / "results"
+    root.mkdir()
+    result_file = root / "valid.json"
+    result_file.write_text("[]", encoding="utf-8")
+    monkeypatch.setattr(benchmark, "CLI_RESULTS_DIR", str(root))
+    monkeypatch.setattr(benchmark, "CLI_RESULTS_NUMBA_DIR", str(tmp_path / "missing"))
+
+    resolve_filename = benchmark._resolve_cli_filename
+
+    def resolve_then_remove(filename):
+        resolved = resolve_filename(filename)
+        Path(resolved).unlink()
+        return resolved
+
+    monkeypatch.setattr(benchmark, "_resolve_cli_filename", resolve_then_remove)
+    preview_route = next(
+        route
+        for route in benchmark.router.routes
+        if route.path == "/api/v1/benchmark/cli/preview"
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        preview_route.endpoint(filename="valid.json")
+
+    response = asyncio.run(http_exception_handler(
+        Request({"type": "http", "method": "GET", "path": preview_route.path, "headers": []}),
+        exc.value,
+    ))
+
+    assert response.status_code == 404
+    assert json.loads(response.body)["detail"] == "File not found"
+    assert str(tmp_path).encode() not in response.body
 
 
 def test_only_cli_file_routes_require_the_internal_api_key():

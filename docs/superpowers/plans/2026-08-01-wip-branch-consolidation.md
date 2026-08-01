@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Work only in `C:\tmp\UniRide-consolidate-20260801` on `codex/wip-consolidation-20260801`.
+- Work only in `C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.temp\worktrees\wip-consolidation-20260801` on `codex/wip-consolidation-20260801`.
 - The original checkout at `C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide` is dirty and must not be edited, staged, cleaned, reset, or used for commits.
 - C1 `08820813a4657d62bb81c44a6a671984c846e28b` is the immutable academic spine.
 - Never merge or range-cherry-pick `codex/local-rescue-20260721`.

@@ -67,6 +67,20 @@ def test_cli_file_listing_does_not_expose_absolute_paths(tmp_path, monkeypatch):
     assert "filepath" not in rows[0]
 
 
+def test_cli_file_listing_hides_absolute_scan_directories(tmp_path, monkeypatch):
+    results_root = tmp_path / "results"
+    numba_root = tmp_path / "numba-results"
+    results_root.mkdir()
+    numba_root.mkdir()
+    monkeypatch.setattr(benchmark, "CLI_RESULTS_DIR", str(results_root))
+    monkeypatch.setattr(benchmark, "CLI_RESULTS_NUMBA_DIR", str(numba_root))
+
+    response = benchmark.list_cli_benchmark_files()
+
+    assert response["scan_directories"] == ["results", "numba-results"]
+    assert all(str(tmp_path) not in value for value in response["scan_directories"])
+
+
 def test_only_cli_file_routes_require_the_internal_api_key():
     cli_routes = {
         route.path: route

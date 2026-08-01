@@ -614,7 +614,7 @@ def list_cli_benchmark_files() -> Dict:
     files = _find_cli_json_files()
     return {
         "total_files": len(files),
-        "scan_directories": [d for d in [CLI_RESULTS_DIR, CLI_RESULTS_NUMBA_DIR] if os.path.isdir(d)],
+        "scan_directories": [os.path.basename(d) for d in [CLI_RESULTS_DIR, CLI_RESULTS_NUMBA_DIR] if os.path.isdir(d)],
         "files": files,
     }
 

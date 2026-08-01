@@ -98,4 +98,4 @@ These are Git blob hashes computed from `0882081`, not workspace copies. No benc
 - RED: `& .\.venv-consolidation\Scripts\python.exe -m pytest academic_benchmark/tests/test_dependency_manifest.py -q -p no:cacheprovider --tb=short` failed as intended: the new NumPy/Numba-floor and optimizer Pydantic-pair assertions failed; the two existing assertions passed.
 - GREEN: the same manifest test passed: `4 passed in 0.34s`.
 - Environment consistency: `& .\.venv-consolidation\Scripts\python.exe -m pip check` passed: `No broken requirements found.`
-- Scope check: only the manifest test, `pyproject.toml`, and `optimizer_api/requirements.txt` changed; no lockfile, generated metadata, environment, or academic solver code was touched.
+- Scope check: only the four authorized files changed: the manifest test, `pyproject.toml`, `optimizer_api/requirements.txt`, and this consolidation manifest; no lockfile, generated metadata, environment, or academic solver code was touched.

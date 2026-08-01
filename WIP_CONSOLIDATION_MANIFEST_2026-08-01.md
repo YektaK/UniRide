@@ -92,6 +92,7 @@ These are Git blob hashes computed from `0882081`, not workspace copies. No benc
 - Scope check: no academic code, dependency files, `src/proxy.ts`, refs, tags, remotes, or pre-existing `uniride.egg-info` changes were modified by this task.
 - Follow-up RED: the new response-level listing test failed because `scan_directories` returned absolute temporary result roots. Follow-up GREEN: the focused suite passed `24 passed in 1.13s` after mapping configured roots to basenames while preserving the list key and shape.
 - Follow-up files: `optimizer_api/routers/benchmark.py` and `optimizer_api/tests/test_phase0_containment.py`; no other behavior changed.
+- Final API follow-up: the late-missing-file checks cover disappearance both after safe resolution and at `open()` after the `isfile()` precheck. `& .\.venv-consolidation\Scripts\python.exe -m pytest optimizer_api/tests/test_phase0_containment.py optimizer_api/tests/test_benchmark_router_problem_loading.py -q -p no:cacheprovider --tb=short` passed: 26 passed in 1.06s. Both serialized 404 responses are generic `File not found` and omit the resolved temporary root.
 
 ## Task 3 dependency-contract evidence
 

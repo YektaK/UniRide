@@ -602,7 +602,11 @@ def _resolve_cli_filename(filename: str) -> str:
 def _load_and_validate_cli_json(filepath: str) -> List[Dict]:
     if not os.path.isfile(filepath): raise HTTPException(status_code=404, detail="File not found")
     try:
-        with open(filepath, "r", encoding="utf-8") as f: data = json.load(f)
+        file_handle = open(filepath, "r", encoding="utf-8")
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="File not found")
+    try:
+        with file_handle as f: data = json.load(f)
     except json.JSONDecodeError as e: raise HTTPException(status_code=400, detail=f"JSON error: {e}")
     if not isinstance(data, list) or not data: raise HTTPException(status_code=400, detail="Invalid JSON array")
     missing = [f for f in ["problem", "strategy", "dimension"] if f not in data[0]]

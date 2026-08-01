@@ -1,4 +1,5 @@
 import asyncio
+import builtins
 import json
 from pathlib import Path
 
@@ -99,6 +100,41 @@ def test_cli_preview_hides_resolved_path_when_file_disappears_after_resolution(t
         return resolved
 
     monkeypatch.setattr(benchmark, "_resolve_cli_filename", resolve_then_remove)
+    preview_route = next(
+        route
+        for route in benchmark.router.routes
+        if route.path == "/api/v1/benchmark/cli/preview"
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        preview_route.endpoint(filename="valid.json")
+
+    response = asyncio.run(http_exception_handler(
+        Request({"type": "http", "method": "GET", "path": preview_route.path, "headers": []}),
+        exc.value,
+    ))
+
+    assert response.status_code == 404
+    assert json.loads(response.body)["detail"] == "File not found"
+    assert str(tmp_path).encode() not in response.body
+
+
+def test_cli_preview_hides_resolved_path_when_file_disappears_during_open(tmp_path, monkeypatch):
+    root = tmp_path / "results"
+    root.mkdir()
+    result_file = root / "valid.json"
+    result_file.write_text("[]", encoding="utf-8")
+    monkeypatch.setattr(benchmark, "CLI_RESULTS_DIR", str(root))
+    monkeypatch.setattr(benchmark, "CLI_RESULTS_NUMBA_DIR", str(tmp_path / "missing"))
+
+    original_open = builtins.open
+
+    def open_missing_target(file, *args, **kwargs):
+        if Path(file) == result_file:
+            raise FileNotFoundError(file)
+        return original_open(file, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "open", open_missing_target)
     preview_route = next(
         route
         for route in benchmark.router.routes

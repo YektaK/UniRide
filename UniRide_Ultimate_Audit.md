@@ -37,7 +37,7 @@ The dual-engine dependency direction is mostly sound: production and academic ad
 The revised direct-source review corrected several claims from the original audit while preserving the defects that still reproduce on WIP:
 
 - `optimizer_api/utils/patterns.py:10-31` implements a thread-safe singleton metaclass, and `optimizer_api/utils/data_loader.py:128-131` returns `cls()` through that metaclass. Repeated `get_instance()` construction is not the defect.
-- `optimizer_api/strategies/pso_strategy.py:53` still falls back to `int(time.time() * 1000)` when no seed is supplied. This blocks deterministic replay unless every caller supplies a seed.
+- `optimizer_api/strategies/pso_strategy.py:53` still falls back to `int(time.time() * 1000)` for every falsy seed, including an omitted seed, `None`, and explicit seed `0`. This breaks deterministic replay and discards seed-`0` semantics.
 - `optimizer_api/utils/data_loader.py:53-59` constructs the Supabase client without an explicit provider timeout. A stalled external request can therefore block loading.
 - `uniride_core/algorithms/cvrptw_decoder.py:95-111` skips a depot token without updating `prev`, so travel after a mid-route depot can be measured from a stale predecessor.
 - `optimizer_api/strategies/promoted_config_loader.py:9-13` still imports academic promoted-config code into production strategy construction.
@@ -206,7 +206,7 @@ The backend result must be the authority for effective direction, feasibility, m
 
 ### Frontend/GIS
 
-- No verified reusable map/route-geometry abstraction exists; page-specific GIS rendering and state must not be mistaken for a shared map foundation.
+- No active GIS renderer or reusable route-geometry abstraction exists; page-specific route lists and state must not be mistaken for GIS rendering.
 - `D.Kampus` has multiple incompatible coordinate definitions.
 - Async interval polling overlaps requests and permits stale responses to overwrite terminal state.
 - Server state is duplicated despite React Query being installed.

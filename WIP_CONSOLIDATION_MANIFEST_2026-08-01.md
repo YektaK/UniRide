@@ -153,6 +153,6 @@ These are Git blob hashes computed from `0882081`, not workspace copies. No benc
   - Final promotion validation on the actual WIP head passed: frontend 21 tests, TypeScript, academic 790 tests, core/API 461 tests with 1 skip, and JIT parity 9 tests with zero skips.
   - Local and remote `WIP` were then verified at `0ebd63d337dc3fca1a1c9e7644910ecf2e620a79`.
 
-The three user waivers close the consolidation hold only. They must not be cited as a successful Supabase production build, warning-cap compliance, or dependency-vulnerability remediation.
+The two user waivers and npm-audit debt disposition close the consolidation hold only. They must not be cited as a successful Supabase production build, warning-cap compliance, or dependency-vulnerability remediation.
 - Open post-consolidation audit backlog: wall-clock fallback seeds; Supabase explicit timeouts; CVRPTW depot `prev` feasibility; production imports of academic promoted configurations; unrecognized promoted-name pass-through; and no reusable GIS map implementation.
 - Original dirty checkout reinspection showed its pre-existing dirty set unchanged. A later documentation-only synchronization created a checksum-verified external preservation package without cleaning or switching that checkout; isolated `node_modules` and `.next` remain ignored local artifacts.

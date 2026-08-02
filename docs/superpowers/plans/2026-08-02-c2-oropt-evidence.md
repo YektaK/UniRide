@@ -233,4 +233,3 @@ Expected: the existing Package A/Package B suites remain green; no test should r
 - [ ] No task changes fairness-budget policy, production strategy exposure, solver relocation, archival, dependencies, frontend, API, databases, or generated evidence.
 - [ ] Type/signature consistency is maintained: \`improve_or_opt_budgeted\` returns \`BudgetedSearchResult\`; fairness imports and registry dispatch use the same name; \`window\` is an integer \`1..3\`; \`Or-opt\` is the family string; \`objective=python;polish=none\` is the backend string.
 - [ ] Candidate and planned boundaries remain explicitly tested after Or-opt promotion.
-

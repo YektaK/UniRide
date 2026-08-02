@@ -16,6 +16,7 @@
       "objective_evaluations": 80,
       "observed_execution_backend": "mixed-numba-objective-python-polish",
       "seed": 1729,
+      "termination_reason": "max_iterations",
       "tour_length": 29.0,
       "variant": "memetic_2opt"
     },
@@ -35,6 +36,7 @@
       "objective_evaluations": 80,
       "observed_execution_backend": "mixed-numba-objective-python-polish",
       "seed": 1729,
+      "termination_reason": "max_iterations",
       "tour_length": 38.0,
       "variant": "memetic_2opt"
     },
@@ -54,6 +56,7 @@
       "objective_evaluations": 5,
       "observed_execution_backend": "numba-objective",
       "seed": 1729,
+      "termination_reason": "max_iterations",
       "tour_length": 39.0,
       "variant": "pure"
     },
@@ -73,6 +76,7 @@
       "objective_evaluations": 5,
       "observed_execution_backend": "numba-objective",
       "seed": 1729,
+      "termination_reason": "max_iterations",
       "tour_length": 43.0,
       "variant": "pure"
     },
@@ -92,6 +96,7 @@
       "objective_evaluations": 83,
       "observed_execution_backend": "mixed-numba-objective-python-polish",
       "seed": 1729,
+      "termination_reason": "max_iterations",
       "tour_length": 29.0,
       "variant": "memetic_2opt"
     },
@@ -111,6 +116,7 @@
       "objective_evaluations": 83,
       "observed_execution_backend": "mixed-numba-objective-python-polish",
       "seed": 1729,
+      "termination_reason": "max_iterations",
       "tour_length": 38.0,
       "variant": "memetic_2opt"
     },
@@ -130,6 +136,7 @@
       "objective_evaluations": 9,
       "observed_execution_backend": "numba-objective",
       "seed": 1729,
+      "termination_reason": "max_iterations",
       "tour_length": 48.0,
       "variant": "pure"
     },
@@ -149,6 +156,7 @@
       "objective_evaluations": 8,
       "observed_execution_backend": "numba-objective",
       "seed": 1729,
+      "termination_reason": "max_iterations",
       "tour_length": 48.0,
       "variant": "pure"
     }

@@ -25,6 +25,7 @@ FIXTURE_SCHEMA_VERSION = "uniride-bildiri-parity/v1"
 FIXTURE_PATH = Path(__file__).with_name("fixtures") / "bildiri_gwo_hho_v1.json"
 SEED = 1729
 EVALUATION_BUDGET = 100
+MAX_ITERATIONS = 1
 
 PUBLIC_GWO_HHO_EXECUTORS = (
     "Core-GWO-TSP",
@@ -55,6 +56,7 @@ class ParityRecord(TypedDict):
     objective_evaluations: int
     evaluation_budget: int
     budget_terminated: bool
+    termination_reason: Literal["evaluation_budget_exhausted", "max_iterations", "stagnation_limit"]
     variant: Literal["pure", "memetic_2opt"]
     observed_execution_backend: str
     seed: int
@@ -121,6 +123,7 @@ MATHEMATICAL_AND_ACCOUNTING_FIELDS = (
     "objective_evaluations",
     "evaluation_budget",
     "budget_terminated",
+    "termination_reason",
     "variant",
     "seed",
 )
@@ -166,6 +169,11 @@ def _validate_record(record: Mapping[str, Any], *, matrix_size: int) -> None:
     if not isinstance(record["budget_terminated"], bool):
         raise ValueError("capture budget_terminated flag must be bool")
 
+    if record["termination_reason"] not in {
+        "evaluation_budget_exhausted", "max_iterations", "stagnation_limit"
+    }:
+        raise ValueError("capture termination_reason is invalid")
+
     variant = record["variant"]
     if variant not in {"pure", "memetic_2opt"}:
         raise ValueError("capture variant must be pure or memetic_2opt")
@@ -187,6 +195,7 @@ def test_capture_record_rejects_missing_backend_label() -> None:
         "objective_evaluations": 1,
         "evaluation_budget": 100,
         "budget_terminated": False,
+        "termination_reason": "max_iterations",
         "variant": "pure",
         "observed_execution_backend": "",
         "seed": 1729,
@@ -206,6 +215,7 @@ def _valid_record() -> ParityRecord:
         "objective_evaluations": 1,
         "evaluation_budget": 100,
         "budget_terminated": False,
+        "termination_reason": "max_iterations",
         "variant": "pure",
         "observed_execution_backend": "numba-objective",
         "seed": 1729,
@@ -269,7 +279,7 @@ def _solver_for_case(
     variant: Literal["pure", "memetic_2opt"],
 ):
     common = {
-        "max_iterations": 1,
+        "max_iterations": MAX_ITERATIONS,
         "random_seed": SEED,
         "polish_enabled": variant == "memetic_2opt",
         "polish_interval": 1,
@@ -315,12 +325,25 @@ def _capture_case(
         "objective_evaluations": int(extra_stats["objective_evaluations"]),
         "evaluation_budget": int(extra_stats["evaluation_budget"]),
         "budget_terminated": bool(extra_stats["budget_terminated"]),
+        "termination_reason": (
+            "evaluation_budget_exhausted"
+            if bool(extra_stats["budget_terminated"])
+            else "max_iterations"
+            if int(result.iterations) >= MAX_ITERATIONS
+            else "stagnation_limit"
+        ),
         "variant": str(extra_stats["variant"]),
         "observed_execution_backend": str(extra_stats.get("execution_backend", "")),
         "seed": int(result.seed),
     }
     _validate_record(record, matrix_size=len(matrix))
     return record
+
+
+def test_capture_case_records_termination_reason() -> None:
+    record = _capture_case("gwo", "pure", False)
+
+    assert record["termination_reason"] == "max_iterations"
 
 
 def test_capture_case_uses_solver_reported_variant(

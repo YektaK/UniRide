@@ -261,3 +261,21 @@ def find_capability_claim(
         ):
             return claim
     return None
+
+
+_OR_OPT_VERIFIED = AlgorithmCapability(
+    "Core-OrOpt-TSP",
+    "OrOpt",
+    "Or-opt",
+    LifecycleStatus.VERIFIED,
+    claims=_fixed_local_search_claims(
+        "test_core_or_opt_fixed_tsp_and_atsp_evidence"
+    )
+    + _native_local_search_claims(
+        "test_core_or_opt_direct_native_tsp_and_atsp_evidence"
+    ),
+)
+CAPABILITY_CATALOG = build_capability_catalog(
+    _OR_OPT_VERIFIED if capability.canonical_id == "Core-OrOpt-TSP" else capability
+    for capability in _INITIAL_CAPABILITIES
+)

@@ -396,12 +396,12 @@ def test_current_candidate_catalog_entry_remains_non_selectable() -> None:
     with pytest.raises(CandidateAlgorithmError):
         preflight_run(
             PreflightRequest(
-                resolution=_resolution("Core-OrOpt-TSP"),
+                resolution=_resolution("Core-GA-TSP"),
                 problem=_TSP,
                 protocol=ExecutionProtocol.FIXED_BUDGET,
                 backend_policy=BackendPolicy.PYTHON_ONLY,
                 evaluation_budget=10,
-                registered_algorithm_ids=frozenset({"Core-OrOpt-TSP"}),
+                registered_algorithm_ids=frozenset({"Core-GA-TSP"}),
                 runtime_backends=RuntimeBackendAvailability(True, False, "test"),
             )
         )

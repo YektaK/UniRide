@@ -175,7 +175,7 @@ def test_study_rejects_alias_unknown_and_planned_secondary_ids(algorithm_id: str
         StudyManifestV1.model_validate(payload)
 
 
-@pytest.mark.parametrize("candidate_id", ["Core-OrOpt-TSP", "ALNS-TSP"])
+@pytest.mark.parametrize("candidate_id", ["Core-GA-TSP", "ALNS-TSP"])
 def test_study_rejects_canonical_candidate_primary_ids_with_typed_error(
     candidate_id: str,
 ):
@@ -192,7 +192,7 @@ def test_study_rejects_canonical_candidate_primary_ids_with_typed_error(
     assert error["ctx"]["error"].code == "candidate_algorithm"
 
 
-@pytest.mark.parametrize("candidate_id", ["Core-OrOpt-TSP", "ALNS-TSP"])
+@pytest.mark.parametrize("candidate_id", ["Core-GA-TSP", "ALNS-TSP"])
 def test_study_rejects_canonical_candidate_secondary_ids_with_typed_error(
     candidate_id: str,
 ):

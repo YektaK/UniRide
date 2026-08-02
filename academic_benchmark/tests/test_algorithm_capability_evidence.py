@@ -413,3 +413,15 @@ def test_core_hho_memetic_2opt_fixed_tsp_and_atsp_numba_evidence() -> None:
     _require_live_numba_objective()
     _prove_fixed("Core-HHO-TSP-Memetic-2opt", expected_backend="objective=numba;polish=python", expected_variant="memetic_2opt", polish_enabled=True)
     _assert_metaheuristic_claims_published("Core-HHO-TSP-Memetic-2opt", ExecutionProtocol.FIXED_BUDGET, ExecutionBackendProfile(BackendKind.NUMBA_NOPYTHON, BackendKind.PYTHON), CompositionKind.MEMETIC_2OPT, "test_core_hho_memetic_2opt_fixed_tsp_and_atsp_numba_evidence")
+
+
+def test_core_or_opt_fixed_tsp_and_atsp_evidence() -> None:
+    _prove_fixed(
+        "Core-OrOpt-TSP",
+        expected_backend="objective=python;polish=none",
+        expected_variant="pure",
+        polish_enabled=False,
+    )
+    _assert_fixed_local_claims_published(
+        "Core-OrOpt-TSP", "test_core_or_opt_fixed_tsp_and_atsp_evidence"
+    )

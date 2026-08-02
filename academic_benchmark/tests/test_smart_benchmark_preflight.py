@@ -314,10 +314,10 @@ def test_cli_governed_candidate_rejects_before_registry_or_direct_fallback(monke
     monkeypatch.setattr(cli_engine, "_AlgoReg", ExplodingRegistry)
     monkeypatch.setattr(cli_engine, "_HAS_NUMBA_REGISTRY", True)
     task = (
-        cli_engine._make_problem_dict(_Problem()), "Core-OrOpt-TSP", "Core-OrOpt-TSP",
+        cli_engine._make_problem_dict(_Problem()), "Core-GA-TSP", "Core-GA-TSP",
         {}, 0, 1, _request(
-            requested_algorithm_id="Core-OrOpt-TSP",
-            canonical_algorithm_id="Core-OrOpt-TSP",
+            requested_algorithm_id="Core-GA-TSP",
+            canonical_algorithm_id="Core-GA-TSP",
         ),
     )
 
@@ -427,7 +427,7 @@ def test_smart_selection_excludes_every_raw_governed_alias_and_preserves_non_c1(
     ]
 
 
-@pytest.mark.parametrize("algorithm_id", ["Core-OrOpt-TSP", "Numba-Or-opt"])
+@pytest.mark.parametrize("algorithm_id", ["Core-GA-TSP", "Numba-GA"])
 def test_smart_public_runner_rejects_governed_candidate_before_setup(monkeypatch, algorithm_id) -> None:
     def explode(*_args, **_kwargs):
         raise AssertionError("governed candidate reached Smart setup")
@@ -502,7 +502,7 @@ def test_cli_alias_selection_uses_canonical_spec_and_governed_request() -> None:
 def test_cli_candidate_alias_fails_instead_of_becoming_zero_tasks() -> None:
     with pytest.raises(CandidateAlgorithmError):
         cli_engine._select_cli_specs(
-            [], ["Numba-Or-opt"], "fixed_evaluation_budget", 10, "python_only"
+            [], ["Numba-GA"], "fixed_evaluation_budget", 10, "python_only"
         )
 
 
@@ -515,7 +515,7 @@ def test_cli_config_governed_spec_requires_explicit_execution_request() -> None:
 @pytest.mark.parametrize(
     ("algorithm_id", "error_type"),
     [
-        ("Numba-Or-opt", CandidateAlgorithmError),
+        ("Numba-GA", CandidateAlgorithmError),
         ("Core-GWO-TSP-Memetic-3opt", PlannedAlgorithmError),
     ],
 )

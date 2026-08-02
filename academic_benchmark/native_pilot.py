@@ -64,6 +64,9 @@ _ALLOWED_ALGORITHM_KEYS = {
     "Core-ThreeOpt-TSP": frozenset({
         "max_iterations", "first_improvement", "window",
     }),
+    "Core-OrOpt-TSP": frozenset({
+        "max_iterations", "first_improvement", "window",
+    }),
 }
 _REQUIRED_ALGORITHM_KEYS = {
     "Core-GWO-TSP-Pure": frozenset({
@@ -74,6 +77,9 @@ _REQUIRED_ALGORITHM_KEYS = {
     }),
     "Core-TwoOpt-TSP": frozenset({"max_iterations", "first_improvement"}),
     "Core-ThreeOpt-TSP": frozenset({
+        "max_iterations", "first_improvement", "window",
+    }),
+    "Core-OrOpt-TSP": frozenset({
         "max_iterations", "first_improvement", "window",
     }),
 }
@@ -221,6 +227,14 @@ def _validate_algorithm_parameters(
         "Core-ThreeOpt-TSP.window",
         2,
     )
+    or_opt = algorithms["Core-OrOpt-TSP"]
+    _strict_bool(
+        or_opt["first_improvement"],
+        "Core-OrOpt-TSP.first_improvement",
+    )
+    _strict_int(or_opt["window"], "Core-OrOpt-TSP.window", 1)
+    if or_opt["window"] > 3:
+        raise NativePilotError("Core-OrOpt-TSP.window must be <= 3")
 
 
 def load_native_pilot_config(path: str | Path) -> NativePilotConfig:

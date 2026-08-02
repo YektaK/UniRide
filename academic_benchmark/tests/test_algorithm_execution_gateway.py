@@ -102,7 +102,7 @@ class _ExplodingGetter:
     "requested_id,problem,error",
     [
         ("unknown", PROBLEM, UnknownAlgorithmError),
-        ("Core-OrOpt-TSP", PROBLEM, CandidateAlgorithmError),
+        ("Core-GA-TSP", PROBLEM, CandidateAlgorithmError),
         (CANONICAL_ID, _Problem(problem_type="cvrp"), UnsupportedProblemContractError),
     ],
 )
@@ -236,3 +236,34 @@ def test_gateway_attaches_requested_alias_only_when_alias_was_used() -> None:
     assert canonical.requested_algorithm_id is None
     assert alias.algorithm == alias.algorithm_id == CANONICAL_ID
     assert alias.requested_algorithm_id == "Numba-2-opt"
+
+
+def test_gateway_accepts_verified_or_opt_python_claim() -> None:
+    def getter(algorithm_id: str):
+        assert algorithm_id == "Core-OrOpt-TSP"
+        return lambda *args, **kwargs: _valid_result(
+            algorithm="Core-OrOpt-TSP",
+            algorithm_id="Core-OrOpt-TSP",
+            algorithm_family="Or-opt",
+            variant="pure",
+            neighborhood_window=3,
+            execution_backend="objective=python;polish=none",
+        )
+
+    result, decision = execute_preflighted(
+        requested_algorithm_id="Core-OrOpt-TSP",
+        identifier_source=IdentifierSource.INTERNAL,
+        problem=PROBLEM,
+        params={},
+        seed=41,
+        run_idx=2,
+        protocol=ExecutionProtocol.FIXED_BUDGET,
+        backend_policy=BackendPolicy.PYTHON_ONLY,
+        evaluation_budget=10,
+        registered_algorithm_ids=frozenset({"Core-OrOpt-TSP"}),
+        runtime_backends=RUNTIME,
+        registry_getter=getter,
+    )
+    assert decision.executor_registry_id == "Core-OrOpt-TSP"
+    assert result.algorithm_family == "Or-opt"
+    assert result.neighborhood_window == 3

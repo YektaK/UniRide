@@ -111,6 +111,11 @@ def _algorithm_config() -> dict[str, dict[str, Any]]:
             "first_improvement": True,
             "window": 4,
         },
+        "Core-OrOpt-TSP": {
+            "max_iterations": 3,
+            "first_improvement": False,
+            "window": 3,
+        },
     }
 
 
@@ -524,3 +529,10 @@ def test_canonical_local_search_native_primary_and_replay_use_real_gateway(
         }
         assert replay_row["executor_registry_id"] == algorithm_id
         assert replay_row["capability_evidence_ids"] == [expected_evidence]
+
+
+def test_core_or_opt_direct_native_tsp_and_atsp_evidence() -> None:
+    _assert_direct_canonical_native_evidence(
+        "Core-OrOpt-TSP",
+        {"max_iterations": 3, "first_improvement": False, "window": 3},
+    )

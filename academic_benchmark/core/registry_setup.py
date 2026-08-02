@@ -999,3 +999,123 @@ for problem_prefix in ("CVRP", "CVRPTW"):
         AlgorithmRegistry.register(alias)(_make_holistic_routing_executor(alias, solver_name))
 
 logger.info("Loaded %d algorithms.", len(AlgorithmRegistry.list_algorithms()))
+
+def _run_canonical_or_opt(
+    problem, params, run_idx, algorithm_name, manifest, *, native: bool
+):
+    import random
+    import time
+
+    from academic_benchmark.fairness import (
+        FairRunResult,
+        ObjectiveEvaluationBudget,
+        improve_or_opt_budgeted,
+    )
+
+    matrix, matrix_kind = _problem_matrix(problem)
+    seed = manifest.paired_seed(problem.name, run_idx)
+    route = list(range(problem.dimension))
+    random.Random(seed).shuffle(route)
+    accounting = ObjectiveEvaluationBudget(
+        None if native else manifest.evaluation_budget
+    )
+    max_iterations = int(params.get("max_iterations", 1000))
+    first_improvement = bool(params.get("first_improvement", False))
+    neighborhood_window = int(
+        params.get("window", params.get("max_segment_length", 3))
+    )
+    started = time.perf_counter()
+    search = improve_or_opt_budgeted(
+        route,
+        matrix,
+        accounting,
+        max_iterations=max_iterations,
+        first_improvement=first_improvement,
+        max_segment_length=neighborhood_window,
+    )
+    elapsed = time.perf_counter() - started
+    if native and (
+        search.budget_exhausted
+        or search.termination_reason == "evaluation_budget_exhausted"
+    ):
+        raise ValueError("native local search unexpectedly exhausted a measurement counter")
+
+    optimal = getattr(problem, "optimal", None)
+    gap = ((search.cost - optimal) / optimal) * 100 if optimal and optimal > 0 else None
+    result = FairRunResult(
+        problem=problem.name,
+        algorithm=algorithm_name,
+        algorithm_id=algorithm_name,
+        algorithm_family="Or-opt",
+        variant="pure",
+        run=run_idx,
+        seed=seed,
+        seed_group=manifest.seed_group(problem.name, run_idx),
+        dimension=problem.dimension,
+        optimal=optimal,
+        tour_cost=float(search.cost),
+        objective_cost=float(search.cost),
+        gap_pct=gap,
+        elapsed_sec=elapsed,
+        iterations=search.iterations,
+        evaluations=accounting.used,
+        objective_evaluations=accounting.used,
+        evaluation_budget=None if native else manifest.evaluation_budget,
+        budget_terminated=False if native else search.budget_exhausted,
+        tour=[node + 1 for node in search.route],
+        problem_type=str(getattr(problem, "problem_type", "tsp") or "tsp").lower(),
+        matrix_kind=matrix_kind,
+        initialization_policy="paired_seed_random_permutation_all_nodes",
+        termination_policy=(
+            f"algorithm_native_termination;max_iterations={max_iterations}"
+            if native
+            else (
+                f"{manifest.budget_policy};max_iterations={max_iterations};"
+                f"budget_exhausted={search.budget_exhausted}"
+            )
+        ),
+        execution_backend="objective=python;polish=none",
+        polish_policy={
+            "enabled": False,
+            "initial": False,
+            "periodic": False,
+            "final": False,
+            "operator": None,
+        },
+        comparison_regime=manifest.comparison_regime,
+        acceptance_policy=(
+            "first_improvement" if first_improvement else "best_improvement"
+        ),
+        neighborhood_window=neighborhood_window,
+        termination_reason=search.termination_reason,
+    )
+    manifest.validate_result(result)
+    return result
+
+
+_existing_fair_local_search = _run_fair_local_search
+_existing_native_local_search = _run_native_local_search
+
+
+def _run_fair_local_search(
+    problem, params, run_idx, algorithm_name, strategy_payload, manifest
+):
+    if strategy_payload == LocalSearchType.OR_OPT:
+        return _run_canonical_or_opt(
+            problem, params, run_idx, algorithm_name, manifest, native=False
+        )
+    return _existing_fair_local_search(
+        problem, params, run_idx, algorithm_name, strategy_payload, manifest
+    )
+
+
+def _run_native_local_search(
+    problem, params, run_idx, algorithm_name, strategy_payload, manifest
+):
+    if strategy_payload == LocalSearchType.OR_OPT:
+        return _run_canonical_or_opt(
+            problem, params, run_idx, algorithm_name, manifest, native=True
+        )
+    return _existing_native_local_search(
+        problem, params, run_idx, algorithm_name, strategy_payload, manifest
+    )

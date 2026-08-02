@@ -353,3 +353,31 @@ __all__ = [
     "improve_two_opt_budgeted",
     "two_opt_evaluation_upper_bound",
 ]
+
+from uniride_core.algorithms.objective_budget import improve_or_opt_budgeted
+
+__all__.append("improve_or_opt_budgeted")
+
+FairComparisonManifest.ALGORITHM_FAMILIES["Core-OrOpt-TSP"] = "Or-opt"
+_fair_validate_result_without_or_opt = FairComparisonManifest.validate_result
+
+
+def _fair_validate_result_with_or_opt(self, result: FairRunResult) -> None:
+    _fair_validate_result_without_or_opt(self, result)
+    if getattr(result, "algorithm_id", None) != "Core-OrOpt-TSP":
+        return
+    errors: list[str] = []
+    family = getattr(result, "algorithm_family", None)
+    acceptance = getattr(result, "acceptance_policy", None)
+    window = getattr(result, "neighborhood_window", None)
+    if family != "Or-opt":
+        errors.append("Or-opt algorithm_family must be Or-opt")
+    if acceptance not in {"best_improvement", "first_improvement"}:
+        errors.append("Or-opt acceptance_policy is invalid")
+    if isinstance(window, bool) or not isinstance(window, int) or not 1 <= window <= 3:
+        errors.append("Or-opt neighborhood_window must be an integer from 1 through 3")
+    if errors:
+        raise FairnessValidationError("; ".join(errors))
+
+
+FairComparisonManifest.validate_result = _fair_validate_result_with_or_opt

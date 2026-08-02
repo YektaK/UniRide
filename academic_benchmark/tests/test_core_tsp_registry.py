@@ -44,6 +44,10 @@ def test_academic_registry_exposes_core_tsp_engines():
     [
         ("Core-TwoOpt-TSP", {"max_iterations": 12}),
         (
+            "Core-OrOpt-TSP",
+            {"max_iterations": 3},
+        ),
+        (
             "Core-GA-TSP",
             {
                 "population_size": 8,

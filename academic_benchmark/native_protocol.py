@@ -201,3 +201,32 @@ __all__ = [
     "NativeRunResult",
     "native_manifest_from_params",
 ]
+APPROVED_NATIVE_ALGORITHMS = frozenset(
+    set(APPROVED_NATIVE_ALGORITHMS) | {"Core-OrOpt-TSP"}
+)
+NativeComparisonManifest.ALGORITHM_FAMILIES["Core-OrOpt-TSP"] = "Or-opt"
+_native_validate_result_without_or_opt = NativeComparisonManifest.validate_result
+
+
+def _native_validate_result_with_or_opt(self, result: NativeRunResult) -> None:
+    _native_validate_result_without_or_opt(self, result)
+    if getattr(result, "algorithm_id", None) != "Core-OrOpt-TSP":
+        return
+    errors: list[str] = []
+    family = getattr(result, "algorithm_family", None)
+    acceptance = getattr(result, "acceptance_policy", None)
+    window = getattr(result, "neighborhood_window", None)
+    reason = getattr(result, "termination_reason", None)
+    if family != "Or-opt":
+        errors.append("Or-opt algorithm_family must be Or-opt")
+    if acceptance not in {"best_improvement", "first_improvement"}:
+        errors.append("Or-opt acceptance_policy is invalid")
+    if isinstance(window, bool) or not isinstance(window, int) or not 1 <= window <= 3:
+        errors.append("Or-opt neighborhood_window must be an integer from 1 through 3")
+    if reason not in {"max_iterations", "no_improving_move"}:
+        errors.append("Or-opt native termination_reason is invalid")
+    if errors:
+        raise FairnessValidationError("; ".join(errors))
+
+
+NativeComparisonManifest.validate_result = _native_validate_result_with_or_opt

@@ -214,6 +214,7 @@ def test_default_catalog_contains_only_evidence_gated_lifecycles():
         "Core-HHO-TSP-Pure",
         "Core-GWO-TSP-Memetic-2opt",
         "Core-HHO-TSP-Memetic-2opt",
+        "Core-OrOpt-TSP",
     }
     assert all(
         bool(capability.claims) is (capability.canonical_id in verified)
@@ -288,6 +289,7 @@ def test_verified_capabilities_have_exact_canonical_academic_executors():
         "Core-HHO-TSP-Pure",
         "Core-GWO-TSP-Memetic-2opt",
         "Core-HHO-TSP-Memetic-2opt",
+        "Core-OrOpt-TSP",
     }
     assert verified_ids <= registry_ids
     for canonical_id in verified_ids:
@@ -305,7 +307,7 @@ def test_catalog_lifecycle_truth_matches_academic_executor_availability():
     assert lifecycle_by_id == {
         "Core-TwoOpt-TSP": LifecycleStatus.VERIFIED,
         "Core-ThreeOpt-TSP": LifecycleStatus.VERIFIED,
-        "Core-OrOpt-TSP": LifecycleStatus.CANDIDATE,
+        "Core-OrOpt-TSP": LifecycleStatus.VERIFIED,
         "Core-GA-TSP": LifecycleStatus.CANDIDATE,
         "Core-PSO-TSP": LifecycleStatus.CANDIDATE,
         "Core-GWO-TSP-Pure": LifecycleStatus.VERIFIED,

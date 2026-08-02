@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Optional, Sequence
 
-from uniride_core.algorithms.three_opt import closed_tour_cost
+from uniride_core.algorithms.three_opt import closed_tour_cost, is_symmetric_matrix
 
 
 class EvaluationBudgetExhausted(RuntimeError):
@@ -124,5 +124,91 @@ def improve_two_opt_budgeted(
         evaluations=budget.used - start_evaluations,
         budget_exhausted=exhausted,
         mode="two_opt",
+        termination_reason=termination_reason,
+    )
+
+def improve_or_opt_budgeted(
+    route: Sequence[int],
+    matrix: Sequence[Sequence[float]],
+    budget: ObjectiveEvaluationBudget,
+    *,
+    max_iterations: int,
+    first_improvement: bool = False,
+    max_segment_length: int = 3,
+    initial_cost: Optional[float] = None,
+) -> BudgetedSearchResult:
+    """Budgeted first/best-improvement Or-opt for TSP and directed ATSP."""
+    if max_iterations < 0:
+        raise ValueError("max_iterations must be non-negative")
+    if isinstance(max_segment_length, bool) or not isinstance(max_segment_length, int):
+        raise ValueError("max_segment_length must be an integer from 1 through 3")
+    if not 1 <= max_segment_length <= 3:
+        raise ValueError("max_segment_length must be an integer from 1 through 3")
+
+    current = list(route)
+    start_evaluations = budget.used
+    if initial_cost is None:
+        current_cost = budget.evaluate(current, matrix)
+    else:
+        current_cost = float(initial_cost)
+    iterations = 0
+    exhausted = False
+    termination_reason = "max_iterations"
+
+    while iterations < max_iterations:
+        iterations += 1
+        selected_route: Optional[List[int]] = None
+        selected_cost = current_cost
+        stop_scan = False
+        max_segment = min(max_segment_length, len(current))
+
+        for segment_length in range(1, max_segment + 1):
+            for start in range(len(current) - segment_length + 1):
+                segment = current[start:start + segment_length]
+                remaining = current[:start] + current[start + segment_length:]
+                for insertion in range(len(remaining) + 1):
+                    if insertion == start:
+                        continue
+                    if not budget.can_spend():
+                        exhausted = True
+                        stop_scan = True
+                        break
+                    candidate = (
+                        remaining[:insertion]
+                        + segment
+                        + remaining[insertion:]
+                    )
+                    candidate_cost = budget.evaluate(candidate, matrix)
+                    if candidate_cost < selected_cost:
+                        selected_route = candidate
+                        selected_cost = candidate_cost
+                        if first_improvement:
+                            stop_scan = True
+                            break
+                if stop_scan:
+                    break
+            if stop_scan:
+                break
+
+        if selected_route is None:
+            termination_reason = (
+                "evaluation_budget_exhausted"
+                if exhausted
+                else "no_improving_move"
+            )
+            break
+        current = selected_route
+        current_cost = selected_cost
+        if exhausted:
+            termination_reason = "evaluation_budget_exhausted"
+            break
+
+    return BudgetedSearchResult(
+        route=current,
+        cost=current_cost,
+        iterations=iterations,
+        evaluations=budget.used - start_evaluations,
+        budget_exhausted=exhausted,
+        mode="symmetric_tsp" if is_symmetric_matrix(matrix) else "directed_atsp",
         termination_reason=termination_reason,
     )

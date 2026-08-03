@@ -1,8 +1,8 @@
 # C3 Standalone ALNS Evidence-Gated Promotion Design
 
-**Date:** 2026-08-03  
-**Status:** Approved for implementation planning  
-**Package:** C3 — Standalone ALNS evidence-gated promotion  
+**Date:** 2026-08-03
+**Status:** Approved for implementation planning
+**Package:** C3 — Standalone ALNS evidence-gated promotion
 **Depends on:** C1 capability/preflight contracts, Package B canonical extraction, and C2 Or-opt evidence promotion
 
 ## 1. Context
@@ -63,7 +63,7 @@ No symmetry inference is permitted. Every move and every independently reported 
 
 The current nearest-neighbor initialization remains the canonical ALNS initialization policy. It starts at node zero and uses outgoing directed costs. The initial complete tour consumes exactly one objective evaluation.
 
-The random seed controls destroy/repair selection and simulated-annealing acceptance. Reconstructing or rerunning a solver with the same matrix, complete configuration, and nonzero seed must reproduce route, cost, objective-evaluation count, iteration count, and termination reason.
+The random seed controls destroy/repair selection and simulated-annealing acceptance. Reconstructing or rerunning a solver with the same matrix, complete configuration, and identical explicit seed must reproduce route, cost, objective-evaluation count, iteration count, and termination reason. Evidence fixtures use fixed nonzero seeds without narrowing the runtime contract, which accepts non-negative seeds.
 
 ### 5.3 Destroy and repair behavior
 
@@ -96,18 +96,20 @@ Only these reasons are valid for promoted ALNS claims:
 
 - `evaluation_budget_exhausted`: the fixed protocol lacked capacity for the next complete candidate evaluation;
 - `max_iterations`: the configured iteration ceiling was reached;
-- `stagnation_limit`: the configured consecutive non-improvement ceiling was reached.
+- `stagnation_limit`: the configured consecutive global-best non-improvement ceiling was reached.
 
 Fixed-budget results may terminate for any of the three reasons, but `budget_terminated` is true only for `evaluation_budget_exhausted`. Native results cannot report budget exhaustion and must have `evaluation_budget=None` and `budget_terminated=False`.
 
 Iteration count means completed ALNS destroy/repair iterations. It must not be copied from configuration when fewer iterations actually ran.
+
+For ALNS, an improvement means a strict new global-best complete-tour objective after a completed candidate evaluation. After every completed candidate evaluation, reset `no_improve` to zero only for a strict global-best improvement; otherwise increment it regardless of simulated-annealing acceptance. Check the ceiling after recording that completed iteration. `stagnation_limit` is emitted only by this condition.
 
 ## 7. Academic Adapter Contract
 
 The academic registry retains:
 
 - canonical identifier: `ALNS-TSP`;
-- compatibility alias: `SOTA-ALNS-TSP`, resolved to canonical output by the existing resolver policy.
+- compatibility alias: `SOTA-ALNS-TSP`, a deprecated CLI-only alias that emits the resolver warning and persists/reports `ALNS-TSP`. Study manifests and stored run manifests must reject the alias.
 
 When a fixed or native manifest is present, the adapter must:
 
@@ -126,11 +128,15 @@ Required metadata:
 - `variant`: `pure`;
 - `acceptance_policy`: `simulated_annealing` or `improving_only`, matching configuration;
 - `initialization_policy`: `nearest_neighbor_from_node_zero_all_nodes`;
-- `execution_backend`: a truthful Python-only observation;
+- `execution_backend`: exactly `objective=python;polish=none`;
 - `polish_policy`: disabled at every stage;
 - actual `iterations`, `evaluations`, `objective_evaluations`, and termination fields.
 
 No result may imply Numba, hidden polishing, random-population initialization, or an ALNS hybrid composition.
+
+The observed backend string must parse to `ExecutionBackendProfile(objective=PYTHON, polish=NONE)` and equal the preflight-selected profile. C3 must not relax the stage-aware backend parser.
+
+Validator admission for `ALNS-TSP` requires `algorithm_family="ALNS"`, `variant="pure"`, `neighborhood_window=None`, and `acceptance_policy` in `{"simulated_annealing", "improving_only"}`. Fixed ALNS permits only `evaluation_budget_exhausted`, `max_iterations`, and `stagnation_limit`; native ALNS permits only `max_iterations` and `stagnation_limit`.
 
 ## 8. Capability Promotion
 
@@ -143,7 +149,7 @@ No result may imply Numba, hidden polishing, random-population initialization, o
 | TSP | native termination | Python objective, no polish | pure |
 | ATSP | native termination | Python objective, no polish | pure |
 
-Every claim requires exact accounting, deterministic fixed-seed behavior, complete route validation, truthful reporting, and—where applicable—directed-cost preservation.
+Every claim requires exact accounting, deterministic fixed-seed behavior, complete route validation, truthful reporting, and—where applicable—directed-cost preservation. Replace only the `ALNS-TSP` catalog entry with a `VERIFIED` entry containing exactly these four `CompositionKind.PURE` claims using `ExecutionBackendProfile(PYTHON, NONE)`. ATSP claims set `directed_cost_preserved=True`; fixed claims set `exact_objective_accounting=True`; all four cite concrete focused pytest node IDs.
 
 The following remain `PLANNED` with no claims:
 
@@ -186,7 +192,7 @@ Focused evidence must use small in-memory matrices and fixed nonzero seeds.
 - fair and native pilot schema/record compatibility;
 - alias canonicalization without duplicate capability identity;
 - full academic suite;
-- production registry exposure snapshot;
+- exact protected production registry key snapshot and zero academic-capability import boundary;
 - no generated CSV, database, or report artifacts.
 
 ## 10. Expected File Boundary
@@ -195,11 +201,14 @@ Expected implementation owners, subject to live-source confirmation during plann
 
 - `uniride_core/algorithms/sota_tsp/repair_ops.py` — cyclic insertion correction;
 - `uniride_core/algorithms/sota_tsp/alns_tsp.py` — exact accounting and canonical search result;
+- `uniride_core/algorithms/objective_budget.py` — authoritative `ObjectiveEvaluationBudget`; ALNS imports and calls it for initial and candidate full-tour objectives without creating a competing counter;
 - `academic_benchmark/core/registry_setup.py` — fixed/native ALNS adapter;
 - `academic_benchmark/fairness.py` and `academic_benchmark/native_protocol.py` — ALNS-specific result validation only;
+- `academic_benchmark/fair_pilot.py` — add `ALNS-TSP` to the exact fixed-pilot admission set and validate only declared ALNS parameter keys;
+- `academic_benchmark/native_pilot.py` and `academic_benchmark/native_protocol.py` — add `ALNS-TSP` to the exact native-pilot admission set, family map, and native parameter schema;
+- `academic_benchmark/core/execution_gateway.py` — preserve the existing strict postflight parser and add regression coverage; no parser relaxation;
 - `uniride_core/algorithms/capabilities.py` — evidence-gated promotion;
-- existing pilot/schema modules only where ALNS must be admitted to an already-governed list;
-- focused ALNS tests and existing capability/manifest/registry regression tests.
+- focused ALNS evidence tests, fair/native pilot record/replay tests, and existing capability/manifest/registry regression tests.
 
 No parallel result model, registry, budget counter, or ALNS implementation may be introduced when an existing canonical owner can be extended.
 
@@ -215,7 +224,7 @@ C3 is complete only when:
 6. postflight independently validates complete routes and directed objectives;
 7. `ALNS-TSP` is selectable only for the evidenced Python/no-polish profile;
 8. ALNS hybrids remain planned and non-selectable;
-9. production strategy exposure is unchanged;
+9. the exact protected production registry key set and zero academic-capability import boundary remain unchanged;
 10. focused and full academic verification pass without generated benchmark evidence.
 
 ## 12. Deferred Work

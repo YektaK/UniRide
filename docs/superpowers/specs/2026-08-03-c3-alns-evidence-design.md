@@ -138,6 +138,14 @@ The observed backend string must parse to `ExecutionBackendProfile(objective=PYT
 
 Validator admission for `ALNS-TSP` requires `algorithm_family="ALNS"`, `variant="pure"`, `neighborhood_window=None`, and `acceptance_policy` in `{"simulated_annealing", "improving_only"}`. Fixed ALNS permits only `evaluation_budget_exhausted`, `max_iterations`, and `stagnation_limit`; native ALNS permits only `max_iterations` and `stagnation_limit`.
 
+### 7.1 Strict scientific parameter schema
+
+Fair and native study/pilot parameter blocks use canonical scientific names, not the legacy `ALNSConfig` field spellings. Both protocols require `max_iterations`, `max_no_improvement`, `remove_ratio`, `min_remove`, `segment_length`, `weight_update_factor`, and `use_sa`. They may additionally declare `sa_start_temp` and `sa_cooling_rate`. Every other key is rejected, including caller-supplied `seed`, legacy `iterations`, legacy `max_no_improve`, and currently unused `noise_scale`.
+
+Validation requires integer `max_iterations`, `max_no_improvement`, `min_remove`, and `segment_length` values of at least one; `0 < remove_ratio <= 1`; `0 <= weight_update_factor <= 1`; boolean `use_sa`; non-negative finite `sa_start_temp`; and `0 < sa_cooling_rate <= 1`. When `use_sa=True`, `sa_start_temp` must be strictly positive. The adapter maps `max_iterations` to `ALNSConfig.iterations`, `max_no_improvement` to `ALNSConfig.max_no_improve`, and the manifest-derived paired seed to `ALNSConfig.seed`; other declared fields retain their names. `use_sa=True` reports `acceptance_policy="simulated_annealing"`; `use_sa=False` reports `acceptance_policy="improving_only"`.
+
+The ordinary non-protocol registry path retains existing `ALNSConfig` compatibility and is outside the strict manifest schema. CLI alias compatibility changes identifiers only; it does not relax scientific parameter validation.
+
 ## 8. Capability Promotion
 
 `ALNS-TSP` becomes `VERIFIED` only with four independently evidenced claims:

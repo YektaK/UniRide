@@ -23,17 +23,30 @@ from uniride_core.models import ProblemInstance
 
 V2 = "uniride-fair-tsp-v2"
 REGIME = "fixed_evaluation_budget"
+ALNS_PARAMS = {
+    "max_iterations": 8,
+    "max_no_improvement": 3,
+    "remove_ratio": 0.34,
+    "min_remove": 1,
+    "segment_length": 2,
+    "weight_update_factor": 0.2,
+    "use_sa": True,
+    "sa_start_temp": 4.0,
+    "sa_cooling_rate": 0.9,
+}
 ALGORITHMS = (
     "Core-GWO-TSP-Pure",
     "Core-HHO-TSP-Pure",
     "Core-TwoOpt-TSP",
     "Core-ThreeOpt-TSP",
+    "ALNS-TSP",
 )
 V1_HISTORICAL_ALGORITHMS = (
     "Core-GWO-TSP-Pure",
     "Core-HHO-TSP-Pure",
     "Numba-2-opt",
     "Numba-3-opt-bounded",
+    "ALNS-TSP",
 )
 
 
@@ -62,6 +75,7 @@ def _algorithm_blocks(first_improvement: bool = False) -> dict[str, dict]:
         "Core-HHO-TSP-Pure": {"hawks": 4, "max_iterations": 2, "dive_count": 0, "max_no_improvement": 10},
         "Core-TwoOpt-TSP": {"max_iterations": 20, "first_improvement": first_improvement},
         "Core-ThreeOpt-TSP": {"max_iterations": 20, "first_improvement": first_improvement, "window": 4},
+        "ALNS-TSP": dict(ALNS_PARAMS),
     }
 
 
@@ -115,7 +129,7 @@ def _closed_cost(tour: list[int], matrix: list[list[float]]) -> float:
 def test_v1_config_remains_loadable(tmp_path: Path):
     config = _v2_config(protocol_version="uniride-fair-tsp-v1")
     config.pop("comparison_regime")
-    config["algorithms"] = {name: {} for name in V1_HISTORICAL_ALGORITHMS}
+    config["algorithms"] = {name: (dict(ALNS_PARAMS) if name == "ALNS-TSP" else {}) for name in V1_HISTORICAL_ALGORITHMS}
 
     loaded = load_fair_pilot_config(_write_config(tmp_path, config))
 
@@ -182,6 +196,9 @@ def test_v2_results_report_truthful_structured_metadata(algorithm: str):
         assert result.neighborhood_window is None
     elif algorithm == "Core-TwoOpt-TSP":
         assert result.acceptance_policy == "best_improvement"
+        assert result.neighborhood_window is None
+    elif algorithm == "ALNS-TSP":
+        assert result.acceptance_policy == "simulated_annealing"
         assert result.neighborhood_window is None
     else:
         assert result.acceptance_policy == "best_improvement"

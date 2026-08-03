@@ -220,15 +220,19 @@ def _assert_fixed_evidence(problem: _Problem) -> None:
     first_params = _fixed_params(1)
     larger_params = _fixed_params(4)
     manifest = FairComparisonManifest.from_value(first_params["fair_comparison"])
+    run_idx = 0
+    expected_seed = manifest.paired_seed(problem.name, run_idx)
 
-    first = executor(problem, first_params, seed=987_654, run_idx=0)
-    replay = executor(problem, first_params, seed=123_456, run_idx=0)
-    larger = executor(problem, larger_params, seed=456_789, run_idx=0)
+    first = executor(problem, first_params, seed=987_654, run_idx=run_idx)
+    replay = executor(problem, first_params, seed=123_456, run_idx=run_idx)
+    larger = executor(problem, larger_params, seed=456_789, run_idx=run_idx)
 
     assert first.algorithm == first.algorithm_id == "ALNS-TSP"
     assert first.algorithm_family == "ALNS"
     assert first.variant == "pure"
-    assert first.seed == manifest.paired_seed(problem.name, 0)
+    assert first.seed == expected_seed
+    assert replay.seed == expected_seed
+    assert larger.seed == expected_seed
     assert first.initialization_policy == "nearest_neighbor_from_node_zero_all_nodes"
     assert first.acceptance_policy == "simulated_annealing"
     assert first.neighborhood_window is None
@@ -241,6 +245,14 @@ def _assert_fixed_evidence(problem: _Problem) -> None:
     assert first.budget_terminated is True
     assert first.termination_reason == "evaluation_budget_exhausted"
     assert larger.evaluation_budget == 4
+    assert larger.algorithm == larger.algorithm_id == "ALNS-TSP"
+    assert larger.algorithm_family == "ALNS"
+    assert larger.variant == "pure"
+    assert larger.initialization_policy == "nearest_neighbor_from_node_zero_all_nodes"
+    assert larger.acceptance_policy == "simulated_annealing"
+    assert larger.neighborhood_window is None
+    assert larger.polish_policy == NO_POLISH
+    assert larger.execution_backend == "objective=python;polish=none"
     assert 1 <= larger.evaluations <= 4
     assert larger.budget_terminated is (
         larger.termination_reason == "evaluation_budget_exhausted"

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import hashlib
-from typing import Any, Dict, List, Optional, Sequence
+import math
+from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from academic_benchmark.engine_core import RunResult
 from uniride_core.algorithms.objective_budget import (
@@ -23,6 +24,76 @@ from uniride_core.algorithms.three_opt import (
 
 class FairnessValidationError(ValueError):
     """Raised when a result violates the fair-comparison contract."""
+
+
+ALNS_REQUIRED_PARAMS = frozenset({
+    "max_iterations", "max_no_improvement", "remove_ratio", "min_remove",
+    "segment_length", "weight_update_factor", "use_sa",
+})
+ALNS_OPTIONAL_PARAMS = frozenset({"sa_start_temp", "sa_cooling_rate"})
+
+
+def _is_finite_alns_number(value: Any) -> bool:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
+
+
+def validate_scientific_alns_params(params: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate the exact scientific ALNS configuration schema."""
+    missing = ALNS_REQUIRED_PARAMS - params.keys()
+    unknown = params.keys() - ALNS_REQUIRED_PARAMS - ALNS_OPTIONAL_PARAMS
+    if missing or unknown:
+        raise ValueError(
+            "ALNS parameter schema mismatch; "
+            f"missing={sorted(missing)}, unknown={sorted(unknown)}"
+        )
+
+    for field in (
+        "max_iterations", "max_no_improvement", "min_remove", "segment_length",
+    ):
+        value = params[field]
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError(f"invalid ALNS parameter: {field}")
+
+    remove_ratio = params["remove_ratio"]
+    if (
+        not _is_finite_alns_number(remove_ratio)
+        or not 0 < remove_ratio <= 1
+    ):
+        raise ValueError("invalid ALNS parameter: remove_ratio")
+
+    weight_update_factor = params["weight_update_factor"]
+    if (
+        not _is_finite_alns_number(weight_update_factor)
+        or not 0 <= weight_update_factor <= 1
+    ):
+        raise ValueError("invalid ALNS parameter: weight_update_factor")
+
+    use_sa = params["use_sa"]
+    if not isinstance(use_sa, bool):
+        raise ValueError("invalid ALNS parameter: use_sa")
+
+    start_temp = params.get("sa_start_temp")
+    if start_temp is not None and (
+        not _is_finite_alns_number(start_temp)
+        or start_temp < 0
+    ):
+        raise ValueError("invalid ALNS parameter: sa_start_temp")
+    if use_sa and start_temp is not None and start_temp <= 0:
+        raise ValueError("invalid ALNS parameter: sa_start_temp")
+
+    cooling_rate = params.get("sa_cooling_rate")
+    if cooling_rate is not None and (
+        not _is_finite_alns_number(cooling_rate)
+        or not 0 < cooling_rate <= 1
+    ):
+        raise ValueError("invalid ALNS parameter: sa_cooling_rate")
+
+    return dict(params)
 
 
 @dataclass
@@ -92,6 +163,7 @@ class FairComparisonManifest:
         "Core-HHO-TSP": "HHO",
         "Numba-GWO": "GWO",
         "Numba-HHO": "HHO",
+        "ALNS-TSP": "ALNS",
     }
     POLISH_POLICY_FIELDS = ("enabled", "initial", "periodic", "final", "operator")
     V1_PROTOCOL = "uniride-fair-tsp-v1"
@@ -257,6 +329,17 @@ class FairComparisonManifest:
                     errors.append("3-opt acceptance_policy is invalid")
                 if isinstance(neighborhood_window, bool) or not isinstance(neighborhood_window, int) or neighborhood_window < 2:
                     errors.append("3-opt neighborhood_window must be an integer >= 2")
+            elif family == "ALNS":
+                if getattr(result, "variant", None) != "pure":
+                    errors.append("ALNS comparison accepts only pure variants")
+                if acceptance_policy not in {"simulated_annealing", "improving_only"}:
+                    errors.append("ALNS acceptance_policy is invalid")
+                if neighborhood_window is not None:
+                    errors.append("ALNS neighborhood_window must be null")
+                if termination_reason not in {
+                    "evaluation_budget_exhausted", "max_iterations", "stagnation_limit",
+                }:
+                    errors.append("ALNS fixed termination_reason is invalid")
             if termination_reason not in self.TERMINATION_REASONS:
                 errors.append("unsupported termination_reason")
 

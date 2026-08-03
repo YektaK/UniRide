@@ -34,6 +34,7 @@ class NativeComparisonManifest:
         "Core-ThreeOpt-TSP": "3-opt",
         "Numba-2-opt": "2-opt",
         "Numba-3-opt-bounded": "3-opt",
+        "ALNS-TSP": "ALNS",
     }
     TERMINATION_REASONS = frozenset({
         "max_iterations",
@@ -175,6 +176,13 @@ class NativeComparisonManifest:
                 errors.append("3-opt neighborhood_window must be an integer >= 2")
             if reason not in {"max_iterations", "no_improving_move"}:
                 errors.append("3-opt native termination_reason is invalid")
+        elif family == "ALNS":
+            if acceptance not in {"simulated_annealing", "improving_only"}:
+                errors.append("ALNS acceptance_policy is invalid")
+            if window is not None:
+                errors.append("ALNS neighborhood_window must be null")
+            if reason not in {"max_iterations", "stagnation_limit"}:
+                errors.append("ALNS native termination_reason is invalid")
         if reason not in self.TERMINATION_REASONS:
             errors.append("unsupported native termination_reason")
         if getattr(result, "execution_backend", None) in {None, "", "unknown"}:

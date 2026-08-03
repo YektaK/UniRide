@@ -6,7 +6,12 @@ import pytest
 
 from academic_benchmark.core import registry_setup  # noqa: F401
 from academic_benchmark.engine_core import AlgorithmRegistry
-from academic_benchmark.fairness import FairComparisonManifest
+from academic_benchmark.fairness import (
+    FairComparisonManifest,
+    FairRunResult,
+    FairnessValidationError,
+    validate_scientific_alns_params,
+)
 from academic_benchmark.native_protocol import NativeComparisonManifest
 from uniride_core.algorithms.objective_budget import ObjectiveEvaluationBudget
 from uniride_core.algorithms.sota_tsp.alns_tsp import (
@@ -380,3 +385,148 @@ def test_alns_scientific_protocol_rejects_invalid_parameters(invalid: dict[str, 
 
     with pytest.raises(ValueError):
         AlgorithmRegistry.get_executor("ALNS-TSP")(DIRECTED_ATSP, params, seed=41, run_idx=0)
+
+
+def test_validate_scientific_alns_params_accepts_exact_schema() -> None:
+    assert validate_scientific_alns_params(ALNS_PARAMS) == ALNS_PARAMS
+
+def test_validate_scientific_alns_params_allows_optional_sa_defaults() -> None:
+    params = {
+        key: value for key, value in ALNS_PARAMS.items()
+        if key not in {"sa_start_temp", "sa_cooling_rate"}
+    }
+    assert validate_scientific_alns_params(params) == params
+
+
+@pytest.mark.parametrize(
+    ("params", "field"),
+    [
+        ({key: value for key, value in ALNS_PARAMS.items() if key != "min_remove"}, "missing"),
+        ({**ALNS_PARAMS, "seed": 42}, "unknown"),
+        ({**ALNS_PARAMS, "iterations": 8}, "unknown"),
+        ({**ALNS_PARAMS, "max_no_improve": 3}, "unknown"),
+        ({**ALNS_PARAMS, "noise_scale": 0.05}, "unknown"),
+        ({**ALNS_PARAMS, "unexpected": "value"}, "unknown"),
+        ({**ALNS_PARAMS, "max_iterations": True}, "max_iterations"),
+        ({**ALNS_PARAMS, "max_no_improvement": True}, "max_no_improvement"),
+        ({**ALNS_PARAMS, "min_remove": True}, "min_remove"),
+        ({**ALNS_PARAMS, "segment_length": True}, "segment_length"),
+        ({**ALNS_PARAMS, "remove_ratio": 0}, "remove_ratio"),
+        ({**ALNS_PARAMS, "remove_ratio": float("inf")}, "remove_ratio"),
+        ({**ALNS_PARAMS, "remove_ratio": 10**400}, "remove_ratio"),
+        ({**ALNS_PARAMS, "weight_update_factor": 1.1}, "weight_update_factor"),
+        ({**ALNS_PARAMS, "weight_update_factor": 10**400}, "weight_update_factor"),
+        ({**ALNS_PARAMS, "use_sa": True, "sa_start_temp": 0}, "sa_start_temp"),
+        ({**ALNS_PARAMS, "sa_start_temp": 10**400}, "sa_start_temp"),
+        ({**ALNS_PARAMS, "sa_cooling_rate": 0}, "sa_cooling_rate"),
+        ({**ALNS_PARAMS, "sa_cooling_rate": 10**400}, "sa_cooling_rate"),
+    ],
+)
+def test_validate_scientific_alns_params_rejects_invalid_values(
+    params: dict[str, object], field: str
+) -> None:
+    with pytest.raises(ValueError, match=field):
+        validate_scientific_alns_params(params)
+
+
+def _protocol_result(manifest, *, native: bool) -> FairRunResult:
+    seed = manifest.paired_seed(DIRECTED_ATSP.name, 0)
+    return FairRunResult(
+        problem=DIRECTED_ATSP.name,
+        algorithm="ALNS-TSP", algorithm_id="ALNS-TSP", algorithm_family="ALNS",
+        variant="pure", run=0, seed=seed,
+        seed_group=manifest.seed_group(DIRECTED_ATSP.name, 0),
+        dimension=DIRECTED_ATSP.dimension, optimal=None, tour_cost=21.0,
+        objective_cost=21.0, gap_pct=None, elapsed_sec=0.0, iterations=1,
+        evaluations=2, objective_evaluations=2,
+        evaluation_budget=None if native else manifest.evaluation_budget,
+        budget_terminated=False, tour=[1, 2, 3, 4, 5, 6], problem_type="atsp",
+        matrix_kind="distance",
+        initialization_policy="nearest_neighbor_from_node_zero_all_nodes",
+        termination_policy="algorithm_native_termination;max_iterations=8" if native else "atomic_upper_bound_v1;max_iterations=8;budget_exhausted=False",
+        execution_backend="objective=python;polish=none", polish_policy=NO_POLISH.copy(),
+        comparison_regime=manifest.comparison_regime,
+        acceptance_policy="simulated_annealing", neighborhood_window=None,
+        termination_reason="max_iterations",
+    )
+
+
+@pytest.mark.parametrize("native", [False, True], ids=["fixed", "native"])
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("algorithm_family", "GWO"),
+        ("variant", "memetic_2opt"),
+        ("neighborhood_window", 2),
+        ("acceptance_policy", "best_improvement"),
+    ],
+)
+def test_alns_manifests_reject_invalid_protocol_metadata(
+    native: bool, field: str, value: object
+) -> None:
+    manifest = (
+        NativeComparisonManifest.from_value(_native_params()["native_comparison"])
+        if native
+        else FairComparisonManifest.from_value(_fixed_params(4)["fair_comparison"])
+    )
+    result = _protocol_result(manifest, native=native)
+    setattr(result, field, value)
+
+    with pytest.raises(FairnessValidationError):
+        manifest.validate_result(result)
+
+
+def test_fixed_alns_manifest_rejects_no_improving_move() -> None:
+    manifest = FairComparisonManifest.from_value(_fixed_params(4)["fair_comparison"])
+    result = _protocol_result(manifest, native=False)
+    result.termination_reason = "no_improving_move"
+
+    with pytest.raises(FairnessValidationError):
+        manifest.validate_result(result)
+
+
+def test_native_alns_manifest_rejects_evaluation_budget_exhausted() -> None:
+    manifest = NativeComparisonManifest.from_value(_native_params()["native_comparison"])
+    result = _protocol_result(manifest, native=True)
+    result.termination_reason = "evaluation_budget_exhausted"
+
+    with pytest.raises(FairnessValidationError):
+        manifest.validate_result(result)
+
+def test_native_alns_manifest_rejects_an_evaluation_budget() -> None:
+    manifest = NativeComparisonManifest.from_value(_native_params()["native_comparison"])
+    result = _protocol_result(manifest, native=True)
+    result.evaluation_budget = 4
+
+    with pytest.raises(FairnessValidationError):
+        manifest.validate_result(result)
+
+
+def test_alns_protocol_mode_rejects_routing_before_solver_construction() -> None:
+    routing = _Problem(
+        name="c3-alns-routing", problem_type="cvrp", dist_matrix=DIRECTED_ATSP.dist_matrix,
+    )
+
+    with pytest.raises(ValueError, match="fair TSP comparison mode"):
+        AlgorithmRegistry.get_executor("ALNS-TSP")(routing, _fixed_params(4), seed=1, run_idx=0)
+
+def test_alns_fixed_protocol_preserves_fractional_directed_cost() -> None:
+    fractional_atsp = _Problem(
+        name="c3-alns-fractional-atsp",
+        problem_type="atsp",
+        dist_matrix=[
+            [0.0, 1.25, 9.75, 3.5],
+            [4.4, 0.0, 2.25, 8.75],
+            [7.5, 5.6, 0.0, 1.1],
+            [2.2, 6.4, 3.3, 0.0],
+        ],
+    )
+
+    result = AlgorithmRegistry.get_executor("ALNS-TSP")(
+        fractional_atsp, _fixed_params(4), seed=41, run_idx=0
+    )
+    expected = _closed_cost(result.tour, fractional_atsp.dist_matrix)
+
+    assert expected % 1 != 0
+    assert result.tour_cost == pytest.approx(expected)
+    assert result.objective_cost == pytest.approx(expected)

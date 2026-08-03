@@ -463,6 +463,29 @@ def _make_sota_executor(algo: str, reported_algorithm_id: str | None = None):
         import math
         from academic_benchmark.engine_core import RunResult
         from academic_benchmark.benchmark_utils import compute_gap
+        from academic_benchmark.fairness import fair_manifest_from_params
+        from academic_benchmark.native_protocol import native_manifest_from_params
+
+        manifest = fair_manifest_from_params(params)
+        native_manifest = native_manifest_from_params(params)
+        if manifest is not None and native_manifest is not None:
+            raise ValueError("fair_comparison and native_comparison are mutually exclusive")
+        if manifest is not None or native_manifest is not None:
+            if algo != "ALNS-TSP":
+                raise ValueError(
+                    f"{algo} does not expose exact objective accounting in scientific protocol mode"
+                )
+            if _is_routing_problem(problem):
+                regime = "fair" if manifest is not None else "native"
+                raise ValueError(f"{regime} TSP comparison mode does not accept routing problems")
+            return _run_canonical_alns(
+                problem,
+                params,
+                run_idx,
+                manifest or native_manifest,
+                native=native_manifest is not None,
+            )
+
         if _is_routing_problem(problem):
             return _run_core_routing_executor(problem, params, seed, run_idx, f"{public_id}:core-greedy-routing")
         
@@ -1092,6 +1115,103 @@ def _run_canonical_or_opt(
     manifest.validate_result(result)
     return result
 
+
+def _run_canonical_alns(problem, params, run_idx, manifest, *, native: bool):
+    """Run the canonical ALNS implementation under a scientific manifest."""
+    import time
+
+    from academic_benchmark.fairness import (
+        FairRunResult,
+        ObjectiveEvaluationBudget,
+        validate_scientific_alns_params,
+    )
+    from uniride_core.algorithms.sota_tsp.alns_tsp import ALNSConfig, ALNS_TSP
+
+    if _is_routing_problem(problem):
+        regime = "native" if native else "fair"
+        raise ValueError(f"{regime} TSP comparison mode does not accept routing problems")
+    scientific = validate_scientific_alns_params({
+        key: value for key, value in params.items()
+        if key not in {"fair_comparison", "native_comparison"}
+    })
+    matrix, matrix_kind = _problem_matrix(problem)
+    seed = manifest.paired_seed(problem.name, run_idx)
+    config = ALNSConfig(
+        iterations=scientific["max_iterations"],
+        max_no_improve=scientific["max_no_improvement"],
+        remove_ratio=scientific["remove_ratio"],
+        min_remove=scientific["min_remove"],
+        segment_length=scientific["segment_length"],
+        weight_update_factor=scientific["weight_update_factor"],
+        use_sa=scientific["use_sa"],
+        sa_start_temp=scientific.get("sa_start_temp", ALNSConfig.sa_start_temp),
+        sa_cooling_rate=scientific.get("sa_cooling_rate", ALNSConfig.sa_cooling_rate),
+        seed=seed,
+    )
+    accounting = ObjectiveEvaluationBudget(None if native else manifest.evaluation_budget)
+    started = time.perf_counter()
+    search = ALNS_TSP(config).solve_accounted_with_matrix(matrix, accounting)
+    elapsed = time.perf_counter() - started
+    if native and (
+        search.budget_exhausted
+        or search.termination_reason == "evaluation_budget_exhausted"
+    ):
+        raise ValueError("native ALNS unexpectedly exhausted a measurement counter")
+
+    optimal = getattr(problem, "optimal", None)
+    cost = float(search.cost)
+    gap = ((cost - optimal) / optimal) * 100 if optimal and optimal > 0 else None
+    result = FairRunResult(
+        problem=problem.name,
+        algorithm="ALNS-TSP",
+        algorithm_id="ALNS-TSP",
+        algorithm_family="ALNS",
+        variant="pure",
+        run=run_idx,
+        seed=seed,
+        seed_group=manifest.seed_group(problem.name, run_idx),
+        dimension=problem.dimension,
+        optimal=optimal,
+        tour_cost=cost,
+        objective_cost=cost,
+        gap_pct=gap,
+        elapsed_sec=elapsed,
+        iterations=search.iterations,
+        evaluations=accounting.used,
+        objective_evaluations=accounting.used,
+        evaluation_budget=None if native else manifest.evaluation_budget,
+        budget_terminated=(
+            False if native else search.termination_reason == "evaluation_budget_exhausted"
+        ),
+        tour=[node + 1 for node in search.route],
+        problem_type=str(getattr(problem, "problem_type", "tsp") or "tsp").lower(),
+        matrix_kind=matrix_kind,
+        initialization_policy="nearest_neighbor_from_node_zero_all_nodes",
+        termination_policy=(
+            f"algorithm_native_termination;max_iterations={scientific['max_iterations']}"
+            if native
+            else (
+                f"{manifest.budget_policy};max_iterations={scientific['max_iterations']};"
+                f"budget_exhausted={search.budget_exhausted}"
+            )
+        ),
+        execution_backend="objective=python;polish=none",
+        polish_policy={
+            "enabled": False,
+            "initial": False,
+            "periodic": False,
+            "final": False,
+            "operator": None,
+        },
+        comparison_regime=manifest.comparison_regime,
+        acceptance_policy=(
+            "simulated_annealing" if scientific["use_sa"] else "improving_only"
+        ),
+        neighborhood_window=None,
+        termination_reason=search.termination_reason,
+    )
+    manifest.validate_result(result)
+    return result
 
 _existing_fair_local_search = _run_fair_local_search
 _existing_native_local_search = _run_native_local_search

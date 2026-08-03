@@ -19,6 +19,7 @@ from typing import List, Tuple, Optional
 
 from uniride_core.models import TSPResult
 from uniride_core.algorithms.sota_tsp.base_solver import BaseTSPSolver
+from uniride_core.algorithms.objective_budget import ObjectiveEvaluationBudget
 from uniride_core.algorithms.sota_tsp.destroy_ops import (
     RandomRemoval, WorstRemoval, ShawRemoval, RelatedRemoval,
 )
@@ -55,6 +56,16 @@ class ALNSConfig:
     seed: int = 42
 
 
+
+@dataclass(frozen=True)
+class AccountedALNSResult:
+    route: list[int]
+    cost: float
+    iterations: int
+    evaluations: int
+    budget_exhausted: bool
+    termination_reason: str
+
 class ALNS_TSP(BaseTSPSolver):
     """Adaptive Large Neighborhood Search for TSP.
 
@@ -71,6 +82,16 @@ class ALNS_TSP(BaseTSPSolver):
         self._repair_names, self._repair_ops = zip(*REPAIR_OPERATORS)
         self._nd = len(self._destroy_ops)
         self._nr = len(self._repair_ops)
+
+    def solve_accounted_with_matrix(
+        self,
+        matrix: list[list[float]],
+        budget: ObjectiveEvaluationBudget,
+    ) -> AccountedALNSResult:
+        self.set_dist_matrix(matrix)
+        self._set_problem([(0.0, 0.0)] * len(matrix))
+        return self._solve_accounted(budget)
+
 
     def _init_weights(self):
         n_scores = 3
@@ -154,67 +175,93 @@ class ALNS_TSP(BaseTSPSolver):
             self._repair_counts[i] = 0
 
     def _solve(self) -> TSPResult:
+        start_time = time.perf_counter()
+        result = self._solve_accounted(ObjectiveEvaluationBudget(None))
+        elapsed = (time.perf_counter() - start_time) * 1000.0
+        return TSPResult(
+            algorithm=self.name,
+            tour=result.route,
+            tour_length=result.cost,
+            time_ms=elapsed,
+            iterations=result.iterations,
+            seed=self.config.seed,
+        )
+
+    def _solve_accounted(
+        self, budget: ObjectiveEvaluationBudget
+    ) -> AccountedALNSResult:
         cfg = self.config
         self.rng = random.Random(cfg.seed)
         self._init_weights()
         n = self._n
+        start_evaluations = budget.used
 
         current = self._nearest_neighbor_tour()
-        current_cost = self._tour_cost(current)
+        current_cost = budget.evaluate(current, self._dist_matrix)
         best = list(current)
         best_cost = current_cost
-
         temp = cfg.sa_start_temp if cfg.use_sa else 0.0
         no_improve = 0
-        start_time = time.perf_counter()
+        iterations = 0
 
-        for iteration in range(1, cfg.iterations + 1):
+        while iterations < cfg.iterations:
+            if not budget.can_spend():
+                return AccountedALNSResult(
+                    route=best,
+                    cost=best_cost,
+                    iterations=iterations,
+                    evaluations=budget.used - start_evaluations,
+                    budget_exhausted=True,
+                    termination_reason="evaluation_budget_exhausted",
+                )
+
             d_idx = self._roulette_select(self._destroy_weights)
             r_idx = self._roulette_select(self._repair_weights)
-
             n_remove = max(cfg.min_remove, int(n * cfg.remove_ratio))
             n_remove = min(n_remove, n - 2)
-
             removed, partial = self._destroy_ops[d_idx].destroy(
                 current, n_remove, self.rng, self._dist_matrix
             )
             candidate = self._repair_ops[r_idx].repair(
                 partial, removed, self._dist_matrix
             )
-            candidate_cost = self._tour_cost(candidate)
+            candidate_cost = budget.evaluate(candidate, self._dist_matrix)
+            iterations += 1
 
-            if self._accept(current_cost, candidate_cost, temp):
+            accepted = self._accept(current_cost, candidate_cost, temp)
+            if accepted:
                 current = candidate
                 current_cost = candidate_cost
-                if candidate_cost < best_cost:
-                    best = list(candidate)
-                    best_cost = candidate_cost
-                    no_improve = 0
-                    sigma = 3
-                else:
-                    sigma = 2
+
+            if candidate_cost < best_cost:
+                best = list(candidate)
+                best_cost = candidate_cost
+                no_improve = 0
+                sigma = 3
             else:
-                sigma = 0
                 no_improve += 1
+                sigma = 2 if accepted else 0
 
             self._update_segment(d_idx, r_idx, sigma)
-
-            if iteration % cfg.segment_length == 0:
+            if iterations % cfg.segment_length == 0:
                 self._apply_weights()
-
             if cfg.use_sa:
                 temp *= cfg.sa_cooling_rate
-
             if no_improve >= cfg.max_no_improve:
-                break
+                return AccountedALNSResult(
+                    route=best,
+                    cost=best_cost,
+                    iterations=iterations,
+                    evaluations=budget.used - start_evaluations,
+                    budget_exhausted=False,
+                    termination_reason="stagnation_limit",
+                )
 
-        elapsed = (time.perf_counter() - start_time) * 1000.0
-
-        return TSPResult(
-            algorithm=self.name,
-            tour=best,
-            tour_length=best_cost,
-            time_ms=elapsed,
-            iterations=iteration,
-            seed=cfg.seed,
+        return AccountedALNSResult(
+            route=best,
+            cost=best_cost,
+            iterations=iterations,
+            evaluations=budget.used - start_evaluations,
+            budget_exhausted=False,
+            termination_reason="max_iterations",
         )

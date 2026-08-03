@@ -24,9 +24,7 @@ class GreedyInsertion:
                 if not result:
                     cost = 0.0
                 else:
-                    cost = dm[prev_node][node] + dm[node][next_node]
-                    if pos > 0 and pos < len(result):
-                        cost -= dm[prev_node][next_node]
+                    cost = dm[prev_node][node] + dm[node][next_node] - dm[prev_node][next_node]
                 if cost < best_cost:
                     best_cost = cost
                     best_pos = pos
@@ -55,9 +53,7 @@ class RegretKInsertion:
                     if not result:
                         costs.append(0.0)
                     else:
-                        c = dm[prev_node][node] + dm[node][next_node]
-                        if pos > 0 and pos < len(result):
-                            c -= dm[prev_node][next_node]
+                        c = dm[prev_node][node] + dm[node][next_node] - dm[prev_node][next_node]
                         costs.append(c)
                 costs.sort()
                 
@@ -85,9 +81,7 @@ class RegretKInsertion:
                 if not result:
                     cost = 0.0
                 else:
-                    cost = dm[prev_node][best_node] + dm[best_node][next_node]
-                    if pos > 0 and pos < len(result):
-                        cost -= dm[prev_node][next_node]
+                    cost = dm[prev_node][best_node] + dm[best_node][next_node] - dm[prev_node][next_node]
                 if cost < best_cost:
                     best_cost = cost
                     best_pos = pos

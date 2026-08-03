@@ -9,7 +9,11 @@ from academic_benchmark.engine_core import AlgorithmRegistry
 from academic_benchmark.fairness import FairComparisonManifest
 from academic_benchmark.native_protocol import NativeComparisonManifest
 from uniride_core.algorithms.objective_budget import ObjectiveEvaluationBudget
-from uniride_core.algorithms.sota_tsp.alns_tsp import ALNSConfig, ALNS_TSP
+from uniride_core.algorithms.sota_tsp.alns_tsp import (
+    ALNSConfig,
+    ALNS_TSP,
+    AccountedALNSResult,
+)
 from uniride_core.algorithms.sota_tsp.repair_ops import (
     GreedyInsertion,
     Regret2Insertion,
@@ -159,12 +163,43 @@ def test_alns_accounted_budget_one_stops_before_candidate_evaluation() -> None:
         DIRECTED_ATSP.dist_matrix, budget
     )
 
+    assert isinstance(result, AccountedALNSResult)
     _assert_accounted_complete_and_exact(result, DIRECTED_ATSP.dist_matrix)
     assert result.evaluations == budget.used == 1
     assert result.iterations == 0
     assert result.budget_exhausted is True
     assert result.termination_reason == "evaluation_budget_exhausted"
 
+
+class _EqualCostDestroy:
+    def destroy(self, current, n_remove, rng, matrix):
+        return [1], [node for node in current if node != 1]
+
+
+class _EqualCostRepair:
+    def repair(self, partial, removed, matrix):
+        return [0, 2, 1, 3]
+
+
+def test_alns_accounted_stagnation_counts_sa_accepted_non_improvements() -> None:
+    matrix = [
+        [0.0, 1.0, 1.0, 1.0],
+        [1.0, 0.0, 1.0, 1.0],
+        [1.0, 1.0, 0.0, 1.0],
+        [1.0, 1.0, 1.0, 0.0],
+    ]
+    solver = ALNS_TSP(_accounted_config(iterations=8, max_no_improve=2, use_sa=True))
+    solver._destroy_ops = (_EqualCostDestroy(),)
+    solver._repair_ops = (_EqualCostRepair(),)
+    solver._nd = 1
+    solver._nr = 1
+
+    result = solver.solve_accounted_with_matrix(matrix, ObjectiveEvaluationBudget(None))
+
+    assert result.iterations == 2
+    assert result.evaluations == 3
+    assert result.budget_exhausted is False
+    assert result.termination_reason == "stagnation_limit"
 
 def test_alns_accounted_larger_fixed_budget_reports_exact_consumption() -> None:
     budget = ObjectiveEvaluationBudget(4)

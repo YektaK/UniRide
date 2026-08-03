@@ -307,6 +307,26 @@ def _evidence_node_parts(evidence_id: str) -> tuple[Path, str]:
     return path, function_name
 
 
+def test_alns_claims_cite_all_four_focused_evidence_nodes() -> None:
+    capability = get_algorithm_capability("ALNS-TSP")
+    assert capability is not None
+    assert capability.lifecycle is LifecycleStatus.VERIFIED
+    assert {
+        evidence_id
+        for claim in capability.claims
+        for evidence_id in claim.evidence_ids
+    } == {
+        "academic_benchmark/tests/test_alns_c3_evidence.py::"
+        "test_alns_fixed_tsp_evidence",
+        "academic_benchmark/tests/test_alns_c3_evidence.py::"
+        "test_alns_fixed_atsp_evidence",
+        "academic_benchmark/tests/test_alns_c3_evidence.py::"
+        "test_alns_native_tsp_evidence",
+        "academic_benchmark/tests/test_alns_c3_evidence.py::"
+        "test_alns_native_atsp_evidence",
+    }
+
+
 def test_published_claim_evidence_ids_are_exact_passing_pytest_nodes(tmp_path) -> None:
     """Evidence is a real, unskipped pytest function, never a helper or substring."""
     evidence_ids = {

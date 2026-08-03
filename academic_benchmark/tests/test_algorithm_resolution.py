@@ -79,6 +79,21 @@ def test_manifests_reject_every_noncanonical_identifier(requested_id):
     assert exc_info.value.replacement_id == EXPECTED_CLI_MAPPINGS[requested_id]
 
 
+def test_sota_alns_alias_is_deprecated_cli_only_and_canonical_stays_exact() -> None:
+    with pytest.warns(DeprecationWarning, match="SOTA-ALNS-TSP"):
+        cli = resolve_algorithm_id("SOTA-ALNS-TSP", IdentifierSource.CLI)
+    assert cli.canonical_id == "ALNS-TSP"
+    assert cli.alias_policy is AliasPolicy.DEPRECATED
+    assert cli.warning_code == "deprecated_algorithm_alias"
+
+    with pytest.raises(DeprecatedManifestIdentifierError):
+        resolve_algorithm_id("SOTA-ALNS-TSP", IdentifierSource.MANIFEST)
+
+    canonical = resolve_algorithm_id("ALNS-TSP", IdentifierSource.MANIFEST)
+    assert canonical.requested_id == canonical.canonical_id == "ALNS-TSP"
+    assert canonical.alias_used is False
+
+
 @pytest.mark.parametrize(
     "requested_id",
     ("core-twoopt-tsp", "gwo", "NUMBA-GWO", "sota-alns-tsp"),

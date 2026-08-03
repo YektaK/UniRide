@@ -36,6 +36,7 @@ class _Problem:
 
 PROBLEM = _Problem()
 CANONICAL_ID = "Core-TwoOpt-TSP"
+ALNS_ID = "ALNS-TSP"
 RUNTIME = RuntimeBackendAvailability(True, False, "deterministic Python-only unit test")
 
 
@@ -88,6 +89,46 @@ def _execute(
         backend_policy=BackendPolicy.PYTHON_ONLY,
         evaluation_budget=budget,
         registered_algorithm_ids=frozenset({CANONICAL_ID}),
+        runtime_backends=RUNTIME,
+        registry_getter=getter,
+    )
+
+
+def _valid_alns_result(**changes: Any) -> FairRunResult:
+    return _valid_result(
+        algorithm=ALNS_ID,
+        algorithm_id=ALNS_ID,
+        algorithm_family="ALNS",
+        variant="pure",
+        **changes,
+    )
+
+
+def _execute_alns(
+    *,
+    requested_algorithm_id: str = ALNS_ID,
+    source: IdentifierSource = IdentifierSource.INTERNAL,
+    protocol: ExecutionProtocol = ExecutionProtocol.FIXED_BUDGET,
+    budget: int | None = 10,
+    result_changes: dict[str, Any] | None = None,
+):
+    changes = result_changes or {}
+
+    def getter(algorithm_id: str):
+        assert algorithm_id == ALNS_ID
+        return lambda *args, **kwargs: _valid_alns_result(**changes)
+
+    return execute_preflighted(
+        requested_algorithm_id=requested_algorithm_id,
+        identifier_source=source,
+        problem=PROBLEM,
+        params={},
+        seed=41,
+        run_idx=2,
+        protocol=protocol,
+        backend_policy=BackendPolicy.PYTHON_ONLY,
+        evaluation_budget=budget,
+        registered_algorithm_ids=frozenset({ALNS_ID}),
         runtime_backends=RUNTIME,
         registry_getter=getter,
     )
@@ -198,6 +239,82 @@ def test_gateway_rejects_backend_profile_that_differs_from_decision() -> None:
                 execution_backend="objective=numba;polish=none"
             )
         )
+
+
+@pytest.mark.parametrize(
+    "backend",
+    [
+        "python",
+        "objective=python",
+        "objective=python;polish=none;extra=none",
+        "objective=python; polish=none",
+        "objective=python;objective=python",
+    ],
+)
+def test_alns_gateway_rejects_malformed_stage_aware_backend_strings(
+    backend: str,
+) -> None:
+    with pytest.raises(ResultContractViolation, match="execution_backend"):
+        _execute_alns(result_changes={"execution_backend": backend})
+
+
+def test_alns_gateway_rejects_result_backend_profile_mismatch() -> None:
+    with pytest.raises(ResultContractViolation, match="selected backend profile"):
+        _execute_alns(
+            result_changes={"execution_backend": "objective=numba;polish=none"}
+        )
+
+
+@pytest.mark.parametrize(
+    ("changes", "match"),
+    [
+        ({"tour": [0, 1, 2]}, "1-indexed"),
+        ({"tour_cost": 16.0, "objective_cost": 16.0}, "directed closed-cycle cost"),
+        ({"evaluation_budget": 9}, "evaluation_budget"),
+        ({"objective_evaluations": 6}, "evaluation counts"),
+    ],
+)
+def test_alns_gateway_independently_rejects_invalid_fixed_result_fields(
+    changes: dict[str, Any], match: str
+) -> None:
+    with pytest.raises(ResultContractViolation, match=match):
+        _execute_alns(result_changes=changes)
+
+
+def test_alns_gateway_accepts_exact_fixed_and_native_records() -> None:
+    fixed, fixed_decision = _execute_alns()
+    native, native_decision = _execute_alns(
+        protocol=ExecutionProtocol.NATIVE_TERMINATION,
+        budget=None,
+        result_changes={
+            "evaluation_budget": None,
+            "budget_terminated": False,
+            "termination_reason": "max_iterations",
+        },
+    )
+    assert fixed.algorithm == fixed.algorithm_id == ALNS_ID
+    assert fixed.execution_backend == "objective=python;polish=none"
+    assert fixed_decision.evidence_ids == (
+        "academic_benchmark/tests/test_alns_c3_evidence.py::"
+        "test_alns_fixed_atsp_evidence",
+    )
+    assert native.algorithm == native.algorithm_id == ALNS_ID
+    assert native.evaluation_budget is None
+    assert native_decision.evidence_ids == (
+        "academic_benchmark/tests/test_alns_c3_evidence.py::"
+        "test_alns_native_atsp_evidence",
+    )
+
+
+def test_alns_gateway_keeps_cli_alias_out_of_stored_algorithm_identity() -> None:
+    with pytest.warns(DeprecationWarning, match="SOTA-ALNS-TSP"):
+        result, decision = _execute_alns(
+            requested_algorithm_id="SOTA-ALNS-TSP",
+            source=IdentifierSource.CLI,
+        )
+    assert result.algorithm == result.algorithm_id == ALNS_ID
+    assert result.requested_algorithm_id == "SOTA-ALNS-TSP"
+    assert decision.executor_registry_id == ALNS_ID
 
 
 def test_native_postflight_requires_truthful_accounting_and_termination() -> None:

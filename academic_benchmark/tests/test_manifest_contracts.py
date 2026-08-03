@@ -16,7 +16,13 @@ from academic_benchmark.contracts.common import (
     RepositoryRelativePath,
     StrictContract,
 )
-from uniride_core.algorithms.capabilities import BackendPolicy, ExecutionProtocol
+from uniride_core.algorithms.capabilities import (
+    BackendKind,
+    BackendPolicy,
+    CompositionKind,
+    ExecutionBackendProfile,
+    ExecutionProtocol,
+)
 
 
 class _PathProbe(StrictContract):
@@ -155,7 +161,15 @@ def test_study_requires_exact_parameter_keys_for_algorithm_ids():
 
 @pytest.mark.parametrize(
     "algorithm_id",
-    ["Numba-GWO", "GWO", "unknown", "Core-GWO-TSP-Memetic-3opt"],
+    [
+        "Numba-GWO",
+        "GWO",
+        "SOTA-ALNS-TSP",
+        "unknown",
+        "Core-GWO-TSP-Memetic-3opt",
+        "Core-GWO-TSP-Memetic-ALNS",
+        "Core-HHO-TSP-Memetic-ALNS",
+    ],
 )
 def test_study_rejects_alias_unknown_and_planned_primary_ids(algorithm_id: str):
     payload = _study_payload()
@@ -166,7 +180,15 @@ def test_study_rejects_alias_unknown_and_planned_primary_ids(algorithm_id: str):
 
 
 @pytest.mark.parametrize(
-    "algorithm_id", ["Numba-GWO", "unknown", "Core-GWO-TSP-Memetic-3opt"]
+    "algorithm_id",
+    [
+        "Numba-GWO",
+        "SOTA-ALNS-TSP",
+        "unknown",
+        "Core-GWO-TSP-Memetic-3opt",
+        "Core-GWO-TSP-Memetic-ALNS",
+        "Core-HHO-TSP-Memetic-ALNS",
+    ],
 )
 def test_study_rejects_alias_unknown_and_planned_secondary_ids(algorithm_id: str):
     payload = _study_payload()
@@ -175,7 +197,7 @@ def test_study_rejects_alias_unknown_and_planned_secondary_ids(algorithm_id: str
         StudyManifestV1.model_validate(payload)
 
 
-@pytest.mark.parametrize("candidate_id", ["Core-GA-TSP", "ALNS-TSP"])
+@pytest.mark.parametrize("candidate_id", ["Core-GA-TSP", "Core-PSO-TSP"])
 def test_study_rejects_canonical_candidate_primary_ids_with_typed_error(
     candidate_id: str,
 ):
@@ -192,7 +214,7 @@ def test_study_rejects_canonical_candidate_primary_ids_with_typed_error(
     assert error["ctx"]["error"].code == "candidate_algorithm"
 
 
-@pytest.mark.parametrize("candidate_id", ["Core-GA-TSP", "ALNS-TSP"])
+@pytest.mark.parametrize("candidate_id", ["Core-GA-TSP", "Core-PSO-TSP"])
 def test_study_rejects_canonical_candidate_secondary_ids_with_typed_error(
     candidate_id: str,
 ):
@@ -217,6 +239,7 @@ def test_study_rejects_canonical_candidate_secondary_ids_with_typed_error(
         "Core-HHO-TSP-Pure",
         "Core-GWO-TSP-Memetic-2opt",
         "Core-HHO-TSP-Memetic-2opt",
+        "ALNS-TSP",
     ],
 )
 def test_study_accepts_verified_canonical_primary_ids(algorithm_id: str):
@@ -225,6 +248,49 @@ def test_study_accepts_verified_canonical_primary_ids(algorithm_id: str):
     payload["algorithm_parameters"] = {algorithm_id: {}}
 
     assert StudyManifestV1.model_validate(payload).algorithm_ids == [algorithm_id]
+
+
+def test_canonical_alns_manifest_entry_has_successful_python_only_preflight() -> None:
+    payload = _study_payload()
+    payload["algorithm_ids"] = ["ALNS-TSP"]
+    payload["algorithm_parameters"] = {"ALNS-TSP": {}}
+    validated = StudyManifestV1.model_validate(payload)
+    problem = type(
+        "Problem",
+        (),
+        {
+            "problem_type": "tsp",
+            "dimension": 3,
+            "dist_matrix": [
+                [0.0, 2.0, 4.0],
+                [2.0, 0.0, 3.0],
+                [4.0, 3.0, 0.0],
+            ],
+        },
+    )()
+
+    decision = preflight_run(
+        PreflightRequest(
+            resolution=resolve_algorithm_id(
+                validated.algorithm_ids[0], IdentifierSource.MANIFEST
+            ),
+            problem=problem,
+            protocol=ExecutionProtocol.FIXED_BUDGET,
+            backend_policy=BackendPolicy.PYTHON_ONLY,
+            evaluation_budget=10,
+            registered_algorithm_ids=frozenset({"ALNS-TSP"}),
+            runtime_backends=RuntimeBackendAvailability(True, False, "test"),
+        )
+    )
+    assert decision.executor_registry_id == "ALNS-TSP"
+    assert decision.selected_backend == ExecutionBackendProfile(
+        BackendKind.PYTHON, BackendKind.NONE
+    )
+    assert decision.selected_claim.composition is CompositionKind.PURE
+    assert decision.evidence_ids == (
+        "academic_benchmark/tests/test_alns_c3_evidence.py::"
+        "test_alns_fixed_tsp_evidence",
+    )
 
 
 def test_algorithm_run_requires_strict_decision_provenance():

@@ -215,6 +215,7 @@ def test_default_catalog_contains_only_evidence_gated_lifecycles():
         "Core-GWO-TSP-Memetic-2opt",
         "Core-HHO-TSP-Memetic-2opt",
         "Core-OrOpt-TSP",
+        "ALNS-TSP",
     }
     assert all(
         bool(capability.claims) is (capability.canonical_id in verified)
@@ -271,6 +272,53 @@ def test_canonical_local_search_native_claims_are_evidence_gated(
         )
 
 
+def test_alns_publishes_exactly_four_pure_python_evidence_claims() -> None:
+    capability = get_algorithm_capability("ALNS-TSP")
+    assert capability is not None
+    assert capability.lifecycle is LifecycleStatus.VERIFIED
+    assert capability.production_ready is False
+    assert len(capability.claims) == 4
+
+    expected_evidence = {
+        (ProblemContract.TSP, ExecutionProtocol.FIXED_BUDGET):
+            "test_alns_fixed_tsp_evidence",
+        (ProblemContract.ATSP, ExecutionProtocol.FIXED_BUDGET):
+            "test_alns_fixed_atsp_evidence",
+        (ProblemContract.TSP, ExecutionProtocol.NATIVE_TERMINATION):
+            "test_alns_native_tsp_evidence",
+        (ProblemContract.ATSP, ExecutionProtocol.NATIVE_TERMINATION):
+            "test_alns_native_atsp_evidence",
+    }
+    assert {
+        (claim.problem, claim.protocol) for claim in capability.claims
+    } == set(expected_evidence)
+    for claim in capability.claims:
+        assert claim.backend_profile == ExecutionBackendProfile(
+            BackendKind.PYTHON, BackendKind.NONE
+        )
+        assert claim.composition is CompositionKind.PURE
+        assert claim.directed_cost_preserved is (
+            claim.problem is ProblemContract.ATSP
+        )
+        assert claim.exact_objective_accounting is True
+        assert claim.fixed_seed_deterministic is True
+        assert claim.truthful_result_reporting is True
+        assert claim.evidence_ids == (
+            "academic_benchmark/tests/test_alns_c3_evidence.py::"
+            + expected_evidence[(claim.problem, claim.protocol)],
+        )
+
+    for hybrid_id in (
+        "Core-GWO-TSP-Memetic-ALNS",
+        "Core-HHO-TSP-Memetic-ALNS",
+    ):
+        hybrid = get_algorithm_capability(hybrid_id)
+        assert hybrid is not None
+        assert hybrid.lifecycle is LifecycleStatus.PLANNED
+        assert hybrid.claims == ()
+        assert hybrid.production_ready is False
+
+
 def test_verified_capabilities_have_exact_canonical_academic_executors():
     """Selectable catalog identities must remain direct academic registry keys."""
     from academic_benchmark.engine_core import AlgorithmRegistry
@@ -290,6 +338,7 @@ def test_verified_capabilities_have_exact_canonical_academic_executors():
         "Core-GWO-TSP-Memetic-2opt",
         "Core-HHO-TSP-Memetic-2opt",
         "Core-OrOpt-TSP",
+        "ALNS-TSP",
     }
     assert verified_ids <= registry_ids
     for canonical_id in verified_ids:
@@ -314,7 +363,7 @@ def test_catalog_lifecycle_truth_matches_academic_executor_availability():
         "Core-HHO-TSP-Pure": LifecycleStatus.VERIFIED,
         "Core-GWO-TSP-Memetic-2opt": LifecycleStatus.VERIFIED,
         "Core-HHO-TSP-Memetic-2opt": LifecycleStatus.VERIFIED,
-        "ALNS-TSP": LifecycleStatus.CANDIDATE,
+        "ALNS-TSP": LifecycleStatus.VERIFIED,
         "Core-GWO-TSP-Memetic-3opt": LifecycleStatus.PLANNED,
         "Core-HHO-TSP-Memetic-3opt": LifecycleStatus.PLANNED,
         "Core-GWO-TSP-Memetic-ALNS": LifecycleStatus.PLANNED,

@@ -255,7 +255,8 @@ def _native_params() -> dict[str, object]:
     }
 
 
-def _assert_fixed_evidence(problem: _Problem) -> None:
+def _assert_fixed_evidence(problem: _Problem, *, expected_problem_type: str) -> None:
+    assert problem.problem_type == expected_problem_type
     executor = AlgorithmRegistry.get_executor("ALNS-TSP")
     first_params = _fixed_params(1)
     larger_params = _fixed_params(4)
@@ -307,7 +308,8 @@ def _assert_fixed_evidence(problem: _Problem) -> None:
     assert replay.execution_backend == first.execution_backend
 
 
-def _assert_native_evidence(problem: _Problem) -> None:
+def _assert_native_evidence(problem: _Problem, *, expected_problem_type: str) -> None:
+    assert problem.problem_type == expected_problem_type
     executor = AlgorithmRegistry.get_executor("ALNS-TSP")
     params = _native_params()
     manifest = NativeComparisonManifest.from_value(params["native_comparison"])
@@ -341,19 +343,19 @@ def _assert_native_evidence(problem: _Problem) -> None:
 
 
 def test_alns_fixed_tsp_evidence() -> None:
-    _assert_fixed_evidence(SYMMETRIC_TSP)
+    _assert_fixed_evidence(SYMMETRIC_TSP, expected_problem_type="tsp")
 
 
 def test_alns_fixed_atsp_evidence() -> None:
-    _assert_fixed_evidence(DIRECTED_ATSP)
+    _assert_fixed_evidence(DIRECTED_ATSP, expected_problem_type="atsp")
 
 
 def test_alns_native_tsp_evidence() -> None:
-    _assert_native_evidence(SYMMETRIC_TSP)
+    _assert_native_evidence(SYMMETRIC_TSP, expected_problem_type="tsp")
 
 
 def test_alns_native_atsp_evidence() -> None:
-    _assert_native_evidence(DIRECTED_ATSP)
+    _assert_native_evidence(DIRECTED_ATSP, expected_problem_type="atsp")
 
 
 @pytest.mark.parametrize(

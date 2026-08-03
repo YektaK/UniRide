@@ -196,6 +196,51 @@ def _numba_metaheuristic_claims(
             claims.append(CapabilityClaim(problem=problem, protocol=protocol, backend_profile=ExecutionBackendProfile(BackendKind.NUMBA_NOPYTHON, polish), composition=composition, directed_cost_preserved=problem is ProblemContract.ATSP, exact_objective_accounting=True, fixed_seed_deterministic=True, truthful_result_reporting=True, evidence_ids=(evidence_id,)))
     return tuple(claims)
 
+
+def _alns_claims() -> tuple[CapabilityClaim, ...]:
+    evidence_by_contract = (
+        (
+            ProblemContract.TSP,
+            ExecutionProtocol.FIXED_BUDGET,
+            "test_alns_fixed_tsp_evidence",
+        ),
+        (
+            ProblemContract.ATSP,
+            ExecutionProtocol.FIXED_BUDGET,
+            "test_alns_fixed_atsp_evidence",
+        ),
+        (
+            ProblemContract.TSP,
+            ExecutionProtocol.NATIVE_TERMINATION,
+            "test_alns_native_tsp_evidence",
+        ),
+        (
+            ProblemContract.ATSP,
+            ExecutionProtocol.NATIVE_TERMINATION,
+            "test_alns_native_atsp_evidence",
+        ),
+    )
+    return tuple(
+        CapabilityClaim(
+            problem=problem,
+            protocol=protocol,
+            backend_profile=ExecutionBackendProfile(
+                BackendKind.PYTHON, BackendKind.NONE
+            ),
+            composition=CompositionKind.PURE,
+            directed_cost_preserved=problem is ProblemContract.ATSP,
+            exact_objective_accounting=True,
+            fixed_seed_deterministic=True,
+            truthful_result_reporting=True,
+            evidence_ids=(
+                "academic_benchmark/tests/test_alns_c3_evidence.py::"
+                + evidence_function,
+            ),
+        )
+        for problem, protocol, evidence_function in evidence_by_contract
+    )
+
+
 _INITIAL_CAPABILITIES: tuple[AlgorithmCapability, ...] = (
     AlgorithmCapability(
         "Core-TwoOpt-TSP", "TwoOpt", "2-opt", LifecycleStatus.VERIFIED,
@@ -220,7 +265,13 @@ _INITIAL_CAPABILITIES: tuple[AlgorithmCapability, ...] = (
     AlgorithmCapability("Core-HHO-TSP-Pure", "HHO", "Harris Hawks Optimizer (pure)", LifecycleStatus.VERIFIED, claims=_numba_metaheuristic_claims(fixed_evidence="test_core_hho_pure_fixed_tsp_and_atsp_numba_evidence", native_evidence="test_core_hho_pure_native_tsp_and_atsp_numba_evidence", composition=CompositionKind.PURE, polish=BackendKind.NONE)),
     AlgorithmCapability("Core-GWO-TSP-Memetic-2opt", "GWO", "Grey Wolf Optimizer (memetic 2-opt)", LifecycleStatus.VERIFIED, claims=_numba_metaheuristic_claims(fixed_evidence="test_core_gwo_memetic_2opt_fixed_tsp_and_atsp_numba_evidence", native_evidence=None, composition=CompositionKind.MEMETIC_2OPT, polish=BackendKind.PYTHON)),
     AlgorithmCapability("Core-HHO-TSP-Memetic-2opt", "HHO", "Harris Hawks Optimizer (memetic 2-opt)", LifecycleStatus.VERIFIED, claims=_numba_metaheuristic_claims(fixed_evidence="test_core_hho_memetic_2opt_fixed_tsp_and_atsp_numba_evidence", native_evidence=None, composition=CompositionKind.MEMETIC_2OPT, polish=BackendKind.PYTHON)),
-    AlgorithmCapability("ALNS-TSP", "ALNS", "Adaptive Large Neighborhood Search", LifecycleStatus.CANDIDATE),
+    AlgorithmCapability(
+        "ALNS-TSP",
+        "ALNS",
+        "Adaptive Large Neighborhood Search",
+        LifecycleStatus.VERIFIED,
+        claims=_alns_claims(),
+    ),
     AlgorithmCapability("Core-GWO-TSP-Memetic-3opt", "GWO", "Grey Wolf Optimizer (memetic 3-opt)", LifecycleStatus.PLANNED, planning_note="Reserved for the approved C2 3-opt composition."),
     AlgorithmCapability("Core-HHO-TSP-Memetic-3opt", "HHO", "Harris Hawks Optimizer (memetic 3-opt)", LifecycleStatus.PLANNED, planning_note="Reserved for the approved C2 3-opt composition."),
     AlgorithmCapability("Core-GWO-TSP-Memetic-ALNS", "GWO", "Grey Wolf Optimizer (memetic ALNS)", LifecycleStatus.PLANNED, planning_note="Reserved for the approved C2 ALNS composition."),

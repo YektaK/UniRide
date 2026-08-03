@@ -392,16 +392,74 @@ def test_decision_and_provenance_are_immutable() -> None:
         decision.problem.matrix[0][0] = 99.0  # type: ignore[index]
 
 
-def test_current_candidate_catalog_entry_remains_non_selectable() -> None:
+@pytest.mark.parametrize("candidate_id", ["Core-GA-TSP", "Core-PSO-TSP"])
+def test_current_candidate_catalog_entries_remain_non_selectable(
+    candidate_id: str,
+) -> None:
     with pytest.raises(CandidateAlgorithmError):
         preflight_run(
             PreflightRequest(
-                resolution=_resolution("Core-GA-TSP"),
+                resolution=_resolution(candidate_id),
                 problem=_TSP,
                 protocol=ExecutionProtocol.FIXED_BUDGET,
                 backend_policy=BackendPolicy.PYTHON_ONLY,
                 evaluation_budget=10,
-                registered_algorithm_ids=frozenset({"Core-GA-TSP"}),
+                registered_algorithm_ids=frozenset({candidate_id}),
+                runtime_backends=RuntimeBackendAvailability(True, False, "test"),
+            )
+        )
+
+
+@pytest.mark.parametrize(
+    ("problem", "protocol", "budget", "evidence_function"),
+    [
+        (_TSP, ExecutionProtocol.FIXED_BUDGET, 10, "test_alns_fixed_tsp_evidence"),
+        (_ATSP, ExecutionProtocol.FIXED_BUDGET, 10, "test_alns_fixed_atsp_evidence"),
+        (_TSP, ExecutionProtocol.NATIVE_TERMINATION, None, "test_alns_native_tsp_evidence"),
+        (_ATSP, ExecutionProtocol.NATIVE_TERMINATION, None, "test_alns_native_atsp_evidence"),
+    ],
+)
+def test_alns_preflight_selects_exact_python_no_polish_claim(
+    problem: _Problem,
+    protocol: ExecutionProtocol,
+    budget: int | None,
+    evidence_function: str,
+) -> None:
+    decision = preflight_run(
+        PreflightRequest(
+            resolution=_resolution("ALNS-TSP"),
+            problem=problem,
+            protocol=protocol,
+            backend_policy=BackendPolicy.PYTHON_ONLY,
+            evaluation_budget=budget,
+            registered_algorithm_ids=frozenset({"ALNS-TSP"}),
+            runtime_backends=RuntimeBackendAvailability(True, False, "test"),
+        )
+    )
+    assert decision.executor_registry_id == "ALNS-TSP"
+    assert decision.selected_backend == ExecutionBackendProfile(
+        BackendKind.PYTHON, BackendKind.NONE
+    )
+    assert decision.selected_claim.composition is CompositionKind.PURE
+    assert decision.evidence_ids == (
+        "academic_benchmark/tests/test_alns_c3_evidence.py::" + evidence_function,
+    )
+
+
+@pytest.mark.parametrize(
+    "planned_id",
+    ["Core-GWO-TSP-Memetic-ALNS", "Core-HHO-TSP-Memetic-ALNS"],
+)
+def test_planned_alns_hybrids_remain_non_selectable(planned_id: str) -> None:
+    with pytest.raises(PlannedAlgorithmError):
+        preflight_run(
+            PreflightRequest(
+                resolution=_resolution(planned_id),
+                problem=_TSP,
+                protocol=ExecutionProtocol.FIXED_BUDGET,
+                backend_policy=BackendPolicy.PYTHON_ONLY,
+                evaluation_budget=10,
+                registered_algorithm_ids=frozenset(),
                 runtime_backends=RuntimeBackendAvailability(True, False, "test"),
             )
         )

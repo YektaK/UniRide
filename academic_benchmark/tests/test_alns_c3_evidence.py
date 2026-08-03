@@ -294,6 +294,7 @@ def _assert_fixed_evidence(problem: _Problem, *, expected_problem_type: str) -> 
     first = executor(problem, first_params, seed=987_654, run_idx=run_idx)
     replay = executor(problem, first_params, seed=123_456, run_idx=run_idx)
     larger = executor(problem, larger_params, seed=456_789, run_idx=run_idx)
+    larger_replay = executor(problem, larger_params, seed=654_321, run_idx=run_idx)
 
     assert first.algorithm == first.algorithm_id == "ALNS-TSP"
     assert first.algorithm_family == "ALNS"
@@ -322,17 +323,27 @@ def _assert_fixed_evidence(problem: _Problem, *, expected_problem_type: str) -> 
     assert larger.polish_policy == NO_POLISH
     assert larger.execution_backend == "objective=python;polish=none"
     assert 1 <= larger.evaluations <= 4
+    assert larger.evaluations > 1
+    assert larger.iterations >= 1
     assert larger.budget_terminated is (
         larger.termination_reason == "evaluation_budget_exhausted"
     )
     assert larger.termination_reason in FIXED_REASONS
     _assert_complete_and_exact(larger, problem.dist_matrix)
+    _assert_complete_and_exact(larger_replay, problem.dist_matrix)
     assert replay.tour == first.tour
     assert replay.tour_cost == pytest.approx(first.tour_cost)
     assert replay.objective_evaluations == first.objective_evaluations
     assert replay.iterations == first.iterations
     assert replay.termination_reason == first.termination_reason
     assert replay.execution_backend == first.execution_backend
+    assert larger_replay.tour == larger.tour
+    assert larger_replay.tour_cost == pytest.approx(larger.tour_cost)
+    assert larger_replay.objective_evaluations == larger.objective_evaluations
+    assert larger_replay.iterations == larger.iterations
+    assert larger_replay.termination_reason == larger.termination_reason
+    assert larger_replay.seed == larger.seed == expected_seed
+    assert larger_replay.execution_backend == larger.execution_backend
 
 
 def _assert_native_evidence(problem: _Problem, *, expected_problem_type: str) -> None:

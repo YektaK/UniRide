@@ -153,6 +153,20 @@ def test_fair_pilot_writes_only_validated_external_artifacts(tmp_path: Path):
     assert all(row["validation_status"] == "passed" for row in rows)
     assert {row["record_kind"] for row in rows} == {"primary", "replay"}
     assert json.loads((output / "validation.json").read_text(encoding="utf-8"))["status"] == "passed"
+    alns_rows = [row for row in rows if row["algorithm_id"] == "ALNS-TSP"]
+    primary = next(row for row in alns_rows if row["record_kind"] == "primary")
+    replay = next(row for row in alns_rows if row["record_kind"] == "replay")
+    assert primary["algorithm_id"] == "ALNS-TSP"
+    assert primary["backend_profile"] == {"objective": "python", "polish": "none"}
+    assert primary["capability_evidence_ids"] == ["fixture::ALNS-TSP"]
+    assert sorted(primary["tour"]) == list(range(1, primary["dimension"] + 1))
+    assert primary["objective_cost"] == pytest.approx(primary["independent_objective_cost"])
+    assert primary["objective_evaluations"] > 0
+    for field in ("tour", "objective_cost", "objective_evaluations", "iterations", "termination_reason", "execution_backend"):
+        assert replay[field] == primary[field]
+    assert replay["backend_profile"] == primary["backend_profile"]
+    assert replay["capability_evidence_ids"] == primary["capability_evidence_ids"]
+
 
 
 def test_fair_pilot_rejects_repository_output_without_creating_it(tmp_path: Path):

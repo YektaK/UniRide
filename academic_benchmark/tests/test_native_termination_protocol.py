@@ -340,7 +340,7 @@ def test_native_pilot_rejects_unavailable_numba_before_registry_getter(tmp_path)
         numba_nopython=False,
         detail="deterministic Phase B candidate boundary",
     )
-    with pytest.raises(NativePilotError, match="Numba nopython objective is unavailable") as exc_info:
+    with pytest.raises(NativePilotError, match="candidate and cannot be selected") as exc_info:
         run_native_pilot(
             config_path,
             output,
@@ -355,10 +355,10 @@ def test_native_pilot_rejects_unavailable_numba_before_registry_getter(tmp_path)
         )
 
     assert lookups == []
-    assert "Numba nopython objective is unavailable" in str(exc_info.value)
+    assert "candidate and cannot be selected" in str(exc_info.value)
     validation = json.loads((output / "validation.json").read_text())
     assert validation["status"] == "failed"
-    assert "Numba nopython objective is unavailable" in validation["error"]
+    assert "candidate and cannot be selected" in validation["error"]
 
 
 def test_native_aggregate_rejects_fixed_protocol_rows():
@@ -562,7 +562,7 @@ def test_native_config_admits_canonical_alns_exact_set(tmp_path: Path) -> None:
 def test_native_alns_invalid_parameters_delegate_to_shared_validator(
     tmp_path: Path,
 ) -> None:
-    invalid = {**ALNS_PARAMS, "unexpected": "forbidden"}
+    invalid = {**ALNS_PARAMS, "max_iterations": True}
     with pytest.raises(ValueError) as shared_error:
         validate_scientific_alns_params(invalid)
     data = _config()
@@ -570,3 +570,10 @@ def test_native_alns_invalid_parameters_delegate_to_shared_validator(
     with pytest.raises(ValueError) as loader_error:
         load_native_pilot_config(_write_config(tmp_path, data))
     assert str(loader_error.value) == str(shared_error.value)
+
+
+def test_native_alns_key_admission_precedes_shared_validation(tmp_path: Path) -> None:
+    data = _config()
+    data["algorithms"]["ALNS-TSP"].pop("min_remove")
+    with pytest.raises(NativePilotError, match="ALNS-TSP parameter schema mismatch"):
+        load_native_pilot_config(_write_config(tmp_path, data))

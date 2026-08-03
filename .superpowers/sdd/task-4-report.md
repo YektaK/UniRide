@@ -23,3 +23,8 @@ Green command:
 ```powershell
 & C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe -m pytest academic_benchmark/tests/test_fair_pilot_cli.py academic_benchmark/tests/test_native_termination_protocol.py academic_benchmark/tests/test_alns_c3_evidence.py -q -p no:cacheprovider --tb=short
 ```
+
+## Review follow-up evidence
+
+After native exact-key-first validation, restored lexical execution ordering, and ALNS fair-pilot record/replay provenance assertions, the required focused suite passed: **87 passed in 4.51s**.
+The ALNS candidate capability admission remains explicitly deferred to Task 5; no capability claims were changed.

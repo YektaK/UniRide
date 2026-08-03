@@ -168,7 +168,6 @@ def _strict_number(
 def _validate_algorithm_parameters(
     algorithms: Mapping[str, Mapping[str, Any]],
 ) -> None:
-    validate_scientific_alns_params(algorithms["ALNS-TSP"])
     for algorithm_id in sorted(APPROVED_NATIVE_ALGORITHMS):
         block = algorithms[algorithm_id]
         missing = _REQUIRED_ALGORITHM_KEYS[algorithm_id] - block.keys()
@@ -178,6 +177,9 @@ def _validate_algorithm_parameters(
                 f"{algorithm_id} parameter schema mismatch; "
                 f"missing={sorted(missing)}, unknown={sorted(unknown)}"
             )
+        if algorithm_id == "ALNS-TSP":
+            validate_scientific_alns_params(block)
+            continue
         _strict_int(block["max_iterations"], f"{algorithm_id}.max_iterations", 1)
 
     gwo = algorithms["Core-GWO-TSP-Pure"]
@@ -454,7 +456,7 @@ def run_native_pilot(
             for replicate in range(config.runs):
                 seed = config.manifest.paired_seed(problem.name, replicate)
                 primary: Dict[str, Dict[str, Any]] = {}
-                for algorithm_id in sorted(APPROVED_NATIVE_ALGORITHMS, key=lambda value: (value not in _GWO_HHO, value)):
+                for algorithm_id in sorted(APPROVED_NATIVE_ALGORITHMS):
                     params = dict(config.algorithms[algorithm_id])
                     params["native_comparison"] = config.native_comparison
                     result, decision, elapsed_ms = _execute_preflighted_run(
@@ -488,7 +490,7 @@ def run_native_pilot(
                     rows.append(row)
                     primary[algorithm_id] = row
                 if replicate in config.replay_replicates:
-                    for algorithm_id in sorted(APPROVED_NATIVE_ALGORITHMS, key=lambda value: (value not in _GWO_HHO, value)):
+                    for algorithm_id in sorted(APPROVED_NATIVE_ALGORITHMS):
                         params = dict(config.algorithms[algorithm_id])
                         params["native_comparison"] = config.native_comparison
                         result, decision, elapsed_ms = _execute_preflighted_run(

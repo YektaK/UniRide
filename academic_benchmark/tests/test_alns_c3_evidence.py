@@ -271,14 +271,17 @@ def _assert_native_evidence(problem: _Problem) -> None:
     executor = AlgorithmRegistry.get_executor("ALNS-TSP")
     params = _native_params()
     manifest = NativeComparisonManifest.from_value(params["native_comparison"])
+    run_idx = 0
+    expected_seed = manifest.paired_seed(problem.name, run_idx)
 
-    first = executor(problem, params, seed=987_654, run_idx=0)
-    replay = executor(problem, params, seed=123_456, run_idx=0)
+    first = executor(problem, params, seed=987_654, run_idx=run_idx)
+    replay = executor(problem, params, seed=123_456, run_idx=run_idx)
 
     assert first.algorithm == first.algorithm_id == "ALNS-TSP"
     assert first.algorithm_family == "ALNS"
     assert first.variant == "pure"
-    assert first.seed == manifest.paired_seed(problem.name, 0)
+    assert first.seed == expected_seed
+    assert replay.seed == expected_seed
     assert first.initialization_policy == "nearest_neighbor_from_node_zero_all_nodes"
     assert first.acceptance_policy == "simulated_annealing"
     assert first.neighborhood_window is None

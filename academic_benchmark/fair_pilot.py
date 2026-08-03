@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
-from academic_benchmark.fairness import FairComparisonManifest, FairRunResult
+from academic_benchmark.fairness import FairComparisonManifest, FairRunResult, validate_scientific_alns_params
 from academic_benchmark.core.algorithm_resolution import IdentifierSource
 from academic_benchmark.core.execution_gateway import (
     execute_preflighted,
@@ -41,6 +41,7 @@ APPROVED_ALGORITHMS = frozenset({
     "Core-HHO-TSP-Pure",
     "Core-TwoOpt-TSP",
     "Core-ThreeOpt-TSP",
+    "ALNS-TSP",
 })
 _V1_ALGORITHM_ALIASES = {
     "Numba-2-opt": "Core-TwoOpt-TSP",
@@ -119,6 +120,14 @@ def _validate_v2_algorithm_policy(algorithms: Mapping[str, Mapping[str, Any]]) -
             )
 
     two_opt = algorithms["Core-TwoOpt-TSP"]
+    alns = algorithms["ALNS-TSP"]
+    forbidden = {"first_improvement", "window", "max_segment_length"} & alns.keys()
+    if forbidden:
+        raise FairPilotError(
+            f"ALNS-TSP cannot declare local-search policy fields: {sorted(forbidden)}"
+        )
+    validate_scientific_alns_params(alns)
+
     _strict_bool(two_opt.get("first_improvement"), "Core-TwoOpt-TSP.first_improvement")
     forbidden = {"window", "max_segment_length"} & two_opt.keys()
     if forbidden:

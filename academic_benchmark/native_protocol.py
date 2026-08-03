@@ -16,6 +16,7 @@ APPROVED_NATIVE_ALGORITHMS = frozenset({
     "Core-HHO-TSP-Pure",
     "Core-TwoOpt-TSP",
     "Core-ThreeOpt-TSP",
+    "ALNS-TSP",
 })
 
 

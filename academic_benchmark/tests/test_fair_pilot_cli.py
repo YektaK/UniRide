@@ -10,7 +10,11 @@ import pytest
 from academic_benchmark.core.algorithm_resolution import IdentifierSource
 from academic_benchmark.core.preflight import RuntimeBackendAvailability
 
-from academic_benchmark.fairness import FairComparisonManifest, FairRunResult
+from academic_benchmark.fairness import (
+    FairComparisonManifest,
+    FairRunResult,
+    validate_scientific_alns_params,
+)
 from academic_benchmark.fair_pilot import (
     APPROVED_ALGORITHMS,
     _closed_cost,
@@ -38,12 +42,27 @@ class _Problem:
     edge_weight_type: str = "EXPLICIT"
     is_time_matrix: bool = False
 
+ALNS_PARAMS = {
+    "max_iterations": 8,
+    "max_no_improvement": 3,
+    "remove_ratio": 0.34,
+    "min_remove": 1,
+    "segment_length": 2,
+    "weight_update_factor": 0.2,
+    "use_sa": True,
+    "sa_start_temp": 4.0,
+    "sa_cooling_rate": 0.9,
+}
+
 
 def _config(tmp_path: Path, **overrides: Any) -> Path:
     config: dict[str, Any] = {
         "protocol_version": "uniride-fair-tsp-v1",
         "problems": ["tiny-tsp", "tiny-atsp"],
-        "algorithms": {algorithm: {} for algorithm in APPROVED_ALGORITHMS},
+        "algorithms": {
+            algorithm: dict(ALNS_PARAMS) if algorithm == "ALNS-TSP" else {}
+            for algorithm in APPROVED_ALGORITHMS
+        },
         "runs": 2,
         "evaluation_budget": 20,
         "base_seed": 123,
@@ -69,7 +88,7 @@ def _problems() -> list[_Problem]:
 def _registry(algorithm_id: str):
     family = {
         "Core-GWO-TSP-Pure": "GWO", "Core-HHO-TSP-Pure": "HHO",
-        "Core-TwoOpt-TSP": "2-opt", "Core-ThreeOpt-TSP": "3-opt",
+        "Core-TwoOpt-TSP": "2-opt", "Core-ThreeOpt-TSP": "3-opt", "ALNS-TSP": "ALNS",
     }[algorithm_id]
 
     def execute(problem, params, seed, run_idx):
@@ -125,12 +144,12 @@ def test_fair_pilot_writes_only_validated_external_artifacts(tmp_path: Path):
         _config(tmp_path), output, problem_loader=_problems, registry_getter=_registry,
         repo_root=tmp_path / "repository", runtime_probe=lambda: RUNTIME, registered_algorithms_provider=lambda: APPROVED_ALGORITHMS, gateway_executor=_gateway,
     )
-    assert result["records"] == 24  # 2 problems x 4 algorithms x (2 primary + replay run 0)
+    assert result["records"] == 30  # 2 problems x 5 algorithms x (2 primary + replay run 0)
     assert {path.name for path in output.iterdir()} == {
         "manifest.json", "runs.jsonl", "aggregate.csv", "validation.json",
     }
     rows = [json.loads(line) for line in (output / "runs.jsonl").read_text(encoding="utf-8").splitlines()]
-    assert len(rows) == 24
+    assert len(rows) == 30
     assert all(row["validation_status"] == "passed" for row in rows)
     assert {row["record_kind"] for row in rows} == {"primary", "replay"}
     assert json.loads((output / "validation.json").read_text(encoding="utf-8"))["status"] == "passed"
@@ -288,3 +307,39 @@ def test_canonical_local_search_fixed_primary_and_replay_use_real_gateway(
         }
         assert replay_row["executor_registry_id"] == algorithm_id
         assert replay_row["capability_evidence_ids"] == [expected_evidence]
+
+def _v2_algorithms_with_alns(params: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {
+        "Core-GWO-TSP-Pure": {},
+        "Core-HHO-TSP-Pure": {},
+        "Core-TwoOpt-TSP": {"first_improvement": False},
+        "Core-ThreeOpt-TSP": {"first_improvement": True, "window": 4},
+        "ALNS-TSP": params,
+    }
+
+
+def test_fair_v2_config_admits_canonical_alns_exact_set(tmp_path: Path) -> None:
+    config = load_fair_pilot_config(_config(
+        tmp_path,
+        protocol_version="uniride-fair-tsp-v2",
+        comparison_regime="fixed_evaluation_budget",
+        algorithms=_v2_algorithms_with_alns(dict(ALNS_PARAMS)),
+    ))
+    assert set(config.algorithms) == APPROVED_ALGORITHMS
+    assert config.algorithms["ALNS-TSP"] == ALNS_PARAMS
+
+
+def test_fair_v2_alns_invalid_parameters_delegate_to_shared_validator(
+    tmp_path: Path,
+) -> None:
+    invalid = {**ALNS_PARAMS, "unexpected": "forbidden"}
+    with pytest.raises(ValueError) as shared_error:
+        validate_scientific_alns_params(invalid)
+    with pytest.raises(ValueError) as loader_error:
+        load_fair_pilot_config(_config(
+            tmp_path,
+            protocol_version="uniride-fair-tsp-v2",
+            comparison_regime="fixed_evaluation_budget",
+            algorithms=_v2_algorithms_with_alns(invalid),
+        ))
+    assert str(loader_error.value) == str(shared_error.value)

@@ -10,7 +10,10 @@ import pytest
 from academic_benchmark.core.algorithm_resolution import IdentifierSource
 from academic_benchmark.core.preflight import RuntimeBackendAvailability
 
-from academic_benchmark.fairness import FairComparisonManifest
+from academic_benchmark.fairness import (
+    FairComparisonManifest,
+    validate_scientific_alns_params,
+)
 from academic_benchmark.native_pilot import (
     NativePilotError,
     _native_result_record,
@@ -74,6 +77,18 @@ def _problem(name: str = "tiny-tsp", *, directed: bool = False, uniform: bool = 
     )
 
 
+ALNS_PARAMS = {
+    "max_iterations": 8,
+    "max_no_improvement": 3,
+    "remove_ratio": 0.34,
+    "min_remove": 1,
+    "segment_length": 2,
+    "weight_update_factor": 0.2,
+    "use_sa": True,
+    "sa_start_temp": 4.0,
+    "sa_cooling_rate": 0.9,
+}
+
 def _executor(algorithm_id: str):
     from academic_benchmark.engine_core import AlgorithmRegistry
     import academic_benchmark.core.registry_setup  # noqa: F401
@@ -116,6 +131,7 @@ def _algorithm_config() -> dict[str, dict[str, Any]]:
             "first_improvement": False,
             "window": 3,
         },
+        "ALNS-TSP": dict(ALNS_PARAMS),
     }
 
 
@@ -536,3 +552,21 @@ def test_core_or_opt_direct_native_tsp_and_atsp_evidence() -> None:
         "Core-OrOpt-TSP",
         {"max_iterations": 3, "first_improvement": False, "window": 3},
     )
+
+def test_native_config_admits_canonical_alns_exact_set(tmp_path: Path) -> None:
+    config = load_native_pilot_config(_write_config(tmp_path, _config()))
+    assert set(config.algorithms) == APPROVED_NATIVE_ALGORITHMS
+    assert config.algorithms["ALNS-TSP"] == ALNS_PARAMS
+
+
+def test_native_alns_invalid_parameters_delegate_to_shared_validator(
+    tmp_path: Path,
+) -> None:
+    invalid = {**ALNS_PARAMS, "unexpected": "forbidden"}
+    with pytest.raises(ValueError) as shared_error:
+        validate_scientific_alns_params(invalid)
+    data = _config()
+    data["algorithms"]["ALNS-TSP"] = invalid
+    with pytest.raises(ValueError) as loader_error:
+        load_native_pilot_config(_write_config(tmp_path, data))
+    assert str(loader_error.value) == str(shared_error.value)

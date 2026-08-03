@@ -14,6 +14,7 @@ from academic_benchmark.core.execution_gateway import execute_preflighted
 from academic_benchmark.core.preflight import RuntimeBackendAvailability, probe_runtime_backends
 from uniride_core.algorithms.capabilities import BackendPolicy, ExecutionProtocol
 
+from academic_benchmark.fairness import ALNS_OPTIONAL_PARAMS, ALNS_REQUIRED_PARAMS, validate_scientific_alns_params
 from academic_benchmark.fair_pilot import (
     FairPilotError,
     _closed_cost,
@@ -67,6 +68,7 @@ _ALLOWED_ALGORITHM_KEYS = {
     "Core-OrOpt-TSP": frozenset({
         "max_iterations", "first_improvement", "window",
     }),
+    "ALNS-TSP": ALNS_REQUIRED_PARAMS | ALNS_OPTIONAL_PARAMS,
 }
 _REQUIRED_ALGORITHM_KEYS = {
     "Core-GWO-TSP-Pure": frozenset({
@@ -82,6 +84,7 @@ _REQUIRED_ALGORITHM_KEYS = {
     "Core-OrOpt-TSP": frozenset({
         "max_iterations", "first_improvement", "window",
     }),
+    "ALNS-TSP": ALNS_REQUIRED_PARAMS,
 }
 _REPLAY_FIELDS = (
     "tour",
@@ -165,6 +168,7 @@ def _strict_number(
 def _validate_algorithm_parameters(
     algorithms: Mapping[str, Mapping[str, Any]],
 ) -> None:
+    validate_scientific_alns_params(algorithms["ALNS-TSP"])
     for algorithm_id in sorted(APPROVED_NATIVE_ALGORITHMS):
         block = algorithms[algorithm_id]
         missing = _REQUIRED_ALGORITHM_KEYS[algorithm_id] - block.keys()
@@ -450,7 +454,7 @@ def run_native_pilot(
             for replicate in range(config.runs):
                 seed = config.manifest.paired_seed(problem.name, replicate)
                 primary: Dict[str, Dict[str, Any]] = {}
-                for algorithm_id in sorted(APPROVED_NATIVE_ALGORITHMS):
+                for algorithm_id in sorted(APPROVED_NATIVE_ALGORITHMS, key=lambda value: (value not in _GWO_HHO, value)):
                     params = dict(config.algorithms[algorithm_id])
                     params["native_comparison"] = config.native_comparison
                     result, decision, elapsed_ms = _execute_preflighted_run(
@@ -484,7 +488,7 @@ def run_native_pilot(
                     rows.append(row)
                     primary[algorithm_id] = row
                 if replicate in config.replay_replicates:
-                    for algorithm_id in sorted(APPROVED_NATIVE_ALGORITHMS):
+                    for algorithm_id in sorted(APPROVED_NATIVE_ALGORITHMS, key=lambda value: (value not in _GWO_HHO, value)):
                         params = dict(config.algorithms[algorithm_id])
                         params["native_comparison"] = config.native_comparison
                         result, decision, elapsed_ms = _execute_preflighted_run(

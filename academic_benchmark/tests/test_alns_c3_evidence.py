@@ -525,6 +525,7 @@ def test_alns_fixed_protocol_preserves_fractional_directed_cost() -> None:
     result = AlgorithmRegistry.get_executor("ALNS-TSP")(
         fractional_atsp, _fixed_params(4), seed=41, run_idx=0
     )
+
     expected = _closed_cost(result.tour, fractional_atsp.dist_matrix)
 
     assert expected % 1 != 0

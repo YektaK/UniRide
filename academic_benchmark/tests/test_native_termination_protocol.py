@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+from types import SimpleNamespace
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -28,7 +29,7 @@ from academic_benchmark.native_protocol import (
     NATIVE_TERMINATION_REGIME,
     NativeComparisonManifest,
 )
-from uniride_core.algorithms.capabilities import BackendPolicy, ExecutionProtocol
+from uniride_core.algorithms.capabilities import BackendKind, BackendPolicy, ExecutionBackendProfile, ExecutionProtocol
 
 
 @dataclass
@@ -577,3 +578,18 @@ def test_native_alns_key_admission_precedes_shared_validation(tmp_path: Path) ->
     data["algorithms"]["ALNS-TSP"].pop("min_remove")
     with pytest.raises(NativePilotError, match="ALNS-TSP parameter schema mismatch"):
         load_native_pilot_config(_write_config(tmp_path, data))
+
+def test_native_alns_record_replay_provenance(tmp_path: Path) -> None:
+    config = load_native_pilot_config(_write_config(tmp_path, _config()))
+    problem = _problem("alns-record")
+    params = {**ALNS_PARAMS, "native_comparison": config.native_comparison}
+    seed = config.manifest.paired_seed(problem.name, 0)
+    decision = SimpleNamespace(backend_policy=BackendPolicy.PYTHON_ONLY, selected_backend=ExecutionBackendProfile(BackendKind.PYTHON), fallback_reason=None, executor_registry_id="ALNS-TSP", evidence_ids=("fixture::ALNS-TSP",))
+    rows = [_native_result_record(_executor("ALNS-TSP")(problem, params, seed, 0), problem=problem, matrix=problem.dist_matrix, matrix_sha256="0" * 64, algorithm_id="ALNS-TSP", replicate=0, seed=seed, config=config, decision=decision, elapsed_ms=0.0, record_kind=kind) for kind in ("primary", "replay")]
+    primary, replay = rows
+    assert primary["algorithm_id"] == "ALNS-TSP" and primary["backend_profile"] == {"objective": "python", "polish": "none"}
+    assert primary["capability_evidence_ids"] == ["fixture::ALNS-TSP"]
+    assert sorted(primary["tour"]) == list(range(1, problem.dimension + 1))
+    assert primary["objective_cost"] == pytest.approx(primary["independent_objective_cost"])
+    for field in ("tour", "objective_cost", "objective_evaluations", "iterations", "termination_reason", "execution_backend"):
+        assert replay[field] == primary[field]

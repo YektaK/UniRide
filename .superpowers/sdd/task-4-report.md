@@ -28,3 +28,6 @@ Green command:
 
 After native exact-key-first validation, restored lexical execution ordering, and ALNS fair-pilot record/replay provenance assertions, the required focused suite passed: **87 passed in 4.51s**.
 The ALNS candidate capability admission remains explicitly deferred to Task 5; no capability claims were changed.
+
+Final fixture correction: added canonical `resolution` provenance to the native ALNS record helper fixture.
+Final required focused suite: **88 passed in 4.41s**.

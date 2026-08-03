@@ -584,7 +584,7 @@ def test_native_alns_record_replay_provenance(tmp_path: Path) -> None:
     problem = _problem("alns-record")
     params = {**ALNS_PARAMS, "native_comparison": config.native_comparison}
     seed = config.manifest.paired_seed(problem.name, 0)
-    decision = SimpleNamespace(backend_policy=BackendPolicy.PYTHON_ONLY, selected_backend=ExecutionBackendProfile(BackendKind.PYTHON), fallback_reason=None, executor_registry_id="ALNS-TSP", evidence_ids=("fixture::ALNS-TSP",))
+    decision = SimpleNamespace(resolution=SimpleNamespace(requested_id="ALNS-TSP", canonical_id="ALNS-TSP"), backend_policy=BackendPolicy.PYTHON_ONLY, selected_backend=ExecutionBackendProfile(BackendKind.PYTHON), fallback_reason=None, executor_registry_id="ALNS-TSP", evidence_ids=("fixture::ALNS-TSP",))
     rows = [_native_result_record(_executor("ALNS-TSP")(problem, params, seed, 0), problem=problem, matrix=problem.dist_matrix, matrix_sha256="0" * 64, algorithm_id="ALNS-TSP", replicate=0, seed=seed, config=config, decision=decision, elapsed_ms=0.0, record_kind=kind) for kind in ("primary", "replay")]
     primary, replay = rows
     assert primary["algorithm_id"] == "ALNS-TSP" and primary["backend_profile"] == {"objective": "python", "polish": "none"}

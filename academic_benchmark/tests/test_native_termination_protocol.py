@@ -341,7 +341,7 @@ def test_native_pilot_rejects_unavailable_numba_before_registry_getter(tmp_path)
         numba_nopython=False,
         detail="deterministic Phase B candidate boundary",
     )
-    with pytest.raises(NativePilotError, match="candidate and cannot be selected") as exc_info:
+    with pytest.raises(NativePilotError, match="Numba nopython objective is unavailable") as exc_info:
         run_native_pilot(
             config_path,
             output,
@@ -356,10 +356,10 @@ def test_native_pilot_rejects_unavailable_numba_before_registry_getter(tmp_path)
         )
 
     assert lookups == []
-    assert "candidate and cannot be selected" in str(exc_info.value)
+    assert "Numba nopython objective is unavailable" in str(exc_info.value)
     validation = json.loads((output / "validation.json").read_text())
     assert validation["status"] == "failed"
-    assert "candidate and cannot be selected" in validation["error"]
+    assert "Numba nopython objective is unavailable" in validation["error"]
 
 
 def test_native_aggregate_rejects_fixed_protocol_rows():

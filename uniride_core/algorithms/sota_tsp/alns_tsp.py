@@ -15,7 +15,7 @@ import math
 import time
 import random
 from dataclasses import dataclass, field
-from typing import List, Tuple, Optional
+from typing import Callable, List, Tuple, Optional
 
 from uniride_core.models import TSPResult
 from uniride_core.algorithms.sota_tsp.base_solver import BaseTSPSolver
@@ -175,8 +175,15 @@ class ALNS_TSP(BaseTSPSolver):
             self._repair_counts[i] = 0
 
     def _solve(self) -> TSPResult:
-        start_time = time.perf_counter()
-        result = self._solve_accounted(ObjectiveEvaluationBudget(None))
+        start_time: float | None = None
+
+        def start_timing() -> None:
+            nonlocal start_time
+            start_time = time.perf_counter()
+
+        result = self._solve_accounted(
+            ObjectiveEvaluationBudget(None), on_initialized=start_timing
+        )
         elapsed = (time.perf_counter() - start_time) * 1000.0
         return TSPResult(
             algorithm=self.name,
@@ -188,7 +195,10 @@ class ALNS_TSP(BaseTSPSolver):
         )
 
     def _solve_accounted(
-        self, budget: ObjectiveEvaluationBudget
+        self,
+        budget: ObjectiveEvaluationBudget,
+        *,
+        on_initialized: Callable[[], None] | None = None,
     ) -> AccountedALNSResult:
         cfg = self.config
         self.rng = random.Random(cfg.seed)
@@ -202,6 +212,8 @@ class ALNS_TSP(BaseTSPSolver):
         best_cost = current_cost
         temp = cfg.sa_start_temp if cfg.use_sa else 0.0
         no_improve = 0
+        if on_initialized is not None:
+            on_initialized()
         iterations = 0
 
         while iterations < cfg.iterations:

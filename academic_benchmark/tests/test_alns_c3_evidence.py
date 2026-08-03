@@ -14,6 +14,7 @@ from academic_benchmark.fairness import (
 )
 from academic_benchmark.native_protocol import NativeComparisonManifest
 from uniride_core.algorithms.objective_budget import ObjectiveEvaluationBudget
+from uniride_core.algorithms.sota_tsp import alns_tsp as alns_module
 from uniride_core.algorithms.sota_tsp.alns_tsp import (
     ALNSConfig,
     ALNS_TSP,
@@ -205,6 +206,32 @@ def test_alns_accounted_stagnation_counts_sa_accepted_non_improvements() -> None
     assert result.evaluations == 3
     assert result.budget_exhausted is False
     assert result.termination_reason == "stagnation_limit"
+
+def test_nonprotocol_alns_time_excludes_initialization(monkeypatch) -> None:
+    solver = ALNS_TSP(_accounted_config(iterations=1, use_sa=False))
+    initialized = False
+    post_initialization_calls = 0
+    original_nearest_neighbor = solver._nearest_neighbor_tour
+
+    def nearest_neighbor():
+        nonlocal initialized
+        route = original_nearest_neighbor()
+        initialized = True
+        return route
+
+    def perf_counter() -> float:
+        nonlocal post_initialization_calls
+        if not initialized:
+            return 0.0
+        post_initialization_calls += 1
+        return 0.1 if post_initialization_calls == 1 else 0.12
+
+    monkeypatch.setattr(solver, "_nearest_neighbor_tour", nearest_neighbor)
+    monkeypatch.setattr(alns_module.time, "perf_counter", perf_counter)
+
+    result = solver.solve_with_matrix(SYMMETRIC_TSP.dist_matrix)
+
+    assert result.time_ms == pytest.approx(20.0)
 
 def test_alns_accounted_larger_fixed_budget_reports_exact_consumption() -> None:
     budget = ObjectiveEvaluationBudget(4)

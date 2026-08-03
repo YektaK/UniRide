@@ -9,9 +9,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
-from academic_benchmark.core.algorithm_resolution import IdentifierSource
+from academic_benchmark.core.algorithm_resolution import IdentifierSource, resolve_algorithm_id
 from academic_benchmark.core.execution_gateway import execute_preflighted
-from academic_benchmark.core.preflight import RuntimeBackendAvailability, probe_runtime_backends
+from academic_benchmark.core.preflight import (
+    PreflightRequest,
+    RuntimeBackendAvailability,
+    preflight_run,
+    probe_runtime_backends,
+)
 from uniride_core.algorithms.capabilities import BackendPolicy, ExecutionProtocol
 
 from academic_benchmark.fairness import ALNS_OPTIONAL_PARAMS, ALNS_REQUIRED_PARAMS, validate_scientific_alns_params
@@ -450,6 +455,25 @@ def run_native_pilot(
         resolved = resolve_problems(config, list(problem_loader()))
         runtime_backends = runtime_probe()
         registered_algorithm_ids = frozenset(registered_algorithms_provider())
+        for problem, _, _ in resolved:
+            for algorithm_id in sorted(APPROVED_NATIVE_ALGORITHMS):
+                preflight_run(
+                    PreflightRequest(
+                        resolution=resolve_algorithm_id(
+                            algorithm_id, IdentifierSource.MANIFEST
+                        ),
+                        problem=problem,
+                        protocol=ExecutionProtocol.NATIVE_TERMINATION,
+                        backend_policy=(
+                            BackendPolicy.REQUIRE_NUMBA_OBJECTIVE
+                            if algorithm_id in _GWO_HHO
+                            else BackendPolicy.PYTHON_ONLY
+                        ),
+                        evaluation_budget=None,
+                        registered_algorithm_ids=registered_algorithm_ids,
+                        runtime_backends=runtime_backends,
+                    )
+                )
 
         rows: List[Dict[str, Any]] = []
         for problem, matrix, matrix_sha256 in resolved:

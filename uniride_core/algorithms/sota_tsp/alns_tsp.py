@@ -184,6 +184,7 @@ class ALNS_TSP(BaseTSPSolver):
         result = self._solve_accounted(
             ObjectiveEvaluationBudget(None), on_initialized=start_timing
         )
+        assert start_time is not None
         elapsed = (time.perf_counter() - start_time) * 1000.0
         return TSPResult(
             algorithm=self.name,

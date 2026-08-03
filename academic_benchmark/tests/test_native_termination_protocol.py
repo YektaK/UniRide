@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 from academic_benchmark.core.algorithm_resolution import IdentifierSource
 from academic_benchmark.core.preflight import RuntimeBackendAvailability
+import academic_benchmark.native_pilot as native_pilot_module
 
 from academic_benchmark.fairness import (
     FairComparisonManifest,
@@ -361,6 +362,53 @@ def test_native_pilot_rejects_unavailable_numba_before_registry_getter(tmp_path)
     assert validation["status"] == "failed"
     assert "Numba nopython objective is unavailable" in validation["error"]
 
+
+def test_native_pilot_preflights_cartesian_product_before_first_registry_lookup(
+    tmp_path, monkeypatch
+):
+    config_path = _write_config(tmp_path, _config())
+    output = tmp_path / "native-output"
+    problems = [_problem("tiny-tsp"), _problem("tiny-atsp", directed=True)]
+    expected_pairs = {
+        (problem.name, algorithm_id)
+        for problem in problems
+        for algorithm_id in APPROVED_NATIVE_ALGORITHMS
+    }
+    preflighted: list[tuple[str, str]] = []
+    lookups: list[str] = []
+    original_preflight = native_pilot_module.preflight_run
+
+    def record_preflight(request):
+        preflighted.append((request.problem.name, request.resolution.canonical_id))
+        return original_preflight(request)
+
+    def getter(algorithm_id: str):
+        lookups.append(algorithm_id)
+        assert set(preflighted) == expected_pairs
+        assert len(preflighted) == len(expected_pairs)
+        return None
+
+    def stop_after_first_lookup(**kwargs):
+        kwargs["registry_getter"](kwargs["requested_algorithm_id"])
+        raise NativePilotError("stop after verified first registry lookup")
+
+    monkeypatch.setattr(native_pilot_module, "preflight_run", record_preflight)
+    runtime = RuntimeBackendAvailability(
+        python=True, numba_nopython=True, detail="deterministic full preflight"
+    )
+    with pytest.raises(NativePilotError, match="stop after verified first registry lookup"):
+        run_native_pilot(
+            config_path,
+            output,
+            problem_loader=lambda: problems,
+            repo_root=tmp_path / "separate-repository-root",
+            registry_getter=getter,
+            runtime_probe=lambda: runtime,
+            registered_algorithms_provider=lambda: APPROVED_NATIVE_ALGORITHMS,
+            gateway_executor=stop_after_first_lookup,
+        )
+
+    assert lookups == ["ALNS-TSP"]
 
 def test_native_aggregate_rejects_fixed_protocol_rows():
     fixed_row = {

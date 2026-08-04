@@ -28,6 +28,7 @@ from uniride_core.algorithms.tsp_meta_engines import (
     solve_gwo_tsp,
 )
 from strategies.promoted_config_loader import get_promoted_strategy_params
+from uniride_core.adapters.demand_builder import student_occurrence_keys
 
 class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
     """
@@ -116,21 +117,31 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
         # Build time matrix and coordinates
         data_loader = DataLoader.get_instance()
 
-        location_ids = [depot.id] + [s.location_code for s in students]
+        # Occurrence-aware node keys: duplicate physical locations get
+        # disambiguated keys (L1#S1, L1#S2) while single-customer locations
+        # keep their location_code. The raw submatrix is fetched positionally
+        # with physical codes (duplicates allowed), then re-keyed.
+        occurrence_keys = list(student_occurrence_keys(students))
+        node_keys = [depot.id] + occurrence_keys
+        physical_ids = [depot.id] + [s.location_code for s in students]
 
         # Build coordinates BEFORE get_submatrix for euclidean distance fallback
-        coordinates = {depot.id: {"lat": depot.lat, "lng": depot.lng}}
+        physical_coordinates = {depot.id: {"lat": depot.lat, "lng": depot.lng}}
         for s in students:
             coords = s.coordinates or {"lat": 0, "lng": 0}
-            coordinates[s.location_code] = coords
+            physical_coordinates[s.location_code] = coords
 
-        raw_matrix = data_loader.get_submatrix(location_ids, coordinates)
+        raw_matrix = data_loader.get_submatrix(physical_ids, physical_coordinates)
         time_matrix = {
-            location_ids[i]: {
-                location_ids[j]: raw_matrix[i][j]
-                for j in range(len(location_ids))
+            node_keys[i]: {
+                node_keys[j]: raw_matrix[i][j]
+                for j in range(len(node_keys))
             }
-            for i in range(len(location_ids))
+            for i in range(len(node_keys))
+        }
+        coordinates = {
+            node_keys[i]: physical_coordinates.get(physical_ids[i], {})
+            for i in range(len(node_keys))
         }
 
         # Helper to compute euclidean distance between two location IDs
@@ -141,11 +152,12 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
 
         # Convert students
         student_dicts = []
-        for s in students:
+        for s, occurrence_key in zip(students, occurrence_keys):
             student_dicts.append({
                 "id": s.id,
                 "name": s.name,
                 "location_code": s.location_code,
+                "occurrence_key": occurrence_key,
                 "coordinates": s.coordinates or {"lat": 0, "lng": 0},
                 "disability_type": s.disability_type
             })

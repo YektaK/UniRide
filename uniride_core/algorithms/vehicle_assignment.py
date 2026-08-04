@@ -97,7 +97,13 @@ class VehicleCalculator:
                 route_details = []
 
                 if route_optimizer:
-                    location_codes = [student["location_code"] for student in cluster_students]
+                    # Prefer the per-student occurrence key so duplicate physical
+                    # locations stay distinct solver nodes; falls back to the
+                    # location code when no occurrence identity is provided.
+                    location_codes = [
+                        student.get("occurrence_key") or student["location_code"]
+                        for student in cluster_students
+                    ]
                     route_result = route_optimizer(location_codes)
                     route_details = route_result.get("route_details", [])
                     route_duration = route_result.get("total_duration", 0)

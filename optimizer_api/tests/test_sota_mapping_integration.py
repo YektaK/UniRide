@@ -11,7 +11,6 @@ Key test scenarios:
 3. Full strategy execution: string-location tour in → SOTA solver → string-location tour out
 """
 import math
-import pytest
 import numpy as np
 from typing import Dict, List
 
@@ -187,17 +186,27 @@ def test_sota_mapping_full_pipeline():
     assert set(result_order) == expected
 
 
-def test_sota_mapping_with_duplicate_rejection():
-    """Verify that duplicate location codes are detected as a mapping error."""
+def test_sota_mapping_disambiguates_duplicate_location_codes():
+    """Duplicate location codes become unique occurrence keys, not a mapping error."""
+    from uniride_core.adapters.demand_builder import student_occurrence_keys
+
     students = [
         StudentNode(id="s1", name="A", location_code="dup",
                     coordinates={"lat": 0.0, "lng": 0.0}, disability_type="So"),
         StudentNode(id="s2", name="B", location_code="dup",
                     coordinates={"lat": 0.0, "lng": 10.0}, disability_type="So"),
     ]
-    student_ids = [s.location_code for s in students]
-    with pytest.raises(AssertionError):
-        assert len(set(student_ids)) == len(student_ids), "Duplicate codes must be rejected"
+    node_ids = [TRIVIAL_DEPOT.id] + list(student_occurrence_keys(students))
+    assert node_ids == ["depot", "dup#s1", "dup#s2"]
+    assert len(set(node_ids)) == len(node_ids), "Occurrence keys must be unique"
+
+    # The integer-index mapping is a bijection over the disambiguated node ids.
+    idx_to_code = {i: nid for i, nid in enumerate(node_ids)}
+    code_to_idx = {v: k for k, v in idx_to_code.items()}
+    assert len(idx_to_code) == len(node_ids)
+    assert len(code_to_idx) == len(node_ids)
+    for i in range(len(node_ids)):
+        assert code_to_idx[idx_to_code[i]] == i
 
 
 def test_sota_mapping_with_depot_included():

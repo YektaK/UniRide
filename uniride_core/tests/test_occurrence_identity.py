@@ -143,6 +143,91 @@ def test_build_student_map_preserves_duplicate_locations():
 
 
 # ---------------------------------------------------------------------------
+# deterministic, collision-safe occurrence keys
+# ---------------------------------------------------------------------------
+
+def test_student_occurrence_keys_disambiguates_colliding_explicit_ids():
+    students = [
+        SimpleNamespace(occurrence_id="REQ-A", id="s1", location_code="L1"),
+        SimpleNamespace(occurrence_id="REQ-A", id="s2", location_code="L1"),
+    ]
+    keys = student_occurrence_keys(students)
+    assert len(set(keys)) == 2
+    assert keys[0] == "L1#REQ-A"
+    assert keys[1].startswith("L1#REQ-A")
+    assert keys[1] != keys[0]
+
+
+def test_student_occurrence_keys_generated_key_does_not_collide_with_physical_code():
+    # s2's generated key "L1#L2" equals s3's physical location code; the
+    # physical code must win and the generated key must be disambiguated.
+    students = [
+        SimpleNamespace(location_code="L1", id="s1"),
+        SimpleNamespace(location_code="L1", occurrence_id="L2", id="s2"),
+        SimpleNamespace(location_code="L1#L2", id="s3"),
+    ]
+    keys = student_occurrence_keys(students)
+    assert len(set(keys)) == 3
+    assert keys[0] == "L1#s1"
+    assert keys[1].startswith("L1#L2")
+    assert keys[1] != "L1#L2"
+    assert keys[2] == "L1#L2"
+
+
+def test_student_occurrence_keys_deterministic_for_same_input():
+    students = [
+        SimpleNamespace(occurrence_id="REQ-A", id="s1", location_code="L1"),
+        SimpleNamespace(occurrence_id="REQ-A", id="s2", location_code="L1"),
+        SimpleNamespace(location_code="L1", occurrence_id="L2", id="s3"),
+    ]
+    first = student_occurrence_keys(students)
+    second = student_occurrence_keys(list(students))
+    assert first == second
+    assert len(set(first)) == len(first)
+
+
+def test_build_student_map_preserves_colliding_explicit_ids():
+    s1 = SimpleNamespace(occurrence_id="REQ-A", id="s1", location_code="L1")
+    s2 = SimpleNamespace(occurrence_id="REQ-A", id="s2", location_code="L1")
+    result = build_student_map([s1, s2])
+    assert len(result) == 2
+    assert s1 in result.values()
+    assert s2 in result.values()
+
+
+# ---------------------------------------------------------------------------
+# generator inputs behave identically to lists
+# ---------------------------------------------------------------------------
+
+def test_student_occurrence_keys_accepts_generator():
+    students = [
+        SimpleNamespace(location_code="a", id="s1"),
+        SimpleNamespace(location_code="a", id="s2"),
+        SimpleNamespace(location_code="b", id="s3"),
+    ]
+    expected = student_occurrence_keys(students)
+    assert student_occurrence_keys(iter(students)) == expected
+
+
+def test_build_student_demands_accepts_generator():
+    students = [
+        SimpleNamespace(location_code="L1", id="s1", disability_type="Sw"),
+        SimpleNamespace(location_code="L1", id="s2", disability_type="So"),
+        SimpleNamespace(location_code="L2", id="s3", disability_type="Sw"),
+    ]
+    expected = build_student_demands(students)
+    assert build_student_demands(iter(students)) == expected
+
+
+def test_build_student_map_accepts_generator():
+    s1 = SimpleNamespace(location_code="a", id="s1")
+    s2 = SimpleNamespace(location_code="a", id="s2")
+    s3 = SimpleNamespace(location_code="b", id="s3")
+    expected = build_student_map([s1, s2, s3])
+    assert build_student_map(iter([s1, s2, s3])) == expected
+
+
+# ---------------------------------------------------------------------------
 # uniride_adapter occurrence_ids
 # ---------------------------------------------------------------------------
 

@@ -44,20 +44,44 @@ def student_occurrence_keys(students: Iterable) -> List[str]:
     served by multiple students, each occurrence is disambiguated to
     ``"<location_code>#<occurrence_id>"`` (falling back to a zero-based index
     when the occurrence id equals the location code or is empty).
+
+    Keys are deterministic and globally collision-safe: when an explicit
+    ``occurrence_id`` collides with another occurrence or with a physical
+    ``location_code``, the later occurrence is re-keyed to
+    ``"<location_code>#<occurrence_id>#<n>"``. Physical location codes always
+    take precedence over generated keys. The iterable is materialized once, so
+    lists and generators behave identically.
     """
-    keys = [student_occurrence_key(student) for student in students]
+    students = list(students)
     locations = [_get_attribute(student, "location_code") for student in students]
+    base_keys = [student_occurrence_key(student) for student in students]
     counts = Counter(locations)
-    seen: Counter = Counter()
-    result: List[str] = []
-    for student, base_key, location in zip(students, keys, locations):
+
+    result: List[str] = [""] * len(students)
+    taken = set()
+
+    # Single-customer locations keep their physical code as the node key.
+    for idx, location in enumerate(locations):
         if counts[location] == 1:
-            result.append(location)
-        else:
-            idx = seen[location]
-            seen[location] += 1
-            suffix = base_key if base_key and base_key != location else str(idx)
-            result.append(f"{location}#{suffix}")
+            result[idx] = location
+            taken.add(location)
+
+    # Multi-customer locations get "<loc>#<occurrence>" keys, skipping any
+    # key already claimed by a physical code or an earlier occurrence.
+    seen: Counter = Counter()
+    for idx, (location, base_key) in enumerate(zip(locations, base_keys)):
+        if counts[location] == 1:
+            continue
+        occurrence = seen[location]
+        seen[location] += 1
+        suffix = base_key if base_key and base_key != location else str(occurrence)
+        candidate = f"{location}#{suffix}"
+        counter = 1
+        while candidate in taken:
+            candidate = f"{location}#{suffix}#{counter}"
+            counter += 1
+        result[idx] = candidate
+        taken.add(candidate)
     return result
 
 
@@ -67,6 +91,7 @@ def build_student_demands(students: Iterable) -> Dict[str, Tuple[int, int]]:
     Single-customer locations keep their ``location_code`` as the key;
     locations served by multiple customers get disambiguated occurrence keys.
     """
+    students = list(students)
     demands: Dict[str, Tuple[int, int]] = {}
     for student, key in zip(students, student_occurrence_keys(students)):
         demands[key] = student_capacity_demand(student)
@@ -79,6 +104,7 @@ def build_student_map(students: Iterable) -> Dict[str, object]:
     Single-customer locations keep their ``location_code`` as the key;
     locations served by multiple customers get disambiguated occurrence keys.
     """
+    students = list(students)
     return {key: student for student, key in zip(students, student_occurrence_keys(students))}
 
 

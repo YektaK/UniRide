@@ -75,11 +75,12 @@ class PermutationTSPStrategy(BaseRoutingStrategy):
 
         # Convert students
         student_dicts = []
-        for s in students:
+        for s, occurrence_key in zip(students, context["student_ids"]):
             student_dicts.append({
                 "id": s.id,
                 "name": s.name,
                 "location_code": s.location_code,
+                "occurrence_key": occurrence_key,
                 "coordinates": s.coordinates or {"lat": 0, "lng": 0},
                 "disability_type": s.disability_type
             })

@@ -169,6 +169,58 @@ class TestGASplitOccurrenceIdentity:
         assert sorted(visited) == ["S1", "S2"]
 
 
+# ── Permutation TSP (cluster-first, VehicleCalculator-backed) ────────────────
+
+class TestPermutationTSPOccurrenceIdentity:
+    def test_permutation_tsp_preserves_same_location_occurrences(self, monkeypatch):
+        _patch_loader(monkeypatch)
+        from strategies.permutation_tsp import PermutationTSPStrategy
+
+        students = [
+            _student("S1", "L1", sw=True, lat=1.0, lng=0.0),
+            _student("S2", "L1", sw=True, lat=1.0, lng=0.0),
+            _student("S3", "L2", sw=False, lat=2.0, lng=0.0),
+        ]
+        request = _request(students, lat=0.0, lng=0.0)
+        result = PermutationTSPStrategy().optimize(request)
+
+        assert result.success
+        visited = [sid for route in result.routes for sid in route.student_ids]
+        assert len(visited) == 3, f"expected all 3 students, got {visited}"
+        assert set(visited) == {"S1", "S2", "S3"}
+        # Route stops must use distinct occurrence keys, not the physical code.
+        step_locs = [
+            step.location2
+            for route in result.routes
+            for step in route.route_details
+            if step.location2 != "D.Kampus"
+        ]
+        assert "L1#S1" in step_locs
+        assert "L1#S2" in step_locs
+        assert "L1" not in step_locs
+
+    def test_permutation_tsp_backward_compat_single_customer_locations(self, monkeypatch):
+        _patch_loader(monkeypatch)
+        from strategies.permutation_tsp import PermutationTSPStrategy
+
+        students = [
+            _student("S1", "L1", sw=True, lat=1.0, lng=0.0),
+            _student("S2", "L2", sw=False, lat=2.0, lng=0.0),
+        ]
+        request = _request(students, lat=0.0, lng=0.0)
+        result = PermutationTSPStrategy().optimize(request)
+
+        assert result.success
+        step_locs = [
+            step.location2
+            for route in result.routes
+            for step in route.route_details
+            if step.location2 != "D.Kampus"
+        ]
+        assert sorted(step_locs) == ["L1", "L2"]
+        assert sorted(sid for route in result.routes for sid in route.student_ids) == ["S1", "S2"]
+
+
 # ── SOTA context (shared by greedy / SOTA / holistic strategies) ─────────────
 
 class TestSOTAContextOccurrenceIdentity:
@@ -230,3 +282,19 @@ class TestTimeWindowsOccurrenceIdentity:
         request.use_time_windows = True
         windows = request.get_time_windows()
         assert set(windows) == {"L1", "L2"}
+
+    def test_get_time_windows_disambiguates_colliding_explicit_ids(self):
+        # Duplicate explicit occurrence ids are deterministically disambiguated
+        # at the occurrence-key layer, never rejected at the request boundary.
+        students = [
+            StudentNode(id="S1", occurrence_id="REQ-A", location_code="L1",
+                        pickup_time="08:00", disability_type="Sw"),
+            StudentNode(id="S2", occurrence_id="REQ-A", location_code="L1",
+                        pickup_time="09:00", disability_type="So"),
+        ]
+        request = _request(students)
+        request.use_time_windows = True
+        windows = request.get_time_windows()
+        assert len(windows) == 2
+        assert "L1#REQ-A" in windows
+        assert any(key.startswith("L1#REQ-A") and key != "L1#REQ-A" for key in windows)

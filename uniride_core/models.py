@@ -118,6 +118,7 @@ class CostMatrix:
     kind: str = "distance"  # distance | travel_time | synthetic_travel_time
     is_asymmetric: bool = False
     labels: Optional[List[str]] = None
+    occurrence_ids: Optional[List[str]] = None
 
 
 @dataclass

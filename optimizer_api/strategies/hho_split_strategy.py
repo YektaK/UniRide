@@ -30,7 +30,11 @@ from models.schemas import (
 from strategies.hybrid_base_strategy import HybridSplitBaseStrategy
 from strategies.promoted_config_loader import get_promoted_strategy_params
 from utils.data_loader import DataLoader
-from uniride_core.adapters.demand_builder import build_student_demands, build_student_map
+from uniride_core.adapters.demand_builder import (
+    build_student_demands,
+    build_student_map,
+    student_occurrence_keys,
+)
 from uniride_core.algorithms.hho_split_engine import solve_hho_split
 from uniride_core.algorithms.string_split_decoder import Direction
 
@@ -151,24 +155,26 @@ class HHOSplitStrategy(HybridSplitBaseStrategy):
 
         # Load data
         data_loader = DataLoader.get_instance()
-        location_ids = [depot.id] + [s.location_code for s in students]
-        raw_matrix = data_loader.get_submatrix(location_ids)
+        occurrence_keys = student_occurrence_keys(students)
+        node_keys = [depot.id] + occurrence_keys
+        physical_ids = [depot.id] + [s.location_code for s in students]
+        raw_matrix = data_loader.get_submatrix(physical_ids)
         
-        # Build time matrix
+        # Build time matrix (re-key positional submatrix to occurrence nodes)
         time_matrix = {}
-        for i, from_loc in enumerate(location_ids):
+        for i, from_loc in enumerate(node_keys):
             time_matrix[from_loc] = {}
-            for j, to_loc in enumerate(location_ids):
+            for j, to_loc in enumerate(node_keys):
                 time_matrix[from_loc][to_loc] = raw_matrix[i][j]
         
         # Build coordinates
         coordinates = {depot.id: {"lat": depot.lat, "lng": depot.lng}}
-        for s in students:
+        for s, key in zip(students, occurrence_keys):
             coords = s.coordinates or {"lat": 0, "lng": 0}
-            coordinates[s.location_code] = coords
+            coordinates[key] = coords
         
         # Build distance matrix
-        all_locations = [depot.id] + [s.location_code for s in students]
+        all_locations = node_keys
         distance_matrix = self._build_distance_matrix(all_locations, time_matrix, coordinates)
         
         # Build demands
@@ -176,7 +182,7 @@ class HHOSplitStrategy(HybridSplitBaseStrategy):
         student_map = build_student_map(students)
         
         # Customer locations (without depot)
-        waypoints = [s.location_code for s in students]
+        waypoints = occurrence_keys
         
         tw_tuples = {}
         if use_time_windows and time_windows:

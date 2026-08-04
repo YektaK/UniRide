@@ -6,6 +6,7 @@ from collections.abc import Callable, Sequence
 from typing import Any
 
 from models.schemas import OptimizationRequest, OptimizationResponse, RouteStep, VehicleRoute
+from uniride_core.adapters.demand_builder import student_occurrence_keys
 
 
 def build_sequence_routes_response(
@@ -21,6 +22,7 @@ def build_sequence_routes_response(
     """Map core routes expressed as customer-index sequences to API routes."""
     depot = request.depot
     students = request.students
+    occurrence_keys = student_occurrence_keys(students)
     routes: list[VehicleRoute] = []
 
     for route_plan in route_plans:
@@ -31,7 +33,7 @@ def build_sequence_routes_response(
 
         for customer_idx in route_plan.customer_indices:
             student = students[customer_idx]
-            current_location = student.location_code
+            current_location = occurrence_keys[customer_idx]
             duration = duration_lookup(previous_location, current_location)
             total_duration += duration
             route_details.append(

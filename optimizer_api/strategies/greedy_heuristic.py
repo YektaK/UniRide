@@ -11,6 +11,7 @@ from models.schemas import (
 )
 from strategies.base_strategy import BaseRoutingStrategy
 from strategies.sota_response_builder import build_sota_request_context
+from uniride_core.adapters.demand_builder import student_occurrence_keys
 from uniride_core.algorithms.string_greedy_routing import solve_string_greedy_routes
 
 
@@ -53,10 +54,11 @@ class GreedyHeuristicStrategy(BaseRoutingStrategy):
         time_matrix = context["time_matrix"]
         distance_lookup = context["distance_lookup"]
         duration_lookup = lambda origin, destination: self._get_duration(origin, destination, time_matrix, coordinates)
-        student_by_location = {student.location_code: student for student in students}
+        occurrence_keys = student_occurrence_keys(students)
+        student_by_key = {key: student for student, key in zip(students, occurrence_keys)}
         route_plans = solve_string_greedy_routes(
             customer_locations=context["student_ids"],
-            disability_types={student.location_code: student.disability_type for student in students},
+            disability_types={key: student.disability_type for student, key in zip(students, occurrence_keys)},
             depot_id=depot.id,
             duration_lookup=duration_lookup,
             sw_capacity=request.sw_capacity,
@@ -85,7 +87,7 @@ class GreedyHeuristicStrategy(BaseRoutingStrategy):
                 total_distance_km=round(route_distance, 2),
                 sw_count=route_plan.sw_count,
                 so_count=route_plan.so_count,
-                student_ids=[student_by_location[location].id for location in route_plan.student_locations]
+                student_ids=[student_by_key[location].id for location in route_plan.student_locations]
             ))
 
         execution_time = time.time() - start_time

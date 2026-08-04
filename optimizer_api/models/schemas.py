@@ -2,6 +2,8 @@ from typing import List, Dict, Any, Optional, Tuple
 from pydantic import BaseModel, Field, model_validator
 from enum import Enum
 
+from uniride_core.adapters.demand_builder import student_occurrence_keys
+
 # --- Enums ---
 class TripDirection(str, Enum):
     PICKUP = "pickup"
@@ -63,6 +65,7 @@ class StudentNode(BaseModel):
     id: str
     name: str = ""
     location_code: str
+    occurrence_id: Optional[str] = None
     coordinates: Optional[Dict[str, float]] = None
     disability_type: str = "So"
     pickup_time: Optional[str] = None
@@ -298,14 +301,17 @@ class OptimizationRequest(BaseModel):
         """Helper to get time windows from students if applicable
         
         Parses pickup_time and dropoff_time from StudentNode objects
-        into TimeWindow dicts keyed by student location_code.
-        
+        into TimeWindow dicts keyed by student occurrence identity.
+
+        Single-customer locations keep their location_code as the key;
+        locations served by multiple customers get disambiguated occurrence keys.
+
         Time format: HH:MM (e.g., "08:30", "14:00")
-        Returns: Dict mapping location_code -> TimeWindow(earliest, latest)
+        Returns: Dict mapping occurrence key -> TimeWindow(earliest, latest)
         """
         time_windows: Dict[str, TimeWindow] = {}
         
-        for student in self.students:
+        for student, occurrence_key in zip(self.students, student_occurrence_keys(self.students)):
             # Use pickup_time for PICKUP direction, dropoff_time for DROPOFF
             time_str = None
             if self.direction == TripDirection.PICKUP and student.pickup_time:
@@ -326,12 +332,12 @@ class OptimizationRequest(BaseModel):
                     # PICKUP: (target-30, target) — must arrive by target
                     # DROPOFF: (target, target+30) — can depart after target
                     if self.direction == TripDirection.PICKUP:
-                        time_windows[student.location_code] = TimeWindow(
+                        time_windows[occurrence_key] = TimeWindow(
                             earliest=max(0, total_minutes - 30),
                             latest=total_minutes,
                         )
                     else:
-                        time_windows[student.location_code] = TimeWindow(
+                        time_windows[occurrence_key] = TimeWindow(
                             earliest=total_minutes,
                             latest=total_minutes + 30,
                         )

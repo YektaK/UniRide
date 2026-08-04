@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from uniride_core.adapters.matrix_builder import MatrixBuilder
+from uniride_core.adapters.demand_builder import student_occurrence_keys
 from uniride_core.models import ConstraintProfile, CostMatrix, RoutingProblem
 
 
@@ -93,7 +94,8 @@ def uniride_request_to_problem(
     data = _as_dict(request)
     students = list(_get(request, "students", []) or [])
     depot = _get(request, "depot")
-    labels = [str(_get(depot, "id", "depot"))] + [_student_location(student) for student in students]
+    occurrence_ids = student_occurrence_keys(students)
+    labels = [str(_get(depot, "id", "depot"))] + occurrence_ids
     coords = [_depot_coordinates(depot)] + [_student_coordinates(student) for student in students]
 
     if matrix is None:
@@ -120,6 +122,7 @@ def uniride_request_to_problem(
             kind=matrix_kind,
             is_asymmetric=bool(_get(request, "is_asymmetric", False)),
             labels=labels,
+            occurrence_ids=occurrence_ids,
         ),
         constraints=ConstraintProfile(
             demands=demands,

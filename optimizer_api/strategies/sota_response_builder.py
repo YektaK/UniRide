@@ -6,27 +6,41 @@ from typing import Callable, Dict, List
 
 from models.schemas import OptimizationResponse, RouteStep, VehicleRoute
 from utils.data_loader import DataLoader, euclidean_distance
+from uniride_core.adapters.demand_builder import student_occurrence_keys
 
 DistanceLookup = Callable[[str, str], float]
 DurationLookup = Callable[[str, str], float]
 
 
 def build_sota_request_context(students, depot) -> Dict:
-    """Build app-layer matrix context from an OptimizationRequest."""
+    """Build app-layer matrix context from an OptimizationRequest.
+
+    Solver nodes use occurrence identities, so customers sharing a physical
+    ``location_code`` remain distinct nodes. Single-customer locations keep
+    their ``location_code`` as the key (backward compatible). The raw
+    submatrix is fetched positionally by physical codes (duplicates allowed)
+    and re-keyed to occurrence identities.
+    """
     data_loader = DataLoader.get_instance()
-    location_ids = [depot.id] + [student.location_code for student in students]
+    occurrence_keys = student_occurrence_keys(students)
+    node_keys = [depot.id] + occurrence_keys
+    physical_ids = [depot.id] + [student.location_code for student in students]
+
+    physical_coordinates = {depot.id: {"lat": depot.lat, "lng": depot.lng}}
+    for student in students:
+        physical_coordinates[student.location_code] = student.coordinates or {"lat": 0, "lng": 0}
 
     coordinates = {depot.id: {"lat": depot.lat, "lng": depot.lng}}
-    for student in students:
-        coordinates[student.location_code] = student.coordinates or {"lat": 0, "lng": 0}
+    for student, occurrence_key in zip(students, occurrence_keys):
+        coordinates[occurrence_key] = student.coordinates or {"lat": 0, "lng": 0}
 
-    raw_matrix = data_loader.get_submatrix(location_ids, coordinates)
+    raw_matrix = data_loader.get_submatrix(physical_ids, physical_coordinates)
     time_matrix = {
-        location_ids[i]: {
-            location_ids[j]: raw_matrix[i][j]
-            for j in range(len(location_ids))
+        node_keys[i]: {
+            node_keys[j]: raw_matrix[i][j]
+            for j in range(len(node_keys))
         }
-        for i in range(len(location_ids))
+        for i in range(len(node_keys))
     }
 
     def distance_lookup(origin: str, destination: str) -> float:
@@ -45,7 +59,7 @@ def build_sota_request_context(students, depot) -> Dict:
     return {
         "coordinates": coordinates,
         "time_matrix": time_matrix,
-        "student_ids": [student.location_code for student in students],
+        "student_ids": occurrence_keys,
         "distance_lookup": distance_lookup,
     }
 
@@ -93,6 +107,10 @@ def build_single_route_response(
     route_distance += return_distance
 
     total_duration = sum(step.duration for step in route_details)
+    student_by_key = {
+        key: student
+        for student, key in zip(students, student_occurrence_keys(students))
+    }
     route = VehicleRoute(
         vehicle_id=f"Araç 1 ({vehicle_label})",
         route_details=route_details,
@@ -101,12 +119,14 @@ def build_single_route_response(
         sw_count=sum(
             1
             for student_id in best_order
-            if any(student.location_code == student_id for student in students if student.disability_type == "Sw")
+            if student_by_key.get(student_id) is not None
+            and student_by_key[student_id].disability_type == "Sw"
         ),
         so_count=sum(
             1
             for student_id in best_order
-            if any(student.location_code == student_id for student in students if student.disability_type == "So")
+            if student_by_key.get(student_id) is not None
+            and student_by_key[student_id].disability_type == "So"
         ),
         student_ids=best_order,
     )

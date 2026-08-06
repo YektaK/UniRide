@@ -36,26 +36,27 @@ Target: week 1. These are release blockers.
 
 ### Customer occurrence identity
 
-- [ ] Use unique customer/request IDs as solver nodes.
-- [ ] Map customer ID to physical location separately.
-- [ ] Build demand, time-window, and response maps by customer ID.
-- [ ] Support multiple customers at one stop without aggregation or crossover failure.
+- [x] Use unique customer/request IDs as solver nodes.
+- [x] Map customer ID to physical location separately.
+- [x] Build demand, time-window, and response maps by customer ID.
+- [x] Support multiple customers at one stop without aggregation or crossover failure.
 
 ### Shared feasibility certificate
 
-- [ ] Add a solver-independent validator in `uniride_core`.
-- [ ] Verify exact coverage, depot closure, vector capacity, duration, time windows, matrix validity, and continuity.
-- [ ] Return structured violations.
-- [ ] Prohibit `success=True` for hard-constraint violations.
+- [x] Add a solver-independent validator in `uniride_core`.
+- [x] Verify coverage, depot closure, vector capacity, duration, time windows, matrix, and continuity.
+- [x] Return structured violations.
+- [x] Prohibit `success=True` for hard-constraint violations.
+- [x] Attach the certificate to every benchmark result (`certify_benchmark_response`).
 
 ### Split-decoder repair
 
-- [ ] Initialize unreachable TW-violation DP states to infinity.
-- [ ] Define explicit strict and soft modes.
-- [ ] Generate every capacity-feasible pickup prefix.
-- [ ] Separate TW warp, route-duration excess, and capacity overflow.
-- [ ] Reject missing ATSP arcs.
-- [ ] Update `prev` when a route revisits the depot and add a regression proving that the next directed arc begins at the depot.
+- [x] Initialize unreachable TW-violation DP states to infinity.
+- [x] Define explicit strict (`strict_time_windows`) and soft modes.
+- [x] Generate every capacity-feasible pickup prefix.
+- [x] Separate TW warp, route-duration excess, and capacity overflow.
+- [x] Reject missing ATSP arcs (fail closed, no 15-minute fabrication).
+- [x] Split giant tours at interior depot revisits; regression proves the next directed arc begins at the depot.
 
 ### Objective and RNG consistency
 

@@ -1,0 +1,1 @@
+"""Response-level verification helpers for optimizer outputs."""

@@ -28,6 +28,8 @@ logger = logging.getLogger(__name__)
 
 from uniride_core.models import ProblemInstance
 
+from verification.response_certifier import certify_benchmark_response
+
 
 @dataclass
 class AlgorithmConfig:
@@ -401,6 +403,28 @@ class BenchmarkRunner:
             gap_percent = ((tour_length - problem.optimal) / problem.optimal) * 100
         
         routes_count = len(response.routes) if response else 0
+
+        metadata = {
+            "problem_dimension": problem.dimension,
+            "problem_type": problem.problem_type,
+            "problem_category": problem.category,
+            "algorithm_params": algorithm.params,
+            "execution_failed": execution_failed,
+            "routes_count": routes_count,
+            "vehicles_used": routes_count,
+        }
+
+        if response is not None:
+            try:
+                metadata["feasibility_certificate"] = certify_benchmark_response(
+                    problem, response
+                )
+            except Exception:
+                logger.warning(
+                    f"Feasibility certification failed for {algorithm.algorithm_id} "
+                    f"on {problem.name}",
+                    exc_info=True
+                )
         
         return ExperimentResult(
             algorithm=algorithm.algorithm_id,
@@ -409,15 +433,7 @@ class BenchmarkRunner:
             tour_length=tour_length,
             elapsed_ms=elapsed_ms,
             gap_percent=gap_percent,
-            metadata={
-                "problem_dimension": problem.dimension,
-                "problem_type": problem.problem_type,
-                "problem_category": problem.category,
-                "algorithm_params": algorithm.params,
-                "execution_failed": execution_failed,
-                "routes_count": routes_count,
-                "vehicles_used": routes_count,
-            }
+            metadata=metadata,
         )
 
     def _apply_algorithm_params(self, request, algorithm_id: str, params: Dict[str, Any]) -> None:

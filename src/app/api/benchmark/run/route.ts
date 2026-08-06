@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateBenchmarkRunId, isValidBenchmarkRunId } from '@/lib/benchmark-run-id';
 import { buildBenchmarkBackendRequest } from '@/lib/benchmark-backend-request';
+import { getOwnerToken, setOwnerCookie, isRunExistsStatus } from '@/lib/benchmark-owner-cookie';
 
 const BACKEND_URL = process.env.OPTIMIZER_API_URL || 'http://localhost:8000';
 
@@ -70,12 +71,16 @@ export async function POST(request: NextRequest) {
 
     if (providedRunId) {
       try {
+        const precheckToken = getOwnerToken(request, providedRunId);
+        const precheckHeaders: Record<string, string> = {};
+        if (precheckToken) precheckHeaders['X-Benchmark-Owner-Token'] = precheckToken;
+
         const statusResponse = await fetch(
           `${BACKEND_URL}/api/v1/benchmark/status?run_id=${encodeURIComponent(providedRunId)}`,
-          { method: 'GET' }
+          { method: 'GET', headers: precheckHeaders }
         );
 
-        if (statusResponse.ok) {
+        if (isRunExistsStatus(statusResponse.status)) {
           return NextResponse.json(
             { error: 'Bu run_id zaten kullanılıyor. Lütfen farklı bir run_id deneyin.' },
             { status: 409 }
@@ -124,7 +129,7 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
 
-    return NextResponse.json({
+    const browserResponse = NextResponse.json({
       run_id: runId,
       total_experiments: body.algorithms.length * body.problems.length * benchmarkRequest.settings.n_runs,
       problems_count: body.problems.length,
@@ -134,6 +139,12 @@ export async function POST(request: NextRequest) {
       message: 'Benchmark başlatıldı',
       start_time: now.toISOString(),
     });
+
+    if (data.owner_token) {
+      setOwnerCookie(browserResponse, runId, data.owner_token);
+    }
+
+    return browserResponse;
 
   } catch (error: any) {
     console.error('[API /api/benchmark/run] Error:', error);

@@ -103,7 +103,8 @@ class BenchmarkStateManager:
         expired = [
             rid for rid, s in self._runs.items()
             if s.status in terminal and s.end_time
-            and datetime.fromisoformat(s.end_time).timestamp() < cutoff
+            and self._safe_end_timestamp(s.end_time) is not None
+            and self._safe_end_timestamp(s.end_time) < cutoff
         ]
         for rid in expired:
             del self._runs[rid]
@@ -114,6 +115,18 @@ class BenchmarkStateManager:
         while len(terminal_runs) > self._max_runs:
             rid, _ = terminal_runs.pop(0)
             del self._runs[rid]
+
+    @staticmethod
+    def _safe_end_timestamp(end_time: str) -> Optional[float]:
+        """Parse an end_time ISO string defensively; None when malformed.
+
+        Prevents a single malformed payload from raising on every
+        get/list/stop/results call via _evict_expired.
+        """
+        try:
+            return datetime.fromisoformat(end_time).timestamp()
+        except (ValueError, TypeError):
+            return None
 
     def can_start_run(self) -> bool:
         """

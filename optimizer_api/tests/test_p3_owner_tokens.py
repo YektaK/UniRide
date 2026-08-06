@@ -246,3 +246,18 @@ def test_owner_403_when_run_has_no_hash(client, monkeypatch):
     )
     assert resp.status_code == 403
     benchmark.benchmark_state_manager.complete_run("p3-nohash", 1, "done")
+
+
+def test_malformed_end_time_does_not_poison_manager():
+    """A malformed end_time from /import must not 500 every get/list call."""
+    mgr = BenchmarkStateManager()
+    state, token = mgr.import_run(
+        "p3-bad-end-time",
+        {"results": [], "total_experiments": 0, "end_time": "not-a-date"},
+    )
+    assert state is not None
+    assert token is not None
+    run = mgr.get_run("p3-bad-end-time")
+    assert run is not None
+    assert run.run_id == "p3-bad-end-time"
+

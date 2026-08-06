@@ -33,6 +33,7 @@ from typing import Dict, Optional, List, Any
 from datetime import datetime, timezone
 from enum import Enum
 import threading
+import hashlib
 
 
 # Concurrent benchmark limit (soft limit - returns 429 if exceeded)
@@ -60,6 +61,23 @@ class BenchmarkRunState:
     message: str = "Başlatılıyor..."
     parameters: Dict = field(default_factory=dict)
     results: List[Dict[str, Any]] = field(default_factory=list)
+    owner_token_hash: Optional[str] = None
+
+
+def hash_owner_token(token: str) -> str:
+    """SHA-256 hex digest of an owner token (never stored in plaintext)."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def verify_owner_token(state: "BenchmarkRunState", provided: Optional[str]) -> bool:
+    """True only if state has a stored hash and provided matches it."""
+    if state.owner_token_hash is None or provided is None:
+        return False
+    import secrets
+    return secrets.compare_digest(
+        state.owner_token_hash,
+        hash_owner_token(provided),
+    )
 
 
 class BenchmarkStateManager:
@@ -221,5 +239,7 @@ __all__ = [
     "BenchmarkStatus",
     "BenchmarkRunState",
     "BenchmarkStateManager",
-    "benchmark_state_manager"
+    "benchmark_state_manager",
+    "hash_owner_token",
+    "verify_owner_token"
 ]

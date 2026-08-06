@@ -20,6 +20,7 @@ class PenaltyConfig:
     allow_capacity_overflow: bool = True
     sw_cap_penalty_rate: float = 100.0
     so_cap_penalty_rate: float = 50.0
+    duration_penalty_rate: float = 10.0
     max_stops_bounded: int = 15
 
 
@@ -33,6 +34,7 @@ class LinearSplitResult:
     capacity_violations: int
     num_vehicles: int
     schedules: List[Dict]
+    duration_excess_minutes: float = 0.0
 
 
 class LinearSplitDecoder:
@@ -88,6 +90,7 @@ class LinearSplitDecoder:
         predecessor = [-1] * (n + 1)
         tw_violations = [0.0] * (n + 1)
         cap_violations = [0] * (n + 1)
+        dur_excess = [0.0] * (n + 1)
         best_schedule = [None] * (n + 1)
 
         for i in range(n):
@@ -124,7 +127,9 @@ class LinearSplitDecoder:
                 total_cap_violations = cap_over_sw + cap_over_so
 
                 tw_penalty = 0.0
+                dur_penalty = 0.0
                 time_warp_mins = 0.0
+                duration_excess = 0.0
                 if loc in self.time_windows:
                     earliest, latest = self.time_windows[loc]
                     if current_time_forward > latest:
@@ -143,14 +148,13 @@ class LinearSplitDecoder:
                 total_route_dur = curr_travel_time + return_dur
                 if total_route_dur > self.max_duration:
                     if self.penalties.allow_time_warp:
-                        duration_warp = total_route_dur - self.max_duration
-                        time_warp_mins += duration_warp
-                        tw_penalty += duration_warp * self.penalties.tw_penalty_rate
+                        duration_excess = total_route_dur - self.max_duration
+                        dur_penalty = duration_excess * self.penalties.duration_penalty_rate
                     else:
                         break
 
                 trip_base_cost = total_route_dur
-                trip_penalty = cap_penalty + tw_penalty
+                trip_penalty = cap_penalty + tw_penalty + dur_penalty
                 trip_objective = trip_base_cost + trip_penalty
                 new_total_objective = objective[i] + trip_objective
 
@@ -161,6 +165,7 @@ class LinearSplitDecoder:
                     predecessor[j + 1] = i
                     tw_violations[j + 1] = tw_violations[i] + time_warp_mins
                     cap_violations[j + 1] = cap_violations[i] + total_cap_violations
+                    dur_excess[j + 1] = dur_excess[i] + duration_excess
                     dep_time = 480
                     if self.direction == "pickup" and self.target_time:
                         dep_time = max(0, self.target_time - int(total_route_dur) - self.offset_minutes)
@@ -170,6 +175,7 @@ class LinearSplitDecoder:
                         "departure_time": max(0, dep_time),
                         "tw_violations": time_warp_mins,
                         "cap_violations": total_cap_violations,
+                        "duration_excess": duration_excess,
                     }
 
                 prev_loc = loc
@@ -200,6 +206,7 @@ class LinearSplitDecoder:
             capacity_violations=cap_violations[n],
             num_vehicles=len(routes),
             schedules=schedules,
+            duration_excess_minutes=dur_excess[n],
         )
 
 

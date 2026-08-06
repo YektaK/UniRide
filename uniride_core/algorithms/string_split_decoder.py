@@ -299,87 +299,93 @@ class SplitDecoder:
 
             if self.direction == Direction.PICKUP:
                 # ── BACKWARD SCHEDULING ──────────────────────────────────────
-                # LOOP 1: accumulate capacity and travel cost.
-                # Use variable 'k' to avoid shadowing outer 'i' and the
-                # second verification loop (FIX-03).
-                trip_end = i  # last feasible stop index
+                # LOOP 1: record load + travel cost of every capacity-feasible
+                # prefix i..k. FIX-11: every prefix becomes its own trip so the
+                # DP can pick an intermediate pickup prefix just like DROPOFF.
+                prefix_cost: Dict[int, float] = {}
+                prefix_sw: Dict[int, int] = {}
+                prefix_so: Dict[int, int] = {}
+                cum_cost = 0.0
+                cum_sw = 0
+                cum_so = 0
+                prev = depot
                 for k in range(i, n):
                     loc = giant_tour[k]
                     sw_d, so_d = demands.get(loc, (0, 0))
-                    sw_load += sw_d
-                    so_load += so_d
-
-                    if sw_load > self.sw_capacity or so_load > self.so_capacity:
+                    if cum_sw + sw_d > self.sw_capacity or cum_so + so_d > self.so_capacity:
                         break
-
-                    # FIX-04: use named constant instead of magic 15.0
                     travel_time = self._get_dist(prev, loc, distance_matrix)
-                    cost += travel_time
+                    if math.isinf(travel_time):
+                        break  # FIX-10: missing arc means this prefix is unusable
+                    cum_cost += travel_time
+                    cum_sw += sw_d
+                    cum_so += so_d
+                    prefix_cost[k] = cum_cost
+                    prefix_sw[k] = cum_sw
+                    prefix_so[k] = cum_so
                     prev = loc
-                    trip_end = k  # commit: this stop is within capacity
 
-                # Return-to-depot segment
-                return_cost = self._get_dist(prev, depot, distance_matrix)
-
-                total_trip_cost = cost + return_cost
-
-                if total_trip_cost > self.max_tour_duration:
-                    continue
-
-                # FIX-03: use trip_end for slicing, NOT the loop variable j
-                target_arrival = self._get_target_arrival_time(
-                    giant_tour[i:trip_end + 1]
-                )
-
-                # Calculate departure time (backward scheduling)
-                departure_time = (
-                    target_arrival - int(total_trip_cost) - self.offset_minutes
-                )
-
-                # FIX-01: If departure_time is negative the trip is physically
-                # impossible (driver would depart before midnight). Skip it.
-                if departure_time < 0:
-                    logger.debug(
-                        "Skipping infeasible pickup trip i=%d trip_end=%d: "
-                        "departure_time=%d < 0 (target=%d cost=%d offset=%d)",
-                        i, trip_end, departure_time,
-                        target_arrival, int(total_trip_cost), self.offset_minutes,
+                # LOOP 2: emit one Trip per capacity-feasible prefix.
+                for k in prefix_cost:
+                    total_trip_cost = prefix_cost[k] + self._get_dist(
+                        giant_tour[k], depot, distance_matrix
                     )
-                    continue
 
-                # LOOP 2: verify time windows — iterate only over committed stops
-                tw_violations = 0
-                current_time = departure_time
-                prev = depot
+                    if total_trip_cost > self.max_tour_duration:
+                        continue
 
-                for k in range(i, trip_end + 1):  # FIX-03: bounded by trip_end
-                    loc = giant_tour[k]
-                    travel_time = self._get_dist(prev, loc, distance_matrix)
-                    current_time += int(travel_time)
+                    target_arrival = self._get_target_arrival_time(
+                        giant_tour[i:k + 1]  # FIX-11: per-prefix target arrival
+                    )
 
-                    if loc in self.time_windows:
-                        earliest, latest = self.time_windows[loc]
-                        if current_time > latest:
-                            tw_violations += 1
-                        elif current_time < earliest:
-                            current_time = earliest  # wait until window opens
+                    departure_time = (
+                        target_arrival - int(total_trip_cost) - self.offset_minutes
+                    )
 
-                    arrival_times[loc] = current_time
-                    prev = loc
+                    # FIX-01: If departure_time is negative the trip is physically
+                    # impossible (driver would depart before midnight). Skip it.
+                    if departure_time < 0:
+                        logger.debug(
+                            "Skipping infeasible pickup trip i=%d end=%d: "
+                            "departure_time=%d < 0 (target=%d cost=%d offset=%d)",
+                            i, k, departure_time,
+                            target_arrival, int(total_trip_cost), self.offset_minutes,
+                        )
+                        continue
 
-                if self.strict_time_windows and tw_violations > 0:
-                    continue
+                    # LOOP 3: verify time windows for this exact prefix.
+                    tw_violations = 0
+                    current_time = departure_time
+                    prev = depot
 
-                trips[trip_end + 1].append(Trip(
-                    start_idx=i,
-                    end_idx=trip_end,
-                    cost=total_trip_cost,
-                    sw_count=sw_load,
-                    so_count=so_load,
-                    is_feasible=True,
-                    time_window_violations=tw_violations,
-                    departure_time=departure_time,  # FIX-01: guaranteed >= 0
-                ))
+                    for x in range(i, k + 1):
+                        loc = giant_tour[x]
+                        travel_time = self._get_dist(prev, loc, distance_matrix)
+                        current_time += int(travel_time)
+
+                        if loc in self.time_windows:
+                            earliest, latest = self.time_windows[loc]
+                            if current_time > latest:
+                                tw_violations += 1
+                            elif current_time < earliest:
+                                current_time = earliest  # wait until window opens
+
+                        arrival_times[loc] = current_time
+                        prev = loc
+
+                    if self.strict_time_windows and tw_violations > 0:
+                        continue
+
+                    trips[k + 1].append(Trip(
+                        start_idx=i,
+                        end_idx=k,
+                        cost=total_trip_cost,
+                        sw_count=prefix_sw[k],
+                        so_count=prefix_so[k],
+                        is_feasible=True,
+                        time_window_violations=tw_violations,
+                        departure_time=departure_time,  # FIX-01: guaranteed >= 0
+                    ))
 
             else:  # ── DROPOFF — FORWARD SCHEDULING ─────────────────────────
                 current_time = self._get_target_departure_time(

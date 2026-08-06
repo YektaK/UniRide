@@ -146,3 +146,111 @@ def test_linear_strict_never_emits_tw_violating_route():
 
     assert math.isinf(res.final_objective)
     assert res.routes == []
+
+
+# ── Task C: enumerate pickup prefixes ────────────────────────────────────────
+
+
+def _cap2_tour_matrix():
+    return {
+        DEPOT: {"A": 10.0, "B": 30.0, "C": 50.0},
+        "A": {DEPOT: 20.0, "B": 10.0, "C": 40.0},
+        "B": {DEPOT: 10.0, "A": 40.0, "C": 10.0},
+        "C": {DEPOT: 10.0, "A": 40.0, "B": 10.0},
+    }
+
+
+def test_pickup_enumerates_every_capacity_feasible_prefix():
+    decoder = SplitDecoder(
+        sw_capacity=2,
+        so_capacity=5,
+        use_time_windows=True,
+        direction=Direction.PICKUP,
+        max_tour_duration=1000,
+        offset_minutes=0,
+    )
+    trips = decoder._build_trips_with_tw(
+        ["A", "B", "C"], DEPOT, _cap2_tour_matrix(), _demands_sw("A", "B", "C")
+    )
+
+    assert any(t.start_idx == 0 and t.end_idx == 0 for t in trips[1])
+    assert any(t.start_idx == 0 and t.end_idx == 1 for t in trips[2])
+    assert not any(t.start_idx == 0 and t.end_idx == 2 for t in trips[3])
+
+
+def test_pickup_prefix_enumeration_unblocks_dp():
+    decoder = SplitDecoder(
+        sw_capacity=2,
+        so_capacity=5,
+        use_time_windows=True,
+        direction=Direction.PICKUP,
+        max_tour_duration=1000,
+        offset_minutes=0,
+    )
+    result = decoder.decode(["A", "B", "C"], DEPOT, _cap2_tour_matrix(), _demands_sw("A", "B", "C"))
+
+    assert "error" not in result
+    assert result["total_cost"] == pytest.approx(80.0)
+    assert result["routes"] == [["A"], ["B", "C"]]
+
+
+def test_dropoff_still_emits_every_prefix():
+    decoder = SplitDecoder(
+        sw_capacity=2,
+        so_capacity=5,
+        use_time_windows=True,
+        direction=Direction.DROPOFF,
+        max_tour_duration=1000,
+        offset_minutes=0,
+    )
+    trips = decoder._build_trips_with_tw(
+        ["A", "B", "C"], DEPOT, _cap2_tour_matrix(), _demands_sw("A", "B", "C")
+    )
+
+    assert any(t.start_idx == 0 and t.end_idx == 1 for t in trips[2])
+
+
+# ── Task C: duration excess separated from time-warp violation ───────────────
+
+
+def _duration_matrix():
+    return {
+        DEPOT: {"A": 50.0},
+        "A": {DEPOT: 50.0},
+    }
+
+
+def test_penalty_config_exposes_duration_penalty_rate():
+    assert PenaltyConfig().duration_penalty_rate == 10.0
+
+
+def test_duration_excess_tracked_without_tw_violation():
+    decoder = LinearSplitDecoder(
+        max_tour_duration=80,
+        penalty_config=PenaltyConfig(allow_time_warp=True),
+    )
+    res = decoder.decode(["A"], DEPOT, _duration_matrix(), {"A": (1, 0)})
+
+    assert res.time_window_violations == 0
+    assert res.duration_excess_minutes == pytest.approx(20.0)
+    assert res.final_objective == pytest.approx(300.0)
+    assert res.schedules[0]["duration_excess"] == pytest.approx(20.0)
+    assert res.schedules[0]["tw_violations"] == 0
+
+
+def test_tw_violation_reports_without_duration_excess():
+    decoder = LinearSplitDecoder(
+        max_tour_duration=200,
+        time_windows={"A": (0, 100)},
+        penalty_config=PenaltyConfig(allow_time_warp=True),
+    )
+    res = decoder.decode(["A"], DEPOT, _duration_matrix(), {"A": (1, 0)})
+
+    assert res.duration_excess_minutes == 0
+    assert res.time_window_violations > 0
+    assert res.time_window_violations != res.duration_excess_minutes
+
+
+def test_linear_result_defaults_duration_excess_zero():
+    res = LinearSplitResult([], 0.0, 0.0, 0.0, 0, 0, 0, [])
+    assert res.duration_excess_minutes == 0.0

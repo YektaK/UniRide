@@ -79,6 +79,21 @@ class LinearSplitDecoder:
         distance_matrix: Dict[str, Dict[str, float]],
         demands: Dict[str, Tuple[int, int]],
     ) -> LinearSplitResult:
+        segments = _split_depot_segments(giant_tour, depot)
+        if len(segments) > 1:
+            results = [self.decode(seg, depot, distance_matrix, demands) for seg in segments]
+            return LinearSplitResult(
+                routes=[r for result in results for r in result.routes],
+                total_cost_=sum(result.total_cost_ for result in results),
+                total_penalty_=sum(result.total_penalty_ for result in results),
+                final_objective=sum(result.final_objective for result in results),
+                time_window_violations=sum(result.time_window_violations for result in results),
+                capacity_violations=sum(result.capacity_violations for result in results),
+                num_vehicles=sum(result.num_vehicles for result in results),
+                schedules=[s for result in results for s in result.schedules],
+                duration_excess_minutes=sum(result.duration_excess_minutes for result in results),
+            )
+        giant_tour = segments[0] if segments else []
         if not giant_tour:
             return LinearSplitResult([], 0, 0, 0, 0, 0, 0, [])
 
@@ -214,6 +229,34 @@ def _normalize_direction(direction: object) -> str:
     raw = getattr(direction, "value", None) or getattr(direction, "name", None) or str(direction)
     raw = str(raw).lower()
     return "dropoff" if "drop" in raw else "pickup"
+
+
+def _is_depot(node: object, depot: object) -> bool:
+    try:
+        return int(node) == int(depot)
+    except (TypeError, ValueError):
+        return str(node) == str(depot)
+
+
+def _split_depot_segments(giant_tour: List[str], depot: object) -> List[List[str]]:
+    """Split a giant tour at interior depot occurrences into depot-free segments.
+
+    A depot revisit marks a route boundary: the vehicle returns to base, so the
+    next directed arc must begin at the depot. The depot node itself is never a
+    route stop.
+    """
+    segments: List[List[str]] = []
+    current: List[str] = []
+    for node in giant_tour:
+        if _is_depot(node, depot):
+            if current:
+                segments.append(current)
+                current = []
+        else:
+            current.append(node)
+    if current:
+        segments.append(current)
+    return segments
 
 
 __all__ = ["PenaltyConfig", "LinearSplitResult", "LinearSplitDecoder"]

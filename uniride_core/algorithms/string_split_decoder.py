@@ -22,6 +22,61 @@ logger = logging.getLogger(__name__)
 DEFAULT_TRAVEL_FALLBACK_MINUTES = 15.0
 
 
+def _is_depot(node: object, depot: object) -> bool:
+    try:
+        return int(node) == int(depot)
+    except (TypeError, ValueError):
+        return str(node) == str(depot)
+
+
+def _split_depot_segments(giant_tour: List[str], depot: object) -> List[List[str]]:
+    """Split a giant tour at interior depot occurrences into depot-free segments.
+
+    A depot revisit marks a route boundary: the vehicle returns to base, so the
+    next directed arc must begin at the depot. The depot node itself is never a
+    route stop.
+    """
+    segments: List[List[str]] = []
+    current: List[str] = []
+    for node in giant_tour:
+        if _is_depot(node, depot):
+            if current:
+                segments.append(current)
+                current = []
+        else:
+            current.append(node)
+    if current:
+        segments.append(current)
+    return segments
+
+
+def _merge_segment_results(results: List[Dict]) -> Dict:
+    """Merge the decode() dicts of depot-separated sub-tours."""
+    routes: List[List[str]] = []
+    costs: List[float] = []
+    schedules: List[Dict] = []
+    total_cost = 0.0
+    num_vehicles = 0
+    tw_violations = 0
+    for res in results:
+        routes.extend(res.get("routes", []))
+        costs.extend(res.get("costs", []))
+        schedules.extend(res.get("schedules", []))
+        total_cost += res.get("total_cost", 0) if res.get("total_cost") is not None else 0
+        num_vehicles += res.get("num_vehicles", 0)
+        tw_violations += res.get("time_window_violations", 0)
+    merged = {
+        "routes": routes,
+        "costs": costs,
+        "total_cost": total_cost,
+        "num_vehicles": num_vehicles,
+        "time_window_violations": tw_violations,
+    }
+    if schedules:
+        merged["schedules"] = schedules
+    return merged
+
+
 class Direction(str, Enum):
     PICKUP = "pickup"
     DROPOFF = "dropoff"
@@ -103,6 +158,27 @@ class SplitDecoder:
         - PICKUP: Uses backward scheduling from target arrival times
         - DROPOFF: Uses forward scheduling from target departure times
         """
+        # FIX-12: split the giant tour at interior depot occurrences so a depot
+        # revisit starts a new route whose first directed arc begins at the
+        # depot (never a through-arc across the depot).
+        segments = _split_depot_segments(giant_tour, depot)
+        if len(segments) > 1:
+            results = []
+            merged_trips = {}
+            offset = 0
+            for seg in segments:
+                res = self.decode(seg, depot, distance_matrix, demands, return_trip_details)
+                results.append(res)
+                if return_trip_details:
+                    for k, v in res.get("trips", {}).items():
+                        merged_trips[k + offset] = v
+                offset += len(seg)
+            merged = _merge_segment_results(results)
+            if return_trip_details:
+                merged["trips"] = merged_trips
+            return merged
+
+        giant_tour = segments[0] if segments else []
         if not giant_tour:
             return {
                 "routes": [],
@@ -279,7 +355,7 @@ class SplitDecoder:
         - Determine latest time from time_windows (latest arrival at school)
         - Calculate backwards: departure = latest - tour_duration - offset
         - FIX-01: Trips with negative departure are skipped (physically infeasible)
-        - FIX-03: Uses trip_end variable to avoid j-variable collision between loops
+        - FIX-11: every capacity-feasible prefix i..k is emitted as its own trip
 
         For DROPOFF (forward scheduling):
         - Determine earliest time from time_windows

@@ -143,3 +143,33 @@ def test_is_feasible_accepts_complete_matrix():
 
     feasible, reason = decoder.is_feasible(["A", "B", "C"], DEPOT, matrix)
     assert feasible is True
+
+
+def _depot_revisit_matrix():
+    return {
+        DEPOT: {"A": 5.0, "B": 60.0},
+        "A": {"B": 7.0, DEPOT: 50.0},
+        "B": {"A": 90.0, DEPOT: 3.0},
+    }
+
+
+def test_linear_depot_revisit_splits_route_at_depot():
+    decoder = LinearSplitDecoder(is_asymmetric=True)
+    res = decoder.decode(
+        ["A", DEPOT, "B"], DEPOT, _depot_revisit_matrix(), {"A": (1, 0), "B": (1, 0)}
+    )
+
+    assert res.routes == [["A"], ["B"]]
+    assert res.total_cost_ == pytest.approx(118.0)
+    assert all(DEPOT not in route for route in res.routes)
+
+
+def test_string_depot_revisit_splits_route_at_depot():
+    decoder = SplitDecoder(is_asymmetric=True)
+    result = decoder.decode(
+        ["A", DEPOT, "B"], DEPOT, _depot_revisit_matrix(), {"A": (1, 0), "B": (1, 0)}
+    )
+
+    assert result["routes"] == [["A"], ["B"]]
+    assert result["total_cost"] == pytest.approx(118.0)
+    assert all(DEPOT not in route for route in result["routes"])

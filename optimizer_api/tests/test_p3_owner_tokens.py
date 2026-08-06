@@ -152,6 +152,29 @@ def test_cli_import_response_includes_owner_token(client, monkeypatch):
     assert isinstance(resp.json().get("owner_token"), str)
 
 
+def test_cli_import_returns_429_when_concurrent_limit_hit(client, monkeypatch):
+    monkeypatch.setattr(benchmark, "_resolve_cli_filename", lambda f: "dummy.json")
+    monkeypatch.setattr(benchmark, "_load_and_validate_cli_json", lambda f: [{"problem": "P1", "strategy": "A", "n_runs": 1}])
+    monkeypatch.setattr(benchmark, "_convert_cli_record_to_web", lambda rec, run_number: {"algorithm": "ga", "problem": "P1", "run_number": run_number})
+    mgr = benchmark.benchmark_state_manager
+    seeded = []
+    try:
+        for i in range(benchmark.MAX_CONCURRENT_BENCHMARKS):
+            s, _tok = mgr.create_run(f"p3-cli-seed-{i}", 1, {})
+            assert s is not None
+            seeded.append(f"p3-cli-seed-{i}")
+        resp = client.post(
+            "/api/v1/benchmark/cli/import?filename=dummy.json&run_id=p3-cli-reject",
+            headers={"X-Internal-Api-Key": "phase3-test-key"},
+        )
+        assert resp.status_code == 429
+        assert resp.json()["detail"]["error"] == "Maximum concurrent benchmarks reached"
+        assert mgr.get_run("p3-cli-reject") is None
+    finally:
+        for rid in seeded:
+            mgr.complete_run(rid, 0, "done")
+
+
 @pytest.mark.parametrize("method,path_fn,case_id", [
     ("get", lambda rid: ("/api/v1/benchmark/status", {"params": {"run_id": rid}}), "status"),
     ("post", lambda rid: ("/api/v1/benchmark/stop", {"params": {"run_id": rid}}), "stop"),
@@ -173,8 +196,30 @@ def test_owner_gated_endpoints(method, path_fn, case_id, client, monkeypatch):
 
         ok = getattr(client, method)(path, headers={**base, "X-Benchmark-Owner-Token": token}, **kwargs)
         assert ok.status_code == 200
+        assert "owner_token" not in ok.json()
     finally:
         benchmark.benchmark_state_manager.complete_run(run_id, 2, "done")
+
+
+def test_results_returns_data_for_completed_run(client):
+    state, token = benchmark.benchmark_state_manager.create_run("p3-completed-results", 2, {"p": 1})
+    assert state is not None
+    benchmark.benchmark_state_manager.add_result(
+        "p3-completed-results", {"algorithm": "ga", "tour_length": 1.0}
+    )
+    benchmark.benchmark_state_manager.complete_run("p3-completed-results", 1, "done")
+    try:
+        resp = client.get(
+            "/api/v1/benchmark/results/p3-completed-results",
+            headers={"X-Internal-Api-Key": "phase3-test-key", "X-Benchmark-Owner-Token": token},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["status"] == "completed"
+        assert body["results"] == [{"algorithm": "ga", "tour_length": 1.0}]
+        assert "owner_token" not in body
+    finally:
+        benchmark.benchmark_state_manager.complete_run("p3-completed-results", 1, "done")
 
 
 def test_owner_404_when_run_missing(client):

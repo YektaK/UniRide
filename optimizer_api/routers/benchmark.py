@@ -684,6 +684,11 @@ def import_cli_benchmark_results(filename: str = "", run_id: Optional[str] = Non
         run_id=run_id, total_experiments=len(web_results),
         parameters={"source": "cli_import", "source_file": os.path.basename(filepath), "problems": unique_problems}
     )
+    if state is None:
+        raise HTTPException(
+            status_code=429,
+            detail={"error": "Maximum concurrent benchmarks reached", "max_concurrent": MAX_CONCURRENT_BENCHMARKS},
+        )
     for result in web_results: benchmark_state_manager.add_result(run_id, result)
     benchmark_state_manager.complete_run(run_id=run_id, results_count=len(web_results), message="CLI Imported")
     

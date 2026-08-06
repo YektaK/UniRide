@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import logging
 import threading
@@ -27,7 +28,13 @@ from utils.tsplib_parser import (
 )
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/v1/benchmark", tags=["Benchmark"])
+router = APIRouter(
+    prefix="/api/v1/benchmark",
+    tags=["Benchmark"],
+    dependencies=[Depends(require_internal_api_key)],
+)
+
+_VALID_PROBLEM_NAME = re.compile(r"^[a-zA-Z0-9_-]+$")
 
 CLI_RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "tests", "benchmark_results")
 CLI_RESULTS_NUMBA_DIR = os.path.join(os.path.dirname(__file__), "..", "tests", "benchmark_results_numba")
@@ -249,12 +256,11 @@ def start_benchmark(body: BenchmarkRunRequest) -> Dict:
 
 def _start_benchmark_impl(run_id: str, algorithms: List[Dict], problems: List[str], settings: Dict) -> Dict:
     try:
-        if not benchmark_state_manager.can_start_run():
+        if benchmark_state_manager.get_run(run_id) is not None:
             raise HTTPException(
-                status_code=429,
-                detail={"error": "Maximum concurrent benchmarks reached", "max_concurrent": MAX_CONCURRENT_BENCHMARKS}
+                status_code=409,
+                detail={"error": "Benchmark run already exists", "run_id": run_id},
             )
-
         if settings.get("execution_mode") in {"matrix_native", "academic_matrix"}:
             return _start_matrix_native_benchmark_impl(run_id, algorithms, problems, settings)
         
@@ -275,6 +281,11 @@ def _start_benchmark_impl(run_id: str, algorithms: List[Dict], problems: List[st
             run_id=run_id, total_experiments=total_experiments,
             parameters={"algorithms": algorithms, "problems": problems, "settings": settings}
         )
+        if state is None:
+            raise HTTPException(
+                status_code=429,
+                detail={"error": "Maximum concurrent benchmarks reached", "max_concurrent": MAX_CONCURRENT_BENCHMARKS}
+            )
         
         def run_benchmark_task():
             try:
@@ -351,6 +362,11 @@ def _start_matrix_native_benchmark_impl(run_id: str, algorithms: List[Dict], pro
             "settings": {**settings, "execution_mode": "matrix_native"},
         },
     )
+    if state is None:
+        raise HTTPException(
+            status_code=429,
+            detail={"error": "Maximum concurrent benchmarks reached", "max_concurrent": MAX_CONCURRENT_BENCHMARKS},
+        )
     save_benchmark_run(
         run_id,
         source="web_matrix_native",
@@ -465,10 +481,17 @@ def import_benchmark(body: BenchmarkImportRequest) -> Dict:
     try:
         data = body.model_dump()
         state = benchmark_state_manager.import_run(body.run_id, data)
+        if state is None:
+            raise HTTPException(
+                status_code=409,
+                detail={"error": "Benchmark run already exists", "run_id": body.run_id},
+            )
         return {
             "run_id": state.run_id, "status": state.status.value,
             "results_imported": state.results_count, "message": f"Data imported ({state.results_count})"
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Benchmark import failed")
         raise HTTPException(status_code=500, detail="Import failed")
@@ -504,6 +527,11 @@ def stop_benchmark(run_id: str) -> Dict:
 @router.post("/download/{problem_name}")
 def download_benchmark_problem(problem_name: str) -> Dict:
     name_lower = problem_name.lower().strip()
+    if not _VALID_PROBLEM_NAME.fullmatch(name_lower):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid problem name '{problem_name}': only letters, digits, '_' and '-' are allowed",
+        )
     info = get_problem_by_name(name_lower)
     if info and info.file_path:
         return {

@@ -108,10 +108,17 @@ class BenchmarkStateManager:
             ])
             return running_count < MAX_CONCURRENT_BENCHMARKS
     
-    def create_run(self, run_id: str, total_experiments: int, parameters: Dict) -> BenchmarkRunState:
-        """Create a new benchmark run"""
+    def create_run(self, run_id: str, total_experiments: int, parameters: Dict) -> Optional[BenchmarkRunState]:
         with self._lock:
             self._evict_expired()
+            if run_id in self._runs:
+                return None
+            running_count = len([
+                s for s in self._runs.values()
+                if s.status == BenchmarkStatus.RUNNING
+            ])
+            if running_count >= MAX_CONCURRENT_BENCHMARKS:
+                return None
             state = BenchmarkRunState(
                 run_id=run_id,
                 total_experiments=total_experiments,
@@ -125,6 +132,35 @@ class BenchmarkStateManager:
         with self._lock:
             self._evict_expired()
             return self._runs.get(run_id)
+
+    def import_run(self, run_id: str, data: Dict[str, Any]) -> Optional[BenchmarkRunState]:
+        """Bulk-import a completed benchmark run from an external source.
+
+        Returns None if a run with this run_id already exists (no overwrite).
+        """
+        results = data.get("results") or []
+        total_experiments = data.get("total_experiments") or len(results)
+        parameters = data.get("parameters") or {}
+        start_time = data.get("start_time") or datetime.now(timezone.utc).isoformat()
+        end_time = data.get("end_time")
+        with self._lock:
+            self._evict_expired()
+            if run_id in self._runs:
+                return None
+            state = BenchmarkRunState(
+                run_id=run_id,
+                status=BenchmarkStatus.COMPLETED,
+                total_experiments=total_experiments,
+                completed_experiments=total_experiments,
+                results_count=len(results),
+                start_time=start_time,
+                end_time=end_time or datetime.now(timezone.utc).isoformat(),
+                message=f"Imported {len(results)} results",
+                parameters=parameters,
+                results=list(results),
+            )
+            self._runs[run_id] = state
+            return state
     
     def update_progress(self, run_id: str, completed: int, message: str = ""):
         """Update progress of a run"""

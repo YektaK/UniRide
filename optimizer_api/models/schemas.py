@@ -394,11 +394,25 @@ class StrategyInfo(BaseModel):
     available: bool = True
 
 
+# Upper bounds for solver-sizing parameters supplied through benchmark requests.
+# These protect the optimizer from unbounded workloads (iterations, populations, swarms).
+ALGORITHM_PARAM_UPPER_BOUNDS = {
+    "max_iterations": 100_000,
+    "max_generations": 100_000,
+    "generations": 100_000,
+    "population_size": 100_000,
+    "num_particles": 100_000,
+    "num_wolves": 100_000,
+    "num_hawks": 100_000,
+    "max_evaluations": 1_000_000,
+}
+
+
 class BenchmarkRunRequest(BaseModel):
     """Request body for POST /api/v1/benchmark/run"""
     run_id: str = Field(..., min_length=1, max_length=128)
-    algorithms: List[Dict[str, Any]] = Field(..., min_length=1)
-    problems: List[str] = Field(..., min_length=1)
+    algorithms: List[Dict[str, Any]] = Field(..., min_length=1, max_length=50)
+    problems: List[str] = Field(..., min_length=1, max_length=500)
     settings: Dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -412,6 +426,16 @@ class BenchmarkRunRequest(BaseModel):
             params = algorithm.get("params", {})
             if params is not None and not isinstance(params, dict):
                 raise ValueError(f"algorithms[{index}].params must be an object when provided")
+            for param_key, upper_bound in ALGORITHM_PARAM_UPPER_BOUNDS.items():
+                param_value = (params or {}).get(param_key)
+                if (
+                    isinstance(param_value, int)
+                    and not isinstance(param_value, bool)
+                    and param_value > upper_bound
+                ):
+                    raise ValueError(
+                        f"algorithms[{index}].params.{param_key} must not exceed {upper_bound}"
+                    )
 
         for index, problem in enumerate(self.problems):
             if not isinstance(problem, str) or not problem.strip():
@@ -422,12 +446,12 @@ class BenchmarkRunRequest(BaseModel):
             raise ValueError("settings.execution_mode must be 'matrix_native' or 'academic_matrix' when provided")
 
         n_runs = self.settings.get("n_runs", 1)
-        if not isinstance(n_runs, int) or isinstance(n_runs, bool) or n_runs < 1:
-            raise ValueError("settings.n_runs must be an integer greater than or equal to 1")
+        if not isinstance(n_runs, int) or isinstance(n_runs, bool) or not (1 <= n_runs <= 100):
+            raise ValueError("settings.n_runs must be an integer between 1 and 100")
 
         workers = self.settings.get("workers")
-        if workers is not None and (not isinstance(workers, int) or isinstance(workers, bool) or workers < 1):
-            raise ValueError("settings.workers must be an integer greater than or equal to 1 when provided")
+        if workers is not None and (not isinstance(workers, int) or isinstance(workers, bool) or not (1 <= workers <= 64)):
+            raise ValueError("settings.workers must be an integer between 1 and 64 when provided")
 
         seed = self.settings.get("seed")
         if seed is not None and (not isinstance(seed, int) or isinstance(seed, bool)):

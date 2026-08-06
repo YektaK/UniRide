@@ -40,6 +40,7 @@ TSPLIB_DOWNLOAD_URL = "http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp
 ATSP_DOWNLOAD_URL = "http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/atsp/"
 _DOWNLOAD_TIMEOUT = 30
 _DOWNLOAD_USER_AGENT = "UniRide-Optimizer/1.0 (+https://uniride.dev)"
+_VALID_PROBLEM_NAME = re.compile(r"^[a-zA-Z0-9_-]+$")
 
 # Known TSPLIB optimal solutions (source: TSPLIB95)
 TSPLIB_OPTIMALS: Dict[str, int] = {
@@ -364,6 +365,9 @@ def _extract_tgz_to_dest(tgz_data: bytes, dest_dir: str, problem_name: str) -> O
 
 def download_tsplib_problem(name: str, dest_dir: Optional[str] = None) -> Optional[str]:
     name = name.lower().strip()
+    if not _VALID_PROBLEM_NAME.fullmatch(name):
+        logger.warning(f"Rejected invalid TSPLIB problem name: {name!r}")
+        return None
     if dest_dir is None:
         dest_dir = TSPLIB_DATA_DIR
     os.makedirs(dest_dir, exist_ok=True)
@@ -413,6 +417,9 @@ ATSP_PROBLEM_NAMES = [
 
 def download_atsp_problem(name: str, dest_dir: Optional[str] = None) -> Optional[str]:
     name = name.lower().strip()
+    if not _VALID_PROBLEM_NAME.fullmatch(name):
+        logger.warning(f"Rejected invalid ATSP problem name: {name!r}")
+        return None
     if dest_dir is None:
         dest_dir = TSPLIB_DATA_DIR
     os.makedirs(dest_dir, exist_ok=True)

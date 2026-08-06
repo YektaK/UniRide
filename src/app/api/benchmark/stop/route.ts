@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { getOwnerToken } from "@/lib/benchmark-owner-cookie";
 
 const BACKEND_URL = process.env.OPTIMIZER_API_URL || "http://localhost:8000";
 
@@ -21,12 +22,18 @@ export async function POST(request: NextRequest) {
 
     const { run_id } = parsed.data;
 
-    const response = await fetch(`${BACKEND_URL}/api/v1/benchmark/stop`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ run_id }),
-      signal: AbortSignal.timeout(10000),
-    });
+    const ownerToken = getOwnerToken(request, run_id);
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (ownerToken) headers["X-Benchmark-Owner-Token"] = ownerToken;
+
+    const response = await fetch(
+      `${BACKEND_URL}/api/v1/benchmark/stop?run_id=${encodeURIComponent(run_id)}`,
+      {
+        method: "POST",
+        headers,
+        signal: AbortSignal.timeout(10000),
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => "Unknown error");

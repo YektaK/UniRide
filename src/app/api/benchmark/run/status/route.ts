@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getOwnerToken } from '@/lib/benchmark-owner-cookie';
 
 const BACKEND_URL = process.env.OPTIMIZER_API_URL || 'http://localhost:8000';
 
@@ -33,7 +34,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Forward to Python backend
-    const response = await fetch(`${BACKEND_URL}/api/v1/benchmark/status?run_id=${encodeURIComponent(runId)}`);
+    const ownerToken = getOwnerToken(request, runId);
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (ownerToken) headers['X-Benchmark-Owner-Token'] = ownerToken;
+
+    const response = await fetch(
+      `${BACKEND_URL}/api/v1/benchmark/status?run_id=${encodeURIComponent(runId)}`,
+      { headers }
+    );
 
     if (!response.ok) {
       if (response.status === 404) {

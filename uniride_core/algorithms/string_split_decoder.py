@@ -75,6 +75,7 @@ class SplitDecoder:
         target_time: Optional[int] = None,
         offset_minutes: int = 10,
         is_asymmetric: bool = False,
+        strict_time_windows: bool = False,
     ):
         self.sw_capacity = sw_capacity
         self.so_capacity = so_capacity
@@ -85,6 +86,7 @@ class SplitDecoder:
         self.target_time = target_time
         self.offset_minutes = offset_minutes
         self.is_asymmetric = is_asymmetric
+        self.strict_time_windows = strict_time_windows
     
     def decode(
         self,
@@ -365,6 +367,9 @@ class SplitDecoder:
                     arrival_times[loc] = current_time
                     prev = loc
 
+                if self.strict_time_windows and tw_violations > 0:
+                    continue
+
                 trips[trip_end + 1].append(Trip(
                     start_idx=i,
                     end_idx=trip_end,
@@ -414,6 +419,9 @@ class SplitDecoder:
                     total_trip_cost = cost + return_cost
 
                     if total_trip_cost > self.max_tour_duration:
+                        continue
+
+                    if self.strict_time_windows and tw_violations > 0:
                         continue
 
                     trips[j + 1].append(Trip(

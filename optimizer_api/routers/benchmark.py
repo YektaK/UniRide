@@ -5,10 +5,10 @@ import logging
 import threading
 import glob as glob_mod
 from pathlib import Path
-from typing import Any, List, Dict, Optional
+from typing import Any, Annotated, List, Dict, Optional
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from fastapi.params import Query as QueryParam
 
 try:
@@ -18,7 +18,7 @@ except ModuleNotFoundError:
 
 from models.schemas import BenchmarkRunRequest, BenchmarkImportRequest
 from benchmark_runner import BenchmarkRunner, ProblemInstance, AlgorithmConfig
-from benchmark_state import benchmark_state_manager, BenchmarkStatus, MAX_CONCURRENT_BENCHMARKS
+from benchmark_state import benchmark_state_manager, BenchmarkStatus, MAX_CONCURRENT_BENCHMARKS, verify_owner_token
 from strategies import STRATEGY_REGISTRY
 from utils.tsplib_parser import (
     get_available_problems as get_tsplib_problems,
@@ -35,6 +35,18 @@ router = APIRouter(
 )
 
 _VALID_PROBLEM_NAME = re.compile(r"^[a-zA-Z0-9_-]+$")
+
+
+def require_run_owner(
+    run_id: str,
+    x_benchmark_owner_token: Annotated[str | None, Header()] = None,
+) -> None:
+    """Gate /status, /stop, /results on the per-run owner token."""
+    state = benchmark_state_manager.get_run(run_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail=f"Benchmark run {run_id} not found")
+    if not verify_owner_token(state, x_benchmark_owner_token):
+        raise HTTPException(status_code=403, detail="Forbidden: missing or invalid owner token")
 
 CLI_RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "tests", "benchmark_results")
 CLI_RESULTS_NUMBA_DIR = os.path.join(os.path.dirname(__file__), "..", "tests", "benchmark_results_numba")
@@ -233,7 +245,7 @@ def get_benchmark_problem_detail(problem_name: str) -> Dict:
             result["coordinates"] = coords
     return result
 
-@router.get("/results/{run_id}")
+@router.get("/results/{run_id}", dependencies=[Depends(require_run_owner)])
 def get_benchmark_results(run_id: str) -> Dict:
     state = benchmark_state_manager.get_run(run_id)
     if not state:
@@ -277,7 +289,7 @@ def _start_benchmark_impl(run_id: str, algorithms: List[Dict], problems: List[st
         if not benchmark_problems:
             raise HTTPException(status_code=400, detail={"error": "No valid benchmark problems found"})
 
-        state = benchmark_state_manager.create_run(
+        state, owner_token = benchmark_state_manager.create_run(
             run_id=run_id, total_experiments=total_experiments,
             parameters={"algorithms": algorithms, "problems": problems, "settings": settings}
         )
@@ -308,7 +320,8 @@ def _start_benchmark_impl(run_id: str, algorithms: List[Dict], problems: List[st
             "run_id": run_id, "status": "running", "total_experiments": total_experiments,
             "problems_count": len(problems), "algorithms_count": len(algorithms),
             "message": f"Benchmark run {run_id} started in background",
-            "start_time": state.start_time
+            "start_time": state.start_time,
+            "owner_token": owner_token,
         }
     except HTTPException:
         raise
@@ -353,7 +366,7 @@ def _start_matrix_native_benchmark_impl(run_id: str, algorithms: List[Dict], pro
         ))
 
     total_experiments = len(routing_problems) * len(matrix_algorithms) * n_runs
-    state = benchmark_state_manager.create_run(
+    state, owner_token = benchmark_state_manager.create_run(
         run_id=run_id,
         total_experiments=total_experiments,
         parameters={
@@ -431,6 +444,7 @@ def _start_matrix_native_benchmark_impl(run_id: str, algorithms: List[Dict], pro
         "algorithms_count": len(matrix_algorithms),
         "message": f"Matrix-native benchmark run {run_id} started in background",
         "start_time": state.start_time,
+        "owner_token": owner_token,
     }
 
 
@@ -480,7 +494,7 @@ def _load_benchmark_problem(problem_name: str) -> Optional[ProblemInstance]:
 def import_benchmark(body: BenchmarkImportRequest) -> Dict:
     try:
         data = body.model_dump()
-        state = benchmark_state_manager.import_run(body.run_id, data)
+        state, owner_token = benchmark_state_manager.import_run(body.run_id, data)
         if state is None:
             raise HTTPException(
                 status_code=409,
@@ -488,7 +502,8 @@ def import_benchmark(body: BenchmarkImportRequest) -> Dict:
             )
         return {
             "run_id": state.run_id, "status": state.status.value,
-            "results_imported": state.results_count, "message": f"Data imported ({state.results_count})"
+            "results_imported": state.results_count, "message": f"Data imported ({state.results_count})",
+            "owner_token": owner_token,
         }
     except HTTPException:
         raise
@@ -496,7 +511,7 @@ def import_benchmark(body: BenchmarkImportRequest) -> Dict:
         logger.exception("Benchmark import failed")
         raise HTTPException(status_code=500, detail="Import failed")
 
-@router.get("/status")
+@router.get("/status", dependencies=[Depends(require_run_owner)])
 def get_benchmark_status(run_id: str) -> Dict:
     state = benchmark_state_manager.get_run(run_id)
     if not state:
@@ -513,7 +528,7 @@ def get_benchmark_status(run_id: str) -> Dict:
         "start_time": state.start_time, "end_time": state.end_time
     }
 
-@router.post("/stop")
+@router.post("/stop", dependencies=[Depends(require_run_owner)])
 def stop_benchmark(run_id: str) -> Dict:
     state = benchmark_state_manager.get_run(run_id)
     if not state:
@@ -665,7 +680,7 @@ def import_cli_benchmark_results(filename: str = "", run_id: Optional[str] = Non
     unique_problems = list(set(r["problem"] for r in cli_records))
     unique_strategies = list(set(r["strategy"] for r in cli_records))
     
-    state = benchmark_state_manager.create_run(
+    state, owner_token = benchmark_state_manager.create_run(
         run_id=run_id, total_experiments=len(web_results),
         parameters={"source": "cli_import", "source_file": os.path.basename(filepath), "problems": unique_problems}
     )
@@ -674,7 +689,8 @@ def import_cli_benchmark_results(filename: str = "", run_id: Optional[str] = Non
     
     return {
         "run_id": run_id, "status": "completed", "results_count": len(web_results),
-        "source_file": os.path.basename(filepath), "summary": {"unique_problems": len(unique_problems)}
+        "source_file": os.path.basename(filepath), "summary": {"unique_problems": len(unique_problems)},
+        "owner_token": owner_token,
     }
 
 @router.get("/cli/preview", dependencies=[Depends(require_internal_api_key)])

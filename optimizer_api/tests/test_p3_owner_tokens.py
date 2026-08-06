@@ -80,3 +80,124 @@ def test_import_run_duplicate_returns_none_none():
     assert s1 is not None
     s2, t2 = mgr.import_run("import-dup", data)
     assert s2 is None and t2 is None
+
+
+def _valid_payload(**overrides):
+    payload = {
+        "run_id": "p3-router-run",
+        "algorithms": [{"id": "ga", "params": {"seed": 7, "max_iterations": 20}}],
+        "problems": ["berlin52"],
+        "settings": {"n_runs": 1, "seed": 7},
+    }
+    payload.update(overrides)
+    return payload
+
+
+@pytest.fixture
+def client(monkeypatch):
+    monkeypatch.setenv("INTERNAL_API_KEY", "phase3-test-key")
+    app = FastAPI()
+    app.include_router(benchmark.router)
+    return TestClient(app)
+
+
+class _NoopRunner:
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def run(self, problems=None, algorithms=None, n_runs=1, seed=None, skip_cached=False):
+        pass
+
+
+class _FakeProblem:
+    name = "berlin52"
+
+
+def test_run_response_includes_owner_token(client, monkeypatch):
+    monkeypatch.setattr(benchmark, "_load_benchmark_problem", lambda name: _FakeProblem())
+    monkeypatch.setattr(benchmark, "BenchmarkRunner", _NoopRunner)
+    resp = client.post(
+        "/api/v1/benchmark/run",
+        json=_valid_payload(run_id="p3-run-tok"),
+        headers={"X-Internal-Api-Key": "phase3-test-key"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    token = body.get("owner_token")
+    assert token and isinstance(token, str)
+    state = benchmark.benchmark_state_manager.get_run("p3-run-tok")
+    assert state.owner_token_hash == hash_owner_token(token)
+    benchmark.benchmark_state_manager.complete_run("p3-run-tok", 0, "done")
+
+
+def test_import_response_includes_owner_token(client):
+    resp = client.post(
+        "/api/v1/benchmark/import",
+        json={"run_id": "p3-import-token", "results": [], "total_experiments": 0, "parameters": {}},
+        headers={"X-Internal-Api-Key": "phase3-test-key"},
+    )
+    assert resp.status_code == 200
+    assert isinstance(resp.json().get("owner_token"), str)
+
+
+def test_cli_import_response_includes_owner_token(client, monkeypatch):
+    monkeypatch.setattr(benchmark, "_resolve_cli_filename", lambda f: "dummy.json")
+    monkeypatch.setattr(benchmark, "_load_and_validate_cli_json", lambda f: [{"problem": "P1", "strategy": "A", "n_runs": 1}])
+    monkeypatch.setattr(benchmark, "_convert_cli_record_to_web", lambda rec, run_number: {"algorithm": "ga", "problem": "P1", "run_number": run_number})
+    resp = client.post(
+        "/api/v1/benchmark/cli/import?filename=dummy.json&run_id=p3-cli-token",
+        headers={"X-Internal-Api-Key": "phase3-test-key"},
+    )
+    assert resp.status_code == 200
+    assert isinstance(resp.json().get("owner_token"), str)
+
+
+@pytest.mark.parametrize("method,path_fn,case_id", [
+    ("get", lambda rid: ("/api/v1/benchmark/status", {"params": {"run_id": rid}}), "status"),
+    ("post", lambda rid: ("/api/v1/benchmark/stop", {"params": {"run_id": rid}}), "stop"),
+    ("get", lambda rid: (f"/api/v1/benchmark/results/{rid}", {}), "results"),
+])
+def test_owner_gated_endpoints(method, path_fn, case_id, client, monkeypatch):
+    run_id = f"p3-gate-{case_id}"
+    state, token = benchmark.benchmark_state_manager.create_run(run_id, 2, {})
+    assert state is not None
+    try:
+        path, kwargs = path_fn(run_id)
+        base = {"X-Internal-Api-Key": "phase3-test-key"}
+
+        no_tok = getattr(client, method)(path, headers=base, **kwargs)
+        assert no_tok.status_code == 403
+
+        wrong = getattr(client, method)(path, headers={**base, "X-Benchmark-Owner-Token": "wrong"}, **kwargs)
+        assert wrong.status_code == 403
+
+        ok = getattr(client, method)(path, headers={**base, "X-Benchmark-Owner-Token": token}, **kwargs)
+        assert ok.status_code == 200
+    finally:
+        benchmark.benchmark_state_manager.complete_run(run_id, 2, "done")
+
+
+def test_owner_404_when_run_missing(client):
+    cases = [
+        ("get", "/api/v1/benchmark/status?run_id=nope", {}),
+        ("post", "/api/v1/benchmark/stop?run_id=nope", {}),
+        ("get", "/api/v1/benchmark/results/nope", {}),
+    ]
+    for method, path, kwargs in cases:
+        resp = getattr(client, method)(
+            path,
+            headers={"X-Internal-Api-Key": "phase3-test-key", "X-Benchmark-Owner-Token": "whatever"},
+            **kwargs,
+        )
+        assert resp.status_code == 404
+
+
+def test_owner_403_when_run_has_no_hash(client, monkeypatch):
+    state, _tok = benchmark.benchmark_state_manager.create_run("p3-nohash", 1, {})
+    state.owner_token_hash = None
+    resp = client.get(
+        "/api/v1/benchmark/status?run_id=p3-nohash",
+        headers={"X-Internal-Api-Key": "phase3-test-key", "X-Benchmark-Owner-Token": "x"},
+    )
+    assert resp.status_code == 403
+    benchmark.benchmark_state_manager.complete_run("p3-nohash", 1, "done")

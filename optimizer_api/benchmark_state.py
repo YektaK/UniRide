@@ -29,9 +29,10 @@ See: docs/BENCHMARK_ARCHITECTURE_DEBT.md for full architecture
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, Optional, List, Any
+from typing import Dict, Optional, List, Any, Tuple
 from datetime import datetime, timezone
 from enum import Enum
+import secrets
 import threading
 import hashlib
 
@@ -69,11 +70,14 @@ def hash_owner_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
+def _mint_owner_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
 def verify_owner_token(state: "BenchmarkRunState", provided: Optional[str]) -> bool:
     """True only if state has a stored hash and provided matches it."""
     if state.owner_token_hash is None or provided is None:
         return False
-    import secrets
     return secrets.compare_digest(
         state.owner_token_hash,
         hash_owner_token(provided),
@@ -126,24 +130,27 @@ class BenchmarkStateManager:
             ])
             return running_count < MAX_CONCURRENT_BENCHMARKS
     
-    def create_run(self, run_id: str, total_experiments: int, parameters: Dict) -> Optional[BenchmarkRunState]:
+    def create_run(self, run_id: str, total_experiments: int, parameters: Dict) -> Tuple[Optional[BenchmarkRunState], Optional[str]]:
+        """Create a new benchmark run; returns (state, owner_token), or (None, None) on rejection."""
         with self._lock:
             self._evict_expired()
             if run_id in self._runs:
-                return None
+                return (None, None)
             running_count = len([
                 s for s in self._runs.values()
                 if s.status == BenchmarkStatus.RUNNING
             ])
             if running_count >= MAX_CONCURRENT_BENCHMARKS:
-                return None
+                return (None, None)
+            token = _mint_owner_token()
             state = BenchmarkRunState(
                 run_id=run_id,
                 total_experiments=total_experiments,
-                parameters=parameters
+                parameters=parameters,
+                owner_token_hash=hash_owner_token(token),
             )
             self._runs[run_id] = state
-            return state
+            return (state, token)
     
     def get_run(self, run_id: str) -> Optional[BenchmarkRunState]:
         """Get a benchmark run state"""
@@ -151,10 +158,11 @@ class BenchmarkStateManager:
             self._evict_expired()
             return self._runs.get(run_id)
 
-    def import_run(self, run_id: str, data: Dict[str, Any]) -> Optional[BenchmarkRunState]:
+    def import_run(self, run_id: str, data: Dict[str, Any]) -> Tuple[Optional[BenchmarkRunState], Optional[str]]:
         """Bulk-import a completed benchmark run from an external source.
 
-        Returns None if a run with this run_id already exists (no overwrite).
+        Returns (state, owner_token), or (None, None) if a run with this
+        run_id already exists (no overwrite).
         """
         results = data.get("results") or []
         total_experiments = data.get("total_experiments") or len(results)
@@ -164,7 +172,8 @@ class BenchmarkStateManager:
         with self._lock:
             self._evict_expired()
             if run_id in self._runs:
-                return None
+                return (None, None)
+            token = _mint_owner_token()
             state = BenchmarkRunState(
                 run_id=run_id,
                 status=BenchmarkStatus.COMPLETED,
@@ -176,9 +185,10 @@ class BenchmarkStateManager:
                 message=f"Imported {len(results)} results",
                 parameters=parameters,
                 results=list(results),
+                owner_token_hash=hash_owner_token(token),
             )
             self._runs[run_id] = state
-            return state
+            return (state, token)
     
     def update_progress(self, run_id: str, completed: int, message: str = ""):
         """Update progress of a run"""

@@ -313,7 +313,7 @@ def test_p1_import_run_unit():
     from optimizer_api.benchmark_state import BenchmarkStateManager
 
     mgr = BenchmarkStateManager()
-    state = mgr.import_run("unit-import-1", {
+    state, _token = mgr.import_run("unit-import-1", {
         "results": [
             {
                 "algorithm": "two_opt",
@@ -384,14 +384,14 @@ def test_p2_create_run_returns_none_when_limit_hit_then_accepts_after_complete(
 
     mgr = BenchmarkStateManager()
 
-    s1 = mgr.create_run("p2-run-1", 5, {})
+    s1, _t1 = mgr.create_run("p2-run-1", 5, {})
     assert s1 is not None
 
-    s2 = mgr.create_run("p2-run-2", 5, {})
+    s2, _t2 = mgr.create_run("p2-run-2", 5, {})
     assert s2 is None
 
     mgr.complete_run("p2-run-1", 5, "done")
-    s3 = mgr.create_run("p2-run-3", 5, {})
+    s3, _t3 = mgr.create_run("p2-run-3", 5, {})
     assert s3 is not None
 
 
@@ -403,10 +403,10 @@ def test_d3_create_run_rejects_duplicate_run_id():
     from optimizer_api.benchmark_state import BenchmarkStateManager
 
     mgr = BenchmarkStateManager()
-    s1 = mgr.create_run("dup-create-1", 5, {"alg": "ga"})
+    s1, _t1 = mgr.create_run("dup-create-1", 5, {"alg": "ga"})
     assert s1 is not None
 
-    s2 = mgr.create_run("dup-create-1", 5, {"alg": "pso"})
+    s2, _t2 = mgr.create_run("dup-create-1", 5, {"alg": "pso"})
     assert s2 is None
     assert mgr.get_run("dup-create-1") is s1
 
@@ -417,10 +417,10 @@ def test_d3_import_run_rejects_duplicate_run_id():
     mgr = BenchmarkStateManager()
     data = {"results": [], "total_experiments": 0, "parameters": {}}
 
-    s1 = mgr.import_run("dup-import-1", data)
+    s1, _t1 = mgr.import_run("dup-import-1", data)
     assert s1 is not None
 
-    s2 = mgr.import_run("dup-import-1", data)
+    s2, _t2 = mgr.import_run("dup-import-1", data)
     assert s2 is None
     assert mgr.get_run("dup-import-1") is s1
 
@@ -429,16 +429,16 @@ def test_d3_create_then_import_same_run_id_rejected():
     from optimizer_api.benchmark_state import BenchmarkStateManager
 
     mgr = BenchmarkStateManager()
-    s1 = mgr.create_run("mixed-dupe-1", 3, {})
+    s1, _t1 = mgr.create_run("mixed-dupe-1", 3, {})
     assert s1 is not None
 
-    s2 = mgr.import_run("mixed-dupe-1", {"results": [], "total_experiments": 0, "parameters": {}})
+    s2, _t2 = mgr.import_run("mixed-dupe-1", {"results": [], "total_experiments": 0, "parameters": {}})
     assert s2 is None
 
 
 def test_d3_run_endpoint_duplicate_run_id_409(client, authed):
     mgr = benchmark.benchmark_state_manager
-    mgr.create_run("dup-endpoint-1", 1, {})
+    _s, _tok = mgr.create_run("dup-endpoint-1", 1, {})
     mgr.complete_run("dup-endpoint-1", 1, "done")
 
     response = client.post(

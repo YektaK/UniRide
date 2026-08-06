@@ -29,6 +29,7 @@ class CVRPTWDecoder:
         self.time_windows = time_windows or {}
         self.use_time_windows = use_time_windows
         self.use_sota_engine = use_sota_engine
+        self.is_asymmetric = is_asymmetric
 
         if use_sota_engine:
             self.decoder = LinearSplitDecoder(
@@ -96,9 +97,13 @@ class CVRPTWDecoder:
             if loc == depot:
                 continue
 
-            travel_time = 0.0
+            travel_time = None
             if prev in distance_matrix and loc in distance_matrix[prev]:
                 travel_time = distance_matrix[prev][loc]
+            elif not self.is_asymmetric and loc in distance_matrix and prev in distance_matrix[loc]:
+                travel_time = distance_matrix[loc][prev]
+            if travel_time is None:
+                return False, f"missing arc {prev} -> {loc} in distance matrix"
             current_time += travel_time
 
             if loc in self.time_windows:
@@ -110,8 +115,14 @@ class CVRPTWDecoder:
 
             prev = loc
 
+        return_cost = None
         if prev in distance_matrix and depot in distance_matrix[prev]:
-            current_time += distance_matrix[prev][depot]
+            return_cost = distance_matrix[prev][depot]
+        elif not self.is_asymmetric and depot in distance_matrix and prev in distance_matrix[depot]:
+            return_cost = distance_matrix[depot][prev]
+        if return_cost is None:
+            return False, f"missing arc {prev} -> {depot} in distance matrix"
+        current_time += return_cost
 
         return True, f"Feasible (total time: {current_time:.0f}min)"
 

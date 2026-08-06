@@ -13,6 +13,7 @@ Computers & Operations Research, 31(12), 1985-2002.
 """
 
 import logging
+import math
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass, field
 from enum import Enum
@@ -200,7 +201,11 @@ class SplitDecoder:
         to_loc: str,
         distance_matrix: Dict[str, Dict[str, float]],
     ) -> float:
-        """Get distance between two locations, respecting ATSP asymmetry."""
+        """Get distance between two locations, respecting ATSP asymmetry.
+
+        FIX-10: an absent directed arc is data corruption — never fall back to
+        DEFAULT_TRAVEL_FALLBACK_MINUTES; return math.inf instead.
+        """
         direct = distance_matrix.get(from_loc, {}).get(to_loc)
         if direct is not None:
             return direct
@@ -208,7 +213,7 @@ class SplitDecoder:
             reverse = distance_matrix.get(to_loc, {}).get(from_loc)
             if reverse is not None:
                 return reverse
-        return DEFAULT_TRAVEL_FALLBACK_MINUTES
+        return math.inf
     
     def _build_trips(
         self,
@@ -389,6 +394,8 @@ class SplitDecoder:
                         break
 
                     travel_time = self._get_dist(prev, loc, distance_matrix)
+                    if math.isinf(travel_time):
+                        break  # FIX-10: missing arc kills the forward schedule
                     cost += travel_time
                     current_time += int(travel_time)
 

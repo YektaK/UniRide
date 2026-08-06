@@ -7,6 +7,7 @@ fast route-first decoding with infeasibility penalties.
 from __future__ import annotations
 
 import copy
+import math
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
@@ -47,6 +48,7 @@ class LinearSplitDecoder:
         target_time: Optional[int] = None,
         offset_minutes: int = 10,
         penalty_config: Optional[PenaltyConfig] = None,
+        is_asymmetric: bool = False,
     ):
         self.sw_cap = sw_capacity
         self.so_cap = so_capacity
@@ -56,9 +58,17 @@ class LinearSplitDecoder:
         self.target_time = target_time
         self.offset_minutes = offset_minutes
         self.penalties = penalty_config or PenaltyConfig()
+        self.is_asymmetric = is_asymmetric
 
     def _get_distance(self, dist_matrix: dict, fr: str, to: str) -> float:
-        return float(dist_matrix.get(fr, {}).get(to, 15.0))
+        direct = dist_matrix.get(fr, {}).get(to)
+        if direct is not None:
+            return float(direct)
+        if not self.is_asymmetric:
+            reverse = dist_matrix.get(to, {}).get(fr)
+            if reverse is not None:
+                return float(reverse)
+        return float("inf")
 
     def decode(
         self,
@@ -97,6 +107,8 @@ class LinearSplitDecoder:
                 curr_so += d_so
 
                 leg_dist = self._get_distance(distance_matrix, prev_loc, loc)
+                if math.isinf(leg_dist):
+                    break
                 curr_travel_time += leg_dist
                 current_time_forward += int(leg_dist)
 
@@ -126,6 +138,8 @@ class LinearSplitDecoder:
                         current_time_forward = earliest
 
                 return_dur = self._get_distance(distance_matrix, loc, depot)
+                if math.isinf(return_dur):
+                    continue
                 total_route_dur = curr_travel_time + return_dur
                 if total_route_dur > self.max_duration:
                     if self.penalties.allow_time_warp:

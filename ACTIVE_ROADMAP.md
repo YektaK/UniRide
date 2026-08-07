@@ -60,13 +60,18 @@ Target: week 1. These are release blockers.
 
 ### Objective and RNG consistency
 
+1D objective items (tracked as a separate serial workstream, `1D-objective`):
+
 - [ ] Use one objective for fitness, incumbent selection, and reporting.
 - [ ] Prefer lexicographic feasibility/vehicle-count/travel-cost ordering in production.
 - [ ] Correct cyclic ALNS insertion deltas.
-- [ ] Preserve seed `0`.
-- [ ] Replace PSO's wall-clock fallback seed with a deterministic caller/default contract and test omitted-seed plus seed-`0` replay.
-- [ ] Pass request-local Python and NumPy RNGs through all stochastic components.
-- [ ] Remove process-global reseeding from concurrent jobs.
+
+1D-RNG items (`codex/phase1-1d-rng-determinism-20260806`, merged):
+
+- [x] Preserve seed `0` (all strategies resolve via `seed_utils.resolve_seed`).
+- [x] Replace PSO's wall-clock fallback seed with a deterministic caller/default contract and test omitted-seed plus seed-`0` replay.
+- [x] Pass request-local Python and NumPy RNGs through all stochastic components.
+- [x] Remove process-global reseeding from concurrent runners.
 
 Acceptance:
 

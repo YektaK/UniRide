@@ -37,6 +37,7 @@ from uniride_core.adapters.demand_builder import (
 )
 from uniride_core.algorithms.hho_split_engine import solve_hho_split
 from uniride_core.algorithms.string_split_decoder import Direction
+from strategies.seed_utils import resolve_seed, make_rng
 
 
 class HHOSplitStrategy(HybridSplitBaseStrategy):
@@ -96,7 +97,7 @@ class HHOSplitStrategy(HybridSplitBaseStrategy):
             matrix_kind="travel_time",
         )
         self.config = {**self.DEFAULT_CONFIG, **promoted, **(config or {})}
-        self.seed = self.config.get("seed") or int(time.time() * 1000)
+        self.seed = resolve_seed(self.config)
         self._generation_stats = []
 
     @property
@@ -149,7 +150,7 @@ class HHOSplitStrategy(HybridSplitBaseStrategy):
         effective_config = dict(self.config)
         if hasattr(request, 'hho_config') and request.hho_config:
             effective_config = {**self.config, **request.hho_config}
-            rng = random.Random(effective_config.get("seed", self.seed))
+            rng = make_rng(effective_config, default=self.seed)
         else:
             rng = random.Random(self.seed)
 

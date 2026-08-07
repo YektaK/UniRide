@@ -28,6 +28,7 @@ from uniride_core.algorithms.vehicle_assignment import VehicleCalculator
 from uniride_core.algorithms.tsp_meta_engines import nearest_neighbor_route, solve_two_opt_tsp
 from strategies.promoted_config_loader import get_promoted_strategy_params
 from uniride_core.adapters.demand_builder import student_occurrence_keys
+from strategies.seed_utils import resolve_seed, make_rng
 
 class TwoOptStrategy(BaseRoutingStrategy):
     """
@@ -56,7 +57,7 @@ class TwoOptStrategy(BaseRoutingStrategy):
             ("two_opt", "2opt", "Numba-2-opt", "Core-TwoOpt-TSP")
         )
         self.config = {**self.DEFAULT_CONFIG, **promoted, **(config or {})}
-        self.seed = self.config.get("seed") or int(time.time() * 1000)
+        self.seed = resolve_seed(self.config)
 
     @property
     def name(self) -> str:
@@ -124,7 +125,7 @@ class TwoOptStrategy(BaseRoutingStrategy):
         effective_config = dict(self.config)
         if hasattr(request, 'two_opt_config') and request.two_opt_config:
             effective_config = {**self.config, **request.two_opt_config}
-            rng = random.Random(effective_config.get("seed", self.seed))
+            rng = make_rng(effective_config, default=self.seed)
         else:
             rng = random.Random(self.seed)
 

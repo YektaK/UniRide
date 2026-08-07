@@ -348,8 +348,8 @@ def run_single_test(
     duration_func = create_np_duration_func(np_matrix, unique_locs)
 
     indices = list(range(1, dimension + 1))
-    random.seed(seed)
-    random.shuffle(indices)
+    rng = random.Random(seed)
+    rng.shuffle(indices)
     initial_route = [f"L{i}" for i in indices]
 
     start_time = time.time()

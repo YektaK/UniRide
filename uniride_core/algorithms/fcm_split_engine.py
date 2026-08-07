@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import random
-import threading
 import time
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
@@ -17,8 +16,6 @@ from uniride_core.algorithms.clustering_strategies.fuzzy_cmeans_enhanced import 
 from uniride_core.algorithms.tsp_meta_engines import solve_two_opt_tsp
 from uniride_core.algorithms.tsp_meta_matrix_engine import TSPSolver
 from uniride_core.models import PermutationResult, RoutingProblem
-
-_FCM_LOCK = threading.Lock()
 
 
 class FCMSplitMatrixEngine(UnifiedEngine):
@@ -173,18 +170,14 @@ def _cluster_node_indices(
         )
         for idx in node_indices
     ]
-    with _FCM_LOCK:
-        state = random.getstate()
-        random.seed(seed)
-        try:
-            _, _, assignments = fuzzy_c_means_with_membership(
-                points,
-                k=k,
-                filter_limit=int(cfg.get("fcm_iterations", 100) or 100),
-                m=float(cfg.get("fcm_m", 2.0) or 2.0),
-            )
-        finally:
-            random.setstate(state)
+    rng = random.Random(seed)
+    _, _, assignments = fuzzy_c_means_with_membership(
+        points,
+        k=k,
+        filter_limit=int(cfg.get("fcm_iterations", 100) or 100),
+        m=float(cfg.get("fcm_m", 2.0) or 2.0),
+        rng=rng,
+    )
 
     clusters: List[List[int]] = [[] for _ in range(k)]
     for idx, cluster_idx in zip(node_indices, assignments):

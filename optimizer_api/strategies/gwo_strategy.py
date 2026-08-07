@@ -29,6 +29,7 @@ from uniride_core.algorithms.tsp_meta_engines import (
 )
 from strategies.promoted_config_loader import get_promoted_strategy_params
 from uniride_core.adapters.demand_builder import student_occurrence_keys
+from strategies.seed_utils import resolve_seed, make_rng
 
 class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
     """
@@ -61,7 +62,7 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
             ("gwo", "grey_wolf", "Numba-GWO", "Core-GWO-TSP")
         )
         self.config = {**self.DEFAULT_CONFIG, **promoted, **(config or {})}
-        self.seed = self.config.get("seed") or int(time.time() * 1000)
+        self.seed = resolve_seed(self.config)
 
     @property
     def name(self) -> str:
@@ -110,7 +111,7 @@ class GreyWolfOptimizerStrategy(BaseRoutingStrategy):
         effective_config = dict(self.config)
         if hasattr(request, 'gwo_config') and request.gwo_config:
             effective_config = {**self.config, **request.gwo_config}
-            rng = random.Random(effective_config.get("seed", self.seed))
+            rng = make_rng(effective_config, default=self.seed)
         else:
             rng = random.Random(self.seed)
 

@@ -38,6 +38,7 @@ from uniride_core.adapters.demand_builder import (
 )
 from uniride_core.algorithms.pso_split_engine import solve_pso_split
 from uniride_core.algorithms.string_split_decoder import Direction
+from strategies.seed_utils import resolve_seed, make_rng
 
 
 class PSOSplitStrategy(HybridSplitBaseStrategy):
@@ -95,7 +96,7 @@ class PSOSplitStrategy(HybridSplitBaseStrategy):
             matrix_kind="travel_time",
         )
         self.config = {**self.DEFAULT_CONFIG, **promoted, **(config or {})}
-        self.seed = self.config.get("seed") or int(time.time() * 1000)
+        self.seed = resolve_seed(self.config)
         self._global_best: Optional[List[str]] = None
         self._generation_stats = []
 
@@ -147,7 +148,7 @@ class PSOSplitStrategy(HybridSplitBaseStrategy):
         effective_config = dict(self.config)
         if request.pso_config:
             effective_config = {**self.config, **request.pso_config}
-            rng = random.Random(effective_config.get("seed", self.seed))
+            rng = make_rng(effective_config, default=self.seed)
         else:
             rng = random.Random(self.seed)
 

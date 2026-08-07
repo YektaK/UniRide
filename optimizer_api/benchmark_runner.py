@@ -254,9 +254,6 @@ class BenchmarkRunner:
         self.running = True
         self.start_time = time.time()
         
-        random.seed(seed)
-        np.random.seed(seed)
-        
         metadata = {
             "start_time": datetime.now(timezone.utc).isoformat(),
             "total_experiments": len(problems) * len(algorithms) * n_runs,
@@ -277,7 +274,7 @@ class BenchmarkRunner:
                         
                         try:
                             result = self._run_single_experiment(
-                                problem, algorithm, run_num
+                                problem, algorithm, run_num, seed + run_num - 1
                             )
                             self.results.append(result)
                             completed += 1
@@ -335,7 +332,8 @@ class BenchmarkRunner:
         self,
         problem: ProblemInstance,
         algorithm: AlgorithmConfig,
-        run_number: int
+        run_number: int,
+        run_seed: Optional[int] = None
     ) -> ExperimentResult:
         """
         Run a single algorithm on a single problem using real strategy dispatch.
@@ -365,7 +363,7 @@ class BenchmarkRunner:
                 problem,
                 algorithm.algorithm_id
             )
-            self._apply_algorithm_params(request, algorithm.algorithm_id, algorithm.params)
+            self._apply_algorithm_params(request, algorithm.algorithm_id, algorithm.params, run_seed)
             
             # Call real strategy
             response = strategy.optimize(request)
@@ -436,12 +434,12 @@ class BenchmarkRunner:
             metadata=metadata,
         )
 
-    def _apply_algorithm_params(self, request, algorithm_id: str, params: Dict[str, Any]) -> None:
+    def _apply_algorithm_params(self, request, algorithm_id: str, params: Dict[str, Any], run_seed: Optional[int] = None) -> None:
         """Attach benchmark overrides to existing strategy-specific request config fields."""
-        if not params:
-            return
-
+        params = params or {}
         clean_params = {key: value for key, value in params.items() if value is not None and value != ""}
+        if run_seed is not None and "seed" not in params:
+            clean_params["seed"] = run_seed
         if not clean_params:
             return
 

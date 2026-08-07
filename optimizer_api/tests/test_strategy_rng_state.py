@@ -1,3 +1,5 @@
+import random
+
 from strategies.hho_strategy import HarrisHawksOptimizerStrategy
 from strategies.pso_strategy import PSOStrategy
 from models.schemas import LocationNode, OptimizationRequest, StudentNode
@@ -11,6 +13,30 @@ def test_pso_strategy_does_not_keep_instance_rng():
 
 def test_hho_strategy_does_not_keep_instance_rng():
     strategy = HarrisHawksOptimizerStrategy({"seed": 123})
+
+    assert not hasattr(strategy, "rng")
+
+
+def test_pso_strategy_does_not_keep_instance_rng_seed_zero():
+    strategy = PSOStrategy({"seed": 0})
+
+    assert not hasattr(strategy, "rng")
+
+
+def test_hho_strategy_does_not_keep_instance_rng_seed_zero():
+    strategy = HarrisHawksOptimizerStrategy({"seed": 0})
+
+    assert not hasattr(strategy, "rng")
+
+
+def test_pso_strategy_does_not_keep_instance_rng_omitted_seed():
+    strategy = PSOStrategy({})
+
+    assert not hasattr(strategy, "rng")
+
+
+def test_hho_strategy_does_not_keep_instance_rng_omitted_seed():
+    strategy = HarrisHawksOptimizerStrategy({})
 
     assert not hasattr(strategy, "rng")
 
@@ -121,3 +147,84 @@ def test_hho_request_config_is_passed_without_mutating_strategy_defaults(monkeyp
     assert strategy.config["seed"] == 123
     assert strategy.config["max_iterations"] == 4
     assert strategy.config["population_size"] == 2
+
+
+def _rng_shuffle_solve(self, waypoints, depot, time_matrix, coordinates, first=None, second=None):
+    rng = first if isinstance(first, random.Random) else second
+    route = list(waypoints)
+    rng.shuffle(route)
+    return route, 10.0
+
+
+def _multi_student_request(**overrides):
+    students = [
+        StudentNode(
+            id=f"student-{i}",
+            location_code=f"S{i}",
+            coordinates={"lat": float(i), "lng": 0.0},
+            disability_type="Sw" if i % 2 == 0 else "So",
+        )
+        for i in range(1, 5)
+    ]
+    data = {
+        "algorithm": "pso",
+        "depot": LocationNode(id="D", lat=0.0, lng=0.0),
+        "students": students,
+        "sw_capacity": 2,
+        "so_capacity": 2,
+        "max_travel_time": 120,
+    }
+    data.update(overrides)
+    return OptimizationRequest(**data)
+
+
+def _route_sequence(response):
+    return [step.location2 for step in response.routes[0].route_details][:-1]
+
+
+def test_pso_seed_zero_replays(monkeypatch):
+    monkeypatch.setattr("strategies.pso_strategy.DataLoader.get_instance", lambda: _FakeDataLoader())
+    monkeypatch.setattr("strategies.pso_strategy.VehicleCalculator", _FakeVehicleCalculator)
+    monkeypatch.setattr(PSOStrategy, "_solve_tsp", _rng_shuffle_solve)
+
+    strategy = PSOStrategy({"seed": 0})
+    request = _multi_student_request(algorithm="pso")
+
+    assert strategy.seed == 0
+    assert _route_sequence(strategy.optimize(request)) == _route_sequence(strategy.optimize(request))
+
+
+def test_hho_seed_zero_replays(monkeypatch):
+    monkeypatch.setattr("strategies.hho_strategy.DataLoader.get_instance", lambda: _FakeDataLoader())
+    monkeypatch.setattr("strategies.hho_strategy.VehicleCalculator", _FakeVehicleCalculator)
+    monkeypatch.setattr(HarrisHawksOptimizerStrategy, "_solve_tsp", _rng_shuffle_solve)
+
+    strategy = HarrisHawksOptimizerStrategy({"seed": 0})
+    request = _multi_student_request(algorithm="hho")
+
+    assert strategy.seed == 0
+    assert _route_sequence(strategy.optimize(request)) == _route_sequence(strategy.optimize(request))
+
+
+def test_pso_omitted_seed_replays(monkeypatch):
+    monkeypatch.setattr("strategies.pso_strategy.DataLoader.get_instance", lambda: _FakeDataLoader())
+    monkeypatch.setattr("strategies.pso_strategy.VehicleCalculator", _FakeVehicleCalculator)
+    monkeypatch.setattr(PSOStrategy, "_solve_tsp", _rng_shuffle_solve)
+
+    strategy = PSOStrategy({})
+    request = _multi_student_request(algorithm="pso")
+
+    assert strategy.seed == 42
+    assert _route_sequence(strategy.optimize(request)) == _route_sequence(strategy.optimize(request))
+
+
+def test_hho_omitted_seed_replays(monkeypatch):
+    monkeypatch.setattr("strategies.hho_strategy.DataLoader.get_instance", lambda: _FakeDataLoader())
+    monkeypatch.setattr("strategies.hho_strategy.VehicleCalculator", _FakeVehicleCalculator)
+    monkeypatch.setattr(HarrisHawksOptimizerStrategy, "_solve_tsp", _rng_shuffle_solve)
+
+    strategy = HarrisHawksOptimizerStrategy({})
+    request = _multi_student_request(algorithm="hho")
+
+    assert strategy.seed == 42
+    assert _route_sequence(strategy.optimize(request)) == _route_sequence(strategy.optimize(request))

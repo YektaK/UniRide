@@ -34,6 +34,7 @@ from uniride_core.adapters.demand_builder import (
 )
 from uniride_core.algorithms.ga_split_engine import solve_ga_split
 from uniride_core.algorithms.string_split_decoder import Direction
+from strategies.seed_utils import resolve_seed, make_rng
 
 
 class GASplitStrategy(HybridSplitBaseStrategy):
@@ -75,7 +76,7 @@ class GASplitStrategy(HybridSplitBaseStrategy):
             matrix_kind="travel_time",
         )
         self.config = {**self.DEFAULT_CONFIG, **promoted, **(config or {})}
-        self.seed = self.config.get("seed") or int(time.time() * 1000)
+        self.seed = resolve_seed(self.config)
         self._best_individual = None
         self._generation_stats = []
 
@@ -129,7 +130,7 @@ class GASplitStrategy(HybridSplitBaseStrategy):
         effective_config = dict(self.config)
         if request.ga_config:
             effective_config = {**self.config, **request.ga_config}
-            rng = random.Random(effective_config.get("seed", self.seed))
+            rng = make_rng(effective_config, default=self.seed)
         else:
             rng = random.Random(self.seed)
 

@@ -138,11 +138,11 @@ BORDER_THRESHOLD_MEDIUM = 0.30  # 0.15 ≤ ambiguity < 0.30 → MEDIUM
 # ambiguity ≥ 0.30 → LOW
 
 
-def _initialize_membership_matrix(n: int, k: int) -> List[List[float]]:
+def _initialize_membership_matrix(n: int, k: int, rng: random.Random) -> List[List[float]]:
     """Initialize membership matrix with random values normalized per row."""
     U = []
     for _ in range(n):
-        row = [random.random() for _ in range(k)]
+        row = [rng.random() for _ in range(k)]
         s = sum(row)
         U.append([x / s for x in row])
     return U
@@ -152,7 +152,8 @@ def fuzzy_c_means_with_membership(
     points: List[Point],
     k: int,
     filter_limit: int = 100,
-    m: float = 2.0
+    m: float = 2.0,
+    rng: Optional[random.Random] = None
 ) -> Tuple[List[Tuple[float, float]], List[List[float]], List[int]]:
     """
     Run FCM and return centroids, membership matrix, and assignments.
@@ -164,10 +165,12 @@ def fuzzy_c_means_with_membership(
         k: Number of clusters
         filter_limit: Maximum iterations
         m: Fuzziness parameter (typically 2.0)
+        rng: Optional random generator for deterministic membership init
     
     Returns:
         Tuple of (centroids, membership_matrix, assignments)
     """
+    rng = rng or random.Random()
     if not points or k <= 0:
         return [], [], []
     
@@ -181,7 +184,7 @@ def fuzzy_c_means_with_membership(
         return centroids, U, assignments
     
     n = len(points)
-    U = _initialize_membership_matrix(n, k)
+    U = _initialize_membership_matrix(n, k, rng)
     centroids = [(0.0, 0.0)] * k
     
     for iteration in range(filter_limit):

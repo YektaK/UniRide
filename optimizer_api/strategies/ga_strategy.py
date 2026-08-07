@@ -26,6 +26,7 @@ from uniride_core.algorithms.tsp_meta_engines import (
 )
 from strategies.promoted_config_loader import get_promoted_strategy_params
 from uniride_core.adapters.demand_builder import student_occurrence_keys
+from strategies.seed_utils import resolve_seed, make_rng
 
 class GeneticAlgorithmStrategy(BaseRoutingStrategy):
     """
@@ -51,7 +52,7 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
             ("genetic_algorithm", "ga", "Numba-GA", "Core-GA-TSP")
         )
         self.config = {**self.DEFAULT_CONFIG, **promoted, **(config or {})}
-        self.seed = self.config.get("seed") or int(time.time() * 1000)
+        self.seed = resolve_seed(self.config)
 
     @property
     def name(self) -> str:
@@ -111,7 +112,7 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
         effective_config = dict(self.config)
         if request.ga_config:
             effective_config.update(request.ga_config)
-            rng = random.Random(effective_config.get("seed", self.seed))
+            rng = make_rng(effective_config, default=self.seed)
         else:
             rng = random.Random(self.seed)
 

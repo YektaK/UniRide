@@ -24,6 +24,7 @@ from uniride_core.algorithms.tsp_meta_engines import (
     solve_pso_tsp,
 )
 from strategies.promoted_config_loader import get_promoted_strategy_params
+from strategies.seed_utils import resolve_seed, make_rng
 from uniride_core.adapters.demand_builder import student_occurrence_keys
 
 class PSOStrategy(BaseRoutingStrategy):
@@ -51,7 +52,7 @@ class PSOStrategy(BaseRoutingStrategy):
             ("pso", "Numba-PSO", "Core-PSO-TSP")
         )
         self.config = {**self.DEFAULT_CONFIG, **promoted, **(config or {})}
-        self.seed = self.config.get("seed") or int(time.time() * 1000)
+        self.seed = resolve_seed(self.config)
 
     @property
     def name(self) -> str:
@@ -66,8 +67,7 @@ class PSOStrategy(BaseRoutingStrategy):
         return "Sürü zekası tabanlı meta-sezgisel. Hızlı yakınsama özelliği."
 
     def _rng_for_config(self, config: Optional[Dict] = None) -> random.Random:
-        seed = (config or self.config).get("seed") or self.seed
-        return random.Random(seed)
+        return make_rng(config or self.config, default=self.seed)
 
     def _solve_tsp(
         self,
@@ -105,7 +105,7 @@ class PSOStrategy(BaseRoutingStrategy):
         rng = random.Random(self.seed)
         if request.pso_config:
             effective_config.update(request.pso_config)
-            rng = random.Random(effective_config.get("seed", self.seed))
+            rng = make_rng(effective_config, default=self.seed)
 
         # Set local search type from request
         if request.local_search_type:

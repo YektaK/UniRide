@@ -218,6 +218,13 @@ No paper-scale benchmark ran, no benchmark output was generated, and archive pay
 - Direct source confirms `DataLoader` uses the thread-safe `SingletonMeta`; the old “new object on every `get_instance()` call” claim is retired.
 - Still-open verified risks include PSO's wall-clock fallback seed, missing explicit Supabase provider timeout, stale predecessor handling after a depot token, production import of academic promoted configurations, promoted-name no-op risk, and the absence of a verified reusable GIS map/geometry abstraction.
 - The master audit, current architecture, active roadmap, worklog, and consolidation manifest were synchronized while preserving historical evidence as dated context.
+
+### 2026-08-07 - 2A matrix repository (Phase 2 item 1)
+
+- Extracted the cache/lifecycle from the `DataLoader` singleton into an injectable `TimeMatrixRepository` in `optimizer_api/utils/matrix_repository.py`, with a `TravelTimeProvider` protocol, `SupabaseTimeMatrixProvider`, explicit `load`/`refresh(force)`/`close`, injected-clock TTL, and `health()` metadata.
+- `DataLoader` remains the verified process-level singleton facade (`SingletonMeta` + `get_instance()`), now delegating to the repository; the optional pre-singleton `repository=` injection seam was added.
+- New `optimizer_api/tests/test_matrix_repository.py` (14 tests) pins the provider seam, TTL staleness with a fake clock, force refresh, health, coordinate-fallback, failing-provider fallback, `close`, and delegation. Full scoped regression green; the only failure is a pre-existing hypothesis edge case in `uniride_core/tests/test_distance_properties.py` that also fails on the base commit.
+- Master docs updated: `CURRENT_ARCHITECTURE.md` and `UniRide_Ultimate_Audit.md` now describe the injectable repository behind the singleton and keep provider-timeout/last-known-good as the open Phase 2 item 2.
 ## Curated Historical Milestones
 
 ### April 2026 - Dual-engine and SOTA exploration

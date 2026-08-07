@@ -53,7 +53,7 @@ Responsibilities:
 - FastAPI application and routers;
 - Pydantic production DTOs;
 - executable strategy adapters;
-- travel-matrix loading;
+- travel-matrix loading via an injectable `TimeMatrixRepository` backed by the process-level `DataLoader` singleton;
 - web benchmark orchestration.
 
 Verified limitations:
@@ -62,7 +62,7 @@ Verified limitations:
 - Request sizes and algorithm configurations are insufficiently bounded.
 - Benchmark admission and creation are non-atomic; stop does not cancel work.
 - CLI preview/import accepted caller-selected filesystem paths.
-- `DataLoader` is a verified process-level singleton, but Supabase construction has no explicit provider timeout and cache health/last-known-good behavior remains incomplete.
+- `DataLoader` is a verified process-level singleton that delegates to an injectable `TimeMatrixRepository` (`optimizer_api/utils/matrix_repository.py`): explicit `load`/`refresh(force)`/`close` lifecycle, TTL with injected clock, and `health()` cache metadata (source, loaded, stale, age, ttl, locations, edges, last_error). The only remaining matrix risk from this block is that the Supabase provider still lacks an explicit request timeout and last-known-good persistence — scheduled in Phase 2, and the residual P0 matrix-integrity items (arc completeness, provider timeouts) still stand.
 - Production promoted-config loading imports `academic_benchmark.promoted_configs`, leaving the production-to-academic dependency boundary porous.
 - FastAPI routers have no authentication dependency.
 
@@ -71,7 +71,7 @@ Verified limitations:
 Contains distance functions, clustering, split decoders, metaheuristic engines, local search, Numba kernels, ALNS/SOTA operators, solver adapters, and routing models.
 
 The dependency direction is mostly sound: the core does not intentionally depend on FastAPI or academic orchestration. The model boundary remains incomplete because legacy core models combine TSPLIB metadata, benchmark fields, and production constraints.
-The 2026-08-01 re-verification refuted the earlier “broken DataLoader singleton” claim. It did not remove the separate provider-timeout, matrix provenance, cache-health, or production/academic isolation risks.
+The 2026-08-01 re-verification refuted the earlier “broken DataLoader singleton” claim. The 2026-08-07 matrix-repository work preserved that singleton (as a facade over an injectable `TimeMatrixRepository`) and closed the cache-health gap with tested `health()` metadata. Provider timeout, matrix provenance, arc completeness, and production/academic isolation risks remain open.
 
 ### `academic_benchmark/`: experiment system
 
@@ -153,6 +153,8 @@ The core should own:
 Production owns authentication, user DTOs, provider-specific geography, route geometry, and operational errors. Academic tooling owns dataset paths, BKS/optima, gaps, seeds, DOE metadata, environment manifests, and persistence.
 
 ## 6. Matrix Architecture
+
+Production loading path (verified in 2A): the process-level `DataLoader` singleton delegates to an injectable `TimeMatrixRepository` whose `TravelTimeProvider` seam fetches `time_matrix` rows from Supabase with a coordinate-distance fallback; the repository exposes explicit lifecycle and cache-health (see `optimizer_api/utils/matrix_repository.py`).
 
 Current critical risk: missing directed arcs can become zero-valued, Euclidean-degree, or generic fallback edges. This silently changes route order, feasibility, and benchmark rankings.
 

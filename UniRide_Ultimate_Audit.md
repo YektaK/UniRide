@@ -17,7 +17,7 @@ The dual-engine dependency direction is mostly sound: production and academic ad
 ### Verified claims that must be retired
 
 - “CVRPTW support complete”: cluster-first solvers do not enforce time windows inside route construction.
-- “DataLoader singleton is broken”: refuted. `DataLoader` uses the thread-safe `SingletonMeta`, and `get_instance()` delegates to the cached `cls()` instance. Provider timeout and cache-health risks remain separate concerns.
+- “DataLoader singleton is broken”: refuted. `DataLoader` uses the thread-safe `SingletonMeta`, and `get_instance()` delegates to the cached `cls()` instance. The 2026-08-07 2A work further extracted the cache into an injectable `TimeMatrixRepository`; provider timeout and last-known-good risks remain separate concerns.
 - “No benchmark race conditions”: admission and creation are separate critical sections.
 - “Stop benchmark”: the endpoint changes status but does not stop computation.
 - “Production-grade core”: live feasibility and matrix defects contradict this status.
@@ -38,7 +38,7 @@ The revised direct-source review corrected several claims from the original audi
 
 - `optimizer_api/utils/patterns.py:10-31` implements a thread-safe singleton metaclass, and `optimizer_api/utils/data_loader.py:128-131` returns `cls()` through that metaclass. Repeated `get_instance()` construction is not the defect.
 - `optimizer_api/strategies/pso_strategy.py:53` still falls back to `int(time.time() * 1000)` for every falsy seed, including an omitted seed, `None`, and explicit seed `0`. This breaks deterministic replay and discards seed-`0` semantics.
-- `optimizer_api/utils/data_loader.py:53-59` constructs the Supabase client without an explicit provider timeout. A stalled external request can therefore block loading.
+- `optimizer_api/utils/data_loader.py:53-59` constructs the Supabase client without an explicit provider timeout. A stalled external request can therefore block loading. (2A extracted the provider into `TimeMatrixRepository`/`SupabaseTimeMatrixProvider`; the timeout itself remains open.)
 - `uniride_core/algorithms/cvrptw_decoder.py:95-111` skips a depot token without updating `prev`, so travel after a mid-route depot can be measured from a stale predecessor.
 - `optimizer_api/strategies/promoted_config_loader.py:9-13` still imports academic promoted-config code into production strategy construction.
 - `normalize_strategy_params` preserves unknown names rather than dropping them; the remaining risk is that downstream strategies silently ignore academic names they do not consume.
@@ -197,7 +197,7 @@ The backend result must be the authority for effective direction, feasibility, m
 ### Backend/API
 
 - Production uses shared `STRATEGY_REGISTRY` instances although fresh factories exist.
-- `DataLoader` is a process-level singleton, but its Supabase client has no explicit provider timeout and its cache/repository boundary still lacks durable health and last-known-good semantics.
+- `DataLoader` is a process-level singleton, but its Supabase client has no explicit provider timeout and last-known-good semantics remain open. (The 2A matrix-repository extraction added explicit lifecycle and cache-health metadata; timeout + last-known-good are Phase 2 item 2.)
 - `/compare` creates a thread pool sized from input and does not truly cancel timed-out work.
 - Optional `None` strategies can break health/default comparison enumeration.
 - Benchmark state is process-local.
@@ -382,7 +382,7 @@ The rationale is preserved; the chosen daemon-thread/polling and direct-browser 
 ### Architecture
 
 - request-scoped strategy factories;
-- injected matrix repository;
+- injected matrix repository (delivered in 2A: `TimeMatrixRepository`/`TravelTimeProvider` in `optimizer_api/utils/matrix_repository.py`, composed behind the `DataLoader` singleton);
 - durable benchmark workers;
 - authenticated BFF-to-FastAPI boundary;
 - serialized cancellable frontend server state.

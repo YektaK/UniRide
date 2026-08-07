@@ -1,6 +1,6 @@
 # 2A-MATRIX-REPO — Injectable Matrix Repository (plan)
 
-Status: PROPOSED
+Status: COMPLETE
 Date: 2026-08-07
 Package: phase2 item 1 (first serial workstream of Phase 2)
 Branch: `codex/phase2-matrix-repository-20260807` (from origin/WIP @ 1b2ac03)

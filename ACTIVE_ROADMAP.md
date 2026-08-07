@@ -13,9 +13,9 @@ UniRide remains **experimental and not production-ready** until Phase 1 is compl
 
 Target: 1-2 days.
 
-- [ ] Restrict FastAPI to a trusted network boundary.
-- [ ] Authenticate benchmark and CLI-import/preview endpoints.
-- [ ] Remove arbitrary `filepath` support.
+- [x] Restrict FastAPI to a trusted network boundary. (loopback default in `optimizer_host()`; bind guard rejects non-loopback without `ALLOW_PUBLIC_BIND=1`; startup refuses to boot without `INTERNAL_API_KEY`.)
+- [x] Authenticate benchmark and CLI-import/preview endpoints. (router-level `require_internal_api_key`; now **fail-closed** — missing key is 403, never allow; pinned in `test_phase0_auth_guard.py` + `test_api_hardening_phase0.py`.)
+- [x] Remove arbitrary `filepath` support. (`_resolve_cli_filename` confines to the two CLI result roots; traversal and symlink escape rejected; listing returns basenames only — `test_phase0_containment.py`.)
 - [x] Create a clean combined Python validation environment and align compatible Pydantic packages.
 - [x] Restore the frontend dependency tree with `npm ci`.
 - [x] Replace obsolete `next lint` with a working ESLint gate.

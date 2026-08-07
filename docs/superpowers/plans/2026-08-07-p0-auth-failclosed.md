@@ -1,10 +1,22 @@
 # P0-AUTH — Close the Benchmark/CLI Authentication Gap (plan)
 
-Status: PROPOSED
+Status: COMPLETE (implemented directly; small single-owner change)
 Date: 2026-08-07
 Package: phase0 hardening follow-up (serial workstream after 1D-objective)
 Branch: `codex/phase1-p0-auth-failclosed-20260807` (from origin/WIP @ f07a80c)
 Docs: `docs/superpowers/specs/2026-08-07-p0-auth-failclosed-design.md`
+
+## Status notes
+
+- Implemented directly (single-owner change, no subagent dispatch needed).
+- `require_internal_api_key` fails closed: missing key ⇒ 403, never allow.
+- Startup guard in `main.py` refuses to boot without `INTERNAL_API_KEY`
+  (or `UNIRIDE_DISABLE_AUTH=1`); `validate_bind_host` rejects non-loopback
+  binds without `ALLOW_PUBLIC_BIND=1`.
+- `test_phase0_containment.py` updated to the fail-closed contract; NEW
+  `optimizer_api/tests/test_phase0_auth_guard.py` (G1-G4: missing-key 403 on
+  benchmark/CLI routes, correct-key pass, startup guard, bind guard).
+- Full regression: **1632+ tests green**; `git diff --check` clean.
 
 ## Steps
 

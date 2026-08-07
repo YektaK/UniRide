@@ -18,15 +18,23 @@ def test_optimizer_host_defaults_to_loopback(monkeypatch):
     assert optimizer_host() == "127.0.0.1"
 
 
-def test_internal_key_is_optional_but_rejects_mismatch(monkeypatch):
+def test_internal_key_is_required_and_rejects_mismatch(monkeypatch):
     monkeypatch.delenv("INTERNAL_API_KEY", raising=False)
-    asyncio.run(require_internal_api_key(None))
+
+    with pytest.raises(HTTPException) as exc_unset:
+        asyncio.run(require_internal_api_key(None))
+    assert exc_unset.value.status_code == 403
+
+    with pytest.raises(HTTPException) as exc_unset_with_header:
+        asyncio.run(require_internal_api_key("anything"))
+    assert exc_unset_with_header.value.status_code == 403
+
     monkeypatch.setenv("INTERNAL_API_KEY", "expected")
 
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(HTTPException) as exc_wrong:
         asyncio.run(require_internal_api_key("wrong"))
 
-    assert exc.value.status_code == 403
+    assert exc_wrong.value.status_code == 403
 
 
 def test_cli_filename_cannot_escape_result_roots(tmp_path, monkeypatch):

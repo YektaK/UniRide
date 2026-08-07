@@ -83,7 +83,8 @@ Acceptance:
 
 Target: weeks 2-3.
 
-- [ ] Preserve the verified process-level singleton while extracting an injectable matrix repository with explicit lifecycle, cache-health, and test boundaries.
+- [x] Preserve the verified process-level singleton while extracting an injectable matrix repository with explicit lifecycle, cache-health, and test boundaries.
+  Evidence: `optimizer_api/utils/matrix_repository.py` (`TimeMatrixRepository`, `TravelTimeProvider` seam, explicit `load`/`refresh`/`close`, `health()` metadata); `DataLoader` keeps `SingletonMeta` + `get_instance` and delegates; `test_matrix_repository.py` (provider seam, TTL w/ injected clock, force refresh, health, close, delegation); existing DataLoader test suites unchanged and green.
 - [ ] Add provider timeouts, cache TTL, last-known-good behavior, and health metadata.
 - [ ] Reject missing or invalid off-diagonal arcs.
 - [ ] Separate production geographic travel time from academic metrics.

@@ -8,14 +8,15 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from uniride_core.algorithms.ga_split_engine import nearest_neighbor_tour
+from uniride_core.algorithms.objective_rank import FeasibleVehiclesCost, objective_key
 from uniride_core.algorithms.meta_split_common import (
     decode_final_tour,
     giant_tour_cost,
     local_search_improve,
     shuffle_permutation,
-    split_penalized_cost,
 )
 from uniride_core.algorithms.gwo_split_engine import apply_swaps
+from uniride_core.algorithms.string_split_decoder import decode_giant_tour
 
 
 @dataclass
@@ -25,6 +26,7 @@ class Hawk:
     position: List[str]
     fitness: float = 0.0
     total_cost: float = float("inf")
+    obj_key: Optional[FeasibleVehiclesCost] = None
 
 
 @dataclass
@@ -158,18 +160,21 @@ def evaluate_hawk(
     max_tour_duration: float,
     is_asymmetric: bool = False,
 ) -> Hawk:
-    """Evaluate a hawk with split-decoded penalized route cost."""
-    cost = split_penalized_cost(
-        hawk.position,
-        depot,
-        distance_matrix,
-        demands,
-        sw_capacity,
-        so_capacity,
-        max_tour_duration,
-        is_asymmetric,
+    """Evaluate a hawk with split-decoded lexicographic objective."""
+    decoded = decode_giant_tour(
+        giant_tour=hawk.position,
+        depot=depot,
+        distance_matrix=distance_matrix,
+        demands=demands,
+        sw_capacity=sw_capacity,
+        so_capacity=so_capacity,
+        max_tour_duration=max_tour_duration,
+        is_asymmetric=is_asymmetric,
     )
-    return Hawk(position=hawk.position, total_cost=cost, fitness=1.0 / cost if cost > 0 else 0.0)
+    cost = float(decoded.get("total_cost", float("inf")))
+    num_vehicles = int(decoded.get("num_vehicles", 0))
+    key = objective_key({"num_vehicles": num_vehicles, "total_cost": cost})
+    return Hawk(position=hawk.position, total_cost=cost, fitness=1.0 / cost if cost > 0 else 0.0, obj_key=key)
 
 
 def solve_hho_split(
@@ -195,8 +200,8 @@ def solve_hho_split(
         evaluate_hawk(hawk, depot, distance_matrix, demands, sw_capacity, so_capacity, max_tour_duration, is_asymmetric)
         for hawk in initialize_population(waypoints, config, rng, distance_matrix)
     ]
-    prey_seed = min(hawks, key=lambda hawk: hawk.total_cost)
-    prey = Hawk(prey_seed.position.copy(), prey_seed.fitness, prey_seed.total_cost)
+    prey_seed = min(hawks, key=lambda hawk: hawk.obj_key or (1, 999, float("inf")))
+    prey = Hawk(prey_seed.position.copy(), prey_seed.fitness, prey_seed.total_cost, prey_seed.obj_key)
 
     no_improvement = 0
     iteration = 0
@@ -250,13 +255,14 @@ def solve_hho_split(
                 max_tour_duration,
                 is_asymmetric,
             )
-            if candidate.total_cost < hawk.total_cost:
+            if candidate.obj_key and hawk.obj_key and candidate.obj_key < hawk.obj_key:
                 hawk.position = candidate.position
                 hawk.total_cost = candidate.total_cost
                 hawk.fitness = candidate.fitness
+                hawk.obj_key = candidate.obj_key
 
-            if hawk.total_cost < prey.total_cost:
-                prey = Hawk(hawk.position.copy(), hawk.fitness, hawk.total_cost)
+            if hawk.obj_key and prey.obj_key and hawk.obj_key < prey.obj_key:
+                prey = Hawk(hawk.position.copy(), hawk.fitness, hawk.total_cost, hawk.obj_key)
                 improved = True
 
         no_improvement = 0 if improved else no_improvement + 1

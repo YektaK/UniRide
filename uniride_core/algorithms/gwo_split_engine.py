@@ -7,12 +7,13 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from uniride_core.algorithms.ga_split_engine import nearest_neighbor_tour
+from uniride_core.algorithms.objective_rank import FeasibleVehiclesCost, objective_key
 from uniride_core.algorithms.meta_split_common import (
     decode_final_tour,
     local_search_improve,
     shuffle_permutation,
-    split_penalized_cost,
 )
+from uniride_core.algorithms.string_split_decoder import decode_giant_tour
 
 
 @dataclass
@@ -22,6 +23,7 @@ class Wolf:
     position: List[str]
     fitness: float = 0.0
     total_cost: float = float("inf")
+    obj_key: Optional[FeasibleVehiclesCost] = None
 
 
 @dataclass
@@ -117,18 +119,21 @@ def evaluate_wolf(
     max_tour_duration: float,
     is_asymmetric: bool = False,
 ) -> Wolf:
-    """Evaluate a wolf with split-decoded penalized route cost."""
-    cost = split_penalized_cost(
-        wolf.position,
-        depot,
-        distance_matrix,
-        demands,
-        sw_capacity,
-        so_capacity,
-        max_tour_duration,
-        is_asymmetric,
+    """Evaluate a wolf with split-decoded lexicographic objective."""
+    decoded = decode_giant_tour(
+        giant_tour=wolf.position,
+        depot=depot,
+        distance_matrix=distance_matrix,
+        demands=demands,
+        sw_capacity=sw_capacity,
+        so_capacity=so_capacity,
+        max_tour_duration=max_tour_duration,
+        is_asymmetric=is_asymmetric,
     )
-    return Wolf(position=wolf.position, total_cost=cost, fitness=1.0 / cost if cost > 0 else 0.0)
+    cost = float(decoded.get("total_cost", float("inf")))
+    num_vehicles = int(decoded.get("num_vehicles", 0))
+    key = objective_key({"num_vehicles": num_vehicles, "total_cost": cost})
+    return Wolf(position=wolf.position, total_cost=cost, fitness=1.0 / cost if cost > 0 else 0.0, obj_key=key)
 
 
 def solve_gwo_split(
@@ -154,10 +159,10 @@ def solve_gwo_split(
         evaluate_wolf(wolf, depot, distance_matrix, demands, sw_capacity, so_capacity, max_tour_duration, is_asymmetric)
         for wolf in initialize_pack(waypoints, config, rng, distance_matrix)
     ]
-    pack.sort(key=lambda wolf: wolf.total_cost)
-    alpha = Wolf(pack[0].position.copy(), pack[0].fitness, pack[0].total_cost)
-    beta = Wolf(pack[1].position.copy(), pack[1].fitness, pack[1].total_cost) if len(pack) > 1 else alpha
-    delta = Wolf(pack[2].position.copy(), pack[2].fitness, pack[2].total_cost) if len(pack) > 2 else beta
+    pack.sort(key=lambda wolf: wolf.obj_key or (1, 999, float("inf")))
+    alpha = Wolf(pack[0].position.copy(), pack[0].fitness, pack[0].total_cost, pack[0].obj_key)
+    beta = Wolf(pack[1].position.copy(), pack[1].fitness, pack[1].total_cost, pack[1].obj_key) if len(pack) > 1 else alpha
+    delta = Wolf(pack[2].position.copy(), pack[2].fitness, pack[2].total_cost, pack[2].obj_key) if len(pack) > 2 else beta
 
     no_improvement = 0
     iteration = 0
@@ -191,22 +196,23 @@ def solve_gwo_split(
                 max_tour_duration,
                 is_asymmetric,
             )
-            if candidate.total_cost < wolf.total_cost:
+            if candidate.obj_key and wolf.obj_key and candidate.obj_key < wolf.obj_key:
                 wolf.position = candidate.position
                 wolf.total_cost = candidate.total_cost
                 wolf.fitness = candidate.fitness
+                wolf.obj_key = candidate.obj_key
 
-            if wolf.total_cost < alpha.total_cost:
-                delta = Wolf(beta.position.copy(), beta.fitness, beta.total_cost)
-                beta = Wolf(alpha.position.copy(), alpha.fitness, alpha.total_cost)
-                alpha = Wolf(wolf.position.copy(), wolf.fitness, wolf.total_cost)
+            if wolf.obj_key and alpha.obj_key and wolf.obj_key < alpha.obj_key:
+                delta = Wolf(beta.position.copy(), beta.fitness, beta.total_cost, beta.obj_key)
+                beta = Wolf(alpha.position.copy(), alpha.fitness, alpha.total_cost, alpha.obj_key)
+                alpha = Wolf(wolf.position.copy(), wolf.fitness, wolf.total_cost, wolf.obj_key)
                 improved = True
-            elif wolf.total_cost < beta.total_cost:
-                delta = Wolf(beta.position.copy(), beta.fitness, beta.total_cost)
-                beta = Wolf(wolf.position.copy(), wolf.fitness, wolf.total_cost)
+            elif wolf.obj_key and beta.obj_key and wolf.obj_key < beta.obj_key:
+                delta = Wolf(beta.position.copy(), beta.fitness, beta.total_cost, beta.obj_key)
+                beta = Wolf(wolf.position.copy(), wolf.fitness, wolf.total_cost, wolf.obj_key)
                 improved = True
-            elif wolf.total_cost < delta.total_cost:
-                delta = Wolf(wolf.position.copy(), wolf.fitness, wolf.total_cost)
+            elif wolf.obj_key and delta.obj_key and wolf.obj_key < delta.obj_key:
+                delta = Wolf(wolf.position.copy(), wolf.fitness, wolf.total_cost, wolf.obj_key)
                 improved = True
 
         no_improvement = 0 if improved else no_improvement + 1

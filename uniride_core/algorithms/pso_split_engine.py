@@ -7,12 +7,13 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from uniride_core.algorithms.ga_split_engine import nearest_neighbor_tour
+from uniride_core.algorithms.objective_rank import FeasibleVehiclesCost, objective_key
 from uniride_core.algorithms.meta_split_common import (
     decode_final_tour,
     local_search_improve,
     shuffle_permutation,
-    split_penalized_cost,
 )
+from uniride_core.algorithms.string_split_decoder import decode_giant_tour
 
 
 @dataclass
@@ -23,7 +24,9 @@ class Particle:
     velocity: List[Tuple[int, int, float]]
     personal_best: List[str]
     personal_best_cost: float = float("inf")
+    personal_best_key: Optional[FeasibleVehiclesCost] = None
     current_cost: float = float("inf")
+    current_key: Optional[FeasibleVehiclesCost] = None
 
 
 @dataclass
@@ -129,6 +132,32 @@ def update_velocity(
     return new_velocity[:max_velocity]
 
 
+def _evaluate_position(
+    position: List[str],
+    depot: str,
+    distance_matrix: Dict[str, Dict[str, float]],
+    demands: Dict[str, Tuple[int, int]],
+    sw_capacity: int,
+    so_capacity: int,
+    max_tour_duration: float,
+    is_asymmetric: bool,
+) -> Tuple[float, FeasibleVehiclesCost]:
+    """Decode a position into (cost, lexicographic objective key)."""
+    decoded = decode_giant_tour(
+        giant_tour=position,
+        depot=depot,
+        distance_matrix=distance_matrix,
+        demands=demands,
+        sw_capacity=sw_capacity,
+        so_capacity=so_capacity,
+        max_tour_duration=max_tour_duration,
+        is_asymmetric=is_asymmetric,
+    )
+    cost = float(decoded.get("total_cost", float("inf")))
+    num_vehicles = int(decoded.get("num_vehicles", 0))
+    return cost, objective_key({"num_vehicles": num_vehicles, "total_cost": cost})
+
+
 def solve_pso_split(
     waypoints: List[str],
     depot: str,
@@ -151,15 +180,19 @@ def solve_pso_split(
     swarm = initialize_swarm(waypoints, config, rng, distance_matrix)
     global_best: Optional[List[str]] = None
     global_best_cost = float("inf")
+    global_best_key: Optional[FeasibleVehiclesCost] = None
 
     for particle in swarm:
-        cost = split_penalized_cost(
+        cost, key = _evaluate_position(
             particle.position, depot, distance_matrix, demands,
             sw_capacity, so_capacity, max_tour_duration, is_asymmetric,
         )
         particle.current_cost = cost
+        particle.current_key = key
         particle.personal_best_cost = cost
-        if cost < global_best_cost:
+        particle.personal_best_key = key
+        if key is not None and (global_best_key is None or key < global_best_key):
+            global_best_key = key
             global_best_cost = cost
             global_best = particle.position.copy()
 
@@ -185,20 +218,25 @@ def solve_pso_split(
                     str(config.get("local_search_type", "hybrid")),
                 )
 
-            new_cost = split_penalized_cost(
+            new_cost, new_key = _evaluate_position(
                 new_position, depot, distance_matrix, demands,
                 sw_capacity, so_capacity, max_tour_duration, is_asymmetric,
             )
-            if new_cost < particle.personal_best_cost:
+            if new_key is not None and (
+                particle.personal_best_key is None or new_key < particle.personal_best_key
+            ):
                 particle.personal_best = new_position.copy()
                 particle.personal_best_cost = new_cost
+                particle.personal_best_key = new_key
 
             particle.position = new_position
             particle.current_cost = new_cost
+            particle.current_key = new_key
 
-            if new_cost < global_best_cost:
+            if new_key is not None and (global_best_key is None or new_key < global_best_key):
                 global_best = new_position.copy()
                 global_best_cost = new_cost
+                global_best_key = new_key
                 improved = True
 
         no_improvement = 0 if improved else no_improvement + 1

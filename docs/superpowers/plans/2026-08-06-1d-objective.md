@@ -1,10 +1,17 @@
 # 1D-OBJECTIVE — One Objective for Fitness, Incumbent, and Reporting (plan)
 
-Status: PROPOSED
+Status: COMPLETE (implemented directly after two no-op subagent dispatches)
 Date: 2026-08-06
 Package: phase1 item 1D (second serial workstream)
 Branch: `codex/phase1-1d-objective-20260806` (from origin/WIP)
 Docs: `docs/superpowers/specs/2026-08-06-1d-objective-design.md`
+
+## Status notes
+
+- Implemented by hand (branch owner) after two subagent dispatches returned
+  empty no-op task results (no commit, no `objective_rank.py`).
+- Full scoped regression: **1632 passed** (incl. `test_objective_rank.py`
+  28 tests and `test_alns_c3_evidence.py` 54 tests), `git diff --check` clean.
 
 ## Steps
 

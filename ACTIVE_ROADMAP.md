@@ -62,8 +62,8 @@ Target: week 1. These are release blockers.
 
 1D objective items (tracked as a separate serial workstream, `1D-objective`):
 
-- [ ] Use one objective for fitness, incumbent selection, and reporting.
-- [ ] Prefer lexicographic feasibility/vehicle-count/travel-cost ordering in production.
+- [x] Use one objective for fitness, incumbent selection, and reporting.
+- [x] Prefer lexicographic feasibility/vehicle-count/travel-cost ordering in production.
 - [ ] Correct cyclic ALNS insertion deltas.
 
 1D-RNG items (`codex/phase1-1d-rng-determinism-20260806`, merged):

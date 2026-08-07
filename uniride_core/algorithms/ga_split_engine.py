@@ -9,6 +9,11 @@ from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from uniride_core.algorithms.ga_operators import mutate_permutation, order_crossover
 from uniride_core.algorithms.local_search import LocalSearchType, apply_local_search
+from uniride_core.algorithms.objective_rank import (
+    FeasibleVehiclesCost,
+    fitness_from_key,
+    objective_key,
+)
 from uniride_core.algorithms.string_split_decoder import decode_giant_tour, decode_with_time_windows
 
 logger = logging.getLogger(__name__)
@@ -24,6 +29,7 @@ class GAIndividual:
     fitness: float = 0.0
     total_cost: float = float("inf")
     num_vehicles: int = 0
+    obj_key: Optional[FeasibleVehiclesCost] = None
 
 
 @dataclass
@@ -112,22 +118,26 @@ def evaluate_individual(
     )
 
     if result["num_vehicles"] == 0:
+        key = (1, 999, float("inf"))
         return GAIndividual(
             chromosome=individual.chromosome,
-            fitness=0.0,
+            fitness=fitness_from_key(key),
             total_cost=float("inf"),
             num_vehicles=999,
+            obj_key=key,
         )
 
     total_cost = float(result["total_cost"])
     num_vehicles = int(result["num_vehicles"])
-    fitness = 1.0 / (total_cost + num_vehicles * 50)
+    key = objective_key({"num_vehicles": num_vehicles, "total_cost": total_cost})
+    fitness = fitness_from_key(key)
 
     return GAIndividual(
         chromosome=individual.chromosome,
         fitness=fitness,
         total_cost=total_cost,
         num_vehicles=num_vehicles,
+        obj_key=key,
     )
 
 
@@ -164,7 +174,7 @@ def tournament_selection(
 ) -> GAIndividual:
     """Select an individual using tournament selection."""
     tournament = rng.sample(population, min(tournament_size, len(population)))
-    return max(tournament, key=lambda individual: individual.fitness)
+    return min(tournament, key=lambda individual: individual.obj_key or (1, 999, float("inf")))
 
 
 def educate_individual(
@@ -195,6 +205,7 @@ def educate_individual(
             fitness=individual.fitness,
             total_cost=individual.total_cost,
             num_vehicles=individual.num_vehicles,
+            obj_key=individual.obj_key,
         )
     except Exception as exc:
         logger.debug("Local search failed for individual: %s", exc)
@@ -206,7 +217,7 @@ def diversify_population(
     rng: random.Random,
 ) -> List[GAIndividual]:
     """Keep the best 30 percent and refill the rest with random permutations."""
-    sorted_population = sorted(population, key=lambda individual: individual.fitness, reverse=True)
+    sorted_population = sorted(population, key=lambda individual: individual.obj_key or (1, 999, float("inf")))
     keep_count = max(2, int(len(population) * 0.3))
     new_population = [
         GAIndividual(
@@ -214,6 +225,7 @@ def diversify_population(
             fitness=individual.fitness,
             total_cost=individual.total_cost,
             num_vehicles=individual.num_vehicles,
+            obj_key=individual.obj_key,
         )
         for individual in sorted_population[:keep_count]
     ]
@@ -234,7 +246,7 @@ def evolve_population(
 ) -> List[GAIndividual]:
     """Create the next GA-Split generation."""
     new_population: List[GAIndividual] = []
-    sorted_population = sorted(population, key=lambda individual: individual.fitness, reverse=True)
+    sorted_population = sorted(population, key=lambda individual: individual.obj_key or (1, 999, float("inf")))
     elite_count = int(config.get("elite_count", 3))
     population_size = int(config.get("population_size", 50))
     tournament_size = int(config.get("tournament_size", 4))
@@ -248,6 +260,7 @@ def evolve_population(
                 fitness=individual.fitness,
                 total_cost=individual.total_cost,
                 num_vehicles=individual.num_vehicles,
+                obj_key=individual.obj_key,
             )
         )
 
@@ -304,7 +317,7 @@ def solve_ga_split(
         is_asymmetric=is_asymmetric,
     )
 
-    best = min(population, key=lambda individual: individual.total_cost)
+    best = min(population, key=lambda individual: individual.obj_key or (1, 999, float("inf")))
     no_improvement = 0
     generation = 0
 
@@ -321,7 +334,7 @@ def solve_ga_split(
             is_asymmetric=is_asymmetric,
         )
 
-        current_best = min(population, key=lambda individual: individual.total_cost)
+        current_best = min(population, key=lambda individual: individual.obj_key or (1, 999, float("inf")))
         if generation % int(config.get("local_search_interval", 10)) == 0:
             current_best = educate_individual(
                 current_best,
@@ -340,7 +353,7 @@ def solve_ga_split(
                 is_asymmetric=is_asymmetric,
             )
 
-        if current_best.total_cost < best.total_cost:
+        if (current_best.obj_key or (1, 999, float("inf"))) < (best.obj_key or (1, 999, float("inf"))):
             best = current_best
             no_improvement = 0
         else:

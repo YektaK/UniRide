@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 from utils.patterns import SingletonMeta
 from utils.matrix_repository import (
+    IncompleteTravelMatrixError,
     SupabaseTimeMatrixProvider,
     TimeMatrixRepository,
 )
@@ -40,10 +41,16 @@ class DataLoader(metaclass=SingletonMeta):
         self._lock = repository._lock if repository is not None else None
 
         if repository is None:
-            ttl = int(os.environ.get("TIME_MATRIX_CACHE_TTL_SECONDS", "600"))
-            timeout = float(
-                os.environ.get("TIME_MATRIX_PROVIDER_TIMEOUT_SECONDS", "10.0")
-            )
+            try:
+                ttl = int(os.environ.get("TIME_MATRIX_CACHE_TTL_SECONDS", "600"))
+            except ValueError:
+                ttl = 600
+            try:
+                timeout = float(
+                    os.environ.get("TIME_MATRIX_PROVIDER_TIMEOUT_SECONDS", "10.0")
+                )
+            except ValueError:
+                timeout = 10.0
             supabase_url = os.environ.get("SUPABASE_URL", "")
             supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
             if supabase_url and supabase_key:

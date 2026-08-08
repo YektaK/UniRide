@@ -107,6 +107,7 @@ class TimeMatrixRepository:
         self._use_coordinates = True
         self._loaded_at: Optional[float] = None
         self._last_error: Optional[str] = None
+        self._next_retry_at: Optional[float] = None
 
     # ------------------------------------------------------------------ lifecycle
 
@@ -115,7 +116,9 @@ class TimeMatrixRepository:
 
         Last-known-good: if a matrix is already loaded and a *refresh* fetch
         fails, the previous matrix is kept (and reported stale via health)
-        instead of clearing to empty. The very first load has no prior matrix,
+        instead of clearing to empty. A failed fetch also sets a retry
+        backoff (``_next_retry_at``) so automatic refreshes do not hammer a
+        down provider on every call. The very first load has no prior matrix,
         so failure still falls back to coordinates.
         """
         if self._provider is None:
@@ -125,6 +128,7 @@ class TimeMatrixRepository:
             self._use_coordinates = True
             self._loaded_at = None
             self._last_error = None
+            self._next_retry_at = None
             return
         have_matrix = self.time_matrix is not None and not self._use_coordinates
         try:
@@ -133,8 +137,10 @@ class TimeMatrixRepository:
             self._use_coordinates = False
             self._loaded_at = self._clock()
             self._last_error = None
+            self._next_retry_at = None
         except Exception as exc:  # noqa: BLE001 - fallback, not propagate
             self._last_error = str(exc)
+            self._next_retry_at = self._clock() + self._ttl_seconds
             if have_matrix:
                 # Keep the last-known-good matrix; it is now stale (age grows
                 # beyond TTL) rather than an empty coordinate fallback.
@@ -146,15 +152,31 @@ class TimeMatrixRepository:
             self._loaded_at = None
 
     def refresh(self, force: bool = False) -> None:
-        """Reload from the provider when stale or forced (double-checked lock)."""
+        """Reload from the provider when stale or forced (double-checked lock).
+
+        Automatic refreshes respect the retry backoff set by a failed load:
+        while ``_next_retry_at`` is in the future, no fetch is attempted and
+        the last-known-good matrix (or coordinate fallback) keeps serving.
+        A forced refresh always bypasses the backoff.
+        """
         if self._provider is None:
+            return
+        if not force and self._in_backoff():
             return
         if not force and not self._is_cache_stale():
             return
         with self._lock:
+            if not force and self._in_backoff():
+                return
             if not force and not self._is_cache_stale():
                 return
             self.load()
+
+    def _in_backoff(self) -> bool:
+        """True while a failed load's retry window is still active."""
+        if self._next_retry_at is None:
+            return False
+        return self._clock() < self._next_retry_at
 
     def close(self) -> None:
         """Clear cached state — test isolation / lifecycle boundary."""
@@ -165,6 +187,7 @@ class TimeMatrixRepository:
             self._use_coordinates = True
             self._loaded_at = None
             self._last_error = None
+            self._next_retry_at = None
 
     # ------------------------------------------------------------------- helpers
 

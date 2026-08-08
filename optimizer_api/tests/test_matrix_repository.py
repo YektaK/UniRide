@@ -286,6 +286,47 @@ def test_first_load_failure_still_falls_back():
     assert repo.time_matrix is None
 
 
+def test_retry_backoff_prevents_fetch_storm():
+    clock = _MutableClock()
+    repo = _build_repo(provider=_FailingAfterProvider(), clock=clock)
+    repo.load()
+    assert repo.health()["loaded"] is True
+    clock.advance(601)
+    repo.refresh()  # stale -> one failing fetch; backoff armed
+    fetches = repo._provider._n
+    for _ in range(5):
+        repo.get_submatrix(["A", "B", "C"])  # backoff -> no new fetch
+    assert repo._provider._n == fetches
+    clock.advance(601)  # backoff window expires (== TTL)
+    repo.get_submatrix(["A", "B", "C"])  # one more attempt allowed
+    assert repo._provider._n == fetches + 1
+    assert repo.health()["loaded"] is True  # LKG still served
+
+
+def test_force_refresh_bypasses_backoff():
+    clock = _MutableClock()
+    repo = _build_repo(provider=_FailingAfterProvider(), clock=clock)
+    repo.load()
+    clock.advance(601)
+    repo.refresh()  # fails, backoff set
+    fetches = repo._provider._n
+    repo.get_submatrix(["A", "B", "C"])  # within backoff -> no fetch
+    assert repo._provider._n == fetches
+    repo.refresh(force=True)  # force ignores backoff
+    assert repo._provider._n == fetches + 1
+
+
+def test_env_timeout_garbage_falls_back_to_default(monkeypatch):
+    class _DL(DataLoader):
+        pass
+
+    monkeypatch.setenv("TIME_MATRIX_PROVIDER_TIMEOUT_SECONDS", "not-a-number")
+    monkeypatch.setenv("TIME_MATRIX_CACHE_TTL_SECONDS", "nope")
+    loader = _DL()
+    assert loader.repository._ttl_seconds == 600
+    assert loader.repository._provider is None  # no supabase creds -> coordinate mode
+
+
 def test_provider_timeout_plumbed_into_sdk_client(monkeypatch):
     pytest.importorskip("supabase")
     captured = {}

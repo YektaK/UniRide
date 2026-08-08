@@ -12,6 +12,16 @@ DEFAULT_TRAVEL_FALLBACK_MINUTES = 15.0
 DEFAULT_SPEED_KMH = 30.0
 
 
+class TravelTimeUnavailableError(LookupError):
+    """No travel time available for a (source, target) pair.
+
+    Raised by ``get_duration``/``calculate_route_duration`` when ``strict``
+    is enabled and neither the time matrix nor the coordinates can answer.
+    Production strategy code enables strict mode so missing arcs fail closed
+    instead of silently fabricating the generic fallback estimate.
+    """
+
+
 def haversine_distance_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     radius_km = 6371.0
     dlat = math.radians(lat2 - lat1)
@@ -37,8 +47,14 @@ def get_duration(
     time_matrix: Mapping,
     coordinates: Mapping,
     fallback_minutes: float = DEFAULT_TRAVEL_FALLBACK_MINUTES,
+    strict: bool = False,
 ) -> float:
-    """Get travel duration from matrix first, coordinate fallback second."""
+    """Get travel duration from matrix first, coordinate fallback second.
+
+    With ``strict=True``, a pair missing from both the matrix and the
+    coordinates raises ``TravelTimeUnavailableError`` instead of returning
+    the generic fallback estimate (fail-closed; used by production code).
+    """
     if from_loc in time_matrix and to_loc in time_matrix[from_loc]:
         return float(time_matrix[from_loc][to_loc])
 
@@ -47,6 +63,12 @@ def get_duration(
         c2 = coordinates[to_loc]
         dist = haversine_distance_km(float(c1["lat"]), float(c1["lng"]), float(c2["lat"]), float(c2["lng"]))
         return estimate_travel_time_minutes(dist)
+
+    if strict:
+        raise TravelTimeUnavailableError(
+            f"No travel time for {from_loc!r} -> {to_loc!r}: "
+            "missing from both the time matrix and the coordinates."
+        )
 
     logger.warning(
         "Distance matrix miss for %s to %s. Using default fallback: %s mins",
@@ -63,20 +85,26 @@ def calculate_route_duration(
     time_matrix: Dict,
     coordinates: Dict,
     fallback_minutes: float = DEFAULT_TRAVEL_FALLBACK_MINUTES,
+    strict: bool = False,
 ) -> float:
-    """Compute depot -> route -> depot duration in minutes."""
+    """Compute depot -> route -> depot duration in minutes.
+
+    ``strict`` is forwarded to ``get_duration`` (fail-closed on missing
+    arcs; see ``TravelTimeUnavailableError``).
+    """
     if not route:
         return 0.0
 
-    total = get_duration(depot, route[0], time_matrix, coordinates, fallback_minutes)
+    total = get_duration(depot, route[0], time_matrix, coordinates, fallback_minutes, strict)
     for idx in range(len(route) - 1):
-        total += get_duration(route[idx], route[idx + 1], time_matrix, coordinates, fallback_minutes)
-    total += get_duration(route[-1], depot, time_matrix, coordinates, fallback_minutes)
+        total += get_duration(route[idx], route[idx + 1], time_matrix, coordinates, fallback_minutes, strict)
+    total += get_duration(route[-1], depot, time_matrix, coordinates, fallback_minutes, strict)
     return total
 
 
 __all__ = [
     "DEFAULT_TRAVEL_FALLBACK_MINUTES",
+    "TravelTimeUnavailableError",
     "calculate_route_duration",
     "estimate_travel_time_minutes",
     "get_duration",

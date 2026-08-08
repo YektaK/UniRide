@@ -113,7 +113,30 @@ Each entry follows: **Context → Options → Chosen → Rationale → Evidence*
 
 ---
 
-## Engineering guardrails agreed for this session
+## D3. Audit follow-ups (2026-08-08): backoff, re-export, env guard, Path-3 strict
+
+- **Context:** External-auditor rerun of the 2B shipment produced three low/moderate
+  findings (no retry backoff → fetch storm; doc claimed `IncompleteTravelMatrixError`
+  re-export that did not exist; unguarded env float parse) and re-opened audit Path 3
+  (`route_metrics` 15-minute generic fallback still silently fabricates durations).
+- **Chosen:** fix all four, minimal, with pinned tests.
+  - F1: failed `load()` arms `_next_retry_at = clock + TTL`; `refresh()` skips the
+    fetch while in backoff (force bypasses). LKG still served; storm gone.
+  - F2: `data_loader` now re-exports `IncompleteTravelMatrixError` (doc claim true).
+  - F3: TTL/timeout env parse wrapped in `ValueError` fallback to defaults.
+  - Path-3: `route_metrics.get_duration`/`calculate_route_duration` gained
+    `strict=False`; strict raises `TravelTimeUnavailableError` instead of the
+    generic 15-minute estimate. `base_strategy._get_duration` (production seam)
+    passes `strict=True`; academic default unchanged.
+- **Evidence:** `test_retry_backoff_prevents_fetch_storm`,
+  `test_force_refresh_bypasses_backoff`, `test_env_timeout_garbage_falls_back_to_default`,
+  `test_get_duration_strict_raises_when_unavailable` (+ matrix/coordinate-hit and
+  non-strict back-compat cases in `test_route_metrics.py`).
+- **Tradeoff accepted:** strategies that previously received a fabricated 15-minute
+  value for an unanswerable pair now fail the request deterministically. The full
+  optimizer suite (427) and academic suite (338 core / 153 CI) stayed green, so no
+  current caller depends on the fabrication.
+- **Status 2026-08-08:** SHIPPED on `2B` (commits `f8a6b51`, Path-3 commit).
 
 - No changes to `uniride_core` algorithms beyond: (a) the documented test-constant fix (D1);
   no solver/decode semantics changed.

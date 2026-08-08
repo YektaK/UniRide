@@ -74,8 +74,10 @@ class BaseRoutingStrategy(ABC):
         Calculate duration between two locations using time matrix or coordinates.
         
         This is a shared helper method used by GA, PSO, GWO, HHO strategies.
-        Attempts to get time from matrix first, then falls back to haversine calculation,
-        then uses DEFAULT_TRAVEL_FALLBACK_MINUTES constant (15.0 minutes).
+        Attempts to get time from matrix first, then falls back to haversine calculation.
+        In strict mode (default), a pair missing from both the matrix and the
+        coordinates raises ``TravelTimeUnavailableError`` instead of silently
+        fabricating ``DEFAULT_TRAVEL_FALLBACK_MINUTES`` (fail-closed).
         
         Args:
             from_loc: Origin location ID
@@ -86,7 +88,7 @@ class BaseRoutingStrategy(ABC):
         Returns:
             Travel time in minutes (float)
         """
-        return get_duration(from_loc, to_loc, time_matrix, coordinates)
+        return get_duration(from_loc, to_loc, time_matrix, coordinates, strict=True)
 
     def _calculate_route_duration(
         self,

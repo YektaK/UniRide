@@ -2,6 +2,15 @@
 
 This is the curated project chronology. Entries record work and evidence available at that time; they do not override the current architecture, roadmap, or audit.
 
+## 2026-08-07 — Matrix repository extraction, autonomous session (2A + 2B)
+
+- Introduced an injectable `TimeMatrixRepository` with explicit lifecycle (`load`/`refresh(force)`/`close`), TTL with injected clock, `health()` cache metadata, and a `TravelTimeProvider` seam over the verified `DataLoader` singleton (`optimizer_api/utils/matrix_repository.py`).
+- Wiring: `TIME_MATRIX_PROVIDER_TIMEOUT_SECONDS` (default 10.0) plumbs a version-guarded `ClientOptions(postgrest_client_timeout=...)` into the Supabase provider; refresh failures now retain the last-known-good matrix (health reports stale + `last_error`), while first-load failure still falls back to coordinates.
+- Fail-closed arc validation: missing/non-finite/zero/negative off-diagonal arcs raise `IncompleteTravelMatrixError` from `get_duration`/`get_submatrix` (`source == target` remains 0.0).
+- Test-only correction in `uniride_core` distance tests: the `GEO` max-range assertion now uses `int(math.pi * 6378.388) + 1` (20039), the exact cap derived from the implemented `111.1949`-based metric (antipodal distance); the previous ad-hoc constant had no derivation.
+- Evidence: uniride_core 334 passed; optimizer_api 424 passed; CI integration batch 153 passed; CI on WIP green (`6e1f968`).
+- Sustained open items: generic `route_metrics` 15-minute fallback labeling, matrix provenance (domain/units/hash), academic-vs-production isolation, `pso_strategy` zero-seed semantic, CVRPTW decoder depot-token edge, `promoted_config_loader` import, PSO seed-0 reporting.
+
 ## 2026-07-16 - Ultimate Audit and Documentation Consolidation
 
 ### Scope

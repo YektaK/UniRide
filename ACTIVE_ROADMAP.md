@@ -85,8 +85,10 @@ Target: weeks 2-3.
 
 - [x] Preserve the verified process-level singleton while extracting an injectable matrix repository with explicit lifecycle, cache-health, and test boundaries.
   Evidence: `optimizer_api/utils/matrix_repository.py` (`TimeMatrixRepository`, `TravelTimeProvider` seam, explicit `load`/`refresh`/`close`, `health()` metadata); `DataLoader` keeps `SingletonMeta` + `get_instance` and delegates; `test_matrix_repository.py` (provider seam, TTL w/ injected clock, force refresh, health, close, delegation); existing DataLoader test suites unchanged and green.
-- [ ] Add provider timeouts, cache TTL, last-known-good behavior, and health metadata.
-- [ ] Reject missing or invalid off-diagonal arcs.
+- [x] Add provider timeouts, cache TTL, last-known-good behavior, and health metadata.
+  Evidence: `SupabaseTimeMatrixProvider(timeout_seconds=...)` with version-guarded `ClientOptions(postgrest_client_timeout=...)` fallback; `TIME_MATRIX_PROVIDER_TIMEOUT_SECONDS` env (default 10.0) wired from `DataLoader`; TTL via injected clock + `health()` (2a); `load()` preserves the last-known-good matrix on failed refresh (stale + `last_error` surfaced); pinned in `test_matrix_repository.py`.
+- [x] Reject missing or invalid off-diagonal arcs.
+  Evidence: `IncompleteTravelMatrixError` raised by `TimeMatrixRepository.get_duration`/`get_submatrix` for missing/non-finite/zero/negative off-diagonal arcs (`source == target` stays 0.0); asserted in `test_matrix_repository.py` (`test_missing_arc_raises`, `test_zero_or_negative_arc_raises`).
 - [ ] Separate production geographic travel time from academic metrics.
 - [ ] Create bounded typed algorithm configurations.
 - [ ] Bound students, vehicles, algorithms, problems, repetitions, workers, and iterations.

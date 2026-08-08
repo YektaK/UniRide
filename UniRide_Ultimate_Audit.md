@@ -38,7 +38,7 @@ The revised direct-source review corrected several claims from the original audi
 
 - `optimizer_api/utils/patterns.py:10-31` implements a thread-safe singleton metaclass, and `optimizer_api/utils/data_loader.py:128-131` returns `cls()` through that metaclass. Repeated `get_instance()` construction is not the defect.
 - `optimizer_api/strategies/pso_strategy.py:53` still falls back to `int(time.time() * 1000)` for every falsy seed, including an omitted seed, `None`, and explicit seed `0`. This breaks deterministic replay and discards seed-`0` semantics.
-- `optimizer_api/utils/data_loader.py:53-59` constructs the Supabase client without an explicit provider timeout. A stalled external request can therefore block loading. (2A extracted the provider into `TimeMatrixRepository`/`SupabaseTimeMatrixProvider`; the timeout itself remains open.)
+- Original finding: `optimizer_api/utils/data_loader.py:53-59` constructed the Supabase client without an explicit provider timeout; a stalled external request could block loading. (2A extracted the provider into `TimeMatrixRepository`/`SupabaseTimeMatrixProvider`.) — **Closed in 2B**: `matrix_repository.py` now provides an explicit, version-guarded provider timeout (`TIME_MATRIX_PROVIDER_TIMEOUT_SECONDS`), last-known-good retention on refresh failure, and fail-closed `IncompleteTravelMatrixError` for missing/non-finite/zero/negative off-diagonal arcs. The generic `route_metrics` 15-minute fallback remains a labeled-approximation open item.
 - `uniride_core/algorithms/cvrptw_decoder.py:95-111` skips a depot token without updating `prev`, so travel after a mid-route depot can be measured from a stale predecessor.
 - `optimizer_api/strategies/promoted_config_loader.py:9-13` still imports academic promoted-config code into production strategy construction.
 - `normalize_strategy_params` preserves unknown names rather than dropping them; the remaining risk is that downstream strategies silently ignore academic names they do not consume.
@@ -197,7 +197,7 @@ The backend result must be the authority for effective direction, feasibility, m
 ### Backend/API
 
 - Production uses shared `STRATEGY_REGISTRY` instances although fresh factories exist.
-- `DataLoader` is a process-level singleton, but its Supabase client has no explicit provider timeout and last-known-good semantics remain open. (The 2A matrix-repository extraction added explicit lifecycle and cache-health metadata; timeout + last-known-good are Phase 2 item 2.)
+- `DataLoader` is a process-level singleton with timeout, last-known-good, cache-health, and fail-closed arc validation in place (2A/2B); the generic `route_metrics` fallback and academic-vs-production metric isolation remain open.
 - `/compare` creates a thread pool sized from input and does not truly cancel timed-out work.
 - Optional `None` strategies can break health/default comparison enumeration.
 - Benchmark state is process-local.

@@ -62,7 +62,7 @@ Verified limitations:
 - Request sizes and algorithm configurations are insufficiently bounded.
 - Benchmark admission and creation are non-atomic; stop does not cancel work.
 - CLI preview/import accepted caller-selected filesystem paths.
-- `DataLoader` is a verified process-level singleton that delegates to an injectable `TimeMatrixRepository` (`optimizer_api/utils/matrix_repository.py`): explicit `load`/`refresh(force)`/`close` lifecycle, TTL with injected clock, and `health()` cache metadata (source, loaded, stale, age, ttl, locations, edges, last_error). The only remaining matrix risk from this block is that the Supabase provider still lacks an explicit request timeout and last-known-good persistence — scheduled in Phase 2, and the residual P0 matrix-integrity items (arc completeness, provider timeouts) still stand.
+- `DataLoader` is a verified process-level singleton that delegates to an injectable `TimeMatrixRepository` (`optimizer_api/utils/matrix_repository.py`): explicit `load`/`refresh(force)`/`close` lifecycle, TTL with injected clock, provider timeout (`TIME_MATRIX_PROVIDER_TIMEOUT_SECONDS`, version-guarded SDK option), last-known-good retention on refresh failure, and `health()` cache metadata (source, loaded, stale, age, ttl, locations, edges, last_error). Missing, zero, negative, or non-finite off-diagonal arcs are rejected with `IncompleteTravelMatrixError`; residual matrix items: generic `route_metrics` 15-minute fallback labeling and production/academic metric separation.
 - Production promoted-config loading imports `academic_benchmark.promoted_configs`, leaving the production-to-academic dependency boundary porous.
 - FastAPI routers have no authentication dependency.
 
@@ -71,7 +71,7 @@ Verified limitations:
 Contains distance functions, clustering, split decoders, metaheuristic engines, local search, Numba kernels, ALNS/SOTA operators, solver adapters, and routing models.
 
 The dependency direction is mostly sound: the core does not intentionally depend on FastAPI or academic orchestration. The model boundary remains incomplete because legacy core models combine TSPLIB metadata, benchmark fields, and production constraints.
-The 2026-08-01 re-verification refuted the earlier “broken DataLoader singleton” claim. The 2026-08-07 matrix-repository work preserved that singleton (as a facade over an injectable `TimeMatrixRepository`) and closed the cache-health gap with tested `health()` metadata. Provider timeout, matrix provenance, arc completeness, and production/academic isolation risks remain open.
+The 2026-08-01 re-verification refuted the earlier “broken DataLoader singleton” claim. The 2026-08-07 matrix-repository work preserved that singleton (as a facade over an injectable `TimeMatrixRepository`) and closed the cache-health gap with tested `health()` metadata; the 2B work added provider timeout, last-known-good retention, and fail-closed arc rejection. Remaining: `route_metrics` generic fallback labeling, matrix provenance, and production/academic isolation.
 
 ### `academic_benchmark/`: experiment system
 
@@ -154,9 +154,9 @@ Production owns authentication, user DTOs, provider-specific geography, route ge
 
 ## 6. Matrix Architecture
 
-Production loading path (verified in 2A): the process-level `DataLoader` singleton delegates to an injectable `TimeMatrixRepository` whose `TravelTimeProvider` seam fetches `time_matrix` rows from Supabase with a coordinate-distance fallback; the repository exposes explicit lifecycle and cache-health (see `optimizer_api/utils/matrix_repository.py`).
+Production loading path (verified in 2A/2B): the process-level `DataLoader` singleton delegates to an injectable `TimeMatrixRepository` whose `TravelTimeProvider` seam fetches `time_matrix` rows from Supabase (with a configurable provider timeout and last-known-good retention) and falls back to coordinate distance; the repository exposes explicit lifecycle, cache-health, and rejects missing/invalid off-diagonal arcs via `IncompleteTravelMatrixError` (see `optimizer_api/utils/matrix_repository.py` and `optimizer_api/utils/data_loader.py`).
 
-Current critical risk: missing directed arcs can become zero-valued, Euclidean-degree, or generic fallback edges. This silently changes route order, feasibility, and benchmark rankings.
+Current critical risk: missing directed arcs can still become generic fallback edges in the `route_metrics` layer (`DEFAULT_TRAVEL_FALLBACK_MINUTES`), and an academic/coordinate path can still produce Euclidean-degree or fabricated edges. These silently change route order, feasibility, and benchmark rankings.
 
 Required rules:
 

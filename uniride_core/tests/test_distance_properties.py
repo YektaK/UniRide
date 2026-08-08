@@ -194,7 +194,7 @@ class TestTSPLIB_GEO:
         floats(min_value=-180, max_value=180, allow_nan=False, allow_infinity=False),
     )
     def test_max_range(self, lat1, lon1, lat2, lon2):
-        TSPLIB_GEO_MAX = 20000
+        TSPLIB_GEO_MAX = int(math.pi * 6378.388) + 1
         assert tsplib_geo_distance((lat1, lon1), (lat2, lon2)) <= TSPLIB_GEO_MAX
 
 

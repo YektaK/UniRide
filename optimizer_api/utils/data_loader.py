@@ -41,10 +41,15 @@ class DataLoader(metaclass=SingletonMeta):
 
         if repository is None:
             ttl = int(os.environ.get("TIME_MATRIX_CACHE_TTL_SECONDS", "600"))
+            timeout = float(
+                os.environ.get("TIME_MATRIX_PROVIDER_TIMEOUT_SECONDS", "10.0")
+            )
             supabase_url = os.environ.get("SUPABASE_URL", "")
             supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
             if supabase_url and supabase_key:
-                provider = SupabaseTimeMatrixProvider(supabase_url, supabase_key)
+                provider = SupabaseTimeMatrixProvider(
+                    supabase_url, supabase_key, timeout_seconds=timeout
+                )
             else:
                 logger.warning(
                     "SUPABASE credentials not found. Using coordinate-based distance calculation."

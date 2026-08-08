@@ -1,6 +1,12 @@
 """Tests for the injectable matrix repository and the DataLoader delegation."""
 
-from utils.matrix_repository import TimeMatrixRepository
+import pytest
+
+from utils.matrix_repository import (
+    IncompleteTravelMatrixError,
+    SupabaseTimeMatrixProvider,
+    TimeMatrixRepository,
+)
 from utils.data_loader import DataLoader, euclidean_distance
 
 
@@ -16,6 +22,21 @@ class _FakeProvider:
     def fetch_rows(self):
         self.calls += 1
         return self.rows
+
+
+class _CompleteProvider(_FakeProvider):
+    """Full directed 3x3 matrix so submatrix lookups never hit a missing arc."""
+
+    def __init__(self):
+        rows = [
+            {"origin_code": a, "destination_code": b, "duration_minutes": d}
+            for a, b, d in [
+                ("A", "A", 0), ("A", "B", 5), ("A", "C", 3),
+                ("B", "A", 6), ("B", "B", 0), ("B", "C", 7),
+                ("C", "A", 8), ("C", "B", 4), ("C", "C", 0),
+            ]
+        ]
+        super().__init__(rows=rows)
 
 
 class _FailingProvider:
@@ -49,24 +70,50 @@ def _build_repo(provider=_DEFAULT, clock=None, ttl_seconds=600):
 
 
 def test_provider_rows_build_submatrix():
-    repo = _build_repo()
+    repo = _build_repo(provider=_CompleteProvider())
     repo.load()
     sub = repo.get_submatrix(["A", "B", "C"])
     assert sub == [
-        [0.0, 5.0, 0.0],
-        [6.0, 0.0, 0.0],
-        [8.0, 0.0, 0.0],
+        [0.0, 5.0, 3.0],
+        [6.0, 0.0, 7.0],
+        [8.0, 4.0, 0.0],
     ]
 
 
 def test_get_duration_and_has_location():
-    repo = _build_repo()
+    repo = _build_repo(provider=_CompleteProvider())
     repo.load()
     assert repo.get_duration("A", "B") == 5.0
     assert repo.get_duration("B", "A") == 6.0
-    assert repo.get_duration("A", "C") == 0.0
+    assert repo.get_duration("A", "C") == 3.0
     assert repo.has_location("A")
     assert not repo.has_location("Z")
+
+
+def test_missing_arc_raises():
+    repo = _build_repo()  # partial: C->A only among C pairs
+    repo.load()
+    with pytest.raises(IncompleteTravelMatrixError):
+        repo.get_duration("A", "C")
+    with pytest.raises(IncompleteTravelMatrixError):
+        repo.get_duration("Z", "A")
+    with pytest.raises(IncompleteTravelMatrixError):
+        repo.get_submatrix(["A", "B", "C"])
+
+
+def test_zero_or_negative_arc_raises():
+    provider = _FakeProvider(rows=[
+        {"origin_code": "A", "destination_code": "B", "duration_minutes": 0},
+        {"origin_code": "B", "destination_code": "A", "duration_minutes": 5},
+        {"origin_code": "B", "destination_code": "C", "duration_minutes": -1},
+    ])
+    repo = _build_repo(provider=provider)
+    repo.load()
+    with pytest.raises(IncompleteTravelMatrixError):
+        repo.get_duration("A", "B")
+    with pytest.raises(IncompleteTravelMatrixError):
+        repo.get_duration("B", "C")
+    assert repo.get_duration("B", "A") == 5.0
 
 
 # ----------------------------------------------------------------------- health
@@ -156,11 +203,11 @@ def test_close_clears_state():
 # -------------------------------------------------------------------- DataLoader
 
 
-def _make_delegating_loader():
+def _make_delegating_loader(provider=_DEFAULT):
     class _DL(DataLoader):
         pass
 
-    return _DL, _build_repo()
+    return _DL, _build_repo(provider=provider)
 
 
 def test_data_loader_delegates_to_repository():
@@ -174,7 +221,7 @@ def test_data_loader_delegates_to_repository():
 
 
 def test_data_loader_get_submatrix_uses_delegated_repository():
-    _DL, repo = _make_delegating_loader()
+    _DL, repo = _make_delegating_loader(provider=_CompleteProvider())
     repo.load()
     loader = _DL(repository=repo)
     assert loader.get_submatrix(["A", "B", "C"]) == repo.get_submatrix(["A", "B", "C"])
@@ -198,3 +245,78 @@ def test_singleton_injection_seam_preserves_global_after_resolution():
     _DL, repo = _make_delegating_loader()
     inst = _DL(repository=repo)
     assert _DL() is inst  # singleton slot filled after first construction
+
+
+# ------------------------------------------------- provider timeout + last-known-good
+
+
+class _FailingAfterProvider(_FakeProvider):
+    """Succeeds once (full matrix), then fails on every subsequent fetch."""
+
+    def __init__(self):
+        _FakeProvider.__init__(self, rows=_CompleteProvider().rows)
+        self._n = 0
+
+    def fetch_rows(self):
+        self._n += 1
+        if self._n > 1:
+            raise RuntimeError("boom")
+        return _FakeProvider.fetch_rows(self)
+
+
+def test_last_known_good_matrix_survives_failed_refresh():
+    clock = _MutableClock()
+    repo = _build_repo(provider=_FailingAfterProvider(), clock=clock)
+    repo.load()
+    assert repo.health()["loaded"] is True
+    submatrix = repo.get_submatrix(["A", "B", "C"])
+    clock.advance(601)
+    repo.refresh()  # stale -> triggers a failing fetch
+    health = repo.health()
+    assert health["loaded"] is True  # matrix kept, not cleared
+    assert health["stale"] is True
+    assert "boom" in (health["last_error"] or "")
+    assert repo.get_submatrix(["A", "B", "C"]) == submatrix  # LKG unchanged
+
+
+def test_first_load_failure_still_falls_back():
+    repo = _build_repo(provider=_FailingProvider())
+    repo.load()
+    assert repo.health()["loaded"] is False
+    assert repo.time_matrix is None
+
+
+def test_provider_timeout_plumbed_into_sdk_client(monkeypatch):
+    pytest.importorskip("supabase")
+    captured = {}
+
+    class _FakeClient:
+        def __init__(self, url, key, **kwargs):
+            captured["url"] = url
+            captured["key"] = key
+            captured["kwargs"] = kwargs
+
+        def table(self, _name):
+            return self
+
+        def select(self, _cols):
+            return self
+
+        def execute(self):
+            return type("Resp", (), {"data": [{
+                "origin_code": "A", "destination_code": "B", "duration_minutes": 5}]})()
+
+    fake_create = lambda *a, **k: _FakeClient(*a, **k)  # noqa: E731
+    provider = SupabaseTimeMatrixProvider("https://x", "k", timeout_seconds=7.5)
+    rows = (
+        provider._build_client(fake_create)
+        .table("time_matrix")
+        .select("origin_code, destination_code, duration_minutes")
+        .execute()
+        .data
+    )
+    assert rows == [{
+        "origin_code": "A", "destination_code": "B", "duration_minutes": 5}]
+    assert captured["url"] == "https://x"
+    options = captured["kwargs"].get("options")
+    assert options is not None and options.postgrest_client_timeout == 7.5

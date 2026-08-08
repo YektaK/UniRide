@@ -12,9 +12,26 @@ delegates here.
 
 from __future__ import annotations
 
+import math
 import time
 import threading
 from typing import Any, Callable, Dict, List, Optional, Protocol
+
+
+class IncompleteTravelMatrixError(LookupError):
+    """A requested directed arc is missing, zero, negative, or non-finite.
+
+    Raised by the repository's lookup path when the loaded travel-time matrix
+    cannot answer for a given (source, target) pair. Source==target is always
+    valid (0.0). Mirrors the audit P0 requirement on arc completeness.
+    """
+
+    def __init__(self, source: str, target: str):
+        self.source = source
+        self.target = target
+        super().__init__(
+            f"Incomplete travel matrix: no valid arc {source!r} -> {target!r}."
+        )
 
 
 class TravelTimeProvider(Protocol):
@@ -28,14 +45,15 @@ class TravelTimeProvider(Protocol):
 class SupabaseTimeMatrixProvider:
     """Loads `time_matrix` rows from a Supabase table through ``create_client``."""
 
-    def __init__(self, url: str, key: str):
+    def __init__(self, url: str, key: str, timeout_seconds: Optional[float] = None):
         self.url = url
         self.key = key
+        self.timeout_seconds = timeout_seconds
 
     def fetch_rows(self) -> List[Dict[str, Any]]:
         from supabase import create_client, Client  # local import (lazy)
 
-        client: Client = create_client(self.url, self.key)
+        client = self._build_client(create_client)
         response = client.table("time_matrix").select(
             "origin_code, destination_code, duration_minutes"
         ).execute()
@@ -43,6 +61,25 @@ class SupabaseTimeMatrixProvider:
         if not rows:
             raise RuntimeError("time_matrix table is empty.")
         return rows
+
+    def _build_client(self, create_client: Callable) -> Any:
+        """Create the supabase client, applying the request timeout when the
+        installed SDK supports it (``postgrest_client_timeout`` via
+        ``ClientOptions``). Version-guarded: if the option is unavailable,
+        fall back to the SDK default rather than failing startup.
+        """
+        if self.timeout_seconds is None:
+            return create_client(self.url, self.key)
+        try:
+            from supabase.lib.client_options import ClientOptions
+
+            return create_client(
+                self.url,
+                self.key,
+                options=ClientOptions(postgrest_client_timeout=self.timeout_seconds),
+            )
+        except (ImportError, TypeError):
+            return create_client(self.url, self.key)
 
 
 class TimeMatrixRepository:
@@ -74,7 +111,13 @@ class TimeMatrixRepository:
     # ------------------------------------------------------------------ lifecycle
 
     def load(self) -> None:
-        """One-shot initial load from the provider; coordinate fallback on failure."""
+        """Load from the provider; coordinate fallback on first-load failure.
+
+        Last-known-good: if a matrix is already loaded and a *refresh* fetch
+        fails, the previous matrix is kept (and reported stale via health)
+        instead of clearing to empty. The very first load has no prior matrix,
+        so failure still falls back to coordinates.
+        """
         if self._provider is None:
             self.locations = []
             self.loc_to_idx = {}
@@ -83,6 +126,7 @@ class TimeMatrixRepository:
             self._loaded_at = None
             self._last_error = None
             return
+        have_matrix = self.time_matrix is not None and not self._use_coordinates
         try:
             rows = self._provider.fetch_rows()
             self._build_from_rows(rows)
@@ -91,6 +135,10 @@ class TimeMatrixRepository:
             self._last_error = None
         except Exception as exc:  # noqa: BLE001 - fallback, not propagate
             self._last_error = str(exc)
+            if have_matrix:
+                # Keep the last-known-good matrix; it is now stale (age grows
+                # beyond TTL) rather than an empty coordinate fallback.
+                return
             self.locations = []
             self.loc_to_idx = {}
             self.time_matrix = None
@@ -210,27 +258,39 @@ class TimeMatrixRepository:
                 return [[0.0] * n for _ in range(n)]
 
             submatrix = [[0.0] * n for _ in range(n)]
+
             for i, from_loc in enumerate(request_locations):
                 for j, to_loc in enumerate(request_locations):
-                    idx_from = self.loc_to_idx.get(from_loc)
-                    idx_to = self.loc_to_idx.get(to_loc)
-                    if idx_from is not None and idx_to is not None:
-                        submatrix[i][j] = float(self.time_matrix[idx_from][idx_to])
+                    submatrix[i][j] = self._arc_value(from_loc, to_loc)
             return submatrix
 
     def get_duration(self, from_loc: str, to_loc: str) -> float:
         with self._lock:
             if self._use_coordinates or self.time_matrix is None:
                 return 0.0
-            idx_from = self.loc_to_idx.get(from_loc)
-            idx_to = self.loc_to_idx.get(to_loc)
-            if idx_from is not None and idx_to is not None:
-                return float(self.time_matrix[idx_from][idx_to])
-            return 0.0
+            return self._arc_value(from_loc, to_loc)
 
     def has_location(self, loc_id: str) -> bool:
         with self._lock:
             return loc_id in self.loc_to_idx
+
+    def _arc_value(self, from_loc: str, to_loc: str) -> float:
+        """Return the directed arc value, rejecting invalid arcs.
+
+        source == target is always 0.0. A missing location or a missing,
+        zero, negative, or non-finite off-diagonal value raises
+        ``IncompleteTravelMatrixError``.
+        """
+        if from_loc == to_loc:
+            return 0.0
+        idx_from = self.loc_to_idx.get(from_loc)
+        idx_to = self.loc_to_idx.get(to_loc)
+        if idx_from is None or idx_to is None or self.time_matrix is None:
+            raise IncompleteTravelMatrixError(from_loc, to_loc)
+        value = float(self.time_matrix[idx_from][idx_to])
+        if not math.isfinite(value) or value <= 0.0:
+            raise IncompleteTravelMatrixError(from_loc, to_loc)
+        return value
 
     # ------------------------------------------------------------ static builders
 

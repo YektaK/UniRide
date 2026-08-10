@@ -263,3 +263,12 @@ def test_pytest_norecursedirs_preserves_defaults_and_excludes_archive():
     norecursedirs = set(pyproject["tool"]["pytest"]["ini_options"]["norecursedirs"])
     assert PYTEST_DEFAULT_NORECURSEDIRS <= norecursedirs
     assert "archive" in norecursedirs
+
+
+def test_pytest_testpaths_are_exact_authoritative_suites():
+    pyproject = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))
+    assert pyproject["tool"]["pytest"]["ini_options"]["testpaths"] == [
+        "uniride_core/tests",
+        "optimizer_api/tests",
+        "academic_benchmark/tests",
+    ]

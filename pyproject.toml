@@ -32,6 +32,7 @@ include = ["uniride_core*", "optimizer_api*", "academic_benchmark*"]
 "academic_benchmark.schemas" = ["*.schema.json"]
 
 [tool.pytest.ini_options]
+testpaths = ["uniride_core/tests", "optimizer_api/tests", "academic_benchmark/tests"]
 norecursedirs = [
     "*.egg",
     ".*",

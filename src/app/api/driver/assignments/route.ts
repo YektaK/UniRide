@@ -1,13 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@supabase/supabase-js";
 import { requireRole } from "@/lib/admin-auth";
-
-// Create Supabase client with service role for admin operations
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const updateAssignmentSchema = z.object({
     id: z.string().min(1, "Assignment ID is required"),
@@ -18,6 +13,7 @@ export async function GET(request: Request) {
     try {
         const user = await requireRole(request, ["driver", "admin"]);
 
+        const supabaseAdmin: SupabaseClient = getSupabaseAdmin();
         // Get route assignments for this driver
         let query = supabaseAdmin
             .from("route_assignments")
@@ -62,6 +58,7 @@ export async function PUT(request: Request) {
     try {
         const user = await requireRole(request, ["driver"]);
 
+        const supabaseAdmin: SupabaseClient = getSupabaseAdmin();
         const rawBody = await request.json();
         const parseResult = updateAssignmentSchema.safeParse(rawBody);
         if (!parseResult.success) {

@@ -2,12 +2,11 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase anon client for JWT verification in proxy.
-// Uses anon key, never service-role credentials.
-const supabaseAnon = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
-);
+function getSupabaseAnon() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    return url && key ? createClient(url, key) : null;
+}
 
 export async function proxy(request: NextRequest) {
     const authHeader = request.headers.get('authorization');
@@ -20,6 +19,14 @@ export async function proxy(request: NextRequest) {
 
     const token = authHeader.slice(7);
     // Verify the JWT token with Supabase
+    const supabaseAnon = getSupabaseAnon();
+    if (!supabaseAnon) {
+        return NextResponse.json(
+            { error: 'Authentication service unavailable' },
+            { status: 503 }
+        );
+    }
+
     const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
     if (error || !user) {
         return NextResponse.json(

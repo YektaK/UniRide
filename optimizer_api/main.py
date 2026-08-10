@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from routers import optimization, utils, strategies, benchmark
-from strategies import STRATEGY_REGISTRY
+from strategies import get_available_strategy_names
 try:
     from optimizer_api.runtime_config import optimizer_host, internal_auth_disabled, validate_bind_host
 except ModuleNotFoundError:
@@ -112,7 +112,7 @@ def health_check() -> dict:
         "message": "UniRide Optimization Engine is running.",
         "version": "3.1.0",
         "features": ["CVRP", "CVRPTW", "Heterogeneous Fleet", "IE Resource Analysis"],
-        "algorithms": list(set(s.name for s in STRATEGY_REGISTRY.values()))
+        "algorithms": get_available_strategy_names()
     }
 
 # Mount Routers

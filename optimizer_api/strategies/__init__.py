@@ -214,6 +214,13 @@ STRATEGY_REGISTRY: Dict[str, Optional[BaseRoutingStrategy]] = {
 }
 
 
+def get_available_strategy_names() -> List[str]:
+    return sorted({
+        strategy.name
+        for strategy in STRATEGY_REGISTRY.values()
+        if strategy is not None
+    })
+
 STRATEGY_FACTORIES: Dict[str, Optional[Callable[[], BaseRoutingStrategy]]] = {
     "genetic_algorithm": GeneticAlgorithmStrategy,
     "ga": GeneticAlgorithmStrategy,
@@ -475,6 +482,7 @@ __all__ = [
     'STRATEGY_REGISTRY',
     'get_strategy',
     'get_all_strategies',
+    'get_available_strategy_names',
     'get_strategy_info',
     'get_available_solvers',
     'get_recommended_strategy',

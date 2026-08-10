@@ -11,7 +11,7 @@ from models.schemas import (
     IEResponseData, BottleneckInfo,
     TimeShiftSuggestion
 )
-from strategies import STRATEGY_REGISTRY
+from strategies import STRATEGY_REGISTRY, get_available_strategy_names
 from utils.resource_profiler import ResourceProfiler
 from utils.scheduling import calculate_scheduled_times
 
@@ -23,7 +23,7 @@ def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
     algorithm_key = request.algorithm.lower()
 
     if algorithm_key not in STRATEGY_REGISTRY:
-        available = list(set(s.name for s in STRATEGY_REGISTRY.values()))
+        available = get_available_strategy_names()
         raise HTTPException(
             status_code=400,
             detail=f"Unknown algorithm '{algorithm_key}'. Available: {available}"
@@ -145,7 +145,7 @@ def compare_algorithms(request: CompareRequest) -> CompareResponse:
     if request.algorithms:
         algorithms_to_run = [a.lower() for a in request.algorithms if a.lower() in STRATEGY_REGISTRY]
     else:
-        algorithms_to_run = list(set(s.name for s in STRATEGY_REGISTRY.values()))
+        algorithms_to_run = get_available_strategy_names()
 
     if not algorithms_to_run:
         raise HTTPException(status_code=400, detail="No valid algorithms specified")

@@ -1,8 +1,8 @@
 # Post-Audit Quick Fixes and Documentation Truth Design
 
-**Status:** Approved design, pending specification review  
-**Date:** 2026-08-10  
-**Base:** `origin/WIP` at `0b4bef6e77d4eda2812cbe773296978862c25599`  
+**Status:** Approved design, pending specification review
+**Date:** 2026-08-10
+**Verification base:** `origin/WIP` at `0b4bef6e77d4eda2812cbe773296978862c25599`
 **Branch:** `codex/post-audit-quickfixes-20260810`
 
 ## 1. Objective
@@ -44,7 +44,11 @@ This would combine feasibility, authentication, budgets, process isolation, comp
 
 ### 4.1 Optional-solver null safety
 
-PyVRP and VROOM are optional and can legitimately be represented by `None` in the production registry. Health, unknown-algorithm reporting, strategy listing, and default comparison discovery must not dereference unavailable entries.
+PyVRP and VROOM are optional and can legitimately be represented by `None` in the production registry. Health, unknown-algorithm reporting, strategy listing, and default comparison discovery must not dereference unavailable entries. The response contract is surface-specific:
+
+- `/health` and unknown-algorithm error lists expose only available strategy names, with unique names in deterministic sorted order.
+- Default `/compare` discovery selects only available canonical strategy names, with unique names in deterministic sorted order; unavailable optional entries and aliases create no comparison work.
+- `/api/v1/strategies` retains optional entries and reports them as `available: false`, preserving deterministic registry-defined order.
 
 The implementation should reuse the existing registry/factory helpers where they already express availability. It must not introduce another registry abstraction. Tests must reproduce the missing-optional-solver profile before implementation and verify stable JSON/listing behavior afterward.
 
@@ -54,15 +58,17 @@ Server clients must not be constructed at module import time when environment va
 
 Any other import-time Supabase construction exposed by the next build, including proxy/JWT code, may be changed only enough to defer construction until request execution and fail closed at runtime when required credentials are absent. No mock/default credentials may be invented.
 
-Acceptance requires `npm run build` to pass in the same environment that previously failed for absent Supabase variables. A build that merely reaches a different missing-environment crash is not success.
+Acceptance requires `npm run build` in a credential-free child environment that explicitly removes `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`. Any untracked `.env*` file is a reported blocker rather than something this package deletes. A build that merely reaches a different missing-environment crash is not success.
+
+Focused tests must prove that importing a driver-assignment route does not construct the admin client, missing credentials fail closed during request execution, and the proxy returns a sanitized `503` without calling `createClient` with empty strings.
 
 ### 4.3 Browser optimization through the authenticated BFF
 
-Client components must not call FastAPI through `NEXT_PUBLIC_OPTIMIZER_API_URL` or the browser's `127.0.0.1`. The admin route-test page must use the existing authenticated same-origin `/api/optimize-route` route.
+Client components must not call FastAPI through `NEXT_PUBLIC_OPTIMIZER_API_URL` or the browser's `127.0.0.1`. The admin route-test page must use the existing authenticated same-origin `/api/optimize-route` route. The BFF request schema must accept the page's existing `local_search_type` selection and forward it to FastAPI after the existing `requireAdmin` authorization succeeds.
 
 The direct optimizer service remains a server-side adapter for Next.js route handlers. Prefer a native `server-only` boundary or an equivalently small existing-project pattern rather than a new client library. Types may remain shared through type-only imports or a minimal neutral type module if compilation requires it.
 
-Tests must prove the route-test workflow targets the same-origin BFF and that the server adapter is not imported as executable browser code.
+Tests must prove the route-test workflow targets the same-origin authenticated BFF, preserves `local_search_type`, and does not import the server adapter as executable browser code.
 
 ### 4.4 Canonical pytest discovery
 
@@ -87,7 +93,9 @@ Remove only direct JavaScript dependencies with zero live imports or required co
 
 `@genkit-ai/ai` may be removed as a direct dependency only if the lock graph and live imports prove it remains correctly supplied by the retained `genkit` package. Retain `genkit`, `@genkit-ai/googleai`, and `xlsx` in this package; replacing `xlsx` or redesigning the AI flow is future work.
 
-Regenerate `package-lock.json` using npm's normal package operation. Unit tests, typecheck, lint, build, and a fresh production-only audit must follow. The package is accepted when advisories do not increase and the removable `tar`/`websocket-driver` critical paths disappear where the dependency graph permits. It is not required to eliminate all npm debt.
+Regenerate `package-lock.json` using npm's normal package operation. Acceptance is based on the named direct dependencies being absent from both root `package.json` and root dependency metadata in `package-lock.json`, with `npm explain` output recorded for any remaining transitive occurrence. A transitive dependency retained by another package is acceptable when its removed root direct edge is absent.
+
+Unit tests, typecheck, lint, build, `npm explain`, and a fresh `npm audit --omit=dev --json` must follow. A nonzero audit exit is recorded evidence, not an automatic package failure; exact advisory counts and dependency paths must be reported. The package must not promise that externally drifting audit counts decrease or that every critical transitive path disappears.
 
 ## 5. Documentation Deliverables
 
@@ -98,10 +106,11 @@ After code verification, synchronize these root files:
 - `ACTIVE_ROADMAP.md`
 - `UniRide_Ultimate_Audit.md`
 - `WORKLOG.md`
+- `NEXT_PHASE_EXECUTION_ROADMAP.md` (new)
 
 Corrections must include:
 
-- current branch/base and actual verification counts;
+- the immutable verification-base commit, the last code-bearing verified commit, and actual verification counts; temporary feature-branch names must not be presented as permanent project truth;
 - occurrence identity, split-decoder, canonical Bildiri extraction, matrix repository, and seed-`0` fixes as verified closures with their scope stated accurately;
 - universal production feasibility enforcement as open;
 - compute authentication, typed bounds, alias deduplication, worker ceilings, hard cancellation, and comparison ranking as open;
@@ -110,11 +119,7 @@ Corrections must include:
 - no stale PSO wall-clock seed claim;
 - no implication that a GIS renderer currently exists.
 
-Create one new root-level authority document:
-
-`NEXT_PHASE_EXECUTION_ROADMAP.md`
-
-It must contain:
+The new `NEXT_PHASE_EXECUTION_ROADMAP.md` must contain:
 
 1. Current verified baseline and explicit non-goals.
 2. Dependency-ordered packages with entry and exit gates.
@@ -164,6 +169,8 @@ git status --short --branch
 
 The implementation plan may select the known dependency-complete Python interpreter and existing Node installation, but it must record their exact paths/versions. It must not modify existing virtual environments.
 
+The implementation plan must name the focused regression test file and its assertion contract for every quick fix. Before the documentation-only synchronization step, record the immutable verification-base commit and the last code-bearing commit that passed the complete gates.
+
 ## 8. Exclusions
 
 - No universal feasibility integration in this quick-fix package.
@@ -184,7 +191,7 @@ The package is complete only when:
 - the complete Python and frontend gates pass;
 - the production build passes without relying on the prior Supabase waiver;
 - dependency pruning is demonstrated by a fresh audit and dependency trace;
-- all five master documents agree with live code and final command results;
+- all six authority documents agree with live code, the immutable verification base, the last verified code-bearing commit, and final command results;
 - `NEXT_PHASE_EXECUTION_ROADMAP.md` is complete enough for another agent to start without reading this conversation;
 - an independent whole-branch review finds no unresolved critical or important issue;
 - the feature worktree is clean and the original dirty checkout remains untouched.

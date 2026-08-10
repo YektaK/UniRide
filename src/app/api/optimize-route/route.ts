@@ -37,6 +37,7 @@ const optimizeRouteSchema = z.object({
         lng: z.number().optional(),
     }),
     algorithm: z.string().optional(),
+    local_search_type: z.enum(["none", "two_opt", "three_opt", "or_opt", "hybrid"]).optional(),
     max_travel_time: z.number().optional(),
     sw_capacity: z.number().optional(),
     so_capacity: z.number().optional(),
@@ -91,6 +92,7 @@ export async function POST(request: Request) {
             students, 
             depot, 
             algorithm, 
+            local_search_type,
             max_travel_time, 
             sw_capacity, 
             so_capacity,
@@ -130,6 +132,7 @@ export async function POST(request: Request) {
             optimizationDepot,
             {
                 algorithm: (algorithm ?? "genetic_algorithm") as import("@/services/optimizer-service").OptimizationOptions["algorithm"],
+                local_search_type,
                 max_travel_time: max_travel_time ?? 120,
                 sw_capacity: sw_capacity ?? 4,
                 so_capacity: so_capacity ?? 5,

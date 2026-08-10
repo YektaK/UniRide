@@ -29,7 +29,7 @@ import {
     algorithmSupportsLocalSearch,
     type LocalSearchType
 } from "@/lib/algorithm-constants";
-import { optimizeRoutes, type StudentForOptimization, type Depot, type OptimizationOptions } from "@/services/optimizer-service";
+import { adminApi } from "@/lib/admin-api";
 
 type AlgorithmType = (typeof ALGORITHM_KEYS)[keyof typeof ALGORITHM_KEYS];
 
@@ -39,12 +39,7 @@ const dKampusAndSwLocations = ALL_LOCATIONS.filter(
 );
 const soLocations = ALL_LOCATIONS.filter((loc) => loc.startsWith("So"));
 
-// Default depot
-const DEFAULT_DEPOT: Depot = {
-    id: "D.Kampus",
-    lat: 37.0667,
-    lng: 37.3833,
-};
+// Route requests are constructed by the authenticated admin API client.
 
 export default function RouteTestPage() {
     const { toast } = useToast();
@@ -107,25 +102,11 @@ export default function RouteTestPage() {
                 return;
             }
 
-            // Convert waypoints to students format for Python API
-            const students: StudentForOptimization[] = waypoints.map((loc, index) => ({
-                id: `test-${index}`,
-                name: loc,
-                location_code: loc,
-                coordinates: undefined, // Will use time matrix
-                disability_type: loc.startsWith("Sw") ? "Sw" : "So" as const,
-            }));
-
-            // Use start as depot
-            const depot: Depot = {
-                id: start,
-                lat: DEFAULT_DEPOT.lat,
-                lng: DEFAULT_DEPOT.lng,
-            };
-
-            // Call Python API with correct payload
-            const response = await optimizeRoutes(students, depot, {
-                algorithm: normalizeAlgorithmName(algorithm) as OptimizationOptions['algorithm'],
+            const response = await adminApi.routes.optimize({
+                start,
+                end,
+                waypoints,
+                strategy: normalizeAlgorithmName(algorithm),
                 local_search_type: algorithmSupportsLocalSearch(algorithm) ? localSearchType : undefined,
                 max_travel_time: 180,
             });

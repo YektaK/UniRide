@@ -358,6 +358,8 @@ export const adminApi = {
       end: string;
       waypoints: string[];
       strategy?: string;
+      local_search_type?: "none" | "two_opt" | "three_opt" | "or_opt" | "hybrid";
+      max_travel_time?: number;
     }) {
       // Map route-test simple waypoints format to standard API format
       const students = params.waypoints.map((wp, index) => ({
@@ -371,7 +373,8 @@ export const adminApi = {
         students,
         depot: { id: params.start || "D.Kampus", lat: 41.001, lng: 29.177 },
         algorithm: params.strategy || "genetic_algorithm",
-        max_travel_time: 120,
+        local_search_type: params.local_search_type,
+        max_travel_time: params.max_travel_time ?? 120,
         sw_capacity: 4,
         so_capacity: 5
       };

@@ -88,7 +88,8 @@ Keep local values outside version control. Never put credential values in docume
 | `OPTIMIZER_PORT` | FastAPI | optimizer service port |
 | `TIME_MATRIX_CACHE_TTL_SECONDS` | FastAPI | production matrix-cache lifetime |
 | `TIME_MATRIX_PROVIDER_TIMEOUT_SECONDS` | FastAPI | travel-time provider timeout |
-| `INTERNAL_API_KEY` | FastAPI | internal benchmark/CLI boundary key |
+| `INTERNAL_API_KEY` | FastAPI | required internal benchmark/CLI boundary key |
+| `UNIRIDE_DISABLE_AUTH` | FastAPI local development only | explicit `1` opt-out for loopback/local development; never set in production |
 | `ENABLE_DEV_RESET` / `DEV_RESET_SECRET` | Next.js server | development reset control |
 | `AZURE_AI_ENDPOINT`, `AZURE_AI_API_KEY`, `AZURE_AI_API_VERSION` | optional utility | Azure AI configuration |
 
@@ -96,7 +97,7 @@ The admin route-test page uses the authenticated same-origin `/api/optimize-rout
 
 ## Run locally
 
-Start the FastAPI service:
+Start the FastAPI service after configuring `INTERNAL_API_KEY` with a secret local value. For an explicit loopback/local-development-only opt-out, set `UNIRIDE_DISABLE_AUTH=1`; never use that opt-out in production:
 
 ```powershell
 Push-Location optimizer_api

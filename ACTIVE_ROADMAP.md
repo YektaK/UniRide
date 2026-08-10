@@ -25,7 +25,7 @@ The following are closed only to the tested scope recorded in [CURRENT_ARCHITECT
 - authenticated admin route-test BFF path;
 - removal of five unused direct root dependency edges.
 
-The 2026-08-10 immutable verification reported 1,676 passing canonical Python tests, 17 passing Vitest files / 37 tests, passing TypeScript and credential-free build, and ESLint at 0 errors / 158 warnings. `npm audit --omit=dev --json` reports 84 unresolved findings (2 critical, 22 high, 59 moderate, 1 low).
+The 2026-08-10 immutable verification reported **1,676 passing canonical Python tests, 48 warnings, 238.17s**; **17 passing Vitest files / 37 tests, 2.83s**; passing TypeScript; ESLint at **0 errors / 158 warnings**; and a passing credential-free production build. `npm audit --omit=dev --json` exited **1** with **84 unresolved findings: 2 critical, 22 high, 59 moderate, 1 low**.
 
 ## Priority 1 — Universal production feasibility
 

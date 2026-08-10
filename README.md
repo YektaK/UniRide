@@ -1,64 +1,57 @@
 # UniRide Dual-Engine Routing Platform
 
-UniRide is a vehicle-routing research and operations repository with two execution surfaces:
+UniRide is one repository with two deliberately separate execution engines that share `uniride_core`:
 
-- **Production engine:** a Next.js application and FastAPI optimization service for student transportation planning.
-- **Academic engine:** a TSPLIB/CVRPLIB/DOE benchmark framework for controlled algorithm experiments.
+- **Production engine:** a Next.js application and FastAPI optimization service for student transportation operations.
+- **Academic engine:** TSPLIB/CVRPLIB datasets, controlled solver studies, DOE/tuning, and reproducible analysis.
 
-Both surfaces reuse `uniride_core`, but they have different contracts, lifecycle requirements, and evidence standards.
+The engines may share neutral models and solver implementations, but they do not share operational authority, job lifecycle, or scientific evidence. A passing benchmark is not a production release decision, and a production request must not acquire TSPLIB/DOE concerns.
 
-> **Current status (audited 2026-07-16): not production-ready.** Critical feasibility, matrix-integrity, authentication, benchmark-lifecycle, and frontend integration defects remain open. Treat solver output as experimental until it passes the planned shared feasibility certificate. See [UniRide_Ultimate_Audit.md](./UniRide_Ultimate_Audit.md) and [ACTIVE_ROADMAP.md](./ACTIVE_ROADMAP.md).
+## Current verified status
 
-## Repository Map
+The latest post-audit verification was run on 2026-08-10 from base `0b4bef6e77d4eda2812cbe773296978862c25599`; the last code-bearing commit was `ddd85e8b1cc5ed64a8163988b2e179a08c8cfd2f`.
+
+| Gate | Verified result |
+| --- | --- |
+| Canonical Python suites | 1,676 passed, 48 warnings, 238.17s |
+| Frontend Vitest | 17 files, 37 tests passed, 2.83s |
+| TypeScript | passed |
+| ESLint | 0 errors, 158 warnings |
+| Credential-free production build | passed |
+| `npm audit --omit=dev --json` | 84 findings: 2 critical, 22 high, 59 moderate, 1 low |
+
+UniRide is still experimental. The passing build and test gates do **not** close the remaining feasibility, general compute-authentication, durable-job, provenance, GIS, lint-warning, or dependency-security boundaries. Read [ACTIVE_ROADMAP.md](ACTIVE_ROADMAP.md) before planning work.
+
+## Repository map
 
 | Path | Responsibility |
-|---|---|
-| `src/` | Next.js UI, browser services, and same-origin API routes |
-| `optimizer_api/` | FastAPI production optimizer and web benchmark control plane |
-| `uniride_core/` | Shared algorithms, decoders, adapters, distance functions, and routing models |
-| `academic_benchmark/` | Dataset management, algorithm registry, DOE/tuning, repeated runs, and result analysis |
-| `supabase/` | Database schema, migrations, and row-level-security policies |
-| `docs/` | Verified operational references only |
-| `archive/` | Superseded audits, speculative designs, and historical documentation; never a current source of truth |
+| --- | --- |
+| `src/` | Next.js UI and authenticated same-origin API/BFF routes |
+| `optimizer_api/` | FastAPI production optimizer, DTOs, and benchmark control-plane code |
+| `uniride_core/` | shared routing models, constraints, algorithms, validation, and matrix contracts |
+| `academic_benchmark/` | academic datasets, studies, experiment protocols, registry adapters, and analysis |
+| `supabase/` | schema, migrations, and RLS policy material |
+| `docs/` | active design and operational documentation |
+| `archive/` | historical evidence only; never current architecture truth |
 
-## Architectural Summary
+## Architecture in one view
 
 ```text
-Browser / Next.js UI
-        |
-        v
-Next.js API routes -----> Supabase
-        |
-        v
-FastAPI production service -----> production adapters ----+
-                                                         |
-Academic CLI / DOE -------------> academic adapters ------+--> uniride_core
+Browser UI
+  -> authenticated Next.js BFF routes
+  -> FastAPI production adapters
+  -> uniride_core
+
+Academic CLI / study runners
+  -> academic adapters and manifests
+  -> uniride_core
 ```
 
-The intended dependency rule is inward-only: production and academic adapters may import the shared core; the core must not depend on FastAPI, Next.js, TSPLIB persistence, or benchmark orchestration.
+Production owns user/service authorization, authoritative locations, travel-time providers, geometry, and operational persistence. Academic tooling owns instance sources, BKS/gaps, DOE metadata, seeds, environment manifests, and scientific reporting. The core must remain neutral.
 
-## Solver Families
+## Setup
 
-- Cluster-first strategies: GA, PSO, GWO, and HHO followed by per-cluster TSP optimization.
-- Giant-tour/split strategies: GA-Split, PSO-Split, GWO-Split, and HHO-Split.
-- Reference and holistic solvers: OR-Tools and optional PyVRP/VROOM integrations.
-- Local and exact baselines: greedy, 2-opt, and permutation search for very small instances.
-- Research solvers and ALNS-related components under `uniride_core/algorithms/sota_*`.
-
-Algorithm availability is not evidence of correctness. Current blockers include duplicate-customer identity handling, incorrect feasibility reporting, time-window split defects, incomplete travel matrices, and inconsistent deterministic seeding.
-
-## Prerequisites
-
-- Node.js 20 or newer
-- npm with the committed lockfile
-- Python 3.12 or 3.13 in a clean virtual environment
-- A Supabase project for database-backed application flows
-
-Optional academic solvers may require native build tools or external binaries.
-
-## Installation
-
-### Frontend
+### JavaScript
 
 ```powershell
 npm ci
@@ -66,48 +59,44 @@ npm ci
 
 ### Python
 
+Use a clean virtual environment. The full solver/test profile used during the latest validation installed the repository-declared test and solver extras plus the two optimizer requirement files.
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
+python -m pip install ".[test]"
+python -m pip install ".[solvers]"
 python -m pip install -r optimizer_api\requirements.txt
-python -m pip install -e ".[test]"
+python -m pip install -r optimizer_api\requirements-benchmark.txt
 ```
 
-Install optional solvers only when required:
+Optional solvers can require native tooling or a system binary. Their absence must be represented as unavailable, not as a failed registry dereference.
 
-```powershell
-python -m pip install -e ".[solvers]"
-```
+## Environment variables
 
-Use a fresh environment. The audit machine had incompatible `pydantic` and `pydantic-core` installations, which prevented FastAPI test collection.
+Keep local values outside version control. Never put credential values in documents, browser bundles, logs, or commits.
 
-## Environment Variables
+| Variable | Used by | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | browser / Next.js | public Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | browser / Next.js | public Supabase anonymous key |
+| `SUPABASE_SERVICE_ROLE_KEY` | server only | privileged Supabase operations |
+| `SUPABASE_URL` | Python/server | backend Supabase URL where configured |
+| `OPTIMIZER_API_URL` | Next.js server | FastAPI URL for server-side adapters/BFF routes |
+| `ALLOWED_ORIGINS` | FastAPI | comma-separated CORS allowlist |
+| `OPTIMIZER_PORT` | FastAPI | optimizer service port |
+| `TIME_MATRIX_CACHE_TTL_SECONDS` | FastAPI | production matrix-cache lifetime |
+| `TIME_MATRIX_PROVIDER_TIMEOUT_SECONDS` | FastAPI | travel-time provider timeout |
+| `INTERNAL_API_KEY` | FastAPI | internal benchmark/CLI boundary key |
+| `ENABLE_DEV_RESET` / `DEV_RESET_SECRET` | Next.js server | development reset control |
+| `AZURE_AI_ENDPOINT`, `AZURE_AI_API_KEY`, `AZURE_AI_API_VERSION` | optional utility | Azure AI configuration |
 
-Create local environment files outside version control. Never commit credentials or copy real values into documentation.
+The admin route-test page uses the authenticated same-origin `/api/optimize-route` BFF. Do not add a browser-direct FastAPI URL or expose an optimizer service address through a `NEXT_PUBLIC_*` variable.
 
-| Variable | Surface | Purpose |
-|---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Browser | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser | Public anonymous Supabase key; security must rely on RLS |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server only | Privileged Supabase operations; never expose to the browser |
-| `SUPABASE_URL` | Python/server | Supabase URL for backend data access where supported |
-| `OPTIMIZER_API_URL` | Next.js server | FastAPI service URL used by server-side routes |
-| `NEXT_PUBLIC_OPTIMIZER_API_URL` | Legacy browser path | Direct browser optimizer URL; avoid in production |
-| `ALLOWED_ORIGINS` | FastAPI | Comma-separated CORS allowlist |
-| `OPTIMIZER_PORT` | FastAPI | Optimizer service port; default is `8000` |
-| `TIME_MATRIX_CACHE_TTL_SECONDS` | FastAPI | Matrix cache lifetime; current loader lifecycle requires remediation |
-| `ENABLE_DEV_RESET` | Next.js server | Enables the development reset endpoint |
-| `DEV_RESET_SECRET` | Next.js server | Authorization secret for development reset |
-| `AZURE_AI_ENDPOINT` | Optional utility | Azure AI endpoint |
-| `AZURE_AI_API_KEY` | Optional utility | Azure AI credential |
-| `AZURE_AI_API_VERSION` | Optional utility | Azure AI API version |
+## Run locally
 
-Other narrow utilities read `AZURE_OPENAI_API_KEY`, `BENCHMARK_PROFILE`, default pickup/dropoff-hour variables, `NODE_ENV`, and `VERCEL_ENV`.
-
-## Running Locally
-
-FastAPI service:
+Start the FastAPI service:
 
 ```powershell
 Push-Location optimizer_api
@@ -115,57 +104,47 @@ python main.py
 Pop-Location
 ```
 
-Next.js development server:
+Start the web application:
 
 ```powershell
 npm run dev
 ```
 
-Defaults:
-
-- Web application: `http://localhost:9002`
-- FastAPI service: `http://127.0.0.1:8000`
-
-Academic entry point:
+Run academic CLI/help through the package entry point:
 
 ```powershell
-python -m academic_benchmark
+python -m academic_benchmark.cli_engine --help
 ```
 
-Do not publish benchmark results until environment, seed schedule, matrix provenance, configuration, and independent feasibility are recorded.
+Do not publish benchmark evidence without a versioned dataset/matrix manifest, seed schedule, configuration, environment record, independent feasibility evidence, and the declared comparison protocol.
 
-## Verification Commands and Current Baseline
+## Verification
+
+The canonical Python suites are constrained in `pyproject.toml`; do not rely on broad repository discovery, which can collect manual scripts.
 
 ```powershell
+python -m pytest uniride_core\tests optimizer_api\tests academic_benchmark\tests -q -p no:cacheprovider --tb=short
 npm test -- --run
 npm run typecheck
 npm run lint
-python -m pytest uniride_core\tests optimizer_api\tests academic_benchmark\tests -q --tb=short
+npm run build
+npm audit --omit=dev --json
+git diff --check
+git status --short --branch
 ```
 
-Audit results on 2026-07-16:
+`npm audit` currently exits nonzero because the 84 findings above remain unresolved. Record it as security evidence; do not silently treat an audit finding as a test failure or a resolved issue.
 
-| Gate | Result |
-|---|---|
-| Frontend unit tests | 15 passed across 3 files |
-| TypeScript typecheck | Failed: local install lacked declared `next-intl`; two implicit-`any` errors remained |
-| Lint | Failed: obsolete `next lint` script and disabled correctness rules |
-| FastAPI/Python collection | Blocked by incompatible `pydantic`/`pydantic-core` environment |
-| Core and academic tests | Reached 370 passed and 2 skipped before 46 temp-path/environment errors |
+## Documentation authority
 
-These are audit observations, not release certification.
+1. [UniRide_Ultimate_Audit.md](UniRide_Ultimate_Audit.md) — verified findings, historical rationale, and qualifications.
+2. [CURRENT_ARCHITECTURE.md](CURRENT_ARCHITECTURE.md) — current structural boundaries and explicit open risks.
+3. [ACTIVE_ROADMAP.md](ACTIVE_ROADMAP.md) — prioritized project state.
+4. [NEXT_PHASE_EXECUTION_ROADMAP.md](NEXT_PHASE_EXECUTION_ROADMAP.md) — dependency-ordered handoffs for future agents.
+5. [WORKLOG.md](WORKLOG.md) — curated chronology and verification provenance.
 
-## Documentation Authority
-
-1. [UniRide_Ultimate_Audit.md](./UniRide_Ultimate_Audit.md) — definitive audit and historical rationale.
-2. [CURRENT_ARCHITECTURE.md](./CURRENT_ARCHITECTURE.md) — current structural truth.
-3. [ACTIVE_ROADMAP.md](./ACTIVE_ROADMAP.md) — prioritized remediation plan.
-4. [WORKLOG.md](./WORKLOG.md) — curated chronology.
-5. [docs/API_REFERENCE.md](./docs/API_REFERENCE.md) — verified endpoint inventory.
-6. [docs/GITHUB_WORKFLOW.md](./docs/GITHUB_WORKFLOW.md) — contribution and verification workflow.
-
-Everything under `archive/` is historical evidence and may contain false, contradictory, or superseded claims.
+If prose conflicts with live code or executable tests, live evidence wins. Archived documents are context, not authority.
 
 ## License
 
-No repository license file is currently present. Confirm usage and redistribution terms with the repository owner.
+No repository license file is currently present. Confirm redistribution and usage terms with the repository owner.

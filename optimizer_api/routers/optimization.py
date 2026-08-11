@@ -67,6 +67,17 @@ def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
         
         result = strategy.optimize(request)
         execution_time = time.time() - start_time
+        if result is None:
+            typed_certificate = _typed_certificate(None)
+            return OptimizationResponse(
+                algorithm_used=algorithm_key,
+                success=False,
+                routes=[],
+                execution_time_seconds=round(execution_time, 4),
+                error_message=json.dumps(typed_certificate.model_dump(exclude_none=True)),
+                feasibility_certificate=typed_certificate,
+            )
+        original_result_success = result.success
         result.execution_time_seconds = round(execution_time, 4)
         
         result.direction = request.direction
@@ -85,7 +96,7 @@ def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
             certify_optimization_response(request, result)
         )
         result.feasibility_certificate = typed_certificate
-        result.success = typed_certificate.is_feasible
+        result.success = bool(original_result_success and typed_certificate.is_feasible)
         if not result.success:
             result.error_message = json.dumps(
                 typed_certificate.model_dump(exclude_none=True)
@@ -171,10 +182,11 @@ def _run_single_algorithm(algorithm_name: str, request: OptimizationRequest) -> 
                 feasibility_certificate=typed_certificate,
             )
         execution_time = time.time() - start_time
+        original_result_success = result.success
         typed_certificate = _typed_certificate(
             certify_optimization_response(request, result)
         )
-        success = typed_certificate.is_feasible
+        success = bool(original_result_success and typed_certificate.is_feasible)
         error_message = (
             json.dumps(typed_certificate.model_dump(exclude_none=True))
             if not success

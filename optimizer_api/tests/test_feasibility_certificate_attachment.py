@@ -26,10 +26,10 @@ def _request(algorithm="stub"):
     )
 
 
-def _response():
+def _response(success=True):
     return schemas.OptimizationResponse(
         algorithm_used="stub",
-        success=True,
+        success=success,
         routes=[],
     )
 
@@ -177,3 +177,125 @@ def test_compare_no_result_boundaries_attach_sanitized_unavailable_certificate(m
         assert result.feasibility_certificate.certify_error == optimization._UNAVAILABLE_CERTIFICATE_ERROR
         assert "secret strategy failure" not in result.error_message
         assert json.loads(result.error_message) == result.feasibility_certificate.model_dump(exclude_none=True)
+
+
+def test_optimize_preserves_solver_failure_with_feasible_certificate(monkeypatch):
+    payload = _payload()
+    calls = 0
+
+    def certify(request, result):
+        nonlocal calls
+        calls += 1
+        return payload
+
+    monkeypatch.setitem(optimization.STRATEGY_REGISTRY, "stub", _StubStrategy(_response(success=False)))
+    monkeypatch.setattr(optimization, "certify_optimization_response", certify)
+
+    result = optimization.optimize_route(_request())
+
+    assert calls == 1
+    assert result.success is False
+    assert result.feasibility_certificate.model_dump(exclude_none=True) == payload
+    assert json.loads(result.error_message) == result.feasibility_certificate.model_dump(exclude_none=True)
+
+
+def test_single_algorithm_preserves_solver_failure_with_feasible_certificate(monkeypatch):
+    payload = _payload()
+    calls = 0
+
+    def certify(request, result):
+        nonlocal calls
+        calls += 1
+        return payload
+
+    monkeypatch.setitem(optimization.STRATEGY_REGISTRY, "stub", _StubStrategy(_response(success=False)))
+    monkeypatch.setattr(optimization, "certify_optimization_response", certify)
+
+    result = optimization._run_single_algorithm("stub", _request())
+
+    assert calls == 1
+    assert result.success is False
+    assert result.feasibility_certificate.model_dump(exclude_none=True) == payload
+    assert json.loads(result.error_message) == result.feasibility_certificate.model_dump(exclude_none=True)
+
+
+def test_single_algorithm_attaches_the_single_feasible_typed_certificate(monkeypatch):
+    payload = _payload()
+    calls = 0
+
+    def certify(request, result):
+        nonlocal calls
+        calls += 1
+        return payload
+
+    monkeypatch.setitem(optimization.STRATEGY_REGISTRY, "stub", _StubStrategy(_response()))
+    monkeypatch.setattr(optimization, "certify_optimization_response", certify)
+
+    result = optimization._run_single_algorithm("stub", _request())
+
+    assert calls == 1
+    assert result.success is True
+    assert result.feasibility_certificate.model_dump(exclude_none=True) == payload
+
+
+def test_optimize_no_result_attaches_sanitized_unavailable_certificate(monkeypatch):
+    calls = 0
+
+    def certify(request, result):
+        nonlocal calls
+        calls += 1
+        return _payload()
+
+    monkeypatch.setitem(optimization.STRATEGY_REGISTRY, "stub", _StubStrategy())
+    monkeypatch.setattr(optimization, "certify_optimization_response", certify)
+
+    result = optimization.optimize_route(_request())
+
+    assert calls == 0
+    assert result.success is False
+    assert result.feasibility_certificate.certify_error == optimization._UNAVAILABLE_CERTIFICATE_ERROR
+    assert json.loads(result.error_message) == result.feasibility_certificate.model_dump(exclude_none=True)
+
+
+def test_compare_timeout_attaches_sanitized_unavailable_certificate(monkeypatch):
+    class _TimeoutFuture:
+        def result(self, timeout):
+            raise TimeoutError("do not expose")
+
+    class _TimeoutExecutor:
+        def __init__(self, max_workers):
+            self.max_workers = max_workers
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+        def submit(self, function, *args):
+            return _TimeoutFuture()
+
+    calls = 0
+
+    def certify(request, result):
+        nonlocal calls
+        calls += 1
+        return _payload()
+
+    monkeypatch.setitem(optimization.STRATEGY_REGISTRY, "timeout", _StubStrategy(_response()))
+    monkeypatch.setattr(optimization, "ThreadPoolExecutor", _TimeoutExecutor)
+    monkeypatch.setattr(optimization, "certify_optimization_response", certify)
+
+    response = optimization.compare_algorithms(
+        schemas.CompareRequest(
+            students=[],
+            depot=schemas.LocationNode(id="depot", lat=0.0, lng=0.0),
+            algorithms=["timeout"],
+        )
+    )
+    result = response.results[0]
+
+    assert calls == 0
+    assert result.success is False
+    assert result.feasibility_certificate.certify_error == optimization._UNAVAILABLE_CERTIFICATE_ERROR
+    assert json.loads(result.error_message) == result.feasibility_certificate.model_dump(exclude_none=True)

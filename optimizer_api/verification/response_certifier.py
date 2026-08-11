@@ -288,6 +288,7 @@ def _certify_optimization_response(request: Any, response: Any) -> dict:
 
         keys = [steps[0].location1] + [step.location2 for step in steps]
         nodes: List[int] = []
+        node_chain: List[int] = []
         for key in keys:
             node = loc_to_node.get(str(key)) if not isinstance(key, int) else (key if 0 <= key < dimension else None)
             if node is None:
@@ -297,8 +298,15 @@ def _certify_optimization_response(request: Any, response: Any) -> dict:
                     "route_index": route_index,
                 })
                 continue
+            node_chain.append(node)
             if node != depot:
                 nodes.append(node)
+        if any(node == depot for node in node_chain[1:-1]):
+            pre_violations.append({
+                "type": "route_continuity", "severity": "error",
+                "details": f"Route {route_index} contains an interior depot visit",
+                "route_index": route_index,
+            })
         routes.append(nodes)
 
         reported_total = float(getattr(route, "total_duration_minutes", 0.0) or 0.0)
@@ -403,6 +411,32 @@ def _certify_optimization_response(request: Any, response: Any) -> dict:
                 f"route totals sum {routed_sum}"
             ),
         })
+
+    reported_time_window_violations = getattr(
+        response, "total_time_window_violations", None
+    )
+    if reported_time_window_violations is not None:
+        try:
+            reported_tw_value = float(reported_time_window_violations)
+        except (TypeError, ValueError):
+            reported_tw_value = float("nan")
+        if (
+            isinstance(reported_time_window_violations, bool)
+            or not math.isfinite(reported_tw_value)
+            or reported_tw_value < 0
+            or not reported_tw_value.is_integer()
+        ):
+            pre_violations.append({
+                "type": "reported_time_window_violation",
+                "severity": "error",
+                "details": "Response has invalid total_time_window_violations",
+            })
+        elif reported_tw_value > 0:
+            pre_violations.append({
+                "type": "reported_time_window_violation",
+                "severity": "error",
+                "details": "Response reports time-window violations",
+            })
 
     nonempty_routes = [r for r in routes if r]
     reported_total_vehicles = int(getattr(response, "total_vehicles", 0) or 0)

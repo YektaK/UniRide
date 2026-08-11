@@ -458,6 +458,31 @@ def test_compare_demotes_infeasible_strategy_keeps_feasible(monkeypatch):
     assert response.best_algorithm == "good"
 
 
+def test_compare_with_no_certified_success_has_no_ranked_algorithm(monkeypatch):
+    _install_strategy(monkeypatch, "failed-one", _StubStrategy(
+        lambda req: _response(routes=[_valid_route(req.students)], success=False)
+    ))
+    _install_strategy(monkeypatch, "failed-two", _StubStrategy(
+        lambda req: _response(routes=[_valid_route(req.students)], success=False)
+    ))
+
+    response = optimization.compare_algorithms(
+        CompareRequest(
+            students=BASIC_STUDENTS,
+            depot=DEPOT,
+            sw_capacity=1,
+            so_capacity=5,
+            max_travel_time=120,
+            algorithms=["failed-one", "failed-two"],
+        )
+    )
+
+    assert response.success is False
+    assert all(result.success is False for result in response.results)
+    assert response.best_algorithm == ""
+    assert response.fastest_algorithm == ""
+
+
 def test_compare_all_infeasible_reports_failure(monkeypatch):
     _install_strategy(monkeypatch, "bad1", _StubStrategy(
         lambda req: _response(routes=[_route_missing_occurrence(req)])
@@ -696,6 +721,48 @@ def test_total_vehicles_mismatch_rejected():
 
     assert certificate["is_feasible"] is False
     assert "vehicle_count_mismatch" in _cert_types(certificate)
+
+
+def test_certificate_rejects_interior_depot_without_fabricating_a_zero_arc():
+    request = _request(students=BASIC_STUDENTS[:2], max_travel_time=40)
+    steps = [
+        RouteStep(location1="DEPOT", location2="LocA", duration=10.0),
+        RouteStep(location1="LocA", location2="DEPOT", duration=10.0),
+        RouteStep(location1="DEPOT", location2="LocB", duration=10.0),
+        RouteStep(location1="LocB", location2="DEPOT", duration=10.0),
+    ]
+    route = VehicleRoute(
+        vehicle_id="V1", route_details=steps, total_duration_minutes=40.0,
+        sw_count=1, so_count=1, student_ids=["s1", "s2"],
+    )
+
+    certificate = certify_optimization_response(
+        request, _response(routes=[route])
+    )
+
+    assert certificate["is_feasible"] is False
+    assert certificate["violation_count"] == 1
+    assert certificate["violations"] == [{
+        "type": "route_continuity",
+        "severity": "error",
+        "details": "Route 0 contains an interior depot visit",
+        "route_index": 0,
+    }]
+
+
+@pytest.mark.parametrize("reported", [3, "not-a-number", float("nan"), float("inf"), -1])
+def test_certificate_rejects_reported_or_invalid_time_window_violations(reported):
+    response = _response(routes=[_valid_route()])
+    response.total_time_window_violations = reported
+
+    certificate = certify_optimization_response(_request(), response)
+
+    assert certificate["is_feasible"] is False
+    violations = [
+        violation for violation in certificate["violations"]
+        if violation["type"] == "reported_time_window_violation"
+    ]
+    assert len(violations) == 1
 
 
 @pytest.mark.parametrize("field,value", [("sw_count", 9), ("so_count", 9)])

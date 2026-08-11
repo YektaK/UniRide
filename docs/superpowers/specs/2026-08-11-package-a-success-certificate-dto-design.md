@@ -114,7 +114,9 @@ No certificate is recomputed solely for serialization.
 
 - Existing request bodies are unchanged.
 - Existing response fields retain their names and meanings.
-- Failure `error_message` remains populated exactly as before this extension.
+- Existing field names and JSON shapes remain compatible. Unsuccessful outcomes
+  intentionally carry the certificate JSON, and prior solver diagnostic text is
+  not guaranteed to be preserved in `error_message`.
 - The new field is additive and optional.
 - No frontend changes are required to preserve current behavior.
 - No solver, matrix, feasibility, ranking, or academic semantics change.

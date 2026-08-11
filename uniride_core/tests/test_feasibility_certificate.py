@@ -233,6 +233,17 @@ def test_time_windows_valid():
     assert violations == []
 
 
+def test_time_windows_preserve_fractional_travel_duration():
+    matrix = np.array([[0.0, 30.9], [30.9, 0.0]], dtype=float)
+    violations = check_time_windows(
+        [[1]], matrix, depot=0, time_windows=[(0, 200), (0, 30)],
+        direction="delivery", target_time=0,
+    )
+
+    assert len(violations) == 1
+    assert violations[0].type == TIME_WINDOW_VIOLATION
+
+
 def test_time_windows_none_skips():
     violations = check_time_windows([[1, 2]], MATRIX_4, depot=0, time_windows=None)
     assert violations == []

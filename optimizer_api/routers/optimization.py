@@ -254,8 +254,8 @@ def compare_algorithms(request: CompareRequest) -> CompareResponse:
         best = min(successful_results, key=lambda x: x.total_duration_minutes)
         fastest = min(successful_results, key=lambda x: x.execution_time_seconds)
     else:
-        best = results[0] if results else None
-        fastest = results[0] if results else None
+        best = None
+        fastest = None
 
     summary = {}
     for r in results:

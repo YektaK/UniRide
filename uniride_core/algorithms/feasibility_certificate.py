@@ -209,7 +209,16 @@ def check_time_windows(
                 if target_time is not None
                 else max(time_windows[node][1] for node in route if node < len(time_windows))
             )
-            current = latest - int(calculate_route_cost(route, mat, depot)) - offset_minutes
+            route_cost = float(calculate_route_cost(route, mat, depot))
+            if not math.isfinite(route_cost):
+                violations.append(Violation(
+                    type=TIME_WINDOW_VIOLATION,
+                    severity="error",
+                    details=f"Route {idx} has a non-finite travel duration",
+                    route_index=idx,
+                ))
+                continue
+            current = float(latest) - route_cost - float(offset_minutes)
             if current < 0:
                 violations.append(Violation(
                     type=TIME_WINDOW_VIOLATION,
@@ -230,7 +239,17 @@ def check_time_windows(
             if node >= len(time_windows):
                 prev = node
                 continue
-            current += int(mat[prev, node])
+            travel_duration = float(mat[prev, node])
+            if not math.isfinite(travel_duration):
+                violations.append(Violation(
+                    type=TIME_WINDOW_VIOLATION,
+                    severity="error",
+                    details=f"Route {idx} node {node} has a non-finite travel duration",
+                    route_index=idx,
+                    node=node,
+                ))
+                break
+            current += travel_duration
             earliest, latest_tw = time_windows[node]
             if current > latest_tw:
                 violations.append(Violation(
@@ -242,7 +261,17 @@ def check_time_windows(
                 ))
             elif current < earliest:
                 current = earliest
-            current += int(service[node]) if node < len(service) else 0
+            service_duration = float(service[node]) if node < len(service) else 0.0
+            if not math.isfinite(service_duration):
+                violations.append(Violation(
+                    type=TIME_WINDOW_VIOLATION,
+                    severity="error",
+                    details=f"Route {idx} node {node} has a non-finite service duration",
+                    route_index=idx,
+                    node=node,
+                ))
+                break
+            current += service_duration
             prev = node
 
     return violations

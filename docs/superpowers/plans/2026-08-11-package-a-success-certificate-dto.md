@@ -185,3 +185,90 @@ def _typed_certificate(payload: dict | None) -> FeasibilityCertificateInfo:
     return FeasibilityCertificateInfo(
         is_feasible=False,
         violation_count=0,
+        violations=[],
+        certify_error=(
+            _INVALID_CERTIFICATE_ERROR
+            if payload is not None
+            else _UNAVAILABLE_CERTIFICATE_ERROR
+        ),
+    )
+```
+
+In `/optimize`, call `certify_optimization_response` once after a real strategy result is available, pass that returned dictionary to `_typed_certificate` once, and retain the resulting object in a local `typed_certificate`. Set `success = typed_certificate.is_feasible`, attach `feasibility_certificate=typed_certificate`, and, only when it is unsuccessful, set:
+
+```python
+error_message=json.dumps(typed_certificate.model_dump(exclude_none=True))
+```
+
+Do not call the certifier while serializing the response. For an absent or unavailable strategy result, attach `_typed_certificate(None)`, set `success=False`, and use the same `model_dump(exclude_none=True)` JSON for the legacy failure `error_message`.
+
+In `_run_single_algorithm`, use the identical sequence for every real algorithm result: certify once, validate once, derive `success` from the same typed object, and attach that object to the returned `AlgorithmResult`. Apply the unavailable typed certificate to every no-result boundary, including strategy-not-found, strategy exception, and compare timeout/unavailable paths. Those paths must return `success=False` and must use the fixed unavailable message, never raw exception text. An invalid DTO payload must instead use the fixed invalid-payload message, also without exposing Pydantic validation details.
+
+When compare ranking filters results, require both the existing success check and `result.feasibility_certificate is not None and result.feasibility_certificate.is_feasible`; do not recertify results to rank them.
+
+- [ ] **Step 4: Run endpoint tests and verify GREEN**
+
+Run:
+
+```powershell
+C:\tmp\UniRide-occurrence-verify-20260805\Scripts\python.exe -m pytest optimizer_api\tests\test_feasibility_certificate_attachment.py -q -p no:cacheprovider --tb=short
+```
+
+Expected: all focused DTO, `/optimize`, and `/compare` attachment tests pass; each real result has exactly one certifier call and all failure JSON equals its attached typed certificate payload.
+
+- [ ] **Step 5: Commit the completed attachment boundary**
+
+```powershell
+git add optimizer_api/models/schemas.py optimizer_api/routers/optimization.py optimizer_api/tests/test_feasibility_certificate_attachment.py
+git commit -m "feat(api): attach typed feasibility certificates"
+```
+
+Expected: one atomic Task 2 commit containing only the typed attachment DTO, router boundary, and focused test changes. Do not push.
+
+---
+
+### Task 3: Final Package A DTO Verification
+
+**Files:**
+- Verify: `optimizer_api/models/schemas.py`
+- Verify: `optimizer_api/routers/optimization.py`
+- Verify: `optimizer_api/tests/test_feasibility_certificate_attachment.py`
+- Verify: `optimizer_api/tests/test_production_feasibility_boundary.py`
+- Verify: `optimizer_api/tests/test_occurrence_identity_pipeline_a.py`
+- Verify: `optimizer_api/tests/test_occurrence_identity_strategies.py`
+
+**Interfaces:**
+- Verifies: all result boundaries attach one validated `FeasibilityCertificateInfo`.
+- Verifies: failed legacy `error_message` JSON equals `typed_certificate.model_dump(exclude_none=True)`.
+
+- [ ] **Step 1: Run the focused Package A DTO and occurrence gate**
+
+```powershell
+C:\tmp\UniRide-occurrence-verify-20260805\Scripts\python.exe -m pytest optimizer_api\tests\test_feasibility_certificate_attachment.py optimizer_api\tests\test_production_feasibility_boundary.py optimizer_api\tests\test_occurrence_identity_pipeline_a.py optimizer_api\tests\test_occurrence_identity_strategies.py -q -p no:cacheprovider --tb=short
+```
+
+Expected: all selected tests pass.
+
+- [ ] **Step 2: Run the full core and API gate**
+
+```powershell
+C:\tmp\UniRide-occurrence-verify-20260805\Scripts\python.exe -m pytest uniride_core\tests optimizer_api\tests -q -p no:cacheprovider --basetemp C:\tmp\pytest-package-a-dto-final --tb=short
+```
+
+Expected: all collected core and API tests pass; record any environment-only warnings separately from test failures.
+
+- [ ] **Step 3: Inspect the final authorized diff**
+
+```powershell
+git diff --check
+git status --short --branch
+```
+
+Expected: `git diff --check` is silent and status contains only authorized Package A DTO changes. This task makes no code edits unless a test exposes an approved-scope defect; if it does, return to the relevant RED-GREEN task, rerun both gates, and create a separate atomic corrective commit.
+
+## Explicit Exclusions
+
+- No frontend changes.
+- No solver or production strategy-registry changes.
+- No dependency changes.
+- No merge or push changes.

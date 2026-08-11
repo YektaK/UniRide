@@ -346,6 +346,29 @@ class OptimizationRequest(BaseModel):
         
         return time_windows
 
+class FeasibilityViolationInfo(BaseModel):
+    type: str
+    severity: str
+    details: str
+    route_index: Optional[int] = None
+    node: Optional[int] = None
+
+
+class FeasibilityCertificateInfo(BaseModel):
+    is_feasible: bool
+    violation_count: int
+    violations: List[FeasibilityViolationInfo]
+    certify_error: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_consistency(self) -> "FeasibilityCertificateInfo":
+        if self.violation_count != len(self.violations):
+            raise ValueError("violation_count must equal len(violations)")
+        if self.is_feasible and (self.violations or self.certify_error is not None):
+            raise ValueError("a feasible certificate cannot contain violations or certify_error")
+        return self
+
+
 class OptimizationResponse(BaseModel):
     algorithm_used: str
     success: bool
@@ -358,6 +381,7 @@ class OptimizationResponse(BaseModel):
     time_windows_used: bool = False
     ie_data: Optional[IEResponseData] = None
     total_time_window_violations: Optional[int] = None
+    feasibility_certificate: Optional[FeasibilityCertificateInfo] = None
 
 class AlgorithmResult(BaseModel):
     algorithm: str
@@ -367,6 +391,7 @@ class AlgorithmResult(BaseModel):
     execution_time_seconds: float
     routes: List[VehicleRoute]
     error_message: Optional[str] = None
+    feasibility_certificate: Optional[FeasibilityCertificateInfo] = None
 
 class CompareRequest(BaseModel):
     students: List[StudentNode]

@@ -1,6 +1,6 @@
 # Package A Success-Certificate DTO Design
 
-**Status:** Specification independently reviewed; pending user approval before implementation
+**Status:** Specification independently reviewed and user-approved before implementation
 **Date:** 2026-08-11
 **Implementation base:** `74087a2` (`feat(api): enforce production feasibility certificates`)
 **Branch:** `codex/package-a-universal-feasibility-20260810`

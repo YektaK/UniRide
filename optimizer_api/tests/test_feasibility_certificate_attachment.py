@@ -36,6 +36,33 @@ def test_certificate_model_enforces_invariants():
         )
 
 
+def test_violation_info_defaults_optional_context_to_none_in_serialization():
+    violation = schemas.FeasibilityViolationInfo(
+        type="x", severity="error", details="x"
+    )
+
+    assert violation.route_index is None
+    assert violation.node is None
+    assert violation.model_dump()["route_index"] is None
+    assert violation.model_dump()["node"] is None
+
+
+def test_legacy_response_models_default_certificate_to_none_and_serialize_it():
+    optimization_response = schemas.OptimizationResponse(
+        algorithm_used="test", success=True, routes=[]
+    )
+    algorithm_result = schemas.AlgorithmResult(
+        algorithm="test",
+        success=True,
+        total_vehicles=0,
+        total_duration_minutes=0.0,
+        execution_time_seconds=0.0,
+        routes=[],
+    )
+
+    for response in (optimization_response, algorithm_result):
+        assert response.feasibility_certificate is None
+        assert response.model_dump()["feasibility_certificate"] is None
 def test_certificate_field_is_optional_and_typed_in_openapi():
     assert "feasibility_certificate" in schemas.OptimizationResponse.model_fields
     assert "feasibility_certificate" in schemas.AlgorithmResult.model_fields
@@ -45,4 +72,4 @@ def test_certificate_field_is_optional_and_typed_in_openapi():
     components = app.openapi()["components"]["schemas"]
     for response_name in ("OptimizationResponse", "AlgorithmResult"):
         prop = components[response_name]["properties"]["feasibility_certificate"]
-        assert "FeasibilityCertificateInfo" in json.dumps(prop)
+        assert {"$ref": "#/components/schemas/FeasibilityCertificateInfo"} in prop["anyOf"]

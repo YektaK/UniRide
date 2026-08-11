@@ -11,6 +11,35 @@ from uniride_core.algorithms.clustering_strategies import get_clustering_strateg
 RouteOptimizer = Callable[[List[str]], Dict]
 
 
+def _order_students_by_visit(
+    cluster_students: List[Dict], route_details: List[Dict]
+) -> List[Dict]:
+    """Return cluster students in the route's optimized visit order.
+
+    The visit order is read from the depot-closed ``route_details`` chain of
+    occurrence keys; students whose key never appears in the chain (or an
+    empty chain) keep their incoming order deterministically.
+    """
+    if not route_details:
+        return cluster_students
+
+    keyed: Dict[str, List[Dict]] = {}
+    for student in cluster_students:
+        key = student.get("occurrence_key") or student["location_code"]
+        keyed.setdefault(key, []).append(student)
+
+    chain_keys = [route_details[0].get("location1")] + [
+        step.get("location2") for step in route_details
+    ]
+
+    ordered: List[Dict] = []
+    for key in chain_keys:
+        ordered.extend(keyed.pop(key, []))
+    for remaining in keyed.values():
+        ordered.extend(remaining)
+    return ordered
+
+
 class VehicleCalculator:
     """Calculate vehicle requirements and cluster students into route assignments."""
 
@@ -107,6 +136,16 @@ class VehicleCalculator:
                     route_result = route_optimizer(location_codes)
                     route_details = route_result.get("route_details", [])
                     route_duration = route_result.get("total_duration", 0)
+
+                    # Normalize the cluster student order to the optimized
+                    # visit order so consuming builders emit positional
+                    # student_ids aligned with route_details. Occurrence
+                    # identity is preserved: every visited occurrence key maps
+                    # back to its exact student, including co-located
+                    # duplicates.
+                    cluster_students = _order_students_by_visit(
+                        cluster_students, route_details
+                    )
                 else:
                     route_duration = len(cluster_students) * 15 + 20
 

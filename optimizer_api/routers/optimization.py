@@ -1,4 +1,5 @@
 import time
+import json
 import logging
 from typing import List
 from concurrent.futures import ThreadPoolExecutor
@@ -14,6 +15,7 @@ from models.schemas import (
 from strategies import STRATEGY_REGISTRY, get_available_strategy_names
 from utils.resource_profiler import ResourceProfiler
 from utils.scheduling import calculate_scheduled_times
+from verification.response_certifier import certify_optimization_response
 
 router = APIRouter(prefix="/api/v1", tags=["Optimization"])
 logger = logging.getLogger(__name__)
@@ -59,55 +61,61 @@ def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
                     distance_matrix[step.location1][step.location2] = step.duration
             result.routes = calculate_scheduled_times(result.routes, request, distance_matrix)
 
-        profiler = ResourceProfiler(
-            standard_sw_capacity=request.sw_capacity,
-            standard_so_capacity=request.so_capacity,
-            max_tour_duration=request.max_travel_time
-        )
+        certificate = certify_optimization_response(request, result)
+        if not certificate["is_feasible"]:
+            result.success = False
+            result.error_message = json.dumps(certificate)
 
-        students = request.students
-        sw_count = sum(1 for s in students if s.disability_type == 'Sw')
-        so_count = len(students) - sw_count
+        if result.success:
+            profiler = ResourceProfiler(
+                standard_sw_capacity=request.sw_capacity,
+                standard_so_capacity=request.so_capacity,
+                max_tour_duration=request.max_travel_time
+            )
 
-        standard_needs = profiler.calculate_standard_vehicle_needs(students, mode=request.direction.value)
-        hourly_demand_raw = profiler.generate_hourly_demand(students)
+            students = request.students
+            sw_count = sum(1 for s in students if s.disability_type == 'Sw')
+            so_count = len(students) - sw_count
 
-        hourly_demand = {
-            hour: {
-                'pickup': { 'Sw': d.pickup_sw, 'So': d.pickup_so },
-                'dropoff': { 'Sw': d.dropoff_sw, 'So': d.dropoff_so }
+            standard_needs = profiler.calculate_standard_vehicle_needs(students, mode=request.direction.value)
+            hourly_demand_raw = profiler.generate_hourly_demand(students)
+
+            hourly_demand = {
+                hour: {
+                    'pickup': { 'Sw': d.pickup_sw, 'So': d.pickup_so },
+                    'dropoff': { 'Sw': d.dropoff_sw, 'So': d.dropoff_so }
+                }
+                for hour, d in hourly_demand_raw.items()
             }
-            for hour, d in hourly_demand_raw.items()
-        }
 
-        available_vehicles = request.vehicles if request.vehicles else []
-        bottlenecks_raw = profiler.identify_bottlenecks(
-            hourly_demand_raw, available_vehicles, mode=request.direction.value
-        )
+            available_vehicles = request.vehicles if request.vehicles else []
+            bottlenecks_raw = profiler.identify_bottlenecks(
+                hourly_demand_raw, available_vehicles, mode=request.direction.value
+            )
 
-        bottlenecks = [
-            BottleneckInfo(
-                time=b.hour, type=b.type, reason=b.description, affected_students=None
-            ) for b in bottlenecks_raw
-        ]
+            bottlenecks = [
+                BottleneckInfo(
+                    time=b.hour, type=b.type, reason=b.description, affected_students=None
+                ) for b in bottlenecks_raw
+            ]
 
-        bottleneck_hours = [b.hour for b in bottlenecks_raw if b.severity in ['high', 'medium']]
-        shift_suggestions_raw = profiler.suggest_time_shifts(
-            hourly_demand_raw, bottleneck_hours, slack_window_minutes=request.slack_window_minutes
-        )
+            bottleneck_hours = [b.hour for b in bottlenecks_raw if b.severity in ['high', 'medium']]
+            shift_suggestions_raw = profiler.suggest_time_shifts(
+                hourly_demand_raw, bottleneck_hours, slack_window_minutes=request.slack_window_minutes
+            )
 
-        time_shift_suggestions = [
-            TimeShiftSuggestion(
-                student_id=s.student_id, current_time=s.current_time,
-                suggested_time=s.suggested_time, savings_vehicles=float(s.savings_vehicles)
-            ) for s in shift_suggestions_raw
-        ]
+            time_shift_suggestions = [
+                TimeShiftSuggestion(
+                    student_id=s.student_id, current_time=s.current_time,
+                    suggested_time=s.suggested_time, savings_vehicles=float(s.savings_vehicles)
+                ) for s in shift_suggestions_raw
+            ]
 
-        result.ie_data = IEResponseData(
-            standard_vehicles_needed=standard_needs.get('standard_vehicles_needed', 0),
-            hourly_demand=hourly_demand, bottlenecks=bottlenecks,
-            time_shift_suggestions=time_shift_suggestions
-        )
+            result.ie_data = IEResponseData(
+                standard_vehicles_needed=standard_needs.get('standard_vehicles_needed', 0),
+                hourly_demand=hourly_demand, bottlenecks=bottlenecks,
+                time_shift_suggestions=time_shift_suggestions
+            )
 
         return result
 
@@ -127,10 +135,17 @@ def _run_single_algorithm(algorithm_name: str, request: OptimizationRequest) -> 
         start_time = time.time()
         result = strategy.optimize(request)
         execution_time = time.time() - start_time
+        certificate = certify_optimization_response(request, result)
+        success = result.success and certificate["is_feasible"]
+        error_message = (
+            json.dumps(certificate)
+            if not certificate["is_feasible"]
+            else result.error_message
+        )
         return AlgorithmResult(
-            algorithm=algorithm_name, success=result.success, total_vehicles=result.total_vehicles,
+            algorithm=algorithm_name, success=success, total_vehicles=result.total_vehicles,
             total_duration_minutes=result.total_duration_minutes, execution_time_seconds=round(execution_time, 4),
-            routes=result.routes, error_message=result.error_message
+            routes=result.routes, error_message=error_message
         )
     except Exception as e:
         logger.exception("Algorithm %s failed during compare", algorithm_name)

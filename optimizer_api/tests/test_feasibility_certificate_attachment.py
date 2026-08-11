@@ -7,6 +7,42 @@ from pydantic import ValidationError
 from models import schemas
 from routers import optimization
 
+class _StubStrategy:
+    def __init__(self, response=None, error=None):
+        self.response = response
+        self.error = error
+
+    def optimize(self, request):
+        if self.error is not None:
+            raise self.error
+        return self.response
+
+
+def _request(algorithm="stub"):
+    return schemas.OptimizationRequest(
+        algorithm=algorithm,
+        students=[],
+        depot=schemas.LocationNode(id="depot", lat=0.0, lng=0.0),
+    )
+
+
+def _response():
+    return schemas.OptimizationResponse(
+        algorithm_used="stub",
+        success=True,
+        routes=[],
+    )
+
+
+def _payload(is_feasible=True):
+    return {
+        "is_feasible": is_feasible,
+        "violation_count": 0 if is_feasible else 1,
+        "violations": [] if is_feasible else [
+            {"type": "capacity", "severity": "error", "details": "over capacity"}
+        ],
+    }
+
 
 def _certificate_model():
     model = getattr(schemas, "FeasibilityCertificateInfo", None)
@@ -73,3 +109,71 @@ def test_certificate_field_is_optional_and_typed_in_openapi():
     for response_name in ("OptimizationResponse", "AlgorithmResult"):
         prop = components[response_name]["properties"]["feasibility_certificate"]
         assert {"$ref": "#/components/schemas/FeasibilityCertificateInfo"} in prop["anyOf"]
+
+
+def test_optimize_attaches_the_single_feasible_typed_certificate(monkeypatch):
+    payload = _payload()
+    calls = 0
+
+    def certify(request, result):
+        nonlocal calls
+        calls += 1
+        return payload
+
+    monkeypatch.setitem(optimization.STRATEGY_REGISTRY, "stub", _StubStrategy(_response()))
+    monkeypatch.setattr(optimization, "certify_optimization_response", certify)
+
+    result = optimization.optimize_route(_request())
+
+    assert calls == 1
+    assert result.feasibility_certificate.model_dump(exclude_none=True) == payload
+    assert result.success is payload["is_feasible"]
+    assert result.error_message is None
+
+
+def test_optimize_attaches_infeasible_certificate_and_legacy_json(monkeypatch):
+    payload = _payload(is_feasible=False)
+    calls = 0
+
+    def certify(request, result):
+        nonlocal calls
+        calls += 1
+        return payload
+
+    monkeypatch.setitem(optimization.STRATEGY_REGISTRY, "stub", _StubStrategy(_response()))
+    monkeypatch.setattr(optimization, "certify_optimization_response", certify)
+
+    result = optimization.optimize_route(_request())
+
+    assert calls == 1
+    assert result.feasibility_certificate.model_dump(exclude_none=True) == payload
+    assert result.success is payload["is_feasible"]
+    assert json.loads(result.error_message) == result.feasibility_certificate.model_dump(exclude_none=True)
+
+
+def test_boundaries_fail_closed_for_invalid_certificate_payload(monkeypatch):
+    invalid_payload = {"is_feasible": True, "violation_count": 1, "violations": []}
+    monkeypatch.setitem(optimization.STRATEGY_REGISTRY, "stub", _StubStrategy(_response()))
+    monkeypatch.setattr(optimization, "certify_optimization_response", lambda request, result: invalid_payload)
+
+    optimize_result = optimization.optimize_route(_request())
+    compare_result = optimization._run_single_algorithm("stub", _request())
+
+    for result in (optimize_result, compare_result):
+        assert result.success is False
+        assert result.feasibility_certificate.certify_error == optimization._INVALID_CERTIFICATE_ERROR
+        assert "validation error" not in result.error_message.lower()
+        assert json.loads(result.error_message) == result.feasibility_certificate.model_dump(exclude_none=True)
+
+
+def test_compare_no_result_boundaries_attach_sanitized_unavailable_certificate(monkeypatch):
+    monkeypatch.setitem(optimization.STRATEGY_REGISTRY, "broken", _StubStrategy(error=RuntimeError("secret strategy failure")))
+
+    missing = optimization._run_single_algorithm("missing", _request())
+    broken = optimization._run_single_algorithm("broken", _request("broken"))
+
+    for result in (missing, broken):
+        assert result.success is False
+        assert result.feasibility_certificate.certify_error == optimization._UNAVAILABLE_CERTIFICATE_ERROR
+        assert "secret strategy failure" not in result.error_message
+        assert json.loads(result.error_message) == result.feasibility_certificate.model_dump(exclude_none=True)

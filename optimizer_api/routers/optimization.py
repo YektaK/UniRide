@@ -10,7 +10,7 @@ from models.schemas import (
     OptimizationRequest, OptimizationResponse,
     CompareRequest, CompareResponse, AlgorithmResult,
     IEResponseData, BottleneckInfo,
-    TimeShiftSuggestion
+    TimeShiftSuggestion, FeasibilityCertificateInfo
 )
 from strategies import STRATEGY_REGISTRY, get_available_strategy_names
 from utils.resource_profiler import ResourceProfiler
@@ -19,6 +19,26 @@ from verification.response_certifier import certify_optimization_response
 
 router = APIRouter(prefix="/api/v1", tags=["Optimization"])
 logger = logging.getLogger(__name__)
+_INVALID_CERTIFICATE_ERROR = "certification aborted: invalid certificate payload"
+_UNAVAILABLE_CERTIFICATE_ERROR = "certification unavailable: algorithm produced no result"
+
+
+def _typed_certificate(payload: dict | None) -> FeasibilityCertificateInfo:
+    if payload is not None:
+        try:
+            return FeasibilityCertificateInfo.model_validate(payload)
+        except Exception:
+            logger.exception("Invalid feasibility certificate payload")
+    return FeasibilityCertificateInfo(
+        is_feasible=False,
+        violation_count=0,
+        violations=[],
+        certify_error=(
+            _INVALID_CERTIFICATE_ERROR
+            if payload is not None
+            else _UNAVAILABLE_CERTIFICATE_ERROR
+        ),
+    )
 
 @router.post("/optimize", response_model=OptimizationResponse)
 def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
@@ -61,10 +81,15 @@ def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
                     distance_matrix[step.location1][step.location2] = step.duration
             result.routes = calculate_scheduled_times(result.routes, request, distance_matrix)
 
-        certificate = certify_optimization_response(request, result)
-        if not certificate["is_feasible"]:
-            result.success = False
-            result.error_message = json.dumps(certificate)
+        typed_certificate = _typed_certificate(
+            certify_optimization_response(request, result)
+        )
+        result.feasibility_certificate = typed_certificate
+        result.success = typed_certificate.is_feasible
+        if not result.success:
+            result.error_message = json.dumps(
+                typed_certificate.model_dump(exclude_none=True)
+            )
 
         if result.success:
             profiler = ResourceProfiler(
@@ -126,34 +151,50 @@ def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
 def _run_single_algorithm(algorithm_name: str, request: OptimizationRequest) -> AlgorithmResult:
     strategy = STRATEGY_REGISTRY.get(algorithm_name)
     if not strategy:
+        typed_certificate = _typed_certificate(None)
         return AlgorithmResult(
             algorithm=algorithm_name, success=False, total_vehicles=0,
             total_duration_minutes=0, execution_time_seconds=0, routes=[],
-            error_message=f"Algorithm '{algorithm_name}' not found"
+            error_message=json.dumps(typed_certificate.model_dump(exclude_none=True)),
+            feasibility_certificate=typed_certificate,
         )
     try:
         start_time = time.time()
         result = strategy.optimize(request)
+        if result is None:
+            typed_certificate = _typed_certificate(None)
+            return AlgorithmResult(
+                algorithm=algorithm_name, success=False, total_vehicles=0,
+                total_duration_minutes=0, execution_time_seconds=round(time.time() - start_time, 4),
+                routes=[],
+                error_message=json.dumps(typed_certificate.model_dump(exclude_none=True)),
+                feasibility_certificate=typed_certificate,
+            )
         execution_time = time.time() - start_time
-        certificate = certify_optimization_response(request, result)
-        success = result.success and certificate["is_feasible"]
+        typed_certificate = _typed_certificate(
+            certify_optimization_response(request, result)
+        )
+        success = typed_certificate.is_feasible
         error_message = (
-            json.dumps(certificate)
-            if not certificate["is_feasible"]
+            json.dumps(typed_certificate.model_dump(exclude_none=True))
+            if not success
             else result.error_message
         )
         return AlgorithmResult(
             algorithm=algorithm_name, success=success, total_vehicles=result.total_vehicles,
             total_duration_minutes=result.total_duration_minutes, execution_time_seconds=round(execution_time, 4),
-            routes=result.routes, error_message=error_message
+            routes=result.routes, error_message=error_message,
+            feasibility_certificate=typed_certificate,
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Algorithm %s failed during compare", algorithm_name)
+        typed_certificate = _typed_certificate(None)
         return AlgorithmResult(
             algorithm=algorithm_name, success=False, total_vehicles=0,
-            total_duration_minutes=0, execution_time_seconds=0, routes=[], error_message=f"Algorithm '{algorithm_name}' failed — check server logs"
+            total_duration_minutes=0, execution_time_seconds=0, routes=[],
+            error_message=json.dumps(typed_certificate.model_dump(exclude_none=True)),
+            feasibility_certificate=typed_certificate,
         )
-
 @router.post("/compare", response_model=CompareResponse)
 def compare_algorithms(request: CompareRequest) -> CompareResponse:
     start_time = time.time()
@@ -182,13 +223,21 @@ def compare_algorithms(request: CompareRequest) -> CompareResponse:
             try:
                 result = future.result(timeout=120)
                 results.append(result)
-            except Exception as e:
+            except Exception:
+                typed_certificate = _typed_certificate(None)
                 results.append(AlgorithmResult(
                     algorithm=algo, success=False, total_vehicles=0,
-                    total_duration_minutes=0, execution_time_seconds=0, routes=[], error_message=str(e)
+                    total_duration_minutes=0, execution_time_seconds=0, routes=[],
+                    error_message=json.dumps(typed_certificate.model_dump(exclude_none=True)),
+                    feasibility_certificate=typed_certificate,
                 ))
 
-    successful_results = [r for r in results if r.success]
+    successful_results = [
+        r for r in results
+        if r.success
+        and r.feasibility_certificate is not None
+        and r.feasibility_certificate.is_feasible
+    ]
     if successful_results:
         best = min(successful_results, key=lambda x: x.total_duration_minutes)
         fastest = min(successful_results, key=lambda x: x.execution_time_seconds)

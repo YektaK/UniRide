@@ -1,6 +1,6 @@
 # Package A Success-Certificate DTO Design
 
-**Status:** Typed-model approach selected; pending written specification approval
+**Status:** Specification independently reviewed; pending user approval before implementation
 **Date:** 2026-08-11
 **Implementation base:** `74087a2` (`feat(api): enforce production feasibility certificates`)
 **Branch:** `codex/package-a-universal-feasibility-20260810`
@@ -60,6 +60,13 @@ Add two response-only models in `optimizer_api/models/schemas.py`:
   - `violations: List[FeasibilityViolationInfo]`
   - `certify_error: Optional[str] = None`
 
+`FeasibilityCertificateInfo` validates its own invariants:
+
+- `violation_count == len(violations)`;
+- `certify_error` is permitted only when `is_feasible=False`;
+- an `is_feasible=True` certificate has zero violations and no
+  `certify_error`.
+
 Add the following optional field to both result DTOs:
 
 ```python
@@ -76,7 +83,7 @@ authorized.
 
 1. Run the selected strategy and scheduling behavior already present.
 2. Generate one certificate.
-3. Validate the returned dictionary into `FeasibilityCertificateInfo`.
+3. Validate the returned dictionary once into `FeasibilityCertificateInfo`.
 4. Attach it to `result.feasibility_certificate` for both feasible and
    infeasible outcomes.
 5. If infeasible, retain the existing `success=False` demotion and JSON
@@ -85,7 +92,7 @@ authorized.
 ### `/compare`
 
 1. Generate one certificate for each algorithm result.
-2. Validate it into the same model.
+2. Validate it once into the same model.
 3. Pass it into the corresponding `AlgorithmResult` regardless of feasibility.
 4. Rank only results whose existing success and certificate checks both pass.
 
@@ -98,8 +105,10 @@ No certificate is recomputed solely for serialization.
   result to be unsuccessful.
 - The certifier's sanitized error text remains the only internal-failure detail
   crossing the API boundary.
-- DTO validation failure must not allow `success=True`; it follows the existing
-  endpoint exception boundary and server-side logging policy.
+- Certificate DTO validation failure produces one fixed, sanitized typed
+  fallback with `is_feasible=False`, no violations, and a generic
+  `certify_error`; it is attached, forces `success=False`, and preserves the
+  legacy JSON `error_message` without exposing the raw validation exception.
 
 ## 7. Compatibility
 
@@ -123,6 +132,14 @@ RED tests must first prove the field is absent or unset under the current code:
    serializes it as `None` under the existing Pydantic defaults.
 6. The generated FastAPI OpenAPI schema references the typed certificate model
    for both result DTOs.
+7. Certificate invariants reject mismatched counts, feasible certificates with
+   violations, and feasible certificates carrying `certify_error`.
+8. `/optimize` and each `/compare` result call the certifier exactly once and
+   attach the exact validated payload from that call.
+9. For failed results, the typed payload equals the certificate serialized in
+   the legacy JSON `error_message`.
+10. Invalid certificate dictionaries produce the sanitized typed fallback and
+    `success=False` at both `/optimize` and per-result `/compare` boundaries.
 
 After GREEN, run the focused production feasibility suite and the complete
 core/API gate.
@@ -141,8 +158,10 @@ core/API gate.
 - Successful and failed `/optimize` results carry the typed certificate.
 - Every `/compare` result carries the same typed certificate schema.
 - Hard violations still cannot return `success=True`.
+- Certificate DTO invariants cannot represent contradictory count, feasibility,
+  or error states.
+- Each result is certified once; attachment does not recompute certification.
 - Existing clients can ignore the additive optional field.
 - Focused RED-GREEN evidence is recorded.
 - `uniride_core/tests` and `optimizer_api/tests` pass.
 - `git diff --check` passes and only authorized paths change.
-

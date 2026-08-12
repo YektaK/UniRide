@@ -43,6 +43,11 @@ def validate_runtime_configuration() -> None:
             "INTERNAL_API_KEY is not set; configure it or use "
             "UNIRIDE_DISABLE_AUTH=1 outside production"
         )
+    try:
+        from optimizer_api.compute_policy import load_compute_policy
+    except ModuleNotFoundError:  # direct `python optimizer_api/main.py` compatibility
+        from compute_policy import load_compute_policy
+    load_compute_policy()
 
 
 def validate_bind_host(host: str) -> None:

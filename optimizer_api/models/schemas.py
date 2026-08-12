@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Literal
 from pydantic import BaseModel, Field, model_validator
 from enum import Enum
 
@@ -289,6 +289,34 @@ class OptimizationRequest(BaseModel):
             _parse_hhmm(self.target_time)
         return self
 
+    @model_validator(mode="after")
+    def validate_compute_admission(self) -> "OptimizationRequest":
+        try:
+            from optimizer_api.compute_policy import (
+                TUNING_ALLOWLISTS,
+                load_compute_policy,
+                validate_tuning_dict,
+            )
+        except ModuleNotFoundError:  # direct-module compatibility
+            from compute_policy import TUNING_ALLOWLISTS, load_compute_policy, validate_tuning_dict
+
+        policy = load_compute_policy()
+        if len(self.students) > policy.max_students:
+            raise ValueError(f"students cannot exceed {policy.max_students}")
+        if self.vehicles is not None and len(self.vehicles) > policy.max_vehicles:
+            raise ValueError(f"vehicles cannot exceed {policy.max_vehicles}")
+        if self.local_search_type not in {None, "none", "two_opt", "three_opt", "or_opt", "hybrid"}:
+            raise ValueError("local_search_type is unsupported")
+        for field_name in TUNING_ALLOWLISTS:
+            supplied = getattr(self, field_name)
+            if supplied is not None:
+                setattr(
+                    self,
+                    field_name,
+                    validate_tuning_dict(field_name, supplied, policy, len(self.students)),
+                )
+        return self
+
     @property
     def strategy(self) -> str:
         return self.algorithm
@@ -369,6 +397,29 @@ class FeasibilityCertificateInfo(BaseModel):
         return self
 
 
+class PolicyValueSource(str, Enum):
+    PROFILE_DEFAULT = "profile_default"
+    SERVER_OVERRIDE = "server_override"
+    CALLER = "caller"
+    STRATEGY_DEFAULT = "strategy_default"
+
+
+class AppliedPolicyLimitInfo(BaseModel):
+    value: float
+    source: PolicyValueSource
+    enforcement: str
+
+
+class AppliedComputePolicyInfo(BaseModel):
+    profile_id: str
+    algorithm_requested: Optional[str] = None
+    algorithm_canonical: Optional[str] = None
+    student_count: int = 0
+    vehicle_count: int = 0
+    cancellation_mode: Literal["none", "soft_response_deadline"] = "none"
+    limits: Dict[str, AppliedPolicyLimitInfo] = Field(default_factory=dict)
+
+
 class OptimizationResponse(BaseModel):
     algorithm_used: str
     success: bool
@@ -382,6 +433,8 @@ class OptimizationResponse(BaseModel):
     ie_data: Optional[IEResponseData] = None
     total_time_window_violations: Optional[int] = None
     feasibility_certificate: Optional[FeasibilityCertificateInfo] = None
+    algorithm_requested: Optional[str] = None
+    applied_policy: Optional[AppliedComputePolicyInfo] = None
 
 class AlgorithmResult(BaseModel):
     algorithm: str
@@ -392,6 +445,8 @@ class AlgorithmResult(BaseModel):
     routes: List[VehicleRoute]
     error_message: Optional[str] = None
     feasibility_certificate: Optional[FeasibilityCertificateInfo] = None
+    algorithm_requested: Optional[str] = None
+    applied_policy: Optional[AppliedComputePolicyInfo] = None
 
 class CompareRequest(BaseModel):
     students: List[StudentNode]
@@ -403,12 +458,27 @@ class CompareRequest(BaseModel):
     use_time_windows: bool = False
     algorithms: Optional[List[str]] = None
 
+    @model_validator(mode="after")
+    def validate_compute_admission(self) -> "CompareRequest":
+        try:
+            from optimizer_api.compute_policy import load_compute_policy
+        except ModuleNotFoundError:  # direct-module compatibility
+            from compute_policy import load_compute_policy
+
+        policy = load_compute_policy()
+        if len(self.students) > policy.max_students:
+            raise ValueError(f"students cannot exceed {policy.max_students}")
+        if self.algorithms is not None and len(self.algorithms) > policy.max_algorithms:
+            raise ValueError(f"algorithms cannot exceed {policy.max_algorithms}")
+        return self
+
 class CompareResponse(BaseModel):
     success: bool
     results: List[AlgorithmResult]
     best_algorithm: str
     fastest_algorithm: str
     summary: Dict[str, Any]
+    applied_policy: Optional[AppliedComputePolicyInfo] = None
 
 class StrategyInfo(BaseModel):
     name: str

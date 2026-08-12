@@ -1,6 +1,6 @@
 # Package B Compute Admission, Budget, and Alias Canonicalization Design
 
-**Status:** Approved design baseline; written specification pending final user review
+**Status:** Approved written specification
 **Date:** 2026-08-12
 **Base:** `WIP` at `b9becba1cded4dcfa897cecab9046b322b3be5d7`
 **Profile identifier:** `production-conservative-v1`
@@ -172,7 +172,7 @@ When `CompareRequest.algorithms` is omitted, Package B runs this ordered canonic
 
 The set is intentionally limited to six distinct production roles. Exact enumeration, SOTA solvers with large native time limits, optional dependency variants, compatibility variants, and near-duplicate strategies are explicit opt-ins.
 
-An unavailable explicit strategy fails before any comparison work. The default set must be validated at startup; an unavailable default is a deployment/configuration error rather than a silent substitution.
+An unavailable explicit strategy fails before any comparison work. The default set must be validated at startup; an unavailable default is a deployment/configuration error rather than a silent substitution. Because this profile requires the omitted/default set to remain exactly six algorithms, `UNIRIDE_COMPUTE_MAX_ALGORITHMS` below six is also an invalid startup configuration for `production-conservative-v1`; callers run fewer algorithms by supplying an explicit list.
 
 ## 8. Comparison Execution and Ranking
 

@@ -1,21 +1,22 @@
-import os
 import secrets
 from typing import Annotated
 
 from fastapi import Header, HTTPException
 
 
+try:
+    from optimizer_api.runtime_config import internal_api_key, internal_auth_disabled
+except ModuleNotFoundError:  # direct-module compatibility
+    from runtime_config import internal_api_key, internal_auth_disabled
+
+
 async def require_internal_api_key(
     x_internal_api_key: Annotated[str | None, Header()] = None,
 ) -> None:
-    """Fail-closed internal API key gate for benchmark/CLI routes.
-
-    A missing ``INTERNAL_API_KEY`` environment variable is always a deny:
-    production deployments must configure the key or the app refuses to
-    serve these routes.
-    """
-    expected = os.getenv("INTERNAL_API_KEY")
-    if expected is None:
+    if internal_auth_disabled():
+        return
+    expected = internal_api_key()
+    if expected is None or x_internal_api_key is None:
         raise HTTPException(status_code=403, detail="Forbidden")
-    if x_internal_api_key is None or not secrets.compare_digest(x_internal_api_key, expected):
+    if not secrets.compare_digest(x_internal_api_key, expected):
         raise HTTPException(status_code=403, detail="Forbidden")

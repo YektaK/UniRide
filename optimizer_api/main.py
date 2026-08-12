@@ -18,9 +18,9 @@ from dotenv import load_dotenv
 from routers import optimization, utils, strategies, benchmark
 from strategies import get_available_strategy_names
 try:
-    from optimizer_api.runtime_config import optimizer_host, internal_auth_disabled, validate_bind_host
-except ModuleNotFoundError:
-    from runtime_config import optimizer_host, internal_auth_disabled, validate_bind_host
+    from optimizer_api.runtime_config import optimizer_host, validate_bind_host, validate_runtime_configuration
+except ModuleNotFoundError:  # direct `python optimizer_api/main.py` compatibility
+    from runtime_config import optimizer_host, validate_bind_host, validate_runtime_configuration
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -28,20 +28,7 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
 
-# Phase 0 authentication guard: benchmark/CLI routes are fail-closed and the
-# server refuses to boot without a configured internal key (unless explicitly
-# disabled for local/dev/test runs).
-if not (internal_auth_disabled() or os.getenv("INTERNAL_API_KEY")):
-    _missing_key_hint = (
-        "INTERNAL_API_KEY is not set. Benchmark and CLI endpoints are "
-        "fail-closed; set INTERNAL_API_KEY in the environment or .env, or set "
-        "UNIRIDE_DISABLE_AUTH=1 for an explicit local/dev-only opt-out."
-    )
-    if os.getenv("APP_ENV") == "test":
-        print(f"[WARN] {_missing_key_hint}")
-    else:
-        raise SystemExit(_missing_key_hint)
-
+validate_runtime_configuration()
 # Create FastAPI app
 app = FastAPI(
     title="UniRide Optimization Engine API",

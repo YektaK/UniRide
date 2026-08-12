@@ -96,13 +96,13 @@ def test_g3_main_import_ok_with_key(monkeypatch):
     assert callable(module.health_check)
 
 
-def test_g3_main_import_ok_with_explicit_disable(monkeypatch):
+def test_g3_production_rejects_explicit_disable(monkeypatch):
     monkeypatch.setenv("UNIRIDE_DISABLE_AUTH", "1")
     monkeypatch.delenv("INTERNAL_API_KEY", raising=False)
     monkeypatch.setenv("APP_ENV", "production")
 
-    module = _load_main_module()
-    assert callable(module.health_check)
+    with pytest.raises(SystemExit, match="UNIRIDE_DISABLE_AUTH"):
+        runtime_config.validate_runtime_configuration()
 
 
 def test_g4_bind_host_defaults_to_loopback(monkeypatch):

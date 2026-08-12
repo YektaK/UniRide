@@ -24,6 +24,26 @@ def internal_auth_disabled() -> bool:
     """Explicit dev/test opt-out for the internal API key gate."""
     return os.getenv("UNIRIDE_DISABLE_AUTH") == "1"
 
+def app_env() -> str:
+
+    return os.getenv("APP_ENV", "development").strip().lower()
+
+
+def internal_api_key() -> str | None:
+    value = os.getenv("INTERNAL_API_KEY")
+    return value if value else None
+
+
+def validate_runtime_configuration() -> None:
+    disabled = internal_auth_disabled()
+    if disabled and app_env() == "production":
+        raise SystemExit("UNIRIDE_DISABLE_AUTH=1 is forbidden when APP_ENV=production")
+    if not disabled and internal_api_key() is None:
+        raise SystemExit(
+            "INTERNAL_API_KEY is not set; configure it or use "
+            "UNIRIDE_DISABLE_AUTH=1 outside production"
+        )
+
 
 def validate_bind_host(host: str) -> None:
     """Raise when binding outside loopback without an explicit opt-in.

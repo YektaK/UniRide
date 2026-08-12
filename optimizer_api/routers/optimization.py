@@ -4,7 +4,12 @@ import logging
 from typing import List
 from concurrent.futures import ThreadPoolExecutor
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+
+try:
+    from optimizer_api.auth import require_internal_api_key
+except ModuleNotFoundError:  # direct-module compatibility
+    from auth import require_internal_api_key
 
 from models.schemas import (
     OptimizationRequest, OptimizationResponse,
@@ -17,7 +22,11 @@ from utils.resource_profiler import ResourceProfiler
 from utils.scheduling import calculate_scheduled_times
 from verification.response_certifier import certify_optimization_response
 
-router = APIRouter(prefix="/api/v1", tags=["Optimization"])
+router = APIRouter(
+    prefix="/api/v1",
+    tags=["Optimization"],
+    dependencies=[Depends(require_internal_api_key)],
+)
 logger = logging.getLogger(__name__)
 _INVALID_CERTIFICATE_ERROR = "certification aborted: invalid certificate payload"
 _UNAVAILABLE_CERTIFICATE_ERROR = "certification unavailable: algorithm produced no result"

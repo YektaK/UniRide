@@ -48,6 +48,21 @@ def test_heavy_routes_require_internal_key(monkeypatch, path, payload):
     assert "expected" not in allowed.text
 
 
+def test_heavy_route_rejects_non_ascii_wrong_key(monkeypatch):
+    monkeypatch.delenv("UNIRIDE_DISABLE_AUTH", raising=False)
+    monkeypatch.setenv("INTERNAL_API_KEY", "expected")
+
+    submitted_key = "wrongé"
+    response = _client().post(
+        "/api/v1/optimize",
+        json=OPTIMIZE,
+        headers={"X-Internal-API-Key": submitted_key.encode("utf-8")},
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Forbidden"}
+    assert "expected" not in response.text
+    assert submitted_key not in response.text
 def test_lightweight_routes_remain_public(monkeypatch):
     monkeypatch.delenv("UNIRIDE_DISABLE_AUTH", raising=False)
     monkeypatch.setenv("INTERNAL_API_KEY", "expected")

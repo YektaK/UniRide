@@ -18,5 +18,7 @@ async def require_internal_api_key(
     expected = internal_api_key()
     if expected is None or x_internal_api_key is None:
         raise HTTPException(status_code=403, detail="Forbidden")
-    if not secrets.compare_digest(x_internal_api_key, expected):
+    if not secrets.compare_digest(
+        x_internal_api_key.encode("utf-8"), expected.encode("utf-8")
+    ):
         raise HTTPException(status_code=403, detail="Forbidden")

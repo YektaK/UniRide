@@ -15,6 +15,7 @@ from pydantic import ValidationError
 
 from optimizer_api.compute_policy import (
     HARD_CEILINGS,
+    INTENSITY_KEYS,
     TUNING_ALLOWLISTS,
     load_compute_policy,
     validate_tuning_dict,
@@ -277,6 +278,19 @@ def test_local_search_type_enum_validated():
         validate_tuning_dict("ga_config", {"local_search_type": "banana"}, HARD_CEILINGS, 0)
 
 
+@pytest.mark.parametrize("bad_value", [[], {}, 1], ids=["list", "dict", "integer"])
+def test_tuning_dict_rejects_non_string_local_search_type(bad_value):
+    with pytest.raises(ValueError, match="local_search_type is unsupported"):
+        validate_tuning_dict("ga_config", {"local_search_type": bad_value}, HARD_CEILINGS, 0)
+
+
+@pytest.mark.parametrize("bad_value", [[], {}, 1], ids=["list", "dict", "integer"])
+@pytest.mark.parametrize("intensity_key", sorted(INTENSITY_KEYS))
+def test_tuning_dict_rejects_non_string_intensity_values(intensity_key, bad_value):
+    with pytest.raises(ValueError, match=f"{intensity_key} is unsupported"):
+        validate_tuning_dict("sota_config", {intensity_key: bad_value}, HARD_CEILINGS, 0)
+
+
 def test_tuning_dict_does_not_mutate_caller_dict():
     supplied = {"max_iterations": 5, "population_size": 10}
     snapshot = dict(supplied)
@@ -353,6 +367,18 @@ def test_compare_accepts_six_algorithms(monkeypatch):
 def test_request_rejects_unsupported_local_search_type():
     with pytest.raises(ValidationError, match="local_search_type is unsupported"):
         OptimizationRequest(**_request(local_search_type="banana"))
+
+
+@pytest.mark.parametrize("bad_value", [[], {}, 1], ids=["list", "dict", "integer"])
+@pytest.mark.parametrize(
+    ("config_field", "config_key"),
+    [("ga_config", "local_search_type")] + [("sota_config", key) for key in sorted(INTENSITY_KEYS)],
+)
+def test_request_wraps_malformed_compute_policy_enums_in_validation_error(
+    config_field, config_key, bad_value
+):
+    with pytest.raises(ValidationError):
+        OptimizationRequest(**_request(**{config_field: {config_key: bad_value}}))
 
 
 def test_zero_student_request_remains_valid(monkeypatch):

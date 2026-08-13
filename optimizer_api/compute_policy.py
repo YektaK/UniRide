@@ -163,10 +163,10 @@ def validate_tuning_dict(
                 raise ValueError("sa_cooling_rate must be in (0, 1)")
             result[key] = number
         elif key == "local_search_type":
-            if item not in {"none", "two_opt", "three_opt", "or_opt", "hybrid"}:
+            if not isinstance(item, str) or item not in {"none", "two_opt", "three_opt", "or_opt", "hybrid"}:
                 raise ValueError("local_search_type is unsupported")
         elif key in INTENSITY_KEYS:
-            if item not in {"light", "moderate"}:
+            if not isinstance(item, str) or item not in {"light", "moderate"}:
                 raise ValueError(f"{key} is unsupported")
         elif key == "destroy_ops_pool":
             result[key] = _operator_list(key, item, frozenset({"random", "worst", "shaw", "related"}))

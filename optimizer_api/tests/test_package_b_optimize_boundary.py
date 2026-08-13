@@ -272,3 +272,94 @@ def test_optimize_named_registry_contract_error_is_deterministic_400(monkeypatch
 
     assert exc_info.value.status_code == 400
     assert exc_info.value.detail == "registry contract mismatch"
+
+
+# ---------------------------------------------------------------------------
+# Task 6: oversized exact/permutation requests must fail before solver work
+# ---------------------------------------------------------------------------
+
+def _many_students(count=11):
+    return [
+        schemas.StudentNode(
+            id=f"S{i}",
+            name=f"S{i}",
+            location_code=f"L{i}",
+            coordinates={"lat": float(i), "lng": 0.0},
+            disability_type="So",
+        )
+        for i in range(count)
+    ]
+
+
+def _install_permutation(monkeypatch, requested, strategy):
+    resolution = ResolvedStrategy(
+        requested, "permutation_tsp", lambda: strategy, (requested,)
+    )
+    monkeypatch.setattr(optimization, "resolve_strategy", lambda key: resolution)
+    monkeypatch.setattr(optimization, "load_compute_policy", lambda: ComputePolicy())
+    monkeypatch.setattr(
+        optimization,
+        "certify_optimization_response",
+        lambda request, result: FEASIBLE,
+    )
+
+    def apply(request, actual_resolution, actual_strategy, policy):
+        assert actual_resolution is resolution
+        assert actual_strategy is strategy
+        effective = request.model_copy(deep=True)
+        return effective, schemas.AppliedComputePolicyInfo(
+            profile_id="production-conservative-v1",
+            algorithm_requested=requested,
+            algorithm_canonical="permutation_tsp",
+            student_count=len(effective.students),
+            vehicle_count=0,
+            cancellation_mode="none",
+            limits={},
+        )
+
+    monkeypatch.setattr(optimization, "apply_compute_policy", apply)
+    return resolution
+
+
+@pytest.mark.parametrize("requested", ["permutation_tsp", "exact"])
+def test_optimize_rejects_oversize_exact_before_solver_with_sanitized_failure(
+    monkeypatch, requested
+):
+    strategy = _Strategy(name="permutation_tsp", response=_response())
+    _install_permutation(monkeypatch, requested, strategy)
+    request = _request(requested, students=_many_students())
+    before = request.model_dump()
+
+    result = optimization.optimize_route(request)
+
+    assert strategy.optimize_calls == 0
+    assert request.model_dump() == before
+    assert [student.id for student in request.students] == [
+        f"S{i}" for i in range(11)
+    ]
+    assert result.success is False
+    assert result.algorithm_used == "permutation_tsp"
+    assert result.algorithm_requested == requested
+    assert result.applied_policy.algorithm_canonical == "permutation_tsp"
+    assert result.applied_policy.algorithm_requested == requested
+    assert result.applied_policy.student_count == 11
+    assert (
+        result.feasibility_certificate.certify_error
+        == optimization._UNAVAILABLE_CERTIFICATE_ERROR
+    )
+    error_text = result.error_message or ""
+    assert "S0" not in error_text
+    assert "L0" not in error_text
+    assert "Traceback" not in error_text
+
+
+def test_optimize_allows_exact_at_limit_with_solver_invocation(monkeypatch):
+    strategy = _Strategy(name="permutation_tsp", response=_response())
+    _install_permutation(monkeypatch, "permutation_tsp", strategy)
+    request = _request("permutation_tsp", students=_many_students(10))
+
+    result = optimization.optimize_route(request)
+
+    assert strategy.optimize_calls == 1
+    assert result.success is True
+    assert result.algorithm_used == "permutation_tsp"

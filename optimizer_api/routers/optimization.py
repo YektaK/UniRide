@@ -61,6 +61,19 @@ router = APIRouter(
 logger = logging.getLogger(__name__)
 _INVALID_CERTIFICATE_ERROR = "certification aborted: invalid certificate payload"
 _UNAVAILABLE_CERTIFICATE_ERROR = "certification unavailable: algorithm produced no result"
+_EXACT_OPTIMAL_LIMIT = 10
+
+
+def _is_oversize_exact_request(resolution: ResolvedStrategy, request) -> bool:
+    """True when an exact/permutation request exceeds the safe search limit.
+
+    Exact search is factorial; the production cutoff is ``_EXACT_OPTIMAL_LIMIT``
+    waypoints. Oversized requests must fail before the solver method is invoked.
+    """
+    return (
+        resolution.canonical == "permutation_tsp"
+        and len(request.students) > _EXACT_OPTIMAL_LIMIT
+    )
 
 
 def _typed_certificate(payload: dict | None) -> FeasibilityCertificateInfo:
@@ -119,6 +132,9 @@ def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
         )
     except PolicyValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from None
+
+    if _is_oversize_exact_request(resolution, request):
+        return _optimization_failure(resolution, applied_policy, 0.0)
 
     start_time = time.time()
     try:
@@ -293,6 +309,9 @@ def _run_single_algorithm(
 
     start_time = time.time()
     try:
+        if _is_oversize_exact_request(resolution, effective_request):
+            return _algorithm_failure(resolution, applied_policy, 0.0)
+
         response = strategy.optimize(effective_request)
         execution_time = time.time() - start_time
         if response is None:

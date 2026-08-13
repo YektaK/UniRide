@@ -8,6 +8,10 @@ from typing import Callable, List, Sequence
 DurationLookup = Callable[[str, str], float]
 
 
+class ExactTSPSizeError(ValueError):
+    """Raised before factorial work when an exact TSP request exceeds its limit."""
+
+
 def solve_exact_tsp_route(
     waypoints: Sequence[str],
     depot: str,
@@ -16,12 +20,14 @@ def solve_exact_tsp_route(
     max_permutation_size: int = 10,
 ) -> tuple[List[str], float]:
     """Find the best depot-closed route by complete permutation search."""
-    if not waypoints:
+    search_waypoints = list(waypoints)
+    if not search_waypoints:
         return [], 0.0
 
-    search_waypoints = list(waypoints)
     if len(search_waypoints) > max_permutation_size:
-        search_waypoints = search_waypoints[:max_permutation_size]
+        raise ExactTSPSizeError(
+            f"{len(search_waypoints)} waypoints exceeds exact-search limit {max_permutation_size}"
+        )
 
     if len(search_waypoints) == 1:
         only = search_waypoints[0]
@@ -49,4 +55,4 @@ def route_duration(route: Sequence[str], depot: str, duration_lookup: DurationLo
     return total
 
 
-__all__ = ["route_duration", "solve_exact_tsp_route"]
+__all__ = ["route_duration", "solve_exact_tsp_route", "ExactTSPSizeError"]

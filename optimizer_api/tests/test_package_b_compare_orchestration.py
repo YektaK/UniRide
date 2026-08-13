@@ -586,3 +586,101 @@ def test_compare_policy_failure_happens_before_executor(monkeypatch):
 
     assert exc_info.value.status_code == 422
     assert exc_info.value.detail == "ga_config not applicable"
+
+
+# ---------------------------------------------------------------------------
+# Task 6: oversized exact/permutation runs fail without touching the solver
+# ---------------------------------------------------------------------------
+
+def _many_students(count=11):
+    return [
+        schemas.StudentNode(
+            id=f"S{i}",
+            name=f"S{i}",
+            location_code=f"L{i}",
+            coordinates={"lat": float(i), "lng": 0.0},
+            disability_type="So",
+        )
+        for i in range(count)
+    ]
+
+
+def test_compare_oversize_exact_run_fails_while_eligible_runs_continue(monkeypatch):
+    exact_calls = []
+
+    class ExactStrategy:
+        name = "permutation_tsp"
+        config = {}
+
+        def optimize(self, request):
+            exact_calls.append(request)
+            raise AssertionError("exact solver must never run for an oversized request")
+
+    class GreedyStrategy:
+        name = "greedy"
+        config = {}
+
+        def optimize(self, request):
+            return schemas.OptimizationResponse(
+                algorithm_used="greedy", success=True, routes=[]
+            )
+
+    exact_resolution = _resolution(
+        "exact", "permutation_tsp", ("exact", "permutation_tsp"),
+        factory=lambda: ExactStrategy(),
+    )
+    greedy_resolution = _resolution(
+        "greedy", "greedy", ("greedy",), factory=lambda: GreedyStrategy()
+    )
+    monkeypatch.setattr(
+        optimization,
+        "resolve_unique_strategies",
+        lambda keys: [exact_resolution, greedy_resolution],
+    )
+    monkeypatch.setattr(
+        optimization,
+        "certify_optimization_response",
+        lambda request, result: {
+            "is_feasible": True, "violation_count": 0, "violations": []
+        },
+    )
+    _install_policy(monkeypatch)
+    request = schemas.CompareRequest(
+        students=_many_students(), depot=DEPOT, algorithms=["exact", "greedy"]
+    )
+
+    response = optimization.compare_algorithms(request)
+
+    assert exact_calls == []
+    assert [student.id for student in request.students] == [
+        f"S{i}" for i in range(11)
+    ]
+    assert [result.algorithm for result in response.results] == [
+        "permutation_tsp", "greedy"
+    ]
+
+    exact_result = response.results[0]
+    assert exact_result.success is False
+    assert exact_result.algorithm_requested == "exact"
+    assert exact_result.applied_policy.algorithm_canonical == "permutation_tsp"
+    assert exact_result.applied_policy.algorithm_requested == "exact"
+    assert exact_result.applied_policy.student_count == 11
+    assert (
+        exact_result.feasibility_certificate.certify_error
+        == optimization._UNAVAILABLE_CERTIFICATE_ERROR
+    )
+    error_text = exact_result.error_message or ""
+    assert "S0" not in error_text
+    assert "L0" not in error_text
+    assert "Traceback" not in error_text
+
+    greedy_result = response.results[1]
+    assert greedy_result.success is True
+    assert greedy_result.algorithm == "greedy"
+
+    assert response.success is True
+    assert response.best_algorithm == "greedy"
+    assert response.fastest_algorithm == "greedy"
+    assert "permutation_tsp" not in {
+        response.best_algorithm, response.fastest_algorithm
+    }

@@ -5,6 +5,7 @@
  */
 
 import { OPTIMIZER_API_URL } from "@/lib/config";
+import { optimizerFetch } from "@/lib/optimizer-server";
 import type { IERawData } from "@/types/ie-resource";
 
 // Types
@@ -119,6 +120,9 @@ export interface OptimizationResult {
     direction?: DirectionType;
     time_windows_used?: boolean;
     total_time_window_violations?: number;
+    algorithm_requested?: string;
+    feasibility_certificate?: unknown;
+    applied_policy?: import("./optimizer-types").AppliedComputePolicyInfo;
 }
 
 /**
@@ -133,6 +137,9 @@ export interface AlgorithmCompareResult {
     total_duration_minutes: number;
     execution_time_seconds: number;
     error_message?: string;
+    algorithm_requested?: string;
+    feasibility_certificate?: unknown;
+    applied_policy?: import("./optimizer-types").AppliedComputePolicyInfo;
 }
 
 export interface CompareResult {
@@ -146,6 +153,9 @@ export interface CompareResult {
         execution_time_seconds: number;
         success: boolean;
     }>;
+    algorithm_requested?: string;
+    feasibility_certificate?: unknown;
+    applied_policy?: import("./optimizer-types").AppliedComputePolicyInfo;
 }
 
 export interface StrategyInfo {
@@ -261,7 +271,7 @@ export async function optimizeRoutes(
     const algorithm = options.algorithm || "genetic_algorithm";
 
     try {
-        const response = await fetch(`${OPTIMIZER_API_URL}/api/v1/optimize`, {
+        const response = await optimizerFetch("/api/v1/optimize", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -326,6 +336,9 @@ export async function optimizeRoutes(
             direction: data.direction,
             time_windows_used: data.time_windows_used,
             total_time_window_violations: data.total_time_window_violations,
+            algorithm_requested: data.algorithm_requested,
+            feasibility_certificate: data.feasibility_certificate,
+            applied_policy: data.applied_policy,
         };
     } catch (error: unknown) {
         console.error("Optimization API error:", error);
@@ -351,7 +364,7 @@ export async function compareAllAlgorithms(
     algorithms?: string[]
 ): Promise<CompareResult> {
     try {
-        const response = await fetch(`${OPTIMIZER_API_URL}/api/v1/compare`, {
+        const response = await optimizerFetch("/api/v1/compare", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -400,6 +413,9 @@ export async function compareAllAlgorithms(
             total_duration_minutes: r.total_duration_minutes || 0,
             execution_time_seconds: r.execution_time_seconds || 0,
             error_message: r.error_message,
+            algorithm_requested: r.algorithm_requested,
+            feasibility_certificate: r.feasibility_certificate,
+            applied_policy: r.applied_policy,
         }));
 
         return {
@@ -408,6 +424,9 @@ export async function compareAllAlgorithms(
             best_algorithm: data.best_algorithm || "",
             fastest_algorithm: data.fastest_algorithm || "",
             summary: data.summary || {},
+            algorithm_requested: data.algorithm_requested,
+            feasibility_certificate: data.feasibility_certificate,
+            applied_policy: data.applied_policy,
         };
     } catch (error: unknown) {
         console.error("Compare API error:", error);

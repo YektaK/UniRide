@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Cpu, Play, CheckCircle2, Clock, Truck, Activity, Target, Eye, ChevronRight, Users, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi, getAuthToken } from "@/lib/admin-api";
-import { CompareResult, AlgorithmCompareResult } from "@/services/optimizer-service";
+import type { CompareResult, AlgorithmCompareResult } from "@/services/optimizer-types";
 import {
     Select,
     SelectContent,

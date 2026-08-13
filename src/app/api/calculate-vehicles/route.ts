@@ -293,6 +293,9 @@ export async function POST(request: NextRequest) {
                 validStudentCount: validStudents.length,
                 algorithmUsed: result.algorithm_used,
                 executionTimeSeconds: result.execution_time_seconds,
+                algorithmRequested: result.algorithm_requested,
+                feasibilityCertificate: result.feasibility_certificate,
+                appliedPolicy: result.applied_policy,
                 options: {
                     maxTourTime,
                     swCapacity,

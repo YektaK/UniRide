@@ -15,7 +15,8 @@ import { getOptimalRoute, calculateDistance, type LocationCode } from "./route";
 import { addressToLocationCode } from "./location-mapper";
 import type { Route as DouBusRoute } from "./route";
 import type { Route as DbRoute } from "@/types/db";
-import { OPTIMIZER_API_URL, DEFAULT_TIME_WINDOW_MINUTES, DEFAULT_MAX_TRAVEL_TIME, DEFAULT_SW_CAPACITY, DEFAULT_SO_CAPACITY } from "@/lib/config";
+import { DEFAULT_TIME_WINDOW_MINUTES, DEFAULT_MAX_TRAVEL_TIME, DEFAULT_SW_CAPACITY, DEFAULT_SO_CAPACITY } from "@/lib/config";
+import { optimizerFetch } from "@/lib/optimizer-server";
 
 // API Configuration
 const API_TIMEOUT_MS = 30000; // 30 seconds
@@ -155,7 +156,7 @@ export const groupRequestsByTimeSlot = (
  * Fetch with timeout and retry
  */
 async function fetchWithRetry(
-  url: string,
+  path: string,
   options: RequestInit,
   timeoutMs: number = API_TIMEOUT_MS,
   maxRetries: number = API_MAX_RETRIES
@@ -167,7 +168,7 @@ async function fetchWithRetry(
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-      const response = await fetch(url, {
+      const response = await optimizerFetch(path, {
         ...options,
         signal: controller.signal,
       });
@@ -264,13 +265,8 @@ export const optimizeTimeSlotRoutes = async (
   };
 
   try {
-    // FIXED: Use environment variable for API URL
-    const apiUrl = `${OPTIMIZER_API_URL}/api/v1/optimize`;
-    
-    console.log(`[Routing] Calling optimizer API: ${apiUrl}`);
-    
     const response = await fetchWithRetry(
-      apiUrl,
+      "/api/v1/optimize",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

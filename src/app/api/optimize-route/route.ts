@@ -171,6 +171,9 @@ export async function POST(request: Request) {
             direction: result.direction,
             time_windows_used: result.time_windows_used,
             total_time_window_violations: result.total_time_window_violations,
+            algorithm_requested: result.algorithm_requested,
+            feasibility_certificate: result.feasibility_certificate,
+            applied_policy: result.applied_policy,
         });
     } catch (error: unknown) {
         console.error("Route optimization error:", error);

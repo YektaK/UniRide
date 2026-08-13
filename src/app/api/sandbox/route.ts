@@ -15,6 +15,7 @@ import {
     createSuccessResponse,
     handleApiError,
 } from "@/lib/admin-auth";
+import { optimizerFetch } from "@/lib/optimizer-server";
 import type { Database } from "@/lib/supabase";
 import type { IERawData, IEResponseData, HourlyDemandData, BottleneckData, TimeShiftSuggestion } from "@/types/ie-resource";
 
@@ -172,7 +173,7 @@ export async function POST(request: NextRequest) {
         }));
 
         // Call the optimization API with correct request shape (depot + vehicles required)
-        const response = await fetch(process.env.OPTIMIZER_API_URL + "/api/v1/optimize", {
+        const response = await optimizerFetch("/api/v1/optimize", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -187,8 +188,7 @@ export async function POST(request: NextRequest) {
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            return createErrorResponse(`Optimizasyon hatası: ${errorText}`, response.status);
+            return createErrorResponse("Optimization failed", response.status);
         }
 
         const result = await response.json();

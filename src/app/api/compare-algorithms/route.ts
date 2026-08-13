@@ -76,11 +76,17 @@ export async function POST(request: Request) {
                 execution_time_seconds: r.execution_time_seconds,
                 routes: r.routes,
                 error_message: r.error_message,
+                algorithm_requested: r.algorithm_requested,
+                feasibility_certificate: r.feasibility_certificate,
+                applied_policy: r.applied_policy,
             })),
             best_algorithm: result.best_algorithm,
             fastest_algorithm: result.fastest_algorithm,
             summary: result.summary,
             student_count: students.length,
+            algorithm_requested: result.algorithm_requested,
+            feasibility_certificate: result.feasibility_certificate,
+            applied_policy: result.applied_policy,
         });
     } catch (error: unknown) {
         console.error("Compare algorithms error:", error);

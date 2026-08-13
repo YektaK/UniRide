@@ -1,5 +1,6 @@
 """Task 4: evidence-gated tuning applicability and request-local budgets."""
 
+import random
 from dataclasses import fields
 
 import pytest
@@ -13,9 +14,12 @@ from optimizer_api.compute_policy import (
     load_compute_policy,
 )
 from optimizer_api.models.schemas import OptimizationRequest, PolicyValueSource
+from optimizer_api.strategies import get_available_strategy_names
 from optimizer_api.strategies.canonical import resolve_strategy
 from optimizer_api.strategies.ga_strategy import GeneticAlgorithmStrategy
+from uniride_core.algorithms.local_search import LocalSearchType
 from uniride_core.algorithms.sota_tsp import E2BSOTSPConfig, PAOEAConfig, R2DMATSPConfig
+from uniride_core.algorithms.tsp_meta_engines import solve_pso_tsp
 
 
 CONFIG_FIELD_BY_CANONICAL = {
@@ -34,17 +38,14 @@ CONFIG_FIELD_BY_CANONICAL = {
     "paoea": "sota_config",
 }
 
-STANDARD_APPLICABLE_KEYS = {
-    "genetic_algorithm": frozenset({"population_size", "max_iterations", "max_no_improvement", "elite_count", "tournament_size", "crossover_rate", "mutation_rate", "seed"}),
-    "ga_split": frozenset({"population_size", "max_iterations", "max_no_improvement", "elite_count", "tournament_size", "crossover_rate", "mutation_rate", "local_search_interval", "local_search_type", "diversify_threshold", "seed"}),
-    "ga_split_enhanced": frozenset({"population_size", "max_iterations", "max_no_improvement", "elite_count", "tournament_size", "crossover_rate", "mutation_rate", "local_search_interval", "local_search_type", "diversify_threshold", "seed"}),
-    "pso": frozenset({"swarm_size", "max_iterations", "max_no_improvement", "max_velocity_size", "reinit_interval", "inertia_weight", "cognitive_weight", "social_weight", "seed"}),
-    "pso_split": frozenset({"swarm_size", "max_iterations", "max_no_improvement", "local_search_interval", "local_search_type", "inertia_weight", "inertia_min", "cognitive_weight", "social_weight", "velocity_clamp", "seed"}),
-    "gwo": frozenset({"population_size", "max_iterations", "max_no_improvement", "initial_a", "exploration_rate", "local_search_type", "seed"}),
-    "gwo_split": frozenset({"population_size", "max_iterations", "max_no_improvement", "initial_a", "exploration_rate", "local_search_interval", "local_search_type", "seed"}),
-    "hho": frozenset({"population_size", "max_iterations", "max_no_improvement", "initial_energy", "jump_probability", "local_search_type", "seed"}),
-    "hho_split": frozenset({"population_size", "max_iterations", "max_no_improvement", "initial_energy", "jump_probability", "levy_flight_scale", "local_search_interval", "local_search_type", "seed"}),
-    "two_opt": TUNING_ALLOWLISTS["two_opt_config"],
+STANDARD_DECLARATION_ONLY = {
+    "genetic_algorithm": frozenset({"local_search_type"}),
+}
+
+SOTA_DECLARATION_ONLY = {
+    "paoea": frozenset({
+        "tournament_size", "genome_injection_rate", "remove_ratio_range"
+    }),
 }
 
 SOTA_CONFIGS = {
@@ -55,10 +56,17 @@ SOTA_CONFIGS = {
 
 
 def expected_applicable_keys(canonical: str) -> frozenset[str]:
-    if canonical in STANDARD_APPLICABLE_KEYS:
-        return STANDARD_APPLICABLE_KEYS[canonical]
-    config_type = SOTA_CONFIGS[canonical]
-    return frozenset(field.name for field in fields(config_type)) & TUNING_ALLOWLISTS["sota_config"]
+    if canonical in SOTA_CONFIGS:
+        config_type = SOTA_CONFIGS[canonical]
+        declared = (
+            frozenset(field.name for field in fields(config_type))
+            & TUNING_ALLOWLISTS["sota_config"]
+        )
+        return declared - SOTA_DECLARATION_ONLY.get(canonical, frozenset())
+    strategy = resolve_strategy(canonical).create()
+    field_name = CONFIG_FIELD_BY_CANONICAL[canonical]
+    live_defaults = frozenset(strategy.config) & TUNING_ALLOWLISTS[field_name]
+    return live_defaults - STANDARD_DECLARATION_ONLY.get(canonical, frozenset())
 
 
 def valid_sample(key: str):
@@ -254,11 +262,18 @@ def test_cross_field_relations_are_rechecked_against_registered_defaults(
         apply_compute_policy(request, resolution, strategy, HARD_CEILINGS)
 
 
-@pytest.mark.parametrize("canonical", ["greedy", "ortools_cvrp"])
-def test_unconfigured_strategies_reject_all_tuning_fields(canonical):
-    request = _request(canonical, ga_config={"max_iterations": 1})
+UNTUNED_CANONICALS = tuple(
+    sorted(set(get_available_strategy_names()) - set(CONFIG_FIELD_BY_CANONICAL))
+)
+
+
+@pytest.mark.parametrize("canonical", UNTUNED_CANONICALS)
+@pytest.mark.parametrize("field_name", tuple(TUNING_ALLOWLISTS))
+def test_unconfigured_strategies_reject_all_tuning_fields(canonical, field_name):
+    key = next(iter(TUNING_ALLOWLISTS[field_name]))
+    request = _request(canonical, **{field_name: {key: valid_sample(key)}})
     resolution = resolve_strategy(canonical)
-    with pytest.raises(PolicyValidationError, match="ga_config"):
+    with pytest.raises(PolicyValidationError, match=field_name):
         apply_compute_policy(request, resolution, resolution.create(), HARD_CEILINGS)
 
 
@@ -270,3 +285,56 @@ def test_uninspectable_sota_config_fails_closed():
 
     with pytest.raises(PolicyValidationError, match="not consumed"):
         apply_compute_policy(request, resolution, strategy, HARD_CEILINGS)
+
+
+def test_standard_pso_policy_forwards_live_consumed_local_search_type(monkeypatch):
+    observed = []
+
+    def fake_local_search(route, duration_func, local_search_type):
+        observed.append(local_search_type)
+        return route, duration_func(route)
+
+    monkeypatch.setattr(
+        "uniride_core.algorithms.tsp_meta_engines.apply_local_search",
+        fake_local_search,
+    )
+    request = _request(
+        "pso",
+        pso_config={
+            "swarm_size": 3,
+            "max_iterations": 1,
+            "max_no_improvement": 1,
+            "local_search_type": "or_opt",
+        },
+    )
+    resolution = resolve_strategy("pso")
+    effective, _ = apply_compute_policy(
+        request, resolution, resolution.create(), HARD_CEILINGS
+    )
+
+    solve_pso_tsp(
+        ["A", "B", "C"],
+        lambda route: float(len(route)),
+        random.Random(7),
+        effective.pso_config,
+    )
+
+    assert observed == [LocalSearchType.OR_OPT]
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("tournament_size", 2),
+        ("genome_injection_rate", 0.2),
+        ("remove_ratio_range", [0.1, 0.2]),
+    ],
+)
+def test_paoea_rejects_declaration_only_fields_without_enforcement_metadata(
+    key, value
+):
+    request = _request("paoea", sota_config={key: value})
+    resolution = resolve_strategy("paoea")
+
+    with pytest.raises(PolicyValidationError, match="not consumed"):
+        apply_compute_policy(request, resolution, resolution.create(), HARD_CEILINGS)

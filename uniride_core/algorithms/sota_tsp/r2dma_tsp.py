@@ -432,8 +432,13 @@ class R2DMA_TSP(BaseTSPSolver):
             if time.monotonic() - t_start > self.cfg.time_limit:
                 break
 
-        gbest, gbest_cost, _ = MultiLayerLS.improve(gbest, self._dist_matrix, dm_np, "full", 500, 5.0,
-                                                        self.cfg.three_opt_window)
+        remaining = max(0.0, self.cfg.time_limit - (time.monotonic() - t_start))
+        final_ls_budget = min(self.cfg.ls_time_limit, remaining)
+        if final_ls_budget > 0.0:
+            gbest, gbest_cost, _ = MultiLayerLS.improve(
+                gbest, self._dist_matrix, dm_np, "full", 500, final_ls_budget,
+                self.cfg.three_opt_window,
+            )
 
         elapsed_ms = (time.monotonic() - t_start) * 1000
         return TSPResult(

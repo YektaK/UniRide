@@ -4,6 +4,8 @@ import os
 
 import pytest
 from fastapi import HTTPException
+from compute_policy import DEFAULT_COMPARE_ALGORITHMS
+
 
 os.environ.setdefault("UNIRIDE_DISABLE_AUTH", "1")
 
@@ -61,14 +63,15 @@ def test_unknown_algorithm_reports_only_sorted_available_names(monkeypatch):
         optimization.optimize_route(_optimization_request())
 
     assert exc_info.value.status_code == 400
-    assert exc_info.value.detail == "Unknown algorithm 'unknown'. Available: ['alpha', 'zeta']"
+    assert exc_info.value.detail == "Unknown algorithm 'unknown'"
 
 
-def test_compare_defaults_to_available_canonical_names(monkeypatch):
+def test_compare_defaults_to_conservative_canonical_set(monkeypatch):
     monkeypatch.setattr(optimization, "get_available_strategy_names", lambda: ["alpha", "zeta"], raising=False)
     calls = []
 
-    def fake_run(algorithm_name, request):
+    def fake_run(resolution, request, policy):
+        algorithm_name = resolution.canonical
         calls.append(algorithm_name)
         return AlgorithmResult(
             algorithm=algorithm_name,
@@ -77,6 +80,9 @@ def test_compare_defaults_to_available_canonical_names(monkeypatch):
             total_duration_minutes=1.0 if algorithm_name == "alpha" else 2.0,
             execution_time_seconds=0.1 if algorithm_name == "alpha" else 0.2,
             routes=[],
+            feasibility_certificate={
+                "is_feasible": True, "violation_count": 0, "violations": []
+            },
         )
 
     monkeypatch.setattr(optimization, "_run_single_algorithm", fake_run)
@@ -88,9 +94,9 @@ def test_compare_defaults_to_available_canonical_names(monkeypatch):
         )
     )
 
-    assert calls == ["alpha", "zeta"]
-    assert [result.algorithm for result in response.results] == ["alpha", "zeta"]
-    assert list(response.summary) == ["alpha", "zeta"]
+    assert sorted(calls) == sorted(DEFAULT_COMPARE_ALGORITHMS)
+    assert [result.algorithm for result in response.results] == list(DEFAULT_COMPARE_ALGORITHMS)
+    assert list(response.summary) == list(DEFAULT_COMPARE_ALGORITHMS)
 
 
 def test_strategies_endpoint_keeps_unavailable_entries_in_declared_order(monkeypatch):

@@ -259,21 +259,19 @@ def test_optimize_no_result_attaches_sanitized_unavailable_certificate(monkeypat
 
 def test_compare_timeout_attaches_sanitized_unavailable_certificate(monkeypatch):
     class _TimeoutFuture:
-        def result(self, timeout):
-            raise TimeoutError("do not expose")
+        def cancel(self):
+            return True
 
     class _TimeoutExecutor:
         def __init__(self, max_workers):
             self.max_workers = max_workers
 
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, traceback):
-            return False
-
         def submit(self, function, *args):
             return _TimeoutFuture()
+
+        def shutdown(self, *, wait, cancel_futures):
+            assert wait is False
+            assert cancel_futures is True
 
     calls = 0
 
@@ -285,6 +283,12 @@ def test_compare_timeout_attaches_sanitized_unavailable_certificate(monkeypatch)
     monkeypatch.setitem(optimization.STRATEGY_REGISTRY, "timeout", _StubStrategy(_response()))
     monkeypatch.setattr(optimization, "ThreadPoolExecutor", _TimeoutExecutor)
     monkeypatch.setattr(optimization, "certify_optimization_response", certify)
+
+    monkeypatch.setattr(
+        optimization, "wait",
+        lambda pending, **kwargs: (set(), set(pending)),
+    )
+
 
     response = optimization.compare_algorithms(
         schemas.CompareRequest(

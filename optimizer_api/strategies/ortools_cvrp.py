@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import time
 
 from models.schemas import OptimizationRequest, OptimizationResponse
@@ -13,6 +14,17 @@ from uniride_core.algorithms.ortools_cvrp_engine import solve_ortools_cvrp
 
 class ORToolsCVRPStrategy(BaseRoutingStrategy):
     """OR-Tools based CVRP solver wrapper for the UniRide API."""
+
+    def __init__(self, time_limit_seconds: float = 30.0) -> None:
+        if isinstance(time_limit_seconds, bool):
+            raise ValueError("time_limit_seconds must be positive")
+        try:
+            value = float(time_limit_seconds)
+        except (TypeError, ValueError):
+            raise ValueError("time_limit_seconds must be positive") from None
+        if not math.isfinite(value) or value <= 0:
+            raise ValueError("time_limit_seconds must be positive")
+        self.time_limit_seconds = value
 
     @property
     def name(self) -> str:
@@ -56,7 +68,7 @@ class ORToolsCVRPStrategy(BaseRoutingStrategy):
             so_capacity=request.so_capacity,
             max_route_duration=request.max_travel_time,
             num_vehicles=min(len(students), 10),
-            time_limit_seconds=30,
+            time_limit_seconds=self.time_limit_seconds,
         )
 
         if not solution.success:

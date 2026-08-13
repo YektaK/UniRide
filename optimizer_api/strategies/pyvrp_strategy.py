@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import time
 
 from models.schemas import OptimizationRequest, OptimizationResponse
@@ -13,6 +14,9 @@ from uniride_core.algorithms.pyvrp_cvrp_engine import solve_pyvrp_cvrp
 
 class PyVRPStrategy(BaseRoutingStrategy):
     """PyVRP based CVRP/CVRPTW solver using Hybrid Genetic Search."""
+
+    def __init__(self, time_limit_seconds: float = 30.0) -> None:
+        self.time_limit_seconds = _validate_time_limit(time_limit_seconds)
 
     @property
     def name(self) -> str:
@@ -33,6 +37,9 @@ class PyVRPStrategy(BaseRoutingStrategy):
 class PyVRPAlternativeStrategy(BaseRoutingStrategy):
     """Compatibility alias for the PyVRP production solver."""
 
+    def __init__(self, time_limit_seconds: float = 30.0) -> None:
+        self.time_limit_seconds = _validate_time_limit(time_limit_seconds)
+
     @property
     def name(self) -> str:
         return "pyvrp_alt"
@@ -47,6 +54,18 @@ class PyVRPAlternativeStrategy(BaseRoutingStrategy):
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:
         return _optimize_with_pyvrp(self, request, algorithm_name=self.name, vehicle_label="PyVRP-Alt")
+
+
+def _validate_time_limit(time_limit_seconds: float) -> float:
+    if isinstance(time_limit_seconds, bool):
+        raise ValueError("time_limit_seconds must be positive")
+    try:
+        value = float(time_limit_seconds)
+    except (TypeError, ValueError):
+        raise ValueError("time_limit_seconds must be positive") from None
+    if not math.isfinite(value) or value <= 0:
+        raise ValueError("time_limit_seconds must be positive")
+    return value
 
 
 def _optimize_with_pyvrp(
@@ -87,7 +106,7 @@ def _optimize_with_pyvrp(
         sw_capacity=request.sw_capacity,
         so_capacity=request.so_capacity,
         num_vehicles=min(len(students), 15),
-        time_limit_seconds=30,
+        time_limit_seconds=strategy.time_limit_seconds,
     )
     if not solution.success:
         return OptimizationResponse(

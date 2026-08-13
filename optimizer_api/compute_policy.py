@@ -12,7 +12,7 @@ from __future__ import annotations
 import math
 import os
 from collections.abc import Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, fields, is_dataclass, replace
 from numbers import Real
 from typing import Any
 
@@ -87,6 +87,43 @@ STRUCTURAL_KEYS = frozenset({"max_velocity_size", "three_opt_window", "segment_s
 UNIT_INTERVAL_KEYS = frozenset({"crossover_rate", "mutation_rate", "exploration_rate", "jump_probability", "velocity_clamp", "diversity_injection_rate", "diversity_threshold", "entropy_threshold", "genome_injection_rate", "injection_rate", "p_best", "p_gbest", "pulse_injection_rate", "remove_ratio", "inertia_min", "inertia_weight", "h_start", "h_end", "gamma", "delta_threshold", "theta_base"})
 POSITIVE_REAL_KEYS = frozenset({"cognitive_weight", "social_weight", "initial_a", "initial_energy", "levy_flight_scale", "sa_start_temp_factor", "sa_end_temp"})
 INTENSITY_KEYS = frozenset({"ls_intensity_compress", "ls_intensity_constructive", "ls_intensity_destructive", "ls_intensity_moderate", "ls_intensity_normal"})
+
+CONFIG_FIELD_BY_CANONICAL = {
+    "genetic_algorithm": "ga_config",
+    "ga_split": "ga_config",
+    "ga_split_enhanced": "ga_config",
+    "pso": "pso_config",
+    "pso_split": "pso_config",
+    "gwo": "gwo_config",
+    "gwo_split": "gwo_config",
+    "hho": "hho_config",
+    "hho_split": "hho_config",
+    "two_opt": "two_opt_config",
+    "e2bso": "sota_config",
+    "r2dma": "sota_config",
+    "paoea": "sota_config",
+}
+
+STANDARD_APPLICABLE_KEYS = {
+    "genetic_algorithm": frozenset({"population_size", "max_iterations", "max_no_improvement", "elite_count", "tournament_size", "crossover_rate", "mutation_rate", "seed"}),
+    "ga_split": frozenset({"population_size", "max_iterations", "max_no_improvement", "elite_count", "tournament_size", "crossover_rate", "mutation_rate", "local_search_interval", "local_search_type", "diversify_threshold", "seed"}),
+    "ga_split_enhanced": frozenset({"population_size", "max_iterations", "max_no_improvement", "elite_count", "tournament_size", "crossover_rate", "mutation_rate", "local_search_interval", "local_search_type", "diversify_threshold", "seed"}),
+    "pso": frozenset({"swarm_size", "max_iterations", "max_no_improvement", "max_velocity_size", "reinit_interval", "inertia_weight", "cognitive_weight", "social_weight", "seed"}),
+    "pso_split": frozenset({"swarm_size", "max_iterations", "max_no_improvement", "local_search_interval", "local_search_type", "inertia_weight", "inertia_min", "cognitive_weight", "social_weight", "velocity_clamp", "seed"}),
+    "gwo": frozenset({"population_size", "max_iterations", "max_no_improvement", "initial_a", "exploration_rate", "local_search_type", "seed"}),
+    "gwo_split": frozenset({"population_size", "max_iterations", "max_no_improvement", "initial_a", "exploration_rate", "local_search_interval", "local_search_type", "seed"}),
+    "hho": frozenset({"population_size", "max_iterations", "max_no_improvement", "initial_energy", "jump_probability", "local_search_type", "seed"}),
+    "hho_split": frozenset({"population_size", "max_iterations", "max_no_improvement", "initial_energy", "jump_probability", "levy_flight_scale", "local_search_interval", "local_search_type", "seed"}),
+    "two_opt": TUNING_ALLOWLISTS["two_opt_config"],
+}
+
+BUDGET_KEYS = ITERATION_KEYS | ALLOCATION_KEYS | STRUCTURAL_KEYS | {
+    "time_limit", "ls_time_limit"
+}
+
+
+class PolicyValidationError(ValueError):
+    """Raised when policy cannot be applied truthfully before solver work."""
 
 
 def _finite_real(key: str, value: Any) -> float:
@@ -194,3 +231,221 @@ def validate_tuning_dict(
         if dependent in result and result[dependent] > population:
             raise ValueError(f"{dependent} cannot exceed effective population")
     return result
+
+
+def applicable_keys(canonical: str, strategy: object) -> frozenset[str]:
+    """Return only tuning keys proven by the live strategy configuration."""
+
+    if canonical in STANDARD_APPLICABLE_KEYS:
+        return STANDARD_APPLICABLE_KEYS[canonical]
+    config = getattr(strategy, "_config", None)
+    if canonical in {"e2bso", "r2dma", "paoea"} and is_dataclass(config):
+        return frozenset(field.name for field in fields(config)) & TUNING_ALLOWLISTS["sota_config"]
+    return frozenset()
+
+
+def _ceiling_for(key: str, policy: ComputePolicy) -> float:
+    if key in ITERATION_KEYS:
+        return policy.max_iterations
+    if key in ALLOCATION_KEYS:
+        return policy.max_population
+    if key in STRUCTURAL_KEYS:
+        return min(policy.max_students, policy.max_population)
+    if key == "time_limit":
+        return policy.solver_seconds
+    if key == "ls_time_limit":
+        return policy.local_search_seconds
+    raise KeyError(key)
+
+
+def _registered_config(strategy: object) -> dict[str, Any]:
+    raw = getattr(strategy, "config", None)
+    if raw is None:
+        raw = getattr(strategy, "_config", None)
+    if raw is None:
+        return {}
+    if is_dataclass(raw):
+        return {field.name: getattr(raw, field.name) for field in fields(raw)}
+    if hasattr(raw, "model_dump"):
+        return raw.model_dump()
+    if isinstance(raw, Mapping):
+        return dict(raw)
+    raise PolicyValidationError("strategy configuration is not inspectable")
+
+
+def _source_for_default(
+    key: str,
+    registered: float,
+    effective: float,
+    policy: ComputePolicy,
+):
+    try:
+        from optimizer_api.models.schemas import PolicyValueSource
+    except ModuleNotFoundError:  # direct-module compatibility
+        from models.schemas import PolicyValueSource
+
+    ceiling = _ceiling_for(key, policy)
+    hard_ceiling = _ceiling_for(key, HARD_CEILINGS)
+    if effective == registered:
+        return PolicyValueSource.STRATEGY_DEFAULT
+    if ceiling < hard_ceiling:
+        return PolicyValueSource.SERVER_OVERRIDE
+    return PolicyValueSource.PROFILE_DEFAULT
+
+
+def _capped_registered_budget(key: str, value: Any, ceiling: float) -> int | float:
+    if key in ITERATION_KEYS | ALLOCATION_KEYS | STRUCTURAL_KEYS:
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise PolicyValidationError(f"registered {key} must be a positive integer")
+        return min(value, int(ceiling))
+    try:
+        number = _finite_real(key, value)
+    except ValueError as exc:
+        raise PolicyValidationError(f"registered {exc}") from None
+    if number <= 0:
+        raise PolicyValidationError(f"registered {key} must be positive")
+    return min(number, ceiling)
+
+
+def _reject_if_greater(
+    config: Mapping[str, Any],
+    left: str,
+    right: str,
+    message: str,
+) -> None:
+    if left not in config or right not in config:
+        return
+    try:
+        invalid = config[left] > config[right]
+    except TypeError:
+        raise PolicyValidationError(f"{left} and {right} must be comparable numbers") from None
+    if invalid:
+        raise PolicyValidationError(message)
+
+
+def validate_effective_relations(
+    config: Mapping[str, Any], policy: ComputePolicy
+) -> None:
+    """Recheck cross-field rules after defaults and caller values are combined."""
+
+    _reject_if_greater(config, "h_end", "h_start", "h_end cannot exceed h_start")
+    _reject_if_greater(
+        config,
+        "inertia_min",
+        "inertia_weight",
+        "inertia_min cannot exceed inertia_weight",
+    )
+    _reject_if_greater(
+        config,
+        "n_edges_normal",
+        "n_edges_aggressive",
+        "n_edges_normal cannot exceed n_edges_aggressive",
+    )
+    population = config.get(
+        "population_size", config.get("swarm_size", policy.max_population)
+    )
+    for dependent in (
+        "elite_count", "tournament_size", "tournament_k", "genome_population_size"
+    ):
+        if dependent not in config:
+            continue
+        try:
+            invalid = config[dependent] > population
+        except TypeError:
+            raise PolicyValidationError(
+                f"{dependent} and effective population must be comparable numbers"
+            ) from None
+        if invalid:
+            raise PolicyValidationError(
+                f"{dependent} cannot exceed effective population"
+            )
+
+
+def apply_compute_policy(request, resolution, strategy, policy: ComputePolicy):
+    """Return an isolated request plus truthful metadata for one fresh strategy."""
+
+    try:
+        from optimizer_api.models.schemas import (
+            AppliedComputePolicyInfo,
+            AppliedPolicyLimitInfo,
+            PolicyValueSource,
+        )
+    except ModuleNotFoundError:  # direct-module compatibility
+        from models.schemas import (
+            AppliedComputePolicyInfo,
+            AppliedPolicyLimitInfo,
+            PolicyValueSource,
+        )
+
+    effective = request.model_copy(deep=True)
+    canonical = resolution.canonical
+    selected_field = CONFIG_FIELD_BY_CANONICAL.get(canonical)
+
+    for field_name in TUNING_ALLOWLISTS:
+        supplied = getattr(effective, field_name)
+        if supplied and field_name != selected_field:
+            raise PolicyValidationError(f"{field_name} does not apply to {canonical}")
+
+    limits: dict[str, AppliedPolicyLimitInfo] = {}
+    if selected_field is not None:
+        raw_caller = dict(getattr(effective, selected_field) or {})
+        allowed = applicable_keys(canonical, strategy)
+        rejected = set(raw_caller) - allowed
+        if rejected:
+            raise PolicyValidationError(
+                f"{selected_field} keys not consumed by {canonical}: {sorted(rejected)}"
+            )
+        try:
+            caller = validate_tuning_dict(
+                selected_field, raw_caller, policy, len(effective.students)
+            )
+        except ValueError as exc:
+            raise PolicyValidationError(str(exc)) from None
+
+        registered = _registered_config(strategy)
+        merged = dict(caller)
+        for key in sorted(allowed & BUDGET_KEYS):
+            ceiling = _ceiling_for(key, policy)
+            if key in caller:
+                value = caller[key]
+                source = PolicyValueSource.CALLER
+            elif key in registered:
+                value = _capped_registered_budget(key, registered[key], ceiling)
+                source = _source_for_default(key, registered[key], value, policy)
+            else:
+                continue
+            merged[key] = value
+            limits[key] = AppliedPolicyLimitInfo(
+                value=value,
+                source=source,
+                enforcement=f"request-local {selected_field}.{key}",
+            )
+
+        relation_view = {
+            key: value for key, value in registered.items() if key in allowed
+        }
+        relation_view.update(merged)
+        validate_effective_relations(relation_view, policy)
+        setattr(effective, selected_field, merged)
+
+    if canonical in {"ortools_cvrp", "pyvrp", "pyvrp_alt"}:
+        registered_seconds = strategy.time_limit_seconds
+        strategy.time_limit_seconds = min(registered_seconds, policy.solver_seconds)
+        limits["solver_seconds"] = AppliedPolicyLimitInfo(
+            value=strategy.time_limit_seconds,
+            source=_source_for_default(
+                "time_limit", registered_seconds, strategy.time_limit_seconds, policy
+            ),
+            enforcement="request-local native solver limit",
+        )
+
+    metadata = AppliedComputePolicyInfo(
+        profile_id=policy.profile_id,
+        algorithm_requested=resolution.requested,
+        algorithm_canonical=canonical,
+        student_count=len(effective.students),
+        vehicle_count=len(effective.vehicles or []),
+        cancellation_mode="none",
+        limits=limits,
+    )
+    return effective, metadata

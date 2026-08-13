@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+import subprocess
+import sys
+
 import pytest
 
 from optimizer_api.strategies import STRATEGY_FACTORIES, STRATEGY_REGISTRY
+from optimizer_api.strategies import canonical as canonical_module
 from optimizer_api.strategies.canonical import (
+    StrategyRegistryContractError,
     StrategyUnavailableError,
     UnknownStrategyError,
     resolve_strategy,
@@ -90,3 +96,66 @@ def test_unique_resolution_rejects_an_unavailable_alias_before_execution(monkeyp
 
     with pytest.raises(StrategyUnavailableError, match="Algorithm 'vroom' is unavailable"):
         resolve_unique_strategies(["greedy", "vroom"])
+
+@pytest.mark.parametrize("drift_side", ["registry", "factory"])
+def test_resolver_rejects_registry_factory_key_drift(monkeypatch, drift_side) -> None:
+    target = STRATEGY_REGISTRY if drift_side == "registry" else STRATEGY_FACTORIES
+    source = STRATEGY_REGISTRY if drift_side == "registry" else STRATEGY_FACTORIES
+    monkeypatch.setitem(target, "drift-only", source["ga"])
+
+    with pytest.raises(StrategyRegistryContractError, match="registry and factory keys differ"):
+        resolve_strategy("ga")
+
+
+
+def test_factory_output_must_match_resolved_canonical_name(monkeypatch) -> None:
+    greedy_factory = STRATEGY_FACTORIES["greedy"]
+    assert greedy_factory is not None
+    monkeypatch.setitem(STRATEGY_FACTORIES, "ga", greedy_factory)
+    resolution = resolve_strategy("ga")
+
+    with pytest.raises(StrategyRegistryContractError, match="expected 'genetic_algorithm'"):
+        resolution.create()
+
+
+def test_direct_module_resolver_binds_its_callers_registry(tmp_path) -> None:
+    worktree_root = Path(__file__).resolve().parents[2]
+    optimizer_root = worktree_root / "optimizer_api"
+    shadow_root = tmp_path / "alternate-checkout"
+    shadow_strategies = shadow_root / "optimizer_api" / "strategies"
+    shadow_strategies.mkdir(parents=True)
+    (shadow_root / "optimizer_api" / "__init__.py").write_text("", encoding="utf-8")
+    (shadow_strategies / "__init__.py").write_text(
+        "STRATEGY_REGISTRY = {}\nSTRATEGY_FACTORIES = {}\n",
+        encoding="utf-8",
+    )
+    (shadow_strategies / "base_strategy.py").write_text(
+        "class BaseRoutingStrategy: pass\n",
+        encoding="utf-8",
+    )
+
+    script = "\n".join(
+        (
+            "import sys",
+            f"sys.path.insert(0, {str(worktree_root)!r})",
+            f"sys.path.insert(0, {str(shadow_root)!r})",
+            f"sys.path.insert(0, {str(optimizer_root)!r})",
+            "import strategies",
+            "import strategies.canonical as canonical",
+            "assert canonical.STRATEGY_REGISTRY is strategies.STRATEGY_REGISTRY",
+            "assert canonical.STRATEGY_FACTORIES is strategies.STRATEGY_FACTORIES",
+            "assert 'optimizer_api.strategies' not in sys.modules",
+        )
+    )
+    completed = subprocess.run(
+        [sys.executable, "-I", "-c", script],
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert canonical_module.STRATEGY_REGISTRY is STRATEGY_REGISTRY
+    assert canonical_module.STRATEGY_FACTORIES is STRATEGY_FACTORIES

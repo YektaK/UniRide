@@ -5,12 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Callable
 
-try:
-    from optimizer_api.strategies import STRATEGY_FACTORIES, STRATEGY_REGISTRY
-    from optimizer_api.strategies.base_strategy import BaseRoutingStrategy
-except ModuleNotFoundError:  # direct-module compatibility
-    from strategies import STRATEGY_FACTORIES, STRATEGY_REGISTRY
-    from strategies.base_strategy import BaseRoutingStrategy
+from . import STRATEGY_FACTORIES, STRATEGY_REGISTRY
+from .base_strategy import BaseRoutingStrategy
 
 
 _OPTIONAL_CANONICAL = {
@@ -28,6 +24,10 @@ class UnknownStrategyError(ValueError):
 
 class StrategyUnavailableError(ValueError):
     """Raised when a registered strategy cannot execute in this environment."""
+
+
+class StrategyRegistryContractError(ValueError):
+    """Raised when registry metadata and executable factories disagree."""
 
 
 @dataclass(frozen=True)
@@ -48,13 +48,24 @@ class ResolvedStrategy:
             raise StrategyUnavailableError(
                 f"Algorithm '{self.requested}' is unavailable"
             )
-        return self.factory()
+        strategy = self.factory()
+        if strategy.name != self.canonical:
+            raise StrategyRegistryContractError(
+                f"Algorithm '{self.requested}' factory returned '{strategy.name}'; "
+                f"expected '{self.canonical}'"
+            )
+        return strategy
 
 
 def resolve_strategy(key: str, *, require_available: bool = True) -> ResolvedStrategy:
     """Resolve a submitted registry key to one canonical executable identity."""
 
     requested = key.strip().lower()
+    if set(STRATEGY_REGISTRY) != set(STRATEGY_FACTORIES):
+        raise StrategyRegistryContractError(
+            "Strategy registry and factory keys differ"
+        )
+
     if requested not in STRATEGY_FACTORIES:
         raise UnknownStrategyError(f"Unknown algorithm '{requested}'")
     singleton = STRATEGY_REGISTRY[requested]

@@ -684,3 +684,105 @@ def test_compare_oversize_exact_run_fails_while_eligible_runs_continue(monkeypat
     assert "permutation_tsp" not in {
         response.best_algorithm, response.fastest_algorithm
     }
+
+
+def test_compare_preflights_oversize_exact_queued_behind_saturated_workers(
+    monkeypatch,
+):
+    resolutions = [
+        _resolution("greedy"),
+        _resolution("two_opt"),
+        _resolution("exact", "permutation_tsp", ("exact", "permutation_tsp")),
+    ]
+    _install_resolutions(monkeypatch, resolutions)
+    _install_policy(monkeypatch, max_workers=2, deadline_seconds=1)
+    submitted = []
+
+    class Executor:
+        def __init__(self, max_workers):
+            assert max_workers == 2
+
+        def submit(self, function, prepared):
+            submitted.append(prepared.resolution.canonical)
+            future = Future()
+            if len(submitted) <= 2:
+                future.set_running_or_notify_cancel()
+            return future
+
+        def shutdown(self, **kwargs):
+            assert kwargs == {"wait": False, "cancel_futures": True}
+
+    monkeypatch.setattr(optimization, "ThreadPoolExecutor", Executor)
+    monkeypatch.setattr(
+        optimization,
+        "wait",
+        lambda pending, **kwargs: (set(), set(pending)),
+    )
+
+    response = optimization.compare_algorithms(
+        schemas.CompareRequest(
+            students=_many_students(),
+            depot=DEPOT,
+            algorithms=["greedy", "two_opt", "exact"],
+        )
+    )
+
+    exact_result = response.results[2]
+    assert exact_result.applied_policy.cancellation_mode == "none"
+    assert submitted == ["greedy", "two_opt"]
+    assert [result.algorithm for result in response.results] == [
+        "greedy", "two_opt", "permutation_tsp"
+    ]
+    assert exact_result.success is False
+    assert exact_result.applied_policy.student_count == 11
+    assert response.best_algorithm == ""
+    assert response.fastest_algorithm == ""
+
+
+def test_compare_oversize_exact_only_does_not_create_executor(monkeypatch):
+    exact_calls = []
+
+    class ExactStrategy:
+        name = "permutation_tsp"
+        config = {}
+
+        def optimize(self, request):
+            exact_calls.append(request)
+            raise AssertionError("oversized exact solver must not run")
+
+    resolution = _resolution(
+        "exact",
+        "permutation_tsp",
+        ("exact", "permutation_tsp"),
+        factory=ExactStrategy,
+    )
+    _install_resolutions(monkeypatch, [resolution])
+    _install_policy(monkeypatch, max_workers=2)
+    monkeypatch.setattr(
+        optimization,
+        "ThreadPoolExecutor",
+        lambda **kwargs: pytest.fail("executor must not be created"),
+    )
+    monkeypatch.setattr(
+        optimization,
+        "wait",
+        lambda *args, **kwargs: pytest.fail("wait must not be called"),
+    )
+
+    response = optimization.compare_algorithms(
+        schemas.CompareRequest(
+            students=_many_students(), depot=DEPOT, algorithms=["exact"]
+        )
+    )
+
+    assert exact_calls == []
+    assert len(response.results) == 1
+    result = response.results[0]
+    assert result.algorithm == "permutation_tsp"
+    assert result.success is False
+    assert result.applied_policy.algorithm_requested == "exact"
+    assert result.applied_policy.student_count == 11
+    assert result.applied_policy.cancellation_mode == "none"
+    assert response.success is False
+    assert response.best_algorithm == ""
+    assert response.fastest_algorithm == ""

@@ -407,27 +407,40 @@ def compare_algorithms(request: CompareRequest) -> CompareResponse:
     except PolicyValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from None
 
+    results_by_canonical = {}
+    runnable_runs = []
+    for prepared in prepared_runs:
+        resolution = prepared.resolution
+        if _is_oversize_exact_request(resolution, prepared.request):
+            results_by_canonical[resolution.canonical] = _algorithm_failure(
+                resolution, prepared.applied_policy
+            )
+        else:
+            runnable_runs.append(prepared)
+
     executor = None
     future_by_canonical = {}
     pending = set()
     try:
-        executor = ThreadPoolExecutor(
-            max_workers=min(policy.max_workers, len(resolutions))
-        )
-        for prepared in prepared_runs:
+        if runnable_runs:
+            executor = ThreadPoolExecutor(
+                max_workers=min(policy.max_workers, len(runnable_runs))
+            )
+        for prepared in runnable_runs:
             future = executor.submit(
                 _run_single_algorithm,
                 prepared,
             )
             future_by_canonical[prepared.resolution.canonical] = future
             pending.add(future)
-        done, pending = wait(
-            pending,
-            timeout=policy.deadline_seconds,
-            return_when=ALL_COMPLETED,
-        )
-        results_by_canonical = {}
-        for prepared in prepared_runs:
+        done = set()
+        if pending:
+            done, pending = wait(
+                pending,
+                timeout=policy.deadline_seconds,
+                return_when=ALL_COMPLETED,
+            )
+        for prepared in runnable_runs:
             resolution = prepared.resolution
             future = future_by_canonical[resolution.canonical]
             if future in done:

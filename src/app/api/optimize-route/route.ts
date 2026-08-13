@@ -154,6 +154,9 @@ export async function POST(request: Request) {
                 { 
                     error: result.error_message ?? "Optimization failed",
                     algorithm_used: result.algorithm_used,
+                    algorithm_requested: result.algorithm_requested,
+                    feasibility_certificate: result.feasibility_certificate,
+                    applied_policy: result.applied_policy,
                 },
                 { status: 500 }
             );

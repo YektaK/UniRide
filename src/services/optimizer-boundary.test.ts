@@ -28,17 +28,40 @@ describe("optimizer server boundary", () => {
     expect(page).not.toContain("@/services/optimizer-service");
   });
 
-  it.each([
-    ["src/services/optimizer-service.ts", ["/api/v1/optimize", "/api/v1/compare"]],
-    ["src/app/api/sandbox/route.ts", ["/api/v1/optimize"]],
-    ["src/services/doubus/multi-vehicle-routing.ts", ["/api/v1/optimize"]],
-  ])("routes heavy calls in %s through optimizerFetch", (path, endpoints) => {
-    const source = read(path);
-    expect(source).toContain("optimizerFetch");
-    for (const endpoint of endpoints) expect(source).toContain(endpoint);
-    expect(source).not.toMatch(/fetch\s*\(\s*[`'"][^`'"]*\/api\/v1\/(optimize|compare|vehicle-calculator)/);
+  it("owns browser-safe route and comparison DTOs in optimizer-types", () => {
+    const service = read("src/services/optimizer-service.ts");
+    const types = read("src/services/optimizer-types.ts");
+
+    expect(types).toContain("export interface RouteStep");
+    expect(types).toContain("export interface VehicleRoute");
+    expect(types).toContain("routes: VehicleRoute[]");
+    expect(types).toContain("export interface AlgorithmCompareResult");
+    expect(types).toContain("export interface CompareResult");
+    expect(service).not.toMatch(/export interface (RouteStep|VehicleRoute|AlgorithmCompareResult|CompareResult)/);
+    expect(service).toContain('export type { RouteStep, VehicleRoute, AlgorithmCompareResult, CompareResult } from "./optimizer-types"');
   });
 
+  it("routes every heavy optimizer endpoint through the authenticated transport", () => {
+    const endpointPattern = /\/api\/v1\/(optimize|compare|vehicle-calculator)/;
+    const directFetchPattern = /\bfetch\s*\([\s\S]{0,180}\/api\/v1\/(optimize|compare|vehicle-calculator)/;
+    const expectedModules = new Set([
+      "src/services/optimizer-service.ts",
+      "src/app/api/sandbox/route.ts",
+      "src/services/doubus/multi-vehicle-routing.ts",
+    ]);
+    const observedModules = new Set<string>();
+
+    for (const file of sourceFiles(join(root, "src"))) {
+      const relative = file.slice(root.length + 1).replaceAll("\\", "/");
+      const source = readFileSync(file, "utf8");
+      if (/\.test\.(ts|tsx)$/.test(relative) || !endpointPattern.test(source)) continue;
+      observedModules.add(relative);
+      expect(source, relative).toContain("optimizerFetch");
+      expect(source, relative).not.toMatch(directFetchPattern);
+    }
+
+    expect(observedModules).toEqual(expectedModules);
+  });
   it("keeps server-only transport out of client components", () => {
     for (const file of sourceFiles(join(root, "src"))) {
       const source = readFileSync(file, "utf8");

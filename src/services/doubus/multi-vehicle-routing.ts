@@ -155,41 +155,37 @@ export const groupRequestsByTimeSlot = (
 /**
  * Fetch with timeout and retry
  */
-async function fetchWithRetry(
+export async function fetchWithRetry(
   path: string,
   options: RequestInit,
   timeoutMs: number = API_TIMEOUT_MS,
   maxRetries: number = API_MAX_RETRIES
 ): Promise<Response> {
   let lastError: Error | null = null;
-  
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-      const response = await optimizerFetch(path, {
-        ...options,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
+      const timeoutSignal = AbortSignal.timeout(timeoutMs);
+      const signal = options.signal
+        ? AbortSignal.any([options.signal, timeoutSignal])
+        : timeoutSignal;
+      const response = await optimizerFetch(path, { ...options, signal });
       return response;
     } catch (error) {
       lastError = error as Error;
+      if (options.signal?.aborted) break;
       if (attempt < maxRetries) {
         // Exponential backoff
         await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
       }
     }
   }
-  
+
   throw new RoutingError(
     `API request failed after ${maxRetries + 1} attempts: ${lastError?.message}`,
     "TIMEOUT"
   );
 }
-
 /**
  * Optimize routes for a time slot with multiple vehicles
  * Uses the Python Microservice Optimization API

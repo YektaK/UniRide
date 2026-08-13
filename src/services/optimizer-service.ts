@@ -7,6 +7,9 @@
 import { OPTIMIZER_API_URL } from "@/lib/config";
 import { optimizerFetch } from "@/lib/optimizer-server";
 import type { IERawData } from "@/types/ie-resource";
+import type { AppliedComputePolicyInfo, AlgorithmCompareResult, CompareResult, VehicleRoute } from "./optimizer-types";
+
+export type { RouteStep, VehicleRoute, AlgorithmCompareResult, CompareResult } from "./optimizer-types";
 
 // Types
 export type LocalSearchType = "none" | "two_opt" | "three_opt" | "or_opt" | "hybrid";
@@ -85,27 +88,6 @@ export interface OptimizationOptions {
     };
 }
 
-export interface RouteStep {
-    location1: string;
-    location2: string;
-    duration: number;
-    distance: number;
-}
-
-export interface VehicleRoute {
-    vehicle_id: string;
-    route_details: RouteStep[];
-    total_duration_minutes: number;
-    total_distance_km: number;
-    sw_count: number;
-    so_count: number;
-    student_ids: string[];
-    // CVRPTW fields
-    departure_time?: string;              // Vehicle departure time (HH:MM)
-    arrival_times?: Record<string, string>; // Arrival at each location {location: HH:MM}
-    time_window_violations?: number;       // Number of time window violations
-}
-
 export interface OptimizationResult {
     success: boolean;
     algorithm_used: string;
@@ -122,40 +104,7 @@ export interface OptimizationResult {
     total_time_window_violations?: number;
     algorithm_requested?: string;
     feasibility_certificate?: unknown;
-    applied_policy?: import("./optimizer-types").AppliedComputePolicyInfo;
-}
-
-/**
- * Result from a single algorithm in comparison
- * Note: Uses 'algorithm' not 'algorithm_used' to match Python AlgorithmResult schema
- */
-export interface AlgorithmCompareResult {
-    algorithm: string;
-    success: boolean;
-    routes: VehicleRoute[];
-    total_vehicles: number;
-    total_duration_minutes: number;
-    execution_time_seconds: number;
-    error_message?: string;
-    algorithm_requested?: string;
-    feasibility_certificate?: unknown;
-    applied_policy?: import("./optimizer-types").AppliedComputePolicyInfo;
-}
-
-export interface CompareResult {
-    success: boolean;
-    results: AlgorithmCompareResult[];
-    best_algorithm: string;
-    fastest_algorithm: string;
-    summary: Record<string, { 
-        total_vehicles: number; 
-        total_duration_minutes: number; 
-        execution_time_seconds: number;
-        success: boolean;
-    }>;
-    algorithm_requested?: string;
-    feasibility_certificate?: unknown;
-    applied_policy?: import("./optimizer-types").AppliedComputePolicyInfo;
+    applied_policy?: AppliedComputePolicyInfo;
 }
 
 export interface StrategyInfo {
@@ -349,7 +298,7 @@ export async function optimizeRoutes(
             total_vehicles: 0,
             total_duration_minutes: 0,
             execution_time_seconds: 0,
-            error_message: error instanceof Error ? error.message : "Optimization failed",
+            error_message: "Optimization unavailable",
         };
     }
 }

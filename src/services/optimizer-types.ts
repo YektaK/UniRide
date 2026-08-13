@@ -14,10 +14,30 @@ export interface AppliedComputePolicyInfo {
   limits: Record<string, AppliedPolicyLimitInfo>;
 }
 
+export interface RouteStep {
+  location1: string;
+  location2: string;
+  duration: number;
+  distance: number;
+}
+
+export interface VehicleRoute {
+  vehicle_id: string;
+  route_details: RouteStep[];
+  total_duration_minutes: number;
+  total_distance_km: number;
+  sw_count: number;
+  so_count: number;
+  student_ids: string[];
+  departure_time?: string;
+  arrival_times?: Record<string, string>;
+  time_window_violations?: number;
+}
+
 export interface AlgorithmCompareResult {
   algorithm: string;
   success: boolean;
-  routes: unknown[];
+  routes: VehicleRoute[];
   total_vehicles: number;
   total_duration_minutes: number;
   execution_time_seconds: number;

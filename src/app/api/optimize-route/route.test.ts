@@ -55,4 +55,19 @@ describe("POST /api/optimize-route", () => {
     expect(response.status).toBe(400);
     expect(optimizeRoutesMock).not.toHaveBeenCalled();
   });
+
+  it("returns solver failure metadata without exposing transport details", async () => {
+    requireAdminMock.mockResolvedValue({ id: "admin-1" });
+    optimizeRoutesMock.mockResolvedValue({
+      success: false,
+      algorithm_used: "ga",
+      algorithm_requested: "requested-ga",
+      feasibility_certificate: { feasible: false },
+      applied_policy: { profile_id: "small", limits: {} },
+      error_message: "infeasible",
+    });
+    const { POST } = await import("./route");
+    const response = await POST(validRequest("or_opt"));
+    expect(await response.json()).toMatchObject({ algorithm_requested: "requested-ga", feasibility_certificate: { feasible: false }, error: "infeasible" });
+  });
 });

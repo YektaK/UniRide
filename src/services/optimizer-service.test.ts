@@ -67,6 +67,42 @@ describe("optimizer-service optimizeRoutes", () => {
     expect(result).toMatchObject(metadata);
   });
 
+  it("sanitizes transport failures while retaining backend solver certificates", async () => {
+    const secret = "server-secret";
+    vi.stubGlobal("fetch", vi.fn()
+      .mockRejectedValueOnce(new Error(`connection refused at http://internal.example with ${secret}`))
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: false,
+          algorithm_used: "ga",
+          routes: [],
+          total_vehicles: 0,
+          total_duration_minutes: 0,
+          execution_time_seconds: 0,
+          error_message: "infeasible",
+          algorithm_requested: "requested-ga",
+          feasibility_certificate: { feasible: false },
+          applied_policy: { profile_id: "small", student_count: 1, vehicle_count: 1, cancellation_mode: "none", limits: {} },
+        }),
+      }));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const input = [{ id: "s1", name: "Student 1", location_code: "L1", disability_type: "Sw" as const }];
+    const depot = { id: "depot", lat: 40, lng: 29 };
+
+    const unavailable = await optimizeRoutes(input, depot);
+    const infeasible = await optimizeRoutes(input, depot);
+
+    expect(unavailable).toMatchObject({ success: false, error_message: "Optimization unavailable" });
+    expect(JSON.stringify(unavailable)).not.toContain(secret);
+    expect(JSON.stringify(unavailable)).not.toContain("internal.example");
+    expect(infeasible).toMatchObject({
+      success: false,
+      error_message: "infeasible",
+      algorithm_requested: "requested-ga",
+      feasibility_certificate: { feasible: false },
+    });
+  });
   it("preserves optimizer metadata for algorithm comparisons", async () => {
     const metadata = {
       algorithm_requested: "gwo",

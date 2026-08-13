@@ -1,8 +1,8 @@
 # UniRide Current Architecture
 
-**Verified documentation snapshot:** 2026-08-10
-**Evidence base:** `0b4bef6e77d4eda2812cbe773296978862c25599`
-**Last verified code-bearing commit:** `ddd85e8b1cc5ed64a8163988b2e179a08c8cfd2f`
+**Verified documentation snapshot:** 2026-08-13
+**Evidence base:** `b0b3a11fb4374c0470f4b6762251483f8f8ac81b`
+**Last verified code-bearing commit:** `b0b3a11`
 
 This describes current, verified boundaries. It is not a production-readiness claim. When this document conflicts with live code or executable tests, those sources win.
 
@@ -30,11 +30,21 @@ The intended dependency flow is inward: adapters may depend on the core; the cor
 ### Production request path
 
 ```text
-Browser -> authenticated Next.js BFF -> FastAPI production adapter
-        -> request-scoped solver work -> uniride_core -> response/persistence
+Browser -> authenticated Next.js BFF -> FastAPI internal-key boundary
+        -> canonical alias resolution -> fresh request-scoped strategy
+        -> immutable compute policy (lowering-only) -> request-scoped solver work
+        -> Package A feasibility certificate -> deterministic admission/ranking -> response/persistence
 ```
 
-The admin route-test workflow now follows the authenticated same-origin `/api/optimize-route` BFF and no longer calls the optimizer directly from the browser. This is a scoped page-path correction, **not** general compute authentication.
+The admin route-test workflow calls the authenticated same-origin `/api/optimize-route` BFF and no longer calls the optimizer directly from the browser. General production compute is now protected end to end:
+
+- The FastAPI `optimization` router requires `X-Internal-API-Key` (constant-time compared, router-level dependency) for `POST /api/v1/optimize`, `POST /api/v1/compare`, and `POST /api/v1/vehicle-calculator`. `/health`, `/api/v1/strategies`, `/api/v1/extract-time-windows`, and `/api/v1/schedule-to-students` remain public.
+- Next.js server code calls those heavy endpoints only through `optimizerFetch` (`src/lib/optimizer-server.ts`), which imports `server-only`, reads `OPTIMIZER_INTERNAL_API_KEY`, and injects it as a header. Public raw `fetch` is reserved for `/health` and `/api/v1/strategies`. The key is never exposed through a `NEXT_PUBLIC_*` variable, responses, or logs.
+- Every submitted strategy key resolves through `resolve_strategy`/`resolve_unique_strategies` (`optimizer_api/strategies/canonical.py`) to one canonical identity; each canonical run receives a fresh instance from `resolution.create()`, which fails closed if the factory returns a mismatched name.
+- `apply_compute_policy` (`optimizer_api/compute_policy.py`) applies the frozen, immutable `production-conservative-v1` profile to a request-local copy, returns typed `applied_policy` metadata, and caps native solver budgets (`solver_seconds`, `ls_time_limit`) per request. Overrides may lower ceilings but never raise them.
+- `/optimize` and `/compare` results pass through the Package A feasibility certificate; a result is successful only when it is solver-successful **and** `feasibility_certificate.is_feasible`. Failed/infeasible/uncertified/timed-out results are never ranked. Best/fastest ranking is deterministic (duration, vehicles, canonical name / execution seconds, canonical name).
+- `/compare` deduplicates aliases, runs at most `max_workers` (2) canonical workers, and applies one 120-second **soft** response deadline via `concurrent.futures.wait`. Pending futures are not waited on and the executor shuts down with `wait=False`; running threads may continue, so Package B is **not** hard cancellation.
+- Exact/permutation requests with more than ten waypoints fail fast before the solver method is invoked (`ExactTSPSizeError` in `uniride_core/algorithms/string_exact_tsp.py`; router preflight for `optimize`, `compare`, and `_run_single_algorithm`), with the same sanitized unsuccessful shape used when a solver produces no valid result.
 
 ### Academic path
 
@@ -59,13 +69,19 @@ Bildiri legacy solver material has a canonical-core boundary and archive/manifes
 | Supabase construction | proxy and driver routes defer client construction; credential-free build passes | credential-free build is not an authentication/security certification |
 | Browser optimization test | admin route-test uses the authenticated BFF | other production/browser compute paths remain to be migrated |
 | Dependencies | five unused **direct** root edges were removed | transitive Genkit packages and audit findings remain |
+| Compute authentication | all three heavy endpoints deny missing/wrong keys (403) and accept the correct key; public endpoints remain public; `UNIRIDE_DISABLE_AUTH=1` is a startup error under `APP_ENV=production` | auth is boundary-gated on the shared internal key, not per-tenant authorization |
+| Compute profile | frozen `production-conservative-v1` ceilings; nine `UNIRIDE_COMPUTE_*` overrides validated at startup and may only lower ceilings; tuning allowlists are exhaustive and fail closed | no rate limiting; profile governs only the optimizer service |
+| Canonical resolution | every alias resolves to one canonical identity; explicit alias duplicates execute once; fresh request-scoped instances per canonical run | future registry additions need the same contract review |
+| Bounded comparison | at most 2 workers, one 120-second soft deadline, six canonical defaults, deterministic best/fastest ranking, certificate-gated admission | soft deadline is not hard cancellation or process isolation |
+| Exact TSP | >10-waypoint exact/permutation requests fail fast without truncation and never invoke the solver | applies to the canonical permutation_tsp/exact paths; other solver limits unchanged |
+| Server-only transport | heavy Next.js calls route through server-only `optimizerFetch`; browser boundary test blocks the internal key from client code | browser-facing pages depend on BFF routes continuing to enforce the boundary |
 
 ## 4. Open production boundaries
 
 These are not closed by test count, a build pass, or documentation updates:
 
-1. **Universal feasibility enforcement.** `/optimize` and `/compare` still need one final certificate that makes any hard-constraint violation impossible to report as successful.
-2. **Compute protection and budgets.** General compute authentication, authorization, typed limits, alias deduplication, worker ceilings, cancellation semantics, and fair compare ranking remain incomplete.
+1. **Universal feasibility enforcement.** The Package A feasibility certificate is attached to `/optimize` and `/compare` results and is the final admission gate; requested-algorithm policy and any solver surface not covered by the certificate still need the same contract review.
+2. **Compute protection and budgets.** Internal-key boundary authentication, typed lowering-only limits, alias deduplication, worker ceilings, soft deadlines, and deterministic compare ranking are implemented. **Hard solver cancellation, process isolation, rate limiting, per-tenant authorization, and durable jobs remain open.**
 3. **Durable execution.** Benchmark work is not yet a durable multi-worker job system with atomic admission, persisted heartbeat, idempotency, and cooperative cancellation.
 4. **Matrix provenance.** Production travel time and academic problem metrics still require explicit, non-interchangeable provenance/domain/unit/directionality contracts.
 5. **Frontend resilience.** State consolidation, cancellation/timeouts, polling, error handling, and the 158 lint warnings need focused work.
@@ -95,10 +111,10 @@ Production-specific geometry, users, authorization, and errors remain outside th
 
 ## 6. Execution and concurrency
 
-Registry metadata should be immutable. Executable strategies must be request/job scoped. Current compare and benchmark lifecycle work still requires typed policy, bounded resource allocation, cancellation that actually stops loops, and durable persistence before it can be treated as multi-worker production infrastructure.
+Registry metadata should be immutable. Executable strategies must be request/job scoped. `/compare` now uses at most 2 canonical workers and a single 120-second soft response deadline; native solver budgets are capped per request. Because the deadline is soft (threads may continue, `wait=False` shutdown), hard cancellation that actually stops loops, process isolation, and durable persistence are still required before this can be treated as multi-worker production infrastructure.
 
 ## 7. Verification baseline
 
-On 2026-08-10, the canonical Python suites passed **1,676 tests** with **48 warnings** in **238.17s**. Frontend Vitest passed **17 files / 37 tests** in **2.83s**; TypeScript passed; ESLint reported **0 errors / 158 warnings**; and a credential-free production build passed. `npm audit --omit=dev --json` still exited nonzero with the 84 findings above.
+On 2026-08-13, the focused Package B Python gate passed **1,453 tests** in **31.27s**. The full affected Python suites passed **2,275 tests** with **1 skip** (Numba unavailable) and **3 warnings** in **195.81s**, with the same **21 pre-existing baseline failures** (20 auth test-order-pollution failures that pass in isolation, plus 1 Supabase SDK provider-timeout drift). Frontend Vitest passed **21 files / 58 tests** in **94.71s**; TypeScript passed; ESLint reported **0 errors / 158 warnings** (temporary waiver); and a credential-free production build passed with **57 static pages**. `npm audit --omit=dev --json` still exits nonzero with the 84 findings above.
 
 See [UniRide_Ultimate_Audit.md](UniRide_Ultimate_Audit.md) for qualifications, [ACTIVE_ROADMAP.md](ACTIVE_ROADMAP.md) for priority, and [NEXT_PHASE_EXECUTION_ROADMAP.md](NEXT_PHASE_EXECUTION_ROADMAP.md) for bounded future handoffs.

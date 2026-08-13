@@ -1,14 +1,14 @@
 # UniRide Active Roadmap
 
-**Authoritative planning snapshot:** 2026-08-10
-**Verified base:** `0b4bef6e77d4eda2812cbe773296978862c25599`
-**Last verified code-bearing commit:** `ddd85e8b1cc5ed64a8163988b2e179a08c8cfd2f`
+**Authoritative planning snapshot:** 2026-08-13
+**Verified base:** `b0b3a11fb4374c0470f4b6762251483f8f8ac81b`
+**Last verified code-bearing commit:** `b0b3a11`
 
 This is the current priority order. Detailed agent handoffs, gates, and model preferences live in [NEXT_PHASE_EXECUTION_ROADMAP.md](NEXT_PHASE_EXECUTION_ROADMAP.md).
 
 ## Release policy
 
-UniRide remains experimental. No routing result is production-certified until universal hard-feasibility enforcement, general compute protection, bounded execution, durable jobs, matrix provenance, and operational geometry are implemented and verified. A test/build pass, warning waiver, or audit-debt disposition is not remediation.
+UniRide remains experimental. No routing result is production-certified until universal hard-feasibility enforcement across all solver surfaces, durable jobs, hard cancellation, rate limiting, matrix provenance, and operational geometry are implemented and verified. A test/build pass, warning waiver, or audit-debt disposition is not remediation.
 
 ## Verified completed, scoped work
 
@@ -23,29 +23,32 @@ The following are closed only to the tested scope recorded in [CURRENT_ARCHITECT
 - optional-solver null-safe API enumeration;
 - deferred Supabase construction and credential-free build;
 - authenticated admin route-test BFF path;
-- removal of five unused direct root dependency edges.
+- removal of five unused direct root dependency edges;
+- production compute authentication on the three heavy endpoints (internal-key boundary; startup error when auth is disabled in production);
+- immutable, lowering-only `production-conservative-v1` compute profile with nine typed overrides;
+- canonical alias resolution with fail-closed registry drift handling and fresh request-scoped instances;
+- request-local compute budgets and capped native solver runtimes;
+- bounded `/compare` execution (at most 2 workers, one 120-second soft response deadline, six canonical defaults, certificate-gated deterministic ranking);
+- exact/permutation fail-fast rejection above ten waypoints;
+- server-only Next.js optimizer transport with a browser boundary test.
 
-The 2026-08-10 immutable verification reported **1,676 passing canonical Python tests, 48 warnings, 238.17s**; **17 passing Vitest files / 37 tests, 2.83s**; passing TypeScript; ESLint at **0 errors / 158 warnings**; and a passing credential-free production build. `npm audit --omit=dev --json` exited **1** with **84 unresolved findings: 2 critical, 22 high, 59 moderate, 1 low**.
+The 2026-08-13 verification reported **1,453 passing focused Package B Python tests, 31.27s**; **2,275 passing full affected-suite Python tests, 1 skip (Numba unavailable), 3 warnings, 195.81s**, with the same **21 pre-existing baseline failures** (20 auth test-order pollution that passes in isolation, 1 Supabase SDK provider-timeout drift); **21 passing Vitest files / 58 tests, 94.71s**; passing TypeScript; ESLint at **0 errors / 158 warnings (temporary waiver)**; and a passing credential-free production build with **57 static pages**. `npm audit --omit=dev --json` exited **1** with **84 unresolved findings: 2 critical, 22 high, 59 moderate, 1 low**.
 
 ## Priority 1 — Universal production feasibility
 
-**Goal:** A hard-constraint violation can never be returned as a successful `/optimize` or `/compare` result.
+**Status: certificate attached as the final admission gate on `/optimize` and `/compare`.** A result is successful only when solver-successful **and** `feasibility_certificate.is_feasible`; failed/infeasible/uncertified/timed-out results are never ranked. Remaining scope:
 
-- Make one solver-independent final feasibility certificate mandatory at production response boundaries.
-- Cover occurrence coverage, depot closure/continuity, capacity, duration, time windows, and matrix completeness.
-- Define explicit failure/diagnostic response semantics.
-- Compare representative strategies against exact/reference outcomes on small instances.
-
-Exit only when every production strategy and compare path receives the same certificate and mutation tests prove success cannot survive a hard violation.
+- **Requested-algorithm policy** — non-default explicit requested algorithms still need the same certificate contract.
+- **Mutation proof** — mutation tests proving success cannot survive a hard violation are still pending across every solver surface.
 
 ## Priority 2 — Compute protection, typed budgets, and compare semantics
 
-**Goal:** Make compute admission explicit, authenticated, bounded, and interpretable.
+**Status: implemented for the scoped Package B surface** — the three heavy endpoints are internal-key authenticated, the compute profile is typed/lowering-only, aliases are deduplicated, `/compare` is bounded and deterministically ranked, and exact/permutation requests fail fast above ten waypoints. Remaining scope is tracked below:
 
-- Apply a common service-authentication/authorization boundary to general compute paths.
-- Replace unbounded/free-form request policy with typed bounds for students, vehicles, algorithms, repetitions, iterations, workers, and time.
-- Deduplicate aliases, use request-scoped executors, and enforce a worker ceiling.
-- Redesign `/compare` ranking so feasibility and policy are explicit rather than accidental.
+- **Hard cancellation and process isolation** — the current 120-second deadline is a soft response deadline; running threads may continue (`wait=False` shutdown).
+- **Rate limiting** — there is no per-tenant or per-IP request throttling.
+- **Per-tenant authorization** — the boundary is gated on the shared internal key, not on tenant identity.
+- **Requested-algorithm policy** — explicit non-default requested-algorithm admission still needs the same contract review as the six canonical defaults.
 
 ## Priority 3 — Durable jobs and cancellation
 
@@ -58,9 +61,9 @@ Exit only when every production strategy and compare path receives the same cert
 
 ## Priority 4 — Frontend BFF, state, and warning reduction
 
-**Goal:** Move remaining browser-compute workflows behind authenticated same-origin boundaries and make long-running state reliable.
+**Goal:** Keep all browser-compute workflows behind authenticated same-origin boundaries and make long-running state reliable.
 
-- Remove remaining direct browser optimizer paths.
+- Browser optimizer calls now route through server-only `optimizerFetch` (the admin route-test BFF and the compare page); audit any future/new browser compute path against this boundary.
 - Consolidate polling/state with cancellation, timeout, retry, backoff, and terminal-state protection.
 - Preserve backend-effective direction and feasibility in persistence/UI.
 - Reduce the 158 lint warnings without using broad suppressions.

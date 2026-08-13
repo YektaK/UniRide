@@ -9,18 +9,19 @@ The engines may share neutral models and solver implementations, but they do not
 
 ## Current verified status
 
-The latest post-audit verification was run on 2026-08-10 from base `0b4bef6e77d4eda2812cbe773296978862c25599`; the last code-bearing commit was `ddd85e8b1cc5ed64a8163988b2e179a08c8cfd2f`.
+The latest verification was run on 2026-08-13 from base `b0b3a11fb4374c0470f4b6762251483f8f8ac81b` (the Package B compute-policy branch tip; the last code-bearing commit was `b0b3a11`).
 
 | Gate | Verified result |
 | --- | --- |
-| Canonical Python suites | 1,676 passed, 48 warnings, 238.17s |
-| Frontend Vitest | 17 files, 37 tests passed, 2.83s |
+| Focused Package B Python gate | 1,453 passed, 31.27s |
+| Full affected Python suites | 2,275 passed, 1 skipped (Numba unavailable), 21 pre-existing baseline failures (20 auth test-order pollution + 1 Supabase SDK provider-timeout drift), 3 warnings, 195.81s |
+| Frontend Vitest | 21 files, 58 tests passed, 94.71s |
 | TypeScript | passed |
-| ESLint | 0 errors, 158 warnings |
-| Credential-free production build | passed |
+| ESLint | 0 errors, 158 warnings (temporary waiver) |
+| Credential-free production build | passed, 57 static pages |
 | `npm audit --omit=dev --json` | 84 findings: 2 critical, 22 high, 59 moderate, 1 low |
 
-UniRide is still experimental. The passing build and test gates do **not** close the remaining feasibility, general compute-authentication, durable-job, provenance, GIS, lint-warning, or dependency-security boundaries. Read [ACTIVE_ROADMAP.md](ACTIVE_ROADMAP.md) before planning work.
+UniRide is still experimental. The passing build and test gates do **not** close the remaining hard solver cancellation, process isolation, durable-job, rate-limiting, matrix-provenance, GIS, lint-warning, or dependency-security boundaries. Read [ACTIVE_ROADMAP.md](ACTIVE_ROADMAP.md) before planning work.
 
 ## Repository map
 
@@ -88,10 +89,26 @@ Keep local values outside version control. Never put credential values in docume
 | `OPTIMIZER_PORT` | FastAPI | optimizer service port |
 | `TIME_MATRIX_CACHE_TTL_SECONDS` | FastAPI | production matrix-cache lifetime |
 | `TIME_MATRIX_PROVIDER_TIMEOUT_SECONDS` | FastAPI | travel-time provider timeout |
-| `INTERNAL_API_KEY` | FastAPI | required internal benchmark/CLI boundary key |
-| `UNIRIDE_DISABLE_AUTH` | FastAPI local development only | explicit `1` opt-out for loopback/local development; never set in production |
+| `INTERNAL_API_KEY` | FastAPI | required production compute boundary key for `POST /api/v1/optimize`, `POST /api/v1/compare`, and `POST /api/v1/vehicle-calculator`; never log, return, or expose it |
+| `OPTIMIZER_INTERNAL_API_KEY` | Next.js server only | server-only FastAPI internal key for `optimizerFetch`; set to the same secret value as `INTERNAL_API_KEY`; never expose through a `NEXT_PUBLIC_*` variable |
+| `UNIRIDE_DISABLE_AUTH` | FastAPI local/test only | explicit `1` opt-out for loopback/local/test development; a startup error when `APP_ENV=production`; never set in production |
+| `UNIRIDE_COMPUTE_MAX_STUDENTS` | FastAPI | optional override of the `production-conservative-v1` ceiling (250); may only lower it |
+| `UNIRIDE_COMPUTE_MAX_VEHICLES` | FastAPI | optional override of the ceiling (50); may only lower it |
+| `UNIRIDE_COMPUTE_MAX_ALGORITHMS` | FastAPI | optional override of the ceiling (6); may only lower it and never below the six-algorithm default set |
+| `UNIRIDE_COMPUTE_MAX_WORKERS` | FastAPI | optional override of the ceiling (2); may only lower it |
+| `UNIRIDE_COMPUTE_DEADLINE_SECONDS` | FastAPI | optional override of the 120-second soft response deadline; may only lower it |
+| `UNIRIDE_COMPUTE_SOLVER_SECONDS` | FastAPI | optional override of the 60-second supported solver runtime; may only lower it |
+| `UNIRIDE_COMPUTE_MAX_ITERATIONS` | FastAPI | optional override of the 2,000-iteration ceiling; may only lower it |
+| `UNIRIDE_COMPUTE_MAX_POPULATION` | FastAPI | optional override of the 250 population/swarm-member ceiling; may only lower it |
+| `UNIRIDE_COMPUTE_LOCAL_SEARCH_SECONDS` | FastAPI | optional override of the 2-second local-search sublimit; may only lower it |
 | `ENABLE_DEV_RESET` / `DEV_RESET_SECRET` | Next.js server | development reset control |
 | `AZURE_AI_ENDPOINT`, `AZURE_AI_API_KEY`, `AZURE_AI_API_VERSION` | optional utility | Azure AI configuration |
+
+### Compute policy (`production-conservative-v1`)
+
+Heavy requests are admitted through `INTERNAL_API_KEY` and bounded by the frozen `production-conservative-v1` profile: **250 students, 50 vehicles, 6 canonical compare algorithms, 2 workers, a 120-second soft response deadline, 60 supported solver seconds, 2,000 iterations, 250 population/swarm members, and a 2-second local-search sublimit**. The nine `UNIRIDE_COMPUTE_*` variables may lower a ceiling, never raise it; invalid values fail at startup. Requests above the effective limits are rejected, never silently clamped. Exact/permutation requests with more than ten waypoints fail fast before the solver runs.
+
+The deadline is a **soft** response deadline: `/compare` stops waiting after 120 seconds and running threads may continue in the background. Package B does **not** provide hard solver cancellation, process isolation, durable jobs, or rate limiting.
 
 The admin route-test page uses the authenticated same-origin `/api/optimize-route` BFF. Do not add a browser-direct FastAPI URL or expose an optimizer service address through a `NEXT_PUBLIC_*` variable.
 

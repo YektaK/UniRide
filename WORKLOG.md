@@ -2,6 +2,68 @@
 
 This is a curated chronology. It records verified work and does not turn archived reports or agent assertions into current truth.
 
+## 2026-08-13 — Package B compute policy: verification gates and documentation synchronization
+
+**Scope.** The Package B compute-policy branch was verified at HEAD `b0b3a11fb4374c0470f4b6762251483f8f8ac81b` in isolated worktree `.temp\worktrees\package-b-compute-policy-20260812`. The branch is 17 commits ahead of clean `origin/WIP` at `b9becba1cded4dcfa897cecab9046b322b3be5d7`. All gates below were run against the live working tree and every documented claim was checked against live source with file/line evidence.
+
+**Package B commit list** (oldest to newest; 2 docs, 7 task commits, 8 follow-up fixes):
+
+| Commit | Subject |
+| --- | --- |
+| `419c8e466db5632e35b4f17495f412356d776e9a` | `docs: specify Package B compute policy` |
+| `4789a730750073d7368110857e6897e43e662bae` | `docs: plan Package B compute policy` |
+| `882e602b7627908d9a9d5e497fe784a43c3a347e` | `feat(api): protect production compute routes` |
+| `bf51eef603ee3ed2b561e43697bd27d408bdd843` | `fix(api): reject non-ascii auth keys safely` |
+| `2037590652260763032bb8605993d25d2388894b` | `feat(api): add conservative compute profile` |
+| `0c5bf75b87f3c9a7f755d29744f1e6fb388202cf` | `fix(api): reject malformed compute policy enums` |
+| `ba3894748eb69464b565e1936fcbcbae23eca709` | `feat(api): canonicalize strategy aliases` |
+| `89f2a3da99b1188cb9ae8ea0451beeb7fa156599` | `fix(api): fail closed on strategy registry drift` |
+| `e94509d0ed7d17287be6a8ee09971409971de56a` | `feat(api): apply request-local compute budgets` |
+| `ca0f1141a325c4902227121c9d5f74b75b61f3ab` | `fix(api): enforce evidence-based solver budgets` |
+| `f694f712e15bdc359f16d97be8348ae8a0a9e1f8` | `feat(api): bound canonical comparison execution` |
+| `d76c62f0279ce4e258596cefa3d0c9dcc30a8600` | `fix(api): preserve truthful comparison policy metadata` |
+| `10852e0eeeb9bd837eb536e0bfaa2e724f4d422a` | `fix(core): reject oversized exact TSP requests` |
+| `8836972e581690dd5e3206c598637e1ebd06cd90` | `fix(api): preflight oversized exact comparisons` |
+| `d9a5f4632c884697b6e347c0fc75c05eb29abe2a` | `feat(web): authenticate server optimizer calls` |
+| `edabf29e79c84751679c9843840ddfff7df80f42` | `fix(web): harden optimizer transport boundary` |
+| `b0b3a11fb4374c0470f4b6762251483f8f8ac81b` | `fix(web): sanitize optimizer transport failures` |
+
+**Changed boundaries (verified against live source).**
+
+- Heavy endpoints `POST /api/v1/optimize`, `POST /api/v1/compare`, and `POST /api/v1/vehicle-calculator` deny missing/wrong internal keys with 403 (constant-time comparison, router-level dependency). `/health`, `/api/v1/strategies`, and the time-window/schedule utilities remain public. `UNIRIDE_DISABLE_AUTH=1` is a startup error under `APP_ENV=production` (`optimizer_api/runtime_config.py:37-50`).
+- The frozen `production-conservative-v1` profile (`optimizer_api/compute_policy.py:25-36`) fixes 250 students, 50 vehicles, 6 algorithms, 2 workers, 120s soft deadline, 60 solver seconds, 2,000 iterations, 250 population, 2s local search. The nine `UNIRIDE_COMPUTE_*` overrides may only lower ceilings; invalid values fail at startup.
+- Strategies resolve to one canonical identity per request; each run gets a fresh factory instance and fails closed on name drift (`optimizer_api/strategies/canonical.py:46-57`).
+- `/compare` runs at most 2 canonical workers under one 120-second **soft** response deadline (`optimizer_api/routers/optimization.py:427,438-468`); results are admitted only with a feasible Package A certificate and ranked deterministically; pending threads are not waited on (`wait=False`), so Package B is **not** hard cancellation.
+- Exact/permutation requests above ten waypoints fail fast via `ExactTSPSizeError` before the solver runs (`uniride_core/algorithms/string_exact_tsp.py:11-30`, router preflight `optimization.py:67-76,136-137,312-313,412-419`).
+- Next.js server code calls heavy endpoints only through server-only `optimizerFetch` (`src/lib/optimizer-server.ts:1-14`); the internal key is never exposed via `NEXT_PUBLIC_*`; the browser boundary test blocks it from client code.
+
+**Immutable verification snapshot (2026-08-13).**
+
+```powershell
+& .venv-jit\Scripts\python.exe -m pytest optimizer_api\tests\test_package_b_compute_auth.py optimizer_api\tests\test_package_b_compute_policy.py optimizer_api\tests\test_package_b_canonical_resolution.py optimizer_api\tests\test_package_b_tuning_applicability.py optimizer_api\tests\test_package_b_native_runtime.py optimizer_api\tests\test_package_b_optimize_boundary.py optimizer_api\tests\test_package_b_compare_orchestration.py uniride_core\tests\test_string_exact_tsp.py academic_benchmark\tests\test_production_registry_snapshot.py -q -p no:cacheprovider --basetemp C:\tmp\pytest-pkg-b-focused
+& .venv-jit\Scripts\python.exe -m pytest optimizer_api\tests uniride_core\tests academic_benchmark\tests\test_production_registry_snapshot.py -q -p no:cacheprovider --basetemp C:\tmp\pytest-pkg-b-full --tb=short
+npm test -- --run
+npm run typecheck
+npm run lint
+npm run build
+git diff --check
+```
+
+- Focused Package B gate: **1,453 tests passed in 31.27s**, zero failures.
+- Full affected suites: **2,275 passed, 1 skipped, 3 warnings, 195.81s**, with **21 pre-existing baseline failures** — 20 auth test-order-pollution failures (`test_api_hardening_phase0.py`, `test_phase0_auth_guard.py`, `test_phase0_containment.py`) that pass together in isolation (70 passed), plus 1 `test_matrix_repository.py` Supabase SDK provider-timeout drift that also fails on a clean baseline. The 1 skip is `academic_benchmark/tests/test_numba_three_opt.py` (Numba unavailable). None of the 21 are Package B regressions; all touch disjoint files.
+- Vitest **21 files / 58 tests passed in 94.71s** (vitest 4.0.18). TypeScript passed. ESLint **0 errors / 158 warnings**.
+- Credential-free `npm run build` passed (Next.js 16.1.6, webpack) with **57 static pages**; Supabase missing-env build warnings are expected in a credential-free environment.
+- `git diff --check` clean; final worktree status clean.
+
+**Documentation outcome.** Updated `README.md` (verification status, env-var table with `OPTIMIZER_INTERNAL_API_KEY` and the nine `UNIRIDE_COMPUTE_*` variables, new compute-policy section), `CURRENT_ARCHITECTURE.md` (production request path, verified closures, open boundaries, execution/concurrency, verification baseline), `ACTIVE_ROADMAP.md` (completed scoped work, updated Priority 1/2 status with remaining scope), and this worklog. The 2026-08-10 verification figures were superseded by the 2026-08-13 figures above.
+
+**Waivers and remaining risk (documented, not closed).**
+
+- The 158 ESLint warnings continue under a temporary waiver; Priority 4 debt remains.
+- `npm audit --omit=dev --json` still exits 1 with 84 findings (2 critical, 22 high, 59 moderate, 1 low).
+- Package B provides a **soft** response deadline only: no hard solver cancellation, process isolation, durable jobs, or rate limiting. The exact/permutation fail-fast boundary covers the canonical permutation/exact paths, not every solver family.
+- The 21 full-suite failures are environment/order baseline debt, not Package B scope.
+
 ## 2026-08-10 — Post-audit quick fixes, immutable verification, and documentation synchronization
 
 **Scope.** Work began from verification base `0b4bef6e77d4eda2812cbe773296978862c25599` in isolated worktree `C:\tmp\UniRide-post-audit-quickfixes`. The last code-bearing commit validated before this documentation update was `ddd85e8b1cc5ed64a8163988b2e179a08c8cfd2f` (`chore(web): prune unused direct dependencies`). The original dirty rescue checkout was preserved and not switched, staged, restored, cleaned, merged, or modified.

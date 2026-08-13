@@ -5,15 +5,17 @@ from __future__ import annotations
 from concurrent.futures import Future
 from dataclasses import replace
 from threading import Barrier
+from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
 
-from compute_policy import ComputePolicy, DEFAULT_COMPARE_ALGORITHMS
+from compute_policy import ComputePolicy, DEFAULT_COMPARE_ALGORITHMS, PolicyValidationError
 from models import schemas
 from routers import optimization
 from strategies.canonical import (
     ResolvedStrategy,
+    StrategyRegistryContractError,
     StrategyUnavailableError,
     UnknownStrategyError,
 )
@@ -39,10 +41,13 @@ def _request(algorithms=None):
     return schemas.CompareRequest(students=[], depot=DEPOT, algorithms=algorithms)
 
 
-def _resolution(requested, canonical=None, aliases=None, factory=lambda: object()):
+def _resolution(requested, canonical=None, aliases=None, factory=None):
+    canonical_name = canonical or requested
+    if factory is None:
+        factory = lambda: SimpleNamespace(name=canonical_name, time_limit_seconds=30.0)
     return ResolvedStrategy(
         requested=requested,
-        canonical=canonical or requested,
+        canonical=canonical_name,
         factory=factory,
         requested_aliases=tuple(aliases or (requested,)),
     )
@@ -107,7 +112,8 @@ def test_compare_default_is_exact_ordered_six_and_preserves_canonical_order(monk
     _install_policy(monkeypatch)
     executions = []
 
-    def run(resolution, request, policy):
+    def run(prepared):
+        resolution = prepared.resolution
         executions.append(resolution.canonical)
         return _result(resolution.canonical)
 
@@ -130,7 +136,8 @@ def test_compare_deduplicates_aliases_once_and_retains_requested_aliases(monkeyp
     _install_policy(monkeypatch)
     executions = []
 
-    def run(resolution, request, policy):
+    def run(prepared):
+        resolution = prepared.resolution
         executions.append((resolution.canonical, resolution.requested_aliases))
         return _result(
             resolution.canonical,
@@ -180,8 +187,8 @@ def test_compare_rejects_explicit_empty_list_before_resolution_or_executor(monke
 @pytest.mark.parametrize(
     "error",
     [
-        UnknownStrategyError("Unknown algorithm 'missing'"),
-        StrategyUnavailableError("Algorithm 'pyvrp' is unavailable"),
+        optimization.UnknownStrategyError("Unknown algorithm 'missing'"),
+        optimization.StrategyUnavailableError("Algorithm 'pyvrp' is unavailable"),
     ],
 )
 def test_compare_resolves_every_algorithm_before_submitting_any_work(monkeypatch, error):
@@ -247,7 +254,7 @@ def test_compare_uses_two_workers_one_bounded_wait_and_nonblocking_shutdown(monk
     monkeypatch.setattr(
         optimization,
         "_run_single_algorithm",
-        lambda resolution, request, policy: _result(resolution.canonical),
+        lambda prepared: _result(prepared.resolution.canonical),
     )
 
     optimization.compare_algorithms(_request(["greedy", "two_opt", "ga"]))
@@ -269,7 +276,8 @@ def test_compare_deadline_returns_typed_soft_failures_in_requested_order(monkeyp
         def __init__(self, max_workers):
             pass
 
-        def submit(self, function, resolution, request, policy):
+        def submit(self, function, prepared):
+            resolution = prepared.resolution
             future = Future()
             if resolution.canonical == "fast":
                 future.set_result(_result("fast", duration=2))
@@ -312,7 +320,7 @@ def test_compare_ranks_only_certified_feasible_successes_with_deterministic_ties
     monkeypatch.setattr(
         optimization,
         "_run_single_algorithm",
-        lambda resolution, request, policy: results[resolution.canonical],
+        lambda prepared: results[prepared.resolution.canonical],
     )
 
     response = optimization.compare_algorithms(_request(names))
@@ -328,10 +336,10 @@ def test_compare_with_no_eligible_result_has_empty_rankings(monkeypatch):
     monkeypatch.setattr(
         optimization,
         "_run_single_algorithm",
-        lambda resolution, request, policy: _result(
-            resolution.canonical,
-            success=False if resolution.canonical == "failed" else True,
-            certificate=CERTIFIED if resolution.canonical == "failed" else None,
+        lambda prepared: _result(
+            prepared.resolution.canonical,
+            success=False if prepared.resolution.canonical == "failed" else True,
+            certificate=CERTIFIED if prepared.resolution.canonical == "failed" else None,
         ),
     )
 
@@ -371,12 +379,14 @@ def test_single_algorithm_execution_isolates_shared_request_and_strategy_instanc
         }
     )
 
+    prepared = [
+        optimization._prepare_comparison_run(resolution, request, policy)
+        for resolution in (first, second)
+    ]
     with optimization.ThreadPoolExecutor(max_workers=2) as executor:
         results = list(executor.map(
-            lambda resolution: optimization._run_single_algorithm(
-                resolution, request, policy
-            ),
-            (first, second),
+            optimization._run_single_algorithm,
+            prepared,
         ))
 
     assert all(result.success for result in results)
@@ -394,10 +404,10 @@ def test_compare_normalizes_package_dto_payloads_across_import_modes(monkeypatch
     _install_resolutions(monkeypatch, [_resolution("greedy")])
     _install_policy(monkeypatch)
 
-    def run(resolution, request, policy):
-        assert isinstance(request, schemas.OptimizationRequest)
-        assert isinstance(request.depot, schemas.LocationNode)
-        assert request.depot.id == "package-depot"
+    def run(prepared):
+        assert isinstance(prepared.request, schemas.OptimizationRequest)
+        assert isinstance(prepared.request.depot, schemas.LocationNode)
+        assert prepared.request.depot.id == "package-depot"
         return _result("greedy")
 
     monkeypatch.setattr(optimization, "_run_single_algorithm", run)
@@ -405,3 +415,174 @@ def test_compare_normalizes_package_dto_payloads_across_import_modes(monkeypatch
     response = optimization.compare_algorithms(package_request)
 
     assert response.results[0].algorithm == "greedy"
+
+
+@pytest.mark.parametrize("future_mode", ["timeout", "exception"])
+def test_compare_prepares_truthful_policy_before_submit_for_non_success_outcomes(
+    monkeypatch, future_mode
+):
+    created = []
+
+    class Strategy:
+        name = "genetic_algorithm"
+        config = {"max_iterations": 50, "population_size": 100}
+
+        def optimize(self, request):
+            raise AssertionError("fake executor must not run the worker")
+
+    def factory():
+        strategy = Strategy()
+        created.append(strategy)
+        return strategy
+
+    resolution = _resolution(
+        "ga", "genetic_algorithm", ("ga", "genetic_algorithm"), factory=factory
+    )
+    _install_resolutions(monkeypatch, [resolution])
+    policy = _install_policy(monkeypatch)
+    request = schemas.CompareRequest(
+        students=[], depot=DEPOT, algorithms=["ga"]
+    )
+    original_dump = request.model_dump()
+    prepared_at_submit = []
+    submitted = []
+
+    def apply(request_copy, actual_resolution, strategy, actual_policy):
+        assert actual_resolution is resolution
+        assert actual_policy is policy
+        assert request_copy is not request
+        metadata = _metadata("ga", "genetic_algorithm")
+        metadata.limits = {
+            "max_iterations": schemas.AppliedPolicyLimitInfo(
+                value=7, source="caller", enforcement="request-local ga_config.max_iterations"
+            ),
+            "population_size": schemas.AppliedPolicyLimitInfo(
+                value=100,
+                source="strategy_default",
+                enforcement="request-local ga_config.population_size",
+            ),
+        }
+        request_copy.ga_config = {"max_iterations": 7, "population_size": 100}
+        prepared_at_submit.append((strategy, request_copy, metadata))
+        return request_copy, metadata
+
+    class Executor:
+        def __init__(self, max_workers):
+            assert max_workers == 1
+
+        def submit(self, function, prepared):
+            assert prepared_at_submit, "policy must be applied before submission"
+            submitted.append(prepared)
+            future = Future()
+            if future_mode == "exception":
+                future.set_exception(RuntimeError("future failed"))
+            return future
+
+        def shutdown(self, **kwargs):
+            assert kwargs == {"wait": False, "cancel_futures": True}
+
+    monkeypatch.setattr(optimization, "apply_compute_policy", apply)
+    monkeypatch.setattr(optimization, "ThreadPoolExecutor", Executor)
+    monkeypatch.setattr(
+        optimization,
+        "wait",
+        lambda pending, **kwargs: (
+            (set(pending), set())
+            if future_mode == "exception"
+            else (set(), set(pending))
+        ),
+    )
+
+    response = optimization.compare_algorithms(request)
+
+    assert len(created) == 1
+    assert len(prepared_at_submit) == 1
+    assert len(submitted) == 1
+    assert request.model_dump() == original_dump
+    result = response.results[0]
+    assert result.success is False
+    assert result.algorithm == "genetic_algorithm"
+    assert result.algorithm_requested == "ga"
+    assert result.applied_policy.algorithm_requested == "ga"
+    assert result.applied_policy.algorithm_canonical == "genetic_algorithm"
+    assert result.applied_policy.limits["max_iterations"].value == 7
+    assert result.applied_policy.limits["max_iterations"].source == "caller"
+    assert result.applied_policy.limits["population_size"].value == 100
+    if future_mode == "timeout":
+        assert result.applied_policy.cancellation_mode == "soft_response_deadline"
+    else:
+        assert result.applied_policy.cancellation_mode == "none"
+
+
+def test_router_exposes_no_mutation_bridge_to_canonical_registries():
+    assert not hasattr(optimization, "STRATEGY_REGISTRY")
+    assert not hasattr(optimization, "_STRATEGY_REGISTRY")
+    assert not hasattr(optimization, "_STRATEGY_FACTORIES")
+
+
+def test_canonical_alias_dedup_remains_one_without_router_registry_stubs():
+    from strategies.canonical import resolve_unique_strategies
+
+    resolutions = resolve_unique_strategies(["ga", "genetic_algorithm"])
+
+    assert len(resolutions) == 1
+    assert resolutions[0].canonical == "genetic_algorithm"
+    assert resolutions[0].requested_aliases == ("ga", "genetic_algorithm")
+
+
+@pytest.mark.parametrize(
+    "error_type",
+    [
+        optimization.UnknownStrategyError,
+        optimization.StrategyUnavailableError,
+        optimization.StrategyRegistryContractError,
+    ],
+)
+def test_compare_maps_only_named_resolution_errors_to_400(monkeypatch, error_type):
+    error = error_type("named resolver failure")
+    monkeypatch.setattr(
+        optimization,
+        "resolve_unique_strategies",
+        lambda keys: (_ for _ in ()).throw(error),
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        optimization.compare_algorithms(_request(["ga"]))
+
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail == "named resolver failure"
+
+
+def test_compare_does_not_convert_unexpected_resolution_value_error_to_400(monkeypatch):
+    monkeypatch.setattr(
+        optimization,
+        "resolve_unique_strategies",
+        lambda keys: (_ for _ in ()).throw(ValueError("resolver bug")),
+    )
+
+    with pytest.raises(ValueError, match="resolver bug"):
+        optimization.compare_algorithms(_request(["ga"]))
+
+
+def test_compare_policy_failure_happens_before_executor(monkeypatch):
+    resolution = _resolution("ga", "genetic_algorithm")
+    _install_resolutions(monkeypatch, [resolution])
+    _install_policy(monkeypatch)
+    monkeypatch.setattr(
+        optimization,
+        "apply_compute_policy",
+        lambda *args: (_ for _ in ()).throw(
+            optimization.PolicyValidationError("ga_config not applicable")
+        ),
+    )
+    monkeypatch.setattr(
+        optimization,
+        "ThreadPoolExecutor",
+        lambda **kwargs: pytest.fail("executor must not be created"),
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        optimization.compare_algorithms(_request(["ga"]))
+
+    assert exc_info.value.status_code == 422
+    assert exc_info.value.detail == "ga_config not applicable"

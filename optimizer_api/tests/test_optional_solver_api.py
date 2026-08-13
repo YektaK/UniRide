@@ -57,7 +57,6 @@ def test_health_reports_only_sorted_available_strategy_names(monkeypatch):
 
 def test_unknown_algorithm_reports_only_sorted_available_names(monkeypatch):
     monkeypatch.setattr(optimization, "get_available_strategy_names", lambda: ["alpha", "zeta"], raising=False)
-    monkeypatch.setitem(optimization.STRATEGY_REGISTRY, "pyvrp", None)
 
     with pytest.raises(HTTPException) as exc_info:
         optimization.optimize_route(_optimization_request())
@@ -70,8 +69,8 @@ def test_compare_defaults_to_conservative_canonical_set(monkeypatch):
     monkeypatch.setattr(optimization, "get_available_strategy_names", lambda: ["alpha", "zeta"], raising=False)
     calls = []
 
-    def fake_run(resolution, request, policy):
-        algorithm_name = resolution.canonical
+    def fake_run(prepared):
+        algorithm_name = prepared.resolution.canonical
         calls.append(algorithm_name)
         return AlgorithmResult(
             algorithm=algorithm_name,

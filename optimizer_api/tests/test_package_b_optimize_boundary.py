@@ -12,6 +12,7 @@ from models import schemas
 from routers import optimization
 from strategies.canonical import (
     ResolvedStrategy,
+    StrategyRegistryContractError,
     StrategyUnavailableError,
     UnknownStrategyError,
 )
@@ -126,9 +127,9 @@ def test_optimize_resolves_alias_uses_fresh_instance_and_preserves_request(monke
 @pytest.mark.parametrize(
     ("error", "detail"),
     [
-        (UnknownStrategyError("Unknown algorithm 'missing'"), "Unknown algorithm 'missing'"),
+        (optimization.UnknownStrategyError("Unknown algorithm 'missing'"), "Unknown algorithm 'missing'"),
         (
-            StrategyUnavailableError("Algorithm 'pyvrp' is unavailable"),
+            optimization.StrategyUnavailableError("Algorithm 'pyvrp' is unavailable"),
             "Algorithm 'pyvrp' is unavailable",
         ),
     ],
@@ -164,7 +165,7 @@ def test_optimize_maps_policy_applicability_and_limit_failures_to_422_before_wor
     monkeypatch, message
 ):
     strategy = _Strategy(response=_response())
-    _install(monkeypatch, strategy, policy_error=PolicyValidationError(message))
+    _install(monkeypatch, strategy, policy_error=optimization.PolicyValidationError(message))
 
     with pytest.raises(HTTPException) as exc_info:
         optimization.optimize_route(_request())
@@ -229,3 +230,45 @@ def test_optimize_exception_becomes_sanitized_typed_failure_with_policy(monkeypa
     assert result.algorithm_requested == "ga"
     assert result.applied_policy == _metadata()
     assert "secret solver detail" not in (result.error_message or "")
+
+
+def test_optimize_maps_only_named_resolution_errors_to_400(monkeypatch):
+    monkeypatch.setattr(
+        optimization,
+        "resolve_strategy",
+        lambda key: (_ for _ in ()).throw(RuntimeError("resolver bug")),
+    )
+
+    with pytest.raises(RuntimeError, match="resolver bug"):
+        optimization.optimize_route(_request())
+
+
+def test_optimize_does_not_convert_unexpected_policy_value_error_to_422(monkeypatch):
+    resolution = ResolvedStrategy(
+        "ga", "genetic_algorithm", lambda: _Strategy(response=_response()), ("ga",)
+    )
+    monkeypatch.setattr(optimization, "resolve_strategy", lambda key: resolution)
+    monkeypatch.setattr(optimization, "load_compute_policy", lambda: ComputePolicy())
+    monkeypatch.setattr(
+        optimization,
+        "apply_compute_policy",
+        lambda *args: (_ for _ in ()).throw(ValueError("policy bug")),
+    )
+
+    with pytest.raises(ValueError, match="policy bug"):
+        optimization.optimize_route(_request())
+
+
+def test_optimize_named_registry_contract_error_is_deterministic_400(monkeypatch):
+    error = optimization.StrategyRegistryContractError("registry contract mismatch")
+    monkeypatch.setattr(
+        optimization,
+        "resolve_strategy",
+        lambda key: (_ for _ in ()).throw(error),
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        optimization.optimize_route(_request())
+
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail == "registry contract mismatch"

@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 
 import pytest
 from fastapi import FastAPI
@@ -16,6 +17,51 @@ class _StubStrategy:
         if self.error is not None:
             raise self.error
         return self.response
+
+
+def _install_strategy(monkeypatch, key, strategy):
+    installed = getattr(optimization, "_test_strategies", None)
+    if installed is None:
+        installed = {}
+        monkeypatch.setattr(
+            optimization, "_test_strategies", installed, raising=False
+        )
+    installed[key] = strategy
+
+    def resolve(requested):
+        requested = requested.strip().lower()
+        if requested not in installed:
+            raise optimization.UnknownStrategyError(
+                f"Unknown algorithm '{requested}'"
+            )
+        template = installed[requested]
+
+        def factory():
+            instance = deepcopy(template)
+            instance.name = requested
+            return instance
+
+        return optimization.ResolvedStrategy(
+            requested, requested, factory, (requested,)
+        )
+
+    def resolve_unique(keys):
+        unique = {}
+        for requested in keys:
+            item = resolve(requested)
+            unique.setdefault(item.canonical, item)
+        return list(unique.values())
+
+    monkeypatch.setattr(optimization, "resolve_strategy", resolve)
+    monkeypatch.setattr(optimization, "resolve_unique_strategies", resolve_unique)
+
+
+def _run_installed_algorithm(key, request):
+    resolution = optimization.resolve_strategy(key)
+    prepared = optimization._prepare_comparison_run(
+        resolution, request, optimization.load_compute_policy()
+    )
+    return optimization._run_single_algorithm(prepared)
 
 
 def _request(algorithm="stub"):
@@ -120,7 +166,7 @@ def test_optimize_attaches_the_single_feasible_typed_certificate(monkeypatch):
         calls += 1
         return payload
 
-    monkeypatch.setitem(optimization.STRATEGY_REGISTRY, "stub", _StubStrategy(_response()))
+    _install_strategy(monkeypatch, "stub", _StubStrategy(_response()))
     monkeypatch.setattr(optimization, "certify_optimization_response", certify)
 
     result = optimization.optimize_route(_request())
@@ -140,7 +186,7 @@ def test_optimize_attaches_infeasible_certificate_and_legacy_json(monkeypatch):
         calls += 1
         return payload
 
-    monkeypatch.setitem(optimization.STRATEGY_REGISTRY, "stub", _StubStrategy(_response()))
+    _install_strategy(monkeypatch, "stub", _StubStrategy(_response()))
     monkeypatch.setattr(optimization, "certify_optimization_response", certify)
 
     result = optimization.optimize_route(_request())
@@ -153,11 +199,11 @@ def test_optimize_attaches_infeasible_certificate_and_legacy_json(monkeypatch):
 
 def test_boundaries_fail_closed_for_invalid_certificate_payload(monkeypatch):
     invalid_payload = {"is_feasible": True, "violation_count": 1, "violations": []}
-    monkeypatch.setitem(optimization.STRATEGY_REGISTRY, "stub", _StubStrategy(_response()))
+    _install_strategy(monkeypatch, "stub", _StubStrategy(_response()))
     monkeypatch.setattr(optimization, "certify_optimization_response", lambda request, result: invalid_payload)
 
     optimize_result = optimization.optimize_route(_request())
-    compare_result = optimization._run_single_algorithm("stub", _request())
+    compare_result = _run_installed_algorithm("stub", _request())
 
     for result in (optimize_result, compare_result):
         assert result.success is False
@@ -167,12 +213,13 @@ def test_boundaries_fail_closed_for_invalid_certificate_payload(monkeypatch):
 
 
 def test_compare_no_result_boundaries_attach_sanitized_unavailable_certificate(monkeypatch):
-    monkeypatch.setitem(optimization.STRATEGY_REGISTRY, "broken", _StubStrategy(error=RuntimeError("secret strategy failure")))
+    _install_strategy(monkeypatch, "broken", _StubStrategy(error=RuntimeError("secret strategy failure")))
 
-    missing = optimization._run_single_algorithm("missing", _request())
-    broken = optimization._run_single_algorithm("broken", _request("broken"))
+    with pytest.raises(optimization.UnknownStrategyError):
+        optimization.resolve_strategy("missing")
+    broken = _run_installed_algorithm("broken", _request("broken"))
 
-    for result in (missing, broken):
+    for result in (broken,):
         assert result.success is False
         assert result.feasibility_certificate.certify_error == optimization._UNAVAILABLE_CERTIFICATE_ERROR
         assert "secret strategy failure" not in result.error_message
@@ -188,7 +235,7 @@ def test_optimize_preserves_solver_failure_with_feasible_certificate(monkeypatch
         calls += 1
         return payload
 
-    monkeypatch.setitem(optimization.STRATEGY_REGISTRY, "stub", _StubStrategy(_response(success=False)))
+    _install_strategy(monkeypatch, "stub", _StubStrategy(_response(success=False)))
     monkeypatch.setattr(optimization, "certify_optimization_response", certify)
 
     result = optimization.optimize_route(_request())
@@ -208,10 +255,10 @@ def test_single_algorithm_preserves_solver_failure_with_feasible_certificate(mon
         calls += 1
         return payload
 
-    monkeypatch.setitem(optimization.STRATEGY_REGISTRY, "stub", _StubStrategy(_response(success=False)))
+    _install_strategy(monkeypatch, "stub", _StubStrategy(_response(success=False)))
     monkeypatch.setattr(optimization, "certify_optimization_response", certify)
 
-    result = optimization._run_single_algorithm("stub", _request())
+    result = _run_installed_algorithm("stub", _request())
 
     assert calls == 1
     assert result.success is False
@@ -228,10 +275,10 @@ def test_single_algorithm_attaches_the_single_feasible_typed_certificate(monkeyp
         calls += 1
         return payload
 
-    monkeypatch.setitem(optimization.STRATEGY_REGISTRY, "stub", _StubStrategy(_response()))
+    _install_strategy(monkeypatch, "stub", _StubStrategy(_response()))
     monkeypatch.setattr(optimization, "certify_optimization_response", certify)
 
-    result = optimization._run_single_algorithm("stub", _request())
+    result = _run_installed_algorithm("stub", _request())
 
     assert calls == 1
     assert result.success is True
@@ -246,7 +293,7 @@ def test_optimize_no_result_attaches_sanitized_unavailable_certificate(monkeypat
         calls += 1
         return _payload()
 
-    monkeypatch.setitem(optimization.STRATEGY_REGISTRY, "stub", _StubStrategy())
+    _install_strategy(monkeypatch, "stub", _StubStrategy())
     monkeypatch.setattr(optimization, "certify_optimization_response", certify)
 
     result = optimization.optimize_route(_request())
@@ -280,7 +327,7 @@ def test_compare_timeout_attaches_sanitized_unavailable_certificate(monkeypatch)
         calls += 1
         return _payload()
 
-    monkeypatch.setitem(optimization.STRATEGY_REGISTRY, "timeout", _StubStrategy(_response()))
+    _install_strategy(monkeypatch, "timeout", _StubStrategy(_response()))
     monkeypatch.setattr(optimization, "ThreadPoolExecutor", _TimeoutExecutor)
     monkeypatch.setattr(optimization, "certify_optimization_response", certify)
 

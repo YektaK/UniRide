@@ -13,6 +13,7 @@ mandatory.
 
 import json
 
+from copy import deepcopy
 from types import SimpleNamespace
 
 import pytest
@@ -149,7 +150,42 @@ class _StubStrategy:
 
 
 def _install_strategy(monkeypatch, key, strategy):
-    monkeypatch.setitem(optimization.STRATEGY_REGISTRY, key, strategy)
+    installed = getattr(optimization, "_test_strategies", None)
+    if installed is None:
+        installed = {}
+        monkeypatch.setattr(
+            optimization, "_test_strategies", installed, raising=False
+        )
+    installed[key] = strategy
+
+    def resolve(requested):
+        requested = requested.strip().lower()
+        if requested not in installed:
+            raise optimization.UnknownStrategyError(
+                f"Unknown algorithm '{requested}'"
+            )
+        template = installed[requested]
+
+        def factory():
+            instance = deepcopy(template)
+            instance.name = requested
+            return instance
+
+        return optimization.ResolvedStrategy(
+            requested, requested, factory, (requested,)
+        )
+
+    def resolve_unique(keys):
+        unique = {}
+        for requested in keys:
+            item = resolve(requested)
+            previous = unique.get(item.canonical)
+            if previous is None:
+                unique[item.canonical] = item
+        return list(unique.values())
+
+    monkeypatch.setattr(optimization, "resolve_strategy", resolve)
+    monkeypatch.setattr(optimization, "resolve_unique_strategies", resolve_unique)
 
 
 # ---------------------------------------------------------------------------

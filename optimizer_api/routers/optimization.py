@@ -1,9 +1,8 @@
 import time
 import json
 import logging
-from collections.abc import MutableMapping
-from copy import deepcopy
 from concurrent.futures import ALL_COMPLETED, ThreadPoolExecutor, wait
+from dataclasses import dataclass
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -19,12 +18,11 @@ try:
         apply_compute_policy,
         load_compute_policy,
     )
-    from optimizer_api.strategies import (
-        STRATEGY_FACTORIES as _STRATEGY_FACTORIES,
-        STRATEGY_REGISTRY as _STRATEGY_REGISTRY,
-    )
     from optimizer_api.strategies.canonical import (
         ResolvedStrategy,
+        StrategyRegistryContractError,
+        StrategyUnavailableError,
+        UnknownStrategyError,
         resolve_strategy,
         resolve_unique_strategies,
     )
@@ -35,12 +33,11 @@ except ModuleNotFoundError:  # direct-module compatibility
         apply_compute_policy,
         load_compute_policy,
     )
-    from strategies import (
-        STRATEGY_FACTORIES as _STRATEGY_FACTORIES,
-        STRATEGY_REGISTRY as _STRATEGY_REGISTRY,
-    )
     from strategies.canonical import (
         ResolvedStrategy,
+        StrategyRegistryContractError,
+        StrategyUnavailableError,
+        UnknownStrategyError,
         resolve_strategy,
         resolve_unique_strategies,
     )
@@ -64,47 +61,6 @@ router = APIRouter(
 logger = logging.getLogger(__name__)
 _INVALID_CERTIFICATE_ERROR = "certification aborted: invalid certificate payload"
 _UNAVAILABLE_CERTIFICATE_ERROR = "certification unavailable: algorithm produced no result"
-
-
-class _FreshFactoryRegistryView(MutableMapping):
-    """Keep legacy test injection compatible without executing singletons."""
-
-    def __getitem__(self, key):
-        return _STRATEGY_REGISTRY[key]
-
-    def __iter__(self):
-        return iter(_STRATEGY_REGISTRY)
-
-    def __len__(self):
-        return len(_STRATEGY_REGISTRY)
-
-    def __setitem__(self, key, strategy):
-        if strategy is not None:
-            try:
-                strategy.name = key
-            except AttributeError:
-                pass
-        _STRATEGY_REGISTRY[key] = strategy
-        if strategy is None:
-            _STRATEGY_FACTORIES[key] = None
-            return
-
-        def factory(template=strategy, canonical=strategy.name):
-            instance = deepcopy(template)
-            if not getattr(instance, "name", None):
-                instance.name = canonical
-            return instance
-
-        _STRATEGY_FACTORIES[key] = factory
-
-    def __delitem__(self, key):
-        del _STRATEGY_REGISTRY[key]
-        _STRATEGY_FACTORIES.pop(key, None)
-
-
-# Compatibility for older boundary tests that inject strategies through this
-# module. The resolver still consumes a fresh factory for every execution.
-STRATEGY_REGISTRY = _FreshFactoryRegistryView()
 
 
 def _typed_certificate(payload: dict | None) -> FeasibilityCertificateInfo:
@@ -149,15 +105,19 @@ def _optimization_failure(
 def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
     try:
         resolution = resolve_strategy(request.algorithm)
-    except ValueError as exc:
+        strategy = resolution.create()
+    except (
+        UnknownStrategyError,
+        StrategyUnavailableError,
+        StrategyRegistryContractError,
+    ) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from None
 
-    strategy = resolution.create()
     try:
         request, applied_policy = apply_compute_policy(
             request, resolution, strategy, load_compute_policy()
         )
-    except ValueError as exc:
+    except PolicyValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from None
 
     start_time = time.time()
@@ -296,48 +256,40 @@ def _algorithm_failure(
     )
 
 
-def _run_single_algorithm(
-    resolution: ResolvedStrategy | str,
+@dataclass(frozen=True)
+class PreparedComparisonRun:
+    resolution: ResolvedStrategy
+    strategy: object
+    request: OptimizationRequest
+    applied_policy: AppliedComputePolicyInfo
+
+
+def _prepare_comparison_run(
+    resolution: ResolvedStrategy,
     request: OptimizationRequest,
-    policy=None,
-) -> AlgorithmResult:
-    if isinstance(resolution, str):
-        requested = resolution.strip().lower()
-        try:
-            resolution = resolve_strategy(requested)
-        except ValueError:
-            missing = ResolvedStrategy(requested, requested, None, (requested,))
-            fallback_policy = policy or load_compute_policy()
-            metadata = AppliedComputePolicyInfo(
-                profile_id=fallback_policy.profile_id,
-                algorithm_requested=requested,
-                algorithm_canonical=requested,
-                student_count=len(request.students),
-                vehicle_count=len(request.vehicles or []),
-                cancellation_mode="none",
-                limits={},
-            )
-            return _algorithm_failure(missing, metadata)
-    if policy is None:
-        policy = load_compute_policy()
+    policy,
+) -> PreparedComparisonRun:
     strategy = resolution.create()
-    try:
-        effective_request, applied_policy = apply_compute_policy(
-            request, resolution, strategy, policy
-        )
-    except PolicyValidationError as exc:
-        metadata = AppliedComputePolicyInfo(
-            profile_id=policy.profile_id,
-            algorithm_requested=resolution.requested,
-            algorithm_canonical=resolution.canonical,
-            student_count=len(request.students),
-            vehicle_count=len(request.vehicles or []),
-            cancellation_mode="none",
-            limits={},
-        )
-        result = _algorithm_failure(resolution, metadata)
-        result.error_message = str(exc)
-        return result
+    effective_request, applied_policy = apply_compute_policy(
+        request, resolution, strategy, policy
+    )
+    return PreparedComparisonRun(
+        resolution=resolution,
+        strategy=strategy,
+        request=effective_request,
+        applied_policy=AppliedComputePolicyInfo.model_validate(
+            applied_policy.model_dump()
+        ),
+    )
+
+
+def _run_single_algorithm(
+    prepared: PreparedComparisonRun,
+) -> AlgorithmResult:
+    resolution = prepared.resolution
+    strategy = prepared.strategy
+    effective_request = prepared.request
+    applied_policy = prepared.applied_policy
 
     start_time = time.time()
     try:
@@ -405,7 +357,11 @@ def compare_algorithms(request: CompareRequest) -> CompareResponse:
     keys = tuple(request.algorithms) if explicit else DEFAULT_COMPARE_ALGORITHMS
     try:
         resolutions = resolve_unique_strategies(keys)
-    except ValueError as exc:
+    except (
+        UnknownStrategyError,
+        StrategyUnavailableError,
+        StrategyRegistryContractError,
+    ) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from None
 
     policy = load_compute_policy()
@@ -418,6 +374,20 @@ def compare_algorithms(request: CompareRequest) -> CompareResponse:
         raise HTTPException(status_code=400, detail="No valid algorithms specified")
 
     opt_request = _compare_optimization_request(request, resolutions[0].requested)
+    prepared_runs = []
+    try:
+        for resolution in resolutions:
+            prepared_runs.append(
+                _prepare_comparison_run(resolution, opt_request, policy)
+            )
+    except (
+        StrategyUnavailableError,
+        StrategyRegistryContractError,
+    ) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    except PolicyValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+
     executor = None
     future_by_canonical = {}
     pending = set()
@@ -425,14 +395,12 @@ def compare_algorithms(request: CompareRequest) -> CompareResponse:
         executor = ThreadPoolExecutor(
             max_workers=min(policy.max_workers, len(resolutions))
         )
-        for resolution in resolutions:
+        for prepared in prepared_runs:
             future = executor.submit(
                 _run_single_algorithm,
-                resolution,
-                opt_request,
-                policy,
+                prepared,
             )
-            future_by_canonical[resolution.canonical] = future
+            future_by_canonical[prepared.resolution.canonical] = future
             pending.add(future)
         done, pending = wait(
             pending,
@@ -440,7 +408,8 @@ def compare_algorithms(request: CompareRequest) -> CompareResponse:
             return_when=ALL_COMPLETED,
         )
         results_by_canonical = {}
-        for resolution in resolutions:
+        for prepared in prepared_runs:
+            resolution = prepared.resolution
             future = future_by_canonical[resolution.canonical]
             if future in done:
                 try:
@@ -449,29 +418,13 @@ def compare_algorithms(request: CompareRequest) -> CompareResponse:
                     logger.exception(
                         "Algorithm %s future failed", resolution.canonical
                     )
-                    metadata = AppliedComputePolicyInfo(
-                        profile_id=policy.profile_id,
-                        algorithm_requested=resolution.requested,
-                        algorithm_canonical=resolution.canonical,
-                        student_count=len(opt_request.students),
-                        vehicle_count=len(opt_request.vehicles or []),
-                        cancellation_mode="none",
-                        limits={},
+                    result = _algorithm_failure(
+                        resolution, prepared.applied_policy
                     )
-                    result = _algorithm_failure(resolution, metadata)
             else:
-                metadata = AppliedComputePolicyInfo(
-                    profile_id=policy.profile_id,
-                    algorithm_requested=resolution.requested,
-                    algorithm_canonical=resolution.canonical,
-                    student_count=len(opt_request.students),
-                    vehicle_count=len(opt_request.vehicles or []),
-                    cancellation_mode="soft_response_deadline",
-                    limits={},
-                )
                 result = _algorithm_failure(
                     resolution,
-                    metadata,
+                    prepared.applied_policy,
                     soft_deadline=True,
                 )
             results_by_canonical[resolution.canonical] = result

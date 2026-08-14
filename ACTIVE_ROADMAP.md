@@ -1,8 +1,8 @@
 # UniRide Active Roadmap
 
 **Authoritative planning snapshot:** 2026-08-14
-**Verified evidence tip:** `d3b19de20a36e39d1f6f429cb5e1a76d0b0240d8`
-**Last verified code-bearing commit:** `d3b19de`
+**Verified evidence tip:** `80d053a4dd9700c08b927b4d419b91f382c7e25d`
+**Last verified code-bearing commit:** `80d053a`
 
 This is the current priority order. Detailed agent handoffs, gates, and model preferences live in [NEXT_PHASE_EXECUTION_ROADMAP.md](NEXT_PHASE_EXECUTION_ROADMAP.md).
 
@@ -38,7 +38,7 @@ The 2026-08-14 verification at `2d178c9` reported **1,453 passing focused Packag
 
 **Status: certificate attached as the final admission gate on `/optimize` and `/compare`.** A result is successful only when solver-successful **and** `feasibility_certificate.is_feasible`; failed/infeasible/uncertified/timed-out results are never ranked. Remaining scope:
 
-- **Requested-algorithm policy** — non-default explicit requested algorithms still need the same certificate contract.
+- **Requested-algorithm policy** — verified (`80d053a`): non-default explicitly-requested algorithms pass the identical mandatory certificate contract on `/optimize`, `/compare`, and `/vehicle-calculator`. Escape audit: `optimization.py` is the only router calling `strategy.optimize`; both call sites (:145, :315) certify unconditionally. Evidence in `docs/REQUESTED_ALGORITHM_POLICY_VERIFICATION.md`; confirmation suite `optimizer_api/tests/test_requested_algorithm_policy.py` (22 tests incl. non-default keys `hho_split`/`gwo_split`/`pso_split`/`e2bso`/`rdma`/`paoea`/`permutation_tsp` and a load-bearing test proving removal of the certification line demotes to infeasible). Full suite at `80d053a`: 3,336 passed, 1 skipped, 0 failed.
 - **Mutation proof** — implemented (`d3b19de`): 114 mutation tests across every solver surface (canonical strategies incl. OR-Tools behind `importorskip`, core CVRP engines incl. non-finite-arc instance mutations, canonical 3-opt TSP/ATSP input contracts, permutation exact path n<=10, and the academic execution-gateway RunResult contract). Each test runs a real solve, certifies the unmutated output feasible, then injects a single hard violation (missing/duplicate occurrence, capacity overflow, non-finite arc, inflated cost, identity/evaluation/budget/termination/backend tampering) and requires the final certificate or gateway to reject it. Full suite at `d3b19de`: 3,314 passed, 1 skipped, 0 failed.
 
 ## Priority 2 — Compute protection, typed budgets, and compare semantics

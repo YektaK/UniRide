@@ -2,6 +2,24 @@
 
 This is a curated chronology. It records verified work and does not turn archived reports or agent assertions into current truth.
 
+## 2026-08-14 — Requested-algorithm policy verified
+
+Non-default explicitly-requested algorithms now have proof that they pass the same
+mandatory feasibility certificate contract as the six canonical defaults, on every
+production surface. Escape audit in `docs/REQUESTED_ALGORITHM_POLICY_VERIFICATION.md`
+showed `optimizer_api/routers/optimization.py` is the only router that invokes
+`strategy.optimize` and that both call sites (optimize :145→certify :181; compare
+:315→certify :322) certify unconditionally, with `/vehicle-calculator` delegating to
+`optimize_route`. No solver result reaches a caller without the certificate contract.
+Confirmation suite `optimizer_api/tests/test_requested_algorithm_policy.py` (22 tests)
+covers non-default requested keys `hho_split`, `gwo_split`, `pso_split`, `e2bso`,
+`rdma`, `paoea`, `permutation_tsp`: real solves certify feasible, injected
+infeasible-success claims are demoted on `/optimize` and `/compare`, and a
+load-bearing test proves the endpoint certification line is the enforcement point.
+Verified at HEAD `80d053a4dd9700c08b927b4d419b91f382c7e25d`; full suite
+`uniride_core/tests optimizer_api/tests academic_benchmark/tests` = 3,336 passed,
+1 skipped (Numba), 0 failed (d3b19de baseline 3,314 + 22 new).
+
 ## 2026-08-14 — Package B compute policy: final verification and documentation synchronization
 
 **Scope.** The Package B compute-policy branch was independently re-verified at HEAD `ed54d5cebdc849fb0df2743692f0eca385a4750a` in isolated worktree `.temp\worktrees\package-b-compute-policy-20260812`. At that evidence tip, the branch was 19 commits ahead of clean `origin/WIP` at `b9becba1cded4dcfa897cecab9046b322b3be5d7`. The initial Task 8 gates ran at `b0b3a11`; the post-audit Python gates below ran after the documentation and auth-test isolation follow-ups at `ed54d5c`.

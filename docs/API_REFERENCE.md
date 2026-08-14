@@ -11,7 +11,7 @@ The archived predecessor described obsolete payloads. This reference is intentio
 - Next.js routes authenticate users and translate application payloads.
 - Next.js server routes call the FastAPI optimizer through `OPTIMIZER_API_URL`.
 - Direct browser calls to FastAPI are a known defect and must not be used in production.
-- FastAPI currently has no service-authentication dependency; deploy it only on a trusted private boundary until Phase 2 of the roadmap.
+- FastAPI requires `X-Internal-API-Key` authentication (constant-time compared, 403 on failure) on all heavy compute endpoints (`/api/v1/optimize`, `/api/v1/compare`, `/api/v1/vehicle-calculator`) and the entire benchmark router. Public endpoints (`/health`, `/api/v1/strategies`, `/api/v1/extract-time-windows`, `/api/v1/schedule-to-students`) remain unauthenticated. `UNIRIDE_DISABLE_AUTH=1` is forbidden when `APP_ENV=production`. This is a shared-key boundary gate, not per-tenant authorization.
 
 ## 2. FastAPI Endpoints
 
@@ -52,7 +52,7 @@ Default local base: `http://127.0.0.1:8000`
 
 ### FastAPI security warning
 
-The benchmark and CLI endpoints are not safe for untrusted exposure. In particular, the archived implementation of CLI preview/import accepted caller-selected paths. Phase 0 must remove this behavior and add service/admin authentication.
+The benchmark and CLI endpoints now require `X-Internal-API-Key` via the router-level `require_internal_api_key` dependency. The archived CLI path-traversal vulnerability (caller-selected `filepath`) was replaced with `_resolve_cli_filename()`, which restricts filenames to a configured search directory. The internal API key is a shared-secret boundary gate; per-tenant authorization and rate limiting remain open.
 
 ## 3. Core FastAPI Contracts
 

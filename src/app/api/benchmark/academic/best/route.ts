@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const BACKEND_URL = process.env.OPTIMIZER_API_URL || "http://localhost:8000";
+import { optimizerFetch } from "@/lib/optimizer-server";
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,7 +10,7 @@ export async function GET(request: NextRequest) {
     if (problem) params.set("problem", problem);
     if (algorithm) params.set("algorithm", algorithm);
 
-    const response = await fetch(`${BACKEND_URL}/api/v1/benchmark/academic/best?${params.toString()}`, {
+    const response = await optimizerFetch(`/api/v1/benchmark/academic/best?${params.toString()}`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       signal: AbortSignal.timeout(10000),

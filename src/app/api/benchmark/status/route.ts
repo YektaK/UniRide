@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOwnerToken } from "@/lib/benchmark-owner-cookie";
-
-const BACKEND_URL = process.env.OPTIMIZER_API_URL || "http://localhost:8000";
+import { optimizerFetch } from "@/lib/optimizer-server";
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,13 +16,13 @@ export async function GET(request: NextRequest) {
 
     const params = new URLSearchParams();
     params.set("run_id", runId);
-    const url = `${BACKEND_URL}/api/v1/benchmark/status?${params.toString()}`;
+    const url = `/api/v1/benchmark/status?${params.toString()}`;
 
     const ownerToken = getOwnerToken(request, runId);
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (ownerToken) headers["X-Benchmark-Owner-Token"] = ownerToken;
 
-    const response = await fetch(url, {
+    const response = await optimizerFetch(url, {
       method: "GET",
       headers,
       signal: AbortSignal.timeout(10000),

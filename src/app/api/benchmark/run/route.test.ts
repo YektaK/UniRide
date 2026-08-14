@@ -1,6 +1,12 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { POST } from "./route";
+
+vi.mock("server-only", () => ({}));
+
+beforeEach(() => {
+  process.env.OPTIMIZER_INTERNAL_API_KEY = "test-key";
+});
 
 type FetchResponse = { status: number; json: unknown };
 
@@ -24,6 +30,7 @@ function stubFetch(responses: FetchResponse[]) {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  delete process.env.OPTIMIZER_INTERNAL_API_KEY;
 });
 
 function runRequest(runId?: string) {

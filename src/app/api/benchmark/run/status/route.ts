@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerToken } from '@/lib/benchmark-owner-cookie';
-
-const BACKEND_URL = process.env.OPTIMIZER_API_URL || 'http://localhost:8000';
+import { optimizerFetch } from "@/lib/optimizer-server";
 
 /**
  * GET /api/benchmark/run/status?runId=xyz
@@ -38,8 +37,8 @@ export async function GET(request: NextRequest) {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (ownerToken) headers['X-Benchmark-Owner-Token'] = ownerToken;
 
-    const response = await fetch(
-      `${BACKEND_URL}/api/v1/benchmark/status?run_id=${encodeURIComponent(runId)}`,
+    const response = await optimizerFetch(
+      `/api/v1/benchmark/status?run_id=${encodeURIComponent(runId)}`,
       { headers }
     );
 

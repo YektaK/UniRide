@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateBenchmarkRunId, isValidBenchmarkRunId } from '@/lib/benchmark-run-id';
 import { buildBenchmarkBackendRequest } from '@/lib/benchmark-backend-request';
 import { getOwnerToken, setOwnerCookie, isRunExistsStatus } from '@/lib/benchmark-owner-cookie';
-
-const BACKEND_URL = process.env.OPTIMIZER_API_URL || 'http://localhost:8000';
+import { optimizerFetch } from "@/lib/optimizer-server";
 
 /**
  * POST /api/benchmark/run
@@ -75,8 +74,8 @@ export async function POST(request: NextRequest) {
         const precheckHeaders: Record<string, string> = {};
         if (precheckToken) precheckHeaders['X-Benchmark-Owner-Token'] = precheckToken;
 
-        const statusResponse = await fetch(
-          `${BACKEND_URL}/api/v1/benchmark/status?run_id=${encodeURIComponent(providedRunId)}`,
+        const statusResponse = await optimizerFetch(
+          `/api/v1/benchmark/status?run_id=${encodeURIComponent(providedRunId)}`,
           { method: 'GET', headers: precheckHeaders }
         );
 
@@ -109,7 +108,7 @@ export async function POST(request: NextRequest) {
     // Forward to Python backend
     console.log(`[Benchmark /api/benchmark/run] Starting: ${runId}`);
     
-    const response = await fetch(`${BACKEND_URL}/api/v1/benchmark/run`, {
+    const response = await optimizerFetch(`/api/v1/benchmark/run`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(benchmarkRequest),

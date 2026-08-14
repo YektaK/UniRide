@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getOwnerToken } from "@/lib/benchmark-owner-cookie";
-
-const BACKEND_URL = process.env.OPTIMIZER_API_URL || "http://localhost:8000";
+import { optimizerFetch } from "@/lib/optimizer-server";
 
 const StopBenchmarkRequestSchema = z.object({
   run_id: z.string().min(1, "run_id gerekli"),
@@ -26,8 +25,8 @@ export async function POST(request: NextRequest) {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (ownerToken) headers["X-Benchmark-Owner-Token"] = ownerToken;
 
-    const response = await fetch(
-      `${BACKEND_URL}/api/v1/benchmark/stop?run_id=${encodeURIComponent(run_id)}`,
+    const response = await optimizerFetch(
+      `/api/v1/benchmark/stop?run_id=${encodeURIComponent(run_id)}`,
       {
         method: "POST",
         headers,

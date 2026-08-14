@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const BACKEND_URL = process.env.OPTIMIZER_API_URL || "http://localhost:8000";
+import { optimizerFetch } from "@/lib/optimizer-server";
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,9 +9,9 @@ export async function GET(request: NextRequest) {
     const params = new URLSearchParams();
     if (category) params.set("category", category);
 
-    const url = `${BACKEND_URL}/api/v1/benchmark/problems${params.toString() ? `?${params.toString()}` : ""}`;
+    const url = `/api/v1/benchmark/problems${params.toString() ? `?${params.toString()}` : ""}`;
 
-    const response = await fetch(url, {
+    const response = await optimizerFetch(url, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       signal: AbortSignal.timeout(15000),

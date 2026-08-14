@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-
-const BACKEND_URL = process.env.OPTIMIZER_API_URL || "http://localhost:8000";
+import { optimizerFetch } from "@/lib/optimizer-server";
 
 export async function GET() {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/v1/strategies`, {
+    const response = await optimizerFetch(`/api/v1/strategies`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       signal: AbortSignal.timeout(10000),

@@ -13,8 +13,8 @@ The latest verification was run on 2026-08-13 from base `b0b3a11fb4374c0470f4b67
 
 | Gate | Verified result |
 | --- | --- |
-| Focused Package B Python gate | 1,453 passed, 31.27s |
-| Full affected Python suites | 2,275 passed, 1 skipped (Numba unavailable), 21 pre-existing baseline failures (20 auth test-order pollution + 1 Supabase SDK provider-timeout drift), 3 warnings, 195.81s |
+| Focused Package B Python gate | 1,453 passed, 12.70s |
+| Full affected Python suites | 2,295 passed, 1 skipped (Numba unavailable), 1 pre-existing Supabase SDK provider-timeout drift failure (`test_matrix_repository.py`, unchanged from base), 3 warnings, 136.92s |
 | Frontend Vitest | 21 files, 58 tests passed, 94.71s |
 | TypeScript | passed |
 | ESLint | 0 errors, 158 warnings (temporary waiver) |

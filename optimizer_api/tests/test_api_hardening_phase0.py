@@ -94,6 +94,7 @@ class _NoCall:
 )
 def test_b1_benchmark_endpoints_reject_missing_key(client, monkeypatch, method, path, kwargs):
     monkeypatch.setenv("INTERNAL_API_KEY", "phase0-test-key")
+    monkeypatch.delenv("UNIRIDE_DISABLE_AUTH", raising=False)
     response = getattr(client, method)(path, **kwargs)
 
     assert response.status_code == 403
@@ -102,6 +103,7 @@ def test_b1_benchmark_endpoints_reject_missing_key(client, monkeypatch, method, 
 
 def test_b1_missing_key_does_not_start_benchmark_run(client, monkeypatch):
     monkeypatch.setenv("INTERNAL_API_KEY", "phase0-test-key")
+    monkeypatch.delenv("UNIRIDE_DISABLE_AUTH", raising=False)
     before = {s.run_id for s in benchmark.benchmark_state_manager.list_runs()}
 
     response = client.post("/api/v1/benchmark/run", json=_valid_payload())
@@ -113,6 +115,7 @@ def test_b1_missing_key_does_not_start_benchmark_run(client, monkeypatch):
 
 def test_b1_missing_key_does_not_trigger_download(client, monkeypatch):
     monkeypatch.setenv("INTERNAL_API_KEY", "phase0-test-key")
+    monkeypatch.delenv("UNIRIDE_DISABLE_AUTH", raising=False)
     no_call = _NoCall()
     monkeypatch.setattr(benchmark, "download_tsplib_problem", no_call)
 
@@ -296,6 +299,7 @@ def test_b4_fetch_url_honors_timeout():
 
 def test_b4_download_endpoint_does_not_fetch_without_credentials(client, monkeypatch):
     monkeypatch.setenv("INTERNAL_API_KEY", "phase0-test-key")
+    monkeypatch.delenv("UNIRIDE_DISABLE_AUTH", raising=False)
     no_call = _NoCall()
     monkeypatch.setattr(benchmark, "download_tsplib_problem", no_call)
 

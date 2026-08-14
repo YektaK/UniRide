@@ -32,7 +32,7 @@ The following are closed only to the tested scope recorded in [CURRENT_ARCHITECT
 - exact/permutation fail-fast rejection above ten waypoints;
 - server-only Next.js optimizer transport with a browser boundary test.
 
-The 2026-08-13 verification reported **1,453 passing focused Package B Python tests, 31.27s**; **2,275 passing full affected-suite Python tests, 1 skip (Numba unavailable), 3 warnings, 195.81s**, with the same **21 pre-existing baseline failures** (20 auth test-order pollution that passes in isolation, 1 Supabase SDK provider-timeout drift); **21 passing Vitest files / 58 tests, 94.71s**; passing TypeScript; ESLint at **0 errors / 158 warnings (temporary waiver)**; and a passing credential-free production build with **57 static pages**. `npm audit --omit=dev --json` exited **1** with **84 unresolved findings: 2 critical, 22 high, 59 moderate, 1 low**.
+The 2026-08-13 verification reported **1,453 passing focused Package B Python tests, 12.70s**; **2,295 passing full affected-suite Python tests, 1 skip (Numba unavailable), 3 warnings, 136.92s**, with a single remaining pre-existing `test_matrix_repository.py` Supabase SDK provider-timeout drift failure (file unchanged from base); **21 passing Vitest files / 58 tests, 94.71s**; passing TypeScript; ESLint at **0 errors / 158 warnings (temporary waiver)**; and a passing credential-free production build with **57 static pages**. `npm audit --omit=dev --json` exited **1** with **84 unresolved findings: 2 critical, 22 high, 59 moderate, 1 low**.
 
 ## Priority 1 — Universal production feasibility
 

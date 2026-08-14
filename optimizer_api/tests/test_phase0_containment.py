@@ -20,6 +20,7 @@ def test_optimizer_host_defaults_to_loopback(monkeypatch):
 
 def test_internal_key_is_required_and_rejects_mismatch(monkeypatch):
     monkeypatch.delenv("INTERNAL_API_KEY", raising=False)
+    monkeypatch.delenv("UNIRIDE_DISABLE_AUTH", raising=False)
 
     with pytest.raises(HTTPException) as exc_unset:
         asyncio.run(require_internal_api_key(None))

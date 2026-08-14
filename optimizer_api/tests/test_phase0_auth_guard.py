@@ -41,6 +41,7 @@ def authed_client():
 )
 def test_g1_benchmark_routes_deny_when_key_unset(authed_client, monkeypatch, method, path, kwargs):
     monkeypatch.delenv("INTERNAL_API_KEY", raising=False)
+    monkeypatch.delenv("UNIRIDE_DISABLE_AUTH", raising=False)
 
     response = getattr(authed_client, method)(path, **kwargs)
 
@@ -63,6 +64,7 @@ def test_g2_correct_key_allows_benchmark_read(authed_client, monkeypatch):
 
 def test_g3_missing_key_correctly_forbidden(authed_client, monkeypatch):
     monkeypatch.setenv("INTERNAL_API_KEY", "guard-test-key")
+    monkeypatch.delenv("UNIRIDE_DISABLE_AUTH", raising=False)
 
     response = authed_client.get("/api/v1/benchmark/problems")
 

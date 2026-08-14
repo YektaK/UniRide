@@ -49,8 +49,8 @@ npm run build
 git diff --check
 ```
 
-- Focused Package B gate: **1,453 tests passed in 31.27s**, zero failures.
-- Full affected suites: **2,275 passed, 1 skipped, 3 warnings, 195.81s**, with **21 pre-existing baseline failures** — 20 auth test-order-pollution failures (`test_api_hardening_phase0.py`, `test_phase0_auth_guard.py`, `test_phase0_containment.py`) that pass together in isolation (70 passed), plus 1 `test_matrix_repository.py` Supabase SDK provider-timeout drift that also fails on a clean baseline. The 1 skip is `academic_benchmark/tests/test_numba_three_opt.py` (Numba unavailable). None of the 21 are Package B regressions; all touch disjoint files.
+- Focused Package B gate: **1,453 tests passed in 12.70s**, zero failures.
+- Full affected suites: **2,295 passed, 1 skipped, 3 warnings, 136.92s**. The single remaining failure is `test_matrix_repository.py::test_provider_timeout_plumbed_into_sdk_client`, a genuinely pre-existing Supabase SDK provider-timeout drift (that file is unchanged from base). The 1 skip is `academic_benchmark/tests/test_numba_three_opt.py` (Numba unavailable). **Correction:** an earlier draft of this entry described "20 pre-existing auth order-pollution failures"; that attribution was wrong. Those 20 failures were branch-induced suite-consistency failures — stale Phase 0 tests asserting the old always-deny auth contract — and were fixed as part of the audit follow-up documented below.
 - Vitest **21 files / 58 tests passed in 94.71s** (vitest 4.0.18). TypeScript passed. ESLint **0 errors / 158 warnings**.
 - Credential-free `npm run build` passed (Next.js 16.1.6, webpack) with **57 static pages**; Supabase missing-env build warnings are expected in a credential-free environment.
 - `git diff --check` clean; final worktree status clean.
@@ -62,7 +62,35 @@ git diff --check
 - The 158 ESLint warnings continue under a temporary waiver; Priority 4 debt remains.
 - `npm audit --omit=dev --json` still exits 1 with 84 findings (2 critical, 22 high, 59 moderate, 1 low).
 - Package B provides a **soft** response deadline only: no hard solver cancellation, process isolation, durable jobs, or rate limiting. The exact/permutation fail-fast boundary covers the canonical permutation/exact paths, not every solver family.
-- The 21 full-suite failures are environment/order baseline debt, not Package B scope.
+- The single remaining full-suite failure (`test_matrix_repository.py`) is genuine pre-existing Supabase SDK provider-timeout drift; the 20 auth failures noted in the earlier draft were branch-induced and are now fixed (see follow-up below).
+
+## 2026-08-13 — Package B audit follow-up: auth suite-consistency fix and doc correction
+
+**Audit.** A final correctness audit of `codex/package-b-compute-policy-20260812` found that the initial documentation claim about "20 pre-existing auth order-pollution baseline failures" was false. Root cause, verified against live source:
+
+- `require_internal_api_key` had no `UNIRIDE_DISABLE_AUTH` bypass at the base; Package B wired in `if internal_auth_disabled(): return` (`optimizer_api/auth.py:16-17`).
+- `optimizer_api/tests/test_optional_solver_api.py:9` contains the pre-existing, unchanged module-level `os.environ.setdefault("UNIRIDE_DISABLE_AUTH", "1")`. At the base this was inert; on this branch it activates the bypass for the rest of the suite.
+- Stale Phase 0 deny-contract tests (`test_phase0_auth_guard.py` g1/g3, `test_api_hardening_phase0.py` b1/b4, `test_phase0_containment.py::test_internal_key_is_required_and_rejects_mismatch`) assert 403 with a key unset/absent header but never clear `UNIRIDE_DISABLE_AUTH`, so under pollution they observe 200/400/404 instead of 403. These 20 failures are branch-induced suite-consistency failures, **not** pre-existing baseline debt.
+- Mechanism reproduced: `test_phase0_auth_guard.py` alone → 12 passed; preceded by `test_optional_solver_api.py` → 4 failed (g1×3 got 400/404, g3 got 200). CI does not catch this because the focused job runs `test_phase0_containment.py` but not the polluter, and the focused Package B gate excludes all four stale files.
+
+**Fix (surgical).** Added the plan's own isolation pattern, `monkeypatch.delenv("UNIRIDE_DISABLE_AUTH", raising=False)`, to the deny-contract tests in `test_phase0_auth_guard.py` (g1, g3), `test_api_hardening_phase0.py` (test_b1_benchmark_endpoints_reject_missing_key, test_b1_missing_key_does_not_start_benchmark_run, test_b1_missing_key_does_not_trigger_download, test_b4_download_endpoint_does_not_fetch_without_credentials), and `test_phase0_containment.py` (test_internal_key_is_required_and_rejects_mismatch). The polluter line is pre-existing and left unchanged.
+
+**Re-verified results (post-fix).**
+
+```powershell
+python -m pytest optimizer_api/tests/test_optional_solver_api.py optimizer_api/tests/test_phase0_auth_guard.py optimizer_api/tests/test_phase0_containment.py optimizer_api/tests/test_api_hardening_phase0.py -q -p no:cacheprovider
+python -m pytest optimizer_api/tests -q -p no:cacheprovider
+python -m pytest optimizer_api/tests uniride_core/tests academic_benchmark/tests/test_production_registry_snapshot.py -q -p no:cacheprovider
+```
+
+- Polluter-first reproduction file set: **75 passed** (previously 4 failed).
+- `optimizer_api/tests`: **1,960 passed, 1 failed (matrix drift), 3 warnings, 105.46s**.
+- Full affected suites: **2,295 passed, 1 failed (matrix drift), 1 skipped (Numba), 3 warnings, 136.92s**.
+- Focused Package B gate: **1,453 passed in 12.70s**.
+
+**Documentation correction.** The earlier "21 pre-existing baseline failures" claim was corrected in `WORKLOG.md`, `README.md`, `CURRENT_ARCHITECTURE.md`, and `ACTIVE_ROADMAP.md`: 20 were branch-induced stale-test failures fixed in this follow-up; the single `test_matrix_repository.py` failure is genuine pre-existing Supabase SDK drift (file unchanged from base).
+
+**Known remaining (unrelated to this audit).** The optional cosmetics noted by the audit (timed-out compare results reporting `execution_time_seconds=0.0`, and `cancellation_mode="soft_response_deadline"` being emitted when no run is runnable) are still open and out of scope here. `test_phase0_auth_guard.py`'s docstring still references the pre-Package B G3 startup-guard wording; the tests themselves assert the new contract.
 
 ## 2026-08-10 — Post-audit quick fixes, immutable verification, and documentation synchronization
 

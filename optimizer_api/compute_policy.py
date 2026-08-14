@@ -34,6 +34,8 @@ class ComputePolicy:
     max_iterations: int = 2_000
     max_population: int = 250
     local_search_seconds: int = 2
+    rate_limit_requests: int = 30
+    rate_limit_window_seconds: int = 60
 
 
 HARD_CEILINGS = ComputePolicy()
@@ -47,6 +49,8 @@ ENV_FIELDS = {
     "UNIRIDE_COMPUTE_MAX_ITERATIONS": "max_iterations",
     "UNIRIDE_COMPUTE_MAX_POPULATION": "max_population",
     "UNIRIDE_COMPUTE_LOCAL_SEARCH_SECONDS": "local_search_seconds",
+    "UNIRIDE_RATE_LIMIT_REQUESTS": "rate_limit_requests",
+    "UNIRIDE_RATE_LIMIT_WINDOW_SECONDS": "rate_limit_window_seconds",
 }
 
 

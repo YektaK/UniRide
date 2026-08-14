@@ -5,3 +5,22 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
+
+env:
+  # ─── Optimizer API Key (shared secret with FastAPI) ───
+  - variable: OPTIMIZER_INTERNAL_API_KEY
+    secret: optimizer-internal-api-key
+
+  # ─── Optimizer API URL (internal network address of FastAPI service) ───
+  - variable: OPTIMIZER_API_URL
+    value: http://127.0.0.1:8000  # Replace with production optimizer URL
+
+  # ─── Supabase ───
+  - variable: NEXT_PUBLIC_SUPABASE_URL
+    value: https://your-project.supabase.co  # Replace with production URL
+
+  - variable: NEXT_PUBLIC_SUPABASE_ANON_KEY
+    value: your-anon-key  # Replace with production anon key (not a secret — public by design)
+
+  - variable: SUPABASE_SERVICE_ROLE_KEY
+    secret: supabase-service-role-key

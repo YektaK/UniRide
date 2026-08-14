@@ -4,9 +4,9 @@ This is a curated chronology. It records verified work and does not turn archive
 
 ## 2026-08-14 — Package B compute policy: final verification and documentation synchronization
 
-**Scope.** The Package B compute-policy branch was independently re-verified at HEAD `ed54d5cebdc849fb0df2743692f0eca385a4750a` in isolated worktree `.temp\worktrees\package-b-compute-policy-20260812`. The branch is 19 commits ahead of clean `origin/WIP` at `b9becba1cded4dcfa897cecab9046b322b3be5d7`. The initial Task 8 gates ran at `b0b3a11`; the post-audit Python gates below ran after the documentation and auth-test isolation follow-ups at `ed54d5c`.
+**Scope.** The Package B compute-policy branch was independently re-verified at HEAD `ed54d5cebdc849fb0df2743692f0eca385a4750a` in isolated worktree `.temp\worktrees\package-b-compute-policy-20260812`. At that evidence tip, the branch was 19 commits ahead of clean `origin/WIP` at `b9becba1cded4dcfa897cecab9046b322b3be5d7`. The initial Task 8 gates ran at `b0b3a11`; the post-audit Python gates below ran after the documentation and auth-test isolation follow-ups at `ed54d5c`.
 
-**Package B commit list** (oldest to newest; 3 documentation commits, 7 task commits, 9 follow-up fixes):
+**Evidence-bearing Package B commit list through `ed54d5c`** (oldest to newest; 3 documentation commits, 7 task commits, 9 follow-up fixes):
 
 | Commit | Subject |
 | --- | --- |

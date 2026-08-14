@@ -1,8 +1,8 @@
 # UniRide Active Roadmap
 
 **Authoritative planning snapshot:** 2026-08-14
-**Verified evidence tip:** `ed54d5cebdc849fb0df2743692f0eca385a4750a`
-**Last verified code-bearing commit:** `ed54d5c`
+**Verified evidence tip:** `2d178c9b3910be8a8369de19a8ff4bd62bcf8a41`
+**Last verified code-bearing commit:** `2d178c9`
 
 This is the current priority order. Detailed agent handoffs, gates, and model preferences live in [NEXT_PHASE_EXECUTION_ROADMAP.md](NEXT_PHASE_EXECUTION_ROADMAP.md).
 
@@ -32,7 +32,7 @@ The following are closed only to the tested scope recorded in [CURRENT_ARCHITECT
 - exact/permutation fail-fast rejection above ten waypoints;
 - server-only Next.js optimizer transport with a browser boundary test.
 
-The 2026-08-14 verification at `ed54d5c` reported **1,453 passing focused Package B Python tests, 37.37s** and **2,295 passing full affected-suite Python tests, 1 skip (Numba unavailable), 3 warnings, 167.78s**, with one remaining pre-existing `test_matrix_repository.py` Supabase SDK provider-timeout drift failure reproduced on clean `WIP`. The unchanged frontend gate remains **21 passing Vitest files / 58 tests** with passing TypeScript, ESLint at **0 errors / 158 warnings (temporary waiver)**, and a passing credential-free production build with **57 static pages**. `npm audit --omit=dev --json` exited **1** with **84 unresolved findings: 2 critical, 22 high, 59 moderate, 1 low**.
+The 2026-08-14 verification at `2d178c9` reported **1,453 passing focused Package B Python tests, 13.38s** and **3,200 passing full affected-suite Python tests, 1 skip, 46 warnings, 262.32s**. The pre-existing `test_matrix_repository.py` Supabase SDK provider-timeout drift failure was fixed at `2d178c9` by stubbing the SDK `ClientOptions` module inside the test (SDK-version-independent); the full suite now has **zero failures**. The frontend gate remains **21 passing Vitest files / 58 tests** with passing TypeScript, ESLint at **0 errors / 158 warnings (temporary waiver)**, and a passing credential-free production build with **57 routes (all server-rendered dynamic — no static pages)**. `npm audit --omit=dev --json` reports the unchanged baseline of **84 unresolved findings: 2 critical, 22 high, 59 moderate, 1 low**.
 
 ## Priority 1 — Universal production feasibility
 

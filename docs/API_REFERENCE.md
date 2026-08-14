@@ -1,6 +1,6 @@
 # UniRide API Reference
 
-**Verified:** 2026-07-16
+**Verified:** 2026-08-14
 **Status:** endpoint inventory and integration guide, not a production-security certification
 
 The archived predecessor described obsolete payloads. This reference is intentionally concise and reflects the live route inventory. Generate detailed schemas from FastAPI OpenAPI after the Python environment is repaired.

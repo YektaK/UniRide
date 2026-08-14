@@ -1,8 +1,8 @@
 # UniRide Current Architecture
 
-**Verified documentation snapshot:** 2026-08-13
-**Evidence base:** `b0b3a11fb4374c0470f4b6762251483f8f8ac81b`
-**Last verified code-bearing commit:** `b0b3a11`
+**Verified documentation snapshot:** 2026-08-14
+**Evidence tip:** `ed54d5cebdc849fb0df2743692f0eca385a4750a`
+**Last verified code-bearing commit:** `ed54d5c`
 
 This describes current, verified boundaries. It is not a production-readiness claim. When this document conflicts with live code or executable tests, those sources win.
 
@@ -115,6 +115,6 @@ Registry metadata should be immutable. Executable strategies must be request/job
 
 ## 7. Verification baseline
 
-On 2026-08-13, the focused Package B Python gate passed **1,453 tests** in **12.70s**. The full affected Python suites passed **2,295 tests** with **1 skip** (Numba unavailable) and **3 warnings** in **136.92s**; the only remaining failure is `test_matrix_repository.py::test_provider_timeout_plumbed_into_sdk_client`, a genuinely pre-existing Supabase SDK provider-timeout drift (that file is unchanged from the base). Frontend Vitest passed **21 files / 58 tests** in **94.71s**; TypeScript passed; ESLint reported **0 errors / 158 warnings** (temporary waiver); and a credential-free production build passed with **57 static pages**. `npm audit --omit=dev --json` still exits nonzero with the 84 findings above. (An earlier mid-run observation of 20 additional auth-guard failures was a branch-induced suite-consistency artifact, not baseline debt; it is documented and corrected in the worklog.)
+On 2026-08-14 at `ed54d5c`, the focused Package B Python gate passed **1,453 tests** in **37.37s**. The full affected Python suites passed **2,295 tests** with **1 skip** (Numba unavailable) and **3 warnings** in **167.78s**; the only remaining failure is `test_matrix_repository.py::test_provider_timeout_plumbed_into_sdk_client`, a pre-existing Supabase SDK provider-timeout drift reproduced on clean `WIP`. Frontend Vitest remains **21 files / 58 tests passed**; TypeScript passed; ESLint reported **0 errors / 158 warnings** (temporary waiver); and a credential-free production build passed with **57 static pages**. No frontend production source changed after those frontend gates. `npm audit --omit=dev --json` still exits nonzero with the 84 findings above. (An earlier mid-run observation of 20 additional auth-guard failures was a branch-induced suite-consistency artifact, not baseline debt; it is documented and corrected in the worklog.)
 
 See [UniRide_Ultimate_Audit.md](UniRide_Ultimate_Audit.md) for qualifications, [ACTIVE_ROADMAP.md](ACTIVE_ROADMAP.md) for priority, and [NEXT_PHASE_EXECUTION_ROADMAP.md](NEXT_PHASE_EXECUTION_ROADMAP.md) for bounded future handoffs.

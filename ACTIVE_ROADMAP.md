@@ -1,8 +1,8 @@
 # UniRide Active Roadmap
 
-**Authoritative planning snapshot:** 2026-08-13
-**Verified base:** `b0b3a11fb4374c0470f4b6762251483f8f8ac81b`
-**Last verified code-bearing commit:** `b0b3a11`
+**Authoritative planning snapshot:** 2026-08-14
+**Verified evidence tip:** `ed54d5cebdc849fb0df2743692f0eca385a4750a`
+**Last verified code-bearing commit:** `ed54d5c`
 
 This is the current priority order. Detailed agent handoffs, gates, and model preferences live in [NEXT_PHASE_EXECUTION_ROADMAP.md](NEXT_PHASE_EXECUTION_ROADMAP.md).
 
@@ -32,7 +32,7 @@ The following are closed only to the tested scope recorded in [CURRENT_ARCHITECT
 - exact/permutation fail-fast rejection above ten waypoints;
 - server-only Next.js optimizer transport with a browser boundary test.
 
-The 2026-08-13 verification reported **1,453 passing focused Package B Python tests, 12.70s**; **2,295 passing full affected-suite Python tests, 1 skip (Numba unavailable), 3 warnings, 136.92s**, with a single remaining pre-existing `test_matrix_repository.py` Supabase SDK provider-timeout drift failure (file unchanged from base); **21 passing Vitest files / 58 tests, 94.71s**; passing TypeScript; ESLint at **0 errors / 158 warnings (temporary waiver)**; and a passing credential-free production build with **57 static pages**. `npm audit --omit=dev --json` exited **1** with **84 unresolved findings: 2 critical, 22 high, 59 moderate, 1 low**.
+The 2026-08-14 verification at `ed54d5c` reported **1,453 passing focused Package B Python tests, 37.37s** and **2,295 passing full affected-suite Python tests, 1 skip (Numba unavailable), 3 warnings, 167.78s**, with one remaining pre-existing `test_matrix_repository.py` Supabase SDK provider-timeout drift failure reproduced on clean `WIP`. The unchanged frontend gate remains **21 passing Vitest files / 58 tests** with passing TypeScript, ESLint at **0 errors / 158 warnings (temporary waiver)**, and a passing credential-free production build with **57 static pages**. `npm audit --omit=dev --json` exited **1** with **84 unresolved findings: 2 critical, 22 high, 59 moderate, 1 low**.
 
 ## Priority 1 — Universal production feasibility
 

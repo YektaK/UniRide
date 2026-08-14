@@ -2,11 +2,11 @@
 
 This is a curated chronology. It records verified work and does not turn archived reports or agent assertions into current truth.
 
-## 2026-08-13 — Package B compute policy: verification gates and documentation synchronization
+## 2026-08-14 — Package B compute policy: final verification and documentation synchronization
 
-**Scope.** The Package B compute-policy branch was verified at HEAD `b0b3a11fb4374c0470f4b6762251483f8f8ac81b` in isolated worktree `.temp\worktrees\package-b-compute-policy-20260812`. The branch is 17 commits ahead of clean `origin/WIP` at `b9becba1cded4dcfa897cecab9046b322b3be5d7`. All gates below were run against the live working tree and every documented claim was checked against live source with file/line evidence.
+**Scope.** The Package B compute-policy branch was independently re-verified at HEAD `ed54d5cebdc849fb0df2743692f0eca385a4750a` in isolated worktree `.temp\worktrees\package-b-compute-policy-20260812`. The branch is 19 commits ahead of clean `origin/WIP` at `b9becba1cded4dcfa897cecab9046b322b3be5d7`. The initial Task 8 gates ran at `b0b3a11`; the post-audit Python gates below ran after the documentation and auth-test isolation follow-ups at `ed54d5c`.
 
-**Package B commit list** (oldest to newest; 2 docs, 7 task commits, 8 follow-up fixes):
+**Package B commit list** (oldest to newest; 3 documentation commits, 7 task commits, 9 follow-up fixes):
 
 | Commit | Subject |
 | --- | --- |
@@ -27,6 +27,8 @@ This is a curated chronology. It records verified work and does not turn archive
 | `d9a5f4632c884697b6e347c0fc75c05eb29abe2a` | `feat(web): authenticate server optimizer calls` |
 | `edabf29e79c84751679c9843840ddfff7df80f42` | `fix(web): harden optimizer transport boundary` |
 | `b0b3a11fb4374c0470f4b6762251483f8f8ac81b` | `fix(web): sanitize optimizer transport failures` |
+| `8da15ddeb6aa572abf27844da014c839d773ca97` | `docs: record production compute policy` |
+| `ed54d5cebdc849fb0df2743692f0eca385a4750a` | `fix(test): isolate stale auth-guard tests; correct full-suite baseline claim` |
 
 **Changed boundaries (verified against live source).**
 
@@ -55,7 +57,7 @@ git diff --check
 - Credential-free `npm run build` passed (Next.js 16.1.6, webpack) with **57 static pages**; Supabase missing-env build warnings are expected in a credential-free environment.
 - `git diff --check` clean; final worktree status clean.
 
-**Documentation outcome.** Updated `README.md` (verification status, env-var table with `OPTIMIZER_INTERNAL_API_KEY` and the nine `UNIRIDE_COMPUTE_*` variables, new compute-policy section), `CURRENT_ARCHITECTURE.md` (production request path, verified closures, open boundaries, execution/concurrency, verification baseline), `ACTIVE_ROADMAP.md` (completed scoped work, updated Priority 1/2 status with remaining scope), and this worklog. The 2026-08-10 verification figures were superseded by the 2026-08-13 figures above.
+**Documentation outcome.** Updated `README.md` (verification status, env-var table with `OPTIMIZER_INTERNAL_API_KEY` and the nine `UNIRIDE_COMPUTE_*` variables, new compute-policy section), `CURRENT_ARCHITECTURE.md` (production request path, verified closures, open boundaries, execution/concurrency, verification baseline), `ACTIVE_ROADMAP.md` (completed scoped work, updated Priority 1/2 status with remaining scope), and this worklog. The 2026-08-10 figures were superseded by the initial 2026-08-13 gates and the 2026-08-14 independent rerun below.
 
 **Waivers and remaining risk (documented, not closed).**
 
@@ -64,7 +66,7 @@ git diff --check
 - Package B provides a **soft** response deadline only: no hard solver cancellation, process isolation, durable jobs, or rate limiting. The exact/permutation fail-fast boundary covers the canonical permutation/exact paths, not every solver family.
 - The single remaining full-suite failure (`test_matrix_repository.py`) is genuine pre-existing Supabase SDK provider-timeout drift; the 20 auth failures noted in the earlier draft were branch-induced and are now fixed (see follow-up below).
 
-## 2026-08-13 — Package B audit follow-up: auth suite-consistency fix and doc correction
+## 2026-08-14 — Package B audit follow-up: auth suite-consistency fix and doc correction
 
 **Audit.** A final correctness audit of `codex/package-b-compute-policy-20260812` found that the initial documentation claim about "20 pre-existing auth order-pollution baseline failures" was false. Root cause, verified against live source:
 
@@ -87,6 +89,13 @@ python -m pytest optimizer_api/tests uniride_core/tests academic_benchmark/tests
 - `optimizer_api/tests`: **1,960 passed, 1 failed (matrix drift), 3 warnings, 105.46s**.
 - Full affected suites: **2,295 passed, 1 failed (matrix drift), 1 skipped (Numba), 3 warnings, 136.92s**.
 - Focused Package B gate: **1,453 passed in 12.70s**.
+
+**Independent controller re-verification at `ed54d5c` (2026-08-14).**
+
+- Polluter-first auth-isolation set: **75 passed in 14.32s**.
+- Focused Package B gate: **1,453 passed in 37.37s**.
+- Full affected suites: **2,295 passed, 1 failed, 1 skipped, 3 warnings in 167.78s**. The failure remained `test_matrix_repository.py::test_provider_timeout_plumbed_into_sdk_client`.
+- The same provider-timeout test failed on clean `WIP` at `b9becba1` (**1 failed in 3.23s**), confirming it is baseline Supabase SDK drift rather than a Package B regression.
 
 **Documentation correction.** The earlier "21 pre-existing baseline failures" claim was corrected in `WORKLOG.md`, `README.md`, `CURRENT_ARCHITECTURE.md`, and `ACTIVE_ROADMAP.md`: 20 were branch-induced stale-test failures fixed in this follow-up; the single `test_matrix_repository.py` failure is genuine pre-existing Supabase SDK drift (file unchanged from base).
 

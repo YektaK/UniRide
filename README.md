@@ -9,12 +9,12 @@ The engines may share neutral models and solver implementations, but they do not
 
 ## Current verified status
 
-The latest verification was run on 2026-08-13 from base `b0b3a11fb4374c0470f4b6762251483f8f8ac81b` (the Package B compute-policy branch tip; the last code-bearing commit was `b0b3a11`).
+The latest verification was run on 2026-08-14 at Package B code/test evidence tip `ed54d5cebdc849fb0df2743692f0eca385a4750a`; the last verified code-bearing commit is `ed54d5c`.
 
 | Gate | Verified result |
 | --- | --- |
-| Focused Package B Python gate | 1,453 passed, 12.70s |
-| Full affected Python suites | 2,295 passed, 1 skipped (Numba unavailable), 1 pre-existing Supabase SDK provider-timeout drift failure (`test_matrix_repository.py`, unchanged from base), 3 warnings, 136.92s |
+| Focused Package B Python gate | 1,453 passed, 37.37s |
+| Full affected Python suites | 2,295 passed, 1 pre-existing Supabase SDK provider-timeout drift failure (`test_matrix_repository.py`, reproduced on clean `WIP`), 1 skipped (Numba unavailable), 3 warnings, 167.78s |
 | Frontend Vitest | 21 files, 58 tests passed, 94.71s |
 | TypeScript | passed |
 | ESLint | 0 errors, 158 warnings (temporary waiver) |

@@ -1,8 +1,8 @@
 # UniRide Active Roadmap
 
 **Authoritative planning snapshot:** 2026-08-14
-**Verified evidence tip:** `2d178c9b3910be8a8369de19a8ff4bd62bcf8a41`
-**Last verified code-bearing commit:** `2d178c9`
+**Verified evidence tip:** `d3b19de20a36e39d1f6f429cb5e1a76d0b0240d8`
+**Last verified code-bearing commit:** `d3b19de`
 
 This is the current priority order. Detailed agent handoffs, gates, and model preferences live in [NEXT_PHASE_EXECUTION_ROADMAP.md](NEXT_PHASE_EXECUTION_ROADMAP.md).
 
@@ -39,7 +39,7 @@ The 2026-08-14 verification at `2d178c9` reported **1,453 passing focused Packag
 **Status: certificate attached as the final admission gate on `/optimize` and `/compare`.** A result is successful only when solver-successful **and** `feasibility_certificate.is_feasible`; failed/infeasible/uncertified/timed-out results are never ranked. Remaining scope:
 
 - **Requested-algorithm policy** — non-default explicit requested algorithms still need the same certificate contract.
-- **Mutation proof** — mutation tests proving success cannot survive a hard violation are still pending across every solver surface.
+- **Mutation proof** — implemented (`d3b19de`): 114 mutation tests across every solver surface (canonical strategies incl. OR-Tools behind `importorskip`, core CVRP engines incl. non-finite-arc instance mutations, canonical 3-opt TSP/ATSP input contracts, permutation exact path n<=10, and the academic execution-gateway RunResult contract). Each test runs a real solve, certifies the unmutated output feasible, then injects a single hard violation (missing/duplicate occurrence, capacity overflow, non-finite arc, inflated cost, identity/evaluation/budget/termination/backend tampering) and requires the final certificate or gateway to reject it. Full suite at `d3b19de`: 3,314 passed, 1 skipped, 0 failed.
 
 ## Priority 2 — Compute protection, typed budgets, and compare semantics
 

@@ -2,6 +2,18 @@
 
 This is a curated chronology. It records verified work and does not turn archived reports or agent assertions into current truth.
 
+## 2026-08-14 — Per-IP rate limiting verified
+
+P2 compute-protection gate closed: a fixed-window in-memory limiter keyed by
+client IP now guards the three heavy routing endpoints (`POST /optimize`,
+`POST /compare`, `POST /vehicle-calculator`), applied alongside the internal-key
+auth. Exceeding the per-IP window budget returns HTTP 429 with `Retry-After`.
+Configurable under the `production-conservative-v1` profile via
+`UNIRIDE_RATE_LIMIT_REQUESTS` (default 30) and `UNIRIDE_RATE_LIMIT_WINDOW_SECONDS`
+(default 60), both clamped by the hard ceilings. Verified at `d14029d`; full
+suite `uniride_core/tests optimizer_api/tests academic_benchmark/tests` =
+3,339 passed, 1 skipped (Numba), 0 failed (3,336 baseline + 3 new).
+
 ## 2026-08-14 — Requested-algorithm policy verified
 
 Non-default explicitly-requested algorithms now have proof that they pass the same

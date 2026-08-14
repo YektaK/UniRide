@@ -46,9 +46,8 @@ The 2026-08-14 verification at `2d178c9` reported **1,453 passing focused Packag
 **Status: implemented for the scoped Package B surface** — the three heavy endpoints are internal-key authenticated, the compute profile is typed/lowering-only, aliases are deduplicated, `/compare` is bounded and deterministically ranked, and exact/permutation requests fail fast above ten waypoints. Remaining scope is tracked below:
 
 - **Hard cancellation and process isolation** — the current 120-second deadline is a soft response deadline; running threads may continue (`wait=False` shutdown).
-- **Rate limiting** — there is no per-tenant or per-IP request throttling.
+- **Rate limiting** — verified: fixed-window per-IP throttling on the optimization router (all three heavy endpoints), HTTP 429 + `Retry-After` on exceed; configurable via `UNIRIDE_RATE_LIMIT_REQUESTS` / `UNIRIDE_RATE_LIMIT_WINDOW_SECONDS` under the `production-conservative-v1` profile (defaults 30 req / 60 s). Evidence: `optimizer_api/rate_limit.py` + `optimizer_api/tests/test_rate_limit.py` (under-limit passes, over-limit 429, window reset). Full suite at `d14029d`: 3,339 passed, 1 skipped, 0 failed.
 - **Per-tenant authorization** — the boundary is gated on the shared internal key, not on tenant identity.
-- **Requested-algorithm policy** — explicit non-default requested-algorithm admission still needs the same contract review as the six canonical defaults.
 
 ## Priority 3 — Durable jobs and cancellation
 

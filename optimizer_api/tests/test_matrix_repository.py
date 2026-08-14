@@ -347,10 +347,20 @@ def test_provider_timeout_plumbed_into_sdk_client(monkeypatch):
             return type("Resp", (), {"data": [{
                 "origin_code": "A", "destination_code": "B", "duration_minutes": 5}]})()
 
-    fake_create = lambda *a, **k: _FakeClient(*a, **k)  # noqa: E731
+    # Do not depend on the installed SDK's ClientOptions shape: stub the module
+    # the production code imports so the assertion is SDK-version-independent.
+    import sys
+    import types
+
+    fake_client_options = types.ModuleType("client_options")
+    fake_client_options.ClientOptions = lambda **kw: kw
+    monkeypatch.setitem(
+        sys.modules, "supabase.lib.client_options", fake_client_options
+    )
+
     provider = SupabaseTimeMatrixProvider("https://x", "k", timeout_seconds=7.5)
     rows = (
-        provider._build_client(fake_create)
+        provider._build_client(_FakeClient)
         .table("time_matrix")
         .select("origin_code, destination_code, duration_minutes")
         .execute()
@@ -360,4 +370,4 @@ def test_provider_timeout_plumbed_into_sdk_client(monkeypatch):
         "origin_code": "A", "destination_code": "B", "duration_minutes": 5}]
     assert captured["url"] == "https://x"
     options = captured["kwargs"].get("options")
-    assert options is not None and options.postgrest_client_timeout == 7.5
+    assert options == {"postgrest_client_timeout": 7.5}

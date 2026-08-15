@@ -47,7 +47,7 @@ The 2026-08-14 verification at `2d178c9` reported **1,453 passing focused Packag
 
 - **Hard cancellation and process isolation** — the current 120-second deadline is a soft response deadline; running threads may continue (`wait=False` shutdown).
 - **Rate limiting** — verified: fixed-window per-IP throttling on the optimization router (all three heavy endpoints), HTTP 429 + `Retry-After` on exceed; configurable via `UNIRIDE_RATE_LIMIT_REQUESTS` / `UNIRIDE_RATE_LIMIT_WINDOW_SECONDS` under the `production-conservative-v1` profile (defaults 30 req / 60 s). Evidence: `optimizer_api/rate_limit.py` + `optimizer_api/tests/test_rate_limit.py` (under-limit passes, over-limit 429, window reset). Full suite at `d14029d`: 3,339 passed, 1 skipped, 0 failed.
-- **Per-tenant authorization** — the boundary is gated on the shared internal key, not on tenant identity.
+- **Per-tenant authorization** — verified: requests resolve to a tenant identity via `UNIRIDE_TENANT_KEYS` (JSON tenant-id → key map, constant-time compared); the shared `INTERNAL_API_KEY` remains an ops override (`tenant_id="internal"`); every request is attributed via `request.state.tenant_id` and the rate limiter keys its per-IP budget on tenant identity when present (isolated per-tenant buckets). Applied to the optimization and benchmark routers. Startup rejects malformed tenant-key config. Evidence: `optimizer_api/auth.py`, `optimizer_api/runtime_config.py`, `optimizer_api/tests/test_tenant_authorization.py` (8 tests). Full suite at the per-tenant commit: 3,347 passed, 1 skipped, 0 failed.
 
 ## Priority 3 — Durable jobs and cancellation
 

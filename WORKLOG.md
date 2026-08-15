@@ -2,6 +2,19 @@
 
 This is a curated chronology. It records verified work and does not turn archived reports or agent assertions into current truth.
 
+## 2026-08-15 — Per-tenant authorization verified
+
+P2 compute-protection gate closed: the auth boundary is now tenant-identity
+based, not just a shared-key gate. `UNIRIDE_TENANT_KEYS` (JSON tenant-id → key,
+constant-time compared) resolves a presented key to `request.state.tenant_id`;
+the shared `INTERNAL_API_KEY` remains the ops override (`tenant_id="internal"`).
+Applied to the optimization and benchmark routers via
+`require_tenant_authorization`. The rate limiter keys its budget on tenant
+identity when present, giving isolated per-tenant request windows. Startup
+rejects malformed tenant-key config. Verified at `3f14f09`; full suite
+`uniride_core/tests optimizer_api/tests academic_benchmark/tests` = 3,347 passed,
+1 skipped (Numba), 0 failed (3,339 baseline + 8 new).
+
 ## 2026-08-14 — Per-IP rate limiting verified
 
 P2 compute-protection gate closed: a fixed-window in-memory limiter keyed by

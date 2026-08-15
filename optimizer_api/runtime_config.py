@@ -1,3 +1,4 @@
+import json
 import os
 
 
@@ -34,6 +35,28 @@ def internal_api_key() -> str | None:
     return value if value else None
 
 
+def tenant_keys() -> dict[str, str]:
+    """Tenant id -> key mapping from UNIRIDE_TENANT_KEYS (JSON object).
+
+    Empty when unset; every configured tenant key stays static for the
+    process lifetime.
+    """
+    raw = os.getenv("UNIRIDE_TENANT_KEYS")
+    if raw is None:
+        return {}
+    parsed = json.loads(raw)
+    if not isinstance(parsed, dict):
+        raise ValueError("UNIRIDE_TENANT_KEYS must be a JSON object mapping tenant id to key")
+    invalid = {
+        str(tenant_id)
+        for tenant_id, key in parsed.items()
+        if not isinstance(key, str) or not key
+    }
+    if invalid:
+        raise ValueError(f"UNIRIDE_TENANT_KEYS has empty/non-string keys for tenants: {sorted(invalid)}")
+    return {str(tenant_id): str(key) for tenant_id, key in parsed.items()}
+
+
 def validate_runtime_configuration() -> None:
     disabled = internal_auth_disabled()
     if disabled and app_env() == "production":
@@ -43,6 +66,11 @@ def validate_runtime_configuration() -> None:
             "INTERNAL_API_KEY is not set; configure it or use "
             "UNIRIDE_DISABLE_AUTH=1 outside production"
         )
+    try:
+        if os.getenv("UNIRIDE_TENANT_KEYS") is not None:
+            tenant_keys()
+    except ValueError as exc:
+        raise SystemExit(str(exc))
     try:
         from optimizer_api.compute_policy import load_compute_policy
     except ModuleNotFoundError:  # direct `python optimizer_api/main.py` compatibility

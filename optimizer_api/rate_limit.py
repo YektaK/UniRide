@@ -21,7 +21,10 @@ _lock = threading.Lock()
 _buckets: Dict[str, List[float]] = {}
 
 
-def _client_key(request: Request) -> str:
+def _rate_key(request: Request) -> str:
+    tenant_id = getattr(request.state, "tenant_id", None)
+    if tenant_id:
+        return f"tenant:{tenant_id}"
     return request.client.host if request.client else "unknown"
 
 
@@ -34,7 +37,7 @@ def require_rate_limit(request: Request) -> None:
     policy = load_compute_policy()
     limit = policy.rate_limit_requests
     window = policy.rate_limit_window_seconds
-    key = _client_key(request)
+    key = _rate_key(request)
     now = time.monotonic()
 
     with _lock:

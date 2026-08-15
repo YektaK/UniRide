@@ -12,9 +12,9 @@ from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from fastapi.params import Query as QueryParam
 
 try:
-    from optimizer_api.auth import require_internal_api_key
+    from optimizer_api.auth import require_tenant_authorization
 except ModuleNotFoundError:
-    from auth import require_internal_api_key
+    from auth import require_tenant_authorization
 
 from models.schemas import BenchmarkRunRequest, BenchmarkImportRequest
 from benchmark_runner import BenchmarkRunner, ProblemInstance, AlgorithmConfig
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/api/v1/benchmark",
     tags=["Benchmark"],
-    dependencies=[Depends(require_internal_api_key)],
+    dependencies=[Depends(require_tenant_authorization)],
 )
 
 _VALID_PROBLEM_NAME = re.compile(r"^[a-zA-Z0-9_-]+$")
@@ -656,7 +656,7 @@ def _load_and_validate_cli_json(filepath: str) -> List[Dict]:
     if missing: raise HTTPException(status_code=400, detail=f"Missing fields: {missing}")
     return data
 
-@router.get("/cli/files", dependencies=[Depends(require_internal_api_key)])
+@router.get("/cli/files", dependencies=[Depends(require_tenant_authorization)])
 def list_cli_benchmark_files() -> Dict:
     files = _find_cli_json_files()
     return {
@@ -665,7 +665,7 @@ def list_cli_benchmark_files() -> Dict:
         "files": files,
     }
 
-@router.post("/cli/import", dependencies=[Depends(require_internal_api_key)])
+@router.post("/cli/import", dependencies=[Depends(require_tenant_authorization)])
 def import_cli_benchmark_results(filename: str = "", run_id: Optional[str] = None, label: Optional[str] = None) -> Dict:
     filepath = _resolve_cli_filename(filename)
     cli_records = _load_and_validate_cli_json(filepath)
@@ -698,7 +698,7 @@ def import_cli_benchmark_results(filename: str = "", run_id: Optional[str] = Non
         "owner_token": owner_token,
     }
 
-@router.get("/cli/preview", dependencies=[Depends(require_internal_api_key)])
+@router.get("/cli/preview", dependencies=[Depends(require_tenant_authorization)])
 def preview_cli_import(filename: str = "") -> Dict:
     filepath = _resolve_cli_filename(filename)
     cli_records = _load_and_validate_cli_json(filepath)

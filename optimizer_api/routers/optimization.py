@@ -7,10 +7,10 @@ from dataclasses import dataclass
 from fastapi import APIRouter, Depends, HTTPException
 
 try:
-    from optimizer_api.auth import require_internal_api_key
+    from optimizer_api.auth import require_tenant_authorization
     from optimizer_api.rate_limit import require_rate_limit
 except ModuleNotFoundError:  # direct-module compatibility
-    from auth import require_internal_api_key
+    from auth import require_tenant_authorization
     from rate_limit import require_rate_limit
 
 try:
@@ -58,7 +58,7 @@ from verification.response_certifier import certify_optimization_response
 router = APIRouter(
     prefix="/api/v1",
     tags=["Optimization"],
-    dependencies=[Depends(require_internal_api_key), Depends(require_rate_limit)],
+    dependencies=[Depends(require_tenant_authorization), Depends(require_rate_limit)],
 )
 logger = logging.getLogger(__name__)
 _INVALID_CERTIFICATE_ERROR = "certification aborted: invalid certificate payload"

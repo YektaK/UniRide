@@ -1,8 +1,8 @@
 # UniRide Current Architecture
 
-**Verified documentation snapshot:** 2026-08-24
-**Verified base commit:** `fef5a2b537da7068b51b3b3a50c6d633a2853404`
-**Verification basis:** remediation working tree derived from `fef5a2b`; evidence captured before integration
+**Verified documentation snapshot:** 2026-08-25
+**Historical verification evidence:** 2026-08-24 remediation derived from `fef5a2b537da7068b51b3b3a50c6d633a2853404`
+**Latest scoped verification:** Dudullu Package 1 on `codex/dudullu-daily-planner-20260825`, based on `origin/WIP` `60161adeb81b18b3798a9e0c2024163cabf63e50`, with code through `6ef36591215331bcd51b33a0f6f6508c62862702`
 
 This describes current, verified boundaries. It is not a production-readiness claim. When this document conflicts with live code or executable tests, those sources win.
 
@@ -75,7 +75,7 @@ Bildiri legacy solver material has a canonical-core boundary and archive/manifes
 | Bounded comparison | at most 2 workers, one 120-second soft deadline, six canonical defaults, deterministic best/fastest ranking, certificate-gated admission | soft deadline is not hard cancellation or process isolation |
 | Exact TSP | >10-waypoint exact/permutation requests fail fast without truncation and never invoke the solver | applies to the canonical permutation_tsp/exact paths; other solver limits unchanged |
 | Server-only transport | heavy Next.js calls route through server-only `optimizerFetch`; browser boundary test blocks the internal key from client code | browser-facing pages depend on BFF routes continuing to enforce the boundary |
-| Dudullu daily demand domain | pure TypeScript schedule filtering, separate pickup/dropoff occurrences, hourly waves with exact anchors, inclusive previous-day 22:00 `Europe/Istanbul` admission, exception/lead handling, and shift-eligibility precheck are covered by `src/services/daily-planning.test.ts` | no database/API/UI integration, no live-data verification, no optimizer/matrix binding, no full depot-chain timing, no physical-fleet assignment, and no publication |
+| Dudullu daily demand domain | pure TypeScript schedule filtering, separate pickup/dropoff occurrences, hourly waves with exact anchors, inclusive previous-day 22:00 `Europe/Istanbul` admission, exception/lead handling, and shift-eligibility precheck are covered by `src/services/daily-planning.test.ts`; final hardening fails closed on out-of-day anchors, blank identities, invalid runtime directions, and malformed source demands, with boundary-first same-wave ordering | no database/API/UI integration, no live-data verification, no optimizer/matrix binding, no full depot-chain timing, no physical-fleet assignment, and no publication |
 
 ## 4. Open production boundaries
 
@@ -120,8 +120,8 @@ Registry metadata should be immutable. Executable strategies must be request/job
 On 2026-08-24, branch `codex/audit-remediation-20260824` (base `fef5a2b`) passed full Python discovery with **3,355 passed, 1 skipped, 45 warnings in 429.17s**. Frontend Vitest passed **21 files / 58 tests in 78.99s** after restricting discovery to the current root `src` tree; TypeScript passed; ESLint reported **0 errors / 158 warnings** under the temporary waiver; and the Next.js 16.1.6 production build passed with **57 dynamic, server-rendered routes**. The previous environment-sensitive matrix test and ignored local Bildiri-boundary failures are closed. The npm security audit was not rerun, so the 84-finding figure above remains dated evidence rather than a current count.
 
 On 2026-08-25, the Package 1 feature branch
-`codex/dudullu-daily-planner-20260825` at `5278d80ca73de872a7dfef682385279ed0963f07`
-passed `daily-planning` (**1 file / 27 tests**) and the six named regression
+`codex/dudullu-daily-planner-20260825` at `6ef36591215331bcd51b33a0f6f6508c62862702`
+passed `daily-planning` (**1 file / 32 tests**) and the six named regression
 files (**6 files / 19 tests**), `npm run typecheck` (**0 errors**), `npm run
 lint` (**0 errors / 158 warnings**), and `git diff --check`. This is not a
 current live-data or production-operation verification.

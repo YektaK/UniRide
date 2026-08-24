@@ -1,8 +1,8 @@
 # UniRide Active Roadmap
 
-**Authoritative planning snapshot:** 2026-08-24
-**Verified base commit:** `fef5a2b537da7068b51b3b3a50c6d633a2853404`
-**Verification basis:** remediation working tree derived from `fef5a2b`; evidence captured before integration
+**Authoritative planning snapshot:** 2026-08-25
+**Historical verification evidence:** 2026-08-24 remediation derived from `fef5a2b537da7068b51b3b3a50c6d633a2853404`
+**Latest scoped verification:** Dudullu Package 1 on `codex/dudullu-daily-planner-20260825`, based on `origin/WIP` `60161adeb81b18b3798a9e0c2024163cabf63e50`, with code through `6ef36591215331bcd51b33a0f6f6508c62862702`
 
 This is the current priority order. Detailed agent handoffs, gates, and model preferences live in [NEXT_PHASE_EXECUTION_ROADMAP.md](NEXT_PHASE_EXECUTION_ROADMAP.md).
 
@@ -40,7 +40,7 @@ The 2026-08-24 remediation branch passed full Python discovery with **3,355 pass
 
 **Status:** Package 1 is complete as a pure domain foundation on
 `codex/dudullu-daily-planner-20260825` at implementation commit
-`5278d80ca73de872a7dfef682385279ed0963f07`. It is not an operational product
+`6ef36591215331bcd51b33a0f6f6508c62862702`. It is not an operational product
 or a verification that 28 current live records exist. The historical
 approximately-28 schedule claim remains a runtime/data-readiness question.
 
@@ -54,7 +54,9 @@ approximately-28 schedule claim remains a runtime/data-readiness question.
    previous-day 22:00 `Europe/Istanbul` admission, exception/lead policy,
    occurrence identity, and a direction-safe shift-eligibility precheck. It
    does not call the database, optimizer, API, or UI, and it cannot prove a
-   saving or move a student automatically.
+   saving or move a student automatically. Final fail-closed hardening rejects
+   out-of-day anchors, blank identities, invalid runtime directions, and
+   malformed source demands; same-wave demand order is boundary-first.
 3. **Package 2 — preview planning and physical-fleet truthfulness (next).**
    After Package 0 evidence and a separately approved plan, add an
    authenticated admin preview API, bind each call to an authoritative matrix
@@ -82,7 +84,7 @@ approximately-28 schedule claim remains a runtime/data-readiness question.
    claim.
 
 **Package 1 gate (2026-08-25):** `npm test -- --run
-src/services/daily-planning.test.ts` passed **1 file / 27 tests**;
+src/services/daily-planning.test.ts` passed **1 file / 32 tests**;
 the six named frontend regression files passed **6 files / 19 tests**;
 `npm run typecheck` passed with **0 errors**; `npm run lint` passed with
 **0 errors / 158 warnings**; and `git diff --check` passed. These checks prove

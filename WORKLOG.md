@@ -6,15 +6,17 @@ This is a curated chronology. It records verified work and does not turn archive
 
 **Scope and branch.** Package 1 was verified on
 `codex/dudullu-daily-planner-20260825` at implementation commit
-`5278d80ca73de872a7dfef682385279ed0963f07`. The completed work is the pure
+`6ef36591215331bcd51b33a0f6f6508c62862702`. The completed work is the pure
 `src/services/daily-planning.ts` demand/slot domain: Dudullu schedule filtering,
 independent pickup and dropoff legs, occurrence identities, hourly waves with
 exact anchor groups, inclusive previous-day 22:00 `Europe/Istanbul` admission,
 exception/lead policy, and a shift-eligibility precheck. The precheck does not
-auto-shift students and cannot claim vehicle savings.
+auto-shift students and cannot claim vehicle savings. Final hardening fails
+closed on out-of-day anchors, blank identities, invalid runtime directions,
+and malformed source demands, and orders same-wave demand boundary-first.
 
 **Verification.** `npm test -- --run src/services/daily-planning.test.ts`
-passed **1 file / 27 tests**. The six named frontend regression files passed
+passed **1 file / 32 tests**. The six named frontend regression files passed
 **6 files / 19 tests**. `npm run typecheck` passed with **0 errors**. `npm run
 lint` passed with **0 errors / 158 warnings** (existing warning debt). `git diff
 --check` passed.

@@ -141,6 +141,28 @@ function demandOrder(left: DailyTripDemand, right: DailyTripDemand): number {
   );
 }
 
+function validateDailyPlanningSettings(
+  settings: DailyPlanningSettings,
+): void {
+  if (
+    settings.campusCode !== "D.Kampus" ||
+    settings.timezone !== "Europe/Istanbul" ||
+    !Number.isFinite(settings.pickupArrivalBufferMinutes) ||
+    !Number.isInteger(settings.pickupArrivalBufferMinutes) ||
+    settings.pickupArrivalBufferMinutes < 0 ||
+    !Number.isFinite(settings.dropoffDepartureBufferMinutes) ||
+    !Number.isInteger(settings.dropoffDepartureBufferMinutes) ||
+    settings.dropoffDepartureBufferMinutes < 0 ||
+    !Number.isInteger(settings.confirmationCutoffHour) ||
+    settings.confirmationCutoffHour < 0 ||
+    settings.confirmationCutoffHour > 23 ||
+    !Number.isFinite(settings.exceptionLeadMinutes) ||
+    !Number.isInteger(settings.exceptionLeadMinutes) ||
+    settings.exceptionLeadMinutes < 0
+  ) {
+    throw new Error("Invalid daily planning settings");
+  }
+}
 export function buildScheduleDemands(
   input: BuildScheduleDemandsInput,
 ): {
@@ -148,6 +170,7 @@ export function buildScheduleDemands(
   readonly excludedEntries: readonly ExcludedScheduleEntry[];
 } {
   const settings = input.settings ?? DEFAULT_DAILY_PLANNING_SETTINGS;
+  validateDailyPlanningSettings(settings);
   const dayOfWeek = serviceDayOfWeek(input.serviceDate);
   const excludedEntries: ExcludedScheduleEntry[] = [];
   const dudulluEntries: ScheduleEntry[] = [];

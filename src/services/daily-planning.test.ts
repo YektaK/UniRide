@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ScheduleEntry } from "@/types";
+import type { DailyPlanningSettings } from "./daily-planning";
 
 import {
   buildScheduleDemands,
@@ -90,5 +91,77 @@ describe("daily planning contracts", () => {
     expect(waves).toMatchObject([{ key: "PICKUP-09:00", classBoundaryHour: 9, demands: [{ occurrenceId: "2026-08-26:pickup:S2" }, { occurrenceId: "2026-08-26:pickup:S1" }], anchorGroups: [{ key: "PICKUP-09:00@525", anchorMinutes: 525 }, { key: "PICKUP-09:00@555", anchorMinutes: 555 }] }]);
     expect(groupServiceWaves([...pickups].reverse())).toEqual(waves);
     expect(() => groupServiceWaves([pickups[0], pickups[0]])).toThrow("Duplicate occurrence ID");
+  });
+  it("rejects noncanonical campus and timezone settings", () => {
+    for (const settings of [
+      { ...DEFAULT_DAILY_PLANNING_SETTINGS, campusCode: "Other" },
+      { ...DEFAULT_DAILY_PLANNING_SETTINGS, timezone: "UTC" },
+    ]) {
+      expect(() =>
+        buildScheduleDemands({
+          studentId: "S1",
+          locationCode: "L1",
+          serviceDate: "2026-08-26",
+          scheduleEntries: WEDNESDAY_DUDULLU_ENTRIES,
+          settings: settings as DailyPlanningSettings,
+        }),
+      ).toThrow("Invalid daily planning settings");
+    }
+  });
+
+  it("rejects invalid pickup and dropoff buffers", () => {
+    for (const key of [
+      "pickupArrivalBufferMinutes",
+      "dropoffDepartureBufferMinutes",
+    ] as const) {
+      for (const value of [-1, 1.5, Infinity]) {
+        expect(() =>
+          buildScheduleDemands({
+            studentId: "S1",
+            locationCode: "L1",
+            serviceDate: "2026-08-26",
+            scheduleEntries: WEDNESDAY_DUDULLU_ENTRIES,
+            settings: {
+              ...DEFAULT_DAILY_PLANNING_SETTINGS,
+              [key]: value,
+            } as DailyPlanningSettings,
+          }),
+        ).toThrow("Invalid daily planning settings");
+      }
+    }
+  });
+
+  it("rejects invalid confirmation cutoff hours", () => {
+    for (const confirmationCutoffHour of [-1, 24, 12.5]) {
+      expect(() =>
+        buildScheduleDemands({
+          studentId: "S1",
+          locationCode: "L1",
+          serviceDate: "2026-08-26",
+          scheduleEntries: WEDNESDAY_DUDULLU_ENTRIES,
+          settings: {
+            ...DEFAULT_DAILY_PLANNING_SETTINGS,
+            confirmationCutoffHour,
+          } as DailyPlanningSettings,
+        }),
+      ).toThrow("Invalid daily planning settings");
+    }
+  });
+
+  it("rejects invalid exception lead minutes", () => {
+    for (const exceptionLeadMinutes of [-1, 1.5, Infinity]) {
+      expect(() =>
+        buildScheduleDemands({
+          studentId: "S1",
+          locationCode: "L1",
+          serviceDate: "2026-08-26",
+          scheduleEntries: WEDNESDAY_DUDULLU_ENTRIES,
+          settings: {
+            ...DEFAULT_DAILY_PLANNING_SETTINGS,
+            exceptionLeadMinutes,
+          } as DailyPlanningSettings,
+        }),
+      ).toThrow("Invalid daily planning settings");
+    }
   });
 });

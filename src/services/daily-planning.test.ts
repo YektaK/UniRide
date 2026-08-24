@@ -3,6 +3,7 @@ import type { ScheduleEntry } from "@/types";
 import type { DailyPlanningSettings } from "./daily-planning";
 
 import {
+  buildExceptionDemand,
   buildScheduleDemands,
   DEFAULT_DAILY_PLANNING_SETTINGS,
   groupServiceWaves,
@@ -162,6 +163,145 @@ describe("daily planning contracts", () => {
           } as DailyPlanningSettings,
         }),
       ).toThrow("Invalid daily planning settings");
+    }
+  });
+});
+
+describe("schedule decision admission", () => {
+  it("applies the Istanbul confirmation cutoff independently per leg", () => {
+    const result = buildScheduleDemands({
+      studentId: "S1",
+      locationCode: "L1",
+      serviceDate: "2026-08-26",
+      scheduleEntries: WEDNESDAY_DUDULLU_ENTRIES,
+      decisions: {
+        pickup: {
+          status: "confirmed",
+          confirmedAt: "2026-08-25T18:59:00Z",
+          flexibilityMinutes: 10,
+        },
+        dropoff: {
+          status: "confirmed",
+          confirmedAt: "2026-08-25T19:01:00Z",
+        },
+      },
+    });
+
+    expect(result.demands).toMatchObject([
+      { direction: "pickup", admission: "confirmed", flexibilityMinutes: 10 },
+      { direction: "dropoff", admission: "pending_admin_approval", flexibilityMinutes: 0 },
+    ]);
+    expect(
+      buildScheduleDemands({
+        studentId: "S1",
+        locationCode: "L1",
+        serviceDate: "2026-08-26",
+        scheduleEntries: WEDNESDAY_DUDULLU_ENTRIES,
+        decisions: { pickup: { status: "cancelled", decidedAt: "2026-08-25T18:00:00Z" } },
+      }).demands,
+    ).toMatchObject([
+      { direction: "pickup", admission: "cancelled" },
+      { direction: "dropoff", admission: "pending_student_confirmation" },
+    ]);
+  });
+
+  it("rejects malformed confirmed decisions and negative flexibility", () => {
+    expect(() =>
+      buildScheduleDemands({
+        studentId: "S1",
+        locationCode: "L1",
+        serviceDate: "2026-08-26",
+        scheduleEntries: WEDNESDAY_DUDULLU_ENTRIES,
+        decisions: { pickup: { status: "confirmed", confirmedAt: "not-a-timestamp" } },
+      }),
+    ).toThrow("Invalid ISO timestamp");
+    expect(() =>
+      buildScheduleDemands({
+        studentId: "S1",
+        locationCode: "L1",
+        serviceDate: "2026-08-26",
+        scheduleEntries: WEDNESDAY_DUDULLU_ENTRIES,
+        decisions: { dropoff: { status: "pending", flexibilityMinutes: -1 } },
+      }),
+    ).toThrow("Invalid flexibility minutes");
+  });
+});
+describe("exception demand admission", () => {
+  const ordinaryException = {
+    requestId: "request-1",
+    studentId: "S1",
+    locationCode: "L1",
+    serviceDate: "2026-08-26",
+    direction: "pickup" as const,
+    requestedAnchorTime: "10:00",
+    requestedAt: "2026-08-26T04:30:00Z",
+  };
+
+  it("builds a no-class exception demand with ordinary pending admission", () => {
+    const demand = buildExceptionDemand(ordinaryException);
+
+    expect(demand).toMatchObject({
+      occurrenceId: expect.stringContaining("request-1"),
+      studentId: "S1",
+      locationCode: "L1",
+      source: "student_exception",
+      direction: "pickup",
+      admission: "pending_admin_approval",
+      anchorMinutes: 600,
+      waveKey: "PICKUP-10:00",
+      emergencyException: false,
+    });
+  });
+
+  it("requires a reason to approve an emergency exception", () => {
+    const emergency = {
+      ...ordinaryException,
+      requestedAt: "2026-08-26T05:30:00Z",
+      adminApproval: { approved: true, reason: "   " },
+    };
+
+    expect(buildExceptionDemand(emergency)).toMatchObject({
+      admission: "pending_admin_approval",
+      emergencyException: true,
+    });
+    expect(
+      buildExceptionDemand({
+        ...emergency,
+        adminApproval: { approved: true, reason: "Medical need" },
+      }),
+    ).toMatchObject({ admission: "approved", emergencyException: true });
+    expect(
+      buildExceptionDemand({
+        ...ordinaryException,
+        adminApproval: { approved: true },
+      }),
+    ).toMatchObject({ admission: "approved", emergencyException: false });
+  });
+
+  it("keeps pickup and dropoff exception anchors independent", () => {
+    const pickup = buildExceptionDemand(ordinaryException);
+    const dropoff = buildExceptionDemand({
+      ...ordinaryException,
+      requestId: "request-2",
+      direction: "dropoff",
+      requestedAnchorTime: "17:10",
+    });
+
+    expect([pickup, dropoff]).toMatchObject([
+      { direction: "pickup", anchorMinutes: 600, waveKey: "PICKUP-10:00" },
+      { direction: "dropoff", anchorMinutes: 1030, waveKey: "DROPOFF-17:00" },
+    ]);
+  });
+
+  it("rejects invalid exception inputs", () => {
+    for (const input of [
+      { ...ordinaryException, requestedAt: "not-a-timestamp" },
+      { ...ordinaryException, requestedAt: "2026-02-30T00:00:00Z" },
+      { ...ordinaryException, requestedAnchorTime: "25:00" },
+      { ...ordinaryException, requestId: " " },
+      { ...ordinaryException, flexibilityMinutes: -1 },
+    ]) {
+      expect(() => buildExceptionDemand(input)).toThrow();
     }
   });
 });

@@ -9,6 +9,15 @@ export type DemandAdmission =
   | "approved"
   | "cancelled";
 
+export type StudentLegDecision =
+  | { readonly status: "pending"; readonly flexibilityMinutes?: number }
+  | {
+      readonly status: "confirmed";
+      readonly confirmedAt: string;
+      readonly flexibilityMinutes?: number;
+    }
+  | { readonly status: "cancelled"; readonly decidedAt: string };
+
 export interface DailyPlanningSettings {
   readonly campusCode: "D.Kampus";
   readonly timezone: "Europe/Istanbul";
@@ -50,8 +59,24 @@ export interface BuildScheduleDemandsInput {
   readonly serviceDate: string;
   readonly scheduleEntries: readonly ScheduleEntry[];
   readonly settings?: DailyPlanningSettings;
+  readonly decisions?: Partial<Record<TripDirection, StudentLegDecision>>;
 }
 
+
+export interface ExceptionAdmissionInput {
+  readonly requestId: string;
+  readonly studentId: string;
+  readonly locationCode: string;
+  readonly serviceDate: string;
+  readonly direction: TripDirection;
+  readonly requestedAnchorTime: string;
+  readonly requestedAt: string;
+  readonly flexibilityMinutes?: number;
+  readonly adminApproval?: {
+    readonly approved: boolean;
+    readonly reason?: string;
+  };
+}
 export interface ServiceAnchorGroup {
   readonly key: string;
   readonly anchorMinutes: number;
@@ -76,6 +101,18 @@ export const DEFAULT_DAILY_PLANNING_SETTINGS: Readonly<DailyPlanningSettings> =
     exceptionLeadMinutes: 120,
   });
 
+const ISTANBUL_WALL_CLOCK_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Istanbul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+const ISO_TIMESTAMP =
+  /^(\d{4})-(\d{2})-(\d{2})T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
 const DAYS_OF_WEEK: ScheduleEntry["dayOfWeek"][] = [
   "sunday",
   "monday",
@@ -163,6 +200,122 @@ function validateDailyPlanningSettings(
     throw new Error("Invalid daily planning settings");
   }
 }
+function validateFlexibilityMinutes(value: number | undefined): number {
+  const flexibilityMinutes = value ?? 0;
+
+  if (!Number.isFinite(flexibilityMinutes) || !Number.isInteger(flexibilityMinutes) || flexibilityMinutes < 0) {
+    throw new Error("Invalid flexibility minutes");
+  }
+
+  return flexibilityMinutes;
+}
+
+function parseIsoTimestamp(value: string): Date {
+  const match = ISO_TIMESTAMP.exec(value);
+
+  if (!match) {
+    throw new Error("Invalid ISO timestamp");
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const calendarDate = new Date(Date.UTC(year, month - 1, day));
+  const timestamp = new Date(value);
+
+  if (
+    Number.isNaN(timestamp.getTime()) ||
+    calendarDate.getUTCFullYear() !== year ||
+    calendarDate.getUTCMonth() !== month - 1 ||
+    calendarDate.getUTCDate() !== day
+  ) {
+    throw new Error("Invalid ISO timestamp");
+  }
+
+  return timestamp;
+}
+function istanbulWallClock(timestamp: Date): {
+  readonly year: number;
+  readonly month: number;
+  readonly day: number;
+  readonly minutes: number;
+} {
+  const values: Record<string, number> = {};
+
+  for (const part of ISTANBUL_WALL_CLOCK_FORMATTER.formatToParts(timestamp)) {
+    if (part.type !== "literal") {
+      values[part.type] = Number(part.value);
+    }
+  }
+
+  return {
+    year: values.year!,
+    month: values.month!,
+    day: values.day!,
+    minutes: values.hour! * 60 + values.minute!,
+  };
+}
+
+function previousServiceDate(serviceDate: string): {
+  readonly year: number;
+  readonly month: number;
+  readonly day: number;
+} {
+  serviceDayOfWeek(serviceDate);
+  const [year, month, day] = serviceDate.split("-").map(Number);
+  const previous = new Date(Date.UTC(year!, month! - 1, day! - 1));
+
+  return {
+    year: previous.getUTCFullYear(),
+    month: previous.getUTCMonth() + 1,
+    day: previous.getUTCDate(),
+  };
+}
+
+function compareWallDate(
+  left: { readonly year: number; readonly month: number; readonly day: number },
+  right: { readonly year: number; readonly month: number; readonly day: number },
+): number {
+  return (
+    (left.year - right.year) ||
+    (left.month - right.month) ||
+    (left.day - right.day)
+  );
+}
+
+export function classifyScheduleDecision(
+  decision: StudentLegDecision | undefined,
+  serviceDate: string,
+  settings?: DailyPlanningSettings,
+): { readonly admission: DemandAdmission; readonly flexibilityMinutes: number } {
+  const effectiveSettings = settings ?? DEFAULT_DAILY_PLANNING_SETTINGS;
+  validateDailyPlanningSettings(effectiveSettings);
+  const flexibilityMinutes = validateFlexibilityMinutes(
+    decision && decision.status !== "cancelled"
+      ? decision.flexibilityMinutes
+      : undefined,
+  );
+
+  if (!decision || decision.status === "pending") {
+    return { admission: "pending_student_confirmation", flexibilityMinutes };
+  }
+
+  if (decision.status === "cancelled") {
+    return { admission: "cancelled", flexibilityMinutes };
+  }
+
+  const confirmation = istanbulWallClock(parseIsoTimestamp(decision.confirmedAt));
+  const cutoffDate = previousServiceDate(serviceDate);
+  const isBeforeCutoff =
+    compareWallDate(confirmation, cutoffDate) < 0 ||
+    (compareWallDate(confirmation, cutoffDate) === 0 &&
+      confirmation.minutes < effectiveSettings.confirmationCutoffHour * 60);
+
+  return {
+    admission: isBeforeCutoff ? "confirmed" : "pending_admin_approval",
+    flexibilityMinutes,
+  };
+}
 export function buildScheduleDemands(
   input: BuildScheduleDemandsInput,
 ): {
@@ -213,6 +366,16 @@ export function buildScheduleDemands(
   const dropoffAnchor = dropoffBoundary + settings.dropoffDepartureBufferMinutes;
   const pickupWaveKey = waveKey("pickup", pickupBoundary);
   const dropoffWaveKey = waveKey("dropoff", dropoffBoundary);
+  const pickupDecision = classifyScheduleDecision(
+    input.decisions?.pickup,
+    input.serviceDate,
+    settings,
+  );
+  const dropoffDecision = classifyScheduleDecision(
+    input.decisions?.dropoff,
+    input.serviceDate,
+    settings,
+  );
 
   return {
     demands: [
@@ -224,13 +387,13 @@ export function buildScheduleDemands(
         serviceDate: input.serviceDate,
         direction: "pickup",
         source: "schedule",
-        admission: "pending_student_confirmation",
+        admission: pickupDecision.admission,
         classBoundaryMinutes: pickupBoundary,
         waveKey: pickupWaveKey,
         anchorGroupKey: pickupWaveKey + "@" + pickupAnchor,
         anchorMinutes: pickupAnchor,
         hardDeadlineMinutes: pickupAnchor,
-        flexibilityMinutes: 0,
+        flexibilityMinutes: pickupDecision.flexibilityMinutes,
         emergencyException: false,
       },
       {
@@ -241,13 +404,13 @@ export function buildScheduleDemands(
         serviceDate: input.serviceDate,
         direction: "dropoff",
         source: "schedule",
-        admission: "pending_student_confirmation",
+        admission: dropoffDecision.admission,
         classBoundaryMinutes: dropoffBoundary,
         waveKey: dropoffWaveKey,
         anchorGroupKey: dropoffWaveKey + "@" + dropoffAnchor,
         anchorMinutes: dropoffAnchor,
         hardReadyMinutes: dropoffAnchor,
-        flexibilityMinutes: 0,
+        flexibilityMinutes: dropoffDecision.flexibilityMinutes,
         emergencyException: false,
       },
     ],
@@ -255,6 +418,62 @@ export function buildScheduleDemands(
   };
 }
 
+function requireNonBlank(value: string): void {
+  if (!value.trim()) {
+    throw new Error("Invalid exception input");
+  }
+}
+
+function wallMinuteIndex(
+  date: { readonly year: number; readonly month: number; readonly day: number },
+  minutes: number,
+): number {
+  return Date.UTC(date.year, date.month - 1, date.day) / 60_000 + minutes;
+}
+
+export function buildExceptionDemand(
+  input: ExceptionAdmissionInput,
+  settings?: DailyPlanningSettings,
+): DailyTripDemand {
+  const effectiveSettings = settings ?? DEFAULT_DAILY_PLANNING_SETTINGS;
+  validateDailyPlanningSettings(effectiveSettings);
+  requireNonBlank(input.requestId);
+  requireNonBlank(input.studentId);
+  requireNonBlank(input.locationCode);
+  serviceDayOfWeek(input.serviceDate);
+  const anchorMinutes = parseClockMinutes(input.requestedAnchorTime);
+  const requested = istanbulWallClock(parseIsoTimestamp(input.requestedAt));
+  const [year, month, day] = input.serviceDate.split("-").map(Number);
+  const leadMinutes =
+    wallMinuteIndex({ year: year!, month: month!, day: day! }, anchorMinutes) -
+    wallMinuteIndex(requested, requested.minutes);
+  const emergencyException = leadMinutes < effectiveSettings.exceptionLeadMinutes;
+  const approved =
+    input.adminApproval?.approved === true &&
+    (!emergencyException || Boolean(input.adminApproval.reason?.trim()));
+  const key = waveKey(input.direction, anchorMinutes);
+
+  return {
+    occurrenceId:
+      input.serviceDate + ":" + input.direction + ":exception:" + input.requestId,
+    studentId: input.studentId,
+    locationCode: input.locationCode,
+    campusCode: effectiveSettings.campusCode,
+    serviceDate: input.serviceDate,
+    direction: input.direction,
+    source: "student_exception",
+    admission: approved ? "approved" : "pending_admin_approval",
+    classBoundaryMinutes: anchorMinutes,
+    waveKey: key,
+    anchorGroupKey: key + "@" + anchorMinutes,
+    anchorMinutes,
+    ...(input.direction === "pickup"
+      ? { hardDeadlineMinutes: anchorMinutes }
+      : { hardReadyMinutes: anchorMinutes }),
+    flexibilityMinutes: validateFlexibilityMinutes(input.flexibilityMinutes),
+    emergencyException,
+  };
+}
 export function groupServiceWaves(
   demands: readonly DailyTripDemand[],
 ): readonly ServiceWave[] {

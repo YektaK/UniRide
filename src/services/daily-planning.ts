@@ -354,7 +354,9 @@ export function assessShiftEligibility(
     !Number.isFinite(target.anchorMinutes) ||
     !Number.isInteger(target.anchorMinutes) ||
     target.anchorMinutes < 0 ||
-    target.anchorMinutes >= 24 * 60
+    target.anchorMinutes >= 24 * 60 ||
+    (target.alternativeTimeRequested !== undefined &&
+      typeof target.alternativeTimeRequested !== "boolean")
   ) {
     throw new Error("Invalid shift target");
   }

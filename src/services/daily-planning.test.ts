@@ -408,4 +408,14 @@ describe("service-wave shift eligibility", () => {
       expect(() => assessShiftEligibility(pickup, target)).toThrow("Invalid shift target");
     }
   });
+  it("rejects truthy non-boolean alternative-time intent fail-closed", () => {
+    expect(() =>
+      assessShiftEligibility(pickup, {
+        serviceDate: pickup.serviceDate,
+        direction: "pickup",
+        anchorMinutes: pickup.anchorMinutes + 1,
+        alternativeTimeRequested: "false" as unknown as boolean,
+      }),
+    ).toThrow("Invalid shift target");
+  });
 });

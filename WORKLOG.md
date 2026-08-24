@@ -2,6 +2,53 @@
 
 This is a curated chronology. It records verified work and does not turn archived reports or agent assertions into current truth.
 
+## 2026-08-24 — Audit remediation and validation-integrity repair
+
+**Scope and base.** Re-verified live code rather than accepting prior agent or
+documentation claims. Verification was performed on
+`codex/audit-remediation-20260824`, based on `WIP` commit
+`fef5a2b537da7068b51b3b3a50c6d633a2853404`; at verification time the
+remediation diff had not been committed or pushed. The pre-existing untracked
+`opencode.json` was not read, edited, staged, moved, or deleted.
+
+**Corrections.**
+
+- `tenant_keys()` now fails closed on blank/untrimmed tenant IDs, the reserved
+  `internal` ID, blank/whitespace secrets, duplicate tenant secrets, and a
+  tenant secret that reuses `INTERNAL_API_KEY`. Valid mappings retain their
+  exact identifiers and secrets. The TDD RED run produced 8 expected
+  `DID NOT RAISE` failures; the GREEN tenant suite is **16 passed**.
+- Vitest now includes only `src/**/*.test.ts` and `src/**/*.test.tsx`.
+  The polluted pre-fix run collected **150 files / 406 tests** from nested
+  worktrees; the corrected default command collected **21 files / 58 tests**.
+- `test_env_timeout_garbage_falls_back_to_default` now removes Supabase
+  credentials explicitly, so its coordinate-mode assertion no longer depends
+  on the caller's machine environment.
+- The ignored local `academic_benchmark/bildiri2026` residue was not treated
+  as tracked source or deleted without preservation. All **90 files /
+  1,830,905 bytes** were copied, SHA-256/length checked, and preserved at
+  `C:\tmp\UniRide-local-artifacts-20260824\academic_benchmark\bildiri2026`;
+  the manifest is
+  `C:\tmp\UniRide-local-artifacts-20260824\bildiri2026-sha256.csv`.
+  Only after complete staging verification was the ignored source removed.
+
+**Verification.**
+
+- Tenant authorization: **16 passed**.
+- Matrix fallback plus Bildiri quarantine boundary: **22 passed**.
+- Full Python discovery: **3,355 passed, 1 skipped, 45 warnings in 429.17s**.
+- Frontend: **21 files / 58 tests passed in 78.99s**.
+- TypeScript: passed.
+- ESLint: **0 errors / 158 warnings** under the existing temporary waiver.
+- Next.js 16.1.6 production build: passed with **57 dynamic,
+  server-rendered routes**.
+
+The npm security audit was not rerun. Its previously recorded 84 findings are
+dated debt, not refreshed 2026-08-24 evidence. Hard cancellation/process
+isolation, durable jobs, distributed quota state, matrix provenance, frontend
+async/GIS work, lint debt, dependency security, and dead DouBus code remain
+explicitly open.
+
 ## 2026-08-15 — Per-tenant authorization verified
 
 P2 compute-protection gate closed: the auth boundary is now tenant-identity

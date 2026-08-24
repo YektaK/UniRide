@@ -9,19 +9,18 @@ The engines may share neutral models and solver implementations, but they do not
 
 ## Current verified status
 
-The latest verification was run on 2026-08-14 at Package B code/test evidence tip `ed54d5cebdc849fb0df2743692f0eca385a4750a`; the last verified code-bearing commit is `ed54d5c`.
+The latest verification was run on 2026-08-24 against the remediation working tree based on `WIP` commit `fef5a2b537da7068b51b3b3a50c6d633a2853404`. The evidence was captured before integration.
 
 | Gate | Verified result |
 | --- | --- |
-| Focused Package B Python gate | 1,453 passed, 37.37s |
-| Full affected Python suites | 2,295 passed, 1 pre-existing Supabase SDK provider-timeout drift failure (`test_matrix_repository.py`, reproduced on clean `WIP`), 1 skipped (Numba unavailable), 3 warnings, 167.78s |
-| Frontend Vitest | 21 files, 58 tests passed, 94.71s |
+| Full Python discovery | 3,355 passed, 1 skipped, 45 warnings, 429.17s |
+| Frontend Vitest | 21 files, 58 tests passed, 78.99s |
 | TypeScript | passed |
 | ESLint | 0 errors, 158 warnings (temporary waiver) |
-| Credential-free production build | passed, 57 static pages |
-| `npm audit --omit=dev --json` | 84 findings: 2 critical, 22 high, 59 moderate, 1 low |
+| Production build | passed on Next.js 16.1.6; 57 dynamic, server-rendered routes |
+| `npm audit --omit=dev --json` | last recorded baseline: 84 findings (2 critical, 22 high, 59 moderate, 1 low); not refreshed on 2026-08-24 |
 
-UniRide is still experimental. The passing build and test gates do **not** close the remaining hard solver cancellation, process isolation, durable-job, rate-limiting, matrix-provenance, GIS, lint-warning, or dependency-security boundaries. Read [ACTIVE_ROADMAP.md](ACTIVE_ROADMAP.md) before planning work.
+UniRide is still experimental. The passing build and test gates do **not** close the remaining hard solver cancellation, process isolation, durable-job, distributed rate-limit storage, matrix-provenance, GIS, lint-warning, or dependency-security boundaries. Read [ACTIVE_ROADMAP.md](ACTIVE_ROADMAP.md) before planning work.
 
 ## Repository map
 
@@ -86,12 +85,17 @@ Keep local values outside version control. Never put credential values in docume
 | `SUPABASE_URL` | Python/server | backend Supabase URL where configured |
 | `OPTIMIZER_API_URL` | Next.js server | FastAPI URL for server-side adapters/BFF routes |
 | `ALLOWED_ORIGINS` | FastAPI | comma-separated CORS allowlist |
+| `APP_ENV` | FastAPI | runtime environment name; `production` forbids disabling auth |
+| `ALLOW_PUBLIC_BIND` | FastAPI | explicit `1` opt-in required for a non-loopback optimizer bind |
 | `OPTIMIZER_PORT` | FastAPI | optimizer service port |
 | `TIME_MATRIX_CACHE_TTL_SECONDS` | FastAPI | production matrix-cache lifetime |
 | `TIME_MATRIX_PROVIDER_TIMEOUT_SECONDS` | FastAPI | travel-time provider timeout |
 | `INTERNAL_API_KEY` | FastAPI | required production compute boundary key for `POST /api/v1/optimize`, `POST /api/v1/compare`, and `POST /api/v1/vehicle-calculator`; never log, return, or expose it |
 | `OPTIMIZER_INTERNAL_API_KEY` | Next.js server only | server-only FastAPI internal key for `optimizerFetch`; set to the same secret value as `INTERNAL_API_KEY`; never expose through a `NEXT_PUBLIC_*` variable |
 | `UNIRIDE_DISABLE_AUTH` | FastAPI local/test only | explicit `1` opt-out for loopback/local/test development; a startup error when `APP_ENV=production`; never set in production |
+| `UNIRIDE_TENANT_KEYS` | FastAPI server only | optional JSON object mapping a non-empty tenant ID to a unique secret; `internal` is reserved and tenant secrets cannot reuse `INTERNAL_API_KEY` |
+| `UNIRIDE_RATE_LIMIT_REQUESTS` | FastAPI | optional lowering-only fixed-window request limit (default 30) |
+| `UNIRIDE_RATE_LIMIT_WINDOW_SECONDS` | FastAPI | optional lowering-only rate window in seconds (default 60) |
 | `UNIRIDE_COMPUTE_MAX_STUDENTS` | FastAPI | optional override of the `production-conservative-v1` ceiling (250); may only lower it |
 | `UNIRIDE_COMPUTE_MAX_VEHICLES` | FastAPI | optional override of the ceiling (50); may only lower it |
 | `UNIRIDE_COMPUTE_MAX_ALGORITHMS` | FastAPI | optional override of the ceiling (6); may only lower it and never below the six-algorithm default set |
@@ -108,7 +112,7 @@ Keep local values outside version control. Never put credential values in docume
 
 Heavy requests are admitted through `INTERNAL_API_KEY` and bounded by the frozen `production-conservative-v1` profile: **250 students, 50 vehicles, 6 canonical compare algorithms, 2 workers, a 120-second soft response deadline, 60 supported solver seconds, 2,000 iterations, 250 population/swarm members, and a 2-second local-search sublimit**. The nine `UNIRIDE_COMPUTE_*` variables may lower a ceiling, never raise it; invalid values fail at startup. Requests above the effective limits are rejected, never silently clamped. Exact/permutation requests with more than ten waypoints fail fast before the solver runs.
 
-The deadline is a **soft** response deadline: `/compare` stops waiting after 120 seconds and running threads may continue in the background. Package B does **not** provide hard solver cancellation, process isolation, durable jobs, or rate limiting.
+The deadline is a **soft** response deadline: `/compare` stops waiting after 120 seconds and running threads may continue in the background. A fixed-window in-memory limiter keys authenticated requests by tenant identity (with client-IP fallback when no tenant identity exists) and returns HTTP 429 with `Retry-After` after the configured budget. It is process-local, not a distributed quota. Package B does **not** provide hard solver cancellation, process isolation, or durable jobs.
 
 The admin route-test page uses the authenticated same-origin `/api/optimize-route` BFF. Do not add a browser-direct FastAPI URL or expose an optimizer service address through a `NEXT_PUBLIC_*` variable.
 
@@ -151,7 +155,7 @@ git diff --check
 git status --short --branch
 ```
 
-`npm audit` currently exits nonzero because the 84 findings above remain unresolved. Record it as security evidence; do not silently treat an audit finding as a test failure or a resolved issue.
+The last recorded `npm audit` exited nonzero with the 84 findings above; it was not refreshed in the 2026-08-24 remediation run. Record audit output as dated security evidence and never treat an unrefreshed count as current proof.
 
 ## Documentation authority
 

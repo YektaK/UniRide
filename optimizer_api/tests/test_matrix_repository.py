@@ -322,6 +322,8 @@ def test_env_timeout_garbage_falls_back_to_default(monkeypatch):
 
     monkeypatch.setenv("TIME_MATRIX_PROVIDER_TIMEOUT_SECONDS", "not-a-number")
     monkeypatch.setenv("TIME_MATRIX_CACHE_TTL_SECONDS", "nope")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
     loader = _DL()
     assert loader.repository._ttl_seconds == 600
     assert loader.repository._provider is None  # no supabase creds -> coordinate mode

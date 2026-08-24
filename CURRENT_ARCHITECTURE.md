@@ -1,8 +1,8 @@
 # UniRide Current Architecture
 
-**Verified documentation snapshot:** 2026-08-14
-**Evidence tip:** `ed54d5cebdc849fb0df2743692f0eca385a4750a`
-**Last verified code-bearing commit:** `ed54d5c`
+**Verified documentation snapshot:** 2026-08-24
+**Verified base commit:** `fef5a2b537da7068b51b3b3a50c6d633a2853404`
+**Verification basis:** remediation working tree derived from `fef5a2b`; evidence captured before integration
 
 This describes current, verified boundaries. It is not a production-readiness claim. When this document conflicts with live code or executable tests, those sources win.
 
@@ -69,8 +69,8 @@ Bildiri legacy solver material has a canonical-core boundary and archive/manifes
 | Supabase construction | proxy and driver routes defer client construction; credential-free build passes | credential-free build is not an authentication/security certification |
 | Browser optimization test | admin route-test uses the authenticated BFF | other production/browser compute paths remain to be migrated |
 | Dependencies | five unused **direct** root edges were removed | transitive Genkit packages and audit findings remain |
-| Compute authentication | all three heavy endpoints deny missing/wrong keys (403) and accept a valid key; public endpoints remain public; `UNIRIDE_DISABLE_AUTH=1` is a startup error under `APP_ENV=production`; with `UNIRIDE_TENANT_KEYS` set, keys resolve to tenant identities and the shared internal key remains the ops override | per-tenant budgets/quotas beyond rate windows are not implemented |
-| Compute profile | frozen `production-conservative-v1` ceilings; nine `UNIRIDE_COMPUTE_*` overrides validated at startup and may only lower ceilings; tuning allowlists are exhaustive and fail closed; per-IP and per-tenant rate limiting on the optimization router | profile governs only the optimizer service |
+| Compute authentication | all three heavy endpoints deny missing/wrong keys (403) and accept a valid key; public endpoints remain public; `UNIRIDE_DISABLE_AUTH=1` is a startup error under `APP_ENV=production`; tenant keys resolve to distinct tenant identities; blank/untrimmed/reserved IDs, blank/duplicate secrets, and reuse of the ops key fail closed | per-tenant budgets/quotas beyond rate windows are not implemented |
+| Compute profile | frozen `production-conservative-v1` ceilings; nine `UNIRIDE_COMPUTE_*` overrides validated at startup and may only lower ceilings; tuning allowlists are exhaustive and fail closed; authenticated rate windows are tenant-keyed with IP fallback | the limiter and profile are process-local to the optimizer service, not distributed admission control |
 | Canonical resolution | every alias resolves to one canonical identity; explicit alias duplicates execute once; fresh request-scoped instances per canonical run | future registry additions need the same contract review |
 | Bounded comparison | at most 2 workers, one 120-second soft deadline, six canonical defaults, deterministic best/fastest ranking, certificate-gated admission | soft deadline is not hard cancellation or process isolation |
 | Exact TSP | >10-waypoint exact/permutation requests fail fast without truncation and never invoke the solver | applies to the canonical permutation_tsp/exact paths; other solver limits unchanged |
@@ -80,13 +80,13 @@ Bildiri legacy solver material has a canonical-core boundary and archive/manifes
 
 These are not closed by test count, a build pass, or documentation updates:
 
-1. **Universal feasibility enforcement.** The Package A feasibility certificate is attached to `/optimize` and `/compare` results and is the final admission gate; requested-algorithm policy and any solver surface not covered by the certificate still need the same contract review.
-2. **Compute protection and budgets.** Internal-key boundary authentication, tenant-key authorization, typed lowering-only limits, alias deduplication, worker ceilings, soft deadlines, per-IP/per-tenant rate limiting, and deterministic compare ranking are implemented. **Hard solver cancellation, process isolation, and durable jobs remain open.**
+1. **Feasibility extension discipline.** The current `/optimize`, `/compare`, and tested requested-algorithm/vehicle-calculator paths are certificate-gated. Every future solver, router, persistence, or response surface must prove the same fail-closed contract; present coverage is not a blanket production certification.
+2. **Compute protection and budgets.** Internal-key boundary authentication, tenant-key authorization, typed lowering-only limits, alias deduplication, worker ceilings, soft deadlines, tenant-keyed rate windows with IP fallback, and deterministic compare ranking are implemented. **Hard solver cancellation, process isolation, distributed quota state, and durable jobs remain open.**
 3. **Durable execution.** Benchmark work is not yet a durable multi-worker job system with atomic admission, persisted heartbeat, idempotency, and cooperative cancellation.
 4. **Matrix provenance.** Production travel time and academic problem metrics still require explicit, non-interchangeable provenance/domain/unit/directionality contracts.
 5. **Frontend resilience.** State consolidation, cancellation/timeouts, polling, error handling, and the 158 lint warnings need focused work.
 6. **GIS.** There is no current route-geometry contract or GIS renderer. Existing route lists and locations are not a map implementation.
-7. **Dependency security.** `npm audit --omit=dev --json` reports 84 unresolved findings: 2 critical, 22 high, 59 moderate, and 1 low.
+7. **Dependency security.** The last recorded `npm audit --omit=dev --json` reported 84 unresolved findings (2 critical, 22 high, 59 moderate, 1 low); that count was not refreshed on 2026-08-24.
 
 ## 5. Solver and matrix contract
 
@@ -115,6 +115,6 @@ Registry metadata should be immutable. Executable strategies must be request/job
 
 ## 7. Verification baseline
 
-On 2026-08-14 at `ed54d5c`, the focused Package B Python gate passed **1,453 tests** in **37.37s**. The full affected Python suites passed **2,295 tests** with **1 skip** (Numba unavailable) and **3 warnings** in **167.78s**; the only remaining failure is `test_matrix_repository.py::test_provider_timeout_plumbed_into_sdk_client`, a pre-existing Supabase SDK provider-timeout drift reproduced on clean `WIP`. Frontend Vitest remains **21 files / 58 tests passed**; TypeScript passed; ESLint reported **0 errors / 158 warnings** (temporary waiver); and a credential-free production build passed with **57 static pages**. No frontend production source changed after those frontend gates. `npm audit --omit=dev --json` still exits nonzero with the 84 findings above. (An earlier mid-run observation of 20 additional auth-guard failures was a branch-induced suite-consistency artifact, not baseline debt; it is documented and corrected in the worklog.)
+On 2026-08-24, branch `codex/audit-remediation-20260824` (base `fef5a2b`) passed full Python discovery with **3,355 passed, 1 skipped, 45 warnings in 429.17s**. Frontend Vitest passed **21 files / 58 tests in 78.99s** after restricting discovery to the current root `src` tree; TypeScript passed; ESLint reported **0 errors / 158 warnings** under the temporary waiver; and the Next.js 16.1.6 production build passed with **57 dynamic, server-rendered routes**. The previous environment-sensitive matrix test and ignored local Bildiri-boundary failures are closed. The npm security audit was not rerun, so the 84-finding figure above remains dated evidence rather than a current count.
 
 See [UniRide_Ultimate_Audit.md](UniRide_Ultimate_Audit.md) for qualifications, [ACTIVE_ROADMAP.md](ACTIVE_ROADMAP.md) for priority, and [NEXT_PHASE_EXECUTION_ROADMAP.md](NEXT_PHASE_EXECUTION_ROADMAP.md) for bounded future handoffs.

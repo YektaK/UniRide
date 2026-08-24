@@ -47,13 +47,35 @@ def tenant_keys() -> dict[str, str]:
     parsed = json.loads(raw)
     if not isinstance(parsed, dict):
         raise ValueError("UNIRIDE_TENANT_KEYS must be a JSON object mapping tenant id to key")
+    if any(
+        not isinstance(tenant_id, str)
+        or not tenant_id.strip()
+        or tenant_id != tenant_id.strip()
+        for tenant_id in parsed
+    ):
+        raise ValueError(
+            "UNIRIDE_TENANT_KEYS tenant ids must be non-empty and trimmed"
+        )
+    if "internal" in parsed:
+        raise ValueError(
+            "UNIRIDE_TENANT_KEYS cannot use reserved tenant id 'internal'"
+        )
     invalid = {
         str(tenant_id)
         for tenant_id, key in parsed.items()
-        if not isinstance(key, str) or not key
+        if not isinstance(key, str) or not key.strip()
     }
     if invalid:
-        raise ValueError(f"UNIRIDE_TENANT_KEYS has empty/non-string keys for tenants: {sorted(invalid)}")
+        raise ValueError(
+            "UNIRIDE_TENANT_KEYS values must be non-empty strings for tenants: "
+            f"{sorted(invalid)}"
+        )
+    values = list(parsed.values())
+    if len(set(values)) != len(values):
+        raise ValueError("UNIRIDE_TENANT_KEYS values must be unique")
+    shared_key = internal_api_key()
+    if shared_key is not None and shared_key in values:
+        raise ValueError("UNIRIDE_TENANT_KEYS cannot reuse INTERNAL_API_KEY")
     return {str(tenant_id): str(key) for tenant_id, key in parsed.items()}
 
 

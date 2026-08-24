@@ -1,28 +1,28 @@
 # UniRide Ultimate Audit
 
 **Original audit:** 2026-07-16
-**Current scoped update:** 2026-08-10
-**Immutable verification base:** `0b4bef6e77d4eda2812cbe773296978862c25599`
-**Last verified code-bearing commit:** `ddd85e8b1cc5ed64a8163988b2e179a08c8cfd2f`
+**Current scoped update:** 2026-08-24
+**Verified base commit:** `fef5a2b537da7068b51b3b3a50c6d633a2853404`
+**Verification basis:** remediation working tree derived from `fef5a2b`; evidence captured before integration
 
 ## 1. Reality check
 
 UniRide has a credible dual-engine direction: a production student-transport application and an academic routing laboratory share algorithms through `uniride_core`. That structure is useful only when the core stays neutral and both engines retain their own evidence and lifecycle contracts.
 
-The project is **not production-ready**. Multiple high-impact boundaries remain open: universal feasibility at `/optimize` and `/compare`, general compute authentication and typed budgets, durable cancellation, matrix provenance, frontend async state, dependency security, and route geometry/GIS.
+The project is **not production-ready**. Fail-closed feasibility admission, service/tenant authentication, typed lowering-only compute limits, bounded compare orchestration, and a process-local rate window now protect the current heavy production paths. High-impact boundaries remain open: hard cancellation and process isolation, durable jobs, distributed admission/rate-limit state, matrix provenance, frontend async state, dependency security, and route geometry/GIS.
 
-The 2026-08-10 verification is a functional baseline, not a release certificate:
+The 2026-08-24 verification is a functional baseline, not a release certificate:
 
 | Gate | Result |
 | --- | --- |
-| Canonical Python suites | 1,676 passed, 48 warnings, 238.17s |
-| Frontend Vitest | 17 files / 37 tests passed, 2.83s |
+| Full Python discovery | 3,355 passed, 1 skipped, 45 warnings, 429.17s |
+| Frontend Vitest | 21 files / 58 tests passed, 78.99s |
 | TypeScript | passed |
 | ESLint | 0 errors, 158 warnings |
-| Credential-free `npm run build` | passed |
-| `npm audit --omit=dev --json` | 84 unresolved findings: 2 critical, 22 high, 59 moderate, 1 low |
+| `npm run build` | passed on Next.js 16.1.6; 57 dynamic, server-rendered routes |
+| `npm audit --omit=dev --json` | not refreshed; last recorded 84 findings (2 critical, 22 high, 59 moderate, 1 low) |
 
-A nonzero audit result is security debt, not a functional-gate failure. Conversely, passing tests or a credential-free build do not resolve that debt or establish general runtime security.
+A nonzero audit result is security debt, not a functional-gate failure. Conversely, passing tests or a production build do not resolve that debt or establish general runtime security.
 
 ## 2. Findings closed to verified scope
 
@@ -34,18 +34,21 @@ The following earlier findings must no longer be presented as current open defec
 - **Matrix repository:** the process-level `DataLoader` remains a singleton facade over an injectable repository. Timeout, cache-health, last-known-good retention, and invalid off-diagonal arc rejection are covered; the old claim that every `get_instance()` call creates a new loader is retired.
 - **Deterministic seeding:** explicit seed `0` and PSO deterministic seed behavior are repaired on their tested paths. The earlier PSO wall-clock fallback claim is retired.
 - **Quick fixes:** canonical pytest discovery, optional-solver API null safety, deferred Supabase client construction, the authenticated admin route-test BFF, and removal of five unused direct dependency edges are verified.
+- **Production admission:** `/optimize` and `/compare` attach the solver-independent certificate and demote unsuccessful, infeasible, uncertified, or timed-out results; requested-algorithm policy extends the same gate to the tested production surfaces.
+- **Compute protection:** current heavy endpoints use service/tenant authorization, immutable lowering-only limits, canonical alias resolution, bounded compare workers, a soft response deadline, deterministic ranking, and a process-local tenant/IP rate window.
+- **Validation integrity:** Vitest is restricted to the current root `src` tree; the matrix timeout fallback test owns its credential-free precondition; ignored local Bildiri artifacts were hash-preserved outside the repository before boundary re-verification.
 
-The BFF correction is limited to the admin route-test workflow; it is not general FastAPI compute authentication. The passing credential-free build replaces the earlier Supabase page-data build waiver; it is not a security waiver closure.
+These are scoped closures. A passing build does not prove deployment credentials, authorization policy, distributed quotas, or dependency security, and a new solver/router still requires explicit certificate and compute-policy evidence.
 
 ## 3. Critical open risks
 
-### Universal feasibility remains incomplete
+### Feasibility is enforced on current paths, not universally certified
 
-The target is one independent final certificate covering occurrence coverage, capacity, duration, time windows, depot closure/continuity, and matrix completeness. Until `/optimize` and `/compare` apply it to every production result, hard-constraint violations may retain misleading success semantics.
+The independent final certificate covers occurrence identity/coverage, capacity, duration, time windows, depot closure/continuity, matrix completeness, and fail-closed error handling on the current production boundaries. The remaining risk is extension drift: every future solver, router, persistence layer, or response surface must prove that it cannot bypass this admission contract.
 
-### General compute protection and policy remain incomplete
+### Compute protection is scoped, not durable
 
-The API still needs a coherent service-authentication/authorization boundary for general compute, typed request budgets, alias canonicalization, worker ceilings, request-scoped executors, cancellation semantics, and explicit compare ranking. Earlier containment for selected benchmark/CLI routes does not prove these guarantees.
+The optimizer has service/tenant authentication, typed lowering-only budgets, alias canonicalization, worker ceilings, request-scoped strategies, deterministic ranking, and tenant-keyed rate windows. The 120-second deadline is still soft: running threads may continue. The limiter is in-memory per process. Hard cancellation, process isolation, atomic distributed admission, shared quota state, and durable execution remain open.
 
 ### Job lifecycle is not durable
 
@@ -61,7 +64,7 @@ Remaining browser compute paths, overlapping polling, cancellation/timeouts, dir
 
 ### Dependency security remains open
 
-Removing five direct dependency edges did not remove all transitive Genkit components. The current production audit has 84 findings, including 2 critical and 22 high. This requires a separate evidence-led remediation plan; audit churn must not be disguised as a test result.
+Removing five direct dependency edges did not remove all transitive Genkit components. The last recorded production audit had 84 findings, including 2 critical and 22 high; it was not refreshed on 2026-08-24. This requires a separate evidence-led remediation plan; audit churn must not be disguised as a test result.
 
 ## 4. Architecture judgement
 
@@ -75,7 +78,7 @@ Academic record -> academic adapter ----+
 
 The core should own neutral routing constraints, identity/matrix contracts, deterministic solver inputs, result/violation structures, and feasibility validation. Production owns users, authorization, locations, provider policy, route geometry, and operational errors. Academic tooling owns datasets, optima/gaps, DOE, seeds, environment records, statistics, and evidence publication.
 
-The remaining architectural danger is boundary erosion: production importing academic configuration concepts, academic records leaking into core DTOs, mutable/shared executable registry instances, and unbounded request policy. These deserve explicit package-level fixes, not incidental refactors.
+The remaining architectural danger is boundary erosion: production importing academic configuration concepts, academic records leaking into core DTOs, mutable/shared executable registry instances, new request surfaces bypassing policy/certification, and process-local controls being mistaken for distributed guarantees. These deserve explicit package-level fixes, not incidental refactors.
 
 ## 5. Historical context and design decisions
 
@@ -89,13 +92,13 @@ Durable academic methodology retained from earlier work is: versioned instances 
 
 The dependency order is intentional:
 
-1. universal feasibility;
-2. compute authentication, typed budgets, and compare semantics;
-3. durable jobs/cancellation;
-4. frontend BFF/state/warning work;
-5. matrix provenance and metric separation;
-6. academic TSP/ATSP/CVRP validation;
-7. backend geometry, then GIS rendering.
+1. preserve certificate/policy coverage as production surfaces evolve;
+2. implement hard cancellation, process isolation, and durable jobs;
+3. add distributed admission/rate-limit state where multi-instance deployment requires it;
+4. complete frontend state/timeout/warning work;
+5. add matrix provenance and metric separation;
+6. run the academic TSP/ATSP/CVRP validation campaign;
+7. define backend geometry, then build GIS rendering.
 
 See [ACTIVE_ROADMAP.md](ACTIVE_ROADMAP.md) for the concise priority list and [NEXT_PHASE_EXECUTION_ROADMAP.md](NEXT_PHASE_EXECUTION_ROADMAP.md) for implementation gates and handoff prompts.
 

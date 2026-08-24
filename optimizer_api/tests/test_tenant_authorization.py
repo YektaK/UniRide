@@ -129,6 +129,50 @@ def test_tenant_keys_empty_values_rejected(monkeypatch):
         runtime_config.tenant_keys()
 
 
+@pytest.mark.parametrize("tenant_id", ["", "   ", " alpha", "alpha "])
+def test_tenant_keys_blank_or_untrimmed_tenant_ids_rejected(monkeypatch, tenant_id):
+    monkeypatch.delenv("INTERNAL_API_KEY", raising=False)
+    monkeypatch.setenv("UNIRIDE_TENANT_KEYS", f'{{"{tenant_id}": "tenant-key"}}')
+
+    with pytest.raises(ValueError, match="tenant ids must be non-empty and trimmed"):
+        runtime_config.tenant_keys()
+
+
+def test_tenant_keys_reserved_internal_id_rejected(monkeypatch):
+    monkeypatch.delenv("INTERNAL_API_KEY", raising=False)
+    monkeypatch.setenv("UNIRIDE_TENANT_KEYS", '{"internal": "tenant-key"}')
+
+    with pytest.raises(ValueError, match="reserved tenant id 'internal'"):
+        runtime_config.tenant_keys()
+
+
+def test_tenant_keys_whitespace_only_values_rejected(monkeypatch):
+    monkeypatch.delenv("INTERNAL_API_KEY", raising=False)
+    monkeypatch.setenv("UNIRIDE_TENANT_KEYS", '{"alpha": "   "}')
+
+    with pytest.raises(ValueError, match="values must be non-empty strings"):
+        runtime_config.tenant_keys()
+
+
+def test_tenant_keys_duplicate_values_rejected(monkeypatch):
+    monkeypatch.delenv("INTERNAL_API_KEY", raising=False)
+    monkeypatch.setenv(
+        "UNIRIDE_TENANT_KEYS",
+        '{"alpha": "shared-tenant-key", "beta": "shared-tenant-key"}',
+    )
+
+    with pytest.raises(ValueError, match="values must be unique"):
+        runtime_config.tenant_keys()
+
+
+def test_tenant_keys_cannot_reuse_internal_api_key(monkeypatch):
+    monkeypatch.setenv("INTERNAL_API_KEY", "shared-key")
+    monkeypatch.setenv("UNIRIDE_TENANT_KEYS", '{"alpha": "shared-key"}')
+
+    with pytest.raises(ValueError, match="cannot reuse INTERNAL_API_KEY"):
+        runtime_config.tenant_keys()
+
+
 def test_startup_validation_rejects_bad_tenant_keys(monkeypatch):
     monkeypatch.delenv("UNIRIDE_DISABLE_AUTH", raising=False)
     monkeypatch.setenv("UNIRIDE_TENANT_KEYS", "not-json")

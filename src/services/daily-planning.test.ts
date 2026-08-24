@@ -205,6 +205,32 @@ describe("schedule decision admission", () => {
     ]);
   });
 
+
+  it("accepts exactly the Istanbul cutoff but not the instant after it", () => {
+    const baseInput = {
+      studentId: "S1",
+      locationCode: "L1",
+      serviceDate: "2026-08-26",
+      scheduleEntries: WEDNESDAY_DUDULLU_ENTRIES,
+    };
+
+    expect(
+      buildScheduleDemands({
+        ...baseInput,
+        decisions: {
+          pickup: { status: "confirmed", confirmedAt: "2026-08-25T19:00:00.000Z" },
+        },
+      }).demands[0]!.admission,
+    ).toBe("confirmed");
+    expect(
+      buildScheduleDemands({
+        ...baseInput,
+        decisions: {
+          pickup: { status: "confirmed", confirmedAt: "2026-08-25T19:00:00.001Z" },
+        },
+      }).demands[0]!.admission,
+    ).toBe("pending_admin_approval");
+  });
   it("rejects malformed confirmed decisions and negative flexibility", () => {
     expect(() =>
       buildScheduleDemands({
@@ -213,6 +239,15 @@ describe("schedule decision admission", () => {
         serviceDate: "2026-08-26",
         scheduleEntries: WEDNESDAY_DUDULLU_ENTRIES,
         decisions: { pickup: { status: "confirmed", confirmedAt: "not-a-timestamp" } },
+      }),
+    ).toThrow("Invalid ISO timestamp");
+    expect(() =>
+      buildScheduleDemands({
+        studentId: "S1",
+        locationCode: "L1",
+        serviceDate: "2026-08-26",
+        scheduleEntries: WEDNESDAY_DUDULLU_ENTRIES,
+        decisions: { pickup: { status: "cancelled", decidedAt: "not-a-timestamp" } },
       }),
     ).toThrow("Invalid ISO timestamp");
     expect(() =>
@@ -241,7 +276,7 @@ describe("exception demand admission", () => {
     const demand = buildExceptionDemand(ordinaryException);
 
     expect(demand).toMatchObject({
-      occurrenceId: expect.stringContaining("request-1"),
+      occurrenceId: "2026-08-26:pickup:exception:request-1",
       studentId: "S1",
       locationCode: "L1",
       source: "student_exception",
@@ -278,6 +313,21 @@ describe("exception demand admission", () => {
     ).toMatchObject({ admission: "approved", emergencyException: false });
   });
 
+
+  it("preserves seconds at the exception lead-time boundary", () => {
+    expect(
+      buildExceptionDemand({
+        ...ordinaryException,
+        requestedAt: "2026-08-26T05:00:00.000Z",
+      }).emergencyException,
+    ).toBe(false);
+    expect(
+      buildExceptionDemand({
+        ...ordinaryException,
+        requestedAt: "2026-08-26T05:00:30.000Z",
+      }).emergencyException,
+    ).toBe(true);
+  });
   it("keeps pickup and dropoff exception anchors independent", () => {
     const pickup = buildExceptionDemand(ordinaryException);
     const dropoff = buildExceptionDemand({

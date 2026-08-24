@@ -108,6 +108,7 @@ const ISTANBUL_WALL_CLOCK_FORMATTER = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
   hour: "2-digit",
   minute: "2-digit",
+  second: "2-digit",
   hourCycle: "h23",
 });
 
@@ -239,6 +240,7 @@ function istanbulWallClock(timestamp: Date): {
   readonly month: number;
   readonly day: number;
   readonly minutes: number;
+  readonly millisecondsSinceDay: number;
 } {
   const values: Record<string, number> = {};
 
@@ -253,6 +255,9 @@ function istanbulWallClock(timestamp: Date): {
     month: values.month!,
     day: values.day!,
     minutes: values.hour! * 60 + values.minute!,
+    millisecondsSinceDay:
+      (values.hour! * 60 * 60 + values.minute! * 60 + values.second!) * 1_000 +
+      timestamp.getUTCMilliseconds(),
   };
 }
 
@@ -301,18 +306,20 @@ export function classifyScheduleDecision(
   }
 
   if (decision.status === "cancelled") {
+    parseIsoTimestamp(decision.decidedAt);
     return { admission: "cancelled", flexibilityMinutes };
   }
 
   const confirmation = istanbulWallClock(parseIsoTimestamp(decision.confirmedAt));
   const cutoffDate = previousServiceDate(serviceDate);
-  const isBeforeCutoff =
+  const cutoffMilliseconds =
+    effectiveSettings.confirmationCutoffHour * 60 * 60 * 1_000;
+  const isAtOrBeforeCutoff =
     compareWallDate(confirmation, cutoffDate) < 0 ||
     (compareWallDate(confirmation, cutoffDate) === 0 &&
-      confirmation.minutes < effectiveSettings.confirmationCutoffHour * 60);
-
+      confirmation.millisecondsSinceDay <= cutoffMilliseconds);
   return {
-    admission: isBeforeCutoff ? "confirmed" : "pending_admin_approval",
+    admission: isAtOrBeforeCutoff ? "confirmed" : "pending_admin_approval",
     flexibilityMinutes,
   };
 }
@@ -424,13 +431,12 @@ function requireNonBlank(value: string): void {
   }
 }
 
-function wallMinuteIndex(
+function wallTimestampMilliseconds(
   date: { readonly year: number; readonly month: number; readonly day: number },
-  minutes: number,
+  millisecondsSinceDay: number,
 ): number {
-  return Date.UTC(date.year, date.month - 1, date.day) / 60_000 + minutes;
+  return Date.UTC(date.year, date.month - 1, date.day) + millisecondsSinceDay;
 }
-
 export function buildExceptionDemand(
   input: ExceptionAdmissionInput,
   settings?: DailyPlanningSettings,
@@ -444,10 +450,14 @@ export function buildExceptionDemand(
   const anchorMinutes = parseClockMinutes(input.requestedAnchorTime);
   const requested = istanbulWallClock(parseIsoTimestamp(input.requestedAt));
   const [year, month, day] = input.serviceDate.split("-").map(Number);
-  const leadMinutes =
-    wallMinuteIndex({ year: year!, month: month!, day: day! }, anchorMinutes) -
-    wallMinuteIndex(requested, requested.minutes);
-  const emergencyException = leadMinutes < effectiveSettings.exceptionLeadMinutes;
+  const leadMilliseconds =
+    wallTimestampMilliseconds(
+      { year: year!, month: month!, day: day! },
+      anchorMinutes * 60_000,
+    ) -
+    wallTimestampMilliseconds(requested, requested.millisecondsSinceDay);
+  const emergencyException =
+    leadMilliseconds < effectiveSettings.exceptionLeadMinutes * 60_000;
   const approved =
     input.adminApproval?.approved === true &&
     (!emergencyException || Boolean(input.adminApproval.reason?.trim()));

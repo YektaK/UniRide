@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ScheduleEntry } from "@/types";
-import type { DailyPlanningSettings } from "./daily-planning";
+import type { DailyPlanningSettings, DailyTripDemand } from "./daily-planning";
 
 import {
   buildExceptionDemand,
@@ -417,5 +417,116 @@ describe("service-wave shift eligibility", () => {
         alternativeTimeRequested: "false" as unknown as boolean,
       }),
     ).toThrow("Invalid shift target");
+  });
+});
+
+describe("daily planning final hardening", () => {
+  it("rejects schedule buffers that would cross the service-day boundary", () => {
+    const scheduleInputs: readonly { readonly scheduleEntries: readonly ScheduleEntry[]; readonly settings: DailyPlanningSettings }[] = [
+      {
+        scheduleEntries: WEDNESDAY_DUDULLU_ENTRIES,
+        settings: { ...DEFAULT_DAILY_PLANNING_SETTINGS, pickupArrivalBufferMinutes: 600 },
+      },
+      {
+        scheduleEntries: WEDNESDAY_DUDULLU_ENTRIES,
+        settings: { ...DEFAULT_DAILY_PLANNING_SETTINGS, dropoffDepartureBufferMinutes: 600 },
+      },
+    ];
+
+    for (const { scheduleEntries, settings } of scheduleInputs) {
+      expect(() =>
+        buildScheduleDemands({
+          studentId: "S1",
+          locationCode: "L1",
+          serviceDate: "2026-08-26",
+          scheduleEntries,
+          settings,
+        }),
+      ).toThrow("Invalid schedule demand input");
+    }
+  });
+
+  it("rejects blank schedule demand identities", () => {
+    for (const input of [
+      { studentId: " ", locationCode: "L1" },
+      { studentId: "S1", locationCode: " " },
+    ]) {
+      expect(() =>
+        buildScheduleDemands({
+          ...input,
+          serviceDate: "2026-08-26",
+          scheduleEntries: WEDNESDAY_DUDULLU_ENTRIES,
+        }),
+      ).toThrow("Invalid schedule demand input");
+    }
+  });
+
+  it("rejects runtime-invalid exception directions", () => {
+    expect(() =>
+      buildExceptionDemand({
+        requestId: "request-1",
+        studentId: "S1",
+        locationCode: "L1",
+        serviceDate: "2026-08-26",
+        direction: "sideways" as unknown as "pickup",
+        requestedAnchorTime: "10:00",
+        requestedAt: "2026-08-26T04:30:00Z",
+      }),
+    ).toThrow("Invalid exception input");
+  });
+
+  it("orders same-wave demands by class boundary before exact anchor", () => {
+    const earlierBoundary = buildScheduleDemands({
+      studentId: "S1",
+      locationCode: "L1",
+      serviceDate: "2026-08-26",
+      scheduleEntries: [{ id: "nine", dayOfWeek: "wednesday", startTime: "09:00", endTime: "10:00", location: "Dudullu" }],
+      settings: { ...DEFAULT_DAILY_PLANNING_SETTINGS, pickupArrivalBufferMinutes: 0 },
+    }).demands[0]!;
+    const laterBoundary = buildScheduleDemands({
+      studentId: "S2",
+      locationCode: "L1",
+      serviceDate: "2026-08-26",
+      scheduleEntries: [{ id: "nine-thirty", dayOfWeek: "wednesday", startTime: "09:30", endTime: "10:30", location: "Dudullu" }],
+      settings: { ...DEFAULT_DAILY_PLANNING_SETTINGS, pickupArrivalBufferMinutes: 60 },
+    }).demands[0]!;
+
+    expect(laterBoundary.anchorMinutes).toBeLessThan(earlierBoundary.anchorMinutes);
+    expect(groupServiceWaves([laterBoundary, earlierBoundary])[0]!.demands).toMatchObject([
+      { occurrenceId: earlierBoundary.occurrenceId },
+      { occurrenceId: laterBoundary.occurrenceId },
+    ]);
+  });
+
+  it("rejects malformed source demands before assessing a shift", () => {
+    const [pickup, dropoff] = buildScheduleDemands({
+      studentId: "S1",
+      locationCode: "L1",
+      serviceDate: "2026-08-26",
+      scheduleEntries: WEDNESDAY_DUDULLU_ENTRIES,
+    }).demands;
+    const malformedDemands: readonly DailyTripDemand[] = [
+      { ...pickup!, serviceDate: "2026-02-30" },
+      { ...pickup!, direction: "sideways" as unknown as "pickup" },
+      { ...pickup!, occurrenceId: " " },
+      { ...pickup!, studentId: " " },
+      { ...pickup!, locationCode: " " },
+      { ...pickup!, campusCode: "Other" as unknown as "D.Kampus" },
+      { ...pickup!, classBoundaryMinutes: Number.NaN },
+      { ...pickup!, anchorMinutes: Number.NaN },
+      { ...pickup!, flexibilityMinutes: Number.NaN },
+      { ...pickup!, hardDeadlineMinutes: pickup!.anchorMinutes - 1 },
+      { ...dropoff!, hardReadyMinutes: dropoff!.anchorMinutes + 1 },
+    ];
+
+    for (const demand of malformedDemands) {
+      expect(() =>
+        assessShiftEligibility(demand, {
+          serviceDate: "2026-08-26",
+          direction: "pickup",
+          anchorMinutes: 555,
+        }),
+      ).toThrow("Invalid daily demand");
+    }
   });
 });

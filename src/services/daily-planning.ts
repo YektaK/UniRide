@@ -185,6 +185,7 @@ function waveKey(direction: TripDirection, classBoundaryMinutes: number): string
 
 function demandOrder(left: DailyTripDemand, right: DailyTripDemand): number {
   return (
+    left.classBoundaryMinutes - right.classBoundaryMinutes ||
     left.anchorMinutes - right.anchorMinutes ||
     left.occurrenceId.localeCompare(right.occurrenceId)
   );
@@ -212,14 +213,71 @@ function validateDailyPlanningSettings(
     throw new Error("Invalid daily planning settings");
   }
 }
+function isInDayMinute(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value < 24 * 60
+  );
+}
+
+function isNonBlankString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function requireNonBlank(value: unknown, errorMessage: string): void {
+  if (!isNonBlankString(value)) {
+    throw new Error(errorMessage);
+  }
+}
+
+function isTripDirection(value: unknown): value is TripDirection {
+  return value === "pickup" || value === "dropoff";
+}
+
+function requireTripDirection(value: unknown, errorMessage: string): asserts value is TripDirection {
+  if (!isTripDirection(value)) {
+    throw new Error(errorMessage);
+  }
+}
+
 function validateFlexibilityMinutes(value: number | undefined): number {
   const flexibilityMinutes = value ?? 0;
 
-  if (!Number.isFinite(flexibilityMinutes) || !Number.isInteger(flexibilityMinutes) || flexibilityMinutes < 0) {
+  if (!isInDayMinute(flexibilityMinutes)) {
     throw new Error("Invalid flexibility minutes");
   }
 
   return flexibilityMinutes;
+}
+
+function validateDailyTripDemand(demand: DailyTripDemand): void {
+  try {
+    serviceDayOfWeek(demand.serviceDate);
+  } catch {
+    throw new Error("Invalid daily demand");
+  }
+
+  if (
+    !isTripDirection(demand.direction) ||
+    !isNonBlankString(demand.occurrenceId) ||
+    !isNonBlankString(demand.studentId) ||
+    !isNonBlankString(demand.locationCode) ||
+    demand.campusCode !== "D.Kampus" ||
+    !isInDayMinute(demand.classBoundaryMinutes) ||
+    !isInDayMinute(demand.anchorMinutes) ||
+    !isInDayMinute(demand.flexibilityMinutes) ||
+    (demand.direction === "pickup" &&
+      (demand.hardDeadlineMinutes !== demand.anchorMinutes ||
+        demand.hardReadyMinutes !== undefined)) ||
+    (demand.direction === "dropoff" &&
+      (demand.hardReadyMinutes !== demand.anchorMinutes ||
+        demand.hardDeadlineMinutes !== undefined))
+  ) {
+    throw new Error("Invalid daily demand");
+  }
 }
 
 function parseIsoTimestamp(value: string): Date {
@@ -343,6 +401,8 @@ export function assessShiftEligibility(
     readonly alternativeTimeRequested?: boolean;
   },
 ): ShiftAssessment {
+  validateDailyTripDemand(demand);
+
   try {
     serviceDayOfWeek(target.serviceDate);
   } catch {
@@ -395,6 +455,8 @@ export function buildScheduleDemands(
 } {
   const settings = input.settings ?? DEFAULT_DAILY_PLANNING_SETTINGS;
   validateDailyPlanningSettings(settings);
+  requireNonBlank(input.studentId, "Invalid schedule demand input");
+  requireNonBlank(input.locationCode, "Invalid schedule demand input");
   const dayOfWeek = serviceDayOfWeek(input.serviceDate);
   const excludedEntries: ExcludedScheduleEntry[] = [];
   const dudulluEntries: ScheduleEntry[] = [];
@@ -435,6 +497,11 @@ export function buildScheduleDemands(
   const dropoffBoundary = parseClockMinutes(lastEntry.endTime);
   const pickupAnchor = pickupBoundary - settings.pickupArrivalBufferMinutes;
   const dropoffAnchor = dropoffBoundary + settings.dropoffDepartureBufferMinutes;
+
+  if (!isInDayMinute(pickupAnchor) || !isInDayMinute(dropoffAnchor)) {
+    throw new Error("Invalid schedule demand input");
+  }
+
   const pickupWaveKey = waveKey("pickup", pickupBoundary);
   const dropoffWaveKey = waveKey("dropoff", dropoffBoundary);
   const pickupDecision = classifyScheduleDecision(
@@ -489,11 +556,6 @@ export function buildScheduleDemands(
   };
 }
 
-function requireNonBlank(value: string): void {
-  if (!value.trim()) {
-    throw new Error("Invalid exception input");
-  }
-}
 
 function wallTimestampMilliseconds(
   date: { readonly year: number; readonly month: number; readonly day: number },
@@ -507,9 +569,10 @@ export function buildExceptionDemand(
 ): DailyTripDemand {
   const effectiveSettings = settings ?? DEFAULT_DAILY_PLANNING_SETTINGS;
   validateDailyPlanningSettings(effectiveSettings);
-  requireNonBlank(input.requestId);
-  requireNonBlank(input.studentId);
-  requireNonBlank(input.locationCode);
+  requireNonBlank(input.requestId, "Invalid exception input");
+  requireNonBlank(input.studentId, "Invalid exception input");
+  requireNonBlank(input.locationCode, "Invalid exception input");
+  requireTripDirection(input.direction, "Invalid exception input");
   serviceDayOfWeek(input.serviceDate);
   const anchorMinutes = parseClockMinutes(input.requestedAnchorTime);
   const requested = istanbulWallClock(parseIsoTimestamp(input.requestedAt));

@@ -47,6 +47,17 @@ export interface DailyTripDemand {
   readonly emergencyException: boolean;
 }
 
+export type ShiftRejectionReason =
+  | "different_service_date"
+  | "different_direction"
+  | "unsafe_direction";
+
+export interface ShiftAssessment {
+  readonly canPreview: boolean;
+  readonly requiresStudentReconfirmation: boolean;
+  readonly deltaMinutes: number;
+  readonly rejectionReason?: ShiftRejectionReason;
+}
 export interface ExcludedScheduleEntry {
   readonly entryId: string;
   readonly location?: string;
@@ -321,6 +332,57 @@ export function classifyScheduleDecision(
   return {
     admission: isAtOrBeforeCutoff ? "confirmed" : "pending_admin_approval",
     flexibilityMinutes,
+  };
+}
+export function assessShiftEligibility(
+  demand: DailyTripDemand,
+  target: {
+    readonly serviceDate: string;
+    readonly direction: TripDirection;
+    readonly anchorMinutes: number;
+    readonly alternativeTimeRequested?: boolean;
+  },
+): ShiftAssessment {
+  try {
+    serviceDayOfWeek(target.serviceDate);
+  } catch {
+    throw new Error("Invalid shift target");
+  }
+
+  if (
+    (target.direction !== "pickup" && target.direction !== "dropoff") ||
+    !Number.isFinite(target.anchorMinutes) ||
+    !Number.isInteger(target.anchorMinutes) ||
+    target.anchorMinutes < 0 ||
+    target.anchorMinutes >= 24 * 60
+  ) {
+    throw new Error("Invalid shift target");
+  }
+
+  const deltaMinutes = target.anchorMinutes - demand.anchorMinutes;
+
+  if (target.serviceDate !== demand.serviceDate) {
+    return { canPreview: false, requiresStudentReconfirmation: false, deltaMinutes, rejectionReason: "different_service_date" };
+  }
+
+  if (target.direction !== demand.direction) {
+    return { canPreview: false, requiresStudentReconfirmation: false, deltaMinutes, rejectionReason: "different_direction" };
+  }
+
+  const unsafeDirection =
+    (demand.direction === "pickup" && deltaMinutes > 0) ||
+    (demand.direction === "dropoff" && deltaMinutes < 0);
+
+  if (unsafeDirection && !target.alternativeTimeRequested) {
+    return { canPreview: false, requiresStudentReconfirmation: false, deltaMinutes, rejectionReason: "unsafe_direction" };
+  }
+
+  return {
+    canPreview: true,
+    requiresStudentReconfirmation:
+      (unsafeDirection || Math.abs(deltaMinutes) > demand.flexibilityMinutes) &&
+      deltaMinutes !== 0,
+    deltaMinutes,
   };
 }
 export function buildScheduleDemands(

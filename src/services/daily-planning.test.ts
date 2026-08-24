@@ -7,6 +7,7 @@ import {
   buildScheduleDemands,
   DEFAULT_DAILY_PLANNING_SETTINGS,
   groupServiceWaves,
+  assessShiftEligibility,
   parseClockMinutes,
   serviceDayOfWeek,
 } from "./daily-planning";
@@ -352,6 +353,59 @@ describe("exception demand admission", () => {
       { ...ordinaryException, flexibilityMinutes: -1 },
     ]) {
       expect(() => buildExceptionDemand(input)).toThrow();
+    }
+  });
+});
+
+describe("service-wave shift eligibility", () => {
+  const baseDemand = buildScheduleDemands({
+    studentId: "S1",
+    locationCode: "L1",
+    serviceDate: "2026-08-26",
+    scheduleEntries: WEDNESDAY_DUDULLU_ENTRIES,
+    decisions: {
+      pickup: { status: "confirmed", confirmedAt: "2026-08-25T18:00:00Z", flexibilityMinutes: 60 },
+      dropoff: { status: "confirmed", confirmedAt: "2026-08-25T18:00:00Z", flexibilityMinutes: 60 },
+    },
+  }).demands;
+  const pickup = baseDemand[0]!;
+  const dropoff = baseDemand[1]!;
+
+  it("previews direction-safe pickup-earlier and dropoff-later shifts within confirmed flexibility", () => {
+    expect(assessShiftEligibility(pickup, { serviceDate: pickup.serviceDate, direction: "pickup", anchorMinutes: pickup.anchorMinutes - 60 })).toEqual({ canPreview: true, requiresStudentReconfirmation: false, deltaMinutes: -60 });
+    expect(assessShiftEligibility(dropoff, { serviceDate: dropoff.serviceDate, direction: "dropoff", anchorMinutes: dropoff.anchorMinutes + 60 })).toEqual({ canPreview: true, requiresStudentReconfirmation: false, deltaMinutes: 60 });
+  });
+
+  it("rejects unsafe directions unless the student requested an alternative time", () => {
+    for (const [demand, anchorMinutes] of [[pickup, pickup.anchorMinutes + 1], [dropoff, dropoff.anchorMinutes - 1]] as const) {
+      expect(assessShiftEligibility(demand, { serviceDate: demand.serviceDate, direction: demand.direction, anchorMinutes })).toEqual({ canPreview: false, requiresStudentReconfirmation: false, deltaMinutes: anchorMinutes - demand.anchorMinutes, rejectionReason: "unsafe_direction" });
+      expect(assessShiftEligibility(demand, { serviceDate: demand.serviceDate, direction: demand.direction, anchorMinutes, alternativeTimeRequested: true })).toEqual({ canPreview: true, requiresStudentReconfirmation: true, deltaMinutes: anchorMinutes - demand.anchorMinutes });
+    }
+  });
+
+  it("requires reconfirmation beyond flexibility and for nonzero shifts with default zero flexibility", () => {
+    expect(assessShiftEligibility(pickup, { serviceDate: pickup.serviceDate, direction: "pickup", anchorMinutes: pickup.anchorMinutes - 61 })).toMatchObject({ canPreview: true, requiresStudentReconfirmation: true, deltaMinutes: -61 });
+    const zeroFlexibility = buildScheduleDemands({ studentId: "S2", locationCode: "L1", serviceDate: "2026-08-26", scheduleEntries: WEDNESDAY_DUDULLU_ENTRIES }).demands[0]!;
+    expect(assessShiftEligibility(zeroFlexibility, { serviceDate: zeroFlexibility.serviceDate, direction: "pickup", anchorMinutes: zeroFlexibility.anchorMinutes - 1 })).toMatchObject({ canPreview: true, requiresStudentReconfirmation: true, deltaMinutes: -1 });
+  });
+
+  // This policy precheck must never claim vehicle savings; Package 5 needs certified source/destination re-solves.
+  it("keeps same anchors non-reconfirming, rejects cross-boundary targets, and does not mutate demand", () => {
+    const before = structuredClone(pickup);
+    expect(assessShiftEligibility(pickup, { serviceDate: pickup.serviceDate, direction: "pickup", anchorMinutes: pickup.anchorMinutes })).toEqual({ canPreview: true, requiresStudentReconfirmation: false, deltaMinutes: 0 });
+    expect(assessShiftEligibility(pickup, { serviceDate: "2026-08-27", direction: "pickup", anchorMinutes: pickup.anchorMinutes })).toMatchObject({ canPreview: false, rejectionReason: "different_service_date" });
+    expect(assessShiftEligibility(pickup, { serviceDate: pickup.serviceDate, direction: "dropoff", anchorMinutes: pickup.anchorMinutes })).toMatchObject({ canPreview: false, rejectionReason: "different_direction" });
+    expect(pickup).toEqual(before);
+  });
+
+  it("rejects malformed runtime targets fail-closed", () => {
+    for (const target of [
+      { serviceDate: "2026-02-30", direction: "pickup", anchorMinutes: pickup.anchorMinutes },
+      { serviceDate: pickup.serviceDate, direction: "pickup", anchorMinutes: Infinity },
+      { serviceDate: pickup.serviceDate, direction: "pickup", anchorMinutes: 1.5 },
+      { serviceDate: pickup.serviceDate, direction: "pickup", anchorMinutes: 1440 },
+    ] as const) {
+      expect(() => assessShiftEligibility(pickup, target)).toThrow("Invalid shift target");
     }
   });
 });

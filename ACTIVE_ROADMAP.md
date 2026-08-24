@@ -36,6 +36,67 @@ The following are closed only to the tested scope recorded in [CURRENT_ARCHITECT
 
 The 2026-08-24 remediation branch passed full Python discovery with **3,355 passed, 1 skipped, 45 warnings in 429.17s**. Frontend Vitest passed **21 files / 58 tests in 78.99s** after excluding nested worktree copies; TypeScript passed; ESLint remained **0 errors / 158 warnings** under the temporary waiver; and the Next.js 16.1.6 production build passed with **57 dynamic, server-rendered routes**. The npm security audit was not rerun; its last recorded baseline remains **84 findings: 2 critical, 22 high, 59 moderate, 1 low**.
 
+## Dudullu daily operations planner — ordered delivery packages
+
+**Status:** Package 1 is complete as a pure domain foundation on
+`codex/dudullu-daily-planner-20260825` at implementation commit
+`5278d80ca73de872a7dfef682385279ed0963f07`. It is not an operational product
+or a verification that 28 current live records exist. The historical
+approximately-28 schedule claim remains a runtime/data-readiness question.
+
+1. **Package 0 — runtime and data readiness (open; prerequisite for product work).**
+   Read the live Dudullu schedule, location, vehicle, driver, and matrix data
+   without mutation; verify current access, identity mapping, and the actual
+   record count. Do not infer present data from archived imports.
+2. **Package 1 — pure Dudullu demand and slot domain (complete on this feature branch).**
+   `src/services/daily-planning.ts` handles schedule filtering, independent
+   pickup/dropoff legs, exact anchors within hourly waves, inclusive
+   previous-day 22:00 `Europe/Istanbul` admission, exception/lead policy,
+   occurrence identity, and a direction-safe shift-eligibility precheck. It
+   does not call the database, optimizer, API, or UI, and it cannot prove a
+   saving or move a student automatically.
+3. **Package 2 — preview planning and physical-fleet truthfulness (next).**
+   After Package 0 evidence and a separately approved plan, add an
+   authenticated admin preview API, bind each call to an authoritative matrix
+   ID/version/hash, independently validate every used arc, calculate complete
+   depot-to-depot timing including the closing arc, and perform two-stage
+   day-level physical-fleet assignment. Drafts with shortages or unassigned
+   admitted demand must be explicitly non-publishable; never report a solver
+   route count as a day-level fleet saving.
+4. **Package 3 — transactional publication and RLS (blocked on Package 2).**
+   Add versioned multi-wave change sets, atomic publication, immutable audit
+   links, and row-level security. A partial wave publication must not be
+   possible.
+5. **Package 4 — administrator and student workflows (blocked on Package 3).**
+   Build confirmation, exception, review, driver-assignment, notification,
+   and publication flows against the truthful plan state. No workflow may
+   silently auto-shift students.
+6. **Package 5 — certified cross-wave decision support (blocked on Packages 2–4).**
+   Evaluate a candidate only with certified before/after source-and-destination
+   re-solves and a renewed day-level fleet assignment. Accept recommendations
+   only for lexicographic fleet-first savings; capacity estimates and the
+   legacy aggregate shift placeholder are not evidence.
+7. **Package 6 — pilot and operations (blocked on all prior packages).**
+   Run a controlled operational pilot with live data readiness, review,
+   monitoring, rollback, and evidence gates before any production-readiness
+   claim.
+
+**Package 1 gate (2026-08-25):** `npm test -- --run
+src/services/daily-planning.test.ts` passed **1 file / 27 tests**;
+the six named frontend regression files passed **6 files / 19 tests**;
+`npm run typecheck` passed with **0 errors**; `npm run lint` passed with
+**0 errors / 158 warnings**; and `git diff --check` passed. These checks prove
+the pure domain boundary only. They do not verify runtime credentials, current
+Supabase data, a 28-record dataset, optimization, matrix provenance, timing,
+fleet availability, publication, or operational readiness.
+
+**Exact next recommended task:** create and approve the Package 2 plan only
+after completing Package 0's read-only runtime/data-readiness evidence. Its
+first implementation slice should be the authenticated admin preview contract
+with authoritative matrix artifact binding and used-arc validation. Do not
+start UI, database publication, automatic student shifting, or savings claims
+ahead of those gates.
+
 ## Priority 1 — Feasibility governance and extension
 
 **Status: implemented on current heavy production paths.** A result is successful only when solver-successful **and** `feasibility_certificate.is_feasible`; failed/infeasible/uncertified/timed-out results are never ranked. The remaining action is governance: every future solver, router, persistence, or response surface must prove the same contract before exposure.

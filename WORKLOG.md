@@ -2,6 +2,33 @@
 
 This is a curated chronology. It records verified work and does not turn archived reports or agent assertions into current truth.
 
+## 2026-08-25 — Dudullu daily demand-domain foundation verified
+
+**Scope and branch.** Package 1 was verified on
+`codex/dudullu-daily-planner-20260825` at implementation commit
+`5278d80ca73de872a7dfef682385279ed0963f07`. The completed work is the pure
+`src/services/daily-planning.ts` demand/slot domain: Dudullu schedule filtering,
+independent pickup and dropoff legs, occurrence identities, hourly waves with
+exact anchor groups, inclusive previous-day 22:00 `Europe/Istanbul` admission,
+exception/lead policy, and a shift-eligibility precheck. The precheck does not
+auto-shift students and cannot claim vehicle savings.
+
+**Verification.** `npm test -- --run src/services/daily-planning.test.ts`
+passed **1 file / 27 tests**. The six named frontend regression files passed
+**6 files / 19 tests**. `npm run typecheck` passed with **0 errors**. `npm run
+lint` passed with **0 errors / 158 warnings** (existing warning debt). `git diff
+--check` passed.
+
+**Open delivery gates.** Package 0 runtime/data readiness is still open; no
+current Supabase data or 28 live records were verified. Package 2 must add the
+authenticated preview API, authoritative matrix ID/version/hash, independent
+used-arc checks, complete depot-to-depot timing including the closing arc, and
+two-stage daily physical-fleet assignment with truthful shortage/non-publishable
+semantics. Package 3 requires transactional versioned multi-wave publication
+and RLS; Package 4 covers admin/student workflows; Package 5 requires certified
+cross-wave before/after re-solves and lexicographic fleet-first savings; Package
+6 is pilot/operations. The product is not operational from Package 1 alone.
+
 ## 2026-08-24 — Audit remediation and validation-integrity repair
 
 **Scope and base.** Re-verified live code rather than accepting prior agent or

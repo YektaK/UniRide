@@ -472,6 +472,30 @@ def test_request_rejects_empty_and_blank_and_malformed_bodies(monkeypatch):
     assert broken.json() == {"detail": "Invalid readiness request"}
 
 
+def test_unknown_top_level_fields_are_rejected_with_fixed_422(monkeypatch):
+    _enable_internal_key(monkeypatch, "shared-key")
+    loader = _StubDataLoader(_StubMatrixRepository())
+    _install_stub_loader(monkeypatch, loader)
+    client = _client()
+    headers = {"X-Internal-API-Key": "shared-key"}
+
+    for payload in (
+        {"student_location_codes": ["Sw1"], "extra": "x"},
+        {"student_location_codes": ["Sw1"], "limit": 5},
+        {"student_location_codes": ["Sw1"], "source": "malicious"},
+        {"codes": ["Sw1"]},
+        {"student_location_codes": ["Sw1"], "student_location_codes_extra": ["So1"]},
+    ):
+        response = client.post(
+            "/api/v1/internal/readiness/time-matrix", json=payload, headers=headers
+        )
+        assert response.status_code == 422
+        assert response.json() == {"detail": "Invalid readiness request"}
+        assert "Sw1" not in response.text
+
+    assert loader.refresh_calls == []
+
+
 def test_invalid_422_and_success_neither_echo_sentinel_or_error(monkeypatch):
     _enable_internal_key(monkeypatch, "shared-key")
     _install_stub_loader(monkeypatch, _StubDataLoader(_StubMatrixRepository()))

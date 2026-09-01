@@ -49,7 +49,12 @@ async def time_matrix_readiness(request: Request) -> JSONResponse:
     except Exception:  # noqa: BLE001 - redacted boundary, never echo input
         return JSONResponse(status_code=422, content=_FIXED_422)
 
-    codes = body.get("student_location_codes") if isinstance(body, dict) else None
+    if not isinstance(body, dict):
+        return JSONResponse(status_code=422, content=_FIXED_422)
+
+    codes = body.get("student_location_codes")
+    if set(body) != {"student_location_codes"}:
+        return JSONResponse(status_code=422, content=_FIXED_422)
     if (
         not isinstance(codes, list)
         or not codes

@@ -13,9 +13,20 @@
 **Baseline verified on 2026-09-01:**
 
 - branch `codex/dudullu-package0-readiness-20260901` starts at `origin/WIP` `9972f820820f638e7d62a1aa1d1fbbf6f8c62ee6`;
-- focused Vitest baseline: 40 passed;
-- focused FastAPI matrix/auth baseline: 43 passed;
-- live Supabase inventory was attempted without printing secrets or identities and was blocked by `HttpRequestException -> SocketException` before an HTTP response;
+- focused Vitest baseline (40 passed):
+  ```powershell
+  npm test -- --run src/services/daily-planning.test.ts src/lib/optimizer-server.test.ts
+  ```
+- focused FastAPI matrix/auth baseline (43 passed):
+  ```powershell
+  & C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe -m pytest optimizer_api/tests/test_matrix_repository.py optimizer_api/tests/test_package_b_compute_auth.py optimizer_api/tests/test_phase0_auth_guard.py -q -p no:cacheprovider --tb=short
+  ```
+- the original checkout's local Next.js and FastAPI env files contain Supabase
+  configuration but neither side currently contains its internal-key variable;
+  no value was printed or copied;
+- live Supabase inventory was attempted without printing secrets or identities
+  and was blocked by `HttpRequestException -> SocketException` before an HTTP
+  response; no current 28-student / 29-node claim is verified from this attempt;
 - the original WIP checkout's user-owned `.gitignore` change is outside this worktree and must remain untouched.
 
 ## Non-goals and hard boundaries
@@ -43,20 +54,22 @@ The final admin response contains only aggregate data:
     "matchesMatrixNodeCount": false
   },
   "students": {
-    "total": 0,
-    "completeProfiles": 0,
-    "withDudulluSchedule": 0,
-    "missingLocation": 0,
-    "missingDisabilityType": 0,
-    "missingOrMismatchedSchedule": 0,
-    "distinctLocations": 0
+    "allAccounts": 0,
+    "dudulluTarget": 0,
+    "nonDudulluScheduled": 0,
+    "unclassifiedSchedule": 0,
+    "completeTargetProfiles": 0,
+    "targetMissingLocation": 0,
+    "targetMissingDisabilityType": 0,
+    "scheduleLinkMismatch": 0,
+    "distinctTargetLocations": 0
   },
   "schedules": {
     "total": 0,
     "empty": 0,
     "malformed": 0,
-    "orphaned": 0,
-    "duplicateForStudent": 0
+    "orphanedRows": 0,
+    "duplicateRowsForStudent": 0
   },
   "fleet": {
     "configuredDrivers": 0,
@@ -84,6 +97,32 @@ The final admin response contains only aggregate data:
 ```
 
 Reason codes are a fixed allowlist. They never embed IDs or provider text.
+
+Field semantics are fixed as follows:
+
+- `dudulluTarget` counts students whose consistently linked, well-formed weekly
+  schedule contains at least one Dudullu entry;
+- `nonDudulluScheduled` counts students with a valid linked schedule but no
+  Dudullu entry and does not block Dudullu readiness;
+- `unclassifiedSchedule` counts student accounts whose missing, malformed, or
+  inconsistent schedule prevents a truthful campus classification and does
+  block readiness;
+- `completeTargetProfiles` means a Dudullu-target student has a nonblank
+  location and `disability_type` in `{Sw, So}`;
+- `orphanedRows` counts schedule rows whose `user_id` is not a student row;
+- `duplicateRowsForStudent` counts schedule rows beyond the first row for a
+  student, not the number of affected students;
+- `matchesStudentCount` compares `dudulluTarget === 28` and
+  `matchesMatrixNodeCount` compares `matrix.matrixLocationCount === 29`;
+- historical-expectation booleans never affect `ready`;
+- a dependency-level 503 has the small fixed body
+  `{ "ready": false, "reasonCodes": ["dependency_unavailable"] }`;
+- allowed reason codes, in deterministic output order, are:
+  `no_dudullu_students`, `target_profile_incomplete`,
+  `schedule_classification_incomplete`, `schedule_data_invalid`,
+  `no_configured_driver`, `no_usable_active_vehicle`, `matrix_unavailable`,
+  `matrix_stale`, `matrix_incomplete`, `matrix_location_mismatch`, and
+  `dependency_unavailable`.
 
 ---
 
@@ -114,7 +153,7 @@ The repository API should be:
 
 ```python
 summary = repository.readiness_summary(
-    required_locations=["D.Kampus", "Sw1", "So1"],
+    student_locations=["Sw1", "So1"],
     depot_code="D.Kampus",
 )
 ```
@@ -133,8 +172,10 @@ Expected: FAIL because `readiness_summary` and the route do not exist.
 
 Under the existing repository lock:
 
-- strip and deduplicate required codes without reordering requirements semantically;
-- calculate `expected = n * (n - 1)` for the required set;
+- strip and deduplicate student home codes, then internally construct the
+  required set as `{depot_code} union student_locations`;
+- require at least one non-depot student location; empty or depot-only input is never complete or ready;
+- calculate `expected = n * (n - 1)` for that internally constructed set;
 - treat an off-diagonal arc as valid only when `math.isfinite(value) and value > 0`;
 - count missing required locations separately;
 - count every unavailable required directed arc once;
@@ -153,8 +194,12 @@ Use `TestClient` and dependency-safe monkeypatching. Test:
 - tenant-only key -> 403;
 - `UNIRIDE_DISABLE_AUTH=1` keeps the existing development/test opt-out;
 - the route calls non-forced `refresh()` before measuring;
-- request rejects an empty list, blank code, or excessive list;
-- response serialization contains no submitted location code, key, URL, or fake provider error;
+- request accepts at most 250 student location codes and tests 250/251 boundaries;
+- request rejects an empty list and blank code;
+- invalid input uses a route-owned fixed 422 body rather than FastAPI's default
+  validation body, which can echo rejected input;
+- invalid and successful response serialization contains no submitted sentinel
+  location code, key, URL, or fake provider error;
 - readiness failure returns HTTP 200 with `ready=false` so diagnostics are preserved;
 - public `/health` remains unauthenticated and unchanged.
 
@@ -163,11 +208,16 @@ Use `TestClient` and dependency-safe monkeypatching. Test:
 Add:
 
 ```text
+GET  /api/v1/internal/readiness
 POST /api/v1/internal/readiness/time-matrix
 ```
 
 - protect the router with `Depends(require_internal_api_key)`, not tenant authorization;
-- accept only a bounded list of required location codes;
+- make the GET endpoint a status-only internal-key handshake for the launcher;
+  it is not matrix or live-data evidence;
+- for POST, accept only `{"student_location_codes": [...]}` with 1-250 entries;
+- parse/validate that small body inside the route (or catch Pydantic validation
+  before FastAPI renders it) and return a fixed redacted 422 on failure;
 - call `DataLoader.get_instance().refresh()` without forcing provider backoff;
 - return the repository's redacted summary;
 - do not log the request body;
@@ -207,13 +257,15 @@ Rename/export the current private predicate as `isDudulluCampus()` without chang
 
 Use small immutable fixtures with sentinel identities. Cover:
 
-- 28 is compared, not required;
+- 28 Dudullu-target students is compared, not required;
 - consistent `users.weekly_schedule_id <-> weekly_schedules.id/user_id` mapping;
-- missing and mismatched schedule links;
+- valid non-Dudullu scheduled accounts are reported but do not block readiness;
+- missing, malformed, or mismatched schedule links remain unclassified and do block readiness;
+- zero Dudullu-target students always yields `ready:false`;
 - malformed/non-array/empty schedule entries;
 - orphaned and duplicate schedules;
 - Dudullu schedule detection through `isDudulluCampus()`;
-- missing location and disability type;
+- missing location and disability type within the Dudullu target;
 - duplicate physical locations count as separate students but one distinct location;
 - driver accounts reported as `configuredDrivers`, never active drivers;
 - active vehicle with zero total capacity is not usable;
@@ -233,22 +285,28 @@ Expected: FAIL because the analyzer does not exist and the predicate is private.
 
 Define minimal local input interfaces rather than accepting broad application DTOs. Treat schedule `entries` as `unknown` and narrow defensively. Return only the target aggregate contract.
 
-Provide a separate helper for the route to obtain the deduplicated required matrix codes:
+Provide a separate helper for the route to obtain deduplicated Dudullu-target
+student home codes; FastAPI adds the depot itself:
 
 ```typescript
-requiredDudulluMatrixLocations(users): readonly string[]
+requiredDudulluStudentLocations(users, schedules): readonly string[]
 ```
 
 This helper may return codes to the server-only caller, but `analyzeDudulluReadiness()` must never include them in its result.
 
 The overall report is ready only when:
 
-- every student has a valid location, disability type, consistent schedule link, and at least one Dudullu entry;
+- `students.dudulluTarget > 0`;
+- every Dudullu-target student has a valid location and disability type;
+- no student remains unclassified because of missing/malformed/inconsistent schedule data;
 - at least one usable active vehicle and one configured driver exist;
-- the matrix summary is ready and covers the same required distinct-location count;
+- the matrix summary is ready and
+  `matrix.requiredLocationCount === students.distinctTargetLocations + 1`,
+  where the extra node is `D.Kampus`;
 - no malformed/orphaned/duplicate schedule condition exists.
 
-Do not require exactly 28 students.
+Do not require exactly 28 students, and do not make valid non-Dudullu accounts
+release blockers.
 
 **Step 5: Run GREEN**
 
@@ -279,7 +337,8 @@ git commit -m "feat(runtime): analyze Dudullu data readiness"
 Mock only Supabase and optimizer boundaries. Test:
 
 - `requireAdmin()` runs before creating the service-role client or calling FastAPI;
-- unauthorized requests cause zero data/optimizer calls;
+- missing/invalid bearer tokens return 401 and authenticated non-admin users return 403;
+- both auth failures cause zero Supabase/optimizer calls;
 - exact narrow selections are used:
   - users: `id,role,location_code,disability_type,weekly_schedule_id`;
   - schedules: `id,user_id,entries`;
@@ -290,6 +349,12 @@ Mock only Supabase and optimizer boundaries. Test:
 - ordinary data deficiencies return 200 with `ready:false`;
 - Supabase or optimizer transport failures return 503 with a fixed error code/message;
 - `Cache-Control` is `private, no-store`;
+- the FastAPI payload passes a strict allowlist schema: `source` is a fixed
+  enum, counts are finite nonnegative integers, booleans are booleans, and
+  unknown fields are rejected;
+- malicious upstream `source` values or extra `error`, `locations`, and
+  `url` fields produce the same redacted 503 response;
+- accepted fields are reconstructed individually and the upstream object is never spread;
 - response and captured logs contain no sentinel identity, location list, raw Supabase error, URL, or key.
 
 **Step 2: Run RED**
@@ -304,15 +369,18 @@ Expected: FAIL because the route does not exist.
 
 Flow:
 
-1. `await requireAdmin(request)`.
+1. Call `await requireAdmin(request)` in its own auth error boundary so the
+   existing 401/403 `AppError` semantics are preserved.
 2. Create the lazy service-role client.
 3. Run the three narrow read-only queries.
 4. Fail with a fixed redacted 503 response if any query fails.
 5. Compute required codes server-side.
 6. POST them through `optimizerFetch()` to the protected matrix endpoint with `AbortSignal.timeout(10_000)`.
-7. Validate only the expected aggregate matrix shape; reject malformed upstream responses.
-8. Call the pure analyzer and return its aggregate report.
-9. Set `Cache-Control: private, no-store`.
+7. Strictly validate the aggregate matrix response and reconstruct accepted
+   fields one-by-one; never spread or forward the upstream object.
+8. Reject unknown or malformed upstream fields with the fixed redacted 503.
+9. Call the pure analyzer and return its aggregate report.
+10. Set `Cache-Control: private, no-store`.
 
 Do not use the generic error helper for unexpected readiness failures because it can relay/log raw error objects. Do not add UI or `admin-api.ts` wiring yet.
 
@@ -337,8 +405,8 @@ git commit -m "feat(runtime): expose admin Dudullu readiness report"
 
 **Files:**
 
-- Create: `scripts/start-dudullu-local.ts`
-- Create: `scripts/start-dudullu-local.test.ts`
+- Create: `scripts/start-dudullu-local.mjs`
+- Create: `scripts/start-dudullu-local.test.mjs`
 - Modify: `package.json`
 - Modify: `.env.example` only if a discovered variable is absent; never add a real value
 
@@ -359,14 +427,17 @@ Do not start real processes in unit tests.
 **Step 2: Run RED**
 
 ```powershell
-npm test -- --run scripts/start-dudullu-local.test.ts
+node --test scripts/start-dudullu-local.test.mjs
 ```
 
 Expected: FAIL because the launcher does not exist.
 
 **Step 3: Implement with Node standard library only**
 
-Add `npm run dev:dudullu` using the already installed `tsx` runner. The launcher must:
+Add `npm run dev:dudullu` as `node scripts/start-dudullu-local.mjs`. This is a
+foreground, long-running startup command. It proves process health and
+internal-key handshake only. The full redacted inventory still requires a
+separate authenticated admin request. The launcher must:
 
 - load only the two internal key names from process environment and the two local env files;
 - reject a configured mismatch;
@@ -375,8 +446,9 @@ Add `npm run dev:dudullu` using the already installed `tsx` runner. The launcher
 - honor `UNIRIDE_PYTHON` or fall back to the documented `.venv` interpreter and then `python`;
 - start `python main.py` with working directory `optimizer_api`;
 - start `npm run dev` at the repository root;
-- poll public FastAPI `/health`, the protected matrix readiness endpoint, and the Next.js HTTP listener;
-- print only service status and aggregate matrix readiness counts;
+- poll public FastAPI `/health`, the `GET /api/v1/internal/readiness` key
+  handshake, and the Next.js HTTP listener;
+- print only service status; do not print data-readiness counts from the launcher;
 - terminate both children when one exits unexpectedly or on Ctrl+C/SIGTERM;
 - support `--check-only` for deterministic config/interpreter checks without starting services.
 
@@ -385,7 +457,7 @@ No new package dependency is allowed.
 **Step 4: Run unit and check-only gates**
 
 ```powershell
-npm test -- --run scripts/start-dudullu-local.test.ts
+node --test scripts/start-dudullu-local.test.mjs
 npm run dev:dudullu -- --check-only
 ```
 
@@ -394,7 +466,7 @@ The unit test must pass. `--check-only` may report a missing Python/Supabase run
 **Step 5: Commit**
 
 ```powershell
-git add scripts/start-dudullu-local.ts scripts/start-dudullu-local.test.ts package.json .env.example
+git add scripts/start-dudullu-local.mjs scripts/start-dudullu-local.test.mjs package.json .env.example
 git commit -m "feat(runtime): add one-command Dudullu local stack"
 ```
 
@@ -409,6 +481,7 @@ If `.env.example` did not change, omit it from `git add`.
 - Create: `docs/DUDULLU_RUNTIME_READINESS.md`
 - Modify: `README.md`
 - Modify: `ACTIVE_ROADMAP.md`
+- Modify: `CURRENT_ARCHITECTURE.md`
 - Modify: `WORKLOG.md`
 
 **Step 1: Run the live gate without mutation**
@@ -451,7 +524,14 @@ Record:
 
 **Step 4: Update active documentation**
 
-- README: replace two-terminal instructions with `npm run dev:dudullu`, document `--check-only`, and retain individual service commands as troubleshooting only.
+- README: replace two-terminal instructions with `npm run dev:dudullu`, document
+  `--check-only`, and retain individual service commands as troubleshooting only.
+  Describe the startup command as **verified** only if the live smoke actually
+  passes. Otherwise state **implemented-but-blocked** with the specific blocker
+  category and retain the troubleshooting commands.
+- CURRENT_ARCHITECTURE.md: add the internal readiness endpoint and the admin
+  readiness BFF route to the endpoint inventory; record Package 0 as the current
+  open production boundary.
 - ACTIVE_ROADMAP: correct the stale Package 1 branch wording, record Package 0 implementation/evidence state, and keep Package 2 blocked until Package 0 PASS.
 - WORKLOG: append the Package 0 implementation and exact verification evidence.
 
@@ -460,7 +540,7 @@ Do not claim that 28 students or a 29-node complete matrix exists unless the liv
 **Step 5: Commit**
 
 ```powershell
-git add docs/DUDULLU_RUNTIME_READINESS.md README.md ACTIVE_ROADMAP.md WORKLOG.md
+git add docs/DUDULLU_RUNTIME_READINESS.md README.md ACTIVE_ROADMAP.md CURRENT_ARCHITECTURE.md WORKLOG.md
 git commit -m "docs(runtime): record Dudullu readiness evidence"
 ```
 
@@ -471,7 +551,8 @@ git commit -m "docs(runtime): record Dudullu readiness evidence"
 **Step 1: Run focused frontend gates**
 
 ```powershell
-npm test -- --run src/services/daily-planning.test.ts src/services/dudullu-readiness.test.ts src/app/api/admin/dudullu-readiness/route.test.ts src/lib/optimizer-server.test.ts scripts/start-dudullu-local.test.ts
+npm test -- --run src/services/daily-planning.test.ts src/services/dudullu-readiness.test.ts src/app/api/admin/dudullu-readiness/route.test.ts src/lib/optimizer-server.test.ts
+node --test scripts/start-dudullu-local.test.mjs
 npm run typecheck
 npm run lint
 ```

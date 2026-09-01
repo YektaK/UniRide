@@ -171,7 +171,7 @@ export function serviceDayOfWeek(
   return DAYS_OF_WEEK[date.getUTCDay()];
 }
 
-function isDudullu(location: string): boolean {
+export function isDudulluCampus(location: string): boolean {
   const normalized = location.trim().toLocaleLowerCase("tr-TR");
 
   return normalized === "dudullu" || normalized === "d.kampus";
@@ -468,7 +468,7 @@ export function buildScheduleDemands(
 
     if (!entry.location?.trim()) {
       excludedEntries.push({ entryId: entry.id, reason: "missing_campus" });
-    } else if (isDudullu(entry.location)) {
+    } else if (isDudulluCampus(entry.location)) {
       dudulluEntries.push(entry);
     } else {
       excludedEntries.push({

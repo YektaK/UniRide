@@ -10,6 +10,7 @@ import {
   assessShiftEligibility,
   parseClockMinutes,
   serviceDayOfWeek,
+  isDudulluCampus,
 } from "./daily-planning";
 
 const WEDNESDAY_DUDULLU_ENTRIES: readonly ScheduleEntry[] = [
@@ -527,6 +528,26 @@ describe("daily planning final hardening", () => {
           anchorMinutes: 555,
         }),
       ).toThrow("Invalid daily demand");
+    }
+  });
+});
+
+describe("isDudulluCampus campus predicate", () => {
+  it("recognizes Dudullu and D.Kampus with Turkish-locale case normalization", () => {
+    for (const location of [
+      "Dudullu",
+      "D.Kampus",
+      "  DUDULLU  ",
+      "d.kampus",
+      "D.KAMPUS",
+    ]) {
+      expect(isDudulluCampus(location)).toBe(true);
+    }
+  });
+
+  it("rejects other campuses and blank values", () => {
+    for (const location of ["Çengelköy", "cengelköy", "", "   "]) {
+      expect(isDudulluCampus(location)).toBe(false);
     }
   });
 });

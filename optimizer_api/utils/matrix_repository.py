@@ -297,6 +297,93 @@ class TimeMatrixRepository:
         with self._lock:
             return loc_id in self.loc_to_idx
 
+    def readiness_summary(
+        self,
+        student_locations: List[str],
+        depot_code: str,
+    ) -> Dict[str, Any]:
+        """Redacted aggregate matrix-readiness measurement.
+
+        Counts/booleans only: never exposes location codes, missing arc pairs,
+        keys, URLs, or the last provider error. The required set is the depot
+        code plus the stripped, deduplicated non-depot student home codes.
+        Empty or depot-only input is never complete or ready.
+        """
+        with self._lock:
+            seen: Dict[str, None] = {}
+            for code in student_locations:
+                cleaned = code.strip()
+                if not cleaned or cleaned == depot_code:
+                    continue
+                seen[cleaned] = None
+            has_students = bool(seen)
+            required = [depot_code] + list(seen)
+
+            if self.time_matrix is not None and not self._use_coordinates:
+                source = "supabase"
+                loaded = self._loaded_at is not None
+                stale = False
+                if loaded and self._ttl_seconds > 0:
+                    stale = (self._clock() - self._loaded_at) > self._ttl_seconds
+            elif self._provider is not None:
+                source = "empty"
+                loaded = False
+                stale = False
+            else:
+                source = "coordinates"
+                loaded = False
+                stale = False
+
+            matrix_location_count = len(self.locations)
+            n = len(required)
+            expected_arcs = n * (n - 1) if has_students else 0
+            depot_present = depot_code in self.loc_to_idx
+
+            missing_locations = 0
+            valid_arcs = 0
+            present = [code for code in required if code in self.loc_to_idx]
+            missing_locations = n - len(present)
+            if len(present) > 1 and self.time_matrix is not None:
+                idx = {code: self.loc_to_idx[code] for code in present}
+                for from_code in present:
+                    for to_code in present:
+                        if from_code == to_code:
+                            continue
+                        value = self.time_matrix[idx[from_code]][idx[to_code]]
+                        if math.isfinite(value) and value > 0.0:
+                            valid_arcs += 1
+
+            complete = (
+                has_students
+                and depot_present
+                and missing_locations == 0
+                and valid_arcs == expected_arcs
+            )
+            has_error = self._last_error is not None
+            ready = (
+                complete
+                and source == "supabase"
+                and loaded
+                and not stale
+                and not has_error
+            )
+
+            return {
+                "source": source,
+                "loaded": loaded,
+                "stale": stale,
+                "hasError": has_error,
+                "matrixLocationCount": matrix_location_count,
+                "requiredLocationCount": n,
+                "missingRequiredLocationCount": missing_locations,
+                "expectedRequiredDirectedArcCount": expected_arcs,
+                "validRequiredDirectedArcCount": valid_arcs,
+                "invalidOrMissingRequiredDirectedArcCount": expected_arcs - valid_arcs,
+                "depotPresent": depot_present,
+                "complete": complete,
+                "ready": ready,
+            }
+
     def _arc_value(self, from_loc: str, to_loc: str) -> float:
         """Return the directed arc value, rejecting invalid arcs.
 

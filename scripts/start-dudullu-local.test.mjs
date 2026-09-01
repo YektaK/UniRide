@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import {
   KeyMismatchError,
@@ -13,6 +14,9 @@ import {
   buildChildEnv,
   pythonCommand,
   webCommand,
+  resolvePythonBin,
+  probeWebRunner,
+  treeKillArgs,
 } from "./start-dudullu-local.mjs";
 
 test("matching configured keys are accepted", () => {
@@ -128,4 +132,64 @@ test("pythonCommand pins main.py into the optimizer_api working directory", () =
     args: ["main.py"],
     cwd: "optimizer_api",
   });
+});
+
+test("webCommand selects npm.cmd with a Windows shell and plain npm elsewhere", () => {
+  const win = webCommand("win32");
+  assert.equal(win.command, "npm.cmd");
+  assert.equal(win.shell, true);
+  assert.deepEqual(win.args, ["run", "dev"]);
+  assert.equal(win.cwd, ".");
+
+  const posix = webCommand("linux");
+  assert.equal(posix.command, "npm");
+  assert.equal(posix.shell, false);
+});
+
+test("resolvePythonBin honors UNIRIDE_PYTHON then .venv then PATH python", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "uniride-python-"));
+  try {
+    const venv = path.join(root, ".venv", "Scripts", "python.exe");
+    fs.mkdirSync(path.dirname(venv), { recursive: true });
+    fs.writeFileSync(venv, "");
+    assert.equal(
+      resolvePythonBin({ PATH: process.env.PATH }, root),
+      venv,
+    );
+
+    const explicit = path.join(root, "custom-python.exe");
+    fs.writeFileSync(explicit, "");
+    assert.equal(
+      resolvePythonBin({ UNIRIDE_PYTHON: explicit, PATH: process.env.PATH }, root),
+      explicit,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+
+  const pathBin = resolvePythonBin({ PATH: process.env.PATH }, root);
+  assert.ok(pathBin !== null && fs.existsSync(pathBin));
+});
+
+test("probeWebRunner succeeds for a real command and fails for a missing one", async () => {
+  const ok = await probeWebRunner(
+    { command: process.execPath, shell: false },
+    ["--version"],
+  );
+  assert.equal(ok, true);
+
+  const missing = await probeWebRunner(
+    { command: "definitely-not-a-real-binary-9f2a", shell: false },
+    ["--version"],
+  );
+  assert.equal(missing, false);
+});
+
+test("treeKillArgs emits a taskkill process-tree kill on win32 and null elsewhere", () => {
+  const args = treeKillArgs(1234);
+  if (process.platform === "win32") {
+    assert.deepEqual(args, ["/pid", "1234", "/T", "/F"]);
+  } else {
+    assert.equal(args, null);
+  }
 });

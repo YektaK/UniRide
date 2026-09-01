@@ -83,12 +83,79 @@ export function pythonCommand(pythonBin) {
   return { command: pythonBin, args: ["main.py"], cwd: "optimizer_api" };
 }
 
-export function webCommand() {
+export function webCommand(platform = process.platform) {
+  const isWin = platform === "win32";
   return {
-    command: process.platform === "win32" ? "npm.cmd" : "npm",
+    command: isWin ? "npm.cmd" : "npm",
     args: ["run", "dev"],
     cwd: ".",
+    shell: isWin,
   };
+}
+
+export function probeWebRunner(web, args = ["--version"], timeoutMs = 15_000) {
+  return new Promise((resolve) => {
+    let child;
+    try {
+      const shell = Boolean(web.shell);
+      const command = shell ? [web.command, ...args].join(" ") : web.command;
+      child = spawn(command, shell ? [] : args, {
+        stdio: "ignore",
+        shell,
+      });
+    } catch {
+      resolve(false);
+      return;
+    }
+    let settled = false;
+    let timer;
+    const finish = (ok) => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        resolve(ok);
+      }
+    };
+    timer = setTimeout(() => {
+      try {
+        child.kill();
+      } catch {
+        // ignore
+      }
+      finish(false);
+    }, timeoutMs);
+    child.on("error", () => finish(false));
+    child.on("exit", (code) => finish(code === 0));
+  });
+}
+
+export function treeKillArgs(pid) {
+  if (process.platform !== "win32") {
+    return null;
+  }
+  return ["/pid", String(pid), "/T", "/F"];
+}
+
+export function findExecutableOnPath(pathVar, names) {
+  if (typeof pathVar !== "string" || pathVar.trim() === "") {
+    return null;
+  }
+  for (const dir of pathVar.split(path.delimiter)) {
+    if (dir.trim() === "") {
+      continue;
+    }
+    for (const name of names) {
+      const candidate = path.join(dir, name);
+      try {
+        if (fs.existsSync(candidate)) {
+          return candidate;
+        }
+      } catch {
+        // ignore unreadable directory
+      }
+    }
+  }
+  return null;
 }
 
 function readEnvFileOrEmpty(filePath) {
@@ -124,7 +191,9 @@ export function resolvePythonBin(env, rootDir) {
       return candidate;
     }
   }
-  return null;
+  const pathNames =
+    process.platform === "win32" ? ["python.exe", "python"] : ["python"];
+  return findExecutableOnPath(env.PATH, pathNames);
 }
 
 function collectConfiguredKeys(processEnv, rootDir) {
@@ -219,6 +288,7 @@ async function main() {
   }
 
   const pythonBin = resolvePythonBin(process.env, rootDir);
+  const web = webCommand();
 
   if (checkOnly) {
     process.stdout.write(
@@ -239,7 +309,22 @@ async function main() {
         "[uniride-local] check-only: python interpreter not found\n",
       );
       process.exitCode = 1;
+      return;
     }
+    process.stdout.write(
+      `[uniride-local] web runner: ${web.command} (shell=${
+        web.shell ? "on" : "off"
+      }) probing --version...\n`,
+    );
+    const probeOk = await probeWebRunner(web);
+    if (!probeOk) {
+      process.stderr.write(
+        `[uniride-local] check-only: web runner ${web.command} probe failed\n`,
+      );
+      process.exitCode = 1;
+      return;
+    }
+    process.stdout.write("[uniride-local] web runner probe: PASS\n");
     return;
   }
 
@@ -254,10 +339,20 @@ async function main() {
   const children = [];
   let shuttingDown = false;
 
-  function terminateChildren() {
-    for (const child of children) {
-      if (!child.killed) {
-        child.kill("SIGTERM");
+  function terminateChildren(force) {
+    for (const entry of children) {
+      if (entry.exited) {
+        continue;
+      }
+      const args = treeKillArgs(entry.proc.pid);
+      if (args) {
+        spawn("taskkill", args, { stdio: "ignore" });
+      } else {
+        try {
+          entry.proc.kill(force ? "SIGKILL" : "SIGTERM");
+        } catch {
+          // ignore
+        }
       }
     }
   }
@@ -267,13 +362,9 @@ async function main() {
       return;
     }
     shuttingDown = true;
-    terminateChildren();
+    terminateChildren(false);
     setTimeout(() => {
-      for (const child of children) {
-        if (!child.killed) {
-          child.kill("SIGKILL");
-        }
-      }
+      terminateChildren(true);
       process.exit(code);
     }, 3_000);
   }
@@ -281,8 +372,9 @@ async function main() {
   process.on("SIGINT", () => shutdown(130));
   process.on("SIGTERM", () => shutdown(143));
 
-  function onUnexpectedExit(name, child) {
+  function onUnexpectedExit(name, entry) {
     return (code, signal) => {
+      entry.exited = true;
       if (shuttingDown) {
         return;
       }
@@ -293,23 +385,34 @@ async function main() {
     };
   }
 
-  const python = spawn(pythonBin, pythonCommand(pythonBin).args, {
-    cwd: path.join(rootDir, "optimizer_api"),
-    env: buildChildEnv(process.env, shared.key),
-    stdio: "inherit",
-  });
+  const python = {
+    proc: spawn(pythonBin, pythonCommand(pythonBin).args, {
+      cwd: path.join(rootDir, "optimizer_api"),
+      env: buildChildEnv(process.env, shared.key),
+      stdio: "inherit",
+    }),
+    exited: false,
+  };
   children.push(python);
-  python.on("error", () => shutdown(1));
-  python.on("exit", onUnexpectedExit("optimizer API", python));
+  python.proc.on("error", () => shutdown(1));
+  python.proc.on("exit", onUnexpectedExit("optimizer API", python));
 
-  const web = spawn(webCommand().command, webCommand().args, {
-    cwd: rootDir,
-    env: buildChildEnv(process.env, shared.key),
-    stdio: "inherit",
-  });
-  children.push(web);
-  web.on("error", () => shutdown(1));
-  web.on("exit", onUnexpectedExit("next web", web));
+  const webEntry = {
+    proc: spawn(
+      web.shell ? [web.command, ...web.args].join(" ") : web.command,
+      web.shell ? [] : web.args,
+      {
+        cwd: rootDir,
+        env: buildChildEnv(process.env, shared.key),
+        stdio: "inherit",
+        shell: Boolean(web.shell),
+      },
+    ),
+    exited: false,
+  };
+  children.push(webEntry);
+  webEntry.proc.on("error", () => shutdown(1));
+  webEntry.proc.on("exit", onUnexpectedExit("next web", webEntry));
 
   await waitForServices(shared.key);
 }

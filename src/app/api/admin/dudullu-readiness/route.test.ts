@@ -27,7 +27,7 @@ const USER_SELECT = "id, role, location_code, disability_type, weekly_schedule_i
 const SCHEDULE_SELECT = "id, user_id, entries";
 const VEHICLE_SELECT = "status, wheelchair_capacity, seating_capacity";
 
-const UNAVAILABLE = { error: "Readiness unavailable" };
+const UNAVAILABLE = { ready: false, reasonCodes: ["dependency_unavailable"] };
 
 function validSummary(requiredLocationCount = 2, overrides: object = {}): object {
   const arcs = requiredLocationCount * (requiredLocationCount - 1);
@@ -59,7 +59,7 @@ function adminClient(
         (columns: string): Promise<{ data: unknown; error: unknown }> => {
           selects.push({ table, columns });
           const resolved =
-            table === "schedules"
+            table === "weekly_schedules"
               ? (rows.schedules ?? [])
               : table === "vehicles"
                 ? (rows.vehicles ?? [])
@@ -139,7 +139,7 @@ describe("GET /api/admin/dudullu-readiness", () => {
     expect(getSupabaseAdminMock).toHaveBeenCalledTimes(1);
     expect(optimizerFetchMock).toHaveBeenCalledTimes(1);
     expect(client.from).toHaveBeenCalledWith("users");
-    expect(client.from).toHaveBeenCalledWith("schedules");
+    expect(client.from).toHaveBeenCalledWith("weekly_schedules");
     expect(client.from).toHaveBeenCalledWith("vehicles");
   });
 
@@ -150,6 +150,7 @@ describe("GET /api/admin/dudullu-readiness", () => {
     const response = await GET(new Request("http://x/api/admin/dudullu-readiness"));
 
     expect(response.status).toBe(401);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect(getSupabaseAdminMock).not.toHaveBeenCalled();
     expect(optimizerFetchMock).not.toHaveBeenCalled();
   });
@@ -163,6 +164,7 @@ describe("GET /api/admin/dudullu-readiness", () => {
     }));
 
     expect(response.status).toBe(403);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect(getSupabaseAdminMock).not.toHaveBeenCalled();
     expect(optimizerFetchMock).not.toHaveBeenCalled();
   });
@@ -205,7 +207,7 @@ describe("GET /api/admin/dudullu-readiness", () => {
     expect(init.signal.aborted).toBe(false);
   });
 
-  it("returns 200 with ready:false for ordinary data deficiencies", async () => {
+  it("returns 200 with ready:false for ordinary data deficiencies without calling the optimizer", async () => {
     getSupabaseAdminMock.mockReturnValue(
       adminClient({
         users: [
@@ -220,8 +222,61 @@ describe("GET /api/admin/dudullu-readiness", () => {
         vehicles: [{ status: "active", wheelchair_capacity: 1, seating_capacity: 7 }],
       }),
     );
-    optimizerFetchMock.mockResolvedValue(
-      new Response(JSON.stringify(validSummary(1)), { status: 200 }),
+    requireAdminMock.mockResolvedValue({ id: "adm-x", role: "admin" });
+
+    const { GET } = await import("./route");
+    const response = await GET(new Request("http://x/api/admin/dudullu-readiness", {
+      headers: { authorization: "Bearer adm-token" },
+    }));
+
+    expect(response.status).toBe(200);
+    expect(optimizerFetchMock).not.toHaveBeenCalled();
+    const body = await response.json();
+    expect(body.ready).toBe(false);
+    expect(body.reasonCodes).toEqual([
+      "no_dudullu_students",
+      "matrix_unavailable",
+      "matrix_location_mismatch",
+    ]);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+  });
+
+  it("skips the optimizer and returns a deterministic 200 when zero Dudullu targets exist", async () => {
+    getSupabaseAdminMock.mockReturnValue(
+      adminClient({
+        users: [
+          {
+            id: "stu-NO-9f2a",
+            role: "student",
+            location_code: "Çengelköy",
+            disability_type: "So",
+            weekly_schedule_id: "sch-NO-9f2a",
+          },
+          {
+            id: "drv-NO-9f2a",
+            role: "driver",
+            location_code: null,
+            disability_type: null,
+            weekly_schedule_id: null,
+          },
+        ],
+        schedules: [
+          {
+            id: "sch-NO-9f2a",
+            user_id: "stu-NO-9f2a",
+            entries: [
+              {
+                id: "cl-NO-9f2a",
+                dayOfWeek: "wednesday",
+                startTime: "10:00",
+                endTime: "11:00",
+                location: "Çengelköy",
+              },
+            ],
+          },
+        ],
+        vehicles: [{ status: "active", wheelchair_capacity: 1, seating_capacity: 7 }],
+      }),
     );
     requireAdminMock.mockResolvedValue({ id: "adm-x", role: "admin" });
 
@@ -231,9 +286,11 @@ describe("GET /api/admin/dudullu-readiness", () => {
     }));
 
     expect(response.status).toBe(200);
+    expect(optimizerFetchMock).not.toHaveBeenCalled();
     const body = await response.json();
     expect(body.ready).toBe(false);
-    expect(body.reasonCodes).toEqual(["no_dudullu_students"]);
+    expect(body.reasonCodes).toContain("no_dudullu_students");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
   });
 
   it("sets Cache-Control to private, no-store", async () => {
@@ -262,6 +319,7 @@ describe("GET /api/admin/dudullu-readiness", () => {
     }));
 
     expect(response.status).toBe(503);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
     await expect(response.json()).resolves.toEqual(UNAVAILABLE);
     expect(optimizerFetchMock).not.toHaveBeenCalled();
   });
@@ -276,6 +334,7 @@ describe("GET /api/admin/dudullu-readiness", () => {
     }));
 
     expect(response.status).toBe(503);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
     await expect(response.json()).resolves.toEqual(UNAVAILABLE);
   });
 
@@ -289,6 +348,7 @@ describe("GET /api/admin/dudullu-readiness", () => {
     }));
 
     expect(response.status).toBe(503);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
     await expect(response.json()).resolves.toEqual(UNAVAILABLE);
   });
 
@@ -328,8 +388,15 @@ describe("GET /api/admin/dudullu-readiness", () => {
     const body = await response.json();
     expect(body.ready).toBe(true);
     expect(body.reasonCodes).toEqual([]);
+    expect(body.students.allAccounts).toBe(1);
+    expect(body.students.dudulluTarget).toBe(1);
+    expect(body.historicalExpectation.isWithinDeviation).toBeUndefined();
     expect(body.matrix.requiredLocationCount).toBe(2);
     expect(body.matrix.matrixLocationCount).toBe(2);
+    expect(body.matrix.expectedRequiredDirectedArcCount).toBe(2);
+    expect(body.matrix.validRequiredDirectedArcCount).toBe(2);
+    expect(body.matrix.depotPresent).toBe(true);
+    expect(body.historicalExpectation.matchesMatrixNodeCount).toBe(false);
   });
 
   it("never leaks sentinel identities, locations, URLs, keys, or raw errors", async () => {

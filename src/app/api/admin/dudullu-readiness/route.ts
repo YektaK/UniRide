@@ -20,7 +20,28 @@ import type {
   ReadinessVehicleInput,
 } from "@/services/dudullu-readiness";
 
-const UNAVAILABLE_BODY = { error: "Readiness unavailable" };
+const UNAVAILABLE_BODY = {
+  ready: false,
+  reasonCodes: ["dependency_unavailable"],
+} as const;
+
+const NO_STORE_HEADERS = { "cache-control": "private, no-store" };
+
+const EMPTY_MATRIX: ReadinessMatrixSummary = {
+  source: "empty",
+  loaded: false,
+  stale: false,
+  hasError: true,
+  matrixLocationCount: 0,
+  requiredLocationCount: 0,
+  missingRequiredLocationCount: 0,
+  expectedRequiredDirectedArcCount: 0,
+  validRequiredDirectedArcCount: 0,
+  invalidOrMissingRequiredDirectedArcCount: 0,
+  depotPresent: false,
+  complete: false,
+  ready: false,
+};
 
 const TIMEOUT_MILLIS = 10_000;
 
@@ -89,14 +110,18 @@ function toVehicle(row: Record<string, unknown>): ReadinessVehicleInput {
   };
 }
 
+function json(body: unknown, status: number): Response {
+  return Response.json(body, { status, headers: NO_STORE_HEADERS });
+}
+
 export async function GET(request: Request) {
   try {
     await requireAdmin(request);
   } catch (error) {
     if (error instanceof AppError) {
-      return Response.json({ error: error.message }, { status: error.statusCode });
+      return json({ error: error.message }, error.statusCode);
     }
-    return Response.json(UNAVAILABLE_BODY, { status: 503 });
+    return json(UNAVAILABLE_BODY, 503);
   }
 
   let users: Record<string, unknown>[];
@@ -105,10 +130,10 @@ export async function GET(request: Request) {
   try {
     const client: SupabaseClient<Database> = getSupabaseAdmin();
     users = await selectAll(client, "users", "id, role, location_code, disability_type, weekly_schedule_id");
-    schedules = await selectAll(client, "schedules", "id, user_id, entries");
+    schedules = await selectAll(client, "weekly_schedules", "id, user_id, entries");
     vehicles = await selectAll(client, "vehicles", "status, wheelchair_capacity, seating_capacity");
   } catch {
-    return Response.json(UNAVAILABLE_BODY, { status: 503 });
+    return json(UNAVAILABLE_BODY, 503);
   }
 
   const studentInputs = users.map(toStudent);
@@ -118,24 +143,28 @@ export async function GET(request: Request) {
   const locationCodes = requiredDudulluStudentLocations(studentInputs, scheduleInputs);
 
   let matrix: ReadinessMatrixSummary;
-  try {
-    const response = await optimizerFetch("/api/v1/internal/readiness/time-matrix", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ student_location_codes: locationCodes }),
-      signal: AbortSignal.timeout(TIMEOUT_MILLIS),
-    });
-    if (!response.ok) {
-      throw new Error("readiness upstream failed");
+  if (locationCodes.length === 0) {
+    matrix = EMPTY_MATRIX;
+  } else {
+    try {
+      const response = await optimizerFetch("/api/v1/internal/readiness/time-matrix", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ student_location_codes: locationCodes }),
+        signal: AbortSignal.timeout(TIMEOUT_MILLIS),
+      });
+      if (!response.ok) {
+        throw new Error("readiness upstream failed");
+      }
+      const raw: unknown = await response.json();
+      const parsed = summarySchema.safeParse(raw);
+      if (!parsed.success) {
+        throw new Error("readiness upstream failed");
+      }
+      matrix = parsed.data;
+    } catch {
+      return json(UNAVAILABLE_BODY, 503);
     }
-    const raw: unknown = await response.json();
-    const parsed = summarySchema.safeParse(raw);
-    if (!parsed.success) {
-      throw new Error("readiness upstream failed");
-    }
-    matrix = parsed.data;
-  } catch {
-    return Response.json(UNAVAILABLE_BODY, { status: 503 });
   }
 
   const report = analyzeDudulluReadiness(
@@ -145,8 +174,5 @@ export async function GET(request: Request) {
     matrix,
   );
 
-  return Response.json(report, {
-    status: 200,
-    headers: { "cache-control": "private, no-store" },
-  });
+  return json(report, 200);
 }

@@ -40,6 +40,7 @@ export interface DudulluReadinessReport {
   ready: boolean;
   reasonCodes: readonly string[];
   students: {
+    allAccounts: number;
     dudulluTarget: number;
     nonDudulluScheduled: number;
     unclassifiedSchedule: number;
@@ -51,8 +52,6 @@ export interface DudulluReadinessReport {
   };
   schedules: {
     total: number;
-    dudulluTargetRows: number;
-    nonDudulluScheduledRows: number;
     empty: number;
     malformed: number;
     orphanedRows: number;
@@ -73,15 +72,17 @@ export interface DudulluReadinessReport {
     complete: boolean;
     ready: boolean;
     requiredLocationCount: number;
+    expectedRequiredDirectedArcCount: number;
+    validRequiredDirectedArcCount: number;
     missingRequiredLocationCount: number;
     invalidOrMissingRequiredDirectedArcCount: number;
+    depotPresent: boolean;
   };
   historicalExpectation: {
     studentCount: number;
     matrixNodeCount: number;
     matchesStudentCount: boolean;
     matchesMatrixNodeCount: boolean;
-    isWithinDeviation: boolean;
   };
 }
 
@@ -117,12 +118,22 @@ interface StudentRecord {
   id: string;
   role: "student" | "driver" | "unknown";
   homeCode?: string;
-  hasDisability: boolean;
-  isHomeDudullu: boolean;
+  disabilityEnumerated: boolean;
   schedule?: ReadinessScheduleInput;
   linkMismatch: boolean;
   entriesMalformed: boolean;
   target: boolean;
+}
+
+function normalizedDisability(value: unknown): "Sw" | "So" | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  if (trimmed === "Sw" || trimmed === "So") {
+    return trimmed;
+  }
+  return undefined;
 }
 
 function buildStudentRecords(
@@ -141,8 +152,6 @@ function buildStudentRecords(
       typeof user.locationCode === "string" && user.locationCode.trim() !== ""
         ? user.locationCode!.trim()
         : undefined;
-    const hasDisability =
-      typeof user.disabilityType === "string" && user.disabilityType.trim() !== "";
 
     const scheduleId =
       typeof user.weeklyScheduleId === "string" && user.weeklyScheduleId.trim() !== ""
@@ -157,14 +166,17 @@ function buildStudentRecords(
       id: user.id,
       role,
       homeCode: location,
-      hasDisability,
-      isHomeDudullu: location !== undefined && isDudulluCampus(location),
+      disabilityEnumerated: normalizedDisability(user.disabilityType) !== undefined,
       schedule,
       linkMismatch: schedule !== undefined && schedule.userId !== user.id,
       entriesMalformed: schedule !== undefined && !entriesValidArray,
       target: false,
     };
-    record.target = record.isHomeDudullu || hasDudulluEntry(record, schedulesById);
+    record.target =
+      record.schedule !== undefined &&
+      !record.linkMismatch &&
+      !record.entriesMalformed &&
+      hasDudulluEntry(record);
 
     records.push(record);
   }
@@ -172,10 +184,7 @@ function buildStudentRecords(
   return records;
 }
 
-function hasDudulluEntry(
-  record: StudentRecord,
-  schedulesById: ReadonlyMap<string, ReadinessScheduleInput>,
-): boolean {
+function hasDudulluEntry(record: StudentRecord): boolean {
   const schedule = record.schedule;
   if (!schedule) {
     return false;
@@ -184,12 +193,7 @@ function hasDudulluEntry(
   if (!entries) {
     return false;
   }
-  for (const entry of entries) {
-    if (isDudulluCampus(entry)) {
-      return true;
-    }
-  }
-  return false;
+  return entries.some((entry) => isDudulluCampus(entry));
 }
 
 function flattenEntriesTrimmed(
@@ -204,9 +208,10 @@ function flattenEntriesTrimmed(
       return undefined;
     }
     const location = (entry as { location?: unknown }).location;
-    if (typeof location === "string") {
-      locations.push(location);
+    if (typeof location !== "string" || location.trim() === "") {
+      return undefined;
     }
+    locations.push(location.trim());
   }
   return locations;
 }
@@ -256,6 +261,7 @@ export function analyzeDudulluReadiness(
     ready: true,
     reasonCodes: [],
     students: {
+      allAccounts: 0,
       dudulluTarget: 0,
       nonDudulluScheduled: 0,
       unclassifiedSchedule: 0,
@@ -267,8 +273,6 @@ export function analyzeDudulluReadiness(
     },
     schedules: {
       total: schedules.length,
-      dudulluTargetRows: 0,
-      nonDudulluScheduledRows: 0,
       empty: 0,
       malformed: 0,
       orphanedRows: 0,
@@ -289,16 +293,18 @@ export function analyzeDudulluReadiness(
       complete: matrix.complete,
       ready: matrix.ready,
       requiredLocationCount: matrix.requiredLocationCount,
+      expectedRequiredDirectedArcCount: matrix.expectedRequiredDirectedArcCount,
+      validRequiredDirectedArcCount: matrix.validRequiredDirectedArcCount,
       missingRequiredLocationCount: matrix.missingRequiredLocationCount,
       invalidOrMissingRequiredDirectedArcCount:
         matrix.invalidOrMissingRequiredDirectedArcCount,
+      depotPresent: matrix.depotPresent,
     },
     historicalExpectation: {
       studentCount: DUDULLU_HISTORICAL_STUDENT_EXPECTATION,
       matrixNodeCount: DUDULLU_HISTORICAL_MATRIX_NODE_EXPECTATION,
       matchesStudentCount: false,
       matchesMatrixNodeCount: false,
-      isWithinDeviation: false,
     },
   };
 
@@ -310,6 +316,7 @@ export function analyzeDudulluReadiness(
     }
     if (roleOf(user) === "student") {
       studentIds.add(user.id);
+      report.students.allAccounts += 1;
     }
   }
 
@@ -322,10 +329,10 @@ export function analyzeDudulluReadiness(
       if (record.homeCode === undefined) {
         report.students.targetMissingLocation += 1;
       }
-      if (!record.hasDisability) {
+      if (!record.disabilityEnumerated) {
         report.students.targetMissingDisabilityType += 1;
       }
-      if (record.homeCode !== undefined && record.hasDisability) {
+      if (record.homeCode !== undefined && record.disabilityEnumerated) {
         report.students.completeTargetProfiles += 1;
       }
     }
@@ -346,10 +353,7 @@ export function analyzeDudulluReadiness(
       } else if (entries.length === 0) {
         report.schedules.empty += 1;
         report.students.nonDudulluScheduled += 1;
-      } else if (hasDudulluEntry(record, schedulesById)) {
-        report.schedules.dudulluTargetRows += 1;
-      } else {
-        report.schedules.nonDudulluScheduledRows += 1;
+      } else if (!record.target) {
         report.students.nonDudulluScheduled += 1;
       }
     }
@@ -383,9 +387,7 @@ export function analyzeDudulluReadiness(
   report.historicalExpectation.matchesStudentCount =
     studentComparison === DUDULLU_HISTORICAL_STUDENT_EXPECTATION;
   report.historicalExpectation.matchesMatrixNodeCount =
-    matrix.requiredLocationCount === DUDULLU_HISTORICAL_MATRIX_NODE_EXPECTATION;
-  report.historicalExpectation.isWithinDeviation =
-    Math.abs(studentComparison - DUDULLU_HISTORICAL_STUDENT_EXPECTATION) <= 2;
+    matrix.matrixLocationCount === DUDULLU_HISTORICAL_MATRIX_NODE_EXPECTATION;
 
   const reasons: string[] = [];
 
@@ -435,7 +437,6 @@ export function analyzeDudulluReadiness(
   }
 
   report.ready = reasons.length === 0;
-  reasons.sort();
   report.reasonCodes = reasons;
 
   return report;

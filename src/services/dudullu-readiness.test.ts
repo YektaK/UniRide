@@ -425,7 +425,7 @@ describe("analyzeDudulluReadiness", () => {
     }
   });
 
-  it("emits sorted, deterministic reason codes from the fixed allowlist", () => {
+  it("emits reason codes in the approved order from the fixed allowlist", () => {
     const student = nonDudulluStudent("stu-R-9f2a", { weeklyScheduleId: undefined });
     const report = analyzeDudulluReadiness(
       [student],
@@ -449,13 +449,149 @@ describe("analyzeDudulluReadiness", () => {
     );
 
     expect(report.reasonCodes).toEqual([
-      "matrix_location_mismatch",
-      "matrix_unavailable",
-      "no_configured_driver",
       "no_dudullu_students",
-      "no_usable_active_vehicle",
       "schedule_classification_incomplete",
+      "no_configured_driver",
+      "no_usable_active_vehicle",
+      "matrix_unavailable",
+      "matrix_location_mismatch",
     ]);
+  });
+
+  it("never classifies a Dudullu home location as a target without a qualifying schedule", () => {
+    const homeOnly = targetStudent("stu-HOME-9f2a", "Dudullu", {
+      weeklyScheduleId: undefined,
+    });
+    const report = analyzeDudulluReadiness(
+      [...READY_DRIVERS, homeOnly],
+      [],
+      readyVehicles(),
+      readyMatrix(1),
+    );
+
+    expect(report.students.dudulluTarget).toBe(0);
+    expect(report.students.unclassifiedSchedule).toBe(1);
+    expect(report.students.distinctTargetLocations).toBe(0);
+    expect(
+      requiredDudulluStudentLocations([homeOnly], []),
+    ).toEqual([]);
+    expect(report.reasonCodes).toContain("no_dudullu_students");
+  });
+
+  it("does not count a mismatched Dudullu schedule as a target or matrix requirement", () => {
+    const student = targetStudent("stu-MM-9f2a", "Sw1");
+    const mismatched = {
+      id: student.weeklyScheduleId!,
+      userId: OBSERVER_STUDENT,
+      entries: dudulluSchedule("x").entries,
+    };
+    const report = analyzeDudulluReadiness(
+      [...READY_DRIVERS, student],
+      [mismatched],
+      readyVehicles(),
+      readyMatrix(1),
+    );
+
+    expect(report.students.dudulluTarget).toBe(0);
+    expect(report.students.scheduleLinkMismatch).toBe(1);
+    expect(report.students.unclassifiedSchedule).toBe(1);
+    expect(
+      requiredDudulluStudentLocations([student], [mismatched]),
+    ).toEqual([]);
+  });
+
+  it("treats entries with a missing or non-string or blank location as malformed", () => {
+    const malformedCases: unknown[][] = [
+      [{}],
+      [{ id: "c-9f2a" }],
+      [{ id: "c-9f2a", location: "" }],
+      [{ id: "c-9f2a", location: "   " }],
+      [{ id: "c-9f2a", location: 42 }],
+    ];
+    for (const entries of malformedCases) {
+      const student = targetStudent("stu-MF-9f2a", "Sw1");
+      const report = analyzeDudulluReadiness(
+        [...READY_DRIVERS, student],
+        [{ id: student.weeklyScheduleId!, userId: student.id, entries }],
+        readyVehicles(),
+        readyMatrix(1),
+      );
+
+      expect(report.schedules.malformed).toBe(1);
+      expect(report.students.unclassifiedSchedule).toBe(1);
+      expect(report.students.dudulluTarget).toBe(0);
+      expect(report.reasonCodes).toContain("schedule_data_invalid");
+    }
+  });
+
+  it("rejects an invalid nonblank disability type on a target profile", () => {
+    const student = targetStudent("stu-DINV-9f2a", "Sw1", {
+      disabilityType: "unknown",
+    });
+    const report = analyzeDudulluReadiness(
+      [...READY_DRIVERS, student],
+      [dudulluSchedule(student.id)],
+      readyVehicles(),
+      readyMatrix(2),
+    );
+
+    expect(report.students.dudulluTarget).toBe(1);
+    expect(report.students.completeTargetProfiles).toBe(0);
+    expect(report.students.targetMissingDisabilityType).toBe(1);
+    expect(report.ready).toBe(false);
+    expect(report.reasonCodes).toContain("target_profile_incomplete");
+  });
+
+  it("reports allAccounts and the full approved report DTO", () => {
+    const target = targetStudent("stu-DTO-9f2a", "Sw1");
+    const plain = nonDudulluStudent("stu-DTO2-9f2a");
+    const report = analyzeDudulluReadiness(
+      [...READY_DRIVERS, target, plain],
+      [
+        dudulluSchedule(target.id),
+        { id: plain.id, userId: plain.id, entries: [] },
+      ],
+      readyVehicles(),
+      readyMatrix(2),
+    );
+
+    expect(report.students.allAccounts).toBe(2);
+    expect(report.students.dudulluTarget).toBe(1);
+    expect(report.students.nonDudulluScheduled).toBe(1);
+    expect(Object.keys(report.schedules)).toEqual([
+      "total",
+      "empty",
+      "malformed",
+      "orphanedRows",
+      "duplicateRowsForStudent",
+    ]);
+    expect("dudulluTargetRows" in report.schedules).toBe(false);
+    expect("nonDudulluScheduledRows" in report.schedules).toBe(false);
+    expect("isWithinDeviation" in report.historicalExpectation).toBe(false);
+    expect(report.matrix.expectedRequiredDirectedArcCount).toBe(2);
+    expect(report.matrix.validRequiredDirectedArcCount).toBe(2);
+    expect(report.matrix.depotPresent).toBe(true);
+    expect(report.matrix.ready).toBe(true);
+  });
+
+  it("derives matchesMatrixNodeCount from matrixLocationCount === 29", () => {
+    const target = targetStudent("stu-29-9f2a", "Sw1");
+
+    const exact = analyzeDudulluReadiness(
+      [...READY_DRIVERS, target],
+      [dudulluSchedule(target.id)],
+      readyVehicles(),
+      readyMatrix(2, 29),
+    );
+    expect(exact.historicalExpectation.matchesMatrixNodeCount).toBe(true);
+
+    const shifted = analyzeDudulluReadiness(
+      [...READY_DRIVERS, target],
+      [dudulluSchedule(target.id)],
+      readyVehicles(),
+      readyMatrix(2, 30),
+    );
+    expect(shifted.historicalExpectation.matchesMatrixNodeCount).toBe(false);
   });
 });
 

@@ -13,11 +13,11 @@
 **Baseline verified on 2026-09-01:**
 
 - branch `codex/dudullu-package0-readiness-20260901` starts at `origin/WIP` `9972f820820f638e7d62a1aa1d1fbbf6f8c62ee6`;
-- focused Vitest baseline (40 passed):
+- focused Vitest baseline (39 passed):
   ```powershell
   npm test -- --run src/services/daily-planning.test.ts src/lib/optimizer-server.test.ts
   ```
-- focused FastAPI matrix/auth baseline (43 passed):
+- focused FastAPI matrix/auth baseline (39 passed):
   ```powershell
   & C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe -m pytest optimizer_api/tests/test_matrix_repository.py optimizer_api/tests/test_package_b_compute_auth.py optimizer_api/tests/test_phase0_auth_guard.py -q -p no:cacheprovider --tb=short
   ```

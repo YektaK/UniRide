@@ -45,6 +45,7 @@
       "rideRequests": "Ride Requests",
       "driverAssignments": "Driver Assignments",
       "vehiclePlanning": "Vehicle Planning",
+      "sandbox": "Planning Sandbox",
       "algorithmCompare": "Algorithm Comparison",
       "benchmarkSuite": "Benchmark Suite",
       "routeTest": "Route Test",

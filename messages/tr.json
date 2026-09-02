@@ -45,6 +45,7 @@
       "rideRequests": "Servis Talepleri",
       "driverAssignments": "Şoför Görevlendirmeleri",
       "vehiclePlanning": "Araç Planlama",
+      "sandbox": "Planlama Simülasyonu",
       "algorithmCompare": "Algoritma Karşılaştırma",
       "benchmarkSuite": "Benchmark Suite",
       "routeTest": "Rota Testi",

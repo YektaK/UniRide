@@ -17,6 +17,7 @@ const PYTHON_ENV_FILE = path.join("optimizer_api", ".env");
 const WEB_URL = "http://127.0.0.1:9002";
 const FASTAPI_URL = "http://127.0.0.1:8000";
 const POLL_INTERVAL_MS = 500;
+const PROBE_TIMEOUT_MS = 2_000;
 
 export class KeyMismatchError extends Error {
   constructor() {
@@ -205,18 +206,27 @@ function collectConfiguredKeys(processEnv, rootDir) {
   };
 }
 
-async function checkService(url, init) {
+export function allServicesReady(status) {
+  return (
+    status?.fastapiHealth === true &&
+    status?.webListener === true &&
+    status?.handshake === true
+  );
+}
+
+export async function checkService(url, init, fetchFn = fetch) {
+  const bounded = init?.signal ? init : { ...init, signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) };
   try {
-    const response = await fetch(url, init);
+    const response = await fetchFn(url, bounded);
     return response.ok;
   } catch {
     return false;
   }
 }
 
-async function checkHandshake(sharedKey) {
+export async function checkHandshake(sharedKey, fetchFn = fetch) {
   try {
-    const response = await fetch(
+    const response = await fetchFn(
       `${FASTAPI_URL}/api/v1/internal/readiness`,
       {
         headers: { "X-Internal-API-Key": sharedKey },
@@ -233,7 +243,11 @@ async function checkHandshake(sharedKey) {
   }
 }
 
-async function waitForServices(sharedKey) {
+export async function waitForServices(sharedKey, deps = {}) {
+  const check = deps.checkService ?? checkService;
+  const handshake = deps.checkHandshake ?? checkHandshake;
+  const write = deps.write ?? ((text) => process.stdout.write(text));
+  const pollIntervalMs = deps.pollIntervalMs ?? POLL_INTERVAL_MS;
   const announced = {
     fastapiHealth: false,
     webListener: false,
@@ -241,33 +255,98 @@ async function waitForServices(sharedKey) {
   };
 
   while (true) {
-    const [fastapiHealth, web, handshake] = await Promise.all([
-      checkService(`${FASTAPI_URL}/health`),
-      checkService(WEB_URL, { signal: AbortSignal.timeout(2_000) }),
-      checkHandshake(sharedKey),
+    const [fastapiHealth, web, handshakeOk] = await Promise.all([
+      check(`${FASTAPI_URL}/health`),
+      check(WEB_URL, { signal: AbortSignal.timeout(2_000) }),
+      handshake(sharedKey),
     ]);
 
     if (fastapiHealth && !announced.fastapiHealth) {
       announced.fastapiHealth = true;
-      process.stdout.write("[uniride-local] optimizer /health: UP\n");
+      write("[uniride-local] optimizer /health: UP\n");
     }
     if (web && !announced.webListener) {
       announced.webListener = true;
-      process.stdout.write("[uniride-local] next web listener: UP\n");
+      write("[uniride-local] next web listener: UP\n");
     }
-    if (handshake && !announced.handshake) {
+    if (handshakeOk && !announced.handshake) {
       announced.handshake = true;
-      process.stdout.write(
-        "[uniride-local] optimizer internal readiness handshake: UP\n",
-      );
-      process.stdout.write(
-        "[uniride-local] both services running. Press Ctrl+C to stop.\n",
-      );
+      write("[uniride-local] optimizer internal readiness handshake: UP\n");
+    }
+    if (allServicesReady({ fastapiHealth, webListener: web, handshake: handshakeOk })) {
+      write("[uniride-local] both services running. Press Ctrl+C to stop.\n");
       return;
     }
 
-    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
   }
+}
+
+function defaultKillEntry(entry, force) {
+  const args = treeKillArgs(entry.proc.pid);
+  if (args) {
+    spawn("taskkill", args, { stdio: "ignore" });
+    return;
+  }
+  try {
+    entry.proc.kill(force ? "SIGKILL" : "SIGTERM");
+  } catch {
+    // ignore
+  }
+}
+
+export function terminateChildren(children, force, killEntry = defaultKillEntry) {
+  for (const entry of children) {
+    if (entry.exited) {
+      continue;
+    }
+    killEntry(entry, force);
+  }
+}
+
+export function startStack(options, deps = {}) {
+  const spawnFn = deps.spawnFn ?? spawn;
+  const killEntry = deps.killEntry ?? defaultKillEntry;
+  const children = [];
+
+  const pythonProc = spawnFn(
+    options.pythonBin,
+    pythonCommand(options.pythonBin).args,
+    {
+      cwd: path.join(options.rootDir, "optimizer_api"),
+      env: buildChildEnv(process.env, options.shared.key),
+      stdio: "inherit",
+    },
+  );
+  const python = { proc: pythonProc, exited: false };
+  children.push(python);
+  pythonProc.on("error", options.onError);
+  pythonProc.on("exit", options.onUnexpectedExit("optimizer API", python));
+
+  let webProc;
+  try {
+    webProc = spawnFn(
+      options.web.shell
+        ? [options.web.command, ...options.web.args].join(" ")
+        : options.web.command,
+      options.web.shell ? [] : options.web.args,
+      {
+        cwd: options.rootDir,
+        env: buildChildEnv(process.env, options.shared.key),
+        stdio: "inherit",
+        shell: Boolean(options.web.shell),
+      },
+    );
+  } catch (error) {
+    terminateChildren(children, true, killEntry);
+    throw error;
+  }
+  const webEntry = { proc: webProc, exited: false };
+  children.push(webEntry);
+  webEntry.proc.on("error", options.onError);
+  webEntry.proc.on("exit", options.onUnexpectedExit("next web", webEntry));
+
+  return children;
 }
 
 async function main() {
@@ -336,35 +415,16 @@ async function main() {
     return;
   }
 
-  const children = [];
   let shuttingDown = false;
-
-  function terminateChildren(force) {
-    for (const entry of children) {
-      if (entry.exited) {
-        continue;
-      }
-      const args = treeKillArgs(entry.proc.pid);
-      if (args) {
-        spawn("taskkill", args, { stdio: "ignore" });
-      } else {
-        try {
-          entry.proc.kill(force ? "SIGKILL" : "SIGTERM");
-        } catch {
-          // ignore
-        }
-      }
-    }
-  }
 
   function shutdown(code) {
     if (shuttingDown) {
       return;
     }
     shuttingDown = true;
-    terminateChildren(false);
+    terminateChildren(children, false);
     setTimeout(() => {
-      terminateChildren(true);
+      terminateChildren(children, true);
       process.exit(code);
     }, 3_000);
   }
@@ -385,34 +445,14 @@ async function main() {
     };
   }
 
-  const python = {
-    proc: spawn(pythonBin, pythonCommand(pythonBin).args, {
-      cwd: path.join(rootDir, "optimizer_api"),
-      env: buildChildEnv(process.env, shared.key),
-      stdio: "inherit",
-    }),
-    exited: false,
-  };
-  children.push(python);
-  python.proc.on("error", () => shutdown(1));
-  python.proc.on("exit", onUnexpectedExit("optimizer API", python));
-
-  const webEntry = {
-    proc: spawn(
-      web.shell ? [web.command, ...web.args].join(" ") : web.command,
-      web.shell ? [] : web.args,
-      {
-        cwd: rootDir,
-        env: buildChildEnv(process.env, shared.key),
-        stdio: "inherit",
-        shell: Boolean(web.shell),
-      },
-    ),
-    exited: false,
-  };
-  children.push(webEntry);
-  webEntry.proc.on("error", () => shutdown(1));
-  webEntry.proc.on("exit", onUnexpectedExit("next web", webEntry));
+  const children = startStack({
+    pythonBin,
+    web,
+    rootDir,
+    shared,
+    onError: () => shutdown(1),
+    onUnexpectedExit,
+  });
 
   await waitForServices(shared.key);
 }

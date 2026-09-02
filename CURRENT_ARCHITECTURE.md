@@ -1,8 +1,8 @@
 # UniRide Current Architecture
 
-**Verified documentation snapshot:** 2026-08-25
+**Verified documentation snapshot:** 2026-09-02
 **Historical verification evidence:** 2026-08-24 remediation derived from `fef5a2b537da7068b51b3b3a50c6d633a2853404`
-**Latest scoped verification:** Dudullu Package 1 on `codex/dudullu-daily-planner-20260825`, based on `origin/WIP` `60161adeb81b18b3798a9e0c2024163cabf63e50`, with code through `6ef36591215331bcd51b33a0f6f6508c62862702`
+**Latest scoped verification:** Dudullu Package 0 code gate on `codex/dudullu-package0-readiness-20260901` at `d983375d0307fa6b2ee7a995de9cbfa15fbf20e1`; live aggregate gate `BLOCKED-CONFIG`
 
 This describes current, verified boundaries. It is not a production-readiness claim. When this document conflicts with live code or executable tests, those sources win.
 
@@ -45,6 +45,8 @@ The admin route-test workflow calls the authenticated same-origin `/api/optimize
 - `/optimize` and `/compare` results pass through the Package A feasibility certificate; a result is successful only when it is solver-successful **and** `feasibility_certificate.is_feasible`. Failed/infeasible/uncertified/timed-out results are never ranked. Best/fastest ranking is deterministic (duration, vehicles, canonical name / execution seconds, canonical name).
 - `/compare` deduplicates aliases, runs at most `max_workers` (2) canonical workers, and applies one 120-second **soft** response deadline via `concurrent.futures.wait`. Pending futures are not waited on and the executor shuts down with `wait=False`; running threads may continue, so Package B is **not** hard cancellation.
 - Exact/permutation requests with more than ten waypoints fail fast before the solver method is invoked (`ExactTSPSizeError` in `uniride_core/algorithms/string_exact_tsp.py`; router preflight for `optimize`, `compare`, and `_run_single_algorithm`), with the same sanitized unsuccessful shape used when a solver produces no valid result.
+- Dudullu Package 0 adds protected FastAPI `GET /api/v1/internal/readiness` for key handshake and `POST /api/v1/internal/readiness/time-matrix` for a redacted required-location matrix summary. The admin-only Next.js `GET /api/admin/dudullu-readiness` BFF reads narrow Supabase projections, calls the protected matrix endpoint through `optimizerFetch`, strictly reconstructs the allowlisted aggregate, and returns `Cache-Control: private, no-store`. It does not solve or mutate routes.
+- `npm run dev:dudullu` is the local foreground launcher. It shares one in-memory internal key with both children, requires FastAPI health, the protected handshake, and the Next.js listener in the same poll before announcing readiness, and tears down both child trees when one exits. `--check-only` validates configuration without starting services.
 
 ### Academic path
 
@@ -76,6 +78,7 @@ Bildiri legacy solver material has a canonical-core boundary and archive/manifes
 | Exact TSP | >10-waypoint exact/permutation requests fail fast without truncation and never invoke the solver | applies to the canonical permutation_tsp/exact paths; other solver limits unchanged |
 | Server-only transport | heavy Next.js calls route through server-only `optimizerFetch`; browser boundary test blocks the internal key from client code | browser-facing pages depend on BFF routes continuing to enforce the boundary |
 | Dudullu daily demand domain | pure TypeScript schedule filtering, separate pickup/dropoff occurrences, hourly waves with exact anchors, inclusive previous-day 22:00 `Europe/Istanbul` admission, exception/lead handling, and shift-eligibility precheck are covered by `src/services/daily-planning.test.ts`; final hardening fails closed on out-of-day anchors, blank identities, invalid runtime directions, and malformed source demands, with boundary-first same-wave ordering | no database/API/UI integration, no live-data verification, no optimizer/matrix binding, no full depot-chain timing, no physical-fleet assignment, and no publication |
+| Dudullu Package 0 runtime boundary | protected FastAPI readiness routes, pure redacted analyzer, admin-only BFF, strict aggregate schemas, no-store responses, one-command local launcher, and child-process lifecycle are test-gated | 2026-09-02 aggregate gate is `BLOCKED-CONFIG`; no administrator bearer token was available, so current Supabase/matrix/fleet readiness is unverified |
 
 ## 4. Open production boundaries
 
@@ -88,7 +91,7 @@ These are not closed by test count, a build pass, or documentation updates:
 5. **Frontend resilience.** State consolidation, cancellation/timeouts, polling, error handling, and the 158 lint warnings need focused work.
 6. **GIS.** There is no current route-geometry contract or GIS renderer. Existing route lists and locations are not a map implementation.
 7. **Dependency security.** The last recorded `npm audit --omit=dev --json` reported 84 unresolved findings (2 critical, 22 high, 59 moderate, 1 low); that count was not refreshed on 2026-08-24.
-8. **Dudullu daily operations.** Package 1 is a pure, tested demand/slot boundary only. Package 0 must verify live runtime/data readiness (including rather than assuming any historical 28-record import). Package 2 must provide an authenticated preview API, authoritative matrix ID/version/hash, independent used-arc checks, full depot-to-depot timing including the closing arc, and two-stage day-level physical-fleet assignment with truthful shortage/non-publishable semantics. Package 3 requires transactional versioned multi-wave publication and RLS; Package 4 owns admin/student workflows; Package 5 needs certified cross-wave before/after re-solves and lexicographic fleet-first savings; Package 6 is pilot/operations. No automatic student shifting or unverified savings claim is allowed.
+8. **Dudullu daily operations.** Package 1 is the pure, tested demand/slot boundary. Package 0 implementation is code-gated, but its live aggregate gate is `BLOCKED-CONFIG` until an administrator token is available; historical 28-student/29-node material is not current evidence. Package 2 remains blocked and must provide an authenticated preview API, authoritative matrix ID/version/hash, independent used-arc checks, full depot-to-depot timing including the closing arc, and two-stage day-level physical-fleet assignment with truthful shortage/non-publishable semantics. Package 3 requires transactional versioned multi-wave publication and RLS; Package 4 owns admin/student workflows; Package 5 needs certified cross-wave before/after re-solves and lexicographic fleet-first savings; Package 6 is pilot/operations. No automatic student shifting or unverified savings claim is allowed.
 
 ## 5. Solver and matrix contract
 
@@ -125,5 +128,13 @@ passed `daily-planning` (**1 file / 32 tests**) and the six named regression
 files (**6 files / 19 tests**), `npm run typecheck` (**0 errors**), `npm run
 lint` (**0 errors / 158 warnings**), and `git diff --check`. This is not a
 current live-data or production-operation verification.
+
+On 2026-09-02, Package 0 at `d983375` passed launcher **20/20**, focused
+readiness Vitest **2 files / 43 tests**, focused FastAPI readiness **25 tests**,
+TypeScript, and quiet lint. The local FastAPI health and Next.js listener both
+returned HTTP 200. The authenticated BFF returned HTTP 401 because no
+administrator bearer token was available, so the live aggregate state is
+`BLOCKED-CONFIG`; no current student, matrix, driver, or vehicle count is
+verified. See [docs/DUDULLU_RUNTIME_READINESS.md](docs/DUDULLU_RUNTIME_READINESS.md).
 
 See [UniRide_Ultimate_Audit.md](UniRide_Ultimate_Audit.md) for qualifications, [ACTIVE_ROADMAP.md](ACTIVE_ROADMAP.md) for priority, and [NEXT_PHASE_EXECUTION_ROADMAP.md](NEXT_PHASE_EXECUTION_ROADMAP.md) for bounded future handoffs.

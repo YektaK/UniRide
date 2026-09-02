@@ -1,8 +1,8 @@
 # UniRide Active Roadmap
 
-**Authoritative planning snapshot:** 2026-08-25
+**Authoritative planning snapshot:** 2026-09-02
 **Historical verification evidence:** 2026-08-24 remediation derived from `fef5a2b537da7068b51b3b3a50c6d633a2853404`
-**Latest scoped verification:** Dudullu Package 1 on `codex/dudullu-daily-planner-20260825`, based on `origin/WIP` `60161adeb81b18b3798a9e0c2024163cabf63e50`, with code through `6ef36591215331bcd51b33a0f6f6508c62862702`
+**Latest scoped verification:** Dudullu Package 0 code gate on `codex/dudullu-package0-readiness-20260901` at `d983375d0307fa6b2ee7a995de9cbfa15fbf20e1`; live aggregate gate `BLOCKED-CONFIG`
 
 This is the current priority order. Detailed agent handoffs, gates, and model preferences live in [NEXT_PHASE_EXECUTION_ROADMAP.md](NEXT_PHASE_EXECUTION_ROADMAP.md).
 
@@ -38,16 +38,19 @@ The 2026-08-24 remediation branch passed full Python discovery with **3,355 pass
 
 ## Dudullu daily operations planner — ordered delivery packages
 
-**Status:** Package 1 is complete as a pure domain foundation on
-`codex/dudullu-daily-planner-20260825` at implementation commit
-`6ef36591215331bcd51b33a0f6f6508c62862702`. It is not an operational product
-or a verification that 28 current live records exist. The historical
-approximately-28 schedule claim remains a runtime/data-readiness question.
+**Status:** Package 1 remains complete as a pure domain foundation. Package 0's
+launcher, protected matrix-readiness endpoint, redacted analyzer, and
+authenticated admin BFF are implemented and test-gated on
+`codex/dudullu-package0-readiness-20260901` at `d983375`. The 2026-09-02 live
+attempt started both services, but the aggregate request correctly returned
+HTTP 401 because no administrator access token was available. Package 0 is
+therefore `BLOCKED-CONFIG`, not `PASS`; no current 28-student or 29-node claim
+is verified.
 
-1. **Package 0 — runtime and data readiness (open; prerequisite for product work).**
-   Read the live Dudullu schedule, location, vehicle, driver, and matrix data
-   without mutation; verify current access, identity mapping, and the actual
-   record count. Do not infer present data from archived imports.
+1. **Package 0 — runtime and data readiness (implementation complete; live gate `BLOCKED-CONFIG`).**
+   Code and focused tests are green. Rerun the admin-only, read-only aggregate
+   endpoint with a valid administrator bearer token. Do not infer present data
+   from archived imports or bypass authentication.
 2. **Package 1 — pure Dudullu demand and slot domain (complete on this feature branch).**
    `src/services/daily-planning.ts` handles schedule filtering, independent
    pickup/dropoff legs, exact anchors within hourly waves, inclusive
@@ -57,8 +60,10 @@ approximately-28 schedule claim remains a runtime/data-readiness question.
    saving or move a student automatically. Final fail-closed hardening rejects
    out-of-day anchors, blank identities, invalid runtime directions, and
    malformed source demands; same-wave demand order is boundary-first.
-3. **Package 2 — preview planning and physical-fleet truthfulness (next).**
-   After Package 0 evidence and a separately approved plan, add an
+3. **Package 2 — preview planning and physical-fleet truthfulness (blocked on Package 0 live evidence).**
+   After remediating any returned reason codes, require a rerun that reaches
+   Package 0 `PASS`. Then, with a separately approved plan, add an
+
    authenticated admin preview API, bind each call to an authoritative matrix
    ID/version/hash, independently validate every used arc, calculate complete
    depot-to-depot timing including the closing arc, and perform two-stage
@@ -92,12 +97,20 @@ the pure domain boundary only. They do not verify runtime credentials, current
 Supabase data, a 28-record dataset, optimization, matrix provenance, timing,
 fleet availability, publication, or operational readiness.
 
-**Exact next recommended task:** create and approve the Package 2 plan only
-after completing Package 0's read-only runtime/data-readiness evidence. Its
-first implementation slice should be the authenticated admin preview contract
-with authoritative matrix artifact binding and used-arc validation. Do not
-start UI, database publication, automatic student shifting, or savings claims
-ahead of those gates.
+**Package 0 code gate and live attempt (2026-09-02):** launcher tests passed
+**20/20**; focused readiness Vitest passed **2 files / 43 tests**; focused
+FastAPI readiness passed **25 tests**; TypeScript and quiet lint passed. A live
+attempt observed FastAPI `/health` HTTP 200 and the Next.js listener HTTP 200.
+The admin BFF returned HTTP 401 without a bearer token, so no aggregate report
+or current data counts were captured. Evidence is recorded in
+[`docs/DUDULLU_RUNTIME_READINESS.md`](docs/DUDULLU_RUNTIME_READINESS.md).
+
+**Exact next recommended task:** obtain a valid administrator access token in
+the local credential-bearing environment and rerun the read-only
+`GET /api/admin/dudullu-readiness` gate. If it returns `ready:false`, remediate
+only the fixed aggregate reason codes and rerun. Create the Package 2 plan only
+after Package 0 reaches `PASS`. Do not start UI, publication, automatic student
+shifting, or savings claims ahead of that gate.
 
 ## Priority 1 — Feasibility governance and extension
 

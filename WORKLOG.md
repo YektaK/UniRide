@@ -2,6 +2,36 @@
 
 This is a curated chronology. It records verified work and does not turn archived reports or agent assertions into current truth.
 
+
+## 2026-09-02 — Dudullu Package 0 implemented; live aggregate gate blocked by admin authentication
+
+**Scope and commit.** Package 0 was verified on
+`codex/dudullu-package0-readiness-20260901` at
+`d983375d0307fa6b2ee7a995de9cbfa15fbf20e1`. The code adds protected FastAPI
+readiness routes, a pure redacted inventory analyzer, an administrator-only
+Next.js BFF, and the dependency-free `npm run dev:dudullu` launcher. No solver,
+publication, schema-migration, or administrator UI behavior was added.
+
+**Independent verification.** A fresh CodeGraph index covered 686 files. The
+launcher suite passed **20/20**; focused readiness Vitest passed **2 files / 43
+tests**; focused FastAPI readiness passed **25 tests**; TypeScript and quiet
+lint passed. A live attempt using existing ignored credentials only through the
+child-process environment observed FastAPI `/health` HTTP 200 and the Next.js
+listener HTTP 200. Temporary process trees were then terminated and ports 8000
+and 9002 were verified free.
+
+**Honest gate state.** No administrator access token was available in the local
+environment or connected browser session. The admin BFF correctly returned
+HTTP 401, so no aggregate report was produced and Package 0 is
+`BLOCKED-CONFIG`, not `PASS`. Current Dudullu student counts, the historical
+28-student/29-node comparisons, schedule/profile integrity, configured drivers,
+usable active vehicles, and required directed matrix arcs remain unverified.
+Package 2 stays blocked. Full redacted evidence and the exact follow-up are in
+[docs/DUDULLU_RUNTIME_READINESS.md](docs/DUDULLU_RUNTIME_READINESS.md).
+
+**Safety.** The live attempt was read-only. No Supabase or matrix data was
+mutated; no identity, token, key, location-code list, or raw provider error was
+recorded or committed.
 ## 2026-08-25 — Dudullu daily demand-domain foundation verified
 
 **Scope and branch.** Package 1 was verified on

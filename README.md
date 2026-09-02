@@ -22,6 +22,8 @@ The latest verification was run on 2026-08-24 against the remediation working tr
 
 UniRide is still experimental. The passing build and test gates do **not** close the remaining hard solver cancellation, process isolation, durable-job, distributed rate-limit storage, matrix-provenance, GIS, lint-warning, or dependency-security boundaries. Read [ACTIVE_ROADMAP.md](ACTIVE_ROADMAP.md) before planning work.
 
+The Dudullu Package 0 launcher and redacted readiness boundaries are implemented and test-gated at `d983375`, but the 2026-09-02 live aggregate gate is **`BLOCKED-CONFIG`** because no administrator access token was available. Current student, matrix, driver, and vehicle readiness is not verified. See [Dudullu runtime readiness evidence](docs/DUDULLU_RUNTIME_READINESS.md).
+
 ## Repository map
 
 | Path | Responsibility |
@@ -88,9 +90,10 @@ Keep local values outside version control. Never put credential values in docume
 | `APP_ENV` | FastAPI | runtime environment name; `production` forbids disabling auth |
 | `ALLOW_PUBLIC_BIND` | FastAPI | explicit `1` opt-in required for a non-loopback optimizer bind |
 | `OPTIMIZER_PORT` | FastAPI | optimizer service port |
+| `UNIRIDE_PYTHON` | local launcher | optional Python interpreter path used by `npm run dev:dudullu`; otherwise the launcher checks the repository `.venv` and then `PATH` |
 | `TIME_MATRIX_CACHE_TTL_SECONDS` | FastAPI | production matrix-cache lifetime |
 | `TIME_MATRIX_PROVIDER_TIMEOUT_SECONDS` | FastAPI | travel-time provider timeout |
-| `INTERNAL_API_KEY` | FastAPI | required production compute boundary key for `POST /api/v1/optimize`, `POST /api/v1/compare`, and `POST /api/v1/vehicle-calculator`; never log, return, or expose it |
+| `INTERNAL_API_KEY` | FastAPI | required key for the three production compute endpoints plus protected `GET /api/v1/internal/readiness` and `POST /api/v1/internal/readiness/time-matrix`; never log, return, or expose it |
 | `OPTIMIZER_INTERNAL_API_KEY` | Next.js server only | server-only FastAPI internal key for `optimizerFetch`; set to the same secret value as `INTERNAL_API_KEY`; never expose through a `NEXT_PUBLIC_*` variable |
 | `UNIRIDE_DISABLE_AUTH` | FastAPI local/test only | explicit `1` opt-out for loopback/local/test development; a startup error when `APP_ENV=production`; never set in production |
 | `UNIRIDE_TENANT_KEYS` | FastAPI server only | optional JSON object mapping a non-empty tenant ID to a unique secret; `internal` is reserved and tenant secrets cannot reuse `INTERNAL_API_KEY` |
@@ -118,7 +121,19 @@ The admin route-test page uses the authenticated same-origin `/api/optimize-rout
 
 ## Run locally
 
-Start the FastAPI service after configuring `INTERNAL_API_KEY` with a secret local value. For an explicit loopback/local-development-only opt-out, set `UNIRIDE_DISABLE_AUTH=1`; never use that opt-out in production:
+The one-command Dudullu launcher is implemented and code-gated. It shares one internal key with both child processes, starts FastAPI and Next.js, and requires FastAPI health, the protected internal handshake, and the web listener before announcing readiness. The authenticated live inventory gate remains `BLOCKED-CONFIG` until an administrator bearer token is available; startup success is not a claim that current operational data is ready.
+
+```powershell
+npm run dev:dudullu
+```
+
+Validate interpreter, internal-key compatibility, and the web runner without starting either service:
+
+```powershell
+npm run dev:dudullu -- --check-only
+```
+
+For troubleshooting only, start the services separately in two terminals:
 
 ```powershell
 Push-Location optimizer_api
@@ -126,11 +141,12 @@ python main.py
 Pop-Location
 ```
 
-Start the web application:
-
 ```powershell
 npm run dev
 ```
+
+Configure matching `INTERNAL_API_KEY` and `OPTIMIZER_INTERNAL_API_KEY` values when starting separately, or let the combined launcher provide an in-memory ephemeral key. Never use `UNIRIDE_DISABLE_AUTH=1` in production.
+
 
 Run academic CLI/help through the package entry point:
 

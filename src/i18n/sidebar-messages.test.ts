@@ -65,7 +65,8 @@ describe("sidebar message catalog contract", () => {
   });
 
   it("collects the current menu and logout keys", () => {
-    expect(sidebarKeys).toHaveLength(22);
+    expect(sidebarKeys).toHaveLength(23);
+    expect(sidebarKeys).toContain("dudulluReadiness");
     expect(sidebarKeys).toContain("sandbox");
     expect(sidebarKeys).toContain("logout");
   });

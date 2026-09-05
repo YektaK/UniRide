@@ -45,6 +45,7 @@
       "rideRequests": "Ride Requests",
       "driverAssignments": "Driver Assignments",
       "vehiclePlanning": "Vehicle Planning",
+      "dudulluReadiness": "Dudullu Readiness",
       "sandbox": "Planning Sandbox",
       "algorithmCompare": "Algorithm Comparison",
       "benchmarkSuite": "Benchmark Suite",
@@ -224,6 +225,40 @@
       }
     },
     "admin": {
+      "readiness": {
+        "title": "Dudullu Planning Readiness",
+        "description": "Verify the Dudullu data and configuration required before planning.",
+        "loading": "Loading readiness report...",
+        "refresh": "Refresh",
+        "boolean": { "yes": "Yes", "no": "No" },
+        "errors": {
+          "authorization": "Administrator session could not be verified. Please sign in again.",
+          "configuration": "The readiness report could not be retrieved. Check local services and configuration, then try again."
+        },
+        "labels": {
+          "activeVehicles": "Active vehicles", "allAccounts": "All accounts", "completeTargetProfiles": "Complete target profiles",
+          "configuredDrivers": "Configured drivers", "dudulluTarget": "Dudullu target", "expectedArcCount": "Expected arc count",
+          "expectedMatrixNodes": "Expected matrix nodes", "expectedStudents": "Expected students", "matrixLocationCount": "Matrix location count",
+          "matrixSource": "Matrix source", "matchesMatrix": "Matches matrix", "matchesStudents": "Matches students",
+          "requiredLocationCount": "Required location count", "scheduleEmpty": "Empty schedules", "scheduleMalformed": "Malformed schedules",
+          "scheduleTotal": "Total schedules", "unclassifiedSchedule": "Unclassified schedules", "usableActiveVehicles": "Usable active vehicles",
+          "validArcCount": "Valid arc count"
+        },
+        "matrixSources": { "coordinates": "Coordinates", "empty": "No matrix data", "supabase": "Supabase" },
+        "reasons": {
+          "matrix_incomplete": "The matrix does not contain all required travel arcs.",
+          "matrix_location_mismatch": "The matrix location count does not match the required locations.",
+          "matrix_stale": "The matrix is stale and must be refreshed.", "matrix_unavailable": "The travel-time matrix is unavailable.",
+          "no_configured_driver": "No driver is configured for the target fleet.", "no_dudullu_students": "No Dudullu students were found.",
+          "no_usable_active_vehicle": "No usable active vehicle is available.", "schedule_classification_incomplete": "Some schedules could not be classified.",
+          "schedule_data_invalid": "Schedule data is invalid.", "target_profile_incomplete": "One or more target student profiles are incomplete."
+        },
+        "sections": { "fleet": "Fleet", "historical": "Historical checks", "matrix": "Travel-time matrix", "schedules": "Schedules", "students": "Students" },
+        "status": {
+          "passTitle": "PASS — Ready for planning", "blockedDataTitle": "BLOCKED-DATA — Data correction required",
+          "blockedConfigTitle": "BLOCKED-CONFIG — Configuration or service issue"
+        }
+      },
       "benchmark": {
         "title": "Benchmark Suite",
         "description": "Run algorithm comparison tests on TSPLIB standard datasets. Measure quality and performance systematically.",

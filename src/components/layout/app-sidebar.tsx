@@ -34,6 +34,7 @@ import {
   Cpu,
   FlaskConical,
   BarChart3,
+  Activity,
 } from "lucide-react";
 import { Button } from "../ui/button";
 
@@ -56,6 +57,7 @@ const adminMenuItems = [
   { href: "/admin/ride-requests", labelKey: "rideRequests", icon: ShieldAlert },
   { href: "/admin/drivers", labelKey: "driverAssignments", icon: Users },
   { href: "/admin/vehicle-planning", labelKey: "vehiclePlanning", icon: Route },
+  { href: "/admin/readiness", labelKey: "dudulluReadiness", icon: Activity },
   { href: "/admin/sandbox", labelKey: "sandbox", icon: FlaskConical },
   { href: "/admin/compare", labelKey: "algorithmCompare", icon: Cpu },
   { href: "/admin/benchmark", labelKey: "benchmarkSuite", icon: BarChart3 },

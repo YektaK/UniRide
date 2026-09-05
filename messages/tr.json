@@ -45,6 +45,7 @@
       "rideRequests": "Servis Talepleri",
       "driverAssignments": "Şoför Görevlendirmeleri",
       "vehiclePlanning": "Araç Planlama",
+      "dudulluReadiness": "Dudullu Hazırlık Durumu",
       "sandbox": "Planlama Simülasyonu",
       "algorithmCompare": "Algoritma Karşılaştırma",
       "benchmarkSuite": "Benchmark Suite",
@@ -224,6 +225,40 @@
       }
     },
     "admin": {
+      "readiness": {
+        "title": "Dudullu Planlama Hazırlığı",
+        "description": "Planlamadan önce gerekli Dudullu veri ve yapılandırmasını doğrulayın.",
+        "loading": "Hazırlık raporu yükleniyor...",
+        "refresh": "Yenile",
+        "boolean": { "yes": "Evet", "no": "Hayır" },
+        "errors": {
+          "authorization": "Yönetici oturumu doğrulanamadı. Yeniden giriş yapın.",
+          "configuration": "Hazırlık raporu alınamadı. Yerel servisleri ve yapılandırmayı kontrol edip yeniden deneyin."
+        },
+        "labels": {
+          "activeVehicles": "Aktif araçlar", "allAccounts": "Tüm hesaplar", "completeTargetProfiles": "Tam hedef profilleri",
+          "configuredDrivers": "Yapılandırılmış şoförler", "dudulluTarget": "Dudullu hedefi", "expectedArcCount": "Beklenen yay sayısı",
+          "expectedMatrixNodes": "Beklenen matris düğümleri", "expectedStudents": "Beklenen öğrenci sayısı", "matrixLocationCount": "Matris konum sayısı",
+          "matrixSource": "Matris kaynağı", "matchesMatrix": "Matrisle eşleşiyor", "matchesStudents": "Öğrencilerle eşleşiyor",
+          "requiredLocationCount": "Gerekli konum sayısı", "scheduleEmpty": "Boş ders programları", "scheduleMalformed": "Hatalı ders programları",
+          "scheduleTotal": "Toplam ders programı", "unclassifiedSchedule": "Sınıflandırılmamış ders programları", "usableActiveVehicles": "Kullanılabilir aktif araçlar",
+          "validArcCount": "Geçerli yay sayısı"
+        },
+        "matrixSources": { "coordinates": "Koordinatlar", "empty": "Matris verisi yok", "supabase": "Supabase" },
+        "reasons": {
+          "matrix_incomplete": "Matris gerekli tüm yolculuk yaylarını içermiyor.",
+          "matrix_location_mismatch": "Matris konum sayısı gerekli konumlarla eşleşmiyor.",
+          "matrix_stale": "Matris güncel değil ve yenilenmelidir.", "matrix_unavailable": "Seyahat süresi matrisi kullanılamıyor.",
+          "no_configured_driver": "Hedef filo için yapılandırılmış şoför yok.", "no_dudullu_students": "Dudullu öğrencisi bulunamadı.",
+          "no_usable_active_vehicle": "Kullanılabilir aktif araç yok.", "schedule_classification_incomplete": "Bazı ders programları sınıflandırılamadı.",
+          "schedule_data_invalid": "Ders programı verisi geçersiz.", "target_profile_incomplete": "Bir veya daha fazla hedef öğrenci profili eksik."
+        },
+        "sections": { "fleet": "Filo", "historical": "Geçmiş kontroller", "matrix": "Seyahat süresi matrisi", "schedules": "Ders programları", "students": "Öğrenciler" },
+        "status": {
+          "passTitle": "PASS — Planlamaya hazır", "blockedDataTitle": "BLOCKED-DATA — Veri düzeltmesi gerekli",
+          "blockedConfigTitle": "BLOCKED-CONFIG — Yapılandırma veya servis sorunu"
+        }
+      },
       "benchmark": {
         "title": "Benchmark Suite",
         "description": "TSPLIB standart veri setleri üzerinde algoritma karşılaştırma testleri çalıştırın. Sistematik benchmark ile algoritmaların kalite ve performansını ölçün.",

@@ -5,6 +5,7 @@ import type { User } from "@/types";
 import type { ReactNode } from "react";
 import React, { createContext, useState, useEffect } from "react";
 import { signIn, signOutUser, onAuthStateChange } from "@/lib/supabase-auth";
+import { clearAuthTokenCache } from "@/lib/admin-api";
 
 interface AuthContextType {
   user: User | null;
@@ -23,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Listen to Supabase Auth state changes
     const unsubscribe = onAuthStateChange((user) => {
+      clearAuthTokenCache();
       setUser(user);
       setIsLoading(false);
     });
@@ -50,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       await signOutUser();
+      clearAuthTokenCache();
       setUser(null);
     } catch (error) {
       console.error("Logout error:", error);

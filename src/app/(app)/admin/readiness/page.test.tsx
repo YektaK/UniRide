@@ -75,12 +75,35 @@ describe("ReadinessPage", () => {
   });
 
   it("renders a passing aggregate readiness report", async () => {
-    mocks.getDudullu.mockResolvedValue(report);
+    mocks.getDudullu.mockResolvedValue({
+      ...report,
+      historicalExpectation: { ...report.historicalExpectation, matchesMatrixNodeCount: false },
+    });
 
     render(<ReadinessPage />);
 
     expect(await screen.findByText("status.passTitle")).toBeTruthy();
-    expect(screen.getByText("fields.allAccounts: 30")).toBeTruthy();
+    expect(screen.getByText("labels.allAccounts: 30")).toBeTruthy();
+    expect(screen.getByText("labels.dudulluTarget: 28")).toBeTruthy();
+    expect(screen.getByText("labels.completeTargetProfiles: 28")).toBeTruthy();
+    expect(screen.getByText("labels.unclassifiedSchedule: 0")).toBeTruthy();
+    expect(screen.getByText("labels.scheduleTotal: 30")).toBeTruthy();
+    expect(screen.getByText("labels.scheduleEmpty: 0")).toBeTruthy();
+    expect(screen.getByText("labels.scheduleMalformed: 0")).toBeTruthy();
+    expect(screen.getByText("labels.configuredDrivers: 2")).toBeTruthy();
+    expect(screen.getByText("labels.activeVehicles: 2")).toBeTruthy();
+    expect(screen.getByText("labels.usableActiveVehicles: 2")).toBeTruthy();
+    expect(screen.getByText("labels.matrixSource: matrixSources.supabase")).toBeTruthy();
+    expect(screen.getByText("labels.matrixLocationCount: 29")).toBeTruthy();
+    expect(screen.getByText("labels.requiredLocationCount: 29")).toBeTruthy();
+    expect(screen.getByText("labels.validArcCount: 812")).toBeTruthy();
+    expect(screen.getByText("labels.expectedArcCount: 812")).toBeTruthy();
+    expect(screen.getByText("labels.expectedStudents: 28")).toBeTruthy();
+    expect(screen.getByText("labels.expectedMatrixNodes: 29")).toBeTruthy();
+    expect(screen.getByText("labels.matchesStudents: boolean.yes")).toBeTruthy();
+    expect(screen.getByText("labels.matchesMatrix: boolean.no")).toBeTruthy();
+    expect(screen.queryByText("fields.allAccounts: 30")).toBeNull();
+    expect(screen.queryByText("values.yes")).toBeNull();
   });
 
   it("renders blocked-data reasons from a failing aggregate readiness report", async () => {
@@ -121,9 +144,12 @@ describe("ReadinessPage", () => {
 
     render(<ReadinessPage />);
 
-    const refresh = screen.getByRole("button", { name: "Yenile" });
+    expect(screen.getByText("loading")).toBeTruthy();
+    const refresh = screen.getByRole("button", { name: "refresh" });
     expect((refresh as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(refresh);
     expect(mocks.getDudullu).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("status.loading")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Yenile" })).toBeNull();
   });
 });

@@ -14,52 +14,52 @@ type ViewState =
 
 function ReadinessRows({ report }: { report: DudulluReadinessReport }) {
   const t = useTranslations("page.admin.readiness");
-  const boolean = (value: boolean) => (value ? t("values.yes") : t("values.no"));
+  const boolean = (value: boolean) => (value ? t("boolean.yes") : t("boolean.no"));
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <Card>
         <CardHeader><CardTitle>{t("sections.students")}</CardTitle></CardHeader>
         <CardContent className="space-y-1">
-          <p>{t("fields.allAccounts")}: {report.students.allAccounts}</p>
-          <p>{t("fields.dudulluTarget")}: {report.students.dudulluTarget}</p>
-          <p>{t("fields.completeTargetProfiles")}: {report.students.completeTargetProfiles}</p>
-          <p>{t("fields.unclassifiedSchedule")}: {report.students.unclassifiedSchedule}</p>
+          <p>{t("labels.allAccounts")}: {report.students.allAccounts}</p>
+          <p>{t("labels.dudulluTarget")}: {report.students.dudulluTarget}</p>
+          <p>{t("labels.completeTargetProfiles")}: {report.students.completeTargetProfiles}</p>
+          <p>{t("labels.unclassifiedSchedule")}: {report.students.unclassifiedSchedule}</p>
         </CardContent>
       </Card>
       <Card>
         <CardHeader><CardTitle>{t("sections.schedules")}</CardTitle></CardHeader>
         <CardContent className="space-y-1">
-          <p>{t("fields.total")}: {report.schedules.total}</p>
-          <p>{t("fields.empty")}: {report.schedules.empty}</p>
-          <p>{t("fields.malformed")}: {report.schedules.malformed}</p>
+          <p>{t("labels.scheduleTotal")}: {report.schedules.total}</p>
+          <p>{t("labels.scheduleEmpty")}: {report.schedules.empty}</p>
+          <p>{t("labels.scheduleMalformed")}: {report.schedules.malformed}</p>
         </CardContent>
       </Card>
       <Card>
         <CardHeader><CardTitle>{t("sections.fleet")}</CardTitle></CardHeader>
         <CardContent className="space-y-1">
-          <p>{t("fields.configuredDrivers")}: {report.fleet.configuredDrivers}</p>
-          <p>{t("fields.activeVehicles")}: {report.fleet.activeVehicles}</p>
-          <p>{t("fields.usableActiveVehicles")}: {report.fleet.usableActiveVehicles}</p>
+          <p>{t("labels.configuredDrivers")}: {report.fleet.configuredDrivers}</p>
+          <p>{t("labels.activeVehicles")}: {report.fleet.activeVehicles}</p>
+          <p>{t("labels.usableActiveVehicles")}: {report.fleet.usableActiveVehicles}</p>
         </CardContent>
       </Card>
       <Card>
         <CardHeader><CardTitle>{t("sections.matrix")}</CardTitle></CardHeader>
         <CardContent className="space-y-1">
-          <p>{t("fields.source")}: {report.matrix.source}</p>
-          <p>{t("fields.matrixLocationCount")}: {report.matrix.matrixLocationCount}</p>
-          <p>{t("fields.requiredLocationCount")}: {report.matrix.requiredLocationCount}</p>
-          <p>{t("fields.validRequiredDirectedArcCount")}: {report.matrix.validRequiredDirectedArcCount}</p>
-          <p>{t("fields.expectedRequiredDirectedArcCount")}: {report.matrix.expectedRequiredDirectedArcCount}</p>
+          <p>{t("labels.matrixSource")}: {t(`matrixSources.${report.matrix.source}`)}</p>
+          <p>{t("labels.matrixLocationCount")}: {report.matrix.matrixLocationCount}</p>
+          <p>{t("labels.requiredLocationCount")}: {report.matrix.requiredLocationCount}</p>
+          <p>{t("labels.validArcCount")}: {report.matrix.validRequiredDirectedArcCount}</p>
+          <p>{t("labels.expectedArcCount")}: {report.matrix.expectedRequiredDirectedArcCount}</p>
         </CardContent>
       </Card>
       <Card className="md:col-span-2">
         <CardHeader><CardTitle>{t("sections.historical")}</CardTitle></CardHeader>
         <CardContent className="space-y-1">
-          <p>{t("fields.expectedStudents")}: {report.historicalExpectation.studentCount}</p>
-          <p>{t("fields.expectedMatrixNodes")}: {report.historicalExpectation.matrixNodeCount}</p>
-          <p>{t("fields.matchesStudentCount")}: {boolean(report.historicalExpectation.matchesStudentCount)}</p>
-          <p>{t("fields.matchesMatrixNodeCount")}: {boolean(report.historicalExpectation.matchesMatrixNodeCount)}</p>
+          <p>{t("labels.expectedStudents")}: {report.historicalExpectation.studentCount}</p>
+          <p>{t("labels.expectedMatrixNodes")}: {report.historicalExpectation.matrixNodeCount}</p>
+          <p>{t("labels.matchesStudents")}: {boolean(report.historicalExpectation.matchesStudentCount)}</p>
+          <p>{t("labels.matchesMatrix")}: {boolean(report.historicalExpectation.matchesMatrixNodeCount)}</p>
         </CardContent>
       </Card>
     </div>
@@ -72,29 +72,34 @@ export default function ReadinessPage() {
   const requestInFlight = useRef(false);
   const mounted = useRef(false);
 
-  const load = async () => {
+  const load = () => {
     if (requestInFlight.current) return;
 
     requestInFlight.current = true;
-    setView({ kind: "loading" });
-    try {
-      const report = await adminApi.readiness.getDudullu();
-      if (mounted.current) setView({ kind: "report", report });
-    } catch (error) {
-      const kind = error instanceof DudulluReadinessRequestError ? error.kind : "configuration";
-      if (mounted.current) setView({ kind: "error", error: kind });
-    } finally {
-      requestInFlight.current = false;
-    }
+    void adminApi.readiness.getDudullu()
+      .then((report) => {
+        if (mounted.current) setView({ kind: "report", report });
+      })
+      .catch((error: unknown) => {
+        const kind = error instanceof DudulluReadinessRequestError ? error.kind : "configuration";
+        if (mounted.current) setView({ kind: "error", error: kind });
+      })
+      .finally(() => {
+        requestInFlight.current = false;
+      });
   };
 
   useEffect(() => {
     mounted.current = true;
-    void load();
+    load();
     return () => { mounted.current = false; };
   }, []);
 
   const loading = view.kind === "loading";
+  const refresh = () => {
+    setView({ kind: "loading" });
+    load();
+  };
 
   return (
     <div className="space-y-6" aria-live="polite">
@@ -103,10 +108,10 @@ export default function ReadinessPage() {
           <h1 className="text-2xl font-semibold">{t("title")}</h1>
           <p className="text-muted-foreground">{t("description")}</p>
         </div>
-        <Button onClick={() => void load()} disabled={loading}>Yenile</Button>
+        <Button onClick={refresh} disabled={loading}>{t("refresh")}</Button>
       </div>
 
-      {loading && <Card><CardContent className="p-6">{t("status.loading")}</CardContent></Card>}
+      {loading && <Card><CardContent className="p-6">{t("loading")}</CardContent></Card>}
       {view.kind === "error" && <Card><CardContent className="p-6">{t(`errors.${view.error}`)}</CardContent></Card>}
       {view.kind === "report" && (
         <>

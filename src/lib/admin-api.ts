@@ -9,6 +9,22 @@
  */
 
 import { getSupabaseClient } from "./supabase";
+import type { DudulluReadinessReport } from "@/services/dudullu-readiness";
+import { parseDudulluReadinessReport } from "@/services/dudullu-readiness-response";
+
+export class AdminApiAuthenticationError extends Error {
+  constructor() {
+    super("Not authenticated");
+    this.name = "AdminApiAuthenticationError";
+  }
+}
+
+export class DudulluReadinessRequestError extends Error {
+  constructor(public readonly kind: "authorization" | "configuration") {
+    super("Dudullu readiness request failed");
+    this.name = "DudulluReadinessRequestError";
+  }
+}
 
 // Token cache with mutex to prevent race conditions
 let cachedToken: string | null = null;
@@ -126,7 +142,7 @@ async function adminFetch(url: string, options: RequestInit = {}): Promise<Respo
   const token = await getAuthToken();
 
   if (!token) {
-    throw new Error("Not authenticated");
+    throw new AdminApiAuthenticationError();
   }
 
   return fetch(url, {
@@ -139,9 +155,43 @@ async function adminFetch(url: string, options: RequestInit = {}): Promise<Respo
   });
 }
 
+const DUDULLU_READINESS_TIMEOUT_MS = 15_000;
+
+async function getDudulluReadiness(): Promise<DudulluReadinessReport> {
+  let response: Response;
+  try {
+    response = await adminFetch("/api/admin/dudullu-readiness", {
+      method: "GET",
+      cache: "no-store",
+      signal: AbortSignal.timeout(DUDULLU_READINESS_TIMEOUT_MS),
+    });
+  } catch (error) {
+    throw new DudulluReadinessRequestError(
+      error instanceof AdminApiAuthenticationError ? "authorization" : "configuration",
+    );
+  }
+
+  if (response.status === 401 || response.status === 403) {
+    throw new DudulluReadinessRequestError("authorization");
+  }
+  if (!response.ok) {
+    throw new DudulluReadinessRequestError("configuration");
+  }
+
+  try {
+    return parseDudulluReadinessReport(await response.json());
+  } catch {
+    throw new DudulluReadinessRequestError("configuration");
+  }
+}
+
 // ==================== USERS ====================
 
 export const adminApi = {
+  readiness: {
+    getDudullu: getDudulluReadiness,
+  },
+
   users: {
     /**
      * Get all users with pagination

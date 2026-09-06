@@ -30,6 +30,14 @@ function Probe() {
   return <button onClick={() => void auth.logout()}>logout</button>;
 }
 
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((next) => {
+    resolve = next;
+  });
+  return { promise, resolve };
+}
+
 describe("AuthProvider", () => {
   afterEach(cleanup);
 
@@ -40,21 +48,25 @@ describe("AuthProvider", () => {
     mocks.clearToken.mockReset();
   });
 
-  it("clears the cache on every observed auth-state change", () => {
+  it("passes cache invalidation as the immediate auth-state hook", () => {
     render(<AuthProvider><Probe /></AuthProvider>);
-    const callback = mocks.onChange.mock.calls[0][0];
 
-    act(() => callback(null));
-
-    expect(mocks.clearToken).toHaveBeenCalledTimes(1);
+    expect(mocks.onChange).toHaveBeenCalledWith(expect.any(Function), mocks.clearToken);
   });
 
-  it("clears the cache after explicit logout", async () => {
+  it("clears before sign-out settles and again after successful logout", async () => {
+    const signOut = deferred();
+    mocks.signOut.mockReturnValue(signOut.promise);
     render(<AuthProvider><Probe /></AuthProvider>);
 
-    fireEvent.click(screen.getByRole("button", { name: "logout" }));
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "logout" }));
+    });
 
-    await waitFor(() => expect(mocks.signOut).toHaveBeenCalledTimes(1));
-    expect(mocks.clearToken).toHaveBeenCalled();
+    expect(mocks.signOut).toHaveBeenCalledTimes(1);
+    expect(mocks.clearToken).toHaveBeenCalledTimes(1);
+
+    signOut.resolve();
+    await waitFor(() => expect(mocks.clearToken).toHaveBeenCalledTimes(2));
   });
 });

@@ -30,6 +30,7 @@ export class DudulluReadinessRequestError extends Error {
 let cachedToken: string | null = null;
 let tokenPromise: Promise<string | null> | null = null;
 let tokenExpiry: number = 0;
+let tokenGeneration = 0;
 
 // Token refresh threshold (refresh if expiring within 5 minutes)
 const TOKEN_REFRESH_THRESHOLD_MS = 5 * 60 * 1000;
@@ -39,6 +40,26 @@ const TOKEN_REFRESH_THRESHOLD_MS = 5 * 60 * 1000;
  */
 function isTokenExpiring(expiresAt: number): boolean {
   return Date.now() + TOKEN_REFRESH_THRESHOLD_MS > expiresAt * 1000;
+}
+
+function cacheToken(
+  generation: number,
+  token: string,
+  expiresAt?: number,
+): string | null {
+  if (generation !== tokenGeneration) return null;
+
+  cachedToken = token;
+  tokenExpiry = expiresAt ? expiresAt * 1000 : Date.now() + 3600000;
+  return token;
+}
+
+function clearTokenForGeneration(generation: number): null {
+  if (generation === tokenGeneration) {
+    cachedToken = null;
+    tokenExpiry = 0;
+  }
+  return null;
 }
 
 /**
@@ -62,13 +83,16 @@ export async function getAuthToken(): Promise<string | null> {
   
   console.log("[AdminAPI] Starting new token fetch...");
   // Start a new token fetch
-  tokenPromise = (async () => {
+  const generation = tokenGeneration;
+  const acquisition = (async () => {
     try {
       console.log("[AdminAPI] Calling supabase.auth.getSession()...");
       // Get session - this will auto-refresh if needed
       const { data: { session }, error } = await supabase.auth.getSession();
       
       console.log("[AdminAPI] getSession returned. Error:", error ? error.message : "None", "Session exists:", !!session);
+
+      if (generation !== tokenGeneration) return null;
       
       if (error) {
         console.error("[AdminAPI] Error getting session:", error);
@@ -77,23 +101,21 @@ export async function getAuthToken(): Promise<string | null> {
         
         if (refreshError) {
           console.error("[AdminAPI] Token refresh failed:", refreshError);
-          cachedToken = null;
-          tokenExpiry = 0;
-          return null;
+          return clearTokenForGeneration(generation);
         }
         
         if (refreshData.session) {
-          cachedToken = refreshData.session.access_token;
-          tokenExpiry = refreshData.session.expires_at ? refreshData.session.expires_at * 1000 : Date.now() + 3600000;
-          return cachedToken;
+          return cacheToken(
+            generation,
+            refreshData.session.access_token,
+            refreshData.session.expires_at,
+          );
         }
-        return null;
+        return clearTokenForGeneration(generation);
       }
       
       if (!session) {
-        cachedToken = null;
-        tokenExpiry = 0;
-        return null;
+        return clearTokenForGeneration(generation);
       }
       
       // Check if token is about to expire
@@ -102,44 +124,74 @@ export async function getAuthToken(): Promise<string | null> {
         const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
         
         if (!refreshError && refreshData.session) {
-          cachedToken = refreshData.session.access_token;
-          tokenExpiry = refreshData.session.expires_at ? refreshData.session.expires_at * 1000 : Date.now() + 3600000;
-          return cachedToken;
+          return cacheToken(
+            generation,
+            refreshData.session.access_token,
+            refreshData.session.expires_at,
+          );
         }
       }
       
-      cachedToken = session.access_token;
-      tokenExpiry = session.expires_at ? session.expires_at * 1000 : Date.now() + 3600000;
-      return session.access_token;
+      return cacheToken(generation, session.access_token, session.expires_at);
       
     } catch (error) {
       console.error("[AdminAPI] Unexpected error in getAuthToken:", error);
-      cachedToken = null;
-      tokenExpiry = 0;
-      return null;
-    } finally {
-      // Clear the promise so future calls can start fresh
-      tokenPromise = null;
+      return clearTokenForGeneration(generation);
     }
   })();
-  
-  return tokenPromise;
+  tokenPromise = acquisition;
+  const detach = () => {
+    if (generation === tokenGeneration && tokenPromise === acquisition) {
+      tokenPromise = null;
+    }
+  };
+  void acquisition.then(detach, detach);
+
+  return acquisition;
 }
 
 /**
  * Clear cached token (call on logout)
  */
 export function clearAuthTokenCache(): void {
+  tokenGeneration += 1;
   cachedToken = null;
   tokenExpiry = 0;
   tokenPromise = null;
+}
+
+function waitForPromiseWithSignal<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) return Promise.reject(signal.reason);
+
+  return new Promise<T>((resolve, reject) => {
+    const cleanup = () => signal.removeEventListener("abort", onAbort);
+    const onAbort = () => {
+      cleanup();
+      reject(signal.reason);
+    };
+
+    signal.addEventListener("abort", onAbort, { once: true });
+    promise.then(
+      (value) => {
+        cleanup();
+        resolve(value);
+      },
+      (error) => {
+        cleanup();
+        reject(error);
+      },
+    );
+  });
 }
 
 /**
  * Helper to make authenticated API requests
  */
 async function adminFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  const token = await getAuthToken();
+  const tokenRequest = getAuthToken();
+  const token = options.signal
+    ? await waitForPromiseWithSignal(tokenRequest, options.signal)
+    : await tokenRequest;
 
   if (!token) {
     throw new AdminApiAuthenticationError();

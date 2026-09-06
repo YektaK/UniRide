@@ -69,5 +69,6 @@ describe("sidebar message catalog contract", () => {
     expect(sidebarKeys).toContain("dudulluReadiness");
     expect(sidebarKeys).toContain("sandbox");
     expect(sidebarKeys).toContain("logout");
+    expect(trMessages.common.sidebar.dudulluReadiness).toBe("Dudullu Hazırlık");
   });
 });

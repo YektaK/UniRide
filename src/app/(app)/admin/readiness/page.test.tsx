@@ -120,7 +120,8 @@ describe("ReadinessPage", () => {
 
     render(<ReadinessPage />);
 
-    expect(await screen.findByText("errors.authorization")).toBeTruthy();
+    expect(await screen.findByText("status.blockedConfigTitle")).toBeTruthy();
+    expect(screen.getByText("errors.authorization")).toBeTruthy();
   });
 
   it("renders a configuration error for an explicit configuration failure", async () => {
@@ -128,7 +129,8 @@ describe("ReadinessPage", () => {
 
     render(<ReadinessPage />);
 
-    expect(await screen.findByText("errors.configuration")).toBeTruthy();
+    expect(await screen.findByText("status.blockedConfigTitle")).toBeTruthy();
+    expect(screen.getByText("errors.configuration")).toBeTruthy();
   });
 
   it("fails closed to a configuration error for an unknown failure", async () => {

@@ -24,10 +24,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Listen to Supabase Auth state changes
     const unsubscribe = onAuthStateChange((user) => {
-      clearAuthTokenCache();
       setUser(user);
       setIsLoading(false);
-    });
+    }, clearAuthTokenCache);
 
     return () => unsubscribe();
   }, []);
@@ -50,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    clearAuthTokenCache();
     try {
       await signOutUser();
       clearAuthTokenCache();

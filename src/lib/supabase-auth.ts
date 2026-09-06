@@ -227,10 +227,14 @@ export const signOutUser = async (): Promise<void> => {
 /**
  * Listen to auth state changes
  */
-export const onAuthStateChange = (callback: (user: User | null) => void): (() => void) => {
+export const onAuthStateChange = (
+  callback: (user: User | null) => void,
+  onImmediateAuthEvent?: () => void,
+): (() => void) => {
   // Set up Supabase auth state listener
   const supabaseClient = getSupabaseClient();
   const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    onImmediateAuthEvent?.();
     if (session?.user?.email) {
       try {
         const dbUser = await getUserByEmail(session.user.email);

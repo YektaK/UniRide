@@ -113,7 +113,12 @@ export default function ReadinessPage() {
       </div>
 
       {loading && <Card><CardContent className="p-6">{t("loading")}</CardContent></Card>}
-      {view.kind === "error" && <Card><CardContent className="p-6">{t(`errors.${view.error}`)}</CardContent></Card>}
+      {view.kind === "error" && (
+        <Card>
+          <CardHeader><CardTitle>{t("status.blockedConfigTitle")}</CardTitle></CardHeader>
+          <CardContent>{t(`errors.${view.error}`)}</CardContent>
+        </Card>
+      )}
       {view.kind === "report" && (
         <>
           <Card>

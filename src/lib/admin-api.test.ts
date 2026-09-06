@@ -10,9 +10,18 @@ vi.mock("./supabase", () => ({
 }));
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((next) => {
+    resolve = next;
+  });
+  return { promise, resolve };
+}
 
 describe("adminApi.routes.optimize", () => {
   it("preserves local search settings in the authenticated BFF request", async () => {
@@ -111,6 +120,59 @@ const validReadinessReport: DudulluReadinessReport = {
   },
 };
 
+describe("getAuthToken cache invalidation", () => {
+  it("ignores an old acquisition without overwriting or detaching the current generation", async () => {
+    const oldSession = deferred<{
+      data: { session: { access_token: string; expires_at: number } };
+      error: null;
+    }>();
+    const newSession = deferred<{
+      data: { session: { access_token: string; expires_at: number } };
+      error: null;
+    }>();
+    const getSession = vi.fn()
+      .mockReturnValueOnce(oldSession.promise)
+      .mockReturnValueOnce(newSession.promise);
+    getSupabaseClientMock.mockReturnValue({
+      auth: { getSession, refreshSession: vi.fn() },
+    });
+    const { clearAuthTokenCache, getAuthToken } = await import("./admin-api");
+    clearAuthTokenCache();
+
+    const oldAcquisition = getAuthToken();
+    clearAuthTokenCache();
+    const currentAcquisition = getAuthToken();
+
+    oldSession.resolve({
+      data: {
+        session: {
+          access_token: "old-token",
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
+        },
+      },
+      error: null,
+    });
+    await expect(oldAcquisition).resolves.toBeNull();
+
+    const sharedCurrentAcquisition = getAuthToken();
+    expect(getSession).toHaveBeenCalledTimes(2);
+
+    newSession.resolve({
+      data: {
+        session: {
+          access_token: "new-token",
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
+        },
+      },
+      error: null,
+    });
+    await expect(currentAcquisition).resolves.toBe("new-token");
+    await expect(sharedCurrentAcquisition).resolves.toBe("new-token");
+    await expect(getAuthToken()).resolves.toBe("new-token");
+    expect(getSession).toHaveBeenCalledTimes(2);
+  });
+});
+
 async function readinessApi(session = true) {
   getSupabaseClientMock.mockReturnValue({
     auth: {
@@ -157,6 +219,30 @@ describe("adminApi.readiness.getDudullu", () => {
     timeoutSpy.mockRestore();
   });
 
+  it("removes the token-wait abort listener after token acquisition settles", async () => {
+    const addEventListener = vi.fn();
+    const removeEventListener = vi.fn();
+    const signal = {
+      aborted: false,
+      reason: undefined,
+      addEventListener,
+      removeEventListener,
+    } as unknown as AbortSignal;
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout").mockReturnValue(signal);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => validReadinessReport,
+    }));
+    const adminApi = await readinessApi();
+
+    await adminApi.readiness.getDudullu();
+
+    expect(addEventListener).toHaveBeenCalledWith("abort", expect.any(Function), { once: true });
+    expect(removeEventListener).toHaveBeenCalledWith("abort", addEventListener.mock.calls[0][1]);
+    timeoutSpy.mockRestore();
+  });
+
   it("classifies a missing session as an authorization failure", async () => {
     const adminApi = await readinessApi(false);
 
@@ -164,6 +250,42 @@ describe("adminApi.readiness.getDudullu", () => {
       kind: "authorization",
       message: "Dudullu readiness request failed",
     });
+  });
+
+  it("bounds unresolved token acquisition with the readiness deadline", async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) => {
+      setTimeout(() => controller.abort(), milliseconds);
+      return controller.signal;
+    });
+    const getSession = vi.fn().mockReturnValue(new Promise(() => undefined));
+    getSupabaseClientMock.mockReturnValue({
+      auth: { getSession },
+    });
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const { adminApi, clearAuthTokenCache } = await import("./admin-api");
+    clearAuthTokenCache();
+
+    let settled = false;
+    let failure: unknown;
+    void adminApi.readiness.getDudullu().then(
+      () => { settled = true; },
+      (error) => { settled = true; failure = error; },
+    );
+
+    await vi.advanceTimersByTimeAsync(14_999);
+    expect(settled).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(settled).toBe(true);
+    expect(failure).toMatchObject({
+      kind: "configuration",
+      message: "Dudullu readiness request failed",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    timeoutSpy.mockRestore();
   });
 
   it.each([401, 403])("classifies HTTP %i as an authorization failure without parsing its body", async (status) => {

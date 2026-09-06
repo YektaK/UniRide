@@ -23,23 +23,35 @@ vi.mock("@/lib/admin-api", () => ({
 
 import { AuthContext, AuthProvider } from "./auth-context";
 
-function Probe() {
+function Probe({ onLogout }: { onLogout?: (promise: Promise<void>) => void }) {
   const auth = useContext(AuthContext);
   if (!auth) throw new Error("AuthProvider is required");
 
-  return <button onClick={() => void auth.logout()}>logout</button>;
+  return (
+    <button onClick={() => {
+      const promise = auth.logout();
+      onLogout?.(promise);
+    }}>
+      logout
+    </button>
+  );
 }
 
 function deferred() {
   let resolve!: () => void;
-  const promise = new Promise<void>((next) => {
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<void>((next, fail) => {
     resolve = next;
+    reject = fail;
   });
-  return { promise, resolve };
+  return { promise, reject, resolve };
 }
 
 describe("AuthProvider", () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
 
   beforeEach(() => {
     mocks.signIn.mockReset();
@@ -68,5 +80,28 @@ describe("AuthProvider", () => {
 
     signOut.resolve();
     await waitFor(() => expect(mocks.clearToken).toHaveBeenCalledTimes(2));
+  });
+
+  it("clears immediately but not a second time when deferred logout fails", async () => {
+    const signOut = deferred();
+    const failure = new Error("sign-out failed");
+    mocks.signOut.mockReturnValue(signOut.promise);
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    let logout: Promise<void> | undefined;
+    render(
+      <AuthProvider>
+        <Probe onLogout={(promise) => { logout = promise; }} />
+      </AuthProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "logout" }));
+
+    expect(mocks.signOut).toHaveBeenCalledTimes(1);
+    expect(mocks.clearToken).toHaveBeenCalledTimes(1);
+
+    signOut.reject(failure);
+    await expect(logout).rejects.toBe(failure);
+    expect(mocks.clearToken).toHaveBeenCalledTimes(1);
+    expect(consoleErrorSpy).toHaveBeenCalledWith("Logout error:", failure);
   });
 });

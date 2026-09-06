@@ -12,15 +12,18 @@ vi.mock("./supabase", () => ({
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   vi.clearAllMocks();
 });
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((next) => {
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((next, fail) => {
     resolve = next;
+    reject = fail;
   });
-  return { promise, resolve };
+  return { promise, reject, resolve };
 }
 
 describe("adminApi.routes.optimize", () => {
@@ -242,6 +245,115 @@ describe("adminApi.readiness.getDudullu", () => {
     expect(removeEventListener).toHaveBeenCalledWith("abort", addEventListener.mock.calls[0][1]);
     timeoutSpy.mockRestore();
   });
+
+  it("rejects an already-aborted readiness signal without calling fetch", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("sensitive abort reason"));
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout").mockReturnValue(controller.signal);
+    const getSession = vi.fn().mockReturnValue(new Promise(() => undefined));
+    getSupabaseClientMock.mockReturnValue({ auth: { getSession } });
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const { adminApi, clearAuthTokenCache } = await import("./admin-api");
+    clearAuthTokenCache();
+
+    await expect(adminApi.readiness.getDudullu()).rejects.toMatchObject({
+      kind: "configuration",
+      message: "Dudullu readiness request failed",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    clearAuthTokenCache();
+    timeoutSpy.mockRestore();
+  });
+
+  it("cleans up the signal listener when token acquisition rejects", async () => {
+    const controller = new AbortController();
+    const addEventListener = vi.spyOn(controller.signal, "addEventListener");
+    const removeEventListener = vi.spyOn(controller.signal, "removeEventListener");
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout").mockReturnValue(controller.signal);
+    getSupabaseClientMock.mockImplementationOnce(() => {
+      throw new Error("sensitive client initialization failure");
+    });
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const { adminApi, clearAuthTokenCache } = await import("./admin-api");
+    clearAuthTokenCache();
+
+    await expect(adminApi.readiness.getDudullu()).rejects.toMatchObject({
+      kind: "configuration",
+      message: "Dudullu readiness request failed",
+    });
+
+    expect(addEventListener).toHaveBeenCalledWith("abort", expect.any(Function), { once: true });
+    expect(removeEventListener).toHaveBeenCalledWith("abort", addEventListener.mock.calls[0][1]);
+    expect(fetchMock).not.toHaveBeenCalled();
+    timeoutSpy.mockRestore();
+  });
+
+  it.each(["resolve", "reject"] as const)(
+    "keeps one redacted abort outcome when token acquisition later %ss",
+    async (settlement) => {
+      const session = deferred<{
+        data: { session: { access_token: string; expires_at: number } };
+        error: null;
+      }>();
+      getSupabaseClientMock.mockReturnValue({
+        auth: { getSession: vi.fn().mockReturnValue(session.promise) },
+      });
+      const controller = new AbortController();
+      const addEventListener = vi.spyOn(controller.signal, "addEventListener");
+      const removeEventListener = vi.spyOn(controller.signal, "removeEventListener");
+      const timeoutSpy = vi.spyOn(AbortSignal, "timeout").mockReturnValue(controller.signal);
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      const { adminApi, clearAuthTokenCache } = await import("./admin-api");
+      clearAuthTokenCache();
+
+      const outcomes: string[] = [];
+      const outcome = adminApi.readiness.getDudullu().then(
+        () => {
+          outcomes.push("resolved");
+          return undefined;
+        },
+        (error) => {
+          outcomes.push("rejected");
+          return error;
+        },
+      );
+
+      controller.abort(new Error("sensitive abort reason"));
+      if (settlement === "resolve") {
+        session.resolve({
+          data: {
+            session: {
+              access_token: "late-token",
+              expires_at: Math.floor(Date.now() / 1000) + 3600,
+            },
+          },
+          error: null,
+        });
+      } else {
+        session.reject(new Error("late token acquisition failure"));
+      }
+
+      await expect(outcome).resolves.toMatchObject({
+        kind: "configuration",
+        message: "Dudullu readiness request failed",
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(outcomes).toEqual(["rejected"]);
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(removeEventListener).toHaveBeenCalledWith("abort", addEventListener.mock.calls[0][1]);
+
+      clearAuthTokenCache();
+      consoleErrorSpy.mockRestore();
+      timeoutSpy.mockRestore();
+    },
+  );
 
   it("classifies a missing session as an authorization failure", async () => {
     const adminApi = await readinessApi(false);

@@ -147,7 +147,14 @@ describe("ReadinessPage", () => {
     render(<ReadinessPage />);
 
     expect(await screen.findByText("errors.configuration")).toBeTruthy();
-    expect((screen.getByRole("button", { name: "refresh" }) as HTMLButtonElement).disabled).toBe(false);
+    const refresh = screen.getByRole("button", { name: "refresh" });
+    expect((refresh as HTMLButtonElement).disabled).toBe(false);
+
+    mocks.getDudullu.mockResolvedValue(report);
+    fireEvent.click(refresh);
+
+    await waitFor(() => expect(mocks.getDudullu).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("status.passTitle")).toBeTruthy();
   });
 
   it("shows loading and disables refresh while a refresh request is unresolved", async () => {

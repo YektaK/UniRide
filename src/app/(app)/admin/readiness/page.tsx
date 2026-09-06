@@ -76,7 +76,8 @@ export default function ReadinessPage() {
     if (requestInFlight.current) return;
 
     requestInFlight.current = true;
-    void adminApi.readiness.getDudullu()
+    void Promise.resolve()
+      .then(() => adminApi.readiness.getDudullu())
       .then((report) => {
         if (mounted.current) setView({ kind: "report", report });
       })

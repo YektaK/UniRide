@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DudulluReadinessReport } from "@/services/dudullu-readiness";
 
@@ -139,7 +139,34 @@ describe("ReadinessPage", () => {
     expect(await screen.findByText("errors.configuration")).toBeTruthy();
   });
 
-  it("keeps refresh disabled and avoids duplicate calls while the request is unresolved", () => {
+  it("fails closed and releases refresh when API invocation throws synchronously", async () => {
+    mocks.getDudullu.mockImplementation(() => {
+      throw new Error("unexpected");
+    });
+
+    render(<ReadinessPage />);
+
+    expect(await screen.findByText("errors.configuration")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "refresh" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("shows loading and disables refresh while a refresh request is unresolved", async () => {
+    mocks.getDudullu
+      .mockResolvedValueOnce(report)
+      .mockReturnValueOnce(new Promise(() => undefined));
+
+    render(<ReadinessPage />);
+
+    await screen.findByText("status.passTitle");
+    const refresh = screen.getByRole("button", { name: "refresh" });
+    fireEvent.click(refresh);
+
+    expect(screen.getByText("loading")).toBeTruthy();
+    expect((refresh as HTMLButtonElement).disabled).toBe(true);
+    await waitFor(() => expect(mocks.getDudullu).toHaveBeenCalledTimes(2));
+  });
+
+  it("keeps refresh disabled and avoids duplicate calls while the request is unresolved", async () => {
     mocks.getDudullu.mockReturnValue(new Promise(() => undefined));
 
     render(<ReadinessPage />);
@@ -148,7 +175,7 @@ describe("ReadinessPage", () => {
     const refresh = screen.getByRole("button", { name: "refresh" });
     expect((refresh as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(refresh);
-    expect(mocks.getDudullu).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(mocks.getDudullu).toHaveBeenCalledTimes(1));
     expect(screen.queryByText("status.loading")).toBeNull();
     expect(screen.queryByRole("button", { name: "Yenile" })).toBeNull();
   });

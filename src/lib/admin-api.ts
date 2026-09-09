@@ -329,6 +329,24 @@ export const adminApi = {
   // ==================== VEHICLES ====================
 
   vehicles: {
+    async calculate(input: {
+      students: Array<Record<string, unknown>>;
+      maxTourTime?: number;
+      swCapacity?: number;
+      soCapacity?: number;
+      strategy?: string;
+      clusteringAlgorithm?: string;
+      local_search_type?: "none" | "two_opt" | "three_opt" | "or_opt" | "hybrid";
+      direction?: "pickup" | "dropoff";
+    }) {
+      const response = await adminFetch("/api/calculate-vehicles", {
+        method: "POST",
+        body: JSON.stringify(input),
+      });
+      if (!response.ok) throw new Error("Vehicle calculation failed");
+      return response.json();
+    },
+
     async getAll() {
       const res = await adminFetch("/api/admin/vehicles");
       if (!res.ok) {

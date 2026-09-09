@@ -19,7 +19,7 @@ import {
 } from "@/services/optimizer-service";
 import { normalizeAlgorithmName } from "@/lib/algorithm-constants";
 import type { IEResponseData, HourlyDemandData, BottleneckData, TimeShiftSuggestion, IERawData } from "@/types/ie-resource";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireAdmin, handleApiError } from "@/lib/admin-auth";
 
 // Student info kept in a local lookup map for result enrichment
 interface StudentLookupEntry {
@@ -155,6 +155,7 @@ export async function POST(request: NextRequest) {
             strategy?: string;
             clusteringAlgorithm?: string;
             vehicles?: OptimizationOptions["vehicles"];
+            direction?: unknown;
         };
 
         const {
@@ -165,7 +166,20 @@ export async function POST(request: NextRequest) {
             strategy = "genetic_algorithm",
             clusteringAlgorithm = "sweep",
             vehicles: customVehicles,
+            direction,
         } = body;
+
+        // Yön: eksikse legacy "pickup"; yalnızca geçerli değerler kabul edilir.
+        const directionRaw = direction as unknown;
+        if (directionRaw !== undefined && directionRaw !== "pickup" && directionRaw !== "dropoff") {
+            return NextResponse.json(
+                { error: "Invalid direction" },
+                { status: 400 }
+            );
+        }
+
+        const normalizedDirection: "pickup" | "dropoff" =
+            directionRaw === "dropoff" ? "dropoff" : "pickup";
 
         // Girdi doğrulama
         if (!students || !Array.isArray(students)) {
@@ -235,6 +249,7 @@ export async function POST(request: NextRequest) {
             so_capacity: soCapacity,
             clustering_algorithm: clusteringAlgorithm,
             vehicles: customVehicles,
+            direction: normalizedDirection,
         });
 
         const calculationTime = Date.now() - startTime;
@@ -250,6 +265,15 @@ export async function POST(request: NextRequest) {
                     applied_policy: result.applied_policy,
                 },
                 { status: 500 }
+            );
+        }
+
+        // Başarılı sonuç yönü güvenilir ve istek yönüyle tutarlı olmalıdır.
+        const returnedDirection = result.direction;
+        if (returnedDirection !== normalizedDirection) {
+            return NextResponse.json(
+                { success: false, error: "Invalid optimization direction" },
+                { status: 502 }
             );
         }
 
@@ -285,6 +309,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
+            direction: result.direction,
             requiredVehicles: result.total_vehicles ?? assignments.length,
             assignments,
             totalDuration: Math.round(result.total_duration_minutes ?? 0),
@@ -309,10 +334,6 @@ export async function POST(request: NextRequest) {
             },
         });
     } catch (error: unknown) {
-        console.error("Vehicle calculation error:", error);
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Calculation failed" },
-            { status: 500 }
-        );
+        return handleApiError(error);
     }
 }

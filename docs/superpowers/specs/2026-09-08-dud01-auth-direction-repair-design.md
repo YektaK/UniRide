@@ -1,6 +1,6 @@
 # DUD-01 authentication and direction repair
 
-Status: implemented and automatically verified in codex/dud01-auth-direction-20260908; uncommitted and not integrated into WIP. See docs/DUD01_VERIFICATION_2026-09-09.md for current evidence and the pending live gate.
+Status: implemented and automatically verified; integrated into WIP. See docs/DUD01_VERIFICATION_2026-09-09.md for current evidence and the pending live gate.
 
 ## Scope
 

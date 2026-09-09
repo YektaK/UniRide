@@ -54,6 +54,7 @@ export default function VehiclePlanningPage() {
     const [clusteringAlgorithm, setClusteringAlgorithm] = useState("sweep");
     const [planDate, setPlanDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [direction, setDirection] = useState<"pickup" | "dropoff">("pickup");
+    const [calculationDirection, setCalculationDirection] = useState<"pickup" | "dropoff">("pickup");
     const [isSaving, setIsSaving] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [ieData, setIeData] = useState<IEResponseData | null>(null);
@@ -119,24 +120,17 @@ export default function VehiclePlanningPage() {
                 return;
             }
 
-            const response = await fetch("/api/calculate-vehicles", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    students: activeStudents,
-                    maxTourTime,
-                    swCapacity,
-                    soCapacity,
-                    strategy,
-                    clusteringAlgorithm,
-                }),
+            setCalculationDirection(direction);
+
+            const data = await adminApi.vehicles.calculate({
+                students: activeStudents as unknown as Array<Record<string, unknown>>,
+                maxTourTime,
+                swCapacity,
+                soCapacity,
+                strategy,
+                clusteringAlgorithm,
+                direction,
             });
-
-            if (!response.ok) {
-                throw new Error(tc('error'));
-            }
-
-            const data = await response.json();
             setResult(data);
             setIeData(data.ieData);
 
@@ -168,7 +162,7 @@ export default function VehiclePlanningPage() {
         try {
             setIsSaving(true);
 
-            const planData = formatRoutePlanForSave(result, planDate, direction, strategy, clusteringAlgorithm);
+            const planData = formatRoutePlanForSave(result, planDate, calculationDirection, strategy, clusteringAlgorithm);
             await saveRoutePlan(planData);
 
             toast({

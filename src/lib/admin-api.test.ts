@@ -452,3 +452,110 @@ describe("adminApi.readiness.getDudullu", () => {
     });
   });
 });
+
+describe("adminApi.vehicles.calculate", () => {
+  const validStudent = {
+    id: "student-1",
+    name: "Student One",
+    location_code: "Sw1",
+    disability_type: "Sw",
+  };
+
+  const calculationResult = (direction: "pickup" | "dropoff") => ({
+    success: true,
+    direction,
+    requiredVehicles: 1,
+    assignments: [{
+      vehicleIndex: 1,
+      students: [validStudent],
+      route: [],
+      totalDuration: 30,
+      swCount: 1,
+      soCount: 0,
+    }],
+    totalDuration: 30,
+    message: "1 vehicle(s) used for optimization",
+    meta: {
+      calculationTimeMs: 12,
+      inputStudentCount: 1,
+      validStudentCount: 1,
+      algorithmUsed: "genetic_algorithm",
+      executionTimeSeconds: 0.1,
+      options: {
+        maxTourTime: 120,
+        swCapacity: 4,
+        soCapacity: 5,
+        strategy: "genetic_algorithm",
+        clusteringAlgorithm: "sweep",
+      },
+    },
+  });
+
+  it.each(["pickup", "dropoff"] as const)("sends %s calculations with bearer authentication", async (direction) => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => calculationResult(direction),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const adminApi = await readinessApi();
+
+    await expect(adminApi.vehicles.calculate({
+      students: [validStudent],
+      direction,
+    })).resolves.toEqual(calculationResult(direction));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/calculate-vehicles",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({ Authorization: "Bearer test-token" }),
+      }),
+    );
+    expect(fetchMock.mock.calls[0][1].headers).toEqual(expect.objectContaining({
+      "Content-Type": "application/json",
+    }));
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      students: [validStudent],
+      direction,
+    });
+  });
+
+  it("preserves compatibility for calculations without a direction", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => calculationResult("pickup"),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const adminApi = await readinessApi();
+
+    await expect(adminApi.vehicles.calculate({ students: [validStudent] })).resolves.toEqual(calculationResult("pickup"));
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ students: [validStudent] });
+  });
+
+  it("rejects calculations without an authenticated session", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const adminApi = await readinessApi(false);
+
+    await expect(adminApi.vehicles.calculate({ students: [validStudent] })).rejects.toMatchObject({
+      name: "AdminApiAuthenticationError",
+      message: "Not authenticated",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-OK calculation response", async () => {
+    const json = vi.fn().mockResolvedValue({ error: "internal optimizer secret" });
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, json });
+    vi.stubGlobal("fetch", fetchMock);
+    const adminApi = await readinessApi();
+
+    const error = await adminApi.vehicles.calculate({ students: [validStudent] }).catch((caught) => caught as Error);
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toBe("Vehicle calculation failed");
+    expect(error.message).not.toContain("internal optimizer secret");
+    expect(json).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});

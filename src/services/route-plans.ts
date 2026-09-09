@@ -151,10 +151,18 @@ export async function deleteRoutePlan(id: string): Promise<void> {
 export function formatRoutePlanForSave(
     optimizationResult: OptimizationResult & { assignments?: Array<Record<string, unknown>>; meta?: Record<string, unknown>; requiredVehicles?: number; totalDuration?: number },
     planDate: string,
-    direction: 'pickup' | 'dropoff',
+    requestedDirection: 'pickup' | 'dropoff',
     algorithmUsed: string,
     clusteringUsed: string
 ): SaveRoutePlanRequest {
+    const returned = optimizationResult.direction;
+    if (returned !== 'pickup' && returned !== 'dropoff') {
+        throw new Error("Calculation result has no valid direction; save is blocked");
+    }
+    if (returned !== requestedDirection) {
+        throw new Error("Calculation result direction does not match the requested direction");
+    }
+
     const routes = (optimizationResult.routes ?? optimizationResult.assignments ?? []) as VehicleRoute[] | Record<string, unknown>[];
 
     function countStudents(route: VehicleRoute | Record<string, unknown>): number {
@@ -171,7 +179,7 @@ export function formatRoutePlanForSave(
 
     return {
         planDate,
-        direction,
+        direction: returned,
         algorithmUsed,
         clusteringUsed,
         totalVehicles: optimizationResult.requiredVehicles ?? optimizationResult.total_vehicles ?? routes.length,

@@ -210,7 +210,7 @@
         "submitButton": "Send Request",
         "successDesc": "Your request has been received. Check your notifications and requests page for approval status.",
         "errorTitle": "Request Could Not Be Created",
-        "defaultDropoff": "Yıldız Technical University, Davutpaşa Campus",
+        "defaultDropoff": "Doğuş University, Dudullu Campus",
         "timeFormatError": "Time must be in HH:MM format.",
         "dateRequired": "Please select a date.",
         "addressMinError": "Pickup address must be at least 5 characters.",

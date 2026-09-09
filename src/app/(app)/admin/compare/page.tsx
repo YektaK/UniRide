@@ -10,6 +10,7 @@ import { Cpu, Play, CheckCircle2, Clock, Truck, Activity, Target, Eye, ChevronRi
 import { useToast } from "@/hooks/use-toast";
 import { adminApi, getAuthToken } from "@/lib/admin-api";
 import type { CompareResult, AlgorithmCompareResult } from "@/services/optimizer-types";
+import { DUDULLU_DEPOT } from "@/services/dudullu-campus";
 import {
     Select,
     SelectContent,
@@ -93,7 +94,7 @@ export default function AlgorithmComparisonPage() {
                 },
                 body: JSON.stringify({
                     students: students,
-                    depot: { id: "D.Kampus", lat: 41.001, lng: 29.177 },
+                    depot: { ...DUDULLU_DEPOT },
                     clusteringAlgorithm: clusteringAlgorithm
                 })
             });

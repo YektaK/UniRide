@@ -11,6 +11,7 @@
 import { getSupabaseClient } from "./supabase";
 import type { DudulluReadinessReport } from "@/services/dudullu-readiness";
 import { parseDudulluReadinessReport } from "@/services/dudullu-readiness-response";
+import { DUDULLU_DEPOT } from "@/services/dudullu-campus";
 
 export class AdminApiAuthenticationError extends Error {
   constructor() {
@@ -491,7 +492,7 @@ export const adminApi = {
 
       const payload = {
         students,
-        depot: { id: params.start || "D.Kampus", lat: 41.001, lng: 29.177 },
+        depot: { id: params.start || DUDULLU_DEPOT.id, lat: DUDULLU_DEPOT.lat, lng: DUDULLU_DEPOT.lng },
         algorithm: params.strategy || "genetic_algorithm",
         local_search_type: params.local_search_type,
         max_travel_time: params.max_travel_time ?? 120,

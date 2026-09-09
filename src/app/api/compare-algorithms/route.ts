@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { compareAllAlgorithms, type StudentForOptimization, type Depot } from "@/services/optimizer-service";
 import { requireAdmin } from "@/lib/admin-auth";
+import { DUDULLU_DEPOT } from "@/services/dudullu-campus";
 
 const studentSchema = z.object({
     id: z.string().optional(),
@@ -54,9 +55,9 @@ export async function POST(request: Request) {
         }));
 
         const optimizationDepot: Depot = {
-            id: depot?.id || "D.Kampus",
-            lat: depot?.lat || 41.001,
-            lng: depot?.lng || 29.177,
+            id: depot?.id || DUDULLU_DEPOT.id,
+            lat: depot?.lat || DUDULLU_DEPOT.lat,
+            lng: depot?.lng || DUDULLU_DEPOT.lng,
         };
 
         const result = await compareAllAlgorithms(

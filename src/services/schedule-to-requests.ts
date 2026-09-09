@@ -7,6 +7,7 @@ import { getUsers, getScheduleByUserId, createRideRequest, getAllRideRequests } 
 import type { ScheduleEntry, RideRequest } from "@/types";
 import { addDays, format, getDay, startOfWeek, endOfWeek, addWeeks, parse } from "date-fns";
 import { tr } from "date-fns/locale";
+import { DUDULLU_CAMPUS } from "@/services/dudullu-campus";
 
 const daysOrder: ScheduleEntry["dayOfWeek"][] = [
   "monday",
@@ -34,7 +35,7 @@ export const generateRideRequestsFromSchedule = async (
   scheduleId: string,
   targetWeekStart: Date,
   homeAddress: string,
-  universityLocation: string = "Doğuş Üniversitesi, Dudullu Kampüsü"
+  universityLocation: string = DUDULLU_CAMPUS.address
 ): Promise<{ created: number; requests: RideRequest[] }> => {
   const schedule = await getScheduleByUserId(userId);
   if (!schedule || schedule.entries.length === 0) {

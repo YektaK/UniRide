@@ -210,7 +210,7 @@
         "submitButton": "Talep Gönder",
         "successDesc": "Talebiniz başarıyla alındı. Onay durumu için bildirimlerinizi ve taleplerim sayfasını kontrol edin.",
         "errorTitle": "Talep Oluşturulamadı",
-        "defaultDropoff": "Yıldız Teknik Üniversitesi, Davutpaşa Kampüsü",
+        "defaultDropoff": "Doğuş Üniversitesi, Dudullu Kampüsü",
         "timeFormatError": "Saat SS:DD formatında olmalıdır.",
         "dateRequired": "Lütfen bir tarih seçin.",
         "addressMinError": "Alınış adresi en az 5 karakter olmalıdır.",

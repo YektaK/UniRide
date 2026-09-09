@@ -327,7 +327,7 @@ if __name__ == "__main__":
         "dayOfWeek": "monday",
         "startTime": "09:00",
         "endTime": "14:00",
-        "location": "Dogus Kampus",
+        "location": "Dudullu",
         "courseName": "Ders Programı"
     }
     

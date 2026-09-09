@@ -64,8 +64,8 @@ resource blocks. Those behaviors are not accepted as the new planner.
 - `D.Kampus` is the depot/campus identifier.
 - Schedule entries for other campuses, including Çengelköy, are excluded and
   reported; they are never silently mapped to Dudullu.
-- The Yıldız Technical University/Davutpaşa hardcode in the current ride
-  confirmation route is invalid and must be removed.
+- Ride confirmation persists the canonical Dudullu campus address and
+  coordinates.
 - Every demand retains the student occurrence identity separately from the
   physical location code. Students sharing a stop remain separate demand.
 

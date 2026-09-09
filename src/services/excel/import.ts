@@ -6,6 +6,7 @@
 import * as XLSX from "xlsx";
 import type { ScheduleEntry } from "@/types";
 import { getUsers, getScheduleByUserId, createSchedule, updateScheduleEntries, updateUser } from "@/lib/database";
+import { DUDULLU_CAMPUS } from "@/services/dudullu-campus";
 
 export interface ExcelImportRow {
   studentNumber: string;
@@ -49,7 +50,8 @@ const DAY_MAP: Record<string, ScheduleEntry["dayOfWeek"]> = {
 };
 
 const LOCATION_MAP: Record<string, string> = {
-  dudullu: "Dudullu",
+  dudullu: DUDULLU_CAMPUS.scheduleLabel,
+  "d.kampus": DUDULLU_CAMPUS.scheduleLabel,
   çengelköy: "Çengelköy",
   cengelkoy: "Çengelköy",
   cengelköy: "Çengelköy",

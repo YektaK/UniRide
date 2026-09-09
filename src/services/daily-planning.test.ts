@@ -546,7 +546,7 @@ describe("isDudulluCampus campus predicate", () => {
   });
 
   it("rejects other campuses and blank values", () => {
-    for (const location of ["Çengelköy", "cengelköy", "", "   "]) {
+    for (const location of ["Çengelköy", "cengelköy", "Davutpaşa", "Davutpasa", "", "   "]) {
       expect(isDudulluCampus(location)).toBe(false);
     }
   });

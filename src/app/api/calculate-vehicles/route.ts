@@ -20,6 +20,7 @@ import {
 import { normalizeAlgorithmName } from "@/lib/algorithm-constants";
 import type { IEResponseData, HourlyDemandData, BottleneckData, TimeShiftSuggestion, IERawData } from "@/types/ie-resource";
 import { requireAdmin, handleApiError } from "@/lib/admin-auth";
+import { DUDULLU_DEPOT } from "@/services/dudullu-campus";
 
 // Student info kept in a local lookup map for result enrichment
 interface StudentLookupEntry {
@@ -32,9 +33,7 @@ interface StudentLookupEntry {
 
 // Varsayılan depot (Doğuş Üniversitesi, Dudullu Kampüsü)
 const DEFAULT_DEPOT: Depot = {
-    id: "D.Kampus",
-    lat: 41.001,
-    lng: 29.177,
+    ...DUDULLU_DEPOT,
 };
 
 function transformIEData(

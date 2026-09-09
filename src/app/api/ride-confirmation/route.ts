@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { AppError, getCurrentUserFromRequest } from "@/lib/admin-auth";
+import { DUDULLU_CAMPUS } from "@/services/dudullu-campus";
 
 const rideConfirmationSchema = z.object({
     action: z.enum(["confirm", "cancel", "change"], {
@@ -118,8 +119,8 @@ export async function POST(request: NextRequest) {
                         coordinates: userData?.home_coordinates,
                     },
                     dropoff_location: {
-                        address: "Yıldız Teknik Üniversitesi Davutpaşa Kampüsü",
-                        coordinates: { lat: 41.0254, lng: 28.8895 },
+                        address: DUDULLU_CAMPUS.address,
+                        coordinates: { ...DUDULLU_CAMPUS.coordinates },
                     },
                     notes,
                 } as never)

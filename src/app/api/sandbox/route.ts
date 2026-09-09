@@ -18,9 +18,10 @@ import {
 import { optimizerFetch } from "@/lib/optimizer-server";
 import type { Database } from "@/lib/supabase";
 import type { IERawData, IEResponseData, HourlyDemandData, BottleneckData, TimeShiftSuggestion } from "@/types/ie-resource";
+import { DUDULLU_DEPOT } from "@/services/dudullu-campus";
 
 // Default depot — Doğuş Üniversitesi Dudullu Kampüsü
-const DEFAULT_DEPOT = { id: "D.Kampus", lat: 41.001, lng: 29.177 };
+const DEFAULT_DEPOT = { ...DUDULLU_DEPOT };
 
 interface VehicleConfig {
     id?: string;

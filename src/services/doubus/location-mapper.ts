@@ -9,6 +9,7 @@
  */
 
 import type { LocationCode } from "./route";
+import { DUDULLU_CAMPUS } from "@/services/dudullu-campus";
 
 // Location code mappings - keyword to location code
 const LOCATION_MAPPINGS: Record<string, LocationCode> = {
@@ -85,7 +86,7 @@ export const addressToLocationCode = (address: string): LocationCode | null => {
  * TODO: Replace with precise coordinates from the database or config file.
  */
 const LOCATION_REFERENCE_COORDS: Record<LocationCode, { lat: number; lng: number }> = {
-  "D.Kampus": { lat: 41.1065, lng: 29.0244 },
+  "D.Kampus": { ...DUDULLU_CAMPUS.coordinates },
   "Sw1": { lat: 41.1685, lng: 29.0535 },
   "Sw2": { lat: 41.1620, lng: 29.0480 },
   "Sw3": { lat: 41.1550, lng: 29.0420 },

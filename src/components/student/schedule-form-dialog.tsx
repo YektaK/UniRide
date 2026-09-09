@@ -32,6 +32,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useEffect } from "react";
+import { isDudulluCampus } from "@/services/daily-planning";
+import { DUDULLU_CAMPUS } from "@/services/dudullu-campus";
 
 interface ScheduleFormDialogProps {
   isOpen: boolean;
@@ -58,6 +60,10 @@ type ScheduleFormValues = z.infer<typeof scheduleEntrySchema>;
 const daysOrder: ScheduleEntry["dayOfWeek"][] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const locationOptions: ScheduleFormValues["location"][] = ["Dudullu", "Çengelköy"];
 
+export function normalizeScheduleLocationForEditing(location: ScheduleEntry["location"]): string {
+  return location && isDudulluCampus(location) ? DUDULLU_CAMPUS.scheduleLabel : location ?? "";
+}
+
 export default function ScheduleFormDialog({ isOpen, onClose, onSave, entry }: ScheduleFormDialogProps) {
   const t = useTranslations("page.student.schedule");
   const form = useForm<ScheduleFormValues>({
@@ -67,22 +73,21 @@ export default function ScheduleFormDialog({ isOpen, onClose, onSave, entry }: S
       courseName: "",
       startTime: "",
       endTime: "",
-      location: "Dudullu",
+      location: DUDULLU_CAMPUS.scheduleLabel,
     },
   });
 
   useEffect(() => {
     if (isOpen) {
       if (entry) {
-        const validLocation = locationOptions.includes(entry.location as ScheduleFormValues["location"]) ? entry.location : "Dudullu";
-        form.reset({...entry, location: validLocation as ScheduleFormValues["location"]});
+        form.reset({ ...entry, location: normalizeScheduleLocationForEditing(entry.location) as ScheduleFormValues["location"] });
       } else {
         form.reset({
           dayOfWeek: "monday",
           courseName: "",
           startTime: "",
           endTime: "",
-          location: "Dudullu",
+          location: DUDULLU_CAMPUS.scheduleLabel,
         });
       }
     }
@@ -109,7 +114,7 @@ export default function ScheduleFormDialog({ isOpen, onClose, onSave, entry }: S
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("dayLabel")}</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder={t("dayPlaceholder")} />

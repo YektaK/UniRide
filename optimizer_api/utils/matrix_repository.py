@@ -71,7 +71,7 @@ class SupabaseTimeMatrixProvider:
         if self.timeout_seconds is None:
             return create_client(self.url, self.key)
         try:
-            from supabase.lib.client_options import ClientOptions
+            from supabase.client import ClientOptions
 
             return create_client(
                 self.url,

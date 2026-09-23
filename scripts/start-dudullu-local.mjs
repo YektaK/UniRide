@@ -88,7 +88,7 @@ export function webCommand(platform = process.platform) {
   const isWin = platform === "win32";
   return {
     command: isWin ? "npm.cmd" : "npm",
-    args: ["run", "dev"],
+    args: ["run", "dev", "--", "--hostname", "127.0.0.1"],
     cwd: ".",
     shell: isWin,
   };

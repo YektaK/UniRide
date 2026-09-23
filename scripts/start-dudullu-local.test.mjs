@@ -138,7 +138,7 @@ test("webCommand selects npm.cmd with a Windows shell and plain npm elsewhere", 
   const win = webCommand("win32");
   assert.equal(win.command, "npm.cmd");
   assert.equal(win.shell, true);
-  assert.deepEqual(win.args, ["run", "dev"]);
+  assert.deepEqual(win.args, ["run", "dev", "--", "--hostname", "127.0.0.1"]);
   assert.equal(win.cwd, ".");
 
   const posix = webCommand("linux");

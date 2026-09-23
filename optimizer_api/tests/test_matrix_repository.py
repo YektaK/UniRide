@@ -329,47 +329,8 @@ def test_env_timeout_garbage_falls_back_to_default(monkeypatch):
     assert loader.repository._provider is None  # no supabase creds -> coordinate mode
 
 
-def test_provider_timeout_plumbed_into_sdk_client(monkeypatch):
-    pytest.importorskip("supabase")
-    captured = {}
-
-    class _FakeClient:
-        def __init__(self, url, key, **kwargs):
-            captured["url"] = url
-            captured["key"] = key
-            captured["kwargs"] = kwargs
-
-        def table(self, _name):
-            return self
-
-        def select(self, _cols):
-            return self
-
-        def execute(self):
-            return type("Resp", (), {"data": [{
-                "origin_code": "A", "destination_code": "B", "duration_minutes": 5}]})()
-
-    # Do not depend on the installed SDK's ClientOptions shape: stub the module
-    # the production code imports so the assertion is SDK-version-independent.
-    import sys
-    import types
-
-    fake_client_options = types.ModuleType("client_options")
-    fake_client_options.ClientOptions = lambda **kw: kw
-    monkeypatch.setitem(
-        sys.modules, "supabase.lib.client_options", fake_client_options
-    )
-
-    provider = SupabaseTimeMatrixProvider("https://x", "k", timeout_seconds=7.5)
-    rows = (
-        provider._build_client(_FakeClient)
-        .table("time_matrix")
-        .select("origin_code, destination_code, duration_minutes")
-        .execute()
-        .data
-    )
-    assert rows == [{
-        "origin_code": "A", "destination_code": "B", "duration_minutes": 5}]
-    assert captured["url"] == "https://x"
-    options = captured["kwargs"].get("options")
-    assert options == {"postgrest_client_timeout": 7.5}
+def test_provider_timeout_plumbed_into_sdk_client():
+    sdk = pytest.importorskip("supabase.client")
+    provider = SupabaseTimeMatrixProvider("http://127.0.0.1:9", "test-key", timeout_seconds=7.5)
+    client = provider._build_client(sdk.create_client)
+    assert client.options.postgrest_client_timeout == 7.5

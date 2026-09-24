@@ -2,13 +2,13 @@
 
 > Current checkpoint, not a substitute for approved specifications. Read the dated audit only when its evidence or a selected task requires it.
 
-**Updated:** 2026-09-23, Europe/Istanbul
+**Updated:** 2026-09-24, Europe/Istanbul
 
 **Repository:** `C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide`
 
 **Integration/default branch:** `WIP`
 
-**Verified local and actual remote HEAD:** `73618255d94f2e51ae01c8bcedbf9c1b43c9a6ff` — `fix(campus): unify Dudullu location defaults`
+**Recovery audit base HEAD:** 73618255d94f2e51ae01c8bcedbf9c1b43c9a6ff — fix(campus): unify Dudullu location defaults. For the current WIP SHA, use git rev-parse WIP; the 2026-09-23 recovery changes were pushed as 66948fa.
 
 **Detailed evidence and continuation plan:** [2026-09-22 recovery audit/plan](superpowers/plans/2026-09-22-uniride-recovery-and-continuation.md)
 
@@ -23,7 +23,7 @@ Keep three tracks separate: Dudullu operations; shared production infrastructure
 - OPS-01 passed locally after the user restored Supabase. The user reported PASS, 29 matrix nodes and 812 directed arcs on /admin/readiness; local server logs showed authenticated administrator readiness HTTP 200 and internal time-matrix readiness HTTP 200. The UI response body was not independently captured because computer-use access failed.
 - A read-only live Supabase count found 812 time_matrix rows, so the earlier BLOCKED-DATA display (0 nodes / 0 arcs) did not mean the table was empty. The Python provider failed while constructing its SDK client: it imported the base ClientOptions class, which lacks storage. The tracked one-line fix imports the SDK's concrete ClientOptions from supabase.client. The existing declared supabase requirement was installed into ignored local .venv-jit; no dependency manifest or database rows changed.
 - Direct read-only provider verification after the fix reported source=supabase, loaded=true, no provider error, 29/29 nodes, 812/812 arcs, ready=true. Focused matrix/readiness tests: 47 passed. This establishes the local data gate, not deployed-production readiness.
-- The Dudullu launcher now passes --hostname 127.0.0.1 to Next. All 20 launcher tests passed; live listeners on ports 8000 and 9002 were verified bound to 127.0.0.1. The code change is uncommitted.
+- The Dudullu launcher now passes --hostname 127.0.0.1 to Next. All 20 launcher tests passed; live listeners on ports 8000 and 9002 were verified bound to 127.0.0.1. The change is included in commit 66948fa.
 - SEC-01 initial ownership only: next and xlsx are direct dependencies; protobufjs and websocket-driver enter through transitive chains. Reachability and remediation remain open.
 
 ## Fresh verification at the recorded HEAD
@@ -72,8 +72,9 @@ Dudullu order follows the approved design: Package 2 preview → 3 transactional
 ## Git and environment boundaries
 
 - Preserve unrelated modified `.gitignore` and `AGENTS.md`, and untracked `INSTRUCTION_REVIEW_2026-09-07.md`. Their hashes were unchanged through this audit.
-- The dated audit and this checkpoint are uncommitted. The 2026-09-23 Dudullu launcher/test and matrix provider/test are also modified. The existing declared Supabase SDK was added only to ignored .venv-jit; no tracked dependency or DB edits, commit, merge, push, or worktree cleanup occurred.
-- **17 registered worktrees** were inspected: root plus 16 linked trees. Of the linked trees, 15 were clean; one has five modified `uniride.egg-info/*` files.
+- The dated audit, checkpoint, Dudullu launcher/test, and matrix provider/test were committed as 66948fa and pushed to origin/WIP on 2026-09-23. The existing declared Supabase SDK was added only to ignored .venv-jit; no tracked dependency or DB rows changed. Preserve unrelated modified .gitignore and AGENTS.md and untracked INSTRUCTION_REVIEW_2026-09-07.md.
+- The audit inspected 17 registered worktrees (root plus 16 linked). On 2026-09-23, nine clean C:/tmp worktrees were removed through Git while retaining their branches. The remaining registered worktrees are the root plus seven repo-internal linked trees; one repo-internal tree has five modified uniride.egg-info/* files.
+- C:/tmp cleanup also removed 16 pytest cache folders and one unused 519 MB Python venv. Eleven scratch folders and 180 root patch/draft files were archived before removal. Three preserved-artifact folders remain untouched; the verified archives are UniRide-worktree-artifacts-20260923.tar.gz, UniRide-scratch-folders-20260923.tar.gz, and UniRide-root-scratch-20260923.tar.gz in C:/tmp.
 - Package B task5/task6/task7 have seven non-ancestor commits in total, but all are patch-equivalent to WIP. Do not merge them merely because ahead/behind is nonzero.
 - One old `autostash` is preserved. Ignored artifacts and all rescue-branch contents were not exhaustively reviewed; no blanket cleanup is approved.
 - No open GitHub PR was found at capture. Recheck before future integration.

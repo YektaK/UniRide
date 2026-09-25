@@ -26,6 +26,11 @@ Keep three tracks separate: Dudullu operations; shared production infrastructure
 - The Dudullu launcher now passes --hostname 127.0.0.1 to Next. All 20 launcher tests passed; live listeners on ports 8000 and 9002 were verified bound to 127.0.0.1. The change is included in commit 66948fa.
 - SEC-01 initial ownership only: next and xlsx are direct dependencies; protobufjs and websocket-driver enter through transitive chains. Reachability and remediation remain open.
 
+## 2026-09-24 planning continuation
+
+- [Dudullu Package 2 preview plan](superpowers/plans/2026-09-24-dudullu-package2-daily-preview.md) is proposed for separate approval. It scopes a protected, content-addressed matrix snapshot, per-job hash binding, independent arc and full-interval checks, physical fleet assignment, an authenticated read-only admin BFF, and a 28-student fixture gate. No Package 2 code or live data was changed by this planning step.
+- Current `ride_requests` rows combine both times without an explicit direction. They cannot establish independently admitted pickup and dropoff legs; the proposed preview reports such legacy confirmation as ambiguous instead of inventing demand. Durable request/plan migrations and publication remain Package 3/4 work.
+- `ACTIVE_ROADMAP.md`'s old Package 0 `BLOCKED-CONFIG` wording was corrected to the verified 2026-09-23 local `PASS` while retaining the older attempt as history. Deployed-production acceptance remains open.
 ## Fresh verification at the recorded HEAD
 
 | Check | 2026-09-22 result |
@@ -106,6 +111,6 @@ The archived-task listing ended with no archived UniRide match. External reports
 6. The coordinator updates this file at material checkpoints. Keep implementation, integration, functional verification, and live acceptance separate.
 7. Carry existing authorization forward. A model change does not itself authorize new scope or require a new complete audit.
 
-**Next product task:** Prepare the scoped Dudullu Package 2 preview plan from the approved package design, using the 2026-09-23 local OPS-01 PASS as its entry evidence. Keep SEC-01 as an independent security track. Recheck the live data gate before any later deployment or publication claim.
+**Next product task:** Review and approve the proposed Dudullu Package 2 preview plan; then implement its first bounded task. Keep SEC-01 as an independent security track. Recheck the live data gate before any later deployment or publication claim.
 
 **If the live gate regresses:** record the current redacted aggregate and the failing layer before changing data or beginning Package 2 implementation.

@@ -31,6 +31,12 @@ Keep three tracks separate: Dudullu operations; shared production infrastructure
 - [Dudullu Package 2 preview plan](superpowers/plans/2026-09-24-dudullu-package2-daily-preview.md) is proposed for separate approval. It scopes a protected, content-addressed matrix snapshot, per-job hash binding, independent arc and full-interval checks, physical fleet assignment, an authenticated read-only admin BFF, and a 28-student fixture gate. No Package 2 code or live data was changed by this planning step.
 - Current `ride_requests` rows combine both times without an explicit direction. They cannot establish independently admitted pickup and dropoff legs; the proposed preview reports such legacy confirmation as ambiguous instead of inventing demand. Durable request/plan migrations and publication remain Package 3/4 work.
 - `ACTIVE_ROADMAP.md`'s old Package 0 `BLOCKED-CONFIG` wording was corrected to the verified 2026-09-23 local `PASS` while retaining the older attempt as history. Deployed-production acceptance remains open.
+
+## 2026-09-28 Package 2 continuation
+
+- Task 1 is implemented and locally committed as `f954629`: the Python matrix repository now creates a content-addressed SHA-256 snapshot, the protected internal snapshot route forces refresh and fails closed on fallback/stale/error/incomplete data, and preview opt-in requests bind the optimizer solve to the unchanged matrix hash.
+- Verification: focused matrix/readiness/hash-guard suite **57 passed**; existing optimize/certificate regression suite **99 passed**; TypeScript typecheck and quiet lint passed; staged diff check passed. No live data or database rows were changed.
+- Next bounded task is Package 2 Task 2: pure TypeScript route verification and complete depot-to-depot intervals. Package 2 remains read-only and non-publishable; Task 4/5 live preview and 28-student gate are not complete.
 ## Fresh verification at the recorded HEAD
 
 | Check | 2026-09-22 result |

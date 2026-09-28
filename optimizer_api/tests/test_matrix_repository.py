@@ -4,8 +4,10 @@ import pytest
 
 from utils.matrix_repository import (
     IncompleteTravelMatrixError,
+    MatrixSnapshotError,
     SupabaseTimeMatrixProvider,
     TimeMatrixRepository,
+    matrix_sha256,
 )
 from utils.data_loader import DataLoader, euclidean_distance
 
@@ -69,6 +71,14 @@ def _build_repo(provider=_DEFAULT, clock=None, ttl_seconds=600):
 # ------------------------------------------------------------------- build/lookup
 
 
+def test_matrix_digest_is_order_independent():
+    forward = matrix_sha256(["D.Kampus", "H1"], [[0, 7], [9, 0]])
+    reordered = matrix_sha256(["H1", "D.Kampus"], [[0, 9], [7, 0]])
+    changed = matrix_sha256(["D.Kampus", "H1"], [[0, 8], [9, 0]])
+    assert forward == reordered
+    assert forward != changed
+
+
 def test_provider_rows_build_submatrix():
     repo = _build_repo(provider=_CompleteProvider())
     repo.load()
@@ -130,6 +140,45 @@ def test_health_fresh_after_load():
     assert health["edges"] == 3
     assert health["last_error"] is None
     assert health["source"] == "supabase"
+
+
+def test_matrix_snapshot_returns_digest_and_requested_directed_arcs():
+    repo = _build_repo(provider=_CompleteProvider())
+    repo.load()
+
+    snapshot = repo.matrix_snapshot(["B", "A"], depot_code="A")
+
+    assert snapshot["id"] == f"time_matrix:sha256:{snapshot['sha256']}"
+    assert snapshot["version"] == snapshot["sha256"]
+    assert snapshot["source"] == "supabase"
+    assert snapshot["arcs"] == [
+        {"origin_code": "A", "destination_code": "B", "duration_minutes": 5.0},
+        {"origin_code": "B", "destination_code": "A", "duration_minutes": 6.0},
+    ]
+
+
+def test_matrix_snapshot_rejects_coordinate_fallback():
+    repo = _build_repo(provider=None)
+    repo.load()
+
+    with pytest.raises(MatrixSnapshotError):
+        repo.matrix_snapshot(["B"], depot_code="A")
+
+
+def test_matrix_snapshot_rejects_stale_or_incomplete_matrix():
+    clock = _MutableClock()
+    repo = _build_repo(provider=_FailingAfterProvider(), clock=clock)
+    repo.load()
+    clock.advance(601)
+    repo.refresh(force=True)
+
+    with pytest.raises(MatrixSnapshotError):
+        repo.matrix_snapshot(["B"], depot_code="A")
+
+    incomplete = _build_repo()
+    incomplete.load()
+    with pytest.raises(MatrixSnapshotError):
+        incomplete.matrix_snapshot(["C"], depot_code="A")
 
 
 def test_ttl_staleness_with_injected_clock():

@@ -10,9 +10,11 @@ logger = logging.getLogger(__name__)
 try:
     from optimizer_api.auth import require_internal_api_key
     from optimizer_api.utils.data_loader import DataLoader
+    from optimizer_api.utils.matrix_repository import MatrixSnapshotError
 except ModuleNotFoundError:  # direct-module compatibility
     from auth import require_internal_api_key
     from utils.data_loader import DataLoader
+    from utils.matrix_repository import MatrixSnapshotError
 
 router = APIRouter(
     prefix="/api/v1/internal",
@@ -23,6 +25,22 @@ router = APIRouter(
 DEPOT_CODE = "D.Kampus"
 MAX_STUDENT_LOCATION_CODES = 250
 _FIXED_422 = {"detail": "Invalid readiness request"}
+_SNAPSHOT_422 = {"detail": "Invalid matrix snapshot request"}
+_SNAPSHOT_503 = {"detail": "Matrix snapshot unavailable"}
+
+
+def _parse_student_location_codes(body):
+    if not isinstance(body, dict) or set(body) != {"student_location_codes"}:
+        return None
+    codes = body.get("student_location_codes")
+    if (
+        not isinstance(codes, list)
+        or not codes
+        or len(codes) > MAX_STUDENT_LOCATION_CODES
+        or any(not isinstance(code, str) or not code.strip() for code in codes)
+    ):
+        return None
+    return codes
 
 
 @router.get("/readiness")
@@ -49,18 +67,8 @@ async def time_matrix_readiness(request: Request) -> JSONResponse:
     except Exception:  # noqa: BLE001 - redacted boundary, never echo input
         return JSONResponse(status_code=422, content=_FIXED_422)
 
-    if not isinstance(body, dict):
-        return JSONResponse(status_code=422, content=_FIXED_422)
-
-    codes = body.get("student_location_codes")
-    if set(body) != {"student_location_codes"}:
-        return JSONResponse(status_code=422, content=_FIXED_422)
-    if (
-        not isinstance(codes, list)
-        or not codes
-        or len(codes) > MAX_STUDENT_LOCATION_CODES
-        or any(not isinstance(code, str) or not code.strip() for code in codes)
-    ):
+    codes = _parse_student_location_codes(body)
+    if codes is None:
         return JSONResponse(status_code=422, content=_FIXED_422)
 
     loader = DataLoader.get_instance()
@@ -70,3 +78,29 @@ async def time_matrix_readiness(request: Request) -> JSONResponse:
         depot_code=DEPOT_CODE,
     )
     return JSONResponse(status_code=200, content=summary)
+
+
+@router.post("/matrix-snapshot")
+async def matrix_snapshot(request: Request) -> JSONResponse:
+    """Return a protected, content-addressed snapshot of requested matrix arcs."""
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001 - fixed redacted boundary
+        return JSONResponse(status_code=422, content=_SNAPSHOT_422)
+
+    codes = _parse_student_location_codes(body)
+    if codes is None:
+        return JSONResponse(status_code=422, content=_SNAPSHOT_422)
+
+    try:
+        loader = DataLoader.get_instance()
+        loader.refresh(force=True)
+        snapshot = loader.repository.matrix_snapshot(
+            student_locations=codes,
+            depot_code=DEPOT_CODE,
+        )
+    except MatrixSnapshotError:
+        return JSONResponse(status_code=503, content=_SNAPSHOT_503)
+    except Exception:  # noqa: BLE001 - fixed redacted boundary
+        return JSONResponse(status_code=503, content=_SNAPSHOT_503)
+    return JSONResponse(status_code=200, content=snapshot)

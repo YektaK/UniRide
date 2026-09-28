@@ -298,6 +298,37 @@ class _StubMatrixRepository:
         return dict(self.summary)
 
 
+class _StubSnapshotRepository(_StubMatrixRepository):
+    def __init__(self, snapshot=None, error=None):
+        super().__init__()
+        self.snapshot = snapshot or {
+            "id": "time_matrix:sha256:" + "a" * 64,
+            "version": "a" * 64,
+            "sha256": "a" * 64,
+            "source": "supabase",
+            "arcs": [
+                {
+                    "origin_code": "D.Kampus",
+                    "destination_code": "H1",
+                    "duration_minutes": 9.0,
+                },
+                {
+                    "origin_code": "H1",
+                    "destination_code": "D.Kampus",
+                    "duration_minutes": 10.0,
+                },
+            ],
+        }
+        self.error = error
+        self.snapshot_calls = []
+
+    def matrix_snapshot(self, student_locations, depot_code):
+        self.snapshot_calls.append((list(student_locations), depot_code))
+        if self.error is not None:
+            raise self.error
+        return dict(self.snapshot)
+
+
 class _StubDataLoader:
     def __init__(self, repository):
         self.repository = repository
@@ -419,6 +450,42 @@ def test_route_calls_non_forced_refresh_before_measuring(monkeypatch):
     assert loader.refresh_calls == [False]
     assert loader.repository.last_locations == ["Sw1"]
     assert loader.repository.last_depot == "D.Kampus"
+
+
+def test_snapshot_route_forces_refresh_and_returns_artifact(monkeypatch):
+    _enable_internal_key(monkeypatch, "shared-key")
+    repository = _StubSnapshotRepository()
+    loader = _StubDataLoader(repository)
+    _install_stub_loader(monkeypatch, loader)
+
+    response = _client().post(
+        "/api/v1/internal/matrix-snapshot",
+        json={"student_location_codes": ["H1"]},
+        headers={"X-Internal-API-Key": "shared-key"},
+    )
+
+    assert response.status_code == 200
+    assert loader.refresh_calls == [True]
+    assert repository.snapshot_calls == [(["H1"], "D.Kampus")]
+    assert response.json()["id"].startswith("time_matrix:sha256:")
+    assert response.json()["source"] == "supabase"
+
+
+def test_snapshot_route_returns_fixed_503_for_unhealthy_matrix(monkeypatch):
+    _enable_internal_key(monkeypatch, "shared-key")
+    repository = _StubSnapshotRepository(error=RuntimeError("secret provider detail"))
+    loader = _StubDataLoader(repository)
+    _install_stub_loader(monkeypatch, loader)
+
+    response = _client().post(
+        "/api/v1/internal/matrix-snapshot",
+        json={"student_location_codes": ["H1"]},
+        headers={"X-Internal-API-Key": "shared-key"},
+    )
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Matrix snapshot unavailable"}
+    assert "secret provider detail" not in response.text
 
 
 def test_request_accepts_250_codes_but_rejects_251(monkeypatch):

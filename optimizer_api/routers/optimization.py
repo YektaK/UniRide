@@ -53,6 +53,8 @@ from models.schemas import (
 )
 from utils.resource_profiler import ResourceProfiler
 from utils.scheduling import calculate_scheduled_times
+from utils.data_loader import DataLoader
+from utils.matrix_repository import MatrixSnapshotError
 from verification.response_certifier import certify_optimization_response
 
 router = APIRouter(
@@ -63,6 +65,7 @@ router = APIRouter(
 logger = logging.getLogger(__name__)
 _INVALID_CERTIFICATE_ERROR = "certification aborted: invalid certificate payload"
 _UNAVAILABLE_CERTIFICATE_ERROR = "certification unavailable: algorithm produced no result"
+_MATRIX_BINDING_ERROR = "matrix snapshot unavailable or changed"
 _EXACT_OPTIMAL_LIMIT = 10
 
 
@@ -116,6 +119,67 @@ def _optimization_failure(
         feasibility_certificate=typed_certificate,
     )
 
+
+def _matrix_snapshot_for_request(request: OptimizationRequest) -> dict:
+    loader = DataLoader.get_instance()
+    return loader.repository.matrix_snapshot(
+        student_locations=[student.location_code for student in request.students],
+        depot_code=request.depot.id,
+    )
+
+
+def _matrix_binding_failure(
+    resolution: ResolvedStrategy,
+    applied_policy: AppliedComputePolicyInfo,
+    execution_time: float,
+) -> OptimizationResponse:
+    typed_certificate = FeasibilityCertificateInfo(
+        is_feasible=False,
+        violation_count=0,
+        violations=[],
+        certify_error=_MATRIX_BINDING_ERROR,
+    )
+    return OptimizationResponse(
+        algorithm_used=resolution.canonical,
+        algorithm_requested=resolution.requested,
+        applied_policy=applied_policy.model_dump(),
+        success=False,
+        routes=[],
+        execution_time_seconds=round(execution_time, 4),
+        error_message=_failure_json(typed_certificate),
+        feasibility_certificate=typed_certificate,
+    )
+
+
+def _matrix_binding_is_valid(
+    request: OptimizationRequest,
+    baseline: dict,
+) -> bool:
+    try:
+        current = _matrix_snapshot_for_request(request)
+    except MatrixSnapshotError:
+        return False
+    except Exception:  # noqa: BLE001 - fail closed
+        return False
+    return (
+        isinstance(baseline, dict)
+        and _matrix_snapshot_matches(request, current)
+        and current.get("sha256") == baseline.get("sha256")
+    )
+
+
+def _matrix_snapshot_matches(request: OptimizationRequest, snapshot: dict) -> bool:
+    if not isinstance(snapshot, dict):
+        return False
+    digest = snapshot.get("sha256")
+    return (
+        snapshot.get("source") == "supabase"
+        and isinstance(digest, str)
+        and digest == request.expected_matrix_sha256
+        and snapshot.get("version") == digest
+        and snapshot.get("id") == f"time_matrix:sha256:{digest}"
+    )
+
 @router.post("/optimize", response_model=OptimizationResponse)
 def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
     try:
@@ -143,8 +207,32 @@ def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
         time_windows = {}
         if request.use_time_windows:
             time_windows = request.get_time_windows()
-        
+
+        matrix_binding = None
+        if request.expected_matrix_sha256 is not None:
+            try:
+                matrix_binding = _matrix_snapshot_for_request(request)
+            except MatrixSnapshotError:
+                return _matrix_binding_failure(
+                    resolution, applied_policy, time.time() - start_time
+                )
+            except Exception:  # noqa: BLE001 - fail closed
+                return _matrix_binding_failure(
+                    resolution, applied_policy, time.time() - start_time
+                )
+            if not _matrix_snapshot_matches(request, matrix_binding):
+                return _matrix_binding_failure(
+                    resolution, applied_policy, time.time() - start_time
+                )
+
         result = strategy.optimize(request)
+        if (
+            request.expected_matrix_sha256 is not None
+            and not _matrix_binding_is_valid(request, matrix_binding)
+        ):
+            return _matrix_binding_failure(
+                resolution, applied_policy, time.time() - start_time
+            )
         execution_time = time.time() - start_time
         if result is None:
             typed_certificate = _typed_certificate(None)

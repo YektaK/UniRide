@@ -208,6 +208,11 @@ class OptimizationRequest(BaseModel):
     direction: TripDirection = TripDirection.PICKUP
     use_time_windows: bool = False
     target_time: Optional[str] = None
+    expected_matrix_sha256: Optional[str] = Field(
+        default=None,
+        pattern=r"^[0-9a-f]{64}$",
+        description="Content hash of the authoritative matrix snapshot for preview calls",
+    )
     offset_minutes: int = 15
     allow_time_shift: bool = False
     slack_window_minutes: int = 60

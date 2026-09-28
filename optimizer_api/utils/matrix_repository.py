@@ -13,6 +13,8 @@ delegates here.
 from __future__ import annotations
 
 import math
+import hashlib
+import json
 import time
 import threading
 from typing import Any, Callable, Dict, List, Optional, Protocol
@@ -32,6 +34,28 @@ class IncompleteTravelMatrixError(LookupError):
         super().__init__(
             f"Incomplete travel matrix: no valid arc {source!r} -> {target!r}."
         )
+
+
+class MatrixSnapshotError(RuntimeError):
+    """Raised when a healthy, complete Supabase matrix snapshot is unavailable."""
+
+
+def matrix_sha256(locations: list[str], matrix: list[list[float]]) -> str:
+    """Return a stable digest for every directed off-diagonal matrix entry."""
+    if len(locations) != len(matrix) or any(len(row) != len(locations) for row in matrix):
+        raise ValueError("matrix must be square and match locations")
+    if len(set(locations)) != len(locations):
+        raise ValueError("locations must be unique")
+
+    entries = [
+        [origin, destination, float(matrix[i][j]).hex()]
+        for i, origin in enumerate(locations)
+        for j, destination in enumerate(locations)
+        if i != j
+    ]
+    entries.sort(key=lambda row: (row[0], row[1]))
+    payload = json.dumps(entries, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 class TravelTimeProvider(Protocol):
@@ -384,6 +408,66 @@ class TimeMatrixRepository:
                 "ready": ready,
             }
 
+    def matrix_snapshot(
+        self,
+        student_locations: List[str],
+        depot_code: str,
+    ) -> Dict[str, Any]:
+        """Return an immutable, redaction-safe snapshot for the requested arcs."""
+        with self._lock:
+            required = [depot_code]
+            seen = {depot_code}
+            for code in student_locations:
+                cleaned = code.strip()
+                if cleaned and cleaned not in seen:
+                    required.append(cleaned)
+                    seen.add(cleaned)
+
+            if len(required) < 2:
+                raise MatrixSnapshotError("student locations are required")
+            if self._use_coordinates or self.time_matrix is None:
+                raise MatrixSnapshotError("coordinate fallback is not authoritative")
+            if self._loaded_at is None:
+                raise MatrixSnapshotError("matrix is not loaded")
+            if self._last_error is not None:
+                raise MatrixSnapshotError("matrix provider is unhealthy")
+            if self._ttl_seconds > 0 and self._clock() - self._loaded_at > self._ttl_seconds:
+                raise MatrixSnapshotError("matrix is stale")
+
+            locations = list(self.locations)
+            matrix = [list(row) for row in self.time_matrix]
+            loc_to_idx = dict(self.loc_to_idx)
+
+        if len(matrix) != len(locations) or any(
+            len(row) != len(locations) for row in matrix
+        ):
+            raise MatrixSnapshotError("matrix shape is invalid")
+        if any(code not in loc_to_idx for code in required):
+            raise MatrixSnapshotError("required matrix location is missing")
+
+        arcs = []
+        for origin in required:
+            for destination in required:
+                if origin == destination:
+                    continue
+                value = float(matrix[loc_to_idx[origin]][loc_to_idx[destination]])
+                if not math.isfinite(value) or value <= 0.0:
+                    raise MatrixSnapshotError("required matrix arc is incomplete")
+                arcs.append({
+                    "origin_code": origin,
+                    "destination_code": destination,
+                    "duration_minutes": value,
+                })
+
+        digest = matrix_sha256(locations, matrix)
+        return {
+            "id": f"time_matrix:sha256:{digest}",
+            "version": digest,
+            "sha256": digest,
+            "source": "supabase",
+            "arcs": arcs,
+        }
+
     def _arc_value(self, from_loc: str, to_loc: str) -> float:
         """Return the directed arc value, rejecting invalid arcs.
 
@@ -461,7 +545,9 @@ class TimeMatrixRepository:
 
 
 __all__ = [
+    "MatrixSnapshotError",
     "SupabaseTimeMatrixProvider",
     "TimeMatrixRepository",
     "TravelTimeProvider",
+    "matrix_sha256",
 ]

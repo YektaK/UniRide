@@ -36,7 +36,9 @@ Keep three tracks separate: Dudullu operations; shared production infrastructure
 
 - Task 1 is implemented and locally committed as `f954629`: the Python matrix repository now creates a content-addressed SHA-256 snapshot, the protected internal snapshot route forces refresh and fails closed on fallback/stale/error/incomplete data, and preview opt-in requests bind the optimizer solve to the unchanged matrix hash.
 - Verification: focused matrix/readiness/hash-guard suite **57 passed**; existing optimize/certificate regression suite **99 passed**; TypeScript typecheck and quiet lint passed; staged diff check passed. No live data or database rows were changed.
-- Next bounded task is Package 2 Task 2: pure TypeScript route verification and complete depot-to-depot intervals. Package 2 remains read-only and non-publishable; Task 4/5 live preview and 28-student gate are not complete.
+- Task 2 is implemented and locally committed as `ed1a2f4`: the pure TypeScript preview assembler verifies admitted occurrence coverage, directed matrix arcs, feasible certificates, complete depot-to-depot routes, and unrounded full-day pickup/dropoff intervals. It remains non-publishable and performs no live-data writes.
+- Verification: focused preview suite **12 passed**; full frontend suite **40 files / 228 tests passed**; `npm.cmd run typecheck` passed; quiet lint passed after the sandbox process-start workaround; staged diff check passed. No live data or database rows were changed.
+- Next bounded task is Package 2 Task 3: deterministic physical fleet assignment with capacity, cooldown, shortage, and indeterminate-search reporting. Task 4/5 live preview and 28-student gate are not complete.
 ## Fresh verification at the recorded HEAD
 
 | Check | 2026-09-22 result |
@@ -117,6 +119,6 @@ The archived-task listing ended with no archived UniRide match. External reports
 6. The coordinator updates this file at material checkpoints. Keep implementation, integration, functional verification, and live acceptance separate.
 7. Carry existing authorization forward. A model change does not itself authorize new scope or require a new complete audit.
 
-**Next product task:** Review and approve the proposed Dudullu Package 2 preview plan; then implement its first bounded task. Keep SEC-01 as an independent security track. Recheck the live data gate before any later deployment or publication claim.
+**Next product task:** Implement and verify Dudullu Package 2 Task 3 (physical fleet assignment) from the approved plan. Keep SEC-01 as an independent security track. Recheck the live data gate before any later deployment or publication claim.
 
 **If the live gate regresses:** record the current redacted aggregate and the failing layer before changing data or beginning Package 2 implementation.

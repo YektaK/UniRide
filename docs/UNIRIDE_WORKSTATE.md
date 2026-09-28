@@ -38,7 +38,9 @@ Keep three tracks separate: Dudullu operations; shared production infrastructure
 - Verification: focused matrix/readiness/hash-guard suite **57 passed**; existing optimize/certificate regression suite **99 passed**; TypeScript typecheck and quiet lint passed; staged diff check passed. No live data or database rows were changed.
 - Task 2 is implemented and locally committed as `ed1a2f4`: the pure TypeScript preview assembler verifies admitted occurrence coverage, directed matrix arcs, feasible certificates, complete depot-to-depot routes, and unrounded full-day pickup/dropoff intervals. It remains non-publishable and performs no live-data writes.
 - Verification: focused preview suite **12 passed**; full frontend suite **40 files / 228 tests passed**; `npm.cmd run typecheck` passed; quiet lint passed after the sandbox process-start workaround; staged diff check passed. No live data or database rows were changed.
-- Next bounded task is Package 2 Task 3: deterministic physical fleet assignment with capacity, cooldown, shortage, and indeterminate-search reporting. Task 4/5 live preview and 28-student gate are not complete.
+- Task 3 is implemented and locally committed as `8ff220b`: the pure preview assembler now validates solver Sw/So load counts against admitted occurrences, assigns complete intervals to physical vehicles with capacity/cooldown constraints, minimizes distinct fleet size deterministically, and reports truthful `shortage`/`indeterminate` outcomes plus hourly occupancy.
+- Verification: focused preview suite **20 passed**; full frontend suite **40 files / 236 tests passed**; `npm.cmd run typecheck` passed; quiet lint passed after the sandbox process-start workaround; staged diff check passed. A fresh read-only review found one load-count trust issue, which was fixed with a failing regression test before the final suite. No live data or database rows were changed.
+- Next bounded task is Package 2 Task 4: authenticated read-only admin BFF and live-data admission boundary. The 28-student gate and publication remain incomplete.
 ## Fresh verification at the recorded HEAD
 
 | Check | 2026-09-22 result |
@@ -119,6 +121,6 @@ The archived-task listing ended with no archived UniRide match. External reports
 6. The coordinator updates this file at material checkpoints. Keep implementation, integration, functional verification, and live acceptance separate.
 7. Carry existing authorization forward. A model change does not itself authorize new scope or require a new complete audit.
 
-**Next product task:** Implement and verify Dudullu Package 2 Task 3 (physical fleet assignment) from the approved plan. Keep SEC-01 as an independent security track. Recheck the live data gate before any later deployment or publication claim.
+**Next product task:** Implement and verify Dudullu Package 2 Task 4 (admin BFF and live-data admission boundary) from the approved plan. Keep SEC-01 as an independent security track. Recheck the live data gate before any later deployment or publication claim.
 
 **If the live gate regresses:** record the current redacted aggregate and the failing layer before changing data or beginning Package 2 implementation.

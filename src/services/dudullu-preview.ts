@@ -3,6 +3,7 @@ import { DUDULLU_CAMPUS } from "./dudullu-campus";
 
 const DEPOT_CODE = DUDULLU_CAMPUS.code;
 const SERVICE_DAY_END_MINUTES = 24 * 60;
+const ASSIGNMENT_SEARCH_NODE_BUDGET = 50_000;
 const ADMITTED = new Set(["confirmed", "approved"]);
 
 export interface MatrixArc {
@@ -54,6 +55,10 @@ export interface PreviewVehicle {
   readonly cooldownMinutes?: number;
 }
 
+export interface PreviewAssignment extends PreviewRouteInterval {
+  readonly physicalVehicleId: string;
+}
+
 export interface PreviewJobInput {
   readonly id: string;
   readonly serviceDate: string;
@@ -66,10 +71,13 @@ export interface PreviewJobInput {
 }
 
 export type PreviewReasonCode =
+  | "ASSIGNMENT_SEARCH_INDETERMINATE"
   | "CERTIFICATE_INVALID"
   | "CLOSING_DEPOT_ARC_MISSING"
   | "DUPLICATE_MATRIX_ARC"
   | "DUPLICATE_OCCURRENCE_COVERAGE"
+  | "FLEET_INVALID"
+  | "FLEET_SHORTAGE"
   | "JOB_CONTRACT_MISMATCH"
   | "MATRIX_ARC_MISMATCH"
   | "MATRIX_SNAPSHOT_INVALID"
@@ -79,6 +87,7 @@ export type PreviewReasonCode =
   | "NO_ROUTE_STEPS"
   | "OPTIMIZATION_NOT_SUCCESSFUL"
   | "ROUTE_OUTSIDE_SERVICE_DAY"
+  | "ROUTE_LOAD_MISMATCH"
   | "ROUTE_TOTAL_MISMATCH"
   | "UNKNOWN_OCCURRENCE"
   | "UNKNOWN_ROUTE_NODE";
@@ -110,14 +119,15 @@ export interface HourlyDemandSummary {
 }
 
 export interface DudulluPreviewResult {
-  readonly status: "preview_ready" | "blocked_data";
+  readonly status: "preview_ready" | "shortage" | "blocked_data" | "indeterminate";
   readonly publishable: false;
   readonly serviceDate: string;
   readonly matrix: Omit<MatrixSnapshot, "arcs"> | null;
   readonly hourlyDemand: Readonly<Record<string, HourlyDemandSummary>>;
   readonly jobs: readonly VerifiedPreviewJob[];
   readonly routeIntervals: readonly PreviewRouteInterval[];
-  readonly assignments: readonly unknown[];
+  readonly assignments: readonly PreviewAssignment[];
+  readonly hourlyOccupiedVehicles: Readonly<Record<string, number>>;
   readonly unassignedOccurrenceIds: readonly string[];
   readonly reasonCodes: readonly PreviewReasonCode[];
 }
@@ -164,6 +174,7 @@ function makeBlockedResult(
   matrix: MatrixSnapshot | null | undefined,
   reasonCodes: readonly PreviewReasonCode[],
   hourlyDemand: Readonly<Record<string, HourlyDemandSummary>> = {},
+  unassignedOccurrenceIds: readonly string[] = [],
 ): DudulluPreviewResult {
   return {
     status: "blocked_data",
@@ -174,7 +185,8 @@ function makeBlockedResult(
     jobs: [],
     routeIntervals: [],
     assignments: [],
-    unassignedOccurrenceIds: [],
+    hourlyOccupiedVehicles: {},
+    unassignedOccurrenceIds,
     reasonCodes: [...new Set(reasonCodes)],
   };
 }
@@ -311,6 +323,22 @@ function validateRoute(
   for (const occurrenceId of listedOccurrences) {
     if (!jobOccurrenceIds.has(occurrenceId)) fail("UNKNOWN_OCCURRENCE");
   }
+  const expectedLoad = { Sw: 0, So: 0 };
+  for (const occurrenceId of listedOccurrences) {
+    const demand = job.demands.find((item) => item.occurrenceId === occurrenceId);
+    if (!demand || !(demand.disabilityType in expectedLoad)) fail("ROUTE_LOAD_MISMATCH");
+    expectedLoad[demand.disabilityType] += 1;
+  }
+  if (
+    !Number.isInteger(route.sw_count) ||
+    !Number.isInteger(route.so_count) ||
+    route.sw_count < 0 ||
+    route.so_count < 0 ||
+    route.sw_count !== expectedLoad.Sw ||
+    route.so_count !== expectedLoad.So
+  ) {
+    fail("ROUTE_LOAD_MISMATCH");
+  }
   if (
     listedOccurrences.length !== internalOccurrences.size ||
     listedOccurrences.some((occurrenceId) => !internalOccurrences.has(occurrenceId))
@@ -403,6 +431,162 @@ function validateJob(
   };
 }
 
+interface NormalizedPreviewVehicle extends PreviewVehicle {
+  readonly cooldownMinutes: number;
+}
+
+interface FleetAssignmentResult {
+  readonly status: "preview_ready" | "shortage" | "blocked_data" | "indeterminate";
+  readonly assignments: readonly PreviewAssignment[];
+  readonly hourlyOccupiedVehicles: Readonly<Record<string, number>>;
+  readonly unassignedOccurrenceIds: readonly string[];
+  readonly reasonCodes: readonly PreviewReasonCode[];
+}
+
+function normalizeVehicles(vehicles: readonly PreviewVehicle[]): NormalizedPreviewVehicle[] | null {
+  const seen = new Set<string>();
+  const normalized: NormalizedPreviewVehicle[] = [];
+  for (const vehicle of vehicles) {
+    const cooldownMinutes = vehicle.cooldownMinutes ?? 0;
+    if (
+      typeof vehicle.vehicleId !== "string" ||
+      vehicle.vehicleId.length === 0 ||
+      seen.has(vehicle.vehicleId) ||
+      !Number.isFinite(vehicle.swCapacity) ||
+      !Number.isFinite(vehicle.soCapacity) ||
+      !Number.isFinite(cooldownMinutes) ||
+      vehicle.swCapacity < 0 ||
+      vehicle.soCapacity < 0 ||
+      cooldownMinutes < 0
+    ) {
+      return null;
+    }
+    seen.add(vehicle.vehicleId);
+    normalized.push({ ...vehicle, cooldownMinutes });
+  }
+  return normalized.sort((left, right) => left.vehicleId < right.vehicleId ? -1 : 1);
+}
+
+function canAssign(
+  vehicle: NormalizedPreviewVehicle,
+  route: PreviewRouteInterval,
+  assigned: readonly PreviewRouteInterval[],
+): boolean {
+  return route.swCount <= vehicle.swCapacity &&
+    route.soCount <= vehicle.soCapacity &&
+    assigned.every((other) =>
+      other.endMinutes + vehicle.cooldownMinutes <= route.startMinutes ||
+      route.endMinutes + vehicle.cooldownMinutes <= other.startMinutes
+    );
+}
+
+function hourlyOccupiedVehicles(assignments: readonly PreviewAssignment[]): Readonly<Record<string, number>> {
+  const occupied: Record<string, Set<string>> = {};
+  for (const assignment of assignments) {
+    const firstHour = Math.floor(assignment.startMinutes / 60);
+    const lastHour = Math.floor(Math.max(assignment.startMinutes, assignment.endMinutes - 0.000000001) / 60);
+    for (let hour = firstHour; hour <= lastHour; hour += 1) {
+      const key = `${String(hour).padStart(2, "0")}:00`;
+      (occupied[key] ??= new Set()).add(assignment.physicalVehicleId);
+    }
+  }
+  return Object.fromEntries(Object.entries(occupied).map(([hour, ids]) => [hour, ids.size]));
+}
+
+function assignPhysicalVehicles(
+  intervals: readonly PreviewRouteInterval[],
+  vehicles: readonly PreviewVehicle[],
+): FleetAssignmentResult {
+  const normalizedVehicles = normalizeVehicles(vehicles);
+  const allOccurrenceIds = [...new Set(intervals.flatMap((interval) => interval.occurrenceIds))];
+  if (normalizedVehicles === null) {
+    return {
+      status: "blocked_data",
+      assignments: [],
+      hourlyOccupiedVehicles: {},
+      unassignedOccurrenceIds: allOccurrenceIds,
+      reasonCodes: ["FLEET_INVALID"],
+    };
+  }
+  if (normalizedVehicles.length === 0) {
+    return {
+      status: "shortage",
+      assignments: [],
+      hourlyOccupiedVehicles: {},
+      unassignedOccurrenceIds: allOccurrenceIds,
+      reasonCodes: ["FLEET_SHORTAGE"],
+    };
+  }
+  const availableVehicles = normalizedVehicles;
+
+  const orderedIntervals = intervals
+    .map((interval, originalIndex) => ({ interval, originalIndex }))
+    .sort((left, right) =>
+      left.interval.startMinutes - right.interval.startMinutes ||
+      left.interval.endMinutes - right.interval.endMinutes ||
+      (left.interval.jobId < right.interval.jobId ? -1 : left.interval.jobId > right.interval.jobId ? 1 : 0) ||
+      left.interval.routeIndex - right.interval.routeIndex
+    );
+  const current = new Map<number, string>();
+  const assignedByVehicle = new Map<string, PreviewRouteInterval[]>();
+  let best: Map<number, string> | null = null;
+  let bestVehicleCount = Number.POSITIVE_INFINITY;
+  let nodes = 0;
+  let exhausted = false;
+
+  function search(index: number): void {
+    if (exhausted || assignedByVehicle.size >= bestVehicleCount) return;
+    if (nodes >= ASSIGNMENT_SEARCH_NODE_BUDGET) {
+      exhausted = true;
+      return;
+    }
+    nodes += 1;
+    if (index === orderedIntervals.length) {
+      best = new Map(current);
+      bestVehicleCount = new Set(current.values()).size;
+      return;
+    }
+
+    const { interval, originalIndex } = orderedIntervals[index];
+    const candidates = [...availableVehicles].sort((left, right) => {
+      const leftUsed = assignedByVehicle.has(left.vehicleId) ? 0 : 1;
+      const rightUsed = assignedByVehicle.has(right.vehicleId) ? 0 : 1;
+      return leftUsed - rightUsed || (left.vehicleId < right.vehicleId ? -1 : 1);
+    });
+    for (const vehicle of candidates) {
+      const assigned = assignedByVehicle.get(vehicle.vehicleId) ?? [];
+      if (!canAssign(vehicle, interval, assigned)) continue;
+      current.set(originalIndex, vehicle.vehicleId);
+      assignedByVehicle.set(vehicle.vehicleId, [...assigned, interval]);
+      search(index + 1);
+      current.delete(originalIndex);
+      if (assigned.length === 0) assignedByVehicle.delete(vehicle.vehicleId);
+      else assignedByVehicle.set(vehicle.vehicleId, assigned);
+      if (exhausted) return;
+    }
+  }
+
+  search(0);
+  const assignments = best === null
+    ? []
+    : intervals.map((interval, originalIndex) => ({
+      ...interval,
+      physicalVehicleId: best?.get(originalIndex) ?? "",
+    }));
+  const assignedOccurrenceIds = new Set(assignments.flatMap((assignment) => assignment.occurrenceIds));
+  const unassignedOccurrenceIds = allOccurrenceIds.filter((occurrenceId) => !assignedOccurrenceIds.has(occurrenceId));
+  const status = exhausted ? "indeterminate" : best === null ? "shortage" : "preview_ready";
+  return {
+    status,
+    assignments,
+    hourlyOccupiedVehicles: hourlyOccupiedVehicles(assignments),
+    unassignedOccurrenceIds,
+    reasonCodes: status === "preview_ready"
+      ? []
+      : [status === "shortage" ? "FLEET_SHORTAGE" : "ASSIGNMENT_SEARCH_INDETERMINATE"],
+  };
+}
+
 export function buildDudulluPreview(input: BuildDudulluPreviewInput): DudulluPreviewResult {
   const admitted = input.demands.filter((item) => ADMITTED.has(item.admission));
   const demandSummary = hourlyDemand(admitted);
@@ -450,16 +634,28 @@ export function buildDudulluPreview(input: BuildDudulluPreviewInput): DudulluPre
     throw error;
   }
 
+  const fleet = assignPhysicalVehicles(verifiedJobs.flatMap((job) => job.intervals), input.vehicles);
+  if (fleet.status === "blocked_data") {
+    return makeBlockedResult(
+      input.serviceDate,
+      input.matrix,
+      fleet.reasonCodes,
+      demandSummary,
+      fleet.unassignedOccurrenceIds,
+    );
+  }
+
   return {
-    status: "preview_ready",
+    status: fleet.status,
     publishable: false,
     serviceDate: input.serviceDate,
     matrix: matrixMetadata(input.matrix),
     hourlyDemand: demandSummary,
     jobs: verifiedJobs,
     routeIntervals: verifiedJobs.flatMap((job) => job.intervals),
-    assignments: [],
-    unassignedOccurrenceIds: [],
-    reasonCodes: [],
+    assignments: fleet.assignments,
+    hourlyOccupiedVehicles: fleet.hourlyOccupiedVehicles,
+    unassignedOccurrenceIds: fleet.unassignedOccurrenceIds,
+    reasonCodes: fleet.reasonCodes,
   };
 }

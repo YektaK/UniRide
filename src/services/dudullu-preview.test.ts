@@ -7,6 +7,7 @@ import type {
   PreviewJobInput,
   PreviewOptimizationResult,
   PreviewRoute,
+  PreviewVehicle,
 } from "./dudullu-preview";
 
 const SERVICE_DATE = "2026-08-26";
@@ -88,10 +89,20 @@ function result(
   };
 }
 
+function vehicle(
+  vehicleId: string,
+  swCapacity = 2,
+  soCapacity = 2,
+  cooldownMinutes = 0,
+): PreviewVehicle {
+  return { vehicleId, swCapacity, soCapacity, cooldownMinutes };
+}
+
 function job(
   demands: readonly PreviewDemand[],
   routeDetails: PreviewRoute["route_details"],
   options: {
+    id?: string;
     direction?: PreviewDemand["direction"];
     anchorMinutes?: number;
     routeStudentIds?: readonly string[];
@@ -113,7 +124,7 @@ function job(
 
   const routeStudentIds = options.routeStudentIds ?? demands.map((item) => item.occurrenceId);
   return {
-    id: `${direction}-${anchorMinutes}`,
+    id: options.id ?? `${direction}-${anchorMinutes}`,
     serviceDate: SERVICE_DATE,
     direction,
     anchorMinutes,
@@ -128,11 +139,14 @@ function build(
   demands: readonly PreviewDemand[],
   jobs: readonly PreviewJobInput[],
   matrix: MatrixSnapshot = baseMatrix,
+  options: {
+    vehicles?: readonly PreviewVehicle[];
+  } = {},
 ) {
   return buildDudulluPreview({
     serviceDate: SERVICE_DATE,
     demands,
-    vehicles: [],
+    vehicles: options.vehicles ?? [vehicle("BUS-1")],
     matrix,
     jobs,
   });
@@ -142,6 +156,20 @@ const normalRoute = (node = "H1", outbound = 5, inbound = 6) => [
   { location1: DEPOT, location2: node, duration: outbound, distance: 1 },
   { location1: node, location2: DEPOT, duration: inbound, distance: 1 },
 ];
+
+function countedRoute(
+  details: PreviewRoute["route_details"],
+  studentIds: readonly string[],
+  swCount: number,
+  soCount: number,
+  totalDuration = details.reduce((sum, step) => sum + step.duration, 0),
+): PreviewRoute {
+  return {
+    ...route(details, studentIds, totalDuration),
+    sw_count: swCount,
+    so_count: soCount,
+  };
+}
 
 describe("buildDudulluPreview", () => {
   it("keeps distinct exact anchors as separate jobs even within one wave", () => {
@@ -330,5 +358,186 @@ describe("buildDudulluPreview", () => {
 
     expect(preview.status).toBe("blocked_data");
     expect(preview.reasonCodes).toContain(code);
+  });
+
+  it("assigns a route only when both Sw and So capacities fit", () => {
+    const sw = demand("sw-1", "H1", "pickup", 600, "Sw");
+    const so = demand("so-1", "H1", "pickup", 600, "So");
+    const details = [
+      { location1: DEPOT, location2: "H1#sw", duration: 5, distance: 1 },
+      { location1: "H1#sw", location2: "H1#so", duration: 0, distance: 0 },
+      { location1: "H1#so", location2: DEPOT, duration: 6, distance: 1 },
+    ];
+    const preview = build(
+      [sw, so],
+      [job([sw, so], details, {
+        nodeNames: ["H1#sw", "H1#so"],
+        result: result([countedRoute(details, [sw.occurrenceId, so.occurrenceId], 1, 1)]),
+      })],
+      baseMatrix,
+      { vehicles: [vehicle("BUS-1", 1, 1)] },
+    );
+
+    expect(preview.status).toBe("preview_ready");
+    expect(preview.assignments).toEqual([
+      expect.objectContaining({ physicalVehicleId: "BUS-1", swCount: 1, soCount: 1 }),
+    ]);
+  });
+
+  it("rejects optimizer load counts that disagree with admitted Sw/So occurrences", () => {
+    const sw = demand("sw-1", "H1", "pickup", 600, "Sw");
+    const details = normalRoute("sw-1");
+    const preview = build(
+      [sw],
+      [job([sw], details, {
+        result: result([countedRoute(details, [sw.occurrenceId], 0, 1)]),
+      })],
+    );
+
+    expect(preview.status).toBe("blocked_data");
+    expect(preview.reasonCodes).toContain("ROUTE_LOAD_MISMATCH");
+  });
+
+  it("uses heterogeneous vehicles for incompatible Sw and So routes", () => {
+    const sw = demand("sw-1", "H1", "pickup", 600, "Sw");
+    const so = demand("so-1", "H2", "pickup", 600, "So");
+    const preview = build(
+      [sw, so],
+      [
+        job([sw], normalRoute("sw-1"), {
+          id: "sw-job",
+          result: result([countedRoute(normalRoute("sw-1"), [sw.occurrenceId], 1, 0)]),
+        }),
+        job([so], normalRoute("so-1", 4, 7), {
+          id: "so-job",
+          result: result([countedRoute(normalRoute("so-1", 4, 7), [so.occurrenceId], 0, 1)]),
+        }),
+      ],
+      baseMatrix,
+      { vehicles: [vehicle("SW-BUS", 1, 0), vehicle("SO-BUS", 0, 1)] },
+    );
+
+    expect(preview.status).toBe("preview_ready");
+    expect(new Set(preview.assignments.map((item) => item.physicalVehicleId))).toEqual(
+      new Set(["SW-BUS", "SO-BUS"]),
+    );
+  });
+
+  it("allows exact endpoint reuse but honors a positive cooldown", () => {
+    const first = demand("occ-1", "H1", "pickup", 600);
+    const second = demand("occ-2", "H2", "pickup", 611);
+    const jobs = [
+      job([first], normalRoute("occ-1"), { id: "first", anchorMinutes: 600 }),
+      job([second], normalRoute("occ-2", 4, 7), { id: "second", anchorMinutes: 611 }),
+    ];
+    const endpoint = build([first, second], jobs, baseMatrix, {
+      vehicles: [vehicle("BUS-1", 2, 2, 0)],
+    });
+    const cooldown = build([first, second], jobs, baseMatrix, {
+      vehicles: [vehicle("BUS-1", 2, 2, 1)],
+    });
+
+    expect(endpoint.status).toBe("preview_ready");
+    expect(new Set(endpoint.assignments.map((item) => item.physicalVehicleId))).toEqual(new Set(["BUS-1"]));
+    expect(cooldown.status).toBe("shortage");
+    expect(cooldown.unassignedOccurrenceIds).toEqual([first.occurrenceId, second.occurrenceId]);
+  });
+
+  it("reuses one physical vehicle across pickup and dropoff when full intervals do not conflict", () => {
+    const pickup = demand("pickup-1", "H1", "pickup", 600);
+    const dropoff = demand("dropoff-1", "H1", "dropoff", 900);
+    const preview = build(
+      [pickup, dropoff],
+      [
+        job([pickup], normalRoute("pickup-1"), { id: "pickup-job", anchorMinutes: 600 }),
+        job([dropoff], normalRoute("dropoff-1"), {
+          id: "dropoff-job",
+          direction: "dropoff",
+          anchorMinutes: 900,
+        }),
+      ],
+      baseMatrix,
+      { vehicles: [vehicle("BUS-1", 2, 2, 5)] },
+    );
+
+    expect(preview.status).toBe("preview_ready");
+    expect(preview.assignments).toHaveLength(2);
+    expect(new Set(preview.assignments.map((item) => item.physicalVehicleId))).toEqual(new Set(["BUS-1"]));
+    expect(preview.hourlyOccupiedVehicles["09:00"]).toBe(1);
+  });
+
+  it("returns shortage rather than claiming fleet feasibility when routes cannot fit", () => {
+    const first = demand("occ-1", "H1", "pickup", 600);
+    const second = demand("occ-2", "H2", "pickup", 600);
+    const preview = build(
+      [first, second],
+      [
+        job([first], normalRoute("occ-1"), { id: "first", anchorMinutes: 600 }),
+        job([second], normalRoute("occ-2", 4, 7), { id: "second", anchorMinutes: 600 }),
+      ],
+      baseMatrix,
+      { vehicles: [vehicle("BUS-1", 2, 2, 0)] },
+    );
+
+    expect(preview.status).toBe("shortage");
+    expect(preview.publishable).toBe(false);
+    expect(preview.unassignedOccurrenceIds).toEqual([first.occurrenceId, second.occurrenceId]);
+  });
+
+  it("chooses the minimum distinct physical fleet instead of keeping the first fit", () => {
+    const first = demand("occ-1", "H1", "pickup", 600);
+    const second = demand("occ-2", "H2", "pickup", 700);
+    const third = demand("occ-3", "H2", "pickup", 700);
+    const secondDetails = [
+      { location1: DEPOT, location2: "H2#occ-2", duration: 4, distance: 1 },
+      { location1: "H2#occ-2", location2: "H2#occ-3", duration: 0, distance: 0 },
+      { location1: "H2#occ-3", location2: DEPOT, duration: 7, distance: 1 },
+    ];
+    const preview = build(
+      [first, second, third],
+      [
+        job([first], normalRoute("occ-1"), { id: "first", anchorMinutes: 600 }),
+        job([second, third], secondDetails, {
+          id: "second",
+          anchorMinutes: 700,
+          nodeNames: ["H2#occ-2", "H2#occ-3"],
+          result: result([countedRoute(secondDetails, [second.occurrenceId, third.occurrenceId], 0, 2)]),
+        }),
+      ],
+      baseMatrix,
+      { vehicles: [vehicle("A", 2, 1), vehicle("B", 2, 2)] },
+    );
+
+    expect(preview.status).toBe("preview_ready");
+    expect(new Set(preview.assignments.map((item) => item.physicalVehicleId))).toEqual(new Set(["B"]));
+  });
+
+  it("returns indeterminate when the bounded assignment search is exhausted", () => {
+    const demands = Array.from({ length: 9 }, (_, index) =>
+      demand(`occ-${index + 1}`, `H${index + 1}`, "pickup", 600),
+    );
+    const matrix: MatrixSnapshot = {
+      ...baseMatrix,
+      arcs: demands.flatMap((item) => [
+        arc(DEPOT, item.locationCode, 5),
+        arc(item.locationCode, DEPOT, 6),
+      ]),
+    };
+    const jobs = demands.map((item) =>
+      job([item], normalRoute(item.occurrenceId), {
+        id: item.occurrenceId,
+        anchorMinutes: 600,
+      }),
+    );
+    const preview = build(
+      demands,
+      jobs,
+      matrix,
+      { vehicles: Array.from({ length: 8 }, (_, index) => vehicle(`V${index + 1}`, 2, 1)) },
+    );
+
+    expect(preview.status).toBe("indeterminate");
+    expect(preview.reasonCodes).toContain("ASSIGNMENT_SEARCH_INDETERMINATE");
+    expect(preview.unassignedOccurrenceIds).toEqual(demands.map((item) => item.occurrenceId));
   });
 });

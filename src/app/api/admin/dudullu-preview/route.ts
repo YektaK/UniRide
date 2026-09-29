@@ -10,7 +10,10 @@ import {
   type TripDirection,
 } from "@/services/daily-planning";
 import { buildDudulluPreview, type PreviewDemand } from "@/services/dudullu-preview";
+import type { MatrixSnapshot, PreviewJobInput, PreviewOptimizationResult, PreviewVehicle, PreviewReasonCode } from "@/services/dudullu-preview";
 import { isRealServiceDate, serviceDateBounds } from "@/services/istanbul-service-date";
+import { DUDULLU_DEPOT } from "@/services/dudullu-campus";
+import { optimizerFetch } from "@/lib/optimizer-server";
 
 const NO_STORE_HEADERS = { "cache-control": "private, no-store" };
 const SERVICE_DATE_SCHEMA = z.object({
@@ -42,6 +45,21 @@ const LEGACY_NON_BLOCKERS = new Set([
   "cancelled_by_student",
   "completed",
 ]);
+const snapshotSchema = z.object({
+  id: z.string(), version: z.string(), sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  source: z.literal("supabase"),
+  arcs: z.array(z.object({ origin_code: z.string(), destination_code: z.string(), duration_minutes: z.number() })),
+});
+const optimizerResultSchema = z.object({
+  success: z.boolean(),
+  routes: z.array(z.object({
+    vehicle_id: z.string(),
+    route_details: z.array(z.object({ location1: z.string(), location2: z.string(), duration: z.number(), distance: z.number() })),
+    total_duration_minutes: z.number(), total_distance_km: z.number().optional(),
+    sw_count: z.number(), so_count: z.number(), student_ids: z.array(z.string()),
+  })),
+  total_duration_minutes: z.number().optional(), feasibility_certificate: z.unknown().optional(),
+});
 
 type QueryResult = { data: unknown; error: unknown };
 type DataRow = Record<string, unknown>;
@@ -71,6 +89,42 @@ function withReasonCodes(
   extra: readonly (typeof result.reasonCodes)[number][],
 ) {
   return { ...result, reasonCodes: [...new Set([...result.reasonCodes, ...extra])] };
+}
+
+function blockedPreview(
+  serviceDate: string,
+  demands: readonly PreviewDemand[],
+  matrix: MatrixSnapshot | null,
+  reason: PreviewReasonCode,
+) {
+  const base = buildDudulluPreview({ serviceDate, demands, vehicles: [], matrix, jobs: [] });
+  return { ...base, status: "blocked_data" as const, jobs: [], reasonCodes: [reason] };
+}
+
+function exactClock(minutes: number): string {
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+}
+
+function nodeMaps(demands: readonly PreviewDemand[]) {
+  const counts = new Map<string, number>();
+  for (const demand of demands) counts.set(demand.locationCode, (counts.get(demand.locationCode) ?? 0) + 1);
+  const nodeToLocation = new Map<string, string>([[DUDULLU_DEPOT.id, DUDULLU_DEPOT.id]]);
+  const nodeToOccurrence = new Map<string, string>();
+  const reserved = new Set(demands.map((demand) => demand.locationCode));
+  for (const demand of demands) {
+    if (counts.get(demand.locationCode) !== 1) continue;
+    nodeToLocation.set(demand.locationCode, demand.locationCode);
+    nodeToOccurrence.set(demand.locationCode, demand.occurrenceId);
+  }
+  for (const demand of demands) {
+    if (counts.get(demand.locationCode) === 1) continue;
+    const base = `${demand.locationCode}#${demand.occurrenceId}`;
+    let node = base;
+    for (let suffix = 1; reserved.has(node) || nodeToLocation.has(node); suffix += 1) node = `${base}#${suffix}`;
+    nodeToLocation.set(node, demand.locationCode);
+    nodeToOccurrence.set(node, demand.occurrenceId);
+  }
+  return { nodeToLocation, nodeToOccurrence };
 }
 
 async function loadBlockedPreview(serviceDate: string) {
@@ -231,14 +285,97 @@ async function loadBlockedPreview(serviceDate: string) {
   if (blockedStudents.size > 0) extraReasons.push("LEGACY_AMBIGUOUS_CONFIRMATION");
   if (scheduleDataInvalid) extraReasons.push("SCHEDULE_DATA_INVALID");
 
-  const base = buildDudulluPreview({
-    serviceDate,
-    demands: scheduleDataInvalid ? [] : demands,
-    vehicles: [],
-    matrix: null,
-    jobs: [],
-  });
-  return withReasonCodes(base, extraReasons);
+  const admitted = scheduleDataInvalid ? [] : demands.filter((demand) => demand.admission === "confirmed" || demand.admission === "approved");
+  if (admitted.length === 0) {
+    return withReasonCodes(buildDudulluPreview({ serviceDate, demands: [], vehicles: [], matrix: null, jobs: [] }), extraReasons);
+  }
+
+  const vehicleRows = await selectRows(
+    client.from("vehicles")
+      .select("id, wheelchair_capacity, seating_capacity, cooldown_minutes, status")
+      .eq("status", "active"),
+  );
+  const vehicles: PreviewVehicle[] = [];
+  const vehicleIds = new Set<string>();
+  for (const row of vehicleRows) {
+    if (
+      !nonBlankString(row.id) || vehicleIds.has(row.id) || row.status !== "active" ||
+      !Number.isInteger(row.wheelchair_capacity) || (row.wheelchair_capacity as number) < 0 ||
+      !Number.isInteger(row.seating_capacity) || (row.seating_capacity as number) < 0 ||
+      !Number.isInteger(row.cooldown_minutes) || (row.cooldown_minutes as number) < 0
+    ) return withReasonCodes(blockedPreview(serviceDate, admitted, null, "FLEET_INVALID"), extraReasons);
+    vehicleIds.add(row.id);
+    vehicles.push({
+      vehicleId: row.id,
+      swCapacity: row.wheelchair_capacity as number,
+      soCapacity: row.seating_capacity as number,
+      cooldownMinutes: row.cooldown_minutes as number,
+    });
+  }
+
+  let matrix: MatrixSnapshot;
+  try {
+    const response = await optimizerFetch("/api/v1/internal/matrix-snapshot", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ student_location_codes: [...new Set(admitted.map((demand) => demand.locationCode))] }),
+    });
+    if (!response.ok) throw new Error("matrix unavailable");
+    const parsed = snapshotSchema.safeParse(await response.json());
+    if (!parsed.success || parsed.data.id !== `time_matrix:sha256:${parsed.data.sha256}` || parsed.data.version !== parsed.data.sha256) {
+      throw new Error("matrix invalid");
+    }
+    matrix = parsed.data;
+  } catch {
+    return withReasonCodes(blockedPreview(serviceDate, admitted, null, "MATRIX_UNAVAILABLE"), extraReasons);
+  }
+
+  const groups = new Map<string, PreviewDemand[]>();
+  for (const demand of admitted) {
+    const key = `${demand.direction}:${demand.anchorMinutes}`;
+    const group = groups.get(key) ?? [];
+    group.push(demand);
+    groups.set(key, group);
+  }
+  const jobs: PreviewJobInput[] = [];
+  for (const group of groups.values()) {
+    const first = group[0]!;
+    let result: PreviewOptimizationResult;
+    try {
+      const response = await optimizerFetch("/api/v1/optimize", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          algorithm: "ga_split", mode: "sandbox", service_date: serviceDate,
+          direction: first.direction, target_time: exactClock(first.anchorMinutes),
+          expected_matrix_sha256: matrix.sha256, use_time_windows: true,
+          is_asymmetric: true, max_travel_time: 120,
+          sw_capacity: Math.max(0, ...vehicles.map((vehicle) => vehicle.swCapacity)),
+          so_capacity: Math.max(0, ...vehicles.map((vehicle) => vehicle.soCapacity)),
+          depot: DUDULLU_DEPOT,
+          students: group.map((demand) => ({
+            id: demand.occurrenceId, occurrence_id: demand.occurrenceId,
+            name: demand.studentId, location_code: demand.locationCode,
+            disability_type: demand.disabilityType,
+          })),
+          vehicles: vehicles.map((vehicle) => ({
+            vehicle_id: vehicle.vehicleId, sw_capacity: vehicle.swCapacity,
+            so_capacity: vehicle.soCapacity, cooldown_minutes: vehicle.cooldownMinutes,
+          })),
+        }),
+      });
+      if (!response.ok) throw new Error("optimizer unavailable");
+      const parsed = optimizerResultSchema.safeParse(await response.json());
+      if (!parsed.success) throw new Error("optimizer result invalid");
+      result = parsed.data;
+    } catch {
+      return withReasonCodes(blockedPreview(serviceDate, admitted, matrix, "OPTIMIZATION_NOT_SUCCESSFUL"), extraReasons);
+    }
+    jobs.push({
+      id: `${serviceDate}:${first.direction}:${first.anchorMinutes}`,
+      serviceDate, direction: first.direction, anchorMinutes: first.anchorMinutes,
+      demands: group, ...nodeMaps(group), result,
+    });
+  }
+  return withReasonCodes(buildDudulluPreview({ serviceDate, demands: admitted, vehicles, matrix, jobs }), extraReasons);
 }
 
 export async function POST(request: Request): Promise<Response> {

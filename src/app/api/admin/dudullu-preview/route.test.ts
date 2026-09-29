@@ -126,17 +126,123 @@ const onTimePickup = {
   flexibility_minutes: 0,
 };
 
+const matrix = {
+  id: `time_matrix:sha256:${"a".repeat(64)}`,
+  version: "a".repeat(64),
+  sha256: "a".repeat(64),
+  source: "supabase",
+  arcs: [
+    { origin_code: "D.Kampus", destination_code: "Sw1", duration_minutes: 5 },
+    { origin_code: "Sw1", destination_code: "D.Kampus", duration_minutes: 6 },
+  ],
+};
+
+function admittedRows(decisions: object[] = [onTimePickup]) {
+  return {
+    ...legacyRows(),
+    ride_requests: [],
+    student_leg_decisions: decisions,
+    vehicles: [{ id: "vehicle-1", wheelchair_capacity: 2, seating_capacity: 2, cooldown_minutes: 10, status: "active" }],
+  };
+}
+
+function solverResult(occurrenceId: string) {
+  const steps = [{ location1: "D.Kampus", location2: "Sw1", duration: 5, distance: 0 }, { location1: "Sw1", location2: "D.Kampus", duration: 6, distance: 0 }];
+  return {
+    success: true,
+    routes: [{ vehicle_id: "V1", route_details: steps, total_duration_minutes: 11, sw_count: 1, so_count: 0, student_ids: [occurrenceId] }],
+    total_duration_minutes: 11,
+    feasibility_certificate: { is_feasible: true },
+  };
+}
+
+function mockTransport(results: unknown[]) {
+  optimizerFetchMock.mockImplementation(async (path: string) => {
+    if (path === "/api/v1/internal/matrix-snapshot") return Response.json(matrix);
+    if (path === "/api/v1/optimize") return Response.json(results.shift());
+    throw new Error("unexpected optimizer path");
+  });
+}
+
 beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
 
 afterEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   vi.resetModules();
   vi.restoreAllMocks();
 });
 
 describe("POST /api/admin/dudullu-preview", () => {
+  it("skips fleet, matrix, and solver for zero admitted demand", async () => {
+    const client = setAdmin(admittedRows([]));
+    const { POST } = await import("./route");
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+    expect(body).toMatchObject({ status: "blocked_data", publishable: false, jobs: [] });
+    expect(body.reasonCodes).toContain("NO_ADMITTED_DEMAND");
+    expect(client.queries.map((query) => query.table)).not.toContain("vehicles");
+    expect(optimizerFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("solves one exact admitted anchor with a bound matrix and verified result", async () => {
+    const client = setAdmin(admittedRows());
+    mockTransport([solverResult("2026-09-30:pickup:student-1")]);
+    const { POST } = await import("./route");
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+    const calls = optimizerFetchMock.mock.calls;
+    expect(calls.map(([path]) => path)).toEqual(["/api/v1/internal/matrix-snapshot", "/api/v1/optimize"]);
+    expect(JSON.parse(calls[0][1].body)).toEqual({ student_location_codes: ["Sw1"] });
+    expect(JSON.parse(calls[1][1].body)).toMatchObject({
+      algorithm: "ga_split", service_date: "2026-09-30", direction: "pickup", target_time: "08:45",
+      expected_matrix_sha256: matrix.sha256,
+      students: [{ id: "2026-09-30:pickup:student-1", location_code: "Sw1", disability_type: "Sw" }],
+    });
+    expect(client.queries.map((query) => query.table)).toContain("vehicles");
+    expect(body).toMatchObject({ status: "preview_ready", publishable: false });
+    expect(body.jobs).toHaveLength(1);
+    expect(body.assignments).toHaveLength(1);
+  });
+
+  it("solves two admitted exact anchors sequentially", async () => {
+    setAdmin(admittedRows([onTimePickup, { ...onTimePickup, direction: "dropoff" }]));
+    mockTransport([
+      solverResult("2026-09-30:pickup:student-1"),
+      solverResult("2026-09-30:dropoff:student-1"),
+    ]);
+    const { POST } = await import("./route");
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+    const calls = optimizerFetchMock.mock.calls.filter(([path]) => path === "/api/v1/optimize");
+    expect(calls).toHaveLength(2);
+    const requests = calls.map(([, init]) => JSON.parse(init.body));
+    expect(requests.map((item) => [item.direction, item.target_time])).toEqual([["pickup", "08:45"], ["dropoff", "10:15"]]);
+    expect(requests.every((item) => item.expected_matrix_sha256 === matrix.sha256 && item.students.length === 1)).toBe(true);
+    expect(body).toMatchObject({ status: "preview_ready", publishable: false });
+    expect(body.jobs).toHaveLength(2);
+  });
+
+  it.each(["snapshot", "optimizer", "solver_failure", "certificate", "invalid_result"])("fails closed on %s failure", async (failure) => {
+    setAdmin(admittedRows());
+    const result = solverResult("2026-09-30:pickup:student-1");
+    if (failure === "solver_failure") result.success = false;
+    if (failure === "certificate") delete (result as { feasibility_certificate?: unknown }).feasibility_certificate;
+    if (failure === "invalid_result") result.routes[0].route_details[0].duration = 99;
+    mockTransport([result]);
+    if (failure === "snapshot") optimizerFetchMock.mockResolvedValueOnce(Response.json({ error: "secret" }, { status: 503 }));
+    if (failure === "optimizer") optimizerFetchMock.mockImplementationOnce(async () => Response.json(matrix))
+      .mockResolvedValueOnce(Response.json({ error: "secret" }, { status: 503 }));
+    const { POST } = await import("./route");
+    const response = await POST(post({ serviceDate: "2026-09-30" }));
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.publishable).toBe(false);
+    expect(["blocked_data", "indeterminate"]).toContain(body.status);
+    expect(body.jobs).toEqual([]);
+    if (failure === "certificate") expect(body.reasonCodes).toContain("CERTIFICATE_INVALID");
+    if (failure === "invalid_result") expect(body.reasonCodes).toContain("MATRIX_ARC_MISMATCH");
+    if (failure === "solver_failure") expect(body.reasonCodes).toContain("OPTIMIZATION_NOT_SUCCESSFUL");
+    expect(JSON.stringify(body)).not.toContain("secret");
+  });
   it("authenticates before parsing the body or creating downstream clients", async () => {
     requireAdminMock.mockRejectedValue(AppError.forbidden());
     const { POST } = await import("./route");
@@ -214,7 +320,8 @@ describe("POST /api/admin/dudullu-preview", () => {
       onTimePickup,
       { ...onTimePickup, direction: "dropoff", decision: "cancelled" },
     ] };
-    const client = setAdmin(rows);
+    const client = setAdmin({ ...rows, vehicles: admittedRows().vehicles });
+    mockTransport([solverResult("2026-09-30:pickup:student-1")]);
     const { POST } = await import("./route");
 
     const response = await POST(post({ serviceDate: "2026-09-30" }));
@@ -223,8 +330,11 @@ describe("POST /api/admin/dudullu-preview", () => {
     expect(body.hourlyDemand["09:00"]).toEqual({ pickup: { Sw: 1, So: 0 }, dropoff: { Sw: 0, So: 0 } });
     expect(body.hourlyDemand["10:00"]).toBeUndefined();
     expect(body.reasonCodes).not.toContain("NO_ADMITTED_DEMAND");
-    expect(optimizerFetchMock).not.toHaveBeenCalled();
-    expect(client.queries.map((query) => query.table)).not.toContain("vehicles");
+    const calls = optimizerFetchMock.mock.calls.filter(([path]) => path === "/api/v1/optimize");
+    expect(calls).toHaveLength(1);
+    expect(JSON.parse(calls[0][1].body).students.map((student: { id: string }) => student.id))
+      .toEqual(["2026-09-30:pickup:student-1"]);
+    expect(client.queries.map((query) => query.table)).toContain("vehicles");
   });
 
   it("keeps a late explicit confirmation pending administrator approval", async () => {

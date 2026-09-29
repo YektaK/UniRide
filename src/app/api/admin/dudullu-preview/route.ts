@@ -141,7 +141,6 @@ async function loadBlockedPreview(serviceDate: string) {
   for (const user of users) {
     if (
       !nonBlankString(user.id) ||
-      !nonBlankString(user.weekly_schedule_id) ||
       user.role !== "student" ||
       usersById.has(user.id)
     ) {
@@ -149,6 +148,11 @@ async function loadBlockedPreview(serviceDate: string) {
       continue;
     }
     usersById.set(user.id, user);
+    if (user.weekly_schedule_id === null) continue;
+    if (!nonBlankString(user.weekly_schedule_id)) {
+      scheduleDataInvalid = true;
+      continue;
+    }
     scheduleIds.add(user.weekly_schedule_id);
   }
 
@@ -178,6 +182,7 @@ async function loadBlockedPreview(serviceDate: string) {
   const dudulluStudentIds = new Set<string>();
   const serviceDay = serviceDayOfWeek(serviceDate);
   for (const [studentId, user] of usersById) {
+    if (user.weekly_schedule_id === null) continue;
     const scheduleId = user.weekly_schedule_id as string;
     const schedule = schedulesById.get(scheduleId);
     if (!schedule || schedule.user_id !== studentId) {
@@ -346,7 +351,7 @@ async function loadBlockedPreview(serviceDate: string) {
         body: JSON.stringify({
           algorithm: "ga_split", mode: "sandbox", service_date: serviceDate,
           direction: first.direction, target_time: exactClock(first.anchorMinutes),
-          expected_matrix_sha256: matrix.sha256, use_time_windows: true,
+          expected_matrix_sha256: matrix.sha256, use_time_windows: false,
           is_asymmetric: true, max_travel_time: 120,
           sw_capacity: Math.max(0, ...vehicles.map((vehicle) => vehicle.swCapacity)),
           so_capacity: Math.max(0, ...vehicles.map((vehicle) => vehicle.soCapacity)),

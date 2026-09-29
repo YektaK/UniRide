@@ -43,7 +43,7 @@ describe("ScheduleConfirmationCard", () => {
         if (body.action !== "change") {
           decisions[body.direction as "pickup" | "dropoff"] = body.action === "confirm" ? "confirmed" : "cancelled";
           admissions[body.direction as "pickup" | "dropoff"] = body.action === "confirm" ? "admitted" : "cancelled";
-        }
+        } else legacyBlocker = true;
         return { ok: true, json: async () => ({ success: true }) };
       }
       return { ok: true, json: async () => ({
@@ -103,6 +103,18 @@ describe("ScheduleConfirmationCard", () => {
       method: "POST",
       body: JSON.stringify({ action: "change", rideDate: "2026-09-30", pickupTime: "08:30", dropoffTime: "17:15" }),
     })));
+  });
+
+  it("reloads the legacy blocker after requesting a time change", async () => {
+    render(<ScheduleConfirmationCard {...props} />);
+    const change = screen.getByRole("button", { name: "changeButton" });
+    await waitFor(() => expect(change).toHaveProperty("disabled", false));
+
+    fireEvent.click(change);
+
+    expect(await screen.findByText("legacyBlocker")).toBeTruthy();
+    expect(fetchMock.mock.calls.filter(([url, init]) =>
+      url.startsWith("/api/ride-confirmation?") && !init?.method)).toHaveLength(2);
   });
 
   it("does not display unknown leg state as pending when the GET fails", async () => {

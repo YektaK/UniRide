@@ -204,6 +204,44 @@ describe("POST /api/admin/dudullu-preview", () => {
     expect(body.assignments).toHaveLength(1);
   });
 
+  it("skips an unscheduled student without blocking admitted scheduled demand", async () => {
+    const rows = admittedRows();
+    setAdmin({ ...rows, users: [...rows.users, {
+      id: "student-2", role: "student", location_code: "So2",
+      disability_type: "So", weekly_schedule_id: null,
+    }] });
+    mockTransport([solverResult("2026-09-30:pickup:student-1")]);
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+
+    expect(body.status).toBe("preview_ready");
+    expect(body.reasonCodes).not.toContain("SCHEDULE_DATA_INVALID");
+    expect(optimizerFetchMock.mock.calls.map(([path]) => path)).toContain("/api/v1/optimize");
+  });
+
+  it.each([
+    ["duplicate unscheduled ID", [null, null]],
+    ["malformed schedule ID", [42]],
+    ["dangling schedule ID", ["missing-schedule"]],
+    ["mismatched schedule owner", ["schedule-1"]],
+  ])("fails closed on %s", async (_label, scheduleIds) => {
+    const rows = admittedRows();
+    setAdmin({ ...rows, users: [
+      ...rows.users,
+      ...scheduleIds.map((scheduleId) => ({
+        id: "student-2", role: "student", location_code: "So2",
+        disability_type: "So", weekly_schedule_id: scheduleId,
+      })),
+    ] });
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+
+    expect(body.reasonCodes).toContain("SCHEDULE_DATA_INVALID");
+    expect(optimizerFetchMock).not.toHaveBeenCalled();
+  });
+
   it("solves two admitted exact anchors sequentially", async () => {
     setAdmin(admittedRows([onTimePickup, { ...onTimePickup, direction: "dropoff" }]));
     mockTransport([
@@ -217,6 +255,11 @@ describe("POST /api/admin/dudullu-preview", () => {
     const requests = calls.map(([, init]) => JSON.parse(init.body));
     expect(requests.map((item) => [item.direction, item.target_time])).toEqual([["pickup", "08:45"], ["dropoff", "10:15"]]);
     expect(requests.every((item) => item.expected_matrix_sha256 === matrix.sha256 && item.students.length === 1)).toBe(true);
+    expect(requests.map((item) => [item.service_date, item.use_time_windows, item.max_travel_time])).toEqual([
+      ["2026-09-30", false, 120], ["2026-09-30", false, 120],
+    ]);
+    expect(requests.every((item) => item.students.every((student: Record<string, unknown>) =>
+      !("pickup_time" in student) && !("dropoff_time" in student)))).toBe(true);
     expect(body).toMatchObject({ status: "preview_ready", publishable: false });
     expect(body.jobs).toHaveLength(2);
   });

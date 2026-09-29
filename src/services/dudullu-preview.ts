@@ -295,6 +295,9 @@ function validateRoute(
     }
     const fromLocation = job.nodeToLocation.get(step.location1);
     const toLocation = job.nodeToLocation.get(step.location2);
+    if (index < steps.length - 1 && toLocation === DEPOT_CODE) {
+      fail("CLOSING_DEPOT_ARC_MISSING");
+    }
     if (fromLocation === toLocation && fromLocation !== DEPOT_CODE) {
       const fromOccurrence = job.nodeToOccurrence.get(step.location1);
       const toOccurrence = job.nodeToOccurrence.get(step.location2);
@@ -308,6 +311,9 @@ function validateRoute(
       const occurrenceId = job.nodeToOccurrence.get(node);
       if (occurrenceId === undefined) fail("UNKNOWN_ROUTE_NODE");
       if (!jobOccurrenceIds.has(occurrenceId)) fail("UNKNOWN_OCCURRENCE");
+      if (node === step.location2 && internalOccurrences.has(occurrenceId)) {
+        fail("DUPLICATE_OCCURRENCE_COVERAGE");
+      }
       internalOccurrences.add(occurrenceId);
     }
   }
@@ -422,6 +428,14 @@ function validateJob(
     }
     intervals.push(interval);
   }
+
+  const resultTotal = job.result.total_duration_minutes;
+  if (resultTotal !== undefined && (
+    !Number.isFinite(resultTotal) ||
+    Math.abs(roundToTwo(resultTotal) - roundToTwo(job.result.routes.reduce(
+      (sum, route) => sum + route.total_duration_minutes, 0,
+    ))) > 0.000001
+  )) fail("ROUTE_TOTAL_MISMATCH");
 
   if (covered.size !== jobOccurrenceIds.size) fail("MISSING_OCCURRENCE_COVERAGE");
   return {

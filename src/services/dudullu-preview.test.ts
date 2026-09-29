@@ -267,6 +267,37 @@ describe("buildDudulluPreview", () => {
     expect(missing.reasonCodes).toContain("MISSING_OCCURRENCE_COVERAGE");
   });
 
+  it("rejects a route that visits one occurrence twice", () => {
+    const first = demand("occ-1", "H1");
+    const second = demand("occ-2", "H2");
+    const details = [
+      { location1: DEPOT, location2: "occ-1", duration: 5, distance: 1 },
+      { location1: "occ-1", location2: "occ-2", duration: 3, distance: 1 },
+      { location1: "occ-2", location2: "occ-1", duration: 4, distance: 1 },
+      { location1: "occ-1", location2: DEPOT, duration: 6, distance: 1 },
+    ];
+    const matrix = { ...baseMatrix, arcs: [...baseMatrix.arcs, arc("H1", "H2", 3), arc("H2", "H1", 4)] };
+    const preview = build([first, second], [job([first, second], details)], matrix);
+
+    expect(preview.status).toBe("blocked_data");
+    expect(preview.reasonCodes).toContain("DUPLICATE_OCCURRENCE_COVERAGE");
+  });
+
+  it("rejects a depot visit between occurrence stops", () => {
+    const first = demand("occ-1", "H1");
+    const second = demand("occ-2", "H2");
+    const details = [
+      { location1: DEPOT, location2: "occ-1", duration: 5, distance: 1 },
+      { location1: "occ-1", location2: DEPOT, duration: 6, distance: 1 },
+      { location1: DEPOT, location2: "occ-2", duration: 4, distance: 1 },
+      { location1: "occ-2", location2: DEPOT, duration: 7, distance: 1 },
+    ];
+    const preview = build([first, second], [job([first, second], details)]);
+
+    expect(preview.status).toBe("blocked_data");
+    expect(preview.reasonCodes).toContain("CLOSING_DEPOT_ARC_MISSING");
+  });
+
   it("rejects a wrong route total and an omitted closing depot arc", () => {
     const item = demand("occ-1");
     const wrongTotal = build(
@@ -284,6 +315,27 @@ describe("buildDudulluPreview", () => {
 
     expect(wrongTotal.reasonCodes).toContain("ROUTE_TOTAL_MISMATCH");
     expect(omittedClosingArc.reasonCodes).toContain("CLOSING_DEPOT_ARC_MISSING");
+  });
+
+  it.each([21, Number.NaN])("rejects invalid result-level route duration %s", (total) => {
+    const first = demand("occ-1", "H1");
+    const second = demand("occ-2", "H2");
+    const routes = [route(normalRoute("occ-1"), ["occ-1"]), route(normalRoute("occ-2", 4, 7), ["occ-2"])];
+    const preview = build([first, second], [job([first, second], normalRoute("occ-1"), {
+      result: result(routes, { total_duration_minutes: total }),
+    })]);
+
+    expect(preview.status).toBe("blocked_data");
+    expect(preview.reasonCodes).toContain("ROUTE_TOTAL_MISMATCH");
+  });
+
+  it("accepts an omitted optional result-level route duration", () => {
+    const item = demand("occ-1");
+    const preview = build([item], [job([item], normalRoute("occ-1"), {
+      result: result([route(normalRoute("occ-1"), ["occ-1"])], { total_duration_minutes: undefined }),
+    })]);
+
+    expect(preview.status).toBe("preview_ready");
   });
 
   it("calculates pickup backward from the hard deadline and dropoff forward from hard ready", () => {

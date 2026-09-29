@@ -115,6 +115,7 @@ export default function ScheduleConfirmationCard({
         body: JSON.stringify({ action: "change", rideDate, pickupTime, dropoffTime }),
       });
       if (!response.ok) throw new Error(t("operationFailed"));
+      await loadState();
       toast({ title: t("changeRequested") });
     } catch (error) {
       toast({

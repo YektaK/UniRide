@@ -327,6 +327,19 @@ describe("POST /api/admin/dudullu-preview", () => {
     },
   );
 
+  it("fails closed on an unrecognized legacy status", async () => {
+    const rows = legacyRows();
+    rows.ride_requests[0].status = "future_status";
+    setAdmin({ ...rows, student_leg_decisions: [onTimePickup] });
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+
+    expect(body.reasonCodes).toContain("LEGACY_AMBIGUOUS_CONFIRMATION");
+    expect(body.reasonCodes).toContain("NO_ADMITTED_DEMAND");
+    expect(body.hourlyDemand).toEqual({});
+  });
+
   it.each([
     { direction: "sideways" },
     { user_id: "other-student" },

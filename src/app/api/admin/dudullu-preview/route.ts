@@ -36,6 +36,12 @@ const decisionRowSchema = z.object({
   flexibility_minutes: z.number().int().min(0).max(1439),
 }).passthrough();
 const LEGACY_BLOCKERS = new Set(["pending_admin_approval", "cancelled_by_admin", "in_progress"]);
+const LEGACY_NON_BLOCKERS = new Set([
+  "confirmed",
+  "pending_student_confirmation",
+  "cancelled_by_student",
+  "completed",
+]);
 
 type QueryResult = { data: unknown; error: unknown };
 type DataRow = Record<string, unknown>;
@@ -189,9 +195,10 @@ async function loadBlockedPreview(serviceDate: string) {
         ),
     );
     for (const request of requests) {
+      const status = String(request.status);
       if (!nonBlankString(request.user_id) || !dudulluStudentIds.has(request.user_id)) {
         scheduleDataInvalid = true;
-      } else if (LEGACY_BLOCKERS.has(String(request.status))) {
+      } else if (LEGACY_BLOCKERS.has(status) || !LEGACY_NON_BLOCKERS.has(status)) {
         blockedStudents.add(request.user_id);
       }
     }

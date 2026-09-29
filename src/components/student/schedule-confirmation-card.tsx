@@ -1,16 +1,26 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useState, useEffect } from "react";
+import { BellRing, CalendarClock, CheckCircle, Edit3, Loader2, XCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Edit3, BellRing, CalendarClock, Clock, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { getSupabaseClient } from "@/lib/supabase";
-import { format, parseISO } from "date-fns";
-import { tr } from "date-fns/locale";
+
+type Direction = "pickup" | "dropoff";
+type LegDecision = "pending" | "confirmed" | "cancelled";
+interface LegView {
+  decision: LegDecision;
+  admission: string;
+}
+interface LegStateResponse {
+  legs: Record<Direction, LegView>;
+  legacyBlocker: boolean;
+}
+type BusyTarget = Direction | "change" | null;
 
 interface ScheduleConfirmationCardProps {
   studentName: string;
@@ -18,12 +28,20 @@ interface ScheduleConfirmationCardProps {
   dropoffTime: string;
   notificationMessage: string;
   relevantDate: string;
-  rideDate?: string;
+  rideDate: string;
   hasRide?: boolean;
 }
 
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const supabase = getSupabaseClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  return {
+    "Content-Type": "application/json",
+    ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+  };
+}
+
 export default function ScheduleConfirmationCard({
-  studentName,
   pickupTime,
   dropoffTime,
   notificationMessage,
@@ -34,199 +52,158 @@ export default function ScheduleConfirmationCard({
   const tc = useTranslations("common");
   const { toast } = useToast();
   const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
-  const [isPastDeadline, setIsPastDeadline] = useState(false);
-  const [deadlineTime, setDeadlineTime] = useState<string>("");
+  const [legs, setLegs] = useState<Record<Direction, LegView> | null>(null);
+  const [legacyBlocker, setLegacyBlocker] = useState(false);
+  const [busyTarget, setBusyTarget] = useState<BusyTarget>(null);
+  const [loadError, setLoadError] = useState(false);
 
-  const getAuthHeaders = async (): Promise<Record<string, string>> => {
-    const supabase = getSupabaseClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) return { "Content-Type": "application/json" };
-    return {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${session.access_token}`,
-    };
-  };
+  const loadState = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const response = await fetch(`/api/ride-confirmation?date=${rideDate}`, {
+        headers: await getAuthHeaders(),
+      });
+      if (!response.ok) throw new Error("Request failed");
+      const data = await response.json() as LegStateResponse;
+      setLoadError(false);
+      setLegs(data.legs);
+      setLegacyBlocker(data.legacyBlocker);
+    } catch {
+      setLoadError(true);
+    }
+  }, [rideDate, user?.id]);
 
   useEffect(() => {
-    const checkStatus = async () => {
-      if (!user?.id || !rideDate) return;
+    // The state updates in loadState happen only after the authenticated GET resolves.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadState();
+  }, [loadState]);
 
-      try {
-        const headers = await getAuthHeaders();
-        const response = await fetch(
-          `/api/ride-confirmation?date=${rideDate}`,
-          { headers }
-        );
-        if (response.ok) {
-          const data = await response.json();
-          if (data.hasExistingRide) {
-            setStatus(data.ride.status);
-          }
-          setIsPastDeadline(data.isPastDeadline);
-          if (data.deadline) {
-            setDeadlineTime(format(parseISO(data.deadline), "HH:mm", { locale: tr }));
-          }
-        }
-      } catch (error) {
-        console.error("Error checking ride status:", error);
-      }
-    };
-
-    checkStatus();
-  }, [user?.id, rideDate]);
-
-  const handleAction = async (action: "confirm" | "cancel" | "change") => {
-    if (!user?.id) return;
-
-    setLoading(true);
+  const handleLegAction = async (direction: Direction, action: "confirm" | "cancel") => {
+    if (!user?.id || busyTarget) return;
+    setBusyTarget(direction);
     try {
-      const headers = await getAuthHeaders();
       const response = await fetch("/api/ride-confirmation", {
         method: "POST",
-        headers,
-        body: JSON.stringify({
-          action,
-          rideDate: rideDate || getNextWeekday(),
-          pickupTime,
-          dropoffTime,
-        }),
+        headers: await getAuthHeaders(),
+        body: JSON.stringify({ action, rideDate, direction }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || t("operationFailed"));
-      }
-
-      setStatus(data.status);
-      setIsPastDeadline(data.isPastDeadline);
-
+      if (!response.ok) throw new Error(t("operationFailed"));
+      await loadState();
       toast({
-        title: action === "confirm" ? t("rideConfirmed") :
-          action === "cancel" ? t("rideCancelled") : t("changeRequested"),
-        description: data.message,
+        title: action === "confirm" ? t("legConfirmed") : t("legCancelled"),
         variant: action === "cancel" ? "destructive" : "default",
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: tc("error"),
-        description: error.message,
+        description: error instanceof Error ? error.message : t("operationFailed"),
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setBusyTarget(null);
     }
   };
 
-  const getStatusBadge = () => {
-    if (!status) return null;
-
-    const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-      confirmed: { label: t("confirmed"), variant: "default" },
-      pending_admin_approval: { label: t("statusPending"), variant: "secondary" },
-      cancelled_by_student: { label: t("statusCancelled"), variant: "destructive" },
-      pending_student_confirmation: { label: t("statusAwaiting"), variant: "outline" },
-    };
-
-    const info = statusMap[status] || { label: status, variant: "outline" as const };
-    return <Badge variant={info.variant}>{info.label}</Badge>;
+  const handleChangeRequest = async () => {
+    if (!user?.id || busyTarget) return;
+    setBusyTarget("change");
+    try {
+      const response = await fetch("/api/ride-confirmation", {
+        method: "POST",
+        headers: await getAuthHeaders(),
+        body: JSON.stringify({ action: "change", rideDate, pickupTime, dropoffTime }),
+      });
+      if (!response.ok) throw new Error(t("operationFailed"));
+      toast({ title: t("changeRequested") });
+    } catch (error) {
+      toast({
+        title: tc("error"),
+        description: error instanceof Error ? error.message : t("operationFailed"),
+        variant: "destructive",
+      });
+    } finally {
+      setBusyTarget(null);
+    }
   };
 
-  const getNextWeekday = () => {
-    const date = new Date();
-    date.setDate(date.getDate() + 1);
-    return date.toISOString().split("T")[0];
-  };
+  const renderLeg = (direction: Direction, time: string) => {
+    const leg = legs?.[direction];
+    const label = !legs || loadError
+      ? "—"
+      : leg?.admission === "pending_admin_approval"
+        ? t("pendingAdminReview")
+        : leg ? t(leg.decision) : t("pending");
+    const disabled = !legs || loadError || busyTarget !== null;
 
-  const isConfirmed = status === "confirmed";
-  const isCancelled = status === "cancelled_by_student";
+    return (
+      <div role="group" aria-label={t(direction)} className="space-y-2 rounded-md border p-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="font-medium">{t(direction)}</p>
+          <Badge variant={leg?.decision === "cancelled" ? "destructive" : "outline"} aria-live="polite">
+            {label}
+          </Badge>
+        </div>
+        <p className="text-primary flex items-center gap-1 text-lg">
+          <CalendarClock aria-hidden="true" className="h-5 w-5" />
+          <span className="sr-only">{t(direction === "pickup" ? "pickupLabel" : "dropoffLabel")}</span>
+          {time}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {leg?.decision !== "confirmed" && (
+            <Button
+              onClick={() => void handleLegAction(direction, "confirm")}
+              disabled={disabled}
+              className="flex-1"
+            >
+              {busyTarget === direction ? <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle aria-hidden="true" className="mr-2 h-4 w-4" />}
+              {t("confirmLeg", { direction: t(direction) })}
+            </Button>
+          )}
+          {leg?.decision !== "cancelled" && (
+            <Button
+              variant="outline"
+              onClick={() => void handleLegAction(direction, "cancel")}
+              disabled={disabled}
+              className="flex-1"
+            >
+              {busyTarget === direction ? <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" /> : <XCircle aria-hidden="true" className="mr-2 h-4 w-4" />}
+              {t("cancelLeg", { direction: t(direction) })}
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <Card className="bg-accent/10 border-accent shadow-lg">
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <BellRing className="h-6 w-6 text-accent" />
-            {t("cardTitle", { relevantDate })}
-          </CardTitle>
-          {getStatusBadge()}
-        </div>
-        <CardDescription>
-          {isPastDeadline ? (
-            <span className="text-yellow-600 flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              {t("pastDeadline")}
-            </span>
-          ) : deadlineTime ? (
-            <span className="text-muted-foreground">
-              {t("deadlineInfo", { deadlineTime })}
-            </span>
-          ) : (
-            t("defaultDescription", { relevantDate })
-          )}
-        </CardDescription>
+        <CardTitle className="flex items-center gap-2 text-xl">
+          <BellRing aria-hidden="true" className="h-6 w-6 text-accent" />
+          {t("cardTitle", { relevantDate })}
+        </CardTitle>
+        <CardDescription>{t("defaultDescription", { relevantDate })}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm">{notificationMessage}</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 bg-background/50 rounded-md">
-          <div className="font-medium">
-            <p className="text-muted-foreground text-xs">{t("pickupLabel")}</p>
-            <p className="text-lg text-primary flex items-center gap-1">
-              <CalendarClock className="h-5 w-5" />{pickupTime}
-            </p>
-          </div>
-          <div className="font-medium">
-            <p className="text-muted-foreground text-xs">{t("dropoffLabel")}</p>
-            <p className="text-lg text-primary flex items-center gap-1">
-              <CalendarClock className="h-5 w-5" />{dropoffTime}
-            </p>
-          </div>
+        {legacyBlocker && <p role="status" className="text-sm text-yellow-700">{t("legacyBlocker")}</p>}
+        {loadError && <p role="alert" className="text-sm text-destructive">{t("stateUnavailable")}</p>}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" aria-busy={!legs && !loadError}>
+          {renderLeg("pickup", pickupTime)}
+          {renderLeg("dropoff", dropoffTime)}
         </div>
       </CardContent>
-      <CardFooter className="flex flex-col sm:flex-row justify-end gap-2">
-        {!isCancelled && (
-          <Button
-            variant="outline"
-            onClick={() => handleAction("cancel")}
-            disabled={loading}
-            className="w-full sm:w-auto"
-          >
-            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
-            {t("cancelButton")}
-          </Button>
-        )}
-        {!isConfirmed && !isCancelled && (
-          <>
-            <Button
-              variant="outline"
-              onClick={() => handleAction("change")}
-              disabled={loading}
-              className="w-full sm:w-auto"
-            >
-              <Edit3 className="mr-2 h-4 w-4" /> {t("changeButton")}
-            </Button>
-            <Button
-              onClick={() => handleAction("confirm")}
-              disabled={loading}
-              className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto"
-            >
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-              {t("confirmButton")}
-            </Button>
-          </>
-        )}
-        {isCancelled && (
-          <Button
-            onClick={() => handleAction("confirm")}
-            disabled={loading}
-            className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto"
-          >
-            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-            {t("reconfirmButton")}
-          </Button>
-        )}
+      <CardFooter className="flex justify-end">
+        <Button
+          variant="outline"
+          onClick={() => void handleChangeRequest()}
+          disabled={!legs || loadError || busyTarget !== null}
+          className="w-full sm:w-auto"
+        >
+          {busyTarget === "change" ? <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" /> : <Edit3 aria-hidden="true" className="mr-2 h-4 w-4" />}
+          {t("changeButton")}
+        </Button>
       </CardFooter>
     </Card>
   );

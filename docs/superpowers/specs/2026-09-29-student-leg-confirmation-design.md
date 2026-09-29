@@ -1,6 +1,6 @@
 # Dudullu per-leg student confirmation
 
-**Status:** Draft for user review. The user approved the separate per-leg data-source approach on 2026-09-29; implementation is not approved until this written specification is reviewed.
+**Status:** Approved by the user on 2026-09-29; implementation plan approved for execution on 2026-09-29.
 
 ## Intent and constraints
 

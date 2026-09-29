@@ -6,7 +6,8 @@ import {
   buildScheduleDemands,
   isDudulluCampus,
   serviceDayOfWeek,
-  type DailyTripDemand,
+  type StudentLegDecision,
+  type TripDirection,
 } from "@/services/daily-planning";
 import { buildDudulluPreview, type PreviewDemand } from "@/services/dudullu-preview";
 import { isRealServiceDate, serviceDateBounds } from "@/services/istanbul-service-date";
@@ -26,6 +27,15 @@ const scheduleEntrySchema = z.object({
   location: z.string().optional(),
   courseName: z.string().optional(),
 }).passthrough();
+const decisionRowSchema = z.object({
+  user_id: z.string().min(1),
+  service_date: z.string(),
+  direction: z.enum(["pickup", "dropoff"]),
+  decision: z.enum(["confirmed", "cancelled"]),
+  decided_at: z.string().datetime({ offset: true }),
+  flexibility_minutes: z.number().int().min(0).max(1439),
+}).passthrough();
+const LEGACY_BLOCKERS = new Set(["pending_admin_approval", "cancelled_by_admin", "in_progress"]);
 
 type QueryResult = { data: unknown; error: unknown };
 type DataRow = Record<string, unknown>;
@@ -50,10 +60,6 @@ function nonBlankString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function isCancelledRequest(row: DataRow): boolean {
-  return row.status === "cancelled_by_student" || row.status === "cancelled_by_admin";
-}
-
 function withReasonCodes(
   result: ReturnType<typeof buildDudulluPreview>,
   extra: readonly (typeof result.reasonCodes)[number][],
@@ -73,7 +79,12 @@ async function loadBlockedPreview(serviceDate: string) {
   const scheduleIds = new Set<string>();
   let scheduleDataInvalid = false;
   for (const user of users) {
-    if (!nonBlankString(user.id) || !nonBlankString(user.weekly_schedule_id)) {
+    if (
+      !nonBlankString(user.id) ||
+      !nonBlankString(user.weekly_schedule_id) ||
+      user.role !== "student" ||
+      usersById.has(user.id)
+    ) {
       scheduleDataInvalid = true;
       continue;
     }
@@ -98,7 +109,12 @@ async function loadBlockedPreview(serviceDate: string) {
   }
   if (schedulesById.size !== scheduleIds.size) scheduleDataInvalid = true;
 
-  const demands: PreviewDemand[] = [];
+  const candidates: Array<{
+    studentId: string;
+    locationCode: string;
+    disabilityType: "Sw" | "So";
+    entries: ScheduleEntry[];
+  }> = [];
   const dudulluStudentIds = new Set<string>();
   const serviceDay = serviceDayOfWeek(serviceDate);
   for (const [studentId, user] of usersById) {
@@ -125,32 +141,43 @@ async function loadBlockedPreview(serviceDate: string) {
       continue;
     }
 
-    let scheduleDemands: readonly DailyTripDemand[];
-    try {
-      scheduleDemands = buildScheduleDemands({
-        studentId,
-        locationCode: user.location_code,
-        serviceDate,
-        scheduleEntries: entries.data as ScheduleEntry[],
-      }).demands;
-    } catch {
-      scheduleDataInvalid = true;
-      continue;
-    }
-    if (scheduleDemands.length === 0) continue;
-
     dudulluStudentIds.add(studentId);
-    demands.push(...scheduleDemands.map((demand) => ({
-      ...demand,
-      disabilityType: user.disability_type as "Sw" | "So",
-    })));
+    candidates.push({
+      studentId,
+      locationCode: user.location_code,
+      disabilityType: user.disability_type,
+      entries: entries.data as ScheduleEntry[],
+    });
   }
 
   const extraReasons: Array<ReturnType<typeof buildDudulluPreview>["reasonCodes"][number]> = [];
-  if (demands.length > 0) extraReasons.push("PENDING_STUDENT_CONFIRMATION");
-  if (scheduleDataInvalid) extraReasons.push("SCHEDULE_DATA_INVALID");
-
+  const decisionsByStudent = new Map<string, Partial<Record<TripDirection, StudentLegDecision>>>();
+  const blockedStudents = new Set<string>();
   if (dudulluStudentIds.size > 0) {
+    const decisionRows = await selectRows(
+      client.from("student_leg_decisions")
+        .select("user_id, service_date, direction, decision, decided_at, flexibility_minutes")
+        .in("user_id", [...dudulluStudentIds])
+        .eq("service_date", serviceDate),
+    );
+    for (const raw of decisionRows) {
+      const parsed = decisionRowSchema.safeParse(raw);
+      if (!parsed.success || !dudulluStudentIds.has(parsed.data.user_id) || parsed.data.service_date !== serviceDate) {
+        scheduleDataInvalid = true;
+        continue;
+      }
+      const row = parsed.data;
+      const decisions = decisionsByStudent.get(row.user_id) ?? {};
+      if (decisions[row.direction]) {
+        scheduleDataInvalid = true;
+        continue;
+      }
+      decisions[row.direction] = row.decision === "confirmed"
+        ? { status: "confirmed", confirmedAt: row.decided_at, flexibilityMinutes: row.flexibility_minutes }
+        : { status: "cancelled", decidedAt: row.decided_at };
+      decisionsByStudent.set(row.user_id, decisions);
+    }
+
     const { start, end } = serviceDateBounds(serviceDate);
     const requests = await selectRows(
       client.from("ride_requests")
@@ -161,14 +188,45 @@ async function loadBlockedPreview(serviceDate: string) {
           `and(requested_dropoff_time.gte.${start},requested_dropoff_time.lt.${end})`,
         ),
     );
-    if (requests.some((request) => !isCancelledRequest(request))) {
-      extraReasons.push("LEGACY_AMBIGUOUS_CONFIRMATION");
+    for (const request of requests) {
+      if (!nonBlankString(request.user_id) || !dudulluStudentIds.has(request.user_id)) {
+        scheduleDataInvalid = true;
+      } else if (LEGACY_BLOCKERS.has(String(request.status))) {
+        blockedStudents.add(request.user_id);
+      }
     }
   }
 
+  const demands: PreviewDemand[] = [];
+  for (const candidate of candidates) {
+    try {
+      const scheduleDemands = buildScheduleDemands({
+        studentId: candidate.studentId,
+        locationCode: candidate.locationCode,
+        serviceDate,
+        scheduleEntries: candidate.entries,
+        decisions: decisionsByStudent.get(candidate.studentId),
+      }).demands;
+      demands.push(...scheduleDemands.map((demand) => ({
+        ...demand,
+        admission: blockedStudents.has(candidate.studentId) && demand.admission === "confirmed"
+          ? "pending_admin_approval" as const
+          : demand.admission,
+        disabilityType: candidate.disabilityType,
+      })));
+    } catch {
+      scheduleDataInvalid = true;
+    }
+  }
+  if (demands.some((demand) => demand.admission === "pending_student_confirmation")) {
+    extraReasons.push("PENDING_STUDENT_CONFIRMATION");
+  }
+  if (blockedStudents.size > 0) extraReasons.push("LEGACY_AMBIGUOUS_CONFIRMATION");
+  if (scheduleDataInvalid) extraReasons.push("SCHEDULE_DATA_INVALID");
+
   const base = buildDudulluPreview({
     serviceDate,
-    demands,
+    demands: scheduleDataInvalid ? [] : demands,
     vehicles: [],
     matrix: null,
     jobs: [],

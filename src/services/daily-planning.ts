@@ -124,7 +124,7 @@ const ISTANBUL_WALL_CLOCK_FORMATTER = new Intl.DateTimeFormat("en-CA", {
 });
 
 const ISO_TIMESTAMP =
-  /^(\d{4})-(\d{2})-(\d{2})T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
+  /^(\d{4})-(\d{2})-(\d{2})T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?(?:Z|[+-]\d{2}:\d{2})$/;
 const DAYS_OF_WEEK: ScheduleEntry["dayOfWeek"][] = [
   "sunday",
   "monday",
@@ -304,6 +304,12 @@ function parseIsoTimestamp(value: string): Date {
 
   return timestamp;
 }
+
+function subMillisecondMicroseconds(value: string): number {
+  const fraction = /\.(\d{4,6})(?=Z|[+-]\d{2}:\d{2}$)/.exec(value)?.[1] ?? "";
+  return Number((fraction.slice(3) + "000").slice(0, 3));
+}
+
 function istanbulWallClock(timestamp: Date): {
   readonly year: number;
   readonly month: number;
@@ -379,14 +385,18 @@ export function classifyScheduleDecision(
     return { admission: "cancelled", flexibilityMinutes };
   }
 
-  const confirmation = istanbulWallClock(parseIsoTimestamp(decision.confirmedAt));
+  const confirmationTimestamp = parseIsoTimestamp(decision.confirmedAt);
+  const confirmation = istanbulWallClock(confirmationTimestamp);
+  const confirmationMicrosecondsSinceDay =
+    confirmation.millisecondsSinceDay * 1_000 +
+    subMillisecondMicroseconds(decision.confirmedAt);
   const cutoffDate = previousServiceDate(serviceDate);
   const cutoffMilliseconds =
     effectiveSettings.confirmationCutoffHour * 60 * 60 * 1_000;
   const isAtOrBeforeCutoff =
     compareWallDate(confirmation, cutoffDate) < 0 ||
     (compareWallDate(confirmation, cutoffDate) === 0 &&
-      confirmation.millisecondsSinceDay <= cutoffMilliseconds);
+      confirmationMicrosecondsSinceDay <= cutoffMilliseconds * 1_000);
   return {
     admission: isAtOrBeforeCutoff ? "confirmed" : "pending_admin_approval",
     flexibilityMinutes,

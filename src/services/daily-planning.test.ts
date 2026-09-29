@@ -233,6 +233,33 @@ describe("schedule decision admission", () => {
       }).demands[0]!.admission,
     ).toBe("pending_admin_approval");
   });
+
+  it("accepts PostgreSQL microsecond timestamps and preserves the exact cutoff", () => {
+    const baseInput = {
+      studentId: "S1",
+      locationCode: "L1",
+      serviceDate: "2026-08-26",
+      scheduleEntries: WEDNESDAY_DUDULLU_ENTRIES,
+    };
+
+    expect(
+      buildScheduleDemands({
+        ...baseInput,
+        decisions: {
+          pickup: { status: "confirmed", confirmedAt: "2026-08-25T19:00:00.000000Z" },
+        },
+      }).demands[0]!.admission,
+    ).toBe("confirmed");
+    expect(
+      buildScheduleDemands({
+        ...baseInput,
+        decisions: {
+          pickup: { status: "confirmed", confirmedAt: "2026-08-25T19:00:00.000001Z" },
+        },
+      }).demands[0]!.admission,
+    ).toBe("pending_admin_approval");
+  });
+
   it("rejects malformed confirmed decisions and negative flexibility", () => {
     expect(() =>
       buildScheduleDemands({

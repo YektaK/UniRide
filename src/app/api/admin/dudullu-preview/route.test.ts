@@ -229,7 +229,7 @@ describe("POST /api/admin/dudullu-preview", () => {
 
   it("keeps a late explicit confirmation pending administrator approval", async () => {
     setAdmin({ ...legacyRows(), ride_requests: [], student_leg_decisions: [
-      { ...onTimePickup, decided_at: "2026-09-29T19:00:00.001Z" },
+      { ...onTimePickup, decided_at: "2026-09-29T19:00:00.000001+00:00" },
     ] });
     const { POST } = await import("./route");
 

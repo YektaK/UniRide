@@ -7,223 +7,154 @@
  * Requires JWT authentication — userId is extracted from the token.
  */
 
-import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { AppError, getCurrentUserFromRequest } from "@/lib/admin-auth";
-import { DUDULLU_CAMPUS } from "@/services/dudullu-campus";
+import { getCurrentUserFromRequest } from "@/lib/admin-auth";
+import { classifyScheduleDecision, isDudulluCampus, serviceDayOfWeek, type StudentLegDecision, type TripDirection } from "@/services/daily-planning";
+import { isRealServiceDate, serviceDateBounds } from "@/services/istanbul-service-date";
+import type { DbStudentLegDecision } from "@/types/db";
 
-const rideConfirmationSchema = z.object({
-    action: z.enum(["confirm", "cancel", "change"], {
-        errorMap: () => ({ message: "Invalid action. Must be 'confirm', 'cancel', or 'change'" }),
-    }),
-    rideDate: z.string().min(1, "rideDate is required"),
-    pickupTime: z.string().optional(),
-    dropoffTime: z.string().optional(),
-    notes: z.string().optional(),
-});
+const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const directionalSchema = z.object({
+  action: z.enum(["confirm", "cancel"]),
+  rideDate: dateSchema,
+  direction: z.enum(["pickup", "dropoff"]),
+  flexibilityMinutes: z.number().int().min(0).max(1439).default(0),
+}).strict();
+const changeSchema = z.object({
+  action: z.literal("change"),
+  rideDate: dateSchema,
+  pickupTime: z.string().optional(),
+  dropoffTime: z.string().optional(),
+  notes: z.string().optional(),
+}).strict();
+const postSchema = z.union([directionalSchema, changeSchema]);
+const headers = { "cache-control": "private, no-store" };
+const BLOCKING_STATUSES = new Set(["pending_admin_approval", "cancelled_by_admin", "in_progress"]);
 
-export async function POST(request: NextRequest) {
-    try {
-        const authUser = await getCurrentUserFromRequest(request);
-        if (!authUser) {
-            throw AppError.unauthorized("Unauthorized: Giriş yapmanız gerekiyor.");
-        }
-
-        const rawBody = await request.json();
-        const parseResult = rideConfirmationSchema.safeParse(rawBody);
-        if (!parseResult.success) {
-            return NextResponse.json(
-                { error: parseResult.error.errors[0].message },
-                { status: 400 }
-            );
-        }
-
-        const { action, rideDate, pickupTime, dropoffTime, notes } = parseResult.data;
-
-        // userId comes from the token, not from the body
-        const userId = authUser.id;
-
-        const adminClient = getSupabaseAdmin();
-
-        // Check deadline (22:00 previous day)
-        const now = new Date();
-        const rideDateObj = new Date(rideDate);
-        const deadline = new Date(rideDateObj);
-        deadline.setDate(deadline.getDate() - 1);
-        deadline.setHours(22, 0, 0, 0);
-
-        const isPastDeadline = now > deadline;
-
-        // Determine status based on action and deadline
-        let status: string;
-        if (action === "confirm") {
-            status = isPastDeadline ? "pending_admin_approval" : "confirmed";
-        } else if (action === "cancel") {
-            status = "cancelled_by_student";
-        } else {
-            status = "pending_admin_approval";
-        }
-
-        // Check if a ride request already exists for this date
-        const { data: existingRideRaw, error: findError } = await adminClient
-            .from("ride_requests")
-            .select("*")
-            .eq("user_id", userId)
-            .gte("requested_pickup_time", `${rideDate}T00:00:00`)
-            .lt("requested_pickup_time", `${rideDate}T23:59:59`)
-            .single();
-
-        if (findError && findError.code !== "PGRST116") {
-            throw findError;
-        }
-
-        const existingRide = existingRideRaw as { id: string; notes: string | null } | null;
-        let result;
-        if (existingRide) {
-            // Update existing ride
-            const { data, error } = await adminClient
-                .from("ride_requests")
-                .update({
-                    status,
-                    notes: notes ?? existingRide.notes,
-                    updated_at: new Date().toISOString(),
-                } as never)
-                .eq("id", existingRide.id)
-                .select()
-                .single();
-
-            if (error) throw error;
-            result = data;
-        } else if (action === "confirm") {
-            // Create new ride request
-            const { data: userDataRaw, error: userError } = await adminClient
-                .from("users")
-                .select("home_address, home_coordinates")
-                .eq("id", userId)
-                .single();
-
-            if (userError) throw userError;
-            const userData = userDataRaw as { home_address: string | null; home_coordinates: unknown } | null;
-
-            const { data, error } = await adminClient
-                .from("ride_requests")
-                .insert({
-                    user_id: userId,
-                    type: "scheduled",
-                    status,
-                    requested_pickup_time: `${rideDate}T${pickupTime ?? "08:00"}:00`,
-                    requested_dropoff_time: `${rideDate}T${dropoffTime ?? "17:00"}:00`,
-                    pickup_location: {
-                        address: userData?.home_address ?? "Ev Adresi",
-                        coordinates: userData?.home_coordinates,
-                    },
-                    dropoff_location: {
-                        address: DUDULLU_CAMPUS.address,
-                        coordinates: { ...DUDULLU_CAMPUS.coordinates },
-                    },
-                    notes,
-                } as never)
-                .select()
-                .single();
-
-            if (error) throw error;
-            result = data;
-        } else {
-            return NextResponse.json(
-                { error: "No existing ride to cancel or change" },
-                { status: 404 }
-            );
-        }
-
-        return NextResponse.json({
-            success: true,
-            action,
-            status,
-            isPastDeadline,
-            message: getActionMessage(action, status, isPastDeadline),
-            ride: result,
-        });
-    } catch (error: unknown) {
-        if (error instanceof AppError) {
-            return NextResponse.json({ error: error.message }, { status: error.statusCode });
-        }
-        console.error("Ride confirmation error:", error);
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Confirmation failed" },
-            { status: 500 }
-        );
-    }
+function json(body: unknown, status: number): Response {
+  return Response.json(body, { status, headers });
 }
 
-function getActionMessage(action: string, status: string, isPastDeadline: boolean): string {
-    if (action === "confirm") {
-        if (isPastDeadline) {
-            return "Onay süresi geçtiği için talebiniz yönetici onayına gönderildi.";
-        }
-        return "Servisiniz başarıyla onaylandı.";
-    }
-    if (action === "cancel") {
-        return "Servisiniz iptal edildi.";
-    }
-    return "Değişiklik talebiniz yönetici onayına gönderildi.";
+function pendingLeg() {
+  return { decision: "pending", admission: "pending_student_confirmation" } as const;
 }
 
-// GET: Check ride status for a specific date
-export async function GET(request: NextRequest) {
-    try {
-        const authUser = await getCurrentUserFromRequest(request);
-        if (!authUser) {
-            throw AppError.unauthorized("Unauthorized: Giriş yapmanız gerekiyor.");
-        }
+function legView(row: DbStudentLegDecision | undefined, serviceDate: string) {
+  if (!row) return pendingLeg();
+  const decision: StudentLegDecision = row.decision === "confirmed"
+    ? { status: "confirmed", confirmedAt: row.decided_at, flexibilityMinutes: row.flexibility_minutes }
+    : { status: "cancelled", decidedAt: row.decided_at };
+  return { decision: row.decision, admission: classifyScheduleDecision(decision, serviceDate).admission };
+}
 
-        const { searchParams } = new URL(request.url);
-        const date = searchParams.get("date");
+export async function POST(request: Request): Promise<Response> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "INVALID_REQUEST" }, 400);
+  }
+  const parsed = postSchema.safeParse(body);
+  if (!parsed.success || !isRealServiceDate(parsed.data.rideDate)) {
+    return json({ error: "INVALID_REQUEST" }, 400);
+  }
 
-        if (!date) {
-            return NextResponse.json(
-                { error: "date query parameter is required" },
-                { status: 400 }
-            );
-        }
+  try {
+    const authUser = await getCurrentUserFromRequest(request);
+    if (!authUser) return json({ error: "AUTH_REQUIRED" }, 401);
+    if (authUser.role !== "student") return json({ error: "STUDENT_REQUIRED" }, 403);
 
-        // userId comes from the token
-        const userId = authUser.id;
+    const { rideDate, action } = parsed.data;
+    const client = getSupabaseAdmin();
+    const { data: userRaw, error: userError } = await client.from("users")
+      .select("weekly_schedule_id").eq("id", authUser.id).maybeSingle();
+    if (userError) throw userError;
+    const user = userRaw as { weekly_schedule_id: string | null } | null;
+    if (!user?.weekly_schedule_id) return json({ error: "NO_DUDULLU_SERVICE" }, 409);
 
-        const adminClient = getSupabaseAdmin();
-        const { data, error } = await adminClient
-            .from("ride_requests")
-            .select("*")
-            .eq("user_id", userId)
-            .gte("requested_pickup_time", `${date}T00:00:00`)
-            .lt("requested_pickup_time", `${date}T23:59:59`)
-            .single();
+    const { data: scheduleRaw, error: scheduleError } = await client.from("weekly_schedules")
+      .select("user_id, entries").eq("id", user.weekly_schedule_id).maybeSingle();
+    if (scheduleError) throw scheduleError;
+    const schedule = scheduleRaw as { user_id: string; entries: unknown } | null;
+    const entries = schedule?.entries;
+    const eligible = schedule?.user_id === authUser.id && Array.isArray(entries) && entries.some((entry) =>
+      entry && typeof entry === "object" && entry.dayOfWeek === serviceDayOfWeek(rideDate) &&
+      typeof entry.location === "string" && isDudulluCampus(entry.location));
+    if (!eligible) return json({ error: "NO_DUDULLU_SERVICE" }, 409);
 
-        if (error && error.code !== "PGRST116") {
-            throw error;
-        }
-
-        // Check deadline
-        const now = new Date();
-        const rideDate = new Date(date);
-        const deadline = new Date(rideDate);
-        deadline.setDate(deadline.getDate() - 1);
-        deadline.setHours(22, 0, 0, 0);
-
-        return NextResponse.json({
-            hasExistingRide: !!data,
-            ride: data || null,
-            isPastDeadline: now > deadline,
-            deadline: deadline.toISOString(),
-        });
-    } catch (error: unknown) {
-        if (error instanceof AppError) {
-            return NextResponse.json({ error: error.message }, { status: error.statusCode });
-        }
-        console.error("Get ride status error:", error);
-        return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Internal server error" },
-            { status: 500 }
-        );
+    if (action === "change") {
+      const { start, end } = serviceDateBounds(rideDate);
+      const { data: rideRaw, error: readError } = await client.from("ride_requests")
+        .select("id, notes").eq("user_id", authUser.id)
+        .gte("requested_pickup_time", start).lt("requested_pickup_time", end).maybeSingle();
+      if (readError) throw readError;
+      const ride = rideRaw as { id: string; notes: string | null } | null;
+      if (!ride) return json({ error: "RIDE_NOT_FOUND" }, 404);
+      const { data: updated, error: updateError } = await client.from("ride_requests")
+        .update({ status: "pending_admin_approval", notes: parsed.data.notes ?? ride.notes, updated_at: new Date().toISOString() } as never)
+        .eq("id", ride.id).eq("user_id", authUser.id).select().single();
+      if (updateError) throw updateError;
+      return json({ success: true, action, status: "pending_admin_approval", ride: updated,
+        message: "Değişiklik talebiniz yönetici onayına gönderildi." }, 200);
     }
+
+    const { direction, flexibilityMinutes } = parsed.data;
+    const decision = action === "confirm" ? "confirmed" : "cancelled";
+    const flexibility = action === "confirm" ? flexibilityMinutes : 0;
+    const { data: existingRaw, error: readError } = await client.from("student_leg_decisions")
+      .select("decision, flexibility_minutes").eq("user_id", authUser.id)
+      .eq("service_date", rideDate).eq("direction", direction).maybeSingle();
+    if (readError) throw readError;
+    const existing = existingRaw as Pick<DbStudentLegDecision, "decision" | "flexibility_minutes"> | null;
+    if (existing?.decision !== decision || existing.flexibility_minutes !== flexibility) {
+      const { error: writeError } = await client.from("student_leg_decisions").upsert({
+        user_id: authUser.id,
+        service_date: rideDate,
+        direction,
+        decision,
+        flexibility_minutes: flexibility,
+      } as never, { onConflict: "user_id,service_date,direction" });
+      if (writeError) throw writeError;
+    }
+    return json({ success: true, direction, decision }, 200);
+  } catch {
+    return json({ error: "CONFIRMATION_UNAVAILABLE" }, 503);
+  }
+}
+
+export async function GET(request: Request): Promise<Response> {
+  const date = new URL(request.url).searchParams.get("date");
+  if (!date || !isRealServiceDate(date)) return json({ error: "INVALID_SERVICE_DATE" }, 400);
+
+  try {
+    const authUser = await getCurrentUserFromRequest(request);
+    if (!authUser) return json({ error: "AUTH_REQUIRED" }, 401);
+    if (authUser.role !== "student") return json({ error: "STUDENT_REQUIRED" }, 403);
+
+    const client = getSupabaseAdmin();
+    const { data: decisions, error: decisionError } = await client.from("student_leg_decisions")
+      .select("direction, decision, decided_at, flexibility_minutes")
+      .eq("user_id", authUser.id).eq("service_date", date);
+    if (decisionError || !Array.isArray(decisions)) throw new Error("decision read failed");
+
+    const { start, end } = serviceDateBounds(date);
+    const { data: legacy, error: legacyError } = await client.from("ride_requests")
+      .select("status").eq("user_id", authUser.id)
+      .or(`and(requested_pickup_time.gte.${start},requested_pickup_time.lt.${end}),` +
+        `and(requested_dropoff_time.gte.${start},requested_dropoff_time.lt.${end})`);
+    if (legacyError || !Array.isArray(legacy)) throw new Error("legacy read failed");
+
+    const rows = decisions as DbStudentLegDecision[];
+    const byDirection = (direction: TripDirection) => rows.find((row) => row.direction === direction);
+    return json({
+      legs: {
+        pickup: legView(byDirection("pickup"), date),
+        dropoff: legView(byDirection("dropoff"), date),
+      },
+      legacyBlocker: (legacy as Array<{ status: string }>).some((row) => BLOCKING_STATUSES.has(row.status)),
+    }, 200);
+  } catch {
+    return json({ error: "CONFIRMATION_UNAVAILABLE" }, 503);
+  }
 }

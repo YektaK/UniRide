@@ -11,6 +11,7 @@ ALTER TABLE routes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE route_assignments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.student_leg_decisions ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies to avoid conflicts
 DO $$ 

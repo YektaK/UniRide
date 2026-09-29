@@ -27,6 +27,15 @@ export interface DbUserRow {
     updated_at: string;
 }
 
+export interface DbStudentLegDecision {
+  user_id: string;
+  service_date: string;
+  direction: "pickup" | "dropoff";
+  decision: "confirmed" | "cancelled";
+  decided_at: string;
+  flexibility_minutes: number;
+}
+
 /**
  * Database document types with DB metadata fields
  * These extend the base types with timestamps and other database-specific fields

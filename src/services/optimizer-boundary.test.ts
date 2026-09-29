@@ -47,6 +47,7 @@ describe("optimizer server boundary", () => {
     const expectedModules = new Set([
       "src/services/optimizer-service.ts",
       "src/app/api/sandbox/route.ts",
+      "src/app/api/admin/dudullu-preview/route.ts",
       "src/services/doubus/multi-vehicle-routing.ts",
     ]);
     const observedModules = new Set<string>();

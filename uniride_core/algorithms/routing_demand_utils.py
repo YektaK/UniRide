@@ -13,6 +13,8 @@ def demand_vectors_from_legacy(
 ) -> tuple[List[List[int]], List[int]]:
     """Convert legacy UniRide SW/SO demand inputs to vector demands."""
     types = list(disability_types or [])
+    if any(disability_type not in ("Sw", "So") for disability_type in types):
+        raise ValueError("disability_types must contain only 'Sw' or 'So'")
     vectors = [
         [1, 0] if disability_type == "Sw" else [0, 1]
         for disability_type in types

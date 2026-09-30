@@ -65,14 +65,17 @@ def solve_ortools_cvrp(
     matrix = [[int(round(float(value) * scale)) for value in row] for row in time_matrix]
     num_locations = len(matrix)
     customer_count = max(0, num_locations - 1)
-    normalized_demands, normalized_capacities = normalize_demand_vectors(
-        customer_count=customer_count,
-        demand_vectors=demand_vectors,
-        capacities=capacities,
-        disability_types=disability_types,
-        sw_capacity=sw_capacity,
-        so_capacity=so_capacity,
-    )
+    try:
+        normalized_demands, normalized_capacities = normalize_demand_vectors(
+            customer_count=customer_count,
+            demand_vectors=demand_vectors,
+            capacities=capacities,
+            disability_types=disability_types,
+            sw_capacity=sw_capacity,
+            so_capacity=so_capacity,
+        )
+    except ValueError as exc:
+        return ORToolsCVRPSolution(success=False, error_message=str(exc))
     vehicle_count = int(num_vehicles or min(customer_count, 10) or 1)
     depot_index = 0
 

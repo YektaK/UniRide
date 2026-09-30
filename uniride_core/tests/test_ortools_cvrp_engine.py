@@ -42,6 +42,21 @@ def test_solve_ortools_cvrp_reports_infeasible_problem():
     assert solution.error_message
 
 
+def test_solve_ortools_cvrp_rejects_unknown_disability_type():
+    solution = solve_ortools_cvrp(
+        time_matrix=[[0, 1], [1, 0]],
+        disability_types=["Unknown"],
+        sw_capacity=0,
+        so_capacity=1,
+        max_route_duration=20,
+        num_vehicles=1,
+        time_limit_seconds=1,
+    )
+
+    assert solution.success is False
+    assert "disability_type" in (solution.error_message or "")
+
+
 def test_solve_ortools_cvrptw_enforces_time_windows():
     solution = solve_ortools_cvrp(
         time_matrix=[

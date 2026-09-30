@@ -1,3 +1,6 @@
+import pytest
+from pydantic import ValidationError
+
 from optimizer_api.models import OptimizationRequest
 
 
@@ -26,3 +29,11 @@ def test_optimization_request_accepts_legacy_smoke_payload():
 
     request.strategy = "pso"
     assert request.algorithm == "pso"
+
+
+def test_optimization_request_rejects_unknown_disability_type():
+    with pytest.raises(ValidationError):
+        OptimizationRequest(
+            students=[{"id": "s1", "location_code": "L1", "disability_type": "Unknown"}],
+            depot={"id": "D", "lat": 0, "lng": 0},
+        )

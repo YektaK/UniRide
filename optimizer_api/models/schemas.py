@@ -67,7 +67,7 @@ class StudentNode(BaseModel):
     location_code: str
     occurrence_id: Optional[str] = None
     coordinates: Optional[Dict[str, float]] = None
-    disability_type: str = "So"
+    disability_type: Literal["Sw", "So"] = "So"
     pickup_time: Optional[str] = None
     dropoff_time: Optional[str] = None
     direction: TripDirection = TripDirection.PICKUP

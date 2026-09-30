@@ -114,6 +114,65 @@ def test_split_strict_blocks_violating_dropoff_trip():
         assert all(t.time_window_violations == 0 for t in trip_list)
 
 
+def test_split_soft_decode_accepts_only_violating_path():
+    decoder = SplitDecoder(
+        use_time_windows=True,
+        direction=Direction.PICKUP,
+        time_windows={"L1": (100, 110)},
+        max_tour_duration=1000,
+        offset_minutes=0,
+    )
+
+    result = decoder.decode(
+        ["L1"], DEPOT, {DEPOT: {"L1": 10.0}, "L1": {DEPOT: 10.0}},
+        _demands_sw("L1"),
+    )
+
+    assert result["routes"] == [["L1"]]
+    assert result["total_cost"] == 20.0
+    assert result["time_window_violations"] > 0
+
+
+def test_split_strict_decode_rejects_only_violating_path():
+    decoder = SplitDecoder(
+        use_time_windows=True,
+        direction=Direction.PICKUP,
+        time_windows={"L1": (100, 110)},
+        max_tour_duration=1000,
+        offset_minutes=0,
+        strict_time_windows=True,
+    )
+
+    result = decoder.decode(
+        ["L1"], DEPOT, {DEPOT: {"L1": 10.0}, "L1": {DEPOT: 10.0}},
+        _demands_sw("L1"),
+    )
+
+    assert result.get("error") == "No feasible splitting found"
+    assert result["total_cost"] == float("inf")
+
+
+def test_split_dp_prefers_violation_free_routes_over_cheaper_violating_route():
+    decoder = SplitDecoder(
+        use_time_windows=True,
+        direction=Direction.PICKUP,
+        time_windows={"L1": (590, 600), "L2": (530, 540)},
+        max_tour_duration=1000,
+        offset_minutes=0,
+    )
+    matrix = {
+        DEPOT: {"L1": 10.0, "L2": 10.0},
+        "L1": {DEPOT: 10.0, "L2": 1.0},
+        "L2": {DEPOT: 10.0, "L1": 10.0},
+    }
+
+    result = decoder.decode(["L1", "L2"], DEPOT, matrix, _demands_sw("L1", "L2"))
+
+    assert result["routes"] == [["L1"], ["L2"]]
+    assert result["total_cost"] == 40.0
+    assert result["time_window_violations"] == 0
+
+
 def _linear_matrix():
     return {
         DEPOT: {"A": 5.0, "B": 5.0},

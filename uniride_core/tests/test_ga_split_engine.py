@@ -59,3 +59,25 @@ def test_solve_ga_split_returns_decoded_routes():
     assert solution.final_result["num_vehicles"] >= 1
     assert sorted(location for route in solution.final_result["routes"] for location in route) == ["A", "B", "C"]
     assert solution.best_individual.total_cost < float("inf")
+
+
+def test_ga_split_soft_windows_keeps_positive_violation_route():
+    solution = solve_ga_split(
+        waypoints=["A"],
+        depot="D",
+        distance_matrix=_matrix(),
+        demands={"A": (1, 0)},
+        sw_capacity=1,
+        so_capacity=1,
+        max_tour_duration=60,
+        config={"population_size": 1, "max_iterations": 0},
+        rng=random.Random(123),
+        use_time_windows=True,
+        time_windows={"A": (100, 110)},
+        direction="pickup",
+        offset_minutes=0,
+    )
+
+    assert solution.final_result["routes"] == [["A"]]
+    assert solution.final_result["total_cost"] < float("inf")
+    assert solution.final_result["time_window_violations"] > 0

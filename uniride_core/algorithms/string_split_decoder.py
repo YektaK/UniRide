@@ -205,11 +205,13 @@ class SplitDecoder:
         for j in range(1, n + 1):
             for trip in trips[j]:
                 i = trip.start_idx
+                if not math.isfinite(V[i]):
+                    continue
                 total_violations = tw_violations[i] + trip.time_window_violations
                 total_cost = V[i] + trip.cost
                 
                 # Prefer solutions with fewer violations, then lower cost
-                if total_violations < tw_violations[j] or (
+                if predecessor[j] == -1 or total_violations < tw_violations[j] or (
                     total_violations == tw_violations[j] and total_cost < V[j]
                 ):
                     V[j] = total_cost

@@ -80,6 +80,36 @@ def test_meta_split_engines_return_decoded_routes(solver, config):
     assert sorted(location for route in solution.final_result["routes"] for location in route) == ["A", "B", "C"]
 
 
+@pytest.mark.parametrize(
+    ("solver", "config"),
+    [
+        (solve_pso_split, {"swarm_size": 1, "max_iterations": 0}),
+        (solve_gwo_split, {"population_size": 1, "max_iterations": 0}),
+        (solve_hho_split, {"population_size": 1, "max_iterations": 0}),
+    ],
+)
+def test_meta_split_soft_windows_keep_positive_violation_route(solver, config):
+    solution = solver(
+        waypoints=["A"],
+        depot="D",
+        distance_matrix=_matrix(),
+        demands={"A": (1, 0)},
+        sw_capacity=1,
+        so_capacity=1,
+        max_tour_duration=60,
+        config=config,
+        rng=random.Random(123),
+        use_time_windows=True,
+        time_windows={"A": (100, 110)},
+        direction="pickup",
+        offset_minutes=0,
+    )
+
+    assert solution.final_result["routes"] == [["A"]]
+    assert solution.final_result["total_cost"] < float("inf")
+    assert solution.final_result["time_window_violations"] > 0
+
+
 def test_levy_flight_preserves_permutation_contents():
     chromosome = ["A", "B", "C", "D"]
 

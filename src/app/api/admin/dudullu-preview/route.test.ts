@@ -185,6 +185,19 @@ describe("POST /api/admin/dudullu-preview", () => {
     expect(optimizerFetchMock).not.toHaveBeenCalled();
   });
 
+  it("fails closed before matrix and solver calls when the active fleet is empty", async () => {
+    const rows = admittedRows();
+    const client = setAdmin({ ...rows, vehicles: [] });
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+
+    expect(optimizerFetchMock).not.toHaveBeenCalled();
+    expect(body).toMatchObject({ status: "blocked_data", publishable: false, jobs: [] });
+    expect(body.reasonCodes).toContain("FLEET_SHORTAGE");
+    expect(client.queries.map((query) => query.table)).toContain("vehicles");
+  });
+
   it("solves one exact admitted anchor with a bound matrix and verified result", async () => {
     const client = setAdmin(admittedRows());
     mockTransport([solverResult("2026-09-30:pickup:student-1")]);

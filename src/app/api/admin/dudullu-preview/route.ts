@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import type { ScheduleEntry } from "@/types";
 import {
   buildScheduleDemands,
+  isBlockingLegacyRequestStatus,
   isDudulluCampus,
   serviceDayOfWeek,
   type StudentLegDecision,
@@ -38,13 +39,6 @@ const decisionRowSchema = z.object({
   decided_at: z.string().datetime({ offset: true }),
   flexibility_minutes: z.number().int().min(0).max(1439),
 }).passthrough();
-const LEGACY_BLOCKERS = new Set(["pending_admin_approval", "cancelled_by_admin", "in_progress"]);
-const LEGACY_NON_BLOCKERS = new Set([
-  "confirmed",
-  "pending_student_confirmation",
-  "cancelled_by_student",
-  "completed",
-]);
 const snapshotSchema = z.object({
   id: z.string(), version: z.string(), sha256: z.string().regex(/^[0-9a-f]{64}$/),
   source: z.literal("supabase"),
@@ -257,7 +251,7 @@ async function loadBlockedPreview(serviceDate: string) {
       const status = String(request.status);
       if (!nonBlankString(request.user_id) || !dudulluStudentIds.has(request.user_id)) {
         scheduleDataInvalid = true;
-      } else if (LEGACY_BLOCKERS.has(status) || !LEGACY_NON_BLOCKERS.has(status)) {
+      } else if (isBlockingLegacyRequestStatus(status)) {
         blockedStudents.add(request.user_id);
       }
     }
@@ -316,6 +310,9 @@ async function loadBlockedPreview(serviceDate: string) {
       soCapacity: row.seating_capacity as number,
       cooldownMinutes: row.cooldown_minutes as number,
     });
+  }
+  if (vehicles.length === 0) {
+    return withReasonCodes(blockedPreview(serviceDate, admitted, null, "FLEET_SHORTAGE"), extraReasons);
   }
 
   let matrix: MatrixSnapshot;

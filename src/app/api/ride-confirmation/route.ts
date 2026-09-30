@@ -10,7 +10,7 @@
 import { z } from "zod";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getCurrentUserFromRequest } from "@/lib/admin-auth";
-import { classifyScheduleDecision, isDudulluCampus, serviceDayOfWeek, type StudentLegDecision, type TripDirection } from "@/services/daily-planning";
+import { classifyScheduleDecision, isBlockingLegacyRequestStatus, isDudulluCampus, serviceDayOfWeek, type StudentLegDecision, type TripDirection } from "@/services/daily-planning";
 import { isRealServiceDate, serviceDateBounds } from "@/services/istanbul-service-date";
 import type { DbStudentLegDecision } from "@/types/db";
 
@@ -30,7 +30,6 @@ const changeSchema = z.object({
 }).strict();
 const postSchema = z.union([directionalSchema, changeSchema]);
 const headers = { "cache-control": "private, no-store" };
-const BLOCKING_STATUSES = new Set(["pending_admin_approval", "cancelled_by_admin", "in_progress"]);
 
 function json(body: unknown, status: number): Response {
   return Response.json(body, { status, headers });
@@ -152,7 +151,7 @@ export async function GET(request: Request): Promise<Response> {
         pickup: legView(byDirection("pickup"), date),
         dropoff: legView(byDirection("dropoff"), date),
       },
-      legacyBlocker: (legacy as Array<{ status: string }>).some((row) => BLOCKING_STATUSES.has(row.status)),
+      legacyBlocker: (legacy as Array<{ status: string }>).some((row) => isBlockingLegacyRequestStatus(row.status)),
     }, 200);
   } catch {
     return json({ error: "CONFIRMATION_UNAVAILABLE" }, 503);

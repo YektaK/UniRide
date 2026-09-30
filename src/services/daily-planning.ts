@@ -177,6 +177,17 @@ export function isDudulluCampus(location: string): boolean {
   return normalized === "dudullu" || normalized === "d.kampus";
 }
 
+const NON_BLOCKING_LEGACY_STATUSES = new Set([
+  "confirmed",
+  "pending_student_confirmation",
+  "cancelled_by_student",
+  "completed",
+]);
+
+export function isBlockingLegacyRequestStatus(status: string): boolean {
+  return !NON_BLOCKING_LEGACY_STATUSES.has(status);
+}
+
 function waveKey(direction: TripDirection, classBoundaryMinutes: number): string {
   const hour = String(Math.floor(classBoundaryMinutes / 60)).padStart(2, "0");
 

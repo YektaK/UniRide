@@ -201,6 +201,17 @@ describe("student leg BFF", () => {
     });
   });
 
+  it("fails closed on an unknown legacy status in the student view", async () => {
+    mockData({
+      ride_requests: [{ user_id: student.id, status: "future_status", requested_pickup_time: "2026-09-30T06:00:00.000Z" }],
+    });
+    const { GET } = await import("./route");
+
+    const body = await (await GET(get() as never)).json();
+
+    expect(body).toMatchObject({ legacyBlocker: true });
+  });
+
   it("preserves change as legacy review without a decision write", async () => {
     const client = mockData({ ride_requests: [{ id: "ride-1", user_id: student.id, requested_pickup_time: "2026-09-30T06:00:00.000Z", notes: null }] });
     const { POST } = await import("./route");

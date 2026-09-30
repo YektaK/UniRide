@@ -9,20 +9,23 @@ The engines may share neutral models and solver implementations, but they do not
 
 ## Current verified status
 
-The latest verification was run on 2026-08-24 against the remediation working tree based on `WIP` commit `fef5a2b537da7068b51b3b3a50c6d633a2853404`. The evidence was captured before integration.
+The latest recorded full-suite baseline is from 2026-09-22; it is historical evidence, not a claim that the current WIP is fully verified. The 2026-09-29 decoder and Dudullu Package 2 changes received scoped local verification as noted below.
 
-| Gate | Verified result |
+| Gate | Latest recorded result |
 | --- | --- |
-| Full Python discovery | 3,355 passed, 1 skipped, 45 warnings, 429.17s |
-| Frontend Vitest | 21 files, 58 tests passed, 78.99s |
-| TypeScript | passed |
-| ESLint | 0 errors, 158 warnings (temporary waiver) |
-| Production build | passed on Next.js 16.1.6; 57 dynamic, server-rendered routes |
-| `npm audit --omit=dev --json` | last recorded baseline: 84 findings (2 critical, 22 high, 59 moderate, 1 low); not refreshed on 2026-08-24 |
+| Full Python discovery (2026-09-22) | 3,380 passed, 1 skipped, 45 warnings |
+| Frontend Vitest (2026-09-22) | 39 files, 216 tests passed |
+| TypeScript / production build (2026-09-22) | passed; build produced 57 dynamic, server-rendered routes |
+| ESLint (2026-09-22) | 0 errors, 164 warnings |
+| `npm audit --omit=dev --json` (2026-09-22) | 86 findings: 3 critical, 21 high, 60 moderate, 2 low; not refreshed since |
 
 UniRide is still experimental. The passing build and test gates do **not** close the remaining hard solver cancellation, process isolation, durable-job, distributed rate-limit storage, matrix-provenance, GIS, lint-warning, or dependency-security boundaries. Read [ACTIVE_ROADMAP.md](ACTIVE_ROADMAP.md) before planning work.
 
-The Dudullu Package 0 launcher and redacted readiness boundaries are implemented and test-gated at `d983375`, but the 2026-09-02 live aggregate gate is **`BLOCKED-CONFIG`** because no administrator access token was available. Current student, matrix, driver, and vehicle readiness is not verified. See [Dudullu runtime readiness evidence](docs/DUDULLU_RUNTIME_READINESS.md).
+The 2026-09-29 scoped verification covered the decoder regression and Package 2 Task 4: 59 Python tests across six files and 77 frontend tests across four files passed, along with TypeScript, quiet lint, and `git diff --check`. Task 4's explicit-leg admission, matrix snapshot, and optimizer orchestration are implemented locally; route tests cover two admitted exact anchors. The repository includes the `student_leg_decisions` migration and student BFF, but live migration application and stored rows were not verified. Package 2 Task 5's 28-student fixture remains open. Package 0 readiness reached a **local** PASS on 2026-09-23 (29 nodes, 812 directed arcs); this is not deployed-production acceptance. The 2026-09-02 `BLOCKED-CONFIG` result is historical. See [ACTIVE_ROADMAP.md](ACTIVE_ROADMAP.md), [work state](docs/UNIRIDE_WORKSTATE.md), and [Dudullu runtime readiness evidence](docs/DUDULLU_RUNTIME_READINESS.md).
+
+**Latest local suite run (2026-09-30):** Python **3,399 passed, 1 skipped, 45 warnings** with dotenv disabled and Supabase credentials blank; frontend **43 files / 315 tests passed**; TypeScript and quiet ESLint passed. This is current local verification, not production acceptance.
+
+**Branch policy:** `WIP` is the canonical integration/default branch. `main` mirrors the published WIP state for compatibility; do not develop on `main` as a parallel line.
 
 ## Repository map
 
@@ -121,7 +124,7 @@ The admin route-test page uses the authenticated same-origin `/api/optimize-rout
 
 ## Run locally
 
-The one-command Dudullu launcher is implemented and code-gated. It shares one internal key with both child processes, starts FastAPI and Next.js, and requires FastAPI health, the protected internal handshake, and the web listener before announcing readiness. The authenticated live inventory gate remains `BLOCKED-CONFIG` until an administrator bearer token is available; startup success is not a claim that current operational data is ready.
+The one-command Dudullu launcher is implemented and code-gated. It shares one internal key with both child processes, starts FastAPI and Next.js, and requires FastAPI health, the protected internal handshake, and the web listener before announcing readiness. Package 2 Task 4 reads explicit per-leg decisions and runs admitted exact-anchor jobs in the local code; live use still depends on the migration and decision rows being present. Recheck authenticated inventory before preview use; the last local aggregate PASS does not establish deployed readiness.
 
 ```powershell
 npm run dev:dudullu
@@ -158,10 +161,13 @@ Do not publish benchmark evidence without a versioned dataset/matrix manifest, s
 
 ## Verification
 
-The canonical Python suites are constrained in `pyproject.toml`; do not rely on broad repository discovery, which can collect manual scripts.
+The canonical Python suites are constrained in `pyproject.toml`; do not rely on broad repository discovery, which can collect manual scripts. `optimizer_api/main.py` loads `optimizer_api/.env` when imported, so disable dotenv and blank provider credentials to keep tests offline and independent of local secrets.
 
 ```powershell
-python -m pytest uniride_core\tests optimizer_api\tests academic_benchmark\tests -q -p no:cacheprovider --tb=short
+$env:PYTHON_DOTENV_DISABLED = "1"
+$env:SUPABASE_URL = ""
+$env:SUPABASE_SERVICE_ROLE_KEY = ""
+python -B -m pytest uniride_core\tests optimizer_api\tests academic_benchmark\tests -q -p no:cacheprovider --tb=short
 npm test -- --run
 npm run typecheck
 npm run lint

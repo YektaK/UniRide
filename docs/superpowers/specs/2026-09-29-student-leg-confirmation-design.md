@@ -56,7 +56,7 @@ The Task 4 loader reads the exact service date's schedules and leg decisions, th
 - `cancelled` rows are excluded;
 - directionless rows never create positive demand; unresolved legacy change/admin-cancel/in-progress rows block both directions.
 
-Only when at least one valid leg is admitted, load active vehicles, request a matrix snapshot, and call the optimizer. With zero admitted demand, return the honest pending/empty preview without matrix or optimizer calls. Existing matrix, certificate, arc, exact-anchor, and physical-fleet gates remain unchanged. Package 2 Task 4 is still incomplete until its admitted-demand solver path, two-anchor case, and Package 2 Task 5 fixture pass.
+Only when at least one valid leg is admitted, load active vehicles, request a matrix snapshot, and call the optimizer. With zero admitted demand, return the honest pending/empty preview without matrix or optimizer calls. Existing matrix, certificate, arc, exact-anchor, and physical-fleet gates remain unchanged. The admitted-demand solver path and two-anchor route test are implemented locally; Package 2 remains incomplete until its separate Task 5 fixture passes. Live migration and data status are not established by this design or local tests.
 
 ## Migration, access control, and compatibility
 

@@ -1,8 +1,8 @@
 # UniRide Active Roadmap
 
-**Authoritative planning snapshot:** 2026-09-02
+**Authoritative planning snapshot:** 2026-09-30
 **Historical verification evidence:** 2026-08-24 remediation derived from `fef5a2b537da7068b51b3b3a50c6d633a2853404`
-**Latest scoped verification:** Dudullu Package 0 code gate on `codex/dudullu-package0-readiness-20260901` at `d983375d0307fa6b2ee7a995de9cbfa15fbf20e1`; live aggregate gate `BLOCKED-CONFIG`
+**Latest local verification:** 2026-09-30 canonical Python suites: 3,399 passed, 1 skipped, 45 warnings (dotenv disabled); frontend: 43 files / 315 tests passed; TypeScript and quiet lint passed. The 2026-09-29 decoder and Package 2 Task 4 scoped suites also passed. Task 4's code path is implemented locally; Task 5 and live readiness remain open. This is local verification, not production acceptance.
 
 This is the current priority order. Detailed agent handoffs, gates, and model preferences live in [NEXT_PHASE_EXECUTION_ROADMAP.md](NEXT_PHASE_EXECUTION_ROADMAP.md).
 
@@ -15,7 +15,7 @@ UniRide remains experimental. Current heavy production paths have fail-closed fe
 The following are closed only to the tested scope recorded in [CURRENT_ARCHITECTURE.md](CURRENT_ARCHITECTURE.md):
 
 - occurrence identity on covered production paths;
-- split-decoder repair and missing-directed-arc failure behavior;
+- split-decoder prefix-construction, soft-window DP reachability, and missing-directed-arc repairs (those tested scopes only; see workstate);
 - canonical Bildiri extraction and active-import boundary;
 - matrix repository/integrity contracts and cache-health hardening;
 - seed `0` and PSO deterministic seed repair;
@@ -44,7 +44,17 @@ admin UI showed 29 nodes and 812 directed arcs, corroborated by local HTTP
 logs and a direct provider aggregate. This is not deployed-production
 acceptance. The 2026-09-02 `BLOCKED-CONFIG` attempt below remains historical.
 The separate [Package 2 preview plan](docs/superpowers/plans/2026-09-24-dudullu-package2-daily-preview.md)
-is proposed and awaits approval before implementation.
+was approved on 2026-09-29. Package 2 implementation status is reconciled below;
+the historical 2026-09-24 proposal state remains recorded in the workstate.
+
+**Status (2026-09-30):** Package 2 plan approved. Tasks 1–3 are implemented
+and locally committed (`f954629`, `ed1a2f4`, `8ff220b`). Task 4's explicit-leg
+admission and matrix/optimizer path are implemented locally; route tests cover
+two admitted exact anchors. The repository includes the `student_leg_decisions`
+migration and student BFF, but live migration application and stored rows were
+not verified. Task 5's 28-student fixture has not started. Do not infer live
+readiness from local tests. Recorded verification and remaining gates are in
+[`docs/UNIRIDE_WORKSTATE.md`](docs/UNIRIDE_WORKSTATE.md).
 
 1. **Package 0 — runtime and data readiness (implementation complete; local gate `PASS`).**
    The admin-only, read-only aggregate passed locally on 2026-09-23. Recheck
@@ -58,10 +68,12 @@ is proposed and awaits approval before implementation.
    saving or move a student automatically. Final fail-closed hardening rejects
    out-of-day anchors, blank identities, invalid runtime directions, and
    malformed source demands; same-wave demand order is boundary-first.
-3. **Package 2 — preview planning and physical-fleet truthfulness (plan proposed; implementation pending approval).**
-   With the local Package 0 `PASS` and a separately approved plan, add an
-   authenticated admin preview API, bind each call to an authoritative matrix
-   ID/version/hash, independently validate every used arc, calculate complete
+3. **Package 2 — preview planning and physical-fleet truthfulness (plan approved; Tasks 1–4 implemented locally; Task 5 not started).**
+   The authenticated Task 4 route admits only persisted explicit-leg decisions,
+   fails closed on unresolved admission, and binds admitted jobs to an
+   authoritative matrix snapshot. Confirm live migration/readiness separately;
+   then complete the Task 5 fixture. The route must continue to bind each call
+   to an authoritative matrix ID/version/hash, independently validate every used arc, calculate complete
    depot-to-depot timing including the closing arc, and perform two-stage
    day-level physical-fleet assignment. Drafts with shortages or unassigned
    admitted demand must be explicitly non-publishable; never report a solver
@@ -101,10 +113,11 @@ The admin BFF returned HTTP 401 without a bearer token, so no aggregate report
 or current data counts were captured. Evidence is recorded in
 [`docs/DUDULLU_RUNTIME_READINESS.md`](docs/DUDULLU_RUNTIME_READINESS.md).
 
-**Exact next recommended task:** review and approve the separate Package 2
-preview plan, then implement its first bounded task. Recheck the authenticated
-readiness aggregate before later live preview testing. Do not start UI,
-publication, automatic student shifting, or savings claims ahead of those gates.
+**Exact next recommended task:** complete Package 2 Task 5's deterministic
+28-student / 29-node / 812-arc fixture and its mutated-arc regression. Then
+recheck authenticated readiness and live migration/data status before a
+preview smoke test. Do not infer consent, mutate live data, publish, deploy, or
+make savings claims ahead of those gates.
 
 ## Priority 1 — Feasibility governance and extension
 

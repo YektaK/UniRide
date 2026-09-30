@@ -121,6 +121,7 @@ scratch/
 # Tool / editor state — regenerable, not source code
 .codegraph/
 .opencode/
+/opencode.json
 .cursor/
 .hypothesis/
 .sixth/

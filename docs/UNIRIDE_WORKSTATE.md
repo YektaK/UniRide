@@ -2,11 +2,11 @@
 
 > Current checkpoint, not a substitute for approved specifications. Read the dated audit only when its evidence or a selected task requires it.
 
-**Updated:** 2026-09-24, Europe/Istanbul
+**Updated:** 2026-09-30, Europe/Istanbul
 
 **Repository:** `C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide`
 
-**Integration/default branch:** `WIP`
+**Integration/default branch:** `WIP` (`origin/HEAD` points to `origin/WIP`); `main` is the compatibility mirror, not a separate development line.
 
 **Recovery audit base HEAD:** 73618255d94f2e51ae01c8bcedbf9c1b43c9a6ff — fix(campus): unify Dudullu location defaults. For the current WIP SHA, use git rev-parse WIP; the 2026-09-23 recovery changes were pushed as 66948fa.
 
@@ -40,7 +40,30 @@ Keep three tracks separate: Dudullu operations; shared production infrastructure
 - Verification: focused preview suite **12 passed**; full frontend suite **40 files / 228 tests passed**; `npm.cmd run typecheck` passed; quiet lint passed after the sandbox process-start workaround; staged diff check passed. No live data or database rows were changed.
 - Task 3 is implemented and locally committed as `8ff220b`: the pure preview assembler now validates solver Sw/So load counts against admitted occurrences, assigns complete intervals to physical vehicles with capacity/cooldown constraints, minimizes distinct fleet size deterministically, and reports truthful `shortage`/`indeterminate` outcomes plus hourly occupancy.
 - Verification: focused preview suite **20 passed**; full frontend suite **40 files / 236 tests passed**; `npm.cmd run typecheck` passed; quiet lint passed after the sandbox process-start workaround; staged diff check passed. A fresh read-only review found one load-count trust issue, which was fixed with a failing regression test before the final suite. No live data or database rows were changed.
-- Next bounded task is Package 2 Task 4: authenticated read-only admin BFF and live-data admission boundary. The 28-student gate and publication remain incomplete.
+- At this checkpoint, the next bounded task was Package 2 Task 4: authenticated read-only admin BFF and live-data admission boundary. See the 2026-09-29 continued-execution section below for its implementation and blocker status; the 28-student gate and publication remain incomplete.
+
+## 2026-09-29 roadmap reconciliation
+
+- Package 2 plan approval was confirmed; Tasks 1–3 remained complete as recorded above, and Task 4 was next at this checkpoint. Current execution status is recorded below. This approval does not establish production readiness or authorize live-data mutation/publication.
+- **ALG-TW-01 / solver correctness — was OPEN at this checkpoint; resolved locally on 2026-09-29.** The source-level reachability defect and its acceptance criteria are retained as history; implementation and regression evidence are recorded in the continued-execution section below. Other decoder variants and certificate semantics were not changed.
+
+## 2026-09-29 continued execution
+
+- **ALG-TW-01 — fixed locally:** soft-window DP now admits a reachable positive-violation state when no predecessor state was reachable, while strict rejection, zero-violation preference, and minimum cost among equal-violation alternatives remain covered. Direct decoder, GA split, and meta-split regressions pass: **59 tests across six Python test files**. No other decoder variant or feasibility-certificate semantics changed.
+- **Package 2 Task 4 — implementation complete locally:** the authenticated admin BFF validates authorization/date/input, reads explicit `student_leg_decisions`, blocks pending/ambiguous legacy demand, and runs admitted exact-anchor groups through the content-addressed matrix and canonical optimizer path. The route suite covers zero-demand short-circuiting, failure gates, one and two exact-anchor jobs; related preview/readiness/planning suites pass: **77 tests across four frontend test files**. Typecheck, quiet lint, and `git diff --check` pass.
+- The repository contains the per-leg decision migration and student BFF (migration contract committed in `a8b18c9`). Whether that migration is applied to live Supabase and whether current rows admit demand remain unverified. No live database or optimizer endpoint was queried, no migration was applied, and no deployment/publication acceptance is claimed. Package 2 Task 5's 28-student fixture has not started.
+- **Next gate:** complete Task 5's deterministic 28-student/29-node/812-directed-arc fixture, including a mutated-used-arc rejection. Then recheck authenticated readiness and live migration/data status before any preview smoke test. Do not infer consent or mutate live data.
+
+## 2026-09-30 WIP consolidation audit
+
+- **Canonical branch:** live remote `HEAD` points to `origin/WIP`; local `WIP` and `origin/WIP` were both `1b48623049299ed76e89971dc33a840de3d4841d` before the current local changes. Keep WIP as the integration/default branch and `main` as its compatibility mirror.
+- **Phase 2 matrix branches:** `origin/codex/phase2-matrix-repository-20260807` ended at `e260f5a` on Aug 7 (54 days old; 128 commits behind WIP, zero unique commits). `origin/codex/phase2-matrix-arc-integrity-20260808` ended at `0b4bef6` on Aug 8 (53 days old; 121 behind, zero unique commits). Both tips are ancestors of WIP; repository injection/lifecycle/cache-health, strict directed-arc validation, timeout/backoff, and related tests remain in WIP. No code transfer is needed; their remote refs are obsolete after publication verification.
+- **Copilot/Zai audit branches:** five of six Copilot tips have zero commits unique from WIP. `copilot/evaluate-last-15-commits` has one unique May 27 commit (`90cd1bb`) containing only two historical audit reports, not implementation changes. `zai-full-backup-04042026` is an Apr 4 ancestor of WIP with zero unique commits. No open GitHub PRs were found during this audit. These refs are not additional sources of truth.
+- **Old remote `main`:** tip `b6e9220` (Apr 6) has 10 unique commits and a 1,406-path tree delta from the merge base, but zero changed paths in `src/`, `optimizer_api/`, `uniride_core/`, `academic_benchmark/`, `docs/`, or `supabase/`; its unique tree is legacy duplicate/tooling/generated content. The tracked `.env` filename was observed in that old tree; its contents were not inspected. Its tip is preserved locally as `archive/main-before-wip-20260930`; moving the remote ref does not guarantee secret-history purging. WIP contains only `.env.example` among matching filenames.
+- The historical Copilot report commit `90cd1bb` contributes no code to transfer. Current WIP now rejects unknown legacy disability values at both the API schema and shared demand-normalization boundaries; OR-Tools reports invalid demand as an unsuccessful solution.
+- **2026-09-30 verification:** canonical Python suites passed **3,399, skipped 1, warnings 45 in 378.55s** with `PYTHON_DOTENV_DISABLED=1` and both Supabase variables blank; frontend passed **43 files / 315 tests**; TypeScript and quiet ESLint passed. The earlier Python run without dotenv isolation failed five matrix-dependent tests; `optimizer_api/main.py` loads `optimizer_api/.env` on import, so future tests must use the isolated command in `README.md`.
+- `codegraph index` succeeded on 2026-09-30 (712 files, 11,563 nodes, 30,245 edges). No live-data mutation, deployment, or production acceptance is part of this branch consolidation.
+
 ## Fresh verification at the recorded HEAD
 
 | Check | 2026-09-22 result |
@@ -74,9 +97,10 @@ Source integration does not certify persisted historical records or a live deplo
 |---|---|---|
 | OPS-01 / Dudullu | Local PASS on 2026-09-23 after SDK client-options fix; UI result reported by user and corroborated by HTTP logs plus direct aggregate | Package 2 preview plan; deployed-production acceptance remains separate |
 | SEC-01 / dependencies | Critical audit entries: Next, protobufjs, websocket-driver; xlsx high, no automatic fix reported | Reachability review and separately scoped safe remediation |
+| ALG-TW-01 / solver correctness | Fixed locally 2026-09-29; soft positive-violation reachability, strict behavior, zero-violation preference, and GA/meta call paths covered (59 focused Python tests passed) | Closed for the tested decoder/caller scope; reopen only on a regression |
 | JOB-01 / job lifecycle | Fresh in-memory repro: `stopped -> completed` after a late completion; workers are not wired to manager stop state | Terminal-state and worker-stop regression, then separate durable-execution gate |
 | DOC-01 / continuity | DUD-01 verification header, 3-opt status, workflow baseline/precedence, and Package 6 labels are stale/conflicting | Correct status annotations without rewriting approved contracts or historical evidence |
-| PROD-02 / daily preview | Domain functions exist; full production preview/fleet orchestration remains pending | OPS-01 PASS, then approved Package 2 plan and certified truthful preview |
+| PROD-02 / daily preview | Task 4's explicit-leg admin/read, matrix, optimizer, and two-anchor code path is implemented and locally tested; live migration/data status is unverified; Task 5's 28-student fixture is pending | Complete Task 5, then recheck authenticated readiness and live migration/data before preview smoke; production acceptance remains separate |
 | ACAD-01 / academic Gate C | Runtime catalog: **8 verified, 2 candidate, 4 planned**; only Bildiri active study profile | Remaining capability/composition/profile gates before Gate D |
 | Later production | Soft deadlines, in-memory jobs/rate limits, incomplete matrix provenance; no established GIS renderer | Scoped durability/cancellation/provenance and geometry gates before release claims |
 
@@ -86,13 +110,13 @@ Dudullu order follows the approved design: Package 2 preview → 3 transactional
 
 ## Git and environment boundaries
 
-- Preserve unrelated modified `.gitignore` and `AGENTS.md`, and untracked `INSTRUCTION_REVIEW_2026-09-07.md`. Their hashes were unchanged through this audit.
-- The dated audit, checkpoint, Dudullu launcher/test, and matrix provider/test were committed as 66948fa and pushed to origin/WIP on 2026-09-23. The existing declared Supabase SDK was added only to ignored .venv-jit; no tracked dependency or DB rows changed. Preserve unrelated modified .gitignore and AGENTS.md and untracked INSTRUCTION_REVIEW_2026-09-07.md.
+- Tracked `.gitignore` and `AGENTS.md` changes are included in the current WIP publication. Preserve untracked `INSTRUCTION_REVIEW_2026-09-07.md` as user-owned and intentionally exclude it from commits.
+- The dated audit, checkpoint, Dudullu launcher/test, and matrix provider/test were committed as 66948fa and pushed to origin/WIP on 2026-09-23. The existing declared Supabase SDK was added only to ignored .venv-jit; no tracked dependency or DB rows changed at that checkpoint. Preserve untracked INSTRUCTION_REVIEW_2026-09-07.md.
 - The audit inspected 17 registered worktrees (root plus 16 linked). On 2026-09-23, nine clean C:/tmp worktrees were removed through Git while retaining their branches. The remaining registered worktrees are the root plus seven repo-internal linked trees; one repo-internal tree has five modified uniride.egg-info/* files.
 - C:/tmp cleanup also removed 16 pytest cache folders and one unused 519 MB Python venv. Eleven scratch folders and 180 root patch/draft files were archived before removal. Three preserved-artifact folders remain untouched; the verified archives are UniRide-worktree-artifacts-20260923.tar.gz, UniRide-scratch-folders-20260923.tar.gz, and UniRide-root-scratch-20260923.tar.gz in C:/tmp.
 - Package B task5/task6/task7 have seven non-ancestor commits in total, but all are patch-equivalent to WIP. Do not merge them merely because ahead/behind is nonzero.
 - One old `autostash` is preserved. Ignored artifacts and all rescue-branch contents were not exhaustively reviewed; no blanket cleanup is approved.
-- No open GitHub PR was found at capture. Recheck before future integration.
+- No open GitHub PR was found during the 2026-09-30 branch audit. Recheck before future integration.
 - `codegraph index .` failed with an EPERM lock; init reported already initialized; explore/node worked. Treat graph relationships as leads and verify active imports/current source.
 - Browser inventory failed twice with `trusted Node process exited unexpectedly`. This audit did not reach the administrator UI.
 - The local launcher subsequently started both services on 127.0.0.1; FastAPI health and internal readiness handshakes passed. The process was restarted on 2026-09-23 to open the web panel.
@@ -121,6 +145,6 @@ The archived-task listing ended with no archived UniRide match. External reports
 6. The coordinator updates this file at material checkpoints. Keep implementation, integration, functional verification, and live acceptance separate.
 7. Carry existing authorization forward. A model change does not itself authorize new scope or require a new complete audit.
 
-**Next product task:** Implement and verify Dudullu Package 2 Task 4 (admin BFF and live-data admission boundary) from the approved plan. Keep SEC-01 as an independent security track. Recheck the live data gate before any later deployment or publication claim.
+**Next product task:** Complete Package 2 Task 5's 28-student fixture and mutated-arc regression. Then recheck authenticated readiness and live migration/data status before preview smoke. Keep SEC-01 as an independent security track; no deployment/publication claim follows from local tests alone.
 
 **If the live gate regresses:** record the current redacted aggregate and the failing layer before changing data or beginning Package 2 implementation.

@@ -21,7 +21,7 @@
 - Legacy `pending_admin_approval`, `cancelled_by_admin`, or `in_progress` rows block both directions; `completed` rows are not candidates for a new plan.
 - Reuse `buildScheduleDemands` and `classifyScheduleDecision`; do not duplicate the cutoff rule.
 - With zero admitted demand, do not load vehicles, request a matrix, or call the optimizer.
-- Preserve matrix, certificate, arc, exact-anchor, and physical-fleet validation. Package 2 Task 4 remains incomplete until its separate 28-student gate passes.
+- Preserve matrix, certificate, arc, exact-anchor, and physical-fleet validation. The admitted-demand solver path and two-anchor route case are now implemented locally; Package 2 remains incomplete until its separate 28-student gate passes.
 - Do not apply a migration to Supabase, query live rows, backfill, publish, or deploy.
 - Preserve unrelated dirty-tree changes. Existing `src/services/dudullu-preview.ts` edits and untracked `src/app/api/admin/dudullu-preview/` files are in-scope WIP: inspect and extend them, never replace them wholesale. Do not stage unrelated files.
 
@@ -300,7 +300,7 @@ expect(requestBodies.every((body) => body.expected_matrix_sha256 === "a".repeat(
 - [ ] Run `npm.cmd test -- --run src/app/api/ride-confirmation/route.test.ts src/services/istanbul-service-date.test.ts src/services/daily-planning.test.ts src/components/student/schedule-confirmation-card.test.tsx src/app/api/admin/dudullu-preview/route.test.ts src/services/dudullu-preview.test.ts`. Expected: all focused tests pass.
 - [ ] Run `npm.cmd run typecheck`, `npm.cmd run lint -- --quiet`, and `git diff --check`; report exact exit results.
 - [ ] Review the final diff and staged paths; preserve unrelated dirty changes and do not apply the SQL migration to Supabase or use live student data.
-- [ ] Record the implementation checkpoint only after checks pass. Do not mark Package 2 Task 4 complete: its separate deterministic 28-student gate and any required local readiness/smoke evidence remain outstanding.
+- [ ] Record the implementation checkpoint only after checks pass. Do not mark Package 2 complete until its deterministic 28-student gate and any required local readiness/smoke evidence pass. The current local implementation state and live-data boundary are recorded in `docs/UNIRIDE_WORKSTATE.md`.
 
 ## Self-Review
 

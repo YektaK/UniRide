@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Status: proposed for separate Package 2 approval. This document authorizes no code or live-data mutation by itself.
+- Status: approved for Package 2 implementation on 2026-09-29. Approval does not authorize live-data mutation, production publication, or deployment acceptance.
 - Campus code `D.Kampus`; timezone `Europe/Istanbul`; pickup and dropoff are independent demand legs.
 - Fixed previous-day 22:00 confirmation cutoff and 120-minute exception lead rule stay in `daily-planning.ts`.
 - Preserve unrelated dirty `.gitignore`, `AGENTS.md`, and `INSTRUCTION_REVIEW_2026-09-07.md`.
@@ -177,6 +177,8 @@ The Python snapshot response is `{id, version, sha256, source, arcs}`. Each arc 
 - [ ] **Step 3:** Request one protected matrix snapshot for the required physical locations. For each admitted exact-anchor group, call `optimizerFetch("/api/v1/optimize", { method: "POST", body: JSON.stringify(jobRequest) })` sequentially with `ga_split`, one `target_time`, direction, the matrix digest, and scalar capacity no greater than the maximum active compatible vehicle capacity. GA-Split's virtual route labels are requirements, not physical assignments. Fail closed if no active capacity exists. Assemble/verify all jobs with the pure service, then assign physical vehicles.
 - [ ] **Step 4:** Return fixed error codes and redacted messages. Never echo provider errors, keys, Supabase rows, or raw addresses on failure. No public unauthenticated test hook, database writes, route persistence, or UI in this package.
 - [ ] **Step 5:** Run `npm.cmd test -- --run src/app/api/admin/dudullu-preview/route.test.ts src/services/dudullu-preview.test.ts src/app/api/admin/dudullu-readiness/route.test.ts` and `npm.cmd run typecheck`. Expected: all pass. Commit only Task 4 files.
+
+**Implementation checkpoint — 2026-09-30:** Task 4's authenticated admission boundary and admitted-demand matrix/optimizer path are implemented locally. The repository contains the `student_leg_decisions` migration and student BFF; route tests cover zero-demand short-circuiting, failure gates, one anchor, and two sequential exact-anchor jobs. Related preview/readiness/planning suites pass (**77 tests across four frontend files**); typecheck, quiet lint, and `git diff --check` pass. Task 5's deterministic 28-student fixture remains undone. This work did not apply the migration or query live Supabase/optimizer; live migration, data, and deployment readiness remain unverified. Do not infer consent or alter the existing acceptance criteria.
 
 ### Task 5: 28-student gate, regression checks, and handoff
 

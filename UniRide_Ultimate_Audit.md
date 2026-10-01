@@ -4,6 +4,7 @@
 **Current scoped update:** 2026-08-24
 **Verified base commit:** `fef5a2b537da7068b51b3b3a50c6d633a2853404`
 **Verification basis:** remediation working tree derived from `fef5a2b`; evidence captured before integration
+**Newer full audit:** [docs/ULTIMATE_AUDIT_2026-10-01_CLAUDE_OPUS_5_5.md](docs/ULTIMATE_AUDIT_2026-10-01_CLAUDE_OPUS_5_5.md) (2026-10-01, `316cbab`) qualifies several closures below (feasibility certificate, matrix integrity, compute protection); re-verify before relying on them.
 
 ## 1. Reality check
 

@@ -14,6 +14,8 @@ Read the relevant specification sections before changing their contracts. Combin
 
 A test-only edit that changes accepted algorithm behavior or scientific evidence still requires the corresponding specification. Reuse context already read in the session unless it has changed.
 
+Open defects from the 2026-10-01 full-stack audit, with fix guidance and a remediation tracker, are in `docs/ULTIMATE_AUDIT_2026-10-01_CLAUDE_OPUS_5_5.md`; re-verify each finding against live code before acting and record fixes in its tracker.
+
 If documents conflict, use this precedence:
 
 1. verified live code and passing tests for claims about current behavior (a passing implementation does not silently override an approved requirement);

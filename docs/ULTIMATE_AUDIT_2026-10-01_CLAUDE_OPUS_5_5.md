@@ -7,7 +7,8 @@
 | Field | Value |
 |---|---|
 | Report ID | `UA-2026-10-01-CLAUDE` |
-| Written | **2026-10-01 11:01 (+03:00, Europe/Istanbul)** |
+| Written | **2026-10-01 11:01 (+03:00, Europe/Istanbul)**, v1.0 |
+| Revised | **2026-10-01 16:53 (+03:00)**, **v1.1**: reconciled with the independent Codex verification (`docs/ULTIMATE_AUDIT_2026-10-01_CODEX_VERIFICATION.md`, reviewed at `a54b786`). See [Revision history](#revision-history). |
 | Investigation window | 2026-09-30 ≈17:00 → 2026-10-01 ≈11:00 (+03:00). Paused overnight when the account's 5-hour usage window was exhausted; the investigators were resumed from their saved transcripts. |
 | Author (lead agent) | **Claude** (Anthropic), model **Claude Opus 5.5** (`claude-opus-5-5`), running in Claude Code (Claude desktop app, Code tab) |
 | Contributing agents | Six Claude Opus 5.5 sub-agents ("investigators"), one per lane: **P1a** constraints and objective math · **P1b** local search, determinism and duplicates · **P2** FastAPI backend · **P3** Next.js frontend and BFF · **P4** dual-engine boundaries and work-package gates · **ACAD** academic accounting, seeds and statistics. The lead re-verified every Critical finding. |
@@ -19,6 +20,8 @@
 ---
 
 ## Table of contents
+
+- [Revision history](#revision-history)
 
 0. [How to use this report](#0-how-to-use-this-report-read-first)
 1. [Method, scope and baseline](#1-method-scope-and-baseline)
@@ -43,6 +46,44 @@
 
 ---
 
+## Revision history
+
+| Version | Date (+03:00) | Author | Change |
+|---|---|---|---|
+| v1.0 | 2026-10-01 11:01 | Claude (Opus 5.5) | Initial audit at `316cbab`. |
+| v1.1 | 2026-10-01 16:53 | Claude (Opus 5.5) | Reconciled with the independent Codex verification (`docs/ULTIMATE_AUDIT_2026-10-01_CODEX_VERIFICATION.md`, reviewed at `a54b786`). Every disputed claim was re-checked against live code before it was accepted. |
+
+**v1.1 changes** (re-verified by the lead at the cited lines unless noted):
+
+| Item | Change | Basis |
+|---|---|---|
+| C1 | Severity made explicitly conditional: Critical if the live policies match the repository SQL; the unsafe repository policy is a release blocker regardless. | Codex §3 |
+| C1.b | **Re-rated Critical → High.** The gap is limited to the attacker's own requests, and no consequence in the current Dudullu planning/publication flow is verified (legacy routing reads `confirmed` rows). New open question Q20. | Codex §3 |
+| C2 | Scope added: snapshot-bound requests already fail closed (`routers/optimization.py:211-234`; Appendix H.4 steps 6 and 9). The fail-open applies to unbound requests; the rounding gap applies with any matrix. | Codex §3; lead repro H.4 |
+| C3 | Scope added: the governed fair/native branches (`registry_setup.py:345-365`) bypass the cache, so quarantine follows result provenance, not wholesale. Preferred fix: pass the prebuilt matrix explicitly; no second global cache. | Codex §3 |
+| C4 | Severity made conditional on the Next.js app being publicly reachable and the benchmark router being mounted in the deployed optimizer (Q15, Q18). | Codex §3 |
+| H20 | **Corrected.** Pushes to `WIP` run 8 focused Python files; pull requests also run `benchmark.yml` (SOTA smoke, ATSP integration, regression gate, SOTA E2E). The finding is now: the full canonical suites and the production build never run in CI. | `.github/workflows/benchmark.yml:3-48` |
+| M6 | **Narrowed.** The landing page does show demo badges (`src/app/page.tsx:1156-1160, 1902-1903`). Remaining: unlabelled IE tracks, demo rows saved to history with only a `demo_` prefix, automatic switching. | `page.tsx` |
+| M11 | **Re-rated Medium → Low.** Next 16's peers accept React 18.2+ or 19, and the App Router bundles canary React by design; act only on a concrete runtime incompatibility. | `node_modules/next/package.json` |
+| M15, §8.4 | **Corrected.** The production registry must stay a domain-aware CVRP/CVRPTW surface with grandfathered `production_ready` flags; it cannot be produced by filtering the permutation-TSP academic catalog. | Unification design, Capability Model; Codex §7.11 |
+| M17 | **Corrected.** The generic test lives at `uniride_core/tests/test_archive_boundaries.py` (v1.0 cited a wrong path). The YAEM-specific test does reject static imports of `archive.academic_benchmark.yaem2026_legacy` (`test_yaem_quarantine_boundary.py:39-50`). Residual gaps only: namespace importability, the generic test's markers, dynamic and root-file scans. | test sources |
+| M19 | Clarified: `studies/bildiri2026/study.json` is an explicit draft/smoke profile; the finding concerns truthful metadata, not contaminated published results. | Codex §5 |
+| M20 | **Re-rated Medium → Low (informational).** Counting repeated objective calls complies with the approved budget definition. The memoization advice is withdrawn: it would change the comparison protocol and needs approval. | Fairness design; Codex §7.9 |
+| M24 | Profile before adding virtualization or other abstractions. | Codex §5 |
+| M26 | **Re-rated Medium → High; now VERIFIED-LEAD.** The adapter builds a student-only, depot-free, distance-scaled matrix and silently falls back to greedy on any exception (`sota_tsp_strategy_adapter.py:12-23, 61-67`), so production responses can misreport the algorithm that ran. Detailed entry added to §4; new quick win QW11. | lead source read; Codex §5 |
+| L3, §8.2 | **Corrected precision.** Only the request-model field `use_sota_engine` (`optimizer_api/models/schemas.py:222`) is unused; the core decoder option of that name is live (`uniride_core/algorithms/cvrptw_decoder.py:25-62`). In `clustering.py` only the duplicate k-means is dead. `sota_common` has consumers (re-exports, compatibility tests, `__main__`) to redirect before retirement. | grep; Codex §6-7 |
+| §2.3, §8.6, MT4, MT5, Appendix C | **Withdrawn:** the claim that Package C started while Gate A was incomplete. Gate A (design lines 422-429) covers archival, checksums, schemas, non-importability and green academic tests. Run-manifest integration is Package D, and production → academic isolation is a separate architecture plan. Pilots already emit `manifest.json` (`fair_pilot.py:583`, `native_pilot.py:596`). | design; grep |
+| §2.3 | Added two documentation overstatements: `CURRENT_ARCHITECTURE.md:39` ("protected end to end") and `:58` ("academic execution remains separate"). | Codex §8 |
+| §7.3, §8.3 | Memoization advice withdrawn (see M20). Shared timing logic should be the smallest common function, not a new scheduling framework. | Codex §9 |
+| §9 | Sequencing refined: Phase 0 containment must precede live-data preview and operational acceptance; the offline Package 2 Task 5 fixture may proceed in parallel. Durations are estimates. | Codex §7.14 |
+| §1.4, Appendix F, Appendix H | Added Codex's independent selective re-runs and five items confirmed sound. Codex re-ran Appendix H.1 unchanged with the identical 4-of-6 result. | Codex §8, §10 |
+
+**Unchanged:** every other finding. Codex either confirmed the mechanism or did not dispute it with evidence. Where Codex marked a measurement as "not rerun" (H6's 2,703 ms, C2's OR-Tools rounding), the lead had reproduced it on 2026-10-01 (Appendix H.3, H.4).
+
+**IDs are stable across versions.** When a finding is re-rated, its ID stays the same; the severity stated in the finding and in Appendix J is authoritative.
+
+---
+
 ## 0. How to use this report (read first)
 
 1. **Precedence.** Per `AGENTS.md`, verified live code and passing tests outrank this document. All line numbers refer to commit `316cbab`. Before acting on a finding, re-open the cited lines (`codegraph node <file>`, or the `codegraph_explore` MCP tool) and confirm the defect still exists.
@@ -55,7 +96,7 @@
    | `PLAUSIBLE` | Mechanism identified; runtime or live-environment confirmation still required. The **Confirm by** line says how. |
    | `LATENT` | A real defect that is currently unreachable or inactive. |
 
-3. **IDs.** `C#` Critical, `H#` High, `M#` Medium, `L#` Low. Investigator IDs (for example `P2-01`, `ACAD-03`) appear in parentheses for traceability. Roadmap items are `QW#` (quick wins), `MT#` (mid-term) and `LT#` (long-term).
+3. **IDs.** IDs are stable identifiers assigned in v1.0 by original severity: `C#` Critical, `H#` High, `M#` Medium, `L#` Low. A re-rated finding keeps its ID; the severity stated in the finding and in Appendix J is authoritative (see the Revision history). Investigator IDs (for example `P2-01`, `ACAD-03`) appear in parentheses for traceability. Roadmap items are `QW#` (quick wins), `MT#` (mid-term) and `LT#` (long-term).
 4. **Working discipline** (`AGENTS.md`, `ACTIVE_ROADMAP.md`):
    - one bounded package per branch, cut from a clean `origin/WIP`;
    - write a failing regression test that reproduces the finding **before** fixing it;
@@ -69,7 +110,7 @@
    - Budgets, seeds, algorithm identity and statistics (C3, C5, H11, H13, M18–M20, L8–L10): `ACADEMIC_FAIRNESS_PROTOCOL_DESIGN.md`, plus the unification design.
    - 3-opt (H10, M14, M25): `CANONICAL_THREE_OPT_DESIGN.md`.
    - Production boundaries and priorities (C1, C2, C4, H1–H7, H14, H15, H18, H20): `CURRENT_ARCHITECTURE.md`, `ACTIVE_ROADMAP.md`.
-8. **Relationship to other documents.** This report does not replace `UniRide_Ultimate_Audit.md` (the project's maintained master audit) or any approved design. Where they disagree about current behavior, verify the live code. §2.3 lists the discrepancies found.
+8. **Relationship to other documents.** This report does not replace `UniRide_Ultimate_Audit.md` (the project's maintained master audit) or any approved design. Where they disagree about current behavior, verify the live code. §2.3 lists the discrepancies found. A companion independent review by Codex, `docs/ULTIMATE_AUDIT_2026-10-01_CODEX_VERIFICATION.md` (reviewed at `a54b786`), is reconciled into v1.1; read it for its evidence labels and fresh selective test runs.
 
 ---
 
@@ -113,6 +154,8 @@
 
 These match the counts documented on 2026-09-30, except lint (documented as 158).
 
+*(v1.1)* Codex independently re-ran selective groups at `a54b786`: 387 Python tests in three groups, 6 Vitest files / 13 tests, typecheck clean, lint 0 errors / 163 warnings (companion report §8 and §10). These are selective runs, not a new full-suite run.
+
 A green suite is not evidence against the findings below. Most defects sit **between** components, and each component is tested only against its own assumptions. For example, the certificate is tested against solver responses, not against the authoritative travel-time matrix.
 
 ---
@@ -127,6 +170,8 @@ UniRide is a well-tested research prototype wrapped in a production-shaped shell
 2. **The compute protection can be bypassed** through anonymous BFF benchmark routes, and "stop" does not stop (C4).
 
 In addition: a database-level privilege escalation (C1), silent corruption of academic results through an `id()`-keyed cache (C3), and a dashboard that prints significance claims from invalid statistics (C5).
+
+*(v1.1)* An independent Codex review reproduced the mechanisms of C2 and C4, C3's 4-of-6 corruption, and H2, H3, H5, H13 and M18. It also narrowed several scopes; see the Revision history.
 
 ### 2.2 Scorecard
 
@@ -154,8 +199,10 @@ Per `AGENTS.md`, these are discrepancies to report, not code to relabel as compl
 | ESLint: 0 errors / 158 warnings | 0 errors / 163 warnings today | ESLint JSON, 2026-09-30 |
 | Old Numba 3-opt kernels are unreachable from public execution | Live in the final polish of the SOTA solvers | `uniride_core/algorithms/sota_tsp/ls_engine.py:142-150` |
 | One canonical ID maps to one implementation; a `production_ready` gate exists | `Core-GWO-TSP` names two different solvers, and no production gate exists | `uniride_core/algorithms/engine_factory.py:28-34`; `optimizer_api/strategies/__init__.py:120-214` |
-| Work-package gates run A → B → C → D | Package C work exists while Gate A gaps remain: archive importable, no optimizer → academic boundary test, run manifests never emitted | Appendix C |
+| ~~Work-package gates run A → B → C → D~~ | **Withdrawn in v1.1.** Gate A's criteria (design lines 422-429) are substantially met. The items v1.0 listed belong to Package D (run-manifest integration) or to a separate architecture plan (production → academic isolation). Residual Gate A hardening only: archive namespace importability and broader import scans. | Appendix C |
 | Statistics protocol: Kruskal-Wallis/Mann-Whitney with Holm, or Friedman; no proof language | The dashboard's "Academic Proof" tab runs a Wilcoxon test with rows paired by position | `academic_benchmark/dashboard.py:326-388` |
+| `CURRENT_ARCHITECTURE.md:39`: "General production compute is now protected end to end" *(added v1.1)* | Anonymous BFF benchmark routes forward requests with the internal key (C4) | `src/app/api/benchmark/run/route.ts:38-40` |
+| `CURRENT_ARCHITECTURE.md:58`: "Academic execution remains separate from production request lifecycles" *(added v1.1)* | The production optimizer mounts the benchmark router and imports academic promoted configs (H8, H17) | `optimizer_api/main.py:18, 109`; `optimizer_api/strategies/promoted_config_loader.py:9` |
 
 Documentation claims that **were confirmed**:
 - the test counts (Python and Vitest), and that TypeScript is clean;
@@ -195,6 +242,7 @@ Each finding follows the same template: status, governing contract, locations, m
 ### C1 — Anyone can self-register as admin, then read all student data and reset any password
 
 - **Status:** `VERIFIED-LEAD` (repo code and SQL). **The live database has not been checked.**
+- **Severity (v1.1):** Critical if the live policies and user provisioning match the repository SQL. The unsafe repository policy is a release blocker regardless (Codex concurs).
 - **Category:** Security / data protection.
 - **Sources:** lead finding; impact corroborated by P3.
 - **Governing context:** `ACTIVE_ROADMAP.md` (Package 3 RLS is still open); KVKK obligations for disability data.
@@ -299,6 +347,7 @@ Also:
 #### C1.b — Students can set any `ride_requests.status`, bypassing admin approval
 
 - **Status:** `VERIFIED-LEAD` (SQL); live state not checked.
+- **Severity (v1.1): High** (re-rated from Critical). The gap is limited to the attacker's own requests, and no consequence in the current Dudullu planning/publication flow is verified; legacy routing does read `confirmed` rows. Re-rate to Critical if a live dispatch path that consumes `ride_requests.status` is shown (Q20).
 - **Locations:**
   - `supabase/rls_policies.sql:104-116`: `ride_requests_insert_own WITH CHECK (auth.uid() = user_id)` and `ride_requests_update_own USING (auth.uid() = user_id)`;
   - `supabase/schema.sql:35-58`: statuses include `confirmed`, `in_progress`, `completed` and `pending_admin_approval`.
@@ -359,6 +408,8 @@ repro_c2_h5_dual_singleton: 1 unbound optimize (first load failed): success=True
 - Zero-minute or meaningless routes are returned as `success=True` with `is_feasible=True` and can be saved as route plans.
 - Readiness reports healthy at the same time.
 - Real violations of `max_travel_time` are hidden by rounding even when the matrix is healthy.
+
+**Scope (v1.1).** Requests bound to a snapshot (`expected_matrix_sha256`) already fail closed when the snapshot is unavailable or changed (`optimizer_api/routers/optimization.py:211-234`; Appendix H.4 steps 6 and 9). The fail-open applies to unbound requests, and the rounding gap applies with any matrix. The certificate is structurally separate from the solver but not independent of its costs: wrapping the self-reported durations again would not fix it. It must certify against the same immutable snapshot the solve used (Codex concurs).
 
 **Fix (before)**
 ```python
@@ -466,6 +517,8 @@ runs corrupted: 4 of 6
 
 **Impact:** any multi-instance batch (for example kroA100…kroE100) run through these paths without a manifest may contain silently degraded results. Treat such existing results as **suspect** and rerun them after the fix (LT1).
 
+**Scope (v1.1).** The governed fair/native manifest branches (`academic_benchmark/core/registry_setup.py:345-365`) use a direct matrix and accounting path that bypasses this cache, so governed pilot results are not implicated by this reproduction. Decide quarantine or rerun per result provenance (Q17), not wholesale. Codex re-ran Appendix H.1 unchanged and observed the identical 4-of-6 corruption.
+
 **Fix (before)**
 ```python
 _DIST_MATRIX_CACHE: Dict[Tuple, Any] = {}
@@ -499,7 +552,7 @@ if per_func is not None:
     with _DIST_MATRIX_CACHE_LOCK:
         per_func[cache_key] = result
 ```
-Optionally, consult the prebuilt `_np_dist_matrix` fast path **before** any cache lookup.
+Preferred (v1.1): pass the already available prebuilt matrix explicitly through the live callers and use it **before** any cache. Keep a cache only if profiling shows it is needed, with a real, bounded lifetime as above; do not add a second global cache.
 
 **Acceptance criteria**
 - A regression test solves two same-size, different problems back to back in a loop with `gc.collect()` between them, and asserts that each run's cached matrix equals its own problem's matrix.
@@ -511,6 +564,7 @@ Optionally, consult the prebuilt `_np_dist_matrix` fast path **before** any cach
 ### C4 — Anyone can start benchmark runs in the production optimizer, and "stop" does not stop them
 
 - **Status:** `VERIFIED-LEAD` (repro; BFF side re-read).
+- **Severity (v1.1):** Critical when the Next.js app is publicly reachable and the benchmark router is mounted in the deployed optimizer (Q15, Q18; neither verified). The broken status/admission invariant is a defect regardless (Codex reproduced it with finite fake workers).
 - **Category:** Availability / security.
 - **Sources:** P3-01, P2-02, P4-01.
 - **Governing context:** `CURRENT_ARCHITECTURE.md` (compute protection); `ACTIVE_ROADMAP.md` Priorities 2–3.
@@ -604,6 +658,8 @@ if len(data_A) > 0 and len(data_B) > 0 and len(data_A) == len(data_B):
 st.info("Inferential tests disabled: rows are not validated, protocol-homogeneous "
         "or seed_group-paired. Use the Package D analysis service.")
 ```
+
+**Note (v1.1):** this is not evidence that any submitted paper contains such claims. It is a blocker for using this dashboard as evidence.
 
 **Acceptance:** the tab can no longer emit an inferential claim. Package D (LT1) reintroduces inference over validated, protocol-homogeneous records matched on `seed_group`, with Kruskal-Wallis → Mann-Whitney and Holm correction (or Friedman for matched designs), effect sizes and exact sample counts.
 
@@ -1116,14 +1172,14 @@ st.info("Inferential tests disabled: rows are not validated, protocol-homogeneou
   ```
 - **Acceptance:** the quick runner is retired or relocated to the lab service (MT4).
 
-### H20 — CI executes only 8 Python test files
+### H20 — CI never runs the full canonical suites or a production build *(corrected in v1.1)*
 
 - **Status:** `VERIFIED-LEAD`.
-- **Location:** `.github/workflows/ci.yml:45-60`.
-- **Mechanism:**
-  - The Python job only *collects* the three canonical suites, then executes 8 focused files.
-  - About 3,400 tests never run in CI.
-  - CI has no `npm run build` and no dependency audit; `benchmark.yml` runs a separate subset.
+- **Location:** `.github/workflows/ci.yml:45-60`; `.github/workflows/benchmark.yml:3-48`.
+- **Mechanism (corrected in v1.1):**
+  - On pushes to `WIP`, `ci.yml` only *collects* the three canonical suites, then executes 8 focused files.
+  - Pull requests also run `benchmark.yml` (SOTA solver smoke tests, ATSP integration, the regression gate and SOTA E2E). It does not run on pushes to `WIP`: its push trigger is `main`/`master` only.
+  - Neither workflow executes the full ~3,400-test canonical suites, and CI has no `npm run build` and no dependency audit.
 - **Fix sketch:**
   ```yaml
         - name: Run canonical Python suites
@@ -1141,6 +1197,17 @@ st.info("Inferential tests disabled: rows are not validated, protocol-homogeneou
   Shard the Python suite with `pytest-xdist` if runtime is a concern; the full run is about 10 minutes locally.
 - **Acceptance:** CI fails on any failure in the canonical suites and on any build failure.
 
+### M26 — The production SOTA strategies optimize a different objective and can silently run greedy instead *(re-rated Medium → High in v1.1)*
+
+- **Status:** `VERIFIED-LEAD` (v1.1, source read). Re-rated at Codex's recommendation.
+- **Locations:** `uniride_core/adapters/sota_tsp_strategy_adapter.py:12-23` (`build_solver_matrix`) and `:45-67` (`solve_student_order_with_sota_tsp`); production callers via `optimizer_api/strategies/ebso_strategy.py:93-100` (e2bso, rdma and paoea, per P1b).
+- **Mechanism:**
+  - The solver matrix covers students only, with the depot excluded, and is built from `distance_lookup` scaled to integers (`max(1, int(distance * 1000))`). Responses, however, report depot-anchored *duration*.
+  - Any exception inside the SOTA solver is swallowed and replaced by `greedy_student_order` (`:66-67`), and nothing in the response says so.
+- **Impact:** a caller who requests `e2bso`, `rdma` or `paoea` can receive a greedy route labelled as that algorithm, and the SOTA search optimizes a different objective from the one reported and certified. This is an algorithm-identity truthfulness defect on a production surface.
+- **Fix sketch:** build the solver matrix from the depot-anchored duration matrix (include the depot as the fixed tour start). On solver failure, either fail the request or set an explicit fallback marker (for example `algorithm_used="greedy_fallback"`) that the certificate and the UI surface.
+- **Acceptance:** a test that forces the SOTA solver to raise gets a failed or explicitly labelled fallback response, and a parity test shows that the optimized objective equals the reported duration.
+
 ---
 
 ## 5. Medium findings
@@ -1149,30 +1216,30 @@ st.info("Inferential tests disabled: rows are not validated, protocol-homogeneou
 |---|---|---|---|---|
 | M1 (P1A-06) | **Solvers ignore the heterogeneous fleet** (`request.vehicles`); no strategy reads it. Only the certifier enforces it, disabling the global caps when a fleet is given. Any fleet tighter than `sw/so_capacity`, or with fewer vehicles than the solver's route count, gives `success=False`. | `optimizer_api/strategies/*` (0 reads); `optimizer_api/verification/response_certifier.py:136-193` | CONFIRMED | Pass vehicle-indexed capacities to the solvers, or add a route-to-vehicle assignment stage before certification (MT1). |
 | M2 (P1A-07) | **Pickup windows can be built from `dropoff_time`.** In a PICKUP request, a student with only `dropoff_time` gets `(dropoff−30, dropoff)` as a morning pickup window. | `optimizer_api/models/schemas.py:350-357` | CONFIRMED | No fallback across directions; require `pickup_time`, or derive from `target_time`. |
-| M3 (P1A-08) | **"km" is actually lat/lng degrees** (about 1/111 of the real value). The same degree matrix is used as minutes in the fallback. | `optimizer_api/strategies/ga_strategy.py:158`; `sota_response_builder.py:46-57`; `matrix_repository.py:492-509` | CONFIRMED | Use haversine km or drop the field; never use degrees as minutes (C2). |
+| M3 (P1A-08) | **"km" is actually lat/lng degrees** (roughly 1/111 of the real value; the ratio varies with latitude and axis). The same degree matrix is used as minutes in the fallback. | `optimizer_api/strategies/ga_strategy.py:158`; `sota_response_builder.py:46-57`; `matrix_repository.py:492-509` | CONFIRMED | Use haversine km or drop the field; never use degrees as minutes (C2). |
 | M4 (P2-06) | **Stale matrix served indefinitely** after a failed refresh: no maximum age, and the backoff (equal to the TTL) repeats. Responses carry no provenance. The `.select()` has no `.range()` and no row-count check, so a PostgREST max-rows limit (1,000 by default when hosted) truncates matrices above about 32 locations. Truncation fails closed via `IncompleteTravelMatrixError`. | `optimizer_api/utils/matrix_repository.py:81-87, 165-171, 186-191`; `optimizer_api/models/schemas.py:428-442` | CONFIRMED (stale / provenance); PLAUSIBLE (truncation; confirm max_rows and location count) | Maximum staleness, then fail closed; provenance fields in responses; paginated fetch with an expected row count (MT2). |
 | M5 (P2-07) | **The benchmark router leaks internal errors** to clients: error text, exception messages in run status, and absolute server paths. | `optimizer_api/routers/benchmark.py:154, 174, 192, 214` (`detail=f"... {exc}"`), `:653`, `:314, 434`, `:554, 560` | CONFIRMED | Return fixed messages and log details server-side. |
-| M6 (P3-05) | **Fabricated data presented as analysis results.** The IEDashboard "tracks" tab always draws hard-coded blocks (pickups 8–11, drop-offs 14–17, 2 Sw / 3 So) with no demo label. The sandbox `transformIEData` zeroes several metrics. Landing-page demo mode invents gap and time values from hard-coded per-algorithm ranges that already encode a ranking, saves them to run history with only a `demo_` prefix, and switches on automatically when a health check fails. | `src/components/admin/ie-dashboard.tsx:72-107, 376-379`; `src/app/api/sandbox/route.ts:104-120`; `src/app/page.tsx:309-350, 745, 775` | CONFIRMED | Remove it or label it prominently, never persist demo data to history, and never auto-enable demo mode. |
+| M6 (P3-05) | **Synthetic data shown without enough provenance** *(narrowed in v1.1: the landing page does show demo badges, `src/app/page.tsx:1156-1160, 1902-1903`)*. The IEDashboard "tracks" tab always draws hard-coded blocks (pickups 8–11, drop-offs 14–17, 2 Sw / 3 So) with no demo label. The sandbox `transformIEData` zeroes several metrics. Landing-page demo mode invents gap and time values from hard-coded per-algorithm ranges that already encode a ranking, saves them to run history with only a `demo_` prefix, and switches on automatically when a health check fails. | `src/components/admin/ie-dashboard.tsx:72-107, 376-379`; `src/app/api/sandbox/route.ts:104-120`; `src/app/page.tsx:309-350, 745, 775` | CONFIRMED | Remove it or label it prominently, never persist demo data to history, and never auto-enable demo mode. |
 | M7 (P3-06) | **Drivers page shows stale data, hidden by a lint suppression.** The suppression says "fetch-on-mount", but the effect re-runs on `[selectedDate]`. If dates are switched quickly, an older response overwrites the newer one, so the table shows date A while the picker shows B, and exports are labelled with the wrong date (`driver-export.ts:103`). The page also reads users through the browser anon client; repo RLS has only `users_select_own`, so drivers appear unassigned unless live RLS differs. | `src/app/(app)/admin/drivers/page.tsx:30-57` | CONFIRMED (race); PLAUSIBLE (RLS effect) | Ignore stale responses or use an AbortController; fetch via the admin BFF. |
 | M8 (P3-07) | **Possible stored XSS in the driver PDF export, under a loose CSP.** The export writes `s.name`, `studentNumber`, and driver and vehicle names unescaped into an `about:blank` popup via `document.write`. The CSP allows `script-src 'self' 'unsafe-inline' 'unsafe-eval'` in **all** environments, `connect-src` includes localhost, there is no HSTS, and the session lives in localStorage. Students can set their own name. | `src/services/excel/driver-export.ts:123-128, 252-254, 285`; `next.config.ts:36, 40`; `src/lib/supabase.ts:130-133` | PLAUSIBLE (exploitation needs the list to include other users) | HTML-escape every interpolated value; nonce-based CSP in production; drop `unsafe-eval` and the localhost entries; add HSTS. |
 | M9 (P3-08) | **The dev-reset secret is optional, and the UI never sends it.** `next dev` binds `0.0.0.0`, so with `ENABLE_DEV_RESET=true` anyone on the LAN could reset any account's password in whichever Supabase project `.env.local` points to. Production builds fail closed. | `src/app/api/auth/dev-reset/route.ts:23-28`; `src/app/(auth)/forgot-password/page.tsx:89-95` | PLAUSIBLE (configuration-dependent) | Always require the secret and refuse non-loopback requests. |
 | M10 (P3-09) | **Password change with only a bearer token**, without re-authentication, so a stolen token means permanent takeover. Auth failures come back as HTTP 500. | `src/app/api/profile/password/route.ts:34-37, 55-56` | CONFIRMED | Require the current password or a recent re-login; map auth errors to 401/403. |
-| M11 (P3-10) | **Production and tests run different React versions.** Next 16.1.6 lists `react ^18.2.0` as a peer, but the App Router runs Next's bundled `19.3.0-canary-f93b9fd4-20251217`. `node_modules/react` 18.3.1 is used only by Vitest, Testing Library and `@types/react` 18.3.18, so component tests and type-checking never exercise the production React. | `package.json`; `node_modules/next/dist/compiled/react/cjs/react.production.js:557`; `vite.config.ts:10-13` | CONFIRMED | Align on React 19 (`react`, `react-dom`, `@types/*`), or alias tests to the bundled build. |
+| M11 (P3-10) | **Severity (v1.1): Low** (re-rated). **Production and tests run different React builds.** Next 16.1.6 accepts React 18.2+ or 19 as peers, and the App Router runs Next's bundled `19.3.0-canary-f93b9fd4-20251217` by design. `node_modules/react` 18.3.1 serves Vitest, Testing Library and `@types/react` 18.3.18, so component tests and type-checking do not exercise the production React build. | `package.json`; `node_modules/next/package.json` (peerDependencies); `node_modules/next/dist/compiled/react/cjs/react.production.js:557`; `vite.config.ts:10-13` | CONFIRMED (expected framework behavior) | Treat only a concrete runtime incompatibility as a defect, and cover the production React with E2E tests against `next build`. An upgrade alone does not give exact parity. |
 | M12 (P3-11) | **`xlsx` 0.18.5 parses admin uploads.** Known issues: CVE-2023-30533 (prototype pollution, fixed in 0.19.3) and CVE-2024-22363 (ReDoS, fixed in 0.20.2). The npm release line is unmaintained. | `package.json:73`; `src/services/excel/import.ts:6, 138` | CONFIRMED (version); exploitation needs a crafted file | Use the SheetJS CDN build ≥ 0.20.2 or exceljs; add file size and type limits. |
 | M13 (P3-13) | **Async `onAuthStateChange` callback** that awaits a database query. auth-js deprecates async callbacks because they can deadlock, and the callbacks are not sequenced, so a slow lookup can finish after SIGNED_OUT and put the user back. | `src/lib/supabase-auth.ts:236-257` | PLAUSIBLE (confirm with a multi-tab or token-refresh test) | Keep the callback synchronous and defer DB work; sequence by event. |
 | M14 (P1B-05) | **The production default uses a second, non-canonical 3-opt.** The "hybrid" local search is the default in `ga_split` (the API default algorithm), the gwo/hho/pso split strategies and `hho_strategy`. Its cases are B'C', B'C, BC (identity), CB, C'B and CB': 6 distinct non-identity moves, with C'B' missing. `A = route[:i+1]`, so the depot→first-stop arc is never cut. Tours stay valid (full costing), but the search is weaker and drifts from the contract. | `uniride_core/algorithms/local_search.py:168-206, 726-732, 800`; `ga_split_strategy.py:67`; `hho_strategy.py:59` | CONFIRMED | Run `improve_three_opt` on `[depot] + route` (directed mode auto-detected), rotate back, and delete `_three_opt_cases` (MT6). |
-| M15 (P4-06) | **No `production_ready` gate.** The flag exists only in the academic catalog, where it is forced to False. API exposure is a hard-coded dict, and the snapshot test freezes the key list only. | `optimizer_api/strategies/__init__.py:120-214` (academic SOTA strategies at `:186-196`); `canonical.py:60-81`; `capabilities.py:77, 110-111`; `test_production_registry_snapshot.py:17-31` | CONFIRMED | Add a production strategy table with `production_ready`, check it in `resolve_strategy`, and snapshot (key, canonical ID, ready). |
+| M15 (P4-06) | **No `production_ready` gate.** The flag exists only in the academic catalog, where it is forced to False. API exposure is a hard-coded dict, and the snapshot test freezes the key list only. | `optimizer_api/strategies/__init__.py:120-214` (academic SOTA strategies at `:186-196`); `canonical.py:60-81`; `capabilities.py:77, 110-111`; `test_production_registry_snapshot.py:17-31` | CONFIRMED | Add a domain-aware production strategy table (CVRP/CVRPTW/UniRide) with `production_ready`, grandfathering the current API inventory as the unification design requires; check it in `resolve_strategy`; snapshot (key, canonical ID, ready). *(v1.1: do not derive it by filtering the permutation-TSP academic catalog.)* |
 | M16 (P4-08) | **`uniride_core` is not neutral.** It owns a TSPLIB registry in repo-root `tsplib_data` (created on first read), an HTTP downloader, the best-known-solution table and the gap logic, all imported eagerly. Three TSPLIB stores are looked up by name only. `CostMatrix.kind` exists but nothing enforces it. The production adapter labels any explicit matrix as travel time and otherwise applies EUC_2D integer rounding to degrees (no production caller yet). | `uniride_core/algorithms/tsplib_parser.py:35-60, 277-280, 366-392`; `uniride_core/benchmark_runner.py:120-157`; `uniride_core/__init__.py:17`; `uniride_core/models.py:10-27, 94, 187`; `uniride_core/adapters/uniride_adapter.py:100-111` | CONFIRMED | Move these to `academic_benchmark`; make the metric domain a required enum checked when an engine starts (MT2, MT4). |
-| M17 (P4-09) | **The archive quarantine only works by package name.** `archive/` has no `__init__.py`, so it is importable as a namespace package. The boundary tests' markers never match `archive.*`, and they scan only static imports in three packages, missing importlib strings and root/src/scripts files. | `archive/`; `academic_benchmark/tests/test_archive_boundaries.py:8-13, 48-52`; `test_yaem_quarantine_boundary.py:176-188` | CONFIRMED | Add an `archive/__init__.py` that raises `ImportError`, and widen the scans (MT5, Gate A). |
+| M17 (P4-09) | **The archive quarantine has hardening gaps** *(corrected in v1.1)*. The YAEM-specific test does reject static imports of `archive.academic_benchmark.yaem2026_legacy` (`test_yaem_quarantine_boundary.py:39-50`), so a working quarantine exists for static imports. Residual gaps: `archive/` has no `__init__.py`, so it is importable as a namespace package; the generic test's markers (`uniride_core/tests/test_archive_boundaries.py:8-13`) do not include `archive.`; and the scans cover static imports in active packages only, missing importlib strings and root, `src` and `scripts` files. | `archive/`; `uniride_core/tests/test_archive_boundaries.py:7-13`; `academic_benchmark/tests/test_yaem_quarantine_boundary.py:39-50, 176-188` | CONFIRMED | Add an `archive/__init__.py` that raises `ImportError`, add `archive.` to the generic markers, and widen the scans to dynamic imports and root files. This is hardening, not a Gate A failure (MT5). |
 | M18 (ACAD-05) | **The GWO/HHO executor rounds cost to 2 decimals**, while the gateway uses tolerance 1e-9. Fair runs on fractional ATSP matrices are rejected ("reported tour_cost does not equal the independently recomputed directed closed-cycle cost"); 2-opt, 3-opt and ALNS pass. Any fair pilot on UniRide travel times aborts at the first GWO run. | `academic_benchmark/core/registry_setup.py:710, 715`; `execution_gateway.py:97-111`; `fair_pilot.py:343` | CONFIRMED | Report the unrounded `float(cost)`. |
-| M19 (ACAD-06) | **The `memetic_2opt` label is set from a boolean**, not from the polish that ran. `studies/bildiri2026/study.json` sets `polish_iters: 0, final_polish_iters: 0`. In the demo, Memetic-2opt with zero polish was identical to Pure (cost 422.0, 54 evaluations) but labelled memetic, with every polish phase true. The polish schedule is not recorded, although the design requires it. | `academic_benchmark/core/registry_setup.py:767-780`; `tsp_matrix_metaheuristics/gwo_solver.py:116-127, 261-285` (same in `hho_solver.py`) | CONFIRMED | Record the schedule, reject memetic configurations with zero polish, and derive the flags from the executed polish. |
-| M20 (ACAD-07) | **Many counted evaluations are repeats.** Share of counted evaluations that re-evaluate an already-seen tour (n=30, budget 5,000): GWO 34–62%, HHO 47–50%, ALNS 55–58%, 3-opt 34%, 2-opt 0.3%. Truthful under the contract, but the budget measures calls, not distinct search effort. | `hho_solver.py:154-170, 302`; `gwo_solver.py:229-233`; `fairness.py:388-395`; `sota_tsp/alns_tsp.py:241` | CONFIRMED (measured) | Record distinct-candidate counts; declare a memoization policy or list it as a threat to validity (LT1). |
+| M19 (ACAD-06) | **The `memetic_2opt` label is set from a boolean**, not from the polish that ran. `studies/bildiri2026/study.json` sets `polish_iters: 0, final_polish_iters: 0`; *(v1.1)* it is an explicit draft/smoke profile (`study.json:5`), and no contaminated published result is established. In the demo, Memetic-2opt with zero polish was identical to Pure (cost 422.0, 54 evaluations) but labelled memetic, with every polish phase true. The polish schedule is not recorded, although the design requires it. | `academic_benchmark/core/registry_setup.py:767-780`; `tsp_matrix_metaheuristics/gwo_solver.py:116-127, 261-285` (same in `hho_solver.py`) | CONFIRMED | Record the schedule, reject memetic configurations with zero polish, and derive the flags from the executed polish. |
+| M20 (ACAD-07) | **Severity (v1.1): Low (informational).** **Many counted evaluations are repeats.** Share of counted evaluations that re-evaluate an already-seen tour (n=30, budget 5,000): GWO 34–62%, HHO 47–50%, ALNS 55–58%, 3-opt 34%, 2-opt 0.3%. Truthful under the contract, but the budget measures calls, not distinct search effort. | `hho_solver.py:154-170, 302`; `gwo_solver.py:229-233`; `fairness.py:388-395`; `sota_tsp/alns_tsp.py:241` | CONFIRMED (measured by the investigator; not re-measured by Codex) | Record distinct-candidate telemetry and discuss it as a threat to validity. Counting repeats complies with the approved budget definition; memoization would change the comparison protocol and requires an approved protocol change (LT1). |
 | M21 (lead) | **RLS hygiene.** The `SECURITY DEFINER` functions `is_admin()` and `prevent_role_change()` have no `SET search_path`. `rls_policies.sql:17-24` drops **every** public policy, including migration-owned ones (`route_plans`, `sandbox_scenarios`, `time_matrix`), and does not recreate them, so running it after the migrations breaks access (fail-closed). Policy has three sources of truth: `schema.sql`, `rls_policies.sql` and the migrations. | `supabase/rls_policies.sql:17-36, 59-75`; `supabase/migrations/20260329_add_route_plans.sql:46, 52`; `20260329_add_sandbox_scenarios.sql:30`; `20260305_add_time_matrix.sql:14, 20` | VERIFIED-LEAD | A single migration-owned policy set with `search_path` set; retire the drop-all script (MT8). |
 | M22 (P2-08) | **`.env` is loaded after the routers are imported** (`main.py:18` vs `:29`), so settings read at import time ignore it: `UNIRIDE_PROMOTED_CONFIG_PATH` is `lru_cache`d under key None, and `TSPLIB_DATA_DIR` is a module constant. Tests that import `main` read the developer's `optimizer_api/.env` unless `PYTHON_DOTENV_DISABLED` is set, which needs python-dotenv ≥ 1.2 while requirements ask for ≥ 1.0.0. | `optimizer_api/main.py:18, 29`; `strategies/promoted_config_loader.py:31-36`; `strategies/__init__.py:79-98` | CONFIRMED | Load settings before imports (or use a settings object); pin python-dotenv ≥ 1.2. |
 | M23 (P2-09, P1A-10) | **Unprotected utility endpoints and an unsafe download.** The `utils` endpoints have no auth and no size limits. `/extract-time-windows` always raises `AttributeError`: it passes a Pydantic model to code that calls `entry.get`. The TSPLIB downloader uses plain `http://` with no integrity check and an unbounded `read()`, reachable via `POST /benchmark/download` with a tenant key. | `optimizer_api/routers/utils.py:11-54` (`:26`); `uniride_core/algorithms/time_window_extractor.py:119`; `uniride_core/algorithms/tsplib_parser.py:39, 323-330` | CONFIRMED | Auth plus size limits; fix the model handling; HTTPS with checksum and size cap, or remove the downloader from production. |
-| M24 (P3-12) | **Render hot spots** on the landing and benchmark pages (§7.1). | `src/app/(app)/admin/benchmark/page.tsx:203, 459, 526, 530, 1045, 1282`; `src/app/page.tsx:745, 947, 1016, 1024, 2056` | CONFIRMED | See §7.1 (MT7). |
+| M24 (P3-12) | **Render hot spots** on the landing and benchmark pages (§7.1). | `src/app/(app)/admin/benchmark/page.tsx:203, 459, 526, 530, 1045, 1282`; `src/app/page.tsx:745, 947, 1016, 1024, 2056` | CONFIRMED (mechanism); impact needs profiling | Profile first (React Profiler on a production build) and apply the §7.1 changes where the profile shows cost; virtualize only if table rendering dominates (v1.1). |
 | M25 (P1B-06) | **Canonical 3-opt performance:** duplicate detection dominates (§7.3). | `uniride_core/algorithms/three_opt.py:78-83, 96-101, 151-171`; `local_search_numba.py:778-784` | CONFIRMED (measured) | See §7.3 (MT6), gated by a candidate-parity test. |
-| M26 (P1B, cross-lane note) | **The production SOTA adapter optimizes a different objective than it reports.** It optimizes a student-only cycle that leaves out the depot, on *distance*, while responses report depot-anchored *duration*. It also silently falls back to greedy on any exception. | `uniride_core/adapters/sota_tsp_strategy_adapter.py:12-22, 66-67` | CONFIRMED (investigator code reading; not re-read by the lead) | Optimize the depot-anchored duration matrix; report a fallback in the response, or fail. |
+| M26 (P1B, cross-lane note) | **Re-rated to High in v1.1; see the M26 entry at the end of §4.** The production SOTA adapter optimizes a student-only, depot-free, distance-scaled matrix while responses report depot-anchored duration, and it silently falls back to greedy on any exception. | `uniride_core/adapters/sota_tsp_strategy_adapter.py:12-23, 61-67` | VERIFIED-LEAD (v1.1) | See §4 and QW11. |
 
 ---
 
@@ -1201,10 +1268,10 @@ st.info("Inferential tests disabled: rows are not validated, protocol-homogeneou
 - The `run/status` and `run/stop` BFF routes have no client; `run/status` also turns a missing status into `'running'` (`:63`).
 - The server-side sandbox-scenario routes are unused (the page uses localStorage) and double-encode JSONB (`sandbox/route.ts:267`).
 - In `optimizer_api/utils`, `local_search.py` and `local_search_numba.py` are imported only by tests; the rest are re-export shims.
-- `sota_common` (about 2k lines) and its shims.
-- The `clustering.py` copy of k-means.
+- `sota_common` (about 2k lines) and its shims. *(v1.1: it has consumers — re-exports, compatibility tests, the `__main__` entry point — that must be redirected or retired deliberately before deletion.)*
+- The duplicate k-means in `clustering.py` only. *(v1.1: `Point`, `Cluster`, `calculate_centroid` and the capacity helpers in that module are live.)*
 - `local_search_numba._three_opt_improve_numba` / `_cases_numba` (0 callers).
-- `use_sota_engine` is never read.
+- The request-model field `use_sota_engine` (`optimizer_api/models/schemas.py:222`) is never read. *(v1.1: the core decoder option of the same name is live, `uniride_core/algorithms/cvrptw_decoder.py:25-62`; keep it.)*
 - `PenaltyManager` is unused by live solvers.
 
 **L5 — raw error text to clients:**
@@ -1265,7 +1332,7 @@ There is no map to memoize (§2.5). These are the real heavy surfaces.
   1. Compute analytics once with `useMemo` keyed on `results`.
   2. Move the run and polling panel into its own child component, so a tick re-renders only that panel.
   3. Give charts stable data references (`useMemo`) and wrap them in `React.memo`.
-  4. Virtualize the large tables (for example with TanStack Virtual).
+  4. Virtualize the large tables only if profiling shows that table rendering dominates (v1.1: profile first).
   5. Replace the ad-hoc intervals with one polling hook (H14): AbortController, a `setTimeout` chain, backoff, terminal states, and the `runId` kept in the URL. `@tanstack/react-query` is already installed: either use `useQuery` with `refetchInterval` and `enabled: !terminal`, or remove it (L1).
   6. Align React versions (M11), so component tests exercise the React that ships.
 - **When GIS work starts** (roadmap Priority 7):
@@ -1311,7 +1378,7 @@ There is no map to memoize (§2.5). These are the real heavy surfaces.
   - Pass lists of lists, not an ndarray.
   - Keep the existing sort key and full closed-cycle costing.
   - Gate the change with a candidate-parity test against the current generator.
-- **Wasted budget (M20):** 34–62% of counted GWO evaluations, 47–50% for HHO, 55–58% for ALNS and 34% for 3-opt re-evaluate tours already seen. Memoize per run, or record distinct-candidate counts.
+- **Repeated evaluations (M20):** 34–62% of counted GWO evaluations, 47–50% for HHO, 55–58% for ALNS and 34% for 3-opt re-evaluate tours already seen. This complies with the approved budget definition; record distinct-candidate telemetry. *(v1.1: memoization advice withdrawn — it would change the comparison protocol and needs approval.)*
 - **O(n²) matrix rebuild per `improve()` call** in the legacy Numba local search. This is why the faulty C3 cache exists; pass the prebuilt matrix instead.
 - **Dead complexity:** `PenaltyManager` (unused by live solvers) and `sota_common` (about 2k lines).
 
@@ -1355,22 +1422,22 @@ There is no map to memoize (§2.5). These are the real heavy surfaces.
 | The academic import in `optimizer_api/strategies/promoted_config_loader.py` | production | a production-owned `production_params.json` | Reviewed, versioned, travel-time evidence only (H17). |
 | Legacy `Core-*-TSP` names in `uniride_core/algorithms/engine_factory.py` | core | resolution through the catalog only | H9. |
 | `optimizer_api/utils/*` re-export shims | production | delete | Tests import `uniride_core` directly. |
-| `uniride_core/algorithms/sota_common/*` and `optimizer_api/strategies/sota_common/*` | core and production | archive with a manifest | Unused by live solvers. |
-| The k-means copy in `uniride_core/algorithms/clustering.py` | core | delete | Live code uses `clustering_strategies`. |
+| `uniride_core/algorithms/sota_common/*` and `optimizer_api/strategies/sota_common/*` | core and production | retire deliberately, then archive with a manifest | Unused by live solvers, but re-exports, compatibility tests and the `__main__` entry point consume it; redirect them first (v1.1). |
+| The duplicate k-means in `uniride_core/algorithms/clustering.py` (that function set only) | core | delete | Live code uses `clustering_strategies`; keep `Point`, `Cluster`, `calculate_centroid` and the capacity helpers (v1.1). |
 | The Numba 3-opt kernels (`numba_accel` 3-opt, `local_search_numba._three_opt_improve_numba` / `_cases_numba`) | core | delete, or quarantine behind a parity test | `CANONICAL_THREE_OPT_DESIGN.md` (H10). |
 | `BenchmarkSuitePage` at `/` | product UI | admin-only academic console | C4, M6. |
 
 ### 8.3 Contracts
 
 1. **Metric domain.** `CostMatrix.domain` becomes mandatory and is checked when an engine starts. Production engines accept only `TRAVEL_TIME_MINUTES`; academic adapters produce `TSPLIB_*` domains; a mismatch raises (M16, H18, H19).
-2. **One `RouteSimulator` per `ConstraintProfile`** (`school_pickup`, `school_dropoff`, `forward_cvrptw`). The decoders, the candidate ranking, the certificate and the response builder all use it, which removes today's four time-window models (H2–H4, H16).
+2. **One shared route-simulation function per `ConstraintProfile`** (`school_pickup`, `school_dropoff`, `forward_cvrptw`): the smallest common function that owns the existing contract, not a new scheduling framework (v1.1). The decoders, the candidate ranking, the certificate and the response builder all use it, which removes today's four time-window models (H2–H4, H16).
 3. **The certificate re-costs on the bound snapshot.** It never trusts reported durations (C2).
 4. **Academic persistence uses only the `RunResult` envelope** (already in `academic_benchmark/contracts/run.py`), written by the gateway (H8).
 
 ### 8.4 Registries
 
-- **The core catalog** (`capabilities.py` + `registry.py`) is the only place IDs are defined: ID → (implementation, capabilities, `production_ready`). Duplicate registration raises, and import failures fail closed (H9).
-- **The production registry** is the catalog filtered by `production_ready`, plus a snapshot test of (key, canonical ID, ready) (M15).
+- **The core catalog** (`capabilities.py` + `registry.py`) is the only place canonical academic IDs are defined: ID → (implementation, capabilities). Duplicate registration raises, and import failures fail closed (H9). Consolidate onto these existing modules rather than adding another registry abstraction (v1.1).
+- **The production registry** stays a separate, domain-aware CVRP/CVRPTW/UniRide surface with explicit `production_ready` flags (the current API inventory grandfathered as `true`, per the unification design), plus a snapshot test of (key, canonical ID, ready) (M15). *(v1.1: it cannot be produced by filtering the permutation-TSP academic catalog.)*
 - **`engine_factory`** resolves canonical IDs only.
 
 ### 8.5 Enforcement
@@ -1386,16 +1453,16 @@ There is no map to memoize (§2.5). These are the real heavy surfaces.
 ### 8.6 Migration order (respecting the `AGENTS.md` gates)
 
 1. **Phase 0 quick wins** (§9.1). These change no contracts.
-2. **Close the Gate A gaps:** archive not importable, boundary tests including optimizer → academic, run-manifest emission.
+2. **Harden the archive quarantine** (namespace importability, generic test markers, dynamic and root-file scans). *(v1.1: Gate A's own criteria are substantially met; run-manifest integration is Package D, and production → academic isolation is step 3's separate plan.)*
 3. **Decouple production.** Remove the benchmark router and the promoted-config import from the production process. This is a FastAPI surface change: the unification design allows it "where an import boundary or production-readiness check requires it", but it needs owner approval.
 4. **Package C:** catalog unification, truthful hybrid compositions with a shared counter, study loading, the YAEM profile.
-5. **Package D:** the analysis service, reproducibility manifests, documentation sync, then a draft PR awaiting the powerful-computer runs.
+5. **Package D:** the analysis service, uniform `RunManifestV1` integration across producers, storage and readers (the pilots already emit `manifest.json`), documentation sync, then a draft PR awaiting the powerful-computer runs.
 
 ---
 
 ## 9. Master roadmap and task cards
 
-**Sequencing note:** do Phase 0 **before** the current "next recommended task" in `ACTIVE_ROADMAP.md` (Dudullu Package 2 Task 5 and the live preview smoke test). That preview touches live student data (C1), and H5 breaks snapshot-bound previews after the TTL. Each item is its own branch and plan; suggested branch names are given.
+**Sequencing note (refined in v1.1):** complete the Phase 0 containment (at least QW1–QW4) **before** any live-data preview smoke test or operational acceptance in `ACTIVE_ROADMAP.md`. The preview touches live student data (C1), and H5 breaks snapshot-bound previews after the TTL. The offline, deterministic Package 2 Task 5 fixture may proceed in parallel, provided it uses no live student data and makes no acceptance claim. Durations below are estimates, not commitments. Each item is its own branch and plan; suggested branch names are given.
 
 ### 9.1 Phase 0 — quick wins (about 1–2 weeks)
 
@@ -1411,6 +1478,7 @@ There is no map to memoize (§2.5). These are the real heavy surfaces.
 | QW8 | A production CSP (nonces, no `unsafe-eval`, no localhost entries) and HSTS; escape the PDF export | M8 | S | `fix/qw8-csp-xss` |
 | QW9 | CI: the full canonical Python suite (sharded if needed), `npm run build`, and a report-only `npm audit` | H20 | S | `ci/qw9-full-gates` |
 | QW10 | Small fixes: the Sw/So mapping (H15); drop `round(cost, 2)` (M18); keep the solver's termination reason (L8); no window taken across directions (M2); fix the "km" unit (M3); the `/extract-time-windows` crash (M23) | listed | XS | `fix/qw10-small-correctness` |
+| QW11 *(v1.1)* | SOTA adapter: no silent greedy fallback (fail, or label it explicitly) and optimize the depot-anchored duration objective | M26 | S | `fix/qw11-sota-adapter-truth` |
 
 #### Task cards
 
@@ -1489,10 +1557,10 @@ There is no map to memoize (§2.5). These are the real heavy surfaces.
 | MT1 | **Time-window unification.** One `RouteSimulator` per profile. Count the return arc to school and waiting time. Rank candidates by (violations, vehicles, cost). Pass windows and maximum duration to OR-Tools and PyVRP. Add a forward CVRPTW profile for Solomon. Make solvers respect the fleet. | H2, H3, H4, H16, M1, L12 | QW3 | Property tests: solver feasibility equals certificate feasibility, and returned times equal the simulated times. |
 | MT2 | **Matrix provenance contract** (`ACTIVE_ROADMAP.md` Priority 5): domain, unit and provenance enforced; maximum staleness; paginated fetch with a row-count check; reject caller-supplied matrices. | H18, M4, M16 | QW3 | Every response carries provenance, and the engines reject a mismatched domain. |
 | MT3 | **Execution:** a global semaphore, then a process-isolated solver pool with hard cancellation and cooperative deadlines, then durable jobs. Make readiness async-safe. | H6, H7 | QW4 | Live solver workers never exceed the cap; cancel kills the work; `/health` p99 < 50 ms under load. |
-| MT4 | **Engine separation:** extract the lab service and ResultStore v2 with gateway-only writes; one ID per implementation; remove the promoted-config import; retire the quick runner. | H8, H9, H17, H19, M15, M16, L13 | Gate A closure | `import optimizer_api.main` loads no academic module; every stored row carries full provenance. |
-| MT5 | **Academic gates in order:** close the Gate A gaps (M17, run-manifest emission, an optimizer → academic boundary test); then inject manifests into CLI/Smart runs (H13); then the Package C hybrids (GWO/HHO-3opt and -ALNS sharing one counter); then the YAEM study profile. | H13, M17, M18, M19 | — | Each gate's acceptance per `ACADEMIC_STUDY_UNIFICATION_DESIGN.md`. |
+| MT4 | **Engine separation:** extract the lab service and ResultStore v2 with gateway-only writes; one ID per implementation; remove the promoted-config import; retire the quick runner. | H8, H9, H17, H19, M15, M16, L13 | An approved contract-change plan (†) | `import optimizer_api.main` loads no academic module; every stored row carries full provenance. |
+| MT5 | **Academic work, in gate order:** harden the archive quarantine (M17); inject manifests into CLI/Smart runs (H13); fix fractional costs and memetic metadata (M18, M19); then the Package C hybrids (GWO/HHO-3opt and -ALNS sharing one counter) and the YAEM study profile. Uniform `RunManifestV1` integration belongs to Package D (LT1). *(v1.1: the earlier "close Gate A gaps" framing is withdrawn.)* | H13, M17, M18, M19 | — | Each gate's acceptance per `ACADEMIC_STUDY_UNIFICATION_DESIGN.md`. |
 | MT6 | **Local-search consolidation:** remove the forbidden kernel path (H10); canonical 3-opt in the production hybrid (M14); the 3-opt speed-up behind a parity test (M25); iteration- or evaluation-based SOTA termination (H11); archive `sota_common`; remove the shims; fix the SOTA adapter objective (M26). | H10, H11, M14, M25, M26, L3, L10 | QW6 | `CANONICAL_THREE_OPT_DESIGN.md` regression plus new parity tests; same-seed reproducibility under load. |
-| MT7 | **Frontend:** a polling hook; memoized analytics; split the landing page; virtualization; align on React 19; replace `xlsx`; a synchronous auth callback; re-authentication before password change; a typed snake_case→camelCase DTO mapper. | H14, H15, M10–M13, M24, L1, L2, L5–L7 | QW2 | Fake-timer polling tests; tests run on the production React. |
+| MT7 | **Frontend:** a polling hook; memoized analytics (profile first); split the landing page; replace `xlsx`; a synchronous auth callback; re-authentication before password change; a typed snake_case→camelCase DTO mapper; E2E coverage against `next build` for the production React (M11, Low). | H14, H15, M10–M13, M24, L1, L2, L5–L7 | QW2 | Fake-timer polling tests; E2E smoke tests on the production build. |
 | MT8 | **Dudullu:** Package 2 Task 5, then Package 3 (transactional publication plus RLS consolidated into migrations, with policy tests). | M21 | QW1, QW3 | Per `ACTIVE_ROADMAP.md`. |
 
 ### 9.3 Phase 2 — long-term vision (a quarter or more)
@@ -1562,12 +1630,12 @@ Source: P4 (`ACADEMIC_STUDY_UNIFICATION_DESIGN.md` delivery plan).
 
 | Gate | Status | Evidence |
 |---|---|---|
-| A — YAEM quarantine and contract foundation | **Partial** | **Present:** `archive/academic_benchmark/yaem2026_legacy` has `QUARANTINE.md` and a manifest (`uniride-archive/v1`, 159 entries, all with SHA-256); study, dataset and run v1 schemas plus `contracts/`; quarantine tests; `pyproject.toml` excludes `archive` (`:29, :46`). **Missing:** `archive` is still importable (M17); no boundary test for optimizer_api → academic_benchmark, which is currently violated; the run-v1 manifest is never emitted by any code (`RunManifestV1` appears only in contracts and tests). |
+| A — YAEM quarantine and contract foundation | **Substantially present** *(corrected in v1.1)* | **Present:** `archive/academic_benchmark/yaem2026_legacy` has `QUARANTINE.md` and a manifest (`uniride-archive/v1`, 159 entries, all with SHA-256); study, dataset and run v1 schemas plus `contracts/`; quarantine tests that reject static imports of the archived YAEM path (`test_yaem_quarantine_boundary.py:39-50`); `pyproject.toml` excludes `archive` (`:29, :46`). **Residual hardening (not a gate failure):** namespace importability of `archive/` and the scan scope (M17). *(v1.0 also listed a missing optimizer → academic boundary test and missing run-manifest emission; neither is a Gate A criterion. See the D row and §8.6.)* |
 | B — Bildiri canonical extraction | **Present** (parity tests not re-run during this audit) | Relocated solvers in `uniride_core/algorithms/tsp_matrix_metaheuristics/{gwo,hho}_solver.py`; parity fixture `bildiri_gwo_hho_v1.json` with `test_bildiri_solver_parity.py`; zero active Bildiri imports (scan; `find_spec` returns None; the folder is gone); `bildiri2026_legacy` has `QUARANTINE.md` and a manifest (233 SHA-256 entries); `academic_benchmark/studies/bildiri2026/study.json` exists with status "draft". Caveat: H9. |
 | C — Catalog, composition, experiment services | **Partial** | **Present:** all 14 canonical IDs (`capabilities.py:244-332`) and the resolver. **Absent:** the 3-opt and ALNS hybrid compositions (still PLANNED, `:275-278`; GA and PSO are CANDIDATE); any study loader outside tests; `studies/yaem2026`. **Partial:** fixed vs native separation exists only in the pilot manifests, not in the database. |
-| D — Analysis, documentation, publication | **Absent** | The dashboard runs Wilcoxon over pooled, unlabelled rows (C5); no reproducibility manifests are emitted; invalid evidence is reachable through `/academic/*` (H8). |
+| D — Analysis, documentation, publication | **Absent** (as expected at this stage) | The dashboard runs Wilcoxon over pooled, unlabelled rows (C5), and invalid evidence is reachable through `/academic/*` (H8). *(v1.1)* The pilots already emit `manifest.json` (`fair_pilot.py:583`, `native_pilot.py:596`), but no producer validates against `RunManifestV1` (`contracts/run.py:65`); uniform integration across producers, storage and readers is missing. |
 
-**Discrepancy:** Package C work has started while the Gate A criteria are not fully met. Per `AGENTS.md`, close the Gate A gaps before extending Package C (MT5).
+**v1.1 correction:** the v1.0 claim that Package C work started while Gate A was incomplete is **withdrawn**. Gate A's criteria (`ACADEMIC_STUDY_UNIFICATION_DESIGN.md:422-429`) are substantially met, and the residual archive hardening (M17) can proceed alongside Package C.
 
 ## Appendix D — Academic contract compliance
 
@@ -1697,6 +1765,13 @@ Source: ACAD.
 - **Responses and UI:** `/optimize` and `/compare` responses carry no gap or best-known fields, and `src/` imports no academic artifacts.
 - **Secrets:** no secrets are tracked in git (only `.env.example`); `.env*` is gitignored.
 
+**Added in v1.1** (from the Codex verification, re-checked by the lead):
+- Snapshot-bound `/optimize` requests fail closed when the snapshot is unavailable or changed (`optimizer_api/routers/optimization.py:211-234`; reproduced in Appendix H.4 steps 6 and 9).
+- The YAEM quarantine test rejects static imports of `archive.academic_benchmark.yaem2026_legacy` (`academic_benchmark/tests/test_yaem_quarantine_boundary.py:39-50`).
+- The fair and native pilots write `manifest.json` atomically (`academic_benchmark/fair_pilot.py:583`, `native_pilot.py:596`).
+- The landing page labels demo mode in the UI (`src/app/page.tsx:1156-1160, 1902-1903`).
+- Next 16's peer range accepts React 18.2+ or 19; the App Router's bundled React is by design.
+
 ## Appendix G — Open questions
 
 | # | Question | Affects | How to resolve |
@@ -1720,6 +1795,7 @@ Source: ACAD.
 | Q17 | Were published or archived academic results produced by `Numba-*`/`Core-*-TSP` runs without a manifest, in processes that handled several same-size instances? | C3 rerun scope | Run manifests and `RunResult` types. |
 | Q18 | Is the Next.js app internet-facing? | C4, H1 exposure | Deployment configuration (`apphosting.yaml` suggests Firebase App Hosting). |
 | Q19 | Memory growth: RUNNING benchmark runs are never evicted, and `/import` accepts unbounded results. | Capacity | A load test (`optimizer_api/models/schemas.py:576-584`; `benchmark_state.py:174-204`). |
+| Q20 *(v1.1)* | Does any current dispatch or publication path consume `ride_requests.status`? | C1.b severity (High → Critical if yes) | Trace the consumers of `ride_requests`; legacy routing reads `confirmed` rows. |
 
 ## Appendix H — Reproduction scripts (re-run 2026-10-01)
 
@@ -1730,7 +1806,7 @@ $env:NUMBA_CACHE_DIR = "$env:TEMP\uniride-numba-cache"   # keep JIT caches outsi
 .\.venv-jit\Scripts\python.exe -B <path>\repro_c3_cache_idreuse.py
 ```
 
-After a fix, each script should show the fail-closed or correct behavior. Convert each one into a pytest regression test in the fixing branch.
+After a fix, each script should show the fail-closed or correct behavior. Convert each one into a pytest regression test in the fixing branch. *(v1.1: Codex independently re-ran H.1 unchanged and observed the identical 4-of-6 corruption.)*
 
 ### H.1 — C3: `id()`-keyed local-search cache
 
@@ -2226,7 +2302,7 @@ Update the Status, Branch/PR and Closing commit columns as fixes land (statuses:
 | ID | Severity | Short title | Roadmap | Status | Branch / PR | Closing commit | Evidence |
 |---|---|---|---|---|---|---|---|
 | C1 | Critical | Self-registration as admin (RLS insert / role trigger) | QW1 | OPEN | | | |
-| C1.b | Critical | Students set any `ride_requests.status` | QW1 | OPEN | | | |
+| C1.b | High (v1.1) | Students set any `ride_requests.status` | QW1 | OPEN | | | |
 | C2 | Critical | Matrix fail-open + self-referential certificate | QW3 | OPEN | | | |
 | C3 | Critical | `id()`-keyed local-search cache | QW6 | OPEN | | | |
 | C4 | Critical | Anonymous, unstoppable benchmark compute | QW2, QW4 | OPEN | | | |
@@ -2250,8 +2326,11 @@ Update the Status, Branch/PR and Closing commit columns as fixes land (statuses:
 | H17 | High | Production parameters from academic results | MT4 | OPEN | | | |
 | H18 | High | Caller `distance_matrix` silently ignored | MT2 | OPEN | | | |
 | H19 | High | TSPLIB quick-runner objective mismatch | MT4 | OPEN | | | |
-| H20 | High | CI runs only 8 Python test files | QW9 | OPEN | | | |
-| M1–M26 | Medium | See §5 | per §5 | OPEN | | | |
+| H20 | High | CI never runs the full suites or a production build | QW9 | OPEN | | | |
+| M26 | High (v1.1) | SOTA adapter objective mismatch and silent greedy fallback | QW11 | OPEN | | | |
+| M11 | Low (v1.1) | React build split between tests and production | MT7 | OPEN | | | |
+| M20 | Low (v1.1) | Repeated evaluations: telemetry only | LT1 | OPEN | | | |
+| M1–M25 (others) | Medium | See §5 | per §5 | OPEN | | | |
 | L1–L15 | Low | See §6 | per §6 | OPEN | | | |
 
 ### Remediation log
@@ -2262,4 +2341,4 @@ Append one entry per landed fix: date, agent or author, ID(s), branch/commit, te
 
 ---
 
-*End of report — `UA-2026-10-01-CLAUDE`, written by Claude (Anthropic, Claude Opus 5.5 `claude-opus-5-5`) on 2026-10-01 11:01 (+03:00).*
+*End of report — `UA-2026-10-01-CLAUDE` v1.1, written by Claude (Anthropic, Claude Opus 5.5 `claude-opus-5-5`) on 2026-10-01 11:01 (+03:00) and revised at 16:53 (+03:00) after the independent Codex verification.*

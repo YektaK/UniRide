@@ -21,6 +21,22 @@ def is_loopback(host: str) -> bool:
     return False
 
 
+def reload_enabled(env=None) -> bool:
+    """Whether uvicorn auto-reload is on when running ``python main.py``.
+
+    Controlled by ``UNIRIDE_API_RELOAD``. "1"/"true"/"yes" -> True;
+    "0"/"false"/"no" -> False (case-insensitive, surrounding spaces ignored).
+    Unset, empty or unrecognised values keep the historical default (True).
+    The demo launcher sets "0" because StatReload restarts break the
+    launcher's child-process supervision on Windows (audit L14).
+    """
+    source = os.environ if env is None else env
+    value = str(source.get("UNIRIDE_API_RELOAD", "")).strip().lower()
+    if value in {"0", "false", "no"}:
+        return False
+    return True
+
+
 def internal_auth_disabled() -> bool:
     """Explicit dev/test opt-out for the internal API key gate."""
     return os.getenv("UNIRIDE_DISABLE_AUTH") == "1"

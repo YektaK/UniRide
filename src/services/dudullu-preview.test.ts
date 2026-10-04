@@ -822,6 +822,83 @@ describe("vehicle summary and honest assignment termination", () => {
     });
   });
 
+  it("exhausts a type-forced search above the lower bound only thanks to symmetry breaking", () => {
+    // One wheelchair route (only WHEEL can carry it) runs first, then 6 concurrent seated
+    // routes. The depth bound is 6, but WHEEL cannot take a seated route, so the true
+    // minimum is 7 and the bound is never reached: the DFS must finish the whole tree.
+    // 12 interchangeable seat vehicles give 12*11*10*9*8 orderings at depth 5 without symmetry
+    // breaking, which is more than the default 50,000 node budget.
+    const wheel = demand("sw-1", "H-sw", "pickup", 500, "Sw");
+    const seated = Array.from({ length: 6 }, (_, index) =>
+      demand(`so-${index}`, `H-so-${index}`, "pickup", 700, "So"));
+    const arcs = [wheel, ...seated].flatMap((item) => [
+      arc(DEPOT, item.locationCode, 10),
+      arc(item.locationCode, DEPOT, 10),
+    ]);
+    const jobs = [
+      job([wheel], normalRoute("sw-1", 10, 10), {
+        id: "wheel", anchorMinutes: 500,
+        result: result([countedRoute(normalRoute("sw-1", 10, 10), ["sw-1"], 1, 0)]),
+      }),
+      job(seated, normalRoute("so-0", 10, 10), {
+        id: "seated", anchorMinutes: 700,
+        result: result(seated.map((item) =>
+          countedRoute(normalRoute(item.occurrenceId, 10, 10), [item.occurrenceId], 0, 1))),
+      }),
+    ];
+    const vehicles = [
+      vehicle("A-WHEEL", 1, 0),
+      ...Array.from({ length: 12 }, (_, index) => vehicle(`SEAT-${index}`, 0, 1)),
+    ];
+    const preview = build([wheel, ...seated], jobs, { ...baseMatrix, arcs }, { vehicles });
+
+    expect(preview.status).toBe("preview_ready");
+    expect(preview.vehicleSummary).toMatchObject({
+      minimumVehicles: 7, minimumProven: true, lowerBound: 6, activeFleetSize: 13,
+    });
+  });
+
+  it("stops at the lower bound so a small node budget still proves the minimum", () => {
+    // 4 sequential seated routes, then 6 concurrent ones. The 6 vehicles all have different
+    // capacities, so symmetry breaking cannot merge them. The first dive reuses one vehicle for
+    // the sequential routes and meets the bound of 6 after 11 nodes. Without the early stop the
+    // search keeps exploring the many alternatives for the sequential routes (states that use
+    // fewer than 6 vehicles) and runs out of this 11 node budget.
+    const early = Array.from({ length: 4 }, (_, index) =>
+      demand(`early-${index}`, `H-early-${index}`, "pickup", 200 + index * 100, "So"));
+    const late = Array.from({ length: 6 }, (_, index) =>
+      demand(`late-${index}`, `H-late-${index}`, "pickup", 700, "So"));
+    const demands = [...early, ...late];
+    const arcs = demands.flatMap((item) => [
+      arc(DEPOT, item.locationCode, 10),
+      arc(item.locationCode, DEPOT, 10),
+    ]);
+    const jobs = [
+      ...early.map((item) => job([item], normalRoute(item.occurrenceId, 10, 10), {
+        id: item.occurrenceId, anchorMinutes: item.anchorMinutes,
+        result: result([countedRoute(normalRoute(item.occurrenceId, 10, 10), [item.occurrenceId], 0, 1)]),
+      })),
+      job(late, normalRoute("late-0", 10, 10), {
+        id: "late", anchorMinutes: 700,
+        result: result(late.map((item) =>
+          countedRoute(normalRoute(item.occurrenceId, 10, 10), [item.occurrenceId], 0, 1))),
+      }),
+    ];
+    const vehicles = Array.from({ length: 6 }, (_, index) => vehicle(`V${index}`, 0, index + 1, 0));
+
+    const preview = buildDudulluPreview({
+      serviceDate: SERVICE_DATE,
+      demands,
+      vehicles,
+      matrix: { ...baseMatrix, arcs },
+      jobs,
+      assignmentSearchNodeBudget: 11,
+    });
+
+    expect(preview.status).toBe("preview_ready");
+    expect(preview.vehicleSummary).toMatchObject({ minimumVehicles: 6, minimumProven: true, lowerBound: 6 });
+  });
+
   it("sets the summary to null on blocked results", () => {
     const item = demand("occ-1");
     const blocked = build([item], [job([item], normalRoute("occ-1"))], { ...baseMatrix, arcs: [] });
@@ -829,4 +906,3 @@ describe("vehicle summary and honest assignment termination", () => {
     expect(blocked.vehicleSummary).toBeNull();
   });
 });
-

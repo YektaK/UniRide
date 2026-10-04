@@ -187,7 +187,7 @@ describe("DailyPlanPage", () => {
       "Yalnızca koltuk kapasitesi en az 2 araç gerektirir (Sw: 4 koltuk, So: 10 koltuk).",
     );
     expect(screen.getByTestId("why-conclusion").textContent).toBe(
-      "Fazladan 1 araç, öğrencinin araçta en fazla 90 dk ve araç turunun en fazla 150 dk kalma sınırları rotaları böldüğü (ve rotalar aynı saatlere denk geldiği) için gerekiyor.",
+      "Fazladan 1 araç koltuk kapasitesinden kaynaklanmıyor. Olası nedenler: öğrencinin araçta en fazla 90 dk ve araç turunun en fazla 150 dk kalma sınırlarının rotaları bölmesi, aynı saatlere denk gelen rotalar ve araçların bekleme süresi.",
     );
   });
 
@@ -196,6 +196,14 @@ describe("DailyPlanPage", () => {
 
     expect(screen.getByTestId("why-conclusion").textContent).toContain("belirleyici etken koltuk kapasitesidir");
     expect(screen.queryByText(/Fazladan/)).toBeNull();
+  });
+
+  it("hides the explanation when the vehicles are fewer than the capacity floor", async () => {
+    await generate(peakWaveResponse(1));
+
+    expect(screen.queryByTestId("why-vehicles")).toBeNull();
+    expect(screen.queryByText(/Fazladan/)).toBeNull();
+    expect(screen.queryByText(/belirleyici etken/)).toBeNull();
   });
 
   it("shows no explanation for an unproven count, a missing floor or an empty day", async () => {

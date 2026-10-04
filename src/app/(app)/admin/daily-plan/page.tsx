@@ -96,6 +96,8 @@ function WhyVehicles({ plan }: { plan: DailyPlanView }) {
   const { neededVehicles, neededAtMost, capacityFloor: floor } = plan.summary;
   if (neededVehicles === null || neededAtMost || floor === null) return null;
   const gap = neededVehicles - floor.vehicles;
+  // Fewer vehicles than the capacity floor cannot happen for a proven plan; show nothing then.
+  if (gap < 0) return null;
   return (
     <Card data-testid="why-vehicles">
       <CardHeader className="pb-2">
@@ -147,62 +149,62 @@ function SummaryCards({ plan }: { plan: DailyPlanView }) {
 
   return (
     <div className="space-y-4">
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Card data-testid="card-needed-vehicles">
-        <CardHeader className="pb-2">
-          <CardDescription>{t("neededVehicles")}</CardDescription>
-          <CardTitle className="flex items-center gap-2 text-3xl">
-            {summary.neededAtMost && <Badge variant="outline" className="text-sm">{t("atMost")}</Badge>}
-            <span data-testid="needed-vehicles-value">{summary.neededVehicles ?? "—"}</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1 text-sm text-muted-foreground">
-          {summary.neededVehicles === null && <p>{t("unknown")}</p>}
-          {summary.neededAtMost && <p>{t("atMostHint")}</p>}
-          {summary.lowerBound !== null && (summary.neededVehicles === null || summary.neededAtMost) && (
-            <p>{t("lowerBound", { n: summary.lowerBound })}</p>
-          )}
-          {summary.peakConcurrentRoutes !== null && <p>{t("peak", { n: summary.peakConcurrentRoutes })}</p>}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="pb-2">
-          <CardDescription>{t("students")}</CardDescription>
-          <CardTitle className="text-3xl">{summary.students}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1 text-sm text-muted-foreground">
-          <p>{t("studentsHint", { trips: summary.trips })}</p>
-          {summary.invalidStudentRecords > 0 && <p>{t("invalidStudents", { n: summary.invalidStudentRecords })}</p>}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="pb-2">
-          <CardDescription>{t("routes")}</CardDescription>
-          <CardTitle className="text-3xl">{summary.routes}</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          <p>{t("routesHint", { waves })}</p>
-          {summary.maxRideMinutes !== null && (
-            <p data-testid="day-max-ride">
-              {t("maxRide", { n: summary.maxRideMinutes, limit: plan.limits.maxRideTimeMinutes })}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card data-testid="card-needed-vehicles">
+          <CardHeader className="pb-2">
+            <CardDescription>{t("neededVehicles")}</CardDescription>
+            <CardTitle className="flex items-center gap-2 text-3xl">
+              {summary.neededAtMost && <Badge variant="outline" className="text-sm">{t("atMost")}</Badge>}
+              <span data-testid="needed-vehicles-value">{summary.neededVehicles ?? "—"}</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1 text-sm text-muted-foreground">
+            {summary.neededVehicles === null && <p>{t("unknown")}</p>}
+            {summary.neededAtMost && <p>{t("atMostHint")}</p>}
+            {summary.lowerBound !== null && (summary.neededVehicles === null || summary.neededAtMost) && (
+              <p>{t("lowerBound", { n: summary.lowerBound })}</p>
+            )}
+            {summary.peakConcurrentRoutes !== null && <p>{t("peak", { n: summary.peakConcurrentRoutes })}</p>}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>{t("students")}</CardDescription>
+            <CardTitle className="text-3xl">{summary.students}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1 text-sm text-muted-foreground">
+            <p>{t("studentsHint", { trips: summary.trips })}</p>
+            {summary.invalidStudentRecords > 0 && <p>{t("invalidStudents", { n: summary.invalidStudentRecords })}</p>}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>{t("routes")}</CardDescription>
+            <CardTitle className="text-3xl">{summary.routes}</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            <p>{t("routesHint", { waves })}</p>
+            {summary.maxRideMinutes !== null && (
+              <p data-testid="day-max-ride">
+                {t("maxRide", { n: summary.maxRideMinutes, limit: plan.limits.maxRideTimeMinutes })}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+        <Card data-testid="card-fleet">
+          <CardHeader className="pb-2">
+            <CardDescription>{t("liveFleet")}</CardDescription>
+            <CardTitle className="text-3xl">{fleet.liveFleet ?? "—"}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1 text-sm">
+            <p className="text-muted-foreground">{t("difference")}</p>
+            <p className={cn("font-medium", difference.className)}>
+              {fleet.neededAtMost && fleet.state !== "unknown" ? `${t("atMost")} ` : ""}
+              {difference.text}
             </p>
-          )}
-        </CardContent>
-      </Card>
-      <Card data-testid="card-fleet">
-        <CardHeader className="pb-2">
-          <CardDescription>{t("liveFleet")}</CardDescription>
-          <CardTitle className="text-3xl">{fleet.liveFleet ?? "—"}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1 text-sm">
-          <p className="text-muted-foreground">{t("difference")}</p>
-          <p className={cn("font-medium", difference.className)}>
-            {fleet.neededAtMost && fleet.state !== "unknown" ? `${t("atMost")} ` : ""}
-            {difference.text}
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+      </div>
     <WhyVehicles plan={plan} />
     </div>
   );

@@ -506,6 +506,41 @@ describe("adminApi.readiness.getDudullu", () => {
     timeoutSpy.mockRestore();
   });
 
+  it("bounds a hanging readiness request with the 15 s deadline", async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) => {
+      setTimeout(() => controller.abort(), milliseconds);
+      return controller.signal;
+    });
+    // The token is available at once; only fetch hangs, and it honours the abort signal.
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const adminApi = await readinessApi();
+
+    let settled = false;
+    let failure: unknown;
+    void adminApi.readiness.getDudullu().then(
+      () => { settled = true; },
+      (error) => { settled = true; failure = error; },
+    );
+
+    await vi.advanceTimersByTimeAsync(14_999);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(timeoutSpy).toHaveBeenCalledWith(15_000);
+    expect(settled).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(settled).toBe(true);
+    expect(failure).toMatchObject({
+      kind: "configuration",
+      message: "Dudullu readiness request failed",
+    });
+    timeoutSpy.mockRestore();
+  });
+
   it.each([401, 403])("classifies HTTP %i as an authorization failure without parsing its body", async (status) => {
     const json = vi.fn();
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status, json }));

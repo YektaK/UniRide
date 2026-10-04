@@ -299,7 +299,7 @@
           "peakPickup": "The busiest wave is the {time} arrival: {students, plural, one {# student} other {# students}} ({sw} Sw, {so} So).",
           "peakDropoff": "The busiest wave is the {time} departure: {students, plural, one {# student} other {# students}} ({sw} Sw, {so} So).",
           "floor": "Seat capacity alone needs at least {n, plural, one {# vehicle} other {# vehicles}} (Sw: {swCap} seats, So: {soCap} seats).",
-          "gap": "{n, plural, one {# extra vehicle is} other {# extra vehicles are}} needed because the limits of {ride} min in the vehicle per student and {tour} min per vehicle tour split the routes (and routes overlap in time).",
+          "gap": "{n, plural, one {# extra vehicle does} other {# extra vehicles do}} not come from seat capacity. Possible causes: the limits of {ride} min in the vehicle per student and {tour} min per vehicle tour splitting the routes, routes that fall at the same times, and the vehicle cooldown.",
           "capacityBinding": "The vehicles needed equal this lower bound: seat capacity is the binding constraint, the time limits do not require extra vehicles."
         },
         "sections": {

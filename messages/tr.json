@@ -299,7 +299,7 @@
           "peakPickup": "En yoğun dalga {time} varış: {students} öğrenci ({sw} Sw, {so} So).",
           "peakDropoff": "En yoğun dalga {time} çıkış: {students} öğrenci ({sw} Sw, {so} So).",
           "floor": "Yalnızca koltuk kapasitesi en az {n} araç gerektirir (Sw: {swCap} koltuk, So: {soCap} koltuk).",
-          "gap": "Fazladan {n} araç, öğrencinin araçta en fazla {ride} dk ve araç turunun en fazla {tour} dk kalma sınırları rotaları böldüğü (ve rotalar aynı saatlere denk geldiği) için gerekiyor.",
+          "gap": "Fazladan {n} araç koltuk kapasitesinden kaynaklanmıyor. Olası nedenler: öğrencinin araçta en fazla {ride} dk ve araç turunun en fazla {tour} dk kalma sınırlarının rotaları bölmesi, aynı saatlere denk gelen rotalar ve araçların bekleme süresi.",
           "capacityBinding": "Gereken araç sayısı bu alt sınıra eşit: belirleyici etken koltuk kapasitesidir, süre sınırları ek araç gerektirmiyor."
         },
         "sections": {

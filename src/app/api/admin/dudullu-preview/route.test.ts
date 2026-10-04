@@ -180,6 +180,7 @@ describe("POST /api/admin/dudullu-preview", () => {
     const { POST } = await import("./route");
     const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
     expect(body).toMatchObject({ status: "blocked_data", publishable: false, jobs: [] });
+    expect(body.vehicleSummary).toBeNull();
     expect(body.reasonCodes).toContain("NO_ADMITTED_DEMAND");
     expect(client.queries.map((query) => query.table)).not.toContain("vehicles");
     expect(optimizerFetchMock).not.toHaveBeenCalled();
@@ -194,6 +195,7 @@ describe("POST /api/admin/dudullu-preview", () => {
 
     expect(optimizerFetchMock).not.toHaveBeenCalled();
     expect(body).toMatchObject({ status: "blocked_data", publishable: false, jobs: [] });
+    expect(body.vehicleSummary).toBeNull();
     expect(body.reasonCodes).toContain("FLEET_SHORTAGE");
     expect(client.queries.map((query) => query.table)).toContain("vehicles");
   });
@@ -215,6 +217,20 @@ describe("POST /api/admin/dudullu-preview", () => {
     expect(body).toMatchObject({ status: "preview_ready", publishable: false });
     expect(body.jobs).toHaveLength(1);
     expect(body.assignments).toHaveLength(1);
+    expect(body.vehicleSummary).toEqual({
+      minimumVehicles: 1,
+      minimumProven: true,
+      lowerBound: 1,
+      peakConcurrentRoutes: 1,
+      activeFleetSize: 1,
+      routesPerJob: [{
+        jobId: body.jobs[0].id,
+        direction: "pickup",
+        anchorMinutes: 525,
+        routeCount: 1,
+        studentCount: 1,
+      }],
+    });
   });
 
   it("skips an unscheduled student without blocking admitted scheduled demand", async () => {

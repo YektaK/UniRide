@@ -301,8 +301,9 @@ describe("POST /api/admin/dudullu-preview", () => {
     const requests = calls.map(([, init]) => JSON.parse(init.body));
     expect(requests.map((item) => [item.direction, item.target_time])).toEqual([["pickup", "08:45"], ["dropoff", "10:15"]]);
     expect(requests.every((item) => item.expected_matrix_sha256 === matrix.sha256 && item.students.length === 1)).toBe(true);
-    expect(requests.map((item) => [item.service_date, item.use_time_windows, item.max_travel_time])).toEqual([
-      ["2026-09-30", false, 120], ["2026-09-30", false, 120],
+    // Owner decision 2026-10-04: tour upper bound 150 min, student ride limit 90 min by default.
+    expect(requests.map((item) => [item.service_date, item.use_time_windows, item.max_travel_time, item.max_ride_time])).toEqual([
+      ["2026-09-30", false, 150, 90], ["2026-09-30", false, 150, 90],
     ]);
     expect(requests.every((item) => item.students.every((student: Record<string, unknown>) =>
       !("pickup_time" in student) && !("dropoff_time" in student)))).toBe(true);
@@ -1121,5 +1122,228 @@ describe("POST /api/admin/dudullu-preview demo modes", () => {
       expect(response.status).toBe(403);
       expect(getSupabaseAdminMock).not.toHaveBeenCalled();
     });
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Owner decision (2026-10-04): the limit is the time a STUDENT stays in the vehicle
+// (`max_ride_time`, default 90 min); the vehicle tour (`max_travel_time`) gets an upper bound
+// (default 150 min). Both are adjustable per request.
+// ---------------------------------------------------------------------------------------
+
+type LimitBody = OptimizeBody & { max_ride_time?: unknown; max_travel_time?: unknown };
+
+/** Like `mockCrowdTransport`, but with a custom matrix; every /optimize body is recorded. */
+function mockLimitTransport(arcs: Array<{ origin_code: string; destination_code: string; duration_minutes: number }>) {
+  const bodies: LimitBody[] = [];
+  optimizerFetchMock.mockImplementation(async (path: string, init?: { body: string }) => {
+    if (path === "/api/v1/internal/matrix-snapshot") return Response.json({ ...matrix, arcs });
+    if (path !== "/api/v1/optimize") throw new Error("unexpected optimizer path");
+    const body = JSON.parse(init!.body) as LimitBody;
+    bodies.push(body);
+    return Response.json({
+      success: true,
+      routes: body.students.map((student) => ({
+        vehicle_id: body.vehicles[0]!.vehicle_id,
+        route_details: [
+          { location1: "D.Kampus", location2: student.location_code, duration: 5, distance: 0 },
+          { location1: student.location_code, location2: "D.Kampus", duration: 6, distance: 0 },
+        ],
+        total_duration_minutes: 11, sw_count: 1, so_count: 0, student_ids: [student.id],
+      })),
+      total_duration_minutes: 11 * body.students.length,
+      feasibility_certificate: { is_feasible: true },
+    });
+  });
+  return bodies;
+}
+
+const SHORT_ARCS = [
+  { origin_code: "D.Kampus", destination_code: "Sw1", duration_minutes: 5 },
+  { origin_code: "Sw1", destination_code: "D.Kampus", duration_minutes: 6 },
+];
+/** Pickup arc Sw1 -> campus is 40 min; the dropoff arc campus -> Sw1 stays 5 min. */
+const LONG_PICKUP_ARCS = [
+  { origin_code: "D.Kampus", destination_code: "Sw1", duration_minutes: 5 },
+  { origin_code: "Sw1", destination_code: "D.Kampus", duration_minutes: 40 },
+];
+
+const oneStudentRows = () => ({
+  ...crowd(1), vehicles: [vehicleRow("v1", 2, 2, 10)], student_leg_decisions: [confirmedLeg(1)],
+});
+
+describe("POST /api/admin/dudullu-preview time limits", () => {
+  it("forwards the defaults (90 min ride, 150 min tour) and echoes them", async () => {
+    setAdmin({ ...crowd(1), vehicles: [vehicleRow("v1", 2, 2, 10)], student_leg_decisions: [confirmedLeg(1), confirmedLeg(1, "dropoff")] });
+    const bodies = mockLimitTransport(SHORT_ARCS);
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+
+    expect(bodies).toHaveLength(2);
+    expect(bodies.map((item) => [item.max_ride_time, item.max_travel_time])).toEqual([[90, 150], [90, 150]]);
+    expect(body.limits).toEqual({ maxRideTimeMinutes: 90, maxTourMinutes: 150, minimumFeasibleRideMinutes: null });
+    expect(body.status).toBe("preview_ready");
+  });
+
+  it("forwards custom limits to every /optimize call and echoes them", async () => {
+    setAdmin({ ...crowd(1), vehicles: [vehicleRow("v1", 2, 2, 10)], student_leg_decisions: [confirmedLeg(1), confirmedLeg(1, "dropoff")] });
+    const bodies = mockLimitTransport(SHORT_ARCS);
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({
+      serviceDate: "2026-09-30", maxRideTimeMinutes: 60, maxTourMinutes: 200,
+    }))).json();
+
+    expect(bodies).toHaveLength(2);
+    expect(bodies.every((item) => item.max_ride_time === 60 && item.max_travel_time === 200)).toBe(true);
+    expect(body.limits).toEqual({ maxRideTimeMinutes: 60, maxTourMinutes: 200, minimumFeasibleRideMinutes: null });
+  });
+
+  it("applies one limit and defaults the other", async () => {
+    setAdmin(oneStudentRows());
+    const bodies = mockLimitTransport(SHORT_ARCS);
+    const { POST } = await import("./route");
+
+    await POST(post({ serviceDate: "2026-09-30", maxRideTimeMinutes: 45 }));
+
+    expect(bodies.map((item) => [item.max_ride_time, item.max_travel_time])).toEqual([[45, 150]]);
+  });
+
+  it.each([
+    [{ maxRideTimeMinutes: 15 }, 15, 150],
+    [{ maxRideTimeMinutes: 240 }, 240, 150],
+    [{ maxTourMinutes: 30 }, 90, 30],
+    [{ maxTourMinutes: 300 }, 90, 300],
+  ])("accepts the boundary %j", async (extra, ride, tour) => {
+    setAdmin(oneStudentRows());
+    const bodies = mockLimitTransport(SHORT_ARCS);
+    const { POST } = await import("./route");
+
+    const response = await POST(post({ serviceDate: "2026-09-30", ...extra }));
+
+    expect(response.status).toBe(200);
+    expect(bodies.map((item) => [item.max_ride_time, item.max_travel_time])).toEqual([[ride, tour]]);
+  });
+
+  it.each([
+    { maxRideTimeMinutes: 14 },
+    { maxRideTimeMinutes: 241 },
+    { maxRideTimeMinutes: 45.5 },
+    { maxRideTimeMinutes: "60" },
+    { maxRideTimeMinutes: null },
+    { maxRideTimeMinutes: 0 },
+    { maxTourMinutes: 29 },
+    { maxTourMinutes: 301 },
+    { maxTourMinutes: -5 },
+    { maxTourMinutes: 120.5 },
+    { maxRideTimeMinutes: 10, maxTourMinutes: 500 },
+  ])("rejects %j with INVALID_LIMIT before reading data", async (extra) => {
+    setAdmin();
+    const { POST } = await import("./route");
+
+    const response = await POST(post({ serviceDate: "2026-09-30", ...extra }));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "INVALID_LIMIT" });
+    expect(getSupabaseAdminMock).not.toHaveBeenCalled();
+    expect(optimizerFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps INVALID_MODE ahead of INVALID_LIMIT and rejects unknown fields as before", async () => {
+    setAdmin();
+    const { POST } = await import("./route");
+
+    const both = await POST(post({ serviceDate: "2026-09-30", fleetMode: "huge", maxRideTimeMinutes: 1 }));
+    expect(await both.json()).toEqual({ error: "INVALID_MODE" });
+    const unknown = await POST(post({ serviceDate: "2026-09-30", maxRideTimeMinutes: 1, extra: true }));
+    expect(await unknown.json()).toEqual({ error: "INVALID_SERVICE_DATE" });
+    const badDate = await POST(post({ serviceDate: "2026-02-30", maxRideTimeMinutes: 1 }));
+    expect(await badDate.json()).toEqual({ error: "INVALID_SERVICE_DATE" });
+    expect(getSupabaseAdminMock).not.toHaveBeenCalled();
+  });
+
+  it("reports RIDE_TIME_LIMIT_INFEASIBLE with the minimum feasible limit and never calls the optimizer", async () => {
+    const client = setAdmin(oneStudentRows());
+    mockLimitTransport(LONG_PICKUP_ARCS);
+    const { POST } = await import("./route");
+
+    const response = await POST(post({ serviceDate: "2026-09-30", maxRideTimeMinutes: 30 }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({ status: "blocked_data", publishable: false, jobs: [] });
+    expect(body.reasonCodes).toContain("RIDE_TIME_LIMIT_INFEASIBLE");
+    expect(body.reasonCodes).not.toContain("OPTIMIZATION_NOT_SUCCESSFUL");
+    expect(body.limits).toEqual({ maxRideTimeMinutes: 30, maxTourMinutes: 150, minimumFeasibleRideMinutes: 40 });
+    expect(optimizerFetchMock.mock.calls.map(([path]) => path)).toEqual(["/api/v1/internal/matrix-snapshot"]);
+    expectReadOnly(client);
+  });
+
+  it("rounds the minimum feasible limit up", async () => {
+    setAdmin(oneStudentRows());
+    mockLimitTransport([LONG_PICKUP_ARCS[0]!, { ...LONG_PICKUP_ARCS[1]!, duration_minutes: 40.2 }]);
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30", maxRideTimeMinutes: 30 }))).json();
+
+    expect(body.limits.minimumFeasibleRideMinutes).toBe(41);
+  });
+
+  it("lets a limit equal to the direct ride through", async () => {
+    setAdmin(oneStudentRows());
+    const bodies = mockLimitTransport(LONG_PICKUP_ARCS.map((item) => ({ ...item })));
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30", maxRideTimeMinutes: 40 }))).json();
+
+    expect(bodies).toHaveLength(1);
+    expect(body.reasonCodes).not.toContain("RIDE_TIME_LIMIT_INFEASIBLE");
+  });
+
+  it("checks the arc in the wave's own direction (a long pickup arc does not block a dropoff)", async () => {
+    setAdmin({ ...crowd(1), vehicles: [vehicleRow("v1", 2, 2, 10)], student_leg_decisions: [confirmedLeg(1, "dropoff")] });
+    const bodies = mockLimitTransport(LONG_PICKUP_ARCS);
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30", maxRideTimeMinutes: 30 }))).json();
+
+    expect(bodies).toHaveLength(1);
+    expect(body.reasonCodes).not.toContain("RIDE_TIME_LIMIT_INFEASIBLE");
+  });
+
+  it("maps an optimizer ride_time_violation certificate to RIDE_TIME_LIMIT_INFEASIBLE", async () => {
+    setAdmin(oneStudentRows());
+    optimizerFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/internal/matrix-snapshot") return Response.json({ ...matrix, arcs: SHORT_ARCS });
+      return Response.json({
+        success: false, routes: [],
+        feasibility_certificate: {
+          is_feasible: false, violation_count: 1,
+          violations: [{ type: "ride_time_violation", severity: "error", details: "ride 95 exceeds max 90" }],
+        },
+      });
+    });
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+
+    expect(body.reasonCodes).toContain("RIDE_TIME_LIMIT_INFEASIBLE");
+    expect(body.reasonCodes).not.toContain("OPTIMIZATION_NOT_SUCCESSFUL");
+    expect(body.status).toBe("blocked_data");
+    expect(body.limits.minimumFeasibleRideMinutes).toBeNull();
+  });
+
+  it("stays read-only and carries the limits on blocked responses too", async () => {
+    const client = setAdmin(crowd(1), "student_leg_decisions", "42P01");
+    const { POST } = await import("./route");
+
+    const response = await POST(post({
+      serviceDate: "2026-09-30", admissionMode: "recorded", maxRideTimeMinutes: 75, maxTourMinutes: 180,
+    }));
+    const body = await response.json();
+
+    expect(body.limits).toEqual({ maxRideTimeMinutes: 75, maxTourMinutes: 180, minimumFeasibleRideMinutes: null });
+    expectReadOnly(client);
   });
 });

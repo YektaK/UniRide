@@ -1,4 +1,5 @@
 import { DUDULLU_CAMPUS } from "./dudullu-campus";
+import { longestStudentRideMinutes } from "./dudullu-preview";
 import type { DudulluPreviewJobView, DudulluPreviewResponse } from "./dudullu-preview-response";
 
 /**
@@ -35,6 +36,7 @@ export const KNOWN_REASON_CODES = [
   "NO_ROUTE_STEPS",
   "OPTIMIZATION_NOT_SUCCESSFUL",
   "PENDING_STUDENT_CONFIRMATION",
+  "RIDE_TIME_LIMIT_INFEASIBLE",
   "ROUTE_OUTSIDE_SERVICE_DAY",
   "ROUTE_LOAD_MISMATCH",
   "ROUTE_TOTAL_MISMATCH",
@@ -84,6 +86,8 @@ export interface PlanRoute {
   readonly startLabel: string;
   readonly endLabel: string;
   readonly totalMinutes: number;
+  /** Longest time any student of this route stays in the vehicle (rounded to a minute). */
+  readonly maxRideMinutes: number;
   readonly swCount: number;
   readonly soCount: number;
   readonly studentCount: number;
@@ -164,6 +168,8 @@ export interface PlanSummary {
   readonly routes: number;
   readonly invalidStudentRecords: number;
   readonly fleet: FleetComparison;
+  /** Longest student ride of the whole day (minutes); null when the plan has no route. */
+  readonly maxRideMinutes: number | null;
 }
 
 export interface DailyPlanView {
@@ -172,6 +178,8 @@ export interface DailyPlanView {
   readonly assumedAdmission: boolean;
   readonly virtualFleet: boolean;
   readonly virtualTemplate: DudulluPreviewResponse["fleet"]["template"];
+  /** The ride and tour limits the optimizer was given (minutes). */
+  readonly limits: DudulluPreviewResponse["limits"];
   readonly summary: PlanSummary;
   readonly reasons: readonly PlanReason[];
   /** True when no admitted trip exists on that day (nothing to plan). */
@@ -369,6 +377,7 @@ export function buildDailyPlanView(response: DudulluPreviewResponse): DailyPlanV
           startLabel: formatMinutesOfDay(startMinutes),
           endLabel: formatMinutesOfDay(endMinutes),
           totalMinutes: Math.round(total),
+          maxRideMinutes: Math.round(longestStudentRideMinutes(raw.route_details, job.direction)),
           swCount: raw.sw_count,
           soCount: raw.so_count,
           studentCount: raw.sw_count + raw.so_count,
@@ -431,6 +440,7 @@ export function buildDailyPlanView(response: DudulluPreviewResponse): DailyPlanV
     assumedAdmission,
     virtualFleet,
     virtualTemplate: response.fleet.template,
+    limits: response.limits,
     summary: {
       status: response.status,
       tone: isEmptyDay ? "neutral" : statusTone(response.status),
@@ -443,6 +453,9 @@ export function buildDailyPlanView(response: DudulluPreviewResponse): DailyPlanV
       routes: routeCount,
       invalidStudentRecords: response.candidateSummary.invalidStudentRecords,
       fleet: compareFleet(neededVehicles, neededAtMost, response.fleet.liveActiveFleetSize),
+      maxRideMinutes: pendingRoutes.length === 0
+        ? null
+        : Math.max(...pendingRoutes.map((route) => route.maxRideMinutes)),
     },
     reasons,
     isEmptyDay,

@@ -12,6 +12,7 @@ import {
   emptyDayResponse,
   indeterminateResponse,
   readyResponse,
+  rideLimitInfeasibleResponse,
   shortageResponse,
 } from "./daily-plan-fixtures";
 import { parseDudulluPreviewResponse } from "./dudullu-preview-response";
@@ -318,6 +319,52 @@ describe("describeReason", () => {
   });
 });
 
+describe("buildDailyPlanView - student ride time", () => {
+  it("derives each route's longest student ride per direction and the day's maximum", () => {
+    const view = buildDailyPlanView(readyResponse());
+    const [morning] = view.sections[0].waves;
+    // pickup: total - outbound arc (first student rides longest): 27 - 10, 20 - 10.
+    expect(morning.routes.map((route) => [route.totalMinutes, route.maxRideMinutes])).toEqual([[27, 17], [20, 10]]);
+    // dropoff: total - closing arc (last student rides longest): 16 - 8.
+    expect(view.sections[1].waves[0].routes[0].maxRideMinutes).toBe(8);
+    expect(view.summary.maxRideMinutes).toBe(17);
+  });
+
+  it("uses the closing arc for dropoff and the outbound arc for pickup on an asymmetric route", () => {
+    const response = readyResponse();
+    const steps = [
+      { location1: "D.Kampus", location2: "Sw4", duration: 8, distance: 0 },
+      { location1: "Sw4", location2: "So5", duration: 7, distance: 0 },
+      { location1: "So5", location2: "D.Kampus", duration: 20, distance: 0 },
+    ];
+    response.jobs[1].result.routes[0].route_details = steps;
+    response.jobs[0].result.routes[0].route_details = steps;
+    const view = buildDailyPlanView(response);
+    // dropoff: 8 + 7 = 15; pickup: 7 + 20 = 27.
+    expect(view.sections[1].waves[0].routes[0].maxRideMinutes).toBe(15);
+    expect(view.sections[0].waves[0].routes.map((route) => route.maxRideMinutes)).toContain(27);
+  });
+
+  it("has no day maximum when there is no route and carries the limits", () => {
+    const view = buildDailyPlanView(blockedResponse());
+    expect(view.summary.maxRideMinutes).toBeNull();
+    expect(view.limits).toEqual({ maxRideTimeMinutes: 90, maxTourMinutes: 150, minimumFeasibleRideMinutes: null });
+    expect(buildDailyPlanView(rideLimitInfeasibleResponse()).limits.minimumFeasibleRideMinutes).toBe(23);
+  });
+
+  it("treats RIDE_TIME_LIMIT_INFEASIBLE as a known problem code", () => {
+    expect(describeReason("RIDE_TIME_LIMIT_INFEASIBLE", false)).toEqual({
+      code: "RIDE_TIME_LIMIT_INFEASIBLE", messageKey: "RIDE_TIME_LIMIT_INFEASIBLE", severity: "problem",
+    });
+  });
+
+  it("rejects a response without the limits echo", () => {
+    const withoutLimits: Partial<ReturnType<typeof readyResponse>> = readyResponse();
+    delete withoutLimits.limits;
+    expect(() => parseDudulluPreviewResponse(withoutLimits)).toThrow();
+  });
+});
+
 describe("reason code copy", () => {
   type Messages = { page: { admin: { dailyPlan?: { reasons?: Record<string, string>; status?: Record<string, string> } } } };
   const load = (name: string) =>
@@ -343,7 +390,7 @@ describe("reason code copy", () => {
     const en = load("en").page.admin.dailyPlan;
     expect(flatten(en).sort()).toEqual(flatten(tr).sort());
     const errors = (tr as { errors?: Record<string, string> }).errors ?? {};
-    for (const kind of ["authorization", "invalidDate", "unavailable", "timeout", "network", "invalidResponse"]) {
+    for (const kind of ["authorization", "invalidDate", "invalidLimit", "unavailable", "timeout", "network", "invalidResponse"]) {
       expect(errors[kind]?.trim(), `error ${kind}`).toBeTruthy();
     }
   });
@@ -359,7 +406,9 @@ describe("reason code copy", () => {
 
 describe("parseDudulluPreviewResponse", () => {
   it("accepts the fixture shapes", () => {
-    for (const response of [readyResponse(), shortageResponse(), blockedResponse(), emptyDayResponse()]) {
+    for (const response of [
+      readyResponse(), shortageResponse(), blockedResponse(), emptyDayResponse(), rideLimitInfeasibleResponse(),
+    ]) {
       expect(() => parseDudulluPreviewResponse(response)).not.toThrow();
     }
   });

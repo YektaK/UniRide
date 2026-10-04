@@ -5,6 +5,8 @@ import {
   assumeScheduledLegsConfirmed,
   buildDudulluPreview,
   buildVirtualFleet,
+  longestStudentRideMinutes,
+  requiredDirectRideMinutes,
   selectVirtualFleetTemplate,
 } from "./dudullu-preview";
 import type {
@@ -960,5 +962,27 @@ describe("demo helpers (K1 admission assumption, K2 virtual fleet)", () => {
     expect(new Set(fleet.map((item) => item.vehicleId)).size).toBe(12);
     expect(new Set(fleet.map((item) => `${item.swCapacity}|${item.soCapacity}|${item.cooldownMinutes}`)).size).toBe(1);
     expect(buildVirtualFleet(DEFAULT_VIRTUAL_FLEET_TEMPLATE, 0)).toHaveLength(1);
+  });
+});
+
+describe("student ride time helpers", () => {
+  const steps = [{ duration: 8 }, { duration: 7 }, { duration: 20 }];
+
+  it("measures the longest student ride per direction (pickup minus outbound arc, dropoff minus closing arc)", () => {
+    expect(longestStudentRideMinutes(steps, "pickup")).toBe(27);
+    expect(longestStudentRideMinutes(steps, "dropoff")).toBe(15);
+    expect(longestStudentRideMinutes([{ duration: 5 }, { duration: 6 }], "pickup")).toBe(6);
+    expect(longestStudentRideMinutes([{ duration: 5 }, { duration: 6 }], "dropoff")).toBe(5);
+    expect(longestStudentRideMinutes([], "pickup")).toBe(0);
+  });
+
+  it("requires the largest direct campus arc in each demand's own direction", () => {
+    const matrix = { arcs: [arc(DEPOT, "Sw1", 5), arc("Sw1", DEPOT, 40), arc(DEPOT, "Sw2", 55), arc("Sw2", DEPOT, 9)] };
+    const demand = (direction: "pickup" | "dropoff", locationCode: string) => ({ direction, locationCode });
+    expect(requiredDirectRideMinutes([demand("pickup", "Sw1")], matrix)).toBe(40);
+    expect(requiredDirectRideMinutes([demand("dropoff", "Sw1")], matrix)).toBe(5);
+    expect(requiredDirectRideMinutes([demand("pickup", "Sw2"), demand("dropoff", "Sw2")], matrix)).toBe(55);
+    expect(requiredDirectRideMinutes([demand("pickup", "Unknown")], matrix)).toBeNull();
+    expect(requiredDirectRideMinutes([], matrix)).toBeNull();
   });
 });

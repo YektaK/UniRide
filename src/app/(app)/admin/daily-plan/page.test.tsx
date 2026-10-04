@@ -7,6 +7,7 @@ import {
   emptyDayResponse,
   indeterminateResponse,
   readyResponse,
+  rideLimitInfeasibleResponse,
   shortageResponse,
 } from "@/services/daily-plan-fixtures";
 import type { DudulluPreviewResponse } from "@/services/dudullu-preview-response";
@@ -78,7 +79,77 @@ describe("DailyPlanPage", () => {
     expect(mocks.run).toHaveBeenCalledWith("2026-10-05", {
       admissionMode: "assume_confirmed",
       fleetMode: "virtual",
+      maxRideTimeMinutes: 90,
+      maxTourMinutes: 150,
     });
+  });
+
+  it("renders the two time-limit inputs with the owner defaults", () => {
+    render(<DailyPlanPage />);
+
+    const ride = screen.getByLabelText("Öğrenci en fazla araçta (dk)") as HTMLInputElement;
+    const tour = screen.getByLabelText("Araç turu en fazla (dk)") as HTMLInputElement;
+    expect(ride.type).toBe("number");
+    expect(ride.value).toBe("90");
+    expect(tour.type).toBe("number");
+    expect(tour.value).toBe("150");
+    expect(screen.queryByTestId("limit-invalid")).toBeNull();
+  });
+
+  it("sends the adjusted limits", async () => {
+    mocks.run.mockResolvedValue(readyResponse());
+    render(<DailyPlanPage />);
+    setDate("2026-10-05");
+    fireEvent.change(screen.getByLabelText("Öğrenci en fazla araçta (dk)"), { target: { value: "60" } });
+    fireEvent.change(screen.getByLabelText("Araç turu en fazla (dk)"), { target: { value: "200" } });
+    fireEvent.click(runButton());
+    await screen.findByTestId("preview-banner");
+
+    expect(mocks.run).toHaveBeenCalledWith("2026-10-05", expect.objectContaining({
+      maxRideTimeMinutes: 60,
+      maxTourMinutes: 200,
+    }));
+  });
+
+  it.each([
+    ["ride", "Öğrenci en fazla araçta (dk)", "14"],
+    ["ride", "Öğrenci en fazla araçta (dk)", "241"],
+    ["ride", "Öğrenci en fazla araçta (dk)", ""],
+    ["ride", "Öğrenci en fazla araçta (dk)", "45.5"],
+    ["tour", "Araç turu en fazla (dk)", "29"],
+    ["tour", "Araç turu en fazla (dk)", "301"],
+  ])("does not run with an invalid %s limit (%s = %j)", (_which, label, value) => {
+    render(<DailyPlanPage />);
+    setDate("2026-10-05");
+    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+
+    expect(screen.getByTestId("limit-invalid")).toBeTruthy();
+    expect((runButton() as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(runButton());
+    expect(mocks.run).not.toHaveBeenCalled();
+  });
+
+  it("shows the limits used in the banner, the day's longest ride and each route's longest ride", async () => {
+    await generate(readyResponse());
+
+    expect(within(screen.getByTestId("banner-limits")).getByText(
+      "Kullanılan sınırlar: öğrenci araçta en fazla 90 dk, araç turu en fazla 150 dk.",
+    )).toBeTruthy();
+    // Fixture: pickup route 1 = 27 - 10 = 17, route 2 = 20 - 10 = 10, dropoff = 16 - 8 = 8.
+    expect(screen.getByTestId("day-max-ride").textContent).toBe("Günün en uzun öğrenci yolculuğu: 17 dk (sınır: 90 dk)");
+    expect(screen.getAllByTestId("route-max-ride").map((node) => node.textContent).sort()).toEqual([
+      "En uzun öğrenci yolculuğu: 10 dk",
+      "En uzun öğrenci yolculuğu: 17 dk",
+      "En uzun öğrenci yolculuğu: 8 dk",
+    ]);
+  });
+
+  it("explains an infeasible ride limit in plain Turkish with the minimum feasible limit", async () => {
+    await generate(rideLimitInfeasibleResponse());
+
+    expect(screen.getByText(/Seçilen öğrenci araçta kalma sınırı \(15 dk\) bu gün için karşılanamıyor/)).toBeTruthy();
+    expect(screen.getByText(/en az 23 dk yapın/)).toBeTruthy();
+    expect(screen.queryAllByTestId("wave-card")).toHaveLength(0);
   });
 
   it("sends recorded and live when both switches are turned off", async () => {
@@ -94,6 +165,8 @@ describe("DailyPlanPage", () => {
     expect(mocks.run).toHaveBeenCalledWith("2026-10-05", {
       admissionMode: "recorded",
       fleetMode: "live",
+      maxRideTimeMinutes: 90,
+      maxTourMinutes: 150,
     });
   });
 
@@ -245,6 +318,7 @@ describe("DailyPlanPage", () => {
     ["authorization", /Yönetici oturumu doğrulanamadı/],
     ["timeout", /zaman aşımına uğradı/],
     ["invalidResponse", /beklenmeyen bir yanıt/],
+    ["invalidLimit", /Geçersiz süre sınırı/],
   ])("shows the %s error state and allows a retry", async (kind, message) => {
     mocks.run.mockRejectedValueOnce(new DailyPlanRequestError(kind as never));
     render(<DailyPlanPage />);

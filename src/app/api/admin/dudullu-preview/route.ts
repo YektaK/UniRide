@@ -15,6 +15,7 @@ import {
   assumeScheduledLegsConfirmed,
   buildDudulluPreview,
   buildVirtualFleet,
+  requiredDirectRideMinutes,
   selectVirtualFleetTemplate,
   type PreviewDemand,
   type VirtualFleetTemplate,
@@ -30,10 +31,25 @@ const ADMISSION_MODES = ["recorded", "assume_confirmed"] as const;
 const FLEET_MODES = ["live", "virtual"] as const;
 type AdmissionMode = (typeof ADMISSION_MODES)[number];
 type FleetMode = (typeof FLEET_MODES)[number];
+/**
+ * Owner decision (2026-10-04): "maximum travel time" is the time a STUDENT stays in the
+ * vehicle (`max_ride_time`, demo default 90 min). The vehicle tour (depot -> stops -> depot,
+ * `max_travel_time`) only gets an upper bound (default 150 min). Both are adjustable.
+ */
+const DEFAULT_MAX_RIDE_MINUTES = 90;
+const DEFAULT_MAX_TOUR_MINUTES = 150;
+const RIDE_LIMIT_RANGE = { min: 15, max: 240 } as const;
+const TOUR_LIMIT_RANGE = { min: 30, max: 300 } as const;
+const LIMIT_KEYS: ReadonlySet<unknown> = new Set(["maxRideTimeMinutes", "maxTourMinutes"]);
+const MODE_KEYS: ReadonlySet<unknown> = new Set(["admissionMode", "fleetMode"]);
+/** Matrix durations are 2-decimal rounded; a direct ride within this margin is left to the optimizer. */
+const RIDE_LIMIT_PRECHECK_MARGIN = 0.01;
 const SERVICE_DATE_SCHEMA = z.object({
   serviceDate: z.string().regex(DATE_PATTERN),
   admissionMode: z.enum(ADMISSION_MODES).optional(),
   fleetMode: z.enum(FLEET_MODES).optional(),
+  maxRideTimeMinutes: z.number().int().min(RIDE_LIMIT_RANGE.min).max(RIDE_LIMIT_RANGE.max).optional(),
+  maxTourMinutes: z.number().int().min(TOUR_LIMIT_RANGE.min).max(TOUR_LIMIT_RANGE.max).optional(),
 }).strict();
 
 /**
@@ -117,6 +133,11 @@ function violatesFleetSize(certificate: unknown): boolean {
   return certificate.violations.some((violation) => isRow(violation) && violation.type === "fleet_size_violation");
 }
 
+function violatesRideTime(certificate: unknown): boolean {
+  if (!isRow(certificate) || !Array.isArray(certificate.violations)) return false;
+  return certificate.violations.some((violation) => isRow(violation) && violation.type === "ride_time_violation");
+}
+
 function nonBlankString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
@@ -171,10 +192,12 @@ const ADMISSION_KEYS: readonly DemandAdmission[] = [
 interface PreviewModes {
   readonly admissionMode: AdmissionMode;
   readonly fleetMode: FleetMode;
+  readonly maxRideTimeMinutes: number;
+  readonly maxTourMinutes: number;
 }
 
 async function loadBlockedPreview(serviceDate: string, modes: PreviewModes) {
-  const { admissionMode, fleetMode } = modes;
+  const { admissionMode, fleetMode, maxRideTimeMinutes, maxTourMinutes } = modes;
   // K1 (owner decision, 2026-10-04): a deliberate, owner-approved exception to
   // ACTIVE_ROADMAP.md's "do not infer consent". It is preview-only: nothing is written,
   // the response is labelled hypothetical and publishable stays false.
@@ -192,6 +215,13 @@ async function loadBlockedPreview(serviceDate: string, modes: PreviewModes) {
     liveActiveFleetSize: number | null;
     template: VirtualFleetTemplate | null;
   } = { mode: fleetMode, assignmentFleetSize: null, liveActiveFleetSize: null, template: null };
+  // Echo of the limits the optimizer is given. `minimumFeasibleRideMinutes` is set only when a
+  // student's own direct ride already exceeds the ride limit.
+  const limits: {
+    maxRideTimeMinutes: number;
+    maxTourMinutes: number;
+    minimumFeasibleRideMinutes: number | null;
+  } = { maxRideTimeMinutes, maxTourMinutes, minimumFeasibleRideMinutes: null };
   const extraReasons: PreviewReasonCode[] = [];
   if (assumeConfirmed) extraReasons.push("ADMISSION_ASSUMED");
 
@@ -204,6 +234,7 @@ async function loadBlockedPreview(serviceDate: string, modes: PreviewModes) {
     hypothetical,
     candidateSummary,
     fleet: fleetInfo,
+    limits,
     occurrenceLabels,
   });
 
@@ -443,6 +474,15 @@ async function loadBlockedPreview(serviceDate: string, modes: PreviewModes) {
     return finish(blockedPreview(serviceDate, admitted, null, "MATRIX_UNAVAILABLE"));
   }
 
+  // Cheap fail-closed pre-check: a student's own direct ride (campus arc in the wave's
+  // direction) is a lower bound of that student's ride in any route. If it already exceeds the
+  // ride limit, the optimizer cannot succeed, so say so instead of a generic failure.
+  const requiredRide = requiredDirectRideMinutes(admitted, matrix);
+  if (requiredRide !== null && requiredRide > maxRideTimeMinutes + RIDE_LIMIT_PRECHECK_MARGIN) {
+    limits.minimumFeasibleRideMinutes = Math.ceil(requiredRide);
+    return finish(blockedPreview(serviceDate, admitted, matrix, "RIDE_TIME_LIMIT_INFEASIBLE"));
+  }
+
   const groups = new Map<string, PreviewDemand[]>();
   for (const demand of admitted) {
     const key = `${demand.direction}:${demand.anchorMinutes}`;
@@ -465,7 +505,8 @@ async function loadBlockedPreview(serviceDate: string, modes: PreviewModes) {
           algorithm: "ga_split", mode: "sandbox", service_date: serviceDate,
           direction: first.direction, target_time: exactClock(first.anchorMinutes),
           expected_matrix_sha256: matrix.sha256, use_time_windows: false,
-          is_asymmetric: true, max_travel_time: 120,
+          is_asymmetric: true,
+          max_travel_time: maxTourMinutes, max_ride_time: maxRideTimeMinutes,
           sw_capacity: Math.max(0, ...waveVehicles.map((vehicle) => vehicle.swCapacity)),
           so_capacity: Math.max(0, ...waveVehicles.map((vehicle) => vehicle.soCapacity)),
           depot: DUDULLU_DEPOT,
@@ -492,6 +533,11 @@ async function loadBlockedPreview(serviceDate: string, modes: PreviewModes) {
       // instead of a generic optimization failure. Not applied to the virtual fleet, where
       // the vehicle list is capped by the optimizer policy and not by the real fleet.
       return finish({ ...blockedPreview(serviceDate, admitted, matrix, "FLEET_SHORTAGE"), status: "shortage" as const });
+    }
+    if (!result.success && violatesRideTime(result.feasibility_certificate)) {
+      // The solver could not keep every student within the ride limit (the cheap pre-check
+      // above only catches a student's own direct ride).
+      return finish(blockedPreview(serviceDate, admitted, matrix, "RIDE_TIME_LIMIT_INFEASIBLE"));
     }
     jobs.push({
       id: `${serviceDate}:${first.direction}:${first.anchorMinutes}`,
@@ -520,14 +566,17 @@ export async function POST(request: Request): Promise<Response> {
   }
   const parsed = SERVICE_DATE_SCHEMA.safeParse(parsedBody);
   if (!parsed.success) {
-    // A valid body with only a bad mode value gets its own code; everything else keeps the
-    // original contract (including rejection of unknown fields).
-    const onlyModeIssues = parsed.error.issues.every(
-      (issue) => issue.path[0] === "admissionMode" || issue.path[0] === "fleetMode",
+    // A valid body with only a bad mode or limit value gets its own code; everything else keeps
+    // the original contract (including rejection of unknown fields).
+    const issues = parsed.error.issues;
+    const onlyKnownFieldIssues = issues.every(
+      (issue) => MODE_KEYS.has(issue.path[0]) || LIMIT_KEYS.has(issue.path[0]),
     );
     const dateOk = isRecord(parsedBody) && typeof parsedBody.serviceDate === "string" &&
       DATE_PATTERN.test(parsedBody.serviceDate) && isRealServiceDate(parsedBody.serviceDate);
-    return json({ error: onlyModeIssues && dateOk ? "INVALID_MODE" : "INVALID_SERVICE_DATE" }, 400);
+    if (!onlyKnownFieldIssues || !dateOk) return json({ error: "INVALID_SERVICE_DATE" }, 400);
+    const modeIssue = issues.some((issue) => MODE_KEYS.has(issue.path[0]));
+    return json({ error: modeIssue ? "INVALID_MODE" : "INVALID_LIMIT" }, 400);
   }
   if (!isRealServiceDate(parsed.data.serviceDate)) {
     return json({ error: "INVALID_SERVICE_DATE" }, 400);
@@ -537,6 +586,8 @@ export async function POST(request: Request): Promise<Response> {
     return json(await loadBlockedPreview(parsed.data.serviceDate, {
       admissionMode: parsed.data.admissionMode ?? "recorded",
       fleetMode: parsed.data.fleetMode ?? "live",
+      maxRideTimeMinutes: parsed.data.maxRideTimeMinutes ?? DEFAULT_MAX_RIDE_MINUTES,
+      maxTourMinutes: parsed.data.maxTourMinutes ?? DEFAULT_MAX_TOUR_MINUTES,
     }), 200);
   } catch {
     return json({ error: "PREVIEW_UNAVAILABLE" }, 503);

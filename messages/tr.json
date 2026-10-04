@@ -236,6 +236,11 @@
           "virtualFleet": "Sanal filo (gereken araç)",
           "virtualFleetOn": "Özdeş araçlardan oluşan sanal filo kullanılır; gereken araç sayısı hesaplanır.",
           "virtualFleetOff": "Mevcut filo: yalnızca sistemdeki aktif araçlar kullanılır.",
+          "maxRide": "Öğrenci en fazla araçta (dk)",
+          "maxRideHint": "Bir öğrencinin araçta geçireceği en uzun süre (15–240 dk).",
+          "maxTour": "Araç turu en fazla (dk)",
+          "maxTourHint": "Aracın kampüsten çıkıp kampüse dönene kadarki en uzun süresi (30–300 dk).",
+          "limitInvalid": "Sınırlar tam sayı olmalı: öğrenci 15–240 dk, araç turu 30–300 dk.",
           "run": "Planı oluştur",
           "running": "Plan hazırlanıyor..."
         },
@@ -249,6 +254,7 @@
           "title": "Plan oluşturulamadı",
           "authorization": "Yönetici oturumu doğrulanamadı. Yeniden giriş yapın.",
           "invalidDate": "Geçersiz tarih. Geçerli bir tarih seçin.",
+          "invalidLimit": "Geçersiz süre sınırı. Öğrenci için 15–240, araç turu için 30–300 dakika arasında tam sayı girin.",
           "unavailable": "Önizleme hizmeti şu anda kullanılamıyor. Yerel servisleri ve yapılandırmayı kontrol edip yeniden deneyin.",
           "timeout": "İstek zaman aşımına uğradı. Daha az dalgası olan bir gün seçip yeniden deneyin.",
           "network": "Sunucuya ulaşılamadı. Bağlantıyı kontrol edip yeniden deneyin.",
@@ -259,7 +265,8 @@
           "titlePlain": "Önizleme — yayınlanamaz",
           "text": "Bu ekran gerçek bir servis planı değildir. Hiçbir şey kaydedilmez, atanmaz veya yayınlanmaz.",
           "assumedAdmission": "Öğrenci onayları varsayıldı.",
-          "virtualFleet": "Sanal filo kullanıldı: {sw} Sw / {so} So kapasiteli, {cooldown} dk bekleme süreli özdeş araçlar."
+          "virtualFleet": "Sanal filo kullanıldı: {sw} Sw / {so} So kapasiteli, {cooldown} dk bekleme süreli özdeş araçlar.",
+          "limits": "Kullanılan sınırlar: öğrenci araçta en fazla {ride} dk, araç turu en fazla {tour} dk."
         },
         "status": {
           "preview_ready": "Önizleme hazır",
@@ -279,6 +286,7 @@
           "invalidStudents": "{n} öğrenci kaydı eksik bilgi nedeniyle dışarıda bırakıldı.",
           "routes": "Rota sayısı",
           "routesHint": "{waves} dalga",
+          "maxRide": "Günün en uzun öğrenci yolculuğu: {n} dk (sınır: {limit} dk)",
           "liveFleet": "Mevcut filo",
           "difference": "Fark",
           "missing": "{n} araç eksik",
@@ -300,6 +308,7 @@
           "timeRange": "{start} – {end}",
           "duration": "{n} dk",
           "counts": "Sw {sw} · So {so}",
+          "longestRide": "En uzun öğrenci yolculuğu: {n} dk",
           "vehicle": "Araç: {vehicle}",
           "noVehicle": "Araç atanmadı",
           "stops": "Duraklar",
@@ -322,7 +331,8 @@
           "timeline": "Zaman çizelgesi"
         },
         "notes": {
-          "title": "Durum notları"
+          "title": "Durum notları",
+          "rideLimitMinimum": "Bu gün için öğrenci araçta kalma sınırını en az {min} dk yapın."
         },
         "reasons": {
           "ADMISSION_ASSUMED": "Demo için bekleyen tüm öğrenci seferleri onaylı sayıldı. Bu bir varsayımdır, gerçek onay değildir.",
@@ -344,7 +354,8 @@
           "NO_ROUTE_STEPS": "Bir rotada hiç adım yok; plan geçersiz sayıldı.",
           "OPTIMIZATION_NOT_SUCCESSFUL": "Rota çözücüsü başarılı bir sonuç döndürmedi veya ulaşılamadı.",
           "PENDING_STUDENT_CONFIRMATION": "Bazı öğrencilerin onayı hâlâ bekleniyor.",
-          "ROUTE_OUTSIDE_SERVICE_DAY": "Bir rota gün sınırlarının dışına taşıyor.",
+          "RIDE_TIME_LIMIT_INFEASIBLE": "Seçilen öğrenci araçta kalma sınırı ({limit} dk) bu gün için karşılanamıyor; plan kurulamadı. Sınırı artırın.",
+          "ROUTE_OUTSIDE_SERVICE_DAY":"Bir rota gün sınırlarının dışına taşıyor.",
           "ROUTE_LOAD_MISMATCH": "Rotadaki Sw/So sayıları öğrenci listesiyle uyuşmuyor.",
           "ROUTE_TOTAL_MISMATCH": "Rota toplam süresi adımların toplamıyla uyuşmuyor.",
           "SCHEDULE_DATA_INVALID": "Ders programı veya öğrenci kaydı verisi geçersiz.",

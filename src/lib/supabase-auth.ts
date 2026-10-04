@@ -225,39 +225,57 @@ export const signOutUser = async (): Promise<void> => {
 };
 
 /**
- * Listen to auth state changes
+ * Listen to auth state changes.
+ *
+ * The listener handed to supabase auth-js MUST stay synchronous. auth-js invokes it while it
+ * holds its internal lock; awaiting a database query inside it (which itself calls
+ * auth.getSession()) deadlocks that lock, so getSession() never resolves and every authenticated
+ * request hangs until a reload (audit M13). The profile lookup is therefore deferred to a fresh
+ * task outside the lock, and each event gets a sequence number so a late lookup can never
+ * overwrite a newer event (e.g. resurrect a user after SIGNED_OUT) or run after unsubscribe.
  */
 export const onAuthStateChange = (
   callback: (user: User | null) => void,
   onImmediateAuthEvent?: () => void,
 ): (() => void) => {
-  // Set up Supabase auth state listener
   const supabaseClient = getSupabaseClient();
-  const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
-    onImmediateAuthEvent?.();
-    if (session?.user?.email) {
-      try {
-        const dbUser = await getUserByEmail(session.user.email);
-        if (dbUser) {
-          callback(dbUserToUser(dbUser));
-        } else {
-          // User exists in Auth but not in database - this can happen during registration
-          callback(null);
-        }
-      } catch (error: any) {
-        // Only log actual errors, not expected cases like RLS blocking or user not found
-        if (error?.code && error.code !== "PGRST116" && error.code !== "42501") {
-          console.error("Error getting user:", error);
-        }
-        callback(null);
+  let latestEventId = 0;
+
+  const loadProfile = async (email: string, eventId: number): Promise<void> => {
+    let nextUser: User | null;
+    try {
+      const dbUser = await getUserByEmail(email);
+      // A missing row can happen during registration (user exists in Auth but not yet in the database).
+      nextUser = dbUser ? dbUserToUser(dbUser) : null;
+    } catch (caught: unknown) {
+      const error = caught as { code?: string } | null;
+      // Only log actual errors, not expected cases like RLS blocking or user not found
+      if (error?.code && error.code !== "PGRST116" && error.code !== "42501") {
+        console.error("Error getting user:", error);
       }
-    } else {
-      callback(null);
+      nextUser = null;
     }
+    if (eventId !== latestEventId) return; // superseded by a newer event or unsubscribed
+    callback(nextUser);
+  };
+
+  const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+    const eventId = ++latestEventId;
+    onImmediateAuthEvent?.();
+    const email = session?.user?.email;
+    if (!email) {
+      callback(null);
+      return;
+    }
+    setTimeout(() => {
+      if (eventId !== latestEventId) return;
+      void loadProfile(email, eventId);
+    }, 0);
   });
 
   // Return unsubscribe function
   return () => {
+    latestEventId++;
     subscription.unsubscribe();
   };
 };

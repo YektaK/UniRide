@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import tailwindConfig from "../../tailwind.config";
@@ -49,5 +49,27 @@ describe("tailwind theme colors", () => {
       expect(rootBlock, `${name} -> ${variable}`).toContain(`${variable}:`);
       expect(darkBlock, `${name} -> ${variable}`).toContain(`${variable}:`);
     }
+  });
+});
+
+// Regression: charts used hsl(var(--chart-n)) / hsl(var(--muted)); with oklch() variables that is an
+// invalid color, so the series and tooltip cursor rendered wrong. Use var(--x) directly.
+describe("source files", () => {
+  function sourceFiles(dir: string): string[] {
+    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) return entry.name === "node_modules" ? [] : sourceFiles(full);
+      return /\.(ts|tsx)$/.test(entry.name) ? [full] : [];
+    });
+  }
+
+  it("never wraps a theme variable in hsl(var(--...))", () => {
+    const srcRoot = path.resolve(__dirname, "..");
+    const thisFile = path.resolve(__filename);
+    const offenders = sourceFiles(srcRoot)
+      .filter((file) => path.resolve(file) !== thisFile)
+      .filter((file) => /hsl\(\s*var\(\s*--/.test(readFileSync(file, "utf8")))
+      .map((file) => path.relative(srcRoot, file));
+    expect(offenders).toEqual([]);
   });
 });

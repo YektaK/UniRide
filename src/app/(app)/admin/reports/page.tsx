@@ -131,11 +131,11 @@ const processDepartureDataForChart = async (users: User[], targetDate: Date | un
 const chartConfig = {
   Wheelchair: {
     label: "Tekerlekli Sandalye",
-    color: "hsl(var(--chart-1))",
+    color: "var(--chart-1)",
   },
   Other: {
     label: "Diğer",
-    color: "hsl(var(--chart-2))",
+    color: "var(--chart-2)",
   },
 };
 
@@ -294,7 +294,7 @@ export default function AdminReportsPage() {
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                 <XAxis dataKey="timeSlot" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} />
                                 <YAxis allowDecimals={false} tickLine={false} axisLine={false} tickMargin={8} domain={[0, globalArrivalMaxY]} fontSize={10} />
-                                <Tooltip cursorStyle={{ fill: 'hsl(var(--muted))', opacity: 0.5 }} content={<ChartTooltipContent indicator="dot" />} />
+                                <Tooltip cursorStyle={{ fill: 'var(--muted)', opacity: 0.5 }} content={<ChartTooltipContent indicator="dot" />} />
                                 <Legend content={<ChartLegendContent className="text-xs mt-1" />} wrapperStyle={{ fontSize: '10px' }} />
                                 <Bar dataKey="Wheelchair" stackId="arrival" fill="var(--color-Wheelchair)" radius={[2, 2, 0, 0]} barSize={15} />
                                 <Bar dataKey="Other" stackId="arrival" fill="var(--color-Other)" radius={[2, 2, 0, 0]} barSize={15} />
@@ -320,7 +320,7 @@ export default function AdminReportsPage() {
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                 <XAxis dataKey="timeSlot" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} />
                                 <YAxis allowDecimals={false} tickLine={false} axisLine={false} tickMargin={8} domain={[0, globalDepartureMaxY]} fontSize={10} />
-                                <Tooltip cursorStyle={{ fill: 'hsl(var(--muted))', opacity: 0.5 }} content={<ChartTooltipContent indicator="dot" />} />
+                                <Tooltip cursorStyle={{ fill: 'var(--muted)', opacity: 0.5 }} content={<ChartTooltipContent indicator="dot" />} />
                                 <Legend content={<ChartLegendContent className="text-xs mt-1" />} wrapperStyle={{ fontSize: '10px' }} />
                                 <Bar dataKey="Wheelchair" stackId="departure" fill="var(--color-Wheelchair)" radius={[2, 2, 0, 0]} barSize={15} />
                                 <Bar dataKey="Other" stackId="departure" fill="var(--color-Other)" radius={[2, 2, 0, 0]} barSize={15} />

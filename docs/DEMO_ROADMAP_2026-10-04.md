@@ -34,7 +34,7 @@
 | F5 | **Fark.** `student_leg_decisions` tablosu canlıda yoksa sorgu hata verir. `selectRows` bu hatayı fırlatır ve yanıt genel **503 `PREVIEW_UNAVAILABLE`** olur. Açık bir neden kodu dönmez. | `route.ts:69-75`, `:216-221`, `:404-408` |
 | F6 | Tek bir bozuk öğrenci kaydı bütün günü engeller. `scheduleDataInvalid` ise `admitted = []` olur. Örnek: Dudullu dersi olan ama `location_code` ya da `disability_type` eksik bir kayıt. | `route.ts:195-201`, `:287` |
 | F7 | `decided_at` her INSERT'te `clock_timestamp()` olur. Bugün ya da geçmiş tarih için bugün eklenen onay, 22:00 kesimini geçtiği için `pending_admin_approval` olur. Yani geçmiş tarihli demo, satır ekleyerek açılamaz. | `supabase/migrations/20260929_create_student_leg_decisions.sql:12-33`, `daily-planning.ts:404-412` |
-| F8 | H5 demo ortamında **gerçekten tetiklenir**. Readiness router önce `optimizer_api.utils.data_loader` yükler, optimizasyon router'ı `utils.data_loader` yükler. `.venv-jit`'te `optimizer_api`'yi eşleyen editable kurulum var, bu yüzden iki ayrı singleton oluşur. | `optimizer_api/routers/readiness.py:10-17`, `optimization.py:56`, `:123-127`. `.venv-jit/Lib/site-packages/__editable___uniride_3_1_0_finder.py` |
+| F8 | H5 demo ortamında **gerçekten tetiklenir**. `main.py` router'ları `optimization`, ..., `readiness` sırasıyla import eder. Optimizasyon router'ı `utils.data_loader` modülünü yükler. Readiness router'ı ise önce `optimizer_api.utils.data_loader` modülünü dener. `.venv-jit`'te `optimizer_api`'yi eşleyen editable kurulum olduğu için bu deneme başarılı olur. Böylece aynı modül iki farklı adla yüklenir ve iki ayrı singleton oluşur. | `optimizer_api/main.py:18`, `optimizer_api/routers/readiness.py:10-17`, `optimization.py:56`, `:123-127`. `.venv-jit/Lib/site-packages/__editable___uniride_3_1_0_finder.py` |
 | F9 | Editable finder ana checkout'u gösterir (`...\UniRide\optimizer_api`). Launcher `cwd=optimizer_api` ile `python main.py` çalıştırır (`scripts/start-dudullu-local.mjs:83-85`, `:312-317`). Bu nedenle bir worktree'den başlatılan optimizer, `optimizer_api.*` modüllerini **ana checkout'tan** okur. Demo merge'den sonra ana checkout'tan çalıştırılmalıdır. | yukarıdaki dosyalar |
 | F10 | M1: Her (yön, anchor) çağrısında rota sayısı aktif araç sayısını geçerse sertifika `fleet_size_violation` verir. Önizleme bunu `OPTIMIZATION_NOT_SUCCESSFUL` olarak gösterir ve bütün gün engellenir. | `optimizer_api/verification/response_certifier.py:134-193`, `route.ts:367-373` |
 | F11 | Launcher sırasıyla `UNIRIDE_PYTHON`, `.venv` ve PATH'e bakar, `.venv-jit`'e bakmaz. Ana checkout'ta `.venv` yok, yalnızca `.venv-jit` var. | `scripts/start-dudullu-local.mjs:170-198` |
@@ -74,7 +74,7 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
 - **Adımlar:**
   1. Sahip Supabase projesini yeniden etkinleştirir (**sahip işlemi**).
   2. `.env.local` dosyasında `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` ve `SUPABASE_SERVICE_ROLE_KEY` bulunur. `optimizer_api/.env` dosyasında `SUPABASE_URL` ve `SUPABASE_SERVICE_ROLE_KEY` bulunur (`optimizer_api/utils/data_loader.py:54-55`). Değerler yazdırılmaz.
-  3. Python seçimi için `$env:UNIRIDE_PYTHON=".venv-jit\Scripts\python.exe"` ayarlanır. Ardından `node scripts/start-dudullu-local.mjs --check-only` çalıştırılır ve yorumlayıcı satırı kontrol edilir.
+  3. Python seçimi için `UNIRIDE_PYTHON` **mutlak yol** olarak ayarlanır, örneğin `$env:UNIRIDE_PYTHON="C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe"`. Göreli yol `rootDir` ile birleştirilir (`scripts/start-dudullu-local.mjs:171-178`). Bir worktree'den çalıştırıldığında bu yolda `.venv-jit` bulunmaz. Launcher bu durumda uyarı vermeden PATH'teki Python'a döner, o Python'da da fastapi yoktur. Ardından `node scripts/start-dudullu-local.mjs --check-only` çalıştırılır. Yorumlayıcı satırında `.venv-jit` yolunun göründüğü doğrulanır.
   4. Yığın `npm run dev:dudullu` ile başlatılır. Adres `http://127.0.0.1:9002`.
   5. Yönetici hesabı kontrol edilir: bir Auth kullanıcısı ve `public.users.role = 'admin'` olan satırı gerekir (`src/lib/admin-auth.ts:86-133`). Hesap yoksa sahip bunu Supabase panelinden oluşturur (**sahip yetkisi gerekir**). Kayıt formu ile admin oluşturulmaz: bu C1 açığını kullanmak olur.
   6. `/admin/readiness` sayfasındaki sayımlar not edilir: öğrenciler (`dudulluTarget` ile `completeTargetProfiles`), takvimler (`malformed`), aktif ve kullanılabilir araç sayısı, matris (`validArcCount` ile `expectedArcCount`).
@@ -82,13 +82,15 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
      - `to_regclass('public.student_leg_decisions')`;
      - aktif araçlarda `wheelchair_capacity`, `seating_capacity` ve `cooldown_minutes` sütunlarının NULL olmayan tamsayı olduğu;
      - Dudullu takvim girişlerinin haftanın günlerine dağılımı.
+  8. Önizleme route'u `/optimize` çağrılarını anchor başına **sırayla** yapar (`route.ts:342-379`). Politika gereği her çözüm 60 sn'ye, bir istek ise 120 sn'ye kadar sürebilir (`optimizer_api/compute_policy.py:32-33`). `src/lib/optimizer-server.ts` içinde zaman aşımı yoktur. Bu yüzden D1 sonrasında aday günler için tam günlük önizleme süresi ölçülür. Ölçüm, salt okuma bir çağrıyla, ya D2 sayfasından ya da admin bearer token ile doğrudan route'a yapılır. Bulunan süreye göre D2'nin istemci zaman aşımı ayarlanır.
 - **Kabul ölçütleri:**
   - `/health` ve `/admin/readiness` yanıt verir.
+  - Tam gün önizleme süresi (anchor sayısı ve toplam saniye) ölçülmüş ve lider notuna yazılmıştır. D2'deki istemci zaman aşımı bu ölçüme göre belirlenir, örneğin ölçülen en uzun süre × 1,5. 120 sn bir varsayımdır, ölçülmüş bir değer değildir.
   - Envanter tablosu (yalnızca sayımlar, kişisel veri yok) lider notuna yazılır.
   - Devam/dur kararı yazılıdır. Devam için şunların hepsi gerekir:
     - en az 1 kullanılabilir aktif araç;
     - matris eksik arc sayısı 0;
-    - `dudulluTarget == completeTargetProfiles`, ya da K7 kararı;
+    - `dudulluTarget == completeTargetProfiles`, ya da K1'deki bozuk kayıt kuralı;
     - bir admin hesabı.
 - **Testler (launcher düzeltilirse):** `node --test scripts/start-dudullu-local.test.mjs`
 - **Boyut:** XS. **Ajan:** sahip ve lider. Launcher düzeltmesi: `gelistirici`/haiku.
@@ -115,7 +117,7 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
 
 ### D1b — Araç özeti ve atama aramasının dürüst sonlanması
 
-- **Amaç:** Yanıtta açık bir "minimum araç" alanı olması ve gerçekçi günlerde `indeterminate` yerine kanıtlı sonuç dönmesi (F2, F3).
+- **Amaç:** Yanıtta açık bir "bu rotalar için gereken araç" alanı olması ve gerçekçi günlerde `indeterminate` yerine kanıtlı sonuç dönmesi (F2, F3).
 - **Dosyalar:** `src/services/dudullu-preview.ts` (`assignPhysicalVehicles` `:513-605`, `DudulluPreviewResult` `:124-136`, `buildDudulluPreview` `:607-678`) ve `src/services/dudullu-preview.test.ts`.
 - **Adımlar:**
   1. **Alt sınır:** Rota aralıkları en küçük cooldown kadar uzatılır. Aynı anda çakışan en fazla aralık sayısı `lowerBound` olur.
@@ -126,7 +128,8 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
      ```ts
      vehicleSummary: {
        minimumVehicles: number | null;   // farklı physicalVehicleId; best yoksa null
-       minimumProven: boolean;           // arama tükenmeden bitti ya da best == lowerBound
+       minimumProven: boolean;           // sabit rotalar için atama minimal kanıtlandı
+                                         // (arama tükenmeden bitti ya da best == lowerBound)
        lowerBound: number;               // cooldown dahil tepe eşzamanlı rota
        activeFleetSize: number;
        routesPerJob: { jobId: string; direction: TripDirection; anchorMinutes: number;
@@ -134,11 +137,12 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
      }
      ```
      `makeBlockedResult` bu alanı `null` olarak döndürür ve tip buna göre güncellenir.
+     `minimumProven` şu anlama gelir: **çözücünün ürettiği sabit rotalar için** fiziksel araç ataması minimaldir. Rota sayısının kendisi minimal değildir; bu yüzden değer bir günlük "gerçek minimum araç" sayısı olarak sunulmaz.
 - **Kabul:**
   - F3 deneyindeki 4/4/8 ve 8/6/15 senaryoları test olarak eklenir; ikisi de `preview_ready` ve `minimumProven=true` sonucunu verir.
   - 10/8/8 senaryosu `shortage` verir.
   - `:539` testi ("chooses the minimum distinct physical fleet") değişmeden geçer.
-  - **Davranış değişikliği (K8):** `:567` testi şu anda 9 eşzamanlı rota ile 8 araçta `indeterminate` bekliyor; değişiklikten sonra sonuç `shortage` olur. Test bilerek güncellenir. Bütçe tükenme dalı, bütçe parametreleştirilerek ayrı bir testle korunur.
+  - **Davranış değişikliği (varsayılan, ayrı karar gerektirmez):** `:567` testi şu anda 9 eşzamanlı rota ile 8 araçta `indeterminate` bekliyor; değişiklikten sonra sonuç `shortage` olur. Test bilerek güncellenir. Bütçe tükenme dalı, bütçe parametreleştirilerek ayrı bir testle korunur.
 - **Testler:** `npx vitest run src/services/dudullu-preview.test.ts`
 - **Boyut:** S. **Ajan:** `typescript-pro`/sonnet. Denetçi: `denetci`/opus, çünkü filo doğruluğu sözleşmesi değişiyor.
 
@@ -146,7 +150,7 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
 
 - **Amaç:**
   - Canlı DB'ye yazmadan "herkes geliyor" varsayımıyla önizleme almak (F4, F7).
-  - Gerçek filodan bağımsız minimum araç sayısını bulmak (F10).
+  - Gerçek filodan bağımsız olarak, bu rotalar için gereken araç sayısını bulmak (F10).
   - Eksik tablo ve bozuk kayıtları açıkça raporlamak (F5, F6).
 - **Dosyalar:**
   - `src/app/api/admin/dudullu-preview/route.ts` (`SERVICE_DATE_SCHEMA` `:20-22`, `loadBlockedPreview` `:124-381`, `POST` `:383-409`);
@@ -163,7 +167,8 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
   - Sayım tabanlı bir `candidateSummary` eklenir; kimlik içermez: `{ dudulluStudents, legsByAdmission, invalidStudentRecords }`.
 - **`assume_confirmed` kuralları:**
   - Satırı olmayan bacak ve `pending_admin_approval` olan bacak `confirmed` sayılır.
-  - Kayıtlı `cancelled` iptal olarak kalır (K1).
+  - Kayıtlı `cancelled` iptal olarak kalır.
+  - Eski `ride_requests` engelleri ve bozuk öğrenci kayıtları K1'deki kurala göre işlenir.
   - Yeni bilgi kodu `ADMISSION_ASSUMED` eklenir.
   - Dönüşüm yalnızca route içinde, `buildScheduleDemands` çıktısı üzerinde yapılır. `daily-planning.ts` içindeki saf alan mantığına dokunulmaz.
 - **Eksik tablo:** Supabase hatasında tablo yok kodu (`PGRST205` veya `42P01`) yakalanır.
@@ -172,8 +177,10 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
   - Diğer okuma hataları sabit 503 olarak kalır.
 - **Sanal filo (`virtual`):**
   - Canlı aktif araçların farklı (Sw, So, cooldown) tipleri alınır.
-  - Her tipten N = kabul edilen bacak sayısı kadar kopya üretilir; toplam en fazla 250. Kimlikler `virtual:<tip>:<n>` biçimindedir.
-  - Hem `/optimize` isteğinde hem DFS'de bu filo kullanılır.
+  - Her tipten N kopya üretilir; N, kabul edilen bacak sayısıdır. Kimlikler `virtual:<tip>:<n>` biçimindedir. **Bu tam sanal filo yalnızca DFS atamasına verilir.**
+  - `/optimize` çağrısına tam filo gönderilmez. `OptimizationRequest`, `len(vehicles) > policy.max_vehicles` olan istekleri reddeder (varsayılan 50; `optimizer_api/compute_policy.py:29`, `optimizer_api/models/schemas.py:311-312`). Red durumunda route `OPTIMIZATION_NOT_SUCCESSFUL` döner (`route.ts:367-373`).
+  - Her dalgada `/optimize` çağrısına en fazla `min(dalgadaki bacak sayısı, 50)` araç gönderilir. Bu sayı tipler arasında sırayla dağıtılır. Sınır route'ta tek bir sabit olarak tutulur ve yorumda `UNIRIDE_COMPUTE_MAX_VEHICLES` ile bağı belirtilir.
+  - Bir rota, tek bir tipin karşılamadığı bir Sw/So birleşimi isterse sertifika yine reddedebilir. Bu, M1'in kalıntısıdır ve bilinen bir sınır olarak kabul edilir.
   - Aktif araç yoksa `FLEET_SHORTAGE` döner.
   - `vehicleSummary.activeFleetSize` gerçek filo sayısıdır. UI eksik araç sayısını şöyle hesaplar: `minimumVehicles - activeFleetSize`.
 - **Temiz eksik filo raporu (`live`):** Optimizer `success=false` döndürür ve sertifikada `fleet_size_violation` varsa sonuç `OPTIMIZATION_NOT_SUCCESSFUL` yerine `shortage` + `FLEET_SHORTAGE` olur (M1'in demodaki etkisi). Bu iş S boyutunu aşarsa ertelenir ve belgelenir.
@@ -185,13 +192,14 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
     - kayıtlı iptalin girmediği;
     - eksik tablonun iki moddaki davranışı;
     - sanal filoda 2 araçlık canlı filo ile 3 rotalık bir dalganın `preview_ready` ve `minimumVehicles=3` verdiği;
+    - 60 kabul edilen bacaklı bir dalgada mock'lanmış `/optimize` gövdesindeki `vehicles.length` değerinin ≤ 50 olduğu, DFS'ye verilen sanal filonun ise ≥ 60 olduğu;
     - kimlik doğrulamasının gövdeden önce kalmaya devam ettiği (`:302`).
 - **Testler:** `npx vitest run src/app/api/admin/dudullu-preview/route.test.ts src/services/dudullu-preview.test.ts src/services/daily-planning.test.ts`, ardından `npm run typecheck`.
 - **Boyut:** M. **Ajan:** `typescript-pro`/sonnet. Denetçi: `denetci`/opus (onay çıkarımı ve canlı okuma yolu).
 
 ### D2 — Günlük plan sayfası (UI)
 
-- **Amaç:** Yöneticinin tek ekranda günü, rotaları ve minimum araç sayısını görmesi.
+- **Amaç:** Yöneticinin tek ekranda günü, rotaları ve bu rotalar için gereken araç sayısını görmesi.
 - **Dosyalar:**
   - yeni `src/app/(app)/admin/daily-plan/page.tsx` ve `page.test.tsx`;
   - yeni `src/services/daily-plan-view.ts` ve testi (saf görünüm modeli);
@@ -209,8 +217,10 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
   - "Herkes onayladı say" anahtarı (`switch`, `assume_confirmed`);
   - "Sanal filo ile minimum" anahtarı (`fleetMode`);
   - Çalıştır düğmesi; yükleniyor, boş ve hata durumları;
-  - istemci zaman aşımı 120 sn;
-  - özet kartları: minimum araç (kanıtlı değilse "en fazla" etiketi), öğrenci, rota, durum, aktif filo ve eksik;
+  - istemci zaman aşımı D0'daki süre ölçümüne göre belirlenir (bkz. D0 adım 8);
+  - özet kartları:
+    - **"Bu rotalar için gereken araç"**: `minimumVehicles`. `minimumProven=false` ise "en fazla" etiketi eklenir. Kart "gerçek minimum" diye adlandırılmaz.
+    - öğrenci, rota, durum, aktif filo ve eksik araç;
   - dalga bölümleri: "08:45 varış — Toplama", her rota için sıralı duraklar, süre ve Sw/So sayıları;
   - araç tablosu;
   - neden kodlarının sade Türkçe karşılıkları;
@@ -219,7 +229,8 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
   - Kenar çubuğundan sayfa açılır.
   - Mock'lanmış `preview_ready`, `shortage`, `blocked_data` ve 503 yanıtları doğru kartları ve metinleri gösterir.
   - Hiçbir yanıtta yayınla/kaydet düğmesi yoktur.
-  - Öğrenci adı yerine K5'e göre etiket görünür.
+  - Öğrenci adı yerine K4'e göre etiket görünür.
+  - Araç kartının başlığı "Bu rotalar için gereken araç" olur ve testte doğrulanır.
 - **Testler:** `npx vitest run "src/app/(app)/admin/daily-plan/page.test.tsx" src/services/daily-plan-view.test.ts`, ardından `npm run typecheck` ve `npm run lint`.
 - **Boyut:** M. **Ajan:** `gelistirici`/sonnet; düzen taslağı istenirse önce `tasarimci`/opus. Denetçi: `denetci`/sonnet.
 
@@ -239,18 +250,32 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
 
 ## 4. Sahip için karar noktaları
 
-- **KARAR K1 — Demo kabul yaklaşımı.**
-  - Öneri: istek bayrağı `admissionMode: "assume_confirmed"`. Yalnızca admin kullanır, DB'ye yazmaz, yanıtta `hypothetical` ve `ADMISSION_ASSUMED` ile etiketlenir, kayıtlı iptalleri korur.
-  - Alternatif: canlıya `student_leg_decisions` satırı eklemek (**sahip yetkisi gerekir**). F7 nedeniyle yalnızca gelecek tarihlerde ve önceki gün 22:00'den önce işe yarar. Önerilmez.
-  - Not: `ACTIVE_ROADMAP.md` "onay çıkarımı yapma" der. Bu mod bilinçli, yalnızca önizleme için ve yayınlanamaz bir istisnadır. Sahip onayı kayda geçirilmelidir.
-- **KARAR K2 — Minimum araç tanımı.** Öneri: demoda varsayılan `fleetMode: "virtual"`. Böylece "gereken araç" gerçek filodan bağımsız ölçülür ve gerçek filo ile fark gösterilir. `live` ise "mevcut filo yetiyor mu?" sorusunu yanıtlar.
-- **KARAR K3 — Yönler.** Öneri: pickup ve dropoff birlikte planlanır. Fiziksel araç ataması zaten günü bütün olarak ele alır (`dudullu-preview.ts:654`). UI'da yön filtresi olur.
-- **KARAR K4 — Demo tarihi.** Öneri: D1 bittikten sonra Pazartesi–Cuma için salt okuma önizleme alınır ve en dolu hafta içi günü seçilir. Tarihin yalnızca haftanın günü önemlidir (`daily-planning.ts:148`). Geçmiş ya da gelecek tarih fark etmez.
-- **KARAR K5 — Öğrenci kimliği.** Öneri: ekran paylaşımı için varsayılan "Öğrenci 1..N" ve konum kodu kullanılır. İsim göstermek yanıta ek bir kişisel veri alanı demektir; ayrıca onaylanmalıdır.
-- **KARAR K6 — Eski `ride_requests` engelleri** (`route.ts:250-256`, `:271-275`). Öneri: `assume_confirmed` modunda öğrenci dahil edilir ve `LEGACY_AMBIGUOUS_CONFIRMATION` bilgi olarak kalır. Alternatif: dışarıda bırakıp sayısını göstermek.
-- **KARAR K7 — Bozuk öğrenci kayıtları** (F6). Öneri: yalnızca `assume_confirmed` modunda, profil düzeyindeki hatalı kayıtlar dışarıda bırakılır ve sayısı `candidateSummary.invalidStudentRecords` ile gösterilir. Kopya kimlik gibi bütünlük hataları yine bütün günü engeller.
-- **KARAR K8 — Davranış değişikliği.** `indeterminate` sonucunun kanıtlı `shortage` ya da `preview_ready` olması (D1b) kabul ediliyor mu? Öneri: evet.
-- **KARAR K9 — Canlı veri eksikleri.** Bölüm 5'teki her canlı yazma seçeneği tek tek onaylanmalıdır.
+**Belirlenmiş varsayılanlar (ayrı karar gerektirmez):**
+- Pickup ve dropoff birlikte planlanır. Fiziksel araç ataması zaten günü bütün olarak ele alır (`dudullu-preview.ts:654`). UI'da yön filtresi olur.
+- D1b'de `:567` testi `indeterminate` yerine kanıtlı `shortage` bekleyecek şekilde güncellenir. Bütçe tükenme dalı ayrı bir testle korunur.
+- Canlı yazma gerektiren her adım D0'da ve bölüm 5'te "**sahip yetkisi gerekir**" olarak işaretlidir ve tek tek onaylanır.
+
+- **KARAR K1 — `assume_confirmed` demo modu.** Bu karar tek pakettir ve üç parçadan oluşur:
+  - (a) **Kabul:**
+    - Öneri: istek bayrağı `admissionMode: "assume_confirmed"`. Yalnızca admin kullanır ve DB'ye yazmaz. Yanıtta `hypothetical` ve `ADMISSION_ASSUMED` ile etiketlenir. Kayıtlı iptaller korunur.
+    - Alternatif: canlıya `student_leg_decisions` satırı eklemek (**sahip yetkisi gerekir**). F7 nedeniyle yalnızca gelecek tarihlerde ve önceki gün 22:00'den önce işe yarar. Önerilmez.
+  - (b) **Eski `ride_requests` engelleri** (`route.ts:250-256`, `:271-275`):
+    - Öneri: bu modda öğrenci dahil edilir ve `LEGACY_AMBIGUOUS_CONFIRMATION` bilgi olarak kalır.
+    - Alternatif: öğrenci dışarıda bırakılır ve sayısı gösterilir.
+  - (c) **Bozuk öğrenci kayıtları** (F6):
+    - Öneri: yalnızca bu modda, profil düzeyindeki hatalı kayıtlar dışarıda bırakılır. Sayısı `candidateSummary.invalidStudentRecords` ile gösterilir.
+    - Kopya kimlik gibi bütünlük hataları yine bütün günü engeller.
+  - Not: `ACTIVE_ROADMAP.md` "onay çıkarımı yapma" der. Bu mod bilinçli bir istisnadır: yalnızca önizleme içindir ve yayınlanamaz. Sahip onayı kayda geçirilmelidir.
+- **KARAR K2 — "Gereken araç" tanımı.**
+  - Öneri: demoda varsayılan `fleetMode: "virtual"`. Böylece gereken araç sayısı gerçek filodan bağımsız ölçülür ve gerçek filo ile arasındaki fark gösterilir.
+  - `live` modu ise "mevcut filo yetiyor mu?" sorusunu yanıtlar.
+  - Her iki modda da sayı, çözücünün ürettiği sabit rotalar için geçerlidir.
+- **KARAR K3 — Demo tarihi.**
+  - Öneri: D1 bittikten sonra Pazartesi–Cuma için salt okuma önizleme alınır ve en dolu hafta içi günü seçilir.
+  - Tarihin yalnızca haftanın günü önemlidir (`daily-planning.ts:148`). Geçmiş ya da gelecek tarih fark etmez.
+- **KARAR K4 — Öğrenci kimliği.**
+  - Öneri: ekran paylaşımı için varsayılan olarak "Öğrenci 1..N" ve konum kodu gösterilir.
+  - İsim göstermek yanıta ek bir kişisel veri alanı eklemek demektir; bu ayrıca onaylanmalıdır.
 
 ## 5. Riskler ve D0'da veri eksik çıkarsa
 
@@ -258,25 +283,25 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
 |---|---|---|
 | Supabase duraklatılmış ya da kota dolmuş | readiness 503 | Sahip etkinleştirir. Demo öncesi 1 saat içinde yeniden kontrol edilir. |
 | `student_leg_decisions` canlıda yok | şu an 503 (F5) | (a) D1c + `assume_confirmed`, migration gerekmez. (b) Migration uygulanır (**sahip yetkisi gerekir**; QW1'deki RLS incelemesiyle birlikte). |
-| Matriste eksik arc ya da `D.Kampus` yok | `MATRIX_UNAVAILABLE` (F13) | (a) Eksik konumu olmayan bir gün seçilir (K4). (b) Sahip mevcut yöntemiyle `time_matrix` tablosunu doldurur (**sahip yetkisi gerekir**; bu depoda doğrulanmış bir doldurma aracı bulunmadı). (c) Öğrenciyi sessizce düşürmek: **önerilmez**. |
+| Matriste eksik arc ya da `D.Kampus` yok | `MATRIX_UNAVAILABLE` (F13) | (a) Eksik konumu olmayan bir gün seçilir (K3). (b) Sahip mevcut yöntemiyle `time_matrix` tablosunu doldurur (**sahip yetkisi gerekir**; bu depoda doğrulanmış bir doldurma aracı bulunmadı). (c) Öğrenciyi sessizce düşürmek: **önerilmez**. |
 | Aktif araç yok ya da sütun NULL | `FLEET_SHORTAGE` / `FLEET_INVALID` | Sahip araç ekler ya da düzeltir (**sahip yetkisi gerekir**). Sanal filo için en az bir geçerli tip gerekir. |
-| Öğrenci profili eksik | `SCHEDULE_DATA_INVALID`, gün boş | K7. Ya da sahip profilleri düzeltir (**sahip yetkisi gerekir**). |
+| Öğrenci profili eksik | `SCHEDULE_DATA_INVALID`, gün boş | K1(c). Ya da sahip profilleri düzeltir (**sahip yetkisi gerekir**). |
 | Admin hesabı yok | 401/403 | Sahip panelden oluşturur (**sahip yetkisi gerekir**). C1 yolu kullanılmaz. |
 | H5 düzeltilmedi | `OPTIMIZATION_NOT_SUCCESSFUL` | D1a demonun ön koşuludur. |
 | Dalga başına rota sayısı filodan büyük (M1) | `OPTIMIZATION_NOT_SUCCESSFUL` | K2 sanal filo. Ya da D1c'deki temiz eksik filo raporu. |
-| Uzun çözüm süresi | UI bekler | 120 sn istemci zaman aşımı. Anchor sayısı az bir gün seçilir. |
+| Uzun çözüm süresi (anchor başına sıralı çağrı, her çözüm ≤ 60 sn) | UI bekler ya da zaman aşımına düşer | D0 adım 8'deki ölçüm yapılır ve zaman aşımı ona göre ayarlanır. Anchor sayısı az bir gün seçilir. |
 | Worktree'den başlatma (F9) | eski kod çalışır | Demo merge'den sonra ana checkout'tan başlatılır. |
 | Rota sayısı optimal değil, zaman modeli basit | yanlış beklenti | D3 etiketleri; "tasarruf" iddiası yapılmaz (`ACTIVE_ROADMAP.md`). |
-| Ekran paylaşımında kişisel veri | gizlilik | K5 anonim etiketler; konsol ve log'da kimlik basılmaz. |
+| Ekran paylaşımında kişisel veri | gizlilik | K4 anonim etiketler; konsol ve log'da kimlik basılmaz. |
 
 ## 6. Uçtan uca elle demo kontrol listesi (D3)
 
 1. Ana checkout `WIP` dalında ve D0–D2 birleştirilmiş durumda. `UNIRIDE_PYTHON` ayarlı. `npm run dev:dudullu` iki sürecin de hazır olduğunu basar.
 2. Admin olarak giriş yapılır. Kenar çubuğunda "Günlük Plan" görünür.
 3. `/admin/readiness` sayfasında matris eksik arc sayısı 0'dır.
-4. K4 tarihi seçilir, iki anahtar açılır, Çalıştır'a basılır. 120 sn içinde `preview_ready` görünür.
+4. K3 tarihi seçilir, iki anahtar açılır, Çalıştır'a basılır. D0'da ölçülen süre içinde `preview_ready` görünür.
 5. Kartlar kontrol edilir:
-   - minimum araç kanıtlıdır (`minimumProven`);
+   - "Bu rotalar için gereken araç" kartında `minimumProven` doğrudur, yani "en fazla" etiketi yoktur;
    - öğrenci ve rota sayıları `candidateSummary` ile tutarlıdır;
    - aktif filo ve eksik araç sayısı görünür.
 6. Her dalgada duraklar sıralıdır. Saatler pickup'ta anchor'da biter, dropoff'ta anchor'da başlar.
@@ -291,8 +316,8 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
 | D0 | Ortam, canlı veri envanteri ve devam/dur kararı (+ isteğe bağlı launcher `.venv-jit`) | PLANNED | `chore/demo-d0-launcher-venv-jit` (yalnızca kod gerekirse) | sahip |
 | D1a | H5 tek DataLoader kökü ve refresh | PLANNED | `fix/demo-d1a-h5-single-loader` | D0 |
 | D1b | `vehicleSummary`, alt sınır ve simetri kırma | PLANNED | `feat/demo-d1b-vehicle-summary` | — |
-| D1c | `assume_confirmed`, sanal filo, `LEG_DECISIONS_UNAVAILABLE`, temiz eksik filo raporu | PLANNED | `feat/demo-d1c-admission-fleet-modes` | D1b, K1, K2, K6, K7 |
+| D1c | `assume_confirmed`, sanal filo, `LEG_DECISIONS_UNAVAILABLE`, temiz eksik filo raporu | PLANNED | `feat/demo-d1c-admission-fleet-modes` | D1b, K1, K2 |
 | D2 | `/admin/daily-plan` sayfası, görünüm modeli, `adminApi.preview`, kenar çubuğu, i18n | PLANNED | `feat/demo-d2-daily-plan-page` | D1b, D1c |
-| D3 | Sınırlama etiketleri, kılavuz ve elle demo | PLANNED | `docs/demo-d3-runbook` | D0–D2, K4, K5 |
+| D3 | Sınırlama etiketleri, kılavuz ve elle demo | PLANNED | `docs/demo-d3-runbook` | D0–D2, K3, K4 |
 
 D1a ve D1b paralel ilerleyebilir; D1c, D1b'nin tipleri üzerine kurulur. Her birleştirmeden önce odaklı testler çalıştırılır ve ardından `npm run typecheck` ile `npm run lint` geçmelidir. Atlanan kontroller birleştirme notunda açıkça yazılır.

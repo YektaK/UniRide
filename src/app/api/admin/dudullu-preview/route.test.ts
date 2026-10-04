@@ -16,7 +16,7 @@ vi.mock("@/lib/optimizer-server", () => ({ optimizerFetch: optimizerFetchMock })
 
 import { AppError } from "@/lib/admin-auth";
 
-type QueryResult = { data: unknown; error: { message: string } | null };
+type QueryResult = { data: unknown; error: { message: string; code?: string } | null };
 type QueryTrace = {
   table: string;
   columns?: string;
@@ -26,14 +26,19 @@ type QueryTrace = {
 function adminClient(
   rows: Record<string, unknown[]> = {},
   failedTable?: string,
+  failureCode?: string,
 ) {
   const queries: QueryTrace[] = [];
+  // Every mutating entry point records its call so tests can prove the preview is read-only.
+  const writes: string[] = [];
   const from = vi.fn((table: string) => {
     const trace: QueryTrace = { table, filters: [] };
     queries.push(trace);
     const result: QueryResult = {
       data: rows[table] ?? [],
-      error: table === failedTable ? { message: "SUPABASE-SECRET-DIAGNOSTIC" } : null,
+      error: table === failedTable
+        ? { message: "SUPABASE-SECRET-DIAGNOSTIC", ...(failureCode ? { code: failureCode } : {}) }
+        : null,
     };
     const query = {} as {
       select(columns: string): typeof query;
@@ -45,6 +50,14 @@ function adminClient(
         onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
       ): PromiseLike<TResult1 | TResult2>;
     };
+    for (const method of ["insert", "update", "upsert", "delete"]) {
+      Object.assign(query, {
+        [method]: vi.fn(() => {
+          writes.push(`${table}.${method}`);
+          return query;
+        }),
+      });
+    }
     Object.assign(query, {
       select: vi.fn((columns: string) => {
         trace.columns = columns;
@@ -69,11 +82,15 @@ function adminClient(
     });
     return query;
   });
-  return { from, queries };
+  const rpc = vi.fn((name: string) => {
+    writes.push(`rpc.${name}`);
+    return Promise.resolve({ data: null, error: null });
+  });
+  return { from, rpc, queries, writes };
 }
 
-function setAdmin(rows: Record<string, unknown[]> = {}, failedTable?: string) {
-  const client = adminClient(rows, failedTable);
+function setAdmin(rows: Record<string, unknown[]> = {}, failedTable?: string, failureCode?: string) {
+  const client = adminClient(rows, failedTable, failureCode);
   getSupabaseAdminMock.mockReturnValue(client);
   requireAdminMock.mockResolvedValue({ id: "admin-1", role: "admin" });
   return client;
@@ -609,5 +626,472 @@ describe("POST /api/admin/dudullu-preview", () => {
     expect(serialized).toBe('{"error":"PREVIEW_UNAVAILABLE"}');
     expect(serialized).not.toContain("SUPABASE-SECRET-DIAGNOSTIC");
     expect(optimizerFetchMock).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Demo modes (D1c). K1: `assume_confirmed` is a deliberate, owner-approved, preview-only and
+// non-publishable exception to ACTIVE_ROADMAP.md's "do not infer consent". K2: virtual fleet.
+// ---------------------------------------------------------------------------------------
+
+type OptimizeBody = {
+  students: Array<{ id: string; location_code: string; disability_type: string }>;
+  vehicles: Array<{ vehicle_id: string; sw_capacity: number; so_capacity: number; cooldown_minutes: number }>;
+  sw_capacity: number;
+  so_capacity: number;
+};
+
+function crowd(count: number, extra: Record<string, unknown> = {}) {
+  const ids = Array.from({ length: count }, (_, index) => index + 1);
+  return {
+    users: ids.map((n) => ({
+      id: `student-${n}`, role: "student", location_code: `Sw${n}`, disability_type: "Sw",
+      weekly_schedule_id: `schedule-${n}`, ...extra,
+    })),
+    weekly_schedules: ids.map((n) => ({
+      id: `schedule-${n}`, user_id: `student-${n}`,
+      entries: [{ id: `class-${n}`, dayOfWeek: "wednesday", startTime: "09:00", endTime: "10:00", location: "Dudullu" }],
+    })),
+    ride_requests: [] as unknown[],
+    student_leg_decisions: [] as unknown[],
+    vehicles: [] as unknown[],
+  };
+}
+
+const vehicleRow = (id: string, sw: number, so: number, cooldown: number) =>
+  ({ id, wheelchair_capacity: sw, seating_capacity: so, cooldown_minutes: cooldown, status: "active" });
+
+function matrixFor(count: number) {
+  const arcs: Array<{ origin_code: string; destination_code: string; duration_minutes: number }> = [];
+  for (let n = 1; n <= count; n += 1) {
+    arcs.push({ origin_code: "D.Kampus", destination_code: `Sw${n}`, duration_minutes: 5 });
+    arcs.push({ origin_code: `Sw${n}`, destination_code: "D.Kampus", duration_minutes: 6 });
+  }
+  return { ...matrix, arcs };
+}
+
+/** Matrix + an optimizer that returns one single-student route per student; records every /optimize body. */
+function mockCrowdTransport(count: number) {
+  const bodies: OptimizeBody[] = [];
+  optimizerFetchMock.mockImplementation(async (path: string, init?: { body: string }) => {
+    if (path === "/api/v1/internal/matrix-snapshot") return Response.json(matrixFor(count));
+    if (path !== "/api/v1/optimize") throw new Error("unexpected optimizer path");
+    const body = JSON.parse(init!.body) as OptimizeBody;
+    bodies.push(body);
+    return Response.json({
+      success: true,
+      routes: body.students.map((student) => ({
+        vehicle_id: body.vehicles[0]!.vehicle_id,
+        route_details: [
+          { location1: "D.Kampus", location2: student.location_code, duration: 5, distance: 0 },
+          { location1: student.location_code, location2: "D.Kampus", duration: 6, distance: 0 },
+        ],
+        total_duration_minutes: 11, sw_count: 1, so_count: 0, student_ids: [student.id],
+      })),
+      total_duration_minutes: 11 * body.students.length,
+      feasibility_certificate: { is_feasible: true },
+    });
+  });
+  return bodies;
+}
+
+const confirmedLeg = (n: number, direction: "pickup" | "dropoff" = "pickup") =>
+  ({ ...onTimePickup, user_id: `student-${n}`, direction });
+
+function expectReadOnly(client: ReturnType<typeof adminClient>) {
+  expect(client.writes).toEqual([]);
+  expect(client.rpc).not.toHaveBeenCalled();
+  expect(client.queries.length).toBeGreaterThan(0);
+  expect(client.queries.every((query) => query.columns !== undefined)).toBe(true);
+}
+
+describe("POST /api/admin/dudullu-preview demo modes", () => {
+  it("never writes in either admission mode", async () => {
+    for (const admissionMode of ["recorded", "assume_confirmed"] as const) {
+      const rows = crowd(2);
+      const client = setAdmin({
+        ...rows, vehicles: [vehicleRow("v1", 2, 2, 10), vehicleRow("v2", 2, 2, 10)],
+        student_leg_decisions: [confirmedLeg(1), confirmedLeg(2)],
+      });
+      mockCrowdTransport(2);
+      const { POST } = await import("./route");
+
+      const response = await POST(post({ serviceDate: "2026-09-30", admissionMode }));
+
+      expect(response.status).toBe(200);
+      expectReadOnly(client);
+      vi.resetModules();
+    }
+  });
+
+  it("never writes when the preview is blocked or the table is missing", async () => {
+    const client = setAdmin(crowd(1), "student_leg_decisions", "42P01");
+    const { POST } = await import("./route");
+    await POST(post({ serviceDate: "2026-09-30", admissionMode: "assume_confirmed", fleetMode: "virtual" }));
+    expectReadOnly(client);
+  });
+
+  it("defaults to recorded and live and labels the response as not hypothetical", async () => {
+    setAdmin({ ...crowd(1), vehicles: [vehicleRow("v1", 2, 2, 10)], student_leg_decisions: [confirmedLeg(1)] });
+    mockCrowdTransport(1);
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+
+    expect(body).toMatchObject({
+      admissionMode: "recorded", fleetMode: "live", hypothetical: false, publishable: false,
+    });
+    expect(body.reasonCodes).not.toContain("ADMISSION_ASSUMED");
+    expect(body.fleet).toEqual({
+      mode: "live", assignmentFleetSize: 1, liveActiveFleetSize: 1, template: null,
+    });
+  });
+
+  it("assume_confirmed admits every scheduled leg without decision rows and stays hypothetical", async () => {
+    const client = setAdmin({ ...crowd(2), vehicles: [vehicleRow("v1", 2, 2, 10), vehicleRow("v2", 2, 2, 10)] });
+    const bodies = mockCrowdTransport(2);
+    const { POST } = await import("./route");
+
+    const response = await POST(post({ serviceDate: "2026-09-30", admissionMode: "assume_confirmed" }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      status: "preview_ready", publishable: false, hypothetical: true,
+      admissionMode: "assume_confirmed", fleetMode: "live",
+    });
+    expect(body.reasonCodes).toContain("ADMISSION_ASSUMED");
+    expect(body.reasonCodes).not.toContain("PENDING_STUDENT_CONFIRMATION");
+    expect(body.reasonCodes).not.toContain("NO_ADMITTED_DEMAND");
+    expect(bodies.map((item) => item.students.length).sort()).toEqual([2, 2]);
+    expect(body.candidateSummary).toEqual({
+      dudulluStudents: 2,
+      legsByAdmission: {
+        confirmed: 4, approved: 0, pending_student_confirmation: 0, pending_admin_approval: 0, cancelled: 0,
+      },
+      invalidStudentRecords: 0,
+    });
+    expectReadOnly(client);
+  });
+
+  it("the same data stays blocked in recorded mode", async () => {
+    setAdmin({ ...crowd(2), vehicles: [vehicleRow("v1", 2, 2, 10), vehicleRow("v2", 2, 2, 10)] });
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30", admissionMode: "recorded" }))).json();
+
+    expect(body.status).toBe("blocked_data");
+    expect(body.reasonCodes).toContain("PENDING_STUDENT_CONFIRMATION");
+    expect(body.reasonCodes).toContain("NO_ADMITTED_DEMAND");
+    expect(body.hypothetical).toBe(false);
+    expect(optimizerFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("assume_confirmed still honours a recorded cancellation and a late confirmation counts as confirmed", async () => {
+    setAdmin({
+      ...crowd(2), vehicles: [vehicleRow("v1", 2, 2, 10), vehicleRow("v2", 2, 2, 10)],
+      student_leg_decisions: [
+        { ...confirmedLeg(1, "dropoff"), decision: "cancelled" },
+        { ...confirmedLeg(2, "pickup"), decided_at: "2026-09-29T19:00:00.000001+00:00" },
+      ],
+    });
+    const bodies = mockCrowdTransport(2);
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30", admissionMode: "assume_confirmed" }))).json();
+
+    expect(body.candidateSummary.legsByAdmission).toMatchObject({ confirmed: 3, cancelled: 1 });
+    const dropoff = bodies.find((item) => item.students.some((student) => student.id.includes(":dropoff:")));
+    expect(dropoff?.students.map((student) => student.id)).toEqual(["2026-09-30:dropoff:student-2"]);
+    expect(body.status).toBe("preview_ready");
+  });
+
+  it("assume_confirmed includes legacy-blocked students and keeps the info code", async () => {
+    const rows = crowd(1);
+    rows.ride_requests = [{
+      id: "request-1", user_id: "student-1", requested_pickup_time: "2026-09-30T06:00:00.000Z",
+      requested_dropoff_time: "2026-09-30T14:00:00.000Z", status: "in_progress",
+    }];
+    setAdmin({ ...rows, vehicles: [vehicleRow("v1", 2, 2, 10), vehicleRow("v2", 2, 2, 10)] });
+    mockCrowdTransport(1);
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30", admissionMode: "assume_confirmed" }))).json();
+
+    expect(body.status).toBe("preview_ready");
+    expect(body.reasonCodes).toEqual(expect.arrayContaining(["LEGACY_AMBIGUOUS_CONFIRMATION", "ADMISSION_ASSUMED"]));
+    expect(body.candidateSummary.legsByAdmission.confirmed).toBe(2);
+  });
+
+  describe("missing student_leg_decisions table", () => {
+    it.each(["42P01", "PGRST205"])("recorded mode returns a clear blocked result for %s", async (code) => {
+      const client = setAdmin(crowd(1), "student_leg_decisions", code);
+      const { POST } = await import("./route");
+
+      const response = await POST(post({ serviceDate: "2026-09-30" }));
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body).toMatchObject({ status: "blocked_data", publishable: false, jobs: [] });
+      expect(body.reasonCodes).toEqual(["LEG_DECISIONS_UNAVAILABLE"]);
+      expect(JSON.stringify(body)).not.toContain("SUPABASE-SECRET-DIAGNOSTIC");
+      expect(client.queries.map((query) => query.table)).not.toContain("vehicles");
+      expect(optimizerFetchMock).not.toHaveBeenCalled();
+    });
+
+    it("assume_confirmed proceeds without the table and reports the code as information", async () => {
+      setAdmin({ ...crowd(1), vehicles: [vehicleRow("v1", 2, 2, 10), vehicleRow("v2", 2, 2, 10)] }, "student_leg_decisions", "42P01");
+      mockCrowdTransport(1);
+      const { POST } = await import("./route");
+
+      const response = await POST(post({ serviceDate: "2026-09-30", admissionMode: "assume_confirmed" }));
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.status).toBe("preview_ready");
+      expect(body.reasonCodes).toEqual(expect.arrayContaining(["LEG_DECISIONS_UNAVAILABLE", "ADMISSION_ASSUMED"]));
+    });
+
+    it.each(["recorded", "assume_confirmed"])("keeps failing closed on other read errors in %s mode", async (admissionMode) => {
+      setAdmin(crowd(1), "student_leg_decisions", "XX000");
+      const { POST } = await import("./route");
+
+      const response = await POST(post({ serviceDate: "2026-09-30", admissionMode }));
+
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ error: "PREVIEW_UNAVAILABLE" });
+    });
+
+    it("does not treat a missing relation other than the decisions table as recoverable", async () => {
+      setAdmin(crowd(1), "ride_requests", "42P01");
+      const { POST } = await import("./route");
+
+      const response = await POST(post({ serviceDate: "2026-09-30", admissionMode: "assume_confirmed" }));
+
+      expect(response.status).toBe(503);
+    });
+  });
+
+  describe("virtual fleet", () => {
+    it("caps every /optimize vehicle list at 50 while the assignment fleet covers all 60 legs", async () => {
+      setAdmin({
+        ...crowd(60), vehicles: [vehicleRow("v1", 2, 2, 10)],
+        student_leg_decisions: Array.from({ length: 60 }, (_, index) => confirmedLeg(index + 1)),
+      });
+      const bodies = mockCrowdTransport(60);
+      const { POST } = await import("./route");
+
+      const body = await (await POST(post({ serviceDate: "2026-09-30", fleetMode: "virtual" }))).json();
+
+      expect(bodies).toHaveLength(1);
+      expect(bodies.every((item) => item.vehicles.length <= 50)).toBe(true);
+      expect(bodies[0]!.vehicles).toHaveLength(50);
+      expect(new Set(bodies[0]!.vehicles.map((item) => `${item.sw_capacity}|${item.so_capacity}|${item.cooldown_minutes}`)).size).toBe(1);
+      expect(body).toMatchObject({ status: "preview_ready", fleetMode: "virtual", hypothetical: true, publishable: false });
+      expect(body.vehicleSummary.activeFleetSize).toBeGreaterThanOrEqual(60);
+      expect(body.vehicleSummary).toMatchObject({ minimumVehicles: 60, minimumProven: true });
+      expect(body.fleet).toMatchObject({ mode: "virtual", assignmentFleetSize: 60, liveActiveFleetSize: 1 });
+      expect(new Set(body.assignments.map((item: { physicalVehicleId: string }) => item.physicalVehicleId)).size).toBe(60);
+      expect(body.assignments.every((item: { physicalVehicleId: string }) => item.physicalVehicleId.startsWith("virtual:"))).toBe(true);
+    });
+
+    it("sizes the fleet by all admitted legs of the day and sends at most the wave size per call", async () => {
+      setAdmin({ ...crowd(3), vehicles: [vehicleRow("v1", 2, 2, 10), vehicleRow("v2", 2, 2, 10)] });
+      const bodies = mockCrowdTransport(3);
+      const { POST } = await import("./route");
+
+      const body = await (await POST(post({
+        serviceDate: "2026-09-30", admissionMode: "assume_confirmed", fleetMode: "virtual",
+      }))).json();
+
+      expect(body.status).toBe("preview_ready");
+      expect(bodies.map((item) => item.vehicles.length)).toEqual([3, 3]);
+      expect(body.fleet).toEqual({
+        mode: "virtual", assignmentFleetSize: 6, liveActiveFleetSize: 2,
+        template: { swCapacity: 2, soCapacity: 2, cooldownMinutes: 10 },
+      });
+      expect(body.vehicleSummary).toMatchObject({ activeFleetSize: 6, minimumVehicles: 3, minimumProven: true });
+    });
+
+    it("proves 3 vehicles are needed for a 3-route wave although only 2 are live", async () => {
+      setAdmin({
+        ...crowd(3), vehicles: [vehicleRow("v1", 2, 2, 10), vehicleRow("v2", 2, 2, 10)],
+        student_leg_decisions: [confirmedLeg(1), confirmedLeg(2), confirmedLeg(3)],
+      });
+      mockCrowdTransport(3);
+      const { POST } = await import("./route");
+
+      const live = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+      const virtual = await (await POST(post({ serviceDate: "2026-09-30", fleetMode: "virtual" }))).json();
+
+      expect(live.status).toBe("shortage");
+      expect(virtual.status).toBe("preview_ready");
+      expect(virtual.vehicleSummary.minimumVehicles).toBe(3);
+      expect(virtual.fleet.liveActiveFleetSize).toBe(2);
+    });
+
+    it("uses the most common live signature as the template", async () => {
+      setAdmin({
+        ...crowd(2), student_leg_decisions: [confirmedLeg(1), confirmedLeg(2)],
+        vehicles: [vehicleRow("a", 4, 12, 5), vehicleRow("b", 2, 8, 10), vehicleRow("c", 2, 8, 10)],
+      });
+      const bodies = mockCrowdTransport(2);
+      const { POST } = await import("./route");
+
+      const body = await (await POST(post({ serviceDate: "2026-09-30", fleetMode: "virtual" }))).json();
+
+      expect(body.fleet.template).toEqual({ swCapacity: 2, soCapacity: 8, cooldownMinutes: 10 });
+      expect(bodies[0]!.vehicles.every((item) =>
+        item.sw_capacity === 2 && item.so_capacity === 8 && item.cooldown_minutes === 10)).toBe(true);
+      expect(body.fleet.liveActiveFleetSize).toBe(3);
+    });
+
+    it("falls back to the default template (Sw 4 / So 10 / cooldown 10) when no vehicle is active", async () => {
+      setAdmin({ ...crowd(2), student_leg_decisions: [confirmedLeg(1), confirmedLeg(2)] });
+      mockCrowdTransport(2);
+      const { POST } = await import("./route");
+
+      const body = await (await POST(post({ serviceDate: "2026-09-30", fleetMode: "virtual" }))).json();
+
+      expect(body.status).toBe("preview_ready");
+      expect(body.fleet).toEqual({
+        mode: "virtual", assignmentFleetSize: 2, liveActiveFleetSize: 0,
+        template: { swCapacity: 4, soCapacity: 10, cooldownMinutes: 10 },
+      });
+    });
+
+    it("still fails closed on an invalid live fleet row", async () => {
+      setAdmin({
+        ...crowd(1), student_leg_decisions: [confirmedLeg(1)],
+        vehicles: [{ ...vehicleRow("v1", 2, 2, 10), cooldown_minutes: null }],
+      });
+      const { POST } = await import("./route");
+
+      const body = await (await POST(post({ serviceDate: "2026-09-30", fleetMode: "virtual" }))).json();
+
+      expect(body.reasonCodes).toContain("FLEET_INVALID");
+      expect(optimizerFetchMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("live fleet shortage", () => {
+    it("reports FLEET_SHORTAGE when the optimizer certificate says routes exceed vehicles", async () => {
+      setAdmin({
+        ...crowd(2), vehicles: [vehicleRow("v1", 2, 2, 10), vehicleRow("v2", 2, 2, 10)],
+        student_leg_decisions: [confirmedLeg(1), confirmedLeg(2)],
+      });
+      optimizerFetchMock.mockImplementation(async (path: string) => {
+        if (path === "/api/v1/internal/matrix-snapshot") return Response.json(matrixFor(2));
+        return Response.json({
+          success: false, routes: [],
+          feasibility_certificate: {
+            is_feasible: false, violation_count: 1,
+            violations: [{ type: "fleet_size_violation", severity: "error", details: "2 routes but 1 vehicle" }],
+          },
+        });
+      });
+      const { POST } = await import("./route");
+
+      const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+
+      expect(body.status).toBe("shortage");
+      expect(body.reasonCodes).toContain("FLEET_SHORTAGE");
+      expect(body.reasonCodes).not.toContain("OPTIMIZATION_NOT_SUCCESSFUL");
+      expect(body.publishable).toBe(false);
+    });
+  });
+
+  describe("invalid student records", () => {
+    const withInvalidProfile = (change: Record<string, unknown>) => {
+      const rows = crowd(2);
+      rows.users[1] = { ...rows.users[1]!, ...change };
+      return { ...rows, vehicles: [vehicleRow("v1", 2, 2, 10), vehicleRow("v2", 2, 2, 10)] };
+    };
+
+    it.each([
+      ["missing location_code", { location_code: null }],
+      ["missing disability_type", { disability_type: null }],
+    ])("excludes and counts a student with %s in assume_confirmed mode only", async (_label, change) => {
+      setAdmin(withInvalidProfile(change));
+      mockCrowdTransport(2);
+      const { POST } = await import("./route");
+
+      const assumed = await (await POST(post({ serviceDate: "2026-09-30", admissionMode: "assume_confirmed" }))).json();
+
+      expect(assumed.status).toBe("preview_ready");
+      expect(assumed.reasonCodes).not.toContain("SCHEDULE_DATA_INVALID");
+      expect(assumed.candidateSummary).toMatchObject({ dudulluStudents: 1, invalidStudentRecords: 1 });
+      expect(assumed.candidateSummary.legsByAdmission.confirmed).toBe(2);
+
+      vi.resetModules();
+      setAdmin(withInvalidProfile(change));
+      const { POST: recordedPost } = await import("./route");
+      const recorded = await (await recordedPost(post({ serviceDate: "2026-09-30" }))).json();
+      expect(recorded.reasonCodes).toContain("SCHEDULE_DATA_INVALID");
+      expect(recorded.candidateSummary.invalidStudentRecords).toBe(0);
+    });
+
+    it("still blocks the whole day on integrity errors in assume_confirmed mode", async () => {
+      for (const change of [
+        { users: [crowd(1).users[0], crowd(1).users[0]] },
+        { weekly_schedules: [{ ...crowd(1).weekly_schedules[0], user_id: "someone-else" }] },
+      ]) {
+        setAdmin({ ...crowd(1), vehicles: [vehicleRow("v1", 2, 2, 10)], ...change });
+        const { POST } = await import("./route");
+
+        const body = await (await POST(post({ serviceDate: "2026-09-30", admissionMode: "assume_confirmed" }))).json();
+
+        expect(body.reasonCodes).toContain("SCHEDULE_DATA_INVALID");
+        expect(body.reasonCodes).toContain("NO_ADMITTED_DEMAND");
+        expect(optimizerFetchMock).not.toHaveBeenCalled();
+        vi.resetModules();
+      }
+    });
+  });
+
+  describe("display labels", () => {
+    it("returns no user name and labels occurrences with the location code", async () => {
+      const rows = crowd(2, { name: "Ayse Yilmaz-PRIVATE" });
+      const client = setAdmin({ ...rows, vehicles: [vehicleRow("v1", 2, 2, 10)] });
+      mockCrowdTransport(2);
+      const { POST } = await import("./route");
+
+      const body = await (await POST(post({ serviceDate: "2026-09-30", admissionMode: "assume_confirmed" }))).json();
+
+      expect(JSON.stringify(body)).not.toContain("PRIVATE");
+      expect(JSON.stringify(body)).not.toMatch(/"name"/);
+      expect(client.queries[0]?.columns).not.toContain("name");
+      expect(body.occurrenceLabels).toEqual({
+        "2026-09-30:pickup:student-1": "Sw1", "2026-09-30:dropoff:student-1": "Sw1",
+        "2026-09-30:pickup:student-2": "Sw2", "2026-09-30:dropoff:student-2": "Sw2",
+      });
+    });
+  });
+
+  describe("request contract", () => {
+    it.each([
+      { admissionMode: "everyone" },
+      { fleetMode: "huge" },
+      { admissionMode: null },
+    ])("rejects %j before reading data", async (extra) => {
+      setAdmin();
+      const { POST } = await import("./route");
+
+      const response = await POST(post({ serviceDate: "2026-09-30", ...extra }));
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: "INVALID_MODE" });
+      expect(getSupabaseAdminMock).not.toHaveBeenCalled();
+    });
+
+    it("still requires the administrator before looking at the new fields", async () => {
+      requireAdminMock.mockRejectedValue(AppError.forbidden());
+      const { POST } = await import("./route");
+
+      const response = await POST(post({ serviceDate: "2026-09-30", admissionMode: "assume_confirmed" }));
+
+      expect(response.status).toBe(403);
+      expect(getSupabaseAdminMock).not.toHaveBeenCalled();
+    });
   });
 });

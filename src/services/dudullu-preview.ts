@@ -1,4 +1,4 @@
-import type { DailyTripDemand, TripDirection } from "./daily-planning";
+import type { DailyTripDemand, DemandAdmission, TripDirection } from "./daily-planning";
 import { DUDULLU_CAMPUS } from "./dudullu-campus";
 
 const DEPOT_CODE = DUDULLU_CAMPUS.code;
@@ -71,6 +71,7 @@ export interface PreviewJobInput {
 }
 
 export type PreviewReasonCode =
+  | "ADMISSION_ASSUMED"
   | "ASSIGNMENT_SEARCH_INDETERMINATE"
   | "CERTIFICATE_INVALID"
   | "CLOSING_DEPOT_ARC_MISSING"
@@ -79,6 +80,7 @@ export type PreviewReasonCode =
   | "FLEET_INVALID"
   | "FLEET_SHORTAGE"
   | "JOB_CONTRACT_MISMATCH"
+  | "LEG_DECISIONS_UNAVAILABLE"
   | "LEGACY_AMBIGUOUS_CONFIRMATION"
   | "MATRIX_ARC_MISMATCH"
   | "MATRIX_SNAPSHOT_INVALID"
@@ -172,6 +174,82 @@ export interface BuildDudulluPreviewInput {
   readonly jobs: readonly PreviewJobInput[];
   /** Overrides the assignment search node budget; intended for tests. */
   readonly assignmentSearchNodeBudget?: number;
+}
+
+/**
+ * Demo-only admission rule (owner decision K1, 2026-10-04). A deliberate, owner-approved
+ * exception to ACTIVE_ROADMAP.md's "do not infer consent": every scheduled leg that is
+ * still awaiting a student or administrator decision is treated as confirmed. A recorded
+ * cancellation stays cancelled. The result is a hypothetical, non-publishable preview.
+ */
+export function assumeScheduledLegsConfirmed<T extends { readonly admission: DemandAdmission }>(
+  demands: readonly T[],
+): T[] {
+  return demands.map((demand) =>
+    demand.admission === "pending_student_confirmation" || demand.admission === "pending_admin_approval"
+      ? { ...demand, admission: "confirmed" as const }
+      : demand
+  );
+}
+
+/** Identical-vehicle template for the virtual fleet (owner decision K2, 2026-10-04). */
+export interface VirtualFleetTemplate {
+  readonly swCapacity: number;
+  readonly soCapacity: number;
+  readonly cooldownMinutes: number;
+}
+
+/** Used when no live vehicle is active. The roadmap defines no template of its own. */
+export const DEFAULT_VIRTUAL_FLEET_TEMPLATE: VirtualFleetTemplate = {
+  swCapacity: 4,
+  soCapacity: 10,
+  cooldownMinutes: 10,
+};
+
+/**
+ * The single live vehicle type when all active vehicles share one (Sw, So, cooldown)
+ * signature, otherwise the most common signature; ties go to the largest total capacity,
+ * then to the smaller signature string so the choice is deterministic.
+ */
+export function selectVirtualFleetTemplate(vehicles: readonly PreviewVehicle[]): VirtualFleetTemplate {
+  const groups = new Map<string, { template: VirtualFleetTemplate; count: number }>();
+  for (const vehicle of vehicles) {
+    const template = {
+      swCapacity: vehicle.swCapacity,
+      soCapacity: vehicle.soCapacity,
+      cooldownMinutes: vehicle.cooldownMinutes ?? 0,
+    };
+    const key = `${template.swCapacity}|${template.soCapacity}|${template.cooldownMinutes}`;
+    const group = groups.get(key);
+    if (group) group.count += 1;
+    else groups.set(key, { template, count: 1 });
+  }
+  let best: { key: string; template: VirtualFleetTemplate; count: number } | null = null;
+  for (const [key, group] of groups) {
+    const total = group.template.swCapacity + group.template.soCapacity;
+    const bestTotal = best ? best.template.swCapacity + best.template.soCapacity : -1;
+    if (
+      best === null ||
+      group.count > best.count ||
+      (group.count === best.count && (total > bestTotal || (total === bestTotal && key < best.key)))
+    ) {
+      best = { key, ...group };
+    }
+  }
+  return best?.template ?? DEFAULT_VIRTUAL_FLEET_TEMPLATE;
+}
+
+/** `count` (at least 1) identical vehicles; identical copies keep the assignment search provable. */
+export function buildVirtualFleet(template: VirtualFleetTemplate, count: number): PreviewVehicle[] {
+  const size = Math.max(1, Math.floor(count));
+  const width = String(size).length;
+  const type = `${template.swCapacity}-${template.soCapacity}-${template.cooldownMinutes}`;
+  return Array.from({ length: size }, (_, index) => ({
+    vehicleId: `virtual:${type}:${String(index + 1).padStart(width, "0")}`,
+    swCapacity: template.swCapacity,
+    soCapacity: template.soCapacity,
+    cooldownMinutes: template.cooldownMinutes,
+  }));
 }
 
 class PreviewValidationError extends Error {

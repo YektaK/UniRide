@@ -176,13 +176,14 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
   - `assume_confirmed` modunda karar olmadan devam edilir ve aynı kod bilgi olarak eklenir.
   - Diğer okuma hataları sabit 503 olarak kalır.
 - **Sanal filo (`virtual`):**
+  - **Sahip kararı K2 (2026-10-04) ile güncellendi:** tek bir şablon tipinden N özdeş kopya üretilir (şablon seçimi için §4'e bakın). Karışık tipli filoların atama aramasını tükettiği ölçülmüştür; özdeş filolar hızlı kanıtlanır. Aşağıdaki "her tipten" ifadesi bu karardan önceki taslaktır.
   - Canlı aktif araçların farklı (Sw, So, cooldown) tipleri alınır.
   - Her tipten N kopya üretilir; N, kabul edilen bacak sayısıdır. Kimlikler `virtual:<tip>:<n>` biçimindedir. **Bu tam sanal filo yalnızca DFS atamasına verilir.**
   - `/optimize` çağrısına tam filo gönderilmez. `OptimizationRequest`, `len(vehicles) > policy.max_vehicles` olan istekleri reddeder (varsayılan 50; `optimizer_api/compute_policy.py:29`, `optimizer_api/models/schemas.py:311-312`). Red durumunda route `OPTIMIZATION_NOT_SUCCESSFUL` döner (`route.ts:367-373`).
   - Her dalgada `/optimize` çağrısına en fazla `min(dalgadaki bacak sayısı, 50)` araç gönderilir. Bu sayı tipler arasında sırayla dağıtılır. Sınır route'ta tek bir sabit olarak tutulur ve yorumda `UNIRIDE_COMPUTE_MAX_VEHICLES` ile bağı belirtilir.
   - Bir rota, tek bir tipin karşılamadığı bir Sw/So birleşimi isterse sertifika yine reddedebilir. Bu, M1'in kalıntısıdır ve bilinen bir sınır olarak kabul edilir.
-  - Aktif araç yoksa `FLEET_SHORTAGE` döner.
-  - `vehicleSummary.activeFleetSize` gerçek filo sayısıdır. UI eksik araç sayısını şöyle hesaplar: `minimumVehicles - activeFleetSize`.
+  - Aktif araç yoksa: `live` modunda `FLEET_SHORTAGE` döner; `virtual` modunda varsayılan şablon (Sw 4 / So 10 / cooldown 10) kullanılır (K2).
+  - **K2 ile güncellendi:** `vehicleSummary.activeFleetSize`, atamada gerçekten kullanılan filodur (sanal modda N). Gerçek aktif filo ayrıca üst düzey `fleet.liveActiveFleetSize` alanındadır. UI eksik araç sayısını şöyle hesaplar: `minimumVehicles - fleet.liveActiveFleetSize`.
 - **Temiz eksik filo raporu (`live`):** Optimizer `success=false` döndürür ve sertifikada `fleet_size_violation` varsa sonuç `OPTIMIZATION_NOT_SUCCESSFUL` yerine `shortage` + `FLEET_SHORTAGE` olur (M1'in demodaki etkisi). Bu iş S boyutunu aşarsa ertelenir ve belgelenir.
 - **Kabul:**
   - Testler şunları doğrular:
@@ -250,6 +251,13 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
 
 ## 4. Sahip için karar noktaları
 
+**Sahip kararları (2026-10-04):**
+- **K1 onaylandı:** `assume_confirmed` demo modu, bu bölümdeki (a), (b) ve (c) önerileriyle. `ACTIVE_ROADMAP.md`'nin "onay çıkarımı yapma" kuralına **bilinçli, sahip onaylı bir istisnadır**: yalnızca önizleme içindir, DB'ye hiçbir şey yazmaz ve yayınlanamaz (`publishable: false`).
+- **K2 onaylandı:** demoda `fleetMode: "virtual"` varsayılandır (`live` da desteklenir). Sanal filo, aktif araçların tek bir şablon tipinin N özdeş kopyasıdır: tüm aktif araçlar aynı (Sw, So, cooldown) imzasındaysa o tip, değilse en yaygın imza (eşitlikte toplam kapasitesi en büyük olan). Aktif araç yoksa Sw 4 / So 10 / cooldown 10 şablonu kullanılır. N, o günün kabul edilen bacak sayısıdır. API'nin kendi varsayılanı `live` olarak kalır (mevcut sözleşme ve testler değişmez); demo arayüzü (D2) `virtual` gönderir.
+- **K3:** demo tarihini sahip demo sırasında seçer.
+- **K4 onaylandı:** yanıtta öğrenci adı yoktur. Not: canlı DB'deki öğrenci adları kod benzeri değildir; bu yüzden gösterim etiketi olarak konum kodu (`So1`, `Sw3` gibi) kullanılır. Yanıtta bunun için `occurrenceLabels` (occurrenceId -> konum kodu) bulunur.
+- D0 (2026-10-04): data GO — 28 students, 812/812 matrix arcs, 1 active vehicle, `student_leg_decisions` table absent.
+
 **Belirlenmiş varsayılanlar (ayrı karar gerektirmez):**
 - Pickup ve dropoff birlikte planlanır. Fiziksel araç ataması zaten günü bütün olarak ele alır (`dudullu-preview.ts:654`). UI'da yön filtresi olur.
 - D1b'de `:567` testi `indeterminate` yerine kanıtlı `shortage` bekleyecek şekilde güncellenir. Bütçe tükenme dalı ayrı bir testle korunur.
@@ -313,10 +321,10 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
 
 | ID | Başlık | Durum | Önerilen dal | Bağımlılık |
 |---|---|---|---|---|
-| D0 | Ortam, canlı veri envanteri ve devam/dur kararı (+ isteğe bağlı launcher `.venv-jit`) | PLANNED | `chore/demo-d0-launcher-venv-jit` (yalnızca kod gerekirse) | sahip |
-| D1a | H5 tek DataLoader kökü ve refresh | PLANNED | `fix/demo-d1a-h5-single-loader` | D0 |
-| D1b | `vehicleSummary`, alt sınır ve simetri kırma | PLANNED | `feat/demo-d1b-vehicle-summary` | — |
-| D1c | `assume_confirmed`, sanal filo, `LEG_DECISIONS_UNAVAILABLE`, temiz eksik filo raporu | PLANNED | `feat/demo-d1c-admission-fleet-modes` | D1b, K1, K2 |
+| D0 | Ortam, canlı veri envanteri ve devam/dur kararı (+ isteğe bağlı launcher `.venv-jit`) | Launcher düzeltmesi DONE (merge `0dc2616`); canlı envanter tamamlandı (bkz. §4) | `chore/demo-d0-launcher-venv-jit` (yalnızca kod gerekirse) | sahip |
+| D1a | H5 tek DataLoader kökü ve refresh | DONE (merge `5796d93`) | `fix/demo-d1a-h5-single-loader` | D0 |
+| D1b | `vehicleSummary`, alt sınır ve simetri kırma | DONE (merge `b9f6655`) | `feat/demo-d1b-vehicle-summary` | — |
+| D1c | `assume_confirmed`, sanal filo, `LEG_DECISIONS_UNAVAILABLE`, temiz eksik filo raporu | IMPLEMENTED, birleştirme bekliyor (K1, K2, K4 sahip kararı 2026-10-04) | `feat/demo-d1c-admission-fleet-modes` | D1b, K1, K2 |
 | D2 | `/admin/daily-plan` sayfası, görünüm modeli, `adminApi.preview`, kenar çubuğu, i18n | PLANNED | `feat/demo-d2-daily-plan-page` | D1b, D1c |
 | D3 | Sınırlama etiketleri, kılavuz ve elle demo | PLANNED | `docs/demo-d3-runbook` | D0–D2, K3, K4 |
 

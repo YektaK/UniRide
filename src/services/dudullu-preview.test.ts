@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { buildDudulluPreview } from "./dudullu-preview";
+import {
+  DEFAULT_VIRTUAL_FLEET_TEMPLATE,
+  assumeScheduledLegsConfirmed,
+  buildDudulluPreview,
+  buildVirtualFleet,
+  selectVirtualFleetTemplate,
+} from "./dudullu-preview";
 import type {
   MatrixSnapshot,
   PreviewDemand,
@@ -904,5 +910,55 @@ describe("vehicle summary and honest assignment termination", () => {
     const blocked = build([item], [job([item], normalRoute("occ-1"))], { ...baseMatrix, arcs: [] });
     expect(blocked.status).toBe("blocked_data");
     expect(blocked.vehicleSummary).toBeNull();
+  });
+});
+
+describe("demo helpers (K1 admission assumption, K2 virtual fleet)", () => {
+  const vehicleOf = (id: string, sw: number, so: number, cooldownMinutes?: number): PreviewVehicle =>
+    ({ vehicleId: id, swCapacity: sw, soCapacity: so, cooldownMinutes });
+
+  it("assumes pending legs confirmed but keeps recorded cancellations and approvals", () => {
+    const base = demand("occ-1");
+    const output = assumeScheduledLegsConfirmed([
+      { ...base, admission: "pending_student_confirmation" as const },
+      { ...base, admission: "pending_admin_approval" as const },
+      { ...base, admission: "cancelled" as const },
+      { ...base, admission: "approved" as const },
+      { ...base, admission: "confirmed" as const },
+    ]);
+    expect(output.map((item) => item.admission)).toEqual([
+      "confirmed", "confirmed", "cancelled", "approved", "confirmed",
+    ]);
+  });
+
+  it("uses the single live vehicle type as the virtual template", () => {
+    expect(selectVirtualFleetTemplate([vehicleOf("a", 2, 8, 10), vehicleOf("b", 2, 8, 10)]))
+      .toEqual({ swCapacity: 2, soCapacity: 8, cooldownMinutes: 10 });
+  });
+
+  it("uses the most common signature when live types are mixed", () => {
+    const template = selectVirtualFleetTemplate([
+      vehicleOf("a", 4, 12, 5), vehicleOf("b", 2, 8, 10), vehicleOf("c", 2, 8, 10),
+    ]);
+    expect(template).toEqual({ swCapacity: 2, soCapacity: 8, cooldownMinutes: 10 });
+  });
+
+  it("breaks a count tie by largest total capacity", () => {
+    const template = selectVirtualFleetTemplate([vehicleOf("a", 2, 8, 10), vehicleOf("b", 4, 12, 5)]);
+    expect(template).toEqual({ swCapacity: 4, soCapacity: 12, cooldownMinutes: 5 });
+  });
+
+  it("treats a missing cooldown as zero and falls back to the default template without vehicles", () => {
+    expect(selectVirtualFleetTemplate([vehicleOf("a", 1, 2)]).cooldownMinutes).toBe(0);
+    expect(selectVirtualFleetTemplate([])).toEqual(DEFAULT_VIRTUAL_FLEET_TEMPLATE);
+    expect(DEFAULT_VIRTUAL_FLEET_TEMPLATE).toEqual({ swCapacity: 4, soCapacity: 10, cooldownMinutes: 10 });
+  });
+
+  it("builds identical copies with unique ids and at least one vehicle", () => {
+    const fleet = buildVirtualFleet({ swCapacity: 2, soCapacity: 8, cooldownMinutes: 10 }, 12);
+    expect(fleet).toHaveLength(12);
+    expect(new Set(fleet.map((item) => item.vehicleId)).size).toBe(12);
+    expect(new Set(fleet.map((item) => `${item.swCapacity}|${item.soCapacity}|${item.cooldownMinutes}`)).size).toBe(1);
+    expect(buildVirtualFleet(DEFAULT_VIRTUAL_FLEET_TEMPLATE, 0)).toHaveLength(1);
   });
 });

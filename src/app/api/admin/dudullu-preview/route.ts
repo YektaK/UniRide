@@ -7,19 +7,45 @@ import {
   isBlockingLegacyRequestStatus,
   isDudulluCampus,
   serviceDayOfWeek,
+  type DemandAdmission,
   type StudentLegDecision,
   type TripDirection,
 } from "@/services/daily-planning";
-import { buildDudulluPreview, type PreviewDemand } from "@/services/dudullu-preview";
+import {
+  assumeScheduledLegsConfirmed,
+  buildDudulluPreview,
+  buildVirtualFleet,
+  selectVirtualFleetTemplate,
+  type PreviewDemand,
+  type VirtualFleetTemplate,
+} from "@/services/dudullu-preview";
 import type { MatrixSnapshot, PreviewJobInput, PreviewOptimizationResult, PreviewVehicle, PreviewReasonCode } from "@/services/dudullu-preview";
 import { isRealServiceDate, serviceDateBounds } from "@/services/istanbul-service-date";
 import { DUDULLU_DEPOT } from "@/services/dudullu-campus";
 import { optimizerFetch } from "@/lib/optimizer-server";
 
 const NO_STORE_HEADERS = { "cache-control": "private, no-store" };
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const ADMISSION_MODES = ["recorded", "assume_confirmed"] as const;
+const FLEET_MODES = ["live", "virtual"] as const;
+type AdmissionMode = (typeof ADMISSION_MODES)[number];
+type FleetMode = (typeof FLEET_MODES)[number];
 const SERVICE_DATE_SCHEMA = z.object({
-  serviceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  serviceDate: z.string().regex(DATE_PATTERN),
+  admissionMode: z.enum(ADMISSION_MODES).optional(),
+  fleetMode: z.enum(FLEET_MODES).optional(),
 }).strict();
+
+/**
+ * Largest vehicle list sent to one /optimize call. Mirrors the optimizer policy cap
+ * (`UNIRIDE_COMPUTE_MAX_VEHICLES`, default 50: optimizer_api/compute_policy.py and
+ * optimizer_api/models/schemas.py). The full virtual fleet is only given to the physical
+ * assignment search, never to /optimize.
+ */
+const OPTIMIZER_MAX_VEHICLES = 50;
+
+// Postgres "undefined_table" and PostgREST "table not found in the schema cache".
+const MISSING_RELATION_CODES = new Set(["42P01", "PGRST205"]);
 
 const scheduleEntrySchema = z.object({
   id: z.string().min(1),
@@ -66,12 +92,29 @@ function isRow(value: unknown): value is DataRow {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+const isRecord = isRow;
+
 async function selectRows(query: PromiseLike<QueryResult>): Promise<DataRow[]> {
   const { data, error } = await query;
   if (error || !Array.isArray(data) || !data.every(isRow)) {
     throw new Error("preview read failed");
   }
   return data;
+}
+
+/** Like `selectRows`, but reports a missing relation (not any other failure) as `null`. */
+async function selectRowsOrMissingRelation(query: PromiseLike<QueryResult>): Promise<DataRow[] | null> {
+  const { data, error } = await query;
+  if (isRow(error) && typeof error.code === "string" && MISSING_RELATION_CODES.has(error.code)) return null;
+  if (error || !Array.isArray(data) || !data.every(isRow)) {
+    throw new Error("preview read failed");
+  }
+  return data;
+}
+
+function violatesFleetSize(certificate: unknown): boolean {
+  if (!isRow(certificate) || !Array.isArray(certificate.violations)) return false;
+  return certificate.violations.some((violation) => isRow(violation) && violation.type === "fleet_size_violation");
 }
 
 function nonBlankString(value: unknown): value is string {
@@ -121,7 +164,49 @@ function nodeMaps(demands: readonly PreviewDemand[]) {
   return { nodeToLocation, nodeToOccurrence };
 }
 
-async function loadBlockedPreview(serviceDate: string) {
+const ADMISSION_KEYS: readonly DemandAdmission[] = [
+  "confirmed", "approved", "pending_student_confirmation", "pending_admin_approval", "cancelled",
+];
+
+interface PreviewModes {
+  readonly admissionMode: AdmissionMode;
+  readonly fleetMode: FleetMode;
+}
+
+async function loadBlockedPreview(serviceDate: string, modes: PreviewModes) {
+  const { admissionMode, fleetMode } = modes;
+  // K1 (owner decision, 2026-10-04): a deliberate, owner-approved exception to
+  // ACTIVE_ROADMAP.md's "do not infer consent". It is preview-only: nothing is written,
+  // the response is labelled hypothetical and publishable stays false.
+  const assumeConfirmed = admissionMode === "assume_confirmed";
+  const hypothetical = assumeConfirmed || fleetMode !== "live";
+  const candidateSummary = {
+    dudulluStudents: 0,
+    legsByAdmission: Object.fromEntries(ADMISSION_KEYS.map((key) => [key, 0])) as Record<DemandAdmission, number>,
+    invalidStudentRecords: 0,
+  };
+  const occurrenceLabels: Record<string, string> = {};
+  const fleetInfo: {
+    mode: FleetMode;
+    assignmentFleetSize: number | null;
+    liveActiveFleetSize: number | null;
+    template: VirtualFleetTemplate | null;
+  } = { mode: fleetMode, assignmentFleetSize: null, liveActiveFleetSize: null, template: null };
+  const extraReasons: PreviewReasonCode[] = [];
+  if (assumeConfirmed) extraReasons.push("ADMISSION_ASSUMED");
+
+  // Every response, including blocked ones, carries the same labelling. Display labels are
+  // location codes only; no user names are read or returned (K4).
+  const finish = <T extends ReturnType<typeof buildDudulluPreview>>(result: T) => ({
+    ...withReasonCodes(result, extraReasons),
+    admissionMode,
+    fleetMode,
+    hypothetical,
+    candidateSummary,
+    fleet: fleetInfo,
+    occurrenceLabels,
+  });
+
   const client = getSupabaseAdmin();
   const users = await selectRows(
     client.from("users")
@@ -196,7 +281,10 @@ async function loadBlockedPreview(serviceDate: string) {
       !nonBlankString(user.location_code) ||
       (user.disability_type !== "Sw" && user.disability_type !== "So")
     ) {
-      scheduleDataInvalid = true;
+      // Profile-level defect: the demo mode drops this student and counts it; otherwise the
+      // whole day stays blocked. Integrity errors (duplicates, dangling schedules) always block.
+      if (assumeConfirmed) candidateSummary.invalidStudentRecords += 1;
+      else scheduleDataInvalid = true;
       continue;
     }
 
@@ -209,17 +297,26 @@ async function loadBlockedPreview(serviceDate: string) {
     });
   }
 
-  const extraReasons: Array<ReturnType<typeof buildDudulluPreview>["reasonCodes"][number]> = [];
+  candidateSummary.dudulluStudents = candidates.length;
   const decisionsByStudent = new Map<string, Partial<Record<TripDirection, StudentLegDecision>>>();
   const blockedStudents = new Set<string>();
   if (dudulluStudentIds.size > 0) {
-    const decisionRows = await selectRows(
+    const decisionRows = await selectRowsOrMissingRelation(
       client.from("student_leg_decisions")
         .select("user_id, service_date, direction, decision, decided_at, flexibility_minutes")
         .in("user_id", [...dudulluStudentIds])
         .eq("service_date", serviceDate),
     );
-    for (const raw of decisionRows) {
+    if (decisionRows === null) {
+      // The table does not exist (true on the live DB today). Recorded admission cannot be
+      // evaluated at all; the demo mode proceeds without recorded decisions.
+      extraReasons.push("LEG_DECISIONS_UNAVAILABLE");
+      if (!assumeConfirmed) {
+        if (scheduleDataInvalid) extraReasons.push("SCHEDULE_DATA_INVALID");
+        return finish(blockedPreview(serviceDate, [], null, "LEG_DECISIONS_UNAVAILABLE"));
+      }
+    }
+    for (const raw of decisionRows ?? []) {
       const parsed = decisionRowSchema.safeParse(raw);
       if (!parsed.success || !dudulluStudentIds.has(parsed.data.user_id) || parsed.data.service_date !== serviceDate) {
         scheduleDataInvalid = true;
@@ -267,17 +364,20 @@ async function loadBlockedPreview(serviceDate: string) {
         scheduleEntries: candidate.entries,
         decisions: decisionsByStudent.get(candidate.studentId),
       }).demands;
-      demands.push(...scheduleDemands.map((demand) => ({
+      const typed = scheduleDemands.map((demand) => ({
         ...demand,
-        admission: blockedStudents.has(candidate.studentId) && demand.admission === "confirmed"
+        // In the demo mode legacy blockers do not downgrade a leg; the info code below remains.
+        admission: !assumeConfirmed && blockedStudents.has(candidate.studentId) && demand.admission === "confirmed"
           ? "pending_admin_approval" as const
           : demand.admission,
         disabilityType: candidate.disabilityType,
-      })));
+      }));
+      demands.push(...(assumeConfirmed ? assumeScheduledLegsConfirmed(typed) : typed));
     } catch {
       scheduleDataInvalid = true;
     }
   }
+  for (const demand of demands) candidateSummary.legsByAdmission[demand.admission] += 1;
   if (demands.some((demand) => demand.admission === "pending_student_confirmation")) {
     extraReasons.push("PENDING_STUDENT_CONFIRMATION");
   }
@@ -286,15 +386,16 @@ async function loadBlockedPreview(serviceDate: string) {
 
   const admitted = scheduleDataInvalid ? [] : demands.filter((demand) => demand.admission === "confirmed" || demand.admission === "approved");
   if (admitted.length === 0) {
-    return withReasonCodes(buildDudulluPreview({ serviceDate, demands: [], vehicles: [], matrix: null, jobs: [] }), extraReasons);
+    return finish(buildDudulluPreview({ serviceDate, demands: [], vehicles: [], matrix: null, jobs: [] }));
   }
+  for (const demand of admitted) occurrenceLabels[demand.occurrenceId] = demand.locationCode;
 
   const vehicleRows = await selectRows(
     client.from("vehicles")
       .select("id, wheelchair_capacity, seating_capacity, cooldown_minutes, status")
       .eq("status", "active"),
   );
-  const vehicles: PreviewVehicle[] = [];
+  const liveVehicles: PreviewVehicle[] = [];
   const vehicleIds = new Set<string>();
   for (const row of vehicleRows) {
     if (
@@ -302,18 +403,28 @@ async function loadBlockedPreview(serviceDate: string) {
       !Number.isInteger(row.wheelchair_capacity) || (row.wheelchair_capacity as number) < 0 ||
       !Number.isInteger(row.seating_capacity) || (row.seating_capacity as number) < 0 ||
       !Number.isInteger(row.cooldown_minutes) || (row.cooldown_minutes as number) < 0
-    ) return withReasonCodes(blockedPreview(serviceDate, admitted, null, "FLEET_INVALID"), extraReasons);
+    ) return finish(blockedPreview(serviceDate, admitted, null, "FLEET_INVALID"));
     vehicleIds.add(row.id);
-    vehicles.push({
+    liveVehicles.push({
       vehicleId: row.id,
       swCapacity: row.wheelchair_capacity as number,
       soCapacity: row.seating_capacity as number,
       cooldownMinutes: row.cooldown_minutes as number,
     });
   }
-  if (vehicles.length === 0) {
-    return withReasonCodes(blockedPreview(serviceDate, admitted, null, "FLEET_SHORTAGE"), extraReasons);
+  fleetInfo.liveActiveFleetSize = liveVehicles.length;
+  if (fleetMode === "live" && liveVehicles.length === 0) {
+    return finish(blockedPreview(serviceDate, admitted, null, "FLEET_SHORTAGE"));
   }
+  // K2 (owner decision, 2026-10-04): the virtual fleet is N identical copies of one template
+  // vehicle, N = admitted legs of the day. Identical copies keep the assignment search provable.
+  // `vehicles` is the fleet used for the physical assignment; /optimize gets a capped slice.
+  let vehicles = liveVehicles;
+  if (fleetMode === "virtual") {
+    fleetInfo.template = selectVirtualFleetTemplate(liveVehicles);
+    vehicles = buildVirtualFleet(fleetInfo.template, admitted.length);
+  }
+  fleetInfo.assignmentFleetSize = vehicles.length;
 
   let matrix: MatrixSnapshot;
   try {
@@ -328,7 +439,7 @@ async function loadBlockedPreview(serviceDate: string) {
     }
     matrix = parsed.data;
   } catch {
-    return withReasonCodes(blockedPreview(serviceDate, admitted, null, "MATRIX_UNAVAILABLE"), extraReasons);
+    return finish(blockedPreview(serviceDate, admitted, null, "MATRIX_UNAVAILABLE"));
   }
 
   const groups = new Map<string, PreviewDemand[]>();
@@ -341,6 +452,10 @@ async function loadBlockedPreview(serviceDate: string) {
   const jobs: PreviewJobInput[] = [];
   for (const group of groups.values()) {
     const first = group[0]!;
+    // Virtual: at most min(legs in the wave, policy cap) identical vehicles per call.
+    const waveVehicles = fleetMode === "virtual"
+      ? vehicles.slice(0, Math.min(group.length, OPTIMIZER_MAX_VEHICLES))
+      : vehicles;
     let result: PreviewOptimizationResult;
     try {
       const response = await optimizerFetch("/api/v1/optimize", {
@@ -350,15 +465,15 @@ async function loadBlockedPreview(serviceDate: string) {
           direction: first.direction, target_time: exactClock(first.anchorMinutes),
           expected_matrix_sha256: matrix.sha256, use_time_windows: false,
           is_asymmetric: true, max_travel_time: 120,
-          sw_capacity: Math.max(0, ...vehicles.map((vehicle) => vehicle.swCapacity)),
-          so_capacity: Math.max(0, ...vehicles.map((vehicle) => vehicle.soCapacity)),
+          sw_capacity: Math.max(0, ...waveVehicles.map((vehicle) => vehicle.swCapacity)),
+          so_capacity: Math.max(0, ...waveVehicles.map((vehicle) => vehicle.soCapacity)),
           depot: DUDULLU_DEPOT,
           students: group.map((demand) => ({
             id: demand.occurrenceId, occurrence_id: demand.occurrenceId,
             name: demand.studentId, location_code: demand.locationCode,
             disability_type: demand.disabilityType,
           })),
-          vehicles: vehicles.map((vehicle) => ({
+          vehicles: waveVehicles.map((vehicle) => ({
             vehicle_id: vehicle.vehicleId, sw_capacity: vehicle.swCapacity,
             so_capacity: vehicle.soCapacity, cooldown_minutes: vehicle.cooldownMinutes,
           })),
@@ -369,7 +484,13 @@ async function loadBlockedPreview(serviceDate: string) {
       if (!parsed.success) throw new Error("optimizer result invalid");
       result = parsed.data;
     } catch {
-      return withReasonCodes(blockedPreview(serviceDate, admitted, matrix, "OPTIMIZATION_NOT_SUCCESSFUL"), extraReasons);
+      return finish(blockedPreview(serviceDate, admitted, matrix, "OPTIMIZATION_NOT_SUCCESSFUL"));
+    }
+    if (fleetMode === "live" && !result.success && violatesFleetSize(result.feasibility_certificate)) {
+      // The solver needs more routes than the real fleet has vehicles: report the shortage
+      // instead of a generic optimization failure. Not applied to the virtual fleet, where
+      // the vehicle list is capped by the optimizer policy and not by the real fleet.
+      return finish({ ...blockedPreview(serviceDate, admitted, matrix, "FLEET_SHORTAGE"), status: "shortage" as const });
     }
     jobs.push({
       id: `${serviceDate}:${first.direction}:${first.anchorMinutes}`,
@@ -377,7 +498,7 @@ async function loadBlockedPreview(serviceDate: string) {
       demands: group, ...nodeMaps(group), result,
     });
   }
-  return withReasonCodes(buildDudulluPreview({ serviceDate, demands: admitted, vehicles, matrix, jobs }), extraReasons);
+  return finish(buildDudulluPreview({ serviceDate, demands: admitted, vehicles, matrix, jobs }));
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -397,12 +518,25 @@ export async function POST(request: Request): Promise<Response> {
     return json({ error: "INVALID_SERVICE_DATE" }, 400);
   }
   const parsed = SERVICE_DATE_SCHEMA.safeParse(parsedBody);
-  if (!parsed.success || !isRealServiceDate(parsed.data.serviceDate)) {
+  if (!parsed.success) {
+    // A valid body with only a bad mode value gets its own code; everything else keeps the
+    // original contract (including rejection of unknown fields).
+    const onlyModeIssues = parsed.error.issues.every(
+      (issue) => issue.path[0] === "admissionMode" || issue.path[0] === "fleetMode",
+    );
+    const dateOk = isRecord(parsedBody) && typeof parsedBody.serviceDate === "string" &&
+      DATE_PATTERN.test(parsedBody.serviceDate) && isRealServiceDate(parsedBody.serviceDate);
+    return json({ error: onlyModeIssues && dateOk ? "INVALID_MODE" : "INVALID_SERVICE_DATE" }, 400);
+  }
+  if (!isRealServiceDate(parsed.data.serviceDate)) {
     return json({ error: "INVALID_SERVICE_DATE" }, 400);
   }
 
   try {
-    return json(await loadBlockedPreview(parsed.data.serviceDate), 200);
+    return json(await loadBlockedPreview(parsed.data.serviceDate, {
+      admissionMode: parsed.data.admissionMode ?? "recorded",
+      fleetMode: parsed.data.fleetMode ?? "live",
+    }), 200);
   } catch {
     return json({ error: "PREVIEW_UNAVAILABLE" }, 503);
   }

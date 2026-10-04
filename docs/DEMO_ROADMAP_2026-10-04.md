@@ -86,6 +86,7 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
 - **Kabul ölçütleri:**
   - `/health` ve `/admin/readiness` yanıt verir.
   - Tam gün önizleme süresi (anchor sayısı ve toplam saniye) ölçülmüş ve lider notuna yazılmıştır. D2'deki istemci zaman aşımı bu ölçüme göre belirlenir, örneğin ölçülen en uzun süre × 1,5. 120 sn bir varsayımdır, ölçülmüş bir değer değildir.
+    - **Ölçüldü (2026-10-04, yerel çalıştırma):** tam gün önizleme (27 öğrenci, 12 dalga) uçtan uca **17,7 sn**. İstemci zaman aşımı yaklaşık 3 katı olarak 60 sn'ye ayarlandı (`DAILY_PLAN_TIMEOUT_MS`, `src/lib/admin-api.ts`).
   - Envanter tablosu (yalnızca sayımlar, kişisel veri yok) lider notuna yazılır.
   - Devam/dur kararı yazılıdır. Devam için şunların hepsi gerekir:
     - en az 1 kullanılabilir aktif araç;
@@ -306,10 +307,10 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
 
 ## 6. Uçtan uca elle demo kontrol listesi (D3)
 
-1. Ana checkout `WIP` dalında ve D0–D2 birleştirilmiş durumda. `UNIRIDE_PYTHON` ayarlı. `npm run dev:dudullu` iki sürecin de hazır olduğunu basar.
+1. Ana checkout `WIP` dalında ve D0–D2 birleştirilmiş durumda. Launcher `.venv-jit`'i kendisi bulur (`UNIRIDE_PYTHON` yalnızca geçersiz kılmak içindir). `npm run dev:dudullu` iki sürecin de hazır olduğunu basar.
 2. Admin olarak giriş yapılır. Kenar çubuğunda "Günlük Plan" görünür.
 3. `/admin/readiness` sayfasında matris eksik arc sayısı 0'dır.
-4. K3 tarihi seçilir, iki anahtar açılır, Çalıştır'a basılır. D0'da ölçülen süre içinde `preview_ready` görünür.
+4. K3 tarihi seçilir (Pazartesi en çok öğrenciye sahiptir), iki anahtar açılır, "Planı oluştur"a basılır. D0'da ölçülen süre içinde (yaklaşık 18 sn; zaman aşımı 60 sn) `preview_ready` görünür.
 5. Kartlar kontrol edilir:
    - "Bu rotalar için gereken araç" kartında `minimumProven` doğrudur, yani "en fazla" etiketi yoktur;
    - öğrenci ve rota sayıları `candidateSummary` ile tutarlıdır;
@@ -317,7 +318,7 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
 6. Her dalgada duraklar sıralıdır. Saatler pickup'ta anchor'da biter, dropoff'ta anchor'da başlar.
 7. Araç tablosunda aynı araçtaki rotalar çakışmaz ve aralarında cooldown kadar boşluk vardır.
 8. Anahtarlar kapatılıp tekrar çalıştırılır. Beklenen sonuç `PENDING_STUDENT_CONFIRMATION` ile boş gündür (kayıt yoksa). Bu, canlı veriye hiçbir şey yazılmadığını gösterir.
-9. "Yayınlanamaz" ve sınırlama etiketleri görünür. Ekran görüntülerinde öğrenci adı yoktur.
+9. "Yayınlanamaz" başlığı ve sabit "Bilinen sınırlamalar" kutusu görünür. İki anahtar ve "Planı oluştur" düğmesi belirgin görünür (anahtarlar iki durumda da ayırt edilir, düğme dolgulu birincil renktedir). Ekran görüntülerinde öğrenci adı yoktur.
 
 ## 7. İzleyici
 
@@ -327,7 +328,7 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
 | D1a | H5 tek DataLoader kökü ve refresh | DONE (merge `5796d93`) | `fix/demo-d1a-h5-single-loader` | D0 |
 | D1b | `vehicleSummary`, alt sınır ve simetri kırma | DONE (merge `b9f6655`) | `feat/demo-d1b-vehicle-summary` | — |
 | D1c | `assume_confirmed`, sanal filo, `LEG_DECISIONS_UNAVAILABLE`, temiz eksik filo raporu | IMPLEMENTED, birleştirme bekliyor (K1, K2, K4 sahip kararı 2026-10-04) | `feat/demo-d1c-admission-fleet-modes` | D1b, K1, K2 |
-| D2 | `/admin/daily-plan` sayfası, görünüm modeli, `adminApi.preview`, kenar çubuğu, i18n | PLANNED | `feat/demo-d2-daily-plan-page` | D1b, D1c |
-| D3 | Sınırlama etiketleri, kılavuz ve elle demo | PLANNED | `docs/demo-d3-runbook` | D0–D2, K3, K4 |
+| D2 | `/admin/daily-plan` sayfası, görünüm modeli, `adminApi.preview`, kenar çubuğu, i18n | DONE (merge `ab92691`) | `feat/demo-d2-daily-plan-page` | D1b, D1c |
+| D3 | Sınırlama etiketleri, kılavuz ve elle demo | IMPLEMENTED (sabit sınırlama kutusu, çalıştırma kılavuzu, tema renk düzeltmesi, 60 sn zaman aşımı; birleştirme bekliyor). Bölüm 6'daki elle kontrol listesi henüz işaretlenmedi: sahip/koordinatör canlı veriyle çalıştırır | `feat/d3-demo-polish` | D0–D2, K3, K4 |
 
 D1a ve D1b paralel ilerleyebilir; D1c, D1b'nin tipleri üzerine kurulur. Her birleştirmeden önce odaklı testler çalıştırılır ve ardından `npm run typecheck` ile `npm run lint` geçmelidir. Atlanan kontroller birleştirme notunda açıkça yazılır.

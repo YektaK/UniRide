@@ -122,6 +122,9 @@ def _optimization_failure(
 
 def _matrix_snapshot_for_request(request: OptimizationRequest) -> dict:
     loader = DataLoader.get_instance()
+    # H5: a TTL-expired solver copy must be refreshed before the binding check,
+    # otherwise a bound request right after a fresh snapshot fails closed.
+    loader.refresh()
     return loader.repository.matrix_snapshot(
         student_locations=[student.location_code for student in request.students],
         depot_code=request.depot.id,

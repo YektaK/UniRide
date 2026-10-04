@@ -42,10 +42,15 @@ class _Repository:
 
 class _DataLoader:
     repository = None
+    refresh_calls = 0
 
     @classmethod
     def get_instance(cls):
         return cls
+
+    @classmethod
+    def refresh(cls, force=False):
+        cls.refresh_calls += 1
 
 
 def _snapshot(digest):

@@ -7,14 +7,13 @@ from fastapi.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
 
-try:
-    from optimizer_api.auth import require_internal_api_key
-    from optimizer_api.utils.data_loader import DataLoader
-    from optimizer_api.utils.matrix_repository import MatrixSnapshotError
-except ModuleNotFoundError:  # direct-module compatibility
-    from auth import require_internal_api_key
-    from utils.data_loader import DataLoader
-    from utils.matrix_repository import MatrixSnapshotError
+# H5: one import root. The optimizer router and every strategy import
+# ``utils.data_loader``; importing the same module through the
+# ``optimizer_api.`` package path would create a second DataLoader class and a
+# second singleton (and a second matrix cache with its own TTL).
+from auth import require_internal_api_key
+from utils.data_loader import DataLoader
+from utils.matrix_repository import MatrixSnapshotError
 
 router = APIRouter(
     prefix="/api/v1/internal",

@@ -24,8 +24,8 @@ describe("tailwind theme colors", () => {
 
   it("never wraps a variable in hsl() or rgb()", () => {
     for (const { name, value } of colors) {
-      const plain = typeof value === "function" ? value({}) : value;
-      const faded = typeof value === "function" ? value({ opacityValue: "0.5" }) : value;
+      const plain = typeof value === "function" ? value({}) : (value as string);
+      const faded = typeof value === "function" ? value({ opacityValue: "0.5" }) : (value as string);
       expect(plain, name).not.toMatch(/\b(hsl|rgb)a?\(/);
       expect(faded, name).not.toMatch(/\b(hsl|rgb)a?\(/);
     }
@@ -43,7 +43,7 @@ describe("tailwind theme colors", () => {
     const rootBlock = globalsCss.slice(globalsCss.indexOf(":root"), globalsCss.indexOf(".dark"));
     const darkBlock = globalsCss.slice(globalsCss.indexOf(".dark"));
     for (const { name, value } of colors) {
-      const resolved = typeof value === "function" ? value({}) : value;
+      const resolved = typeof value === "function" ? value({}) : (value as string);
       const variable = /^var\((--[\w-]+)\)$/.exec(resolved)?.[1];
       expect(variable, name).toBeTruthy();
       expect(rootBlock, `${name} -> ${variable}`).toContain(`${variable}:`);

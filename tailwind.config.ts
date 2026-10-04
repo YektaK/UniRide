@@ -6,14 +6,16 @@ import type { Config } from "tailwindcss";
  * (bg-primary, bg-input, bg-background, ...) rendered as transparent. Use the variable as-is and
  * express Tailwind opacity modifiers (bg-primary/90) with color-mix.
  */
-function themeColor(variable: string) {
-  return ({ opacityValue }: { opacityValue?: string }) => {
+function themeColor(variable: string): string {
+  const color = ({ opacityValue }: { opacityValue?: string }) => {
     if (opacityValue === undefined) return `var(${variable})`;
     const percent = Number.parseFloat(opacityValue) * 100;
     return Number.isNaN(percent)
       ? `var(${variable})`
       : `color-mix(in oklab, var(${variable}) ${percent}%, transparent)`;
   };
+  // Tailwind accepts a function at runtime; its bundled type only models plain strings.
+  return color as unknown as string;
 }
 
 export default {

@@ -45,6 +45,7 @@
       "rideRequests": "Servis Talepleri",
       "driverAssignments": "Şoför Görevlendirmeleri",
       "vehiclePlanning": "Araç Planlama",
+      "dailyPlan": "Günlük Plan",
       "dudulluReadiness": "Dudullu Hazırlık",
       "sandbox": "Planlama Simülasyonu",
       "algorithmCompare": "Algoritma Karşılaştırma",
@@ -225,6 +226,140 @@
       }
     },
     "admin": {
+      "dailyPlan": {
+        "title": "Günlük Plan",
+        "description": "Seçilen gün için öğrenci servis rotalarını ve bu rotalar için gereken araç sayısını görün.",
+        "controls": {
+          "date": "Tarih",
+          "assumeConfirmed": "Öğrenci onaylarını varsay (demo)",
+          "assumeConfirmedHint": "Onay bekleyen tüm seferler onaylı sayılır; kayıtlı iptaller korunur.",
+          "virtualFleet": "Sanal filo (gereken araç)",
+          "virtualFleetOn": "Özdeş araçlardan oluşan sanal filo kullanılır; gereken araç sayısı hesaplanır.",
+          "virtualFleetOff": "Mevcut filo: yalnızca sistemdeki aktif araçlar kullanılır.",
+          "run": "Planı oluştur",
+          "running": "Plan hazırlanıyor..."
+        },
+        "initial": "Bir tarih seçip \"Planı oluştur\" düğmesine basın.",
+        "loading": "Plan hazırlanıyor. Çözücü her dalga için sırayla çalışır; bu birkaç dakika sürebilir.",
+        "emptyDay": {
+          "title": "Bu gün için planlanacak sefer yok",
+          "text": "Seçilen günde Dudullu'ya giden veya dönen onaylı öğrenci seferi bulunamadı. Başka bir tarih deneyin."
+        },
+        "errors": {
+          "title": "Plan oluşturulamadı",
+          "authorization": "Yönetici oturumu doğrulanamadı. Yeniden giriş yapın.",
+          "invalidDate": "Geçersiz tarih. Geçerli bir tarih seçin.",
+          "unavailable": "Önizleme hizmeti şu anda kullanılamıyor. Yerel servisleri ve yapılandırmayı kontrol edip yeniden deneyin.",
+          "timeout": "İstek zaman aşımına uğradı. Daha az dalgası olan bir gün seçip yeniden deneyin.",
+          "network": "Sunucuya ulaşılamadı. Bağlantıyı kontrol edip yeniden deneyin.",
+          "invalidResponse": "Sunucudan beklenmeyen bir yanıt geldi."
+        },
+        "banner": {
+          "title": "Önizleme — yayınlanamaz, varsayımsal",
+          "titlePlain": "Önizleme — yayınlanamaz",
+          "text": "Bu ekran gerçek bir servis planı değildir. Hiçbir şey kaydedilmez, atanmaz veya yayınlanmaz.",
+          "assumedAdmission": "Öğrenci onayları varsayıldı.",
+          "virtualFleet": "Sanal filo kullanıldı: {sw} Sw / {so} So kapasiteli, {cooldown} dk bekleme süreli özdeş araçlar."
+        },
+        "status": {
+          "preview_ready": "Önizleme hazır",
+          "shortage": "Araç yetersiz",
+          "blocked_data": "Plan oluşturulamadı: veri veya hizmet sorunu",
+          "indeterminate": "Sonuç kesin değil"
+        },
+        "cards": {
+          "neededVehicles": "Bu rotalar için gereken araç",
+          "atMost": "en fazla",
+          "atMostHint": "Atama araması bitmedi; daha az araç mümkün olabilir.",
+          "unknown": "Hesaplanamadı",
+          "lowerBound": "Bu rotalar için en az {n} araç gerekir.",
+          "peak": "Aynı anda en çok {n} rota çalışıyor.",
+          "students": "Öğrenci sayısı",
+          "studentsHint": "{trips} yolculuk (sabah + akşam)",
+          "invalidStudents": "{n} öğrenci kaydı eksik bilgi nedeniyle dışarıda bırakıldı.",
+          "routes": "Rota sayısı",
+          "routesHint": "{waves} dalga",
+          "liveFleet": "Mevcut filo",
+          "difference": "Fark",
+          "missing": "{n} araç eksik",
+          "enough": "Mevcut filo yeterli",
+          "spare": "{n} araç boşta kalır",
+          "differenceUnknown": "Karşılaştırılamadı"
+        },
+        "sections": {
+          "pickup": "Sabah toplama",
+          "dropoff": "Akşam bırakma"
+        },
+        "wave": {
+          "pickupTitle": "{time} varış — Toplama",
+          "dropoffTitle": "{time} çıkış — Bırakma",
+          "summary": "{routes} rota · {students} öğrenci · {sw} Sw · {so} So"
+        },
+        "route": {
+          "title": "Rota {n}",
+          "timeRange": "{start} – {end}",
+          "duration": "{n} dk",
+          "counts": "Sw {sw} · So {so}",
+          "vehicle": "Araç: {vehicle}",
+          "noVehicle": "Araç atanmadı",
+          "stops": "Duraklar",
+          "campusStart": "Kampüs — çıkış",
+          "campusEnd": "Kampüs — dönüş",
+          "student": "{code} Öğrenci",
+          "leg": "+{n} dk"
+        },
+        "vehicles": {
+          "title": "Araç çizelgesi",
+          "description": "Her araç, kendisine atanan rotaları zaman sırasıyla üstlenir. Araç numaraları yalnızca görüntü içindir.",
+          "empty": "Bu sonuçta araç ataması yok.",
+          "vehicle": "Araç",
+          "routes": "Rotalar",
+          "minutes": "{n} dk",
+          "busy": "Çalışma süresi",
+          "slot": "{start}–{end} {direction} (Rota {n})",
+          "pickupShort": "Toplama",
+          "dropoffShort": "Bırakma",
+          "timeline": "Zaman çizelgesi"
+        },
+        "notes": {
+          "title": "Durum notları"
+        },
+        "reasons": {
+          "ADMISSION_ASSUMED": "Demo için bekleyen tüm öğrenci seferleri onaylı sayıldı. Bu bir varsayımdır, gerçek onay değildir.",
+          "ASSIGNMENT_SEARCH_INDETERMINATE": "Araç ataması araması süre sınırına takıldı. Gösterilen araç sayısı en fazla değerdir; daha azı mümkün olabilir.",
+          "CERTIFICATE_INVALID": "Çözücünün uygunluk belgesi geçerli değil; rota güvenilir sayılmadı.",
+          "CLOSING_DEPOT_ARC_MISSING": "Bir rota kampüse dönüşle bitmiyor; rota geçersiz sayıldı.",
+          "DUPLICATE_MATRIX_ARC": "Seyahat süresi matrisinde aynı yol için çelişen süreler var.",
+          "DUPLICATE_OCCURRENCE_COVERAGE": "Aynı sefer birden fazla rotada görünüyor; plan geçersiz sayıldı.",
+          "FLEET_INVALID": "Araç kayıtlarında geçersiz veya tekrar eden bilgi var.",
+          "FLEET_SHORTAGE": "Mevcut filo bu rotalar için yetersiz.",
+          "JOB_CONTRACT_MISMATCH": "Bir dalganın saat veya yön bilgisi tutarsız; plan geçersiz sayıldı.",
+          "LEG_DECISIONS_UNAVAILABLE": "Öğrenci onay kayıtları tablosu bulunamadı; kayıtlı onaylar okunamadı.",
+          "LEGACY_AMBIGUOUS_CONFIRMATION": "Bazı öğrencilerin eski usul talepleri var ve onay durumları belirsiz.",
+          "MATRIX_ARC_MISMATCH": "Rotadaki bir süre, seyahat süresi matrisiyle uyuşmuyor.",
+          "MATRIX_SNAPSHOT_INVALID": "Seyahat süresi matrisi geçersiz veya bozuk.",
+          "MATRIX_UNAVAILABLE": "Seyahat süresi matrisi alınamadı veya eksik; rota hesaplanamadı.",
+          "MISSING_OCCURRENCE_COVERAGE": "Bazı seferler hiçbir rotaya yerleştirilmedi; plan geçersiz sayıldı.",
+          "NO_ADMITTED_DEMAND": "Bu gün için onaylı sefer yok.",
+          "NO_ROUTE_STEPS": "Bir rotada hiç adım yok; plan geçersiz sayıldı.",
+          "OPTIMIZATION_NOT_SUCCESSFUL": "Rota çözücüsü başarılı bir sonuç döndürmedi veya ulaşılamadı.",
+          "PENDING_STUDENT_CONFIRMATION": "Bazı öğrencilerin onayı hâlâ bekleniyor.",
+          "ROUTE_OUTSIDE_SERVICE_DAY": "Bir rota gün sınırlarının dışına taşıyor.",
+          "ROUTE_LOAD_MISMATCH": "Rotadaki Sw/So sayıları öğrenci listesiyle uyuşmuyor.",
+          "ROUTE_TOTAL_MISMATCH": "Rota toplam süresi adımların toplamıyla uyuşmuyor.",
+          "SCHEDULE_DATA_INVALID": "Ders programı veya öğrenci kaydı verisi geçersiz.",
+          "UNKNOWN_OCCURRENCE": "Rota, bu planda olmayan bir sefere başvuruyor.",
+          "UNKNOWN_ROUTE_NODE": "Rota, tanınmayan bir durak içeriyor.",
+          "unknown": "Bilinmeyen durum kodu. Teknik ekibe bildirin."
+        },
+        "limits": {
+          "title": "Bilinen sınırlamalar",
+          "notOptimal": "Çözücü rotaları optimal değildir; rota sayısı gerçek minimum değildir.",
+          "fixedRoutes": "Araç sayısı yalnızca bu sabit rotalar için hesaplanır.",
+          "timeModel": "Zaman modeli basittir: her dalga tek bir varış/çıkış saatine bağlıdır; bekleme ve kampüse dönüş kontrolü yapılmaz (H2, H4).",
+          "noNames": "Öğrenci adı gösterilmez; konum kodu (So1, Sw3 gibi) kullanılır."
+        }
+      },
       "readiness": {
         "title": "Dudullu Planlama Hazırlığı",
         "description": "Planlamadan önce gerekli Dudullu veri ve yapılandırmasını doğrulayın.",

@@ -35,6 +35,7 @@ import {
   FlaskConical,
   BarChart3,
   Activity,
+  CalendarRange,
 } from "lucide-react";
 import { Button } from "../ui/button";
 
@@ -56,6 +57,7 @@ const adminMenuItems = [
   { href: "/admin/schedules", labelKey: "schedules", icon: FilePenLine },
   { href: "/admin/ride-requests", labelKey: "rideRequests", icon: ShieldAlert },
   { href: "/admin/drivers", labelKey: "driverAssignments", icon: Users },
+  { href: "/admin/daily-plan", labelKey: "dailyPlan", icon: CalendarRange },
   { href: "/admin/vehicle-planning", labelKey: "vehiclePlanning", icon: Route },
   { href: "/admin/readiness", labelKey: "dudulluReadiness", icon: Activity },
   { href: "/admin/sandbox", labelKey: "sandbox", icon: FlaskConical },

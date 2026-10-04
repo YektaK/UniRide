@@ -45,6 +45,7 @@
       "rideRequests": "Ride Requests",
       "driverAssignments": "Driver Assignments",
       "vehiclePlanning": "Vehicle Planning",
+      "dailyPlan": "Daily Plan",
       "dudulluReadiness": "Dudullu Readiness",
       "sandbox": "Planning Sandbox",
       "algorithmCompare": "Algorithm Comparison",
@@ -225,6 +226,140 @@
       }
     },
     "admin": {
+      "dailyPlan": {
+        "title": "Daily Plan",
+        "description": "See the student shuttle routes for the chosen day and the vehicles needed for these routes.",
+        "controls": {
+          "date": "Date",
+          "assumeConfirmed": "Assume student confirmations (demo)",
+          "assumeConfirmedHint": "Every pending trip counts as confirmed; recorded cancellations are kept.",
+          "virtualFleet": "Virtual fleet (vehicles needed)",
+          "virtualFleetOn": "A virtual fleet of identical vehicles is used; the number of vehicles needed is computed.",
+          "virtualFleetOff": "Current fleet: only the active vehicles in the system are used.",
+          "run": "Create plan",
+          "running": "Preparing plan..."
+        },
+        "initial": "Pick a date and press \"Create plan\".",
+        "loading": "Preparing the plan. The solver runs wave by wave; this can take a few minutes.",
+        "emptyDay": {
+          "title": "No trips to plan for this day",
+          "text": "No confirmed student trip to or from Dudullu was found for the chosen day. Try another date."
+        },
+        "errors": {
+          "title": "The plan could not be created",
+          "authorization": "The admin session could not be verified. Sign in again.",
+          "invalidDate": "Invalid date. Pick a valid date.",
+          "unavailable": "The preview service is unavailable. Check the local services and configuration, then try again.",
+          "timeout": "The request timed out. Try a day with fewer waves.",
+          "network": "The server could not be reached. Check the connection and try again.",
+          "invalidResponse": "The server returned an unexpected response."
+        },
+        "banner": {
+          "title": "Preview — not publishable, hypothetical",
+          "titlePlain": "Preview — not publishable",
+          "text": "This screen is not a real shuttle plan. Nothing is saved, assigned or published.",
+          "assumedAdmission": "Student confirmations were assumed.",
+          "virtualFleet": "Virtual fleet used: identical vehicles with {sw} Sw / {so} So capacity and {cooldown} min cooldown."
+        },
+        "status": {
+          "preview_ready": "Preview ready",
+          "shortage": "Not enough vehicles",
+          "blocked_data": "Blocked: data or service problem",
+          "indeterminate": "Result not conclusive"
+        },
+        "cards": {
+          "neededVehicles": "Vehicles needed for these routes",
+          "atMost": "at most",
+          "atMostHint": "The assignment search did not finish; fewer vehicles may be possible.",
+          "unknown": "Not computed",
+          "lowerBound": "At least {n} vehicles are needed for these routes.",
+          "peak": "At most {n} routes run at the same time.",
+          "students": "Students",
+          "studentsHint": "{trips} trips (morning + evening)",
+          "invalidStudents": "{n} student records were left out because of missing data.",
+          "routes": "Routes",
+          "routesHint": "{waves} waves",
+          "liveFleet": "Current fleet",
+          "difference": "Difference",
+          "missing": "{n} vehicles short",
+          "enough": "Current fleet is enough",
+          "spare": "{n} vehicles spare",
+          "differenceUnknown": "Cannot compare"
+        },
+        "sections": {
+          "pickup": "Morning pickup",
+          "dropoff": "Evening dropoff"
+        },
+        "wave": {
+          "pickupTitle": "{time} arrival — Pickup",
+          "dropoffTitle": "{time} departure — Dropoff",
+          "summary": "{routes} routes · {students} students · {sw} Sw · {so} So"
+        },
+        "route": {
+          "title": "Route {n}",
+          "timeRange": "{start} – {end}",
+          "duration": "{n} min",
+          "counts": "Sw {sw} · So {so}",
+          "vehicle": "Vehicle: {vehicle}",
+          "noVehicle": "No vehicle assigned",
+          "stops": "Stops",
+          "campusStart": "Campus — departure",
+          "campusEnd": "Campus — return",
+          "student": "{code} Student",
+          "leg": "+{n} min"
+        },
+        "vehicles": {
+          "title": "Vehicle schedule",
+          "description": "Each vehicle takes its assigned routes in time order. Vehicle numbers are for display only.",
+          "empty": "There is no vehicle assignment in this result.",
+          "vehicle": "Vehicle",
+          "routes": "Routes",
+          "minutes": "{n} min",
+          "busy": "Busy time",
+          "slot": "{start}–{end} {direction} (Route {n})",
+          "pickupShort": "Pickup",
+          "dropoffShort": "Dropoff",
+          "timeline": "Timeline"
+        },
+        "notes": {
+          "title": "Status notes"
+        },
+        "reasons": {
+          "ADMISSION_ASSUMED": "For the demo, every pending student trip was counted as confirmed. This is an assumption, not a real confirmation.",
+          "ASSIGNMENT_SEARCH_INDETERMINATE": "The vehicle assignment search hit its limit. The vehicle count shown is an upper bound; fewer may be possible.",
+          "CERTIFICATE_INVALID": "The solver's feasibility certificate is not valid; the route was not trusted.",
+          "CLOSING_DEPOT_ARC_MISSING": "A route does not end with a return to campus; the route was rejected.",
+          "DUPLICATE_MATRIX_ARC": "The travel-time matrix has conflicting durations for the same arc.",
+          "DUPLICATE_OCCURRENCE_COVERAGE": "The same trip appears in more than one route; the plan was rejected.",
+          "FLEET_INVALID": "Vehicle records contain invalid or duplicate data.",
+          "FLEET_SHORTAGE": "The current fleet is not enough for these routes.",
+          "JOB_CONTRACT_MISMATCH": "A wave has an inconsistent time or direction; the plan was rejected.",
+          "LEG_DECISIONS_UNAVAILABLE": "The student decision table was not found; recorded confirmations could not be read.",
+          "LEGACY_AMBIGUOUS_CONFIRMATION": "Some students have legacy requests and their confirmation state is ambiguous.",
+          "MATRIX_ARC_MISMATCH": "A duration in a route does not match the travel-time matrix.",
+          "MATRIX_SNAPSHOT_INVALID": "The travel-time matrix is invalid or corrupt.",
+          "MATRIX_UNAVAILABLE": "The travel-time matrix could not be loaded or is incomplete; routes could not be computed.",
+          "MISSING_OCCURRENCE_COVERAGE": "Some trips were not placed in any route; the plan was rejected.",
+          "NO_ADMITTED_DEMAND": "There are no confirmed trips for this day.",
+          "NO_ROUTE_STEPS": "A route has no steps; the plan was rejected.",
+          "OPTIMIZATION_NOT_SUCCESSFUL": "The route solver did not return a successful result or could not be reached.",
+          "PENDING_STUDENT_CONFIRMATION": "Some student confirmations are still pending.",
+          "ROUTE_OUTSIDE_SERVICE_DAY": "A route runs outside the service day.",
+          "ROUTE_LOAD_MISMATCH": "The Sw/So counts of a route do not match its student list.",
+          "ROUTE_TOTAL_MISMATCH": "A route's total duration does not match the sum of its steps.",
+          "SCHEDULE_DATA_INVALID": "Schedule or student record data is invalid.",
+          "UNKNOWN_OCCURRENCE": "A route refers to a trip that is not in this plan.",
+          "UNKNOWN_ROUTE_NODE": "A route contains an unrecognised stop.",
+          "unknown": "Unknown status code. Report it to the technical team."
+        },
+        "limits": {
+          "title": "Known limitations",
+          "notOptimal": "The solver's routes are not optimal; the route count is not a true minimum.",
+          "fixedRoutes": "The vehicle count applies only to these fixed routes.",
+          "timeModel": "The time model is simple: each wave is tied to a single arrival/departure time; waiting and return-to-campus checks are not made (H2, H4).",
+          "noNames": "No student names are shown; location codes (like So1, Sw3) are used."
+        }
+      },
       "readiness": {
         "title": "Dudullu Planning Readiness",
         "description": "Verify the Dudullu data and configuration required before planning.",

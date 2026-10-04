@@ -12,6 +12,8 @@ import {
   generateEphemeralKey,
   resolveSharedKey,
   buildChildEnv,
+  buildPythonEnv,
+  RELOAD_ENV_NAME,
   pythonCommand,
   webCommand,
   resolvePythonBin,
@@ -359,6 +361,66 @@ test("checkHandshake stays bounded and rejects non-optimizer bodies", async () =
     Promise.resolve(new Response(JSON.stringify({ service: "other" }), { status: 200 })),
   );
   assert.equal(bad, false);
+});
+
+test("buildPythonEnv disables optimizer auto-reload by default and keeps the keys", () => {
+  const env = buildPythonEnv({ NODE_ENV: "development" }, "k");
+  assert.equal(RELOAD_ENV_NAME, "UNIRIDE_API_RELOAD");
+  assert.equal(env.UNIRIDE_API_RELOAD, "0");
+  assert.equal(env[WEB_KEY_NAME], "k");
+  assert.equal(env[PYTHON_KEY_NAME], "k");
+  assert.equal(env.NODE_ENV, "development");
+});
+
+test("buildPythonEnv preserves an explicit UNIRIDE_API_RELOAD value", () => {
+  assert.equal(buildPythonEnv({ UNIRIDE_API_RELOAD: "1" }, "k").UNIRIDE_API_RELOAD, "1");
+  assert.equal(buildPythonEnv({ UNIRIDE_API_RELOAD: "true" }, "k").UNIRIDE_API_RELOAD, "true");
+  assert.equal(buildPythonEnv({ UNIRIDE_API_RELOAD: "" }, "k").UNIRIDE_API_RELOAD, "0");
+});
+
+test("buildChildEnv alone never sets the reload variable (web child is untouched)", () => {
+  assert.equal("UNIRIDE_API_RELOAD" in buildChildEnv({}, "k"), false);
+});
+
+async function spawnInitsWithReloadEnv(value) {
+  const { startStack } = await import("./start-dudullu-local.mjs");
+  const saved = process.env.UNIRIDE_API_RELOAD;
+  if (value === undefined) delete process.env.UNIRIDE_API_RELOAD;
+  else process.env.UNIRIDE_API_RELOAD = value;
+  const inits = [];
+  const spawnFn = (command, args, init) => {
+    inits.push(init);
+    return { pid: 1, kill() {}, on() {} };
+  };
+  try {
+    startStack(
+      {
+        pythonBin: "/venv/python.exe",
+        web: { command: "npm", args: ["run", "dev"], cwd: ".", shell: false },
+        rootDir: "C:/tmp",
+        shared: { key: "not-printed" },
+        onError: () => {},
+        onUnexpectedExit: () => () => {},
+      },
+      { spawnFn, killEntry: () => {} },
+    );
+  } finally {
+    if (saved === undefined) delete process.env.UNIRIDE_API_RELOAD;
+    else process.env.UNIRIDE_API_RELOAD = saved;
+  }
+  return inits;
+}
+
+test("startStack gives only the optimizer child UNIRIDE_API_RELOAD=0 by default", async () => {
+  const inits = await spawnInitsWithReloadEnv(undefined);
+  assert.equal(inits.length, 2);
+  assert.equal(inits[0].env.UNIRIDE_API_RELOAD, "0");
+  assert.equal("UNIRIDE_API_RELOAD" in inits[1].env, false);
+});
+
+test("startStack preserves an explicit UNIRIDE_API_RELOAD for the optimizer child", async () => {
+  const inits = await spawnInitsWithReloadEnv("1");
+  assert.equal(inits[0].env.UNIRIDE_API_RELOAD, "1");
 });
 
 test("web spawn failure terminates the already-started python child and never reaches readiness", async () => {

@@ -18,9 +18,9 @@ from dotenv import load_dotenv
 from routers import optimization, utils, strategies, benchmark, readiness
 from strategies import get_available_strategy_names
 try:
-    from optimizer_api.runtime_config import optimizer_host, validate_bind_host, validate_runtime_configuration
+    from optimizer_api.runtime_config import optimizer_host, reload_enabled, validate_bind_host, validate_runtime_configuration
 except ModuleNotFoundError:  # direct `python optimizer_api/main.py` compatibility
-    from runtime_config import optimizer_host, validate_bind_host, validate_runtime_configuration
+    from runtime_config import optimizer_host, reload_enabled, validate_bind_host, validate_runtime_configuration
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -114,4 +114,4 @@ if __name__ == "__main__":
     port = int(os.getenv("OPTIMIZER_PORT", "8000"))
     bind_host = optimizer_host()
     validate_bind_host(bind_host)
-    uvicorn.run("main:app", host=bind_host, port=port, reload=True)
+    uvicorn.run("main:app", host=bind_host, port=port, reload=reload_enabled())

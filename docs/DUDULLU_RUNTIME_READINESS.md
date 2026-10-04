@@ -113,6 +113,10 @@ read-only preview. Source of truth for scope and limits: `docs/DEMO_ROADMAP_2026
    show the `.venv-jit` path.
 2. `npm run dev:dudullu`. It prints when the FastAPI optimizer (`127.0.0.1:8000`) and Next.js
    (`http://127.0.0.1:9002`) are both ready.
+   The demo launcher runs the optimizer without auto-reload (`UNIRIDE_API_RELOAD=0`), because on
+   Windows a uvicorn reload restart makes the launcher treat the optimizer as crashed and stop both
+   services. Restart the launcher after any Python change. An explicitly set `UNIRIDE_API_RELOAD`
+   is respected.
 3. Open `http://127.0.0.1:9002` and sign in as the admin.
 4. Sidebar: **Günlük Plan** (`/admin/daily-plan`).
 5. Optional: `/admin/readiness` should show 0 missing matrix arcs (812/812 on 2026-10-04).

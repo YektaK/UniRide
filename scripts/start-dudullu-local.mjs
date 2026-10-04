@@ -11,6 +11,7 @@ import { pathToFileURL } from "node:url";
 
 export const WEB_KEY_NAME = "OPTIMIZER_INTERNAL_API_KEY";
 export const PYTHON_KEY_NAME = "INTERNAL_API_KEY";
+export const RELOAD_ENV_NAME = "UNIRIDE_API_RELOAD";
 
 const WEB_ENV_FILE = ".env.local";
 const PYTHON_ENV_FILE = path.join("optimizer_api", ".env");
@@ -77,6 +78,19 @@ export function buildChildEnv(parent, key) {
   const env = { ...(parent ?? {}) };
   env[WEB_KEY_NAME] = key;
   env[PYTHON_KEY_NAME] = key;
+  return env;
+}
+
+// Demo stability over hot reload (audit L14): uvicorn's StatReload restarts the
+// optimizer when a Python file changes; on Windows that exits the supervised
+// process and the launcher tears the whole stack down. Default the optimizer
+// child to no reload, but respect an explicit UNIRIDE_API_RELOAD from the user.
+export function buildPythonEnv(parent, key) {
+  const env = buildChildEnv(parent, key);
+  const explicit = env[RELOAD_ENV_NAME];
+  if (typeof explicit !== "string" || explicit.trim() === "") {
+    env[RELOAD_ENV_NAME] = "0";
+  }
   return env;
 }
 
@@ -318,7 +332,7 @@ export function startStack(options, deps = {}) {
     pythonCommand(options.pythonBin).args,
     {
       cwd: path.join(options.rootDir, "optimizer_api"),
-      env: buildChildEnv(process.env, options.shared.key),
+      env: buildPythonEnv(process.env, options.shared.key),
       stdio: "inherit",
     },
   );

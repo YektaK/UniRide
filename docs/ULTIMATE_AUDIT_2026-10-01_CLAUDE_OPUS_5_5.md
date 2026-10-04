@@ -2332,12 +2332,14 @@ Update the Status, Branch/PR and Closing commit columns as fixes land (statuses:
 | M20 | Low (v1.1) | Repeated evaluations: telemetry only | LT1 | OPEN | | | |
 | M1–M25 (others) | Medium | See §5 | per §5 | OPEN | | | |
 | L1–L15 | Low | See §6 | per §6 | OPEN | | | |
+| N1 (2026-10-04) | Medium | Dropoff time-window path: phantom wait vs `max_ride_time`; fallback `error` flag ignored | MT1 | OPEN | | | See remediation log; demo unaffected (`use_time_windows=false`) |
 
 ### Remediation log
 
 Append one entry per landed fix: date, agent or author, ID(s), branch/commit, tests added, and the suites run with their exact results.
 
-- *(no entries yet)*
+- *(no landed fixes yet)*
+- **N1 (2026-10-04), OPEN, found in the independent review of R1 (`max_ride_time`); not fixed.** In the dropoff time-window path the split decoder departs at `min(target_time, earliest window)` (`uniride_core/algorithms/string_split_decoder.py`, dropoff branch of `_build_trips_with_tw`, `_get_target_departure_time`), while the published schedule departs at the earliest window without waiting (`optimizer_api/utils/route_scheduling.py`, ~lines 67-81). The decoder therefore simulates a wait that the published schedule does not contain, and that phantom wait can trip the ride limit and push students into single-vehicle fallback routes. Separately, `GASplitStrategy` ignores the fallback's `"error": "No feasible splitting found"` flag and returns `success=True`. Reviewer repro: 3 students, dropoff, time windows, target 16:00, `max_ride_time=45` gives 3 vehicles although a single vehicle's longest ride would be 42 minutes. The demo preview is unaffected (`use_time_windows=false`). Belongs with the MT1 time-window unification (one simulator per profile, H2-H4).
 
 ---
 

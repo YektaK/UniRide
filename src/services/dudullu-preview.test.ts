@@ -564,7 +564,7 @@ describe("buildDudulluPreview", () => {
     expect(new Set(preview.assignments.map((item) => item.physicalVehicleId))).toEqual(new Set(["B"]));
   });
 
-  it("returns indeterminate when the bounded assignment search is exhausted", () => {
+  it("proves shortage from the lower bound when 9 routes overlap on 8 vehicles", () => {
     const demands = Array.from({ length: 9 }, (_, index) =>
       demand(`occ-${index + 1}`, `H${index + 1}`, "pickup", 600),
     );
@@ -588,8 +588,321 @@ describe("buildDudulluPreview", () => {
       { vehicles: Array.from({ length: 8 }, (_, index) => vehicle(`V${index + 1}`, 2, 1)) },
     );
 
-    expect(preview.status).toBe("indeterminate");
-    expect(preview.reasonCodes).toContain("ASSIGNMENT_SEARCH_INDETERMINATE");
+    expect(preview.status).toBe("shortage");
+    expect(preview.publishable).toBe(false);
+    expect(preview.reasonCodes).toEqual(["FLEET_SHORTAGE"]);
+    expect(preview.reasonCodes).not.toContain("ASSIGNMENT_SEARCH_INDETERMINATE");
+    expect(preview.assignments).toEqual([]);
     expect(preview.unassignedOccurrenceIds).toEqual(demands.map((item) => item.occurrenceId));
+    expect(preview.vehicleSummary).toMatchObject({
+      minimumVehicles: null,
+      minimumProven: false,
+      lowerBound: 9,
+      activeFleetSize: 8,
+    });
+  });
+
+  it("returns indeterminate only when the bounded assignment search budget is exhausted", () => {
+    const demands = Array.from({ length: 3 }, (_, index) =>
+      demand(`occ-${index + 1}`, `H${index + 1}`, "pickup", 600),
+    );
+    const matrix: MatrixSnapshot = {
+      ...baseMatrix,
+      arcs: demands.flatMap((item) => [
+        arc(DEPOT, item.locationCode, 5),
+        arc(item.locationCode, DEPOT, 6),
+      ]),
+    };
+    const jobs = demands.map((item) =>
+      job([item], normalRoute(item.occurrenceId), { id: item.occurrenceId, anchorMinutes: 600 }),
+    );
+    const input = {
+      serviceDate: SERVICE_DATE,
+      demands,
+      vehicles: Array.from({ length: 3 }, (_, index) => vehicle(`V${index + 1}`, 2, 1)),
+      matrix,
+      jobs,
+    };
+
+    const exhausted = buildDudulluPreview({ ...input, assignmentSearchNodeBudget: 1 });
+    expect(exhausted.status).toBe("indeterminate");
+    expect(exhausted.reasonCodes).toContain("ASSIGNMENT_SEARCH_INDETERMINATE");
+    expect(exhausted.unassignedOccurrenceIds).toEqual(demands.map((item) => item.occurrenceId));
+    expect(exhausted.vehicleSummary).toMatchObject({
+      minimumVehicles: null,
+      minimumProven: false,
+      lowerBound: 3,
+      activeFleetSize: 3,
+    });
+
+    const solved = buildDudulluPreview(input);
+    expect(solved.status).toBe("preview_ready");
+    expect(solved.vehicleSummary).toMatchObject({ minimumVehicles: 3, minimumProven: true, lowerBound: 3 });
+  });
+});
+
+interface WaveScenario {
+  readonly demands: readonly PreviewDemand[];
+  readonly jobs: readonly PreviewJobInput[];
+  readonly matrix: MatrixSnapshot;
+}
+
+// Waves of single-student pickup routes: each route takes 50 minutes, anchors are
+// 30 minutes apart, so with a 10 minute cooldown two adjacent waves always overlap.
+function waveScenario(waves: number, perWave: number): WaveScenario {
+  const demands: PreviewDemand[] = [];
+  const jobs: PreviewJobInput[] = [];
+  const arcs: MatrixSnapshot["arcs"][number][] = [];
+  for (let wave = 0; wave < waves; wave += 1) {
+    const anchor = 600 + wave * 30;
+    const waveDemands: PreviewDemand[] = [];
+    const routes: PreviewRoute[] = [];
+    for (let index = 0; index < perWave; index += 1) {
+      const code = `H-${wave}-${index}`;
+      const item = demand(`occ-${wave}-${index}`, code, "pickup", anchor);
+      arcs.push(arc(DEPOT, code, 25), arc(code, DEPOT, 25));
+      waveDemands.push(item);
+      routes.push(route(normalRoute(item.occurrenceId, 25, 25), [item.occurrenceId]));
+    }
+    demands.push(...waveDemands);
+    jobs.push(job(waveDemands, normalRoute(waveDemands[0].occurrenceId, 25, 25), {
+      id: `wave-${wave}`,
+      anchorMinutes: anchor,
+      result: result(routes),
+    }));
+  }
+  return { demands, jobs, matrix: { ...baseMatrix, arcs } };
+}
+
+function fleetOf(size: number, sw = 2, so = 2, cooldown = 10): PreviewVehicle[] {
+  return Array.from({ length: size }, (_, index) =>
+    vehicle(`BUS-${String(index + 1).padStart(3, "0")}`, sw, so, cooldown));
+}
+
+describe("vehicle summary and honest assignment termination", () => {
+  it("proves the minimum for 4 waves x 4 routes on 8 identical vehicles", () => {
+    const { demands, jobs, matrix } = waveScenario(4, 4);
+    const preview = build(demands, jobs, matrix, { vehicles: fleetOf(8) });
+
+    expect(preview.status).toBe("preview_ready");
+    expect(preview.publishable).toBe(false);
+    expect(preview.vehicleSummary).toMatchObject({
+      minimumVehicles: 8,
+      minimumProven: true,
+      lowerBound: 8,
+      activeFleetSize: 8,
+    });
+    expect(new Set(preview.assignments.map((item) => item.physicalVehicleId)).size).toBe(8);
+  });
+
+  it("proves the minimum for 8 waves x 6 routes on 15 identical vehicles", () => {
+    const { demands, jobs, matrix } = waveScenario(8, 6);
+    const preview = build(demands, jobs, matrix, { vehicles: fleetOf(15) });
+
+    expect(preview.status).toBe("preview_ready");
+    expect(preview.vehicleSummary).toMatchObject({
+      minimumVehicles: 12,
+      minimumProven: true,
+      lowerBound: 12,
+      activeFleetSize: 15,
+    });
+    expect(new Set(preview.assignments.map((item) => item.physicalVehicleId)).size).toBe(12);
+  });
+
+  it("scales to a large identical fleet without enumerating vehicle permutations", () => {
+    const { demands, jobs, matrix } = waveScenario(12, 8);
+    const preview = build(demands, jobs, matrix, { vehicles: fleetOf(60) });
+
+    expect(preview.status).toBe("preview_ready");
+    expect(preview.vehicleSummary).toMatchObject({ minimumVehicles: 16, minimumProven: true, lowerBound: 16 });
+  });
+
+  it("returns a proven shortage for 10 waves x 8 routes on 8 vehicles", () => {
+    const { demands, jobs, matrix } = waveScenario(10, 8);
+    const preview = build(demands, jobs, matrix, { vehicles: fleetOf(8) });
+
+    expect(preview.status).toBe("shortage");
+    expect(preview.reasonCodes).toEqual(["FLEET_SHORTAGE"]);
+    expect(preview.assignments).toEqual([]);
+    expect(preview.vehicleSummary).toMatchObject({
+      minimumVehicles: null,
+      minimumProven: false,
+      lowerBound: 16,
+      activeFleetSize: 8,
+    });
+  });
+
+  it("reports routes per job, student counts and peak concurrency", () => {
+    const { demands, jobs, matrix } = waveScenario(2, 3);
+    const preview = build(demands, jobs, matrix, { vehicles: fleetOf(10) });
+
+    expect(preview.vehicleSummary?.routesPerJob).toEqual([
+      { jobId: "wave-0", direction: "pickup", anchorMinutes: 600, routeCount: 3, studentCount: 3 },
+      { jobId: "wave-1", direction: "pickup", anchorMinutes: 630, routeCount: 3, studentCount: 3 },
+    ]);
+    // The two 50 minute waves 30 minutes apart overlap even without any cooldown.
+    expect(preview.vehicleSummary?.peakConcurrentRoutes).toBe(6);
+    expect(preview.vehicleSummary?.lowerBound).toBe(6);
+  });
+
+  it("includes the smallest fleet cooldown in the lower bound", () => {
+    const first = demand("occ-1", "H1", "pickup", 600);
+    const second = demand("occ-2", "H2", "pickup", 611);
+    const jobs = [
+      job([first], normalRoute("occ-1"), { id: "first", anchorMinutes: 600 }),
+      job([second], normalRoute("occ-2", 4, 7), { id: "second", anchorMinutes: 611 }),
+    ];
+
+    const noCooldown = build([first, second], jobs, baseMatrix, { vehicles: [vehicle("A", 2, 2, 0)] });
+    expect(noCooldown.status).toBe("preview_ready");
+    expect(noCooldown.vehicleSummary).toMatchObject({
+      minimumVehicles: 1, minimumProven: true, lowerBound: 1, peakConcurrentRoutes: 1,
+    });
+
+    const tooSlow = build([first, second], jobs, baseMatrix, { vehicles: [vehicle("A", 2, 2, 30)] });
+    expect(tooSlow.status).toBe("shortage");
+    expect(tooSlow.vehicleSummary).toMatchObject({
+      minimumVehicles: null, lowerBound: 2, peakConcurrentRoutes: 1, activeFleetSize: 1,
+    });
+
+    // The bound uses the smallest cooldown, so a fast vehicle in the fleet keeps it at 1
+    // and the search then finds the single fast vehicle for both routes.
+    const mixed = build([first, second], jobs, baseMatrix, {
+      vehicles: [vehicle("A", 2, 2, 30), vehicle("B", 2, 2, 0)],
+    });
+    expect(mixed.status).toBe("preview_ready");
+    expect(mixed.vehicleSummary).toMatchObject({ minimumVehicles: 1, minimumProven: true, lowerBound: 1 });
+    expect(new Set(mixed.assignments.map((item) => item.physicalVehicleId))).toEqual(new Set(["B"]));
+  });
+
+  it("proves shortage from Sw capacity when the depth bound alone would fit the fleet", () => {
+    const first = demand("sw-1", "H1", "pickup", 600, "Sw");
+    const second = demand("sw-2", "H2", "pickup", 600, "Sw");
+    const swRoute = (node: string, outbound: number, inbound: number) =>
+      countedRoute(normalRoute(node, outbound, inbound), [node], 1, 0);
+    const jobs = [
+      job([first], normalRoute("sw-1"), {
+        id: "first", anchorMinutes: 600, result: result([swRoute("sw-1", 5, 6)]),
+      }),
+      job([second], normalRoute("sw-2", 4, 7), {
+        id: "second", anchorMinutes: 600, result: result([swRoute("sw-2", 4, 7)]),
+      }),
+    ];
+    const preview = buildDudulluPreview({
+      serviceDate: SERVICE_DATE,
+      demands: [first, second],
+      vehicles: [vehicle("WHEEL", 1, 1), vehicle("SEAT-1", 0, 4), vehicle("SEAT-2", 0, 4)],
+      matrix: baseMatrix,
+      jobs,
+      assignmentSearchNodeBudget: 1,
+    });
+
+    expect(preview.status).toBe("shortage");
+    expect(preview.reasonCodes).toEqual(["FLEET_SHORTAGE"]);
+    expect(preview.vehicleSummary).toMatchObject({ lowerBound: 2, activeFleetSize: 3, minimumVehicles: null });
+  });
+
+  it("proves a type-forced minimum above the depth bound by exhausting a small search", () => {
+    const wheel = demand("sw-1", "H1", "pickup", 600, "Sw");
+    const seated = demand("so-1", "H2", "pickup", 700, "So");
+    const jobs = [
+      job([wheel], normalRoute("sw-1"), {
+        id: "wheel", anchorMinutes: 600,
+        result: result([countedRoute(normalRoute("sw-1"), ["sw-1"], 1, 0)]),
+      }),
+      job([seated], normalRoute("so-1", 4, 7), { id: "seated", anchorMinutes: 700 }),
+    ];
+    const preview = build([wheel, seated], jobs, baseMatrix, {
+      vehicles: [vehicle("WHEEL", 1, 0), vehicle("SEAT", 0, 1)],
+    });
+
+    expect(preview.status).toBe("preview_ready");
+    expect(preview.vehicleSummary).toMatchObject({
+      minimumVehicles: 2, minimumProven: true, lowerBound: 1, activeFleetSize: 2,
+    });
+  });
+
+  it("exhausts a type-forced search above the lower bound only thanks to symmetry breaking", () => {
+    // One wheelchair route (only WHEEL can carry it) runs first, then 6 concurrent seated
+    // routes. The depth bound is 6, but WHEEL cannot take a seated route, so the true
+    // minimum is 7 and the bound is never reached: the DFS must finish the whole tree.
+    // 12 interchangeable seat vehicles give 12*11*10*9*8 orderings at depth 5 without symmetry
+    // breaking, which is more than the default 50,000 node budget.
+    const wheel = demand("sw-1", "H-sw", "pickup", 500, "Sw");
+    const seated = Array.from({ length: 6 }, (_, index) =>
+      demand(`so-${index}`, `H-so-${index}`, "pickup", 700, "So"));
+    const arcs = [wheel, ...seated].flatMap((item) => [
+      arc(DEPOT, item.locationCode, 10),
+      arc(item.locationCode, DEPOT, 10),
+    ]);
+    const jobs = [
+      job([wheel], normalRoute("sw-1", 10, 10), {
+        id: "wheel", anchorMinutes: 500,
+        result: result([countedRoute(normalRoute("sw-1", 10, 10), ["sw-1"], 1, 0)]),
+      }),
+      job(seated, normalRoute("so-0", 10, 10), {
+        id: "seated", anchorMinutes: 700,
+        result: result(seated.map((item) =>
+          countedRoute(normalRoute(item.occurrenceId, 10, 10), [item.occurrenceId], 0, 1))),
+      }),
+    ];
+    const vehicles = [
+      vehicle("A-WHEEL", 1, 0),
+      ...Array.from({ length: 12 }, (_, index) => vehicle(`SEAT-${index}`, 0, 1)),
+    ];
+    const preview = build([wheel, ...seated], jobs, { ...baseMatrix, arcs }, { vehicles });
+
+    expect(preview.status).toBe("preview_ready");
+    expect(preview.vehicleSummary).toMatchObject({
+      minimumVehicles: 7, minimumProven: true, lowerBound: 6, activeFleetSize: 13,
+    });
+  });
+
+  it("stops at the lower bound so a small node budget still proves the minimum", () => {
+    // 4 sequential seated routes, then 6 concurrent ones. The 6 vehicles all have different
+    // capacities, so symmetry breaking cannot merge them. The first dive reuses one vehicle for
+    // the sequential routes and meets the bound of 6 after 11 nodes. Without the early stop the
+    // search keeps exploring the many alternatives for the sequential routes (states that use
+    // fewer than 6 vehicles) and runs out of this 11 node budget.
+    const early = Array.from({ length: 4 }, (_, index) =>
+      demand(`early-${index}`, `H-early-${index}`, "pickup", 200 + index * 100, "So"));
+    const late = Array.from({ length: 6 }, (_, index) =>
+      demand(`late-${index}`, `H-late-${index}`, "pickup", 700, "So"));
+    const demands = [...early, ...late];
+    const arcs = demands.flatMap((item) => [
+      arc(DEPOT, item.locationCode, 10),
+      arc(item.locationCode, DEPOT, 10),
+    ]);
+    const jobs = [
+      ...early.map((item) => job([item], normalRoute(item.occurrenceId, 10, 10), {
+        id: item.occurrenceId, anchorMinutes: item.anchorMinutes,
+        result: result([countedRoute(normalRoute(item.occurrenceId, 10, 10), [item.occurrenceId], 0, 1)]),
+      })),
+      job(late, normalRoute("late-0", 10, 10), {
+        id: "late", anchorMinutes: 700,
+        result: result(late.map((item) =>
+          countedRoute(normalRoute(item.occurrenceId, 10, 10), [item.occurrenceId], 0, 1))),
+      }),
+    ];
+    const vehicles = Array.from({ length: 6 }, (_, index) => vehicle(`V${index}`, 0, index + 1, 0));
+
+    const preview = buildDudulluPreview({
+      serviceDate: SERVICE_DATE,
+      demands,
+      vehicles,
+      matrix: { ...baseMatrix, arcs },
+      jobs,
+      assignmentSearchNodeBudget: 11,
+    });
+
+    expect(preview.status).toBe("preview_ready");
+    expect(preview.vehicleSummary).toMatchObject({ minimumVehicles: 6, minimumProven: true, lowerBound: 6 });
+  });
+
+  it("sets the summary to null on blocked results", () => {
+    const item = demand("occ-1");
+    const blocked = build([item], [job([item], normalRoute("occ-1"))], { ...baseMatrix, arcs: [] });
+    expect(blocked.status).toBe("blocked_data");
+    expect(blocked.vehicleSummary).toBeNull();
   });
 });

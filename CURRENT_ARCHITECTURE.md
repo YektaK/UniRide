@@ -99,6 +99,8 @@ A production solver input must distinguish a customer occurrence from a physical
 
 A matrix must declare its source/domain, units, directionality, identity mapping, completeness, and validity. Invalid off-diagonal values fail closed on covered production paths. Academic TSPLIB/CVRPLIB distances and production travel-time estimates must never be silently substituted for one another.
 
+Per-student ride time (owner decision 2026-10-04): the optional production request field `max_ride_time` (minutes, 1-600, default `None` = no limit; independent of the vehicle-tour limit `max_travel_time`) bounds every student's in-vehicle time on a route `depot -> s1..sk -> depot`. Pickup: a student's ride is the travel from that student's stop to the campus including the closing arc (longest = first student). Dropoff: the travel from the campus to that student's stop (longest = last student). Students sharing a stop share one ride time. `ga_split` constructs against it in every decode path (`SplitDecoder` capacity-only and time-window builders, both directions; waiting aboard counts where the decoder simulates it), and `check_ride_time` in the production response certifier rejects (`ride_time_violation`) any strategy result that violates it, whether or not that strategy knows the field. The certifier checks pure travel time only; waiting aboard is not visible to it (audit H2). Other strategies do not construct with the limit and rely on that rejection. `None` leaves every existing behaviour, benchmark and academic result unchanged; the academic `ConstraintProfile` does not carry the field.
+
 A target neutral contract is:
 
 ```text

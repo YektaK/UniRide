@@ -89,3 +89,74 @@ gate.
 The attempt was read-only. No user, schedule, request, plan, vehicle, driver,
 matrix, or route record was created or modified. No identity, location-code
 list, token, key, URL credential, or raw provider error was recorded here.
+
+## Demo runbook (Demo çalıştırma)
+
+Purpose: repeat the daily-plan demo (`/admin/daily-plan`) on a local machine. The page is a
+read-only preview. Source of truth for scope and limits: `docs/DEMO_ROADMAP_2026-10-04.md`.
+
+### Prerequisites
+
+- Run from the **main checkout** on the `WIP` branch with D0-D3 merged. The optimizer's
+  editable install points at the main checkout (roadmap F9), so a worktree would load the
+  wrong `optimizer_api` modules.
+- `.env.local` holds the Next.js Supabase variables and `optimizer_api/.env` holds the
+  optimizer variables (roadmap D0 step 2). Never print their values.
+- The Python environment is `.venv-jit`. The launcher now detects it automatically; set
+  `UNIRIDE_PYTHON` (absolute path) only to override it.
+- The Supabase project is active (owner action) and a Supabase Auth user with
+  `public.users.role = 'admin'` exists. Do not create the admin through the sign-up form.
+
+### Start
+
+1. `node scripts/start-dudullu-local.mjs --check-only` (optional). The interpreter line must
+   show the `.venv-jit` path.
+2. `npm run dev:dudullu`. It prints when the FastAPI optimizer (`127.0.0.1:8000`) and Next.js
+   (`http://127.0.0.1:9002`) are both ready.
+3. Open `http://127.0.0.1:9002` and sign in as the admin.
+4. Sidebar: **Günlük Plan** (`/admin/daily-plan`).
+5. Optional: `/admin/readiness` should show 0 missing matrix arcs (812/812 on 2026-10-04).
+
+### Using the page
+
+1. Pick a date. **Monday has the most students** (27 students, 12 waves, 54 trips on
+   2026-10-05), so it is the best demo day. Days with no confirmed trips show the empty-day card.
+2. Leave both toggles on for the demo, then press **Planı oluştur**. Expect about 20 s for a
+   full Monday (17.7 s measured on 2026-10-04); the client gives up after 60 s.
+3. Read the cards: **Bu rotalar için gereken araç** (vehicles needed for these fixed routes; an
+   "en fazla" badge means the assignment search did not finish), student and route counts,
+   live fleet and the shortage. Then the waves with stop times, the vehicle schedule and the
+   status notes.
+
+### What the toggles mean
+
+| Toggle | On | Off |
+|---|---|---|
+| Öğrenci onaylarını varsay (demo) | Every pending trip counts as confirmed (`admissionMode: assume_confirmed`); recorded cancellations are kept. | Only recorded decisions count (`recorded`). The decision table does not exist yet, so an empty day or `LEG_DECISIONS_UNAVAILABLE` is the expected result. |
+| Sanal filo (gereken araç) | Identical virtual vehicles (template taken from the active vehicles; 4 Sw / 10 So / 10 min cooldown on 2026-10-04) are generated, so the page can answer "how many vehicles are needed" (`fleetMode: virtual`). | Only the real active vehicles are used (`live`); the page reports the shortage. |
+
+### Read-only guarantees
+
+- The route `POST /api/admin/dudullu-preview` is admin-only and writes nothing to Supabase.
+- Every response is `publishable: false`; the page has no publish, save or assign action and
+  always shows the "Önizleme - yayınlanamaz" banner.
+- No student names are shown, only location codes (So1, Sw3).
+- The assume-confirmed mode is a preview-only, owner-approved exception (roadmap K1).
+
+### Known limits (also shown on the page)
+
+The solver is not optimal and the route count is not a true minimum (only the vehicle
+assignment is proven). The time model is simple: each wave is tied to a single arrival or
+departure time (`use_time_windows: false`); waiting and return-to-campus checks are not made
+(H2, H4). Do not claim savings from this page.
+
+### Troubleshooting
+
+| Symptom | Likely cause |
+|---|---|
+| "Önizleme hizmeti şu anda kullanılamıyor" | Optimizer or Supabase not reachable; check the launcher output and `/admin/readiness`. |
+| "İstek zaman aşımına uğradı" | Run exceeded 60 s; pick a day with fewer waves. |
+| "Yönetici oturumu doğrulanamadı" | Sign in again as the admin. |
+| Python interpreter without fastapi in `--check-only` | `UNIRIDE_PYTHON` points to a missing path (for example from a worktree); fix the absolute path. |
+
+The manual end-to-end checklist is section 6 of `docs/DEMO_ROADMAP_2026-10-04.md`.

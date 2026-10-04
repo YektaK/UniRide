@@ -240,7 +240,7 @@
           "running": "Plan hazırlanıyor..."
         },
         "initial": "Bir tarih seçip \"Planı oluştur\" düğmesine basın.",
-        "loading": "Plan hazırlanıyor. Çözücü her dalga için sırayla çalışır; bu birkaç dakika sürebilir.",
+        "loading": "Plan hazırlanıyor. Çözücü her dalga için sırayla çalışır; bu yaklaşık yarım dakika, en fazla bir dakika sürebilir.",
         "emptyDay": {
           "title": "Bu gün için planlanacak sefer yok",
           "text": "Seçilen günde Dudullu'ya giden veya dönen onaylı öğrenci seferi bulunamadı. Başka bir tarih deneyin."
@@ -354,9 +354,9 @@
         },
         "limits": {
           "title": "Bilinen sınırlamalar",
-          "notOptimal": "Çözücü rotaları optimal değildir; rota sayısı gerçek minimum değildir.",
+          "notOptimal": "Çözücü optimal değildir; rota sayısı gerçek minimum değildir (yalnızca araç ataması kanıtlanır).",
           "fixedRoutes": "Araç sayısı yalnızca bu sabit rotalar için hesaplanır.",
-          "timeModel": "Zaman modeli basittir: her dalga tek bir varış/çıkış saatine bağlıdır; bekleme ve kampüse dönüş kontrolü yapılmaz (H2, H4).",
+          "timeModel": "Zaman modeli basittir: her dalga tek bir varış/çıkış saatine bağlıdır (use_time_windows: false). Bekleme ve kampüse dönüş kontrolü yapılmaz (H2, H4).",
           "noNames": "Öğrenci adı gösterilmez; konum kodu (So1, Sw3 gibi) kullanılır."
         }
       },

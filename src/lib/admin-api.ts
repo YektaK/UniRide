@@ -265,10 +265,11 @@ async function getDudulluReadiness(): Promise<DudulluReadinessReport> {
 
 /**
  * The preview route calls the optimizer once per wave, one after another, and the server
- * sets no timeout of its own. This client limit is a placeholder until the D0 timing
- * measurement exists (roadmap D0 step 8), then it should be tuned to that value.
+ * sets no timeout of its own. Measured on 2026-10-04 (local run, roadmap D0 step 8): a full
+ * Monday preview (27 students, 12 waves) took 17.7 s end to end. The limit is about 3x that
+ * measurement, rounded to 60 s.
  */
-export const DAILY_PLAN_TIMEOUT_MS = 240_000;
+export const DAILY_PLAN_TIMEOUT_MS = 60_000;
 
 async function runDailyPlanPreview(
   serviceDate: string,

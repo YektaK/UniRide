@@ -250,9 +250,22 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
 - **H15:** H15 yalnızca eski sayfadadır (`src/app/(app)/admin/vehicle-planning/page.tsx`) ve demo onu kullanmaz. QW10'da kalır.
 - **Boyut:** S. **Ajan:** `gelistirici`/haiku (metin), elle demo lider ve sahip.
 
+### R1/R2 — Öğrenci araçta kalma süresi sınırı (sahip kararı K5, 2026-10-04)
+
+- **Sahip kararı K5:** "En fazla seyahat süresi", bir **öğrencinin araçta kaldığı süredir**. Demo varsayılanı **90 dakikadır** ve demo ekranından ayarlanır. Aracın tur sınırı (`max_travel_time`, depo -> duraklar -> depo) için varsayılan **üst sınır 150 dakikadır** ve o da ayarlanır. (Önceki sabit `max_travel_time: 120` kaldırıldı.)
+- **R1 (optimizer):** `max_ride_time` alanı (1–600 dk). Tanım: pickup'ta öğrencinin durağından kampüse kadar (kapanış yayı dahil), dropoff'ta kampüsten ayrılıştan öğrencinin durağına kadar. Sertifika ihlali `ride_time_violation` olarak reddeder. Bekleme süresi sertifikada görünmez (H2).
+- **R2 (Next.js):**
+  - İstek: `maxRideTimeMinutes` (tam sayı 15–240, varsayılan 90) ve `maxTourMinutes` (tam sayı 30–300, varsayılan 150). Hatalı değer `400 INVALID_LIMIT`. Her `/optimize` çağrısına `max_ride_time` ve `max_travel_time` olarak iletilir.
+  - Yanıt: `limits: { maxRideTimeMinutes, maxTourMinutes, minimumFeasibleRideMinutes }`. Her yanıtta (engellenenler dahil) bulunur.
+  - Bir öğrencinin kendi doğrudan yolculuğu (dalganın yönünde kampüs yayı: pickup'ta durak -> kampüs, dropoff'ta kampüs -> durak) sınırı aşarsa çözücü çağrılmadan `RIDE_TIME_LIMIT_INFEASIBLE` (`blocked_data`) döner; `minimumFeasibleRideMinutes` en büyük doğrudan yayın yukarı yuvarlanmış halidir. Çözücü sertifikasında `ride_time_violation` çıkarsa aynı kod döner (minimum `null`).
+  - Rota başına en uzun öğrenci yolculuğu (`maxRideMinutes`) ve günün en büyüğü görünüm modelinde `route_details`'ten hesaplanır: pickup'ta toplam - ilk yay, dropoff'ta toplam - kapanış yayı.
+  - Arayüz: iki sayı alanı ("Öğrenci en fazla araçta (dk)" 90, "Araç turu en fazla (dk)" 150), kullanılan sınırlar önizleme başlığında, her rotada "En uzun öğrenci yolculuğu: X dk".
+- **Kısıt:** Doğrudan yolculuk ön kontrolü yalnızca alt sınırdır; çözücü, paylaşılan rotalarda sınırı tutturamazsa yine `RIDE_TIME_LIMIT_INFEASIBLE` (sertifikadan) ya da `OPTIMIZATION_NOT_SUCCESSFUL` döner. Bu bir sonuç kalitesi iddiası değildir.
+
 ## 4. Sahip için karar noktaları
 
 **Sahip kararları (2026-10-04):**
+- **K5 onaylandı:** öğrencinin araçta kalma süresi sınırı, varsayılan 90 dk, ayarlanabilir; araç turu üst sınırı varsayılan 150 dk, ayarlanabilir (bkz. R1/R2).
 - **K1 onaylandı:** `assume_confirmed` demo modu, bu bölümdeki (a), (b) ve (c) önerileriyle. `ACTIVE_ROADMAP.md`'nin "onay çıkarımı yapma" kuralına **bilinçli, sahip onaylı bir istisnadır**: yalnızca önizleme içindir, DB'ye hiçbir şey yazmaz ve yayınlanamaz (`publishable: false`).
 - **K2 onaylandı:** demoda `fleetMode: "virtual"` (sanal filo) varsayılandır; `live` da desteklenir. Sahibin onayladığı yalnızca budur.
   - **Geliştirici varsayılanı (koordinatör brifi), sahip kararı değildir:** sanal filo, tek bir şablon tipinin N özdeş kopyasıdır. Şablon: tüm aktif araçlar aynı (Sw, So, cooldown) imzasındaysa o tip; değilse en yaygın imza (eşitlikte toplam kapasitesi en büyük olan); aktif araç yoksa Sw 4 / So 10 / cooldown 10. N, o günün kabul edilen bacak sayısıdır.
@@ -327,8 +340,10 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
 | D0 | Ortam, canlı veri envanteri ve devam/dur kararı (+ isteğe bağlı launcher `.venv-jit`) | Launcher düzeltmesi DONE (merge `0dc2616`); canlı envanter tamamlandı (bkz. §4) | `chore/demo-d0-launcher-venv-jit` (yalnızca kod gerekirse) | sahip |
 | D1a | H5 tek DataLoader kökü ve refresh | DONE (merge `5796d93`) | `fix/demo-d1a-h5-single-loader` | D0 |
 | D1b | `vehicleSummary`, alt sınır ve simetri kırma | DONE (merge `b9f6655`) | `feat/demo-d1b-vehicle-summary` | — |
-| D1c | `assume_confirmed`, sanal filo, `LEG_DECISIONS_UNAVAILABLE`, temiz eksik filo raporu | IMPLEMENTED, birleştirme bekliyor (K1, K2, K4 sahip kararı 2026-10-04) | `feat/demo-d1c-admission-fleet-modes` | D1b, K1, K2 |
+| D1c | `assume_confirmed`, sanal filo, `LEG_DECISIONS_UNAVAILABLE`, temiz eksik filo raporu | DONE (merge `d05e7fd` ve `23ec2b5`; K1, K2, K4 sahip kararı 2026-10-04) | `feat/demo-d1c-admission-fleet-modes` | D1b, K1, K2 |
 | D2 | `/admin/daily-plan` sayfası, görünüm modeli, `adminApi.preview`, kenar çubuğu, i18n | DONE (merge `ab92691`) | `feat/demo-d2-daily-plan-page` | D1b, D1c |
-| D3 | Sınırlama etiketleri, kılavuz ve elle demo | IMPLEMENTED (sabit sınırlama kutusu, çalıştırma kılavuzu, tema renk düzeltmesi, 60 sn zaman aşımı; birleştirme bekliyor). Bölüm 6'daki elle kontrol listesi henüz işaretlenmedi: sahip/koordinatör canlı veriyle çalıştırır | `feat/d3-demo-polish` | D0–D2, K3, K4 |
+| D3 | Sınırlama etiketleri, kılavuz ve elle demo | DONE (merge `70c0e1c`: sabit sınırlama kutusu, çalıştırma kılavuzu, tema renk düzeltmesi, 60 sn zaman aşımı). Bölüm 6'daki elle kontrol listesi henüz işaretlenmedi: sahip/koordinatör canlı veriyle çalıştırır | `feat/d3-demo-polish` | D0–D2, K3, K4 |
+| R1 | Optimizer `max_ride_time` alanı, sertifika kontrolü (`ride_time_violation`), `ga_split` bağlantısı | IMPLEMENTED, bağımsız denetimde (dal `worktree-agent-ad53deffb25237cba`; birleştirme bekliyor) | `worktree-agent-ad53deffb25237cba` | K5 |
+| R2 | Önizleme rotası, görünüm modeli ve günlük plan arayüzünde ride-time sınırı (`maxRideTimeMinutes`, `maxTourMinutes`, `limits`, `RIDE_TIME_LIMIT_INFEASIBLE`, rota başına en uzun yolculuk), belgeler | IMPLEMENTED, birleştirme bekliyor (R1'e bağlı; dal `worktree-agent-a39bee331766c35a7`) | `worktree-agent-a39bee331766c35a7` | R1, D3, K5 |
 
 D1a ve D1b paralel ilerleyebilir; D1c, D1b'nin tipleri üzerine kurulur. Her birleştirmeden önce odaklı testler çalıştırılır ve ardından `npm run typecheck` ile `npm run lint` geçmelidir. Atlanan kontroller birleştirme notunda açıkça yazılır.

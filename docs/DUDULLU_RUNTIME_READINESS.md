@@ -133,7 +133,24 @@ read-only preview. Source of truth for scope and limits: `docs/DEMO_ROADMAP_2026
 | Toggle | On | Off |
 |---|---|---|
 | Öğrenci onaylarını varsay (demo) | Every pending trip counts as confirmed (`admissionMode: assume_confirmed`); recorded cancellations are kept. | Only recorded decisions count (`recorded`). The decision table does not exist yet, so an empty day or `LEG_DECISIONS_UNAVAILABLE` is the expected result. |
-| Sanal filo (gereken araç) | Identical virtual vehicles (template taken from the active vehicles; 4 Sw / 10 So / 10 min cooldown on 2026-10-04) are generated, so the page can answer "how many vehicles are needed" (`fleetMode: virtual`). | Only the real active vehicles are used (`live`); the page reports the shortage. |
+| Sanal filo (gereken araç) | Identical virtual vehicles are generated, so the page can answer "how many vehicles are needed" (`fleetMode: virtual`). The vehicle template is the single live vehicle's (Sw, So, cooldown) signature when exactly one vehicle type is active; with several types it is the most common signature; with no active vehicle it is the developer default (4 Sw / 10 So / 10 min cooldown). The default is a developer choice, not an owner decision. | Only the real active vehicles are used (`live`); the page reports the shortage. |
+
+### The two time limits
+
+Owner decision (2026-10-04): "maximum travel time" means the time a **student** stays in the
+vehicle.
+
+| Field | Default | Range | Meaning |
+|---|---|---|---|
+| Öğrenci en fazla araçta (dk) (`maxRideTimeMinutes`) | 90 | 15-240, whole minutes | Longest in-vehicle time of any single student. Pickup: from the student's stop to the campus, closing arc included. Dropoff: from the campus departure to the student's stop. Pure driving time, waiting is not counted (H2). Sent to the optimizer as `max_ride_time`. |
+| Araç turu en fazla (dk) (`maxTourMinutes`) | 150 | 30-300, whole minutes | Upper bound for one vehicle tour, depot -> stops -> depot. Sent as `max_travel_time` (it was a fixed 120 before). |
+
+Each route shows "En uzun öğrenci yolculuğu: X dk" and the vehicles card shows the day's
+longest ride against the limit; the preview banner lists the limits that were used. If a
+student's own direct ride to or from the campus is already longer than the ride limit, no
+plan is possible: the page shows the reason "Seçilen öğrenci araçta kalma sınırı ... karşılanamıyor"
+(`RIDE_TIME_LIMIT_INFEASIBLE`) together with the smallest limit that would work for that day,
+and the optimizer is not called. Raising the limit (or choosing another day) is the fix.
 
 ### Read-only guarantees
 

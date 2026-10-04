@@ -2331,7 +2331,7 @@ Update the Status, Branch/PR and Closing commit columns as fixes land (statuses:
 | M11 | Low (v1.1) | React build split between tests and production | MT7 | OPEN | | | |
 | M20 | Low (v1.1) | Repeated evaluations: telemetry only | LT1 | OPEN | | | |
 | M1–M25 (others) | Medium | See §5 | per §5 | OPEN | | | |
-| L14 | Low | Launcher runs uvicorn with `reload=True` (Windows reload kills the stack) | per §6 | FIXED | `worktree-agent-a03c533784adb2997` | see remediation log | `optimizer_api/tests/test_reload_env.py`; `scripts/start-dudullu-local.test.mjs` (`buildPythonEnv`, `startStack` env tests). Reload is now `UNIRIDE_API_RELOAD`-controlled (default on); the launcher sets `0` for the optimizer child unless the user set it. The "explicit app path" half of the §6 guidance is not done. |
+| L14 | Low | Launcher runs uvicorn with `reload=True` (Windows reload kills the stack) | per §6 | FIXED | `worktree-agent-a03c533784adb2997` | `7cef7ee` | `optimizer_api/tests/test_reload_env.py`; `scripts/start-dudullu-local.test.mjs` (`buildPythonEnv`, `startStack` env tests). Reload is now `UNIRIDE_API_RELOAD`-controlled (default on); the launcher sets `0` for the optimizer child unless the user set it. The "explicit app path" half of the §6 guidance is not done. |
 | L1–L13, L15 | Low | See §6 | per §6 | OPEN | | | |
 | N1 (2026-10-04) | Medium | Dropoff time-window path: phantom wait vs `max_ride_time`; fallback `error` flag ignored | MT1 | OPEN | | | See remediation log; demo unaffected (`use_time_windows=false`) |
 

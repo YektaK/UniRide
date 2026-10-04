@@ -104,6 +104,8 @@ def evaluate_individual(
     so_capacity: int,
     max_tour_duration: float,
     is_asymmetric: bool = False,
+    max_ride_time: Optional[float] = None,
+    direction: Any = "pickup",
 ) -> GAIndividual:
     """Evaluate an individual by decoding its giant tour into feasible routes."""
     result = decode_giant_tour(
@@ -115,6 +117,8 @@ def evaluate_individual(
         so_capacity=so_capacity,
         max_tour_duration=max_tour_duration,
         is_asymmetric=is_asymmetric,
+        max_ride_time=max_ride_time,
+        direction=direction,
     )
 
     if result["num_vehicles"] == 0:
@@ -150,6 +154,8 @@ def evaluate_population(
     so_capacity: int,
     max_tour_duration: float,
     is_asymmetric: bool = False,
+    max_ride_time: Optional[float] = None,
+    direction: Any = "pickup",
 ) -> List[GAIndividual]:
     """Evaluate all individuals in a population."""
     return [
@@ -162,6 +168,8 @@ def evaluate_population(
             so_capacity,
             max_tour_duration,
             is_asymmetric=is_asymmetric,
+            max_ride_time=max_ride_time,
+            direction=direction,
         )
         for individual in population
     ]
@@ -303,6 +311,7 @@ def solve_ga_split(
     target_time: Optional[int] = None,
     offset_minutes: int = 10,
     is_asymmetric: bool = False,
+    max_ride_time: Optional[float] = None,
 ) -> GASplitSolution:
     """Run GA-Split and return the final decoded route result."""
     population = initialize_population(waypoints, config, rng, distance_matrix)
@@ -315,6 +324,8 @@ def solve_ga_split(
         so_capacity,
         max_tour_duration,
         is_asymmetric=is_asymmetric,
+        max_ride_time=max_ride_time,
+        direction=direction,
     )
 
     best = min(population, key=lambda individual: individual.obj_key or (1, 999, float("inf")))
@@ -332,6 +343,8 @@ def solve_ga_split(
             so_capacity,
             max_tour_duration,
             is_asymmetric=is_asymmetric,
+            max_ride_time=max_ride_time,
+            direction=direction,
         )
 
         current_best = min(population, key=lambda individual: individual.obj_key or (1, 999, float("inf")))
@@ -351,6 +364,8 @@ def solve_ga_split(
                 so_capacity,
                 max_tour_duration,
                 is_asymmetric=is_asymmetric,
+                max_ride_time=max_ride_time,
+                direction=direction,
             )
 
         if (current_best.obj_key or (1, 999, float("inf"))) < (best.obj_key or (1, 999, float("inf"))):
@@ -373,6 +388,8 @@ def solve_ga_split(
                 so_capacity,
                 max_tour_duration,
                 is_asymmetric=is_asymmetric,
+                max_ride_time=max_ride_time,
+                direction=direction,
             )
             no_improvement = 0
 
@@ -390,6 +407,7 @@ def solve_ga_split(
             so_capacity=so_capacity,
             max_tour_duration=max_tour_duration,
             is_asymmetric=is_asymmetric,
+            max_ride_time=max_ride_time,
         )
     else:
         final_result = decode_giant_tour(
@@ -401,6 +419,8 @@ def solve_ga_split(
             so_capacity=so_capacity,
             max_tour_duration=max_tour_duration,
             is_asymmetric=is_asymmetric,
+            max_ride_time=max_ride_time,
+            direction=direction,
         )
 
     return GASplitSolution(

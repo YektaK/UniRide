@@ -279,7 +279,11 @@ def test_certifier_checks_ride_time_per_direction():
     )
 
     assert pickup["is_feasible"] is False
-    assert [v["type"] for v in pickup["violations"]] == ["ride_time_violation"]
+    # a success=True response with violations also gets the generic hard_violation
+    assert {v["type"] for v in pickup["violations"]} == {
+        "ride_time_violation",
+        "hard_violation",
+    }
     assert dropoff["is_feasible"] is True
 
 

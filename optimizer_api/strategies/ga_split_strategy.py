@@ -186,6 +186,7 @@ class GASplitStrategy(HybridSplitBaseStrategy):
             target_time=target_time_minutes,
             offset_minutes=offset_minutes,
             is_asymmetric=request.is_asymmetric,
+            max_ride_time=getattr(request, "max_ride_time", None),
         )
         final_result = solution.final_result
         

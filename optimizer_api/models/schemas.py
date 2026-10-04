@@ -203,6 +203,17 @@ class OptimizationRequest(BaseModel):
     students: List[StudentNode]
     depot: LocationNode
     max_travel_time: int = 120
+    max_ride_time: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=600,
+        description=(
+            "Per-student maximum ride time in minutes (None = no limit). "
+            "Pickup: travel from the student's stop to the campus; dropoff: "
+            "travel from the campus to the student's stop. Independent of "
+            "max_travel_time, which limits the whole vehicle tour."
+        ),
+    )
     sw_capacity: int = 4
     so_capacity: int = 5
     direction: TripDirection = TripDirection.PICKUP
@@ -457,6 +468,7 @@ class CompareRequest(BaseModel):
     students: List[StudentNode]
     depot: LocationNode
     max_travel_time: int = 120
+    max_ride_time: Optional[int] = Field(default=None, ge=1, le=600)
     sw_capacity: int = 4
     so_capacity: int = 5
     direction: TripDirection = TripDirection.PICKUP

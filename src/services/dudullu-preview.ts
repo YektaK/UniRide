@@ -199,7 +199,10 @@ export interface VirtualFleetTemplate {
   readonly cooldownMinutes: number;
 }
 
-/** Used when no live vehicle is active. The roadmap defines no template of its own. */
+/**
+ * Used when no live vehicle is active. This (like the template selection rules below) is a
+ * developer default from the coordinator brief, not an owner decision; the roadmap marks it so.
+ */
 export const DEFAULT_VIRTUAL_FLEET_TEMPLATE: VirtualFleetTemplate = {
   swCapacity: 4,
   soCapacity: 10,

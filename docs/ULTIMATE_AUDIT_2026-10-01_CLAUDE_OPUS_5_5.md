@@ -2311,7 +2311,7 @@ Update the Status, Branch/PR and Closing commit columns as fixes land (statuses:
 | H2 | High | Return arc to school and waiting unchecked | MT1 | OPEN | | | |
 | H3 | High | Uncertified `arrival_times` schedule | MT1 | OPEN | | | |
 | H4 | High | Search ignores time windows | MT1 | OPEN | | | |
-| H5 | High | Dual DataLoader singletons | QW3 | OPEN | | | |
+| H5 | High | Dual DataLoader singletons | QW3 (H5 part only; C2 stays open) | FIXED | `worktree-agent-a8fa6fced6451df76` (D1a) | `d672dc7` | `optimizer_api/tests/test_single_data_loader_root.py` (red in `b536600`, green in `d672dc7`); Appendix H.4 offline rerun: one `utils.data_loader` module, steps 4 (readiness DataLoader), 6 and 9 succeed; `optimizer_api/tests` 2101 passed |
 | H6 | High | Event loop blocked by readiness | MT3 | OPEN | | | |
 | H7 | High | No global solver cap; `/compare` thread leak | MT3 | OPEN | | | |
 | H8 | High | Academic runs and DB writes in the production process | MT4 | OPEN | | | |

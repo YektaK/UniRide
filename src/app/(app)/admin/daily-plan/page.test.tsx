@@ -204,8 +204,7 @@ describe("DailyPlanPage", () => {
     expect(screen.queryByTestId("why-vehicles")).toBeNull();
     cleanup();
 
-    const { maxCapacity: _omit, ...fleet } = peakWaveResponse().fleet;
-    await generate({ ...peakWaveResponse(), fleet });
+    await generate({ ...peakWaveResponse(), fleet: { ...peakWaveResponse().fleet, maxCapacity: undefined } });
     expect(screen.queryByTestId("why-vehicles")).toBeNull();
     cleanup();
 

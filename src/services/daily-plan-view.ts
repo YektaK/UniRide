@@ -403,8 +403,8 @@ export function computeCapacityFloor(
     }
   }
   if (best === null) return null;
-  const { anchorMinutes: _anchor, ...floor } = best;
-  return floor;
+  const { vehicles, direction, anchorLabel, studentCount, swCount, soCount, swCapacity, soCapacity } = best;
+  return { vehicles, direction, anchorLabel, studentCount, swCount, soCount, swCapacity, soCapacity };
 }
 
 /** Turns one preview response into everything the daily-plan page displays. */

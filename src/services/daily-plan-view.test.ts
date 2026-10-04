@@ -492,7 +492,7 @@ describe("buildDailyPlanView - capacity floor", () => {
 
   it("is null for an older response without fleet capacities and for a plan without routes", () => {
     const old = peakWaveResponse();
-    const { maxCapacity: _omit, ...fleet } = old.fleet;
+    const fleet = { ...old.fleet, maxCapacity: undefined };
     expect(buildDailyPlanView({ ...old, fleet }).summary.capacityFloor).toBeNull();
     expect(buildDailyPlanView(blockedResponse()).summary.capacityFloor).toBeNull();
     expect(buildDailyPlanView(emptyDayResponse()).summary.capacityFloor).toBeNull();
@@ -502,6 +502,7 @@ describe("buildDailyPlanView - capacity floor", () => {
     const withField = peakWaveResponse();
     expect(parseDudulluPreviewResponse(withField).fleet.maxCapacity).toEqual({ swCapacity: 4, soCapacity: 10 });
     const { maxCapacity: _omit, ...fleet } = withField.fleet;
+    void _omit;
     expect(parseDudulluPreviewResponse({ ...withField, fleet }).fleet.maxCapacity).toBeUndefined();
     expect(parseDudulluPreviewResponse({ ...withField, fleet: { ...fleet, maxCapacity: null } }).fleet.maxCapacity).toBeNull();
   });

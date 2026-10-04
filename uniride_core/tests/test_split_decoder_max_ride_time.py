@@ -285,6 +285,31 @@ def test_time_window_pickup_waiting_after_first_pickup_counts():
     assert decode_with_time_windows(max_ride_time=55, **kw)["routes"] == [["A", "B", "C"]]
 
 
+def test_time_window_pickup_wait_at_first_stop_is_not_ride_time():
+    """The first student boards after the wait, so it is not part of any ride."""
+    dm = _line_matrix()
+    # departure 1440 - 60 = 1380; A reached at 1390 but opens at 1395: a
+    # 5 minute wait at the FIRST stop, before anyone is aboard.
+    windows = {"A": (1395, 1440), "B": (0, 1440), "C": (0, 1440)}
+    kw = dict(
+        giant_tour=["A", "B", "C"],
+        depot=DEPOT,
+        distance_matrix=dm,
+        demands=DEMANDS,
+        time_windows=windows,
+        direction=Direction.PICKUP,
+        target_time=420,
+        offset_minutes=0,
+        sw_capacity=4,
+        so_capacity=10,
+        max_tour_duration=1000,
+        is_asymmetric=True,
+    )
+    # pure travel ride of A is exactly 50; the first-stop wait must not add to it
+    assert decode_with_time_windows(max_ride_time=50, **kw)["routes"] == [["A", "B", "C"]]
+    assert decode_with_time_windows(max_ride_time=49, **kw)["routes"] != [["A", "B", "C"]]
+
+
 # -- decoder class contract ---------------------------------------------------
 
 

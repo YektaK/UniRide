@@ -214,7 +214,8 @@ async function loadBlockedPreview(serviceDate: string, modes: PreviewModes) {
     assignmentFleetSize: number | null;
     liveActiveFleetSize: number | null;
     template: VirtualFleetTemplate | null;
-  } = { mode: fleetMode, assignmentFleetSize: null, liveActiveFleetSize: null, template: null };
+    maxCapacity: { swCapacity: number; soCapacity: number } | null;
+  } = { mode: fleetMode, assignmentFleetSize: null, liveActiveFleetSize: null, template: null, maxCapacity: null };
   // Echo of the limits the optimizer is given. `minimumFeasibleRideMinutes` is set only when a
   // student's own direct ride already exceeds the ride limit.
   const limits: {
@@ -457,6 +458,14 @@ async function loadBlockedPreview(serviceDate: string, modes: PreviewModes) {
     vehicles = buildVirtualFleet(fleetInfo.template, admitted.length);
   }
   fleetInfo.assignmentFleetSize = vehicles.length;
+  // Largest seat counts of the fleet the plan used: lets the page explain the capacity-only
+  // vehicle floor ("why N vehicles?"). Sw and So seats are separate pools.
+  if (vehicles.length > 0) {
+    fleetInfo.maxCapacity = {
+      swCapacity: Math.max(...vehicles.map((vehicle) => vehicle.swCapacity)),
+      soCapacity: Math.max(...vehicles.map((vehicle) => vehicle.soCapacity)),
+    };
+  }
 
   let matrix: MatrixSnapshot;
   try {

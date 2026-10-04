@@ -6,6 +6,7 @@ import {
   blockedResponse,
   emptyDayResponse,
   indeterminateResponse,
+  peakWaveResponse,
   readyResponse,
   rideLimitInfeasibleResponse,
   shortageResponse,
@@ -150,6 +151,66 @@ describe("DailyPlanPage", () => {
     expect(screen.getByText(/Seçilen öğrenci araçta kalma sınırı \(15 dk\) bu gün için karşılanamıyor/)).toBeTruthy();
     expect(screen.getByText(/en az 23 dk yapın/)).toBeTruthy();
     expect(screen.queryAllByTestId("wave-card")).toHaveLength(0);
+  });
+
+  it("tells the admin that 240 min is not enough instead of asking for an unreachable limit", async () => {
+    const response = rideLimitInfeasibleResponse();
+    await generate({
+      ...response,
+      limits: { maxRideTimeMinutes: 240, maxTourMinutes: 300, minimumFeasibleRideMinutes: 260 },
+    });
+
+    const notes = screen.getByTestId("status-notes").textContent ?? "";
+    expect(notes).toContain("Bu gün için en yüksek sınır olan 240 dk bile yetmiyor");
+    expect(notes).toContain("en az 260 dk");
+    expect(notes).not.toContain("yapın");
+    expect(notes).not.toContain("Sınırı artırın");
+  });
+
+  it("keeps asking for the minimum limit while it is within the 240 min maximum", async () => {
+    await generate({
+      ...rideLimitInfeasibleResponse(),
+      limits: { maxRideTimeMinutes: 90, maxTourMinutes: 150, minimumFeasibleRideMinutes: 240 },
+    });
+
+    expect(screen.getByText(/en az 240 dk yapın/)).toBeTruthy();
+    expect(screen.queryByText(/bile yetmiyor/)).toBeNull();
+  });
+
+  it("explains why 3 vehicles when the limits add one above the capacity floor", async () => {
+    await generate(peakWaveResponse(3));
+
+    const why = screen.getByTestId("why-vehicles");
+    expect(within(why).getByText("Neden 3 araç?")).toBeTruthy();
+    expect(screen.getByTestId("why-peak").textContent).toBe("En yoğun dalga 08:45 varış: 20 öğrenci (5 Sw, 15 So).");
+    expect(screen.getByTestId("why-floor").textContent).toBe(
+      "Yalnızca koltuk kapasitesi en az 2 araç gerektirir (Sw: 4 koltuk, So: 10 koltuk).",
+    );
+    expect(screen.getByTestId("why-conclusion").textContent).toBe(
+      "Fazladan 1 araç, öğrencinin araçta en fazla 90 dk ve araç turunun en fazla 150 dk kalma sınırları rotaları böldüğü (ve rotalar aynı saatlere denk geldiği) için gerekiyor.",
+    );
+  });
+
+  it("says capacity is the binding constraint when the vehicles equal the floor", async () => {
+    await generate(peakWaveResponse(2));
+
+    expect(screen.getByTestId("why-conclusion").textContent).toContain("belirleyici etken koltuk kapasitesidir");
+    expect(screen.queryByText(/Fazladan/)).toBeNull();
+  });
+
+  it("shows no explanation for an unproven count, a missing floor or an empty day", async () => {
+    const unproven = peakWaveResponse(3);
+    await generate({ ...unproven, vehicleSummary: { ...unproven.vehicleSummary!, minimumProven: false } });
+    expect(screen.queryByTestId("why-vehicles")).toBeNull();
+    cleanup();
+
+    const { maxCapacity: _omit, ...fleet } = peakWaveResponse().fleet;
+    await generate({ ...peakWaveResponse(), fleet });
+    expect(screen.queryByTestId("why-vehicles")).toBeNull();
+    cleanup();
+
+    await generate(emptyDayResponse());
+    expect(screen.queryByTestId("why-vehicles")).toBeNull();
   });
 
   it("sends recorded and live when both switches are turned off", async () => {

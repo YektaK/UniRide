@@ -748,6 +748,7 @@ describe("POST /api/admin/dudullu-preview demo modes", () => {
     expect(body.reasonCodes).not.toContain("ADMISSION_ASSUMED");
     expect(body.fleet).toEqual({
       mode: "live", assignmentFleetSize: 1, liveActiveFleetSize: 1, template: null,
+      maxCapacity: { swCapacity: 2, soCapacity: 2 },
     });
   });
 
@@ -913,6 +914,7 @@ describe("POST /api/admin/dudullu-preview demo modes", () => {
       expect(body.fleet).toEqual({
         mode: "virtual", assignmentFleetSize: 6, liveActiveFleetSize: 2,
         template: { swCapacity: 2, soCapacity: 2, cooldownMinutes: 10 },
+        maxCapacity: { swCapacity: 2, soCapacity: 2 },
       });
       expect(body.vehicleSummary).toMatchObject({ activeFleetSize: 6, minimumVehicles: 3, minimumProven: true });
     });
@@ -961,7 +963,38 @@ describe("POST /api/admin/dudullu-preview demo modes", () => {
       expect(body.fleet).toEqual({
         mode: "virtual", assignmentFleetSize: 2, liveActiveFleetSize: 0,
         template: { swCapacity: 4, soCapacity: 10, cooldownMinutes: 10 },
+        maxCapacity: { swCapacity: 4, soCapacity: 10 },
       });
+    });
+
+    it("reports the largest Sw and So capacity of the live fleet, each pool on its own", async () => {
+      setAdmin({
+        ...crowd(2), student_leg_decisions: [confirmedLeg(1), confirmedLeg(2)],
+        vehicles: [vehicleRow("a", 4, 6, 5), vehicleRow("b", 2, 12, 10)],
+      });
+      mockCrowdTransport(2);
+      const { POST } = await import("./route");
+
+      const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+
+      expect(body.fleet.maxCapacity).toEqual({ swCapacity: 4, soCapacity: 12 });
+    });
+
+    it("reports the template capacity for the virtual fleet and null when no fleet was built", async () => {
+      setAdmin({ ...crowd(1), vehicles: [vehicleRow("a", 4, 6, 5), vehicleRow("b", 2, 12, 10)] });
+      mockCrowdTransport(1);
+      const { POST } = await import("./route");
+
+      const virtual = await (await POST(post({
+        serviceDate: "2026-09-30", admissionMode: "assume_confirmed", fleetMode: "virtual",
+      }))).json();
+      expect(virtual.fleet.maxCapacity).toEqual({
+        swCapacity: virtual.fleet.template.swCapacity, soCapacity: virtual.fleet.template.soCapacity,
+      });
+
+      setAdmin({ ...crowd(1) });
+      const noFleet = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+      expect(noFleet.fleet.maxCapacity).toBeNull();
     });
 
     it("still fails closed on an invalid live fleet row", async () => {

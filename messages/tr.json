@@ -294,6 +294,14 @@
           "spare": "{n} araç boşta kalır",
           "differenceUnknown": "Karşılaştırılamadı"
         },
+        "why": {
+          "title": "Neden {n} araç?",
+          "peakPickup": "En yoğun dalga {time} varış: {students} öğrenci ({sw} Sw, {so} So).",
+          "peakDropoff": "En yoğun dalga {time} çıkış: {students} öğrenci ({sw} Sw, {so} So).",
+          "floor": "Yalnızca koltuk kapasitesi en az {n} araç gerektirir (Sw: {swCap} koltuk, So: {soCap} koltuk).",
+          "gap": "Fazladan {n} araç, öğrencinin araçta en fazla {ride} dk ve araç turunun en fazla {tour} dk kalma sınırları rotaları böldüğü (ve rotalar aynı saatlere denk geldiği) için gerekiyor.",
+          "capacityBinding": "Gereken araç sayısı bu alt sınıra eşit: belirleyici etken koltuk kapasitesidir, süre sınırları ek araç gerektirmiyor."
+        },
         "sections": {
           "pickup": "Sabah toplama",
           "dropoff": "Akşam bırakma"
@@ -332,7 +340,8 @@
         },
         "notes": {
           "title": "Durum notları",
-          "rideLimitMinimum": "Bu gün için öğrenci araçta kalma sınırını en az {min} dk yapın."
+          "rideLimitMinimum": "Bu gün için öğrenci araçta kalma sınırını en az {min} dk yapın.",
+          "rideLimitUnreachable": "Bu gün için en yüksek sınır olan {max} dk bile yetmiyor: en az bir öğrencinin doğrudan yolculuğu bundan uzun (en az {min} dk). Sınırı artırmak sorunu çözmez."
         },
         "reasons": {
           "ADMISSION_ASSUMED": "Demo için bekleyen tüm öğrenci seferleri onaylı sayıldı. Bu bir varsayımdır, gerçek onay değildir.",
@@ -355,7 +364,7 @@
           "OPTIMIZATION_NOT_SUCCESSFUL": "Rota çözücüsü başarılı bir sonuç döndürmedi veya ulaşılamadı.",
           "PENDING_STUDENT_CONFIRMATION": "Bazı öğrencilerin onayı hâlâ bekleniyor.",
           "RIDE_TIME_LIMIT_INFEASIBLE": "Seçilen öğrenci araçta kalma sınırı ({limit} dk) bu gün için karşılanamıyor; plan kurulamadı. Sınırı artırın.",
-          "ROUTE_OUTSIDE_SERVICE_DAY":"Bir rota gün sınırlarının dışına taşıyor.",
+          "ROUTE_OUTSIDE_SERVICE_DAY": "Bir rota gün sınırlarının dışına taşıyor.",
           "ROUTE_LOAD_MISMATCH": "Rotadaki Sw/So sayıları öğrenci listesiyle uyuşmuyor.",
           "ROUTE_TOTAL_MISMATCH": "Rota toplam süresi adımların toplamıyla uyuşmuyor.",
           "SCHEDULE_DATA_INVALID": "Ders programı veya öğrenci kaydı verisi geçersiz.",

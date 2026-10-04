@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   KNOWN_REASON_CODES,
   buildDailyPlanView,
+  computeCapacityFloor,
   describeReason,
   formatMinutesOfDay,
   nodeLocationCode,
@@ -11,6 +12,7 @@ import {
   blockedResponse,
   emptyDayResponse,
   indeterminateResponse,
+  peakWaveResponse,
   readyResponse,
   rideLimitInfeasibleResponse,
   shortageResponse,
@@ -418,5 +420,89 @@ describe("parseDudulluPreviewResponse", () => {
     expect(() => parseDudulluPreviewResponse({ ...readyResponse(), status: "ok" })).toThrow();
     expect(() => parseDudulluPreviewResponse({ error: "PREVIEW_UNAVAILABLE" })).toThrow();
     expect(() => parseDudulluPreviewResponse(null)).toThrow();
+  });
+});
+
+describe("computeCapacityFloor", () => {
+  const wave = (direction: "pickup" | "dropoff", anchorMinutes: number, swCount: number, soCount: number) => ({
+    direction,
+    anchorMinutes,
+    anchorLabel: formatMinutesOfDay(anchorMinutes),
+    swCount,
+    soCount,
+  });
+  const capacity = { swCapacity: 4, soCapacity: 10 };
+
+  it("is bound by the So pool when So students need more vehicles (5 Sw, 15 So -> 2)", () => {
+    expect(computeCapacityFloor([wave("pickup", 525, 5, 15)], capacity)).toEqual({
+      vehicles: 2, direction: "pickup", anchorLabel: "08:45", studentCount: 20, swCount: 5, soCount: 15,
+      swCapacity: 4, soCapacity: 10,
+    });
+  });
+
+  it("is bound by the Sw pool when Sw students need more vehicles", () => {
+    expect(computeCapacityFloor([wave("pickup", 525, 9, 3)], capacity)?.vehicles).toBe(3);
+  });
+
+  it("checks Sw and So separately instead of adding them", () => {
+    // 4 Sw + 10 So fit one vehicle although 14 > 10.
+    expect(computeCapacityFloor([wave("pickup", 525, 4, 10)], capacity)?.vehicles).toBe(1);
+    expect(computeCapacityFloor([wave("pickup", 525, 5, 10)], capacity)?.vehicles).toBe(2);
+  });
+
+  it("takes the busiest wave of the day, whatever the direction", () => {
+    const floor = computeCapacityFloor(
+      [wave("pickup", 480, 1, 10), wave("dropoff", 1020, 0, 21), wave("pickup", 525, 5, 15)],
+      capacity,
+    );
+    expect(floor).toMatchObject({ vehicles: 3, direction: "dropoff", anchorLabel: "17:00", soCount: 21 });
+  });
+
+  it("breaks ties by student count, then by the earlier wave", () => {
+    const byStudents = computeCapacityFloor([wave("pickup", 480, 0, 11), wave("pickup", 525, 0, 20)], capacity);
+    expect(byStudents).toMatchObject({ vehicles: 2, anchorLabel: "08:45" });
+    const byTime = computeCapacityFloor([wave("dropoff", 1020, 0, 15), wave("pickup", 525, 0, 15)], capacity);
+    expect(byTime).toMatchObject({ vehicles: 2, anchorLabel: "08:45" });
+  });
+
+  it("uses the given capacities, not the default template", () => {
+    expect(computeCapacityFloor([wave("pickup", 525, 5, 15)], { swCapacity: 2, soCapacity: 5 })?.vehicles).toBe(3);
+  });
+
+  it("returns null without capacities, without students or when a needed seat pool is empty", () => {
+    expect(computeCapacityFloor([wave("pickup", 525, 5, 15)], null)).toBeNull();
+    expect(computeCapacityFloor([wave("pickup", 525, 5, 15)], undefined)).toBeNull();
+    expect(computeCapacityFloor([], capacity)).toBeNull();
+    expect(computeCapacityFloor([wave("pickup", 525, 0, 0)], capacity)).toBeNull();
+    expect(computeCapacityFloor([wave("pickup", 525, 2, 0)], { swCapacity: 0, soCapacity: 10 })).toBeNull();
+    // An empty pool is fine when nobody needs it.
+    expect(computeCapacityFloor([wave("pickup", 525, 0, 3)], { swCapacity: 0, soCapacity: 10 })?.vehicles).toBe(1);
+  });
+});
+
+describe("buildDailyPlanView - capacity floor", () => {
+  it("derives the floor from the response waves and fleet capacity", () => {
+    const view = buildDailyPlanView(peakWaveResponse(3));
+    expect(view.summary.capacityFloor).toMatchObject({
+      vehicles: 2, direction: "pickup", anchorLabel: "08:45", studentCount: 20, swCount: 5, soCount: 15,
+      swCapacity: 4, soCapacity: 10,
+    });
+    expect(view.summary.neededVehicles).toBe(3);
+  });
+
+  it("is null for an older response without fleet capacities and for a plan without routes", () => {
+    const old = peakWaveResponse();
+    const { maxCapacity: _omit, ...fleet } = old.fleet;
+    expect(buildDailyPlanView({ ...old, fleet }).summary.capacityFloor).toBeNull();
+    expect(buildDailyPlanView(blockedResponse()).summary.capacityFloor).toBeNull();
+    expect(buildDailyPlanView(emptyDayResponse()).summary.capacityFloor).toBeNull();
+  });
+
+  it("still parses through the zod contract with and without the new field", () => {
+    const withField = peakWaveResponse();
+    expect(parseDudulluPreviewResponse(withField).fleet.maxCapacity).toEqual({ swCapacity: 4, soCapacity: 10 });
+    const { maxCapacity: _omit, ...fleet } = withField.fleet;
+    expect(parseDudulluPreviewResponse({ ...withField, fleet }).fleet.maxCapacity).toBeUndefined();
+    expect(parseDudulluPreviewResponse({ ...withField, fleet: { ...fleet, maxCapacity: null } }).fleet.maxCapacity).toBeNull();
   });
 });

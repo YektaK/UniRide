@@ -90,6 +90,43 @@ function PreviewBanner({ plan }: { plan: DailyPlanView }) {
   );
 }
 
+/** "Why N vehicles?": the capacity-only lower bound and what drives the gap above it. */
+function WhyVehicles({ plan }: { plan: DailyPlanView }) {
+  const t = useTranslations("page.admin.dailyPlan.why");
+  const { neededVehicles, neededAtMost, capacityFloor: floor } = plan.summary;
+  if (neededVehicles === null || neededAtMost || floor === null) return null;
+  const gap = neededVehicles - floor.vehicles;
+  return (
+    <Card data-testid="why-vehicles">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg">{t("title", { n: neededVehicles })}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-1 text-sm text-muted-foreground">
+        <p data-testid="why-peak">
+          {t(floor.direction === "pickup" ? "peakPickup" : "peakDropoff", {
+            time: floor.anchorLabel,
+            students: floor.studentCount,
+            sw: floor.swCount,
+            so: floor.soCount,
+          })}
+        </p>
+        <p data-testid="why-floor">
+          {t("floor", { n: floor.vehicles, swCap: floor.swCapacity, soCap: floor.soCapacity })}
+        </p>
+        <p data-testid="why-conclusion">
+          {gap > 0
+            ? t("gap", {
+              n: gap,
+              ride: plan.limits.maxRideTimeMinutes,
+              tour: plan.limits.maxTourMinutes,
+            })
+            : t("capacityBinding")}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 function SummaryCards({ plan }: { plan: DailyPlanView }) {
   const t = useTranslations("page.admin.dailyPlan.cards");
   const { summary } = plan;
@@ -109,6 +146,7 @@ function SummaryCards({ plan }: { plan: DailyPlanView }) {
   }
 
   return (
+    <div className="space-y-4">
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <Card data-testid="card-needed-vehicles">
         <CardHeader className="pb-2">
@@ -164,6 +202,8 @@ function SummaryCards({ plan }: { plan: DailyPlanView }) {
           </p>
         </CardContent>
       </Card>
+    </div>
+    <WhyVehicles plan={plan} />
     </div>
   );
 }
@@ -311,6 +351,9 @@ function VehicleSchedule({ plan }: { plan: DailyPlanView }) {
 
 function StatusNotes({ plan, t }: { plan: DailyPlanView; t: Translate }) {
   if (plan.reasons.length === 0) return null;
+  const minimumRide = plan.limits.minimumFeasibleRideMinutes;
+  // Even the largest limit the form accepts cannot fix this day: do not tell the user to raise it.
+  const rideLimitUnreachable = minimumRide !== null && minimumRide > RIDE_LIMIT_RANGE.max;
   return (
     <Card data-testid="status-notes">
       <CardHeader className="pb-2">
@@ -324,10 +367,12 @@ function StatusNotes({ plan, t }: { plan: DailyPlanView; t: Translate }) {
                 ? <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                 : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />}
               <span>
-                {t(`reasons.${reason.messageKey}`, { limit: plan.limits.maxRideTimeMinutes })}
+                {rideLimitUnreachable && reason.code === "RIDE_TIME_LIMIT_INFEASIBLE"
+                  ? t("notes.rideLimitUnreachable", { max: RIDE_LIMIT_RANGE.max, min: minimumRide })
+                  : t(`reasons.${reason.messageKey}`, { limit: plan.limits.maxRideTimeMinutes })}
                 {reason.messageKey === "unknown" ? ` (${reason.code})` : ""}
-                {reason.code === "RIDE_TIME_LIMIT_INFEASIBLE" && plan.limits.minimumFeasibleRideMinutes !== null
-                  ? ` ${t("notes.rideLimitMinimum", { min: plan.limits.minimumFeasibleRideMinutes })}`
+                {!rideLimitUnreachable && reason.code === "RIDE_TIME_LIMIT_INFEASIBLE" && minimumRide !== null
+                  ? ` ${t("notes.rideLimitMinimum", { min: minimumRide })}`
                   : ""}
               </span>
             </li>

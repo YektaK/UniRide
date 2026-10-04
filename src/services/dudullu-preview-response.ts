@@ -93,6 +93,11 @@ export const dudulluPreviewResponseSchema = z.object({
       soCapacity: count,
       cooldownMinutes: count,
     }).nullable(),
+    /** Largest Sw / So capacity of the fleet the plan used; absent on older responses. */
+    maxCapacity: z.object({
+      swCapacity: count,
+      soCapacity: count,
+    }).nullable().optional(),
   }),
   /** The limits the optimizer was given (minutes); the minimum is set only for an infeasible ride limit. */
   limits: z.object({

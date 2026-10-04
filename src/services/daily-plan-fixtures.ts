@@ -111,6 +111,7 @@ const baseResponse = (): Response => ({
     assignmentFleetSize: 4,
     liveActiveFleetSize: 1,
     template: { swCapacity: 4, soCapacity: 10, cooldownMinutes: 10 },
+    maxCapacity: { swCapacity: 4, soCapacity: 10 },
   },
   limits: { maxRideTimeMinutes: 90, maxTourMinutes: 150, minimumFeasibleRideMinutes: null },
   vehicleSummary: {
@@ -150,6 +151,30 @@ const baseResponse = (): Response => ({
 /** preview_ready: 2 vehicles for 3 routes, one live vehicle. */
 export function readyResponse(): Response {
   return baseResponse();
+}
+
+/**
+ * Shaped like the 2026-10-05 live run: the 08:45 wave carries 20 students (5 Sw, 15 So), so seat
+ * capacity (Sw 4 / So 10) alone needs 2 vehicles. `neededVehicles` is what the assignment proved.
+ */
+export function peakWaveResponse(neededVehicles = 3): Response {
+  const response = baseResponse();
+  const counts = [[2, 5], [2, 5], [1, 5]] as const;
+  const [pickup, dropoff] = response.jobs;
+  const routes = counts.map(([sw, so], index) => ({
+    vehicle_id: `virtual:4-10-10:${index + 1}`,
+    route_details: [step("D.Kampus", "So1", 10), step("So1", "D.Kampus", 10)],
+    total_duration_minutes: 20,
+    sw_count: sw,
+    so_count: so,
+    student_ids: [],
+  }));
+  return {
+    ...response,
+    jobs: [{ ...pickup, result: { ...pickup.result, routes }, intervals: [] }, dropoff],
+    assignments: [],
+    vehicleSummary: { ...response.vehicleSummary!, minimumVehicles: neededVehicles, lowerBound: 2 },
+  };
 }
 
 /** Assignment search did not finish: the vehicle count is only an upper bound. */

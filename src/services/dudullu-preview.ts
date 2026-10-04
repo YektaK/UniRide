@@ -121,6 +121,33 @@ export interface HourlyDemandSummary {
   readonly dropoff: { Sw: number; So: number };
 }
 
+export interface PreviewJobRouteCount {
+  readonly jobId: string;
+  readonly direction: TripDirection;
+  readonly anchorMinutes: number;
+  readonly routeCount: number;
+  readonly studentCount: number;
+}
+
+/**
+ * Fleet summary for the solver's fixed routes. `minimumProven` only says that the
+ * physical-vehicle assignment is minimal for these routes. It is not a claim about
+ * the global minimum number of vehicles, because the route count itself is the
+ * solver's choice and is not proven minimal.
+ */
+export interface PreviewVehicleSummary {
+  /** Distinct physical vehicles in the best assignment found; null when none was found. */
+  readonly minimumVehicles: number | null;
+  /** True only when the search finished (or met the lower bound) with an assignment. */
+  readonly minimumProven: boolean;
+  /** Peak number of routes that must run on different vehicles, cooldown included. */
+  readonly lowerBound: number;
+  /** Peak number of simultaneously running routes, without cooldown. */
+  readonly peakConcurrentRoutes: number;
+  readonly activeFleetSize: number;
+  readonly routesPerJob: readonly PreviewJobRouteCount[];
+}
+
 export interface DudulluPreviewResult {
   readonly status: "preview_ready" | "shortage" | "blocked_data" | "indeterminate";
   readonly publishable: false;
@@ -133,6 +160,8 @@ export interface DudulluPreviewResult {
   readonly hourlyOccupiedVehicles: Readonly<Record<string, number>>;
   readonly unassignedOccurrenceIds: readonly string[];
   readonly reasonCodes: readonly PreviewReasonCode[];
+  /** Null when the preview is blocked before a fleet assignment is attempted. */
+  readonly vehicleSummary: PreviewVehicleSummary | null;
 }
 
 export interface BuildDudulluPreviewInput {
@@ -141,6 +170,8 @@ export interface BuildDudulluPreviewInput {
   readonly vehicles: readonly PreviewVehicle[];
   readonly matrix: MatrixSnapshot | null | undefined;
   readonly jobs: readonly PreviewJobInput[];
+  /** Overrides the assignment search node budget; intended for tests. */
+  readonly assignmentSearchNodeBudget?: number;
 }
 
 class PreviewValidationError extends Error {
@@ -191,6 +222,7 @@ function makeBlockedResult(
     hourlyOccupiedVehicles: {},
     unassignedOccurrenceIds,
     reasonCodes: [...new Set(reasonCodes)],
+    vehicleSummary: null,
   };
 }
 
@@ -458,6 +490,11 @@ interface FleetAssignmentResult {
   readonly hourlyOccupiedVehicles: Readonly<Record<string, number>>;
   readonly unassignedOccurrenceIds: readonly string[];
   readonly reasonCodes: readonly PreviewReasonCode[];
+  readonly minimumVehicles: number | null;
+  readonly minimumProven: boolean;
+  readonly lowerBound: number;
+  readonly peakConcurrentRoutes: number;
+  readonly activeFleetSize: number;
 }
 
 function normalizeVehicles(vehicles: readonly PreviewVehicle[]): NormalizedPreviewVehicle[] | null {
@@ -510,31 +547,140 @@ function hourlyOccupiedVehicles(assignments: readonly PreviewAssignment[]): Read
   return Object.fromEntries(Object.entries(occupied).map(([hour, ids]) => [hour, ids.size]));
 }
 
+function vehicleSignature(vehicle: NormalizedPreviewVehicle): string {
+  return `${vehicle.swCapacity}|${vehicle.soCapacity}|${vehicle.cooldownMinutes}`;
+}
+
+interface IntervalBounds {
+  /** Peak number of simultaneously running routes (no cooldown). */
+  readonly peakConcurrentRoutes: number;
+  /**
+   * Peak number of routes that pairwise conflict on every vehicle. Each route is
+   * extended by the smallest fleet cooldown, so two routes that overlap after the
+   * extension cannot share any vehicle. Capped at 0 for an empty route list.
+   */
+  readonly lowerBound: number;
+  /** True when some set of mutually conflicting routes cannot be matched to compatible vehicles. */
+  readonly capacityInfeasible: boolean;
+}
+
+function maxDepthAtStarts(
+  intervals: readonly PreviewRouteInterval[],
+  extension: number,
+): { depth: number; cliques: PreviewRouteInterval[][] } {
+  let depth = 0;
+  const cliques: PreviewRouteInterval[][] = [];
+  const seenStarts = new Set<number>();
+  for (const probe of intervals) {
+    if (seenStarts.has(probe.startMinutes)) continue;
+    seenStarts.add(probe.startMinutes);
+    const clique = intervals.filter((item) =>
+      item.startMinutes <= probe.startMinutes && probe.startMinutes < item.endMinutes + extension
+    );
+    if (clique.length > depth) depth = clique.length;
+    cliques.push(clique);
+  }
+  return { depth, cliques };
+}
+
+/**
+ * Can every route of a clique get its own distinct vehicle with enough Sw/So capacity?
+ * Vehicles are grouped by capacity signature and capped at the clique size, which keeps
+ * the augmenting-path matching small even for large (virtual) fleets.
+ */
+function cliqueHasCapacityMatching(
+  clique: readonly PreviewRouteInterval[],
+  vehicles: readonly NormalizedPreviewVehicle[],
+): boolean {
+  const perSignature = new Map<string, number>();
+  const pool: NormalizedPreviewVehicle[] = [];
+  for (const vehicle of vehicles) {
+    const key = `${vehicle.swCapacity}|${vehicle.soCapacity}`;
+    const count = perSignature.get(key) ?? 0;
+    if (count >= clique.length) continue;
+    perSignature.set(key, count + 1);
+    pool.push(vehicle);
+  }
+
+  const owner = new Array<number>(pool.length).fill(-1);
+  const tryRoute = (routeIndex: number, visited: boolean[]): boolean => {
+    const route = clique[routeIndex];
+    for (let vehicleIndex = 0; vehicleIndex < pool.length; vehicleIndex += 1) {
+      const vehicle = pool[vehicleIndex];
+      if (visited[vehicleIndex] || route.swCount > vehicle.swCapacity || route.soCount > vehicle.soCapacity) continue;
+      visited[vehicleIndex] = true;
+      if (owner[vehicleIndex] === -1 || tryRoute(owner[vehicleIndex], visited)) {
+        owner[vehicleIndex] = routeIndex;
+        return true;
+      }
+    }
+    return false;
+  };
+  for (let routeIndex = 0; routeIndex < clique.length; routeIndex += 1) {
+    if (!tryRoute(routeIndex, new Array<boolean>(pool.length).fill(false))) return false;
+  }
+  return true;
+}
+
+function computeIntervalBounds(
+  intervals: readonly PreviewRouteInterval[],
+  vehicles: readonly NormalizedPreviewVehicle[],
+): IntervalBounds {
+  if (intervals.length === 0) {
+    return { peakConcurrentRoutes: 0, lowerBound: 0, capacityInfeasible: false };
+  }
+  const minimumCooldown = vehicles.reduce(
+    (smallest, vehicle) => Math.min(smallest, vehicle.cooldownMinutes),
+    Number.POSITIVE_INFINITY,
+  );
+  const extension = Number.isFinite(minimumCooldown) ? minimumCooldown : 0;
+  const peak = maxDepthAtStarts(intervals, 0).depth;
+  const { depth, cliques } = maxDepthAtStarts(intervals, extension);
+  // A zero-length route is never "inside" any interval at its own start, but it still
+  // needs one vehicle, so the bound never drops below 1.
+  const lowerBound = Math.max(depth, 1);
+  const capacityInfeasible = cliques.some((clique) => !cliqueHasCapacityMatching(clique, vehicles));
+  return { peakConcurrentRoutes: Math.max(peak, 1), lowerBound, capacityInfeasible };
+}
+
 function assignPhysicalVehicles(
   intervals: readonly PreviewRouteInterval[],
   vehicles: readonly PreviewVehicle[],
+  nodeBudget: number = ASSIGNMENT_SEARCH_NODE_BUDGET,
 ): FleetAssignmentResult {
   const normalizedVehicles = normalizeVehicles(vehicles);
   const allOccurrenceIds = [...new Set(intervals.flatMap((interval) => interval.occurrenceIds))];
+  const noAssignment = {
+    assignments: [] as PreviewAssignment[],
+    hourlyOccupiedVehicles: {},
+    unassignedOccurrenceIds: allOccurrenceIds,
+    minimumVehicles: null,
+    minimumProven: false,
+  };
   if (normalizedVehicles === null) {
     return {
+      ...noAssignment,
       status: "blocked_data",
-      assignments: [],
-      hourlyOccupiedVehicles: {},
-      unassignedOccurrenceIds: allOccurrenceIds,
       reasonCodes: ["FLEET_INVALID"],
-    };
-  }
-  if (normalizedVehicles.length === 0) {
-    return {
-      status: "shortage",
-      assignments: [],
-      hourlyOccupiedVehicles: {},
-      unassignedOccurrenceIds: allOccurrenceIds,
-      reasonCodes: ["FLEET_SHORTAGE"],
+      lowerBound: 0,
+      peakConcurrentRoutes: 0,
+      activeFleetSize: 0,
     };
   }
   const availableVehicles = normalizedVehicles;
+  const bounds = computeIntervalBounds(intervals, availableVehicles);
+  const summaryBase = {
+    lowerBound: bounds.lowerBound,
+    peakConcurrentRoutes: bounds.peakConcurrentRoutes,
+    activeFleetSize: availableVehicles.length,
+  };
+  if (
+    availableVehicles.length === 0 ||
+    bounds.lowerBound > availableVehicles.length ||
+    bounds.capacityInfeasible
+  ) {
+    return { ...noAssignment, ...summaryBase, status: "shortage", reasonCodes: ["FLEET_SHORTAGE"] };
+  }
 
   const orderedIntervals = intervals
     .map((interval, originalIndex) => ({ interval, originalIndex }))
@@ -550,10 +696,40 @@ function assignPhysicalVehicles(
   let bestVehicleCount = Number.POSITIVE_INFINITY;
   let nodes = 0;
   let exhausted = false;
+  let reachedLowerBound = false;
+
+  // Routes are visited in start order, so a vehicle matters for the remaining routes
+  // only through the time it becomes free again. Vehicles with the same capacity,
+  // cooldown and free time are interchangeable, and so are all unused vehicles of one
+  // signature. Trying one of each removes the permutation blow-up of identical fleets.
+  function candidateVehicles(interval: PreviewRouteInterval): NormalizedPreviewVehicle[] {
+    const used: NormalizedPreviewVehicle[] = [];
+    const unused: NormalizedPreviewVehicle[] = [];
+    const seen = new Set<string>();
+    for (const vehicle of availableVehicles) {
+      const assigned = assignedByVehicle.get(vehicle.vehicleId);
+      if (assigned === undefined) {
+        const key = vehicleSignature(vehicle);
+        if (seen.has(`new|${key}`)) continue;
+        seen.add(`new|${key}`);
+        unused.push(vehicle);
+        continue;
+      }
+      const freeAt = Math.max(
+        Math.max(...assigned.map((item) => item.endMinutes)) + vehicle.cooldownMinutes,
+        interval.startMinutes,
+      );
+      const key = `${vehicleSignature(vehicle)}|${freeAt}`;
+      if (seen.has(`used|${key}`)) continue;
+      seen.add(`used|${key}`);
+      used.push(vehicle);
+    }
+    return [...used, ...unused];
+  }
 
   function search(index: number): void {
-    if (exhausted || assignedByVehicle.size >= bestVehicleCount) return;
-    if (nodes >= ASSIGNMENT_SEARCH_NODE_BUDGET) {
+    if (exhausted || reachedLowerBound || assignedByVehicle.size >= bestVehicleCount) return;
+    if (nodes >= nodeBudget) {
       exhausted = true;
       return;
     }
@@ -561,16 +737,12 @@ function assignPhysicalVehicles(
     if (index === orderedIntervals.length) {
       best = new Map(current);
       bestVehicleCount = new Set(current.values()).size;
+      if (bestVehicleCount <= bounds.lowerBound) reachedLowerBound = true;
       return;
     }
 
     const { interval, originalIndex } = orderedIntervals[index];
-    const candidates = [...availableVehicles].sort((left, right) => {
-      const leftUsed = assignedByVehicle.has(left.vehicleId) ? 0 : 1;
-      const rightUsed = assignedByVehicle.has(right.vehicleId) ? 0 : 1;
-      return leftUsed - rightUsed || (left.vehicleId < right.vehicleId ? -1 : 1);
-    });
-    for (const vehicle of candidates) {
+    for (const vehicle of candidateVehicles(interval)) {
       const assigned = assignedByVehicle.get(vehicle.vehicleId) ?? [];
       if (!canAssign(vehicle, interval, assigned)) continue;
       current.set(originalIndex, vehicle.vehicleId);
@@ -579,7 +751,7 @@ function assignPhysicalVehicles(
       current.delete(originalIndex);
       if (assigned.length === 0) assignedByVehicle.delete(vehicle.vehicleId);
       else assignedByVehicle.set(vehicle.vehicleId, assigned);
-      if (exhausted) return;
+      if (exhausted || reachedLowerBound) return;
     }
   }
 
@@ -601,6 +773,9 @@ function assignPhysicalVehicles(
     reasonCodes: status === "preview_ready"
       ? []
       : [status === "shortage" ? "FLEET_SHORTAGE" : "ASSIGNMENT_SEARCH_INDETERMINATE"],
+    ...summaryBase,
+    minimumVehicles: best === null ? null : bestVehicleCount,
+    minimumProven: status === "preview_ready",
   };
 }
 
@@ -651,7 +826,11 @@ export function buildDudulluPreview(input: BuildDudulluPreviewInput): DudulluPre
     throw error;
   }
 
-  const fleet = assignPhysicalVehicles(verifiedJobs.flatMap((job) => job.intervals), input.vehicles);
+  const fleet = assignPhysicalVehicles(
+    verifiedJobs.flatMap((job) => job.intervals),
+    input.vehicles,
+    input.assignmentSearchNodeBudget,
+  );
   if (fleet.status === "blocked_data") {
     return makeBlockedResult(
       input.serviceDate,
@@ -674,5 +853,19 @@ export function buildDudulluPreview(input: BuildDudulluPreviewInput): DudulluPre
     hourlyOccupiedVehicles: fleet.hourlyOccupiedVehicles,
     unassignedOccurrenceIds: fleet.unassignedOccurrenceIds,
     reasonCodes: fleet.reasonCodes,
+    vehicleSummary: {
+      minimumVehicles: fleet.minimumVehicles,
+      minimumProven: fleet.minimumProven,
+      lowerBound: fleet.lowerBound,
+      peakConcurrentRoutes: fleet.peakConcurrentRoutes,
+      activeFleetSize: fleet.activeFleetSize,
+      routesPerJob: verifiedJobs.map((job) => ({
+        jobId: job.id,
+        direction: job.direction,
+        anchorMinutes: job.anchorMinutes,
+        routeCount: job.intervals.length,
+        studentCount: job.intervals.reduce((sum, interval) => sum + interval.occurrenceIds.length, 0),
+      })),
+    },
   };
 }

@@ -20,6 +20,7 @@ DEPOT_CLOSURE = "depot_closure"
 CAPACITY_VIOLATION = "capacity_violation"
 DURATION_VIOLATION = "duration_violation"
 TIME_WINDOW_VIOLATION = "time_window_violation"
+RIDE_TIME_VIOLATION = "ride_time_violation"
 MATRIX_SHAPE = "matrix_shape"
 MISSING_ARC = "missing_arc"
 ROUTE_CONTINUITY = "route_continuity"
@@ -177,6 +178,78 @@ def check_duration(
                 severity="error",
                 details=f"Route {idx} duration {cost:.1f} exceeds max {max_route_duration}",
                 route_index=idx,
+            ))
+
+    return violations
+
+
+def check_ride_time(
+    routes: Sequence[Sequence[int]],
+    matrix: Any,
+    depot: int,
+    max_ride_time: Optional[float],
+    direction: str = "pickup",
+    tolerance: float = 0.0,
+) -> List[Violation]:
+    """Per-student maximum in-vehicle time (minutes), pure travel time.
+
+    A route is ``depot -> s1 .. sk -> depot``.  Students sharing a stop are
+    separate nodes joined by zero-length arcs, so they share one ride time.
+
+    * ``pickup``  (students -> campus): the ride of stop ``m`` is the travel
+      from ``m`` along the route to the depot, closing arc included.  The
+      longest ride is the first student's.
+    * ``dropoff`` (campus -> students): the ride of stop ``m`` is the travel
+      from the depot to ``m``.  The longest ride is the last student's.
+
+    Waiting inside the vehicle is NOT visible here (the certificate has no
+    schedule), so waiting is not counted (audit H2); decoders that simulate
+    waiting enforce it themselves.  ``tolerance`` absorbs rounding of
+    reported arc durations only.  A non-finite ride is always a violation.
+    """
+    if max_ride_time is None or matrix is None:
+        return []
+
+    mat = np.asarray(matrix, dtype=np.float64)
+    dropoff = str(getattr(direction, "value", direction)).strip().lower() == "dropoff"
+    limit = float(max_ride_time) + float(tolerance)
+    violations: List[Violation] = []
+
+    for idx, route in enumerate(routes):
+        if not route:
+            continue
+
+        chain = [depot, *route, depot]
+        try:
+            arcs = [float(mat[a, b]) for a, b in zip(chain, chain[1:])]
+        except (IndexError, TypeError, ValueError):
+            violations.append(Violation(
+                type=RIDE_TIME_VIOLATION,
+                severity="error",
+                details=f"Route {idx} ride time cannot be evaluated (arc out of matrix bounds)",
+                route_index=idx,
+            ))
+            continue
+
+        if dropoff:
+            # ride of stop m = arcs[0] + .. + arcs[m-1]; longest = last student
+            ride = sum(arcs[:-1])
+            node = route[-1]
+        else:
+            # ride of stop m = arcs[m] + .. + arcs[-1]; longest = first student
+            ride = sum(arcs[1:])
+            node = route[0]
+
+        if not (math.isfinite(ride) and ride <= limit):
+            violations.append(Violation(
+                type=RIDE_TIME_VIOLATION,
+                severity="error",
+                details=(
+                    f"Route {idx} {'dropoff' if dropoff else 'pickup'} ride time "
+                    f"{ride:.1f} exceeds max {max_ride_time} (node {node})"
+                ),
+                route_index=idx,
+                node=node,
             ))
 
     return violations
@@ -546,6 +619,7 @@ __all__ = [
     "CAPACITY_VIOLATION",
     "DURATION_VIOLATION",
     "TIME_WINDOW_VIOLATION",
+    "RIDE_TIME_VIOLATION",
     "MATRIX_SHAPE",
     "MISSING_ARC",
     "ROUTE_CONTINUITY",
@@ -556,6 +630,7 @@ __all__ = [
     "check_depot_closure",
     "check_capacity_vectors",
     "check_duration",
+    "check_ride_time",
     "check_time_windows",
     "check_matrix_shape",
     "check_missing_arcs",

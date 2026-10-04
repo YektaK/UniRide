@@ -240,7 +240,7 @@
           "running": "Preparing plan..."
         },
         "initial": "Pick a date and press \"Create plan\".",
-        "loading": "Preparing the plan. The solver runs wave by wave; this can take a few minutes.",
+        "loading": "Preparing the plan. The solver runs wave by wave; this takes about half a minute and at most one minute.",
         "emptyDay": {
           "title": "No trips to plan for this day",
           "text": "No confirmed student trip to or from Dudullu was found for the chosen day. Try another date."
@@ -354,9 +354,9 @@
         },
         "limits": {
           "title": "Known limitations",
-          "notOptimal": "The solver's routes are not optimal; the route count is not a true minimum.",
+          "notOptimal": "The solver is not optimal; the route count is not a true minimum (only the vehicle assignment is proven).",
           "fixedRoutes": "The vehicle count applies only to these fixed routes.",
-          "timeModel": "The time model is simple: each wave is tied to a single arrival/departure time; waiting and return-to-campus checks are not made (H2, H4).",
+          "timeModel": "The time model is simple: each wave is tied to a single arrival/departure time (use_time_windows: false). Waiting and return-to-campus checks are not made (H2, H4).",
           "noNames": "No student names are shown; location codes (like So1, Sw3) are used."
         }
       },

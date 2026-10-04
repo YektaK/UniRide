@@ -2,12 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, CheckCircle2, ChevronDown, Info, Loader2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Info, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -313,25 +312,19 @@ function StatusNotes({ plan, t }: { plan: DailyPlanView; t: Translate }) {
 }
 
 function Limitations({ t }: { t: Translate }) {
-  const [open, setOpen] = useState(false);
   return (
-    <Collapsible open={open} onOpenChange={setOpen} data-testid="limitations">
-      <CollapsibleTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-2 px-2">
-          <Info className="h-4 w-4" />
-          {t("limits.title")}
-          <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
-        </Button>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <ul className="ml-6 mt-1 list-disc space-y-1 text-sm text-muted-foreground">
+    <Alert data-testid="limitations" className="border-sky-300 bg-sky-50 text-sky-950 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-50">
+      <Info className="h-4 w-4" />
+      <AlertTitle>{t("limits.title")}</AlertTitle>
+      <AlertDescription>
+        <ul className="mt-1 list-disc space-y-1 pl-4">
           <li>{t("limits.notOptimal")}</li>
           <li>{t("limits.fixedRoutes")}</li>
           <li>{t("limits.timeModel")}</li>
           <li>{t("limits.noNames")}</li>
         </ul>
-      </CollapsibleContent>
-    </Collapsible>
+      </AlertDescription>
+    </Alert>
   );
 }
 
@@ -436,6 +429,7 @@ export default function DailyPlanPage() {
             <Switch
               id="daily-plan-assume"
               checked={assumeConfirmed}
+              className="data-[state=unchecked]:bg-muted-foreground/40"
               onCheckedChange={setAssumeConfirmed}
               aria-describedby="daily-plan-assume-hint"
             />
@@ -450,6 +444,7 @@ export default function DailyPlanPage() {
             <Switch
               id="daily-plan-virtual"
               checked={virtualFleet}
+              className="data-[state=unchecked]:bg-muted-foreground/40"
               onCheckedChange={setVirtualFleet}
               aria-describedby="daily-plan-virtual-hint"
             />
@@ -460,7 +455,7 @@ export default function DailyPlanPage() {
               </p>
             </div>
           </div>
-          <Button onClick={run} disabled={loading || !validDate} className="w-full md:w-auto">
+          <Button type="button" size="lg" onClick={run} disabled={loading || !validDate} className="w-full md:w-auto">
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {loading ? t("controls.running") : t("controls.run")}
           </Button>

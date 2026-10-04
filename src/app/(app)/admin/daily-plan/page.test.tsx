@@ -303,13 +303,35 @@ describe("DailyPlanPage", () => {
     expect(screen.getAllByText("So1 Öğrenci").length).toBeGreaterThan(0);
   });
 
-  it("shows the known limitations on demand", async () => {
+  it("always shows the known limitations in a fixed info box", () => {
     render(<DailyPlanPage />);
 
-    expect(screen.queryByText(/optimal değildir/)).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: /Bilinen sınırlamalar/ }));
-    expect(await screen.findByText(/Çözücü rotaları optimal değildir/)).toBeTruthy();
-    expect(screen.getByText(/H2, H4/)).toBeTruthy();
-    expect(screen.getByText(/Araç sayısı yalnızca bu sabit rotalar için hesaplanır/)).toBeTruthy();
+    const box = screen.getByTestId("limitations");
+    expect(within(box).getByText("Bilinen sınırlamalar")).toBeTruthy();
+    expect(within(box).getByText(/Çözücü optimal değildir; rota sayısı gerçek minimum değildir/)).toBeTruthy();
+    expect(within(box).getByText(/use_time_windows: false/)).toBeTruthy();
+    expect(within(box).getByText(/H2, H4/)).toBeTruthy();
+    expect(within(box).getByText(/Araç sayısı yalnızca bu sabit rotalar için hesaplanır/)).toBeTruthy();
+  });
+
+  it("renders the run control as a styled primary button and the toggles as labelled switches", () => {
+    render(<DailyPlanPage />);
+
+    const button = runButton();
+    expect(button.tagName).toBe("BUTTON");
+    expect(button.getAttribute("type")).toBe("button");
+    // The primary variant is what makes it look like a button; plain text would lack it.
+    expect(button.className).toContain("bg-primary");
+    expect(button.className).toContain("text-primary-foreground");
+
+    for (const name of ["Öğrenci onaylarını varsay (demo)", "Sanal filo (gereken araç)"]) {
+      const toggle = screen.getByRole("switch", { name });
+      expect(toggle.className).toContain("h-6");
+      expect(toggle.className).toContain("w-11");
+      expect(toggle.className).toContain("data-[state=checked]:bg-primary");
+      // A visible unchecked track, not the near-invisible default.
+      expect(toggle.className).toContain("data-[state=unchecked]:bg-muted-foreground/40");
+      expect(toggle.getAttribute("aria-describedby")).toBeTruthy();
+    }
   });
 });

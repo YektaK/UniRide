@@ -586,7 +586,7 @@ describe("adminApi.preview.run", () => {
       admissionMode: "assume_confirmed",
       fleetMode: "virtual",
     });
-    expect(timeoutSpy).toHaveBeenCalledWith(240_000);
+    expect(timeoutSpy).toHaveBeenCalledWith(60_000);
   });
 
   it("classifies a missing session as an authorization failure without calling fetch", async () => {

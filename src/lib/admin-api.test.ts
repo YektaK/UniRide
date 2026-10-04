@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DudulluReadinessReport } from "@/services/dudullu-readiness";
 import { readyResponse } from "@/services/daily-plan-fixtures";
 
+import { SESSION_TIMEOUT_MS } from "./admin-api";
+
 const { getSupabaseClientMock } = vi.hoisted(() => ({
   getSupabaseClientMock: vi.fn(),
 }));
@@ -198,6 +200,109 @@ async function readinessApi(session = true) {
   return adminApi;
 }
 
+describe("getAuthToken session timeout", () => {
+  const session = (token: string) => ({
+    data: { session: { access_token: token, expires_at: Math.floor(Date.now() / 1000) + 3600 } },
+    error: null,
+  });
+
+  it("resolves no token when getSession hangs, then clears the timer and retries on the next call", async () => {
+    vi.useFakeTimers();
+    const getSession = vi.fn()
+      .mockReturnValueOnce(new Promise(() => undefined))
+      .mockResolvedValueOnce(session("second-token"));
+    getSupabaseClientMock.mockReturnValue({ auth: { getSession, refreshSession: vi.fn() } });
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { clearAuthTokenCache, getAuthToken } = await import("./admin-api");
+    clearAuthTokenCache();
+
+    const hung = getAuthToken();
+    expect(vi.getTimerCount()).toBe(1);
+    await vi.advanceTimersByTimeAsync(SESSION_TIMEOUT_MS - 1);
+    expect(getSession).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(hung).resolves.toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
+
+    // tokenPromise was reset: a new call asks Supabase again instead of reusing the hung one.
+    await expect(getAuthToken()).resolves.toBe("second-token");
+    expect(getSession).toHaveBeenCalledTimes(2);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("also bounds a hung refreshSession", async () => {
+    vi.useFakeTimers();
+    getSupabaseClientMock.mockReturnValue({
+      auth: {
+        getSession: vi.fn().mockResolvedValue({
+          data: { session: { access_token: "old", expires_at: Math.floor(Date.now() / 1000) + 10 } },
+          error: null,
+        }),
+        refreshSession: vi.fn().mockReturnValue(new Promise(() => undefined)),
+      },
+    });
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { clearAuthTokenCache, getAuthToken } = await import("./admin-api");
+    clearAuthTokenCache();
+
+    const pending = getAuthToken();
+    await vi.advanceTimersByTimeAsync(SESSION_TIMEOUT_MS);
+
+    await expect(pending).resolves.toBeNull();
+  });
+
+  it("clears the timer when the session answers in time and does not time out later", async () => {
+    vi.useFakeTimers();
+    getSupabaseClientMock.mockReturnValue({
+      auth: { getSession: vi.fn().mockResolvedValue(session("fast-token")), refreshSession: vi.fn() },
+    });
+    const { clearAuthTokenCache, getAuthToken } = await import("./admin-api");
+    clearAuthTokenCache();
+
+    await expect(getAuthToken()).resolves.toBe("fast-token");
+    expect(vi.getTimerCount()).toBe(0);
+
+    await vi.advanceTimersByTimeAsync(SESSION_TIMEOUT_MS * 2);
+    await expect(getAuthToken()).resolves.toBe("fast-token");
+  });
+
+  it("lets two concurrent callers share one timed-out acquisition", async () => {
+    vi.useFakeTimers();
+    const getSession = vi.fn().mockReturnValue(new Promise(() => undefined));
+    getSupabaseClientMock.mockReturnValue({ auth: { getSession, refreshSession: vi.fn() } });
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { clearAuthTokenCache, getAuthToken } = await import("./admin-api");
+    clearAuthTokenCache();
+
+    const first = getAuthToken();
+    const second = getAuthToken();
+    await vi.advanceTimersByTimeAsync(SESSION_TIMEOUT_MS);
+
+    await expect(first).resolves.toBeNull();
+    await expect(second).resolves.toBeNull();
+    expect(getSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("makes the daily plan fail fast with the authorization kind and never calls fetch", async () => {
+    vi.useFakeTimers();
+    getSupabaseClientMock.mockReturnValue({ auth: { getSession: vi.fn().mockReturnValue(new Promise(() => undefined)) } });
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const { adminApi, clearAuthTokenCache } = await import("./admin-api");
+    clearAuthTokenCache();
+
+    let failure: unknown;
+    void adminApi.preview.run("2026-10-05", { admissionMode: "assume_confirmed", fleetMode: "virtual" })
+      .catch((error) => { failure = error; });
+    await vi.advanceTimersByTimeAsync(SESSION_TIMEOUT_MS);
+
+    expect(failure).toMatchObject({ kind: "authorization" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("adminApi.readiness.getDudullu", () => {
   it("uses an authenticated no-store request and validates the report", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
@@ -365,7 +470,7 @@ describe("adminApi.readiness.getDudullu", () => {
     });
   });
 
-  it("bounds unresolved token acquisition with the readiness deadline", async () => {
+  it("fails a hung session fast, before the readiness deadline, as an authorization failure", async () => {
     vi.useFakeTimers();
     const controller = new AbortController();
     const timeoutSpy = vi.spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) => {
@@ -388,7 +493,43 @@ describe("adminApi.readiness.getDudullu", () => {
       (error) => { settled = true; failure = error; },
     );
 
+    await vi.advanceTimersByTimeAsync(SESSION_TIMEOUT_MS - 1);
+    expect(settled).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(settled).toBe(true);
+    expect(failure).toMatchObject({
+      kind: "authorization",
+      message: "Dudullu readiness request failed",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    timeoutSpy.mockRestore();
+  });
+
+  it("bounds a hanging readiness request with the 15 s deadline", async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) => {
+      setTimeout(() => controller.abort(), milliseconds);
+      return controller.signal;
+    });
+    // The token is available at once; only fetch hangs, and it honours the abort signal.
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const adminApi = await readinessApi();
+
+    let settled = false;
+    let failure: unknown;
+    void adminApi.readiness.getDudullu().then(
+      () => { settled = true; },
+      (error) => { settled = true; failure = error; },
+    );
+
     await vi.advanceTimersByTimeAsync(14_999);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(timeoutSpy).toHaveBeenCalledWith(15_000);
     expect(settled).toBe(false);
 
     await vi.advanceTimersByTimeAsync(1);
@@ -397,7 +538,6 @@ describe("adminApi.readiness.getDudullu", () => {
       kind: "configuration",
       message: "Dudullu readiness request failed",
     });
-    expect(fetchMock).not.toHaveBeenCalled();
     timeoutSpy.mockRestore();
   });
 

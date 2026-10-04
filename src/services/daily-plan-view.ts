@@ -155,6 +155,20 @@ export interface FleetComparison {
   readonly amount: number;
 }
 
+/** The wave that sets the capacity-only lower bound on the number of vehicles. */
+export interface CapacityFloor {
+  /** max over waves of max(ceil(Sw / swCapacity), ceil(So / soCapacity)). */
+  readonly vehicles: number;
+  readonly direction: PlanDirection;
+  readonly anchorLabel: string;
+  readonly studentCount: number;
+  readonly swCount: number;
+  readonly soCount: number;
+  /** Largest Sw / So capacity of the fleet the plan used. */
+  readonly swCapacity: number;
+  readonly soCapacity: number;
+}
+
 export interface PlanSummary {
   readonly status: PlanStatus;
   readonly tone: PlanTone;
@@ -163,6 +177,8 @@ export interface PlanSummary {
   readonly neededAtMost: boolean;
   readonly lowerBound: number | null;
   readonly peakConcurrentRoutes: number | null;
+  /** Capacity-only lower bound with its binding wave; null when it cannot be computed. */
+  readonly capacityFloor: CapacityFloor | null;
   readonly students: number;
   readonly trips: number;
   readonly routes: number;
@@ -343,6 +359,54 @@ function compareFleet(
   };
 }
 
+/**
+ * Capacity-only lower bound on the vehicles of a day. Sw and So students use separate seat
+ * pools, so a wave needs max(ceil(Sw / swCapacity), ceil(So / soCapacity)) vehicles at once
+ * (all routes of a wave share one anchor time, so they run together). The day needs at least
+ * the largest wave requirement. Ties go to the wave with more students, then the earlier one.
+ * Null when there is no student or a needed seat pool has no capacity.
+ */
+export function computeCapacityFloor(
+  waves: readonly Pick<PlanWave, "direction" | "anchorMinutes" | "anchorLabel" | "swCount" | "soCount">[],
+  capacity: { readonly swCapacity: number; readonly soCapacity: number } | null | undefined,
+): CapacityFloor | null {
+  if (!capacity) return null;
+  let best: (CapacityFloor & { anchorMinutes: number }) | null = null;
+  for (const wave of waves) {
+    const studentCount = wave.swCount + wave.soCount;
+    if (studentCount === 0) continue;
+    if ((wave.swCount > 0 && capacity.swCapacity <= 0) || (wave.soCount > 0 && capacity.soCapacity <= 0)) {
+      return null;
+    }
+    const vehicles = Math.max(
+      wave.swCount > 0 ? Math.ceil(wave.swCount / capacity.swCapacity) : 0,
+      wave.soCount > 0 ? Math.ceil(wave.soCount / capacity.soCapacity) : 0,
+    );
+    const better = best === null
+      || vehicles > best.vehicles
+      || (vehicles === best.vehicles && (
+        studentCount > best.studentCount
+        || (studentCount === best.studentCount && wave.anchorMinutes < best.anchorMinutes)
+      ));
+    if (better) {
+      best = {
+        vehicles,
+        direction: wave.direction,
+        anchorLabel: wave.anchorLabel,
+        anchorMinutes: wave.anchorMinutes,
+        studentCount,
+        swCount: wave.swCount,
+        soCount: wave.soCount,
+        swCapacity: capacity.swCapacity,
+        soCapacity: capacity.soCapacity,
+      };
+    }
+  }
+  if (best === null) return null;
+  const { vehicles, direction, anchorLabel, studentCount, swCount, soCount, swCapacity, soCapacity } = best;
+  return { vehicles, direction, anchorLabel, studentCount, swCount, soCount, swCapacity, soCapacity };
+}
+
 /** Turns one preview response into everything the daily-plan page displays. */
 export function buildDailyPlanView(response: DudulluPreviewResponse): DailyPlanView {
   const assumedAdmission = response.admissionMode === "assume_confirmed";
@@ -448,6 +512,7 @@ export function buildDailyPlanView(response: DudulluPreviewResponse): DailyPlanV
       neededAtMost,
       lowerBound: summaryFleet?.lowerBound ?? null,
       peakConcurrentRoutes: summaryFleet?.peakConcurrentRoutes ?? null,
+      capacityFloor: computeCapacityFloor(waves, response.fleet.maxCapacity),
       students: response.candidateSummary.dudulluStudents,
       trips,
       routes: routeCount,

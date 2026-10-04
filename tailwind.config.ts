@@ -1,5 +1,21 @@
 import type { Config } from "tailwindcss";
 
+/**
+ * The theme variables in src/app/globals.css hold complete oklch() colors. Wrapping them in
+ * hsl(...) produced invalid declarations (hsl(oklch(...))), so every semantic color utility
+ * (bg-primary, bg-input, bg-background, ...) rendered as transparent. Use the variable as-is and
+ * express Tailwind opacity modifiers (bg-primary/90) with color-mix.
+ */
+function themeColor(variable: string) {
+  return ({ opacityValue }: { opacityValue?: string }) => {
+    if (opacityValue === undefined) return `var(${variable})`;
+    const percent = Number.parseFloat(opacityValue) * 100;
+    return Number.isNaN(percent)
+      ? `var(${variable})`
+      : `color-mix(in oklab, var(${variable}) ${percent}%, transparent)`;
+  };
+}
+
 export default {
     darkMode: ["class"],
     content: [
@@ -10,55 +26,55 @@ export default {
   theme: {
   	extend: {
   		colors: {
-  			background: 'hsl(var(--background))',
-  			foreground: 'hsl(var(--foreground))',
+  			background: themeColor('--background'),
+  			foreground: themeColor('--foreground'),
   			card: {
-  				DEFAULT: 'hsl(var(--card))',
-  				foreground: 'hsl(var(--card-foreground))'
+  				DEFAULT: themeColor('--card'),
+  				foreground: themeColor('--card-foreground')
   			},
   			popover: {
-  				DEFAULT: 'hsl(var(--popover))',
-  				foreground: 'hsl(var(--popover-foreground))'
+  				DEFAULT: themeColor('--popover'),
+  				foreground: themeColor('--popover-foreground')
   			},
   			primary: {
-  				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
+  				DEFAULT: themeColor('--primary'),
+  				foreground: themeColor('--primary-foreground')
   			},
   			secondary: {
-  				DEFAULT: 'hsl(var(--secondary))',
-  				foreground: 'hsl(var(--secondary-foreground))'
+  				DEFAULT: themeColor('--secondary'),
+  				foreground: themeColor('--secondary-foreground')
   			},
   			muted: {
-  				DEFAULT: 'hsl(var(--muted))',
-  				foreground: 'hsl(var(--muted-foreground))'
+  				DEFAULT: themeColor('--muted'),
+  				foreground: themeColor('--muted-foreground')
   			},
   			accent: {
-  				DEFAULT: 'hsl(var(--accent))',
-  				foreground: 'hsl(var(--accent-foreground))'
+  				DEFAULT: themeColor('--accent'),
+  				foreground: themeColor('--accent-foreground')
   			},
   			destructive: {
-  				DEFAULT: 'hsl(var(--destructive))',
-  				foreground: 'hsl(var(--destructive-foreground))'
+  				DEFAULT: themeColor('--destructive'),
+  				foreground: themeColor('--destructive-foreground')
   			},
-  			border: 'hsl(var(--border))',
-  			input: 'hsl(var(--input))',
-  			ring: 'hsl(var(--ring))',
+  			border: themeColor('--border'),
+  			input: themeColor('--input'),
+  			ring: themeColor('--ring'),
   			chart: {
-  				'1': 'hsl(var(--chart-1))',
-  				'2': 'hsl(var(--chart-2))',
-  				'3': 'hsl(var(--chart-3))',
-  				'4': 'hsl(var(--chart-4))',
-  				'5': 'hsl(var(--chart-5))'
+  				'1': themeColor('--chart-1'),
+  				'2': themeColor('--chart-2'),
+  				'3': themeColor('--chart-3'),
+  				'4': themeColor('--chart-4'),
+  				'5': themeColor('--chart-5')
   			},
   			sidebar: {
-  				DEFAULT: 'hsl(var(--sidebar-background))',
-  				foreground: 'hsl(var(--sidebar-foreground))',
-  				primary: 'hsl(var(--sidebar-primary))',
-  				'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-  				accent: 'hsl(var(--sidebar-accent))',
-  				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-  				border: 'hsl(var(--sidebar-border))',
-  				ring: 'hsl(var(--sidebar-ring))'
+  				DEFAULT: themeColor('--sidebar'),
+  				foreground: themeColor('--sidebar-foreground'),
+  				primary: themeColor('--sidebar-primary'),
+  				'primary-foreground': themeColor('--sidebar-primary-foreground'),
+  				accent: themeColor('--sidebar-accent'),
+  				'accent-foreground': themeColor('--sidebar-accent-foreground'),
+  				border: themeColor('--sidebar-border'),
+  				ring: themeColor('--sidebar-ring')
   			}
   		},
   		borderRadius: {

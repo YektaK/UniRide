@@ -46,6 +46,19 @@ function todayInIstanbul(): string {
   }).format(new Date());
 }
 
+/** Owner decision (2026-10-04): demo defaults and the ranges the preview route accepts. */
+const DEFAULT_RIDE_LIMIT = 90;
+const DEFAULT_TOUR_LIMIT = 150;
+const RIDE_LIMIT_RANGE = { min: 15, max: 240 } as const;
+const TOUR_LIMIT_RANGE = { min: 30, max: 300 } as const;
+
+/** A whole number inside the range, or null (empty, decimal, negative, out of range). */
+function parseLimit(text: string, range: { readonly min: number; readonly max: number }): number | null {
+  if (!/^\d+$/.test(text.trim())) return null;
+  const value = Number(text);
+  return value >= range.min && value <= range.max ? value : null;
+}
+
 function PreviewBanner({ plan }: { plan: DailyPlanView }) {
   const t = useTranslations("page.admin.dailyPlan.banner");
   const template = plan.virtualTemplate;
@@ -60,6 +73,9 @@ function PreviewBanner({ plan }: { plan: DailyPlanView }) {
       <AlertDescription>
         <p>{t("text")}</p>
         {plan.assumedAdmission && <p>{t("assumedAdmission")}</p>}
+        <p data-testid="banner-limits">
+          {t("limits", { ride: plan.limits.maxRideTimeMinutes, tour: plan.limits.maxTourMinutes })}
+        </p>
         {plan.virtualFleet && template && (
           <p>
             {t("virtualFleet", {
@@ -128,6 +144,11 @@ function SummaryCards({ plan }: { plan: DailyPlanView }) {
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
           <p>{t("routesHint", { waves })}</p>
+          {summary.maxRideMinutes !== null && (
+            <p data-testid="day-max-ride">
+              {t("maxRide", { n: summary.maxRideMinutes, limit: plan.limits.maxRideTimeMinutes })}
+            </p>
+          )}
         </CardContent>
       </Card>
       <Card data-testid="card-fleet">
@@ -160,6 +181,9 @@ function RouteCard({ route }: { route: PlanRoute }) {
       <p className="text-sm text-muted-foreground">
         {t("counts", { sw: route.swCount, so: route.soCount })} ·{" "}
         {route.vehicleLabel ? t("vehicle", { vehicle: route.vehicleLabel }) : t("noVehicle")}
+      </p>
+      <p className="text-sm text-muted-foreground" data-testid="route-max-ride">
+        {t("longestRide", { n: route.maxRideMinutes })}
       </p>
       <p className="mt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("stops")}</p>
       <ol className="mt-1 space-y-1">
@@ -300,8 +324,11 @@ function StatusNotes({ plan, t }: { plan: DailyPlanView; t: Translate }) {
                 ? <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                 : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />}
               <span>
-                {t(`reasons.${reason.messageKey}`)}
+                {t(`reasons.${reason.messageKey}`, { limit: plan.limits.maxRideTimeMinutes })}
                 {reason.messageKey === "unknown" ? ` (${reason.code})` : ""}
+                {reason.code === "RIDE_TIME_LIMIT_INFEASIBLE" && plan.limits.minimumFeasibleRideMinutes !== null
+                  ? ` ${t("notes.rideLimitMinimum", { min: plan.limits.minimumFeasibleRideMinutes })}`
+                  : ""}
               </span>
             </li>
           ))}
@@ -372,6 +399,8 @@ export default function DailyPlanPage() {
   const [serviceDate, setServiceDate] = useState<string>(todayInIstanbul);
   const [assumeConfirmed, setAssumeConfirmed] = useState(true);
   const [virtualFleet, setVirtualFleet] = useState(true);
+  const [rideLimitText, setRideLimitText] = useState(String(DEFAULT_RIDE_LIMIT));
+  const [tourLimitText, setTourLimitText] = useState(String(DEFAULT_TOUR_LIMIT));
   const [view, setView] = useState<ViewState>({ kind: "idle" });
   const latestRequest = useRef(0);
   const mounted = useRef(false);
@@ -383,9 +412,12 @@ export default function DailyPlanPage() {
 
   const loading = view.kind === "loading";
   const validDate = isRealServiceDate(serviceDate);
+  const rideLimit = parseLimit(rideLimitText, RIDE_LIMIT_RANGE);
+  const tourLimit = parseLimit(tourLimitText, TOUR_LIMIT_RANGE);
+  const validLimits = rideLimit !== null && tourLimit !== null;
 
   const run = () => {
-    if (loading || !validDate) return;
+    if (loading || !validDate || rideLimit === null || tourLimit === null) return;
     const requestId = latestRequest.current + 1;
     latestRequest.current = requestId;
     setView({ kind: "loading" });
@@ -393,6 +425,8 @@ export default function DailyPlanPage() {
       .then(() => adminApi.preview.run(serviceDate, {
         admissionMode: assumeConfirmed ? "assume_confirmed" : "recorded",
         fleetMode: virtualFleet ? "virtual" : "live",
+        maxRideTimeMinutes: rideLimit,
+        maxTourMinutes: tourLimit,
       }))
       .then((response) => {
         if (mounted.current && latestRequest.current === requestId) {
@@ -455,7 +489,50 @@ export default function DailyPlanPage() {
               </p>
             </div>
           </div>
-          <Button type="button" size="lg" onClick={run} disabled={loading || !validDate} className="w-full md:w-auto">
+          <div className="space-y-2">
+            <Label htmlFor="daily-plan-max-ride">{t("controls.maxRide")}</Label>
+            <Input
+              id="daily-plan-max-ride"
+              type="number"
+              inputMode="numeric"
+              min={RIDE_LIMIT_RANGE.min}
+              max={RIDE_LIMIT_RANGE.max}
+              step={1}
+              value={rideLimitText}
+              onChange={(event) => setRideLimitText(event.target.value)}
+              aria-invalid={rideLimit === null}
+              aria-describedby="daily-plan-max-ride-hint"
+              className="w-full md:w-40"
+            />
+            <p id="daily-plan-max-ride-hint" className="max-w-xs text-xs text-muted-foreground">
+              {t("controls.maxRideHint")}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="daily-plan-max-tour">{t("controls.maxTour")}</Label>
+            <Input
+              id="daily-plan-max-tour"
+              type="number"
+              inputMode="numeric"
+              min={TOUR_LIMIT_RANGE.min}
+              max={TOUR_LIMIT_RANGE.max}
+              step={1}
+              value={tourLimitText}
+              onChange={(event) => setTourLimitText(event.target.value)}
+              aria-invalid={tourLimit === null}
+              aria-describedby="daily-plan-max-tour-hint"
+              className="w-full md:w-40"
+            />
+            <p id="daily-plan-max-tour-hint" className="max-w-xs text-xs text-muted-foreground">
+              {t("controls.maxTourHint")}
+            </p>
+          </div>
+          {!validLimits && (
+            <p role="alert" data-testid="limit-invalid" className="w-full text-sm text-red-700 dark:text-red-300">
+              {t("controls.limitInvalid")}
+            </p>
+          )}
+          <Button type="button" size="lg" onClick={run} disabled={loading || !validDate || !validLimits} className="w-full md:w-auto">
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {loading ? t("controls.running") : t("controls.run")}
           </Button>

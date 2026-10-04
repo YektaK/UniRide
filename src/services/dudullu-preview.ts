@@ -90,6 +90,7 @@ export type PreviewReasonCode =
   | "NO_ROUTE_STEPS"
   | "OPTIMIZATION_NOT_SUCCESSFUL"
   | "PENDING_STUDENT_CONFIRMATION"
+  | "RIDE_TIME_LIMIT_INFEASIBLE"
   | "ROUTE_OUTSIDE_SERVICE_DAY"
   | "ROUTE_LOAD_MISMATCH"
   | "ROUTE_TOTAL_MISMATCH"
@@ -253,6 +254,50 @@ export function buildVirtualFleet(template: VirtualFleetTemplate, count: number)
     soCapacity: template.soCapacity,
     cooldownMinutes: template.cooldownMinutes,
   }));
+}
+
+/**
+ * Longest in-vehicle time of any student on one route, from its `route_details`
+ * (depot -> stops -> depot), with the optimizer's `max_ride_time` definition:
+ * pickup = stop to campus incl. the closing arc, so the first student rides longest
+ * (total minus the outbound arc); dropoff = campus departure to the stop, so the last
+ * student rides longest (total minus the closing arc). Pure travel time, no waiting.
+ */
+export function longestStudentRideMinutes(
+  steps: readonly Pick<PreviewRouteStep, "duration">[],
+  direction: TripDirection,
+): number {
+  if (steps.length === 0) return 0;
+  const total = steps.reduce((sum, step) => sum + step.duration, 0);
+  const excluded = direction === "pickup" ? steps[0].duration : steps[steps.length - 1].duration;
+  return Math.max(0, total - excluded);
+}
+
+/**
+ * Smallest ride limit any plan could satisfy: the largest direct campus arc among the demands
+ * (pickup: student stop to campus, dropoff: campus to student stop). A student's ride on any
+ * route is at least this arc, so a limit below it is infeasible. Null when no demand has a
+ * known arc (the optimizer then decides).
+ */
+export function requiredDirectRideMinutes(
+  demands: readonly Pick<PreviewDemand, "direction" | "locationCode">[],
+  matrix: Pick<MatrixSnapshot, "arcs">,
+): number | null {
+  const arcs = new Map<string, number>();
+  for (const arc of matrix.arcs) {
+    if (Number.isFinite(arc.duration_minutes)) {
+      arcs.set(JSON.stringify([arc.origin_code, arc.destination_code]), arc.duration_minutes);
+    }
+  }
+  let required: number | null = null;
+  for (const demand of demands) {
+    const key = demand.direction === "pickup"
+      ? JSON.stringify([demand.locationCode, DEPOT_CODE])
+      : JSON.stringify([DEPOT_CODE, demand.locationCode]);
+    const direct = arcs.get(key);
+    if (direct !== undefined && (required === null || direct > required)) required = direct;
+  }
+  return required;
 }
 
 class PreviewValidationError extends Error {

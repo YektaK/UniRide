@@ -94,6 +94,12 @@ export const dudulluPreviewResponseSchema = z.object({
       cooldownMinutes: count,
     }).nullable(),
   }),
+  /** The limits the optimizer was given (minutes); the minimum is set only for an infeasible ride limit. */
+  limits: z.object({
+    maxRideTimeMinutes: count,
+    maxTourMinutes: count,
+    minimumFeasibleRideMinutes: count.nullable(),
+  }),
   vehicleSummary: vehicleSummarySchema.nullable(),
   jobs: z.array(jobSchema),
   routeIntervals: z.array(routeIntervalSchema),

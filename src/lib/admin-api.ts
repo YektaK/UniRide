@@ -31,6 +31,7 @@ export class DudulluReadinessRequestError extends Error {
 export type DailyPlanErrorKind =
   | "authorization"
   | "invalidDate"
+  | "invalidLimit"
   | "unavailable"
   | "timeout"
   | "network"
@@ -48,6 +49,10 @@ export interface DailyPlanRunOptions {
   readonly admissionMode: "recorded" | "assume_confirmed";
   /** "virtual" plans with identical virtual vehicles; "live" uses the real active fleet. */
   readonly fleetMode: "live" | "virtual";
+  /** Longest time a student may stay in the vehicle, minutes (server default 90, range 15-240). */
+  readonly maxRideTimeMinutes?: number;
+  /** Longest vehicle tour depot -> stops -> depot, minutes (server default 150, range 30-300). */
+  readonly maxTourMinutes?: number;
   /** Client timeout in milliseconds. */
   readonly timeoutMs?: number;
 }
@@ -284,6 +289,8 @@ async function runDailyPlanPreview(
         serviceDate,
         admissionMode: options.admissionMode,
         fleetMode: options.fleetMode,
+        ...(options.maxRideTimeMinutes === undefined ? {} : { maxRideTimeMinutes: options.maxRideTimeMinutes }),
+        ...(options.maxTourMinutes === undefined ? {} : { maxTourMinutes: options.maxTourMinutes }),
       }),
       signal: AbortSignal.timeout(options.timeoutMs ?? DAILY_PLAN_TIMEOUT_MS),
     });
@@ -296,7 +303,13 @@ async function runDailyPlanPreview(
   }
 
   if (response.status === 401 || response.status === 403) throw new DailyPlanRequestError("authorization");
-  if (response.status === 400) throw new DailyPlanRequestError("invalidDate");
+  if (response.status === 400) {
+    const code = await response.json().then(
+      (body: unknown) => (typeof body === "object" && body !== null ? (body as { error?: unknown }).error : undefined),
+      () => undefined,
+    );
+    throw new DailyPlanRequestError(code === "INVALID_LIMIT" ? "invalidLimit" : "invalidDate");
+  }
   if (!response.ok) throw new DailyPlanRequestError("unavailable");
 
   try {

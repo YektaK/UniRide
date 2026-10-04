@@ -112,6 +112,7 @@ const baseResponse = (): Response => ({
     liveActiveFleetSize: 1,
     template: { swCapacity: 4, soCapacity: 10, cooldownMinutes: 10 },
   },
+  limits: { maxRideTimeMinutes: 90, maxTourMinutes: 150, minimumFeasibleRideMinutes: null },
   vehicleSummary: {
     minimumVehicles: 2,
     minimumProven: true,
@@ -193,6 +194,12 @@ export function blockedResponse(reasonCodes: string[] = ["MATRIX_UNAVAILABLE"]):
     vehicleSummary: null,
     fleet: { mode: "virtual", assignmentFleetSize: null, liveActiveFleetSize: 2, template: null },
   };
+}
+
+/** A student's own direct ride exceeds the ride limit: blocked before the optimizer runs. */
+export function rideLimitInfeasibleResponse(): Response {
+  const response = blockedResponse(["ADMISSION_ASSUMED", "RIDE_TIME_LIMIT_INFEASIBLE"]);
+  return { ...response, limits: { maxRideTimeMinutes: 15, maxTourMinutes: 150, minimumFeasibleRideMinutes: 23 } };
 }
 
 /** A day with no admitted trip. */

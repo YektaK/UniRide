@@ -236,6 +236,11 @@
           "virtualFleet": "Virtual fleet (vehicles needed)",
           "virtualFleetOn": "A virtual fleet of identical vehicles is used; the number of vehicles needed is computed.",
           "virtualFleetOff": "Current fleet: only the active vehicles in the system are used.",
+          "maxRide": "Student at most in vehicle (min)",
+          "maxRideHint": "The longest time one student may stay in the vehicle (15–240 min).",
+          "maxTour": "Vehicle tour at most (min)",
+          "maxTourHint": "The longest time from leaving the campus until returning to it (30–300 min).",
+          "limitInvalid": "Limits must be whole numbers: student 15–240 min, vehicle tour 30–300 min.",
           "run": "Create plan",
           "running": "Preparing plan..."
         },
@@ -249,6 +254,7 @@
           "title": "The plan could not be created",
           "authorization": "The admin session could not be verified. Sign in again.",
           "invalidDate": "Invalid date. Pick a valid date.",
+          "invalidLimit": "Invalid time limit. Enter a whole number of minutes: 15–240 for the student, 30–300 for the vehicle tour.",
           "unavailable": "The preview service is unavailable. Check the local services and configuration, then try again.",
           "timeout": "The request timed out. Try a day with fewer waves.",
           "network": "The server could not be reached. Check the connection and try again.",
@@ -259,7 +265,8 @@
           "titlePlain": "Preview — not publishable",
           "text": "This screen is not a real shuttle plan. Nothing is saved, assigned or published.",
           "assumedAdmission": "Student confirmations were assumed.",
-          "virtualFleet": "Virtual fleet used: identical vehicles with {sw} Sw / {so} So capacity and {cooldown} min cooldown."
+          "virtualFleet": "Virtual fleet used: identical vehicles with {sw} Sw / {so} So capacity and {cooldown} min cooldown.",
+          "limits": "Limits used: a student stays in the vehicle at most {ride} min, a vehicle tour lasts at most {tour} min."
         },
         "status": {
           "preview_ready": "Preview ready",
@@ -279,6 +286,7 @@
           "invalidStudents": "{n} student records were left out because of missing data.",
           "routes": "Routes",
           "routesHint": "{waves} waves",
+          "maxRide": "Longest student ride of the day: {n} min (limit: {limit} min)",
           "liveFleet": "Current fleet",
           "difference": "Difference",
           "missing": "{n} vehicles short",
@@ -300,6 +308,7 @@
           "timeRange": "{start} – {end}",
           "duration": "{n} min",
           "counts": "Sw {sw} · So {so}",
+          "longestRide": "Longest student ride: {n} min",
           "vehicle": "Vehicle: {vehicle}",
           "noVehicle": "No vehicle assigned",
           "stops": "Stops",
@@ -322,7 +331,8 @@
           "timeline": "Timeline"
         },
         "notes": {
-          "title": "Status notes"
+          "title": "Status notes",
+          "rideLimitMinimum": "For this day, set the student ride limit to at least {min} min."
         },
         "reasons": {
           "ADMISSION_ASSUMED": "For the demo, every pending student trip was counted as confirmed. This is an assumption, not a real confirmation.",
@@ -344,7 +354,8 @@
           "NO_ROUTE_STEPS": "A route has no steps; the plan was rejected.",
           "OPTIMIZATION_NOT_SUCCESSFUL": "The route solver did not return a successful result or could not be reached.",
           "PENDING_STUDENT_CONFIRMATION": "Some student confirmations are still pending.",
-          "ROUTE_OUTSIDE_SERVICE_DAY": "A route runs outside the service day.",
+          "RIDE_TIME_LIMIT_INFEASIBLE": "The chosen student ride limit ({limit} min) cannot be met for this day; no plan could be built. Raise the limit.",
+          "ROUTE_OUTSIDE_SERVICE_DAY":"A route runs outside the service day.",
           "ROUTE_LOAD_MISMATCH": "The Sw/So counts of a route do not match its student list.",
           "ROUTE_TOTAL_MISMATCH": "A route's total duration does not match the sum of its steps.",
           "SCHEDULE_DATA_INVALID": "Schedule or student record data is invalid.",

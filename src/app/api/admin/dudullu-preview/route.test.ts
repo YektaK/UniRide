@@ -727,7 +727,10 @@ describe("POST /api/admin/dudullu-preview demo modes", () => {
   it("never writes when the preview is blocked or the table is missing", async () => {
     const client = setAdmin(crowd(1), "student_leg_decisions", "42P01");
     const { POST } = await import("./route");
-    await POST(post({ serviceDate: "2026-09-30", admissionMode: "assume_confirmed", fleetMode: "virtual" }));
+    const response = await POST(post({
+      serviceDate: "2026-09-30", admissionMode: "assume_confirmed", fleetMode: "virtual",
+    }));
+    expect(response.status).toBe(200);
     expectReadOnly(client);
   });
 
@@ -997,6 +1000,31 @@ describe("POST /api/admin/dudullu-preview demo modes", () => {
       expect(body.status).toBe("shortage");
       expect(body.reasonCodes).toContain("FLEET_SHORTAGE");
       expect(body.reasonCodes).not.toContain("OPTIMIZATION_NOT_SUCCESSFUL");
+      expect(body.publishable).toBe(false);
+    });
+
+    it("keeps OPTIMIZATION_NOT_SUCCESSFUL for the same fleet_size_violation in virtual mode", async () => {
+      setAdmin({
+        ...crowd(2), vehicles: [vehicleRow("v1", 2, 2, 10)],
+        student_leg_decisions: [confirmedLeg(1), confirmedLeg(2)],
+      });
+      optimizerFetchMock.mockImplementation(async (path: string) => {
+        if (path === "/api/v1/internal/matrix-snapshot") return Response.json(matrixFor(2));
+        return Response.json({
+          success: false, routes: [],
+          feasibility_certificate: {
+            is_feasible: false, violation_count: 1,
+            violations: [{ type: "fleet_size_violation", severity: "error", details: "2 routes but 1 vehicle" }],
+          },
+        });
+      });
+      const { POST } = await import("./route");
+
+      const body = await (await POST(post({ serviceDate: "2026-09-30", fleetMode: "virtual" }))).json();
+
+      expect(body.status).not.toBe("shortage");
+      expect(body.reasonCodes).toContain("OPTIMIZATION_NOT_SUCCESSFUL");
+      expect(body.reasonCodes).not.toContain("FLEET_SHORTAGE");
       expect(body.publishable).toBe(false);
     });
   });

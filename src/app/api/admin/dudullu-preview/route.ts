@@ -366,8 +366,9 @@ async function loadBlockedPreview(serviceDate: string, modes: PreviewModes) {
       }).demands;
       const typed = scheduleDemands.map((demand) => ({
         ...demand,
-        // In the demo mode legacy blockers do not downgrade a leg; the info code below remains.
-        admission: !assumeConfirmed && blockedStudents.has(candidate.studentId) && demand.admission === "confirmed"
+        // In the demo mode the downgrade is undone by assumeScheduledLegsConfirmed below, so
+        // legacy blockers only leave the info code.
+        admission: blockedStudents.has(candidate.studentId) && demand.admission === "confirmed"
           ? "pending_admin_approval" as const
           : demand.admission,
         disabilityType: candidate.disabilityType,

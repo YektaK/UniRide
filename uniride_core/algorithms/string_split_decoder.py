@@ -131,7 +131,17 @@ class SplitDecoder:
         offset_minutes: int = 10,
         is_asymmetric: bool = False,
         strict_time_windows: bool = False,
+        max_ride_time: Optional[float] = None,
     ):
+        # Per-student maximum ride time (minutes).  ``None`` = no limit, which
+        # leaves every pre-existing behaviour unchanged.  Definitions (route =
+        # depot -> s1..sk -> depot, no waiting):
+        #   pickup : longest ride = first student's = arcs s1->..->sk->depot
+        #   dropoff: longest ride = last student's  = arcs depot->s1->..->sk
+        # In the time-window paths waiting aboard the vehicle is added.
+        if max_ride_time is not None and not (max_ride_time > 0):
+            raise ValueError(f"max_ride_time must be positive, got {max_ride_time!r}")
+        self.max_ride_time = max_ride_time
         self.sw_capacity = sw_capacity
         self.so_capacity = so_capacity
         self.max_tour_duration = max_tour_duration
@@ -295,6 +305,10 @@ class SplitDecoder:
                 return reverse
         return math.inf
     
+    def _ride_direction_is_dropoff(self) -> bool:
+        value = getattr(self.direction, "value", self.direction)
+        return str(value).strip().lower() == "dropoff"
+
     def _build_trips(
         self,
         giant_tour: List[str],
@@ -306,10 +320,13 @@ class SplitDecoder:
         n = len(giant_tour)
         trips = {j: [] for j in range(1, n + 1)}
 
+        dropoff = self._ride_direction_is_dropoff()
+
         for i in range(n):
             sw_load = 0
             so_load = 0
             cost = 0.0
+            tail = 0.0  # arcs after the first stop (pickup: ride = tail + closing arc)
             prev = depot
 
             for j in range(i, n):
@@ -322,7 +339,10 @@ class SplitDecoder:
                     break
 
                 # FIX-04: named constant instead of magic 15.0
-                cost += self._get_dist(prev, loc, distance_matrix)
+                arc = self._get_dist(prev, loc, distance_matrix)
+                cost += arc
+                if j > i:
+                    tail += arc
 
                 prev = loc
 
@@ -331,6 +351,13 @@ class SplitDecoder:
 
                 if total_trip_cost > self.max_tour_duration:
                     continue
+
+                if self.max_ride_time is not None:
+                    # pickup: first student rides s1->..->sk->depot;
+                    # dropoff: last student rides depot->s1->..->sk.
+                    longest_ride = cost if dropoff else tail + return_cost
+                    if not (longest_ride <= self.max_ride_time):
+                        continue
 
                 trips[j + 1].append(Trip(
                     start_idx=i,
@@ -383,7 +410,9 @@ class SplitDecoder:
                 prefix_cost: Dict[int, float] = {}
                 prefix_sw: Dict[int, int] = {}
                 prefix_so: Dict[int, int] = {}
+                prefix_tail: Dict[int, float] = {}  # arcs after the first stop
                 cum_cost = 0.0
+                cum_tail = 0.0
                 cum_sw = 0
                 cum_so = 0
                 prev = depot
@@ -396,6 +425,9 @@ class SplitDecoder:
                     if math.isinf(travel_time):
                         break  # FIX-10: missing arc means this prefix is unusable
                     cum_cost += travel_time
+                    if k > i:
+                        cum_tail += travel_time
+                    prefix_tail[k] = cum_tail
                     cum_sw += sw_d
                     cum_so += so_d
                     prefix_cost[k] = cum_cost
@@ -405,11 +437,18 @@ class SplitDecoder:
 
                 # LOOP 2: emit one Trip per capacity-feasible prefix.
                 for k in prefix_cost:
-                    total_trip_cost = prefix_cost[k] + self._get_dist(
-                        giant_tour[k], depot, distance_matrix
-                    )
+                    closing_arc = self._get_dist(giant_tour[k], depot, distance_matrix)
+                    total_trip_cost = prefix_cost[k] + closing_arc
 
                     if total_trip_cost > self.max_tour_duration:
+                        continue
+
+                    # Pure-travel ride of the first student (s1 -> .. -> depot);
+                    # waiting aboard is added after the schedule simulation.
+                    pickup_ride = prefix_tail[k] + closing_arc
+                    if self.max_ride_time is not None and not (
+                        pickup_ride <= self.max_ride_time
+                    ):
                         continue
 
                     target_arrival = self._get_target_arrival_time(
@@ -435,6 +474,7 @@ class SplitDecoder:
                     tw_violations = 0
                     current_time = departure_time
                     prev = depot
+                    waited_aboard = 0  # waits at stops after the first pickup
 
                     for x in range(i, k + 1):
                         loc = giant_tour[x]
@@ -446,12 +486,21 @@ class SplitDecoder:
                             if current_time > latest:
                                 tw_violations += 1
                             elif current_time < earliest:
+                                if x > i:
+                                    waited_aboard += earliest - current_time
                                 current_time = earliest  # wait until window opens
 
                         arrival_times[loc] = current_time
                         prev = loc
 
                     if self.strict_time_windows and tw_violations > 0:
+                        continue
+
+                    # Waiting inside the vehicle counts toward the first
+                    # student's ride (audit H2: only simulated paths see it).
+                    if self.max_ride_time is not None and not (
+                        pickup_ride + waited_aboard <= self.max_ride_time
+                    ):
                         continue
 
                     trips[k + 1].append(Trip(
@@ -472,6 +521,7 @@ class SplitDecoder:
 
                 # FIX-02A: initialise BEFORE the loop so count accumulates
                 tw_violations = 0
+                waited_aboard = 0  # waits so far; every student aboard bears them
 
                 for j in range(i, n):
                     loc = giant_tour[j]
@@ -494,6 +544,7 @@ class SplitDecoder:
                         if current_time > latest:
                             tw_violations += 1  # FIX-02A: accumulate, not reset
                         elif current_time < earliest:
+                            waited_aboard += earliest - current_time
                             current_time = earliest  # wait until window opens
 
                     arrival_times[loc] = current_time  # record after possible wait
@@ -503,6 +554,13 @@ class SplitDecoder:
                     total_trip_cost = cost + return_cost
 
                     if total_trip_cost > self.max_tour_duration:
+                        continue
+
+                    # Last student's ride = travel campus -> sk plus any waiting
+                    # aboard (the closing arc is not part of a dropoff ride).
+                    if self.max_ride_time is not None and not (
+                        cost + waited_aboard <= self.max_ride_time
+                    ):
                         continue
 
                     if self.strict_time_windows and tw_violations > 0:
@@ -630,14 +688,23 @@ def decode_giant_tour(
     sw_capacity: int = 4,
     so_capacity: int = 5,
     max_tour_duration: float = 120.0,
-    is_asymmetric: bool = False
+    is_asymmetric: bool = False,
+    max_ride_time: Optional[float] = None,
+    direction: Direction = Direction.PICKUP,
 ) -> Dict:
-    """Convenience function for basic split decoding."""
+    """Convenience function for basic split decoding.
+
+    ``max_ride_time`` (minutes, ``None`` = unlimited) bounds every student's
+    in-vehicle time; ``direction`` selects which end of the route is longest
+    (see ``SplitDecoder.__init__``).
+    """
     decoder = SplitDecoder(
         sw_capacity=sw_capacity,
         so_capacity=so_capacity,
         max_tour_duration=max_tour_duration,
-        is_asymmetric=is_asymmetric
+        is_asymmetric=is_asymmetric,
+        direction=direction,
+        max_ride_time=max_ride_time,
     )
     return decoder.decode(giant_tour, depot, distance_matrix, demands)
 
@@ -654,7 +721,8 @@ def decode_with_time_windows(
     sw_capacity: int = 4,
     so_capacity: int = 5,
     max_tour_duration: float = 120.0,
-    is_asymmetric: bool = False
+    is_asymmetric: bool = False,
+    max_ride_time: Optional[float] = None,
 ) -> Dict:
     """
     Convenience function for CVRPTW decoding.
@@ -682,7 +750,8 @@ def decode_with_time_windows(
         direction=direction,
         target_time=target_time,
         offset_minutes=offset_minutes,
-        is_asymmetric=is_asymmetric
+        is_asymmetric=is_asymmetric,
+        max_ride_time=max_ride_time,
     )
     return decoder.decode_with_details(giant_tour, depot, distance_matrix, demands)
 

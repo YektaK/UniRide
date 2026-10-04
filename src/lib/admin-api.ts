@@ -30,11 +30,11 @@ export class DudulluReadinessRequestError extends Error {
 
 export type DailyPlanErrorKind =
   | "authorization"
-  | "invalid_date"
+  | "invalidDate"
   | "unavailable"
   | "timeout"
   | "network"
-  | "invalid_response";
+  | "invalidResponse";
 
 export class DailyPlanRequestError extends Error {
   constructor(public readonly kind: DailyPlanErrorKind) {
@@ -295,13 +295,13 @@ async function runDailyPlanPreview(
   }
 
   if (response.status === 401 || response.status === 403) throw new DailyPlanRequestError("authorization");
-  if (response.status === 400) throw new DailyPlanRequestError("invalid_date");
+  if (response.status === 400) throw new DailyPlanRequestError("invalidDate");
   if (!response.ok) throw new DailyPlanRequestError("unavailable");
 
   try {
     return parseDudulluPreviewResponse(await response.json());
   } catch {
-    throw new DailyPlanRequestError("invalid_response");
+    throw new DailyPlanRequestError("invalidResponse");
   }
 }
 

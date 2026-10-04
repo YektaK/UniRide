@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DudulluReadinessReport } from "@/services/dudullu-readiness";
+import { readyResponse } from "@/services/daily-plan-fixtures";
 
 const { getSupabaseClientMock } = vi.hoisted(() => ({
   getSupabaseClientMock: vi.fn(),
@@ -557,5 +558,80 @@ describe("adminApi.vehicles.calculate", () => {
     expect(error.message).not.toContain("internal optimizer secret");
     expect(json).not.toHaveBeenCalled();
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("adminApi.preview.run", () => {
+  const modes = { admissionMode: "assume_confirmed", fleetMode: "virtual" } as const;
+
+  it("posts the date and both modes with the admin bearer token and validates the response", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => readyResponse() });
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout");
+    vi.stubGlobal("fetch", fetchMock);
+    const adminApi = await readinessApi();
+
+    const result = await adminApi.preview.run("2026-10-05", modes);
+
+    expect(result.status).toBe("preview_ready");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/admin/dudullu-preview",
+      expect.objectContaining({
+        method: "POST",
+        cache: "no-store",
+        headers: expect.objectContaining({ Authorization: "Bearer test-token" }),
+      }),
+    );
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      serviceDate: "2026-10-05",
+      admissionMode: "assume_confirmed",
+      fleetMode: "virtual",
+    });
+    expect(timeoutSpy).toHaveBeenCalledWith(240_000);
+  });
+
+  it("classifies a missing session as an authorization failure without calling fetch", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const adminApi = await readinessApi(false);
+
+    await expect(adminApi.preview.run("2026-10-05", modes)).rejects.toMatchObject({ kind: "authorization" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [401, "authorization"],
+    [403, "authorization"],
+    [400, "invalidDate"],
+    [503, "unavailable"],
+    [500, "unavailable"],
+  ])("maps HTTP %s to %s", async (status, kind) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status, json: async () => ({ error: "x" }) }));
+    const adminApi = await readinessApi();
+
+    await expect(adminApi.preview.run("2026-10-05", modes)).rejects.toMatchObject({ kind });
+  });
+
+  it("maps a client timeout and a network failure to distinct kinds", async () => {
+    const adminApi = await readinessApi();
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new DOMException("timed out", "TimeoutError")));
+    await expect(adminApi.preview.run("2026-10-05", modes)).rejects.toMatchObject({ kind: "timeout" });
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    await expect(adminApi.preview.run("2026-10-05", modes)).rejects.toMatchObject({ kind: "network" });
+  });
+
+  it("rejects a response that is malformed or claims to be publishable", async () => {
+    const adminApi = await readinessApi();
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ status: "ok" }) }));
+    await expect(adminApi.preview.run("2026-10-05", modes)).rejects.toMatchObject({ kind: "invalidResponse" });
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ ...readyResponse(), publishable: true }),
+    }));
+    await expect(adminApi.preview.run("2026-10-05", modes)).rejects.toMatchObject({ kind: "invalidResponse" });
   });
 });

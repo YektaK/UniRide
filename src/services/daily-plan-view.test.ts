@@ -298,6 +298,21 @@ describe("reason code copy", () => {
     }
   });
 
+  it("has the same keys in Turkish and English and copy for every client error kind", () => {
+    const flatten = (value: unknown, prefix = ""): string[] =>
+      typeof value === "string"
+        ? [prefix]
+        : Object.entries(value as Record<string, unknown>).flatMap(([key, child]) =>
+            flatten(child, prefix ? `${prefix}.${key}` : key));
+    const tr = load("tr").page.admin.dailyPlan;
+    const en = load("en").page.admin.dailyPlan;
+    expect(flatten(en).sort()).toEqual(flatten(tr).sort());
+    const errors = (tr as { errors?: Record<string, string> }).errors ?? {};
+    for (const kind of ["authorization", "invalidDate", "unavailable", "timeout", "network", "invalidResponse"]) {
+      expect(errors[kind]?.trim(), `error ${kind}`).toBeTruthy();
+    }
+  });
+
   it("covers every code of the backend PreviewReasonCode union", () => {
     const source = readFileSync(new URL("./dudullu-preview.ts", import.meta.url), "utf8");
     const union = /export type PreviewReasonCode =([\s\S]*?);/.exec(source)?.[1] ?? "";

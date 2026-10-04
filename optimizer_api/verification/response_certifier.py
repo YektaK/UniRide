@@ -25,6 +25,7 @@ from uniride_core.algorithms.feasibility_certificate import (
     check_duration,
     check_hard_violation_rejection,
     check_occurrence_coverage,
+    check_ride_time,
     check_time_windows,
     certify_problem_instance,
 )
@@ -473,6 +474,21 @@ def _certify_optimization_response(request: Any, response: Any) -> dict:
     violations.extend(check_duration(
         routes, matrix, depot, float(request.max_travel_time), None
     ))
+    max_ride_time = getattr(request, "max_ride_time", None)
+    if max_ride_time is not None:
+        # Fail-closed safety net for every strategy: a result that violates
+        # the per-student ride limit is rejected whether or not the strategy
+        # knows about the field. Arc durations are 2-decimal rounded in the
+        # response, so allow the same rounding tolerance as the route totals.
+        max_steps = max(
+            (len(getattr(r, "route_details", None) or []) for r in (getattr(response, "routes", None) or [])),
+            default=0,
+        )
+        violations.extend(check_ride_time(
+            routes, matrix, depot, float(max_ride_time),
+            getattr(request.direction, "value", request.direction),
+            tolerance=_route_duration_tolerance(max_steps),
+        ))
     if time_windows is not None:
         violations.extend(check_time_windows(
             routes, matrix, depot, time_windows, None,

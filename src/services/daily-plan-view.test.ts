@@ -255,11 +255,46 @@ describe("buildDailyPlanView - blocked and empty days", () => {
     expect(view.sections).toEqual([]);
   });
 
-  it("recognises an empty day even without the NO_ADMITTED_DEMAND code", () => {
-    const response = emptyDayResponse();
-    const view = buildDailyPlanView({ ...response, reasonCodes: [] });
-    expect(view.isEmptyDay).toBe(true);
+  it("shows a neutral status for an empty day", () => {
+    expect(buildDailyPlanView(emptyDayResponse()).summary.tone).toBe("neutral");
   });
+
+  it("does not call a response without NO_ADMITTED_DEMAND an empty day", () => {
+    const view = buildDailyPlanView({ ...emptyDayResponse(), reasonCodes: [] });
+    expect(view.isEmptyDay).toBe(false);
+  });
+
+  it("keeps SCHEDULE_DATA_INVALID visible even though the route also adds NO_ADMITTED_DEMAND", () => {
+    const response = { ...emptyDayResponse(), reasonCodes: ["ADMISSION_ASSUMED", "SCHEDULE_DATA_INVALID", "NO_ADMITTED_DEMAND"] };
+    const view = buildDailyPlanView(response);
+    expect(view.isEmptyDay).toBe(false);
+    expect(view.summary.tone).toBe("danger");
+    expect(view.reasons.find((reason) => reason.code === "SCHEDULE_DATA_INVALID")?.severity).toBe("problem");
+  });
+
+  it("keeps recorded-mode LEG_DECISIONS_UNAVAILABLE visible instead of an empty day", () => {
+    const response = {
+      ...emptyDayResponse(),
+      admissionMode: "recorded" as const,
+      reasonCodes: ["LEG_DECISIONS_UNAVAILABLE", "NO_ADMITTED_DEMAND"],
+    };
+    const view = buildDailyPlanView(response);
+    expect(view.isEmptyDay).toBe(false);
+    expect(view.reasons.map((reason) => reason.severity)).toEqual(["problem", "problem"]);
+  });
+
+  it("still treats assume_confirmed LEG_DECISIONS_UNAVAILABLE as an empty day (informational)", () => {
+    const response = { ...emptyDayResponse(), reasonCodes: ["ADMISSION_ASSUMED", "LEG_DECISIONS_UNAVAILABLE", "NO_ADMITTED_DEMAND"] };
+    expect(buildDailyPlanView(response).isEmptyDay).toBe(true);
+  });
+
+  it.each(["FLEET_SHORTAGE", "MATRIX_UNAVAILABLE", "OPTIMIZATION_NOT_SUCCESSFUL", "SOMETHING_NEW"])(
+    "keeps %s visible next to NO_ADMITTED_DEMAND",
+    (code) => {
+      const view = buildDailyPlanView({ ...emptyDayResponse(), reasonCodes: [code, "NO_ADMITTED_DEMAND"] });
+      expect(view.isEmptyDay).toBe(false);
+    },
+  );
 
   it("does not call a blocked day with admitted trips empty", () => {
     const view = buildDailyPlanView(blockedResponse(["MATRIX_UNAVAILABLE"]));

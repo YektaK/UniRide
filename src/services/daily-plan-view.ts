@@ -419,10 +419,11 @@ export function buildDailyPlanView(response: DudulluPreviewResponse): DailyPlanV
     ? summaryFleet.routesPerJob.reduce((sum, job) => sum + job.studentCount, 0)
     : tripsFromJobs;
 
-  const admittedLegs = (response.candidateSummary.legsByAdmission.confirmed ?? 0)
-    + (response.candidateSummary.legsByAdmission.approved ?? 0);
+  const reasons = response.reasonCodes.map((code) => describeReason(code, assumedAdmission));
+  // An empty day is only the plain "nothing to plan" answer: any other real problem
+  // (invalid schedule data, missing decision table, fleet, matrix ...) must stay visible.
   const isEmptyDay = response.reasonCodes.includes("NO_ADMITTED_DEMAND")
-    || (response.jobs.length === 0 && admittedLegs === 0 && response.status === "blocked_data");
+    && reasons.every((reason) => reason.code === "NO_ADMITTED_DEMAND" || reason.severity === "info");
 
   return {
     serviceDate: response.serviceDate,
@@ -432,7 +433,7 @@ export function buildDailyPlanView(response: DudulluPreviewResponse): DailyPlanV
     virtualTemplate: response.fleet.template,
     summary: {
       status: response.status,
-      tone: statusTone(response.status),
+      tone: isEmptyDay ? "neutral" : statusTone(response.status),
       neededVehicles,
       neededAtMost,
       lowerBound: summaryFleet?.lowerBound ?? null,
@@ -443,7 +444,7 @@ export function buildDailyPlanView(response: DudulluPreviewResponse): DailyPlanV
       invalidStudentRecords: response.candidateSummary.invalidStudentRecords,
       fleet: compareFleet(neededVehicles, neededAtMost, response.fleet.liveActiveFleetSize),
     },
-    reasons: response.reasonCodes.map((code) => describeReason(code, assumedAdmission)),
+    reasons,
     isEmptyDay,
     sections,
     vehicles,

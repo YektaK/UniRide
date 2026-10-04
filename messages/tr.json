@@ -280,13 +280,11 @@
           "routes": "Rota sayısı",
           "routesHint": "{waves} dalga",
           "liveFleet": "Mevcut filo",
-          "vehicleCount": "{n} araç",
           "difference": "Fark",
           "missing": "{n} araç eksik",
           "enough": "Mevcut filo yeterli",
           "spare": "{n} araç boşta kalır",
-          "differenceUnknown": "Karşılaştırılamadı",
-          "statusTitle": "Durum"
+          "differenceUnknown": "Karşılaştırılamadı"
         },
         "sections": {
           "pickup": "Sabah toplama",
@@ -317,7 +315,7 @@
           "vehicle": "Araç",
           "routes": "Rotalar",
           "minutes": "{n} dk",
-        "busy": "Çalışma süresi",
+          "busy": "Çalışma süresi",
           "slot": "{start}–{end} {direction} (Rota {n})",
           "pickupShort": "Toplama",
           "dropoffShort": "Bırakma",

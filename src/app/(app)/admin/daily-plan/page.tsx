@@ -339,15 +339,17 @@ function PlanBody({ plan, t }: { plan: DailyPlanView; t: Translate }) {
   return (
     <div className="space-y-6">
       <PreviewBanner plan={plan} />
-      <div
-        data-testid="status-banner"
-        className={cn("rounded-md border px-4 py-3 text-sm font-medium", TONE_CLASSES[plan.summary.tone])}
-      >
-        <span className="inline-flex items-center gap-2">
-          {plan.summary.tone === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-          {t(`status.${plan.summary.status}`)}
-        </span>
-      </div>
+      {!plan.isEmptyDay && (
+        <div
+          data-testid="status-banner"
+          className={cn("rounded-md border px-4 py-3 text-sm font-medium", TONE_CLASSES[plan.summary.tone])}
+        >
+          <span className="inline-flex items-center gap-2">
+            {plan.summary.tone === "success" ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+            {t(`status.${plan.summary.status}`)}
+          </span>
+        </div>
+      )}
       {plan.isEmptyDay ? (
         <Card data-testid="empty-day">
           <CardHeader>

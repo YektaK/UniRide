@@ -50,7 +50,7 @@ async function generate(response: DudulluPreviewResponse) {
   render(<DailyPlanPage />);
   setDate("2026-10-05");
   fireEvent.click(runButton());
-  await screen.findByTestId("status-banner");
+  await screen.findByTestId("preview-banner");
 }
 
 describe("DailyPlanPage", () => {
@@ -210,6 +210,34 @@ describe("DailyPlanPage", () => {
     expect(screen.getByTestId("empty-day")).toBeTruthy();
     expect(screen.getByText("Bu gün için planlanacak sefer yok")).toBeTruthy();
     expect(screen.queryByTestId("card-needed-vehicles")).toBeNull();
+    // A genuinely empty day is neutral: no red problem status bar.
+    expect(screen.queryByTestId("status-banner")).toBeNull();
+    expect(screen.queryByText("Plan oluşturulamadı: veri veya hizmet sorunu")).toBeNull();
+  });
+
+  it("shows invalid schedule data as a problem, not as an empty day", async () => {
+    await generate({
+      ...emptyDayResponse(),
+      reasonCodes: ["ADMISSION_ASSUMED", "SCHEDULE_DATA_INVALID", "NO_ADMITTED_DEMAND"],
+    });
+
+    expect(screen.queryByTestId("empty-day")).toBeNull();
+    expect(screen.queryByText(/Başka bir tarih deneyin/)).toBeNull();
+    expect(screen.getByText("Plan oluşturulamadı: veri veya hizmet sorunu")).toBeTruthy();
+    expect(screen.getByText("Ders programı veya öğrenci kaydı verisi geçersiz.")).toBeTruthy();
+  });
+
+  it("shows a missing recorded-decision table as a problem, not as an empty day", async () => {
+    await generate({
+      ...emptyDayResponse(),
+      admissionMode: "recorded",
+      hypothetical: false,
+      reasonCodes: ["LEG_DECISIONS_UNAVAILABLE", "NO_ADMITTED_DEMAND"],
+    });
+
+    expect(screen.queryByTestId("empty-day")).toBeNull();
+    expect(screen.getByText("Öğrenci onay kayıtları tablosu bulunamadı; kayıtlı onaylar okunamadı.")).toBeTruthy();
+    expect(screen.getByText("Plan oluşturulamadı: veri veya hizmet sorunu")).toBeTruthy();
   });
 
   it.each([

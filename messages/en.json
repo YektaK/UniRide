@@ -280,13 +280,11 @@
           "routes": "Routes",
           "routesHint": "{waves} waves",
           "liveFleet": "Current fleet",
-          "vehicleCount": "{n} vehicles",
           "difference": "Difference",
           "missing": "{n} vehicles short",
           "enough": "Current fleet is enough",
           "spare": "{n} vehicles spare",
-          "differenceUnknown": "Cannot compare",
-          "statusTitle": "Status"
+          "differenceUnknown": "Cannot compare"
         },
         "sections": {
           "pickup": "Morning pickup",
@@ -317,7 +315,7 @@
           "vehicle": "Vehicle",
           "routes": "Routes",
           "minutes": "{n} min",
-        "busy": "Busy time",
+          "busy": "Busy time",
           "slot": "{start}–{end} {direction} (Route {n})",
           "pickupShort": "Pickup",
           "dropoffShort": "Dropoff",

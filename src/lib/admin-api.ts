@@ -67,6 +67,13 @@ let tokenGeneration = 0;
 const TOKEN_REFRESH_THRESHOLD_MS = 5 * 60 * 1000;
 
 /**
+ * Longest wait for the Supabase session (getSession plus a possible refresh). A hung session
+ * call otherwise blocks every admin request until its own, much longer, deadline. On expiry
+ * the acquisition fails like any other session failure (no token -> authentication error).
+ */
+export const SESSION_TIMEOUT_MS = 10_000;
+
+/**
  * Check if token is about to expire
  */
 function isTokenExpiring(expiresAt: number): boolean {
@@ -115,7 +122,7 @@ export async function getAuthToken(): Promise<string | null> {
   console.log("[AdminAPI] Starting new token fetch...");
   // Start a new token fetch
   const generation = tokenGeneration;
-  const acquisition = (async () => {
+  const sessionWork = (async () => {
     try {
       console.log("[AdminAPI] Calling supabase.auth.getSession()...");
       // Get session - this will auto-refresh if needed
@@ -170,6 +177,15 @@ export async function getAuthToken(): Promise<string | null> {
       return clearTokenForGeneration(generation);
     }
   })();
+  let sessionTimer: ReturnType<typeof setTimeout> | undefined;
+  const sessionDeadline = new Promise<null>((resolve) => {
+    sessionTimer = setTimeout(() => {
+      console.error(`[AdminAPI] Session request timed out after ${SESSION_TIMEOUT_MS} ms.`);
+      resolve(clearTokenForGeneration(generation));
+    }, SESSION_TIMEOUT_MS);
+  });
+  // Always settles within SESSION_TIMEOUT_MS; the timer is cleared as soon as the work settles.
+  const acquisition = Promise.race([sessionWork, sessionDeadline]).finally(() => clearTimeout(sessionTimer));
   tokenPromise = acquisition;
   const detach = () => {
     if (generation === tokenGeneration && tokenPromise === acquisition) {

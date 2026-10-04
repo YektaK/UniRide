@@ -12,6 +12,7 @@ import { getSupabaseClient } from "./supabase";
 import type { DudulluReadinessReport } from "@/services/dudullu-readiness";
 import { parseDudulluReadinessReport } from "@/services/dudullu-readiness-response";
 import { DUDULLU_DEPOT } from "@/services/dudullu-campus";
+import { parseDudulluPreviewResponse, type DudulluPreviewResponse } from "@/services/dudullu-preview-response";
 
 export class AdminApiAuthenticationError extends Error {
   constructor() {
@@ -25,6 +26,30 @@ export class DudulluReadinessRequestError extends Error {
     super("Dudullu readiness request failed");
     this.name = "DudulluReadinessRequestError";
   }
+}
+
+export type DailyPlanErrorKind =
+  | "authorization"
+  | "invalid_date"
+  | "unavailable"
+  | "timeout"
+  | "network"
+  | "invalid_response";
+
+export class DailyPlanRequestError extends Error {
+  constructor(public readonly kind: DailyPlanErrorKind) {
+    super(`Daily plan request failed: ${kind}`);
+    this.name = "DailyPlanRequestError";
+  }
+}
+
+export interface DailyPlanRunOptions {
+  /** "assume_confirmed" counts pending legs as confirmed (demo); "recorded" uses real decisions. */
+  readonly admissionMode: "recorded" | "assume_confirmed";
+  /** "virtual" plans with identical virtual vehicles; "live" uses the real active fleet. */
+  readonly fleetMode: "live" | "virtual";
+  /** Client timeout in milliseconds. */
+  readonly timeoutMs?: number;
 }
 
 // Token cache with mutex to prevent race conditions
@@ -238,11 +263,57 @@ async function getDudulluReadiness(): Promise<DudulluReadinessReport> {
   }
 }
 
+/**
+ * The preview route calls the optimizer once per wave, one after another, and the server
+ * sets no timeout of its own. This client limit is a placeholder until the D0 timing
+ * measurement exists (roadmap D0 step 8), then it should be tuned to that value.
+ */
+export const DAILY_PLAN_TIMEOUT_MS = 240_000;
+
+async function runDailyPlanPreview(
+  serviceDate: string,
+  options: DailyPlanRunOptions,
+): Promise<DudulluPreviewResponse> {
+  let response: Response;
+  try {
+    response = await adminFetch("/api/admin/dudullu-preview", {
+      method: "POST",
+      cache: "no-store",
+      body: JSON.stringify({
+        serviceDate,
+        admissionMode: options.admissionMode,
+        fleetMode: options.fleetMode,
+      }),
+      signal: AbortSignal.timeout(options.timeoutMs ?? DAILY_PLAN_TIMEOUT_MS),
+    });
+  } catch (error) {
+    if (error instanceof AdminApiAuthenticationError) throw new DailyPlanRequestError("authorization");
+    if (error instanceof DOMException && error.name === "TimeoutError") {
+      throw new DailyPlanRequestError("timeout");
+    }
+    throw new DailyPlanRequestError("network");
+  }
+
+  if (response.status === 401 || response.status === 403) throw new DailyPlanRequestError("authorization");
+  if (response.status === 400) throw new DailyPlanRequestError("invalid_date");
+  if (!response.ok) throw new DailyPlanRequestError("unavailable");
+
+  try {
+    return parseDudulluPreviewResponse(await response.json());
+  } catch {
+    throw new DailyPlanRequestError("invalid_response");
+  }
+}
+
 // ==================== USERS ====================
 
 export const adminApi = {
   readiness: {
     getDudullu: getDudulluReadiness,
+  },
+
+  preview: {
+    run: runDailyPlanPreview,
   },
 
   users: {

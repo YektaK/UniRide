@@ -1,0 +1,323 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+import {
+  KNOWN_REASON_CODES,
+  buildDailyPlanView,
+  describeReason,
+  formatMinutesOfDay,
+  nodeLocationCode,
+} from "./daily-plan-view";
+import {
+  blockedResponse,
+  emptyDayResponse,
+  indeterminateResponse,
+  readyResponse,
+  shortageResponse,
+} from "./daily-plan-fixtures";
+import { parseDudulluPreviewResponse } from "./dudullu-preview-response";
+
+describe("formatMinutesOfDay", () => {
+  it.each([
+    [0, "00:00"],
+    [525, "08:45"],
+    [1020, "17:00"],
+    [498.4, "08:18"],
+    [498.6, "08:19"],
+    [1440, "24:00"],
+    [-3, "00:00"],
+  ])("formats %s as %s", (minutes, label) => {
+    expect(formatMinutesOfDay(minutes)).toBe(label);
+  });
+});
+
+describe("nodeLocationCode", () => {
+  it("drops the #occurrence suffix and keeps plain codes", () => {
+    expect(nodeLocationCode("So3#occ-c")).toBe("So3");
+    expect(nodeLocationCode("So3#occ-c#2")).toBe("So3");
+    expect(nodeLocationCode("D.Kampus")).toBe("D.Kampus");
+  });
+});
+
+describe("buildDailyPlanView - ready plan", () => {
+  const view = buildDailyPlanView(readyResponse());
+
+  it("groups jobs into pickup then dropoff sections with HH:MM anchors", () => {
+    expect(view.sections.map((section) => section.direction)).toEqual(["pickup", "dropoff"]);
+    const [morning] = view.sections[0].waves;
+    expect(morning.anchorLabel).toBe("08:45");
+    expect(morning.routeCount).toBe(2);
+    expect(morning.studentCount).toBe(3);
+    expect(morning.swCount).toBe(1);
+    expect(morning.soCount).toBe(2);
+    expect(view.sections[1].waves[0].anchorLabel).toBe("17:00");
+  });
+
+  it("sorts waves by anchor inside a direction", () => {
+    const response = readyResponse();
+    const early = structuredClone(response.jobs[0]);
+    early.id = "2026-10-05:pickup:420";
+    early.anchorMinutes = 420;
+    early.intervals = early.intervals.map((interval) => ({
+      ...interval,
+      jobId: early.id,
+      startMinutes: interval.startMinutes - 105,
+      endMinutes: interval.endMinutes - 105,
+    }));
+    const sorted = buildDailyPlanView({ ...response, jobs: [response.jobs[0], early, response.jobs[1]] });
+    expect(sorted.sections[0].waves.map((wave) => wave.anchorLabel)).toEqual(["07:00", "08:45"]);
+  });
+
+  it("merges jobs with the same direction and anchor into one wave", () => {
+    const response = readyResponse();
+    const twin = structuredClone(response.jobs[0]);
+    twin.id = "twin";
+    twin.intervals = twin.intervals.map((interval) => ({ ...interval, jobId: "twin" }));
+    const merged = buildDailyPlanView({ ...response, jobs: [response.jobs[0], twin] });
+    expect(merged.sections).toHaveLength(1);
+    expect(merged.sections[0].waves).toHaveLength(1);
+    expect(merged.sections[0].waves[0].routeCount).toBe(4);
+  });
+
+  it("orders routes by departure and computes stop arrival times from the interval start", () => {
+    const [first, second] = view.sections[0].waves[0].routes;
+    expect(first.number).toBe(1);
+    expect(first.startLabel).toBe("08:18");
+    expect(first.endLabel).toBe("08:45");
+    expect(first.totalMinutes).toBe(27);
+    expect(first.stops.map((stop) => [stop.code, stop.arrivalLabel, stop.offsetMinutes, stop.legMinutes])).toEqual([
+      ["D.Kampus", "08:18", 0, 0],
+      ["So1", "08:28", 10, 10],
+      ["Sw2", "08:33", 15, 5],
+      ["D.Kampus", "08:45", 27, 12],
+    ]);
+    expect(first.stops.map((stop) => stop.kind)).toEqual(["campus", "student", "student", "campus"]);
+    expect(first.stops.map((stop) => stop.disability)).toEqual([null, "So", "Sw", null]);
+    expect(first.swCount).toBe(1);
+    expect(first.soCount).toBe(1);
+    expect(second.number).toBe(2);
+    expect(second.startLabel).toBe("08:25");
+  });
+
+  it("strips the occurrence suffix from stop codes", () => {
+    const second = view.sections[0].waves[0].routes[1];
+    expect(second.stops.map((stop) => stop.code)).toEqual(["D.Kampus", "So3", "D.Kampus"]);
+  });
+
+  it("starts a dropoff route at the anchor", () => {
+    const route = view.sections[1].waves[0].routes[0];
+    expect(route.startLabel).toBe("17:00");
+    expect(route.endLabel).toBe("17:16");
+    expect(route.stops.map((stop) => stop.arrivalLabel)).toEqual(["17:00", "17:08", "17:16"]);
+  });
+
+  it("lists physical vehicles numbered by first departure with routes in time order", () => {
+    expect(view.vehicles.map((vehicle) => vehicle.label)).toEqual(["Araç 1", "Araç 2"]);
+    const [first, second] = view.vehicles;
+    expect(first.routes.map((slot) => [slot.direction, slot.anchorLabel, slot.startLabel, slot.endLabel])).toEqual([
+      ["pickup", "08:45", "08:18", "08:45"],
+      ["dropoff", "17:00", "17:00", "17:16"],
+    ]);
+    expect(first.busyMinutes).toBe(43);
+    expect(second.routes).toHaveLength(1);
+    expect(view.sections[0].waves[0].routes[0].vehicleLabel).toBe("Araç 1");
+    expect(view.sections[0].waves[0].routes[1].vehicleLabel).toBe("Araç 2");
+  });
+
+  it("never exposes backend vehicle ids", () => {
+    expect(JSON.stringify(view.vehicles)).not.toContain("virtual:");
+  });
+
+  it("positions vehicle slots on an hourly timeline", () => {
+    expect(view.timeline?.startMinutes).toBe(8 * 60);
+    expect(view.timeline?.endMinutes).toBe(18 * 60);
+    const slot = view.vehicles[0].routes[0];
+    expect(slot.leftPercent).toBeCloseTo(((498 - 480) / 600) * 100, 1);
+    expect(slot.widthPercent).toBeCloseTo((27 / 600) * 100, 1);
+    expect(view.timeline?.ticks[0]).toEqual({ label: "08:00", leftPercent: 0 });
+    expect(view.timeline?.ticks.at(-1)).toEqual({ label: "18:00", leftPercent: 100 });
+  });
+
+  it("summarises vehicles, students, routes and the real fleet", () => {
+    expect(view.summary.status).toBe("preview_ready");
+    expect(view.summary.tone).toBe("success");
+    expect(view.summary.neededVehicles).toBe(2);
+    expect(view.summary.neededAtMost).toBe(false);
+    expect(view.summary.students).toBe(4);
+    expect(view.summary.trips).toBe(4);
+    expect(view.summary.routes).toBe(3);
+    expect(view.summary.peakConcurrentRoutes).toBe(2);
+    expect(view.summary.fleet).toEqual({
+      needed: 2, neededAtMost: false, liveFleet: 1, difference: 1, state: "missing", amount: 1,
+    });
+  });
+
+  it("labels the demo as hypothetical with its assumptions", () => {
+    expect(view.hypothetical).toBe(true);
+    expect(view.assumedAdmission).toBe(true);
+    expect(view.virtualFleet).toBe(true);
+    expect(view.virtualTemplate).toEqual({ swCapacity: 4, soCapacity: 10, cooldownMinutes: 10 });
+    expect(view.isEmptyDay).toBe(false);
+  });
+
+  it("reports a sufficient real fleet with its spare vehicles", () => {
+    const response = readyResponse();
+    const enough = buildDailyPlanView({ ...response, fleet: { ...response.fleet, liveActiveFleetSize: 5 } });
+    expect(enough.summary.fleet).toMatchObject({ difference: -3, state: "enough", amount: 3 });
+    const exact = buildDailyPlanView({ ...response, fleet: { ...response.fleet, liveActiveFleetSize: 2 } });
+    expect(exact.summary.fleet).toMatchObject({ difference: 0, state: "enough", amount: 0 });
+  });
+
+  it("does not know the difference when the live fleet size is missing", () => {
+    const response = readyResponse();
+    const unknown = buildDailyPlanView({ ...response, fleet: { ...response.fleet, liveActiveFleetSize: null } });
+    expect(unknown.summary.fleet).toMatchObject({ liveFleet: null, difference: null, state: "unknown" });
+  });
+
+  it("contains no name-like data beyond location codes", () => {
+    const text = JSON.stringify(view);
+    expect(text).not.toMatch(/occ-/);
+  });
+});
+
+describe("buildDailyPlanView - indeterminate", () => {
+  const view = buildDailyPlanView(indeterminateResponse());
+
+  it("marks the vehicle count as an upper bound", () => {
+    expect(view.summary.status).toBe("indeterminate");
+    expect(view.summary.tone).toBe("warning");
+    expect(view.summary.neededVehicles).toBe(3);
+    expect(view.summary.neededAtMost).toBe(true);
+    expect(view.summary.lowerBound).toBe(2);
+    expect(view.summary.fleet.neededAtMost).toBe(true);
+  });
+
+  it("keeps the routes and flags the unfinished search", () => {
+    expect(view.summary.routes).toBe(3);
+    expect(view.reasons.map((reason) => reason.code)).toContain("ASSIGNMENT_SEARCH_INDETERMINATE");
+  });
+
+  it("has no upper-bound badge when no assignment was found", () => {
+    const response = indeterminateResponse();
+    const none = buildDailyPlanView({
+      ...response,
+      assignments: [],
+      vehicleSummary: { ...response.vehicleSummary!, minimumVehicles: null },
+    });
+    expect(none.summary.neededVehicles).toBeNull();
+    expect(none.summary.neededAtMost).toBe(false);
+    expect(none.vehicles).toEqual([]);
+    expect(none.timeline).toBeNull();
+  });
+});
+
+describe("buildDailyPlanView - shortage", () => {
+  const view = buildDailyPlanView(shortageResponse());
+
+  it("shows the routes but no vehicle count or assignment", () => {
+    expect(view.summary.status).toBe("shortage");
+    expect(view.summary.tone).toBe("danger");
+    expect(view.summary.neededVehicles).toBeNull();
+    expect(view.summary.lowerBound).toBe(2);
+    expect(view.summary.fleet.state).toBe("unknown");
+    expect(view.sections).toHaveLength(2);
+    expect(view.vehicles).toEqual([]);
+    expect(view.sections[0].waves[0].routes.every((route) => route.vehicleLabel === null)).toBe(true);
+  });
+
+  it("is not hypothetical when recorded admission and the live fleet are used", () => {
+    expect(view.hypothetical).toBe(false);
+    expect(view.assumedAdmission).toBe(false);
+    expect(view.virtualFleet).toBe(false);
+    expect(view.virtualTemplate).toBeNull();
+    expect(view.reasons).toEqual([{ code: "FLEET_SHORTAGE", messageKey: "FLEET_SHORTAGE", severity: "problem" }]);
+  });
+});
+
+describe("buildDailyPlanView - blocked and empty days", () => {
+  it("shows a blocked response with reasons and no plan", () => {
+    const view = buildDailyPlanView(blockedResponse(["MATRIX_UNAVAILABLE", "SCHEDULE_DATA_INVALID"]));
+    expect(view.summary.status).toBe("blocked_data");
+    expect(view.summary.tone).toBe("danger");
+    expect(view.sections).toEqual([]);
+    expect(view.vehicles).toEqual([]);
+    expect(view.summary.neededVehicles).toBeNull();
+    expect(view.summary.routes).toBe(0);
+    expect(view.summary.fleet).toMatchObject({ liveFleet: 2, state: "unknown" });
+    expect(view.isEmptyDay).toBe(false);
+    expect(view.reasons.map((reason) => reason.severity)).toEqual(["problem", "problem"]);
+  });
+
+  it("recognises an empty day", () => {
+    const view = buildDailyPlanView(emptyDayResponse());
+    expect(view.isEmptyDay).toBe(true);
+    expect(view.summary.students).toBe(0);
+    expect(view.summary.routes).toBe(0);
+    expect(view.sections).toEqual([]);
+  });
+
+  it("recognises an empty day even without the NO_ADMITTED_DEMAND code", () => {
+    const response = emptyDayResponse();
+    const view = buildDailyPlanView({ ...response, reasonCodes: [] });
+    expect(view.isEmptyDay).toBe(true);
+  });
+
+  it("does not call a blocked day with admitted trips empty", () => {
+    const view = buildDailyPlanView(blockedResponse(["MATRIX_UNAVAILABLE"]));
+    expect(view.isEmptyDay).toBe(false);
+  });
+});
+
+describe("describeReason", () => {
+  it("treats demo-preparation codes as informational", () => {
+    expect(describeReason("ADMISSION_ASSUMED", true).severity).toBe("info");
+    expect(describeReason("PENDING_STUDENT_CONFIRMATION", false).severity).toBe("info");
+    expect(describeReason("LEG_DECISIONS_UNAVAILABLE", true).severity).toBe("info");
+    expect(describeReason("LEG_DECISIONS_UNAVAILABLE", false).severity).toBe("problem");
+    expect(describeReason("MATRIX_UNAVAILABLE", true).severity).toBe("problem");
+  });
+
+  it("falls back to the unknown message for codes without copy", () => {
+    expect(describeReason("SOMETHING_NEW", false)).toEqual({
+      code: "SOMETHING_NEW", messageKey: "unknown", severity: "problem",
+    });
+  });
+});
+
+describe("reason code copy", () => {
+  type Messages = { page: { admin: { dailyPlan?: { reasons?: Record<string, string>; status?: Record<string, string> } } } };
+  const load = (name: string) =>
+    JSON.parse(readFileSync(new URL(`../../messages/${name}.json`, import.meta.url), "utf8")) as Messages;
+
+  it.each(["tr", "en"])("has plain text for every reason code and status in %s", (locale) => {
+    const plan = load(locale).page.admin.dailyPlan;
+    for (const code of [...KNOWN_REASON_CODES, "unknown"]) {
+      expect(plan?.reasons?.[code]?.trim(), `${locale} reason ${code}`).toBeTruthy();
+    }
+    for (const status of ["preview_ready", "shortage", "blocked_data", "indeterminate"]) {
+      expect(plan?.status?.[status]?.trim(), `${locale} status ${status}`).toBeTruthy();
+    }
+  });
+
+  it("covers every code of the backend PreviewReasonCode union", () => {
+    const source = readFileSync(new URL("./dudullu-preview.ts", import.meta.url), "utf8");
+    const union = /export type PreviewReasonCode =([\s\S]*?);/.exec(source)?.[1] ?? "";
+    const backendCodes = [...union.matchAll(/"([A-Z_]+)"/g)].map((match) => match[1]).sort();
+    expect(backendCodes.length).toBeGreaterThan(20);
+    expect([...KNOWN_REASON_CODES].sort()).toEqual(backendCodes);
+  });
+});
+
+describe("parseDudulluPreviewResponse", () => {
+  it("accepts the fixture shapes", () => {
+    for (const response of [readyResponse(), shortageResponse(), blockedResponse(), emptyDayResponse()]) {
+      expect(() => parseDudulluPreviewResponse(response)).not.toThrow();
+    }
+  });
+
+  it("rejects a publishable or malformed response", () => {
+    expect(() => parseDudulluPreviewResponse({ ...readyResponse(), publishable: true })).toThrow();
+    expect(() => parseDudulluPreviewResponse({ ...readyResponse(), status: "ok" })).toThrow();
+    expect(() => parseDudulluPreviewResponse({ error: "PREVIEW_UNAVAILABLE" })).toThrow();
+    expect(() => parseDudulluPreviewResponse(null)).toThrow();
+  });
+});

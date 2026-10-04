@@ -65,10 +65,12 @@ describe("sidebar message catalog contract", () => {
   });
 
   it("collects the current menu and logout keys", () => {
-    expect(sidebarKeys).toHaveLength(23);
+    expect(sidebarKeys).toHaveLength(24);
     expect(sidebarKeys).toContain("dudulluReadiness");
+    expect(sidebarKeys).toContain("dailyPlan");
     expect(sidebarKeys).toContain("sandbox");
     expect(sidebarKeys).toContain("logout");
     expect(trMessages.common.sidebar.dudulluReadiness).toBe("Dudullu Hazırlık");
+    expect(trMessages.common.sidebar.dailyPlan).toBe("Günlük Plan");
   });
 });

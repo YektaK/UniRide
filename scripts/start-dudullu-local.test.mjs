@@ -171,6 +171,56 @@ test("resolvePythonBin honors UNIRIDE_PYTHON then .venv then PATH python", () =>
   assert.ok(pathBin !== null && fs.existsSync(pathBin));
 });
 
+test("resolvePythonBin selects .venv-jit when .venv is absent", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "uniride-python-venv-jit-"));
+  try {
+    const venvJit = path.join(root, ".venv-jit", "Scripts", "python.exe");
+    fs.mkdirSync(path.dirname(venvJit), { recursive: true });
+    fs.writeFileSync(venvJit, "");
+    assert.equal(
+      resolvePythonBin({ PATH: process.env.PATH }, root),
+      venvJit,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("resolvePythonBin prefers .venv over .venv-jit when both exist", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "uniride-python-both-"));
+  try {
+    const venv = path.join(root, ".venv", "Scripts", "python.exe");
+    const venvJit = path.join(root, ".venv-jit", "Scripts", "python.exe");
+    fs.mkdirSync(path.dirname(venv), { recursive: true });
+    fs.mkdirSync(path.dirname(venvJit), { recursive: true });
+    fs.writeFileSync(venv, "");
+    fs.writeFileSync(venvJit, "");
+    assert.equal(
+      resolvePythonBin({ PATH: process.env.PATH }, root),
+      venv,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("resolvePythonBin still honors UNIRIDE_PYTHON when .venv-jit exists", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "uniride-python-explicit-"));
+  try {
+    const explicit = path.join(root, "custom-python.exe");
+    const venvJit = path.join(root, ".venv-jit", "Scripts", "python.exe");
+    fs.mkdirSync(path.dirname(venvJit), { recursive: true });
+    fs.writeFileSync(explicit, "");
+    fs.writeFileSync(venvJit, "");
+    assert.equal(
+      resolvePythonBin({ UNIRIDE_PYTHON: explicit, PATH: process.env.PATH }, root),
+      explicit,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("probeWebRunner succeeds for a real command and fails for a missing one", async () => {
   const ok = await probeWebRunner(
     { command: process.execPath, shell: false },

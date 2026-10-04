@@ -182,10 +182,14 @@ export function resolvePythonBin(env, rootDir) {
       ? [
           path.join(rootDir, ".venv", "Scripts", "python.exe"),
           path.join(rootDir, ".venv", "bin", "python"),
+          path.join(rootDir, ".venv-jit", "Scripts", "python.exe"),
+          path.join(rootDir, ".venv-jit", "bin", "python"),
         ]
       : [
           path.join(rootDir, ".venv", "bin", "python"),
           path.join(rootDir, ".venv", "Scripts", "python.exe"),
+          path.join(rootDir, ".venv-jit", "bin", "python"),
+          path.join(rootDir, ".venv-jit", "Scripts", "python.exe"),
         ];
   for (const candidate of venvCandidates) {
     if (fs.existsSync(candidate)) {

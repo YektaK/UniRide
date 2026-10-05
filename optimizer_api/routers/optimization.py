@@ -49,7 +49,7 @@ from models.schemas import (
     CompareRequest, CompareResponse, AlgorithmResult,
     IEResponseData, BottleneckInfo,
     TimeShiftSuggestion, FeasibilityCertificateInfo,
-    AppliedComputePolicyInfo,
+    AppliedComputePolicyInfo, MatrixProvenanceInfo,
 )
 from utils.resource_profiler import ResourceProfiler
 from utils.scheduling import calculate_scheduled_times
@@ -57,7 +57,10 @@ from utils.data_loader import DataLoader
 from utils.matrix_repository import IncompleteTravelMatrixError, MatrixSnapshotError
 from uniride_core.algorithms.clustering import MissingTravelTimeError
 from uniride_core.algorithms.route_metrics import TravelTimeUnavailableError
-from verification.authoritative_arcs import authoritative_arc_lookup
+from verification.authoritative_arcs import (
+    authoritative_arc_lookup,
+    matrix_provenance_of,
+)
 from verification.response_certifier import certify_optimization_response
 
 router = APIRouter(
@@ -303,6 +306,9 @@ def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
             )
         )
         result.feasibility_certificate = typed_certificate
+        provenance = matrix_provenance_of(arc_lookup)
+        if provenance is not None:
+            result.matrix_provenance = MatrixProvenanceInfo.model_validate(provenance)
         result.success = bool(original_result_success and typed_certificate.is_feasible)
         if not result.success:
             result.error_message = json.dumps(
@@ -459,6 +465,12 @@ def _run_single_algorithm(
             )
         )
         success = bool(original_success and typed_certificate.is_feasible)
+        provenance = matrix_provenance_of(arc_lookup)
+        matrix_provenance = (
+            MatrixProvenanceInfo.model_validate(provenance)
+            if provenance is not None
+            else None
+        )
         return AlgorithmResult(
             algorithm=resolution.canonical,
             algorithm_requested=resolution.requested,
@@ -474,6 +486,7 @@ def _run_single_algorithm(
                 else _failure_json(typed_certificate)
             ),
             feasibility_certificate=typed_certificate,
+            matrix_provenance=matrix_provenance,
         )
     except _MATRIX_ERRORS:
         # The matrix is a request-level precondition shared by every
@@ -506,6 +519,17 @@ def _comparison_metadata(
         cancellation_mode="soft_response_deadline",
         limits={},
     )
+
+
+def _shared_provenance(results) -> MatrixProvenanceInfo | None:
+    """The provenance every algorithm run shares, or None if absent/divergent
+    (a cache refresh between runs); per-result values stay on each result."""
+    found = [r.matrix_provenance for r in results if r.matrix_provenance is not None]
+    if not found or len(found) != len(results):
+        return None
+    if len({p.sha256 for p in found}) != 1:
+        return None
+    return found[0]
 
 
 @router.post("/compare", response_model=CompareResponse)
@@ -651,6 +675,7 @@ def compare_algorithms(request: CompareRequest) -> CompareResponse:
         fastest_algorithm=fastest.algorithm if fastest else "",
         summary=summary,
         applied_policy=_comparison_metadata(policy, request),
+        matrix_provenance=_shared_provenance(results),
     )
 
 

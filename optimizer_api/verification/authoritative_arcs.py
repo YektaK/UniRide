@@ -41,7 +41,21 @@ def arc_lookup_from_snapshot(snapshot: Mapping[str, Any]) -> ArcLookup:
             raise IncompleteTravelMatrixError(origin, destination)
         return value
 
+    _attach_provenance(lookup, snapshot.get("provenance"))
     return lookup
+
+
+def _attach_provenance(lookup: ArcLookup, provenance: Any) -> None:
+    """Record the provenance of the matrix state a lookup was built from."""
+    if isinstance(provenance, Mapping):
+        lookup.matrix_provenance = dict(provenance)  # type: ignore[attr-defined]
+
+
+def matrix_provenance_of(lookup: Optional[ArcLookup]) -> Optional[Dict[str, Any]]:
+    """Provenance (source/sha256/location_count/loaded_at/age_seconds) of the
+    matrix state ``lookup`` was captured from, or ``None`` if unknown."""
+    provenance = getattr(lookup, "matrix_provenance", None)
+    return dict(provenance) if isinstance(provenance, Mapping) else None
 
 
 def arc_lookup_from_repository(repository: Any) -> ArcLookup:
@@ -91,7 +105,11 @@ def capture_repository_arcs(repository: Any, request: Any) -> ArcLookup:
     codes = [str(request.depot.id)] + [
         str(student.location_code) for student in request.students
     ]
-    captured: Dict[Tuple[str, str], float] = repository.capture_arcs(codes)
+    provenance: Any = None
+    if hasattr(repository, "capture_arcs_with_provenance"):
+        captured, provenance = repository.capture_arcs_with_provenance(codes)
+    else:
+        captured = repository.capture_arcs(codes)
 
     def lookup(origin: str, destination: str) -> float:
         if origin == destination:
@@ -101,6 +119,7 @@ def capture_repository_arcs(repository: Any, request: Any) -> ArcLookup:
             raise IncompleteTravelMatrixError(origin, destination)
         return value
 
+    _attach_provenance(lookup, provenance)
     return lookup
 
 
@@ -145,4 +164,5 @@ __all__ = [
     "capture_repository_arcs",
     "arc_lookup_from_submatrix",
     "authoritative_arc_lookup",
+    "matrix_provenance_of",
 ]

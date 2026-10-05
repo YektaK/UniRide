@@ -56,15 +56,48 @@ def _clarke_wright_groups(matrix):
 
 
 def test_clarke_wright_uses_the_directed_matrix_values():
-    # savings S(i, j) = t(D, i) + t(D, j) - t(i, j) with i before j in the list
+    # directed savings S(i -> j) = t(i, D) + t(D, j) - t(i, j)
     cheap_ab = _matrix({("A", "B"): 1.0, ("C", "E"): 1.0}, default=10.0)
     assert _clarke_wright_groups(cheap_ab) == [["A", "B"], ["C", "E"]]
 
-    # the same pair is expensive in the listed direction (cheap only reversed)
+    # cheap only in the reverse direction: the better orientation (B -> A) is
+    # used, so the same pair is still found
     reversed_ab = _matrix(
         {("A", "B"): 99.0, ("B", "A"): 1.0, ("C", "E"): 1.0}, default=10.0
     )
-    assert _clarke_wright_groups(reversed_ab) != [["A", "B"], ["C", "E"]]
+    assert _clarke_wright_groups(reversed_ab) == [["A", "B"], ["C", "E"]]
+
+
+def _tour_cost(points, matrix, depot="D"):
+    codes = [depot] + [p.location_code for p in points] + [depot]
+    return sum(matrix[a][b] for a, b in zip(codes, codes[1:]))
+
+
+def test_clarke_wright_directed_saving_beats_one_way_saving():
+    # D->x = 10 and x->D = 10 for all x. A->B is cheap (9) but B->A is dear (30);
+    # C->A is very cheap (1) while A->C costs 15. The old one-way saving
+    # t(D,i)+t(D,j)-t(i,j) (i before j in list order) ranks (A,B)=11 first and
+    # merges A->B (total 49); the directed saving S(C->A) = 10+10-1 = 19 wins
+    # and gives D->C->A->D + D->B->D = 41.
+    matrix = _matrix(
+        {
+            ("A", "B"): 9.0, ("B", "A"): 30.0,
+            ("A", "C"): 15.0, ("C", "A"): 1.0,
+            ("B", "C"): 20.0, ("C", "B"): 20.0,
+        },
+        codes=("D", "A", "B", "C"),
+        default=10.0,
+    )
+    points = [_point("1", "A"), _point("2", "B"), _point("3", "C")]
+    strategy = get_clustering_strategy("clarke_wright", 10, 10)
+    clusters = strategy.cluster_students(points, 2, time_matrix=matrix, depot=DEPOT)
+
+    groups = sorted([p.location_code for p in c.points] for c in clusters)
+    assert groups == [["B"], ["C", "A"]]  # route order is C then A
+    total = sum(_tour_cost(c.points, matrix) for c in clusters)
+    assert total == 41.0
+    one_way_choice = [[points[0], points[1]], [points[2]]]
+    assert total < sum(_tour_cost(r, matrix) for r in one_way_choice)
 
 
 def test_clarke_wright_missing_pair_raises_instead_of_haversine():

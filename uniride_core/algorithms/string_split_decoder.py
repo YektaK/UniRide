@@ -19,7 +19,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 logger = logging.getLogger(__name__)
-DEFAULT_TRAVEL_FALLBACK_MINUTES = 15.0
 
 
 def _is_depot(node: object, depot: object) -> bool:
@@ -293,8 +292,8 @@ class SplitDecoder:
     ) -> float:
         """Get distance between two locations, respecting ATSP asymmetry.
 
-        FIX-10: an absent directed arc is data corruption — never fall back to
-        DEFAULT_TRAVEL_FALLBACK_MINUTES; return math.inf instead.
+        FIX-10: an absent directed arc is data corruption — never substitute a
+        default travel time; return math.inf instead.
         """
         direct = distance_matrix.get(from_loc, {}).get(to_loc)
         if direct is not None:
@@ -338,7 +337,6 @@ class SplitDecoder:
                 if sw_load > self.sw_capacity or so_load > self.so_capacity:
                     break
 
-                # FIX-04: named constant instead of magic 15.0
                 arc = self._get_dist(prev, loc, distance_matrix)
                 cost += arc
                 if j > i:

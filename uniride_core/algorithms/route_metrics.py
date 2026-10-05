@@ -40,6 +40,29 @@ def estimate_travel_time_minutes(distance_km: float, speed_kmh: float = DEFAULT_
     return (distance_km / speed_kmh) * 60.0
 
 
+def strict_arc(
+    distance_matrix: Mapping,
+    from_loc: str,
+    to_loc: str,
+) -> float:
+    """Directed arc from a nested ``{from: {to: minutes}}`` matrix, strictly.
+
+    Never substitutes a default: a missing arc raises
+    ``TravelTimeUnavailableError`` (operational travel times come only from
+    the stored ``time_matrix``). ``from_loc == to_loc`` is 0.0 when the
+    diagonal is absent.
+    """
+    row = distance_matrix.get(from_loc)
+    if row is not None and to_loc in row:
+        return float(row[to_loc])
+    if from_loc == to_loc:
+        return 0.0
+    raise TravelTimeUnavailableError(
+        f"No travel time for {from_loc!r} -> {to_loc!r}: "
+        "missing from the time matrix."
+    )
+
+
 def get_duration(
     from_loc: str,
     to_loc: str,
@@ -129,5 +152,6 @@ __all__ = [
     "calculate_route_duration",
     "estimate_travel_time_minutes",
     "get_duration",
+    "strict_arc",
     "haversine_distance_km",
 ]

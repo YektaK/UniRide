@@ -436,6 +436,15 @@ class AppliedComputePolicyInfo(BaseModel):
     limits: Dict[str, AppliedPolicyLimitInfo] = Field(default_factory=dict)
 
 
+class MatrixProvenanceInfo(BaseModel):
+    """Which ``time_matrix`` state a response was solved and certified on."""
+    source: Literal["supabase"] = "supabase"
+    sha256: str
+    location_count: int
+    loaded_at: Optional[str] = None
+    age_seconds: Optional[float] = None
+
+
 class OptimizationResponse(BaseModel):
     algorithm_used: str
     success: bool
@@ -451,6 +460,7 @@ class OptimizationResponse(BaseModel):
     feasibility_certificate: Optional[FeasibilityCertificateInfo] = None
     algorithm_requested: Optional[str] = None
     applied_policy: Optional[AppliedComputePolicyInfo] = None
+    matrix_provenance: Optional[MatrixProvenanceInfo] = None
 
 class AlgorithmResult(BaseModel):
     algorithm: str
@@ -463,6 +473,7 @@ class AlgorithmResult(BaseModel):
     feasibility_certificate: Optional[FeasibilityCertificateInfo] = None
     algorithm_requested: Optional[str] = None
     applied_policy: Optional[AppliedComputePolicyInfo] = None
+    matrix_provenance: Optional[MatrixProvenanceInfo] = None
 
 class CompareRequest(BaseModel):
     students: List[StudentNode]
@@ -496,6 +507,7 @@ class CompareResponse(BaseModel):
     fastest_algorithm: str
     summary: Dict[str, Any]
     applied_policy: Optional[AppliedComputePolicyInfo] = None
+    matrix_provenance: Optional[MatrixProvenanceInfo] = None
 
 class StrategyInfo(BaseModel):
     name: str

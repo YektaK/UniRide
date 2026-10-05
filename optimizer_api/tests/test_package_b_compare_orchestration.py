@@ -374,7 +374,7 @@ def test_single_algorithm_execution_isolates_shared_request_and_strategy_instanc
     second = _resolution("ga", "genetic_algorithm", factory=MutatingStrategy)
     policy = ComputePolicy()
     monkeypatch.setattr(
-        optimization, "certify_optimization_response", lambda request, result: {
+        optimization, "certify_optimization_response", lambda request, result, arc_lookup=None: {
             "is_feasible": True, "violation_count": 0, "violations": []
         }
     )
@@ -640,7 +640,7 @@ def test_compare_oversize_exact_run_fails_while_eligible_runs_continue(monkeypat
     monkeypatch.setattr(
         optimization,
         "certify_optimization_response",
-        lambda request, result: {
+        lambda request, result, arc_lookup=None: {
             "is_feasible": True, "violation_count": 0, "violations": []
         },
     )

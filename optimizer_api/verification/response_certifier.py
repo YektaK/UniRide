@@ -1,17 +1,21 @@
-"""Certify a strategy response against a ProblemInstance into a JSON-safe dict.
+"""Certify a strategy response into a JSON-safe dict.
 
-Boundary certificates are produced from the response's own reported data
-(route_details chains, durations, counts, ids); they attest internal
-consistency and constraint satisfaction, not equivalence with any
-authoritative source matrix. Source/unit/provenance validation of the
-synthesized matrix against Package E-derived sources is deferred.
+``certify_optimization_response`` (the production ``/optimize`` and
+``/compare`` boundary) re-costs every reported step on the authoritative,
+directed ``time_matrix`` arcs through an injected ``arc_lookup`` and judges
+capacity, duration, ride-time and time-window feasibility on those matrix
+durations. The durations a solver reports about itself are only compared with
+the matrix (``arc_duration_mismatch``); they are never trusted.
+
+``certify_benchmark_response`` is the academic/benchmark certificate over a
+``ProblemInstance`` and keeps its own matrix contract.
 """
 
 from __future__ import annotations
 
 import copy
 import math
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from uniride_core.adapters.demand_builder import (
     student_capacity_demand,
@@ -114,7 +118,27 @@ def _violation_to_dict(violation: Any) -> Dict[str, Any]:
     return out
 
 
-_ROUNDING_TOLERANCE_STEP = 0.005
+ArcLookup = Callable[[str, str], float]
+"""Directed arc lookup over *physical* location codes: ``lookup(origin, destination)``
+returns the authoritative travel time in minutes, or raises when the arc is
+missing or invalid. ``lookup(a, a)`` is ``0.0``."""
+
+# Responses publish step durations as ``round(x, 2)``. Rounding to two decimals
+# moves a value by at most half a unit of the second decimal, i.e. 0.005 min, so
+# this is the largest deviation from the matrix arc that is pure float
+# formatting. Matrix values themselves may be integers or arbitrary decimals;
+# the tolerance must NOT be widened to hide solver rounding (the pre-fix
+# OR-Tools scaling error of up to 0.05 min per arc is deliberately larger).
+ARC_DURATION_TOLERANCE = 0.005
+_ROUNDING_TOLERANCE_STEP = ARC_DURATION_TOLERANCE
+
+# Guard against binary float noise only (e.g. 60.00000000000001 > 60 after
+# summing arcs in a different order). Far below any meaningful duration.
+_FLOAT_EPSILON = 1e-9
+
+_MATRIX_UNAVAILABLE_ERROR = (
+    "certification aborted: authoritative travel-time matrix unavailable"
+)
 
 
 def _sanitize_certify_error(exc: Exception) -> str:
@@ -194,16 +218,30 @@ def _fleet_assignment_violations(
     return []
 
 
-def certify_optimization_response(request: Any, response: Any) -> dict:
+def certify_optimization_response(
+    request: Any,
+    response: Any,
+    arc_lookup: Optional[ArcLookup] = None,
+) -> dict:
     """Public fail-closed boundary for ``/optimize`` and ``/compare`` responses.
 
-    Solver-independent final certificate. Never raises: any internal failure
-    yields an ``is_feasible=False`` certificate carrying only a sanitized
+    Final certificate that judges the response against the authoritative
+    directed travel-time matrix reachable through ``arc_lookup`` (the same
+    snapshot the solve was bound to when the request is snapshot-bound). Never
+    raises: any internal failure, and a missing ``arc_lookup``, yields an
+    ``is_feasible=False`` certificate carrying only a sanitized
     ``certify_error`` summary. See ``_certify_optimization_response`` for the
     checks performed.
     """
+    if arc_lookup is None:
+        return {
+            "is_feasible": False,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": _MATRIX_UNAVAILABLE_ERROR,
+        }
     try:
-        return _certify_optimization_response(request, response)
+        return _certify_optimization_response(request, response, arc_lookup)
     except Exception as exc:  # noqa: BLE001 - fail-closed certification
         return {
             "is_feasible": False,
@@ -213,7 +251,9 @@ def certify_optimization_response(request: Any, response: Any) -> dict:
         }
 
 
-def _certify_optimization_response(request: Any, response: Any) -> dict:
+def _certify_optimization_response(
+    request: Any, response: Any, arc_lookup: ArcLookup
+) -> dict:
     """Certify a production ``OptimizationResponse`` against its request.
 
     Rebuilds the integer-node route representation from the response's own
@@ -229,12 +269,17 @@ def _certify_optimization_response(request: Any, response: Any) -> dict:
     the heterogeneous fleet when ``request.vehicles`` is set (deterministic
     one-to-one SW/SO capacity assignment, superseding global caps).
 
-    Matrix provenance: the arc matrix is synthesized from the response's own
-    route_details. It attests internal consistency of the reported chain
-    (finite, non-negative for any arc, chain-continuous,
-    depot-closed) but does NOT claim equivalence with the authoritative source
-    travel-time matrix; source/unit/provenance validation is deferred to
-    Package E. This bound certifies constraint satisfaction, not optimality.
+    Matrix provenance (C2): every step is re-costed on the directed arc
+    returned by ``arc_lookup`` for the physical codes of its endpoints (depot
+    id and each student's ``location_code``). A step whose reported duration
+    deviates from that arc by more than ``ARC_DURATION_TOLERANCE`` is an
+    ``arc_duration_mismatch`` error; a step whose endpoints cannot be resolved,
+    or whose arc the matrix cannot answer, is a ``missing_arc`` error. The
+    duration, ride-time and time-window checks then run on the matrix
+    durations, never on the reported ones. The lookup is only as authoritative
+    as the matrix behind it: callers pass the request's bound snapshot, or the
+    DataLoader repository. This bound certifies constraint satisfaction, not
+    optimality.
     """
     occurrence_keys = student_occurrence_keys(request.students)
     node_keys = [request.depot.id] + occurrence_keys
@@ -242,6 +287,9 @@ def _certify_optimization_response(request: Any, response: Any) -> dict:
     dimension = len(node_keys)
     depot = 0
 
+    node_codes = [str(request.depot.id)] + [
+        str(student.location_code) for student in request.students
+    ]
     demands = [[0, 0]] + [
         list(student_capacity_demand(student)) for student in request.students
     ]
@@ -373,22 +421,85 @@ def _certify_optimization_response(request: Any, response: Any) -> dict:
                     })
 
     matrix = [[0.0] * dimension for _ in range(dimension)]
+    arc_cache: Dict[Tuple[int, int], Optional[float]] = {}
+
+    def _matrix_arc(src: int, dst: int) -> Optional[float]:
+        """Authoritative arc for node indices; ``None`` when it cannot be answered."""
+        key = (src, dst)
+        if key not in arc_cache:
+            try:
+                value: Optional[float] = float(arc_lookup(node_codes[src], node_codes[dst]))
+            except Exception:  # noqa: BLE001 - any lookup failure is fail-closed
+                value = None
+            if value is not None and (not math.isfinite(value) or value < 0.0):
+                value = None
+            arc_cache[key] = value
+        return arc_cache[key]
+
+    reported_unanswered: set = set()
+
+    def _unanswered(route_index: int, src: int, dst: int) -> None:
+        if (route_index, src, dst) in reported_unanswered:
+            return
+        reported_unanswered.add((route_index, src, dst))
+        pre_violations.append({
+            "type": "missing_arc", "severity": "error",
+            "details": (
+                f"Route {route_index} arc {node_keys[src]!r}->{node_keys[dst]!r} "
+                "has no valid arc in the authoritative travel-time matrix"
+            ),
+            "route_index": route_index,
+        })
+
     for route_index, route in enumerate(getattr(response, "routes", None) or []):
         for step in getattr(route, "route_details", None) or []:
             src = loc_to_node.get(str(step.location1))
             dst = loc_to_node.get(str(step.location2))
             if src is None or dst is None:
+                pre_violations.append({
+                    "type": "missing_arc", "severity": "error",
+                    "details": (
+                        f"Route {route_index} step {step.location1!r}->{step.location2!r} "
+                        "has an endpoint that cannot be resolved to a travel-time matrix code"
+                    ),
+                    "route_index": route_index,
+                })
                 continue
             duration = float(step.duration)
-            valid = math.isfinite(duration) and duration >= 0.0
-            if not valid:
+            if not (math.isfinite(duration) and duration >= 0.0):
                 pre_violations.append({
                     "type": "missing_arc", "severity": "error",
                     "details": f"Route {route_index} arc {step.location1!r}->{step.location2!r} has invalid duration {step.duration!r}",
                     "route_index": route_index,
                 })
                 continue
-            matrix[src][dst] = duration
+            expected = _matrix_arc(src, dst)
+            if expected is None:
+                _unanswered(route_index, src, dst)
+                continue
+            if abs(duration - expected) > ARC_DURATION_TOLERANCE + _FLOAT_EPSILON:
+                pre_violations.append({
+                    "type": "arc_duration_mismatch", "severity": "error",
+                    "details": (
+                        f"Route {route_index} step {step.location1!r}->{step.location2!r} "
+                        f"reports {duration} min but the matrix arc is {expected} min"
+                    ),
+                    "route_index": route_index,
+                })
+            matrix[src][dst] = expected
+
+    # The feasibility checks walk the node chain depot -> nodes -> depot; make
+    # sure every arc of that chain is the matrix arc and not a default of 0.
+    for route_index, route_nodes in enumerate(routes):
+        if not route_nodes:
+            continue
+        chain = [depot, *route_nodes, depot]
+        for src, dst in zip(chain, chain[1:]):
+            expected = _matrix_arc(src, dst)
+            if expected is None:
+                _unanswered(route_index, src, dst)
+            else:
+                matrix[src][dst] = expected
 
     routed_totals = [
         float(getattr(route, "total_duration_minutes", 0.0) or 0.0)
@@ -472,22 +583,18 @@ def _certify_optimization_response(request: Any, response: Any) -> dict:
     if capacities is not None:
         violations.extend(check_capacity_vectors(routes, demands, capacities))
     violations.extend(check_duration(
-        routes, matrix, depot, float(request.max_travel_time), None
+        routes, matrix, depot, float(request.max_travel_time) + _FLOAT_EPSILON, None
     ))
     max_ride_time = getattr(request, "max_ride_time", None)
     if max_ride_time is not None:
         # Fail-closed safety net for every strategy: a result that violates
         # the per-student ride limit is rejected whether or not the strategy
-        # knows about the field. Arc durations are 2-decimal rounded in the
-        # response, so allow the same rounding tolerance as the route totals.
-        max_steps = max(
-            (len(getattr(r, "route_details", None) or []) for r in (getattr(response, "routes", None) or [])),
-            default=0,
-        )
+        # knows about the field. The matrix holds the true arcs, so only float
+        # noise is tolerated (reported-arc rounding is handled per arc above).
         violations.extend(check_ride_time(
             routes, matrix, depot, float(max_ride_time),
             getattr(request.direction, "value", request.direction),
-            tolerance=_route_duration_tolerance(max_steps),
+            tolerance=_FLOAT_EPSILON,
         ))
     if time_windows is not None:
         violations.extend(check_time_windows(

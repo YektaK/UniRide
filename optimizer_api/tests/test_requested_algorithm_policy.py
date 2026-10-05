@@ -25,6 +25,7 @@ from models.schemas import (
     StudentNode,
     VehicleRoute,
 )
+from certifier_matrix_support import certify_on_loader_matrix
 from routers import optimization
 from strategies.canonical import resolve_strategy
 
@@ -45,7 +46,9 @@ class _EuclideanLoader:
 
     def get_submatrix(self, request_locations, coordinates=None, geo_coords=False, asymmetric_haversine=False):
         n = len(request_locations)
-        coords = coordinates or {}
+        # A real matrix is a fixed table: callers that pass no coordinates (the
+        # split strategies) must still get true arcs, not zeros (audit C2).
+        coords = coordinates or self.get_location_coordinates()
         matrix = [[0.0] * n for _ in range(n)]
         for i in range(n):
             c1 = coords.get(request_locations[i], {})
@@ -72,6 +75,8 @@ def _patch_live_loader(monkeypatch):
     monkeypatch.setattr(
         "strategies.sota_response_builder.DataLoader.get_instance", lambda: loader
     )
+    # the endpoint certificate re-costs on the arcs the solve used
+    certify_on_loader_matrix(monkeypatch, loader)
     return loader
 
 
@@ -240,7 +245,7 @@ def test_certification_line_is_load_bearing(monkeypatch):
     point (the 'remove the line' property of this confirmation suite)."""
     _install_strategy(monkeypatch, "rdma", _LyingStrategy())
 
-    def always_feasible(request, response):
+    def always_feasible(request, response, arc_lookup=None):
         return {
             "is_feasible": True,
             "violation_count": 0,

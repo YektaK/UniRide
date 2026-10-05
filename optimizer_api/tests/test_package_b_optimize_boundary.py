@@ -98,7 +98,7 @@ def _install(
 
     monkeypatch.setattr(optimization, "apply_compute_policy", apply)
     monkeypatch.setattr(
-        optimization, "certify_optimization_response", lambda request, result: FEASIBLE
+        optimization, "certify_optimization_response", lambda request, result, arc_lookup=None: FEASIBLE
     )
     return created
 
@@ -194,7 +194,7 @@ def test_optimize_attaches_identity_policy_and_certificate_to_solver_outcome(
 def test_optimize_keeps_package_a_fail_closed_certificate_after_policy(monkeypatch):
     _install(monkeypatch, _Strategy(response=_response()))
     monkeypatch.setattr(
-        optimization, "certify_optimization_response", lambda request, result: INFEASIBLE
+        optimization, "certify_optimization_response", lambda request, result, arc_lookup=None: INFEASIBLE
     )
 
     result = optimization.optimize_route(_request())
@@ -300,7 +300,7 @@ def _install_permutation(monkeypatch, requested, strategy):
     monkeypatch.setattr(
         optimization,
         "certify_optimization_response",
-        lambda request, result: FEASIBLE,
+        lambda request, result, arc_lookup=None: FEASIBLE,
     )
 
     def apply(request, actual_resolution, actual_strategy, policy):

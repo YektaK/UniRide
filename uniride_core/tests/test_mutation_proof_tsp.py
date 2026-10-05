@@ -18,7 +18,19 @@ from uniride_core.algorithms.three_opt import (
     closed_tour_cost,
     improve_three_opt,
 )
-from verification.response_certifier import certify_optimization_response
+from verification.authoritative_arcs import arc_lookup_from_submatrix
+from verification.response_certifier import (
+    certify_optimization_response as _certify_with_lookup,
+)
+
+_ACTIVE_LOADER = []  # the loader the solve used; the certificate re-costs on it
+
+
+def certify_optimization_response(request, response):
+    """Certify against the arcs of the loader that produced the solve."""
+    return _certify_with_lookup(
+        request, response, arc_lookup=arc_lookup_from_submatrix(_ACTIVE_LOADER[-1], request)
+    )
 
 # ---------------------------------------------------------------------------
 # Canonical 3-opt contracts
@@ -96,7 +108,9 @@ class _EuclideanLoader:
 
     def get_submatrix(self, request_locations, coordinates=None, geo_coords=False, asymmetric_haversine=False):
         n = len(request_locations)
-        coords = coordinates or {}
+        # A real matrix is a fixed table: callers that pass no coordinates must
+        # still get true arcs, not zeros (audit C2).
+        coords = coordinates or self.get_location_coordinates()
         matrix = [[0.0] * n for _ in range(n)]
         for i in range(n):
             c1 = coords.get(request_locations[i], {})
@@ -120,6 +134,7 @@ class _EuclideanLoader:
 
 def _patch_loader(monkeypatch):
     loader = _EuclideanLoader()
+    _ACTIVE_LOADER.append(loader)
     monkeypatch.setattr("utils.data_loader.DataLoader.get_instance", lambda: loader)
     monkeypatch.setattr(
         "strategies.sota_response_builder.DataLoader.get_instance", lambda: loader

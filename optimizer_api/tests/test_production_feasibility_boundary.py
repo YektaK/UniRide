@@ -44,8 +44,14 @@ from strategies.sota_response_builder import build_single_route_response
 from uniride_core.adapters.demand_builder import student_occurrence_keys
 from uniride_core.algorithms.string_greedy_routing import solve_string_greedy_routes
 from uniride_core.algorithms.vehicle_assignment import VehicleCalculator
+from certifier_matrix_support import (
+    certify_on_reported as certify_optimization_response,
+    echo_certifier_matrix,  # noqa: F401 - fixture
+)
 from verification import response_certifier
-from verification.response_certifier import certify_optimization_response
+from verification.authoritative_arcs import arc_lookup_from_submatrix
+
+pytestmark = pytest.mark.usefixtures("echo_certifier_matrix")
 
 
 # ---------------------------------------------------------------------------
@@ -662,7 +668,8 @@ def test_optimize_demotes_insufficient_fleet(monkeypatch):
 def test_identity_accepts_same_location_distinct_students_ordered():
     request = _request(students=SAME_LOCATION_STUDENTS)
     keys = student_occurrence_keys(SAME_LOCATION_STUDENTS)
-    steps = _steps(*keys)
+    # students sharing a stop are joined by a zero-length matrix arc
+    steps = _steps(*keys, durations=[10.0, 0.0, 5.0])
     route = VehicleRoute(
         vehicle_id="V1", route_details=steps,
         total_duration_minutes=sum(s.duration for s in steps),
@@ -680,7 +687,8 @@ def test_identity_accepts_same_location_distinct_students_ordered():
 def test_identity_accepts_occurrence_keys_sota_style():
     request = _request(students=SAME_LOCATION_STUDENTS)
     keys = student_occurrence_keys(SAME_LOCATION_STUDENTS)
-    steps = _steps(*keys)
+    # students sharing a stop are joined by a zero-length matrix arc
+    steps = _steps(*keys, durations=[10.0, 0.0, 5.0])
     route = VehicleRoute(
         vehicle_id="V1", route_details=steps,
         total_duration_minutes=sum(s.duration for s in steps),
@@ -707,7 +715,8 @@ def test_identity_accepts_occurrence_keys_sota_style():
 def test_identity_rejects_swapped_unknown_missing_duplicated_ids(bad_ids):
     request = _request(students=SAME_LOCATION_STUDENTS)
     keys = student_occurrence_keys(SAME_LOCATION_STUDENTS)
-    steps = _steps(*keys)
+    # students sharing a stop are joined by a zero-length matrix arc
+    steps = _steps(*keys, durations=[10.0, 0.0, 5.0])
     route = VehicleRoute(
         vehicle_id="V1", route_details=steps,
         total_duration_minutes=sum(s.duration for s in steps),
@@ -772,8 +781,10 @@ def test_certificate_rejects_interior_depot_without_fabricating_a_zero_arc():
         sw_count=1, so_count=1, student_ids=["s1", "s2"],
     )
 
-    certificate = certify_optimization_response(
-        request, _response(routes=[route])
+    # every matrix arc exists (10 min): the chain A -> B must be costed from the
+    # matrix, not left at a fabricated zero, and only the interior depot is wrong
+    certificate = response_certifier.certify_optimization_response(
+        request, _response(routes=[route]), arc_lookup=lambda a, b: 0.0 if a == b else 10.0
     )
 
     assert certificate["is_feasible"] is False
@@ -1186,12 +1197,15 @@ def _patch_live_loader(monkeypatch):
     ids=["ga", "pso", "gwo", "hho", "two_opt", "permutation"],
 )
 def test_live_cluster_first_strategy_output_certifies(monkeypatch, strategy):
-    _patch_live_loader(monkeypatch)
+    loader = _patch_live_loader(monkeypatch)
     request = _live_request()
     response = strategy.optimize(request)
 
     assert response.success is True
-    certificate = certify_optimization_response(request, response)
+    # re-cost on the arcs of the loader the solve used (C2), not on the response
+    certificate = response_certifier.certify_optimization_response(
+        request, response, arc_lookup=arc_lookup_from_submatrix(loader, request)
+    )
 
     assert certificate["is_feasible"] is True, (strategy.name, certificate)
     assert "student_id_mismatch" not in _cert_types(certificate)

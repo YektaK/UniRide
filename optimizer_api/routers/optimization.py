@@ -55,6 +55,7 @@ from utils.resource_profiler import ResourceProfiler
 from utils.scheduling import calculate_scheduled_times
 from utils.data_loader import DataLoader
 from utils.matrix_repository import MatrixSnapshotError
+from verification.authoritative_arcs import authoritative_arc_lookup
 from verification.response_certifier import certify_optimization_response
 
 router = APIRouter(
@@ -271,7 +272,11 @@ def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
             result.routes = calculate_scheduled_times(result.routes, request, distance_matrix)
 
         typed_certificate = _typed_certificate(
-            certify_optimization_response(request, result)
+            certify_optimization_response(
+                request,
+                result,
+                arc_lookup=authoritative_arc_lookup(matrix_binding, DataLoader),
+            )
         )
         result.feasibility_certificate = typed_certificate
         result.success = bool(original_result_success and typed_certificate.is_feasible)
@@ -412,7 +417,11 @@ def _run_single_algorithm(
         response = OptimizationResponse.model_validate(response.model_dump())
         original_success = response.success
         typed_certificate = _typed_certificate(
-            certify_optimization_response(effective_request, response)
+            certify_optimization_response(
+                effective_request,
+                response,
+                arc_lookup=authoritative_arc_lookup(None, DataLoader),
+            )
         )
         success = bool(original_success and typed_certificate.is_feasible)
         return AlgorithmResult(

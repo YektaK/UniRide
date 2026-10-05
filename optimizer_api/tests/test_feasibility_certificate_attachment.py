@@ -161,7 +161,7 @@ def test_optimize_attaches_the_single_feasible_typed_certificate(monkeypatch):
     payload = _payload()
     calls = 0
 
-    def certify(request, result):
+    def certify(request, result, arc_lookup=None):
         nonlocal calls
         calls += 1
         return payload
@@ -181,7 +181,7 @@ def test_optimize_attaches_infeasible_certificate_and_legacy_json(monkeypatch):
     payload = _payload(is_feasible=False)
     calls = 0
 
-    def certify(request, result):
+    def certify(request, result, arc_lookup=None):
         nonlocal calls
         calls += 1
         return payload
@@ -200,7 +200,7 @@ def test_optimize_attaches_infeasible_certificate_and_legacy_json(monkeypatch):
 def test_boundaries_fail_closed_for_invalid_certificate_payload(monkeypatch):
     invalid_payload = {"is_feasible": True, "violation_count": 1, "violations": []}
     _install_strategy(monkeypatch, "stub", _StubStrategy(_response()))
-    monkeypatch.setattr(optimization, "certify_optimization_response", lambda request, result: invalid_payload)
+    monkeypatch.setattr(optimization, "certify_optimization_response", lambda request, result, arc_lookup=None: invalid_payload)
 
     optimize_result = optimization.optimize_route(_request())
     compare_result = _run_installed_algorithm("stub", _request())
@@ -230,7 +230,7 @@ def test_optimize_preserves_solver_failure_with_feasible_certificate(monkeypatch
     payload = _payload()
     calls = 0
 
-    def certify(request, result):
+    def certify(request, result, arc_lookup=None):
         nonlocal calls
         calls += 1
         return payload
@@ -250,7 +250,7 @@ def test_single_algorithm_preserves_solver_failure_with_feasible_certificate(mon
     payload = _payload()
     calls = 0
 
-    def certify(request, result):
+    def certify(request, result, arc_lookup=None):
         nonlocal calls
         calls += 1
         return payload
@@ -270,7 +270,7 @@ def test_single_algorithm_attaches_the_single_feasible_typed_certificate(monkeyp
     payload = _payload()
     calls = 0
 
-    def certify(request, result):
+    def certify(request, result, arc_lookup=None):
         nonlocal calls
         calls += 1
         return payload
@@ -288,7 +288,7 @@ def test_single_algorithm_attaches_the_single_feasible_typed_certificate(monkeyp
 def test_optimize_no_result_attaches_sanitized_unavailable_certificate(monkeypatch):
     calls = 0
 
-    def certify(request, result):
+    def certify(request, result, arc_lookup=None):
         nonlocal calls
         calls += 1
         return _payload()
@@ -322,7 +322,7 @@ def test_compare_timeout_attaches_sanitized_unavailable_certificate(monkeypatch)
 
     calls = 0
 
-    def certify(request, result):
+    def certify(request, result, arc_lookup=None):
         nonlocal calls
         calls += 1
         return _payload()

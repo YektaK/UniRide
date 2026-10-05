@@ -23,14 +23,19 @@ from models.schemas import (
     VehicleRoute,
 )
 from routers import optimization
-from verification.response_certifier import certify_optimization_response
-
+from certifier_matrix_support import (
+    certify_on_loader_matrix,
+    certify_on_reported as certify_optimization_response,
+    echo_certifier_matrix,  # noqa: F401 - fixture
+)
 from test_production_feasibility_boundary import (
     _StubStrategy,
     _install_strategy,
     _response,
     _steps,
 )
+
+pytestmark = pytest.mark.usefixtures("echo_certifier_matrix")
 
 DEPOT_ID = "DEPOT"
 
@@ -84,9 +89,12 @@ class _ArcLoader:
 def _install_loader(monkeypatch, arcs):
     strategy = optimization.resolve_strategy("ga_split").create()
     module = sys.modules[type(strategy).__module__]
+    loader = _ArcLoader(arcs)
     monkeypatch.setattr(
-        module.DataLoader, "get_instance", staticmethod(lambda: _ArcLoader(arcs))
+        module.DataLoader, "get_instance", staticmethod(lambda: loader)
     )
+    # the certificate re-costs on the same arcs the strategy solved on
+    certify_on_loader_matrix(monkeypatch, loader)
 
 
 def _star_arcs(count, out_arc=12.0, in_arc=10.0, between=15.0):

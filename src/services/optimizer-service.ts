@@ -8,6 +8,12 @@ import { OPTIMIZER_API_URL } from "@/lib/config";
 import { optimizerFetch } from "@/lib/optimizer-server";
 import type { IERawData } from "@/types/ie-resource";
 import type { AppliedComputePolicyInfo, AlgorithmCompareResult, CompareResult, VehicleRoute } from "./optimizer-types";
+import {
+    classifyOptimizerMatrixError,
+    MATRIX_ERROR_MESSAGES,
+    readOptimizerErrorDetail,
+    type OptimizerMatrixErrorCode,
+} from "./optimizer-matrix-errors";
 
 export type { RouteStep, VehicleRoute, AlgorithmCompareResult, CompareResult } from "./optimizer-types";
 
@@ -96,6 +102,8 @@ export interface OptimizationResult {
     total_duration_minutes: number;
     execution_time_seconds: number;
     error_message?: string;
+    // Set when the optimizer failed closed on the travel-time matrix (503/422)
+    error_code?: OptimizerMatrixErrorCode;
     // IE Resource analysis data (raw from Python API)
     ie_data?: IERawData;
     // CVRPTW fields
@@ -267,6 +275,21 @@ export async function optimizeRoutes(
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
+            const matrixError = classifyOptimizerMatrixError(response.status, errorData.detail);
+            if (matrixError) {
+                // C2: the stored travel-time matrix cannot answer. Return the
+                // explicit, redacted error; never an empty or zero route.
+                return {
+                    success: false,
+                    algorithm_used: algorithm,
+                    routes: [],
+                    total_vehicles: 0,
+                    total_duration_minutes: 0,
+                    execution_time_seconds: 0,
+                    error_message: MATRIX_ERROR_MESSAGES[matrixError],
+                    error_code: matrixError,
+                };
+            }
             throw new Error(errorData.detail || `API error: ${response.status}`);
         }
 
@@ -347,6 +370,21 @@ export async function compareAllAlgorithms(
         });
 
         if (!response.ok) {
+            const matrixError = classifyOptimizerMatrixError(
+                response.status,
+                await readOptimizerErrorDetail(response)
+            );
+            if (matrixError) {
+                return {
+                    success: false,
+                    results: [],
+                    best_algorithm: "",
+                    fastest_algorithm: "",
+                    summary: {},
+                    error_message: MATRIX_ERROR_MESSAGES[matrixError],
+                    error_code: matrixError,
+                };
+            }
             throw new Error(`Compare API error: ${response.status}`);
         }
 

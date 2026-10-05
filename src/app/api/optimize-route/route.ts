@@ -11,6 +11,7 @@ import {
     type StudentForOptimization, 
     type Depot 
 } from "@/services/optimizer-service";
+import { MATRIX_ERROR_HTTP_STATUS } from "@/services/optimizer-matrix-errors";
 import { requireAdmin } from "@/lib/admin-auth";
 import { DUDULLU_DEPOT } from "@/services/dudullu-campus";
 
@@ -152,14 +153,15 @@ export async function POST(request: Request) {
 
         if (!result.success) {
             return NextResponse.json(
-                { 
+                {
                     error: result.error_message ?? "Optimization failed",
+                    ...(result.error_code ? { code: result.error_code } : {}),
                     algorithm_used: result.algorithm_used,
                     algorithm_requested: result.algorithm_requested,
                     feasibility_certificate: result.feasibility_certificate,
                     applied_policy: result.applied_policy,
                 },
-                { status: 500 }
+                { status: result.error_code ? MATRIX_ERROR_HTTP_STATUS[result.error_code] : 500 }
             );
         }
 

@@ -17,6 +17,7 @@ import {
     type VehicleRoute,
     type OptimizationOptions,
 } from "@/services/optimizer-service";
+import { MATRIX_ERROR_HTTP_STATUS } from "@/services/optimizer-matrix-errors";
 import { normalizeAlgorithmName } from "@/lib/algorithm-constants";
 import type { IEResponseData, HourlyDemandData, BottleneckData, TimeShiftSuggestion, IERawData } from "@/types/ie-resource";
 import { requireAdmin, handleApiError } from "@/lib/admin-auth";
@@ -258,12 +259,13 @@ export async function POST(request: NextRequest) {
                 {
                     success: false,
                     error: result.error_message || "Optimization failed",
+                    ...(result.error_code ? { code: result.error_code } : {}),
                     algorithm_used: result.algorithm_used,
                     algorithm_requested: result.algorithm_requested,
                     feasibility_certificate: result.feasibility_certificate,
                     applied_policy: result.applied_policy,
                 },
-                { status: 500 }
+                { status: result.error_code ? MATRIX_ERROR_HTTP_STATUS[result.error_code] : 500 }
             );
         }
 

@@ -276,11 +276,19 @@ export default function SandboxPage() {
       });
 
       if (!response.ok) {
+        // C2: the optimizer fails closed when the travel-time matrix cannot answer.
+        const errorBody = await response.json().catch(() => null);
+        if (errorBody?.code === 'travel_time_matrix_unavailable') {
+          throw new Error(tc('matrixUnavailable'));
+        }
+        if (errorBody?.code === 'travel_time_matrix_locations_missing') {
+          throw new Error(tc('matrixLocationsMissing'));
+        }
         throw new Error(tc('error'));
       }
 
       const data = await response.json();
-      
+
       if (data.data?.ieData) {
         setIeData(data.data.ieData);
         setActiveTab("results");

@@ -58,3 +58,52 @@ def test_cluster_first_strategies_cluster_on_directed_matrix_values(
     assert any(
         repository.arc(a, b) != repository.arc(b, a) for a, b, _ in calls if a != b
     )
+
+
+@pytest.mark.parametrize("endpoint", ["optimize", "compare"])
+def test_missing_clustering_pair_maps_to_the_redacted_503(monkeypatch, endpoint):
+    """A MissingTravelTimeError raised mid-solve is a matrix error: 503, no leak."""
+    from fastapi import HTTPException
+
+    from models.schemas import CompareRequest
+    from uniride_core.algorithms.clustering import MissingTravelTimeError
+
+    loader = _RepositoryLoader(_decimal_repository())
+    monkeypatch.setattr(optimization, "DataLoader", loader)
+
+    class _Raising:
+        name = "stub"
+        display_name = "Stub"
+        description = "raises"
+
+        def optimize(self, request):
+            raise MissingTravelTimeError("No travel time 'SECRET_A' -> 'SECRET_B'")
+
+    strategy = _Raising()
+    resolution = optimization.ResolvedStrategy(
+        "stub", "stub", lambda: strategy, ("stub",)
+    )
+    monkeypatch.setattr(optimization, "resolve_strategy", lambda key: resolution)
+    monkeypatch.setattr(
+        optimization, "resolve_unique_strategies", lambda keys: [resolution]
+    )
+    request = _request(2, algorithm="stub")
+
+    with pytest.raises(HTTPException) as caught:
+        if endpoint == "optimize":
+            optimization.optimize_route(request)
+        else:
+            optimization.compare_algorithms(
+                CompareRequest(
+                    students=request.students,
+                    depot=request.depot,
+                    sw_capacity=4,
+                    so_capacity=5,
+                    max_travel_time=60,
+                    algorithms=["stub"],
+                )
+            )
+
+    assert caught.value.status_code == 503
+    assert caught.value.detail == optimization.MATRIX_UNAVAILABLE_DETAIL
+    assert "SECRET" not in str(caught.value.detail)

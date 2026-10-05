@@ -124,3 +124,31 @@ def test_vehicle_calculator_hands_the_matrix_and_depot_to_clustering():
 
     with pytest.raises(MissingTravelTimeError):
         calculator.calculate(students, None)  # no matrix: no haversine stand-in
+
+
+def _sweep_groups(depot):
+    corners = {"P1": (1.0, 1.0), "P2": (1.0, -1.0), "P3": (-1.0, -1.0), "P4": (-1.0, 1.0)}
+    points = [
+        _point(name, name, lat=lat, lng=lng) for name, (lat, lng) in corners.items()
+    ]
+    strategy = get_clustering_strategy("sweep", 10, 10)
+    kwargs = {} if depot is None else {"depot": depot}
+    clusters = strategy.cluster_students(points, 2, **kwargs)
+    return sorted(sorted(p.id for p in c.points) for c in clusters)
+
+
+def test_sweep_pivots_around_the_passed_depot():
+    # depot at the origin: polar order P3, P4, P1, P2
+    assert _sweep_groups({"id": "D", "lat": 0.0, "lng": 0.0}) == [
+        ["P1", "P2"],
+        ["P3", "P4"],
+    ]
+    # depot far north: every point lies south of it, polar order P2, P3, P4, P1
+    assert _sweep_groups({"id": "D", "lat": 5.0, "lng": 0.0}) == [
+        ["P1", "P4"],
+        ["P2", "P3"],
+    ]
+    # without a depot the historical Dudullu pivot (41.001, 29.177) is used
+    assert _sweep_groups(None) == _sweep_groups(
+        {"id": "D", "lat": 41.001, "lng": 29.177}
+    )

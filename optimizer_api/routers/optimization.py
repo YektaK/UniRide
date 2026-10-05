@@ -55,6 +55,7 @@ from utils.resource_profiler import ResourceProfiler
 from utils.scheduling import calculate_scheduled_times
 from utils.data_loader import DataLoader
 from utils.matrix_repository import IncompleteTravelMatrixError, MatrixSnapshotError
+from uniride_core.algorithms.clustering import MissingTravelTimeError
 from uniride_core.algorithms.route_metrics import TravelTimeUnavailableError
 from verification.authoritative_arcs import authoritative_arc_lookup
 from verification.response_certifier import certify_optimization_response
@@ -79,6 +80,7 @@ _MATRIX_ERRORS = (
     MatrixSnapshotError,
     IncompleteTravelMatrixError,
     TravelTimeUnavailableError,
+    MissingTravelTimeError,
 )
 
 

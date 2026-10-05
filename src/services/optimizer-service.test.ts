@@ -103,6 +103,55 @@ describe("optimizer-service optimizeRoutes", () => {
       feasibility_certificate: { feasible: false },
     });
   });
+  it.each([
+    [503, "travel-time matrix unavailable", "travel_time_matrix_unavailable"],
+    [422, "requested locations are missing from the travel-time matrix", "travel_time_matrix_locations_missing"],
+  ])("maps the optimizer's fail-closed %i matrix response to an explicit redacted error", async (status, detail, code) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: false,
+      status,
+      json: async () => ({ detail }),
+    }));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const result = await optimizeRoutes([{ id: "s1", name: "Student 1", location_code: "L1", disability_type: "Sw" }], { id: "depot", lat: 40, lng: 29 });
+
+    expect(result).toMatchObject({ success: false, routes: [], total_vehicles: 0, error_code: code });
+    expect(result.error_message).not.toBe("Optimization unavailable");
+    expect(result.error_message).toBeTruthy();
+    expect(JSON.stringify(result)).not.toContain("L1");
+  });
+
+  it("keeps other 422 and 503 optimizer errors on the generic unavailable path", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 422, json: async () => ({ detail: "students cannot exceed 60" }) })
+      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ detail: "something else" }) }));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const input = [{ id: "s1", name: "Student 1", location_code: "L1", disability_type: "Sw" as const }];
+    const depot = { id: "depot", lat: 40, lng: 29 };
+
+    const policy = await optimizeRoutes(input, depot);
+    const other = await optimizeRoutes(input, depot);
+
+    expect(policy).toMatchObject({ success: false, error_message: "Optimization unavailable" });
+    expect(policy.error_code).toBeUndefined();
+    expect(other.error_code).toBeUndefined();
+  });
+
+  it("maps a fail-closed matrix response from /compare to an explicit error", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({ detail: "travel-time matrix unavailable" }),
+    }));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const result = await compareAllAlgorithms([{ id: "s1", name: "Student 1", location_code: "L1", disability_type: "Sw" }], { id: "depot", lat: 40, lng: 29 });
+
+    expect(result).toMatchObject({ success: false, results: [], error_code: "travel_time_matrix_unavailable" });
+    expect(result.error_message).toBeTruthy();
+  });
+
   it("preserves optimizer metadata for algorithm comparisons", async () => {
     const metadata = {
       algorithm_requested: "gwo",

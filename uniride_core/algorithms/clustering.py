@@ -4,9 +4,34 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import Dict, List, Mapping, Tuple
 
 from uniride_core.algorithms.distance import haversine_distance
+
+
+class MissingTravelTimeError(LookupError):
+    """A clustering step needs a travel time the stored matrix does not hold.
+
+    Operational clustering (k-medoids, Clarke-Wright) must use the authoritative
+    ``time_matrix``; there is no haversine or other stand-in (owner requirement
+    2026-10-05).
+    """
+
+
+def matrix_travel_time(p1: "Point", p2: "Point", time_matrix: Mapping[str, Mapping[str, float]]) -> float:
+    """Directed travel time between two points from a matrix keyed by location code.
+
+    Points sharing a stop (same non-empty ``location_code``) are 0 minutes apart.
+    Any other pair absent from ``time_matrix`` raises ``MissingTravelTimeError``.
+    """
+    if p1.location_code and p1.location_code == p2.location_code:
+        return 0.0
+    try:
+        return float(time_matrix[p1.location_code][p2.location_code])
+    except (KeyError, TypeError):
+        raise MissingTravelTimeError(
+            f"No travel time {p1.location_code!r} -> {p2.location_code!r} in the matrix"
+        ) from None
 
 
 @dataclass
@@ -134,6 +159,8 @@ def split_cluster(cluster: Cluster) -> List[Cluster]:
 
 
 __all__ = [
+    "MissingTravelTimeError",
+    "matrix_travel_time",
     "Point",
     "Cluster",
     "calculate_centroid",

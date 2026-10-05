@@ -1,14 +1,10 @@
 from typing import List, Dict, Tuple
-from uniride_core.algorithms.clustering import Point, Cluster, calculate_centroid, validate_cluster_capacity
+from uniride_core.algorithms.clustering import Point, Cluster, calculate_centroid, matrix_travel_time, validate_cluster_capacity
 from uniride_core.algorithms.clustering_strategies.base import BaseClusteringStrategy
-from uniride_core.algorithms.distance import estimate_travel_time, haversine_distance
 
 def get_duration(p1: Point, p2: Point, time_matrix: Dict) -> float:
-    if p1.location_code in time_matrix and p2.location_code in time_matrix[p1.location_code]:
-        return time_matrix[p1.location_code][p2.location_code]
-        
-    dist = haversine_distance(p1.lat, p1.lng, p2.lat, p2.lng)
-    return estimate_travel_time(dist)
+    """Directed matrix time; raises ``MissingTravelTimeError`` (no haversine stand-in)."""
+    return matrix_travel_time(p1, p2, time_matrix)
 
 class ClarkeWrightClusteringStrategy(BaseClusteringStrategy):
     """
@@ -24,7 +20,10 @@ class ClarkeWrightClusteringStrategy(BaseClusteringStrategy):
         depot = kwargs.get("depot", {"id": "D.Kampus", "lat": 41.001, "lng": 29.177})
         
         # We need a dummy depot point for distance calc
-        depot_point = Point(id=depot["id"], lat=depot["lat"], lng=depot["lng"], disability_type="So")
+        depot_point = Point(
+            id=depot["id"], lat=depot["lat"], lng=depot["lng"], disability_type="So",
+            location_code=depot["id"],
+        )
         
         points_dict = {p.id: p for p in students}
         points_dict[depot["id"]] = depot_point

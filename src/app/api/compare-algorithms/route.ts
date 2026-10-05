@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { compareAllAlgorithms, type StudentForOptimization, type Depot } from "@/services/optimizer-service";
+import { MATRIX_ERROR_HTTP_STATUS } from "@/services/optimizer-matrix-errors";
 import { requireAdmin } from "@/lib/admin-auth";
 import { DUDULLU_DEPOT } from "@/services/dudullu-campus";
 
@@ -66,6 +67,17 @@ export async function POST(request: Request) {
             { clustering_algorithm: clusteringAlgorithm }, 
             algorithms
         );
+
+        if (result.error_code) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: result.error_message ?? "Comparison failed",
+                    code: result.error_code,
+                },
+                { status: MATRIX_ERROR_HTTP_STATUS[result.error_code] }
+            );
+        }
 
         return NextResponse.json({
             success: result.success,

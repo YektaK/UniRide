@@ -93,6 +93,11 @@ def test_g3_main_import_ok_with_key(monkeypatch):
     monkeypatch.setenv("INTERNAL_API_KEY", "guard-test-key")
     monkeypatch.delenv("UNIRIDE_DISABLE_AUTH", raising=False)
     monkeypatch.setenv("APP_ENV", "production")
+    # C2: production also requires the time_matrix source (names only, dummy
+    # values; importing main never builds a DataLoader or contacts Supabase).
+    monkeypatch.setenv("SUPABASE_URL", "https://uniride-test.invalid")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "dummy-service-key")
+    monkeypatch.delenv("UNIRIDE_ALLOW_COORDINATE_FALLBACK", raising=False)
 
     module = _load_main_module()
     assert callable(module.health_check)

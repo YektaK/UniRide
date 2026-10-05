@@ -155,7 +155,7 @@ def _install_solver_stubs(monkeypatch, strategy):
         ),
     )
     monkeypatch.setattr(
-        optimization, "certify_optimization_response", lambda request, result: FEASIBLE
+        optimization, "certify_optimization_response", lambda request, result, arc_lookup=None: FEASIBLE
     )
 
 

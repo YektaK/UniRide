@@ -148,7 +148,7 @@ cp /path/to/Veri.xlsx ./optimizer_api/
 ```
 
 ### "SUPABASE credentials not found"
-Bu uyarı öneml değil - coordinate-based hesaplama fallback olarak kullanılıyor.
+Supabase `time_matrix` yüklenemediğinde optimizer artık sıfır ya da koordinat tabanlı süre üretmez; matris gerektiren istekler 503 ile reddedilir (production'da servis hiç başlamaz). `UNIRIDE_ALLOW_COORDINATE_FALLBACK=1` yalnızca doğrudan strateji/repository çağrılarında (testler, çevrimdışı betikler) koordinat tabanlı yaklaşık değerleri açar; HTTP uç noktaları (`/optimize`, `/vehicle-calculator`, `/compare`) bayrak açık olsa bile her zaman saklanan matrisi gerektirir ve matris yoksa 503 döner.
 
 ### Import Errors (GWOStrategy, HHOStrategy)
 Sınıf isimleri değişti, alias kullanılıyor:

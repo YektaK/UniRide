@@ -87,7 +87,8 @@ Keep local values outside version control. Never put credential values in docume
 | `NEXT_PUBLIC_SUPABASE_URL` | browser / Next.js | public Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | browser / Next.js | public Supabase anonymous key |
 | `SUPABASE_SERVICE_ROLE_KEY` | server only | privileged Supabase operations |
-| `SUPABASE_URL` | Python/server | backend Supabase URL where configured |
+| `SUPABASE_URL` | Python/server | backend Supabase URL (with `SUPABASE_SERVICE_ROLE_KEY`, the only source of travel times); the optimizer refuses to start in `APP_ENV=production` without both |
+| `UNIRIDE_ALLOW_COORDINATE_FALLBACK` | FastAPI (dev/test only) | truthy `1`/`true`/`yes`; default off. Affects only direct strategy and repository calls (tests, offline scripts), which may then use coordinate-derived stand-ins when no `time_matrix` is loaded. The HTTP endpoints (`/optimize`, `/vehicle-calculator`, `/compare`) always require the stored matrix and return 503 without it, even with the flag on. Forbidden when `APP_ENV=production` |
 | `OPTIMIZER_API_URL` | Next.js server | FastAPI URL for server-side adapters/BFF routes |
 | `ALLOWED_ORIGINS` | FastAPI | comma-separated CORS allowlist |
 | `APP_ENV` | FastAPI | runtime environment name; `production` forbids disabling auth |

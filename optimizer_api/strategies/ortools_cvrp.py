@@ -9,6 +9,7 @@ from models.schemas import OptimizationRequest, OptimizationResponse
 from strategies.base_strategy import BaseRoutingStrategy
 from strategies.holistic_response_builder import build_indexed_step_routes_response
 from strategies.sota_response_builder import build_sota_request_context
+from utils.matrix_repository import in_academic_coordinate_scope
 from uniride_core.algorithms.ortools_cvrp_engine import solve_ortools_cvrp
 
 
@@ -68,6 +69,10 @@ class ORToolsCVRPStrategy(BaseRoutingStrategy):
             so_capacity=request.so_capacity,
             max_route_duration=request.max_travel_time,
             num_vehicles=min(len(students), 10),
+            # Operational requests round conservatively (C2). The legacy
+            # /benchmark runner (academic_coordinate_scope) keeps the historical
+            # nearest rounding so its results stay comparable.
+            arc_rounding="nearest" if in_academic_coordinate_scope() else "conservative",
             time_limit_seconds=self.time_limit_seconds,
         )
 

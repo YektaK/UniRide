@@ -103,7 +103,7 @@ def _install(monkeypatch, strategy, repository):
         ),
     )
     monkeypatch.setattr(
-        optimization, "certify_optimization_response", lambda request, result: FEASIBLE
+        optimization, "certify_optimization_response", lambda request, result, arc_lookup=None: FEASIBLE
     )
     _DataLoader.repository = repository
     monkeypatch.setattr(optimization, "DataLoader", _DataLoader)

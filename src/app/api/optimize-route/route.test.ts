@@ -70,4 +70,26 @@ describe("POST /api/optimize-route", () => {
     const response = await POST(validRequest("or_opt"));
     expect(await response.json()).toMatchObject({ algorithm_requested: "requested-ga", feasibility_certificate: { feasible: false }, error: "infeasible" });
   });
+
+  it.each([
+    ["travel_time_matrix_unavailable", 503],
+    ["travel_time_matrix_locations_missing", 422],
+  ])("surfaces the fail-closed matrix error %s as HTTP %i with no routes", async (code, status) => {
+    requireAdminMock.mockResolvedValue({ id: "admin-1" });
+    optimizeRoutesMock.mockResolvedValue({
+      success: false,
+      algorithm_used: "ga",
+      routes: [],
+      error_message: "redacted message",
+      error_code: code,
+    });
+    const { POST } = await import("./route");
+
+    const response = await POST(validRequest("or_opt"));
+    const body = await response.json();
+
+    expect(response.status).toBe(status);
+    expect(body).toMatchObject({ error: "redacted message", code });
+    expect(body.routes).toBeUndefined();
+  });
 });

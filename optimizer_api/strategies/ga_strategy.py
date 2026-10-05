@@ -19,6 +19,7 @@ from models.schemas import (
     VehicleRoute, RouteStep
 )
 from strategies.base_strategy import BaseRoutingStrategy
+from strategies.sota_response_builder import build_physical_time_matrix
 from utils.data_loader import DataLoader, euclidean_distance
 from uniride_core.algorithms.vehicle_assignment import VehicleCalculator
 from uniride_core.algorithms.tsp_meta_engines import (
@@ -212,7 +213,12 @@ class GeneticAlgorithmStrategy(BaseRoutingStrategy):
 
             return {"route_details": route_details, "total_duration": total_duration}
 
-        result = calculator.calculate(student_dicts, route_optimizer)
+        result = calculator.calculate(
+            student_dicts,
+            route_optimizer,
+            time_matrix=build_physical_time_matrix(physical_ids, raw_matrix),
+            depot={"id": depot.id, "lat": depot.lat, "lng": depot.lng},
+        )
 
         # Build response routes
         routes = []

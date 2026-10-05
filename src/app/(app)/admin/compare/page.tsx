@@ -101,6 +101,13 @@ export default function AlgorithmComparisonPage() {
 
             if (!response.ok) {
                 const errorData = await response.json();
+                // C2: the optimizer fails closed when the travel-time matrix cannot answer.
+                if (errorData.code === "travel_time_matrix_unavailable") {
+                    throw new Error(tc('matrixUnavailable'));
+                }
+                if (errorData.code === "travel_time_matrix_locations_missing") {
+                    throw new Error(tc('matrixLocationsMissing'));
+                }
                 throw new Error(errorData.error || "Karşılaştırma API hatası");
             }
 

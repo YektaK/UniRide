@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import List, Sequence
 
@@ -49,8 +50,26 @@ def solve_ortools_cvrp(
     service_times: Sequence[float] | None = None,
     first_solution_strategy: str | int | None = None,
     local_search_metaheuristic: str | int | None = None,
+    arc_rounding: str = "nearest",
 ) -> ORToolsCVRPSolution:
-    """Solve a depot-first string-compatible CVRP using OR-Tools."""
+    """Solve a depot-first string-compatible CVRP using OR-Tools.
+
+    ``arc_rounding`` selects how minutes become OR-Tools integers:
+
+    * ``"nearest"`` (default): the historical behaviour, unchanged, so academic
+      callers keep identical scaled values and reported durations (the reported
+      step duration is the scaled value divided by ``scale``).
+    * ``"conservative"``: arcs and service times are rounded up, the route
+      limit is rounded down, and the true unscaled arc durations are reported,
+      so rounding can never let a route exceed ``max_route_duration`` in true
+      minutes. The operational ``/optimize`` and ``/compare`` path uses this.
+    """
+    if arc_rounding not in _ARC_ROUNDING_MODES:
+        return ORToolsCVRPSolution(
+            success=False,
+            error_message=f"Unsupported OR-Tools arc_rounding: {arc_rounding!r}",
+        )
+    conservative = arc_rounding == "conservative"
     try:
         from ortools.constraint_solver import pywrapcp, routing_enums_pb2
     except ImportError:
@@ -62,7 +81,17 @@ def solve_ortools_cvrp(
     if not time_matrix:
         return ORToolsCVRPSolution(success=True, routes=[])
 
-    matrix = [[int(round(float(value) * scale)) for value in row] for row in time_matrix]
+    # OR-Tools needs integer costs. Conservative mode rounds arcs (and service
+    # times) UP so the scaled route duration is never below the true one: with
+    # the route limit rounded DOWN below, a route that satisfies the scaled limit
+    # satisfies ``max_route_duration`` in true minutes. Nearest-integer rounding
+    # could under-report a route by up to 0.5/scale per arc and hide a violation.
+    def to_units(value: float) -> int:
+        if conservative:
+            return _scale_up(value, scale)
+        return int(round(float(value) * scale))
+
+    matrix = [[to_units(value) for value in row] for row in time_matrix]
     num_locations = len(matrix)
     customer_count = max(0, num_locations - 1)
     try:
@@ -82,7 +111,7 @@ def solve_ortools_cvrp(
     manager = pywrapcp.RoutingIndexManager(num_locations, vehicle_count, depot_index)
     routing = pywrapcp.RoutingModel(manager)
 
-    scaled_service_times = [int(round(float(value) * scale)) for value in service_times or []]
+    scaled_service_times = [to_units(value) for value in service_times or []]
     if len(scaled_service_times) < num_locations:
         scaled_service_times.extend([0] * (num_locations - len(scaled_service_times)))
 
@@ -109,11 +138,16 @@ def solve_ortools_cvrp(
     for dim, capacity in enumerate(normalized_capacities):
         dimension_demands = [0] + [row[dim] * scale for row in normalized_demands]
         add_capacity_dimension(f"Capacity{dim}", dimension_demands, capacity)
-    slack_max = int(max_route_duration * scale) if time_windows else 0
+    scaled_max_duration = (
+        _scale_down(max_route_duration, scale)
+        if conservative
+        else int(max_route_duration * scale)
+    )
+    slack_max = scaled_max_duration if time_windows else 0
     routing.AddDimension(
         transit_callback_index,
         slack_max,
-        int(max_route_duration * scale),
+        scaled_max_duration,
         False,
         "Time",
     )
@@ -175,7 +209,13 @@ def solve_ortools_cvrp(
             to_index = solution.Value(routing.NextVar(index))
             from_node = manager.IndexToNode(from_index)
             to_node = manager.IndexToNode(to_index)
-            duration = matrix[from_node][to_node] / float(scale)
+            if conservative:
+                # Report the true, unscaled arc: the caller's matrix is
+                # authoritative; the scaled cost is only the solver's currency.
+                duration = float(time_matrix[from_node][to_node])
+            else:
+                # Historical reporting, kept so academic outputs are unchanged.
+                duration = matrix[from_node][to_node] / float(scale)
             route.steps.append(ORToolsRouteStep(from_index=from_node, to_index=to_node, duration=round(duration, 2)))
             route.total_duration += duration
 
@@ -193,6 +233,22 @@ def solve_ortools_cvrp(
             routes.append(route)
 
     return ORToolsCVRPSolution(success=True, routes=routes)
+
+
+_ARC_ROUNDING_MODES = ("nearest", "conservative")
+
+# Absorbs binary float noise only (0.7 * 10 == 7.000000000000001 must stay 7).
+_SCALE_EPSILON = 1e-9
+
+
+def _scale_up(value: float, scale: int) -> int:
+    """Scale minutes to solver units, rounding up (never under-estimates)."""
+    return max(0, math.ceil(float(value) * scale - _SCALE_EPSILON))
+
+
+def _scale_down(value: float, scale: int) -> int:
+    """Scale a limit in minutes to solver units, rounding down (never over-allows)."""
+    return int(math.floor(float(value) * scale + _SCALE_EPSILON))
 
 
 def _routing_enum_value(enum_type, value: str | int | None, default: int, label: str) -> int:

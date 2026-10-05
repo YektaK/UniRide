@@ -503,7 +503,9 @@ def _smoke_request():
 
 
 @pytest.mark.parametrize("registry_key", ["ga", "pso"])
-def test_b5_config_not_mutated_after_request(registry_key):
+def test_b5_config_not_mutated_after_request(registry_key, monkeypatch):
+    # Needs coordinates: no time_matrix here, so opt in explicitly (C2).
+    monkeypatch.setenv("UNIRIDE_ALLOW_COORDINATE_FALLBACK", "1")
     from optimizer_api.strategies import STRATEGY_REGISTRY
 
     strategy = STRATEGY_REGISTRY[registry_key]
@@ -518,7 +520,9 @@ def test_b5_config_not_mutated_after_request(registry_key):
     assert strategy.config == config_before
 
 
-def test_b5_concurrent_requests_do_not_corrupt_shared_config():
+def test_b5_concurrent_requests_do_not_corrupt_shared_config(monkeypatch):
+    # Needs coordinates: no time_matrix here, so opt in explicitly (C2).
+    monkeypatch.setenv("UNIRIDE_ALLOW_COORDINATE_FALLBACK", "1")
     from optimizer_api.strategies import STRATEGY_REGISTRY
 
     strategy = STRATEGY_REGISTRY["ga"]

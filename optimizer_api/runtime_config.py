@@ -46,6 +46,33 @@ def app_env() -> str:
     return os.getenv("APP_ENV", "development").strip().lower()
 
 
+COORDINATE_FALLBACK_ENV = "UNIRIDE_ALLOW_COORDINATE_FALLBACK"
+
+
+def allow_coordinate_fallback(env=None) -> bool:
+    """Explicit development/test opt-in for coordinate-derived travel times.
+
+    Operational travel times come only from the stored Supabase ``time_matrix``
+    (owner requirement, 2026-10-05). When this flag is truthy ("1", "true" or
+    "yes", case-insensitive, surrounding spaces ignored) the legacy
+    Euclidean/haversine stand-ins stay available for offline development and
+    tests. Unset, empty and unrecognised values mean False. The flag is
+    forbidden when ``APP_ENV=production`` (see
+    ``validate_runtime_configuration``).
+    """
+    source = os.environ if env is None else env
+    value = str(source.get(COORDINATE_FALLBACK_ENV, "")).strip().lower()
+    return value in {"1", "true", "yes"}
+
+
+def supabase_credentials_present(env=None) -> bool:
+    """True when both the Supabase URL and the service-role key are set."""
+    source = os.environ if env is None else env
+    return bool(str(source.get("SUPABASE_URL", "")).strip()) and bool(
+        str(source.get("SUPABASE_SERVICE_ROLE_KEY", "")).strip()
+    )
+
+
 def internal_api_key() -> str | None:
     value = os.getenv("INTERNAL_API_KEY")
     return value if value else None
@@ -104,6 +131,18 @@ def validate_runtime_configuration() -> None:
             "INTERNAL_API_KEY is not set; configure it or use "
             "UNIRIDE_DISABLE_AUTH=1 outside production"
         )
+    if app_env() == "production":
+        # Matrix contract: the stored Supabase time_matrix is the only source
+        # of operational travel times. Names only, never values, in messages.
+        if allow_coordinate_fallback():
+            raise SystemExit(
+                f"{COORDINATE_FALLBACK_ENV} is forbidden when APP_ENV=production"
+            )
+        if not supabase_credentials_present():
+            raise SystemExit(
+                "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must both be set "
+                "when APP_ENV=production: the travel-time matrix has no other source"
+            )
     try:
         if os.getenv("UNIRIDE_TENANT_KEYS") is not None:
             tenant_keys()

@@ -8,6 +8,13 @@ from typing import List, Dict
 from models.schemas import OptimizationRequest, OptimizationResponse
 from uniride_core.algorithms.route_metrics import calculate_route_duration, get_duration
 
+try:
+    from runtime_config import allow_coordinate_fallback as _coordinate_fallback_allowed
+except ModuleNotFoundError:  # package-style import path
+    from optimizer_api.runtime_config import (
+        allow_coordinate_fallback as _coordinate_fallback_allowed,
+    )
+
 
 class BaseRoutingStrategy(ABC):
     """
@@ -74,11 +81,12 @@ class BaseRoutingStrategy(ABC):
         Calculate duration between two locations using time matrix or coordinates.
         
         This is a shared helper method used by GA, PSO, GWO, HHO strategies.
-        Attempts to get time from matrix first, then falls back to haversine calculation.
-        In strict mode (default), a pair missing from both the matrix and the
-        coordinates raises ``TravelTimeUnavailableError`` instead of silently
-        fabricating ``DEFAULT_TRAVEL_FALLBACK_MINUTES`` (fail-closed).
-        
+        The stored time matrix is the only source of travel times: a pair
+        missing from it raises ``TravelTimeUnavailableError`` (fail-closed).
+        A haversine estimate from ``coordinates`` is used only when the
+        explicit development opt-in ``UNIRIDE_ALLOW_COORDINATE_FALLBACK`` is
+        set.
+
         Args:
             from_loc: Origin location ID
             to_loc: Destination location ID
@@ -88,7 +96,14 @@ class BaseRoutingStrategy(ABC):
         Returns:
             Travel time in minutes (float)
         """
-        return get_duration(from_loc, to_loc, time_matrix, coordinates, strict=True)
+        return get_duration(
+            from_loc,
+            to_loc,
+            time_matrix,
+            coordinates,
+            strict=True,
+            allow_coordinate_fallback=_coordinate_fallback_allowed(),
+        )
 
     def _calculate_route_duration(
         self,
@@ -112,4 +127,11 @@ class BaseRoutingStrategy(ABC):
         Returns:
             Total route duration in minutes (float)
         """
-        return calculate_route_duration(route, depot, time_matrix, coordinates)
+        return calculate_route_duration(
+            route,
+            depot,
+            time_matrix,
+            coordinates,
+            strict=True,
+            allow_coordinate_fallback=_coordinate_fallback_allowed(),
+        )

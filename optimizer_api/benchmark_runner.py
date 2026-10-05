@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 from uniride_core.models import ProblemInstance
 
+from utils.matrix_repository import academic_coordinate_scope
 from verification.response_certifier import certify_benchmark_response
 
 
@@ -365,8 +366,12 @@ class BenchmarkRunner:
             )
             self._apply_algorithm_params(request, algorithm.algorithm_id, algorithm.params, run_seed)
             
-            # Call real strategy
-            response = strategy.optimize(request)
+            # Call real strategy. Academic problems (TSPLIB/CVRPLIB) define
+            # their own coordinate-based distances; they are not UniRide
+            # travel times, so they must not touch (or depend on) the stored
+            # time_matrix. The scope is explicit and limited to this call.
+            with academic_coordinate_scope():
+                response = strategy.optimize(request)
             
             if not response.success:
                 logger.warning(

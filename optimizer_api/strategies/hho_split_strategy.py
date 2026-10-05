@@ -159,7 +159,11 @@ class HHOSplitStrategy(HybridSplitBaseStrategy):
         occurrence_keys = student_occurrence_keys(students)
         node_keys = [depot.id] + occurrence_keys
         physical_ids = [depot.id] + [s.location_code for s in students]
-        raw_matrix = data_loader.get_submatrix(physical_ids)
+        # Coordinates are used only under the explicit UNIRIDE_ALLOW_COORDINATE_FALLBACK opt-in.
+        physical_coordinates = {depot.id: {"lat": depot.lat, "lng": depot.lng}}
+        for s in students:
+            physical_coordinates[s.location_code] = s.coordinates or {"lat": 0, "lng": 0}
+        raw_matrix = data_loader.get_submatrix(physical_ids, coordinates=physical_coordinates)
         
         # Build time matrix (re-key positional submatrix to occurrence nodes)
         time_matrix = {}

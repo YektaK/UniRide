@@ -392,3 +392,102 @@ def test_development_without_credentials_starts_and_fails_closed(monkeypatch):
     repo.load()
     with pytest.raises(MatrixUnavailableError):
         repo.get_submatrix(["D.Kampus", "L1"], COORDS)
+
+
+# ------------------------------------------------ router status mapping
+
+
+def test_invalid_stored_arc_is_a_503_not_a_422(monkeypatch):
+    # Codes exist but a stored arc is zero: stored-data problem, not caller input.
+    rows = [dict(row) for row in ROWS]
+    rows[0]["duration_minutes"] = 0
+    repo = TimeMatrixRepository(provider=type("P", (), {"fetch_rows": lambda self: rows})())
+    repo.load()
+    _install_loader(monkeypatch, repo)
+    with pytest.raises(HTTPException) as caught:
+        optimization.optimize_route(_request())
+    assert caught.value.status_code == 503
+    assert caught.value.detail == "travel-time matrix unavailable"
+
+
+def test_compare_unknown_location_is_redacted_422(monkeypatch):
+    repo = TimeMatrixRepository(provider=_FlakyProvider(failures=0))
+    repo.load()
+    _install_loader(monkeypatch, repo)
+    request = schemas.CompareRequest(
+        depot=schemas.LocationNode(id="D.Kampus", lat=41.0, lng=29.17),
+        students=_request(codes=("L1", "SECRET-CODE-42")).students,
+        algorithms=["ga_split"],
+    )
+    with pytest.raises(HTTPException) as caught:
+        optimization.compare_algorithms(request)
+    assert caught.value.status_code == 422
+    assert "SECRET-CODE-42" not in str(caught.value.detail)
+
+
+def test_bound_request_keeps_its_existing_fail_closed_response(monkeypatch):
+    """A snapshot-bound request still gets the 200 binding failure, not a 503."""
+    repo = TimeMatrixRepository(provider=_FlakyProvider(failures=0))
+    repo.load()
+    _install_loader(monkeypatch, repo)
+    digest = repo.matrix_snapshot(["L1", "L2", "L3"], "D.Kampus")["sha256"]
+
+    def _boom(self, request):
+        raise MatrixUnavailableError()
+
+    monkeypatch.setattr(GASplitStrategy, "optimize", _boom)
+    request = _request()
+    request.expected_matrix_sha256 = digest
+    result = optimization.optimize_route(request)
+    assert result.success is False
+    assert result.feasibility_certificate.certify_error == "matrix snapshot unavailable or changed"
+
+
+# ------------------------------------------- academic benchmark isolation
+
+
+def test_academic_scope_uses_problem_coordinates_without_any_matrix():
+    from utils.matrix_repository import academic_coordinate_scope
+
+    coords = {"A": {"lat": 0.0, "lng": 0.0}, "B": {"lat": 3.0, "lng": 4.0}}
+    repo = TimeMatrixRepository(provider=None)
+    repo.load()
+    with academic_coordinate_scope():
+        assert repo.get_submatrix(["A", "B"], coords) == [[0.0, 5.0], [5.0, 0.0]]
+    # The scope ends with the block: operational lookups fail closed again.
+    with pytest.raises(MatrixUnavailableError):
+        repo.get_submatrix(["A", "B"], coords)
+
+
+def test_academic_scope_does_not_need_the_stored_matrix_even_when_loaded():
+    from utils.matrix_repository import academic_coordinate_scope
+
+    repo = TimeMatrixRepository(provider=_FlakyProvider(failures=0))
+    repo.load()
+    coords = {"loc_1": {"lat": 0.0, "lng": 0.0}, "loc_2": {"lat": 3.0, "lng": 4.0}}
+    with academic_coordinate_scope():
+        assert repo.get_submatrix(["loc_1", "loc_2"], coords) == [[0.0, 5.0], [5.0, 0.0]]
+    with pytest.raises(IncompleteTravelMatrixError):
+        repo.get_submatrix(["loc_1", "loc_2"], coords)
+
+
+def test_benchmark_runner_runs_production_strategies_on_problem_coordinates(monkeypatch):
+    """The legacy /benchmark runner (TSPLIB coordinates) keeps working with no matrix."""
+    from benchmark_runner import AlgorithmConfig, BenchmarkRunner
+    from uniride_core.models import ProblemInstance
+
+    _install_loader(monkeypatch, TimeMatrixRepository(provider=None))
+    problem = ProblemInstance(
+        name="tiny4",
+        dimension=4,
+        problem_type="tsp",
+        edge_weight_type="EUC_2D",
+        category="small",
+        coordinates=[(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)],
+        depot_index=0,
+    )
+    runner = BenchmarkRunner()
+    result = runner._run_single_experiment(
+        problem, AlgorithmConfig(name="greedy", algorithm_id="greedy"), 1
+    )
+    assert result.tour_length == pytest.approx(40.0)

@@ -9,7 +9,7 @@ from optimizer_api.strategies.hho_split_strategy import HHOSplitStrategy
 
 
 class _FakeDataLoader:
-    def get_submatrix(self, location_ids):
+    def get_submatrix(self, location_ids, coordinates=None):
         size = len(location_ids)
         return [
             [0 if i == j else abs(i - j) + 1 for j in range(size)]

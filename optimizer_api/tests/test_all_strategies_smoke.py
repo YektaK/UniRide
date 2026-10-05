@@ -6,9 +6,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from optimizer_api.strategies import STRATEGY_REGISTRY, get_strategy
 from optimizer_api.models import OptimizationRequest
 
-def test_smoke_all_strategies():
+def test_smoke_all_strategies(monkeypatch):
     """Run a small dummy request against EVERY available strategy to ensure no syntax/runtime crashes."""
-    
+    # The dummy request has no stored time_matrix behind it, so it needs the
+    # explicit coordinate opt-in (C2); without it every strategy fails closed.
+    monkeypatch.setenv("UNIRIDE_ALLOW_COORDINATE_FALLBACK", "1")
+
     strategies = list(STRATEGY_REGISTRY.keys())
     print(f"Found {len(strategies)} strategies: {strategies}")
     

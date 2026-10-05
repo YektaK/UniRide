@@ -12,12 +12,14 @@ delegates here.
 
 from __future__ import annotations
 
+import contextlib
+import contextvars
 import math
 import hashlib
 import json
 import time
 import threading
-from typing import Any, Callable, Dict, List, Optional, Protocol
+from typing import Any, Callable, Dict, Iterator, List, Optional, Protocol
 
 
 class IncompleteTravelMatrixError(LookupError):
@@ -28,9 +30,13 @@ class IncompleteTravelMatrixError(LookupError):
     valid (0.0). Mirrors the audit P0 requirement on arc completeness.
     """
 
-    def __init__(self, source: str, target: str):
+    def __init__(self, source: str, target: str, *, unknown_location: bool = False):
         self.source = source
         self.target = target
+        # True when a requested code is absent from the matrix (a caller-input
+        # problem); False when the codes exist but the stored arc is invalid
+        # (a stored-data problem). Used only to choose a redacted HTTP status.
+        self.unknown_location = unknown_location
         super().__init__(
             f"Incomplete travel matrix: no valid arc {source!r} -> {target!r}."
         )
@@ -38,6 +44,50 @@ class IncompleteTravelMatrixError(LookupError):
 
 class MatrixSnapshotError(RuntimeError):
     """Raised when a healthy, complete Supabase matrix snapshot is unavailable."""
+
+
+class MatrixUnavailableError(MatrixSnapshotError):
+    """No authoritative travel-time matrix is loaded (fail closed).
+
+    Raised by the repository's lookup path when the Supabase ``time_matrix``
+    has not been (successfully) loaded, instead of returning zeros or values
+    derived from coordinates. The message is fixed and never carries provider
+    errors, URLs, keys or location codes.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("authoritative travel-time matrix unavailable")
+
+
+_ACADEMIC_COORDINATE_SCOPE: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "uniride_academic_coordinate_scope", default=False
+)
+
+
+@contextlib.contextmanager
+def academic_coordinate_scope() -> Iterator[None]:
+    """Mark a block as an academic benchmark run (TSPLIB/CVRPLIB).
+
+    Inside the scope, ``get_submatrix`` builds distances from the problem's
+    own coordinates (those define the academic metric); the stored UniRide
+    ``time_matrix`` is neither consulted nor required. This is explicit and
+    scoped to the current context: operational requests never enter it, so
+    coordinate-derived values still cannot stand in for UniRide travel times.
+    """
+    token = _ACADEMIC_COORDINATE_SCOPE.set(True)
+    try:
+        yield
+    finally:
+        _ACADEMIC_COORDINATE_SCOPE.reset(token)
+
+
+def _coordinate_fallback_allowed() -> bool:
+    """Read the explicit dev/test opt-in (``UNIRIDE_ALLOW_COORDINATE_FALLBACK``)."""
+    try:
+        from runtime_config import allow_coordinate_fallback
+    except ModuleNotFoundError:  # package-style import path
+        from optimizer_api.runtime_config import allow_coordinate_fallback
+    return allow_coordinate_fallback()
 
 
 def matrix_sha256(locations: list[str], matrix: list[list[float]]) -> str:
@@ -119,10 +169,13 @@ class TimeMatrixRepository:
         provider: Optional[TravelTimeProvider] = None,
         ttl_seconds: int = 600,
         clock: Callable[[], float] = time.time,
+        allow_coordinate_fallback: Optional[bool] = None,
     ):
         self._provider = provider
         self._ttl_seconds = ttl_seconds
         self._clock = clock
+        # None -> read UNIRIDE_ALLOW_COORDINATE_FALLBACK at call time.
+        self._allow_coordinate_fallback = allow_coordinate_fallback
         self._lock = threading.RLock()
 
         self.locations: List[str] = []
@@ -136,14 +189,16 @@ class TimeMatrixRepository:
     # ------------------------------------------------------------------ lifecycle
 
     def load(self) -> None:
-        """Load from the provider; coordinate fallback on first-load failure.
+        """Load from the provider; fail closed on first-load failure.
 
         Last-known-good: if a matrix is already loaded and a *refresh* fetch
         fails, the previous matrix is kept (and reported stale via health)
         instead of clearing to empty. A failed fetch also sets a retry
         backoff (``_next_retry_at``) so automatic refreshes do not hammer a
         down provider on every call. The very first load has no prior matrix,
-        so failure still falls back to coordinates.
+        so failure leaves the repository empty ("no authoritative matrix");
+        lookups then raise ``MatrixUnavailableError`` until a later automatic
+        retry (after the backoff) or a forced refresh succeeds.
         """
         if self._provider is None:
             self.locations = []
@@ -181,7 +236,9 @@ class TimeMatrixRepository:
         Automatic refreshes respect the retry backoff set by a failed load:
         while ``_next_retry_at`` is in the future, no fetch is attempted and
         the last-known-good matrix (or coordinate fallback) keeps serving.
-        A forced refresh always bypasses the backoff.
+        A forced refresh always bypasses the backoff. A repository that has a
+        provider but never loaded successfully counts as stale, so a failed
+        first load is retried (after the backoff) without a restart.
         """
         if self._provider is None:
             return
@@ -238,7 +295,10 @@ class TimeMatrixRepository:
 
     def _is_cache_stale(self) -> bool:
         with self._lock:
-            if self._loaded_at is None or self._ttl_seconds <= 0:
+            if self._loaded_at is None:
+                # Never loaded: stale whenever a provider could still load it.
+                return self._provider is not None
+            if self._ttl_seconds <= 0:
                 return False
             return (self._clock() - self._loaded_at) > self._ttl_seconds
 
@@ -288,21 +348,39 @@ class TimeMatrixRepository:
         geo_coords: bool = False,
         asymmetric_haversine: bool = False,
     ) -> List[List[float]]:
+        """Directed travel-time submatrix (minutes) from the stored matrix.
+
+        Fail-closed contract: refreshes in every mode (so a failed first load
+        recovers once the provider is back), and when no authoritative matrix
+        is loaded raises ``MatrixUnavailableError`` instead of returning
+        zeros or coordinate-derived values. A requested location missing from
+        a loaded matrix raises ``IncompleteTravelMatrixError``. Only the
+        explicit opt-in ``UNIRIDE_ALLOW_COORDINATE_FALLBACK`` re-enables the
+        coordinate (haversine/Euclidean) stand-ins, and only when coordinates
+        are supplied.
+        """
         n = len(request_locations)
 
+        if coordinates and _ACADEMIC_COORDINATE_SCOPE.get():
+            # Academic benchmark problem: its coordinates define the metric.
+            if geo_coords:
+                return self.build_haversine_matrix(
+                    request_locations, coordinates, asymmetric=True
+                )
+            return self.build_euclidean_matrix(request_locations, coordinates)
+
         with self._lock:
-            if not self._use_coordinates and self.time_matrix is not None:
-                self.refresh()
+            self.refresh()
 
             if self._use_coordinates or self.time_matrix is None:
-                if coordinates:
+                if coordinates and self._coordinate_fallback_enabled():
                     if geo_coords:
                         return self.build_haversine_matrix(
                             request_locations, coordinates,
                             asymmetric=asymmetric_haversine if not geo_coords else True,
                         )
                     return self.build_euclidean_matrix(request_locations, coordinates)
-                return [[0.0] * n for _ in range(n)]
+                raise MatrixUnavailableError()
 
             submatrix = [[0.0] * n for _ in range(n)]
 
@@ -312,10 +390,22 @@ class TimeMatrixRepository:
             return submatrix
 
     def get_duration(self, from_loc: str, to_loc: str) -> float:
+        """Directed duration (minutes); never 0.0 for an unknown pair.
+
+        Raises ``MatrixUnavailableError`` when no authoritative matrix is
+        loaded and ``IncompleteTravelMatrixError`` for a missing or invalid
+        arc. Only ``from_loc == to_loc`` yields 0.0.
+        """
         with self._lock:
+            self.refresh()
             if self._use_coordinates or self.time_matrix is None:
-                return 0.0
+                raise MatrixUnavailableError()
             return self._arc_value(from_loc, to_loc)
+
+    def _coordinate_fallback_enabled(self) -> bool:
+        if self._allow_coordinate_fallback is not None:
+            return bool(self._allow_coordinate_fallback)
+        return _coordinate_fallback_allowed()
 
     def has_location(self, loc_id: str) -> bool:
         with self._lock:
@@ -480,7 +570,9 @@ class TimeMatrixRepository:
         idx_from = self.loc_to_idx.get(from_loc)
         idx_to = self.loc_to_idx.get(to_loc)
         if idx_from is None or idx_to is None or self.time_matrix is None:
-            raise IncompleteTravelMatrixError(from_loc, to_loc)
+            raise IncompleteTravelMatrixError(
+                from_loc, to_loc, unknown_location=True
+            )
         value = float(self.time_matrix[idx_from][idx_to])
         if not math.isfinite(value) or value <= 0.0:
             raise IncompleteTravelMatrixError(from_loc, to_loc)
@@ -545,7 +637,10 @@ class TimeMatrixRepository:
 
 
 __all__ = [
+    "IncompleteTravelMatrixError",
+    "academic_coordinate_scope",
     "MatrixSnapshotError",
+    "MatrixUnavailableError",
     "SupabaseTimeMatrixProvider",
     "TimeMatrixRepository",
     "TravelTimeProvider",

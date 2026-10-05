@@ -54,7 +54,8 @@ from models.schemas import (
 from utils.resource_profiler import ResourceProfiler
 from utils.scheduling import calculate_scheduled_times
 from utils.data_loader import DataLoader
-from utils.matrix_repository import MatrixSnapshotError
+from utils.matrix_repository import IncompleteTravelMatrixError, MatrixSnapshotError
+from uniride_core.algorithms.route_metrics import TravelTimeUnavailableError
 from verification.response_certifier import certify_optimization_response
 
 router = APIRouter(
@@ -67,6 +68,24 @@ _INVALID_CERTIFICATE_ERROR = "certification aborted: invalid certificate payload
 _UNAVAILABLE_CERTIFICATE_ERROR = "certification unavailable: algorithm produced no result"
 _MATRIX_BINDING_ERROR = "matrix snapshot unavailable or changed"
 _EXACT_OPTIMAL_LIMIT = 10
+
+# C2: operational travel times come only from the stored time_matrix. When it
+# cannot answer, unbound requests fail closed with a fixed, redacted detail
+# (never location codes, keys, URLs or provider errors).
+MATRIX_UNAVAILABLE_DETAIL = "travel-time matrix unavailable"
+MATRIX_LOCATIONS_DETAIL = "requested locations are missing from the travel-time matrix"
+_MATRIX_ERRORS = (
+    MatrixSnapshotError,
+    IncompleteTravelMatrixError,
+    TravelTimeUnavailableError,
+)
+
+
+def _matrix_http_error(exc: BaseException) -> HTTPException:
+    """Map a fail-closed matrix error to a redacted HTTP error."""
+    if isinstance(exc, IncompleteTravelMatrixError) and exc.unknown_location:
+        return HTTPException(status_code=422, detail=MATRIX_LOCATIONS_DETAIL)
+    return HTTPException(status_code=503, detail=MATRIX_UNAVAILABLE_DETAIL)
 
 
 def _is_oversize_exact_request(resolution: ResolvedStrategy, request) -> bool:
@@ -333,6 +352,14 @@ def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
 
         return result
 
+    except _MATRIX_ERRORS as exc:
+        logger.warning("Optimization failed closed on the travel-time matrix: %s", type(exc).__name__)
+        if request.expected_matrix_sha256 is not None:
+            # Snapshot-bound requests keep their existing fail-closed response.
+            return _matrix_binding_failure(
+                resolution, applied_policy, time.time() - start_time
+            )
+        raise _matrix_http_error(exc) from None
     except Exception:
         logger.exception("Optimization endpoint failed")
         return _optimization_failure(
@@ -431,6 +458,10 @@ def _run_single_algorithm(
             ),
             feasibility_certificate=typed_certificate,
         )
+    except _MATRIX_ERRORS:
+        # The matrix is a request-level precondition shared by every
+        # algorithm: surface it to /compare instead of a per-algorithm failure.
+        raise
     except Exception:
         logger.exception("Algorithm %s failed during compare", resolution.canonical)
         return _algorithm_failure(
@@ -539,6 +570,12 @@ def compare_algorithms(request: CompareRequest) -> CompareResponse:
             if future in done:
                 try:
                     result = future.result()
+                except _MATRIX_ERRORS as exc:
+                    logger.warning(
+                        "Compare failed closed on the travel-time matrix: %s",
+                        type(exc).__name__,
+                    )
+                    raise _matrix_http_error(exc) from None
                 except Exception:
                     logger.exception(
                         "Algorithm %s future failed", resolution.canonical

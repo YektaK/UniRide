@@ -491,3 +491,128 @@ def test_benchmark_runner_runs_production_strategies_on_problem_coordinates(monk
         problem, AlgorithmConfig(name="greedy", algorithm_id="greedy"), 1
     )
     assert result.tour_length == pytest.approx(40.0)
+
+
+# ---------------------------------------- exponential failed-load backoff
+
+
+def _down_repo(ttl=600, base=None, failures=99):
+    clock = _Clock()
+    provider = _FlakyProvider(failures=failures)
+    kwargs = {} if base is None else {"retry_base_seconds": base}
+    repo = TimeMatrixRepository(provider=provider, ttl_seconds=ttl, clock=clock, **kwargs)
+    repo.load()  # failure 1 at t=0
+    return repo, provider, clock
+
+
+def _attempt(repo):
+    try:
+        repo.get_submatrix(["D.Kampus", "L1"])
+    except MatrixUnavailableError:
+        pass
+
+
+def test_backoff_first_retry_after_30_seconds_by_default():
+    repo, provider, clock = _down_repo()
+    clock.now = 29.9
+    _attempt(repo)
+    assert provider.calls == 1  # still inside the 30 s window
+    clock.now = 30.0
+    _attempt(repo)
+    assert provider.calls == 2
+
+
+def test_backoff_doubles_after_each_consecutive_failure():
+    repo, provider, clock = _down_repo()
+    clock.now = 30.0
+    _attempt(repo)  # failure 2 -> next window 60 s
+    assert provider.calls == 2
+    clock.now = 89.9
+    _attempt(repo)
+    assert provider.calls == 2
+    clock.now = 90.0
+    _attempt(repo)  # failure 3 -> next window 120 s
+    assert provider.calls == 3
+    clock.now = 209.9
+    _attempt(repo)
+    assert provider.calls == 3
+    clock.now = 210.0
+    _attempt(repo)
+    assert provider.calls == 4
+
+
+def test_backoff_is_capped_at_the_ttl():
+    repo, provider, clock = _down_repo(ttl=100)
+    waits = []
+    for _ in range(6):
+        waits.append(repo._next_retry_at - clock.now)
+        clock.now = repo._next_retry_at
+        _attempt(repo)
+    assert waits == [30, 60, 100, 100, 100, 100]
+
+
+def test_backoff_resets_after_a_successful_load():
+    repo, provider, clock = _down_repo(failures=3)  # fails at t=0, then twice more
+    clock.now = 30.0
+    _attempt(repo)  # failure 2
+    clock.now = 90.0
+    _attempt(repo)  # failure 3
+    assert repo._consecutive_failures == 3
+    clock.now = 210.0
+    repo.get_submatrix(["D.Kampus", "L1"])  # success
+    assert repo.health()["loaded"] is True
+    assert repo._consecutive_failures == 0
+    assert repo._next_retry_at is None
+    # A later refresh failure starts again at the base (30 s), not at 240 s.
+    provider.failures = 99
+    clock.now = 210.0 + 601.0  # TTL expired
+    repo.refresh()
+    assert repo._next_retry_at - clock.now == 30.0
+
+
+def test_backoff_base_is_configurable():
+    repo, provider, clock = _down_repo(base=5)
+    assert repo._next_retry_at == 5
+    clock.now = 5.0
+    _attempt(repo)
+    assert repo._next_retry_at - clock.now == 10
+
+
+def test_backoff_base_env_is_parsed_like_the_ttl_env(monkeypatch):
+    class _DL(DataLoader):
+        pass
+
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
+    monkeypatch.setenv("TIME_MATRIX_RETRY_BASE_SECONDS", "7")
+    assert _DL().repository._retry_base_seconds == 7
+
+    class _DL2(DataLoader):
+        pass
+
+    monkeypatch.setenv("TIME_MATRIX_RETRY_BASE_SECONDS", "garbage")
+    assert _DL2().repository._retry_base_seconds == 30
+    class _DL3(DataLoader):
+        pass
+
+    monkeypatch.delenv("TIME_MATRIX_RETRY_BASE_SECONDS")
+    assert _DL3().repository._retry_base_seconds == 30
+
+
+def test_backoff_allows_one_fetch_per_window_under_concurrency():
+    import threading
+
+    repo, provider, clock = _down_repo()
+    clock.now = 30.0
+    barrier = threading.Barrier(8)
+
+    def worker():
+        barrier.wait()
+        _attempt(repo)
+
+    threads = [threading.Thread(target=worker) for _ in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert provider.calls == 2  # initial load + exactly one retry

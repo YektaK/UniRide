@@ -53,6 +53,12 @@ class DataLoader(metaclass=SingletonMeta):
                 )
             except ValueError:
                 timeout = 10.0
+            try:
+                retry_base = float(
+                    os.environ.get("TIME_MATRIX_RETRY_BASE_SECONDS", "30")
+                )
+            except ValueError:
+                retry_base = 30.0
             supabase_url = os.environ.get("SUPABASE_URL", "")
             supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
             if supabase_url and supabase_key:
@@ -69,6 +75,7 @@ class DataLoader(metaclass=SingletonMeta):
             repository = TimeMatrixRepository(
                 provider=provider,
                 ttl_seconds=ttl,
+                retry_base_seconds=retry_base,
             )
             repository.load()
         self._repository = repository

@@ -22,6 +22,11 @@ import threading
 from typing import Any, Callable, Dict, Iterator, List, Optional, Protocol
 
 
+DEFAULT_RETRY_BASE_SECONDS = 30.0
+# Backoff cap when the TTL is disabled (ttl <= 0).
+MAX_RETRY_BACKOFF_SECONDS = 600.0
+
+
 class IncompleteTravelMatrixError(LookupError):
     """A requested directed arc is missing, zero, negative, or non-finite.
 
@@ -170,10 +175,17 @@ class TimeMatrixRepository:
         ttl_seconds: int = 600,
         clock: Callable[[], float] = time.time,
         allow_coordinate_fallback: Optional[bool] = None,
+        retry_base_seconds: float = DEFAULT_RETRY_BASE_SECONDS,
     ):
         self._provider = provider
         self._ttl_seconds = ttl_seconds
         self._clock = clock
+        # Failed-load backoff: base * 2**(consecutive_failures - 1), capped at
+        # the TTL; reset by a successful load.
+        self._retry_base_seconds = (
+            retry_base_seconds if retry_base_seconds > 0 else DEFAULT_RETRY_BASE_SECONDS
+        )
+        self._consecutive_failures = 0
         # None -> read UNIRIDE_ALLOW_COORDINATE_FALLBACK at call time.
         self._allow_coordinate_fallback = allow_coordinate_fallback
         self._lock = threading.RLock()
@@ -208,6 +220,7 @@ class TimeMatrixRepository:
             self._loaded_at = None
             self._last_error = None
             self._next_retry_at = None
+            self._consecutive_failures = 0
             return
         have_matrix = self.time_matrix is not None and not self._use_coordinates
         try:
@@ -217,9 +230,11 @@ class TimeMatrixRepository:
             self._loaded_at = self._clock()
             self._last_error = None
             self._next_retry_at = None
+            self._consecutive_failures = 0
         except Exception as exc:  # noqa: BLE001 - fallback, not propagate
             self._last_error = str(exc)
-            self._next_retry_at = self._clock() + self._ttl_seconds
+            self._consecutive_failures += 1
+            self._next_retry_at = self._clock() + self._retry_backoff_seconds()
             if have_matrix:
                 # Keep the last-known-good matrix; it is now stale (age grows
                 # beyond TTL) rather than an empty coordinate fallback.
@@ -253,6 +268,12 @@ class TimeMatrixRepository:
                 return
             self.load()
 
+    def _retry_backoff_seconds(self) -> float:
+        """Exponential backoff for the current failure streak, capped at the TTL."""
+        cap = self._ttl_seconds if self._ttl_seconds > 0 else MAX_RETRY_BACKOFF_SECONDS
+        exponent = min(max(self._consecutive_failures - 1, 0), 32)
+        return min(cap, self._retry_base_seconds * (2 ** exponent))
+
     def _in_backoff(self) -> bool:
         """True while a failed load's retry window is still active."""
         if self._next_retry_at is None:
@@ -269,6 +290,7 @@ class TimeMatrixRepository:
             self._loaded_at = None
             self._last_error = None
             self._next_retry_at = None
+            self._consecutive_failures = 0
 
     # ------------------------------------------------------------------- helpers
 

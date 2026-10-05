@@ -1,0 +1,394 @@
+"""C2 (repository part) regression tests: the travel-time matrix fails closed.
+
+Audit finding C2 (docs/ULTIMATE_AUDIT_2026-10-01_CLAUDE_OPUS_5_5.md), repros
+H.2 (unbound zero matrix) and H.4 (failed first load, no recovery).
+
+Owner requirement (2026-10-05): every operational travel time comes from the
+stored Supabase ``time_matrix``. No zero, haversine or Euclidean values may
+stand in for travel times unless the explicit development opt-in
+``UNIRIDE_ALLOW_COORDINATE_FALLBACK`` is set.
+
+All tests are offline: no network, no Supabase, no ``.env`` loading.
+"""
+
+import pytest
+from fastapi import HTTPException
+
+import runtime_config
+from models import schemas
+from routers import optimization
+from strategies.ga_split_strategy import GASplitStrategy
+from utils.data_loader import DataLoader
+from utils.matrix_repository import (
+    IncompleteTravelMatrixError,
+    MatrixSnapshotError,
+    MatrixUnavailableError,
+    TimeMatrixRepository,
+)
+from utils.patterns import SingletonMeta
+
+FLAG = "UNIRIDE_ALLOW_COORDINATE_FALLBACK"
+CODES = ["D.Kampus", "L1", "L2", "L3"]
+ROWS = [
+    {"origin_code": a, "destination_code": b, "duration_minutes": 7 + i + 2 * j}
+    for i, a in enumerate(CODES)
+    for j, b in enumerate(CODES)
+    if a != b
+]
+COORDS = {
+    "D.Kampus": {"lat": 41.00, "lng": 29.17},
+    "L1": {"lat": 41.01, "lng": 29.18},
+    "L2": {"lat": 41.02, "lng": 29.19},
+    "L3": {"lat": 41.03, "lng": 29.20},
+}
+
+
+@pytest.fixture(autouse=True)
+def _no_opt_in(monkeypatch):
+    """Every test starts from the production default: fallback not allowed."""
+    monkeypatch.delenv(FLAG, raising=False)
+
+
+class _Clock:
+    def __init__(self):
+        self.now = 0.0
+
+    def __call__(self):
+        return self.now
+
+
+class _FlakyProvider:
+    """Fails the first ``failures`` fetches, then serves the full matrix."""
+
+    def __init__(self, failures=1):
+        self.failures = failures
+        self.calls = 0
+
+    def fetch_rows(self):
+        self.calls += 1
+        if self.calls <= self.failures:
+            raise RuntimeError("transient outage")
+        return [dict(row) for row in ROWS]
+
+
+def _install_loader(monkeypatch, repository):
+    monkeypatch.setattr(SingletonMeta, "_instances", {})
+    return DataLoader(repository=repository)
+
+
+def _request(codes=("L1", "L2", "L3"), algorithm="ga_split"):
+    return schemas.OptimizationRequest(
+        algorithm=algorithm,
+        depot=schemas.LocationNode(id="D.Kampus", lat=41.0, lng=29.17),
+        students=[
+            schemas.StudentNode(
+                id=f"S{i}",
+                name=f"S{i}",
+                location_code=code,
+                disability_type="So",
+                coordinates=COORDS.get(code, {"lat": 41.0 + 0.2 * i, "lng": 29.17}),
+            )
+            for i, code in enumerate(codes, start=1)
+        ],
+        sw_capacity=4,
+        so_capacity=5,
+        max_travel_time=60,
+        ga_config={"population_size": 6, "max_iterations": 3, "seed": 1},
+    )
+
+
+# ------------------------------------------------- H.2: unbound zero matrix
+
+
+def test_h2_no_provider_get_submatrix_raises_instead_of_zero_matrix():
+    repo = TimeMatrixRepository(provider=None)
+    repo.load()
+    with pytest.raises(MatrixSnapshotError):
+        repo.get_submatrix(["A", "B"])
+    with pytest.raises(MatrixSnapshotError):
+        repo.get_submatrix(["A", "B"], coordinates={"A": {"lat": 0, "lng": 0}, "B": {"lat": 1, "lng": 1}})
+    with pytest.raises(MatrixSnapshotError):
+        repo.get_submatrix(["A", "B"], coordinates={"A": {"lat": 0, "lng": 0}, "B": {"lat": 1, "lng": 1}}, geo_coords=True)
+
+
+def test_h2_matrix_unavailable_error_is_a_matrix_snapshot_error():
+    assert issubclass(MatrixUnavailableError, MatrixSnapshotError)
+
+
+def test_h2_get_duration_never_returns_zero_for_unknown_pairs():
+    repo = TimeMatrixRepository(provider=None)
+    repo.load()
+    with pytest.raises(MatrixSnapshotError):
+        repo.get_duration("A", "B")
+
+    loaded = TimeMatrixRepository(provider=_FlakyProvider(failures=0))
+    loaded.load()
+    with pytest.raises(IncompleteTravelMatrixError):
+        loaded.get_duration("L1", "NOT-IN-MATRIX")
+    assert loaded.get_duration("L1", "L1") == 0.0  # same node is the only zero
+
+
+def test_h2_split_strategy_without_matrix_raises_not_zero_routes(monkeypatch):
+    _install_loader(monkeypatch, TimeMatrixRepository(provider=None))
+    strategy = GASplitStrategy({"seed": 1, "population_size": 6, "max_iterations": 3})
+    with pytest.raises(MatrixSnapshotError):
+        strategy.optimize(_request())
+
+
+def test_h2_unbound_optimize_without_matrix_is_redacted_503(monkeypatch):
+    _install_loader(monkeypatch, TimeMatrixRepository(provider=None))
+    with pytest.raises(HTTPException) as caught:
+        optimization.optimize_route(_request())
+    assert caught.value.status_code == 503
+    assert caught.value.detail == "travel-time matrix unavailable"
+
+
+def test_h2_unbound_optimize_unknown_location_is_redacted_422(monkeypatch):
+    repo = TimeMatrixRepository(provider=_FlakyProvider(failures=0))
+    repo.load()
+    _install_loader(monkeypatch, repo)
+    with pytest.raises(HTTPException) as caught:
+        optimization.optimize_route(_request(codes=("L1", "L2", "SECRET-CODE-42")))
+    assert caught.value.status_code == 422
+    assert "SECRET-CODE-42" not in str(caught.value.detail)
+    assert caught.value.detail == "requested locations are missing from the travel-time matrix"
+
+
+def test_h2_503_never_echoes_provider_error(monkeypatch):
+    class _Leaky:
+        def fetch_rows(self):
+            raise RuntimeError("https://secret.supabase.co service-role-key-123")
+
+    repo = TimeMatrixRepository(provider=_Leaky())
+    repo.load()
+    _install_loader(monkeypatch, repo)
+    with pytest.raises(HTTPException) as caught:
+        optimization.optimize_route(_request())
+    assert caught.value.status_code == 503
+    assert "secret" not in str(caught.value.detail).lower()
+    assert "key" not in str(caught.value.detail).lower()
+
+
+def test_h2_compare_without_matrix_is_redacted_503(monkeypatch):
+    _install_loader(monkeypatch, TimeMatrixRepository(provider=None))
+    request = schemas.CompareRequest(
+        depot=schemas.LocationNode(id="D.Kampus", lat=41.0, lng=29.17),
+        students=_request().students,
+        algorithms=["ga_split"],
+    )
+    with pytest.raises(HTTPException) as caught:
+        optimization.compare_algorithms(request)
+    assert caught.value.status_code == 503
+    assert caught.value.detail == "travel-time matrix unavailable"
+
+
+# ------------------------------------- H.4: failed first load, no recovery
+
+
+def test_h4_never_loaded_with_provider_is_stale():
+    repo = TimeMatrixRepository(provider=_FlakyProvider(failures=1))
+    repo.load()  # first load fails
+    assert repo._loaded_at is None
+    assert repo._is_cache_stale() is True
+
+
+def test_h4_no_provider_is_not_stale():
+    repo = TimeMatrixRepository(provider=None)
+    repo.load()
+    assert repo._is_cache_stale() is False
+
+
+def test_h4_failed_first_load_recovers_after_backoff_without_restart():
+    clock = _Clock()
+    provider = _FlakyProvider(failures=1)
+    repo = TimeMatrixRepository(provider=provider, ttl_seconds=600, clock=clock)
+    repo.load()
+    assert provider.calls == 1
+
+    # Inside the backoff window: fail closed, and no fetch storm.
+    for _ in range(5):
+        with pytest.raises(MatrixUnavailableError):
+            repo.get_submatrix(["D.Kampus", "L1"])
+    assert provider.calls == 1
+
+    # Backoff expired and provider recovered: the next call heals the cache.
+    clock.now = 601.0
+    sub = repo.get_submatrix(["D.Kampus", "L1", "L2"])
+    assert provider.calls == 2
+    assert repo.health()["loaded"] is True
+    assert sub[0][1] == 7 + 0 + 2 * 1
+    assert all(sub[i][j] > 0 for i in range(3) for j in range(3) if i != j)
+
+
+def test_h4_failed_first_load_keeps_failing_closed_while_provider_is_down():
+    clock = _Clock()
+    provider = _FlakyProvider(failures=99)
+    repo = TimeMatrixRepository(provider=provider, ttl_seconds=600, clock=clock)
+    repo.load()
+    clock.now = 601.0
+    with pytest.raises(MatrixUnavailableError):
+        repo.get_submatrix(["D.Kampus", "L1"])
+    assert provider.calls == 2  # retried once after the backoff, still down
+
+
+def test_h4_unbound_optimize_recovers_after_provider_recovers(monkeypatch):
+    clock = _Clock()
+    provider = _FlakyProvider(failures=1)
+    repo = TimeMatrixRepository(provider=provider, ttl_seconds=600, clock=clock)
+    repo.load()
+    _install_loader(monkeypatch, repo)
+
+    with pytest.raises(HTTPException) as caught:
+        optimization.optimize_route(_request())
+    assert caught.value.status_code == 503
+
+    clock.now = 601.0
+    result = optimization.optimize_route(_request())
+    assert result.success is True
+    durations = [s.duration for r in result.routes for s in r.route_details]
+    assert durations and all(d > 0 for d in durations)
+
+
+def test_h4_force_refresh_bypasses_backoff_for_recovery():
+    provider = _FlakyProvider(failures=1)
+    repo = TimeMatrixRepository(provider=provider, ttl_seconds=600, clock=_Clock())
+    repo.load()
+    repo.refresh(force=True)
+    assert repo.get_submatrix(["D.Kampus", "L1"])[0][1] > 0
+
+
+# ------------------------------------------------ explicit opt-in fallback
+
+
+@pytest.mark.parametrize("value", ["1", "true", "TRUE", " yes ", "Yes"])
+def test_flag_truthy_values(monkeypatch, value):
+    monkeypatch.setenv(FLAG, value)
+    assert runtime_config.allow_coordinate_fallback() is True
+
+
+@pytest.mark.parametrize("value", ["", "0", "false", "no", "off", "2", "maybe"])
+def test_flag_falsy_and_unrecognised_values(monkeypatch, value):
+    monkeypatch.setenv(FLAG, value)
+    assert runtime_config.allow_coordinate_fallback() is False
+
+
+def test_flag_default_is_false():
+    assert runtime_config.allow_coordinate_fallback() is False
+
+
+def test_opt_in_enables_euclidean_fallback_with_coordinates(monkeypatch):
+    monkeypatch.setenv(FLAG, "1")
+    repo = TimeMatrixRepository(provider=None)
+    repo.load()
+    matrix = repo.get_submatrix(["D.Kampus", "L1"], COORDS)
+    assert matrix[0][1] > 0 and matrix[0][1] == matrix[1][0]
+
+
+def test_opt_in_enables_haversine_fallback_with_geo_coords(monkeypatch):
+    monkeypatch.setenv(FLAG, "yes")
+    repo = TimeMatrixRepository(provider=None)
+    repo.load()
+    matrix = repo.get_submatrix(["D.Kampus", "L1"], COORDS, geo_coords=True)
+    assert matrix[0][1] > 0
+
+
+def test_opt_in_without_coordinates_still_never_returns_zeros(monkeypatch):
+    monkeypatch.setenv(FLAG, "1")
+    repo = TimeMatrixRepository(provider=None)
+    repo.load()
+    with pytest.raises(MatrixSnapshotError):
+        repo.get_submatrix(["A", "B"])
+
+
+def test_opt_in_does_not_hide_unknown_codes_when_a_real_matrix_is_loaded(monkeypatch):
+    monkeypatch.setenv(FLAG, "1")
+    repo = TimeMatrixRepository(provider=_FlakyProvider(failures=0))
+    repo.load()
+    with pytest.raises(IncompleteTravelMatrixError):
+        repo.get_submatrix(["D.Kampus", "NOT-IN-MATRIX"], COORDS)
+
+
+def test_explicit_constructor_flag_overrides_env(monkeypatch):
+    monkeypatch.setenv(FLAG, "1")
+    repo = TimeMatrixRepository(provider=None, allow_coordinate_fallback=False)
+    repo.load()
+    with pytest.raises(MatrixSnapshotError):
+        repo.get_submatrix(["D.Kampus", "L1"], COORDS)
+
+
+def test_opt_in_split_strategy_runs_on_coordinates(monkeypatch):
+    monkeypatch.setenv(FLAG, "1")
+    _install_loader(monkeypatch, TimeMatrixRepository(provider=None))
+    strategy = GASplitStrategy({"seed": 1, "population_size": 6, "max_iterations": 3})
+    result = strategy.optimize(_request())
+    durations = [s.duration for r in result.routes for s in r.route_details]
+    assert result.success is True
+    assert durations and all(d > 0 for d in durations)
+
+
+# ------------------------------------------------------- startup validation
+
+
+def _clean_startup_env(monkeypatch, app_env):
+    monkeypatch.setenv("INTERNAL_API_KEY", "k")
+    monkeypatch.delenv("UNIRIDE_DISABLE_AUTH", raising=False)
+    monkeypatch.delenv("UNIRIDE_TENANT_KEYS", raising=False)
+    monkeypatch.setenv("APP_ENV", app_env)
+
+
+def test_production_without_supabase_credentials_is_a_startup_error(monkeypatch):
+    _clean_startup_env(monkeypatch, "production")
+    monkeypatch.setenv("SUPABASE_URL", "")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "")
+    with pytest.raises(SystemExit) as caught:
+        runtime_config.validate_runtime_configuration()
+    message = str(caught.value)
+    assert "SUPABASE" in message
+
+
+@pytest.mark.parametrize(
+    "url,key", [("https://x.invalid", ""), ("", "service-key")]
+)
+def test_production_with_partial_credentials_is_a_startup_error(monkeypatch, url, key):
+    _clean_startup_env(monkeypatch, "production")
+    monkeypatch.setenv("SUPABASE_URL", url)
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", key)
+    with pytest.raises(SystemExit):
+        runtime_config.validate_runtime_configuration()
+
+
+def test_production_startup_error_never_prints_credential_values(monkeypatch):
+    _clean_startup_env(monkeypatch, "production")
+    monkeypatch.setenv("SUPABASE_URL", "")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "super-secret-value")
+    with pytest.raises(SystemExit) as caught:
+        runtime_config.validate_runtime_configuration()
+    assert "super-secret-value" not in str(caught.value)
+
+
+def test_production_with_credentials_starts(monkeypatch):
+    _clean_startup_env(monkeypatch, "production")
+    monkeypatch.setenv("SUPABASE_URL", "https://x.invalid")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "service-key")
+    runtime_config.validate_runtime_configuration()
+
+
+def test_production_forbids_the_coordinate_fallback_opt_in(monkeypatch):
+    _clean_startup_env(monkeypatch, "production")
+    monkeypatch.setenv("SUPABASE_URL", "https://x.invalid")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "service-key")
+    monkeypatch.setenv(FLAG, "1")
+    with pytest.raises(SystemExit) as caught:
+        runtime_config.validate_runtime_configuration()
+    assert FLAG in str(caught.value)
+
+
+def test_development_without_credentials_starts_and_fails_closed(monkeypatch):
+    _clean_startup_env(monkeypatch, "development")
+    monkeypatch.setenv("SUPABASE_URL", "")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "")
+    runtime_config.validate_runtime_configuration()  # must not raise
+    repo = TimeMatrixRepository(provider=None)
+    repo.load()
+    with pytest.raises(MatrixUnavailableError):
+        repo.get_submatrix(["D.Kampus", "L1"], COORDS)

@@ -13,6 +13,9 @@ from fastapi import HTTPException
 from compute_policy import ComputePolicy, DEFAULT_COMPARE_ALGORITHMS, PolicyValidationError
 from models import schemas
 from routers import optimization
+from certifier_matrix_support import stub_arc_capture  # noqa: F401 - fixture
+
+pytestmark = pytest.mark.usefixtures("stub_arc_capture")
 from strategies.canonical import (
     ResolvedStrategy,
     StrategyRegistryContractError,

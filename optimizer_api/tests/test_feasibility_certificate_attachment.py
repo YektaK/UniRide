@@ -7,6 +7,9 @@ from pydantic import ValidationError
 
 from models import schemas
 from routers import optimization
+from certifier_matrix_support import stub_arc_capture  # noqa: F401 - fixture
+
+pytestmark = pytest.mark.usefixtures("stub_arc_capture")
 
 class _StubStrategy:
     def __init__(self, response=None, error=None):

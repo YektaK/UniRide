@@ -27,6 +27,9 @@ from models.schemas import (
 )
 from certifier_matrix_support import certify_on_loader_matrix
 from routers import optimization
+from certifier_matrix_support import stub_arc_capture  # noqa: F401 - fixture
+
+pytestmark = pytest.mark.usefixtures("stub_arc_capture")
 from strategies.canonical import resolve_strategy
 
 # Non-default requested keys that are always available (not optional solvers).

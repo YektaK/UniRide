@@ -67,9 +67,31 @@ def certify_on_loader_matrix(monkeypatch, loader):
     monkeypatch.setattr(optimization, "certify_optimization_response", certify)
 
 
+def _skip_arc_capture(monkeypatch):
+    """Stub strategies run without a stored matrix: skip the pre-solve capture.
+
+    The router captures the authoritative arcs BEFORE solving (a missing matrix
+    is a 503 without a solve). Suites that exercise the certificate with stub
+    strategies and a stubbed/echoed certificate give the router a dummy lookup.
+    """
+    from routers import optimization
+
+    monkeypatch.setattr(
+        optimization,
+        "authoritative_arc_lookup",
+        lambda *args, **kwargs: (lambda origin, destination: 0.0),
+    )
+
+
+@pytest.fixture
+def stub_arc_capture(monkeypatch):
+    _skip_arc_capture(monkeypatch)
+
+
 @pytest.fixture
 def echo_certifier_matrix(monkeypatch):
     """Make the router's certificate use the stub response's own arcs."""
+    _skip_arc_capture(monkeypatch)
     from routers import optimization
 
     def certify(request, response, arc_lookup=None):

@@ -82,23 +82,69 @@ def arc_lookup_from_submatrix(loader: Any, request: Any) -> ArcLookup:
     return lookup
 
 
+def capture_repository_arcs(repository: Any, request: Any) -> ArcLookup:
+    """Copy every arc among the request's physical codes out of ``repository``.
+
+    The copy is taken under one repository lock acquisition and the returned
+    lookup only reads that copy, so a later cache refresh (or a refresh during
+    the solve) cannot change what the certificate re-costs on. An arc the
+    repository cannot answer is remembered as missing and raises on lookup.
+    """
+    codes = [str(request.depot.id)]
+    for student in request.students:
+        code = str(student.location_code)
+        if code not in codes:
+            codes.append(code)
+    captured: Dict[Tuple[str, str], float] = {}
+    with repository._lock:
+        if getattr(repository, "_use_coordinates", False) or repository.time_matrix is None:
+            raise MatrixSnapshotError("authoritative travel-time matrix unavailable")
+        for origin in codes:
+            for destination in codes:
+                if origin == destination:
+                    continue
+                try:
+                    captured[(origin, destination)] = float(
+                        repository._arc_value(origin, destination)
+                    )
+                except IncompleteTravelMatrixError:
+                    continue
+
+    def lookup(origin: str, destination: str) -> float:
+        if origin == destination:
+            return 0.0
+        value = captured.get((origin, destination))
+        if value is None:
+            raise IncompleteTravelMatrixError(origin, destination)
+        return value
+
+    return lookup
+
+
 def authoritative_arc_lookup(
     snapshot: Optional[Mapping[str, Any]] = None,
     loader: Any = None,
+    request: Any = None,
 ) -> Optional[ArcLookup]:
     """Return the arc lookup the certificate must use, or ``None`` if unavailable.
 
     ``snapshot`` is the request's bound matrix snapshot (when the request is
     snapshot-bound); otherwise the repository of ``loader`` (a DataLoader class
     or instance exposing ``get_instance()``; the process DataLoader by default)
-    is used. ``None`` makes the certifier fail closed.
+    is used. With ``request`` the repository arcs are copied immediately
+    (``capture_repository_arcs``); call this BEFORE the solve so the certificate
+    judges the matrix the solve started from. Without ``request`` the lookup
+    reads the live repository. ``None`` makes the certifier fail closed.
     """
     try:
         if isinstance(snapshot, Mapping):
             return arc_lookup_from_snapshot(snapshot)
         if loader is None:
             from utils.data_loader import DataLoader as loader
-        return arc_lookup_from_repository(loader.get_instance().repository)
+        repository = loader.get_instance().repository
+        if request is not None:
+            return capture_repository_arcs(repository, request)
+        return arc_lookup_from_repository(repository)
     except Exception:  # noqa: BLE001 - no authoritative matrix => fail closed
         return None
 
@@ -107,6 +153,7 @@ __all__ = [
     "ArcLookup",
     "arc_lookup_from_repository",
     "arc_lookup_from_snapshot",
+    "capture_repository_arcs",
     "arc_lookup_from_submatrix",
     "authoritative_arc_lookup",
 ]

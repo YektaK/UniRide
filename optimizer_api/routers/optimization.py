@@ -229,6 +229,9 @@ def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
                     resolution, applied_policy, time.time() - start_time
                 )
 
+        # capture the authoritative arcs before the solve (C2): a refresh while
+        # solving must not change the matrix the certificate judges on
+        arc_lookup = authoritative_arc_lookup(matrix_binding, DataLoader, request)
         result = strategy.optimize(request)
         if (
             request.expected_matrix_sha256 is not None
@@ -275,7 +278,7 @@ def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
             certify_optimization_response(
                 request,
                 result,
-                arc_lookup=authoritative_arc_lookup(matrix_binding, DataLoader),
+                arc_lookup=arc_lookup,
             )
         )
         result.feasibility_certificate = typed_certificate
@@ -410,6 +413,9 @@ def _run_single_algorithm(
         if _is_oversize_exact_request(resolution, effective_request):
             return _algorithm_failure(resolution, applied_policy, 0.0)
 
+        # capture the authoritative arcs before the solve (C2): a refresh while
+        # solving must not change the matrix the certificate judges on
+        arc_lookup = authoritative_arc_lookup(None, DataLoader, effective_request)
         response = strategy.optimize(effective_request)
         execution_time = time.time() - start_time
         if response is None:
@@ -420,7 +426,7 @@ def _run_single_algorithm(
             certify_optimization_response(
                 effective_request,
                 response,
-                arc_lookup=authoritative_arc_lookup(None, DataLoader),
+                arc_lookup=arc_lookup,
             )
         )
         success = bool(original_success and typed_certificate.is_feasible)

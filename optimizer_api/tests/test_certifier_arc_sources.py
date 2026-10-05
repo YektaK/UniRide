@@ -227,6 +227,53 @@ def _decimal_repository():
     return repository
 
 
+def test_matrix_refresh_during_the_solve_does_not_change_the_certificate_matrix(
+    monkeypatch,
+):
+    """Unbound request: arcs are captured before the solve, not re-read after it."""
+    rows = [
+        {"origin_code": a, "destination_code": b, "duration_minutes": TRUE_ARC}
+        for a in ("D", "L1", "L2")
+        for b in ("D", "L1", "L2")
+        if a != b
+    ]
+
+    class _Provider:
+        def fetch_rows(self):
+            return [dict(row) for row in rows]
+
+    repository = TimeMatrixRepository(provider=_Provider(), ttl_seconds=600)
+    repository.load()
+    loader = _RepositoryLoader(repository)
+    monkeypatch.setattr(optimization, "DataLoader", loader)
+
+    class _RefreshingStrategy(_StubStrategy):
+        def optimize(self, request):
+            # the matrix table changes while the solver is running
+            for row in rows:
+                row["duration_minutes"] = 99.0
+            repository.refresh(force=True)
+            return super().optimize(request)
+
+    # the response matches the matrix the solve STARTED from
+    response = _response(["D", "L1", "L2", "D"], [TRUE_ARC] * 3)
+    strategy = _RefreshingStrategy(response)
+    resolution = optimization.ResolvedStrategy(
+        "stub", "stub", lambda: strategy, ("stub",)
+    )
+    monkeypatch.setattr(optimization, "resolve_strategy", lambda key: resolution)
+
+    result = optimization.optimize_route(_request(2))
+
+    # the live repository really changed ...
+    assert arc_lookup_from_repository(repository)("D", "L1") == 99.0
+    # ... but the certificate still judged the captured, pre-solve arcs
+    assert result.feasibility_certificate.is_feasible is True, (
+        result.feasibility_certificate.violations
+    )
+    assert result.success is True
+
+
 @pytest.mark.parametrize(
     "key",
     [

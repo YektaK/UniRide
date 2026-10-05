@@ -68,6 +68,7 @@ class ORToolsCVRPStrategy(BaseRoutingStrategy):
             so_capacity=request.so_capacity,
             max_route_duration=request.max_travel_time,
             num_vehicles=min(len(students), 10),
+            arc_rounding="conservative",
             time_limit_seconds=self.time_limit_seconds,
         )
 

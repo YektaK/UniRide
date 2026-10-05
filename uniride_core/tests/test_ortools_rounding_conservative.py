@@ -36,6 +36,7 @@ def test_true_route_duration_never_exceeds_the_limit():
         max_route_duration=60,
         num_vehicles=5,
         time_limit_seconds=1,
+        arc_rounding="conservative",
     )
 
     assert solution.success
@@ -47,3 +48,40 @@ def test_true_route_duration_never_exceeds_the_limit():
         # reported durations are the true arcs, not scaled-and-rounded ones
         assert [s.duration for s in route.steps] == [10.04] * len(route.steps)
         assert route.total_duration == pytest.approx(true_total, abs=0.005)
+
+
+def test_default_is_the_historical_nearest_rounding_for_academic_callers():
+    """Scientific parity: without ``arc_rounding`` the scaled values are unchanged.
+
+    Nearest rounding scales 10.04 to 100, so six arcs look like exactly 60.0 and
+    a single route is accepted; the step durations are the scaled values / scale.
+    """
+    pytest.importorskip("ortools")
+    matrix = _star_matrix(5, 10.04)
+    kwargs = dict(
+        time_matrix=matrix,
+        disability_types=["So"] * 5,
+        sw_capacity=4,
+        so_capacity=5,
+        max_route_duration=60,
+        num_vehicles=5,
+        time_limit_seconds=1,
+    )
+
+    default = solve_ortools_cvrp(**kwargs)
+    explicit = solve_ortools_cvrp(**kwargs, arc_rounding="nearest")
+
+    for solution in (default, explicit):
+        assert solution.success
+        assert len(solution.routes) == 1
+        route = solution.routes[0]
+        assert [s.duration for s in route.steps] == [10.0] * 6
+        assert route.total_duration == 60.0
+
+
+def test_unknown_arc_rounding_is_rejected():
+    solution = solve_ortools_cvrp(
+        time_matrix=_star_matrix(1, 5.0), arc_rounding="round-ish"
+    )
+    assert not solution.success
+    assert "arc_rounding" in solution.error_message

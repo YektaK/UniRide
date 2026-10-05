@@ -7,74 +7,72 @@ def get_duration(p1: Point, p2: Point, time_matrix: Dict) -> float:
     return matrix_travel_time(p1, p2, time_matrix)
 
 class ClarkeWrightClusteringStrategy(BaseClusteringStrategy):
+    """Directed Clarke-Wright savings adapted for clustering.
+
+    Routes are closed tours ``D -> s1 -> ... -> sk -> D`` costed on the
+    directed ``time_matrix`` (``c(a, b) != c(b, a)`` in general). Joining the
+    tail ``i`` of one route to the head ``j`` of another removes the arcs
+    ``i -> D`` and ``D -> j`` and adds ``i -> j``::
+
+        S(i -> j) = c(i, D) + c(D, j) - c(i, j)
+
+    The two orientations of a pair differ (``S(i -> j) != S(j -> i)``), so every
+    ordered pair is a separate candidate: the better orientation of a pair is
+    tried first and the other only if the first no longer applies. On a
+    symmetric matrix both orientations equal the classic
+    ``c(D, i) + c(D, j) - c(i, j)``. Savings are processed in descending
+    order; a merge needs ``i`` to be the last stop of one route and ``j`` the
+    first stop of another, and respects the Sw/So capacities.
     """
-    Clarke-Wright Savings algorithm adapted for clustering.
-    Calculates savings metric: S(i,j) = Cost(Depot, i) + Cost(Depot, j) - Cost(i, j)
-    Merges nodes iteratively to build efficient clusters based on true road times.
-    """
-    
+
     def cluster_students(self, students: List[Point], num_vehicles: int, **kwargs) -> List[Cluster]:
         if not students or num_vehicles <= 0: return []
-        
+
         time_matrix = kwargs.get("time_matrix", {})
         depot = kwargs.get("depot", {"id": "D.Kampus", "lat": 41.001, "lng": 29.177})
-        
+
         # We need a dummy depot point for distance calc
         depot_point = Point(
             id=depot["id"], lat=depot["lat"], lng=depot["lng"], disability_type="So",
             location_code=depot["id"],
         )
-        
-        points_dict = {p.id: p for p in students}
-        points_dict[depot["id"]] = depot_point
-        
-        # Start with everyone in their own cluster (route)
+
+        # Start with everyone in their own route
         routes = [[s] for s in students]
-        
-        # Calculate savings for all pairs
+
+        # Directed savings for every ordered pair (tail i, head j)
         savings = []
-        for i in range(len(students)):
-            for j in range(i + 1, len(students)):
-                s1, s2 = students[i], students[j]
-                
-                # S_ij = t(depot, i) + t(depot, j) - t(i, j)
-                cost_d_i = get_duration(depot_point, s1, time_matrix)
-                cost_d_j = get_duration(depot_point, s2, time_matrix)
-                cost_i_j = get_duration(s1, s2, time_matrix)
-                
-                saving_val = cost_d_i + cost_d_j - cost_i_j
-                savings.append((saving_val, s1, s2))
-                
-        # Sort savings descending
-        savings.sort(key=lambda x: x[0], reverse=True)
-        
+        for i, s1 in enumerate(students):
+            to_depot = get_duration(s1, depot_point, time_matrix)
+            for j, s2 in enumerate(students):
+                if i == j:
+                    continue
+                from_depot = get_duration(depot_point, s2, time_matrix)
+                arc = get_duration(s1, s2, time_matrix)
+                savings.append((to_depot + from_depot - arc, i, j, s1, s2))
+
+        # Descending saving; ties keep input order (deterministic)
+        savings.sort(key=lambda x: (-x[0], x[1], x[2]))
+
         # Merge routes
-        for saving_val, s1, s2 in savings:
+        for _saving, _i, _j, tail, head in savings:
             if len(routes) <= num_vehicles:
                 break # Reached desired number of clusters
-                
-            # Find which routes s1 and s2 belong to
-            route1_idx = -1
-            route2_idx = -1
-            for idx, r in enumerate(routes):
-                if r[0].id == s1.id or r[-1].id == s1.id:
-                    route1_idx = idx
-                if r[0].id == s2.id or r[-1].id == s2.id:
-                    route2_idx = idx
-                    
+
+            route1_idx = next((k for k, r in enumerate(routes) if r[-1].id == tail.id), -1)
+            route2_idx = next((k for k, r in enumerate(routes) if r[0].id == head.id), -1)
+
             if route1_idx != -1 and route2_idx != -1 and route1_idx != route2_idx:
                 r1 = routes[route1_idx]
                 r2 = routes[route2_idx]
-                
+
                 combined = r1 + r2
                 sw_count = sum(1 for p in combined if p.disability_type == "Sw")
                 so_count = sum(1 for p in combined if p.disability_type == "So")
-                
+
                 if sw_count <= self.sw_capacity and so_count <= self.so_capacity:
-                    # Valid merge! 
-                    # Note: We aren't strictly checking the CW 120-min max_tour_time here because 
-                    # the cluster string will just be fed to the local TSP solver anyway.
-                    # As long as capacity is fine, savings heuristic merges them.
+                    # Valid merge. The CW max-tour-time is not checked here: the
+                    # cluster is handed to the local TSP solver afterwards.
                     routes.pop(max(route1_idx, route2_idx))
                     routes.pop(min(route1_idx, route2_idx))
                     routes.append(combined)

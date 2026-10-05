@@ -157,12 +157,30 @@ def test_optimize_endpoint_accepts_matching_claim_on_bound_snapshot(monkeypatch)
     assert result.success is True
 
 
-def test_optimize_endpoint_fails_closed_without_an_authoritative_matrix(monkeypatch):
-    """Unbound request and a DataLoader with no loaded matrix: never certify."""
+class _CountingStrategy(_StubStrategy):
+    def __init__(self, response):
+        super().__init__(response)
+        self.calls = 0
 
-    class _CoordinateOnly:
-        repository = TimeMatrixRepository(provider=None)
+    def optimize(self, request):
+        self.calls += 1
+        return super().optimize(request)
 
+
+def _install_counting_stub(monkeypatch):
+    strategy = _CountingStrategy(_response(["D", "L1", "L2", "D"], [0.0, 0.0, 0.0]))
+    resolution = optimization.ResolvedStrategy(
+        "stub", "stub", lambda: strategy, ("stub",)
+    )
+    monkeypatch.setattr(optimization, "resolve_strategy", lambda key: resolution)
+    monkeypatch.setattr(
+        optimization, "resolve_unique_strategies", lambda keys: [resolution]
+    )
+    return strategy
+
+
+def _loader_for(repository):
+    class _Loader:
         @classmethod
         def get_instance(cls):
             return cls
@@ -171,14 +189,150 @@ def test_optimize_endpoint_fails_closed_without_an_authoritative_matrix(monkeypa
         def refresh(cls, force=False):
             return None
 
-    _CoordinateOnly.repository.load()
-    monkeypatch.setattr(optimization, "DataLoader", _CoordinateOnly)
-    _install_stub(monkeypatch, _response(["D", "L1", "L2", "D"], [0.0, 0.0, 0.0]))
+    _Loader.repository = repository
+    return _Loader
 
-    result = optimization.optimize_route(_request(2))
+
+def _coordinate_only_repository(allow_coordinate_fallback=None):
+    repository = TimeMatrixRepository(
+        provider=None, allow_coordinate_fallback=allow_coordinate_fallback
+    )
+    repository.load()
+    return repository
+
+
+@pytest.mark.parametrize("opt_in", [None, True])
+def test_unbound_optimize_503_before_solving_without_an_authoritative_matrix(
+    monkeypatch, opt_in
+):
+    """Ordering: the arcs are captured BEFORE the solve, so an unavailable
+    matrix is a redacted 503 and the strategy never runs. The coordinate-fallback
+    opt-in does not make coordinate values authoritative for the certificate."""
+    from fastapi import HTTPException
+
+    monkeypatch.setattr(
+        optimization, "DataLoader", _loader_for(_coordinate_only_repository(opt_in))
+    )
+    strategy = _install_counting_stub(monkeypatch)
+
+    with pytest.raises(HTTPException) as caught:
+        optimization.optimize_route(_request(2))
+
+    assert caught.value.status_code == 503
+    assert caught.value.detail == optimization.MATRIX_UNAVAILABLE_DETAIL
+    assert strategy.calls == 0
+
+
+def test_unbound_optimize_422_before_solving_for_unknown_locations(monkeypatch):
+    from fastapi import HTTPException
+
+    repository = _decimal_repository()  # knows D, L1..L5 only
+    monkeypatch.setattr(optimization, "DataLoader", _loader_for(repository))
+    strategy = _install_counting_stub(monkeypatch)
+    request = _request(2)
+    request.students[0].location_code = "NOT_IN_MATRIX"
+
+    with pytest.raises(HTTPException) as caught:
+        optimization.optimize_route(request)
+
+    assert caught.value.status_code == 422
+    assert strategy.calls == 0
+
+
+def test_bound_optimize_keeps_the_200_binding_failure_when_the_snapshot_is_gone(
+    monkeypatch,
+):
+    from utils.matrix_repository import MatrixSnapshotError
+
+    class _Gone(_SnapshotLoader):
+        def matrix_snapshot(self, student_locations, depot_code):
+            raise MatrixSnapshotError("gone")
+
+    monkeypatch.setattr(optimization, "DataLoader", _Gone(_arcs()))
+    strategy = _install_counting_stub(monkeypatch)
+
+    result = optimization.optimize_route(_request(2, expected_matrix_sha256=DIGEST))
 
     assert result.success is False
-    assert result.feasibility_certificate.is_feasible is False
+    assert result.feasibility_certificate.certify_error == optimization._MATRIX_BINDING_ERROR
+    assert strategy.calls == 0
+
+
+def test_compare_503_before_solving_without_an_authoritative_matrix(monkeypatch):
+    from fastapi import HTTPException
+    from models.schemas import CompareRequest
+
+    monkeypatch.setattr(
+        optimization, "DataLoader", _loader_for(_coordinate_only_repository())
+    )
+    strategy = _install_counting_stub(monkeypatch)
+    request = CompareRequest(
+        students=_request(2).students,
+        depot=_request(2).depot,
+        sw_capacity=4,
+        so_capacity=5,
+        max_travel_time=60,
+        algorithms=["stub"],
+    )
+
+    with pytest.raises(HTTPException) as caught:
+        optimization.compare_algorithms(request)
+
+    assert caught.value.status_code == 503
+    assert strategy.calls == 0
+
+
+# -- public strict repository accessors -----------------------------------------
+
+
+def test_repository_capture_arcs_is_strict_and_a_copy():
+    repository = _decimal_repository()
+    arcs = repository.capture_arcs(["D", "L1", "L1", "L2"])
+
+    assert set(arcs) == {
+        (a, b) for a in ("D", "L1", "L2") for b in ("D", "L1", "L2") if a != b
+    }
+    before = arcs[("D", "L1")]
+    repository.time_matrix[repository.loc_to_idx["D"]][repository.loc_to_idx["L1"]] = 99.0
+    assert arcs[("D", "L1")] == before  # a plain copy
+    assert repository.arc("D", "L1") == 99.0
+    assert repository.arc("L1", "L1") == 0.0
+    with pytest.raises(IncompleteTravelMatrixError) as caught:
+        repository.capture_arcs(["D", "NOPE"])
+    assert caught.value.unknown_location is True
+
+
+@pytest.mark.parametrize("opt_in", [None, True])
+def test_repository_accessors_never_serve_coordinate_values(opt_in):
+    """Not under the dev opt-in and not inside the academic coordinate scope:
+    the certificate may only be judged on the stored matrix."""
+    from utils.matrix_repository import MatrixUnavailableError, academic_coordinate_scope
+
+    repository = _coordinate_only_repository(opt_in)
+    with pytest.raises(MatrixUnavailableError):
+        repository.arc("A", "B")
+    with pytest.raises(MatrixUnavailableError):
+        repository.capture_arcs(["A", "B"])
+    with academic_coordinate_scope():
+        # the academic metric still works for the TSPLIB runner ...
+        coords = {"A": {"lat": 0.0, "lng": 0.0}, "B": {"lat": 3.0, "lng": 4.0}}
+        assert repository.get_submatrix(["A", "B"], coords)[0][1] == 5.0
+        # ... but never becomes an authoritative arc
+        with pytest.raises(MatrixUnavailableError):
+            repository.arc("A", "B")
+        with pytest.raises(MatrixUnavailableError):
+            repository.capture_arcs(["A", "B"])
+
+
+def test_benchmark_certificate_does_not_use_the_arc_lookup():
+    """The academic runner certifies with certify_benchmark_response over the
+    problem's own matrix; the lookup (and so the stored matrix) is not involved."""
+    import inspect
+
+    from verification import response_certifier
+
+    source = inspect.getsource(response_certifier.certify_benchmark_response)
+    assert "arc_lookup" not in source
 
 
 # -- real repository, real strategies, decimal asymmetric arcs ------------------

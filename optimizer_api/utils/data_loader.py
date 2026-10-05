@@ -34,7 +34,9 @@ class DataLoader(metaclass=SingletonMeta):
     loaded exactly once per server session. Delegates the actual cache to an
     injectable ``TimeMatrixRepository``; construction accepts an optional
     pre-built repository (honored only before the singleton is created).
-    Falls back to coordinate-based distance calculation if a pair is missing.
+    Fails closed (``MatrixUnavailableError`` / ``IncompleteTravelMatrixError``)
+    when the matrix is not loaded or a pair is missing; coordinate-derived
+    values exist only behind ``UNIRIDE_ALLOW_COORDINATE_FALLBACK``.
     """
 
     def __init__(self, repository: Optional[TimeMatrixRepository] = None):
@@ -51,6 +53,12 @@ class DataLoader(metaclass=SingletonMeta):
                 )
             except ValueError:
                 timeout = 10.0
+            try:
+                retry_base = float(
+                    os.environ.get("TIME_MATRIX_RETRY_BASE_SECONDS", "30")
+                )
+            except ValueError:
+                retry_base = 30.0
             supabase_url = os.environ.get("SUPABASE_URL", "")
             supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
             if supabase_url and supabase_key:
@@ -59,12 +67,15 @@ class DataLoader(metaclass=SingletonMeta):
                 )
             else:
                 logger.warning(
-                    "SUPABASE credentials not found. Using coordinate-based distance calculation."
+                    "SUPABASE credentials not found. No travel-time matrix source: "
+                    "matrix-dependent requests fail closed (set "
+                    "UNIRIDE_ALLOW_COORDINATE_FALLBACK=1 for offline development only)."
                 )
                 provider = None
             repository = TimeMatrixRepository(
                 provider=provider,
                 ttl_seconds=ttl,
+                retry_base_seconds=retry_base,
             )
             repository.load()
         self._repository = repository
@@ -97,8 +108,9 @@ class DataLoader(metaclass=SingletonMeta):
         """
         Extract an NxN time submatrix for the given subset of location IDs.
 
-        Falls back to coordinate-based distance when the Supabase matrix is
-        not loaded. See ``TimeMatrixRepository.get_submatrix``.
+        Raises ``MatrixUnavailableError`` when the Supabase matrix is not
+        loaded (coordinate fallback only with the explicit opt-in). See
+        ``TimeMatrixRepository.get_submatrix``.
         """
         return self._repository.get_submatrix(
             request_locations,
@@ -108,7 +120,7 @@ class DataLoader(metaclass=SingletonMeta):
         )
 
     def get_duration(self, from_loc: str, to_loc: str) -> float:
-        """Get duration between two locations (0 if unknown)."""
+        """Get duration between two locations; raises for an unknown pair."""
         return self._repository.get_duration(from_loc, to_loc)
 
     def has_location(self, loc_id: str) -> bool:

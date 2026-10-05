@@ -5,6 +5,7 @@ import pytest
 from utils.matrix_repository import (
     IncompleteTravelMatrixError,
     MatrixSnapshotError,
+    MatrixUnavailableError,
     SupabaseTimeMatrixProvider,
     TimeMatrixRepository,
     matrix_sha256,
@@ -222,12 +223,14 @@ def test_refresh_reloads_when_stale_or_forced():
 # ----------------------------------------------------------- fallback + lifecycle
 
 
-def test_missing_provider_uses_coordinate_fallback():
+def test_missing_provider_fails_closed_instead_of_zero_matrix():
+    # C2: the old behaviour returned [[0.0, 0.0], [0.0, 0.0]] here.
     repo = _build_repo(provider=None)
     repo.load()
     assert repo._use_coordinates is True
     assert repo.time_matrix is None
-    assert repo.get_submatrix(["A", "B"]) == [[0.0, 0.0], [0.0, 0.0]]
+    with pytest.raises(MatrixUnavailableError):
+        repo.get_submatrix(["A", "B"])
 
 
 def test_failing_provider_falls_back_and_records_error():
@@ -246,7 +249,14 @@ def test_close_clears_state():
     repo.close()
     assert repo.time_matrix is None
     assert repo.health()["loaded"] is False
-    assert repo.get_duration("A", "B") == 0.0
+    # C2: a cleared cache never answers 0.0; the next lookup lazily reloads
+    # from the provider (never-loaded counts as stale), or fails closed.
+    assert repo.get_duration("A", "B") == 5.0
+    assert repo.health()["loaded"] is True
+    repo._provider = None
+    repo.close()
+    with pytest.raises(MatrixUnavailableError):
+        repo.get_duration("A", "B")
 
 
 # -------------------------------------------------------------------- DataLoader

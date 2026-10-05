@@ -16,6 +16,12 @@ import {
     handleApiError,
 } from "@/lib/admin-auth";
 import { optimizerFetch } from "@/lib/optimizer-server";
+import {
+    classifyOptimizerMatrixError,
+    MATRIX_ERROR_HTTP_STATUS,
+    MATRIX_ERROR_MESSAGES,
+    readOptimizerErrorDetail,
+} from "@/services/optimizer-matrix-errors";
 import type { Database } from "@/lib/supabase";
 import type { IERawData, IEResponseData, HourlyDemandData, BottleneckData, TimeShiftSuggestion } from "@/types/ie-resource";
 import { DUDULLU_DEPOT } from "@/services/dudullu-campus";
@@ -189,6 +195,18 @@ export async function POST(request: NextRequest) {
         });
 
         if (!response.ok) {
+            // C2: the optimizer fails closed (503/422) when the stored
+            // travel-time matrix cannot answer. Surface a clear, redacted error.
+            const matrixError = classifyOptimizerMatrixError(
+                response.status,
+                await readOptimizerErrorDetail(response)
+            );
+            if (matrixError) {
+                return Response.json(
+                    { error: MATRIX_ERROR_MESSAGES[matrixError], code: matrixError },
+                    { status: MATRIX_ERROR_HTTP_STATUS[matrixError] }
+                );
+            }
             return createErrorResponse("Optimization failed", response.status);
         }
 

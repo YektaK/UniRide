@@ -7,10 +7,10 @@ codes. Two sources are supported:
 * a request-bound snapshot (``expected_matrix_sha256``): the immutable ``arcs``
   captured by ``TimeMatrixRepository.matrix_snapshot``, i.e. exactly the data
   the binding digest vouches for;
-* the process DataLoader repository, for unbound requests.
+* the process DataLoader repository, for unbound requests (copied via the public `capture_arcs` before the solve).
 
 Neither source synthesizes, defaults or guesses an arc: a missing, zero,
-negative or non-finite arc, a coordinate-fallback repository, or an unloaded
+negative or non-finite arc, or an unloaded
 matrix raises, which the certifier reports as ``missing_arc``.
 """
 
@@ -19,7 +19,7 @@ from __future__ import annotations
 import math
 from typing import Any, Callable, Dict, Mapping, Optional, Tuple
 
-from utils.matrix_repository import IncompleteTravelMatrixError, MatrixSnapshotError
+from utils.matrix_repository import IncompleteTravelMatrixError
 
 ArcLookup = Callable[[str, str], float]
 
@@ -45,17 +45,14 @@ def arc_lookup_from_snapshot(snapshot: Mapping[str, Any]) -> ArcLookup:
 
 
 def arc_lookup_from_repository(repository: Any) -> ArcLookup:
-    """Directed lookup over a ``TimeMatrixRepository`` (wraps ``_arc_value``).
+    """Live directed lookup over a ``TimeMatrixRepository`` (``repository.arc``).
 
-    Wrapped here because the repository exposes no public single-arc accessor
-    that rejects invalid arcs (``get_duration`` returns 0.0 in coordinate mode).
+    Reads the repository at every call; prefer :func:`capture_repository_arcs`
+    when a solve happens in between. Strict: never coordinate-derived values.
     """
 
     def lookup(origin: str, destination: str) -> float:
-        with repository._lock:
-            if getattr(repository, "_use_coordinates", False) or repository.time_matrix is None:
-                raise MatrixSnapshotError("authoritative travel-time matrix unavailable")
-            return float(repository._arc_value(origin, destination))
+        return float(repository.arc(origin, destination))
 
     return lookup
 
@@ -85,30 +82,16 @@ def arc_lookup_from_submatrix(loader: Any, request: Any) -> ArcLookup:
 def capture_repository_arcs(repository: Any, request: Any) -> ArcLookup:
     """Copy every arc among the request's physical codes out of ``repository``.
 
-    The copy is taken under one repository lock acquisition and the returned
-    lookup only reads that copy, so a later cache refresh (or a refresh during
-    the solve) cannot change what the certificate re-costs on. An arc the
-    repository cannot answer is remembered as missing and raises on lookup.
+    ``repository.capture_arcs`` takes the copy atomically and strictly; the
+    returned lookup only reads that copy, so a later cache refresh (or a refresh
+    during the solve) cannot change what the certificate re-costs on.
+    ``MatrixUnavailableError`` / ``IncompleteTravelMatrixError`` propagate: the
+    caller must fail closed before solving.
     """
-    codes = [str(request.depot.id)]
-    for student in request.students:
-        code = str(student.location_code)
-        if code not in codes:
-            codes.append(code)
-    captured: Dict[Tuple[str, str], float] = {}
-    with repository._lock:
-        if getattr(repository, "_use_coordinates", False) or repository.time_matrix is None:
-            raise MatrixSnapshotError("authoritative travel-time matrix unavailable")
-        for origin in codes:
-            for destination in codes:
-                if origin == destination:
-                    continue
-                try:
-                    captured[(origin, destination)] = float(
-                        repository._arc_value(origin, destination)
-                    )
-                except IncompleteTravelMatrixError:
-                    continue
+    codes = [str(request.depot.id)] + [
+        str(student.location_code) for student in request.students
+    ]
+    captured: Dict[Tuple[str, str], float] = repository.capture_arcs(codes)
 
     def lookup(origin: str, destination: str) -> float:
         if origin == destination:
@@ -134,19 +117,25 @@ def authoritative_arc_lookup(
     is used. With ``request`` the repository arcs are copied immediately
     (``capture_repository_arcs``); call this BEFORE the solve so the certificate
     judges the matrix the solve started from. Without ``request`` the lookup
-    reads the live repository. ``None`` makes the certifier fail closed.
+    reads the live repository.
+
+    A matrix that cannot answer (``MatrixSnapshotError`` including
+    ``MatrixUnavailableError``, ``IncompleteTravelMatrixError``) propagates so
+    the router can fail closed with its redacted 503/422 BEFORE solving. Any
+    other failure to reach a repository yields ``None``, which makes the
+    certifier fail closed.
     """
+    if isinstance(snapshot, Mapping):
+        return arc_lookup_from_snapshot(snapshot)
     try:
-        if isinstance(snapshot, Mapping):
-            return arc_lookup_from_snapshot(snapshot)
         if loader is None:
             from utils.data_loader import DataLoader as loader
         repository = loader.get_instance().repository
-        if request is not None:
-            return capture_repository_arcs(repository, request)
-        return arc_lookup_from_repository(repository)
-    except Exception:  # noqa: BLE001 - no authoritative matrix => fail closed
+    except Exception:  # noqa: BLE001 - no repository => certifier fails closed
         return None
+    if request is not None:
+        return capture_repository_arcs(repository, request)
+    return arc_lookup_from_repository(repository)
 
 
 __all__ = [

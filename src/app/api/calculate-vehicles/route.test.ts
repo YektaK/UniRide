@@ -60,6 +60,26 @@ describe("POST /api/calculate-vehicles", () => {
   });
 
   it.each([
+    ["travel_time_matrix_unavailable", 503],
+    ["travel_time_matrix_locations_missing", 422],
+  ] as const)("surfaces the fail-closed matrix error %s as HTTP %i", async (code, status) => {
+    requireAdminMock.mockResolvedValue({ id: "admin-1" });
+    optimizeRoutesMock.mockResolvedValue({
+      success: false,
+      algorithm_used: "ga",
+      routes: [],
+      error_message: "redacted message",
+      error_code: code,
+    });
+
+    const { POST } = await import("./route");
+    const response = await POST(validRequest() as never);
+
+    expect(response.status).toBe(status);
+    expect(await response.json()).toMatchObject({ success: false, error: "redacted message", code });
+  });
+
+  it.each([
     ["pickup", "pickup"],
     ["dropoff", "dropoff"],
   ] as const)(

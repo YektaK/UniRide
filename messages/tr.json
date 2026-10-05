@@ -4,6 +4,8 @@
     "appDescription": "Üniversite Ulaşım Destek Sistemi",
     "loading": "Yükleniyor...",
     "error": "Hata",
+    "matrixUnavailable": "Seyahat süresi matrisi şu anda kullanılamıyor; rota hesaplanamadı. Lütfen daha sonra tekrar deneyin veya yöneticiye başvurun.",
+    "matrixLocationsMissing": "Bazı duraklar kayıtlı seyahat süresi matrisinde bulunmuyor; rota hesaplanamadı.",
     "success": "Başarılı",
     "warning": "Uyarı",
     "save": "Kaydet",

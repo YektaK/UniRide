@@ -4,6 +4,8 @@
     "appDescription": "University Transport Support System",
     "loading": "Loading...",
     "error": "Error",
+    "matrixUnavailable": "The travel-time matrix is currently unavailable, so no routes were calculated. Please try again later or contact an administrator.",
+    "matrixLocationsMissing": "Some stops are not in the stored travel-time matrix, so no routes were calculated.",
     "success": "Success",
     "warning": "Warning",
     "save": "Save",

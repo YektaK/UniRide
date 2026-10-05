@@ -111,7 +111,13 @@ export default function VehiclePlanningPage() {
             });
 
             if (!response.ok) {
-                throw new Error("Hesaplama başarısız");
+                // C2: surface the redacted fail-closed matrix message from the BFF.
+                const errorBody = await response.json().catch(() => null);
+                throw new Error(
+                    errorBody?.code && typeof errorBody.error === "string"
+                        ? errorBody.error
+                        : "Hesaplama başarısız"
+                );
             }
 
             const data = await response.json();

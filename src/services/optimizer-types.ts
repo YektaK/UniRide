@@ -53,6 +53,9 @@ export interface CompareResult {
   best_algorithm: string;
   fastest_algorithm: string;
   summary: Record<string, { total_vehicles: number; total_duration_minutes: number; execution_time_seconds: number; success: boolean }>;
+  /** Set when the optimizer failed closed on the travel-time matrix (503/422). */
+  error_message?: string;
+  error_code?: "travel_time_matrix_unavailable" | "travel_time_matrix_locations_missing";
   algorithm_requested?: string;
   feasibility_certificate?: unknown;
   applied_policy?: AppliedComputePolicyInfo;

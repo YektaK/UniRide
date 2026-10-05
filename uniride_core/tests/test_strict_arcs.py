@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from uniride_core.algorithms.ga_split_engine import GAIndividual, educate_individual
-from uniride_core.algorithms.meta_split_common import giant_tour_cost
+from uniride_core.algorithms.meta_split_common import giant_tour_cost, local_search_improve
 from uniride_core.algorithms.route_metrics import TravelTimeUnavailableError, strict_arc
 from uniride_core.algorithms.route_scheduling import calculate_scheduled_times
 
@@ -72,3 +72,8 @@ def test_scheduling_missing_arc_raises(direction):
 def test_scheduling_with_arc_does_not_raise(direction):
     routes = calculate_scheduled_times([_route("A", "B")], _request(direction), FULL)
     assert routes[0].arrival_times
+
+
+def test_local_search_improve_missing_arc_raises_instead_of_returning_tour():
+    with pytest.raises(TravelTimeUnavailableError):
+        local_search_improve(["A", "B", "C"], "D", MISSING)

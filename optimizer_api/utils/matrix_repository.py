@@ -217,6 +217,8 @@ class TimeMatrixRepository:
         self.time_matrix = None
         self._use_coordinates = True
         self._loaded_at: Optional[float] = None
+        # sha256 of the loaded matrix, computed lazily and reset on every load/clear
+        self._matrix_digest: Optional[str] = None
         self._last_error: Optional[str] = None
         self._next_retry_at: Optional[float] = None
 
@@ -240,6 +242,7 @@ class TimeMatrixRepository:
             self.time_matrix = None
             self._use_coordinates = True
             self._loaded_at = None
+            self._matrix_digest = None
             self._last_error = None
             self._next_retry_at = None
             self._consecutive_failures = 0
@@ -250,6 +253,7 @@ class TimeMatrixRepository:
             self._build_from_rows(rows)
             self._use_coordinates = False
             self._loaded_at = self._clock()
+            self._matrix_digest = None
             self._last_error = None
             self._next_retry_at = None
             self._consecutive_failures = 0
@@ -266,6 +270,7 @@ class TimeMatrixRepository:
             self.time_matrix = None
             self._use_coordinates = True
             self._loaded_at = None
+            self._matrix_digest = None
 
     def refresh(self, force: bool = False) -> None:
         """Reload from the provider when stale or forced (double-checked lock).
@@ -310,6 +315,7 @@ class TimeMatrixRepository:
             self.time_matrix = None
             self._use_coordinates = True
             self._loaded_at = None
+            self._matrix_digest = None
             self._last_error = None
             self._next_retry_at = None
             self._consecutive_failures = 0
@@ -463,13 +469,19 @@ class TimeMatrixRepository:
                 raise MatrixUnavailableError()
             return self._arc_value(from_loc, to_loc)
 
+    def _digest_locked(self) -> str:
+        """Matrix digest, computed once per load (caller holds the lock)."""
+        if self._matrix_digest is None:
+            self._matrix_digest = matrix_sha256(list(self.locations), self.time_matrix)
+        return self._matrix_digest
+
     def _provenance_locked(self) -> Dict[str, Any]:
         """Provenance of the loaded matrix; caller holds the lock and has
         verified a matrix is loaded. Never contains keys, URLs or codes."""
         loaded_at = self._loaded_at
         return {
             "source": "supabase",
-            "sha256": matrix_sha256(list(self.locations), self.time_matrix),
+            "sha256": self._digest_locked(),
             "location_count": len(self.locations),
             "loaded_at": (
                 datetime.fromtimestamp(loaded_at, tz=timezone.utc).isoformat()
@@ -680,7 +692,7 @@ class TimeMatrixRepository:
                     "duration_minutes": value,
                 })
 
-        digest = matrix_sha256(locations, matrix)
+        digest = provenance["sha256"]
         return {
             "id": f"time_matrix:sha256:{digest}",
             "version": digest,

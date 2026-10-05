@@ -237,3 +237,25 @@ def test_provenance_field_is_optional_for_existing_clients():
         {"algorithm_used": "x", "success": False, "routes": []}
     )
     assert parsed.matrix_provenance is None
+
+
+def test_digest_is_computed_once_per_load_and_recomputed_after_reload(monkeypatch):
+    from utils import matrix_repository
+
+    calls = []
+    real = matrix_repository.matrix_sha256
+
+    def counting(locations, matrix):
+        calls.append(1)
+        return real(locations, matrix)
+
+    monkeypatch.setattr(matrix_repository, "matrix_sha256", counting)
+    repo = _loaded_repository()
+    first = repo.matrix_provenance()["sha256"]
+    repo.matrix_provenance()
+    repo.capture_arcs_with_provenance(["D.Kampus", "L1"])
+    repo.matrix_snapshot(["L1", "L2"], "D.Kampus")
+    assert len(calls) == 1
+    repo.refresh(force=True)
+    assert repo.matrix_provenance()["sha256"] == first
+    assert len(calls) == 2

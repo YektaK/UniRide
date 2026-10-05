@@ -7,11 +7,10 @@ import random
 from typing import Any, Dict, List, Optional, Tuple
 
 from uniride_core.algorithms.local_search import LocalSearchType, apply_local_search
+from uniride_core.algorithms.route_metrics import strict_arc
 from uniride_core.algorithms.string_split_decoder import decode_giant_tour, decode_with_time_windows
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_TRAVEL_FALLBACK_MINUTES = 15.0
 
 
 def shuffle_permutation(items: List[str], rng: random.Random) -> List[str]:
@@ -32,10 +31,10 @@ def giant_tour_cost(
     if not tour:
         return 0.0
 
-    total = distance_matrix.get(depot, {}).get(tour[0], DEFAULT_TRAVEL_FALLBACK_MINUTES)
+    total = strict_arc(distance_matrix, depot, tour[0])
     for idx in range(len(tour) - 1):
-        total += distance_matrix.get(tour[idx], {}).get(tour[idx + 1], DEFAULT_TRAVEL_FALLBACK_MINUTES)
-    total += distance_matrix.get(tour[-1], {}).get(depot, DEFAULT_TRAVEL_FALLBACK_MINUTES)
+        total += strict_arc(distance_matrix, tour[idx], tour[idx + 1])
+    total += strict_arc(distance_matrix, tour[-1], depot)
     return float(total)
 
 
@@ -134,7 +133,6 @@ def decode_final_tour(
 
 
 __all__ = [
-    "DEFAULT_TRAVEL_FALLBACK_MINUTES",
     "decode_final_tour",
     "giant_tour_cost",
     "local_search_improve",

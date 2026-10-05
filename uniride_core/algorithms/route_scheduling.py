@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping, MutableSequence
 
-from uniride_core.algorithms.route_metrics import DEFAULT_TRAVEL_FALLBACK_MINUTES
+from uniride_core.algorithms.route_metrics import strict_arc
 
 
 def calculate_scheduled_times(
@@ -54,9 +54,7 @@ def calculate_scheduled_times(
                 from_loc = locations[i]
                 to_loc = locations[i + 1]
 
-                travel_time = distance_matrix.get(from_loc, {}).get(
-                    to_loc, DEFAULT_TRAVEL_FALLBACK_MINUTES
-                )
+                travel_time = strict_arc(distance_matrix, from_loc, to_loc)
                 current_minutes -= travel_time
                 arrival_times[from_loc] = minutes_to_time(current_minutes)
 
@@ -84,9 +82,7 @@ def calculate_scheduled_times(
                 from_loc = locations[i]
                 to_loc = locations[i + 1]
 
-                travel_time = distance_matrix.get(from_loc, {}).get(
-                    to_loc, DEFAULT_TRAVEL_FALLBACK_MINUTES
-                )
+                travel_time = strict_arc(distance_matrix, from_loc, to_loc)
                 current_minutes += travel_time
                 arrival_times[to_loc] = minutes_to_time(current_minutes)
 

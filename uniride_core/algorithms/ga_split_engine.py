@@ -14,11 +14,10 @@ from uniride_core.algorithms.objective_rank import (
     fitness_from_key,
     objective_key,
 )
+from uniride_core.algorithms.route_metrics import TravelTimeUnavailableError, strict_arc
 from uniride_core.algorithms.string_split_decoder import decode_giant_tour, decode_with_time_windows
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_TRAVEL_FALLBACK_MINUTES = 15.0
 
 
 @dataclass
@@ -197,9 +196,9 @@ def educate_individual(
         total = 0.0
         previous = depot
         for location in route:
-            total += distance_matrix.get(previous, {}).get(location, DEFAULT_TRAVEL_FALLBACK_MINUTES)
+            total += strict_arc(distance_matrix, previous, location)
             previous = location
-        total += distance_matrix.get(previous, {}).get(depot, DEFAULT_TRAVEL_FALLBACK_MINUTES)
+        total += strict_arc(distance_matrix, previous, depot)
         return total
 
     try:
@@ -215,6 +214,8 @@ def educate_individual(
             num_vehicles=individual.num_vehicles,
             obj_key=individual.obj_key,
         )
+    except TravelTimeUnavailableError:
+        raise  # a missing arc is not a recoverable local-search failure
     except Exception as exc:
         logger.debug("Local search failed for individual: %s", exc)
         return individual

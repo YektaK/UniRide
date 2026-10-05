@@ -73,7 +73,7 @@ class _FakeVehicleCalculator:
     def __init__(self, **kwargs):
         self.kwargs = kwargs
 
-    def calculate(self, students, route_optimizer):
+    def calculate(self, students, route_optimizer, time_matrix=None, depot=None):
         route = route_optimizer([student["location_code"] for student in students])
         return {
             "assignments": [

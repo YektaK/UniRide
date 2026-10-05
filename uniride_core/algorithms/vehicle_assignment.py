@@ -78,8 +78,17 @@ class VehicleCalculator:
         self,
         students: List[Dict],
         route_optimizer: Optional[RouteOptimizer] = None,
+        time_matrix: Optional[Dict[str, Dict[str, float]]] = None,
+        depot: Optional[Dict] = None,
     ) -> Dict:
-        """Create vehicle assignments and optionally optimize each cluster route."""
+        """Create vehicle assignments and optionally optimize each cluster route.
+
+        ``time_matrix`` is the authoritative directed travel-time matrix keyed
+        by physical location code and including the depot; ``depot`` is
+        ``{"id", "lat", "lng"}``. Both are handed to the clustering strategy, so
+        the matrix-based strategies (k_medoids, clarke_wright) cluster on the
+        stored matrix and raise ``MissingTravelTimeError`` for a missing pair.
+        """
         if not students:
             return {
                 "success": True,
@@ -104,6 +113,12 @@ class VehicleCalculator:
             points.append(point)
             student_map[student["id"]] = student
 
+        cluster_kwargs: Dict = {}
+        if time_matrix is not None:
+            cluster_kwargs["time_matrix"] = time_matrix
+        if depot is not None:
+            cluster_kwargs["depot"] = depot
+
         num_vehicles = self.estimate_vehicle_count(points)
         max_attempts = min(len(students) - num_vehicles + 1, 15)
 
@@ -113,7 +128,7 @@ class VehicleCalculator:
         best_duration = 0
 
         for _ in range(max_attempts):
-            clusters = self.cluster_students(points, num_vehicles)
+            clusters = self.cluster_students(points, num_vehicles, **cluster_kwargs)
 
             assignments = []
             total_duration = 0

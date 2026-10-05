@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,6 +52,7 @@ const testStudents = [
 
 export default function VehiclePlanningPage() {
     const { toast } = useToast();
+    const tc = useTranslations("common");
     const [loading, setLoading] = useState(false);
     const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
     const [maxTourTime, setMaxTourTime] = useState(120);
@@ -111,13 +113,15 @@ export default function VehiclePlanningPage() {
             });
 
             if (!response.ok) {
-                // C2: surface the redacted fail-closed matrix message from the BFF.
+                // C2: the optimizer fails closed when the travel-time matrix cannot answer.
                 const errorBody = await response.json().catch(() => null);
-                throw new Error(
-                    errorBody?.code && typeof errorBody.error === "string"
-                        ? errorBody.error
-                        : "Hesaplama başarısız"
-                );
+                if (errorBody?.code === "travel_time_matrix_unavailable") {
+                    throw new Error(tc("matrixUnavailable"));
+                }
+                if (errorBody?.code === "travel_time_matrix_locations_missing") {
+                    throw new Error(tc("matrixLocationsMissing"));
+                }
+                throw new Error("Hesaplama başarısız");
             }
 
             const data = await response.json();

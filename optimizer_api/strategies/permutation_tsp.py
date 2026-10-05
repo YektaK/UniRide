@@ -121,7 +121,12 @@ class PermutationTSPStrategy(BaseRoutingStrategy):
 
             return {"route_details": route_details, "total_duration": duration}
 
-        result = calculator.calculate(student_dicts, route_optimizer)
+        result = calculator.calculate(
+            student_dicts,
+            route_optimizer,
+            time_matrix=context["physical_time_matrix"],
+            depot={"id": depot.id, "lat": depot.lat, "lng": depot.lng},
+        )
 
         # Build response
         routes = []

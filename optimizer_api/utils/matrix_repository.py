@@ -86,6 +86,11 @@ def academic_coordinate_scope() -> Iterator[None]:
         _ACADEMIC_COORDINATE_SCOPE.reset(token)
 
 
+def in_academic_coordinate_scope() -> bool:
+    """True while inside :func:`academic_coordinate_scope` (legacy /benchmark runner)."""
+    return _ACADEMIC_COORDINATE_SCOPE.get()
+
+
 def _coordinate_fallback_allowed() -> bool:
     """Read the explicit dev/test opt-in (``UNIRIDE_ALLOW_COORDINATE_FALLBACK``)."""
     try:
@@ -697,6 +702,7 @@ class TimeMatrixRepository:
 __all__ = [
     "IncompleteTravelMatrixError",
     "academic_coordinate_scope",
+    "in_academic_coordinate_scope",
     "MatrixSnapshotError",
     "MatrixUnavailableError",
     "SupabaseTimeMatrixProvider",

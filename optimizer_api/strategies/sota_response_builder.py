@@ -12,6 +12,26 @@ DistanceLookup = Callable[[str, str], float]
 DurationLookup = Callable[[str, str], float]
 
 
+def build_physical_time_matrix(physical_ids, raw_matrix) -> Dict[str, Dict[str, float]]:
+    """Directed authoritative matrix keyed by PHYSICAL location code (depot included).
+
+    ``raw_matrix`` is the positional submatrix fetched for ``physical_ids``
+    (duplicates allowed). Occurrences sharing a code collapse to one entry; the
+    arc between them is the matrix's own 0. Used for clustering (k_medoids,
+    clarke_wright), which works on physical stops, not on occurrence nodes.
+    """
+    first_index: Dict[str, int] = {}
+    for index, code in enumerate(physical_ids):
+        first_index.setdefault(code, index)
+    return {
+        origin: {
+            destination: raw_matrix[i][j]
+            for destination, j in first_index.items()
+        }
+        for origin, i in first_index.items()
+    }
+
+
 def build_sota_request_context(students, depot) -> Dict:
     """Build app-layer matrix context from an OptimizationRequest.
 
@@ -58,6 +78,7 @@ def build_sota_request_context(students, depot) -> Dict:
 
     return {
         "coordinates": coordinates,
+        "physical_time_matrix": build_physical_time_matrix(physical_ids, raw_matrix),
         "time_matrix": time_matrix,
         "student_ids": occurrence_keys,
         "distance_lookup": distance_lookup,

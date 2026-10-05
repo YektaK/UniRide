@@ -87,13 +87,16 @@ class StubStrategy:
         return self._response
 
 
-def test_greedy_tsp_certificate_is_feasible(monkeypatch):
+def test_greedy_tsp_certificate_is_feasible():
     # TSPLIB-style coordinates define the distances here, not the stored
-    # time_matrix: opt in to the coordinate path explicitly (C2).
-    monkeypatch.setenv("UNIRIDE_ALLOW_COORDINATE_FALLBACK", "1")
+    # time_matrix: run under the explicit academic scope, exactly like the
+    # legacy /benchmark runner (C2), not the dev opt-in.
+    from utils.matrix_repository import academic_coordinate_scope
+
     problem = _small_tsp_problem()
     request = _benchmark_request(problem.coordinates)
-    response = get_strategy("greedy").optimize(request)
+    with academic_coordinate_scope():
+        response = get_strategy("greedy").optimize(request)
 
     certificate = certify_benchmark_response(problem, response)
 

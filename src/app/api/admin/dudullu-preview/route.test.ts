@@ -1206,6 +1206,35 @@ const oneStudentRows = () => ({
 });
 
 describe("POST /api/admin/dudullu-preview time limits", () => {
+  it.each(["pickup", "dropoff"] as const)("consults the solver for a %s route shorter than a direct campus arc", async (direction) => {
+    const client = setAdmin({ ...crowd(2), vehicles: [vehicleRow("v1", 2, 2, 10)],
+      student_leg_decisions: [confirmedLeg(1, direction), confirmedLeg(2, direction)] });
+    const arcs = [
+      { origin_code: "D.Kampus", destination_code: "Sw1", duration_minutes: 10 },
+      { origin_code: "Sw1", destination_code: "Sw2", duration_minutes: 10 },
+      { origin_code: "Sw2", destination_code: "D.Kampus", duration_minutes: 10 },
+      { origin_code: "D.Kampus", destination_code: "Sw2", duration_minutes: direction === "dropoff" ? 100 : 10 },
+      { origin_code: "Sw1", destination_code: "D.Kampus", duration_minutes: direction === "pickup" ? 100 : 10 },
+      { origin_code: "Sw2", destination_code: "Sw1", duration_minutes: 10 },
+    ];
+    optimizerFetchMock.mockImplementation(async (path: string, init?: { body: string }) => {
+      if (path === "/api/v1/internal/matrix-snapshot") return Response.json({ ...matrix, arcs });
+      const request = JSON.parse(init!.body) as LimitBody;
+      expect(request).toMatchObject({ max_ride_time: 50, max_travel_time: 150 });
+      return Response.json({ success: true, routes: [{ vehicle_id: "v1",
+        route_details: arcs.slice(0, 3).map((arc) => ({ location1: arc.origin_code, location2: arc.destination_code, duration: arc.duration_minutes, distance: 0 })),
+        total_duration_minutes: 30, sw_count: 2, so_count: 0, student_ids: request.students.map((student) => student.id),
+      }], total_duration_minutes: 30, feasibility_certificate: { is_feasible: true } });
+    });
+    const { POST } = await import("./route");
+    const body = await (await POST(post({ serviceDate: "2026-09-30", maxRideTimeMinutes: 50 }))).json();
+    expect(optimizerFetchMock.mock.calls.map(([path]) => path)).toEqual(["/api/v1/internal/matrix-snapshot", "/api/v1/optimize"]);
+    expect(body.status).toBe("preview_ready");
+    expect(body.jobs).toHaveLength(1);
+    expect(body.limits.minimumFeasibleRideMinutes).toBeNull();
+    expectReadOnly(client);
+  });
+
   it("forwards the defaults (90 min ride, 150 min tour) and echoes them", async () => {
     setAdmin({ ...crowd(1), vehicles: [vehicleRow("v1", 2, 2, 10)], student_leg_decisions: [confirmedLeg(1), confirmedLeg(1, "dropoff")] });
     const bodies = mockLimitTransport(SHORT_ARCS);
@@ -1294,33 +1323,6 @@ describe("POST /api/admin/dudullu-preview time limits", () => {
     const badDate = await POST(post({ serviceDate: "2026-02-30", maxRideTimeMinutes: 1 }));
     expect(await badDate.json()).toEqual({ error: "INVALID_SERVICE_DATE" });
     expect(getSupabaseAdminMock).not.toHaveBeenCalled();
-  });
-
-  it("reports RIDE_TIME_LIMIT_INFEASIBLE with the minimum feasible limit and never calls the optimizer", async () => {
-    const client = setAdmin(oneStudentRows());
-    mockLimitTransport(LONG_PICKUP_ARCS);
-    const { POST } = await import("./route");
-
-    const response = await POST(post({ serviceDate: "2026-09-30", maxRideTimeMinutes: 30 }));
-    const body = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(body).toMatchObject({ status: "blocked_data", publishable: false, jobs: [] });
-    expect(body.reasonCodes).toContain("RIDE_TIME_LIMIT_INFEASIBLE");
-    expect(body.reasonCodes).not.toContain("OPTIMIZATION_NOT_SUCCESSFUL");
-    expect(body.limits).toEqual({ maxRideTimeMinutes: 30, maxTourMinutes: 150, minimumFeasibleRideMinutes: 40 });
-    expect(optimizerFetchMock.mock.calls.map(([path]) => path)).toEqual(["/api/v1/internal/matrix-snapshot"]);
-    expectReadOnly(client);
-  });
-
-  it("rounds the minimum feasible limit up", async () => {
-    setAdmin(oneStudentRows());
-    mockLimitTransport([LONG_PICKUP_ARCS[0]!, { ...LONG_PICKUP_ARCS[1]!, duration_minutes: 40.2 }]);
-    const { POST } = await import("./route");
-
-    const body = await (await POST(post({ serviceDate: "2026-09-30", maxRideTimeMinutes: 30 }))).json();
-
-    expect(body.limits.minimumFeasibleRideMinutes).toBe(41);
   });
 
   it("lets a limit equal to the direct ride through", async () => {

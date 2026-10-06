@@ -328,7 +328,8 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
 5. Kartlar kontrol edilir:
    - "Bu rotalar için gereken araç" kartında `minimumProven` doğrudur, yani "en fazla" etiketi yoktur;
    - öğrenci ve rota sayıları `candidateSummary` ile tutarlıdır;
-   - aktif filo ve eksik araç sayısı görünür.
+   - aktif filo sayısı ve sanal şablona göre araç sayısı farkı görünür; sanal sonuç gerçek filonun kapasite/bekleme koşullarına göre yeterliliğini kanıtlamaz;
+   - gerçek filo modunda yalnızca tüm rota aralıkları ve seferleri kapsayan geçerli atama “Mevcut filo bu rotalara atanabildi” sonucunu destekler. Atama araması bitmese bile tam atama bu rotaların atanabildiğini gösterir; en az araç sayısını kanıtlamaz. “Mevcut filo bu rotalara atanamıyor” farklı rotalarla çözüm olmadığını veya tam ek araç sayısını kanıtlamaz.
 6. Her dalgada duraklar sıralıdır. Saatler pickup'ta anchor'da biter, dropoff'ta anchor'da başlar.
 7. Araç tablosunda aynı araçtaki rotalar çakışmaz ve aralarında cooldown kadar boşluk vardır.
 8. Anahtarlar kapatılıp tekrar çalıştırılır. Beklenen sonuç `PENDING_STUDENT_CONFIRMATION` ile boş gündür (kayıt yoksa). Bu, canlı veriye hiçbir şey yazılmadığını gösterir.

@@ -137,10 +137,10 @@ function SummaryCards({ plan }: { plan: DailyPlanView }) {
 
   let difference: { text: string; className: string };
   if (fleet.state === "missing") {
-    difference = { text: t("missing", { n: fleet.amount }), className: "text-red-700 dark:text-red-300" };
+    difference = { text: t("missing"), className: "text-red-700 dark:text-red-300" };
   } else if (fleet.state === "enough") {
     difference = {
-      text: fleet.amount === 0 ? t("enough") : `${t("enough")} — ${t("spare", { n: fleet.amount })}`,
+      text: t("enough"),
       className: "text-emerald-700 dark:text-emerald-300",
     };
   } else {
@@ -197,9 +197,12 @@ function SummaryCards({ plan }: { plan: DailyPlanView }) {
             <CardTitle className="text-3xl">{fleet.liveFleet ?? "—"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
-            <p className="text-muted-foreground">{t("difference")}</p>
+            {plan.virtualFleet && fleet.difference !== null && (
+              <p className="text-muted-foreground">
+                {t("difference")}: {fleet.neededAtMost ? `${t("atMost")} ` : ""}{fleet.difference}
+              </p>
+            )}
             <p className={cn("font-medium", difference.className)}>
-              {fleet.neededAtMost && fleet.state !== "unknown" ? `${t("atMost")} ` : ""}
               {difference.text}
             </p>
           </CardContent>

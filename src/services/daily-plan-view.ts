@@ -148,10 +148,10 @@ export interface FleetComparison {
   readonly needed: number | null;
   readonly neededAtMost: boolean;
   readonly liveFleet: number | null;
-  /** needed - liveFleet; positive means vehicles are missing. Null when either side is unknown. */
+  /** Count comparison only: template vehicles minus live vehicles is not a feasibility proof. */
   readonly difference: number | null;
   readonly state: FleetState;
-  /** Missing vehicles when state is "missing", spare vehicles when "enough", else 0. */
+  /** Retained for API compatibility; exact shortage/spare counts are not established. */
   readonly amount: number;
 }
 
@@ -340,22 +340,81 @@ function buildVehicles(
   return { rows, labelByRouteId, timeline: { startMinutes: timelineStart, endMinutes: timelineEnd, ticks } };
 }
 
+/** Check the producer's complete witness, without repeating its capacity/cooldown solver. */
+function hasCompleteRouteEvidence(response: DudulluPreviewResponse, requireAssignment: boolean): boolean {
+  const intervals = response.jobs.flatMap((job) => job.intervals);
+  const routeCount = response.jobs.reduce((sum, job) => sum + job.result.routes.length, 0);
+  if (routeCount === 0 || intervals.length !== routeCount
+    || response.routeIntervals.length !== routeCount || (requireAssignment && response.assignments.length !== routeCount)
+    || new Set(response.jobs.map((job) => job.id)).size !== response.jobs.length) return false;
+  const signature = (interval: DudulluPreviewResponse["routeIntervals"][number]) => JSON.stringify([
+    interval.jobId, interval.routeIndex, interval.vehicleId, interval.direction,
+    interval.startMinutes, interval.endMinutes, interval.swCount, interval.soCount,
+    [...interval.occurrenceIds].sort(),
+  ]);
+  const expected = new Map<string, string>();
+  const occurrences = new Set<string>();
+  for (const job of response.jobs) {
+    if (!job.result.success || job.serviceDate !== response.serviceDate
+      || job.intervals.length !== job.result.routes.length) return false;
+    for (const interval of job.intervals) {
+      const route = job.result.routes[interval.routeIndex];
+      const key = routeKey(interval.jobId, interval.routeIndex);
+      if (!route || interval.jobId !== job.id || interval.direction !== job.direction
+        || interval.vehicleId !== route.vehicle_id || interval.swCount !== route.sw_count
+        || interval.soCount !== route.so_count || interval.endMinutes <= interval.startMinutes
+        || interval.occurrenceIds.length !== interval.swCount + interval.soCount
+        || interval.occurrenceIds.length === 0
+        || JSON.stringify([...interval.occurrenceIds].sort()) !== JSON.stringify([...route.student_ids].sort())
+        || expected.has(key)) return false;
+      for (const id of interval.occurrenceIds) {
+        if (!id || occurrences.has(id)) return false;
+        occurrences.add(id);
+      }
+      expected.set(key, signature(interval));
+    }
+  }
+  for (const entries of requireAssignment ? [response.routeIntervals, response.assignments] : [response.routeIntervals]) {
+    const seen = new Set<string>();
+    for (const entry of entries) {
+      const key = routeKey(entry.jobId, entry.routeIndex);
+      if (seen.has(key) || expected.get(key) !== signature(entry)) return false;
+      seen.add(key);
+    }
+  }
+  if (!requireAssignment) return true;
+  const byVehicle = new Map<string, typeof response.assignments>();
+  for (const assignment of response.assignments) {
+    const slots = byVehicle.get(assignment.physicalVehicleId) ?? [];
+    if (slots.some((slot) => assignment.startMinutes < slot.endMinutes && slot.startMinutes < assignment.endMinutes)) return false;
+    byVehicle.set(assignment.physicalVehicleId, [...slots, assignment]);
+  }
+  const vehicleIds = new Set(response.assignments.map((assignment) => assignment.physicalVehicleId));
+  if (vehicleIds.has("") || [...vehicleIds].some((id) => id.trim() === "")) return false;
+  if (response.fleet.activeVehicleIds && [...vehicleIds].some((id) => !response.fleet.activeVehicleIds!.includes(id))) return false;
+  return [response.fleet.liveActiveFleetSize, response.fleet.assignmentFleetSize, response.vehicleSummary?.activeFleetSize]
+    .every((size) => size == null || vehicleIds.size <= size);
+}
+
 function compareFleet(
   needed: number | null,
   neededAtMost: boolean,
-  liveFleet: number | null,
+  response: DudulluPreviewResponse,
 ): FleetComparison {
-  if (needed === null || liveFleet === null) {
-    return { needed, neededAtMost, liveFleet, difference: null, state: "unknown", amount: 0 };
-  }
-  const difference = needed - liveFleet;
+  const liveFleet = response.fleet.liveActiveFleetSize;
+  const state = response.fleetMode !== "live" || response.fleet.mode !== "live" ? "unknown"
+    : response.status === "shortage" && response.vehicleSummary !== null && response.assignments.length === 0
+      && response.reasonCodes.includes("FLEET_SHORTAGE") && hasCompleteRouteEvidence(response, false) ? "missing"
+    : (response.status === "preview_ready" || response.status === "indeterminate") && response.vehicleSummary !== null
+      && hasCompleteRouteEvidence(response, true) ? "enough"
+    : "unknown";
   return {
     needed,
     neededAtMost,
     liveFleet,
-    difference,
-    state: difference > 0 ? "missing" : "enough",
-    amount: Math.abs(difference),
+    difference: needed === null || liveFleet === null ? null : needed - liveFleet,
+    state,
+    amount: 0,
   };
 }
 
@@ -517,7 +576,7 @@ export function buildDailyPlanView(response: DudulluPreviewResponse): DailyPlanV
       trips,
       routes: routeCount,
       invalidStudentRecords: response.candidateSummary.invalidStudentRecords,
-      fleet: compareFleet(neededVehicles, neededAtMost, response.fleet.liveActiveFleetSize),
+      fleet: compareFleet(neededVehicles, neededAtMost, response),
       maxRideMinutes: pendingRoutes.length === 0
         ? null
         : Math.max(...pendingRoutes.map((route) => route.maxRideMinutes)),

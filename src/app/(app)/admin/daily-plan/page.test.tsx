@@ -145,36 +145,13 @@ describe("DailyPlanPage", () => {
     ]);
   });
 
-  it("explains an infeasible ride limit in plain Turkish with the minimum feasible limit", async () => {
+  it("describes a failed route computation without claiming a minimum ride limit", async () => {
     await generate(rideLimitInfeasibleResponse());
-
-    expect(screen.getByText(/Seçilen öğrenci araçta kalma sınırı \(15 dk\) bu gün için karşılanamıyor/)).toBeTruthy();
-    expect(screen.getByText(/en az 23 dk yapın/)).toBeTruthy();
-    expect(screen.queryAllByTestId("wave-card")).toHaveLength(0);
-  });
-
-  it("tells the admin that 240 min is not enough instead of asking for an unreachable limit", async () => {
-    const response = rideLimitInfeasibleResponse();
-    await generate({
-      ...response,
-      limits: { maxRideTimeMinutes: 240, maxTourMinutes: 300, minimumFeasibleRideMinutes: 260 },
-    });
-
     const notes = screen.getByTestId("status-notes").textContent ?? "";
-    expect(notes).toContain("Bu gün için en yüksek sınır olan 240 dk bile yetmiyor");
-    expect(notes).toContain("en az 260 dk");
-    expect(notes).not.toContain("yapın");
-    expect(notes).not.toContain("Sınırı artırın");
-  });
-
-  it("keeps asking for the minimum limit while it is within the 240 min maximum", async () => {
-    await generate({
-      ...rideLimitInfeasibleResponse(),
-      limits: { maxRideTimeMinutes: 90, maxTourMinutes: 150, minimumFeasibleRideMinutes: 240 },
-    });
-
-    expect(screen.getByText(/en az 240 dk yapın/)).toBeTruthy();
-    expect(screen.queryByText(/bile yetmiyor/)).toBeNull();
+    expect(notes).toContain("(15 dk) içinde uygun bir rota hesaplanamadı");
+    expect(notes).toContain("kanıtlamaz");
+    expect(notes).not.toContain("en az");
+    expect(screen.queryAllByTestId("wave-card")).toHaveLength(0);
   });
 
   it("explains why 3 vehicles when the limits add one above the capacity floor", async () => {

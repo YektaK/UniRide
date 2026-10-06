@@ -341,9 +341,7 @@
           "timeline": "Zaman çizelgesi"
         },
         "notes": {
-          "title": "Durum notları",
-          "rideLimitMinimum": "Bu gün için öğrenci araçta kalma sınırını en az {min} dk yapın.",
-          "rideLimitUnreachable": "Bu gün için en yüksek sınır olan {max} dk bile yetmiyor: en az bir öğrencinin doğrudan yolculuğu bundan uzun (en az {min} dk). Sınırı artırmak sorunu çözmez."
+          "title": "Durum notları"
         },
         "reasons": {
           "ADMISSION_ASSUMED": "Demo için bekleyen tüm öğrenci seferleri onaylı sayıldı. Bu bir varsayımdır, gerçek onay değildir.",
@@ -365,7 +363,7 @@
           "NO_ROUTE_STEPS": "Bir rotada hiç adım yok; plan geçersiz sayıldı.",
           "OPTIMIZATION_NOT_SUCCESSFUL": "Rota çözücüsü başarılı bir sonuç döndürmedi veya ulaşılamadı.",
           "PENDING_STUDENT_CONFIRMATION": "Bazı öğrencilerin onayı hâlâ bekleniyor.",
-          "RIDE_TIME_LIMIT_INFEASIBLE": "Seçilen öğrenci araçta kalma sınırı ({limit} dk) bu gün için karşılanamıyor; plan kurulamadı. Sınırı artırın.",
+          "RIDE_TIME_LIMIT_INFEASIBLE": "Seçilen öğrenci araçta kalma sınırı ({limit} dk) içinde uygun bir rota hesaplanamadı. Bu sonuç, bu sınırda hiçbir rotanın mümkün olmadığını kanıtlamaz.",
           "ROUTE_OUTSIDE_SERVICE_DAY": "Bir rota gün sınırlarının dışına taşıyor.",
           "ROUTE_LOAD_MISMATCH": "Rotadaki Sw/So sayıları öğrenci listesiyle uyuşmuyor.",
           "ROUTE_TOTAL_MISMATCH": "Rota toplam süresi adımların toplamıyla uyuşmuyor.",

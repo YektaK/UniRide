@@ -351,7 +351,7 @@ describe("buildDailyPlanView - student ride time", () => {
     const view = buildDailyPlanView(blockedResponse());
     expect(view.summary.maxRideMinutes).toBeNull();
     expect(view.limits).toEqual({ maxRideTimeMinutes: 90, maxTourMinutes: 150, minimumFeasibleRideMinutes: null });
-    expect(buildDailyPlanView(rideLimitInfeasibleResponse()).limits.minimumFeasibleRideMinutes).toBe(23);
+    expect(buildDailyPlanView(rideLimitInfeasibleResponse()).limits.minimumFeasibleRideMinutes).toBeNull();
   });
 
   it("treats RIDE_TIME_LIMIT_INFEASIBLE as a known problem code", () => {

@@ -353,9 +353,6 @@ function VehicleSchedule({ plan }: { plan: DailyPlanView }) {
 
 function StatusNotes({ plan, t }: { plan: DailyPlanView; t: Translate }) {
   if (plan.reasons.length === 0) return null;
-  const minimumRide = plan.limits.minimumFeasibleRideMinutes;
-  // Even the largest limit the form accepts cannot fix this day: do not tell the user to raise it.
-  const rideLimitUnreachable = minimumRide !== null && minimumRide > RIDE_LIMIT_RANGE.max;
   return (
     <Card data-testid="status-notes">
       <CardHeader className="pb-2">
@@ -369,13 +366,8 @@ function StatusNotes({ plan, t }: { plan: DailyPlanView; t: Translate }) {
                 ? <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                 : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />}
               <span>
-                {rideLimitUnreachable && reason.code === "RIDE_TIME_LIMIT_INFEASIBLE"
-                  ? t("notes.rideLimitUnreachable", { max: RIDE_LIMIT_RANGE.max, min: minimumRide })
-                  : t(`reasons.${reason.messageKey}`, { limit: plan.limits.maxRideTimeMinutes })}
+                {t(`reasons.${reason.messageKey}`, { limit: plan.limits.maxRideTimeMinutes })}
                 {reason.messageKey === "unknown" ? ` (${reason.code})` : ""}
-                {!rideLimitUnreachable && reason.code === "RIDE_TIME_LIMIT_INFEASIBLE" && minimumRide !== null
-                  ? ` ${t("notes.rideLimitMinimum", { min: minimumRide })}`
-                  : ""}
               </span>
             </li>
           ))}

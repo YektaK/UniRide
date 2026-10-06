@@ -6,7 +6,6 @@ import {
   buildDudulluPreview,
   buildVirtualFleet,
   longestStudentRideMinutes,
-  requiredDirectRideMinutes,
   selectVirtualFleetTemplate,
 } from "./dudullu-preview";
 import type {
@@ -976,13 +975,4 @@ describe("student ride time helpers", () => {
     expect(longestStudentRideMinutes([], "pickup")).toBe(0);
   });
 
-  it("requires the largest direct campus arc in each demand's own direction", () => {
-    const matrix = { arcs: [arc(DEPOT, "Sw1", 5), arc("Sw1", DEPOT, 40), arc(DEPOT, "Sw2", 55), arc("Sw2", DEPOT, 9)] };
-    const demand = (direction: "pickup" | "dropoff", locationCode: string) => ({ direction, locationCode });
-    expect(requiredDirectRideMinutes([demand("pickup", "Sw1")], matrix)).toBe(40);
-    expect(requiredDirectRideMinutes([demand("dropoff", "Sw1")], matrix)).toBe(5);
-    expect(requiredDirectRideMinutes([demand("pickup", "Sw2"), demand("dropoff", "Sw2")], matrix)).toBe(55);
-    expect(requiredDirectRideMinutes([demand("pickup", "Unknown")], matrix)).toBeNull();
-    expect(requiredDirectRideMinutes([], matrix)).toBeNull();
-  });
 });

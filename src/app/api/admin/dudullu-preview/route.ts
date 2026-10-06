@@ -15,7 +15,6 @@ import {
   assumeScheduledLegsConfirmed,
   buildDudulluPreview,
   buildVirtualFleet,
-  requiredDirectRideMinutes,
   selectVirtualFleetTemplate,
   type PreviewDemand,
   type VirtualFleetTemplate,
@@ -42,8 +41,6 @@ const RIDE_LIMIT_RANGE = { min: 15, max: 240 } as const;
 const TOUR_LIMIT_RANGE = { min: 30, max: 300 } as const;
 const LIMIT_KEYS: ReadonlySet<unknown> = new Set(["maxRideTimeMinutes", "maxTourMinutes"]);
 const MODE_KEYS: ReadonlySet<unknown> = new Set(["admissionMode", "fleetMode"]);
-/** Matrix durations are 2-decimal rounded; a direct ride within this margin is left to the optimizer. */
-const RIDE_LIMIT_PRECHECK_MARGIN = 0.01;
 const SERVICE_DATE_SCHEMA = z.object({
   serviceDate: z.string().regex(DATE_PATTERN),
   admissionMode: z.enum(ADMISSION_MODES).optional(),
@@ -216,8 +213,7 @@ async function loadBlockedPreview(serviceDate: string, modes: PreviewModes) {
     template: VirtualFleetTemplate | null;
     maxCapacity: { swCapacity: number; soCapacity: number } | null;
   } = { mode: fleetMode, assignmentFleetSize: null, liveActiveFleetSize: null, template: null, maxCapacity: null };
-  // Echo of the limits the optimizer is given. `minimumFeasibleRideMinutes` is set only when a
-  // student's own direct ride already exceeds the ride limit.
+  // The optimizer limits are echoed; no global minimum ride limit is proven.
   const limits: {
     maxRideTimeMinutes: number;
     maxTourMinutes: number;
@@ -483,15 +479,6 @@ async function loadBlockedPreview(serviceDate: string, modes: PreviewModes) {
     return finish(blockedPreview(serviceDate, admitted, null, "MATRIX_UNAVAILABLE"));
   }
 
-  // Cheap fail-closed pre-check: a student's own direct ride (campus arc in the wave's
-  // direction) is a lower bound of that student's ride in any route. If it already exceeds the
-  // ride limit, the optimizer cannot succeed, so say so instead of a generic failure.
-  const requiredRide = requiredDirectRideMinutes(admitted, matrix);
-  if (requiredRide !== null && requiredRide > maxRideTimeMinutes + RIDE_LIMIT_PRECHECK_MARGIN) {
-    limits.minimumFeasibleRideMinutes = Math.ceil(requiredRide);
-    return finish(blockedPreview(serviceDate, admitted, matrix, "RIDE_TIME_LIMIT_INFEASIBLE"));
-  }
-
   const groups = new Map<string, PreviewDemand[]>();
   for (const demand of admitted) {
     const key = `${demand.direction}:${demand.anchorMinutes}`;
@@ -544,8 +531,7 @@ async function loadBlockedPreview(serviceDate: string, modes: PreviewModes) {
       return finish({ ...blockedPreview(serviceDate, admitted, matrix, "FLEET_SHORTAGE"), status: "shortage" as const });
     }
     if (!result.success && violatesRideTime(result.feasibility_certificate)) {
-      // The solver could not keep every student within the ride limit (the cheap pre-check
-      // above only catches a student's own direct ride).
+      // No suitable route was computed within the ride limit.
       return finish(blockedPreview(serviceDate, admitted, matrix, "RIDE_TIME_LIMIT_INFEASIBLE"));
     }
     jobs.push({

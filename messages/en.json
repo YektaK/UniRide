@@ -272,7 +272,7 @@
         },
         "status": {
           "preview_ready": "Preview ready",
-          "shortage": "Not enough vehicles",
+          "shortage": "Current fleet cannot be assigned to these routes",
           "blocked_data": "Blocked: data or service problem",
           "indeterminate": "Result not conclusive"
         },
@@ -290,11 +290,10 @@
           "routesHint": "{waves} waves",
           "maxRide": "Longest student ride of the day: {n} min (limit: {limit} min)",
           "liveFleet": "Current fleet",
-          "difference": "Difference",
-          "missing": "{n} vehicles short",
-          "enough": "Current fleet is enough",
-          "spare": "{n} vehicles spare",
-          "differenceUnknown": "Cannot compare"
+          "difference": "Vehicle count difference against the virtual template",
+          "missing": "Current fleet cannot be assigned to these routes",
+          "enough": "Current fleet was assigned to these routes",
+          "differenceUnknown": "Real fleet sufficiency has not been verified"
         },
         "why": {
           "title": "Why {n, plural, one {# vehicle} other {# vehicles}}?",
@@ -353,7 +352,7 @@
           "DUPLICATE_MATRIX_ARC": "The travel-time matrix has conflicting durations for the same arc.",
           "DUPLICATE_OCCURRENCE_COVERAGE": "The same trip appears in more than one route; the plan was rejected.",
           "FLEET_INVALID": "Vehicle records contain invalid or duplicate data.",
-          "FLEET_SHORTAGE": "The current fleet is not enough for these routes.",
+          "FLEET_SHORTAGE": "Current fleet cannot be assigned to these routes. This does not prove that other routes are impossible or establish an exact extra vehicle count.",
           "JOB_CONTRACT_MISMATCH": "A wave has an inconsistent time or direction; the plan was rejected.",
           "LEG_DECISIONS_UNAVAILABLE": "The student decision table was not found; recorded confirmations could not be read.",
           "LEGACY_AMBIGUOUS_CONFIRMATION": "Some students have legacy requests and their confirmation state is ambiguous.",

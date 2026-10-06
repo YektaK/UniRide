@@ -88,6 +88,8 @@ export const dudulluPreviewResponseSchema = z.object({
     mode: z.enum(["live", "virtual"]),
     assignmentFleetSize: count.nullable(),
     liveActiveFleetSize: count.nullable(),
+    /** Optional on older responses; identifies the live fleet used by the producer. */
+    activeVehicleIds: z.array(z.string()).optional(),
     template: z.object({
       swCapacity: count,
       soCapacity: count,

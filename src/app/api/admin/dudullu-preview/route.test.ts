@@ -748,6 +748,7 @@ describe("POST /api/admin/dudullu-preview demo modes", () => {
     expect(body.reasonCodes).not.toContain("ADMISSION_ASSUMED");
     expect(body.fleet).toEqual({
       mode: "live", assignmentFleetSize: 1, liveActiveFleetSize: 1, template: null,
+      activeVehicleIds: ["v1"],
       maxCapacity: { swCapacity: 2, soCapacity: 2 },
     });
   });
@@ -913,6 +914,7 @@ describe("POST /api/admin/dudullu-preview demo modes", () => {
       expect(bodies.map((item) => item.vehicles.length)).toEqual([3, 3]);
       expect(body.fleet).toEqual({
         mode: "virtual", assignmentFleetSize: 6, liveActiveFleetSize: 2,
+        activeVehicleIds: ["v1", "v2"],
         template: { swCapacity: 2, soCapacity: 2, cooldownMinutes: 10 },
         maxCapacity: { swCapacity: 2, soCapacity: 2 },
       });
@@ -962,6 +964,7 @@ describe("POST /api/admin/dudullu-preview demo modes", () => {
       expect(body.status).toBe("preview_ready");
       expect(body.fleet).toEqual({
         mode: "virtual", assignmentFleetSize: 2, liveActiveFleetSize: 0,
+        activeVehicleIds: [],
         template: { swCapacity: 4, soCapacity: 10, cooldownMinutes: 10 },
         maxCapacity: { swCapacity: 4, soCapacity: 10 },
       });

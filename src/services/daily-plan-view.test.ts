@@ -150,7 +150,7 @@ describe("buildDailyPlanView - ready plan", () => {
     expect(view.summary.routes).toBe(3);
     expect(view.summary.peakConcurrentRoutes).toBe(2);
     expect(view.summary.fleet).toEqual({
-      needed: 2, neededAtMost: false, liveFleet: 1, difference: 1, state: "missing", amount: 1,
+      needed: 2, neededAtMost: false, liveFleet: 1, difference: 1, state: "unknown", amount: 0,
     });
   });
 
@@ -162,12 +162,12 @@ describe("buildDailyPlanView - ready plan", () => {
     expect(view.isEmptyDay).toBe(false);
   });
 
-  it("reports a sufficient real fleet with its spare vehicles", () => {
+  it("keeps virtual count comparisons separate from real sufficiency", () => {
     const response = readyResponse();
     const enough = buildDailyPlanView({ ...response, fleet: { ...response.fleet, liveActiveFleetSize: 5 } });
-    expect(enough.summary.fleet).toMatchObject({ difference: -3, state: "enough", amount: 3 });
+    expect(enough.summary.fleet).toMatchObject({ difference: -3, state: "unknown", amount: 0 });
     const exact = buildDailyPlanView({ ...response, fleet: { ...response.fleet, liveActiveFleetSize: 2 } });
-    expect(exact.summary.fleet).toMatchObject({ difference: 0, state: "enough", amount: 0 });
+    expect(exact.summary.fleet).toMatchObject({ difference: 0, state: "unknown", amount: 0 });
   });
 
   it("does not know the difference when the live fleet size is missing", () => {
@@ -221,7 +221,7 @@ describe("buildDailyPlanView - shortage", () => {
     expect(view.summary.tone).toBe("danger");
     expect(view.summary.neededVehicles).toBeNull();
     expect(view.summary.lowerBound).toBe(2);
-    expect(view.summary.fleet.state).toBe("unknown");
+    expect(view.summary.fleet.state).toBe("missing");
     expect(view.sections).toHaveLength(2);
     expect(view.vehicles).toEqual([]);
     expect(view.sections[0].waves[0].routes.every((route) => route.vehicleLabel === null)).toBe(true);
@@ -302,6 +302,64 @@ describe("buildDailyPlanView - blocked and empty days", () => {
   it("does not call a blocked day with admitted trips empty", () => {
     const view = buildDailyPlanView(blockedResponse(["MATRIX_UNAVAILABLE"]));
     expect(view.isEmptyDay).toBe(false);
+  });
+});
+
+describe("fleet assignment evidence", () => {
+  const live = () => {
+    const response = readyResponse();
+    return { ...response, fleetMode: "live" as const,
+      routeIntervals: response.jobs.flatMap((job) => job.intervals),
+      fleet: { ...response.fleet, mode: "live" as const, liveActiveFleetSize: 4, template: null } };
+  };
+
+  it.each(["preview_ready", "indeterminate"] as const)("accepts a complete live witness in %s", (status) => {
+    const response = live();
+    expect(buildDailyPlanView({ ...response, status,
+      vehicleSummary: { ...response.vehicleSummary!, minimumProven: false } }).summary.fleet.state).toBe("enough");
+  });
+
+  it.each(["missing", "incomplete", "duplicate", "unknown route", "time", "occurrences", "overlap", "empty vehicle", "unknown vehicle", "too many vehicles", "missing interval", "duplicate interval", "duplicate job"])(
+    "rejects %s witness", (kind) => {
+      const response = live();
+      if (kind === "missing") response.assignments = [];
+      if (kind === "incomplete") response.assignments.pop();
+      if (kind === "duplicate") response.assignments[1] = { ...response.assignments[0] };
+      if (kind === "unknown route") response.assignments[0].jobId = "unknown";
+      if (kind === "time") response.assignments[0].endMinutes += 1;
+      if (kind === "occurrences") response.assignments[0].occurrenceIds = ["unknown"];
+      if (kind === "overlap") response.assignments[1].physicalVehicleId = response.assignments[0].physicalVehicleId;
+      if (kind === "empty vehicle") response.assignments[0].physicalVehicleId = "";
+      if (kind === "unknown vehicle") Object.assign(response.fleet, { activeVehicleIds: ["unknown"] });
+      if (kind === "too many vehicles") response.fleet.liveActiveFleetSize = 1;
+      if (kind === "missing interval") response.routeIntervals.pop();
+      if (kind === "duplicate interval") response.routeIntervals[1] = { ...response.routeIntervals[0] };
+      if (kind === "duplicate job") response.jobs.push(response.jobs[0]);
+      expect(buildDailyPlanView(response).summary.fleet.state).toBe("unknown");
+    },
+  );
+
+  it("never promotes virtual capacity or cooldown assumptions into real evidence", () => {
+    for (const cooldownMinutes of [0, 60]) {
+      const response = readyResponse();
+      response.fleet.liveActiveFleetSize = 2;
+      response.fleet.template = { swCapacity: 8, soCapacity: 10, cooldownMinutes };
+      expect(buildDailyPlanView(response).summary.fleet).toMatchObject({ difference: 0, state: "unknown" });
+    }
+    expect(buildDailyPlanView(indeterminateResponse()).summary.fleet).toMatchObject({ neededAtMost: true, state: "unknown", amount: 0 });
+  });
+
+  it("keeps an invalid or empty shortage unknown", () => {
+    const response = shortageResponse();
+    response.routeIntervals.pop();
+    expect(buildDailyPlanView(response).summary.fleet.state).toBe("unknown");
+    expect(buildDailyPlanView({ ...shortageResponse(), jobs: [], routeIntervals: [] }).summary.fleet.state).toBe("unknown");
+  });
+
+  it("parses available live identities while accepting older responses", () => {
+    const response = live();
+    expect(parseDudulluPreviewResponse({ ...response, fleet: { ...response.fleet, activeVehicleIds: ["v1", "v2"] } }).fleet.activeVehicleIds).toEqual(["v1", "v2"]);
+    expect(parseDudulluPreviewResponse(response).fleet.activeVehicleIds).toBeUndefined();
   });
 });
 

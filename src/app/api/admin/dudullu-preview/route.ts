@@ -213,6 +213,7 @@ async function loadBlockedPreview(serviceDate: string, modes: PreviewModes) {
     mode: FleetMode;
     assignmentFleetSize: number | null;
     liveActiveFleetSize: number | null;
+    activeVehicleIds?: string[];
     template: VirtualFleetTemplate | null;
     maxCapacity: { swCapacity: number; soCapacity: number } | null;
   } = { mode: fleetMode, assignmentFleetSize: null, liveActiveFleetSize: null, template: null, maxCapacity: null };
@@ -446,6 +447,7 @@ async function loadBlockedPreview(serviceDate: string, modes: PreviewModes) {
     });
   }
   fleetInfo.liveActiveFleetSize = liveVehicles.length;
+  fleetInfo.activeVehicleIds = liveVehicles.map((vehicle) => vehicle.vehicleId);
   if (fleetMode === "live" && liveVehicles.length === 0) {
     return finish(blockedPreview(serviceDate, admitted, null, "FLEET_SHORTAGE"));
   }

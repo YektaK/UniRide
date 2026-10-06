@@ -126,7 +126,7 @@ const baseResponse = (): Response => ({
     ],
   },
   jobs: makeJobs(),
-  routeIntervals: [],
+  routeIntervals: makeJobs().flatMap((job) => job.intervals),
   assignments: [
     {
       jobId: "2026-10-05:pickup:525", routeIndex: 0, vehicleId: "virtual:4-10-10:1", direction: "pickup",

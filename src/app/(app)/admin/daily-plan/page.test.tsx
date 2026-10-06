@@ -13,6 +13,9 @@ import {
 } from "@/services/daily-plan-fixtures";
 import type { DudulluPreviewResponse } from "@/services/dudullu-preview-response";
 import trMessages from "../../../../../messages/tr.json";
+import enMessages from "../../../../../messages/en.json";
+
+let testLocale: "tr" | "en" = "tr";
 
 const mocks = vi.hoisted(() => ({
   run: vi.fn(),
@@ -23,7 +26,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next-intl", () => ({
   useTranslations: (namespace: string) => (key: string, values?: Record<string, string | number>) => {
     const path = `${namespace}.${key}`.split(".");
-    let node: unknown = trMessages;
+    let node: unknown = testLocale === "tr" ? trMessages : enMessages;
     for (const segment of path) {
       node = typeof node === "object" && node !== null ? (node as Record<string, unknown>)[segment] : undefined;
     }
@@ -59,7 +62,38 @@ describe("DailyPlanPage", () => {
   afterEach(cleanup);
 
   beforeEach(() => {
+    testLocale = "tr";
     mocks.run.mockReset();
+  });
+
+  it.each(["tr", "en"] as const)("renders fleet evidence without false spare or shortage claims in %s", async (locale) => {
+    testLocale = locale;
+    const copy = (locale === "tr" ? trMessages : enMessages).page.admin.dailyPlan;
+    const response = readyResponse();
+    response.fleet.liveActiveFleetSize = 2;
+    for (const mode of ["virtual", "live", "incomplete", "indeterminate", "shortage"] as const) {
+      const current = mode === "shortage" ? shortageResponse() : structuredClone(response);
+      if (mode !== "virtual" && mode !== "shortage") {
+        current.fleetMode = "live";
+        current.fleet.mode = "live";
+        current.fleet.template = null;
+      }
+      if (mode === "incomplete") current.assignments.pop();
+      if (mode === "indeterminate") {
+        current.status = "indeterminate";
+        current.vehicleSummary!.minimumProven = false;
+      }
+      mocks.run.mockResolvedValue(current);
+      render(<DailyPlanPage />);
+      fireEvent.click(screen.getByRole("button", { name: copy.controls.run }));
+      const fleet = await screen.findByTestId("card-fleet");
+      const expected = mode === "virtual" || mode === "incomplete" ? copy.cards.differenceUnknown
+        : mode === "shortage" ? copy.cards.missing : copy.cards.enough;
+      expect(within(fleet).getByText(expected)).toBeTruthy();
+      if (mode === "virtual") expect(within(fleet).getByText(`${copy.cards.difference}: 0`)).toBeTruthy();
+      expect(fleet.textContent).not.toMatch(/spare|boşta|vehicles short|araç eksik/);
+      cleanup();
+    }
   });
 
   it("starts with the demo defaults and an initial prompt", () => {
@@ -280,7 +314,8 @@ describe("DailyPlanPage", () => {
 
     const fleet = screen.getByTestId("card-fleet");
     expect(within(fleet).getByText("Mevcut filo")).toBeTruthy();
-    expect(within(fleet).getByText("1 araç eksik")).toBeTruthy();
+    expect(within(fleet).getByText("Sanal şablona göre araç sayısı farkı: 1")).toBeTruthy();
+    expect(within(fleet).getByText("Gerçek filo yeterliliği doğrulanmadı")).toBeTruthy();
 
     const rows = screen.getAllByTestId("vehicle-row");
     expect(rows).toHaveLength(2);
@@ -320,11 +355,11 @@ describe("DailyPlanPage", () => {
   it("shows a shortage without a vehicle count", async () => {
     await generate(shortageResponse());
 
-    expect(screen.getByText("Araç yetersiz")).toBeTruthy();
+    expect(screen.getAllByText("Mevcut filo bu rotalara atanamıyor").length).toBe(2);
     const needed = screen.getByTestId("card-needed-vehicles");
     expect(within(needed).getByTestId("needed-vehicles-value").textContent).toBe("—");
     expect(within(needed).getByText("Bu rotalar için en az 2 araç gerekir.")).toBeTruthy();
-    expect(screen.getByText("Mevcut filo bu rotalar için yetersiz.")).toBeTruthy();
+    expect(screen.getByText(/Bu sonuç farklı rotalarla çözüm olmadığını/)).toBeTruthy();
     expect(screen.getByText(/Bu sonuçta araç ataması yok/)).toBeTruthy();
     expect(screen.queryAllByTestId("vehicle-row")).toHaveLength(0);
   });

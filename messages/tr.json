@@ -272,7 +272,7 @@
         },
         "status": {
           "preview_ready": "Önizleme hazır",
-          "shortage": "Araç yetersiz",
+          "shortage": "Mevcut filo bu rotalara atanamıyor",
           "blocked_data": "Plan oluşturulamadı: veri veya hizmet sorunu",
           "indeterminate": "Sonuç kesin değil"
         },
@@ -290,11 +290,10 @@
           "routesHint": "{waves} dalga",
           "maxRide": "Günün en uzun öğrenci yolculuğu: {n} dk (sınır: {limit} dk)",
           "liveFleet": "Mevcut filo",
-          "difference": "Fark",
-          "missing": "{n} araç eksik",
-          "enough": "Mevcut filo yeterli",
-          "spare": "{n} araç boşta kalır",
-          "differenceUnknown": "Karşılaştırılamadı"
+          "difference": "Sanal şablona göre araç sayısı farkı",
+          "missing": "Mevcut filo bu rotalara atanamıyor",
+          "enough": "Mevcut filo bu rotalara atanabildi",
+          "differenceUnknown": "Gerçek filo yeterliliği doğrulanmadı"
         },
         "why": {
           "title": "Neden {n} araç?",
@@ -353,7 +352,7 @@
           "DUPLICATE_MATRIX_ARC": "Seyahat süresi matrisinde aynı yol için çelişen süreler var.",
           "DUPLICATE_OCCURRENCE_COVERAGE": "Aynı sefer birden fazla rotada görünüyor; plan geçersiz sayıldı.",
           "FLEET_INVALID": "Araç kayıtlarında geçersiz veya tekrar eden bilgi var.",
-          "FLEET_SHORTAGE": "Mevcut filo bu rotalar için yetersiz.",
+          "FLEET_SHORTAGE": "Mevcut filo bu rotalara atanamıyor. Bu sonuç farklı rotalarla çözüm olmadığını veya tam kaç ek araç gerektiğini kanıtlamaz.",
           "JOB_CONTRACT_MISMATCH": "Bir dalganın saat veya yön bilgisi tutarsız; plan geçersiz sayıldı.",
           "LEG_DECISIONS_UNAVAILABLE": "Öğrenci onay kayıtları tablosu bulunamadı; kayıtlı onaylar okunamadı.",
           "LEGACY_AMBIGUOUS_CONFIRMATION": "Bazı öğrencilerin eski usul talepleri var ve onay durumları belirsiz.",

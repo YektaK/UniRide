@@ -524,4 +524,3 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
   }
   return finish(buildDudulluPreview({ serviceDate, demands: admitted, vehicles, matrix, jobs }));
 }
-

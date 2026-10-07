@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2440 254" width="2440" height="254" font-family="Arial, Helvetica, sans-serif"><defs><pattern id="cool" patternUnits="userSpaceOnUse" width="5" height="5" patternTransform="rotate(45)"><rect width="5" height="5" fill="#f3f3f3"/><line x1="0" y1="0" x2="0" y2="5" stroke="#999" stroke-width="1.5"/></pattern></defs><rect width="100%" height="100%" fill="#ffffff"/>
+<text x="20" y="24" font-size="16" font-weight="bold" fill="#111">Friday 2026-10-09, ride limit R=70 min, tour limit 150 min, 5 vehicles</text>
+<rect x="20" y="40" width="14" height="12" fill="#0072B2" stroke="#222" stroke-width="0.7"/><text x="40" y="51" font-size="12" fill="#222">Pickup (P): ends at campus at anchor</text>
+<rect x="294" y="40" width="14" height="12" fill="#E69F00" stroke="#222" stroke-width="0.7"/><text x="314" y="51" font-size="12" fill="#222">Drop-off (D): leaves campus at anchor</text>
+<rect x="574.5" y="40" width="14" height="12" fill="url(#cool)" stroke="#888" stroke-width="0.6"/><text x="594.5" y="51" font-size="12" fill="#222">10-min cooldown</text>
+<text x="704.5" y="51" font-size="11" fill="#555">Bar label: anchor time, direction, Sw/So load</text>
+<rect x="80" y="86" width="2340" height="30" fill="#f4f4f4"/>
+<text x="74" y="105" font-size="12" text-anchor="end" fill="#222">Vehicle 1</text>
+<rect x="80" y="116" width="2340" height="30" fill="#ffffff"/>
+<text x="74" y="135" font-size="12" text-anchor="end" fill="#222">Vehicle 2</text>
+<rect x="80" y="146" width="2340" height="30" fill="#f4f4f4"/>
+<text x="74" y="165" font-size="12" text-anchor="end" fill="#222">Vehicle 3</text>
+<rect x="80" y="176" width="2340" height="30" fill="#ffffff"/>
+<text x="74" y="195" font-size="12" text-anchor="end" fill="#222">Vehicle 4</text>
+<rect x="80" y="206" width="2340" height="30" fill="#f4f4f4"/>
+<text x="74" y="225" font-size="12" text-anchor="end" fill="#222">Vehicle 5</text>
+<line x1="80" y1="86" x2="80" y2="236" stroke="#bbb" stroke-width="0.7"/>
+<text x="80" y="80" font-size="11" text-anchor="middle" fill="#333">07:00</text>
+<line x1="260" y1="86" x2="260" y2="236" stroke="#bbb" stroke-width="0.7"/>
+<text x="260" y="80" font-size="11" text-anchor="middle" fill="#333">08:00</text>
+<line x1="440" y1="86" x2="440" y2="236" stroke="#bbb" stroke-width="0.7"/>
+<text x="440" y="80" font-size="11" text-anchor="middle" fill="#333">09:00</text>
+<line x1="620" y1="86" x2="620" y2="236" stroke="#bbb" stroke-width="0.7"/>
+<text x="620" y="80" font-size="11" text-anchor="middle" fill="#333">10:00</text>
+<line x1="800" y1="86" x2="800" y2="236" stroke="#bbb" stroke-width="0.7"/>
+<text x="800" y="80" font-size="11" text-anchor="middle" fill="#333">11:00</text>
+<line x1="980" y1="86" x2="980" y2="236" stroke="#bbb" stroke-width="0.7"/>
+<text x="980" y="80" font-size="11" text-anchor="middle" fill="#333">12:00</text>
+<line x1="1160" y1="86" x2="1160" y2="236" stroke="#bbb" stroke-width="0.7"/>
+<text x="1160" y="80" font-size="11" text-anchor="middle" fill="#333">13:00</text>
+<line x1="1340" y1="86" x2="1340" y2="236" stroke="#bbb" stroke-width="0.7"/>
+<text x="1340" y="80" font-size="11" text-anchor="middle" fill="#333">14:00</text>
+<line x1="1520" y1="86" x2="1520" y2="236" stroke="#bbb" stroke-width="0.7"/>
+<text x="1520" y="80" font-size="11" text-anchor="middle" fill="#333">15:00</text>
+<line x1="1700" y1="86" x2="1700" y2="236" stroke="#bbb" stroke-width="0.7"/>
+<text x="1700" y="80" font-size="11" text-anchor="middle" fill="#333">16:00</text>
+<line x1="1880" y1="86" x2="1880" y2="236" stroke="#bbb" stroke-width="0.7"/>
+<text x="1880" y="80" font-size="11" text-anchor="middle" fill="#333">17:00</text>
+<line x1="2060" y1="86" x2="2060" y2="236" stroke="#bbb" stroke-width="0.7"/>
+<text x="2060" y="80" font-size="11" text-anchor="middle" fill="#333">18:00</text>
+<line x1="2240" y1="86" x2="2240" y2="236" stroke="#bbb" stroke-width="0.7"/>
+<text x="2240" y="80" font-size="11" text-anchor="middle" fill="#333">19:00</text>
+<line x1="2420" y1="86" x2="2420" y2="236" stroke="#bbb" stroke-width="0.7"/>
+<text x="2420" y="80" font-size="11" text-anchor="middle" fill="#333">20:00</text>
+<rect x="395" y="90" width="30" height="22" fill="url(#cool)" stroke="#888" stroke-width="0.6"/>
+<g><title>Pickup Vehicle6, anchor 08:45, 3 students, route 102 min, max ride 62 min, 2 Sw / 1 So, 07:03-08:45</title><clipPath id="c1"><rect x="89" y="90" width="306" height="22"/></clipPath>
+<rect x="89" y="90" width="306" height="22" fill="#0072B2" stroke="#222" stroke-width="0.7"/>
+<text clip-path="url(#c1)" x="92" y="105" font-size="9.5" fill="#fff">08:45 P 2Sw/1So</text></g>
+<rect x="575" y="90" width="30" height="22" fill="url(#cool)" stroke="#888" stroke-width="0.6"/>
+<g><title>Pickup Vehicle6, anchor 09:45, 1 students, route 40 min, max ride 18 min, 0 Sw / 1 So, 09:05-09:45</title><clipPath id="c2"><rect x="455" y="90" width="120" height="22"/></clipPath>
+<rect x="455" y="90" width="120" height="22" fill="#0072B2" stroke="#222" stroke-width="0.7"/>
+<text clip-path="url(#c2)" x="458" y="105" font-size="9.5" fill="#fff">09:45 P 0Sw/1So</text></g>
+<rect x="1295" y="90" width="30" height="22" fill="url(#cool)" stroke="#888" stroke-width="0.6"/>
+<g><title>Pickup Vehicle6, anchor 13:45, 3 students, route 110 min, max ride 65 min, 0 Sw / 3 So, 11:55-13:45</title><clipPath id="c3"><rect x="965" y="90" width="330" height="22"/></clipPath>
+<rect x="965" y="90" width="330" height="22" fill="#0072B2" stroke="#222" stroke-width="0.7"/>
+<text clip-path="url(#c3)" x="968" y="105" font-size="9.5" fill="#fff">13:45 P 0Sw/3So</text></g>
+<rect x="1901" y="90" width="30" height="22" fill="url(#cool)" stroke="#888" stroke-width="0.6"/>
+<g><title>Drop-off Vehicle6, anchor 16:15, 1 students, route 52 min, max ride 30 min, 0 Sw / 1 So, 16:15-17:07</title><clipPath id="c4"><rect x="1745" y="90" width="156" height="22"/></clipPath>
+<rect x="1745" y="90" width="156" height="22" fill="#E69F00" stroke="#222" stroke-width="0.7"/>
+<text clip-path="url(#c4)" x="1748" y="105" font-size="9.5" fill="#000">16:15 D 0Sw/1So</text></g>
+<rect x="2168" y="90" width="30" height="22" fill="url(#cool)" stroke="#888" stroke-width="0.6"/>
+<g><title>Drop-off Vehicle6, anchor 18:15, 1 students, route 21 min, max ride 10 min, 0 Sw / 1 So, 18:15-18:36</title><clipPath id="c5"><rect x="2105" y="90" width="63" height="22"/></clipPath>
+<rect x="2105" y="90" width="63" height="22" fill="#E69F00" stroke="#222" stroke-width="0.7"/>
+<text clip-path="url(#c5)" x="2108" y="105" font-size="9.5" fill="#000">18:15 D 0Sw/1So</text></g>
+<rect x="395" y="120" width="30" height="22" fill="url(#cool)" stroke="#888" stroke-width="0.6"/>
+<g><title>Pickup Vehicle7, anchor 08:45, 7 students, route 92 min, max ride 62 min, 2 Sw / 5 So, 07:13-08:45</title><clipPath id="c6"><rect x="119" y="120" width="276" height="22"/></clipPath>
+<rect x="119" y="120" width="276" height="22" fill="#0072B2" stroke="#222" stroke-width="0.7"/>
+<text clip-path="url(#c6)" x="122" y="135" font-size="9.5" fill="#fff">08:45 P 2Sw/5So</text></g>
+<rect x="1229" y="120" width="30" height="22" fill="url(#cool)" stroke="#888" stroke-width="0.6"/>
+<g><title>Drop-off Vehicle7, anchor 12:15, 5 students, route 68 min, max ride 46 min, 1 Sw / 4 So, 12:15-13:23</title><clipPath id="c7"><rect x="1025" y="120" width="204" height="22"/></clipPath>
+<rect x="1025" y="120" width="204" height="22" fill="#E69F00" stroke="#222" stroke-width="0.7"/>
+<text clip-path="url(#c7)" x="1028" y="135" font-size="9.5" fill="#000">12:15 D 1Sw/4So</text></g>
+<rect x="2162" y="120" width="30" height="22" fill="url(#cool)" stroke="#888" stroke-width="0.6"/>
+<g><title>Drop-off Vehicle7, anchor 17:15, 2 students, route 79 min, max ride 43 min, 0 Sw / 2 So, 17:15-18:34</title><clipPath id="c8"><rect x="1925" y="120" width="237" height="22"/></clipPath>
+<rect x="1925" y="120" width="237" height="22" fill="#E69F00" stroke="#222" stroke-width="0.7"/>
+<text clip-path="url(#c8)" x="1928" y="135" font-size="9.5" fill="#000">17:15 D 0Sw/2So</text></g>
+<rect x="395" y="150" width="30" height="22" fill="url(#cool)" stroke="#888" stroke-width="0.6"/>
+<g><title>Pickup Vehicle8, anchor 08:45, 2 students, route 90 min, max ride 68 min, 0 Sw / 2 So, 07:15-08:45</title><clipPath id="c9"><rect x="125" y="150" width="270" height="22"/></clipPath>
+<rect x="125" y="150" width="270" height="22" fill="#0072B2" stroke="#222" stroke-width="0.7"/>
+<text clip-path="url(#c9)" x="128" y="165" font-size="9.5" fill="#fff">08:45 P 0Sw/2So</text></g>
+<rect x="1301" y="150" width="30" height="22" fill="url(#cool)" stroke="#888" stroke-width="0.6"/>
+<g><title>Drop-off Vehicle8, anchor 12:15, 3 students, route 92 min, max ride 55 min, 0 Sw / 3 So, 12:15-13:47</title><clipPath id="c10"><rect x="1025" y="150" width="276" height="22"/></clipPath>
+<rect x="1025" y="150" width="276" height="22" fill="#E69F00" stroke="#222" stroke-width="0.7"/>
+<text clip-path="url(#c10)" x="1028" y="165" font-size="9.5" fill="#000">12:15 D 0Sw/3So</text></g>
+<rect x="2222" y="150" width="30" height="22" fill="url(#cool)" stroke="#888" stroke-width="0.6"/>
+<g><title>Drop-off Vehicle8, anchor 17:15, 3 students, route 99 min, max ride 62 min, 1 Sw / 2 So, 17:15-18:54</title><clipPath id="c11"><rect x="1925" y="150" width="297" height="22"/></clipPath>
+<rect x="1925" y="150" width="297" height="22" fill="#E69F00" stroke="#222" stroke-width="0.7"/>
+<text clip-path="url(#c11)" x="1928" y="165" font-size="9.5" fill="#000">17:15 D 1Sw/2So</text></g>
+<rect x="395" y="180" width="30" height="22" fill="url(#cool)" stroke="#888" stroke-width="0.6"/>
+<g><title>Pickup Vehicle9, anchor 08:45, 1 students, route 20 min, max ride 10 min, 0 Sw / 1 So, 08:25-08:45</title><clipPath id="c12"><rect x="335" y="180" width="60" height="22"/></clipPath>
+<rect x="335" y="180" width="60" height="22" fill="#0072B2" stroke="#222" stroke-width="0.7"/>
+<text clip-path="url(#c12)" x="338" y="195" font-size="9.5" fill="#fff">08:45 P 0Sw/1So</text></g>
+<rect x="1433" y="180" width="30" height="22" fill="url(#cool)" stroke="#888" stroke-width="0.6"/>
+<g><title>Drop-off Vehicle9, anchor 13:15, 4 students, route 76 min, max ride 58 min, 2 Sw / 2 So, 13:15-14:31</title><clipPath id="c13"><rect x="1205" y="180" width="228" height="22"/></clipPath>
+<rect x="1205" y="180" width="228" height="22" fill="#E69F00" stroke="#222" stroke-width="0.7"/>
+<text clip-path="url(#c13)" x="1208" y="195" font-size="9.5" fill="#000">13:15 D 2Sw/2So</text></g>
+<rect x="1295" y="210" width="30" height="22" fill="url(#cool)" stroke="#888" stroke-width="0.6"/>
+<g><title>Pickup Vehicle10, anchor 13:45, 2 students, route 29 min, max ride 19 min, 0 Sw / 2 So, 13:16-13:45</title><clipPath id="c14"><rect x="1208" y="210" width="87" height="22"/></clipPath>
+<rect x="1208" y="210" width="87" height="22" fill="#0072B2" stroke="#222" stroke-width="0.7"/>
+<text clip-path="url(#c14)" x="1211" y="225" font-size="9.5" fill="#fff">13:45 P 0Sw/2So</text></g>
+</svg>

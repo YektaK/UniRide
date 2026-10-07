@@ -26,3 +26,9 @@ Caveats:
 - This is a single snapshot and supports descriptive reporting only.
 
 Analysis: see `../../DAILY_STUDENT_TRANSPORT_PLANNING_METHOD.md`, section 6.
+
+Schedule verification and figures:
+
+- [schedule_verification.md](schedule_verification.md): independent recomputation of overlap, cooldown, coverage, capacity, tour/ride limits and summary agreement for all 20 runs.
+- [figures/](figures/README.md): Gantt charts as SVG (20 daily, 4 weekly overviews); open [figures/index.html](figures/index.html) in a browser.
+- Regenerate with `python scripts/plan_schedule_report.py` (standard library only).

@@ -1,3 +1,5 @@
+> **INVALID — computed with a wrong vehicle capacity (4 Sw / 10 So) due to a database data error; superseded by [../week-2026-10-05-4sw5so/](../week-2026-10-05-4sw5so/).** Kept only as an archive; do not cite its numbers.
+
 # Daily-plan sensitivity campaign, week of 2026-10-05
 
 Archived output of one daily-plan experiment campaign (anonymized).

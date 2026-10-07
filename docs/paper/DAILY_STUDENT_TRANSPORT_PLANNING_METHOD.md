@@ -87,40 +87,53 @@ Results include waves, routes, longest passenger ride, capacity floors, and assi
 
 Mean passenger ride is a proposed study metric, not a currently displayed statistic. Calculate it from each admitted occurrence's cumulative arc time, weighted by passenger trips. Averaging route maxima would measure something different. Students, daily legs, routes, and vehicles must likewise remain distinct quantities.
 
-## 6. Planned sensitivity experiment
+## 6. Sensitivity experiment
 
 Cross five weekdays with R ∈ {50, 60, 70, 90} minutes, giving 20 scenario cells. Hold T = 150 minutes and use identical vehicles with 4 Sw positions, 10 So positions, and a 10-minute cooldown. Ensure that this exact template is supplied in every scenario; automatic selection from changing live signatures would confound comparisons. Freeze timetable data, admission rules, passenger ordering, and the directed matrix snapshot across relevant paired scenarios.
 
-Use a preregistered list of explicit seeds and repeated runs for each cell. Record effective parameters, termination reason, runtime, matrix identity, and assignment proof status. Repeating only the same seed and inputs checks reproducibility rather than variation across seeds. Set the replicate count and seed list before collecting results.
+This campaign uses one deterministic run per cell with the strategy's effective seed 42; an independent rerun reproduced all 20 rows exactly. Record effective parameters, termination reason, runtime, matrix identity, and assignment proof status. A rerun with the same seed and inputs checks reproducibility, not variation across seeds. Multi-seed robustness (a preregistered seed list and replicate count, with distributions summarized across seeds) is left to further study and is a validity limit of the results below.
 
 Record daily vehicles V, total routes K, wave count W, daily seat floor Lseat, gap V−Lseat, maximum and mean passenger ride, total vehicle travel-minutes, and routes per wave. Keep indeterminate assignments visible, with bounds where available. Do not report witness counts as optima or heuristic failure as proved infeasibility. Vehicle-minutes are the sum of closed-route travel times, excluding cooldown. Retain per-run records and summarize distributions across seeds.
 
-| Weekday | R (min) | V / proof status | K | Lseat / gap | Max / mean ride (min) | Vehicle-minutes | Routes per wave |
+### Results: week of 2026-10-05
+
+One snapshot, one run per cell (seed 42, native termination), under assumed confirmations. Raw files and provenance are in [docs/paper/results/week-2026-10-05/](results/week-2026-10-05/). Every row has status preview_ready; V is the vehicle count proven for the solver's fixed routes, not a global optimum. Gap = V - Lseat.
+
+| Weekday | R (min) | V / proof status | K (routes) | Lseat / gap | Max / mean ride (min) | Vehicle-minutes | Routes per wave (routes/waves) |
 |---|---:|---|---|---|---|---|---|
-| Monday | 50 | TBD | TBD | TBD | TBD | TBD | TBD |
-| Monday | 60 | TBD | TBD | TBD | TBD | TBD | TBD |
-| Monday | 70 | TBD | TBD | TBD | TBD | TBD | TBD |
-| Monday | 90 | TBD | TBD | TBD | TBD | TBD | TBD |
-| Tuesday | 50 | TBD | TBD | TBD | TBD | TBD | TBD |
-| Tuesday | 60 | TBD | TBD | TBD | TBD | TBD | TBD |
-| Tuesday | 70 | TBD | TBD | TBD | TBD | TBD | TBD |
-| Tuesday | 90 | TBD | TBD | TBD | TBD | TBD | TBD |
-| Wednesday | 50 | TBD | TBD | TBD | TBD | TBD | TBD |
-| Wednesday | 60 | TBD | TBD | TBD | TBD | TBD | TBD |
-| Wednesday | 70 | TBD | TBD | TBD | TBD | TBD | TBD |
-| Wednesday | 90 | TBD | TBD | TBD | TBD | TBD | TBD |
-| Thursday | 50 | TBD | TBD | TBD | TBD | TBD | TBD |
-| Thursday | 60 | TBD | TBD | TBD | TBD | TBD | TBD |
-| Thursday | 70 | TBD | TBD | TBD | TBD | TBD | TBD |
-| Thursday | 90 | TBD | TBD | TBD | TBD | TBD | TBD |
-| Friday | 50 | TBD | TBD | TBD | TBD | TBD | TBD |
-| Friday | 60 | TBD | TBD | TBD | TBD | TBD | TBD |
-| Friday | 70 | TBD | TBD | TBD | TBD | TBD | TBD |
-| Friday | 90 | TBD | TBD | TBD | TBD | TBD | TBD |
+| Monday | 50 | 6 (proven for fixed routes) | 26 | 2 / 4 | 50 / 28.3 | 1600 | 26/12 = 2.2 |
+| Monday | 60 | 5 (proven for fixed routes) | 21 | 2 / 3 | 60 / 31.9 | 1475 | 21/12 = 1.8 |
+| Monday | 70 | 4 (proven for fixed routes) | 17 | 2 / 2 | 70 / 35.6 | 1357 | 17/12 = 1.4 |
+| Monday | 90 | 3 (proven for fixed routes) | 16 | 2 / 1 | 89 / 41.5 | 1304 | 16/12 = 1.3 |
+| Tuesday | 50 | 5 (proven for fixed routes) | 22 | 1 / 4 | 50 / 26.6 | 1334 | 22/13 = 1.7 |
+| Tuesday | 60 | 4 (proven for fixed routes) | 20 | 1 / 3 | 58 / 29.2 | 1307 | 20/13 = 1.5 |
+| Tuesday | 70 | 4 (proven for fixed routes) | 18 | 1 / 3 | 67 / 31.8 | 1237 | 18/13 = 1.4 |
+| Tuesday | 90 | 3 (proven for fixed routes) | 14 | 1 / 2 | 88 / 42.9 | 1164 | 14/13 = 1.1 |
+| Wednesday | 50 | 6 (proven for fixed routes) | 20 | 1 / 5 | 50 / 28.9 | 1302 | 20/11 = 1.8 |
+| Wednesday | 60 | 6 (proven for fixed routes) | 18 | 1 / 5 | 60 / 30.8 | 1254 | 18/11 = 1.6 |
+| Wednesday | 70 | 6 (proven for fixed routes) | 18 | 1 / 5 | 69 / 34.7 | 1209 | 18/11 = 1.6 |
+| Wednesday | 90 | 4 (proven for fixed routes) | 14 | 1 / 3 | 88 / 42.2 | 1139 | 14/11 = 1.3 |
+| Thursday | 50 | 5 (proven for fixed routes) | 24 | 2 / 3 | 50 / 28.0 | 1494 | 24/13 = 1.8 |
+| Thursday | 60 | 4 (proven for fixed routes) | 20 | 2 / 2 | 60 / 32.0 | 1387 | 20/13 = 1.5 |
+| Thursday | 70 | 4 (proven for fixed routes) | 16 | 2 / 2 | 69 / 38.2 | 1294 | 16/13 = 1.2 |
+| Thursday | 90 | 4 (proven for fixed routes) | 16 | 2 / 2 | 81 / 39.3 | 1286 | 16/13 = 1.2 |
+| Friday | 50 | 6 (proven for fixed routes) | 17 | 1 / 5 | 50 / 29.1 | 1092 | 17/8 = 2.1 |
+| Friday | 60 | 5 (proven for fixed routes) | 15 | 1 / 4 | 60 / 31.3 | 1029 | 15/8 = 1.9 |
+| Friday | 70 | 5 (proven for fixed routes) | 14 | 1 / 4 | 68 / 32.2 | 970 | 14/8 = 1.8 |
+| Friday | 90 | 4 (proven for fixed routes) | 12 | 1 / 3 | 85 / 43.1 | 937 | 12/8 = 1.5 |
 
-**One reported illustration, not an experimental result:** a Monday scenario with 27 students, R = 90 minutes and T = 150 minutes was reported to use 3 vehicles, 16 routes, and 12 waves, with a longest ride of 89 minutes. Its peak pickup wave at 08:45 contained 20 passengers: 5 Sw and 15 So. Its seat floor is max(⌈5/4⌉, ⌈15/10⌉) = 2. The underlying run, effective configuration, and proof flag were not independently reproduced here. This illustration cannot establish optimality or superiority.
+Weekly fleet need is the maximum daily V over the five weekdays.
 
-Analyze achieved service level against fleet size. Tighter limits contract the feasible set, but independent heuristic runs need not produce a monotone observed vehicle count. Distinguish that mathematical expectation from search outcomes. This planned sensitivity study is descriptive. Later algorithm comparisons require a separate fair protocol using primary fixed objective-evaluation budgets, with native-termination results reported separately.
+| R (min) | Weekly fleet need | Mon | Tue | Wed | Thu | Fri | Total vehicle-minutes |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 50 | 6 | 6 | 5 | 6 | 5 | 6 | 6822 |
+| 60 | 6 | 5 | 4 | 6 | 4 | 5 | 6452 |
+| 70 | 6 | 4 | 4 | 6 | 4 | 5 | 6067 |
+| 90 | 4 | 3 | 3 | 4 | 4 | 4 | 5830 |
+
+In this snapshot the weekly fleet need was 6 vehicles for R = 50, 60 and 70 minutes and 4 vehicles for R = 90 minutes. Wednesday required 6 vehicles at every limit up to R = 70 and 4 at R = 90. Total vehicle-minutes decreased from 6822 at R = 50 to 5830 at R = 90, about 15% lower. The passenger-weighted mean ride rose from about 28 minutes at R = 50 to about 42 minutes at R = 90. The daily seat floors were 1 or 2 while the proven vehicle counts were 3 to 6. At R = 50 the longest ride equalled the limit on every day, and at R = 60 on four of five days (58 minutes on Tuesday); at R = 70 it equalled the limit on Monday only, and at R = 90 it stayed below the limit (maximum 89). These figures describe one set of heuristic routes for one week and do not identify causes of the differences. The vehicle minimum holds only for the fixed routes produced, not for all possible routings; the data are a single snapshot with one run per cell; and the results assume confirmed admissions for all legs, so they are not operational demand.
+
+Analyze achieved service level against fleet size. Tighter limits contract the feasible set, but independent heuristic runs need not produce a monotone observed vehicle count. Distinguish that mathematical expectation from search outcomes. This sensitivity study is descriptive. Later algorithm comparisons require a separate fair protocol using primary fixed objective-evaluation budgets, with native-termination results reported separately.
 
 ## 7. Further study
 

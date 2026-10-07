@@ -115,7 +115,7 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 
 ### O01 — certify on captured authoritative arcs
 
-- **Date/status:** 2026-10-05; documented C2 closure. **Chosen/rationale:** independently re-cost every response step on the snapshot or an atomic pre-solve copy; tolerance 0.005 minutes absorbs two-decimal formatting. Certify constraints on those costs.
+- **Date/status:** 2026-10-05; documented C2 closure. **Chosen/rationale:** independently re-cost every response step on the snapshot or an atomic pre-solve copy; per-arc tolerance 0.005 minutes absorbs two-decimal formatting, with corresponding aggregate formatting checks. It is not extra ride-time allowance. Certify constraints on authoritative costs.
 - **Rejected/why:** solver-reported durations self-certify; post-solve live lookup admits a refresh race. **Dead ends:** earlier response-derived matrix. **Reversal:** re-costing replaces self-reference; benchmark certification stays in its own problem domain.
 - **Evidence:** [architecture §5](../CURRENT_ARCHITECTURE.md), [Appendix J C2 certifier](ULTIMATE_AUDIT_2026-10-01_CLAUDE_OPUS_5_5.md); `c6684f3`, `9e34a2f`, merge `0b52ad9`. Historical integrated suites are reported there, not rerun here. **Check first:** captured arc identity/digest and independent mismatch tests.
 

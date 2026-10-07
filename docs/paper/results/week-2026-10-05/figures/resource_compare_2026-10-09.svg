@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1332 390" width="1332" height="390" font-family="Arial, Helvetica, sans-serif"><rect width="100%" height="100%" fill="#ffffff"/>
+<text x="24" y="24" font-size="16" font-weight="bold" fill="#111">Busy vehicles incl. 10-min cooldown by ride limit R, Friday 2026-10-09</text>
+<text x="24" y="42" font-size="12" fill="#444">Event-based step functions; hover a segment for the counts of all four R values.</text>
+<line x1="24" y1="57" x2="54" y2="57" stroke="#D55E00" stroke-width="2.4" stroke-dasharray="none"/><text x="60" y="61" font-size="12" fill="#222">R=50: peak 6 (required 6)</text>
+<line x1="255" y1="57" x2="285" y2="57" stroke="#E69F00" stroke-width="2.4" stroke-dasharray="7 4"/><text x="291" y="61" font-size="12" fill="#222">R=60: peak 5 (required 5)</text>
+<line x1="486" y1="57" x2="516" y2="57" stroke="#009E73" stroke-width="2.4" stroke-dasharray="2 3"/><text x="522" y="61" font-size="12" fill="#222">R=70: peak 5 (required 5)</text>
+<line x1="717" y1="57" x2="747" y2="57" stroke="#0072B2" stroke-width="2.4" stroke-dasharray="9 3 2 3"/><text x="753" y="61" font-size="12" fill="#222">R=90: peak 4 (required 4)</text>
+<rect x="60" y="84" width="1248" height="260" fill="#fff" stroke="#888" stroke-width="0.8"/>
+<line x1="60" y1="344" x2="1308" y2="344" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="348" font-size="11" text-anchor="end" fill="#333">0</text>
+<line x1="60" y1="306.857" x2="1308" y2="306.857" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="310.857" font-size="11" text-anchor="end" fill="#333">1</text>
+<line x1="60" y1="269.714" x2="1308" y2="269.714" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="273.714" font-size="11" text-anchor="end" fill="#333">2</text>
+<line x1="60" y1="232.571" x2="1308" y2="232.571" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="236.571" font-size="11" text-anchor="end" fill="#333">3</text>
+<line x1="60" y1="195.429" x2="1308" y2="195.429" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="199.429" font-size="11" text-anchor="end" fill="#333">4</text>
+<line x1="60" y1="158.286" x2="1308" y2="158.286" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="162.286" font-size="11" text-anchor="end" fill="#333">5</text>
+<line x1="60" y1="121.143" x2="1308" y2="121.143" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="125.143" font-size="11" text-anchor="end" fill="#333">6</text>
+<line x1="60" y1="84" x2="1308" y2="84" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="88" font-size="11" text-anchor="end" fill="#333">7</text>
+<line x1="60" y1="84" x2="60" y2="344" stroke="#bbb" stroke-width="0.7"/>
+<text x="60" y="358" font-size="11" text-anchor="middle" fill="#333">07:00</text>
+<line x1="156" y1="84" x2="156" y2="344" stroke="#bbb" stroke-width="0.7"/>
+<text x="156" y="358" font-size="11" text-anchor="middle" fill="#333">08:00</text>
+<line x1="252" y1="84" x2="252" y2="344" stroke="#bbb" stroke-width="0.7"/>
+<text x="252" y="358" font-size="11" text-anchor="middle" fill="#333">09:00</text>
+<line x1="348" y1="84" x2="348" y2="344" stroke="#bbb" stroke-width="0.7"/>
+<text x="348" y="358" font-size="11" text-anchor="middle" fill="#333">10:00</text>
+<line x1="444" y1="84" x2="444" y2="344" stroke="#bbb" stroke-width="0.7"/>
+<text x="444" y="358" font-size="11" text-anchor="middle" fill="#333">11:00</text>
+<line x1="540" y1="84" x2="540" y2="344" stroke="#bbb" stroke-width="0.7"/>
+<text x="540" y="358" font-size="11" text-anchor="middle" fill="#333">12:00</text>
+<line x1="636" y1="84" x2="636" y2="344" stroke="#bbb" stroke-width="0.7"/>
+<text x="636" y="358" font-size="11" text-anchor="middle" fill="#333">13:00</text>
+<line x1="732" y1="84" x2="732" y2="344" stroke="#bbb" stroke-width="0.7"/>
+<text x="732" y="358" font-size="11" text-anchor="middle" fill="#333">14:00</text>
+<line x1="828" y1="84" x2="828" y2="344" stroke="#bbb" stroke-width="0.7"/>
+<text x="828" y="358" font-size="11" text-anchor="middle" fill="#333">15:00</text>
+<line x1="924" y1="84" x2="924" y2="344" stroke="#bbb" stroke-width="0.7"/>
+<text x="924" y="358" font-size="11" text-anchor="middle" fill="#333">16:00</text>
+<line x1="1020" y1="84" x2="1020" y2="344" stroke="#bbb" stroke-width="0.7"/>
+<text x="1020" y="358" font-size="11" text-anchor="middle" fill="#333">17:00</text>
+<line x1="1116" y1="84" x2="1116" y2="344" stroke="#bbb" stroke-width="0.7"/>
+<text x="1116" y="358" font-size="11" text-anchor="middle" fill="#333">18:00</text>
+<line x1="1212" y1="84" x2="1212" y2="344" stroke="#bbb" stroke-width="0.7"/>
+<text x="1212" y="358" font-size="11" text-anchor="middle" fill="#333">19:00</text>
+<line x1="1308" y1="84" x2="1308" y2="344" stroke="#bbb" stroke-width="0.7"/>
+<text x="1308" y="358" font-size="11" text-anchor="middle" fill="#333">20:00</text>
+<text transform="rotate(-90 28 214)" x="28" y="214" font-size="12" text-anchor="middle" fill="#222">Vehicles</text>
+<polyline points="71.2,306.857 85.6,306.857 85.6,269.714 104.8,269.714 104.8,232.571 120.8,232.571 120.8,195.429 228,195.429 228,195.429 244,195.429 244,344 260,344 260,306.857 324,306.857 324,306.857 340,306.857 340,344 556,344 556,306.857 564,306.857 564,195.429 615.2,195.429 615.2,195.429 618.4,195.429 618.4,158.286 631.2,158.286 631.2,195.429 660,195.429 660,121.143 676,121.143 676,121.143 692,121.143 692,158.286 693.6,158.286 693.6,158.286 708,158.286 708,158.286 709.6,158.286 709.6,195.429 724,195.429 724,269.714 740,269.714 740,306.857 773.6,306.857 773.6,306.857 789.6,306.857 789.6,344 948,344 948,306.857 1031.2,306.857 1031.2,306.857 1044,306.857 1044,195.429 1047.2,195.429 1047.2,232.571 1119.2,232.571 1119.2,232.571 1135.2,232.571 1135.2,269.714 1140,269.714 1140,232.571 1167.2,232.571 1167.2,232.571 1170.4,232.571 1170.4,232.571 1173.6,232.571 1173.6,232.571 1183.2,232.571 1183.2,269.714 1186.4,269.714 1186.4,306.857 1189.6,306.857" fill="none" stroke="#D55E00" stroke-width="2.4" stroke-dasharray="none"/>
+<polyline points="79.2,306.857 85.6,306.857 85.6,269.714 103.2,269.714 103.2,232.571 104.8,232.571 104.8,195.429 228,195.429 228,195.429 244,195.429 244,344 260,344 260,306.857 324,306.857 324,306.857 340,306.857 340,344 549.6,344 549.6,306.857 564,306.857 564,232.571 639.2,232.571 639.2,195.429 660,195.429 660,158.286 672.8,158.286 672.8,158.286 688.8,158.286 688.8,195.429 708,195.429 708,195.429 711.2,195.429 711.2,195.429 724,195.429 724,269.714 727.2,269.714 727.2,306.857 781.6,306.857 781.6,306.857 797.6,306.857 797.6,344 948,344 948,306.857 1031.2,306.857 1031.2,306.857 1044,306.857 1044,195.429 1047.2,195.429 1047.2,232.571 1064.8,232.571 1064.8,232.571 1080.8,232.571 1080.8,269.714 1140,269.714 1140,232.571 1173.6,232.571 1173.6,232.571 1189.6,232.571 1189.6,269.714 1199.2,269.714 1199.2,269.714 1205.6,269.714 1205.6,306.857 1215.2,306.857" fill="none" stroke="#E69F00" stroke-width="2.4" stroke-dasharray="7 4"/>
+<polyline points="64.8,306.857 80.8,306.857 80.8,269.714 84,269.714 84,232.571 196,232.571 196,195.429 228,195.429 228,195.429 244,195.429 244,344 260,344 260,306.857 324,306.857 324,306.857 340,306.857 340,344 532,344 532,306.857 564,306.857 564,232.571 660,232.571 660,195.429 661.6,195.429 661.6,158.286 672.8,158.286 672.8,158.286 688.8,158.286 688.8,195.429 708,195.429 708,195.429 711.2,195.429 711.2,195.429 724,195.429 724,269.714 727.2,269.714 727.2,306.857 781.6,306.857 781.6,306.857 797.6,306.857 797.6,344 948,344 948,306.857 1031.2,306.857 1031.2,306.857 1044,306.857 1044,232.571 1047.2,232.571 1047.2,269.714 1140,269.714 1140,232.571 1170.4,232.571 1170.4,232.571 1173.6,232.571 1173.6,232.571 1186.4,232.571 1186.4,269.714 1189.6,269.714 1189.6,306.857 1202.4,306.857 1202.4,306.857 1218.4,306.857" fill="none" stroke="#009E73" stroke-width="2.4" stroke-dasharray="2 3"/>
+<polyline points="64.8,306.857 68,306.857 68,269.714 98.4,269.714 98.4,232.571 228,232.571 228,232.571 244,232.571 244,344 260,344 260,306.857 324,306.857 324,306.857 340,306.857 340,344 500,344 500,306.857 564,306.857 564,232.571 660,232.571 660,195.429 677.6,195.429 677.6,195.429 693.6,195.429 693.6,232.571 704.8,232.571 704.8,232.571 708,232.571 708,232.571 720.8,232.571 720.8,269.714 724,269.714 724,306.857 781.6,306.857 781.6,306.857 797.6,306.857 797.6,344 948,344 948,306.857 1031.2,306.857 1031.2,306.857 1044,306.857 1044,232.571 1047.2,232.571 1047.2,269.714 1140,269.714 1140,232.571 1167.2,232.571 1167.2,232.571 1173.6,232.571 1173.6,232.571 1183.2,232.571 1183.2,269.714 1189.6,269.714 1189.6,306.857 1202.4,306.857 1202.4,306.857 1218.4,306.857" fill="none" stroke="#0072B2" stroke-width="2.4" stroke-dasharray="9 3 2 3"/>
+<rect x="64.8" y="84" width="3.2" height="260" fill="#000" fill-opacity="0"><title>07:03-07:05 busy incl. cooldown: R=50: 0, R=60: 0, R=70: 1, R=90: 1</title></rect>
+<rect x="68" y="84" width="3.2" height="260" fill="#000" fill-opacity="0"><title>07:05-07:07 busy incl. cooldown: R=50: 0, R=60: 0, R=70: 1, R=90: 2</title></rect>
+<rect x="71.2" y="84" width="8" height="260" fill="#000" fill-opacity="0"><title>07:07-07:12 busy incl. cooldown: R=50: 1, R=60: 0, R=70: 1, R=90: 2</title></rect>
+<rect x="79.2" y="84" width="1.6" height="260" fill="#000" fill-opacity="0"><title>07:12-07:13 busy incl. cooldown: R=50: 1, R=60: 1, R=70: 1, R=90: 2</title></rect>
+<rect x="80.8" y="84" width="3.2" height="260" fill="#000" fill-opacity="0"><title>07:13-07:15 busy incl. cooldown: R=50: 1, R=60: 1, R=70: 2, R=90: 2</title></rect>
+<rect x="84" y="84" width="1.6" height="260" fill="#000" fill-opacity="0"><title>07:15-07:16 busy incl. cooldown: R=50: 1, R=60: 1, R=70: 3, R=90: 2</title></rect>
+<rect x="85.6" y="84" width="12.8" height="260" fill="#000" fill-opacity="0"><title>07:16-07:24 busy incl. cooldown: R=50: 2, R=60: 2, R=70: 3, R=90: 2</title></rect>
+<rect x="98.4" y="84" width="4.8" height="260" fill="#000" fill-opacity="0"><title>07:24-07:27 busy incl. cooldown: R=50: 2, R=60: 2, R=70: 3, R=90: 3</title></rect>
+<rect x="103.2" y="84" width="1.6" height="260" fill="#000" fill-opacity="0"><title>07:27-07:28 busy incl. cooldown: R=50: 2, R=60: 3, R=70: 3, R=90: 3</title></rect>
+<rect x="104.8" y="84" width="16" height="260" fill="#000" fill-opacity="0"><title>07:28-07:38 busy incl. cooldown: R=50: 3, R=60: 4, R=70: 3, R=90: 3</title></rect>
+<rect x="120.8" y="84" width="75.2" height="260" fill="#000" fill-opacity="0"><title>07:38-08:25 busy incl. cooldown: R=50: 4, R=60: 4, R=70: 3, R=90: 3</title></rect>
+<rect x="196" y="84" width="32" height="260" fill="#000" fill-opacity="0"><title>08:25-08:45 busy incl. cooldown: R=50: 4, R=60: 4, R=70: 4, R=90: 3</title></rect>
+<rect x="228" y="84" width="16" height="260" fill="#000" fill-opacity="0"><title>08:45-08:55 busy incl. cooldown: R=50: 4, R=60: 4, R=70: 4, R=90: 3</title></rect>
+<rect x="244" y="84" width="16" height="260" fill="#000" fill-opacity="0"><title>08:55-09:05 busy incl. cooldown: R=50: 0, R=60: 0, R=70: 0, R=90: 0</title></rect>
+<rect x="260" y="84" width="64" height="260" fill="#000" fill-opacity="0"><title>09:05-09:45 busy incl. cooldown: R=50: 1, R=60: 1, R=70: 1, R=90: 1</title></rect>
+<rect x="324" y="84" width="16" height="260" fill="#000" fill-opacity="0"><title>09:45-09:55 busy incl. cooldown: R=50: 1, R=60: 1, R=70: 1, R=90: 1</title></rect>
+<rect x="340" y="84" width="160" height="260" fill="#000" fill-opacity="0"><title>09:55-11:35 busy incl. cooldown: R=50: 0, R=60: 0, R=70: 0, R=90: 0</title></rect>
+<rect x="500" y="84" width="32" height="260" fill="#000" fill-opacity="0"><title>11:35-11:55 busy incl. cooldown: R=50: 0, R=60: 0, R=70: 0, R=90: 1</title></rect>
+<rect x="532" y="84" width="17.6" height="260" fill="#000" fill-opacity="0"><title>11:55-12:06 busy incl. cooldown: R=50: 0, R=60: 0, R=70: 1, R=90: 1</title></rect>
+<rect x="549.6" y="84" width="6.4" height="260" fill="#000" fill-opacity="0"><title>12:06-12:10 busy incl. cooldown: R=50: 0, R=60: 1, R=70: 1, R=90: 1</title></rect>
+<rect x="556" y="84" width="8" height="260" fill="#000" fill-opacity="0"><title>12:10-12:15 busy incl. cooldown: R=50: 1, R=60: 1, R=70: 1, R=90: 1</title></rect>
+<rect x="564" y="84" width="51.2" height="260" fill="#000" fill-opacity="0"><title>12:15-12:47 busy incl. cooldown: R=50: 4, R=60: 3, R=70: 3, R=90: 3</title></rect>
+<rect x="615.2" y="84" width="3.2" height="260" fill="#000" fill-opacity="0"><title>12:47-12:49 busy incl. cooldown: R=50: 4, R=60: 3, R=70: 3, R=90: 3</title></rect>
+<rect x="618.4" y="84" width="12.8" height="260" fill="#000" fill-opacity="0"><title>12:49-12:57 busy incl. cooldown: R=50: 5, R=60: 3, R=70: 3, R=90: 3</title></rect>
+<rect x="631.2" y="84" width="8" height="260" fill="#000" fill-opacity="0"><title>12:57-13:02 busy incl. cooldown: R=50: 4, R=60: 3, R=70: 3, R=90: 3</title></rect>
+<rect x="639.2" y="84" width="20.8" height="260" fill="#000" fill-opacity="0"><title>13:02-13:15 busy incl. cooldown: R=50: 4, R=60: 4, R=70: 3, R=90: 3</title></rect>
+<rect x="660" y="84" width="1.6" height="260" fill="#000" fill-opacity="0"><title>13:15-13:16 busy incl. cooldown: R=50: 6, R=60: 5, R=70: 4, R=90: 4</title></rect>
+<rect x="661.6" y="84" width="11.2" height="260" fill="#000" fill-opacity="0"><title>13:16-13:23 busy incl. cooldown: R=50: 6, R=60: 5, R=70: 5, R=90: 4</title></rect>
+<rect x="672.8" y="84" width="3.2" height="260" fill="#000" fill-opacity="0"><title>13:23-13:25 busy incl. cooldown: R=50: 6, R=60: 5, R=70: 5, R=90: 4</title></rect>
+<rect x="676" y="84" width="1.6" height="260" fill="#000" fill-opacity="0"><title>13:25-13:26 busy incl. cooldown: R=50: 6, R=60: 5, R=70: 5, R=90: 4</title></rect>
+<rect x="677.6" y="84" width="11.2" height="260" fill="#000" fill-opacity="0"><title>13:26-13:33 busy incl. cooldown: R=50: 6, R=60: 5, R=70: 5, R=90: 4</title></rect>
+<rect x="688.8" y="84" width="3.2" height="260" fill="#000" fill-opacity="0"><title>13:33-13:35 busy incl. cooldown: R=50: 6, R=60: 4, R=70: 4, R=90: 4</title></rect>
+<rect x="692" y="84" width="1.6" height="260" fill="#000" fill-opacity="0"><title>13:35-13:36 busy incl. cooldown: R=50: 5, R=60: 4, R=70: 4, R=90: 4</title></rect>
+<rect x="693.6" y="84" width="11.2" height="260" fill="#000" fill-opacity="0"><title>13:36-13:43 busy incl. cooldown: R=50: 5, R=60: 4, R=70: 4, R=90: 3</title></rect>
+<rect x="704.8" y="84" width="3.2" height="260" fill="#000" fill-opacity="0"><title>13:43-13:45 busy incl. cooldown: R=50: 5, R=60: 4, R=70: 4, R=90: 3</title></rect>
+<rect x="708" y="84" width="1.6" height="260" fill="#000" fill-opacity="0"><title>13:45-13:46 busy incl. cooldown: R=50: 5, R=60: 4, R=70: 4, R=90: 3</title></rect>
+<rect x="709.6" y="84" width="1.6" height="260" fill="#000" fill-opacity="0"><title>13:46-13:47 busy incl. cooldown: R=50: 4, R=60: 4, R=70: 4, R=90: 3</title></rect>
+<rect x="711.2" y="84" width="9.6" height="260" fill="#000" fill-opacity="0"><title>13:47-13:53 busy incl. cooldown: R=50: 4, R=60: 4, R=70: 4, R=90: 3</title></rect>
+<rect x="720.8" y="84" width="3.2" height="260" fill="#000" fill-opacity="0"><title>13:53-13:55 busy incl. cooldown: R=50: 4, R=60: 4, R=70: 4, R=90: 2</title></rect>
+<rect x="724" y="84" width="3.2" height="260" fill="#000" fill-opacity="0"><title>13:55-13:57 busy incl. cooldown: R=50: 2, R=60: 2, R=70: 2, R=90: 1</title></rect>
+<rect x="727.2" y="84" width="12.8" height="260" fill="#000" fill-opacity="0"><title>13:57-14:05 busy incl. cooldown: R=50: 2, R=60: 1, R=70: 1, R=90: 1</title></rect>
+<rect x="740" y="84" width="33.6" height="260" fill="#000" fill-opacity="0"><title>14:05-14:26 busy incl. cooldown: R=50: 1, R=60: 1, R=70: 1, R=90: 1</title></rect>
+<rect x="773.6" y="84" width="8" height="260" fill="#000" fill-opacity="0"><title>14:26-14:31 busy incl. cooldown: R=50: 1, R=60: 1, R=70: 1, R=90: 1</title></rect>
+<rect x="781.6" y="84" width="8" height="260" fill="#000" fill-opacity="0"><title>14:31-14:36 busy incl. cooldown: R=50: 1, R=60: 1, R=70: 1, R=90: 1</title></rect>
+<rect x="789.6" y="84" width="8" height="260" fill="#000" fill-opacity="0"><title>14:36-14:41 busy incl. cooldown: R=50: 0, R=60: 1, R=70: 1, R=90: 1</title></rect>
+<rect x="797.6" y="84" width="150.4" height="260" fill="#000" fill-opacity="0"><title>14:41-16:15 busy incl. cooldown: R=50: 0, R=60: 0, R=70: 0, R=90: 0</title></rect>
+<rect x="948" y="84" width="83.2" height="260" fill="#000" fill-opacity="0"><title>16:15-17:07 busy incl. cooldown: R=50: 1, R=60: 1, R=70: 1, R=90: 1</title></rect>
+<rect x="1031.2" y="84" width="12.8" height="260" fill="#000" fill-opacity="0"><title>17:07-17:15 busy incl. cooldown: R=50: 1, R=60: 1, R=70: 1, R=90: 1</title></rect>
+<rect x="1044" y="84" width="3.2" height="260" fill="#000" fill-opacity="0"><title>17:15-17:17 busy incl. cooldown: R=50: 4, R=60: 4, R=70: 3, R=90: 3</title></rect>
+<rect x="1047.2" y="84" width="17.6" height="260" fill="#000" fill-opacity="0"><title>17:17-17:28 busy incl. cooldown: R=50: 3, R=60: 3, R=70: 2, R=90: 2</title></rect>
+<rect x="1064.8" y="84" width="16" height="260" fill="#000" fill-opacity="0"><title>17:28-17:38 busy incl. cooldown: R=50: 3, R=60: 3, R=70: 2, R=90: 2</title></rect>
+<rect x="1080.8" y="84" width="38.4" height="260" fill="#000" fill-opacity="0"><title>17:38-18:02 busy incl. cooldown: R=50: 3, R=60: 2, R=70: 2, R=90: 2</title></rect>
+<rect x="1119.2" y="84" width="16" height="260" fill="#000" fill-opacity="0"><title>18:02-18:12 busy incl. cooldown: R=50: 3, R=60: 2, R=70: 2, R=90: 2</title></rect>
+<rect x="1135.2" y="84" width="4.8" height="260" fill="#000" fill-opacity="0"><title>18:12-18:15 busy incl. cooldown: R=50: 2, R=60: 2, R=70: 2, R=90: 2</title></rect>
+<rect x="1140" y="84" width="27.2" height="260" fill="#000" fill-opacity="0"><title>18:15-18:32 busy incl. cooldown: R=50: 3, R=60: 3, R=70: 3, R=90: 3</title></rect>
+<rect x="1167.2" y="84" width="3.2" height="260" fill="#000" fill-opacity="0"><title>18:32-18:34 busy incl. cooldown: R=50: 3, R=60: 3, R=70: 3, R=90: 3</title></rect>
+<rect x="1170.4" y="84" width="3.2" height="260" fill="#000" fill-opacity="0"><title>18:34-18:36 busy incl. cooldown: R=50: 3, R=60: 3, R=70: 3, R=90: 3</title></rect>
+<rect x="1173.6" y="84" width="9.6" height="260" fill="#000" fill-opacity="0"><title>18:36-18:42 busy incl. cooldown: R=50: 3, R=60: 3, R=70: 3, R=90: 3</title></rect>
+<rect x="1183.2" y="84" width="3.2" height="260" fill="#000" fill-opacity="0"><title>18:42-18:44 busy incl. cooldown: R=50: 2, R=60: 3, R=70: 3, R=90: 2</title></rect>
+<rect x="1186.4" y="84" width="3.2" height="260" fill="#000" fill-opacity="0"><title>18:44-18:46 busy incl. cooldown: R=50: 1, R=60: 3, R=70: 2, R=90: 2</title></rect>
+<rect x="1189.6" y="84" width="9.6" height="260" fill="#000" fill-opacity="0"><title>18:46-18:52 busy incl. cooldown: R=50: 0, R=60: 2, R=70: 1, R=90: 1</title></rect>
+<rect x="1199.2" y="84" width="3.2" height="260" fill="#000" fill-opacity="0"><title>18:52-18:54 busy incl. cooldown: R=50: 0, R=60: 2, R=70: 1, R=90: 1</title></rect>
+<rect x="1202.4" y="84" width="3.2" height="260" fill="#000" fill-opacity="0"><title>18:54-18:56 busy incl. cooldown: R=50: 0, R=60: 2, R=70: 1, R=90: 1</title></rect>
+<rect x="1205.6" y="84" width="9.6" height="260" fill="#000" fill-opacity="0"><title>18:56-19:02 busy incl. cooldown: R=50: 0, R=60: 1, R=70: 1, R=90: 1</title></rect>
+<rect x="1215.2" y="84" width="3.2" height="260" fill="#000" fill-opacity="0"><title>19:02-19:04 busy incl. cooldown: R=50: 0, R=60: 0, R=70: 1, R=90: 1</title></rect>
+<text x="684" y="378" font-size="12" text-anchor="middle" fill="#222">Time of day (HH:MM)</text>
+</svg>

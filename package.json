@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack -p 9002",
     "dev:dudullu": "node scripts/start-dudullu-local.mjs",
+    "experiments:plan": "node --conditions=react-server --import tsx scripts/run-plan-experiments.ts",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "next build --webpack",

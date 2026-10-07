@@ -283,6 +283,8 @@ The October audit remains authoritative for its unresolved tracker entries, subj
 - Safe-fixes historical report records combined48 files/552 Vitest tests, typecheck success, lint0 errors/167 warnings, health/handshake/page200 and anonymousAPI401. It explicitly excludes authenticated live preview, user E2E, production build and new Python/scientific suites. These are **reported results**, not this documentation branch's tests.
 - Architecture/roadmap contain historical status text (“PLANNED”, old Package2 blocked language, R3 pending, no-landed-fixes placeholder) alongside later implementation/tracker entries. Use dated specific evidence and Git ancestry; do not copy a stale status wholesale.
 
+- **2026-10-07 batch follow-up proposal — not approved/implemented:** add weekly and single-wave options on the planning page using `runDailyPlan`, expose seed/algorithm/parameter selection, and evaluate an exact small-wave capacitated solver with optimality gaps. The [batch runner](PLAN_EXPERIMENTS.md) only exports the existing operational computation; these page and solver additions remain a separate scope and require their own contracts and verification.
+
 ## Triage of process files
 
 All 51 tracked files and 12 distinct untracked process files were inventoried and read as source material. The six tracked `.superpowers/sdd` baseline reports copied into each old worktree are counted once, below, not as eighteen additional untracked files. Verdicts are recommendations only: nothing moved or deleted. `archive candidate` means a historical execution plan can be relocated only in a separately authorized cleanup; source links must remain recoverable. `discard` means no reusable policy beyond extracted decisions, not deletion authority.

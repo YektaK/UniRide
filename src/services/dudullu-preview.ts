@@ -273,33 +273,6 @@ export function longestStudentRideMinutes(
   return Math.max(0, total - excluded);
 }
 
-/**
- * Smallest ride limit any plan could satisfy: the largest direct campus arc among the demands
- * (pickup: student stop to campus, dropoff: campus to student stop). A student's ride on any
- * route is at least this arc, so a limit below it is infeasible. Null when no demand has a
- * known arc (the optimizer then decides).
- */
-export function requiredDirectRideMinutes(
-  demands: readonly Pick<PreviewDemand, "direction" | "locationCode">[],
-  matrix: Pick<MatrixSnapshot, "arcs">,
-): number | null {
-  const arcs = new Map<string, number>();
-  for (const arc of matrix.arcs) {
-    if (Number.isFinite(arc.duration_minutes)) {
-      arcs.set(JSON.stringify([arc.origin_code, arc.destination_code]), arc.duration_minutes);
-    }
-  }
-  let required: number | null = null;
-  for (const demand of demands) {
-    const key = demand.direction === "pickup"
-      ? JSON.stringify([demand.locationCode, DEPOT_CODE])
-      : JSON.stringify([DEPOT_CODE, demand.locationCode]);
-    const direct = arcs.get(key);
-    if (direct !== undefined && (required === null || direct > required)) required = direct;
-  }
-  return required;
-}
-
 class PreviewValidationError extends Error {
   constructor(readonly code: PreviewReasonCode) {
     super(code);

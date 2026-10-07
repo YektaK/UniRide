@@ -62,7 +62,7 @@ Genel kurallar:
 
 ```powershell
 $env:PYTHON_DOTENV_DISABLED="1"; $env:SUPABASE_URL=""; $env:SUPABASE_SERVICE_ROLE_KEY=""
-& "C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe" -B -m pytest <dosyalar> -q
+& "<repo>\.venv-jit\Scripts\python.exe" -B -m pytest <dosyalar> -q
 ```
 
 Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman worktree kodu, editable finder'dan önce gelir (F9).
@@ -74,7 +74,7 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
 - **Adımlar:**
   1. Sahip Supabase projesini yeniden etkinleştirir (**sahip işlemi**).
   2. `.env.local` dosyasında `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` ve `SUPABASE_SERVICE_ROLE_KEY` bulunur. `optimizer_api/.env` dosyasında `SUPABASE_URL` ve `SUPABASE_SERVICE_ROLE_KEY` bulunur (`optimizer_api/utils/data_loader.py:54-55`). Değerler yazdırılmaz.
-  3. Python seçimi için `UNIRIDE_PYTHON` **mutlak yol** olarak ayarlanır, örneğin `$env:UNIRIDE_PYTHON="C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe"`. Göreli yol `rootDir` ile birleştirilir (`scripts/start-dudullu-local.mjs:171-178`). Bir worktree'den çalıştırıldığında bu yolda `.venv-jit` bulunmaz. Launcher bu durumda uyarı vermeden PATH'teki Python'a döner, o Python'da da fastapi yoktur. Ardından `node scripts/start-dudullu-local.mjs --check-only` çalıştırılır. Yorumlayıcı satırında `.venv-jit` yolunun göründüğü doğrulanır.
+  3. Python seçimi için `UNIRIDE_PYTHON` **mutlak yol** olarak ayarlanır, örneğin `$env:UNIRIDE_PYTHON="<repo>\.venv-jit\Scripts\python.exe"`. Göreli yol `rootDir` ile birleştirilir (`scripts/start-dudullu-local.mjs:171-178`). Bir worktree'den çalıştırıldığında bu yolda `.venv-jit` bulunmaz. Launcher bu durumda uyarı vermeden PATH'teki Python'a döner, o Python'da da fastapi yoktur. Ardından `node scripts/start-dudullu-local.mjs --check-only` çalıştırılır. Yorumlayıcı satırında `.venv-jit` yolunun göründüğü doğrulanır.
   4. Yığın `npm run dev:dudullu` ile başlatılır. Adres `http://127.0.0.1:9002`.
   5. Yönetici hesabı kontrol edilir: bir Auth kullanıcısı ve `public.users.role = 'admin'` olan satırı gerekir (`src/lib/admin-auth.ts:86-133`). Hesap yoksa sahip bunu Supabase panelinden oluşturur (**sahip yetkisi gerekir**). Kayıt formu ile admin oluşturulmaz: bu C1 açığını kullanmak olur.
   6. `/admin/readiness` sayfasındaki sayımlar not edilir: öğrenciler (`dudulluTarget` ile `completeTargetProfiles`), takvimler (`malformed`), aktif ve kullanılabilir araç sayısı, matris (`validArcCount` ile `expectedArcCount`).
@@ -257,10 +257,10 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
 - **R2 (Next.js):**
   - İstek: `maxRideTimeMinutes` (tam sayı 15–240, varsayılan 90) ve `maxTourMinutes` (tam sayı 30–300, varsayılan 150). Hatalı değer `400 INVALID_LIMIT`. Her `/optimize` çağrısına `max_ride_time` ve `max_travel_time` olarak iletilir.
   - Yanıt: `limits: { maxRideTimeMinutes, maxTourMinutes, minimumFeasibleRideMinutes }`. Her yanıtta (engellenenler dahil) bulunur.
-  - Bir öğrencinin kendi doğrudan yolculuğu (dalganın yönünde kampüs yayı: pickup'ta durak -> kampüs, dropoff'ta kampüs -> durak) sınırı aşarsa çözücü çağrılmadan `RIDE_TIME_LIMIT_INFEASIBLE` (`blocked_data`) döner; `minimumFeasibleRideMinutes` en büyük doğrudan yayın yukarı yuvarlanmış halidir. Çözücü sertifikasında `ride_time_violation` çıkarsa aynı kod döner (minimum `null`).
+  - Doğrudan yaylardan uygunsuzluk veya küresel minimum çıkarılmaz; çözücü çağrılır. Çözücü sertifikasında `ride_time_violation` çıkarsa `RIDE_TIME_LIMIT_INFEASIBLE` (`blocked_data`) döner: bu sınırda uygun rota hesaplanamadı. `minimumFeasibleRideMinutes` her zaman `null` kalır.
   - Rota başına en uzun öğrenci yolculuğu (`maxRideMinutes`) ve günün en büyüğü görünüm modelinde `route_details`'ten hesaplanır: pickup'ta toplam - ilk yay, dropoff'ta toplam - kapanış yayı.
   - Arayüz: iki sayı alanı ("Öğrenci en fazla araçta (dk)" 90, "Araç turu en fazla (dk)" 150), kullanılan sınırlar önizleme başlığında, her rotada "En uzun öğrenci yolculuğu: X dk".
-- **Kısıt:** Doğrudan yolculuk ön kontrolü yalnızca alt sınırdır; çözücü, paylaşılan rotalarda sınırı tutturamazsa yine `RIDE_TIME_LIMIT_INFEASIBLE` (sertifikadan) ya da `OPTIMIZATION_NOT_SUCCESSFUL` döner. Bu bir sonuç kalitesi iddiası değildir.
+- **Kısıt:** Çözücü paylaşılan rotalarda sınırı tutturamazsa `RIDE_TIME_LIMIT_INFEASIBLE` (sertifikadan) ya da `OPTIMIZATION_NOT_SUCCESSFUL` döner. Bu, bu sınırda hiçbir rotanın mümkün olmadığının kanıtı değildir.
 - **Canlı çalıştırma notu (2026-10-04):** Pazartesi 2026-10-05 için 90 dk öğrenci / 150 dk tur sınırı ve sanal filoyla (özdeş 4 Sw / 10 So araç) canlı çalıştırma: **3 araç**, 27 öğrenci, 54 yolculuk, 16 rota, 12 dalga; en uzun öğrenci yolculuğu 89 dk (sınır 90). En yoğun dalga 08:45 varış: 20 öğrenci (5 Sw, 15 So). Sw ve So öğrencileri yalnızca kendi koltuklarını kullanır ve ikisi ayrı denetlenir; bu yüzden yalnızca kapasite alt sınırı max(ceil(5/4), ceil(15/10)) = **2** araçtır. Üçüncü araç koltuk kapasitesinden gelmez; olası nedenler zaman sınırları (öğrenci 90 dk, tur 150 dk rotaları böler), aynı saatlere denk gelen rotalar ve araç bekleme süresidir. Bu çalıştırmada hangisinin etkili olduğu ölçülmedi. Veri kanıtı: canlı DB'de Pazartesi için 27 öğrenci var ve 20'si 09:00'da başlıyor; bu, plandaki 08:45 dalgasıyla örtüşür. R3 bu açıklamayı sayfada "Neden N araç?" bloğu olarak gösterir.
 
 ## 4. Sahip için karar noktaları
@@ -328,7 +328,8 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
 5. Kartlar kontrol edilir:
    - "Bu rotalar için gereken araç" kartında `minimumProven` doğrudur, yani "en fazla" etiketi yoktur;
    - öğrenci ve rota sayıları `candidateSummary` ile tutarlıdır;
-   - aktif filo ve eksik araç sayısı görünür.
+   - aktif filo sayısı ve sanal şablona göre araç sayısı farkı görünür; sanal sonuç gerçek filonun kapasite/bekleme koşullarına göre yeterliliğini kanıtlamaz;
+   - gerçek filo modunda yalnızca tüm rota aralıkları ve seferleri kapsayan geçerli atama “Mevcut filo bu rotalara atanabildi” sonucunu destekler. Atama araması bitmese bile tam atama bu rotaların atanabildiğini gösterir; en az araç sayısını kanıtlamaz. “Mevcut filo bu rotalara atanamıyor” farklı rotalarla çözüm olmadığını veya tam ek araç sayısını kanıtlamaz.
 6. Her dalgada duraklar sıralıdır. Saatler pickup'ta anchor'da biter, dropoff'ta anchor'da başlar.
 7. Araç tablosunda aynı araçtaki rotalar çakışmaz ve aralarında cooldown kadar boşluk vardır.
 8. Anahtarlar kapatılıp tekrar çalıştırılır. Beklenen sonuç `PENDING_STUDENT_CONFIRMATION` ile boş gündür (kayıt yoksa). Bu, canlı veriye hiçbir şey yazılmadığını gösterir.

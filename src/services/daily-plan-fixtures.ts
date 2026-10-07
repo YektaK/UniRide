@@ -126,7 +126,7 @@ const baseResponse = (): Response => ({
     ],
   },
   jobs: makeJobs(),
-  routeIntervals: [],
+  routeIntervals: makeJobs().flatMap((job) => job.intervals),
   assignments: [
     {
       jobId: "2026-10-05:pickup:525", routeIndex: 0, vehicleId: "virtual:4-10-10:1", direction: "pickup",
@@ -221,10 +221,10 @@ export function blockedResponse(reasonCodes: string[] = ["MATRIX_UNAVAILABLE"]):
   };
 }
 
-/** A student's own direct ride exceeds the ride limit: blocked before the optimizer runs. */
+/** The solver did not compute a suitable route within the ride limit. */
 export function rideLimitInfeasibleResponse(): Response {
   const response = blockedResponse(["ADMISSION_ASSUMED", "RIDE_TIME_LIMIT_INFEASIBLE"]);
-  return { ...response, limits: { maxRideTimeMinutes: 15, maxTourMinutes: 150, minimumFeasibleRideMinutes: 23 } };
+  return { ...response, limits: { maxRideTimeMinutes: 15, maxTourMinutes: 150, minimumFeasibleRideMinutes: null } };
 }
 
 /** A day with no admitted trip. */

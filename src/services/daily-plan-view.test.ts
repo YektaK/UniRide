@@ -349,11 +349,14 @@ describe("fleet assignment evidence", () => {
     expect(buildDailyPlanView(indeterminateResponse()).summary.fleet).toMatchObject({ neededAtMost: true, state: "unknown", amount: 0 });
   });
 
-  it("keeps an invalid or empty shortage unknown", () => {
+  it("treats the API's empty FLEET_SHORTAGE response as missing without a numeric shortfall, but keeps an invalid one unknown", () => {
     const response = shortageResponse();
     response.routeIntervals.pop();
     expect(buildDailyPlanView(response).summary.fleet.state).toBe("unknown");
-    expect(buildDailyPlanView({ ...shortageResponse(), jobs: [], routeIntervals: [] }).summary.fleet.state).toBe("unknown");
+    const empty = buildDailyPlanView({ ...shortageResponse(), jobs: [], routeIntervals: [], vehicleSummary: null }).summary.fleet;
+    expect(empty.state).toBe("missing");
+    expect(empty.amount).toBe(0);
+    expect(buildDailyPlanView({ ...shortageResponse(), jobs: [], routeIntervals: [], reasonCodes: ["MATRIX_UNAVAILABLE"] }).summary.fleet.state).toBe("unknown");
   });
 
   it("parses available live identities while accepting older responses", () => {

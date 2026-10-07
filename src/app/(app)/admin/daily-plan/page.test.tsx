@@ -329,6 +329,15 @@ describe("DailyPlanPage", () => {
     expect(screen.getByText(/Gösterilen araç sayısı en fazla değerdir/)).toBeTruthy();
   });
 
+  it("shows the fleet card and the header consistently for the API's empty shortage response", async () => {
+    await generate({ ...shortageResponse(), jobs: [], routeIntervals: [], vehicleSummary: null });
+
+    expect(screen.getAllByText("Mevcut filo bu rotalara atanamıyor").length).toBe(2);
+    const fleet = screen.getByTestId("card-fleet");
+    expect(within(fleet).queryByText("Gerçek filo yeterliliği doğrulanmadı")).toBeNull();
+    expect(fleet.textContent).not.toMatch(/d+ araç eksik/);
+  });
+
   it("shows a shortage without a vehicle count", async () => {
     await generate(shortageResponse());
 

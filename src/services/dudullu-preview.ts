@@ -273,7 +273,6 @@ export function longestStudentRideMinutes(
   return Math.max(0, total - excluded);
 }
 
-
 class PreviewValidationError extends Error {
   constructor(readonly code: PreviewReasonCode) {
     super(code);

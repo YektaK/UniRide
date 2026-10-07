@@ -11,7 +11,7 @@ Tarih: 6 Ekim 2026. Kapsam: doğrulanan iki hata, birbirinden bağımsız düzel
 | `codex/fleet-evidence-fix` | `54a8af1` | Gerçek filo yeterliliği sonucunun kanıtı |
 | `codex/demo-safe-fixes` | `f63716d` | İki düzeltmenin birleşik kodu |
 
-Çalışma dizinleri, `C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.temp\worktrees\` altında sırasıyla `codex-ride-limit-fix`, `codex-fleet-evidence-fix`, `codex-demo-safe-fixes` dizinleridir. Düzeltme dalları aynı başlangıç commit'inden ayrıldı; yalnız demo dalında birleştirildi. WIP/main üzerinde kaynak değişikliği veya birleştirme yapılmadı. Mevcut checkout'ta önceden bulunan `INSTRUCTION_REVIEW_2026-09-07.md` değiştirilmedi. Git durumunda yalnız bu önceden mevcut izlenmeyen dosya kaldı.
+Çalışma dizinleri, `<repo>\.temp\worktrees\` altında sırasıyla `codex-ride-limit-fix`, `codex-fleet-evidence-fix`, `codex-demo-safe-fixes` dizinleridir. Düzeltme dalları aynı başlangıç commit'inden ayrıldı; yalnız demo dalında birleştirildi. WIP/main üzerinde kaynak değişikliği veya birleştirme yapılmadı. Mevcut checkout'ta önceden bulunan `INSTRUCTION_REVIEW_2026-09-07.md` değiştirilmedi. Git durumunda yalnız bu önceden mevcut izlenmeyen dosya kaldı.
 
 ## 1. Yolculuk sınırı
 

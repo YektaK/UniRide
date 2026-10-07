@@ -10,20 +10,20 @@ Yolculuk sınırı düzeltmesi `codex/ride-limit-fix`, filo sonucu düzeltmesi `
 **Terminal 1 — optimizer:**
 
 ```powershell
-$demoRoot = 'C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.temp\worktrees\codex-demo-safe-fixes'
+$demoRoot = '<repo>\.temp\worktrees\codex-demo-safe-fixes'
 $env:PYTHONPATH = "$demoRoot;$demoRoot\optimizer_api"
 $env:OPTIMIZER_PORT = '8001'
 $env:OPTIMIZER_HOST = '127.0.0.1'
 $env:UNIRIDE_API_RELOAD = '0'
 $env:ALLOWED_ORIGINS = 'http://127.0.0.1:9003,http://localhost:9003'
 Set-Location -LiteralPath "$demoRoot\optimizer_api"
-& 'C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe' -B main.py
+& '<repo>\.venv-jit\Scripts\python.exe' -B main.py
 ```
 
 **Terminal 2 — web:**
 
 ```powershell
-Set-Location -LiteralPath 'C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.temp\worktrees\codex-demo-safe-fixes'
+Set-Location -LiteralPath '<repo>\.temp\worktrees\codex-demo-safe-fixes'
 $env:OPTIMIZER_API_URL = 'http://127.0.0.1:8001'
 $env:NEXT_PUBLIC_OPTIMIZER_API_URL = 'http://127.0.0.1:8001'
 node node_modules/next/dist/bin/next dev --webpack --hostname 127.0.0.1 --port 9003

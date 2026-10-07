@@ -62,7 +62,7 @@ Genel kurallar:
 
 ```powershell
 $env:PYTHON_DOTENV_DISABLED="1"; $env:SUPABASE_URL=""; $env:SUPABASE_SERVICE_ROLE_KEY=""
-& "C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe" -B -m pytest <dosyalar> -q
+& "<repo>\.venv-jit\Scripts\python.exe" -B -m pytest <dosyalar> -q
 ```
 
 Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman worktree kodu, editable finder'dan önce gelir (F9).
@@ -74,7 +74,7 @@ Testi bir worktree'nin kökünden `-m pytest` ile çalıştırın: o zaman workt
 - **Adımlar:**
   1. Sahip Supabase projesini yeniden etkinleştirir (**sahip işlemi**).
   2. `.env.local` dosyasında `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` ve `SUPABASE_SERVICE_ROLE_KEY` bulunur. `optimizer_api/.env` dosyasında `SUPABASE_URL` ve `SUPABASE_SERVICE_ROLE_KEY` bulunur (`optimizer_api/utils/data_loader.py:54-55`). Değerler yazdırılmaz.
-  3. Python seçimi için `UNIRIDE_PYTHON` **mutlak yol** olarak ayarlanır, örneğin `$env:UNIRIDE_PYTHON="C:\Users\yektakayman\Desktop\AiCode\FirebaseUniRide\UniRide\.venv-jit\Scripts\python.exe"`. Göreli yol `rootDir` ile birleştirilir (`scripts/start-dudullu-local.mjs:171-178`). Bir worktree'den çalıştırıldığında bu yolda `.venv-jit` bulunmaz. Launcher bu durumda uyarı vermeden PATH'teki Python'a döner, o Python'da da fastapi yoktur. Ardından `node scripts/start-dudullu-local.mjs --check-only` çalıştırılır. Yorumlayıcı satırında `.venv-jit` yolunun göründüğü doğrulanır.
+  3. Python seçimi için `UNIRIDE_PYTHON` **mutlak yol** olarak ayarlanır, örneğin `$env:UNIRIDE_PYTHON="<repo>\.venv-jit\Scripts\python.exe"`. Göreli yol `rootDir` ile birleştirilir (`scripts/start-dudullu-local.mjs:171-178`). Bir worktree'den çalıştırıldığında bu yolda `.venv-jit` bulunmaz. Launcher bu durumda uyarı vermeden PATH'teki Python'a döner, o Python'da da fastapi yoktur. Ardından `node scripts/start-dudullu-local.mjs --check-only` çalıştırılır. Yorumlayıcı satırında `.venv-jit` yolunun göründüğü doğrulanır.
   4. Yığın `npm run dev:dudullu` ile başlatılır. Adres `http://127.0.0.1:9002`.
   5. Yönetici hesabı kontrol edilir: bir Auth kullanıcısı ve `public.users.role = 'admin'` olan satırı gerekir (`src/lib/admin-auth.ts:86-133`). Hesap yoksa sahip bunu Supabase panelinden oluşturur (**sahip yetkisi gerekir**). Kayıt formu ile admin oluşturulmaz: bu C1 açığını kullanmak olur.
   6. `/admin/readiness` sayfasındaki sayımlar not edilir: öğrenciler (`dudulluTarget` ile `completeTargetProfiles`), takvimler (`malformed`), aktif ve kullanılabilir araç sayısı, matris (`validArcCount` ile `expectedArcCount`).

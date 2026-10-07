@@ -403,8 +403,12 @@ function compareFleet(
 ): FleetComparison {
   const liveFleet = response.fleet.liveActiveFleetSize;
   const state = response.fleetMode !== "live" || response.fleet.mode !== "live" ? "unknown"
-    : response.status === "shortage" && response.vehicleSummary !== null && response.assignments.length === 0
-      && response.reasonCodes.includes("FLEET_SHORTAGE") && hasCompleteRouteEvidence(response, false) ? "missing"
+    // The optimizer's FLEET_SHORTAGE certificate means it could not fit the routes into the live fleet.
+    // The API then returns no jobs/route intervals, so an empty route list is accepted as that evidence;
+    // a partial or inconsistent route list is not. No numeric shortfall is derived from it.
+    : response.status === "shortage" && response.assignments.length === 0
+      && response.reasonCodes.includes("FLEET_SHORTAGE")
+      && ((response.jobs.length === 0 && response.routeIntervals.length === 0) || hasCompleteRouteEvidence(response, false)) ? "missing"
     : (response.status === "preview_ready" || response.status === "indeterminate") && response.vehicleSummary !== null
       && hasCompleteRouteEvidence(response, true) ? "enough"
     : "unknown";

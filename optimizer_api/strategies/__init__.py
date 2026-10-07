@@ -119,6 +119,12 @@ if _VROOM_AVAILABLE:
         _vroom_fallback_strategy = VROOMFallbackStrategy()
 
 
+# Operational-only strategies: executable through /optimize with their own
+# request contract, but hidden from discovery lists (/strategies, benchmark
+# param-spaces) because they cannot run from a plain benchmark/compare request.
+OPERATIONAL_ONLY_STRATEGIES = frozenset({"ga_split_hf"})
+
+
 # Registry mapping name -> instance
 STRATEGY_REGISTRY: Dict[str, Optional[BaseRoutingStrategy]] = {
     # =====================================================
@@ -318,6 +324,8 @@ def get_strategy_info() -> List[dict]:
     }
 
     for name, strategy in STRATEGY_REGISTRY.items():
+        if name in OPERATIONAL_ONLY_STRATEGIES:
+            continue
         if strategy is not None:
             if strategy.name not in seen:
                 seen.add(strategy.name)

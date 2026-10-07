@@ -370,6 +370,19 @@ class OptimizationRequest(BaseModel):
             raise ValueError("at most one vehicle type may set max_routes")
         if len(ids) > 1 and quota_types and quota_types[0] == self.minimize_type:
             raise ValueError("max_routes cannot be set on the minimized type")
+        for spec in self.vehicle_types:
+            if (
+                spec.max_ride_time is not None
+                and self.max_ride_time is not None
+                and spec.max_ride_time > self.max_ride_time
+            ):
+                raise ValueError(
+                    f"vehicle type {spec.type_id!r} max_ride_time cannot exceed the request max_ride_time"
+                )
+            if spec.max_travel_time is not None and spec.max_travel_time > self.max_travel_time:
+                raise ValueError(
+                    f"vehicle type {spec.type_id!r} max_travel_time cannot exceed the request max_travel_time"
+                )
         max_sw = max(spec.sw_capacity for spec in self.vehicle_types)
         max_so = max(spec.so_capacity for spec in self.vehicle_types)
         if "sw_capacity" in self.model_fields_set and self.sw_capacity != max_sw:

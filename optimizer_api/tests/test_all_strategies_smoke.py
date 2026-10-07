@@ -39,6 +39,11 @@ def test_smoke_all_strategies(monkeypatch):
     failures = []
     
     for strategy in strategies:
+        if strategy == "ga_split_hf":
+            # operational-only: it requires request.vehicle_types and fails closed
+            # (ValueError) on this plain payload, by design; its own tests live in
+            # test_heterogeneous_fleet_wp3.py
+            continue
         print(f"Testing {strategy}...", end=" ")
         try:
             # Overwrite the strategy in the payload

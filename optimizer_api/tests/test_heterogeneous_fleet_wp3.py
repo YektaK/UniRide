@@ -90,6 +90,16 @@ REJECTED = [
     ("type_ride_zero", _payload(vehicle_types=[dict(LARGE, max_ride_time=0), dict(CAR)]), "max_ride_time"),
     ("type_ride_over_600", _payload(vehicle_types=[dict(LARGE, max_ride_time=601), dict(CAR)]), "max_ride_time"),
     ("negative_quota", _payload(vehicle_types=[dict(LARGE, max_routes=-1), dict(CAR)]), "max_routes"),
+    (
+        "type_ride_above_request_limit",
+        _payload(max_ride_time=40, vehicle_types=[dict(LARGE, max_ride_time=41), dict(CAR)]),
+        "max_ride_time cannot exceed",
+    ),
+    (
+        "type_travel_above_request_limit",
+        _payload(max_travel_time=100, vehicle_types=[dict(LARGE, max_travel_time=101), dict(CAR)]),
+        "max_travel_time cannot exceed",
+    ),
     ("quota_over_policy_ceiling", _payload(vehicle_types=[dict(LARGE, max_routes=51), dict(CAR)]), "max_routes cannot exceed"),
 ]
 
@@ -114,11 +124,50 @@ def test_invalid_heterogeneous_requests_are_http_422(monkeypatch, case_id, paylo
     assert response.status_code == 422
 
 
+def _client_for_get(monkeypatch):
+    monkeypatch.setenv("UNIRIDE_DISABLE_AUTH", "1")
+    from routers import strategies as strategies_router
+
+    app = FastAPI()
+    app.include_router(strategies_router.router)
+    return TestClient(app)
+
+
 def test_ga_split_hf_is_rejected_by_compare_with_422(monkeypatch):
     body = {"students": [], "depot": {"id": "D", "lat": 0.0, "lng": 0.0}, "algorithms": ["ga_split_hf"]}
     response = _client(monkeypatch).post("/api/v1/compare", json=body)
     assert response.status_code == 422
     assert "ga_split_hf" in response.text
+
+
+def test_type_limits_equal_to_request_limits_are_accepted():
+    request = OptimizationRequest(**_payload(
+        max_ride_time=40, max_travel_time=100,
+        vehicle_types=[dict(LARGE, max_ride_time=40, max_travel_time=100), dict(CAR, max_ride_time=30)],
+    ))
+    assert request.vehicle_types[1].max_ride_time == 30
+
+
+def test_ga_split_hf_is_hidden_from_discovery_lists(monkeypatch):
+    from routers import benchmark
+    from strategies import get_strategy_info, STRATEGY_FACTORIES
+
+    assert "ga_split_hf" in STRATEGY_FACTORIES  # still executable via /optimize
+    assert "ga_split_hf" not in {s["name"] for s in get_strategy_info()}
+    assert "ga_split_hf" not in benchmark._strategy_param_spaces()
+    reply = _client_for_get(monkeypatch).get("/api/v1/strategies")
+    assert reply.status_code == 200
+    assert "ga_split_hf" not in {s["name"] for s in reply.json()}
+
+
+def test_ga_split_hf_strategy_without_vehicle_types_fails_closed():
+    from strategies import get_strategy
+
+    request = OptimizationRequest(
+        algorithm="ga_split", students=[], depot={"id": "D", "lat": 0.0, "lng": 0.0}
+    )
+    with pytest.raises(ValueError, match="requires vehicle_types"):
+        get_strategy("ga_split_hf").optimize(request)
 
 
 def test_valid_typed_request_accepted_and_defaults():

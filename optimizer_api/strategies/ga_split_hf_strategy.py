@@ -18,7 +18,7 @@ import time
 from typing import Dict, Optional
 
 from models.schemas import (
-    OptimizationRequest, OptimizationResponse, VehicleTypeSpec,
+    OptimizationRequest, OptimizationResponse,
     VehicleRoute, RouteStep
 )
 from strategies.hybrid_base_strategy import HybridSplitBaseStrategy
@@ -77,19 +77,11 @@ class GASplitHFStrategy(HybridSplitBaseStrategy):
         students = request.students
         depot = request.depot
         direction = request.direction
-        if request.vehicle_types:
-            specs = list(request.vehicle_types)
-            minimize_type = request.minimize_type or specs[0].type_id
-        else:
-            # The API schema rejects ga_split_hf without vehicle_types (422), so
-            # this branch is only reachable by direct strategy calls (e.g. the
-            # registry smoke test): one type from the request caps, no quota.
-            specs = [VehicleTypeSpec(
-                type_id="default",
-                sw_capacity=request.sw_capacity,
-                so_capacity=request.so_capacity,
-            )]
-            minimize_type = "default"
+        if not request.vehicle_types:
+            # fail closed: never invent a fleet (the API schema also returns 422)
+            raise ValueError("ga_split_hf requires vehicle_types")
+        specs = list(request.vehicle_types)
+        minimize_type = request.minimize_type or specs[0].type_id
         type_ids = [spec.type_id for spec in specs]
 
         if not students:

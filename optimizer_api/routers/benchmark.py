@@ -19,7 +19,7 @@ except ModuleNotFoundError:
 from models.schemas import BenchmarkRunRequest, BenchmarkImportRequest
 from benchmark_runner import BenchmarkRunner, ProblemInstance, AlgorithmConfig
 from benchmark_state import benchmark_state_manager, BenchmarkStatus, MAX_CONCURRENT_BENCHMARKS, verify_owner_token
-from strategies import STRATEGY_REGISTRY
+from strategies import OPERATIONAL_ONLY_STRATEGIES, STRATEGY_REGISTRY
 from utils.tsplib_parser import (
     get_available_problems as get_tsplib_problems,
     get_problem_by_name,
@@ -116,6 +116,8 @@ def _add_param_space_aliases(
 def _strategy_param_spaces() -> Dict[str, Dict[str, Dict[str, Any]]]:
     spaces: Dict[str, Dict[str, Dict[str, Any]]] = {}
     for key, strategy in STRATEGY_REGISTRY.items():
+        if key in OPERATIONAL_ONLY_STRATEGIES:
+            continue
         config = getattr(strategy, "config", None)
         if isinstance(config, dict) and config:
             spaces[key] = _space_from_config(config)

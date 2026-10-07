@@ -37,3 +37,13 @@ Weekly charts:
 - `gantt_week_R90.svg`: R=90
 
 Verification: see `../schedule_verification.md`.
+
+## Resource requirement charts
+
+Event-based step charts from `scripts/plan_resource_profile.py` (run after `plan_schedule_report.py`). Dark line = vehicles on a route; light fill = busy including the 10-min cooldown; dashed line = vehicles required; red bar = peak window. Hover a segment for its time window and counts.
+
+- `resource_<date>_R<R>.svg` (20 files): one run each.
+- `resource_week_R<R>.svg` (4 files): Monday to Friday stacked, shared time axis and y-scale.
+- `resource_compare_<date>.svg` (5 files): busy-including-cooldown lines for R = 50, 60, 70, 90 (colour plus dash pattern).
+
+Checks (peak busy = vehicles required, peak on route <= vehicles required): `../schedule_verification.md`, section 'Resource profile checks'.

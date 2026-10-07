@@ -14,6 +14,7 @@ the matrix (``arc_duration_mismatch``); they are never trusted.
 from __future__ import annotations
 
 import copy
+import dataclasses
 import math
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -31,6 +32,8 @@ from uniride_core.algorithms.feasibility_certificate import (
     check_occurrence_coverage,
     check_ride_time,
     check_time_windows,
+    check_type_quota,
+    check_typed_capacity,
     certify_problem_instance,
 )
 from uniride_core.models import ProblemInstance, RoutingResult
@@ -218,6 +221,72 @@ def _fleet_assignment_violations(
     return []
 
 
+def _typed_fleet_violations(
+    request: Any,
+    response: Any,
+    routes: List[List[int]],
+    demands: List[List[int]],
+    matrix: Any,
+    depot: int,
+    vehicle_types: List[Any],
+) -> List[Any]:
+    """Per-route checks of a typed (``ga_split_hf``) response.
+
+    Capacity (Sw and So pools), the per-type tour limit and the per-type ride
+    limit are judged against the type each route declares, on the captured
+    authoritative matrix. A route without a declared type is a violation and is
+    never defaulted; it is still held to the request-level limits.
+    """
+    route_types = [
+        getattr(route, "vehicle_type", None)
+        for route in (getattr(response, "routes", None) or [])
+    ]
+    route_types += [None] * (len(routes) - len(route_types))
+    type_caps = {t.type_id: (t.sw_capacity, t.so_capacity) for t in vehicle_types}
+    out: List[Any] = list(check_typed_capacity(routes, demands, route_types, type_caps))
+    quotas = {t.type_id: t.max_routes for t in vehicle_types if t.max_routes is not None}
+    out.extend(check_type_quota(route_types, quotas, routes))
+
+    limits = {
+        t.type_id: (
+            t.max_travel_time if t.max_travel_time is not None else request.max_travel_time,
+            t.max_ride_time if t.max_ride_time is not None else getattr(request, "max_ride_time", None),
+        )
+        for t in vehicle_types
+    }
+    default_limits = (request.max_travel_time, getattr(request, "max_ride_time", None))
+    direction = getattr(request.direction, "value", request.direction)
+    for idx, route in enumerate(routes):
+        if not route:
+            continue
+        tour_limit, ride_limit = limits.get(route_types[idx], default_limits)
+        found = list(check_duration(
+            [route], matrix, depot, float(tour_limit) + _FLOAT_EPSILON, None
+        ))
+        if ride_limit is not None:
+            found.extend(check_ride_time(
+                [route], matrix, depot, float(ride_limit), direction,
+                tolerance=_FLOAT_EPSILON,
+            ))
+        out.extend(dataclasses.replace(v, route_index=idx) for v in found)
+
+    counts: Dict[str, int] = {}
+    for idx, label in enumerate(route_types):
+        if idx < len(routes) and routes[idx] and isinstance(label, str):
+            counts[label] = counts.get(label, 0) + 1
+    reported = getattr(response, "fleet_mix", None)
+    if reported is None or {k: v for k, v in reported.items() if v} != counts:
+        out.append(Violation(
+            type="fleet_mix_mismatch",
+            severity="error",
+            details=(
+                f"Response fleet_mix {reported!r} differs from the routes' "
+                f"declared types {counts!r}"
+            ),
+        ))
+    return out
+
+
 def certify_optimization_response(
     request: Any,
     response: Any,
@@ -297,7 +366,12 @@ def _certify_optimization_response(
         key: student for student, key in zip(request.students, occurrence_keys)
     }
     fleet = list(getattr(request, "vehicles", None) or [])
-    capacities = None if fleet else [request.sw_capacity, request.so_capacity]
+    vehicle_types = list(getattr(request, "vehicle_types", None) or [])
+    typed = bool(vehicle_types)
+    # Typed (ga_split_hf) requests judge capacity per route against the route's
+    # declared type; the global caps and the one-to-one ``vehicles`` matching
+    # only apply when no types are declared (single-type behaviour unchanged).
+    capacities = None if (fleet or typed) else [request.sw_capacity, request.so_capacity]
 
     routes: List[List[int]] = []
     pre_violations: List[Dict[str, Any]] = []
@@ -582,11 +656,16 @@ def _certify_optimization_response(
     violations.extend(_fleet_assignment_violations(routes, demands, fleet))
     if capacities is not None:
         violations.extend(check_capacity_vectors(routes, demands, capacities))
-    violations.extend(check_duration(
-        routes, matrix, depot, float(request.max_travel_time) + _FLOAT_EPSILON, None
-    ))
+    if typed:
+        violations.extend(_typed_fleet_violations(
+            request, response, routes, demands, matrix, depot, vehicle_types
+        ))
+    else:
+        violations.extend(check_duration(
+            routes, matrix, depot, float(request.max_travel_time) + _FLOAT_EPSILON, None
+        ))
     max_ride_time = getattr(request, "max_ride_time", None)
-    if max_ride_time is not None:
+    if max_ride_time is not None and not typed:
         # Fail-closed safety net for every strategy: a result that violates
         # the per-student ride limit is rejected whether or not the strategy
         # knows about the field. The matrix holds the true arcs, so only float

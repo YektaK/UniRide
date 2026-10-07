@@ -17,7 +17,7 @@ from optimizer_api.strategies import STRATEGY_FACTORIES, STRATEGY_REGISTRY
 EXPECTED_PRODUCTION_STRATEGIES = frozenset({
     "genetic_algorithm", "ga", "pso", "gwo", "grey_wolf", "hho",
     "harris_hawks", "ga_split", "ga-split", "ga_split_enhanced",
-    "ga-split-enhanced", "pso_split", "pso-split", "gwo_split",
+    "ga-split-enhanced", "ga_split_hf", "pso_split", "pso-split", "gwo_split",
     "gwo-split", "hho_split", "hho-split", "ortools_cvrp", "ortools",
     "pyvrp", "hgs", "pyvrp_alt", "vroom", "vroom_fallback", "e2bso",
     "entropy_bso", "e2b", "r2dma", "rdma", "paoea", "aoea", "two_opt",

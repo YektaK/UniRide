@@ -96,6 +96,7 @@ CONFIG_FIELD_BY_CANONICAL = {
     "genetic_algorithm": "ga_config",
     "ga_split": "ga_config",
     "ga_split_enhanced": "ga_config",
+    "ga_split_hf": "ga_config",
     "pso": "pso_config",
     "pso_split": "pso_config",
     "gwo": "gwo_config",
@@ -111,6 +112,7 @@ CONFIG_FIELD_BY_CANONICAL = {
 STANDARD_APPLICABLE_KEYS = {
     "genetic_algorithm": frozenset({"population_size", "max_iterations", "max_no_improvement", "elite_count", "tournament_size", "crossover_rate", "mutation_rate", "seed"}),
     "ga_split": frozenset({"population_size", "max_iterations", "max_no_improvement", "elite_count", "tournament_size", "crossover_rate", "mutation_rate", "local_search_interval", "local_search_type", "diversify_threshold", "seed"}),
+    "ga_split_hf": frozenset({"population_size", "max_iterations", "max_no_improvement", "elite_count", "tournament_size", "crossover_rate", "mutation_rate", "local_search_interval", "local_search_type", "diversify_threshold", "seed"}),
     "ga_split_enhanced": frozenset({"population_size", "max_iterations", "max_no_improvement", "elite_count", "tournament_size", "crossover_rate", "mutation_rate", "local_search_interval", "local_search_type", "diversify_threshold", "seed"}),
     "pso": frozenset({"swarm_size", "max_iterations", "max_no_improvement", "max_velocity_size", "reinit_interval", "inertia_weight", "cognitive_weight", "social_weight", "local_search_type", "seed"}),
     "pso_split": frozenset({"swarm_size", "max_iterations", "max_no_improvement", "local_search_interval", "local_search_type", "inertia_weight", "inertia_min", "cognitive_weight", "social_weight", "velocity_clamp", "seed"}),

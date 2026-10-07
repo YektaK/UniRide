@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional, Tuple, Literal
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_serializer, model_validator
 from enum import Enum
 
 from uniride_core.adapters.demand_builder import student_occurrence_keys
@@ -124,6 +124,29 @@ class VehicleConfig(BaseModel):
     so_capacity: int = 5
     cooldown_minutes: int = 15
 
+
+class VehicleTypeSpec(BaseModel):
+    """One vehicle type of a heterogeneous-fleet request (``ga_split_hf``).
+
+    Sw and So are separate capacity pools. ``max_ride_time``/``max_travel_time``
+    default to the request-level limits. ``max_routes`` is a per-call quota on
+    the number of routes that may use this type (None = unlimited).
+    """
+
+    type_id: str = Field(pattern=r"^[a-z][a-z0-9_-]{0,31}$")
+    sw_capacity: int = Field(ge=0, le=1000)
+    so_capacity: int = Field(ge=0, le=1000)
+    max_ride_time: Optional[int] = Field(default=None, ge=1, le=600)
+    max_travel_time: Optional[int] = Field(default=None, ge=1, le=1440)
+    max_routes: Optional[int] = Field(default=None, ge=0, le=100000)
+
+    @model_validator(mode="after")
+    def validate_capacity(self) -> "VehicleTypeSpec":
+        if self.sw_capacity + self.so_capacity < 1:
+            raise ValueError(f"vehicle type {self.type_id!r} must have capacity >= 1")
+        return self
+
+
 class WeeklyScheduleEntry(BaseModel):
     id: str
     dayOfWeek: str
@@ -165,6 +188,16 @@ class VehicleRoute(BaseModel):
     student_ids: List[str] = []
     departure_time: Optional[str] = None
     arrival_times: Optional[Dict[str, str]] = None
+    # Heterogeneous fleet (ga_split_hf only). Absent from the JSON when unset,
+    # so single-type responses stay byte-identical.
+    vehicle_type: Optional[str] = None
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_vehicle_type(self, handler):
+        data = handler(self)
+        if isinstance(data, dict) and data.get("vehicle_type") is None:
+            data.pop("vehicle_type", None)
+        return data
 
 class BottleneckInfo(BaseModel):
     time: str
@@ -228,6 +261,8 @@ class OptimizationRequest(BaseModel):
     allow_time_shift: bool = False
     slack_window_minutes: int = 60
     vehicles: Optional[List[VehicleConfig]] = None
+    vehicle_types: Optional[List[VehicleTypeSpec]] = Field(default=None, min_length=1, max_length=4)
+    minimize_type: Optional[str] = None
     mode: OptimizationMode = OptimizationMode.BENCHMARK
     local_search_type: Optional[str] = "two_opt"
     use_sota_engine: bool = False
@@ -306,6 +341,46 @@ class OptimizationRequest(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def validate_heterogeneous_fleet(self) -> "OptimizationRequest":
+        """Fail-closed contract for ``vehicle_types`` / ``ga_split_hf`` (422)."""
+        is_hf = str(self.algorithm).strip().lower() == "ga_split_hf"
+        if self.vehicle_types is None:
+            if is_hf:
+                raise ValueError("algorithm ga_split_hf requires vehicle_types")
+            if self.minimize_type is not None:
+                raise ValueError("minimize_type requires vehicle_types")
+            return self
+        if not is_hf:
+            raise ValueError("vehicle_types is only supported by algorithm ga_split_hf")
+        if self.vehicles is not None:
+            raise ValueError("vehicle_types and vehicles are mutually exclusive")
+        if self.use_time_windows:
+            raise ValueError("vehicle_types does not support use_time_windows")
+        ids = [spec.type_id for spec in self.vehicle_types]
+        if len(set(ids)) != len(ids):
+            raise ValueError("vehicle_types type_id values must be unique")
+        if self.minimize_type is None:
+            if len(ids) > 1:
+                raise ValueError("minimize_type is required when several vehicle_types are declared")
+            self.minimize_type = ids[0]
+        elif self.minimize_type not in ids:
+            raise ValueError("minimize_type must name one of vehicle_types")
+        quota_types = [spec.type_id for spec in self.vehicle_types if spec.max_routes is not None]
+        if len(quota_types) > 1:
+            raise ValueError("at most one vehicle type may set max_routes")
+        if len(ids) > 1 and quota_types and quota_types[0] == self.minimize_type:
+            raise ValueError("max_routes cannot be set on the minimized type")
+        max_sw = max(spec.sw_capacity for spec in self.vehicle_types)
+        max_so = max(spec.so_capacity for spec in self.vehicle_types)
+        if "sw_capacity" in self.model_fields_set and self.sw_capacity != max_sw:
+            raise ValueError("sw_capacity must equal the maximum over vehicle_types, or be omitted")
+        if "so_capacity" in self.model_fields_set and self.so_capacity != max_so:
+            raise ValueError("so_capacity must equal the maximum over vehicle_types, or be omitted")
+        self.sw_capacity = max_sw
+        self.so_capacity = max_so
+        return self
+
+    @model_validator(mode="after")
     def validate_compute_admission(self) -> "OptimizationRequest":
         try:
             from optimizer_api.compute_policy import (
@@ -321,6 +396,9 @@ class OptimizationRequest(BaseModel):
             raise ValueError(f"students cannot exceed {policy.max_students}")
         if self.vehicles is not None and len(self.vehicles) > policy.max_vehicles:
             raise ValueError(f"vehicles cannot exceed {policy.max_vehicles}")
+        for spec in self.vehicle_types or []:
+            if spec.max_routes is not None and spec.max_routes > policy.max_vehicles:
+                raise ValueError(f"vehicle_types max_routes cannot exceed {policy.max_vehicles}")
         if self.local_search_type not in {None, "none", "two_opt", "three_opt", "or_opt", "hybrid"}:
             raise ValueError("local_search_type is unsupported")
         for field_name in TUNING_ALLOWLISTS:
@@ -461,6 +539,16 @@ class OptimizationResponse(BaseModel):
     algorithm_requested: Optional[str] = None
     applied_policy: Optional[AppliedComputePolicyInfo] = None
     matrix_provenance: Optional[MatrixProvenanceInfo] = None
+    # Heterogeneous fleet (ga_split_hf only): routes per vehicle type. Absent
+    # from the JSON when unset, so single-type responses stay byte-identical.
+    fleet_mix: Optional[Dict[str, int]] = None
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_fleet_mix(self, handler):
+        data = handler(self)
+        if isinstance(data, dict) and data.get("fleet_mix") is None:
+            data.pop("fleet_mix", None)
+        return data
 
 class AlgorithmResult(BaseModel):
     algorithm: str

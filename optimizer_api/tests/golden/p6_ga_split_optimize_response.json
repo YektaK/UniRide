@@ -1,0 +1,316 @@
+{
+ "algorithm_requested": "ga_split",
+ "algorithm_used": "ga_split",
+ "applied_policy": {
+  "algorithm_canonical": "ga_split",
+  "algorithm_requested": "ga_split",
+  "cancellation_mode": "none",
+  "limits": {
+   "diversify_threshold": {
+    "enforcement": "request-local ga_config.diversify_threshold",
+    "source": "strategy_default",
+    "value": 30.0
+   },
+   "elite_count": {
+    "enforcement": "request-local ga_config.elite_count",
+    "source": "strategy_default",
+    "value": 3.0
+   },
+   "local_search_interval": {
+    "enforcement": "request-local ga_config.local_search_interval",
+    "source": "strategy_default",
+    "value": 10.0
+   },
+   "max_iterations": {
+    "enforcement": "request-local ga_config.max_iterations",
+    "source": "caller",
+    "value": 15.0
+   },
+   "max_no_improvement": {
+    "enforcement": "request-local ga_config.max_no_improvement",
+    "source": "strategy_default",
+    "value": 25.0
+   },
+   "population_size": {
+    "enforcement": "request-local ga_config.population_size",
+    "source": "caller",
+    "value": 20.0
+   },
+   "tournament_size": {
+    "enforcement": "request-local ga_config.tournament_size",
+    "source": "strategy_default",
+    "value": 4.0
+   }
+  },
+  "profile_id": "production-conservative-v1",
+  "student_count": 5,
+  "vehicle_count": 0
+ },
+ "direction": "pickup",
+ "error_message": null,
+ "execution_time_seconds": 0.0,
+ "feasibility_certificate": {
+  "certify_error": null,
+  "is_feasible": true,
+  "violation_count": 0,
+  "violations": []
+ },
+ "ie_data": {
+  "bottlenecks": [],
+  "hourly_demand": {
+   "06:00": {
+    "dropoff": {
+     "So": 0,
+     "Sw": 0
+    },
+    "pickup": {
+     "So": 0,
+     "Sw": 0
+    }
+   },
+   "07:00": {
+    "dropoff": {
+     "So": 0,
+     "Sw": 0
+    },
+    "pickup": {
+     "So": 0,
+     "Sw": 0
+    }
+   },
+   "08:00": {
+    "dropoff": {
+     "So": 0,
+     "Sw": 0
+    },
+    "pickup": {
+     "So": 0,
+     "Sw": 0
+    }
+   },
+   "09:00": {
+    "dropoff": {
+     "So": 0,
+     "Sw": 0
+    },
+    "pickup": {
+     "So": 0,
+     "Sw": 0
+    }
+   },
+   "10:00": {
+    "dropoff": {
+     "So": 0,
+     "Sw": 0
+    },
+    "pickup": {
+     "So": 0,
+     "Sw": 0
+    }
+   },
+   "11:00": {
+    "dropoff": {
+     "So": 0,
+     "Sw": 0
+    },
+    "pickup": {
+     "So": 0,
+     "Sw": 0
+    }
+   },
+   "12:00": {
+    "dropoff": {
+     "So": 0,
+     "Sw": 0
+    },
+    "pickup": {
+     "So": 0,
+     "Sw": 0
+    }
+   },
+   "13:00": {
+    "dropoff": {
+     "So": 0,
+     "Sw": 0
+    },
+    "pickup": {
+     "So": 0,
+     "Sw": 0
+    }
+   },
+   "14:00": {
+    "dropoff": {
+     "So": 0,
+     "Sw": 0
+    },
+    "pickup": {
+     "So": 0,
+     "Sw": 0
+    }
+   },
+   "15:00": {
+    "dropoff": {
+     "So": 0,
+     "Sw": 0
+    },
+    "pickup": {
+     "So": 0,
+     "Sw": 0
+    }
+   },
+   "16:00": {
+    "dropoff": {
+     "So": 0,
+     "Sw": 0
+    },
+    "pickup": {
+     "So": 0,
+     "Sw": 0
+    }
+   },
+   "17:00": {
+    "dropoff": {
+     "So": 0,
+     "Sw": 0
+    },
+    "pickup": {
+     "So": 0,
+     "Sw": 0
+    }
+   },
+   "18:00": {
+    "dropoff": {
+     "So": 0,
+     "Sw": 0
+    },
+    "pickup": {
+     "So": 0,
+     "Sw": 0
+    }
+   },
+   "19:00": {
+    "dropoff": {
+     "So": 0,
+     "Sw": 0
+    },
+    "pickup": {
+     "So": 0,
+     "Sw": 0
+    }
+   },
+   "20:00": {
+    "dropoff": {
+     "So": 0,
+     "Sw": 0
+    },
+    "pickup": {
+     "So": 0,
+     "Sw": 0
+    }
+   },
+   "21:00": {
+    "dropoff": {
+     "So": 0,
+     "Sw": 0
+    },
+    "pickup": {
+     "So": 0,
+     "Sw": 0
+    }
+   },
+   "22:00": {
+    "dropoff": {
+     "So": 0,
+     "Sw": 0
+    },
+    "pickup": {
+     "So": 0,
+     "Sw": 0
+    }
+   }
+  },
+  "standard_vehicles_needed": 2,
+  "time_shift_suggestions": []
+ },
+ "matrix_provenance": null,
+ "routes": [
+  {
+   "arrival_times": null,
+   "departure_time": null,
+   "route_details": [
+    {
+     "distance": 0.0,
+     "duration": 6.0,
+     "location1": "DEPOT",
+     "location2": "L5"
+    },
+    {
+     "distance": 0.0,
+     "duration": 5.0,
+     "location1": "L5",
+     "location2": "DEPOT"
+    }
+   ],
+   "so_count": 1,
+   "student_ids": [
+    "s5"
+   ],
+   "sw_count": 0,
+   "total_distance_km": 0.0,
+   "total_duration_minutes": 11.0,
+   "vehicle_id": "Ara\u00e7 1 (GA-Split)"
+  },
+  {
+   "arrival_times": null,
+   "departure_time": null,
+   "route_details": [
+    {
+     "distance": 0.0,
+     "duration": 6.0,
+     "location1": "DEPOT",
+     "location2": "L1"
+    },
+    {
+     "distance": 0.0,
+     "duration": 3.0,
+     "location1": "L1",
+     "location2": "L4"
+    },
+    {
+     "distance": 0.0,
+     "duration": 3.0,
+     "location1": "L4",
+     "location2": "L2"
+    },
+    {
+     "distance": 0.0,
+     "duration": 3.0,
+     "location1": "L2",
+     "location2": "L3"
+    },
+    {
+     "distance": 0.0,
+     "duration": 5.0,
+     "location1": "L3",
+     "location2": "DEPOT"
+    }
+   ],
+   "so_count": 2,
+   "student_ids": [
+    "s1",
+    "s4",
+    "s2",
+    "s3"
+   ],
+   "sw_count": 2,
+   "total_distance_km": 0.0,
+   "total_duration_minutes": 20.0,
+   "vehicle_id": "Ara\u00e7 2 (GA-Split)"
+  }
+ ],
+ "success": true,
+ "time_windows_used": false,
+ "total_duration_minutes": 31.0,
+ "total_time_window_violations": 0,
+ "total_vehicles": 2
+}

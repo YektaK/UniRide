@@ -26,6 +26,7 @@ CONFIG_FIELD_BY_CANONICAL = {
     "genetic_algorithm": "ga_config",
     "ga_split": "ga_config",
     "ga_split_enhanced": "ga_config",
+    "ga_split_hf": "ga_config",
     "pso": "pso_config",
     "pso_split": "pso_config",
     "gwo": "gwo_config",

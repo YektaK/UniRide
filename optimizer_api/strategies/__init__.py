@@ -12,6 +12,7 @@ Cluster-First, Route-Second (Pipeline A — uses Sweep/CW clustering):
 
 Route-First, Cluster-Second (Pipeline B - Split):
 - ga_split: GA + Optimal Split Decoder
+- ga_split_hf: typed GA-Split for a heterogeneous fleet (operational only, needs vehicle_types)
 - pso_split: PSO + Optimal Split Decoder
 - gwo_split: GWO + Optimal Split Decoder
 - hho_split: HHO + Optimal Split Decoder
@@ -47,6 +48,7 @@ from strategies.aoea_strategy import PAOEAStrategy
 
 # Pipeline B: Split-based strategies
 from strategies.ga_split_strategy import GASplitStrategy, GAEnhancedSplitStrategy
+from strategies.ga_split_hf_strategy import GASplitHFStrategy
 from strategies.pso_split_strategy import PSOSplitStrategy
 from strategies.hho_split_strategy import HHOSplitStrategy
 from strategies.gwo_split_strategy import GWOSplitStrategy
@@ -88,6 +90,7 @@ _ortools_strategy = ORToolsCVRPStrategy()
 # Pipeline B instances
 _ga_split_strategy = GASplitStrategy()
 _ga_split_enhanced_strategy = GAEnhancedSplitStrategy()
+_ga_split_hf_strategy = GASplitHFStrategy()
 _pso_split_strategy = PSOSplitStrategy()
 _hho_split_strategy = HHOSplitStrategy()
 _gwo_split_strategy = GWOSplitStrategy()
@@ -146,6 +149,8 @@ STRATEGY_REGISTRY: Dict[str, Optional[BaseRoutingStrategy]] = {
     "ga-split": _ga_split_strategy,  # Alias
     "ga_split_enhanced": _ga_split_enhanced_strategy,
     "ga-split-enhanced": _ga_split_enhanced_strategy,  # Alias
+    # Heterogeneous fleet (operational only; requires vehicle_types; not a /compare default)
+    "ga_split_hf": _ga_split_hf_strategy,
     
     # PSO + Split
     "pso_split": _pso_split_strategy,
@@ -233,6 +238,7 @@ STRATEGY_FACTORIES: Dict[str, Optional[Callable[[], BaseRoutingStrategy]]] = {
     "ga-split": GASplitStrategy,
     "ga_split_enhanced": GAEnhancedSplitStrategy,
     "ga-split-enhanced": GAEnhancedSplitStrategy,
+    "ga_split_hf": GASplitHFStrategy,
     "pso_split": PSOSplitStrategy,
     "pso-split": PSOSplitStrategy,
     "gwo_split": GWOSplitStrategy,

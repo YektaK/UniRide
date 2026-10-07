@@ -113,6 +113,39 @@ describe("assignTypedVehicles unit cases", () => {
     const loose = assignTypedVehicles({ intervals, types: [large(1), sedan()] });
     expect(loose.status).toBe("proven");
   });
+
+  it("reports witness when a smaller car count hits the budget and the next count succeeds", () => {
+    const data: [number, number, number, number][] = [
+      [46, 67, 0, 1], [68, 95, 0, 3], [68, 77, 0, 1], [34, 39, 1, 2], [32, 52, 1, 2], [28, 43, 0, 3],
+      [55, 63, 0, 2], [6, 35, 0, 2], [9, 37, 0, 2], [7, 19, 0, 1], [79, 85, 0, 3], [77, 101, 1, 2], [6, 21, 1, 1],
+    ];
+    const intervals = data.map(([start, end, sw, so], i) => route(i, start, end, sw, so));
+    const types = [large(2), sedan()];
+    const exact = assignTypedVehicles({ intervals, types });
+    expect(exact.status).toBe("proven");
+    expect(exact.lowerBoundsByType.car).toBe(3);
+    expect(exact.minimumCount).toBe(3);
+    // Budget 15 (found by hand) is exhausted at 3 cars and sufficient at 4.
+    const tight = assignTypedVehicles({ intervals, types, nodeBudget: 15 });
+    expect(tight.status).toBe("witness");
+    expect(tight.minimumCount).toBe(4);
+    expect(tight.minimumCount).toBeGreaterThan(tight.lowerBoundsByType.car);
+    expect(verifyTypedAssignment(tight.assignments, types)).toEqual([]);
+  });
+
+  it("handles zero cooldown and a zero-duration route", () => {
+    const zero = (cooldown: number) => [large(0, cooldown), sedan(cooldown)];
+    const chain = [route(0, 0, 10, 0, 1), route(1, 10, 10, 0, 1), route(2, 10, 20, 0, 1)];
+    const shared = assignTypedVehicles({ intervals: chain, types: zero(0) });
+    expect(shared.status).toBe("proven");
+    expect(shared.minimumCount).toBe(1);
+    expect(verifyTypedAssignment(shared.assignments, zero(0))).toEqual([]);
+    const inside = [route(0, 5, 15, 0, 1), route(1, 10, 10, 0, 1)];
+    expect(assignTypedVehicles({ intervals: inside, types: zero(0) }).minimumCount).toBe(2);
+    const lone = assignTypedVehicles({ intervals: [route(0, 7, 7, 0, 1)], types: zero(0) });
+    expect(lone.minimumCount).toBe(1);
+    expect(lone.minimiseMinutes).toBe(0);
+  });
 });
 
 // ---------------------------------------------------------------------------------------

@@ -14,7 +14,7 @@ Production:
 
 - Command: `npm run experiments:plan -- --week-of 2026-10-05 --ride-limits 50,60,70,90 --tour-limit 150 --fleet virtual`
 - Run date: 2026-10-07.
-- Git commit: `51c5c51bfe007672a6618097f2ded64eea91b0f8` (the manifest records a dirty working tree).
+- Git commit: `51c5c51bfe007672a6618097f2ded64eea91b0f8` (the manifest sets a dirty flag, but the only working-tree change at run time was one unrelated untracked note file; all tracked files equalled this commit, so the run is reproducible from 51c5c51).
 - Seed: 42. Algorithm `ga_split`, native termination, one repeat per cell.
 - Matrix sha256: `bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5` (29 locations; the same value is recorded for all 20 runs).
 

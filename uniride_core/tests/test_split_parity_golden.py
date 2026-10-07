@@ -167,13 +167,14 @@ def _dump(data: Dict[str, Any]) -> str:
 
 
 def test_split_outputs_are_byte_identical_to_base_commit_goldens():
-    expected = GOLDEN.read_bytes().decode("utf-8")
+    # Normalise CRLF so git autocrlf checkouts compare equal to the LF capture.
+    expected = GOLDEN.read_bytes().replace(b"\r\n", b"\n").decode("utf-8")
     actual = _dump(build_golden())
     if actual != expected:
         got, want = json.loads(actual), json.loads(expected)
         diff = sorted(k for k in set(got) | set(want) if got.get(k) != want.get(k))
         raise AssertionError(f"split parity drift in {len(diff)} entries, first: {diff[:5]}")
-    assert actual.encode("utf-8") == GOLDEN.read_bytes()
+    assert actual.encode("utf-8") == expected.encode("utf-8")
 
 
 def test_golden_covers_every_engine_and_mix():

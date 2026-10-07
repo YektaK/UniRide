@@ -45,7 +45,7 @@ Initialization combines randomized permutations and a nearest-neighbour tour. To
 
 The decoder enumerates feasible contiguous segments under both passenger capacities and the tour and ride limits. Dynamic programming chooses a minimum-travel-time partition for a fixed permutation, preferring partitions without violations. This restricted calculation does not optimize all permutations, and its cost objective differs from the outer GA's route-count priority. Neither a decoded partition nor the final wave result proves globally minimum route count. With nonmetric travel, a duration violation also does not imply that every longer segment violates the limit; alternatives must still be examined.
 
-The planning tool always selects the GA split strategy and supplies no per-request algorithm configuration. The following are the strategy's declared defaults, rather than an observed deployment configuration:
+The planning tool always selects the `ga_split` strategy and supplies no per-request algorithm configuration. The following are the strategy's declared defaults, rather than an observed deployment configuration:
 
 | Parameter | Declared default | Interpretation |
 |---|---:|---|

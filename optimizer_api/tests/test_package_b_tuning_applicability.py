@@ -106,6 +106,10 @@ def _request(algorithm: str, **overrides) -> OptimizationRequest:
         "students": [],
         "depot": {"id": "D", "lat": 0.0, "lng": 0.0},
     }
+    if algorithm == "ga_split_hf":  # the schema requires declared vehicle types
+        payload["vehicle_types"] = [
+            {"type_id": "large", "sw_capacity": 4, "so_capacity": 5}
+        ]
     payload.update(overrides)
     return OptimizationRequest(**payload)
 

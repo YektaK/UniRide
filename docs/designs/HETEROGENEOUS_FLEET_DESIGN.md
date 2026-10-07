@@ -320,3 +320,20 @@ Total ≈ 12 developer days. Packages 1 and 2 can run in parallel after 0.
 | Q6 | How should the corrected-capacity campaign relate to the archived 4/10 results in the paper: new labelled section, or replacement with an erratum? | new labelled campaign; archive untouched | Results must not change silently. |
 | Q7 | Default car cap (unlimited today) and selection time limit for the headline run. | unlimited; 30 s per (day, R, L) | A cap can turn a result into `infeasible_for_L`. |
 | Q8 | Is CP-SAT for the day selection acceptable, or should the greedy quota-repair fallback be used (weaker guarantee, §3.5)? | CP-SAT | Changes WP4 only. |
+
+## Owner decisions (2026-10-08)
+
+The owner answered the open questions of section 11 as follows. These replace the defaults in that table.
+
+| # | Decision |
+|---|---|
+| Q1 | Sedan Sw = 0 (`0sw4so`). A sedan carrying 1 Sw (`sedan:1sw3so`) can be tested later with no code change. |
+| Q2 | Minibus = 4 Sw + 5 So confirmed. The DB record was corrected by the owner on 2026-10-07 from 4/10 to 4/5 (F6). |
+| Q3 | Same travel times, same ride limit R and cooldown 10 for both vehicle types. |
+| Q4 | All So students are sedan-eligible; no per-student eligibility is needed. |
+| Q5 | Tie-break on car-minutes. Report both the weekly maximum and the per-day need. |
+| Q6 | The 4/10 results are REMOVED from the paper and replaced by the corrected 4/5 campaign. The 4/10 archive stays in git, labelled invalid due to a data error. |
+| Q7 | Cars unlimited. Selection time limit 30 s per (day, R, L). |
+| Q8 | CP-SAT is accepted for the day selection. |
+
+Q1 stays recorded as an open scenario question in `DECISION_LOG.md` (sedan Sw = 0 is the owner's current answer, not a safety verification of mixed loads).

@@ -43,6 +43,9 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 | S03 | Service boundaries | Narrow remediation and explicit waivers | Historical bounded scope |
 | W01 | Daily workflow | Separate legs, exact anchors, confirmed admission | Approved production contract |
 | W02 | Daily workflow | Preview orchestration before publication/operations | Approved staged design |
+| X01 | Data errors | Vehicle capacity sources disagreed (DB 4/10 vs physical/decoder 4/5); DB corrected | Owner decision; data error |
+| H01 | Heterogeneous fleet | Typed split, exact day selection, typed assignment; additive only; academic code untouched | Owner approved 2026-10-08 |
+| H02 | Heterogeneous fleet | Q1: can a sedan carry any Sw (`sedan:1sw3so`)? | **Open question** |
 
 ## Demo scope
 
@@ -270,6 +273,24 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 - **Date/status:** 2026-08-25/09-24; approved design. **Chosen/rationale:** TypeScript orchestrates demand and exact-anchor jobs through canonical FastAPI/core, independently checks matrix-bound routes, then assigns physical vehicles across full depot-to-depot intervals. Keep preview read-only; transactional versioned multi-wave publication and driver operations are later gates.
 - **Rejected/why:** extending legacy DouBus island duplicates/violates canonical routing; moving all product orchestration into FastAPI/core crosses ownership boundaries. **Dead ends:** per-wave route count alone cannot establish daily physical resource need. **Superseded:** response-derived timing/certification alone is insufficient without source arcs/full closing chain.
 - **Evidence:** [daily operations design §4/§10](superpowers/specs/2026-08-25-dudullu-daily-operations-planner-design.md), [Package2 plan](superpowers/plans/2026-09-24-dudullu-package2-daily-preview.md). **Check first:** package-specific acceptance evidence before claiming persistence, publication, driver assignment or certified shift savings.
+
+## Heterogeneous fleet and data errors
+
+### X01 - vehicle capacity sources disagreed; DB corrected
+
+- **Date/status:** 2026-10-07/08; owner decision, data error. **Finding:** the database vehicle record said 4 Sw + 10 So, while the physical layout and the decoder default (`SplitDecoder`, 4/5) said 4 Sw + 5 So. The owner corrected the DB record to 4/5 on 2026-10-07. Every earlier fleet number computed from the DB used 4/10.
+- **Consequence:** the 4/10 results are removed from the paper and replaced by the corrected 4/5 campaign. The 4/10 archive stays in git, labelled invalid due to a data error; it must not be cited as evidence.
+- **Check first:** when sources disagree on a capacity, check the physical layout first, then the DB and code defaults. **Evidence:** [design section 1.1 (F6) and owner decisions](designs/HETEROGENEOUS_FLEET_DESIGN.md).
+
+### H01 - heterogeneous fleet design
+
+- **Date/status:** 2026-10-08; owner approved. **Chosen/rationale:** typed split decoder with a large-route quota per wave, exact CP-SAT day selection over the wave menu, typed fixed-route assignment in TypeScript; all additive, optional fields only. Sedan Sw = 0, minibus 4/5, same travel times, ride limit and cooldown 10, cars unlimited, 30 s per (day, R, L), tie-break on car-minutes with weekly max and per-day need both reported.
+- **Academic boundary:** default `ga_split` and the shared decoder stay unchanged. WP0 adds byte-identical goldens (`uniride_core/tests/golden/split_parity.json`, `test_split_parity_golden.py`) and a zero-import guard for the new modules. **Rejected:** greedy quota repair as primary (weaker guarantee).
+- **Evidence:** [design](designs/HETEROGENEOUS_FLEET_DESIGN.md), owner decisions 2026-10-08. **Check first:** P1 goldens green before any later work package.
+
+### H02 - Q1 open: can a sedan carry Sw?
+
+- **Date/status:** 2026-10-08; **open question**. The current answer is sedan Sw = 0. Whether a Fiat Linea can safely carry 1-2 Sw (folding, transfer seat, ramp) is not verified. It can be tested later as `sedan:1sw3so` with no code change; any such result must be labelled as a scenario, not as validated practice.
 
 ## Open questions and evidence limits
 

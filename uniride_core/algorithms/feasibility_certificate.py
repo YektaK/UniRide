@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Any, List, Optional, Sequence, Tuple
+from typing import Any, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -25,6 +25,9 @@ MATRIX_SHAPE = "matrix_shape"
 MISSING_ARC = "missing_arc"
 ROUTE_CONTINUITY = "route_continuity"
 HARD_VIOLATION = "hard_violation"
+TYPED_CAPACITY_VIOLATION = "typed_capacity_violation"
+VEHICLE_TYPE_UNKNOWN = "vehicle_type_unknown"
+TYPE_QUOTA_VIOLATION = "type_quota_violation"
 
 
 @dataclass(frozen=True)
@@ -151,6 +154,74 @@ def check_capacity_vectors(
                 ))
 
     return violations
+
+
+def check_typed_capacity(
+    routes: Sequence[Sequence[int]],
+    demands: Optional[Sequence],
+    route_types: Sequence[Optional[str]],
+    type_caps: Mapping[str, Tuple[int, int]],
+) -> List[Violation]:
+    """Per-route (Sw, So) capacity against the route's declared vehicle type.
+
+    ``type_caps`` maps a type id to ``(sw_capacity, so_capacity)``.  A missing,
+    unknown or non-string type label on a non-empty route is a
+    ``vehicle_type_unknown`` violation (never defaulted to another type); a
+    type with ``sw_capacity == 0`` therefore rejects any Sw passenger.
+    """
+    if demands is None:
+        return []
+    demand_vectors = _normalize_demands(demands)
+    violations: List[Violation] = []
+    for idx, route in enumerate(routes):
+        if not route:
+            continue
+        label = route_types[idx] if idx < len(route_types) else None
+        caps = type_caps.get(label) if isinstance(label, str) else None
+        if caps is None:
+            violations.append(Violation(
+                type=VEHICLE_TYPE_UNKNOWN,
+                severity="error",
+                details=f"Route {idx} vehicle type {label!r} is missing or not declared",
+                route_index=idx,
+            ))
+            continue
+        load = route_load(route, demand_vectors)
+        for d, name in enumerate(("Sw", "So")):
+            if d < len(load) and load[d] > caps[d]:
+                violations.append(Violation(
+                    type=TYPED_CAPACITY_VIOLATION,
+                    severity="error",
+                    details=(
+                        f"Route {idx} ({label}) {name} load {load[d]} exceeds "
+                        f"type capacity {caps[d]}"
+                    ),
+                    route_index=idx,
+                ))
+    return violations
+
+
+def check_type_quota(
+    route_types: Sequence[Optional[str]],
+    quotas: Mapping[str, int],
+    routes: Optional[Sequence[Sequence[int]]] = None,
+) -> List[Violation]:
+    """At most ``quotas[type]`` non-empty routes of each quota-limited type."""
+    counts: dict = {}
+    for idx, label in enumerate(route_types):
+        if routes is not None and idx < len(routes) and not routes[idx]:
+            continue
+        if isinstance(label, str):
+            counts[label] = counts.get(label, 0) + 1
+    return [
+        Violation(
+            type=TYPE_QUOTA_VIOLATION,
+            severity="error",
+            details=f"{counts[name]} route(s) of type {name!r} exceed the quota {limit}",
+        )
+        for name, limit in sorted(quotas.items())
+        if counts.get(name, 0) > limit
+    ]
 
 
 def check_duration(
@@ -624,11 +695,16 @@ __all__ = [
     "MISSING_ARC",
     "ROUTE_CONTINUITY",
     "HARD_VIOLATION",
+    "TYPED_CAPACITY_VIOLATION",
+    "VEHICLE_TYPE_UNKNOWN",
+    "TYPE_QUOTA_VIOLATION",
     "Violation",
     "FeasibilityCertificate",
     "check_occurrence_coverage",
     "check_depot_closure",
     "check_capacity_vectors",
+    "check_typed_capacity",
+    "check_type_quota",
     "check_duration",
     "check_ride_time",
     "check_time_windows",

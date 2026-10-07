@@ -548,6 +548,13 @@ def compare_algorithms(request: CompareRequest) -> CompareResponse:
     ) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from None
 
+    if any(item.canonical == "ga_split_hf" for item in resolutions):
+        # needs vehicle_types, which /compare does not carry
+        raise HTTPException(
+            status_code=422,
+            detail="ga_split_hf is not available in /compare; use /optimize",
+        )
+
     policy = load_compute_policy()
     if len(resolutions) > policy.max_algorithms:
         raise HTTPException(

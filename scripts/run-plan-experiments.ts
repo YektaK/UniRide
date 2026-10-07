@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 import { resolveSharedKey, buildChildEnv, resolvePythonBin } from "./start-dudullu-local.mjs";
 import {
   parseExperimentArgs, captureMatrixSnapshot, summarizePlan, anonymizeResponse,
-  aggregateWeeks, summariesMatch, toCsv, SUMMARY_COLUMNS,
+  aggregateWeeks, summariesMatch, toCsv, SUMMARY_COLUMNS, fetchWithRateLimitRetry,
   type ExperimentMatrix, type ExperimentSummary,
 } from "../src/services/plan-experiments";
 
@@ -78,8 +78,16 @@ async function main() {
   try {
     for (const date of args.dates) for (const ride of args.rideLimits) for (let repeat = 1; repeat <= args.repeat; repeat++) {
       let matrix: ExperimentMatrix | null = null;
+      const rateLimitWaits: Array<{ path: string; status: number; wait_seconds: number; attempt: number }> = [];
+      const httpFailures: Array<{ path: string; status: number }> = [];
       const fetchWithSnapshot = async (requestPath: string, init?: RequestInit) => {
-        const response = await optimizerFetch(requestPath, init);
+        const response = await fetchWithRateLimitRetry(optimizerFetch, requestPath, init, {
+          onRetry: (seconds, attempt) => {
+            rateLimitWaits.push({ path: requestPath, status: 429, wait_seconds: seconds, attempt });
+            console.log(`Optimizer rate limit: waiting ${seconds}s before retry ${attempt}.`);
+          },
+        });
+        if (!response.ok) httpFailures.push({ path: requestPath, status: response.status });
         if (requestPath === "/api/v1/internal/matrix-snapshot" && response.ok) {
           try { matrix = captureMatrixSnapshot(await response.clone().json()); }
           catch { matrix = null; }
@@ -103,6 +111,7 @@ async function main() {
       summaries.push(summary);
       runs.push({ date, ride_limit: ride, repeat_index: repeat, response_file: responseFile,
         matrix_file: captured ? `${stem}.matrix.json` : null, matrix_provenance: captured?.provenance ?? null,
+        rate_limit_waits: rateLimitWaits, optimizer_http_failures: httpFailures,
         virtual_template: typeof response === "object" && response !== null && "fleet" in response
           ? (response.fleet as { template?: unknown }).template ?? null : null,
       });

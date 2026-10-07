@@ -43,6 +43,8 @@ Add `--repeat 2` for two runs per combination (40 computations). Explicit comma-
 
 The existing default resolves `seed=None` to **42**. The runner does not override GA parameters to force agreement: a promoted configuration must be recorded truthfully. Repeats compare every daily summary field except repeat index and also compare matrix hashes. Divergence is recorded and exits with code 2. `loaded_at` can legitimately differ. Responses/CSV/manifest are checkpointed after each completed run; a failed export preserves earlier results and marks the manifest failed. Preview/data failures are exported with their status/reasons rather than claimed as feasible plans.
 
+The default optimizer admits 30 compute requests per 60-second window; a day uses one request per wave. The CLI respects numeric HTTP 429 `Retry-After` for at most two waits of up to 60 seconds per request (missing/malformed header defaults to 60). It retries the same rejected payload; authentication and other failures are not retried. Longer/busy windows remain failures. Waits and final HTTP failure statuses are recorded per run without headers/bodies or secrets. This does not change optimizer policy or the shared planning computation.
+
 These are descriptive operational sensitivity results under **native termination**, not fixed objective-evaluation-budget benchmark evidence. A proven vehicle assignment is minimal for the solver's fixed routes; it is not global routing optimality. Smoke/pilot output establishes neither algorithm superiority nor causality. Live schedules can change between runs; matrix hashes and status are captured, but these files do not freeze the underlying live database.
 
 ## Verification

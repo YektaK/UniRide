@@ -66,6 +66,22 @@ const matrixSchema = z.object({
   })),
 });
 export type ExperimentMatrix = z.infer<typeof matrixSchema>;
+export async function fetchWithRateLimitRetry(
+  transport: (path: string, init?: RequestInit) => Promise<Response>, path: string, init?: RequestInit,
+  options: { sleep?: (ms: number) => Promise<void>; onRetry?: (waitSeconds: number, attempt: number) => void } = {},
+): Promise<Response> {
+  const sleep = options.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms)));
+  // ponytail: two waits up to 60 seconds; longer/busy windows remain explicit HTTP failures.
+  for (let attempt = 0; ; attempt++) {
+    const response = await transport(path, init);
+    if (response.status !== 429 || attempt === 2) return response;
+    const header = response.headers.get("Retry-After");
+    const seconds = header && /^\d+$/.test(header) ? Math.max(1, Number(header)) : 60;
+    if (seconds > 60) return response;
+    options.onRetry?.(seconds, attempt + 1);
+    await sleep(seconds * 1000);
+  }
+}
 export function captureMatrixSnapshot(value: unknown): ExperimentMatrix {
   const matrix = matrixSchema.parse(value);
   if (matrix.id !== `time_matrix:sha256:${matrix.sha256}` || matrix.version !== matrix.sha256 || matrix.provenance.sha256 !== matrix.sha256) {

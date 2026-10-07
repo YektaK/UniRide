@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   parseExperimentArgs, routeMetrics, aggregateWeeks, anonymizeResponse,
-  summariesMatch, captureMatrixSnapshot, summarizePlan, toCsv, type ExperimentSummary,
+  summariesMatch, captureMatrixSnapshot, summarizePlan, toCsv, fetchWithRateLimitRetry, type ExperimentSummary,
 } from "./plan-experiments";
 
 describe("plan experiments", () => {
@@ -78,6 +78,27 @@ describe("plan experiments", () => {
   it("escapes nested reason arrays and blank unknown values in CSV", () => {
     expect(toCsv([{ reason: ["A", "B"], minutes: null }], ["reason", "minutes"]))
       .toBe('reason,minutes\n"[""A"",""B""]",\n');
+  });
+  it("respects a rejected compute request's Retry-After before retrying the same payload", async () => {
+    const calls: Array<[string, RequestInit | undefined]> = [], waits: number[] = [];
+    const transport = async (path: string, init?: RequestInit) => {
+      calls.push([path, init]);
+      return new Response(null, calls.length === 1 ? { status: 429, headers: { "Retry-After": "2" } } : { status: 200 });
+    };
+    const init = { method: "POST", body: "same-payload" };
+    const response = await fetchWithRateLimitRetry(transport, "/api/v1/optimize", init, { sleep: async ms => { waits.push(ms); } });
+    expect(response.status).toBe(200);
+    expect(calls).toEqual([["/api/v1/optimize", init], ["/api/v1/optimize", init]]);
+    expect(waits).toEqual([2000]);
+  });
+  it("bounds retries and does not retry authentication failures or long windows", async () => {
+    let calls = 0;
+    const transport = async () => { calls++; return new Response(null, { status: 429, headers: { "Retry-After": "1" } }); };
+    expect((await fetchWithRateLimitRetry(transport, "path", undefined, { sleep: async () => {} })).status).toBe(429);
+    expect(calls).toBe(3);
+    const sleep = async () => { throw new Error("must not sleep"); };
+    expect((await fetchWithRateLimitRetry(async () => new Response(null, { status: 401 }), "path", undefined, { sleep })).status).toBe(401);
+    expect((await fetchWithRateLimitRetry(async () => new Response(null, { status: 429, headers: { "Retry-After": "120" } }), "path", undefined, { sleep })).status).toBe(429);
   });
 
   const row = (date: string, vehicles: number | null, repeat_index = 1): ExperimentSummary => ({

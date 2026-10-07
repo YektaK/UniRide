@@ -21,6 +21,18 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 RES = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "docs", "paper", "results", "week-2026-10-05")
 FIG = os.path.join(RES, "figures")
 COOLDOWN, SW_CAP, SO_CAP, TOUR = 10, 4, 10, 150
+
+
+def _template_capacity():
+    """Large-vehicle capacity from the campaign's own responses (old default kept if none)."""
+    for p in sorted(glob.glob(os.path.join(RES, "*_R*_repeat1.response.json"))):
+        with open(p, encoding="utf-8") as f:
+            t = json.load(f)["fleet"]["template"]
+        return t["swCapacity"], t["soCapacity"]
+    return SW_CAP, SO_CAP
+
+
+SW_CAP, SO_CAP = _template_capacity()
 BUFFER = 15  # documented arrival/departure buffer (class time is not in the JSON)
 C_PICK, C_DROP = "#0072B2", "#E69F00"  # Okabe-Ito blue / orange
 
@@ -173,7 +185,7 @@ def analyse(date, R, d):
 
 
 CHECKS = [("a", "no overlap on a vehicle"), ("b", "cooldown >= 10 min"), ("c", "each route and leg served exactly once"),
-          ("d", "load within 4 Sw / 10 So"), ("e", "tour <= 150 and ride <= R"),
+          ("d", "load within %d Sw / %d So" % (SW_CAP, SO_CAP)), ("e", "tour <= 150 and ride <= R"),
           ("f", "vehicles and summary.csv match"), ("g", "internal consistency of fields")]
 
 
@@ -244,7 +256,7 @@ def write_md(res, weekly_notes):
          "Conventions: pickup interval = [anchor - total, anchor], drop-off interval = [anchor, anchor + total] "
          "(total = sum of step durations). Pickup ride = steps after the student's stop up to campus; "
          "drop-off ride = steps from campus up to the student's stop. "
-         "Gap = next start - previous end on the same physical vehicle. Cooldown 10 min, capacity 4 Sw / 10 So, tour limit 150.", ""]
+         "Gap = next start - previous end on the same physical vehicle. Cooldown 10 min, capacity %d Sw / %d So, tour limit 150." % (SW_CAP, SO_CAP), ""]
     tot = defaultdict(int)
     for a in res:
         for c, _ in a["viol"]:

@@ -47,7 +47,7 @@ describe("optimizer server boundary", () => {
     const expectedModules = new Set([
       "src/services/optimizer-service.ts",
       "src/app/api/sandbox/route.ts",
-      "src/app/api/admin/dudullu-preview/route.ts",
+      "src/services/daily-plan-run.ts",
       "src/services/doubus/multi-vehicle-routing.ts",
     ]);
     const observedModules = new Set<string>();
@@ -62,6 +62,8 @@ describe("optimizer server boundary", () => {
     }
 
     expect(observedModules).toEqual(expectedModules);
+    expect(read("src/services/daily-plan-run.ts")).toContain('import "server-only"');
+    expect(read("src/app/api/admin/dudullu-preview/route.ts")).toContain("reader: getSupabaseAdmin(), optimizerFetch");
   });
   it("keeps server-only transport out of client components", () => {
     for (const file of sourceFiles(join(root, "src"))) {

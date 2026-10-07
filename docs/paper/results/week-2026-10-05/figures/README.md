@@ -47,3 +47,12 @@ Event-based step charts from `scripts/plan_resource_profile.py` (run after `plan
 - `resource_compare_<date>.svg` (5 files): busy-including-cooldown lines for R = 50, 60, 70, 90 (colour plus dash pattern).
 
 Checks (peak busy = vehicles required, peak on route <= vehicles required): `../schedule_verification.md`, section 'Resource profile checks'.
+
+## Fleet-mix frontier charts
+
+From `scripts/plan_fleet_mix.py` (run after `plan_resource_profile.py`). Weekly frontier of large vehicles (x) versus cars (y) that cover all five weekdays, thin lines = single weekdays, black square = all-large baseline. Routes are fixed as produced for the large vehicle, so this is an upper bound, not a mixed-fleet optimum. Details: `../fleet_mix_analysis.md`.
+
+- `fleet_mix_frontier_R50.svg`: R = 50 min
+- `fleet_mix_frontier_R60.svg`: R = 60 min
+- `fleet_mix_frontier_R70.svg`: R = 70 min
+- `fleet_mix_frontier_R90.svg`: R = 90 min

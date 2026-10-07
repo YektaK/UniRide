@@ -13,6 +13,7 @@ vi.mock("@/lib/admin-auth", async () => {
 
 vi.mock("@/lib/supabase-admin", () => ({ getSupabaseAdmin: getSupabaseAdminMock }));
 vi.mock("@/lib/optimizer-server", () => ({ optimizerFetch: optimizerFetchMock }));
+vi.mock("server-only", () => ({}));
 
 import { AppError } from "@/lib/admin-auth";
 
@@ -192,6 +193,35 @@ afterEach(() => {
 });
 
 describe("POST /api/admin/dudullu-preview", () => {
+  it("matches the direct runDailyPlan output for a nonempty two-direction fixture", async () => {
+    const rows = admittedRows([onTimePickup, { ...onTimePickup, direction: "dropoff" }]);
+    const client = setAdmin(rows);
+    const results = () => [
+      solverResult("2026-09-30:pickup:student-1"),
+      solverResult("2026-09-30:dropoff:student-1"),
+    ];
+    mockTransport(results());
+    const { POST } = await import("./route");
+    const response = await POST(post({ serviceDate: "2026-09-30" }));
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(body.status).toBe("preview_ready");
+    expect(body.jobs).toHaveLength(2);
+    mockTransport(results());
+    const { runDailyPlan } = await import("@/services/daily-plan-run");
+    const direct = await runDailyPlan({
+      reader: client as unknown as import("@/services/daily-plan-run").DailyPlanReader,
+      optimizerFetch: optimizerFetchMock,
+      clock: () => new Date("2026-09-30T00:00:00Z"),
+    }, {
+      serviceDate: "2026-09-30", admissionMode: "recorded", fleetMode: "live",
+      maxRideTimeMinutes: 90, maxTourMinutes: 150,
+    });
+    expect(direct).toEqual(body);
+    expect(client.writes).toEqual([]);
+  });
+
   it("skips fleet, matrix, and solver for zero admitted demand", async () => {
     const client = setAdmin(admittedRows([]));
     const { POST } = await import("./route");

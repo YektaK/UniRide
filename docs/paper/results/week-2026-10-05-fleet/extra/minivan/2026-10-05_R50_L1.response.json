@@ -1,0 +1,1654 @@
+{
+  "serviceDate": "2026-10-05",
+  "dayStatus": "ready",
+  "limits": {
+    "maxRideTimeMinutes": 50,
+    "maxTourMinutes": 150
+  },
+  "dbVehiclesConsulted": false,
+  "matrix": {
+    "id": "time_matrix:sha256:bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+    "version": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+    "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+    "source": "supabase"
+  },
+  "scenario": {
+    "scenario": 1,
+    "status": "ok",
+    "reasonCodes": [],
+    "cars": 6,
+    "carsStatus": "proven_over_menu",
+    "largeVehicles": 1,
+    "largeVehiclesProven": null,
+    "largeLimit": 1,
+    "carUsageWindows": [
+      {
+        "carId": "Vehicle1",
+        "windowStartMinutes": 442,
+        "windowEndMinutes": 1101,
+        "busyMinutes": 354,
+        "routeCount": 6,
+        "waves": [
+          "2026-10-05:dropoff:1035",
+          "2026-10-05:dropoff:735",
+          "2026-10-05:dropoff:795",
+          "2026-10-05:dropoff:915",
+          "2026-10-05:pickup:525",
+          "2026-10-05:pickup:705"
+        ]
+      },
+      {
+        "carId": "Vehicle2",
+        "windowStartMinutes": 448,
+        "windowEndMinutes": 980,
+        "busyMinutes": 271,
+        "routeCount": 4,
+        "waves": [
+          "2026-10-05:dropoff:675",
+          "2026-10-05:dropoff:735",
+          "2026-10-05:dropoff:915",
+          "2026-10-05:pickup:525"
+        ]
+      },
+      {
+        "carId": "Vehicle3",
+        "windowStartMinutes": 451,
+        "windowEndMinutes": 991,
+        "busyMinutes": 259,
+        "routeCount": 5,
+        "waves": [
+          "2026-10-05:dropoff:795",
+          "2026-10-05:dropoff:975",
+          "2026-10-05:pickup:525",
+          "2026-10-05:pickup:765",
+          "2026-10-05:pickup:945"
+        ]
+      },
+      {
+        "carId": "Vehicle4",
+        "windowStartMinutes": 465,
+        "windowEndMinutes": 1027,
+        "busyMinutes": 165,
+        "routeCount": 3,
+        "waves": [
+          "2026-10-05:dropoff:975",
+          "2026-10-05:pickup:525",
+          "2026-10-05:pickup:765"
+        ]
+      },
+      {
+        "carId": "Vehicle5",
+        "windowStartMinutes": 469,
+        "windowEndMinutes": 1030,
+        "busyMinutes": 111,
+        "routeCount": 2,
+        "waves": [
+          "2026-10-05:dropoff:975",
+          "2026-10-05:pickup:525"
+        ]
+      },
+      {
+        "carId": "Vehicle6",
+        "windowStartMinutes": 509,
+        "windowEndMinutes": 525,
+        "busyMinutes": 16,
+        "routeCount": 1,
+        "waves": [
+          "2026-10-05:pickup:525"
+        ]
+      }
+    ],
+    "selection": {
+      "status": "optimal",
+      "cars": 6,
+      "carMinutes": 1176,
+      "claim": "minimum cars over the given menus only",
+      "optionByWave": {
+        "2026-10-05:pickup:765": "q0",
+        "2026-10-05:dropoff:1035": "base",
+        "2026-10-05:pickup:525": "q0",
+        "2026-10-05:dropoff:975": "q0",
+        "2026-10-05:dropoff:735": "base",
+        "2026-10-05:dropoff:855": "base",
+        "2026-10-05:pickup:945": "base",
+        "2026-10-05:dropoff:1095": "base",
+        "2026-10-05:dropoff:795": "base",
+        "2026-10-05:pickup:705": "base",
+        "2026-10-05:dropoff:915": "base",
+        "2026-10-05:dropoff:675": "base"
+      },
+      "diagnostics": {
+        "lower_bound_L": 0,
+        "claim": "minimum cars over the given menus only"
+      },
+      "stats": {
+        "wall_time_s": 0.06828059999679681,
+        "num_workers": 1,
+        "random_seed": 20261008,
+        "stage_values": {
+          "cars": 6,
+          "car_minutes": 1176000,
+          "total_minutes": 1650000,
+          "option_index": 3
+        },
+        "routes": 52
+      }
+    },
+    "assignment": {
+      "status": "proven",
+      "reasonCodes": [],
+      "nodes": 104,
+      "lowerBoundsByType": {
+        "large": 0,
+        "minivan": 6
+      },
+      "problems": []
+    },
+    "routes": [
+      {
+        "jobId": "2026-10-05:pickup:765",
+        "routeIndex": 0,
+        "direction": "pickup",
+        "anchorMinutes": 765,
+        "startMinutes": 712,
+        "endMinutes": 765,
+        "minutes": 53,
+        "swCount": 1,
+        "soCount": 1,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle4",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:pickup:So7~1",
+          "2026-10-05:pickup:Sw7~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "So7",
+            "duration": 10
+          },
+          {
+            "location1": "So7",
+            "location2": "Sw7",
+            "duration": 21
+          },
+          {
+            "location1": "Sw7",
+            "location2": "D.Kampus",
+            "duration": 22
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:pickup:765",
+        "routeIndex": 1,
+        "direction": "pickup",
+        "anchorMinutes": 765,
+        "startMinutes": 699,
+        "endMinutes": 765,
+        "minutes": 66,
+        "swCount": 1,
+        "soCount": 0,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle3",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:pickup:Sw5~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "Sw5",
+            "duration": 35
+          },
+          {
+            "location1": "Sw5",
+            "location2": "D.Kampus",
+            "duration": 31
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:dropoff:1035",
+        "routeIndex": 0,
+        "direction": "dropoff",
+        "anchorMinutes": 1035,
+        "startMinutes": 1035,
+        "endMinutes": 1076,
+        "minutes": 41,
+        "swCount": 0,
+        "soCount": 2,
+        "vehicleType": "large",
+        "physicalVehicleId": "Vehicle7",
+        "selectionLabel": "large",
+        "occurrenceIds": [
+          "2026-10-05:dropoff:So9~1",
+          "2026-10-05:dropoff:So8~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "So9",
+            "duration": 10
+          },
+          {
+            "location1": "So9",
+            "location2": "So8",
+            "duration": 14
+          },
+          {
+            "location1": "So8",
+            "location2": "D.Kampus",
+            "duration": 17
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:dropoff:1035",
+        "routeIndex": 1,
+        "direction": "dropoff",
+        "anchorMinutes": 1035,
+        "startMinutes": 1035,
+        "endMinutes": 1101,
+        "minutes": 66,
+        "swCount": 1,
+        "soCount": 0,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle1",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:dropoff:Sw5~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "Sw5",
+            "duration": 35
+          },
+          {
+            "location1": "Sw5",
+            "location2": "D.Kampus",
+            "duration": 31
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:pickup:525",
+        "routeIndex": 0,
+        "direction": "pickup",
+        "anchorMinutes": 525,
+        "startMinutes": 448,
+        "endMinutes": 525,
+        "minutes": 77,
+        "swCount": 1,
+        "soCount": 3,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle2",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:pickup:Sw4~1",
+          "2026-10-05:pickup:So18~1",
+          "2026-10-05:pickup:So14~1",
+          "2026-10-05:pickup:So12~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "Sw4",
+            "duration": 30
+          },
+          {
+            "location1": "Sw4",
+            "location2": "So18",
+            "duration": 8
+          },
+          {
+            "location1": "So18",
+            "location2": "So14",
+            "duration": 14
+          },
+          {
+            "location1": "So14",
+            "location2": "So12",
+            "duration": 8
+          },
+          {
+            "location1": "So12",
+            "location2": "D.Kampus",
+            "duration": 17
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:pickup:525",
+        "routeIndex": 1,
+        "direction": "pickup",
+        "anchorMinutes": 525,
+        "startMinutes": 442,
+        "endMinutes": 525,
+        "minutes": 83,
+        "swCount": 1,
+        "soCount": 1,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle1",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:pickup:Sw1~1",
+          "2026-10-05:pickup:So1~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "Sw1",
+            "duration": 40
+          },
+          {
+            "location1": "Sw1",
+            "location2": "So1",
+            "duration": 37
+          },
+          {
+            "location1": "So1",
+            "location2": "D.Kampus",
+            "duration": 6
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:pickup:525",
+        "routeIndex": 2,
+        "direction": "pickup",
+        "anchorMinutes": 525,
+        "startMinutes": 509,
+        "endMinutes": 525,
+        "minutes": 16,
+        "swCount": 1,
+        "soCount": 0,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle6",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:pickup:Sw3~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "Sw3",
+            "duration": 9
+          },
+          {
+            "location1": "Sw3",
+            "location2": "D.Kampus",
+            "duration": 7
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:pickup:525",
+        "routeIndex": 3,
+        "direction": "pickup",
+        "anchorMinutes": 525,
+        "startMinutes": 469,
+        "endMinutes": 525,
+        "minutes": 56,
+        "swCount": 0,
+        "soCount": 3,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle5",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:pickup:So10~1",
+          "2026-10-05:pickup:So3~1",
+          "2026-10-05:pickup:So8~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "So10",
+            "duration": 10
+          },
+          {
+            "location1": "So10",
+            "location2": "So3",
+            "duration": 20
+          },
+          {
+            "location1": "So3",
+            "location2": "So8",
+            "duration": 9
+          },
+          {
+            "location1": "So8",
+            "location2": "D.Kampus",
+            "duration": 17
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:pickup:525",
+        "routeIndex": 4,
+        "direction": "pickup",
+        "anchorMinutes": 525,
+        "startMinutes": 465,
+        "endMinutes": 525,
+        "minutes": 60,
+        "swCount": 1,
+        "soCount": 3,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle4",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:pickup:So19~1",
+          "2026-10-05:pickup:So2~1",
+          "2026-10-05:pickup:Sw6~1",
+          "2026-10-05:pickup:So13~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "So19",
+            "duration": 18
+          },
+          {
+            "location1": "So19",
+            "location2": "So2",
+            "duration": 1
+          },
+          {
+            "location1": "So2",
+            "location2": "Sw6",
+            "duration": 14
+          },
+          {
+            "location1": "Sw6",
+            "location2": "So13",
+            "duration": 9
+          },
+          {
+            "location1": "So13",
+            "location2": "D.Kampus",
+            "duration": 18
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:pickup:525",
+        "routeIndex": 5,
+        "direction": "pickup",
+        "anchorMinutes": 525,
+        "startMinutes": 451,
+        "endMinutes": 525,
+        "minutes": 74,
+        "swCount": 1,
+        "soCount": 3,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle3",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:pickup:So5~1",
+          "2026-10-05:pickup:Sw2~1",
+          "2026-10-05:pickup:So16~1",
+          "2026-10-05:pickup:So15~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "So5",
+            "duration": 24
+          },
+          {
+            "location1": "So5",
+            "location2": "Sw2",
+            "duration": 5
+          },
+          {
+            "location1": "Sw2",
+            "location2": "So16",
+            "duration": 17
+          },
+          {
+            "location1": "So16",
+            "location2": "So15",
+            "duration": 4
+          },
+          {
+            "location1": "So15",
+            "location2": "D.Kampus",
+            "duration": 24
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:pickup:525",
+        "routeIndex": 6,
+        "direction": "pickup",
+        "anchorMinutes": 525,
+        "startMinutes": 432,
+        "endMinutes": 525,
+        "minutes": 93,
+        "swCount": 0,
+        "soCount": 2,
+        "vehicleType": "large",
+        "physicalVehicleId": "Vehicle7",
+        "selectionLabel": "large",
+        "occurrenceIds": [
+          "2026-10-05:pickup:So6~1",
+          "2026-10-05:pickup:So9~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "So6",
+            "duration": 50
+          },
+          {
+            "location1": "So6",
+            "location2": "So9",
+            "duration": 33
+          },
+          {
+            "location1": "So9",
+            "location2": "D.Kampus",
+            "duration": 10
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:dropoff:975",
+        "routeIndex": 0,
+        "direction": "dropoff",
+        "anchorMinutes": 975,
+        "startMinutes": 975,
+        "endMinutes": 1027,
+        "minutes": 52,
+        "swCount": 1,
+        "soCount": 1,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle4",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:dropoff:So14~1",
+          "2026-10-05:dropoff:Sw7~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "So14",
+            "duration": 18
+          },
+          {
+            "location1": "So14",
+            "location2": "Sw7",
+            "duration": 12
+          },
+          {
+            "location1": "Sw7",
+            "location2": "D.Kampus",
+            "duration": 22
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:dropoff:975",
+        "routeIndex": 1,
+        "direction": "dropoff",
+        "anchorMinutes": 975,
+        "startMinutes": 975,
+        "endMinutes": 1030,
+        "minutes": 55,
+        "swCount": 1,
+        "soCount": 0,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle5",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:dropoff:Sw4~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "Sw4",
+            "duration": 30
+          },
+          {
+            "location1": "Sw4",
+            "location2": "D.Kampus",
+            "duration": 25
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:dropoff:975",
+        "routeIndex": 2,
+        "direction": "dropoff",
+        "anchorMinutes": 975,
+        "startMinutes": 975,
+        "endMinutes": 991,
+        "minutes": 16,
+        "swCount": 1,
+        "soCount": 0,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle3",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:dropoff:Sw3~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "Sw3",
+            "duration": 9
+          },
+          {
+            "location1": "Sw3",
+            "location2": "D.Kampus",
+            "duration": 7
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:dropoff:735",
+        "routeIndex": 0,
+        "direction": "dropoff",
+        "anchorMinutes": 735,
+        "startMinutes": 735,
+        "endMinutes": 818,
+        "minutes": 83,
+        "swCount": 0,
+        "soCount": 2,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle2",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:dropoff:So10~1",
+          "2026-10-05:dropoff:So6~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "So10",
+            "duration": 10
+          },
+          {
+            "location1": "So10",
+            "location2": "So6",
+            "duration": 36
+          },
+          {
+            "location1": "So6",
+            "location2": "D.Kampus",
+            "duration": 37
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:dropoff:735",
+        "routeIndex": 1,
+        "direction": "dropoff",
+        "anchorMinutes": 735,
+        "startMinutes": 735,
+        "endMinutes": 781,
+        "minutes": 46,
+        "swCount": 1,
+        "soCount": 0,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle1",
+        "selectionLabel": "large",
+        "occurrenceIds": [
+          "2026-10-05:dropoff:Sw2~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "Sw2",
+            "duration": 24
+          },
+          {
+            "location1": "Sw2",
+            "location2": "D.Kampus",
+            "duration": 22
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:dropoff:735",
+        "routeIndex": 2,
+        "direction": "dropoff",
+        "anchorMinutes": 735,
+        "startMinutes": 735,
+        "endMinutes": 818,
+        "minutes": 83,
+        "swCount": 1,
+        "soCount": 1,
+        "vehicleType": "large",
+        "physicalVehicleId": "Vehicle7",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:dropoff:So1~1",
+          "2026-10-05:dropoff:Sw1~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "So1",
+            "duration": 7
+          },
+          {
+            "location1": "So1",
+            "location2": "Sw1",
+            "duration": 39
+          },
+          {
+            "location1": "Sw1",
+            "location2": "D.Kampus",
+            "duration": 37
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:dropoff:855",
+        "routeIndex": 0,
+        "direction": "dropoff",
+        "anchorMinutes": 855,
+        "startMinutes": 855,
+        "endMinutes": 892,
+        "minutes": 37,
+        "swCount": 0,
+        "soCount": 1,
+        "vehicleType": "large",
+        "physicalVehicleId": "Vehicle7",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:dropoff:So12~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "So12",
+            "duration": 20
+          },
+          {
+            "location1": "So12",
+            "location2": "D.Kampus",
+            "duration": 17
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:pickup:945",
+        "routeIndex": 0,
+        "direction": "pickup",
+        "anchorMinutes": 945,
+        "startMinutes": 916,
+        "endMinutes": 945,
+        "minutes": 29,
+        "swCount": 0,
+        "soCount": 1,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle3",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:pickup:So11~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "So11",
+            "duration": 14
+          },
+          {
+            "location1": "So11",
+            "location2": "D.Kampus",
+            "duration": 15
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:dropoff:1095",
+        "routeIndex": 0,
+        "direction": "dropoff",
+        "anchorMinutes": 1095,
+        "startMinutes": 1095,
+        "endMinutes": 1143,
+        "minutes": 48,
+        "swCount": 0,
+        "soCount": 2,
+        "vehicleType": "large",
+        "physicalVehicleId": "Vehicle7",
+        "selectionLabel": "large",
+        "occurrenceIds": [
+          "2026-10-05:dropoff:So11~1",
+          "2026-10-05:dropoff:So19~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "So11",
+            "duration": 14
+          },
+          {
+            "location1": "So11",
+            "location2": "So19",
+            "duration": 18
+          },
+          {
+            "location1": "So19",
+            "location2": "D.Kampus",
+            "duration": 16
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:dropoff:795",
+        "routeIndex": 0,
+        "direction": "dropoff",
+        "anchorMinutes": 795,
+        "startMinutes": 795,
+        "endMinutes": 869,
+        "minutes": 74,
+        "swCount": 1,
+        "soCount": 2,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle3",
+        "selectionLabel": "large",
+        "occurrenceIds": [
+          "2026-10-05:dropoff:So5~1",
+          "2026-10-05:dropoff:Sw6~1",
+          "2026-10-05:dropoff:So18~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "So5",
+            "duration": 24
+          },
+          {
+            "location1": "So5",
+            "location2": "Sw6",
+            "duration": 16
+          },
+          {
+            "location1": "Sw6",
+            "location2": "So18",
+            "duration": 10
+          },
+          {
+            "location1": "So18",
+            "location2": "D.Kampus",
+            "duration": 24
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:dropoff:795",
+        "routeIndex": 1,
+        "direction": "dropoff",
+        "anchorMinutes": 795,
+        "startMinutes": 795,
+        "endMinutes": 849,
+        "minutes": 54,
+        "swCount": 0,
+        "soCount": 1,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle1",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:dropoff:So16~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "So16",
+            "duration": 28
+          },
+          {
+            "location1": "So16",
+            "location2": "D.Kampus",
+            "duration": 26
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:pickup:705",
+        "routeIndex": 0,
+        "direction": "pickup",
+        "anchorMinutes": 705,
+        "startMinutes": 614,
+        "endMinutes": 705,
+        "minutes": 91,
+        "swCount": 1,
+        "soCount": 1,
+        "vehicleType": "large",
+        "physicalVehicleId": "Vehicle7",
+        "selectionLabel": "large",
+        "occurrenceIds": [
+          "2026-10-05:pickup:So17~1",
+          "2026-10-05:pickup:Sw9~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "So17",
+            "duration": 45
+          },
+          {
+            "location1": "So17",
+            "location2": "Sw9",
+            "duration": 27
+          },
+          {
+            "location1": "Sw9",
+            "location2": "D.Kampus",
+            "duration": 19
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:pickup:705",
+        "routeIndex": 1,
+        "direction": "pickup",
+        "anchorMinutes": 705,
+        "startMinutes": 654,
+        "endMinutes": 705,
+        "minutes": 51,
+        "swCount": 0,
+        "soCount": 1,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle1",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:pickup:So4~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "So4",
+            "duration": 30
+          },
+          {
+            "location1": "So4",
+            "location2": "D.Kampus",
+            "duration": 21
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:dropoff:915",
+        "routeIndex": 0,
+        "direction": "dropoff",
+        "anchorMinutes": 915,
+        "startMinutes": 915,
+        "endMinutes": 980,
+        "minutes": 65,
+        "swCount": 0,
+        "soCount": 2,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle2",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:dropoff:So15~1",
+          "2026-10-05:dropoff:So4~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "So15",
+            "duration": 26
+          },
+          {
+            "location1": "So15",
+            "location2": "So4",
+            "duration": 18
+          },
+          {
+            "location1": "So4",
+            "location2": "D.Kampus",
+            "duration": 21
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:dropoff:915",
+        "routeIndex": 1,
+        "direction": "dropoff",
+        "anchorMinutes": 915,
+        "startMinutes": 915,
+        "endMinutes": 996,
+        "minutes": 81,
+        "swCount": 0,
+        "soCount": 1,
+        "vehicleType": "large",
+        "physicalVehicleId": "Vehicle7",
+        "selectionLabel": "large",
+        "occurrenceIds": [
+          "2026-10-05:dropoff:So17~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "So17",
+            "duration": 45
+          },
+          {
+            "location1": "So17",
+            "location2": "D.Kampus",
+            "duration": 36
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:dropoff:915",
+        "routeIndex": 2,
+        "direction": "dropoff",
+        "anchorMinutes": 915,
+        "startMinutes": 915,
+        "endMinutes": 969,
+        "minutes": 54,
+        "swCount": 1,
+        "soCount": 2,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle1",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:dropoff:So7~1",
+          "2026-10-05:dropoff:So3~1",
+          "2026-10-05:dropoff:Sw9~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "So7",
+            "duration": 10
+          },
+          {
+            "location1": "So7",
+            "location2": "So3",
+            "duration": 18
+          },
+          {
+            "location1": "So3",
+            "location2": "Sw9",
+            "duration": 7
+          },
+          {
+            "location1": "Sw9",
+            "location2": "D.Kampus",
+            "duration": 19
+          }
+        ]
+      },
+      {
+        "jobId": "2026-10-05:dropoff:675",
+        "routeIndex": 0,
+        "direction": "dropoff",
+        "anchorMinutes": 675,
+        "startMinutes": 675,
+        "endMinutes": 721,
+        "minutes": 46,
+        "swCount": 0,
+        "soCount": 2,
+        "vehicleType": "minivan",
+        "physicalVehicleId": "Vehicle2",
+        "selectionLabel": "car",
+        "occurrenceIds": [
+          "2026-10-05:dropoff:So2~1",
+          "2026-10-05:dropoff:So13~1"
+        ],
+        "steps": [
+          {
+            "location1": "D.Kampus",
+            "location2": "So2",
+            "duration": 18
+          },
+          {
+            "location1": "So2",
+            "location2": "So13",
+            "duration": 10
+          },
+          {
+            "location1": "So13",
+            "location2": "D.Kampus",
+            "duration": 18
+          }
+        ]
+      }
+    ],
+    "largeRoutes": 7,
+    "carRoutes": 21,
+    "minutesByType": {
+      "minivan": 1176,
+      "large": 474
+    },
+    "totalVehicleMinutes": 1650,
+    "ride": {
+      "passengers": 54,
+      "mean": 28.314815,
+      "median": 27.5,
+      "p90": 46,
+      "max": 50
+    }
+  },
+  "occurrenceLabels": {
+    "2026-10-05:pickup:Sw5~1": "Sw5",
+    "2026-10-05:dropoff:Sw5~1": "Sw5",
+    "2026-10-05:pickup:Sw4~1": "Sw4",
+    "2026-10-05:dropoff:Sw4~1": "Sw4",
+    "2026-10-05:pickup:Sw3~1": "Sw3",
+    "2026-10-05:dropoff:Sw3~1": "Sw3",
+    "2026-10-05:pickup:Sw2~1": "Sw2",
+    "2026-10-05:dropoff:Sw2~1": "Sw2",
+    "2026-10-05:pickup:So10~1": "So10",
+    "2026-10-05:dropoff:So10~1": "So10",
+    "2026-10-05:pickup:So1~1": "So1",
+    "2026-10-05:dropoff:So1~1": "So1",
+    "2026-10-05:pickup:So12~1": "So12",
+    "2026-10-05:dropoff:So12~1": "So12",
+    "2026-10-05:pickup:So11~1": "So11",
+    "2026-10-05:dropoff:So11~1": "So11",
+    "2026-10-05:pickup:So5~1": "So5",
+    "2026-10-05:dropoff:So5~1": "So5",
+    "2026-10-05:pickup:So4~1": "So4",
+    "2026-10-05:dropoff:So4~1": "So4",
+    "2026-10-05:pickup:So3~1": "So3",
+    "2026-10-05:dropoff:So3~1": "So3",
+    "2026-10-05:pickup:So2~1": "So2",
+    "2026-10-05:dropoff:So2~1": "So2",
+    "2026-10-05:pickup:Sw9~1": "Sw9",
+    "2026-10-05:dropoff:Sw9~1": "Sw9",
+    "2026-10-05:pickup:Sw7~1": "Sw7",
+    "2026-10-05:dropoff:Sw7~1": "Sw7",
+    "2026-10-05:pickup:Sw6~1": "Sw6",
+    "2026-10-05:dropoff:Sw6~1": "Sw6",
+    "2026-10-05:pickup:Sw1~1": "Sw1",
+    "2026-10-05:dropoff:Sw1~1": "Sw1",
+    "2026-10-05:pickup:So19~1": "So19",
+    "2026-10-05:dropoff:So19~1": "So19",
+    "2026-10-05:pickup:So18~1": "So18",
+    "2026-10-05:dropoff:So18~1": "So18",
+    "2026-10-05:pickup:So17~1": "So17",
+    "2026-10-05:dropoff:So17~1": "So17",
+    "2026-10-05:pickup:So16~1": "So16",
+    "2026-10-05:dropoff:So16~1": "So16",
+    "2026-10-05:pickup:So15~1": "So15",
+    "2026-10-05:dropoff:So15~1": "So15",
+    "2026-10-05:pickup:So14~1": "So14",
+    "2026-10-05:dropoff:So14~1": "So14",
+    "2026-10-05:pickup:So13~1": "So13",
+    "2026-10-05:dropoff:So13~1": "So13",
+    "2026-10-05:pickup:So9~1": "So9",
+    "2026-10-05:dropoff:So9~1": "So9",
+    "2026-10-05:pickup:So8~1": "So8",
+    "2026-10-05:dropoff:So8~1": "So8",
+    "2026-10-05:pickup:So7~1": "So7",
+    "2026-10-05:dropoff:So7~1": "So7",
+    "2026-10-05:pickup:So6~1": "So6",
+    "2026-10-05:dropoff:So6~1": "So6"
+  },
+  "menu": [
+    {
+      "waveId": "2026-10-05:pickup:765",
+      "direction": "pickup",
+      "anchorMinutes": 765,
+      "legs": 3,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 2,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "included",
+          "routes": 2,
+          "reason": null
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:1035",
+      "direction": "dropoff",
+      "anchorMinutes": 1035,
+      "legs": 3,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 2,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:pickup:525",
+      "direction": "pickup",
+      "anchorMinutes": 525,
+      "legs": 20,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 6,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "included",
+          "routes": 7,
+          "reason": null
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "included",
+          "routes": 7,
+          "reason": null
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "included",
+          "routes": 7,
+          "reason": null
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:975",
+      "direction": "dropoff",
+      "anchorMinutes": 975,
+      "legs": 4,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 2,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "included",
+          "routes": 3,
+          "reason": null
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:735",
+      "direction": "dropoff",
+      "anchorMinutes": 735,
+      "legs": 5,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 3,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_duplicate",
+          "routes": 3,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "routes": 3,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "routes": 3,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:855",
+      "direction": "dropoff",
+      "anchorMinutes": 855,
+      "legs": 1,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 1,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:pickup:945",
+      "direction": "pickup",
+      "anchorMinutes": 945,
+      "legs": 1,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 1,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:1095",
+      "direction": "dropoff",
+      "anchorMinutes": 1095,
+      "legs": 2,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 1,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:795",
+      "direction": "dropoff",
+      "anchorMinutes": 795,
+      "legs": 4,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 2,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:pickup:705",
+      "direction": "pickup",
+      "anchorMinutes": 705,
+      "legs": 3,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 2,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:915",
+      "direction": "dropoff",
+      "anchorMinutes": 915,
+      "legs": 6,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 3,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_duplicate",
+          "routes": 3,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "routes": 3,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "routes": 3,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:675",
+      "direction": "dropoff",
+      "anchorMinutes": 675,
+      "legs": 2,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 1,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    }
+  ]
+}

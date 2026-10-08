@@ -1,0 +1,28 @@
+# Extra campaign L4: 4 large minibuses + sedans, week of 2026-10-05
+
+Additional scenario of the heterogeneous-fleet campaign in the parent folder (same week, same matrix, same solver settings). Descriptive only; no superiority, causality or cost claim. Used by `scripts/plan_fleet_pareto.py` (see `../../pareto_analysis.md`).
+
+## Command (equivalent invocation)
+
+```text
+npm run experiments:fleet -- --week-of 2026-10-05 --ride-limits 50,60,70,90 --tour-limit 150 \
+  --fleet-types large:4sw5so:cd10,sedan:0sw4so:cd10 --fixed-type large --minimize-type sedan \
+  --scenarios 4 --out <output folder>
+```
+
+The manifest records the parsed parameters, not the literal command line. One scenario, `L4`: exactly 4 large minibuses (4 Sw + 5 So) and the minimum number of sedans (0 Sw + 4 So) per weekday. Grid: 5 weekdays x R in {50, 60, 70, 90} = 20 scenario runs; manifest `state: completed`.
+
+## Provenance
+
+- Git commit in the manifest: `afc72089389165e5b03657d246f37029e9669baa` (`dirty_working_tree: true`).
+- Same settings as the parent campaign: GA seed 42, native termination, CP-SAT `random_seed` 20261008, tour limit 150, cooldown 10 min, `admission_mode: assume_confirmed` (every student with a class is assumed to ride), `db_vehicles_consulted: false`.
+- Matrix sha256 `bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5` in all 20 runs (identical to the parent campaign).
+- Result statuses: 20 of 20 rows `ok`, sedan count `proven_over_menu`, assignment `proven` (minimum over the generated route menus, exact assignment; not a global minimum over all possible routes).
+
+## Files
+
+`run_manifest.json`, `scenario_daily.csv`, `scenario_weekly.csv`, `car_usage_windows.csv` (same columns as the parent folder; `car_*` columns refer to sedans), `<date>_R<R>_L4.response.json` (20 anonymised route files) and `<date>_R<R>.matrix.json` (20 arc files).
+
+## Privacy check
+
+The files contain no personal data and no local paths: occurrences are anonymised labels (`Sw`/`So` plus an index), vehicles are `Vehicle<n>`, and locations are the campus code plus anonymised stop codes (`Sw<n>`, `So<n>`; 29 locations in the matrix). A search for user names, drive paths, e-mail addresses and credentials found nothing.

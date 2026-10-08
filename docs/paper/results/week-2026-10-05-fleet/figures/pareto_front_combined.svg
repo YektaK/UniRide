@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1010 700" width="1010" height="700" font-family="Arial, Helvetica, sans-serif"><rect width="100%" height="100%" fill="#ffffff"/>
+<text x="24" y="24" font-size="16" font-weight="bold" fill="#111">Pareto options for all ride limits R (combined)</text>
+<text x="24" y="42" font-size="12" fill="#444">Labels name option@R. Solid = non-dominated for its own R; black ring = non-dominated globally on (f1, f2, f3, R); faint = dominated.</text>
+<text x="24" y="58" font-size="12" fill="#444">Bubble size grows with peak borrowed vehicles (f2).</text>
+<circle cx="31" cy="76" r="6" fill="#0072B2" fill-opacity="1" stroke="#fff" stroke-width="1"></circle>
+<text x="42" y="80" font-size="12" fill="#222">A: minibuses only</text>
+<rect x="168" y="70" width="12" height="12" fill="#E69F00" fill-opacity="1" stroke="#fff" stroke-width="1"></rect>
+<text x="185" y="80" font-size="12" fill="#222">S: minibuses + sedans (no Sw)</text>
+<polygon points="401,68.8 394.4,81.4 407.6,81.4" fill="#CC79A7" fill-opacity="1" stroke="#fff" stroke-width="1"></polygon>
+<text x="412" y="80" font-size="12" fill="#222">V: minibuses + minivans (1 Sw)</text>
+<polygon points="635,68.5 642.5,76 635,83.5 627.5,76" fill="#009E73" fill-opacity="1" stroke="#fff" stroke-width="1"></polygon>
+<text x="646" y="80" font-size="12" fill="#222">H: day-level hybrid</text>
+<text x="70" y="120" font-size="14" font-weight="bold" fill="#111">All feasible options, R = 50, 60, 70, 90</text>
+<rect x="70" y="130" width="900" height="520" fill="#fff" stroke="#888" stroke-width="0.8"/>
+<line x1="70" y1="632" x2="970" y2="632" stroke="#e6e6e6" stroke-width="0.7"/><text x="66" y="636" font-size="11" text-anchor="end" fill="#333">0</text>
+<line x1="70" y1="597.429" x2="970" y2="597.429" stroke="#e6e6e6" stroke-width="0.7"/><text x="66" y="601.429" font-size="11" text-anchor="end" fill="#333">10</text>
+<line x1="70" y1="562.857" x2="970" y2="562.857" stroke="#e6e6e6" stroke-width="0.7"/><text x="66" y="566.857" font-size="11" text-anchor="end" fill="#333">20</text>
+<line x1="70" y1="528.286" x2="970" y2="528.286" stroke="#e6e6e6" stroke-width="0.7"/><text x="66" y="532.286" font-size="11" text-anchor="end" fill="#333">30</text>
+<line x1="70" y1="493.714" x2="970" y2="493.714" stroke="#e6e6e6" stroke-width="0.7"/><text x="66" y="497.714" font-size="11" text-anchor="end" fill="#333">40</text>
+<line x1="70" y1="459.143" x2="970" y2="459.143" stroke="#e6e6e6" stroke-width="0.7"/><text x="66" y="463.143" font-size="11" text-anchor="end" fill="#333">50</text>
+<line x1="70" y1="424.571" x2="970" y2="424.571" stroke="#e6e6e6" stroke-width="0.7"/><text x="66" y="428.571" font-size="11" text-anchor="end" fill="#333">60</text>
+<line x1="70" y1="390" x2="970" y2="390" stroke="#e6e6e6" stroke-width="0.7"/><text x="66" y="394" font-size="11" text-anchor="end" fill="#333">70</text>
+<line x1="70" y1="355.429" x2="970" y2="355.429" stroke="#e6e6e6" stroke-width="0.7"/><text x="66" y="359.429" font-size="11" text-anchor="end" fill="#333">80</text>
+<line x1="70" y1="320.857" x2="970" y2="320.857" stroke="#e6e6e6" stroke-width="0.7"/><text x="66" y="324.857" font-size="11" text-anchor="end" fill="#333">90</text>
+<line x1="70" y1="286.286" x2="970" y2="286.286" stroke="#e6e6e6" stroke-width="0.7"/><text x="66" y="290.286" font-size="11" text-anchor="end" fill="#333">100</text>
+<line x1="70" y1="251.714" x2="970" y2="251.714" stroke="#e6e6e6" stroke-width="0.7"/><text x="66" y="255.714" font-size="11" text-anchor="end" fill="#333">110</text>
+<line x1="70" y1="217.143" x2="970" y2="217.143" stroke="#e6e6e6" stroke-width="0.7"/><text x="66" y="221.143" font-size="11" text-anchor="end" fill="#333">120</text>
+<line x1="70" y1="182.571" x2="970" y2="182.571" stroke="#e6e6e6" stroke-width="0.7"/><text x="66" y="186.571" font-size="11" text-anchor="end" fill="#333">130</text>
+<line x1="70" y1="148" x2="970" y2="148" stroke="#e6e6e6" stroke-width="0.7"/><text x="66" y="152" font-size="11" text-anchor="end" fill="#333">140</text>
+<line x1="94" y1="130" x2="94" y2="650" stroke="#f0f0f0" stroke-width="0.7"/><text x="94" y="664" font-size="11" text-anchor="middle" fill="#333">0</text>
+<line x1="236" y1="130" x2="236" y2="650" stroke="#f0f0f0" stroke-width="0.7"/><text x="236" y="664" font-size="11" text-anchor="middle" fill="#333">1</text>
+<line x1="378" y1="130" x2="378" y2="650" stroke="#f0f0f0" stroke-width="0.7"/><text x="378" y="664" font-size="11" text-anchor="middle" fill="#333">2</text>
+<line x1="520" y1="130" x2="520" y2="650" stroke="#f0f0f0" stroke-width="0.7"/><text x="520" y="664" font-size="11" text-anchor="middle" fill="#333">3</text>
+<line x1="662" y1="130" x2="662" y2="650" stroke="#f0f0f0" stroke-width="0.7"/><text x="662" y="664" font-size="11" text-anchor="middle" fill="#333">4</text>
+<line x1="804" y1="130" x2="804" y2="650" stroke="#f0f0f0" stroke-width="0.7"/><text x="804" y="664" font-size="11" text-anchor="middle" fill="#333">5</text>
+<line x1="946" y1="130" x2="946" y2="650" stroke="#f0f0f0" stroke-width="0.7"/><text x="946" y="664" font-size="11" text-anchor="middle" fill="#333">6</text>
+<text x="520" y="679" font-size="11" text-anchor="middle" fill="#222">Owned minibuses (f1)</text>
+<text transform="rotate(-90 38 390)" x="38" y="390" font-size="11" text-anchor="middle" fill="#222">Borrowed vehicle-hours per week (f3)</text>
+<polyline points="94,155.49 236,319.186 378,440.82 520,513.017 662,596.68 946,632" fill="none" stroke="#555" stroke-width="1.4" stroke-dasharray="none"/>
+<polyline points="94,171.105 236,346.67 378,483.458 520,569.138 662,617.538 946,632" fill="none" stroke="#555" stroke-width="1.4" stroke-dasharray="7 4"/>
+<polyline points="94,193.577 236,381.76 378,527.249 520,596.68 662,624.279 946,632" fill="none" stroke="#555" stroke-width="1.4" stroke-dasharray="2 3"/>
+<polyline points="94,201.47 236,408.15 378,547.703 520,621.283 662,632 662,632" fill="none" stroke="#555" stroke-width="1.4" stroke-dasharray="9 3 2 3"/>
+<line x1="640" y1="146" x2="664" y2="146" stroke="#555" stroke-width="1.4" stroke-dasharray="none"/><text x="670" y="150" font-size="11" fill="#222">R=50 front</text>
+<line x1="722" y1="146" x2="746" y2="146" stroke="#555" stroke-width="1.4" stroke-dasharray="7 4"/><text x="752" y="150" font-size="11" fill="#222">R=60 front</text>
+<line x1="804" y1="146" x2="828" y2="146" stroke="#555" stroke-width="1.4" stroke-dasharray="2 3"/><text x="834" y="150" font-size="11" fill="#222">R=70 front</text>
+<line x1="886" y1="146" x2="910" y2="146" stroke="#555" stroke-width="1.4" stroke-dasharray="9 3 2 3"/><text x="916" y="150" font-size="11" fill="#222">R=90 front</text>
+<polygon points="378,416.924 390.603,429.527 378,442.129 365.397,429.527" fill="#009E73" fill-opacity="0.2" stroke="#aaa" stroke-width="0.6"><title>L2 + sedan/minivan (hybrid), R=50: owned 2, peak borrowed 5, 58.6 borrowed h/week, 5 borrowed days, mean ride 28.3 min; dominated</title></polygon>
+<polygon points="378,465.378 389.8,477.178 378,488.978 366.2,477.178" fill="#009E73" fill-opacity="0.2" stroke="#aaa" stroke-width="0.6"><title>L2 + sedan/minivan (hybrid), R=60: owned 2, peak borrowed 4, 44.8 borrowed h/week, 5 borrowed days, mean ride 31.5 min; dominated</title></polygon>
+<polygon points="378,507.9 389.8,519.7 378,531.5 366.2,519.7" fill="#009E73" fill-opacity="0.2" stroke="#aaa" stroke-width="0.6"><title>L2 + sedan/minivan (hybrid), R=70: owned 2, peak borrowed 4, 32.5 borrowed h/week, 5 borrowed days, mean ride 34.6 min; dominated</title></polygon>
+<polygon points="378,533.689 387.808,543.497 378,553.305 368.192,543.497" fill="#009E73" fill-opacity="0.2" stroke="#aaa" stroke-width="0.6"><title>L2 + sedan/minivan (hybrid), R=90: owned 2, peak borrowed 2, 25.6 borrowed h/week, 5 borrowed days, mean ride 40.7 min; dominated</title></polygon>
+<polygon points="94,142.055 81.6839,165.567 106.316,165.567" fill="#CC79A7" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>L0 + minivan, R=50: owned 0, peak borrowed 7, 137.8 borrowed h/week, 5 borrowed days, mean ride 27.6 min; non-dominated</title></polygon>
+<text x="107.196" y="158.49" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">V0@50</text>
+<polygon points="236,306.391 224.271,328.783 247.729,328.783" fill="#CC79A7" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>L1 + minivan, R=50: owned 1, peak borrowed 6, 90.5 borrowed h/week, 5 borrowed days, mean ride 28.0 min; non-dominated</title></polygon>
+<text x="248.663" y="322.186" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">V1@50</text>
+<polygon points="94,158.31 82.2711,180.702 105.729,180.702" fill="#CC79A7" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>L0 + minivan, R=60: owned 0, peak borrowed 6, 133.3 borrowed h/week, 5 borrowed days, mean ride 29.2 min; non-dominated</title></polygon>
+<text x="106.663" y="174.105" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">V0@60</text>
+<polygon points="94,180.782 82.2711,203.173 105.729,203.173" fill="#CC79A7" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>L0 + minivan, R=70: owned 0, peak borrowed 6, 126.8 borrowed h/week, 5 borrowed days, mean ride 32.9 min; non-dominated</title></polygon>
+<text x="106.663" y="196.577" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">V0@70</text>
+<polygon points="94,188.675 82.2711,211.067 105.729,211.067" fill="#CC79A7" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>L0 + minivan, R=90: owned 0, peak borrowed 6, 124.5 borrowed h/week, 5 borrowed days, mean ride 35.5 min; non-dominated</title></polygon>
+<text x="106.663" y="204.47" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">V0@90</text>
+<polygon points="378,428.721 366.91,449.894 389.09,449.894" fill="#CC79A7" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>L2 + minivan, R=50: owned 2, peak borrowed 5, 55.3 borrowed h/week, 5 borrowed days, mean ride 28.1 min; non-dominated</title></polygon>
+<text x="390.082" y="443.82" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">V2@50</text>
+<polygon points="236,334.572 224.91,355.744 247.09,355.744" fill="#CC79A7" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>L1 + minivan, R=60: owned 1, peak borrowed 5, 82.5 borrowed h/week, 5 borrowed days, mean ride 30.7 min; non-dominated</title></polygon>
+<text x="248.082" y="349.67" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">V1@60</text>
+<polygon points="236,369.662 224.91,390.834 247.09,390.834" fill="#CC79A7" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>L1 + minivan, R=70: owned 1, peak borrowed 5, 72.4 borrowed h/week, 5 borrowed days, mean ride 34.1 min; non-dominated</title></polygon>
+<text x="248.082" y="384.76" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">V1@70</text>
+<rect x="510.56" y="503.577" width="18.88" height="18.88" fill="#E69F00" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>L3 + sedan, R=50: owned 3, peak borrowed 4, 34.4 borrowed h/week, 5 borrowed days, mean ride 28.2 min; non-dominated</title></rect>
+<text x="531.44" y="516.017" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">S3@50</text>
+<polygon points="378,472.13 367.616,491.954 388.384,491.954" fill="#CC79A7" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>L2 + minivan, R=60: owned 2, peak borrowed 4, 43.0 borrowed h/week, 5 borrowed days, mean ride 31.0 min; non-dominated</title></polygon>
+<text x="389.44" y="486.458" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">V2@60</text>
+<polygon points="378,515.921 367.616,535.745 388.384,535.745" fill="#CC79A7" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>L2 + minivan, R=70: owned 2, peak borrowed 4, 30.3 borrowed h/week, 5 borrowed days, mean ride 34.5 min; non-dominated</title></polygon>
+<text x="389.44" y="530.249" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">V2@70</text>
+<polygon points="236,396.822 225.616,416.646 246.384,416.646" fill="#CC79A7" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>L1 + minivan, R=90: owned 1, peak borrowed 4, 64.8 borrowed h/week, 5 borrowed days, mean ride 39.8 min; non-dominated</title></polygon>
+<text x="247.44" y="411.15" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">V1@90</text>
+<rect x="511.289" y="560.426" width="17.4224" height="17.4224" fill="#E69F00" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>L3 + sedan, R=60: owned 3, peak borrowed 3, 18.2 borrowed h/week, 5 borrowed days, mean ride 31.2 min; non-dominated</title></rect>
+<text x="530.711" y="572.138" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">S3@60</text>
+<rect x="511.289" y="587.968" width="17.4224" height="17.4224" fill="#E69F00" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>L3 + sedan, R=70: owned 3, peak borrowed 3, 10.2 borrowed h/week, 5 borrowed days, mean ride 35.1 min; non-dominated</title></rect>
+<text x="530.711" y="599.68" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">S3@70</text>
+<rect x="654.153" y="588.833" width="15.6933" height="15.6933" fill="#E69F00" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>L4 + sedan, R=50: owned 4, peak borrowed 2, 10.2 borrowed h/week, 5 borrowed days, mean ride 28.2 min; non-dominated</title></rect>
+<text x="671.847" y="599.68" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">S4@50</text>
+<rect x="654.153" y="609.691" width="15.6933" height="15.6933" fill="#E69F00" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>L4 + sedan, R=60: owned 4, peak borrowed 2, 4.2 borrowed h/week, 3 borrowed days, mean ride 31.3 min; non-dominated</title></rect>
+<text x="671.847" y="620.538" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">S4@60</text>
+<rect x="654.153" y="616.432" width="15.6933" height="15.6933" fill="#E69F00" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>L4 + sedan, R=70: owned 4, peak borrowed 2, 2.2 borrowed h/week, 2 borrowed days, mean ride 35.1 min; non-dominated</title></rect>
+<text x="671.847" y="627.279" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">S4@70</text>
+<polygon points="378,538.287 369.369,554.765 386.631,554.765" fill="#CC79A7" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>L2 + minivan, R=90: owned 2, peak borrowed 2, 24.4 borrowed h/week, 5 borrowed days, mean ride 41.6 min; non-dominated</title></polygon>
+<text x="387.847" y="550.703" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">V2@90</text>
+<rect x="513.28" y="614.563" width="13.44" height="13.44" fill="#E69F00" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>L3 + sedan, R=90: owned 3, peak borrowed 1, 3.1 borrowed h/week, 3 borrowed days, mean ride 41.9 min; non-dominated</title></rect>
+<text x="528.72" y="624.283" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">S3@90</text>
+<circle cx="946" cy="632" r="4" fill="#0072B2" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>minibus-only, R=50: owned 6, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 28.2 min; non-dominated</title></circle>
+<text x="952" y="635" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">A@50</text>
+<circle cx="946" cy="632" r="4" fill="#0072B2" fill-opacity="0.9" stroke="#222" stroke-width="1"><title>minibus-only, R=60: owned 6, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 31.2 min; non-dominated</title></circle>
+<circle cx="946" cy="632" r="4" fill="#0072B2" fill-opacity="0.9" stroke="#222" stroke-width="1"><title>minibus-only, R=70: owned 6, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 34.6 min; non-dominated</title></circle>
+<circle cx="662" cy="632" r="4" fill="#0072B2" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>minibus-only, R=90: owned 4, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 41.3 min; non-dominated</title></circle>
+<text x="668" y="635" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">A@90</text>
+<rect x="658" y="628" width="8" height="8" fill="#E69F00" fill-opacity="0.9" stroke="#000" stroke-width="2.4"><title>L4 + sedan, R=90: owned 4, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 41.6 min; non-dominated</title></rect>
+<text x="668" y="635" font-size="10" fill="#111" stroke="#fff" stroke-width="2.4" paint-order="stroke">S4@90</text>
+</svg>

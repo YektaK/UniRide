@@ -1,0 +1,181 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 570" width="1040" height="570" font-family="Arial, Helvetica, sans-serif"><rect width="100%" height="100%" fill="#ffffff"/>
+<text x="24" y="24" font-size="16" font-weight="bold" fill="#111">Service level vs owned minibuses (colour = borrowed vehicle-hours per week)</text>
+<text x="24" y="42" font-size="12" fill="#444">x = realised mean ride (passenger-weighted, week). The four clusters are R = 50, 60, 70, 90; a small vertical offset separates families at the same L.</text>
+<text x="24" y="58" font-size="12" fill="#444">Shape = family; black outline = non-dominated for its R, grey outline = dominated.</text>
+<circle cx="31" cy="76" r="6" fill="#0072B2" fill-opacity="1" stroke="#fff" stroke-width="1"></circle>
+<text x="42" y="80" font-size="12" fill="#222">A: minibuses only</text>
+<rect x="168" y="70" width="12" height="12" fill="#E69F00" fill-opacity="1" stroke="#fff" stroke-width="1"></rect>
+<text x="185" y="80" font-size="12" fill="#222">S: minibuses + sedans (no Sw)</text>
+<polygon points="401,68.8 394.4,81.4 407.6,81.4" fill="#CC79A7" fill-opacity="1" stroke="#fff" stroke-width="1"></polygon>
+<text x="412" y="80" font-size="12" fill="#222">V: minibuses + minivans (1 Sw)</text>
+<polygon points="635,68.5 642.5,76 635,83.5 627.5,76" fill="#009E73" fill-opacity="1" stroke="#fff" stroke-width="1"></polygon>
+<text x="646" y="80" font-size="12" fill="#222">H: day-level hybrid</text>
+<rect x="80" y="120" width="820" height="400" fill="#fff" stroke="#888" stroke-width="0.8"/>
+<line x1="80" y1="495" x2="900" y2="495" stroke="#eee"/><text x="75" y="499" font-size="11" text-anchor="end" fill="#333">0</text>
+<line x1="80" y1="436.667" x2="900" y2="436.667" stroke="#eee"/><text x="75" y="440.667" font-size="11" text-anchor="end" fill="#333">1</text>
+<line x1="80" y1="378.333" x2="900" y2="378.333" stroke="#eee"/><text x="75" y="382.333" font-size="11" text-anchor="end" fill="#333">2</text>
+<line x1="80" y1="320" x2="900" y2="320" stroke="#eee"/><text x="75" y="324" font-size="11" text-anchor="end" fill="#333">3</text>
+<line x1="80" y1="261.667" x2="900" y2="261.667" stroke="#eee"/><text x="75" y="265.667" font-size="11" text-anchor="end" fill="#333">4</text>
+<line x1="80" y1="203.333" x2="900" y2="203.333" stroke="#eee"/><text x="75" y="207.333" font-size="11" text-anchor="end" fill="#333">5</text>
+<line x1="80" y1="145" x2="900" y2="145" stroke="#eee"/><text x="75" y="149" font-size="11" text-anchor="end" fill="#333">6</text>
+<line x1="80" y1="120" x2="80" y2="520" stroke="#f0f0f0"/><text x="80" y="534" font-size="11" text-anchor="middle" fill="#333">26</text>
+<line x1="176.471" y1="120" x2="176.471" y2="520" stroke="#f0f0f0"/><text x="176.471" y="534" font-size="11" text-anchor="middle" fill="#333">28</text>
+<line x1="272.941" y1="120" x2="272.941" y2="520" stroke="#f0f0f0"/><text x="272.941" y="534" font-size="11" text-anchor="middle" fill="#333">30</text>
+<line x1="369.412" y1="120" x2="369.412" y2="520" stroke="#f0f0f0"/><text x="369.412" y="534" font-size="11" text-anchor="middle" fill="#333">32</text>
+<line x1="465.882" y1="120" x2="465.882" y2="520" stroke="#f0f0f0"/><text x="465.882" y="534" font-size="11" text-anchor="middle" fill="#333">34</text>
+<line x1="562.353" y1="120" x2="562.353" y2="520" stroke="#f0f0f0"/><text x="562.353" y="534" font-size="11" text-anchor="middle" fill="#333">36</text>
+<line x1="658.824" y1="120" x2="658.824" y2="520" stroke="#f0f0f0"/><text x="658.824" y="534" font-size="11" text-anchor="middle" fill="#333">38</text>
+<line x1="755.294" y1="120" x2="755.294" y2="520" stroke="#f0f0f0"/><text x="755.294" y="534" font-size="11" text-anchor="middle" fill="#333">40</text>
+<line x1="851.765" y1="120" x2="851.765" y2="520" stroke="#f0f0f0"/><text x="851.765" y="534" font-size="11" text-anchor="middle" fill="#333">42</text>
+<text x="490" y="552" font-size="12" text-anchor="middle" fill="#222">Mean ride (min), lower = better service</text>
+<text transform="rotate(-90 28 320)" x="28" y="320" font-size="12" text-anchor="middle" fill="#222">Owned minibuses (f1)</text>
+<text x="180.495" y="136" font-size="12" font-weight="bold" text-anchor="middle" fill="#111">R=50</text>
+<text x="314.225" y="136" font-size="12" font-weight="bold" text-anchor="middle" fill="#111">R=60</text>
+<text x="486.25" y="136" font-size="12" font-weight="bold" text-anchor="middle" fill="#111">R=70</text>
+<text x="771.667" y="136" font-size="12" font-weight="bold" text-anchor="middle" fill="#111">R=90</text>
+<circle cx="185.435" cy="145" r="7" fill="#440154" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>minibus-only, R=50: owned 6, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 28.2 min</title></circle>
+<rect x="180.142" y="323.5" width="14" height="14" fill="#3b518a" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>L3 + sedan, R=50: owned 3, peak borrowed 4, 34.4 borrowed h/week, 5 borrowed days, mean ride 28.2 min</title></rect>
+<rect x="178.435" y="265.167" width="14" height="14" fill="#411964" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>L4 + sedan, R=50: owned 4, peak borrowed 2, 10.2 borrowed h/week, 5 borrowed days, mean ride 28.2 min</title></rect>
+<polygon points="158.116,476.1 150.416,490.8 165.816,490.8" fill="#f3e529" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>L0 + minivan, R=50: owned 0, peak borrowed 7, 137.8 borrowed h/week, 5 borrowed days, mean ride 27.6 min</title></polygon>
+<polygon points="178.818,417.767 171.118,432.467 186.518,432.467" fill="#45b273" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>L1 + minivan, R=50: owned 1, peak borrowed 6, 90.5 borrowed h/week, 5 borrowed days, mean ride 28.0 min</title></polygon>
+<polygon points="179.885,359.433 172.185,374.133 187.585,374.133" fill="#2c778c" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>L2 + minivan, R=50: owned 2, peak borrowed 5, 55.3 borrowed h/week, 5 borrowed days, mean ride 28.1 min</title></polygon>
+<polygon points="188.636,369.583 197.386,378.333 188.636,387.083 179.886,378.333" fill="#297c8c" fill-opacity="1" stroke="#777" stroke-width="1.4"><title>L2 + sedan/minivan (hybrid), R=50: owned 2, peak borrowed 5, 58.6 borrowed h/week, 5 borrowed days, mean ride 28.3 min</title></polygon>
+<circle cx="331.848" cy="145" r="7" fill="#440154" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>minibus-only, R=60: owned 6, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 31.2 min</title></circle>
+<rect x="322.5" y="323.5" width="14" height="14" fill="#3f2b71" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>L3 + sedan, R=60: owned 3, peak borrowed 3, 18.2 borrowed h/week, 5 borrowed days, mean ride 31.2 min</title></rect>
+<rect x="327.409" y="265.167" width="14" height="14" fill="#430b5b" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>L4 + sedan, R=60: owned 4, peak borrowed 2, 4.2 borrowed h/week, 3 borrowed days, mean ride 31.3 min</title></rect>
+<polygon points="234.951,476.1 227.251,490.8 242.651,490.8" fill="#dfe131" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>L0 + minivan, R=60: owned 0, peak borrowed 6, 133.3 borrowed h/week, 5 borrowed days, mean ride 29.2 min</title></polygon>
+<polygon points="305.383,417.767 297.683,432.467 313.083,432.467" fill="#37a57d" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>L1 + minivan, R=60: owned 1, peak borrowed 5, 82.5 borrowed h/week, 5 borrowed days, mean ride 30.7 min</title></polygon>
+<polygon points="320.109,359.433 312.409,374.133 327.809,374.133" fill="#35608b" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>L2 + minivan, R=60: owned 2, peak borrowed 4, 43.0 borrowed h/week, 5 borrowed days, mean ride 31.0 min</title></polygon>
+<polygon points="343.373,369.583 352.123,378.333 343.373,387.083 334.623,378.333" fill="#34648b" fill-opacity="1" stroke="#777" stroke-width="1.4"><title>L2 + sedan/minivan (hybrid), R=60: owned 2, peak borrowed 4, 44.8 borrowed h/week, 5 borrowed days, mean ride 31.5 min</title></polygon>
+<circle cx="495.976" cy="145" r="7" fill="#440154" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>minibus-only, R=70: owned 6, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 34.6 min</title></circle>
+<rect x="514.161" y="323.5" width="14" height="14" fill="#411964" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>L3 + sedan, R=70: owned 3, peak borrowed 3, 10.2 borrowed h/week, 5 borrowed days, mean ride 35.1 min</title></rect>
+<rect x="514.161" y="265.167" width="14" height="14" fill="#430658" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>L4 + sedan, R=70: owned 4, peak borrowed 2, 2.2 borrowed h/week, 2 borrowed days, mean ride 35.1 min</title></rect>
+<polygon points="412.098,476.1 404.398,490.8 419.798,490.8" fill="#c1dc3c" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>L0 + minivan, R=70: owned 0, peak borrowed 6, 126.8 borrowed h/week, 5 borrowed days, mean ride 32.9 min</title></polygon>
+<polygon points="468.657,417.767 460.957,432.467 476.357,432.467" fill="#259589" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>L1 + minivan, R=70: owned 1, peak borrowed 5, 72.4 borrowed h/week, 5 borrowed days, mean ride 34.1 min</title></polygon>
+<polygon points="491.494,359.433 483.794,374.133 499.194,374.133" fill="#3c4784" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>L2 + minivan, R=70: owned 2, peak borrowed 4, 30.3 borrowed h/week, 5 borrowed days, mean ride 34.5 min</title></polygon>
+<polygon points="493.201,369.583 501.951,378.333 493.201,387.083 484.451,378.333" fill="#3c4c87" fill-opacity="1" stroke="#777" stroke-width="1.4"><title>L2 + sedan/minivan (hybrid), R=70: owned 2, peak borrowed 4, 32.5 borrowed h/week, 5 borrowed days, mean ride 34.6 min</title></polygon>
+<circle cx="816.549" cy="261.667" r="7" fill="#440154" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>minibus-only, R=90: owned 4, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 41.3 min</title></circle>
+<rect x="839.429" y="323.5" width="14" height="14" fill="#430859" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>L3 + sedan, R=90: owned 3, peak borrowed 1, 3.1 borrowed h/week, 3 borrowed days, mean ride 41.9 min</title></rect>
+<rect x="826.837" y="265.167" width="14" height="14" fill="#440154" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>L4 + sedan, R=90: owned 4, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 41.6 min</title></rect>
+<polygon points="538.449,476.1 530.749,490.8 546.149,490.8" fill="#b7da40" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>L0 + minivan, R=90: owned 0, peak borrowed 6, 124.5 borrowed h/week, 5 borrowed days, mean ride 35.5 min</title></polygon>
+<polygon points="745.903,417.767 738.203,432.467 753.603,432.467" fill="#25888c" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>L1 + minivan, R=90: owned 1, peak borrowed 4, 64.8 borrowed h/week, 5 borrowed days, mean ride 39.8 min</title></polygon>
+<polygon points="833.623,359.433 825.923,374.133 841.323,374.133" fill="#3e397a" fill-opacity="1" stroke="#111" stroke-width="1.4"><title>L2 + minivan, R=90: owned 2, peak borrowed 2, 24.4 borrowed h/week, 5 borrowed days, mean ride 41.6 min</title></polygon>
+<polygon points="786.882,369.583 795.632,378.333 786.882,387.083 778.132,378.333" fill="#3d3c7c" fill-opacity="1" stroke="#777" stroke-width="1.4"><title>L2 + sedan/minivan (hybrid), R=90: owned 2, peak borrowed 2, 25.6 borrowed h/week, 5 borrowed days, mean ride 40.7 min</title></polygon>
+<rect x="930" y="495" width="16" height="4.2" fill="#440154"/>
+<rect x="930" y="491.6" width="16" height="4.2" fill="#440456"/>
+<rect x="930" y="488.2" width="16" height="4.2" fill="#430758"/>
+<rect x="930" y="484.8" width="16" height="4.2" fill="#430b5b"/>
+<rect x="930" y="481.4" width="16" height="4.2" fill="#430e5d"/>
+<rect x="930" y="478" width="16" height="4.2" fill="#42115f"/>
+<rect x="930" y="474.6" width="16" height="4.2" fill="#421461"/>
+<rect x="930" y="471.2" width="16" height="4.2" fill="#411863"/>
+<rect x="930" y="467.8" width="16" height="4.2" fill="#411b66"/>
+<rect x="930" y="464.4" width="16" height="4.2" fill="#411e68"/>
+<rect x="930" y="461" width="16" height="4.2" fill="#40216a"/>
+<rect x="930" y="457.6" width="16" height="4.2" fill="#40256c"/>
+<rect x="930" y="454.2" width="16" height="4.2" fill="#40286e"/>
+<rect x="930" y="450.8" width="16" height="4.2" fill="#3f2b71"/>
+<rect x="930" y="447.4" width="16" height="4.2" fill="#3f2e73"/>
+<rect x="930" y="444" width="16" height="4.2" fill="#3f3275"/>
+<rect x="930" y="440.6" width="16" height="4.2" fill="#3e3577"/>
+<rect x="930" y="437.2" width="16" height="4.2" fill="#3e3879"/>
+<rect x="930" y="433.8" width="16" height="4.2" fill="#3e3b7c"/>
+<rect x="930" y="430.4" width="16" height="4.2" fill="#3d3f7e"/>
+<rect x="930" y="427" width="16" height="4.2" fill="#3d4280"/>
+<rect x="930" y="423.6" width="16" height="4.2" fill="#3c4582"/>
+<rect x="930" y="420.2" width="16" height="4.2" fill="#3c4884"/>
+<rect x="930" y="416.8" width="16" height="4.2" fill="#3c4c87"/>
+<rect x="930" y="413.4" width="16" height="4.2" fill="#3b4f89"/>
+<rect x="930" y="410" width="16" height="4.2" fill="#3b528b"/>
+<rect x="930" y="406.6" width="16" height="4.2" fill="#3a558b"/>
+<rect x="930" y="403.2" width="16" height="4.2" fill="#39578b"/>
+<rect x="930" y="399.8" width="16" height="4.2" fill="#385a8b"/>
+<rect x="930" y="396.4" width="16" height="4.2" fill="#375c8b"/>
+<rect x="930" y="393" width="16" height="4.2" fill="#365f8b"/>
+<rect x="930" y="389.6" width="16" height="4.2" fill="#35618b"/>
+<rect x="930" y="386.2" width="16" height="4.2" fill="#34648b"/>
+<rect x="930" y="382.8" width="16" height="4.2" fill="#33668b"/>
+<rect x="930" y="379.4" width="16" height="4.2" fill="#32698b"/>
+<rect x="930" y="376" width="16" height="4.2" fill="#316b8b"/>
+<rect x="930" y="372.6" width="16" height="4.2" fill="#306e8b"/>
+<rect x="930" y="369.2" width="16" height="4.2" fill="#2f708b"/>
+<rect x="930" y="365.8" width="16" height="4.2" fill="#2d738c"/>
+<rect x="930" y="362.4" width="16" height="4.2" fill="#2c758c"/>
+<rect x="930" y="359" width="16" height="4.2" fill="#2b788c"/>
+<rect x="930" y="355.6" width="16" height="4.2" fill="#2a7a8c"/>
+<rect x="930" y="352.2" width="16" height="4.2" fill="#297d8c"/>
+<rect x="930" y="348.8" width="16" height="4.2" fill="#287f8c"/>
+<rect x="930" y="345.4" width="16" height="4.2" fill="#27828c"/>
+<rect x="930" y="342" width="16" height="4.2" fill="#26848c"/>
+<rect x="930" y="338.6" width="16" height="4.2" fill="#25878c"/>
+<rect x="930" y="335.2" width="16" height="4.2" fill="#24898c"/>
+<rect x="930" y="331.8" width="16" height="4.2" fill="#238c8c"/>
+<rect x="930" y="328.4" width="16" height="4.2" fill="#228e8c"/>
+<rect x="930" y="325" width="16" height="4.2" fill="#21918c"/>
+<rect x="930" y="321.6" width="16" height="4.2" fill="#23938a"/>
+<rect x="930" y="318.2" width="16" height="4.2" fill="#269589"/>
+<rect x="930" y="314.8" width="16" height="4.2" fill="#289887"/>
+<rect x="930" y="311.4" width="16" height="4.2" fill="#2b9a85"/>
+<rect x="930" y="308" width="16" height="4.2" fill="#2d9c84"/>
+<rect x="930" y="304.6" width="16" height="4.2" fill="#309e82"/>
+<rect x="930" y="301.2" width="16" height="4.2" fill="#32a180"/>
+<rect x="930" y="297.8" width="16" height="4.2" fill="#35a37f"/>
+<rect x="930" y="294.4" width="16" height="4.2" fill="#37a57d"/>
+<rect x="930" y="291" width="16" height="4.2" fill="#39a77b"/>
+<rect x="930" y="287.6" width="16" height="4.2" fill="#3caa7a"/>
+<rect x="930" y="284.2" width="16" height="4.2" fill="#3eac78"/>
+<rect x="930" y="280.8" width="16" height="4.2" fill="#41ae76"/>
+<rect x="930" y="277.4" width="16" height="4.2" fill="#43b074"/>
+<rect x="930" y="274" width="16" height="4.2" fill="#46b373"/>
+<rect x="930" y="270.6" width="16" height="4.2" fill="#48b571"/>
+<rect x="930" y="267.2" width="16" height="4.2" fill="#4ab76f"/>
+<rect x="930" y="263.8" width="16" height="4.2" fill="#4db96e"/>
+<rect x="930" y="260.4" width="16" height="4.2" fill="#4fbc6c"/>
+<rect x="930" y="257" width="16" height="4.2" fill="#52be6a"/>
+<rect x="930" y="253.6" width="16" height="4.2" fill="#54c069"/>
+<rect x="930" y="250.2" width="16" height="4.2" fill="#57c267"/>
+<rect x="930" y="246.8" width="16" height="4.2" fill="#59c565"/>
+<rect x="930" y="243.4" width="16" height="4.2" fill="#5cc764"/>
+<rect x="930" y="240" width="16" height="4.2" fill="#5ec962"/>
+<rect x="930" y="236.6" width="16" height="4.2" fill="#64ca60"/>
+<rect x="930" y="233.2" width="16" height="4.2" fill="#6bcb5d"/>
+<rect x="930" y="229.8" width="16" height="4.2" fill="#71cd5b"/>
+<rect x="930" y="226.4" width="16" height="4.2" fill="#77ce58"/>
+<rect x="930" y="223" width="16" height="4.2" fill="#7ecf56"/>
+<rect x="930" y="219.6" width="16" height="4.2" fill="#84d053"/>
+<rect x="930" y="216.2" width="16" height="4.2" fill="#8bd151"/>
+<rect x="930" y="212.8" width="16" height="4.2" fill="#91d34e"/>
+<rect x="930" y="209.4" width="16" height="4.2" fill="#97d44c"/>
+<rect x="930" y="206" width="16" height="4.2" fill="#9ed54a"/>
+<rect x="930" y="202.6" width="16" height="4.2" fill="#a4d647"/>
+<rect x="930" y="199.2" width="16" height="4.2" fill="#aad745"/>
+<rect x="930" y="195.8" width="16" height="4.2" fill="#b1d942"/>
+<rect x="930" y="192.4" width="16" height="4.2" fill="#b7da40"/>
+<rect x="930" y="189" width="16" height="4.2" fill="#bddb3d"/>
+<rect x="930" y="185.6" width="16" height="4.2" fill="#c4dc3b"/>
+<rect x="930" y="182.2" width="16" height="4.2" fill="#cadd39"/>
+<rect x="930" y="178.8" width="16" height="4.2" fill="#d0df36"/>
+<rect x="930" y="175.4" width="16" height="4.2" fill="#d7e034"/>
+<rect x="930" y="172" width="16" height="4.2" fill="#dde131"/>
+<rect x="930" y="168.6" width="16" height="4.2" fill="#e4e22f"/>
+<rect x="930" y="165.2" width="16" height="4.2" fill="#eae32c"/>
+<rect x="930" y="161.8" width="16" height="4.2" fill="#f0e52a"/>
+<rect x="930" y="158.4" width="16" height="4.2" fill="#f7e627"/>
+<rect x="930" y="155" width="16" height="4.2" fill="#fde725"/>
+<text x="952" y="498" font-size="11" fill="#333">0 h</text>
+<text x="952" y="473.714" font-size="11" fill="#333">10 h</text>
+<text x="952" y="449.429" font-size="11" fill="#333">20 h</text>
+<text x="952" y="425.143" font-size="11" fill="#333">30 h</text>
+<text x="952" y="400.857" font-size="11" fill="#333">40 h</text>
+<text x="952" y="376.571" font-size="11" fill="#333">50 h</text>
+<text x="952" y="352.286" font-size="11" fill="#333">60 h</text>
+<text x="952" y="328" font-size="11" fill="#333">70 h</text>
+<text x="952" y="303.714" font-size="11" fill="#333">80 h</text>
+<text x="952" y="279.429" font-size="11" fill="#333">90 h</text>
+<text x="952" y="255.143" font-size="11" fill="#333">100 h</text>
+<text x="952" y="230.857" font-size="11" fill="#333">110 h</text>
+<text x="952" y="206.571" font-size="11" fill="#333">120 h</text>
+<text x="952" y="182.286" font-size="11" fill="#333">130 h</text>
+<text x="952" y="158" font-size="11" fill="#333">140 h</text>
+<text x="920" y="135" font-size="11" fill="#222">borrowed h/week (f3)</text>
+</svg>

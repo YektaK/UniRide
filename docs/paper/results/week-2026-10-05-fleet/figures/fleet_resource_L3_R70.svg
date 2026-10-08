@@ -1,0 +1,273 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1610 994" width="1610" height="994" font-family="Arial, Helvetica, sans-serif"><rect width="100%" height="100%" fill="#ffffff"/>
+<defs><pattern id="hatchgrey" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="#999" stroke-width="2"/></pattern><pattern id="hatchbad" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#E69F00"/><line x1="0" y1="0" x2="0" y2="6" stroke="#C00000" stroke-width="3"/></pattern></defs>
+<text x="24" y="24" font-size="16" font-weight="bold" fill="#111">Busy vehicles by type incl. 10-min cooldown, scenario D (3 large + sedans), R=70 min, tour limit 150</text>
+<rect x="24" y="38" width="16" height="10" fill="#0072B2" fill-opacity="0.3" stroke="#0072B2" stroke-width="2"/><text x="46" y="47" font-size="12" fill="#222">Large busy (step line)</text>
+<rect x="214" y="38" width="16" height="10" fill="#E69F00" fill-opacity="0.3" stroke="#E69F00" stroke-width="2"/><text x="236" y="47" font-size="12" fill="#222">Sedan busy (step line)</text>
+<text x="424" y="47" font-size="12" fill="#222">Dashed: vehicles provided (large) / sedans needed that day. Red heading = sedan count not proven over the menu.</text>
+<text x="60" y="76" font-size="13" font-weight="bold" fill="#111">Mon 2026-10-05: 3 large, 1 sedans</text>
+<rect x="60" y="84" width="1440" height="120" fill="#fff" stroke="#888" stroke-width="0.8"/>
+<line x1="60" y1="204" x2="1500" y2="204" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="208" font-size="11" text-anchor="end" fill="#333">0</text>
+<line x1="60" y1="174" x2="1500" y2="174" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="178" font-size="11" text-anchor="end" fill="#333">1</text>
+<line x1="60" y1="144" x2="1500" y2="144" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="148" font-size="11" text-anchor="end" fill="#333">2</text>
+<line x1="60" y1="114" x2="1500" y2="114" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="118" font-size="11" text-anchor="end" fill="#333">3</text>
+<line x1="60" y1="84" x2="1500" y2="84" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="88" font-size="11" text-anchor="end" fill="#333">4</text>
+<line x1="60" y1="84" x2="60" y2="204" stroke="#bbb" stroke-width="0.7"/>
+<text x="60" y="218" font-size="11" text-anchor="middle" fill="#333">06:00</text>
+<line x1="156" y1="84" x2="156" y2="204" stroke="#bbb" stroke-width="0.7"/>
+<text x="156" y="218" font-size="11" text-anchor="middle" fill="#333">07:00</text>
+<line x1="252" y1="84" x2="252" y2="204" stroke="#bbb" stroke-width="0.7"/>
+<text x="252" y="218" font-size="11" text-anchor="middle" fill="#333">08:00</text>
+<line x1="348" y1="84" x2="348" y2="204" stroke="#bbb" stroke-width="0.7"/>
+<text x="348" y="218" font-size="11" text-anchor="middle" fill="#333">09:00</text>
+<line x1="444" y1="84" x2="444" y2="204" stroke="#bbb" stroke-width="0.7"/>
+<text x="444" y="218" font-size="11" text-anchor="middle" fill="#333">10:00</text>
+<line x1="540" y1="84" x2="540" y2="204" stroke="#bbb" stroke-width="0.7"/>
+<text x="540" y="218" font-size="11" text-anchor="middle" fill="#333">11:00</text>
+<line x1="636" y1="84" x2="636" y2="204" stroke="#bbb" stroke-width="0.7"/>
+<text x="636" y="218" font-size="11" text-anchor="middle" fill="#333">12:00</text>
+<line x1="732" y1="84" x2="732" y2="204" stroke="#bbb" stroke-width="0.7"/>
+<text x="732" y="218" font-size="11" text-anchor="middle" fill="#333">13:00</text>
+<line x1="828" y1="84" x2="828" y2="204" stroke="#bbb" stroke-width="0.7"/>
+<text x="828" y="218" font-size="11" text-anchor="middle" fill="#333">14:00</text>
+<line x1="924" y1="84" x2="924" y2="204" stroke="#bbb" stroke-width="0.7"/>
+<text x="924" y="218" font-size="11" text-anchor="middle" fill="#333">15:00</text>
+<line x1="1020" y1="84" x2="1020" y2="204" stroke="#bbb" stroke-width="0.7"/>
+<text x="1020" y="218" font-size="11" text-anchor="middle" fill="#333">16:00</text>
+<line x1="1116" y1="84" x2="1116" y2="204" stroke="#bbb" stroke-width="0.7"/>
+<text x="1116" y="218" font-size="11" text-anchor="middle" fill="#333">17:00</text>
+<line x1="1212" y1="84" x2="1212" y2="204" stroke="#bbb" stroke-width="0.7"/>
+<text x="1212" y="218" font-size="11" text-anchor="middle" fill="#333">18:00</text>
+<line x1="1308" y1="84" x2="1308" y2="204" stroke="#bbb" stroke-width="0.7"/>
+<text x="1308" y="218" font-size="11" text-anchor="middle" fill="#333">19:00</text>
+<line x1="1404" y1="84" x2="1404" y2="204" stroke="#bbb" stroke-width="0.7"/>
+<text x="1404" y="218" font-size="11" text-anchor="middle" fill="#333">20:00</text>
+<line x1="1500" y1="84" x2="1500" y2="204" stroke="#bbb" stroke-width="0.7"/>
+<text x="1500" y="218" font-size="11" text-anchor="middle" fill="#333">21:00</text>
+<text transform="rotate(-90 28 144)" x="28" y="144" font-size="12" text-anchor="middle" fill="#222">Vehicles</text>
+<polygon points="165.6,204 165.6,174 167.2,174 167.2,144 205.6,144 205.6,114 340,114 340,204 434.4,204 434.4,174 560.8,174 560.8,144 564,144 564,114 628,114 628,144 653.6,144 653.6,174 660,174 660,114 724,114 724,144 756,144 756,114 805.6,114 805.6,144 847.2,144 847.2,174 852,174 852,144 925.6,144 925.6,174 927.2,174 927.2,204 948,204 948,144 949.6,144 949.6,114 1012,114 1012,144 1044,144 1044,114 1068,114 1068,144 1120.8,144 1120.8,174 1140,174 1140,144 1200.8,144 1200.8,174 1236,174 1236,144 1296.8,144 1296.8,174 1328.8,174 1328.8,204" fill="#0072B2" fill-opacity="0.25" stroke="none"/>
+<polyline points="165.6,174 167.2,174 167.2,144 205.6,144 205.6,114 340,114 340,204 434.4,204 434.4,174 560.8,174 560.8,144 564,144 564,114 628,114 628,144 653.6,144 653.6,174 660,174 660,114 724,114 724,144 756,144 756,114 805.6,114 805.6,144 847.2,144 847.2,174 852,174 852,144 925.6,144 925.6,174 927.2,174 927.2,204 948,204 948,144 949.6,144 949.6,114 1012,114 1012,144 1044,144 1044,114 1068,114 1068,144 1120.8,144 1120.8,174 1140,174 1140,144 1200.8,144 1200.8,174 1236,174 1236,144 1296.8,144 1296.8,174 1328.8,174" fill="none" stroke="#0072B2" stroke-width="2.4"/>
+<text x="1506" y="118" font-size="11" fill="#222">large peak 3</text>
+<polygon points="167.2,204 167.2,174 340,174 340,204" fill="#E69F00" fill-opacity="0.25" stroke="none"/>
+<polyline points="167.2,174 340,174" fill="none" stroke="#E69F00" stroke-width="2.4"/>
+<text x="1506" y="178" font-size="11" fill="#222">sedan peak 1</text>
+<line x1="60" y1="114" x2="1500" y2="114" stroke="#0072B2" stroke-width="1.4" stroke-dasharray="7 4"/>
+<line x1="60" y1="174" x2="1500" y2="174" stroke="#E69F00" stroke-width="1.4" stroke-dasharray="7 4"/>
+<text x="60" y="262" font-size="13" font-weight="bold" fill="#111">Tue 2026-10-06: 3 large, 1 sedans</text>
+<rect x="60" y="270" width="1440" height="120" fill="#fff" stroke="#888" stroke-width="0.8"/>
+<line x1="60" y1="390" x2="1500" y2="390" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="394" font-size="11" text-anchor="end" fill="#333">0</text>
+<line x1="60" y1="360" x2="1500" y2="360" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="364" font-size="11" text-anchor="end" fill="#333">1</text>
+<line x1="60" y1="330" x2="1500" y2="330" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="334" font-size="11" text-anchor="end" fill="#333">2</text>
+<line x1="60" y1="300" x2="1500" y2="300" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="304" font-size="11" text-anchor="end" fill="#333">3</text>
+<line x1="60" y1="270" x2="1500" y2="270" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="274" font-size="11" text-anchor="end" fill="#333">4</text>
+<line x1="60" y1="270" x2="60" y2="390" stroke="#bbb" stroke-width="0.7"/>
+<text x="60" y="404" font-size="11" text-anchor="middle" fill="#333">06:00</text>
+<line x1="156" y1="270" x2="156" y2="390" stroke="#bbb" stroke-width="0.7"/>
+<text x="156" y="404" font-size="11" text-anchor="middle" fill="#333">07:00</text>
+<line x1="252" y1="270" x2="252" y2="390" stroke="#bbb" stroke-width="0.7"/>
+<text x="252" y="404" font-size="11" text-anchor="middle" fill="#333">08:00</text>
+<line x1="348" y1="270" x2="348" y2="390" stroke="#bbb" stroke-width="0.7"/>
+<text x="348" y="404" font-size="11" text-anchor="middle" fill="#333">09:00</text>
+<line x1="444" y1="270" x2="444" y2="390" stroke="#bbb" stroke-width="0.7"/>
+<text x="444" y="404" font-size="11" text-anchor="middle" fill="#333">10:00</text>
+<line x1="540" y1="270" x2="540" y2="390" stroke="#bbb" stroke-width="0.7"/>
+<text x="540" y="404" font-size="11" text-anchor="middle" fill="#333">11:00</text>
+<line x1="636" y1="270" x2="636" y2="390" stroke="#bbb" stroke-width="0.7"/>
+<text x="636" y="404" font-size="11" text-anchor="middle" fill="#333">12:00</text>
+<line x1="732" y1="270" x2="732" y2="390" stroke="#bbb" stroke-width="0.7"/>
+<text x="732" y="404" font-size="11" text-anchor="middle" fill="#333">13:00</text>
+<line x1="828" y1="270" x2="828" y2="390" stroke="#bbb" stroke-width="0.7"/>
+<text x="828" y="404" font-size="11" text-anchor="middle" fill="#333">14:00</text>
+<line x1="924" y1="270" x2="924" y2="390" stroke="#bbb" stroke-width="0.7"/>
+<text x="924" y="404" font-size="11" text-anchor="middle" fill="#333">15:00</text>
+<line x1="1020" y1="270" x2="1020" y2="390" stroke="#bbb" stroke-width="0.7"/>
+<text x="1020" y="404" font-size="11" text-anchor="middle" fill="#333">16:00</text>
+<line x1="1116" y1="270" x2="1116" y2="390" stroke="#bbb" stroke-width="0.7"/>
+<text x="1116" y="404" font-size="11" text-anchor="middle" fill="#333">17:00</text>
+<line x1="1212" y1="270" x2="1212" y2="390" stroke="#bbb" stroke-width="0.7"/>
+<text x="1212" y="404" font-size="11" text-anchor="middle" fill="#333">18:00</text>
+<line x1="1308" y1="270" x2="1308" y2="390" stroke="#bbb" stroke-width="0.7"/>
+<text x="1308" y="404" font-size="11" text-anchor="middle" fill="#333">19:00</text>
+<line x1="1404" y1="270" x2="1404" y2="390" stroke="#bbb" stroke-width="0.7"/>
+<text x="1404" y="404" font-size="11" text-anchor="middle" fill="#333">20:00</text>
+<line x1="1500" y1="270" x2="1500" y2="390" stroke="#bbb" stroke-width="0.7"/>
+<text x="1500" y="404" font-size="11" text-anchor="middle" fill="#333">21:00</text>
+<text transform="rotate(-90 28 330)" x="28" y="330" font-size="12" text-anchor="middle" fill="#222">Vehicles</text>
+<polygon points="143.2,390 143.2,360 160.8,360 160.8,330 328.8,330 328.8,300 340,300 340,360 436,360 436,390 460,390 460,360 466.4,360 466.4,330 532,330 532,360 564,360 564,330 586.4,330 586.4,300 628,300 628,330 660,330 660,300 661.6,300 661.6,330 724,330 724,360 756,360 756,330 767.2,330 767.2,300 837.6,300 837.6,330 893.6,330 893.6,360 916,360 916,390 948,390 948,360 1010.4,360 1010.4,390 1044,390 1044,330 1127.2,330 1127.2,360 1140,360 1140,330 1208.8,330 1208.8,360 1236,360 1236,330 1279.2,330 1279.2,360 1416.8,360 1416.8,390" fill="#0072B2" fill-opacity="0.25" stroke="none"/>
+<polyline points="143.2,360 160.8,360 160.8,330 328.8,330 328.8,300 340,300 340,360 436,360 436,390 460,390 460,360 466.4,360 466.4,330 532,330 532,360 564,360 564,330 586.4,330 586.4,300 628,300 628,330 660,330 660,300 661.6,300 661.6,330 724,330 724,360 756,360 756,330 767.2,330 767.2,300 837.6,300 837.6,330 893.6,330 893.6,360 916,360 916,390 948,390 948,360 1010.4,360 1010.4,390 1044,390 1044,330 1127.2,330 1127.2,360 1140,360 1140,330 1208.8,330 1208.8,360 1236,360 1236,330 1279.2,330 1279.2,360 1416.8,360" fill="none" stroke="#0072B2" stroke-width="2.4"/>
+<text x="1506" y="304" font-size="11" fill="#222">large peak 3</text>
+<polygon points="277.6,390 277.6,360 340,360 340,390 660,390 660,360 722.4,360 722.4,390 756,390 756,360 852,360 852,390" fill="#E69F00" fill-opacity="0.25" stroke="none"/>
+<polyline points="277.6,360 340,360 340,390 660,390 660,360 722.4,360 722.4,390 756,390 756,360 852,360" fill="none" stroke="#E69F00" stroke-width="2.4"/>
+<text x="1506" y="364" font-size="11" fill="#222">sedan peak 1</text>
+<line x1="60" y1="300" x2="1500" y2="300" stroke="#0072B2" stroke-width="1.4" stroke-dasharray="7 4"/>
+<line x1="60" y1="360" x2="1500" y2="360" stroke="#E69F00" stroke-width="1.4" stroke-dasharray="7 4"/>
+<text x="60" y="448" font-size="13" font-weight="bold" fill="#111">Wed 2026-10-07: 3 large, 3 sedans</text>
+<rect x="60" y="456" width="1440" height="120" fill="#fff" stroke="#888" stroke-width="0.8"/>
+<line x1="60" y1="576" x2="1500" y2="576" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="580" font-size="11" text-anchor="end" fill="#333">0</text>
+<line x1="60" y1="546" x2="1500" y2="546" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="550" font-size="11" text-anchor="end" fill="#333">1</text>
+<line x1="60" y1="516" x2="1500" y2="516" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="520" font-size="11" text-anchor="end" fill="#333">2</text>
+<line x1="60" y1="486" x2="1500" y2="486" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="490" font-size="11" text-anchor="end" fill="#333">3</text>
+<line x1="60" y1="456" x2="1500" y2="456" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="460" font-size="11" text-anchor="end" fill="#333">4</text>
+<line x1="60" y1="456" x2="60" y2="576" stroke="#bbb" stroke-width="0.7"/>
+<text x="60" y="590" font-size="11" text-anchor="middle" fill="#333">06:00</text>
+<line x1="156" y1="456" x2="156" y2="576" stroke="#bbb" stroke-width="0.7"/>
+<text x="156" y="590" font-size="11" text-anchor="middle" fill="#333">07:00</text>
+<line x1="252" y1="456" x2="252" y2="576" stroke="#bbb" stroke-width="0.7"/>
+<text x="252" y="590" font-size="11" text-anchor="middle" fill="#333">08:00</text>
+<line x1="348" y1="456" x2="348" y2="576" stroke="#bbb" stroke-width="0.7"/>
+<text x="348" y="590" font-size="11" text-anchor="middle" fill="#333">09:00</text>
+<line x1="444" y1="456" x2="444" y2="576" stroke="#bbb" stroke-width="0.7"/>
+<text x="444" y="590" font-size="11" text-anchor="middle" fill="#333">10:00</text>
+<line x1="540" y1="456" x2="540" y2="576" stroke="#bbb" stroke-width="0.7"/>
+<text x="540" y="590" font-size="11" text-anchor="middle" fill="#333">11:00</text>
+<line x1="636" y1="456" x2="636" y2="576" stroke="#bbb" stroke-width="0.7"/>
+<text x="636" y="590" font-size="11" text-anchor="middle" fill="#333">12:00</text>
+<line x1="732" y1="456" x2="732" y2="576" stroke="#bbb" stroke-width="0.7"/>
+<text x="732" y="590" font-size="11" text-anchor="middle" fill="#333">13:00</text>
+<line x1="828" y1="456" x2="828" y2="576" stroke="#bbb" stroke-width="0.7"/>
+<text x="828" y="590" font-size="11" text-anchor="middle" fill="#333">14:00</text>
+<line x1="924" y1="456" x2="924" y2="576" stroke="#bbb" stroke-width="0.7"/>
+<text x="924" y="590" font-size="11" text-anchor="middle" fill="#333">15:00</text>
+<line x1="1020" y1="456" x2="1020" y2="576" stroke="#bbb" stroke-width="0.7"/>
+<text x="1020" y="590" font-size="11" text-anchor="middle" fill="#333">16:00</text>
+<line x1="1116" y1="456" x2="1116" y2="576" stroke="#bbb" stroke-width="0.7"/>
+<text x="1116" y="590" font-size="11" text-anchor="middle" fill="#333">17:00</text>
+<line x1="1212" y1="456" x2="1212" y2="576" stroke="#bbb" stroke-width="0.7"/>
+<text x="1212" y="590" font-size="11" text-anchor="middle" fill="#333">18:00</text>
+<line x1="1308" y1="456" x2="1308" y2="576" stroke="#bbb" stroke-width="0.7"/>
+<text x="1308" y="590" font-size="11" text-anchor="middle" fill="#333">19:00</text>
+<line x1="1404" y1="456" x2="1404" y2="576" stroke="#bbb" stroke-width="0.7"/>
+<text x="1404" y="590" font-size="11" text-anchor="middle" fill="#333">20:00</text>
+<line x1="1500" y1="456" x2="1500" y2="576" stroke="#bbb" stroke-width="0.7"/>
+<text x="1500" y="590" font-size="11" text-anchor="middle" fill="#333">21:00</text>
+<text transform="rotate(-90 28 516)" x="28" y="516" font-size="12" text-anchor="middle" fill="#222">Vehicles</text>
+<polygon points="146.4,576 146.4,546 156,546 156,516 340,516 340,576 468,576 468,546 498.4,546 498.4,516 584.8,516 584.8,486 628,486 628,546 660,546 660,516 690.4,516 690.4,486 724,486 724,516 820,516 820,546 832.8,546 832.8,576 852,576 852,516 948,516 948,486 989.6,486 989.6,516 997.6,516 997.6,546 1023.2,546 1023.2,576 1044,576 1044,546 1140,546 1140,516 1173.6,516 1173.6,546 1236,546 1236,486 1244,486 1244,516 1277.6,516 1277.6,546 1404,546 1404,576" fill="#0072B2" fill-opacity="0.25" stroke="none"/>
+<polyline points="146.4,546 156,546 156,516 340,516 340,576 468,576 468,546 498.4,546 498.4,516 584.8,516 584.8,486 628,486 628,546 660,546 660,516 690.4,516 690.4,486 724,486 724,516 820,516 820,546 832.8,546 832.8,576 852,576 852,516 948,516 948,486 989.6,486 989.6,516 997.6,516 997.6,546 1023.2,546 1023.2,576 1044,576 1044,546 1140,546 1140,516 1173.6,516 1173.6,546 1236,546 1236,486 1244,486 1244,516 1277.6,516 1277.6,546 1404,546" fill="none" stroke="#0072B2" stroke-width="2.4"/>
+<text x="1506" y="490" font-size="11" fill="#222">large peak 3</text>
+<polygon points="564,576 564,546 621.6,546 621.6,516 660,516 660,486 709.6,486 709.6,546 724,546 724,576" fill="#E69F00" fill-opacity="0.25" stroke="none"/>
+<polyline points="564,546 621.6,546 621.6,516 660,516 660,486 709.6,486 709.6,546 724,546" fill="none" stroke="#E69F00" stroke-width="2.4"/>
+<text x="1506" y="498" font-size="11" fill="#222">sedan peak 3</text>
+<line x1="60" y1="486" x2="1500" y2="486" stroke="#0072B2" stroke-width="1.4" stroke-dasharray="7 4"/>
+<line x1="60" y1="486" x2="1500" y2="486" stroke="#E69F00" stroke-width="1.4" stroke-dasharray="7 4"/>
+<text x="60" y="634" font-size="13" font-weight="bold" fill="#111">Thu 2026-10-08: 3 large, 1 sedans</text>
+<rect x="60" y="642" width="1440" height="120" fill="#fff" stroke="#888" stroke-width="0.8"/>
+<line x1="60" y1="762" x2="1500" y2="762" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="766" font-size="11" text-anchor="end" fill="#333">0</text>
+<line x1="60" y1="732" x2="1500" y2="732" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="736" font-size="11" text-anchor="end" fill="#333">1</text>
+<line x1="60" y1="702" x2="1500" y2="702" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="706" font-size="11" text-anchor="end" fill="#333">2</text>
+<line x1="60" y1="672" x2="1500" y2="672" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="676" font-size="11" text-anchor="end" fill="#333">3</text>
+<line x1="60" y1="642" x2="1500" y2="642" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="646" font-size="11" text-anchor="end" fill="#333">4</text>
+<line x1="60" y1="642" x2="60" y2="762" stroke="#bbb" stroke-width="0.7"/>
+<text x="60" y="776" font-size="11" text-anchor="middle" fill="#333">06:00</text>
+<line x1="156" y1="642" x2="156" y2="762" stroke="#bbb" stroke-width="0.7"/>
+<text x="156" y="776" font-size="11" text-anchor="middle" fill="#333">07:00</text>
+<line x1="252" y1="642" x2="252" y2="762" stroke="#bbb" stroke-width="0.7"/>
+<text x="252" y="776" font-size="11" text-anchor="middle" fill="#333">08:00</text>
+<line x1="348" y1="642" x2="348" y2="762" stroke="#bbb" stroke-width="0.7"/>
+<text x="348" y="776" font-size="11" text-anchor="middle" fill="#333">09:00</text>
+<line x1="444" y1="642" x2="444" y2="762" stroke="#bbb" stroke-width="0.7"/>
+<text x="444" y="776" font-size="11" text-anchor="middle" fill="#333">10:00</text>
+<line x1="540" y1="642" x2="540" y2="762" stroke="#bbb" stroke-width="0.7"/>
+<text x="540" y="776" font-size="11" text-anchor="middle" fill="#333">11:00</text>
+<line x1="636" y1="642" x2="636" y2="762" stroke="#bbb" stroke-width="0.7"/>
+<text x="636" y="776" font-size="11" text-anchor="middle" fill="#333">12:00</text>
+<line x1="732" y1="642" x2="732" y2="762" stroke="#bbb" stroke-width="0.7"/>
+<text x="732" y="776" font-size="11" text-anchor="middle" fill="#333">13:00</text>
+<line x1="828" y1="642" x2="828" y2="762" stroke="#bbb" stroke-width="0.7"/>
+<text x="828" y="776" font-size="11" text-anchor="middle" fill="#333">14:00</text>
+<line x1="924" y1="642" x2="924" y2="762" stroke="#bbb" stroke-width="0.7"/>
+<text x="924" y="776" font-size="11" text-anchor="middle" fill="#333">15:00</text>
+<line x1="1020" y1="642" x2="1020" y2="762" stroke="#bbb" stroke-width="0.7"/>
+<text x="1020" y="776" font-size="11" text-anchor="middle" fill="#333">16:00</text>
+<line x1="1116" y1="642" x2="1116" y2="762" stroke="#bbb" stroke-width="0.7"/>
+<text x="1116" y="776" font-size="11" text-anchor="middle" fill="#333">17:00</text>
+<line x1="1212" y1="642" x2="1212" y2="762" stroke="#bbb" stroke-width="0.7"/>
+<text x="1212" y="776" font-size="11" text-anchor="middle" fill="#333">18:00</text>
+<line x1="1308" y1="642" x2="1308" y2="762" stroke="#bbb" stroke-width="0.7"/>
+<text x="1308" y="776" font-size="11" text-anchor="middle" fill="#333">19:00</text>
+<line x1="1404" y1="642" x2="1404" y2="762" stroke="#bbb" stroke-width="0.7"/>
+<text x="1404" y="776" font-size="11" text-anchor="middle" fill="#333">20:00</text>
+<line x1="1500" y1="642" x2="1500" y2="762" stroke="#bbb" stroke-width="0.7"/>
+<text x="1500" y="776" font-size="11" text-anchor="middle" fill="#333">21:00</text>
+<text transform="rotate(-90 28 702)" x="28" y="702" font-size="12" text-anchor="middle" fill="#222">Vehicles</text>
+<polygon points="175.2,762 175.2,732 183.2,732 183.2,702 340,702 340,762 372,762 372,732 479.2,732 479.2,702 504.8,702 504.8,672 532,672 532,702 562.4,702 562.4,672 628,672 628,732 660,732 660,702 706.4,702 706.4,672 724,672 724,702 788,702 788,672 816.8,672 816.8,702 820,702 820,732 852,732 852,702 916,702 916,732 948,732 948,702 1024.8,702 1024.8,732 1044,732 1044,672 1087.2,672 1087.2,702 1140,702 1140,672 1192.8,672 1192.8,702 1218.4,702 1218.4,732 1236,732 1236,702 1301.6,702 1301.6,732 1364,732 1364,762" fill="#0072B2" fill-opacity="0.25" stroke="none"/>
+<polyline points="175.2,732 183.2,732 183.2,702 340,702 340,762 372,762 372,732 479.2,732 479.2,702 504.8,702 504.8,672 532,672 532,702 562.4,702 562.4,672 628,672 628,732 660,732 660,702 706.4,702 706.4,672 724,672 724,702 788,702 788,672 816.8,672 816.8,702 820,702 820,732 852,732 852,702 916,702 916,732 948,732 948,702 1024.8,702 1024.8,732 1044,732 1044,672 1087.2,672 1087.2,702 1140,702 1140,672 1192.8,672 1192.8,702 1218.4,702 1218.4,732 1236,732 1236,702 1301.6,702 1301.6,732 1364,732" fill="none" stroke="#0072B2" stroke-width="2.4"/>
+<text x="1506" y="676" font-size="11" fill="#222">large peak 3</text>
+<polygon points="756,762 756,732 837.6,732 837.6,762" fill="#E69F00" fill-opacity="0.25" stroke="none"/>
+<polyline points="756,732 837.6,732" fill="none" stroke="#E69F00" stroke-width="2.4"/>
+<text x="1506" y="736" font-size="11" fill="#222">sedan peak 1</text>
+<line x1="60" y1="672" x2="1500" y2="672" stroke="#0072B2" stroke-width="1.4" stroke-dasharray="7 4"/>
+<line x1="60" y1="732" x2="1500" y2="732" stroke="#E69F00" stroke-width="1.4" stroke-dasharray="7 4"/>
+<text x="60" y="820" font-size="13" font-weight="bold" fill="#111">Fri 2026-10-09: 3 large, 2 sedans</text>
+<rect x="60" y="828" width="1440" height="120" fill="#fff" stroke="#888" stroke-width="0.8"/>
+<line x1="60" y1="948" x2="1500" y2="948" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="952" font-size="11" text-anchor="end" fill="#333">0</text>
+<line x1="60" y1="918" x2="1500" y2="918" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="922" font-size="11" text-anchor="end" fill="#333">1</text>
+<line x1="60" y1="888" x2="1500" y2="888" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="892" font-size="11" text-anchor="end" fill="#333">2</text>
+<line x1="60" y1="858" x2="1500" y2="858" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="862" font-size="11" text-anchor="end" fill="#333">3</text>
+<line x1="60" y1="828" x2="1500" y2="828" stroke="#e2e2e2" stroke-width="0.7"/>
+<text x="55" y="832" font-size="11" text-anchor="end" fill="#333">4</text>
+<line x1="60" y1="828" x2="60" y2="948" stroke="#bbb" stroke-width="0.7"/>
+<text x="60" y="962" font-size="11" text-anchor="middle" fill="#333">06:00</text>
+<line x1="156" y1="828" x2="156" y2="948" stroke="#bbb" stroke-width="0.7"/>
+<text x="156" y="962" font-size="11" text-anchor="middle" fill="#333">07:00</text>
+<line x1="252" y1="828" x2="252" y2="948" stroke="#bbb" stroke-width="0.7"/>
+<text x="252" y="962" font-size="11" text-anchor="middle" fill="#333">08:00</text>
+<line x1="348" y1="828" x2="348" y2="948" stroke="#bbb" stroke-width="0.7"/>
+<text x="348" y="962" font-size="11" text-anchor="middle" fill="#333">09:00</text>
+<line x1="444" y1="828" x2="444" y2="948" stroke="#bbb" stroke-width="0.7"/>
+<text x="444" y="962" font-size="11" text-anchor="middle" fill="#333">10:00</text>
+<line x1="540" y1="828" x2="540" y2="948" stroke="#bbb" stroke-width="0.7"/>
+<text x="540" y="962" font-size="11" text-anchor="middle" fill="#333">11:00</text>
+<line x1="636" y1="828" x2="636" y2="948" stroke="#bbb" stroke-width="0.7"/>
+<text x="636" y="962" font-size="11" text-anchor="middle" fill="#333">12:00</text>
+<line x1="732" y1="828" x2="732" y2="948" stroke="#bbb" stroke-width="0.7"/>
+<text x="732" y="962" font-size="11" text-anchor="middle" fill="#333">13:00</text>
+<line x1="828" y1="828" x2="828" y2="948" stroke="#bbb" stroke-width="0.7"/>
+<text x="828" y="962" font-size="11" text-anchor="middle" fill="#333">14:00</text>
+<line x1="924" y1="828" x2="924" y2="948" stroke="#bbb" stroke-width="0.7"/>
+<text x="924" y="962" font-size="11" text-anchor="middle" fill="#333">15:00</text>
+<line x1="1020" y1="828" x2="1020" y2="948" stroke="#bbb" stroke-width="0.7"/>
+<text x="1020" y="962" font-size="11" text-anchor="middle" fill="#333">16:00</text>
+<line x1="1116" y1="828" x2="1116" y2="948" stroke="#bbb" stroke-width="0.7"/>
+<text x="1116" y="962" font-size="11" text-anchor="middle" fill="#333">17:00</text>
+<line x1="1212" y1="828" x2="1212" y2="948" stroke="#bbb" stroke-width="0.7"/>
+<text x="1212" y="962" font-size="11" text-anchor="middle" fill="#333">18:00</text>
+<line x1="1308" y1="828" x2="1308" y2="948" stroke="#bbb" stroke-width="0.7"/>
+<text x="1308" y="962" font-size="11" text-anchor="middle" fill="#333">19:00</text>
+<line x1="1404" y1="828" x2="1404" y2="948" stroke="#bbb" stroke-width="0.7"/>
+<text x="1404" y="962" font-size="11" text-anchor="middle" fill="#333">20:00</text>
+<line x1="1500" y1="828" x2="1500" y2="948" stroke="#bbb" stroke-width="0.7"/>
+<text x="1500" y="962" font-size="11" text-anchor="middle" fill="#333">21:00</text>
+<text transform="rotate(-90 28 888)" x="28" y="888" font-size="12" text-anchor="middle" fill="#222">Vehicles</text>
+<polygon points="160.8,948 160.8,918 167.2,918 167.2,888 176.8,888 176.8,858 340,858 340,948 356,948 356,918 436,918 436,948 628,948 628,918 660,918 660,888 756,888 756,858 799.2,858 799.2,888 820,888 820,918 893.6,918 893.6,948 1044,948 1044,918 1140,918 1140,858 1143.2,858 1143.2,888 1236,888 1236,858 1282.4,858 1282.4,888 1285.6,888 1285.6,918 1314.4,918 1314.4,948" fill="#0072B2" fill-opacity="0.25" stroke="none"/>
+<polyline points="160.8,918 167.2,918 167.2,888 176.8,888 176.8,858 340,858 340,948 356,948 356,918 436,918 436,948 628,948 628,918 660,918 660,888 756,888 756,858 799.2,858 799.2,888 820,888 820,918 893.6,918 893.6,948 1044,948 1044,918 1140,918 1140,858 1143.2,858 1143.2,888 1236,888 1236,858 1282.4,858 1282.4,888 1285.6,888 1285.6,918 1314.4,918" fill="none" stroke="#0072B2" stroke-width="2.4"/>
+<text x="1506" y="862" font-size="11" fill="#222">large peak 3</text>
+<polygon points="660,948 660,918 757.6,918 757.6,888 805.6,888 805.6,918 820,918 820,948" fill="#E69F00" fill-opacity="0.25" stroke="none"/>
+<polyline points="660,918 757.6,918 757.6,888 805.6,888 805.6,918 820,918" fill="none" stroke="#E69F00" stroke-width="2.4"/>
+<text x="1506" y="892" font-size="11" fill="#222">sedan peak 2</text>
+<line x1="60" y1="858" x2="1500" y2="858" stroke="#0072B2" stroke-width="1.4" stroke-dasharray="7 4"/>
+<line x1="60" y1="888" x2="1500" y2="888" stroke="#E69F00" stroke-width="1.4" stroke-dasharray="7 4"/>
+<text x="780" y="980" font-size="12" text-anchor="middle" fill="#222">Time of day (HH:MM)</text>
+</svg>

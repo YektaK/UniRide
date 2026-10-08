@@ -1,0 +1,2586 @@
+{
+  "git_commit": "8ab88ca35ae05418a0cdae4f4c7a6337ca189c0b",
+  "dirty_working_tree": true,
+  "timestamp": "2026-10-08T09:04:47.065Z",
+  "parameters": {
+    "dates": [
+      "2026-10-05",
+      "2026-10-06",
+      "2026-10-07",
+      "2026-10-08",
+      "2026-10-09"
+    ],
+    "ride_limits": [
+      50,
+      60,
+      70,
+      90
+    ],
+    "tour_limit": 150,
+    "scenarios": [
+      "A",
+      "L1",
+      "L2",
+      "L3"
+    ],
+    "max_cars": null,
+    "node_budget": 200000,
+    "selection_time_limit_seconds": 30,
+    "admission_mode": "assume_confirmed"
+  },
+  "fleet_types": [
+    {
+      "typeId": "large",
+      "swCapacity": 4,
+      "soCapacity": 5,
+      "cooldownMinutes": 10
+    },
+    {
+      "typeId": "sedan",
+      "swCapacity": 0,
+      "soCapacity": 4,
+      "cooldownMinutes": 10
+    }
+  ],
+  "fleet_types_source": "cli",
+  "fixed_type": "large",
+  "minimize_type": "sedan",
+  "db_vehicles_consulted": false,
+  "algorithms": {
+    "baseline": "ga_split",
+    "menu": "ga_split_hf"
+  },
+  "termination_protocol": "native",
+  "ga_defaults": {
+    "population_size": 50,
+    "max_iterations": 100,
+    "crossover_rate": 0.85,
+    "mutation_rate": 0.2,
+    "elite_count": 3,
+    "tournament_size": 4,
+    "max_no_improvement": 25,
+    "seed": null,
+    "local_search_type": "hybrid",
+    "local_search_interval": 10,
+    "diversify_threshold": 30
+  },
+  "ga_effective_configuration": {
+    "population_size": 50,
+    "max_iterations": 100,
+    "crossover_rate": 0.85,
+    "mutation_rate": 0.2,
+    "elite_count": 3,
+    "tournament_size": 4,
+    "max_no_improvement": 25,
+    "seed": null,
+    "local_search_type": "hybrid",
+    "local_search_interval": 10,
+    "diversify_threshold": 30
+  },
+  "effective_seed": 42,
+  "hf_effective_configuration": {
+    "population_size": 50,
+    "max_iterations": 100,
+    "crossover_rate": 0.85,
+    "mutation_rate": 0.2,
+    "elite_count": 3,
+    "tournament_size": 4,
+    "max_no_improvement": 25,
+    "seed": null,
+    "local_search_type": "hybrid",
+    "local_search_interval": 10,
+    "diversify_threshold": 30
+  },
+  "hf_effective_seed": 42,
+  "selection_solver": {
+    "name": "cp-sat",
+    "version": "9.15.6755",
+    "random_seed": 20261008,
+    "num_workers": 1,
+    "time_limit_seconds": 30
+  },
+  "vehicle_count_scope": "cars are the minimum over the per-wave option menus (heuristic GA routes) and exact for the chosen fixed routes when proven; not a global minimum",
+  "weekly_cars_definition": "weekly_cars = maximum over weekdays (same cars every day); cars_day_sum and monday_cars..friday_cars give the per-day need (borrow per day)",
+  "runs": [
+    {
+      "date": "2026-10-05",
+      "ride_limit": 50,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-05_R50_A.response.json",
+        "2026-10-05_R50_L1.response.json",
+        "2026-10-05_R50_L2.response.json",
+        "2026-10-05_R50_L3.response.json"
+      ],
+      "matrix_file": "2026-10-05_R50.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-08T09:04:54.439211+00:00"
+      },
+      "rate_limit_waits": [
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 56,
+          "attempt": 1
+        }
+      ],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-05:pickup:765",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:1035",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:pickup:525",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:975",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:735",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:855",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:pickup:945",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:1095",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:795",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:pickup:705",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:915",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:675",
+          "options": 1,
+          "skipped": 3
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "A",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": null,
+          "selection_status": null,
+          "assignment_status": null
+        },
+        {
+          "scenario": "L1",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L2",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L3",
+          "status": "ok",
+          "cars": 4,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-05",
+      "ride_limit": 60,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-05_R60_A.response.json",
+        "2026-10-05_R60_L1.response.json",
+        "2026-10-05_R60_L2.response.json",
+        "2026-10-05_R60_L3.response.json"
+      ],
+      "matrix_file": "2026-10-05_R60.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-08T09:06:01.258244+00:00"
+      },
+      "rate_limit_waits": [
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 54,
+          "attempt": 1
+        },
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 56,
+          "attempt": 1
+        }
+      ],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-05:pickup:765",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:1035",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:pickup:525",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:975",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:735",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:855",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:pickup:945",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:1095",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:795",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:pickup:705",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:915",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:675",
+          "options": 1,
+          "skipped": 3
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "A",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": null,
+          "selection_status": null,
+          "assignment_status": null
+        },
+        {
+          "scenario": "L1",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L2",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L3",
+          "status": "ok",
+          "cars": 2,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-05",
+      "ride_limit": 70,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-05_R70_A.response.json",
+        "2026-10-05_R70_L1.response.json",
+        "2026-10-05_R70_L2.response.json",
+        "2026-10-05_R70_L3.response.json"
+      ],
+      "matrix_file": "2026-10-05_R70.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-08T09:07:59.439076+00:00"
+      },
+      "rate_limit_waits": [
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 56,
+          "attempt": 1
+        },
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 55,
+          "attempt": 1
+        }
+      ],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-05:pickup:765",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:1035",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:pickup:525",
+          "options": 3,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:975",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:735",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:855",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:pickup:945",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:1095",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:795",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:pickup:705",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:915",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:675",
+          "options": 1,
+          "skipped": 3
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "A",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": null,
+          "selection_status": null,
+          "assignment_status": null
+        },
+        {
+          "scenario": "L1",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 3,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L3",
+          "status": "ok",
+          "cars": 1,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-05",
+      "ride_limit": 90,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-05_R90_A.response.json",
+        "2026-10-05_R90_L1.response.json",
+        "2026-10-05_R90_L2.response.json",
+        "2026-10-05_R90_L3.response.json"
+      ],
+      "matrix_file": "2026-10-05_R90.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-08T09:10:00.172401+00:00"
+      },
+      "rate_limit_waits": [
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 55,
+          "attempt": 1
+        },
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 55,
+          "attempt": 1
+        }
+      ],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-05:pickup:765",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:1035",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:pickup:525",
+          "options": 3,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:975",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:735",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:855",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:pickup:945",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:1095",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:795",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:pickup:705",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:915",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:675",
+          "options": 1,
+          "skipped": 3
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "A",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": null,
+          "selection_status": null,
+          "assignment_status": null
+        },
+        {
+          "scenario": "L1",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 2,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L3",
+          "status": "ok",
+          "cars": 1,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-06",
+      "ride_limit": 50,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-06_R50_A.response.json",
+        "2026-10-06_R50_L1.response.json",
+        "2026-10-06_R50_L2.response.json",
+        "2026-10-06_R50_L3.response.json"
+      ],
+      "matrix_file": "2026-10-06_R50.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-08T09:11:59.977493+00:00"
+      },
+      "rate_limit_waits": [
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 56,
+          "attempt": 1
+        },
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 59,
+          "attempt": 1
+        }
+      ],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-06:pickup:525",
+          "options": 3,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:795",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:pickup:885",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:1095",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:735",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:pickup:765",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:915",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:675",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:1035",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:pickup:705",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:975",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:pickup:585",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:645",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "A",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": null,
+          "selection_status": null,
+          "assignment_status": null
+        },
+        {
+          "scenario": "L1",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 3,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L3",
+          "status": "ok",
+          "cars": 2,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-06",
+      "ride_limit": 60,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-06_R60_A.response.json",
+        "2026-10-06_R60_L1.response.json",
+        "2026-10-06_R60_L2.response.json",
+        "2026-10-06_R60_L3.response.json"
+      ],
+      "matrix_file": "2026-10-06_R60.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-08T09:14:01.223171+00:00"
+      },
+      "rate_limit_waits": [
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 55,
+          "attempt": 1
+        }
+      ],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-06:pickup:525",
+          "options": 3,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:795",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:pickup:885",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:1095",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:735",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:pickup:765",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:915",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:675",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:1035",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:pickup:705",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:975",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:pickup:585",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:645",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "A",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": null,
+          "selection_status": null,
+          "assignment_status": null
+        },
+        {
+          "scenario": "L1",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 2,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L3",
+          "status": "ok",
+          "cars": 1,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-06",
+      "ride_limit": 70,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-06_R70_A.response.json",
+        "2026-10-06_R70_L1.response.json",
+        "2026-10-06_R70_L2.response.json",
+        "2026-10-06_R70_L3.response.json"
+      ],
+      "matrix_file": "2026-10-06_R70.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-08T09:15:02.149285+00:00"
+      },
+      "rate_limit_waits": [
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 57,
+          "attempt": 1
+        },
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 59,
+          "attempt": 1
+        }
+      ],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-06:pickup:525",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:795",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:pickup:885",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:1095",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:735",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:pickup:765",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:915",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:675",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:1035",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:pickup:705",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:975",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:pickup:585",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:645",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "A",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": null,
+          "selection_status": null,
+          "assignment_status": null
+        },
+        {
+          "scenario": "L1",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L2",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L3",
+          "status": "ok",
+          "cars": 1,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-06",
+      "ride_limit": 90,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-06_R90_A.response.json",
+        "2026-10-06_R90_L1.response.json",
+        "2026-10-06_R90_L2.response.json",
+        "2026-10-06_R90_L3.response.json"
+      ],
+      "matrix_file": "2026-10-06_R90.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-08T09:17:03.991521+00:00"
+      },
+      "rate_limit_waits": [
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 56,
+          "attempt": 1
+        },
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 58,
+          "attempt": 1
+        }
+      ],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-06:pickup:525",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:795",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:pickup:885",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:1095",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:735",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:765",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:915",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:675",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:1035",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:pickup:705",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:975",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-06:pickup:585",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:645",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "A",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": null,
+          "selection_status": null,
+          "assignment_status": null
+        },
+        {
+          "scenario": "L1",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L2",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L3",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-07",
+      "ride_limit": 50,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-07_R50_A.response.json",
+        "2026-10-07_R50_L1.response.json",
+        "2026-10-07_R50_L2.response.json",
+        "2026-10-07_R50_L3.response.json"
+      ],
+      "matrix_file": "2026-10-07_R50.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-08T09:19:03.721392+00:00"
+      },
+      "rate_limit_waits": [
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 57,
+          "attempt": 1
+        },
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 58,
+          "attempt": 1
+        }
+      ],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-07:pickup:525",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:735",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-07:pickup:825",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:1035",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:1095",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:pickup:705",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:855",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:915",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:975",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-07:pickup:765",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:675",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "A",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": null,
+          "selection_status": null,
+          "assignment_status": null
+        },
+        {
+          "scenario": "L1",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L2",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L3",
+          "status": "ok",
+          "cars": 4,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-07",
+      "ride_limit": 60,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-07_R60_A.response.json",
+        "2026-10-07_R60_L1.response.json",
+        "2026-10-07_R60_L2.response.json",
+        "2026-10-07_R60_L3.response.json"
+      ],
+      "matrix_file": "2026-10-07_R60.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-08T09:21:04.865270+00:00"
+      },
+      "rate_limit_waits": [
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 55,
+          "attempt": 1
+        }
+      ],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-07:pickup:525",
+          "options": 4,
+          "skipped": 1
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:735",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-07:pickup:825",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:1035",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:1095",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:pickup:705",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:855",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:915",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:975",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-07:pickup:765",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:675",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "A",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": null,
+          "selection_status": null,
+          "assignment_status": null
+        },
+        {
+          "scenario": "L1",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L2",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L3",
+          "status": "ok",
+          "cars": 3,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-07",
+      "ride_limit": 70,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-07_R70_A.response.json",
+        "2026-10-07_R70_L1.response.json",
+        "2026-10-07_R70_L2.response.json",
+        "2026-10-07_R70_L3.response.json"
+      ],
+      "matrix_file": "2026-10-07_R70.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-08T09:22:06.608449+00:00"
+      },
+      "rate_limit_waits": [
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 56,
+          "attempt": 1
+        },
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 58,
+          "attempt": 1
+        }
+      ],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-07:pickup:525",
+          "options": 4,
+          "skipped": 1
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:735",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-07:pickup:825",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:1035",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:1095",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:pickup:705",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:855",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:915",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:975",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-07:pickup:765",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:675",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "A",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": null,
+          "selection_status": null,
+          "assignment_status": null
+        },
+        {
+          "scenario": "L1",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L2",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L3",
+          "status": "ok",
+          "cars": 3,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-07",
+      "ride_limit": 90,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-07_R90_A.response.json",
+        "2026-10-07_R90_L1.response.json",
+        "2026-10-07_R90_L2.response.json",
+        "2026-10-07_R90_L3.response.json"
+      ],
+      "matrix_file": "2026-10-07_R90.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-08T09:24:06.623000+00:00"
+      },
+      "rate_limit_waits": [
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 55,
+          "attempt": 1
+        },
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 59,
+          "attempt": 1
+        }
+      ],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-07:pickup:525",
+          "options": 3,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:735",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-07:pickup:825",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:1035",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:1095",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-07:pickup:705",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:855",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:915",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:975",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-07:pickup:765",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:675",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "A",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": null,
+          "selection_status": null,
+          "assignment_status": null
+        },
+        {
+          "scenario": "L1",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L2",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L3",
+          "status": "ok",
+          "cars": 1,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-08",
+      "ride_limit": 50,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-08_R50_A.response.json",
+        "2026-10-08_R50_L1.response.json",
+        "2026-10-08_R50_L2.response.json",
+        "2026-10-08_R50_L3.response.json"
+      ],
+      "matrix_file": "2026-10-08_R50.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-08T09:26:07.460500+00:00"
+      },
+      "rate_limit_waits": [
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 56,
+          "attempt": 1
+        },
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 59,
+          "attempt": 1
+        }
+      ],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-08:pickup:525",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:1035",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:735",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:855",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-08:pickup:705",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:975",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-08:pickup:765",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:915",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:885",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:1095",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:825",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:795",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:645",
+          "options": 1,
+          "skipped": 3
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "A",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": null,
+          "selection_status": null,
+          "assignment_status": null
+        },
+        {
+          "scenario": "L1",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L2",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L3",
+          "status": "ok",
+          "cars": 2,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-08",
+      "ride_limit": 60,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-08_R60_A.response.json",
+        "2026-10-08_R60_L1.response.json",
+        "2026-10-08_R60_L2.response.json",
+        "2026-10-08_R60_L3.response.json"
+      ],
+      "matrix_file": "2026-10-08_R60.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-08T09:28:08.028020+00:00"
+      },
+      "rate_limit_waits": [
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 56,
+          "attempt": 1
+        }
+      ],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-08:pickup:525",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:1035",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:735",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:855",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-08:pickup:705",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:975",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-08:pickup:765",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:915",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-08:pickup:885",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:1095",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:825",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:795",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:645",
+          "options": 1,
+          "skipped": 3
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "A",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": null,
+          "selection_status": null,
+          "assignment_status": null
+        },
+        {
+          "scenario": "L1",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 2,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L3",
+          "status": "ok",
+          "cars": 1,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-08",
+      "ride_limit": 70,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-08_R70_A.response.json",
+        "2026-10-08_R70_L1.response.json",
+        "2026-10-08_R70_L2.response.json",
+        "2026-10-08_R70_L3.response.json"
+      ],
+      "matrix_file": "2026-10-08_R70.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-08T09:29:10.247295+00:00"
+      },
+      "rate_limit_waits": [
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 57,
+          "attempt": 1
+        },
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 58,
+          "attempt": 1
+        }
+      ],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-08:pickup:525",
+          "options": 3,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:1035",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:735",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:855",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-08:pickup:705",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:975",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-08:pickup:765",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:915",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-08:pickup:885",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:1095",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:825",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:795",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:645",
+          "options": 1,
+          "skipped": 3
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "A",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": null,
+          "selection_status": null,
+          "assignment_status": null
+        },
+        {
+          "scenario": "L1",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 2,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L3",
+          "status": "ok",
+          "cars": 1,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-08",
+      "ride_limit": 90,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-08_R90_A.response.json",
+        "2026-10-08_R90_L1.response.json",
+        "2026-10-08_R90_L2.response.json",
+        "2026-10-08_R90_L3.response.json"
+      ],
+      "matrix_file": "2026-10-08_R90.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-08T09:31:11.504507+00:00"
+      },
+      "rate_limit_waits": [
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 56,
+          "attempt": 1
+        },
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 58,
+          "attempt": 1
+        }
+      ],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-08:pickup:525",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:1035",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:735",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:855",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-08:pickup:705",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:975",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-08:pickup:765",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:915",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-08:pickup:885",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:1095",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:825",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:795",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:645",
+          "options": 1,
+          "skipped": 3
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "A",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": null,
+          "selection_status": null,
+          "assignment_status": null
+        },
+        {
+          "scenario": "L1",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 2,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L3",
+          "status": "ok",
+          "cars": 1,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-09",
+      "ride_limit": 50,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-09_R50_A.response.json",
+        "2026-10-09_R50_L1.response.json",
+        "2026-10-09_R50_L2.response.json",
+        "2026-10-09_R50_L3.response.json"
+      ],
+      "matrix_file": "2026-10-09_R50.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-08T09:33:11.496787+00:00"
+      },
+      "rate_limit_waits": [
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 56,
+          "attempt": 1
+        },
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 57,
+          "attempt": 1
+        }
+      ],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-09:pickup:525",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:795",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:735",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-09:pickup:825",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:1035",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:975",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:pickup:585",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:1095",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "A",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": null,
+          "selection_status": null,
+          "assignment_status": null
+        },
+        {
+          "scenario": "L1",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 4,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L3",
+          "status": "ok",
+          "cars": 3,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-09",
+      "ride_limit": 60,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-09_R60_A.response.json",
+        "2026-10-09_R60_L1.response.json",
+        "2026-10-09_R60_L2.response.json",
+        "2026-10-09_R60_L3.response.json"
+      ],
+      "matrix_file": "2026-10-09_R60.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-08T09:35:10.817823+00:00"
+      },
+      "rate_limit_waits": [
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 55,
+          "attempt": 1
+        }
+      ],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-09:pickup:525",
+          "options": 3,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:795",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:735",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-09:pickup:825",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:1035",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:975",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:pickup:585",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:1095",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "A",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": null,
+          "selection_status": null,
+          "assignment_status": null
+        },
+        {
+          "scenario": "L1",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 3,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L3",
+          "status": "ok",
+          "cars": 2,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-09",
+      "ride_limit": 70,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-09_R70_A.response.json",
+        "2026-10-09_R70_L1.response.json",
+        "2026-10-09_R70_L2.response.json",
+        "2026-10-09_R70_L3.response.json"
+      ],
+      "matrix_file": "2026-10-09_R70.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-08T09:36:11.729194+00:00"
+      },
+      "rate_limit_waits": [
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 55,
+          "attempt": 1
+        }
+      ],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-09:pickup:525",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:795",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:735",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-09:pickup:825",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:1035",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:975",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:pickup:585",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:1095",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "A",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": null,
+          "selection_status": null,
+          "assignment_status": null
+        },
+        {
+          "scenario": "L1",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 3,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L3",
+          "status": "ok",
+          "cars": 2,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-09",
+      "ride_limit": 90,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-09_R90_A.response.json",
+        "2026-10-09_R90_L1.response.json",
+        "2026-10-09_R90_L2.response.json",
+        "2026-10-09_R90_L3.response.json"
+      ],
+      "matrix_file": "2026-10-09_R90.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-08T09:37:13.369637+00:00"
+      },
+      "rate_limit_waits": [
+        {
+          "path": "/api/v1/optimize",
+          "status": 429,
+          "wait_seconds": 54,
+          "attempt": 1
+        }
+      ],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-09:pickup:525",
+          "options": 3,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:795",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:735",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-09:pickup:825",
+          "options": 2,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:1035",
+          "options": 1,
+          "skipped": 4
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:975",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:pickup:585",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:1095",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "A",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": null,
+          "selection_status": null,
+          "assignment_status": null
+        },
+        {
+          "scenario": "L1",
+          "status": "infeasible_for_L",
+          "cars": null,
+          "cars_status": null,
+          "selection_status": "infeasible_for_L",
+          "assignment_status": null
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 2,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L3",
+          "status": "ok",
+          "cars": 0,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ]
+    }
+  ],
+  "state": "completed",
+  "completed_at": "2026-10-08T09:38:11.042Z"
+}

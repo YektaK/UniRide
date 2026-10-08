@@ -1,0 +1,650 @@
+{
+  "serviceDate": "2026-10-05",
+  "dayStatus": "ready",
+  "limits": {
+    "maxRideTimeMinutes": 60,
+    "maxTourMinutes": 150
+  },
+  "dbVehiclesConsulted": false,
+  "matrix": {
+    "id": "time_matrix:sha256:bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+    "version": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+    "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+    "source": "supabase"
+  },
+  "scenario": {
+    "scenario": 1,
+    "largeLimit": 1,
+    "status": "infeasible_for_L",
+    "reasonCodes": [
+      "SW_DEMAND_EXCEEDS_LARGE_CAPACITY"
+    ],
+    "cars": null,
+    "carsStatus": null,
+    "largeVehicles": null,
+    "largeVehiclesProven": null,
+    "routes": [],
+    "largeRoutes": 0,
+    "carRoutes": 0,
+    "minutesByType": {},
+    "totalVehicleMinutes": null,
+    "ride": null,
+    "carUsageWindows": [],
+    "selection": {
+      "status": "infeasible_for_L",
+      "cars": null,
+      "carMinutes": null,
+      "claim": null,
+      "optionByWave": {},
+      "diagnostics": {
+        "reason": "SW_DEMAND_EXCEEDS_LARGE_CAPACITY",
+        "waves_exceeding_L": [
+          "2026-10-05:pickup:525"
+        ],
+        "lower_bound_L": 3,
+        "min_forced_large_per_wave": {
+          "2026-10-05:pickup:765": 1,
+          "2026-10-05:dropoff:1035": 1,
+          "2026-10-05:pickup:525": 3,
+          "2026-10-05:dropoff:975": 1,
+          "2026-10-05:dropoff:735": 1,
+          "2026-10-05:dropoff:855": 0,
+          "2026-10-05:pickup:945": 0,
+          "2026-10-05:dropoff:1095": 0,
+          "2026-10-05:dropoff:795": 1,
+          "2026-10-05:pickup:705": 1,
+          "2026-10-05:dropoff:915": 1,
+          "2026-10-05:dropoff:675": 0
+        }
+      },
+      "stats": {}
+    },
+    "assignment": null
+  },
+  "occurrenceLabels": {
+    "2026-10-05:pickup:Sw5~1": "Sw5",
+    "2026-10-05:dropoff:Sw5~1": "Sw5",
+    "2026-10-05:pickup:Sw4~1": "Sw4",
+    "2026-10-05:dropoff:Sw4~1": "Sw4",
+    "2026-10-05:pickup:Sw3~1": "Sw3",
+    "2026-10-05:dropoff:Sw3~1": "Sw3",
+    "2026-10-05:pickup:Sw2~1": "Sw2",
+    "2026-10-05:dropoff:Sw2~1": "Sw2",
+    "2026-10-05:pickup:So10~1": "So10",
+    "2026-10-05:dropoff:So10~1": "So10",
+    "2026-10-05:pickup:So1~1": "So1",
+    "2026-10-05:dropoff:So1~1": "So1",
+    "2026-10-05:pickup:So12~1": "So12",
+    "2026-10-05:dropoff:So12~1": "So12",
+    "2026-10-05:pickup:So11~1": "So11",
+    "2026-10-05:dropoff:So11~1": "So11",
+    "2026-10-05:pickup:So5~1": "So5",
+    "2026-10-05:dropoff:So5~1": "So5",
+    "2026-10-05:pickup:So4~1": "So4",
+    "2026-10-05:dropoff:So4~1": "So4",
+    "2026-10-05:pickup:So3~1": "So3",
+    "2026-10-05:dropoff:So3~1": "So3",
+    "2026-10-05:pickup:So2~1": "So2",
+    "2026-10-05:dropoff:So2~1": "So2",
+    "2026-10-05:pickup:Sw9~1": "Sw9",
+    "2026-10-05:dropoff:Sw9~1": "Sw9",
+    "2026-10-05:pickup:Sw7~1": "Sw7",
+    "2026-10-05:dropoff:Sw7~1": "Sw7",
+    "2026-10-05:pickup:Sw6~1": "Sw6",
+    "2026-10-05:dropoff:Sw6~1": "Sw6",
+    "2026-10-05:pickup:Sw1~1": "Sw1",
+    "2026-10-05:dropoff:Sw1~1": "Sw1",
+    "2026-10-05:pickup:So19~1": "So19",
+    "2026-10-05:dropoff:So19~1": "So19",
+    "2026-10-05:pickup:So18~1": "So18",
+    "2026-10-05:dropoff:So18~1": "So18",
+    "2026-10-05:pickup:So17~1": "So17",
+    "2026-10-05:dropoff:So17~1": "So17",
+    "2026-10-05:pickup:So16~1": "So16",
+    "2026-10-05:dropoff:So16~1": "So16",
+    "2026-10-05:pickup:So15~1": "So15",
+    "2026-10-05:dropoff:So15~1": "So15",
+    "2026-10-05:pickup:So14~1": "So14",
+    "2026-10-05:dropoff:So14~1": "So14",
+    "2026-10-05:pickup:So13~1": "So13",
+    "2026-10-05:dropoff:So13~1": "So13",
+    "2026-10-05:pickup:So9~1": "So9",
+    "2026-10-05:dropoff:So9~1": "So9",
+    "2026-10-05:pickup:So8~1": "So8",
+    "2026-10-05:dropoff:So8~1": "So8",
+    "2026-10-05:pickup:So7~1": "So7",
+    "2026-10-05:dropoff:So7~1": "So7",
+    "2026-10-05:pickup:So6~1": "So6",
+    "2026-10-05:dropoff:So6~1": "So6"
+  },
+  "menu": [
+    {
+      "waveId": "2026-10-05:pickup:765",
+      "direction": "pickup",
+      "anchorMinutes": 765,
+      "legs": 3,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 1,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_infeasible",
+          "routes": null,
+          "reason": "optimizer reported no feasible typed split"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q3",
+          "kind": "quota",
+          "quota": 3,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:1035",
+      "direction": "dropoff",
+      "anchorMinutes": 1035,
+      "legs": 3,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 1,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_infeasible",
+          "routes": null,
+          "reason": "optimizer reported no feasible typed split"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q3",
+          "kind": "quota",
+          "quota": 3,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:pickup:525",
+      "direction": "pickup",
+      "anchorMinutes": 525,
+      "legs": 20,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 5,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_infeasible",
+          "routes": null,
+          "reason": "optimizer reported no feasible typed split"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_infeasible",
+          "routes": null,
+          "reason": "optimizer reported no feasible typed split"
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_infeasible",
+          "routes": null,
+          "reason": "optimizer reported no feasible typed split"
+        },
+        {
+          "optionId": "q3",
+          "kind": "quota",
+          "quota": 3,
+          "status": "included",
+          "routes": 5,
+          "reason": null
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:975",
+      "direction": "dropoff",
+      "anchorMinutes": 975,
+      "legs": 4,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 2,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_infeasible",
+          "routes": null,
+          "reason": "optimizer reported no feasible typed split"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "included",
+          "routes": 2,
+          "reason": null
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q3",
+          "kind": "quota",
+          "quota": 3,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:735",
+      "direction": "dropoff",
+      "anchorMinutes": 735,
+      "legs": 5,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 2,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_infeasible",
+          "routes": null,
+          "reason": "optimizer reported no feasible typed split"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q3",
+          "kind": "quota",
+          "quota": 3,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:855",
+      "direction": "dropoff",
+      "anchorMinutes": 855,
+      "legs": 1,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 1,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:pickup:945",
+      "direction": "pickup",
+      "anchorMinutes": 945,
+      "legs": 1,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 1,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:1095",
+      "direction": "dropoff",
+      "anchorMinutes": 1095,
+      "legs": 2,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 1,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:795",
+      "direction": "dropoff",
+      "anchorMinutes": 795,
+      "legs": 4,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 2,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_infeasible",
+          "routes": null,
+          "reason": "optimizer reported no feasible typed split"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q3",
+          "kind": "quota",
+          "quota": 3,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:pickup:705",
+      "direction": "pickup",
+      "anchorMinutes": 705,
+      "legs": 3,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 2,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_infeasible",
+          "routes": null,
+          "reason": "optimizer reported no feasible typed split"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q3",
+          "kind": "quota",
+          "quota": 3,
+          "status": "skipped_duplicate",
+          "routes": 2,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:915",
+      "direction": "dropoff",
+      "anchorMinutes": 915,
+      "legs": 6,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 2,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_infeasible",
+          "routes": null,
+          "reason": "optimizer reported no feasible typed split"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "included",
+          "routes": 3,
+          "reason": null
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "routes": 3,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q3",
+          "kind": "quota",
+          "quota": 3,
+          "status": "skipped_duplicate",
+          "routes": 3,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:675",
+      "direction": "dropoff",
+      "anchorMinutes": 675,
+      "legs": 2,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "routes": 1,
+          "reason": null
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "routes": 1,
+          "reason": "same route partition as an earlier option"
+        }
+      ]
+    }
+  ]
+}

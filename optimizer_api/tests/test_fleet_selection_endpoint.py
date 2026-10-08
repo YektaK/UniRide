@@ -167,9 +167,9 @@ def test_policy_ceiling_follows_env(monkeypatch):
     assert fleet_selection._policy_time_limit(None) == 10
 
 
-def test_app_registers_route_with_auth():
-    import optimizer_api.main as m
+def test_main_includes_router_source_check():
+    # main must not be imported here: test_phase0_auth_guard relies on a fresh import.
+    from pathlib import Path
 
-    assert URL in m.app.openapi()["paths"]
-    res = TestClient(m.app).post(URL, json=_body())
-    assert res.status_code == 403
+    src = (Path(fleet_selection.__file__).parents[1] / "main.py").read_text(encoding="utf-8")
+    assert "app.include_router(fleet_selection.router)" in src

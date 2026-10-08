@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from routers import optimization, utils, strategies, benchmark, readiness
+from routers import optimization, utils, strategies, benchmark, readiness, fleet_selection
 from strategies import get_available_strategy_names
 try:
     from optimizer_api.runtime_config import optimizer_host, reload_enabled, validate_bind_host, validate_runtime_configuration
@@ -108,6 +108,7 @@ app.include_router(utils.router)
 app.include_router(strategies.router)
 app.include_router(benchmark.router)
 app.include_router(readiness.router)
+app.include_router(fleet_selection.router)
 
 if __name__ == "__main__":
     import uvicorn

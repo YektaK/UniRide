@@ -1,0 +1,5 @@
+week_of,ride_limit,scenario,large_limit,weekly_cars,weekly_large_vehicles,monday_cars,tuesday_cars,wednesday_cars,thursday_cars,friday_cars,cars_day_sum,complete_week,all_proven,infeasible_days,large_vehicle_minutes,car_vehicle_minutes,total_vehicle_minutes,ride_passengers,ride_mean,ride_max
+2026-10-05,50,L4,4,2,4,2,1,2,1,2,8,true,true,0,6319,503,6822,226,28.185841,50
+2026-10-05,60,L4,4,2,4,1,0,2,0,1,4,true,true,0,6207,211,6418,226,31.274336,60
+2026-10-05,70,L4,4,2,4,0,0,2,0,1,3,true,true,0,5944,104,6048,226,35.146018,70
+2026-10-05,90,L4,4,0,4,0,0,0,0,0,0,true,true,0,5831,0,5831,226,41.628319,89

@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1070 570" width="1070" height="570" font-family="Arial, Helvetica, sans-serif"><rect width="100%" height="100%" fill="#ffffff"/>
+<text x="24" y="24" font-size="16" font-weight="bold" fill="#111">Parallel coordinates of the objectives f1..f5, all feasible options</text>
+<text x="24" y="42" font-size="12" fill="#444">Every axis is minimised: bottom = better. One line per option (hover for details). Solid = non-dominated on (f1, f2, f3) for its R; dashed = dominated. Colour and marker = family.</text>
+<text x="24" y="58" font-size="12" fill="#444">f5 = service level, shown as the ride limit R and the realised weekly mean ride.</text>
+<circle cx="31" cy="76" r="6" fill="#0072B2" fill-opacity="1" stroke="#fff" stroke-width="1"></circle>
+<text x="42" y="80" font-size="12" fill="#222">A: minibuses only</text>
+<rect x="168" y="70" width="12" height="12" fill="#E69F00" fill-opacity="1" stroke="#fff" stroke-width="1"></rect>
+<text x="185" y="80" font-size="12" fill="#222">S: minibuses + sedans (no Sw)</text>
+<polygon points="401,68.8 394.4,81.4 407.6,81.4" fill="#CC79A7" fill-opacity="1" stroke="#fff" stroke-width="1"></polygon>
+<text x="412" y="80" font-size="12" fill="#222">V: minibuses + minivans (1 Sw)</text>
+<polygon points="635,68.5 642.5,76 635,83.5 627.5,76" fill="#009E73" fill-opacity="1" stroke="#fff" stroke-width="1"></polygon>
+<text x="646" y="80" font-size="12" fill="#222">H: day-level hybrid</text>
+<line x1="90" y1="150" x2="90" y2="530" stroke="#333" stroke-width="1.4"/>
+<text x="90" y="136" font-size="12" text-anchor="middle" font-weight="bold" fill="#111">f1 owned minibuses</text>
+<text x="90" y="546" font-size="11" text-anchor="middle" fill="#333">0</text>
+<text x="90" y="149" font-size="11" text-anchor="middle" fill="#333">6</text>
+<line x1="270" y1="150" x2="270" y2="530" stroke="#333" stroke-width="1.4"/>
+<text x="270" y="136" font-size="12" text-anchor="middle" font-weight="bold" fill="#111">f2 peak borrowed</text>
+<text x="270" y="546" font-size="11" text-anchor="middle" fill="#333">0</text>
+<text x="270" y="149" font-size="11" text-anchor="middle" fill="#333">7</text>
+<line x1="450" y1="150" x2="450" y2="530" stroke="#333" stroke-width="1.4"/>
+<text x="450" y="136" font-size="12" text-anchor="middle" font-weight="bold" fill="#111">f3 borrowed h/week</text>
+<text x="450" y="546" font-size="11" text-anchor="middle" fill="#333">0</text>
+<text x="450" y="149" font-size="11" text-anchor="middle" fill="#333">138</text>
+<line x1="630" y1="150" x2="630" y2="530" stroke="#333" stroke-width="1.4"/>
+<text x="630" y="136" font-size="12" text-anchor="middle" font-weight="bold" fill="#111">f4 borrowed days</text>
+<text x="630" y="546" font-size="11" text-anchor="middle" fill="#333">0</text>
+<text x="630" y="149" font-size="11" text-anchor="middle" fill="#333">5</text>
+<line x1="810" y1="150" x2="810" y2="530" stroke="#333" stroke-width="1.4"/>
+<text x="810" y="136" font-size="12" text-anchor="middle" font-weight="bold" fill="#111">R (ride limit)</text>
+<text x="810" y="546" font-size="11" text-anchor="middle" fill="#333">50</text>
+<text x="810" y="149" font-size="11" text-anchor="middle" fill="#333">90</text>
+<line x1="990" y1="150" x2="990" y2="530" stroke="#333" stroke-width="1.4"/>
+<text x="990" y="136" font-size="12" text-anchor="middle" font-weight="bold" fill="#111">mean ride (min)</text>
+<text x="990" y="546" font-size="11" text-anchor="middle" fill="#333">27.6</text>
+<text x="990" y="149" font-size="11" text-anchor="middle" fill="#333">41.9</text>
+<polyline points="90,403.333 270,258.571 450,368.534 630,150 810,530 990,513.15" fill="none" stroke="#009E73" stroke-width="1.4" stroke-opacity="0.6" stroke-dasharray="4 3"><title>L2 + sedan/minivan (hybrid), R=50: owned 2, peak borrowed 5, 58.6 borrowed h/week, 5 borrowed days, mean ride 28.3 min; dominated</title></polyline>
+<polygon points="90,398.333 95,403.333 90,408.333 85,403.333" fill="#009E73" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></polygon>
+<polyline points="90,403.333 270,312.857 450,406.534 630,150 810,435 990,427.724" fill="none" stroke="#009E73" stroke-width="1.4" stroke-opacity="0.6" stroke-dasharray="4 3"><title>L2 + sedan/minivan (hybrid), R=60: owned 2, peak borrowed 4, 44.8 borrowed h/week, 5 borrowed days, mean ride 31.5 min; dominated</title></polyline>
+<polygon points="90,398.333 95,403.333 90,408.333 85,403.333" fill="#009E73" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></polygon>
+<polyline points="90,403.333 270,312.857 450,440.445 630,150 810,340 990,345.008" fill="none" stroke="#009E73" stroke-width="1.4" stroke-opacity="0.6" stroke-dasharray="4 3"><title>L2 + sedan/minivan (hybrid), R=70: owned 2, peak borrowed 4, 32.5 borrowed h/week, 5 borrowed days, mean ride 34.6 min; dominated</title></polyline>
+<polygon points="90,398.333 95,403.333 90,408.333 85,403.333" fill="#009E73" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></polygon>
+<polyline points="90,403.333 270,421.429 450,459.422 630,150 810,150 990,182.874" fill="none" stroke="#009E73" stroke-width="1.4" stroke-opacity="0.6" stroke-dasharray="4 3"><title>L2 + sedan/minivan (hybrid), R=90: owned 2, peak borrowed 2, 25.6 borrowed h/week, 5 borrowed days, mean ride 40.7 min; dominated</title></polyline>
+<polygon points="90,398.333 95,403.333 90,408.333 85,403.333" fill="#009E73" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></polygon>
+<polyline points="90,150 270,530 450,530 630,530 810,530 990,514.918" fill="none" stroke="#0072B2" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>minibus-only, R=50: owned 6, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 28.2 min; non-dominated</title></polyline>
+<circle cx="90" cy="150" r="4" fill="#0072B2" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></circle>
+<polyline points="90,340 270,312.857 450,435.115 630,150 810,530 990,513.975" fill="none" stroke="#E69F00" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>L3 + sedan, R=50: owned 3, peak borrowed 4, 34.4 borrowed h/week, 5 borrowed days, mean ride 28.2 min; non-dominated</title></polyline>
+<rect x="86" y="336" width="8" height="8" fill="#E69F00" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></rect>
+<polyline points="90,276.667 270,421.429 450,501.833 630,150 810,530 990,514.918" fill="none" stroke="#E69F00" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>L4 + sedan, R=50: owned 4, peak borrowed 2, 10.2 borrowed h/week, 5 borrowed days, mean ride 28.2 min; non-dominated</title></polyline>
+<rect x="86" y="272.667" width="8" height="8" fill="#E69F00" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></rect>
+<polyline points="90,530 270,150 450,150 630,150 810,530 990,530" fill="none" stroke="#CC79A7" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>L0 + minivan, R=50: owned 0, peak borrowed 7, 137.8 borrowed h/week, 5 borrowed days, mean ride 27.6 min; non-dominated</title></polyline>
+<polygon points="90,525.2 85.6,533.6 94.4,533.6" fill="#CC79A7" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></polygon>
+<polyline points="90,466.667 270,204.286 450,280.542 630,150 810,530 990,518.571" fill="none" stroke="#CC79A7" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>L1 + minivan, R=50: owned 1, peak borrowed 6, 90.5 borrowed h/week, 5 borrowed days, mean ride 28.0 min; non-dominated</title></polyline>
+<polygon points="90,461.867 85.6,470.267 94.4,470.267" fill="#CC79A7" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></polygon>
+<polyline points="90,403.333 270,258.571 450,377.541 630,150 810,530 990,517.981" fill="none" stroke="#CC79A7" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>L2 + minivan, R=50: owned 2, peak borrowed 5, 55.3 borrowed h/week, 5 borrowed days, mean ride 28.1 min; non-dominated</title></polyline>
+<polygon points="90,398.533 85.6,406.933 94.4,406.933" fill="#CC79A7" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></polygon>
+<polyline points="90,150 270,530 450,530 630,530 810,435 990,434.087" fill="none" stroke="#0072B2" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>minibus-only, R=60: owned 6, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 31.2 min; non-dominated</title></polyline>
+<circle cx="90" cy="150" r="4" fill="#0072B2" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></circle>
+<polyline points="90,340 270,367.143 450,479.869 630,150 810,435 990,435.383" fill="none" stroke="#E69F00" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>L3 + sedan, R=60: owned 3, peak borrowed 3, 18.2 borrowed h/week, 5 borrowed days, mean ride 31.2 min; non-dominated</title></polyline>
+<rect x="86" y="336" width="8" height="8" fill="#E69F00" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></rect>
+<polyline points="90,276.667 270,421.429 450,518.467 630,302 810,435 990,432.673" fill="none" stroke="#E69F00" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>L4 + sedan, R=60: owned 4, peak borrowed 2, 4.2 borrowed h/week, 3 borrowed days, mean ride 31.3 min; non-dominated</title></polyline>
+<rect x="86" y="272.667" width="8" height="8" fill="#E69F00" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></rect>
+<polyline points="90,530 270,204.286 450,162.452 630,150 810,435 990,487.581" fill="none" stroke="#CC79A7" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>L0 + minivan, R=60: owned 0, peak borrowed 6, 133.3 borrowed h/week, 5 borrowed days, mean ride 29.2 min; non-dominated</title></polyline>
+<polygon points="90,525.2 85.6,533.6 94.4,533.6" fill="#CC79A7" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></polygon>
+<polyline points="90,466.667 270,258.571 450,302.459 630,150 810,435 990,448.698" fill="none" stroke="#CC79A7" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>L1 + minivan, R=60: owned 1, peak borrowed 5, 82.5 borrowed h/week, 5 borrowed days, mean ride 30.7 min; non-dominated</title></polyline>
+<polygon points="90,461.867 85.6,470.267 94.4,470.267" fill="#CC79A7" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></polygon>
+<polyline points="90,403.333 270,312.857 450,411.543 630,150 810,435 990,440.567" fill="none" stroke="#CC79A7" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>L2 + minivan, R=60: owned 2, peak borrowed 4, 43.0 borrowed h/week, 5 borrowed days, mean ride 31.0 min; non-dominated</title></polyline>
+<polygon points="90,398.533 85.6,406.933 94.4,406.933" fill="#CC79A7" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></polygon>
+<polyline points="90,150 270,530 450,530 630,530 810,340 990,343.476" fill="none" stroke="#0072B2" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>minibus-only, R=70: owned 6, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 34.6 min; non-dominated</title></polyline>
+<circle cx="90" cy="150" r="4" fill="#0072B2" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></circle>
+<polyline points="90,340 270,367.143 450,501.833 630,150 810,340 990,329.572" fill="none" stroke="#E69F00" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>L3 + sedan, R=70: owned 3, peak borrowed 3, 10.2 borrowed h/week, 5 borrowed days, mean ride 35.1 min; non-dominated</title></polyline>
+<rect x="86" y="336" width="8" height="8" fill="#E69F00" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></rect>
+<polyline points="90,276.667 270,421.429 450,523.843 630,378 810,340 990,329.572" fill="none" stroke="#E69F00" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>L4 + sedan, R=70: owned 4, peak borrowed 2, 2.2 borrowed h/week, 2 borrowed days, mean ride 35.1 min; non-dominated</title></polyline>
+<rect x="86" y="272.667" width="8" height="8" fill="#E69F00" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></rect>
+<polyline points="90,530 270,204.286 450,180.372 630,150 810,340 990,389.783" fill="none" stroke="#CC79A7" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>L0 + minivan, R=70: owned 0, peak borrowed 6, 126.8 borrowed h/week, 5 borrowed days, mean ride 32.9 min; non-dominated</title></polyline>
+<polygon points="90,525.2 85.6,533.6 94.4,533.6" fill="#CC79A7" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></polygon>
+<polyline points="90,466.667 270,258.571 450,330.443 630,150 810,340 990,358.558" fill="none" stroke="#CC79A7" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>L1 + minivan, R=70: owned 1, peak borrowed 5, 72.4 borrowed h/week, 5 borrowed days, mean ride 34.1 min; non-dominated</title></polyline>
+<polygon points="90,461.867 85.6,470.267 94.4,470.267" fill="#CC79A7" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></polygon>
+<polyline points="90,403.333 270,312.857 450,446.464 630,150 810,340 990,345.95" fill="none" stroke="#CC79A7" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>L2 + minivan, R=70: owned 2, peak borrowed 4, 30.3 borrowed h/week, 5 borrowed days, mean ride 34.5 min; non-dominated</title></polyline>
+<polygon points="90,398.533 85.6,406.933 94.4,406.933" fill="#CC79A7" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></polygon>
+<polyline points="90,276.667 270,530 450,530 630,530 810,150 990,166.496" fill="none" stroke="#0072B2" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>minibus-only, R=90: owned 4, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 41.3 min; non-dominated</title></polyline>
+<circle cx="90" cy="276.667" r="4" fill="#0072B2" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></circle>
+<polyline points="90,340 270,475.714 450,521.453 630,302 810,150 990,150" fill="none" stroke="#E69F00" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>L3 + sedan, R=90: owned 3, peak borrowed 1, 3.1 borrowed h/week, 3 borrowed days, mean ride 41.9 min; non-dominated</title></polyline>
+<rect x="86" y="336" width="8" height="8" fill="#E69F00" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></rect>
+<polyline points="90,276.667 270,530 450,530 630,530 810,150 990,156.952" fill="none" stroke="#E69F00" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>L4 + sedan, R=90: owned 4, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 41.6 min; non-dominated</title></polyline>
+<rect x="86" y="272.667" width="8" height="8" fill="#E69F00" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></rect>
+<polyline points="90,530 270,204.286 450,186.667 630,150 810,150 990,320.028" fill="none" stroke="#CC79A7" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>L0 + minivan, R=90: owned 0, peak borrowed 6, 124.5 borrowed h/week, 5 borrowed days, mean ride 35.5 min; non-dominated</title></polyline>
+<polygon points="90,525.2 85.6,533.6 94.4,533.6" fill="#CC79A7" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></polygon>
+<polyline points="90,466.667 270,312.857 450,351.487 630,150 810,150 990,205.498" fill="none" stroke="#CC79A7" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>L1 + minivan, R=90: owned 1, peak borrowed 4, 64.8 borrowed h/week, 5 borrowed days, mean ride 39.8 min; non-dominated</title></polyline>
+<polygon points="90,461.867 85.6,470.267 94.4,470.267" fill="#CC79A7" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></polygon>
+<polyline points="90,403.333 270,421.429 450,462.776 630,150 810,150 990,157.07" fill="none" stroke="#CC79A7" stroke-width="2.2" stroke-opacity="0.8" stroke-dasharray="none"><title>L2 + minivan, R=90: owned 2, peak borrowed 2, 24.4 borrowed h/week, 5 borrowed days, mean ride 41.6 min; non-dominated</title></polyline>
+<polygon points="90,398.533 85.6,406.933 94.4,406.933" fill="#CC79A7" fill-opacity="0.9" stroke="#fff" stroke-width="0.6"></polygon>
+</svg>

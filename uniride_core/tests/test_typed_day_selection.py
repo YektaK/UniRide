@@ -12,11 +12,15 @@ from uniride_core.planning.typed_day_selection import (
     Option,
     Route,
     Wave,
-    peak_concurrency,
     solve_day_selection,
 )
 
 CD = 10
+
+
+def peak_concurrency(intervals):
+    """Local oracle copy (independent of the production helper)."""
+    return max((sum(1 for s, e in intervals if s <= a < e) for a, _ in intervals), default=0)
 SCALE = 1000
 
 
@@ -74,7 +78,7 @@ def _validate(waves, res, max_large, cd_l=CD, cd_c=CD):
             (car if lab == "car" else big).append(
                 (r.start, r.end + (cd_c if lab == "car" else cd_l)))
     assert peak_concurrency(big) <= max_large
-    assert peak_concurrency(car) == res.cars
+    assert peak_concurrency(car) == res.cars == res.stats["stage_values"]["cars"]
 
 
 @pytest.mark.parametrize("seed", range(60))
@@ -214,3 +218,27 @@ def test_option_index_tiebreak_prefers_lowest_index():
     r = (Route(0, 10, 10.0),)
     waves = [Wave("w", (Option("a", r), Option("b", r)))]
     assert solve_day_selection(waves, 1).selection["w"]["option_index"] == 0
+
+
+@pytest.mark.parametrize("gap,cars", [(0, 1), (-1, 2)])
+def test_car_cooldown_boundary(gap, cars):
+    # L=0 forces cars. next start = end + cooldown + gap: equal -> reusable, one earlier -> 2 cars.
+    r1 = Route(0, 30, 30.0)
+    nxt = 30 + CD + gap
+    r2 = Route(nxt, nxt + 20, 20.0)
+    waves = [Wave("a", (Option("o", (r1, r2)),))]
+    res = solve_day_selection(waves, 0, cooldown_large=CD, cooldown_car=CD)
+    assert res.status == tds.STATUS_OPTIMAL and res.cars == cars
+    assert res.stats["stage_values"]["cars"] == cars  # the model's own C, not the recomputed peak
+    assert _brute(waves, 0)[0] == cars
+
+
+@pytest.mark.parametrize("gap,large", [(0, 1), (-1, 2)])
+def test_large_cooldown_boundary(gap, large):
+    r1 = Route(0, 30, 30.0, True, False)
+    nxt = 30 + CD + gap
+    r2 = Route(nxt, nxt + 20, 20.0, True, False)
+    waves = [Wave("a", (Option("o", (r1, r2)),))]
+    assert solve_day_selection(waves, large).status == tds.STATUS_OPTIMAL
+    if large == 2:
+        assert solve_day_selection(waves, 1).status == tds.STATUS_INFEASIBLE_FOR_L

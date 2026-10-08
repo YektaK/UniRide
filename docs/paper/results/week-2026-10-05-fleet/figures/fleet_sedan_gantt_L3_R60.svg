@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 496" width="1180" height="496" font-family="Arial, Helvetica, sans-serif"><rect width="100%" height="100%" fill="#ffffff"/>
+<defs><pattern id="hatchgrey" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="#999" stroke-width="2"/></pattern><pattern id="hatchbad" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#E69F00"/><line x1="0" y1="0" x2="0" y2="6" stroke="#C00000" stroke-width="3"/></pattern></defs>
+<text x="24" y="24" font-size="16" font-weight="bold" fill="#111">Sedan usage, scenario D (3 large + sedans), R=60 min, week of 2026-10-05</text>
+<rect x="24" y="38" width="16" height="10" fill="#0072B2"/><text x="46" y="47" font-size="12" fill="#222">Pickup route</text>
+<rect x="134" y="38" width="16" height="10" fill="#E69F00"/><text x="156" y="47" font-size="12" fill="#222">Dropoff route</text>
+<rect x="254" y="38" width="16" height="10" fill="#bbb"/><text x="276" y="47" font-size="12" fill="#222">Cooldown (10 min)</text>
+<line x1="404" y1="43" x2="424" y2="43" stroke="#555" stroke-width="2"/><text x="430" y="47" font-size="12" fill="#222">First start to last end of the sedan</text>
+<text x="24" y="76" font-size="13" font-weight="bold" fill="#111">Mon 2026-10-05: 2 sedan(s)</text>
+<rect x="100" y="84" width="1056" height="36" fill="#fff" stroke="#888" stroke-width="0.8"/>
+<line x1="100" y1="84" x2="100" y2="120" stroke="#ddd" stroke-width="0.7"/><text x="100" y="132" font-size="10" text-anchor="middle" fill="#333">07:00</text>
+<line x1="196" y1="84" x2="196" y2="120" stroke="#ddd" stroke-width="0.7"/><text x="196" y="132" font-size="10" text-anchor="middle" fill="#333">08:00</text>
+<line x1="292" y1="84" x2="292" y2="120" stroke="#ddd" stroke-width="0.7"/><text x="292" y="132" font-size="10" text-anchor="middle" fill="#333">09:00</text>
+<line x1="388" y1="84" x2="388" y2="120" stroke="#ddd" stroke-width="0.7"/><text x="388" y="132" font-size="10" text-anchor="middle" fill="#333">10:00</text>
+<line x1="484" y1="84" x2="484" y2="120" stroke="#ddd" stroke-width="0.7"/><text x="484" y="132" font-size="10" text-anchor="middle" fill="#333">11:00</text>
+<line x1="580" y1="84" x2="580" y2="120" stroke="#ddd" stroke-width="0.7"/><text x="580" y="132" font-size="10" text-anchor="middle" fill="#333">12:00</text>
+<line x1="676" y1="84" x2="676" y2="120" stroke="#ddd" stroke-width="0.7"/><text x="676" y="132" font-size="10" text-anchor="middle" fill="#333">13:00</text>
+<line x1="772" y1="84" x2="772" y2="120" stroke="#ddd" stroke-width="0.7"/><text x="772" y="132" font-size="10" text-anchor="middle" fill="#333">14:00</text>
+<line x1="868" y1="84" x2="868" y2="120" stroke="#ddd" stroke-width="0.7"/><text x="868" y="132" font-size="10" text-anchor="middle" fill="#333">15:00</text>
+<line x1="964" y1="84" x2="964" y2="120" stroke="#ddd" stroke-width="0.7"/><text x="964" y="132" font-size="10" text-anchor="middle" fill="#333">16:00</text>
+<line x1="1060" y1="84" x2="1060" y2="120" stroke="#ddd" stroke-width="0.7"/><text x="1060" y="132" font-size="10" text-anchor="middle" fill="#333">17:00</text>
+<line x1="1156" y1="84" x2="1156" y2="120" stroke="#ddd" stroke-width="0.7"/><text x="1156" y="132" font-size="10" text-anchor="middle" fill="#333">18:00</text>
+<text x="94" y="97" font-size="11" text-anchor="end" fill="#222">C1</text>
+<line x1="119.2" y1="93" x2="1044" y2="93" stroke="#555" stroke-width="2"/>
+<rect x="268" y="87" width="16" height="12" fill="#bbb"/>
+<rect x="119.2" y="86" width="148.8" height="14" fill="#0072B2" stroke="#fff" stroke-width="0.6"><title>pickup 07:12-08:45 (93 min, 2 So)</title></rect>
+<rect x="1044" y="87" width="16" height="12" fill="#bbb"/>
+<rect x="988" y="86" width="56" height="14" fill="#E69F00" stroke="#fff" stroke-width="0.6"><title>dropoff 16:15-16:50 (35 min, 1 So)</title></rect>
+<rect x="786.4" y="87" width="16" height="12" fill="#bbb"/>
+<rect x="700" y="86" width="86.4" height="14" fill="#E69F00" stroke="#fff" stroke-width="0.6"><title>dropoff 13:15-14:09 (54 min, 1 So)</title></rect>
+<rect x="581.6" y="87" width="16" height="12" fill="#bbb"/>
+<rect x="508" y="86" width="73.6" height="14" fill="#E69F00" stroke="#fff" stroke-width="0.6"><title>dropoff 11:15-12:01 (46 min, 2 So)</title></rect>
+<text x="94" y="115" font-size="11" text-anchor="end" fill="#222">C2</text>
+<line x1="168.8" y1="111" x2="268" y2="111" stroke="#555" stroke-width="2"/>
+<rect x="268" y="105" width="16" height="12" fill="#bbb"/>
+<rect x="168.8" y="104" width="99.2" height="14" fill="#0072B2" stroke="#fff" stroke-width="0.6"><title>pickup 07:43-08:45 (62 min, 4 So)</title></rect>
+<text x="24" y="166" font-size="13" font-weight="bold" fill="#111">Tue 2026-10-06: 1 sedan(s)</text>
+<rect x="100" y="174" width="1056" height="18" fill="#fff" stroke="#888" stroke-width="0.8"/>
+<line x1="100" y1="174" x2="100" y2="192" stroke="#ddd" stroke-width="0.7"/><text x="100" y="204" font-size="10" text-anchor="middle" fill="#333">07:00</text>
+<line x1="196" y1="174" x2="196" y2="192" stroke="#ddd" stroke-width="0.7"/><text x="196" y="204" font-size="10" text-anchor="middle" fill="#333">08:00</text>
+<line x1="292" y1="174" x2="292" y2="192" stroke="#ddd" stroke-width="0.7"/><text x="292" y="204" font-size="10" text-anchor="middle" fill="#333">09:00</text>
+<line x1="388" y1="174" x2="388" y2="192" stroke="#ddd" stroke-width="0.7"/><text x="388" y="204" font-size="10" text-anchor="middle" fill="#333">10:00</text>
+<line x1="484" y1="174" x2="484" y2="192" stroke="#ddd" stroke-width="0.7"/><text x="484" y="204" font-size="10" text-anchor="middle" fill="#333">11:00</text>
+<line x1="580" y1="174" x2="580" y2="192" stroke="#ddd" stroke-width="0.7"/><text x="580" y="204" font-size="10" text-anchor="middle" fill="#333">12:00</text>
+<line x1="676" y1="174" x2="676" y2="192" stroke="#ddd" stroke-width="0.7"/><text x="676" y="204" font-size="10" text-anchor="middle" fill="#333">13:00</text>
+<line x1="772" y1="174" x2="772" y2="192" stroke="#ddd" stroke-width="0.7"/><text x="772" y="204" font-size="10" text-anchor="middle" fill="#333">14:00</text>
+<line x1="868" y1="174" x2="868" y2="192" stroke="#ddd" stroke-width="0.7"/><text x="868" y="204" font-size="10" text-anchor="middle" fill="#333">15:00</text>
+<line x1="964" y1="174" x2="964" y2="192" stroke="#ddd" stroke-width="0.7"/><text x="964" y="204" font-size="10" text-anchor="middle" fill="#333">16:00</text>
+<line x1="1060" y1="174" x2="1060" y2="192" stroke="#ddd" stroke-width="0.7"/><text x="1060" y="204" font-size="10" text-anchor="middle" fill="#333">17:00</text>
+<line x1="1156" y1="174" x2="1156" y2="192" stroke="#ddd" stroke-width="0.7"/><text x="1156" y="204" font-size="10" text-anchor="middle" fill="#333">18:00</text>
+<text x="94" y="187" font-size="11" text-anchor="end" fill="#222">C1</text>
+<line x1="136.8" y1="183" x2="733.6" y2="183" stroke="#555" stroke-width="2"/>
+<rect x="268" y="177" width="16" height="12" fill="#bbb"/>
+<rect x="136.8" y="176" width="131.2" height="14" fill="#0072B2" stroke="#fff" stroke-width="0.6"><title>pickup 07:23-08:45 (82 min, 4 So)</title></rect>
+<rect x="733.6" y="177" width="16" height="12" fill="#bbb"/>
+<rect x="604" y="176" width="129.6" height="14" fill="#E69F00" stroke="#fff" stroke-width="0.6"><title>dropoff 12:15-13:36 (81 min, 2 So)</title></rect>
+<text x="24" y="238" font-size="13" font-weight="bold" fill="#111">Wed 2026-10-07: 3 sedan(s)</text>
+<rect x="100" y="246" width="1056" height="54" fill="#fff" stroke="#888" stroke-width="0.8"/>
+<line x1="100" y1="246" x2="100" y2="300" stroke="#ddd" stroke-width="0.7"/><text x="100" y="312" font-size="10" text-anchor="middle" fill="#333">07:00</text>
+<line x1="196" y1="246" x2="196" y2="300" stroke="#ddd" stroke-width="0.7"/><text x="196" y="312" font-size="10" text-anchor="middle" fill="#333">08:00</text>
+<line x1="292" y1="246" x2="292" y2="300" stroke="#ddd" stroke-width="0.7"/><text x="292" y="312" font-size="10" text-anchor="middle" fill="#333">09:00</text>
+<line x1="388" y1="246" x2="388" y2="300" stroke="#ddd" stroke-width="0.7"/><text x="388" y="312" font-size="10" text-anchor="middle" fill="#333">10:00</text>
+<line x1="484" y1="246" x2="484" y2="300" stroke="#ddd" stroke-width="0.7"/><text x="484" y="312" font-size="10" text-anchor="middle" fill="#333">11:00</text>
+<line x1="580" y1="246" x2="580" y2="300" stroke="#ddd" stroke-width="0.7"/><text x="580" y="312" font-size="10" text-anchor="middle" fill="#333">12:00</text>
+<line x1="676" y1="246" x2="676" y2="300" stroke="#ddd" stroke-width="0.7"/><text x="676" y="312" font-size="10" text-anchor="middle" fill="#333">13:00</text>
+<line x1="772" y1="246" x2="772" y2="300" stroke="#ddd" stroke-width="0.7"/><text x="772" y="312" font-size="10" text-anchor="middle" fill="#333">14:00</text>
+<line x1="868" y1="246" x2="868" y2="300" stroke="#ddd" stroke-width="0.7"/><text x="868" y="312" font-size="10" text-anchor="middle" fill="#333">15:00</text>
+<line x1="964" y1="246" x2="964" y2="300" stroke="#ddd" stroke-width="0.7"/><text x="964" y="312" font-size="10" text-anchor="middle" fill="#333">16:00</text>
+<line x1="1060" y1="246" x2="1060" y2="300" stroke="#ddd" stroke-width="0.7"/><text x="1060" y="312" font-size="10" text-anchor="middle" fill="#333">17:00</text>
+<line x1="1156" y1="246" x2="1156" y2="300" stroke="#ddd" stroke-width="0.7"/><text x="1156" y="312" font-size="10" text-anchor="middle" fill="#333">18:00</text>
+<text x="94" y="259" font-size="11" text-anchor="end" fill="#222">C1</text>
+<line x1="508" y1="255" x2="637.6" y2="255" stroke="#555" stroke-width="2"/>
+<rect x="637.6" y="249" width="16" height="12" fill="#bbb"/>
+<rect x="508" y="248" width="129.6" height="14" fill="#E69F00" stroke="#fff" stroke-width="0.6"><title>dropoff 11:15-12:36 (81 min, 1 So)</title></rect>
+<text x="94" y="277" font-size="11" text-anchor="end" fill="#222">C2</text>
+<line x1="565.6" y1="273" x2="652" y2="273" stroke="#555" stroke-width="2"/>
+<rect x="652" y="267" width="16" height="12" fill="#bbb"/>
+<rect x="565.6" y="266" width="86.4" height="14" fill="#0072B2" stroke="#fff" stroke-width="0.6"><title>pickup 11:51-12:45 (54 min, 1 So)</title></rect>
+<text x="94" y="295" font-size="11" text-anchor="end" fill="#222">C3</text>
+<line x1="604" y1="291" x2="687.2" y2="291" stroke="#555" stroke-width="2"/>
+<rect x="687.2" y="285" width="16" height="12" fill="#bbb"/>
+<rect x="604" y="284" width="83.2" height="14" fill="#E69F00" stroke="#fff" stroke-width="0.6"><title>dropoff 12:15-13:07 (52 min, 3 So)</title></rect>
+<text x="24" y="346" font-size="13" font-weight="bold" fill="#111">Thu 2026-10-08: 1 sedan(s)</text>
+<rect x="100" y="354" width="1056" height="18" fill="#fff" stroke="#888" stroke-width="0.8"/>
+<line x1="100" y1="354" x2="100" y2="372" stroke="#ddd" stroke-width="0.7"/><text x="100" y="384" font-size="10" text-anchor="middle" fill="#333">07:00</text>
+<line x1="196" y1="354" x2="196" y2="372" stroke="#ddd" stroke-width="0.7"/><text x="196" y="384" font-size="10" text-anchor="middle" fill="#333">08:00</text>
+<line x1="292" y1="354" x2="292" y2="372" stroke="#ddd" stroke-width="0.7"/><text x="292" y="384" font-size="10" text-anchor="middle" fill="#333">09:00</text>
+<line x1="388" y1="354" x2="388" y2="372" stroke="#ddd" stroke-width="0.7"/><text x="388" y="384" font-size="10" text-anchor="middle" fill="#333">10:00</text>
+<line x1="484" y1="354" x2="484" y2="372" stroke="#ddd" stroke-width="0.7"/><text x="484" y="384" font-size="10" text-anchor="middle" fill="#333">11:00</text>
+<line x1="580" y1="354" x2="580" y2="372" stroke="#ddd" stroke-width="0.7"/><text x="580" y="384" font-size="10" text-anchor="middle" fill="#333">12:00</text>
+<line x1="676" y1="354" x2="676" y2="372" stroke="#ddd" stroke-width="0.7"/><text x="676" y="384" font-size="10" text-anchor="middle" fill="#333">13:00</text>
+<line x1="772" y1="354" x2="772" y2="372" stroke="#ddd" stroke-width="0.7"/><text x="772" y="384" font-size="10" text-anchor="middle" fill="#333">14:00</text>
+<line x1="868" y1="354" x2="868" y2="372" stroke="#ddd" stroke-width="0.7"/><text x="868" y="384" font-size="10" text-anchor="middle" fill="#333">15:00</text>
+<line x1="964" y1="354" x2="964" y2="372" stroke="#ddd" stroke-width="0.7"/><text x="964" y="384" font-size="10" text-anchor="middle" fill="#333">16:00</text>
+<line x1="1060" y1="354" x2="1060" y2="372" stroke="#ddd" stroke-width="0.7"/><text x="1060" y="384" font-size="10" text-anchor="middle" fill="#333">17:00</text>
+<line x1="1156" y1="354" x2="1156" y2="372" stroke="#ddd" stroke-width="0.7"/><text x="1156" y="384" font-size="10" text-anchor="middle" fill="#333">18:00</text>
+<text x="94" y="367" font-size="11" text-anchor="end" fill="#222">C1</text>
+<line x1="700" y1="363" x2="1042.4" y2="363" stroke="#555" stroke-width="2"/>
+<rect x="1042.4" y="357" width="16" height="12" fill="#bbb"/>
+<rect x="988" y="356" width="54.4" height="14" fill="#E69F00" stroke="#fff" stroke-width="0.6"><title>dropoff 16:15-16:49 (34 min, 1 So)</title></rect>
+<rect x="765.6" y="357" width="16" height="12" fill="#bbb"/>
+<rect x="700" y="356" width="65.6" height="14" fill="#E69F00" stroke="#fff" stroke-width="0.6"><title>dropoff 13:15-13:56 (41 min, 2 So)</title></rect>
+<text x="24" y="418" font-size="13" font-weight="bold" fill="#111">Fri 2026-10-09: 2 sedan(s)</text>
+<rect x="100" y="426" width="1056" height="36" fill="#fff" stroke="#888" stroke-width="0.8"/>
+<line x1="100" y1="426" x2="100" y2="462" stroke="#ddd" stroke-width="0.7"/><text x="100" y="474" font-size="10" text-anchor="middle" fill="#333">07:00</text>
+<line x1="196" y1="426" x2="196" y2="462" stroke="#ddd" stroke-width="0.7"/><text x="196" y="474" font-size="10" text-anchor="middle" fill="#333">08:00</text>
+<line x1="292" y1="426" x2="292" y2="462" stroke="#ddd" stroke-width="0.7"/><text x="292" y="474" font-size="10" text-anchor="middle" fill="#333">09:00</text>
+<line x1="388" y1="426" x2="388" y2="462" stroke="#ddd" stroke-width="0.7"/><text x="388" y="474" font-size="10" text-anchor="middle" fill="#333">10:00</text>
+<line x1="484" y1="426" x2="484" y2="462" stroke="#ddd" stroke-width="0.7"/><text x="484" y="474" font-size="10" text-anchor="middle" fill="#333">11:00</text>
+<line x1="580" y1="426" x2="580" y2="462" stroke="#ddd" stroke-width="0.7"/><text x="580" y="474" font-size="10" text-anchor="middle" fill="#333">12:00</text>
+<line x1="676" y1="426" x2="676" y2="462" stroke="#ddd" stroke-width="0.7"/><text x="676" y="474" font-size="10" text-anchor="middle" fill="#333">13:00</text>
+<line x1="772" y1="426" x2="772" y2="462" stroke="#ddd" stroke-width="0.7"/><text x="772" y="474" font-size="10" text-anchor="middle" fill="#333">14:00</text>
+<line x1="868" y1="426" x2="868" y2="462" stroke="#ddd" stroke-width="0.7"/><text x="868" y="474" font-size="10" text-anchor="middle" fill="#333">15:00</text>
+<line x1="964" y1="426" x2="964" y2="462" stroke="#ddd" stroke-width="0.7"/><text x="964" y="474" font-size="10" text-anchor="middle" fill="#333">16:00</text>
+<line x1="1060" y1="426" x2="1060" y2="462" stroke="#ddd" stroke-width="0.7"/><text x="1060" y="474" font-size="10" text-anchor="middle" fill="#333">17:00</text>
+<line x1="1156" y1="426" x2="1156" y2="462" stroke="#ddd" stroke-width="0.7"/><text x="1156" y="474" font-size="10" text-anchor="middle" fill="#333">18:00</text>
+<text x="94" y="439" font-size="11" text-anchor="end" fill="#222">C1</text>
+<line x1="159.2" y1="435" x2="1104.8" y2="435" stroke="#555" stroke-width="2"/>
+<rect x="268" y="429" width="16" height="12" fill="#bbb"/>
+<rect x="159.2" y="428" width="108.8" height="14" fill="#0072B2" stroke="#fff" stroke-width="0.6"><title>pickup 07:37-08:45 (68 min, 4 So)</title></rect>
+<rect x="751.2" y="429" width="16" height="12" fill="#bbb"/>
+<rect x="604" y="428" width="147.2" height="14" fill="#E69F00" stroke="#fff" stroke-width="0.6"><title>dropoff 12:15-13:47 (92 min, 3 So)</title></rect>
+<rect x="1104.8" y="429" width="16" height="12" fill="#bbb"/>
+<rect x="1084" y="428" width="20.8" height="14" fill="#E69F00" stroke="#fff" stroke-width="0.6"><title>dropoff 17:15-17:28 (13 min, 1 So)</title></rect>
+<text x="94" y="457" font-size="11" text-anchor="end" fill="#222">C2</text>
+<line x1="679.2" y1="453" x2="748" y2="453" stroke="#555" stroke-width="2"/>
+<rect x="748" y="447" width="16" height="12" fill="#bbb"/>
+<rect x="679.2" y="446" width="68.8" height="14" fill="#0072B2" stroke="#fff" stroke-width="0.6"><title>pickup 13:02-13:45 (43 min, 2 So)</title></rect>
+</svg>

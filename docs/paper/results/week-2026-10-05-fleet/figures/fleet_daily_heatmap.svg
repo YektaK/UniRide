@@ -1,0 +1,206 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 774 674" width="774" height="674" font-family="Arial, Helvetica, sans-serif"><rect width="100%" height="100%" fill="#ffffff"/>
+<defs><pattern id="hatchgrey" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="#999" stroke-width="2"/></pattern><pattern id="hatchbad" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#E69F00"/><line x1="0" y1="0" x2="0" y2="6" stroke="#C00000" stroke-width="3"/></pattern></defs>
+<text x="24" y="24" font-size="16" font-weight="bold" fill="#111">Daily fleet per scenario: large + sedans (L+C) or infeasible, week of 2026-10-05</text>
+<text x="24" y="42" font-size="12" fill="#444">Cell = large vehicles + sedans needed that day. Grey hatch = infeasible_for_L.</text>
+<text x="24" y="58" font-size="12" fill="#444">Red outline and * = not proven over the menu.</text>
+<text x="24" y="96" font-size="13" font-weight="bold" fill="#111">R = 50 min</text>
+<text x="210" y="96" font-size="12" text-anchor="middle" fill="#333">Mon 10-05</text>
+<text x="330" y="96" font-size="12" text-anchor="middle" fill="#333">Tue 10-06</text>
+<text x="450" y="96" font-size="12" text-anchor="middle" fill="#333">Wed 10-07</text>
+<text x="570" y="96" font-size="12" text-anchor="middle" fill="#333">Thu 10-08</text>
+<text x="690" y="96" font-size="12" text-anchor="middle" fill="#333">Fri 10-09</text>
+<text x="30" y="121" font-size="12" fill="#222">A: all-large minimum</text>
+<rect x="150" y="104" width="120" height="26" fill="rgb(235,245,255)" stroke="#fff" stroke-width="1.5"><title>Mon 2026-10-05 R=50: A: all-large minimum L+C = 6+0</title></rect>
+<text x="210" y="122" font-size="13" text-anchor="middle" fill="#111">6+0</text>
+<rect x="270" y="104" width="120" height="26" fill="rgb(235,245,255)" stroke="#fff" stroke-width="1.5"><title>Tue 2026-10-06 R=50: A: all-large minimum L+C = 5+0</title></rect>
+<text x="330" y="122" font-size="13" text-anchor="middle" fill="#111">5+0</text>
+<rect x="390" y="104" width="120" height="26" fill="rgb(235,245,255)" stroke="#fff" stroke-width="1.5"><title>Wed 2026-10-07 R=50: A: all-large minimum L+C = 6+0</title></rect>
+<text x="450" y="122" font-size="13" text-anchor="middle" fill="#111">6+0</text>
+<rect x="510" y="104" width="120" height="26" fill="rgb(235,245,255)" stroke="#fff" stroke-width="1.5"><title>Thu 2026-10-08 R=50: A: all-large minimum L+C = 5+0</title></rect>
+<text x="570" y="122" font-size="13" text-anchor="middle" fill="#111">5+0</text>
+<rect x="630" y="104" width="120" height="26" fill="rgb(235,245,255)" stroke="#fff" stroke-width="1.5"><title>Fri 2026-10-09 R=50: A: all-large minimum L+C = 6+0</title></rect>
+<text x="690" y="122" font-size="13" text-anchor="middle" fill="#111">6+0</text>
+<text x="30" y="147" font-size="12" fill="#222">B: 1 large + sedans</text>
+<rect x="150" y="130" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Mon 2026-10-05 R=50: B: 1 large + sedans [&quot;SW_DEMAND_EXCEEDS_LARGE_CAPACITY&quot;]</title></rect>
+<text x="210" y="148" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="270" y="130" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Tue 2026-10-06 R=50: B: 1 large + sedans [&quot;SW_DEMAND_EXCEEDS_LARGE_CAPACITY&quot;]</title></rect>
+<text x="330" y="148" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="390" y="130" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Wed 2026-10-07 R=50: B: 1 large + sedans [&quot;SW_DEMAND_EXCEEDS_LARGE_CAPACITY&quot;]</title></rect>
+<text x="450" y="148" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="510" y="130" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Thu 2026-10-08 R=50: B: 1 large + sedans [&quot;SW_DEMAND_EXCEEDS_LARGE_CAPACITY&quot;]</title></rect>
+<text x="570" y="148" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="630" y="130" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Fri 2026-10-09 R=50: B: 1 large + sedans [&quot;SW_DEMAND_EXCEEDS_LARGE_CAPACITY&quot;]</title></rect>
+<text x="690" y="148" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<text x="30" y="173" font-size="12" fill="#222">C: 2 large + sedans</text>
+<rect x="150" y="156" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Mon 2026-10-05 R=50: C: 2 large + sedans [&quot;SW_DEMAND_EXCEEDS_LARGE_CAPACITY&quot;]</title></rect>
+<text x="210" y="174" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="270" y="156" width="120" height="26" fill="rgb(255,171,91)" stroke="#fff" stroke-width="1.5"><title>Tue 2026-10-06 R=50: C: 2 large + sedans L+C = 2+3</title></rect>
+<text x="330" y="174" font-size="13" text-anchor="middle" fill="#111">2+3</text>
+<rect x="390" y="156" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Wed 2026-10-07 R=50: C: 2 large + sedans [&quot;CROSS_WAVE_CONFLICT&quot;]</title></rect>
+<text x="450" y="174" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="510" y="156" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Thu 2026-10-08 R=50: C: 2 large + sedans [&quot;CROSS_WAVE_CONFLICT&quot;]</title></rect>
+<text x="570" y="174" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="630" y="156" width="120" height="26" fill="rgb(255,143,63)" stroke="#fff" stroke-width="1.5"><title>Fri 2026-10-09 R=50: C: 2 large + sedans L+C = 2+4</title></rect>
+<text x="690" y="174" font-size="13" text-anchor="middle" fill="#111">2+4</text>
+<text x="30" y="199" font-size="12" fill="#222">D: 3 large + sedans</text>
+<rect x="150" y="182" width="120" height="26" fill="rgb(255,143,63)" stroke="#fff" stroke-width="1.5"><title>Mon 2026-10-05 R=50: D: 3 large + sedans L+C = 3+4</title></rect>
+<text x="210" y="200" font-size="13" text-anchor="middle" fill="#111">3+4</text>
+<rect x="270" y="182" width="120" height="26" fill="rgb(255,199,119)" stroke="#fff" stroke-width="1.5"><title>Tue 2026-10-06 R=50: D: 3 large + sedans L+C = 3+2</title></rect>
+<text x="330" y="200" font-size="13" text-anchor="middle" fill="#111">3+2</text>
+<rect x="390" y="182" width="120" height="26" fill="rgb(255,143,63)" stroke="#fff" stroke-width="1.5"><title>Wed 2026-10-07 R=50: D: 3 large + sedans L+C = 3+4</title></rect>
+<text x="450" y="200" font-size="13" text-anchor="middle" fill="#111">3+4</text>
+<rect x="510" y="182" width="120" height="26" fill="rgb(255,199,119)" stroke="#fff" stroke-width="1.5"><title>Thu 2026-10-08 R=50: D: 3 large + sedans L+C = 3+2</title></rect>
+<text x="570" y="200" font-size="13" text-anchor="middle" fill="#111">3+2</text>
+<rect x="630" y="182" width="120" height="26" fill="rgb(255,171,91)" stroke="#fff" stroke-width="1.5"><title>Fri 2026-10-09 R=50: D: 3 large + sedans L+C = 3+3</title></rect>
+<text x="690" y="200" font-size="13" text-anchor="middle" fill="#111">3+3</text>
+<text x="24" y="244" font-size="13" font-weight="bold" fill="#111">R = 60 min</text>
+<text x="210" y="244" font-size="12" text-anchor="middle" fill="#333">Mon 10-05</text>
+<text x="330" y="244" font-size="12" text-anchor="middle" fill="#333">Tue 10-06</text>
+<text x="450" y="244" font-size="12" text-anchor="middle" fill="#333">Wed 10-07</text>
+<text x="570" y="244" font-size="12" text-anchor="middle" fill="#333">Thu 10-08</text>
+<text x="690" y="244" font-size="12" text-anchor="middle" fill="#333">Fri 10-09</text>
+<text x="30" y="269" font-size="12" fill="#222">A: all-large minimum</text>
+<rect x="150" y="252" width="120" height="26" fill="rgb(235,245,255)" stroke="#fff" stroke-width="1.5"><title>Mon 2026-10-05 R=60: A: all-large minimum L+C = 5+0</title></rect>
+<text x="210" y="270" font-size="13" text-anchor="middle" fill="#111">5+0</text>
+<rect x="270" y="252" width="120" height="26" fill="rgb(235,245,255)" stroke="#fff" stroke-width="1.5"><title>Tue 2026-10-06 R=60: A: all-large minimum L+C = 4+0</title></rect>
+<text x="330" y="270" font-size="13" text-anchor="middle" fill="#111">4+0</text>
+<rect x="390" y="252" width="120" height="26" fill="rgb(235,245,255)" stroke="#fff" stroke-width="1.5"><title>Wed 2026-10-07 R=60: A: all-large minimum L+C = 6+0</title></rect>
+<text x="450" y="270" font-size="13" text-anchor="middle" fill="#111">6+0</text>
+<rect x="510" y="252" width="120" height="26" fill="rgb(235,245,255)" stroke="#fff" stroke-width="1.5"><title>Thu 2026-10-08 R=60: A: all-large minimum L+C = 4+0</title></rect>
+<text x="570" y="270" font-size="13" text-anchor="middle" fill="#111">4+0</text>
+<rect x="630" y="252" width="120" height="26" fill="rgb(235,245,255)" stroke="#fff" stroke-width="1.5"><title>Fri 2026-10-09 R=60: A: all-large minimum L+C = 5+0</title></rect>
+<text x="690" y="270" font-size="13" text-anchor="middle" fill="#111">5+0</text>
+<text x="30" y="295" font-size="12" fill="#222">B: 1 large + sedans</text>
+<rect x="150" y="278" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Mon 2026-10-05 R=60: B: 1 large + sedans [&quot;SW_DEMAND_EXCEEDS_LARGE_CAPACITY&quot;]</title></rect>
+<text x="210" y="296" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="270" y="278" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Tue 2026-10-06 R=60: B: 1 large + sedans [&quot;SW_DEMAND_EXCEEDS_LARGE_CAPACITY&quot;]</title></rect>
+<text x="330" y="296" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="390" y="278" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Wed 2026-10-07 R=60: B: 1 large + sedans [&quot;CROSS_WAVE_CONFLICT&quot;]</title></rect>
+<text x="450" y="296" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="510" y="278" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Thu 2026-10-08 R=60: B: 1 large + sedans [&quot;SW_DEMAND_EXCEEDS_LARGE_CAPACITY&quot;]</title></rect>
+<text x="570" y="296" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="630" y="278" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Fri 2026-10-09 R=60: B: 1 large + sedans [&quot;SW_DEMAND_EXCEEDS_LARGE_CAPACITY&quot;]</title></rect>
+<text x="690" y="296" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<text x="30" y="321" font-size="12" fill="#222">C: 2 large + sedans</text>
+<rect x="150" y="304" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Mon 2026-10-05 R=60: C: 2 large + sedans [&quot;SW_DEMAND_EXCEEDS_LARGE_CAPACITY&quot;]</title></rect>
+<text x="210" y="322" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="270" y="304" width="120" height="26" fill="rgb(255,199,119)" stroke="#fff" stroke-width="1.5"><title>Tue 2026-10-06 R=60: C: 2 large + sedans L+C = 2+2</title></rect>
+<text x="330" y="322" font-size="13" text-anchor="middle" fill="#111">2+2</text>
+<rect x="390" y="304" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Wed 2026-10-07 R=60: C: 2 large + sedans [&quot;CROSS_WAVE_CONFLICT&quot;]</title></rect>
+<text x="450" y="322" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="510" y="304" width="120" height="26" fill="rgb(255,199,119)" stroke="#fff" stroke-width="1.5"><title>Thu 2026-10-08 R=60: C: 2 large + sedans L+C = 2+2</title></rect>
+<text x="570" y="322" font-size="13" text-anchor="middle" fill="#111">2+2</text>
+<rect x="630" y="304" width="120" height="26" fill="rgb(255,171,91)" stroke="#fff" stroke-width="1.5"><title>Fri 2026-10-09 R=60: C: 2 large + sedans L+C = 2+3</title></rect>
+<text x="690" y="322" font-size="13" text-anchor="middle" fill="#111">2+3</text>
+<text x="30" y="347" font-size="12" fill="#222">D: 3 large + sedans</text>
+<rect x="150" y="330" width="120" height="26" fill="rgb(255,199,119)" stroke="#fff" stroke-width="1.5"><title>Mon 2026-10-05 R=60: D: 3 large + sedans L+C = 3+2</title></rect>
+<text x="210" y="348" font-size="13" text-anchor="middle" fill="#111">3+2</text>
+<rect x="270" y="330" width="120" height="26" fill="rgb(255,227,147)" stroke="#fff" stroke-width="1.5"><title>Tue 2026-10-06 R=60: D: 3 large + sedans L+C = 3+1</title></rect>
+<text x="330" y="348" font-size="13" text-anchor="middle" fill="#111">3+1</text>
+<rect x="390" y="330" width="120" height="26" fill="rgb(255,171,91)" stroke="#fff" stroke-width="1.5"><title>Wed 2026-10-07 R=60: D: 3 large + sedans L+C = 3+3</title></rect>
+<text x="450" y="348" font-size="13" text-anchor="middle" fill="#111">3+3</text>
+<rect x="510" y="330" width="120" height="26" fill="rgb(255,227,147)" stroke="#fff" stroke-width="1.5"><title>Thu 2026-10-08 R=60: D: 3 large + sedans L+C = 3+1</title></rect>
+<text x="570" y="348" font-size="13" text-anchor="middle" fill="#111">3+1</text>
+<rect x="630" y="330" width="120" height="26" fill="rgb(255,199,119)" stroke="#fff" stroke-width="1.5"><title>Fri 2026-10-09 R=60: D: 3 large + sedans L+C = 3+2</title></rect>
+<text x="690" y="348" font-size="13" text-anchor="middle" fill="#111">3+2</text>
+<text x="24" y="392" font-size="13" font-weight="bold" fill="#111">R = 70 min</text>
+<text x="210" y="392" font-size="12" text-anchor="middle" fill="#333">Mon 10-05</text>
+<text x="330" y="392" font-size="12" text-anchor="middle" fill="#333">Tue 10-06</text>
+<text x="450" y="392" font-size="12" text-anchor="middle" fill="#333">Wed 10-07</text>
+<text x="570" y="392" font-size="12" text-anchor="middle" fill="#333">Thu 10-08</text>
+<text x="690" y="392" font-size="12" text-anchor="middle" fill="#333">Fri 10-09</text>
+<text x="30" y="417" font-size="12" fill="#222">A: all-large minimum</text>
+<rect x="150" y="400" width="120" height="26" fill="rgb(235,245,255)" stroke="#fff" stroke-width="1.5"><title>Mon 2026-10-05 R=70: A: all-large minimum L+C = 4+0</title></rect>
+<text x="210" y="418" font-size="13" text-anchor="middle" fill="#111">4+0</text>
+<rect x="270" y="400" width="120" height="26" fill="rgb(235,245,255)" stroke="#fff" stroke-width="1.5"><title>Tue 2026-10-06 R=70: A: all-large minimum L+C = 4+0</title></rect>
+<text x="330" y="418" font-size="13" text-anchor="middle" fill="#111">4+0</text>
+<rect x="390" y="400" width="120" height="26" fill="rgb(235,245,255)" stroke="#fff" stroke-width="1.5"><title>Wed 2026-10-07 R=70: A: all-large minimum L+C = 6+0</title></rect>
+<text x="450" y="418" font-size="13" text-anchor="middle" fill="#111">6+0</text>
+<rect x="510" y="400" width="120" height="26" fill="rgb(235,245,255)" stroke="#fff" stroke-width="1.5"><title>Thu 2026-10-08 R=70: A: all-large minimum L+C = 4+0</title></rect>
+<text x="570" y="418" font-size="13" text-anchor="middle" fill="#111">4+0</text>
+<rect x="630" y="400" width="120" height="26" fill="rgb(235,245,255)" stroke="#fff" stroke-width="1.5"><title>Fri 2026-10-09 R=70: A: all-large minimum L+C = 5+0</title></rect>
+<text x="690" y="418" font-size="13" text-anchor="middle" fill="#111">5+0</text>
+<text x="30" y="443" font-size="12" fill="#222">B: 1 large + sedans</text>
+<rect x="150" y="426" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Mon 2026-10-05 R=70: B: 1 large + sedans [&quot;SW_DEMAND_EXCEEDS_LARGE_CAPACITY&quot;]</title></rect>
+<text x="210" y="444" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="270" y="426" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Tue 2026-10-06 R=70: B: 1 large + sedans [&quot;CROSS_WAVE_CONFLICT&quot;]</title></rect>
+<text x="330" y="444" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="390" y="426" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Wed 2026-10-07 R=70: B: 1 large + sedans [&quot;CROSS_WAVE_CONFLICT&quot;]</title></rect>
+<text x="450" y="444" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="510" y="426" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Thu 2026-10-08 R=70: B: 1 large + sedans [&quot;SW_DEMAND_EXCEEDS_LARGE_CAPACITY&quot;]</title></rect>
+<text x="570" y="444" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="630" y="426" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Fri 2026-10-09 R=70: B: 1 large + sedans [&quot;SW_DEMAND_EXCEEDS_LARGE_CAPACITY&quot;]</title></rect>
+<text x="690" y="444" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<text x="30" y="469" font-size="12" fill="#222">C: 2 large + sedans</text>
+<rect x="150" y="452" width="120" height="26" fill="rgb(255,171,91)" stroke="#fff" stroke-width="1.5"><title>Mon 2026-10-05 R=70: C: 2 large + sedans L+C = 2+3</title></rect>
+<text x="210" y="470" font-size="13" text-anchor="middle" fill="#111">2+3</text>
+<rect x="270" y="452" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Tue 2026-10-06 R=70: C: 2 large + sedans [&quot;CROSS_WAVE_CONFLICT&quot;]</title></rect>
+<text x="330" y="470" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="390" y="452" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Wed 2026-10-07 R=70: C: 2 large + sedans [&quot;CROSS_WAVE_CONFLICT&quot;]</title></rect>
+<text x="450" y="470" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="510" y="452" width="120" height="26" fill="rgb(255,199,119)" stroke="#fff" stroke-width="1.5"><title>Thu 2026-10-08 R=70: C: 2 large + sedans L+C = 2+2</title></rect>
+<text x="570" y="470" font-size="13" text-anchor="middle" fill="#111">2+2</text>
+<rect x="630" y="452" width="120" height="26" fill="rgb(255,171,91)" stroke="#fff" stroke-width="1.5"><title>Fri 2026-10-09 R=70: C: 2 large + sedans L+C = 2+3</title></rect>
+<text x="690" y="470" font-size="13" text-anchor="middle" fill="#111">2+3</text>
+<text x="30" y="495" font-size="12" fill="#222">D: 3 large + sedans</text>
+<rect x="150" y="478" width="120" height="26" fill="rgb(255,227,147)" stroke="#fff" stroke-width="1.5"><title>Mon 2026-10-05 R=70: D: 3 large + sedans L+C = 3+1</title></rect>
+<text x="210" y="496" font-size="13" text-anchor="middle" fill="#111">3+1</text>
+<rect x="270" y="478" width="120" height="26" fill="rgb(255,227,147)" stroke="#fff" stroke-width="1.5"><title>Tue 2026-10-06 R=70: D: 3 large + sedans L+C = 3+1</title></rect>
+<text x="330" y="496" font-size="13" text-anchor="middle" fill="#111">3+1</text>
+<rect x="390" y="478" width="120" height="26" fill="rgb(255,171,91)" stroke="#fff" stroke-width="1.5"><title>Wed 2026-10-07 R=70: D: 3 large + sedans L+C = 3+3</title></rect>
+<text x="450" y="496" font-size="13" text-anchor="middle" fill="#111">3+3</text>
+<rect x="510" y="478" width="120" height="26" fill="rgb(255,227,147)" stroke="#fff" stroke-width="1.5"><title>Thu 2026-10-08 R=70: D: 3 large + sedans L+C = 3+1</title></rect>
+<text x="570" y="496" font-size="13" text-anchor="middle" fill="#111">3+1</text>
+<rect x="630" y="478" width="120" height="26" fill="rgb(255,199,119)" stroke="#fff" stroke-width="1.5"><title>Fri 2026-10-09 R=70: D: 3 large + sedans L+C = 3+2</title></rect>
+<text x="690" y="496" font-size="13" text-anchor="middle" fill="#111">3+2</text>
+<text x="24" y="540" font-size="13" font-weight="bold" fill="#111">R = 90 min</text>
+<text x="210" y="540" font-size="12" text-anchor="middle" fill="#333">Mon 10-05</text>
+<text x="330" y="540" font-size="12" text-anchor="middle" fill="#333">Tue 10-06</text>
+<text x="450" y="540" font-size="12" text-anchor="middle" fill="#333">Wed 10-07</text>
+<text x="570" y="540" font-size="12" text-anchor="middle" fill="#333">Thu 10-08</text>
+<text x="690" y="540" font-size="12" text-anchor="middle" fill="#333">Fri 10-09</text>
+<text x="30" y="565" font-size="12" fill="#222">A: all-large minimum</text>
+<rect x="150" y="548" width="120" height="26" fill="rgb(235,245,255)" stroke="#fff" stroke-width="1.5"><title>Mon 2026-10-05 R=90: A: all-large minimum L+C = 4+0</title></rect>
+<text x="210" y="566" font-size="13" text-anchor="middle" fill="#111">4+0</text>
+<rect x="270" y="548" width="120" height="26" fill="rgb(235,245,255)" stroke="#fff" stroke-width="1.5"><title>Tue 2026-10-06 R=90: A: all-large minimum L+C = 3+0</title></rect>
+<text x="330" y="566" font-size="13" text-anchor="middle" fill="#111">3+0</text>
+<rect x="390" y="548" width="120" height="26" fill="rgb(235,245,255)" stroke="#fff" stroke-width="1.5"><title>Wed 2026-10-07 R=90: A: all-large minimum L+C = 4+0</title></rect>
+<text x="450" y="566" font-size="13" text-anchor="middle" fill="#111">4+0</text>
+<rect x="510" y="548" width="120" height="26" fill="rgb(235,245,255)" stroke="#fff" stroke-width="1.5"><title>Thu 2026-10-08 R=90: A: all-large minimum L+C = 4+0</title></rect>
+<text x="570" y="566" font-size="13" text-anchor="middle" fill="#111">4+0</text>
+<rect x="630" y="548" width="120" height="26" fill="rgb(235,245,255)" stroke="#fff" stroke-width="1.5"><title>Fri 2026-10-09 R=90: A: all-large minimum L+C = 4+0</title></rect>
+<text x="690" y="566" font-size="13" text-anchor="middle" fill="#111">4+0</text>
+<text x="30" y="591" font-size="12" fill="#222">B: 1 large + sedans</text>
+<rect x="150" y="574" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Mon 2026-10-05 R=90: B: 1 large + sedans [&quot;SW_DEMAND_EXCEEDS_LARGE_CAPACITY&quot;]</title></rect>
+<text x="210" y="592" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="270" y="574" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Tue 2026-10-06 R=90: B: 1 large + sedans [&quot;CROSS_WAVE_CONFLICT&quot;]</title></rect>
+<text x="330" y="592" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="390" y="574" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Wed 2026-10-07 R=90: B: 1 large + sedans [&quot;CROSS_WAVE_CONFLICT&quot;]</title></rect>
+<text x="450" y="592" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="510" y="574" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Thu 2026-10-08 R=90: B: 1 large + sedans [&quot;SW_DEMAND_EXCEEDS_LARGE_CAPACITY&quot;]</title></rect>
+<text x="570" y="592" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="630" y="574" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Fri 2026-10-09 R=90: B: 1 large + sedans [&quot;SW_DEMAND_EXCEEDS_LARGE_CAPACITY&quot;]</title></rect>
+<text x="690" y="592" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<text x="30" y="617" font-size="12" fill="#222">C: 2 large + sedans</text>
+<rect x="150" y="600" width="120" height="26" fill="rgb(255,199,119)" stroke="#fff" stroke-width="1.5"><title>Mon 2026-10-05 R=90: C: 2 large + sedans L+C = 2+2</title></rect>
+<text x="210" y="618" font-size="13" text-anchor="middle" fill="#111">2+2</text>
+<rect x="270" y="600" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Tue 2026-10-06 R=90: C: 2 large + sedans [&quot;CROSS_WAVE_CONFLICT&quot;]</title></rect>
+<text x="330" y="618" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="390" y="600" width="120" height="26" fill="url(#hatchgrey)" stroke="#fff" stroke-width="1.5"><title>Wed 2026-10-07 R=90: C: 2 large + sedans [&quot;CROSS_WAVE_CONFLICT&quot;]</title></rect>
+<text x="450" y="618" font-size="13" text-anchor="middle" fill="#333">infeasible</text>
+<rect x="510" y="600" width="120" height="26" fill="rgb(255,199,119)" stroke="#fff" stroke-width="1.5"><title>Thu 2026-10-08 R=90: C: 2 large + sedans L+C = 2+2</title></rect>
+<text x="570" y="618" font-size="13" text-anchor="middle" fill="#111">2+2</text>
+<rect x="630" y="600" width="120" height="26" fill="rgb(255,199,119)" stroke="#fff" stroke-width="1.5"><title>Fri 2026-10-09 R=90: C: 2 large + sedans L+C = 2+2</title></rect>
+<text x="690" y="618" font-size="13" text-anchor="middle" fill="#111">2+2</text>
+<text x="30" y="643" font-size="12" fill="#222">D: 3 large + sedans</text>
+<rect x="150" y="626" width="120" height="26" fill="rgb(255,227,147)" stroke="#fff" stroke-width="1.5"><title>Mon 2026-10-05 R=90: D: 3 large + sedans L+C = 3+1</title></rect>
+<text x="210" y="644" font-size="13" text-anchor="middle" fill="#111">3+1</text>
+<rect x="270" y="626" width="120" height="26" fill="rgb(255,255,175)" stroke="#fff" stroke-width="1.5"><title>Tue 2026-10-06 R=90: D: 3 large + sedans L+C = 3+0</title></rect>
+<text x="330" y="644" font-size="13" text-anchor="middle" fill="#111">3+0</text>
+<rect x="390" y="626" width="120" height="26" fill="rgb(255,227,147)" stroke="#fff" stroke-width="1.5"><title>Wed 2026-10-07 R=90: D: 3 large + sedans L+C = 3+1</title></rect>
+<text x="450" y="644" font-size="13" text-anchor="middle" fill="#111">3+1</text>
+<rect x="510" y="626" width="120" height="26" fill="rgb(255,227,147)" stroke="#fff" stroke-width="1.5"><title>Thu 2026-10-08 R=90: D: 3 large + sedans L+C = 3+1</title></rect>
+<text x="570" y="644" font-size="13" text-anchor="middle" fill="#111">3+1</text>
+<rect x="630" y="626" width="120" height="26" fill="rgb(255,255,175)" stroke="#fff" stroke-width="1.5"><title>Fri 2026-10-09 R=90: D: 3 large + sedans L+C = 3+0</title></rect>
+<text x="690" y="644" font-size="13" text-anchor="middle" fill="#111">3+0</text>
+</svg>

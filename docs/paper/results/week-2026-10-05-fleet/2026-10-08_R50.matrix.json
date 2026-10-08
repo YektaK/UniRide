@@ -1,0 +1,2774 @@
+{
+  "id": "time_matrix:sha256:bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+  "version": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+  "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+  "source": "supabase",
+  "provenance": {
+    "source": "supabase",
+    "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+    "location_count": 29,
+    "loaded_at": "2026-10-08T09:26:07.460500+00:00"
+  },
+  "arcs": [
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "Sw5",
+      "duration_minutes": 35
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "Sw4",
+      "duration_minutes": 30
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "Sw2",
+      "duration_minutes": 24
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "So1",
+      "duration_minutes": 7
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "So12",
+      "duration_minutes": 20
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "So11",
+      "duration_minutes": 14
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "So4",
+      "duration_minutes": 30
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "So2",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "Sw9",
+      "duration_minutes": 28
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "Sw8",
+      "duration_minutes": 14
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "Sw7",
+      "duration_minutes": 26
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "Sw6",
+      "duration_minutes": 28
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "Sw1",
+      "duration_minutes": 40
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "So18",
+      "duration_minutes": 30
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "So17",
+      "duration_minutes": 45
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "So16",
+      "duration_minutes": 28
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "So15",
+      "duration_minutes": 26
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "So14",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "So13",
+      "duration_minutes": 22
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "So9",
+      "duration_minutes": 10
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "So8",
+      "duration_minutes": 22
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "So7",
+      "duration_minutes": 10
+    },
+    {
+      "origin_code": "D.Kampus",
+      "destination_code": "So6",
+      "duration_minutes": 50
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 31
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "Sw4",
+      "duration_minutes": 40
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "Sw2",
+      "duration_minutes": 28
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "So1",
+      "duration_minutes": 31
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "So12",
+      "duration_minutes": 36
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "So11",
+      "duration_minutes": 35
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "So4",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "So2",
+      "duration_minutes": 28
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "Sw9",
+      "duration_minutes": 38
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "Sw8",
+      "duration_minutes": 30
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "Sw7",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "Sw6",
+      "duration_minutes": 37
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "Sw1",
+      "duration_minutes": 13
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "So18",
+      "duration_minutes": 35
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "So17",
+      "duration_minutes": 49
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "So16",
+      "duration_minutes": 19
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "So15",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "So14",
+      "duration_minutes": 33
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "So13",
+      "duration_minutes": 31
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "So9",
+      "duration_minutes": 34
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "So8",
+      "duration_minutes": 36
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "So7",
+      "duration_minutes": 35
+    },
+    {
+      "origin_code": "Sw5",
+      "destination_code": "So6",
+      "duration_minutes": 54
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "Sw5",
+      "duration_minutes": 39
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "Sw2",
+      "duration_minutes": 22
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "So1",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "So12",
+      "duration_minutes": 19
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "So11",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "So4",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "So2",
+      "duration_minutes": 20
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "Sw9",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "Sw8",
+      "duration_minutes": 28
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "Sw7",
+      "duration_minutes": 20
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "Sw6",
+      "duration_minutes": 12
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "Sw1",
+      "duration_minutes": 47
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "So18",
+      "duration_minutes": 8
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "So17",
+      "duration_minutes": 39
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "So16",
+      "duration_minutes": 31
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "So15",
+      "duration_minutes": 32
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "So14",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "So13",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "So9",
+      "duration_minutes": 22
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "So8",
+      "duration_minutes": 14
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "So7",
+      "duration_minutes": 19
+    },
+    {
+      "origin_code": "Sw4",
+      "destination_code": "So6",
+      "duration_minutes": 40
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 22
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "Sw5",
+      "duration_minutes": 29
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "Sw4",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "So1",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "So12",
+      "duration_minutes": 20
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "So11",
+      "duration_minutes": 20
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "So4",
+      "duration_minutes": 7
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "So2",
+      "duration_minutes": 9
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "Sw9",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "Sw8",
+      "duration_minutes": 27
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "Sw7",
+      "duration_minutes": 4
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "Sw6",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "Sw1",
+      "duration_minutes": 36
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "So18",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "So17",
+      "duration_minutes": 38
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "So16",
+      "duration_minutes": 17
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "So15",
+      "duration_minutes": 20
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "So14",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "So13",
+      "duration_minutes": 14
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "So9",
+      "duration_minutes": 23
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "So8",
+      "duration_minutes": 20
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "So7",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "Sw2",
+      "destination_code": "So6",
+      "duration_minutes": 40
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 6
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "Sw5",
+      "duration_minutes": 32
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "Sw4",
+      "duration_minutes": 32
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "Sw2",
+      "duration_minutes": 27
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "So12",
+      "duration_minutes": 23
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "So11",
+      "duration_minutes": 19
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "So4",
+      "duration_minutes": 26
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "So2",
+      "duration_minutes": 22
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "Sw9",
+      "duration_minutes": 22
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "Sw8",
+      "duration_minutes": 12
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "Sw7",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "Sw6",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "Sw1",
+      "duration_minutes": 39
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "So18",
+      "duration_minutes": 26
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "So17",
+      "duration_minutes": 36
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "So16",
+      "duration_minutes": 26
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "So15",
+      "duration_minutes": 23
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "So14",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "So13",
+      "duration_minutes": 22
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "So9",
+      "duration_minutes": 11
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "So8",
+      "duration_minutes": 20
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "So7",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "So1",
+      "destination_code": "So6",
+      "duration_minutes": 37
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 17
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "Sw5",
+      "duration_minutes": 34
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "Sw4",
+      "duration_minutes": 23
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "Sw2",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "So1",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "So11",
+      "duration_minutes": 6
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "So4",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "So2",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "Sw9",
+      "duration_minutes": 11
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "Sw8",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "Sw7",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "Sw6",
+      "duration_minutes": 14
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "Sw1",
+      "duration_minutes": 43
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "So18",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "So17",
+      "duration_minutes": 34
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "So16",
+      "duration_minutes": 26
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "So15",
+      "duration_minutes": 26
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "So14",
+      "duration_minutes": 8
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "So13",
+      "duration_minutes": 12
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "So9",
+      "duration_minutes": 13
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "So8",
+      "duration_minutes": 6
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "So7",
+      "duration_minutes": 11
+    },
+    {
+      "origin_code": "So12",
+      "destination_code": "So6",
+      "duration_minutes": 35
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "Sw5",
+      "duration_minutes": 35
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "Sw4",
+      "duration_minutes": 23
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "Sw2",
+      "duration_minutes": 19
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "So1",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "So12",
+      "duration_minutes": 7
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "So4",
+      "duration_minutes": 19
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "So2",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "Sw9",
+      "duration_minutes": 13
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "Sw8",
+      "duration_minutes": 20
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "Sw7",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "Sw6",
+      "duration_minutes": 19
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "Sw1",
+      "duration_minutes": 41
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "So18",
+      "duration_minutes": 20
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "So17",
+      "duration_minutes": 33
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "So16",
+      "duration_minutes": 30
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "So15",
+      "duration_minutes": 27
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "So14",
+      "duration_minutes": 13
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "So13",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "So9",
+      "duration_minutes": 14
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "So8",
+      "duration_minutes": 11
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "So7",
+      "duration_minutes": 11
+    },
+    {
+      "origin_code": "So11",
+      "destination_code": "So6",
+      "duration_minutes": 34
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "Sw5",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "Sw4",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "Sw2",
+      "duration_minutes": 5
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "So1",
+      "duration_minutes": 26
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "So12",
+      "duration_minutes": 20
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "So11",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "So2",
+      "duration_minutes": 10
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "Sw9",
+      "duration_minutes": 22
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "Sw8",
+      "duration_minutes": 24
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "Sw7",
+      "duration_minutes": 3
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "Sw6",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "Sw1",
+      "duration_minutes": 33
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "So18",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "So17",
+      "duration_minutes": 39
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "So16",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "So15",
+      "duration_minutes": 17
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "So14",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "So13",
+      "duration_minutes": 14
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "So9",
+      "duration_minutes": 24
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "So8",
+      "duration_minutes": 20
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "So7",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "So4",
+      "destination_code": "So6",
+      "duration_minutes": 41
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "Sw5",
+      "duration_minutes": 29
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "Sw4",
+      "duration_minutes": 22
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "Sw2",
+      "duration_minutes": 9
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "So1",
+      "duration_minutes": 19
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "So12",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "So11",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "So4",
+      "duration_minutes": 10
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "Sw9",
+      "duration_minutes": 17
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "Sw8",
+      "duration_minutes": 26
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "Sw7",
+      "duration_minutes": 9
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "Sw6",
+      "duration_minutes": 14
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "Sw1",
+      "duration_minutes": 37
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "So18",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "So17",
+      "duration_minutes": 37
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "So16",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "So15",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "So14",
+      "duration_minutes": 10
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "So13",
+      "duration_minutes": 10
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "So9",
+      "duration_minutes": 19
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "So8",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "So7",
+      "duration_minutes": 17
+    },
+    {
+      "origin_code": "So2",
+      "destination_code": "So6",
+      "duration_minutes": 38
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 19
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "Sw5",
+      "duration_minutes": 36
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "Sw4",
+      "duration_minutes": 19
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "Sw2",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "So1",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "So12",
+      "duration_minutes": 12
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "So11",
+      "duration_minutes": 11
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "So4",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "So2",
+      "duration_minutes": 17
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "Sw8",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "Sw7",
+      "duration_minutes": 17
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "Sw6",
+      "duration_minutes": 17
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "Sw1",
+      "duration_minutes": 45
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "So18",
+      "duration_minutes": 19
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "So17",
+      "duration_minutes": 33
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "So16",
+      "duration_minutes": 28
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "So15",
+      "duration_minutes": 28
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "So14",
+      "duration_minutes": 13
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "So13",
+      "duration_minutes": 14
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "So9",
+      "duration_minutes": 14
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "So8",
+      "duration_minutes": 5
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "So7",
+      "duration_minutes": 11
+    },
+    {
+      "origin_code": "Sw9",
+      "destination_code": "So6",
+      "duration_minutes": 33
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "Sw5",
+      "duration_minutes": 27
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "Sw4",
+      "duration_minutes": 32
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "Sw2",
+      "duration_minutes": 30
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "So1",
+      "duration_minutes": 13
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "So12",
+      "duration_minutes": 24
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "So11",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "So4",
+      "duration_minutes": 26
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "So2",
+      "duration_minutes": 27
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "Sw9",
+      "duration_minutes": 24
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "Sw7",
+      "duration_minutes": 27
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "Sw6",
+      "duration_minutes": 29
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "Sw1",
+      "duration_minutes": 35
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "So18",
+      "duration_minutes": 32
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "So17",
+      "duration_minutes": 33
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "So16",
+      "duration_minutes": 26
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "So15",
+      "duration_minutes": 23
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "So14",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "So13",
+      "duration_minutes": 27
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "So9",
+      "duration_minutes": 13
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "So8",
+      "duration_minutes": 22
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "So7",
+      "duration_minutes": 17
+    },
+    {
+      "origin_code": "Sw8",
+      "destination_code": "So6",
+      "duration_minutes": 38
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 22
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "Sw5",
+      "duration_minutes": 27
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "Sw4",
+      "duration_minutes": 26
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "Sw2",
+      "duration_minutes": 3
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "So1",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "So12",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "So11",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "So4",
+      "duration_minutes": 3
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "So2",
+      "duration_minutes": 10
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "Sw9",
+      "duration_minutes": 22
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "Sw8",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "Sw6",
+      "duration_minutes": 19
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "Sw1",
+      "duration_minutes": 36
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "So18",
+      "duration_minutes": 19
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "So17",
+      "duration_minutes": 40
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "So16",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "So15",
+      "duration_minutes": 19
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "So14",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "So13",
+      "duration_minutes": 14
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "So9",
+      "duration_minutes": 23
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "So8",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "So7",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "Sw7",
+      "destination_code": "So6",
+      "duration_minutes": 42
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 22
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "Sw5",
+      "duration_minutes": 33
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "Sw4",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "Sw2",
+      "duration_minutes": 14
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "So1",
+      "duration_minutes": 24
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "So12",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "So11",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "So4",
+      "duration_minutes": 14
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "So2",
+      "duration_minutes": 13
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "Sw9",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "Sw8",
+      "duration_minutes": 28
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "Sw7",
+      "duration_minutes": 13
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "Sw1",
+      "duration_minutes": 41
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "So18",
+      "duration_minutes": 10
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "So17",
+      "duration_minutes": 38
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "So16",
+      "duration_minutes": 24
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "So15",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "So14",
+      "duration_minutes": 11
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "So13",
+      "duration_minutes": 9
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "So9",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "So8",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "So7",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "Sw6",
+      "destination_code": "So6",
+      "duration_minutes": 40
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 37
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "Sw5",
+      "duration_minutes": 13
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "Sw4",
+      "duration_minutes": 47
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "Sw2",
+      "duration_minutes": 34
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "So1",
+      "duration_minutes": 37
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "So12",
+      "duration_minutes": 44
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "So11",
+      "duration_minutes": 41
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "So4",
+      "duration_minutes": 33
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "So2",
+      "duration_minutes": 35
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "Sw9",
+      "duration_minutes": 43
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "Sw8",
+      "duration_minutes": 36
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "Sw7",
+      "duration_minutes": 34
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "Sw6",
+      "duration_minutes": 41
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "So18",
+      "duration_minutes": 41
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "So17",
+      "duration_minutes": 54
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "So16",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "So15",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "So14",
+      "duration_minutes": 40
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "So13",
+      "duration_minutes": 38
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "So9",
+      "duration_minutes": 39
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "So8",
+      "duration_minutes": 43
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "So7",
+      "duration_minutes": 41
+    },
+    {
+      "origin_code": "Sw1",
+      "destination_code": "So6",
+      "duration_minutes": 57
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 24
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "Sw5",
+      "duration_minutes": 37
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "Sw4",
+      "duration_minutes": 13
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "Sw2",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "So1",
+      "duration_minutes": 27
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "So12",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "So11",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "So4",
+      "duration_minutes": 17
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "So2",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "Sw9",
+      "duration_minutes": 23
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "Sw8",
+      "duration_minutes": 30
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "Sw7",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "Sw6",
+      "duration_minutes": 11
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "Sw1",
+      "duration_minutes": 43
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "So17",
+      "duration_minutes": 40
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "So16",
+      "duration_minutes": 27
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "So15",
+      "duration_minutes": 28
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "So14",
+      "duration_minutes": 14
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "So13",
+      "duration_minutes": 11
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "So9",
+      "duration_minutes": 23
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "So8",
+      "duration_minutes": 20
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "So7",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "So18",
+      "destination_code": "So6",
+      "duration_minutes": 43
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 36
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "Sw5",
+      "duration_minutes": 45
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "Sw4",
+      "duration_minutes": 38
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "Sw2",
+      "duration_minutes": 35
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "So1",
+      "duration_minutes": 36
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "So12",
+      "duration_minutes": 30
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "So11",
+      "duration_minutes": 28
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "So4",
+      "duration_minutes": 35
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "So2",
+      "duration_minutes": 34
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "Sw9",
+      "duration_minutes": 27
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "Sw8",
+      "duration_minutes": 36
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "Sw7",
+      "duration_minutes": 34
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "Sw6",
+      "duration_minutes": 34
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "Sw1",
+      "duration_minutes": 53
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "So18",
+      "duration_minutes": 35
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "So16",
+      "duration_minutes": 44
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "So15",
+      "duration_minutes": 43
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "So14",
+      "duration_minutes": 30
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "So13",
+      "duration_minutes": 31
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "So9",
+      "duration_minutes": 31
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "So8",
+      "duration_minutes": 26
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "So7",
+      "duration_minutes": 28
+    },
+    {
+      "origin_code": "So17",
+      "destination_code": "So6",
+      "duration_minutes": 10
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 26
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "Sw5",
+      "duration_minutes": 20
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "Sw4",
+      "duration_minutes": 34
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "Sw2",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "So1",
+      "duration_minutes": 26
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "So12",
+      "duration_minutes": 29
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "So11",
+      "duration_minutes": 30
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "So4",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "So2",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "Sw9",
+      "duration_minutes": 31
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "Sw8",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "Sw7",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "Sw6",
+      "duration_minutes": 28
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "Sw1",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "So18",
+      "duration_minutes": 28
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "So17",
+      "duration_minutes": 46
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "So15",
+      "duration_minutes": 4
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "So14",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "So13",
+      "duration_minutes": 24
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "So9",
+      "duration_minutes": 30
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "So8",
+      "duration_minutes": 29
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "So7",
+      "duration_minutes": 30
+    },
+    {
+      "origin_code": "So16",
+      "destination_code": "So6",
+      "duration_minutes": 47
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 24
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "Sw5",
+      "duration_minutes": 19
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "Sw4",
+      "duration_minutes": 34
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "Sw2",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "So1",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "So12",
+      "duration_minutes": 29
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "So11",
+      "duration_minutes": 30
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "So4",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "So2",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "Sw9",
+      "duration_minutes": 31
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "Sw8",
+      "duration_minutes": 24
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "Sw7",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "Sw6",
+      "duration_minutes": 28
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "Sw1",
+      "duration_minutes": 23
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "So18",
+      "duration_minutes": 29
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "So17",
+      "duration_minutes": 46
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "So16",
+      "duration_minutes": 4
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "So14",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "So13",
+      "duration_minutes": 24
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "So9",
+      "duration_minutes": 29
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "So8",
+      "duration_minutes": 30
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "So7",
+      "duration_minutes": 29
+    },
+    {
+      "origin_code": "So15",
+      "destination_code": "So6",
+      "duration_minutes": 48
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 17
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "Sw5",
+      "duration_minutes": 32
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "Sw4",
+      "duration_minutes": 19
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "Sw2",
+      "duration_minutes": 13
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "So1",
+      "duration_minutes": 20
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "So12",
+      "duration_minutes": 8
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "So11",
+      "duration_minutes": 13
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "So4",
+      "duration_minutes": 13
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "So2",
+      "duration_minutes": 9
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "Sw9",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "Sw8",
+      "duration_minutes": 24
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "Sw7",
+      "duration_minutes": 12
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "Sw6",
+      "duration_minutes": 12
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "Sw1",
+      "duration_minutes": 40
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "So18",
+      "duration_minutes": 12
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "So17",
+      "duration_minutes": 35
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "So16",
+      "duration_minutes": 24
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "So15",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "So13",
+      "duration_minutes": 7
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "So9",
+      "duration_minutes": 17
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "So8",
+      "duration_minutes": 12
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "So7",
+      "duration_minutes": 14
+    },
+    {
+      "origin_code": "So14",
+      "destination_code": "So6",
+      "duration_minutes": 35
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "Sw5",
+      "duration_minutes": 32
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "Sw4",
+      "duration_minutes": 19
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "Sw2",
+      "duration_minutes": 12
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "So1",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "So12",
+      "duration_minutes": 14
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "So11",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "So4",
+      "duration_minutes": 12
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "So2",
+      "duration_minutes": 12
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "Sw9",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "Sw8",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "Sw7",
+      "duration_minutes": 11
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "Sw6",
+      "duration_minutes": 10
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "Sw1",
+      "duration_minutes": 39
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "So18",
+      "duration_minutes": 12
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "So17",
+      "duration_minutes": 36
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "So16",
+      "duration_minutes": 24
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "So15",
+      "duration_minutes": 24
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "So14",
+      "duration_minutes": 9
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "So9",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "So8",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "So7",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "So13",
+      "destination_code": "So6",
+      "duration_minutes": 39
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 10
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "Sw5",
+      "duration_minutes": 32
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "Sw4",
+      "duration_minutes": 25
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "Sw2",
+      "duration_minutes": 24
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "So1",
+      "duration_minutes": 9
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "So12",
+      "duration_minutes": 14
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "So11",
+      "duration_minutes": 12
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "So4",
+      "duration_minutes": 23
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "So2",
+      "duration_minutes": 22
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "Sw9",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "Sw8",
+      "duration_minutes": 12
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "Sw7",
+      "duration_minutes": 23
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "Sw6",
+      "duration_minutes": 24
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "Sw1",
+      "duration_minutes": 39
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "So18",
+      "duration_minutes": 24
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "So17",
+      "duration_minutes": 36
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "So16",
+      "duration_minutes": 31
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "So15",
+      "duration_minutes": 28
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "So14",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "So13",
+      "duration_minutes": 20
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "So8",
+      "duration_minutes": 14
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "So7",
+      "duration_minutes": 8
+    },
+    {
+      "origin_code": "So9",
+      "destination_code": "So6",
+      "duration_minutes": 34
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 17
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "Sw5",
+      "duration_minutes": 33
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "Sw4",
+      "duration_minutes": 17
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "Sw2",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "So1",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "So12",
+      "duration_minutes": 7
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "So11",
+      "duration_minutes": 8
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "So4",
+      "duration_minutes": 16
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "So2",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "Sw9",
+      "duration_minutes": 5
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "Sw8",
+      "duration_minutes": 19
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "Sw7",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "Sw6",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "Sw1",
+      "duration_minutes": 41
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "So18",
+      "duration_minutes": 17
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "So17",
+      "duration_minutes": 30
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "So16",
+      "duration_minutes": 27
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "So15",
+      "duration_minutes": 26
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "So14",
+      "duration_minutes": 11
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "So13",
+      "duration_minutes": 12
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "So9",
+      "duration_minutes": 11
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "So7",
+      "duration_minutes": 8
+    },
+    {
+      "origin_code": "So8",
+      "destination_code": "So6",
+      "duration_minutes": 31
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 11
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "Sw5",
+      "duration_minutes": 36
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "Sw4",
+      "duration_minutes": 24
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "Sw2",
+      "duration_minutes": 22
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "So1",
+      "duration_minutes": 13
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "So12",
+      "duration_minutes": 14
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "So11",
+      "duration_minutes": 10
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "So4",
+      "duration_minutes": 22
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "So2",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "Sw9",
+      "duration_minutes": 14
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "Sw8",
+      "duration_minutes": 15
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "Sw7",
+      "duration_minutes": 21
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "Sw6",
+      "duration_minutes": 22
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "Sw1",
+      "duration_minutes": 42
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "So18",
+      "duration_minutes": 23
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "So17",
+      "duration_minutes": 34
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "So16",
+      "duration_minutes": 30
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "So15",
+      "duration_minutes": 27
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "So14",
+      "duration_minutes": 17
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "So13",
+      "duration_minutes": 18
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "So9",
+      "duration_minutes": 7
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "So8",
+      "duration_minutes": 13
+    },
+    {
+      "origin_code": "So7",
+      "destination_code": "So6",
+      "duration_minutes": 35
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "D.Kampus",
+      "duration_minutes": 37
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "Sw5",
+      "duration_minutes": 50
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "Sw4",
+      "duration_minutes": 39
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "Sw2",
+      "duration_minutes": 37
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "So1",
+      "duration_minutes": 38
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "So12",
+      "duration_minutes": 33
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "So11",
+      "duration_minutes": 30
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "So4",
+      "duration_minutes": 37
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "So2",
+      "duration_minutes": 36
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "Sw9",
+      "duration_minutes": 29
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "Sw8",
+      "duration_minutes": 38
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "Sw7",
+      "duration_minutes": 35
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "Sw6",
+      "duration_minutes": 35
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "Sw1",
+      "duration_minutes": 57
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "So18",
+      "duration_minutes": 36
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "So17",
+      "duration_minutes": 10
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "So16",
+      "duration_minutes": 46
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "So15",
+      "duration_minutes": 43
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "So14",
+      "duration_minutes": 31
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "So13",
+      "duration_minutes": 33
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "So9",
+      "duration_minutes": 33
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "So8",
+      "duration_minutes": 27
+    },
+    {
+      "origin_code": "So6",
+      "destination_code": "So7",
+      "duration_minutes": 30
+    }
+  ]
+}

@@ -206,7 +206,7 @@ export interface VirtualFleetTemplate {
  */
 export const DEFAULT_VIRTUAL_FLEET_TEMPLATE: VirtualFleetTemplate = {
   swCapacity: 4,
-  soCapacity: 10,
+  soCapacity: 5,
   cooldownMinutes: 10,
 };
 

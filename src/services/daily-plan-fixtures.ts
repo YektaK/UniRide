@@ -28,7 +28,7 @@ export function makeJobs(): Job[] {
       success: true,
       routes: [
         {
-          vehicle_id: "virtual:4-10-10:1",
+          vehicle_id: "virtual:4-5-10:1",
           route_details: [
             step("D.Kampus", "So1", 10),
             step("So1", "Sw2", 5),
@@ -40,7 +40,7 @@ export function makeJobs(): Job[] {
           student_ids: ["occ-a", "occ-b"],
         },
         {
-          vehicle_id: "virtual:4-10-10:2",
+          vehicle_id: "virtual:4-5-10:2",
           route_details: [
             step("D.Kampus", "So3#occ-c", 10),
             step("So3#occ-c", "D.Kampus", 10),
@@ -54,11 +54,11 @@ export function makeJobs(): Job[] {
     },
     intervals: [
       {
-        jobId: "2026-10-05:pickup:525", routeIndex: 0, vehicleId: "virtual:4-10-10:1", direction: "pickup",
+        jobId: "2026-10-05:pickup:525", routeIndex: 0, vehicleId: "virtual:4-5-10:1", direction: "pickup",
         startMinutes: 498, endMinutes: 525, occurrenceIds: ["occ-a", "occ-b"], swCount: 1, soCount: 1,
       },
       {
-        jobId: "2026-10-05:pickup:525", routeIndex: 1, vehicleId: "virtual:4-10-10:2", direction: "pickup",
+        jobId: "2026-10-05:pickup:525", routeIndex: 1, vehicleId: "virtual:4-5-10:2", direction: "pickup",
         startMinutes: 505, endMinutes: 525, occurrenceIds: ["occ-c"], swCount: 0, soCount: 1,
       },
     ],
@@ -72,7 +72,7 @@ export function makeJobs(): Job[] {
       success: true,
       routes: [
         {
-          vehicle_id: "virtual:4-10-10:1",
+          vehicle_id: "virtual:4-5-10:1",
           route_details: [step("D.Kampus", "Sw4", 8), step("Sw4", "D.Kampus", 8)],
           total_duration_minutes: 16,
           sw_count: 1,
@@ -83,7 +83,7 @@ export function makeJobs(): Job[] {
     },
     intervals: [
       {
-        jobId: "2026-10-05:dropoff:1020", routeIndex: 0, vehicleId: "virtual:4-10-10:1", direction: "dropoff",
+        jobId: "2026-10-05:dropoff:1020", routeIndex: 0, vehicleId: "virtual:4-5-10:1", direction: "dropoff",
         startMinutes: 1020, endMinutes: 1036, occurrenceIds: ["occ-d"], swCount: 1, soCount: 0,
       },
     ],
@@ -110,8 +110,8 @@ const baseResponse = (): Response => ({
     mode: "virtual",
     assignmentFleetSize: 4,
     liveActiveFleetSize: 1,
-    template: { swCapacity: 4, soCapacity: 10, cooldownMinutes: 10 },
-    maxCapacity: { swCapacity: 4, soCapacity: 10 },
+    template: { swCapacity: 4, soCapacity: 5, cooldownMinutes: 10 },
+    maxCapacity: { swCapacity: 4, soCapacity: 5 },
   },
   limits: { maxRideTimeMinutes: 90, maxTourMinutes: 150, minimumFeasibleRideMinutes: null },
   vehicleSummary: {
@@ -129,19 +129,19 @@ const baseResponse = (): Response => ({
   routeIntervals: makeJobs().flatMap((job) => job.intervals),
   assignments: [
     {
-      jobId: "2026-10-05:pickup:525", routeIndex: 0, vehicleId: "virtual:4-10-10:1", direction: "pickup",
+      jobId: "2026-10-05:pickup:525", routeIndex: 0, vehicleId: "virtual:4-5-10:1", direction: "pickup",
       startMinutes: 498, endMinutes: 525, occurrenceIds: ["occ-a", "occ-b"], swCount: 1, soCount: 1,
-      physicalVehicleId: "virtual:4-10-10:2",
+      physicalVehicleId: "virtual:4-5-10:2",
     },
     {
-      jobId: "2026-10-05:pickup:525", routeIndex: 1, vehicleId: "virtual:4-10-10:2", direction: "pickup",
+      jobId: "2026-10-05:pickup:525", routeIndex: 1, vehicleId: "virtual:4-5-10:2", direction: "pickup",
       startMinutes: 505, endMinutes: 525, occurrenceIds: ["occ-c"], swCount: 0, soCount: 1,
-      physicalVehicleId: "virtual:4-10-10:1",
+      physicalVehicleId: "virtual:4-5-10:1",
     },
     {
-      jobId: "2026-10-05:dropoff:1020", routeIndex: 0, vehicleId: "virtual:4-10-10:1", direction: "dropoff",
+      jobId: "2026-10-05:dropoff:1020", routeIndex: 0, vehicleId: "virtual:4-5-10:1", direction: "dropoff",
       startMinutes: 1020, endMinutes: 1036, occurrenceIds: ["occ-d"], swCount: 1, soCount: 0,
-      physicalVehicleId: "virtual:4-10-10:2",
+      physicalVehicleId: "virtual:4-5-10:2",
     },
   ],
   hourlyOccupiedVehicles: { "08:00": 2, "17:00": 1 },
@@ -155,14 +155,14 @@ export function readyResponse(): Response {
 
 /**
  * Shaped like the 2026-10-05 live run: the 08:45 wave carries 20 students (5 Sw, 15 So), so seat
- * capacity (Sw 4 / So 10) alone needs 2 vehicles. `neededVehicles` is what the assignment proved.
+ * capacity (Sw 4 / So 5) alone needs 3 vehicles. `neededVehicles` is what the assignment proved.
  */
 export function peakWaveResponse(neededVehicles = 3): Response {
   const response = baseResponse();
   const counts = [[2, 5], [2, 5], [1, 5]] as const;
   const [pickup, dropoff] = response.jobs;
   const routes = counts.map(([sw, so], index) => ({
-    vehicle_id: `virtual:4-10-10:${index + 1}`,
+    vehicle_id: `virtual:4-5-10:${index + 1}`,
     route_details: [step("D.Kampus", "So1", 10), step("So1", "D.Kampus", 10)],
     total_duration_minutes: 20,
     sw_count: sw,

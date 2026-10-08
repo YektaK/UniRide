@@ -154,12 +154,12 @@ export function readyResponse(): Response {
 }
 
 /**
- * Shaped like the 2026-10-05 live run: the 08:45 wave carries 20 students (5 Sw, 15 So), so seat
- * capacity (Sw 4 / So 5) alone needs 3 vehicles. `neededVehicles` is what the assignment proved.
+ * Peak wave of 15 students (5 Sw, 10 So): seat capacity (Sw 4 / So 5) alone needs 2 vehicles.
+ * `neededVehicles` is what the assignment proved.
  */
 export function peakWaveResponse(neededVehicles = 3): Response {
   const response = baseResponse();
-  const counts = [[2, 5], [2, 5], [1, 5]] as const;
+  const counts = [[2, 3], [2, 3], [1, 4]] as const;
   const [pickup, dropoff] = response.jobs;
   const routes = counts.map(([sw, so], index) => ({
     vehicle_id: `virtual:4-5-10:${index + 1}`,

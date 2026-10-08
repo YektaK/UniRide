@@ -48,6 +48,7 @@ describe("optimizer server boundary", () => {
       "src/services/optimizer-service.ts",
       "src/app/api/sandbox/route.ts",
       "src/services/daily-plan-run.ts",
+      "src/services/fleet-scenario-run.ts",
       "src/services/doubus/multi-vehicle-routing.ts",
     ]);
     const observedModules = new Set<string>();

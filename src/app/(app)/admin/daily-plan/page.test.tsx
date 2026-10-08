@@ -193,9 +193,9 @@ describe("DailyPlanPage", () => {
 
     const why = screen.getByTestId("why-vehicles");
     expect(within(why).getByText("Neden 3 araç?")).toBeTruthy();
-    expect(screen.getByTestId("why-peak").textContent).toBe("En yoğun dalga 08:45 varış: 20 öğrenci (5 Sw, 15 So).");
+    expect(screen.getByTestId("why-peak").textContent).toBe("En yoğun dalga 08:45 varış: 15 öğrenci (5 Sw, 10 So).");
     expect(screen.getByTestId("why-floor").textContent).toBe(
-      "Yalnızca koltuk kapasitesi en az 2 araç gerektirir (Sw: 4 koltuk, So: 10 koltuk).",
+      "Yalnızca koltuk kapasitesi en az 2 araç gerektirir (Sw: 4 koltuk, So: 5 koltuk).",
     );
     expect(screen.getByTestId("why-conclusion").textContent).toBe(
       "Fazladan 1 araç koltuk kapasitesinden kaynaklanmıyor. Olası nedenler: öğrencinin araçta en fazla 90 dk ve araç turunun en fazla 150 dk kalma sınırlarının rotaları bölmesi, aynı saatlere denk gelen rotalar ve araçların bekleme süresi.",
@@ -305,7 +305,7 @@ describe("DailyPlanPage", () => {
     const banner = screen.getByTestId("preview-banner");
     expect(within(banner).getByText("Önizleme — yayınlanamaz, varsayımsal")).toBeTruthy();
     expect(within(banner).getByText("Öğrenci onayları varsayıldı.")).toBeTruthy();
-    expect(within(banner).getByText(/Sanal filo kullanıldı: 4 Sw \/ 10 So/)).toBeTruthy();
+    expect(within(banner).getByText(/Sanal filo kullanıldı: 4 Sw \/ 5 So/)).toBeTruthy();
     const buttons = screen.getAllByRole("button").map((button) => button.textContent ?? "");
     expect(buttons.filter((text) => /yayınla|kaydet|onayla|ata\b/i.test(text))).toEqual([]);
   });

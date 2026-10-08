@@ -545,7 +545,7 @@ describe("buildDailyPlanView - capacity floor", () => {
   it("derives the floor from the response waves and fleet capacity", () => {
     const view = buildDailyPlanView(peakWaveResponse(3));
     expect(view.summary.capacityFloor).toMatchObject({
-      vehicles: 3, direction: "pickup", anchorLabel: "08:45", studentCount: 20, swCount: 5, soCount: 15,
+      vehicles: 2, direction: "pickup", anchorLabel: "08:45", studentCount: 15, swCount: 5, soCount: 10,
       swCapacity: 4, soCapacity: 5,
     });
     expect(view.summary.neededVehicles).toBe(3);

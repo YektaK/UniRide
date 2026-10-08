@@ -952,7 +952,7 @@ describe("demo helpers (K1 admission assumption, K2 virtual fleet)", () => {
   it("treats a missing cooldown as zero and falls back to the default template without vehicles", () => {
     expect(selectVirtualFleetTemplate([vehicleOf("a", 1, 2)]).cooldownMinutes).toBe(0);
     expect(selectVirtualFleetTemplate([])).toEqual(DEFAULT_VIRTUAL_FLEET_TEMPLATE);
-    expect(DEFAULT_VIRTUAL_FLEET_TEMPLATE).toEqual({ swCapacity: 4, soCapacity: 10, cooldownMinutes: 10 });
+    expect(DEFAULT_VIRTUAL_FLEET_TEMPLATE).toEqual({ swCapacity: 4, soCapacity: 5, cooldownMinutes: 10 });
   });
 
   it("builds identical copies with unique ids and at least one vehicle", () => {

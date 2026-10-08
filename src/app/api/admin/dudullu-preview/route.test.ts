@@ -984,7 +984,7 @@ describe("POST /api/admin/dudullu-preview demo modes", () => {
       expect(body.fleet.liveActiveFleetSize).toBe(3);
     });
 
-    it("falls back to the default template (Sw 4 / So 10 / cooldown 10) when no vehicle is active", async () => {
+    it("falls back to the default template (Sw 4 / So 5 / cooldown 10) when no vehicle is active", async () => {
       setAdmin({ ...crowd(2), student_leg_decisions: [confirmedLeg(1), confirmedLeg(2)] });
       mockCrowdTransport(2);
       const { POST } = await import("./route");
@@ -995,8 +995,8 @@ describe("POST /api/admin/dudullu-preview demo modes", () => {
       expect(body.fleet).toEqual({
         mode: "virtual", assignmentFleetSize: 2, liveActiveFleetSize: 0,
         activeVehicleIds: [],
-        template: { swCapacity: 4, soCapacity: 10, cooldownMinutes: 10 },
-        maxCapacity: { swCapacity: 4, soCapacity: 10 },
+        template: { swCapacity: 4, soCapacity: 5, cooldownMinutes: 10 },
+        maxCapacity: { swCapacity: 4, soCapacity: 5 },
       });
     });
 

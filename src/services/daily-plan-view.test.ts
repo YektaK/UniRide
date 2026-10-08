@@ -158,7 +158,7 @@ describe("buildDailyPlanView - ready plan", () => {
     expect(view.hypothetical).toBe(true);
     expect(view.assumedAdmission).toBe(true);
     expect(view.virtualFleet).toBe(true);
-    expect(view.virtualTemplate).toEqual({ swCapacity: 4, soCapacity: 10, cooldownMinutes: 10 });
+    expect(view.virtualTemplate).toEqual({ swCapacity: 4, soCapacity: 5, cooldownMinutes: 10 });
     expect(view.isEmptyDay).toBe(false);
   });
 
@@ -545,8 +545,8 @@ describe("buildDailyPlanView - capacity floor", () => {
   it("derives the floor from the response waves and fleet capacity", () => {
     const view = buildDailyPlanView(peakWaveResponse(3));
     expect(view.summary.capacityFloor).toMatchObject({
-      vehicles: 2, direction: "pickup", anchorLabel: "08:45", studentCount: 20, swCount: 5, soCount: 15,
-      swCapacity: 4, soCapacity: 10,
+      vehicles: 2, direction: "pickup", anchorLabel: "08:45", studentCount: 15, swCount: 5, soCount: 10,
+      swCapacity: 4, soCapacity: 5,
     });
     expect(view.summary.neededVehicles).toBe(3);
   });
@@ -561,7 +561,7 @@ describe("buildDailyPlanView - capacity floor", () => {
 
   it("still parses through the zod contract with and without the new field", () => {
     const withField = peakWaveResponse();
-    expect(parseDudulluPreviewResponse(withField).fleet.maxCapacity).toEqual({ swCapacity: 4, soCapacity: 10 });
+    expect(parseDudulluPreviewResponse(withField).fleet.maxCapacity).toEqual({ swCapacity: 4, soCapacity: 5 });
     const { maxCapacity: _omit, ...fleet } = withField.fleet;
     void _omit;
     expect(parseDudulluPreviewResponse({ ...withField, fleet }).fleet.maxCapacity).toBeUndefined();

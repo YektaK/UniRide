@@ -40,7 +40,7 @@ export interface DailyPlanDeps {
  * optimizer_api/models/schemas.py). The full virtual fleet is only given to the physical
  * assignment search, never to /optimize.
  */
-const OPTIMIZER_MAX_VEHICLES = 50;
+export const OPTIMIZER_MAX_VEHICLES = 50;
 
 // Postgres "undefined_table" and PostgREST "table not found in the schema cache".
 const MISSING_RELATION_CODES = new Set(["42P01", "PGRST205"]);
@@ -109,7 +109,7 @@ function violatesFleetSize(certificate: unknown): boolean {
   return certificate.violations.some((violation) => isRow(violation) && violation.type === "fleet_size_violation");
 }
 
-function violatesRideTime(certificate: unknown): boolean {
+export function violatesRideTime(certificate: unknown): boolean {
   if (!isRow(certificate) || !Array.isArray(certificate.violations)) return false;
   return certificate.violations.some((violation) => isRow(violation) && violation.type === "ride_time_violation");
 }
@@ -125,7 +125,7 @@ function withReasonCodes(
   return { ...result, reasonCodes: [...new Set([...result.reasonCodes, ...extra])] };
 }
 
-function blockedPreview(
+export function blockedPreview(
   serviceDate: string,
   demands: readonly PreviewDemand[],
   matrix: MatrixSnapshot | null,
@@ -135,11 +135,11 @@ function blockedPreview(
   return { ...base, status: "blocked_data" as const, jobs: [], reasonCodes: [reason] };
 }
 
-function exactClock(minutes: number): string {
+export function exactClock(minutes: number): string {
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 }
 
-function nodeMaps(demands: readonly PreviewDemand[]) {
+export function nodeMaps(demands: readonly PreviewDemand[]) {
   const counts = new Map<string, number>();
   for (const demand of demands) counts.set(demand.locationCode, (counts.get(demand.locationCode) ?? 0) + 1);
   const nodeToLocation = new Map<string, string>([[DUDULLU_DEPOT.id, DUDULLU_DEPOT.id]]);
@@ -165,57 +165,45 @@ const ADMISSION_KEYS: readonly DemandAdmission[] = [
   "confirmed", "approved", "pending_student_confirmation", "pending_admin_approval", "cancelled",
 ];
 
-export interface DailyPlanParams {
-  readonly serviceDate: string;
-  readonly admissionMode: AdmissionMode;
-  readonly fleetMode: FleetMode;
-  readonly maxRideTimeMinutes: number;
-  readonly maxTourMinutes: number;
+export interface DailyPlanDemandState {
+  readonly candidateSummary: {
+    dudulluStudents: number;
+    legsByAdmission: Record<DemandAdmission, number>;
+    invalidStudentRecords: number;
+  };
+  readonly extraReasons: PreviewReasonCode[];
+  readonly occurrenceLabels: Record<string, string>;
 }
 
-export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams) {
-  const { serviceDate, admissionMode, fleetMode, maxRideTimeMinutes, maxTourMinutes } = params;
-  const { reader: client, optimizerFetch } = deps;
-  // K1 (owner decision, 2026-10-04): a deliberate, owner-approved exception to
-  // ACTIVE_ROADMAP.md's "do not infer consent". It is preview-only: nothing is written,
-  // the response is labelled hypothetical and publishable stays false.
-  const assumeConfirmed = admissionMode === "assume_confirmed";
-  const hypothetical = assumeConfirmed || fleetMode !== "live";
-  const candidateSummary = {
-    dudulluStudents: 0,
-    legsByAdmission: Object.fromEntries(ADMISSION_KEYS.map((key) => [key, 0])) as Record<DemandAdmission, number>,
-    invalidStudentRecords: 0,
+export function createDailyPlanDemandState(assumeConfirmed: boolean): DailyPlanDemandState {
+  return {
+    candidateSummary: {
+      dudulluStudents: 0,
+      legsByAdmission: Object.fromEntries(ADMISSION_KEYS.map((key) => [key, 0])) as Record<DemandAdmission, number>,
+      invalidStudentRecords: 0,
+    },
+    extraReasons: assumeConfirmed ? ["ADMISSION_ASSUMED"] : [],
+    occurrenceLabels: {},
   };
-  const occurrenceLabels: Record<string, string> = {};
-  const fleetInfo: {
-    mode: FleetMode;
-    assignmentFleetSize: number | null;
-    liveActiveFleetSize: number | null;
-    activeVehicleIds?: string[];
-    template: VirtualFleetTemplate | null;
-    maxCapacity: { swCapacity: number; soCapacity: number } | null;
-  } = { mode: fleetMode, assignmentFleetSize: null, liveActiveFleetSize: null, template: null, maxCapacity: null };
-  // The optimizer limits are echoed; no global minimum ride limit is proven.
-  const limits: {
-    maxRideTimeMinutes: number;
-    maxTourMinutes: number;
-    minimumFeasibleRideMinutes: number | null;
-  } = { maxRideTimeMinutes, maxTourMinutes, minimumFeasibleRideMinutes: null };
-  const extraReasons: PreviewReasonCode[] = [];
-  if (assumeConfirmed) extraReasons.push("ADMISSION_ASSUMED");
+}
 
-  // Every response, including blocked ones, carries the same labelling. Display labels are
-  // location codes only; no user names are read or returned (K4).
-  const finish = <T extends ReturnType<typeof buildDudulluPreview>>(result: T) => ({
-    ...withReasonCodes(result, extraReasons),
-    admissionMode,
-    fleetMode,
-    hypothetical,
-    candidateSummary,
-    fleet: fleetInfo,
-    limits,
-    occurrenceLabels,
-  });
+export type DailyPlanDemandLoad =
+  | { readonly kind: "ready"; readonly admitted: PreviewDemand[] }
+  | { readonly kind: "blocked" }
+  | { readonly kind: "empty" };
+
+/**
+ * Read-only demand loading shared by `runDailyPlan` and the fleet-scenario runner: students,
+ * schedules, recorded leg decisions and legacy requests become admitted demand legs.
+ * Side effects are confined to `state` (counters, reason codes, display labels).
+ */
+export async function loadDailyPlanDemand(
+  client: DailyPlanReader,
+  serviceDate: string,
+  assumeConfirmed: boolean,
+  state: DailyPlanDemandState,
+): Promise<DailyPlanDemandLoad> {
+  const { candidateSummary, extraReasons, occurrenceLabels } = state;
 
   const users = await selectRows(
     client.from("users")
@@ -322,7 +310,7 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
       extraReasons.push("LEG_DECISIONS_UNAVAILABLE");
       if (!assumeConfirmed) {
         if (scheduleDataInvalid) extraReasons.push("SCHEDULE_DATA_INVALID");
-        return finish(blockedPreview(serviceDate, [], null, "LEG_DECISIONS_UNAVAILABLE"));
+        return { kind: "blocked" };
       }
     }
     for (const raw of decisionRows ?? []) {
@@ -396,9 +384,95 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
 
   const admitted = scheduleDataInvalid ? [] : demands.filter((demand) => demand.admission === "confirmed" || demand.admission === "approved");
   if (admitted.length === 0) {
-    return finish(buildDudulluPreview({ serviceDate, demands: [], vehicles: [], matrix: null, jobs: [] }));
+    return { kind: "empty" };
   }
   for (const demand of admitted) occurrenceLabels[demand.occurrenceId] = demand.locationCode;
+  return { kind: "ready", admitted };
+}
+
+/** Matrix snapshot for the admitted locations; null when unavailable or invalid. */
+export async function fetchMatrixSnapshot(
+  optimizerFetch: DailyPlanDeps["optimizerFetch"],
+  admitted: readonly PreviewDemand[],
+): Promise<MatrixSnapshot | null> {
+  try {
+    const response = await optimizerFetch("/api/v1/internal/matrix-snapshot", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ student_location_codes: [...new Set(admitted.map((demand) => demand.locationCode))] }),
+    });
+    if (!response.ok) throw new Error("matrix unavailable");
+    const parsed = snapshotSchema.safeParse(await response.json());
+    if (!parsed.success || parsed.data.id !== `time_matrix:sha256:${parsed.data.sha256}` || parsed.data.version !== parsed.data.sha256) {
+      throw new Error("matrix invalid");
+    }
+    return parsed.data;
+  } catch {
+    return null;
+  }
+}
+
+/** Waves: admitted legs grouped by (direction, anchor), in first-seen order. */
+export function groupWaves(admitted: readonly PreviewDemand[]): PreviewDemand[][] {
+  const groups = new Map<string, PreviewDemand[]>();
+  for (const demand of admitted) {
+    const key = `${demand.direction}:${demand.anchorMinutes}`;
+    const group = groups.get(key) ?? [];
+    group.push(demand);
+    groups.set(key, group);
+  }
+  return [...groups.values()];
+}
+
+export interface DailyPlanParams {
+  readonly serviceDate: string;
+  readonly admissionMode: AdmissionMode;
+  readonly fleetMode: FleetMode;
+  readonly maxRideTimeMinutes: number;
+  readonly maxTourMinutes: number;
+}
+
+export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams) {
+  const { serviceDate, admissionMode, fleetMode, maxRideTimeMinutes, maxTourMinutes } = params;
+  const { reader: client, optimizerFetch } = deps;
+  // K1 (owner decision, 2026-10-04): a deliberate, owner-approved exception to
+  // ACTIVE_ROADMAP.md's "do not infer consent". It is preview-only: nothing is written,
+  // the response is labelled hypothetical and publishable stays false.
+  const assumeConfirmed = admissionMode === "assume_confirmed";
+  const hypothetical = assumeConfirmed || fleetMode !== "live";
+  const demandState = createDailyPlanDemandState(assumeConfirmed);
+  const { candidateSummary, extraReasons, occurrenceLabels } = demandState;
+  const fleetInfo: {
+    mode: FleetMode;
+    assignmentFleetSize: number | null;
+    liveActiveFleetSize: number | null;
+    activeVehicleIds?: string[];
+    template: VirtualFleetTemplate | null;
+    maxCapacity: { swCapacity: number; soCapacity: number } | null;
+  } = { mode: fleetMode, assignmentFleetSize: null, liveActiveFleetSize: null, template: null, maxCapacity: null };
+  // The optimizer limits are echoed; no global minimum ride limit is proven.
+  const limits: {
+    maxRideTimeMinutes: number;
+    maxTourMinutes: number;
+    minimumFeasibleRideMinutes: number | null;
+  } = { maxRideTimeMinutes, maxTourMinutes, minimumFeasibleRideMinutes: null };
+
+  // Every response, including blocked ones, carries the same labelling. Display labels are
+  // location codes only; no user names are read or returned (K4).
+  const finish = <T extends ReturnType<typeof buildDudulluPreview>>(result: T) => ({
+    ...withReasonCodes(result, extraReasons),
+    admissionMode,
+    fleetMode,
+    hypothetical,
+    candidateSummary,
+    fleet: fleetInfo,
+    limits,
+    occurrenceLabels,
+  });
+
+  const loaded = await loadDailyPlanDemand(client, serviceDate, assumeConfirmed, demandState);
+  if (loaded.kind === "blocked") return finish(blockedPreview(serviceDate, [], null, "LEG_DECISIONS_UNAVAILABLE"));
+  if (loaded.kind === "empty") return finish(buildDudulluPreview({ serviceDate, demands: [], vehicles: [], matrix: null, jobs: [] }));
+  const { admitted } = loaded;
 
   const vehicleRows = await selectRows(
     client.from("vehicles")
@@ -445,31 +519,11 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
     };
   }
 
-  let matrix: MatrixSnapshot;
-  try {
-    const response = await optimizerFetch("/api/v1/internal/matrix-snapshot", {
-      method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ student_location_codes: [...new Set(admitted.map((demand) => demand.locationCode))] }),
-    });
-    if (!response.ok) throw new Error("matrix unavailable");
-    const parsed = snapshotSchema.safeParse(await response.json());
-    if (!parsed.success || parsed.data.id !== `time_matrix:sha256:${parsed.data.sha256}` || parsed.data.version !== parsed.data.sha256) {
-      throw new Error("matrix invalid");
-    }
-    matrix = parsed.data;
-  } catch {
-    return finish(blockedPreview(serviceDate, admitted, null, "MATRIX_UNAVAILABLE"));
-  }
+  const matrix = await fetchMatrixSnapshot(optimizerFetch, admitted);
+  if (matrix === null) return finish(blockedPreview(serviceDate, admitted, null, "MATRIX_UNAVAILABLE"));
 
-  const groups = new Map<string, PreviewDemand[]>();
-  for (const demand of admitted) {
-    const key = `${demand.direction}:${demand.anchorMinutes}`;
-    const group = groups.get(key) ?? [];
-    group.push(demand);
-    groups.set(key, group);
-  }
   const jobs: PreviewJobInput[] = [];
-  for (const group of groups.values()) {
+  for (const group of groupWaves(admitted)) {
     const first = group[0]!;
     // Virtual: at most min(legs in the wave, policy cap) identical vehicles per call.
     const waveVehicles = fleetMode === "virtual"

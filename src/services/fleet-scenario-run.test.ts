@@ -49,7 +49,7 @@ function reader(data: Record<string, unknown[]>) {
 
 interface OptimizeBody {
   algorithm: string; direction: "pickup" | "dropoff"; students: Array<{ id: string; disability_type: "Sw" | "So"; location_code: string }>;
-  vehicle_types?: Array<{ type_id: string; max_routes?: number }>;
+  vehicle_types?: Array<{ type_id: string; max_routes?: number; total_capacity?: number }>;
 }
 const steps = (locations: string[]) => {
   const path = ["D.Kampus", ...locations, "D.Kampus"];
@@ -198,6 +198,29 @@ describe("runFleetScenarioDay", () => {
     expect(day.scenarios).toHaveLength(1);
     expect(t.calls.map((c) => c.path)).not.toContain("/api/v1/internal/fleet-selection");
     expect(t.calls.some((c) => (c.body as OptimizeBody | null)?.algorithm === "ga_split_hf")).toBe(false);
+  });
+
+  it("fails closed when a baseline route exceeds a shared total capacity of the fixed type", async () => {
+    const capped: FleetTypeSpec = { ...large, totalCapacity: 2 };
+    const t = transport({ selection: pickSelection("q1", () => ["large", "car"]) });
+    const day = await runFleetScenarioDay({ reader: reader(rows()).client, optimizerFetch: t.fetch, clock },
+      params({ fixedType: capped }));
+    expect(day).toMatchObject({ status: "blocked_data", reasonCodes: ["BASELINE_TOTAL_CAPACITY_EXCEEDED"], scenarios: [] });
+    expect(t.calls.map((c) => c.path)).not.toContain("/api/v1/internal/fleet-selection");
+  });
+
+  it("forwards total_capacity to ga_split_hf only for capped types", async () => {
+    const capped: FleetTypeSpec = { ...sedan, totalCapacity: 3 };
+    const t = transport({ selection: pickSelection("q1", () => ["large", "car"]) });
+    await runFleetScenarioDay({ reader: reader(rows()).client, optimizerFetch: t.fetch, clock },
+      params({ minimiseType: capped, scenarios: [1] }));
+    const hf = t.calls.filter((c) => (c.body as OptimizeBody | null)?.algorithm === "ga_split_hf");
+    expect(hf.length).toBeGreaterThan(0);
+    for (const call of hf) {
+      const types = (call.body as OptimizeBody).vehicle_types!;
+      expect(types.find((v) => v.type_id === "sedan")!.total_capacity).toBe(3);
+      expect(types.find((v) => v.type_id === "large")).not.toHaveProperty("total_capacity");
+    }
   });
 
   it("blocks the day when the matrix is unavailable and reports an empty day", async () => {

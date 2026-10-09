@@ -161,6 +161,7 @@ def check_typed_capacity(
     demands: Optional[Sequence],
     route_types: Sequence[Optional[str]],
     type_caps: Mapping[str, Tuple[int, int]],
+    type_totals: Optional[Mapping[str, Optional[int]]] = None,
 ) -> List[Violation]:
     """Per-route (Sw, So) capacity against the route's declared vehicle type.
 
@@ -168,6 +169,8 @@ def check_typed_capacity(
     unknown or non-string type label on a non-empty route is a
     ``vehicle_type_unknown`` violation (never defaulted to another type); a
     type with ``sw_capacity == 0`` therefore rejects any Sw passenger.
+    ``type_totals`` optionally maps a type id to a shared seat limit
+    (``Sw + So <= total``); a missing or ``None`` entry means pools only.
     """
     if demands is None:
         return []
@@ -198,6 +201,17 @@ def check_typed_capacity(
                     ),
                     route_index=idx,
                 ))
+        total_cap = type_totals.get(label) if type_totals else None
+        if total_cap is not None and sum(load[:2]) > total_cap:
+            violations.append(Violation(
+                type=TYPED_CAPACITY_VIOLATION,
+                severity="error",
+                details=(
+                    f"Route {idx} ({label}) total load {sum(load[:2])} exceeds "
+                    f"type total capacity {total_cap}"
+                ),
+                route_index=idx,
+            ))
     return violations
 
 

@@ -243,7 +243,14 @@ def _typed_fleet_violations(
     ]
     route_types += [None] * (len(routes) - len(route_types))
     type_caps = {t.type_id: (t.sw_capacity, t.so_capacity) for t in vehicle_types}
-    out: List[Any] = list(check_typed_capacity(routes, demands, route_types, type_caps))
+    type_totals = {
+        t.type_id: getattr(t, "total_capacity", None)
+        for t in vehicle_types
+        if getattr(t, "total_capacity", None) is not None
+    }
+    out: List[Any] = list(
+        check_typed_capacity(routes, demands, route_types, type_caps, type_totals)
+    )
     quotas = {t.type_id: t.max_routes for t in vehicle_types if t.max_routes is not None}
     out.extend(check_type_quota(route_types, quotas, routes))
 

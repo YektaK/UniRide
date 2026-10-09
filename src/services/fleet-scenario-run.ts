@@ -198,7 +198,8 @@ function template(type: FleetTypeSpec): VirtualFleetTemplate {
 }
 
 function fits(type: FleetTypeSpec, sw: number, so: number): boolean {
-  return sw <= type.swCapacity && so <= type.soCapacity;
+  return sw <= type.swCapacity && so <= type.soCapacity &&
+    (type.totalCapacity === undefined || sw + so <= type.totalCapacity);
 }
 
 interface RouteFacts {
@@ -375,6 +376,13 @@ export async function runFleetScenarioDay(
     return blocked([...new Set(baselinePreview.reasonCodes)] as string[], common);
   }
 
+  // The baseline (ga_split) only knows the Sw/So pools; a shared seat limit on the fixed type
+  // would go unenforced there, so fail closed instead of reporting an over-capacity baseline.
+  if (fixedType.totalCapacity !== undefined && baselinePreview.jobs.some((job) =>
+    job.intervals.some((interval) => !fits(fixedType, interval.swCount, interval.soCount)))) {
+    return blocked(["BASELINE_TOTAL_CAPACITY_EXCEEDED"], common);
+  }
+
   // ---- facts per verified route ------------------------------------------------------------
   const factsOf = (job: VerifiedPreviewJob): RouteFacts[] =>
     job.intervals.map((interval, index) => ({
@@ -484,6 +492,7 @@ export async function runFleetScenarioDay(
           record.push({ optionId, kind: "quota", quota: q, status, routes, reason });
         const specs = [fixedType, minimiseType].map((type) => ({
           type_id: type.typeId, sw_capacity: type.swCapacity, so_capacity: type.soCapacity,
+          ...(type.totalCapacity === undefined ? {} : { total_capacity: type.totalCapacity }),
           ...(type.rideLimit === undefined ? {} : { max_ride_time: type.rideLimit }),
           ...(type.tourLimit === undefined ? {} : { max_travel_time: type.tourLimit }),
           ...(type === fixedType ? { max_routes: q } : {}),
@@ -520,8 +529,10 @@ export async function runFleetScenarioDay(
 
   const types = (count: number): TypedFleetType[] => [
     { typeId: fixedType.typeId, swCapacity: fixedType.swCapacity, soCapacity: fixedType.soCapacity,
+      ...(fixedType.totalCapacity === undefined ? {} : { totalCapacity: fixedType.totalCapacity }),
       cooldownMinutes: fixedType.cooldownMinutes, role: "fixed", count, idPrefix: "L" },
     { typeId: minimiseType!.typeId, swCapacity: minimiseType!.swCapacity, soCapacity: minimiseType!.soCapacity,
+      ...(minimiseType!.totalCapacity === undefined ? {} : { totalCapacity: minimiseType!.totalCapacity }),
       cooldownMinutes: minimiseType!.cooldownMinutes, role: "minimise", idPrefix: "C",
       ...(params.maxCars === null || params.maxCars === undefined ? {} : { maxCount: params.maxCars }) },
   ];

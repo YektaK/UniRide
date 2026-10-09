@@ -19,6 +19,8 @@ export interface TypedFleetType {
   readonly typeId: string;
   readonly swCapacity: number;
   readonly soCapacity: number;
+  /** Optional shared seat limit: Sw + So <= totalCapacity (pools only when absent). */
+  readonly totalCapacity?: number;
   readonly cooldownMinutes: number;
   readonly role: "fixed" | "minimise";
   /** Required for `fixed`: the number of vehicles of this type. */
@@ -90,7 +92,8 @@ export interface TypedAssignmentResult {
 class BudgetExceeded extends Error {}
 
 function fits(type: TypedFleetType, interval: PreviewRouteInterval): boolean {
-  return interval.swCount <= type.swCapacity && interval.soCount <= type.soCapacity;
+  return interval.swCount <= type.swCapacity && interval.soCount <= type.soCapacity &&
+    (type.totalCapacity === undefined || interval.swCount + interval.soCount <= type.totalCapacity);
 }
 
 function conflicts(cooldown: number, a: PreviewRouteInterval, b: PreviewRouteInterval): boolean {
@@ -106,6 +109,8 @@ function validTypes(types: readonly TypedFleetType[]): boolean {
     ids.add(type.typeId);
     const numbers = [type.swCapacity, type.soCapacity, type.cooldownMinutes];
     if (numbers.some((value) => !Number.isFinite(value) || value < 0)) return false;
+    if (type.totalCapacity !== undefined &&
+      !(Number.isInteger(type.totalCapacity) && type.totalCapacity >= 1)) return false;
     if (type.role === "minimise") {
       minimise += 1;
       if (type.maxCount !== undefined && !(Number.isInteger(type.maxCount) && type.maxCount >= 0)) return false;

@@ -47,6 +47,7 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 | X01 | Data errors | Vehicle capacity sources disagreed (DB 4/10 vs physical/decoder 4/5); DB corrected | Owner decision; data error |
 | H01 | Heterogeneous fleet | Typed split, exact day selection, typed assignment; additive only; academic code untouched | Owner approved 2026-10-08 |
 | H02 | Heterogeneous fleet | Q1: can a sedan carry any Sw (`sedan:1sw3so`)? | **Open question** |
+| H03 | Heterogeneous fleet | Optional shared seat limit `total_capacity`; Doblo = 3 seats total, max 1 Sw | Owner decision 2026-10-09 |
 
 ## Demo scope
 
@@ -298,6 +299,12 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 ### H02 - Q1 open: can a sedan carry Sw?
 
 - **Date/status:** 2026-10-08; **open question**. The current answer is sedan Sw = 0. Whether a Fiat Linea can safely carry 1-2 Sw (folding, transfer seat, ramp) is not verified. It can be tested later as `sedan:1sw3so` with no code change; any such result must be labelled as a scenario, not as validated practice.
+
+### H03 - optional shared seat limit; Doblo is 3 seats in total
+
+- **Date/status:** 2026-10-09; owner decision. **Chosen:** vehicle types gain an optional `total_capacity` (API `total_capacity`, TS `totalCapacity`, CLI `:capN`). Feasible iff Sw <= sw, So <= so and, when set, Sw + So <= total. Unset is byte-identical to before. Fiat Doblo = 3 passenger seats (1 front + 2 rear), at most 1 Sw who sits in a seat while the chair is stowed: `doblo:1sw3so:cap3`. Minibus (4 Sw + 5 So pools) and sedan (0 + 4) unchanged.
+- **Superseded:** the earlier minivan campaigns that used `minivan:1sw3so` overstated capacity (they allowed 1 Sw + 3 So = 4 passengers); their results must not be cited as Doblo evidence and are to be rerun with `:cap3`. **Rejected:** changing `string_split_decoder`/`ga_split` (academic parity); the `ga_split` baseline therefore cannot enforce a limit on the fixed type and fails closed.
+- **Evidence:** [design](designs/HETEROGENEOUS_FLEET_DESIGN.md), tests `test_typed_split_decoder.py`, `test_typed_certificate_checks.py`, `test_heterogeneous_fleet_wp3.py`, `typed-fleet-assignment.test.ts`, `fleet-scenario-args.test.ts`.
 
 ## Open questions and evidence limits
 

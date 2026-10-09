@@ -8,6 +8,8 @@ export interface FleetTypeSpec {
   typeId: string;
   swCapacity: number;
   soCapacity: number;
+  /** Optional shared seat limit (`:capN`): Sw + So <= totalCapacity. */
+  totalCapacity?: number;
   cooldownMinutes: number;
   /** Per-type ride limit; defaults to the experiment ride limit when absent. */
   rideLimit?: number;
@@ -35,7 +37,7 @@ export interface FleetArgs {
 export const MAX_FLEET_SCENARIO_L = 4;
 const TYPE_ID = /^[a-z][a-z0-9_-]{0,31}$/;
 
-/** Grammar: `<id>:<n>sw<m>so[:cd<min>][:r<R>][:t<T>]`, each optional part at most once. */
+/** Grammar: `<id>:<n>sw<m>so[:capN][:cd<min>][:r<R>][:t<T>]`, each optional part at most once. */
 export function parseFleetType(text: string): FleetTypeSpec {
   const [typeId, capacity, ...options] = text.trim().split(":");
   const match = capacity?.match(/^(\d{1,3})sw(\d{1,3})so$/);
@@ -44,11 +46,14 @@ export function parseFleetType(text: string): FleetTypeSpec {
   if (spec.swCapacity + spec.soCapacity < 1) throw new Error("Invalid fleet type");
   const seen = new Set<string>();
   for (const option of options) {
-    const m = option.match(/^(cd|r|t)(\d{1,3})$/);
+    const m = option.match(/^(cap|cd|r|t)(\d{1,3})$/);
     if (!m || seen.has(m[1])) throw new Error("Invalid fleet type");
     seen.add(m[1]);
     const value = Number(m[2]);
-    if (m[1] === "cd") {
+    if (m[1] === "cap") {
+      if (value < 1 || value > spec.swCapacity + spec.soCapacity) throw new Error("Invalid fleet type");
+      spec.totalCapacity = value;
+    } else if (m[1] === "cd") {
       if (value > 240) throw new Error("Invalid fleet type");
       spec.cooldownMinutes = value;
     } else if (m[1] === "r") {

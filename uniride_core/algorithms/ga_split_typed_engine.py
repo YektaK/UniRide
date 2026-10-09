@@ -9,9 +9,10 @@ diff, parity gate P1); it reuses the exported GA helpers and the same ``rng``
 discipline, so with one type and no quota the RNG stream, the routes and the
 generation count equal ``solve_ga_split`` (parity gate P4).
 
-Inner objective (CX-03, decision O05/H01): the inner split decode is cost-only
+Inner objective (CX-03, decisions O05/H01/H04): the inner split decode is cost-only
 (``decode_typed`` without ``minimize_type``, exactly the untyped DP) when there
-is one type and no quota; that is what makes P4 hold on nonmetric matrices.
+is one type and no quota (quota_type or quota unset, matching the decoder's
+quota tracking, which needs both); that is what makes P4 hold on nonmetric matrices.
 With two or more types or a quota the inner decode is count-first (routes of
 ``minimize_type``, then cost), which is intended for borrowed-vehicle
 minimisation.  The two inner objectives differ by design.  The outer GA
@@ -78,8 +79,12 @@ def inner_minimize_type(
     quota_type: Optional[str],
     quota: Optional[int],
 ) -> Optional[str]:
-    """Inner split objective: ``None`` (cost-only) for one type and no quota."""
-    if len(types) == 1 and quota_type is None and quota is None:
+    """Inner split objective: ``None`` (cost-only) for one type and no quota.
+
+    "No quota" means ``quota_type`` or ``quota`` unset: ``decode_typed`` only
+    tracks a quota when both are set.
+    """
+    if len(types) == 1 and (quota_type is None or quota is None):
         return None
     return minimize_type
 
@@ -147,6 +152,8 @@ def solve_ga_split_typed(
 ) -> TypedGASolution:
     """Run the typed GA-Split and return the final typed decode."""
     types = list(types)
+    if minimize_type not in {t.id for t in types}:
+        raise ValueError(f"minimize_type {minimize_type!r} is not a declared vehicle type")
 
     def evaluate(individual: GAIndividual) -> GAIndividual:
         return _evaluate(

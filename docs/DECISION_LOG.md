@@ -42,6 +42,8 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 | S02 | Service boundaries | Per-run ownership tokens | Documented design; present security not inferred |
 | S03 | Service boundaries | Narrow remediation and explicit waivers | Historical bounded scope |
 | S04 | Service boundaries | Role and ride status locked in RLS; student-only self-registration | Lead decision 2026-10-09 |
+| S05 | Service boundaries | route_plans readable only by authenticated drivers/admins; legacy rls_policies.sql retired | Lead decision 2026-10-09 |
+| S06 | Service boundaries | H1 password-hint endpoint deliberately deferred until go-live | Owner decision 2026-10-09 |
 | W01 | Daily workflow | Separate legs, exact anchors, confirmed admission | Approved production contract |
 | W02 | Daily workflow | Preview orchestration before publication/operations | Approved staged design |
 | X01 | Data errors | Vehicle capacity sources disagreed (DB 4/10 vs physical/decoder 4/5); DB corrected | Owner decision; data error |
@@ -261,6 +263,18 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 - **Date/status:** 2026-10-09; lead decision, repo fix landed on `fix/qw1-users-role-rls`, live apply pending the owner. **Chosen/rationale:** the live DB had no role trigger and no `is_admin()`, so the migration does not depend on either: insert policy `role = 'student'`, update policy with WITH CHECK, `prevent_role_change()` (invoker, empty search_path) on INSERT and UPDATE OF role with a service_role exemption; the migration aborts if a FOR ALL policy exists on the two tables; student cancel only from pending/confirmed rows without vehicle/actual times, ride_request writes limited to pending statuses and self-cancellation, and the two SECURITY DEFINER RPCs get a pinned `search_path` and no PUBLIC/anon/authenticated EXECUTE (no caller exists). `signUp` loses its role parameter; admin/driver accounts stay on the service-role admin route.
 - **Rejected/why:** keeping `authenticated` EXECUTE on the RPCs (no browser caller found); relying on `is_admin()` (absent live). **Dead ends:** no local Postgres/Supabase, so behaviour is proven only by the owner-run script `supabase/tests/20261009_role_lock.sql` plus a static clause test. **Reversal:** none recorded.
 - **Evidence:** [audit C1/C1.b](ULTIMATE_AUDIT_2026-10-01_CLAUDE_OPUS_5_5.md), `supabase/migrations/20261009_lock_user_role_and_ride_status.sql`. **Check first:** that the migration was applied and `pg_policies`/`pg_trigger` match it; server-side creation of the `users` row remains open.
+
+### S05 — route_plans read lock; retire the drop-all RLS script (C1.d, M21)
+
+- **Date/status:** 2026-10-09; lead decision, repo fix on `fix/route-plans-rls-m21`, live apply pending the owner. **Chosen/rationale:** the live `route_plans` read policy was `{public}` with no auth check, so anon could read published plans. The migration `20261010_route_plans_read_lock.sql` makes it `TO authenticated` and requires `users.role` in driver/admin (trustworthy since S04 locked the role); admin `ALL` policies on `route_plans`/`sandbox_scenarios` become `TO authenticated` with WITH CHECK; `admin_settings`/`routes`/`vehicles` select_all become `TO authenticated` with the same qual. The only reader of `route_plans` is the BFF (`requireAdmin` + service-role key), so no student or driver path needed broader access. `supabase/rls_policies.sql` is kept as a legacy reference: the drop-all loop is removed and an aborting guard inside `BEGIN … COMMIT` stops any run, so it can neither drop migration-owned policies nor recreate pre-lock policies.
+- **Rejected/why:** deleting `rls_policies.sql` (loses history, other docs link to it); keeping the loop with exclusions (would still recreate older policy text); granting students read access (no student reader exists). **Dead ends:** no local Postgres, so behaviour is proven only by the owner-run script `supabase/tests/20261010_route_plans_read_lock.sql` and a static clause test. **Reversal:** none recorded.
+- **Evidence:** [audit Appendix J C1.d, M21](ULTIMATE_AUDIT_2026-10-01_CLAUDE_OPUS_5_5.md). **Check first:** that the migration was applied and `pg_policies` shows no `{public}`/`anon` role on the five tables; consolidating all policy into migrations stays MT8.
+
+### S06 — H1 password-hint endpoint deferred until go-live
+
+- **Date/status:** 2026-10-09; owner decision. H1 (the password-hint endpoint answers without login) is deliberately DEFERRED until go-live. **Chosen/rationale:** the system is single-user (owner only); the hints are owner-only mnemonics for the student/driver/admin test accounts. The code (`src/app/api/auth/hint/route.ts`) is not changed.
+- **Rejected/why:** fixing now (no outside users, the hints are the owner's test-account mnemonics). **Dead ends:** none. **Reversal:** none recorded.
+- **Evidence:** [audit H1](ULTIMATE_AUDIT_2026-10-01_CLAUDE_OPUS_5_5.md), Appendix J status DEFERRED. **Check first:** H1 must be closed in the pre-go-live checklist; re-open before any outside user gets an account.
 
 ### S03 — bounded quick fixes, hermetic discovery and explicit waivers
 

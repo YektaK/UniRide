@@ -588,6 +588,12 @@
       }
     },
     "benchmark": {
+      "adminGate": {
+        "title": "Yönetici girişi gerekli",
+        "description": "Benchmark paketi yalnızca yönetici hesaplarına açıktır. Devam etmek için giriş yapın.",
+        "signIn": "Giriş yap",
+        "checking": "Yetki kontrol ediliyor..."
+      },
       "sizeLabels": {
         "small": "Küçük",
         "medium": "Orta",

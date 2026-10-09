@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerToken } from '@/lib/benchmark-owner-cookie';
 import { optimizerFetch } from "@/lib/optimizer-server";
+import { denyUnlessBenchmarkAdmin } from "@/lib/benchmark-auth";
 
 /**
  * POST /api/benchmark/run/stop
@@ -21,6 +22,9 @@ import { optimizerFetch } from "@/lib/optimizer-server";
  * }
  */
 export async function POST(request: NextRequest) {
+  const denied = await denyUnlessBenchmarkAdmin(request);
+  if (denied) return denied;
+
   try {
     const { runId } = await request.json();
 
@@ -47,7 +51,7 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
       return NextResponse.json(
-        { error: error.error || 'Durdurma başarısız' },
+        { error: error.detail || error.error || 'Durdurma başarısız' },
         { status: response.status }
       );
     }

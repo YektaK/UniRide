@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerToken } from '@/lib/benchmark-owner-cookie';
 import { optimizerFetch } from "@/lib/optimizer-server";
+import { denyUnlessBenchmarkAdmin } from "@/lib/benchmark-auth";
 
 /**
  * GET /api/benchmark/run/status?runId=xyz
@@ -21,6 +22,9 @@ import { optimizerFetch } from "@/lib/optimizer-server";
  * }
  */
 export async function GET(request: NextRequest) {
+  const denied = await denyUnlessBenchmarkAdmin(request);
+  if (denied) return denied;
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const runId = searchParams.get('runId');
@@ -51,7 +55,7 @@ export async function GET(request: NextRequest) {
       }
       const error = await response.json().catch(() => ({}));
       return NextResponse.json(
-        { error: error.error || 'Durum alınamadı' },
+        { error: error.detail || error.error || 'Durum alınamadı' },
         { status: response.status }
       );
     }

@@ -28,7 +28,7 @@ describe("BenchmarkSuitePage render contract", () => {
 
 describe("BenchmarkSuitePage admin gate", () => {
   it("renders the suite only for admins, so anonymous visitors trigger no benchmark calls", () => {
-    expect(pageSource).toContain('user.role === "admin"');
+    expect(pageSource).toContain('user.role !== "admin"');
     expect(pageSource).toMatch(/export default function BenchmarkSuitePage\(\)[\s\S]*?<BenchmarkSuite \/>/);
     expect(pageSource).toContain("function BenchmarkSuite()");
   });

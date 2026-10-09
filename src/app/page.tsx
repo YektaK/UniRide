@@ -1,6 +1,8 @@
 "use client";
 
 import { useTranslations } from 'next-intl';
+import Link from "next/link";
+import { useAuth } from "@/hooks/use-auth";
 import React, { useState, useEffect, useCallback, useRef, useMemo, Suspense } from "react";
 import {
   Card,
@@ -464,7 +466,7 @@ function AnimatedCounter({ target, duration = 1200, suffix = "", prefix = "", de
 // Main Page Component
 // ============================================================
 
-export default function BenchmarkSuitePage() {
+function BenchmarkSuite() {
   const t = useTranslations('page.benchmark');
   const tc = useTranslations('common');
   const { toast } = useToast();
@@ -2736,4 +2738,36 @@ export default function BenchmarkSuitePage() {
       </footer>
     </div>
   );
+}
+
+// ============================================================
+// Admin gate (audit C4): every /api/benchmark/* route requires an admin session,
+// so anonymous visitors must not mount the suite (it fires benchmark calls on mount).
+// ============================================================
+
+export default function BenchmarkSuitePage() {
+  const t = useTranslations('page.benchmark.adminGate');
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
+        {t('checking')}
+      </div>
+    );
+  }
+
+  if (!user || user.role !== "admin") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
+        <h1 className="text-xl font-semibold">{t('title')}</h1>
+        <p className="max-w-md text-sm text-muted-foreground">{t('description')}</p>
+        <Button asChild>
+          <Link href="/login">{t('signIn')}</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  return <BenchmarkSuite />;
 }

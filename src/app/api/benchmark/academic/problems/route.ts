@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { optimizerFetch } from "@/lib/optimizer-server";
+import { denyUnlessBenchmarkAdmin } from "@/lib/benchmark-auth";
 
 export async function GET(request: NextRequest) {
+  const denied = await denyUnlessBenchmarkAdmin(request);
+  if (denied) return denied;
+
   try {
     const { searchParams } = new URL(request.url);
     const params = new URLSearchParams();

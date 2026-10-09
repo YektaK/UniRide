@@ -1,3 +1,4 @@
+vi.mock("@/lib/admin-api", () => ({ getAuthToken: vi.fn().mockResolvedValue("test-token") }));
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/benchmark-run-id", () => ({

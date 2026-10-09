@@ -68,13 +68,19 @@ class BenchmarkRunState:
     stop_event: threading.Event = field(default_factory=threading.Event, repr=False)
     thread: Optional[threading.Thread] = field(default=None, repr=False)
 
+    def thread_active(self) -> bool:
+        """Alive, or registered but not started yet (register happens before start)."""
+        return self.worker_alive() or (
+            self.thread is not None and getattr(self.thread, "ident", 1) is None
+        )
+
     def worker_alive(self) -> bool:
         is_alive = getattr(self.thread, "is_alive", None)  # tolerate thread test doubles
         return bool(is_alive and is_alive())
 
     def holds_slot(self) -> bool:
         """A run occupies a slot while RUNNING or while its worker thread is alive."""
-        return self.status == BenchmarkStatus.RUNNING or self.worker_alive()
+        return self.status == BenchmarkStatus.RUNNING and (self.thread is None or self.thread_active())
 
 
 def hash_owner_token(token: str) -> str:
@@ -256,6 +262,20 @@ class BenchmarkStateManager:
             if run_id in self._runs:
                 self._runs[run_id].thread = thread
 
+    def ensure_terminal(self, run_id: str) -> None:
+        """Called when a worker exits: a run still RUNNING becomes STOPPED or FAILED."""
+        with self._lock:
+            run = self._runs.get(run_id)
+            if run is None or run.status != BenchmarkStatus.RUNNING:
+                return
+            run.end_time = datetime.now(timezone.utc).isoformat()
+            if run.stop_event.is_set():
+                run.status = BenchmarkStatus.STOPPED
+                run.message = "Stopped by user"
+            else:
+                run.status = BenchmarkStatus.FAILED
+                run.message = "Worker exited without completing the run"
+
     def stop_requested(self, run_id: str) -> bool:
         """True once stop_run was called for this run (checked by the worker loop)."""
         with self._lock:
@@ -276,7 +296,7 @@ class BenchmarkStateManager:
             if run.status != BenchmarkStatus.RUNNING:
                 return run.status == BenchmarkStatus.STOPPED
             run.stop_event.set()
-            if run.worker_alive():
+            if run.thread_active():
                 run.message = message or "Stop requested; waiting for the current experiment to finish"
             else:
                 run.status = BenchmarkStatus.STOPPED

@@ -13,13 +13,13 @@ from fastapi.params import Query as QueryParam
 
 try:
     from optimizer_api.auth import require_tenant_authorization
-    from optimizer_api.rate_limit import require_rate_limit
+    from optimizer_api.rate_limit import require_benchmark_rate_limit
 except ModuleNotFoundError:
     from auth import require_tenant_authorization
-    from rate_limit import require_rate_limit
+    from rate_limit import require_benchmark_rate_limit
 
 from models.schemas import BenchmarkRunRequest, BenchmarkImportRequest
-from benchmark_runner import BenchmarkRunner, ProblemInstance, AlgorithmConfig, validate_benchmark_params
+from benchmark_runner import BenchmarkRunner, ProblemInstance, AlgorithmConfig, validate_benchmark_params, validate_matrix_params
 from benchmark_state import benchmark_state_manager, BenchmarkStatus, MAX_CONCURRENT_BENCHMARKS, verify_owner_token
 from strategies import OPERATIONAL_ONLY_STRATEGIES, STRATEGY_REGISTRY
 from utils.tsplib_parser import (
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/api/v1/benchmark",
     tags=["Benchmark"],
-    dependencies=[Depends(require_tenant_authorization), Depends(require_rate_limit)],
+    dependencies=[Depends(require_tenant_authorization)],
 )
 
 _VALID_PROBLEM_NAME = re.compile(r"^[a-zA-Z0-9_-]+$")
@@ -266,22 +266,35 @@ def get_benchmark_results(run_id: str) -> Dict:
         "parameters": state.parameters, "results": state.results,
     }
 
-@router.post("/run")
+@router.post("/run", dependencies=[Depends(require_benchmark_rate_limit)])
 def start_benchmark(body: BenchmarkRunRequest) -> Dict:
     return _start_benchmark_impl(body.run_id, body.algorithms, body.problems, body.settings)
 
-def _validate_algorithm_params(algorithms: List[Dict]) -> None:
-    """Reject out-of-policy tuning parameters with 422 (messages carry no internals)."""
+def _reject_params(index: int, reason: str) -> HTTPException:
+    return HTTPException(
+        status_code=422,
+        detail={"error": "Benchmark parameters exceed the compute policy",
+                "algorithm_index": index, "reason": reason},
+    )
+
+
+def _validate_algorithm_params(algorithms: List[Dict], matrix_native: bool = False) -> None:
+    """Reject malformed or out-of-policy tuning parameters with 422 (no internals leaked)."""
     for index, algo in enumerate(algorithms):
+        if not isinstance(algo, dict):
+            raise _reject_params(index, "algorithm must be an object")
+        params = algo.get("params")
+        if params is None:
+            params = {}
+        if not isinstance(params, dict):
+            raise _reject_params(index, "params must be an object")
         algo_id = str(algo.get("id", algo.get("name", "unknown")))
         try:
-            validate_benchmark_params(algo_id, algo.get("params") or {})
+            validate_benchmark_params(algo_id, params)
+            if matrix_native:
+                validate_matrix_params(params)
         except ValueError as exc:
-            raise HTTPException(
-                status_code=422,
-                detail={"error": "Benchmark parameters exceed the compute policy",
-                        "algorithm_index": index, "reason": str(exc)},
-            )
+            raise _reject_params(index, str(exc))
 
 
 def _start_benchmark_impl(run_id: str, algorithms: List[Dict], problems: List[str], settings: Dict) -> Dict:
@@ -291,8 +304,9 @@ def _start_benchmark_impl(run_id: str, algorithms: List[Dict], problems: List[st
                 status_code=409,
                 detail={"error": "Benchmark run already exists", "run_id": run_id},
             )
-        _validate_algorithm_params(algorithms)
-        if settings.get("execution_mode") in {"matrix_native", "academic_matrix"}:
+        matrix_native = settings.get("execution_mode") in {"matrix_native", "academic_matrix"}
+        _validate_algorithm_params(algorithms, matrix_native)
+        if matrix_native:
             return _start_matrix_native_benchmark_impl(run_id, algorithms, problems, settings)
         
         n_runs = settings.get("n_runs", 3)
@@ -331,10 +345,12 @@ def _start_benchmark_impl(run_id: str, algorithms: List[Dict], problems: List[st
                 runner.run(problems=benchmark_problems, algorithms=algo_configs, n_runs=n_runs, seed=settings.get("seed", 42), skip_cached=settings.get("skip_cached", False))
             except Exception as e:
                 benchmark_state_manager.fail_run(run_id, f"Error: {str(e)}")
+            finally:
+                benchmark_state_manager.ensure_terminal(run_id)
         
         executor_thread = threading.Thread(target=run_benchmark_task, daemon=True, name=f"benchmark-executor-{run_id}")
-        executor_thread.start()
         benchmark_state_manager.register_thread(run_id, executor_thread)
+        executor_thread.start()
         
         return {
             "run_id": run_id, "status": "running", "total_experiments": total_experiments,
@@ -458,10 +474,12 @@ def _start_matrix_native_benchmark_impl(run_id: str, algorithms: List[Dict], pro
                 metadata={"error": str(exc)},
             )
             benchmark_state_manager.fail_run(run_id, f"Error: {str(exc)}")
+        finally:
+            benchmark_state_manager.ensure_terminal(run_id)
 
     executor_thread = threading.Thread(target=run_matrix_task, daemon=True, name=f"matrix-benchmark-executor-{run_id}")
-    executor_thread.start()
     benchmark_state_manager.register_thread(run_id, executor_thread)
+    executor_thread.start()
     return {
         "run_id": run_id,
         "status": "running",
@@ -517,7 +535,7 @@ def _load_benchmark_problem(problem_name: str) -> Optional[ProblemInstance]:
         file_path=info.file_path,
     )
 
-@router.post("/import")
+@router.post("/import", dependencies=[Depends(require_benchmark_rate_limit)])
 def import_benchmark(body: BenchmarkImportRequest) -> Dict:
     try:
         data = body.model_dump()
@@ -571,7 +589,7 @@ def stop_benchmark(run_id: str) -> Dict:
         "message": f"Benchmark {run_id} stop requested" if stopping else f"Benchmark {run_id} stopped"
     }
 
-@router.post("/download/{problem_name}")
+@router.post("/download/{problem_name}", dependencies=[Depends(require_benchmark_rate_limit)])
 def download_benchmark_problem(problem_name: str) -> Dict:
     name_lower = problem_name.lower().strip()
     if not _VALID_PROBLEM_NAME.fullmatch(name_lower):

@@ -186,7 +186,7 @@ The hybrid has the same f2 as the pure L2 + minivan option in 4 of 4 cases and a
 - Heuristic routes and a minimum proven only over the generated menus; the front is an approximation (section 1).
 - The minivan capacity (3 passengers in total, at most 1 Sw) and the sedan capacity (0 Sw + 4 So) are assumptions; the sedan having no wheelchair place is an open owner question.
 - A borrowed vehicle is assumed available for the whole of its first-start to last-end window on each day it is used (f3 counts only its busy time); borrowing for single routes would need the lenders' schedules.
-- No cost data: nothing here states which option is cheaper.
+- No cost data: this document gives no cost ranking.
 
 ## 11. Reproduce
 

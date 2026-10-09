@@ -64,29 +64,6 @@ _LEGACY_ALIASES = {
 }
 
 
-def _assignment_field_for_algorithm(algorithm_id: str) -> Optional[str]:
-    """Field that benchmark params are ASSIGNED to (legacy mapping, kept for academic parity).
-
-    ga_split_enhanced / ga_split_hf deliberately get no ga_config and no per-run
-    seed here (pre-existing behaviour, see DECISION_LOG A06). The policy table
-    is used for validation only (config_field_for_algorithm).
-    """
-    key = algorithm_id.lower().replace("-", "_")
-    if key in {"genetic_algorithm", "ga", "ga_split"}:
-        return "ga_config"
-    if key in {"pso", "pso_split"}:
-        return "pso_config"
-    if key in {"gwo", "grey_wolf", "gwo_split"}:
-        return "gwo_config"
-    if key in {"hho", "harris_hawks", "hho_split"}:
-        return "hho_config"
-    if key in {"e2bso", "entropy_bso", "e2b", "r2dma", "rdma", "paoea", "aoea"}:
-        return "sota_config"
-    if key in {"two_opt", "2opt"}:
-        return "two_opt_config"
-    return None
-
-
 def config_field_for_algorithm(algorithm_id: str) -> Optional[str]:
     """Name of the OptimizationRequest tuning field an algorithm's params go to.
 
@@ -540,7 +517,7 @@ class BenchmarkRunner:
         if not clean_params:
             return
 
-        config_field = _assignment_field_for_algorithm(algorithm_id)
+        config_field = config_field_for_algorithm(algorithm_id)
         config_params = {key: value for key, value in clean_params.items() if key != "local_search_type"}
         # Audit C4/QW4: bound the budget keys with the compute policy before
         # anything is assigned to the request. Unknown keys keep their legacy

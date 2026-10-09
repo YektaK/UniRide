@@ -8,6 +8,7 @@ import math
 import os
 from typing import Dict, List, Optional
 
+from academic_benchmark.obsolete_results import filter_obsolete_rows
 from academic_benchmark.tsplib_manager import (
     DB_PATH,
     get_all_problems,
@@ -58,11 +59,18 @@ def get_benchmark_rows(
     db_path: str = DB_PATH,
     prefer_db: bool = True,
     feasible_only: bool = False,
+    include_obsolete: bool = False,
 ) -> Dict[str, object]:
-    """Read benchmark rows from SQLite source-of-truth, with CSV fallback."""
+    """Read benchmark rows from SQLite source-of-truth, with CSV fallback.
+
+    Rows flagged obsolete (metadata.obsolete, see obsolete_results.py) are excluded
+    unless ``include_obsolete`` is True; the limit applies before this filter.
+    """
     safe_limit = max(1, min(int(limit), 5000))
     if prefer_db:
-        db_rows = query_benchmark_results(limit=safe_limit, db_path=db_path)
+        db_rows = filter_obsolete_rows(
+            query_benchmark_results(limit=safe_limit, db_path=db_path), include_obsolete
+        )
         if feasible_only:
             db_rows = [row for row in db_rows if is_feasible_benchmark_row(row)]
         if db_rows:

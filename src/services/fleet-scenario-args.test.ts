@@ -10,6 +10,15 @@ describe("parseFleetType", () => {
       typeId: "sedan", swCapacity: 1, soCapacity: 3, cooldownMinutes: 15, rideLimit: 50, tourLimit: 120,
     });
   });
+  it("parses the optional :capN shared seat limit in any position", () => {
+    expect(parseFleetType("minivan:1sw3so:cap3:cd10")).toEqual({
+      typeId: "minivan", swCapacity: 1, soCapacity: 3, totalCapacity: 3, cooldownMinutes: 10,
+    });
+    expect(parseFleetType("minivan:1sw3so:cd5:cap3:r50").totalCapacity).toBe(3);
+    expect(parseFleetType("large:4sw5so")).not.toHaveProperty("totalCapacity");
+  });
+  it.each(["minivan:1sw3so:cap0", "minivan:1sw3so:cap5", "minivan:1sw3so:cap3:cap3", "minivan:1sw3so:cap", "minivan:1sw3so:capx"])(
+    "rejects invalid cap %j", (text) => { expect(() => parseFleetType(text)).toThrow(); });
   it.each(["", "large", "Large:4sw5so", "large:4sw", "large:0sw0so", "large:4sw5so:cd", "large:4sw5so:cd10:cd10",
     "large:4sw5so:x5", "large:4sw5so:r5", "1x:4sw5so", "large:4sw5so:cd999"])("rejects %j", (text) => {
     expect(() => parseFleetType(text)).toThrow();

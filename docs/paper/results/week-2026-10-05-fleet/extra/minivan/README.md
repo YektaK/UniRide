@@ -1,3 +1,5 @@
+> **SUPERSEDED — capacity overstated (allowed 4 people); see ../minivan-cap3/ (DECISION_LOG H03)**
+
 # Extra campaign: large minibuses + wheelchair-accessible minivans, week of 2026-10-05
 
 Additional scenarios of the heterogeneous-fleet campaign in the parent folder (same week, same matrix, same solver settings), with a third vehicle type: a wheelchair-accessible minivan (Fiat Doblo type). Descriptive only; no superiority, causality or cost claim. Used by `scripts/plan_fleet_pareto.py` (see `../../pareto_analysis.md`).

@@ -57,6 +57,34 @@ class ParetoTests(unittest.TestCase):
         self.assertTrue(by["R60_minibus-only"]["nd_R"] and not by["R60_minibus-only"]["nd_glob"])
         self.assertFalse(by["R60_hybrid_L2"]["nd_R"])
 
+    def test_minivan_total_capacity_three(self):
+        """H03: Doblo = 3 passengers in total (at most 1 Sw). Active minivan data must declare it and respect it."""
+        mv = [d for d in P.DSS if d.name == "minivan"][0]
+        self.assertEqual(mv.types["minivan"].get("totalCapacity"), 3)
+        for date in mv.dates:
+            for R in P.RS:
+                for s in mv.scens:
+                    for r in mv.response(date, R, s)["scenario"]["routes"]:
+                        if r["vehicleType"] == "minivan":
+                            self.assertLessEqual(r["swCount"] + r["soCount"], 3)
+                            self.assertLessEqual(r["swCount"], 1)
+
+    def test_check_run_flags_total_capacity(self):
+        """A 1 Sw + 3 So route is within the per-kind capacities but exceeds the total of 3: must be a violation."""
+        class FakeDS:
+            types = {"minivan": {"swCapacity": 1, "soCapacity": 3, "totalCapacity": 3, "cooldownMinutes": 10}}
+            bor = "minivan"
+        steps = [{"location1": lab, "location2": "C", "duration": 5} for lab in ("Sw1", "So1", "So2", "So3")]
+        route = {"vehicleType": "minivan", "physicalVehicleId": "V1", "jobId": "j", "startMinutes": 0, "endMinutes": 20, "minutes": 20,
+                 "direction": "pickup", "steps": steps, "swCount": 1, "soCount": 3, "occurrenceIds": ["x:Sw1", "x:So1", "x:So2", "x:So3"]}
+        full = {"serviceDate": "d", "limits": {"maxRideTimeMinutes": 50}, "scenario": {"routes": [route]}, "occurrenceLabels": ["x:Sw1", "x:So1", "x:So2", "x:So3"]}
+        row = {"legs": "4", "cars": "1", "car_vehicle_minutes": "5", "car_routes": "1", "ride_mean": "5", "ride_max": "5", "date": "d"}
+        try:
+            v = P.check_run(FakeDS, full, row, 50, "L0")
+        except Exception:  # other checks may trip on the minimal fake; the capacity message is produced before them
+            self.fail("check_run raised on the fake route")
+        self.assertTrue(any(x.startswith("total capacity") for x in v), v)
+
     def test_hybrid_is_day_level_combination(self):
         for o in P.OPTS:
             if o["family"] != "hybrid":

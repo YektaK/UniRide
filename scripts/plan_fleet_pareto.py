@@ -4,7 +4,7 @@ Standard library only. Reuses SVG helpers from plan_resource_profile / plan_sche
 
 Usage: python scripts/plan_fleet_pareto.py [results_dir]
 Reads, from results_dir (default docs/paper/results/week-2026-10-05-fleet) and its extra/L4 and
-extra/minivan sub-folders: run_manifest.json, scenario_daily.csv, scenario_weekly.csv and the
+extra/minivan-cap3 sub-folders: run_manifest.json, scenario_daily.csv, scenario_weekly.csv and the
 *_R<R>_<scenario>.response.json route files. Writes pareto_options.csv, pareto_daily.csv, pareto_borrowed_hourly.csv,
 pareto_analysis.md, figures/pareto_*.svg and a marked section in figures/index.html.
 Every number is recomputed from the routes and cross-checked against the CSVs.
@@ -24,6 +24,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 RES = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.join(ROOT, "docs", "paper", "results", "week-2026-10-05-fleet")
+MINIVAN_DIR = sys.argv[2] if len(sys.argv) > 2 else "minivan-cap3"  # sub-folder of extra/
 sys.argv[1:] = [RES]  # the imported campaign helpers read RES from argv[1]
 from plan_resource_profile import PAD, head, write  # noqa: E402
 from plan_schedule_report import hm  # noqa: E402
@@ -75,7 +76,8 @@ class DS:
 
 DSS = [DS("main", RES, ["A", "L1", "L2", "L3"]),
        DS("L4", os.path.join(RES, "extra", "L4"), ["L4"]),
-       DS("minivan", os.path.join(RES, "extra", "minivan"), ["L0", "L1", "L2"])]
+       # Corrected minivan model (total capacity 3, DECISION_LOG H03). extra/minivan is superseded.
+       DS("minivan", os.path.join(RES, "extra", MINIVAN_DIR), ["L0", "L1", "L2"])]
 DATES = DSS[0].dates
 
 
@@ -117,6 +119,8 @@ def check_run(ds, full, row, R, s):
             v.append("Sw/So recount %s" % r["jobId"])
         if sw > t["swCapacity"] or so > t["soCapacity"]:
             v.append("capacity %s %s sw/so %d/%d" % (r["vehicleType"], r["jobId"], sw, so))
+        if sw + so > t.get("totalCapacity", t["swCapacity"] + t["soCapacity"]):
+            v.append("total capacity %s %s sw+so %d > %d" % (r["vehicleType"], r["jobId"], sw + so, t.get("totalCapacity", t["swCapacity"] + t["soCapacity"])))
         total = sum(x["duration"] for x in r["steps"])
         if total != r["minutes"] or r["endMinutes"] - r["startMinutes"] != total or total > TOUR_LIMIT:
             v.append("tour %s %d" % (r["jobId"], total))
@@ -387,7 +391,7 @@ def fam_legend(out, x, y, hybrid=True):
     for fam in FAMS if hybrid else FAMS[:3]:
         out.append(marker(FAM_SHAPE[fam], x + 7, y + 6, 6, FAM_COL[fam], 1, "#fff"))
         txt = {"minibus-only": "A: minibuses only", "minibus+sedan": "S: minibuses + sedans (no Sw)",
-               "minibus+minivan": "V: minibuses + minivans (1 Sw)", "hybrid": "H: day-level hybrid"}[fam]
+               "minibus+minivan": "V: minibuses + minivans (3 seats, max 1 Sw)", "hybrid": "H: day-level hybrid"}[fam]
         out.append('<text x="%g" y="%g" font-size="12" fill="#222">%s</text>' % (x + 18, y + 10, esc(txt)))
         x += 24 + 7 * len(txt)
 
@@ -677,15 +681,15 @@ def write_md():
         ["f4", "borrowed vehicle-days per week = number of weekdays on which at least one borrowed vehicle is needed (0..5); the sum of vehicles over days is `borrowed_vehicle_days`"],
         ["f5", "service level = ride limit R (minutes, lower is stricter) and the realised passenger-weighted mean ride of the week (`f5_mean_ride_min`)"],
         ["minibus utilisation", "owned busy minutes (route + cooldown) / (f1 x service span summed over the five days); the span of a day is the earliest route start to the latest route end over all options at that (day, R), so all options share one denominator; not defined for L = 0"],
-        ["borrowed utilisation", "borrowed busy minutes (route + cooldown) / time on loan (per borrowed vehicle and day: first start to last end plus cooldown). 100%% means the vehicle drives (or cools down) the whole time it is borrowed; it says nothing about how long it is borrowed"],
+        ["borrowed utilisation", "borrowed busy minutes (route + cooldown) / time on loan (per borrowed vehicle and day: first start to last end plus cooldown). 100% means the vehicle drives (or cools down) the whole time it is borrowed; it says nothing about how long it is borrowed"],
         ["before-10:00 share", "share of the borrowed busy minutes that fall before 10:00"]])
     out += ["", "Families: **minibus-only** (A) = all-large minimum; **minibus+sedan** = L large minibuses (4 Sw + 5 So) plus sedans (0 Sw + 4 So), sedans cannot carry wheelchair (Sw) students; "
-            "**minibus+minivan** = L large minibuses plus wheelchair-accessible minivans `minivan:1sw3so:cd10` (1 Sw + 3 So), which can. The minivan capacity is an **assumption and a parameter** "
-            "(it can be tested as `minivan:1sw2so`; not run here). **hybrid** = day-level combination derived exactly from existing runs (section 5).", "",
+            "**minibus+minivan** = L large minibuses plus wheelchair-accessible minivans `minivan:1sw3so:cap3:cd10` (Doblo model: **3 passengers in total, of whom at most 1 is a wheelchair user**; the wheelchair is stowed in the luggage space and the student sits in a seat), which can. The minivan capacity is an **assumption and a parameter** "
+            "(a smaller model such as `minivan:1sw2so` was not run). The earlier archived `extra/minivan` campaign allowed 4 people and is superseded (DECISION_LOG H03). **hybrid** = day-level combination derived exactly from existing runs (section 5).", "",
             "## 3. Data and checks", ""]
     out += mdt(["Source", "Scenarios", "Git commit (manifest)", "Fleet types", "Files"],
                [[("`%s`" % os.path.relpath(d.path, RES).replace("\\", "/")) if d.name != "main" else "`.` (archive)", ", ".join(d.scens), d.man["git_commit"][:7],
-                 ", ".join("%s %dSw/%dSo" % (t["typeId"], t["swCapacity"], t["soCapacity"]) for t in d.man["fleet_types"]), "%d daily rows" % len(d.daily)] for d in DSS])
+                 ", ".join("%s %dSw/%dSo%s" % (t["typeId"], t["swCapacity"], t["soCapacity"], (", total %d" % t["totalCapacity"]) if "totalCapacity" in t else "") for t in d.man["fleet_types"]), "%d daily rows" % len(d.daily)] for d in DSS])
     out += ["", "All runs: week %s..%s, R in {50, 60, 70, 90}, tour limit 150, cooldown 10, `assume_confirmed`, same matrix (sha256 `%s...%s`, read from every response file: %d distinct value(s)). "
             "The runs come from different working-tree states (manifests `dirty_working_tree: true`); the first campaign was run at an earlier commit than L4 and minivan." % (
                 DATES[0], DATES[-1], sorted(SHAS)[0][:8], sorted(SHAS)[0][-8:], len(SHAS)), "",
@@ -777,11 +781,11 @@ def write_md():
             "## 10. Limits", "",
             "- One week, one timetable snapshot, `assume_confirmed` (every student with a class is assumed to ride); fixed travel-time matrix, no traffic, boarding times or driver assignment.",
             "- Heuristic routes and a minimum proven only over the generated menus; the front is an approximation (section 1).",
-            "- The minivan capacity (1 Sw + 3 So) and the sedan capacity (0 Sw + 4 So) are assumptions; the sedan having no wheelchair place is an open owner question.",
+            "- The minivan capacity (3 passengers in total, at most 1 Sw) and the sedan capacity (0 Sw + 4 So) are assumptions; the sedan having no wheelchair place is an open owner question.",
             "- A borrowed vehicle is assumed available for the whole of its first-start to last-end window on each day it is used (f3 counts only its busy time); borrowing for single routes would need the lenders' schedules.",
             "- No cost data: nothing here states which option is cheaper.", "",
             "## 11. Reproduce", "",
-            "`python scripts/plan_fleet_pareto.py` (standard library only) reads this folder and `extra/L4`, `extra/minivan`, and rewrites `pareto_options.csv`, `pareto_daily.csv`, this file and the `figures/pareto_*.svg`."]
+            "`python scripts/plan_fleet_pareto.py` (standard library only) reads this folder and `extra/L4`, `extra/minivan-cap3` (second argument overrides the sub-folder), and rewrites `pareto_options.csv`, `pareto_daily.csv`, this file and the `figures/pareto_*.svg`."]
     with open(os.path.join(RES, "pareto_analysis.md"), "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(out) + "\n")
 

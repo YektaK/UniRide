@@ -7,9 +7,9 @@
 <rect x="168" y="70" width="12" height="12" fill="#E69F00" fill-opacity="1" stroke="#fff" stroke-width="1"></rect>
 <text x="185" y="80" font-size="12" fill="#222">S: minibuses + sedans (no Sw)</text>
 <polygon points="401,68.8 394.4,81.4 407.6,81.4" fill="#CC79A7" fill-opacity="1" stroke="#fff" stroke-width="1"></polygon>
-<text x="412" y="80" font-size="12" fill="#222">V: minibuses + minivans (1 Sw)</text>
-<polygon points="635,68.5 642.5,76 635,83.5 627.5,76" fill="#009E73" fill-opacity="1" stroke="#fff" stroke-width="1"></polygon>
-<text x="646" y="80" font-size="12" fill="#222">H: day-level hybrid</text>
+<text x="412" y="80" font-size="12" fill="#222">V: minibuses + minivans (3 seats, max 1 Sw)</text>
+<polygon points="726,68.5 733.5,76 726,83.5 718.5,76" fill="#009E73" fill-opacity="1" stroke="#fff" stroke-width="1"></polygon>
+<text x="737" y="80" font-size="12" fill="#222">H: day-level hybrid</text>
 <text x="24" y="110" font-size="13" font-weight="bold" fill="#111">R = 50 min</text>
 <text x="190" y="110" font-size="11" fill="#333">minibus utilisation %</text>
 <text x="370" y="110" font-size="11" fill="#333">borrowed vehicle-hours/week</text>
@@ -17,54 +17,54 @@
 <text x="680" y="110" font-size="11" fill="#333">borrowed util. % / before 10:00 %</text>
 <text x="182" y="130" font-size="12" text-anchor="end" fill="#111">L0 + minivan</text>
 <text x="190" y="130" font-size="11" fill="#777">n/a (no minibus)</text>
-<rect x="370" y="120" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="120" width="147.679" height="12" fill="#CC79A7"/>
-<text x="521.679" y="130" font-size="11" fill="#111">137.8</text>
+<rect x="370" y="120" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="120" width="148.821" height="12" fill="#CC79A7"/>
+<text x="522.821" y="130" font-size="11" fill="#111">138.9</text>
 <rect x="550" y="120" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="120" width="110" height="12" fill="#CC79A7"/>
 <text x="664" y="130" font-size="11" fill="#111">5</text>
-<text x="680" y="130" font-size="11" fill="#111">54% / 25%</text>
+<text x="680" y="130" font-size="11" fill="#111">54% / 26%</text>
 <text x="182" y="147" font-size="12" text-anchor="end" fill="#111">L1 + minivan</text>
-<rect x="190" y="137" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="137" width="108.731" height="12" fill="#0072B2"><title>L1 + minivan, R=50: owned 1, peak borrowed 6, 90.5 borrowed h/week, 5 borrowed days, mean ride 28.0 min</title></rect>
-<text x="302.731" y="147" font-size="11" fill="#111">72%</text>
-<rect x="370" y="137" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="137" width="96.9464" height="12" fill="#CC79A7"/>
-<text x="470.946" y="147" font-size="11" fill="#111">90.5</text>
+<rect x="190" y="137" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="137" width="108.766" height="12" fill="#0072B2"><title>L1 + minivan, R=50: owned 1, peak borrowed 6, 91.9 borrowed h/week, 5 borrowed days, mean ride 27.9 min</title></rect>
+<text x="302.766" y="147" font-size="11" fill="#111">73%</text>
+<rect x="370" y="137" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="137" width="98.5" height="12" fill="#CC79A7"/>
+<text x="472.5" y="147" font-size="11" fill="#111">91.9</text>
 <rect x="550" y="137" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="137" width="110" height="12" fill="#CC79A7"/>
 <text x="664" y="147" font-size="11" fill="#111">5</text>
-<text x="680" y="147" font-size="11" fill="#111">50% / 25%</text>
+<text x="680" y="147" font-size="11" fill="#111">48% / 27%</text>
 <text x="182" y="164" font-size="12" text-anchor="end" fill="#111">L2 + minivan</text>
-<rect x="190" y="154" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="154" width="96.8212" height="12" fill="#0072B2"><title>L2 + minivan, R=50: owned 2, peak borrowed 5, 55.3 borrowed h/week, 5 borrowed days, mean ride 28.1 min</title></rect>
-<text x="290.821" y="164" font-size="11" fill="#111">65%</text>
-<rect x="370" y="154" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="154" width="59.25" height="12" fill="#CC79A7"/>
-<text x="433.25" y="164" font-size="11" fill="#111">55.3</text>
+<rect x="190" y="154" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="154" width="96.0749" height="12" fill="#0072B2"><title>L2 + minivan, R=50: owned 2, peak borrowed 5, 56.4 borrowed h/week, 5 borrowed days, mean ride 27.9 min</title></rect>
+<text x="290.075" y="164" font-size="11" fill="#111">64%</text>
+<rect x="370" y="154" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="154" width="60.4107" height="12" fill="#CC79A7"/>
+<text x="434.411" y="164" font-size="11" fill="#111">56.4</text>
 <rect x="550" y="154" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="154" width="110" height="12" fill="#CC79A7"/>
 <text x="664" y="164" font-size="11" fill="#111">5</text>
-<text x="680" y="164" font-size="11" fill="#111">45% / 27%</text>
+<text x="680" y="164" font-size="11" fill="#111">44% / 28%</text>
 <text x="182" y="181" font-size="12" text-anchor="end" fill="#111">L2 + sedan/minivan (hybrid)</text>
-<rect x="190" y="171" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="171" width="94.3642" height="12" fill="#0072B2"><title>L2 + sedan/minivan (hybrid), R=50: owned 2, peak borrowed 5, 58.6 borrowed h/week, 5 borrowed days, mean ride 28.3 min</title></rect>
-<text x="288.364" y="181" font-size="11" fill="#111">63%</text>
-<rect x="370" y="171" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="171" width="62.75" height="12" fill="#009E73"/>
-<text x="436.75" y="181" font-size="11" fill="#111">58.6</text>
+<rect x="190" y="171" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="171" width="93.3911" height="12" fill="#0072B2"><title>L2 + sedan/minivan (hybrid), R=50: owned 2, peak borrowed 5, 59.3 borrowed h/week, 5 borrowed days, mean ride 28.2 min</title></rect>
+<text x="287.391" y="181" font-size="11" fill="#111">62%</text>
+<rect x="370" y="171" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="171" width="63.5357" height="12" fill="#009E73"/>
+<text x="437.536" y="181" font-size="11" fill="#111">59.3</text>
 <rect x="550" y="171" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="171" width="110" height="12" fill="#009E73"/>
 <text x="664" y="181" font-size="11" fill="#111">5</text>
 <text x="680" y="181" font-size="11" fill="#111">45% / 29%</text>
 <text x="182" y="198" font-size="12" text-anchor="end" fill="#111">L3 + sedan</text>
-<rect x="190" y="188" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="188" width="83.4536" height="12" fill="#0072B2"><title>L3 + sedan, R=50: owned 3, peak borrowed 4, 34.4 borrowed h/week, 5 borrowed days, mean ride 28.2 min</title></rect>
-<text x="277.454" y="198" font-size="11" fill="#111">56%</text>
+<rect x="190" y="188" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="188" width="83.3842" height="12" fill="#0072B2"><title>L3 + sedan, R=50: owned 3, peak borrowed 4, 34.4 borrowed h/week, 5 borrowed days, mean ride 28.2 min</title></rect>
+<text x="277.384" y="198" font-size="11" fill="#111">56%</text>
 <rect x="370" y="188" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="188" width="36.875" height="12" fill="#E69F00"/>
 <text x="410.875" y="198" font-size="11" fill="#111">34.4</text>
 <rect x="550" y="188" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="188" width="110" height="12" fill="#E69F00"/>
 <text x="664" y="198" font-size="11" fill="#111">5</text>
 <text x="680" y="198" font-size="11" fill="#111">50% / 31%</text>
 <text x="182" y="215" font-size="12" text-anchor="end" fill="#111">L4 + sedan</text>
-<rect x="190" y="205" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="205" width="75.989" height="12" fill="#0072B2"><title>L4 + sedan, R=50: owned 4, peak borrowed 2, 10.2 borrowed h/week, 5 borrowed days, mean ride 28.2 min</title></rect>
-<text x="269.989" y="215" font-size="11" fill="#111">51%</text>
+<rect x="190" y="205" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="205" width="75.9258" height="12" fill="#0072B2"><title>L4 + sedan, R=50: owned 4, peak borrowed 2, 10.2 borrowed h/week, 5 borrowed days, mean ride 28.2 min</title></rect>
+<text x="269.926" y="215" font-size="11" fill="#111">51%</text>
 <rect x="370" y="205" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="205" width="10.9464" height="12" fill="#E69F00"/>
 <text x="384.946" y="215" font-size="11" fill="#111">10.2</text>
 <rect x="550" y="205" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="205" width="110" height="12" fill="#E69F00"/>
 <text x="664" y="215" font-size="11" fill="#111">5</text>
 <text x="680" y="215" font-size="11" fill="#111">53% / 24%</text>
 <text x="182" y="232" font-size="12" text-anchor="end" fill="#111">minibus-only</text>
-<rect x="190" y="222" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="222" width="54.9139" height="12" fill="#0072B2"><title>minibus-only, R=50: owned 6, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 28.2 min</title></rect>
-<text x="248.914" y="232" font-size="11" fill="#111">37%</text>
+<rect x="190" y="222" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="222" width="54.8682" height="12" fill="#0072B2"><title>minibus-only, R=50: owned 6, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 28.2 min</title></rect>
+<text x="248.868" y="232" font-size="11" fill="#111">37%</text>
 <rect x="370" y="222" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="222" width="0" height="12" fill="#0072B2"/>
 <text x="374" y="232" font-size="11" fill="#111">0.0</text>
 <rect x="550" y="222" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="222" width="0" height="12" fill="#0072B2"/>
@@ -76,54 +76,54 @@
 <text x="680" y="271" font-size="11" fill="#333">borrowed util. % / before 10:00 %</text>
 <text x="182" y="291" font-size="12" text-anchor="end" fill="#111">L0 + minivan</text>
 <text x="190" y="291" font-size="11" fill="#777">n/a (no minibus)</text>
-<rect x="370" y="281" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="281" width="142.839" height="12" fill="#CC79A7"/>
-<text x="516.839" y="291" font-size="11" fill="#111">133.3</text>
+<rect x="370" y="281" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="281" width="145.196" height="12" fill="#CC79A7"/>
+<text x="519.196" y="291" font-size="11" fill="#111">135.5</text>
 <rect x="550" y="281" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="281" width="110" height="12" fill="#CC79A7"/>
 <text x="664" y="291" font-size="11" fill="#111">5</text>
-<text x="680" y="291" font-size="11" fill="#111">55% / 25%</text>
+<text x="680" y="291" font-size="11" fill="#111">54% / 26%</text>
 <text x="182" y="308" font-size="12" text-anchor="end" fill="#111">L1 + minivan</text>
-<rect x="190" y="298" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="298" width="108.226" height="12" fill="#0072B2"><title>L1 + minivan, R=60: owned 1, peak borrowed 5, 82.5 borrowed h/week, 5 borrowed days, mean ride 30.7 min</title></rect>
-<text x="302.226" y="308" font-size="11" fill="#111">72%</text>
-<rect x="370" y="298" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="298" width="88.4286" height="12" fill="#CC79A7"/>
-<text x="462.429" y="308" font-size="11" fill="#111">82.5</text>
+<rect x="190" y="298" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="298" width="107.806" height="12" fill="#0072B2"><title>L1 + minivan, R=60: owned 1, peak borrowed 5, 83.6 borrowed h/week, 5 borrowed days, mean ride 30.3 min</title></rect>
+<text x="301.806" y="308" font-size="11" fill="#111">72%</text>
+<rect x="370" y="298" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="298" width="89.5536" height="12" fill="#CC79A7"/>
+<text x="463.554" y="308" font-size="11" fill="#111">83.6</text>
 <rect x="550" y="298" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="298" width="110" height="12" fill="#CC79A7"/>
 <text x="664" y="308" font-size="11" fill="#111">5</text>
 <text x="680" y="308" font-size="11" fill="#111">52% / 26%</text>
 <text x="182" y="325" font-size="12" text-anchor="end" fill="#111">L2 + minivan</text>
-<rect x="190" y="315" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="315" width="99.2894" height="12" fill="#0072B2"><title>L2 + minivan, R=60: owned 2, peak borrowed 4, 43.0 borrowed h/week, 5 borrowed days, mean ride 31.0 min</title></rect>
-<text x="293.289" y="325" font-size="11" fill="#111">66%</text>
-<rect x="370" y="315" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="315" width="46.0357" height="12" fill="#CC79A7"/>
-<text x="420.036" y="325" font-size="11" fill="#111">43.0</text>
+<rect x="190" y="315" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="315" width="99.7329" height="12" fill="#0072B2"><title>L2 + minivan, R=60: owned 2, peak borrowed 4, 42.5 borrowed h/week, 5 borrowed days, mean ride 30.9 min</title></rect>
+<text x="293.733" y="325" font-size="11" fill="#111">66%</text>
+<rect x="370" y="315" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="315" width="45.5357" height="12" fill="#CC79A7"/>
+<text x="419.536" y="325" font-size="11" fill="#111">42.5</text>
 <rect x="550" y="315" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="315" width="110" height="12" fill="#CC79A7"/>
 <text x="664" y="325" font-size="11" fill="#111">5</text>
-<text x="680" y="325" font-size="11" fill="#111">50% / 29%</text>
+<text x="680" y="325" font-size="11" fill="#111">50% / 28%</text>
 <text x="182" y="342" font-size="12" text-anchor="end" fill="#111">L2 + sedan/minivan (hybrid)</text>
-<rect x="190" y="332" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="332" width="96.9117" height="12" fill="#0072B2"><title>L2 + sedan/minivan (hybrid), R=60: owned 2, peak borrowed 4, 44.8 borrowed h/week, 5 borrowed days, mean ride 31.5 min</title></rect>
-<text x="290.912" y="342" font-size="11" fill="#111">65%</text>
-<rect x="370" y="332" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="332" width="47.9821" height="12" fill="#009E73"/>
-<text x="421.982" y="342" font-size="11" fill="#111">44.8</text>
+<rect x="190" y="332" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="332" width="96.7954" height="12" fill="#0072B2"><title>L2 + sedan/minivan (hybrid), R=60: owned 2, peak borrowed 4, 44.5 borrowed h/week, 5 borrowed days, mean ride 31.1 min</title></rect>
+<text x="290.795" y="342" font-size="11" fill="#111">65%</text>
+<rect x="370" y="332" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="332" width="47.7143" height="12" fill="#009E73"/>
+<text x="421.714" y="342" font-size="11" fill="#111">44.5</text>
 <rect x="550" y="332" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="332" width="110" height="12" fill="#009E73"/>
 <text x="664" y="342" font-size="11" fill="#111">5</text>
-<text x="680" y="342" font-size="11" fill="#111">51% / 30%</text>
+<text x="680" y="342" font-size="11" fill="#111">51% / 29%</text>
 <text x="182" y="359" font-size="12" text-anchor="end" fill="#111">L3 + sedan</text>
-<rect x="190" y="349" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="349" width="86.3761" height="12" fill="#0072B2"><title>L3 + sedan, R=60: owned 3, peak borrowed 3, 18.2 borrowed h/week, 5 borrowed days, mean ride 31.2 min</title></rect>
-<text x="280.376" y="359" font-size="11" fill="#111">58%</text>
+<rect x="190" y="349" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="349" width="86.5653" height="12" fill="#0072B2"><title>L3 + sedan, R=60: owned 3, peak borrowed 3, 18.2 borrowed h/week, 5 borrowed days, mean ride 31.2 min</title></rect>
+<text x="280.565" y="359" font-size="11" fill="#111">58%</text>
 <rect x="370" y="349" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="349" width="19.4821" height="12" fill="#E69F00"/>
 <text x="393.482" y="359" font-size="11" fill="#111">18.2</text>
 <rect x="550" y="349" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="349" width="110" height="12" fill="#E69F00"/>
 <text x="664" y="359" font-size="11" fill="#111">5</text>
 <text x="680" y="359" font-size="11" fill="#111">51% / 32%</text>
 <text x="182" y="376" font-size="12" text-anchor="end" fill="#111">L4 + sedan</text>
-<rect x="190" y="366" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="366" width="72.8375" height="12" fill="#0072B2"><title>L4 + sedan, R=60: owned 4, peak borrowed 2, 4.2 borrowed h/week, 3 borrowed days, mean ride 31.3 min</title></rect>
-<text x="266.838" y="376" font-size="11" fill="#111">49%</text>
+<rect x="190" y="366" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="366" width="72.9971" height="12" fill="#0072B2"><title>L4 + sedan, R=60: owned 4, peak borrowed 2, 4.2 borrowed h/week, 3 borrowed days, mean ride 31.3 min</title></rect>
+<text x="266.997" y="376" font-size="11" fill="#111">49%</text>
 <rect x="370" y="366" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="366" width="4.48214" height="12" fill="#E69F00"/>
 <text x="378.482" y="376" font-size="11" fill="#111">4.2</text>
 <rect x="550" y="366" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="366" width="66" height="12" fill="#E69F00"/>
 <text x="620" y="376" font-size="11" fill="#111">3</text>
 <text x="680" y="376" font-size="11" fill="#111">100% / 29%</text>
 <text x="182" y="393" font-size="12" text-anchor="end" fill="#111">minibus-only</text>
-<rect x="190" y="383" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="383" width="50.4919" height="12" fill="#0072B2"><title>minibus-only, R=60: owned 6, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 31.2 min</title></rect>
-<text x="244.492" y="393" font-size="11" fill="#111">34%</text>
+<rect x="190" y="383" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="383" width="50.6026" height="12" fill="#0072B2"><title>minibus-only, R=60: owned 6, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 31.2 min</title></rect>
+<text x="244.603" y="393" font-size="11" fill="#111">34%</text>
 <rect x="370" y="383" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="383" width="0" height="12" fill="#0072B2"/>
 <text x="374" y="393" font-size="11" fill="#111">0.0</text>
 <rect x="550" y="383" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="383" width="0" height="12" fill="#0072B2"/>
@@ -135,54 +135,54 @@
 <text x="680" y="432" font-size="11" fill="#333">borrowed util. % / before 10:00 %</text>
 <text x="182" y="452" font-size="12" text-anchor="end" fill="#111">L0 + minivan</text>
 <text x="190" y="452" font-size="11" fill="#777">n/a (no minibus)</text>
-<rect x="370" y="442" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="442" width="135.875" height="12" fill="#CC79A7"/>
-<text x="509.875" y="452" font-size="11" fill="#111">126.8</text>
+<rect x="370" y="442" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="442" width="140.036" height="12" fill="#CC79A7"/>
+<text x="514.036" y="452" font-size="11" fill="#111">130.7</text>
 <rect x="550" y="442" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="442" width="110" height="12" fill="#CC79A7"/>
 <text x="664" y="452" font-size="11" fill="#111">5</text>
-<text x="680" y="452" font-size="11" fill="#111">55% / 26%</text>
+<text x="680" y="452" font-size="11" fill="#111">54% / 26%</text>
 <text x="182" y="469" font-size="12" text-anchor="end" fill="#111">L1 + minivan</text>
-<rect x="190" y="459" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="459" width="111.823" height="12" fill="#0072B2"><title>L1 + minivan, R=70: owned 1, peak borrowed 5, 72.4 borrowed h/week, 5 borrowed days, mean ride 34.1 min</title></rect>
-<text x="305.823" y="469" font-size="11" fill="#111">75%</text>
-<rect x="370" y="459" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="459" width="77.5536" height="12" fill="#CC79A7"/>
-<text x="451.554" y="469" font-size="11" fill="#111">72.4</text>
+<rect x="190" y="459" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="459" width="110.646" height="12" fill="#0072B2"><title>L1 + minivan, R=70: owned 1, peak borrowed 5, 72.6 borrowed h/week, 5 borrowed days, mean ride 33.4 min</title></rect>
+<text x="304.646" y="469" font-size="11" fill="#111">74%</text>
+<rect x="370" y="459" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="459" width="77.7679" height="12" fill="#CC79A7"/>
+<text x="451.768" y="469" font-size="11" fill="#111">72.6</text>
 <rect x="550" y="459" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="459" width="110" height="12" fill="#CC79A7"/>
 <text x="664" y="469" font-size="11" fill="#111">5</text>
-<text x="680" y="469" font-size="11" fill="#111">54% / 26%</text>
+<text x="680" y="469" font-size="11" fill="#111">55% / 25%</text>
 <text x="182" y="486" font-size="12" text-anchor="end" fill="#111">L2 + minivan</text>
-<rect x="190" y="476" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="476" width="100.824" height="12" fill="#0072B2"><title>L2 + minivan, R=70: owned 2, peak borrowed 4, 30.3 borrowed h/week, 5 borrowed days, mean ride 34.5 min</title></rect>
-<text x="294.824" y="486" font-size="11" fill="#111">67%</text>
-<rect x="370" y="476" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="476" width="32.4643" height="12" fill="#CC79A7"/>
-<text x="406.464" y="486" font-size="11" fill="#111">30.3</text>
+<rect x="190" y="476" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="476" width="101.615" height="12" fill="#0072B2"><title>L2 + minivan, R=70: owned 2, peak borrowed 4, 30.2 borrowed h/week, 5 borrowed days, mean ride 33.8 min</title></rect>
+<text x="295.615" y="486" font-size="11" fill="#111">68%</text>
+<rect x="370" y="476" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="476" width="32.3393" height="12" fill="#CC79A7"/>
+<text x="406.339" y="486" font-size="11" fill="#111">30.2</text>
 <rect x="550" y="476" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="476" width="110" height="12" fill="#CC79A7"/>
 <text x="664" y="486" font-size="11" fill="#111">5</text>
-<text x="680" y="486" font-size="11" fill="#111">55% / 24%</text>
+<text x="680" y="486" font-size="11" fill="#111">55% / 23%</text>
 <text x="182" y="503" font-size="12" text-anchor="end" fill="#111">L2 + sedan/minivan (hybrid)</text>
-<rect x="190" y="493" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="493" width="99.3292" height="12" fill="#0072B2"><title>L2 + sedan/minivan (hybrid), R=70: owned 2, peak borrowed 4, 32.5 borrowed h/week, 5 borrowed days, mean ride 34.6 min</title></rect>
-<text x="293.329" y="503" font-size="11" fill="#111">66%</text>
+<rect x="190" y="493" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="493" width="99.382" height="12" fill="#0072B2"><title>L2 + sedan/minivan (hybrid), R=70: owned 2, peak borrowed 4, 32.5 borrowed h/week, 5 borrowed days, mean ride 34.6 min</title></rect>
+<text x="293.382" y="503" font-size="11" fill="#111">66%</text>
 <rect x="370" y="493" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="493" width="34.8036" height="12" fill="#009E73"/>
 <text x="408.804" y="503" font-size="11" fill="#111">32.5</text>
 <rect x="550" y="493" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="493" width="110" height="12" fill="#009E73"/>
 <text x="664" y="503" font-size="11" fill="#111">5</text>
 <text x="680" y="503" font-size="11" fill="#111">58% / 26%</text>
 <text x="182" y="520" font-size="12" text-anchor="end" fill="#111">L3 + sedan</text>
-<rect x="190" y="510" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="510" width="82.957" height="12" fill="#0072B2"><title>L3 + sedan, R=70: owned 3, peak borrowed 3, 10.2 borrowed h/week, 5 borrowed days, mean ride 35.1 min</title></rect>
-<text x="276.957" y="520" font-size="11" fill="#111">55%</text>
+<rect x="190" y="510" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="510" width="83.0011" height="12" fill="#0072B2"><title>L3 + sedan, R=70: owned 3, peak borrowed 3, 10.2 borrowed h/week, 5 borrowed days, mean ride 35.1 min</title></rect>
+<text x="277.001" y="520" font-size="11" fill="#111">55%</text>
 <rect x="370" y="510" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="510" width="10.9464" height="12" fill="#E69F00"/>
 <text x="384.946" y="520" font-size="11" fill="#111">10.2</text>
 <rect x="550" y="510" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="510" width="110" height="12" fill="#E69F00"/>
 <text x="664" y="520" font-size="11" fill="#111">5</text>
 <text x="680" y="520" font-size="11" fill="#111">74% / 24%</text>
 <text x="182" y="537" font-size="12" text-anchor="end" fill="#111">L4 + sedan</text>
-<rect x="190" y="527" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="527" width="66.9899" height="12" fill="#0072B2"><title>L4 + sedan, R=70: owned 4, peak borrowed 2, 2.2 borrowed h/week, 2 borrowed days, mean ride 35.1 min</title></rect>
-<text x="260.99" y="537" font-size="11" fill="#111">45%</text>
+<rect x="190" y="527" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="527" width="67.0255" height="12" fill="#0072B2"><title>L4 + sedan, R=70: owned 4, peak borrowed 2, 2.2 borrowed h/week, 2 borrowed days, mean ride 35.1 min</title></rect>
+<text x="261.026" y="537" font-size="11" fill="#111">45%</text>
 <rect x="370" y="527" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="527" width="2.39286" height="12" fill="#E69F00"/>
 <text x="376.393" y="537" font-size="11" fill="#111">2.2</text>
 <rect x="550" y="527" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="527" width="44" height="12" fill="#E69F00"/>
 <text x="598" y="537" font-size="11" fill="#111">2</text>
 <text x="680" y="537" font-size="11" fill="#111">100% / 0%</text>
 <text x="182" y="554" font-size="12" text-anchor="end" fill="#111">minibus-only</text>
-<rect x="190" y="544" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="544" width="45.6496" height="12" fill="#0072B2"><title>minibus-only, R=70: owned 6, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 34.6 min</title></rect>
-<text x="239.65" y="554" font-size="11" fill="#111">30%</text>
+<rect x="190" y="544" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="544" width="45.6738" height="12" fill="#0072B2"><title>minibus-only, R=70: owned 6, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 34.6 min</title></rect>
+<text x="239.674" y="554" font-size="11" fill="#111">30%</text>
 <rect x="370" y="544" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="544" width="0" height="12" fill="#0072B2"/>
 <text x="374" y="554" font-size="11" fill="#111">0.0</text>
 <rect x="550" y="544" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="544" width="0" height="12" fill="#0072B2"/>
@@ -194,53 +194,53 @@
 <text x="680" y="593" font-size="11" fill="#333">borrowed util. % / before 10:00 %</text>
 <text x="182" y="613" font-size="12" text-anchor="end" fill="#111">L0 + minivan</text>
 <text x="190" y="613" font-size="11" fill="#777">n/a (no minibus)</text>
-<rect x="370" y="603" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="603" width="133.429" height="12" fill="#CC79A7"/>
-<text x="507.429" y="613" font-size="11" fill="#111">124.5</text>
+<rect x="370" y="603" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="603" width="138.411" height="12" fill="#CC79A7"/>
+<text x="512.411" y="613" font-size="11" fill="#111">129.2</text>
 <rect x="550" y="603" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="603" width="110" height="12" fill="#CC79A7"/>
 <text x="664" y="613" font-size="11" fill="#111">5</text>
-<text x="680" y="613" font-size="11" fill="#111">54% / 25%</text>
+<text x="680" y="613" font-size="11" fill="#111">54% / 26%</text>
 <text x="182" y="630" font-size="12" text-anchor="end" fill="#111">L1 + minivan</text>
-<rect x="190" y="620" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="620" width="115.068" height="12" fill="#0072B2"><title>L1 + minivan, R=90: owned 1, peak borrowed 4, 64.8 borrowed h/week, 5 borrowed days, mean ride 39.8 min</title></rect>
-<text x="309.068" y="630" font-size="11" fill="#111">77%</text>
-<rect x="370" y="620" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="620" width="69.375" height="12" fill="#CC79A7"/>
-<text x="443.375" y="630" font-size="11" fill="#111">64.8</text>
+<rect x="190" y="620" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="620" width="114.666" height="12" fill="#0072B2"><title>L1 + minivan, R=90: owned 1, peak borrowed 4, 67.5 borrowed h/week, 5 borrowed days, mean ride 39.5 min</title></rect>
+<text x="308.666" y="630" font-size="11" fill="#111">76%</text>
+<rect x="370" y="620" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="620" width="72.2857" height="12" fill="#CC79A7"/>
+<text x="446.286" y="630" font-size="11" fill="#111">67.5</text>
 <rect x="550" y="620" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="620" width="110" height="12" fill="#CC79A7"/>
 <text x="664" y="630" font-size="11" fill="#111">5</text>
-<text x="680" y="630" font-size="11" fill="#111">57% / 23%</text>
+<text x="680" y="630" font-size="11" fill="#111">56% / 22%</text>
 <text x="182" y="647" font-size="12" text-anchor="end" fill="#111">L2 + minivan</text>
-<rect x="190" y="637" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="637" width="101.307" height="12" fill="#0072B2"><title>L2 + minivan, R=90: owned 2, peak borrowed 2, 24.4 borrowed h/week, 5 borrowed days, mean ride 41.6 min</title></rect>
-<text x="295.307" y="647" font-size="11" fill="#111">68%</text>
-<rect x="370" y="637" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="637" width="26.125" height="12" fill="#CC79A7"/>
-<text x="400.125" y="647" font-size="11" fill="#111">24.4</text>
+<rect x="190" y="637" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="637" width="101.136" height="12" fill="#0072B2"><title>L2 + minivan, R=90: owned 2, peak borrowed 2, 25.3 borrowed h/week, 5 borrowed days, mean ride 40.4 min</title></rect>
+<text x="295.136" y="647" font-size="11" fill="#111">67%</text>
+<rect x="370" y="637" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="637" width="27.1429" height="12" fill="#CC79A7"/>
+<text x="401.143" y="647" font-size="11" fill="#111">25.3</text>
 <rect x="550" y="637" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="637" width="110" height="12" fill="#CC79A7"/>
 <text x="664" y="647" font-size="11" fill="#111">5</text>
-<text x="680" y="647" font-size="11" fill="#111">58% / 21%</text>
+<text x="680" y="647" font-size="11" fill="#111">59% / 21%</text>
 <text x="182" y="664" font-size="12" text-anchor="end" fill="#111">L2 + sedan/minivan (hybrid)</text>
-<rect x="190" y="654" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="654" width="100.033" height="12" fill="#0072B2"><title>L2 + sedan/minivan (hybrid), R=90: owned 2, peak borrowed 2, 25.6 borrowed h/week, 5 borrowed days, mean ride 40.7 min</title></rect>
-<text x="294.033" y="664" font-size="11" fill="#111">67%</text>
+<rect x="190" y="654" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="654" width="100.545" height="12" fill="#0072B2"><title>L2 + sedan/minivan (hybrid), R=90: owned 2, peak borrowed 2, 25.6 borrowed h/week, 5 borrowed days, mean ride 40.5 min</title></rect>
+<text x="294.545" y="664" font-size="11" fill="#111">67%</text>
 <rect x="370" y="654" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="654" width="27.4286" height="12" fill="#009E73"/>
 <text x="401.429" y="664" font-size="11" fill="#111">25.6</text>
 <rect x="550" y="654" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="654" width="110" height="12" fill="#009E73"/>
 <text x="664" y="664" font-size="11" fill="#111">5</text>
 <text x="680" y="664" font-size="11" fill="#111">59% / 21%</text>
 <text x="182" y="681" font-size="12" text-anchor="end" fill="#111">L3 + sedan</text>
-<rect x="190" y="671" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="671" width="83.403" height="12" fill="#0072B2"><title>L3 + sedan, R=90: owned 3, peak borrowed 1, 3.1 borrowed h/week, 3 borrowed days, mean ride 41.9 min</title></rect>
-<text x="277.403" y="681" font-size="11" fill="#111">56%</text>
+<rect x="190" y="671" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="671" width="83.7973" height="12" fill="#0072B2"><title>L3 + sedan, R=90: owned 3, peak borrowed 1, 3.1 borrowed h/week, 3 borrowed days, mean ride 41.9 min</title></rect>
+<text x="277.797" y="681" font-size="11" fill="#111">56%</text>
 <rect x="370" y="671" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="671" width="3.32143" height="12" fill="#E69F00"/>
 <text x="377.321" y="681" font-size="11" fill="#111">3.1</text>
 <rect x="550" y="671" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="671" width="66" height="12" fill="#E69F00"/>
 <text x="620" y="681" font-size="11" fill="#111">3</text>
 <text x="680" y="681" font-size="11" fill="#111">100% / 24%</text>
 <text x="182" y="698" font-size="12" text-anchor="end" fill="#111">minibus-only</text>
-<rect x="190" y="688" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="688" width="64.6106" height="12" fill="#0072B2"><title>minibus-only, R=90: owned 4, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 41.3 min</title></rect>
-<text x="258.611" y="698" font-size="11" fill="#111">43%</text>
+<rect x="190" y="688" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="688" width="64.916" height="12" fill="#0072B2"><title>minibus-only, R=90: owned 4, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 41.3 min</title></rect>
+<text x="258.916" y="698" font-size="11" fill="#111">43%</text>
 <rect x="370" y="688" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="688" width="0" height="12" fill="#0072B2"/>
 <text x="374" y="698" font-size="11" fill="#111">0.0</text>
 <rect x="550" y="688" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="688" width="0" height="12" fill="#0072B2"/>
 <text x="554" y="698" font-size="11" fill="#111">0</text>
 <text x="182" y="715" font-size="12" text-anchor="end" fill="#111">L4 + sedan</text>
-<rect x="190" y="705" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="705" width="64.4047" height="12" fill="#0072B2"><title>L4 + sedan, R=90: owned 4, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 41.6 min</title></rect>
-<text x="258.405" y="715" font-size="11" fill="#111">43%</text>
+<rect x="190" y="705" width="150" height="12" fill="#f0f0f0"/><rect x="190" y="705" width="64.7092" height="12" fill="#0072B2"><title>L4 + sedan, R=90: owned 4, peak borrowed 0, 0.0 borrowed h/week, 0 borrowed days, mean ride 41.6 min</title></rect>
+<text x="258.709" y="715" font-size="11" fill="#111">43%</text>
 <rect x="370" y="705" width="150" height="12" fill="#f0f0f0"/><rect x="370" y="705" width="0" height="12" fill="#E69F00"/>
 <text x="374" y="715" font-size="11" fill="#111">0.0</text>
 <rect x="550" y="705" width="110" height="12" fill="#f0f0f0"/><rect x="550" y="705" width="0" height="12" fill="#E69F00"/>

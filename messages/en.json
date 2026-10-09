@@ -588,6 +588,12 @@
       }
     },
     "benchmark": {
+      "adminGate": {
+        "title": "Admin sign-in required",
+        "description": "The benchmark suite is available to administrator accounts only. Sign in to continue.",
+        "signIn": "Sign in",
+        "checking": "Checking access..."
+      },
       "sizeLabels": {
         "small": "Small",
         "medium": "Medium",

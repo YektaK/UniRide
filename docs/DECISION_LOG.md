@@ -276,6 +276,12 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 - **Rejected/why:** fixing now (no outside users, the hints are the owner's test-account mnemonics). **Dead ends:** none. **Reversal:** none recorded.
 - **Evidence:** [audit H1](ULTIMATE_AUDIT_2026-10-01_CLAUDE_OPUS_5_5.md), Appendix J status DEFERRED. **Check first:** H1 must be closed in the pre-go-live checklist; re-open before any outside user gets an account.
 
+### S07 — benchmark BFF requires admin; landing page gated (C4 BFF half, QW2 minus H1)
+
+- **Date/status:** 2026-10-09; lead decision, repo fix on `fix/qw2-benchmark-bff-auth` (pending merge). **Chosen/rationale:** every `/api/benchmark/*` handler first calls `denyUnlessBenchmarkAdmin` (`src/lib/benchmark-auth.ts`, wraps `requireAdmin` and maps errors with `handleApiError` as the admin routes do: 401 anonymous, 403 non-admin). The `src/proxy.ts` matcher also covers `/api/benchmark/:path*` (bearer check only, defence in depth). `benchmark-service.ts` sends the Supabase bearer token via `getAuthToken` from `admin-api.ts` and sends nothing without a session. The landing page `/` is the benchmark suite, so `BenchmarkSuitePage` now mounts the suite only for an admin session; others see a short sign-in prompt and trigger no benchmark call. `run`, `run/status` and `run/stop` read the FastAPI `detail` field so a 429 message is shown.
+- **Rejected/why:** keeping the landing benchmark anonymous (the BFF key then unlocks compute for anyone; audit C4); redesigning the landing page (out of scope). **Dead ends:** none. **Reversal:** none recorded. H1 (`/api/auth/hint`) untouched per S06.
+- **Evidence:** [audit C4, Appendix J C4](ULTIMATE_AUDIT_2026-10-01_CLAUDE_OPUS_5_5.md). **Check first:** this is the BFF half only; the backend half (QW4, stop really stops, slots) is on `fix/qw4-benchmark-stop`. Owner cookies (`benchmark-owner-cookie`) still apply on top of admin auth.
+
 ### S03 — bounded quick fixes, hermetic discovery and explicit waivers
 
 - **Date/status:** 2026-08-10/24; approved historical scope. **Chosen/rationale:** repair easy build/provider/optional-solver/discovery failures while documenting remaining security/feasibility debt; canonical tests exclude historical/manual scripts and unrelated worktrees; tenant configuration rejects blank/reserved/duplicate identities/secrets.

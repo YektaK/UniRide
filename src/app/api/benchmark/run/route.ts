@@ -3,6 +3,7 @@ import { generateBenchmarkRunId, isValidBenchmarkRunId } from '@/lib/benchmark-r
 import { buildBenchmarkBackendRequest } from '@/lib/benchmark-backend-request';
 import { getOwnerToken, setOwnerCookie, isRunExistsStatus } from '@/lib/benchmark-owner-cookie';
 import { optimizerFetch } from "@/lib/optimizer-server";
+import { denyUnlessBenchmarkAdmin } from "@/lib/benchmark-auth";
 
 /**
  * POST /api/benchmark/run
@@ -36,6 +37,9 @@ import { optimizerFetch } from "@/lib/optimizer-server";
  * }
  */
 export async function POST(request: NextRequest) {
+  const denied = await denyUnlessBenchmarkAdmin(request);
+  if (denied) return denied;
+
   try {
     const body = await request.json();
 
@@ -119,7 +123,7 @@ export async function POST(request: NextRequest) {
       console.error(`[Benchmark] Backend error:`, error);
       return NextResponse.json(
         { 
-          error: error.error || 'Benchmark servisine bağlanılamadı',
+          error: error.detail || error.error || 'Benchmark servisine bağlanılamadı',
           code: error.code 
         },
         { status: response.status }

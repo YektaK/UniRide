@@ -106,29 +106,23 @@ function clearTokenForGeneration(generation: number): null {
 export async function getAuthToken(): Promise<string | null> {
   const supabase = getSupabaseClient();
   
-  console.log("[AdminAPI] getAuthToken called.");
   // If we have a cached token that's not expiring, use it
   if (cachedToken && tokenExpiry > Date.now()) {
-    console.log("[AdminAPI] Using cached token.");
     return cachedToken;
   }
   
   // If there's already a refresh in progress, wait for it
   if (tokenPromise) {
-    console.log("[AdminAPI] Waiting for existing tokenPromise...");
     return tokenPromise;
   }
   
-  console.log("[AdminAPI] Starting new token fetch...");
   // Start a new token fetch
   const generation = tokenGeneration;
   const sessionWork = (async () => {
     try {
-      console.log("[AdminAPI] Calling supabase.auth.getSession()...");
       // Get session - this will auto-refresh if needed
       const { data: { session }, error } = await supabase.auth.getSession();
       
-      console.log("[AdminAPI] getSession returned. Error:", error ? error.message : "None", "Session exists:", !!session);
 
       if (generation !== tokenGeneration) return null;
       

@@ -193,3 +193,107 @@ def test_benchmark_router_is_rate_limited(client, monkeypatch):
     bad = _body({"population_size": 5000})
     assert client.post("/api/v1/benchmark/run", json=bad).status_code == 422
     assert client.post("/api/v1/benchmark/run", json=bad).status_code == 429
+
+
+# --- review round (E1, E2, C1, C2, C5, C6) ---------------------------------
+
+def _limit(monkeypatch, n):
+    monkeypatch.setattr(
+        rate_limit, "load_compute_policy",
+        lambda: ComputePolicy(rate_limit_requests=n, rate_limit_window_seconds=60))
+
+
+def test_status_and_stop_polling_is_not_rate_limited(client, monkeypatch):
+    """E1: the UI polls /status every 2 s; polling must not hit 429."""
+    _limit(monkeypatch, 30)
+    manager = BenchmarkStateManager()
+    monkeypatch.setattr(benchmark, "benchmark_state_manager", manager)
+    _, token = manager.create_run("poll-1", 5, {})
+    headers = {"X-Benchmark-Owner-Token": token}
+    for _ in range(40):
+        resp = client.get("/api/v1/benchmark/status", params={"run_id": "poll-1"}, headers=headers)
+        assert resp.status_code == 200, resp.text
+    resp = client.post("/api/v1/benchmark/stop", params={"run_id": "poll-1"}, headers=headers)
+    assert resp.status_code == 200, resp.text
+
+
+def test_benchmark_run_bucket_is_separate_from_optimize_bucket(client, monkeypatch):
+    """E1: exhausting /run must not consume the production /optimize bucket."""
+    _limit(monkeypatch, 2)
+    bad = _body({"population_size": 5000})
+    codes = [client.post("/api/v1/benchmark/run", json=bad).status_code for _ in range(3)]
+    assert codes[-1] == 429, codes
+
+    request = SimpleNamespace(state=SimpleNamespace(), client=SimpleNamespace(host="testclient"))
+    rate_limit.require_rate_limit(request)  # the optimize bucket is untouched
+
+
+@pytest.mark.parametrize("algo", ["Core-GA-TSP", "Core-PSO-TSP", "Core-TwoOpt-TSP"])
+@pytest.mark.parametrize("params", [
+    {"max_iterations": 100_000},
+    {"population_size": 5000},
+    {"max_no_improvement": 10**9},
+    {"time_limit": 10**6},
+    {"time_limit_seconds": 10**6},
+])
+def test_matrix_native_params_are_bounded(client, algo, params):
+    """E2: matrix-native engines also get policy-bounded params (422)."""
+    body = _body(params, algo)
+    body["settings"]["execution_mode"] = "matrix_native"
+    resp = client.post("/api/v1/benchmark/run", json=body)
+    assert resp.status_code == 422, resp.text
+    assert resp.json()["detail"]["error"] == "Benchmark parameters exceed the compute policy"
+
+
+def test_stop_treats_registered_unstarted_thread_as_alive():
+    """C1: register_thread happens before start(); stop must not free the slot."""
+    manager = BenchmarkStateManager()
+    manager.create_run("pre", 1, {})
+    manager.register_thread("pre", threading.Thread(target=lambda: None))
+    manager.stop_run("pre", "stop")
+    assert manager.get_run("pre").status == BenchmarkStatus.RUNNING
+
+
+def test_dead_thread_of_running_run_does_not_hold_slot():
+    """C2: a worker that died without a terminal status must not leak its slot."""
+    manager = BenchmarkStateManager()
+    for i in range(MAX_CONCURRENT_BENCHMARKS):
+        manager.create_run(f"d{i}", 1, {})
+        t = threading.Thread(target=lambda: None)
+        t.start()
+        t.join()
+        manager.register_thread(f"d{i}", t)
+    assert manager.can_start_run() is True
+
+
+def test_worker_always_reaches_terminal_state(monkeypatch):
+    """C2: runner.run returning without completing must still end the run."""
+    manager = BenchmarkStateManager()
+    monkeypatch.setattr(benchmark, "benchmark_state_manager", manager)
+    monkeypatch.setattr(benchmark, "_load_benchmark_problem",
+                        lambda name: SimpleNamespace(name=name))
+    monkeypatch.setattr(benchmark.BenchmarkRunner, "run", lambda self, **kw: ([], {}))
+    benchmark._start_benchmark_impl("term-1", [{"id": "genetic_algorithm"}], ["p"], {"n_runs": 1})
+    assert _wait(lambda: manager.get_run("term-1").status != BenchmarkStatus.RUNNING)
+    assert manager.get_run("term-1").status == BenchmarkStatus.FAILED
+
+
+@pytest.mark.parametrize("algo", ["ga_split_enhanced", "ga_split_hf"])
+def test_config_field_uses_policy_table(algo):
+    """C5: single source of truth is compute_policy.CONFIG_FIELD_BY_CANONICAL."""
+    from optimizer_api.compute_policy import CONFIG_FIELD_BY_CANONICAL
+    field = benchmark.config_field_for_algorithm if hasattr(benchmark, "config_field_for_algorithm") else None
+    runner_mod = sys.modules[benchmark.BenchmarkRunner.__module__]
+    assert runner_mod.config_field_for_algorithm(algo) == CONFIG_FIELD_BY_CANONICAL[algo]
+    with pytest.raises(ValueError):
+        runner_mod.validate_benchmark_params(algo, {"population_size": 5000})
+
+
+@pytest.mark.parametrize("bad", [["x"], "x", 5])
+def test_non_dict_params_return_422_not_500(monkeypatch, bad):
+    """C6."""
+    monkeypatch.setattr(benchmark, "benchmark_state_manager", BenchmarkStateManager())
+    with pytest.raises(benchmark.HTTPException) as exc:
+        benchmark._start_benchmark_impl(
+            "c6", [{"id": "genetic_algorithm", "params": bad}], ["p"], {"n_runs": 1})
+    assert exc.value.status_code == 422

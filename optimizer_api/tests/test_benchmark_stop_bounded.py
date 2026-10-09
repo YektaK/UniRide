@@ -3,6 +3,7 @@ oversize parameters are rejected and the router is rate limited.
 
 Appendix H.5 turned into a test with fake, finite, slow workers (no solver)."""
 
+import sys
 import threading
 import time
 from types import SimpleNamespace
@@ -84,7 +85,9 @@ def test_stop_without_live_worker_stops_immediately():
 def test_real_runner_exits_within_one_experiment_after_stop(monkeypatch):
     """Appendix H.5: start 3, stop, no thread survives beyond one experiment,
     a 4th start is refused while stopped-but-alive runs exist."""
-    from optimizer_api.benchmark_runner import BenchmarkRunner, ExperimentResult
+    # The router imports the runner as a top-level module; patch that exact class.
+    BenchmarkRunner = benchmark.BenchmarkRunner
+    ExperimentResult = sys.modules[BenchmarkRunner.__module__].ExperimentResult
 
     manager = BenchmarkStateManager()
     monkeypatch.setattr(benchmark, "benchmark_state_manager", manager)

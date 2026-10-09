@@ -13,11 +13,13 @@ from fastapi.params import Query as QueryParam
 
 try:
     from optimizer_api.auth import require_tenant_authorization
+    from optimizer_api.rate_limit import require_rate_limit
 except ModuleNotFoundError:
     from auth import require_tenant_authorization
+    from rate_limit import require_rate_limit
 
 from models.schemas import BenchmarkRunRequest, BenchmarkImportRequest
-from benchmark_runner import BenchmarkRunner, ProblemInstance, AlgorithmConfig
+from benchmark_runner import BenchmarkRunner, ProblemInstance, AlgorithmConfig, validate_benchmark_params
 from benchmark_state import benchmark_state_manager, BenchmarkStatus, MAX_CONCURRENT_BENCHMARKS, verify_owner_token
 from strategies import OPERATIONAL_ONLY_STRATEGIES, STRATEGY_REGISTRY
 from utils.tsplib_parser import (
@@ -31,7 +33,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/api/v1/benchmark",
     tags=["Benchmark"],
-    dependencies=[Depends(require_tenant_authorization)],
+    dependencies=[Depends(require_tenant_authorization), Depends(require_rate_limit)],
 )
 
 _VALID_PROBLEM_NAME = re.compile(r"^[a-zA-Z0-9_-]+$")
@@ -268,6 +270,20 @@ def get_benchmark_results(run_id: str) -> Dict:
 def start_benchmark(body: BenchmarkRunRequest) -> Dict:
     return _start_benchmark_impl(body.run_id, body.algorithms, body.problems, body.settings)
 
+def _validate_algorithm_params(algorithms: List[Dict]) -> None:
+    """Reject out-of-policy tuning parameters with 422 (messages carry no internals)."""
+    for index, algo in enumerate(algorithms):
+        algo_id = str(algo.get("id", algo.get("name", "unknown")))
+        try:
+            validate_benchmark_params(algo_id, algo.get("params") or {})
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail={"error": "Benchmark parameters exceed the compute policy",
+                        "algorithm_index": index, "reason": str(exc)},
+            )
+
+
 def _start_benchmark_impl(run_id: str, algorithms: List[Dict], problems: List[str], settings: Dict) -> Dict:
     try:
         if benchmark_state_manager.get_run(run_id) is not None:
@@ -275,6 +291,7 @@ def _start_benchmark_impl(run_id: str, algorithms: List[Dict], problems: List[st
                 status_code=409,
                 detail={"error": "Benchmark run already exists", "run_id": run_id},
             )
+        _validate_algorithm_params(algorithms)
         if settings.get("execution_mode") in {"matrix_native", "academic_matrix"}:
             return _start_matrix_native_benchmark_impl(run_id, algorithms, problems, settings)
         
@@ -317,6 +334,7 @@ def _start_benchmark_impl(run_id: str, algorithms: List[Dict], problems: List[st
         
         executor_thread = threading.Thread(target=run_benchmark_task, daemon=True, name=f"benchmark-executor-{run_id}")
         executor_thread.start()
+        benchmark_state_manager.register_thread(run_id, executor_thread)
         
         return {
             "run_id": run_id, "status": "running", "total_experiments": total_experiments,
@@ -397,6 +415,8 @@ def _start_matrix_native_benchmark_impl(run_id: str, algorithms: List[Dict], pro
             for problem in routing_problems:
                 for algorithm in matrix_algorithms:
                     for run_number in range(1, n_runs + 1):
+                        if benchmark_state_manager.stop_requested(run_id):
+                            break
                         result = runner.run_one(
                             problem,
                             algorithm,
@@ -413,10 +433,14 @@ def _start_matrix_native_benchmark_impl(run_id: str, algorithms: List[Dict], pro
                             completed,
                             f"Completed matrix-native: {algorithm.name} on {problem.name} ({completed}/{total_experiments})",
                         )
+                    if benchmark_state_manager.stop_requested(run_id):
+                        break
+                if benchmark_state_manager.stop_requested(run_id):
+                    break
             save_benchmark_run(
                 run_id,
                 source="web_matrix_native",
-                status="completed",
+                status="stopped" if benchmark_state_manager.stop_requested(run_id) else "completed",
                 settings=state.parameters,
                 metadata={"results": len(collected)},
             )
@@ -437,6 +461,7 @@ def _start_matrix_native_benchmark_impl(run_id: str, algorithms: List[Dict], pro
 
     executor_thread = threading.Thread(target=run_matrix_task, daemon=True, name=f"matrix-benchmark-executor-{run_id}")
     executor_thread.start()
+    benchmark_state_manager.register_thread(run_id, executor_thread)
     return {
         "run_id": run_id,
         "status": "running",
@@ -536,9 +561,14 @@ def stop_benchmark(run_id: str) -> Dict:
     if not state:
         raise HTTPException(status_code=404, detail=f"Benchmark run {run_id} not found")
     benchmark_state_manager.stop_run(run_id, "User requested stop")
+    state = benchmark_state_manager.get_run(run_id) or state
+    # Truthful status: a live worker keeps the run "running" (and its slot)
+    # until it finishes its current experiment; the poll reports "stopped" then.
+    stopping = state.status == BenchmarkStatus.RUNNING
     return {
-        "run_id": run_id, "status": "stopped", "results_collected": state.results_count,
-        "message": f"Benchmark {run_id} stopped"
+        "run_id": run_id, "status": "stopping" if stopping else state.status.value,
+        "results_collected": state.results_count,
+        "message": f"Benchmark {run_id} stop requested" if stopping else f"Benchmark {run_id} stopped"
     }
 
 @router.post("/download/{problem_name}")

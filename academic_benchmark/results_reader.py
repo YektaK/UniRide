@@ -8,7 +8,7 @@ import math
 import os
 from typing import Dict, List, Optional
 
-from academic_benchmark.obsolete_results import filter_obsolete_rows
+from academic_benchmark.obsolete_results import AFFECTED_ALGORITHMS, filter_obsolete_rows, normalize_algorithm
 from academic_benchmark.tsplib_manager import (
     DB_PATH,
     get_all_problems,
@@ -69,7 +69,10 @@ def get_benchmark_rows(
     safe_limit = max(1, min(int(limit), 5000))
     if prefer_db:
         db_rows = filter_obsolete_rows(
-            query_benchmark_results(limit=safe_limit, db_path=db_path), include_obsolete
+            query_benchmark_results(
+                limit=safe_limit, db_path=db_path, exclude_obsolete=not include_obsolete
+            ),
+            include_obsolete
         )
         if feasible_only:
             db_rows = [row for row in db_rows if is_feasible_benchmark_row(row)]
@@ -87,6 +90,11 @@ def get_benchmark_rows(
 
     with open(path, newline="", encoding="utf-8") as handle:
         rows = [_normalize_benchmark_row(row) for row in csv.DictReader(handle)]
+    if not include_obsolete:
+        # An OBSOLETE.md sibling (written by the marking tool) flags the affected algorithms.
+        if os.path.exists(os.path.join(results_dir, "OBSOLETE.md")):
+            rows = [row for row in rows if normalize_algorithm(row.get("algorithm")) not in AFFECTED_ALGORITHMS]
+        rows = filter_obsolete_rows(rows)
     if feasible_only:
         rows = [row for row in rows if is_feasible_benchmark_row(row)]
 

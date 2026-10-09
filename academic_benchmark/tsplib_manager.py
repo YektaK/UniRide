@@ -516,8 +516,13 @@ def query_benchmark_results(
     problem_type: Optional[str] = None,
     limit: int = 100,
     db_path: str = DB_PATH,
+    exclude_obsolete: bool = True,
 ) -> List[Dict]:
-    """Query persisted benchmark run rows."""
+    """Query persisted benchmark run rows.
+
+    Rows flagged metadata.obsolete are excluded in SQL (before LIMIT) unless
+    ``exclude_obsolete`` is False.
+    """
     conn = get_db(db_path)
     init_db(conn)
     where = ["1=1"]
@@ -534,6 +539,11 @@ def query_benchmark_results(
     if problem_type:
         where.append("r.problem_type=?")
         params.append(problem_type)
+    if exclude_obsolete:
+        where.append(
+            "(r.metadata_json IS NULL OR NOT json_valid(r.metadata_json) "
+            "OR json_extract(r.metadata_json,'$.obsolete') IS NOT 1)"
+        )
     sql = (
         "SELECT r.*, b.source, b.status "
         "FROM benchmark_results r "

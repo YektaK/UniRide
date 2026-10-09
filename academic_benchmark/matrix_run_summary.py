@@ -69,7 +69,10 @@ def summarize_run(
 ) -> Dict[str, Any]:
     """Load and summarize rows for a persisted benchmark run id (obsolete rows excluded by default)."""
     rows = filter_obsolete_rows(
-        query_benchmark_results(run_id=run_id, db_path=db_path, limit=limit), include_obsolete
+        query_benchmark_results(
+            run_id=run_id, db_path=db_path, limit=limit, exclude_obsolete=not include_obsolete
+        ),
+        include_obsolete
     )
     summary = summarize_benchmark_rows(rows)
     summary["run_id"] = run_id

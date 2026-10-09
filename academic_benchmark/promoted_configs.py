@@ -40,7 +40,10 @@ def build_promoted_configs(
     candidates.extend(_best_solution_candidates(query_best_solutions(limit=limit, db_path=db_path)))
     candidates.extend(
         _benchmark_result_candidates(
-            filter_obsolete_rows(query_benchmark_results(limit=limit, db_path=db_path), include_obsolete),
+            filter_obsolete_rows(
+                query_benchmark_results(limit=limit, db_path=db_path, exclude_obsolete=not include_obsolete),
+                include_obsolete,
+            ),
             include_empty_params=include_empty_params,
         )
     )

@@ -1,6 +1,11 @@
-"""Mark pre-2026-10-09 ga_split_enhanced / ga_split_hf benchmark-runner results obsolete.
+"""Guard: mark pre-2026-10-09 ga_split_enhanced / ga_split_hf rows and files obsolete.
 
-Never deletes. SQLite rows get ``obsolete`` keys merged into ``metadata_json``
+The benchmark-runner path keeps results in memory and does not persist to tsplib.db
+(0 rows on 2026-10-09, read-only check); this guards rows copied into tsplib.db and
+result files. Exports made before the fix (downloaded JSON, browser copies,
+POST /import) cannot be marked automatically and must not be pooled with later results.
+Directories whose run_manifest.json records "path": "/api/v1/optimize" (production
+path, unaffected) are skipped. Never deletes. SQLite rows get ``obsolete`` keys merged into ``metadata_json``
 (existing metadata preserved). File-based results get a sibling OBSOLETE.md.
 Idempotent: already-marked rows are skipped. See DECISION_LOG A06.
 
@@ -51,9 +56,9 @@ def mark_sqlite(db_path: str, *, dry_run: bool, cutoff: str = OBSOLETE_CUTOFF, n
             try:
                 meta = json.loads(metadata_json) if metadata_json else {}
             except ValueError:
-                meta = {}
+                meta = None
             if not isinstance(meta, dict):
-                meta = {}
+                meta = {"_original_metadata_json": metadata_json} if metadata_json else {}
             if meta.get("obsolete") is True:
                 already += 1
                 continue
@@ -77,9 +82,28 @@ def mark_sqlite(db_path: str, *, dry_run: bool, cutoff: str = OBSOLETE_CUTOFF, n
         conn.close()
 
 
+def _has_production_path(node: Any) -> bool:
+    if isinstance(node, dict):
+        return node.get("path") == "/api/v1/optimize" or any(_has_production_path(v) for v in node.values())
+    if isinstance(node, list):
+        return any(_has_production_path(v) for v in node)
+    return False
+
+
+def _is_production_path(manifest_path: str) -> bool:
+    try:
+        with open(manifest_path, encoding="utf-8") as handle:
+            return _has_production_path(json.load(handle))
+    except (OSError, ValueError):
+        return False
+
+
 def mark_files(directory: str, *, dry_run: bool, now: Optional[str] = None) -> Dict[str, Any]:
     """Write OBSOLETE.md next to result files that mention the affected algorithms."""
     marked_at = now or datetime.now(timezone.utc).isoformat()
+    manifest = os.path.join(directory, "run_manifest.json")
+    if os.path.isfile(manifest) and _is_production_path(manifest):
+        return {"directory": directory, "files": [], "skipped": "production path /api/v1/optimize", "dry_run": dry_run}
     matches: List[str] = []
     for name in sorted(os.listdir(directory)):
         path = os.path.join(directory, name)
@@ -104,8 +128,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db", required=True, help="path to tsplib.db (use a COPY for dry runs)")
     parser.add_argument("--dry-run", action="store_true")
-    parser.add_argument("--cutoff", default=OBSOLETE_CUTOFF, help="ISO date; rows before it are marked")
-    parser.add_argument("--files-dir", action="append", default=[], help="result directory to flag with OBSOLETE.md")
+    parser.add_argument("--cutoff", default=OBSOLETE_CUTOFF, help="exact ISO date or instant; rows with timestamp < it are marked (default is the fix date, so rows stamped 2026-10-09 are not auto-marked)")
+    parser.add_argument("--files-dir", action="append", default=[], help="result directory to flag with OBSOLETE.md (skipped when its run_manifest.json has path /api/v1/optimize, the unaffected production path)")
     args = parser.parse_args(argv)
 
     report = {"algorithms": sorted(AFFECTED_ALGORITHMS), "sqlite": mark_sqlite(args.db, dry_run=args.dry_run, cutoff=args.cutoff)}

@@ -108,7 +108,7 @@ def test_csv_fallback_respects_include_obsolete(tmp_path):
     (tmp_path / "OBSOLETE.md").write_text("x", encoding="utf-8")
     with open(tmp_path / "benchmark_progress.csv", "w", newline="", encoding="utf-8") as h:
         w = _csv.writer(h)
-        w.writerow(["problem", "algorithm", "run", "tour_length"])
+        w.writerow(["problem", "strategy", "run", "tour_length"])
         w.writerow(["p", "ga_split_hf", 1, 5])
         w.writerow(["p", "ga_split", 1, 6])
     kw = dict(results_dir=str(tmp_path), db_path=str(tmp_path / "none.db"), prefer_db=False)

@@ -86,7 +86,8 @@ def load_data(include_obsolete: bool = False):
             loaded_sources["tuning"].append(tuning_path)
 
     db_rows = filter_obsolete_rows(
-        query_benchmark_results(limit=5000, db_path=DB_PATH), include_obsolete
+        query_benchmark_results(limit=5000, db_path=DB_PATH, exclude_obsolete=not include_obsolete),
+        include_obsolete
     )
     if db_rows:
         all_progress.append(benchmark_rows_to_progress_frame(db_rows))

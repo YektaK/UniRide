@@ -439,7 +439,7 @@
         "seedDesc": "Fixed seed for reproducible results",
         "summary": "Summary",
         "totalExperiments": "Total Experiments",
-        "experimentsCount": "{n} experiments",
+        "experimentsCount": "<important>{algorithms}</important> algorithms × <important>{problems}</important> problems × <important>{runs}</important> runs = <bold>{total}</bold> experiments",
         "starting": "Starting...",
         "startBenchmark": "Start Benchmark",
         "emptyHistory": "No Run History",
@@ -544,7 +544,7 @@
           "exportedTitle": "Results exported",
           "exportedDesc": "Results were downloaded as a JSON file.",
           "resultsLoadedTitle": "Results loaded",
-          "resultsLoadedDesc": "{n} results loaded"
+          "resultsLoadedDesc": "{n} results loaded."
         },
         "noProblems": "No Problems Found",
         "noProblemsHint": "No problems match the selected category. Choose another category.",

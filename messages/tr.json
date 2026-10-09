@@ -439,7 +439,7 @@
         "seedDesc": "Tekrarlanabilir sonuçlar için sabit tohum",
         "summary": "Özet",
         "totalExperiments": "Toplam Deney",
-        "experimentsCount": "{n} deney",
+        "experimentsCount": "<important>{algorithms}</important> algoritma × <important>{problems}</important> problem × <important>{runs}</important> çalıştırma = <bold>{total}</bold> deney",
         "starting": "Başlatılıyor...",
         "startBenchmark": "Benchmark Başlat",
         "emptyHistory": "Henüz Çalışma Yok",
@@ -535,7 +535,7 @@
           "resultsLoadFailed": "Sonuçlar Alınamadı",
           "historyCleared": "Tüm çalışma geçmişi silindi.",
           "problemsLoadFailed": "Problemler yüklenemedi",
-          "serverUnreachable": "Optimizer sunucusuna ulaşılamadı.",
+          "serverUnreachable": "Optimizasyon sunucusuna ulaşılamadı.",
           "resultsFetchFailed": "Sonuçlar alınamadı",
           "resultsFetchFailedDesc": "Çalışma tamamlandı ancak sonuçlar getirilemedi.",
           "startedTitle": "Benchmark başlatıldı",
@@ -544,7 +544,7 @@
           "exportedTitle": "Sonuçlar dışa aktarıldı",
           "exportedDesc": "Sonuçlar JSON dosyası olarak indirildi.",
           "resultsLoadedTitle": "Sonuçlar yüklendi",
-          "resultsLoadedDesc": "{n} sonuç yüklendi"
+          "resultsLoadedDesc": "{n} sonuç yüklendi."
         },
         "noProblems": "Problem Bulunamadı",
         "noProblemsHint": "Seçili kategoriye uyan problem yok. Başka bir kategori seçin.",

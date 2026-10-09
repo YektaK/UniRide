@@ -24,6 +24,11 @@ TSPLIB_DATA_DIR = os.path.join(_HERE, "tsplib_data")
 DB_PATH         = os.path.join(TSPLIB_DATA_DIR, "tsplib.db")
 
 try:
+    from tsplib_matrix_codec import decode_matrix, encode_matrix
+except ImportError:
+    from academic_benchmark.tsplib_matrix_codec import decode_matrix, encode_matrix
+
+try:
     from benchmark_utils import TSPLIB_OPTIMALS
 except ImportError:
     from academic_benchmark.benchmark_utils import TSPLIB_OPTIMALS
@@ -165,16 +170,13 @@ def get_distance_matrix(problem_name: str, db_path: str = DB_PATH):
     try:
         conn = get_db(db_path)
         row = conn.execute(
-            "SELECT matrix_blob, shape_n, dtype FROM distance_matrices WHERE problem_name=?",
+            "SELECT matrix_blob, shape_n, dtype, version FROM distance_matrices WHERE problem_name=?",
             (problem_name,)
         ).fetchone()
         conn.close()
         if row is None:
             return None
-        flat = zlib.decompress(bytes(row["matrix_blob"]))
-        n = row["shape_n"]
-        dtype = np.dtype(row["dtype"] if "dtype" in row.keys() and row["dtype"] else "int32")
-        return np.frombuffer(flat, dtype=dtype).reshape(n, n).copy()
+        return decode_matrix(row["matrix_blob"], row["shape_n"], row["dtype"] or "int32", row["version"] or 1)
     except Exception:
         return None
 
@@ -220,14 +222,13 @@ def get_all_problems(db_path: str = DB_PATH, max_dim: int = 0, exclude_explicit:
             }
             if ptype == "ATSP":
                 dm_row = conn.execute(
-                    "SELECT matrix_blob, shape_n, dtype FROM distance_matrices WHERE problem_name=?",
+                    "SELECT matrix_blob, shape_n, dtype, version FROM distance_matrices WHERE problem_name=?",
                     (name,)
                 ).fetchone()
                 if dm_row:
-                    flat = zlib.decompress(bytes(dm_row["matrix_blob"]))
-                    n = dm_row["shape_n"]
-                    dtype = np.dtype(dm_row["dtype"] if "dtype" in dm_row.keys() else "int32")
-                    entry["dist_matrix"] = np.frombuffer(flat, dtype=dtype).reshape(n, n).copy()
+                    entry["dist_matrix"] = decode_matrix(
+                        dm_row["matrix_blob"], dm_row["shape_n"],
+                        dm_row["dtype"] or "int32", dm_row["version"] or 1)
             c_row = conn.execute(
                 "SELECT demands_json, capacities_json, time_windows_json, service_times_json, "
                 "depot_index, max_route_duration, matrix_kind, direction, num_vehicles, metadata_json "
@@ -648,12 +649,13 @@ def _build_matrix(coords, ewt: str):
 
 
 def _store_matrix(conn, name: str, dm, ewt: str):
-    blob = zlib.compress(dm.astype(np.int32).tobytes(), level=6)
+    dm = dm.astype(np.int32)
+    blob, version = encode_matrix(dm)
     conn.execute(
         "INSERT OR REPLACE INTO distance_matrices "
         "(problem_name, matrix_blob, dtype, shape_n, edge_weight_type, computed_at, version) "
         "VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (name, blob, "int32", dm.shape[0], ewt, datetime.now().isoformat(), 1)
+        (name, blob, "int32", dm.shape[0], ewt, datetime.now().isoformat(), version)
     )
 
 
@@ -672,12 +674,12 @@ def _store_numeric_matrix(conn, name: str, matrix, ewt: str):
         dm = dm.astype(np.int32, copy=False)
     else:
         dm = dm.astype(np.float64, copy=False)
-    blob = zlib.compress(dm.tobytes(), level=6)
+    blob, version = encode_matrix(dm)
     conn.execute(
         "INSERT OR REPLACE INTO distance_matrices "
         "(problem_name, matrix_blob, dtype, shape_n, edge_weight_type, computed_at, version) "
         "VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (name, blob, str(dm.dtype), dm.shape[0], ewt, datetime.now().isoformat(), 1),
+        (name, blob, str(dm.dtype), dm.shape[0], ewt, datetime.now().isoformat(), version),
     )
 
 

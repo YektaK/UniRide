@@ -53,6 +53,14 @@ describe("20261010 route_plans_read_lock migration", () => {
     );
   });
 
+  it("has a closing guard that aborts on public/anon policies before commit", () => {
+    const guardAt = body.indexOf("from pg_policies");
+    expect(guardAt).toBeGreaterThan(-1);
+    const guard = body.slice(guardAt, body.lastIndexOf("commit;"));
+    expect(guard).toContain("&& array['public', 'anon']");
+    expect(guard).toContain("raise exception");
+  });
+
   it("never grants to anon or public", () => {
     expect(body).not.toMatch(/to (anon|public)\b/);
     expect(body).not.toContain("using (true)");
@@ -65,9 +73,14 @@ describe("supabase/rls_policies.sql (M21 retired)", () => {
     expect(legacy).not.toMatch(/drop policy if exists "' \|\|/);
   });
 
-  it("is a guarded legacy reference that aborts when executed", () => {
-    expect(legacy).toMatch(/^begin;/);
-    expect(legacy).toContain("raise exception");
-    expect(legacy).toContain("legacy");
+  it("starts with the abort guard as the first statement after begin", () => {
+    expect(legacy).toMatch(
+      /^begin; do \$\$ begin raise exception 'supabase\/rls_policies\.sql is a legacy reference/,
+    );
+  });
+
+  it("has no executable statement after the guard except commit", () => {
+    const afterGuard = legacy.split("end $$;")[1];
+    expect(afterGuard.trim()).toBe("commit;");
   });
 });

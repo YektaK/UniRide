@@ -26,6 +26,8 @@
 -- no row is modified. A final check aborts the transaction if any policy on the
 -- five tables still applies to public/anon.
 --
+-- Operator note: paste the WHOLE file and press Run; do not use "Run selected".
+--
 -- Test: supabase/tests/20261010_route_plans_read_lock.sql (BEGIN ... ROLLBACK).
 -- =============================================================================
 

@@ -1,11 +1,12 @@
 -- =============================================================================
--- LEGACY REFERENCE - DO NOT RUN (audit M21, retired 2026-10-10)
+-- LEGACY REFERENCE - DO NOT RUN (audit M21, retired 2026-10-09)
 -- supabase/migrations/* are the authoritative source of RLS policy. This file
 -- used to DROP every public policy (including migration-owned ones such as
 -- route_plans and sandbox_scenarios) and recreate an older policy set, which
 -- would undo the 20261009 and 20261010 lock migrations. The drop-all loop is
 -- gone and an aborting guard now stops the script. The policy text below is kept
--- only for history and diffing; edit migrations, not this file.
+-- only for history and diffing, fully commented out so that "Run selected" cannot
+-- execute any part of it; edit migrations, not this file.
 -- =============================================================================
 BEGIN;
 
@@ -17,192 +18,192 @@ BEGIN
   RAISE EXCEPTION 'supabase/rls_policies.sql is a legacy reference; apply supabase/migrations/* instead';
 END $$;
 
--- UniRide Row Level Security Policies (Fixed)
--- Run this in Supabase SQL Editor
--- These policies avoid infinite recursion by using auth.uid() directly
-
--- First, enable RLS on all tables
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE weekly_schedules ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ride_requests ENABLE ROW LEVEL SECURITY;
-ALTER TABLE vehicles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE routes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE route_assignments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE admin_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.student_leg_decisions ENABLE ROW LEVEL SECURITY;
-
--- Helper function to check if user is admin
-CREATE OR REPLACE FUNCTION is_admin()
-RETURNS BOOLEAN AS $$
-BEGIN
-  RETURN (
-    SELECT role = 'admin'
-    FROM public.users
-    WHERE id = auth.uid()
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- ==================== USERS POLICIES ====================
-
--- Users can read their own data
-CREATE POLICY "users_select_own"
-  ON users FOR SELECT
-  USING (auth.uid() = id);
-
--- Users can insert themselves (for registration)
-CREATE POLICY "users_insert_self"
-  ON users FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = id AND role = 'student');  -- QW1/C1: never self-create admin/driver
-
--- Users can update their own data (role is protected by trigger below)
-CREATE POLICY "users_update_own"
-  ON users FOR UPDATE TO authenticated
-  USING (auth.uid() = id)
-  WITH CHECK (auth.uid() = id);
-
--- Trigger: prevent self-role-escalation
--- Regular authenticated users cannot change the `role` column.
--- Service-role connections (server-side admin operations) are exempt.
-CREATE OR REPLACE FUNCTION prevent_role_change()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SET search_path = ''
-AS $$
-BEGIN
-  -- Allow service_role to change the role column (admin operations via server)
-  IF auth.role() = 'service_role' THEN
-    RETURN NEW;
-  END IF;
-
-  IF TG_OP = 'INSERT' THEN
-    IF NEW.role IS DISTINCT FROM 'student' THEN
-      RAISE EXCEPTION 'Only service_role may create non-student users';
-    END IF;
-  ELSIF NEW.role IS DISTINCT FROM OLD.role THEN
-    RAISE EXCEPTION 'Direct role modification not allowed - use server-side admin endpoints';
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS enforce_no_role_change ON users;
-CREATE TRIGGER enforce_no_role_change
-  BEFORE INSERT OR UPDATE OF role ON users
-  FOR EACH ROW
-  EXECUTE FUNCTION prevent_role_change();
-
--- Service role can do anything (for admin operations via server)
--- Note: This requires using service_role key on server-side
-
--- ==================== WEEKLY SCHEDULES POLICIES ====================
-
--- Users can manage their own schedules
-CREATE POLICY "schedules_select_own"
-  ON weekly_schedules FOR SELECT
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "schedules_insert_own"
-  ON weekly_schedules FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "schedules_update_own"
-  ON weekly_schedules FOR UPDATE
-  USING (auth.uid() = user_id);
-
--- ==================== RIDE REQUESTS POLICIES ====================
-
--- Users can view their own ride requests
-CREATE POLICY "ride_requests_select_own"
-  ON ride_requests FOR SELECT
-  USING (auth.uid() = user_id);
-
--- Users can create their own ride requests
-CREATE POLICY "ride_requests_insert_own"
-  ON ride_requests FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = user_id
-              AND status IN ('pending_admin_approval', 'pending_student_confirmation')
-              AND vehicle_id IS NULL
-              AND actual_pickup_time IS NULL
-              AND actual_dropoff_time IS NULL);  -- QW1/C1.b
-
--- Users can update their own ride requests
-CREATE POLICY "ride_requests_update_own"
-  ON ride_requests FOR UPDATE TO authenticated
-  USING (auth.uid() = user_id
-         AND status IN ('pending_admin_approval', 'pending_student_confirmation', 'confirmed'))
-  WITH CHECK (auth.uid() = user_id AND status = 'cancelled_by_student'
-              AND vehicle_id IS NULL AND actual_pickup_time IS NULL AND actual_dropoff_time IS NULL);  -- QW1/C1.b
-
--- ==================== VEHICLES POLICIES ====================
-
--- All authenticated users can view vehicles
-CREATE POLICY "vehicles_select_all"
-  ON vehicles FOR SELECT
-  USING (auth.uid() IS NOT NULL);
-
--- Admin can manage vehicles
-CREATE POLICY "vehicles_all_admin"
-  ON vehicles FOR ALL
-  TO authenticated
-  USING (is_admin())
-  WITH CHECK (is_admin());
-
--- ==================== ROUTES POLICIES ====================
-
--- All authenticated users can view routes
-CREATE POLICY "routes_select_all"
-  ON routes FOR SELECT
-  USING (auth.uid() IS NOT NULL);
-
--- Admin can manage routes
-CREATE POLICY "routes_all_admin"
-  ON routes FOR ALL
-  TO authenticated
-  USING (is_admin())
-  WITH CHECK (is_admin());
-
--- ==================== ROUTE ASSIGNMENTS POLICIES ====================
-
--- Users can view assignments they're part of
-CREATE POLICY "route_assignments_select_own"
-  ON route_assignments FOR SELECT
-  USING (auth.uid() = ANY(student_ids) OR auth.uid() = driver_id);
-
--- Admin can manage route assignments
-CREATE POLICY "route_assignments_all_admin"
-  ON route_assignments FOR ALL
-  TO authenticated
-  USING (is_admin())
-  WITH CHECK (is_admin());
-
--- ==================== NOTIFICATIONS POLICIES ====================
-
--- Users can view their own notifications
-CREATE POLICY "notifications_select_own"
-  ON notifications FOR SELECT
-  USING (auth.uid() = user_id);
-
--- Users can update their own notifications (mark as read)
-CREATE POLICY "notifications_update_own"
-  ON notifications FOR UPDATE
-  USING (auth.uid() = user_id);
-
--- System can create notifications (using service role)
-CREATE POLICY "notifications_insert_system"
-  ON notifications FOR INSERT TO service_role
-  WITH CHECK (true);
-
--- ==================== ADMIN SETTINGS POLICIES ====================
-
--- All authenticated users can view admin settings
-CREATE POLICY "admin_settings_select_all"
-  ON admin_settings FOR SELECT
-  USING (auth.uid() IS NOT NULL);
-
--- Note: For admin-only operations (managing users, vehicles, etc.),
--- use service_role key on the server side or create a separate
--- admin API endpoint that verifies the user's role first.
+-- -- UniRide Row Level Security Policies (Fixed)
+-- -- Run this in Supabase SQL Editor
+-- -- These policies avoid infinite recursion by using auth.uid() directly
+--
+-- -- First, enable RLS on all tables
+-- ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE weekly_schedules ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE ride_requests ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE vehicles ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE routes ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE route_assignments ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE admin_settings ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE public.student_leg_decisions ENABLE ROW LEVEL SECURITY;
+--
+-- -- Helper function to check if user is admin
+-- CREATE OR REPLACE FUNCTION is_admin()
+-- RETURNS BOOLEAN AS $$
+-- BEGIN
+--   RETURN (
+--     SELECT role = 'admin'
+--     FROM public.users
+--     WHERE id = auth.uid()
+--   );
+-- END;
+-- $$ LANGUAGE plpgsql SECURITY DEFINER;
+--
+-- -- ==================== USERS POLICIES ====================
+--
+-- -- Users can read their own data
+-- CREATE POLICY "users_select_own"
+--   ON users FOR SELECT
+--   USING (auth.uid() = id);
+--
+-- -- Users can insert themselves (for registration)
+-- CREATE POLICY "users_insert_self"
+--   ON users FOR INSERT TO authenticated
+--   WITH CHECK (auth.uid() = id AND role = 'student');  -- QW1/C1: never self-create admin/driver
+--
+-- -- Users can update their own data (role is protected by trigger below)
+-- CREATE POLICY "users_update_own"
+--   ON users FOR UPDATE TO authenticated
+--   USING (auth.uid() = id)
+--   WITH CHECK (auth.uid() = id);
+--
+-- -- Trigger: prevent self-role-escalation
+-- -- Regular authenticated users cannot change the `role` column.
+-- -- Service-role connections (server-side admin operations) are exempt.
+-- CREATE OR REPLACE FUNCTION prevent_role_change()
+-- RETURNS TRIGGER
+-- LANGUAGE plpgsql
+-- SET search_path = ''
+-- AS $$
+-- BEGIN
+--   -- Allow service_role to change the role column (admin operations via server)
+--   IF auth.role() = 'service_role' THEN
+--     RETURN NEW;
+--   END IF;
+--
+--   IF TG_OP = 'INSERT' THEN
+--     IF NEW.role IS DISTINCT FROM 'student' THEN
+--       RAISE EXCEPTION 'Only service_role may create non-student users';
+--     END IF;
+--   ELSIF NEW.role IS DISTINCT FROM OLD.role THEN
+--     RAISE EXCEPTION 'Direct role modification not allowed - use server-side admin endpoints';
+--   END IF;
+--   RETURN NEW;
+-- END;
+-- $$;
+--
+-- DROP TRIGGER IF EXISTS enforce_no_role_change ON users;
+-- CREATE TRIGGER enforce_no_role_change
+--   BEFORE INSERT OR UPDATE OF role ON users
+--   FOR EACH ROW
+--   EXECUTE FUNCTION prevent_role_change();
+--
+-- -- Service role can do anything (for admin operations via server)
+-- -- Note: This requires using service_role key on server-side
+--
+-- -- ==================== WEEKLY SCHEDULES POLICIES ====================
+--
+-- -- Users can manage their own schedules
+-- CREATE POLICY "schedules_select_own"
+--   ON weekly_schedules FOR SELECT
+--   USING (auth.uid() = user_id);
+--
+-- CREATE POLICY "schedules_insert_own"
+--   ON weekly_schedules FOR INSERT
+--   WITH CHECK (auth.uid() = user_id);
+--
+-- CREATE POLICY "schedules_update_own"
+--   ON weekly_schedules FOR UPDATE
+--   USING (auth.uid() = user_id);
+--
+-- -- ==================== RIDE REQUESTS POLICIES ====================
+--
+-- -- Users can view their own ride requests
+-- CREATE POLICY "ride_requests_select_own"
+--   ON ride_requests FOR SELECT
+--   USING (auth.uid() = user_id);
+--
+-- -- Users can create their own ride requests
+-- CREATE POLICY "ride_requests_insert_own"
+--   ON ride_requests FOR INSERT TO authenticated
+--   WITH CHECK (auth.uid() = user_id
+--               AND status IN ('pending_admin_approval', 'pending_student_confirmation')
+--               AND vehicle_id IS NULL
+--               AND actual_pickup_time IS NULL
+--               AND actual_dropoff_time IS NULL);  -- QW1/C1.b
+--
+-- -- Users can update their own ride requests
+-- CREATE POLICY "ride_requests_update_own"
+--   ON ride_requests FOR UPDATE TO authenticated
+--   USING (auth.uid() = user_id
+--          AND status IN ('pending_admin_approval', 'pending_student_confirmation', 'confirmed'))
+--   WITH CHECK (auth.uid() = user_id AND status = 'cancelled_by_student'
+--               AND vehicle_id IS NULL AND actual_pickup_time IS NULL AND actual_dropoff_time IS NULL);  -- QW1/C1.b
+--
+-- -- ==================== VEHICLES POLICIES ====================
+--
+-- -- All authenticated users can view vehicles
+-- CREATE POLICY "vehicles_select_all"
+--   ON vehicles FOR SELECT
+--   USING (auth.uid() IS NOT NULL);
+--
+-- -- Admin can manage vehicles
+-- CREATE POLICY "vehicles_all_admin"
+--   ON vehicles FOR ALL
+--   TO authenticated
+--   USING (is_admin())
+--   WITH CHECK (is_admin());
+--
+-- -- ==================== ROUTES POLICIES ====================
+--
+-- -- All authenticated users can view routes
+-- CREATE POLICY "routes_select_all"
+--   ON routes FOR SELECT
+--   USING (auth.uid() IS NOT NULL);
+--
+-- -- Admin can manage routes
+-- CREATE POLICY "routes_all_admin"
+--   ON routes FOR ALL
+--   TO authenticated
+--   USING (is_admin())
+--   WITH CHECK (is_admin());
+--
+-- -- ==================== ROUTE ASSIGNMENTS POLICIES ====================
+--
+-- -- Users can view assignments they're part of
+-- CREATE POLICY "route_assignments_select_own"
+--   ON route_assignments FOR SELECT
+--   USING (auth.uid() = ANY(student_ids) OR auth.uid() = driver_id);
+--
+-- -- Admin can manage route assignments
+-- CREATE POLICY "route_assignments_all_admin"
+--   ON route_assignments FOR ALL
+--   TO authenticated
+--   USING (is_admin())
+--   WITH CHECK (is_admin());
+--
+-- -- ==================== NOTIFICATIONS POLICIES ====================
+--
+-- -- Users can view their own notifications
+-- CREATE POLICY "notifications_select_own"
+--   ON notifications FOR SELECT
+--   USING (auth.uid() = user_id);
+--
+-- -- Users can update their own notifications (mark as read)
+-- CREATE POLICY "notifications_update_own"
+--   ON notifications FOR UPDATE
+--   USING (auth.uid() = user_id);
+--
+-- -- System can create notifications (using service role)
+-- CREATE POLICY "notifications_insert_system"
+--   ON notifications FOR INSERT TO service_role
+--   WITH CHECK (true);
+--
+-- -- ==================== ADMIN SETTINGS POLICIES ====================
+--
+-- -- All authenticated users can view admin settings
+-- CREATE POLICY "admin_settings_select_all"
+--   ON admin_settings FOR SELECT
+--   USING (auth.uid() IS NOT NULL);
+--
+-- -- Note: For admin-only operations (managing users, vehicles, etc.),
+-- -- use service_role key on the server side or create a separate
+-- -- admin API endpoint that verifies the user's role first.
 
 COMMIT;

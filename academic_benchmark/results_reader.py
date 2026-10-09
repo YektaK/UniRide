@@ -8,7 +8,7 @@ import math
 import os
 from typing import Dict, List, Optional
 
-from academic_benchmark.obsolete_results import AFFECTED_ALGORITHMS, filter_obsolete_rows, normalize_algorithm
+from academic_benchmark.obsolete_results import filter_obsolete_csv_rows, filter_obsolete_rows
 from academic_benchmark.tsplib_manager import (
     DB_PATH,
     get_all_problems,
@@ -89,12 +89,10 @@ def get_benchmark_rows(
         return {"source": "academic_csv", "count": 0, "limit": safe_limit, "path": path, "results": []}
 
     with open(path, newline="", encoding="utf-8") as handle:
-        rows = [_normalize_benchmark_row(row) for row in csv.DictReader(handle)]
-    if not include_obsolete:
-        # An OBSOLETE.md sibling (written by the marking tool) flags the affected algorithms.
-        if os.path.exists(os.path.join(results_dir, "OBSOLETE.md")):
-            rows = [row for row in rows if normalize_algorithm(row.get("algorithm")) not in AFFECTED_ALGORITHMS]
-        rows = filter_obsolete_rows(rows)
+        raw_rows = list(csv.DictReader(handle))
+    # Filter the raw rows: _normalize_benchmark_row drops the metadata columns.
+    raw_rows = filter_obsolete_csv_rows(raw_rows, results_dir, include_obsolete)
+    rows = [_normalize_benchmark_row(row) for row in raw_rows]
     if feasible_only:
         rows = [row for row in rows if is_feasible_benchmark_row(row)]
 

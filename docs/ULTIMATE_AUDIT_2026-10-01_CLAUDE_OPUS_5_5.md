@@ -2343,6 +2343,13 @@ Update the Status, Branch/PR and Closing commit columns as fixes land (statuses:
 | L1–L13, L15 | Low | See §6 | per §6 | OPEN | | | |
 | N1 (2026-10-04) | Medium | Dropoff time-window path: phantom wait vs `max_ride_time`; fallback `error` flag ignored | MT1 | OPEN | | | See remediation log; demo unaffected (`use_time_windows=false`) |
 
+### Codex review 2026-10-09
+
+| ID | Severity | Short title | Source | Status | Branch / PR | Closing commit | Evidence |
+|---|---|---|---|---|---|---|---|
+| CX-02 | High | Dashboard CSV ingestion bypasses the obsolete-result guard | Codex review 2026-10-09 | FIXED in repo | `fix/cx02-cx04-academic-guards` | see the remediation log | `academic_benchmark/tests/test_cx02_dashboard_obsolete_csv.py`; DECISION_LOG A07 |
+| CX-04 | Medium | Direct fairness manifests truncate a non-integer evaluation budget | Codex review 2026-10-09 | FIXED in repo | `fix/cx02-cx04-academic-guards` | see the remediation log | `academic_benchmark/tests/test_cx04_fair_manifest_validation.py`; DECISION_LOG A08 |
+
 ### Remediation log
 
 Append one entry per landed fix: date, agent or author, ID(s), branch/commit, tests added, and the suites run with their exact results.

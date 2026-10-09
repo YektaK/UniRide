@@ -2343,6 +2343,12 @@ Update the Status, Branch/PR and Closing commit columns as fixes land (statuses:
 | L1–L13, L15 | Low | See §6 | per §6 | OPEN | | | |
 | N1 (2026-10-04) | Medium | Dropoff time-window path: phantom wait vs `max_ride_time`; fallback `error` flag ignored | MT1 | OPEN | | | See remediation log; demo unaffected (`use_time_windows=false`) |
 
+### Codex review 2026-10-09
+
+| ID | Severity | Short title | Status | Branch / PR | Evidence |
+|---|---|---|---|---|---|
+| CX-03 | High | One-type typed GA violated P4 (count-first inner objective on nonmetric matrices) | FIXED in repo | `fix/cx03-typed-ga-parity` | `test_ga_split_typed_engine.py::test_p4_codex_nonmetric_counterexample`, `::test_p4_random_nonmetric_matrices_one_type_equals_untyped`; DECISION_LOG H04 |
+
 ### Remediation log
 
 Append one entry per landed fix: date, agent or author, ID(s), branch/commit, tests added, and the suites run with their exact results.

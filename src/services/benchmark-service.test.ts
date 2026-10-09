@@ -251,6 +251,6 @@ describe("benchmark-service academic problems", () => {
       "fetch",
       vi.fn().mockResolvedValue({ ok: false, status: 422, json: async () => ({ error: "bounds exceeded: x" }) })
     );
-    await expect(startBenchmark([{ id: "ga", params: {} }], ["p"], { n_runs: 1 })).rejects.toThrow("bounds exceeded: x");
+    await expect(startBenchmark([{ id: "ga", params: {} }], ["p"], { n_runs: 1, seed: 42 })).rejects.toThrow("bounds exceeded: x");
   });
 });

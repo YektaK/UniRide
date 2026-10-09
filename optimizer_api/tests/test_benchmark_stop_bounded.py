@@ -300,14 +300,20 @@ def test_non_dict_params_return_422_not_500(monkeypatch, bad):
     assert exc.value.status_code == 422
 
 
-@pytest.mark.parametrize("algo", ["ga_split_enhanced", "ga_split_hf"])
-def test_apply_params_keeps_legacy_assignment_for_ga_split_variants(algo):
-    """Academic parity: these two never received ga_config or the per-run seed on
-    the benchmark-runner path (pre-existing); only validation uses the policy table."""
+@pytest.mark.parametrize("algo", ["ga_split_enhanced", "ga-split-enhanced", "ga_split_hf"])
+def test_apply_params_passes_params_and_seed_for_ga_split_variants(algo):
+    """OWNER DECISION 2026-10-09: ga_split_enhanced / ga_split_hf receive their
+    params AND the per-run seed like the other GA strategies (A06)."""
     runner_mod = sys.modules[benchmark.BenchmarkRunner.__module__]
     request = SimpleNamespace()
-    runner_mod.BenchmarkRunner()._apply_algorithm_params(request, algo, {}, run_seed=42)
-    assert not hasattr(request, "ga_config")
+    runner_mod.BenchmarkRunner()._apply_algorithm_params(request, algo, {}, run_seed=7)
+    assert request.ga_config == {"seed": 7}
+
+    request = SimpleNamespace()
+    runner_mod.BenchmarkRunner()._apply_algorithm_params(
+        request, algo, {"population_size": 12, "max_iterations": 9}, run_seed=7
+    )
+    assert request.ga_config == {"population_size": 12, "max_iterations": 9, "seed": 7}
 
 
 def test_worker_start_failure_fails_the_run(monkeypatch):

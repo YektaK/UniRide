@@ -7,6 +7,7 @@ import json
 import math
 from typing import Any, Dict, Iterable, Optional, Tuple
 
+from academic_benchmark.obsolete_results import filter_obsolete_rows
 from academic_benchmark.tsplib_manager import DB_PATH, query_benchmark_results
 
 
@@ -63,9 +64,16 @@ def summarize_benchmark_rows(rows: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
     return summary
 
 
-def summarize_run(run_id: str, *, db_path: str = DB_PATH, limit: int = 10_000) -> Dict[str, Any]:
-    """Load and summarize rows for a persisted benchmark run id."""
-    rows = query_benchmark_results(run_id=run_id, db_path=db_path, limit=limit)
+def summarize_run(
+    run_id: str, *, db_path: str = DB_PATH, limit: int = 10_000, include_obsolete: bool = False
+) -> Dict[str, Any]:
+    """Load and summarize rows for a persisted benchmark run id (obsolete rows excluded by default)."""
+    rows = filter_obsolete_rows(
+        query_benchmark_results(
+            run_id=run_id, db_path=db_path, limit=limit, exclude_obsolete=not include_obsolete
+        ),
+        include_obsolete
+    )
     summary = summarize_benchmark_rows(rows)
     summary["run_id"] = run_id
     return summary

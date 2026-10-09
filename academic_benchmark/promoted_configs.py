@@ -8,6 +8,7 @@ import os
 from datetime import datetime
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from academic_benchmark.obsolete_results import filter_obsolete_rows
 from academic_benchmark.tsplib_manager import (
     DB_PATH,
     get_db,
@@ -31,6 +32,7 @@ def build_promoted_configs(
     generated_at: Optional[str] = None,
     include_empty_params: bool = False,
     min_evidence_runs: int = 1,
+    include_obsolete: bool = False,
 ) -> Dict[str, object]:
     """Build a neutral promoted-config document from academic DB rows."""
     _ensure_db_schema(db_path)
@@ -38,7 +40,10 @@ def build_promoted_configs(
     candidates.extend(_best_solution_candidates(query_best_solutions(limit=limit, db_path=db_path)))
     candidates.extend(
         _benchmark_result_candidates(
-            query_benchmark_results(limit=limit, db_path=db_path),
+            filter_obsolete_rows(
+                query_benchmark_results(limit=limit, db_path=db_path, exclude_obsolete=not include_obsolete),
+                include_obsolete,
+            ),
             include_empty_params=include_empty_params,
         )
     )
@@ -72,6 +77,7 @@ def write_promoted_configs(
     generated_at: Optional[str] = None,
     include_empty_params: bool = False,
     min_evidence_runs: int = 1,
+    include_obsolete: bool = False,
 ) -> Dict[str, object]:
     """Write promoted configs and return the emitted document."""
     document = build_promoted_configs(
@@ -80,6 +86,7 @@ def write_promoted_configs(
         generated_at=generated_at,
         include_empty_params=include_empty_params,
         min_evidence_runs=min_evidence_runs,
+        include_obsolete=include_obsolete,
     )
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as handle:

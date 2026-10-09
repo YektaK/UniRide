@@ -15,6 +15,7 @@ from dashboard_utils import (
     routing_dashboard_columns,
 )
 from tsplib_manager import DB_PATH, query_benchmark_results
+from obsolete_results import filter_obsolete_rows
 
 # Sayfa yapılandırması
 st.set_page_config(page_title="UniRide Academic Dashboard", page_icon="🎓", layout="wide")
@@ -30,7 +31,7 @@ RESULT_DIRS = [
 
 # Veri yükleme (Önbellekli - Caching)
 @st.cache_data(ttl=60)
-def load_data():
+def load_data(include_obsolete: bool = False):
     all_summary = []
     all_progress = []
     all_tuning = []
@@ -84,7 +85,10 @@ def load_data():
             all_tuning.append(pd.read_csv(tuning_path))
             loaded_sources["tuning"].append(tuning_path)
 
-    db_rows = query_benchmark_results(limit=5000, db_path=DB_PATH)
+    db_rows = filter_obsolete_rows(
+        query_benchmark_results(limit=5000, db_path=DB_PATH, exclude_obsolete=not include_obsolete),
+        include_obsolete
+    )
     if db_rows:
         all_progress.append(benchmark_rows_to_progress_frame(db_rows))
         loaded_sources["sqlite"].append(f"{DB_PATH} ({len(db_rows)} rows)")
@@ -124,7 +128,10 @@ def load_data():
 
     return summary_df, progress_df, tuning_df, history_df, loaded_sources
 
-summary_df, progress_df, tuning_df, history_df, loaded_sources = load_data()
+_include_obsolete = st.sidebar.checkbox(
+    "Include obsolete results (never pool with current results)", value=False
+)
+summary_df, progress_df, tuning_df, history_df, loaded_sources = load_data(_include_obsolete)
 
 st.title("🎓 UniRide Academic Routing Benchmark Dashboard")
 

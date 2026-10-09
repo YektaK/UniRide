@@ -61,3 +61,40 @@ def filter_obsolete_rows(rows: Iterable[Dict[str, Any]], include_obsolete: bool 
     if include_obsolete:
         return rows
     return [row for row in rows if not is_obsolete_row(row)]
+
+
+OBSOLETE_MARKER_FILE = "OBSOLETE.md"
+_ALGORITHM_COLUMNS = ("algorithm", "strategy", "algorithm_id")
+
+
+def _row_is_excluded(row: Mapping[str, Any], marker_present: bool) -> bool:
+    """CSV row exclusion: row metadata, or sibling marker plus an affected algorithm."""
+    if is_obsolete_row(row):
+        return True
+    if marker_present:
+        return any(normalize_algorithm(row.get(col)) in AFFECTED_ALGORITHMS for col in _ALGORITHM_COLUMNS)
+    return False
+
+
+def filter_obsolete_csv_rows(
+    rows: Iterable[Dict[str, Any]], results_dir: str, include_obsolete: bool = False
+) -> List[Dict[str, Any]]:
+    """Shared CSV filter: OBSOLETE.md sibling marker, affected algorithm identity, row metadata."""
+    import os
+
+    rows = list(rows)
+    if include_obsolete:
+        return rows
+    marker = os.path.exists(os.path.join(results_dir, OBSOLETE_MARKER_FILE))
+    return [row for row in rows if not _row_is_excluded(row, marker)]
+
+
+def filter_obsolete_frame(frame: Any, results_dir: str, include_obsolete: bool = False) -> Any:
+    """DataFrame form of :func:`filter_obsolete_csv_rows`; call BEFORE concatenation/aggregation."""
+    import os
+
+    if include_obsolete or frame is None or len(frame) == 0:
+        return frame
+    marker = os.path.exists(os.path.join(results_dir, OBSOLETE_MARKER_FILE))
+    keep = [not _row_is_excluded(row, marker) for row in frame.to_dict("records")]
+    return frame[keep].reset_index(drop=True)

@@ -12,6 +12,7 @@ from dashboard_utils import (
     available_routing_metrics,
     benchmark_rows_to_progress_frame,
     derive_filter_options,
+    load_csv_frames,
     routing_dashboard_columns,
 )
 from tsplib_manager import DB_PATH, query_benchmark_results
@@ -32,55 +33,12 @@ RESULT_DIRS = [
 # Veri yükleme (Önbellekli - Caching)
 @st.cache_data(ttl=60)
 def load_data(include_obsolete: bool = False):
-    all_summary = []
-    all_progress = []
     all_tuning = []
     loaded_sources = {"summary": [], "progress": [], "tuning": [], "sqlite": []}
 
+    all_summary, all_progress, csv_sources = load_csv_frames(RESULT_DIRS, include_obsolete)
+    loaded_sources.update(csv_sources)
     for d in RESULT_DIRS:
-        summary_path = os.path.join(d, "benchmark_summary.csv")
-        progress_path = os.path.join(d, "benchmark_progress.csv")
-        if os.path.exists(summary_path):
-            all_summary.append(pd.read_csv(summary_path))
-            loaded_sources["summary"].append(summary_path)
-        if os.path.exists(progress_path):
-            try:
-                df = pd.read_csv(progress_path)
-            except pd.errors.ParserError:
-                # Handle inconsistent column counts (e.g. result_type added mid-file)
-                import csv, io
-                with open(progress_path, "r", encoding="utf-8") as f:
-                    reader = csv.reader(f)
-                    rows = list(reader)
-                if rows:
-                    header = rows[0]
-                    ncols = len(header)
-                    # Detect if any row has more columns — if so, expand header
-                    max_cols = max(len(r) for r in rows)
-                    if max_cols > ncols:
-                        # Insert missing column names (result_type, etc.)
-                        extra = max_cols - ncols
-                        # Insert before params_json (last column)
-                        insert_at = ncols - 1
-                        for i in range(extra):
-                            header.insert(insert_at + i, f"extra_col_{i}")
-                        ncols = len(header)
-                    # Pad or trim each row to match header length
-                    fixed = [header]
-                    for row in rows[1:]:
-                        if len(row) != ncols:
-                            row = (row + [""] * ncols)[:ncols]
-                        fixed.append(row)
-                    buf = io.StringIO()
-                    writer = csv.writer(buf)
-                    for row in fixed:
-                        writer.writerow(row)
-                    buf.seek(0)
-                    df = pd.read_csv(buf)
-                else:
-                    df = pd.DataFrame()
-            all_progress.append(df)
-            loaded_sources["progress"].append(progress_path)
         for tuning_path in glob.glob(os.path.join(d, "**", "tuning_progress.csv"), recursive=True):
             all_tuning.append(pd.read_csv(tuning_path))
             loaded_sources["tuning"].append(tuning_path)

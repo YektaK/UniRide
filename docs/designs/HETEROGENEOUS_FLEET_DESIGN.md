@@ -228,6 +228,7 @@ VehicleTypeSpec:
 
 **New internal endpoint.** `POST /api/v1/internal/fleet-selection` is internal-key protected like `matrix-snapshot`:
 - **Request:** options per wave with route intervals, labels feasibility and minutes, plus types, L, the optional car cap and a time limit.
+- **Time units (CX-01, decision H05):** `time_scale` (default 1) sets the unit of interval `start`/`end` and of `cooldown_large`/`cooldown_car` to 1/`time_scale` minute. The producer sends `time_scale: 100` (centi-minutes). Endpoints are anchor ± a sum of matrix-snapshot arc minutes; anchors are whole minutes. Nothing enforces 0.01-minute arcs (`time_matrix.duration_minutes` is unconstrained NUMERIC); the current matrix (sha bfb2dd85...) has only whole-minute arcs. A matrix with more than 2 decimals makes the affected days `blocked_data` / `SELECTION_INTERVAL_PRECISION` (fail-closed). Endpoints off the grid are refused, not rounded. `minutes` and all reported minutes are real minutes. The core is integer-based and sees only scaled integers.
 - **Response:** the chosen option per wave, labels, C, minutes, `status` and the solver statistics.
 - It has no DB access and no matrix access (pure).
 - **Rejected alternative:** a Python subprocess from the CLI. It is lighter, but it would diverge from the W02 rule that TS orchestrates through canonical FastAPI/core, and it could not be reused by the planning page later.
@@ -246,7 +247,7 @@ VehicleTypeSpec:
 | P1 | Re-run P0 on every later commit and require byte-identical JSON. | default `ga_split` and the shared decoder unchanged |
 | P2 | Zero-import guard: no module under `academic_benchmark/` or the academic registry imports `typed_split_decoder`, `ga_split_typed_engine` or `typed_day_selection`. | gating by construction |
 | P3 | Property test (500 random instances, seeded): `TypedSplitDecoder` with one type and unlimited quota gives the same routes, costs and route count as `SplitDecoder` for both directions, with and without R. | typed generalises untyped |
-| P4 | `solve_ga_split_typed` with one type and no quota gives the same routes and the same `generations` as `solve_ga_split` for the same seed. This holds because the RNG stream is identical (F2). | wrapper parity |
+| P4 | `solve_ga_split_typed` with one type and no quota gives the same routes and the same `generations` as `solve_ga_split` for the same seed. This holds because the RNG stream is identical (F2) and, for one type and no quota (`quota_type` or `quota` unset), the inner split decode is cost-only like the untyped DP (CX-03). With two or more types or a quota the typed inner decode is count-first (routes of `minimize_type`, then cost), which is intended for borrowed-vehicle minimisation and differs from the untyped objective by design (decision H04). | wrapper parity |
 | P5 | Existing suites pass unchanged: the three canonical pytest suites (`uniride_core/tests`, `optimizer_api/tests` and the academic suite) and the Vitest suite. | no regression |
 | P6 | API: a request without `vehicle_types` produces a response JSON byte-identical to `6be127d`, on mocked matrix fixtures. | additive contract |
 

@@ -178,6 +178,10 @@ const optimizeResultSchema = z.object({
 });
 type OptimizeResult = z.infer<typeof optimizeResultSchema>;
 
+/** Selection interval time scale: 100 = centi-minutes (see scenarioL). */
+const TIME_SCALE = 100;
+const CENTI_TOLERANCE = 1e-6;
+
 const selectionResponseSchema = z.object({
   status: z.enum(["optimal", "feasible", "infeasible_for_L", "infeasible_data", "indeterminate"]),
   cars: z.number().nullable(),
@@ -538,16 +542,28 @@ export async function runFleetScenarioDay(
   ];
 
   const scenarioL = async (limit: number): Promise<ScenarioResult> => {
-    const toInt = (value: number, how: "floor" | "ceil") => Math.max(0, how === "floor" ? Math.floor(value) : Math.ceil(value));
+    // CX-01: interval endpoints and cooldowns travel as integer centi-minutes (time_scale 100).
+    // Endpoints are anchor +/- a sum of matrix-snapshot arc minutes; anchors are whole minutes. Nothing enforces
+    // 0.01-minute arcs (time_matrix.duration_minutes is unconstrained NUMERIC); the current matrix has only
+    // whole-minute arcs. A value off the 0.01 grid is refused (blocked_data / SELECTION_INTERVAL_PRECISION),
+    // never rounded: rounding either way could flip feasibility of the original intervals.
+    let inexact = false;
+    const centi = (value: number): number => {
+      const scaled = value * TIME_SCALE;
+      const rounded = Math.round(scaled);
+      if (!Number.isFinite(scaled) || Math.abs(scaled - rounded) > CENTI_TOLERANCE) inexact = true;
+      return Math.max(0, rounded);
+    };
     const request = {
+      time_scale: TIME_SCALE,
       waves: menu.map((entry) => ({
         wave_id: entry.waveId,
         options: entry.options.map((option) => ({
           option_id: option.optionId, baseline: option.baseline,
           routes: factsOf(option.verified).map((facts) => {
-            const start = toInt(facts.interval.startMinutes, "floor");
+            const start = centi(facts.interval.startMinutes);
             return {
-              start, end: Math.max(start + 1, toInt(facts.interval.endMinutes, "ceil")),
+              start, end: Math.max(start + 1, centi(facts.interval.endMinutes)),
               minutes: round6(facts.minutes),
               large_ok: typeAccepts(fixedType, facts, params), car_ok: typeAccepts(minimiseType!, facts, params),
             };
@@ -556,9 +572,10 @@ export async function runFleetScenarioDay(
       })),
       max_large: limit,
       ...(params.maxCars === null || params.maxCars === undefined ? {} : { max_cars: params.maxCars }),
-      cooldown_large: fixedType.cooldownMinutes, cooldown_car: minimiseType!.cooldownMinutes,
+      cooldown_large: centi(fixedType.cooldownMinutes), cooldown_car: centi(minimiseType!.cooldownMinutes),
       time_limit_seconds: params.selectionTimeLimitSeconds ?? 30,
     };
+    if (inexact) return failedScenario(limit, "blocked_data", ["SELECTION_INTERVAL_PRECISION"], null);
     const reply = await postJson("/api/v1/internal/fleet-selection", request);
     const parsed = reply?.json === null || reply === null ? null : selectionResponseSchema.safeParse(reply.json);
     if (!parsed?.success) {

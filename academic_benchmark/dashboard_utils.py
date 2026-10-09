@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 import json
+import os
 from typing import Iterable, List, Tuple
 
 import pandas as pd
+
+try:
+    from academic_benchmark.obsolete_results import filter_obsolete_frame
+except ImportError:  # dashboard launched from academic_benchmark/ without the package installed
+    from obsolete_results import filter_obsolete_frame
 
 
 ROUTING_METRIC_COLUMNS = [
@@ -199,3 +205,66 @@ def _constraint_status(capacity_violations, tw_violations) -> str:
     if tw:
         parts.append(f"time_window={tw}")
     return ", ".join(parts)
+
+
+def read_progress_csv(progress_path: str) -> pd.DataFrame:
+    """Read benchmark_progress.csv, tolerating inconsistent column counts."""
+    try:
+        df = pd.read_csv(progress_path)
+    except pd.errors.ParserError:
+        # Handle inconsistent column counts (e.g. result_type added mid-file)
+        import csv
+        import io
+        with open(progress_path, "r", encoding="utf-8") as f:
+            reader = csv.reader(f)
+            rows = list(reader)
+        if rows:
+            header = rows[0]
+            ncols = len(header)
+            # Detect if any row has more columns — if so, expand header
+            max_cols = max(len(r) for r in rows)
+            if max_cols > ncols:
+                # Insert missing column names (result_type, etc.)
+                extra = max_cols - ncols
+                # Insert before params_json (last column)
+                insert_at = ncols - 1
+                for i in range(extra):
+                    header.insert(insert_at + i, f"extra_col_{i}")
+                ncols = len(header)
+            # Pad or trim each row to match header length
+            fixed = [header]
+            for row in rows[1:]:
+                if len(row) != ncols:
+                    row = (row + [""] * ncols)[:ncols]
+                fixed.append(row)
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            for row in fixed:
+                writer.writerow(row)
+            buf.seek(0)
+            df = pd.read_csv(buf)
+        else:
+            df = pd.DataFrame()
+    return df
+
+
+def load_csv_frames(result_dirs: Iterable[str], include_obsolete: bool = False):
+    """Read summary/progress CSVs, filtering obsolete rows per directory before concatenation.
+
+    Returns ``(summary_frames, progress_frames, loaded_sources)``. The OBSOLETE.md sibling
+    marker, affected-algorithm identity and row ``obsolete`` metadata are applied to BOTH
+    frames (CX-02); ``include_obsolete=True`` is the explicit override.
+    """
+    summaries: List[pd.DataFrame] = []
+    progress: List[pd.DataFrame] = []
+    sources = {"summary": [], "progress": []}
+    for d in result_dirs:
+        summary_path = os.path.join(d, "benchmark_summary.csv")
+        progress_path = os.path.join(d, "benchmark_progress.csv")
+        if os.path.exists(summary_path):
+            summaries.append(filter_obsolete_frame(pd.read_csv(summary_path), d, include_obsolete))
+            sources["summary"].append(summary_path)
+        if os.path.exists(progress_path):
+            progress.append(filter_obsolete_frame(read_progress_csv(progress_path), d, include_obsolete))
+            sources["progress"].append(progress_path)
+    return summaries, progress, sources

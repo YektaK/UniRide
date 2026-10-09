@@ -242,3 +242,20 @@ def test_large_cooldown_boundary(gap, large):
     assert solve_day_selection(waves, large).status == tds.STATUS_OPTIMAL
     if large == 2:
         assert solve_day_selection(waves, 1).status == tds.STATUS_INFEASIBLE_FOR_L
+
+
+def test_cx01_fractional_gap_is_feasible_at_centiminute_scale():
+    """CX-01: [600, 601.1] and [611.2, 620] with cooldown 10 leave a 10.1-minute gap.
+
+    The producer sends centi-minute integers (x100) and a scaled cooldown; one
+    minibus serves both routes. The old whole-minute widening ([600,602],
+    [611,620]) made the same day falsely infeasible_for_L."""
+    def solve(routes, cooldown):
+        waves = [Wave(str(i), (Option("base", (r,), True),)) for i, r in enumerate(routes)]
+        return solve_day_selection(waves, 1, cooldown_large=cooldown, cooldown_car=cooldown, time_limit_s=20)
+
+    exact = solve([Route(60000, 60110, 1.1, True, False), Route(61120, 62000, 8.8, True, False)], 1000)
+    assert exact.status == tds.STATUS_OPTIMAL
+    assert exact.large_peak == 1 and exact.cars == 0
+    widened = solve([Route(600, 602, 1.1, True, False), Route(611, 620, 8.8, True, False)], 10)
+    assert widened.status == tds.STATUS_INFEASIBLE_FOR_L

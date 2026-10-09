@@ -127,6 +127,20 @@ class FairRunResult(RunResult):
             self.objective_evaluations = self.evaluations
 
 
+def validate_evaluation_budget(value: Any) -> int:
+    """Return ``value`` if it is a positive int (bool excluded); never coerces."""
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError("fair comparison evaluation_budget must be a positive integer")
+    return value
+
+
+def validate_base_seed(value: Any) -> int:
+    """Return ``value`` if it is an int (bool excluded); negatives are hashed into valid seeds."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError("fair comparison base_seed must be an integer")
+    return value
+
+
 @dataclass(frozen=True)
 class FairComparisonManifest:
     """Common experiment budget, paired-seed protocol, and result validator."""
@@ -166,6 +180,9 @@ class FairComparisonManifest:
         "ALNS-TSP": "ALNS",
     }
     POLISH_POLICY_FIELDS = ("enabled", "initial", "periodic", "final", "operator")
+    MANIFEST_FIELDS = (
+        "evaluation_budget", "base_seed", "protocol_version", "budget_policy", "comparison_regime",
+    )
     V1_PROTOCOL = "uniride-fair-tsp-v1"
     V2_PROTOCOL = "uniride-fair-tsp-v2"
     FIXED_EVALUATION_REGIME = "fixed_evaluation_budget"
@@ -184,8 +201,8 @@ class FairComparisonManifest:
     })
 
     def __post_init__(self) -> None:
-        if not isinstance(self.evaluation_budget, int) or self.evaluation_budget < 1:
-            raise ValueError("fair comparison evaluation_budget must be a positive integer")
+        validate_evaluation_budget(self.evaluation_budget)
+        validate_base_seed(self.base_seed)
         if self.budget_policy != "atomic_upper_bound_v1":
             raise ValueError(f"unsupported budget policy: {self.budget_policy}")
         if self.protocol_version not in {self.V1_PROTOCOL, self.V2_PROTOCOL}:
@@ -208,9 +225,15 @@ class FairComparisonManifest:
             raise ValueError("fair_comparison must be a mapping or FairComparisonManifest")
         if "evaluation_budget" not in value:
             raise ValueError("fair_comparison requires evaluation_budget")
+        unknown = sorted(str(key) for key in value if key not in cls.MANIFEST_FIELDS)
+        if unknown:
+            raise ValueError(
+                f"fair_comparison has unknown field(s): {', '.join(unknown)}; "
+                f"allowed: {', '.join(cls.MANIFEST_FIELDS)}"
+            )
         return cls(
-            evaluation_budget=int(value["evaluation_budget"]),
-            base_seed=int(value.get("base_seed", 1000)),
+            evaluation_budget=validate_evaluation_budget(value["evaluation_budget"]),
+            base_seed=validate_base_seed(value.get("base_seed", 1000)),
             protocol_version=str(value.get("protocol_version", "uniride-fair-tsp-v1")),
             budget_policy=str(value.get("budget_policy", "atomic_upper_bound_v1")),
             comparison_regime=value.get("comparison_regime"),

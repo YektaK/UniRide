@@ -439,7 +439,7 @@
         "seedDesc": "Fixed seed for reproducible results",
         "summary": "Summary",
         "totalExperiments": "Total Experiments",
-        "experimentsCount": "{n} experiments",
+        "experimentsCount": "<important>{algorithms}</important> algorithms × <important>{problems}</important> problems × <important>{runs}</important> runs = <bold>{total}</bold> experiments",
         "starting": "Starting...",
         "startBenchmark": "Start Benchmark",
         "emptyHistory": "No Run History",
@@ -456,13 +456,20 @@
           "totalExperiments": "Total Experiments",
           "totalDuration": "Total Duration",
           "successRate": "Success Rate",
-          "testedAlgorithms": "Tested Algorithms"
+          "testedAlgorithms": "Tested Algorithms",
+          "totalTime": "Total Runtime",
+          "tested": "Tested",
+          "testedAlgo": "{count} algorithms"
         },
         "charts": {
           "meanDeviation": "Mean Deviation (%) — By Algorithm",
           "meanDeviationDesc": "Average percentage deviation from optimal solution",
           "meanRuntime": "Mean Runtime (ms) — By Algorithm",
-          "meanRuntimeDesc": "Average runtimes per algorithm"
+          "meanRuntimeDesc": "Average runtimes per algorithm",
+          "avgGapTitle": "Mean Gap (%) by Algorithm",
+          "avgGapDesc": "Average percentage gap to the known optimum",
+          "avgTimeTitle": "Mean Runtime (ms) by Algorithm",
+          "avgTimeDesc": "Average runtime per algorithm"
         },
         "comparisonTable": {
           "title": "Algorithm Comparison Table",
@@ -473,7 +480,13 @@
           "minDev": "Min Dev %",
           "maxDev": "Max Dev %",
           "meanTime": "Mean Time (ms)",
-          "bestTour": "Best Tour"
+          "bestTour": "Best Tour",
+          "description": "Mean, minimum and maximum gap and runtime for each algorithm",
+          "testsCount": "Runs",
+          "avgGap": "Mean Gap (%)",
+          "minGap": "Min Gap (%)",
+          "maxGap": "Max Gap (%)",
+          "avgTime": "Mean Runtime (ms)"
         },
         "problemTable2": {
           "title": "Per-Problem Comparison",
@@ -483,16 +496,20 @@
           "bestTour": "Best Tour",
           "deviation": "Deviation %",
           "bestAlgorithm": "Best Algorithm",
-          "algorithmsTested": "Algorithms Tested"
+          "algorithmsTested": "Algorithms Tested",
+          "description": "Best algorithm and gap to the optimum for each problem",
+          "gap": "Gap (%)"
         },
-        "rawResults": "Raw Results ({n} records)",
+        "rawResults": "Raw Results ({count} records)",
         "rawColumns": {
           "algorithm": "Algorithm",
           "problem": "Problem",
           "run": "Run #",
           "tourLength": "Tour Length",
           "deviation": "Deviation %",
-          "time": "Time (ms)"
+          "time": "Time (ms)",
+          "gap": "Gap (%)",
+          "duration": "Runtime (ms)"
         },
         "downloadJson": "Download as JSON",
         "noResults": "No Results Yet",
@@ -516,7 +533,29 @@
           "exportedJson": "Results downloaded as JSON",
           "resultsLoaded": "{n} results loaded",
           "resultsLoadFailed": "Failed to load results",
-          "historyCleared": "All run history cleared"
+          "historyCleared": "All run history cleared",
+          "problemsLoadFailed": "Problems could not be loaded",
+          "serverUnreachable": "The optimizer server could not be reached.",
+          "resultsFetchFailed": "Results could not be loaded",
+          "resultsFetchFailedDesc": "The run finished but its results could not be fetched.",
+          "startedTitle": "Benchmark started",
+          "startFailedTitle": "Benchmark could not be started",
+          "serverError": "Server error",
+          "exportedTitle": "Results exported",
+          "exportedDesc": "Results were downloaded as a JSON file.",
+          "resultsLoadedTitle": "Results loaded",
+          "resultsLoadedDesc": "{n} results loaded."
+        },
+        "noProblems": "No Problems Found",
+        "noProblemsHint": "No problems match the selected category. Choose another category.",
+        "runTitle": "Run Status",
+        "status": "Status",
+        "statusLoading": "Loading run status...",
+        "viewResults": "View Results",
+        "categories": {
+          "small": "Small",
+          "medium": "Medium",
+          "large": "Large"
         }
       },
       "vehicles": {

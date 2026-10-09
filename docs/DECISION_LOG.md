@@ -346,7 +346,7 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 
 - **Date/status:** 2026-10-09; lead decision. **Chosen/rationale:** `solve_ga_split_typed` decodes (evaluation and final decode) cost-only, i.e. `decode_typed` without `minimize_type`, when there is exactly one type and no quota (`quota_type` or `quota` unset; the decoder tracks a quota only when both are set), so P4 (same routes, cost, generations and best chromosome as `solve_ga_split`) holds on nonmetric matrices too. With two or more types or a quota the inner decode stays count-first (`minimize_type`), meant for borrowed-vehicle minimisation; the objectives differ by design. Default academic split (O05) unchanged.
 - **Rejected:** changing the default split or the shared decoder; weakening P4. **Effect:** production `ga_split_hf` with one declared type and the `all_large` baseline of `solve_typed_menu` now use the cost-only inner decode; the 2-type fleet-scenario path is unchanged.
-- **Evidence:** `uniride_core/tests/test_ga_split_typed_engine.py` (Codex fixture and 50 seeded nonmetric cases), owner-supplied Codex review, `docs/CODEX_DEEP_REVIEW_2026-10-09.md` (local, untracked), finding CX-03. **Check first:** P4 tests and WP0 goldens.
+- **Evidence:** `uniride_core/tests/test_ga_split_typed_engine.py` (Codex fixture and 50 seeded nonmetric cases x 4 variants), owner-supplied Codex review, `docs/CODEX_DEEP_REVIEW_2026-10-09.md` (local, untracked), finding CX-03. **Check first:** P4 tests and WP0 goldens.
 
 ### T07 - TSPLIB matrix cache v2: lossless upper-triangle lzma
 

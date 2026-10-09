@@ -502,6 +502,9 @@
         "apiOffline": "Python Optimizer API Offline",
         "problemsLoading": "Loading problems...",
         "toast": {
+          "stoppedTitle": "Benchmark stopped",
+          "stoppedDesc": "The run was stopped.",
+          "stopFailedTitle": "Failed to stop",
           "resultsFailed": "Results could not be loaded",
           "started": "Benchmark started",
           "startedDesc": "Run ID: {id} — {n} experiments queued",

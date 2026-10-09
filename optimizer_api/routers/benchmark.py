@@ -350,7 +350,11 @@ def _start_benchmark_impl(run_id: str, algorithms: List[Dict], problems: List[st
         
         executor_thread = threading.Thread(target=run_benchmark_task, daemon=True, name=f"benchmark-executor-{run_id}")
         benchmark_state_manager.register_thread(run_id, executor_thread)
-        executor_thread.start()
+        try:
+            executor_thread.start()
+        except BaseException:
+            benchmark_state_manager.fail_run(run_id, "worker could not start")
+            raise
         
         return {
             "run_id": run_id, "status": "running", "total_experiments": total_experiments,
@@ -479,7 +483,11 @@ def _start_matrix_native_benchmark_impl(run_id: str, algorithms: List[Dict], pro
 
     executor_thread = threading.Thread(target=run_matrix_task, daemon=True, name=f"matrix-benchmark-executor-{run_id}")
     benchmark_state_manager.register_thread(run_id, executor_thread)
-    executor_thread.start()
+    try:
+        executor_thread.start()
+    except BaseException:
+        benchmark_state_manager.fail_run(run_id, "worker could not start")
+        raise
     return {
         "run_id": run_id,
         "status": "running",

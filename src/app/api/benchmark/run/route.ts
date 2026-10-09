@@ -123,8 +123,11 @@ export async function POST(request: NextRequest) {
       console.error(`[Benchmark] Backend error:`, error);
       const d = error.detail;
       // FastAPI may send an object detail ({error, reason}); flatten it so the UI gets a string.
-      const detailText =
-        d && typeof d === 'object' ? `${d.error ?? ''}: ${d.reason ?? ''}` : d;
+      const detailText = Array.isArray(d)
+        ? d.map((e: { msg?: string }) => e?.msg).filter(Boolean).join('; ')
+        : d && typeof d === 'object'
+          ? [d.error, d.reason].filter(Boolean).join(': ')
+          : d;
       return NextResponse.json(
         { 
           error: detailText || error.error || 'Benchmark servisine bağlanılamadı',

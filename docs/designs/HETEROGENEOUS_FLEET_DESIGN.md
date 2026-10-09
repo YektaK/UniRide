@@ -228,6 +228,7 @@ VehicleTypeSpec:
 
 **New internal endpoint.** `POST /api/v1/internal/fleet-selection` is internal-key protected like `matrix-snapshot`:
 - **Request:** options per wave with route intervals, labels feasibility and minutes, plus types, L, the optional car cap and a time limit.
+- **Time units (CX-01, decision H04):** `time_scale` (default 1) sets the unit of interval `start`/`end` and of `cooldown_large`/`cooldown_car` to 1/`time_scale` minute. The producer sends `time_scale: 100` (centi-minutes) because matrix durations and step times are rounded to 0.01 minute; endpoints off that grid are refused, not rounded. `minutes` and all reported minutes are real minutes. The core is integer-based and sees only scaled integers.
 - **Response:** the chosen option per wave, labels, C, minutes, `status` and the solver statistics.
 - It has no DB access and no matrix access (pure).
 - **Rejected alternative:** a Python subprocess from the CLI. It is lighter, but it would diverge from the W02 rule that TS orchestrates through canonical FastAPI/core, and it could not be reused by the planning page later.

@@ -50,6 +50,7 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 | H01 | Heterogeneous fleet | Typed split, exact day selection, typed assignment; additive only; academic code untouched | Owner approved 2026-10-08 |
 | H02 | Heterogeneous fleet | Q1: can a sedan carry any Sw (`sedan:1sw3so`)? | **Open question** |
 | H03 | Heterogeneous fleet | Optional shared seat limit `total_capacity`; Doblo = 3 seats total, max 1 Sw | Owner decision 2026-10-09 |
+| H04 | Heterogeneous fleet | CX-01: exact centi-minute intervals and cooldowns in fleet selection (`time_scale`) | Lead decision 2026-10-09 |
 
 ## Demo scope
 
@@ -331,6 +332,14 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 - **Date/status:** 2026-10-09; owner decision. **Chosen:** vehicle types gain an optional `total_capacity` (API `total_capacity`, TS `totalCapacity`, CLI `:capN`). Feasible iff Sw <= sw, So <= so and, when set, Sw + So <= total. Unset is byte-identical to before. Fiat Doblo = 3 passenger seats (1 front + 2 rear), at most 1 Sw who sits in a seat while the chair is stowed: `doblo:1sw3so:cap3`. Minibus (4 Sw + 5 So pools) and sedan (0 + 4) unchanged.
 - **Superseded:** the earlier minivan campaigns that used `minivan:1sw3so` overstated capacity (they allowed 1 Sw + 3 So = 4 passengers); their results must not be cited as Doblo evidence and are to be rerun with `:cap3`. **Rejected:** changing `string_split_decoder`/`ga_split` (academic parity); the `ga_split` baseline therefore cannot enforce a limit on the fixed type and fails closed.
 - **Evidence:** [design](designs/HETEROGENEOUS_FLEET_DESIGN.md), tests `test_typed_split_decoder.py`, `test_typed_certificate_checks.py`, `test_heterogeneous_fleet_wp3.py`, `typed-fleet-assignment.test.ts`, `fleet-scenario-args.test.ts`.
+
+### H04 - fleet selection keeps exact interval precision (CX-01)
+
+- **Date/status:** 2026-10-09; lead decision, fix of review finding CX-01. **Problem:** the producer floored route starts and ceiled ends to whole minutes, so a feasible day (routes [600, 601.1] and [611.2, 620], cooldown 10, one minibus; true gap 10.1 min) was reported `infeasible_for_L`, and optimality was proved over enlarged intervals, not the original ones.
+- **Chosen:** the request carries `time_scale` (integer 1..100, default 1 = legacy whole minutes). Interval `start`/`end` and both cooldowns are integers in units of 1/`time_scale` minute; the producer sends `time_scale: 100` (centi-minutes, `Math.round(x * 100)`). Bounds scale too (end <= 2880 x scale, cooldown <= 240 x scale); an omitted cooldown means 10 real minutes. `minutes` stays real vehicle-minutes and is not scaled; the response reports real minutes. The core stays integer-based with half-open `[start, end + cooldown)`.
+- **Precision assumption:** matrix durations and step times are rounded to 0.01 minute (`round(duration, 2)` in the strategies and `total_duration_minutes`), anchors are whole minutes, so every interval endpoint is exact in centi-minutes. A value off that grid (beyond 1e-6 centi-minute of float noise) is refused with `blocked_data` / `SELECTION_INTERVAL_PRECISION`; it is never rounded in either direction. Cooldowns are checked the same way.
+- **Rejected:** widening the overlap tolerance (hides the discrepancy), conservative rounding of fractional endpoints (can falsely reject a feasible day). **Label:** `proven_over_menu` now means optimal over the menu on the exact intervals, confirmed by the independent typed assignment; unchanged wording.
+- **Evidence:** [review CX-01](CODEX_DEEP_REVIEW_2026-10-09.md), tests `test_typed_day_selection.py::test_cx01_*`, `test_fleet_selection_endpoint.py::test_time_scale_*`, `fleet-scenario-run.test.ts` (CX-01). Related: H01, V01/V02, O01/O02.
 
 ### T07 - TSPLIB matrix cache v2: lossless upper-triangle lzma
 

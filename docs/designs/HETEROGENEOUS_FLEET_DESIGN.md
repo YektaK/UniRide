@@ -22,6 +22,9 @@ Each scenario is reported per day and per week. The report covers the cars neede
 | Sedan (Fiat Linea) | 0 | 4 |
 
 - Sedan Sw capacity is an open owner question (Q1 in §10), so it is a parameter.
+- **Optional shared seat limit (owner requirement 2026-10-09).** A type may set `total_capacity`: a route is feasible on the type iff Sw <= `sw_capacity`, So <= `so_capacity` and, when set, Sw + So <= `total_capacity`. Unset means pools only (behaviour unchanged). API: `VehicleTypeSpec.total_capacity` (>= 1, <= sw + so, else 422). CLI: `:capN` token, e.g. `minivan:1sw3so:cap3:cd10`; recorded in the manifest as `totalCapacity`.
+- **Fiat Doblo (owner decision 2026-10-09):** 3 passenger seats in total (1 front + 2 rear), at most 1 of them a wheelchair user. That student sits in a seat and the chair is stowed in the back. Valid loads: 0 Sw + up to 3 So, or 1 Sw + up to 2 So. Model: `doblo:1sw3so:cap3`. The earlier `minivan:1sw3so` runs allowed 4 passengers (1 Sw + 3 So) and are superseded. The minibus keeps its chairs in place (4 Sw places + 5 So seats as separate pools) and the sedan stays 0 Sw + 4 So.
+- The scenario-A baseline uses `ga_split`, which only knows the pools. A shared limit on the fixed type therefore fails closed (`BASELINE_TOTAL_CAPACITY_EXCEEDED`) when a baseline route exceeds it; the limit is enforced for the minimised type and in typed split, certificate and assignment.
 - R, tour limit 150 and cooldown 10 are shared by default and can be set per type.
 
 **Objective.** The objective is lexicographic: (cars, total vehicle-minutes) with L fixed. Cars are unbounded by default, with an optional cap.
@@ -72,7 +75,7 @@ This new pure module is `uniride_core/algorithms/typed_split_decoder.py`. `Split
 
 For a giant tour `s_1..s_n` and types `T`, each type `t` has `(sw_t, so_t, R_t, tour_t)`. The minimised type is `m` (sedan) and a quota type `ℓ` (large) has quota `q`. The decoder then works as follows:
 
-- **Arc feasibility.** Arc `(i, j]` is feasible for type `t` when the following hold for the segment: its Sw ≤ `sw_t`, its So ≤ `so_t`, its tour ≤ `tour_t`, and its longest ride ≤ `R_t`. The ride and tour definitions are the same as F1.
+- **Arc feasibility.** Arc `(i, j]` is feasible for type `t` when the following hold for the segment: its Sw ≤ `sw_t`, its So ≤ `so_t`, its Sw + So ≤ `total_t` when `total_t` is set, its tour ≤ `tour_t`, and its longest ride ≤ `R_t`. The ride and tour definitions are the same as F1.
 - **DP.** The DP is a resource-constrained shortest path with labels `V[j][k]`, where `k` = large routes used (0..q). The value is the lexicographic pair (routes of type `m`, cost).
 - **Transitions.** A car arc adds `(1, c_ij)` and keeps `k`. A large arc adds `(0, c_ij)` and sets `k+1 ≤ q`.
 - **Answer and labels.** The answer is `min_k V[n][k]`. Every route is returned with the type that realised it.

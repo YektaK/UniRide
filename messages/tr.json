@@ -439,7 +439,7 @@
         "seedDesc": "Tekrarlanabilir sonuçlar için sabit tohum",
         "summary": "Özet",
         "totalExperiments": "Toplam Deney",
-        "experimentsCount": "{n} deney",
+        "experimentsCount": "<important>{algorithms}</important> algoritma × <important>{problems}</important> problem × <important>{runs}</important> çalıştırma = <bold>{total}</bold> deney",
         "starting": "Başlatılıyor...",
         "startBenchmark": "Benchmark Başlat",
         "emptyHistory": "Henüz Çalışma Yok",
@@ -456,13 +456,20 @@
           "totalExperiments": "Toplam Deney",
           "totalDuration": "Toplam Süre",
           "successRate": "Başarı Oranı",
-          "testedAlgorithms": "Test Edilen"
+          "testedAlgorithms": "Test Edilen",
+          "totalTime": "Toplam Çalışma Süresi",
+          "tested": "Test Edilen",
+          "testedAlgo": "{count} algoritma"
         },
         "charts": {
           "meanDeviation": "Ortalama Sapma (%) — Algoritma Bazlı",
           "meanDeviationDesc": "Optimal çözüme olan ortalama yüzde sapma",
           "meanRuntime": "Ortalama Çalışma Süresi (ms) — Algoritma Bazlı",
-          "meanRuntimeDesc": "Algoritmaların ortalama çalışma süreleri"
+          "meanRuntimeDesc": "Algoritmaların ortalama çalışma süreleri",
+          "avgGapTitle": "Algoritmaya Göre Ortalama Sapma (%)",
+          "avgGapDesc": "Bilinen optimum değere olan ortalama yüzde sapma",
+          "avgTimeTitle": "Algoritmaya Göre Ortalama Çalışma Süresi (ms)",
+          "avgTimeDesc": "Algoritma başına ortalama çalışma süresi"
         },
         "comparisonTable": {
           "title": "Algoritma Karşılaştırma Tablosu",
@@ -473,7 +480,13 @@
           "minDev": "Min Sapma %",
           "maxDev": "Max Sapma %",
           "meanTime": "Ort. Süre (ms)",
-          "bestTour": "En İyi Tur"
+          "bestTour": "En İyi Tur",
+          "description": "Her algoritmanın ortalama, en küçük ve en büyük sapma ile çalışma süresi değerleri",
+          "testsCount": "Çalıştırma Sayısı",
+          "avgGap": "Ort. Sapma (%)",
+          "minGap": "Min. Sapma (%)",
+          "maxGap": "Maks. Sapma (%)",
+          "avgTime": "Ort. Çalışma Süresi (ms)"
         },
         "problemTable2": {
           "title": "Problem Bazlı Karşılaştırma",
@@ -483,16 +496,20 @@
           "bestTour": "En İyi Tur",
           "deviation": "Sapma %",
           "bestAlgorithm": "En İyi Algoritma",
-          "algorithmsTested": "Test Edilen Algo."
+          "algorithmsTested": "Test Edilen Algo.",
+          "description": "Her problem için en iyi algoritma ve optimum değere sapma",
+          "gap": "Sapma (%)"
         },
-        "rawResults": "Ham Sonuçlar ({n} kayıt)",
+        "rawResults": "Ham Sonuçlar ({count} kayıt)",
         "rawColumns": {
           "algorithm": "Algoritma",
           "problem": "Problem",
           "run": "Çalışma #",
           "tourLength": "Tur Uzunluğu",
           "deviation": "Sapma %",
-          "time": "Süre (ms)"
+          "time": "Süre (ms)",
+          "gap": "Sapma (%)",
+          "duration": "Çalışma Süresi (ms)"
         },
         "downloadJson": "JSON Olarak İndir",
         "noResults": "Henüz Sonuç Yok",
@@ -516,7 +533,29 @@
           "exportedJson": "Sonuçlar JSON olarak indirildi.",
           "resultsLoaded": "{n} sonuç getirildi.",
           "resultsLoadFailed": "Sonuçlar Alınamadı",
-          "historyCleared": "Tüm çalışma geçmişi silindi."
+          "historyCleared": "Tüm çalışma geçmişi silindi.",
+          "problemsLoadFailed": "Problemler yüklenemedi",
+          "serverUnreachable": "Optimizasyon sunucusuna ulaşılamadı.",
+          "resultsFetchFailed": "Sonuçlar alınamadı",
+          "resultsFetchFailedDesc": "Çalışma tamamlandı ancak sonuçlar getirilemedi.",
+          "startedTitle": "Benchmark başlatıldı",
+          "startFailedTitle": "Benchmark başlatılamadı",
+          "serverError": "Sunucu hatası",
+          "exportedTitle": "Sonuçlar dışa aktarıldı",
+          "exportedDesc": "Sonuçlar JSON dosyası olarak indirildi.",
+          "resultsLoadedTitle": "Sonuçlar yüklendi",
+          "resultsLoadedDesc": "{n} sonuç yüklendi."
+        },
+        "noProblems": "Problem Bulunamadı",
+        "noProblemsHint": "Seçili kategoriye uyan problem yok. Başka bir kategori seçin.",
+        "runTitle": "Çalışma Durumu",
+        "status": "Durum",
+        "statusLoading": "Çalışma durumu yükleniyor...",
+        "viewResults": "Sonuçları Görüntüle",
+        "categories": {
+          "small": "Küçük",
+          "medium": "Orta",
+          "large": "Büyük"
         }
       },
       "vehicles": {

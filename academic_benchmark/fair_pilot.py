@@ -18,7 +18,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
-from academic_benchmark.fairness import FairComparisonManifest, FairRunResult, validate_scientific_alns_params
+from academic_benchmark.fairness import (
+    FairComparisonManifest,
+    FairRunResult,
+    validate_evaluation_budget,
+    validate_scientific_alns_params,
+)
 from academic_benchmark.core.algorithm_resolution import IdentifierSource
 from academic_benchmark.core.execution_gateway import (
     execute_preflighted,
@@ -202,7 +207,10 @@ def load_fair_pilot_config(path: str | Path) -> FairPilotConfig:
     if protocol_version == V2_PROTOCOL:
         _validate_v2_algorithm_policy(algorithms)
     runs = _strict_int(data["runs"], "runs", 1)
-    evaluation_budget = _strict_int(data["evaluation_budget"], "evaluation_budget", 1)
+    try:
+        evaluation_budget = validate_evaluation_budget(data["evaluation_budget"])
+    except ValueError as exc:
+        raise FairPilotError("evaluation_budget must be an integer >= 1") from exc
     base_seed = _strict_int(data["base_seed"], "base_seed", 0)
     budget_policy = data["budget_policy"]
     if budget_policy != "atomic_upper_bound_v1":

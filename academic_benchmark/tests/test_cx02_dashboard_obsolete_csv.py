@@ -117,3 +117,41 @@ def test_reader_csv_path_honours_row_metadata_without_marker(tmp_path):
     ])
     out = get_benchmark_rows(results_dir=d, filename="bm.csv", prefer_db=False)
     assert len(out["results"]) == 1
+
+
+def test_tuning_frames_honour_obsolete_marker(tmp_path):
+    from academic_benchmark.dashboard_utils import load_tuning_frames
+
+    marked = tmp_path / "marked"
+    marked.mkdir()
+    (marked / "OBSOLETE.md").write_text("obsolete", encoding="utf-8")
+    _write(marked / "tuning_progress.csv", [
+        {"algorithm": "ga_split_hf", "score": 1},
+        {"algorithm": "ga_split", "score": 2},
+    ])
+    frames, sources = load_tuning_frames([str(marked)])
+    assert list(_concat(frames)["algorithm"]) == ["ga_split"]
+    assert len(sources) == 1
+    frames_all, _ = load_tuning_frames([str(marked)], include_obsolete=True)
+    assert len(_concat(frames_all)) == 2
+
+
+def test_history_frames_honour_obsolete_marker(tmp_path):
+    from academic_benchmark.dashboard_utils import load_history_frames
+
+    (tmp_path / "OBSOLETE.md").write_text("obsolete", encoding="utf-8")
+    _write(tmp_path / "smart_a.csv", [{"strategy": "ga_split_hf", "gen": 1}, {"strategy": "ga_split", "gen": 1}])
+    _write(tmp_path / "interrupted_smart_b.csv", [{"strategy": "ga_split_hf", "gen": 2}])
+    frames = load_history_frames(str(tmp_path))
+    assert list(_concat(frames)["strategy"]) == ["ga_split"]
+    assert len(_concat(load_history_frames(str(tmp_path), include_obsolete=True))) == 3
+    assert load_history_frames(str(tmp_path / "missing")) == []
+
+
+@pytest.mark.parametrize("empty", ["", None, float("nan")])
+def test_empty_metadata_column_falls_back_to_metadata_json(empty):
+    from academic_benchmark.obsolete_results import is_obsolete_row
+
+    row = {"metadata": empty, "metadata_json": json.dumps({"obsolete": True})}
+    assert is_obsolete_row(row) is True
+    assert is_obsolete_row({"metadata": empty, "metadata_json": "{}"}) is False

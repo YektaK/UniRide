@@ -33,8 +33,8 @@ def test_unknown_fields_rejected_with_clear_error():
 def test_valid_ints_accepted_and_paired_seeds_unchanged():
     m = FairComparisonManifest.from_value({"evaluation_budget": 500, "base_seed": 77})
     assert (m.evaluation_budget, m.base_seed) == (500, 77)
-    # frozen against the pre-fix implementation (sha256 of "protocol|seed|problem|replicate")
-    assert m.paired_seed("berlin52", 3) == FairComparisonManifest(500, 77).paired_seed("berlin52", 3)
+    # literal measured on the pre-fix code (3e14915^), manifest budget 500 / base_seed 77
+    assert m.paired_seed("berlin52", 3) == 583917059
     neg = FairComparisonManifest.from_value({"evaluation_budget": 5, "base_seed": -7})
     assert neg.base_seed == -7 and 0 <= neg.paired_seed("p", 0) < 2_147_483_647
     default = FairComparisonManifest.from_value({"evaluation_budget": 5})

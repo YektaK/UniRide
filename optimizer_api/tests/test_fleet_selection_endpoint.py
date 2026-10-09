@@ -218,3 +218,28 @@ def test_time_scale_rejects_invalid_values(bad):
     body = _scaled_body(100)
     body["time_scale"] = bad
     assert _client().post(URL, json=body, headers=KEY).status_code == 422
+
+
+def _default_cooldown_body(start2, **extra):
+    r = lambda s, e: {"start": s, "end": e, "minutes": 1.0, "car_ok": False}  # noqa: E731
+    body = {
+        "waves": [
+            {"wave_id": "w1", "options": [{"option_id": "base", "baseline": True, "routes": [r(60000, 60110)]}]},
+            {"wave_id": "w2", "options": [{"option_id": "base", "baseline": True, "routes": [r(start2, 62000)]}]},
+        ],
+        "max_large": 1, "time_scale": 100,
+    }
+    body.update(extra)
+    return body
+
+
+@pytest.mark.parametrize("extra", [{}, {"cooldown_large": None, "cooldown_car": None}])
+def test_omitted_or_null_cooldown_means_ten_real_minutes_at_scale(extra):
+    c = _client()
+    # gap 9.9 minutes < 10: one vehicle cannot serve both
+    tight = c.post(URL, json=_default_cooldown_body(61100, **extra), headers=KEY)
+    assert tight.status_code == 200 and tight.json()["status"] == "infeasible_for_L"
+    # gap 10.1 minutes >= 10: feasible
+    ok = c.post(URL, json=_default_cooldown_body(61120, **extra), headers=KEY)
+    assert ok.status_code == 200
+    assert ok.json()["status"] == "optimal" and ok.json()["large_peak"] == 1

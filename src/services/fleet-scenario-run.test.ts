@@ -195,6 +195,17 @@ describe("runFleetScenarioDay", () => {
     expect(day.scenarios[0]).toMatchObject({ status: "blocked_data", reasonCodes: ["SELECTION_INTERVAL_PRECISION"] });
   });
 
+  it("CX-01: an off-grid cooldown is refused, never rounded", async () => {
+    const db = reader(rows());
+    const t = transport({ selection: pickSelection("q1", () => ["large", "car"]) });
+    const day = await runFleetScenarioDay(
+      { reader: db.client, optimizerFetch: t.fetch, clock },
+      params({ scenarios: [1], fixedType: { ...large, cooldownMinutes: 10.005 } }),
+    );
+    expect(t.calls.map((c) => c.path)).not.toContain("/api/v1/internal/fleet-selection");
+    expect(day.scenarios[0]).toMatchObject({ status: "blocked_data", reasonCodes: ["SELECTION_INTERVAL_PRECISION"] });
+  });
+
   it("reports infeasible_for_L with the selection diagnostics", async () => {
     const db = reader(rows());
     const t = transport({

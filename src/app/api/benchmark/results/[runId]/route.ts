@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerToken } from '@/lib/benchmark-owner-cookie';
 import { optimizerFetch } from "@/lib/optimizer-server";
+import { denyUnlessBenchmarkAdmin } from "@/lib/benchmark-auth";
 
 /**
  * GET /api/benchmark/results/[runId]
@@ -23,6 +24,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ runId: string }> }
 ) {
+  const denied = await denyUnlessBenchmarkAdmin(request);
+  if (denied) return denied;
+
   const { runId } = await params;
 
   if (!runId || typeof runId !== 'string') {

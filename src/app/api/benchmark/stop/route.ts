@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getOwnerToken } from "@/lib/benchmark-owner-cookie";
 import { optimizerFetch } from "@/lib/optimizer-server";
+import { denyUnlessBenchmarkAdmin } from "@/lib/benchmark-auth";
 
 const StopBenchmarkRequestSchema = z.object({
   run_id: z.string().min(1, "run_id gerekli"),
 });
 
 export async function POST(request: NextRequest) {
+  const denied = await denyUnlessBenchmarkAdmin(request);
+  if (denied) return denied;
+
   try {
     const body = await request.json();
     const parsed = StopBenchmarkRequestSchema.safeParse(body);

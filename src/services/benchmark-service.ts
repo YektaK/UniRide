@@ -1,3 +1,4 @@
+import { getAuthToken } from "@/lib/admin-api";
 import { generateBenchmarkRunId } from "@/lib/benchmark-run-id";
 
 /**
@@ -163,11 +164,27 @@ export interface BenchmarkRunResponse {
 const BENCHMARK_API_BASE = "/api/benchmark";
 
 /**
+ * Every /api/benchmark/* route requires an admin session (audit C4), so each
+ * call carries the Supabase bearer token, as src/lib/admin-api.ts does.
+ * Without a session no request is sent.
+ */
+async function benchmarkFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const token = await getAuthToken();
+  if (!token) {
+    throw new Error("Benchmark requires an admin sign-in");
+  }
+  return fetch(url, {
+    ...options,
+    headers: { ...(options.headers as Record<string, string> | undefined), Authorization: `Bearer ${token}` },
+  });
+}
+
+/**
  * Check whether the benchmark backend proxy can reach the Python API.
  */
 export async function checkBenchmarkApiHealth(): Promise<boolean> {
   try {
-    const response = await fetch(`${BENCHMARK_API_BASE}/health`, {
+    const response = await benchmarkFetch(`${BENCHMARK_API_BASE}/health`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       signal: AbortSignal.timeout(5000),
@@ -187,7 +204,7 @@ export async function fetchProblems(category?: string): Promise<BenchmarkProblem
     params.set("category", category);
   }
 
-  const response = await fetch(
+  const response = await benchmarkFetch(
     `${BENCHMARK_API_BASE}/problems${params.toString() ? `?${params.toString()}` : ""}`,
     {
       method: "GET",
@@ -199,7 +216,8 @@ export async function fetchProblems(category?: string): Promise<BenchmarkProblem
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(
-      (errorData as { detail?: string }).detail || `Problemler alınamadı: ${response.status}`
+      (errorData as { detail?: string; error?: string }).detail ||
+      (errorData as { error?: string }).error || `Problemler alınamadı: ${response.status}`
     );
   }
 
@@ -211,7 +229,7 @@ export async function fetchProblems(category?: string): Promise<BenchmarkProblem
  * Fetch available strategies from Python API
  */
 export async function fetchStrategies(): Promise<string[]> {
-  const response = await fetch(`${BENCHMARK_API_BASE}/strategies`, {
+  const response = await benchmarkFetch(`${BENCHMARK_API_BASE}/strategies`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
     signal: AbortSignal.timeout(10000),
@@ -247,7 +265,7 @@ export async function fetchAcademicProblems(options: {
   if (options.max_dim) params.set("max_dim", String(options.max_dim));
   if (options.limit) params.set("limit", String(options.limit));
 
-  const response = await fetch(
+  const response = await benchmarkFetch(
     `${BENCHMARK_API_BASE}/academic/problems${params.toString() ? `?${params.toString()}` : ""}`,
     {
       method: "GET",
@@ -272,7 +290,7 @@ export async function fetchAcademicProblems(options: {
  * Fetch editable algorithm parameter spaces for quick benchmark runs
  */
 export async function fetchParamSpaces(): Promise<BenchmarkParamSpacesResponse> {
-  const response = await fetch(`${BENCHMARK_API_BASE}/param-spaces`, {
+  const response = await benchmarkFetch(`${BENCHMARK_API_BASE}/param-spaces`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
     signal: AbortSignal.timeout(10000),
@@ -300,7 +318,7 @@ export async function startBenchmark(
 ): Promise<BenchmarkRunResponse> {
   const runId = generateBenchmarkRunId();
 
-  const response = await fetch(`${BENCHMARK_API_BASE}/run`, {
+  const response = await benchmarkFetch(`${BENCHMARK_API_BASE}/run`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -329,7 +347,7 @@ export async function pollStatus(runId: string): Promise<BenchmarkStatus> {
   const params = new URLSearchParams();
   params.set("run_id", runId);
 
-  const response = await fetch(`${BENCHMARK_API_BASE}/status?${params.toString()}`, {
+  const response = await benchmarkFetch(`${BENCHMARK_API_BASE}/status?${params.toString()}`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
     signal: AbortSignal.timeout(10000),
@@ -349,7 +367,7 @@ export async function pollStatus(runId: string): Promise<BenchmarkStatus> {
  * Stop a running benchmark
  */
 export async function stopBenchmark(runId: string): Promise<void> {
-  const response = await fetch(`${BENCHMARK_API_BASE}/stop`, {
+  const response = await benchmarkFetch(`${BENCHMARK_API_BASE}/stop`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ run_id: runId }),
@@ -368,7 +386,7 @@ export async function stopBenchmark(runId: string): Promise<void> {
  * Fetch benchmark results
  */
 export async function fetchResults(runId: string): Promise<BenchmarkResultsResponse> {
-  const response = await fetch(`${BENCHMARK_API_BASE}/results/${encodeURIComponent(runId)}`, {
+  const response = await benchmarkFetch(`${BENCHMARK_API_BASE}/results/${encodeURIComponent(runId)}`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
     signal: AbortSignal.timeout(30000),
@@ -397,7 +415,7 @@ export async function fetchAcademicLeaderboard(options: {
   if (options.category) params.set("category", options.category);
   if (options.limit) params.set("limit", String(options.limit));
 
-  const response = await fetch(
+  const response = await benchmarkFetch(
     `${BENCHMARK_API_BASE}/academic/leaderboard${params.toString() ? `?${params.toString()}` : ""}`,
     {
       method: "GET",
@@ -421,7 +439,7 @@ export async function fetchAcademicBestResult(
   algorithm: string
 ): Promise<AcademicBestResultResponse> {
   const params = new URLSearchParams({ problem, algorithm });
-  const response = await fetch(`${BENCHMARK_API_BASE}/academic/best?${params.toString()}`, {
+  const response = await benchmarkFetch(`${BENCHMARK_API_BASE}/academic/best?${params.toString()}`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
     signal: AbortSignal.timeout(10000),

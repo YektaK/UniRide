@@ -11,7 +11,13 @@ import { describe, expect, it } from "vitest";
 const root = path.resolve(__dirname, "../..");
 const migrationPath = path.join(root, "supabase/migrations/20261010_route_plans_read_lock.sql");
 const normalise = (text: string) =>
-  text.replace(/--.*$/gm, "").replace(/\s+/g, " ").toLowerCase();
+  text
+    .replace(/--.*$/gm, "")
+    .replace(/\s+/g, " ")
+    .replace(/\( /g, "(")
+    .replace(/ \)/g, ")")
+    .trim()
+    .toLowerCase();
 
 const body = existsSync(migrationPath) ? normalise(readFileSync(migrationPath, "utf8")) : "";
 const legacy = normalise(readFileSync(path.join(root, "supabase/rls_policies.sql"), "utf8"));
@@ -32,7 +38,7 @@ describe("20261010 route_plans_read_lock migration", () => {
 
   it.each(["route_plans", "sandbox_scenarios"])("limits the admin ALL policy on %s to authenticated with WITH CHECK", (table) => {
     const re = new RegExp(
-      `create policy "admins can crud ${table}" on public\.${table} for all to authenticated using \(exists \(select 1 from public\.users u where u\.id = auth\.uid\(\) and u\.role = 'admin'\)\) with check \(exists \(select 1 from public\.users u where u\.id = auth\.uid\(\) and u\.role = 'admin'\)\)`,
+      String.raw`create policy "admins can crud ${table}" on public\.${table} for all to authenticated using \(exists \(select 1 from public\.users u where u\.id = auth\.uid\(\) and u\.role = 'admin'\)\) with check \(exists \(select 1 from public\.users u where u\.id = auth\.uid\(\) and u\.role = 'admin'\)\)`,
     );
     expect(body).toMatch(re);
   });

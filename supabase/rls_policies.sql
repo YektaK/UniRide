@@ -1,3 +1,22 @@
+-- =============================================================================
+-- LEGACY REFERENCE - DO NOT RUN (audit M21, retired 2026-10-10)
+-- supabase/migrations/* are the authoritative source of RLS policy. This file
+-- used to DROP every public policy (including migration-owned ones such as
+-- route_plans and sandbox_scenarios) and recreate an older policy set, which
+-- would undo the 20261009 and 20261010 lock migrations. The drop-all loop is
+-- gone and an aborting guard now stops the script. The policy text below is kept
+-- only for history and diffing; edit migrations, not this file.
+-- =============================================================================
+BEGIN;
+
+-- Guard (M21): this file is a legacy reference and must not be executed.
+-- The statement below always fails, which aborts the transaction opened above;
+-- every later statement then fails too and the final COMMIT rolls back.
+DO $$
+BEGIN
+  RAISE EXCEPTION 'supabase/rls_policies.sql is a legacy reference; apply supabase/migrations/* instead';
+END $$;
+
 -- UniRide Row Level Security Policies (Fixed)
 -- Run this in Supabase SQL Editor
 -- These policies avoid infinite recursion by using auth.uid() directly
@@ -12,16 +31,6 @@ ALTER TABLE route_assignments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.student_leg_decisions ENABLE ROW LEVEL SECURITY;
-
--- Drop existing policies to avoid conflicts
-DO $$ 
-DECLARE
-    r RECORD;
-BEGIN
-    FOR r IN (SELECT policyname, tablename FROM pg_policies WHERE schemaname = 'public') LOOP
-        EXECUTE 'DROP POLICY IF EXISTS "' || r.policyname || '" ON ' || r.tablename;
-    END LOOP;
-END $$;
 
 -- Helper function to check if user is admin
 CREATE OR REPLACE FUNCTION is_admin()
@@ -195,3 +204,5 @@ CREATE POLICY "admin_settings_select_all"
 -- Note: For admin-only operations (managing users, vehicles, etc.),
 -- use service_role key on the server side or create a separate
 -- admin API endpoint that verifies the user's role first.
+
+COMMIT;

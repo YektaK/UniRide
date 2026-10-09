@@ -76,4 +76,21 @@ describe("POST /api/benchmark/run", () => {
     const res = await POST(runRequest("taken-run"));
     expect(res.status).toBe(409);
   });
+
+  it("flattens an object detail from the backend into a string error (C9)", async () => {
+    stubFetch([
+      { status: 404, json: { detail: "not found" } },
+      {
+        status: 422,
+        json: { detail: { error: "Benchmark parameters exceed the compute policy", reason: "population_size must be an integer in [1, 250]" } },
+      },
+    ]);
+    const res = await POST(runRequest("c9-run"));
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(typeof body.error).toBe("string");
+    expect(body.error).toBe(
+      "Benchmark parameters exceed the compute policy: population_size must be an integer in [1, 250]"
+    );
+  });
 });

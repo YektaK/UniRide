@@ -48,4 +48,29 @@ describe("POST /api/benchmark/run/stop", () => {
     expect(capturedHeaders["x-benchmark-owner-token"]).toBe("STOPTOKEN");
     expect(capturedHeaders["x-internal-api-key"]).toBe("test-key");
   });
+
+  async function stopWith(backend: Record<string, unknown>) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true, status: 200, json: async () => backend, text: async () => "" }))
+    );
+    const req = new NextRequest("http://x/api/benchmark/run/stop", {
+      method: "POST",
+      headers: { "content-type": "application/json", cookie: "benchmark_owner_stop-1=T" },
+      body: JSON.stringify({ runId: "stop-1" }),
+    });
+    return (await POST(req)).json();
+  }
+
+  it("reports stopping while the backend worker is still finishing (C7)", async () => {
+    const body = await stopWith({ run_id: "stop-1", status: "stopping", results_collected: 2 });
+    expect(body.status).toBe("stopping");
+    expect(body.message).toBe("Benchmark durduruluyor");
+  });
+
+  it("defaults to stopped when the backend sends no status (C7)", async () => {
+    const body = await stopWith({ run_id: "stop-1", results_collected: 2 });
+    expect(body.status).toBe("stopped");
+    expect(body.message).toBe("Benchmark durduruldu");
+  });
 });

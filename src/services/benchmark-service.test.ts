@@ -245,4 +245,12 @@ describe("benchmark-service academic problems", () => {
       "Akademik sonuç alınamadı: 404"
     );
   });
+
+  it("surfaces the BFF error string when no detail is present (C9)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, status: 422, json: async () => ({ error: "bounds exceeded: x" }) })
+    );
+    await expect(startBenchmark([{ id: "ga", params: {} }], ["p"], { n_runs: 1 })).rejects.toThrow("bounds exceeded: x");
+  });
 });

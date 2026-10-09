@@ -502,6 +502,7 @@
         "apiOffline": "Python Optimizer API Offline",
         "problemsLoading": "Loading problems...",
         "toast": {
+          "stoppingTitle": "Benchmark stopping",
           "stoppedTitle": "Benchmark stopped",
           "stoppedDesc": "The run was stopped.",
           "stopFailedTitle": "Failed to stop",

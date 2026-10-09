@@ -246,7 +246,7 @@ VehicleTypeSpec:
 | P1 | Re-run P0 on every later commit and require byte-identical JSON. | default `ga_split` and the shared decoder unchanged |
 | P2 | Zero-import guard: no module under `academic_benchmark/` or the academic registry imports `typed_split_decoder`, `ga_split_typed_engine` or `typed_day_selection`. | gating by construction |
 | P3 | Property test (500 random instances, seeded): `TypedSplitDecoder` with one type and unlimited quota gives the same routes, costs and route count as `SplitDecoder` for both directions, with and without R. | typed generalises untyped |
-| P4 | `solve_ga_split_typed` with one type and no quota gives the same routes and the same `generations` as `solve_ga_split` for the same seed. This holds because the RNG stream is identical (F2). | wrapper parity |
+| P4 | `solve_ga_split_typed` with one type and no quota gives the same routes and the same `generations` as `solve_ga_split` for the same seed. This holds because the RNG stream is identical (F2) and, for one type and no quota (`quota_type` or `quota` unset), the inner split decode is cost-only like the untyped DP (CX-03). With two or more types or a quota the typed inner decode is count-first (routes of `minimize_type`, then cost), which is intended for borrowed-vehicle minimisation and differs from the untyped objective by design (decision H04). | wrapper parity |
 | P5 | Existing suites pass unchanged: the three canonical pytest suites (`uniride_core/tests`, `optimizer_api/tests` and the academic suite) and the Vitest suite. | no regression |
 | P6 | API: a request without `vehicle_types` produces a response JSON byte-identical to `6be127d`, on mocked matrix fixtures. | additive contract |
 

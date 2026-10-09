@@ -31,10 +31,12 @@ describe("20261009 lock_user_role_and_ride_status migration", () => {
     );
   });
 
-  it("defines prevent_role_change as pinned SECURITY DEFINER without is_admin", () => {
+  it("defines prevent_role_change as invoker with empty search_path and no is_admin", () => {
     expect(body).toMatch(/create or replace function public\.prevent_role_change\(\)/);
-    expect(body).toContain("security definer");
-    expect(body).toContain("set search_path = public");
+    const fn = body.split("create or replace function public.prevent_role_change()")[1].split("$$")[0];
+    expect(fn).not.toContain("security definer");
+    expect(fn).toContain("set search_path = ''");
+    expect(body).toContain("auth.role() = 'service_role'");
     expect(body).not.toMatch(/is_admin\s*\(/);
     expect(body).toContain("tg_op = 'insert'");
     expect(body).toContain("new.role is distinct from old.role");
@@ -52,7 +54,7 @@ describe("20261009 lock_user_role_and_ride_status migration", () => {
       /on public\.ride_requests for insert to authenticated with check \(auth\.uid\(\) = user_id and status in \('pending_admin_approval', 'pending_student_confirmation'\) and vehicle_id is null and actual_pickup_time is null and actual_dropoff_time is null\)/,
     );
     expect(body).toMatch(
-      /on public\.ride_requests for update to authenticated using \(auth\.uid\(\) = user_id\) with check \(auth\.uid\(\) = user_id and status = 'cancelled_by_student'\)/,
+      /on public\.ride_requests for update to authenticated using \(auth\.uid\(\) = user_id and status in \('pending_admin_approval', 'pending_student_confirmation', 'confirmed'\)\) with check \(auth\.uid\(\) = user_id and status = 'cancelled_by_student' and vehicle_id is null and actual_pickup_time is null and actual_dropoff_time is null\)/,
     );
   });
 
@@ -75,6 +77,10 @@ describe("20261009 lock_user_role_and_ride_status migration", () => {
       expect(body).toContain(`alter function public.${fn} set search_path = public`);
       expect(body).toContain(`revoke all on function public.${fn} from public, anon, authenticated`);
     }
+  });
+
+  it("aborts if a FOR ALL policy exists on users or ride_requests", () => {
+    expect(body).toMatch(/cmd = 'all'[\s\S]*raise exception 'for all policy/);
   });
 
   it("is re-runnable: policies and trigger are dropped before creation", () => {

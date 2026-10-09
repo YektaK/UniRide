@@ -59,8 +59,7 @@ CREATE POLICY "users_update_own"
 CREATE OR REPLACE FUNCTION prevent_role_change()
 RETURNS TRIGGER
 LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
 BEGIN
   -- Allow service_role to change the role column (admin operations via server)
@@ -122,8 +121,10 @@ CREATE POLICY "ride_requests_insert_own"
 -- Users can update their own ride requests
 CREATE POLICY "ride_requests_update_own"
   ON ride_requests FOR UPDATE TO authenticated
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id AND status = 'cancelled_by_student');  -- QW1/C1.b
+  USING (auth.uid() = user_id
+         AND status IN ('pending_admin_approval', 'pending_student_confirmation', 'confirmed'))
+  WITH CHECK (auth.uid() = user_id AND status = 'cancelled_by_student'
+              AND vehicle_id IS NULL AND actual_pickup_time IS NULL AND actual_dropoff_time IS NULL);  -- QW1/C1.b
 
 -- ==================== VEHICLES POLICIES ====================
 

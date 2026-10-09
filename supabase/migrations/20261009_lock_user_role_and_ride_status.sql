@@ -9,16 +9,19 @@
 --                            id AND role = 'student'.
 --      - users_update_own  : UPDATE TO authenticated, now with a WITH CHECK
 --                            (id may not be re-pointed to another user).
---      - prevent_role_change() trigger function (SECURITY DEFINER, pinned
---        search_path) fired BEFORE INSERT OR UPDATE OF role. service_role may do
+--      - prevent_role_change() trigger function (SECURITY INVOKER, search_path = ''
+--        with qualified names) fired BEFORE INSERT OR UPDATE OF role. service_role may do
 --        anything; everyone else may only INSERT role 'student' and may never
 --        change an existing role. It does NOT depend on is_admin() (absent live).
+--      - The migration aborts if a FOR ALL policy exists on users/ride_requests.
 --      - Any other INSERT/UPDATE policy on users is dropped first, because
 --        permissive policies are OR-ed and a leftover one would void the lock.
 --   2. public.ride_requests (C1.b)
 --      - INSERT only with status pending_admin_approval or
 --        pending_student_confirmation and no vehicle / actual times.
---      - UPDATE only to status cancelled_by_student on the caller's own rows.
+--      - UPDATE only to status cancelled_by_student, only on own rows that are still
+--        pending/confirmed and have no vehicle or actual times (a student cannot touch
+--        cancelled_by_admin/completed rows).
 --      - Other INSERT/UPDATE policies are dropped first (same reason).
 --      Admin / planner writes go through the BFF with the service-role key.
 --   3. get_available_drivers() and get_route_plans_with_students(date, text):
@@ -43,6 +46,19 @@ BEGIN;
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ride_requests ENABLE ROW LEVEL SECURITY;
+
+-- Guard: a permissive FOR ALL policy would OR with (and void) the policies below.
+DO $$
+DECLARE p record;
+BEGIN
+  FOR p IN
+    SELECT tablename, policyname FROM pg_policies
+    WHERE schemaname = 'public' AND tablename IN ('users', 'ride_requests') AND cmd = 'ALL'
+  LOOP
+    RAISE EXCEPTION 'FOR ALL policy % on public.% would bypass the role/status lock; review and drop it first',
+      p.policyname, p.tablename;
+  END LOOP;
+END $$;
 
 -- ---------------------------------------------------------------------------
 -- 1. users
@@ -74,8 +90,7 @@ CREATE POLICY "users_update_own" ON public.users
 CREATE OR REPLACE FUNCTION public.prevent_role_change()
 RETURNS TRIGGER
 LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
 BEGIN
   -- Server-side admin operations (service-role key) are exempt.
@@ -129,8 +144,13 @@ CREATE POLICY "ride_requests_insert_own" ON public.ride_requests
 DROP POLICY IF EXISTS "ride_requests_update_own" ON public.ride_requests;
 CREATE POLICY "ride_requests_update_own" ON public.ride_requests
   FOR UPDATE TO authenticated
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id AND status = 'cancelled_by_student');
+  USING (auth.uid() = user_id
+         AND status IN ('pending_admin_approval', 'pending_student_confirmation', 'confirmed'))
+  WITH CHECK (auth.uid() = user_id
+              AND status = 'cancelled_by_student'
+              AND vehicle_id IS NULL
+              AND actual_pickup_time IS NULL
+              AND actual_dropoff_time IS NULL);
 
 -- ---------------------------------------------------------------------------
 -- 3. SECURITY DEFINER RPCs that bypass RLS (no caller in src/ or optimizer_api/)

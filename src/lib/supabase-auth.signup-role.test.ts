@@ -39,7 +39,7 @@ describe("signUp / register never send a privileged role", () => {
   });
 
   it("signUp has no role parameter: arity is email, password, name, studentNumber, userData", () => {
-    expect(signUp.length).toBeLessThanOrEqual(5);
+    expect(signUp.length).toBe(5);
   });
 
   it("signUp passes userData as the 5th argument and always creates a student row", async () => {

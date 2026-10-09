@@ -43,29 +43,41 @@ DO $$ BEGIN
     RAISE EXCEPTION 'FAIL T1: own role update to admin succeeded';
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM LIKE 'FAIL%' THEN RAISE; END IF;
+    IF SQLSTATE NOT IN ('42501', 'P0001') THEN RAISE EXCEPTION 'FAIL: unexpected error % (%)', SQLERRM, SQLSTATE; END IF;
     RAISE NOTICE 'PASS T1: update own role blocked (%)', SQLERRM;
   END;
 END $$;
 
--- T2: cannot insert a row with role admin or driver (own id)
+-- T2: cannot insert a row with role admin or driver. Use a fresh id (no row exists) so a
+-- primary-key conflict (23505) can never masquerade as a blocked insert.
+SELECT set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-0000000000a4","role":"authenticated"}', true);
+SELECT set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a4', true);
 DO $$ BEGIN
   BEGIN
     INSERT INTO public.users (id, email, name, role)
-    VALUES ('00000000-0000-4000-8000-0000000000a1', 'qw1-x@example.invalid', 'X', 'admin');
+    VALUES ('00000000-0000-4000-8000-0000000000a4', 'qw1-x@example.invalid', 'X', 'admin');
     RAISE EXCEPTION 'FAIL T2a: insert role=admin succeeded';
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM LIKE 'FAIL%' THEN RAISE; END IF;
+    IF SQLSTATE NOT IN ('42501', 'P0001') THEN RAISE EXCEPTION 'FAIL: unexpected error % (%)', SQLERRM, SQLSTATE; END IF;
     RAISE NOTICE 'PASS T2a: insert admin blocked (%)', SQLERRM;
   END;
   BEGIN
     INSERT INTO public.users (id, email, name, role)
-    VALUES ('00000000-0000-4000-8000-0000000000a1', 'qw1-y@example.invalid', 'Y', 'driver');
+    VALUES ('00000000-0000-4000-8000-0000000000a4', 'qw1-y@example.invalid', 'Y', 'driver');
     RAISE EXCEPTION 'FAIL T2b: insert role=driver succeeded';
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM LIKE 'FAIL%' THEN RAISE; END IF;
+    IF SQLSTATE NOT IN ('42501', 'P0001') THEN RAISE EXCEPTION 'FAIL: unexpected error % (%)', SQLERRM, SQLSTATE; END IF;
     RAISE NOTICE 'PASS T2b: insert driver blocked (%)', SQLERRM;
   END;
 END $$;
+
+-- back to student A
+SELECT set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-0000000000a1","role":"authenticated"}', true);
+SELECT set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-0000000000a1', true);
 
 -- T3: ordinary self-update (non-role column) still works and role is unchanged
 DO $$ DECLARE r text; BEGIN
@@ -93,6 +105,7 @@ DO $$ BEGIN
     RAISE EXCEPTION 'FAIL T5a: insert status=confirmed succeeded';
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM LIKE 'FAIL%' THEN RAISE; END IF;
+    IF SQLSTATE NOT IN ('42501', 'P0001') THEN RAISE EXCEPTION 'FAIL: unexpected error % (%)', SQLERRM, SQLSTATE; END IF;
     RAISE NOTICE 'PASS T5a: insert confirmed blocked (%)', SQLERRM;
   END;
   BEGIN
@@ -100,6 +113,7 @@ DO $$ BEGIN
     RAISE EXCEPTION 'FAIL T5b: update to confirmed succeeded';
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM LIKE 'FAIL%' THEN RAISE; END IF;
+    IF SQLSTATE NOT IN ('42501', 'P0001') THEN RAISE EXCEPTION 'FAIL: unexpected error % (%)', SQLERRM, SQLSTATE; END IF;
     RAISE NOTICE 'PASS T5b: update to confirmed blocked (%)', SQLERRM;
   END;
   BEGIN
@@ -107,6 +121,7 @@ DO $$ BEGIN
     RAISE EXCEPTION 'FAIL T5c: update to completed succeeded';
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM LIKE 'FAIL%' THEN RAISE; END IF;
+    IF SQLSTATE NOT IN ('42501', 'P0001') THEN RAISE EXCEPTION 'FAIL: unexpected error % (%)', SQLERRM, SQLSTATE; END IF;
     RAISE NOTICE 'PASS T5c: update to completed blocked (%)', SQLERRM;
   END;
   BEGIN
@@ -118,6 +133,7 @@ DO $$ BEGIN
     RAISE EXCEPTION 'FAIL T5d: insert with vehicle_id succeeded';
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM LIKE 'FAIL%' THEN RAISE; END IF;
+    IF SQLSTATE NOT IN ('42501', 'P0001') THEN RAISE EXCEPTION 'FAIL: unexpected error % (%)', SQLERRM, SQLSTATE; END IF;
     RAISE NOTICE 'PASS T5d: insert with vehicle_id blocked (%)', SQLERRM;
   END;
 END $$;

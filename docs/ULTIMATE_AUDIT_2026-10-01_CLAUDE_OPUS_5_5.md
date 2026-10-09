@@ -2347,6 +2347,7 @@ Update the Status, Branch/PR and Closing commit columns as fixes land (statuses:
 
 | ID | Severity | Short title | Source | Status | Branch / PR | Closing commit | Evidence |
 |---|---|---|---|---|---|---|---|
+| CX-01 | High | Fractional intervals falsely declared infeasible by fleet selection | Codex review 2026-10-09 | FIXED in repo | `fix/cx01-interval-precision` | red `b39faf5`, green `4ae3d57`, review round 1 `0160acb` + follow-up on this branch | `fleet-scenario-run.test.ts` (CX-01), `test_fleet_selection_endpoint.py::test_time_scale_*` and `test_omitted_or_null_cooldown_*`, `test_typed_day_selection.py::test_cx01_*`; DECISION_LOG H05 |
 | CX-02 | High | Dashboard CSV ingestion bypasses the obsolete-result guard | Codex review 2026-10-09 | FIXED in repo | `fix/cx02-cx04-academic-guards` | see the remediation log | `academic_benchmark/tests/test_cx02_dashboard_obsolete_csv.py`; DECISION_LOG A07 |
 | CX-04 | Medium | Direct fairness manifests truncate a non-integer evaluation budget | Codex review 2026-10-09 | FIXED in repo | `fix/cx02-cx04-academic-guards` | see the remediation log | `academic_benchmark/tests/test_cx04_fair_manifest_validation.py`; DECISION_LOG A08 |
 
@@ -2396,3 +2397,4 @@ Append one entry per landed fix: date, agent or author, ID(s), branch/commit, te
 ---
 
 *End of report — `UA-2026-10-01-CLAUDE` v1.1, written by Claude (Anthropic, Claude Opus 5.5 `claude-opus-5-5`) on 2026-10-01 11:01 (+03:00) and revised at 16:53 (+03:00) after the independent Codex verification.*
+- **CX-01 (fleet-selection interval precision), 2026-10-09, FIXED on branch, Claude Opus 5.5.** Branch `fix/cx01-interval-precision`; red `b39faf5`, green `4ae3d57`, review round 1 red `0160acb`. The selection request carries `time_scale` (default 1; the producer sends 100): interval endpoints and cooldowns are integer centi-minutes, `minutes` stays real; endpoints off the 0.01 grid are refused (`blocked_data` / `SELECTION_INTERVAL_PRECISION`), never rounded. No DB constraint or matrix-ingest check was added (owner decision). Archive unaffected (all inputs whole minutes). Tests: core pin, endpoint `time_scale`/bounds/default-cooldown, TS exact-intervals, off-grid endpoint and cooldown. Decision H05.

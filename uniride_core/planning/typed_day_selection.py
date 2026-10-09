@@ -1,6 +1,6 @@
 """Day-level exact selection of wave options under a large-vehicle limit (WP4).
 
-Pure module (integer time units; the endpoint may scale them, CX-01), see ``docs/designs/HETEROGENEOUS_FLEET_DESIGN.md`` section 3.3.
+Pure module, in integer time units (the endpoint may scale them, see time_scale), see ``docs/designs/HETEROGENEOUS_FLEET_DESIGN.md`` section 3.3.
 Not imported by the academic stack (parity gate P2).
 
 Model.  Every wave offers a menu of options (large-route quota q = 0..3 plus

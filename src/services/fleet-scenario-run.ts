@@ -542,10 +542,11 @@ export async function runFleetScenarioDay(
   ];
 
   const scenarioL = async (limit: number): Promise<ScenarioResult> => {
-    // CX-01: interval endpoints and cooldowns travel as integer centi-minutes (time_scale 100).  Matrix
-    // durations and step times are rounded to 0.01 minute by the optimizer, anchors are whole minutes, so
-    // every endpoint is exactly representable.  A value that is not (more than 2 decimals) is refused, never
-    // rounded: rounding either way could flip feasibility of the original intervals.
+    // CX-01: interval endpoints and cooldowns travel as integer centi-minutes (time_scale 100).
+    // Endpoints are anchor +/- a sum of matrix-snapshot arc minutes; anchors are whole minutes. Nothing enforces
+    // 0.01-minute arcs (time_matrix.duration_minutes is unconstrained NUMERIC); the current matrix has only
+    // whole-minute arcs. A value off the 0.01 grid is refused (blocked_data / SELECTION_INTERVAL_PRECISION),
+    // never rounded: rounding either way could flip feasibility of the original intervals.
     let inexact = false;
     const centi = (value: number): number => {
       const scaled = value * TIME_SCALE;

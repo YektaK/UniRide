@@ -23,7 +23,9 @@ from typing import List, Dict, Tuple, Optional, Callable, Any
 from enum import Enum
 import os
 import random
+import threading as _threading
 import time
+import weakref
 import numpy as np
 
 from uniride_core.algorithms.three_opt import improve_three_opt
@@ -62,28 +64,31 @@ except ImportError:
 
 
 # ============================================================
-# DISTANCE MATRIX CACHE (module-level, shared across LS classes)
+# DISTANCE MATRIX FALLBACK CACHE (module-level, shared across LS classes)
 # ============================================================
-# Key: (frozenset_of_location_strings, id_of_duration_func)
-# Value: (index_map: dict, dist_matrix: np.ndarray, unique_locs: list)
+# Only used when the duration_func does NOT carry a prebuilt matrix.  Every
+# live caller wraps its own problem's matrix with create_np_duration_func(),
+# which attaches it to the function (_np_dist_matrix / _np_unique_locs); that
+# prebuilt matrix is always used BEFORE any cache (audit finding C3).
 #
-# Motivation: _prepare_numba_inputs() rebuilds an O(n²) distance matrix
-# on EVERY improve() call.  For metaheuristics that call improve() hundreds
-# of times on the same problem instance this is the dominant overhead.
-# Cache size is bounded in practice (one entry per problem × algorithm).
-_DIST_MATRIX_CACHE: Dict[Tuple, Any] = {}
-import threading as _threading
+# Layout: WeakKeyDictionary { duration_func -> { frozenset(locations) -> result } }
+# Value:  (index_map: dict, dist_matrix: np.ndarray, unique_locs: list)
+#
+# Entries die together with their duration_func, so a recycled id() can never
+# reach a stale entry (the previous cache was keyed by id(duration_func)).
+# A duration_func that cannot be weakly referenced or hashed is simply not
+# cached; it is never aliased.
+_DIST_MATRIX_CACHE: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
 _DIST_MATRIX_CACHE_LOCK = _threading.Lock()
 
 
-def _get_cached_matrix(key: Tuple):
-    with _DIST_MATRIX_CACHE_LOCK:
-        return _DIST_MATRIX_CACHE.get(key)
-
-
-def _set_cached_matrix(key: Tuple, value: Any) -> None:
-    with _DIST_MATRIX_CACHE_LOCK:
-        _DIST_MATRIX_CACHE[key] = value
+def _per_func_cache(duration_func: Callable) -> Optional[Dict[Any, Any]]:
+    """Return the cache dict owned by `duration_func`, or None if uncacheable."""
+    try:
+        with _DIST_MATRIX_CACHE_LOCK:
+            return _DIST_MATRIX_CACHE.setdefault(duration_func, {})
+    except TypeError:  # not weak-referenceable / unhashable: skip caching
+        return None
 
 
 def _build_or_get_dist_matrix(
@@ -91,51 +96,47 @@ def _build_or_get_dist_matrix(
     duration_func: Callable
 ) -> Tuple[Dict[str, int], np.ndarray, List[str]]:
     """
-    Build (or retrieve from cache) the distance matrix for `route`.
+    Return (index_map, dist_matrix, unique_locs) for `route`.
 
-    Cache key is based on the *set* of locations in the route plus the
-    identity of the duration_func object, so that different problems (or
-    different function instances) never share a matrix.
-
-    Fast path (Step 4): if the duration_func was built by create_np_duration_func()
-    it carries a pre-built numpy array in _np_dist_matrix / _np_unique_locs.
-    We reuse that array directly, avoiding the O(n²) call-by-call reconstruction.
+    Resolution order:
+      1. Prebuilt matrix: if the duration_func was built by
+         create_np_duration_func() it carries the problem's own numpy matrix in
+         _np_dist_matrix / _np_unique_locs.  It is used directly, before any
+         cache, so a matrix can never be taken from another problem's run.
+      2. Fallback (no prebuilt matrix): build the matrix by querying
+         duration_func.  The result is cached per duration_func object in a
+         weak-keyed dictionary, so it lives exactly as long as that function.
 
     Returns:
-        index_map  – {location: integer_index}
-        dist_matrix – np.ndarray shape (n, n)
-        unique_locs – ordered list matching index_map
+        index_map  - {location: integer_index}
+        dist_matrix - np.ndarray shape (n, n)
+        unique_locs - ordered list matching index_map
     """
     unique_locs = list(dict.fromkeys(route))
-    cache_key = (frozenset(unique_locs), id(duration_func))
 
-    cached = _get_cached_matrix(cache_key)
-    if cached is not None:
-        return cached
-
-    # Step 4 fast path: numpy-backed duration_func already has the matrix.
+    # Prebuilt matrix: always first, never cached.
     if hasattr(duration_func, '_np_dist_matrix') and hasattr(duration_func, '_np_unique_locs'):
         prebuilt_locs: List[str] = duration_func._np_unique_locs  # type: ignore[attr-defined]
         prebuilt_dm: np.ndarray = duration_func._np_dist_matrix   # type: ignore[attr-defined]
+        index_map = {loc: i for i, loc in enumerate(unique_locs)}
         # Re-order if route's unique_locs ordering differs (e.g. shuffled route)
         if prebuilt_locs == unique_locs:
-            index_map = {loc: i for i, loc in enumerate(unique_locs)}
-            result = (index_map, prebuilt_dm, unique_locs)
-        else:
-            # Build a reordering view so indices match unique_locs
-            src_map = {loc: i for i, loc in enumerate(prebuilt_locs)}
-            index_map = {loc: i for i, loc in enumerate(unique_locs)}
-            n = len(unique_locs)
-            dist_matrix = np.zeros((n, n), dtype=np.float64)
-            for i, loc_i in enumerate(unique_locs):
-                for j, loc_j in enumerate(unique_locs):
-                    if i != j:
-                        dist_matrix[i, j] = prebuilt_dm[src_map[loc_i], src_map[loc_j]]
-            result = (index_map, dist_matrix, unique_locs)
-        _set_cached_matrix(cache_key, result)
-        return result
+            return index_map, prebuilt_dm, unique_locs
+        src_map = {loc: i for i, loc in enumerate(prebuilt_locs)}
+        order = np.fromiter((src_map[loc] for loc in unique_locs), dtype=np.int64, count=len(unique_locs))
+        dist_matrix = np.array(prebuilt_dm, dtype=np.float64)[np.ix_(order, order)]
+        np.fill_diagonal(dist_matrix, 0.0)
+        return index_map, dist_matrix, unique_locs
 
-    # Standard path: build matrix by querying the duration_func.
+    # Fallback: per-duration_func cache (weak-keyed, see module comment).
+    per_func = _per_func_cache(duration_func)
+    cache_key = frozenset(unique_locs)
+    if per_func is not None:
+        with _DIST_MATRIX_CACHE_LOCK:
+            cached = per_func.get(cache_key)
+        if cached is not None:
+            return cached
+
     n = len(unique_locs)
     index_map = {loc: i for i, loc in enumerate(unique_locs)}
     dist_matrix = np.zeros((n, n), dtype=np.float64)
@@ -146,10 +147,10 @@ def _build_or_get_dist_matrix(
     # Diagonal already 0 by np.zeros
 
     result = (index_map, dist_matrix, unique_locs)
-    _set_cached_matrix(cache_key, result)
+    if per_func is not None:
+        with _DIST_MATRIX_CACHE_LOCK:
+            per_func[cache_key] = result
     return result
-
-
 
 
 class LocalSearchType(str, Enum):

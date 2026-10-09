@@ -51,3 +51,17 @@ def test_type_quota():
     assert _kinds(check_type_quota(labels, {"car": 0})) == [TYPE_QUOTA_VIOLATION]
     # empty routes do not count against a quota
     assert check_type_quota(labels, {"large": 1}, routes=[[1], [2], []]) == []
+
+
+def test_total_capacity_violation_when_pools_allow_but_shared_limit_does_not():
+    caps = {"doblo": (1, 3)}
+    totals = {"doblo": 3}
+    # 1 Sw + 3 So: each pool fits, the shared seat total (4 > 3) does not
+    found = check_typed_capacity([[1, 2, 3, 4]], DEMANDS, ["doblo"], caps, totals)
+    assert _kinds(found) == [TYPED_CAPACITY_VIOLATION]
+    assert "total" in found[0].details
+    # 1 Sw + 2 So and 3 So fit; no totals = pools only (unchanged behaviour)
+    assert check_typed_capacity([[1, 2, 3]], DEMANDS, ["doblo"], caps, totals) == []
+    assert check_typed_capacity([[2, 3, 4]], DEMANDS, ["doblo"], caps, totals) == []
+    assert check_typed_capacity([[1, 2, 3, 4]], DEMANDS, ["doblo"], caps) == []
+    assert check_typed_capacity([[1, 2, 3, 4]], DEMANDS, ["doblo"], caps, {"doblo": None}) == []

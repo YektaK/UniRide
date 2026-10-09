@@ -350,3 +350,45 @@ describe("archived week-2026-10-05 routes", () => {
     }
   });
 });
+
+describe("optional shared total capacity (Doblo: 1sw3so, 3 seats in total)", () => {
+  const doblo = (count = 5): TypedFleetType => ({
+    typeId: "large", swCapacity: 1, soCapacity: 3, totalCapacity: 3, cooldownMinutes: 10, role: "fixed", count,
+  });
+  const problemsFor = (sw: number, so: number, type: TypedFleetType): string[] =>
+    verifyTypedAssignment(
+      [{ ...route(0, 0, 10, sw, so), physicalVehicleId: "L1", vehicleType: "large" }],
+      [type],
+    );
+
+  it("accepts 0Sw+3So and 1Sw+2So and rejects 1Sw+3So and 0Sw+4So", () => {
+    expect(problemsFor(0, 3, doblo())).toEqual([]);
+    expect(problemsFor(1, 2, doblo())).toEqual([]);
+    expect(problemsFor(1, 3, doblo())).toHaveLength(1);
+    expect(problemsFor(0, 4, doblo())).toHaveLength(1);
+  });
+  it("without a cap the same pools still allow 1Sw+3So", () => {
+    const uncapped: TypedFleetType = { ...doblo(), totalCapacity: undefined };
+    expect(problemsFor(1, 3, uncapped)).toEqual([]);
+  });
+  it("blocks a route no type can carry and rejects an invalid cap", () => {
+    const result = assignTypedVehicles({ intervals: [route(0, 0, 10, 1, 3)], types: [doblo()] });
+    expect(result.status).toBe("blocked_data");
+    expect(result.reasonCodes).toEqual(["TYPE_CAPACITY_UNCOVERED"]);
+    const bad = assignTypedVehicles({
+      intervals: [route(0, 0, 10, 0, 1)], types: [{ ...doblo(), totalCapacity: 0 }],
+    });
+    expect(bad.reasonCodes).toEqual(["FLEET_INVALID"]);
+  });
+  it("labels 1Sw+3So on the minibus and 1Sw+2So on the capped minimise type", () => {
+    const capped: TypedFleetType = {
+      typeId: "car", swCapacity: 1, soCapacity: 3, totalCapacity: 3, cooldownMinutes: 10, role: "minimise",
+    };
+    const result = assignTypedVehicles({
+      intervals: [route(0, 0, 10, 1, 3), route(1, 0, 10, 1, 2)],
+      types: [large(1, 10, 4, 5), capped],
+    });
+    expect(result.status).toBe("proven");
+    expect(result.assignments.map((a) => a.vehicleType)).toEqual(["large", "car"]);
+  });
+});

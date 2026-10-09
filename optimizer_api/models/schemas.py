@@ -139,9 +139,18 @@ class VehicleTypeSpec(BaseModel):
     max_ride_time: Optional[int] = Field(default=None, ge=1, le=600)
     max_travel_time: Optional[int] = Field(default=None, ge=1, le=1440)
     max_routes: Optional[int] = Field(default=None, ge=0, le=100000)
+    # Optional shared seat limit: Sw + So <= total_capacity (None = pools only).
+    total_capacity: Optional[int] = Field(default=None, ge=1, le=2000)
 
     @model_validator(mode="after")
     def validate_capacity(self) -> "VehicleTypeSpec":
+        if (
+            self.total_capacity is not None
+            and self.total_capacity > self.sw_capacity + self.so_capacity
+        ):
+            raise ValueError(
+                f"vehicle type {self.type_id!r} total_capacity must be <= sw + so capacity"
+            )
         if self.sw_capacity + self.so_capacity < 1:
             raise ValueError(f"vehicle type {self.type_id!r} must have capacity >= 1")
         return self

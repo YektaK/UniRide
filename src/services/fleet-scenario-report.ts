@@ -145,6 +145,7 @@ export function aggregateFleetWeeks(rows: readonly FleetDailyRow[]) {
 // ---- manifest ------------------------------------------------------------------------------
 const fleetTypeSchema = z.object({
   typeId: z.string().min(1), swCapacity: z.number().int().nonnegative(), soCapacity: z.number().int().nonnegative(),
+  totalCapacity: z.number().int().min(1).optional(),
   cooldownMinutes: z.number().int().nonnegative(),
   rideLimit: z.number().optional(), tourLimit: z.number().optional(),
 });

@@ -326,6 +326,12 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 - **Superseded:** the earlier minivan campaigns that used `minivan:1sw3so` overstated capacity (they allowed 1 Sw + 3 So = 4 passengers); their results must not be cited as Doblo evidence and are to be rerun with `:cap3`. **Rejected:** changing `string_split_decoder`/`ga_split` (academic parity); the `ga_split` baseline therefore cannot enforce a limit on the fixed type and fails closed.
 - **Evidence:** [design](designs/HETEROGENEOUS_FLEET_DESIGN.md), tests `test_typed_split_decoder.py`, `test_typed_certificate_checks.py`, `test_heterogeneous_fleet_wp3.py`, `typed-fleet-assignment.test.ts`, `fleet-scenario-args.test.ts`.
 
+### T01 - TSPLIB matrix cache v2: lossless upper-triangle lzma
+
+- **Date/status:** 2026-10-09; owner instruction (shrink the 2.77 GB local `tsplib.db`, do not delete data). **Chosen:** `distance_matrices.version=2` stores only the strict upper triangle, lzma preset 6, original dtype; used only for symmetric matrices with an all-zero diagonal and only if the encode/decode round trip is byte-identical (otherwise v1 zlib full matrix is kept, e.g. ATSP/ft53). Readers (`get_distance_matrix`, ATSP path of `get_all_problems`) decode v1 and v2 through `academic_benchmark/tsplib_matrix_codec.py`; new writes use v2 when eligible. Converter: `academic_benchmark/tools/compress_tsplib_matrices.py` (backup copy first, per-row SHA-256 + `array_equal` verification, idempotent, `--dry-run`, VACUUM).
+- **Rejected:** deleting or recomputing matrices; storing the diagonal (a nonzero diagonal or asymmetry simply stays v1); lossy narrowing to uint16. Academic results are unchanged because decoded matrices are bit-identical.
+- **Evidence:** `academic_benchmark/tests/test_tsplib_matrix_compression.py`.
+
 ## Open questions and evidence limits
 
 The October audit remains authoritative for its unresolved tracker entries, subject to fresh source verification before fixes. This log closes no audit item. In particular:

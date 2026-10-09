@@ -87,6 +87,7 @@ def test_readers_load_both_versions(tmp_path):
     path, conn = _db(tmp_path)
     a, b = _sym(12, "int32", 1), _sym(12, "int32", 2)
     _put_v1(conn, "old", a)
+    _problem(conn, "new", n=12)
     tm._store_matrix(conn, "new", b, "EUC_2D")  # new writes -> v2
     conn.commit()
     assert conn.execute("SELECT version FROM distance_matrices WHERE problem_name='new'").fetchone()[0] == 2

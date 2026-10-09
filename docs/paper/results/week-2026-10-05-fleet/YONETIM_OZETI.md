@@ -64,7 +64,7 @@ Kullanım: Yalnızca minibüs seçeneğinde 6 minibüs günlük hizmet süresini
 - Sedanın sandalye taşıyıp taşıyamadığı ve minivanın gerçek kapasitesi (toplam 3 yolcu, en fazla 1'i sandalyeli) bilinmiyor; ikisi de varsayımdır ve sonuçları değiştirebilir (B ve C'nin yapılamamasında sedan varsayımı tek neden değildir, yukarıya bakın).
 - Maliyet verisi yoktur (kiralama, şoför, yakıt); bu belge maliyet sıralaması vermez.
 - Tek bir haftanın programı, tek rota üretimi ve sabit yolculuk süreleri kullanıldı; trafik, biniş süreleri ve sürücü atamaları yoktur.
-- Ödünç araçların hangi gün ve saatte boş olduğu bilinmiyor. "Araç-saat" yalnızca sürüş ve dinlenmedir; bir araç ilk seferinden son seferine kadar elde tutulacaksa gereken süre daha uzun olabilir (4 minibüs + sedan seçeneğinde eşittir; saat aralıkları yukarıda).
+- Ödünç araçların hangi gün ve saatte boş olduğu bilinmiyor. "Araç-saat" yalnızca sürüş ve dinlenmedir; bir araç ilk seferinden son seferine kadar elde tutulacaksa gereken süre daha uzun olabilir (60 dakikada 4 minibüs + sedan seçeneğinde eşittir; saat aralıkları yukarıda).
 
 ## Sonraki adımlar
 

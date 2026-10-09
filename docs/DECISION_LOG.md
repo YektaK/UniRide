@@ -50,6 +50,8 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 | H01 | Heterogeneous fleet | Typed split, exact day selection, typed assignment; additive only; academic code untouched | Owner approved 2026-10-08 |
 | H02 | Heterogeneous fleet | Q1: can a sedan carry any Sw (`sedan:1sw3so`)? | **Open question** |
 | H03 | Heterogeneous fleet | Optional shared seat limit `total_capacity`; Doblo = 3 seats total, max 1 Sw | Owner decision 2026-10-09 |
+| H04 | Heterogeneous fleet | CX-03: typed GA inner objective cost-only for one type, count-first otherwise | Lead decision 2026-10-09 |
+| H05 | Heterogeneous fleet | CX-01: exact centi-minute intervals and cooldowns in fleet selection (`time_scale`) | Lead decision 2026-10-09 |
 
 ## Demo scope
 
@@ -347,6 +349,15 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 - **Date/status:** 2026-10-09; lead decision. **Chosen/rationale:** `solve_ga_split_typed` decodes (evaluation and final decode) cost-only, i.e. `decode_typed` without `minimize_type`, when there is exactly one type and no quota (`quota_type` or `quota` unset; the decoder tracks a quota only when both are set), so P4 (same routes, cost, generations and best chromosome as `solve_ga_split`) holds on nonmetric matrices too. With two or more types or a quota the inner decode stays count-first (`minimize_type`), meant for borrowed-vehicle minimisation; the objectives differ by design. Default academic split (O05) unchanged.
 - **Rejected:** changing the default split or the shared decoder; weakening P4. **Effect:** production `ga_split_hf` with one declared type and the `all_large` baseline of `solve_typed_menu` now use the cost-only inner decode; the 2-type fleet-scenario path is unchanged.
 - **Evidence:** `uniride_core/tests/test_ga_split_typed_engine.py` (Codex fixture and 50 seeded nonmetric cases x 4 variants), owner-supplied Codex review, `docs/CODEX_DEEP_REVIEW_2026-10-09.md` (local, untracked), finding CX-03. **Check first:** P4 tests and WP0 goldens.
+
+### H05 - fleet selection keeps exact interval precision (CX-01)
+
+- **Date/status:** 2026-10-09; lead decision, fix of review finding CX-01. **Problem:** the producer floored route starts and ceiled ends to whole minutes, so a feasible day (routes [600, 601.1] and [611.2, 620], cooldown 10, one minibus; true gap 10.1 min) was reported `infeasible_for_L`, and optimality was proved over enlarged intervals, not the original ones.
+- **Chosen:** the request carries `time_scale` (integer 1..100, default 1 = legacy whole minutes). Interval `start`/`end` and both cooldowns are integers in units of 1/`time_scale` minute; the producer sends `time_scale: 100` (centi-minutes, `Math.round(x * 100)`). Bounds scale too (end <= 2880 x scale, cooldown <= 240 x scale); an omitted cooldown means 10 real minutes. `minutes` stays real vehicle-minutes and is not scaled; the response reports real minutes. The core stays integer-based with half-open `[start, end + cooldown)`.
+- **Precision assumption:** Endpoints are anchor ± a sum of matrix-snapshot arc minutes; anchors are whole minutes. Nothing enforces 0.01-minute arcs (`time_matrix.duration_minutes` is unconstrained NUMERIC); the current matrix (sha bfb2dd85...) has only whole-minute arcs. A matrix with more than 2 decimals makes the affected days `blocked_data` / `SELECTION_INTERVAL_PRECISION` (fail-closed). A cooldown is checked on the same grid.
+- **Rejected:** widening the overlap tolerance (hides the discrepancy), conservative rounding of fractional endpoints (can falsely reject a feasible day). **Label:** `proven_over_menu` now means optimal over the menu on the exact intervals, confirmed by the independent typed assignment; unchanged wording.
+- **Contract changes:** an explicit `null` cooldown is now accepted and means the default (10 real minutes); before it was a 422. A zero-length interval gets a minimum length of 0.01 minute at scale 100 (`fleet-scenario-run.ts`, `start + 1`) instead of 1 minute.
+- **Evidence:** owner-supplied Codex review CX-01, `docs/CODEX_DEEP_REVIEW_2026-10-09.md` (local, untracked), tests `test_typed_day_selection.py::test_cx01_*`, `test_fleet_selection_endpoint.py::test_time_scale_*`, `fleet-scenario-run.test.ts` (CX-01). Related: H01, V01/V02, O01/O02.
 
 ### T07 - TSPLIB matrix cache v2: lossless upper-triangle lzma
 

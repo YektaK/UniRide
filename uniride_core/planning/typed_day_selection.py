@@ -1,11 +1,11 @@
 """Day-level exact selection of wave options under a large-vehicle limit (WP4).
 
-Pure module, see ``docs/designs/HETEROGENEOUS_FLEET_DESIGN.md`` section 3.3.
+Pure module, in integer time units (the endpoint may scale them, see time_scale), see ``docs/designs/HETEROGENEOUS_FLEET_DESIGN.md`` section 3.3.
 Not imported by the academic stack (parity gate P2).
 
 Model.  Every wave offers a menu of options (large-route quota q = 0..3 plus
 the all-large baseline).  An option is a list of routes with a fixed interval
-``[start, end)`` in minutes, a duration in vehicle-minutes and per-type label
+``[start, end)`` in integer time units (minutes x time_scale at the endpoint), a duration in vehicle-minutes and per-type label
 feasibility.  CP-SAT picks exactly one option per wave and labels each route of
 the picked options ``large`` or ``car``.  A vehicle of type ``t`` that serves a
 route is busy on ``[start, end + cooldown_t)``.  Routes of one type form an

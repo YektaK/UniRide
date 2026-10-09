@@ -116,14 +116,15 @@ export const updatePassword = async (newPassword: string): Promise<void> => {
 };
 
 /**
- * Register new user
+ * Register new user.
+ * Self-registration is always role "student" (audit C1): admin/driver accounts
+ * are created only through the service-role admin route.
  */
 export const signUp = async (
   email: string,
   password: string,
   name: string,
   studentNumber?: string,
-  role: User["role"] = "student",
   userData?: Partial<Pick<DbUser, 'homeAddress' | 'accessibilityNeeds' | 'passwordHint'>>
 ): Promise<User | null> => {
   try {
@@ -144,7 +145,7 @@ export const signUp = async (
       id: authData.user.id,
       name,
       email: authData.user.email!,
-      role,
+      role: "student",
       studentNumber,
       passwordHint: userData?.passwordHint,
       homeAddress: userData?.homeAddress || "",
@@ -156,20 +157,17 @@ export const signUp = async (
 
     await createUser(newUser, authData.user.id);
 
-    // Create weekly schedule for students AFTER user exists
-    let weeklyScheduleId: string | undefined;
-    if (role === "student") {
-      const schedule = await createSchedule({
-        userId: authData.user.id,
-        entries: [],
-        lastUpdated: new Date().toISOString()
-      });
-      weeklyScheduleId = schedule.id;
+    // Self-registration always creates a student: create the weekly schedule AFTER the user exists
+    const schedule = await createSchedule({
+      userId: authData.user.id,
+      entries: [],
+      lastUpdated: new Date().toISOString()
+    });
+    const weeklyScheduleId = schedule.id;
 
-      // Update user with schedule id
-      await updateUser(authData.user.id, { weeklyScheduleId });
-      newUser.weeklyScheduleId = weeklyScheduleId;
-    }
+    // Update user with schedule id
+    await updateUser(authData.user.id, { weeklyScheduleId });
+    newUser.weeklyScheduleId = weeklyScheduleId;
 
     return dbUserToUser(newUser);
   } catch (error) {
@@ -185,14 +183,14 @@ export const signUp = async (
 export const register = async (
   email: string,
   password: string,
-  userData: Omit<DbUser, 'id' | 'email' | 'createdAt' | 'updatedAt' | 'weeklyScheduleId'>
+  // role is deliberately not accepted: self-registration is always a student (audit C1)
+  userData: Omit<DbUser, 'id' | 'email' | 'createdAt' | 'updatedAt' | 'weeklyScheduleId' | 'role'>
 ): Promise<User> => {
   const result = await signUp(
     email,
     password,
     userData.name,
     userData.studentNumber,
-    userData.role || "student",
     {
       homeAddress: userData.homeAddress,
       accessibilityNeeds: userData.accessibilityNeeds,

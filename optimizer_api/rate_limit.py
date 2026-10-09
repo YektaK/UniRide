@@ -28,16 +28,11 @@ def _rate_key(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def require_rate_limit(request: Request) -> None:
-    """Allow the request or raise 429 once the per-IP window budget is spent.
-
-    ponytail: in-memory fixed-window limiter is per-process; scale out requires
-    a shared store (e.g. Redis) when more than one API instance runs.
-    """
+def _enforce(key: str) -> None:
+    """Fixed-window check for one bucket key; raises 429 when the budget is spent."""
     policy = load_compute_policy()
     limit = policy.rate_limit_requests
     window = policy.rate_limit_window_seconds
-    key = _rate_key(request)
     now = time.monotonic()
 
     with _lock:
@@ -53,3 +48,27 @@ def require_rate_limit(request: Request) -> None:
                 detail="rate limit exceeded",
                 headers={"Retry-After": str(retry_after)},
             )
+
+
+def scoped_rate_limit(scope: str):
+    """Dependency factory: same policy, but a bucket separate from other scopes.
+
+    Benchmark compute-starting calls must not consume the production /optimize
+    budget (the BFF shares one tenant key), and vice versa.
+    """
+    def dependency(request: Request) -> None:
+        _enforce(f"{scope}:{_rate_key(request)}")
+
+    return dependency
+
+
+require_benchmark_rate_limit = scoped_rate_limit("benchmark")
+
+
+def require_rate_limit(request: Request) -> None:
+    """Allow the request or raise 429 once the per-key window budget is spent.
+
+    ponytail: in-memory fixed-window limiter is per-process; scale out requires
+    a shared store (e.g. Redis) when more than one API instance runs.
+    """
+    _enforce(_rate_key(request))

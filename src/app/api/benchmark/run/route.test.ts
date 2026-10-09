@@ -76,4 +76,41 @@ describe("POST /api/benchmark/run", () => {
     const res = await POST(runRequest("taken-run"));
     expect(res.status).toBe(409);
   });
+
+  it("flattens an object detail from the backend into a string error (C9)", async () => {
+    stubFetch([
+      { status: 404, json: { detail: "not found" } },
+      {
+        status: 422,
+        json: { detail: { error: "Benchmark parameters exceed the compute policy", reason: "population_size must be an integer in [1, 250]" } },
+      },
+    ]);
+    const res = await POST(runRequest("c9-run"));
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(typeof body.error).toBe("string");
+    expect(body.error).toBe(
+      "Benchmark parameters exceed the compute policy: population_size must be an integer in [1, 250]"
+    );
+  });
+
+  it("joins FastAPI array detail messages (C9)", async () => {
+    stubFetch([
+      { status: 404, json: { detail: "not found" } },
+      { status: 422, json: { detail: [{ msg: "field required" }, { msg: "bad type" }] } },
+    ]);
+    const res = await POST(runRequest("c9-array"));
+    expect(res.status).toBe(422);
+    expect((await res.json()).error).toBe("field required; bad type");
+  });
+
+  it("passes a plain string detail through on conflict (C9)", async () => {
+    stubFetch([
+      { status: 404, json: { detail: "not found" } },
+      { status: 409, json: { detail: "Benchmark run already exists" } },
+    ]);
+    const res = await POST(runRequest("c9-409"));
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("Benchmark run already exists");
+  });
 });

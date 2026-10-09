@@ -332,9 +332,8 @@ export async function startBenchmark(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      (errorData as { detail?: string }).detail || `Benchmark başlatılamadı: ${response.status}`
-    );
+    const { detail, error } = errorData as { detail?: string; error?: string };
+    throw new Error(detail ?? error ?? `Benchmark başlatılamadı: ${response.status}`);
   }
 
   return await response.json();
@@ -366,7 +365,7 @@ export async function pollStatus(runId: string): Promise<BenchmarkStatus> {
 /**
  * Stop a running benchmark
  */
-export async function stopBenchmark(runId: string): Promise<void> {
+export async function stopBenchmark(runId: string): Promise<{ status?: string }> {
   const response = await benchmarkFetch(`${BENCHMARK_API_BASE}/stop`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -380,6 +379,7 @@ export async function stopBenchmark(runId: string): Promise<void> {
       (errorData as { detail?: string }).detail || `Benchmark durdurulamadı: ${response.status}`
     );
   }
+  return (await response.json().catch(() => ({}))) as { status?: string };
 }
 
 /**

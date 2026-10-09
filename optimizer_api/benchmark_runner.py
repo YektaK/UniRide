@@ -28,6 +28,10 @@ logger = logging.getLogger(__name__)
 
 from uniride_core.models import ProblemInstance
 
+try:
+    from optimizer_api.compute_policy import CONFIG_FIELD_BY_CANONICAL, ITERATION_KEYS, ALLOCATION_KEYS, STRUCTURAL_KEYS, TUNING_ALLOWLISTS, _ceiling_for, load_compute_policy, validate_tuning_dict
+except ModuleNotFoundError:  # direct-module compatibility
+    from compute_policy import CONFIG_FIELD_BY_CANONICAL, ITERATION_KEYS, ALLOCATION_KEYS, STRUCTURAL_KEYS, TUNING_ALLOWLISTS, _ceiling_for, load_compute_policy, validate_tuning_dict
 from utils.matrix_repository import academic_coordinate_scope
 from verification.response_certifier import certify_benchmark_response
 
@@ -51,6 +55,91 @@ class ExperimentResult:
     gap_percent: Optional[float] = None
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     metadata: Dict = field(default_factory=dict)
+
+
+_LEGACY_ALIASES = {
+    "ga": "genetic_algorithm", "grey_wolf": "gwo", "harris_hawks": "hho",
+    "e2b": "e2bso", "entropy_bso": "e2bso", "rdma": "r2dma", "aoea": "paoea",
+    "2opt": "two_opt",
+}
+
+
+def _assignment_field_for_algorithm(algorithm_id: str) -> Optional[str]:
+    """Field that benchmark params are ASSIGNED to (legacy mapping, kept for academic parity).
+
+    ga_split_enhanced / ga_split_hf deliberately get no ga_config and no per-run
+    seed here (pre-existing behaviour, see DECISION_LOG A06). The policy table
+    is used for validation only (config_field_for_algorithm).
+    """
+    key = algorithm_id.lower().replace("-", "_")
+    if key in {"genetic_algorithm", "ga", "ga_split"}:
+        return "ga_config"
+    if key in {"pso", "pso_split"}:
+        return "pso_config"
+    if key in {"gwo", "grey_wolf", "gwo_split"}:
+        return "gwo_config"
+    if key in {"hho", "harris_hawks", "hho_split"}:
+        return "hho_config"
+    if key in {"e2bso", "entropy_bso", "e2b", "r2dma", "rdma", "paoea", "aoea"}:
+        return "sota_config"
+    if key in {"two_opt", "2opt"}:
+        return "two_opt_config"
+    return None
+
+
+def config_field_for_algorithm(algorithm_id: str) -> Optional[str]:
+    """Name of the OptimizationRequest tuning field an algorithm's params go to.
+
+    Single source of truth: compute_policy.CONFIG_FIELD_BY_CANONICAL (plus legacy aliases).
+    """
+    key = algorithm_id.lower().replace("-", "_")
+    key = _LEGACY_ALIASES.get(key, key)
+    return CONFIG_FIELD_BY_CANONICAL.get(key)
+
+
+_MATRIX_TIME_KEYS = frozenset({"time_limit", "time_limit_seconds"})
+
+
+def validate_matrix_params(params: Dict[str, Any]) -> None:
+    """Bound matrix-native engine params with the compute policy (ValueError on violation).
+
+    Matrix engines take iteration/population/time keys directly, so every such key
+    is checked against the same ceilings as the production tuning dicts.
+    """
+    if not params:
+        return
+    policy = load_compute_policy()
+    for key, value in params.items():
+        if key in ITERATION_KEYS or key in ALLOCATION_KEYS or key in STRUCTURAL_KEYS:
+            ceiling = _ceiling_for(key, policy)
+            if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= ceiling:
+                raise ValueError(f"{key} must be an integer in [1, {int(ceiling)}]")
+        elif key in _MATRIX_TIME_KEYS:
+            ceiling = policy.solver_seconds
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(float(value))
+                or not 0 < value <= ceiling
+            ):
+                raise ValueError(f"{key} must be in (0, {ceiling}]")
+
+
+def validate_benchmark_params(algorithm_id: str, params: Dict[str, Any]) -> None:
+    """Bound benchmark tuning parameters with the production compute policy.
+
+    Raises ValueError for an out-of-policy value. Only keys the policy knows for
+    the algorithm's config field are checked (iterations, populations,
+    max_no_improvement, time_limit, ...); other keys are left untouched.
+    """
+    field_name = config_field_for_algorithm(algorithm_id)
+    if field_name is None or not params:
+        return
+    allowed = TUNING_ALLOWLISTS[field_name]
+    known = {key: value for key, value in params.items() if key in allowed and key != "local_search_type"}
+    if known:
+        # student_count=0: benchmark instance size is not a production student count.
+        validate_tuning_dict(field_name, known, load_compute_policy(), 0)
 
 
 class BenchmarkRunner:
@@ -270,7 +359,7 @@ class BenchmarkRunner:
             for problem in problems:
                 for algorithm in algorithms:
                     for run_num in range(1, n_runs + 1):
-                        if not self.running:
+                        if self._stop_requested():
                             break
                         
                         try:
@@ -309,8 +398,11 @@ class BenchmarkRunner:
                                 f"on {problem.name} (run {run_num}): {e}"
                             )
                     
-                    if not self.running:
+                    if self._stop_requested():
                         break
+
+                if self._stop_requested():
+                    break
         
         finally:
             self.running = False
@@ -448,25 +540,29 @@ class BenchmarkRunner:
         if not clean_params:
             return
 
+        config_field = _assignment_field_for_algorithm(algorithm_id)
+        config_params = {key: value for key, value in clean_params.items() if key != "local_search_type"}
+        # Audit C4/QW4: bound the budget keys with the compute policy before
+        # anything is assigned to the request. Unknown keys keep their legacy
+        # pass-through behaviour; only recognised tuning keys are checked.
+        validate_benchmark_params(algorithm_id, clean_params)
+
         if "local_search_type" in clean_params:
             request.local_search_type = str(clean_params["local_search_type"])
 
-        config_params = {key: value for key, value in clean_params.items() if key != "local_search_type"}
-        key = algorithm_id.lower().replace("-", "_")
+        if config_field is not None:
+            setattr(request, config_field, config_params)
 
-        if key in {"genetic_algorithm", "ga", "ga_split"}:
-            request.ga_config = config_params
-        elif key in {"pso", "pso_split"}:
-            request.pso_config = config_params
-        elif key in {"gwo", "grey_wolf", "gwo_split"}:
-            request.gwo_config = config_params
-        elif key in {"hho", "harris_hawks", "hho_split"}:
-            request.hho_config = config_params
-        elif key in {"e2bso", "entropy_bso", "e2b", "r2dma", "rdma", "paoea", "aoea"}:
-            request.sota_config = config_params
-        elif key in {"two_opt", "2opt"}:
-            request.two_opt_config = config_params
-    
+    def _stop_requested(self) -> bool:
+        """True when runner.stop() was called or the state manager flagged a stop."""
+        if not self.running:
+            return True
+        return bool(
+            self.state_manager is not None
+            and self.run_id
+            and self.state_manager.stop_requested(self.run_id)
+        )
+
     def stop(self):
         """Stop benchmark execution."""
         self.running = False

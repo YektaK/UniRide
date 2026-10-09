@@ -339,10 +339,10 @@ export default function BenchmarkPage() {
     if (!runId) return;
     setIsStopping(true);
     try {
-      await stopBenchmark(runId);
+      const stopResult = await stopBenchmark(runId);
       toast({
-        title: t('toast.stoppedTitle'),
-        description: t('toast.stoppedDesc'),
+        title: stopResult?.status === 'stopping' ? t('toast.stoppingTitle') : t('toast.stoppedTitle'),
+        description: stopResult?.status === 'stopping' ? t('toast.stoppingDesc') : t('toast.stoppedDesc'),
       });
     } catch (err) {
       toast({

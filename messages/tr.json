@@ -502,6 +502,10 @@
         "apiOffline": "Python Optimizer API çevrimdışı",
         "problemsLoading": "Problemler yükleniyor...",
         "toast": {
+          "stoppingTitle": "Benchmark Durduruluyor",
+          "stoppedTitle": "Benchmark Durduruldu",
+          "stoppedDesc": "Çalışma durduruldu.",
+          "stopFailedTitle": "Durdurma Başarısız",
           "resultsFailed": "Sonuçlar Alınamadı",
           "started": "Benchmark Başlatıldı",
           "startedDesc": "Çalışma ID: {id} - {n} deney kuyruğa alındı.",

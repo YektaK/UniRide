@@ -58,11 +58,13 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
 
+    const status: string = data.status ?? 'stopped';
+
     return NextResponse.json({
       runId: runId,
-      status: 'stopped',
+      status,
       resultsCollected: data.results_collected || 0,
-      message: 'Benchmark durduruldu',
+      message: status === 'stopping' ? 'Benchmark durduruluyor' : 'Benchmark durduruldu',
       stoppedAt: new Date().toISOString(),
     });
 

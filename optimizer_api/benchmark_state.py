@@ -63,6 +63,24 @@ class BenchmarkRunState:
     parameters: Dict = field(default_factory=dict)
     results: List[Dict[str, Any]] = field(default_factory=list)
     owner_token_hash: Optional[str] = None
+    # Cooperative stop flag (audit C4/QW4). stop_run sets it; the worker checks it
+    # between experiments. The run keeps its concurrency slot until the worker exits.
+    stop_event: threading.Event = field(default_factory=threading.Event, repr=False)
+    thread: Optional[threading.Thread] = field(default=None, repr=False)
+
+    def thread_active(self) -> bool:
+        """Alive, or registered but not started yet (register happens before start)."""
+        return self.worker_alive() or (
+            self.thread is not None and getattr(self.thread, "ident", 1) is None
+        )
+
+    def worker_alive(self) -> bool:
+        is_alive = getattr(self.thread, "is_alive", None)  # tolerate thread test doubles
+        return bool(is_alive and is_alive())
+
+    def holds_slot(self) -> bool:
+        """A run occupies a slot while RUNNING or while its worker thread is alive."""
+        return self.status == BenchmarkStatus.RUNNING and (self.thread is None or self.thread_active())
 
 
 def hash_owner_token(token: str) -> str:
@@ -102,14 +120,14 @@ class BenchmarkStateManager:
         terminal = {BenchmarkStatus.COMPLETED, BenchmarkStatus.FAILED, BenchmarkStatus.STOPPED}
         expired = [
             rid for rid, s in self._runs.items()
-            if s.status in terminal and s.end_time
+            if s.status in terminal and s.end_time and not s.worker_alive()
             and self._safe_end_timestamp(s.end_time) is not None
             and self._safe_end_timestamp(s.end_time) < cutoff
         ]
         for rid in expired:
             del self._runs[rid]
         terminal_runs = sorted(
-            [(rid, s) for rid, s in self._runs.items() if s.status in terminal],
+            [(rid, s) for rid, s in self._runs.items() if s.status in terminal and not s.worker_alive()],
             key=lambda x: x[1].end_time or ""
         )
         while len(terminal_runs) > self._max_runs:
@@ -137,10 +155,7 @@ class BenchmarkStateManager:
         """
         with self._lock:
             self._evict_expired()
-            running_count = len([
-                s for s in self._runs.values()
-                if s.status == BenchmarkStatus.RUNNING
-            ])
+            running_count = len([s for s in self._runs.values() if s.holds_slot()])
             return running_count < MAX_CONCURRENT_BENCHMARKS
     
     def create_run(self, run_id: str, total_experiments: int, parameters: Dict) -> Tuple[Optional[BenchmarkRunState], Optional[str]]:
@@ -149,10 +164,7 @@ class BenchmarkStateManager:
             self._evict_expired()
             if run_id in self._runs:
                 return (None, None)
-            running_count = len([
-                s for s in self._runs.values()
-                if s.status == BenchmarkStatus.RUNNING
-            ])
+            running_count = len([s for s in self._runs.values() if s.holds_slot()])
             if running_count >= MAX_CONCURRENT_BENCHMARKS:
                 return (None, None)
             token = _mint_owner_token()
@@ -222,12 +234,18 @@ class BenchmarkStateManager:
         """Mark a run as completed"""
         with self._lock:
             if run_id in self._runs:
-                self._runs[run_id].status = BenchmarkStatus.COMPLETED
-                self._runs[run_id].results_count = results_count
-                self._runs[run_id].end_time = datetime.now(timezone.utc).isoformat()
-                self._runs[run_id].completed_experiments = self._runs[run_id].total_experiments
+                run = self._runs[run_id]
+                run.results_count = results_count
+                run.end_time = datetime.now(timezone.utc).isoformat()
+                if run.stop_event.is_set():
+                    # The worker has honoured a stop request: not a completed run.
+                    run.status = BenchmarkStatus.STOPPED
+                    run.message = f"Stopped by user after {results_count} results"
+                    return
+                run.status = BenchmarkStatus.COMPLETED
+                run.completed_experiments = run.total_experiments
                 if message:
-                    self._runs[run_id].message = message
+                    run.message = message
     
     def fail_run(self, run_id: str, message: str = ""):
         """Mark a run as failed"""
@@ -238,15 +256,55 @@ class BenchmarkStateManager:
                 if message:
                     self._runs[run_id].message = message
     
-    def stop_run(self, run_id: str, message: str = ""):
-        """Stop a running benchmark"""
+    def register_thread(self, run_id: str, thread: threading.Thread) -> None:
+        """Register the worker thread so slot accounting can see whether it is alive."""
         with self._lock:
             if run_id in self._runs:
-                self._runs[run_id].status = BenchmarkStatus.STOPPED
-                self._runs[run_id].end_time = datetime.now(timezone.utc).isoformat()
+                self._runs[run_id].thread = thread
+
+    def ensure_terminal(self, run_id: str) -> None:
+        """Called when a worker exits: a run still RUNNING becomes STOPPED or FAILED."""
+        with self._lock:
+            run = self._runs.get(run_id)
+            if run is None or run.status != BenchmarkStatus.RUNNING:
+                return
+            run.end_time = datetime.now(timezone.utc).isoformat()
+            if run.stop_event.is_set():
+                run.status = BenchmarkStatus.STOPPED
+                run.message = "Stopped by user"
+            else:
+                run.status = BenchmarkStatus.FAILED
+                run.message = "Worker exited without completing the run"
+
+    def stop_requested(self, run_id: str) -> bool:
+        """True once stop_run was called for this run (checked by the worker loop)."""
+        with self._lock:
+            run = self._runs.get(run_id)
+            return run is not None and run.stop_event.is_set()
+
+    def stop_run(self, run_id: str, message: str = "") -> bool:
+        """Request a stop. Returns True if the run is (now) stopping or stopped.
+
+        With a live worker thread the run stays RUNNING (and keeps its slot)
+        until the worker observes the flag and exits; complete_run then marks
+        it STOPPED. Without a live worker it becomes STOPPED immediately.
+        """
+        with self._lock:
+            run = self._runs.get(run_id)
+            if run is None:
+                return False
+            if run.status != BenchmarkStatus.RUNNING:
+                return run.status == BenchmarkStatus.STOPPED
+            run.stop_event.set()
+            if run.thread_active():
+                run.message = message or "Stop requested; waiting for the current experiment to finish"
+            else:
+                run.status = BenchmarkStatus.STOPPED
+                run.end_time = datetime.now(timezone.utc).isoformat()
                 if message:
-                    self._runs[run_id].message = message
-    
+                    run.message = message
+            return True
+
     def list_runs(self) -> List[BenchmarkRunState]:
         """List all benchmark runs"""
         with self._lock:

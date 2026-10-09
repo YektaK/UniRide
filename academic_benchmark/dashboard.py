@@ -13,6 +13,8 @@ from dashboard_utils import (
     benchmark_rows_to_progress_frame,
     derive_filter_options,
     load_csv_frames,
+    load_history_frames,
+    load_tuning_frames,
     routing_dashboard_columns,
 )
 from tsplib_manager import DB_PATH, query_benchmark_results
@@ -33,15 +35,12 @@ RESULT_DIRS = [
 # Veri yükleme (Önbellekli - Caching)
 @st.cache_data(ttl=60)
 def load_data(include_obsolete: bool = False):
-    all_tuning = []
     loaded_sources = {"summary": [], "progress": [], "tuning": [], "sqlite": []}
 
     all_summary, all_progress, csv_sources = load_csv_frames(RESULT_DIRS, include_obsolete)
     loaded_sources.update(csv_sources)
-    for d in RESULT_DIRS:
-        for tuning_path in glob.glob(os.path.join(d, "**", "tuning_progress.csv"), recursive=True):
-            all_tuning.append(pd.read_csv(tuning_path))
-            loaded_sources["tuning"].append(tuning_path)
+    all_tuning, tuning_sources = load_tuning_frames(RESULT_DIRS, include_obsolete)
+    loaded_sources["tuning"].extend(tuning_sources)
 
     db_rows = filter_obsolete_rows(
         query_benchmark_results(limit=5000, db_path=DB_PATH, exclude_obsolete=not include_obsolete),
@@ -68,19 +67,8 @@ def load_data(include_obsolete: bool = False):
             summary_df[col] = pd.to_numeric(summary_df[col], errors='coerce')
 
     # Load history for convergence curves
-    history_dfs = []
     history_dir = os.path.join(str(_DASHBOARD_DIR), "benchmark_db", "history")
-    if os.path.isdir(history_dir):
-        for hist_path in glob.glob(os.path.join(history_dir, "smart_*.csv"), recursive=True):
-            try:
-                history_dfs.append(pd.read_csv(hist_path))
-            except Exception:
-                pass
-        for hist_path in glob.glob(os.path.join(history_dir, "interrupted_smart_*.csv"), recursive=True):
-            try:
-                history_dfs.append(pd.read_csv(hist_path))
-            except Exception:
-                pass
+    history_dfs = load_history_frames(history_dir, include_obsolete)
 
     history_df = pd.concat(history_dfs, ignore_index=True) if history_dfs else pd.DataFrame()
 

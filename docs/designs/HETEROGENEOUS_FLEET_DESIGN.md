@@ -64,7 +64,7 @@ per day, per R:
                    ─►  physical witness (vehicle ids per type), proven/witness status
 ```
 
-- Scenario A is the existing single-type pipeline, run with the explicit template `large:4sw5so`.
+- Scenario A is the existing single-type pipeline, run with the explicit template `large:4sw5so`. With a capped FIXED type (`:capN`), scenario A cannot be computed (`ga_split` does not know the shared limit), so the day fails closed with `BASELINE_TOTAL_CAPACITY_EXCEEDED`.
 - One menu with `Lmax = 3` serves B, C and D. Each scenario uses only the options with `q ≤ L`.
 
 ## 3. Q1: routing with types

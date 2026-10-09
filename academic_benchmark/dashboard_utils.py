@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import glob
 import json
 import os
 from typing import Iterable, List, Tuple
@@ -268,3 +269,31 @@ def load_csv_frames(result_dirs: Iterable[str], include_obsolete: bool = False):
             progress.append(filter_obsolete_frame(read_progress_csv(progress_path), d, include_obsolete))
             sources["progress"].append(progress_path)
     return summaries, progress, sources
+
+
+def load_tuning_frames(result_dirs: Iterable[str], include_obsolete: bool = False):
+    """Read ``tuning_progress.csv`` files, filtering obsolete rows per directory (A07).
+
+    Returns ``(frames, sources)``.
+    """
+    frames: List[pd.DataFrame] = []
+    sources: List[str] = []
+    for d in result_dirs:
+        for path in glob.glob(os.path.join(d, "**", "tuning_progress.csv"), recursive=True):
+            frames.append(filter_obsolete_frame(pd.read_csv(path), os.path.dirname(path), include_obsolete))
+            sources.append(path)
+    return frames, sources
+
+
+def load_history_frames(history_dir: str, include_obsolete: bool = False) -> List[pd.DataFrame]:
+    """Read ``smart_*.csv`` / ``interrupted_smart_*.csv`` convergence history, filtered (A07)."""
+    frames: List[pd.DataFrame] = []
+    if not os.path.isdir(history_dir):
+        return frames
+    for pattern in ("smart_*.csv", "interrupted_smart_*.csv"):
+        for path in glob.glob(os.path.join(history_dir, pattern), recursive=True):
+            try:
+                frames.append(filter_obsolete_frame(pd.read_csv(path), history_dir, include_obsolete))
+            except Exception:
+                pass
+    return frames

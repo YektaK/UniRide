@@ -52,6 +52,7 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 | H03 | Heterogeneous fleet | Optional shared seat limit `total_capacity`; Doblo = 3 seats total, max 1 Sw | Owner decision 2026-10-09 |
 | H04 | Heterogeneous fleet | CX-03: typed GA inner objective cost-only for one type, count-first otherwise | Lead decision 2026-10-09 |
 | H05 | Heterogeneous fleet | CX-01: exact centi-minute intervals and cooldowns in fleet selection (`time_scale`) | Lead decision 2026-10-09 |
+| E01 | Exact solver (AMPL) | Owner answers EQ1-EQ6: 60 s/600 s peak limits, both typed fleets, per-wave exact + CP-SAT day, HiGHS note in paper, GA seed 42 single-seed, GOAL 2 parameters deferred | Owner decision 2026-10-09 |
 
 ## Demo scope
 
@@ -358,6 +359,14 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 - **Rejected:** widening the overlap tolerance (hides the discrepancy), conservative rounding of fractional endpoints (can falsely reject a feasible day). **Label:** `proven_over_menu` now means optimal over the menu on the exact intervals, confirmed by the independent typed assignment; unchanged wording.
 - **Contract changes:** an explicit `null` cooldown is now accepted and means the default (10 real minutes); before it was a 422. A zero-length interval gets a minimum length of 0.01 minute at scale 100 (`fleet-scenario-run.ts`, `start + 1`) instead of 1 minute.
 - **Evidence:** owner-supplied Codex review CX-01, `docs/CODEX_DEEP_REVIEW_2026-10-09.md` (local, untracked), tests `test_typed_day_selection.py::test_cx01_*`, `test_fleet_selection_endpoint.py::test_time_scale_*`, `fleet-scenario-run.test.ts` (CX-01). Related: H01, V01/V02, O01/O02.
+
+## Exact solver
+
+### E01 - exact-solver design: owner answers EQ1-EQ6
+
+- **Date/status:** 2026-10-09; owner decision ("Onaylıyorum" to the lead's recommendations). Design: [`docs/designs/EXACT_SOLVER_AMPL_DESIGN.md`](designs/EXACT_SOLVER_AMPL_DESIGN.md) §10.
+- **Chosen:** EQ1 GOAL 1 limits 60 s wall per wave and 600 s for the peak wave(s), deterministic work limit and 1 thread unchanged; the peak-wave definition is still open ([EKSİK], fixed in WP-E0). EQ2 both typed fleets (large+sedan, large+Doblò cap3). EQ3 exact per wave with the day level as CP-SAT over exact menus is sufficient for now; a global day model is out of scope. EQ4 the paper carries a short note on the HiGHS cross-check, details in the archive. EQ5 GA at seed 42, labelled single-seed; a multi-seed gap measurement later. EQ6 GOAL 2 instance set and time limit deferred (open); GOAL 2 stays planned.
+- **Evidence:** design document only; no code or measurement. Related: A04, H01.
 
 ### T07 - TSPLIB matrix cache v2: lossless upper-triangle lzma
 

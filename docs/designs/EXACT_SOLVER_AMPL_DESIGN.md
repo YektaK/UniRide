@@ -68,6 +68,8 @@ A time-limited MIP solve returns an incumbent and a **dual (best) bound**; every
 | Duration gap | If `K_GA = K*`: `gD = (D_GA - D_LB) / D_LB`. If `K_GA > K*`: the GA is already lexicographically worse; `gD` is "not comparable" and only the informative `gD_free = (D_GA - D_LB_free) / D_LB_free` is shown. |
 | Day aggregation | `dK_day = sum_w dK_w`; `gD_day` = `(sum D_GA - sum D_LB) / sum D_LB` over waves where `gD` is defined, with the count of excluded waves stated. |
 
+**Limits (owner decision EQ1, 2026-10-09).** GOAL 1 solves run with a 60 s wall-clock limit per wave and 600 s for the peak wave(s); peak wave: [EKSİK: peak-wave definition to be fixed in E0]. The deterministic work limit and 1 thread rules of §4 are unchanged.
+
 `K_GA < K_LB` or `D_GA < D_LB` at equal K is an **error** (model or semantics mismatch), never a result.
 
 ### 1.3 Fallback and cross-check: compact two-index model (`wave_compact.mod`)
@@ -142,11 +144,11 @@ Note: the certificate has no waiting time (H2 open); neither do the GA or the mo
 
 **Manifest** (`exact_manifest.json`, one per campaign): git commit and dirty flag; source campaign path and its manifest sha256; matrix sha256 per (date, R); `ampl` version (`option version`), `amplpy` version, solver name and full version string, the verbatim solver option string, threads, seed, time limit, work limit, MIP gap tolerances; enumeration cap and column counts per wave; runtimes; Python version; host OS. No absolute paths, usernames or license text.
 
-**Determinism.** Proven optimal values do not depend on threads or seed. Time-limited bounds and incumbents do. Recommendation: `threads = 1`, fixed `seed = 0`, and Gurobi's deterministic work limit as the primary stop with a wall-clock limit only as a safety net, so that `feasible_with_gap` rows are reproducible on the same version and platform. HiGHS has no work limit; its time-limited rows are labelled `timing_dependent: true`. Driver option keywords and the best-bound suffix are taken from the AMPL MP driver documentation and confirmed in WP-E1; the manifest stores the exact string used.
+**Determinism.** Proven optimal values do not depend on threads or seed. Time-limited bounds and incumbents do. Recommendation: `threads = 1`, fixed `seed = 0`, and Gurobi's deterministic work limit as the primary stop with a wall-clock limit only as a safety net (the wall limits are 60 s per wave and 600 s for the peak wave(s), owner decision EQ1), so that `feasible_with_gap` rows are reproducible on the same version and platform. HiGHS has no work limit; its time-limited rows are labelled `timing_dependent: true`. Driver option keywords and the best-bound suffix are taken from the AMPL MP driver documentation and confirmed in WP-E1; the manifest stores the exact string used.
 
 ## 5. GOAL 2 extension plan
 
-| Problem | Model | Mechanism | Realistic exact range (time limit 600 s, 1 thread) |
+| Problem | Model | Mechanism | Realistic exact range (1 thread; time limit deferred, owner question EQ6) |
 |---|---|---|---|
 | TSP | `tsp_dfj.mod`: degree constraints + DFJ subtour cuts | Iterative cut loop in the Python driver: solve, find connected components of the integer solution, add violated `sum_{i,j in S} x_ij <= |S|-1`, re-solve (AMPL indexed constraint over a growing set of cuts) | n <= ~150-200 for most EUC instances proven optimal; up to a few hundred often closes; above, report `feasible_with_gap` or the LP/cut bound |
 | ATSP | same with directed arcs (`x_ij` asymmetric) | same loop; strong-component separation | `ft53` (n = 53) expected optimal |
@@ -200,7 +202,7 @@ Gate: each package is reviewed (code line rules: worktree, own branch, tests fir
 | E0 | Wave instance contract + archive loader (offline) | `uniride_core/exact/wave_instance.py`, `scripts/exact_archive_loader.py` | loader on all valid campaigns; class cross-check; matrix sha check; invalid campaigns refused | all 61 waves x 4 R loaded; counts equal archived | low | 0.5 d |
 | E1 | Route enumeration (single + typed, both directions, revisits) + brute-force oracle | `route_enumeration.py`, `brute_force.py` | oracle, dominance, nonmetric revisit, missing arc | 500 instances identical; column counts logged for all archived waves | medium (column explosion on the 20-student wave at R = 90) | 1.5 d |
 | E2 | AMPL backend + `wave_sp.mod`, two stages, bounds, environment lookup, graceful absence | `ampl_backend.py`, `models/wave_sp.mod`, `requirements-exact.txt` | `requires_ampl` SP vs oracle (Gurobi, HiGHS); absence test; option/suffix confirmation | equal optima; `backend_unavailable` without AMPL | medium (driver option names, bound suffix) | 1.5 d |
-| E3 | Certification bridge + GOAL 1 runner, single type | `scripts/run_exact_wave_gaps.py` | GA re-certification; exact certification; objective cross-check; exact <= GA | full grid (5 days x 4 R) for 4/5 fleet, all waves labelled, manifest complete | low | 1 d |
+| E3 | Certification bridge + GOAL 1 runner, single type (limits per EQ1: 60 s per wave, 600 s peak wave(s)) | `scripts/run_exact_wave_gaps.py` | GA re-certification; exact certification; objective cross-check; exact <= GA | full grid (5 days x 4 R) for 4/5 fleet, all waves labelled, manifest complete | low | 1 d |
 | E4 | Typed runner: per-quota exact menus + CP-SAT day selection over exact menus | runner extension | quota respected; typed certificate; menu option comparison | large+sedan and large+Doblò(cap3) grids complete | medium | 1 d |
 | E5 | Compact fallback model | `models/wave_compact.mod` | compact vs SP on n <= 12 | equal optima; invoked only above the cap | medium (weak bounds) | 1 d |
 | E6 | Gap report: tables + figure + paper method paragraph (via the writing line) | `scripts/plan_exact_gap_report.py`, `docs/paper/results/week-2026-10-05-exact/` | CSV schema test; recomputation of sums | §9 deliverable below | low | 1 d |
@@ -213,15 +215,18 @@ Gate: each package is reviewed (code line rules: worktree, own branch, tests fir
 - `wave_gaps.csv`: date, R, fleet (`single_4sw5so`, `large+sedan`, `large+doblo_cap3`), quota, wave id, direction, anchor, students, columns, `K_GA`, `K_LB`, `K*`, `D_GA`, `D_LB`, `D*`, `D_LB_free`, `dK`, `gD`, `gD_free`, status per stage, solver, runtime;
 - `day_gaps.csv`: per (date, R, fleet) sums and `dK_day`, `gD_day`, excluded waves, plus cars over exact menus vs cars over GA menus for the typed fleets;
 - Table: per R, the share of waves with `dK = 0`, mean and max `gD`, and statuses; Figure: per-wave `gD` (y) against students per wave (x), one panel per R, marker by `dK`.
+- Paper text carries a short note on the HiGHS cross-check; the details go in the archive (owner decision EQ4).
 - Wording rule: a single snapshot week; descriptive gap measurement, not a superiority claim; GA seed 42 single run (the gap is of that run, not of the GA in general).
 
-## 10. Owner decisions needed
+## 10. Owner decisions (2026-10-09)
 
-| # | Question | Default proposed |
-|---|---|---|
-| EQ1 | Time and work limits per stage (GOAL 1)? | 600 s wall, deterministic work limit equivalent, 1 thread |
-| EQ2 | Which typed fleets enter the paper table: large+sedan, large+Doblò(cap3), or both? | both; Doblò as headline if the paper uses it |
-| EQ3 | Is "exact per wave, day = CP-SAT over exact menus" sufficient, or is a global day-level model wanted later? | sufficient for this paper; global model out of scope |
-| EQ4 | Report HiGHS cross-check results in the paper or only in the archive? | archive; the paper states Gurobi 13.0.3 as solver and HiGHS reproducibility |
-| EQ5 | GA repeats: the archived GA is one seed (42). Measure the gap over several seeds later? | one seed now, labelled as such |
-| EQ6 | GOAL 2 instance set and time limit (TSPLIB n <= 200; CVRP subset) | TSPLIB n <= 200, 600 s; CVRP after E9 measurement |
+The owner approved the lead's recommendations on 2026-10-09 ("Onaylıyorum"), with the values below.
+
+| # | Question | Decision | Status |
+|---|---|---|---|
+| EQ1 | Time and work limits per stage (GOAL 1)? | 60 s wall per wave; 600 s for the peak wave(s). Deterministic work limit and 1 thread unchanged (§4). Peak wave: [EKSİK: peak-wave definition to be fixed in E0] | Decided; peak-wave definition open (E0) |
+| EQ2 | Which typed fleets enter the paper table? | Both: large+sedan and large+Doblò (cap3) | Decided |
+| EQ3 | Is "exact per wave, day = CP-SAT over exact menus" sufficient? | Sufficient for now; a global day-level model is out of scope | Decided |
+| EQ4 | Report HiGHS cross-check results in the paper or only in the archive? | The paper carries a short note on the HiGHS cross-check; details go in the archive | Decided |
+| EQ5 | GA repeats: the archived GA is one seed (42). | GA at seed 42 now, labelled single-seed; a multi-seed gap measurement comes later | Decided; multi-seed later |
+| EQ6 | GOAL 2 instance set and time limit | Deferred to a later decision; GOAL 2 stays planned (§5) but is not parameterised yet | Open / deferred |

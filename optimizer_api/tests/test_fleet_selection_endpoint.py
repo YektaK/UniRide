@@ -173,3 +173,48 @@ def test_main_includes_router_source_check():
 
     src = (Path(fleet_selection.__file__).parents[1] / "main.py").read_text(encoding="utf-8")
     assert "app.include_router(fleet_selection.router)" in src
+
+
+def _scaled_body(scale, start2=61120, cooldown=1000):
+    r = lambda s, e: {"start": s, "end": e, "minutes": 1.0, "car_ok": False}  # noqa: E731
+    return {
+        "waves": [
+            {"wave_id": "w1", "options": [{"option_id": "base", "baseline": True, "routes": [r(60000, 60110)]}]},
+            {"wave_id": "w2", "options": [{"option_id": "base", "baseline": True, "routes": [r(start2, 62000)]}]},
+        ],
+        "max_large": 1, "cooldown_large": cooldown, "cooldown_car": cooldown, "time_scale": scale,
+    }
+
+
+def test_time_scale_100_fractional_gap_is_feasible():
+    res = _client().post(URL, json=_scaled_body(100), headers=KEY)
+    assert res.status_code == 200
+    assert res.json()["status"] == "optimal"
+    assert res.json()["large_peak"] == 1
+
+
+def test_time_scale_default_1_keeps_legacy_integer_minutes():
+    body = _scaled_body(1)
+    del body["time_scale"]
+    # legacy units: 60000 minutes is out of range
+    assert _client().post(URL, json=body, headers=KEY).status_code == 422
+    assert _client().post(URL, json=_body(), headers=KEY).status_code == 200
+
+
+def test_time_scale_scales_bounds():
+    c = _client()
+    ok = _scaled_body(100)
+    ok["waves"][1]["options"][0]["routes"][0]["end"] = 2880 * 100
+    assert c.post(URL, json=ok, headers=KEY).status_code == 200
+    over = _scaled_body(100)
+    over["waves"][1]["options"][0]["routes"][0]["end"] = 2880 * 100 + 1
+    assert c.post(URL, json=over, headers=KEY).status_code == 422
+    assert c.post(URL, json=_scaled_body(100, cooldown=240 * 100 + 1), headers=KEY).status_code == 422
+    assert c.post(URL, json=_scaled_body(100, cooldown=240 * 100), headers=KEY).status_code == 200
+
+
+@pytest.mark.parametrize("bad", [0, -1, 101, 1.5, "100", True, None])
+def test_time_scale_rejects_invalid_values(bad):
+    body = _scaled_body(100)
+    body["time_scale"] = bad
+    assert _client().post(URL, json=body, headers=KEY).status_code == 422

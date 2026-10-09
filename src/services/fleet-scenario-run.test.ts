@@ -9,10 +9,11 @@ import type { FleetTypeSpec } from "@/services/fleet-scenario-args";
 const DATE = "2026-09-30"; // a Wednesday
 const hash = "a".repeat(64);
 const nodes = ["D.Kampus", "Sw1", "So1", "So2"];
-const matrix = {
+const matrixOf = (duration: number) => ({
   id: `time_matrix:sha256:${hash}`, version: hash, sha256: hash, source: "supabase",
-  arcs: nodes.flatMap((a) => nodes.filter((b) => b !== a).map((b) => ({ origin_code: a, destination_code: b, duration_minutes: 5 }))),
-};
+  arcs: nodes.flatMap((a) => nodes.filter((b) => b !== a).map((b) => ({ origin_code: a, destination_code: b, duration_minutes: duration }))),
+});
+const matrix = matrixOf(5);
 
 const large: FleetTypeSpec = { typeId: "large", swCapacity: 4, soCapacity: 5, cooldownMinutes: 10 };
 const sedan: FleetTypeSpec = { typeId: "sedan", swCapacity: 0, soCapacity: 4, cooldownMinutes: 10 };
@@ -51,13 +52,14 @@ interface OptimizeBody {
   algorithm: string; direction: "pickup" | "dropoff"; students: Array<{ id: string; disability_type: "Sw" | "So"; location_code: string }>;
   vehicle_types?: Array<{ type_id: string; max_routes?: number; total_capacity?: number }>;
 }
-const steps = (locations: string[]) => {
+const steps = (locations: string[], d = 5) => {
   const path = ["D.Kampus", ...locations, "D.Kampus"];
-  return path.slice(1).map((to, i) => ({ location1: path[i], location2: to, duration: 5, distance: 0 }));
+  return path.slice(1).map((to, i) => ({ location1: path[i], location2: to, duration: d, distance: 0 }));
 };
-const route = (students: OptimizeBody["students"], vehicleId: string, type?: string) => ({
-  vehicle_id: vehicleId, route_details: steps(students.map((s) => s.location_code)),
-  total_duration_minutes: 5 * (students.length + 1), sw_count: students.filter((s) => s.disability_type === "Sw").length,
+const round2 = (x: number) => Math.round(x * 100) / 100;
+const route = (students: OptimizeBody["students"], vehicleId: string, type?: string, d = 5) => ({
+  vehicle_id: vehicleId, route_details: steps(students.map((s) => s.location_code), d),
+  total_duration_minutes: round2(d * (students.length + 1)), sw_count: students.filter((s) => s.disability_type === "Sw").length,
   so_count: students.filter((s) => s.disability_type === "So").length, student_ids: students.map((s) => s.id),
   ...(type ? { vehicle_type: type } : {}),
 });
@@ -65,19 +67,21 @@ const route = (students: OptimizeBody["students"], vehicleId: string, type?: str
 type SelectionRequest = {
   waves: Array<{ wave_id: string; options: Array<{ option_id: string; baseline: boolean; routes: Array<{ start: number; end: number; minutes: number; large_ok: boolean; car_ok: boolean }> }> }>;
   max_large: number;
+  time_scale?: number; cooldown_large: number; cooldown_car: number;
 };
 
-function transport(options: { selection?: (request: SelectionRequest) => { status: number; body: unknown } } = {}) {
+function transport(options: { selection?: (request: SelectionRequest) => { status: number; body: unknown }; duration?: number } = {}) {
+  const d = options.duration ?? 5;
   const calls: Array<{ path: string; body: unknown }> = [];
   const fetch = async (path: string, init?: RequestInit): Promise<Response> => {
     const body = init?.body ? JSON.parse(String(init.body)) : null;
     calls.push({ path, body });
-    if (path === "/api/v1/internal/matrix-snapshot") return Response.json(matrix);
+    if (path === "/api/v1/internal/matrix-snapshot") return Response.json(matrixOf(d));
     if (path === "/api/v1/optimize") {
       const request = body as OptimizeBody;
       const all = request.students;
       if (request.algorithm === "ga_split") {
-        return Response.json({ success: true, routes: [route(all, "V1")], total_duration_minutes: 5 * (all.length + 1), feasibility_certificate: { is_feasible: true } });
+        return Response.json({ success: true, routes: [route(all, "V1", undefined, d)], total_duration_minutes: round2(d * (all.length + 1)), feasibility_certificate: { is_feasible: true } });
       }
       const quota = request.vehicle_types!.find((t) => t.type_id === "large")!.max_routes!;
       const sw = all.filter((s) => s.disability_type === "Sw");
@@ -85,8 +89,8 @@ function transport(options: { selection?: (request: SelectionRequest) => { statu
       if (quota === 0 && sw.length > 0) {
         return Response.json({ success: false, routes: [], feasibility_certificate: { is_feasible: false } });
       }
-      const routes = [...(sw.length ? [route(sw, "H1", "large")] : []), ...(so.length ? [route(so, "H2", "sedan")] : [])];
-      return Response.json({ success: true, routes, total_duration_minutes: routes.reduce((s, r) => s + r.total_duration_minutes, 0), feasibility_certificate: { is_feasible: true } });
+      const routes = [...(sw.length ? [route(sw, "H1", "large", d)] : []), ...(so.length ? [route(so, "H2", "sedan", d)] : [])];
+      return Response.json({ success: true, routes, total_duration_minutes: round2(routes.reduce((s, r) => s + r.total_duration_minutes, 0)), feasibility_certificate: { is_feasible: true } });
     }
     if (path === "/api/v1/internal/fleet-selection") {
       const scripted = options.selection?.(body as SelectionRequest);
@@ -161,6 +165,34 @@ describe("runFleetScenarioDay", () => {
     // the response JSON carries types and labels
     const json = scenarioResponse(day, l1);
     expect(JSON.stringify(json)).toContain("\"vehicleType\":\"sedan\"");
+  });
+
+  it("CX-01: sends exact centi-minute intervals (time_scale 100) so fractional routes are not widened into a false infeasible day", async () => {
+    const db = reader(rows());
+    // 5.25-minute arcs: a dropoff wave of n legs spans anchor .. anchor + 5.25 * (n + 1), a fractional end.
+    const t = transport({ duration: 5.25, selection: pickSelection("q1", () => ["large", "car"]) });
+    const day = await runFleetScenarioDay({ reader: db.client, optimizerFetch: t.fetch, clock }, params({ scenarios: [1] }));
+    const request = t.calls.find((c) => c.path === "/api/v1/internal/fleet-selection")!.body as SelectionRequest;
+    expect(request.time_scale).toBe(100);
+    expect(request.cooldown_large).toBe(1000);
+    expect(request.cooldown_car).toBe(1000);
+    const routes = request.waves.flatMap((w) => w.options.flatMap((o) => o.routes));
+    expect(routes.length).toBeGreaterThan(0);
+    for (const r of routes) {
+      expect(Number.isInteger(r.start) && Number.isInteger(r.end)).toBe(true);
+      expect(r.start % 100 === 0 || r.end % 100 === 0).toBe(true); // the anchored endpoint is a whole minute
+    }
+    // exact, not ceil-widened: some endpoint carries a fractional part (e.g. 60525, not 60600)
+    expect(routes.some((r) => r.start % 100 !== 0 || r.end % 100 !== 0)).toBe(true);
+    expect(day.scenarios[0]).toMatchObject({ status: "ok" });
+  });
+
+  it("CX-01: endpoints with more than two decimals are refused, never rounded", async () => {
+    const db = reader(rows());
+    const t = transport({ duration: 5.123, selection: pickSelection("q1", () => ["large", "car"]) });
+    const day = await runFleetScenarioDay({ reader: db.client, optimizerFetch: t.fetch, clock }, params({ scenarios: [1] }));
+    expect(t.calls.map((c) => c.path)).not.toContain("/api/v1/internal/fleet-selection");
+    expect(day.scenarios[0]).toMatchObject({ status: "blocked_data", reasonCodes: ["SELECTION_INTERVAL_PRECISION"] });
   });
 
   it("reports infeasible_for_L with the selection diagnostics", async () => {

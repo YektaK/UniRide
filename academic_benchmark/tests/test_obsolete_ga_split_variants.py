@@ -80,3 +80,100 @@ def test_cli_dry_run_prints_report(tmp_path, capsys):
     db = _seed(tmp_path)
     assert main(["--db", db, "--dry-run"]) == 0
     assert json.loads(capsys.readouterr().out)["sqlite"]["to_mark"] == 3
+
+
+# ---- review round 1 ----
+import csv as _csv
+from types import SimpleNamespace
+
+import pytest
+
+from academic_benchmark.tsplib_manager import query_benchmark_results
+
+
+def test_sql_filters_before_limit(tmp_path):
+    db = str(tmp_path / "t.db")
+    save_benchmark_run("r1", db_path=db)
+    for i in range(1, 6):  # 5 newest rows obsolete, 3 older clean
+        save_benchmark_result("r1", _row("ga_split_hf", f"2026-10-0{i}T10:00:00", i), db_path=db)
+    for i in range(1, 4):
+        save_benchmark_result("r1", _row("ga_split", f"2026-09-0{i}T10:00:00", i), db_path=db)
+    mark_sqlite(db, dry_run=False)
+    assert len(query_benchmark_results(limit=3, db_path=db)) == 3
+    assert get_benchmark_rows(db_path=db, limit=3)["count"] == 3
+    assert len(query_benchmark_results(limit=8, db_path=db, exclude_obsolete=False)) == 8
+
+
+def test_csv_fallback_respects_include_obsolete(tmp_path):
+    (tmp_path / "OBSOLETE.md").write_text("x", encoding="utf-8")
+    with open(tmp_path / "benchmark_progress.csv", "w", newline="", encoding="utf-8") as h:
+        w = _csv.writer(h)
+        w.writerow(["problem", "algorithm", "run", "tour_length"])
+        w.writerow(["p", "ga_split_hf", 1, 5])
+        w.writerow(["p", "ga_split", 1, 6])
+    kw = dict(results_dir=str(tmp_path), db_path=str(tmp_path / "none.db"), prefer_db=False)
+    assert [r["algorithm"] for r in get_benchmark_rows(**kw)["results"]] == ["ga_split"]
+    assert get_benchmark_rows(include_obsolete=True, **kw)["count"] == 2
+
+
+def test_mark_files_skips_production_path_manifest(tmp_path):
+    (tmp_path / "run_manifest.json").write_text(
+        json.dumps({"scenarios": [{"path": "/api/v1/optimize", "menu": "ga_split_hf"}]}), encoding="utf-8"
+    )
+    report = mark_files(str(tmp_path), dry_run=False)
+    assert report["files"] == [] and report.get("skipped")
+    assert not (tmp_path / "OBSOLETE.md").exists()
+
+
+def test_invalid_or_non_dict_metadata_is_preserved(tmp_path):
+    db = _seed(tmp_path)
+    conn = sqlite3.connect(db)
+    conn.execute("UPDATE benchmark_results SET metadata_json='not json{' WHERE algorithm='ga_split_hf'")
+    conn.execute("UPDATE benchmark_results SET metadata_json='[1,2]' WHERE algorithm='ga-split-enhanced'")
+    conn.commit(); conn.close()
+    mark_sqlite(db, dry_run=False)
+    conn = sqlite3.connect(db)
+    got = {a: json.loads(m) for a, m in conn.execute("SELECT algorithm, metadata_json FROM benchmark_results")}
+    assert got["ga_split_hf"]["_original_metadata_json"] == "not json{" and got["ga_split_hf"]["obsolete"] is True
+    assert got["ga-split-enhanced"]["_original_metadata_json"] == "[1,2]"
+
+
+def test_cutoff_is_exact_iso(tmp_path):
+    from academic_benchmark.obsolete_results import is_affected
+    assert not is_affected("ga_split_hf", "2026-10-09T00:00:00")
+    assert is_affected("ga_split_hf", "2026-10-09T00:00:00", "2026-10-09T12:00:00")
+
+
+@pytest.mark.parametrize("module,cls,extra", [
+    ("strategies.ga_split_strategy", "GAEnhancedSplitStrategy", {}),
+    ("strategies.ga_split_hf_strategy", "GASplitHFStrategy",
+     {"algorithm": "ga_split_hf", "vehicle_types": [{"type_id": "large", "sw_capacity": 4, "so_capacity": 5},
+                        {"type_id": "car", "sw_capacity": 0, "so_capacity": 4}],
+      "minimize_type": "car"}),
+])
+def test_runner_seed_reaches_make_rng(module, cls, extra, monkeypatch):
+    """run_seed=7 -> _apply_algorithm_params -> strategy.optimize -> make_rng(seed=7)."""
+    import importlib
+    from models.schemas import LocationNode, OptimizationRequest, StudentNode
+    mod = importlib.import_module(module)
+    seen = {}
+
+    class Stop(Exception):
+        pass
+
+    def fake(cfg, default=None):
+        seen["seed"] = cfg.get("seed")
+        raise Stop
+
+    monkeypatch.setattr(mod, "make_rng", fake)
+    request = OptimizationRequest(**{"algorithm": "x", **extra,
+        "depot": LocationNode(id="D", lat=0.0, lng=0.0),
+        "students": [StudentNode(id="S1", location_code="L1", disability_type="So",
+                                 coordinates={"lat": 3.0, "lng": 4.0})],
+        "sw_capacity": 4, "so_capacity": 5, "max_travel_time": 600})
+    strategy = getattr(mod, cls)()
+    runner_mod = importlib.import_module("benchmark_runner")
+    runner_mod.BenchmarkRunner()._apply_algorithm_params(request, strategy.name, {}, run_seed=7)
+    with pytest.raises(Stop):
+        strategy.optimize(request)
+    assert seen["seed"] == 7

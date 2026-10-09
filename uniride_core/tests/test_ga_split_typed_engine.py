@@ -79,3 +79,46 @@ def test_menu_has_q0_to_q3_and_all_large_baseline():
     for opt in menu[1:4]:
         if opt.feasible:
             assert opt.solution.final_result.type_ids.count("large") <= opt.quota
+
+
+# --- CX-03: P4 on nonmetric matrices (Codex review 2026-10-09) -------------
+
+def _assert_p4_equal(wps, matrix, demands, cfg, seed, vtype, depot="D"):
+    untyped = solve_ga_split(
+        wps, depot, matrix, demands, vtype.sw_capacity, vtype.so_capacity,
+        vtype.max_tour_duration, cfg, random.Random(seed),
+        max_ride_time=vtype.max_ride_time,
+    )
+    typed = solve_ga_split_typed(
+        wps, depot, matrix, demands, [vtype], cfg, random.Random(seed),
+        minimize_type=vtype.id,
+    )
+    assert typed.final_result.routes == untyped.final_result["routes"]
+    assert typed.final_result.total_cost == untyped.final_result["total_cost"]
+    assert typed.generations == untyped.generations
+    assert typed.best_individual.chromosome == untyped.best_individual.chromosome
+
+
+def test_p4_codex_nonmetric_counterexample():
+    matrix = {
+        "D": {"D": 0, "A": 1, "B": 1},
+        "A": {"D": 1, "A": 0, "B": 10},
+        "B": {"D": 1, "A": 11, "B": 0},
+    }
+    demands = {"A": (0, 1), "B": (0, 1)}
+    cfg = {"population_size": 4, "max_iterations": 2, "local_search_interval": 10, "elite_count": 1}
+    large = VehicleType("large", 4, 5, 150.0, 90.0)
+    _assert_p4_equal(["A", "B"], matrix, demands, cfg, 42, large)
+
+
+def test_p4_random_nonmetric_matrices_one_type_equals_untyped():
+    rng = random.Random(20261009)
+    cfg = {"population_size": 6, "max_iterations": 4, "local_search_interval": 2, "max_no_improvement": 3}
+    large = VehicleType("large", 4, 5, 150.0, 90.0)
+    for case in range(50):
+        n = rng.randint(2, 6)
+        wps = [f"W{i}" for i in range(n)]
+        nodes = ["D"] + wps
+        matrix = {a: {b: (0.0 if a == b else float(rng.randint(1, 30))) for b in nodes} for a in nodes}
+        demands = {w: (rng.choice([0, 1]), rng.choice([0, 1, 2])) for w in wps}
+        _assert_p4_equal(wps, matrix, demands, cfg, case, large)

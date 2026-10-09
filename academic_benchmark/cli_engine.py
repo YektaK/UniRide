@@ -582,9 +582,9 @@ def run_single_test_with_matrix(
     """Numba için 'Time Matrix' tabanlı özel problem çözümleyicisi.
 
     Step 4: Uses create_np_duration_func() backed by a numpy ndarray instead
-    of the O(n²) Dict[str, Dict[str, float]] construction.  The numpy closure
-    is stable, so _DIST_MATRIX_CACHE in local_search_numba.py gives a cache
-    hit on the first improve() call within the same run.
+    of the O(n²) Dict[str, Dict[str, float]] construction.  The closure
+    carries this run's own matrix, which local_search_numba uses directly
+    (before any cache), so it can never see another problem's matrix.
     """
     import numpy as _np
     from uniride_core.algorithms.numba_metaheuristics import run_meta_heuristic

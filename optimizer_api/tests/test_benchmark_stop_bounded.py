@@ -235,6 +235,7 @@ def test_benchmark_run_bucket_is_separate_from_optimize_bucket(client, monkeypat
     {"max_no_improvement": 10**9},
     {"time_limit": 10**6},
     {"time_limit_seconds": 10**6},
+    {"max_velocity_size": 10**8},
 ])
 def test_matrix_native_params_are_bounded(client, algo, params):
     """E2: matrix-native engines also get policy-bounded params (422)."""
@@ -297,3 +298,30 @@ def test_non_dict_params_return_422_not_500(monkeypatch, bad):
         benchmark._start_benchmark_impl(
             "c6", [{"id": "genetic_algorithm", "params": bad}], ["p"], {"n_runs": 1})
     assert exc.value.status_code == 422
+
+
+@pytest.mark.parametrize("algo", ["ga_split_enhanced", "ga_split_hf"])
+def test_apply_params_keeps_legacy_assignment_for_ga_split_variants(algo):
+    """Academic parity: these two never received ga_config or the per-run seed on
+    the benchmark-runner path (pre-existing); only validation uses the policy table."""
+    runner_mod = sys.modules[benchmark.BenchmarkRunner.__module__]
+    request = SimpleNamespace()
+    runner_mod.BenchmarkRunner()._apply_algorithm_params(request, algo, {}, run_seed=42)
+    assert not hasattr(request, "ga_config")
+
+
+def test_worker_start_failure_fails_the_run(monkeypatch):
+    """A thread that cannot start must not leave a RUNNING run holding a slot."""
+    manager = BenchmarkStateManager()
+    monkeypatch.setattr(benchmark, "benchmark_state_manager", manager)
+    monkeypatch.setattr(benchmark, "_load_benchmark_problem",
+                        lambda name: SimpleNamespace(name=name))
+
+    def boom(self):
+        raise RuntimeError("can't start new thread")
+
+    monkeypatch.setattr(threading.Thread, "start", boom)
+    with pytest.raises(benchmark.HTTPException):
+        benchmark._start_benchmark_impl("nostart", [{"id": "genetic_algorithm"}], ["p"], {"n_runs": 1})
+    assert manager.get_run("nostart").status == BenchmarkStatus.FAILED
+    assert manager.can_start_run() is True

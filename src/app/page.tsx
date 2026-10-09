@@ -97,6 +97,7 @@ import {
   type BenchmarkStatus,
   type BenchmarkResult,
   type BenchmarkResultsResponse,
+  checkBenchmarkApiHealth,
   fetchProblems,
   startBenchmark,
   pollStatus,
@@ -580,11 +581,7 @@ function BenchmarkSuite() {
   useEffect(() => {
     const checkApi = async () => {
       try {
-        const res = await fetch("/api/benchmark/health", {
-          method: "GET",
-          signal: AbortSignal.timeout(5000),
-        });
-        const online = res.ok;
+        const online = await checkBenchmarkApiHealth();
         setIsApiOnline(online);
         if (online) setIsDemoMode(false);
       } catch {

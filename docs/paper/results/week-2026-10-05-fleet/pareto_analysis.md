@@ -18,7 +18,7 @@ Limits of the front: (i) the routes come from a heuristic (GA), and the borrowed
 | f4 | borrowed vehicle-days per week = number of weekdays on which at least one borrowed vehicle is needed (0..5); the sum of vehicles over days is `borrowed_vehicle_days` |
 | f5 | service level = ride limit R (minutes, lower is stricter) and the realised passenger-weighted mean ride of the week (`f5_mean_ride_min`) |
 | minibus utilisation | owned busy minutes (route + cooldown) / (f1 x service span summed over the five days); the span of a day is the earliest route start to the latest route end over all options at that (day, R), so all options share one denominator; not defined for L = 0 |
-| borrowed utilisation | borrowed busy minutes (route + cooldown) / time on loan (per borrowed vehicle and day: first start to last end plus cooldown). 100%% means the vehicle drives (or cools down) the whole time it is borrowed; it says nothing about how long it is borrowed |
+| borrowed utilisation | borrowed busy minutes (route + cooldown) / time on loan (per borrowed vehicle and day: first start to last end plus cooldown). 100% means the vehicle drives (or cools down) the whole time it is borrowed; it says nothing about how long it is borrowed |
 | before-10:00 share | share of the borrowed busy minutes that fall before 10:00 |
 
 Families: **minibus-only** (A) = all-large minimum; **minibus+sedan** = L large minibuses (4 Sw + 5 So) plus sedans (0 Sw + 4 So), sedans cannot carry wheelchair (Sw) students; **minibus+minivan** = L large minibuses plus wheelchair-accessible minivans `minivan:1sw3so:cd10` (1 Sw + 3 So), which can. The minivan capacity is an **assumption and a parameter** (it can be tested as `minivan:1sw2so`; not run here). **hybrid** = day-level combination derived exactly from existing runs (section 5).
@@ -186,7 +186,7 @@ The hybrid has the same f2 as the pure L2 + minivan option in 4 of 4 cases and a
 - Heuristic routes and a minimum proven only over the generated menus; the front is an approximation (section 1).
 - The minivan capacity (1 Sw + 3 So) and the sedan capacity (0 Sw + 4 So) are assumptions; the sedan having no wheelchair place is an open owner question.
 - A borrowed vehicle is assumed available for the whole of its first-start to last-end window on each day it is used (f3 counts only its busy time); borrowing for single routes would need the lenders' schedules.
-- No cost data: nothing here states which option is cheaper.
+- No cost data: this document gives no cost ranking.
 
 ## 11. Reproduce
 

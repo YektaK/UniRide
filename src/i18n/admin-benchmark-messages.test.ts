@@ -13,7 +13,7 @@ const pageSource = read("../app/(app)/admin/benchmark/page.tsx");
 const enMessages = JSON.parse(read("../../messages/en.json")) as Messages;
 const trMessages = JSON.parse(read("../../messages/tr.json")) as Messages;
 
-type Usage = { key: string; params: string[] };
+type Usage = { key: string; params: string[]; tags: string[] };
 
 const literal = (node: ts.Node | undefined): string | undefined =>
   node && (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) ? node.text : undefined;
@@ -34,25 +34,35 @@ const collectUsages = (source: string): Usage[] => {
   find(sf);
   if (names.size === 0) throw new Error("No translator bound to " + NAMESPACE);
 
-  const usages = new Map<string, Set<string>>();
+  const usages = new Map<string, { params: Set<string>; tags: Set<string> }>();
+  const isTranslatorCall = (callee: ts.Expression): boolean =>
+    (ts.isIdentifier(callee) && names.has(callee.text)) ||
+    (ts.isPropertyAccessExpression(callee) && ts.isIdentifier(callee.expression) &&
+      names.has(callee.expression.text) && ["rich", "markup", "raw"].includes(callee.name.text));
   const visit = (node: ts.Node): void => {
-    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && names.has(node.expression.text)) {
+    if (ts.isCallExpression(node) && isTranslatorCall(node.expression)) {
       const key = literal(node.arguments[0]);
       if (key !== undefined) {
-        const params = usages.get(key) ?? new Set<string>();
+        const entry = usages.get(key) ?? { params: new Set<string>(), tags: new Set<string>() };
         const arg = node.arguments[1];
         if (arg && ts.isObjectLiteralExpression(arg)) {
           for (const p of arg.properties) {
-            if ((ts.isPropertyAssignment(p) || ts.isShorthandPropertyAssignment(p)) && ts.isIdentifier(p.name)) params.add(p.name.text);
+            if (!ts.isPropertyAssignment(p) && !ts.isShorthandPropertyAssignment(p) && !ts.isMethodDeclaration(p)) continue;
+            if (!ts.isIdentifier(p.name)) continue;
+            const isTag = ts.isMethodDeclaration(p) ||
+              (ts.isPropertyAssignment(p) && (ts.isArrowFunction(p.initializer) || ts.isFunctionExpression(p.initializer)));
+            (isTag ? entry.tags : entry.params).add(p.name.text);
           }
         }
-        usages.set(key, params);
+        usages.set(key, entry);
       }
     }
     ts.forEachChild(node, visit);
   };
   visit(sf);
-  return [...usages].map(([key, params]) => ({ key, params: [...params] })).sort((a, b) => a.key.localeCompare(b.key));
+  return [...usages]
+    .map(([key, e]) => ({ key, params: [...e.params], tags: [...e.tags] }))
+    .sort((a, b) => a.key.localeCompare(b.key));
 };
 
 const usages = collectUsages(pageSource);
@@ -97,6 +107,33 @@ describe("admin benchmark page message catalog", () => {
         : [];
     });
     expect(bad).toEqual([]);
+  });
+
+  it.each([
+    ["en", enMessages],
+    ["tr", trMessages],
+  ] as const)("declares every rich-text tag the page passes in %s", (_l, messages) => {
+    const bad = usages.flatMap(({ key, tags }) => {
+      const v = resolve(messages, key);
+      return typeof v === "string"
+        ? tags.filter((t) => !v.includes(`<${t}>`) || !v.includes(`</${t}>`)).map((t) => `${key}:<${t}>`)
+        : [];
+    });
+    expect(bad).toEqual([]);
+  });
+
+  it("collects t.rich, t.markup and t.raw calls with params and tags", () => {
+    const fixture = `
+      const t = useTranslations("${NAMESPACE}");
+      t.rich("r", { n: 1, b: (c) => c });
+      t.markup("m", { x });
+      t.raw("w");
+    `;
+    expect(collectUsages(fixture)).toEqual([
+      { key: "m", params: ["x"], tags: [] },
+      { key: "r", params: ["n"], tags: ["b"] },
+      { key: "w", params: [], tags: [] },
+    ]);
   });
 
   it("keeps tr and en key sets identical under page.admin.benchmark", () => {

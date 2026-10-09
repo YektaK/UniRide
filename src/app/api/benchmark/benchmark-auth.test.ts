@@ -68,10 +68,17 @@ describe("benchmark BFF routes require admin", () => {
     );
   });
 
-  it("covers every route.ts under /api/benchmark", async () => {
-    const { globSync } = await import("node:fs");
-    const found = globSync("**/route.ts", { cwd: __dirname }).length;
-    expect(found).toBe(ROUTES.length);
+  it("covers every exported HTTP method of every route.ts under /api/benchmark", async () => {
+    const { globSync, readFileSync } = await import("node:fs");
+    const exported: string[] = [];
+    for (const file of globSync("**/route.ts", { cwd: __dirname })) {
+      const source = readFileSync(`${__dirname}/${file}`, "utf8");
+      const methods = source.matchAll(/export\s+(?:async\s+)?(?:function|const)\s+(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\b/g);
+      const route = file.split("\\").join("/").replace("/route.ts", "");
+      for (const m of methods) exported.push(`${route}:${m[1]}`);
+    }
+    const covered = ROUTES.map((r) => `${r.name}:${r.method}`);
+    expect(exported.sort()).toEqual(covered.sort());
   });
 
   it.each(ROUTES)("$name: anonymous call is 401 and never reaches the optimizer", async (route) => {

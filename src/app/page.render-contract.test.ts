@@ -32,4 +32,8 @@ describe("BenchmarkSuitePage admin gate", () => {
     expect(pageSource).toMatch(/export default function BenchmarkSuitePage\(\)[\s\S]*?<BenchmarkSuite \/>/);
     expect(pageSource).toContain("function BenchmarkSuite()");
   });
+
+  it("never calls /api/benchmark with a bare fetch (the service adds the admin token)", () => {
+    expect(pageSource).not.toMatch(/fetch\(\s*["'`]\/api\/benchmark/);
+  });
 });

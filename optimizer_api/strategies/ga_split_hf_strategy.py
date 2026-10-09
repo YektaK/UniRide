@@ -101,6 +101,7 @@ class GASplitHFStrategy(HybridSplitBaseStrategy):
                 id=spec.type_id,
                 sw_capacity=spec.sw_capacity,
                 so_capacity=spec.so_capacity,
+                total_capacity=spec.total_capacity,
                 max_tour_duration=float(
                     spec.max_travel_time if spec.max_travel_time is not None else request.max_travel_time
                 ),

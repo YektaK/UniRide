@@ -100,6 +100,13 @@ REJECTED = [
         _payload(max_travel_time=100, vehicle_types=[dict(LARGE, max_travel_time=101), dict(CAR)]),
         "max_travel_time cannot exceed",
     ),
+    ("total_capacity_zero", _payload(vehicle_types=[dict(LARGE, total_capacity=0), dict(CAR)]), "total_capacity"),
+    ("total_capacity_negative", _payload(vehicle_types=[dict(LARGE, total_capacity=-2), dict(CAR)]), "total_capacity"),
+    (
+        "total_capacity_above_pools",
+        _payload(vehicle_types=[dict(LARGE), dict(CAR, total_capacity=5)]),
+        "total_capacity must be <=",
+    ),
     ("quota_over_policy_ceiling", _payload(vehicle_types=[dict(LARGE, max_routes=51), dict(CAR)]), "max_routes cannot exceed"),
 ]
 
@@ -288,6 +295,19 @@ def test_car_route_over_so_capacity_is_rejected():
         {"large": 1},
     )
     assert _certify(request, ok)["is_feasible"]
+
+
+def test_total_capacity_violation_is_a_typed_capacity_violation():
+    students_ = [SW1, SO[0], SO[1]]
+    response = _response(
+        [_route(["A", "B1", "B2"], "large", 1, 2, ids=["a", "b1", "b2"])], {"large": 1}
+    )
+    capped = _typed_request(students_, [dict(LARGE, total_capacity=2), dict(CAR)])
+    certificate = _certify(capped, response)
+    assert "typed_capacity_violation" in _types(certificate)
+    assert any("total load 3" in v["details"] for v in certificate["violations"])
+    # no cap: pools only, same response certifies as before
+    assert _certify(_typed_request(students_), response)["is_feasible"]
 
 
 def test_missing_or_unknown_vehicle_type_is_rejected_never_defaulted():

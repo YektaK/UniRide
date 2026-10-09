@@ -123,6 +123,8 @@ def test_p3_one_type_matches_decode_giant_tour_on_golden_instances(
 def _seg_cost(seg, t, m, dem, dropoff):
     if sum(dem[s][0] for s in seg) > t.sw_capacity or sum(dem[s][1] for s in seg) > t.so_capacity:
         return None
+    if t.total_capacity is not None and sum(dem[s][0] + dem[s][1] for s in seg) > t.total_capacity:
+        return None
     arcs = [m[a][b] for a, b in zip([DEPOT] + seg, seg + [DEPOT])]
     total = sum(arcs)
     if total > t.max_tour_duration:
@@ -196,3 +198,75 @@ def test_brute_force_cross_check_tiny_instances():
         assert sum(map(len, got.routes)) == n
         checked += 1
     assert checked > 100 and infeasible > 10
+
+
+# ---- optional shared total_capacity (Doblo: 1sw3so, 3 seats in total) -------
+
+DOBLO = VehicleType("doblo", 1, 3, 500.0, None, 10, total_capacity=3)
+
+
+@pytest.mark.parametrize("sw,so,ok", [(0, 3, True), (1, 2, True), (1, 3, False), (0, 4, False)])
+def test_total_capacity_accepts_and_rejects_loads(sw, so, ok):
+    stops = ["L1"]  # one stop carrying the whole load, so the route cannot be split
+    m = _line(1)
+    dem = {"L1": (sw, so)}
+    got = _typed(stops, m, dem, [DOBLO], is_asymmetric=True)
+    if ok:
+        assert got.feasible and got.routes == [stops] and got.type_ids == ["doblo"]
+    else:
+        assert not got.feasible
+    # without the cap the pools alone would still allow 1Sw+3So (but not 4 So)
+    uncapped = VehicleType("doblo", 1, 3, 500.0, None, 10)
+    assert _typed(stops, m, dem, [uncapped], is_asymmetric=True).feasible == (so <= 3)
+
+
+def test_total_capacity_splits_when_pools_would_allow_more():
+    stops = ["L1", "L2", "L3", "L4"]
+    m = _line(4)
+    dem = {"L1": (1, 0), "L2": (0, 1), "L3": (0, 1), "L4": (0, 1)}
+    got = _typed(stops, m, dem, [DOBLO], is_asymmetric=True)
+    assert got.feasible and len(got.routes) == 2
+    assert all(sum(sum(dem[s]) for s in r) <= 3 for r in got.routes)
+
+
+def test_total_capacity_must_be_positive():
+    with pytest.raises(ValueError):
+        _typed(["L1"], _line(1), {"L1": (0, 1)}, [VehicleType("x", 1, 3, total_capacity=0)])
+
+
+def test_brute_force_cross_check_with_total_capacity_type():
+    rng = random.Random(20261009)
+    checked = infeasible = 0
+    for _ in range(400):
+        n = rng.randint(1, 7)
+        names = [DEPOT] + [f"L{i}" for i in range(1, n + 1)]
+        m = {a: {b: (0 if a == b else rng.randint(2, 15)) for b in names} for a in names}
+        dem = {f"L{i}": ((1, 0) if rng.random() < 0.3 else (0, rng.randint(0, 2)))
+               for i in range(1, n + 1)}
+        types = [
+            VehicleType("large", rng.randint(1, 3), rng.randint(1, 4),
+                        rng.choice([40.0, 60.0, 200.0]), rng.choice([None, 20.0, 35.0]),
+                        total_capacity=rng.choice([None, 2, 3, 4])),
+            VehicleType("car", 1, 3, rng.choice([40.0, 60.0, 200.0]),
+                        rng.choice([None, 20.0, 35.0]), total_capacity=rng.choice([2, 3])),
+        ]
+        quota = rng.choice([None, 0, 1, 2])
+        direction = rng.choice(["pickup", "dropoff"])
+        tour = names[1:]
+        rng.shuffle(tour)
+        want = _brute(tour, m, dem, types, "car", "large", quota, direction == "dropoff")
+        got = decode_typed(tour, DEPOT, m, dem, types, minimize_type="car",
+                           quota_type="large", quota=quota, is_asymmetric=True,
+                           direction=Direction(direction))
+        if want is None:
+            assert not got.feasible
+            infeasible += 1
+            continue
+        assert got.feasible
+        assert got.routes_by_type["car"] == want[0]
+        assert got.total_cost == pytest.approx(want[1])
+        for r, lab in zip(got.routes, got.type_ids):
+            cap = next(t.total_capacity for t in types if t.id == lab)
+            assert cap is None or sum(sum(dem[s]) for s in r) <= cap
+        checked += 1
+    assert checked > 100

@@ -35,6 +35,8 @@ class VehicleType:
     max_tour_duration: float = 120.0
     max_ride_time: Optional[float] = None
     cooldown: float = 0.0  # carried as data for day-level planning; unused here
+    # Optional shared seat limit: Sw + So <= total_capacity (None = pools only).
+    total_capacity: Optional[int] = None
 
 
 @dataclass
@@ -93,6 +95,8 @@ def decode_typed(
     if quota is not None and quota < 0:
         raise ValueError("quota must be >= 0")
     for t in types:
+        if t.total_capacity is not None and t.total_capacity < 1:
+            raise ValueError(f"total_capacity must be >= 1 for {t.id!r}")
         if t.max_ride_time is not None and not (t.max_ride_time > 0):
             raise ValueError(f"max_ride_time must be positive for {t.id!r}")
     track = quota_type is not None and quota is not None
@@ -120,6 +124,8 @@ def decode_typed(
             alive = [
                 t for t in alive
                 if sw <= types[t].sw_capacity and so <= types[t].so_capacity
+                and (types[t].total_capacity is None
+                     or sw + so <= types[t].total_capacity)
             ]
             if not alive:
                 break

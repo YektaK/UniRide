@@ -44,12 +44,12 @@ CREATE POLICY "users_select_own"
 
 -- Users can insert themselves (for registration)
 CREATE POLICY "users_insert_self"
-  ON users FOR INSERT
-  WITH CHECK (auth.uid() = id);
+  ON users FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = id AND role = 'student');  -- QW1/C1: never self-create admin/driver
 
 -- Users can update their own data (role is protected by trigger below)
 CREATE POLICY "users_update_own"
-  ON users FOR UPDATE
+  ON users FOR UPDATE TO authenticated
   USING (auth.uid() = id)
   WITH CHECK (auth.uid() = id);
 
@@ -59,7 +59,7 @@ CREATE POLICY "users_update_own"
 CREATE OR REPLACE FUNCTION prevent_role_change()
 RETURNS TRIGGER
 LANGUAGE plpgsql
-SECURITY DEFINER
+SET search_path = ''
 AS $$
 BEGIN
   -- Allow service_role to change the role column (admin operations via server)
@@ -67,7 +67,11 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  IF NEW.role IS DISTINCT FROM OLD.role THEN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.role IS DISTINCT FROM 'student' THEN
+      RAISE EXCEPTION 'Only service_role may create non-student users';
+    END IF;
+  ELSIF NEW.role IS DISTINCT FROM OLD.role THEN
     RAISE EXCEPTION 'Direct role modification not allowed - use server-side admin endpoints';
   END IF;
   RETURN NEW;
@@ -76,7 +80,7 @@ $$;
 
 DROP TRIGGER IF EXISTS enforce_no_role_change ON users;
 CREATE TRIGGER enforce_no_role_change
-  BEFORE UPDATE OF role ON users
+  BEFORE INSERT OR UPDATE OF role ON users
   FOR EACH ROW
   EXECUTE FUNCTION prevent_role_change();
 
@@ -107,13 +111,20 @@ CREATE POLICY "ride_requests_select_own"
 
 -- Users can create their own ride requests
 CREATE POLICY "ride_requests_insert_own"
-  ON ride_requests FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+  ON ride_requests FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = user_id
+              AND status IN ('pending_admin_approval', 'pending_student_confirmation')
+              AND vehicle_id IS NULL
+              AND actual_pickup_time IS NULL
+              AND actual_dropoff_time IS NULL);  -- QW1/C1.b
 
 -- Users can update their own ride requests
 CREATE POLICY "ride_requests_update_own"
-  ON ride_requests FOR UPDATE
-  USING (auth.uid() = user_id);
+  ON ride_requests FOR UPDATE TO authenticated
+  USING (auth.uid() = user_id
+         AND status IN ('pending_admin_approval', 'pending_student_confirmation', 'confirmed'))
+  WITH CHECK (auth.uid() = user_id AND status = 'cancelled_by_student'
+              AND vehicle_id IS NULL AND actual_pickup_time IS NULL AND actual_dropoff_time IS NULL);  -- QW1/C1.b
 
 -- ==================== VEHICLES POLICIES ====================
 

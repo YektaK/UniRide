@@ -63,10 +63,9 @@ export default function RegisterForm() {
     setIsLoading(true);
 
     try {
-      const newUserPayload: Omit<DbUser, "id" | "email" | "createdAt" | "updatedAt" | "passwordHash" | "weeklyScheduleId"> = {
+      const newUserPayload: Omit<DbUser, "id" | "email" | "createdAt" | "updatedAt" | "passwordHash" | "weeklyScheduleId" | "role"> = {
         name: data.name,
         studentNumber: data.studentNumber,
-        role: "student",
         passwordHint: data.passwordHint,
         homeAddress: "",
         accessibilityNeeds: [],

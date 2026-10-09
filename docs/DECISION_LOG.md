@@ -41,6 +41,7 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 | S01 | Service boundaries | Authenticated bounded compute; fresh strategies | Documented contract |
 | S02 | Service boundaries | Per-run ownership tokens | Documented design; present security not inferred |
 | S03 | Service boundaries | Narrow remediation and explicit waivers | Historical bounded scope |
+| S04 | Service boundaries | Role and ride status locked in RLS; student-only self-registration | Lead decision 2026-10-09 |
 | W01 | Daily workflow | Separate legs, exact anchors, confirmed admission | Approved production contract |
 | W02 | Daily workflow | Preview orchestration before publication/operations | Approved staged design |
 | X01 | Data errors | Vehicle capacity sources disagreed (DB 4/10 vs physical/decoder 4/5); DB corrected | Owner decision; data error |
@@ -254,6 +255,12 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 
 - **Date/status:** 2026-08-06; documented design, not a blanket current closure. **Chosen/rationale:** unique bearer token per run, store digest, gate stop/status/results and use an HTTP-only BFF cookie. **Rejected/why:** shared service key alone does not isolate callers' jobs. **Dead ends:** none recorded. **Reversal:** none recorded.
 - **Evidence:** [P3 design](superpowers/specs/2026-08-06-p3-benchmark-run-owner-tokens-design.md). **Check first:** active legacy endpoint and token enforcement; C4 must be locally reverified before remediation.
+
+### S04 — lock user role and ride-request status in RLS (QW1)
+
+- **Date/status:** 2026-10-09; lead decision, repo fix landed on `fix/qw1-users-role-rls`, live apply pending the owner. **Chosen/rationale:** the live DB had no role trigger and no `is_admin()`, so the migration does not depend on either: insert policy `role = 'student'`, update policy with WITH CHECK, `prevent_role_change()` (invoker, empty search_path) on INSERT and UPDATE OF role with a service_role exemption; the migration aborts if a FOR ALL policy exists on the two tables; student cancel only from pending/confirmed rows without vehicle/actual times, ride_request writes limited to pending statuses and self-cancellation, and the two SECURITY DEFINER RPCs get a pinned `search_path` and no PUBLIC/anon/authenticated EXECUTE (no caller exists). `signUp` loses its role parameter; admin/driver accounts stay on the service-role admin route.
+- **Rejected/why:** keeping `authenticated` EXECUTE on the RPCs (no browser caller found); relying on `is_admin()` (absent live). **Dead ends:** no local Postgres/Supabase, so behaviour is proven only by the owner-run script `supabase/tests/20261009_role_lock.sql` plus a static clause test. **Reversal:** none recorded.
+- **Evidence:** [audit C1/C1.b](ULTIMATE_AUDIT_2026-10-01_CLAUDE_OPUS_5_5.md), `supabase/migrations/20261009_lock_user_role_and_ride_status.sql`. **Check first:** that the migration was applied and `pg_policies`/`pg_trigger` match it; server-side creation of the `users` row remains open.
 
 ### S03 — bounded quick fixes, hermetic discovery and explicit waivers
 

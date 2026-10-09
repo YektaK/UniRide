@@ -2,7 +2,7 @@
 <text x="24" y="24" font-size="16" font-weight="bold" fill="#111">Borrowed-vehicle demand by hour and weekday, R = 60 min</text>
 <text x="24" y="42" font-size="12" fill="#444">Cell = most borrowed vehicles in use at once within the clock hour (route + 10-min cooldown); blank = none.</text>
 <text x="24" y="58" font-size="12" fill="#444">Monday to Friday of 2026-10-05..09; same colour scale in all panels; dashed line = 10:00.</text>
-<text x="24" y="94" font-size="13" font-weight="bold" fill="#111">L2 + minivan: 43 borrowed h/week, peak 4</text>
+<text x="24" y="94" font-size="13" font-weight="bold" fill="#111">L2 + minivan: 42 borrowed h/week, peak 4</text>
 <text x="121" y="114" font-size="12" text-anchor="middle" fill="#333">Mon</text>
 <text x="175" y="114" font-size="12" text-anchor="middle" fill="#333">Tue</text>
 <text x="229" y="114" font-size="12" text-anchor="middle" fill="#333">Wed</text>
@@ -16,8 +16,8 @@
 <rect x="256" y="122" width="54" height="24" fill="#f4f4f4" stroke="#fff"><title>Thu 06:00-06:59: up to 0 borrowed in use</title></rect>
 <rect x="310" y="122" width="54" height="24" fill="#f4f4f4" stroke="#fff"><title>Fri 06:00-06:59: up to 0 borrowed in use</title></rect>
 <text x="88" y="162" font-size="11" text-anchor="end" fill="#333">07:00</text>
-<rect x="94" y="146" width="54" height="24" fill="rgb(70,145,231)" stroke="#fff"><title>Mon 07:00-07:59: up to 3 borrowed in use</title></rect>
-<text x="121" y="162" font-size="12" text-anchor="middle" fill="#fff">3</text>
+<rect x="94" y="146" width="54" height="24" fill="rgb(120,174,238)" stroke="#fff"><title>Mon 07:00-07:59: up to 2 borrowed in use</title></rect>
+<text x="121" y="162" font-size="12" text-anchor="middle" fill="#fff">2</text>
 <rect x="148" y="146" width="54" height="24" fill="rgb(170,204,244)" stroke="#fff"><title>Tue 07:00-07:59: up to 1 borrowed in use</title></rect>
 <text x="175" y="162" font-size="12" text-anchor="middle" fill="#111">1</text>
 <rect x="202" y="146" width="54" height="24" fill="rgb(170,204,244)" stroke="#fff"><title>Wed 07:00-07:59: up to 1 borrowed in use</title></rect>
@@ -111,7 +111,8 @@
 <rect x="310" y="362" width="54" height="24" fill="rgb(170,204,244)" stroke="#fff"><title>Fri 16:00-16:59: up to 1 borrowed in use</title></rect>
 <text x="337" y="378" font-size="12" text-anchor="middle" fill="#111">1</text>
 <text x="88" y="402" font-size="11" text-anchor="end" fill="#333">17:00</text>
-<rect x="94" y="386" width="54" height="24" fill="#f4f4f4" stroke="#fff"><title>Mon 17:00-17:59: up to 0 borrowed in use</title></rect>
+<rect x="94" y="386" width="54" height="24" fill="rgb(170,204,244)" stroke="#fff"><title>Mon 17:00-17:59: up to 1 borrowed in use</title></rect>
+<text x="121" y="402" font-size="12" text-anchor="middle" fill="#111">1</text>
 <rect x="148" y="386" width="54" height="24" fill="rgb(170,204,244)" stroke="#fff"><title>Tue 17:00-17:59: up to 1 borrowed in use</title></rect>
 <text x="175" y="402" font-size="12" text-anchor="middle" fill="#111">1</text>
 <rect x="202" y="386" width="54" height="24" fill="rgb(170,204,244)" stroke="#fff"><title>Wed 17:00-17:59: up to 1 borrowed in use</title></rect>
@@ -343,8 +344,8 @@
 <rect x="636" y="504" width="54" height="24" fill="#f4f4f4" stroke="#fff"><title>Thu 06:00-06:59: up to 0 borrowed in use</title></rect>
 <rect x="690" y="504" width="54" height="24" fill="#f4f4f4" stroke="#fff"><title>Fri 06:00-06:59: up to 0 borrowed in use</title></rect>
 <text x="468" y="544" font-size="11" text-anchor="end" fill="#333">07:00</text>
-<rect x="474" y="528" width="54" height="24" fill="rgb(70,145,231)" stroke="#fff"><title>Mon 07:00-07:59: up to 3 borrowed in use</title></rect>
-<text x="501" y="544" font-size="12" text-anchor="middle" fill="#fff">3</text>
+<rect x="474" y="528" width="54" height="24" fill="rgb(120,174,238)" stroke="#fff"><title>Mon 07:00-07:59: up to 2 borrowed in use</title></rect>
+<text x="501" y="544" font-size="12" text-anchor="middle" fill="#fff">2</text>
 <rect x="528" y="528" width="54" height="24" fill="rgb(120,174,238)" stroke="#fff"><title>Tue 07:00-07:59: up to 2 borrowed in use</title></rect>
 <text x="555" y="544" font-size="12" text-anchor="middle" fill="#fff">2</text>
 <rect x="582" y="528" width="54" height="24" fill="rgb(170,204,244)" stroke="#fff"><title>Wed 07:00-07:59: up to 1 borrowed in use</title></rect>
@@ -437,7 +438,8 @@
 <rect x="690" y="744" width="54" height="24" fill="rgb(170,204,244)" stroke="#fff"><title>Fri 16:00-16:59: up to 1 borrowed in use</title></rect>
 <text x="717" y="760" font-size="12" text-anchor="middle" fill="#111">1</text>
 <text x="468" y="784" font-size="11" text-anchor="end" fill="#333">17:00</text>
-<rect x="474" y="768" width="54" height="24" fill="#f4f4f4" stroke="#fff"><title>Mon 17:00-17:59: up to 0 borrowed in use</title></rect>
+<rect x="474" y="768" width="54" height="24" fill="rgb(170,204,244)" stroke="#fff"><title>Mon 17:00-17:59: up to 1 borrowed in use</title></rect>
+<text x="501" y="784" font-size="12" text-anchor="middle" fill="#111">1</text>
 <rect x="528" y="768" width="54" height="24" fill="rgb(170,204,244)" stroke="#fff"><title>Tue 17:00-17:59: up to 1 borrowed in use</title></rect>
 <text x="555" y="784" font-size="12" text-anchor="middle" fill="#111">1</text>
 <rect x="582" y="768" width="54" height="24" fill="rgb(170,204,244)" stroke="#fff"><title>Wed 17:00-17:59: up to 1 borrowed in use</title></rect>

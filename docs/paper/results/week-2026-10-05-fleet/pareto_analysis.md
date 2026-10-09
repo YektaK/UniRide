@@ -21,7 +21,7 @@ Limits of the front: (i) the routes come from a heuristic (GA), and the borrowed
 | borrowed utilisation | borrowed busy minutes (route + cooldown) / time on loan (per borrowed vehicle and day: first start to last end plus cooldown). 100% means the vehicle drives (or cools down) the whole time it is borrowed; it says nothing about how long it is borrowed |
 | before-10:00 share | share of the borrowed busy minutes that fall before 10:00 |
 
-Families: **minibus-only** (A) = all-large minimum; **minibus+sedan** = L large minibuses (4 Sw + 5 So) plus sedans (0 Sw + 4 So), sedans cannot carry wheelchair (Sw) students; **minibus+minivan** = L large minibuses plus wheelchair-accessible minivans `minivan:1sw3so:cd10` (1 Sw + 3 So), which can. The minivan capacity is an **assumption and a parameter** (it can be tested as `minivan:1sw2so`; not run here). **hybrid** = day-level combination derived exactly from existing runs (section 5).
+Families: **minibus-only** (A) = all-large minimum; **minibus+sedan** = L large minibuses (4 Sw + 5 So) plus sedans (0 Sw + 4 So), sedans cannot carry wheelchair (Sw) students; **minibus+minivan** = L large minibuses plus wheelchair-accessible minivans `minivan:1sw3so:cap3:cd10` (Doblo model: **3 passengers in total, of whom at most 1 is a wheelchair user**; the wheelchair is stowed in the luggage space and the student sits in a seat), which can. The minivan capacity is an **assumption and a parameter** (a smaller model such as `minivan:1sw2so` was not run). The earlier archived `extra/minivan` campaign allowed 4 people and is superseded (DECISION_LOG H03). **hybrid** = day-level combination derived exactly from existing runs (section 5).
 
 ## 3. Data and checks
 
@@ -29,7 +29,7 @@ Families: **minibus-only** (A) = all-large minimum; **minibus+sedan** = L large 
 |---|---|---|---|---|
 | `.` (archive) | A, L1, L2, L3 | 8ab88ca | large 4Sw/5So, sedan 0Sw/4So | 80 daily rows |
 | `extra/L4` | L4 | afc7208 | large 4Sw/5So, sedan 0Sw/4So | 20 daily rows |
-| `extra/minivan` | L0, L1, L2 | afc7208 | large 4Sw/5So, minivan 1Sw/3So | 60 daily rows |
+| `extra/minivan-cap3` | L0, L1, L2 | 4200acb | large 4Sw/5So, minivan 1Sw/3So, total 3 | 60 daily rows |
 
 All runs: week 2026-10-05..2026-10-09, R in {50, 60, 70, 90}, tour limit 150, cooldown 10, `assume_confirmed`, same matrix (sha256 `bfb2dd85...b2dd31e5`, read from every response file: 1 distinct value(s)). The runs come from different working-tree states (manifests `dirty_working_tree: true`); the first campaign was run at an earlier commit than L4 and minivan.
 
@@ -43,10 +43,10 @@ Feasible = all five weekdays feasible. Per-day column is Mon/Tue/Wed/Thu/Fri bor
 
 | Option | f1 | f2 | f3 h/wk | f4 days | Mean ride | Per day | Minibus util. | Borrowed util. | Before 10:00 | Status |
 |---|---|---|---|---|---|---|---|---|---|---|
-| L0 + minivan | 0 | 7 | 137.8 | 5 | 27.6 | 7/5/6/6/6 | - | 54% | 25% | ND G |
-| L1 + minivan | 1 | 6 | 90.5 | 5 | 28.0 | 6/4/5/4/5 | 72% | 50% | 25% | ND G |
-| L2 + minivan | 2 | 5 | 55.3 | 5 | 28.1 | 5/3/4/3/4 | 65% | 45% | 27% | ND G |
-| L2 + sedan/minivan (hybrid) | 2 | 5 | 58.6 | 5 | 28.3 | 5v/3s/4v/3v/4s | 63% | 45% | 29% | dominated |
+| L0 + minivan | 0 | 8 | 138.9 | 5 | 27.4 | 8/6/6/6/6 | - | 54% | 26% | ND G |
+| L1 + minivan | 1 | 6 | 91.9 | 5 | 27.9 | 6/4/5/4/5 | 73% | 48% | 27% | ND G |
+| L2 + minivan | 2 | 5 | 56.4 | 5 | 27.9 | 5/3/4/3/4 | 64% | 44% | 28% | ND G |
+| L2 + sedan/minivan (hybrid) | 2 | 5 | 59.3 | 5 | 28.2 | 5v/3s/4v/3v/4s | 62% | 45% | 29% | dominated |
 | L3 + sedan | 3 | 4 | 34.4 | 5 | 28.2 | 4/2/4/2/3 | 56% | 50% | 31% | ND G |
 | L4 + sedan | 4 | 2 | 10.2 | 5 | 28.2 | 2/1/2/1/2 | 51% | 53% | 24% | ND G |
 | minibus-only | 6 | 0 | 0.0 | 0 | 28.2 | 0/0/0/0/0 | 37% | - | - | ND G |
@@ -57,10 +57,10 @@ Feasible = all five weekdays feasible. Per-day column is Mon/Tue/Wed/Thu/Fri bor
 
 | Option | f1 | f2 | f3 h/wk | f4 days | Mean ride | Per day | Minibus util. | Borrowed util. | Before 10:00 | Status |
 |---|---|---|---|---|---|---|---|---|---|---|
-| L0 + minivan | 0 | 6 | 133.3 | 5 | 29.2 | 6/5/6/5/6 | - | 55% | 25% | ND G |
-| L1 + minivan | 1 | 5 | 82.5 | 5 | 30.7 | 5/3/5/3/4 | 72% | 52% | 26% | ND G |
-| L2 + minivan | 2 | 4 | 43.0 | 5 | 31.0 | 3/2/4/2/3 | 66% | 50% | 29% | ND G |
-| L2 + sedan/minivan (hybrid) | 2 | 4 | 44.8 | 5 | 31.5 | 3v/2s/4v/2s/3s | 65% | 51% | 30% | dominated |
+| L0 + minivan | 0 | 7 | 135.5 | 5 | 28.4 | 7/5/6/5/6 | - | 54% | 26% | ND G |
+| L1 + minivan | 1 | 5 | 83.6 | 5 | 30.3 | 5/3/5/3/4 | 72% | 52% | 26% | ND G |
+| L2 + minivan | 2 | 4 | 42.5 | 5 | 30.9 | 3/2/4/2/3 | 66% | 50% | 28% | ND G |
+| L2 + sedan/minivan (hybrid) | 2 | 4 | 44.5 | 5 | 31.1 | 3v/2s/4v/2s/3s | 65% | 51% | 29% | dominated |
 | L3 + sedan | 3 | 3 | 18.2 | 5 | 31.2 | 2/1/3/1/2 | 58% | 51% | 32% | ND G |
 | L4 + sedan | 4 | 2 | 4.2 | 3 | 31.3 | 1/0/2/0/1 | 49% | 100% | 29% | ND G |
 | minibus-only | 6 | 0 | 0.0 | 0 | 31.2 | 0/0/0/0/0 | 34% | - | - | ND |
@@ -71,9 +71,9 @@ Feasible = all five weekdays feasible. Per-day column is Mon/Tue/Wed/Thu/Fri bor
 
 | Option | f1 | f2 | f3 h/wk | f4 days | Mean ride | Per day | Minibus util. | Borrowed util. | Before 10:00 | Status |
 |---|---|---|---|---|---|---|---|---|---|---|
-| L0 + minivan | 0 | 6 | 126.8 | 5 | 32.9 | 6/4/6/5/6 | - | 55% | 26% | ND G |
-| L1 + minivan | 1 | 5 | 72.4 | 5 | 34.1 | 4/3/5/3/4 | 75% | 54% | 26% | ND G |
-| L2 + minivan | 2 | 4 | 30.3 | 5 | 34.5 | 2/2/4/2/3 | 67% | 55% | 24% | ND G |
+| L0 + minivan | 0 | 7 | 130.7 | 5 | 30.6 | 7/5/6/5/6 | - | 54% | 26% | ND G |
+| L1 + minivan | 1 | 5 | 72.6 | 5 | 33.4 | 4/3/5/3/4 | 74% | 55% | 25% | ND G |
+| L2 + minivan | 2 | 4 | 30.2 | 5 | 33.8 | 3/2/4/2/3 | 68% | 55% | 23% | ND G |
 | L2 + sedan/minivan (hybrid) | 2 | 4 | 32.5 | 5 | 34.6 | 3s/2v/4v/2s/3s | 66% | 58% | 26% | dominated |
 | L3 + sedan | 3 | 3 | 10.2 | 5 | 35.1 | 1/1/3/1/2 | 55% | 74% | 24% | ND G |
 | L4 + sedan | 4 | 2 | 2.2 | 2 | 35.1 | 0/0/2/0/1 | 45% | 100% | 0% | ND G |
@@ -85,10 +85,10 @@ Feasible = all five weekdays feasible. Per-day column is Mon/Tue/Wed/Thu/Fri bor
 
 | Option | f1 | f2 | f3 h/wk | f4 days | Mean ride | Per day | Minibus util. | Borrowed util. | Before 10:00 | Status |
 |---|---|---|---|---|---|---|---|---|---|---|
-| L0 + minivan | 0 | 6 | 124.5 | 5 | 35.5 | 5/4/6/5/6 | - | 54% | 25% | ND G |
-| L1 + minivan | 1 | 4 | 64.8 | 5 | 39.8 | 4/2/4/3/3 | 77% | 57% | 23% | ND G |
-| L2 + minivan | 2 | 2 | 24.4 | 5 | 41.6 | 2/1/2/2/1 | 68% | 58% | 21% | ND G |
-| L2 + sedan/minivan (hybrid) | 2 | 2 | 25.6 | 5 | 40.7 | 2s/1v/2v/2s/2s | 67% | 59% | 21% | dominated |
+| L0 + minivan | 0 | 7 | 129.2 | 5 | 33.4 | 7/5/6/5/6 | - | 54% | 26% | ND G |
+| L1 + minivan | 1 | 4 | 67.5 | 5 | 39.5 | 4/3/4/3/4 | 76% | 56% | 22% | ND G |
+| L2 + minivan | 2 | 2 | 25.3 | 5 | 40.4 | 2/1/2/2/2 | 67% | 59% | 21% | ND G |
+| L2 + sedan/minivan (hybrid) | 2 | 2 | 25.6 | 5 | 40.5 | 2s/1v/2v/2s/2s | 67% | 59% | 21% | dominated |
 | L3 + sedan | 3 | 1 | 3.1 | 3 | 41.9 | 1/0/1/1/0 | 56% | 100% | 24% | ND G |
 | minibus-only | 4 | 0 | 0.0 | 0 | 41.3 | 0/0/0/0/0 | 43% | - | - | ND G |
 | L4 + sedan | 4 | 0 | 0.0 | 0 | 41.6 | 0/0/0/0/0 | 43% | - | - | ND G |
@@ -99,27 +99,27 @@ Feasible = all five weekdays feasible. Per-day column is Mon/Tue/Wed/Thu/Fri bor
 
 | R | Non-dominated option | f1 | f2 | f3 h/wk | f4 | Also global |
 |---|---|---|---|---|---|---|
-| 50 | L0 + minivan | 0 | 7 | 137.8 | 5 | yes |
-| 50 | L1 + minivan | 1 | 6 | 90.5 | 5 | yes |
-| 50 | L2 + minivan | 2 | 5 | 55.3 | 5 | yes |
+| 50 | L0 + minivan | 0 | 8 | 138.9 | 5 | yes |
+| 50 | L1 + minivan | 1 | 6 | 91.9 | 5 | yes |
+| 50 | L2 + minivan | 2 | 5 | 56.4 | 5 | yes |
 | 50 | L3 + sedan | 3 | 4 | 34.4 | 5 | yes |
 | 50 | L4 + sedan | 4 | 2 | 10.2 | 5 | yes |
 | 50 | minibus-only | 6 | 0 | 0.0 | 0 | yes |
-| 60 | L0 + minivan | 0 | 6 | 133.3 | 5 | yes |
-| 60 | L1 + minivan | 1 | 5 | 82.5 | 5 | yes |
-| 60 | L2 + minivan | 2 | 4 | 43.0 | 5 | yes |
+| 60 | L0 + minivan | 0 | 7 | 135.5 | 5 | yes |
+| 60 | L1 + minivan | 1 | 5 | 83.6 | 5 | yes |
+| 60 | L2 + minivan | 2 | 4 | 42.5 | 5 | yes |
 | 60 | L3 + sedan | 3 | 3 | 18.2 | 5 | yes |
 | 60 | L4 + sedan | 4 | 2 | 4.2 | 3 | yes |
 | 60 | minibus-only | 6 | 0 | 0.0 | 0 | no |
-| 70 | L0 + minivan | 0 | 6 | 126.8 | 5 | yes |
-| 70 | L1 + minivan | 1 | 5 | 72.4 | 5 | yes |
-| 70 | L2 + minivan | 2 | 4 | 30.3 | 5 | yes |
+| 70 | L0 + minivan | 0 | 7 | 130.7 | 5 | yes |
+| 70 | L1 + minivan | 1 | 5 | 72.6 | 5 | yes |
+| 70 | L2 + minivan | 2 | 4 | 30.2 | 5 | yes |
 | 70 | L3 + sedan | 3 | 3 | 10.2 | 5 | yes |
 | 70 | L4 + sedan | 4 | 2 | 2.2 | 2 | yes |
 | 70 | minibus-only | 6 | 0 | 0.0 | 0 | no |
-| 90 | L0 + minivan | 0 | 6 | 124.5 | 5 | yes |
-| 90 | L1 + minivan | 1 | 4 | 64.8 | 5 | yes |
-| 90 | L2 + minivan | 2 | 2 | 24.4 | 5 | yes |
+| 90 | L0 + minivan | 0 | 7 | 129.2 | 5 | yes |
+| 90 | L1 + minivan | 1 | 4 | 67.5 | 5 | yes |
+| 90 | L2 + minivan | 2 | 2 | 25.3 | 5 | yes |
 | 90 | L3 + sedan | 3 | 1 | 3.1 | 3 | yes |
 | 90 | minibus-only | 4 | 0 | 0.0 | 0 | yes |
 | 90 | L4 + sedan | 4 | 0 | 0.0 | 0 | yes |
@@ -136,10 +136,10 @@ Derived exactly, not re-solved: for L = 2 and each R, the L2 + sedan result is u
 
 | R | Hybrid per day | f2 | f3 h/wk | of which minivan h | Days with a minivan | Pure minivan L2 f3 | Pure f2 | Pure minivan days | Status on (f1,f2,f3) |
 |---|---|---|---|---|---|---|---|---|---|
-| 50 | 5v/3s/4v/3v/4s | 5 | 58.6 | 35.7 | 3 | 55.3 | 5 | 5 | dominated |
-| 60 | 3v/2s/4v/2s/3s | 4 | 44.8 | 19.8 | 2 | 43.0 | 4 | 5 | dominated |
-| 70 | 3s/2v/4v/2s/3s | 4 | 32.5 | 11.2 | 2 | 30.3 | 4 | 5 | dominated |
-| 90 | 2s/1v/2v/2s/2s | 2 | 25.6 | 8.3 | 2 | 24.4 | 2 | 5 | dominated |
+| 50 | 5v/3s/4v/3v/4s | 5 | 59.3 | 36.4 | 3 | 56.4 | 5 | 5 | dominated |
+| 60 | 3v/2s/4v/2s/3s | 4 | 44.5 | 19.6 | 2 | 42.5 | 4 | 5 | dominated |
+| 70 | 3s/2v/4v/2s/3s | 4 | 32.5 | 11.2 | 2 | 30.2 | 4 | 5 | dominated |
+| 90 | 2s/1v/2v/2s/2s | 2 | 25.6 | 8.3 | 2 | 25.3 | 2 | 5 | dominated |
 
 The hybrid has the same f2 as the pure L2 + minivan option in 4 of 4 cases and a higher f3 in 4 of 4 (the planner minimises the vehicle count per day, not the hours, so replacing a minivan day by a sedan day does not by itself lower f3). Its only gain is that sedans replace minivans on 2, 3, 3, 3 weekdays (at R = 50, 60, 70, 90 respectively), i.e. fewer days on which a minivan has to be rented (column `days_with_minivan`). That quantity is not one of f1..f5, so on (f1, f2, f3) the hybrid is dominated; it is reported because it matters if a minivan is harder to obtain than a sedan, which the data do not show.
 
@@ -151,21 +151,21 @@ The hybrid has the same f2 as the pure L2 + minivan option in 4 of 4 cases and a
 | f3 = route hours (no cooldown) | same set |
 | f3 = time on loan (first start to last end + cooldown) | same set |
 | f2 = peak concurrent borrowed vehicles instead of distinct vehicles per day | same set |
-| global set with realised mean ride instead of R as f5 | added: R90_hybrid_L2; removed: R90_minibus+sedan_L4 |
+| global set with realised mean ride instead of R as f5 | added: none; removed: R90_minibus+sedan_L4 |
 
 ## 7. Utilisation and timing of borrowed vehicles
 
-- Minibus utilisation (owned busy / owned capacity over the common span) ranges from 30% to 77% over the feasible options with L >= 1; option A has 30% to 43%.
+- Minibus utilisation (owned busy / owned capacity over the common span) ranges from 30% to 76% over the feasible options with L >= 1; option A has 30% to 43%.
 - Share of borrowed busy time before 10:00 ranges from 0% to 32% over the options that borrow; the rest of the borrowed time is at or after 10:00.
-- Borrowed-vehicle utilisation (busy / on loan) ranges from 45% to 100%; 100% means the vehicle is busy for the whole time it is borrowed (one route, or routes separated only by the cooldown).
-- Key options at R = 60 (Fig. 3): L2 + minivan: 2 owned, up to 4 borrowed on the busiest day, 43.0 borrowed h/week on 5 day(s) (per day 3/2/4/2/3), 29% before 10:00; L3 + sedan: 3 owned, up to 3 borrowed on the busiest day, 18.2 borrowed h/week on 5 day(s) (per day 2/1/3/1/2), 32% before 10:00; L4 + sedan: 4 owned, up to 2 borrowed on the busiest day, 4.2 borrowed h/week on 3 day(s) (per day 1/0/2/0/1), 29% before 10:00.
+- Borrowed-vehicle utilisation (busy / on loan) ranges from 44% to 100%; 100% means the vehicle is busy for the whole time it is borrowed (one route, or routes separated only by the cooldown).
+- Key options at R = 60 (Fig. 3): L2 + minivan: 2 owned, up to 4 borrowed on the busiest day, 42.5 borrowed h/week on 5 day(s) (per day 3/2/4/2/3), 28% before 10:00; L3 + sedan: 3 owned, up to 3 borrowed on the busiest day, 18.2 borrowed h/week on 5 day(s) (per day 2/1/3/1/2), 32% before 10:00; L4 + sedan: 4 owned, up to 2 borrowed on the busiest day, 4.2 borrowed h/week on 3 day(s) (per day 1/0/2/0/1), 29% before 10:00.
 
 ## 8. Reading the front (descriptive)
 
-- R = 50: 0 owned -> minivan (peak 7, 137.8 h/week, 5 days); 1 owned -> minivan (peak 6, 90.5 h/week, 5 days); 2 owned -> minivan (peak 5, 55.3 h/week, 5 days); 3 owned -> sedan (peak 4, 34.4 h/week, 5 days); 4 owned -> sedan (peak 2, 10.2 h/week, 5 days); 6 owned -> no borrowing (peak 0, 0.0 h/week, 0 days).
-- R = 60: 0 owned -> minivan (peak 6, 133.3 h/week, 5 days); 1 owned -> minivan (peak 5, 82.5 h/week, 5 days); 2 owned -> minivan (peak 4, 43.0 h/week, 5 days); 3 owned -> sedan (peak 3, 18.2 h/week, 5 days); 4 owned -> sedan (peak 2, 4.2 h/week, 3 days); 6 owned -> no borrowing (peak 0, 0.0 h/week, 0 days).
-- R = 70: 0 owned -> minivan (peak 6, 126.8 h/week, 5 days); 1 owned -> minivan (peak 5, 72.4 h/week, 5 days); 2 owned -> minivan (peak 4, 30.3 h/week, 5 days); 3 owned -> sedan (peak 3, 10.2 h/week, 5 days); 4 owned -> sedan (peak 2, 2.2 h/week, 2 days); 6 owned -> no borrowing (peak 0, 0.0 h/week, 0 days).
-- R = 90: 0 owned -> minivan (peak 6, 124.5 h/week, 5 days); 1 owned -> minivan (peak 4, 64.8 h/week, 5 days); 2 owned -> minivan (peak 2, 24.4 h/week, 5 days); 3 owned -> sedan (peak 1, 3.1 h/week, 3 days); 4 owned -> no borrowing (peak 0, 0.0 h/week, 0 days); 4 owned -> sedan (peak 0, 0.0 h/week, 0 days).
+- R = 50: 0 owned -> minivan (peak 8, 138.9 h/week, 5 days); 1 owned -> minivan (peak 6, 91.9 h/week, 5 days); 2 owned -> minivan (peak 5, 56.4 h/week, 5 days); 3 owned -> sedan (peak 4, 34.4 h/week, 5 days); 4 owned -> sedan (peak 2, 10.2 h/week, 5 days); 6 owned -> no borrowing (peak 0, 0.0 h/week, 0 days).
+- R = 60: 0 owned -> minivan (peak 7, 135.5 h/week, 5 days); 1 owned -> minivan (peak 5, 83.6 h/week, 5 days); 2 owned -> minivan (peak 4, 42.5 h/week, 5 days); 3 owned -> sedan (peak 3, 18.2 h/week, 5 days); 4 owned -> sedan (peak 2, 4.2 h/week, 3 days); 6 owned -> no borrowing (peak 0, 0.0 h/week, 0 days).
+- R = 70: 0 owned -> minivan (peak 7, 130.7 h/week, 5 days); 1 owned -> minivan (peak 5, 72.6 h/week, 5 days); 2 owned -> minivan (peak 4, 30.2 h/week, 5 days); 3 owned -> sedan (peak 3, 10.2 h/week, 5 days); 4 owned -> sedan (peak 2, 2.2 h/week, 2 days); 6 owned -> no borrowing (peak 0, 0.0 h/week, 0 days).
+- R = 90: 0 owned -> minivan (peak 7, 129.2 h/week, 5 days); 1 owned -> minivan (peak 4, 67.5 h/week, 5 days); 2 owned -> minivan (peak 2, 25.3 h/week, 5 days); 3 owned -> sedan (peak 1, 3.1 h/week, 3 days); 4 owned -> no borrowing (peak 0, 0.0 h/week, 0 days); 4 owned -> sedan (peak 0, 0.0 h/week, 0 days).
 
 - Within a family, each extra owned minibus lowers the borrowed hours and the peak (see the chains above). The sedan options (L >= 3) need fewer borrowed hours than every minivan option (L0..L2) at every R, but they also own more minibuses; the families are not directly comparable on f1.
 - Sedans are possible only when enough minibuses cover the Sw demand (L >= 3 here, L2 + sedan fails on 2 to 3 weekdays at every R, L1 + sedan on all five); minivans are possible at any L (L0 is feasible), at the price of more borrowed vehicles and hours. This is the structural difference between the families, not a ranking.
@@ -184,10 +184,10 @@ The hybrid has the same f2 as the pure L2 + minivan option in 4 of 4 cases and a
 
 - One week, one timetable snapshot, `assume_confirmed` (every student with a class is assumed to ride); fixed travel-time matrix, no traffic, boarding times or driver assignment.
 - Heuristic routes and a minimum proven only over the generated menus; the front is an approximation (section 1).
-- The minivan capacity (1 Sw + 3 So) and the sedan capacity (0 Sw + 4 So) are assumptions; the sedan having no wheelchair place is an open owner question.
+- The minivan capacity (3 passengers in total, at most 1 Sw) and the sedan capacity (0 Sw + 4 So) are assumptions; the sedan having no wheelchair place is an open owner question.
 - A borrowed vehicle is assumed available for the whole of its first-start to last-end window on each day it is used (f3 counts only its busy time); borrowing for single routes would need the lenders' schedules.
 - No cost data: this document gives no cost ranking.
 
 ## 11. Reproduce
 
-`python scripts/plan_fleet_pareto.py` (standard library only) reads this folder and `extra/L4`, `extra/minivan`, and rewrites `pareto_options.csv`, `pareto_daily.csv`, this file and the `figures/pareto_*.svg`.
+`python scripts/plan_fleet_pareto.py` (standard library only) reads this folder and `extra/L4`, `extra/minivan-cap3` (second argument overrides the sub-folder), and rewrites `pareto_options.csv`, `pareto_daily.csv`, this file and the `figures/pareto_*.svg`.

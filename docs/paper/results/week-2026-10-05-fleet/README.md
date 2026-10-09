@@ -91,7 +91,7 @@ The Monday R = 60 smoke run (`fleet-smoke-20261008-120302`) stays in `.temp/expe
 
 ## Extra campaigns and multi-objective (Pareto) analysis
 
-- `extra/L4/` (4 large minibuses + sedans) and `extra/minivan/` (0, 1, 2 large minibuses + wheelchair-accessible minivans, capacity 1 Sw + 3 So **assumed**) are archived with their own READMEs; same week, matrix and settings.
+- `extra/L4/` (4 large minibuses + sedans) and `extra/minivan-cap3/` (0, 1, 2 large minibuses + wheelchair-accessible minivans, **assumed** capacity: 3 passengers in total, at most 1 Sw) are archived with their own READMEs; same week, matrix and settings. `extra/minivan/` (capacity 1 Sw + 3 So = 4 people) is superseded and no longer used (DECISION_LOG H03).
 - `pareto_analysis.md`: epsilon-constraint method, objectives (f1 owned minibuses, f2 peak borrowed vehicles, f3 borrowed vehicle-hours per week, f4 borrowed days, f5 service level), all options, non-dominated sets, utilisation, limits.
 - `pareto_options.csv` (one row per option), `pareto_daily.csv` (per option and weekday, with vehicle windows), `pareto_borrowed_hourly.csv` (per option, weekday and clock hour).
 - `figures/pareto_*.svg` and section (e) of `figures/index.html`. Regenerate with `python scripts/plan_fleet_pareto.py` (standard library only; run it after `plan_fleet_scenarios.py`, which rewrites `index.html`); self-test: `python scripts/test_plan_fleet_pareto.py`.

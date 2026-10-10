@@ -306,6 +306,11 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 - **Date/status:** 2026-10-09; FIXED in repo on `fix/cx02-cx04-academic-guards`. **Chosen/rationale:** `validate_evaluation_budget` (positive int, bool excluded, no coercion) and `validate_base_seed` (int, bool excluded; negative allowed because it is hashed into a valid paired seed) are applied in `FairComparisonManifest.from_value` before any conversion, in `__post_init__`, and by the pilot config loader (budget). `from_value` rejects fields outside `MANIFEST_FIELDS` (`evaluation_budget`, `base_seed`, `protocol_version`, `budget_policy`, `comparison_regime`) with an explicit error. Valid manifests and paired seeds are unchanged. Pilot config `base_seed >= 0` remains a stricter config-only rule.
 - **Rejected/why:** keeping `int(...)` coercion (3.9 silently ran budget 3). **Evidence:** `academic_benchmark/tests/test_cx04_fair_manifest_validation.py`. **Check first:** callers that pass a new manifest key must add it to `MANIFEST_FIELDS` deliberately.
 
+### A09 - dashboard statistics tab emits no inferential claim (C5/QW5)
+
+- **Date/status:** 2026-10-10; FIXED in repo on `fix/c5-disable-dashboard-inference`. **Chosen/rationale:** the Wilcoxon tab paired `avg_gap` by row order over rows pooled across protocols and budgets, had no Holm correction or effect sizes, and its LaTeX sentence omitted losses. Per AGENTS.md (smoke/pilot runs cannot produce superiority claims) the tab body is replaced by an informational message and retitled "Statistical tests (disabled)"; no p-value, significance, Wilcoxon or proof wording and no scipy test call remain in `dashboard.py`; descriptive best/Better labels in the Leaderboard and Algorithm Comparison tabs remain and are tracked separately.
+- **Rejected/why:** patching the pairing (rows still lack validated protocol/seed_group labels); implementing Package D statistics here (out of scope). **Evidence:** `academic_benchmark/tests/test_c5_dashboard_no_inference.py`, audit C5. **Check first:** re-enable only through the Package D analysis service over validated, protocol-homogeneous, seed_group-paired rows.
+
 ## Daily workflow
 
 ### W01 — independent legs and production admission

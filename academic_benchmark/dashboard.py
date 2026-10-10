@@ -136,7 +136,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "🏆 Leaderboard & LaTeX",
     "📊 Statistical Robustness",
     "🎛️ DoE Parameter Analysis",
-    "🔬 Statistical Significance (Wilcoxon)",
+    "🔬 Statistical Tests (disabled)",
     "📉 Convergence Curves",
     "⚔️ Algorithm Comparison",
     "🔥 Edge Frequency Heatmap",
@@ -276,73 +276,14 @@ with tab3:
     else:
         st.info("No tuning data found. You must run the engine in 'TUNING' mode first.")
 
-# SEKME 4: Statistical Significance (Wilcoxon Test)
+# SEKME 4: Statistical tests (disabled, C5)
 with tab4:
-    st.subheader("Wilcoxon Signed-Rank Test (Academic Proof)")
-    st.markdown("Automated pairwise statistical testing of algorithm performance.")
-
-    if not filtered_progress.empty:
-        if len(selected_algos) >= 2:
-            algo_A = st.selectbox("Select Algorithm A (Baseline)", selected_algos, index=0)
-            algo_B = st.selectbox("Select Algorithm B (Proposed)", selected_algos, index=1)
-
-            if algo_A != algo_B:
-                st.markdown(f"Comparing **{algo_A}** vs **{algo_B}** across selected problems.")
-                try:
-                    from scipy.stats import wilcoxon
-
-                    results = []
-                    for prob in selected_probs:
-                        data_A = filtered_progress[(filtered_progress['problem'] == prob) & (filtered_progress['strategy'] == algo_A)]['avg_gap'].values
-                        data_B = filtered_progress[(filtered_progress['problem'] == prob) & (filtered_progress['strategy'] == algo_B)]['avg_gap'].values
-
-                        if len(data_A) > 0 and len(data_B) > 0 and len(data_A) == len(data_B):
-                            stat, p_val = wilcoxon(data_A, data_B, zero_method='zsplit')
-                            winner = algo_A if data_A.mean() < data_B.mean() else algo_B
-                            sig = "Yes" if p_val < 0.05 else "No"
-                            results.append({
-                                "Problem": prob,
-                                "Mean A": data_A.mean(),
-                                "Mean B": data_B.mean(),
-                                "p-value": p_val,
-                                "Significant?": sig,
-                                "Winner": winner if sig == "Yes" else "Tie"
-                            })
-
-                    if results:
-                        sig_df = pd.DataFrame(results)
-                        st.dataframe(sig_df)
-
-                        wins = len(sig_df[sig_df['Winner'] == algo_B])
-                        ties = len(sig_df[sig_df['Winner'] == 'Tie'])
-                        losses = len(sig_df[sig_df['Winner'] == algo_A])
-
-                        st.markdown("### LaTeX Summary")
-                        st.code(
-                            f"\\textbf{{{algo_B}}} significantly outperforms {algo_A} "
-                            f"on {wins}/{len(results)} instances "
-                            f"(Wilcoxon $p < 0.05$), with {ties} ties.",
-                            language="latex"
-                        )
-
-                        st.markdown("### Full LaTeX Table")
-                        sig_table = sig_df.copy()
-                        sig_table['p-value'] = sig_table['p-value'].apply(
-                            lambda p: f"$<0.001$" if p < 0.001 else f"${p:.4f}$"
-                        )
-                        latex_wilcoxon = sig_table.to_latex(
-                            index=False, escape=False,
-                            column_format="lrrrrl"
-                        )
-                        st.code(latex_wilcoxon, language="latex")
-                    else:
-                        st.warning("Not enough matched multi-run data to perform Wilcoxon test.")
-                except ImportError:
-                    st.error("Please install scipy (`pip install scipy`) to use the statistical testing features.")
-        else:
-            st.info("Select at least 2 algorithms to compare.")
-    else:
-        st.info("No raw data available for statistical testing.")
+    st.subheader("Statistical tests (disabled)")
+    st.info(
+        "Inferential tests disabled: rows are not validated, "
+        "protocol-homogeneous or seed_group-paired. Use the Package D "
+        "analysis service. Descriptive tables elsewhere remain available."
+    )
 
 # SEKME 5: Convergence Curves
 with tab5:

@@ -17,6 +17,7 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 | T04 | Travel-time data | Pagination/provenance; freshness remains open | Partial MT2 |
 | T05 | Travel-time data | Matrix clustering vs geometric grouping | Accepted distinction |
 | T06 | Travel-time data | Correct TSPLIB GEO assertion, preserve metric | Historical decision |
+| T07 | Travel-time data | TSPLIB matrix cache v2: lossless upper-triangle lzma | Owner instruction 2026-10-09 |
 | O01 | Optimizer/certificate | Independent matrix re-costing before solve | Accepted; C2 remediation |
 | O02 | Optimizer/certificate | Conservative operational OR-Tools rounding | Accepted; academic parity retained |
 | O03 | Optimizer/certificate | Separate student ride and vehicle tour limits (K5) | Owner decision |
@@ -52,7 +53,7 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 | H03 | Heterogeneous fleet | Optional shared seat limit `total_capacity`; Doblo = 3 seats total, max 1 Sw | Owner decision 2026-10-09 |
 | H04 | Heterogeneous fleet | CX-03: typed GA inner objective cost-only for one type, count-first otherwise | Lead decision 2026-10-09 |
 | H05 | Heterogeneous fleet | CX-01: exact centi-minute intervals and cooldowns in fleet selection (`time_scale`) | Lead decision 2026-10-09 |
-| E01 | Exact solver (AMPL) | Owner answers EQ1-EQ6: 60 s/600 s peak limits, both typed fleets, per-wave exact + CP-SAT day, HiGHS note in paper, GA seed 42 single-seed, GOAL 2 parameters deferred | Owner decision 2026-10-09 |
+| E01 | Exact solver (AMPL) | Owner answers EQ1-EQ6 (2026-10-09) and D-A/D-B/D-C (2026-10-10): 60 s/600 s wall limit per solver call, peak wave = largest-leg wave(s) per date, both typed fleets via a fleet re-run at one commit, per-wave exact + CP-SAT over the union menu, HiGHS note in paper, GA seed 42 single-seed, GOAL 2 parameters deferred | Owner decisions 2026-10-09/10 |
 
 ## Demo scope
 
@@ -120,6 +121,12 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 
 - **Date/status:** 2026-08-07; historical recorded decision. **Chosen/rationale:** derive the test maximum from the canonical radius (`int(pi*6378.388)+1`, 20039), retaining the TSPLIB formula. **Rejected/why:** altering the correct metric to fit the test's 20000 bound changes benchmark costs. **Dead ends:** interpreting a failing assertion as production travel-time corruption. **Reversal:** none recorded.
 - **Evidence:** [autonomous log D1](superpowers/decisions/2026-08-07-autonomous-session.md) reports 45 module/5 GEO tests; not rerun. **Check first:** metric provenance and canonical formula before changing academic distances.
+
+### T07 - TSPLIB matrix cache v2: lossless upper-triangle lzma
+
+- **Date/status:** 2026-10-09; owner instruction (shrink the 2.77 GB local `tsplib.db`, do not delete data). **Chosen:** `distance_matrices.version=2` stores only the strict upper triangle, lzma preset 6, original dtype; used only for symmetric matrices with an all-zero diagonal and only if the encode/decode round trip is byte-identical (otherwise v1 zlib full matrix is kept, e.g. ATSP/ft53). Readers (`get_distance_matrix`, ATSP path of `get_all_problems`) decode v1 and v2 through `academic_benchmark/tsplib_matrix_codec.py`; new writes use v2 when eligible. Converter: `academic_benchmark/tools/compress_tsplib_matrices.py` (backup copy first, per-row SHA-256 + `array_equal` verification, idempotent, `--dry-run`, VACUUM).
+- **Rejected:** deleting or recomputing matrices; storing the diagonal (a nonzero diagonal or asymmetry simply stays v1); lossy narrowing to uint16. Academic results are unchanged because decoded matrices are bit-identical.
+- **Evidence:** `academic_benchmark/tests/test_tsplib_matrix_compression.py`.
 
 ## Optimizer and certificate
 
@@ -362,17 +369,14 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 
 ## Exact solver
 
-### E01 - exact-solver design: owner answers EQ1-EQ6
+### E01 - exact-solver design: owner answers EQ1-EQ6, D-A, D-B, D-C
 
-- **Date/status:** 2026-10-09; owner decision ("Onaylıyorum" to the lead's recommendations). Design: [`docs/designs/EXACT_SOLVER_AMPL_DESIGN.md`](designs/EXACT_SOLVER_AMPL_DESIGN.md) §10.
-- **Chosen:** EQ1 GOAL 1 limits 60 s wall per wave and 600 s for the peak wave(s), deterministic work limit and 1 thread unchanged; the peak-wave definition is still open ([EKSİK], fixed in WP-E0). EQ2 both typed fleets (large+sedan, large+Doblò cap3). EQ3 exact per wave with the day level as CP-SAT over exact menus is sufficient for now; a global day model is out of scope. EQ4 the paper carries a short note on the HiGHS cross-check, details in the archive. EQ5 GA at seed 42, labelled single-seed; a multi-seed gap measurement later. EQ6 GOAL 2 instance set and time limit deferred (open); GOAL 2 stays planned.
-- **Evidence:** design document only; no code or measurement. Related: A04, H01.
-
-### T07 - TSPLIB matrix cache v2: lossless upper-triangle lzma
-
-- **Date/status:** 2026-10-09; owner instruction (shrink the 2.77 GB local `tsplib.db`, do not delete data). **Chosen:** `distance_matrices.version=2` stores only the strict upper triangle, lzma preset 6, original dtype; used only for symmetric matrices with an all-zero diagonal and only if the encode/decode round trip is byte-identical (otherwise v1 zlib full matrix is kept, e.g. ATSP/ft53). Readers (`get_distance_matrix`, ATSP path of `get_all_problems`) decode v1 and v2 through `academic_benchmark/tsplib_matrix_codec.py`; new writes use v2 when eligible. Converter: `academic_benchmark/tools/compress_tsplib_matrices.py` (backup copy first, per-row SHA-256 + `array_equal` verification, idempotent, `--dry-run`, VACUUM).
-- **Rejected:** deleting or recomputing matrices; storing the diagonal (a nonzero diagonal or asymmetry simply stays v1); lossy narrowing to uint16. Academic results are unchanged because decoded matrices are bit-identical.
-- **Evidence:** `academic_benchmark/tests/test_tsplib_matrix_compression.py`.
+- **Date/status:** 2026-10-09 owner decision ("Onaylıyorum" to the lead's recommendations); extended 2026-10-10 with owner decisions D-A, D-B and D-C after the first design review. Design: [`docs/designs/EXACT_SOLVER_AMPL_DESIGN.md`](designs/EXACT_SOLVER_AMPL_DESIGN.md) §10.
+- **Chosen (2026-10-09):** EQ1 GOAL 1 limits 60 s wall and 600 s on peak waves, deterministic work limit and 1 thread unchanged. EQ2 both typed fleets (large+sedan, large+Doblò cap3). EQ3 exact per wave with the day level as CP-SAT over menus is sufficient for now; a global day model is out of scope. EQ4 the paper carries a short note on the HiGHS cross-check, details in the archive. EQ5 GA at seed 42, labelled single-seed; a multi-seed gap measurement later. EQ6 GOAL 2 instance set and time limit deferred (open); GOAL 2 stays planned, and its work packages WP-E7 to WP-E9 start only after EQ6 is decided.
+- **Chosen (2026-10-10):** **D-A** re-run both typed fleet campaigns at the current commit (GA seed 42, the same native protocol and labels as the archive) and archive every menu option's routes, minutes and certificates (base + q = 0..L); the GA-vs-exact comparison uses only this re-run, at one commit and `time_scale = 100`; the old archives stay historical and are not pooled; new work package WP-E10 before WP-E4, in the code pipeline. **D-B** peak wave = for each service date, the wave(s) with the largest number of legs (ties included), computed by the WP-E0 loader from the archive before any solve, identical across R and fleets, listed in the manifest; currently the five 08:45 pickup waves (20/11/11/10/13 legs). **D-C** the 60 s / 600 s wall limit applies per solver call (stage 1, stage 2 and `D_LB_free` each get their own limit).
+- **Review fixes adopted with these decisions (lead):** the day level runs over the union of the GA and per-wave exact menus, including an exact all-large baseline option (`proven_over_union_menu`; never above the GA-menu result; not a global day optimum). Enumeration caps are count-based only; any wall-limit stop is labelled `timing_dependent`.
+- **Why D-A:** the fleet archives store only route counts for non-selected menu options (6 620 options over 140 response files), and their commits (`8ab88ca`, `4200acb`; 4sw5so `6be127d`) do not descend from CX-03 (`b1889cf`) or CX-01 (`eb54509`), so the archived day selections used whole-minute intervals.
+- **Evidence:** design document §0 (F10, F11, F14, F18) and §10; read-only scans of `docs/paper/results/week-2026-10-05-*` and `git merge-base --is-ancestor` (2026-10-10). No code or solver measurement yet. Related: A04, H01, H03, H04, H05.
 
 ## Open questions and evidence limits
 

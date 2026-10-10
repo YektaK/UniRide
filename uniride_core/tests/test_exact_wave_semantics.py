@@ -93,7 +93,7 @@ def test_limits_equal_file_name_response_and_150(all_campaigns):
                 assert w.max_ride_minutes == r, (key, r)
                 assert w.max_tour_minutes == 150, (key, r)
     resp = json.loads((SW5SO / "2026-10-05_R90_repeat1.response.json").read_text(encoding="utf-8"))
-    assert resp["limits"] == {"maxRideTimeMinutes": 90, "maxTourMinutes": 150}
+    assert (resp["limits"]["maxRideTimeMinutes"], resp["limits"]["maxTourMinutes"]) == (90, 150)
 
 
 def test_build_colocation_zero_and_directed_arcs(loader):

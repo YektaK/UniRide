@@ -18,6 +18,7 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 | T05 | Travel-time data | Matrix clustering vs geometric grouping | Accepted distinction |
 | T06 | Travel-time data | Correct TSPLIB GEO assertion, preserve metric | Historical decision |
 | T07 | Travel-time data | TSPLIB matrix cache v2: lossless upper-triangle lzma | Owner instruction 2026-10-09 |
+| T08 | Travel-time data | Defer 2-decimal constraint; plan integer seconds and `time_scale=60` | Owner decision 2026-10-10; Google unit unverified |
 | O01 | Optimizer/certificate | Independent matrix re-costing before solve | Accepted; C2 remediation |
 | O02 | Optimizer/certificate | Conservative operational OR-Tools rounding | Accepted; academic parity retained |
 | O03 | Optimizer/certificate | Separate student ride and vehicle tour limits (K5) | Owner decision |
@@ -131,6 +132,15 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 - **Date/status:** 2026-10-09; owner instruction (shrink the 2.77 GB local `tsplib.db`, do not delete data). **Chosen:** `distance_matrices.version=2` stores only the strict upper triangle, lzma preset 6, original dtype; used only for symmetric matrices with an all-zero diagonal and only if the encode/decode round trip is byte-identical (otherwise v1 zlib full matrix is kept, e.g. ATSP/ft53). Readers (`get_distance_matrix`, ATSP path of `get_all_problems`) decode v1 and v2 through `academic_benchmark/tsplib_matrix_codec.py`; new writes use v2 when eligible. Converter: `academic_benchmark/tools/compress_tsplib_matrices.py` (backup copy first, per-row SHA-256 + `array_equal` verification, idempotent, `--dry-run`, VACUUM).
 - **Rejected:** deleting or recomputing matrices; storing the diagonal (a nonzero diagonal or asymmetry simply stays v1); lossy narrowing to uint16. Academic results are unchanged because decoded matrices are bit-identical.
 - **Evidence:** `academic_benchmark/tests/test_tsplib_matrix_compression.py`.
+
+### T08 — travel-time precision: integer seconds for Google integration
+
+- **Date/status:** 2026-10-10; owner decision. No 2-decimal precision constraint is added to `time_matrix.duration_minutes` now. The current matrix (sha `bfb2dd85...`) has only whole-minute arcs.
+- **Plan/unverified:** the owner plans realtime travel times from the Google Maps API (Distance Matrix or Routes). The expectation that these APIs return durations in whole seconds is **unverified**; verify it with the first live call.
+- **When integration starts:** store integer seconds and derive minutes as seconds ÷ 60. Run fleet selection with `time_scale = 60`, giving a one-second grid within the existing 1..100 range from CX-01/H05.
+- **Why:** seconds ÷ 60 can produce values off the 0.01-minute grid. Since CX-01/H05, such values make fleet selection fail closed with `SELECTION_INTERVAL_PRECISION`.
+- **Fallback:** rounding to 0.01 minute is only a fallback, not the plan.
+- **Links:** [H05](#h05---fleet-selection-keeps-exact-interval-precision-cx-01); [heterogeneous fleet design](designs/HETEROGENEOUS_FLEET_DESIGN.md).
 
 ## Optimizer and certificate
 

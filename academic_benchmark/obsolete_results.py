@@ -41,8 +41,9 @@ def _metadata(row: Mapping[str, Any]) -> Mapping[str, Any]:
     if row.get("obsolete") in (True, "true", "True", "1", 1):
         return {"obsolete": True}
     meta = row.get("metadata")
-    if meta is None and row.get("metadata_json"):
-        meta = row["metadata_json"]
+    if not isinstance(meta, (Mapping, str)) or meta == "":
+        # absent, NaN or empty metadata column: fall back to metadata_json
+        meta = row.get("metadata_json") or None
     if isinstance(meta, str):
         try:
             meta = json.loads(meta)

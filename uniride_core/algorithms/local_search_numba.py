@@ -73,6 +73,9 @@ except ImportError:
 #
 # Layout: WeakKeyDictionary { duration_func -> { frozenset(locations) -> result } }
 # Value:  (index_map: dict, dist_matrix: np.ndarray, unique_locs: list)
+# WeakKeyDictionary uses __eq__/__hash__, not identity: equal callable objects
+# can share an entry. Live duration functions are plain functions or closures;
+# none defines custom equality.
 #
 # Entries die together with their duration_func, so a recycled id() can never
 # reach a stale entry (the previous cache was keyed by id(duration_func)).

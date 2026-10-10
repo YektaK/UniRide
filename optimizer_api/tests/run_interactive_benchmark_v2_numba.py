@@ -1018,8 +1018,9 @@ def run_single_test(
     computed from coordinates via the EUC_2D-only ``create_np_distance_matrix``
     for backward compatibility.
 
-    The numpy-backed duration_func also benefits from the _DIST_MATRIX_CACHE in
-    local_search_numba.py (no second matrix rebuild).
+    The numpy-backed duration_func supplies its prebuilt matrix directly to
+    local_search_numba.py, without caching or rebuilding it. _DIST_MATRIX_CACHE
+    is a weak-keyed fallback used only when no prebuilt matrix is available.
     """
     coordinates = problem.coordinates
     dimension = problem.dimension

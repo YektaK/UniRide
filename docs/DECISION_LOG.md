@@ -39,6 +39,10 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 | A02 | Academic boundaries | Claim-specific capabilities and governed gateway | Documented contract |
 | A03 | Academic boundaries | Or-opt/ALNS evidence before promotion | Documented contract |
 | A04 | Academic boundaries | Fixed evaluation primary; native separate | Approved contract |
+| A06 | Academic boundaries | benchmark stop is cooperative; slots held until the worker exits (C4/QW4) | implemented on `fix/qw4-benchmark-stop` (backend half) |
+| A07 | Academic boundaries | dashboard CSV ingestion shares the obsolete-result guard (CX-02) | FIXED in repo on `fix/cx02-cx04-academic-guards` |
+| A08 | Academic boundaries | fair manifests validate the original budget and seed, reject unknown fields (CX-04) | FIXED in repo on `fix/cx02-cx04-academic-guards` |
+| A09 | Academic boundaries | dashboard statistics tab emits no inferential claim (C5/QW5) | FIXED in repo on `fix/c5-disable-dashboard-inference` |
 | S01 | Service boundaries | Authenticated bounded compute; fresh strategies | Documented contract |
 | S02 | Service boundaries | Per-run ownership tokens | Documented design; present security not inferred |
 | S03 | Service boundaries | Narrow remediation and explicit waivers | Historical bounded scope |

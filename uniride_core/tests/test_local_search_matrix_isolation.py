@@ -56,6 +56,18 @@ def _solve(matrix, ls_type, seed, seen):
     return route
 
 
+def test_prebuilt_matrix_reorder_preserves_source():
+    matrix = np.array([[11, 2, 3], [4, 22, 6], [7, 8, 33]], dtype=np.float64)
+    original = matrix.copy()
+    duration_func = create_np_duration_func(matrix, ["A", "B", "C"])
+
+    _, reordered, _ = lsn._build_or_get_dist_matrix(["C", "A", "B"], duration_func)
+
+    assert duration_func._np_dist_matrix is matrix
+    np.testing.assert_array_equal(matrix, original)  # Includes the nonzero diagonal.
+    np.testing.assert_array_equal(reordered, [[0, 7, 8], [3, 0, 2], [6, 4, 0]])
+
+
 @pytest.mark.parametrize("ls_type", list(_KERNELS))
 def test_each_run_uses_its_own_matrix_after_gc(monkeypatch, ls_type):
     matrices = {name: _make_matrix(s) for name, s in (("A", 1), ("B", 2), ("C", 3))}

@@ -4,7 +4,7 @@ import math
 
 import numpy as np
 import pytest
-from hypothesis import assume, given
+from hypothesis import assume, example, given
 from hypothesis.strategies import floats, lists, tuples
 
 from uniride_core.algorithms.distance import (
@@ -49,6 +49,7 @@ class TestHaversine:
         assert haversine_distance(*p, *p) == 0
 
     @given(GEO_POINT, GEO_POINT, GEO_POINT)
+    @example(p1=(0.0, 0.00390625), p2=(0.0, 1.0), p3=(0.0, 180.0))
     def test_triangle_inequality(self, p1, p2, p3):
         d12 = haversine_distance(*p1, *p2)
         d23 = haversine_distance(*p2, *p3)

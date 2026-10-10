@@ -308,7 +308,7 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 
 ### A09 - dashboard statistics tab emits no inferential claim (C5/QW5)
 
-- **Date/status:** 2026-10-10; FIXED in repo on `fix/c5-disable-dashboard-inference`. **Chosen/rationale:** the Wilcoxon tab paired `avg_gap` by row order over rows pooled across protocols and budgets, had no Holm correction or effect sizes, and its LaTeX sentence omitted losses. Per AGENTS.md (smoke/pilot runs cannot produce superiority claims) the tab body is replaced by an informational message and retitled "Statistical tests (disabled)"; no p-value, significance or superiority wording and no scipy test call remain in `dashboard.py`.
+- **Date/status:** 2026-10-10; FIXED in repo on `fix/c5-disable-dashboard-inference`. **Chosen/rationale:** the Wilcoxon tab paired `avg_gap` by row order over rows pooled across protocols and budgets, had no Holm correction or effect sizes, and its LaTeX sentence omitted losses. Per AGENTS.md (smoke/pilot runs cannot produce superiority claims) the tab body is replaced by an informational message and retitled "Statistical tests (disabled)"; no p-value, significance, Wilcoxon or proof wording and no scipy test call remain in `dashboard.py`; descriptive best/Better labels in the Leaderboard and Algorithm Comparison tabs remain and are tracked separately.
 - **Rejected/why:** patching the pairing (rows still lack validated protocol/seed_group labels); implementing Package D statistics here (out of scope). **Evidence:** `academic_benchmark/tests/test_c5_dashboard_no_inference.py`, audit C5. **Check first:** re-enable only through the Package D analysis service over validated, protocol-homogeneous, seed_group-paired rows.
 
 ## Daily workflow

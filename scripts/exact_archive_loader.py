@@ -29,7 +29,7 @@ VALID = {
 # named for a clear refusal message; anything not in VALID is refused as well
 INVALID = {
     ("week-2026-10-05",): "INVALID: wrong capacity 4 Sw / 10 So, superseded by week-2026-10-05-4sw5so (X01)",
-    ("week-2026-10-05-fleet", "extra", "L4"): "not a valid source for the exact study",
+    ("week-2026-10-05-fleet", "extra", "L4"): "out of scope for the exact study: not an EQ2 source (F10); same large+sedan fleet, other commit afc7208",
     ("week-2026-10-05-fleet", "extra", "minivan"): "superseded (capacity 1 Sw + 3 So), DECISION_LOG H03",
 }
 
@@ -48,6 +48,10 @@ class Campaign:
     fleet_types: tuple
     rides: tuple
     _waves: dict  # ride -> tuple of WaveInstance
+    fixed_type: object = None
+    minimize_type: object = None
+    scenarios: tuple = ()
+    max_l: object = None  # largest integer L of the campaign (bounds q, F6)
 
     def waves_for(self, ride: int) -> tuple:
         return self._waves[ride]
@@ -144,11 +148,50 @@ def _build(ref, arcs, snap_sha, slice_sha, ride, tour) -> WaveInstance:
     )
 
 
+def _check_limits(doc: dict, name: str, ride: int, tour: int) -> None:
+    lim = doc.get("limits", {})
+    if lim.get("maxRideTimeMinutes") != ride or lim.get("maxTourMinutes") != tour:
+        raise InputRejected(
+            f"{name}: response limits {lim.get('maxRideTimeMinutes')}/{lim.get('maxTourMinutes')} "
+            f"differ from file-name R {ride} / manifest tour_limit {tour}"
+        )
+
+
+_TYPE_KEYS = {"typeId", "swCapacity", "soCapacity", "cooldownMinutes", "totalCapacity", "rideLimit", "tourLimit"}
+
+
+def _types_from_manifest(manifest: dict) -> tuple:
+    out = []
+    for t in manifest["fleet_types"]:
+        extra = set(t) - _TYPE_KEYS
+        if extra:
+            raise InputRejected(f"fleet_types: unknown keys {sorted(extra)} (fail closed)")
+        out.append(VehicleTypeSpec(t["typeId"], t["swCapacity"], t["soCapacity"], t["cooldownMinutes"],
+                                   t.get("totalCapacity"), t.get("rideLimit"), t.get("tourLimit")))
+    return tuple(out)
+
+
+def _check_selected_routes(rdoc: dict, refs: list, name: str) -> None:
+    routes = rdoc.get("scenario", {}).get("routes") or []
+    if not routes:
+        return
+    got: dict = {}
+    for r in routes:
+        got.setdefault(r["jobId"], []).extend(r["occurrenceIds"])
+    want = {r[0]: sorted(o for o, _, _ in r[4]) for r in refs}
+    if {k: sorted(v) for k, v in got.items()} != want:
+        raise InputRejected(f"{name}: occurrence ids of the selected scenario routes differ from the reference waves")
+
+
 def load_campaign(path, reference_dir=None) -> Campaign:
     path = Path(path)
     key = classify(path)
     manifest = _read(path / "run_manifest.json")
-    tour = manifest.get("parameters", {}).get("tour_limit", 150)
+    params = manifest.get("parameters", {})
+    tour = params.get("tour_limit")
+    if isinstance(tour, bool) or not isinstance(tour, int) or tour <= 0:
+        raise InputRejected(f"{path.name}/run_manifest.json: parameters.tour_limit missing or not a positive int: {tour!r}")
+    ride_limits = params.get("ride_limits")
     if key == "4sw5so":
         ref_dir = path
     elif reference_dir:
@@ -163,6 +206,11 @@ def load_campaign(path, reference_dir=None) -> Campaign:
         ref_path = ref_dir / f"{date}_R{ride}_repeat1.response.json"
         snap_sha, arcs = _load_matrix(mfile)
         ref_resp = _read(ref_path)
+        if not isinstance(ride_limits, list) or ride not in ride_limits:
+            raise InputRejected(f"{mfile.name}: ride_limits {ride_limits!r} in the manifest do not contain R {ride}")
+        _check_limits(ref_resp, ref_path.name, ride, tour)
+        if ref_resp["matrix"]["sha256"] != snap_sha:
+            raise InputRejected(f"{ref_path.name}: reference matrix sha256 differs from {mfile.name}")
         if key == "4sw5so":
             resp_files = [ref_path]
         else:
@@ -177,7 +225,9 @@ def load_campaign(path, reference_dir=None) -> Campaign:
                     f"{rf.name}: declared matrix sha256 {rdoc['matrix']['sha256'][:8]} differs from "
                     f"{mfile.name} {snap_sha[:8]}"
                 )
+            _check_limits(rdoc, rf.name, ride, tour)
             if key != "4sw5so":
+                _check_selected_routes(rdoc, refs, rf.name)
                 menu = {m["waveId"]: m["legs"] for m in rdoc["menu"]}
                 if menu != {r[0]: len(r[4]) for r in refs}:
                     raise InputRejected(f"{rf.name}: menu waveIds/legs differ from the single-type archive")
@@ -188,13 +238,17 @@ def load_campaign(path, reference_dir=None) -> Campaign:
         s_sha = _slice_sha(arcs)
         waves.setdefault(ride, []).extend(_build(r, arcs, snap_sha, s_sha, ride, tour) for r in refs)
     if key != "4sw5so":
-        types = tuple(
-            VehicleTypeSpec(t["typeId"], t["swCapacity"], t["soCapacity"], t["cooldownMinutes"], t.get("totalCapacity"))
-            for t in manifest["fleet_types"]
-        )
+        types = _types_from_manifest(manifest)
     if not waves:
         raise InputRejected(f"{path}: no matrix files")
-    return Campaign(key, types, tuple(sorted(waves)), {r: tuple(w) for r, w in waves.items()})
+    scenarios = tuple(params.get("scenarios", ())) if key != "4sw5so" else ()
+    ls = [int(x[1:]) for x in scenarios if len(x) > 1 and x[0] == "L" and x[1:].isdigit()]
+    return Campaign(
+        key, types, tuple(sorted(waves)), {r: tuple(w) for r, w in waves.items()},
+        fixed_type=manifest.get("fixed_type") if key != "4sw5so" else None,
+        minimize_type=manifest.get("minimize_type") if key != "4sw5so" else None,
+        scenarios=scenarios, max_l=max(ls) if ls else None,
+    )
 
 
 def load_all_valid(results_root) -> dict:

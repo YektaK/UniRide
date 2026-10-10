@@ -6,8 +6,22 @@ import json
 from dataclasses import dataclass
 from typing import Optional, Sequence
 
+# Design EXACT_SOLVER_AMPL_DESIGN.md section 4 / 1.1. "not_run" is only a pre-solve placeholder.
+# TODO(WP-E2): academic_benchmark/exact_reference/protocol.py becomes the single definition of
+# these statuses and must import this set or replace it.
 EXACT_STATUSES = frozenset(
-    {"not_run", "optimal", "feasible", "infeasible", "rejected", "input_rejected", "backend_unavailable", "limit_reached"}
+    {
+        "not_run",
+        "optimal",
+        "feasible_with_gap",
+        "bound_only",
+        "infeasible_proven",
+        "rejected",
+        "backend_unavailable",
+        "input_rejected",
+        "timing_dependent_abort",
+        "skipped_no_stage1_incumbent",
+    }
 )
 _CLASSES = ("Sw", "So")
 _DIRECTIONS = ("pickup", "dropoff")
@@ -44,6 +58,8 @@ class VehicleTypeSpec:
     so_capacity: int
     cooldown_minutes: int
     total_capacity: Optional[int] = None
+    ride_limit_minutes: Optional[int] = None  # production: type.rideLimit ?? R
+    tour_limit_minutes: Optional[int] = None  # production: type.tourLimit ?? T
 
 
 @dataclass(frozen=True)
@@ -80,6 +96,11 @@ class WaveInstance:
         if len(self.matrix) != n + 1:
             raise ValueError(f"matrix must be {n + 1}x{n + 1} (depot + {n} legs)")
         _check_matrix(self.matrix)
+        codes = (self.depot_code,) + tuple(self.location_codes)
+        for i in range(n + 1):
+            for j in range(n + 1):
+                if i != j and (codes[i] == codes[j]) != (self.matrix[i][j] == 0):
+                    raise ValueError(f"arc [{i}][{j}] must be 0 exactly when the location codes are equal ({codes[i]}, {codes[j]})")
         if compute_matrix_sha256(self.matrix) != self.matrix_sha256:
             raise ValueError("matrix_sha256 does not match the matrix")
 
@@ -91,6 +112,7 @@ class ExactResult:
     routes: tuple  # tuple of tuples of occurrence ids
     route_count: Optional[int]
     total_cost: Optional[int]
+    # TODO(WP-E2): stop_reason, timing_dependent, non_lexicographic, K_LB, D_LB, D_LB_free.
 
     def __post_init__(self) -> None:
         if self.status not in EXACT_STATUSES:

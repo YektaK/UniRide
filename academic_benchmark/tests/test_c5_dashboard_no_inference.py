@@ -136,3 +136,30 @@ def test_tab_labels_make_no_inferential_claim():
     blob = " ".join(labels).lower()
     for word in ("significan", "wilcoxon", "proof", "outperform"):
         assert word not in blob
+
+
+def _all_string_parts(tree):
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            yield node.value.lower()
+
+
+def test_whole_dashboard_has_no_inferential_wording():
+    """No tab may bring an inferential claim back (best/better is C5-F1)."""
+    tree = ast.parse(DASHBOARD.read_text(encoding="utf-8"))
+    parts = list(_all_string_parts(tree))
+    assert parts
+    for word in ("significan", "outperform", "p-value", "wilcoxon",
+                 "winner", "academic proof"):
+        hits = [p[:80] for p in parts if word in p]
+        assert not hits, f"{word!r} in dashboard.py string(s): {hits}"
+
+
+def test_dashboard_does_not_load_scipy_indirectly():
+    tree = ast.parse(DASHBOARD.read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            assert not any(a.name.split(".")[0] == "importlib" for a in node.names)
+        if isinstance(node, ast.ImportFrom):
+            assert (node.module or "").split(".")[0] != "importlib"
+    assert not [p for p in _all_string_parts(tree) if "scipy" in p]

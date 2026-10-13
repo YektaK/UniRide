@@ -53,6 +53,7 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 | W01 | Daily workflow | Separate legs, exact anchors, confirmed admission | Approved production contract |
 | W02 | Daily workflow | Preview orchestration before publication/operations | Approved staged design |
 | X01 | Data errors | Vehicle capacity sources disagreed (DB 4/10 vs physical/decoder 4/5); DB corrected | Owner decision; data error |
+| X02 | Data facts | University currently owns exactly 1 minibus (4 Sw / 5 So); campaign did not consult DB vehicles | Owner statement 2026-10-13 |
 | H01 | Heterogeneous fleet | Typed split, exact day selection, typed assignment; additive only; academic code untouched | Owner approved 2026-10-08 |
 | H02 | Heterogeneous fleet | Q1: can a sedan carry any Sw (`sedan:1sw3so`)? | **Open question** |
 | H03 | Heterogeneous fleet | Optional shared seat limit `total_capacity`; Doblo = 3 seats total, max 1 Sw | Owner decision 2026-10-09 |
@@ -369,6 +370,13 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 - **Date/status:** 2026-10-07/08; owner decision, data error. **Finding:** the database vehicle record said 4 Sw + 10 So, while the physical layout and the decoder default (`SplitDecoder`, 4/5) said 4 Sw + 5 So. The owner corrected the DB record to 4/5 on 2026-10-07. Every earlier fleet number computed from the DB used 4/10.
 - **Consequence:** the 4/10 results are removed from the paper and replaced by the corrected 4/5 campaign. The 4/10 archive stays in git, labelled invalid due to a data error; it must not be cited as evidence.
 - **Check first:** when sources disagree on a capacity, check the physical layout first, then the DB and code defaults. **Evidence:** [design section 1.1 (F6) and owner decisions](designs/HETEROGENEOUS_FLEET_DESIGN.md).
+
+### X02 - current minibus ownership count
+
+- **Date/status:** 2026-10-13; source: owner statement.
+- **Fact:** the university currently owns exactly 1 minibus (the 4 Sw / 5 So model).
+- **Archive boundary:** the fleet campaign did not read the DB vehicle table (`db_vehicles_consulted: false`), so this ownership count is not in the archive. The count is sourced by the owner's statement, not inferred from the campaign.
+- **Evidence:** owner statement supplied in the management brief DUZELT 1 task; [fleet campaign README](paper/results/week-2026-10-05-fleet/README.md) for `db_vehicles_consulted: false`.
 
 ### H01 - heterogeneous fleet design
 

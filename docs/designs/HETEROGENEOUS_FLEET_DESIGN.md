@@ -1,10 +1,10 @@
 # Heterogeneous fleet scenarios: design
 
-Status (updated 2026-10-13): **the core of this design is implemented; the design text below keeps its 2026-10-07 wording except where a passage says "implemented" or cites a later decision.** Original status, kept as history: proposal for owner review, nothing implemented, base `WIP @ 6be127d`, 2026-10-07.
+Status (updated 2026-10-13): **implemented as listed below; the design text below keeps its 2026-10-07 wording except where a passage says "implemented" or cites a later decision.** Original status, kept as history: proposal for owner review, nothing implemented, base `WIP @ 6be127d`, 2026-10-07.
 
 Implemented (files in the repository):
 - typed split decoder: `decode_typed` in `uniride_core/algorithms/typed_split_decoder.py:67`;
-- typed GA and per-wave menu: `solve_ga_split_typed` and `solve_typed_menu` in `uniride_core/algorithms/ga_split_typed_engine.py:138, 217`, served by the `ga_split_hf` strategy (`optimizer_api/strategies/ga_split_hf_strategy.py`), with the `vehicle_types` request validation in `optimizer_api/models/schemas.py:273, 354-367`;
+- typed GA and per-wave menu: `solve_ga_split_typed` in `uniride_core/algorithms/ga_split_typed_engine.py:138`, served by the `ga_split_hf` strategy (`optimizer_api/strategies/ga_split_hf_strategy.py:149`), with the `vehicle_types` request validation in `optimizer_api/models/schemas.py:273, 354-367`; the per-wave menu used by the campaigns is built by the TypeScript runner (one `/optimize` call per quota, `src/services/fleet-scenario-run.ts:478-525`), while `solve_typed_menu` (`ga_split_typed_engine.py:217`, default `max_quota=3`) is a core helper exercised only by tests, not by the strategy or the runner;
 - CP-SAT day selection: `solve_day_selection` in `uniride_core/planning/typed_day_selection.py:120`, exposed as `POST /api/v1/internal/fleet-selection` (`optimizer_api/routers/fleet_selection.py:172`, mounted in `optimizer_api/main.py:111`);
 - typed assignment in TypeScript: `assignTypedVehicles` and `verifyTypedAssignment` in `src/services/typed-fleet-assignment.ts:191, 160`;
 - scenario runner and CLI: `runFleetScenarioDay` (`src/services/fleet-scenario-run.ts:257`, menu build `:478-493`) and `scripts/run-fleet-scenarios.ts`; figure script `scripts/plan_fleet_scenarios.py`;
@@ -59,8 +59,8 @@ Each scenario is reported per day and per week. The report covers the cars neede
 | F2 | `solve_ga_split` ranks by `objective_key` = (feasible, vehicles, cost). The RNG is consumed only by init/evolve/diversify/tournament, never by decoding. | `uniride_core/algorithms/ga_split_engine.py:71-95, 177-184, 251-295, 298-431` |
 | F3 | The same decoder serves PSO/GWO/HHO split engines (`meta_split_common.py`) and `cvrptw_decoder.py`. A change to `SplitDecoder` therefore touches academic paths. | `grep` of importers |
 | F4 | `OptimizationRequest.vehicles` already exists. The certifier then does a one-to-one SW/SO matching of the *returned routes of that call* to listed vehicles, plus `fleet_size_violation` when routes > vehicles. | `optimizer_api/models/schemas.py:120-125, 230`; `optimizer_api/verification/response_certifier.py:161-218, 299-300, 584` |
-| F5 | `runDailyPlan` reads the DB `vehicles` table. Virtual mode picks the DB signature as template. Each wave is sent with `sw/so_capacity = max` over the slice. | `src/services/daily-plan-run.ts:403-445, 474-499` |
-| F6 | The archived campaign `docs/paper/results/week-2026-10-05` ran with the template **4 Sw / 10 So / cd 10** (manifest `virtual_template`). `plan_fleet_mix.py` and the paper's fleet-mix paragraph also use large = 4/10. | `run_manifest.json:71-75`; `scripts/plan_schedule_report.py:23`; `docs/paper/DAILY_STUDENT_TRANSPORT_PLANNING_METHOD.md:92, 146` |
+| F5 | (historical: 4/10 archive, superseded by X01) `runDailyPlan` reads the DB `vehicles` table. Virtual mode picks the DB signature as template. Each wave is sent with `sw/so_capacity = max` over the slice. | `src/services/daily-plan-run.ts:403-445, 474-499` |
+| F6 | (historical: 4/10 archive, superseded by X01) The archived campaign `docs/paper/results/week-2026-10-05` ran with the template **4 Sw / 10 So / cd 10** (manifest `virtual_template`). `plan_fleet_mix.py` and the paper's fleet-mix paragraph also use large = 4/10. | `run_manifest.json:71-75`; `scripts/plan_schedule_report.py:23`; `docs/paper/DAILY_STUDENT_TRANSPORT_PLANNING_METHOD.md:92, 146` |
 | F7 | `assignPhysicalVehicles` is a DFS over (route → vehicle id) with the following properties: it minimises distinct vehicles; its lower bound is the peak with min cooldown plus a clique capacity matching; it breaks symmetry by signature/free-time; its budget is 50 000 nodes; `minimumProven` means the search completed. | `src/services/dudullu-preview.ts:623-879` |
 | F8 | Within a wave, every route shares the exact anchor: pickup routes end at it and dropoff routes start at it. All routes of one wave are therefore pairwise concurrent and need distinct vehicles. | `dudullu-preview.ts:489-510` (interval construction) |
 | F9 | OR-Tools (CP-SAT) is already a runtime dependency. | `optimizer_api/requirements.txt:17` |
@@ -71,7 +71,7 @@ Each scenario is reported per day and per week. The report covers the cars neede
 
 ```text
 per day, per R:
-  waves (direction, anchor)  ──►  wave menu: for q = 0..Lmax  ga_split_hf(wave, large quota q)  ─┐
+  waves (direction, anchor)  ──►  wave menu: for q = 0..min(Lmax, legs, 4)  ga_split_hf(wave, large quota q)  ─┐
                                   + baseline option: scenario-A routes of the wave             │ certified per call
                                                                                                ▼
   per scenario L:  day selection (CP-SAT over menu)  ─►  chosen fixed routes + type labels
@@ -94,7 +94,7 @@ For a giant tour `s_1..s_n` and types `T`, each type `t` has `(sw_t, so_t, R_t, 
 - **DP.** The DP is a resource-constrained shortest path with labels `V[j][k]`, where `k` = large routes used (0..q). The value is the lexicographic pair (routes of type `m`, cost).
 - **Transitions.** A car arc adds `(1, c_ij)` and keeps `k`. A large arc adds `(0, c_ij)` and sets `k+1 ≤ q`.
 - **Answer and labels.** The answer is `min_k V[n][k]`. Every route is returned with the type that realised it.
-- **Complexity.** The cost is `O(n²·(q+1)·|T|)`. Waves have n ≲ 20 and q ≤ 3, so this is negligible.
+- **Complexity.** The cost is `O(n²·(q+1)·|T|)`. Waves have n ≲ 20 and q ≤ MENU_MAX_QUOTA = 4, so this is negligible.
 - **Tie-breaking.** Ties break exactly as in `SplitDecoder`: strict `<` on the value, with the first predecessor kept. A one-type, unlimited-quota instance then reproduces `SplitDecoder` routes (parity test P3).
 - **Infeasible tour.** If no feasible split exists, the decoder returns `feasible=False`. **There is no singleton fallback.** The `SplitDecoder` fallback is a known certificate-gated hazard (CURRENT_ARCHITECTURE §5), and a typed singleton could also exceed the quota.
 
@@ -135,7 +135,7 @@ No search over vehicle identities is needed.
 3. **Independent verification.** The chosen fixed routes and labels go to the TS typed assignment (§4). That code is a different implementation in a different language. It recomputes the minimum cars for those fixed routes, proves or refutes it, and emits the physical witness (V01/V02 producer/verifier separation).
 
 **Properties that become tests:**
-- **Monotonicity.** When the selections are proven (`OPTIMAL`), `cars(L=3) ≤ cars(L=2) ≤ cars(L=1)` holds by construction, because the menus are nested and a selection for L−1 is feasible for L.
+- **Monotonicity.** When the selections are proven (`OPTIMAL`), `cars(L=3) ≤ cars(L=2) ≤ cars(L=1)` holds by construction, because all scenarios share one menu, so a selection feasible for L−1 is feasible for L.
 - **Dominance over the fixed-route what-if.** The baseline option keeps the result no worse than `plan_fleet_mix.py`-style labelling of scenario-A routes. The comparison must use the same R, the same template and the same seed.
 - **Zero cars at the scenario-A minimum.** `cars = 0` for every `L ≥ L_A*`.
 
@@ -249,7 +249,7 @@ VehicleTypeSpec:
 
 **Planning layer.**
 - `runDailyPlan` keeps its signature and behaviour.
-- Extract and export, without behaviour change, the demand/matrix/wave-grouping steps as `loadDailyPlanInputs`. This is covered by the existing `daily-plan-view`/`dudullu-preview` tests plus a new "extraction parity" test.
+- Extract and export, without behaviour change, the demand/matrix/wave-grouping steps as `loadDailyPlanInputs`. The extraction that landed is `loadDailyPlanDemand` (`src/services/daily-plan-run.ts:200`), shared by `runDailyPlan` and the fleet-scenario runner; it covers the demand-loading step only. This is covered by the existing `daily-plan-view`/`dudullu-preview` tests plus a new "extraction parity" test.
 - Add a new `runFleetScenarioDay` in a new file `src/services/fleet-scenario-run.ts`. It **never reads the `vehicles` table**; types come only from its parameters.
 - The default single type stays as today.
 
@@ -302,7 +302,7 @@ The figures come from `scripts/plan_fleet_scenarios.py` (standard library, SVG, 
 | Certifier | One test per violation type; absence of `vehicle_types` is byte-identical (P6); type limits are applied on matrix durations | — |
 | Day selection | **Brute force**: ≤ 4 waves × ≤ 3 options × ≤ 3 routes, enumerating all option and label combinations and computing per-type peaks; equal C and equal minutes. Monotonicity in L; zero cars at `L ≥ L_A*`; INFEASIBLE when Sw exceeds `4L`. | enumeration |
 | TS typed assignment | **Brute force**: ≤ 9 intervals, all labellings × peaks. T6: single type equals `assignPhysicalVehicles` on archived routes. **T7**: on the archived week-2026-10-05 routes with types large 4/10 and car 0/4, it reproduces every (L, C) in `fleet_mix.csv` and the proven flags. Budget exhaustion returns `witness`/`indeterminate`, never `proven`. | enumeration, archived CSV |
-| Orchestrator | Mocked optimizer/DB:<br>• the `vehicles` table is never queried;<br>• the manifest records the types;<br>• an infeasible menu entry is skipped and recorded;<br>• `loadDailyPlanInputs` extraction parity. | mocks |
+| Orchestrator | Mocked optimizer/DB:<br>• the `vehicles` table is never queried;<br>• the manifest records the types;<br>• an infeasible menu entry is skipped and recorded;<br>• extraction parity for the shared demand loader (planned as `loadDailyPlanInputs`; the function that landed is `loadDailyPlanDemand`, `src/services/daily-plan-run.ts:200`). | mocks |
 | Regression | **R1 (offline, deterministic)**: replay the archived responses through scenario reporting with the single type `large:4sw10so`. vehicles_required, routes and total minutes equal `summary.csv`. **R2 (live, optional)**: run the CLI with `--fleet-types large:4sw10so --scenarios A`. It must reproduce `summary.csv` for every date/R whose matrix sha and demand equal the archive. Days where these differ are reported as divergent, not failed. | archived campaign |
 
 ## 10. Work packages
@@ -331,7 +331,7 @@ Total ≈ 12 developer days. Packages 1 and 2 can run in parallel after 0.
 | # | Question | Default until answered | Why it matters |
 |---|---|---|---|
 | Q1 | Can a Fiat Linea safely carry 1–2 Sw (e.g. 3 So + 1 Sw, or 2 + 2)? Powered chairs probably cannot be folded into the trunk; is there a transfer-seat option or a ramp vehicle? | `0sw4so` | Decides scenario B feasibility on days with >4 Sw in one wave (§3.4). It can be tested later with `sedan:1sw3so`, with no code change. |
-| Q2 | Confirm large minibus = 4 Sw + 5 So at the same time, and the DB correction date. | 4/5 explicit | Every earlier number used 4/10 (F6). |
+| Q2 | Confirm large minibus = 4 Sw + 5 So at the same time, and the DB correction date. | 4/5 explicit | Every earlier number used 4/10 (F6). (historical: 4/10 archive, superseded by X01) |
 | Q3 | Same matrix travel times and ride limit R for both types? Cooldown 10 for borrowed cars (driver handover may differ)? | same; cd 10 | Per-type parameters exist; values change results. |
 | Q4 | Can every So student ride in a sedan (assistance needs, front-seat needs, escort)? Is any student large-only? | all So car-eligible | Would add per-student eligibility (a small extension of the arc feasibility). |
 | Q5 | Tie-break after cars and total minutes: fewer car-minutes (less borrowing) or fewer large-minutes? Report weekly cars as the max over days (same cars daily) or as the per-day need (borrow per day)? | car-minutes; report both | Changes the chosen plan and the headline number. |

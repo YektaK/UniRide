@@ -59,6 +59,7 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 | H03 | Heterogeneous fleet | Optional shared seat limit `total_capacity`; Doblo = 3 seats total, max 1 Sw | Owner decision 2026-10-09 |
 | H04 | Heterogeneous fleet | CX-03: typed GA inner objective cost-only for one type, count-first otherwise | Lead decision 2026-10-09 |
 | H05 | Heterogeneous fleet | CX-01: exact centi-minute intervals and cooldowns in fleet selection (`time_scale`) | Lead decision 2026-10-09 |
+| H06 | Heterogeneous fleet | Q5: day selection ranks cars, total vehicle-minutes, car-minutes, option index (code had car-minutes first) | Owner decision 2026-10-13 |
 | E01 | Exact solver (AMPL) | Owner answers EQ1-EQ6 (2026-10-09) and D-A/D-B/D-C (2026-10-10): 60 s/600 s wall limit per solver call, peak wave = largest-leg wave(s) per date, both typed fleets via a fleet re-run at one commit, per-wave exact + CP-SAT day level, HiGHS note in paper, GA seed 42 single-seed, GOAL 2 parameters deferred. Lead notes: union menu (unproven union re-run once at 60 s), re-run input rule | Owner decisions 2026-10-09/10; lead notes 2026-10-10 |
 
 ## Demo scope
@@ -408,6 +409,12 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 - **Rejected:** widening the overlap tolerance (hides the discrepancy), conservative rounding of fractional endpoints (can falsely reject a feasible day). **Label:** `proven_over_menu` now means optimal over the menu on the exact intervals, confirmed by the independent typed assignment; unchanged wording.
 - **Contract changes:** an explicit `null` cooldown is now accepted and means the default (10 real minutes); before it was a 422. A zero-length interval gets a minimum length of 0.01 minute at scale 100 (`fleet-scenario-run.ts`, `start + 1`) instead of 1 minute.
 - **Evidence:** owner-supplied Codex review CX-01, `docs/CODEX_DEEP_REVIEW_2026-10-09.md` (local, untracked), tests `test_typed_day_selection.py::test_cx01_*`, `test_fleet_selection_endpoint.py::test_time_scale_*`, `fleet-scenario-run.test.ts` (CX-01). Related: H01, V01/V02, O01/O02.
+
+### H06 - day selection order: cars, total vehicle-minutes, car-minutes, option index (Q5)
+
+- **Date/status:** 2026-10-13; owner decision (option b). **Chosen:** `solve_day_selection` ranks (1) cars, (2) total vehicle-minutes, (3) car-minutes, (4) sum of option indices, as originally specified in Q5 (design section 3.3: stage 2 fixes C* and minimises total vehicle-minutes, stage 3 is the car-minutes tie-break). The implementation had ranked car-minutes before total minutes (stages 2 and 3 swapped); H01's "tie-break on car-minutes" was read as "car-minutes first". Time-limit sharing, status semantics, seed, workers, `time_scale` and the response shape are unchanged.
+- **Effect on archives:** the archived fleet campaigns (8ab88ca, 4200acb, afc7208) used the old order. Their car counts are unaffected because cars is the first stage, but car-minutes, total minutes and the selected options may differ. The WP-E10 re-run uses the new order; differences caused by this change are an expected, explained category (see `designs/EXACT_SOLVER_AMPL_DESIGN.md`, WP-E10 acceptance (d)).
+- **Evidence:** test `test_typed_day_selection.py::test_h06_total_minutes_outrank_car_minutes_at_equal_cars` (fails on the old order) and the brute-force oracle `_brute` moved to the new key. Related: H01, H05, E01.
 
 ## Exact solver
 

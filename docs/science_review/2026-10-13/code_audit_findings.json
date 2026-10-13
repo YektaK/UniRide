@@ -1,0 +1,355 @@
+{
+  "items": [
+    {
+      "id": "C1",
+      "inventory_location": "§1.3 (inv line 26)",
+      "question": "Which instances does academic_benchmark/tsplib_problems/ALL_tsp.tar.gz contain (count, ATSP members, presence of berlin52, pr2392, ft53, ftv*, rbg*, kro124p)?",
+      "finding": "Tarball has 144 members: 111 symmetric TSP instances (*.tsp.gz), 32 optimal tours (*.opt.tour.gz) and 1 'xray.problems.gz'. It contains NO ATSP instance (no *.atsp member). berlin52 and pr2392 are present (both .tsp and .opt.tour). ft53, ftv*, rbg*, kro124p (and br17, p43, ry48p, ft70) are absent. The only ATSP instance in the repo is ft53, stored separately as academic_benchmark/tsplib_data/ft53.atsp and academic_benchmark/datasets/ft53.json, and in the local SQLite DB (problem_type ATSP, dimension 53, optimal 6905, edge_weight_type EXPLICIT). Not in the inventory: an extracted folder academic_benchmark/tsplib_data/ holds 37 .tsp files + ft53.atsp + tsplib.db; tsplib.db 'problems' table has 94 rows (93 TSP + 1 ATSP), 'opt_tours' 24 rows, 'benchmark_results' 66 rows covering 11 small TSP instances (att48, berlin52, burma14, eil51, eil76, gr96, pr76, rat99, st70, ulysses16, ulysses22), all problem_type tsp.",
+      "evidence": [
+        "academic_benchmark/tsplib_problems/ALL_tsp.tar.gz — tarfile.getnames(): 144 members; 111 *.tsp.gz, 32 *.opt.tour.gz, 1 xray.problems.gz; 0 *.atsp",
+        "TSP members (111): a280, ali535, att48, att532, bayg29, bays29, berlin52, bier127, brazil58, brd14051, brg180, burma14, ch130, ch150, d1291, d15112, d1655, d18512, d198, d2103, d493, d657, dantzig42, dsj1000, eil101, eil51, eil76, fl1400, fl1577, fl3795, fl417, fnl4461, fri26, gil262, gr120, gr137, gr17, gr202, gr21, gr229, gr24, gr431, gr48, gr666, gr96, hk48, kroA100, kroA150, kroA200, kroB100, kroB150, kroB200, kroC100, kroD100, kroE100, lin105, lin318, linhp318, nrw1379, p654, pa561, pcb1173, pcb3038, pcb442, pla33810, pla7397, pla85900, pr1002, pr107, pr124, pr136, pr144, pr152, pr226, pr2392, pr264, pr299, pr439, pr76, rat195, rat575, rat783, rat99, rd100, rd400, rl11849, rl1304, rl1323, rl1889, rl5915, rl5934, si1032, si175, si535, st70, swiss42, ts225, tsp225, u1060, u1432, u159, u1817, u2152, u2319, u574, u724, ulysses16, ulysses22, usa13509, vm1084, vm1748",
+        "opt.tour members (32): a280, att48, bayg29, bays29, berlin52, brg180, ch130, ch150, eil101, eil51, eil76, fri26, gr120, gr202, gr24, gr48, gr666, gr96, kroA100, kroC100, kroD100, lin105, pa561, pcb442, pr1002, pr2392, pr76, rd100, st70, tsp225, ulysses16, ulysses22",
+        "academic_benchmark/tsplib_manager.py:22 ARCHIVE_PATH = tsplib_problems/ALL_tsp.tar.gz; :23-24 TSPLIB_DATA_DIR/DB_PATH = tsplib_data/tsplib.db",
+        "academic_benchmark/tsplib_data/ (dir listing): 37 .tsp + ft53.atsp + tsplib.db",
+        "academic_benchmark/tsplib_data/tsplib.db (sqlite, mode=ro): problems=94 rows (ATSP/tsplib/small:1, TSP: small 17, medium 34, large 42); row ft53: dimension 53, optimal 6905, ATSP, EXPLICIT",
+        "academic_benchmark/datasets/ft53.json (only file in datasets/ besides raw/)"
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "C2",
+      "inventory_location": "§1.3 (inv line 27)",
+      "question": "Which CVRPLIB/Solomon instances are actually present locally (data files, json, sqlite DBs referenced by cvrplib_manager.py / bks_manager.py)? Remote-only?",
+      "finding": "Raw files are present on disk but NOT imported into the DB. CVRPLIB: 8 instances in academic_benchmark/datasets/raw/cvrplib_selected/ (A-n32-k5, A-n33-k5, A-n33-k6, A-n34-k5, B-n31-k5, B-n34-k5, B-n35-k5, B-n38-k6) with 8 matching .sol files in cvrplib_selected_solutions/. Solomon: the full 56-instance 100-customer set in datasets/raw/solomon_100/In/ (C1 9, C2 8, R1 12, R2 11, RC1 8, RC2 8) with 56 solution files in solomon_100_solutions/ (two named r205b.txt, rc101b.txt). cvrplib_manager.py and bks_manager.py own no schema; they delegate to tsplib_manager and the single local SQLite file academic_benchmark/tsplib_data/tsplib.db (about 1.0 GB). That DB has 0 CVRP/CVRPTW/Solomon/CVRPLIB/synthetic problems and 0 rows in routing_constraints, so loading any CVRPLIB/Solomon instance needs a manual `cvrplib_manager import <paths>` and `bks_manager --cvrplib-solutions/--solomon-solutions` run first. No default path to datasets/raw exists in code (grep for 'cvrplib_selected|solomon_100|datasets/raw' in active code: 0 hits). The DB is local, not Supabase/remote.",
+      "evidence": [
+        "academic_benchmark/cvrplib_manager.py:1-6 (facade, no own schema), :14-20 (imports DB_PATH etc. from tsplib_manager), :22-23 (extensions .vrp / .solomon,.txt,.vrptw), :48-80 (import functions), :171-205 (CLI import/scan/list)",
+        "academic_benchmark/bks_manager.py:14 (DB_PATH from tsplib_manager), :119-124 (apply_bks_from_solution_dirs: dirs default None), :169-180 (CLI requires --cvrplib-solutions/--solomon-solutions)",
+        "academic_benchmark/tsplib_manager.py:24 DB_PATH = tsplib_data/tsplib.db",
+        "academic_benchmark/datasets/raw/cvrplib_selected/*.vrp (8) and cvrplib_selected_solutions/*.sol (8) — directory listing",
+        "academic_benchmark/datasets/raw/solomon_100/In/*.txt (56) and solomon_100_solutions/*.txt (56) — directory listing",
+        "tsplib.db (sqlite, mode=ro): SELECT count(*) FROM problems WHERE problem_type in (cvrp,cvrptw) OR source LIKE solomon/cvrplib/synthetic -> 0; routing_constraints -> 0 rows; benchmark_results distinct (problem_type, matrix_kind) = (tsp, distance) only",
+        "grep 'cvrplib_selected|solomon_100|datasets/raw' over uniride_core, optimizer_api, academic_benchmark, src code files -> 0 hits"
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "C3",
+      "inventory_location": "§1.3 (inv line 28)",
+      "question": "What does academic_benchmark/synthetic_cvrp_generator.py generate (distributions, parameters, seeds)?",
+      "finding": "It does not create new geometry: it reuses coordinates of a TSPLIB problem from tsplib.db (node 0 = depot) and adds constraints. CVRP: scalar demands with depot demand 0 and customer demand drawn i.i.d. uniform integer in [1,10] (numpy default_rng(seed), seed default 42); capacity default = max(max demand, ceil(total demand / max(2, round(sqrt(#customers))))), i.e. about sqrt(n) vehicles; distance matrix from coordinates (EUC_2D default). CVRPTW: same demands/capacity; travel-time matrix = distance/speed_kmh*60 with speed 40 km/h times an i.i.d. uniform multiplicative noise in [0.9,1.1] drawn PER CELL (rng seed), so the synthetic matrix is asymmetric; time windows: depot (0, 480+60), each customer ready time uniform integer in [0, 480-60] (rng seed+17), width 60 min; service time 5 min (depot 0); horizon (0,480); max_route_duration None; direction 'dropoff'. Names: '<base>-synthetic-cvrp-s<seed>' / '<base>-synthetic-cvrptw-s<seed>'. Batch mode takes all TSP (non-EXPLICIT) problems with dimension <= 500, seed 42, CVRPTW optional, store=True. No synthetic instance is currently stored in tsplib.db (0 rows with source synthetic_*).",
+      "evidence": [
+        "academic_benchmark/synthetic_cvrp_generator.py:28-59 generate_cvrp_from_coordinates (demand_range=(1,10), seed=42, EUC_2D)",
+        "academic_benchmark/synthetic_cvrp_generator.py:62-84 generate_cvrp_from_tsplib (loads TSPLIB coords from DB)",
+        "academic_benchmark/synthetic_cvrp_generator.py:87-148 generate_cvrptw_from_tsplib (speed_kmh=40, time_window_width=60, service_time=5, horizon=(0,480), noise_pct=0.10, direction='dropoff')",
+        "academic_benchmark/synthetic_cvrp_generator.py:151-173 batch_generate_cvrp (max_dim=500, seed=42, store=True)",
+        "academic_benchmark/synthetic_cvrp_generator.py:192-204 _generate_scalar_demands (rng.integers(low, high+1))",
+        "academic_benchmark/synthetic_cvrp_generator.py:207-211 _default_capacity",
+        "academic_benchmark/synthetic_cvrp_generator.py:214-232 _generate_time_windows (default_rng(seed+17), depot window (start, end+width))",
+        "uniride_core/adapters/matrix_builder.py:209-230 tsplib_to_travel_time (minutes=base/speed*60; per-cell uniform(1-noise,1+noise); diagonal 0)"
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "C4",
+      "inventory_location": "§2.1 table row #4 (inv line 51)",
+      "question": "Status of Numba-Swap and Numba-Hybrid: where registered, reachable via registry/resolution/capabilities, forbidden/legacy?",
+      "finding": "Both are still REGISTERED as executors (legacy loop over numba_strategies.STRATEGIES registers 'Numba-<name>'), but they are NOT in the capability catalog, NOT in the resolver alias table and NOT in the forbidden table. engine_core classifies them as UNCATALOGED_TSP_ATSP, and both academic entry points reject them before execution: cli_engine raises ExecutorUnavailableError ('not catalog-governed') and smart_benchmark._selectable_algorithm_ids filters them out. They are therefore unreachable for scientific runs: 'legacy, registered but blocked', not 'forbidden' (no ForbiddenAliasError). If invoked directly, the executor runs local_search_numba.apply_local_search with LocalSearchType.SWAP (registry default max_iterations 8000) or HYBRID (max_iterations 10 cycles; HybridLocalSearch cycles Swap, 2-opt, Or-opt, Cross-exchange, 3-opt with per-method limits 100/80/60/40/25). Side path: the routing aliases 'CVRP-Numba-Swap', 'CVRPTW-Numba-Swap', 'CVRP-Numba-Hybrid', 'CVRPTW-Numba-Hybrid' are registered and map to the Core-TwoOpt-TSP matrix engine, i.e. they run 2-opt + split rather than swap/hybrid. These are classified NON_C1_ROUTING and stay selectable (name-to-algorithm mismatch). uniride_core/algorithms/registry.py also lists SWAP/HYBRID families with aliases ('swap','Numba-Swap') / ('hybrid','Numba-Hybrid') mapped to the '3-OPT-BOUNDED' param space.",
+      "evidence": [
+        "uniride_core/algorithms/numba_strategies.py:4-10 LOCAL_SEARCH_STRATEGIES incl. ('Swap', SWAP, max_iterations 8000) :8 and ('Hybrid', HYBRID, max_iterations 10) :9",
+        "academic_benchmark/core/registry_setup.py:450-453 loop registers f'Numba-{name}' via _make_legacy_executor",
+        "academic_benchmark/core/registry_setup.py:341-366, 412-416 legacy executor -> apply_local_search(strategy_payload, max_iterations)",
+        "academic_benchmark/engine_core.py:16-21 _UNCATALOGED_TSP_ATSP_IDS includes 'Numba-Swap','Numba-Hybrid'; :26-37 classify_academic_algorithm_id",
+        "academic_benchmark/cli_engine.py:332-341 and :367-376 raise ExecutorUnavailableError for UNCATALOGED_TSP_ATSP/UNKNOWN",
+        "academic_benchmark/smart_benchmark.py:454-469 _selectable_algorithm_ids keeps only NON_C1_ROUTING or VERIFIED catalog IDs",
+        "academic_benchmark/core/algorithm_resolution.py:44-57 (_ALIAS_ROWS: no Swap/Hybrid), :65-72 (FORBIDDEN: no Swap/Hybrid), :74-78 RESOLVER_GOVERNED_IDENTIFIERS",
+        "academic_benchmark/core/registry_setup.py:1004-1005 'Numba-Swap'/'Numba-Hybrid' -> 'Core-TwoOpt-TSP' in _ROUTING_ALIAS_ENGINES; :1016-1019 registers CVRP-/CVRPTW- prefixed aliases",
+        "uniride_core/algorithms/local_search_numba.py:998-1005 Hybrid DEFAULT_ITERATION_LIMITS; :1016-1025 default method order; :1127-1151 apply_local_search",
+        "uniride_core/algorithms/registry.py:27-28 SWAP/HYBRID AlgorithmFamilySpec -> '3-OPT-BOUNDED' param space",
+        "academic_benchmark/param_spaces.py:231-232 Numba-Swap/Hybrid reuse 3-OPT-BOUNDED space",
+        "academic_benchmark/tests/test_smart_benchmark_preflight.py:623-637, 745-746, 778-788 (tests asserting rejection; not executed)"
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "C5",
+      "inventory_location": "§2.1 table row #18 (inv line 65)",
+      "question": "What does Core-Greedy-Routing (uniride_core/algorithms/greedy_engine.py) actually do, and with which parameters?",
+      "finding": "GreedyMatrixEngine is a nearest-neighbour giant-tour constructor followed by a split. For CVRP/CVRPTW it starts at the depot and repeatedly appends the unvisited node with minimum dm[current, node] (ties follow Python set iteration order). It has no tunable parameters: config only supplies depot_index and problem_type, and the seed argument is discarded (del seed). Routing problems then go through UnifiedEngine.solve_cvrp, which calls split_decoder.optimal_split_result (a Bellman-style split with vector capacities and optional max_route_duration; this is uniride_core/algorithms/split_decoder.py, a different module from string_split_decoder.SplitDecoder used in production). For CVRPTW, split_with_time_windows_result does the same capacity/duration split and then only COUNTS time-window violations. Despite its docstring ('minimizing time-window violations, then cost'), time windows do not affect the partition. Academic wiring: registered as 'Core-Greedy-Routing' plus CVRP-/CVRPTW- aliases, classified NON_C1_ROUTING (selectable), empty param space. Literature counterpart: nearest-neighbour route-first/cluster-second (giant tour + split).",
+      "evidence": [
+        "uniride_core/algorithms/greedy_engine.py:13-16 class GreedyMatrixEngine 'Nearest-neighbor permutation engine'",
+        "uniride_core/algorithms/greedy_engine.py:24 del seed; :25-29 only depot_index/problem_type read from config",
+        "uniride_core/algorithms/greedy_engine.py:31-44 NN loop from depot (min over unvisited set)",
+        "uniride_core/algorithms/greedy_engine.py:46-56 cost: depot-closed route (routing) or closed tour (tsp)",
+        "uniride_core/algorithms/base_engine.py:82-95 / :121-139 solve_cvrp -> optimal_split_result",
+        "uniride_core/algorithms/base_engine.py:97-117 / :157-185 solve_cvrptw -> split_with_time_windows_result",
+        "uniride_core/algorithms/split_decoder.py:69-101 optimal_split_result 'Bellman-style O(n^2) split ... vector capacities' (break on capacity :100-101)",
+        "uniride_core/algorithms/split_decoder.py:147-179 split_with_time_windows_result: calls optimal_split_result then _count_time_window_violations",
+        "uniride_core/algorithms/engine_factory.py:21-26 CORE_GREEDY_ALIASES; :110-111 create_matrix_engine -> GreedyMatrixEngine()",
+        "academic_benchmark/core/registry_setup.py:20-58 _run_core_routing_executor; :587-591 registration; :995 routing alias",
+        "academic_benchmark/engine_core.py:22, 33-34 NON_C1_ROUTING classification",
+        "academic_benchmark/param_spaces.py:237 'Core-Greedy-Routing': {}"
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "C6",
+      "inventory_location": "§2.2 table row #25 (inv line 77) and §5 item 6 (inv line 213)",
+      "question": "Does ga_split_enhanced contain HGS (Vidal) components: biased fitness with diversity contribution, penalty management with two subpopulations, SWAP*, granular neighbourhoods, split-based education, survivor selection by clone removal?",
+      "finding": "No. GAEnhancedSplitStrategy subclasses GASplitStrategy and overrides only `name` ('ga_split_enhanced') and `display_name` ('GA-Split Enhanced (HGS-style)'). It inherits DEFAULT_CONFIG and optimize() unchanged and calls the same engine, ga_split_engine.solve_ga_split, so at default parameters it is functionally identical to ga_split. None of the docstring features (diversity management, intensification/diversification balance, adaptive parameters, multiple crossover operators) are implemented. Component check against the engine: (1) biased fitness with diversity contribution: ABSENT (fitness and tournament use only the lexicographic key (infeasible, vehicles, cost)). (2) Penalty management with feasible/infeasible subpopulations: ABSENT (single population; an unsplittable tour gets key (1, n_or_999, inf); a PenaltyManager class exists in sota_common but is not used here). (3) SWAP*: ABSENT (0 hits). (4) Granular neighbourhoods: ABSENT (0 hits). (5) Split-based education: ABSENT (education = TSP local search on the whole giant tour costed depot->all->depot, applied only to the generation's best individual every local_search_interval=10 generations, then re-split; no route-based LS). (6) Survivor selection by clone removal: ABSENT (generational replacement + elitism elite_count=3, OX1 crossover only, random swap/inversion/scramble mutation, no duplicate detection). What exists: NN tour + random initial population, tournament selection (size 4), restart-style diversification (keep best 30 %, refill random) after diversify_threshold=30 non-improving generations. With production defaults max_no_improvement=25 < diversify_threshold=30, the loop breaks before diversification can ever fire. Accurate label: Prins-2004-style GA with Split (memetic on giant tour), not HGS.",
+      "evidence": [
+        "optimizer_api/strategies/ga_split_strategy.py:266-283 GAEnhancedSplitStrategy: docstring + only name/display_name properties",
+        "optimizer_api/strategies/ga_split_strategy.py:40-56 GASplitStrategy docstring ('Optimal partitioning guaranteed', 'Based on Prins (2004)')",
+        "optimizer_api/strategies/ga_split_strategy.py:58-70 DEFAULT_CONFIG (elite_count 3, tournament_size 4, max_no_improvement 25, local_search_interval 10, diversify_threshold 30)",
+        "optimizer_api/strategies/ga_split_strategy.py:35, 177-194 single engine call solve_ga_split",
+        "optimizer_api/strategies/__init__.py:50, 92, 156-157, 245-246 registration of GAEnhancedSplitStrategy as 'ga_split_enhanced'/'ga-split-enhanced'",
+        "uniride_core/algorithms/ga_split_engine.py:71-94 initialize_population (pop-2 random + NN tour + 1 random)",
+        "uniride_core/algorithms/ga_split_engine.py:97-144 evaluate_individual: decode_giant_tour -> objective_key / fitness_from_key (no diversity term); :123-131 empty-decode key (1,999,inf)",
+        "uniride_core/algorithms/objective_rank.py:14-37 objective_key (feasible iff num_vehicles>0 and finite cost); :45-56 fitness_from_key",
+        "uniride_core/algorithms/ga_split_engine.py:177-184 tournament_selection by obj_key",
+        "uniride_core/algorithms/ga_split_engine.py:187-221 educate_individual: apply_local_search on giant tour with cost_func depot->...->depot (:195-202)",
+        "uniride_core/algorithms/ga_split_engine.py:224-248 diversify_population (keep 30 %, random refill)",
+        "uniride_core/algorithms/ga_split_engine.py:251-295 evolve_population: elitism + OX (:281) + mutate_permutation (:287-289), generational replacement",
+        "uniride_core/algorithms/ga_operators.py:11-37 order_crossover (OX1); :40-62 mutate_permutation random among swap/inversion/scramble (:46)",
+        "uniride_core/algorithms/ga_split_engine.py:352-370 education only on current_best every local_search_interval generations",
+        "uniride_core/algorithms/ga_split_engine.py:378-382 break at max_no_improvement checked BEFORE diversify_threshold",
+        "uniride_core/algorithms/string_split_decoder.py:236-247 singleton fallback with total_cost inf when no feasible split",
+        "uniride_core/algorithms/sota_common/penalty_manager.py:44 class PenaltyManager (not imported by GA-Split path)",
+        "grep 'swap_?star|SWAP\\*|granular|biased.?fitness|diversity.?contribution|broken.?pairs|clone|subpopulation' over active .py: 0 hits in GA-Split code"
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "C7",
+      "inventory_location": "§2.2 table row #31 (inv line 83)",
+      "question": "Locate assignPhysicalVehicles in src/services/dudullu-preview.ts (line, algorithm, node-budget default).",
+      "finding": "Defined at src/services/dudullu-preview.ts:745 (not exported); default nodeBudget = ASSIGNMENT_SEARCH_NODE_BUDGET = 50_000 (:6); the caller passes input.assignmentSearchNodeBudget (undefined -> default) at :928-932. Algorithm: exact depth-first branch-and-bound over route intervals sorted by (start, end, jobId, routeIndex). Each route is assigned to a physical vehicle if Sw/So capacity fits and every already-assigned interval on that vehicle is separated by the vehicle's cooldownMinutes (canAssign). Pruning: stop a branch when the vehicles used reach the incumbent count; stop globally when the incumbent equals the lower bound or the node budget is exhausted. Symmetry breaking: vehicles with identical (swCapacity, soCapacity, cooldown) signature and identical free-time are tried once, and only one unused vehicle per signature. Lower bound: maximum depth of interval overlap after extending intervals by the smallest fleet cooldown (clique bound, at least 1). Capacity pre-check: bipartite matching (Kuhn augmenting paths) of each maximal clique's routes to compatible vehicles. Outcome: 'preview_ready' with minimumProven=true when the search completes; 'indeterminate' (ASSIGNMENT_SEARCH_INDETERMINATE) when the budget is hit; 'shortage' when no assignment exists. Objective: minimise number of distinct physical vehicles. Literature counterpart: interval scheduling / fixed-job scheduling with setup (cooldown) times and heterogeneous capacities, i.e. a minimum-fleet vehicle scheduling problem.",
+      "evidence": [
+        "src/services/dudullu-preview.ts:6 const ASSIGNMENT_SEARCH_NODE_BUDGET = 50_000",
+        "src/services/dudullu-preview.ts:745-749 function assignPhysicalVehicles(intervals, vehicles, nodeBudget = ASSIGNMENT_SEARCH_NODE_BUDGET)",
+        "src/services/dudullu-preview.ts:623-634 canAssign (Sw/So capacity + cooldown separation)",
+        "src/services/dudullu-preview.ts:649-651 vehicleSignature = swCapacity|soCapacity|cooldownMinutes",
+        "src/services/dudullu-preview.ts:666 maxDepthAtStarts; :724-743 computeIntervalBounds (lower bound with min cooldown extension, capacityInfeasible)",
+        "src/services/dudullu-preview.ts:690-722 cliqueHasCapacityMatching (augmenting-path matching :704-721)",
+        "src/services/dudullu-preview.ts:784-791 interval ordering; :800-827 candidateVehicles symmetry breaking",
+        "src/services/dudullu-preview.ts:829-855 search(): pruning by incumbent (:830), node budget (:831-834), lower-bound stop (:839)",
+        "src/services/dudullu-preview.ts:866-877 status preview_ready/indeterminate/shortage, minimumProven",
+        "src/services/dudullu-preview.ts:928-932 call with input.assignmentSearchNodeBudget"
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "C8",
+      "inventory_location": "§2.2 table row #32 (inv line 84)",
+      "question": "Default parameters of cluster-first strategies optimizer_api/strategies/{ga,pso,gwo,hho}_strategy.py and vehicle_assignment.py.",
+      "finding": "All four are cluster-first/route-second: VehicleCalculator clusters students, then each cluster is routed as a single-vehicle TSP by the string-keyed solver in tsp_meta_engines (solve_ga_tsp / solve_pso_tsp / solve_gwo_tsp / solve_hho_tsp). Promoted params override defaults only when config is None. GA: population_size 50, max_iterations 100, crossover_rate 0.85, mutation_rate 0.15, elite_count 2, tournament_size 3, max_no_improvement 50, seed None, local_search_type 'two_opt' (this key is NOT read by solve_ga_tsp, which hard-codes 2-opt). PSO: swarm_size 30, max_iterations 100, inertia_weight 0.729, cognitive_weight 1.49445, social_weight 1.49445, max_velocity_size 5, max_no_improvement 25, reinit_interval 50, seed None, local_search_type 'hybrid'. GWO: population_size 30, max_iterations 100, initial_a 2.0, exploration_rate 0.5, max_no_improvement 20, seed None, local_search_type 'two_opt'. HHO: population_size 30, max_iterations 100, initial_energy 1.0, jump_probability 0.5, max_no_improvement 20, seed None, local_search_type 'hybrid'. VehicleCalculator (uniride_core/algorithms/vehicle_assignment.py; there is no optimizer_api/strategies/vehicle_assignment.py): sw_capacity 4, so_capacity 5, max_tour_time 120, clustering_algorithm 'sweep'; strategies pass request.sw_capacity/so_capacity/max_travel_time and request.clustering_algorithm or 'sweep'. Loop: start at the vector-capacity lower bound max(ceil(Sw/4), ceil(So/5), 1) vehicles, re-cluster and route; return the first plan whose every route duration <= max_tour_time; otherwise add 1 vehicle, up to min(n - k0 + 1, 15) attempts; fallback is the best-effort plan with minimum total overtime. Note: GA and PSO class docstrings say 'Uses K-Means clustering', but the default is sweep.",
+      "evidence": [
+        "optimizer_api/strategies/ga_strategy.py:39-49 DEFAULT_CONFIG; :52-55 promoted params merge; :94 solve_ga_tsp",
+        "optimizer_api/strategies/pso_strategy.py:38-49 DEFAULT_CONFIG; :86 solve_pso_tsp",
+        "optimizer_api/strategies/gwo_strategy.py:51-59 DEFAULT_CONFIG; :93 solve_gwo_tsp",
+        "optimizer_api/strategies/hho_strategy.py:53-61 DEFAULT_CONFIG; :101 solve_hho_tsp",
+        "optimizer_api/strategies/ga_strategy.py:173-179 VehicleCalculator(..., clustering_algorithm=request.clustering_algorithm or 'sweep') (same pattern pso:163-, gwo:167-, hho:174-)",
+        "optimizer_api/strategies/ga_strategy.py:35 and pso_strategy.py:34 docstrings 'Uses K-Means clustering'",
+        "uniride_core/algorithms/vehicle_assignment.py:46-56 VehicleCalculator defaults (4, 5, 120, 'sweep')",
+        "uniride_core/algorithms/vehicle_assignment.py:58-66 estimate_vehicle_count; :122-123 max_attempts = min(len(students)-num_vehicles+1, 15)",
+        "uniride_core/algorithms/vehicle_assignment.py:130-199 cluster->route->check max_tour_time, increment vehicles; :201-212 best-effort fallback",
+        "uniride_core/algorithms/tsp_meta_engines.py:155-171, 205 solve_ga_tsp hard-codes 2-opt (local_search_type unused)"
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "C9",
+      "inventory_location": "§2 helpers (inv line 94)",
+      "question": "Algorithmic content of time_window_extractor.py and time_window_violation_tracker.py.",
+      "finding": "Both are non-optimising helpers, implemented in uniride_core/algorithms/ (the optimizer_api/utils/ files are 9- and 17-line re-export shims). TimeWindowExtractor converts weekly schedule entries to windows (minutes from midnight). Pickup: [startTime - window_minutes, startTime], default window 30. Dropoff: departure = endTime rounded UP to the next full hour, window [departure, departure + window_minutes] capped at 24:00. Helpers: backward departure = target - tour_duration - offset (offset 10, floored at 0); forward arrival accumulation with a hard-coded 15-min default when a matrix entry is missing. TimeWindowViolationTracker simulates one route forward from start_time: arrival += travel (15-min default if missing), waits on early arrival, counts early/late violations, adds service_time 5 min per stop. Penalty = early_minutes*1.0 + late_minutes*10.0; severity minor <=5, moderate <=15, severe >15 min; compliance rate = % stops within window. Usage: the tracker has NO caller in active non-test code (only its re-export). The extractor is used by the API route optimizer_api/routers/utils.py. Neither is used inside the split decoders or metaheuristics. Their 15-min defaults for missing travel times contradict the fail-closed matrix policy, but they are not on the solver path.",
+      "evidence": [
+        "uniride_core/algorithms/time_window_extractor.py:38-50 class docstring (pickup backward / dropoff forward)",
+        "uniride_core/algorithms/time_window_extractor.py:58-65 window_minutes=30",
+        "uniride_core/algorithms/time_window_extractor.py:85-99 round_up_to_hour; :101-151 extract() pickup/dropoff windows",
+        "uniride_core/algorithms/time_window_extractor.py:203-221 calculate_departure_time (offset=10, max(0,...)); :223-251 calculate_arrival_times (default 15.0 at :248)",
+        "uniride_core/algorithms/time_window_violation_tracker.py:19-25 ViolationType; :124-127 SEVERITY_THRESHOLDS 5/15",
+        "uniride_core/algorithms/time_window_violation_tracker.py:129-148 service_time=5.0, wait_penalty=1.0, late_penalty=10.0",
+        "uniride_core/algorithms/time_window_violation_tracker.py:197-304 analyze_route simulation (default travel 15.0 at :210; wait :237-238; compliance :298-302)",
+        "uniride_core/algorithms/time_window_violation_tracker.py:379-393 calculate_penalty returns report.total_penalty",
+        "optimizer_api/utils/time_window_extractor.py:1-9 and optimizer_api/utils/time_window_violation_tracker.py:1-17 re-export shims",
+        "optimizer_api/routers/utils.py:7, 18 only non-test caller (TimeWindowExtractor)"
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "C10",
+      "inventory_location": "K2 (inv lines 109-114)",
+      "question": "Which crossover/mutation operators does tsp_meta_engines.solve_ga_tsp use; does it apply local search/polish (which, how often)? Same for solve_pso_tsp. Any GA/PSO literature citation?",
+      "finding": "solve_ga_tsp imports only order_crossover (OX1) and mutate_permutation from ga_operators. PMX (partially_mapped_crossover) and cycle_crossover_2 exist in ga_operators but are unused here. GA flow: population_size (50) random permutations, each improved by 2-opt with max_iter=10 at initialisation only. Tournament selection (size 3) on fitness 1/duration. OX1 with p=0.85, else copy parent1. Mutation with p=0.15, choosing swap or inversion 50/50. Elitism elite_count=2. Stops at max_iterations 100 or 50 generations without improvement. No local search inside the generational loop. One final 2-opt polish (max_iter=300) on the best. The config key local_search_type is ignored by the GA. solve_pso_tsp is a swap-sequence PSO. Velocity = inertia swaps kept with probability w (default 0.729), cognitive swaps (diff to pbest) kept with probability c1/3, social swaps (diff to gbest) with probability c2/3 (c1=c2=1.49445), randomly truncated to max_velocity_size=5. Every reinit_interval=50 iterations each particle is reset (90 %: pbest + 1-3 random swaps; 10 %: shuffled gbest). Stops after max_no_improvement=25. No local search during the run. One final apply_local_search of config local_search_type (default 'two_opt' = TwoOptLocalSearch max_iterations 1000; production PSO strategy passes 'hybrid' = HybridLocalSearch) on gbest only. Citations: none for GA in tsp_meta_engines.py or ga_operators.py. PSO has only the phrase 'Clerc-style probabilities' with no reference. The only literature references in the file are HHO (Heidari et al. 2019). local_search.py cites Croes 1958, Lin 1965, Or 1976, Taillard 1993. Governed academic path: 'Numba-GA'/'Numba-PSO' resolve to Core-GA-TSP/Core-PSO-TSP, whose executors run these tsp_meta_engines solvers. The legacy numba_metaheuristics GA/PSO (_run_ga etc.) is reached only by a direct registry lookup of the literal 'Numba-GA'/'Numba-PSO' key.",
+      "evidence": [
+        "uniride_core/algorithms/tsp_meta_engines.py:10 'from uniride_core.algorithms.ga_operators import mutate_permutation, order_crossover'",
+        "uniride_core/algorithms/tsp_meta_engines.py:155-165 inner two_opt via local_search.apply_local_search(TWO_OPT, max_iterations)",
+        "uniride_core/algorithms/tsp_meta_engines.py:167-172 init + 2-opt(max_iter=10) per individual",
+        "uniride_core/algorithms/tsp_meta_engines.py:177-203 elitism, tournament (:194-195), OX (:196-199), swap/inversion mutation (:200-201)",
+        "uniride_core/algorithms/tsp_meta_engines.py:205-209 final 2-opt max_iter=300",
+        "uniride_core/algorithms/ga_operators.py:11-37 OX1; :40-62 mutate_permutation; :65 PMX; :93 cycle_crossover_2 (unused by tsp_meta_engines)",
+        "uniride_core/algorithms/tsp_meta_engines.py:212-268 PSO helpers; :253 'Clerc-style probabilities' (no reference); :256-263 w and c/3 probabilities; :265-267 truncation",
+        "uniride_core/algorithms/tsp_meta_engines.py:409-512 solve_pso_tsp; :480-498 reinit; :500-501 stagnation stop; :503-512 single final local search",
+        "uniride_core/algorithms/local_search.py:77 TwoOptLocalSearch default max_iterations=1000; :695 HybridLocalSearch; :844-853 factory map",
+        "uniride_core/algorithms/local_search.py:9-21 Croes/Lin/Or/Taillard citations",
+        "uniride_core/algorithms/tsp_meta_engines.py:516, 654 Heidari et al. (2019) (HHO only)",
+        "academic_benchmark/core/algorithm_resolution.py:48-49 Numba-GA/PSO -> Core-GA-TSP/Core-PSO-TSP (DEPRECATED)",
+        "uniride_core/algorithms/engine_factory.py:28-34 CORE_TSP_SOLVERS; academic_benchmark/core/registry_setup.py:594-595 registration",
+        "academic_benchmark/core/registry_setup.py:417-421 legacy meta path run_meta_heuristic (numba_metaheuristics)"
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "C11",
+      "inventory_location": "K3 (inv lines 116-121) and §5 item 15 (inv line 222)",
+      "question": "Which implementation runs for each academic ID (Core-GWO-TSP-Pure, Core-GWO-TSP-Memetic-2opt, Numba-GWO, Core-HHO-TSP-Pure, Core-HHO-TSP-Memetic-2opt, Numba-HHO, GWO, HHO): string-keyed tsp_meta_engines vs integer-indexed GWOOptimizer/HHOOptimizer?",
+      "finding": "Governed academic execution (cli_engine/smart_benchmark -> execute_preflighted) resolves the requested ID to a canonical ID and runs the executor registered under that canonical ID. For TSP/ATSP: 'GWO' and 'Core-GWO-TSP-Pure' -> GWOOptimizer (integer-indexed, tsp_matrix_metaheuristics/gwo_solver.py) with pack_size 50, max_iterations 250, initial_a 2.0, exploration_rate 0.4, max_no_improvement 75, polish_enabled=False. 'Core-GWO-TSP-Memetic-2opt', and the deprecated CLI aliases 'Numba-GWO' and 'Core-GWO-TSP', -> the same GWOOptimizer defaults with polish_enabled=True (initial 2-opt per wolf, periodic 2-opt on alpha every 25 iterations, final 2-opt 300). HHO is analogous: 'HHO'/'Core-HHO-TSP-Pure' -> HHOOptimizer (hawks 50, max_iterations 250, initial_energy 1.0, jump_probability 0.5, max_no_improvement 75, polish off); 'Core-HHO-TSP-Memetic-2opt'/'Numba-HHO'/'Core-HHO-TSP' -> HHOOptimizer with polish on. So ALL eight academic TSP/ATSP IDs run the integer-indexed GWOOptimizer/HHOOptimizer; Pure vs Memetic differ only in polish_enabled. The separately registered literal 'Numba-GWO'/'Numba-HHO' entries (pack_size/hawks 80) are not reached via governed resolution (the alias maps to the canonical Memetic entry with 50), only by a direct ungoverned registry lookup. Deprecated aliases are accepted only from the CLI source; manifests raise DeprecatedManifestIdentifierError. 'Core-GWO-TSP'/'Core-HHO-TSP' registry keys are first registered to string-keyed solve_gwo_tsp/solve_hho_tsp and then overwritten by the GWOOptimizer/HHOOptimizer overrides (register is dict assignment). If the tsp_matrix_metaheuristics import fails, the overrides are skipped: the canonical Pure/Memetic IDs become unregistered and Core-GWO-TSP stays string-keyed. String-keyed tsp_meta_engines GWO/HHO produce: (a) any CVRP/CVRPTW problem given to the GWO/HHO academic executors (redirected to engine 'Core-GWO-TSP'/'Core-HHO-TSP' = TSPMetaMatrixEngine(solve_*_tsp) + split_decoder split); (b) the academic routing aliases CVRP-/CVRPTW- {Core-GWO-TSP, Numba-GWO, GWO-Split, and HHO equivalents}; note the academic 'CVRP-GWO-Split' is NOT the production gwo_split engine; (c) FCM-GWO-TSP/FCM-HHO-TSP (UNCATALOGED); (d) production cluster-first 'gwo'/'hho' strategies. A THIRD implementation exists: production 'gwo_split'/'hho_split' use gwo_split_engine.py/hho_split_engine.py (own swap moves, string_split_decoder.decode_giant_tour).",
+      "evidence": [
+        "academic_benchmark/core/algorithm_resolution.py:50-55 GWO/HHO -> *-Pure (ACTIVE); Numba-GWO/Core-GWO-TSP/Numba-HHO/Core-HHO-TSP -> *-Memetic-2opt (DEPRECATED)",
+        "academic_benchmark/core/algorithm_resolution.py:139-160 resolve_algorithm_id (non-CLI deprecated alias -> DeprecatedManifestIdentifierError :155-156)",
+        "academic_benchmark/core/execution_gateway.py:205-218 resolve -> preflight -> registry_getter(decision.executor_registry_id)",
+        "academic_benchmark/core/preflight.py:363 executor_registry_id=canonical_id",
+        "academic_benchmark/core/registry_setup.py:594-595 CORE_TSP_SOLVERS (incl. Core-GWO-TSP/Core-HHO-TSP string-keyed) registered first",
+        "academic_benchmark/core/registry_setup.py:787-837 _NUMBA_METAH_OVERRIDES: :795-798 Core-GWO-TSP memetic; :799-802 Pure (polish False); :803-806 Memetic-2opt; :807-818 HHO equivalents; :819-826 Numba-GWO/HHO (80); :828-829 import-failure fallback; :831-837 registration",
+        "academic_benchmark/engine_core.py:180-185 AlgorithmRegistry.register = dict assignment (later registration overwrites)",
+        "academic_benchmark/core/registry_setup.py:609-677 _make_numba_metah_executor: routing problems -> _run_core_routing_executor(engine_name) :656-660; cfg polish_enabled :673",
+        "uniride_core/algorithms/engine_factory.py:28-34, 51-56, 112-119 string-keyed solvers behind Core-*-TSP, FCM-*-TSP, routing engine",
+        "academic_benchmark/core/registry_setup.py:994-1019 routing aliases (Core-GWO-TSP/Numba-GWO/GWO-Split -> 'Core-GWO-TSP' engine); :839-840 FCM registrations",
+        "uniride_core/algorithms/tsp_matrix_metaheuristics/gwo_solver.py:47-73 GWOOptimizer params; :160-182 initial polish; :260-273 periodic polish; :281-285 final polish; :306 variant label",
+        "optimizer_api/strategies/gwo_strategy.py:93 and hho_strategy.py:101 production cluster-first use tsp_meta_engines",
+        "uniride_core/algorithms/gwo_split_engine.py:9-16, 139 and hho_split_engine.py:10-19, 180 third implementation (production split)"
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "C12",
+      "inventory_location": "K7 (inv lines 144-149)",
+      "question": "Default parameters of clustering strategies (sweep, kmeans, fuzzy_cmeans (m, epsilon, max_iter), fuzzy_cmeans_enhanced, hierarchical_fcm, k_medoids, clarke_wright) and any literature citation.",
+      "finding": "The factory passes only sw_capacity/so_capacity (plus hierarchical_threshold=50 and students_per_region=30 for hierarchical_fcm), so constructor/core defaults apply. Unknown names fall back to sweep. sweep: no parameters; sort by polar angle around the depot (default coords 41.001, 29.177 if no depot given), cut into num_vehicles equal chunks of ceil(n/k); an over-capacity chunk is halved once, then split to singletons. kmeans: k-means++ initialisation, Lloyd iterations max_iterations=100, stop when assignments are unchanged, haversine on lat/lng, capacity repair by splitting. fuzzy_cmeans: m=2.0, max_iter (filter_limit)=100, epsilon = 1e-4 (stop when no membership entry changes by more than 1e-4), random row-normalised initial memberships, haversine, hard assignment by max membership; over-capacity cluster re-split by FCM k=2, then singletons. fuzzy_cmeans_enhanced: same FCM core (m=2.0, filter_limit=100 via kwarg max_iterations, tol 1e-4). Border detection: ambiguity = top1 - top2 membership; HIGH if <0.15, MEDIUM if <0.30, else LOW. Transfer optimisation: up to 50 iterations, executing the highest-priority feasible border-point transfer out of capacity-violating clusters; enable_transfer=True. hierarchical_fcm (HierarchicalConfig): hierarchical_threshold 50, students_per_region 30, min_regions 2, enable_cross_region_transfer True, max_transfer_iterations 50, fcm_max_iterations 100, fcm_fuzziness 2.0. N<=50 runs single-stage enhanced FCM; otherwise regional FCM, then per-region vehicle FCM plus per-region transfer loop. k_medoids: random.sample initial medoids, alternating assign/medoid-update (Voronoi-iteration style, NOT PAM BUILD/SWAP as the inventory labels it), max_iterations=50, directed time_matrix durations. clarke_wright: no parameters; directed savings S(i->j)=c(i,D)+c(D,j)-c(i,j) for all ordered pairs, sorted descending (deterministic tie-break), tail-to-head merge if Sw/So capacity holds, stop when #routes <= num_vehicles; max tour time not checked. kmeans/FCM/k_medoids use the module-level `random` generator (no seed parameter in these files); enhanced FCM uses random.Random() when no rng is passed. Citations: none in any clustering file; only the MATLAB file names FCM_TEK_ASAMA_UYELIK.m / FCM_IKI_ASAMA_MERKEZ.m and 'Date: 05 Nisan 2026' headers.",
+      "evidence": [
+        "uniride_core/algorithms/clustering_strategies/__init__.py:28-72 get_clustering_strategy (fallback Sweep :61; hierarchical kwargs :64-70; others :72)",
+        "uniride_core/algorithms/clustering_strategies/sweep.py:19-63 (default depot :24, chunk_size :29), :65-75 halving split",
+        "uniride_core/algorithms/clustering_strategies/kmeans.py:7-30 k-means++ (random.randint/random.random :11, :23); :32-68 max_iterations=100, convergence :52-53",
+        "uniride_core/algorithms/clustering_strategies/fuzzy_cmeans.py:8-14 random init; :16 filter_limit=100, m=2.0; :45-51 tolerance 1e-4; :53-62 hard assignment; :80-106 capacity repair",
+        "uniride_core/algorithms/clustering_strategies/fuzzy_cmeans_enhanced.py:136-137 thresholds 0.15/0.30; :151-233 FCM core (rng :173, tol :214); :258-280 ambiguity; :524-567 transfer max_iterations=50; :570-577 core defaults; :656-665 strategy kwargs",
+        "uniride_core/algorithms/clustering_strategies/hierarchical_fcm.py:45-62 HierarchicalConfig defaults; :331-341 single-stage branch; :343-382 hierarchical branch; :407-412 constructor",
+        "uniride_core/algorithms/clustering_strategies/k_medoids.py:10-12 random.sample init; :14-60 max_iterations=50, assign/update loop",
+        "uniride_core/algorithms/clustering_strategies/clarke_wright.py:9-26 docstring (directed savings); :43-55 savings + sort; :58-78 merge rule (no max-tour check :74-75)",
+        "uniride_core/algorithms/clustering_strategies/fuzzy_cmeans_enhanced.py:10 and hierarchical_fcm.py:15 MATLAB file names (no publication)"
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "C13",
+      "inventory_location": "K8 (inv lines 151-157), §5 items 10-11 (inv lines 217-218)",
+      "question": "Actual time complexity of SplitDecoder (incl. _build_trips_with_tw and max_tour_duration / max_ride_time branches), early breaks, re-simulation cost; is the decoder exact under TW / ride time / Sw-So capacities / singleton fallback?",
+      "finding": "Complexity. Let L = max number of consecutive customers that fit both Sw and So capacities (L <= sw_cap+so_cap = 9 by default when every customer has a positive demand; L = n in the worst case). (1) _build_trips (CVRP mode; also every fitness evaluation of GA/PSO/GWO/HHO-Split): for each start i, extend j until a capacity break. max_tour_duration and max_ride_time violations use `continue`, NOT break, so the inner loop always runs to the capacity limit. O(1) per extension -> O(n*L), worst case O(n^2). (2) _build_trips_with_tw PICKUP: per i, LOOP1 builds prefixes in O(L) (break on capacity or missing arc). LOOP2 visits each prefix k and for each calls _get_target_arrival_time over giant_tour[i..k] and re-simulates the whole prefix schedule in LOOP3, both O(k-i). Hence O(L^2) per i, total O(n*L^2), worst case O(n^3). (3) DROPOFF: one forward pass per i, O(n*L), worst O(n^2). DP over the trip DAG is O(#trips)=O(n*L). The trips dict stores O(n*L) Trip objects, so memory is O(n*L), not the O(n) claimed in the header. The header 'O(n^2)' holds for CVRP and dropoff-TW (worst case) but not for pickup-TW. Exactness. The DP is an exact shortest path on the DAG it builds, with no pruning and no early termination. For each candidate trip, Sw/So capacity, max_tour_duration, max_ride_time and missing arcs are checked exactly (non-monotone checks use `continue`). So in CVRP mode it returns the optimal order-preserving partition minimising total travel cost under Sw/So capacities, tour-duration and ride-time limits. Limitations: (a) DP objective = (sum of TW violations, total cost); the metaheuristics rank by (feasible, num_vehicles, cost), so the split is not optimal for that vehicle-first key. (b) TW mode is not an exact CVRPTW split. Each trip's schedule is fixed by a rule, not optimised: pickup departure = max(target_time or 09:00, max latest window in trip) - int(travel) - offset; dropoff departure = earliest window of the FIRST customer, or target_time/14:00. Travel times are int-truncated; waiting is not counted in max_tour_duration; after waits, pickup arrival at the school is not re-checked; TW are soft because decode_with_time_windows never sets strict_time_windows (default False). (c) Singleton fallback is not a heuristic inside the DP: it fires only when no feasible partition exists and returns one-customer routes with total_cost=inf, which objective_key marks INFEASIBLE (these routes may still violate limits). (d) With is_asymmetric=False (decode_giant_tour default), a missing directed arc silently uses the reverse arc. (e) GA-Split evaluates every individual with decode_giant_tour (no TW). Only the final best tour is re-decoded with decode_with_time_windows, so TW never steer the search and the reported routes can differ from the optimised key. (f) PSO-, GWO- and HHO-Split engines and their strategies never pass max_ride_time (or direction) to the decoder, so the per-student ride limit is enforced only in GA-Split. Therefore 'Optimal partitioning guaranteed' (ga_split_strategy.py:51) is valid only as: min-cost order-preserving split of a given giant tour under capacity/duration/ride-time (CVRP mode). It does not hold under time windows or for the vehicle-first objective.",
+      "evidence": [
+        "uniride_core/algorithms/string_split_decoder.py:106-119 header claims 'O(n²)' time, 'O(n)' space",
+        "uniride_core/algorithms/string_split_decoder.py:121-153 constructor (strict_time_windows=False :132, max_ride_time :133)",
+        "uniride_core/algorithms/string_split_decoder.py:170-188 recursion on interior depot segments",
+        "uniride_core/algorithms/string_split_decoder.py:203-206 trip-building branch; :208-228 DP with lexicographic (violations, cost)",
+        "uniride_core/algorithms/string_split_decoder.py:236-247 singleton fallback (total_cost inf, 'No feasible splitting found')",
+        "uniride_core/algorithms/string_split_decoder.py:287-305 _get_dist (reverse-arc fallback when not asymmetric, else inf)",
+        "uniride_core/algorithms/string_split_decoder.py:311-369 _build_trips: capacity break :337-338; duration continue :350-351; ride-time continue :353-358",
+        "uniride_core/algorithms/string_split_decoder.py:403-513 pickup TW: LOOP1 :417-434 (breaks :420-421, :423-424); LOOP2 :437-469 (continue :441-442, :447-450, :462-469; target :452-454; departure :456-458); LOOP3 re-simulation :477-492; strict :494-495; ride+wait :499-502",
+        "uniride_core/algorithms/string_split_decoder.py:515-576 dropoff TW: departure from first customer :516-518; breaks :530-531, :534-535; continues :554-555, :559-562, :564-565",
+        "uniride_core/algorithms/string_split_decoder.py:580-597 _get_target_arrival_time (default 09:00); :599-616 _get_target_departure_time (default 14:00)",
+        "uniride_core/algorithms/string_split_decoder.py:681-707 decode_giant_tour (is_asymmetric default False :689, no TW); :710-754 decode_with_time_windows (strict_time_windows not passed)",
+        "uniride_core/algorithms/objective_rank.py:14-37 objective_key (feasible, vehicles, cost) ignores TW violations",
+        "uniride_core/algorithms/ga_split_engine.py:110-121 fitness via decode_giant_tour; :397-412 final decode_with_time_windows only when use_time_windows",
+        "optimizer_api/strategies/ga_split_strategy.py:51 'Optimal partitioning guaranteed for each tour'; :193 passes max_ride_time",
+        "uniride_core/algorithms/pso_split_engine.py, gwo_split_engine.py, hho_split_engine.py: 0 occurrences of 'max_ride_time' (hho_split_engine.py:153-173 evaluate_hawk signature/decoder call without it); optimizer_api/strategies/{pso,gwo,hho}_split_strategy.py: 0 occurrences"
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "C14",
+      "inventory_location": "§5 item 8 (inv line 215); K3 / K8",
+      "question": "How are initial_energy, E, jump_probability and Lévy flight used in hho_solver.py and hho_split_engine.py versus original HHO (E=2E0(1-t/T), E0 in [-1,1], J=2(1-r5))?",
+      "finding": "Escape energy: all three HHO implementations compute E = 2*E0*(1 - t/T) * initial_energy with E0 = 2*rand - 1. Differences from the original: (i) initial_energy is an extra multiplier (1.0 reproduces the original range [-2,2]; production split default 2.0 gives [-4,4], so |E|>=1 exploration lasts longer). (ii) E0 is drawn ONCE per iteration and shared by all hawks, not per hawk. jump_probability is NOT the jump strength J. It replaces the fixed 0.5 threshold on the escape chance r: direct (soft/hard) besiege iff r >= jump_probability, otherwise the progressive-dive variants. 0.5 (academic) reproduces the original rule; 0.4 (production split) gives direct besiege about 60 % of the time. J = 2(1 - r5) is computed separately inside soft besiege only and used as a per-swap keep probability |E*J| for the hawk->prey swap sequence. Hard besiege uses |E|. Dives use |E|*rand (no J). Discretisation: a 'move' keeps each swap of the hawk->prey swap sequence with probability = intensity. The mean position X_m and random-hawk perching are not used. Exploration (|E|>=1): with p=0.5 a partial move toward the prey with random intensity, else a Lévy-flight perturbation. In the original HHO, Lévy flight appears only in the rapid dives. Lévy: Mantegna with beta=1.5 -> number of random swaps = max(1, min(int(|step|*scale*n), n//2)), scale 0.3 (academic levy_scale; split levy_flight_scale 0.3; dives hard-coded 0.3/0.2 in split and string engines; academic hard-dive uses 0.7*levy_scale). Soft besiege with dives: dive_count=3 candidates, keep the best if it beats the hawk. Hard besiege with dives: a single Lévy-perturbed candidate returned WITHOUT comparison (the original compares Y and Z with the current fitness). Acceptance is greedy in all implementations (a hawk moves only if improved); the original replaces positions. hho_split_engine compares dive candidates with giant_tour_cost (TSP cost of the giant tour), not the split objective, and applies local_search every local_search_interval=15 iterations to every new position.",
+      "evidence": [
+        "uniride_core/algorithms/tsp_matrix_metaheuristics/hho_solver.py:57-61 defaults initial_energy=1.0, jump_probability=0.5, levy_scale=0.3",
+        "uniride_core/algorithms/tsp_matrix_metaheuristics/hho_solver.py:86-105 Mantegna Lévy (beta=1.5, num_swaps :105)",
+        "uniride_core/algorithms/tsp_matrix_metaheuristics/hho_solver.py:133-148 soft besiege J=2*(1-rand) :136, intensity |E*J| :137; hard besiege |E| :145",
+        "uniride_core/algorithms/tsp_matrix_metaheuristics/hho_solver.py:154-170 soft dives (dive_count, greedy); :172-179 hard dives (no comparison, 0.7*levy_scale)",
+        "uniride_core/algorithms/tsp_matrix_metaheuristics/hho_solver.py:215-217 _escape_energy = 2*e0*(1-it/T); :269-270 E0 once per iteration, *initial_energy; :273 hawk loop",
+        "uniride_core/algorithms/tsp_matrix_metaheuristics/hho_solver.py:274-300 exploration/exploitation branches; direct = r >= jump_probability :286",
+        "uniride_core/algorithms/tsp_matrix_metaheuristics/hho_solver.py:302-309 greedy acceptance",
+        "uniride_core/algorithms/hho_split_engine.py:59-79 Lévy; :108-117 soft (jump_strength :110) / hard besiege; :120-141 soft dives using giant_tour_cost :136; :144-150 hard dives",
+        "uniride_core/algorithms/hho_split_engine.py:209-212 E0 per iteration, initial_energy default 2.0; :216-238 branches (fresh rng.random() >= jump_probability 0.4 :228); :240-246 periodic local search; :258-262 greedy acceptance",
+        "optimizer_api/strategies/hho_split_strategy.py:71-73 initial_energy 2.0, jump_probability 0.4, levy_flight_scale 0.3",
+        "uniride_core/algorithms/tsp_meta_engines.py:631-643 hho_escape_energy / hho_use_direct_besiege; :673-674 defaults 1.0/0.5; :692-725 loop; :588-628 dives"
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "C15",
+      "inventory_location": "§5 item 7 (inv line 214); K8",
+      "question": "Does pso_split_strategy.py / pso_split_engine.py use a constriction coefficient chi or only inertia weight?",
+      "finding": "Only an inertia weight; there is no constriction factor chi anywhere in pso_split_engine.py (no chi/constriction/kappa variable). Inertia decreases linearly from inertia_weight=0.9 to inertia_min=0.4 over max_iterations (Shi-Eberhart style). Velocity is a list of weighted swaps (i, j, p): carried swaps get p*inertia, are dropped if <0.1 and capped at velocity_clamp=0.7. New cognitive/social swaps (diff to pbest/gbest) get p = c*rand with c1=c2=2.0, so p can exceed 1 and is not clamped. The velocity list is truncated to int(0.7*n) entries keeping the first ones, so social swaps (appended last) are cut first. Each swap is applied with probability p. The strategy comment 'Clerc's constriction with modifications' is therefore inaccurate for the split PSO. Separately, the cluster-first PSO (pso_strategy.py + tsp_meta_engines) uses the numerical constriction-equivalent constants w=0.729, c1=c2=1.49445 in inertia form (no explicit chi), applied as keep probabilities w and c/3.",
+      "evidence": [
+        "optimizer_api/strategies/pso_split_strategy.py:62-72 DEFAULT_CONFIG; :67 comment 'Clerc's constriction with modifications'; :68-72 inertia 0.9 -> 0.4, c1=c2=2.0, velocity_clamp 0.7",
+        "uniride_core/algorithms/pso_split_engine.py:61-77 difference_swaps weight*rand",
+        "uniride_core/algorithms/pso_split_engine.py:80-93 apply_velocity (swap applied with probability p)",
+        "uniride_core/algorithms/pso_split_engine.py:96-132 update_velocity: inertia scaling/clamp :107-111; cognitive :113-120; social :121-129; truncation :131-132",
+        "uniride_core/algorithms/pso_split_engine.py:202-206 linear inertia schedule",
+        "grep 'chi|constrict|kappa|phi|Clerc' in pso_split_engine.py: no constriction variable (only 'lexicographic' substring match at :145)",
+        "optimizer_api/strategies/pso_strategy.py:37-43 'Clerc constriction' values as inertia_weight 0.729, c1=c2=1.49445",
+        "uniride_core/algorithms/tsp_meta_engines.py:246-268 combine_velocities (probabilities w, c1/3, c2/3)"
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "C16",
+      "inventory_location": "§5 item 5 (inv line 212)",
+      "question": "Are SMA, GBO, APO, GTO, DBO (slime mould, gradient-based optimizer, artificial protozoa, gorilla troops, dung beetle) implemented in active code?",
+      "finding": "No. A case-insensitive regex over all 705 code files (.py/.ts/.tsx/.js/.mjs, tests included) in uniride_core, optimizer_api, academic_benchmark and src, plus 43 JSON/YAML/TOML files there, gave 0 hits for slime, SMA, gradient-based optimizer, GBO, protozoa, APO, gorilla, GTO, dung beetle, DBO. Filename-based matches were false positives (smart_benchmark, sandbox). The five names appear only as section headers of the planning document academic_benchmark/SOTA_ALGORITHM_CANDIDATES.md (Rank 3-7). The inventory's 'not implemented' statement is confirmed at code level.",
+      "evidence": [
+        "regex 'slime|\\bSMA\\b|SMA[-_]TSP|gradient[-_ ]?based[-_ ]?optim|\\bGBO\\b|GBO[-_]|protozoa|\\bAPO\\b|APO[-_]|gorilla|\\bGTO\\b|GTO[-_]|dung[-_ ]?beetle|\\bDBO\\b|DBO[-_]' (re.I) over 705 active code files: 0 hits; over 43 json/yaml/toml: 0 hits",
+        "academic_benchmark/SOTA_ALGORITHM_CANDIDATES.md:113 SMA, :153 GBO, :190 APO, :230 GTO, :258 DBO (document headers only)"
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "C17",
+      "inventory_location": "§5 item 4 (inv line 211)",
+      "question": "Is numba imported/used with @njit in active code paths, and is it installed in the repo venv (.venv-jit) (folder names only)?",
+      "finding": "Yes, numba is imported in active code, always behind try/except fallbacks: local_search_numba.py (no-op jit fallback plus a printed warning), numba_accel.py (no-op fallback), sota_tsp/r2dma_tsp.py (guarded), and benchmark_utils.py (version print only). There are 18 JIT-decorated functions: 17 x @jit(nopython=True, cache=True) (njit semantics; 9 in local_search_numba.py, 8 in numba_accel.py) and 1 x @numba.njit(cache=True) in r2dma_tsp.py. No literal '@njit' decorator exists. Active paths: GWOOptimizer/HHOOptimizer objective evaluation via base_solver._tour_length_fast -> numba_accel._calculate_tour_length_atsp_numba. The non-fair 2-opt polish uses numba_accel._two_opt_improve_atsp_numba, but in fixed-budget (fair) mode the polish is pure-Python improve_two_opt_budgeted. The runtime backend is recorded as 'numba' or 'python' via _runtime_backend. The legacy executor (Numba-* names and Core-TwoOpt/ThreeOpt/OrOpt registrations) calls local_search_numba.apply_local_search; its 3-opt delegates to the pure-Python three_opt.improve_three_opt. .venv-jit is the only venv at the repo root. Its Lib/site-packages contains numba + numba-0.66.0.dist-info, llvmlite + llvmlite-0.48.0.dist-info, numpy-2.4.6, ortools-9.15.6755, and no pyvrp or vroom package folders. pyvenv.cfg: Python 3.14.6, include-system-site-packages=false. This matches academic_benchmark/jit-benchmark-constraints.txt. Installation was checked by folder names only; importability was not executed.",
+      "evidence": [
+        "uniride_core/algorithms/local_search_numba.py:31 imports three_opt.improve_three_opt; :33-63 numba import with fallback (warning :63)",
+        "uniride_core/algorithms/local_search_numba.py:175, 200, 226, 242, 294, 402, 451, 528, 576 @jit(nopython=True, cache=True)",
+        "uniride_core/algorithms/numba_accel.py:18-28 import/fallback; :30, 42, 60, 70, 104, 162, 198, 316 @jit(nopython=True, cache=True)",
+        "uniride_core/algorithms/sota_tsp/r2dma_tsp.py:37-45 guarded import; :45 @numba.njit(cache=True) _pos_match_numba",
+        "academic_benchmark/benchmark_utils.py:235-239 numba version print only",
+        "uniride_core/algorithms/tsp_matrix_metaheuristics/base_solver.py:22, 116-118, 138-150 numba objective kernel / backend label",
+        "uniride_core/algorithms/tsp_matrix_metaheuristics/gwo_solver.py:119-127 fair-mode Python polish; :128-144 numba polish kernel",
+        "academic_benchmark/core/registry_setup.py:369-370, 412-416, 597-606 legacy executor -> local_search_numba",
+        ".venv-jit/Lib/site-packages (listing, 142 entries): llvmlite, llvmlite-0.48.0.dist-info, numba, numba-0.66.0.dist-info, numpy-2.4.6.dist-info, ortools-9.15.6755.dist-info; no pyvrp/vroom",
+        ".venv-jit/pyvenv.cfg: version = 3.14.6, include-system-site-packages = false",
+        "academic_benchmark/jit-benchmark-constraints.txt (header: Numba 0.66.0, NumPy 2.4.6, llvmlite 0.48.x)"
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "C18",
+      "inventory_location": "K10 (inv lines 165-169), §5 item 9 (inv line 216)",
+      "question": "Any literature citation in ortools_cvrp_engine.py, pyvrp_cvrp_engine.py, vroom_cvrp_engine.py? Lines in optimizer_api/strategies/__init__.py with 'DIMACS'.",
+      "finding": "No literature citation in any of the three adapters. A regex for years, 'et al', author names (Vidal, Wouda, Perron, Furnon, Voudouris, Tsang, Clarke, Wright, Coupey), doi/arXiv/journal words, DIMACS, HGS, 'Hybrid Genetic' and 'Guided Local' gave 0 hits in ortools_cvrp_engine.py (266 lines), pyvrp_cvrp_engine.py (212) and vroom_cvrp_engine.py (272); each has only a one-line module docstring. 'DIMACS' appears in optimizer_api/strategies/__init__.py at lines 22, 181, 319, 320 (all 'DIMACS 2021 Winner' labels for PyVRP/HGS). The same unsourced claim also appears in optimizer_api/strategies/pyvrp_strategy.py:27, 31 and src/lib/algorithm-constants.ts:173, 174, 239, 399 (badge 'DIMACS 2021').",
+      "evidence": [
+        "uniride_core/algorithms/ortools_cvrp_engine.py:1 docstring 'Core OR-Tools adapter for string-keyed UniRide CVRP problems.' — citation regex 0 hits",
+        "uniride_core/algorithms/pyvrp_cvrp_engine.py:1 docstring 'Core PyVRP adapter ...' — citation regex 0 hits",
+        "uniride_core/algorithms/vroom_cvrp_engine.py:1 docstring 'Core VROOM adapter and fallback sweep routing helpers.' — citation regex 0 hits",
+        "optimizer_api/strategies/__init__.py:22 '- pyvrp: PyVRP HGS (DIMACS 2021 Winner)'",
+        "optimizer_api/strategies/__init__.py:181 '# PyVRP (HGS - DIMACS 2021 Winner)'",
+        "optimizer_api/strategies/__init__.py:319-320 display labels 'PyVRP (HGS — DIMACS 2021 Winner)' / 'PyVRP / HGS (DIMACS 2021 Winner)'",
+        "optimizer_api/strategies/pyvrp_strategy.py:27, 31; src/lib/algorithm-constants.ts:173, 174, 239, 399 (other DIMACS mentions)"
+      ],
+      "status": "resolved"
+    }
+  ],
+  "deviations": [
+    "C11: governed CLI/smart_benchmark paths (resolve_algorithm_id -> preflight -> canonical executor) were fully traced. Not exhaustively traced: whether any ungoverned entry point (e.g. the legacy registry branch at academic_benchmark/cli_engine.py:816-820, dashboards, old smart configs) can still dispatch the literal 'Numba-GWO'/'Numba-HHO' registry keys (pack/hawks=80). The finding says these keys are reachable 'only by direct registry lookup'; that rests on reading, not exhaustive call-graph enumeration.",
+    "C14: the comparison baseline for original HHO (per-hawk E0, exploration without Lévy, greedy only in dives, X_m use) comes from domain knowledge of Heidari et al. 2019. No paper was fetched or read in this audit; only the formulas given in the task (E=2E0(1-t/T), E0 in [-1,1], J=2(1-r5)) were taken as given.",
+    "Scope: code scanned = uniride_core, optimizer_api, academic_benchmark, src (705 code files incl. tests); archive/, old/, scratch/, node_modules/, .venv*/ (except .venv-jit folder names for C17), .next/, .git/, .temp/ and .claude/ worktrees were skipped. No tests, solvers or network calls were run; .env* files were not opened. C17 installation status rests on site-packages folder names only (importability not executed)."
+  ]
+}

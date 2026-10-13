@@ -15,6 +15,7 @@ import {
   assumeScheduledLegsConfirmed,
   buildDudulluPreview,
   buildVirtualFleet,
+  isValidCooldownMinutes,
   selectVirtualFleetTemplate,
   type PreviewDemand,
   type VirtualFleetTemplate,
@@ -519,7 +520,7 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
       !nonBlankString(row.id) || vehicleIds.has(row.id) || row.status !== "active" ||
       !Number.isInteger(row.wheelchair_capacity) || (row.wheelchair_capacity as number) < 0 ||
       !Number.isInteger(row.seating_capacity) || (row.seating_capacity as number) < 0 ||
-      !Number.isInteger(row.cooldown_minutes) || (row.cooldown_minutes as number) < 0
+      !isValidCooldownMinutes(row.cooldown_minutes)
     ) return finish(blockedPreview(serviceDate, admitted, null, "FLEET_INVALID"));
     vehicleIds.add(row.id);
     liveVehicles.push({

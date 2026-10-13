@@ -41,6 +41,8 @@ function ReadinessRows({ report }: { report: DudulluReadinessReport }) {
           <p>{t("labels.configuredDrivers")}: {report.fleet.configuredDrivers}</p>
           <p>{t("labels.activeVehicles")}: {report.fleet.activeVehicles}</p>
           <p>{t("labels.usableActiveVehicles")}: {report.fleet.usableActiveVehicles}</p>
+          <p>{t("labels.invalidCooldownVehicles")}: {report.fleet.invalidCooldownActiveVehicles}</p>
+          <p>{t("labels.legDecisionsReadable")}: {boolean(report.legDecisions.readable)}</p>
         </CardContent>
       </Card>
       <Card>

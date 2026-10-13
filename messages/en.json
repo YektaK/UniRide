@@ -397,7 +397,7 @@
           "expectedMatrixNodes": "Expected matrix nodes", "expectedStudents": "Expected students", "matrixLocationCount": "Matrix location count",
           "matrixSource": "Matrix source", "matchesMatrix": "Matches matrix", "matchesStudents": "Matches students",
           "requiredLocationCount": "Required location count", "scheduleEmpty": "Empty schedules", "scheduleMalformed": "Malformed schedules",
-          "scheduleTotal": "Total schedules", "unclassifiedSchedule": "Unclassified schedules", "usableActiveVehicles": "Usable active vehicles",
+          "scheduleTotal": "Total schedules", "unclassifiedSchedule": "Unclassified schedules", "invalidCooldownVehicles": "Active vehicles with invalid cooldown", "legDecisionsReadable": "Student decision table readable", "usableActiveVehicles": "Usable active vehicles",
           "validArcCount": "Valid arc count"
         },
         "matrixSources": { "coordinates": "Coordinates", "empty": "No matrix data", "supabase": "Supabase" },
@@ -405,6 +405,8 @@
           "matrix_incomplete": "The matrix does not contain all required travel arcs.",
           "matrix_location_mismatch": "The matrix location count does not match the required locations.",
           "matrix_stale": "The matrix is stale and must be refreshed.", "matrix_unavailable": "The travel-time matrix is unavailable.",
+          "leg_decisions_unavailable": "The student decision table (student_leg_decisions) is missing or unreadable; recorded confirmations cannot be read.",
+          "vehicle_cooldown_invalid": "An active vehicle has a missing or invalid cooldown; the daily plan will reject the fleet.",
           "no_configured_driver": "No driver is configured for the target fleet.", "no_dudullu_students": "No Dudullu students were found.",
           "no_usable_active_vehicle": "No usable active vehicle is available.", "schedule_classification_incomplete": "Some schedules could not be classified.",
           "schedule_data_invalid": "Schedule data is invalid.", "target_profile_incomplete": "One or more target student profiles are incomplete."

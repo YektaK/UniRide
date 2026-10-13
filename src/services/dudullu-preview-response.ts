@@ -112,6 +112,8 @@ export const dudulluPreviewResponseSchema = z.object({
   routeIntervals: z.array(routeIntervalSchema),
   assignments: z.array(assignmentSchema),
   hourlyOccupiedVehicles: z.record(z.string(), count),
+  /** Present only for OPTIMIZER_RATE_LIMITED when the optimizer sent a numeric Retry-After. */
+  retryAfterSeconds: z.number().int().positive().optional(),
   occurrenceLabels: z.record(z.string(), z.string()),
 });
 

@@ -361,6 +361,8 @@
           "NO_ADMITTED_DEMAND": "There are no confirmed trips for this day.",
           "NO_ROUTE_STEPS": "A route has no steps; the plan was rejected.",
           "OPTIMIZATION_NOT_SUCCESSFUL": "The route solver did not return a successful result or could not be reached.",
+          "OPTIMIZER_RATE_LIMITED": "The route solver is receiving too many requests. Wait about {seconds} seconds and run the plan again.",
+          "OPTIMIZER_UNAVAILABLE": "The route solver is temporarily unavailable or did not answer in time. Try again shortly.",
           "PENDING_STUDENT_CONFIRMATION": "Some student confirmations are still pending.",
           "RIDE_TIME_LIMIT_INFEASIBLE": "No suitable route was computed within the chosen student ride limit ({limit} min). This result does not prove that no route is possible at this limit.",
           "ROUTE_OUTSIDE_SERVICE_DAY": "A route runs outside the service day.",

@@ -354,6 +354,9 @@ function VehicleSchedule({ plan }: { plan: DailyPlanView }) {
   );
 }
 
+/** Optimizer rate-limit window; shown when a 429 carries no Retry-After. */
+const RATE_LIMIT_WINDOW_SECONDS = 60;
+
 function StatusNotes({ plan, t }: { plan: DailyPlanView; t: Translate }) {
   if (plan.reasons.length === 0) return null;
   return (
@@ -369,7 +372,7 @@ function StatusNotes({ plan, t }: { plan: DailyPlanView; t: Translate }) {
                 ? <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                 : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />}
               <span>
-                {t(`reasons.${reason.messageKey}`, { limit: plan.limits.maxRideTimeMinutes })}
+                {t(`reasons.${reason.messageKey}`, { limit: plan.limits.maxRideTimeMinutes, seconds: plan.retryAfterSeconds ?? RATE_LIMIT_WINDOW_SECONDS })}
                 {reason.messageKey === "unknown" ? ` (${reason.code})` : ""}
               </span>
             </li>

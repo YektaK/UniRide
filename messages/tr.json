@@ -361,6 +361,8 @@
           "NO_ADMITTED_DEMAND": "Bu gün için onaylı sefer yok.",
           "NO_ROUTE_STEPS": "Bir rotada hiç adım yok; plan geçersiz sayıldı.",
           "OPTIMIZATION_NOT_SUCCESSFUL": "Rota çözücüsü başarılı bir sonuç döndürmedi veya ulaşılamadı.",
+          "OPTIMIZER_RATE_LIMITED": "Rota çözücü çok fazla istek aldı. Yaklaşık {seconds} saniye bekleyip planı yeniden çalıştırın.",
+          "OPTIMIZER_UNAVAILABLE": "Rota çözücü geçici olarak kullanılamıyor veya zamanında yanıt vermedi. Kısa süre sonra yeniden deneyin.",
           "PENDING_STUDENT_CONFIRMATION": "Bazı öğrencilerin onayı hâlâ bekleniyor.",
           "RIDE_TIME_LIMIT_INFEASIBLE": "Seçilen öğrenci araçta kalma sınırı ({limit} dk) içinde uygun bir rota hesaplanamadı. Bu sonuç, bu sınırda hiçbir rotanın mümkün olmadığını kanıtlamaz.",
           "ROUTE_OUTSIDE_SERVICE_DAY": "Bir rota gün sınırlarının dışına taşıyor.",

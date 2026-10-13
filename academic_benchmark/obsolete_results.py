@@ -49,11 +49,77 @@ def legacy_cutoff() -> str:
     return LEGACY_CUTOFF
 
 
+def _parse_instant(value: Any) -> Any:
+    """Parse an ISO-8601 date/datetime string (``Z`` allowed) to a naive UTC-comparable datetime.
+
+    Offset-aware values are converted to UTC; naive values are taken as written (the cutoff
+    is naive too). Returns None when the value cannot be parsed.
+    """
+    from datetime import datetime, timezone
+
+    if not isinstance(value, str) or not value.strip():
+        return None
+    text = value.strip()
+    if text[-1] in "zZ":
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+        if parsed.tzinfo is not None:
+            parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+    except (ValueError, OverflowError):
+        return None
+    return parsed
+
+
 def is_legacy_timestamp(timestamp: Any, cutoff: Any = None) -> bool:
-    """True for a non-empty ISO timestamp string strictly before the legacy cutoff."""
-    if not isinstance(timestamp, str) or not timestamp.strip():
-        return False
-    return timestamp.strip() < (cutoff or legacy_cutoff())
+    """True when ``timestamp`` is strictly before the legacy cutoff, FAIL-CLOSED.
+
+    The timestamp is parsed as ISO-8601 (``Z``/offsets converted to UTC). Empty, missing or
+    unparseable stamps (``2026/06/30``, ``13.10.2026``, epoch strings) cannot be shown to be
+    new, so they count as legacy; this matches the SQL readers, where ``timestamp >= cutoff``
+    is false for NULL/empty. Remaining SQL/Python difference: SQL compares strings, so an
+    offset-carrying or non-ISO stored value is judged lexically there but by instant here.
+    """
+    stamp = _parse_instant(timestamp)
+    limit = _parse_instant(str(cutoff or legacy_cutoff()))
+    if stamp is None or limit is None:
+        return True
+    return stamp < limit
+
+
+def best_params_entry_timestamp(entry: Any) -> Any:
+    return entry.get("timestamp") if isinstance(entry, Mapping) else None
+
+
+def include_obsolete_default() -> bool:
+    """Opt-in for warm-start stores: env ``UNIRIDE_INCLUDE_OBSOLETE=1``."""
+    import os
+
+    return os.environ.get("UNIRIDE_INCLUDE_OBSOLETE", "").strip().lower() in ("1", "true", "yes")
+
+
+LEGACY_BEST_PARAMS_KEY = "legacy_best_params"
+
+
+def quarantine_legacy_best_params(metadata: Dict[str, Any], include_obsolete: Any = None) -> Dict[str, Any]:
+    """Warm-start guard (2026-10-13 decision 2): legacy parameters must not seed tuning/benchmarks.
+
+    Entries of ``metadata["best_params"]`` with no/old/unparseable ``timestamp`` are MOVED (not
+    deleted) to ``metadata["legacy_best_params"]``; the dict is mutated in place and returned.
+    ``include_obsolete=True`` (or env UNIRIDE_INCLUDE_OBSOLETE=1) leaves it untouched.
+    """
+    if include_obsolete is None:
+        include_obsolete = include_obsolete_default()
+    best = metadata.get("best_params")
+    if include_obsolete or not isinstance(best, dict):
+        return metadata
+    stale = {k: v for k, v in best.items() if is_legacy_timestamp(best_params_entry_timestamp(v))}
+    if stale:
+        for key in stale:
+            del best[key]
+        legacy = metadata.setdefault(LEGACY_BEST_PARAMS_KEY, {})
+        legacy.update(stale)
+    return metadata
 
 
 def normalize_algorithm(name: Any) -> str:
@@ -82,7 +148,11 @@ def _metadata(row: Mapping[str, Any]) -> Mapping[str, Any]:
 
 def is_obsolete_row(row: Mapping[str, Any]) -> bool:
     """A06 metadata flag OR legacy rule (timestamp before ``LEGACY_CUTOFF``)."""
-    return _metadata(row).get("obsolete") is True or is_legacy_timestamp(row.get("timestamp"))
+    if _metadata(row).get("obsolete") is True:
+        return True
+    # A row with a timestamp column but an empty/unparseable value is legacy (fail-closed, like
+    # SQL); a row with no timestamp column at all cannot be judged by this rule.
+    return "timestamp" in row and is_legacy_timestamp(row.get("timestamp"))
 
 
 def filter_obsolete_rows(rows: Iterable[Dict[str, Any]], include_obsolete: bool = False) -> List[Dict[str, Any]]:

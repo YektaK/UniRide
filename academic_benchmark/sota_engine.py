@@ -30,6 +30,8 @@ from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from academic_benchmark.obsolete_results import quarantine_legacy_best_params
+
 from uniride_core.algorithms._platform import fix_windows_encoding
 fix_windows_encoding()
 
@@ -207,6 +209,7 @@ def _run_engine_tuning(
     Returns:
         Best parameters found per (problem, algorithm) pair.
     """
+    quarantine_legacy_best_params(metadata)
     best_params: Dict[str, Dict[str, Any]] = metadata.get("best_params", {})
     tuning_tasks: List[Tuple] = []
 
@@ -278,6 +281,7 @@ def _run_engine_tuning(
         if result["error"] is None:
             if current_best is None or result["tour_length"] < current_best.get("tour_length", float("inf")):
                 best_params[best_key] = {
+                    "timestamp": datetime.now().isoformat(),
                     "problem": result["problem"],
                     "algorithm": result["algorithm"],
                     "tour_length": result["tour_length"],
@@ -351,6 +355,7 @@ def _run_sota_optuna_tuning(
         )
 
     optuna.logging.set_verbosity(optuna.logging.WARNING)
+    quarantine_legacy_best_params(metadata)
     best_params: Dict[str, Dict[str, Any]] = metadata.get("best_params", {})
 
     for problem in problems:
@@ -406,6 +411,7 @@ def _run_sota_optuna_tuning(
 
             best_key = f"{problem.name}::{algo}"
             best_params[best_key] = {
+                "timestamp": datetime.now().isoformat(),
                 "problem": problem.name,
                 "algorithm": algo,
                 "tour_length": study.best_value,

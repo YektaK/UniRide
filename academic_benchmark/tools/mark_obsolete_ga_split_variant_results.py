@@ -175,8 +175,8 @@ def mark_legacy_files(
         + "Rows stamped before the cutoff, and rows or files without a timestamp, are hidden by default "
         + "by the dashboard, results_reader and CSV readers (`include_obsolete=True` shows them). "
         + "References: DECISION_LOG A10, A11 and the 2026-10-13 legacy-results decision. "
-        + "This data is not deleted. New runs belong in a fresh results directory, "
-        + "or remove this marker once the legacy files are archived.\n"
+        + "This data is not deleted. Legacy files live in this subfolder; "
+        + "new runs write to the parent folder and stay visible.\n"
     )
     if not dry_run:
         with open(path, "w", encoding="utf-8", newline="\n") as handle:

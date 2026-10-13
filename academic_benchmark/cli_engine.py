@@ -132,6 +132,7 @@ except ModuleNotFoundError:
 
 from uniride_core.algorithms.tsplib_parser import parse_tsplib_text
 
+from academic_benchmark.obsolete_results import quarantine_legacy_best_params
 from academic_benchmark.param_db import (
     save_entry as _param_db_save,
     get_best_for as _param_db_get_best,
@@ -1272,6 +1273,7 @@ def _tune_parameters(
     param_overrides: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> Dict[str, Dict[str, Any]]:
     completed = _load_tuning_cache()
+    quarantine_legacy_best_params(metadata)
     best_params: Dict[str, Dict[str, Any]] = metadata.get("best_params", {})
     tuning_tasks = []
 
@@ -1334,6 +1336,7 @@ def _tune_parameters(
         current_best = best_params.get(best_key)
         if current_best is None or result["avg_length"] < float(current_best["avg_length"]):
             best_params[best_key] = {
+                "timestamp": datetime.now().isoformat(),
                 "problem": problem_name,
                 "strategy": strategy_name,
                 "avg_length": result["avg_length"],
@@ -1802,6 +1805,7 @@ def _run_optuna_tuning_flow(
         info = studies[study_name]
         return not info["stopped"] and info["submitted"] < info["max_trials"]
 
+    quarantine_legacy_best_params(metadata)
     best_params = metadata.setdefault("best_params", {})
     interrupted = False
 
@@ -1814,6 +1818,7 @@ def _run_optuna_tuning_flow(
             if len(study.trials) > 0:
                 try:
                     best_params[key] = {
+                        "timestamp": datetime.now().isoformat(),
                         "params": {**defaults, **study.best_params},
                         "avg_gap": study.best_value,
                         "n_runs": n_runs,
@@ -1970,6 +1975,7 @@ def _run_optuna_tuning_flow(
             try:
                 best_trial = study.best_trial
                 best_params[key] = {
+                    "timestamp": datetime.now().isoformat(),
                     "params": {**defaults, **best_trial.params},
                     "avg_gap": study.best_value,
                     "n_runs": n_runs,
@@ -1981,6 +1987,7 @@ def _run_optuna_tuning_flow(
                 print(f"  {key} — gap: {study.best_value:.2f}% ({info['completed']} trials, {status})")
             except ValueError:
                 best_params[key] = {
+                    "timestamp": datetime.now().isoformat(),
                     "params": defaults,
                     "avg_gap": float("inf"),
                     "n_runs": n_runs,
@@ -1991,6 +1998,7 @@ def _run_optuna_tuning_flow(
                 print(f"  {key} — gap: inf% ({info['completed']} trials, ALL FAILED)")
         else:
             best_params[key] = {
+                "timestamp": datetime.now().isoformat(),
                 "params": defaults,
                 "avg_gap": float("inf"),
                 "n_runs": n_runs,
@@ -2359,6 +2367,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     _ensure_dirs()
     _param_db_set(os.path.join(BENCHMARK_DB, "param_db.json"))
     metadata = load_metadata(METADATA_PATH)
+    quarantine_legacy_best_params(metadata)
     _active_metadata = metadata
 
     all_specs = _all_strategy_specs()

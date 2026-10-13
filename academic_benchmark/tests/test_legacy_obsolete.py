@@ -41,7 +41,7 @@ LATER = "2026-11-02T08:00:00"
 
 @pytest.fixture(autouse=True)
 def real_cutoff(monkeypatch):
-    # opt out of the suite-wide legacy-cutoff neutraliser (conftest) for this module
+    # pin the real 2026-10-13 cutoff (conftest neutralises it only for the A06 test module)
     monkeypatch.setattr(orr, "LEGACY_CUTOFF", "2026-10-13")
 
 
@@ -58,9 +58,10 @@ def test_rule_any_algorithm_before_cutoff(algo):
     assert not is_obsolete_row({"algorithm": algo, "timestamp": LATER})
 
 
-def test_rule_missing_timestamp_is_not_legacy_but_metadata_still_works():
+def test_rule_absent_timestamp_column_is_not_legacy_but_metadata_still_works():
     assert not is_obsolete_row({"algorithm": "x"})
-    assert not is_obsolete_row({"algorithm": "x", "timestamp": ""})
+    # timestamp column present but empty: fail-closed, hidden like the SQL readers (NULL/empty >= cutoff is false)
+    assert is_obsolete_row({"algorithm": "x", "timestamp": ""})
     assert is_obsolete_row({"algorithm": "x", "timestamp": NEW, "metadata": {"obsolete": True}})
     assert is_obsolete_row({"metadata_json": json.dumps({"obsolete": True}), "timestamp": LATER})
 

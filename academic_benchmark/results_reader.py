@@ -8,7 +8,7 @@ import math
 import os
 from typing import Dict, List, Optional
 
-from academic_benchmark.obsolete_results import filter_obsolete_csv_rows, filter_obsolete_rows
+from academic_benchmark.obsolete_results import LEGACY_RESULTS_DIRNAME, filter_obsolete_csv_rows, filter_obsolete_rows
 from academic_benchmark.tsplib_manager import (
     DB_PATH,
     get_all_problems,
@@ -89,13 +89,20 @@ def get_benchmark_rows(
             }
 
     path = os.path.join(results_dir, filename)
-    if not os.path.exists(path):
+    # opt-in only: legacy_pre_2026-10-13/ holds the old files (same layout as dashboard_utils)
+    legacy_path = os.path.join(results_dir, LEGACY_RESULTS_DIRNAME, filename)
+    scan = [(path, results_dir)]
+    if include_obsolete:  # older rows first so the newest-last limit keeps current rows
+        scan.insert(0, (legacy_path, os.path.dirname(legacy_path)))
+    scan = [(p, d) for p, d in scan if os.path.exists(p)]
+    if not scan:
         return {"source": "academic_csv", "count": 0, "limit": safe_limit, "path": path, "results": []}
 
-    with open(path, newline="", encoding="utf-8") as handle:
-        raw_rows = list(csv.DictReader(handle))
-    # Filter the raw rows: _normalize_benchmark_row drops the metadata columns.
-    raw_rows = filter_obsolete_csv_rows(raw_rows, results_dir, include_obsolete)
+    raw_rows = []
+    for csv_path, csv_dir in scan:
+        with open(csv_path, newline="", encoding="utf-8") as handle:
+            # Filter the raw rows: _normalize_benchmark_row drops the metadata columns.
+            raw_rows.extend(filter_obsolete_csv_rows(list(csv.DictReader(handle)), csv_dir, include_obsolete))
     rows = [_normalize_benchmark_row(row) for row in raw_rows]
     if feasible_only:
         rows = [row for row in rows if is_feasible_benchmark_row(row)]

@@ -1,6 +1,21 @@
 # Heterogeneous fleet scenarios: design
 
-Status: **proposal for owner review**. Nothing here is implemented. Base: `WIP @ 6be127d`, 2026-10-07.
+Status (updated 2026-10-13): **the core of this design is implemented; the design text below keeps its 2026-10-07 wording except where a passage says "implemented" or cites a later decision.** Original status, kept as history: proposal for owner review, nothing implemented, base `WIP @ 6be127d`, 2026-10-07.
+
+Implemented (files in the repository):
+- typed split decoder: `decode_typed` in `uniride_core/algorithms/typed_split_decoder.py:67`;
+- typed GA and per-wave menu: `solve_ga_split_typed` and `solve_typed_menu` in `uniride_core/algorithms/ga_split_typed_engine.py:138, 217`, served by the `ga_split_hf` strategy (`optimizer_api/strategies/ga_split_hf_strategy.py`), with the `vehicle_types` request validation in `optimizer_api/models/schemas.py:273, 354-367`;
+- CP-SAT day selection: `solve_day_selection` in `uniride_core/planning/typed_day_selection.py:120`, exposed as `POST /api/v1/internal/fleet-selection` (`optimizer_api/routers/fleet_selection.py:172`, mounted in `optimizer_api/main.py:111`);
+- typed assignment in TypeScript: `assignTypedVehicles` and `verifyTypedAssignment` in `src/services/typed-fleet-assignment.ts:191, 160`;
+- scenario runner and CLI: `runFleetScenarioDay` (`src/services/fleet-scenario-run.ts:257`, menu build `:478-493`) and `scripts/run-fleet-scenarios.ts`; figure script `scripts/plan_fleet_scenarios.py`;
+- archived campaigns: `docs/paper/results/week-2026-10-05-fleet/` (README) with the `extra/` sub-campaigns `L4`, `minivan` (superseded, H03) and `minivan-cap3`.
+
+Not implemented, unchanged from the scope list in §1: planning-page UI changes, publication and live writes, and time-window (`use_time_windows=true`) typed routing, which the API rejects (`optimizer_api/models/schemas.py:366-367`). Exact routing (D05) is not part of this document; see `docs/designs/EXACT_SOLVER_AMPL_DESIGN.md` (DECISION_LOG E01).
+
+Changes since the design:
+- **CX-01 (decision H05):** fleet selection takes interval endpoints and cooldowns on an exact 1/`time_scale`-minute grid, and the producer sends `time_scale: 100`. The time-units note is in §6 (internal endpoint).
+- **CX-03 (decision H04):** with exactly one type and no quota, the typed GA decodes by cost only (`ga_split_typed_engine.py:12-17, 76-89`); with two or more types or a quota the inner decode stays count-first. See §3.1 and P4 in §7.
+
 Owner requirements: 2026-10-07 handoff, summarised in §1. Decision IDs refer to `docs/DECISION_LOG.md`. This document reopens none of them.
 
 ## 1. Problem and scope
@@ -27,9 +42,9 @@ Each scenario is reported per day and per week. The report covers the cars neede
 - The scenario-A baseline uses `ga_split`, which only knows the pools. A shared limit on the fixed type therefore fails closed (`BASELINE_TOTAL_CAPACITY_EXCEEDED`) when a baseline route exceeds it; the limit is enforced for the minimised type and in typed split, certificate and assignment.
 - R, tour limit 150 and cooldown 10 are shared by default and can be set per type.
 
-**Objective.** The objective is lexicographic: (cars, total vehicle-minutes) with L fixed. Cars are unbounded by default, with an optional cap.
+**Objective.** With L fixed, the implemented objective is lexicographic: (1) peak cars, (2) car-minutes, (3) total vehicle-minutes, (4) sum of selected option indices as a deterministic tie-break (`uniride_core/planning/typed_day_selection.py:17-21, 203-204`; DECISION_LOG H01, Q5 below). The design-time proposal was (cars, total vehicle-minutes), with car-minutes only as a later tie-break (Q5 in §11). The implementation ranks car-minutes before total vehicle-minutes. Cars are unbounded by default, with an optional cap.
 
-**Fleet source.** The live `vehicles` record wrongly says 10 seated. Scenario fleets are therefore declared **explicitly** (CLI/config), never read from the DB, and recorded in the run manifest.
+**Fleet source.** The live `vehicles` record wrongly said 10 seated (4 Sw / 10 So). The owner corrected it to 4 Sw / 5 So on 2026-10-07 (DECISION_LOG X01, lines 55 and 368-372). Scenario fleets are still declared **explicitly** (CLI/config), never read from the DB, and recorded in the run manifest; the archived campaign records `db_vehicles_consulted: false` (`docs/paper/results/week-2026-10-05-fleet/README.md:29`).
 
 **Out of scope:**
 - planning-page UI changes, publication and live writes;
@@ -50,7 +65,7 @@ Each scenario is reported per day and per week. The report covers the cars neede
 | F8 | Within a wave, every route shares the exact anchor: pickup routes end at it and dropoff routes start at it. All routes of one wave are therefore pairwise concurrent and need distinct vehicles. | `dudullu-preview.ts:489-510` (interval construction) |
 | F9 | OR-Tools (CP-SAT) is already a runtime dependency. | `optimizer_api/requirements.txt:17` |
 
-**Consequence of F6.** Every existing number (campaign, paper, `fleet_mix.csv`) assumes 10 So seats on the large vehicle. With the corrected 5 So, results will change materially. They must be published as a **new, labelled campaign** and must not silently replace the archived one (AGENTS: academic results must not change silently; P04).
+**Consequence of F6.** Every number computed from the DB record before the correction (campaign, paper, `fleet_mix.csv`) assumed 10 So seats on the large vehicle (DECISION_LOG X01, line 370). With the corrected 5 So, results changed materially, so the design required that they be published as a **new, labelled campaign** and not silently replace the archived one (AGENTS: academic results must not change silently; P04). That is what happened: the valid campaigns use 4 Sw / 5 So (`docs/paper/results/week-2026-10-05-4sw5so/README.md:20`; `docs/paper/results/week-2026-10-05-fleet/README.md:26`). The 4/10 results were removed from the paper, and the 4/10 archive stays in git, labelled invalid due to a data error (X01, line 371; owner decision Q6 below).
 
 ## 2. Recommended approach in one picture
 
@@ -65,7 +80,7 @@ per day, per R:
 ```
 
 - Scenario A is the existing single-type pipeline, run with the explicit template `large:4sw5so`. With a capped FIXED type (`:capN`), scenario A cannot be computed (`ga_split` does not know the shared limit), so the day fails closed with `BASELINE_TOTAL_CAPACITY_EXCEEDED`.
-- One menu with `Lmax = 3` serves B, C and D. Each scenario uses only the options with `q ≤ L`.
+- One menu per (date, R) serves B, C and D. It is built with `q = 0..min(maxL, legs, MENU_MAX_QUOTA = 4)`, where `maxL` is the largest integer L of the campaign (`src/services/fleet-scenario-run.ts:47, 478, 493`). A scenario with a smaller L therefore still sees options with `q` up to `maxL`, and the day selection decides how many large vehicles are used. This is why the archived L1 files contain `q2` and `q3` options (`docs/designs/EXACT_SOLVER_AMPL_DESIGN.md:18`, F6). The design-time proposal was that each scenario uses only the options with `q ≤ L`.
 
 ## 3. Q1: routing with types
 
@@ -85,7 +100,7 @@ For a giant tour `s_1..s_n` and types `T`, each type `t` has `(sw_t, so_t, R_t, 
 
 The GA wrapper is `solve_ga_split_typed` in a new module `uniride_core/algorithms/ga_split_typed_engine.py`:
 - It reuses the exported GA helpers (`initialize_population`, `evolve_population`, `diversify_population`, `educate_individual`, `tournament_selection`) and the same `rng` discipline.
-- Its fitness key is `(infeasible, routes_m, cost)`.
+- Its fitness key is `(infeasible, routes_m, cost)` (`ga_split_typed_engine.py:128`). Since CX-03 (decision H04), the inner split decode it uses is cost-only when there is exactly one type and no quota, and count-first (routes of `minimize_type`, then cost) otherwise (`ga_split_typed_engine.py:76-89`).
 - The typed GA loop body duplicates about 60 lines of the `solve_ga_split` loop. This is deliberate, so that `ga_split_engine.py` has **zero diff**. A later dedupe is allowed only behind parity gate P1.
 
 **Why quota, not "cheapest type per segment".** Both types use the same matrix, so travel costs are equal. With lexicographic car minimisation and no quota, every segment would be labelled large and there would be no cars. Cars only appear because large routes are scarce. The scarcity is per wave (F8): a wave with `k` large routes needs `k` large vehicles at the same moment. That is why the quota `q ≤ L` is the natural wave-level coupling variable.
@@ -106,7 +121,7 @@ No search over vehicle identities is needed.
 
 ### 3.3 Recommended decomposition: wave menu + exact day selection over the menu
 
-1. **Menu.** For each wave `w` and each `q = 0..min(Lmax, n_w)`, call `/optimize` with `algorithm: "ga_split_hf"` and `max_routes(large) = q` (seed as today, D05). This gives at most 4 options per wave, and certified, infeasible calls are simply absent. For example, `q = 0` is infeasible whenever the wave has a Sw student and the sedan has Sw = 0. Add the **baseline option**: the wave's scenario-A routes, labelled later by the master.
+1. **Menu.** For each wave `w` and each `q = 0..min(Lmax, n_w, MENU_MAX_QUOTA)`, call `/optimize` with `algorithm: "ga_split_hf"` and `max_routes(large) = q` (seed as today, D05). `Lmax` is the largest L of the campaign and `MENU_MAX_QUOTA = 4` (`src/services/fleet-scenario-run.ts:47, 478, 493`). This gives at most 4 quota options per wave when `Lmax = 3` (5 when `Lmax = 4`), and certified, infeasible calls are simply absent. For example, `q = 0` is infeasible whenever the wave has a Sw student and the sedan has Sw = 0. Add the **baseline option**: the wave's scenario-A routes, labelled later by the master.
 2. **Day selection (exact over the menu).** This is a new pure module `uniride_core/planning/typed_day_selection.py` using CP-SAT. It is exposed through an internal, key-protected endpoint `POST /api/v1/internal/fleet-selection` (see §6). The model:
    - Binary `y[w,o]` selects one option per wave.
    - Each route `r` of option `(w,o)` gets `x_r` (large) and `c_r = y − x_r` (car). `c_r = 0` when `r` is not car-feasible, and `x_r = 0` when not large-feasible.
@@ -114,9 +129,8 @@ No search over vehicle identities is needed.
      - `Σ x_r ≤ L`;
      - `Σ c_r ≤ C`.
    - Optional constraint: `C ≤ Cmax`.
-   - Stage 1 minimises `C`. Stage 2 fixes `C*` and minimises total vehicle-minutes `Σ minutes·y`.
-   - Stage 3 is a deterministic tie-break: fewer car-minutes, then the lowest option index (owner may change, Q5).
-   - Settings: `num_workers=1`, a fixed solver seed, and a time limit.
+   - As implemented (`typed_day_selection.py:203-204`), the stages run in this order. Stage 1 minimises `C`. Stage 2 fixes `C*` and minimises car-minutes. Stage 3 fixes that value and minimises total vehicle-minutes `Σ minutes·y`. Stage 4 minimises the sum of selected option indices, a deterministic tie-break. The design-time proposal had total vehicle-minutes as stage 2, then car-minutes, then the lowest option index (Q5, §11).
+   - Settings: `num_workers=1`, a fixed solver seed, and a time limit. The limit is one allowance per solve call, shared by the stages: each stage receives the time that remains (`typed_day_selection.py:212-220`).
    - Status: `OPTIMAL` → `proven_over_menu`; `FEASIBLE` → `witness`; `UNKNOWN` → `indeterminate`; `INFEASIBLE` → `infeasible_for_L`, with a diagnostic (see 3.4).
 3. **Independent verification.** The chosen fixed routes and labels go to the TS typed assignment (§4). That code is a different implementation in a different language. It recomputes the minimum cars for those fixed routes, proves or refutes it, and emits the physical witness (V01/V02 producer/verifier separation).
 

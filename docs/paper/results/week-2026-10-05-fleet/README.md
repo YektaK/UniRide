@@ -31,7 +31,7 @@ The manifest records the parsed parameters, not the literal command line; the co
 ## Seeds, solver and provenance
 
 - Route menus: GA with effective seed 42 for the baseline (`ga_split`, scenario A) and for the typed menu (`ga_split_hf`, `hf_effective_seed` 42); native termination.
-- Day selection: CP-SAT 9.15.6755, `random_seed` 20261008, 1 worker, 30 s per stage.
+- Day selection: CP-SAT 9.15.6755, `random_seed` 20261008, 1 worker, 30 s per solve call (one call per date, R and L), shared across the lexicographic stages: each stage receives the time that remains (`uniride_core/planning/typed_day_selection.py:212-220`; manifest `selection_time_limit_seconds: 30`).
 - Git commit: `8ab88ca35ae05418a0cdae4f4c7a6337ca189c0b` (manifest `git_commit`). The manifest also records `dirty_working_tree: true`, so the run is tied to that commit plus uncommitted changes in the working tree at the time.
 - Matrix: all 20 (date, R) runs report the same matrix sha256 `bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5` (source `supabase`, 29 locations, loaded 2026-10-08). The per-run `*.matrix.json` files are the arcs used by each run.
 - HTTP: 33 rate-limit waits (429) were retried; no optimizer HTTP failures. All 20 days have `day_status: ready`.

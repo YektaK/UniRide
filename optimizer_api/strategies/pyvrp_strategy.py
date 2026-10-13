@@ -24,11 +24,11 @@ class PyVRPStrategy(BaseRoutingStrategy):
 
     @property
     def display_name(self) -> str:
-        return "PyVRP (HGS - DIMACS Winner)"
+        return "PyVRP (HGS tabanlı)"
 
     @property
     def description(self) -> str:
-        return "DIMACS 2021 birincisi Hybrid Genetic Search algoritması. En yüksek çözüm kalitesi."
+        return "HGS (Hybrid Genetic Search) tabanlı (Vidal 2022; PyVRP, Wouda vd. 2024). HGS soyu DIMACS 2021 VRPTW parkurunda öne çıktı."
 
     def optimize(self, request: OptimizationRequest) -> OptimizationResponse:
         return _optimize_with_pyvrp(self, request, algorithm_name=self.name, vehicle_label="PyVRP")

@@ -465,13 +465,13 @@ export const ALGORITHM_DISPLAY_NAMES: Record<string, string> = {
     "gwo_split": "GWO-Split (Route-First)",
     "hho_split": "HHO-Split (Route-First)",
     // Research-promoted SOTA
-    "e2bso": "E²BSO (Promoted SOTA)",
-    "entropy_bso": "E²BSO (Promoted SOTA)",
-    "e2b": "E²BSO (Promoted SOTA)",
-    "r2dma": "R²DMA (Promoted SOTA)",
-    "rdma": "R²DMA (Promoted SOTA)",
-    "paoea": "P-AOEA (Promoted SOTA)",
-    "aoea": "P-AOEA (Promoted SOTA)",
+    "e2bso": "E²BSO (Deneysel)",
+    "entropy_bso": "E²BSO (Deneysel)",
+    "e2b": "E²BSO (Deneysel)",
+    "r2dma": "R²DMA (Deneysel)",
+    "rdma": "R²DMA (Deneysel)",
+    "paoea": "P-AOEA (Deneysel)",
+    "aoea": "P-AOEA (Deneysel)",
 };
 
 /**

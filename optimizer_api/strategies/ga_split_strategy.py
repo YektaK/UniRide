@@ -265,13 +265,11 @@ class GASplitStrategy(HybridSplitBaseStrategy):
 
 class GAEnhancedSplitStrategy(GASplitStrategy):
     """
-    Enhanced GA-Split with additional features from HGS (Hybrid Genetic Search):
-    
-    Features:
-    - Population diversity management
-    - Intensification/diversification balance
-    - Adaptive parameters
-    - Multiple crossover operators
+    Memetic GA-Split in the style of Prins (2004); same engine as ``ga_split``.
+
+    This subclass only overrides ``name`` and ``display_name``; it adds no
+    HGS (Vidal) components (no SWAP*, diversity-contribution fitness or
+    penalty management). The key is kept for backward compatibility.
     """
     
     @property
@@ -280,4 +278,4 @@ class GAEnhancedSplitStrategy(GASplitStrategy):
     
     @property
     def display_name(self) -> str:
-        return "GA-Split Enhanced (HGS-style)"
+        return "GA-Split Enhanced (Prins 2004 memetic, same engine as ga_split)"

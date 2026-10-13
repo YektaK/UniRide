@@ -19,7 +19,7 @@ Route-First, Cluster-Second (Pipeline B - Split):
 
 Holistic Solvers:
 - ortools_cvrp: Google OR-Tools CVRP solver
-- pyvrp: PyVRP HGS (DIMACS 2021 Winner)
+- pyvrp: PyVRP, HGS-based (Vidal 2022; Wouda et al. 2024); HGS lineage led the DIMACS 2021 VRPTW track
 - vroom: VROOM ultra-fast C++ solver
 
 Heuristics:
@@ -178,7 +178,7 @@ STRATEGY_REGISTRY: Dict[str, Optional[BaseRoutingStrategy]] = {
     "ortools_cvrp": _ortools_strategy,
     "ortools": _ortools_strategy,  # Alias
     
-    # PyVRP (HGS - DIMACS 2021 Winner)
+    # PyVRP (HGS-based)
     # When unavailable, maps to None — routes must check strategy is not None
     "pyvrp": _pyvrp_strategy,
     "hgs": _pyvrp_strategy,  # Alias
@@ -316,8 +316,8 @@ def get_strategy_info() -> List[dict]:
 
     # Metadata for strategies that may be None (unavailable optional deps)
     _OPTIONAL_META = {
-        "pyvrp":         ("pyvrp",         "PyVRP (HGS — DIMACS 2021 Winner)",         "PyVRP HGS algorithm (DIMACS 2021 Winner). Requires `pyvrp` package."),
-        "hgs":           ("hgs",           "PyVRP / HGS (DIMACS 2021 Winner)",          "PyVRP HGS algorithm. Requires `pyvrp` package."),
+        "pyvrp":         ("pyvrp",         "PyVRP (HGS tabanlı)",         "PyVRP, HGS-based (Vidal 2022; Wouda et al. 2024). Requires `pyvrp` package."),
+        "hgs":           ("hgs",           "PyVRP / HGS (HGS tabanlı)",          "PyVRP HGS algorithm. Requires `pyvrp` package."),
         "pyvrp_alt":     ("pyvrp_alt",     "PyVRP (Alternative Configuration)",          "PyVRP with alternative parameter tuning. Requires `pyvrp` package."),
         "vroom":         ("vroom",         "VROOM (Ultra-Fast C++ Solver)",              "VROOM high-performance C++ solver. Requires `vroom` package."),
         "vroom_fallback":("vroom_fallback","VROOM (Fallback Mode)",                      "VROOM with relaxed constraints. Requires `vroom` package."),

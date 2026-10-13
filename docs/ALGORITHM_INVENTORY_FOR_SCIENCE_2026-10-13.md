@@ -1,0 +1,233 @@
+# UniRide algoritma envanteri (Claude Science literatür/SOTA taraması için)
+
+Tarih: 2026-10-13. Kaynak: dal `WIP`, HEAD `f7b8570` (worktree dalı `docs/algorithm-inventory-2026-10-13`). Bu dosya yalnızca okuma ile üretildi: kod değiştirilmedi, test/benchmark çalıştırılmadı.
+
+Kanıt kuralları (AGENTS.md:11-20): güncel davranış için canlı kod > tasarım belgeleri > arşiv. Bu dosyada her olgu `dosya:satır` ya da commit ile verilir. "Tasarım" etiketi taşıyan cümle kodda doğrulanmamış hedeftir. `[DOĞRULANMADI: ...]` işareti kanıtı bulunamayan ya da okunmayan noktayı gösterir. Performans, üstünlük ya da "SOTA" iddiası bu dosyada kanıt olarak sunulmaz. Smoke/pilot sonuçları üstünlük kanıtı değildir (AGENTS.md:38).
+
+Science için kısa yönerge: her kartın sonundaki "Science sorguları" bölümü, bu deponun *hangi* algoritmayı *hangi* adla çalıştırdığını literatürle eşleştirmek içindir. Depodaki ad ile literatürdeki ad çoğu kartta farklıdır; eşleşmeyen yerler bilerek işaretlenmiştir.
+
+---
+
+## 1. Bağlam
+
+### 1.1 Problem aileleri
+- **TSP / ATSP (akademik hat):** simetrik ve asimetrik matris üzerinde Hamilton çevrimi. Hamilton döngüsü doğrulaması ile çok-rotalı doğrulama ayrı sözleşmedir (AGENTS.md:40; `ACADEMIC_STUDY_UNIFICATION_DESIGN.md:26-28`).
+- **CVRP / CVRPTW (akademik ve üretim):** çok-rotalı. Akademik tarafta CVRPLIB/Solomon örnekleri yüklenir (`academic_benchmark/cvrplib_manager.py:1-9`; BKS: `academic_benchmark/bks_manager.py:1`).
+- **Öğrenci servis planlama (üretim, "UniRide"):** tek depo (kampüs), iki yolcu sınıfı: Sw (tekerlekli sandalyeli) ve So (sandalyesiz), ayrı kapasite havuzları (`uniride_core/algorithms/string_split_decoder.py:106-135`, `sw_capacity=4`, `so_capacity=5` varsayılan). Toplama (pickup) ve bırakma (dropoff) yönleri, zaman penceresi modları (geri ve ileri zamanlama), tur süresi limiti ve öğrenci başına maksimum yolculuk süresi `max_ride_time` (`string_split_decoder.py:121-135`; karar O03 `docs/DECISION_LOG.md:159`). Yöntem özeti: `docs/paper/DAILY_STUDENT_TRANSPORT_PLANNING_METHOD.md:38-46`.
+- **Heterojen filo (üretim):** araç türü başına Sw/So kapasitesi, isteğe bağlı toplam koltuk sınırı (`total_capacity`) ve büyük araç kotası (karar H01, H03: `docs/DECISION_LOG.md:358-372`).
+
+### 1.2 Amaç fonksiyonları
+- **Akademik TSP/ATSP:** kapalı turun matris maliyeti (son-ilk kenar dahil); bir "değerlendirme" bir tam aday tur hesaplamasıdır (`ACADEMIC_FAIRNESS_PROTOCOL_DESIGN.md` "Objective-Evaluation Definition"; kod: `uniride_core/algorithms/objective_budget.py:16-47`, `three_opt.py:33-40`).
+- **Split tabanlı CVRP/CVRPTW (GA/PSO/GWO/HHO-Split):** sözlüksel anahtar `(olurlu/olursuz, araç sayısı, toplam seyahat maliyeti)`; olurluluk > araç sayısı > maliyet (`uniride_core/algorithms/objective_rank.py:1-35`, karar O05 `docs/DECISION_LOG.md:171`).
+- **Tipli GA (heterojen filo):** `(olursuz, azaltılan türün rota sayısı, maliyet)`; tek tür ve kota yoksa iç çözümleme yalnız maliyet (karar H04 `docs/DECISION_LOG.md:374`; `uniride_core/algorithms/ga_split_typed_engine.py:1-35`).
+- **Gün düzeyi seçim (CP-SAT):** sözlüksel: 1) araç (car) tepe eşzamanlılığı, 2) araç-dakikası, 3) toplam araç-dakikası, 4) seçilen seçenek indeks toplamı (`uniride_core/planning/typed_day_selection.py:16-24`).
+
+### 1.3 Veri setleri
+- **TSPLIB (TSP/ATSP):** tek örnek `ft53` (ATSP, 53 düğüm, en iyi bilinen 6905, "optimal" etiketli) `academic_benchmark/datasets/ft53.json`; kaynak URL TSPLIB95 (Heidelberg) aynı dosyada. Ham TSPLIB arşivi `academic_benchmark/tsplib_problems/ALL_tsp.tar.gz` [DOĞRULANMADI: arşivin hangi örnekleri içerdiği okunmadı]. Metodoloji belgeleri berlin52 ve pr2392 gibi adları anar (`academic_benchmark/SOTA_PAPER_METHODOLOGY.md` §3.2; `CLASSICAL_PAPER_METHODOLOGY.md` §3.3) ama bunlar arşiv/belge iddiasıdır, çalıştırılmış kanıt değildir.
+- **CVRPLIB / Solomon:** yükleyici `academic_benchmark/cvrplib_manager.py:1-26` ve BKS uygulayıcı `academic_benchmark/bks_manager.py:1-70`; hangi örneklerin veritabanında bulunduğu [DOĞRULANMADI].
+- **Sentetik CVRP üreteci:** `academic_benchmark/synthetic_cvrp_generator.py` [DOĞRULANMADI: okunmadı].
+- **Operasyonel veri (yalnız üretim):** Supabase'te saklanan yönlü seyahat süresi matrisi; koordinat/haversine yedeği yok, matris yoksa hata (`CURRENT_ARCHITECTURE.md` §3 "Matrix fail-closed", T01 `docs/DECISION_LOG.md:95`).
+
+### 1.4 Karşılaştırma protokolü
+- **Birincil:** sabit amaç-değerlendirme bütçesi (`AGENTS.md:37`; karar A04 `docs/DECISION_LOG.md:268-272`). Politika `atomic_upper_bound_v1`: bütçe kesin üst sınır, nüfus başlatma ve GWO/HHO nesli atomik evre, yerel arama aday değerlendirmesi atomik, cilalama aynı bütçeyi tüketir (tasarım: `ACADEMIC_FAIRNESS_PROTOCOL_DESIGN.md` "Atomic Upper-Bound Budget"; kod: `uniride_core/algorithms/objective_budget.py:16-47`; çalışma profili `academic_benchmark/studies/bildiri2026/study.json:20-25`).
+- **İkincil (ayrı etiketli):** algoritmaya özgü sonlanma, `uniride-native-tsp-v1` (`academic_benchmark/native_protocol.py:10-20`). Yalnız beş kimlik onaylı: `Core-GWO-TSP-Pure`, `Core-HHO-TSP-Pure`, `Core-TwoOpt-TSP`, `Core-ThreeOpt-TSP`, `ALNS-TSP` (`native_protocol.py:13-19`). Sabit bütçe ile native sonuçlar havuzlanmaz (`AGENTS.md:38`).
+- **Eşleştirilmiş tohum:** sorun kimliği + tekrar indeksi + taban tohumdan SHA-256 türevi; algoritma kimliği hariç (tasarım: `ACADEMIC_FAIRNESS_PROTOCOL_DESIGN.md` "Paired Seed Protocol"; kod kullanımı: `academic_benchmark/core/registry_setup.py:1043` `manifest.paired_seed(problem.name, run_idx)`).
+- **Yetenek kataloğu ve ön-kontrol:** "registry'de var olmak" bilimsel seçilebilirlik değildir; yaşam döngüsü `VERIFIED/CANDIDATE/PLANNED` (`uniride_core/algorithms/capabilities.py:38-42`, karar A02 `docs/DECISION_LOG.md:256`).
+- **Sonuç durumu (Bildiri 2026 profili):** `status: draft`, yalnız ATSP/ft53, bütçe düzeyleri 100 ve 500, 3 tekrar, `pack_size: 4`, iterasyon 2; depo çıktıları "smoke_only" (`study.json:4-29`). Bu profil üstünlük kanıtı değildir.
+
+---
+
+## 2. Algoritma tablosu
+
+Sütunlar: kod adı | kanonik/literatür adı | aile | problem | giriş noktası `dosya:satır` | kısa tanım. "Yaşam döngüsü" akademik kataloğa göredir (`capabilities.py:244-332`); üretim stratejileri katalogda değildir.
+
+### 2.1 Akademik TSP/ATSP (matris-yerel)
+
+| # | Kod adı | Kanonik ad | Aile | Problem | Giriş noktası | Kısa tanım |
+|---|---|---|---|---|---|---|
+| 1 | `Core-TwoOpt-TSP` (eski `Numba-2-opt`) | 2-opt | yerel arama | TSP, ATSP | `uniride_core/algorithms/objective_budget.py:67` (bütçeli), `tsp_meta_engines.py:74` | 2-opt iyileştirme; yaşam döngüsü VERIFIED (`capabilities.py:244-252`) |
+| 2 | `Core-ThreeOpt-TSP` (eski `Numba-3-opt-bounded`) | 3-opt (sınırlı pencere) | yerel arama | TSP, ATSP | `uniride_core/algorithms/three_opt.py:184`; bütçeli `academic_benchmark/fairness.py:382` | simetrik: 7 yeniden bağlama; yönlü: segment yönü korunur; VERIFIED (`capabilities.py:254-260`) |
+| 3 | `Core-OrOpt-TSP` (eski `Numba-Or-opt`) | Or-opt | yerel arama | TSP, ATSP | `objective_budget.py:130`; kayıt `registry_setup.py:1026` | segment 1-3 taşıma; VERIFIED (`capabilities.py:316-326`) |
+| 4 | `Numba-Swap`, `Numba-Hybrid` | swap, hibrit yerel arama | yerel arama | TSP | `uniride_core/algorithms/numba_strategies.py:6-9`, `registry_setup.py:450-453` | katalogda YOK (`capabilities.py:244-278`); statüsü [DOĞRULANMADI] |
+| 5 | `Core-GA-TSP` (eski `Numba-GA`) | permütasyon GA (memetik) | metasezgisel, popülasyon | TSP, ATSP | `tsp_meta_engines.py:138` | CANDIDATE (`capabilities.py:262`) |
+| 6 | `Core-PSO-TSP` (eski `Numba-PSO`) | takas dizisi PSO | metasezgisel | TSP, ATSP | `tsp_meta_engines.py:409` | CANDIDATE (`capabilities.py:263`) |
+| 7 | `Core-GWO-TSP-Pure` (`GWO`) | ayrık Gri Kurt Optimizasyonu | metasezgisel | TSP, ATSP | `uniride_core/algorithms/tsp_matrix_metaheuristics/gwo_solver.py:35` | cilasız; VERIFIED (`capabilities.py:264`) |
+| 8 | `Core-GWO-TSP-Memetic-2opt` (eski `Numba-GWO`, `Core-GWO-TSP`) | GWO + periyodik/final 2-opt | hibrit | TSP, ATSP | `gwo_solver.py:35`; takma ad `academic_benchmark/core/algorithm_resolution.py:55-57` | VERIFIED (`capabilities.py:266`) |
+| 9 | `Core-HHO-TSP-Pure` (`HHO`) | ayrık Harris Hawks Opt. | metasezgisel | TSP, ATSP | `tsp_matrix_metaheuristics/hho_solver.py:40` | VERIFIED (`capabilities.py:265`) |
+| 10 | `Core-HHO-TSP-Memetic-2opt` (eski `Numba-HHO`, `Core-HHO-TSP`) | HHO + 2-opt | hibrit | TSP, ATSP | `hho_solver.py:40`; `algorithm_resolution.py:58-60` | VERIFIED (`capabilities.py:267`) |
+| 11 | `ALNS-TSP` (`SOTA-ALNS-TSP` eski) | Uyarlanabilir Büyük Komşuluk Araması | metasezgisel / LNS | TSP, ATSP | `uniride_core/algorithms/sota_tsp/alns_tsp.py:69`; adaptör `registry_setup.py:1119` | VERIFIED (`capabilities.py:268-273`) |
+| 12 | `SOTA-E2BSO-TSP` (+`-CPSO`) | "Enhanced Entropy-Balanced Swarm Optimization" | hibrit metasezgisel | TSP | `sota_tsp/e2bso_tsp.py:106`, CPSO `:390` | katalogda YOK; literatür kaynağı [DOĞRULANMADI] |
+| 13 | `SOTA-R2DMA-TSP` | "Resonance-Reinforced Destroy-and-Merge Algorithm" | hibrit | TSP | `sota_tsp/r2dma_tsp.py:230` | katalogda YOK; kaynak [DOĞRULANMADI] |
+| 14 | `SOTA-P-AOEA-TSP` | "Production Adaptive Operator Evolution Algorithm" | hibrit / hiper-sezgisel | TSP | `sota_tsp/paoea_tsp.py:142` | katalogda YOK; kaynak [DOĞRULANMADI] |
+| 15 | `SOTA-CGO-TSP` | Kaos Oyunu Optimizasyonu (ayrık uyarlama) | metasezgisel | TSP | `sota_tsp/cgo_tsp.py:191` | kodda atıf var (`cgo_tsp.py:4`); katalogda YOK |
+| 16 | `SOTA-RUN-TSP` | Runge-Kutta Optimizasyonu (ayrık uyarlama) | metasezgisel | TSP | `sota_tsp/run_tsp.py:239` | kodda atıf var (`run_tsp.py:4`); katalogda YOK |
+| 17 | `FCM-GA/PSO/GWO/HHO-TSP` | bulanık C-ortalamalar ile böl, çöz, birleştir | hibrit (kümeleme + metasezgisel) | büyük TSP | `uniride_core/algorithms/fcm_split_engine.py:21`; `engine_factory.py:51-56` | katalogda YOK |
+| 18 | `Core-Greedy-Routing` | en yakın komşu/açgözlü | yapıcı sezgisel | CVRP(TW) | `uniride_core/algorithms/greedy_engine.py`; `registry_setup.py:587-591` | [DOĞRULANMADI: ayrıntı okunmadı] |
+| 19 | `Core-GWO-TSP-Memetic-3opt`, `Core-HHO-TSP-Memetic-3opt` (`GWO-3opt`, `HHO-3opt`) | GWO/HHO + sınırlı 3-opt | hibrit | TSP, ATSP | yalnız katalog girdisi `capabilities.py:275-276` | **PLANNED, çalıştırılabilir kod YOK** |
+| 20 | `Core-GWO-TSP-Memetic-ALNS`, `Core-HHO-TSP-Memetic-ALNS` | GWO/HHO + ALNS | hibrit | TSP, ATSP | yalnız katalog girdisi `capabilities.py:277-278` | **PLANNED, çalıştırılabilir kod YOK** |
+| 21 | `GWO-LKH`, `HHO-LKH` | (yanlış tarihsel etiket) | n/a | n/a | `algorithm_resolution.py:66-71` | `ForbiddenAliasError` ile reddedilir; gerçek LKH yoktur |
+
+### 2.2 Üretim ve akademik CVRP/CVRPTW
+
+| # | Kod adı | Kanonik ad | Aile | Problem | Giriş noktası | Kısa tanım |
+|---|---|---|---|---|---|---|
+| 22 | `SplitDecoder` | Optimal Split (Prins 2004), zaman pencereli | kesin (DP) çözümleyici | CVRP(TW) | `uniride_core/algorithms/string_split_decoder.py:106` | dev tur -> rotalar; DP |
+| 23 | `LinearSplitDecoder` | sınırlı split, yumuşak ceza | yaklaşık DP | CVRPTW | `uniride_core/algorithms/linear_split_decoder.py:40` | zaman-bükme ve kapasite taşma cezası |
+| 24 | `ga_split` (`GA-Split`) | GA + Split (Prins tarzı) | metasezgisel, hibrit | CVRP(TW) | `ga_split_engine.py:298`; strateji `optimizer_api/strategies/ga_split_strategy.py:58` | üretim planlayıcının varsayılanı (D05 `docs/DECISION_LOG.md:87-91`) |
+| 25 | `ga_split_enhanced` | "GA-Split Enhanced (HGS-style)" | metasezgisel | CVRP(TW) | `ga_split_strategy.py:266-283` | adı HGS çağrıştırır; iddia [DOĞRULANMADI] |
+| 26 | `pso_split`, `gwo_split`, `hho_split` | PSO/GWO/HHO + Split | metasezgisel + DP | CVRP(TW) | `pso_split_engine.py:161`, `gwo_split_engine.py:139`, `hho_split_engine.py:180` | dev tur permütasyonu üzerinde |
+| 27 | `ga_split_hf` | tipli GA-Split (heterojen filo) | metasezgisel + DP | CVRPTW | `ga_split_typed_engine.py:138`; `typed_split_decoder.py:67` | yalnız operasyonel (`optimizer_api/strategies/__init__.py` `OPERATIONAL_ONLY_STRATEGIES`) |
+| 28 | `solve_typed_menu` | kota-menü üretimi | hibrit | CVRPTW | `ga_split_typed_engine.py:217` | büyük araç kotası q=0..3 + tümü-büyük seçenek |
+| 29 | `solve_day_selection` | CP-SAT gün seçimi | kesin | planlama | `uniride_core/planning/typed_day_selection.py:120` | dalga menüsünden seçenek seçer |
+| 30 | `typed-fleet-assignment` | tipli sabit-rota araç ataması | kesin (dal-sınır) | planlama | `src/services/typed-fleet-assignment.ts` (düğüm bütçesi 200 000) | TypeScript; sabit rota aralıklarını araca atar |
+| 31 | `assignPhysicalVehicles` | fiziksel araç ataması | aramalı kesin | planlama | `src/services/dudullu-preview.ts` (V01 `docs/DECISION_LOG.md:195-199`) | 50 000 düğüm varsayılan; [DOĞRULANMADI: satır okunmadı] |
+| 32 | `ga`, `pso`, `gwo`, `hho` (küme-önce) | küme-önce rota-sonra | metasezgisel | CVRP(TW) | `optimizer_api/strategies/{ga,pso,gwo,hho}_strategy.py`; `vehicle_assignment.py` | varsayılanlar [DOĞRULANMADI: okunmadı] |
+| 33 | kümeleme: `sweep`, `kmeans`, `fuzzy_cmeans`, `fuzzy_cmeans_enhanced`, `hierarchical_fcm`, `k_medoids`, `clarke_wright` | süpürme, k-means, FCM, sınır-noktası transferli FCM, hiyerarşik FCM, PAM, Clarke-Wright tasarruf | kümeleme | CVRP(TW) | `uniride_core/algorithms/clustering_strategies/__init__.py:40-60` | fabrika; alan sınıfları aşağıda |
+| 34 | `ortools_cvrp` | Google OR-Tools yönlendirme | kesin/yaklaşık çözücü | CVRP(TW) | `ortools_cvrp_engine.py:37` | GLS metasezgisel, PATH_CHEAPEST_ARC (`:183-191`) |
+| 35 | `pyvrp` (`HGS`) | PyVRP Hibrit Genetik Arama | metasezgisel | CVRP(TW) | `pyvrp_cvrp_engine.py:27` | `MaxRuntime` ile (`:127`) |
+| 36 | `vroom` | VROOM | sezgisel çözücü | CVRP(TW) | `vroom_cvrp_engine.py:28`; yedek süpürme `:148` | |
+| 37 | `permutation_tsp` (`exact`) | tam permütasyon araması | kesin | küçük TSP | `string_exact_tsp.py:15` | varsayılan üst sınır 10 düğüm |
+| 38 | `two_opt`, `greedy` (üretim) | 2-opt, en yakın komşu | sezgisel | CVRP(TW) | `optimizer_api/strategies/two_opt_strategy.py`, `greedy_heuristic.py` | |
+| 39 | `e2bso`, `r2dma`, `paoea` (üretim) | SOTA TSP çözücülerinin üretim sarmalayıcıları | hibrit | CVRP(TW) | `optimizer_api/strategies/{ebso,rdma,aoea}_strategy.py`; kayıt `strategies/__init__.py:194-206` | #12-14 çözücülerini `solve_student_order_with_sota_tsp` üzerinden çağırır |
+| 40 | harici kesin çözücü (AMPL/HiGHS) | kesin referans | kesin | dalga örneği | yalnız `uniride_core/exact/wave_instance.py` (veri sözleşmesi, WP-E0) | **çözücü kodu YOK**; tasarım `docs/designs/EXACT_SOLVER_AMPL_DESIGN.md`; karar E01 `docs/DECISION_LOG.md:391-398`; `academic_benchmark/exact_reference/` yok |
+
+Yardımcı (optimizasyon olmayan) bileşenler: `feasibility_certificate.py` (bağımsız olurluluk sertifikası), `objective_budget.py` (değerlendirme muhasebesi), `objective_rank.py` (sözlüksel sıra), `time_window_extractor.py`/`time_window_violation_tracker.py` (zaman penceresi) [DOĞRULANMADI: son ikisinin algoritmik içeriği okunmadı].
+
+---
+
+## 3. Algoritma kartları
+
+Kart biçimi: ne yapıyor, parametreler, UniRide'a özgü değişiklik, atıf, Science sorguları.
+
+### K1. 2-opt, 3-opt, Or-opt (kanonik yerel aramalar)
+- **Ne yapıyor.** 2-opt çözümlemesi `Core-TwoOpt-TSP`; bütçeli sürüm `improve_two_opt_budgeted` (`objective_budget.py:67`). 3-opt matris-yerel, doğruluk önceliklidir: simetrik matriste 7 sıfır-olmayan yeniden bağlama (3 tanesi 2-opt eşdeğeri, 4 gerçek 3-opt), yönlü matriste segment yönü korunur ve yalnız tek Hamilton çevrimi veren üç-ok değişimleri üretilir (`three_opt.py:1-9`; tasarım `CANONICAL_THREE_OPT_DESIGN.md` "Algorithm contract"). Or-opt: segment uzunluğu 1-3 (`objective_budget.py:130-160`).
+- **Parametreler.** 3-opt: `max_iterations=500`, `first_improvement=False`, `window=12`, `tolerance=1e-10` (`three_opt.py:184-192`); pencere en az 2 (`:68-69`); kesim üçlüsü için n>=6 (`:67-68`). Or-opt: `max_segment_length` 1..3 (`objective_budget.py:140-150`); kayıt varsayılanı `max_iterations=1000`, `window=3` (`registry_setup.py:1040-1044`). 2-opt `solve_two_opt_tsp` varsayılan `max_iterations=2000` (`tsp_meta_engines.py` yapılandırma okuması). Eski Numba sabitleri: 2-opt 3000, 3-opt 400, Or-opt 1500, Swap 8000, Hybrid 10 (`numba_strategies.py:6-10`).
+- **UniRide'a özgü.** (i) 3-opt tek kanonik motora indirgendi; eski Numba çekirdeği resmi yoldan çıkarıldı ve public ad `Numba-3-opt-bounded` uyumluluk adı olarak kaldı (tasarım: `CANONICAL_THREE_OPT_DESIGN.md` "Architecture"; kod notu: `three_opt.py:8-10` "Legacy Numba entry points delegate here"). (ii) Matris yönlü mü diye tolerans içinde simetri testiyle seçilir (`three_opt.py:43-62`; tasarım "Matrix-mode selection"). (iii) Değerlendirme sayımı: bir değerlendirme = tam kapalı tur maliyeti, yineleme sayısından türetilmez (`objective_budget.py:16-47`). (iv) Bildirilen `numba` arka ucu doğrulanmadıkça iddia edilmez ("Numba parity" iddiası yok: `ACADEMIC_FAIRNESS_PROTOCOL_DESIGN.md` "Non-Goals").
+- **Atıf (yalnız kodda yazılan).** Croes (1958), Lin (1965), Or (1976), Taillard (1993): `uniride_core/algorithms/local_search.py:17-21`. Eski, ayrı `local_search.py` sınıfları: 2-opt `:65`, 3-opt `:143`, Or-opt `:255`, Swap `:325`, CrossExchange `:399`, TimeWindowAware `:530`, Hybrid `:695`.
+- **Science sorguları.** (a) "asymmetric TSP 3-opt segment insertion orientation preserving", "or-3opt ATSP move"; (b) "k-opt neighborhood asymmetric TSP Hamiltonian cycle only"; (c) "Or-opt segment insertion TSP bounded neighborhood"; (d) "ATSP local search Kanellakis Papadimitriou" ve "Lin-Kernighan Helsgaun LKH-3 ATSP". Sorular: ATSP için "yön korumalı 3-opt" standart mıdır (literatürde "or-3opt", "segment insertion" olarak geçer mi)? ATSP baz çizgisi olarak LKH-3 ve Kanellakis-Papadimitriou k-opt ile karşılaştırma nasıl raporlanır? Pencereli (window=12) 3-opt'un literatürdeki adı (neighbor lists, don't-look bits) nedir?
+
+### K2. GA / PSO (TSP)
+- **Ne yapıyor.** `solve_ga_tsp` permütasyon tabanlı memetik GA (`tsp_meta_engines.py:138`, docstring "memetic permutation GA"); `solve_pso_tsp` takas dizisi (swap-sequence) PSO (`:409`; yardımcılar `diff_swaps :222`, `combine_velocities :246`). Eski Numba: `_run_ga :95` (sıralı çaprazlama OX `:56`, takas mutasyonu `:72`), `_run_pso :163`.
+- **Parametreler.** Çekirdek: GA `population_size=50` (`tsp_meta_engines.py:~167`), PSO `swarm_size=30`, `max_velocity_size=5`, `reinit_interval=50` (`:~409-440`). Eski Numba: GA `pop_size=120, generations=300, mutation_rate=0.12, elite_size=6`; PSO `swarm_size=80, iterations=250, w=0.72, c1=c2=1.6` (`numba_strategies.py:12-15`).
+- **UniRide'a özgü.** Hiçbir çekirdek GA/PSO değişimi bildirilmemiş; yalnız sözleşme/muhasebe katmanı eklendi. [DOĞRULANMADI: cilalama/yerel arama ayrıntısı, çaprazlama operatörleri `ga_operators.py:11-146` (OX, PMX, döngü) ile `tsp_meta_engines`'in hangisini kullandığı].
+- **Atıf.** Kodda GA/PSO için atıf bulunamadı [DOĞRULANMADI]. Bildiri belgesi "klasik tanımlarına sadık" der (`academic_benchmark/CLASSICAL_PAPER_METHODOLOGY.md` §3.4); kod ayrık uyarlamadır (takas dizisi).
+- **Science sorguları.** "discrete particle swarm optimization TSP swap sequence Clerc", "genetic algorithm TSP order crossover memetic 2-opt", "ATSP genetic algorithm benchmark ft53". Sorular: takas-dizisi PSO (Clerc 2004) güncel TSP için rekabetçi bir baz çizgisi mi, yoksa EAX-GA/LKH baz çizgisi zorunlu mu?
+
+### K3. GWO ve HHO (Pure / Memetic-2opt)
+- **Ne yapıyor.** `GWOOptimizer`: alfa-beta-delta liderlerine takas-dizisi hareketi, üstel azalan `a` katsayısı, alfa'ya periyodik 2-opt cilası ve final 2-opt (`gwo_solver.py:1-12, 35-110`). `HHOOptimizer`: kaçış enerjisi |E|>=1 keşif (tünek/Lévy), |E|<1 yumuşak/sert kuşatma ve aşamalı hızlı dalış (`hho_solver.py:40-52`).
+- **Parametreler.** GWO: `pack_size=50, max_iterations=250, initial_a=2.0, exploration_rate=0.4, max_no_improvement=75, polish_interval=25, polish_iters=10, final_polish_iters=300, polish_enabled=True, evaluation_budget=None` (`gwo_solver.py:52-64`). HHO: `hawks=50, max_iterations=250, initial_energy=1.0, jump_probability=0.5, max_no_improvement=75, dive_count=3, levy_scale=0.3` + aynı cila alanları (`hho_solver.py:52-67`). Kayıt: `Numba-GWO/HHO` için `pack_size/hawks=80` (`registry_setup.py:~800-830`).
+- **UniRide'a özgü.** Pure ve memetik ayrımı: tarihsel `Numba-GWO/HHO` adları cila (2-opt) içerir; tasarım bu adları `Memetic-2opt` olarak yeniden etiketler ve `GWO`/`HHO` adını cilasız (Pure) varyanta atar (`algorithm_resolution.py:49-60`; `ACADEMIC_FAIRNESS_PROTOCOL_DESIGN.md` "Compatibility Boundary"). `evaluation_budget` verilirse "fair mode" açılır (`gwo_solver.py:72`); GWO/HHO nesli atomik evre sayılır (tasarım). İki ayrı GWO/HHO gerçeklemesi vardır: dizgi anahtarlı `tsp_meta_engines.py:334, 646` (üretim, FCM, split ailesi için) ve tamsayı indeksli `GWOOptimizer/HHOOptimizer` (akademik). Registry ikisini de adlandırır (`registry_setup.py:594-596` CORE_TSP_SOLVERS, `:800-833` Numba geçersiz kılma); hangi kimliğin hangi gerçekleme çalıştırdığı [DOĞRULANMADI: yürütme yolu tam izlenmedi].
+- **Atıf (kodda).** GWO: Mirjalili, Mirjalili, Lewis (2014), Advances in Engineering Software 69:46-61 (`gwo_solver.py:4-5`). HHO: Heidari et al. (2019), Future Generation Computer Systems (`hho_solver.py:4-6`; `tsp_meta_engines.py:516, 654`).
+- **Science sorguları.** "grey wolf optimizer traveling salesman problem discrete", "Harris hawks optimization TSP permutation Levy flight", "metaphor-based metaheuristics criticism Sörensen". Sorular: (1) GWO/HHO ATSP/TSP için genelde 2-opt ile hibritlenmiş midir; kod ayrık hareketi (takas alt kümesi) literatürdeki standart ayrıklaştırmayla uyumlu mu? (2) "Memetic-2opt" ile "Pure" ayrımını bildiren çalışma var mı (cilasız karşılaştırma)? (3) Metafor-tabanlı algoritma eleştirisi ışığında bu ikisinin tek başına SOTA baz çizgisi olarak savunulabilirliği.
+
+### K4. ALNS-TSP
+- **Ne yapıyor.** Yok etme/onarma operatörleri, uyarlanabilir ağırlık güncelleme, rulet seçimi, benzetilmiş tavlama kabulü (`alns_tsp.py:1-12, 69-80`). Yok etme: Random, Worst, Shaw, Related (`sota_tsp/destroy_ops.py:12-67`); onarma: Greedy, Regret-2, Regret-3 (`repair_ops.py:12-101`).
+- **Parametreler.** `iterations=5000, max_no_improve=500, remove_ratio=0.2, min_remove=2, segment_length=100, weight_update_factor=0.8, noise_scale=0.05, use_sa=True, sa_start_temp=100.0, sa_cooling_rate=0.995, seed=42` (`alns_tsp.py:45-57`). Bilimsel mod parametre doğrulaması `fairness.py:45`; yürütücü `registry_setup.py:1119-1160`.
+- **UniRide'a özgü.** Doğrudan çekirdek değerlendirmelerin muhasebeye alınması (`503b4e3`), kanonik ALNS protokol adaptörü (`bddbcb4`, 2026-08-03), yetenek iddiaları yayını (`a3531ee`), karar A03 (`docs/DECISION_LOG.md:262-266`). `solve_accounted_with_matrix` ile `ObjectiveEvaluationBudget` tüketir (`alns_tsp.py:86-95`).
+- **Atıf (kodda).** Ropke & Pisinger (2006), Transportation Science 40(4):455-472 (`alns_tsp.py:8-11`). Not: kodda atıf edilen makale pickup-delivery-time-window problemi içindir, TSP için değil.
+- **Science sorguları.** "adaptive large neighborhood search traveling salesman problem", "ALNS ATSP destroy repair regret insertion benchmark", "Ropke Pisinger 2006 ALNS". Sorular: ALNS TSP/ATSP için LKH/EAX karşısında konumu nedir; Shaw/Related/Worst yok etme operatörü ve Regret-k onarma TSP'de etkili mi (ablasyon var mı)?
+
+### K5. E2BSO, R2DMA, P-AOEA (kendi adlarıyla "SOTA" ailesi)
+- **Ne yapıyor.** E2BSO: kenar-tabanlı Shannon entropisi ile popülasyon çeşitliliği, 3 evreli uyarlama (ENJEKTE/NORMAL/SIKIŞTIR), ALNS yok-et/onar, çok katmanlı yerel arama (2-opt, or-opt), LAHC kabulü, uyarlanabilir entropi eşikleri (`e2bso_tsp.py:2-14`). R2DMA: çift çözümler arası 6 boyutlu "rezonans" ölçüsü, 3 modlu çaprazlama (yapıcı/orta/yıkıcı), turnuva ortağı seçimi k=5, OX, ALNS yok-et/onar, SA kabulü ve "dissonance" filtresi, uyarlanabilir teta, çeşitlilik darbesi (`r2dma_tsp.py:2-22`). P-AOEA: her bireyin yok-et/onar/kabul operatörlerini kodlayan "operatör genomu" taşıdığı, genomların turnuva+çaprazlama+mutasyonla evrildiği uyarlanabilir yapı (`paoea_tsp.py:2-12, 31`).
+- **Parametreler.** E2BSO: `population_size=40, max_iterations=500, h_start=0.8, h_end=0.2, gamma=0.5, three_opt_window=12, lahc_history=200, time_limit=300.0, seed=42` (`e2bso_tsp.py:32-55`). R2DMA: `population_size=60, theta_base=0.5, segment_size=50, sa_cooling_rate=0.9995, tournament_k=5` (`r2dma_tsp.py:100-120`). P-AOEA: `population_size=50, genome_population_size=10, meta_evolution_interval=50, crossover_rate=0.7, mutation_rate=0.3, destroy havuzu {random, worst, shaw, related}, onarma {greedy, regret2, regret3}, kabul {sa, lahc}` (`paoea_tsp.py:79-105`).
+- **UniRide'a özgü.** Üç algoritma da bu depoda tanımlı; yöntem belgeleri (`SOTA_PAPER_METHODOLOGY.md` §3.4) çekirdek mekanizmaların "strictly preserved" olduğunu söyler ama hangi makaleye göre olduğunu yazmaz. Boyuta duyarlı yerel arama bütçesi ve mesafe-metriğinden bağımsız hedef (zaman matrisi) uyarlama olarak anılır (`SOTA_PAPER_METHODOLOGY.md` §3.4 madde 1-3). Üretim API'sinde bu çözücüler `e2bso/r2dma/paoea` stratejileri olarak sarılır (`optimizer_api/strategies/ebso_strategy.py:1-40`; kayıt `strategies/__init__.py:194-206`).
+- **Atıf.** Kodda ve `SOTA_ALGORITHM_CANDIDATES.md`'de bu üç algoritma için dış kaynak makale bulunamadı. Aday belge yalnız çerçeve kapsamı tablosunda adlarını sayar (`SOTA_ALGORITHM_CANDIDATES.md:24`) ve bir yerde "our E2BSO-TSP 3-phase design" der (`:452`, yani depoya özgü tasarım). Bu nedenle: **[DOĞRULANMADI: E2BSO, R2DMA, P-AOEA adlı yayınlanmış makale var mı, yoksa depo içi tasarımlar mı?]** `ebso_strategy.py:3-4` "Enhanced Entropy-Balanced Swarm Optimization" yazar; kaynak vermez.
+- **Science sorguları.** "entropy balanced swarm optimization traveling salesman", "resonance destroy and merge algorithm", "adaptive operator evolution algorithm genome TSP", "operator selection genome hyper-heuristic ALNS". Sorular: bu adlarla yayın var mı? Yoksa, mekanizmaların en yakın literatür karşılıkları nelerdir (entropi tabanlı çeşitlilik denetimi, uyarlanabilir operatör seçimi, LAHC, EAX/HGS çeşitlilik yönetimi)?
+
+### K6. CGO-TSP ve RUN-TSP
+- **Ne yapıyor.** CGO-TSP: Talatahari & Azizi kaos oyunu optimizasyonunun ayrık TSP'ye uyarlaması: kısmi tur "tohumları", kaos kontrollü araya yerleştirme birleştirme, tohum uzunluğu iterasyonla ikiye katlanır, lojistik harita `x_{t+1}=r x_t (1-x_t)` (`cgo_tsp.py:1-22, 43-47`). RUN-TSP: Runge-Kutta 4 aşamalı eğim değerlendirmesini ayrık hareketlere eşler: k1=2-opt, k2=sınırlı 3-opt, k3=takas, k4=ekleme; ESQ (Enhanced Solution Quality) kaçış mekanizması (`run_tsp.py:1-24`).
+- **Parametreler.** CGO: `population_size=40, max_iterations=500, chaos_rate=3.99, seed_length_ratio=0.25, ls_time_limit=0.5, three_opt_window=12` (`cgo_tsp.py:32-40`). RUN: `population_size=40, max_iterations=500, beta=0.5, esq_probability=0.2, ls_time_limit=0.5, three_opt_window=12` (`run_tsp.py:35-43`).
+- **UniRide'a özgü.** Kodda belirtildiği üzere sürekli arama uzayı ayrık permütasyona çevrilmiştir; RK4 ağırlıklı ortalaması "ağırlıklı seçim" ile yer değiştirir (`run_tsp.py:14-20`), yani orijinal güncelleme denklemleri korunmaz. Bu, `SOTA_PAPER_METHODOLOGY.md` §3.4'ün "core generative mechanisms ... strictly preserved" ifadesiyle çelişir (bkz. §5).
+- **Atıf (kodda).** Talatahari & Azizi (2021), "Chaos Game Optimization: a novel metaheuristic algorithm" (`cgo_tsp.py:4-5`); Ahmadianfar et al. (2021), "RUN: Beyond the Metaphor..." (`run_tsp.py:4-5`). Aday belgede yıl 2020 (CGO), 2021 (RUN) ve atıf sayıları yazılıdır (`SOTA_ALGORITHM_CANDIDATES.md:30-41, 73-84`); bu sayılar doğrulanmamıştır.
+- **Science sorguları.** "chaos game optimization traveling salesman", "Runge Kutta optimizer discrete combinatorial TSP", "RUN optimizer permutation". Sorular: aday belgenin "TSP uygulaması bulunamadı" iddiası (`SOTA_ALGORITHM_CANDIDATES.md` Rank 1 ve 2 tabloları) bugün de doğru mu? Aday belgedeki 2020-2021 makalelerin güncel atıf sayıları ve ayrık varyant var mı?
+
+### K7. FCM-bölme (FCM-GA/PSO/GWO/HHO-TSP) ve kümeleme ailesi
+- **Ne yapıyor.** `FCMSplitMatrixEngine`: büyük TSP'yi bulanık C-ortalamalarla kümeler, her kümeyi bir temel çözücüyle (GA/PSO/GWO/HHO) çözer, kümeler arası birleştirir ve 2-opt ile cilalar (`fcm_split_engine.py:21-30, 156-230`; `engine_factory.py:51-56`). Üretim küme-önce kümelemeleri: sweep (`sweep.py:12`), k-means (`kmeans.py:70`), FCM (`fuzzy_cmeans.py:74`), sınır-noktası algılama ve transfer mekanizmalı geliştirilmiş FCM (`fuzzy_cmeans_enhanced.py:1-8, 632`), iki-aşamalı hiyerarşik FCM (`hierarchical_fcm.py:1-12, 399`), PAM tarzı k-medoids (`k_medoids.py:62`), yönlü Clarke-Wright tasarruf kümelemesi (`clarke_wright.py:9`).
+- **Parametreler.** Hiyerarşik FCM: eşik 50, bölge başına 30 öğrenci (`clustering_strategies/__init__.py:~70-76`). Diğerleri [DOĞRULANMADI].
+- **UniRide'a özgü.** Operasyonel kümelemede `k_medoids` ve `clarke_wright` yalnız yönlü gerçek matrisi okur ve eksik süre durumunda hata verir, haversine yedeği yoktur (`k_medoids.py` `get_duration`, `clarke_wright.py:1-8`; karar T05 `docs/DECISION_LOG.md:119`). Geliştirilmiş FCM ve hiyerarşik FCM'nin dosya başlığı bunların kullanıcının önceki MATLAB kodlarına (`FCM_TEK_ASAMA_UYELIK.m`, `FCM_IKI_ASAMA_MERKEZ.m`) dayandığını söyler (`fuzzy_cmeans_enhanced.py:9-11`, `hierarchical_fcm.py:14-16`).
+- **Atıf.** Dış makale atıfı yok; yalnız MATLAB dosya adı. [DOĞRULANMADI: dayandığı yayın].
+- **Science sorguları.** "fuzzy c-means clustering vehicle routing cluster first route second", "fuzzy clustering large TSP decomposition", "Karp partitioning TSP", "tour merging large scale TSP clustering". Sorular: "kümele-çöz-birleştir" TSP için güncel SOTA ayrıştırma yaklaşımları (LKH segment ayrıştırma, POPMUSIC, Karp bölme) nelerdir ve FCM kullanan çalışma var mı?
+
+### K8. Split çözümleyicileri ve GA/PSO/GWO/HHO-Split
+- **Ne yapıyor.** `SplitDecoder`: dev tur (giant tour) permütasyonunu ardışık alt dizilere bölerek olurlu depo-kapalı rotalara dönüştürür; CVRP ve CVRPTW kipleri, toplama için geri zamanlama, bırakma için ileri zamanlama (`string_split_decoder.py:1-12, 106-135`). Sınıf başlığı "O(n²) zaman, O(n) bellek" iddiası taşır (`:106-118`) [DOĞRULANMADI: gerçek karmaşıklık, `max_tour_duration` ve zaman penceresi kollarında]. `LinearSplitDecoder` sınırlı, ceza tabanlıdır (`linear_split_decoder.py:1-30`; zaman-bükme `tw_penalty_rate=10`, Sw taşma `100`, So taşma `50`).
+- **GA-Split.** `solve_ga_split` (`ga_split_engine.py:298`): NN tur başlatma (`:43`), OX çaprazlama, mutasyon (`ga_operators.py`), seçkin tutma, her N nesilde yerel arama (`educate_individual :187`), durgunlukta çeşitlendirme (`diversify_population :224`). Üretim varsayılanları (`ga_split_strategy.py:58-70`): `population_size=50, max_iterations=100, crossover_rate=0.85, mutation_rate=0.20, elite_count=3, tournament_size=4, max_no_improvement=25, seed=None, local_search_type="hybrid", local_search_interval=10, diversify_threshold=30`. `seed=None` 42'ye çözülür (`DECISION_LOG.md:90`). Terfi ettirilmiş yapılandırma `get_promoted_strategy_params` ile üstüne yazılabilir (`ga_split_strategy.py:73-79`).
+- **PSO/GWO/HHO-Split.** Aynı dev tur ve split; hız/konum güncellemeleri takas dizisi tabanlı (`pso_split_engine.py:61-96`, `gwo_split_engine.py:58-87`, `hho_split_engine.py:59-144`). Üretim varsayılanları: PSO `swarm_size=60, max_iterations=200, inertia 0.9→0.4, c1=c2=2.0, velocity_clamp=0.7` (`pso_split_strategy.py:62-72`); GWO `population_size=50, max_iterations=180, initial_a=2.5, exploration_rate=0.4` (`gwo_split_strategy.py:65-72`); HHO `population_size=50, max_iterations=180, initial_energy=2.0, jump_probability=0.4, levy_flight_scale=0.3` (`hho_split_strategy.py:65-73`).
+- **UniRide'a özgü.** Sw/So ayrı kapasite havuzları; çözümleyici öğrenci başı maksimum yolculuk süresini uygular (`string_split_decoder.py:121-135`; commit `8d735c2` 2026-10-04); sözlüksel amaç anahtarı (`objective_rank.py`); eksik ok hatası (`route_metrics.py` `strict_arc`); `ga_split` için bağımsız sertifikasyon (`DAILY_STUDENT_TRANSPORT_PLANNING_METHOD.md:68`). Parite altın dosyaları: `uniride_core/tests/golden/split_parity.json` (H01).
+- **Atıf (kodda).** Prins (2004), Computers & Operations Research 31(12):1985-2002 (`string_split_decoder.py:10-12`; `DAILY_STUDENT_TRANSPORT_PLANNING_METHOD.md:215`). Üretim strateji yorumları "Literature: 50-80 for VRP", "Clerc's constriction with modifications" der (`pso_split_strategy.py:63-72`) [bunların kaynağı verilmemiş].
+- **Science sorguları.** "Prins 2004 split algorithm giant tour VRP", "route-first cluster-second hybrid genetic algorithm CVRP time windows Vidal HGS", "split algorithm linear time Vidal 2016", "giant tour split heterogeneous fleet Prins 2009 HVRP". Sorular: Prins split'in zaman pencereli ve çok sınıflı (Sw/So) kapasite uzantısı literatürde var mı? CVRPTW'de HGS-CVRP/HGS-TW (Vidal) baz çizgisi nedir? GA-Split'in PyVRP/HGS karşısında standart karşılaştırması nasıl yapılır?
+
+### K9. Tipli (heterojen filo) GA-Split, CP-SAT gün seçimi, tipli atama
+- **Ne yapıyor.** `decode_typed` (`typed_split_decoder.py:67`): dev turu tür etiketli rotalara böler; her tür için Sw/So kapasitesi, yolculuk limiti, tur limiti, kota türü için en çok `quota` rota. `solve_ga_split_typed` (`ga_split_typed_engine.py:138`) GA döngüsünü kopyalar (parite kapısı P1/P4). `solve_typed_menu` (`:217`) kota q=0..3 ve tümü-büyük seçenek menüsü üretir. `solve_day_selection` (`typed_day_selection.py:120`): her dalga için menüden tam bir seçenek seçer, rotaları `large`/`car` olarak etiketler; tür başına en çok bir eşzamanlı meşgul aralık yükü kısıtlanır; çözücü OR-Tools CP-SAT (`typed_day_selection.py:170-220`, `num_workers=1`, sabit tohum 20261008 `:40`, varsayılan süre 30 s `:41`). TS tarafında tipli sabit-rota ataması dal-sınır tabanlı, düğüm bütçesi 200 000 (`typed-fleet-assignment.ts:1-25`).
+- **UniRide'a özgü.** Bütün katman UniRide'a özgüdür: tek-tür/kotasız durumda tipli GA, `solve_ga_split` ile aynı rota, maliyet ve nesil sayısını vermek zorundadır (P4; karar H04). `time_scale` ile merkez-dakika tam sayı aralıkları (karar H05, CX-01). Optimallik iddiası yalnız "verilen menüler üzerinde" geçerlidir; küresel minimum değildir (`typed_day_selection.py:26-31`).
+- **Atıf.** Kodda yok. Tasarım `docs/designs/HETEROGENEOUS_FLEET_DESIGN.md`.
+- **Science sorguları.** "heterogeneous fleet VRP giant tour split Prins Vidal HFVRP", "CP-SAT interval scheduling vehicle reuse cooldown", "minimum fleet size problem time windows vehicle reuse interval graph", "vehicle scheduling problem minimum number of vehicles interval graph coloring". Sorular: dalga sonrası araç yeniden kullanımı (bekleme süresi ile) için standart problem adı nedir ("vehicle scheduling problem", "fleet minimization"); sedan/minibüs karışımı için Sw kısıtlı HFVRP varyantı var mı?
+
+### K10. OR-Tools, PyVRP (HGS), VROOM
+- **Ne yapıyor.** OR-Tools yönlendirme: `PATH_CHEAPEST_ARC` ilk çözüm, `GUIDED_LOCAL_SEARCH` (`ortools_cvrp_engine.py:183-196`, varsayılan zaman sınırı 30 s `:45`). PyVRP: `MaxRuntime(time_limit_seconds)` ile çözer (`pyvrp_cvrp_engine.py:35, 127`). VROOM + yedek süpürme (`vroom_cvrp_engine.py:28, 148`). Akademik tarafta `CVRP-OR-Tools` vb. takma adlar (`registry_setup.py:1019-1022`).
+- **UniRide'a özgü.** Operasyonel muhafazakâr yuvarlama, akademik "en yakın" yuvarlama (karar O02 `docs/DECISION_LOG.md:153`); adapter'lar matris-yerel (`holistic_matrix_engine.py:13`). Yorum: PyVRP "DIMACS 2021 Winner" olarak etiketlenir (`optimizer_api/strategies/__init__.py:22`).
+- **Atıf.** Dış makale atıfı yok [DOĞRULANMADI].
+- **Science sorguları.** "PyVRP hybrid genetic search time windows benchmark", "HGS-CVRP Vidal 2022", "DIMACS 2021 vehicle routing challenge winner", "OR-Tools routing GLS CVRPTW benchmark". Sorular: 2021 DIMACS kazananı kimdir (depo iddiasını doğrula)? Güncel CVRP/CVRPTW SOTA nedir (HGS türevleri, neural çözücüler)? Bu depoda PyVRP, OR-Tools ve VROOM'u temel çizgi olarak kullanmanın standardı nedir?
+
+### K11. Kesin referanslar (permütasyon arama, planlanan AMPL/HiGHS)
+- **Ne yapıyor.** `solve_exact_tsp_route` tam permütasyon araması; >10 düğümde çözücüden önce `ExactTSPSizeError` (`string_exact_tsp.py:11-35`; `CURRENT_ARCHITECTURE.md` §2). Akademik "exact solver" için yalnız veri sözleşmesi kodlanmıştır (`uniride_core/exact/wave_instance.py:1-30`, durumlar `optimal/feasible_with_gap/bound_only/...`).
+- **UniRide'a özgü.** Kesin çözücü (AMPL/HiGHS) tasarım aşamasında; amaç GA'nın optimallik açığını ölçmektir (E01 `DECISION_LOG.md:391-398`). Kod yok; "solver measurement yok" (`DECISION_LOG.md:398`).
+- **Science sorguları.** "exact solution student transport school bus routing mixed load", "MILP formulation bus routing wheelchair accessible vehicle capacity", "CP-SAT vehicle routing time windows exact", "school bus routing problem survey Park Kim 2010", "dial-a-ride problem wheelchair". Sorular: Sw/So karışık yük (tekerlekli sandalye) için bilinen MILP formülasyonları ve ölçekler nelerdir; DARP / SBRP içinde bu problem hangi alt sınıfa girer?
+
+---
+
+## 4. Geliştirme geçmişi
+
+Tarih = commit tarihi. Karar kimlikleri `docs/DECISION_LOG.md`'dendir.
+
+| Tarih | Commit/Belge | Karar |
+|---|---|---|
+| 2026-05-24 | `b885a09` | SOTA TSP çekirdeği, akademik benchmark motoru ve yönetici paneli depoya girer |
+| 2026-07-21 | `a248d6e` | "Harden academic TSP algorithms and comparison protocols": `three_opt.py` ve temel karşılaştırma protokolü bu committe ilk eklenir |
+| 2026-07-22/24 | karar A01, `de29083` (2026-07-25) | Dört kapı; YAEM karantinası; Bildiri çözücüleri çekirdeğe taşınır; eski malzeme `archive/`'a alınır |
+| 2026-07-24 | `38d097f` | Hedef-değerlendirme bütçe muhasebesi çekirdeğe (`objective_budget.py`) alınır |
+| 2026-07-28 | `0e83be8`, `2ab35b8`, `2a5d79f`, `028eac1` | Değişmez yetenek kataloğu, kanonik algoritma çözümleyici, kanonik kimlikler, kanıta dayalı ön-kontrol |
+| 2026-07-29 | `406a1ab`, `6d42be7` | GWO/HHO ve yerel arama yetenekleri kanıtlarla VERIFIED yapıldı; sonra adayı-bildir manifestleri yalnız doğrulananlarla sınırlandı (`15a45ff`) |
+| 2026-08-02 | `29095fd`, karar A03 | Or-opt kanıta dayalı kanonik çekirdeğe terfi |
+| 2026-08-03 | `bddbcb4`, `a3531ee` | Kanonik ALNS adaptörü ve ALNS yetenek iddiaları |
+| 2026-08-13 | `ba38947`, `ca0f114`, `f694f71`, `10852e0` | Üretimde takma ad kanonikleştirme, bütçe tavanları, sınırlı karşılaştırma, >10 düğüm tam arama reddi |
+| 2026-10-04 | `8d735c2`, `5881570` (R1) | Split çözümleyici öğrenci başı `max_ride_time`; karar O03 |
+| 2026-10-04 | `0883313`, karar V01 | Fiziksel araç ataması: sınırlı, simetri kırmalı arama |
+| 2026-10-05 | `a2bc6b8`, `4f18378` | Saklı zaman matrisi yoksa hata (haversine yedeği yok) |
+| 2026-10-08 | `028f46b`, `378129b`, `35bbc72`, `d548176`, `ab0b617`; karar H01 | Heterojen filo: tipli split, tam sabit-rota atama, tipli GA, `ga_split_hf`, CP-SAT gün seçimi |
+| 2026-10-09 | `4ae3d57` (CX-01), `11d2c38` (CX-03), `e404063` (H03), `20f9069` (A06) | Tam merkez-dakika aralıkları; tek tür/kotasız tipli GA'nın maliyet-önceki iç çözümleme; toplam koltuk sınırı; `ga_split_enhanced/hf` parametre ve tohum |
+| 2026-10-10 | `7092878`, `236f899`, karar E01 | Kesin çözücü (AMPL) tasarımı ve yalnız WP-E0 veri sözleşmesi |
+
+Yeniden adlandırma: `GWO-LKH`/`HHO-LKH` yanlış tarihsel etiketlerdir; gerçek LKH çağrılmadıkça aktif kodda `GWO-3opt`/`HHO-3opt` adları kullanılacaktır (AGENTS.md:41). Canlı kodda bu iki ad yalnız katalogda PLANNED olarak vardır (`capabilities.py:275-276`) ve eski ad `ForbiddenAliasError` verir (`algorithm_resolution.py:66-71`). Neden: tasarım belgesi "bu bileşimler Helsgaun LKH'yı atıf yapmamalı, ima etmemeli" der (`ACADEMIC_STUDY_UNIFICATION_DESIGN.md:173`). Hibrit bileşim kuralları (tasarım, yürürlükte DEĞİL): pure global evre + tek seferlik cilalama, ortak atomik sayaç, `global_fraction=0.80` smoke varsayılanı (`ACADEMIC_STUDY_UNIFICATION_DESIGN.md:181-191`).
+
+---
+
+## 5. Açık sorular / Science'a sorulacaklar
+
+Aşağıdakiler "depoda şu iddia var, doğrulanmalı" biçimindedir. Hiçbiri performans iddiasının kanıtı değildir.
+
+1. **Kaynağı olmayan "SOTA" adları.** E2BSO, R2DMA, P-AOEA için dış yayın kodda ve belgelerde bulunamadı (`e2bso_tsp.py:1-14`, `r2dma_tsp.py:1-22`, `paoea_tsp.py:1-12`). `SOTA_PAPER_METHODOLOGY.md` bunlara "SOTA" der. Sorulacak: yayın var mı? Yoksa "SOTA" sıfatı kaldırılmalı mı?
+2. **"Çekirdek mekanizmalar korunmuştur" iddiası.** `SOTA_PAPER_METHODOLOGY.md` §3.4 beş algoritmanın üretici mekanizmalarının sıkı biçimde korunduğunu söyler. CGO/RUN için kod, sürekli uzaydan ayrık permütasyona dönüştürmeyi ve RK4 ortalamasının ağırlıklı seçimle yer değiştirmesini kendisi bildirir (`cgo_tsp.py:14-21`, `run_tsp.py:14-20`). Orijinal makalelerin ayrık uyarlama olarak nasıl sınıflandırılacağı sorulmalı.
+3. **"Klasik tanımlarına sadık" iddiası.** `CLASSICAL_PAPER_METHODOLOGY.md` §3.4 GA, PSO, GWO, HHO'nun klasik tanımlarına sadık olduğunu söyler. Kod takas dizisi ayrıklaştırması ve 2-opt cila içerir (`gwo_solver.py:1-12`; `tsp_meta_engines.py:222-246`). Literatürdeki ayrıklaştırma eşdeğeri sorulmalı.
+4. **Numba/JIT ve hız iddiası.** `CLASSICAL_PAPER_METHODOLOGY.md` §3.1 `@njit(nogil=True)` ve JIT ısınmadan söz eder. Tasarım belgeleri mevcut ortamda Numba paritesinin iddia edilmediğini ve public 3-opt'un Numba çalıştırmadığını söyler (`CANONICAL_THREE_OPT_DESIGN.md` "Current problem"; `ACADEMIC_FAIRNESS_PROTOCOL_DESIGN.md` "Non-Goals"; `three_opt.py:8-10`). `numba_strategies.py` hâlâ "Numba-*" adlarını yayımlar. Hız iddiaları doğrulanmadı.
+5. **Aday listesinin "TSP'de uygulanmamış" iddiası.** `SOTA_ALGORITHM_CANDIDATES.md` RUN ve CGO için "TSP uygulaması bulunamadı", atıf sayıları ve kaynak kod durumu yazar. Tarih 2026-05-15. Güncel tarama sorulmalı. Aday listesindeki diğer algoritmalar (SMA, GBO, APO, GTO, DBO; başlıklar `:113, 153, 190, 230, 258`) kodda uygulanmamıştır [DOĞRULANMADI: kodda arama yapılmadı, başlık düzeyinde dışarıda bırakıldı].
+6. **"HGS tarzı" adı.** `ga_split_enhanced` adı "HGS-style" der (`ga_split_strategy.py:266-283`); gerçekten Vidal HGS bileşenleri (SWAP*, çeşitlilik katkılı uygunluk, ceza yönetimi) içerip içermediği [DOĞRULANMADI]. Aynı dosyada `Based on Prins (2004)` yazar.
+7. **PSO yorumları.** `pso_split_strategy.py:62-72` "Clerc's constriction" yazar ama eylemsizlik ağırlığı doğrusal 0.9→0.4 azalır ve `c1=c2=2.0` kullanır; daraltma katsayılı Clerc-Kennedy formülasyonu değil. Atıf ve adlandırma doğrulanmalı.
+8. **HHO parametre yorumu.** HHO başlangıç enerjisi akademik hatta 1.0, üretimde 2.0 (`hho_solver.py:57`, `hho_split_strategy.py:71`); atlama olasılığı sabit parametredir (`jump_probability`), orijinal HHO'daki rastgele atlama gücü J'den farklı olabilir [DOĞRULANMADI: tam eşleme].
+9. **PyVRP "DIMACS 2021 Winner".** Bu etiket `optimizer_api/strategies/__init__.py:22, 181, 319-320` yorumlarında. Kaynak doğrulanmalı.
+10. **Split karmaşıklık iddiası.** `SplitDecoder` "O(n²)" der (`string_split_decoder.py:106-118`). Zaman penceresi kolları (`_build_trips_with_tw :371`) için gerçek karmaşıklık [DOĞRULANMADI].
+11. **"Optimal partitioning guaranteed" iddiası.** `ga_split_strategy.py:50-52` "Optimal partitioning guaranteed for each tour" ve "Often finds better solutions with fewer vehicles" yazar. İlki, bu çözümleyicideki ek kısıtlar (zaman penceresi, yolculuk süresi, singleton geri dönüş) altında doğrulanmalıdır; ikincisi ampirik iddiadır ve kanıtı gösterilmemiştir.
+12. **Üretim planlayıcı varsayılanı.** `ga_split` tek tohum (42) ve tek koşuyla çalışır; çözüm kalitesi hakkında iddia yoktur ve "kıyas yapılmadı" (`DECISION_LOG.md:90`; E01 EQ5: "single-seed" etiketi `:395`). Kesin çözücü karşılaştırması henüz yok.
+13. **Smoke çalışması.** `study.json` küçük bütçe, 4 birey, 2 iterasyon kullanır (`study.json:11-16`); bu profil yalnız smoke içindir. Üstünlük kanıtı değildir.
+14. **ATSP baz çizgisi.** Depodaki tek ATSP örneği ft53'tür (`datasets/ft53.json`). ATSP için LKH-3, Kanellakis-Papadimitriou, atsp→tsp dönüşümü gibi baz çizgilerinin depoda bulunduğuna dair kanıt yok. Science, ATSP'de standart baz çizgisini ve örnek kümesini (ftv, rbg, kro...) önermeli.
+15. **Çoklu GWO/HHO gerçeklemesi.** Aynı adların iki gerçeklemesi (dizgi anahtarlı ve tamsayı indeksli) literatürde karşılaştırılan "aynı algoritma" olarak sunulmamalı; hangi yolun hangi sonuçları ürettiği [DOĞRULANMADI].
+
+---
+
+## Ek A. Kapsam dışı / okunmayan alanlar
+
+- Okunmadı: `academic_benchmark/smart_benchmark.py`, `sota_engine.py` gövdesi, `cli_engine.py`, `param_spaces.py`, `param_db.py`, `promoted_configs.py`, `promotion_manager.py`, `dashboard*.py`, `numba_results/`, `sota_results/`, `results/`.
+- Okunmadı: `uniride_core/algorithms/numba_accel.py`, `numba_metaheuristics.py` gövdesi, `local_search_numba.py` gövdesi, `resource_profiler.py`, `base_engine.py`, `tsp_meta_matrix_engine.py`, `greedy_engine.py`, `feasibility_certificate.py` gövdesi.
+- Okunmadı: üretim küme-önce `ga_strategy.py`, `pso_strategy.py`, `gwo_strategy.py`, `hho_strategy.py` varsayılanları; `two_opt_strategy.py`; `optimizer_api/strategies/sota_common/` (yalnız `uniride_core/algorithms/sota_common/` içindeki sınıf adları: SA `acceptance_criteria.py:78`, LAHC `:155`, RTR `:221`; yok-et/onar/çeşitlilik/çok-katman LS/ceza yöneticisi/çok-başlangıç modüllerinin gövdeleri okunmadı).
+- Okunmadı: TypeScript tarafında günlük planlama (`src/services/daily-planning.ts`) ve `dudullu-preview.ts` gövdeleri; `doubus/` hizmeti.
+- Okunmadı: `archive/`, `old/`, `scratch/` (bilerek; AGENTS.md:15-20 uyarınca aktif algoritma sayılmadı).
+- Çalıştırılmadı: hiçbir test, benchmark ya da çözücü.

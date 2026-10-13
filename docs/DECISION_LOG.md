@@ -245,6 +245,11 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 - **Date/status:** continuing rule; recorded 2026-10-07. **Chosen/rationale:** retain exact commands/results and distinguish source review, mocked regression, service smoke, authenticated preview, scientific parity and publication evidence. **Rejected/why:** “all tests pass”/repository clean from partial checks overstates evidence. **Dead ends:** interrupted/no-output runs are blockers, never passes. **Reversal:** historical partial C1 reports were later superseded by explicitly recorded closure, not erased.
 - **Evidence:** [C1 final gate report](../.superpowers/sdd/task-c1-10-report.md), [safe-fixes report verification/limits](DEMO_SAFE_FIXES_RAPORU_2026-10-06.md), [jury review](superpowers/reports/2026-08-06-jury-roadmap-conformance-review.md). **Check first:** exact command, interpreter, commit and scope before borrowing a historical green result. This Markdown task ran no application tests.
 
+### P05 — literature/SOTA review through Claude Science via an algorithm inventory
+
+- **Date/status:** 2026-10-13; owner-approved process. **Chosen/rationale:** code work stays in Claude Code; literature and SOTA checks run in Claude Science (separate local app with OpenAlex/arXiv Literature Graph). The bridge is a reviewed inventory file with file:line evidence, not raw code upload or file-by-file attachment. **Rejected/why:** attaching files one by one (no repository context); claude.ai GitHub project sync (context-window bound, manual sync). **Dead ends:** no official shared-project bridge between Claude Code and Claude Science was found. **Reversal:** none.
+- **Evidence:** [algorithm inventory](ALGORITHM_INVENTORY_FOR_SCIENCE_2026-10-13.md), independently reviewed in two rounds (~85 then 24 references checked). **Check first:** the inventory is a source-review snapshot of WIP `f7b8570`; its 26 `[DOĞRULANMADI]` marks and any repository claims it quotes are not verified evidence. Grant Science a separate output folder rather than write access to source directories.
+
 ## Academic and service boundaries
 
 ### A01 — four gates, canonical ownership and quarantine

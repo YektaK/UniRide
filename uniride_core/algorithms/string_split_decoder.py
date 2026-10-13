@@ -105,7 +105,7 @@ class RouteSchedule:
 
 class SplitDecoder:
     """
-    Optimal Split Decoder for CVRP/CVRPTW using Dynamic Programming.
+    Split Decoder for CVRP/CVRPTW using Dynamic Programming (Prins 2004).
     
     Converts a giant tour (TSP solution) into feasible vehicle routes.
     Supports both CVRP (capacity only) and CVRPTW (capacity + time window) modes.
@@ -114,8 +114,16 @@ class SplitDecoder:
     - PICKUP (backward scheduling): Work backwards from target arrival at school
     - DROPOFF (forward scheduling): Work forward from departure from school
     
-    Time Complexity: O(n²) where n is the number of customers
-    Space Complexity: O(n)
+    Time Complexity (n = customers, L = max customers per route, bounded by
+    capacity): CVRP mode O(n*L); pickup time-window mode O(n*L^2), worst case
+    O(n^3) when L ~ n; dropoff time-window mode O(n*L). Space: O(n*L) for the
+    candidate trips.
+
+    Optimality: only in CVRP mode (no time windows) is the result the
+    minimum-cost partition of the given order (order preserved) under
+    capacity / duration / ride-time limits. In the time-window modes the DP
+    prefers fewer time-window violations first, then lower cost; this is not
+    claimed to be a globally optimal split.
     """
     
     def __init__(
@@ -161,7 +169,7 @@ class SplitDecoder:
         return_trip_details: bool = False
     ) -> Dict:
         """
-        Decode a giant tour into optimal vehicle routes.
+        Decode a giant tour into vehicle routes (order preserved; optimal only in CVRP mode).
         
         For CVRPTW mode:
         - PICKUP: Uses backward scheduling from target arrival times

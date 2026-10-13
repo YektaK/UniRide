@@ -4,7 +4,7 @@ Route-First, Cluster-Second Approach
 
 Combines:
 1. Particle Swarm Optimization (PSO) for giant tour optimization
-2. Split Decoder for optimal partitioning into vehicle routes
+2. Split Decoder for partitioning into vehicle routes (optimal only in CVRP mode, for the given order)
 
 Configuration (linearly decreasing inertia weight, Shi & Eberhart 1998; no Clerc
 constriction coefficient is used here; PSO for VRP Survey, 2024):
@@ -48,12 +48,12 @@ class PSOSplitStrategy(HybridSplitBaseStrategy):
     
     Workflow:
     1. PSO swarm evolves permutations of all customers (giant tours)
-    2. Split Decoder optimally partitions each tour into feasible routes
-    3. Fitness is the total cost after optimal splitting
+    2. Split Decoder partitions each tour into feasible routes (optimal only in CVRP mode, for the given order; see SplitDecoder)
+    3. Fitness is the total cost after splitting
     
     Advantages:
     - Fast convergence due to PSO's social learning
-    - Optimal partitioning guaranteed for each tour
+    - Cost-optimal split of each tour in CVRP mode (order kept); not guaranteed in TW modes
     - Good balance of exploration and exploitation
     
     Literature-optimized parameters for VRP with Split Decoder.

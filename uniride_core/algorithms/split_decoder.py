@@ -74,7 +74,7 @@ def optimal_split_result(
     depot: int = 0,
     max_route_duration: Optional[float] = None,
 ) -> SplitResult:
-    """Bellman-style O(n^2) split for a giant tour with vector capacities."""
+    """Bellman-style split of a fixed giant-tour order; O(n*L) (L = max customers per capacity-feasible route), O(n^2) worst case."""
     perm = [int(node) for node in permutation if int(node) != depot]
     n = len(perm)
     if n == 0:

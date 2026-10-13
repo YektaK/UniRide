@@ -1096,6 +1096,68 @@ describe("POST /api/admin/dudullu-preview demo modes", () => {
     });
   });
 
+  describe("optimizer failure reasons (DP-1)", () => {
+    const failOptimize = (respond: () => Response | Promise<Response>) => {
+      setAdmin({
+        ...crowd(2), vehicles: [vehicleRow("v1", 2, 2, 10), vehicleRow("v2", 2, 2, 10)],
+        student_leg_decisions: [confirmedLeg(1), confirmedLeg(2)],
+      });
+      optimizerFetchMock.mockImplementation(async (path: string) => {
+        if (path === "/api/v1/internal/matrix-snapshot") return Response.json(matrixFor(2));
+        return respond();
+      });
+    };
+    const problems = (body: { reasonCodes: string[] }) =>
+      body.reasonCodes.filter((code) => code !== "PENDING_STUDENT_CONFIRMATION" && code !== "ADMISSION_ASSUMED");
+    const run = async () => {
+      const { POST } = await import("./route");
+      return (await POST(post({ serviceDate: "2026-09-30" }))).json();
+    };
+
+    it("reports OPTIMIZER_RATE_LIMITED with the Retry-After seconds on HTTP 429", async () => {
+      failOptimize(() => Response.json({ detail: "rate limit exceeded" }, { status: 429, headers: { "retry-after": "17" } }));
+      const body = await run();
+      expect(body.status).toBe("blocked_data");
+      expect(problems(body)).toEqual(["OPTIMIZER_RATE_LIMITED"]);
+      expect(body.retryAfterSeconds).toBe(17);
+      expect(body.publishable).toBe(false);
+    });
+
+    it("reports OPTIMIZER_RATE_LIMITED without seconds when Retry-After is absent or invalid", async () => {
+      failOptimize(() => Response.json({}, { status: 429, headers: { "retry-after": "soon" } }));
+      const body = await run();
+      expect(problems(body)).toEqual(["OPTIMIZER_RATE_LIMITED"]);
+      expect(body).not.toHaveProperty("retryAfterSeconds");
+    });
+
+    it("maps a 503 with the travel-time matrix detail to MATRIX_UNAVAILABLE", async () => {
+      failOptimize(() => Response.json({ detail: "travel-time matrix unavailable" }, { status: 503 }));
+      const body = await run();
+      expect(body.status).toBe("blocked_data");
+      expect(problems(body)).toEqual(["MATRIX_UNAVAILABLE"]);
+    });
+
+    it.each([500, 502, 503, 504])("reports OPTIMIZER_UNAVAILABLE on other HTTP %i", async (status) => {
+      failOptimize(() => Response.json({ detail: "boom secret" }, { status }));
+      const body = await run();
+      expect(body.status).toBe("blocked_data");
+      expect(problems(body)).toEqual(["OPTIMIZER_UNAVAILABLE"]);
+      expect(JSON.stringify(body)).not.toContain("secret");
+    });
+
+    it("reports OPTIMIZER_UNAVAILABLE when the optimizer call times out or the network fails", async () => {
+      failOptimize(() => { throw new DOMException("timed out", "TimeoutError"); });
+      const body = await run();
+      expect(body.status).toBe("blocked_data");
+      expect(problems(body)).toEqual(["OPTIMIZER_UNAVAILABLE"]);
+    });
+
+    it("keeps OPTIMIZATION_NOT_SUCCESSFUL for other 4xx answers", async () => {
+      failOptimize(() => Response.json({ detail: "invalid" }, { status: 422 }));
+      expect(problems(await run())).toEqual(["OPTIMIZATION_NOT_SUCCESSFUL"]);
+    });
+  });
+
   describe("invalid student records", () => {
     const withInvalidProfile = (change: Record<string, unknown>) => {
       const rows = crowd(2);

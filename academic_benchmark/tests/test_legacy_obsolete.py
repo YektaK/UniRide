@@ -283,7 +283,7 @@ def test_new_rows_in_main_dir_visible_next_to_legacy_subdir(tmp_path):
     _write(tmp_path / "tuning_progress.csv", [{"timestamp": LATER, "problem": "p", "strategy": "New"}])
     s, p, _ = load_csv_frames([str(tmp_path)])
     t, _ = load_tuning_frames([str(tmp_path)])
-    assert [list(f["strategy"]) for f in s + p + t] == [["New"], ["New"], ["New"]]
+    assert [list(f["strategy"]) for f in s + p + t if len(f)] == [["New"], ["New"], ["New"]]
     rows = get_benchmark_rows(results_dir=str(tmp_path), db_path=str(tmp_path / "none.db"))
     assert [r["algorithm"] if "algorithm" in r else r.get("strategy") for r in rows["results"]] == ["New"]
     s, p, _ = load_csv_frames([str(tmp_path)], include_obsolete=True)

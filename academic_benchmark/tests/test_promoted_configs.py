@@ -154,7 +154,7 @@ def test_promoted_configs_prefer_latest_no_gap_real_row_over_lower_old_cost(tmp_
             "capacity_violations": 0,
             "tw_violations": 0,
             "params": {},
-            "timestamp": "2026-06-01T15:32:46+00:00",
+            "timestamp": "2026-11-01T15:32:46+00:00",
         },
         db_path=db_path,
     )
@@ -169,7 +169,7 @@ def test_promoted_configs_prefer_latest_no_gap_real_row_over_lower_old_cost(tmp_
             "capacity_violations": 0,
             "tw_violations": 0,
             "params": {"scale": 1000},
-            "timestamp": "2026-06-02T02:56:07+00:00",
+            "timestamp": "2026-11-02T02:56:07+00:00",
         },
         db_path=db_path,
     )

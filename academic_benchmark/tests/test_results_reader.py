@@ -47,7 +47,7 @@ def test_results_reader_returns_routing_benchmark_rows(tmp_path):
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
         writer.writerow({
-            "timestamp": "2026-05-26T00:00:00",
+            "timestamp": "2026-11-26T00:00:00",
             "problem": "tiny-cvrptw",
             "strategy": "Core-Greedy-Routing",
             "avg_length": "40",

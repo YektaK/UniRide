@@ -32,7 +32,8 @@ from strategies.seed_utils import resolve_seed, make_rng
 class GeneticAlgorithmStrategy(BaseRoutingStrategy):
     """
     Genetic Algorithm for Vehicle Routing Problem.
-    Uses K-Means clustering for multi-vehicle problems, then GA for TSP.
+    Clusters students for multi-vehicle problems (default clustering: sweep; the
+    request clustering_algorithm may select another), then GA for TSP.
     """
 
     # Default GA parameters

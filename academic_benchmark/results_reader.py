@@ -26,6 +26,7 @@ def get_leaderboard(
     category: Optional[str] = None,
     limit: int = 100,
     db_path: str = DB_PATH,
+    include_obsolete: bool = False,
 ) -> Dict[str, object]:
     safe_limit = max(1, min(int(limit), 1000))
     rows = query_best_solutions(
@@ -33,6 +34,7 @@ def get_leaderboard(
         category=category,
         limit=safe_limit,
         db_path=db_path,
+        include_obsolete=include_obsolete,
     )
     return {
         "source": "academic_db",
@@ -42,8 +44,10 @@ def get_leaderboard(
     }
 
 
-def get_best_result(problem: str, algorithm: str, db_path: str = DB_PATH) -> Dict[str, object]:
-    row = get_best_solution(problem, algorithm, db_path=db_path)
+def get_best_result(
+    problem: str, algorithm: str, db_path: str = DB_PATH, include_obsolete: bool = False
+) -> Dict[str, object]:
+    row = get_best_solution(problem, algorithm, db_path=db_path, include_obsolete=include_obsolete)
     return {
         "source": "academic_db",
         "problem": problem,

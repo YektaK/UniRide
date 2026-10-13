@@ -75,6 +75,7 @@ def _best_db(tmp_path):
     db = str(tmp_path / "t.db")
     conn = get_db(db)
     init_db(conn)
+    conn.execute("INSERT INTO problems (name, dimension, category) VALUES ('tiny', 3, 'small')")
     for algo, ts, length in [("B-GA", OLD, 10.0), ("B-GA", NEW, 12.0), ("test_algo", OLD, 1.0), ("SOTA-X", LATER, 9.0)]:
         conn.execute(
             "INSERT INTO best_solutions (problem_name, algorithm, params_json, tour_nodes, tour_length, gap, timestamp)"

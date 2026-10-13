@@ -29,6 +29,11 @@ except ImportError:
     from academic_benchmark.tsplib_matrix_codec import decode_matrix, encode_matrix
 
 try:
+    import obsolete_results as _obsolete
+except ImportError:
+    from academic_benchmark import obsolete_results as _obsolete
+
+try:
     from benchmark_utils import TSPLIB_OPTIMALS
 except ImportError:
     from academic_benchmark.benchmark_utils import TSPLIB_OPTIMALS
@@ -344,18 +349,22 @@ def get_best_solution(
     problem_name: str,
     algorithm: str,
     db_path: str = DB_PATH,
+    include_obsolete: bool = False,
 ) -> Optional[dict]:
     """Return the best (lowest tour_length) solution for (problem, algorithm).
-    Returns None if no solution exists.
+    Returns None if no solution exists. Legacy rows (timestamp before
+    ``obsolete_results.LEGACY_CUTOFF``) are hidden unless ``include_obsolete``.
     """
     conn = get_db(db_path)
+    legacy_sql = "" if include_obsolete else "AND timestamp >= ? "
+    legacy_args = () if include_obsolete else (_obsolete.legacy_cutoff(),)
     row = conn.execute(
         "SELECT id, problem_name, algorithm, params_json, tour_nodes, "
         "       tour_length, gap, timestamp "
         "FROM best_solutions "
-        "WHERE problem_name=? AND algorithm=? "
+        f"WHERE problem_name=? AND algorithm=? {legacy_sql}"
         "ORDER BY tour_length ASC LIMIT 1",
-        (problem_name, algorithm)
+        (problem_name, algorithm) + legacy_args
     ).fetchone()
     conn.close()
     if row is None:
@@ -377,15 +386,21 @@ def query_best_solutions(
     category: Optional[str] = None,
     limit: int = 100,
     db_path: str = DB_PATH,
+    include_obsolete: bool = False,
 ) -> List[dict]:
     """Query best solutions with optional filters.
-    Returns list sorted by tour_length ASC.
+    Returns list sorted by tour_length ASC. Legacy rows (timestamp before
+    ``obsolete_results.LEGACY_CUTOFF``) are excluded in SQL, before LIMIT,
+    unless ``include_obsolete``.
     """
     conn = get_db(db_path)
     where = ["1=1"]
     params = []
+    if not include_obsolete:
+        where.append("s.timestamp >= ?")
+        params.append(_obsolete.legacy_cutoff())
     if algorithm:
-        where.append("algorithm=?")
+        where.append("s.algorithm=?")
         params.append(algorithm)
     if category:
         where.append("p.category=?")
@@ -544,6 +559,9 @@ def query_benchmark_results(
             "(r.metadata_json IS NULL OR NOT json_valid(r.metadata_json) "
             "OR json_extract(r.metadata_json,'$.obsolete') IS NOT 1)"
         )
+        # legacy rule: any algorithm stamped before the cutoff
+        where.append("r.timestamp >= ?")
+        params.append(_obsolete.legacy_cutoff())
     sql = (
         "SELECT r.*, b.source, b.status "
         "FROM benchmark_results r "
@@ -585,12 +603,12 @@ def _benchmark_result_row_to_dict(row) -> Dict:
     }
 
 
-def analyze_solution_patterns(db_path: str = DB_PATH) -> str:
+def analyze_solution_patterns(db_path: str = DB_PATH, include_obsolete: bool = False) -> str:
     """Cross-problem analysis: most common best params per algorithm and category.
     Returns Markdown-formatted string.
     """
     from collections import Counter
-    rows = query_best_solutions(limit=5000, db_path=db_path)
+    rows = query_best_solutions(limit=5000, db_path=db_path, include_obsolete=include_obsolete)
     if not rows:
         return "No best solutions found in database."
 

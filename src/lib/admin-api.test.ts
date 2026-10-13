@@ -102,7 +102,9 @@ const validReadinessReport: DudulluReadinessReport = {
     vehicles: 1,
     activeVehicles: 1,
     usableActiveVehicles: 1,
+    invalidCooldownActiveVehicles: 0,
   },
+  legDecisions: { readable: true },
   matrix: {
     source: "supabase",
     loaded: true,

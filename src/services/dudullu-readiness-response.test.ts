@@ -28,7 +28,9 @@ const validReport: DudulluReadinessReport = {
     vehicles: 1,
     activeVehicles: 1,
     usableActiveVehicles: 1,
+    invalidCooldownActiveVehicles: 0,
   },
+  legDecisions: { readable: true },
   matrix: {
     source: "supabase",
     loaded: true,
@@ -71,6 +73,8 @@ describe("parseDudulluReadinessReport", () => {
     { ...validReport, students: { ...validReport.students, allAccounts: 1.5 } },
     { ...validReport, matrix: { ...validReport.matrix, source: "unknown" } },
     { ...validReport, fleet: undefined },
+    { ...validReport, legDecisions: undefined },
+    { ...validReport, fleet: { ...validReport.fleet, invalidCooldownActiveVehicles: undefined } },
     { ...validReport, matrix: { ...validReport.matrix, depotPresent: undefined } },
   ])("rejects malformed response", (input) => {
     expect(() => parseDudulluReadinessReport(input)).toThrow(

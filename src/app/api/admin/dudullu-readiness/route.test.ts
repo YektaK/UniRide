@@ -25,7 +25,8 @@ import { AppError } from "@/lib/admin-auth";
 
 const USER_SELECT = "id, role, location_code, disability_type, weekly_schedule_id";
 const SCHEDULE_SELECT = "id, user_id, entries";
-const VEHICLE_SELECT = "status, wheelchair_capacity, seating_capacity";
+const VEHICLE_SELECT = "status, wheelchair_capacity, seating_capacity, cooldown_minutes";
+const LEG_DECISIONS_PROBE_SELECT = "user_id";
 
 const UNAVAILABLE = { ready: false, reasonCodes: ["dependency_unavailable"] };
 
@@ -50,21 +51,32 @@ function validSummary(requiredLocationCount = 2, overrides: object = {}): object
 }
 
 function adminClient(
-  rows: { users?: unknown[]; schedules?: unknown[]; vehicles?: unknown[] } = {},
+  rows: {
+    users?: unknown[]; schedules?: unknown[]; vehicles?: unknown[];
+    legDecisionsError?: { code: string; message: string };
+  } = {},
 ) {
   const selects: Array<{ table: string; columns: string }> = [];
   const from = vi.fn((table: string) => {
     return {
       select: vi.fn(
-        (columns: string): Promise<{ data: unknown; error: unknown }> => {
+        (columns: string) => {
           selects.push({ table, columns });
+          if (table === "student_leg_decisions") {
+            const probe = Promise.resolve(
+              rows.legDecisionsError
+                ? { data: null, error: rows.legDecisionsError }
+                : { data: [], error: null },
+            );
+            return Object.assign(probe, { limit: () => probe });
+          }
           const resolved =
             table === "weekly_schedules"
               ? (rows.schedules ?? [])
               : table === "vehicles"
                 ? (rows.vehicles ?? [])
                 : (rows.users ?? []);
-          return Promise.resolve({ data: resolved, error: null });
+          return Promise.resolve({ data: resolved, error: null }) as Promise<{ data: unknown; error: unknown }>;
         },
       ),
     };
@@ -99,7 +111,7 @@ function happyRows() {
         ],
       },
     ],
-    vehicles: [{ status: "active", wheelchair_capacity: 1, seating_capacity: 7 }],
+    vehicles: [{ status: "active", wheelchair_capacity: 1, seating_capacity: 7, cooldown_minutes: 10 }] as Record<string, unknown>[],
   };
 }
 
@@ -143,6 +155,51 @@ describe("GET /api/admin/dudullu-readiness", () => {
     expect(client.from).toHaveBeenCalledWith("vehicles");
   });
 
+  const get = async () => {
+    const { GET } = await import("./route");
+    return GET(new Request("http://x/api/admin/dudullu-readiness", { headers: { authorization: "Bearer adm-token" } }));
+  };
+  const useRows = (rows: ReturnType<typeof happyRows> & { legDecisionsError?: { code: string; message: string } }) => {
+    getSupabaseAdminMock.mockReturnValue(adminClient(rows));
+    optimizerFetchMock.mockResolvedValue(new Response(JSON.stringify(validSummary()), { status: 200 }));
+    requireAdminMock.mockResolvedValue({ id: "adm-SENTINEL", role: "admin" });
+  };
+
+  it("is ready on the happy path and reports the new checks as passing (F12)", async () => {
+    useRows(happyRows());
+    const body = await (await get()).json();
+    expect(body.ready).toBe(true);
+    expect(body.fleet.invalidCooldownActiveVehicles).toBe(0);
+    expect(body.legDecisions).toEqual({ readable: true });
+  });
+
+  it.each([null, -5, 2.5])("is not ready when an active vehicle has cooldown_minutes %s (F12)", async (cooldown) => {
+    const rows = happyRows();
+    rows.vehicles = [{ ...rows.vehicles[0]!, cooldown_minutes: cooldown }];
+    useRows(rows);
+    const body = await (await get()).json();
+    expect(body.ready).toBe(false);
+    expect(body.reasonCodes).toContain("vehicle_cooldown_invalid");
+    expect(body.fleet.invalidCooldownActiveVehicles).toBe(1);
+  });
+
+  it.each(["42P01", "PGRST205"])("is not ready when student_leg_decisions is missing (%s) (F12)", async (code) => {
+    useRows({ ...happyRows(), legDecisionsError: { code, message: "relation does not exist" } });
+    const response = await get();
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.ready).toBe(false);
+    expect(body.reasonCodes).toEqual(["leg_decisions_unavailable"]);
+    expect(body.legDecisions).toEqual({ readable: false });
+  });
+
+  it("fails closed with 503 when the decision table probe fails for another reason (F12)", async () => {
+    useRows({ ...happyRows(), legDecisionsError: { code: "XX000", message: "boom SECRET" } });
+    const response = await get();
+    expect(response.status).toBe(503);
+    expect(JSON.stringify(await response.json())).not.toContain("SECRET");
+  });
+
   it("returns 401 for a missing bearer token with zero Supabase/optimizer calls", async () => {
     requireAdminMock.mockRejectedValue(AppError.unauthorized());
 
@@ -177,7 +234,7 @@ describe("GET /api/admin/dudullu-readiness", () => {
     }));
 
     const selectNames = client.selects.map((s) => s.columns);
-    expect(selectNames).toEqual([USER_SELECT, SCHEDULE_SELECT, VEHICLE_SELECT]);
+    expect(selectNames).toEqual([USER_SELECT, SCHEDULE_SELECT, VEHICLE_SELECT, LEG_DECISIONS_PROBE_SELECT]);
     expect(selectNames).not.toContain("*");
   });
 
@@ -219,7 +276,7 @@ describe("GET /api/admin/dudullu-readiness", () => {
             weekly_schedule_id: null,
           },
         ],
-        vehicles: [{ status: "active", wheelchair_capacity: 1, seating_capacity: 7 }],
+        vehicles: [{ status: "active", wheelchair_capacity: 1, seating_capacity: 7, cooldown_minutes: 10 }] as Record<string, unknown>[],
       }),
     );
     requireAdminMock.mockResolvedValue({ id: "adm-x", role: "admin" });
@@ -275,7 +332,7 @@ describe("GET /api/admin/dudullu-readiness", () => {
             ],
           },
         ],
-        vehicles: [{ status: "active", wheelchair_capacity: 1, seating_capacity: 7 }],
+        vehicles: [{ status: "active", wheelchair_capacity: 1, seating_capacity: 7, cooldown_minutes: 10 }] as Record<string, unknown>[],
       }),
     );
     requireAdminMock.mockResolvedValue({ id: "adm-x", role: "admin" });

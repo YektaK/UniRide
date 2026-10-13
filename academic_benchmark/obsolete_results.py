@@ -41,6 +41,8 @@ LEGACY_REASON = (
     "the Science-review label/identity fixes (DECISION_LOG A10/A11); not evidence; do not pool"
 )
 LEGACY_MARKER_KEY = "Legacy-Cutoff:"
+# Old result files live in this subfolder of each results directory (OBSOLETE.md only there).
+LEGACY_RESULTS_DIRNAME = "legacy_pre_2026-10-13"
 
 
 def legacy_cutoff() -> str:

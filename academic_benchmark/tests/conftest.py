@@ -7,19 +7,23 @@ import os
 import pytest
 
 
-@pytest.fixture(autouse=True)
-def _neutralise_legacy_cutoff(monkeypatch):
-    """Legacy rule (DECISION_LOG A10/A11): rows stamped before 2026-10-13 are hidden by default.
+# Only these modules seed pre-2026-10-13 timestamps while testing the A06 marker/reader contract.
+_LEGACY_CUTOFF_OFF_MODULES = {"test_obsolete_ga_split_variants"}
 
-    Pre-existing fixtures seed older timestamps and test other behaviour, so the suite runs with
-    the cutoff disabled; test_legacy_obsolete.py restores the real cutoff for itself.
+
+@pytest.fixture(autouse=True)
+def _neutralise_legacy_cutoff(request, monkeypatch):
+    """Legacy rule (DECISION_LOG A10/A11) hides rows stamped before 2026-10-13 by default.
+
+    The A06 test module seeds 2026-10-0x rows to test other behaviour, so the cutoff is disabled
+    for it alone; every other module, including the legacy tests, runs with the real cutoff.
     """
+    if request.module.__name__.rsplit(".", 1)[-1] not in _LEGACY_CUTOFF_OFF_MODULES:
+        return
     import sys
 
-    for name in ("academic_benchmark.obsolete_results", "obsolete_results"):
-        module = sys.modules.get(name)
-        if module is not None:
-            monkeypatch.setattr(module, "LEGACY_CUTOFF", "0001-01-01", raising=False)
     from academic_benchmark import obsolete_results
 
-    monkeypatch.setattr(obsolete_results, "LEGACY_CUTOFF", "0001-01-01")
+    for module in (sys.modules.get("obsolete_results"), obsolete_results):
+        if module is not None:
+            monkeypatch.setattr(module, "LEGACY_CUTOFF", "0001-01-01", raising=False)

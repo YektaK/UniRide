@@ -983,6 +983,9 @@ def load_best_params(
 ) -> Optional[Dict[str, Any]]:
     """Load best known params for (problem, algorithm) from best_solutions table.
     Returns params dict or None.
+
+    Legacy parameters (rows stamped before 2026-10-13) are not used for warm start by the
+    2026-10-13 decision (get_best_solution hides them); a fresh tuning run is required.
     """
     try:
         from academic_benchmark.tsplib_manager import get_best_solution as _load

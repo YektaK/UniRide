@@ -8,9 +8,9 @@ from typing import Iterable, List, Tuple
 import pandas as pd
 
 try:
-    from academic_benchmark.obsolete_results import filter_obsolete_frame
+    from academic_benchmark.obsolete_results import LEGACY_RESULTS_DIRNAME, filter_obsolete_frame
 except ImportError:  # dashboard launched from academic_benchmark/ without the package installed
-    from obsolete_results import filter_obsolete_frame
+    from obsolete_results import LEGACY_RESULTS_DIRNAME, filter_obsolete_frame
 
 
 ROUTING_METRIC_COLUMNS = [
@@ -259,7 +259,13 @@ def load_csv_frames(result_dirs: Iterable[str], include_obsolete: bool = False):
     summaries: List[pd.DataFrame] = []
     progress: List[pd.DataFrame] = []
     sources = {"summary": [], "progress": []}
+    scan_dirs: List[str] = []
     for d in result_dirs:
+        scan_dirs.append(d)
+        legacy_dir = os.path.join(d, LEGACY_RESULTS_DIRNAME)
+        if include_obsolete and os.path.isdir(legacy_dir):
+            scan_dirs.append(legacy_dir)  # opt-in only; its OBSOLETE.md hides it otherwise
+    for d in scan_dirs:
         summary_path = os.path.join(d, "benchmark_summary.csv")
         progress_path = os.path.join(d, "benchmark_progress.csv")
         if os.path.exists(summary_path):

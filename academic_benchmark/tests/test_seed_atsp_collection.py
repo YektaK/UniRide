@@ -152,3 +152,20 @@ class TestLoader:
         conn.close()
         keep = [i for i, c in enumerate(cols) if "extracted" not in c and c != "tsp_file" and "created" not in c and "updated" not in c]
         assert [ra[0][i] for i in keep] == [rb[0][i] for i in keep]
+
+
+class TestParserOptimaTable:
+    """TSPLIB_OPTIMALS must agree with the official ATSP optima (p43 was 28140)."""
+
+    def test_atsp_optima_match_manifest(self):
+        from uniride_core.algorithms.tsplib_parser import TSPLIB_OPTIMALS
+        # Heidelberg lists kro124p as "kro124"; the table uses the file name kro124p.
+        assert "kro124p" in TSPLIB_OPTIMALS
+        for name, entry in _entries().items():
+            if name == "ry48p":
+                continue  # not present in TSPLIB_OPTIMALS (separate gap, reported)
+            assert TSPLIB_OPTIMALS.get(name) == entry["optimal"], name
+
+    def test_p43(self):
+        from uniride_core.algorithms.tsplib_parser import TSPLIB_OPTIMALS
+        assert TSPLIB_OPTIMALS["p43"] == 5620

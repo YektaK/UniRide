@@ -1,7 +1,9 @@
 """
-SOTA TSP — State-of-the-Art TSP Algorithm Variants
+SOTA TSP — package name kept for compatibility (IDs "SOTA-*" unchanged)
 
-TSP-native implementations of E²BSO, R²DMA, and P-AOEA.
+E²BSO, R²DMA and P-AOEA are experimental in-repo designs (no publication
+record); CGO and RUN are discrete heuristics inspired by published methods.
+TSP-native implementations of these.
 Uses integer-indexed tours, Numba-accelerated distance computation,
 and the same interface as bildiri2026/core solvers.
 

@@ -4,7 +4,7 @@ Route-First, Cluster-Second Approach
 
 Combines:
 1. Harris Hawks Optimization (HHO) for giant tour optimization
-2. Split Decoder for optimal partitioning into vehicle routes
+2. Split Decoder for partitioning into vehicle routes (optimal only in CVRP mode, for the given order)
 
 Literature-based Configuration (Heidari et al., 2019; HHO for VRP, 2022):
 - Population Size: 50 (VRP optimal range: 40-60)
@@ -46,8 +46,8 @@ class HHOSplitStrategy(HybridSplitBaseStrategy):
     
     Workflow:
     1. HHO population evolves permutations of all customers (giant tours)
-    2. Split Decoder optimally partitions each tour into feasible routes
-    3. Fitness is the total cost after optimal splitting
+    2. Split Decoder partitions each tour into feasible routes (optimal only in CVRP mode, for the given order; see SplitDecoder)
+    3. Fitness is the total cost after splitting
     
     HHO Characteristics:
     - Exploration: Random perching and Lévy flight

@@ -31,7 +31,7 @@ from uniride_core.adapters.demand_builder import student_occurrence_keys
 class PSOStrategy(BaseRoutingStrategy):
     """
     Particle Swarm Optimization for Vehicle Routing Problem.
-    Uses K-Means clustering for multi-vehicle, then PSO for TSP.
+    Clusters students for multi-vehicle (default clustering: sweep), then PSO for TSP.
     """
 
     # Default PSO parameters (Clerc constriction, swap-sequence velocity)

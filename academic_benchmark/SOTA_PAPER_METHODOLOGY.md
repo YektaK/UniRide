@@ -1,6 +1,6 @@
 # 3. Experimental Framework and SOTA Evaluation Methodology
 
-To ensure a high-fidelity evaluation of complex, modern solvers for the Traveling Salesman Problem (TSP)—specifically State-of-the-Art (SOTA) algorithms such as E²BSO, R²DMA, P-AOEA, CGO, and RUN—a custom "Unified SOTA Benchmark Engine" was conceptualized and developed. The primary objective of this architecture was to establish a rigorous, highly scalable, and equitable computational environment capable of managing the intense processing requirements of modern meta-heuristics on massive problem instances.
+To ensure a high-fidelity evaluation of complex, modern solvers for the Traveling Salesman Problem (TSP)—specifically the repository's experimental in-repo designs (E²BSO, R²DMA, P-AOEA; no publication record) and discrete heuristics inspired by published methods (CGO, RUN)—a custom "Unified SOTA Benchmark Engine" was conceptualized and developed. The primary objective of this architecture was to establish a rigorous, highly scalable, and equitable computational environment capable of managing the intense processing requirements of modern meta-heuristics on massive problem instances.
 
 ### 3.1. Unified Evaluation Framework for SOTA Solvers
 
@@ -87,7 +87,7 @@ Furthermore, an incremental data persistence system was embedded into the core l
 
 ### 3.4. Algorithmic Adaptations for Large-Scale Stability
 
-While the core generative mechanisms and mathematical operators of E²BSO, R²DMA, P-AOEA, CGO, and RUN were strictly preserved to ensure theoretical fidelity, several critical architectural adaptations were engineered to facilitate large-scale, production-grade execution. The canonical implementations provided by original authors are typically designed for idealized conditions; thus, the following enhancements were introduced to bridge the gap between theoretical algorithms and scalable benchmarking:
+E²BSO, R²DMA and P-AOEA are experimental in-repo designs (no publication record). CGO and RUN are discrete heuristics inspired by Talatahari & Azizi (2021) and Ahmadianfar et al. (2021); they do not preserve the original continuous update equations. Several critical architectural adaptations were engineered to facilitate large-scale, production-grade execution. The canonical implementations provided by original authors are typically designed for idealized conditions; thus, the following enhancements were introduced to bridge the gap between theoretical algorithms and scalable benchmarking:
 
 1. **Adaptive Local Search Budgets:** Canonical implementations frequently rely on unbounded local search neighborhoods (e.g., executing 2-opt or 3-opt until a strict local optimum is reached). On massive instances (exceeding 1,000 nodes), this induces a combinatorial explosion (O(N²) to O(N³)), leading to severe computational deadlocks. To resolve this, a dimension-adaptive budget manager was integrated, dynamically bounding search depths based on the problem size (N). This critical safety mechanism prevents algorithms from stagnating in micro-optimization loops while preserving macroscopic exploration efficiency.
 

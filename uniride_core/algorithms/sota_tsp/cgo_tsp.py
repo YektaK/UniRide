@@ -4,7 +4,11 @@ CGO-TSP — Chaos Game Optimization (TSP variant)
 Adapted from Talatahari & Azizi (2021) "Chaos Game Optimization: a novel
 metaheuristic algorithm" for discrete TSP permutation space.
 
-Core DNA:
+NOTE: This is a discrete heuristic inspired by CGO. It does NOT preserve the
+original CGO continuous position-update equations; only the chaos-game /
+seed / logistic-map ideas are borrowed.
+
+Core ideas borrowed (not the original update equations):
   - Chaos game: iterative point placement using deterministic rules + chaos
   - Seed-based construction: partial tours (seeds) merged via chaos-controlled interleaving
   - Self-similarity: seeds double in length each iteration until full tour

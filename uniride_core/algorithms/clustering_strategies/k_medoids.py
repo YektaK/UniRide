@@ -61,7 +61,9 @@ def k_medoids_clustering_core(points: List[Point], k: int, time_matrix: Dict, ma
 
 class KMedoidsClusteringStrategy(BaseClusteringStrategy):
     """
-    Time-Matrix based K-Medoids algorithm (PAM).
+    Time-Matrix based K-Medoids (Voronoi iteration: random initial medoids,
+    nearest-medoid assignment, per-cluster medoid update). Not PAM (no BUILD /
+    global SWAP phases).
     Clusters using actual driving time instead of Haversine distance.
     """
     

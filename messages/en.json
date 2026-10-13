@@ -757,7 +757,7 @@
         "pipelineHTitle": "Holistic solver",
         "show": "Show overview",
         "statAlgorithms": "Algorithms",
-        "statDimacsWinner": "DIMACS winner",
+        "statDimacsWinner": "HGS-based solver",
         "statPipelines": "Pipelines",
         "statProblems": "Problems"
       },

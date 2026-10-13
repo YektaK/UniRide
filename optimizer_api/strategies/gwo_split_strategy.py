@@ -4,7 +4,7 @@ Route-First, Cluster-Second Approach
 
 Combines:
 1. Grey Wolf Optimizer (GWO) for giant tour optimization
-2. Split Decoder for optimal partitioning into vehicle routes
+2. Split Decoder for partitioning into vehicle routes (optimal only in CVRP mode, for the given order)
 
 Literature-based Configuration (Mirjalili et al., 2014; GWO for VRP, 2021):
 - Population Size: 50 (VRP optimal range: 40-60)
@@ -45,8 +45,8 @@ class GWOSplitStrategy(HybridSplitBaseStrategy):
     
     Workflow:
     1. GWO pack evolves permutations of all customers (giant tours)
-    2. Split Decoder optimally partitions each tour into feasible routes
-    3. Fitness is the total cost after optimal splitting
+    2. Split Decoder partitions each tour into feasible routes (optimal only in CVRP mode, for the given order; see SplitDecoder)
+    3. Fitness is the total cost after splitting
     
     GWO Characteristics (Social Hierarchy):
     - Alpha (α): Best solution, leads the pack

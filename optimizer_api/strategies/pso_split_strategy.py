@@ -4,9 +4,10 @@ Route-First, Cluster-Second Approach
 
 Combines:
 1. Particle Swarm Optimization (PSO) for giant tour optimization
-2. Split Decoder for optimal partitioning into vehicle routes
+2. Split Decoder for partitioning into vehicle routes (optimal only in CVRP mode, for the given order)
 
-Literature-based Configuration (Clerc & Kennedy, 2002; PSO for VRP Survey, 2024):
+Configuration (linearly decreasing inertia weight, Shi & Eberhart 1998; no Clerc
+constriction coefficient is used here; PSO for VRP Survey, 2024):
 - Swarm Size: 60 (VRP optimal range: 50-80)
 - Max Iterations: 200 (Split decoder overhead compensation)
 - Inertia Weight: [0.4, 0.9] linear decay (exploration to exploitation)
@@ -16,7 +17,7 @@ Literature-based Configuration (Clerc & Kennedy, 2002; PSO for VRP Survey, 2024)
 
 References:
 - Kennedy, J., & Eberhart, R. (1995). Particle swarm optimization. IEEE ICNN.
-- Clerc, M., & Kennedy, J. (2002). The particle swarm-explosion, stability, and convergence.
+- Shi, Y., & Eberhart, R. (1998). A modified particle swarm optimizer. IEEE ICEC (linearly decreasing inertia weight).
 - PSO for VRP: A Survey and Comparative Analysis (Springer, 2024)
 """
 
@@ -47,12 +48,12 @@ class PSOSplitStrategy(HybridSplitBaseStrategy):
     
     Workflow:
     1. PSO swarm evolves permutations of all customers (giant tours)
-    2. Split Decoder optimally partitions each tour into feasible routes
-    3. Fitness is the total cost after optimal splitting
+    2. Split Decoder partitions each tour into feasible routes (optimal only in CVRP mode, for the given order; see SplitDecoder)
+    3. Fitness is the total cost after splitting
     
     Advantages:
     - Fast convergence due to PSO's social learning
-    - Optimal partitioning guaranteed for each tour
+    - Cost-optimal split of each tour in CVRP mode (order kept); not guaranteed in TW modes
     - Good balance of exploration and exploitation
     
     Literature-optimized parameters for VRP with Split Decoder.
@@ -64,7 +65,7 @@ class PSOSplitStrategy(HybridSplitBaseStrategy):
         "swarm_size": 60,
         "max_iterations": 200,
 
-        # PSO coefficients (Literature: Clerc's constriction with modifications)
+        # PSO coefficients (linearly decreasing inertia weight, Shi & Eberhart 1998; no constriction factor)
         "inertia_weight": 0.9,      # Starting value, linear decay to inertia_min
         "inertia_min": 0.4,         # Ending inertia value
         "cognitive_weight": 2.0,    # c1: personal best attraction

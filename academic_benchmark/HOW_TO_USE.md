@@ -828,7 +828,7 @@ Furthermore, strict protocols for data integrity and reproducibility were establ
 
 ### SOTA Paper Methodology
 
-To ensure a high-fidelity evaluation of complex, modern solvers for the Traveling Salesman Problem (TSP)—specifically State-of-the-Art (SOTA) algorithms such as E²BSO, R²DMA, P-AOEA, CGO, and RUN—a custom "Unified SOTA Benchmark Engine" was conceptualized and developed.
+To ensure a high-fidelity evaluation of complex, modern solvers for the Traveling Salesman Problem (TSP)—specifically the repository's experimental in-repo designs (E²BSO, R²DMA, P-AOEA; no publication record) and discrete heuristics inspired by published methods (CGO, RUN)—a custom "Unified SOTA Benchmark Engine" was conceptualized and developed.
 
 #### Unified Evaluation Framework for SOTA Solvers
 
@@ -838,7 +838,7 @@ To bridge the operational differences between these algorithms, an adaptive eval
 
 #### Algorithmic Adaptations for Large-Scale Stability
 
-While the core generative mechanisms and mathematical operators of E²BSO, R²DMA, P-AOEA, CGO, and RUN were strictly preserved to ensure theoretical fidelity, several critical architectural adaptations were engineered to facilitate large-scale, production-grade execution:
+E²BSO, R²DMA and P-AOEA are experimental in-repo designs (no publication record). CGO and RUN are discrete heuristics inspired by Talatahari & Azizi (2021) and Ahmadianfar et al. (2021); they do not preserve the original continuous update equations. Several critical architectural adaptations were engineered to facilitate large-scale, production-grade execution:
 
 1. **Adaptive Local Search Budgets:** Canonical implementations frequently rely on unbounded local search neighborhoods. On massive instances (exceeding 1,000 nodes), this induces a combinatorial explosion (O(N²) to O(N³)), leading to severe computational deadlocks. To resolve this, a dimension-adaptive budget manager was integrated, dynamically bounding search depths based on the problem size (N).
 

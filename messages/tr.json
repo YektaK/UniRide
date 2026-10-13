@@ -757,7 +757,7 @@
         "pipelineHTitle": "Bütünsel çözücü",
         "show": "Genel görünümü göster",
         "statAlgorithms": "Algoritmalar",
-        "statDimacsWinner": "DIMACS kazananı",
+        "statDimacsWinner": "HGS tabanlı çözücü",
         "statPipelines": "İş akışları",
         "statProblems": "Problemler"
       },

@@ -170,8 +170,8 @@ export const PIPELINE_B_DISPLAY_NAMES: Record<string, string> = {
 export const HOLISTIC_DISPLAY_NAMES: Record<string, string> = {
   [HOLISTIC_KEYS.ORTOOLS_CVRP]: "OR-Tools CVRP",
   [HOLISTIC_KEYS.ORTOOLS]: "OR-Tools CVRP",
-  [HOLISTIC_KEYS.PYVRP]: "PyVRP (HGS - DIMACS Winner)",
-  [HOLISTIC_KEYS.HGS]: "PyVRP (HGS - DIMACS Winner)",
+  [HOLISTIC_KEYS.PYVRP]: "PyVRP (HGS tabanlı)",
+  [HOLISTIC_KEYS.HGS]: "PyVRP (HGS tabanlı)",
   [HOLISTIC_KEYS.PYVRP_ALT]: "PyVRP Alternative",
   [HOLISTIC_KEYS.VROOM]: "VROOM (Ultra-fast)",
   [HOLISTIC_KEYS.VROOM_FALLBACK]: "VROOM (Fallback)",
@@ -188,15 +188,15 @@ export const HEURISTIC_DISPLAY_NAMES: Record<string, string> = {
   [HEURISTIC_KEYS.EXACT]: "Permütasyon (Optimal n≤10)",
 };
 
-// Research-Promoted SOTA Display Names
+// Research-Promoted (experimental, in-repo design; no publication record) Display Names
 export const SOTA_DISPLAY_NAMES: Record<string, string> = {
-  [SOTA_KEYS.E2BSO]: "E²BSO (Promoted SOTA)",
-  [SOTA_KEYS.ENTROPY_BSO]: "E²BSO (Promoted SOTA)",
-  [SOTA_KEYS.E2B]: "E²BSO (Promoted SOTA)",
-  [SOTA_KEYS.R2DMA]: "R²DMA (Promoted SOTA)",
-  [SOTA_KEYS.RDMA]: "R²DMA (Promoted SOTA)",
-  [SOTA_KEYS.PAOEA]: "P-AOEA (Promoted SOTA)",
-  [SOTA_KEYS.AOEA]: "P-AOEA (Promoted SOTA)",
+  [SOTA_KEYS.E2BSO]: "E²BSO (Deneysel)",
+  [SOTA_KEYS.ENTROPY_BSO]: "E²BSO (Deneysel)",
+  [SOTA_KEYS.E2B]: "E²BSO (Deneysel)",
+  [SOTA_KEYS.R2DMA]: "R²DMA (Deneysel)",
+  [SOTA_KEYS.RDMA]: "R²DMA (Deneysel)",
+  [SOTA_KEYS.PAOEA]: "P-AOEA (Deneysel)",
+  [SOTA_KEYS.AOEA]: "P-AOEA (Deneysel)",
 };
 
 // Combined display names
@@ -236,7 +236,7 @@ export const ALGORITHM_DESCRIPTIONS: Record<string, string> = {
   
   // Holistic
   [HOLISTIC_KEYS.ORTOOLS_CVRP]: "Google OR-Tools endüstri standardı CVRP çözücüsü.",
-  [HOLISTIC_KEYS.PYVRP]: "PyVRP HGS - DIMACS 2021 birincisi. En yüksek kalite.",
+  [HOLISTIC_KEYS.PYVRP]: "HGS tabanlı (Vidal 2022; PyVRP, Wouda vd. 2024). HGS soyu DIMACS 2021 VRPTW parkurunda öne çıktı.",
   [HOLISTIC_KEYS.PYVRP_ALT]: "PyVRP alternatif implementasyon.",
   [HOLISTIC_KEYS.VROOM]: "VROOM C++ motor - 1000+ nokta < 5 saniye.",
   [HOLISTIC_KEYS.VROOM_FALLBACK]: "VROOM yedek çözücü.",
@@ -247,9 +247,9 @@ export const ALGORITHM_DESCRIPTIONS: Record<string, string> = {
   [HEURISTIC_KEYS.PERMUTATION_TSP]: "Tüm kombinasyonları dener. n ≤ 10 için optimal.",
 
   // Research-Promoted SOTA
-  [SOTA_KEYS.E2BSO]: "Akademik benchmark ile promote edilen E²BSO. Entropi dengeli swarm + ALNS + çok katmanlı yerel arama.",
-  [SOTA_KEYS.R2DMA]: "Akademik benchmark ile promote edilen R²DMA. Rezonans destekli destroy-and-merge memetik arama.",
-  [SOTA_KEYS.PAOEA]: "Akademik benchmark ile promote edilen P-AOEA. Adaptif operatör evrimi ve elite injection.",
+  [SOTA_KEYS.E2BSO]: "Deneysel, depo içi tasarım (yayın kaydı yok): E²BSO. Entropi dengeli swarm + ALNS + çok katmanlı yerel arama.",
+  [SOTA_KEYS.R2DMA]: "Deneysel, depo içi tasarım (yayın kaydı yok): R²DMA. Rezonans destekli destroy-and-merge memetik arama.",
+  [SOTA_KEYS.PAOEA]: "Deneysel, depo içi tasarım (yayın kaydı yok): P-AOEA. Adaptif operatör evrimi ve elite injection.",
 };
 
 // Local Search descriptions
@@ -396,7 +396,7 @@ export const ALGORITHM_OPTIONS_GROUPED = [
         complexity: ALGORITHM_COMPLEXITY[HOLISTIC_KEYS.PYVRP],
         recommended: false,
         pipeline: "holistic",
-        badge: "DIMACS 2021 🏆",
+        badge: "HGS tabanlı",
       },
       {
         key: HOLISTIC_KEYS.VROOM,
@@ -440,7 +440,7 @@ export const ALGORITHM_OPTIONS_GROUPED = [
     ],
   },
   {
-    category: "Research-Promoted (SOTA)",
+    category: "Research-Promoted (Deneysel)",
     description: "Akademik SQLite sonuçları ve promoted config hattı ile yönetilen araştırma algoritmaları",
     algorithms: [
       {

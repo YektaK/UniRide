@@ -4,7 +4,11 @@ RUN-TSP — Runge Kutta Optimizer (TSP variant)
 Adapted from Ahmadianfar et al. (2021) "RUN: Beyond the Metaphor: An Efficient
 Optimization Algorithm Based on Runge Kutta Method" for discrete TSP space.
 
-Core DNA:
+NOTE: This is a discrete heuristic inspired by RUN. It does NOT preserve the
+original RUN Runge-Kutta position-update equations; only the 4-stage /
+weights [1,2,2,1] / ESQ ideas are borrowed as discrete move operators.
+
+Core ideas borrowed (not the original update equations):
   - RK4 numerical method: 4-stage slope evaluation (k1, k2, k3, k4)
   - Enhanced Solution Quality (ESQ): local optima escape mechanism
   - Adaptive exploration/exploitation controlled by solution quality ranking

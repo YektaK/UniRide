@@ -4,11 +4,11 @@ Route-First, Cluster-Second Approach
 
 Combines:
 1. Genetic Algorithm for TSP (giant tour optimization)
-2. Split Decoder for optimal partitioning into vehicle routes
+2. Split Decoder for partitioning into vehicle routes (optimal only in CVRP mode, for the given order)
 
 This approach is often superior to cluster-first methods because:
 - The GA optimizes the overall route sequence
-- Split decoder guarantees optimal partitioning for a given tour
+- Split decoder: minimum-cost partition of a given tour in CVRP mode (order kept); TW modes are not guaranteed optimal
 - Better explores the solution space
 
 Reference:
@@ -43,14 +43,13 @@ class GASplitStrategy(HybridSplitBaseStrategy):
     
     Workflow:
     1. GA evolves permutations of all customers (giant tours)
-    2. Split Decoder optimally partitions each tour into feasible routes
-    3. Fitness is the total cost after optimal splitting
+    2. Split Decoder partitions each tour into feasible routes (optimal only in CVRP mode, for the given order; see SplitDecoder)
+    3. Fitness is the total cost after splitting
     
     Advantages over cluster-first approaches:
     - Better exploration of solution space
-    - Optimal partitioning guaranteed for each tour
+    - Cost-optimal split of each tour in CVRP mode (order kept); not guaranteed in TW modes
     - Simpler representation (single permutation)
-    - Often finds better solutions with fewer vehicles
     
     Based on Prins (2004) Evolutionary Algorithm for VRP.
     """
@@ -265,13 +264,11 @@ class GASplitStrategy(HybridSplitBaseStrategy):
 
 class GAEnhancedSplitStrategy(GASplitStrategy):
     """
-    Enhanced GA-Split with additional features from HGS (Hybrid Genetic Search):
-    
-    Features:
-    - Population diversity management
-    - Intensification/diversification balance
-    - Adaptive parameters
-    - Multiple crossover operators
+    Memetic GA-Split in the style of Prins (2004); same engine as ``ga_split``.
+
+    This subclass only overrides ``name`` and ``display_name``; it adds no
+    HGS (Vidal) components (no SWAP*, diversity-contribution fitness or
+    penalty management). The key is kept for backward compatibility.
     """
     
     @property
@@ -280,4 +277,4 @@ class GAEnhancedSplitStrategy(GASplitStrategy):
     
     @property
     def display_name(self) -> str:
-        return "GA-Split Enhanced (HGS-style)"
+        return "GA-Split Enhanced (Prins 2004 memetic, same engine as ga_split)"

@@ -250,7 +250,12 @@ def combine_velocities(
     config: Mapping[str, object],
     rng: random.Random,
 ) -> List[SwapOperation]:
-    """Combine PSO velocity components with Clerc-style probabilities."""
+    """Combine PSO velocity components as swap-acceptance probabilities.
+
+    Default values (0.729, 1.49445) are the constriction-equivalent PSO
+    coefficients; here they are used as heuristic swap probabilities, not in
+    the Clerc velocity-update equation.
+    """
     combined: List[SwapOperation] = []
     for swap in inertia_velocity:
         if rng.random() < float(config.get("inertia_weight", 0.729)):

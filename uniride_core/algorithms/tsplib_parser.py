@@ -62,7 +62,7 @@ TSPLIB_OPTIMALS: Dict[str, int] = {
     "ftv35": 1473, "ftv38": 1530, "ftv44": 1613, "ftv47": 1776,
     "ftv55": 1608, "ftv64": 1839, "ftv70": 1950, "ftv170": 2755,
     "kro124p": 36230, "p43": 5620, "rbg323": 1326,
-    "rbg358": 1163, "rbg403": 2465, "rbg443": 2720,
+    "rbg358": 1163, "rbg403": 2465, "rbg443": 2720, "ry48p": 14422,
 }
 
 TSPLIB_OPTIMALS.update({
@@ -411,7 +411,7 @@ def ensure_tsplib_problems(problem_names: Optional[List[str]] = None) -> Dict[st
 ATSP_PROBLEM_NAMES = [
     "br17", "ft53", "ft70", "ftv33", "ftv35", "ftv38", "ftv44",
     "ftv47", "ftv55", "ftv64", "ftv70", "ftv170",
-    "kro124p", "p43", "rbg323", "rbg358", "rbg403", "rbg443",
+    "kro124p", "p43", "rbg323", "rbg358", "rbg403", "rbg443", "ry48p",
 ]
 
 

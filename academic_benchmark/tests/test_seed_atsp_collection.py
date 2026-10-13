@@ -162,10 +162,12 @@ class TestParserOptimaTable:
         # Heidelberg lists kro124p as "kro124"; the table uses the file name kro124p.
         assert "kro124p" in TSPLIB_OPTIMALS
         for name, entry in _entries().items():
-            if name == "ry48p":
-                continue  # not present in TSPLIB_OPTIMALS (separate gap, reported)
             assert TSPLIB_OPTIMALS.get(name) == entry["optimal"], name
 
     def test_p43(self):
         from uniride_core.algorithms.tsplib_parser import TSPLIB_OPTIMALS
         assert TSPLIB_OPTIMALS["p43"] == 5620
+
+    def test_atsp_problem_names_cover_manifest(self):
+        from uniride_core.algorithms.tsplib_parser import ATSP_PROBLEM_NAMES
+        assert set(ATSP_PROBLEM_NAMES) == set(_entries())

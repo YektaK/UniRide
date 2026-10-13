@@ -240,3 +240,67 @@ def test_mark_legacy_files_dry_run_and_append(tmp_path):
     assert text.startswith("A06 note") and "Legacy-Cutoff" in text
     tool.mark_legacy_files(str(tmp_path), dry_run=False, now="2026-10-13")
     assert (tmp_path / "OBSOLETE.md").read_text(encoding="utf-8") == text  # idempotent
+
+
+# ---- legacy subfolder layout (user decision: old CSVs moved to legacy_pre_2026-10-13/) ----
+import os
+from pathlib import Path
+
+BENCH = Path(__file__).resolve().parents[1]
+
+
+def test_repo_layout_old_csvs_moved_markers_only_in_legacy_dirs():
+    for top in ("numba_results", "sota_results"):
+        assert not (BENCH / top / "OBSOLETE.md").exists()
+        legacy = BENCH / top / orr.LEGACY_RESULTS_DIRNAME
+        assert (legacy / "OBSOLETE.md").exists()
+        assert (legacy / "benchmark_progress.csv").exists() and (legacy / "benchmark_summary.csv").exists()
+        assert not (BENCH / top / "benchmark_progress.csv").exists()
+    assert (BENCH / "numba_results" / orr.LEGACY_RESULTS_DIRNAME / "bildiri_import" / "OBSOLETE.md").exists()
+    assert (BENCH / "sota_results" / orr.LEGACY_RESULTS_DIRNAME / "doe_sota" / "OBSOLETE.md").exists()
+    assert (BENCH / "sota_results" / orr.LEGACY_RESULTS_DIRNAME / "doe_sota" / "tuning_progress.csv").exists()
+
+
+def test_real_result_dirs_show_no_legacy_data_by_default_and_all_with_opt_in():
+    dirs = [str(BENCH / "sota_results"), str(BENCH / "numba_results")]
+    s, p, _ = load_csv_frames(dirs)
+    t, _ = load_tuning_frames(dirs)
+    assert s == [] and p == [] and t == [] or all(len(f) == 0 for f in s + p + t)
+    s, p, _ = load_csv_frames(dirs, include_obsolete=True)
+    t, _ = load_tuning_frames(dirs, include_obsolete=True)
+    assert sum(len(f) for f in p) > 0 and sum(len(f) for f in s) > 0 and sum(len(f) for f in t) > 0
+
+
+def test_new_rows_in_main_dir_visible_next_to_legacy_subdir(tmp_path):
+    legacy = tmp_path / orr.LEGACY_RESULTS_DIRNAME
+    legacy.mkdir()
+    tool.mark_legacy_files(str(legacy), dry_run=False, now="2026-10-13")
+    _write(legacy / "benchmark_progress.csv", [{"timestamp": OLD, "problem": "p", "strategy": "Old", "avg_length": 1}])
+    _write(legacy / "tuning_progress.csv", [{"timestamp": OLD, "problem": "p", "strategy": "Old"}])
+    # a new run writes into the main directory: no marker there, summary has no timestamp
+    _write(tmp_path / "benchmark_progress.csv", [{"timestamp": LATER, "problem": "p", "strategy": "New", "avg_length": 2}])
+    _write(tmp_path / "benchmark_summary.csv", [{"problem": "p", "strategy": "New", "avg_length": 2}])
+    _write(tmp_path / "tuning_progress.csv", [{"timestamp": LATER, "problem": "p", "strategy": "New"}])
+    s, p, _ = load_csv_frames([str(tmp_path)])
+    t, _ = load_tuning_frames([str(tmp_path)])
+    assert [list(f["strategy"]) for f in s + p + t] == [["New"], ["New"], ["New"]]
+    rows = get_benchmark_rows(results_dir=str(tmp_path), db_path=str(tmp_path / "none.db"))
+    assert [r["algorithm"] if "algorithm" in r else r.get("strategy") for r in rows["results"]] == ["New"]
+    s, p, _ = load_csv_frames([str(tmp_path)], include_obsolete=True)
+    t, _ = load_tuning_frames([str(tmp_path)], include_obsolete=True)
+    assert sorted(x for f in p for x in f["strategy"]) == ["New", "Old"]
+    assert sorted(x for f in t for x in f["strategy"]) == ["New", "Old"]
+
+
+def test_warmup_does_not_use_legacy_parameters(tmp_path):
+    """DECISION 2026-10-13: legacy parameters are not used for warm start."""
+    from academic_benchmark.benchmark_utils import load_best_params
+
+    db = _best_db(tmp_path)
+    conn = sqlite3.connect(db)
+    conn.execute("UPDATE best_solutions SET params_json='{\"k\": 7}'")
+    conn.commit()
+    conn.close()
+    assert load_best_params("tiny", "test_algo", db) is None
+    assert get_best_solution("tiny", "test_algo", db_path=db) is None
+    assert load_best_params("tiny", "GA-Split", db) == {"k": 7}  # the post-cutoff row of the same algorithm

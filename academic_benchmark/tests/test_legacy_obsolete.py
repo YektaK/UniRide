@@ -50,7 +50,7 @@ def test_constants():
     assert "not evidence" in LEGACY_REASON and "do not pool" in LEGACY_REASON
 
 
-@pytest.mark.parametrize("algo", ["Numba-HHO", "B-GA", "test_algo", "ga_split", "anything"])
+@pytest.mark.parametrize("algo", ["Numba-HHO", "GA-Split", "test_algo", "ga_split", "anything"])
 def test_rule_any_algorithm_before_cutoff(algo):
     assert is_obsolete_row({"algorithm": algo, "timestamp": OLD})
     assert is_obsolete_row({"algorithm": algo, "timestamp": EDGE_BEFORE})
@@ -76,7 +76,7 @@ def _best_db(tmp_path):
     conn = get_db(db)
     init_db(conn)
     conn.execute("INSERT INTO problems (name, dimension, category) VALUES ('tiny', 3, 'small')")
-    for algo, ts, length in [("B-GA", OLD, 10.0), ("B-GA", NEW, 12.0), ("test_algo", OLD, 1.0), ("SOTA-X", LATER, 9.0)]:
+    for algo, ts, length in [("GA-Split", OLD, 10.0), ("GA-Split", NEW, 12.0), ("test_algo", OLD, 1.0), ("SOTA-X", LATER, 9.0)]:
         conn.execute(
             "INSERT INTO best_solutions (problem_name, algorithm, params_json, tour_nodes, tour_length, gap, timestamp)"
             " VALUES ('tiny', ?, '{}', '[0,1,2]', ?, 0.0, ?)",
@@ -90,14 +90,14 @@ def _best_db(tmp_path):
 def test_best_solutions_hidden_by_default(tmp_path):
     db = _best_db(tmp_path)
     default = query_best_solutions(db_path=db)
-    assert sorted((r["algorithm"], r["timestamp"]) for r in default) == [("B-GA", NEW), ("SOTA-X", LATER)]
+    assert sorted((r["algorithm"], r["timestamp"]) for r in default) == [("GA-Split", NEW), ("SOTA-X", LATER)]
     assert len(query_best_solutions(db_path=db, include_obsolete=True)) == 4
     # filter applies before LIMIT: lowest legacy length (1.0) must not fill the page
     assert [r["tour_length"] for r in query_best_solutions(db_path=db, limit=1)] == [9.0]
-    assert get_best_solution("tiny", "B-GA", db_path=db)["tour_length"] == 12.0  # legacy 10.0 hidden
+    assert get_best_solution("tiny", "GA-Split", db_path=db)["tour_length"] == 12.0  # legacy 10.0 hidden
     assert get_best_solution("tiny", "test_algo", db_path=db) is None
     assert get_best_solution("tiny", "test_algo", db_path=db, include_obsolete=True)["tour_length"] == 1.0
-    assert get_best_solution("tiny", "B-GA", db_path=db, include_obsolete=True)["tour_length"] == 10.0
+    assert get_best_solution("tiny", "GA-Split", db_path=db, include_obsolete=True)["tour_length"] == 10.0
 
 
 def test_results_reader_and_patterns_and_promoted_best_solutions(tmp_path):

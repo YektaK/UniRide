@@ -323,6 +323,7 @@ export async function POST(request: NextRequest) {
                 algorithmUsed: result.algorithm_used,
                 executionTimeSeconds: result.execution_time_seconds,
                 algorithmRequested: result.algorithm_requested,
+                ...(result.fallback_reason ? { fallbackReason: result.fallback_reason } : {}),
                 feasibilityCertificate: result.feasibility_certificate,
                 appliedPolicy: result.applied_policy,
                 options: {

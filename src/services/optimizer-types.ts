@@ -43,6 +43,9 @@ export interface AlgorithmCompareResult {
   execution_time_seconds: number;
   error_message?: string;
   algorithm_requested?: string;
+  /** Set only when the requested solver did not run (e.g. "greedy_fallback"). */
+  algorithm_executed?: string;
+  fallback_reason?: string;
   feasibility_certificate?: unknown;
   applied_policy?: AppliedComputePolicyInfo;
 }

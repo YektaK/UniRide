@@ -178,6 +178,7 @@ export async function POST(request: Request) {
             time_windows_used: result.time_windows_used,
             total_time_window_violations: result.total_time_window_violations,
             algorithm_requested: result.algorithm_requested,
+            ...(result.fallback_reason ? { fallback_reason: result.fallback_reason } : {}),
             feasibility_certificate: result.feasibility_certificate,
             applied_policy: result.applied_policy,
         });

@@ -90,6 +90,7 @@ export async function POST(request: Request) {
                 routes: r.routes,
                 error_message: r.error_message,
                 algorithm_requested: r.algorithm_requested,
+                ...(r.fallback_reason ? { algorithm_executed: r.algorithm_executed, fallback_reason: r.fallback_reason } : {}),
                 feasibility_certificate: r.feasibility_certificate,
                 applied_policy: r.applied_policy,
             })),

@@ -111,6 +111,8 @@ export interface OptimizationResult {
     time_windows_used?: boolean;
     total_time_window_violations?: number;
     algorithm_requested?: string;
+    /** Set only when the requested solver did not run (algorithm_used is then "greedy_fallback"). */
+    fallback_reason?: string;
     feasibility_certificate?: unknown;
     applied_policy?: AppliedComputePolicyInfo;
 }
@@ -309,6 +311,7 @@ export async function optimizeRoutes(
             time_windows_used: data.time_windows_used,
             total_time_window_violations: data.total_time_window_violations,
             algorithm_requested: data.algorithm_requested,
+            ...(data.fallback_reason ? { fallback_reason: data.fallback_reason } : {}),
             feasibility_certificate: data.feasibility_certificate,
             applied_policy: data.applied_policy,
         };
@@ -401,6 +404,7 @@ export async function compareAllAlgorithms(
             execution_time_seconds: r.execution_time_seconds || 0,
             error_message: r.error_message,
             algorithm_requested: r.algorithm_requested,
+            ...(r.fallback_reason ? { algorithm_executed: r.algorithm_executed, fallback_reason: r.fallback_reason } : {}),
             feasibility_certificate: r.feasibility_certificate,
             applied_policy: r.applied_policy,
         }));

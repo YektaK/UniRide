@@ -262,6 +262,14 @@
           "network": "The server could not be reached. Check the connection and try again.",
           "invalidResponse": "The server returned an unexpected response."
         },
+        "matrixAge": {
+          "loaded": "Travel-time matrix: loaded {age} ago",
+          "unknownAge": "Travel-time matrix: load time unknown",
+          "ageLessThanMinute": "under a minute",
+          "ageMinutes": "{count} min",
+          "ageHours": "{count} h",
+          "ageDays": "{count} d"
+        },
         "banner": {
           "title": "Preview — not publishable, hypothetical",
           "titlePlain": "Preview — not publishable",
@@ -356,6 +364,7 @@
           "LEGACY_AMBIGUOUS_CONFIRMATION": "Some students have legacy requests and their confirmation state is ambiguous.",
           "MATRIX_ARC_MISMATCH": "A duration in a route does not match the travel-time matrix.",
           "MATRIX_SNAPSHOT_INVALID": "The travel-time matrix is invalid or corrupt.",
+          "MATRIX_STALE": "The travel-time matrix is out of date (the refresh failed or it expired); routes could not be computed and no plan was produced.",
           "MATRIX_UNAVAILABLE": "The travel-time matrix could not be loaded or is incomplete; routes could not be computed.",
           "MISSING_OCCURRENCE_COVERAGE": "Some trips were not placed in any route; the plan was rejected.",
           "NO_ADMITTED_DEMAND": "There are no confirmed trips for this day.",

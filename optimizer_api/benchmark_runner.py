@@ -415,11 +415,16 @@ class BenchmarkRunner:
         execution_failed = False
         response = None
         
+        # Registry singletons are built once at import; a strategy from
+        # get_strategy() is built now. Provenance follows that (A12).
+        from_registry = False
+
         try:
             # Get strategy from registry
             strategy = None
             if self.strategies_registry:
                 strategy = self.strategies_registry.get(algorithm.algorithm_id)
+                from_registry = bool(strategy)
             
             if not strategy:
                 from strategies import get_strategy
@@ -476,6 +481,20 @@ class BenchmarkRunner:
         
         routes_count = len(response.routes) if response else 0
 
+        import strategies as _strategies_pkg
+        from strategies.promoted_config_loader import promoted_config_provenance
+
+        if from_registry:
+            promoted_provenance = {
+                **_strategies_pkg.REGISTRY_PROMOTED_PROVENANCE,
+                "promoted_config_snapshot": "registry_import",
+            }
+        else:
+            promoted_provenance = {
+                **promoted_config_provenance(),
+                "promoted_config_snapshot": "call",
+            }
+
         metadata = {
             "problem_dimension": problem.dimension,
             "problem_type": problem.problem_type,
@@ -484,6 +503,9 @@ class BenchmarkRunner:
             "execution_failed": execution_failed,
             "routes_count": routes_count,
             "vehicles_used": routes_count,
+            # Owner decision 2026-10-14 (DECISION_LOG A12): record whether the
+            # promoted-config flag was on and which promoted file was present.
+            **promoted_provenance,
         }
 
         if response is not None:

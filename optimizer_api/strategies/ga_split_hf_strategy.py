@@ -84,6 +84,15 @@ class GASplitHFStrategy(HybridSplitBaseStrategy):
         minimize_type = request.minimize_type or specs[0].type_id
         type_ids = [spec.type_id for spec in specs]
 
+        # ga_split_hf never reads promoted configs (no loader call).
+        config_source = "default" if self.config == self.DEFAULT_CONFIG else "request"
+        effective_config = dict(self.config)
+        effective_seed = self.seed
+        if request.ga_config:
+            effective_config = {**self.config, **request.ga_config}
+            effective_seed = resolve_seed(effective_config, self.seed)
+            config_source = "request"
+
         if not students:
             return OptimizationResponse(
                 algorithm_used=self.name,
@@ -94,6 +103,8 @@ class GASplitHFStrategy(HybridSplitBaseStrategy):
                 direction=direction,
                 time_windows_used=False,
                 fleet_mix={t: 0 for t in type_ids},
+                effective_config_source=config_source,
+                effective_seed=effective_seed,
             )
 
         types = [
@@ -116,9 +127,7 @@ class GASplitHFStrategy(HybridSplitBaseStrategy):
         quota_type = quota_specs[0].type_id if quota_specs else None
         quota = quota_specs[0].max_routes if quota_specs else None
 
-        effective_config = dict(self.config)
         if request.ga_config:
-            effective_config = {**self.config, **request.ga_config}
             rng = make_rng(effective_config, default=self.seed)
         else:
             rng = random.Random(self.seed)
@@ -173,6 +182,8 @@ class GASplitHFStrategy(HybridSplitBaseStrategy):
                 time_windows_used=False,
                 error_message="no feasible typed split for the declared vehicle types",
                 fleet_mix={t: 0 for t in type_ids},
+                effective_config_source=config_source,
+                effective_seed=effective_seed,
             )
 
         routes = []
@@ -223,4 +234,6 @@ class GASplitHFStrategy(HybridSplitBaseStrategy):
             direction=direction,
             time_windows_used=False,
             fleet_mix={t: final.routes_by_type.get(t, 0) for t in type_ids},
+            effective_config_source=config_source,
+            effective_seed=effective_seed,
         )

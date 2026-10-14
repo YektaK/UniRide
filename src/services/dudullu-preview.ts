@@ -17,6 +17,11 @@ export interface MatrixSnapshot {
   readonly version: string;
   readonly sha256: string;
   readonly source: string;
+  /** Optimizer-reported load time, age and refresh state of the matrix (optional on old optimizers). */
+  readonly provenance?: {
+    readonly loaded_at?: string | null;
+    readonly age_seconds?: number | null;
+  };
   readonly arcs: readonly MatrixArc[];
 }
 
@@ -93,6 +98,7 @@ export type PreviewReasonCode =
   | "LEGACY_AMBIGUOUS_CONFIRMATION"
   | "MATRIX_ARC_MISMATCH"
   | "MATRIX_SNAPSHOT_INVALID"
+  | "MATRIX_STALE"
   | "MATRIX_UNAVAILABLE"
   | "MISSING_OCCURRENCE_COVERAGE"
   | "NO_ADMITTED_DEMAND"

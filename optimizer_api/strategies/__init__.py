@@ -77,6 +77,13 @@ except ImportError:
     _VROOM_AVAILABLE = False
 
 
+# Promoted-config provenance at the moment the singletons below are built. The
+# registry singletons never re-read promoted configs, so benchmark records for
+# them must report this snapshot, not the flag state at result-write time.
+from strategies.promoted_config_loader import promoted_config_provenance
+
+REGISTRY_PROMOTED_PROVENANCE = promoted_config_provenance()
+
 # Strategy instances kept for backward-compatible registry reads.
 _ga_strategy = GeneticAlgorithmStrategy()
 _pso_strategy = PSOStrategy()
@@ -494,6 +501,7 @@ __all__ = [
     
     # Registry and utilities
     'STRATEGY_REGISTRY',
+    'REGISTRY_PROMOTED_PROVENANCE',
     'get_strategy',
     'get_all_strategies',
     'get_available_strategy_names',

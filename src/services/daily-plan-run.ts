@@ -23,8 +23,9 @@ import {
 import type { MatrixSnapshot, PreviewJobInput, PreviewOptimizationResult, PreviewVehicle, PreviewReasonCode } from "@/services/dudullu-preview";
 import { serviceDateBounds } from "@/services/istanbul-service-date";
 import { DUDULLU_DEPOT } from "@/services/dudullu-campus";
+import { buildMatrixAge, type MatrixAge } from "@/services/matrix-age";
 import {
-  MATRIX_UNAVAILABLE_CODE, classifyOptimizerMatrixError, readOptimizerErrorDetail,
+  MATRIX_UNAVAILABLE_CODE, OPTIMIZER_SNAPSHOT_STALE_DETAIL, classifyOptimizerMatrixError, readOptimizerErrorDetail,
 } from "@/services/optimizer-matrix-errors";
 
 type AdmissionMode = "recorded" | "assume_confirmed";
@@ -70,6 +71,11 @@ const decisionRowSchema = z.object({
 const snapshotSchema = z.object({
   id: z.string(), version: z.string(), sha256: z.string().regex(/^[0-9a-f]{64}$/),
   source: z.literal("supabase"),
+  // Age and refresh state of the matrix. A malformed value must never block the plan.
+  provenance: z.object({
+    loaded_at: z.string().nullable().optional(),
+    age_seconds: z.number().finite().nonnegative().nullable().optional(),
+  }).optional().catch(undefined),
   arcs: z.array(z.object({ origin_code: z.string(), destination_code: z.string(), duration_minutes: z.number() })),
 });
 const optimizerResultSchema = z.object({
@@ -399,19 +405,30 @@ export async function fetchMatrixSnapshot(
   optimizerFetch: DailyPlanDeps["optimizerFetch"],
   admitted: readonly PreviewDemand[],
 ): Promise<MatrixSnapshot | null> {
+  return (await fetchMatrixSnapshotOutcome(optimizerFetch, admitted)).matrix;
+}
+
+/** Like `fetchMatrixSnapshot`, and says whether a missing matrix was refused as stale (C2 gate). */
+export async function fetchMatrixSnapshotOutcome(
+  optimizerFetch: DailyPlanDeps["optimizerFetch"],
+  admitted: readonly PreviewDemand[],
+): Promise<{ readonly matrix: MatrixSnapshot | null; readonly stale: boolean }> {
   try {
     const response = await optimizerFetch("/api/v1/internal/matrix-snapshot", {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ student_location_codes: [...new Set(admitted.map((demand) => demand.locationCode))] }),
     });
-    if (!response.ok) throw new Error("matrix unavailable");
+    if (!response.ok) {
+      const stale = response.status === 503 && (await readOptimizerErrorDetail(response)) === OPTIMIZER_SNAPSHOT_STALE_DETAIL;
+      return { matrix: null, stale };
+    }
     const parsed = snapshotSchema.safeParse(await response.json());
     if (!parsed.success || parsed.data.id !== `time_matrix:sha256:${parsed.data.sha256}` || parsed.data.version !== parsed.data.sha256) {
       throw new Error("matrix invalid");
     }
-    return parsed.data;
+    return { matrix: parsed.data, stale: false };
   } catch {
-    return null;
+    return { matrix: null, stale: false };
   }
 }
 
@@ -491,6 +508,8 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
   // Every response, including blocked ones, carries the same labelling. Display labels are
   // location codes only; no user names are read or returned (K4).
   let retryAfterSeconds: number | undefined;
+  // Load time and age of the matrix the plan used (M4, T09); a stale matrix never gets this far.
+  let matrixAge: MatrixAge | null = null;
   const finish = <T extends ReturnType<typeof buildDudulluPreview>>(result: T) => ({
     ...withReasonCodes(result, extraReasons),
     ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
@@ -501,6 +520,7 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
     fleet: fleetInfo,
     limits,
     occurrenceLabels,
+    matrixAge,
   });
 
   const loaded = await loadDailyPlanDemand(client, serviceDate, assumeConfirmed, demandState);
@@ -553,8 +573,9 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
     };
   }
 
-  const matrix = await fetchMatrixSnapshot(optimizerFetch, admitted);
-  if (matrix === null) return finish(blockedPreview(serviceDate, admitted, null, "MATRIX_UNAVAILABLE"));
+  const { matrix, stale } = await fetchMatrixSnapshotOutcome(optimizerFetch, admitted);
+  if (matrix === null) return finish(blockedPreview(serviceDate, admitted, null, stale ? "MATRIX_STALE" : "MATRIX_UNAVAILABLE"));
+  matrixAge = buildMatrixAge(matrix.provenance);
 
   const jobs: PreviewJobInput[] = [];
   for (const group of groupWaves(admitted)) {

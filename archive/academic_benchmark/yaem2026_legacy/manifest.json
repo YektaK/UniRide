@@ -4,108 +4,108 @@
   "entries": [
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/1_generate_config.py",
-      "byte_size": 8619,
+      "byte_size": 8377,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/1_generate_config.py",
-      "sha256": "e1b388d9c07923ff2e855f38ce56113a5606d1745cdefb6b5b4ed2e816d7a3ef"
+      "sha256": "57beb538e95e6ee21228efb5ad60a03b3e9c076e7066f52eb98888f2e2e25b13"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/2_run_tuning.py",
-      "byte_size": 15008,
+      "byte_size": 14660,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/2_run_tuning.py",
-      "sha256": "a833c43a354a220078eaa1d44759373a43aa154322b7ce115c4e03be6cdae286"
+      "sha256": "3b7e8f9fdbf5121510e652ac3843c8c1eb91c7fbcb21483d015c77315cbb61ba"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/3_run_benchmark.py",
-      "byte_size": 10231,
+      "byte_size": 9969,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/3_run_benchmark.py",
-      "sha256": "a77f776acc276d969b56ba30c86d622e99a7cd505c07e08528bd71e3d1f94b0c"
+      "sha256": "4fbc65157100b34d13895026a1f72bf5d3ca9e93fb88647e12f33888e827c9da"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/5_visualize.py",
-      "byte_size": 5861,
+      "byte_size": 5701,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/5_visualize.py",
-      "sha256": "6dd3ed7fb3d09c783a3f163d5c20947178b47db755205a401dea3abbe3ac8799"
+      "sha256": "d1378fe76d9de2dc17edf4334be74a4ec97b491ed9df57c096c3f18de6a01653"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/README.md",
-      "byte_size": 2552,
+      "byte_size": 2482,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/README.md",
-      "sha256": "68d08d0ef19189d7b969c8cd6c714f8542b5abc951886f1b09144a8401ed38c0"
+      "sha256": "724963f88a1f257ec77a58923974989bc8fc719002b49258eab3c11768eff70e"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/analyze_benchmark.py",
-      "byte_size": 13755,
+      "byte_size": 13467,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/analyze_benchmark.py",
-      "sha256": "cf532a7aa03628704a5bcbd483e3df21116c821d9014d8e840e56d2dc25cf9fe"
+      "sha256": "8298f47c720a88cb7954df4484cd7436fce683c8c74d3811890b5d22104f9b35"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/analyze_tuning.py",
-      "byte_size": 9195,
+      "byte_size": 8971,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/analyze_tuning.py",
-      "sha256": "dbea7ec2cfe0eff8f5962943b13a198de42af353b6369ec50aa58d2d9c75db0a"
+      "sha256": "3b501242cbcc141156f003ef04d16959bbe57cda13deab9be68d3db32120c573"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/configs/config_berlin52_20260701_003609.json",
-      "byte_size": 10249,
+      "byte_size": 9786,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/configs/config_berlin52_20260701_003609.json",
-      "sha256": "8f37ac5c7265dfe46007fd940e33919286ea63d69487e529e9799da9aedbe0b1"
+      "sha256": "1c772f95743894e3e285c2057ef4defca35bbbb9578ed376024dd76b22515696"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/configs/config_berlin52_20260701_004500.json",
-      "byte_size": 10259,
+      "byte_size": 9796,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/configs/config_berlin52_20260701_004500.json",
-      "sha256": "6a6a8c4c5dbd6f505848f73d6795d2cf140aa6d11f6a41f72eedf8cac886a1ef"
+      "sha256": "143a29c2d6c68d1de25cf22a46e4b15473dd70c9e23ef3563b08553e8e9a4ecb"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/data/tuned_parameters_db.json",
-      "byte_size": 16727,
+      "byte_size": 16047,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/data/tuned_parameters_db.json",
-      "sha256": "4eaf8f62423a64819f98dd3e528fcfa83a7d6c6de63a63941cd8966c1fa68a77"
+      "sha256": "fdede54da6bb745ce6e376abba7c094f35ee56df7a43178f485d1557f6aebcd4"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/data/universal_parameters_db.json",
-      "byte_size": 5862,
+      "byte_size": 5658,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/data/universal_parameters_db.json",
-      "sha256": "6fcb244897166b06d275cb9b4245db287a34f548181794266464c5d959267289"
+      "sha256": "757529b2a7d8ed869c1c2ae635eebbcfb451ed77734a0a9671209e87a8160e61"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/benchmark_progress_20260701_004150.csv",
-      "byte_size": 6888,
+      "byte_size": 6737,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/benchmark_progress_20260701_004150.csv",
-      "sha256": "c5a55784a4ab521da126415aeeec4d92453bba8915b7beff0b1152f9fc8d99ad"
+      "sha256": "4f81f512a026e6d9f2bd6d5823b91811f727fce2312d6cb0d2e0ff82cd2a3409"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/benchmark_progress_20260701_004937.csv",
-      "byte_size": 95510,
+      "byte_size": 93559,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/benchmark_progress_20260701_004937.csv",
-      "sha256": "3b730c4c8af1409528b43fe8b8fc0a4dca78e5cce3c6857773e4885cbfd66871"
+      "sha256": "f12e28f05348acc792da656f7629153bc3d38867f7f097cfb62608bb2f507e1a"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/benchmark_summary_20260701_004937.csv",
-      "byte_size": 5462,
+      "byte_size": 5396,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/benchmark_summary_20260701_004937.csv",
-      "sha256": "87897673585fb3bc7b76148ac16df1af13b342ca25e6fae167aa99cd171eb7d9"
+      "sha256": "4b4b2735df730e0acbdf5d88902df1ae80e5c9bc261fcecdf56a210d2a03974d"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/histories/convergence_20260701_004937.json",
-      "byte_size": 100716,
+      "byte_size": 94126,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/histories/convergence_20260701_004937.json",
-      "sha256": "cc9b4f443dc1355eb61d469a45e1b69fd933da2e2ef63413beb09441078c7461"
+      "sha256": "a0e5e13ae39d12f8ba881c5ec8227683f3d3bf506f6ed8d7f9e3d41a3aaf1d1b"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/plots/boxplot_berlin52.png",
@@ -242,367 +242,367 @@
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/reports/DENEY_TASARIMI_20260701_003615.md",
-      "byte_size": 16737,
+      "byte_size": 16065,
       "classification": "INVALID",
       "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/reports/DENEY_TASARIMI_20260701_003615.md",
-      "sha256": "fd4468584cb3a073bf247c7a67d9d5ab0d00f5aaf78cd73ef4458f8b3e203933"
+      "sha256": "6c7b5b457235b97aa001621fdc50b38465d2e36a15819de338ddc3bbb9c8762e"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/reports/FINAL_BENCHMARK_ANALYSIS_berlin52_20260701_011500.md",
-      "byte_size": 10950,
+      "byte_size": 10784,
       "classification": "INVALID",
       "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/reports/FINAL_BENCHMARK_ANALYSIS_berlin52_20260701_011500.md",
-      "sha256": "c04185dd912656fae97100a6e3b12716381eb65c6d318ddbd41d66d27385a00b"
+      "sha256": "63a35d8e076f4241fda01108a7889c670f0abd63a672ccb9c8b7bc2642017d6f"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/reports/FINAL_BENCHMARK_ANALYSIS_eil51_20260701_011500.md",
-      "byte_size": 10712,
+      "byte_size": 10546,
       "classification": "INVALID",
       "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/reports/FINAL_BENCHMARK_ANALYSIS_eil51_20260701_011500.md",
-      "sha256": "fba94196a34c06d2ba1067ee5d7a3ab1c73f9288a594e396bcba75ecfceeae26"
+      "sha256": "7d0187c0ad34b416afc5fbe09456c3e9069a469719a8c8c04be0ef7160788a95"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/reports/FINAL_BENCHMARK_ANALYSIS_kroA100_20260701_011500.md",
-      "byte_size": 11006,
+      "byte_size": 10840,
       "classification": "INVALID",
       "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/reports/FINAL_BENCHMARK_ANALYSIS_kroA100_20260701_011500.md",
-      "sha256": "066bf809a0cd1eb6cadcf26c9e2b73058c528dc5a2815661cf43fb735238077d"
+      "sha256": "827a28fc7e84e3ef27a3f7212d84630b936c64fe830ec4c36010c62cf7ce2287"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/reports/FINAL_BENCHMARK_ANALYSIS_st70_20260701_011500.md",
-      "byte_size": 10774,
+      "byte_size": 10608,
       "classification": "INVALID",
       "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/reports/FINAL_BENCHMARK_ANALYSIS_st70_20260701_011500.md",
-      "sha256": "4c3994a42dadb2199f1962e70cd78b9625fd2ccbe85a3b10393920f800fb60d3"
+      "sha256": "4a20bb6cd2da50579287aee888ca4807efefa8ee8e93a1ceca6144e2900407c1"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/reports/FINAL_BENCHMARK_ANALYSIS_student_matrix_20260701_011500.md",
-      "byte_size": 10511,
+      "byte_size": 10345,
       "classification": "INVALID",
       "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/reports/FINAL_BENCHMARK_ANALYSIS_student_matrix_20260701_011500.md",
-      "sha256": "2a4a79401c7b1422a2246db403d4eb5d7d42386ca2ca160de3420ceec2aee71e"
+      "sha256": "a5a9cedd3e4021cdd441580df49b7ef841967ad7404ff91c8e2907ed21affbef"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/reports/MASTER_DENEY_TASARIM_RAPORU.md",
-      "byte_size": 16844,
+      "byte_size": 16171,
       "classification": "INVALID",
       "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/reports/MASTER_DENEY_TASARIM_RAPORU.md",
-      "sha256": "4dc4f1a84a5593d795950e0e946d32b225b2b7518bbb83903c6a2fbf986298f7"
+      "sha256": "58112781e1dfb3378120f4e1cb120f80fd32780b9b82ae4c492d3bb6cb3a0eb9"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/tuning_progress_20260701_003615.csv",
-      "byte_size": 64994,
+      "byte_size": 64714,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/tuning_progress_20260701_003615.csv",
-      "sha256": "6ffa84cbf6bb4465d424b31517d3d3bd328dbb422bb28a636010c12f917efb2a"
+      "sha256": "7106410027d66e20d4085b6b2d482f246b599f884ee2d0710642e6dc7e2cb9f7"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/archive_20260701_0120/results/tuning_progress_20260701_004501.csv",
-      "byte_size": 51229,
+      "byte_size": 50984,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/archive_20260701_0120/results/tuning_progress_20260701_004501.csv",
-      "sha256": "b35de4ef36fed7583af85f7f20b18157ef29e7cbefd42e3a2c1358f8141d9431"
+      "sha256": "f3afb12f6d31da6199f30c9e2c36ddb0ea9b683ef290689ac183e063673419b3"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/benchmark_runner.py",
-      "byte_size": 22231,
+      "byte_size": 21675,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/benchmark_runner.py",
-      "sha256": "7f1f4b3f61ff750552e07b8c7b1cb198eb92738cbcff5f84f01d1614dc042c59"
+      "sha256": "554b1cc425718b7d50c4109f952ef23c29c79a8138e89ca709248d7f8dbead51"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/benchmarks/tsplib_benchmark.py",
-      "byte_size": 9062,
+      "byte_size": 8824,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/benchmarks/tsplib_benchmark.py",
-      "sha256": "e58b70e4508df8f5c8a0e369a9b46560705c381693ddf622f8ed709e83da0540"
+      "sha256": "dacb3d9f697abb43b4a4fa89dda9b197802fb19d15dbc799ae521943a3048a87"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/clean_db.py",
-      "byte_size": 1067,
+      "byte_size": 1036,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/clean_db.py",
-      "sha256": "6c69eadc1598188b2abe00f88f61a4cbd99c95d66fcd5a94e6cd5f8fd3862d28"
+      "sha256": "e67971450ec2ce5857c821c0b43ea14c3d8bf046b7394c259a58830134571d2e"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/config_manager.py",
-      "byte_size": 2094,
+      "byte_size": 2022,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/config_manager.py",
-      "sha256": "4c2d92baa64aa603baa05e827fc6c1e7ef9562b2fd65ead99c411e263f866d35"
+      "sha256": "bc39b70535c6e65a55cef31d539ef2344d1444edad9c814a0a40469af27821ef"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/configs/config_berlin52_20260701_012653.json",
-      "byte_size": 9264,
+      "byte_size": 8846,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/configs/config_berlin52_20260701_012653.json",
-      "sha256": "151ab6a16904dd4bf1223d7e3f187d58bbe020062734d54675e52881047dbbf9"
+      "sha256": "e6d6810a95eaba26bedb0b4399b407fa459b857843a6350862425b89c379512f"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/configs/config_eil51_20260701_012653.json",
-      "byte_size": 9258,
+      "byte_size": 8840,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/configs/config_eil51_20260701_012653.json",
-      "sha256": "7a5b9800e1c7dd72021bbc19e6ccaf6ddceb4e0647b06c161505659bc4127000"
+      "sha256": "cebc62c17883d9ad0db1c779e49c327b2bf2220bb555d02e301732dc97b218d0"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/configs/config_kroA100_20260701_012653.json",
-      "byte_size": 9262,
+      "byte_size": 8844,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/configs/config_kroA100_20260701_012653.json",
-      "sha256": "a11b14a7a4eeae0ed4aa24bce563ea8c8473241666576818cdcc5de350b5fd26"
+      "sha256": "713dad6476549d88ebbba2705687d662eb624f033a2550e7aa63927c1cf2be38"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/configs/config_st70_20260701_012653.json",
-      "byte_size": 9256,
+      "byte_size": 8838,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/configs/config_st70_20260701_012653.json",
-      "sha256": "52eb0a29d56c41d314f9139b7c842effb38025dc6804860a2ddd478bb3f0674b"
+      "sha256": "0266dc3ec2d95dab95908509e9a082a6881b98cf6ccd72ad83339025a7cefab9"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/core/__init__.py",
-      "byte_size": 1128,
+      "byte_size": 1093,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/core/__init__.py",
-      "sha256": "b93c84185d60fc114ae9880f4fe93e8c1c1e7d23af327c267ce73aa07dd012f0"
+      "sha256": "6708fa25224c7e10ecc5a57c039226c96f13af48f648bc6aecd3ceffa33facc1"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/core/base_solver.py",
-      "byte_size": 5640,
+      "byte_size": 5490,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/core/base_solver.py",
-      "sha256": "202ed638a0b402a7385a71f571d62400d91226c72cc1e7c6b554e46de361d87e"
+      "sha256": "3f9effda88bf81a06fe5b7b0be74599c84c016f56548d1dab74929b5aa6802a8"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/core/ga_solver.py",
-      "byte_size": 5598,
+      "byte_size": 5445,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/core/ga_solver.py",
-      "sha256": "1b92cfcb1880ebae6799385e8e591025271c2972bde57b8125e443e72a96c52b"
+      "sha256": "d77d0f1e3f2dc3bf78de2ed4c9ef97cd5ee43bfe6a5e5eb58e5a68cf73d58de7"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/core/gwo_solver.py",
-      "byte_size": 12965,
+      "byte_size": 12667,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/core/gwo_solver.py",
-      "sha256": "5813395321440869fed5ddd8d6734b2e771c3bea85382360eaeecfe8aa52d3d3"
+      "sha256": "25134d6dec314746de726425de724deb76d77eeef35aea5aa3b133f0979905f9"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/core/hho_solver.py",
-      "byte_size": 14057,
+      "byte_size": 13730,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/core/hho_solver.py",
-      "sha256": "de285b21d77e6634e2b62a83b3d8f0377e94b49f880be2f1c449da6a98e92f51"
+      "sha256": "c202e540c74313ffbca1453b25ded8eeecb7177e20af49cfcf4f95519d00cc1f"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/core/numba_accel.py",
-      "byte_size": 16707,
+      "byte_size": 16318,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/core/numba_accel.py",
-      "sha256": "88be2a5ab9804ea7bb0fb8749121d54aebd90c1c65b4d42f555bdbb00af4db74"
+      "sha256": "f70d95930f42b4f16f3c4032a6a917fc7df16a6cb82adc0cb149ea144d84129d"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/core/or_opt.py",
-      "byte_size": 5360,
+      "byte_size": 5223,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/core/or_opt.py",
-      "sha256": "0657fbe9d08290794bc31e69cd8395eed43c242592d8c912f81e44985e4e1a42"
+      "sha256": "49f2385eae5b20e688e2251de1484b3c74543c5c788f26497bbf46dc24af6418"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/core/pso_solver.py",
-      "byte_size": 7851,
+      "byte_size": 7655,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/core/pso_solver.py",
-      "sha256": "428a98f4d52a7e930b72a1b774ee91d139551c049244ad6845fc28b2afa1b414"
+      "sha256": "eda465690d9914054307305ede3931b9e76f2b89567d2231ba3f87b46029a1cd"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/core/three_opt.py",
-      "byte_size": 4388,
+      "byte_size": 4271,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/core/three_opt.py",
-      "sha256": "c8de84493ad58271fcc7bc8ce1cf175ce1d4113f692bf600dea525282fcca085"
+      "sha256": "ac7a6537a9370d90e18a66f97dbc8e2f627956a926161d8c04a1b597a7dcd84c"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/core/two_opt.py",
-      "byte_size": 4340,
+      "byte_size": 4216,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/core/two_opt.py",
-      "sha256": "37c9ef4c8dc33e9241cf1d68aca2c17c9727dd2c1770a12d01f7b02e74ed05f4"
+      "sha256": "6712949f164d50093082b0e722523b1a38418660e46fb062c85e6002d1fd3f38"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/data/student_matrix.json",
-      "byte_size": 10138,
+      "byte_size": 9201,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/data/student_matrix.json",
-      "sha256": "049cb7c0174699e12d65475388c997d4532d34a4a7734b1e4f55ff82a32b5aa5"
+      "sha256": "016099f256c9170e9c0967aa44f6fff5573d3b89b35443df50a97bf73a30b39f"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/data/tuned_parameters_db.json",
-      "byte_size": 59280,
+      "byte_size": 56867,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/data/tuned_parameters_db.json",
-      "sha256": "63acee4513b51f75bd8afb9c6907f60fead29d0dec2c2261520bdbed1f5a327d"
+      "sha256": "79587e9e7c346717e41d019a82b015941b83d0ac5f53b3a80310b94774cef96b"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/data/universal_parameters_db.json",
-      "byte_size": 5113,
+      "byte_size": 4936,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/data/universal_parameters_db.json",
-      "sha256": "746fcc0def3c50d3662acf8553220d114b1627b2ca4174409ce476c2e33f673b"
+      "sha256": "7471c8335bad87b346e5d2497f68eaf0fc89bd2de97947a55ac2a15db7256fc1"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/data_manager.py",
-      "byte_size": 2987,
+      "byte_size": 2895,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/data_manager.py",
-      "sha256": "dbe224d05c3090c2a6fbb48c2562da1f918f5e2bbddd53fcc77813f2ce3af77c"
+      "sha256": "b0c6fb940a03ac5a93c89f7d6c69574f9389547de450d21e8aab00295c75b080"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/extract_universal_params.py",
-      "byte_size": 3299,
+      "byte_size": 3215,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/extract_universal_params.py",
-      "sha256": "5f28f3ef629091a2b25da9c5980fbaca0f83c8cb3999e73bd8a7bf7e5c507751"
+      "sha256": "88328f241ef469cf3875a5cfede7d4a79c385264d3c2b97149cd9d262ae33bc2"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/fix_db.py",
-      "byte_size": 900,
+      "byte_size": 874,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/fix_db.py",
-      "sha256": "d4f733c74577da85d14eeaf4b9284fcfae526a8358d3367a5887e69d400de11a"
+      "sha256": "f806787b959b93d0e2652f9092470d2bf693a9e54289c5aab0248a2ef05cdcce"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/implementation_plan.md",
-      "byte_size": 3790,
+      "byte_size": 3746,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/implementation_plan.md",
-      "sha256": "dece988736b12066a7842a543bd88c0769651bb3b7cf076875b5cfabf48465fa"
+      "sha256": "32c24f155fcf40e4e07cda4868ed6233c16dc39f0b2d0423e01572d6b5eb9072"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/orchestrate_batch.py",
-      "byte_size": 1640,
+      "byte_size": 1589,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/orchestrate_batch.py",
-      "sha256": "23e8f62c62aad69a496565c6f396ab870a146b2788947c257740d1dea980a9b8"
+      "sha256": "43a76a3d18c32a37f8a8d5808d40a830f52c53851aade62d93140ac214ab35a1"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/plot_radar_chart.py",
-      "byte_size": 2710,
+      "byte_size": 2634,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/plot_radar_chart.py",
-      "sha256": "d0707e91e3c84ba832939014189a6a9d6d4d2fc58399d5234d4d0482d0bc6f40"
+      "sha256": "2e6efca50cb5e635f5346a81991cd90a9564575929b2f076422668c97c71a732"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/requirements.txt",
-      "byte_size": 157,
+      "byte_size": 149,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/requirements.txt",
-      "sha256": "d2e4475b175de464b1ff13ea46f56997d2929d28c32194c9a18f1a26bf4a7875"
+      "sha256": "9cbef1d434f2f6f0401593cb9026032c33dbd713e6d6903a107be19fbea4576b"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/benchmark_progress_20260701_041235.csv",
-      "byte_size": 16338,
+      "byte_size": 16007,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/results/benchmark_progress_20260701_041235.csv",
-      "sha256": "a00c6a6076f81c88950082b32a386c122937826a13fb3d856eac6ae9263756e2"
+      "sha256": "4f2b88e89b2e705a62f1abfe2766742ce41986c7e88b9b83bfd68d0628ce1a07"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/benchmark_progress_20260701_041729.csv",
-      "byte_size": 14993,
+      "byte_size": 14662,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/results/benchmark_progress_20260701_041729.csv",
-      "sha256": "63ca3ec404ca1a60497aad7b6dc4b21de1c514a5c6dc7459f951e4b254c0ec09"
+      "sha256": "fec9c41216f8f8c8e2287177a416065591404a45f4f330aa6d20efa5a92429a9"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/benchmark_progress_20260701_042210.csv",
-      "byte_size": 14714,
+      "byte_size": 14383,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/results/benchmark_progress_20260701_042210.csv",
-      "sha256": "adcd39f4002c946619e67d22685c21c1215fae6b15b7f1dfc55ad42b2e81d2cc"
+      "sha256": "2f802ced731e6700307006fddff402811aa5b7ef8376395fa866a40e9c0d2c42"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/benchmark_progress_20260701_042835.csv",
-      "byte_size": 16494,
+      "byte_size": 16163,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/results/benchmark_progress_20260701_042835.csv",
-      "sha256": "c9ff7f3f2a256e5eef710ad2dc6d98e957e0893c875a687cc0bdd5e29344f8cb"
+      "sha256": "bcfca06cc6a6cc906d83204684bd1d57769768457095dfa4262a94d205699c02"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/benchmark_progress_20260701_044102.csv",
-      "byte_size": 17824,
+      "byte_size": 17493,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/results/benchmark_progress_20260701_044102.csv",
-      "sha256": "2ce97a39fca25dabd645e8d52e05d0e5a812aec02487d6c72fb64405327697e9"
+      "sha256": "e5774553211b92830c84796f6a629169f4118c61bc4a346a18c4ef6f67ad38a1"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/benchmark_summary_20260701_041235.csv",
-      "byte_size": 963,
+      "byte_size": 951,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/results/benchmark_summary_20260701_041235.csv",
-      "sha256": "577c10c3ff556ac93865fabc30b02b1acef23b5f84079f92131ff25c2b856c38"
+      "sha256": "d864a1318fd8dc4270dd8a32cfc23e2b4a32a023943a017b8541710abfd03c76"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/benchmark_summary_20260701_041729.csv",
-      "byte_size": 982,
+      "byte_size": 970,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/results/benchmark_summary_20260701_041729.csv",
-      "sha256": "ebc69384ee2b625bf3c0d0c8c8d83bf36f129d5024b033d5f1efe6f5f46ba25f"
+      "sha256": "4f34f36be6a80a947214202ec2b370bb3f1fb15844f67acf3e60bfe057dbba5a"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/benchmark_summary_20260701_042210.csv",
-      "byte_size": 904,
+      "byte_size": 892,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/results/benchmark_summary_20260701_042210.csv",
-      "sha256": "aaaec7fb0e4917b27a4c429d989b3db50e3c48d631cbf4419c628eae4db1f1ee"
+      "sha256": "6b1932bb2b30d3f4c13d50509623cdd13ebfffa553ba7e7d2c68d47a9219d86f"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/benchmark_summary_20260701_042835.csv",
-      "byte_size": 1006,
+      "byte_size": 994,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/results/benchmark_summary_20260701_042835.csv",
-      "sha256": "88ed440198560c8d5363334837ede97aedaa6173254b2e5949ff5eaa118c9bb7"
+      "sha256": "f569e4498ff6df02c1a06a6f32a9ef310a615ef7154842b9684d28acd677a020"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/benchmark_summary_20260701_044102.csv",
-      "byte_size": 962,
+      "byte_size": 950,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/results/benchmark_summary_20260701_044102.csv",
-      "sha256": "edae1f8ece0a7bc8b6fc83c0115c904cb4428f3d7519447f1a9ca225436f5ec1"
+      "sha256": "2a985a744d19fe43f73da36b6a230f02e3741cfe23619bcebfa28ea8c1a0a6ac"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/histories/convergence_20260701_041235.json",
-      "byte_size": 16598,
+      "byte_size": 15558,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/results/histories/convergence_20260701_041235.json",
-      "sha256": "ed8c68c90ab28a23216a1104fe9f85309351b446a274b81bd97df707b569b267"
+      "sha256": "1aade076b0a352e8f45026e8ffa27a357e908956d5ad4e2815c637f46105b729"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/histories/convergence_20260701_041729.json",
-      "byte_size": 15124,
+      "byte_size": 14094,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/results/histories/convergence_20260701_041729.json",
-      "sha256": "67e48e88edb2e9bffd9c110a4b25e0cc96b4e559b7f99a21c3943f86477da0e8"
+      "sha256": "88cbcd3eddf11cfc35686ff0d9bdb7447c18a8ee7f5e3a14c189d6c014a52e46"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/histories/convergence_20260701_042210.json",
-      "byte_size": 15326,
+      "byte_size": 14301,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/results/histories/convergence_20260701_042210.json",
-      "sha256": "f92411d4827b83bad2cd47c1d64a8811adc5c28a978050aa6b3d7cb399c797f8"
+      "sha256": "45c8d1fda4ee90239f1a6ca04223797044f9f6ea3d7a5b76342f4383629a1c54"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/histories/convergence_20260701_042835.json",
-      "byte_size": 17379,
+      "byte_size": 16339,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/results/histories/convergence_20260701_042835.json",
-      "sha256": "fe178f3188307f02d69709954ec4723b18bc8d33273908d71e8a72f6d94ee8c5"
+      "sha256": "40cc2daa3056e6ec25aad1e9f9b3c1c83b83040fd231cfad7bec5fa6017a174b"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/histories/convergence_20260701_044102.json",
-      "byte_size": 12855,
+      "byte_size": 11976,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/results/histories/convergence_20260701_044102.json",
-      "sha256": "8767c627e48dab1ce3a5653c30ba6383b0bafde2d2d0fe851e2ad5f3c2475690"
+      "sha256": "a240b1930c1485c6c7a9fa7a58ff88606b7b5fe77e98a5662ebfd026d1eab242"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/plots/boxplot_berlin52.png",
@@ -998,122 +998,122 @@
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/reports/DENEY_TASARIMI_20260701_012329.md",
-      "byte_size": 1113,
+      "byte_size": 1073,
       "classification": "INVALID",
       "original_path": "academic_benchmark/yaem2026/results/reports/DENEY_TASARIMI_20260701_012329.md",
-      "sha256": "f739192523f2f7decbac537c3b8a60053d5cd415e441fb7f79fa6cb7097f2b25"
+      "sha256": "d92ebca42963c722618352b6d0bb643f1f2d228853edb55dfa47c0dab75ae95c"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/reports/DENEY_TASARIMI_20260701_012654.md",
-      "byte_size": 71278,
+      "byte_size": 68374,
       "classification": "INVALID",
       "original_path": "academic_benchmark/yaem2026/results/reports/DENEY_TASARIMI_20260701_012654.md",
-      "sha256": "23ff3c8956f223939cb81d0a7a19c2c61defa263d2139dac83640f50049c6d05"
+      "sha256": "e9311f3154165fe821b91129e6b06d453b425bd6cb17f13ed783ec8b7be7608b"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/reports/FINAL_BENCHMARK_ANALYSIS_berlin52_20260701_041502.md",
-      "byte_size": 8585,
+      "byte_size": 8448,
       "classification": "INVALID",
       "original_path": "academic_benchmark/yaem2026/results/reports/FINAL_BENCHMARK_ANALYSIS_berlin52_20260701_041502.md",
-      "sha256": "c395088d8759db2355d6a78633489c45b6dde526ed2b9f3383b1526824593f6c"
+      "sha256": "420ad881639c334b57bb00bdd59bdb818d09d5c1ad9af674b54d61b372831442"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/reports/FINAL_BENCHMARK_ANALYSIS_eil51_20260701_041943.md",
-      "byte_size": 8411,
+      "byte_size": 8274,
       "classification": "INVALID",
       "original_path": "academic_benchmark/yaem2026/results/reports/FINAL_BENCHMARK_ANALYSIS_eil51_20260701_041943.md",
-      "sha256": "3308ac3fc419a56ed3c5c5468d0c3ad92db429baee44ffded79cf6ac9a39e186"
+      "sha256": "ea85d2aeda8ef3d4de6f2c020abea818c2fd4ea89eb6e86ba8925d9f77719b4c"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/reports/FINAL_BENCHMARK_ANALYSIS_kroA100_20260701_043836.md",
-      "byte_size": 8680,
+      "byte_size": 8543,
       "classification": "INVALID",
       "original_path": "academic_benchmark/yaem2026/results/reports/FINAL_BENCHMARK_ANALYSIS_kroA100_20260701_043836.md",
-      "sha256": "a37c2b6cb83d88ff9f070c9ae1c0b5ecd760a24ab793651f71188d9af0eae5ec"
+      "sha256": "5bd06918a46ed82d03677e18a7b712f8fad563be537666a81e63a02ff21ab23a"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/reports/FINAL_BENCHMARK_ANALYSIS_st70_20260701_042608.md",
-      "byte_size": 8451,
+      "byte_size": 8314,
       "classification": "INVALID",
       "original_path": "academic_benchmark/yaem2026/results/reports/FINAL_BENCHMARK_ANALYSIS_st70_20260701_042608.md",
-      "sha256": "497aeb1eb8878bac4eb9a579f254f84572e077ba6493477263dbc035d987bc67"
+      "sha256": "5599246012976510faa5740472d4e7976722ffb89f459650e9b0b21c3f0a4e78"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/reports/FINAL_BENCHMARK_ANALYSIS_student_matrix_20260701_044216.md",
-      "byte_size": 8301,
+      "byte_size": 8164,
       "classification": "INVALID",
       "original_path": "academic_benchmark/yaem2026/results/reports/FINAL_BENCHMARK_ANALYSIS_student_matrix_20260701_044216.md",
-      "sha256": "0a7adc2233a1265f0f0dce178652e4a15ad5604b22ef5a6c84696e2fe22a43ab"
+      "sha256": "db217ae49b68c62d0ca658e21cd9b5eb795025bd6845f2734254841812681b3a"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/reports/MASTER_DENEY_TASARIM_RAPORU.md",
-      "byte_size": 71385,
+      "byte_size": 68480,
       "classification": "INVALID",
       "original_path": "academic_benchmark/yaem2026/results/reports/MASTER_DENEY_TASARIM_RAPORU.md",
-      "sha256": "0eaf84a33470597a48a052bc95db6a9dd8e1e3cafbbf34450b794c444f4d7450"
+      "sha256": "344e0b3ae5aa4e7b7abbae5d1c3468c6ea5e50bf2286baed339df53bdba2b9ec"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/tuning_progress_20260701_012329.csv",
-      "byte_size": 221,
+      "byte_size": 219,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/results/tuning_progress_20260701_012329.csv",
-      "sha256": "58a6fef0a01c35d94c6541b4616c8cac4842dde0d11def4ac91c0e9068b1cbb2"
+      "sha256": "003494a8c8a558738623cbdbbaafa6f057e772baab63cb73c219927cbfc189a0"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/results/tuning_progress_20260701_012654.csv",
-      "byte_size": 318540,
+      "byte_size": 317219,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/yaem2026/results/tuning_progress_20260701_012654.csv",
-      "sha256": "f8f0d45714746f53fcf2bf69cf423d525314e1756e8db5a22692a892913edde2"
+      "sha256": "754170182de4feb122a6d172c8c7194b41a0cafb0d093cea82c2ba306b9d2fe6"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/run_benchmark_only.py",
-      "byte_size": 1200,
+      "byte_size": 1159,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/run_benchmark_only.py",
-      "sha256": "ac43c33ee8d29f13998eda9b7df0b46f57b2186a1a22d6f1f3fb040075b99027"
+      "sha256": "e0e77d3d982081865fef07cec17c485020716fe331c58d6511066c3d81f92f01"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/run_yaem2026_experiments.py",
-      "byte_size": 4561,
+      "byte_size": 4440,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/run_yaem2026_experiments.py",
-      "sha256": "b6a9c0346e587af3d52304fc6e2291dda07dc872d675775d2a5653f78dde1c76"
+      "sha256": "4064e39cf6667d0ec3e63666213e8dcaea9fa3eb361296edcfa83c36109abf1c"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/task.md",
-      "byte_size": 1078,
+      "byte_size": 1063,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/task.md",
-      "sha256": "8a269aae4cfa1f0f5a757b24676483202972b18fe98a39b552c339e88443ee0a"
+      "sha256": "a7166d35cf95a7af56888673c32e343c58c85f2acd3403712d3032b67f477f4f"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/test_berlin.py",
-      "byte_size": 1145,
+      "byte_size": 1112,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/test_berlin.py",
-      "sha256": "22b5f802a62b0ad14fd05ee30abf9b9fdb31e75776c0321a6bdc94449b1342dd"
+      "sha256": "c45e8165f222d9b78dc202b47ed92592091a72fd122405fa2b0c94a4972459dd"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/visualize_student_matrix.py",
-      "byte_size": 2980,
+      "byte_size": 2896,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/visualize_student_matrix.py",
-      "sha256": "a1581b57a7b7ec5acfd4f8858b9fb895accd3cf35df4846130573ca5735803f2"
+      "sha256": "d2ab0fb754d68b5388c04a0d5b25a51b570ebf00cffba7512ae2ffb1bd8b55af"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/yaem2026_sunum_slayt_sablonu.md",
-      "byte_size": 15026,
+      "byte_size": 14840,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/yaem2026_sunum_slayt_sablonu.md",
-      "sha256": "b3eba5b9fae959897b98eb843af733ec011d9665c996dc00f66fecd1970bb6ce"
+      "sha256": "af4e81752b97bb04e4be5303d7c3f5f95ea876fafbb4d961fb6d243618e460e0"
     },
     {
       "archive_path": "archive/academic_benchmark/yaem2026_legacy/yaem2026_uygulama_ozeti.md",
-      "byte_size": 7378,
+      "byte_size": 7321,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/yaem2026/yaem2026_uygulama_ozeti.md",
-      "sha256": "07e33ba624ba9e417a37938b1845cdeb1e282be975df347b8eeabf14530dd166"
+      "sha256": "393c3418db957739308e7253ac65cd3a2b371ba3a004a0b8e63a4ec4638b915c"
     }
   ],
   "schema_version": "uniride-archive/v1",

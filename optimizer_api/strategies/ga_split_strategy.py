@@ -88,6 +88,14 @@ class GASplitStrategy(HybridSplitBaseStrategy):
         self._best_individual = None
         self._generation_stats = []
 
+    def _config_provenance(self, request: OptimizationRequest):
+        """Return (config_source, effective_config, effective_seed) for a request."""
+        if request.ga_config:
+            effective_config = {**self.config, **request.ga_config}
+            source = "promoted+request" if self.config_source == "promoted" else "request"
+            return source, effective_config, resolve_seed(effective_config, self.seed)
+        return self.config_source, dict(self.config), self.seed
+
     @property
     def name(self) -> str:
         return "ga_split"
@@ -109,6 +117,8 @@ class GASplitStrategy(HybridSplitBaseStrategy):
         students = request.students
         depot = request.depot
         
+        config_source, effective_config, effective_seed = self._config_provenance(request)
+
         if not students:
             return OptimizationResponse(
                 algorithm_used=self.name,
@@ -117,7 +127,9 @@ class GASplitStrategy(HybridSplitBaseStrategy):
                 total_vehicles=0,
                 execution_time_seconds=time.time() - start_time,
                 direction=request.direction,
-                time_windows_used=False
+                time_windows_used=False,
+                effective_config_source=config_source,
+                effective_seed=effective_seed,
             )
         
         # CVRPTW: Extract time windows if enabled
@@ -135,16 +147,10 @@ class GASplitStrategy(HybridSplitBaseStrategy):
         
         # Override config
         # Singleton self.config korunuyor; her istek icin local kopya
-        effective_config = dict(self.config)
-        config_source = self.config_source
         if request.ga_config:
-            effective_config = {**self.config, **request.ga_config}
             rng = make_rng(effective_config, default=self.seed)
-            effective_seed = resolve_seed(effective_config, self.seed)
-            config_source = "request"
         else:
             rng = random.Random(self.seed)
-            effective_seed = self.seed
 
         # Load data
         data_loader = DataLoader.get_instance()

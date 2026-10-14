@@ -476,6 +476,8 @@ class BenchmarkRunner:
         
         routes_count = len(response.routes) if response else 0
 
+        from strategies.promoted_config_loader import promoted_config_provenance
+
         metadata = {
             "problem_dimension": problem.dimension,
             "problem_type": problem.problem_type,
@@ -484,6 +486,9 @@ class BenchmarkRunner:
             "execution_failed": execution_failed,
             "routes_count": routes_count,
             "vehicles_used": routes_count,
+            # Owner decision 2026-10-14 (DECISION_LOG A12): record whether the
+            # promoted-config flag was on and which promoted file was present.
+            **promoted_config_provenance(),
         }
 
         if response is not None:

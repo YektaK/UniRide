@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 from functools import lru_cache
 from typing import Any, Dict, Iterable, Optional
@@ -30,6 +31,28 @@ ACADEMIC_TO_STRATEGY_PARAM_KEYS = {
 def promoted_config_enabled() -> bool:
     """True only when UNIRIDE_USE_PROMOTED_CONFIG is exactly "1"."""
     return os.environ.get(USE_PROMOTED_CONFIG_ENV) == "1"
+
+
+def promoted_config_provenance() -> Dict[str, Any]:
+    """Promoted-config provenance for result metadata (owner decision 2026-10-14).
+
+    ``promoted_config_flag``: whether UNIRIDE_USE_PROMOTED_CONFIG=1 is set.
+    ``promoted_config_sha256``: SHA-256 of the promoted_configs.json at the
+    configured path, or None when the file does not exist or is unreadable.
+    Pure metadata: it never changes a result value.
+    """
+    digest: Optional[str] = None
+    path = get_promoted_config_path()
+    try:
+        if os.path.isfile(path):
+            with open(path, "rb") as handle:
+                digest = hashlib.sha256(handle.read()).hexdigest()
+    except OSError:
+        digest = None
+    return {
+        "promoted_config_flag": promoted_config_enabled(),
+        "promoted_config_sha256": digest,
+    }
 
 
 def get_promoted_config_path() -> str:
@@ -103,6 +126,7 @@ def clear_promoted_config_cache() -> None:
 __all__ = [
     "USE_PROMOTED_CONFIG_ENV",
     "promoted_config_enabled",
+    "promoted_config_provenance",
     "PROMOTED_CONFIG_PATH_ENV",
     "clear_promoted_config_cache",
     "get_promoted_config_path",

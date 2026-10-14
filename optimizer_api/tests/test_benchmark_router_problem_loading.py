@@ -278,6 +278,10 @@ def test_matrix_native_benchmark_run_executes_and_persists(monkeypatch):
     assert saved_results[0][0][1]["problem_type"] == "cvrp"
     assert saved_results[0][0][1]["routes"]
     assert saved_runs[-1][1]["status"] == "completed"
+    # H17/M22 (A12): matrix-native results record promoted-config provenance
+    metadata = saved_results[0][0][1]["metadata"]
+    assert metadata["promoted_config_flag"] is False
+    assert "promoted_config_sha256" in metadata
 
 
 @pytest.mark.parametrize(

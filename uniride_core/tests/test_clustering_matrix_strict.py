@@ -121,7 +121,7 @@ def test_k_medoids_assigns_by_directed_matrix_time(monkeypatch):
     b = _point("2", "B", lat=41.0, lng=29.0)
     c = _point("3", "C", lat=42.0, lng=30.0)
     matrix = _matrix({("A", "B"): 100.0, ("C", "B"): 1.0}, codes=("A", "B", "C"))
-    monkeypatch.setattr(k_medoids, "initialize_medoids", lambda points, k: [a, c])
+    monkeypatch.setattr(k_medoids, "initialize_medoids", lambda points, k, rng=None: [a, c])
 
     clusters = k_medoids.k_medoids_clustering_core([a, b, c], 2, matrix)
 

@@ -19,7 +19,7 @@ import random
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass, field
 from enum import Enum
-from uniride_core.algorithms.clustering import Point, Cluster, calculate_centroid, validate_cluster_capacity
+from uniride_core.algorithms.clustering import Point, Cluster, calculate_centroid, resolve_rng, validate_cluster_capacity
 from uniride_core.algorithms.clustering_strategies.base import BaseClusteringStrategy
 from uniride_core.algorithms.distance import haversine_distance
 
@@ -170,7 +170,7 @@ def fuzzy_c_means_with_membership(
     Returns:
         Tuple of (centroids, membership_matrix, assignments)
     """
-    rng = rng or random.Random()
+    rng = resolve_rng(rng)
     if not points or k <= 0:
         return [], [], []
     
@@ -574,7 +574,8 @@ def enhanced_fuzzy_c_means_core(
     so_capacity: int = 5,
     filter_limit: int = 100,
     m: float = 2.0,
-    enable_transfer: bool = True
+    enable_transfer: bool = True,
+    rng: Optional[random.Random] = None
 ) -> List[EnhancedCluster]:
     """
     Enhanced FCM with border point detection and transfer mechanism.
@@ -589,6 +590,8 @@ def enhanced_fuzzy_c_means_core(
         filter_limit: Maximum FCM iterations
         m: Fuzziness parameter
         enable_transfer: Whether to enable transfer optimization
+        rng: Random generator for the membership initialisation (a local
+            deterministic generator is used when omitted; global state is never read)
     
     Returns:
         List of EnhancedCluster objects with membership metadata
@@ -612,7 +615,7 @@ def enhanced_fuzzy_c_means_core(
         ]
     
     # Step 1: Run FCM and get membership matrix
-    centroids, U, assignments = fuzzy_c_means_with_membership(points, k, filter_limit, m)
+    centroids, U, assignments = fuzzy_c_means_with_membership(points, k, filter_limit, m, rng=rng)
     
     # Step 2: Analyze border points
     membership_data = analyze_border_points(U, points)
@@ -662,7 +665,8 @@ class EnhancedFuzzyCMeansStrategy(BaseClusteringStrategy):
             self.sw_capacity,
             self.so_capacity,
             filter_limit=max_iterations,
-            enable_transfer=enable_transfer
+            enable_transfer=enable_transfer,
+            rng=self.rng
         )
         
         # Convert to base Cluster for compatibility
@@ -706,7 +710,8 @@ class EnhancedFuzzyCMeansStrategy(BaseClusteringStrategy):
             2,
             self.sw_capacity,
             self.so_capacity,
-            enable_transfer=False
+            enable_transfer=False,
+            rng=self.rng
         )
         
         # Convert to base Cluster

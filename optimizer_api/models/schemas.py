@@ -3,6 +3,11 @@ from pydantic import BaseModel, Field, model_serializer, model_validator
 from enum import Enum
 
 from uniride_core.adapters.demand_builder import student_occurrence_keys
+from uniride_core.algorithms.clustering_strategies import SUPPORTED_CLUSTERING_ALGORITHMS
+
+# Allowlist for the request's ``clustering_algorithm`` (audit H12): exactly the names
+# ``get_clustering_strategy`` supports; anything else is a 422, not a silent sweep.
+ClusteringAlgorithm = Literal[SUPPORTED_CLUSTERING_ALGORITHMS]  # type: ignore[valid-type]
 
 # --- Enums ---
 class TripDirection(str, Enum):
@@ -281,7 +286,7 @@ class OptimizationRequest(BaseModel):
     hho_config: Optional[Dict[str, Any]] = None
     two_opt_config: Optional[Dict[str, Any]] = None
     sota_config: Optional[Dict[str, Any]] = None
-    clustering_algorithm: Optional[str] = "sweep"
+    clustering_algorithm: Optional[ClusteringAlgorithm] = "sweep"
     is_asymmetric: bool = False
 
     @model_validator(mode="before")

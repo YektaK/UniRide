@@ -20,6 +20,7 @@ Date: 05 Nisan 2026
 """
 
 import math
+import random
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
 from uniride_core.algorithms.clustering import Point, Cluster, calculate_centroid, validate_cluster_capacity
@@ -96,7 +97,8 @@ def calculate_region_allocation(
 def stage1_regional_clustering(
     points: List[Point],
     num_regions: int,
-    config: HierarchicalConfig
+    config: HierarchicalConfig,
+    rng: Optional[random.Random] = None
 ) -> List[EnhancedCluster]:
     """
     Stage 1: Partition students into geographic regions.
@@ -118,7 +120,8 @@ def stage1_regional_clustering(
         so_capacity=float('inf'),
         filter_limit=config.fcm_max_iterations,
         m=config.fcm_fuzziness,
-        enable_transfer=False  # No transfer at region level
+        enable_transfer=False,  # No transfer at region level
+        rng=rng
     )
 
 
@@ -127,7 +130,8 @@ def stage2_vehicle_clustering(
     num_vehicles: int,
     sw_capacity: int,
     so_capacity: int,
-    config: HierarchicalConfig
+    config: HierarchicalConfig,
+    rng: Optional[random.Random] = None
 ) -> List[EnhancedCluster]:
     """
     Stage 2: Within a region, create vehicle-specific clusters.
@@ -170,7 +174,8 @@ def stage2_vehicle_clustering(
         so_capacity,
         filter_limit=config.fcm_max_iterations,
         m=config.fcm_fuzziness,
-        enable_transfer=True
+        enable_transfer=True,
+        rng=rng
     )
 
 
@@ -304,7 +309,8 @@ def hierarchical_fcm_clustering(
     num_vehicles: int,
     sw_capacity: int = 4,
     so_capacity: int = 5,
-    config: Optional[HierarchicalConfig] = None
+    config: Optional[HierarchicalConfig] = None,
+    rng: Optional[random.Random] = None
 ) -> List[EnhancedCluster]:
     """
     Main entry point for hierarchical FCM clustering.
@@ -337,7 +343,8 @@ def hierarchical_fcm_clustering(
             so_capacity,
             filter_limit=config.fcm_max_iterations,
             m=config.fcm_fuzziness,
-            enable_transfer=True
+            enable_transfer=True,
+            rng=rng
         )
     
     # HIERARCHICAL MODE
@@ -350,7 +357,7 @@ def hierarchical_fcm_clustering(
     if num_regions > num_vehicles:
         num_regions = num_vehicles
     
-    regions = stage1_regional_clustering(points, num_regions, config)
+    regions = stage1_regional_clustering(points, num_regions, config, rng)
     
     # Stage 2: Vehicle clustering within each region
     vehicle_allocations = distribute_vehicles_to_regions(
@@ -362,7 +369,7 @@ def hierarchical_fcm_clustering(
     
     for region, n_vehicles in zip(regions, vehicle_allocations):
         region_clusters = stage2_vehicle_clustering(
-            region, n_vehicles, sw_capacity, so_capacity, config
+            region, n_vehicles, sw_capacity, so_capacity, config, rng
         )
         
         # Stage 3a: Run per-region transfer optimization BEFORE concatenation.
@@ -409,7 +416,8 @@ class HierarchicalFCMStrategy(BaseClusteringStrategy):
         sw_capacity: int = 4,
         so_capacity: int = 5,
         hierarchical_threshold: int = 50,
-        students_per_region: int = 30
+        students_per_region: int = 30,
+        rng: Optional[random.Random] = None
     ):
         """
         Initialize hierarchical FCM strategy.
@@ -420,7 +428,7 @@ class HierarchicalFCMStrategy(BaseClusteringStrategy):
             hierarchical_threshold: Switch to hierarchical mode if N > threshold
             students_per_region: Target students per region in Stage 1
         """
-        super().__init__(sw_capacity, so_capacity)
+        super().__init__(sw_capacity, so_capacity, rng=rng)
         self.config = HierarchicalConfig(
             hierarchical_threshold=hierarchical_threshold,
             students_per_region=students_per_region
@@ -450,7 +458,8 @@ class HierarchicalFCMStrategy(BaseClusteringStrategy):
             num_vehicles,
             self.sw_capacity,
             self.so_capacity,
-            config
+            config,
+            rng=self.rng
         )
         
         # Validate and handle remaining violations
@@ -490,7 +499,8 @@ class HierarchicalFCMStrategy(BaseClusteringStrategy):
             2,
             self.sw_capacity,
             self.so_capacity,
-            enable_transfer=False
+            enable_transfer=False,
+            rng=self.rng
         )
         
         return [

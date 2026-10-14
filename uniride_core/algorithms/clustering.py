@@ -8,6 +8,16 @@ from typing import Dict, List, Mapping, Tuple
 
 from uniride_core.algorithms.distance import haversine_distance
 
+# Seed used when a caller supplies no generator. Clustering never touches the
+# process-global ``random`` state (audit H12): a missing rng becomes a local,
+# deterministic ``random.Random(DEFAULT_CLUSTERING_SEED)``.
+DEFAULT_CLUSTERING_SEED = 42
+
+
+def resolve_rng(rng: random.Random | None = None) -> random.Random:
+    """Return ``rng`` or a fresh local generator; never the global state."""
+    return rng if rng is not None else random.Random(DEFAULT_CLUSTERING_SEED)
+
 
 class MissingTravelTimeError(LookupError):
     """A clustering step needs a travel time the stored matrix does not hold.
@@ -62,12 +72,15 @@ def calculate_centroid(points: List[Point]) -> Tuple[float, float]:
     )
 
 
-def initialize_centroids_kmeans_plus_plus(points: List[Point], k: int) -> List[Tuple[float, float]]:
+def initialize_centroids_kmeans_plus_plus(
+    points: List[Point], k: int, rng: random.Random | None = None
+) -> List[Tuple[float, float]]:
     if k <= 0 or not points:
         return []
 
+    rng = resolve_rng(rng)
     centroids = []
-    first_idx = random.randint(0, len(points) - 1)
+    first_idx = rng.randint(0, len(points) - 1)
     centroids.append((points[first_idx].lat, points[first_idx].lng))
 
     while len(centroids) < k:
@@ -83,7 +96,7 @@ def initialize_centroids_kmeans_plus_plus(points: List[Point], k: int) -> List[T
         if total_dist == 0:
             break
 
-        threshold = random.random() * total_dist
+        threshold = rng.random() * total_dist
         cumulative = 0.0
         for idx, distance in enumerate(distances):
             cumulative += distance
@@ -94,9 +107,12 @@ def initialize_centroids_kmeans_plus_plus(points: List[Point], k: int) -> List[T
     return centroids
 
 
-def kmeans_clustering(points: List[Point], k: int, max_iterations: int = 100) -> List[Cluster]:
+def kmeans_clustering(
+    points: List[Point], k: int, max_iterations: int = 100, rng: random.Random | None = None
+) -> List[Cluster]:
     if not points or k <= 0:
         return []
+    rng = resolve_rng(rng)
 
     if k >= len(points):
         return [
@@ -109,7 +125,7 @@ def kmeans_clustering(points: List[Point], k: int, max_iterations: int = 100) ->
             for point in points
         ]
 
-    centroids = initialize_centroids_kmeans_plus_plus(points, k)
+    centroids = initialize_centroids_kmeans_plus_plus(points, k, rng)
     prev_assignments = [-1] * len(points)
 
     for _ in range(max_iterations):
@@ -152,13 +168,15 @@ def validate_cluster_capacity(cluster: Cluster, sw_capacity: int, so_capacity: i
     return cluster.sw_count <= sw_capacity and cluster.so_count <= so_capacity
 
 
-def split_cluster(cluster: Cluster) -> List[Cluster]:
+def split_cluster(cluster: Cluster, rng: random.Random | None = None) -> List[Cluster]:
     if len(cluster.points) <= 1:
         return [cluster]
-    return kmeans_clustering(cluster.points, 2)
+    return kmeans_clustering(cluster.points, 2, rng=rng)
 
 
 __all__ = [
+    "DEFAULT_CLUSTERING_SEED",
+    "resolve_rng",
     "MissingTravelTimeError",
     "matrix_travel_time",
     "Point",

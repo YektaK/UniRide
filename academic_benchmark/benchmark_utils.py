@@ -655,8 +655,8 @@ def generate_combinations(space: Dict[str, List[Any]], max_combos: int,
     keys = list(space.keys())
     combos = [dict(zip(keys, v)) for v in itertools.product(*(space[k] for k in keys))]
     if len(combos) > max_combos and strategy == "fractional_fallback":
-        random.seed(random_seed)
-        combos = random.sample(combos, max_combos)
+        # Local generator: same sample as seeding the global state, without mutating it.
+        combos = random.Random(random_seed).sample(combos, max_combos)
     else:
         combos = combos[:max_combos]
     return combos

@@ -15,6 +15,9 @@ Author: UniRide Team
 Date: 05 Nisan 2026
 """
 
+import random
+from typing import Optional
+
 from .base import BaseClusteringStrategy
 from .kmeans import KMeansClusteringStrategy
 from .fuzzy_cmeans import FuzzyCMeansClusteringStrategy
@@ -25,10 +28,24 @@ from .sweep import SweepClusteringStrategy
 from .clarke_wright import ClarkeWrightClusteringStrategy
 
 
+# Exactly the names ``get_clustering_strategy`` maps to a dedicated class. The
+# request schema allowlists ``clustering_algorithm`` against this tuple.
+SUPPORTED_CLUSTERING_ALGORITHMS = (
+    "kmeans",
+    "fuzzy_cmeans",
+    "fuzzy_cmeans_enhanced",
+    "hierarchical_fcm",
+    "k_medoids",
+    "sweep",
+    "clarke_wright",
+)
+
+
 def get_clustering_strategy(
     strategy_name: str, 
     sw_capacity: int = 4, 
     so_capacity: int = 5,
+    rng: Optional[random.Random] = None,
     **kwargs
 ) -> BaseClusteringStrategy:
     """
@@ -38,6 +55,10 @@ def get_clustering_strategy(
         strategy_name: Name of the clustering strategy
         sw_capacity: SW (tekerlekli sandalye) capacity per vehicle
         so_capacity: SO (tekerlekli sandalye olmayan) capacity per vehicle
+        rng: The caller's seeded generator. Randomised strategies (kmeans,
+            k_medoids, the FCM family) draw only from it; when omitted a local
+            ``random.Random(DEFAULT_CLUSTERING_SEED)`` is used. The global
+            ``random`` state is never read or reseeded.
         **kwargs: Additional parameters for specific strategies
             - hierarchical_threshold: For hierarchical_fcm, default 50
             - students_per_region: For hierarchical_fcm, default 30
@@ -66,14 +87,16 @@ def get_clustering_strategy(
             sw_capacity=sw_capacity,
             so_capacity=so_capacity,
             hierarchical_threshold=kwargs.get('hierarchical_threshold', 50),
-            students_per_region=kwargs.get('students_per_region', 30)
+            students_per_region=kwargs.get('students_per_region', 30),
+            rng=rng
         )
     
-    return strategy_class(sw_capacity=sw_capacity, so_capacity=so_capacity)
+    return strategy_class(sw_capacity=sw_capacity, so_capacity=so_capacity, rng=rng)
 
 
 # Export all strategies
 __all__ = [
+    'SUPPORTED_CLUSTERING_ALGORITHMS',
     'BaseClusteringStrategy',
     'KMeansClusteringStrategy',
     'FuzzyCMeansClusteringStrategy',

@@ -404,8 +404,9 @@ def _make_legacy_executor(strategy_payload: any, algorithm_type: str, algorithm_
             
         import random
         indices = list(range(1, dimension + 1))
-        random.seed(seed)
-        random.shuffle(indices)
+        # Local generator (same permutation as random.seed(seed) + random.shuffle): the
+        # process-global ``random`` state is never reseeded (audit H12).
+        random.Random(seed).shuffle(indices)
         initial_route = [f"L{i}" for i in indices]
 
         start_time = time.time()

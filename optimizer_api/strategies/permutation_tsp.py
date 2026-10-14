@@ -4,6 +4,7 @@ Exhaustive search for small problems (n ≤ 10)
 Guarantees optimal solution
 """
 
+import random
 import time
 from typing import List, Dict
 
@@ -12,6 +13,7 @@ from models.schemas import (
     VehicleRoute, RouteStep
 )
 from strategies.base_strategy import BaseRoutingStrategy
+from strategies.seed_utils import DEFAULT_SEED
 from strategies.sota_response_builder import build_sota_request_context
 from uniride_core.algorithms.string_exact_tsp import solve_exact_tsp_route
 from uniride_core.algorithms.vehicle_assignment import VehicleCalculator
@@ -89,7 +91,10 @@ class PermutationTSPStrategy(BaseRoutingStrategy):
             sw_capacity=request.sw_capacity,
             so_capacity=request.so_capacity,
             max_tour_time=request.max_travel_time,
-            clustering_algorithm=request.clustering_algorithm
+            clustering_algorithm=request.clustering_algorithm or "sweep",
+            # The exact solver is seedless; only randomised clustering draws from this
+            # local generator, never from the global ``random`` state (H12).
+            rng=random.Random(DEFAULT_SEED),
         )
 
         def route_optimizer(location_codes: List[str]) -> Dict:

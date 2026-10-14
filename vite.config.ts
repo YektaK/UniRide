@@ -10,5 +10,10 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    // Each jsdom worker imports the full React/Radix tree; on machines with
+    // many cores the unbounded default oversubscribes CPU and random tests
+    // hit the 5 s per-test timeout. Capping workers keeps per-test timing
+    // honest without raising any timeout.
+    maxWorkers: 4,
   },
 });

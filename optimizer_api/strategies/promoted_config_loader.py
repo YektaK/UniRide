@@ -3,15 +3,18 @@
 from __future__ import annotations
 
 import hashlib
+import json
+import logging
 import os
 from functools import lru_cache
 from typing import Any, Dict, Iterable, Optional
 
 from academic_benchmark.promoted_configs import (
     DEFAULT_PROMOTED_CONFIG_PATH,
-    load_promoted_configs,
     resolve_promoted_params,
 )
+
+logger = logging.getLogger(__name__)
 
 PROMOTED_CONFIG_PATH_ENV = "UNIRIDE_PROMOTED_CONFIG_PATH"
 # Owner decision 2026-10-13 (DECISION_LOG A12): production ignores academic
@@ -42,10 +45,8 @@ def promoted_config_provenance() -> Dict[str, Any]:
     does not exist or is unreadable. Pure metadata: it never changes a result.
     """
     path = get_promoted_config_path()
-    try:
-        load_runtime_promoted_configs()
-    except Exception:  # noqa: BLE001 - a malformed file must not break provenance
-        pass
+    # Same explicit cache key as get_promoted_params; never raises (see loader).
+    load_runtime_promoted_configs(path)
     digest = _LOADED_SHA256.get(path)
     return {
         "promoted_config_flag": promoted_config_enabled(),
@@ -63,18 +64,43 @@ def get_promoted_config_path() -> str:
 _LOADED_SHA256: Dict[str, Optional[str]] = {}
 
 
-@lru_cache(maxsize=4)
 def load_runtime_promoted_configs(path: Optional[str] = None) -> Dict[str, object]:
-    resolved_path = path or get_promoted_config_path()
+    """Promoted-config document for ``path`` (default: the env/default path).
+
+    The path is resolved BEFORE the cached call, so the cache key is always the
+    explicit resolved path and a later path change is never masked.
+    """
+    return _load_cached(path or get_promoted_config_path())
+
+
+def _empty_document(source: str) -> Dict[str, object]:
+    return {"schema_version": 1, "source": source, "configs": []}
+
+
+@lru_cache(maxsize=4)
+def _load_cached(resolved_path: str) -> Dict[str, object]:
     if not os.path.exists(resolved_path):
         _LOADED_SHA256[resolved_path] = None
-        return {"schema_version": 1, "source": "missing", "configs": []}
+        return _empty_document("missing")
+    # Production must never fail because of this optional file: an unreadable or
+    # malformed file yields no configs (defaults apply), a logged warning and no
+    # hash. The hash and the parsed document come from the same bytes.
     try:
         with open(resolved_path, "rb") as handle:
-            _LOADED_SHA256[resolved_path] = hashlib.sha256(handle.read()).hexdigest()
-    except OSError:
+            raw = handle.read()
+        document = json.loads(raw.decode("utf-8"))
+        if not isinstance(document, dict):
+            raise ValueError("top-level JSON value is not an object")
+    except (OSError, ValueError) as exc:  # JSONDecodeError/UnicodeDecodeError are ValueErrors
+        logger.warning(
+            "Ignoring promoted-config file %s (%s); built-in defaults apply.",
+            resolved_path,
+            type(exc).__name__,
+        )
         _LOADED_SHA256[resolved_path] = None
-    return load_promoted_configs(resolved_path)
+        return _empty_document("unreadable")
+    _LOADED_SHA256[resolved_path] = hashlib.sha256(raw).hexdigest()
+    return document
 
 
 def get_promoted_params(
@@ -90,7 +116,7 @@ def get_promoted_params(
     """
     if not promoted_config_enabled():
         return {}
-    document = load_runtime_promoted_configs(path)
+    document = load_runtime_promoted_configs(path or get_promoted_config_path())
     names = [algorithms] if isinstance(algorithms, str) else list(algorithms)
     for algorithm in names:
         params = resolve_promoted_params(
@@ -130,7 +156,7 @@ def normalize_strategy_params(params: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def clear_promoted_config_cache() -> None:
-    load_runtime_promoted_configs.cache_clear()
+    _load_cached.cache_clear()
     _LOADED_SHA256.clear()
 
 

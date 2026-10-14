@@ -43,6 +43,9 @@ export interface AlgorithmCompareResult {
   execution_time_seconds: number;
   error_message?: string;
   algorithm_requested?: string;
+  /** Set only when the requested solver did not run (e.g. "greedy_fallback"). */
+  algorithm_executed?: string;
+  fallback_reason?: string;
   feasibility_certificate?: unknown;
   applied_policy?: AppliedComputePolicyInfo;
 }
@@ -52,7 +55,9 @@ export interface CompareResult {
   results: AlgorithmCompareResult[];
   best_algorithm: string;
   fastest_algorithm: string;
-  summary: Record<string, { total_vehicles: number; total_duration_minutes: number; execution_time_seconds: number; success: boolean }>;
+  summary: Record<string, { total_vehicles: number; total_duration_minutes: number; execution_time_seconds: number; success: boolean; algorithm_executed?: string; fallback_reason?: string }>;
+  /** Requested algorithms whose run was served by a fallback (absent when none). */
+  fallback_algorithms?: string[];
   /** Set when the optimizer failed closed on the travel-time matrix (503/422). */
   error_message?: string;
   error_code?: "travel_time_matrix_unavailable" | "travel_time_matrix_locations_missing";

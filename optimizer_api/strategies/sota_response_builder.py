@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Optional
 
 from models.schemas import OptimizationResponse, RouteStep, VehicleRoute
 from utils.data_loader import DataLoader, euclidean_distance
 from uniride_core.adapters.demand_builder import student_occurrence_keys
+from uniride_core.adapters.sota_tsp_strategy_adapter import GREEDY_FALLBACK_ALGORITHM
 
 DistanceLookup = Callable[[str, str], float]
 DurationLookup = Callable[[str, str], float]
@@ -95,8 +96,14 @@ def build_single_route_response(
     duration_lookup: DurationLookup,
     distance_lookup: DistanceLookup,
     execution_time_seconds: float,
+    fallback_reason: Optional[str] = None,
 ) -> OptimizationResponse:
-    """Convert a SOTA student order into the current UniRide API response."""
+    """Convert a SOTA student order into the current UniRide API response.
+
+    ``fallback_reason`` is set when the SOTA solver did not run and a fallback
+    order was served: the response then says so (``algorithm_used`` is
+    ``greedy_fallback``) instead of carrying the requested algorithm's name.
+    """
     route_details = []
     route_distance = 0.0
 
@@ -153,12 +160,13 @@ def build_single_route_response(
     )
 
     return OptimizationResponse(
-        algorithm_used=algorithm_name,
+        algorithm_used=GREEDY_FALLBACK_ALGORITHM if fallback_reason else algorithm_name,
         success=True,
         routes=[route],
         total_vehicles=1,
         total_duration_minutes=round(total_duration, 2),
         execution_time_seconds=round(execution_time_seconds, 4),
+        fallback_reason=fallback_reason,
     )
 
 

@@ -163,6 +163,15 @@ export function formatRoutePlanForSave(
         throw new Error("Calculation result direction does not match the requested direction");
     }
 
+    // M26: when the optimizer served a fallback instead of the selected solver,
+    // persist the algorithm that actually ran, never the UI-selected strategy.
+    const meta = optimizationResult.meta as { algorithmUsed?: unknown; fallbackReason?: unknown } | undefined;
+    const fallbackReason = optimizationResult.fallback_reason ?? meta?.fallbackReason;
+    const metaAlgorithm = typeof meta?.algorithmUsed === "string" && meta.algorithmUsed ? meta.algorithmUsed : undefined;
+    const persistedAlgorithm = fallbackReason
+        ? (metaAlgorithm ?? optimizationResult.algorithm_used ?? "greedy_fallback")
+        : algorithmUsed;
+
     const routes = (optimizationResult.routes ?? optimizationResult.assignments ?? []) as VehicleRoute[] | Record<string, unknown>[];
 
     function countStudents(route: VehicleRoute | Record<string, unknown>): number {
@@ -180,7 +189,7 @@ export function formatRoutePlanForSave(
     return {
         planDate,
         direction: returned,
-        algorithmUsed,
+        algorithmUsed: persistedAlgorithm,
         clusteringUsed,
         totalVehicles: optimizationResult.requiredVehicles ?? optimizationResult.total_vehicles ?? routes.length,
         totalDurationMinutes: optimizationResult.totalDuration ?? optimizationResult.total_duration_minutes ?? 0,

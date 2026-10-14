@@ -191,6 +191,27 @@ describe("VehiclePlanningPage", () => {
     expect(mocks.saveRoutePlan).toHaveBeenCalledWith(expect.objectContaining({ direction: "pickup" }));
   });
 
+  it("saves a SOTA fallback plan as greedy_fallback, not as the selected strategy (M26)", async () => {
+    mocks.getAllUsers.mockResolvedValue(students);
+    mocks.calculate.mockResolvedValue({
+      ...resultPickup,
+      meta: {
+        ...resultPickup.meta,
+        algorithmUsed: "greedy_fallback",
+        algorithmRequested: "genetic_algorithm",
+        fallbackReason: "solver_error",
+      },
+    });
+
+    await selectStudentAndCalculate("pickup");
+
+    fireEvent.click(screen.getByRole("button", { name: /save/ }));
+    await waitFor(() => expect(mocks.saveRoutePlan).toHaveBeenCalledTimes(1));
+    expect(mocks.saveRoutePlan).toHaveBeenCalledWith(
+      expect.objectContaining({ algorithmUsed: "greedy_fallback" }),
+    );
+  });
+
   it.each([
     ["that omits the result direction", { ...resultOk }],
     ["with an invalid result direction", { ...resultOk, direction: "sideways" }],

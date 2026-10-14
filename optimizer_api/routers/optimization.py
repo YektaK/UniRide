@@ -278,7 +278,9 @@ def optimize_route(request: OptimizationRequest) -> OptimizationResponse:
                 feasibility_certificate=typed_certificate,
             )
         result = OptimizationResponse.model_validate(result.model_dump())
-        result.algorithm_used = resolution.canonical
+        # M26: a fallback response keeps its truthful label (greedy_fallback)
+        if result.fallback_reason is None:
+            result.algorithm_used = resolution.canonical
         result.algorithm_requested = resolution.requested
         result.applied_policy = AppliedComputePolicyInfo.model_validate(
             applied_policy.model_dump()
@@ -487,6 +489,10 @@ def _run_single_algorithm(
             ),
             feasibility_certificate=typed_certificate,
             matrix_provenance=matrix_provenance,
+            algorithm_executed=(
+                response.algorithm_used if response.fallback_reason else None
+            ),
+            fallback_reason=response.fallback_reason,
         )
     except _MATRIX_ERRORS:
         # The matrix is a request-level precondition shared by every
@@ -649,6 +655,7 @@ def compare_algorithms(request: CompareRequest) -> CompareResponse:
         result
         for result in results
         if result.success
+        and result.fallback_reason is None  # a fallback is not the requested algorithm
         and result.feasibility_certificate is not None
         and result.feasibility_certificate.is_feasible
     ]
@@ -672,9 +679,20 @@ def compare_algorithms(request: CompareRequest) -> CompareResponse:
             "total_duration_minutes": round(result.total_duration_minutes, 2),
             "execution_time_seconds": round(result.execution_time_seconds, 4),
             "success": result.success,
+            **(
+                {
+                    "algorithm_executed": result.algorithm_executed,
+                    "fallback_reason": result.fallback_reason,
+                }
+                if result.fallback_reason
+                else {}
+            ),
         }
         for result in results
     }
+    fallback_algorithms = [
+        result.algorithm for result in results if result.fallback_reason
+    ]
     return CompareResponse(
         success=bool(eligible),
         results=results,
@@ -683,6 +701,7 @@ def compare_algorithms(request: CompareRequest) -> CompareResponse:
         summary=summary,
         applied_policy=_comparison_metadata(policy, request),
         matrix_provenance=_shared_provenance(results),
+        fallback_algorithms=fallback_algorithms or None,
     )
 
 

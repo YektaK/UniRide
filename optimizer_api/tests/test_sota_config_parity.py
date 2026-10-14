@@ -15,6 +15,7 @@ from strategies.promoted_config_loader import (
 from strategies.rdma_strategy import R2DMAStrategy
 from strategies.sota_config_utils import merge_sota_config
 from uniride_core.algorithms.sota_tsp import E2BSOTSPConfig, PAOEAConfig, R2DMATSPConfig
+from uniride_core.adapters.sota_tsp_strategy_adapter import SotaOrderOutcome
 
 
 def test_merge_sota_config_applies_valid_request_overrides():
@@ -158,10 +159,10 @@ def test_sota_strategy_optimize_merges_request_config(
             "distance_lookup": lambda origin, destination: 0.0 if origin == destination else 1.0,
         }
 
-    def fake_solve(student_ids, depot_id, distance_lookup, duration_lookup, solver_cls, config):
+    def fake_solve(student_ids, depot_id, duration_lookup, solver_cls, config):
         captured["solver_cls"] = solver_cls
         captured["config"] = config
-        return list(student_ids)
+        return SotaOrderOutcome(order=list(student_ids))
 
     def fake_response(**kwargs):
         return OptimizationResponse(

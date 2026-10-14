@@ -574,12 +574,22 @@ class OptimizationResponse(BaseModel):
     # absent from the JSON when unset so other responses stay byte-identical.
     effective_config_source: Optional[str] = None
     effective_seed: Optional[int] = None
+    # M26/QW11: short reason code (never exception text) set only when the
+    # requested SOTA solver did not run and a fallback order was served; then
+    # ``algorithm_used`` is "greedy_fallback" and ``algorithm_requested``
+    # keeps the request. Absent from the JSON when unset.
+    fallback_reason: Optional[str] = None
 
     @model_serializer(mode="wrap")
     def _omit_unset_optional_fields(self, handler):
         data = handler(self)
         if isinstance(data, dict):
-            for key in ("fleet_mix", "effective_config_source", "effective_seed"):
+            for key in (
+                "fleet_mix",
+                "effective_config_source",
+                "effective_seed",
+                "fallback_reason",
+            ):
                 if data.get(key) is None:
                     data.pop(key, None)
         return data
@@ -596,6 +606,20 @@ class AlgorithmResult(BaseModel):
     algorithm_requested: Optional[str] = None
     applied_policy: Optional[AppliedComputePolicyInfo] = None
     matrix_provenance: Optional[MatrixProvenanceInfo] = None
+    # M26/QW11: set only when the requested solver did not run (see
+    # OptimizationResponse.fallback_reason). ``algorithm`` stays the requested
+    # canonical key so comparison summaries keep a stable identity.
+    algorithm_executed: Optional[str] = None
+    fallback_reason: Optional[str] = None
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_fallback_fields(self, handler):
+        data = handler(self)
+        if isinstance(data, dict):
+            for key in ("algorithm_executed", "fallback_reason"):
+                if data.get(key) is None:
+                    data.pop(key, None)
+        return data
 
 class CompareRequest(BaseModel):
     students: List[StudentNode]
@@ -630,6 +654,15 @@ class CompareResponse(BaseModel):
     summary: Dict[str, Any]
     applied_policy: Optional[AppliedComputePolicyInfo] = None
     matrix_provenance: Optional[MatrixProvenanceInfo] = None
+    # M26/QW11: requested algorithms served by a fallback; absent when none.
+    fallback_algorithms: Optional[List[str]] = None
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_fallback_algorithms(self, handler):
+        data = handler(self)
+        if isinstance(data, dict) and data.get("fallback_algorithms") is None:
+            data.pop("fallback_algorithms", None)
+        return data
 
 class StrategyInfo(BaseModel):
     name: str

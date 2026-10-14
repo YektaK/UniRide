@@ -169,3 +169,64 @@ describe("optimizer-service optimizeRoutes", () => {
     expect(result.results[0]).toMatchObject(metadata);
   });
 });
+
+describe("optimizer-service SOTA fallback labelling (M26)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const students = [{ id: "s1", name: "Student 1", location_code: "L1", disability_type: "Sw" as const }];
+  const depot = { id: "depot", lat: 40, lng: 29 };
+
+  it("surfaces greedy_fallback and the reason code from the optimizer", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        algorithm_used: "greedy_fallback",
+        algorithm_requested: "e2bso",
+        fallback_reason: "solver_error",
+        routes: [],
+        total_vehicles: 1,
+        total_duration_minutes: 20,
+        execution_time_seconds: 0.5,
+      }),
+    }));
+
+    const result = await optimizeRoutes(students, depot);
+
+    expect(result).toMatchObject({
+      algorithm_used: "greedy_fallback",
+      algorithm_requested: "e2bso",
+      fallback_reason: "solver_error",
+    });
+  });
+
+  it("omits fallback_reason when the requested algorithm ran", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, algorithm_used: "e2bso", routes: [], total_vehicles: 1, total_duration_minutes: 20, execution_time_seconds: 0.5 }),
+    }));
+
+    const result = await optimizeRoutes(students, depot);
+
+    expect(result).not.toHaveProperty("fallback_reason");
+  });
+
+  it("surfaces the executed algorithm for a fallback comparison result", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        results: [{ algorithm: "e2bso", success: true, routes: [], total_vehicles: 1, total_duration_minutes: 20, execution_time_seconds: 0.5, algorithm_executed: "greedy_fallback", fallback_reason: "solver_error" }],
+        best_algorithm: "",
+        fastest_algorithm: "",
+        summary: {},
+      }),
+    }));
+
+    const result = await compareAllAlgorithms(students, depot);
+
+    expect(result.results[0]).toMatchObject({ algorithm: "e2bso", algorithm_executed: "greedy_fallback", fallback_reason: "solver_error" });
+  });
+});

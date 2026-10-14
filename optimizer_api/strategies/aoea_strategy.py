@@ -85,10 +85,9 @@ class PAOEAStrategy(BaseRoutingStrategy):
         time_matrix = context["time_matrix"]
         coordinates = context["coordinates"]
         distance_lookup = context["distance_lookup"]
-        best_order = solve_student_order_with_sota_tsp(
+        outcome = solve_student_order_with_sota_tsp(
             context["student_ids"],
             depot.id,
-            distance_lookup,
             lambda origin, destination: self._get_duration(origin, destination, time_matrix, coordinates),
             PAOEA_TSP,
             effective_config,
@@ -99,9 +98,10 @@ class PAOEAStrategy(BaseRoutingStrategy):
             vehicle_label="P-AOEA",
             students=students,
             depot_id=depot.id,
-            best_order=best_order,
+            best_order=outcome.order,
             duration_lookup=lambda origin, destination: self._get_duration(origin, destination, time_matrix, coordinates),
             distance_lookup=distance_lookup,
             execution_time_seconds=time.time() - start_time,
+            fallback_reason=outcome.fallback_reason,
         )
 

@@ -64,29 +64,12 @@ function MatrixAgeNote({ plan }: { plan: DailyPlanView }) {
   const t = useTranslations("page.admin.dailyPlan.matrixAge");
   const age = plan.matrixAge;
   if (!age) return null;
-  const format = (parts: { unit: MatrixAgeUnit; count: number }) => {
-    const key = { lessThanMinute: "ageLessThanMinute", minutes: "ageMinutes", hours: "ageHours", days: "ageDays" }[parts.unit];
-    return t(key, { count: parts.count });
-  };
+  const parts = age.ageParts;
+  const key = parts && { lessThanMinute: "ageLessThanMinute", minutes: "ageMinutes", hours: "ageHours", days: "ageDays" }[parts.unit];
   return (
-    <div className="space-y-2" data-testid="matrix-age-section">
-      <p data-testid="matrix-age" className="text-sm text-muted-foreground">
-        {age.ageParts ? t("loaded", { age: format(age.ageParts) }) : t("unknownAge")}
-      </p>
-      {age.warning && (
-        <Alert
-          role="status"
-          data-testid="matrix-age-warning"
-          className="border-amber-400 bg-amber-50 text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-50"
-        >
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>{t("warningTitle")}</AlertTitle>
-          <AlertDescription>
-            {age.warning === "refresh_failed" ? t("warningRefreshFailed") : t("warningStale", { max: format(age.maxAgeParts) })}
-          </AlertDescription>
-        </Alert>
-      )}
-    </div>
+    <p data-testid="matrix-age" className="text-sm text-muted-foreground">
+      {parts && key ? t("loaded", { age: t(key, { count: parts.count }) }) : t("unknownAge")}
+    </p>
   );
 }
 

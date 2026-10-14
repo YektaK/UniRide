@@ -54,6 +54,14 @@ class MatrixSnapshotError(RuntimeError):
     """Raised when a healthy, complete Supabase matrix snapshot is unavailable."""
 
 
+class MatrixStaleError(MatrixSnapshotError):
+    """A matrix is loaded but is a kept (failed-refresh) or TTL-old one (C2 gate).
+
+    A subclass, so every ``except MatrixSnapshotError`` keeps failing closed; the
+    snapshot route uses it to give the 503 a distinct, fixed detail (M4, T09).
+    """
+
+
 class MatrixUnavailableError(MatrixSnapshotError):
     """No authoritative travel-time matrix is loaded (fail closed).
 
@@ -664,10 +672,12 @@ class TimeMatrixRepository:
                 raise MatrixSnapshotError("coordinate fallback is not authoritative")
             if self._loaded_at is None:
                 raise MatrixSnapshotError("matrix is not loaded")
-            # M4 / MT2 staleness half (owner decision 2026-10-13, DECISION_LOG
-            # T09): a matrix kept after a failed refresh, or older than the TTL,
-            # is still served. It is flagged (``provenance.refresh_failed``) and
-            # its age is reported so the consumer can warn; no fail-closed gate.
+            # C2 gate, kept by owner decision 2026-10-14 (DECISION_LOG T09): a matrix
+            # kept after a failed refresh, or older than the TTL, is never served.
+            if self._last_error is not None:
+                raise MatrixStaleError("matrix provider is unhealthy")
+            if self._ttl_seconds > 0 and self._clock() - self._loaded_at > self._ttl_seconds:
+                raise MatrixStaleError("matrix is stale")
 
             locations = list(self.locations)
             matrix = [list(row) for row in self.time_matrix]
@@ -788,6 +798,7 @@ __all__ = [
     "academic_coordinate_scope",
     "in_academic_coordinate_scope",
     "MatrixSnapshotError",
+    "MatrixStaleError",
     "MatrixUnavailableError",
     "SupabaseTimeMatrixProvider",
     "TimeMatrixRepository",

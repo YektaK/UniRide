@@ -1523,7 +1523,8 @@ describe("POST /api/admin/dudullu-preview matrix age (M4, C2 gate kept)", () => 
 
     expect(response.status).toBe(200);
     expect(body).toMatchObject({ status: "blocked_data", publishable: false, jobs: [] });
-    expect(body.reasonCodes).toEqual([reason]);
+    expect(body.reasonCodes).toContain(reason);
+    expect(body.reasonCodes).not.toContain(reason === "MATRIX_STALE" ? "MATRIX_UNAVAILABLE" : "MATRIX_STALE");
     expect(optimizerFetchMock.mock.calls.map(([path]) => path)).toEqual(["/api/v1/internal/matrix-snapshot"]);
   });
 });

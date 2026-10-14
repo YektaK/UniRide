@@ -268,10 +268,7 @@
           "ageLessThanMinute": "1 dakikadan kısa süre",
           "ageMinutes": "{count} dakika",
           "ageHours": "{count} saat",
-          "ageDays": "{count} gün",
-          "warningTitle": "Seyahat süresi matrisi güncel olmayabilir",
-          "warningStale": "Matris {max} sınırından daha eski. Plan yine de oluşturuldu; yolculuk süreleri güncel olmayabilir.",
-          "warningRefreshFailed": "Matris yenilenemedi; son başarılı yüklemedeki matris kullanıldı. Plan yine de oluşturuldu; yolculuk süreleri güncel olmayabilir."
+          "ageDays": "{count} gün"
         },
         "banner": {
           "title": "Önizleme — yayınlanamaz, varsayımsal",
@@ -367,6 +364,7 @@
           "LEGACY_AMBIGUOUS_CONFIRMATION": "Bazı öğrencilerin eski usul talepleri var ve onay durumları belirsiz.",
           "MATRIX_ARC_MISMATCH": "Rotadaki bir süre, seyahat süresi matrisiyle uyuşmuyor.",
           "MATRIX_SNAPSHOT_INVALID": "Seyahat süresi matrisi geçersiz veya bozuk.",
+          "MATRIX_STALE": "Seyahat süresi matrisi güncel değil (yenilenemedi veya süresi doldu); rota hesaplanamadı, plan oluşturulmadı.",
           "MATRIX_UNAVAILABLE": "Seyahat süresi matrisi alınamadı veya eksik; rota hesaplanamadı.",
           "MISSING_OCCURRENCE_COVERAGE": "Bazı seferler hiçbir rotaya yerleştirilmedi; plan geçersiz sayıldı.",
           "NO_ADMITTED_DEMAND": "Bu gün için onaylı sefer yok.",

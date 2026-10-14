@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 # second singleton (and a second matrix cache with its own TTL).
 from auth import require_internal_api_key
 from utils.data_loader import DataLoader
-from utils.matrix_repository import MatrixSnapshotError
+from utils.matrix_repository import MatrixSnapshotError, MatrixStaleError
 
 router = APIRouter(
     prefix="/api/v1/internal",
@@ -27,6 +27,7 @@ MAX_STUDENT_LOCATION_CODES = 250
 _FIXED_422 = {"detail": "Invalid readiness request"}
 _SNAPSHOT_422 = {"detail": "Invalid matrix snapshot request"}
 _SNAPSHOT_503 = {"detail": "Matrix snapshot unavailable"}
+_SNAPSHOT_503_STALE = {"detail": "Matrix snapshot stale"}
 
 
 def _parse_student_location_codes(body):
@@ -111,6 +112,8 @@ async def matrix_snapshot(request: Request) -> JSONResponse:
 
     try:
         snapshot = await run_in_threadpool(_matrix_snapshot_sync, codes)
+    except MatrixStaleError:
+        return JSONResponse(status_code=503, content=_SNAPSHOT_503_STALE)
     except MatrixSnapshotError:
         return JSONResponse(status_code=503, content=_SNAPSHOT_503)
     except Exception:  # noqa: BLE001 - fixed redacted boundary

@@ -21,7 +21,6 @@ export interface MatrixSnapshot {
   readonly provenance?: {
     readonly loaded_at?: string | null;
     readonly age_seconds?: number | null;
-    readonly refresh_failed?: boolean;
   };
   readonly arcs: readonly MatrixArc[];
 }
@@ -99,6 +98,7 @@ export type PreviewReasonCode =
   | "LEGACY_AMBIGUOUS_CONFIRMATION"
   | "MATRIX_ARC_MISMATCH"
   | "MATRIX_SNAPSHOT_INVALID"
+  | "MATRIX_STALE"
   | "MATRIX_UNAVAILABLE"
   | "MISSING_OCCURRENCE_COVERAGE"
   | "NO_ADMITTED_DEMAND"

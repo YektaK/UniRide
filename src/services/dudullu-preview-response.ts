@@ -115,12 +115,10 @@ export const dudulluPreviewResponseSchema = z.object({
   /** Present only for OPTIMIZER_RATE_LIMITED when the optimizer sent a numeric Retry-After. */
   retryAfterSeconds: z.number().int().positive().optional(),
   occurrenceLabels: z.record(z.string(), z.string()),
-  /** Load time, age and refresh state of the matrix; absent or null when the optimizer sent none. */
+  /** Load time and age of the matrix the plan used; absent or null when the optimizer sent none. */
   matrixAge: z.object({
     loadedAt: z.string().nullable(),
     ageSeconds: z.number().finite().nonnegative().nullable(),
-    refreshFailed: z.boolean(),
-    maxAgeSeconds: z.number().int().positive(),
   }).nullable().optional(),
 });
 

@@ -30,6 +30,7 @@ export const KNOWN_REASON_CODES = [
   "LEGACY_AMBIGUOUS_CONFIRMATION",
   "MATRIX_ARC_MISMATCH",
   "MATRIX_SNAPSHOT_INVALID",
+  "MATRIX_STALE",
   "MATRIX_UNAVAILABLE",
   "MISSING_OCCURRENCE_COVERAGE",
   "NO_ADMITTED_DEMAND",
@@ -195,14 +196,8 @@ export type MatrixAgeUnit = "lessThanMinute" | "minutes" | "hours" | "days";
 export interface PlanMatrixAge {
   readonly loadedAt: string | null;
   readonly ageSeconds: number | null;
-  readonly refreshFailed: boolean;
-  readonly maxAgeSeconds: number;
   /** Human unit and count of the age; null when the load time is unknown. */
   readonly ageParts: { readonly unit: MatrixAgeUnit; readonly count: number } | null;
-  /** The maximum in the same units, for the warning text. */
-  readonly maxAgeParts: { readonly unit: MatrixAgeUnit; readonly count: number };
-  /** `refresh_failed` wins over `stale`; null means no warning. The plan is never blocked. */
-  readonly warning: "refresh_failed" | "stale" | null;
 }
 
 export function matrixAgeParts(seconds: number): { unit: MatrixAgeUnit; count: number } {
@@ -214,13 +209,7 @@ export function matrixAgeParts(seconds: number): { unit: MatrixAgeUnit; count: n
 
 function buildPlanMatrixAge(age: DudulluPreviewResponse["matrixAge"]): PlanMatrixAge | null {
   if (!age) return null;
-  const exceeds = age.ageSeconds !== null && age.ageSeconds > age.maxAgeSeconds;
-  return {
-    ...age,
-    ageParts: age.ageSeconds === null ? null : matrixAgeParts(age.ageSeconds),
-    maxAgeParts: matrixAgeParts(age.maxAgeSeconds),
-    warning: age.refreshFailed ? "refresh_failed" : exceeds ? "stale" : null,
-  };
+  return { ...age, ageParts: age.ageSeconds === null ? null : matrixAgeParts(age.ageSeconds) };
 }
 
 export interface DailyPlanView {
@@ -233,7 +222,7 @@ export interface DailyPlanView {
   readonly limits: DudulluPreviewResponse["limits"];
   /** Seconds the optimizer asked us to wait (HTTP 429 `Retry-After`); null when not given. */
   readonly retryAfterSeconds: number | null;
-  /** Matrix load time and age with the warning decision; null when the response carries none. */
+  /** Matrix load time and age; null when the response carries none. */
   readonly matrixAge: PlanMatrixAge | null;
   readonly summary: PlanSummary;
   readonly reasons: readonly PlanReason[];

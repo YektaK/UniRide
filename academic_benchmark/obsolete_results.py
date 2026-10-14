@@ -42,7 +42,9 @@ AFFECTED_ALGORITHMS = frozenset({"ga_split_enhanced", "ga_split_hf"})
 
 # Historical rule: rows stamped on/after this date are NOT historical. Readers resolve the
 # module attribute at call time (see ``legacy_cutoff``); writers stamp ISO instants.
-# [EKSIK: owner rationale for the exact cutoff date]
+# Rationale (owner-confirmed 2026-10-15, DECISION_LOG A13): 2026-10-13 is the day the second of two
+# evidence fixes landed (2026-10-09 merge 62673ca: ga_split params+seed; 2026-10-13 merge 2e157a1:
+# Science-review label/identity fixes), so every earlier result is missing at least one of them.
 LEGACY_CUTOFF = "2026-10-13"
 LEGACY_REASON = (
     "pre-2026-10-13 result: produced before the fairness protocol was enforced and before the "

@@ -49,6 +49,8 @@ def _repo_with_crlf_working_copy(tmp_path: Path, tracked_relative: str) -> tuple
     _git(repo, "init")
     _git(repo, "add", tracked_relative)
     _git(repo, "commit", "-m", "lf blob")
+    # this repo behaves like a Windows checkout: git normalises CRLF, so a CRLF working copy is NOT drift
+    subprocess.run(["git", "config", "--local", "core.autocrlf", "true"], cwd=repo, check=True)
     target.write_bytes(CRLF_TEXT)
     return repo, target
 
@@ -152,3 +154,80 @@ def test_committed_manifest_values_equal_the_committed_blobs(manifest_path: Path
         if (len(blob), _sha(blob)) != (entry["byte_size"], entry["sha256"]):
             wrong.append(entry["archive_path"])
     assert not wrong, f"{len(wrong)} manifest entries differ from the committed blob, e.g. {wrong[:3]}"
+
+
+SOURCE_ROOT = PurePosixPath("academic_benchmark/yaem2026")
+ARCHIVE_ROOT = PurePosixPath("archive/academic_benchmark/yaem2026_legacy")
+
+
+def _committed_source_repo(tmp_path: Path) -> tuple[Path, Path]:
+    repo = tmp_path / "repo"
+    source = repo / "academic_benchmark" / "yaem2026" / "core" / "solver.py"
+    source.parent.mkdir(parents=True)
+    source.write_bytes(LF_TEXT)
+    _git(repo, "init")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "source")
+    return repo, source
+
+
+def _quarantine(repo: Path):
+    return quarantine_tracked_tree(
+        repo_root=repo, source_root=SOURCE_ROOT, archive_root=ARCHIVE_ROOT, archive_id="yaem2026_legacy"
+    )
+
+
+@pytest.mark.parametrize("stage", [False, True], ids=["unstaged", "staged-not-committed"])
+def test_quarantine_refuses_a_source_that_differs_from_head_and_moves_nothing(tmp_path: Path, stage: bool):
+    """P2: the manifest records committed bytes, so an uncommitted edit would be silently archived
+    as something the manifest does not describe. The function must raise before any move."""
+    from academic_benchmark.archive_manifest import QuarantineBlocked
+
+    repo, source = _committed_source_repo(tmp_path)
+    edited = b"VALUE = 99  # uncommitted edit\n"
+    source.write_bytes(edited)
+    if stage:
+        _git(repo, "add", "-A")
+    with pytest.raises(QuarantineBlocked, match="uncommitted"):
+        _quarantine(repo)
+    assert source.read_bytes() == edited  # still in place, untouched
+    assert not (repo / "archive").exists()  # nothing moved, no archive directory created
+
+
+def test_clean_quarantine_moves_exactly_the_bytes_the_manifest_describes(tmp_path: Path):
+    repo, source = _committed_source_repo(tmp_path)
+    manifest = _quarantine(repo)
+    moved = repo / Path(*ARCHIVE_ROOT.parts) / "core" / "solver.py"
+    (entry,) = manifest.entries
+    assert (len(moved.read_bytes()), _sha(moved.read_bytes())) == (entry.byte_size, entry.sha256)
+    assert not source.exists()
+
+
+def test_verify_reports_working_copy_drift_in_a_tracked_archive(tmp_path: Path):
+    """P1: with a repo present, a tracked archived file edited after commit is reported (the
+    manifest equals the blob, so only git's own comparison can see it)."""
+    relative = "archive/academic_benchmark/yaem2026_legacy/core/solver.py"
+    repo, target = _repo_with_crlf_working_copy(tmp_path, relative)
+    archive = repo / Path(*ARCHIVE_ROOT.parts)
+    manifest = build_manifest(
+        archive_id="yaem2026_legacy", source_root=SOURCE_ROOT, archive_root=ARCHIVE_ROOT, archived_root=archive,
+        original_paths=[PurePosixPath("core/solver.py")], withheld=[],
+    )
+    assert verify_manifest(manifest, archive) == []  # CRLF alone is normalised away by git
+    target.write_bytes(b"VALUE = 99\r\n")
+    assert verify_manifest(manifest, archive) == ["working copy differs from committed: core/solver.py"]
+
+
+def test_committed_bytes_ignores_inherited_git_environment(tmp_path: Path, monkeypatch):
+    """A git hook exports GIT_DIR/GIT_INDEX_FILE/GIT_WORK_TREE; they must not redirect the lookup."""
+    from academic_benchmark.committed_bytes import committed_bytes
+
+    relative = "archive/x/core/solver.py"
+    repo, target = _repo_with_crlf_working_copy(tmp_path / "a", relative)
+    other = tmp_path / "other"
+    other.mkdir()
+    _git(other, "init")
+    monkeypatch.setenv("GIT_DIR", str(other / ".git"))
+    monkeypatch.setenv("GIT_WORK_TREE", str(other))
+    monkeypatch.setenv("GIT_INDEX_FILE", str(other / ".git" / "index"))
+    assert committed_bytes(target) == LF_TEXT

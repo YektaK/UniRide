@@ -124,3 +124,35 @@ def test_malformed_file_with_flag_off_reports_no_hash(tmp_path, monkeypatch):
     monkeypatch.setenv(PROMOTED_CONFIG_PATH_ENV, str(path))
 
     assert promoted_config_provenance()["promoted_config_sha256"] is None
+
+
+_WRONG_SHAPE_PAYLOADS = [
+    '{"configs": "abc"}',
+    '{"configs": [1]}',
+    '{"configs": null}',
+    '{"configs": [{"algorithm": "ga_split", "params": "oops"}]}',
+    '{"configs": [{"algorithm": "ga_split", "params": [1, 2]}]}',
+    '"just a string"',
+    "42",
+    "null",
+    "[" * 100000,  # RecursionError in json.loads, not a ValueError
+]
+
+
+@pytest.mark.parametrize("payload", _WRONG_SHAPE_PAYLOADS)
+def test_valid_json_with_wrong_shape_falls_back_logs_and_stores_no_hash(
+    tmp_path, monkeypatch, caplog, payload
+):
+    path = tmp_path / "shape.json"
+    path.write_text(payload, encoding="utf-8")
+    monkeypatch.setenv(PROMOTED_CONFIG_PATH_ENV, str(path))
+    monkeypatch.setenv(USE_PROMOTED_ENV, "1")
+
+    with caplog.at_level(logging.WARNING, logger="strategies.promoted_config_loader"):
+        config = get_strategy("ga_split").config  # must not raise
+        provenance = promoted_config_provenance()
+
+    assert config == GASplitStrategy.DEFAULT_CONFIG
+    assert provenance["promoted_config_sha256"] is None
+    assert any(r.levelno == logging.WARNING for r in caplog.records)
+    assert "abc" not in caplog.text and "oops" not in caplog.text  # content is never logged

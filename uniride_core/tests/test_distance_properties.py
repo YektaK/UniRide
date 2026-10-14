@@ -37,6 +37,18 @@ def _approx_triangle(a, b, c, dist_fn):
     return dist_fn(a, c) <= dist_fn(a, b) + dist_fn(b, c) + TOL
 
 
+def _unclamped_haversine(lat1, lon1, lat2, lon2):
+    """The formula as it was before the clamp (reference for the identity tests)."""
+    lat1_r, lat2_r = math.radians(lat1), math.radians(lat2)
+    dlat, dlon = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2) ** 2 + math.cos(lat1_r) * math.cos(lat2_r) * math.sin(dlon / 2) ** 2
+    return EARTH_RADIUS_M * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def _same_float(x, y):
+    return (math.isnan(x) and math.isnan(y)) or x.hex() == y.hex()
+
+
 class TestHaversine:
     def test_exact_antipodal_pair_does_not_raise(self):
         # 45 N 0 E vs 45 S 180 E: 1 - a used to round to -2.2e-16 and math.sqrt raised.
@@ -47,12 +59,6 @@ class TestHaversine:
         """Bit-identical to the unclamped formula wherever that formula returns."""
         rng = random.Random(20261014)
 
-        def unclamped(lat1, lon1, lat2, lon2):
-            lat1_r, lat2_r = math.radians(lat1), math.radians(lat2)
-            dlat, dlon = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
-            a = math.sin(dlat / 2) ** 2 + math.cos(lat1_r) * math.cos(lat2_r) * math.sin(dlon / 2) ** 2
-            return EARTH_RADIUS_M * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-
         compared = 0
         for i in range(1200):
             lat1, lon1 = rng.uniform(-90, 90), rng.uniform(-180, 180)
@@ -62,12 +68,30 @@ class TestHaversine:
             else:
                 lat2, lon2 = rng.uniform(-90, 90), rng.uniform(-180, 180)
             try:
-                expected = unclamped(lat1, lon1, lat2, lon2)
+                expected = _unclamped_haversine(lat1, lon1, lat2, lon2)
             except ValueError:
                 continue  # the antipodal-rounding inputs the clamp exists for
-            assert haversine_distance(lat1, lon1, lat2, lon2) == expected
+            assert _same_float(haversine_distance(lat1, lon1, lat2, lon2), expected)
             compared += 1
         assert compared >= 1000
+
+    def test_nan_coordinate_propagates_as_nan_not_zero(self):
+        # max(0.0, nan) is 0.0 in Python: a naive clamp would report 0 m ("same place").
+        for args in [(math.nan, 0, 1, 1), (0, math.nan, 1, 1), (0, 0, math.nan, 1), (0, 0, 1, math.nan)]:
+            assert math.isnan(haversine_distance(*args)), args
+
+    def test_nan_and_inf_inputs_match_the_unclamped_formula(self):
+        specials = [math.nan, math.inf, -math.inf, 0.0, 90.0, -180.0]
+        for lat1 in specials:
+            for lat2 in specials:
+                for lon1, lon2 in [(0.0, 0.0), (math.nan, 5.0), (7.0, math.inf)]:
+                    try:
+                        expected = _unclamped_haversine(lat1, lon1, lat2, lon2)
+                    except ValueError:
+                        with pytest.raises(ValueError):
+                            haversine_distance(lat1, lon1, lat2, lon2)
+                        continue
+                    assert _same_float(haversine_distance(lat1, lon1, lat2, lon2), expected)
 
     @given(GEO_POINT, GEO_POINT)
     @example(p1=(45.0, 0.0), p2=(-45.0, 180.0))

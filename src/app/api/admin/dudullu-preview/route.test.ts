@@ -1480,7 +1480,8 @@ describe("POST /api/admin/dudullu-preview time limits", () => {
 
 describe("POST /api/admin/dudullu-preview matrix age (M4, C2 gate kept)", () => {
   const provenance = { source: "supabase", sha256: "a".repeat(64), location_count: 2,
-    loaded_at: "2026-09-30T05:00:00+00:00", age_seconds: 10800, refresh_failed: false };
+    loaded_at: "2026-09-30T05:00:00+00:00", age_seconds: 10800, refresh_failed: false,
+    data_updated_at: "2026-03-05T10:00:00+00:00", data_age_seconds: 19_000_000 };
 
   it("carries the matrix load time and age when a plan is produced", async () => {
     setAdmin(admittedRows());
@@ -1493,7 +1494,47 @@ describe("POST /api/admin/dudullu-preview matrix age (M4, C2 gate kept)", () => 
     const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
 
     expect(body.status).toBe("preview_ready");
-    expect(body.matrixAge).toEqual({ loadedAt: "2026-09-30T05:00:00+00:00", ageSeconds: 10800 });
+    expect(body.matrixAge).toEqual({
+      loadedAt: "2026-09-30T05:00:00+00:00", ageSeconds: 10800,
+      dataUpdatedAt: "2026-03-05T10:00:00+00:00", dataAgeSeconds: 19_000_000,
+    });
+  });
+
+  it("carries a null data age when the snapshot predates the updated_at column", async () => {
+    setAdmin(admittedRows());
+    const { data_updated_at: _a, data_age_seconds: _b, ...withoutData } = provenance;
+    optimizerFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/internal/matrix-snapshot") return Response.json({ ...matrix, provenance: withoutData });
+      return Response.json(solverResult("2026-09-30:pickup:student-1"));
+    });
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+
+    expect(body.status).toBe("preview_ready");
+    expect(body.matrixAge).toEqual({
+      loadedAt: "2026-09-30T05:00:00+00:00", ageSeconds: 10800, dataUpdatedAt: null, dataAgeSeconds: null,
+    });
+  });
+
+  it("ignores a malformed data age instead of blocking the plan", async () => {
+    setAdmin(admittedRows());
+    optimizerFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/internal/matrix-snapshot") {
+        return Response.json({ ...matrix, provenance: { ...provenance, data_age_seconds: "soon" } });
+      }
+      return Response.json(solverResult("2026-09-30:pickup:student-1"));
+    });
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+
+    expect(body.status).toBe("preview_ready");
+    // only the data age is dropped; the load time and age survive
+    expect(body.matrixAge).toEqual({
+      loadedAt: "2026-09-30T05:00:00+00:00", ageSeconds: 10800,
+      dataUpdatedAt: "2026-03-05T10:00:00+00:00", dataAgeSeconds: null,
+    });
   });
 
   it("reports null matrixAge when the optimizer sent no provenance", async () => {

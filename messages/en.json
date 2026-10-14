@@ -263,8 +263,8 @@
           "invalidResponse": "The server returned an unexpected response."
         },
         "matrixAge": {
-          "loaded": "Travel-time matrix: loaded {age} ago",
-          "unknownAge": "Travel-time matrix: load time unknown",
+          "dataUpdated": "Travel times last updated: {age} ago",
+          "unknownDataAge": "Travel times: last update time unknown",
           "ageLessThanMinute": "under a minute",
           "ageMinutes": "{count} min",
           "ageHours": "{count} h",

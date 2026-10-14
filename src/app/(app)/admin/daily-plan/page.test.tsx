@@ -499,12 +499,25 @@ describe("DailyPlanPage", () => {
   });
   describe("matrix age (M4, C2 gate kept)", () => {
     const withAge = (matrixAge: unknown) => ({ ...readyResponse(), matrixAge }) as unknown as DudulluPreviewResponse;
-    const age = (ageSeconds: number | null = 3 * 3600) => ({ loadedAt: "2026-10-05T05:00:00+00:00", ageSeconds });
+    // The load age is ~0 s (the snapshot step refreshes first); the note shows the DATA age.
+    const age = (dataAgeSeconds: number | null = 3 * 3600) => ({
+      loadedAt: "2026-10-05T05:00:00+00:00",
+      ageSeconds: 0.3,
+      dataUpdatedAt: dataAgeSeconds === null ? null : "2026-10-05T02:00:00+00:00",
+      dataAgeSeconds,
+    });
 
-    it("shows when the matrix was loaded when a plan is produced", async () => {
+    it("shows when the travel times were last updated when a plan is produced", async () => {
       await generate(withAge(age()));
-      expect(screen.getByTestId("matrix-age").textContent).toContain("Seyahat süresi matrisi: 3 saat önce yüklendi");
+      expect(screen.getByTestId("matrix-age").textContent).toBe("Yolculuk süreleri en son 3 saat önce güncellendi");
       expect(screen.queryByTestId("matrix-age-warning")).toBeNull();
+    });
+
+    it("shows the data age in days for the months-old matrix, never the near-zero load age", async () => {
+      await generate(withAge(age(224 * 86400)));
+      const text = screen.getByTestId("matrix-age").textContent ?? "";
+      expect(text).toBe("Yolculuk süreleri en son 224 gün önce güncellendi");
+      expect(text).not.toContain("yüklendi");
     });
 
     it("renders English copy", async () => {
@@ -514,12 +527,22 @@ describe("DailyPlanPage", () => {
       fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-10-05" } });
       fireEvent.click(screen.getByRole("button", { name: "Create plan" }));
       await screen.findByTestId("preview-banner");
-      expect(screen.getByTestId("matrix-age").textContent).toContain("Travel-time matrix: loaded 3 h ago");
+      expect(screen.getByTestId("matrix-age").textContent).toBe("Travel times last updated: 3 h ago");
     });
 
-    it("shows an unknown load time", async () => {
+    it("shows an unknown update time when the data age is null (column not migrated yet)", async () => {
       await generate(withAge(age(null)));
-      expect(screen.getByTestId("matrix-age").textContent).toContain("yüklenme zamanı bilinmiyor");
+      expect(screen.getByTestId("matrix-age").textContent).toBe("Yolculuk sürelerinin güncellenme zamanı bilinmiyor");
+    });
+
+    it("shows the English unknown text", async () => {
+      testLocale = "en";
+      mocks.run.mockResolvedValue(withAge(age(null)));
+      render(<DailyPlanPage />);
+      fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-10-05" } });
+      fireEvent.click(screen.getByRole("button", { name: "Create plan" }));
+      await screen.findByTestId("preview-banner");
+      expect(screen.getByTestId("matrix-age").textContent).toBe("Travel times: last update time unknown");
     });
 
     it("shows nothing when the response has no matrix age", async () => {

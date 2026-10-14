@@ -168,6 +168,7 @@ def test_repository_matrix_provenance_is_redaction_safe():
     provenance = repo.matrix_provenance()
     assert set(provenance) == {
         "source", "sha256", "location_count", "loaded_at", "age_seconds", "refresh_failed",
+        "data_updated_at", "data_age_seconds",
     }
     assert provenance["refresh_failed"] is False
     assert provenance["source"] == "supabase"

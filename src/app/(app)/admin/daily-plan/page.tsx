@@ -59,15 +59,19 @@ function parseLimit(text: string, range: { readonly min: number; readonly max: n
   return value >= range.min && value <= range.max ? value : null;
 }
 
+/**
+ * When the travel times were last updated (max time_matrix.updated_at). The matrix LOAD age is
+ * not shown: the snapshot step refreshes first, so it is ~0 s and would read as fresh data.
+ */
 function MatrixAgeNote({ plan }: { plan: DailyPlanView }) {
   const t = useTranslations("page.admin.dailyPlan.matrixAge");
   const age = plan.matrixAge;
   if (!age) return null;
-  const parts = age.ageParts;
+  const parts = age.dataAgeParts;
   const key = parts && { lessThanMinute: "ageLessThanMinute", minutes: "ageMinutes", hours: "ageHours", days: "ageDays" }[parts.unit];
   return (
     <p data-testid="matrix-age" className="text-sm text-muted-foreground">
-      {parts && key ? t("loaded", { age: t(key, { count: parts.count }) }) : t("unknownAge")}
+      {parts && key ? t("dataUpdated", { age: t(key, { count: parts.count }) }) : t("unknownDataAge")}
     </p>
   );
 }

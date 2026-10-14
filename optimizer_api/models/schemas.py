@@ -545,6 +545,9 @@ class MatrixProvenanceInfo(BaseModel):
     age_seconds: Optional[float] = None
     # True when the matrix is the last-known-good one kept after a failed refresh.
     refresh_failed: Optional[bool] = None
+    # Age of the travel-time data (max time_matrix.updated_at); null before migration 20261015.
+    data_updated_at: Optional[str] = None
+    data_age_seconds: Optional[float] = None
 
 
 class OptimizationResponse(BaseModel):

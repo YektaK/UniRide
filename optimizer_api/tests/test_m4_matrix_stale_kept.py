@@ -83,18 +83,11 @@ def _post(monkeypatch, repo):
     )
 
 
-def test_healthy_snapshot_reports_refresh_not_failed(monkeypatch):
-    clock = _Clock()
-    repo = _repo(clock)
-
-    response = _post(monkeypatch, repo)
-
-    # The route force-refreshes first and the fake provider fails then, so the
-    # healthy case is checked on the repository directly.
+def test_healthy_snapshot_reports_refresh_not_failed():
     snapshot = _repo(_Clock()).matrix_snapshot(["Sw1"], depot_code="D.Kampus")
+
     assert snapshot["provenance"]["refresh_failed"] is False
     assert snapshot["provenance"]["age_seconds"] == 0.0
-    assert response.status_code == 200
 
 
 def test_failed_forced_refresh_keeps_serving_and_flags_the_snapshot(monkeypatch):

@@ -2334,7 +2334,7 @@ Update the Status, Branch/PR and Closing commit columns as fixes land (statuses:
 | H17 | High | Production parameters from academic results | MT4 | OPEN | | | |
 | H18 | High | Caller `distance_matrix` silently ignored | MT2 | OPEN | | | |
 | H19 | High | TSPLIB quick-runner objective mismatch | MT4 | OPEN | | | |
-| H20 | High | CI never runs the full suites or a production build | QW9 | OPEN | | | |
+| H20 | High | CI never runs the full suites or a production build | QW9 | FIXED in repo | `ci/h20-build-and-nightly` | 0a802bc | `npm run build` added to the frontend job; full Python suite runs nightly and on `workflow_dispatch` (`dependency audit` not added) |
 | M26 | High (v1.1) | SOTA adapter objective mismatch and silent greedy fallback | QW11 | OPEN | | | |
 | M11 | Low (v1.1) | React build split between tests and production | MT7 | OPEN | | | |
 | M20 | Low (v1.1) | Repeated evaluations: telemetry only | LT1 | OPEN | | | |
@@ -2405,6 +2405,9 @@ Append one entry per landed fix: date, agent or author, ID(s), branch/commit, te
   - Test added: `optimizer_api/tests/test_h6_readiness_event_loop.py` (httpx.AsyncClient on an ASGI app with a provider whose fetch sleeps 1.5 s synchronously; a concurrent `/health` must finish < 0.5 s late and the fetch must still be in flight). Red 2 of 2 on the old handlers, green after the fix. `optimizer_api/tests`: 2527 passed.
   - Other async routes checked: no other route calls the matrix provider or Supabase client on the loop. `optimization.py` and `benchmark.py` endpoints are plain `def` (FastAPI threadpool); `fleet_selection.py` already uses `run_in_threadpool`; `auth.py` dependencies do no I/O.
   - NOT done (owner decision): matrix staleness / max-age logic and `utils/matrix_repository.py` are untouched; the audit's per-call `force=True` refresh in `matrix_snapshot` is unchanged, so the staleness half of H6 stays OPEN.
+- **H20 (CI build and full suites), 2026-10-13, FIXED in repo, Claude Opus 5.5.** Branch `ci/h20-build-and-nightly`; commit 0a802bc. `.github/workflows/ci.yml`: the `frontend` job gained a `Production build` step (`npm run build`) with placeholder public variables only (`NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321`, `NEXT_PUBLIC_SUPABASE_ANON_KEY=ci-dummy-anon-key`, `NEXT_TELEMETRY_DISABLED=1`); a new `python-full` job runs `uniride_core/tests optimizer_api/tests academic_benchmark/tests` on `workflow_dispatch` and a nightly `schedule` (03:00 UTC) only, with `PYTHON_DOTENV_DISABLED=1`, empty `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, `PYTHONPATH=optimizer_api`, and the same install steps as the `python` job. The `frontend` and `python` jobs got a job-level `if` (push or pull request) so the new triggers do not duplicate them; the focused test steps are unchanged.
+  - Local check: `npm run build` passed with the placeholder variables. The `npm audit` part of the fix sketch was not added (report-only, not requested). Scheduled workflows run from the default branch only, so the nightly job starts once this reaches `WIP`.
+  - Not installed by the CI install steps (tests that need them skip or fail on import): `pyvrp`, `pyvroom`, `vrplib` (the `solvers` extra), `streamlit`, `psutil`. `pandas` and `ortools` arrive only transitively. The first nightly run will show which tests skip.
 
 ---
 

@@ -115,10 +115,17 @@ def quarantine_legacy_best_params(metadata: Dict[str, Any], include_obsolete: An
         return metadata
     stale = {k: v for k, v in best.items() if is_legacy_timestamp(best_params_entry_timestamp(v))}
     if stale:
-        for key in stale:
+        legacy = metadata.get(LEGACY_BEST_PARAMS_KEY)
+        if not isinstance(legacy, dict):
+            legacy = metadata[LEGACY_BEST_PARAMS_KEY] = {}
+        for key, value in stale.items():
             del best[key]
-        legacy = metadata.setdefault(LEGACY_BEST_PARAMS_KEY, {})
-        legacy.update(stale)
+            target, n = key, 1
+            # never overwrite an already-quarantined record: keep both under distinct keys
+            while target in legacy and legacy[target] != value:
+                n += 1
+                target = f"{key}#{n}"
+            legacy[target] = value
     return metadata
 
 

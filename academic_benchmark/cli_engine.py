@@ -137,6 +137,7 @@ from academic_benchmark.param_db import (
     save_entry as _param_db_save,
     get_best_for as _param_db_get_best,
     list_entries as _param_db_list,
+    is_legacy_entry as _param_db_is_legacy,
     analyze_patterns as _param_db_analyze,
     delete_entry as _param_db_delete,
     set_db_path as _param_db_set,
@@ -1745,6 +1746,7 @@ def _run_optuna_tuning_flow(
     - Workers are dynamically assigned: fast trials cycle through, slow ones don't block
     - Early stopping: stops study when gap <= 0.01% for 3 consecutive trials
     """
+    quarantine_legacy_best_params(metadata)  # first: legacy params never warm-start
     import optuna
     from concurrent.futures import ProcessPoolExecutor, wait, FIRST_COMPLETED
 
@@ -1805,7 +1807,6 @@ def _run_optuna_tuning_flow(
         info = studies[study_name]
         return not info["stopped"] and info["submitted"] < info["max_trials"]
 
-    quarantine_legacy_best_params(metadata)
     best_params = metadata.setdefault("best_params", {})
     interrupted = False
 
@@ -2205,7 +2206,7 @@ def _load_params_from_db_interactive(
     Previously, multi-problem DB loads silently overwrote params (last problem won).
     See IMPLEMENTATION_PLAN_2026-05-19.md § H-04 for migration details.
     """
-    db_entries = _param_db_list()
+    db_entries = _param_db_list(include_obsolete=False)
     if not db_entries:
         print("[INFO] Parametre DB'sinde kayit bulunamadi. Varsayilan parametreler kullanilacak.")
         return {}
@@ -2283,7 +2284,7 @@ def _param_db_menu() -> None:
                     gap_str = f"{e.get('gap', 0):.2f}" if e.get('gap') is not None else "N/A"
                     score = e.get('best_score', 0)
                     score_str = f"{score:<10.1f}" if isinstance(score, (int, float)) and not math.isinf(score) else f"{str(score):<10}"
-                    print(f"{e['id']:>3} {e.get('timestamp', '?'):<20} {e['problem']:<12} {e['algorithm']:<8} {score_str} {gap_str:<8} {e.get('dimension', 0):<6}")
+                    print(f"{e['id']:>3} {str(e.get('timestamp', '?')):<20} {e['problem']:<12} {e['algorithm']:<8} {score_str} {gap_str:<8} {e.get('dimension', 0):<6}{' [legacy]' if _param_db_is_legacy(e) else ''}")
             input("\nDevam icin Enter...")
         elif choice == '2':
             analysis = _param_db_analyze()

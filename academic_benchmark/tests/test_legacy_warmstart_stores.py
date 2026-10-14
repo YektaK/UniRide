@@ -132,3 +132,90 @@ def test_results_reader_scans_legacy_subfolder_only_when_asked(tmp_path):
     assert [r["problem"] for r in hidden] == ["newprob"]
     shown = get_benchmark_rows(include_obsolete=True, **kw)["results"]
     assert [r["problem"] for r in shown] == ["oldprob", "newprob"]
+
+
+# ---- DUZELT 2: E2 (legacy_best_params must survive reload), call-site pins, param_db views ----
+
+from academic_benchmark.benchmark_utils import load_metadata, save_metadata
+
+
+def _two_rounds(path):
+    """load -> quarantine -> save, twice (the real startup chain)."""
+    for _ in range(2):
+        meta = load_metadata(path)
+        quarantine_legacy_best_params(meta)
+        save_metadata(path, meta)
+    return json.load(open(path, encoding="utf-8"))
+
+
+def test_legacy_best_params_survive_second_startup(tmp_path):
+    path = str(tmp_path / "meta.json")
+    save_metadata(path, _meta())
+    data = _two_rounds(path)
+    assert set(data["legacy_best_params"]) == {"eil51::GA", "a280::GA"}
+    assert set(data["best_params"]) == {"kroA::GA"}
+    assert data["legacy_best_params"]["eil51::GA"]["params"] == {"p": "old"}
+
+
+def test_load_metadata_keeps_unknown_extra_keys(tmp_path):
+    path = str(tmp_path / "meta.json")
+    save_metadata(path, {"best_params": {}, "custom_extra": {"x": 1}})
+    assert load_metadata(path)["custom_extra"] == {"x": 1}
+
+
+def test_quarantine_does_not_overwrite_existing_legacy_entry():
+    meta = {"best_params": {"k": {"params": {"v": "second"}}},
+            "legacy_best_params": {"k": {"params": {"v": "first"}}}}
+    quarantine_legacy_best_params(meta)
+    assert meta["best_params"] == {}
+    assert meta["legacy_best_params"]["k"]["params"] == {"v": "first"}
+    assert [e["params"]["v"] for e in meta["legacy_best_params"].values()] == ["first", "second"]
+    snapshot = json.dumps(meta, sort_keys=True)
+    quarantine_legacy_best_params(meta)  # idempotent
+    assert json.dumps(meta, sort_keys=True) == snapshot
+
+
+def test_optuna_flow_quarantines_legacy():
+    from academic_benchmark import cli_engine
+
+    meta = _meta()
+    try:
+        cli_engine._run_optuna_tuning_flow([], [], 1, 1, meta)
+    except Exception:
+        pass  # only the warm-start guard at the top matters here
+    assert set(meta["best_params"]) == {"kroA::GA"} and len(meta["legacy_best_params"]) == 2
+
+
+def test_sota_optuna_quarantines_legacy():
+    from academic_benchmark import sota_engine
+
+    meta = _meta()
+    try:
+        sota_engine._run_sota_optuna_tuning([], [], 1, 1, 1, meta)
+    except Exception:
+        pass
+    assert set(meta["best_params"]) == {"kroA::GA"} and len(meta["legacy_best_params"]) == 2
+
+
+def test_main_quarantines_loaded_metadata(tmp_path, monkeypatch):
+    from academic_benchmark import cli_engine
+
+    path = str(tmp_path / "master.json")
+    save_metadata(path, _meta())
+    monkeypatch.setattr(cli_engine, "METADATA_PATH", path)
+    monkeypatch.setattr(cli_engine, "_ensure_dirs", lambda: None)
+    monkeypatch.setattr(cli_engine, "_param_db_set", lambda p: None)
+    monkeypatch.setattr(cli_engine, "load_problems", lambda *a, **k: [])
+    assert cli_engine.main([]) == 1
+    active = cli_engine._active_metadata
+    assert set(active["best_params"]) == {"kroA::GA"} and len(active["legacy_best_params"]) == 2
+
+
+def test_param_db_views_hide_or_label_legacy(db):
+    db.write_text(json.dumps([_entry(1, OLD, 1.0, {"p": "old"}), _entry(2, NEW, 2.0, {"p": "new"})]))
+    assert [e["id"] for e in param_db.list_entries()] == [1, 2]  # management view keeps ids deletable
+    assert [e["id"] for e in param_db.list_entries(include_obsolete=False)] == [2]
+    assert param_db.is_legacy_entry(param_db.list_entries()[0])
+    only_new = param_db.analyze_patterns()
+    legacy_inc = param_db.analyze_patterns(include_obsolete=True)
+    assert "1 entries" in only_new and "2 entries" in legacy_inc

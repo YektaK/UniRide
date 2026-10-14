@@ -347,6 +347,7 @@ def _run_sota_optuna_tuning(
     Returns:
         Best parameters found per (problem, algorithm) pair.
     """
+    quarantine_legacy_best_params(metadata)  # first: legacy params never warm-start
     try:
         import optuna
     except ImportError:
@@ -355,7 +356,6 @@ def _run_sota_optuna_tuning(
         )
 
     optuna.logging.set_verbosity(optuna.logging.WARNING)
-    quarantine_legacy_best_params(metadata)
     best_params: Dict[str, Dict[str, Any]] = metadata.get("best_params", {})
 
     for problem in problems:

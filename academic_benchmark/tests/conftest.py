@@ -27,3 +27,9 @@ def _neutralise_legacy_cutoff(request, monkeypatch):
     for module in (sys.modules.get("obsolete_results"), obsolete_results):
         if module is not None:
             monkeypatch.setattr(module, "LEGACY_CUTOFF", "0001-01-01", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _no_include_obsolete_env(monkeypatch):
+    """Opt-in env var must never leak into tests from the developer shell."""
+    monkeypatch.delenv("UNIRIDE_INCLUDE_OBSOLETE", raising=False)

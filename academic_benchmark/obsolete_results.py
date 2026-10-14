@@ -111,25 +111,19 @@ def best_params_entry_timestamp(entry: Any) -> Any:
     return entry.get("timestamp") if isinstance(entry, Mapping) else None
 
 
-def include_obsolete_default() -> bool:
-    """Opt-in for warm-start stores: env ``UNIRIDE_INCLUDE_OBSOLETE=1``."""
-    return os.environ.get("UNIRIDE_INCLUDE_OBSOLETE", "").strip().lower() in ("1", "true", "yes")
-
-
 LEGACY_BEST_PARAMS_KEY = "legacy_best_params"
 
 
-def quarantine_legacy_best_params(metadata: Dict[str, Any], include_obsolete: Any = None) -> Dict[str, Any]:
+def quarantine_legacy_best_params(metadata: Dict[str, Any]) -> Dict[str, Any]:
     """Warm-start guard (A13, owner decision D2): historical parameters must not seed new runs.
 
     Entries of ``metadata["best_params"]`` with no/old/unparseable ``timestamp`` are MOVED (not
     deleted) to ``metadata["legacy_best_params"]``; the dict is mutated in place and returned.
-    ``include_obsolete=True`` (or env UNIRIDE_INCLUDE_OBSOLETE=1) leaves it untouched.
+    There is deliberately NO opt-out (no flag, no environment variable): a way to put old
+    parameters back into warm start would defeat owner decision D2.
     """
-    if include_obsolete is None:
-        include_obsolete = include_obsolete_default()
     best = metadata.get("best_params")
-    if include_obsolete or not isinstance(best, dict):
+    if not isinstance(best, dict):
         return metadata
     stale = {k: v for k, v in best.items() if is_legacy_timestamp(best_params_entry_timestamp(v))}
     if stale:
@@ -271,6 +265,24 @@ def _sha256_file(path: str) -> str:
     return digest.hexdigest()
 
 
+def _committed_bytes(path: str, root: str) -> bytes:
+    """Canonical bytes of ``path``: the blob stored in git (``git cat-file blob :<path>``) when the
+    file is tracked, else the bytes on disk. A working copy with ``core.autocrlf`` line-ending
+    conversion therefore cannot change the manifest (the CRLF/LF mismatch of 2026-10-14).
+    ``.gitattributes`` marks the quarantine folders ``-text`` so a checkout writes those same bytes."""
+    import subprocess
+
+    rel = os.path.relpath(path, root).replace(os.sep, "/")
+    try:
+        done = subprocess.run(
+            ["git", "cat-file", "blob", f":{rel}"], cwd=root, capture_output=True, check=True, timeout=60
+        )
+        return done.stdout
+    except (OSError, subprocess.SubprocessError):
+        with open(path, "rb") as handle:
+            return handle.read()
+
+
 def _manifest_files(legacy_dir: str) -> List[str]:
     skip = {QUARANTINE_MARKER_FILE, QUARANTINE_MANIFEST_FILE}
     found = []
@@ -290,11 +302,12 @@ def build_quarantine_manifest(
     for path in _manifest_files(legacy_dir):
         archive = os.path.relpath(path, root).replace(os.sep, "/")
         original = archive.replace(f"/{LEGACY_RESULTS_DIRNAME}/", "/", 1)
+        data = _committed_bytes(path, root)
         entries.append({
             "original_path": original,
             "archive_path": archive,
-            "size_bytes": os.path.getsize(path),
-            "sha256": _sha256_file(path),
+            "size_bytes": len(data),
+            "sha256": hashlib.sha256(data).hexdigest(),
             "evidence_class": HISTORICAL_MANIFEST_CLASS,
         })
     manifest = {

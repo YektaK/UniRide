@@ -39,13 +39,7 @@ def db(tmp_path, monkeypatch):
 def test_param_db_hides_legacy_entry_by_default(db):
     db.write_text(json.dumps([_entry(1, OLD, 1.0, {"p": "old"}), _entry(2, None, 0.5, {"p": "undated"})]))
     assert param_db.get_best_for("eil51", "GA") is None
-    assert param_db.get_best_for("eil51", "GA", include_obsolete=True)["params"] == {"p": "undated"}
-
-
-def test_param_db_env_opt_in(db, monkeypatch):
-    db.write_text(json.dumps([_entry(1, OLD, 1.0, {"p": "old"})]))
-    monkeypatch.setenv("UNIRIDE_INCLUDE_OBSOLETE", "1")
-    assert param_db.get_best_for("eil51", "GA")["params"] == {"p": "old"}
+    assert [e["params"] for e in param_db.list_entries()] == [{"p": "undated"}]  # kept, viewable, not warm-start
 
 
 def test_param_db_uses_post_cutoff_entry_even_if_worse(db):
@@ -57,7 +51,7 @@ def test_param_db_save_entry_writes_iso_timestamp_that_is_not_legacy(db):
     param_db.save_entry("eil51", "GA", {"p": 1}, 5.0, 0.0, 1, 51)
     stamp = param_db.list_entries()[0]["timestamp"]
     assert not is_legacy_timestamp(stamp, "2000-01-01")
-    assert param_db.get_best_for("eil51", "GA", include_obsolete=True) is not None
+    assert param_db.get_best_for("eil51", "GA") is not None
 
 
 def _meta():
@@ -72,11 +66,6 @@ def test_quarantine_moves_not_deletes():
     meta = quarantine_legacy_best_params(_meta())
     assert list(meta["best_params"]) == ["kroA::GA"]
     assert set(meta["legacy_best_params"]) == {"eil51::GA", "a280::GA"}
-
-
-def test_quarantine_opt_in_keeps_everything():
-    meta = quarantine_legacy_best_params(_meta(), include_obsolete=True)
-    assert len(meta["best_params"]) == 3 and "legacy_best_params" not in meta
 
 
 def test_numba_tune_does_not_warm_start_from_legacy(monkeypatch):

@@ -256,7 +256,9 @@ def load_csv_frames(result_dirs: Iterable[str], include_obsolete: bool = False, 
     sibling marker, affected algorithm, row ``obsolete`` metadata; A06/A07) are dropped unless
     ``include_obsolete``. ``evidence`` picks ONE view (A13): ``"current"`` (default) or
     ``"historical"`` (``legacy_pre_2026-10-13/`` quarantine folders plus old-timestamp rows;
-    labelled ``evidence_class``). The views are never concatenated.
+    labelled ``evidence_class``). The views are never concatenated. In the historical view each
+    result directory's own parent file is scanned too: old-dated rows that sit in the parent
+    folder's current file land in the historical section, not in the current one.
     """
     summaries: List[pd.DataFrame] = []
     progress: List[pd.DataFrame] = []

@@ -67,16 +67,13 @@ def save_entry(problem: str, algorithm: str, params: Dict[str, Any],
     _save(db)
     return entry["id"]
 
-def get_best_for(problem: str, algorithm: str, include_obsolete: Optional[bool] = None) -> Optional[Dict[str, Any]]:
-    """Best stored params. Legacy entries (no/old timestamp, before obsolete_results cutoff)
-    are NOT returned unless ``include_obsolete`` (or env UNIRIDE_INCLUDE_OBSOLETE=1)."""
+def get_best_for(problem: str, algorithm: str) -> Optional[Dict[str, Any]]:
+    """Best stored params for WARM START. Legacy entries (no/old timestamp, before the
+    obsolete_results cutoff) are never returned, with no flag or environment opt-in (A13, D2);
+    they stay in the file and are listed by ``list_entries``/``analyze_patterns``."""
     from academic_benchmark import obsolete_results as _obs
 
-    if include_obsolete is None:
-        include_obsolete = _obs.include_obsolete_default()
-    db = _load()
-    if not include_obsolete:
-        db = [e for e in db if not _obs.is_legacy_timestamp(e.get("timestamp"))]
+    db = [e for e in _load() if not _obs.is_legacy_timestamp(e.get("timestamp"))]
     matches = [e for e in db if e["problem"] == problem and e["algorithm"] == algorithm]
     if not matches:
         return None

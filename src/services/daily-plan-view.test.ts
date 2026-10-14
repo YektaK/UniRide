@@ -14,11 +14,11 @@ import {
   indeterminateResponse,
   peakWaveResponse,
   readyResponse,
+  readyResponse as matrixAgeBase,
   rideLimitInfeasibleResponse,
   shortageResponse,
 } from "./daily-plan-fixtures";
 import { parseDudulluPreviewResponse } from "./dudullu-preview-response";
-import { readyResponse as matrixAgeBase } from "./daily-plan-fixtures";
 
 describe("formatMinutesOfDay", () => {
   it.each([

@@ -406,7 +406,7 @@ describe("analyzeDudulluReadiness", () => {
           { status: "active", wheelchairCapacity: 1, seatingCapacity: 7, cooldownMinutes },
         ],
         readyMatrix(2),
-      { legDecisionsReadable: true },
+        { legDecisionsReadable: true },
       );
 
       expect(report.ready).toBe(false);
@@ -598,7 +598,7 @@ describe("analyzeDudulluReadiness", () => {
         [{ id: student.weeklyScheduleId!, userId: student.id, entries }],
         readyVehicles(),
         readyMatrix(1),
-      { legDecisionsReadable: true },
+        { legDecisionsReadable: true },
       );
 
       expect(report.schedules.malformed).toBe(1);

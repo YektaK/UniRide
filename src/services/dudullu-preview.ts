@@ -17,7 +17,7 @@ export interface MatrixSnapshot {
   readonly version: string;
   readonly sha256: string;
   readonly source: string;
-  /** Optimizer-reported load time, age and refresh state of the matrix (optional on old optimizers). */
+  /** Optimizer-reported load time and age of the matrix (optional on old optimizers). refresh_failed is not parsed in TS. */
   readonly provenance?: {
     readonly loaded_at?: string | null;
     readonly age_seconds?: number | null;

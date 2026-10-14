@@ -249,3 +249,51 @@ def test_compare_best_and_fastest_ignore_a_fallback_result(monkeypatch):
 
     assert response.best_algorithm == "ga"
     assert response.fastest_algorithm == "ga"
+
+
+def _fallback_alg_result(name, duration=1.0):
+    return schemas.AlgorithmResult(
+        algorithm=name, algorithm_requested=name, success=True, total_vehicles=1,
+        total_duration_minutes=duration, execution_time_seconds=0.1, routes=[],
+        feasibility_certificate=None, applied_policy=_metadata(name, name),
+        algorithm_executed="greedy_fallback", fallback_reason="solver_error",
+    )
+
+
+def test_compare_summary_and_response_mark_fallback_algorithms(monkeypatch):
+    import test_package_b_compare_orchestration as compare_support
+
+    resolutions = [compare_support._resolution("e2bso"), compare_support._resolution("ga")]
+    compare_support._install_resolutions(monkeypatch, resolutions)
+    compare_support._install_policy(monkeypatch)
+    monkeypatch.setattr(
+        optimization, "_run_single_algorithm",
+        lambda prepared: (
+            _fallback_alg_result("e2bso")
+            if prepared.resolution.canonical == "e2bso"
+            else compare_support._result("ga", duration=50.0)
+        ),
+    )
+
+    response = optimization.compare_algorithms(compare_support._request(["e2bso", "ga"]))
+
+    assert response.fallback_algorithms == ["e2bso"]
+    assert response.summary["e2bso"]["fallback_reason"] == "solver_error"
+    assert response.summary["e2bso"]["algorithm_executed"] == "greedy_fallback"
+    assert "fallback_reason" not in response.summary["ga"]
+
+
+def test_compare_without_fallback_omits_the_marker_from_json(monkeypatch):
+    import test_package_b_compare_orchestration as compare_support
+
+    compare_support._install_resolutions(monkeypatch, [compare_support._resolution("ga")])
+    compare_support._install_policy(monkeypatch)
+    monkeypatch.setattr(
+        optimization, "_run_single_algorithm",
+        lambda prepared: compare_support._result("ga", duration=50.0),
+    )
+
+    response = optimization.compare_algorithms(compare_support._request(["ga"]))
+
+    assert response.fallback_algorithms is None
+    assert "fallback_algorithms" not in json.loads(response.model_dump_json())

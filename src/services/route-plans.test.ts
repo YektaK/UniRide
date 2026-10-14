@@ -59,4 +59,37 @@ describe("formatRoutePlanForSave", () => {
       "sweep",
     )).toThrow("Calculation result direction does not match the requested direction");
   });
+
+  it("saves the algorithm that actually ran when the optimizer served a fallback (M26)", () => {
+    const fallbackResult = {
+      ...validResult,
+      algorithm_used: "greedy_fallback",
+      algorithm_requested: "e2bso",
+      fallback_reason: "solver_error",
+    };
+
+    const saved = formatRoutePlanForSave(fallbackResult, "2026-09-08", "pickup", "e2bso", "sweep");
+
+    expect(saved.algorithmUsed).toBe("greedy_fallback");
+  });
+
+  it("saves the algorithm that actually ran from the BFF meta of a fallback", () => {
+    const bffResult = {
+      ...validResult,
+      meta: { algorithmUsed: "greedy_fallback", algorithmRequested: "e2bso", fallbackReason: "solver_error" },
+    } as unknown as Parameters<typeof formatRoutePlanForSave>[0];
+
+    const saved = formatRoutePlanForSave(bffResult, "2026-09-08", "pickup", "e2bso", "sweep");
+
+    expect(saved.algorithmUsed).toBe("greedy_fallback");
+  });
+
+  it("keeps the selected strategy when no fallback happened", () => {
+    const saved = formatRoutePlanForSave(
+      { ...validResult, meta: { algorithmUsed: "e2bso" } } as unknown as Parameters<typeof formatRoutePlanForSave>[0],
+      "2026-09-08", "pickup", "e2bso", "sweep",
+    );
+
+    expect(saved.algorithmUsed).toBe("e2bso");
+  });
 });

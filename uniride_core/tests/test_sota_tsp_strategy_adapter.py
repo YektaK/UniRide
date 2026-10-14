@@ -183,3 +183,22 @@ def test_real_sota_solvers_reach_the_reported_duration_optimum_on_a_tiny_instanc
 
     assert outcome.fallback_reason is None
     assert _cycle_cost(outcome.order) == pytest.approx(_cycle_cost(list(_best_order())))
+
+
+class _MatrixUnavailable(RuntimeError):
+    pass
+
+
+def test_matrix_error_fails_closed_instead_of_becoming_solver_error():
+    # Only the return arcs to the depot fail, which the greedy order never
+    # reads: a swallowed matrix error would therefore be served as a "valid"
+    # greedy fallback instead of failing the request.
+    def broken_duration(origin, destination):
+        if destination == DEPOT:
+            raise _MatrixUnavailable("travel-time matrix unavailable")
+        return _duration(origin, destination)
+
+    with pytest.raises(_MatrixUnavailable):
+        solve_student_order_with_sota_tsp(
+            STUDENTS, DEPOT, broken_duration, _BruteForceSolver, object()
+        )

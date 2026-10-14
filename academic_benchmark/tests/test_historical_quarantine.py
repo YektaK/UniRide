@@ -225,3 +225,22 @@ def test_cli_engine_does_not_write_best_params_numba_json_to_results_root():
     src = (BENCH / "cli_engine.py").read_text(encoding="utf-8")
     assert 'os.path.join(RESULTS_DIR, "best_params_numba.json")' not in src
     assert 'os.path.join(RESULTS_DIR, "best_params_numba_current.json")' in src
+
+
+# -- the Python-side filters never pool the two views either (the SQL layer is not the only guard) ----
+def test_python_filters_keep_views_separate_and_label_historical(tmp_path):
+    rows = [
+        {"algorithm": "Old", "timestamp": OLD},
+        {"algorithm": "New", "timestamp": NEW},
+        {"algorithm": "Bad", "timestamp": NEW, "metadata": {"obsolete": True}},
+    ]
+    assert [r["algorithm"] for r in orr.filter_obsolete_rows(rows)] == ["New"]
+    hist = orr.filter_obsolete_rows(rows, evidence="historical")
+    assert [(r["algorithm"], r["evidence_class"]) for r in hist] == [("Old", HIST)]
+    # INVALID rows stay hidden unless asked, independent of the evidence view
+    assert [r["algorithm"] for r in orr.filter_obsolete_rows(rows, include_obsolete=True)] == ["New", "Bad"]
+    csv_rows = [{"algorithm": "Old", "timestamp": OLD}, {"algorithm": "New", "timestamp": NEW}]
+    assert [r["algorithm"] for r in orr.filter_obsolete_csv_rows(csv_rows, str(tmp_path))] == ["New"]
+    assert [r["algorithm"] for r in orr.filter_obsolete_csv_rows(csv_rows, str(tmp_path), evidence="historical")] == ["Old"]
+    with pytest.raises(ValueError):
+        orr.filter_obsolete_rows(rows, evidence="all")

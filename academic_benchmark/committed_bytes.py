@@ -1,13 +1,17 @@
 """Canonical (committed) bytes of a tracked file, independent of the platform's line-ending conversion.
 
 Archive and quarantine manifests (A01 Bildiri/YAEM archives, A13 legacy results) describe what git
-stores. A Windows working copy with ``core.autocrlf=true`` holds CRLF bytes for the same blob, so
+stores. The reference is the INDEX (``git cat-file blob :<path>``), not HEAD, on purpose: a quarantine
+moves files before anything is staged or committed, the pre-move path is still in the index, and
+repositories without a commit yet (and archives staged but not yet committed) must keep working.
+``quarantine_tracked_tree`` ties the index to HEAD by refusing a source that differs from HEAD. A Windows working copy with ``core.autocrlf=true`` holds CRLF bytes for the same blob, so
 hashing the disk would make a manifest that verifies on one platform only (2026-10-14 finding).
 """
 
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 from pathlib import Path
 from typing import Sequence
@@ -15,10 +19,36 @@ from typing import Sequence
 LOGGER = logging.getLogger(__name__)
 
 
+_REPOSITORY_SELECTORS = ("GIT_DIR", "GIT_INDEX_FILE", "GIT_WORK_TREE")
+
+
+def git_environment() -> dict[str, str]:
+    """``os.environ`` without the variables that make git ignore ``cwd``. A git hook exports
+    ``GIT_DIR``/``GIT_INDEX_FILE``/``GIT_WORK_TREE``; inherited, they would point the lookup at the
+    hooked repository instead of the one the file lives in."""
+    return {key: value for key, value in os.environ.items() if key not in _REPOSITORY_SELECTORS}
+
+
+def working_copy_drift(git_cwd: Path | str) -> list[str]:
+    """Paths below ``git_cwd`` (relative to it, POSIX) whose working copy differs from the index
+    according to ``git diff``. Git applies its own end-of-line normalisation, so a CRLF checkout
+    (``core.autocrlf=true``) or an LF checkout is clean and only a real content change is listed.
+    Untracked files are not listed; without git or outside a repository the result is empty."""
+    try:
+        done = subprocess.run(
+            ["git", "diff", "--name-only", "-z", "--relative", "--", "."],
+            cwd=Path(git_cwd), capture_output=True, check=True, timeout=120, env=git_environment(),
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+    return sorted(item.decode("utf-8", "replace") for item in done.stdout.split(b"\0") if item)
+
+
 def _git_blob(cwd: Path, index_spec: str) -> tuple[bytes | None, str]:
     try:
         done = subprocess.run(
-            ["git", "cat-file", "blob", f":{index_spec}"], cwd=cwd, capture_output=True, check=True, timeout=60
+            ["git", "cat-file", "blob", f":{index_spec}"],
+            cwd=cwd, capture_output=True, check=True, timeout=60, env=git_environment(),
         )
         return done.stdout, ""
     except subprocess.CalledProcessError as exc:

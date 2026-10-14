@@ -19,7 +19,7 @@ from typing import Callable, Iterable, Literal
 
 from pydantic import Field, ValidationError, model_validator
 
-from academic_benchmark.committed_bytes import committed_bytes
+from academic_benchmark.committed_bytes import committed_bytes, git_environment, working_copy_drift
 from academic_benchmark.contracts.common import RepositoryRelativePath, Sha256Digest, StrictContract
 
 
@@ -243,10 +243,25 @@ def verify_manifest(manifest: ArchiveManifest, archived_root: Path, repo_root: P
                 errors.append(f"size mismatch: {relative.as_posix()}")
             elif hashlib.sha256(data).hexdigest() != entry.sha256:
                 errors.append(f"checksum mismatch: {relative.as_posix()}")
+    # the manifest equals the committed blob, so a hand-edited working copy is only visible to git
+    if archived_root.is_dir():
+        errors.extend(f"working copy differs from committed: {drifted}" for drifted in working_copy_drift(archived_root))
     return errors
 
 class QuarantineBlocked(RuntimeError):
     """Raised when legacy evidence cannot be quarantined safely."""
+
+
+def _uncommitted_changes(repo_root: Path, source_root: PurePosixPath) -> list[str]:
+    """Tracked files under ``source_root`` whose content differs from HEAD (staged or not), or, in a
+    repository without a commit yet, from the index. ``git diff`` normalises line endings itself."""
+    environment = git_environment()
+    has_head = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", "HEAD"], cwd=repo_root, capture_output=True, env=environment
+    ).returncode == 0
+    command = ["git", "diff", "--name-only", "-z", *(["HEAD"] if has_head else []), "--", source_root.as_posix()]
+    completed = subprocess.run(command, cwd=repo_root, capture_output=True, check=True, env=environment)
+    return sorted(item.decode("utf-8", "replace") for item in completed.stdout.split(b"\0") if item)
 
 
 def _require_repository_relative(value: PurePosixPath | str) -> PurePosixPath:
@@ -557,6 +572,12 @@ def quarantine_tracked_tree(
     ignored = _git_ignored_files(repo_root, source_root)
     for relative in [*tracked, *untracked, *ignored]:
         _source_path(repo_root, source_fs, relative)
+    uncommitted = _uncommitted_changes(repo_root, source_root)
+    if uncommitted:
+        raise QuarantineBlocked(
+            "uncommitted changes under the source; the manifest describes committed bytes, so commit or revert first: "
+            + ", ".join(uncommitted)
+        )
     if untracked:
         raise QuarantineBlocked("untracked non-ignored files require review: " + ", ".join(item.as_posix() for item in untracked))
     unsafe_ignored = [item for item in ignored if not _is_disposable_cache(item)]

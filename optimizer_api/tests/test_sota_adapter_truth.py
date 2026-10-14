@@ -15,6 +15,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from compute_policy import ComputePolicy
 from models import schemas
 from routers import optimization
 from certifier_matrix_support import stub_arc_capture  # noqa: F401 - fixture
@@ -40,7 +41,7 @@ _NODES = ("depot", "A", "B", "C")
 
 STRATEGIES = [
     (ebso_strategy, ebso_strategy.E2BSoStrategy, "E2BSO_TSP", "e2bso"),
-    (rdma_strategy, rdma_strategy.R2DMAStrategy, "R2DMA_TSP", "rdma"),
+    (rdma_strategy, rdma_strategy.R2DMAStrategy, "R2DMA_TSP", "r2dma"),
     (aoea_strategy, aoea_strategy.PAOEAStrategy, "PAOEA_TSP", "paoea"),
 ]
 
@@ -150,7 +151,7 @@ def _metadata(requested, canonical):
 def _install_router(monkeypatch, strategy, requested, canonical):
     resolution = ResolvedStrategy(requested, canonical, lambda: strategy, (requested,))
     monkeypatch.setattr(optimization, "resolve_strategy", lambda key: resolution)
-    monkeypatch.setattr(optimization, "load_compute_policy", lambda: optimization.ComputePolicy())
+    monkeypatch.setattr(optimization, "load_compute_policy", lambda: ComputePolicy())
     monkeypatch.setattr(
         optimization, "apply_compute_policy",
         lambda request, res, strat, policy: (
@@ -219,3 +220,32 @@ def test_compare_marks_fallback_result_and_excludes_it_from_best(monkeypatch):
     assert result.algorithm == "e2bso"
     assert result.algorithm_executed == "greedy_fallback"
     assert result.fallback_reason == "solver_error"
+
+
+def test_compare_best_and_fastest_ignore_a_fallback_result(monkeypatch):
+    from compute_policy import DEFAULT_COMPARE_ALGORITHMS  # noqa: F401
+    import test_package_b_compare_orchestration as compare_support
+
+    resolutions = [compare_support._resolution("e2bso"), compare_support._resolution("ga")]
+    compare_support._install_resolutions(monkeypatch, resolutions)
+    compare_support._install_policy(monkeypatch)
+
+    def run(prepared):
+        name = prepared.resolution.canonical
+        if name == "e2bso":
+            return schemas.AlgorithmResult(
+                algorithm="e2bso", algorithm_requested="e2bso", success=True,
+                total_vehicles=1, total_duration_minutes=1.0,
+                execution_time_seconds=0.1, routes=[],
+                feasibility_certificate=compare_support.CERTIFIED,
+                applied_policy=_metadata("e2bso", "e2bso"),
+                algorithm_executed="greedy_fallback", fallback_reason="solver_error",
+            )
+        return compare_support._result("ga", duration=50.0, seconds=9.0)
+
+    monkeypatch.setattr(optimization, "_run_single_algorithm", run)
+
+    response = optimization.compare_algorithms(compare_support._request(["e2bso", "ga"]))
+
+    assert response.best_algorithm == "ga"
+    assert response.fastest_algorithm == "ga"

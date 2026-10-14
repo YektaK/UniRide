@@ -160,3 +160,26 @@ def test_empty_students_returns_empty_order_without_fallback():
 
 def test_greedy_student_order_handles_empty_students():
     assert greedy_student_order([], "D", _duration) == []
+
+
+@pytest.mark.parametrize("solver_name,config_name", [
+    ("E2BSO_TSP", "E2BSOTSPConfig"),
+    ("R2DMA_TSP", "R2DMATSPConfig"),
+    ("PAOEA_TSP", "PAOEAConfig"),
+])
+def test_real_sota_solvers_reach_the_reported_duration_optimum_on_a_tiny_instance(
+    solver_name, config_name
+):
+    import uniride_core.algorithms.sota_tsp as sota
+
+    config = getattr(sota, config_name)(seed=7)
+    for field, value in (("max_iterations", 30), ("population_size", 8), ("time_limit", 20.0)):
+        if hasattr(config, field):
+            setattr(config, field, value)
+
+    outcome = solve_student_order_with_sota_tsp(
+        STUDENTS, DEPOT, _duration, getattr(sota, solver_name), config
+    )
+
+    assert outcome.fallback_reason is None
+    assert _cycle_cost(outcome.order) == pytest.approx(_cycle_cost(list(_best_order())))

@@ -47,6 +47,8 @@
   "vehicle_count": 0
  },
  "direction": "pickup",
+ "effective_config_source": "request",
+ "effective_seed": 7,
  "error_message": null,
  "execution_time_seconds": 0.0,
  "feasibility_certificate": {

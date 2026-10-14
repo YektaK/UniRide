@@ -2432,6 +2432,15 @@ Append one entry per landed fix: date, agent or author, ID(s), branch/commit, te
 - Polish: `analyzeDudulluReadiness` `legDecisionsReadable` is required (type-level test).
 - Still open under M4 / MT2: matrix domain enum, row-count check.
 
+
+#### 2026-10-14 - Reviewer follow-ups bundle (CI flake, M4 polish, H17 polish, Haversine flake)
+
+- Branch `chore/followups-2026-10-14`; one commit per item. Not merged.
+- CI flake: `vite.config.ts` sets `test.maxWorkers: 4`. Plain parallel `vitest run` on a 12-core machine oversubscribed the jsdom workers (summed test time 55.7 s uncapped, 26-31 s capped, same wall time) and random tests hit the 5 s timeout. No timeout was raised. Plain `npx vitest run` 3 of 3 green (60 files, 798 tests).
+- M4 polish: unused `MatrixAgeUnit` import removed, duplicate fixture import merged, the two "refresh state" comments corrected (TS does not parse `refresh_failed`), `dudullu-readiness.test.ts` indentation fixed. New tests in `optimizer_api/tests/test_m4_matrix_stale_kept.py`: `refresh_failed` True in `matrix_provenance()` after a failed refresh; TTL-only stale path (no `_last_error`) raises `MatrixStaleError` and is 503 through the route (a no-op-refresh loader). Mutation: replacing the TTL raise with `pass` fails 2 tests; forcing `refresh_failed` False fails 1.
+- H17 polish: `promoted_config_loader.py` resolves the path before the cached call, so `get_promoted_params` and `promoted_config_provenance` share one explicit cache key (a path change after an earlier lookup used to be masked). A missing, unreadable or malformed file yields defaults, a logged warning (no file content) and a null SHA; the hash and the parsed document now come from the same bytes. Flag off with a path set still reports the file SHA (the flag is reported separately). Tests: `optimizer_api/tests/test_h17_promoted_config_cache_key.py` (red 5 of 7 before the fix).
+- Haversine flake: `test_non_negative` never saw a negative value. `haversine_distance` raises `ValueError` for some exactly antipodal pairs (for example 45 N 0 E vs 45 S 180 E: `1 - a` rounds to -2.2e-16 and `math.sqrt` rejects it). Pinned by a strict xfail test; the four geographic property tests discard that case. `distance.py` was not changed (open: clamp `a` to [0, 1]).
+
 ---
 
 *End of report — `UA-2026-10-01-CLAUDE` v1.1, written by Claude (Anthropic, Claude Opus 5.5 `claude-opus-5-5`) on 2026-10-01 11:01 (+03:00) and revised at 16:53 (+03:00) after the independent Codex verification.*

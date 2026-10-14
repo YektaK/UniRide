@@ -8,6 +8,8 @@ export const DUDULLU_REASON_CODES = [
   "schedule_data_invalid",
   "no_configured_driver",
   "no_usable_active_vehicle",
+  "vehicle_cooldown_invalid",
+  "leg_decisions_unavailable",
   "matrix_unavailable",
   "matrix_stale",
   "matrix_incomplete",
@@ -42,7 +44,9 @@ export const dudulluReadinessReportSchema = z.object({
     vehicles: count,
     activeVehicles: count,
     usableActiveVehicles: count,
+    invalidCooldownActiveVehicles: count,
   }),
+  legDecisions: z.object({ readable: z.boolean() }),
   matrix: z.object({
     source: z.enum(["supabase", "empty", "coordinates"]),
     loaded: z.boolean(),

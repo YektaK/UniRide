@@ -74,7 +74,7 @@ function readyMatrix(
 }
 
 function readyVehicles(): readonly ReadinessVehicleInput[] {
-  return [{ status: "active", wheelchairCapacity: 1, seatingCapacity: 7 }];
+  return [{ status: "active", wheelchairCapacity: 1, seatingCapacity: 7, cooldownMinutes: 10 }];
 }
 
 const READY_DRIVERS = [{ id: DRIVER_ID, role: "driver" as const }];
@@ -352,7 +352,7 @@ describe("analyzeDudulluReadiness", () => {
     const blocked = analyzeDudulluReadiness(
       [...READY_DRIVERS, target],
       [dudulluSchedule(target.id)],
-      [{ status: "active", wheelchairCapacity: 0, seatingCapacity: 0 }],
+      [{ status: "active", wheelchairCapacity: 0, seatingCapacity: 0, cooldownMinutes: 10 }],
       readyMatrix(2),
     );
 
@@ -366,13 +366,70 @@ describe("analyzeDudulluReadiness", () => {
       [...READY_DRIVERS, target],
       [dudulluSchedule(target.id)],
       [
-        { status: "active", wheelchairCapacity: 0, seatingCapacity: 0 },
-        { status: "active", wheelchairCapacity: 0, seatingCapacity: 5 },
+        { status: "active", wheelchairCapacity: 0, seatingCapacity: 0, cooldownMinutes: 10 },
+        { status: "active", wheelchairCapacity: 0, seatingCapacity: 5, cooldownMinutes: 10 },
       ],
       readyMatrix(2),
     );
     expect(allowed.fleet.usableActiveVehicles).toBe(1);
     expect(allowed.ready).toBe(true);
+  });
+
+  it.each([null, undefined, -1, 1.5, "10", Number.NaN])(
+    "is not ready when an active vehicle has an invalid cooldown (%s) because the plan blocks it (F12)",
+    (cooldownMinutes) => {
+      const target = targetStudent("stu-CD-9f2a", "Sw1");
+      const report = analyzeDudulluReadiness(
+        [...READY_DRIVERS, target],
+        [dudulluSchedule(target.id)],
+        [
+          { status: "active", wheelchairCapacity: 1, seatingCapacity: 7, cooldownMinutes: 10 },
+          { status: "active", wheelchairCapacity: 1, seatingCapacity: 7, cooldownMinutes },
+        ],
+        readyMatrix(2),
+      );
+
+      expect(report.ready).toBe(false);
+      expect(report.reasonCodes).toContain("vehicle_cooldown_invalid");
+      expect(report.fleet.invalidCooldownActiveVehicles).toBe(1);
+    },
+  );
+
+  it("accepts a zero cooldown and ignores invalid cooldowns on inactive vehicles (F12)", () => {
+    const target = targetStudent("stu-CD2-9f2a", "Sw1");
+    const report = analyzeDudulluReadiness(
+      [...READY_DRIVERS, target],
+      [dudulluSchedule(target.id)],
+      [
+        { status: "active", wheelchairCapacity: 1, seatingCapacity: 7, cooldownMinutes: 0 },
+        { status: "inactive", wheelchairCapacity: 1, seatingCapacity: 7, cooldownMinutes: null },
+      ],
+      readyMatrix(2),
+    );
+
+    expect(report.fleet.invalidCooldownActiveVehicles).toBe(0);
+    expect(report.reasonCodes).not.toContain("vehicle_cooldown_invalid");
+    expect(report.ready).toBe(true);
+  });
+
+  it("is not ready when the student_leg_decisions table is not readable (F12)", () => {
+    const target = targetStudent("stu-LD-9f2a", "Sw1");
+    const run = (legDecisionsReadable: boolean) => analyzeDudulluReadiness(
+      [...READY_DRIVERS, target],
+      [dudulluSchedule(target.id)],
+      readyVehicles(),
+      readyMatrix(2),
+      { legDecisionsReadable },
+    );
+
+    const blocked = run(false);
+    expect(blocked.ready).toBe(false);
+    expect(blocked.reasonCodes).toEqual(["leg_decisions_unavailable"]);
+    expect(blocked.legDecisions.readable).toBe(false);
+
+    const allowed = run(true);
+    expect(allowed.ready).toBe(true);
+    expect(allowed.legDecisions.readable).toBe(true);
   });
 
   it("never mutates its input objects", () => {
@@ -390,7 +447,7 @@ describe("analyzeDudulluReadiness", () => {
         }),
       ]),
     });
-    const vehicle = Object.freeze({ status: "active", wheelchairCapacity: 1, seatingCapacity: 7 });
+    const vehicle = Object.freeze({ status: "active", wheelchairCapacity: 1, seatingCapacity: 7, cooldownMinutes: 10 });
     const matrix = Object.freeze(readyMatrix(2));
 
     const report = analyzeDudulluReadiness(
@@ -430,7 +487,7 @@ describe("analyzeDudulluReadiness", () => {
     const report = analyzeDudulluReadiness(
       [student],
       [],
-      [{ status: "inactive", wheelchairCapacity: 1, seatingCapacity: 7 }],
+      [{ status: "inactive", wheelchairCapacity: 1, seatingCapacity: 7, cooldownMinutes: 10 }],
       {
         source: "empty",
         loaded: false,

@@ -361,6 +361,8 @@
           "NO_ADMITTED_DEMAND": "Bu gün için onaylı sefer yok.",
           "NO_ROUTE_STEPS": "Bir rotada hiç adım yok; plan geçersiz sayıldı.",
           "OPTIMIZATION_NOT_SUCCESSFUL": "Rota çözücüsü başarılı bir sonuç döndürmedi veya ulaşılamadı.",
+          "OPTIMIZER_RATE_LIMITED": "Rota çözücü çok fazla istek aldı. Yaklaşık {seconds} saniye bekleyip planı yeniden çalıştırın.",
+          "OPTIMIZER_UNAVAILABLE": "Rota çözücü geçici olarak kullanılamıyor veya zamanında yanıt vermedi. Kısa süre sonra yeniden deneyin.",
           "PENDING_STUDENT_CONFIRMATION": "Bazı öğrencilerin onayı hâlâ bekleniyor.",
           "RIDE_TIME_LIMIT_INFEASIBLE": "Seçilen öğrenci araçta kalma sınırı ({limit} dk) içinde uygun bir rota hesaplanamadı. Bu sonuç, bu sınırda hiçbir rotanın mümkün olmadığını kanıtlamaz.",
           "ROUTE_OUTSIDE_SERVICE_DAY": "Bir rota gün sınırlarının dışına taşıyor.",
@@ -395,7 +397,7 @@
           "expectedMatrixNodes": "Beklenen matris düğümleri", "expectedStudents": "Beklenen öğrenci sayısı", "matrixLocationCount": "Matris konum sayısı",
           "matrixSource": "Matris kaynağı", "matchesMatrix": "Matrisle eşleşiyor", "matchesStudents": "Öğrencilerle eşleşiyor",
           "requiredLocationCount": "Gerekli konum sayısı", "scheduleEmpty": "Boş ders programları", "scheduleMalformed": "Hatalı ders programları",
-          "scheduleTotal": "Toplam ders programı", "unclassifiedSchedule": "Sınıflandırılmamış ders programları", "usableActiveVehicles": "Kullanılabilir aktif araçlar",
+          "scheduleTotal": "Toplam ders programı", "unclassifiedSchedule": "Sınıflandırılmamış ders programları", "invalidCooldownVehicles": "Geçersiz bekleme süreli aktif araçlar", "legDecisionsReadable": "Öğrenci karar tablosu okunabiliyor", "usableActiveVehicles": "Kullanılabilir aktif araçlar",
           "validArcCount": "Geçerli yay sayısı"
         },
         "matrixSources": { "coordinates": "Koordinatlar", "empty": "Matris verisi yok", "supabase": "Supabase" },
@@ -403,6 +405,8 @@
           "matrix_incomplete": "Matris gerekli tüm yolculuk yaylarını içermiyor.",
           "matrix_location_mismatch": "Matris konum sayısı gerekli konumlarla eşleşmiyor.",
           "matrix_stale": "Matris güncel değil ve yenilenmelidir.", "matrix_unavailable": "Seyahat süresi matrisi kullanılamıyor.",
+          "leg_decisions_unavailable": "Öğrenci karar tablosu (student_leg_decisions) yok veya okunamıyor; kayıtlı onaylar okunamaz.",
+          "vehicle_cooldown_invalid": "Bir aktif aracın bekleme süresi eksik veya geçersiz; günlük plan araç filosunu reddedecek.",
           "no_configured_driver": "Hedef filo için yapılandırılmış şoför yok.", "no_dudullu_students": "Dudullu öğrencisi bulunamadı.",
           "no_usable_active_vehicle": "Kullanılabilir aktif araç yok.", "schedule_classification_incomplete": "Bazı ders programları sınıflandırılamadı.",
           "schedule_data_invalid": "Ders programı verisi geçersiz.", "target_profile_incomplete": "Bir veya daha fazla hedef öğrenci profili eksik."

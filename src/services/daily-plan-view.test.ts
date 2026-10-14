@@ -458,6 +458,16 @@ describe("reason code copy", () => {
     }
   });
 
+  it("knows the optimizer failure codes and gives the rate-limit copy a {seconds} slot (DP-1)", () => {
+    expect(KNOWN_REASON_CODES).toContain("OPTIMIZER_RATE_LIMITED");
+    expect(KNOWN_REASON_CODES).toContain("OPTIMIZER_UNAVAILABLE");
+    expect(describeReason("OPTIMIZER_RATE_LIMITED", false)).toMatchObject({ messageKey: "OPTIMIZER_RATE_LIMITED", severity: "problem" });
+    for (const locale of ["tr", "en"]) {
+      const reasons = load(locale).page.admin.dailyPlan?.reasons ?? {};
+      expect(reasons.OPTIMIZER_RATE_LIMITED, locale).toContain("{seconds}");
+    }
+  });
+
   it("covers every code of the backend PreviewReasonCode union", () => {
     const source = readFileSync(new URL("./dudullu-preview.ts", import.meta.url), "utf8");
     const union = /export type PreviewReasonCode =([\s\S]*?);/.exec(source)?.[1] ?? "";

@@ -15,6 +15,7 @@ import {
   assumeScheduledLegsConfirmed,
   buildDudulluPreview,
   buildVirtualFleet,
+  isValidCooldownMinutes,
   selectVirtualFleetTemplate,
   type PreviewDemand,
   type VirtualFleetTemplate,
@@ -22,6 +23,9 @@ import {
 import type { MatrixSnapshot, PreviewJobInput, PreviewOptimizationResult, PreviewVehicle, PreviewReasonCode } from "@/services/dudullu-preview";
 import { serviceDateBounds } from "@/services/istanbul-service-date";
 import { DUDULLU_DEPOT } from "@/services/dudullu-campus";
+import {
+  MATRIX_UNAVAILABLE_CODE, classifyOptimizerMatrixError, readOptimizerErrorDetail,
+} from "@/services/optimizer-matrix-errors";
 
 type AdmissionMode = "recorded" | "assume_confirmed";
 type FleetMode = "live" | "virtual";
@@ -411,6 +415,34 @@ export async function fetchMatrixSnapshot(
   }
 }
 
+/** Positive whole seconds from a `Retry-After` header; HTTP-date and junk values are ignored. */
+export function parseRetryAfterSeconds(header: string | null): number | undefined {
+  if (header === null || !/^\d{1,6}$/.test(header.trim())) return undefined;
+  const seconds = Number(header.trim());
+  return seconds > 0 ? seconds : undefined;
+}
+
+/**
+ * Names a failed /optimize answer instead of the generic failure (DP-1): 429 is the shared
+ * rate limit, a 503 with the fixed matrix detail is the missing matrix, other 5xx is an
+ * unavailable optimizer. Other statuses (4xx validation) keep the generic reason.
+ */
+export async function classifyOptimizeFailure(
+  response: Response,
+): Promise<{ reason: PreviewReasonCode; retryAfterSeconds?: number }> {
+  if (response.status === 429) {
+    const seconds = parseRetryAfterSeconds(response.headers.get("retry-after"));
+    return seconds === undefined
+      ? { reason: "OPTIMIZER_RATE_LIMITED" }
+      : { reason: "OPTIMIZER_RATE_LIMITED", retryAfterSeconds: seconds };
+  }
+  if (response.status >= 500) {
+    const matrix = classifyOptimizerMatrixError(response.status, await readOptimizerErrorDetail(response));
+    return { reason: matrix === MATRIX_UNAVAILABLE_CODE ? "MATRIX_UNAVAILABLE" : "OPTIMIZER_UNAVAILABLE" };
+  }
+  return { reason: "OPTIMIZATION_NOT_SUCCESSFUL" };
+}
+
 /** Waves: admitted legs grouped by (direction, anchor), in first-seen order. */
 export function groupWaves(admitted: readonly PreviewDemand[]): PreviewDemand[][] {
   const groups = new Map<string, PreviewDemand[]>();
@@ -458,8 +490,10 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
 
   // Every response, including blocked ones, carries the same labelling. Display labels are
   // location codes only; no user names are read or returned (K4).
+  let retryAfterSeconds: number | undefined;
   const finish = <T extends ReturnType<typeof buildDudulluPreview>>(result: T) => ({
     ...withReasonCodes(result, extraReasons),
+    ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
     admissionMode,
     fleetMode,
     hypothetical,
@@ -486,7 +520,7 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
       !nonBlankString(row.id) || vehicleIds.has(row.id) || row.status !== "active" ||
       !Number.isInteger(row.wheelchair_capacity) || (row.wheelchair_capacity as number) < 0 ||
       !Number.isInteger(row.seating_capacity) || (row.seating_capacity as number) < 0 ||
-      !Number.isInteger(row.cooldown_minutes) || (row.cooldown_minutes as number) < 0
+      !isValidCooldownMinutes(row.cooldown_minutes)
     ) return finish(blockedPreview(serviceDate, admitted, null, "FLEET_INVALID"));
     vehicleIds.add(row.id);
     liveVehicles.push({
@@ -530,8 +564,9 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
       ? vehicles.slice(0, Math.min(group.length, OPTIMIZER_MAX_VEHICLES))
       : vehicles;
     let result: PreviewOptimizationResult;
+    let response: Response;
     try {
-      const response = await optimizerFetch("/api/v1/optimize", {
+      response = await optimizerFetch("/api/v1/optimize", {
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({
           algorithm: "ga_split", mode: "sandbox", service_date: serviceDate,
@@ -553,7 +588,16 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
           })),
         }),
       });
-      if (!response.ok) throw new Error("optimizer unavailable");
+    } catch {
+      // Timeout or network failure: the optimizer could not be reached.
+      return finish(blockedPreview(serviceDate, admitted, matrix, "OPTIMIZER_UNAVAILABLE"));
+    }
+    if (!response.ok) {
+      const failure = await classifyOptimizeFailure(response);
+      retryAfterSeconds = failure.retryAfterSeconds;
+      return finish(blockedPreview(serviceDate, admitted, matrix, failure.reason));
+    }
+    try {
       const parsed = optimizerResultSchema.safeParse(await response.json());
       if (!parsed.success) throw new Error("optimizer result invalid");
       result = parsed.data;

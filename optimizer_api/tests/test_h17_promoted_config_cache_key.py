@@ -139,7 +139,11 @@ _WRONG_SHAPE_PAYLOADS = [
 ]
 
 
-@pytest.mark.parametrize("payload", _WRONG_SHAPE_PAYLOADS)
+@pytest.mark.parametrize(
+    "payload",
+    _WRONG_SHAPE_PAYLOADS,
+    ids=[f"shape{i}" for i in range(len(_WRONG_SHAPE_PAYLOADS))],  # the deep payload is 100 kB
+)
 def test_valid_json_with_wrong_shape_falls_back_logs_and_stores_no_hash(
     tmp_path, monkeypatch, caplog, payload
 ):

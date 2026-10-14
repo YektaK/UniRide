@@ -77,6 +77,20 @@ def _empty_document(source: str) -> Dict[str, object]:
     return {"schema_version": 1, "source": source, "configs": []}
 
 
+def _validate_document_shape(document: object) -> None:
+    """Raise ValueError unless ``document`` is {"configs": [dict, ...]} with dict params."""
+    if not isinstance(document, dict):
+        raise ValueError("top-level JSON value is not an object")
+    configs = document.get("configs", [])
+    if not isinstance(configs, list):
+        raise ValueError("configs is not a list")
+    for config in configs:
+        if not isinstance(config, dict):
+            raise ValueError("a config entry is not an object")
+        if "params" in config and not isinstance(config["params"], dict):
+            raise ValueError("params is not an object")
+
+
 @lru_cache(maxsize=4)
 def _load_cached(resolved_path: str) -> Dict[str, object]:
     if not os.path.exists(resolved_path):
@@ -89,9 +103,8 @@ def _load_cached(resolved_path: str) -> Dict[str, object]:
         with open(resolved_path, "rb") as handle:
             raw = handle.read()
         document = json.loads(raw.decode("utf-8"))
-        if not isinstance(document, dict):
-            raise ValueError("top-level JSON value is not an object")
-    except (OSError, ValueError) as exc:  # JSONDecodeError/UnicodeDecodeError are ValueErrors
+        _validate_document_shape(document)
+    except (OSError, ValueError, RecursionError) as exc:  # JSON syntax/encoding, wrong shape, deep nesting
         logger.warning(
             "Ignoring promoted-config file %s (%s); built-in defaults apply.",
             resolved_path,

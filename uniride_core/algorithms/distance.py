@@ -53,7 +53,11 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     a = math.sin(dlat / 2) ** 2 + math.cos(lat1_r) * math.cos(lat2_r) * math.sin(dlon / 2) ** 2
     # Rounding can push a just outside [0, 1] (exactly antipodal pairs give 1 + 2.2e-16);
     # clamping keeps both sqrt arguments valid and changes no in-range result.
-    a = min(1.0, max(0.0, a))
+    # Comparisons (not min/max) so NaN still propagates: max(0.0, nan) would be 0.0.
+    if a > 1.0:
+        a = 1.0
+    elif a < 0.0:
+        a = 0.0
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 

@@ -39,7 +39,7 @@ def db(tmp_path, monkeypatch):
 def test_param_db_hides_legacy_entry_by_default(db):
     db.write_text(json.dumps([_entry(1, OLD, 1.0, {"p": "old"}), _entry(2, None, 0.5, {"p": "undated"})]))
     assert param_db.get_best_for("eil51", "GA") is None
-    assert [e["params"] for e in param_db.list_entries()] == [{"p": "undated"}]  # kept, viewable, not warm-start
+    assert [e["params"] for e in param_db.list_entries()] == [{"p": "old"}, {"p": "undated"}]  # kept and viewable, never warm-start
 
 
 def test_param_db_uses_post_cutoff_entry_even_if_worse(db):

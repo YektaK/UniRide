@@ -381,7 +381,7 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 
 ### H01 - heterogeneous fleet design
 
-- **Date/status:** 2026-10-08; owner approved. **Chosen/rationale:** typed split decoder with a large-route quota per wave, exact CP-SAT day selection over the wave menu, typed fixed-route assignment in TypeScript; all additive, optional fields only. Sedan Sw = 0, minibus 4/5, same travel times, ride limit and cooldown 10, cars unlimited, 30 s per (day, R, L), tie-break on car-minutes with weekly max and per-day need both reported.
+- **Date/status:** 2026-10-08; owner approved. **Chosen/rationale:** typed split decoder with a large-route quota per wave, exact CP-SAT day selection over the wave menu, typed fixed-route assignment in TypeScript; all additive, optional fields only. Sedan Sw = 0, minibus 4/5, same travel times, ride limit and cooldown 10, cars unlimited, 30 s per (day, R, L), tie-break on car-minutes (after total vehicle-minutes; see H06) with weekly max and per-day need both reported.
 - **Academic boundary:** default `ga_split` and the shared decoder stay unchanged. WP0 adds byte-identical goldens (`uniride_core/tests/golden/split_parity.json`, `test_split_parity_golden.py`) and a zero-import guard for the new modules. **Rejected:** greedy quota repair as primary (weaker guarantee).
 - **Evidence:** [design](designs/HETEROGENEOUS_FLEET_DESIGN.md), owner decisions 2026-10-08. **Check first:** P1 goldens green before any later work package.
 
@@ -413,7 +413,7 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 ### H06 - day selection order: cars, total vehicle-minutes, car-minutes, option index (Q5)
 
 - **Date/status:** 2026-10-13; owner decision (option b). **Chosen:** `solve_day_selection` ranks (1) cars, (2) total vehicle-minutes, (3) car-minutes, (4) sum of option indices, as originally specified in Q5 (design section 3.3: stage 2 fixes C* and minimises total vehicle-minutes, stage 3 is the car-minutes tie-break). The implementation had ranked car-minutes before total minutes (stages 2 and 3 swapped); H01's "tie-break on car-minutes" was read as "car-minutes first". Time-limit sharing, status semantics, seed, workers, `time_scale` and the response shape are unchanged.
-- **Effect on archives:** the archived fleet campaigns (8ab88ca, 4200acb, afc7208) used the old order. Their car counts are unaffected because cars is the first stage, but car-minutes, total minutes and the selected options may differ. The WP-E10 re-run uses the new order; differences caused by this change are an expected, explained category (see `designs/EXACT_SOLVER_AMPL_DESIGN.md`, WP-E10 acceptance (d)).
+- **Effect on archives:** the archived fleet campaigns (8ab88ca, 4200acb, afc7208) used the old order. Their car counts are unaffected because cars is the first stage, but car-minutes, total minutes and the selected options may differ. All archived selections are optimal, so stage 1 is proven; the archive manifests are dirty (F14), so the order is inferred from the committed code. The WP-E10 re-run uses the new order; differences caused by this change are an expected, explained category (see `designs/EXACT_SOLVER_AMPL_DESIGN.md`, WP-E10 acceptance (d)).
 - **Evidence:** test `test_typed_day_selection.py::test_h06_total_minutes_outrank_car_minutes_at_equal_cars` (fails on the old order) and the brute-force oracle `_brute` moved to the new key. Related: H01, H05, E01.
 
 ## Exact solver

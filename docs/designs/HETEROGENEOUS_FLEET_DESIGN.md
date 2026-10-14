@@ -5,7 +5,7 @@ Status (updated 2026-10-13): **implemented as listed below; the design text belo
 Implemented (files in the repository):
 - typed split decoder: `decode_typed` in `uniride_core/algorithms/typed_split_decoder.py:67`;
 - typed GA and per-wave menu: `solve_ga_split_typed` in `uniride_core/algorithms/ga_split_typed_engine.py:138`, served by the `ga_split_hf` strategy (`optimizer_api/strategies/ga_split_hf_strategy.py:149`), with the `vehicle_types` request validation in `optimizer_api/models/schemas.py:273, 354-367`; the per-wave menu used by the campaigns is built by the TypeScript runner (one `/optimize` call per quota, `src/services/fleet-scenario-run.ts:478-525`), while `solve_typed_menu` (`ga_split_typed_engine.py:217`, default `max_quota=3`) is a core helper exercised only by tests, not by the strategy or the runner;
-- CP-SAT day selection: `solve_day_selection` in `uniride_core/planning/typed_day_selection.py:120`, exposed as `POST /api/v1/internal/fleet-selection` (`optimizer_api/routers/fleet_selection.py:172`, mounted in `optimizer_api/main.py:111`);
+- CP-SAT day selection: `solve_day_selection` in `uniride_core/planning/typed_day_selection.py:121`, exposed as `POST /api/v1/internal/fleet-selection` (`optimizer_api/routers/fleet_selection.py:172`, mounted in `optimizer_api/main.py:111`);
 - typed assignment in TypeScript: `assignTypedVehicles` and `verifyTypedAssignment` in `src/services/typed-fleet-assignment.ts:191, 160`;
 - scenario runner and CLI: `runFleetScenarioDay` (`src/services/fleet-scenario-run.ts:257`, menu build `:478-493`) and `scripts/run-fleet-scenarios.ts`; figure script `scripts/plan_fleet_scenarios.py`;
 - archived campaigns: `docs/paper/results/week-2026-10-05-fleet/` (README) with the `extra/` sub-campaigns `L4`, `minivan` (superseded, H03) and `minivan-cap3`.
@@ -42,7 +42,7 @@ Each scenario is reported per day and per week. The report covers the cars neede
 - The scenario-A baseline uses `ga_split`, which only knows the pools. A shared limit on the fixed type therefore fails closed (`BASELINE_TOTAL_CAPACITY_EXCEEDED`) when a baseline route exceeds it; the limit is enforced for the minimised type and in typed split, certificate and assignment.
 - R, tour limit 150 and cooldown 10 are shared by default and can be set per type.
 
-**Objective.** With L fixed, the implemented objective is lexicographic: (1) peak cars, (2) car-minutes, (3) total vehicle-minutes, (4) sum of selected option indices as a deterministic tie-break (`uniride_core/planning/typed_day_selection.py:17-21, 203-204`; DECISION_LOG H01, Q5 below). The design-time proposal was (cars, total vehicle-minutes), with car-minutes only as a later tie-break (Q5 in §11). The implementation ranks car-minutes before total vehicle-minutes. Cars are unbounded by default, with an optional cap.
+**Objective.** With L fixed, the implemented objective is lexicographic: (1) peak cars, (2) total vehicle-minutes, (3) car-minutes, (4) sum of selected option indices as a deterministic tie-break (`uniride_core/planning/typed_day_selection.py:17-22, 204-205`; DECISION_LOG H01, H06, Q5 below). This is the design-time order of Q5 (§11), restored by H06 on 2026-10-13; until then the implementation ranked car-minutes before total vehicle-minutes, and the archived fleet campaigns use that earlier order. Cars are unbounded by default, with an optional cap.
 
 **Fleet source.** The live `vehicles` record wrongly said 10 seated (4 Sw / 10 So). The owner corrected it to 4 Sw / 5 So on 2026-10-07 (DECISION_LOG X01, lines 55 and 368-372). Scenario fleets are still declared **explicitly** (CLI/config), never read from the DB, and recorded in the run manifest; the archived campaign records `db_vehicles_consulted: false` (`docs/paper/results/week-2026-10-05-fleet/README.md:29`).
 
@@ -129,8 +129,8 @@ No search over vehicle identities is needed.
      - `Σ x_r ≤ L`;
      - `Σ c_r ≤ C`.
    - Optional constraint: `C ≤ Cmax`.
-   - As implemented (`typed_day_selection.py:203-204`), the stages run in this order. Stage 1 minimises `C`. Stage 2 fixes `C*` and minimises car-minutes. Stage 3 fixes that value and minimises total vehicle-minutes `Σ minutes·y`. Stage 4 minimises the sum of selected option indices, a deterministic tie-break. The design-time proposal had total vehicle-minutes as stage 2, then car-minutes, then the lowest option index (Q5, §11).
-   - Settings: `num_workers=1`, a fixed solver seed, and a time limit. The limit is one allowance per solve call, shared by the stages: each stage receives the time that remains (`typed_day_selection.py:212-220`).
+   - As implemented (`typed_day_selection.py:204-205`), the stages run in this order. Stage 1 minimises `C`. Stage 2 fixes `C*` and minimises total vehicle-minutes `Σ minutes·y`. Stage 3 fixes that value and minimises car-minutes. Stage 4 minimises the sum of selected option indices, a deterministic tie-break. This is the Q5 order (§11), restored by H06 (2026-10-13); before that, stages 2 and 3 were swapped, and the archived campaigns used the swapped order.
+   - Settings: `num_workers=1`, a fixed solver seed, and a time limit. The limit is one allowance per solve call, shared by the stages: each stage receives the time that remains (`typed_day_selection.py:213-221`).
    - Status: `OPTIMAL` → `proven_over_menu`; `FEASIBLE` → `witness`; `UNKNOWN` → `indeterminate`; `INFEASIBLE` → `infeasible_for_L`, with a diagnostic (see 3.4).
 3. **Independent verification.** The chosen fixed routes and labels go to the TS typed assignment (§4). That code is a different implementation in a different language. It recomputes the minimum cars for those fixed routes, proves or refutes it, and emits the physical witness (V01/V02 producer/verifier separation).
 
@@ -349,7 +349,7 @@ The owner answered the open questions of section 11 as follows. These replace th
 | Q2 | Minibus = 4 Sw + 5 So confirmed. The DB record was corrected by the owner on 2026-10-07 from 4/10 to 4/5 (F6). |
 | Q3 | Same travel times, same ride limit R and cooldown 10 for both vehicle types. |
 | Q4 | All So students are sedan-eligible; no per-student eligibility is needed. |
-| Q5 | Tie-break on car-minutes. Report both the weekly maximum and the per-day need. |
+| Q5 | Tie-break on car-minutes, after cars and total vehicle-minutes (implemented in this order since H06, 2026-10-13). Report both the weekly maximum and the per-day need. |
 | Q6 | The 4/10 results are REMOVED from the paper and replaced by the corrected 4/5 campaign. The 4/10 archive stays in git, labelled invalid due to a data error. |
 | Q7 | Cars unlimited. Selection time limit 30 s per (day, R, L). |
 | Q8 | CP-SAT is accepted for the day selection. |

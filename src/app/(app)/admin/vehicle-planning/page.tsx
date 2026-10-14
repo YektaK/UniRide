@@ -23,6 +23,7 @@ import { adminApi } from "@/lib/admin-api";
 import { ALGORITHM_OPTIONS } from "@/lib/algorithm-constants";
 import { formatRoutePlanForSave, saveRoutePlan } from "@/services/route-plans";
 import type { User } from "@/types";
+import { normalizeAdminUser, type AdminUserRow } from "@/lib/admin-user-mapper";
 import { IEDashboard } from "@/components/admin/ie-dashboard";
 import type { IEResponseData } from "@/types/ie-resource";
 
@@ -64,7 +65,9 @@ export default function VehiclePlanningPage() {
         try {
             const response = await adminApi.users.getAll(1, 100);
             const usersArray = Array.isArray(response) ? response : (response.data || []);
-            const studentUsers = usersArray.filter((u: User) => u.role === "student");
+            const studentUsers = (usersArray as AdminUserRow[])
+                .filter((u) => u.role === "student")
+                .map(normalizeAdminUser);
             setStudents(studentUsers);
         } catch (error) {
             console.error("Error loading students:", error);

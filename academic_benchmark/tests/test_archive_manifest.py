@@ -242,7 +242,8 @@ def test_quarantine_moves_only_tracked_files_and_writes_reproducible_manifest(tm
     assert (archive / "results" / "reports" / "analysis.md").is_file()
     assert not (archive / "ignored.pyc").exists()
     assert not (repo / "academic_benchmark" / "yaem2026" / "ignored.pyc").exists()
-    assert verify_manifest(manifest, archive) == []
+    # the moved files are not staged yet: their blobs are still at the original paths in the index
+    assert verify_manifest(manifest, archive, repo_root=repo) == []
     assert json.loads((archive / "manifest.json").read_text(encoding="utf-8"))["entries"]
 
 

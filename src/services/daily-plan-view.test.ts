@@ -18,6 +18,7 @@ import {
   shortageResponse,
 } from "./daily-plan-fixtures";
 import { parseDudulluPreviewResponse } from "./dudullu-preview-response";
+import { readyResponse as matrixAgeBase } from "./daily-plan-fixtures";
 
 describe("formatMinutesOfDay", () => {
   it.each([
@@ -576,5 +577,45 @@ describe("buildDailyPlanView - capacity floor", () => {
     void _omit;
     expect(parseDudulluPreviewResponse({ ...withField, fleet }).fleet.maxCapacity).toBeUndefined();
     expect(parseDudulluPreviewResponse({ ...withField, fleet: { ...fleet, maxCapacity: null } }).fleet.maxCapacity).toBeNull();
+  });
+});
+
+describe("matrix age (M4, owner decision: warn and show, never fail closed)", () => {
+  const withAge = (matrixAge: unknown) => parseDudulluPreviewResponse({ ...matrixAgeBase(), matrixAge });
+  const age = (over: Record<string, unknown>) => ({
+    loadedAt: "2026-10-05T05:00:00+00:00", ageSeconds: 3 * 3600, refreshFailed: false, maxAgeSeconds: 86400, ...over,
+  });
+
+  it("shows the age without a warning when it is below the maximum and the refresh worked", () => {
+    const view = buildDailyPlanView(withAge(age({})));
+    expect(view.matrixAge).toMatchObject({ ageSeconds: 10800, ageParts: { unit: "hours", count: 3 }, warning: null });
+  });
+
+  it("warns when the age exceeds the maximum", () => {
+    const view = buildDailyPlanView(withAge(age({ ageSeconds: 86401 })));
+    expect(view.matrixAge?.warning).toBe("stale");
+  });
+
+  it("does not warn at exactly the maximum", () => {
+    expect(buildDailyPlanView(withAge(age({ ageSeconds: 86400 }))).matrixAge?.warning).toBeNull();
+  });
+
+  it("warns when the refresh failed even for a fresh age, and the plan is untouched", () => {
+    const view = buildDailyPlanView(withAge(age({ ageSeconds: 5, refreshFailed: true })));
+    expect(view.matrixAge).toMatchObject({ warning: "refresh_failed", ageParts: { unit: "lessThanMinute", count: 0 } });
+    expect(view.summary.status).toBe("preview_ready");
+  });
+
+  it("has no matrix age when the response carries none", () => {
+    expect(buildDailyPlanView(withAge(null)).matrixAge).toBeNull();
+    expect(buildDailyPlanView(parseDudulluPreviewResponse(matrixAgeBase())).matrixAge).toBeNull();
+  });
+
+  it("has tr and en copy for every matrix age key", () => {
+    const keys = ["loaded", "unknownAge", "ageLessThanMinute", "ageMinutes", "ageHours", "ageDays", "warningTitle", "warningStale", "warningRefreshFailed"];
+    for (const locale of ["tr", "en"] as const) {
+      const copy = (load(locale).page.admin.dailyPlan as { matrixAge?: Record<string, string> }).matrixAge ?? {};
+      for (const key of keys) expect(copy[key]?.trim(), `${locale} matrixAge.${key}`).toBeTruthy();
+    }
   });
 });

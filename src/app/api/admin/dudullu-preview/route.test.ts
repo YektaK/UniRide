@@ -1477,3 +1477,55 @@ describe("POST /api/admin/dudullu-preview time limits", () => {
     expectReadOnly(client);
   });
 });
+
+describe("POST /api/admin/dudullu-preview matrix age (M4)", () => {
+  const provenance = (overrides: Record<string, unknown> = {}) => ({
+    source: "supabase", sha256: "a".repeat(64), location_count: 2,
+    loaded_at: "2026-09-30T05:00:00+00:00", age_seconds: 10800, refresh_failed: false, ...overrides,
+  });
+  function transportWith(snapshot: object) {
+    setAdmin(admittedRows());
+    optimizerFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/internal/matrix-snapshot") return Response.json(snapshot);
+      if (path === "/api/v1/optimize") return Response.json(solverResult("2026-09-30:pickup:student-1"));
+      throw new Error("unexpected optimizer path");
+    });
+  }
+
+  it("carries the matrix age, load time and refresh flag to the response; the plan is still produced", async () => {
+    vi.stubEnv("UNIRIDE_MATRIX_MAX_AGE_SECONDS", "");
+    transportWith({ ...matrix, provenance: provenance({ refresh_failed: true }) });
+    const { POST } = await import("./route");
+
+    const response = await POST(post({ serviceDate: "2026-09-30" }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.status).toBe("preview_ready");
+    expect(body.matrixAge).toEqual({
+      loadedAt: "2026-09-30T05:00:00+00:00", ageSeconds: 10800, refreshFailed: true, maxAgeSeconds: 86400,
+    });
+  });
+
+  it("reads the maximum age from UNIRIDE_MATRIX_MAX_AGE_SECONDS on the server and ignores junk values", async () => {
+    transportWith({ ...matrix, provenance: provenance() });
+    const { POST } = await import("./route");
+
+    vi.stubEnv("UNIRIDE_MATRIX_MAX_AGE_SECONDS", "3600");
+    expect((await (await POST(post({ serviceDate: "2026-09-30" }))).json()).matrixAge.maxAgeSeconds).toBe(3600);
+    vi.stubEnv("UNIRIDE_MATRIX_MAX_AGE_SECONDS", "soon");
+    expect((await (await POST(post({ serviceDate: "2026-09-30" }))).json()).matrixAge.maxAgeSeconds).toBe(86400);
+    vi.stubEnv("UNIRIDE_MATRIX_MAX_AGE_SECONDS", "-5");
+    expect((await (await POST(post({ serviceDate: "2026-09-30" }))).json()).matrixAge.maxAgeSeconds).toBe(86400);
+  });
+
+  it("reports null matrixAge when the optimizer sent no provenance", async () => {
+    transportWith(matrix);
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+
+    expect(body.status).toBe("preview_ready");
+    expect(body.matrixAge).toBeNull();
+  });
+});

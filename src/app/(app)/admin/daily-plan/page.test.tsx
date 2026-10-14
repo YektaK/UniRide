@@ -497,4 +497,41 @@ describe("DailyPlanPage", () => {
       expect(toggle.getAttribute("aria-describedby")).toBeTruthy();
     }
   });
+  describe("matrix age (M4)", () => {
+    const withAge = (matrixAge: unknown) => ({ ...readyResponse(), matrixAge }) as unknown as DudulluPreviewResponse;
+    const age = (over: Record<string, unknown> = {}) => ({
+      loadedAt: "2026-10-05T05:00:00+00:00", ageSeconds: 3 * 3600, refreshFailed: false, maxAgeSeconds: 86400, ...over,
+    });
+
+    it("shows the load age without a warning for a fresh matrix", async () => {
+      await generate(withAge(age()));
+      expect(screen.getByTestId("matrix-age").textContent).toContain("Seyahat süresi matrisi: 3 saat önce yüklendi");
+      expect(screen.queryByTestId("matrix-age-warning")).toBeNull();
+    });
+
+    it("warns when the matrix is older than the maximum and still shows the plan", async () => {
+      await generate(withAge(age({ ageSeconds: 30 * 3600 })));
+      expect(screen.getByTestId("matrix-age").textContent).toContain("1 gün önce yüklendi");
+      expect(screen.getByTestId("matrix-age-warning").textContent).toContain("1 gün");
+      expect(screen.getByTestId("status-banner")).toBeTruthy();
+    });
+
+    it("warns when the refresh failed even if the matrix is young", async () => {
+      await generate(withAge(age({ ageSeconds: 120, refreshFailed: true })));
+      expect(screen.getByTestId("matrix-age").textContent).toContain("2 dakika önce yüklendi");
+      expect(screen.getByTestId("matrix-age-warning").textContent).toContain("yenilenemedi");
+    });
+
+    it("renders English copy", async () => {
+      testLocale = "en";
+      await generate(withAge(age({ refreshFailed: true })));
+      expect(screen.getByTestId("matrix-age").textContent).toContain("Travel-time matrix: loaded 3 h ago");
+      expect(screen.getByTestId("matrix-age-warning").textContent).toContain("could not be refreshed");
+    });
+
+    it("shows nothing when the response has no matrix age", async () => {
+      await generate(withAge(null));
+      expect(screen.queryByTestId("matrix-age")).toBeNull();
+    });
+  });
 });

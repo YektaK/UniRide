@@ -682,3 +682,12 @@ describe("requiredDudulluStudentLocations", () => {
     ).toEqual([]);
   });
 });
+
+describe("analyzeDudulluReadiness options", () => {
+  it("requires legDecisionsReadable (no silent default of true)", () => {
+    // @ts-expect-error legDecisionsReadable is required
+    expect(() => analyzeDudulluReadiness([], [], [], readyMatrix(2, 2), {})).not.toThrow();
+    // @ts-expect-error the options argument itself is required
+    expect(() => analyzeDudulluReadiness([], [], [], readyMatrix(2, 2))).not.toThrow();
+  });
+});

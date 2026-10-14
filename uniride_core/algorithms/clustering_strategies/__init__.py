@@ -28,17 +28,18 @@ from .sweep import SweepClusteringStrategy
 from .clarke_wright import ClarkeWrightClusteringStrategy
 
 
-# Exactly the names ``get_clustering_strategy`` maps to a dedicated class. The
-# request schema allowlists ``clustering_algorithm`` against this tuple.
-SUPPORTED_CLUSTERING_ALGORITHMS = (
-    "kmeans",
-    "fuzzy_cmeans",
-    "fuzzy_cmeans_enhanced",
-    "hierarchical_fcm",
-    "k_medoids",
-    "sweep",
-    "clarke_wright",
-)
+# Single source of truth: the factory dispatches on this dict and the request
+# schema allowlists ``clustering_algorithm`` against its keys.
+_CLUSTERING_STRATEGIES = {
+    "kmeans": KMeansClusteringStrategy,
+    "fuzzy_cmeans": FuzzyCMeansClusteringStrategy,
+    "fuzzy_cmeans_enhanced": EnhancedFuzzyCMeansStrategy,
+    "hierarchical_fcm": HierarchicalFCMStrategy,
+    "k_medoids": KMedoidsClusteringStrategy,
+    "sweep": SweepClusteringStrategy,
+    "clarke_wright": ClarkeWrightClusteringStrategy,
+}
+SUPPORTED_CLUSTERING_ALGORITHMS = tuple(_CLUSTERING_STRATEGIES)
 
 
 def get_clustering_strategy(
@@ -69,17 +70,7 @@ def get_clustering_strategy(
     Fallback:
         Defaults to Sweep if unknown strategy is provided (better for CVRP than K-Means)
     """
-    strategies = {
-        "kmeans": KMeansClusteringStrategy,
-        "fuzzy_cmeans": FuzzyCMeansClusteringStrategy,
-        "fuzzy_cmeans_enhanced": EnhancedFuzzyCMeansStrategy,
-        "hierarchical_fcm": HierarchicalFCMStrategy,
-        "k_medoids": KMedoidsClusteringStrategy,
-        "sweep": SweepClusteringStrategy,
-        "clarke_wright": ClarkeWrightClusteringStrategy,
-    }
-    
-    strategy_class = strategies.get(strategy_name, SweepClusteringStrategy)
+    strategy_class = _CLUSTERING_STRATEGIES.get(strategy_name, SweepClusteringStrategy)
     
     # Handle special initialization parameters
     if strategy_name == "hierarchical_fcm":

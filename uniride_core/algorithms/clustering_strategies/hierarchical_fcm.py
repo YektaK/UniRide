@@ -23,7 +23,7 @@ import math
 import random
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
-from uniride_core.algorithms.clustering import Point, Cluster, calculate_centroid, validate_cluster_capacity
+from uniride_core.algorithms.clustering import Point, Cluster, calculate_centroid, resolve_rng, validate_cluster_capacity
 from uniride_core.algorithms.clustering_strategies.base import BaseClusteringStrategy
 from uniride_core.algorithms.clustering_strategies.fuzzy_cmeans_enhanced import (
     enhanced_fuzzy_c_means_core,
@@ -331,6 +331,8 @@ def hierarchical_fcm_clustering(
     if config is None:
         config = HierarchicalConfig()
     
+    # One generator shared by every stage (never a fresh Random(42) per stage).
+    rng = resolve_rng(rng)
     n = len(points)
     
     # Check if hierarchical mode is needed

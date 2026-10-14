@@ -138,13 +138,25 @@ def list_benchmark_param_spaces() -> Dict:
     }
 
 
+_HISTORICAL_DESC = (
+    "Add a separate, labelled historical_unverified section (results stamped before 2026-10-13, "
+    "DECISION_LOG A13). Never pooled into the default current results."
+)
+
+
+def _historical_kwargs(include_historical: Any) -> Dict[str, bool]:
+    """Pass the flag only when set, so default calls keep their exact reader signature."""
+    return {"include_historical": True} if bool(_query_value(include_historical)) else {}
+
+
 @router.get("/academic/leaderboard")
 def get_academic_leaderboard(
     algorithm: Optional[str] = Query(None, description="Filter by algorithm"),
     category: Optional[str] = Query(None, description="Filter by problem category"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum rows to return"),
+    include_historical: bool = Query(False, description=_HISTORICAL_DESC),
 ) -> Dict:
-    """Read-only leaderboard backed by the academic benchmark database."""
+    """Read-only leaderboard backed by the academic benchmark database (current evidence)."""
     try:
         from academic_benchmark.results_reader import get_leaderboard
 
@@ -152,6 +164,7 @@ def get_academic_leaderboard(
             algorithm=_query_value(algorithm),
             category=_query_value(category),
             limit=_query_value(limit),
+            **_historical_kwargs(include_historical),
         )
     except Exception as exc:
         logger.exception("Academic leaderboard query failed")
@@ -162,14 +175,23 @@ def get_academic_leaderboard(
 def get_academic_best_result(
     problem: str = Query(..., description="Problem name"),
     algorithm: str = Query(..., description="Algorithm name"),
+    include_historical: bool = Query(False, description=_HISTORICAL_DESC),
 ) -> Dict:
-    """Read-only best result lookup backed by the academic benchmark database."""
+    """Read-only best result lookup backed by the academic benchmark database (current evidence)."""
     try:
         from academic_benchmark.results_reader import get_best_result
 
-        result = get_best_result(problem=problem, algorithm=algorithm)
-        if result.get("result") is None:
-            raise HTTPException(status_code=404, detail="No academic result found")
+        kwargs = _historical_kwargs(include_historical)
+        result = get_best_result(problem=problem, algorithm=algorithm, **kwargs)
+        historical = (result.get("historical_unverified") or {}).get("result")
+        if result.get("result") is None and historical is None:
+            detail = "No academic result found"
+            if result.get("historical_unverified_available"):
+                detail += (
+                    " in current evidence; HISTORICAL_UNVERIFIED results exist: "
+                    "pass include_historical=true to see them (labelled, never pooled)"
+                )
+            raise HTTPException(status_code=404, detail=detail)
         return result
     except HTTPException:
         raise
@@ -182,14 +204,16 @@ def get_academic_best_result(
 def get_academic_benchmark_results(
     limit: int = Query(100, ge=1, le=1000, description="Maximum rows to return"),
     feasible_only: bool = Query(False, description="Return only successful, constraint-feasible rows"),
+    include_historical: bool = Query(False, description=_HISTORICAL_DESC),
 ) -> Dict:
-    """Read-only benchmark CSV rows, including CVRP/CVRPTW routing fields."""
+    """Read-only benchmark rows (current evidence), including CVRP/CVRPTW routing fields."""
     try:
         from academic_benchmark.results_reader import get_benchmark_rows
 
         return get_benchmark_rows(
             limit=_query_value(limit),
             feasible_only=bool(_query_value(feasible_only)),
+            **_historical_kwargs(include_historical),
         )
     except Exception as exc:
         logger.exception("Academic benchmark-results query failed")

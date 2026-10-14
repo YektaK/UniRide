@@ -1,0 +1,58 @@
+{
+  "cutoff": "2026-10-13",
+  "decision": "DECISION_LOG A13",
+  "entries": [
+    {
+      "archive_path": "academic_benchmark/numba_results/legacy_pre_2026-10-13/benchmark_progress.csv",
+      "evidence_class": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/numba_results/benchmark_progress.csv",
+      "sha256": "e5efebb28d164595f08202e908ef26406b797d9695557204d1e5af6844619686",
+      "size_bytes": 142828
+    },
+    {
+      "archive_path": "academic_benchmark/numba_results/legacy_pre_2026-10-13/benchmark_summary.csv",
+      "evidence_class": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/numba_results/benchmark_summary.csv",
+      "sha256": "3d580caabcc59f3b7f458af5b89555d84ee09192aefe0a54cddf7cd5dd4f96ff",
+      "size_bytes": 10841
+    },
+    {
+      "archive_path": "academic_benchmark/numba_results/legacy_pre_2026-10-13/best_params_numba.json",
+      "evidence_class": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/numba_results/best_params_numba.json",
+      "sha256": "0161a52f5d77557dff9bb328c647a191f4d82fd73c27907414febd59a9023d48",
+      "size_bytes": 4860
+    },
+    {
+      "archive_path": "academic_benchmark/numba_results/legacy_pre_2026-10-13/bildiri_import/benchmark_progress_20260513_003803.csv",
+      "evidence_class": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/numba_results/bildiri_import/benchmark_progress_20260513_003803.csv",
+      "sha256": "3d854e87115ca66c7f4d14d2341ab19028e2a8a43e21dff9a982ff5cf1e1446d",
+      "size_bytes": 4784
+    },
+    {
+      "archive_path": "academic_benchmark/numba_results/legacy_pre_2026-10-13/bildiri_import/benchmark_summary_20260513_003803.csv",
+      "evidence_class": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/numba_results/bildiri_import/benchmark_summary_20260513_003803.csv",
+      "sha256": "6121787baa6545f89d8d0285a000d68bc7a162641d7562f1707e114ed0bda6e3",
+      "size_bytes": 1237
+    },
+    {
+      "archive_path": "academic_benchmark/numba_results/legacy_pre_2026-10-13/bildiri_import/import_report_20260513_003803.json",
+      "evidence_class": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/numba_results/bildiri_import/import_report_20260513_003803.json",
+      "sha256": "a5fd48cebd413164f825896e0c4dd259987e038c0a4e57dda1763c3fdd6def9a",
+      "size_bytes": 4150
+    },
+    {
+      "archive_path": "academic_benchmark/numba_results/legacy_pre_2026-10-13/tuning_progress.csv",
+      "evidence_class": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/numba_results/tuning_progress.csv",
+      "sha256": "83e40c185d4e096bc7c4d5d1bc7798b9f32698d620956f7fac4facf01fa372a3",
+      "size_bytes": 343948
+    }
+  ],
+  "evidence_class": "HISTORICAL_UNVERIFIED",
+  "generated_at": "2026-10-14",
+  "schema_version": 1
+}

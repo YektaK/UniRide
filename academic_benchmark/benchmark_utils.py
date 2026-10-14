@@ -121,6 +121,9 @@ def _sync_hash_fields(data: Dict[str, Any]) -> Dict[str, Any]:
     return {**data, "file_hashes": merged, "algorithm_hashes": merged}
 
 
+_KNOWN_METADATA_KEYS = ("file_hashes", "algorithm_hashes", "results", "best_params", "last_updated")
+
+
 def load_metadata(path: str) -> Dict[str, Any]:
     """JSON metadata dosyasını okur."""
     default = {
@@ -135,12 +138,15 @@ def load_metadata(path: str) -> Dict[str, Any]:
         if not isinstance(data, dict):
             return default.copy()
         synced = _sync_hash_fields(data)
+        # keep unknown extra keys (e.g. legacy_best_params): save_metadata rewrites the whole file
+        extras = {k: v for k, v in synced.items() if k not in _KNOWN_METADATA_KEYS}
         return {
             "file_hashes": synced.get("file_hashes", {}),
             "algorithm_hashes": synced.get("algorithm_hashes", {}),
             "results": synced.get("results", {}),
             "best_params": synced.get("best_params", {}),
             "last_updated": synced.get("last_updated", ""),
+            **extras,
         }
     except Exception:
         return default.copy()
@@ -983,6 +989,9 @@ def load_best_params(
 ) -> Optional[Dict[str, Any]]:
     """Load best known params for (problem, algorithm) from best_solutions table.
     Returns params dict or None.
+
+    Legacy parameters (rows stamped before 2026-10-13) are not used for warm start by the
+    2026-10-13 decision (get_best_solution hides them); a fresh tuning run is required.
     """
     try:
         from academic_benchmark.tsplib_manager import get_best_solution as _load

@@ -68,7 +68,12 @@ def save_entry(problem: str, algorithm: str, params: Dict[str, Any],
     return entry["id"]
 
 def get_best_for(problem: str, algorithm: str) -> Optional[Dict[str, Any]]:
-    db = _load()
+    """Best stored params for WARM START. Legacy entries (no/old timestamp, before the
+    obsolete_results cutoff) are never returned, with no flag or environment opt-in (A13, D2);
+    they stay in the file and are listed by ``list_entries``/``analyze_patterns``."""
+    from academic_benchmark import obsolete_results as _obs
+
+    db = [e for e in _load() if not _obs.is_legacy_timestamp(e.get("timestamp"))]
     matches = [e for e in db if e["problem"] == problem and e["algorithm"] == algorithm]
     if not matches:
         return None
@@ -81,8 +86,18 @@ def get_best_for(problem: str, algorithm: str) -> Optional[Dict[str, Any]]:
         return min(finite_gap, key=lambda e: e["gap"])
     return matches[0]
 
-def list_entries() -> List[Dict[str, Any]]:
-    return _load()
+def is_legacy_entry(entry: Dict[str, Any]) -> bool:
+    from academic_benchmark import obsolete_results as _obs
+
+    return _obs.is_legacy_timestamp(entry.get("timestamp"))
+
+
+def list_entries(include_obsolete: bool = True) -> List[Dict[str, Any]]:
+    """All entries by default (management view: ids stay listable/deletable; the menu labels
+    legacy rows). ``include_obsolete=False`` drops legacy entries (used for the "is there
+    anything usable" check)."""
+    db = _load()
+    return db if include_obsolete else [e for e in db if not is_legacy_entry(e)]
 
 def delete_entry(entry_id: int) -> bool:
     db = _load()
@@ -96,10 +111,12 @@ def delete_entry(entry_id: int) -> bool:
 def get_problems_for(algorithm: str) -> List[str]:
     return list(set(e["problem"] for e in _load() if e["algorithm"] == algorithm))
 
-def analyze_patterns() -> str:
-    """Return a Markdown analysis of parameter patterns across problem sizes."""
+def analyze_patterns(include_obsolete: bool = False) -> str:
+    """Return a Markdown analysis of parameter patterns across problem sizes.
+
+    Legacy entries (pre-2026-10-13 / undated) are excluded unless ``include_obsolete``."""
     from collections import Counter
-    db = _load()
+    db = list_entries(include_obsolete=include_obsolete)
     if not db:
         return "No parameter entries found."
 

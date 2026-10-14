@@ -37,7 +37,7 @@ def build_promoted_configs(
     """Build a neutral promoted-config document from academic DB rows."""
     _ensure_db_schema(db_path)
     candidates = []
-    candidates.extend(_best_solution_candidates(query_best_solutions(limit=limit, db_path=db_path)))
+    candidates.extend(_best_solution_candidates(query_best_solutions(limit=limit, db_path=db_path, include_obsolete=include_obsolete)))
     candidates.extend(
         _benchmark_result_candidates(
             filter_obsolete_rows(

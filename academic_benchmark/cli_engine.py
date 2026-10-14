@@ -132,10 +132,12 @@ except ModuleNotFoundError:
 
 from uniride_core.algorithms.tsplib_parser import parse_tsplib_text
 
+from academic_benchmark.obsolete_results import quarantine_legacy_best_params
 from academic_benchmark.param_db import (
     save_entry as _param_db_save,
     get_best_for as _param_db_get_best,
     list_entries as _param_db_list,
+    is_legacy_entry as _param_db_is_legacy,
     analyze_patterns as _param_db_analyze,
     delete_entry as _param_db_delete,
     set_db_path as _param_db_set,
@@ -1272,6 +1274,7 @@ def _tune_parameters(
     param_overrides: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> Dict[str, Dict[str, Any]]:
     completed = _load_tuning_cache()
+    quarantine_legacy_best_params(metadata)
     best_params: Dict[str, Dict[str, Any]] = metadata.get("best_params", {})
     tuning_tasks = []
 
@@ -1334,6 +1337,7 @@ def _tune_parameters(
         current_best = best_params.get(best_key)
         if current_best is None or result["avg_length"] < float(current_best["avg_length"]):
             best_params[best_key] = {
+                "timestamp": datetime.now().isoformat(),
                 "problem": problem_name,
                 "strategy": strategy_name,
                 "avg_length": result["avg_length"],
@@ -1356,8 +1360,10 @@ def _tune_parameters(
 
     _run_pool(tuning_tasks, workers, on_result=on_result)
 
+    # A13: the quarantined legacy file best_params_numba.json (legacy_pre_2026-10-13/) keeps its name;
+    # a new run writes a distinct current-evidence file so the two can never be confused.
     metadata["best_params"] = best_params
-    with open(os.path.join(RESULTS_DIR, "best_params_numba.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(RESULTS_DIR, "best_params_numba_current.json"), "w", encoding="utf-8") as f:
         json.dump(best_params, f, indent=2, ensure_ascii=False)
     save_metadata(METADATA_PATH, metadata)
     return best_params
@@ -1742,6 +1748,7 @@ def _run_optuna_tuning_flow(
     - Workers are dynamically assigned: fast trials cycle through, slow ones don't block
     - Early stopping: stops study when gap <= 0.01% for 3 consecutive trials
     """
+    quarantine_legacy_best_params(metadata)  # first: legacy params never warm-start
     import optuna
     from concurrent.futures import ProcessPoolExecutor, wait, FIRST_COMPLETED
 
@@ -1814,6 +1821,7 @@ def _run_optuna_tuning_flow(
             if len(study.trials) > 0:
                 try:
                     best_params[key] = {
+                        "timestamp": datetime.now().isoformat(),
                         "params": {**defaults, **study.best_params},
                         "avg_gap": study.best_value,
                         "n_runs": n_runs,
@@ -1970,6 +1978,7 @@ def _run_optuna_tuning_flow(
             try:
                 best_trial = study.best_trial
                 best_params[key] = {
+                    "timestamp": datetime.now().isoformat(),
                     "params": {**defaults, **best_trial.params},
                     "avg_gap": study.best_value,
                     "n_runs": n_runs,
@@ -1981,6 +1990,7 @@ def _run_optuna_tuning_flow(
                 print(f"  {key} — gap: {study.best_value:.2f}% ({info['completed']} trials, {status})")
             except ValueError:
                 best_params[key] = {
+                    "timestamp": datetime.now().isoformat(),
                     "params": defaults,
                     "avg_gap": float("inf"),
                     "n_runs": n_runs,
@@ -1991,6 +2001,7 @@ def _run_optuna_tuning_flow(
                 print(f"  {key} — gap: inf% ({info['completed']} trials, ALL FAILED)")
         else:
             best_params[key] = {
+                "timestamp": datetime.now().isoformat(),
                 "params": defaults,
                 "avg_gap": float("inf"),
                 "n_runs": n_runs,
@@ -2197,7 +2208,7 @@ def _load_params_from_db_interactive(
     Previously, multi-problem DB loads silently overwrote params (last problem won).
     See IMPLEMENTATION_PLAN_2026-05-19.md § H-04 for migration details.
     """
-    db_entries = _param_db_list()
+    db_entries = _param_db_list(include_obsolete=False)
     if not db_entries:
         print("[INFO] Parametre DB'sinde kayit bulunamadi. Varsayilan parametreler kullanilacak.")
         return {}
@@ -2275,7 +2286,7 @@ def _param_db_menu() -> None:
                     gap_str = f"{e.get('gap', 0):.2f}" if e.get('gap') is not None else "N/A"
                     score = e.get('best_score', 0)
                     score_str = f"{score:<10.1f}" if isinstance(score, (int, float)) and not math.isinf(score) else f"{str(score):<10}"
-                    print(f"{e['id']:>3} {e.get('timestamp', '?'):<20} {e['problem']:<12} {e['algorithm']:<8} {score_str} {gap_str:<8} {e.get('dimension', 0):<6}")
+                    print(f"{e['id']:>3} {str(e.get('timestamp', '?')):<20} {e['problem']:<12} {e['algorithm']:<8} {score_str} {gap_str:<8} {e.get('dimension', 0):<6}{' [legacy]' if _param_db_is_legacy(e) else ''}")
             input("\nDevam icin Enter...")
         elif choice == '2':
             analysis = _param_db_analyze()
@@ -2359,6 +2370,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     _ensure_dirs()
     _param_db_set(os.path.join(BENCHMARK_DB, "param_db.json"))
     metadata = load_metadata(METADATA_PATH)
+    quarantine_legacy_best_params(metadata)
     _active_metadata = metadata
 
     all_specs = _all_strategy_specs()

@@ -55,6 +55,13 @@ class _Loader:
         self.repository.refresh(force=force)
 
 
+class _NoRefreshLoader(_Loader):
+    """Leaves the repository as-is so the TTL gate is reached with no failed refresh."""
+
+    def refresh(self, force=False):
+        return None
+
+
 class _LoaderClass:
     instance = None
 
@@ -71,11 +78,11 @@ def _repo(clock, provider=None):
     return repo
 
 
-def _post(monkeypatch, repo):
+def _post(monkeypatch, repo, loader_cls=_Loader):
     monkeypatch.setenv("INTERNAL_API_KEY", KEY)
     monkeypatch.delenv("UNIRIDE_DISABLE_AUTH", raising=False)
     monkeypatch.delenv("UNIRIDE_TENANT_KEYS", raising=False)
-    _LoaderClass.instance = _Loader(repo)
+    _LoaderClass.instance = loader_cls(repo)
     monkeypatch.setattr(readiness, "DataLoader", _LoaderClass)
     app = FastAPI()
     app.include_router(readiness.router)
@@ -158,3 +165,48 @@ def test_recovery_clears_the_stale_state(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["provenance"]["refresh_failed"] is False
+
+
+def test_failed_refresh_sets_refresh_failed_in_matrix_provenance():
+    clock = _Clock()
+    provider = _Provider()
+    repo = _repo(clock, provider)
+    assert repo.matrix_provenance()["refresh_failed"] is False
+    provider.down = True
+    clock.advance(30)
+
+    repo.refresh(force=True)  # fails; the last-known-good matrix is kept
+
+    provenance = repo.matrix_provenance()
+    assert provenance["refresh_failed"] is True
+    assert provenance["age_seconds"] == pytest.approx(30.0)  # still the old load time
+
+
+def test_matrix_older_than_ttl_without_failed_refresh_is_stale():
+    clock = _Clock()
+    repo = _repo(clock)  # provider healthy; _last_error stays None
+    clock.advance(601)
+    assert repo._last_error is None
+
+    with pytest.raises(matrix_repository.MatrixStaleError, match="matrix is stale"):
+        repo.matrix_snapshot(["Sw1"], depot_code="D.Kampus")
+
+
+def test_ttl_only_stale_matrix_is_503_through_the_route(monkeypatch):
+    clock = _Clock()
+    repo = _repo(clock)
+    clock.advance(601)
+
+    response = _post(monkeypatch, repo, loader_cls=_NoRefreshLoader)
+
+    assert repo._last_error is None
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Matrix snapshot stale"}
+
+
+def test_matrix_exactly_at_ttl_is_still_served():
+    clock = _Clock()
+    repo = _repo(clock)
+    clock.advance(600)
+
+    assert repo.matrix_snapshot(["Sw1"], depot_code="D.Kampus")["provenance"]["refresh_failed"] is False

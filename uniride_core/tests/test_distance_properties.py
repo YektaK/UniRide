@@ -1,6 +1,7 @@
 """Property-based tests for all distance functions in uniride_core.algorithms.distance."""
 
 import math
+import random
 
 import numpy as np
 import pytest
@@ -19,6 +20,7 @@ from uniride_core.algorithms.distance import (
     tsplib_geo_distance,
 )
 
+EARTH_RADIUS_M = 6_371_000  # same value as haversine_distance uses
 TOL = 1e-9
 GEO_TOL = 1e-6
 
@@ -35,14 +37,72 @@ def _approx_triangle(a, b, c, dist_fn):
     return dist_fn(a, c) <= dist_fn(a, b) + dist_fn(b, c) + TOL
 
 
+def _unclamped_haversine(lat1, lon1, lat2, lon2):
+    """The formula as it was before the clamp (reference for the identity tests)."""
+    lat1_r, lat2_r = math.radians(lat1), math.radians(lat2)
+    dlat, dlon = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2) ** 2 + math.cos(lat1_r) * math.cos(lat2_r) * math.sin(dlon / 2) ** 2
+    return EARTH_RADIUS_M * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def _same_float(x, y):
+    return (math.isnan(x) and math.isnan(y)) or x.hex() == y.hex()
+
+
 class TestHaversine:
+    def test_exact_antipodal_pair_does_not_raise(self):
+        # 45 N 0 E vs 45 S 180 E: 1 - a used to round to -2.2e-16 and math.sqrt raised.
+        d = haversine_distance(45.0, 0.0, -45.0, 180.0)
+        assert d == pytest.approx(math.pi * EARTH_RADIUS_M)
+
+    def test_clamp_changes_no_result_for_non_antipodal_pairs(self):
+        """Bit-identical to the unclamped formula wherever that formula returns."""
+        rng = random.Random(20261014)
+
+        compared = 0
+        for i in range(1200):
+            lat1, lon1 = rng.uniform(-90, 90), rng.uniform(-180, 180)
+            if i % 6 == 0:  # near-antipodal: the region where rounding matters
+                lat2, lon2 = -lat1 + rng.uniform(-1e-6, 1e-6), lon1 + 180 + rng.uniform(-1e-6, 1e-6)
+                lon2 = (lon2 + 180) % 360 - 180
+            else:
+                lat2, lon2 = rng.uniform(-90, 90), rng.uniform(-180, 180)
+            try:
+                expected = _unclamped_haversine(lat1, lon1, lat2, lon2)
+            except ValueError:
+                continue  # the antipodal-rounding inputs the clamp exists for
+            assert _same_float(haversine_distance(lat1, lon1, lat2, lon2), expected)
+            compared += 1
+        assert compared >= 1000
+
+    def test_nan_coordinate_propagates_as_nan_not_zero(self):
+        # max(0.0, nan) is 0.0 in Python: a naive clamp would report 0 m ("same place").
+        for args in [(math.nan, 0, 1, 1), (0, math.nan, 1, 1), (0, 0, math.nan, 1), (0, 0, 1, math.nan)]:
+            assert math.isnan(haversine_distance(*args)), args
+
+    def test_nan_and_inf_inputs_match_the_unclamped_formula(self):
+        specials = [math.nan, math.inf, -math.inf, 0.0, 90.0, -180.0]
+        for lat1 in specials:
+            for lat2 in specials:
+                for lon1, lon2 in [(0.0, 0.0), (math.nan, 5.0), (7.0, math.inf)]:
+                    try:
+                        expected = _unclamped_haversine(lat1, lon1, lat2, lon2)
+                    except ValueError:
+                        with pytest.raises(ValueError):
+                            haversine_distance(lat1, lon1, lat2, lon2)
+                        continue
+                    assert _same_float(haversine_distance(lat1, lon1, lat2, lon2), expected)
+
     @given(GEO_POINT, GEO_POINT)
+    @example(p1=(45.0, 0.0), p2=(-45.0, 180.0))
     def test_non_negative(self, p1, p2):
         assert haversine_distance(*p1, *p2) >= 0
 
     @given(GEO_POINT, GEO_POINT)
     def test_symmetric(self, p1, p2):
-        assert abs(haversine_distance(*p1, *p2) - haversine_distance(*p2, *p1)) < GEO_TOL
+        d12 = haversine_distance(*p1, *p2)
+        d21 = haversine_distance(*p2, *p1)
+        assert abs(d12 - d21) < GEO_TOL
 
     @given(GEO_POINT)
     def test_same_point_zero(self, p):
@@ -60,7 +120,7 @@ class TestHaversine:
 
     @given(GEO_POINT, GEO_POINT)
     def test_reasonable_range(self, p1, p2):
-        EARTH_HALF_CIRC = math.pi * 6_371_000
+        EARTH_HALF_CIRC = math.pi * EARTH_RADIUS_M
         assert haversine_distance(*p1, *p2) <= EARTH_HALF_CIRC + GEO_TOL
 
 

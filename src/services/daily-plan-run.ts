@@ -71,7 +71,8 @@ const decisionRowSchema = z.object({
 const snapshotSchema = z.object({
   id: z.string(), version: z.string(), sha256: z.string().regex(/^[0-9a-f]{64}$/),
   source: z.literal("supabase"),
-  // Age and refresh state of the matrix. A malformed value must never block the plan.
+  // Load time and age of the matrix. refresh_failed is not parsed (the plan page does not use it).
+  // A malformed value must never block the plan.
   provenance: z.object({
     loaded_at: z.string().nullable().optional(),
     age_seconds: z.number().finite().nonnegative().nullable().optional(),

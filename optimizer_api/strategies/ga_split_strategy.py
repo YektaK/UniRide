@@ -75,9 +75,26 @@ class GASplitStrategy(HybridSplitBaseStrategy):
             matrix_kind="travel_time",
         )
         self.config = {**self.DEFAULT_CONFIG, **promoted, **(config or {})}
+        # H17/M22: "request" = explicit constructor config, "promoted" = academic
+        # promoted params applied (only with UNIRIDE_USE_PROMOTED_CONFIG=1),
+        # otherwise "default".
+        if config is not None:
+            self.config_source = "request"
+        elif promoted:
+            self.config_source = "promoted"
+        else:
+            self.config_source = "default"
         self.seed = resolve_seed(self.config)
         self._best_individual = None
         self._generation_stats = []
+
+    def _config_provenance(self, request: OptimizationRequest):
+        """Return (config_source, effective_config, effective_seed) for a request."""
+        if request.ga_config:
+            effective_config = {**self.config, **request.ga_config}
+            source = "promoted+request" if self.config_source == "promoted" else "request"
+            return source, effective_config, resolve_seed(effective_config, self.seed)
+        return self.config_source, dict(self.config), self.seed
 
     @property
     def name(self) -> str:
@@ -100,6 +117,8 @@ class GASplitStrategy(HybridSplitBaseStrategy):
         students = request.students
         depot = request.depot
         
+        config_source, effective_config, effective_seed = self._config_provenance(request)
+
         if not students:
             return OptimizationResponse(
                 algorithm_used=self.name,
@@ -108,7 +127,9 @@ class GASplitStrategy(HybridSplitBaseStrategy):
                 total_vehicles=0,
                 execution_time_seconds=time.time() - start_time,
                 direction=request.direction,
-                time_windows_used=False
+                time_windows_used=False,
+                effective_config_source=config_source,
+                effective_seed=effective_seed,
             )
         
         # CVRPTW: Extract time windows if enabled
@@ -126,9 +147,7 @@ class GASplitStrategy(HybridSplitBaseStrategy):
         
         # Override config
         # Singleton self.config korunuyor; her istek icin local kopya
-        effective_config = dict(self.config)
         if request.ga_config:
-            effective_config = {**self.config, **request.ga_config}
             rng = make_rng(effective_config, default=self.seed)
         else:
             rng = random.Random(self.seed)
@@ -258,7 +277,9 @@ class GASplitStrategy(HybridSplitBaseStrategy):
             execution_time_seconds=round(execution_time, 4),
             direction=direction,
             time_windows_used=use_time_windows and len(time_windows) > 0,
-            total_time_window_violations=total_tw_violations
+            total_time_window_violations=total_tw_violations,
+            effective_config_source=config_source,
+            effective_seed=effective_seed,
         )
 
 

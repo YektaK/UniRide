@@ -6,6 +6,10 @@ this module (``python p6_scenario.py <out.json>`` with the base tree on
 PYTHONPATH). It uses only the pre-existing API, so it runs unchanged on the
 base. The test replays it on the current tree and requires an identical JSON
 document (wall-clock ``execution_time_seconds`` neutralised).
+
+H17/M22 (2026-10-14): the golden was regenerated once to add the two reporting
+fields ``effective_config_source`` and ``effective_seed``; the diff against the
+base capture is exactly those two lines.
 """
 
 from __future__ import annotations

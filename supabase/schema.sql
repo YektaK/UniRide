@@ -133,6 +133,8 @@ CREATE TABLE IF NOT EXISTS time_matrix (
     duration_minutes NUMERIC NOT NULL,
     distance_meters NUMERIC,
     created_at TIMESTAMPTZ DEFAULT NOW(),
+    -- Dates the travel-time DATA (M4); kept current by the trigger below. Migration 20261015.
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(origin_code, destination_code)
 );
 
@@ -269,6 +271,24 @@ CREATE TRIGGER update_route_plans_updated_at BEFORE UPDATE ON route_plans
 DROP TRIGGER IF EXISTS update_sandbox_scenarios_updated_at ON sandbox_scenarios;
 CREATE TRIGGER update_sandbox_scenarios_updated_at BEFORE UPDATE ON sandbox_scenarios
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- time_matrix.updated_at (M4, migration 20261015): SECURITY INVOKER, empty search_path.
+CREATE OR REPLACE FUNCTION public.set_time_matrix_updated_at()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+BEGIN
+    NEW.updated_at := pg_catalog.now();
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS time_matrix_set_updated_at ON public.time_matrix;
+CREATE TRIGGER time_matrix_set_updated_at
+    BEFORE UPDATE ON public.time_matrix
+    FOR EACH ROW EXECUTE FUNCTION public.set_time_matrix_updated_at();
 
 -- Enable Row Level Security
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;

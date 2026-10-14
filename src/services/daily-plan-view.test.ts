@@ -584,11 +584,37 @@ describe("matrix age (M4, C2 gate kept: age is shown, a stale matrix blocks the 
   const withAge = (matrixAge: unknown) => parseDudulluPreviewResponse({ ...matrixAgeBase(), matrixAge });
   const load = (name: string) => JSON.parse(readFileSync(new URL(`../../messages/${name}.json`, import.meta.url), "utf8"));
   const age = (ageSeconds: number | null) => ({ loadedAt: "2026-10-05T05:00:00+00:00", ageSeconds });
+  const dataAge = (dataAgeSeconds: number | null) => ({
+    loadedAt: "2026-10-05T05:00:00+00:00",
+    ageSeconds: 0.2,
+    dataUpdatedAt: dataAgeSeconds === null ? null : "2026-03-05T10:00:00+00:00",
+    dataAgeSeconds,
+  });
 
   it.each([
     [5, "lessThanMinute", 0], [120, "minutes", 2], [3 * 3600, "hours", 3], [47 * 3600, "hours", 47], [3 * 86400, "days", 3],
   ])("formats %i s as %s", (seconds, unit, count) => {
     expect(buildDailyPlanView(withAge(age(seconds))).matrixAge).toMatchObject({ ageSeconds: seconds, ageParts: { unit, count } });
+  });
+
+  it.each([
+    [5, "lessThanMinute", 0], [120, "minutes", 2], [3 * 3600, "hours", 3], [47 * 3600, "hours", 47], [224 * 86400, "days", 224],
+  ])("formats the data age %i s as %s (M4: the age of the travel times, not of the load)", (seconds, unit, count) => {
+    expect(buildDailyPlanView(withAge(dataAge(seconds))).matrixAge).toMatchObject({
+      dataUpdatedAt: "2026-03-05T10:00:00+00:00",
+      dataAgeSeconds: seconds,
+      dataAgeParts: { unit, count },
+      ageParts: { unit: "lessThanMinute", count: 0 },
+    });
+  });
+
+  it("has an unknown data age when the optimizer sent none (column not migrated) or an old response omits the fields", () => {
+    expect(buildDailyPlanView(withAge(dataAge(null))).matrixAge).toMatchObject({
+      dataUpdatedAt: null, dataAgeSeconds: null, dataAgeParts: null,
+    });
+    expect(buildDailyPlanView(withAge(age(30))).matrixAge).toMatchObject({
+      dataUpdatedAt: null, dataAgeSeconds: null, dataAgeParts: null,
+    });
   });
 
   it("has an unknown age when the load time is unknown", () => {
@@ -607,12 +633,15 @@ describe("matrix age (M4, C2 gate kept: age is shown, a stale matrix blocks the 
   });
 
   it("has tr and en copy for every matrix age key and the MATRIX_STALE reason, and no leftover warning copy", () => {
-    const keys = ["loaded", "unknownAge", "ageLessThanMinute", "ageMinutes", "ageHours", "ageDays"];
+    const keys = ["dataUpdated", "unknownDataAge", "ageLessThanMinute", "ageMinutes", "ageHours", "ageDays"];
     for (const locale of ["tr", "en"] as const) {
       const plan = load(locale).page.admin.dailyPlan as { matrixAge?: Record<string, string>; reasons?: Record<string, string> };
       for (const key of keys) expect(plan.matrixAge?.[key]?.trim(), `${locale} matrixAge.${key}`).toBeTruthy();
       expect(plan.reasons?.MATRIX_STALE?.trim(), `${locale} reasons.MATRIX_STALE`).toBeTruthy();
       expect(Object.keys(plan.matrixAge ?? {}).filter((key) => key.startsWith("warning"))).toEqual([]);
+      // the load-age copy is gone: the load age is ~0 s and misleading (M4)
+      expect(plan.matrixAge).not.toHaveProperty("loaded");
+      expect(plan.matrixAge).not.toHaveProperty("unknownAge");
     }
   });
 });

@@ -1,13 +1,17 @@
 """Core helpers for production SOTA TSP strategy wrappers.
 
 Objective contract (audit M26 / QW11): the matrix handed to the SOTA solver is
-the *same* depot-anchored, directed travel-time the response reports and the
-certifier checks. The reported route is the closed cycle
+built from the *same* depot-anchored, directed travel-time the response reports
+and the certifier checks, scaled by ``SOTA_DURATION_SCALE`` (the solver
+objective is 1000x the arc durations, unrounded). The response publishes each
+step as ``round(x, 2)`` and sums those steps, so with more precise durations
+the reported total can differ from the exact cycle cost by up to
+``(n + 1) * 0.005`` minutes. The reported route is the closed cycle
 ``depot -> s1 -> ... -> sk -> depot``; the solver therefore receives an
 ``(n + 1) x (n + 1)`` matrix whose index 0 is the depot, and the cycle it
-returns is rotated so that it starts at the depot. Rounding or tie-breaking
-inside the solver cannot change the reported cost: the response recomputes it
-from the real durations of the chosen order.
+returns is rotated so that it starts at the depot. The response recomputes
+its cost from the real durations of the chosen order, never from the solver's
+reported length.
 
 Failure contract: a solver failure never silently turns into a different
 algorithm. The caller receives the greedy order *together with* a short reason
@@ -119,9 +123,12 @@ def solve_student_order_with_sota_tsp(
     if not student_ids:
         return SotaOrderOutcome(order=[])
 
+    # Built outside the try: a travel-time (matrix) error must fail the request
+    # closed, not be relabelled as a solver error and served as a greedy order.
+    matrix = build_solver_matrix(student_ids, depot_id, duration_lookup)
+
     try:
         solver = solver_cls(config)
-        matrix = build_solver_matrix(student_ids, depot_id, duration_lookup)
         result = solver.solve_with_matrix(matrix)
         order = _order_from_cycle(result.tour, student_ids)
     except Exception:

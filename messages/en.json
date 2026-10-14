@@ -627,7 +627,8 @@
         "loadError": "Failed to load students",
         "studentNotFound": "Student Not Found",
         "usingNStudents": "Testing with {n} users registered as \"Student\" role.",
-        "noRouteDetails": "This algorithm did not return detailed route steps. Only vehicle assignments were made."
+        "noRouteDetails": "This algorithm did not return detailed route steps. Only vehicle assignments were made.",
+        "greedyFallback": "Greedy fallback"
       },
       "settings": {
         "notificationTime": "Time to send students their next day's ride plan notification."

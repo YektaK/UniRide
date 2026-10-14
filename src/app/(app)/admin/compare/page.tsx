@@ -247,7 +247,11 @@ export default function AlgorithmComparisonPage() {
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="text-center">
-                                                    {res.success ? (
+                                                    {res.success && res.fallback_reason ? (
+                                                        <Badge variant="outline" className="border-amber-500 text-amber-700" title={res.algorithm_executed}>
+                                                            {t('greedyFallback')} ({res.fallback_reason})
+                                                        </Badge>
+                                                    ) : res.success ? (
                                                         <Badge variant="outline" className="border-green-500 text-green-700">{tc('success')}</Badge>
                                                     ) : (
                                                         <Badge variant="destructive">{tc('error')}</Badge>

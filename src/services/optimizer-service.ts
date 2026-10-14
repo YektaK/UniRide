@@ -415,6 +415,7 @@ export async function compareAllAlgorithms(
             best_algorithm: data.best_algorithm || "",
             fastest_algorithm: data.fastest_algorithm || "",
             summary: data.summary || {},
+            ...(Array.isArray(data.fallback_algorithms) && data.fallback_algorithms.length ? { fallback_algorithms: data.fallback_algorithms } : {}),
             algorithm_requested: data.algorithm_requested,
             feasibility_certificate: data.feasibility_certificate,
             applied_policy: data.applied_policy,

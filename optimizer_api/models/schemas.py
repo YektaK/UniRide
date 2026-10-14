@@ -651,6 +651,15 @@ class CompareResponse(BaseModel):
     summary: Dict[str, Any]
     applied_policy: Optional[AppliedComputePolicyInfo] = None
     matrix_provenance: Optional[MatrixProvenanceInfo] = None
+    # M26/QW11: requested algorithms served by a fallback; absent when none.
+    fallback_algorithms: Optional[List[str]] = None
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_fallback_algorithms(self, handler):
+        data = handler(self)
+        if isinstance(data, dict) and data.get("fallback_algorithms") is None:
+            data.pop("fallback_algorithms", None)
+        return data
 
 class StrategyInfo(BaseModel):
     name: str

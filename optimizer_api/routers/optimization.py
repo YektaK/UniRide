@@ -679,9 +679,20 @@ def compare_algorithms(request: CompareRequest) -> CompareResponse:
             "total_duration_minutes": round(result.total_duration_minutes, 2),
             "execution_time_seconds": round(result.execution_time_seconds, 4),
             "success": result.success,
+            **(
+                {
+                    "algorithm_executed": result.algorithm_executed,
+                    "fallback_reason": result.fallback_reason,
+                }
+                if result.fallback_reason
+                else {}
+            ),
         }
         for result in results
     }
+    fallback_algorithms = [
+        result.algorithm for result in results if result.fallback_reason
+    ]
     return CompareResponse(
         success=bool(eligible),
         results=results,
@@ -690,6 +701,7 @@ def compare_algorithms(request: CompareRequest) -> CompareResponse:
         summary=summary,
         applied_policy=_comparison_metadata(policy, request),
         matrix_provenance=_shared_provenance(results),
+        fallback_algorithms=fallback_algorithms or None,
     )
 
 

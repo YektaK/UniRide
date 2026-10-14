@@ -97,6 +97,7 @@ export async function POST(request: Request) {
             best_algorithm: result.best_algorithm,
             fastest_algorithm: result.fastest_algorithm,
             summary: result.summary,
+            ...(result.fallback_algorithms ? { fallback_algorithms: result.fallback_algorithms } : {}),
             student_count: students.length,
             algorithm_requested: result.algorithm_requested,
             feasibility_certificate: result.feasibility_certificate,

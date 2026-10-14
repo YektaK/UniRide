@@ -627,7 +627,8 @@
         "loadError": "Öğrenciler Yüklenemedi",
         "studentNotFound": "Öğrenci Bulunamadı",
         "usingNStudents": "Sistemde kayıtlı {n} adet \"Öğrenci\" rolündeki kullanıcı kullanılarak test edilecektir.",
-        "noRouteDetails": "Bu algoritma rota adımlarını detaylı döndürmedi. Sadece araç ataması yapıldı."
+        "noRouteDetails": "Bu algoritma rota adımlarını detaylı döndürmedi. Sadece araç ataması yapıldı.",
+        "greedyFallback": "Açgözlü yedek çözüm"
       },
       "settings": {
         "notificationTime": "Öğrencilere bir sonraki günün servis planı için bildirim gönderilme zamanı."

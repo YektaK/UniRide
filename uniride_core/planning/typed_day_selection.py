@@ -14,11 +14,12 @@ busy extended intervals, and it is enough to bound the load at every route
 start time.  Constraints: large peak <= ``max_large`` (L), car peak <= C
 (optionally C <= ``max_cars``).
 
-Objective, lexicographic (owner decisions Q5/Q7/Q8):
+Objective, lexicographic (owner decisions Q5/Q7/Q8, order restored by H06):
   1. minimise cars C (peak of concurrently busy cars, cooldown included);
-  2. minimise car-minutes;
-  3. minimise total vehicle-minutes of the selected options;
+  2. minimise total vehicle-minutes of the selected options;
+  3. minimise car-minutes (the deterministic tie-break of Q5);
   4. minimise the sum of selected option indices (deterministic tie-break).
+Until 2026-10-13 stages 2 and 3 were swapped (see DECISION_LOG H06).
 
 Optimality claim.  ``status == "optimal"`` proves that C is the minimum
 **over the given menus only**; it is not a global minimum number of cars, the
@@ -200,8 +201,8 @@ def solve_day_selection(
     car_min = sum(scaled(rec[3]) * rec[5] for rec in recs if rec[3].car_ok)
     tot_min = sum(scaled(rec[3]) * y[rec[0], rec[1]] for rec in recs)
     idx_sum = sum(oi * var for (_, oi), var in y.items())
-    stages = (("cars", big_c), ("car_minutes", car_min),
-              ("total_minutes", tot_min), ("option_index", idx_sum))
+    stages = (("cars", big_c), ("total_minutes", tot_min),
+              ("car_minutes", car_min), ("option_index", idx_sum))
 
     all_optimal = True
     best_values: Dict[str, int] = {}

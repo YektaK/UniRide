@@ -42,7 +42,7 @@ def _random_waves(rng, n_waves, n_opts, max_routes, car_forced_p=0.25):
 
 
 def _brute(waves, max_large, max_cars=None, cd_l=CD, cd_c=CD):
-    """Lexicographic optimum (cars, car_min, total_min, idx_sum) or None."""
+    """Lexicographic optimum (cars, total_min, car_min, idx_sum) or None (H06 order)."""
     best = None
     for combo in itertools.product(*[range(len(w.options)) for w in waves]):
         routes = [r for w, oi in zip(waves, combo) for r in w.options[oi].routes]
@@ -60,7 +60,7 @@ def _brute(waves, max_large, max_cars=None, cd_l=CD, cd_c=CD):
             if max_cars is not None and c > max_cars:
                 continue
             cm = sum(r.minutes for l, r in zip(labels, routes) if l)
-            key = (c, round(cm * SCALE), round(total * SCALE), idx)
+            key = (c, round(total * SCALE), round(cm * SCALE), idx)
             if best is None or key < best:
                 best = key
     return best
@@ -93,7 +93,7 @@ def test_matches_bruteforce_on_tiny_instances(seed):
         return
     assert res.status == tds.STATUS_OPTIMAL
     _validate(waves, res, max_large)
-    got = (res.cars, round(res.car_minutes * SCALE), round(res.total_minutes * SCALE),
+    got = (res.cars, round(res.total_minutes * SCALE), round(res.car_minutes * SCALE),
            sum(v["option_index"] for v in res.selection.values()))
     assert got == expect
 
@@ -218,6 +218,28 @@ def test_option_index_tiebreak_prefers_lowest_index():
     r = (Route(0, 10, 10.0),)
     waves = [Wave("w", (Option("a", r), Option("b", r)))]
     assert solve_day_selection(waves, 1).selection["w"]["option_index"] == 0
+
+
+def test_h06_total_minutes_outrank_car_minutes_at_equal_cars():
+    """Q5 / H06: cars, then total vehicle-minutes, then car-minutes, then option index.
+
+    Both options need exactly one car (a car-only route starting at 0) and fit the
+    single large vehicle.  Option "few_total" has fewer total minutes (25 < 40) but
+    more car-minutes (20 > 10); option "few_car" is the reverse.  The old order
+    (car-minutes before total minutes) picked "few_car".
+    """
+    few_total = Option("few_total", (Route(0, 20, 20.0, large_ok=False, car_ok=True),
+                                     Route(0, 5, 5.0, large_ok=True, car_ok=False)))
+    few_car = Option("few_car", (Route(0, 10, 10.0, large_ok=False, car_ok=True),
+                                 Route(0, 30, 30.0, large_ok=True, car_ok=False)))
+    # few_car is listed first so the option-index tie-break cannot explain the result.
+    waves = [Wave("w", (few_car, few_total))]
+    res = solve_day_selection(waves, 1, time_limit_s=20)
+    assert res.status == tds.STATUS_OPTIMAL and res.cars == 1
+    assert res.selection["w"]["option_id"] == "few_total"
+    assert (res.total_minutes, res.car_minutes) == (25.0, 20.0)
+    assert list(res.stats["stage_values"]) == ["cars", "total_minutes", "car_minutes", "option_index"]
+    assert _brute(waves, 1)[:3] == (1, 25 * SCALE, 20 * SCALE)
 
 
 @pytest.mark.parametrize("gap,cars", [(0, 1), (-1, 2)])

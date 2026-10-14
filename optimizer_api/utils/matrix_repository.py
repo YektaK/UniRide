@@ -28,6 +28,12 @@ DEFAULT_RETRY_BASE_SECONDS = 30.0
 MAX_RETRY_BACKOFF_SECONDS = 600.0
 # Rows per PostgREST request when loading ``time_matrix``.
 TIME_MATRIX_PAGE_SIZE = 1000
+_TIME_MATRIX_BASE_COLUMNS = "origin_code, destination_code, duration_minutes"
+# ``updated_at`` (migration 20261015) dates the travel-time DATA; the column may not exist
+# yet on a database where the migration is not applied.
+_TIME_MATRIX_COLUMNS = _TIME_MATRIX_BASE_COLUMNS + ", updated_at"
+# PostgreSQL SQLSTATE for "undefined_column", as relayed by PostgREST.
+_UNDEFINED_COLUMN_CODE = "42703"
 
 
 class IncompleteTravelMatrixError(LookupError):
@@ -129,6 +135,46 @@ def matrix_sha256(locations: list[str], matrix: list[list[float]]) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def _is_missing_updated_at_error(exc: BaseException) -> bool:
+    """True only when PostgREST reports the optional ``updated_at`` column as undefined.
+
+    Any other failure (permissions, network, timeout, a different column) is NOT
+    recognised, so it propagates and the load fails closed as before.
+    """
+    code = getattr(exc, "code", None)
+    message = str(getattr(exc, "message", "") or exc)
+    return code == _UNDEFINED_COLUMN_CODE and "updated_at" in message
+
+
+def _parse_updated_at(value: Any) -> Optional[datetime]:
+    """Timezone-aware UTC datetime of a PostgREST timestamp, or None if unusable.
+
+    A timestamp without an offset is read as UTC (``timestamptz`` is always sent with one).
+    """
+    if not isinstance(value, str) or not value.strip():
+        return None
+    text = value.strip()
+    if text.endswith(("Z", "z")):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _max_updated_at(rows: Sequence[Dict[str, Any]]) -> Optional[datetime]:
+    """Newest ``updated_at`` over the rows; None when no row carries a usable one."""
+    newest: Optional[datetime] = None
+    for row in rows:
+        parsed = _parse_updated_at(row.get("updated_at"))
+        if parsed is not None and (newest is None or parsed > newest):
+            newest = parsed
+    return newest
+
+
 class TravelTimeProvider(Protocol):
     """Source of raw travel rows: origin code, destination code, minutes."""
 
@@ -151,17 +197,27 @@ class SupabaseTimeMatrixProvider:
         client = self._build_client(create_client)
         rows: List[Dict[str, Any]] = []
         start = 0
+        columns = _TIME_MATRIX_COLUMNS
         # PostgREST caps a response at its max-rows setting (1000 on hosted
         # projects); page until a short page so larger matrices are not truncated.
         while True:
-            response = (
-                client.table("time_matrix")
-                .select("origin_code, destination_code, duration_minutes")
-                .order("origin_code")
-                .order("destination_code")
-                .range(start, start + TIME_MATRIX_PAGE_SIZE - 1)
-                .execute()
-            )
+            try:
+                response = (
+                    client.table("time_matrix")
+                    .select(columns)
+                    .order("origin_code")
+                    .order("destination_code")
+                    .range(start, start + TIME_MATRIX_PAGE_SIZE - 1)
+                    .execute()
+                )
+            except Exception as exc:  # noqa: BLE001 - narrowed just below
+                # Migration 20261015 not applied: the optional data-freshness column does
+                # not exist. Retry this page with the original select; the matrix, the
+                # paging and the C2 gate are then exactly what they were before it.
+                if columns == _TIME_MATRIX_COLUMNS and _is_missing_updated_at_error(exc):
+                    columns = _TIME_MATRIX_BASE_COLUMNS
+                    continue
+                raise
             page = response.data or []
             rows.extend(page)
             if len(page) < TIME_MATRIX_PAGE_SIZE:
@@ -225,6 +281,9 @@ class TimeMatrixRepository:
         self.time_matrix = None
         self._use_coordinates = True
         self._loaded_at: Optional[float] = None
+        # Newest ``time_matrix.updated_at`` of the loaded rows (UTC); None when the column
+        # is absent or unusable. Informational only: no gate reads it.
+        self._data_updated_at: Optional[datetime] = None
         # sha256 of the loaded matrix, computed lazily and reset on every load/clear
         self._matrix_digest: Optional[str] = None
         self._last_error: Optional[str] = None
@@ -250,6 +309,7 @@ class TimeMatrixRepository:
             self.time_matrix = None
             self._use_coordinates = True
             self._loaded_at = None
+            self._data_updated_at = None
             self._matrix_digest = None
             self._last_error = None
             self._next_retry_at = None
@@ -261,6 +321,7 @@ class TimeMatrixRepository:
             self._build_from_rows(rows)
             self._use_coordinates = False
             self._loaded_at = self._clock()
+            self._data_updated_at = _max_updated_at(rows)
             self._matrix_digest = None
             self._last_error = None
             self._next_retry_at = None
@@ -278,6 +339,7 @@ class TimeMatrixRepository:
             self.time_matrix = None
             self._use_coordinates = True
             self._loaded_at = None
+            self._data_updated_at = None
             self._matrix_digest = None
 
     def refresh(self, force: bool = False) -> None:
@@ -323,6 +385,7 @@ class TimeMatrixRepository:
             self.time_matrix = None
             self._use_coordinates = True
             self._loaded_at = None
+            self._data_updated_at = None
             self._matrix_digest = None
             self._last_error = None
             self._next_retry_at = None
@@ -487,6 +550,7 @@ class TimeMatrixRepository:
         """Provenance of the loaded matrix; caller holds the lock and has
         verified a matrix is loaded. Never contains keys, URLs or codes."""
         loaded_at = self._loaded_at
+        data_updated_at = self._data_updated_at
         return {
             "source": "supabase",
             "sha256": self._digest_locked(),
@@ -504,13 +568,26 @@ class TimeMatrixRepository:
             # True while the matrix served is the last-known-good one kept after
             # a failed (re)load; cleared by the next successful load.
             "refresh_failed": self._last_error is not None,
+            # Age of the travel-time DATA (max ``updated_at`` of the loaded rows), as
+            # opposed to ``loaded_at`` / ``age_seconds`` which date the load. Null when the
+            # column is absent (migration 20261015 not applied) or unusable. Display only:
+            # the C2 gate never reads these.
+            "data_updated_at": (
+                data_updated_at.isoformat() if data_updated_at is not None else None
+            ),
+            "data_age_seconds": (
+                round(max(0.0, self._clock() - data_updated_at.timestamp()), 3)
+                if data_updated_at is not None
+                else None
+            ),
         }
 
     def matrix_provenance(self) -> Dict[str, Any]:
         """Public, redaction-safe provenance of the currently loaded matrix.
 
         Keys: ``source``, ``sha256``, ``location_count``, ``loaded_at`` (ISO
-        UTC), ``age_seconds`` and ``refresh_failed``. Raises ``MatrixUnavailableError`` when no
+        UTC), ``age_seconds``, ``refresh_failed``, ``data_updated_at`` (ISO UTC) and
+        ``data_age_seconds`` (both null without ``time_matrix.updated_at``). Raises ``MatrixUnavailableError`` when no
         authoritative matrix is loaded.
         """
         with self._lock:

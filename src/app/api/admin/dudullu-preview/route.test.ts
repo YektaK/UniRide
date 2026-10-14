@@ -1478,54 +1478,52 @@ describe("POST /api/admin/dudullu-preview time limits", () => {
   });
 });
 
-describe("POST /api/admin/dudullu-preview matrix age (M4)", () => {
-  const provenance = (overrides: Record<string, unknown> = {}) => ({
-    source: "supabase", sha256: "a".repeat(64), location_count: 2,
-    loaded_at: "2026-09-30T05:00:00+00:00", age_seconds: 10800, refresh_failed: false, ...overrides,
-  });
-  function transportWith(snapshot: object) {
+describe("POST /api/admin/dudullu-preview matrix age (M4, C2 gate kept)", () => {
+  const provenance = { source: "supabase", sha256: "a".repeat(64), location_count: 2,
+    loaded_at: "2026-09-30T05:00:00+00:00", age_seconds: 10800, refresh_failed: false };
+
+  it("carries the matrix load time and age when a plan is produced", async () => {
     setAdmin(admittedRows());
     optimizerFetchMock.mockImplementation(async (path: string) => {
-      if (path === "/api/v1/internal/matrix-snapshot") return Response.json(snapshot);
-      if (path === "/api/v1/optimize") return Response.json(solverResult("2026-09-30:pickup:student-1"));
-      throw new Error("unexpected optimizer path");
+      if (path === "/api/v1/internal/matrix-snapshot") return Response.json({ ...matrix, provenance });
+      return Response.json(solverResult("2026-09-30:pickup:student-1"));
     });
-  }
-
-  it("carries the matrix age, load time and refresh flag to the response; the plan is still produced", async () => {
-    vi.stubEnv("UNIRIDE_MATRIX_MAX_AGE_SECONDS", "");
-    transportWith({ ...matrix, provenance: provenance({ refresh_failed: true }) });
     const { POST } = await import("./route");
 
-    const response = await POST(post({ serviceDate: "2026-09-30" }));
-    const body = await response.json();
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
 
-    expect(response.status).toBe(200);
     expect(body.status).toBe("preview_ready");
-    expect(body.matrixAge).toEqual({
-      loadedAt: "2026-09-30T05:00:00+00:00", ageSeconds: 10800, refreshFailed: true, maxAgeSeconds: 86400,
-    });
-  });
-
-  it("reads the maximum age from UNIRIDE_MATRIX_MAX_AGE_SECONDS on the server and ignores junk values", async () => {
-    transportWith({ ...matrix, provenance: provenance() });
-    const { POST } = await import("./route");
-
-    vi.stubEnv("UNIRIDE_MATRIX_MAX_AGE_SECONDS", "3600");
-    expect((await (await POST(post({ serviceDate: "2026-09-30" }))).json()).matrixAge.maxAgeSeconds).toBe(3600);
-    vi.stubEnv("UNIRIDE_MATRIX_MAX_AGE_SECONDS", "soon");
-    expect((await (await POST(post({ serviceDate: "2026-09-30" }))).json()).matrixAge.maxAgeSeconds).toBe(86400);
-    vi.stubEnv("UNIRIDE_MATRIX_MAX_AGE_SECONDS", "-5");
-    expect((await (await POST(post({ serviceDate: "2026-09-30" }))).json()).matrixAge.maxAgeSeconds).toBe(86400);
+    expect(body.matrixAge).toEqual({ loadedAt: "2026-09-30T05:00:00+00:00", ageSeconds: 10800 });
   });
 
   it("reports null matrixAge when the optimizer sent no provenance", async () => {
-    transportWith(matrix);
+    setAdmin(admittedRows());
+    mockTransport([solverResult("2026-09-30:pickup:student-1")]);
     const { POST } = await import("./route");
 
     const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
 
     expect(body.status).toBe("preview_ready");
     expect(body.matrixAge).toBeNull();
+  });
+
+  it.each([
+    ["Matrix snapshot stale", "MATRIX_STALE"],
+    ["Matrix snapshot unavailable", "MATRIX_UNAVAILABLE"],
+  ])("blocks the plan when the snapshot answers 503 %s (%s), without solving", async (detail, reason) => {
+    setAdmin(admittedRows());
+    optimizerFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/internal/matrix-snapshot") return Response.json({ detail }, { status: 503 });
+      throw new Error("must not solve without a matrix");
+    });
+    const { POST } = await import("./route");
+
+    const response = await POST(post({ serviceDate: "2026-09-30" }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({ status: "blocked_data", publishable: false, jobs: [] });
+    expect(body.reasonCodes).toEqual([reason]);
+    expect(optimizerFetchMock.mock.calls.map(([path]) => path)).toEqual(["/api/v1/internal/matrix-snapshot"]);
   });
 });

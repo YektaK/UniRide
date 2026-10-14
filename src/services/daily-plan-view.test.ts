@@ -580,43 +580,39 @@ describe("buildDailyPlanView - capacity floor", () => {
   });
 });
 
-describe("matrix age (M4, owner decision: warn and show, never fail closed)", () => {
+describe("matrix age (M4, C2 gate kept: age is shown, a stale matrix blocks the plan)", () => {
   const withAge = (matrixAge: unknown) => parseDudulluPreviewResponse({ ...matrixAgeBase(), matrixAge });
-  const age = (over: Record<string, unknown>) => ({
-    loadedAt: "2026-10-05T05:00:00+00:00", ageSeconds: 3 * 3600, refreshFailed: false, maxAgeSeconds: 86400, ...over,
+  const load = (name: string) => JSON.parse(readFileSync(new URL(`../../messages/${name}.json`, import.meta.url), "utf8"));
+  const age = (ageSeconds: number | null) => ({ loadedAt: "2026-10-05T05:00:00+00:00", ageSeconds });
+
+  it.each([
+    [5, "lessThanMinute", 0], [120, "minutes", 2], [3 * 3600, "hours", 3], [47 * 3600, "hours", 47], [3 * 86400, "days", 3],
+  ])("formats %i s as %s", (seconds, unit, count) => {
+    expect(buildDailyPlanView(withAge(age(seconds))).matrixAge).toMatchObject({ ageSeconds: seconds, ageParts: { unit, count } });
   });
 
-  it("shows the age without a warning when it is below the maximum and the refresh worked", () => {
-    const view = buildDailyPlanView(withAge(age({})));
-    expect(view.matrixAge).toMatchObject({ ageSeconds: 10800, ageParts: { unit: "hours", count: 3 }, warning: null });
+  it("has an unknown age when the load time is unknown", () => {
+    expect(buildDailyPlanView(withAge(age(null))).matrixAge).toMatchObject({ ageParts: null });
   });
 
-  it("warns when the age exceeds the maximum", () => {
-    const view = buildDailyPlanView(withAge(age({ ageSeconds: 86401 })));
-    expect(view.matrixAge?.warning).toBe("stale");
-  });
-
-  it("does not warn at exactly the maximum", () => {
-    expect(buildDailyPlanView(withAge(age({ ageSeconds: 86400 }))).matrixAge?.warning).toBeNull();
-  });
-
-  it("warns when the refresh failed even for a fresh age, and the plan is untouched", () => {
-    const view = buildDailyPlanView(withAge(age({ ageSeconds: 5, refreshFailed: true })));
-    expect(view.matrixAge).toMatchObject({ warning: "refresh_failed", ageParts: { unit: "lessThanMinute", count: 0 } });
-    expect(view.summary.status).toBe("preview_ready");
-  });
-
-  it("has no matrix age when the response carries none", () => {
+  it("has no matrix age when the response carries none, and no warning field exists", () => {
     expect(buildDailyPlanView(withAge(null)).matrixAge).toBeNull();
     expect(buildDailyPlanView(parseDudulluPreviewResponse(matrixAgeBase())).matrixAge).toBeNull();
+    expect(buildDailyPlanView(withAge(age(5))).matrixAge).not.toHaveProperty("warning");
   });
 
-  it("has tr and en copy for every matrix age key", () => {
-    const keys = ["loaded", "unknownAge", "ageLessThanMinute", "ageMinutes", "ageHours", "ageDays", "warningTitle", "warningStale", "warningRefreshFailed"];
-    const load = (name: string) => JSON.parse(readFileSync(new URL(`../../messages/${name}.json`, import.meta.url), "utf8"));
+  it("describes MATRIX_STALE as a problem reason", () => {
+    expect(describeReason("MATRIX_STALE", true)).toMatchObject({ messageKey: "MATRIX_STALE", severity: "problem" });
+    expect(buildDailyPlanView(blockedResponse(["MATRIX_STALE"])).summary.status).toBe("blocked_data");
+  });
+
+  it("has tr and en copy for every matrix age key and the MATRIX_STALE reason, and no leftover warning copy", () => {
+    const keys = ["loaded", "unknownAge", "ageLessThanMinute", "ageMinutes", "ageHours", "ageDays"];
     for (const locale of ["tr", "en"] as const) {
-      const copy = (load(locale).page.admin.dailyPlan as { matrixAge?: Record<string, string> }).matrixAge ?? {};
-      for (const key of keys) expect(copy[key]?.trim(), `${locale} matrixAge.${key}`).toBeTruthy();
+      const plan = load(locale).page.admin.dailyPlan as { matrixAge?: Record<string, string>; reasons?: Record<string, string> };
+      for (const key of keys) expect(plan.matrixAge?.[key]?.trim(), `${locale} matrixAge.${key}`).toBeTruthy();
+      expect(plan.reasons?.MATRIX_STALE?.trim(), `${locale} reasons.MATRIX_STALE`).toBeTruthy();
+      expect(Object.keys(plan.matrixAge ?? {}).filter((key) => key.startsWith("warning"))).toEqual([]);
     }
   });
 });

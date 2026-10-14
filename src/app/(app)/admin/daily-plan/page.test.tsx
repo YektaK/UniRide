@@ -497,45 +497,45 @@ describe("DailyPlanPage", () => {
       expect(toggle.getAttribute("aria-describedby")).toBeTruthy();
     }
   });
-  describe("matrix age (M4)", () => {
+  describe("matrix age (M4, C2 gate kept)", () => {
     const withAge = (matrixAge: unknown) => ({ ...readyResponse(), matrixAge }) as unknown as DudulluPreviewResponse;
-    const age = (over: Record<string, unknown> = {}) => ({
-      loadedAt: "2026-10-05T05:00:00+00:00", ageSeconds: 3 * 3600, refreshFailed: false, maxAgeSeconds: 86400, ...over,
-    });
+    const age = (ageSeconds: number | null = 3 * 3600) => ({ loadedAt: "2026-10-05T05:00:00+00:00", ageSeconds });
 
-    it("shows the load age without a warning for a fresh matrix", async () => {
+    it("shows when the matrix was loaded when a plan is produced", async () => {
       await generate(withAge(age()));
       expect(screen.getByTestId("matrix-age").textContent).toContain("Seyahat süresi matrisi: 3 saat önce yüklendi");
       expect(screen.queryByTestId("matrix-age-warning")).toBeNull();
     });
 
-    it("warns when the matrix is older than the maximum and still shows the plan", async () => {
-      await generate(withAge(age({ ageSeconds: 3 * 86400 })));
-      expect(screen.getByTestId("matrix-age").textContent).toContain("3 gün önce yüklendi");
-      expect(screen.getByTestId("matrix-age-warning").textContent).toContain("24 saat sınırından");
-      expect(screen.getByTestId("status-banner")).toBeTruthy();
-    });
-
-    it("warns when the refresh failed even if the matrix is young", async () => {
-      await generate(withAge(age({ ageSeconds: 120, refreshFailed: true })));
-      expect(screen.getByTestId("matrix-age").textContent).toContain("2 dakika önce yüklendi");
-      expect(screen.getByTestId("matrix-age-warning").textContent).toContain("yenilenemedi");
-    });
-
     it("renders English copy", async () => {
       testLocale = "en";
-      mocks.run.mockResolvedValue(withAge(age({ refreshFailed: true })));
+      mocks.run.mockResolvedValue(withAge(age()));
       render(<DailyPlanPage />);
       fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-10-05" } });
       fireEvent.click(screen.getByRole("button", { name: "Create plan" }));
       await screen.findByTestId("preview-banner");
       expect(screen.getByTestId("matrix-age").textContent).toContain("Travel-time matrix: loaded 3 h ago");
-      expect(screen.getByTestId("matrix-age-warning").textContent).toContain("could not be refreshed");
+    });
+
+    it("shows an unknown load time", async () => {
+      await generate(withAge(age(null)));
+      expect(screen.getByTestId("matrix-age").textContent).toContain("yüklenme zamanı bilinmiyor");
     });
 
     it("shows nothing when the response has no matrix age", async () => {
       await generate(withAge(null));
       expect(screen.queryByTestId("matrix-age")).toBeNull();
+    });
+
+    it.each(["tr", "en"] as const)("names a stale or refresh-failed matrix as the reason the plan is blocked (%s)", async (locale) => {
+      testLocale = locale;
+      mocks.run.mockResolvedValue({ ...blockedResponse(["MATRIX_STALE"]), matrixAge: null } as unknown as DudulluPreviewResponse);
+      render(<DailyPlanPage />);
+      fireEvent.change(screen.getByLabelText(locale === "tr" ? "Tarih" : "Date"), { target: { value: "2026-10-05" } });
+      fireEvent.click(screen.getByRole("button", { name: locale === "tr" ? "Planı oluştur" : "Create plan" }));
+      await screen.findByTestId("preview-banner");
+      const copy = (locale === "tr" ? trMessages : enMessages).page.admin.dailyPlan.reasons as Record<string, string>;
+      expect(document.body.textContent).toContain(copy.MATRIX_STALE);
     });
   });
 });

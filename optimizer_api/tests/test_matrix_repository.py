@@ -166,17 +166,15 @@ def test_matrix_snapshot_rejects_coordinate_fallback():
         repo.matrix_snapshot(["B"], depot_code="A")
 
 
-def test_matrix_snapshot_serves_stale_kept_matrix_flagged_and_rejects_incomplete_matrix():
-    # M4 (owner decision 2026-10-13): stale-kept is served and flagged, not rejected.
+def test_matrix_snapshot_rejects_stale_or_incomplete_matrix():
     clock = _MutableClock()
     repo = _build_repo(provider=_FailingAfterProvider(), clock=clock)
     repo.load()
     clock.advance(601)
     repo.refresh(force=True)
 
-    snapshot = repo.matrix_snapshot(["B"], depot_code="A")
-    assert snapshot["provenance"]["refresh_failed"] is True
-    assert snapshot["provenance"]["age_seconds"] == 601
+    with pytest.raises(MatrixSnapshotError):
+        repo.matrix_snapshot(["B"], depot_code="A")
 
     incomplete = _build_repo()
     incomplete.load()

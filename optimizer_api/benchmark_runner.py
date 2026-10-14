@@ -413,6 +413,7 @@ class BenchmarkRunner:
         """
         start_time = time.time()
         execution_failed = False
+        error_reason = None
         response = None
         
         # Registry singletons are built once at import; a strategy from
@@ -451,6 +452,18 @@ class BenchmarkRunner:
                 logger.warning(
                     f"Strategy {algorithm.algorithm_id} failed on {problem.name}: "
                     f"{response.error_message}"
+                )
+                execution_failed = True
+                tour_length = float('nan')
+            elif getattr(response, "fallback_reason", None):
+                # M26/QW11: the SOTA solver did not run and a greedy order was
+                # served. That is not a result of the requested algorithm, so it
+                # takes the existing failed-run path (NaN length, dropped from
+                # aggregates) with the reason code recorded.
+                error_reason = f"sota_fallback:{response.fallback_reason}"
+                logger.warning(
+                    f"Strategy {algorithm.algorithm_id} fell back on {problem.name}: "
+                    f"{error_reason}"
                 )
                 execution_failed = True
                 tour_length = float('nan')
@@ -507,6 +520,8 @@ class BenchmarkRunner:
             # promoted-config flag was on and which promoted file was present.
             **promoted_provenance,
         }
+        if error_reason is not None:
+            metadata["error_reason"] = error_reason
 
         if response is not None:
             try:

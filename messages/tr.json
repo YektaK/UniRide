@@ -262,6 +262,17 @@
           "network": "Sunucuya ulaşılamadı. Bağlantıyı kontrol edip yeniden deneyin.",
           "invalidResponse": "Sunucudan beklenmeyen bir yanıt geldi."
         },
+        "matrixAge": {
+          "loaded": "Seyahat süresi matrisi: {age} önce yüklendi",
+          "unknownAge": "Seyahat süresi matrisi: yüklenme zamanı bilinmiyor",
+          "ageLessThanMinute": "1 dakikadan kısa süre",
+          "ageMinutes": "{count} dakika",
+          "ageHours": "{count} saat",
+          "ageDays": "{count} gün",
+          "warningTitle": "Seyahat süresi matrisi güncel olmayabilir",
+          "warningStale": "Matris {max} sınırından daha eski. Plan yine de oluşturuldu; yolculuk süreleri güncel olmayabilir.",
+          "warningRefreshFailed": "Matris yenilenemedi; son başarılı yüklemedeki matris kullanıldı. Plan yine de oluşturuldu; yolculuk süreleri güncel olmayabilir."
+        },
         "banner": {
           "title": "Önizleme — yayınlanamaz, varsayımsal",
           "titlePlain": "Önizleme — yayınlanamaz",

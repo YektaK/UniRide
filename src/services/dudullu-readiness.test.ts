@@ -90,6 +90,7 @@ describe("analyzeDudulluReadiness", () => {
       schedules,
       readyVehicles(),
       readyMatrix(31, 31),
+      { legDecisionsReadable: true },
     );
 
     expect(report.historicalExpectation.studentCount).toBe(28);
@@ -104,6 +105,7 @@ describe("analyzeDudulluReadiness", () => {
       twentyEight.map((s) => dudulluSchedule(s.id)),
       readyVehicles(),
       readyMatrix(29, 29),
+      { legDecisionsReadable: true },
     );
     expect(exact.historicalExpectation.matchesStudentCount).toBe(true);
     expect(exact.historicalExpectation.matchesMatrixNodeCount).toBe(true);
@@ -118,6 +120,7 @@ describe("analyzeDudulluReadiness", () => {
       [{ ...schedule, id: student.weeklyScheduleId! }],
       readyVehicles(),
       readyMatrix(2),
+      { legDecisionsReadable: true },
     );
 
     expect(report.students.dudulluTarget).toBe(1);
@@ -141,6 +144,7 @@ describe("analyzeDudulluReadiness", () => {
       ],
       readyVehicles(),
       readyMatrix(2),
+      { legDecisionsReadable: true },
     );
 
     expect(report.students.dudulluTarget).toBe(1);
@@ -155,6 +159,7 @@ describe("analyzeDudulluReadiness", () => {
       [],
       readyVehicles(),
       readyMatrix(1),
+      { legDecisionsReadable: true },
     );
 
     expect(report.students.unclassifiedSchedule).toBe(1);
@@ -169,6 +174,7 @@ describe("analyzeDudulluReadiness", () => {
       [],
       readyVehicles(),
       readyMatrix(1),
+      { legDecisionsReadable: true },
     );
 
     expect(report.students.unclassifiedSchedule).toBe(1);
@@ -182,6 +188,7 @@ describe("analyzeDudulluReadiness", () => {
       [{ id: student.weeklyScheduleId!, userId: OBSERVER_STUDENT, entries: dudulluSchedule("x").entries }],
       readyVehicles(),
       readyMatrix(1),
+      { legDecisionsReadable: true },
     );
 
     expect(report.students.scheduleLinkMismatch).toBe(1);
@@ -196,6 +203,7 @@ describe("analyzeDudulluReadiness", () => {
       [{ id: student.weeklyScheduleId!, userId: student.id, entries: { bad: true } }],
       readyVehicles(),
       readyMatrix(1),
+      { legDecisionsReadable: true },
     );
 
     expect(report.schedules.malformed).toBe(1);
@@ -211,6 +219,7 @@ describe("analyzeDudulluReadiness", () => {
       [{ id: student.weeklyScheduleId!, userId: student.id, entries: [42] }],
       readyVehicles(),
       readyMatrix(1),
+      { legDecisionsReadable: true },
     );
 
     expect(report.schedules.malformed).toBe(1);
@@ -224,6 +233,7 @@ describe("analyzeDudulluReadiness", () => {
       [{ id: student.id, userId: student.id, entries: [] }],
       readyVehicles(),
       readyMatrix(1),
+      { legDecisionsReadable: true },
     );
 
     expect(report.students.dudulluTarget).toBe(0);
@@ -244,6 +254,7 @@ describe("analyzeDudulluReadiness", () => {
       ],
       readyVehicles(),
       readyMatrix(2),
+      { legDecisionsReadable: true },
     );
 
     expect(report.schedules.empty).toBe(1);
@@ -262,6 +273,7 @@ describe("analyzeDudulluReadiness", () => {
       ],
       readyVehicles(),
       readyMatrix(2),
+      { legDecisionsReadable: true },
     );
 
     expect(report.schedules.orphanedRows).toBe(1);
@@ -280,6 +292,7 @@ describe("analyzeDudulluReadiness", () => {
       ],
       readyVehicles(),
       readyMatrix(2),
+      { legDecisionsReadable: true },
     );
 
     expect(report.schedules.duplicateRowsForStudent).toBe(2);
@@ -294,6 +307,7 @@ describe("analyzeDudulluReadiness", () => {
       [dudulluSchedule(student.id)],
       readyVehicles(),
       readyMatrix(1),
+      { legDecisionsReadable: true },
     );
 
     expect(report.students.targetMissingLocation).toBe(1);
@@ -309,6 +323,7 @@ describe("analyzeDudulluReadiness", () => {
       [dudulluSchedule(student.id)],
       readyVehicles(),
       readyMatrix(1),
+      { legDecisionsReadable: true },
     );
 
     expect(report.students.targetMissingDisabilityType).toBe(1);
@@ -327,6 +342,7 @@ describe("analyzeDudulluReadiness", () => {
       ],
       readyVehicles(),
       readyMatrix(2),
+      { legDecisionsReadable: true },
     );
 
     expect(report.students.dudulluTarget).toBe(2);
@@ -342,6 +358,7 @@ describe("analyzeDudulluReadiness", () => {
       [dudulluSchedule(target.id)],
       readyVehicles(),
       readyMatrix(2),
+      { legDecisionsReadable: true },
     );
 
     expect(report.fleet.configuredDrivers).toBe(1);
@@ -354,6 +371,7 @@ describe("analyzeDudulluReadiness", () => {
       [dudulluSchedule(target.id)],
       [{ status: "active", wheelchairCapacity: 0, seatingCapacity: 0, cooldownMinutes: 10 }],
       readyMatrix(2),
+      { legDecisionsReadable: true },
     );
 
     expect(blocked.fleet.vehicles).toBe(1);
@@ -370,6 +388,7 @@ describe("analyzeDudulluReadiness", () => {
         { status: "active", wheelchairCapacity: 0, seatingCapacity: 5, cooldownMinutes: 10 },
       ],
       readyMatrix(2),
+      { legDecisionsReadable: true },
     );
     expect(allowed.fleet.usableActiveVehicles).toBe(1);
     expect(allowed.ready).toBe(true);
@@ -387,6 +406,7 @@ describe("analyzeDudulluReadiness", () => {
           { status: "active", wheelchairCapacity: 1, seatingCapacity: 7, cooldownMinutes },
         ],
         readyMatrix(2),
+      { legDecisionsReadable: true },
       );
 
       expect(report.ready).toBe(false);
@@ -405,6 +425,7 @@ describe("analyzeDudulluReadiness", () => {
         { status: "inactive", wheelchairCapacity: 1, seatingCapacity: 7, cooldownMinutes: null },
       ],
       readyMatrix(2),
+      { legDecisionsReadable: true },
     );
 
     expect(report.fleet.invalidCooldownActiveVehicles).toBe(0);
@@ -455,6 +476,7 @@ describe("analyzeDudulluReadiness", () => {
       [schedule],
       [vehicle],
       matrix,
+      { legDecisionsReadable: true },
     );
 
     expect(report.ready).toBe(true);
@@ -468,6 +490,7 @@ describe("analyzeDudulluReadiness", () => {
       [dudulluSchedule(target.id)],
       readyVehicles(),
       readyMatrix(2),
+      { legDecisionsReadable: true },
     );
     const serialized = JSON.stringify(report);
 
@@ -503,6 +526,7 @@ describe("analyzeDudulluReadiness", () => {
         complete: false,
         ready: false,
       },
+      { legDecisionsReadable: true },
     );
 
     expect(report.reasonCodes).toEqual([
@@ -524,6 +548,7 @@ describe("analyzeDudulluReadiness", () => {
       [],
       readyVehicles(),
       readyMatrix(1),
+      { legDecisionsReadable: true },
     );
 
     expect(report.students.dudulluTarget).toBe(0);
@@ -547,6 +572,7 @@ describe("analyzeDudulluReadiness", () => {
       [mismatched],
       readyVehicles(),
       readyMatrix(1),
+      { legDecisionsReadable: true },
     );
 
     expect(report.students.dudulluTarget).toBe(0);
@@ -572,6 +598,7 @@ describe("analyzeDudulluReadiness", () => {
         [{ id: student.weeklyScheduleId!, userId: student.id, entries }],
         readyVehicles(),
         readyMatrix(1),
+      { legDecisionsReadable: true },
       );
 
       expect(report.schedules.malformed).toBe(1);
@@ -590,6 +617,7 @@ describe("analyzeDudulluReadiness", () => {
       [dudulluSchedule(student.id)],
       readyVehicles(),
       readyMatrix(2),
+      { legDecisionsReadable: true },
     );
 
     expect(report.students.dudulluTarget).toBe(1);
@@ -610,6 +638,7 @@ describe("analyzeDudulluReadiness", () => {
       ],
       readyVehicles(),
       readyMatrix(2),
+      { legDecisionsReadable: true },
     );
 
     expect(report.students.allAccounts).toBe(2);
@@ -639,6 +668,7 @@ describe("analyzeDudulluReadiness", () => {
       [dudulluSchedule(target.id)],
       readyVehicles(),
       readyMatrix(2, 29),
+      { legDecisionsReadable: true },
     );
     expect(exact.historicalExpectation.matchesMatrixNodeCount).toBe(true);
 
@@ -647,6 +677,7 @@ describe("analyzeDudulluReadiness", () => {
       [dudulluSchedule(target.id)],
       readyVehicles(),
       readyMatrix(2, 30),
+      { legDecisionsReadable: true },
     );
     expect(shifted.historicalExpectation.matchesMatrixNodeCount).toBe(false);
   });
@@ -684,10 +715,13 @@ describe("requiredDudulluStudentLocations", () => {
 });
 
 describe("analyzeDudulluReadiness options", () => {
-  it("requires legDecisionsReadable (no silent default of true)", () => {
-    // @ts-expect-error legDecisionsReadable is required
-    expect(() => analyzeDudulluReadiness([], [], [], readyMatrix(2, 2), {})).not.toThrow();
-    // @ts-expect-error the options argument itself is required
-    expect(() => analyzeDudulluReadiness([], [], [], readyMatrix(2, 2))).not.toThrow();
+  it("requires legDecisionsReadable (no silent default of true); checked by tsc, never executed", () => {
+    const typeOnly = () => {
+      // @ts-expect-error legDecisionsReadable is required
+      analyzeDudulluReadiness([], [], [], readyMatrix(2, 2), {});
+      // @ts-expect-error the options argument itself is required
+      analyzeDudulluReadiness([], [], [], readyMatrix(2, 2));
+    };
+    expect(typeof typeOnly).toBe("function");
   });
 });

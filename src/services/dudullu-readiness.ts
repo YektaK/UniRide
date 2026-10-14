@@ -262,11 +262,10 @@ export function analyzeDudulluReadiness(
   schedules: readonly ReadinessScheduleInput[],
   vehicles: readonly ReadinessVehicleInput[],
   matrix: ReadinessMatrixSummary,
-  options: { readonly legDecisionsReadable?: boolean } = {},
+  options: { readonly legDecisionsReadable: boolean },
 ): DudulluReadinessReport {
-  // The route always passes the probe result; the default only serves callers that do not
-  // concern the decision table.
-  const legDecisionsReadable = options.legDecisionsReadable ?? true;
+  // Required: a caller must state the probe result; there is no silent "readable" default.
+  const { legDecisionsReadable } = options;
   const schedulesById = indexSchedules(schedules);
   const records = buildStudentRecords(users, schedulesById);
 

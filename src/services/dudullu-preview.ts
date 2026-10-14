@@ -17,6 +17,12 @@ export interface MatrixSnapshot {
   readonly version: string;
   readonly sha256: string;
   readonly source: string;
+  /** Optimizer-reported load time, age and refresh state of the matrix (optional on old optimizers). */
+  readonly provenance?: {
+    readonly loaded_at?: string | null;
+    readonly age_seconds?: number | null;
+    readonly refresh_failed?: boolean;
+  };
   readonly arcs: readonly MatrixArc[];
 }
 

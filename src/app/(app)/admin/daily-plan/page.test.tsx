@@ -510,9 +510,9 @@ describe("DailyPlanPage", () => {
     });
 
     it("warns when the matrix is older than the maximum and still shows the plan", async () => {
-      await generate(withAge(age({ ageSeconds: 30 * 3600 })));
-      expect(screen.getByTestId("matrix-age").textContent).toContain("1 gün önce yüklendi");
-      expect(screen.getByTestId("matrix-age-warning").textContent).toContain("1 gün");
+      await generate(withAge(age({ ageSeconds: 3 * 86400 })));
+      expect(screen.getByTestId("matrix-age").textContent).toContain("3 gün önce yüklendi");
+      expect(screen.getByTestId("matrix-age-warning").textContent).toContain("24 saat sınırından");
       expect(screen.getByTestId("status-banner")).toBeTruthy();
     });
 
@@ -524,7 +524,11 @@ describe("DailyPlanPage", () => {
 
     it("renders English copy", async () => {
       testLocale = "en";
-      await generate(withAge(age({ refreshFailed: true })));
+      mocks.run.mockResolvedValue(withAge(age({ refreshFailed: true })));
+      render(<DailyPlanPage />);
+      fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-10-05" } });
+      fireEvent.click(screen.getByRole("button", { name: "Create plan" }));
+      await screen.findByTestId("preview-banner");
       expect(screen.getByTestId("matrix-age").textContent).toContain("Travel-time matrix: loaded 3 h ago");
       expect(screen.getByTestId("matrix-age-warning").textContent).toContain("could not be refreshed");
     });

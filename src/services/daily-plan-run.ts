@@ -23,6 +23,7 @@ import {
 import type { MatrixSnapshot, PreviewJobInput, PreviewOptimizationResult, PreviewVehicle, PreviewReasonCode } from "@/services/dudullu-preview";
 import { serviceDateBounds } from "@/services/istanbul-service-date";
 import { DUDULLU_DEPOT } from "@/services/dudullu-campus";
+import { MATRIX_MAX_AGE_ENV, buildMatrixAge, resolveMatrixMaxAgeSeconds, type MatrixAge } from "@/services/matrix-age";
 import {
   MATRIX_UNAVAILABLE_CODE, classifyOptimizerMatrixError, readOptimizerErrorDetail,
 } from "@/services/optimizer-matrix-errors";
@@ -70,6 +71,12 @@ const decisionRowSchema = z.object({
 const snapshotSchema = z.object({
   id: z.string(), version: z.string(), sha256: z.string().regex(/^[0-9a-f]{64}$/),
   source: z.literal("supabase"),
+  // Age and refresh state of the matrix. A malformed value must never block the plan.
+  provenance: z.object({
+    loaded_at: z.string().nullable().optional(),
+    age_seconds: z.number().finite().nonnegative().nullable().optional(),
+    refresh_failed: z.boolean().optional(),
+  }).optional().catch(undefined),
   arcs: z.array(z.object({ origin_code: z.string(), destination_code: z.string(), duration_minutes: z.number() })),
 });
 const optimizerResultSchema = z.object({
@@ -491,6 +498,8 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
   // Every response, including blocked ones, carries the same labelling. Display labels are
   // location codes only; no user names are read or returned (K4).
   let retryAfterSeconds: number | undefined;
+  // Matrix age is shown, never enforced (M4, T09): the plan is produced either way.
+  let matrixAge: MatrixAge | null = null;
   const finish = <T extends ReturnType<typeof buildDudulluPreview>>(result: T) => ({
     ...withReasonCodes(result, extraReasons),
     ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
@@ -501,6 +510,7 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
     fleet: fleetInfo,
     limits,
     occurrenceLabels,
+    matrixAge,
   });
 
   const loaded = await loadDailyPlanDemand(client, serviceDate, assumeConfirmed, demandState);
@@ -555,6 +565,7 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
 
   const matrix = await fetchMatrixSnapshot(optimizerFetch, admitted);
   if (matrix === null) return finish(blockedPreview(serviceDate, admitted, null, "MATRIX_UNAVAILABLE"));
+  matrixAge = buildMatrixAge(matrix.provenance, resolveMatrixMaxAgeSeconds(process.env[MATRIX_MAX_AGE_ENV]));
 
   const jobs: PreviewJobInput[] = [];
   for (const group of groupWaves(admitted)) {

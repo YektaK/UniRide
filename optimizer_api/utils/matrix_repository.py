@@ -493,13 +493,16 @@ class TimeMatrixRepository:
                 if loaded_at is not None
                 else None
             ),
+            # True while the matrix served is the last-known-good one kept after
+            # a failed (re)load; cleared by the next successful load.
+            "refresh_failed": self._last_error is not None,
         }
 
     def matrix_provenance(self) -> Dict[str, Any]:
         """Public, redaction-safe provenance of the currently loaded matrix.
 
         Keys: ``source``, ``sha256``, ``location_count``, ``loaded_at`` (ISO
-        UTC) and ``age_seconds``. Raises ``MatrixUnavailableError`` when no
+        UTC), ``age_seconds`` and ``refresh_failed``. Raises ``MatrixUnavailableError`` when no
         authoritative matrix is loaded.
         """
         with self._lock:
@@ -661,10 +664,10 @@ class TimeMatrixRepository:
                 raise MatrixSnapshotError("coordinate fallback is not authoritative")
             if self._loaded_at is None:
                 raise MatrixSnapshotError("matrix is not loaded")
-            if self._last_error is not None:
-                raise MatrixSnapshotError("matrix provider is unhealthy")
-            if self._ttl_seconds > 0 and self._clock() - self._loaded_at > self._ttl_seconds:
-                raise MatrixSnapshotError("matrix is stale")
+            # M4 / MT2 staleness half (owner decision 2026-10-13, DECISION_LOG
+            # T09): a matrix kept after a failed refresh, or older than the TTL,
+            # is still served. It is flagged (``provenance.refresh_failed``) and
+            # its age is reported so the consumer can warn; no fail-closed gate.
 
             locations = list(self.locations)
             matrix = [list(row) for row in self.time_matrix]

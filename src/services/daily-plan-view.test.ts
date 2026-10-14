@@ -613,6 +613,7 @@ describe("matrix age (M4, owner decision: warn and show, never fail closed)", ()
 
   it("has tr and en copy for every matrix age key", () => {
     const keys = ["loaded", "unknownAge", "ageLessThanMinute", "ageMinutes", "ageHours", "ageDays", "warningTitle", "warningStale", "warningRefreshFailed"];
+    const load = (name: string) => JSON.parse(readFileSync(new URL(`../../messages/${name}.json`, import.meta.url), "utf8"));
     for (const locale of ["tr", "en"] as const) {
       const copy = (load(locale).page.admin.dailyPlan as { matrixAge?: Record<string, string> }).matrixAge ?? {};
       for (const key of keys) expect(copy[key]?.trim(), `${locale} matrixAge.${key}`).toBeTruthy();

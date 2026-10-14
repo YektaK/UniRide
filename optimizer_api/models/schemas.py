@@ -543,6 +543,8 @@ class MatrixProvenanceInfo(BaseModel):
     location_count: int
     loaded_at: Optional[str] = None
     age_seconds: Optional[float] = None
+    # True when the matrix is the last-known-good one kept after a failed refresh.
+    refresh_failed: Optional[bool] = None
 
 
 class OptimizationResponse(BaseModel):

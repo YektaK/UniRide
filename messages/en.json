@@ -262,6 +262,17 @@
           "network": "The server could not be reached. Check the connection and try again.",
           "invalidResponse": "The server returned an unexpected response."
         },
+        "matrixAge": {
+          "loaded": "Travel-time matrix: loaded {age} ago",
+          "unknownAge": "Travel-time matrix: load time unknown",
+          "ageLessThanMinute": "under a minute",
+          "ageMinutes": "{count} min",
+          "ageHours": "{count} h",
+          "ageDays": "{count} d",
+          "warningTitle": "The travel-time matrix may be out of date",
+          "warningStale": "The matrix is older than the {max} limit. The plan was still produced; travel times may be out of date.",
+          "warningRefreshFailed": "The matrix could not be refreshed; the last successfully loaded matrix was used. The plan was still produced; travel times may be out of date."
+        },
         "banner": {
           "title": "Preview — not publishable, hypothetical",
           "titlePlain": "Preview — not publishable",

@@ -315,14 +315,23 @@ class _FailingStub:
         return OptimizationResponse(algorithm_used="stub", success=False, routes=[])
 
 
-def _runner_metadata():
+def _runner_metadata(monkeypatch=None, *, registry=True):
+    """Run one experiment. registry=True: stub comes from the runner's registry
+    (like the web runner's STRATEGY_REGISTRY singletons); registry=False: the
+    runner falls back to a fresh strategies.get_strategy() call."""
     problem = ProblemInstance(
         name="tiny4", dimension=4, problem_type="tsp", edge_weight_type="EUC_2D",
         category="small",
         coordinates=[(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)],
         depot_index=0,
     )
-    runner = BenchmarkRunner(strategies_registry={"stub": _FailingStub()})
+    if registry:
+        runner = BenchmarkRunner(strategies_registry={"stub": _FailingStub()})
+    else:
+        import strategies
+
+        monkeypatch.setattr(strategies, "get_strategy", lambda name: _FailingStub())
+        runner = BenchmarkRunner()
     result = runner._run_single_experiment(
         problem, AlgorithmConfig(name="Stub", algorithm_id="stub", params={}), 1
     )
@@ -336,9 +345,40 @@ def test_runner_metadata_records_flag_off_and_file_sha(promoted_file):
     assert metadata["promoted_config_sha256"] == digest
 
 
-def test_runner_metadata_records_flag_on(promoted_file, monkeypatch):
+def test_runner_metadata_records_flag_on_for_fresh_strategy(promoted_file, monkeypatch):
     monkeypatch.setenv(USE_PROMOTED_ENV, "1")
-    assert _runner_metadata()["promoted_config_flag"] is True
+    metadata = _runner_metadata(monkeypatch, registry=False)
+    assert metadata["promoted_config_flag"] is True
+    assert metadata["promoted_config_snapshot"] == "call"
+
+
+def test_registry_singletons_report_import_time_snapshot_not_current_flag(
+    promoted_file, monkeypatch
+):
+    """The flag is set AFTER the registry singletons were built: they were built
+    with defaults, so the record must say flag False (snapshot), not True."""
+    import strategies
+
+    assert strategies.REGISTRY_PROMOTED_PROVENANCE["promoted_config_flag"] is False
+    monkeypatch.setenv(USE_PROMOTED_ENV, "1")
+    metadata = _runner_metadata()
+    assert metadata["promoted_config_flag"] is False
+    assert metadata["promoted_config_sha256"] == (
+        strategies.REGISTRY_PROMOTED_PROVENANCE["promoted_config_sha256"]
+    )
+    assert metadata["promoted_config_snapshot"] == "registry_import"
+
+
+def test_provenance_sha_is_the_hash_of_what_was_loaded(promoted_file):
+    from strategies.promoted_config_loader import promoted_config_provenance
+
+    loaded_digest = hashlib.sha256(promoted_file.read_bytes()).hexdigest()
+    assert promoted_config_provenance()["promoted_config_sha256"] == loaded_digest
+    promoted_file.write_text('{"schema_version": 1, "source": "edited", "configs": []}')
+    # the cached document is still the old one, so the reported hash must be too
+    assert promoted_config_provenance()["promoted_config_sha256"] == loaded_digest
+    clear_promoted_config_cache()
+    assert promoted_config_provenance()["promoted_config_sha256"] != loaded_digest
 
 
 def test_runner_metadata_sha_is_null_without_file(tmp_path, monkeypatch):

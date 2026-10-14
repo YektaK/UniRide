@@ -281,7 +281,59 @@ def test_matrix_native_benchmark_run_executes_and_persists(monkeypatch):
     # H17/M22 (A12): matrix-native results record promoted-config provenance
     metadata = saved_results[0][0][1]["metadata"]
     assert metadata["promoted_config_flag"] is False
+    assert metadata["promoted_config_applicable"] is False
     assert "promoted_config_sha256" in metadata
+
+
+def test_matrix_native_result_records_real_promoted_file_digest(monkeypatch, tmp_path):
+    import hashlib
+
+    from strategies.promoted_config_loader import (
+        PROMOTED_CONFIG_PATH_ENV,
+        clear_promoted_config_cache,
+    )
+
+    promoted = tmp_path / "promoted_configs.json"
+    promoted.write_text('{"schema_version": 1, "source": "test", "configs": []}', encoding="utf-8")
+    monkeypatch.setenv(PROMOTED_CONFIG_PATH_ENV, str(promoted))
+    monkeypatch.delenv("UNIRIDE_USE_PROMOTED_CONFIG", raising=False)
+    clear_promoted_config_cache()
+
+    class ImmediateThread:
+        def __init__(self, target, daemon=True, name=None):
+            self.target = target
+
+        def start(self):
+            self.target()
+
+    saved_results = []
+    problem = RoutingProblem(
+        name="tiny-cvrp-digest",
+        problem_type="cvrp",
+        matrix=CostMatrix(np.array([[0, 5, 6], [5, 0, 1], [6, 1, 0]], dtype=float)),
+        constraints=ConstraintProfile(demands=[[0], [1], [1]], capacities=[2]),
+    )
+    monkeypatch.setattr(benchmark.threading, "Thread", ImmediateThread)
+    monkeypatch.setattr("academic_benchmark.tsplib_manager.load_routing_problem", lambda name: problem)
+    monkeypatch.setattr("academic_benchmark.tsplib_manager.save_benchmark_run", lambda *a, **k: a[0])
+    monkeypatch.setattr(
+        "academic_benchmark.tsplib_manager.save_benchmark_result",
+        lambda *a, **k: saved_results.append(a) or 1,
+    )
+    try:
+        benchmark._start_benchmark_impl(
+            "matrix-native-digest",
+            algorithms=[{"id": "Core-Greedy-Routing", "params": {}}],
+            problems=["tiny-cvrp-digest"],
+            settings={"execution_mode": "matrix_native", "n_runs": 1, "seed": 7},
+        )
+    finally:
+        clear_promoted_config_cache()
+
+    metadata = saved_results[0][1]["metadata"]
+    assert metadata["promoted_config_sha256"] == hashlib.sha256(promoted.read_bytes()).hexdigest()
+    assert metadata["promoted_config_flag"] is False
+    assert metadata["promoted_config_applicable"] is False
 
 
 @pytest.mark.parametrize(

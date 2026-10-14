@@ -13,7 +13,7 @@ _LEGACY_CUTOFF_OFF_MODULES = {"test_obsolete_ga_split_variants"}
 
 @pytest.fixture(autouse=True)
 def _neutralise_legacy_cutoff(request, monkeypatch):
-    """Legacy rule (DECISION_LOG A10/A11) hides rows stamped before 2026-10-13 by default.
+    """Legacy rule (DECISION_LOG A13) classifies rows stamped before 2026-10-13 by default.
 
     The A06 test module seeds 2026-10-0x rows to test other behaviour, so the cutoff is disabled
     for it alone; every other module, including the legacy tests, runs with the real cutoff.

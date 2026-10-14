@@ -109,9 +109,9 @@ def test_timestamp_parsing_fail_closed(stamp, legacy):
 
 
 def test_empty_timestamp_row_is_hidden_like_sql():
-    assert orr.is_obsolete_row({"algorithm": "x", "timestamp": ""})
-    assert orr.is_obsolete_row({"algorithm": "x", "timestamp": None})
-    assert not orr.is_obsolete_row({"algorithm": "x"})  # no timestamp column: not judgeable
+    assert orr.row_evidence_class({"algorithm": "x", "timestamp": ""}) == "historical_unverified"
+    assert orr.row_evidence_class({"algorithm": "x", "timestamp": None}) == "historical_unverified"
+    assert orr.row_evidence_class({"algorithm": "x"}) == "current"  # no timestamp column: not judgeable
 
 
 def _write_csv(path, rows):
@@ -126,12 +126,13 @@ def test_results_reader_scans_legacy_subfolder_only_when_asked(tmp_path):
     _write_csv(str(base / "benchmark_progress.csv"), [(NEW, "newprob", 1)])
     sub = base / orr.LEGACY_RESULTS_DIRNAME
     _write_csv(str(sub / "benchmark_progress.csv"), [("2026-05-01T00:00:00", "oldprob", 2)])
-    (sub / "OBSOLETE.md").write_text("Legacy-Cutoff: 2026-10-13\n", encoding="utf-8")
+    (sub / "QUARANTINE.md").write_text("# q\n", encoding="utf-8")
     kw = dict(results_dir=str(base), db_path=str(tmp_path / "none.db"), prefer_db=False)
     hidden = get_benchmark_rows(**kw)["results"]
     assert [r["problem"] for r in hidden] == ["newprob"]
-    shown = get_benchmark_rows(include_obsolete=True, **kw)["results"]
-    assert [r["problem"] for r in shown] == ["oldprob", "newprob"]
+    section = get_benchmark_rows(include_historical=True, **kw)
+    assert [r["problem"] for r in section["results"]] == ["newprob"]  # never pooled
+    assert [r["problem"] for r in section["historical_unverified"]["results"]] == ["oldprob"]
 
 
 # ---- DUZELT 2: E2 (legacy_best_params must survive reload), call-site pins, param_db views ----
@@ -155,6 +156,11 @@ def test_legacy_best_params_survive_second_startup(tmp_path):
     assert set(data["legacy_best_params"]) == {"eil51::GA", "a280::GA"}
     assert set(data["best_params"]) == {"kroA::GA"}
     assert data["legacy_best_params"]["eil51::GA"]["params"] == {"p": "old"}
+    # D2: kept in quarantine through ANY number of startups, never used as warm start
+    for _ in range(3):
+        data = _two_rounds(path)
+    assert set(data["legacy_best_params"]) == {"eil51::GA", "a280::GA"}
+    assert set(data["best_params"]) == {"kroA::GA"}
 
 
 def test_load_metadata_keeps_unknown_extra_keys(tmp_path):

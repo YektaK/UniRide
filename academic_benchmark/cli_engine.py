@@ -1360,8 +1360,10 @@ def _tune_parameters(
 
     _run_pool(tuning_tasks, workers, on_result=on_result)
 
+    # A13: the quarantined legacy file best_params_numba.json (legacy_pre_2026-10-13/) keeps its name;
+    # a new run writes a distinct current-evidence file so the two can never be confused.
     metadata["best_params"] = best_params
-    with open(os.path.join(RESULTS_DIR, "best_params_numba.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(RESULTS_DIR, "best_params_numba_current.json"), "w", encoding="utf-8") as f:
         json.dump(best_params, f, indent=2, ensure_ascii=False)
     save_metadata(METADATA_PATH, metadata)
     return best_params

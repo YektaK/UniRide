@@ -224,3 +224,4 @@ def test_no_dangling_a10_a11_citation_and_a13_exists():
 def test_cli_engine_does_not_write_best_params_numba_json_to_results_root():
     src = (BENCH / "cli_engine.py").read_text(encoding="utf-8")
     assert 'os.path.join(RESULTS_DIR, "best_params_numba.json")' not in src
+    assert 'os.path.join(RESULTS_DIR, "best_params_numba_current.json")' in src

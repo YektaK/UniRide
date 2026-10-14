@@ -1,0 +1,30 @@
+{
+  "cutoff": "2026-10-13",
+  "decision": "DECISION_LOG A13",
+  "entries": [
+    {
+      "archive_path": "academic_benchmark/sota_results/legacy_pre_2026-10-13/benchmark_progress.csv",
+      "evidence_class": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/sota_results/benchmark_progress.csv",
+      "sha256": "dfe853ceff0a8d089a08626859d9f71e3033d49cbf60a1008372bd6c13c6fcf3",
+      "size_bytes": 19600
+    },
+    {
+      "archive_path": "academic_benchmark/sota_results/legacy_pre_2026-10-13/benchmark_summary.csv",
+      "evidence_class": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/sota_results/benchmark_summary.csv",
+      "sha256": "0df1a136c4a13655376b8689818e1a6f087d9846546d3ace5e55e926c23bddaf",
+      "size_bytes": 2319
+    },
+    {
+      "archive_path": "academic_benchmark/sota_results/legacy_pre_2026-10-13/doe_sota/tuning_progress.csv",
+      "evidence_class": "HISTORICAL_UNVERIFIED",
+      "original_path": "academic_benchmark/sota_results/doe_sota/tuning_progress.csv",
+      "sha256": "6de29a680d476613ab5d9523f4a31c4da3ac5ffebf6223d09bd651c06ac174f7",
+      "size_bytes": 273867
+    }
+  ],
+  "evidence_class": "HISTORICAL_UNVERIFIED",
+  "generated_at": "2026-10-14",
+  "schema_version": 1
+}

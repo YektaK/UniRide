@@ -1,3 +1,4 @@
 academic_benchmark/tsplib_data/ft53.atsp text eol=lf
 academic_benchmark/tsplib_data/atsp/*.atsp text eol=lf
 academic_benchmark/tsplib_data/atsp/MANIFEST.json text eol=lf
+academic_benchmark/*/legacy_pre_2026-10-13/** -text

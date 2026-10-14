@@ -34,17 +34,20 @@ RESULT_DIRS = [
 
 # Veri yükleme (Önbellekli - Caching)
 @st.cache_data(ttl=60)
-def load_data(include_obsolete: bool = False):
+def load_data(include_obsolete: bool = False, evidence: str = "current"):
     loaded_sources = {"summary": [], "progress": [], "tuning": [], "sqlite": []}
 
-    all_summary, all_progress, csv_sources = load_csv_frames(RESULT_DIRS, include_obsolete)
+    all_summary, all_progress, csv_sources = load_csv_frames(RESULT_DIRS, include_obsolete, evidence)
     loaded_sources.update(csv_sources)
-    all_tuning, tuning_sources = load_tuning_frames(RESULT_DIRS, include_obsolete)
+    all_tuning, tuning_sources = load_tuning_frames(RESULT_DIRS, include_obsolete, evidence)
     loaded_sources["tuning"].extend(tuning_sources)
 
     db_rows = filter_obsolete_rows(
-        query_benchmark_results(limit=5000, db_path=DB_PATH, exclude_obsolete=not include_obsolete),
-        include_obsolete
+        query_benchmark_results(
+            limit=5000, db_path=DB_PATH, exclude_obsolete=not include_obsolete, evidence=evidence
+        ),
+        include_obsolete,
+        evidence,
     )
     if db_rows:
         all_progress.append(benchmark_rows_to_progress_frame(db_rows))
@@ -68,7 +71,7 @@ def load_data(include_obsolete: bool = False):
 
     # Load history for convergence curves
     history_dir = os.path.join(str(_DASHBOARD_DIR), "benchmark_db", "history")
-    history_dfs = load_history_frames(history_dir, include_obsolete)
+    history_dfs = load_history_frames(history_dir, include_obsolete, evidence)
 
     history_df = pd.concat(history_dfs, ignore_index=True) if history_dfs else pd.DataFrame()
 
@@ -77,7 +80,20 @@ def load_data(include_obsolete: bool = False):
 _include_obsolete = st.sidebar.checkbox(
     "Include obsolete results (never pool with current results)", value=False
 )
-summary_df, progress_df, tuning_df, history_df, loaded_sources = load_data(_include_obsolete)
+# A13: pre-2026-10-13 results are HISTORICAL_UNVERIFIED: visible only as a separate, labelled view,
+# never pooled with current results (the radio selects ONE view; the data are never concatenated).
+_evidence_label = st.sidebar.radio(
+    "Evidence view",
+    ["Current results", "Historical (unverified, pre-2026-10-13)"],
+    index=0,
+)
+_evidence = "historical" if _evidence_label.startswith("Historical") else "current"
+summary_df, progress_df, tuning_df, history_df, loaded_sources = load_data(_include_obsolete, _evidence)
+if _evidence == "historical":
+    st.warning(
+        "HISTORICAL_UNVERIFIED view (DECISION_LOG A13): produced before 2026-10-13, without a complete "
+        "provenance / fair-budget chain. Not evidence. Never compare or pool these with current results."
+    )
 
 st.title("🎓 UniRide Academic Routing Benchmark Dashboard")
 

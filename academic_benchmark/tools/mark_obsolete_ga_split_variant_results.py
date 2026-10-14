@@ -9,10 +9,11 @@ path, unaffected) are skipped. Never deletes. SQLite rows get ``obsolete`` keys 
 (existing metadata preserved). File-based results get a sibling OBSOLETE.md.
 Idempotent: already-marked rows are skipped. See DECISION_LOG A06.
 
-``--rule legacy`` marks EVERY benchmark_results row (any algorithm) stamped before
-2026-10-13 with the legacy reason (A10/A11) and writes a legacy OBSOLETE.md (with a
-``Legacy-Cutoff:`` line) into each ``--files-dir``. It only edits metadata_json; other
-columns and tables (best_solutions, opt_tours) are untouched, nothing is deleted.
+``--rule legacy`` (DECISION_LOG A13, HISTORICAL_UNVERIFIED) does NOT flag any database row: the
+class is rule based (timestamp before 2026-10-13), so it only COUNTS the historical
+benchmark_results rows. It writes QUARANTINE.md plus a SHA-256 QUARANTINE_MANIFEST.json into each
+``--files-dir`` (a ``legacy_pre_2026-10-13`` folder; production-path directories are skipped).
+Nothing is edited or deleted. INVALID (A06) and HISTORICAL_UNVERIFIED (A13) are different classes.
 
 Usage:
     python -m academic_benchmark.tools.mark_obsolete_ga_split_variant_results --db PATH [--dry-run]
@@ -35,8 +36,10 @@ from academic_benchmark.obsolete_results import (
     AFFECTED_ALGORITHMS,
     OBSOLETE_CUTOFF,
     LEGACY_CUTOFF,
-    LEGACY_MARKER_KEY,
     LEGACY_REASON,
+    QUARANTINE_MANIFEST_FILE,
+    QUARANTINE_MARKER_FILE,
+    build_quarantine_manifest,
     OBSOLETE_REASON,
     is_affected,
     is_legacy_timestamp,
@@ -75,11 +78,13 @@ def mark_sqlite(
         by_run: Counter = Counter()
         updates: List[tuple] = []
         already = 0
+        historical = 0
         for row_id, run_id, problem, algorithm, timestamp, metadata_json in rows:
-            if legacy:
-                if not is_legacy_timestamp(timestamp, cutoff):
-                    continue
-            elif not is_affected(algorithm, timestamp, cutoff):
+            if legacy:  # A13: rule-based class, nothing is written to the row
+                if is_legacy_timestamp(timestamp, cutoff):
+                    historical += 1
+                continue
+            if not is_affected(algorithm, timestamp, cutoff):
                 continue
             try:
                 meta = json.loads(metadata_json) if metadata_json else {}
@@ -101,6 +106,7 @@ def mark_sqlite(
         return {
             "to_mark": len(updates),
             "already_marked": already,
+            "historical_unverified_rows": historical if legacy else None,
             "by_algorithm": dict(by_algorithm),
             "by_problem": dict(by_problem),
             "by_run": dict(by_run),
@@ -157,40 +163,57 @@ def mark_files(directory: str, *, dry_run: bool, now: Optional[str] = None) -> D
 def mark_legacy_files(
     directory: str, *, dry_run: bool, now: Optional[str] = None, cutoff: str = LEGACY_CUTOFF
 ) -> Dict[str, Any]:
-    """Write (or append to) a legacy OBSOLETE.md carrying a ``Legacy-Cutoff:`` line. Idempotent."""
+    """Write QUARANTINE.md and a SHA-256 manifest into a legacy folder (A13). Idempotent.
+
+    Same production-path skip as :func:`mark_files` (A06): a directory whose run_manifest.json
+    records ``/api/v1/optimize`` is untouched.
+    """
+    manifest = os.path.join(directory, "run_manifest.json")
+    if os.path.isfile(manifest) and _is_production_path(manifest):
+        return {"directory": directory, "written": False, "skipped": "production path /api/v1/optimize", "dry_run": dry_run}
     marked_at = now or datetime.now(timezone.utc).isoformat()
-    path = os.path.join(directory, "OBSOLETE.md")
-    existing = ""
+    path = os.path.join(directory, QUARANTINE_MARKER_FILE)
     if os.path.isfile(path):
-        with open(path, encoding="utf-8") as handle:
-            existing = handle.read()
-    if any(line.startswith(LEGACY_MARKER_KEY) for line in existing.splitlines()):
         return {"directory": directory, "written": False, "already_marked": True, "dry_run": dry_run}
-    section = (
-        ("\n" if existing and not existing.endswith("\n\n") else "")
-        + "# OBSOLETE results (legacy)\n\n"
-        + f"{LEGACY_MARKER_KEY} {cutoff}\n\n"
-        + f"Marked at: {marked_at}\n\n"
-        + f"Reason: {LEGACY_REASON}\n\n"
-        + "Rows stamped before the cutoff, and rows or files without a timestamp, are hidden by default "
-        + "by the dashboard, results_reader and CSV readers (`include_obsolete=True` shows them). "
-        + "References: DECISION_LOG A10, A11 and the 2026-10-13 legacy-results decision. "
-        + "This data is not deleted. Legacy files live in this subfolder; "
-        + "new runs write to the parent folder and stay visible.\n"
+    body = (
+        "# QUARANTINE: HISTORICAL_UNVERIFIED results\n\n"
+        f"Cutoff: {cutoff}\n\n"
+        f"Marked at: {marked_at}\n\n"
+        f"Evidence class: HISTORICAL_UNVERIFIED (DECISION_LOG A13)\n\n"
+        f"Reason: {LEGACY_REASON}\n\n"
+        "Permitted use: provenance and engineering history, shown only in the explicitly labelled "
+        "historical view (`evidence=\"historical\"` / `include_historical=true`). "
+        "Never pooled with current results, never used as warm start, never cited as evidence. "
+        "Nothing here is deleted. "
+        f"Every file is listed with its SHA-256 in `{QUARANTINE_MANIFEST_FILE}`. "
+        "New runs write to the parent folder.\n"
     )
     if not dry_run:
         with open(path, "w", encoding="utf-8", newline="\n") as handle:
-            handle.write(existing + section)
+            handle.write(body)
+        build_quarantine_manifest(directory, _repo_root(directory), now=marked_at, cutoff=cutoff)
     return {"directory": directory, "written": not dry_run, "already_marked": False, "dry_run": dry_run}
+
+
+def _repo_root(directory: str) -> str:
+    """Nearest ancestor holding ``.git`` (file or folder); else the parent of ``directory``."""
+    current = os.path.abspath(directory)
+    while True:
+        if os.path.exists(os.path.join(current, ".git")):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            return os.path.dirname(os.path.abspath(directory))
+        current = parent
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db", required=True, help="path to tsplib.db (use a COPY for dry runs)")
     parser.add_argument("--dry-run", action="store_true")
-    parser.add_argument("--rule", choices=("a06", "legacy"), default="a06", help="a06 (default): ga_split_enhanced/ga_split_hf rows before the cutoff; legacy: every algorithm stamped before 2026-10-13 (A10/A11)")
+    parser.add_argument("--rule", choices=("a06", "legacy"), default="a06", help="a06 (default): ga_split_enhanced/ga_split_hf rows before the cutoff; legacy: HISTORICAL_UNVERIFIED quarantine for files, count-only for rows (A13)")
     parser.add_argument("--cutoff", default=None, help="exact ISO date or instant; rows with timestamp < it are marked (default is the fix date, so rows stamped 2026-10-09 are not auto-marked)")
-    parser.add_argument("--files-dir", action="append", default=[], help="result directory to flag with OBSOLETE.md (skipped when its run_manifest.json has path /api/v1/optimize, the unaffected production path)")
+    parser.add_argument("--files-dir", action="append", default=[], help="result directory to flag with OBSOLETE.md (a06) or QUARANTINE.md (legacy) (skipped when its run_manifest.json has path /api/v1/optimize, the unaffected production path)")
     args = parser.parse_args(argv)
 
     report = {

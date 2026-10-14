@@ -70,7 +70,17 @@ def get_db(path=DB_PATH):
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     conn.row_factory = sqlite3.Row
+    _obsolete.register_sql_functions(conn)
     return conn
+
+
+def _evidence_sql(column: str, evidence: str) -> str:
+    """SQL predicate for the evidence view. It calls the SAME Python rule the readers use
+    (``obsolete_results.is_legacy_timestamp``), so SQL and Python cannot disagree on the cutoff
+    day (A13/C4)."""
+    if evidence not in _obsolete.EVIDENCE_VIEWS:
+        raise ValueError(f"evidence must be one of {_obsolete.EVIDENCE_VIEWS}, got {evidence!r}")
+    return f"uniride_is_legacy({column}) = {1 if evidence == 'historical' else 0}"
 
 
 def init_db(conn):
@@ -350,26 +360,29 @@ def get_best_solution(
     algorithm: str,
     db_path: str = DB_PATH,
     include_obsolete: bool = False,
+    evidence: str = "current",
 ) -> Optional[dict]:
     """Return the best (lowest tour_length) solution for (problem, algorithm).
-    Returns None if no solution exists. Legacy rows (timestamp before
-    ``obsolete_results.LEGACY_CUTOFF``) are hidden unless ``include_obsolete``.
+    Returns None if no solution exists in the requested evidence view. ``evidence="current"``
+    (default) never returns rows stamped before ``obsolete_results.LEGACY_CUTOFF``;
+    ``evidence="historical"`` returns only those, labelled ``evidence_class``
+    (HISTORICAL_UNVERIFIED, A13). The two views are never merged. ``include_obsolete`` belongs to
+    the INVALID class (A06) and is a no-op here (best_solutions carries no such flag).
     """
     conn = get_db(db_path)
-    legacy_sql = "" if include_obsolete else "AND timestamp >= ? "
-    legacy_args = () if include_obsolete else (_obsolete.legacy_cutoff(),)
     row = conn.execute(
         "SELECT id, problem_name, algorithm, params_json, tour_nodes, "
         "       tour_length, gap, timestamp "
         "FROM best_solutions "
-        f"WHERE problem_name=? AND algorithm=? {legacy_sql}"
+        f"WHERE problem_name=? AND algorithm=? AND {_evidence_sql('timestamp', evidence)} "
         "ORDER BY tour_length ASC LIMIT 1",
-        (problem_name, algorithm) + legacy_args
+        (problem_name, algorithm)
     ).fetchone()
     conn.close()
     if row is None:
         return None
     return {
+        **({"evidence_class": _obsolete.EVIDENCE_HISTORICAL} if evidence == "historical" else {}),
         "id": row["id"],
         "problem": row["problem_name"],
         "algorithm": row["algorithm"],
@@ -387,18 +400,17 @@ def query_best_solutions(
     limit: int = 100,
     db_path: str = DB_PATH,
     include_obsolete: bool = False,
+    evidence: str = "current",
 ) -> List[dict]:
     """Query best solutions with optional filters.
-    Returns list sorted by tour_length ASC. Legacy rows (timestamp before
-    ``obsolete_results.LEGACY_CUTOFF``) are excluded in SQL, before LIMIT,
-    unless ``include_obsolete``.
+    Returns list sorted by tour_length ASC. The evidence view is chosen in SQL, before LIMIT:
+    ``"current"`` (default) excludes rows stamped before ``obsolete_results.LEGACY_CUTOFF``;
+    ``"historical"`` returns only those, each labelled ``evidence_class`` (A13). Views are never
+    pooled. ``include_obsolete`` is the INVALID class (A06) switch and a no-op for this table.
     """
     conn = get_db(db_path)
-    where = ["1=1"]
+    where = [_evidence_sql("s.timestamp", evidence)]
     params = []
-    if not include_obsolete:
-        where.append("s.timestamp >= ?")
-        params.append(_obsolete.legacy_cutoff())
     if algorithm:
         where.append("s.algorithm=?")
         params.append(algorithm)
@@ -426,6 +438,7 @@ def query_best_solutions(
             "tour": json.loads(row["tour_nodes"]),
             "tour_length": row["tour_length"],
             "gap": row["gap"],
+            **({"evidence_class": _obsolete.EVIDENCE_HISTORICAL} if evidence == "historical" else {}),
             "dimension": row["dimension"],
             "category": row["category"],
             "timestamp": row["timestamp"],
@@ -532,11 +545,14 @@ def query_benchmark_results(
     limit: int = 100,
     db_path: str = DB_PATH,
     exclude_obsolete: bool = True,
+    evidence: str = "current",
 ) -> List[Dict]:
     """Query persisted benchmark run rows.
 
-    Rows flagged metadata.obsolete are excluded in SQL (before LIMIT) unless
-    ``exclude_obsolete`` is False.
+    Rows flagged metadata.obsolete (INVALID class, A06) are excluded in SQL (before LIMIT) unless
+    ``exclude_obsolete`` is False. Independently, ``evidence`` selects the view: ``"current"``
+    (default) or ``"historical"`` (stamped before the legacy cutoff, labelled ``evidence_class``,
+    HISTORICAL_UNVERIFIED, A13). Views are never pooled.
     """
     conn = get_db(db_path)
     init_db(conn)
@@ -559,9 +575,7 @@ def query_benchmark_results(
             "(r.metadata_json IS NULL OR NOT json_valid(r.metadata_json) "
             "OR json_extract(r.metadata_json,'$.obsolete') IS NOT 1)"
         )
-        # legacy rule: any algorithm stamped before the cutoff
-        where.append("r.timestamp >= ?")
-        params.append(_obsolete.legacy_cutoff())
+    where.append(_evidence_sql("r.timestamp", evidence))
     sql = (
         "SELECT r.*, b.source, b.status "
         "FROM benchmark_results r "
@@ -572,7 +586,27 @@ def query_benchmark_results(
     params.append(max(1, int(limit)))
     rows = conn.execute(sql, params).fetchall()
     conn.close()
-    return [_benchmark_result_row_to_dict(row) for row in rows]
+    out = [_benchmark_result_row_to_dict(row) for row in rows]
+    if evidence == "historical":
+        for item in out:
+            item["evidence_class"] = _obsolete.EVIDENCE_HISTORICAL
+    return out
+
+
+def count_by_evidence(table: str, db_path: str = DB_PATH) -> Dict[str, int]:
+    """Row counts per evidence view for ``best_solutions`` or ``benchmark_results`` (A13)."""
+    if table not in ("best_solutions", "benchmark_results"):
+        raise ValueError(f"unsupported table {table!r}")
+    conn = get_db(db_path)
+    if table == "benchmark_results":
+        init_db(conn)
+    try:
+        return {
+            view: conn.execute(f"SELECT COUNT(*) FROM {table} WHERE {_evidence_sql('timestamp', view)}").fetchone()[0]
+            for view in _obsolete.EVIDENCE_VIEWS
+        }
+    finally:
+        conn.close()
 
 
 def _benchmark_result_row_to_dict(row) -> Dict:
@@ -603,12 +637,12 @@ def _benchmark_result_row_to_dict(row) -> Dict:
     }
 
 
-def analyze_solution_patterns(db_path: str = DB_PATH, include_obsolete: bool = False) -> str:
+def analyze_solution_patterns(db_path: str = DB_PATH, include_obsolete: bool = False, evidence: str = "current") -> str:
     """Cross-problem analysis: most common best params per algorithm and category.
     Returns Markdown-formatted string.
     """
     from collections import Counter
-    rows = query_best_solutions(limit=5000, db_path=db_path, include_obsolete=include_obsolete)
+    rows = query_best_solutions(limit=5000, db_path=db_path, include_obsolete=include_obsolete, evidence=evidence)
     if not rows:
         return "No best solutions found in database."
 

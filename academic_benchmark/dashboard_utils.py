@@ -249,12 +249,14 @@ def read_progress_csv(progress_path: str) -> pd.DataFrame:
     return df
 
 
-def load_csv_frames(result_dirs: Iterable[str], include_obsolete: bool = False):
-    """Read summary/progress CSVs, filtering obsolete rows per directory before concatenation.
+def load_csv_frames(result_dirs: Iterable[str], include_obsolete: bool = False, evidence: str = "current"):
+    """Read summary/progress CSVs, filtering rows per directory before concatenation.
 
-    Returns ``(summary_frames, progress_frames, loaded_sources)``. The OBSOLETE.md sibling
-    marker, affected-algorithm identity and row ``obsolete`` metadata are applied to BOTH
-    frames (CX-02); ``include_obsolete=True`` is the explicit override.
+    Returns ``(summary_frames, progress_frames, loaded_sources)``. INVALID rows (OBSOLETE.md
+    sibling marker, affected algorithm, row ``obsolete`` metadata; A06/A07) are dropped unless
+    ``include_obsolete``. ``evidence`` picks ONE view (A13): ``"current"`` (default) or
+    ``"historical"`` (``legacy_pre_2026-10-13/`` quarantine folders plus old-timestamp rows;
+    labelled ``evidence_class``). The views are never concatenated.
     """
     summaries: List[pd.DataFrame] = []
     progress: List[pd.DataFrame] = []
@@ -263,22 +265,22 @@ def load_csv_frames(result_dirs: Iterable[str], include_obsolete: bool = False):
     for d in result_dirs:
         scan_dirs.append(d)
         legacy_dir = os.path.join(d, LEGACY_RESULTS_DIRNAME)
-        if include_obsolete and os.path.isdir(legacy_dir):
-            scan_dirs.append(legacy_dir)  # opt-in only; its OBSOLETE.md hides it otherwise
+        if evidence == "historical" and os.path.isdir(legacy_dir):
+            scan_dirs.append(legacy_dir)  # quarantine folder: only the historical view reads it
     for d in scan_dirs:
         summary_path = os.path.join(d, "benchmark_summary.csv")
         progress_path = os.path.join(d, "benchmark_progress.csv")
         if os.path.exists(summary_path):
-            summaries.append(filter_obsolete_frame(pd.read_csv(summary_path), d, include_obsolete))
+            summaries.append(filter_obsolete_frame(pd.read_csv(summary_path), d, include_obsolete, evidence))
             sources["summary"].append(summary_path)
         if os.path.exists(progress_path):
-            progress.append(filter_obsolete_frame(read_progress_csv(progress_path), d, include_obsolete))
+            progress.append(filter_obsolete_frame(read_progress_csv(progress_path), d, include_obsolete, evidence))
             sources["progress"].append(progress_path)
     return summaries, progress, sources
 
 
-def load_tuning_frames(result_dirs: Iterable[str], include_obsolete: bool = False):
-    """Read ``tuning_progress.csv`` files, filtering obsolete rows per directory (A07).
+def load_tuning_frames(result_dirs: Iterable[str], include_obsolete: bool = False, evidence: str = "current"):
+    """Read ``tuning_progress.csv`` files, filtering per directory (A07, A13 evidence view).
 
     Returns ``(frames, sources)``.
     """
@@ -286,12 +288,12 @@ def load_tuning_frames(result_dirs: Iterable[str], include_obsolete: bool = Fals
     sources: List[str] = []
     for d in result_dirs:
         for path in glob.glob(os.path.join(d, "**", "tuning_progress.csv"), recursive=True):
-            frames.append(filter_obsolete_frame(pd.read_csv(path), os.path.dirname(path), include_obsolete))
+            frames.append(filter_obsolete_frame(pd.read_csv(path), os.path.dirname(path), include_obsolete, evidence))
             sources.append(path)
     return frames, sources
 
 
-def load_history_frames(history_dir: str, include_obsolete: bool = False) -> List[pd.DataFrame]:
+def load_history_frames(history_dir: str, include_obsolete: bool = False, evidence: str = "current") -> List[pd.DataFrame]:
     """Read ``smart_*.csv`` / ``interrupted_smart_*.csv`` convergence history, filtered (A07)."""
     frames: List[pd.DataFrame] = []
     if not os.path.isdir(history_dir):
@@ -299,7 +301,7 @@ def load_history_frames(history_dir: str, include_obsolete: bool = False) -> Lis
     for pattern in ("smart_*.csv", "interrupted_smart_*.csv"):
         for path in glob.glob(os.path.join(history_dir, pattern), recursive=True):
             try:
-                frames.append(filter_obsolete_frame(pd.read_csv(path), history_dir, include_obsolete))
+                frames.append(filter_obsolete_frame(pd.read_csv(path), history_dir, include_obsolete, evidence))
             except Exception:
                 pass
     return frames

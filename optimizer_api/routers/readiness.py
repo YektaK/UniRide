@@ -4,6 +4,7 @@ import logging
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,28 @@ def _parse_student_location_codes(body):
     return codes
 
 
+# H6: the refresh is a blocking Supabase fetch and the repository lock may be
+# held by another thread during a network refresh. Both helpers run in the
+# threadpool so the event loop keeps serving other requests (e.g. /health).
+# The handlers stay ``async def`` because they ``await request.json()``.
+def _readiness_summary_sync(codes):
+    loader = DataLoader.get_instance()
+    loader.refresh()
+    return loader.repository.readiness_summary(
+        student_locations=codes,
+        depot_code=DEPOT_CODE,
+    )
+
+
+def _matrix_snapshot_sync(codes):
+    loader = DataLoader.get_instance()
+    loader.refresh(force=True)
+    return loader.repository.matrix_snapshot(
+        student_locations=codes,
+        depot_code=DEPOT_CODE,
+    )
+
+
 @router.get("/readiness")
 async def readiness_handshake() -> dict:
     """Protected internal-key handshake for the local launcher.
@@ -70,12 +93,7 @@ async def time_matrix_readiness(request: Request) -> JSONResponse:
     if codes is None:
         return JSONResponse(status_code=422, content=_FIXED_422)
 
-    loader = DataLoader.get_instance()
-    loader.refresh()
-    summary = loader.repository.readiness_summary(
-        student_locations=codes,
-        depot_code=DEPOT_CODE,
-    )
+    summary = await run_in_threadpool(_readiness_summary_sync, codes)
     return JSONResponse(status_code=200, content=summary)
 
 
@@ -92,12 +110,7 @@ async def matrix_snapshot(request: Request) -> JSONResponse:
         return JSONResponse(status_code=422, content=_SNAPSHOT_422)
 
     try:
-        loader = DataLoader.get_instance()
-        loader.refresh(force=True)
-        snapshot = loader.repository.matrix_snapshot(
-            student_locations=codes,
-            depot_code=DEPOT_CODE,
-        )
+        snapshot = await run_in_threadpool(_matrix_snapshot_sync, codes)
     except MatrixSnapshotError:
         return JSONResponse(status_code=503, content=_SNAPSHOT_503)
     except Exception:  # noqa: BLE001 - fixed redacted boundary

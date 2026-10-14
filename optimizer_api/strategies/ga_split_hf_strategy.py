@@ -117,11 +117,16 @@ class GASplitHFStrategy(HybridSplitBaseStrategy):
         quota = quota_specs[0].max_routes if quota_specs else None
 
         effective_config = dict(self.config)
+        # ga_split_hf never reads promoted configs (no loader call).
+        config_source = "default" if self.config == self.DEFAULT_CONFIG else "request"
         if request.ga_config:
             effective_config = {**self.config, **request.ga_config}
             rng = make_rng(effective_config, default=self.seed)
+            effective_seed = resolve_seed(effective_config, self.seed)
+            config_source = "request"
         else:
             rng = random.Random(self.seed)
+            effective_seed = self.seed
 
         data_loader = DataLoader.get_instance()
         occurrence_keys = student_occurrence_keys(students)
@@ -173,6 +178,8 @@ class GASplitHFStrategy(HybridSplitBaseStrategy):
                 time_windows_used=False,
                 error_message="no feasible typed split for the declared vehicle types",
                 fleet_mix={t: 0 for t in type_ids},
+                effective_config_source=config_source,
+                effective_seed=effective_seed,
             )
 
         routes = []
@@ -223,4 +230,6 @@ class GASplitHFStrategy(HybridSplitBaseStrategy):
             direction=direction,
             time_windows_used=False,
             fleet_mix={t: final.routes_by_type.get(t, 0) for t in type_ids},
+            effective_config_source=config_source,
+            effective_seed=effective_seed,
         )

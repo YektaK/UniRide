@@ -564,12 +564,19 @@ class OptimizationResponse(BaseModel):
     # Heterogeneous fleet (ga_split_hf only): routes per vehicle type. Absent
     # from the JSON when unset, so single-type responses stay byte-identical.
     fleet_mix: Optional[Dict[str, int]] = None
+    # H17/M22: where the effective solver config came from ("default", "request"
+    # or "promoted") and the seed actually used. Set by the ga_split family;
+    # absent from the JSON when unset so other responses stay byte-identical.
+    effective_config_source: Optional[str] = None
+    effective_seed: Optional[int] = None
 
     @model_serializer(mode="wrap")
-    def _omit_unset_fleet_mix(self, handler):
+    def _omit_unset_optional_fields(self, handler):
         data = handler(self)
-        if isinstance(data, dict) and data.get("fleet_mix") is None:
-            data.pop("fleet_mix", None)
+        if isinstance(data, dict):
+            for key in ("fleet_mix", "effective_config_source", "effective_seed"):
+                if data.get(key) is None:
+                    data.pop(key, None)
         return data
 
 class AlgorithmResult(BaseModel):

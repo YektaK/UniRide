@@ -75,6 +75,15 @@ class GASplitStrategy(HybridSplitBaseStrategy):
             matrix_kind="travel_time",
         )
         self.config = {**self.DEFAULT_CONFIG, **promoted, **(config or {})}
+        # H17/M22: "request" = explicit constructor config, "promoted" = academic
+        # promoted params applied (only with UNIRIDE_USE_PROMOTED_CONFIG=1),
+        # otherwise "default".
+        if config is not None:
+            self.config_source = "request"
+        elif promoted:
+            self.config_source = "promoted"
+        else:
+            self.config_source = "default"
         self.seed = resolve_seed(self.config)
         self._best_individual = None
         self._generation_stats = []
@@ -127,11 +136,15 @@ class GASplitStrategy(HybridSplitBaseStrategy):
         # Override config
         # Singleton self.config korunuyor; her istek icin local kopya
         effective_config = dict(self.config)
+        config_source = self.config_source
         if request.ga_config:
             effective_config = {**self.config, **request.ga_config}
             rng = make_rng(effective_config, default=self.seed)
+            effective_seed = resolve_seed(effective_config, self.seed)
+            config_source = "request"
         else:
             rng = random.Random(self.seed)
+            effective_seed = self.seed
 
         # Load data
         data_loader = DataLoader.get_instance()
@@ -258,7 +271,9 @@ class GASplitStrategy(HybridSplitBaseStrategy):
             execution_time_seconds=round(execution_time, 4),
             direction=direction,
             time_windows_used=use_time_windows and len(time_windows) > 0,
-            total_time_window_violations=total_tw_violations
+            total_time_window_violations=total_tw_violations,
+            effective_config_source=config_source,
+            effective_seed=effective_seed,
         )
 
 

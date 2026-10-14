@@ -13,6 +13,9 @@ from academic_benchmark.promoted_configs import (
 )
 
 PROMOTED_CONFIG_PATH_ENV = "UNIRIDE_PROMOTED_CONFIG_PATH"
+# Owner decision 2026-10-13 (DECISION_LOG A12): production ignores academic
+# promoted configs unless this flag is exactly "1". Default is OFF.
+USE_PROMOTED_CONFIG_ENV = "UNIRIDE_USE_PROMOTED_CONFIG"
 
 ACADEMIC_TO_STRATEGY_PARAM_KEYS = {
     "pop_size": "population_size",
@@ -22,6 +25,11 @@ ACADEMIC_TO_STRATEGY_PARAM_KEYS = {
     "pack_size": "population_size",
     "hawks": "population_size",
 }
+
+
+def promoted_config_enabled() -> bool:
+    """True only when UNIRIDE_USE_PROMOTED_CONFIG is exactly "1"."""
+    return os.environ.get(USE_PROMOTED_CONFIG_ENV) == "1"
 
 
 def get_promoted_config_path() -> str:
@@ -43,7 +51,12 @@ def get_promoted_params(
     matrix_kind: str = "distance",
     path: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Return promoted params for the first matching algorithm alias."""
+    """Return promoted params for the first matching algorithm alias.
+
+    Returns ``{}`` unless ``UNIRIDE_USE_PROMOTED_CONFIG=1`` (default off).
+    """
+    if not promoted_config_enabled():
+        return {}
     document = load_runtime_promoted_configs(path)
     names = [algorithms] if isinstance(algorithms, str) else list(algorithms)
     for algorithm in names:
@@ -88,6 +101,8 @@ def clear_promoted_config_cache() -> None:
 
 
 __all__ = [
+    "USE_PROMOTED_CONFIG_ENV",
+    "promoted_config_enabled",
     "PROMOTED_CONFIG_PATH_ENV",
     "clear_promoted_config_cache",
     "get_promoted_config_path",

@@ -1,6 +1,7 @@
 """Property-based tests for all distance functions in uniride_core.algorithms.distance."""
 
 import math
+import random
 
 import numpy as np
 import pytest
@@ -19,6 +20,7 @@ from uniride_core.algorithms.distance import (
     tsplib_geo_distance,
 )
 
+EARTH_RADIUS_M = 6_371_000  # same value as haversine_distance uses
 TOL = 1e-9
 GEO_TOL = 1e-6
 
@@ -35,42 +37,47 @@ def _approx_triangle(a, b, c, dist_fn):
     return dist_fn(a, c) <= dist_fn(a, b) + dist_fn(b, c) + TOL
 
 
-def _haversine_defined(p1, p2):
-    """Haversine distance, discarding the exact-antipodal rounding case.
-
-    For some exactly antipodal pairs ``1 - a`` rounds to -2.2e-16 and
-    ``math.sqrt`` raises ValueError (it never returns a negative distance). That
-    defect is pinned by ``test_exact_antipodal_pair_does_not_raise`` below; the
-    properties here cover every other input, so they are not flaky when
-    Hypothesis happens to draw such a pair.
-    """
-    try:
-        return haversine_distance(*p1, *p2)
-    except ValueError:
-        assume(False)
-
-
 class TestHaversine:
-    # Pinned reproduction of the intermittent failure: 45 N 0 E vs 45 S 180 E.
-    # Strict xfail: when distance.py clamps ``a`` to [0, 1] this XPASSes and the
-    # suite fails until the marker (and the assume guard above) is removed.
-    @pytest.mark.xfail(
-        strict=True,
-        raises=ValueError,
-        reason="haversine_distance: 1 - a rounds to -2.2e-16 for this antipodal pair",
-    )
     def test_exact_antipodal_pair_does_not_raise(self):
+        # 45 N 0 E vs 45 S 180 E: 1 - a used to round to -2.2e-16 and math.sqrt raised.
         d = haversine_distance(45.0, 0.0, -45.0, 180.0)
-        assert d == pytest.approx(math.pi * 6_371_000)
+        assert d == pytest.approx(math.pi * EARTH_RADIUS_M)
+
+    def test_clamp_changes_no_result_for_non_antipodal_pairs(self):
+        """Bit-identical to the unclamped formula wherever that formula returns."""
+        rng = random.Random(20261014)
+
+        def unclamped(lat1, lon1, lat2, lon2):
+            lat1_r, lat2_r = math.radians(lat1), math.radians(lat2)
+            dlat, dlon = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
+            a = math.sin(dlat / 2) ** 2 + math.cos(lat1_r) * math.cos(lat2_r) * math.sin(dlon / 2) ** 2
+            return EARTH_RADIUS_M * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+        compared = 0
+        for i in range(1200):
+            lat1, lon1 = rng.uniform(-90, 90), rng.uniform(-180, 180)
+            if i % 6 == 0:  # near-antipodal: the region where rounding matters
+                lat2, lon2 = -lat1 + rng.uniform(-1e-6, 1e-6), lon1 + 180 + rng.uniform(-1e-6, 1e-6)
+                lon2 = (lon2 + 180) % 360 - 180
+            else:
+                lat2, lon2 = rng.uniform(-90, 90), rng.uniform(-180, 180)
+            try:
+                expected = unclamped(lat1, lon1, lat2, lon2)
+            except ValueError:
+                continue  # the antipodal-rounding inputs the clamp exists for
+            assert haversine_distance(lat1, lon1, lat2, lon2) == expected
+            compared += 1
+        assert compared >= 1000
 
     @given(GEO_POINT, GEO_POINT)
+    @example(p1=(45.0, 0.0), p2=(-45.0, 180.0))
     def test_non_negative(self, p1, p2):
-        assert _haversine_defined(p1, p2) >= 0
+        assert haversine_distance(*p1, *p2) >= 0
 
     @given(GEO_POINT, GEO_POINT)
     def test_symmetric(self, p1, p2):
-        d12 = _haversine_defined(p1, p2)
-        d21 = _haversine_defined(p2, p1)
+        d12 = haversine_distance(*p1, *p2)
+        d21 = haversine_distance(*p2, *p1)
         assert abs(d12 - d21) < GEO_TOL
 
     @given(GEO_POINT)
@@ -80,17 +87,17 @@ class TestHaversine:
     @given(GEO_POINT, GEO_POINT, GEO_POINT)
     @example(p1=(0.0, 0.00390625), p2=(0.0, 1.0), p3=(0.0, 180.0))
     def test_triangle_inequality(self, p1, p2, p3):
-        d12 = _haversine_defined(p1, p2)
-        d23 = _haversine_defined(p2, p3)
-        d13 = _haversine_defined(p1, p3)
+        d12 = haversine_distance(*p1, *p2)
+        d23 = haversine_distance(*p2, *p3)
+        d13 = haversine_distance(*p1, *p3)
         # Near-antipodal cancellation needs sub-mm slack; short paths keep GEO_TOL.
         tol = max(GEO_TOL, 1e-11 * (d12 + d23))
         assert d13 <= d12 + d23 + tol
 
     @given(GEO_POINT, GEO_POINT)
     def test_reasonable_range(self, p1, p2):
-        EARTH_HALF_CIRC = math.pi * 6_371_000
-        assert _haversine_defined(p1, p2) <= EARTH_HALF_CIRC + GEO_TOL
+        EARTH_HALF_CIRC = math.pi * EARTH_RADIUS_M
+        assert haversine_distance(*p1, *p2) <= EARTH_HALF_CIRC + GEO_TOL
 
 
 class TestEuclidean:

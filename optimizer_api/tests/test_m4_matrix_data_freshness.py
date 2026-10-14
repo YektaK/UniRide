@@ -316,6 +316,29 @@ def test_provider_does_not_swallow_other_errors(monkeypatch):
         provider.fetch_rows()
 
 
+def test_undefined_column_error_for_another_column_is_not_a_missing_updated_at(monkeypatch):
+    """42703 alone is not enough: only an error that names ``updated_at`` triggers the fallback.
+
+    A different undefined column (e.g. a renamed ``duration_minutes``) is a real schema
+    problem; it must propagate and the load must fail closed, not be papered over by
+    silently retrying without ``updated_at``.
+    """
+    from postgrest.exceptions import APIError
+
+    other_column = APIError({"message": "column time_matrix.duration_minutes does not exist",
+                             "code": "42703", "hint": None, "details": None})
+    provider, client, _rows = _provider(monkeypatch, 5, error=other_column)
+    with pytest.raises(APIError, match="duration_minutes"):
+        provider.fetch_rows()
+    assert len(client.selects) == 1  # no retry with the base columns
+
+    repo = TimeMatrixRepository(provider=provider, ttl_seconds=600, clock=_Clock())
+    repo.load()
+    assert repo.health()["loaded"] is False
+    with pytest.raises(matrix_repository.MatrixUnavailableError):
+        repo.matrix_provenance()
+
+
 def test_failed_first_load_with_other_error_still_fails_closed(monkeypatch):
     from postgrest.exceptions import APIError
 

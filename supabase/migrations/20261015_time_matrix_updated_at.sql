@@ -21,7 +21,13 @@
 -- single transaction, no arc value changes, no policy or grant changes. The optimizer
 -- tolerates the column being absent, so this can be applied independently of a deploy.
 --
--- Operator note: paste the WHOLE file and press Run; do not use "Run selected".
+-- Operator notes:
+--   * Paste the WHOLE file and press Run; do not use "Run selected".
+--   * Apply this BEFORE deploying the optimizer that reads updated_at. If PostgREST keeps
+--     the old column list after the DDL, run:  NOTIFY pgrst, 'reload schema';
+--   * The trigger advances updated_at on EVERY update, including an upsert that writes
+--     identical values, so reloading unchanged data makes the data look fresh. The date
+--     means "last written", not "last changed".
 -- Mirrored in supabase/schema.sql.
 -- =============================================================================
 

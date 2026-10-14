@@ -151,7 +151,7 @@ negative gap.
 ## 6. Raw CSV Status
 
 The benchmark CSVs were intentionally left **uncommitted** in the working tree:
-- `academic_benchmark/numba_results/benchmark_summary.csv`
+- `academic_benchmark/numba_results/benchmark_summary.csv` (moved to `academic_benchmark/numba_results/legacy_pre_2026-10-13/`, HISTORICAL_UNVERIFIED, DECISION_LOG A13)
 - `academic_benchmark/numba_results/benchmark_progress.csv` (moved to `academic_benchmark/numba_results/legacy_pre_2026-10-13/`, HISTORICAL_UNVERIFIED, DECISION_LOG A13)
 
 These contain the fresh post-fix results and are available for inspection but are

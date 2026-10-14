@@ -4,94 +4,94 @@
   "entries": [
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/1_generate_config.py",
-      "byte_size": 5858,
+      "byte_size": 5688,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/1_generate_config.py",
-      "sha256": "851c7f715adb04f5592639cfbf0b1e6f05674ea95c9c8c87716d11c6aeef74e5"
+      "sha256": "05aca9d1bd3a47d17fc03b6f32cabdaf70358c8a6616944c53d8a9487b9eb219"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/2_run_tuning.py",
-      "byte_size": 11765,
+      "byte_size": 11487,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/2_run_tuning.py",
-      "sha256": "21ad2d496aeb7d561ebc81171b79537d5c79ab4d227209db17d532a52a8d876d"
+      "sha256": "e10dcd17ba64e71328d8b59386edb089b915d422fe6b968159bad79c978ce342"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/3_run_benchmark.py",
-      "byte_size": 10222,
+      "byte_size": 9961,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/3_run_benchmark.py",
-      "sha256": "9695ca1eb682e44cfc5b7cc02b152eef6d7262e2205a5341f700bd67cf3c4a53"
+      "sha256": "197210ad943c2f8d570e16a585d375c116f5de0e3d3b6c211fe52627a32d9ea8"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/5_visualize.py",
-      "byte_size": 6460,
+      "byte_size": 6288,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/5_visualize.py",
-      "sha256": "c77286cd1f5ea597477a2313dd6c664bda8e9451da9a83a7e14f31d2defdddef"
+      "sha256": "bd9e178475be33667e1261eb5a8e82c5b3f994f2f948257c4a9c189760419d94"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/AKADEMIK_RAPOR_ASIMETRİK_TSP_TURKIYE_OGRENCI_MATRISI.md",
-      "byte_size": 14031,
+      "byte_size": 13847,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/AKADEMIK_RAPOR_ASIMETRİK_TSP_TURKIYE_OGRENCI_MATRISI.md",
-      "sha256": "acbbafb11f2b144a133d8243125c41ae2953aaff7dd21866692e11d2572c0372"
+      "sha256": "319f23035c9ba3f8394ce7ae33aa5f06c837ef71a599bff87c640ff8a10a6e94"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/Bildiri.md",
-      "byte_size": 3024,
+      "byte_size": 3013,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/Bildiri.md",
-      "sha256": "3d18a503ee7dc60aa1fa97decb9a73aa501af0fb07516568f70b1b236b0154ef"
+      "sha256": "d1f8eedbea184548900df15c9ef2bbd88ba15300e2a252a11a8d80265c0769e1"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/Bildiri_Detayli.md",
-      "byte_size": 11626,
+      "byte_size": 11395,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/Bildiri_Detayli.md",
-      "sha256": "e1b5932bc825051e0a8d1e8b9505b8aa06b3fef7d1284cfb69e45319f5cbf9c7"
+      "sha256": "aa12673d63734df8cf0fdde71d3a94877fe5e11fce8baaa72f349d7270592201"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/GELiSTiRME_ONERiLERi.md",
-      "byte_size": 3120,
+      "byte_size": 3069,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/GELiSTiRME_ONERiLERi.md",
-      "sha256": "891ba953329ec8c80695ccda80f75ef03ce0cda734a5da423a99edc15b61d85a"
+      "sha256": "7a66c25d2081f5eb940647cc6092f2d3cc26a24affd7a128afbabc79b9b2d33d"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/README.md",
-      "byte_size": 9519,
+      "byte_size": 9290,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/README.md",
-      "sha256": "31fb0d55deee266feb3f3cce9966ca9b85f5ecdea88223629d6c4577c88b20d3"
+      "sha256": "a1328ba352d8b967c6bfaba7dde48c532163b6199a97f9c5000f45f8eb13d694"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/analyze_benchmark.py",
-      "byte_size": 16229,
+      "byte_size": 15785,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/analyze_benchmark.py",
-      "sha256": "35ee3439243be3be6c388cbad2823423d3ee39b711f5ea8f4d68dba31fdcfe32"
+      "sha256": "84550d4674f6b1441d45301c33c4bf1fdf57d475544d00b690732dd1c84353d7"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/analyze_tuning.py",
-      "byte_size": 11201,
+      "byte_size": 10919,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/analyze_tuning.py",
-      "sha256": "f6c798dea4bb618527d4da452e05b85128dc10b16f1e76e3a53eabf427ce87d4"
+      "sha256": "1bd9fa599fb9cf51d89a6396e90cada2df3ce851432d31817811b0d6ab94b22d"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/benchmarks/timematrix_benchmark.py",
-      "byte_size": 10279,
+      "byte_size": 9974,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/benchmarks/timematrix_benchmark.py",
-      "sha256": "fd5837d65c08bdb5ded79f9157534108aa64f1daf0a9e69c03048f76acfeaf7a"
+      "sha256": "cd6de8b957d6057d6d5ab2197c14d4111ea01ba600f6189f26c5f09213dcbb43"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/benchmarks/tsplib_benchmark.py",
-      "byte_size": 10828,
+      "byte_size": 10499,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/benchmarks/tsplib_benchmark.py",
-      "sha256": "ff5e2882df0497bce459fef21f33c9853b7658fcd35f53e153c2dbccf38c9c9d"
+      "sha256": "0c13cd9ec5dac523f4ac37123ece61214e82afe0e2d44d8466cd0136f882c829"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/bildiri_metinleri.docx",
@@ -102,10 +102,10 @@
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/bildiri_metinleri.md",
-      "byte_size": 14620,
+      "byte_size": 14470,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/bildiri_metinleri.md",
-      "sha256": "65deb333766d6ce5459b2e2da94ff94237614000d2f0c6ab8c5ad152926a4449"
+      "sha256": "fdc6244b4a1342c15c33cb37fdb1b923ab689838d7039d12b2b0523be752fe24"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/bildiri_metinleri.pdf",
@@ -116,241 +116,241 @@
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/config_manager.py",
-      "byte_size": 2410,
+      "byte_size": 2329,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/config_manager.py",
-      "sha256": "4bd619f501064e66141b239151a765da47d0502b4049c1ca4a5cb21e72450ab5"
+      "sha256": "963eb8bd1840d9e48c06ac01f536dea130465cd647abc1aac4ab6993b5b292c0"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/batch_berlin52.json",
-      "byte_size": 1367,
+      "byte_size": 1306,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/batch_berlin52.json",
-      "sha256": "bec87b95191ae44a7f425ad6440f2bcd2f7ddd1b1d969f9992fbe3a3139168ba"
+      "sha256": "b14128613f13884a0696cdb81bdc97b013a8266a4eb2952e25a1b16b64f39436"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/batch_eil51.json",
-      "byte_size": 1361,
+      "byte_size": 1300,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/batch_eil51.json",
-      "sha256": "62c94dfe7adb4d8770b01b0710be4092c28bdb40e589344dce03a52cc48ea956"
+      "sha256": "22eafdf9c95105c2dea860354d2a1b9cb08b5fdaddc3097b92cfaed714810105"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/batch_extra_berlin52.json",
-      "byte_size": 883,
+      "byte_size": 844,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/batch_extra_berlin52.json",
-      "sha256": "62e5959f4ad60ac43042bcf0910a6ad067277bc1a438fc4dee9516964751faeb"
+      "sha256": "e467e71e3a48b2b8d2d9c3b1b0d28ed1b40f3e2ece5860d39730c9111c3edee1"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/batch_extra_eil51.json",
-      "byte_size": 877,
+      "byte_size": 838,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/batch_extra_eil51.json",
-      "sha256": "e293e4a8d50124c40d98856f17c298b9e696aa08db062e4c7f205ca55b3d8816"
+      "sha256": "3295096db7dce72dee49d47d225645eadbf9928a99a2a206710fea5152f707f5"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/batch_extra_kroA100.json",
-      "byte_size": 881,
+      "byte_size": 842,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/batch_extra_kroA100.json",
-      "sha256": "cc86dc757ebae6156c68de8c196caa980b0803b5ed4b74e0c3eba1cf773509e5"
+      "sha256": "e83c284699a1e577a98e0114c228dd723da65a7181e09452248c658a87f25f65"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/batch_extra_oropt_berlin52.json",
-      "byte_size": 618,
+      "byte_size": 591,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/batch_extra_oropt_berlin52.json",
-      "sha256": "88aa6e8944b9179d5abf63e15a631847c32f4919d0b473de14bbf77d91884c9b"
+      "sha256": "f7a7c5b56b1f1d771cd89d727bbeb7278a6ee5fe80877323c55a29d5daceb66a"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/batch_extra_oropt_eil51.json",
-      "byte_size": 612,
+      "byte_size": 585,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/batch_extra_oropt_eil51.json",
-      "sha256": "7bed77663fa5d46e461e2c1d5090ebe788c09f1ff09b8dac4fd05e394c9ccc63"
+      "sha256": "191d99e5388158ca4d393360fa6da0d6f9094a8c1484fc8847fbfc76f7eb8239"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/batch_extra_oropt_kroA100.json",
-      "byte_size": 616,
+      "byte_size": 589,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/batch_extra_oropt_kroA100.json",
-      "sha256": "117a324fa80a7474f63d56b73171094c16747e1d1e641192a690b87ce65b554d"
+      "sha256": "7f6fdfef6aa8a0928a8116b4a1d94c7698a18d8a2d897d407b86fa6821e6cc48"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/batch_extra_oropt_rd100.json",
-      "byte_size": 612,
+      "byte_size": 585,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/batch_extra_oropt_rd100.json",
-      "sha256": "5c8ce786fa0a51c11590388411037209f5400fa774dde35f6289dc9253b73c9d"
+      "sha256": "be50083df96fa757ce4af686ae7bdac238917a9309880ebea77a81b0cf088343"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/batch_extra_oropt_st70.json",
-      "byte_size": 610,
+      "byte_size": 583,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/batch_extra_oropt_st70.json",
-      "sha256": "04acb189768e5c69f33e1c504af70da493da91df315acfd157630b671e1e3151"
+      "sha256": "8b88d978b47ba7e40ff4bec9b4bb88c98e789641510b2d2310f4661ace6a8544"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/batch_extra_rd100.json",
-      "byte_size": 877,
+      "byte_size": 838,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/batch_extra_rd100.json",
-      "sha256": "886e52838f02cc270d8dcaa49046cca67da988a072a2bf29608cd51b7e1e2fb4"
+      "sha256": "e92686d9ae3dedeb39b4a7d8fc4d70b105cab55d00bdba9627930ead6e790618"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/batch_extra_st70.json",
-      "byte_size": 875,
+      "byte_size": 836,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/batch_extra_st70.json",
-      "sha256": "c6ea1fe66bed32235249a382deb7e8a5d75bdadf4598303f98daa874295becc6"
+      "sha256": "bfd8e578c727195d32da18e515f281adf6175bfcc38f0afe11d5c4ce7329aaa9"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/batch_kroA100.json",
-      "byte_size": 1365,
+      "byte_size": 1304,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/batch_kroA100.json",
-      "sha256": "b8ca1de1a26aba05cfd8be6b80bf286c4a4ccc41148033214a4fdd2fb6cac2aa"
+      "sha256": "201eb9dadf18b474db18ac248b66e1bbff0d517f7adc62b9f12d4500e9e1bf87"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/batch_rd100.json",
-      "byte_size": 1361,
+      "byte_size": 1300,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/batch_rd100.json",
-      "sha256": "0db4dd2df5aef9952ab4fed031ee8fb9b8dac82fde31f81ce7bf6e852d98157b"
+      "sha256": "b4611e1f5272603d9fb3b7312065226c261ad7797e494975484e3dde421a67f1"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/batch_st70.json",
-      "byte_size": 1359,
+      "byte_size": 1298,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/batch_st70.json",
-      "sha256": "9e971497573f2ef19a0d03f775423fa6783d2142ef66b4e16a3ec1dfa906107c"
+      "sha256": "cba315ed552f03b1252a202de9f236877ace947d2d8e2ca5ec4a27bfd79b0261"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/config_berlin52_20260424_144223.json",
-      "byte_size": 2365,
+      "byte_size": 2258,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/config_berlin52_20260424_144223.json",
-      "sha256": "b3f03fdef89ccfbc96fa1546fd47b336803f67f1aa65daed84c6948f54864952"
+      "sha256": "62b212d0b99dac27d4e7d84528391b2cd9fcc2d5183507ae2aacfa67908b5c26"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/config_berlin52_auto.json",
-      "byte_size": 890,
+      "byte_size": 858,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/config_berlin52_auto.json",
-      "sha256": "1e394fd86bc2535056c59f25495066a7f48508a441346f13a335a11813fc6bc4"
+      "sha256": "4cd80673762dcea5d73bbecb7109fe9b7bec827589d21a339911ef8f4e83144f"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/config_eil51_20260514_222000.json",
-      "byte_size": 2359,
+      "byte_size": 2252,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/config_eil51_20260514_222000.json",
-      "sha256": "69d59d7e47231ae5c193c4354ede02ab87b86f8fbe988688971305412573b587"
+      "sha256": "287709c1896902285d389367c061ce83e5290bea521de7b9f994aec1fd2f4d4d"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/config_eil51_20260630_225228.json",
-      "byte_size": 1301,
+      "byte_size": 1243,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/config_eil51_20260630_225228.json",
-      "sha256": "2fc11b7908e6b2de601c8600f85b1039270f55acfc525b67e18e6401ae633c50"
+      "sha256": "d68848252b705094d5036f914410259ad074be34bac62f7da81d39b643b55202"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/config_eil76_20260424_232832.json",
-      "byte_size": 2359,
+      "byte_size": 2252,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/config_eil76_20260424_232832.json",
-      "sha256": "05c5294c19040d2c813c6658ebce09f342e29129f2999be68708df4d277e2b20"
+      "sha256": "54fbd26b851b6239491e716a180c6a2dfb74a6077512a40359e88491bfc101d9"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/config_eil76_auto.json",
-      "byte_size": 891,
+      "byte_size": 859,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/config_eil76_auto.json",
-      "sha256": "09f5f522f8a20ceb5601e4d8584b6d4faf87a50e870f3e76ac7e2f096ce87dfa"
+      "sha256": "13d10c282f4ad1951a3835bf8a147025f9ad59a824ff748ee91655eed07ccfb9"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/config_gil262_20260430_081116.json",
-      "byte_size": 802,
+      "byte_size": 767,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/config_gil262_20260430_081116.json",
-      "sha256": "4384f8b9e61da3c3520e63706d36770edb96f602dec1f0c693a90cbd5c4c9a8e"
+      "sha256": "f6c28502f0dd6c466128b4f0136b4d595fe04690da7352b0f89dfed1d9bca8e4"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/configs/config_gil262_20260506_105150.json",
-      "byte_size": 2361,
+      "byte_size": 2254,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/configs/config_gil262_20260506_105150.json",
-      "sha256": "9fd0ff0224951418739ebbb337d80e731fa74f5b678da0c114a1e7566e3556fd"
+      "sha256": "ef7ed85d4de1d0f439eeb4548674f74d0a8b4f0eedeeeb71b83d200a726438c0"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/core/__init__.py",
-      "byte_size": 1007,
+      "byte_size": 975,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/core/__init__.py",
-      "sha256": "45f9177e2f0a7e17fa89b82b890432130d12a43ab6c264e28cd2abd33e0898a5"
+      "sha256": "50d270af8975687375dc90dd3722b5ab934ab74bcea938459171e5a29a098600"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/core/base_solver.py",
-      "byte_size": 10679,
+      "byte_size": 10441,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/core/base_solver.py",
-      "sha256": "2f9bc593f0da3ff1024a22b09c1ab4473eeb4df1ae0666ac8688b8ad41e77f98"
+      "sha256": "370eb071c1492a039cf4714043a9d964593000475f778d2609c042e2b3e709e3"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/core/ga_solver.py",
-      "byte_size": 6583,
+      "byte_size": 6408,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/core/ga_solver.py",
-      "sha256": "1fb01709320c969b118a35c2750f2763f46a8fd7121b509b2ce6936c028ddbd3"
+      "sha256": "2c0dede4a74293db07e3bb86a187f67e828950a9c2077f1002d24f9fc1f0a190"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/core/gwo_solver.py",
-      "byte_size": 13098,
+      "byte_size": 12795,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/core/gwo_solver.py",
-      "sha256": "a429b893aeae4222267bb5b247dca15abe44d34f47ccb2291bd998e647b8409c"
+      "sha256": "14c35b86537315c027f6722dfb2cc6908677a3aba04dd8719d3e7eb5253ced8a"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/core/hho_solver.py",
-      "byte_size": 15393,
+      "byte_size": 15031,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/core/hho_solver.py",
-      "sha256": "8fdf8b69ccadbb2502b4155ab2c25c2ae73622e80341cc2b4ccadcca2930e88c"
+      "sha256": "a1f2515505ad99ce60471270fb848916b13f9b5c3d9c7ea185c09c8e4fbdfa59"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/core/numba_accel.py",
-      "byte_size": 18019,
+      "byte_size": 17607,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/core/numba_accel.py",
-      "sha256": "a3156e455de25d14a704774d740e382db9f71e748e295f392accb86da78253de"
+      "sha256": "4f1de957832e632d256a87ac1151167aae4885b5aabbf8523e8b484f4dcfb979"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/core/or_opt.py",
-      "byte_size": 5462,
+      "byte_size": 5324,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/core/or_opt.py",
-      "sha256": "cfa7b1b6b43ea276511419b6c591ef0e952180ad68dbf82e5c8d5de9cd8e7479"
+      "sha256": "f8d6219d9490826139d849e6d2f1c819a501329e6a645facd3cd36780d6ebd41"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/core/pso_solver.py",
-      "byte_size": 9667,
+      "byte_size": 9430,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/core/pso_solver.py",
-      "sha256": "37629cbec610e158d80c73078c62ae46fef0b5de529c42ae6c93a45502df76d7"
+      "sha256": "ba29a718e15b1370f7c3ab62b48ec4f94acab634151e9eb550df6d9ed4fa0498"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/core/three_opt.py",
-      "byte_size": 3990,
+      "byte_size": 3883,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/core/three_opt.py",
-      "sha256": "a8d6d807b81a321cff880a8e099820a34fbbc037c9844244ca3c618550f4c9da"
+      "sha256": "8e45c8a5635aa92df220aab6494ca445d8614e9908768cbe9a03a3655d781133"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/core/two_opt.py",
-      "byte_size": 4865,
+      "byte_size": 4730,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/core/two_opt.py",
-      "sha256": "7ef45055fec69dceadbcaed2da6cedf0b005e87a7c5b57ac176a8176a75c281f"
+      "sha256": "ca43042427944aecc518a9cb7a62684a195d605b6d9dd9050bda24aca87926aa"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/Veri.xlsx",
@@ -361,766 +361,766 @@
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/student_matrix.json",
-      "byte_size": 10138,
+      "byte_size": 9201,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/student_matrix.json",
-      "sha256": "049cb7c0174699e12d65475388c997d4532d34a4a7734b1e4f55ff82a32b5aa5"
+      "sha256": "016099f256c9170e9c0967aa44f6fff5573d3b89b35443df50a97bf73a30b39f"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/a280.opt.tour",
-      "byte_size": 1377,
+      "byte_size": 1092,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/a280.opt.tour",
-      "sha256": "77d2f06ee6e6750d1727a13157aa43c11af81583021f299afbd548ea7ba89203"
+      "sha256": "627207be9bef204438b239f84cda4df5c1d1695f392d2940c3c27eea73f7f01c"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/att48.opt.tour",
-      "byte_size": 300,
+      "byte_size": 245,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/att48.opt.tour",
-      "sha256": "a9fd52d2f43ec36473aeb4a1f2938d838da59b8dbed8a98a486c05eda0e1c6ac"
+      "sha256": "7ee2e1e733bd4f0c544ade34003fa40037df805653595c1cd30bd2f9db6c7e3d"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/bayg29.opt.tour",
-      "byte_size": 222,
+      "byte_size": 186,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/bayg29.opt.tour",
-      "sha256": "d74fd1dd143075a42905b77fe00aefd2c8a6516a257c641f70726f82c0cdd8b3"
+      "sha256": "92707b5d19124c1cf6848a852622ab90aa258d3f8c8b8983fe27a6d4869aab06"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/bays29.opt.tour",
-      "byte_size": 221,
+      "byte_size": 185,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/bays29.opt.tour",
-      "sha256": "762c88b67b0eb55ef921134e6ea02f56efb9a5c3be74b9cb3fe6071a8de0c069"
+      "sha256": "617e9eb79fa92e8d877fa6cca9b152014576b3cb618d62a6f99c7e97aff69b25"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/berlin52.opt.tour",
-      "byte_size": 277,
+      "byte_size": 219,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/berlin52.opt.tour",
-      "sha256": "d615ae01402735aaeadcbfddea0ef0f847cb79577b002035de983e5c0fb659b0"
+      "sha256": "8f3915f397dcdbf9f07bd570fc41faa7e9b3d27391537f048164b2f937d1ccc9"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/brg180.opt.tour",
-      "byte_size": 866,
+      "byte_size": 681,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/brg180.opt.tour",
-      "sha256": "6ff69d0ca782e25b061fd2771a62a554ccde0da15ace38e8c0cd81ca066a29f2"
+      "sha256": "2784275635640169d655d6ffa624fac09090bf12c88f6b7f6223e8af9b3d179c"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/ch130.opt.tour",
-      "byte_size": 636,
+      "byte_size": 500,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/ch130.opt.tour",
-      "sha256": "e62faf1bb38ae99d39564b08e2208cb8c975d6deab4b47d16482158361463469"
+      "sha256": "22b2902f9d6f46c1d022c3e94467dd78ec8e4075b74737cfb6cf9276e41f8d13"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/ch150.opt.tour",
-      "byte_size": 741,
+      "byte_size": 584,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/ch150.opt.tour",
-      "sha256": "804c33e76beed6ce7c52335abb87f9fff0c47ca5f9801bd5022dd2504fa33dd9"
+      "sha256": "b9eaf5cf8bb6b7a02fee02103ca4ae68d57161650cc4739dd9633e501fe0884a"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/eil101.opt.tour",
-      "byte_size": 526,
+      "byte_size": 418,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/eil101.opt.tour",
-      "sha256": "973a9e1d749d9847db505f2cc258624c417b4c40eb11e619243eed5548eb6919"
+      "sha256": "640ed0f0fa4acca54f7c85b83cce0a1853fad9aca56f6a63271d2e5899cb80ff"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/eil51.opt.tour",
-      "byte_size": 315,
+      "byte_size": 257,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/eil51.opt.tour",
-      "sha256": "02df4b01e6b62386421fb152adf4e4a34624c1cef5f21a3a931e8340cc7192b9"
+      "sha256": "fb84e8aba84b163b782d60bc5a6d3d402bccf5d5d77355d03b4713044617c8fc"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/eil76.opt.tour",
-      "byte_size": 414,
+      "byte_size": 331,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/eil76.opt.tour",
-      "sha256": "4278927652d8a2c006a367f7e172d07af1963187ac77de84f0d423aaded7ef58"
+      "sha256": "ffdd42640b7882b8618febfcde132dfc1f97d01ae9c495b94f7c7ee8c1473e64"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/fri26.opt.tour",
-      "byte_size": 210,
+      "byte_size": 177,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/fri26.opt.tour",
-      "sha256": "36cb05aa88f333c5017c5723ff950a5c8ccaac9e74cbbd843a631025005cd7d6"
+      "sha256": "fa861430331ce35156bfeaf47cb52ee090ec8e60efb1ebb02097126240b7f2aa"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/gr120.opt.tour",
-      "byte_size": 609,
+      "byte_size": 482,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/gr120.opt.tour",
-      "sha256": "b8c030eee8fec3c6f8b55e1177b89e172ecbd203768f8339394f8b2d499e930f"
+      "sha256": "7947147647a74deab7367c68a0855b1cd3166b58fce2ada0ef37460f76f9113b"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/gr202.opt.tour",
-      "byte_size": 1024,
+      "byte_size": 815,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/gr202.opt.tour",
-      "sha256": "6dd53083d1cec8d53f93390d44151d08d5fedbff30038ab5dee81fdeac7869e6"
+      "sha256": "f71d2b14c8d919dd0475ecf2bc41aad7b4658b15f30d3a4a179e6b0d409d26c7"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/gr24.opt.tour",
-      "byte_size": 182,
+      "byte_size": 174,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/gr24.opt.tour",
-      "sha256": "b77f2529f14a3ee34a635a00cd7f179ca3246c7e0ff8b9b35565a4b331460545"
+      "sha256": "52f723f07391b6e8d58125355fcf6b768c5b742ac47abc045a3ff54eeeb147ba"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/gr48.opt.tour",
-      "byte_size": 257,
+      "byte_size": 246,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/gr48.opt.tour",
-      "sha256": "0ae1a0d9a7f2710d35eae289813574983721bd962746563de4ab6a3629346d37"
+      "sha256": "8a07c726fc2f5b7860af650c49cef7e67e60e2697f7896a574db7f90e3c31e07"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/gr666.opt.tour",
-      "byte_size": 3344,
+      "byte_size": 2671,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/gr666.opt.tour",
-      "sha256": "8a516bf43c68d8782c9b3616eb7c9417c33c117fe92f4f84696824e73b1df0b3"
+      "sha256": "57332309440765100ceecac7660f939499ed6f74a9aa5dcbd44fd85152f56b5e"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/gr96.opt.tour",
-      "byte_size": 492,
+      "byte_size": 388,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/gr96.opt.tour",
-      "sha256": "237950b5fddc9f6082600b4d132e79aa9e9ddf72b31e9d96d2710f9cd6a210c6"
+      "sha256": "9ab8ce5797c3fbb0f4241e89871ab1900715ef01376af0dae781a8fe34cc840a"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/kroA100.opt.tour",
-      "byte_size": 516,
+      "byte_size": 409,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/kroA100.opt.tour",
-      "sha256": "928991ca150a85f4c722fb9100d7791fbb327160359a5d88ce8f72a28535e2d7"
+      "sha256": "65499d540c5aa7e90750065a5c6ff82f9774f284facf9d29af0146bce4332dd1"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/kroC100.opt.tour",
-      "byte_size": 514,
+      "byte_size": 407,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/kroC100.opt.tour",
-      "sha256": "7d61177a18aa95afdeba1df0a3458691dd78b6d2e6f6b9d251d1d21e7a90d252"
+      "sha256": "c5af19ce345254a2e85d1121544fb8f128744de1e0c7d68223efd0754de155e8"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/kroD100.opt.tour",
-      "byte_size": 515,
+      "byte_size": 408,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/kroD100.opt.tour",
-      "sha256": "9ac83a7bade34e7f64ff7dec83214f7b26083fee39b5f7c205e5fe7bbc630e4c"
+      "sha256": "12a06b91381720ef838ae92c82aae38b0821845dc3c206fa2b9932978fd066ad"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/lin105.opt.tour",
-      "byte_size": 538,
+      "byte_size": 426,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/lin105.opt.tour",
-      "sha256": "97b954b0f45841f9537175fdaaebda79205ed449794b23850080d621c811fe58"
+      "sha256": "e36f359d9fcd4ccd3bda81e9276973323b111bfb302a68ac56d82d78db0b8ef5"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/pa561.opt.tour",
-      "byte_size": 2816,
+      "byte_size": 2248,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/pa561.opt.tour",
-      "sha256": "e529591c7fe059bc2a4325ffa0c5195c906750d0a9d7f426c1d58ae13c1c1d5b"
+      "sha256": "5ba32cce6d9d4603493145a4477f70b4ebd8829571593c621a620907f986fa14"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/pcb442.opt.tour",
-      "byte_size": 2226,
+      "byte_size": 1777,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/pcb442.opt.tour",
-      "sha256": "207f1baef287af699759c0933c689dcc6e00f274ee912f0fcece5223b6ccb668"
+      "sha256": "18083e3208b24ef8db0a1ff1a0c7d520804d4431164af9b4d960abca3487fbc1"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/pr1002.opt.tour",
-      "byte_size": 5195,
+      "byte_size": 5125,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/pr1002.opt.tour",
-      "sha256": "27bf18cbd5d4b8dcc872f9076e6e29b2320435b66d9579e9728d94764a671eef"
+      "sha256": "ec947fc8c8eb4b786a357bdab62c48328b4beed3862d5a16861a99d8b72f2d57"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/pr2392.opt.tour",
-      "byte_size": 13371,
+      "byte_size": 10972,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/pr2392.opt.tour",
-      "sha256": "f6c869deb28f643227c43d9a6064d0ae512f8c267f59991d3cb4d402a58250c7"
+      "sha256": "aa67b8dacd16ba9b5a46173bf90ea9dbea96bc4eedfb067cab9d9f6de6cf014c"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/pr76.opt.tour",
-      "byte_size": 411,
+      "byte_size": 328,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/pr76.opt.tour",
-      "sha256": "a82eea0ce12a549f39561af19554f4cd4854c297d7d3fa81c59047a513f85ae3"
+      "sha256": "9851e6a294ef790eabd3961be9d0ac22e30881e8b7c1671020322847c6965f62"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/rd100.opt.tour",
-      "byte_size": 524,
+      "byte_size": 508,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/rd100.opt.tour",
-      "sha256": "c1a4a204cc9f1b3a6c0793997bf79dbeb6f57ef62b993c3ea9ca866486de1199"
+      "sha256": "300f49c2947bf18d5ea7ebf2ca507b8ab998b050fbd0a83414f52d409f81ad62"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/st70.opt.tour",
-      "byte_size": 385,
+      "byte_size": 308,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/st70.opt.tour",
-      "sha256": "af04ddd7976d73f25498f56470809ab49b91b7aaaaf07d43735a78ea9622b442"
+      "sha256": "a64c8d6db03df9efadad41d80245a269542300a9a5e8138284b23513fa72fe91"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/tsp225.opt.tour",
-      "byte_size": 1140,
+      "byte_size": 908,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/tsp225.opt.tour",
-      "sha256": "fabe8bd56fdfba8f59a384537b9dc5f6842a4375956d486c611118f090eb9dc3"
+      "sha256": "72b403de3a5b619fa75ea5a63849799d56e49a0782c8fb8fd468bc0731bf1bae"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/ulysses16.opt.tour",
-      "byte_size": 170,
+      "byte_size": 161,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/ulysses16.opt.tour",
-      "sha256": "d1ae06e6da07ba4ef12a3ed1f2779978b1d098671775c43b38fa2942c7360d8b"
+      "sha256": "c56e31536a66f6b6ab9a59696297b044cce4449bd626aaad2f69ed873b0902e6"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/ulysses22.opt.tour",
-      "byte_size": 201,
+      "byte_size": 173,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/ulysses22.opt.tour",
-      "sha256": "dc7517e01bf78375d06322a4339872253571583902e69e7d1ef1bb3ff107b5fc"
+      "sha256": "b10550056f959727a88c49687aa1b1996d631330868c66f554f275dde5945cd3"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/xray.problems",
-      "byte_size": 30965,
+      "byte_size": 30368,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data/tsplib/xray.problems",
-      "sha256": "fa7d5bd88e3f4f0b98b5759578fd424183318a8b5e1b3de70a6809494423ae7b"
+      "sha256": "132edf0f82a98ba98511e29ea6ca09caeba68c99299a700e20889c9a675d39fa"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tuned_parameters_db.json",
-      "byte_size": 37874,
+      "byte_size": 36366,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/data/tuned_parameters_db.json",
-      "sha256": "99ddbcae6e06ebea92487140a135e7a75a1b90830be50dcb56718b7d8e6fb01f"
+      "sha256": "d9b53e09057d2d73f9a612c4b0c2669f0358329700ed08b21948c69bf3d13368"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data_manager.py",
-      "byte_size": 3169,
+      "byte_size": 3074,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/data_manager.py",
-      "sha256": "0a6c989f34facd1cab474b20cfea3746c4555569bc435fb550ce0850e16a5ac1"
+      "sha256": "bf152a957b87e2118416563024ef3b5499040cd3f2e25bd3f6e99aa079ab2e01"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/orchestrate_batch.py",
-      "byte_size": 1633,
+      "byte_size": 1580,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/orchestrate_batch.py",
-      "sha256": "08e936e6449818cc500d729a524d5a4c14ad4fc8a9f7e7d0eaf012e933313ffa"
+      "sha256": "a93b49f4ae9024aa418d468b53467b0fd738915bc7b57ec7106d6cc186f538e0"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/requirements.txt",
-      "byte_size": 639,
+      "byte_size": 618,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/requirements.txt",
-      "sha256": "10648fb939ecf8326145c9a7443be220ce097e22abfcfc96c24bdb31b3a96376"
+      "sha256": "d3025ea07580f177ee958ffeebd0820a5805f3d47a3fcf36e58f96cb14e413c5"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_progress_20260425_030209.csv",
-      "byte_size": 203,
+      "byte_size": 198,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_progress_20260425_030209.csv",
-      "sha256": "5fdde488d1e2f6783fc043e0927b453a932efa391eb48d5f5352705d3df3698d"
+      "sha256": "d1d46179619bc72f4da5cac37cd3fd19d577af24b1dd657db14b9bd0fd10f196"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_progress_20260425_030432.csv",
-      "byte_size": 4052,
+      "byte_size": 3961,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_progress_20260425_030432.csv",
-      "sha256": "21f6e34fea9474fda723f2edda44b3b7f101b54d63ae566bc5ae39378e87a452"
+      "sha256": "559d16275cc2cea893154cb0a68ccc08429a507e66dbaa99419632e90c8682c0"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_progress_20260425_030507.csv",
-      "byte_size": 3692,
+      "byte_size": 3601,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_progress_20260425_030507.csv",
-      "sha256": "5bb1ce31aa6560d9a26d74d66567df8babf81cb744ce1ccd5cae855bf1c144ed"
+      "sha256": "40a39fbd5c958d46a485ca25f34e482c2564a4b572d5b0d646ae1032922757f1"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_progress_20260425_030540.csv",
-      "byte_size": 4103,
+      "byte_size": 4012,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_progress_20260425_030540.csv",
-      "sha256": "f575c98c978b4289a56e6b5f6396cdd1dbf25d343e12a8a12e114d8851fafc53"
+      "sha256": "e2a3978993f7324ccebebab34d4ca4c90db348717e6a8964091451ba8d7d5393"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_progress_20260425_030618.csv",
-      "byte_size": 4001,
+      "byte_size": 3910,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_progress_20260425_030618.csv",
-      "sha256": "9733a8d95f279a36277b7f6101f0f49bce94e537607bcd75fb14874aa01942a3"
+      "sha256": "a10e3f10eee28c1559c52ab0e0c87676e76450abc5a6aeb9ab56defe31103dd7"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_progress_20260425_030656.csv",
-      "byte_size": 3802,
+      "byte_size": 3711,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_progress_20260425_030656.csv",
-      "sha256": "73adf7090c4ffcfcfe107445bd4645980e6778a966c130e3cc59fe49177bb0a1"
+      "sha256": "12a5c1bf44afc91ccc1a735694ea8394d8cb4b24d87dc97a618f1d14db631560"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_progress_20260425_090056.csv",
-      "byte_size": 4664,
+      "byte_size": 4573,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_progress_20260425_090056.csv",
-      "sha256": "9b4f3117e430327ce17f46dee6ae6047b72993955f9530f30327436d99a0eb08"
+      "sha256": "981757d725945db03d943dc87e61b76048ee413f0f8fb543b279e44b2af92379"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_progress_20260425_093256.csv",
-      "byte_size": 94115,
+      "byte_size": 92164,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_progress_20260425_093256.csv",
-      "sha256": "007c403931266313636ec081ed897dd7664deffb93eca26441f63053f3e97b87"
+      "sha256": "4dc2e603cf4e5887cf4380068b982f60f1e8a9b9847e661eafde646885a043ec"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_progress_20260506_105850.csv",
-      "byte_size": 286,
+      "byte_size": 280,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_progress_20260506_105850.csv",
-      "sha256": "1538bd65fcd8b17aeb3e4fbba0022554a7840e5b01f7c5c16474b3fb56c2610f"
+      "sha256": "edaac6627b20362892c6e34e1a3b6f6e73e0441bd0419da3f06921d4540399c6"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_progress_20260514_221902.csv",
-      "byte_size": 71,
+      "byte_size": 70,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_progress_20260514_221902.csv",
-      "sha256": "0153cc9db7ea9350fe2f0cbeefd6338fc5c0c64fc32dddd36857f18a6112a700"
+      "sha256": "65ea6f7e07869f6307fcef9168003cc9f03b1d1663c838de38882d3f9a61f3be"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_progress_20260630_225508.csv",
-      "byte_size": 2575,
+      "byte_size": 2514,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_progress_20260630_225508.csv",
-      "sha256": "68dcfce8957436dec507bb99a0c5b856a44ca44395cb4b17f7fee7891070d6b3"
+      "sha256": "273f965d53d3295b5d622f1ccabb9ab569fb59407a3597ae5de2e52a1f86ef31"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_summary_20260425_030209.csv",
-      "byte_size": 385,
+      "byte_size": 378,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_summary_20260425_030209.csv",
-      "sha256": "31b894ad1f3ebe280f807af13e0f5c1776ad3bfe33d65e3de6649ab039127ac6"
+      "sha256": "cc20b56058c9468952073c12939d06e332a86837de6417da2235293447807ff9"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_summary_20260425_030432.csv",
-      "byte_size": 307,
+      "byte_size": 303,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_summary_20260425_030432.csv",
-      "sha256": "1ed716abe6787b3a5587c332b214c319ca9b75e781015d1fcc4ecd85611cdb49"
+      "sha256": "28257693cb3fa0597c032a2012f60693c67c509d99569e1a30da53f09ba907e4"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_summary_20260425_030507.csv",
-      "byte_size": 279,
+      "byte_size": 275,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_summary_20260425_030507.csv",
-      "sha256": "301128915ed63adc669904f0d327579ee48e0076d06c325a9b85f19ff2bbbb9b"
+      "sha256": "a0a75175ea034bdaa771edf3859a6d9b89e3847f5b15e1bd65380447d7419190"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_summary_20260425_030540.csv",
-      "byte_size": 302,
+      "byte_size": 298,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_summary_20260425_030540.csv",
-      "sha256": "b2aa528eb7120f25758aefc6d2160f5e323191b3cb97668fc046280973fd767f"
+      "sha256": "a842e64023f8372887deeab1a3ccb748e2b700e4f123c32b8d27c80b5165935b"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_summary_20260425_030618.csv",
-      "byte_size": 299,
+      "byte_size": 295,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_summary_20260425_030618.csv",
-      "sha256": "2e6a3de617a1fab376003b2b52e9ef3a6657510e8df9fd45b8fbfe03bf24b798"
+      "sha256": "9789e50ad8e3fd5ef34cdcd2b1e772f8f5a9223e96aa3c3a6cb4e67864f7bbd4"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_summary_20260425_030656.csv",
-      "byte_size": 288,
+      "byte_size": 284,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_summary_20260425_030656.csv",
-      "sha256": "369e3910f925e862141ac7f07d6f9adab5d24b8d83ac2ffe920b34b8844a7074"
+      "sha256": "e86e3faf01ec26265a66c6c4336babd21e3f743832744ad1c2b8846b442bc9e5"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_summary_20260425_090056.csv",
-      "byte_size": 333,
+      "byte_size": 329,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_summary_20260425_090056.csv",
-      "sha256": "5133ed72c1a00b028e745b8f9124be37bd6281701cca01b8b8b10d2c77a08dae"
+      "sha256": "115254c827dd5352aa5960422db58f18d9d700e9766d80953fad93a5a56153bf"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_summary_20260425_093256.csv",
-      "byte_size": 5642,
+      "byte_size": 5576,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_summary_20260425_093256.csv",
-      "sha256": "2eff7c5bad72d6901320e5c236984e5a13fcfd9e695ae5fda2f5772d11fcbe1e"
+      "sha256": "4517fae0341878c044a7f21be61e566b868890c876698dc8819d2a796810138a"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_summary_20260506_105850.csv",
-      "byte_size": 131,
+      "byte_size": 129,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_summary_20260506_105850.csv",
-      "sha256": "7e331b50c5cc974e2599f05294e8cc845b6fd550d0d87981a1e21935ca09b46e"
+      "sha256": "5183b496ff361e2d2c80f92230b89f7318d5dec61ecfe95cb9d2362bd703e05c"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/benchmark_summary_20260630_225508.csv",
-      "byte_size": 209,
+      "byte_size": 206,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/benchmark_summary_20260630_225508.csv",
-      "sha256": "b4fe57badade1e951977c93268db2e2fd0c2f6139f917684a2a8fea84028b82d"
+      "sha256": "d674485d9ad6e28edaa8d3d01757cf34d3c2d1cf5ad5c025499f9c51845683c9"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/histories/convergence_20260425_025127.json",
-      "byte_size": 3307,
+      "byte_size": 3090,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/histories/convergence_20260425_025127.json",
-      "sha256": "dd964cab6fdd766fe38fe2e92ebe910c1c9340cccb95eb0243ab3060427af1e2"
+      "sha256": "f04f57f502e08fa896f179a2c3ce274cffafa3117abd61d1f2f15c919e218591"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/histories/convergence_20260425_025718.json",
-      "byte_size": 3109,
+      "byte_size": 2892,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/histories/convergence_20260425_025718.json",
-      "sha256": "617fc1946fa39cd947ef2075df2fe2d428b177ffa18326a789639cad051b3f32"
+      "sha256": "72a5676763efefbb446faee11d9b4e17ce6618118340b1f4185a8f77d2c96115"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/histories/convergence_20260425_030209.json",
-      "byte_size": 6611,
+      "byte_size": 6178,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/histories/convergence_20260425_030209.json",
-      "sha256": "635b60d25b590039ad6f8d5f1c9b1753901cf82ca23261388970a2a47fad6227"
+      "sha256": "4a2dd615b07214f5e8703935344c79863439dcf9f3a20109c425c0c5251c6e63"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/histories/convergence_20260425_030432.json",
-      "byte_size": 3323,
+      "byte_size": 3106,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/histories/convergence_20260425_030432.json",
-      "sha256": "d9f078a8da0ee9b48d014e89f321e1c06a8e594b16cc00cdccf15a0277d11f2f"
+      "sha256": "a7a1c67b18adb3bf5b2fccfc1f63c8adbf0de687c0a9c26e099cb832b304f6d5"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/histories/convergence_20260425_030507.json",
-      "byte_size": 3109,
+      "byte_size": 2892,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/histories/convergence_20260425_030507.json",
-      "sha256": "66dd25e1b6d5039de951a3abbea258f4c74a8ddc7c7c307d0ccb14331b806ee1"
+      "sha256": "b73aa1b7f14126fe3a140aa5691d8e237e2662910ad7c376ab63c84b1a883ca5"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/histories/convergence_20260425_030540.json",
-      "byte_size": 3521,
+      "byte_size": 3304,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/histories/convergence_20260425_030540.json",
-      "sha256": "20c2586d385ad489bd0b5e70e3460f3ae2c8560d32cd37af23b91ffd772fb6ed"
+      "sha256": "b6131fe5c3f67dfc036bcd2000bd31670279eed390102696bb1cd11eae64460a"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/histories/convergence_20260425_030618.json",
-      "byte_size": 3315,
+      "byte_size": 3098,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/histories/convergence_20260425_030618.json",
-      "sha256": "33c1bb122b3db96ef7a809df633b47adbe1fa9f87a12ca2297395f7180362a2d"
+      "sha256": "c8de307a1d60afc8c0179c120b37db9643f0583ca957e84a1837a275f8deda8d"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/histories/convergence_20260425_030656.json",
-      "byte_size": 4285,
+      "byte_size": 3984,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/histories/convergence_20260425_030656.json",
-      "sha256": "68f3778d16637b89b0afa64275f70671235f1ed7e8f5dfab53b8ce970e994abf"
+      "sha256": "9ba9b91e99b480e1f17f0a201b599fd16da9bcee82fd273a051438bd24266598"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/histories/convergence_20260425_090056.json",
-      "byte_size": 3149,
+      "byte_size": 2932,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/histories/convergence_20260425_090056.json",
-      "sha256": "5066a6a670408f920db5981aa7713d10ab4b983eaf633b76dca7676c3e216b24"
+      "sha256": "a865bbadcabff99836d7d075ac1b3509963aceb22017fafacce5342add61886a"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/histories/convergence_20260630_225508.json",
-      "byte_size": 3113,
+      "byte_size": 2896,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/histories/convergence_20260630_225508.json",
-      "sha256": "1c04a3b7c5ba467e5dfc3de1447de9e69f45781b23b11686f50eb20c2466dec1"
+      "sha256": "f118d5e8486890a73a8eeace19cfce5a291135adf53e103212a9eb595748aa0c"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/2opt_ANOVA.csv",
-      "byte_size": 241,
+      "byte_size": 237,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/2opt_ANOVA.csv",
-      "sha256": "83582454d4a9beb5a97f79f159fee8dd720a71fee1c0b6cf0d665b80cf2caf94"
+      "sha256": "11193ee2314da8e88cdf51fdbe1c0891d9a8df4caf4deb9612ffcdadf5a55ebd"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/2opt_raw.csv",
-      "byte_size": 1477,
+      "byte_size": 1452,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/2opt_raw.csv",
-      "sha256": "60ba250bfd7ab4400f9e3e658a746e5b31d11a7e39adc2597f29f9d2593066b4"
+      "sha256": "0d6f0a787daddd3581b116f2dce9c964c6fc1f853c9f321e568bea6e911ef480"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/3opt_ANOVA.csv",
-      "byte_size": 239,
+      "byte_size": 235,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/3opt_ANOVA.csv",
-      "sha256": "fe6e85e3af88fadab4359fe35dff06ffdecebd09b6a4a9f42b3447e6137deb52"
+      "sha256": "62e1f7fd80630ee9734cb0ef0bdd3792ad93b7aca2cd4dc070af620816bced5b"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/3opt_raw.csv",
-      "byte_size": 1086,
+      "byte_size": 1067,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/3opt_raw.csv",
-      "sha256": "73f5494cc10e8f7f4f23b376f55ce8b1d09e1f861621be67ef3e068f1e4d56ed"
+      "sha256": "410397afc760f074983cfbe6cef26c7c9f7bc3a0011f4440efaf908869294355"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/ANOVA_RESULTS.md",
-      "byte_size": 5400,
+      "byte_size": 5186,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/ANOVA_RESULTS.md",
-      "sha256": "3d8d3e0aa88ae727c53fbd093eca5ed6139e2cbb015a0363f0dc4123a065f6b5"
+      "sha256": "b70c868cd73ec4fa218003036b814ed5b3ed25e9e76d19a2ac08965dfab51946"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/GA_ANOVA.csv",
-      "byte_size": 328,
+      "byte_size": 322,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/GA_ANOVA.csv",
-      "sha256": "a3ccecce93e0df75b3a5a3a3702f4f5f2dab93f10a96d486b4a453213e37878b"
+      "sha256": "cad62382a13c56318a96bd5c7935013f49a6de197a5b9ddc995ee79d70dc59af"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/GA_raw.csv",
-      "byte_size": 1838,
+      "byte_size": 1810,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/GA_raw.csv",
-      "sha256": "a97632e83cfbc60c7c4f29ce619c2843532b099a6cf0681bd5431ef3c264f2ad"
+      "sha256": "e8188f2500956edf9891c2f25d3d158a62c104cca7b90cd6ace74c1ddab99842"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/Oropt_ANOVA.csv",
-      "byte_size": 243,
+      "byte_size": 239,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/Oropt_ANOVA.csv",
-      "sha256": "aad146aa9e12f42a2a4659c987aff2c472fac10cdc0aa8b549d07f6c6de3643c"
+      "sha256": "da0b6ad8cb4bbd53761f822e18a6ef5ae4b48be021b47190c443b0b3cce133be"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/Oropt_raw.csv",
-      "byte_size": 1042,
+      "byte_size": 1023,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/Oropt_raw.csv",
-      "sha256": "636df014f82116b3f681bff0844e6eba1b963007ded68ac06130d44ce4f8a5bb"
+      "sha256": "b277520eceda841ab28000d628c082953a65dee6241231d0775b3594a5ee869c"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/PSO_ANOVA.csv",
-      "byte_size": 279,
+      "byte_size": 274,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/PSO_ANOVA.csv",
-      "sha256": "9e757ba3ff0cb5caa0f40f686cc2c148a6b729775f2969ecd683efaf69a01f01"
+      "sha256": "e29581101ee0de9ce24a8c01aa86887d5628a49c06b141d5d9bf2dc872361afb"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/PSO_raw.csv",
-      "byte_size": 1209,
+      "byte_size": 1190,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/PSO_raw.csv",
-      "sha256": "4f926dd8c25079d6af132fcf0e5c75769644206f27140950ddb53740eb74675a"
+      "sha256": "f8f7523b57e9223875185a17ece778ee23591a9d07deec2842167771e10d8835"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/benchmark_progress_20260424_233816.csv",
-      "byte_size": 7234,
+      "byte_size": 7083,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/benchmark_progress_20260424_233816.csv",
-      "sha256": "2575b5c41351943278ac0cf2626154b03eac6e8d2ef98591b4d54e48c77775c4"
+      "sha256": "1e576e3e99251e42b0be06608f91289d8fa4ab069dcd8423de4e91a9566ac426"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/benchmark_progress_20260424_235923.csv",
-      "byte_size": 1411,
+      "byte_size": 1380,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/benchmark_progress_20260424_235923.csv",
-      "sha256": "c0f52ef99feff7a0ebfad9fe69e0347b2cac3dcaa865f193578b57f76b49a2fd"
+      "sha256": "74bb351e11e589cecba40ff71b30d7a998f81716f5e8dafcd32309535f0e78c6"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/benchmark_progress_20260425_000329.csv",
-      "byte_size": 71,
+      "byte_size": 70,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/benchmark_progress_20260425_000329.csv",
-      "sha256": "0153cc9db7ea9350fe2f0cbeefd6338fc5c0c64fc32dddd36857f18a6112a700"
+      "sha256": "65ea6f7e07869f6307fcef9168003cc9f03b1d1663c838de38882d3f9a61f3be"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/benchmark_summary_20260424_233816.csv",
-      "byte_size": 352,
+      "byte_size": 346,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/benchmark_summary_20260424_233816.csv",
-      "sha256": "3ab7c45ae45610289ccaa4ffb3f5a2b7196c8899066ea58f690e645ddd676f2f"
+      "sha256": "505fcb78b9906ab1ba7a91632d83d5301dda1aa6f5f6c1aba67bf0e1c3fcf378"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/param_opt_20260423_111950.csv",
-      "byte_size": 162076,
+      "byte_size": 161025,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/param_opt_20260423_111950.csv",
-      "sha256": "90eb0229f6623a9c732cb7064dbc11f825d945b8ac6bd1dac836cdd151f3b05f"
+      "sha256": "9f26ef13cc18f4a7efb3dbee9a8e302e016ea7089109784d431ed3d69f18772e"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/param_opt_20260423_111950.json",
-      "byte_size": 366874,
+      "byte_size": 355317,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/param_opt_20260423_111950.json",
-      "sha256": "d463e4d615ce2cd83f13d11bfc03d5a72094a3f81fc39ee1676c93724efb0418"
+      "sha256": "86efdbd6e664653994272933824346b119d80053b5642fea65da06d319461dfd"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/param_opt_20260423_140422.csv",
-      "byte_size": 161370,
+      "byte_size": 160319,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/param_opt_20260423_140422.csv",
-      "sha256": "35f0499b2c0cb5ddb4bd55753302c61ccd232a6f5a00258a12b2ca80f6808b40"
+      "sha256": "bd365334ff46c5b7287ec879241fc4aeddeabdecb82346b4639ae0660d439f3b"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/param_opt_20260423_140422.json",
-      "byte_size": 366168,
+      "byte_size": 354611,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/param_opt_20260423_140422.json",
-      "sha256": "f2b7f6a5c55edef9b784c4e3afbb1f8772a2cf62366a4b994295fbd53186974c"
+      "sha256": "1614174969424a4bcbef6e6ac273b2bc57442f77def8ed47adc03deae5bc86e0"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/reports/DENEY_TASARIMI_20260424_144253.md",
-      "byte_size": 5675,
+      "byte_size": 5462,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/reports/DENEY_TASARIMI_20260424_144253.md",
-      "sha256": "eb6fa1d677842efd139c9dbf59f2335de9c86195114da620c85d7b4dc944a279"
+      "sha256": "dd201e7ea31bd116c084f4e00abf16a23e8268f6a11ac0acbdb3bd79835ac88e"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/reports/DENEY_TASARIMI_20260424_232923.md",
-      "byte_size": 5606,
+      "byte_size": 5393,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/reports/DENEY_TASARIMI_20260424_232923.md",
-      "sha256": "6cdcd322439f3e4cb5e09d681c534bb7681f3104a0c37490ccf8e0daffa58ca8"
+      "sha256": "73c234b2c2a252000d153f04e71bfa66eddc711c8894e4803f99550ad002838a"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/reports/MASTER_DENEY_TASARIM_RAPORU.md",
-      "byte_size": 11017,
+      "byte_size": 10599,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/reports/MASTER_DENEY_TASARIM_RAPORU.md",
-      "sha256": "8739141cc2b6adc19d6d64c88bb652e7c2c7b91ae32a9d87b3b5394a7ea571c5"
+      "sha256": "fa53f8253191423ebf96b6e92842794201b3374bc8a89e5fd00914acd026fcb9"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/student_matrix_20260423_144905.csv",
-      "byte_size": 6413,
+      "byte_size": 6262,
       "classification": "INVALID",
       "original_path": "academic_benchmark/bildiri2026/results/old/student_matrix_20260423_144905.csv",
-      "sha256": "591359656aa10c96f670d422c18a50750ba9d76bb249c94d6351f964fac17b36"
+      "sha256": "f1e3ef6ed769982da0c2a15ea4e56e246b83b0e5d5795ae183be91a965c1e98a"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/student_matrix_20260423_144905.json",
-      "byte_size": 84589,
+      "byte_size": 78826,
       "classification": "INVALID",
       "original_path": "academic_benchmark/bildiri2026/results/old/student_matrix_20260423_144905.json",
-      "sha256": "f85dc0ef74bb2d86914bda62c0ac38187dffaaec1d33a9fbad8ac2f5f32db135"
+      "sha256": "85406e75f97b8c7173ce553fb91c22d2ace3f5a99dc64f92bd2f5e3eba72bd57"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/student_matrix_parallel_20260424_132131.csv",
-      "byte_size": 6217,
+      "byte_size": 6066,
       "classification": "INVALID",
       "original_path": "academic_benchmark/bildiri2026/results/old/student_matrix_parallel_20260424_132131.csv",
-      "sha256": "d6eb6bdbde0ce43bb7db3afe0e3aecccf239378c81634d23515cc5257a798209"
+      "sha256": "07dfde1ea2cb352606db0a9373e173cd256af521fe3ba7f7367f2e0638b45560"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/student_matrix_parallel_20260424_132131.json",
-      "byte_size": 84363,
+      "byte_size": 78600,
       "classification": "INVALID",
       "original_path": "academic_benchmark/bildiri2026/results/old/student_matrix_parallel_20260424_132131.json",
-      "sha256": "423ab7db4e3b89f4fa3ce780eaf17efc441d94ca84d43092afab3369d99b2196"
+      "sha256": "ec76edfce09cf9f8552ffc06dc1ea46ac10faf19cab3b2ee4d3b90f8a83dac3b"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/student_matrix_parallel_summary_20260424_132131.csv",
-      "byte_size": 466,
+      "byte_size": 460,
       "classification": "INVALID",
       "original_path": "academic_benchmark/bildiri2026/results/old/student_matrix_parallel_summary_20260424_132131.csv",
-      "sha256": "c2281cdd989d5f95932411b97fa6a6027c75900de4b295afd78d58d011b19469"
+      "sha256": "9dd443193a4fe28428f96040d8597b5821df197896730b59b30948da4cd38e97"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/student_matrix_summary_20260423_144905.csv",
-      "byte_size": 496,
+      "byte_size": 490,
       "classification": "INVALID",
       "original_path": "academic_benchmark/bildiri2026/results/old/student_matrix_summary_20260423_144905.csv",
-      "sha256": "dff2f59129b992d80dd8828c0bbedb1cd6c9169a8eadddbda37fc3155afd8b3c"
+      "sha256": "dace6bcee480c3d6792ae400591dbc551eb6b1646b48300683bf08290c7bb9af"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/timematrix_20260423_035730.csv",
-      "byte_size": 3638,
+      "byte_size": 3517,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/timematrix_20260423_035730.csv",
-      "sha256": "86d0a0c2994e5186e2e29be05434f358ac8078d2d15b27204b0f3af88bad869a"
+      "sha256": "3e78d139e922113970423935d151b9a61246d1c43b99d9cad84beb5380ec0f7d"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/timematrix_20260423_035730.json",
-      "byte_size": 67540,
+      "byte_size": 62974,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/timematrix_20260423_035730.json",
-      "sha256": "ddbe8606f4e81b205a1bf91ee61603cc34376ae4efdeb5ae95a55d28637041a5"
+      "sha256": "0996bcffa67aec66471872fc0e5aa2d7272e0ea6f8af2dea8655c5dc2286a37a"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/tsplib_20260423_151645.csv",
-      "byte_size": 55227,
+      "byte_size": 54476,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/tsplib_20260423_151645.csv",
-      "sha256": "472101bbbb7e03490ed4b40b1ced498a070626259a6edcb2852a3c69e574b89f"
+      "sha256": "09cbe68708a9e38a797381f916be3ec51df1fe9648f39ba4dcd4a09dd745d658"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/tsplib_20260423_151645.json",
-      "byte_size": 218713,
+      "byte_size": 209708,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/tsplib_20260423_151645.json",
-      "sha256": "cf6dcc8c80d1690dc25ba4a9f16e9b7ee0f99edd5c3870088ac25634da650ea9"
+      "sha256": "b93d6cbc70b2c69c49bba9996a1a75cd7cba7832ec98a87b880969419ca36855"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/tsplib_20260423_225041.csv",
-      "byte_size": 55222,
+      "byte_size": 54471,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/tsplib_20260423_225041.csv",
-      "sha256": "f97fb728a2f3bef1137511aac09983b21914ec2a4bacbb2fd954b1f9ab257cca"
+      "sha256": "d347d4571e88e254e5254ab1235b89af86da8f200595f10ff91382a9699984e2"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/tsplib_20260423_225041.json",
-      "byte_size": 218708,
+      "byte_size": 209703,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/tsplib_20260423_225041.json",
-      "sha256": "e71e43e75226353cad497af02ef608d228821990873a122d8a6cb4d8733b5c45"
+      "sha256": "303e2a5fecd04747327265ba20e6bfefc87143d4460ae5249caed84e80308633"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/tsplib_20260424_003252.csv",
-      "byte_size": 43913,
+      "byte_size": 43312,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/tsplib_20260424_003252.csv",
-      "sha256": "c5d85ba759ed7bb1bb30863c3c90e6c6c0259e0c849a2dd1c9fdc665bbb8e168"
+      "sha256": "6d703a4cadf48251338831abb7ae1c0411a00e75e1cf408bded9525136dedf06"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/tsplib_20260424_003252.json",
-      "byte_size": 174699,
+      "byte_size": 167494,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/tsplib_20260424_003252.json",
-      "sha256": "44fd463a56cddcdce6cda75b0f9c7f1fd13eb12a2db5019f0b276eb37efd7eaa"
+      "sha256": "5964a0610fb95b2bbf2a0834ac9e93c6c1a0522965546a39a05fc368a8dd072e"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/tsplib_20260424_030632.csv",
-      "byte_size": 55071,
+      "byte_size": 54320,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/tsplib_20260424_030632.csv",
-      "sha256": "8d7c3a9684059187720b1ecd89cdfb5498e9dc518a46ded914923f60087cb2f2"
+      "sha256": "760cdc92d9742faa6e604925d8730df19810ff830957e6a5ef90b2932de797df"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/tsplib_20260424_030632.json",
-      "byte_size": 218557,
+      "byte_size": 209552,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/tsplib_20260424_030632.json",
-      "sha256": "3b7c297b3d1e2dad807e0cc1eb5044019a5dda08b116313d66da317f642f9cc3"
+      "sha256": "3dedf3c6645b2c1c9d4a7d8d31d94eda7bada3828db393e2785578e5f030382f"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/tuning_progress_20260424_144253.csv",
-      "byte_size": 19063,
+      "byte_size": 18945,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/tuning_progress_20260424_144253.csv",
-      "sha256": "9894931649dfedfc6419853af29ebb1d9c922cfcc883d1392ccbf439b44a4754"
+      "sha256": "2985c12384624c88f7c7d460d34dbb120dafa78bbba11104f3f9dcf416fc39f8"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/old/tuning_progress_20260424_232923.csv",
-      "byte_size": 18244,
+      "byte_size": 18126,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/old/tuning_progress_20260424_232923.csv",
-      "sha256": "899e23ae0ae4ba617da01cba13a4e99df3ab49b0b89a7dec4c8f43111d2e77fa"
+      "sha256": "88f46e4cd817a142e8f8aa69d535e6cfe7830c711783b362b26f84f20e1cefdc"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/plots/boxplot_a280.png",
@@ -1320,318 +1320,318 @@
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/ACADEMIC_ANALYSIS_REPORT_2026.md",
-      "byte_size": 2955,
+      "byte_size": 2913,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/ACADEMIC_ANALYSIS_REPORT_2026.md",
-      "sha256": "7c0b447399f552ca57f71e86014f70cd599177fd96869cce1afb1e5fa3b1f2be"
+      "sha256": "6a9890d0b03275ca19bf614e886f1216fafb62a032317a6af55b4b5ecfeee2f5"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/DENEY_TASARIMI_20260425_025044.md",
-      "byte_size": 3442,
+      "byte_size": 3316,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/DENEY_TASARIMI_20260425_025044.md",
-      "sha256": "b2edb978a29f54e4cdf58cfecc55be2297385ddbcadc5406f5eb50bedbf59c51"
+      "sha256": "e846d123185121bd407530a43fd22eef3d29c049e37d956b663dd239417f77c4"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/DENEY_TASARIMI_20260425_025642.md",
-      "byte_size": 3439,
+      "byte_size": 3312,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/DENEY_TASARIMI_20260425_025642.md",
-      "sha256": "9cefcd028953a43bda99f30e0e50e3d2a4b009f139623dea1aafba9841da3149"
+      "sha256": "858c2203de27e6daa7d1e2a85177c47a6a14bd73856d6a9f8173a2ac04ca8313"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/DENEY_TASARIMI_20260425_030244.md",
-      "byte_size": 15272,
+      "byte_size": 14679,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/DENEY_TASARIMI_20260425_030244.md",
-      "sha256": "775548511c3530897261c11b5d370e3e7b4c4b1be0a1c9db08d6ef4034b4a656"
+      "sha256": "346a14d9dd7e66c205ffdf61d69b8e928d6f1f1129e6a9f97b23651036313c5b"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/DENEY_TASARIMI_20260425_093006.md",
-      "byte_size": 4810,
+      "byte_size": 4632,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/DENEY_TASARIMI_20260425_093006.md",
-      "sha256": "715e4e38e5d7ef19f819632ff64359c2b1581acc004ee02b3635e5f714b27205"
+      "sha256": "28d0eb9461ddd95d233c7bcd586c26c7727ddc84427870869b2e94b2e0b786ff"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/DENEY_TASARIMI_20260425_093120.md",
-      "byte_size": 14819,
+      "byte_size": 14244,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/DENEY_TASARIMI_20260425_093120.md",
-      "sha256": "e6b5be9c5e8bea3ff6fd018deb009f28424bed83514588e75697d3339bb97a6f"
+      "sha256": "45191af761d43c52f09915bb7ddc2d0c8f217a67426ee80be63deb1c8086693f"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/DENEY_TASARIMI_20260425_093148.md",
-      "byte_size": 3119,
+      "byte_size": 3006,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/DENEY_TASARIMI_20260425_093148.md",
-      "sha256": "fe4cbdb3594e7deb445b0bfcf18c6600e413761af2786988b797ac49aae3f6f2"
+      "sha256": "8597efc6f9cf759ea343dcb45b2bfea4c6611bce7630a71cf5c86be0ea41da69"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/DENEY_TASARIMI_20260425_093955.md",
-      "byte_size": 1582,
+      "byte_size": 1528,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/DENEY_TASARIMI_20260425_093955.md",
-      "sha256": "a7e7fc10d4c4eaed7cc587a89bfae593257455a625f27872a8b0bfa22290cbba"
+      "sha256": "2c16555aa72c502a6fd76064460491acef8c9be27a1b740ca797f17a8fcf31e7"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/DENEY_TASARIMI_20260630_225308.md",
-      "byte_size": 2766,
+      "byte_size": 2665,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/DENEY_TASARIMI_20260630_225308.md",
-      "sha256": "5e1598a5e75ff3ea64a0c31fb2b50abea92c0094ed545585b9e489d9b44e9bd5"
+      "sha256": "a4a156edbb76304bd62e1ea81312b6a187ca0c9e4c5da916e17e3aab7f847bd6"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_ALL.md",
-      "byte_size": 16884,
+      "byte_size": 16516,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_ALL.md",
-      "sha256": "7cdfa5f1717dc4cc5906b42dbc684311b70a6b2b81729b0238b0e3f5f563f8cd"
+      "sha256": "7d427d1c279fecc967e23dcfd16403ea12a096b4bfc4a6ec9555e8812d698750"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_a280_20260425_025255.md",
-      "byte_size": 2558,
+      "byte_size": 2495,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_a280_20260425_025255.md",
-      "sha256": "1555d847f264d1b92051f1a5275c9e4b83c7574303d7e13b020f10ced46fc741"
+      "sha256": "1061c4de06441b2ba1bcced2ad4ee80b82c34020d90ddd19074e7722a8cee371"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_a280_20260427_123515.md",
-      "byte_size": 4192,
+      "byte_size": 4101,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_a280_20260427_123515.md",
-      "sha256": "2b3faedf461b46b86abcb453da5a9747a3aa68577d31b8189b620fcd4209514f"
+      "sha256": "06874e8660efc900f9b2bb5c58ea49f2c615e45b78efbbb0745589bf9e28d0e0"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_berlin52_20260425_215157.md",
-      "byte_size": 2557,
+      "byte_size": 2494,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_berlin52_20260425_215157.md",
-      "sha256": "032c2babe9e1ab491e27e97a990b6355a8826ad670764887f2696942f88f698f"
+      "sha256": "4e2430e4c30cc5204789e834c4dc361f74a2971436eaf33184fea412c97c505c"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_berlin52_20260427_123529.md",
-      "byte_size": 4044,
+      "byte_size": 3953,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_berlin52_20260427_123529.md",
-      "sha256": "0b6bc9f583b5b0e3572270bf93737cf17d106cfcce24e4d5016b9e134ceca6ed"
+      "sha256": "211e8352c194355db59e015e8f674ed3803035ad24ced20d0e5667c9c2d5685f"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_d1655_20260427_123546.md",
-      "byte_size": 4223,
+      "byte_size": 4132,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_d1655_20260427_123546.md",
-      "sha256": "6c3d4e81151e8cad7ea79c1c178cd7a8d02a21bc1b739a4c75f132597e63ebf9"
+      "sha256": "a3242b2a1a27b08548540766fa5ca46476372bf749c3b965625bc95ac821fbd0"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_d2103_20260427_123614.md",
-      "byte_size": 4280,
+      "byte_size": 4189,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_d2103_20260427_123614.md",
-      "sha256": "5e122d75517b5e7202ef99fdaa657ad93d6c1bf8642f4c00b2d01b5082d0c94f"
+      "sha256": "882d90b9939229dd063846b6101fe7fdd3f44d414eabf34e6869252f281297f2"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_d493_20260427_123632.md",
-      "byte_size": 4151,
+      "byte_size": 4060,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_d493_20260427_123632.md",
-      "sha256": "488014ec16f564985288c7a07736196565ee288220e6efc71c07e62c1a3b59e7"
+      "sha256": "913354c3a56b1b9e2fef0327482e75b2fe994eef53ca232282c60a945d9f2712"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_eil51_20260425_215158.md",
-      "byte_size": 2519,
+      "byte_size": 2456,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_eil51_20260425_215158.md",
-      "sha256": "ea020b9f4534132dc6589ba38a8c519558fab34d291d66928a40cfc0e167ca28"
+      "sha256": "a848b1ec9267f2113d6d17a734f3c32e86180613b1958bfbebe4e495eda0767e"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_eil51_20260630_225656.md",
-      "byte_size": 2197,
+      "byte_size": 2139,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_eil51_20260630_225656.md",
-      "sha256": "58aab171f6ae21870204b3722c7a3cc22ea1bfe674b1363ec35b056f85da66ff"
+      "sha256": "70d84795d29d01f57bbb544429a5b9a80b45ff32cf796122497186dccf694d16"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_eil76_20260425_025739.md",
-      "byte_size": 2519,
+      "byte_size": 2456,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_eil76_20260425_025739.md",
-      "sha256": "ebb12a7272a3734def2ec59a56f2333f63375e8abfa9a122c3148f6ce67fa2d5"
+      "sha256": "01d7df5a64eef70253dcae7983a51280ec83b3fee0a000bacc8fad3b78e8b0e4"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_kroA100_20260425_215159.md",
-      "byte_size": 2577,
+      "byte_size": 2514,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_kroA100_20260425_215159.md",
-      "sha256": "1a07b0f8246e9148265a169f296d5342380916a93ea8cbbe1189b02319db49e4"
+      "sha256": "7fa86319ad4a1fe202138bd3c8574b0690ca80fb68a743b497007f0db6901181"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_rd100_20260425_215200.md",
-      "byte_size": 2532,
+      "byte_size": 2469,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_rd100_20260425_215200.md",
-      "sha256": "5fbf4e030c8f47290eed8cb293b8990bb96149bb8603feae7122b43729ee7f5b"
+      "sha256": "535339eef1ea11ac4d164d4e007f893160cc2750700c668ad39484faeb4f1bba"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_st70_20260425_030730.md",
-      "byte_size": 2524,
+      "byte_size": 2461,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_st70_20260425_030730.md",
-      "sha256": "9156d075fc13fb0d013c6056a828b696d1b58a11d62faf214a74c2eb69ff41f8"
+      "sha256": "7f33fff20cc61e7cc76d6ea36c06c5363760bc4ad64953b13bbcc67f3685851a"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_st70_20260425_215200.md",
-      "byte_size": 2518,
+      "byte_size": 2455,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_st70_20260425_215200.md",
-      "sha256": "4aac11cbd1cf3baf274958e3ad7fd4758cba9b2654f324aa4523f9914cf4b4aa"
+      "sha256": "bf61259551030f42ef6fa3d32a8e5085d4670f12446c5c4d9ee32d9c902b0ff2"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_student_matrix_20260425_215202.md",
-      "byte_size": 2527,
+      "byte_size": 2464,
       "classification": "INVALID",
       "original_path": "academic_benchmark/bildiri2026/results/reports/FINAL_BENCHMARK_ANALYSIS_student_matrix_20260425_215202.md",
-      "sha256": "e03d4625d6a57e23416da28c5889ed8b80dbbed25805dd8ca6260716a6bf7cad"
+      "sha256": "c4a2d6f8387b18031c96307b5341174aa0b02d422c839d9abeb7573a8385371a"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/MASTER_DENEY_TASARIM_RAPORU.md",
-      "byte_size": 30781,
+      "byte_size": 29584,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/MASTER_DENEY_TASARIM_RAPORU.md",
-      "sha256": "1b530ac0bc4c5e804d35353c943258fc349b0e5a1568dbbb4b7355d9a7f281d8"
+      "sha256": "49bf2ee5b19f73c77dc4416c1cf7d54062bcffd75bdeaae7c12db8b929060a65"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/reports/UNIVERSAL_PARAMETERS_2026.md",
-      "byte_size": 1930,
+      "byte_size": 1897,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/reports/UNIVERSAL_PARAMETERS_2026.md",
-      "sha256": "9cd348840980e01233bc06419b3cc78d98ed55983b5becdd08560b4f3f8c1b94"
+      "sha256": "6373887897c7a7b272c3f43361c217828f79c84f0fd531c07bd0a017ef791d96"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/target_summary_20260425_094502.csv",
-      "byte_size": 61,
+      "byte_size": 60,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/target_summary_20260425_094502.csv",
-      "sha256": "5e17e1e65ba4f495f7c6b5c6460a82e948763f1aedf861f8c1b78a9bd69157b6"
+      "sha256": "ceed76c52b6a054855d46bd497973b5dd6fe3ef9fa9b12282961e12e429a8029"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/target_summary_20260425_094633.csv",
-      "byte_size": 61,
+      "byte_size": 60,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/target_summary_20260425_094633.csv",
-      "sha256": "5e17e1e65ba4f495f7c6b5c6460a82e948763f1aedf861f8c1b78a9bd69157b6"
+      "sha256": "ceed76c52b6a054855d46bd497973b5dd6fe3ef9fa9b12282961e12e429a8029"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/target_summary_seq_20260425_094737.csv",
-      "byte_size": 1338,
+      "byte_size": 1322,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/target_summary_seq_20260425_094737.csv",
-      "sha256": "9853c247cb9e4daeb23349a9b07b47cfdf77e1956917c56e18ff774616bceb90"
+      "sha256": "87052a1b57a09aa3ee6f3b203b3595f6b2acc4e0067b98a789ed1836d9e92fe6"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/tuning_progress_20260425_030244.csv",
-      "byte_size": 8955,
+      "byte_size": 8894,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/tuning_progress_20260425_030244.csv",
-      "sha256": "a5ecdf5032b703d998967d96279b153866ea24bb54dfec99650a8edb13959284"
+      "sha256": "0962ddb3c0fb613908b0e457200afedb102c90e91768056b1e4fcfc36dc09d6e"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/tuning_progress_20260425_093006.csv",
-      "byte_size": 2715,
+      "byte_size": 2694,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/tuning_progress_20260425_093006.csv",
-      "sha256": "071166d62a80e2a0ddf8787175eb50e23824245234bc12fedb7fef950eeb5306"
+      "sha256": "ea60c461e7812823c051345444bcafa5092dfd0ed217e88d1c9b535fdeed82e1"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/tuning_progress_20260425_093120.csv",
-      "byte_size": 45060,
+      "byte_size": 44771,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/tuning_progress_20260425_093120.csv",
-      "sha256": "167882034e5f3ba936b2d3ada8e55fa359ef950d53537acf645a0b631317ffd2"
+      "sha256": "1009286d8165a3852b4c2417907851d3768bb0f2a5cc5b6d484eacde402a5a97"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/tuning_progress_20260425_093148.csv",
-      "byte_size": 1691,
+      "byte_size": 1678,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/tuning_progress_20260425_093148.csv",
-      "sha256": "9d238121cfa16d40e408033c9a2bb42db7ed05fc64e417e468ff010118daa9a7"
+      "sha256": "a39c8f20bfb41297bf869e0d1d85c601e88399a7362399062f53648739bff0ed"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/tuning_progress_20260425_093955.csv",
-      "byte_size": 449,
+      "byte_size": 446,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/tuning_progress_20260425_093955.csv",
-      "sha256": "4543ef1211e948f6974ad498fc110d3dd1cede39ff19a78f18e02aab2265e5a7"
+      "sha256": "41303639f7e4bdbe804797c49e55544d49d745a492ee71082fe7ff12299e6e28"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/tuning_progress_20260425_094106.csv",
-      "byte_size": 72,
+      "byte_size": 71,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/tuning_progress_20260425_094106.csv",
-      "sha256": "1af6eab2bcdbeceed9482a0e3999ea90d997988cd3a26580f3c0904114d548f6"
+      "sha256": "2158c648d92783d542e495addebc958b43e25c91e5bfa6d84b612a84ec486a4f"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/tuning_progress_20260425_094203.csv",
-      "byte_size": 72,
+      "byte_size": 71,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/tuning_progress_20260425_094203.csv",
-      "sha256": "1af6eab2bcdbeceed9482a0e3999ea90d997988cd3a26580f3c0904114d548f6"
+      "sha256": "2158c648d92783d542e495addebc958b43e25c91e5bfa6d84b612a84ec486a4f"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/tuning_progress_20260425_094255.csv",
-      "byte_size": 72,
+      "byte_size": 71,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/tuning_progress_20260425_094255.csv",
-      "sha256": "1af6eab2bcdbeceed9482a0e3999ea90d997988cd3a26580f3c0904114d548f6"
+      "sha256": "2158c648d92783d542e495addebc958b43e25c91e5bfa6d84b612a84ec486a4f"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/tuning_progress_20260514_222046.csv",
-      "byte_size": 72,
+      "byte_size": 71,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/tuning_progress_20260514_222046.csv",
-      "sha256": "1af6eab2bcdbeceed9482a0e3999ea90d997988cd3a26580f3c0904114d548f6"
+      "sha256": "2158c648d92783d542e495addebc958b43e25c91e5bfa6d84b612a84ec486a4f"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/results/tuning_progress_20260630_225308.csv",
-      "byte_size": 9424,
+      "byte_size": 9369,
       "classification": "HISTORICAL_UNVERIFIED",
       "original_path": "academic_benchmark/bildiri2026/results/tuning_progress_20260630_225308.csv",
-      "sha256": "948626d13a2f410b71992ef7f6f83db639697e47a39e00e81f5dbee82322d6d9"
+      "sha256": "7dc9be15dada69d05f65c1abeb3d34b009d3371622b0bcadacce4761fd66db9f"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/run_targeted.py",
-      "byte_size": 3388,
+      "byte_size": 3306,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/bildiri2026/run_targeted.py",
-      "sha256": "18b8bff8736a0094ec5ca95fa63c0fc637d49949a8ea58e067e49ff1cfa7d37e"
+      "sha256": "1af6057691b3d81a1d233b8c83dea0b1239ebf54b01397798b46dd700b2c98a0"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/run_numba_with_bildiri_params.py",
-      "byte_size": 10256,
+      "byte_size": 9974,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/run_numba_with_bildiri_params.py",
-      "sha256": "99d6c3127e008142481cb424afc6eeff2ef02946d9c976f81b162d995d0035ef"
+      "sha256": "6abd60405c91f4fb3b90b6dc5aa9807e02f7c265729f8632fd2a93fecb3f5c37"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/tests/test_bildiri2026_benchmark_script_smoke.py",
-      "byte_size": 2729,
+      "byte_size": 2651,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/tests/test_bildiri2026_benchmark_script_smoke.py",
-      "sha256": "9d3d68d0ef7f319dc5bf6b12c0b52e7821a87d0ff0c037ae7de3488dc8190ee1"
+      "sha256": "59bac2f4a5efefbbb7f2a2c17edf9ea0dabb2e8dbcb44978898546ee98a83998"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/tests/test_bildiri_data_manager.py",
-      "byte_size": 3099,
+      "byte_size": 3022,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/tests/test_bildiri_data_manager.py",
-      "sha256": "37131034c6af974d8538edc33d45ef0dcc632bcc4484267c00735fe784dec8b1"
+      "sha256": "bb27757554b249152040cfb309b1f613cb7d4005607cf268d00aeb7f475a6d0a"
     },
     {
       "archive_path": "archive/academic_benchmark/bildiri2026_legacy/tests/test_orchestrate_batch.py",
-      "byte_size": 767,
+      "byte_size": 740,
       "classification": "REFERENCE_ONLY",
       "original_path": "academic_benchmark/tests/test_orchestrate_batch.py",
-      "sha256": "516fa6952e04f994f4f5f10e212ff9e4f43ceb00a1580ae26fd849399cc6cca3"
+      "sha256": "c99dc26c9816409494c884b2bc038a636477c75ba85e6a10263f438aea9f6f15"
     }
   ],
   "schema_version": "uniride-archive/v1",

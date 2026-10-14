@@ -267,20 +267,16 @@ def _sha256_file(path: str) -> str:
 
 def _committed_bytes(path: str, root: str) -> bytes:
     """Canonical bytes of ``path``: the blob stored in git (``git cat-file blob :<path>``) when the
-    file is tracked, else the bytes on disk. A working copy with ``core.autocrlf`` line-ending
-    conversion therefore cannot change the manifest (the CRLF/LF mismatch of 2026-10-14).
-    ``.gitattributes`` marks the quarantine folders ``-text`` so a checkout writes those same bytes."""
-    import subprocess
+    file is tracked, else the bytes on disk (with a logged warning: no git, not a repository, or
+    untracked). A working copy with ``core.autocrlf`` line-ending conversion therefore cannot
+    change the manifest (the CRLF/LF mismatch of 2026-10-14). ``.gitattributes`` marks the
+    quarantine folders ``-text`` so a checkout writes those same bytes. The spec is ``./``-relative
+    to ``root``, so a ``root`` below the repository top level is handled too. Shared helper:
+    ``academic_benchmark.committed_bytes``."""
+    from academic_benchmark.committed_bytes import committed_bytes
 
     rel = os.path.relpath(path, root).replace(os.sep, "/")
-    try:
-        done = subprocess.run(
-            ["git", "cat-file", "blob", f":{rel}"], cwd=root, capture_output=True, check=True, timeout=60
-        )
-        return done.stdout
-    except (OSError, subprocess.SubprocessError):
-        with open(path, "rb") as handle:
-            return handle.read()
+    return committed_bytes(path, git_cwd=root, index_spec=f"./{rel}")
 
 
 def _manifest_files(legacy_dir: str) -> List[str]:

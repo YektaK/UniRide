@@ -19,6 +19,7 @@ from typing import Callable, Iterable, Literal
 
 from pydantic import Field, ValidationError, model_validator
 
+from academic_benchmark.committed_bytes import committed_bytes, git_environment, working_copy_drift
 from academic_benchmark.contracts.common import RepositoryRelativePath, Sha256Digest, StrictContract
 
 
@@ -83,6 +84,17 @@ def sha256_file(path: Path) -> str:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def _canonical_bytes(archived: Path, original_path: str, repo_root: Path | None) -> bytes:
+    """Bytes a manifest entry describes: the committed blob, not this platform's working copy.
+
+    The blob is read at the archived file's own path (``:./name``) once the archive is staged or
+    committed; with ``repo_root`` it is also looked up at ``original_path`` (the pre-move location
+    that is still in the index during a quarantine). Only when neither is tracked do the disk
+    bytes stand in, with a logged warning."""
+    fallback = () if repo_root is None else ((repo_root, original_path),)
+    return committed_bytes(archived, fallback_sources=fallback)
 
 
 EvidenceClassifier = Callable[[PurePosixPath], EvidenceClass]
@@ -168,6 +180,7 @@ def build_manifest(
     original_paths: Iterable[PurePosixPath],
     withheld: Iterable[ArchiveEntry],
     classifier: EvidenceClassifier | None = None,
+    repo_root: Path | None = None,
 ) -> ArchiveManifest:
     classify = classifier if classifier is not None else classify_yaem_evidence
     paths = sorted(original_paths, key=lambda item: item.as_posix())
@@ -177,12 +190,13 @@ def build_manifest(
     entries = list(withheld)
     for relative in paths:
         archived = archived_root / Path(*relative.parts)
+        data = _canonical_bytes(archived, (source_root / relative).as_posix(), repo_root)
         entries.append(
             ArchiveEntry(
                 original_path=(source_root / relative).as_posix(),
                 archive_path=(archive_root / relative).as_posix(),
-                byte_size=archived.stat().st_size,
-                sha256=sha256_file(archived),
+                byte_size=len(data),
+                sha256=hashlib.sha256(data).hexdigest(),
                 classification=classify(relative),
             )
         )
@@ -195,7 +209,7 @@ def build_manifest(
         entries=entries,
     )
 
-def verify_manifest(manifest: ArchiveManifest, archived_root: Path) -> list[str]:
+def verify_manifest(manifest: ArchiveManifest, archived_root: Path, repo_root: Path | None = None) -> list[str]:
     errors: list[str] = []
     source_root = PurePosixPath(manifest.source_root)
     archive_root = PurePosixPath(manifest.archive_root)
@@ -223,14 +237,31 @@ def verify_manifest(manifest: ArchiveManifest, archived_root: Path) -> list[str]
         path = archived_root / Path(*archived_relative.parts)
         if not path.is_file():
             errors.append(f"missing: {relative.as_posix()}")
-        elif path.stat().st_size != entry.byte_size:
-            errors.append(f"size mismatch: {relative.as_posix()}")
-        elif sha256_file(path) != entry.sha256:
-            errors.append(f"checksum mismatch: {relative.as_posix()}")
+        else:
+            data = _canonical_bytes(path, entry.original_path, repo_root)
+            if len(data) != entry.byte_size:
+                errors.append(f"size mismatch: {relative.as_posix()}")
+            elif hashlib.sha256(data).hexdigest() != entry.sha256:
+                errors.append(f"checksum mismatch: {relative.as_posix()}")
+    # the manifest equals the committed blob, so a hand-edited working copy is only visible to git
+    if archived_root.is_dir():
+        errors.extend(f"working copy differs from committed: {drifted}" for drifted in working_copy_drift(archived_root))
     return errors
 
 class QuarantineBlocked(RuntimeError):
     """Raised when legacy evidence cannot be quarantined safely."""
+
+
+def _uncommitted_changes(repo_root: Path, source_root: PurePosixPath) -> list[str]:
+    """Tracked files under ``source_root`` whose content differs from HEAD (staged or not), or, in a
+    repository without a commit yet, from the index. ``git diff`` normalises line endings itself."""
+    environment = git_environment()
+    has_head = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", "HEAD"], cwd=repo_root, capture_output=True, env=environment
+    ).returncode == 0
+    command = ["git", "diff", "--name-only", "-z", *(["HEAD"] if has_head else []), "--", source_root.as_posix()]
+    completed = subprocess.run(command, cwd=repo_root, capture_output=True, check=True, env=environment)
+    return sorted(item.decode("utf-8", "replace") for item in completed.stdout.split(b"\0") if item)
 
 
 def _require_repository_relative(value: PurePosixPath | str) -> PurePosixPath:
@@ -541,6 +572,12 @@ def quarantine_tracked_tree(
     ignored = _git_ignored_files(repo_root, source_root)
     for relative in [*tracked, *untracked, *ignored]:
         _source_path(repo_root, source_fs, relative)
+    uncommitted = _uncommitted_changes(repo_root, source_root)
+    if uncommitted:
+        raise QuarantineBlocked(
+            "uncommitted changes under the source; the manifest describes committed bytes, so commit or revert first: "
+            + ", ".join(uncommitted)
+        )
     if untracked:
         raise QuarantineBlocked("untracked non-ignored files require review: " + ", ".join(item.as_posix() for item in untracked))
     unsafe_ignored = [item for item in ignored if not _is_disposable_cache(item)]
@@ -574,7 +611,8 @@ def quarantine_tracked_tree(
         for relative in tracked:
             source = _source_path(repo_root, source_fs, relative)
             if relative in confirmed_paths:
-                withheld_entries.append(ArchiveEntry(original_path=(source_root / relative).as_posix(), archive_path=None, byte_size=source.stat().st_size, sha256=sha256_file(source), classification=EvidenceClass.WITHHELD_SENSITIVE))
+                withheld_data = _canonical_bytes(source, (source_root / relative).as_posix(), repo_root)
+                withheld_entries.append(ArchiveEntry(original_path=(source_root / relative).as_posix(), archive_path=None, byte_size=len(withheld_data), sha256=hashlib.sha256(withheld_data).hexdigest(), classification=EvidenceClass.WITHHELD_SENSITIVE))
                 source.unlink()
                 withheld.append(relative)
                 continue
@@ -592,9 +630,10 @@ def quarantine_tracked_tree(
             original_paths=moved,
             withheld=withheld_entries,
             classifier=classifier,
+            repo_root=repo_root,
         )
         write_manifest(manifest, _checked_path(repo_root, destination_root, destination_root / "manifest.json"))
-        errors = verify_manifest(manifest, destination_root)
+        errors = verify_manifest(manifest, destination_root, repo_root)
         if errors:
             raise QuarantineBlocked("; ".join(errors))
         for relative in ignored:
@@ -634,7 +673,7 @@ def _safe_verify_manifest(repo_root: Path, manifest_path: Path) -> tuple[Archive
             except ValueError:
                 continue
             _checked_path(canonical, archived_root, archived_root / Path(*relative.parts))
-    return manifest, archived_root, verify_manifest(manifest, archived_root)
+    return manifest, archived_root, verify_manifest(manifest, archived_root, canonical)
 
 def _as_repo_path(value: str) -> PurePosixPath:
     normalized = value.replace("\\", "/")

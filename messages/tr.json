@@ -263,8 +263,8 @@
           "invalidResponse": "Sunucudan beklenmeyen bir yanıt geldi."
         },
         "matrixAge": {
-          "loaded": "Seyahat süresi matrisi: {age} önce yüklendi",
-          "unknownAge": "Seyahat süresi matrisi: yüklenme zamanı bilinmiyor",
+          "dataUpdated": "Yolculuk süreleri en son {age} önce güncellendi",
+          "unknownDataAge": "Yolculuk sürelerinin güncellenme zamanı bilinmiyor",
           "ageLessThanMinute": "1 dakikadan kısa süre",
           "ageMinutes": "{count} dakika",
           "ageHours": "{count} saat",

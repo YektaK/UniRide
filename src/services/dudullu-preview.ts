@@ -21,6 +21,9 @@ export interface MatrixSnapshot {
   readonly provenance?: {
     readonly loaded_at?: string | null;
     readonly age_seconds?: number | null;
+    /** Newest time_matrix.updated_at and its age; absent before the updated_at migration. */
+    readonly data_updated_at?: string | null;
+    readonly data_age_seconds?: number | null;
   };
   readonly arcs: readonly MatrixArc[];
 }

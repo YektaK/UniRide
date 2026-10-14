@@ -6,17 +6,31 @@
  */
 
 export interface MatrixAge {
+  /** When the optimizer loaded the matrix; ~0 s old because the snapshot step refreshes first. */
   readonly loadedAt: string | null;
   readonly ageSeconds: number | null;
+  /**
+   * Newest `time_matrix.updated_at` (the date of the travel-time DATA); null until the
+   * `updated_at` migration is applied or when the optimizer sent none.
+   */
+  readonly dataUpdatedAt: string | null;
+  readonly dataAgeSeconds: number | null;
 }
 
 export interface MatrixProvenanceInput {
   readonly loaded_at?: string | null;
   readonly age_seconds?: number | null;
+  readonly data_updated_at?: string | null;
+  readonly data_age_seconds?: number | null;
 }
 
 /** Null when the optimizer sent no provenance (older optimizer). */
 export function buildMatrixAge(provenance: MatrixProvenanceInput | undefined): MatrixAge | null {
   if (!provenance) return null;
-  return { loadedAt: provenance.loaded_at ?? null, ageSeconds: provenance.age_seconds ?? null };
+  return {
+    loadedAt: provenance.loaded_at ?? null,
+    ageSeconds: provenance.age_seconds ?? null,
+    dataUpdatedAt: provenance.data_updated_at ?? null,
+    dataAgeSeconds: provenance.data_age_seconds ?? null,
+  };
 }

@@ -71,11 +71,14 @@ const decisionRowSchema = z.object({
 const snapshotSchema = z.object({
   id: z.string(), version: z.string(), sha256: z.string().regex(/^[0-9a-f]{64}$/),
   source: z.literal("supabase"),
-  // Load time and age of the matrix. refresh_failed is not parsed (the plan page does not use it).
-  // A malformed value must never block the plan.
+  // Load time and age of the matrix, plus the age of the travel-time data (max updated_at, M4).
+  // refresh_failed is not parsed (the plan page does not use it). A malformed value must never
+  // block the plan; a malformed data age is dropped on its own and keeps the load fields.
   provenance: z.object({
     loaded_at: z.string().nullable().optional(),
     age_seconds: z.number().finite().nonnegative().nullable().optional(),
+    data_updated_at: z.string().nullable().optional().catch(undefined),
+    data_age_seconds: z.number().finite().nonnegative().nullable().optional().catch(undefined),
   }).optional().catch(undefined),
   arcs: z.array(z.object({ origin_code: z.string(), destination_code: z.string(), duration_minutes: z.number() })),
 });

@@ -196,8 +196,13 @@ export type MatrixAgeUnit = "lessThanMinute" | "minutes" | "hours" | "days";
 export interface PlanMatrixAge {
   readonly loadedAt: string | null;
   readonly ageSeconds: number | null;
-  /** Human unit and count of the age; null when the load time is unknown. */
+  /** Human unit and count of the load age; null when the load time is unknown. */
   readonly ageParts: { readonly unit: MatrixAgeUnit; readonly count: number } | null;
+  /** Date of the travel-time data (max time_matrix.updated_at); null until the migration is applied. */
+  readonly dataUpdatedAt: string | null;
+  readonly dataAgeSeconds: number | null;
+  /** Human unit and count of the data age; null when it is unknown. This is the age the page shows. */
+  readonly dataAgeParts: { readonly unit: MatrixAgeUnit; readonly count: number } | null;
 }
 
 export function matrixAgeParts(seconds: number): { unit: MatrixAgeUnit; count: number } {
@@ -209,7 +214,11 @@ export function matrixAgeParts(seconds: number): { unit: MatrixAgeUnit; count: n
 
 function buildPlanMatrixAge(age: DudulluPreviewResponse["matrixAge"]): PlanMatrixAge | null {
   if (!age) return null;
-  return { ...age, ageParts: age.ageSeconds === null ? null : matrixAgeParts(age.ageSeconds) };
+  return {
+    ...age,
+    ageParts: age.ageSeconds === null ? null : matrixAgeParts(age.ageSeconds),
+    dataAgeParts: age.dataAgeSeconds === null ? null : matrixAgeParts(age.dataAgeSeconds),
+  };
 }
 
 export interface DailyPlanView {

@@ -19,6 +19,7 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 | T06 | Travel-time data | Correct TSPLIB GEO assertion, preserve metric | Historical decision |
 | T07 | Travel-time data | TSPLIB matrix cache v2: lossless upper-triangle lzma | Owner instruction 2026-10-09 |
 | T08 | Travel-time data | Defer 2-decimal constraint; plan integer seconds and `time_scale=60` | Owner decision 2026-10-10; Google unit unverified |
+| T09 | Travel-time data | Stale or refresh-failed matrix stays fail-closed (C2 gate kept); the daily plan shows the matrix age when a plan is produced and a clear reason (`MATRIX_STALE`) when blocked | 2026-10-14 owner decision (supersedes the 2026-10-13 warn-and-serve proposal) |
 | O01 | Optimizer/certificate | Independent matrix re-costing before solve | Accepted; C2 remediation |
 | O02 | Optimizer/certificate | Conservative operational OR-Tools rounding | Accepted; academic parity retained |
 | O03 | Optimizer/certificate | Separate student ride and vehicle tour limits (K5) | Owner decision |
@@ -144,6 +145,15 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 - **Why:** seconds ÷ 60 can produce values off the 0.01-minute grid. Since CX-01/H05, such values make fleet selection fail closed with `SELECTION_INTERVAL_PRECISION`.
 - **Fallback:** rounding to 0.01 minute is only a fallback, not the plan.
 - **Links:** [H05](#h05---fleet-selection-keeps-exact-interval-precision-cx-01); [heterogeneous fleet design](designs/HETEROGENEOUS_FLEET_DESIGN.md).
+
+### T09 — stale travel-time matrix stays fail-closed; the daily plan shows the age and a clear reason
+
+- **Date/status:** 2026-10-14; owner decision (audit M4 / MT2 and H6 staleness half). It supersedes the 2026-10-13 proposal "warn and show the age, do not fail closed", which was withdrawn after the finding that the snapshot path already fails closed (C2 gate).
+- **Decision:** a matrix kept after a failed refresh, or older than the TTL, is **not served**. `TimeMatrixRepository.matrix_snapshot` raises (`MatrixStaleError`, a `MatrixSnapshotError` subclass) exactly as before, so `/matrix-snapshot` answers a redacted 503 and bound `/optimize` (`expected_matrix_sha256`) still fails closed. The C2 behaviour is unchanged.
+- **Additive (does not change behaviour):** matrix provenance carries `refresh_failed` next to `loaded_at` and `age_seconds`. The 503 detail of `/matrix-snapshot` is `Matrix snapshot stale` for a stale or kept matrix, and stays `Matrix snapshot unavailable` for every other failure.
+- **Daily plan:** when a plan is produced, the response carries `matrixAge` (`loadedAt`, `ageSeconds`) and `/admin/daily-plan` shows "Seyahat süresi matrisi: N önce yüklendi". When the snapshot is refused as stale, the plan is `blocked_data` with reason `MATRIX_STALE` (tr/en copy); any other snapshot failure stays `MATRIX_UNAVAILABLE`. No solver call is made without a matrix.
+- **Rejected:** serving a stale matrix with a warning, and the env var `UNIRIDE_MATRIX_MAX_AGE_SECONDS`. The matrix TTL already bounds the age of any served matrix, so a separate display threshold would never fire.
+- **Evidence:** `optimizer_api/tests/test_m4_matrix_stale_kept.py`, `optimizer_api/tests/test_matrix_repository.py`, `src/app/api/admin/dudullu-preview/route.test.ts`, `src/services/daily-plan-view.test.ts`, `src/app/(app)/admin/daily-plan/page.test.tsx`.
 
 ## Optimizer and certificate
 

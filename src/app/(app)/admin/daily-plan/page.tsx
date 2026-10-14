@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import {
   buildDailyPlanView,
   type DailyPlanView,
+  type MatrixAgeUnit,
   type PlanRoute,
   type PlanTone,
   type PlanWave,
@@ -57,6 +58,19 @@ function parseLimit(text: string, range: { readonly min: number; readonly max: n
   if (!/^\d+$/.test(text.trim())) return null;
   const value = Number(text);
   return value >= range.min && value <= range.max ? value : null;
+}
+
+function MatrixAgeNote({ plan }: { plan: DailyPlanView }) {
+  const t = useTranslations("page.admin.dailyPlan.matrixAge");
+  const age = plan.matrixAge;
+  if (!age) return null;
+  const parts = age.ageParts;
+  const key = parts && { lessThanMinute: "ageLessThanMinute", minutes: "ageMinutes", hours: "ageHours", days: "ageDays" }[parts.unit];
+  return (
+    <p data-testid="matrix-age" className="text-sm text-muted-foreground">
+      {parts && key ? t("loaded", { age: t(key, { count: parts.count }) }) : t("unknownAge")}
+    </p>
+  );
 }
 
 function PreviewBanner({ plan }: { plan: DailyPlanView }) {
@@ -404,6 +418,7 @@ function PlanBody({ plan, t }: { plan: DailyPlanView; t: Translate }) {
   return (
     <div className="space-y-6">
       <PreviewBanner plan={plan} />
+      <MatrixAgeNote plan={plan} />
       {!plan.isEmptyDay && (
         <div
           data-testid="status-banner"

@@ -20,6 +20,9 @@ export const OPTIMIZER_MATRIX_UNAVAILABLE_DETAIL = "travel-time matrix unavailab
 export const OPTIMIZER_MATRIX_LOCATIONS_DETAIL =
     "requested locations are missing from the travel-time matrix";
 
+/** Fixed 503 `detail` of /matrix-snapshot for a stale or refresh-failed matrix (C2 gate). */
+export const OPTIMIZER_SNAPSHOT_STALE_DETAIL = "Matrix snapshot stale";
+
 /** HTTP status the BFF returns to the browser for each code. */
 export const MATRIX_ERROR_HTTP_STATUS: Record<OptimizerMatrixErrorCode, 503 | 422> = {
     [MATRIX_UNAVAILABLE_CODE]: 503,

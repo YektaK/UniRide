@@ -30,6 +30,7 @@ export const KNOWN_REASON_CODES = [
   "LEGACY_AMBIGUOUS_CONFIRMATION",
   "MATRIX_ARC_MISMATCH",
   "MATRIX_SNAPSHOT_INVALID",
+  "MATRIX_STALE",
   "MATRIX_UNAVAILABLE",
   "MISSING_OCCURRENCE_COVERAGE",
   "NO_ADMITTED_DEMAND",
@@ -190,6 +191,27 @@ export interface PlanSummary {
   readonly maxRideMinutes: number | null;
 }
 
+export type MatrixAgeUnit = "lessThanMinute" | "minutes" | "hours" | "days";
+
+export interface PlanMatrixAge {
+  readonly loadedAt: string | null;
+  readonly ageSeconds: number | null;
+  /** Human unit and count of the age; null when the load time is unknown. */
+  readonly ageParts: { readonly unit: MatrixAgeUnit; readonly count: number } | null;
+}
+
+export function matrixAgeParts(seconds: number): { unit: MatrixAgeUnit; count: number } {
+  if (seconds < 60) return { unit: "lessThanMinute", count: 0 };
+  if (seconds < 3600) return { unit: "minutes", count: Math.floor(seconds / 60) };
+  if (seconds < 48 * 3600) return { unit: "hours", count: Math.floor(seconds / 3600) };
+  return { unit: "days", count: Math.floor(seconds / 86400) };
+}
+
+function buildPlanMatrixAge(age: DudulluPreviewResponse["matrixAge"]): PlanMatrixAge | null {
+  if (!age) return null;
+  return { ...age, ageParts: age.ageSeconds === null ? null : matrixAgeParts(age.ageSeconds) };
+}
+
 export interface DailyPlanView {
   readonly serviceDate: string;
   readonly hypothetical: boolean;
@@ -200,6 +222,8 @@ export interface DailyPlanView {
   readonly limits: DudulluPreviewResponse["limits"];
   /** Seconds the optimizer asked us to wait (HTTP 429 `Retry-After`); null when not given. */
   readonly retryAfterSeconds: number | null;
+  /** Matrix load time and age; null when the response carries none. */
+  readonly matrixAge: PlanMatrixAge | null;
   readonly summary: PlanSummary;
   readonly reasons: readonly PlanReason[];
   /** True when no admitted trip exists on that day (nothing to plan). */
@@ -573,6 +597,7 @@ export function buildDailyPlanView(response: DudulluPreviewResponse): DailyPlanV
     virtualTemplate: response.fleet.template,
     limits: response.limits,
     retryAfterSeconds: response.retryAfterSeconds ?? null,
+    matrixAge: buildPlanMatrixAge(response.matrixAge),
     summary: {
       status: response.status,
       tone: isEmptyDay ? "neutral" : statusTone(response.status),

@@ -18,6 +18,7 @@ import {
   shortageResponse,
 } from "./daily-plan-fixtures";
 import { parseDudulluPreviewResponse } from "./dudullu-preview-response";
+import { readyResponse as matrixAgeBase } from "./daily-plan-fixtures";
 
 describe("formatMinutesOfDay", () => {
   it.each([
@@ -576,5 +577,42 @@ describe("buildDailyPlanView - capacity floor", () => {
     void _omit;
     expect(parseDudulluPreviewResponse({ ...withField, fleet }).fleet.maxCapacity).toBeUndefined();
     expect(parseDudulluPreviewResponse({ ...withField, fleet: { ...fleet, maxCapacity: null } }).fleet.maxCapacity).toBeNull();
+  });
+});
+
+describe("matrix age (M4, C2 gate kept: age is shown, a stale matrix blocks the plan)", () => {
+  const withAge = (matrixAge: unknown) => parseDudulluPreviewResponse({ ...matrixAgeBase(), matrixAge });
+  const load = (name: string) => JSON.parse(readFileSync(new URL(`../../messages/${name}.json`, import.meta.url), "utf8"));
+  const age = (ageSeconds: number | null) => ({ loadedAt: "2026-10-05T05:00:00+00:00", ageSeconds });
+
+  it.each([
+    [5, "lessThanMinute", 0], [120, "minutes", 2], [3 * 3600, "hours", 3], [47 * 3600, "hours", 47], [3 * 86400, "days", 3],
+  ])("formats %i s as %s", (seconds, unit, count) => {
+    expect(buildDailyPlanView(withAge(age(seconds))).matrixAge).toMatchObject({ ageSeconds: seconds, ageParts: { unit, count } });
+  });
+
+  it("has an unknown age when the load time is unknown", () => {
+    expect(buildDailyPlanView(withAge(age(null))).matrixAge).toMatchObject({ ageParts: null });
+  });
+
+  it("has no matrix age when the response carries none, and no warning field exists", () => {
+    expect(buildDailyPlanView(withAge(null)).matrixAge).toBeNull();
+    expect(buildDailyPlanView(parseDudulluPreviewResponse(matrixAgeBase())).matrixAge).toBeNull();
+    expect(buildDailyPlanView(withAge(age(5))).matrixAge).not.toHaveProperty("warning");
+  });
+
+  it("describes MATRIX_STALE as a problem reason", () => {
+    expect(describeReason("MATRIX_STALE", true)).toMatchObject({ messageKey: "MATRIX_STALE", severity: "problem" });
+    expect(buildDailyPlanView(blockedResponse(["MATRIX_STALE"])).summary.status).toBe("blocked_data");
+  });
+
+  it("has tr and en copy for every matrix age key and the MATRIX_STALE reason, and no leftover warning copy", () => {
+    const keys = ["loaded", "unknownAge", "ageLessThanMinute", "ageMinutes", "ageHours", "ageDays"];
+    for (const locale of ["tr", "en"] as const) {
+      const plan = load(locale).page.admin.dailyPlan as { matrixAge?: Record<string, string>; reasons?: Record<string, string> };
+      for (const key of keys) expect(plan.matrixAge?.[key]?.trim(), `${locale} matrixAge.${key}`).toBeTruthy();
+      expect(plan.reasons?.MATRIX_STALE?.trim(), `${locale} reasons.MATRIX_STALE`).toBeTruthy();
+      expect(Object.keys(plan.matrixAge ?? {}).filter((key) => key.startsWith("warning"))).toEqual([]);
+    }
   });
 });

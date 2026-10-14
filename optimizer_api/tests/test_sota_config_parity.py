@@ -80,6 +80,7 @@ def test_promoted_params_load_from_runtime_config_path(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     monkeypatch.setenv(PROMOTED_CONFIG_PATH_ENV, str(path))
+    monkeypatch.setenv("UNIRIDE_USE_PROMOTED_CONFIG", "1")
     clear_promoted_config_cache()
 
     assert get_promoted_params("e2bso") == {"population_size": 12, "max_iterations": 14}
@@ -105,6 +106,7 @@ def test_sota_strategy_constructor_uses_promoted_params(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     monkeypatch.setenv(PROMOTED_CONFIG_PATH_ENV, str(path))
+    monkeypatch.setenv("UNIRIDE_USE_PROMOTED_CONFIG", "1")
     clear_promoted_config_cache()
 
     strategy = E2BSoStrategy()
@@ -231,6 +233,7 @@ def test_all_sota_strategy_constructors_accept_promoted_params(tmp_path, monkeyp
         encoding="utf-8",
     )
     monkeypatch.setenv(PROMOTED_CONFIG_PATH_ENV, str(path))
+    monkeypatch.setenv("UNIRIDE_USE_PROMOTED_CONFIG", "1")
     clear_promoted_config_cache()
 
     strategies = [
@@ -266,6 +269,7 @@ def test_promoted_strategy_params_normalize_academic_numba_keys(tmp_path, monkey
         encoding="utf-8",
     )
     monkeypatch.setenv(PROMOTED_CONFIG_PATH_ENV, str(path))
+    monkeypatch.setenv("UNIRIDE_USE_PROMOTED_CONFIG", "1")
     clear_promoted_config_cache()
 
     assert get_promoted_strategy_params(("genetic_algorithm", "ga", "Numba-GA")) == {
@@ -295,6 +299,7 @@ def test_ga_strategy_constructor_uses_promoted_defaults_but_explicit_config_wins
         encoding="utf-8",
     )
     monkeypatch.setenv(PROMOTED_CONFIG_PATH_ENV, str(path))
+    monkeypatch.setenv("UNIRIDE_USE_PROMOTED_CONFIG", "1")
     clear_promoted_config_cache()
 
     promoted_strategy = GeneticAlgorithmStrategy()
@@ -325,6 +330,7 @@ def test_split_strategy_constructor_uses_promoted_routing_defaults(tmp_path, mon
         encoding="utf-8",
     )
     monkeypatch.setenv(PROMOTED_CONFIG_PATH_ENV, str(path))
+    monkeypatch.setenv("UNIRIDE_USE_PROMOTED_CONFIG", "1")
     clear_promoted_config_cache()
 
     strategy = HHOSplitStrategy()

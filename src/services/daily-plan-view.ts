@@ -35,6 +35,8 @@ export const KNOWN_REASON_CODES = [
   "NO_ADMITTED_DEMAND",
   "NO_ROUTE_STEPS",
   "OPTIMIZATION_NOT_SUCCESSFUL",
+  "OPTIMIZER_RATE_LIMITED",
+  "OPTIMIZER_UNAVAILABLE",
   "PENDING_STUDENT_CONFIRMATION",
   "RIDE_TIME_LIMIT_INFEASIBLE",
   "ROUTE_OUTSIDE_SERVICE_DAY",
@@ -196,6 +198,8 @@ export interface DailyPlanView {
   readonly virtualTemplate: DudulluPreviewResponse["fleet"]["template"];
   /** The ride and tour limits the optimizer was given (minutes). */
   readonly limits: DudulluPreviewResponse["limits"];
+  /** Seconds the optimizer asked us to wait (HTTP 429 `Retry-After`); null when not given. */
+  readonly retryAfterSeconds: number | null;
   readonly summary: PlanSummary;
   readonly reasons: readonly PlanReason[];
   /** True when no admitted trip exists on that day (nothing to plan). */
@@ -568,6 +572,7 @@ export function buildDailyPlanView(response: DudulluPreviewResponse): DailyPlanV
     virtualFleet,
     virtualTemplate: response.fleet.template,
     limits: response.limits,
+    retryAfterSeconds: response.retryAfterSeconds ?? null,
     summary: {
       status: response.status,
       tone: isEmptyDay ? "neutral" : statusTone(response.status),

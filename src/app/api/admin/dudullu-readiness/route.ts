@@ -100,6 +100,19 @@ function toSchedule(row: Record<string, unknown>): ReadinessScheduleInput {
   };
 }
 
+const MISSING_RELATION_CODES = new Set(["42P01", "PGRST205"]);
+
+/**
+ * Non-mutating probe: can the plan read `student_leg_decisions`? A missing relation is a
+ * readiness finding (false); any other failure is a dependency error and fails closed.
+ */
+async function probeLegDecisionsReadable(client: AdminClient): Promise<boolean> {
+  const { error } = await client.from("student_leg_decisions").select("user_id").limit(1);
+  if (!error) return true;
+  if (MISSING_RELATION_CODES.has((error as { code?: string }).code ?? "")) return false;
+  throw new Error("readiness query failed");
+}
+
 function toVehicle(row: Record<string, unknown>): ReadinessVehicleInput {
   return {
     status: String(row.status ?? ""),
@@ -107,6 +120,7 @@ function toVehicle(row: Record<string, unknown>): ReadinessVehicleInput {
       typeof row.wheelchair_capacity === "number" ? row.wheelchair_capacity : 0,
     seatingCapacity:
       typeof row.seating_capacity === "number" ? row.seating_capacity : 0,
+    cooldownMinutes: row.cooldown_minutes,
   };
 }
 
@@ -127,11 +141,13 @@ export async function GET(request: Request) {
   let users: Record<string, unknown>[];
   let schedules: Record<string, unknown>[];
   let vehicles: Record<string, unknown>[];
+  let legDecisionsReadable: boolean;
   try {
     const client: SupabaseClient<Database> = getSupabaseAdmin();
     users = await selectAll(client, "users", "id, role, location_code, disability_type, weekly_schedule_id");
     schedules = await selectAll(client, "weekly_schedules", "id, user_id, entries");
-    vehicles = await selectAll(client, "vehicles", "status, wheelchair_capacity, seating_capacity");
+    vehicles = await selectAll(client, "vehicles", "status, wheelchair_capacity, seating_capacity, cooldown_minutes");
+    legDecisionsReadable = await probeLegDecisionsReadable(client);
   } catch {
     return json(UNAVAILABLE_BODY, 503);
   }
@@ -172,6 +188,7 @@ export async function GET(request: Request) {
     scheduleInputs,
     vehicleInputs,
     matrix,
+    { legDecisionsReadable },
   );
 
   return json(report, 200);

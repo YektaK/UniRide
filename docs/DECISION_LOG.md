@@ -54,11 +54,13 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 | W01 | Daily workflow | Separate legs, exact anchors, confirmed admission | Approved production contract |
 | W02 | Daily workflow | Preview orchestration before publication/operations | Approved staged design |
 | X01 | Data errors | Vehicle capacity sources disagreed (DB 4/10 vs physical/decoder 4/5); DB corrected | Owner decision; data error |
+| X02 | Data facts | University currently owns exactly 1 minibus (4 Sw / 5 So); campaign did not consult DB vehicles | Owner statement 2026-10-13 |
 | H01 | Heterogeneous fleet | Typed split, exact day selection, typed assignment; additive only; academic code untouched | Owner approved 2026-10-08 |
 | H02 | Heterogeneous fleet | Q1: can a sedan carry any Sw (`sedan:1sw3so`)? | **Open question** |
 | H03 | Heterogeneous fleet | Optional shared seat limit `total_capacity`; Doblo = 3 seats total, max 1 Sw | Owner decision 2026-10-09 |
 | H04 | Heterogeneous fleet | CX-03: typed GA inner objective cost-only for one type, count-first otherwise | Lead decision 2026-10-09 |
 | H05 | Heterogeneous fleet | CX-01: exact centi-minute intervals and cooldowns in fleet selection (`time_scale`) | Lead decision 2026-10-09 |
+| H06 | Heterogeneous fleet | Q5: day selection ranks cars, total vehicle-minutes, car-minutes, option index (code had car-minutes first) | Owner decision 2026-10-13 |
 | E01 | Exact solver (AMPL) | Owner answers EQ1-EQ6 (2026-10-09) and D-A/D-B/D-C (2026-10-10): 60 s/600 s wall limit per solver call, peak wave = largest-leg wave(s) per date, both typed fleets via a fleet re-run at one commit, per-wave exact + CP-SAT day level, HiGHS note in paper, GA seed 42 single-seed, GOAL 2 parameters deferred. Lead notes: union menu (unproven union re-run once at 60 s), re-run input rule | Owner decisions 2026-10-09/10; lead notes 2026-10-10 |
 
 ## Demo scope
@@ -377,9 +379,16 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 - **Consequence:** the 4/10 results are removed from the paper and replaced by the corrected 4/5 campaign. The 4/10 archive stays in git, labelled invalid due to a data error; it must not be cited as evidence.
 - **Check first:** when sources disagree on a capacity, check the physical layout first, then the DB and code defaults. **Evidence:** [design section 1.1 (F6) and owner decisions](designs/HETEROGENEOUS_FLEET_DESIGN.md).
 
+### X02 - current minibus ownership count
+
+- **Date/status:** 2026-10-13; source: owner statement.
+- **Fact:** the university currently owns exactly 1 minibus (the 4 Sw / 5 So model).
+- **Archive boundary:** the fleet campaign did not read the DB vehicle table (`db_vehicles_consulted: false`), so this ownership count is not in the archive. The count is sourced by the owner's statement, not inferred from the campaign.
+- **Evidence:** owner statement supplied in the management brief DUZELT 1 task; [fleet campaign README](paper/results/week-2026-10-05-fleet/README.md) for `db_vehicles_consulted: false`.
+
 ### H01 - heterogeneous fleet design
 
-- **Date/status:** 2026-10-08; owner approved. **Chosen/rationale:** typed split decoder with a large-route quota per wave, exact CP-SAT day selection over the wave menu, typed fixed-route assignment in TypeScript; all additive, optional fields only. Sedan Sw = 0, minibus 4/5, same travel times, ride limit and cooldown 10, cars unlimited, 30 s per (day, R, L), tie-break on car-minutes with weekly max and per-day need both reported.
+- **Date/status:** 2026-10-08; owner approved. **Chosen/rationale:** typed split decoder with a large-route quota per wave, exact CP-SAT day selection over the wave menu, typed fixed-route assignment in TypeScript; all additive, optional fields only. Sedan Sw = 0, minibus 4/5, same travel times, ride limit and cooldown 10, cars unlimited, 30 s per (day, R, L), tie-break on car-minutes (after total vehicle-minutes; see H06) with weekly max and per-day need both reported.
 - **Academic boundary:** default `ga_split` and the shared decoder stay unchanged. WP0 adds byte-identical goldens (`uniride_core/tests/golden/split_parity.json`, `test_split_parity_golden.py`) and a zero-import guard for the new modules. **Rejected:** greedy quota repair as primary (weaker guarantee).
 - **Evidence:** [design](designs/HETEROGENEOUS_FLEET_DESIGN.md), owner decisions 2026-10-08. **Check first:** P1 goldens green before any later work package.
 
@@ -407,6 +416,12 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 - **Rejected:** widening the overlap tolerance (hides the discrepancy), conservative rounding of fractional endpoints (can falsely reject a feasible day). **Label:** `proven_over_menu` now means optimal over the menu on the exact intervals, confirmed by the independent typed assignment; unchanged wording.
 - **Contract changes:** an explicit `null` cooldown is now accepted and means the default (10 real minutes); before it was a 422. A zero-length interval gets a minimum length of 0.01 minute at scale 100 (`fleet-scenario-run.ts`, `start + 1`) instead of 1 minute.
 - **Evidence:** owner-supplied Codex review CX-01, `docs/CODEX_DEEP_REVIEW_2026-10-09.md` (local, untracked), tests `test_typed_day_selection.py::test_cx01_*`, `test_fleet_selection_endpoint.py::test_time_scale_*`, `fleet-scenario-run.test.ts` (CX-01). Related: H01, V01/V02, O01/O02.
+
+### H06 - day selection order: cars, total vehicle-minutes, car-minutes, option index (Q5)
+
+- **Date/status:** 2026-10-13; owner decision (option b). **Chosen:** `solve_day_selection` ranks (1) cars, (2) total vehicle-minutes, (3) car-minutes, (4) sum of option indices, as originally specified in Q5 (design section 3.3: stage 2 fixes C* and minimises total vehicle-minutes, stage 3 is the car-minutes tie-break). The implementation had ranked car-minutes before total minutes (stages 2 and 3 swapped); H01's "tie-break on car-minutes" was read as "car-minutes first". Time-limit sharing, status semantics, seed, workers, `time_scale` and the response shape are unchanged.
+- **Effect on archives:** the archived fleet campaigns (8ab88ca, 4200acb, afc7208) used the old order. Their car counts are unaffected because cars is the first stage, but car-minutes, total minutes and the selected options may differ. All archived selections are optimal, so stage 1 is proven; the archive manifests are dirty (F14), so the order is inferred from the committed code. The WP-E10 re-run uses the new order; differences caused by this change are an expected, explained category (see `designs/EXACT_SOLVER_AMPL_DESIGN.md`, WP-E10 acceptance (d)).
+- **Evidence:** test `test_typed_day_selection.py::test_h06_total_minutes_outrank_car_minutes_at_equal_cars` (fails on the old order) and the brute-force oracle `_brute` moved to the new key. Related: H01, H05, E01.
 
 ## Exact solver
 

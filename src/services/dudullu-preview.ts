@@ -70,6 +70,15 @@ export interface PreviewJobInput {
   readonly result: PreviewOptimizationResult;
 }
 
+/**
+ * A vehicle cooldown the daily plan accepts: a whole number of minutes, zero or more.
+ * Shared by the plan (FLEET_INVALID) and the readiness check so "ready" cannot disagree
+ * with the plan (F12).
+ */
+export function isValidCooldownMinutes(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= 0;
+}
+
 export type PreviewReasonCode =
   | "ADMISSION_ASSUMED"
   | "ASSIGNMENT_SEARCH_INDETERMINATE"
@@ -89,6 +98,8 @@ export type PreviewReasonCode =
   | "NO_ADMITTED_DEMAND"
   | "NO_ROUTE_STEPS"
   | "OPTIMIZATION_NOT_SUCCESSFUL"
+  | "OPTIMIZER_RATE_LIMITED"
+  | "OPTIMIZER_UNAVAILABLE"
   | "PENDING_STUDENT_CONFIRMATION"
   | "RIDE_TIME_LIMIT_INFEASIBLE"
   | "ROUTE_OUTSIDE_SERVICE_DAY"

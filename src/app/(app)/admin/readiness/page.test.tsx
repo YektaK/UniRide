@@ -43,7 +43,8 @@ const report: DudulluReadinessReport = {
     distinctTargetLocations: 28,
   },
   schedules: { total: 30, empty: 0, malformed: 0, orphanedRows: 0, duplicateRowsForStudent: 0 },
-  fleet: { configuredDrivers: 2, vehicles: 2, activeVehicles: 2, usableActiveVehicles: 2 },
+  fleet: { configuredDrivers: 2, vehicles: 2, activeVehicles: 2, usableActiveVehicles: 2, invalidCooldownActiveVehicles: 1 },
+  legDecisions: { readable: false },
   matrix: {
     source: "supabase",
     loaded: true,
@@ -93,6 +94,8 @@ describe("ReadinessPage", () => {
     expect(screen.getByText("labels.configuredDrivers: 2")).toBeTruthy();
     expect(screen.getByText("labels.activeVehicles: 2")).toBeTruthy();
     expect(screen.getByText("labels.usableActiveVehicles: 2")).toBeTruthy();
+    expect(screen.getByText("labels.invalidCooldownVehicles: 1")).toBeTruthy();
+    expect(screen.getByText("labels.legDecisionsReadable: boolean.no")).toBeTruthy();
     expect(screen.getByText("labels.matrixSource: matrixSources.supabase")).toBeTruthy();
     expect(screen.getByText("labels.matrixLocationCount: 29")).toBeTruthy();
     expect(screen.getByText("labels.requiredLocationCount: 29")).toBeTruthy();
@@ -113,6 +116,17 @@ describe("ReadinessPage", () => {
 
     expect(await screen.findByText("status.blockedDataTitle")).toBeTruthy();
     expect(screen.getByText("reasons.matrix_incomplete")).toBeTruthy();
+  });
+
+  it("renders the cooldown and decision-table reasons (F12)", async () => {
+    mocks.getDudullu.mockResolvedValue({
+      ...report, ready: false, reasonCodes: ["vehicle_cooldown_invalid", "leg_decisions_unavailable"],
+    });
+
+    render(<ReadinessPage />);
+
+    expect(await screen.findByText("reasons.vehicle_cooldown_invalid")).toBeTruthy();
+    expect(screen.getByText("reasons.leg_decisions_unavailable")).toBeTruthy();
   });
 
   it("renders an authorization error", async () => {

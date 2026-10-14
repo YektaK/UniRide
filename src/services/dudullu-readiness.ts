@@ -1,4 +1,5 @@
 import { isDudulluCampus } from "./daily-planning";
+import { isValidCooldownMinutes } from "./dudullu-preview";
 
 export interface ReadinessStudentInput {
   id: string;
@@ -18,6 +19,8 @@ export interface ReadinessVehicleInput {
   status: string;
   wheelchairCapacity: number;
   seatingCapacity: number;
+  /** Raw `vehicles.cooldown_minutes`; the daily plan rejects the fleet when an active one is invalid. */
+  cooldownMinutes: unknown;
 }
 
 export interface ReadinessMatrixSummary {
@@ -62,6 +65,12 @@ export interface DudulluReadinessReport {
     vehicles: number;
     activeVehicles: number;
     usableActiveVehicles: number;
+    /** Active vehicles whose cooldown the daily plan would reject (FLEET_INVALID). */
+    invalidCooldownActiveVehicles: number;
+  };
+  legDecisions: {
+    /** The `student_leg_decisions` table exists and can be read. */
+    readable: boolean;
   };
   matrix: {
     source: "supabase" | "empty" | "coordinates";
@@ -253,7 +262,11 @@ export function analyzeDudulluReadiness(
   schedules: readonly ReadinessScheduleInput[],
   vehicles: readonly ReadinessVehicleInput[],
   matrix: ReadinessMatrixSummary,
+  options: { readonly legDecisionsReadable?: boolean } = {},
 ): DudulluReadinessReport {
+  // The route always passes the probe result; the default only serves callers that do not
+  // concern the decision table.
+  const legDecisionsReadable = options.legDecisionsReadable ?? true;
   const schedulesById = indexSchedules(schedules);
   const records = buildStudentRecords(users, schedulesById);
 
@@ -283,7 +296,9 @@ export function analyzeDudulluReadiness(
       vehicles: vehicles.length,
       activeVehicles: 0,
       usableActiveVehicles: 0,
+      invalidCooldownActiveVehicles: 0,
     },
+    legDecisions: { readable: legDecisionsReadable },
     matrix: {
       source: matrix.source,
       loaded: matrix.loaded,
@@ -380,6 +395,9 @@ export function analyzeDudulluReadiness(
       if (vehicleTotalCapacity(vehicle) > 0) {
         report.fleet.usableActiveVehicles += 1;
       }
+      if (!isValidCooldownMinutes(vehicle.cooldownMinutes)) {
+        report.fleet.invalidCooldownActiveVehicles += 1;
+      }
     }
   }
 
@@ -415,6 +433,12 @@ export function analyzeDudulluReadiness(
   }
   if (report.fleet.usableActiveVehicles === 0) {
     reasons.push("no_usable_active_vehicle");
+  }
+  if (report.fleet.invalidCooldownActiveVehicles > 0) {
+    reasons.push("vehicle_cooldown_invalid");
+  }
+  if (!legDecisionsReadable) {
+    reasons.push("leg_decisions_unavailable");
   }
 
   const matrixAvailable = matrix.source === "supabase" && matrix.loaded && !matrix.hasError;

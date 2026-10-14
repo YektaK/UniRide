@@ -66,8 +66,16 @@ vi.mock("@/components/ui/checkbox", () => ({
 
 import VehiclePlanningPage from "./page";
 
+// Fixture mirrors the real GET /api/admin/users payload: raw `users` rows from
+// select("*") (src/app/api/admin/users/route.ts), i.e. snake_case columns
+// (src/types/db.ts). A camelCase fixture here hid audit finding H15.
 const students = [
-  { id: "student-1", name: "S1", role: "student", disabilityType: "So" as const, locationCode: "L1" },
+  { id: "student-1", name: "S1", role: "student", disability_type: "So" as const, location_code: "L1" },
+];
+
+const mixedStudents = [
+  ...students,
+  { id: "student-2", name: "S2", role: "student", disability_type: "Sw" as const, location_code: "L2" },
 ];
 
 // Realistic successful DUD-01 payload: direction, requiredVehicles, assignments,
@@ -131,6 +139,30 @@ describe("VehiclePlanningPage", () => {
         clusteringAlgorithm: "sweep",
       })
     );
+  });
+
+  it("counts a wheelchair user returned by the API as Sw, not So (H15)", async () => {
+    mocks.getAllUsers.mockResolvedValue(mixedStudents);
+    mocks.calculate.mockResolvedValue(resultPickup);
+
+    render(<VehiclePlanningPage />);
+    await screen.findByLabelText("student-2");
+
+    // "Sw" quick-select must pick exactly the wheelchair student.
+    fireEvent.click(screen.getByRole("button", { name: "Sw" }));
+    expect(screen.getByLabelText("student-2")).toHaveProperty("checked", true);
+    expect(screen.getByLabelText("student-1")).toHaveProperty("checked", false);
+    expect(screen.getByText(/1 Sw,\s*0 So\)/)).toBeTruthy();
+
+    // Select the rest: counts must split 1 Sw / 1 So, and the optimizer input
+    // must carry the wheelchair flag.
+    fireEvent.click(screen.getByRole("button", { name: "So" }));
+    expect(screen.getByText(/1 Sw,\s*1 So\)/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /selectAll/ }));
+    await waitFor(() => expect(mocks.calculate).toHaveBeenCalledTimes(1));
+    const payload = mocks.calculate.mock.calls[0][0] as { students: Array<{ id: string; disabilityType?: string }> };
+    expect(payload.students.find((s) => s.id === "student-2")?.disabilityType).toBe("Sw");
+    expect(payload.students.find((s) => s.id === "student-1")?.disabilityType).toBe("So");
   });
 
   it("calculates and saves dropoff even after the selector changes to pickup", async () => {

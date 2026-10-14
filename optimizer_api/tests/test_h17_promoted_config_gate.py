@@ -338,9 +338,9 @@ def _runner_metadata(monkeypatch=None, *, registry=True):
     return result.metadata
 
 
-def test_runner_metadata_records_flag_off_and_file_sha(promoted_file):
+def test_runner_metadata_records_flag_off_and_file_sha(promoted_file, monkeypatch):
     digest = hashlib.sha256(promoted_file.read_bytes()).hexdigest()
-    metadata = _runner_metadata()
+    metadata = _runner_metadata(monkeypatch, registry=False)
     assert metadata["promoted_config_flag"] is False
     assert metadata["promoted_config_sha256"] == digest
 
@@ -385,7 +385,7 @@ def test_runner_metadata_sha_is_null_without_file(tmp_path, monkeypatch):
     monkeypatch.setenv(PROMOTED_CONFIG_PATH_ENV, str(tmp_path / "missing.json"))
     monkeypatch.delenv(USE_PROMOTED_ENV, raising=False)
     clear_promoted_config_cache()
-    metadata = _runner_metadata()
+    metadata = _runner_metadata(monkeypatch, registry=False)
     assert metadata["promoted_config_flag"] is False
     assert metadata["promoted_config_sha256"] is None
 

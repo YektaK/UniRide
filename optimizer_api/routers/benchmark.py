@@ -449,7 +449,9 @@ def _start_matrix_native_benchmark_impl(run_id: str, algorithms: List[Dict], pro
                         # configs; this records the process state only.
                         from strategies.promoted_config_loader import promoted_config_provenance
 
-                        result_dict.setdefault("metadata", {}).update(promoted_config_provenance())
+                        result_dict.setdefault("metadata", {}).update(
+                            {**promoted_config_provenance(), "promoted_config_applicable": False}
+                        )
                         collected.append(result_dict)
                         save_benchmark_result(run_id, result_dict)
                         completed += 1

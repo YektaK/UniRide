@@ -37,18 +37,16 @@ def promoted_config_provenance() -> Dict[str, Any]:
     """Promoted-config provenance for result metadata (owner decision 2026-10-14).
 
     ``promoted_config_flag``: whether UNIRIDE_USE_PROMOTED_CONFIG=1 is set.
-    ``promoted_config_sha256``: SHA-256 of the promoted_configs.json at the
-    configured path, or None when the file does not exist or is unreadable.
-    Pure metadata: it never changes a result value.
+    ``promoted_config_sha256``: SHA-256 of the promoted_configs.json as it was
+    loaded (same cache lifetime as the loaded document), or None when the file
+    does not exist or is unreadable. Pure metadata: it never changes a result.
     """
-    digest: Optional[str] = None
     path = get_promoted_config_path()
     try:
-        if os.path.isfile(path):
-            with open(path, "rb") as handle:
-                digest = hashlib.sha256(handle.read()).hexdigest()
-    except OSError:
-        digest = None
+        load_runtime_promoted_configs()
+    except Exception:  # noqa: BLE001 - a malformed file must not break provenance
+        pass
+    digest = _LOADED_SHA256.get(path)
     return {
         "promoted_config_flag": promoted_config_enabled(),
         "promoted_config_sha256": digest,
@@ -59,11 +57,23 @@ def get_promoted_config_path() -> str:
     return os.environ.get(PROMOTED_CONFIG_PATH_ENV, DEFAULT_PROMOTED_CONFIG_PATH)
 
 
+# SHA-256 of the file bytes read when load_runtime_promoted_configs last loaded
+# each path. Filled at load time and cleared with the lru_cache, so the reported
+# hash always matches the document that is actually in use.
+_LOADED_SHA256: Dict[str, Optional[str]] = {}
+
+
 @lru_cache(maxsize=4)
 def load_runtime_promoted_configs(path: Optional[str] = None) -> Dict[str, object]:
     resolved_path = path or get_promoted_config_path()
     if not os.path.exists(resolved_path):
+        _LOADED_SHA256[resolved_path] = None
         return {"schema_version": 1, "source": "missing", "configs": []}
+    try:
+        with open(resolved_path, "rb") as handle:
+            _LOADED_SHA256[resolved_path] = hashlib.sha256(handle.read()).hexdigest()
+    except OSError:
+        _LOADED_SHA256[resolved_path] = None
     return load_promoted_configs(resolved_path)
 
 
@@ -121,6 +131,7 @@ def normalize_strategy_params(params: Dict[str, Any]) -> Dict[str, Any]:
 
 def clear_promoted_config_cache() -> None:
     load_runtime_promoted_configs.cache_clear()
+    _LOADED_SHA256.clear()
 
 
 __all__ = [

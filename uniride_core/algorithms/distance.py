@@ -51,6 +51,9 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
     a = math.sin(dlat / 2) ** 2 + math.cos(lat1_r) * math.cos(lat2_r) * math.sin(dlon / 2) ** 2
+    # Rounding can push a just outside [0, 1] (exactly antipodal pairs give 1 + 2.2e-16);
+    # clamping keeps both sqrt arguments valid and changes no in-range result.
+    a = min(1.0, max(0.0, a))
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 

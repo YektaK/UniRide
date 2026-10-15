@@ -632,7 +632,10 @@
       },
       "vehiclePlanning": {
         "studentLoadError": "Öğrenciler Yüklenemedi",
-        "saveError": "Kaydetme Hatası"
+        "saveError": "Kaydetme Hatası",
+        "solverProvenance": {
+          "fallback": "İstenen çözücü çalışmadı; yerine {used} kullanıldı (neden: {reason})."
+        }
       },
       "compare": {
         "loadError": "Öğrenciler Yüklenemedi",

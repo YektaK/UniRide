@@ -157,7 +157,9 @@ CREATE TABLE IF NOT EXISTS route_plans (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   confirmed_at TIMESTAMPTZ,
-  completed_at TIMESTAMPTZ
+  completed_at TIMESTAMPTZ,
+  -- Solver provenance reported at save time; NULL = unknown (old rows). Migration 20261016c.
+  solver_provenance JSONB CONSTRAINT route_plans_solver_provenance_is_object CHECK (solver_provenance IS NULL OR jsonb_typeof(solver_provenance) = 'object')
 );
 
 -- Sandbox Scenarios table for IE sandbox mode

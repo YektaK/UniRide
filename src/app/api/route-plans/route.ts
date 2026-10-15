@@ -16,6 +16,7 @@ import {
 } from "@/lib/admin-auth";
 
 import type { VehicleRoute } from "@/services/optimizer-service";
+import { solverProvenanceSchema, type SolverProvenance } from "@/services/solver-provenance";
 import type { Database, Json, RoutePlanStatus } from "@/lib/supabase";
 
 interface RoutePlanRequest {
@@ -29,6 +30,7 @@ interface RoutePlanRequest {
     routes: VehicleRoute[] | Record<string, unknown>[];
     studentCount: number;
     notes?: string;
+    solverProvenance?: unknown;
 }
 
 interface RoutePlanUpdate {
@@ -66,6 +68,17 @@ export async function POST(request: NextRequest) {
             return createErrorResponse("Invalid direction", 400);
         }
 
+        // Optional. A client may store only the allowlisted keys (strict schema, short tokens);
+        // anything else is rejected, never stored. Absent = unknown (the column stays NULL).
+        let solverProvenance: SolverProvenance | undefined;
+        if (body.solverProvenance !== undefined && body.solverProvenance !== null) {
+            const parsed = solverProvenanceSchema.safeParse(body.solverProvenance);
+            if (!parsed.success) {
+                return createErrorResponse("Invalid solverProvenance", 400);
+            }
+            solverProvenance = parsed.data;
+        }
+
         const adminClient = getSupabaseAdmin();
 
         const insertPayload: Database["public"]["Tables"]["route_plans"]["Insert"] = {
@@ -85,6 +98,7 @@ export async function POST(request: NextRequest) {
             updated_at: null,
             confirmed_at: null,
             completed_at: null,
+            ...(solverProvenance ? { solver_provenance: solverProvenance as Json } : {}),
         };
 
         const { data, error } = await adminClient

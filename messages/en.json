@@ -632,7 +632,10 @@
       },
       "vehiclePlanning": {
         "studentLoadError": "Failed to load students",
-        "saveError": "Save Error"
+        "saveError": "Save Error",
+        "solverProvenance": {
+          "fallback": "The requested solver did not run; {used} was used instead (reason: {reason})."
+        }
       },
       "compare": {
         "loadError": "Failed to load students",

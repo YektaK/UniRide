@@ -21,7 +21,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Truck, Users, Clock, Calculator, ArrowRight, Info, Activity } from "lucide-react";
 import { adminApi } from "@/lib/admin-api";
 import { ALGORITHM_OPTIONS } from "@/lib/algorithm-constants";
-import { formatRoutePlanForSave, saveRoutePlan } from "@/services/route-plans";
+import { formatRoutePlanForSave, resolvePersistedAlgorithm, saveRoutePlan } from "@/services/route-plans";
+import { SolverProvenanceNote } from "@/components/admin/solver-provenance-note";
+import { buildSolverProvenance } from "@/services/solver-provenance";
 import type { User } from "@/types";
 import { normalizeAdminUser, type AdminUserRow } from "@/lib/admin-user-mapper";
 import { IEDashboard } from "@/components/admin/ie-dashboard";
@@ -454,6 +456,9 @@ export default function VehiclePlanningPage() {
                                 ))}
                             </div>
                         )}
+
+                        {/* Solver provenance (what will be saved with the plan) */}
+                        <SolverProvenanceNote provenance={buildSolverProvenance(result, resolvePersistedAlgorithm(result, strategy))} />
 
                         {/* Message */}
                         <div className="p-3 rounded-lg bg-muted flex items-start gap-2">

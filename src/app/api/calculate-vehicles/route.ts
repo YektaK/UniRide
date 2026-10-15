@@ -333,6 +333,8 @@ export async function POST(request: NextRequest) {
                 executionTimeSeconds: result.execution_time_seconds,
                 algorithmRequested: result.algorithm_requested,
                 ...(result.fallback_reason ? { fallbackReason: result.fallback_reason } : {}),
+                ...(result.effective_config_source ? { effectiveConfigSource: result.effective_config_source } : {}),
+                ...(typeof result.effective_seed === "number" ? { effectiveSeed: result.effective_seed } : {}),
                 feasibilityCertificate: result.feasibility_certificate,
                 appliedPolicy: result.applied_policy,
                 options: {

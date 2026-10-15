@@ -8,6 +8,7 @@ from uniride_core.algorithms.registry import list_algorithm_names
 from uniride_core.adapters.matrix_builder import MatrixBuilder
 from uniride_core.algorithms.sota_tsp.base_solver import BaseTSPSolver
 from uniride_core.algorithms.engine_factory import CORE_TSP_SOLVERS, FCM_TSP_SOLVERS, create_matrix_engine
+from academic_benchmark.core.reported_cost import report_cycle_cost
 import importlib
 
 
@@ -428,7 +429,7 @@ def _make_legacy_executor(strategy_payload: any, algorithm_type: str, algorithm_
             b = tour_indices[(k + 1) % len(tour_indices)] - 1
             tour_length += dist_matrix[a][b]
             
-        tour_length = int(tour_length) if not is_tm else tour_length
+        tour_length = tour_length if is_tm else report_cycle_cost(tour_length, dist_matrix)
         
         optimal = getattr(problem, "optimal", None)
         gap = None

@@ -1,0 +1,6 @@
+# Optional extra for the offline exact solver (design docs/designs/EXACT_SOLVER_AMPL_DESIGN.md section 7).
+# Not an operational dependency: optimizer_api requirements stay unchanged.
+# AMPL itself and the solver licenses are installed separately; set UNIRIDE_AMPL_DIR.
+# Install: pip install -r requirements-exact.txt (pinned to the version verified in .venv-jit, F13).
+amplpy==0.18.0
+ampltools==0.7.5

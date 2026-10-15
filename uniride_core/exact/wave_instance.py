@@ -7,8 +7,8 @@ from dataclasses import dataclass
 from typing import Optional, Sequence
 
 # Design EXACT_SOLVER_AMPL_DESIGN.md section 4 / 1.1. "not_run" is only a pre-solve placeholder.
-# TODO(WP-E2): academic_benchmark/exact_reference/protocol.py becomes the single definition of
-# these statuses and must import this set or replace it.
+# academic_benchmark/exact_reference/protocol.py (WP-E2) gives every label its protocol meaning and
+# imports this set (core must not import academic_benchmark); a test keeps the two identical.
 EXACT_STATUSES = frozenset(
     {
         "not_run",
@@ -112,7 +112,12 @@ class ExactResult:
     routes: tuple  # tuple of tuples of occurrence ids
     route_count: Optional[int]
     total_cost: Optional[int]
-    # TODO(WP-E2): stop_reason, timing_dependent, non_lexicographic, K_LB, D_LB, D_LB_free.
+    stop_reason: Optional[str] = None
+    timing_dependent: bool = False
+    non_lexicographic: bool = False
+    k_lb: Optional[int] = None
+    d_lb: Optional[int] = None  # conditional on K = K* (design 1.2)
+    d_lb_free: Optional[int] = None
 
     def __post_init__(self) -> None:
         if self.status not in EXACT_STATUSES:

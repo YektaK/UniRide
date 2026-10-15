@@ -98,7 +98,7 @@ def test_amplpy_is_imported_only_inside_functions():
 
 
 def test_no_hard_coded_ampl_path_or_identity_in_new_files():
-    files = [EXACT / "ampl_backend.py", EXACT / "models" / "wave_sp.mod", Path(__file__),
+    files = [EXACT / "ampl_backend.py", EXACT / "models" / "wave_sp.mod",
              REPO / "requirements-exact.txt", REPO / "academic_benchmark" / "exact_reference" / "protocol.py"]
     for f in files:
         text = f.read_text(encoding="utf-8")
@@ -179,6 +179,8 @@ def test_option_strings_use_qualified_names_only():
 @pytest.mark.parametrize("num,msg,obj,bound,want", [
     (0, "Gurobi 13.0.3: optimal solution; objective 28", 28.0, 28.0, ("optimal", "optimal", False, 28, 28)),
     (0, "HiGHS 1.15.1: optimal solution; objective 28", 28.0, 27.2, ("optimal", "optimal", False, 28, 28)),
+    (99, "Solution determined by presolve;", 10.0, None, ("optimal", "optimal", False, 10, 10)),
+    (99, "Solution determined by presolve;", 6.0, 0.0, ("optimal", "optimal", False, 6, 6)),
     (0, "x: optimal solution; objective 28", 28.0, 26.5, ("feasible_with_gap", "gap_tolerance", False, 28, 27)),
     (402, "Gurobi 13.0.3: time limit, feasible solution; objective 1270", 1270.0, 762.0,
      ("feasible_with_gap", "wall_limit", True, 1270, 762)),

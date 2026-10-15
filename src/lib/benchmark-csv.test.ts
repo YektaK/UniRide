@@ -68,6 +68,7 @@ describe("CSV formula injection (OWASP CSV Injection)", () => {
     expect(escapeCSV("2026-10-15T10:00:00Z")).toBe("2026-10-15T10:00:00Z");
     expect(escapeCSV("sota_fallback:solver_error")).toBe("sota_fallback:solver_error");
     expect(escapeCSV("a=b")).toBe("a=b");
+    expect(escapeCSV("a\rb")).toBe('"a\rb"');
     expect(escapeCSV(null)).toBe("");
     expect(escapeCSV(undefined)).toBe("");
   });

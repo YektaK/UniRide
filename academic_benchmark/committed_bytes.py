@@ -32,32 +32,82 @@ def git_environment() -> dict[str, str]:
     return {key: value for key, value in os.environ.items() if key not in _REPOSITORY_SELECTORS}
 
 
+# one bound for every git query of the archive / quarantine code (a diff over a whole tree is the
+# slowest; ``archive_manifest`` imports this constant instead of keeping its own)
+GIT_QUERY_TIMEOUT_SECONDS = 120
+
+
+class GitQueryFailed(RuntimeError):
+    """A git query did not produce an answer: it timed out (``kind="timeout"``), exited non-zero
+    (``"exit"``, with ``returncode`` and ``stderr``) or could not be started (``"unavailable"``).
+    Callers must treat it as "unknown", never as "empty" or "not tracked"."""
+
+    def __init__(self, message: str, *, kind: str, returncode: int | None = None, stderr: str = "") -> None:
+        super().__init__(message)
+        self.kind = kind
+        self.returncode = returncode
+        self.stderr = stderr
+
+
+def run_git(arguments: Sequence[str], cwd: Path | str, *, extra_environment: dict[str, str] | None = None) -> bytes:
+    """stdout of ``git <arguments>`` run in ``cwd`` with the shared timeout and the isolated
+    environment; every failure becomes a :class:`GitQueryFailed`."""
+    environment = git_environment()
+    if extra_environment:
+        environment.update(extra_environment)
+    try:
+        done = subprocess.run(
+            ["git", *arguments], cwd=Path(cwd), capture_output=True, check=True,
+            timeout=GIT_QUERY_TIMEOUT_SECONDS, env=environment,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise GitQueryFailed(f"git timed out after {GIT_QUERY_TIMEOUT_SECONDS} s", kind="timeout") from exc
+    except subprocess.CalledProcessError as exc:
+        detail = (exc.stderr or b"").decode("utf-8", "replace").strip()
+        raise GitQueryFailed(
+            f"git failed with exit status {exc.returncode}" + (f" ({detail})" if detail else ""),
+            kind="exit", returncode=exc.returncode, stderr=detail,
+        ) from exc
+    except OSError as exc:
+        raise GitQueryFailed(f"git unavailable ({type(exc).__name__})", kind="unavailable") from exc
+    return done.stdout
+
+
 def working_copy_drift(git_cwd: Path | str) -> list[str]:
     """Paths below ``git_cwd`` (relative to it, POSIX) whose working copy differs from the index
     according to ``git diff``. Git applies its own end-of-line normalisation, so a CRLF checkout
     (``core.autocrlf=true``) or an LF checkout is clean and only a real content change is listed.
-    Untracked files are not listed; without git or outside a repository the result is empty."""
+    Untracked files are not listed. Without git, or outside a repository, the result is empty (the
+    documented "nothing to compare"); a timeout or any other git failure raises
+    :class:`GitQueryFailed`, because "no drift" would then be a guess."""
     try:
-        done = subprocess.run(
-            ["git", "diff", "--name-only", "-z", "--relative", "--", "."],
-            cwd=Path(git_cwd), capture_output=True, check=True, timeout=120, env=git_environment(),
-        )
-    except (OSError, subprocess.SubprocessError):
-        return []
-    return sorted(item.decode("utf-8", "replace") for item in done.stdout.split(b"\0") if item)
+        # LC_ALL=C: the "not a git repository" test below reads git's English message
+        stdout = run_git(["diff", "--name-only", "-z", "--relative", "--", "."], git_cwd, extra_environment={"LC_ALL": "C"})
+    except GitQueryFailed as exc:
+        if exc.kind == "unavailable" or (exc.kind == "exit" and "not a git repository" in exc.stderr.lower()):
+            return []
+        raise
+    return sorted(item.decode("utf-8", "replace") for item in stdout.split(b"\0") if item)
+
+
+# ``git cat-file blob :<spec>`` exits 128 ("fatal: ...") for a path that is not in the index and
+# for a directory that is not a repository: the documented disk fallback. Any other exit status,
+# and a timeout, is not that case.
+_NOT_IN_INDEX_EXIT_STATUS = 128
 
 
 def _git_blob(cwd: Path, index_spec: str) -> tuple[bytes | None, str]:
+    """``(blob, "")``, or ``(None, reason)`` for the documented "no blob here" outcomes (not in the
+    index / not a repository: exit 128; git cannot be started). A timeout or an unexpected exit
+    status raises :class:`GitQueryFailed`."""
     try:
-        done = subprocess.run(
-            ["git", "cat-file", "blob", f":{index_spec}"],
-            cwd=cwd, capture_output=True, check=True, timeout=60, env=git_environment(),
-        )
-        return done.stdout, ""
-    except subprocess.CalledProcessError as exc:
-        return None, "not a tracked file in a git repository: " + exc.stderr.decode("utf-8", "replace").strip()
-    except (OSError, subprocess.SubprocessError) as exc:
-        return None, f"git unavailable ({type(exc).__name__})"
+        return run_git(["cat-file", "blob", f":{index_spec}"], cwd), ""
+    except GitQueryFailed as exc:
+        if exc.kind == "exit" and exc.returncode == _NOT_IN_INDEX_EXIT_STATUS:
+            return None, "not a tracked file in a git repository: " + exc.stderr
+        if exc.kind == "unavailable":
+            return None, str(exc)
+        raise
 
 
 def committed_bytes(
@@ -75,7 +125,10 @@ def committed_bytes(
     ``./``-prefixed spec is relative to ``git_cwd``, any other spec is relative to the repo root).
     ``fallback_sources`` are further ``(git_cwd, index_spec)`` lookups tried in order before the
     disk is used. The disk fallback (git missing, not a repository, file untracked everywhere)
-    logs a warning because the bytes are then whatever this platform's checkout wrote."""
+    logs a warning because the bytes are then whatever this platform's checkout wrote. A git
+    timeout or an unexpected git exit status is NOT such a case: it raises :class:`GitQueryFailed`
+    (and no further source is tried), because the disk bytes would then silently replace an
+    answer git could not give."""
     path = Path(disk_path)
     sources = [(Path(git_cwd) if git_cwd is not None else path.parent, index_spec if index_spec is not None else f"./{path.name}")]
     sources.extend((Path(cwd), spec) for cwd, spec in fallback_sources)
@@ -95,7 +148,8 @@ def index_has_blob(
     index_spec: str | None = None,
 ) -> bool:
     """True when git's index holds a blob at the same address ``committed_bytes`` would read first
-    (default ``:./<name>`` relative to the file's own directory). Never falls back to the disk."""
+    (default ``:./<name>`` relative to the file's own directory). Never falls back to the disk; a git timeout or
+    unexpected exit status raises :class:`GitQueryFailed` instead of answering False."""
     path = Path(disk_path)
     cwd = Path(git_cwd) if git_cwd is not None else path.parent
     blob, _ = _git_blob(cwd, index_spec if index_spec is not None else f"./{path.name}")

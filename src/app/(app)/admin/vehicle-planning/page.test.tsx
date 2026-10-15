@@ -264,12 +264,67 @@ describe("VehiclePlanningPage solver provenance", () => {
       expect.objectContaining({
         solverProvenance: {
           algorithm_requested: "ga_split",
-          algorithm_used: "genetic_algorithm",
+          algorithm_used: "ga_split",
           effective_config_source: "default",
           effective_seed: 42,
         },
       }),
     );
+  });
+
+  it("saves the algorithm and clustering chosen at calculation time, not the dropdowns at save time", async () => {
+    mocks.getAllUsers.mockResolvedValue(students);
+    mocks.calculate.mockResolvedValue({
+      ...resultPickup,
+      meta: { ...resultPickup.meta, algorithmRequested: "genetic_algorithm", effectiveConfigSource: "default", effectiveSeed: 42 },
+    });
+
+    await calculate();
+
+    // Change both dropdowns AFTER the calculation, before saving.
+    const controls = screen.getAllByTestId("param-control") as HTMLSelectElement[];
+    const strategyControl = controls.find((c) => c.value === "genetic_algorithm")!;
+    const clusteringControl = controls.find((c) => c.value === "sweep")!;
+    const otherStrategy = Array.from(strategyControl.options).map((o) => o.value).find((v) => v !== "genetic_algorithm")!;
+    const otherClustering = Array.from(clusteringControl.options).map((o) => o.value).find((v) => v !== "sweep")!;
+    fireEvent.change(strategyControl, { target: { value: otherStrategy } });
+    fireEvent.change(clusteringControl, { target: { value: otherClustering } });
+
+    fireEvent.click(screen.getByRole("button", { name: /save/ }));
+    await waitFor(() => expect(mocks.saveRoutePlan).toHaveBeenCalledTimes(1));
+    const saved = mocks.saveRoutePlan.mock.calls[0]![0];
+    expect(saved.algorithmUsed).toBe("genetic_algorithm");
+    expect(saved.clusteringUsed).toBe("sweep");
+    expect(saved.solverProvenance).toEqual({
+      algorithm_requested: "genetic_algorithm",
+      algorithm_used: "genetic_algorithm",
+      effective_config_source: "default",
+      effective_seed: 42,
+    });
+  });
+
+  it("still saves greedy_fallback after the dropdown changed when a fallback ran (M26)", async () => {
+    mocks.getAllUsers.mockResolvedValue(students);
+    mocks.calculate.mockResolvedValue({
+      ...resultPickup,
+      meta: { ...resultPickup.meta, algorithmUsed: "greedy_fallback", algorithmRequested: "genetic_algorithm", fallbackReason: "solver_error" },
+    });
+
+    await calculate();
+    const controls = screen.getAllByTestId("param-control") as HTMLSelectElement[];
+    const strategyControl = controls.find((c) => c.value === "genetic_algorithm")!;
+    const otherStrategy = Array.from(strategyControl.options).map((o) => o.value).find((v) => v !== "genetic_algorithm")!;
+    fireEvent.change(strategyControl, { target: { value: otherStrategy } });
+
+    fireEvent.click(screen.getByRole("button", { name: /save/ }));
+    await waitFor(() => expect(mocks.saveRoutePlan).toHaveBeenCalledTimes(1));
+    const saved = mocks.saveRoutePlan.mock.calls[0]![0];
+    expect(saved.algorithmUsed).toBe("greedy_fallback");
+    expect(saved.solverProvenance).toEqual({
+      algorithm_requested: "genetic_algorithm",
+      algorithm_used: "greedy_fallback",
+      fallback_reason: "solver_error",
+    });
   });
 
   it("shows no provenance line and sends none for an older optimizer", async () => {

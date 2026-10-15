@@ -74,6 +74,22 @@ describe("buildSolverProvenance", () => {
     });
   });
 
+  it("prefers the optimizer-reported algorithm that ran over the caller's selection", () => {
+    expect(
+      buildSolverProvenance(
+        { meta: { algorithmUsed: "ga_split", effectiveSeed: 42 } },
+        "genetic_algorithm",
+      ),
+    ).toEqual({ algorithm_used: "ga_split", effective_seed: 42 });
+  });
+
+  it("falls back to the caller's calculation-time choice when the optimizer did not report it", () => {
+    expect(buildSolverProvenance({ meta: { effectiveSeed: 42 } }, "genetic_algorithm")).toEqual({
+      algorithm_used: "genetic_algorithm",
+      effective_seed: 42,
+    });
+  });
+
   it("reads the raw optimizer fields too", () => {
     expect(
       buildSolverProvenance(

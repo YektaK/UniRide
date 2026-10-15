@@ -11,13 +11,13 @@ import json
 import math
 import os
 import statistics
-import subprocess
 import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
+from academic_benchmark.committed_bytes import GitQueryFailed, run_git
 from academic_benchmark.fairness import (
     FairComparisonManifest,
     FairRunResult,
@@ -445,12 +445,17 @@ def _backend_policy(algorithm_id: str) -> BackendPolicy:
 
 
 def _git_metadata(repo_root: Path) -> Dict[str, Any]:
+    """Benchmark provenance: ``{"revision", "dirty"}`` from git, asked through the shared
+    :func:`run_git` (120 s timeout, isolated git environment). When git cannot answer (timeout,
+    non-zero exit, git missing) both values are ``None`` ("unknown", never a clean tree) and
+    ``git_error`` says why (``"timeout"``, ``"exit"`` or ``"unavailable"``). The key is absent
+    when git answered."""
     try:
-        revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo_root, text=True, stderr=subprocess.DEVNULL).strip()
-        dirty = bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=repo_root, text=True, stderr=subprocess.DEVNULL).strip())
-        return {"revision": revision, "dirty": dirty}
-    except (OSError, subprocess.CalledProcessError):
-        return {"revision": None, "dirty": None}
+        revision = run_git(["rev-parse", "HEAD"], repo_root).decode("utf-8", "replace").strip()
+        dirty = bool(run_git(["status", "--porcelain"], repo_root).decode("utf-8", "replace").strip())
+    except GitQueryFailed as exc:
+        return {"revision": None, "dirty": None, "git_error": exc.kind}
+    return {"revision": revision, "dirty": dirty}
 
 
 def _environment_metadata() -> Dict[str, Any]:

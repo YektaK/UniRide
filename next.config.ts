@@ -1,7 +1,10 @@
 import type {NextConfig} from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
+import { buildHstsHeader } from './src/lib/security-headers';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
+
+const hsts = buildHstsHeader(process.env.NODE_ENV === 'production');
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -29,8 +32,9 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-          // Content-Security-Policy and Strict-Transport-Security are set per request in
-          // src/proxy.ts (nonce-based CSP in production; audit M8 / QW8).
+          // Content-Security-Policy is set per request in src/proxy.ts (nonce-based in production;
+          // audit M8 / QW8). HSTS is production-only and covers every path, proxied or not.
+          ...(hsts ? [{ key: "Strict-Transport-Security", value: hsts }] : []),
         ],
       },
     ];

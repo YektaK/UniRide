@@ -3,7 +3,6 @@ import type { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import {
     buildContentSecurityPolicy,
-    buildHstsHeader,
     generateNonce,
 } from '@/lib/security-headers';
 
@@ -22,16 +21,11 @@ function isGatedApiPath(pathname: string): boolean {
     );
 }
 
-function withHsts<T extends NextResponse>(response: T): T {
-    const hsts = buildHstsHeader(process.env.NODE_ENV === 'production');
-    if (hsts) response.headers.set('Strict-Transport-Security', hsts);
-    return response;
-}
-
 /**
  * Per-request nonce CSP for page responses (audit M8 / QW8). Next.js reads
  * the nonce from the *request* Content-Security-Policy header and applies it
- * to its own scripts; the same value is returned on the response.
+ * to its own scripts; the same value is returned on the response. HSTS is sent by next.config.ts
+ * headers() for all paths, so it is deliberately not repeated here.
  */
 function nextWithCsp(request: NextRequest, extraRequestHeaders?: Headers) {
     const nonce = generateNonce();
@@ -39,10 +33,8 @@ function nextWithCsp(request: NextRequest, extraRequestHeaders?: Headers) {
         nonce,
         isProduction: process.env.NODE_ENV === 'production',
         supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
-        optimizerUrls: [
-            process.env.OPTIMIZER_API_URL,
-            process.env.NEXT_PUBLIC_OPTIMIZER_API_URL,
-        ],
+        // Server-only OPTIMIZER_API_URL must not reach a public header (browser never calls it).
+        optimizerUrls: [process.env.NEXT_PUBLIC_OPTIMIZER_API_URL],
     });
 
     const headers = new Headers(extraRequestHeaders ?? request.headers);
@@ -51,7 +43,7 @@ function nextWithCsp(request: NextRequest, extraRequestHeaders?: Headers) {
 
     const response = NextResponse.next({ request: { headers } });
     response.headers.set('Content-Security-Policy', csp);
-    return withHsts(response);
+    return response;
 }
 
 export async function proxy(request: NextRequest) {
@@ -61,28 +53,28 @@ export async function proxy(request: NextRequest) {
 
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return withHsts(NextResponse.json(
+        return NextResponse.json(
             { error: 'Unauthorized: Missing or invalid token in request header' },
             { status: 401 }
-        ));
+        );
     }
 
     const token = authHeader.slice(7);
     // Verify the JWT token with Supabase
     const supabaseAnon = getSupabaseAnon();
     if (!supabaseAnon) {
-        return withHsts(NextResponse.json(
+        return NextResponse.json(
             { error: 'Authentication service unavailable' },
             { status: 503 }
-        ));
+        );
     }
 
     const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
     if (error || !user) {
-        return withHsts(NextResponse.json(
+        return NextResponse.json(
             { error: 'Unauthorized: Invalid or expired token' },
             { status: 401 }
-        ));
+        );
     }
 
     // Forward user info via headers for downstream use

@@ -29,21 +29,8 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-          {
-            key: "Content-Security-Policy",
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval Next.js dev gerektirir
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: https://placehold.co",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co http://localhost:8000 http://localhost:9002 http://127.0.0.1:8000 http://127.0.0.1:9002",
-              "frame-ancestors 'none'",
-              "object-src 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-            ].join("; "),
-          },
+          // Content-Security-Policy and Strict-Transport-Security are set per request in
+          // src/proxy.ts (nonce-based CSP in production; audit M8 / QW8).
         ],
       },
     ];

@@ -1,0 +1,436 @@
+"""WP-E2: AMPL set-partitioning backend (design EXACT_SOLVER_AMPL_DESIGN.md sections 1.1 Step B,
+1.2, 2, 4, 7, 8). Tests that need AMPL carry the ``requires_ampl`` marker and are skipped with a
+reason when AMPL, a solver or its license is absent (CI has no AMPL)."""
+from __future__ import annotations
+
+import ast
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+import pytest
+
+from exact_enum_helpers import random_instance
+
+REPO = Path(__file__).resolve().parents[2]
+EXACT = REPO / "uniride_core" / "exact"
+# Default run: the first ORACLE_DEFAULT generator seeds per solver; UNIRIDE_EXACT_FULL_ORACLE=1 runs all 500
+# (measured runtime in docs/paper/results/week-2026-10-05-exact/wp-e2-calibration/README.md).
+ORACLE_ALL = 500
+ORACLE_DEFAULT = 500 if os.environ.get("UNIRIDE_EXACT_FULL_ORACLE") == "1" else 120
+SOLVERS = ("gurobi", "highs")
+
+
+def _enum(inst):
+    from uniride_core.exact.route_enumeration import enumerate_routes
+
+    return enumerate_routes(inst["direction"], inst["matrix"], inst["location_codes"], inst["classes"],
+                            inst["types"], max_ride=inst["ride"], max_tour=inst["tour"])
+
+
+def _oracle(inst):
+    from uniride_core.exact.brute_force import brute_force_optimum
+
+    return brute_force_optimum(inst["direction"], inst["matrix"], inst["classes"], inst["types"],
+                               max_ride=inst["ride"], max_tour=inst["tour"],
+                               minimize_type=inst["minimize_type"], quota=inst["quota"])
+
+
+def _route_cost(direction, matrix, nodes):
+    path = [0] + list(nodes) + [0]
+    arcs = [matrix[a][b] for a, b in zip(path, path[1:])]
+    tour = sum(arcs)
+    return tour, (tour - arcs[0] if direction == "pickup" else tour - arcs[-1])
+
+
+def _loc_matrix(L, loc_of):
+    locs = [0] + list(loc_of)
+    return tuple(tuple(L[locs[i]][locs[j]] for j in range(len(locs))) for i in range(len(locs)))
+
+
+def _single(sw=4, so=5, total=None):
+    from uniride_core.exact import VehicleTypeSpec
+
+    return (VehicleTypeSpec("large", sw, so, 10, total),)
+
+
+_SKIP_CACHE: dict = {}
+
+
+def _require(solver: str) -> None:
+    from uniride_core.exact import ampl_backend
+
+    if solver not in _SKIP_CACHE:
+        _SKIP_CACHE[solver] = ampl_backend.probe_backend(solver)
+    if _SKIP_CACHE[solver] is not None:
+        pytest.skip(f"AMPL/{solver} unavailable: {_SKIP_CACHE[solver]}")
+
+
+@pytest.fixture(scope="module", params=SOLVERS)
+def session(request):
+    from uniride_core.exact import ampl_backend
+
+    _require(request.param)
+    with ampl_backend.AmplSession(ampl_backend.SolverSettings(solver=request.param)) as s:
+        yield s
+
+
+# ---------- boundary (section 8 row "Boundary", section 2) ----------
+def test_importing_ampl_backend_does_not_import_amplpy():
+    code = ("import sys, uniride_core.exact, uniride_core.exact.ampl_backend; "
+            "sys.exit(1 if 'amplpy' in sys.modules else 0)")
+    res = subprocess.run([sys.executable, "-B", "-c", code], cwd=REPO, capture_output=True, text=True)
+    assert res.returncode == 0, res.stderr
+
+
+def test_amplpy_is_imported_only_inside_functions():
+    tree = ast.parse((EXACT / "ampl_backend.py").read_text(encoding="utf-8"))
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            assert not any(a.name.split(".")[0] == "amplpy" for a in node.names)
+        if isinstance(node, ast.ImportFrom):
+            assert (node.module or "").split(".")[0] != "amplpy"
+    inner = [n for n in ast.walk(tree) if isinstance(n, ast.Import) and any(a.name == "amplpy" for a in n.names)]
+    assert inner, "the backend must import amplpy lazily"
+
+
+def test_no_hard_coded_ampl_path_or_identity_in_new_files():
+    files = [EXACT / "ampl_backend.py", EXACT / "models" / "wave_sp.mod", Path(__file__),
+             REPO / "requirements-exact.txt", REPO / "academic_benchmark" / "exact_reference" / "protocol.py"]
+    for f in files:
+        text = f.read_text(encoding="utf-8")
+        assert not re.search(r"[A-Za-z]:\\\\?Users|/Users/|/home/|yektakayman|\bAMPL\\\\", text), f.name
+
+
+def test_wave_sp_model_is_shipped_as_package_data():
+    from uniride_core.exact import ampl_backend
+
+    path = ampl_backend.model_path()
+    assert path.name == "wave_sp.mod" and path.is_file()
+    assert '"uniride_core.exact" = ["models/*.mod"]' in (REPO / "pyproject.toml").read_text(encoding="utf-8")
+
+
+def test_requirements_exact_is_optional_and_operational_requirements_untouched():
+    text = (REPO / "requirements-exact.txt").read_text(encoding="utf-8")
+    assert re.search(r"^amplpy==\d+\.\d+\.\d+$", text, re.M)
+    for req in (REPO / "optimizer_api").glob("requirements*.txt"):
+        assert "amplpy" not in req.read_text(encoding="utf-8")
+
+
+# ---------- environment lookup and absence (section 7) ----------
+def test_locate_ampl_prefers_env_then_local_config_then_default(tmp_path):
+    from uniride_core.exact import ampl_backend
+
+    cfg = tmp_path / "ampl_local.json"
+    cfg.write_text('{"ampl_dir": "from-config"}', encoding="utf-8")
+    assert ampl_backend.locate_ampl({"UNIRIDE_AMPL_DIR": "from-env"}, cfg) == ("from-env", "env")
+    assert ampl_backend.locate_ampl({}, cfg) == ("from-config", "local_config")
+    assert ampl_backend.locate_ampl({}, tmp_path / "missing.json") == (None, "amplpy_default")
+
+
+def test_local_config_file_is_git_ignored():
+    from uniride_core.exact import ampl_backend
+
+    rel = ampl_backend.LOCAL_CONFIG_PATH.relative_to(REPO).as_posix()
+    res = subprocess.run(["git", "check-ignore", "-q", rel], cwd=REPO)
+    assert res.returncode == 0, rel
+
+
+def test_empty_ampl_dir_gives_backend_unavailable_without_raising(tmp_path, monkeypatch):
+    from uniride_core.exact import ampl_backend
+
+    monkeypatch.setenv("UNIRIDE_AMPL_DIR", str(tmp_path))
+    inst = random_instance(0)
+    res = ampl_backend.solve_columns(_enum(inst))
+    assert res.status == "backend_unavailable"
+    assert res.stage1 is None and res.routes == ()
+    assert "UNIRIDE_AMPL_DIR" in res.note and str(tmp_path) not in res.note
+    assert ampl_backend.probe_backend("gurobi") is not None
+
+
+def test_missing_amplpy_gives_backend_unavailable(monkeypatch):
+    from uniride_core.exact import ampl_backend
+
+    monkeypatch.setitem(sys.modules, "amplpy", None)
+    res = ampl_backend.solve_columns(_enum(random_instance(2)))
+    assert res.status == "backend_unavailable" and "amplpy" in res.note
+
+
+# ---------- option strings (F17) and limits (section 1.2, 4) ----------
+def test_option_strings_use_qualified_names_only():
+    from uniride_core.exact import ampl_backend as ab
+
+    g = ab.solver_option_string(ab.SolverSettings(solver="gurobi"), peak=False)
+    h = ab.solver_option_string(ab.SolverSettings(solver="highs"), peak=True)
+    for s in (g, h):
+        for opt in ("mip:bestbound=1", "tech:threads=1", "tech:seed=0", "mip:gap=0", "mip:gapabs=0.99"):
+            assert opt in s.split()
+        assert not re.search(r"(^|\s)bestbound=", s)
+    assert "lim:time=60" in g.split() and f"lim:work={ab.DEFAULT_WORK_LIMIT:g}" in g.split()
+    assert "lim:time=600" in h.split() and not any(o.startswith("lim:work") for o in h.split())
+    assert ab.wall_limit_seconds(False) == 60 and ab.wall_limit_seconds(True) == 600
+    gp = ab.solver_option_string(ab.SolverSettings(solver="gurobi"), peak=True)
+    assert f"lim:work={ab.PEAK_WORK_LIMIT:g}" in gp.split()
+
+
+@pytest.mark.parametrize("num,msg,obj,bound,want", [
+    (0, "Gurobi 13.0.3: optimal solution; objective 28", 28.0, 28.0, ("optimal", "optimal", False, 28, 28)),
+    (0, "HiGHS 1.15.1: optimal solution; objective 28", 28.0, 27.2, ("optimal", "optimal", False, 28, 28)),
+    (0, "x: optimal solution; objective 28", 28.0, 26.5, ("feasible_with_gap", "gap_tolerance", False, 28, 27)),
+    (402, "Gurobi 13.0.3: time limit, feasible solution; objective 1270", 1270.0, 762.0,
+     ("feasible_with_gap", "wall_limit", True, 1270, 762)),
+    (409, "Gurobi 13.0.3: work limit, feasible solution; objective 19", 19.0, 11.2,
+     ("feasible_with_gap", "work_limit", False, 19, 12)),
+    (472, "HiGHS 1.15.1: time limit, no solution", 0.0, float("-inf"), ("bound_only", "wall_limit", True, None, 0)),
+    (479, "Gurobi 13.0.3: work limit, no solution", 0.0, 4.5, ("bound_only", "work_limit", False, None, 5)),
+    (299, "Infeasible constraints determined by presolve.", 0.0, None, ("infeasible_proven", "infeasible", False, None, None)),
+    (200, "Gurobi 13.0.3: infeasible problem", 0.0, None, ("infeasible_proven", "infeasible", False, None, None)),
+    (500, "Gurobi 13.0.3: Unknown option", 0.0, None, ("rejected", "solver_failure", False, None, None)),
+])
+def test_classify_outcome(num, msg, obj, bound, want):
+    from uniride_core.exact.ampl_backend import classify_outcome
+
+    out = classify_outcome(num, msg, obj, bound)
+    assert (out.status, out.stop_reason, out.timing_dependent, out.objective, out.bound_ceil) == want
+
+
+def test_classify_outcome_rejects_fractional_incumbent():
+    from uniride_core.exact.ampl_backend import classify_outcome
+
+    assert classify_outcome(0, "optimal solution", 28.4, 28.0).status == "rejected"
+
+
+# ---------- stage orchestration (section 1.1 "Stage 2 when stage 1 is not proven") ----------
+def _fake(outcomes):
+    from uniride_core.exact.ampl_backend import classify_outcome
+
+    calls = []
+
+    def call(stage, k_fix):
+        calls.append((stage, k_fix))
+        return classify_outcome(*outcomes[stage])
+
+    return call, calls
+
+
+def test_stage2_runs_with_incumbent_and_is_non_lexicographic_when_stage1_unproven():
+    from uniride_core.exact.ampl_backend import run_stages
+
+    call, calls = _fake({"stage1": (409, "work limit, feasible solution", 5.0, 3.4),
+                         "stage2": (0, "optimal solution", 300.0, 300.0),
+                         "free": (0, "optimal solution", 250.0, 250.0)})
+    out = run_stages(call)
+    assert calls == [("stage1", None), ("stage2", 5), ("free", None)]
+    assert out["stage2"].non_lexicographic is True and out["d_lb"] is None and out["d_lb_free"] == 250
+    assert out["k_lb_solver"] == 4
+
+
+def test_stage2_skipped_without_stage1_incumbent():
+    from uniride_core.exact.ampl_backend import run_stages
+
+    call, calls = _fake({"stage1": (472, "time limit, no solution", 0.0, 2.0),
+                         "free": (0, "optimal solution", 250.0, 250.0)})
+    out = run_stages(call)
+    assert out["stage2"].status == "skipped_no_stage1_incumbent"
+    assert [c[0] for c in calls] == ["stage1", "free"]
+
+
+def test_proven_stage1_gives_lexicographic_stage2_and_d_lb():
+    from uniride_core.exact.ampl_backend import run_stages
+
+    call, calls = _fake({"stage1": (0, "optimal solution", 3.0, 3.0),
+                         "stage2": (402, "time limit, feasible solution", 310.0, 290.5),
+                         "free": (0, "optimal solution", 250.0, 250.0)})
+    out = run_stages(call, d_lb_free=True)
+    assert calls[1] == ("stage2", 3)
+    assert out["stage2"].non_lexicographic is False and out["d_lb"] == 291 and out["k_lb_solver"] == 3
+
+
+def test_stage1_infeasible_skips_everything_else():
+    from uniride_core.exact.ampl_backend import run_stages
+
+    call, calls = _fake({"stage1": (299, "Infeasible constraints determined by presolve.", 0.0, None)})
+    out = run_stages(call)
+    assert out["stage1"].status == "infeasible_proven" and out["stage2"] is None and out["free"] is None
+    assert calls == [("stage1", None)]
+
+
+# ---------- column expansion (E02: a column selected k >= 2 times) ----------
+def test_expansion_gives_each_copy_its_own_occurrences_in_sorted_id_order():
+    from uniride_core.exact.ampl_backend import expand_selection
+
+    L = [[0, 7, 9], [7, 0, 4], [9, 4, 0]]
+    # node order deliberately not id order: A has occurrences b~2, a~1, c~3
+    inst = dict(direction="pickup", matrix=_loc_matrix(L, (1, 1, 1, 2)), location_codes=("A", "A", "A", "B"),
+                classes=("Sw", "Sw", "Sw", "So"), types=_single(sw=1, so=1), ride=50, tour=150,
+                minimize_type=None, quota=None)
+    res = _enum(inst)
+    ids = ("b~2", "a~1", "c~3", "z~1")
+    with_b = next(i for i, c in enumerate(res.columns) if c.multiplicity == (1, 1))
+    only_a = next(i for i, c in enumerate(res.columns) if c.multiplicity == (1, 0))
+    routes = expand_selection(res, [(only_a, 2), (with_b, 1)], ids)
+    assert [r.column_index for r in routes] == sorted([only_a, only_a, with_b])
+    got = sorted(o for r in routes for o in r.occurrence_ids)
+    assert got == sorted(ids)
+    assert only_a < with_b
+    assert [o for r in routes for o in r.occurrence_ids if o != "z~1"] == ["a~1", "b~2", "c~3"]
+    a_routes = [r for r in routes if r.column_index == only_a]
+    assert [r.copy for r in a_routes] == [0, 1]
+    assert len({r.occurrence_ids for r in a_routes}) == 2
+
+
+def test_expansion_refuses_over_or_under_cover():
+    from uniride_core.exact.ampl_backend import expand_selection
+
+    inst = dict(direction="pickup", matrix=_loc_matrix([[0, 7], [7, 0]], (1, 1)), location_codes=("A", "A"),
+                classes=("Sw", "Sw"), types=_single(sw=1, so=0), ride=50, tour=150)
+    res = _enum(inst)
+    with pytest.raises(ValueError):
+        expand_selection(res, [(0, 3)], ("a~1", "a~2"))
+    with pytest.raises(ValueError):
+        expand_selection(res, [(0, 1)], ("a~1", "a~2"))
+
+
+# ---------- requires AMPL: SP vs oracle (section 8 row "SP vs oracle") ----------
+def _check_routes(inst, res, sp):
+    node_of = {i + 1: i + 1 for i in range(len(inst["classes"]))}
+    covered = sorted(o for r in sp.routes for o in r.occurrence_ids)
+    assert covered == sorted(node_of), "every occurrence exactly once"
+    for r in sp.routes:
+        tour, ride = _route_cost(inst["direction"], inst["matrix"], r.occurrence_ids)
+        col = res.columns[r.column_index]
+        assert (tour, ride) == (col.tour, col.ride) and r.type_id == col.type_id
+    counted = [r for r in sp.routes if inst["minimize_type"] is None or r.type_id == inst["minimize_type"]]
+    assert (len(counted), sum(r.cost for r in sp.routes)) == (sp.k, sp.d)
+    if inst["quota"] is not None:
+        assert sum(1 for r in sp.routes if r.type_id == inst["quota"][0]) <= inst["quota"][1]
+
+
+@pytest.mark.requires_ampl
+def test_sp_matches_brute_force_oracle(session):
+    from uniride_core.exact import ampl_backend
+
+    t0 = time.perf_counter()
+    mismatches, counts = [], {"optimal": 0, "infeasible_proven": 0, "lambda_ge_2": 0}
+    for seed in range(ORACLE_DEFAULT):
+        inst = random_instance(seed)
+        res = _enum(inst)
+        want = _oracle(inst).objective
+        sp = ampl_backend.solve_columns(res, occurrence_ids=tuple(range(1, len(inst["classes"]) + 1)),
+                                        minimize_type=inst["minimize_type"], quota=inst["quota"],
+                                        session=session, d_lb_free=False)
+        if want is None:
+            if sp.status != "infeasible_proven":
+                mismatches.append((seed, sp.status, None))
+            counts["infeasible_proven"] += sp.status == "infeasible_proven"
+            continue
+        got = (sp.k, sp.d)
+        if sp.status != "optimal" or got != want or sp.stage1.status != "optimal" or sp.stage2.status != "optimal":
+            mismatches.append((seed, sp.status, got, want))
+            continue
+        _check_routes(inst, res, sp)
+        counts["optimal"] += 1
+        counts["lambda_ge_2"] += any(t >= 2 for _, t in sp.selection)
+    elapsed = time.perf_counter() - t0
+    print(f"SP vs oracle [{session.settings.solver}] {ORACLE_DEFAULT} instances in {elapsed:.1f} s: {counts}")
+    assert mismatches == []
+    assert counts["optimal"] + counts["infeasible_proven"] == ORACLE_DEFAULT
+
+
+@pytest.mark.requires_ampl
+def test_same_multiset_column_twice_is_feasible_and_expanded(session):
+    from uniride_core.exact import ampl_backend
+
+    inst = dict(direction="pickup", matrix=_loc_matrix([[0, 7], [7, 0]], (1, 1)), location_codes=("A", "A"),
+                classes=("Sw", "Sw"), types=_single(sw=1, so=0), ride=50, tour=150, minimize_type=None, quota=None)
+    res = _enum(inst)
+    sp = ampl_backend.solve_columns(res, occurrence_ids=("a~2", "a~1"), session=session)
+    assert sp.status == "optimal" and (sp.k, sp.d) == (2, 28) == _oracle(inst).objective
+    assert sp.selection == ((0, 2),)
+    assert [(r.copy, r.occurrence_ids) for r in sp.routes] == [(0, ("a~1",)), (1, ("a~2",))]
+
+
+@pytest.mark.requires_ampl
+def test_lambda_upper_bound_is_the_cover_floor(session):
+    inst = dict(direction="pickup", matrix=_loc_matrix([[0, 7, 9], [7, 0, 4], [9, 4, 0]], (1, 1, 1, 2, 2)),
+                location_codes=("A", "A", "A", "B", "B"), classes=("Sw", "Sw", "Sw", "So", "So"),
+                types=_single(sw=2, so=2), ride=50, tour=150)
+    res = _enum(inst)
+    bounds = session.declared_lambda_bounds(res)
+    demand = [it.multiplicity for it in res.items]
+    want = [min(demand[i] // a for i, a in enumerate(c.multiplicity) if a > 0) for c in res.columns]
+    assert bounds == want and max(want) >= 2
+
+
+@pytest.mark.requires_ampl
+def test_stage2_keeps_the_stage1_route_count(session):
+    """min D alone would use two direct routes (D = 30); lexicographic (K, D) is (1, 30)."""
+    from uniride_core.exact import ampl_backend
+
+    L = [[0, 10, 10], [5, 0, 25], [5, 25, 0]]
+    inst = dict(direction="pickup", matrix=_loc_matrix(L, (1, 2)), location_codes=("A", "B"), classes=("So", "So"),
+                types=_single(sw=0, so=2), ride=60, tour=150, minimize_type=None, quota=None)
+    res = _enum(inst)
+    sp = ampl_backend.solve_columns(res, occurrence_ids=(1, 2), session=session, d_lb_free=True)
+    assert _oracle(inst).objective == (1, 40)
+    assert (sp.k, sp.d, sp.d_lb) == (1, 40, 40) and sp.status == "optimal"
+    assert sp.d_lb_free == 30 and sp.free.objective == 30
+
+
+@pytest.mark.requires_ampl
+def test_infeasible_wave_is_proven_infeasible(session):
+    from uniride_core.exact import ampl_backend
+
+    inst = dict(direction="pickup", matrix=_loc_matrix([[0, 99], [99, 0]], (1,)), location_codes=("A",),
+                classes=("So",), types=_single(sw=0, so=1), ride=50, tour=150)
+    res = _enum(inst)
+    assert res.columns == ()
+    sp = ampl_backend.solve_columns(res, occurrence_ids=(1,), session=session)
+    assert sp.status == "infeasible_proven" and sp.stage2 is None and sp.routes == ()
+
+
+@pytest.mark.requires_ampl
+def test_result_records_versions_and_options_without_paths(session):
+    from uniride_core.exact import ampl_backend
+
+    sp = ampl_backend.solve_columns(_enum(random_instance(4)), session=session)
+    assert sp.ampl_version.startswith("AMPL Version ") and "\n" not in sp.ampl_version
+    assert re.match(r"^(Gurobi|HiGHS) \d+\.\d+\.\d+$", sp.solver_version)
+    assert sp.amplpy_version and sp.threads == 1 and sp.seed == 0
+    assert sp.option_string == ampl_backend.solver_option_string(session.settings, peak=False)
+    assert sp.ampl_location == "local AMPL installation used" or sp.ampl_location == "amplpy default lookup"
+    blob = repr(sp)
+    assert not re.search(r"@|licen|[A-Za-z]:\\|/Users/", blob, re.I)
+
+
+# ---------- requires AMPL: determinism on archived waves (section 8 row "Determinism") ----------
+@pytest.mark.requires_ampl
+def test_same_archived_waves_twice_give_identical_results():
+    import importlib.util
+
+    from uniride_core.exact import ampl_backend
+    from uniride_core.exact.route_enumeration import enumerate_wave
+
+    _require("gurobi")
+    spec = importlib.util.spec_from_file_location("exact_archive_loader_e2", REPO / "scripts" / "exact_archive_loader.py")
+    loader = importlib.util.module_from_spec(spec)
+    sys.modules["exact_archive_loader_e2"] = loader
+    spec.loader.exec_module(loader)
+    camp = loader.load_campaign(REPO / "docs" / "paper" / "results" / "week-2026-10-05-4sw5so")
+    waves = sorted(camp.waves_for(90), key=lambda w: (-w.legs, w.wave_id))[:5]
+    peaks = {i for v in loader.peak_waves({"4sw5so": camp}).values() for i in v["wave_ids"]}
+
+    def fingerprint(sp):
+        stages = tuple((s.status, s.objective, s.bound, s.stop_reason) for s in (sp.stage1, sp.stage2, sp.free))
+        return (sp.status, sp.k, sp.d, sp.k_lb, sp.d_lb, sp.d_lb_free, sp.selection, sp.routes, stages)
+
+    runs = []
+    for _ in range(2):
+        with ampl_backend.AmplSession(ampl_backend.SolverSettings(solver="gurobi")) as s:
+            runs.append([fingerprint(ampl_backend.solve_wave(w, enumerate_wave(w, camp.fleet_types),
+                                                             peak=w.wave_id in peaks, session=s)) for w in waves])
+    assert runs[0] == runs[1]
+    assert all(fp[0] == "optimal" for fp in runs[0])

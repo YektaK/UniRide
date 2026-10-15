@@ -73,40 +73,92 @@ def run_git(arguments: Sequence[str], cwd: Path | str, *, extra_environment: dic
     return done.stdout
 
 
-def working_copy_drift(git_cwd: Path | str) -> list[str]:
+# git messages are matched in English
+_C_LOCALE = {"LC_ALL": "C"}
+
+# ``git cat-file blob :<spec>`` for a path that is not in the index of a healthy repository exits 128
+# with one of these messages. A corrupt index exits 128 too ("index file smaller than expected"), so
+# the exit status alone is not enough.
+_NOT_IN_INDEX_EXIT_STATUS = 128
+_NOT_IN_INDEX_MESSAGES = ("does not exist", "but not in the index")
+
+
+def _enclosing_dot_git(directory: Path) -> Path | None:
+    """The nearest ``.git`` entry at or above ``directory``, if any."""
+    for candidate in (directory, *directory.parents):
+        if (candidate / ".git").exists():
+            return candidate / ".git"
+    return None
+
+
+def is_git_repository(cwd: Path | str, cache: dict[Path, bool] | None = None) -> bool:
+    """Whether ``cwd`` lies in a git repository, asked of git itself (``git rev-parse --git-dir``).
+
+    ``git diff`` and ``git cat-file`` fail with exit 129 / 128 and the words "not a git repository"
+    both outside a repository and inside one that git refuses to trust (dubious ownership,
+    ``safe.directory``), so their failures cannot be classified by themselves. False only for git
+    missing, or git saying "not a git repository" with no ``.git`` entry at or above ``cwd``;
+    every other failure (dubious ownership, a ``.git`` git cannot read, a timeout) raises
+    :class:`GitQueryFailed`. ``cache`` keeps one answer per directory for one verification run."""
+    key = Path(cwd)
+    if cache is not None and key in cache:
+        return cache[key]
+    try:
+        run_git(["rev-parse", "--git-dir"], key, extra_environment=_C_LOCALE)
+        answer = True
+    except GitQueryFailed as exc:
+        if exc.kind == "unavailable":
+            answer = False
+        elif exc.kind == "exit" and "not a git repository" in exc.stderr.lower():
+            marker = _enclosing_dot_git(key.resolve())
+            if marker is not None:
+                raise GitQueryFailed(
+                    f"git does not recognise {marker} as a repository ({exc.stderr})",
+                    kind="exit", returncode=exc.returncode, stderr=exc.stderr,
+                ) from exc
+            answer = False
+        else:
+            raise
+    if cache is not None:
+        cache[key] = answer
+    return answer
+
+
+def working_copy_drift(git_cwd: Path | str, *, repository_cache: dict[Path, bool] | None = None) -> list[str]:
     """Paths below ``git_cwd`` (relative to it, POSIX) whose working copy differs from the index
     according to ``git diff``. Git applies its own end-of-line normalisation, so a CRLF checkout
     (``core.autocrlf=true``) or an LF checkout is clean and only a real content change is listed.
-    Untracked files are not listed. Without git, or outside a repository, the result is empty (the
-    documented "nothing to compare"); a timeout or any other git failure raises
-    :class:`GitQueryFailed`, because "no drift" would then be a guess."""
+    Untracked files are not listed. Without git, or in a directory that is really not in a
+    repository (:func:`is_git_repository`), the result is empty (the documented "nothing to
+    compare"); a timeout or any other git failure, including a repository git refuses to trust,
+    raises :class:`GitQueryFailed`, because "no drift" would then be a guess."""
     try:
-        # LC_ALL=C: the "not a git repository" test below reads git's English message
-        stdout = run_git(["diff", "--name-only", "-z", "--relative", "--", "."], git_cwd, extra_environment={"LC_ALL": "C"})
+        stdout = run_git(["diff", "--name-only", "-z", "--relative", "--", "."], git_cwd, extra_environment=_C_LOCALE)
     except GitQueryFailed as exc:
-        if exc.kind == "unavailable" or (exc.kind == "exit" and "not a git repository" in exc.stderr.lower()):
+        if exc.kind == "unavailable":
+            return []
+        if exc.kind == "exit" and not is_git_repository(git_cwd, repository_cache):
             return []
         raise
     return sorted(item.decode("utf-8", "replace") for item in stdout.split(b"\0") if item)
 
 
-# ``git cat-file blob :<spec>`` exits 128 ("fatal: ...") for a path that is not in the index and
-# for a directory that is not a repository: the documented disk fallback. Any other exit status,
-# and a timeout, is not that case.
-_NOT_IN_INDEX_EXIT_STATUS = 128
-
-
-def _git_blob(cwd: Path, index_spec: str) -> tuple[bytes | None, str]:
-    """``(blob, "")``, or ``(None, reason)`` for the documented "no blob here" outcomes (not in the
-    index / not a repository: exit 128; git cannot be started). A timeout or an unexpected exit
-    status raises :class:`GitQueryFailed`."""
+def _git_blob(cwd: Path, index_spec: str, repository_cache: dict[Path, bool] | None = None) -> tuple[bytes | None, str]:
+    """``(blob, "")``, or ``(None, reason)`` for the documented "no blob here" outcomes: git cannot
+    be started, ``cwd`` is really not in a repository, or the path is not in the index of a healthy
+    repository (exit 128 with git's "does not exist" / "not in the index" message). A timeout, an
+    unexpected exit status, a repository git refuses to trust or a corrupt index raises
+    :class:`GitQueryFailed`."""
     try:
-        return run_git(["cat-file", "blob", f":{index_spec}"], cwd), ""
+        return run_git(["cat-file", "blob", f":{index_spec}"], cwd, extra_environment=_C_LOCALE), ""
     except GitQueryFailed as exc:
-        if exc.kind == "exit" and exc.returncode == _NOT_IN_INDEX_EXIT_STATUS:
-            return None, "not a tracked file in a git repository: " + exc.stderr
         if exc.kind == "unavailable":
             return None, str(exc)
+        if exc.kind == "exit" and exc.returncode == _NOT_IN_INDEX_EXIT_STATUS:
+            if not is_git_repository(cwd, repository_cache):
+                return None, "not a git repository: " + exc.stderr
+            if any(message in exc.stderr for message in _NOT_IN_INDEX_MESSAGES):
+                return None, "not a tracked file in a git repository: " + exc.stderr
         raise
 
 
@@ -116,6 +168,7 @@ def committed_bytes(
     git_cwd: Path | str | None = None,
     index_spec: str | None = None,
     fallback_sources: Sequence[tuple[Path | str, str]] = (),
+    repository_cache: dict[Path, bool] | None = None,
 ) -> bytes:
     """Return the index (staged) bytes, ``git cat-file blob :<index_spec>`` run in ``git_cwd``; fall
     back to the bytes on disk. The name says "committed" for history; the source is the index.
@@ -126,15 +179,17 @@ def committed_bytes(
     ``fallback_sources`` are further ``(git_cwd, index_spec)`` lookups tried in order before the
     disk is used. The disk fallback (git missing, not a repository, file untracked everywhere)
     logs a warning because the bytes are then whatever this platform's checkout wrote. A git
-    timeout or an unexpected git exit status is NOT such a case: it raises :class:`GitQueryFailed`
+    timeout, an unexpected git exit status, a repository git refuses to trust (dubious ownership)
+    or a corrupt index is NOT such a case: it raises :class:`GitQueryFailed`
     (and no further source is tried), because the disk bytes would then silently replace an
     answer git could not give."""
     path = Path(disk_path)
     sources = [(Path(git_cwd) if git_cwd is not None else path.parent, index_spec if index_spec is not None else f"./{path.name}")]
     sources.extend((Path(cwd), spec) for cwd, spec in fallback_sources)
     reason = ""
+    cache = repository_cache if repository_cache is not None else {}
     for cwd, spec in sources:
-        blob, reason = _git_blob(cwd, spec)
+        blob, reason = _git_blob(cwd, spec, cache)
         if blob is not None:
             return blob
     LOGGER.warning("index bytes unavailable for %s (%s); falling back to disk bytes", path, reason)
@@ -146,11 +201,12 @@ def index_has_blob(
     *,
     git_cwd: Path | str | None = None,
     index_spec: str | None = None,
+    repository_cache: dict[Path, bool] | None = None,
 ) -> bool:
     """True when git's index holds a blob at the same address ``committed_bytes`` would read first
     (default ``:./<name>`` relative to the file's own directory). Never falls back to the disk; a git timeout or
     unexpected exit status raises :class:`GitQueryFailed` instead of answering False."""
     path = Path(disk_path)
     cwd = Path(git_cwd) if git_cwd is not None else path.parent
-    blob, _ = _git_blob(cwd, index_spec if index_spec is not None else f"./{path.name}")
+    blob, _ = _git_blob(cwd, index_spec if index_spec is not None else f"./{path.name}", repository_cache)
     return blob is not None

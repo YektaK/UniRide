@@ -94,7 +94,9 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _canonical_bytes(archived: Path, original_path: str, repo_root: Path | None) -> bytes:
+def _canonical_bytes(
+    archived: Path, original_path: str, repo_root: Path | None, repository_cache: dict[Path, bool] | None = None
+) -> bytes:
     """Bytes a manifest entry describes: the git INDEX blob, not this platform's working copy.
 
     The blob is read at the archived file's own path (``:./name``) once the archive is staged or
@@ -104,7 +106,7 @@ def _canonical_bytes(archived: Path, original_path: str, repo_root: Path | None)
     failure is not that case: it raises ``QuarantineBlocked`` (no disk fallback)."""
     fallback = () if repo_root is None else ((repo_root, original_path),)
     try:
-        return committed_bytes(archived, fallback_sources=fallback)
+        return committed_bytes(archived, fallback_sources=fallback, repository_cache=repository_cache)
     except GitQueryFailed as exc:
         raise QuarantineBlocked(f"cannot read the index bytes of {original_path}: {exc}") from exc
 
@@ -200,9 +202,10 @@ def build_manifest(
         if not _is_repository_relative_path(value):
             raise ValueError("paths must be repository-relative")
     entries = list(withheld)
+    repository_cache: dict[Path, bool] = {}  # one git probe per directory, not per file
     for relative in paths:
         archived = archived_root / Path(*relative.parts)
-        data = _canonical_bytes(archived, (source_root / relative).as_posix(), repo_root)
+        data = _canonical_bytes(archived, (source_root / relative).as_posix(), repo_root, repository_cache)
         entries.append(
             ArchiveEntry(
                 original_path=(source_root / relative).as_posix(),
@@ -236,6 +239,7 @@ def verify_manifest(
     in exactly that state (files moved, nothing staged yet) and passes
     ``allow_unstaged_archive=True``; every other caller wants the report."""
     errors: list[str] = []
+    repository_cache: dict[Path, bool] = {}  # one git probe per directory, not per file
     source_root = PurePosixPath(manifest.source_root)
     archive_root = PurePosixPath(manifest.archive_root)
     for entry in manifest.entries:
@@ -267,12 +271,12 @@ def verify_manifest(
             if (
                 repo_root is not None
                 and not allow_unstaged_archive
-                and not index_has_blob(path)
-                and index_has_blob(path, git_cwd=repo_root, index_spec=entry.original_path)
+                and not index_has_blob(path, repository_cache=repository_cache)
+                and index_has_blob(path, git_cwd=repo_root, index_spec=entry.original_path, repository_cache=repository_cache)
             ):
                 errors.append(f"archive file not tracked in git (stage it): {relative.as_posix()}")
                 continue
-            data = _canonical_bytes(path, entry.original_path, repo_root)
+            data = _canonical_bytes(path, entry.original_path, repo_root, repository_cache)
         except (GitQueryFailed, QuarantineBlocked) as exc:
             # git gave no answer: the file is unverified, which is a problem, not a clean result
             errors.append(f"cannot verify {relative.as_posix()}: {exc}")
@@ -284,7 +288,7 @@ def verify_manifest(
     # the manifest equals the index blob, so a hand-edited working copy is only visible to git
     if archived_root.is_dir():
         try:
-            errors.extend(f"working copy differs from committed: {drifted}" for drifted in working_copy_drift(archived_root))
+            errors.extend(f"working copy differs from committed: {drifted}" for drifted in working_copy_drift(archived_root, repository_cache=repository_cache))
         except GitQueryFailed as exc:
             errors.append(f"cannot check the working copy for drift: {exc}")
     return errors

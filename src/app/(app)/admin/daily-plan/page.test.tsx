@@ -561,4 +561,64 @@ describe("DailyPlanPage", () => {
       expect(document.body.textContent).toContain(copy.MATRIX_STALE);
     });
   });
+
+  describe("solver configuration provenance (H17)", () => {
+    const withConfig = (solverConfig: unknown) => ({ ...readyResponse(), solverConfig }) as unknown as DudulluPreviewResponse;
+    const generateIn = async (locale: "tr" | "en", response: DudulluPreviewResponse) => {
+      testLocale = locale;
+      mocks.run.mockResolvedValue(response);
+      render(<DailyPlanPage />);
+      fireEvent.change(screen.getByLabelText(locale === "tr" ? "Tarih" : "Date"), { target: { value: "2026-10-05" } });
+      fireEvent.click(screen.getByRole("button", { name: locale === "tr" ? "Planı oluştur" : "Create plan" }));
+      await screen.findByTestId("preview-banner");
+    };
+
+    it("shows the built-in defaults and seed in Turkish", async () => {
+      await generateIn("tr", withConfig({ sources: ["default"], seeds: [42] }));
+      expect(screen.getByTestId("solver-config").textContent).toBe("Algoritma ayarları: yerleşik varsayılanlar · tohum 42");
+    });
+
+    it("shows the promoted academic config and seed in English", async () => {
+      await generateIn("en", withConfig({ sources: ["promoted"], seeds: [7] }));
+      expect(screen.getByTestId("solver-config").textContent).toBe("Algorithm settings: promoted academic config · seed 7");
+    });
+
+    it("shows the built-in defaults in English", async () => {
+      await generateIn("en", withConfig({ sources: ["default"], seeds: [42] }));
+      expect(screen.getByTestId("solver-config").textContent).toBe("Algorithm settings: built-in defaults · seed 42");
+    });
+
+    it.each([
+      ["tr", "Algoritma ayarları: karışık · tohum 42"],
+      ["en", "Algorithm settings: mixed · seed 42"],
+    ] as const)("says mixed instead of picking one source (%s)", async (locale, text) => {
+      await generateIn(locale, withConfig({ sources: ["default", "promoted"], seeds: [42] }));
+      expect(screen.getByTestId("solver-config").textContent).toBe(text);
+    });
+
+    it("shows the raw value for an unknown source", async () => {
+      await generateIn("en", withConfig({ sources: ["experimental"], seeds: [1] }));
+      expect(screen.getByTestId("solver-config").textContent).toBe("Algorithm settings: experimental · seed 1");
+    });
+
+    it("shows only the seed when the optimizer did not report a source", async () => {
+      await generateIn("en", withConfig({ sources: [null], seeds: [42] }));
+      expect(screen.getByTestId("solver-config").textContent).toBe("Algorithm settings: seed 42");
+    });
+
+    it("shows nothing for an older optimizer or a response without the field", async () => {
+      await generateIn("en", withConfig({ sources: [null], seeds: [null] }));
+      expect(screen.queryByTestId("solver-config")).toBeNull();
+    });
+
+    it("shows nothing when the response carries no solverConfig", async () => {
+      await generateIn("en", readyResponse());
+      expect(screen.queryByTestId("solver-config")).toBeNull();
+    });
+
+    it("is a small muted line", async () => {
+      await generateIn("en", withConfig({ sources: ["default"], seeds: [42] }));
+      expect(screen.getByTestId("solver-config").className).toContain("text-muted-foreground");
+    });
+  });
 });

@@ -8,6 +8,7 @@ import { compareAllAlgorithms, type StudentForOptimization, type Depot } from "@
 import { MATRIX_ERROR_HTTP_STATUS } from "@/services/optimizer-matrix-errors";
 import { requireAdmin } from "@/lib/admin-auth";
 import { DUDULLU_DEPOT } from "@/services/dudullu-campus";
+import { CLUSTERING_ALGORITHM_NAMES } from "@/lib/clustering-algorithms";
 
 const studentSchema = z.object({
     id: z.string().optional(),
@@ -29,7 +30,7 @@ const compareAlgorithmsSchema = z.object({
         lng: z.number().optional(),
     }).optional(),
     algorithms: z.array(z.string()).optional(),
-    clusteringAlgorithm: z.string().default("sweep"),
+    clusteringAlgorithm: z.enum(CLUSTERING_ALGORITHM_NAMES).default("sweep"),
 });
 
 export async function POST(request: Request) {

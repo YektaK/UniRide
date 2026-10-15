@@ -26,19 +26,12 @@ import type { User } from "@/types";
 import { normalizeAdminUser, type AdminUserRow } from "@/lib/admin-user-mapper";
 import { IEDashboard } from "@/components/admin/ie-dashboard";
 import type { IEResponseData } from "@/types/ie-resource";
+import { CLUSTERING_ALGORITHM_OPTIONS } from "@/lib/clustering-algorithms";
 
 // Algoritmalar merkezi sabitlerden alinir (algorithm-constants.ts → Python registry)
 // Detay: docs/ARCHITECTURE.md#3-algoritma-key-kurali
 
-const clusteringAlgorithms = [
-    { name: "sweep", label: "Sweep Algoritması (Önerilen)" },
-    { name: "clarke_wright", label: "Clarke-Wright Savings" },
-    { name: "k_medoids", label: "K-Medoids (Süre Tabanlı)" },
-    { name: "fuzzy_cmeans", label: "Fuzzy C-Means" },
-    { name: "fuzzy_cmeans_enhanced", label: "Enhanced Fuzzy C-Means" },
-    { name: "hierarchical_fcm", label: "Hierarchical FCM (Büyük Veri)" },
-    { name: "kmeans", label: "K-Means (Eski)" },
-];
+const clusteringAlgorithms = CLUSTERING_ALGORITHM_OPTIONS;
 
 export default function VehiclePlanningPage() {
     const t = useTranslations('page.admin.vehiclePlanning');

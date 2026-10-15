@@ -51,6 +51,8 @@ export default function VehiclePlanningPage() {
     const [planDate, setPlanDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [direction, setDirection] = useState<"pickup" | "dropoff">("pickup");
     const [calculationDirection, setCalculationDirection] = useState<"pickup" | "dropoff">("pickup");
+    // Algorithm and clustering used by the calculation on screen; the dropdowns may change before saving.
+    const [calculationChoice, setCalculationChoice] = useState({ strategy: "genetic_algorithm", clusteringAlgorithm: "sweep" });
     const [isSaving, setIsSaving] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [ieData, setIeData] = useState<IEResponseData | null>(null);
@@ -119,6 +121,7 @@ export default function VehiclePlanningPage() {
             }
 
             setCalculationDirection(direction);
+            setCalculationChoice({ strategy, clusteringAlgorithm });
 
             const data = await adminApi.vehicles.calculate({
                 students: activeStudents as unknown as Array<Record<string, unknown>>,
@@ -160,7 +163,7 @@ export default function VehiclePlanningPage() {
         try {
             setIsSaving(true);
 
-            const planData = formatRoutePlanForSave(result, planDate, calculationDirection, strategy, clusteringAlgorithm);
+            const planData = formatRoutePlanForSave(result, planDate, calculationDirection, calculationChoice.strategy, calculationChoice.clusteringAlgorithm);
             await saveRoutePlan(planData);
 
             toast({
@@ -458,7 +461,7 @@ export default function VehiclePlanningPage() {
                         )}
 
                         {/* Solver provenance (what will be saved with the plan) */}
-                        <SolverProvenanceNote provenance={buildSolverProvenance(result, resolvePersistedAlgorithm(result, strategy))} />
+                        <SolverProvenanceNote provenance={buildSolverProvenance(result, resolvePersistedAlgorithm(result, calculationChoice.strategy))} />
 
                         {/* Message */}
                         <div className="p-3 rounded-lg bg-muted flex items-start gap-2">

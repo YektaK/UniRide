@@ -5,8 +5,10 @@
 -- What this adds
 --   public.route_plans.solver_provenance jsonb NULL
 --     { algorithm_requested, algorithm_used, fallback_reason,
---       effective_config_source, effective_seed } - only the keys the optimizer
---     reported at save time. The API allowlists the keys (src/services/solver-provenance.ts).
+--       effective_config_source, effective_seed } - the optimizer-reported fields plus the
+--     algorithm/clustering choice captured when the calculation ran (never the dropdown at
+--     save time). The API allowlists the keys (src/services/solver-provenance.ts); the values
+--     are asserted by the admin client and only shape-validated server-side.
 --   NULL means "unknown": every row saved before this migration, and plans from an
 --   optimizer that reported no provenance, stay NULL. There is no backfill and no default.
 --   A CHECK keeps the column NULL or a JSON object (no scalar, no array).
@@ -17,8 +19,10 @@
 --   read and write it, drivers read it only for confirmed/active/completed plans.
 --
 -- Safety: idempotent (IF NOT EXISTS, guarded constraint), single transaction, no row is
--- modified. Apply BEFORE deploying the app version that sends solver_provenance, otherwise
--- saving a plan with provenance fails (the app omits the key when it has none).
+-- modified. ORDER IS STRICT: migration first, then the app. The current optimizer sends
+-- algorithm_requested on every response (optimizer_api/routers/optimization.py:284), so an
+-- app deployed before this migration would send solver_provenance with almost every plan
+-- save and those saves would fail with a 500 (unknown column).
 --
 -- Operator note: paste the WHOLE file and press Run; do not use "Run selected".
 -- =============================================================================

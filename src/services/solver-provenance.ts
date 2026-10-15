@@ -44,7 +44,7 @@ export interface SolverProvenanceSource {
   readonly effective_config_source?: unknown;
   readonly effective_seed?: unknown;
   readonly meta?: {
-    readonly algorithmUsed?: unknown; // not read: the caller passes the algorithm that ran
+    readonly algorithmUsed?: unknown;
     readonly algorithmRequested?: unknown;
     readonly fallbackReason?: unknown;
     readonly effectiveConfigSource?: unknown;
@@ -53,12 +53,14 @@ export interface SolverProvenanceSource {
 }
 
 /**
- * Null when the optimizer reported no provenance (older optimizer): `algorithmUsed` alone is
- * already stored in `route_plans.algorithm_used`. Otherwise `algorithm_used` (the algorithm
- * that actually ran, as persisted in the plan) plus each reported field that passes the
- * field schema; a malformed reported value is dropped, never repaired or invented.
+ * Null when the optimizer reported no provenance (older optimizer): the algorithm name alone is
+ * already stored in `route_plans.algorithm_used`. Otherwise the reported fields that pass the
+ * field schema (a malformed value is dropped, never repaired) plus `algorithm_used`: the
+ * optimizer-reported `meta.algorithmUsed` when present (the truth for an M26 fallback), else
+ * `calculationAlgorithm`, the choice captured when the calculation ran (never the dropdown at
+ * save time). Nothing else is inferred.
  */
-export function buildSolverProvenance(source: SolverProvenanceSource, algorithmUsed: string): SolverProvenance | null {
+export function buildSolverProvenance(source: SolverProvenanceSource, calculationAlgorithm: string): SolverProvenance | null {
   const meta = source.meta ?? undefined;
   const reported: Partial<Record<keyof typeof fieldSchemas, unknown>> = {
     algorithm_requested: meta?.algorithmRequested ?? source.algorithm_requested,
@@ -75,7 +77,8 @@ export function buildSolverProvenance(source: SolverProvenanceSource, algorithmU
   }
   if (Object.keys(value).length === 0) return null;
 
-  const used = fieldSchemas.algorithm_used.safeParse(algorithmUsed);
+  const reportedUsed = fieldSchemas.algorithm_used.safeParse(meta?.algorithmUsed);
+  const used = reportedUsed.success ? reportedUsed : fieldSchemas.algorithm_used.safeParse(calculationAlgorithm);
   if (used.success) value.algorithm_used = used.data;
   return value as SolverProvenance;
 }

@@ -1,0 +1,114 @@
+{
+  "work_package": "WP-E1",
+  "design": "docs/designs/EXACT_SOLVER_AMPL_DESIGN.md section 1.1 Step A",
+  "git_commit": "2c8cb7f",
+  "dirty_working_tree": false,
+  "python": "3.14.6",
+  "host_os": "Windows",
+  "caps_used": {
+    "column_cap": 2000000,
+    "label_cap": null,
+    "wall_clock_limit_seconds": 600.0
+  },
+  "label_cap_default_in_code": 5000000,
+  "rows": 684,
+  "caps_fired": [],
+  "per_fleet_R": {
+    "single_4sw5so R50": {
+      "waves": 57,
+      "max_columns": 2149,
+      "max_labels": 4207,
+      "max_seconds": 0.022,
+      "sum_seconds": 0.03,
+      "argmax_labels": "2026-10-05:pickup:525"
+    },
+    "single_4sw5so R60": {
+      "waves": 57,
+      "max_columns": 6225,
+      "max_labels": 15355,
+      "max_seconds": 0.074,
+      "sum_seconds": 0.092,
+      "argmax_labels": "2026-10-05:pickup:525"
+    },
+    "single_4sw5so R70": {
+      "waves": 57,
+      "max_columns": 14537,
+      "max_labels": 42644,
+      "max_seconds": 0.222,
+      "sum_seconds": 0.255,
+      "argmax_labels": "2026-10-05:pickup:525"
+    },
+    "single_4sw5so R90": {
+      "waves": 57,
+      "max_columns": 45170,
+      "max_labels": 171053,
+      "max_seconds": 0.875,
+      "sum_seconds": 0.947,
+      "argmax_labels": "2026-10-05:pickup:525"
+    },
+    "large+sedan R50": {
+      "waves": 57,
+      "max_columns": 2851,
+      "max_labels": 4207,
+      "max_seconds": 0.024,
+      "sum_seconds": 0.034,
+      "argmax_labels": "2026-10-05:pickup:525"
+    },
+    "large+sedan R60": {
+      "waves": 57,
+      "max_columns": 7412,
+      "max_labels": 15355,
+      "max_seconds": 0.087,
+      "sum_seconds": 0.109,
+      "argmax_labels": "2026-10-05:pickup:525"
+    },
+    "large+sedan R70": {
+      "waves": 57,
+      "max_columns": 16072,
+      "max_labels": 42644,
+      "max_seconds": 0.231,
+      "sum_seconds": 0.267,
+      "argmax_labels": "2026-10-05:pickup:525"
+    },
+    "large+sedan R90": {
+      "waves": 57,
+      "max_columns": 47027,
+      "max_labels": 171053,
+      "max_seconds": 0.905,
+      "sum_seconds": 0.985,
+      "argmax_labels": "2026-10-05:pickup:525"
+    },
+    "large+doblo_cap3 R50": {
+      "waves": 57,
+      "max_columns": 2856,
+      "max_labels": 4207,
+      "max_seconds": 0.024,
+      "sum_seconds": 0.035,
+      "argmax_labels": "2026-10-05:pickup:525"
+    },
+    "large+doblo_cap3 R60": {
+      "waves": 57,
+      "max_columns": 7139,
+      "max_labels": 15355,
+      "max_seconds": 0.081,
+      "sum_seconds": 0.103,
+      "argmax_labels": "2026-10-05:pickup:525"
+    },
+    "large+doblo_cap3 R70": {
+      "waves": 57,
+      "max_columns": 15621,
+      "max_labels": 42644,
+      "max_seconds": 0.214,
+      "sum_seconds": 0.25,
+      "argmax_labels": "2026-10-05:pickup:525"
+    },
+    "large+doblo_cap3 R90": {
+      "waves": 57,
+      "max_columns": 46333,
+      "max_labels": 171053,
+      "max_seconds": 0.889,
+      "sum_seconds": 0.962,
+      "argmax_labels": "2026-10-05:pickup:525"
+    }
+  }
+}

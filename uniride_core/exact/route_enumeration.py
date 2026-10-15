@@ -29,7 +29,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Optional, Sequence, Tuple
 
 COLUMN_CAP_DEFAULT = 2_000_000
-# Label cap: PROPOSED from the WP-E1 measurement, pending review before WP-E2 (design 1.1).
+# Label cap: proposed from the WP-E1 measurement, approved by the owner 2026-10-15 (design 1.1, DECISION_LOG E02).
 # Largest measured wave: 171 053 labels (2026-10-05 08:45 pickup, 20 legs, R = 90; every fleet);
 # docs/paper/results/week-2026-10-05-exact/wp-e1-enumeration/. 5 000 000 is about 29x that maximum,
 # about 25-30 s of enumeration on the measuring machine (so it fires long before the 10 min wall

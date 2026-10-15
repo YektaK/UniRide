@@ -31,7 +31,7 @@ Findings:
   labels 4 207 / 15 355 / 42 644 / 171 053 at R = 50 / 60 / 70 / 90 (identical for the three
   fleets, because the large type admits every label any other type admits); columns at R = 90:
   45 170 (single), 47 027 (large+sedan), 46 333 (large+Doblo cap3). About 1 s at R = 90.
-- Proposed label cap: 5 000 000 (about 29x the measured maximum), pending review before WP-E2.
+- Label cap: 5 000 000 (about 29x the measured maximum), approved by the owner 2026-10-15 (DECISION_LOG E02).
   Basis (independent reviewer, 2026-10-15): on the R = 90, 20-leg wave `tracemalloc` peaked at
   44 MB, about 257 bytes per label; on a synthetic 22-location instance the 5 000 000 cap fired
   deterministically at 5 000 001 labels after 22.5-36.5 s, with a peak working set of 949 MB.

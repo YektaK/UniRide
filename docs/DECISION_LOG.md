@@ -51,6 +51,7 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 | A12 | Academic boundaries | 2026-10-13 owner decision: production ignores academic promoted configs unless UNIRIDE_USE_PROMOTED_CONFIG=1; effective config source and seed are reported (H17/M22) | FIXED in repo on `fix/h17-promoted-config-gate` (gate only; the academic import remains, see audit H17) |
 | A13 | Academic boundaries | pre-2026-10-13 results are HISTORICAL_UNVERIFIED: visible, labelled, never pooled; old tuned params retained, not warm-started; cutoff = day the second of two evidence fixes landed (`62673ca` 2026-10-09, `2e157a1` 2026-10-13) | owner decision 2026-10-14, cutoff rationale 2026-10-15; implemented on `fix/legacy-results-obsolete-2026-10-13` |
 | A14 | Academic boundaries | Fix H12 (seeded clustering RNG), M18 (GWO/HHO unrounded cost) and M26 (SOTA adapter truth) although results change; affected pre-fix results are not pooled | Owner approved 2026-10-15; branches `fix/qw7-cluster-rng`, `fix/m18-gwo-hho-unrounded-cost`, `fix/qw11-sota-adapter-truth` |
+| A15 | Academic boundaries | 2026-10-15 owner decision: dashboard descriptive labels (C5-F1) - 'Lower mean gap (descriptive)' and 'Descriptive LaTeX table (not validated for publication)'; no superiority wording from pooled/unvalidated rows | Owner decision 2026-10-15; implemented on `fix/c5f1-descriptive-labels` |
 | S01 | Service boundaries | Authenticated bounded compute; fresh strategies | Documented contract |
 | S02 | Service boundaries | Per-run ownership tokens | Documented design; present security not inferred |
 | S03 | Service boundaries | Narrow remediation and explicit waivers | Historical bounded scope |
@@ -394,6 +395,12 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 - 2026-10-15 lead decision (scope widened under the owner's M18 approval): the same reported-cost fix also covers the core/matrix/legacy executors, the CLI legacy path (cli_engine) and the CLI aggregate rows (stored unrounded), and int() is applied only when every matrix entry is integer-valued, which fixes a silent truncation (e.g. 40.28692 reported as 40 on a fractional distance matrix). TSPLIB integer instances are unchanged; pre-fix CLI rows on fractional matrices are not pooled with later ones.
 - **Rejected/why:** none recorded.
 - **Evidence:** [audit H12, M18, M26, quick fixes QW7/QW11](ULTIMATE_AUDIT_2026-10-01_CLAUDE_OPUS_5_5.md); per-branch tests are listed in each branch's tracker entry. **Check first:** each branch's tracker row and merge commit date, the cut between pre-fix and post-fix results for every affected algorithm, and the fairness protocol before any comparison that spans a fix.
+
+### A15 - dashboard descriptive labels instead of superiority wording (C5-F1)
+
+- **Date/status:** 2026-10-15; owner decision; implemented on `fix/c5f1-descriptive-labels`, not merged. **Chosen/rationale:** the dashboard shows rows that are pooled and not validated, so it must not use superiority wording (AGENTS.md: smoke or pilot runs cannot produce superiority claims; A13: historical rows are never pooled; A09: no inferential claim). The best/better marking is relabelled 'Lower mean gap (descriptive)' (summary highlight caption, pairwise comparison column and caption, edge-frequency algorithm selection) and the LaTeX export 'Descriptive LaTeX table (not validated for publication)' (heading, button, `\caption` and a leading `%` comment in the generated code). The tab title 'Leaderboard' became 'Summary Table & LaTeX'. Labels only: no computation, sort order or selection rule changed.
+- **Rejected/why:** keeping 'best'/'Better'/'paper-ready' with a disclaimer: the wording itself is the claim a reader keeps.
+- **Evidence:** [audit C5-F1, tracker row and remediation entry](ULTIMATE_AUDIT_2026-10-01_CLAUDE_OPUS_5_5.md); `academic_benchmark/tests/test_c5f1_descriptive_labels.py`. **Check first:** the dashboard strings before reintroducing any ranking or 'best' wording, and A09/A13 before pooling rows.
 
 ## Daily workflow
 

@@ -149,7 +149,7 @@ if not progress_df.empty:
 
 # --- SEKMELER (TABS) ---
 tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
-    "🏆 Leaderboard & LaTeX",
+    "📋 Summary Table & LaTeX",
     "📊 Statistical Robustness",
     "🎛️ DoE Parameter Analysis",
     "🔬 Statistical Tests (disabled)",
@@ -159,10 +159,12 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "🚐 Routing Diagnostics"
 ])
 
-# SEKME 1: Liderlik Tablosu ve LaTeX
+# SEKME 1: Ozet Tablosu ve LaTeX
 with tab1:
     st.subheader("Performance Summary (Aggregated)")
-    st.markdown("Averaged metrics across all independent runs. Highlights the best performing algorithms.")
+    st.markdown("Averaged metrics across all independent runs. Highlighted cells mark the "
+                "Lower mean gap (descriptive) per problem (and the lower mean time); rows are pooled "
+                "and not validated, so this is not a performance or superiority claim.")
 
     if not filtered_summary.empty:
         def highlight_best_per_problem(df):
@@ -181,8 +183,9 @@ with tab1:
             use_container_width=True
         )
 
-        st.markdown("### 📜 Export as LaTeX Table")
-        st.markdown("Generates a **paper-ready** LaTeX table with best values in bold.")
+        st.markdown("### 📜 Descriptive LaTeX table (not validated for publication)")
+        st.markdown("Generates a descriptive LaTeX table with the Lower mean gap (descriptive) in bold. "
+                "Rows are pooled and not validated; do not cite as publication evidence.")
 
         col_latex_type, col_latex_btn = st.columns([1, 1])
         with col_latex_type:
@@ -190,7 +193,7 @@ with tab1:
 
         with col_latex_btn:
             st.markdown("&nbsp;")
-            if st.button("Generate Academic LaTeX Code"):
+            if st.button("Generate Descriptive LaTeX Code"):
                 latex_df = filtered_summary.copy()
                 fmt_cols = [c for c in ['avg_gap', 'avg_time_ms'] if c in latex_df.columns]
 
@@ -217,16 +220,18 @@ with tab1:
                 has_bsf = 'gap_type' in latex_df.columns and (latex_df['gap_type'] == 'bsf').any()
                 footnote = r"\textsuperscript{\textdagger} Best-So-Far gap (unknown optimal)" if has_bsf else ""
 
+                latex_caption = "Descriptive LaTeX table (not validated for publication)"
                 if latex_format == "longtable (many rows)":
                     latex_code = latex_df.to_latex(
-                        index=False, escape=False, longtable=True,
+                        index=False, escape=False, longtable=True, caption=latex_caption,
                         column_format="l" + "c" * (len(latex_df.columns) - 1)
                     )
                 else:
                     latex_code = latex_df.to_latex(
-                        index=False, escape=False,
+                        index=False, escape=False, caption=latex_caption,
                         column_format="l" + "c" * (len(latex_df.columns) - 1)
                     )
+                latex_code = f"% {latex_caption}\n" + latex_code
                 if footnote:
                     latex_code += f"\n\n% Note: {footnote}"
                 st.code(latex_code, language='latex')
@@ -348,7 +353,9 @@ with tab5:
 with tab6:
     st.subheader("Pairwise Algorithm Comparison Matrix")
     st.markdown("Gap difference between algorithm pairs per problem. "
-                "**Negative** = Row algorithm better, **Positive** = Column algorithm better.")
+                "**Negative** = Row algorithm has the Lower mean gap (descriptive), "
+                "**Positive** = Column algorithm has the Lower mean gap (descriptive). "
+                "Rows are pooled and not validated; this is not a superiority claim.")
 
     if not filtered_summary.empty and len(selected_algos) >= 2:
         # Build comparison matrix
@@ -370,7 +377,7 @@ with tab6:
                                 "Gap A": round(gap_a, 4),
                                 "Gap B": round(gap_b, 4),
                                 "Difference (A-B)": round(diff, 4),
-                                "Better": algo_a if diff < 0 else algo_b
+                                "Lower mean gap (descriptive)": algo_a if diff < 0 else algo_b
                             })
 
         if comparison_data:
@@ -405,20 +412,22 @@ with tab6:
 # SEKME 7: Edge Frequency Heatmap (NEW)
 with tab7:
     st.subheader("Edge Frequency Analysis")
-    st.markdown("Shows how often each edge appears across top solutions. "
+    st.markdown("Shows how often each edge appears across the solutions of the algorithms with the "
+                "Lower mean gap (descriptive). "
                 "High-frequency edges (>70%) indicate consensus structural patterns.")
 
     if not filtered_summary.empty:
         prob_edge = st.selectbox("Select Problem for Edge Analysis", filtered_summary['problem'].unique())
         prob_summary = filtered_summary[filtered_summary['problem'] == prob_edge]
 
-        # Find best algorithms for this problem
+        # Algorithms with the lower mean gap (descriptive) for this problem
         if 'avg_gap' in prob_summary.columns:
             best_algos = prob_summary.nsmallest(3, 'avg_gap')['strategy'].tolist()
         else:
             best_algos = prob_summary['strategy'].tolist()[:3]
 
-        st.markdown(f"Analyzing edges from top {len(best_algos)} algorithms: **{', '.join(best_algos)}**")
+        st.markdown(f"Analyzing edges from the {len(best_algos)} algorithms with the "
+                    f"Lower mean gap (descriptive): **{', '.join(best_algos)}**")
 
         # Try to load tour data from progress CSV
         if not filtered_progress.empty:

@@ -168,6 +168,28 @@ export function resolvePersistedAlgorithm(optimizationResult: CalculationResult,
         : selectedAlgorithm;
 }
 
+/** What the calculation on screen used; the page captures it when the calculation runs. */
+export interface CalculationChoice {
+    strategy: string;
+    clusteringAlgorithm: string;
+}
+
+/**
+ * Saves a calculation with the algorithm and clustering it was calculated with. Without a
+ * captured choice nothing is saved: the dropdowns at save time are never used instead.
+ */
+export function formatCalculatedPlanForSave(
+    optimizationResult: CalculationResult,
+    planDate: string,
+    requestedDirection: 'pickup' | 'dropoff',
+    choice: CalculationChoice | null,
+): SaveRoutePlanRequest {
+    if (!choice) {
+        throw new Error("No calculation choice was captured; save is blocked");
+    }
+    return formatRoutePlanForSave(optimizationResult, planDate, requestedDirection, choice.strategy, choice.clusteringAlgorithm);
+}
+
 export function formatRoutePlanForSave(
     optimizationResult: CalculationResult,
     planDate: string,

@@ -6,8 +6,8 @@
 --   public.route_plans.solver_provenance jsonb NULL
 --     { algorithm_requested, algorithm_used, fallback_reason,
 --       effective_config_source, effective_seed } - the optimizer-reported fields plus the
---     algorithm/clustering choice captured when the calculation ran (never the dropdown at
---     save time). The API allowlists the keys (src/services/solver-provenance.ts); the values
+--     algorithm choice captured when the calculation ran (never the dropdown at save time);
+--     the clustering choice goes only to route_plans.clustering_used, not into this column. The API allowlists the keys (src/services/solver-provenance.ts); the values
 --     are asserted by the admin client and only shape-validated server-side.
 --   NULL means "unknown": every row saved before this migration, and plans from an
 --   optimizer that reported no provenance, stay NULL. There is no backfill and no default.

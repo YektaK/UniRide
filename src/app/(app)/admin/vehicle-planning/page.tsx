@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Truck, Users, Clock, Calculator, ArrowRight, Info, Activity } from "lucide-react";
 import { adminApi } from "@/lib/admin-api";
 import { ALGORITHM_OPTIONS } from "@/lib/algorithm-constants";
-import { formatRoutePlanForSave, resolvePersistedAlgorithm, saveRoutePlan } from "@/services/route-plans";
+import { formatCalculatedPlanForSave, resolvePersistedAlgorithm, saveRoutePlan, type CalculationChoice } from "@/services/route-plans";
 import { SolverProvenanceNote } from "@/components/admin/solver-provenance-note";
 import { buildSolverProvenance } from "@/services/solver-provenance";
 import type { User } from "@/types";
@@ -52,7 +52,7 @@ export default function VehiclePlanningPage() {
     const [direction, setDirection] = useState<"pickup" | "dropoff">("pickup");
     const [calculationDirection, setCalculationDirection] = useState<"pickup" | "dropoff">("pickup");
     // Algorithm and clustering used by the calculation on screen; the dropdowns may change before saving.
-    const [calculationChoice, setCalculationChoice] = useState({ strategy: "genetic_algorithm", clusteringAlgorithm: "sweep" });
+    const [calculationChoice, setCalculationChoice] = useState<CalculationChoice | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [ieData, setIeData] = useState<IEResponseData | null>(null);
@@ -163,7 +163,7 @@ export default function VehiclePlanningPage() {
         try {
             setIsSaving(true);
 
-            const planData = formatRoutePlanForSave(result, planDate, calculationDirection, calculationChoice.strategy, calculationChoice.clusteringAlgorithm);
+            const planData = formatCalculatedPlanForSave(result, planDate, calculationDirection, calculationChoice);
             await saveRoutePlan(planData);
 
             toast({
@@ -461,7 +461,9 @@ export default function VehiclePlanningPage() {
                         )}
 
                         {/* Solver provenance (what will be saved with the plan) */}
-                        <SolverProvenanceNote provenance={buildSolverProvenance(result, resolvePersistedAlgorithm(result, calculationChoice.strategy))} />
+                        {calculationChoice && (
+                            <SolverProvenanceNote provenance={buildSolverProvenance(result, resolvePersistedAlgorithm(result, calculationChoice.strategy))} />
+                        )}
 
                         {/* Message */}
                         <div className="p-3 rounded-lg bg-muted flex items-start gap-2">

@@ -93,3 +93,56 @@ describe("formatRoutePlanForSave", () => {
     expect(saved.algorithmUsed).toBe("e2bso");
   });
 });
+
+describe("formatRoutePlanForSave solver provenance", () => {
+  type SaveInput = Parameters<typeof formatRoutePlanForSave>[0];
+
+  it("carries the provenance the optimizer reported", () => {
+    const saved = formatRoutePlanForSave(
+      {
+        ...validResult,
+        meta: { algorithmUsed: "ga_split", algorithmRequested: "ga_split", effectiveConfigSource: "default", effectiveSeed: 42 },
+      } as unknown as SaveInput,
+      "2026-09-08", "pickup", "ga_split", "sweep",
+    );
+
+    expect(saved.solverProvenance).toEqual({
+      algorithm_requested: "ga_split",
+      algorithm_used: "ga_split",
+      effective_config_source: "default",
+      effective_seed: 42,
+    });
+  });
+
+  it("stores the algorithm that ran and the reason when a fallback was served", () => {
+    const saved = formatRoutePlanForSave(
+      {
+        ...validResult,
+        meta: { algorithmUsed: "greedy_fallback", algorithmRequested: "e2bso", fallbackReason: "solver_error" },
+      } as unknown as SaveInput,
+      "2026-09-08", "pickup", "e2bso", "sweep",
+    );
+
+    expect(saved.solverProvenance).toEqual({
+      algorithm_requested: "e2bso",
+      algorithm_used: "greedy_fallback",
+      fallback_reason: "solver_error",
+    });
+    expect(saved.algorithmUsed).toBe("greedy_fallback");
+  });
+
+  it("omits fields the optimizer did not report", () => {
+    const saved = formatRoutePlanForSave(
+      { ...validResult, meta: { effectiveSeed: 9 } } as unknown as SaveInput,
+      "2026-09-08", "pickup", "ga_split", "sweep",
+    );
+
+    expect(saved.solverProvenance).toEqual({ algorithm_used: "ga_split", effective_seed: 9 });
+  });
+
+  it("has no provenance for an older optimizer that reported none", () => {
+    const saved = formatRoutePlanForSave(validResult, "2026-09-08", "pickup", "ga", "sweep");
+
+    expect(saved).not.toHaveProperty("solverProvenance");
+  });
+});

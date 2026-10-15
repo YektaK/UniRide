@@ -228,3 +228,59 @@ describe("VehiclePlanningPage", () => {
     expect(mocks.saveRoutePlan).not.toHaveBeenCalled();
   });
 });
+
+describe("VehiclePlanningPage solver provenance", () => {
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    mocks.getAllUsers.mockReset();
+    mocks.calculate.mockReset();
+    mocks.saveRoutePlan.mockReset();
+    mocks.toast.mockReset();
+  });
+
+  async function calculate() {
+    render(<VehiclePlanningPage />);
+    await screen.findByLabelText("student-1");
+    fireEvent.click(screen.getByLabelText("student-1"));
+    fireEvent.click(screen.getByRole("button", { name: /selectAll/ }));
+    await waitFor(() => expect(mocks.calculate).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({ title: "success" })));
+  }
+
+  it("shows the provenance line and saves the same provenance", async () => {
+    mocks.getAllUsers.mockResolvedValue(students);
+    mocks.calculate.mockResolvedValue({
+      ...resultPickup,
+      meta: { ...resultPickup.meta, algorithmUsed: "ga_split", algorithmRequested: "ga_split", effectiveConfigSource: "default", effectiveSeed: 42 },
+    });
+
+    await calculate();
+
+    expect(await screen.findByTestId("solver-provenance")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /save/ }));
+    await waitFor(() => expect(mocks.saveRoutePlan).toHaveBeenCalledTimes(1));
+    expect(mocks.saveRoutePlan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        solverProvenance: {
+          algorithm_requested: "ga_split",
+          algorithm_used: "genetic_algorithm",
+          effective_config_source: "default",
+          effective_seed: 42,
+        },
+      }),
+    );
+  });
+
+  it("shows no provenance line and sends none for an older optimizer", async () => {
+    mocks.getAllUsers.mockResolvedValue(students);
+    mocks.calculate.mockResolvedValue(resultPickup);
+
+    await calculate();
+
+    expect(screen.queryByTestId("solver-provenance")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /save/ }));
+    await waitFor(() => expect(mocks.saveRoutePlan).toHaveBeenCalledTimes(1));
+    expect(mocks.saveRoutePlan.mock.calls[0]![0]).not.toHaveProperty("solverProvenance");
+  });
+});

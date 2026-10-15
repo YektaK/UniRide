@@ -184,16 +184,20 @@ CREATE TABLE IF NOT EXISTS public.student_leg_decisions (
   PRIMARY KEY (user_id, service_date, direction)
 );
 
+-- search_path pinned: Supabase advisor lint 0011; live apply in
+-- migration 20261016b_apply_student_leg_decisions.sql
 CREATE OR REPLACE FUNCTION public.set_student_leg_decided_at()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
 AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
-    NEW.decided_at := clock_timestamp();
+    NEW.decided_at := pg_catalog.clock_timestamp();
   ELSIF ROW(NEW.decision, NEW.flexibility_minutes) IS DISTINCT FROM
         ROW(OLD.decision, OLD.flexibility_minutes) THEN
-    NEW.decided_at := clock_timestamp();
+    NEW.decided_at := pg_catalog.clock_timestamp();
   ELSE
     NEW.decided_at := OLD.decided_at;
   END IF;

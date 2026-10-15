@@ -35,6 +35,8 @@ export interface DbRoutePlan {
   updated_at: string | null;
   confirmed_at: string | null;
   completed_at: string | null;
+  /** Solver provenance reported at save time; null = unknown (migration 20261016c). */
+  solver_provenance: Json | null;
 }
 
 export interface DbSandboxScenario {
@@ -95,7 +97,7 @@ export interface Database {
       };
       route_plans: {
         Row: DbRoutePlan;
-        Insert: Omit<DbRoutePlan, "id" | "created_at"> & { id?: string; created_at?: string };
+        Insert: Omit<DbRoutePlan, "id" | "created_at" | "solver_provenance"> & { id?: string; created_at?: string; solver_provenance?: Json | null };
         Update: Partial<Omit<DbRoutePlan, "id" | "created_at">>;
         Relationships: [];
       };

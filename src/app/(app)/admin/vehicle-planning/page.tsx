@@ -21,7 +21,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Truck, Users, Clock, Calculator, ArrowRight, Info, Activity } from "lucide-react";
 import { adminApi } from "@/lib/admin-api";
 import { ALGORITHM_OPTIONS } from "@/lib/algorithm-constants";
-import { formatRoutePlanForSave, saveRoutePlan } from "@/services/route-plans";
+import { formatCalculatedPlanForSave, resolvePersistedAlgorithm, saveRoutePlan, type CalculationChoice } from "@/services/route-plans";
+import { SolverProvenanceNote } from "@/components/admin/solver-provenance-note";
+import { buildSolverProvenance } from "@/services/solver-provenance";
 import type { User } from "@/types";
 import { normalizeAdminUser, type AdminUserRow } from "@/lib/admin-user-mapper";
 import { IEDashboard } from "@/components/admin/ie-dashboard";
@@ -49,6 +51,8 @@ export default function VehiclePlanningPage() {
     const [planDate, setPlanDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [direction, setDirection] = useState<"pickup" | "dropoff">("pickup");
     const [calculationDirection, setCalculationDirection] = useState<"pickup" | "dropoff">("pickup");
+    // Algorithm and clustering used by the calculation on screen; the dropdowns may change before saving.
+    const [calculationChoice, setCalculationChoice] = useState<CalculationChoice | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [ieData, setIeData] = useState<IEResponseData | null>(null);
@@ -117,6 +121,7 @@ export default function VehiclePlanningPage() {
             }
 
             setCalculationDirection(direction);
+            setCalculationChoice({ strategy, clusteringAlgorithm });
 
             const data = await adminApi.vehicles.calculate({
                 students: activeStudents as unknown as Array<Record<string, unknown>>,
@@ -158,7 +163,7 @@ export default function VehiclePlanningPage() {
         try {
             setIsSaving(true);
 
-            const planData = formatRoutePlanForSave(result, planDate, calculationDirection, strategy, clusteringAlgorithm);
+            const planData = formatCalculatedPlanForSave(result, planDate, calculationDirection, calculationChoice);
             await saveRoutePlan(planData);
 
             toast({
@@ -453,6 +458,11 @@ export default function VehiclePlanningPage() {
                                     </div>
                                 ))}
                             </div>
+                        )}
+
+                        {/* Solver provenance (what will be saved with the plan) */}
+                        {calculationChoice && (
+                            <SolverProvenanceNote provenance={buildSolverProvenance(result, resolvePersistedAlgorithm(result, calculationChoice.strategy))} />
                         )}
 
                         {/* Message */}

@@ -202,6 +202,29 @@ describe("optimizer-service SOTA fallback labelling (M26)", () => {
     });
   });
 
+  it("forwards the effective config source and seed when the optimizer reports them (H17)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, algorithm_used: "ga_split", effective_config_source: "default", effective_seed: 42, routes: [], total_vehicles: 1, total_duration_minutes: 20, execution_time_seconds: 0.5 }),
+    }));
+
+    const result = await optimizeRoutes(students, depot);
+
+    expect(result).toMatchObject({ effective_config_source: "default", effective_seed: 42 });
+  });
+
+  it("omits the effective config keys when the optimizer reports none", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, algorithm_used: "ga", routes: [], total_vehicles: 1, total_duration_minutes: 20, execution_time_seconds: 0.5 }),
+    }));
+
+    const result = await optimizeRoutes(students, depot);
+
+    expect(result).not.toHaveProperty("effective_config_source");
+    expect(result).not.toHaveProperty("effective_seed");
+  });
+
   it("omits fallback_reason when the requested algorithm ran", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,

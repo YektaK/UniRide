@@ -228,3 +228,126 @@ describe("VehiclePlanningPage", () => {
     expect(mocks.saveRoutePlan).not.toHaveBeenCalled();
   });
 });
+
+describe("VehiclePlanningPage solver provenance", () => {
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    mocks.getAllUsers.mockReset();
+    mocks.calculate.mockReset();
+    mocks.saveRoutePlan.mockReset();
+    mocks.toast.mockReset();
+  });
+
+  function paramControls() {
+    const controls = screen.getAllByTestId("param-control") as HTMLSelectElement[];
+    const strategy = controls.find((c) => c.value === "genetic_algorithm" || Array.from(c.options).some((o) => o.value === "genetic_algorithm"))!;
+    const clustering = controls.find((c) => Array.from(c.options).some((o) => o.value === "sweep"))!;
+    const other = (control: HTMLSelectElement, not: string) => Array.from(control.options).map((o) => o.value).find((v) => v !== not)!;
+    return { strategy, clustering, otherStrategy: other(strategy, "genetic_algorithm"), otherClustering: other(clustering, "sweep") };
+  }
+
+  async function calculate(beforeCalculate?: () => void) {
+    render(<VehiclePlanningPage />);
+    await screen.findByLabelText("student-1");
+    fireEvent.click(screen.getByLabelText("student-1"));
+    beforeCalculate?.();
+    fireEvent.click(screen.getByRole("button", { name: /selectAll/ }));
+    await waitFor(() => expect(mocks.calculate).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({ title: "success" })));
+  }
+
+  it("shows the provenance line and saves the same provenance", async () => {
+    mocks.getAllUsers.mockResolvedValue(students);
+    mocks.calculate.mockResolvedValue({
+      ...resultPickup,
+      meta: { ...resultPickup.meta, algorithmUsed: "ga_split", algorithmRequested: "ga_split", effectiveConfigSource: "default", effectiveSeed: 42 },
+    });
+
+    await calculate();
+
+    expect(await screen.findByTestId("solver-provenance")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /save/ }));
+    await waitFor(() => expect(mocks.saveRoutePlan).toHaveBeenCalledTimes(1));
+    expect(mocks.saveRoutePlan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        solverProvenance: {
+          algorithm_requested: "ga_split",
+          algorithm_used: "ga_split",
+          effective_config_source: "default",
+          effective_seed: 42,
+        },
+      }),
+    );
+  });
+
+  it("saves the NON-default algorithm and clustering chosen at calculation time after the dropdowns are switched back", async () => {
+    mocks.getAllUsers.mockResolvedValue(students);
+    mocks.calculate.mockResolvedValue({
+      ...resultPickup,
+      meta: { ...resultPickup.meta, algorithmRequested: "ga_split", effectiveConfigSource: "default", effectiveSeed: 42 },
+    });
+
+    let chosen: ReturnType<typeof paramControls>;
+    await calculate(() => {
+      // Non-default selections BEFORE calculating (the defaults equal the page's initial state).
+      chosen = paramControls();
+      fireEvent.change(chosen.strategy, { target: { value: chosen.otherStrategy } });
+      fireEvent.change(chosen.clustering, { target: { value: chosen.otherClustering } });
+    });
+    expect(mocks.calculate).toHaveBeenCalledWith(
+      expect.objectContaining({ strategy: chosen!.otherStrategy, clusteringAlgorithm: chosen!.otherClustering }),
+    );
+
+    // Switch both dropdowns back to the defaults AFTER the calculation, then save.
+    const after = paramControls();
+    fireEvent.change(after.strategy, { target: { value: "genetic_algorithm" } });
+    fireEvent.change(after.clustering, { target: { value: "sweep" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /save/ }));
+    await waitFor(() => expect(mocks.saveRoutePlan).toHaveBeenCalledTimes(1));
+    const saved = mocks.saveRoutePlan.mock.calls[0]![0];
+    expect(saved.algorithmUsed).toBe(chosen!.otherStrategy);
+    expect(saved.clusteringUsed).toBe(chosen!.otherClustering);
+    expect(saved.solverProvenance).toEqual({
+      algorithm_requested: "ga_split",
+      algorithm_used: chosen!.otherStrategy,
+      effective_config_source: "default",
+      effective_seed: 42,
+    });
+  });
+
+  it("still saves greedy_fallback after the dropdown changed when a fallback ran (M26)", async () => {
+    mocks.getAllUsers.mockResolvedValue(students);
+    mocks.calculate.mockResolvedValue({
+      ...resultPickup,
+      meta: { ...resultPickup.meta, algorithmUsed: "greedy_fallback", algorithmRequested: "genetic_algorithm", fallbackReason: "solver_error" },
+    });
+
+    await calculate();
+    const after = paramControls();
+    fireEvent.change(after.strategy, { target: { value: after.otherStrategy } });
+
+    fireEvent.click(screen.getByRole("button", { name: /save/ }));
+    await waitFor(() => expect(mocks.saveRoutePlan).toHaveBeenCalledTimes(1));
+    const saved = mocks.saveRoutePlan.mock.calls[0]![0];
+    expect(saved.algorithmUsed).toBe("greedy_fallback");
+    expect(saved.solverProvenance).toEqual({
+      algorithm_requested: "genetic_algorithm",
+      algorithm_used: "greedy_fallback",
+      fallback_reason: "solver_error",
+    });
+  });
+
+  it("shows no provenance line and sends none for an older optimizer", async () => {
+    mocks.getAllUsers.mockResolvedValue(students);
+    mocks.calculate.mockResolvedValue(resultPickup);
+
+    await calculate();
+
+    expect(screen.queryByTestId("solver-provenance")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /save/ }));
+    await waitFor(() => expect(mocks.saveRoutePlan).toHaveBeenCalledTimes(1));
+    expect(mocks.saveRoutePlan.mock.calls[0]![0]).not.toHaveProperty("solverProvenance");
+  });
+});

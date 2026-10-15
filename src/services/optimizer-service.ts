@@ -113,6 +113,9 @@ export interface OptimizationResult {
     algorithm_requested?: string;
     /** Set only when the requested solver did not run (algorithm_used is then "greedy_fallback"). */
     fallback_reason?: string;
+    /** H17: where the effective solver config came from and the seed used (ga_split family; absent otherwise). */
+    effective_config_source?: string;
+    effective_seed?: number;
     feasibility_certificate?: unknown;
     applied_policy?: AppliedComputePolicyInfo;
 }
@@ -312,6 +315,8 @@ export async function optimizeRoutes(
             total_time_window_violations: data.total_time_window_violations,
             algorithm_requested: data.algorithm_requested,
             ...(data.fallback_reason ? { fallback_reason: data.fallback_reason } : {}),
+            ...(typeof data.effective_config_source === "string" ? { effective_config_source: data.effective_config_source } : {}),
+            ...(typeof data.effective_seed === "number" ? { effective_seed: data.effective_seed } : {}),
             feasibility_certificate: data.feasibility_certificate,
             applied_policy: data.applied_policy,
         };

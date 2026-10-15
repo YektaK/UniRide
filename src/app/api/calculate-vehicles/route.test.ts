@@ -117,6 +117,31 @@ describe("POST /api/calculate-vehicles", () => {
     await expect(response.json()).resolves.toMatchObject({ direction: "pickup" });
   });
 
+  it("passes the effective config source and seed to the client meta (H17)", async () => {
+    requireAdminMock.mockResolvedValue({ id: "admin-1", email: "admin@test", role: "admin" });
+    optimizeRoutesMock.mockResolvedValue(
+      happySolverResult({ direction: "pickup", effective_config_source: "default", effective_seed: 42 }),
+    );
+
+    const { POST } = await import("./route");
+    const response = await POST(validRequest() as never);
+
+    const body = await response.json();
+    expect(body.meta).toMatchObject({ effectiveConfigSource: "default", effectiveSeed: 42 });
+  });
+
+  it("leaves the effective config keys out of meta when the optimizer reported none", async () => {
+    requireAdminMock.mockResolvedValue({ id: "admin-1", email: "admin@test", role: "admin" });
+    optimizeRoutesMock.mockResolvedValue(happySolverResult({ direction: "pickup" }));
+
+    const { POST } = await import("./route");
+    const response = await POST(validRequest() as never);
+
+    const body = await response.json();
+    expect(body.meta).not.toHaveProperty("effectiveConfigSource");
+    expect(body.meta).not.toHaveProperty("effectiveSeed");
+  });
+
   it("rejects a malformed direction with 400 before running the solver", async () => {
     requireAdminMock.mockResolvedValue({ id: "admin-1", email: "admin@test", role: "admin" });
 

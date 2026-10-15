@@ -5,6 +5,7 @@
 
 import type { VehicleRoute, OptimizationResult } from "@/services/optimizer-service";
 import { getAuthToken } from "@/lib/admin-api";
+import { buildSolverProvenance, type SolverProvenance } from "@/services/solver-provenance";
 
 export interface RoutePlan {
     id: string;
@@ -21,6 +22,8 @@ export interface RoutePlan {
     driver_assignments?: Record<string, unknown>[];
     notes?: string;
     created_by?: string;
+    /** What the optimizer reported when the plan was calculated; null/absent = unknown (old plans). */
+    solver_provenance?: SolverProvenance | null;
     created_at: string;
     confirmed_at?: string;
     completed_at?: string;
@@ -37,6 +40,8 @@ export interface SaveRoutePlanRequest {
     routes: VehicleRoute[] | Record<string, unknown>[];
     studentCount: number;
     notes?: string;
+    /** Only the fields the optimizer reported; absent when it reported none. */
+    solverProvenance?: SolverProvenance;
 }
 
 export interface UpdateRoutePlanRequest {
@@ -148,8 +153,45 @@ export async function deleteRoutePlan(id: string): Promise<void> {
     }
 }
 
+type CalculationResult = OptimizationResult & { assignments?: Array<Record<string, unknown>>; meta?: Record<string, unknown>; requiredVehicles?: number; totalDuration?: number };
+
+/**
+ * M26: when the optimizer served a fallback instead of the selected solver, the algorithm that
+ * actually ran is what gets persisted (and shown), never the UI-selected strategy.
+ */
+export function resolvePersistedAlgorithm(optimizationResult: CalculationResult, selectedAlgorithm: string): string {
+    const meta = optimizationResult.meta as { algorithmUsed?: unknown; fallbackReason?: unknown } | undefined;
+    const fallbackReason = optimizationResult.fallback_reason ?? meta?.fallbackReason;
+    const metaAlgorithm = typeof meta?.algorithmUsed === "string" && meta.algorithmUsed ? meta.algorithmUsed : undefined;
+    return fallbackReason
+        ? (metaAlgorithm ?? optimizationResult.algorithm_used ?? "greedy_fallback")
+        : selectedAlgorithm;
+}
+
+/** What the calculation on screen used; the page captures it when the calculation runs. */
+export interface CalculationChoice {
+    strategy: string;
+    clusteringAlgorithm: string;
+}
+
+/**
+ * Saves a calculation with the algorithm and clustering it was calculated with. Without a
+ * captured choice nothing is saved: the dropdowns at save time are never used instead.
+ */
+export function formatCalculatedPlanForSave(
+    optimizationResult: CalculationResult,
+    planDate: string,
+    requestedDirection: 'pickup' | 'dropoff',
+    choice: CalculationChoice | null,
+): SaveRoutePlanRequest {
+    if (!choice) {
+        throw new Error("No calculation choice was captured; save is blocked");
+    }
+    return formatRoutePlanForSave(optimizationResult, planDate, requestedDirection, choice.strategy, choice.clusteringAlgorithm);
+}
+
 export function formatRoutePlanForSave(
-    optimizationResult: OptimizationResult & { assignments?: Array<Record<string, unknown>>; meta?: Record<string, unknown>; requiredVehicles?: number; totalDuration?: number },
+    optimizationResult: CalculationResult,
     planDate: string,
     requestedDirection: 'pickup' | 'dropoff',
     algorithmUsed: string,
@@ -163,14 +205,7 @@ export function formatRoutePlanForSave(
         throw new Error("Calculation result direction does not match the requested direction");
     }
 
-    // M26: when the optimizer served a fallback instead of the selected solver,
-    // persist the algorithm that actually ran, never the UI-selected strategy.
-    const meta = optimizationResult.meta as { algorithmUsed?: unknown; fallbackReason?: unknown } | undefined;
-    const fallbackReason = optimizationResult.fallback_reason ?? meta?.fallbackReason;
-    const metaAlgorithm = typeof meta?.algorithmUsed === "string" && meta.algorithmUsed ? meta.algorithmUsed : undefined;
-    const persistedAlgorithm = fallbackReason
-        ? (metaAlgorithm ?? optimizationResult.algorithm_used ?? "greedy_fallback")
-        : algorithmUsed;
+    const persistedAlgorithm = resolvePersistedAlgorithm(optimizationResult, algorithmUsed);
 
     const routes = (optimizationResult.routes ?? optimizationResult.assignments ?? []) as VehicleRoute[] | Record<string, unknown>[];
 
@@ -186,6 +221,8 @@ export function formatRoutePlanForSave(
 
     const studentCount = routes.reduce((sum: number, route) => sum + countStudents(route), 0);
 
+    const solverProvenance = buildSolverProvenance(optimizationResult, persistedAlgorithm);
+
     return {
         planDate,
         direction: returned,
@@ -196,5 +233,6 @@ export function formatRoutePlanForSave(
         executionTimeSeconds: optimizationResult.execution_time_seconds,
         routes,
         studentCount,
+        ...(solverProvenance ? { solverProvenance } : {}),
     };
 }

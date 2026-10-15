@@ -230,14 +230,19 @@ CREATE INDEX IF NOT EXISTS idx_route_plans_date ON route_plans(plan_date);
 CREATE INDEX IF NOT EXISTS idx_route_plans_status ON route_plans(status);
 CREATE INDEX IF NOT EXISTS idx_sandbox_scenarios_created_by ON sandbox_scenarios(created_by);
 
--- Create updated_at trigger function
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+-- Create updated_at trigger function (search_path pinned: Supabase advisor lint 0011;
+-- migration 20261016_update_updated_at_search_path.sql)
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
+AS $$
 BEGIN
-    NEW.updated_at = NOW();
+    NEW.updated_at := pg_catalog.now();
     RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$;
 
 -- Create triggers for updated_at (drop first if exists)
 DROP TRIGGER IF EXISTS update_users_updated_at ON users;

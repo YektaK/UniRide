@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BENCHMARK_CSV_HEADERS, buildBenchmarkCsv } from "./benchmark-csv";
+import { BENCHMARK_CSV_HEADERS, benchmarkCsvRow, buildBenchmarkCsv, escapeCSV } from "./benchmark-csv";
 
 const base = {
   algorithm: "e2bso",
@@ -44,5 +44,53 @@ describe("buildBenchmarkCsv (M26 follow-up)", () => {
 
     expect(lines[1]).toBe("e2bso,berlin52,1,7542,120,0,2026-10-15T10:00:00Z,,");
     expect(lines[2]).toBe('e2bso,berlin52,2,7542,120,0,2026-10-15T10:00:00Z,true,"bad, ""quoted"""');
+  });
+});
+
+describe("CSV formula injection (OWASP CSV Injection)", () => {
+  it.each(["=1+1", "+1+1", "-2+3", "@SUM(A1)", "\tcmd", "\rcmd", "=HYPERLINK(\"http://x\",\"y\")"])(
+    "prefixes the text cell %j with a single quote",
+    (text) => {
+      const cell = escapeCSV(text);
+      const unquoted = cell.startsWith('"') ? cell.slice(1, -1).replace(/""/g, '"') : cell;
+      expect(unquoted).toBe(`'${text}`);
+    }
+  );
+
+  it("quotes after prefixing when the value also needs CSV quoting", () => {
+    expect(escapeCSV("=A1,B1")).toBe('"\'=A1,B1"');
+    expect(escapeCSV('=HYPERLINK("u")')).toBe('"\'=HYPERLINK(""u"")"');
+  });
+
+  it("leaves harmless text and quoting behaviour unchanged", () => {
+    expect(escapeCSV("berlin52")).toBe("berlin52");
+    expect(escapeCSV("a,b")).toBe('"a,b"');
+    expect(escapeCSV("2026-10-15T10:00:00Z")).toBe("2026-10-15T10:00:00Z");
+    expect(escapeCSV("sota_fallback:solver_error")).toBe("sota_fallback:solver_error");
+    expect(escapeCSV("a=b")).toBe("a=b");
+    expect(escapeCSV(null)).toBe("");
+    expect(escapeCSV(undefined)).toBe("");
+  });
+
+  it("keeps numbers and booleans unchanged, including negative numbers", () => {
+    expect(escapeCSV(-5)).toBe("-5");
+    expect(escapeCSV(-0.25)).toBe("-0.25");
+    expect(escapeCSV(0)).toBe("0");
+    expect(escapeCSV(false)).toBe("false");
+  });
+
+  it("defuses text columns of a benchmark row but not its numeric columns", () => {
+    const line = benchmarkCsvRow({
+      algorithm: "=cmd|' /C calc'!A0",
+      problem: "@evil",
+      run_number: 1,
+      tour_length: -1,
+      elapsed_ms: 5,
+      gap_percent: -0.5,
+      timestamp: "2026-10-15T10:00:00Z",
+      metadata: { execution_failed: true, error_reason: "+SUM(1)" },
+    });
+
+    expect(line).toBe("'=cmd|' /C calc'!A0,'@evil,1,-1,5,-0.5,2026-10-15T10:00:00Z,true,'+SUM(1)");
   });
 });

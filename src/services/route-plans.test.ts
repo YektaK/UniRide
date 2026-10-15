@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { OptimizationResult } from "@/services/optimizer-service";
-import { formatRoutePlanForSave } from "./route-plans";
+import { formatCalculatedPlanForSave, formatRoutePlanForSave } from "./route-plans";
 
 const validResult: OptimizationResult = {
   success: true,
@@ -91,6 +91,22 @@ describe("formatRoutePlanForSave", () => {
     );
 
     expect(saved.algorithmUsed).toBe("e2bso");
+  });
+});
+
+describe("formatCalculatedPlanForSave", () => {
+  it("blocks saving when no calculation choice was captured", () => {
+    expect(() => formatCalculatedPlanForSave(validResult, "2026-09-08", "pickup", null)).toThrow(
+      "No calculation choice was captured; save is blocked",
+    );
+  });
+
+  it("saves with the captured algorithm and clustering", () => {
+    const saved = formatCalculatedPlanForSave(
+      validResult, "2026-09-08", "pickup", { strategy: "ga_split", clusteringAlgorithm: "k_medoids" },
+    );
+    expect(saved.algorithmUsed).toBe("ga_split");
+    expect(saved.clusteringUsed).toBe("k_medoids");
   });
 });
 

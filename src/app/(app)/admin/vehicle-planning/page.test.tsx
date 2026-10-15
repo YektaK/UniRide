@@ -239,10 +239,19 @@ describe("VehiclePlanningPage solver provenance", () => {
     mocks.toast.mockReset();
   });
 
-  async function calculate() {
+  function paramControls() {
+    const controls = screen.getAllByTestId("param-control") as HTMLSelectElement[];
+    const strategy = controls.find((c) => c.value === "genetic_algorithm" || Array.from(c.options).some((o) => o.value === "genetic_algorithm"))!;
+    const clustering = controls.find((c) => Array.from(c.options).some((o) => o.value === "sweep"))!;
+    const other = (control: HTMLSelectElement, not: string) => Array.from(control.options).map((o) => o.value).find((v) => v !== not)!;
+    return { strategy, clustering, otherStrategy: other(strategy, "genetic_algorithm"), otherClustering: other(clustering, "sweep") };
+  }
+
+  async function calculate(beforeCalculate?: () => void) {
     render(<VehiclePlanningPage />);
     await screen.findByLabelText("student-1");
     fireEvent.click(screen.getByLabelText("student-1"));
+    beforeCalculate?.();
     fireEvent.click(screen.getByRole("button", { name: /selectAll/ }));
     await waitFor(() => expect(mocks.calculate).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({ title: "success" })));
@@ -272,32 +281,37 @@ describe("VehiclePlanningPage solver provenance", () => {
     );
   });
 
-  it("saves the algorithm and clustering chosen at calculation time, not the dropdowns at save time", async () => {
+  it("saves the NON-default algorithm and clustering chosen at calculation time after the dropdowns are switched back", async () => {
     mocks.getAllUsers.mockResolvedValue(students);
     mocks.calculate.mockResolvedValue({
       ...resultPickup,
-      meta: { ...resultPickup.meta, algorithmRequested: "genetic_algorithm", effectiveConfigSource: "default", effectiveSeed: 42 },
+      meta: { ...resultPickup.meta, algorithmRequested: "ga_split", effectiveConfigSource: "default", effectiveSeed: 42 },
     });
 
-    await calculate();
+    let chosen: ReturnType<typeof paramControls>;
+    await calculate(() => {
+      // Non-default selections BEFORE calculating (the defaults equal the page's initial state).
+      chosen = paramControls();
+      fireEvent.change(chosen.strategy, { target: { value: chosen.otherStrategy } });
+      fireEvent.change(chosen.clustering, { target: { value: chosen.otherClustering } });
+    });
+    expect(mocks.calculate).toHaveBeenCalledWith(
+      expect.objectContaining({ strategy: chosen!.otherStrategy, clusteringAlgorithm: chosen!.otherClustering }),
+    );
 
-    // Change both dropdowns AFTER the calculation, before saving.
-    const controls = screen.getAllByTestId("param-control") as HTMLSelectElement[];
-    const strategyControl = controls.find((c) => c.value === "genetic_algorithm")!;
-    const clusteringControl = controls.find((c) => c.value === "sweep")!;
-    const otherStrategy = Array.from(strategyControl.options).map((o) => o.value).find((v) => v !== "genetic_algorithm")!;
-    const otherClustering = Array.from(clusteringControl.options).map((o) => o.value).find((v) => v !== "sweep")!;
-    fireEvent.change(strategyControl, { target: { value: otherStrategy } });
-    fireEvent.change(clusteringControl, { target: { value: otherClustering } });
+    // Switch both dropdowns back to the defaults AFTER the calculation, then save.
+    const after = paramControls();
+    fireEvent.change(after.strategy, { target: { value: "genetic_algorithm" } });
+    fireEvent.change(after.clustering, { target: { value: "sweep" } });
 
     fireEvent.click(screen.getByRole("button", { name: /save/ }));
     await waitFor(() => expect(mocks.saveRoutePlan).toHaveBeenCalledTimes(1));
     const saved = mocks.saveRoutePlan.mock.calls[0]![0];
-    expect(saved.algorithmUsed).toBe("genetic_algorithm");
-    expect(saved.clusteringUsed).toBe("sweep");
+    expect(saved.algorithmUsed).toBe(chosen!.otherStrategy);
+    expect(saved.clusteringUsed).toBe(chosen!.otherClustering);
     expect(saved.solverProvenance).toEqual({
-      algorithm_requested: "genetic_algorithm",
-      algorithm_used: "genetic_algorithm",
+      algorithm_requested: "ga_split",
+      algorithm_used: chosen!.otherStrategy,
       effective_config_source: "default",
       effective_seed: 42,
     });
@@ -311,10 +325,8 @@ describe("VehiclePlanningPage solver provenance", () => {
     });
 
     await calculate();
-    const controls = screen.getAllByTestId("param-control") as HTMLSelectElement[];
-    const strategyControl = controls.find((c) => c.value === "genetic_algorithm")!;
-    const otherStrategy = Array.from(strategyControl.options).map((o) => o.value).find((v) => v !== "genetic_algorithm")!;
-    fireEvent.change(strategyControl, { target: { value: otherStrategy } });
+    const after = paramControls();
+    fireEvent.change(after.strategy, { target: { value: after.otherStrategy } });
 
     fireEvent.click(screen.getByRole("button", { name: /save/ }));
     await waitFor(() => expect(mocks.saveRoutePlan).toHaveBeenCalledTimes(1));

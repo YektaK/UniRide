@@ -281,10 +281,20 @@ def _uncommitted_changes(repo_root: Path, source_root: PurePosixPath) -> list[st
     repository without a commit yet, from the index. ``git diff`` normalises line endings itself."""
     environment = git_environment()
     try:
-        has_head = subprocess.run(
+        head = subprocess.run(
             ["git", "rev-parse", "--verify", "--quiet", "HEAD"], cwd=repo_root, capture_output=True,
             env=environment, timeout=_GIT_QUERY_TIMEOUT_SECONDS,
-        ).returncode == 0
+        )
+        # --verify --quiet exits 1 for "no such ref" (a repository without a commit); any other
+        # non-zero status (not a repository, corrupt, ...) is a failure, not "no HEAD"
+        if head.returncode not in (0, 1):
+            detail = (head.stderr or b"").decode("utf-8", "replace").strip()
+            raise QuarantineBlocked(
+                "cannot determine the uncommitted state: git rev-parse HEAD failed"
+                + (f" ({detail})" if detail else f" (exit status {head.returncode})")
+                + "; nothing moved"
+            )
+        has_head = head.returncode == 0
         command = ["git", "diff", "--name-only", "-z", *(["HEAD"] if has_head else []), "--", source_root.as_posix()]
         completed = subprocess.run(
             command, cwd=repo_root, capture_output=True, check=True, env=environment,

@@ -149,3 +149,85 @@ def test_quarantine_refuses_and_moves_nothing_when_git_diff_times_out(tmp_path: 
         _quarantine(repo)
     assert (repo / Path(*SOURCE_ROOT.parts) / "core" / "solver.py").read_bytes() == LF_TEXT
     assert not (repo / "archive").exists()
+
+
+# ------------------------------------------------ P8 boundary states (review round 1)
+
+def test_verify_is_clean_when_the_archive_is_staged_but_the_original_removal_is_not(tmp_path: Path):
+    """`git add archive/` only: the archive path IS in the index while the original still is too.
+    No false "stage it" error (kills the mutation that drops the `not index_has_blob(archive)` guard)."""
+    repo = _committed_source_repo(tmp_path)
+    manifest = _quarantine(repo)
+    archive = repo / Path(*ARCHIVE_ROOT.parts)
+    _git(repo, "add", "archive/")
+    assert _git(repo, "ls-files", "--", "academic_benchmark").strip()  # original still in the index
+    assert verify_manifest(manifest, archive, repo_root=repo) == []
+
+
+def test_verify_is_clean_and_warns_when_neither_path_is_tracked(tmp_path: Path, caplog):
+    """Neither the archive nor the original is in the index: nothing git-side to compare, so the disk
+    bytes stand in with the logged warning (kills the mutation that drops the original-path guard)."""
+    import logging
+
+    repo = _committed_source_repo(tmp_path)
+    manifest = _quarantine(repo)
+    archive = repo / Path(*ARCHIVE_ROOT.parts)
+    _git(repo, "rm", "--cached", "-r", "-q", SOURCE_ROOT.as_posix())
+    with caplog.at_level(logging.WARNING):
+        assert verify_manifest(manifest, archive, repo_root=repo) == []
+    assert any("falling back to disk bytes" in record.getMessage() for record in caplog.records)
+
+
+# ------------------------------------------------ P9: only "no such ref" means "no HEAD"
+
+def _recording_run(rev_parse_status: int, calls: list):
+    def fake_run(command, **kwargs):
+        calls.append(command)
+        if command[1] == "rev-parse":
+            return subprocess.CompletedProcess(args=command, returncode=rev_parse_status, stdout=b"", stderr=b"fatal: not a git repository")
+        return _completed()
+
+    return fake_run
+
+
+def test_rev_parse_failure_other_than_no_such_ref_is_not_treated_as_no_head(tmp_path: Path, monkeypatch):
+    calls: list = []
+    monkeypatch.setattr(module.subprocess, "run", _recording_run(128, calls))
+    with pytest.raises(QuarantineBlocked, match="uncommitted state"):
+        module._uncommitted_changes(tmp_path, SOURCE_ROOT)
+    assert all(command[1] != "diff" for command in calls)  # never went on to diff against the index
+
+
+def test_rev_parse_exit_1_means_no_head_and_diffs_against_the_index(tmp_path: Path, monkeypatch):
+    calls: list = []
+    monkeypatch.setattr(module.subprocess, "run", _recording_run(1, calls))
+    assert module._uncommitted_changes(tmp_path, SOURCE_ROOT) == []
+    (diff,) = [command for command in calls if command[1] == "diff"]
+    assert "HEAD" not in diff
+
+
+def test_a_real_repository_without_a_commit_still_reports_no_uncommitted_changes(tmp_path: Path):
+    repo = tmp_path / "fresh"
+    (repo / "academic_benchmark" / "yaem2026").mkdir(parents=True)
+    (repo / "academic_benchmark" / "yaem2026" / "a.py").write_bytes(LF_TEXT)
+    _git(repo, "init")
+    _git(repo, "add", ".")
+    assert module._uncommitted_changes(repo, SOURCE_ROOT) == []
+
+
+def test_not_a_repository_is_blocked_not_treated_as_no_head(tmp_path: Path):
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    # a stray enclosing repository would make this a repository; pin the lookup to this directory
+    import os
+
+    old = os.environ.get("GIT_CEILING_DIRECTORIES")
+    os.environ["GIT_CEILING_DIRECTORIES"] = str(tmp_path)
+    try:
+        with pytest.raises(QuarantineBlocked, match="uncommitted state"):
+            module._uncommitted_changes(plain, SOURCE_ROOT)
+    finally:
+        if old is None:
+            del os.environ["GIT_CEILING_DIRECTORIES"]
+        else:
+            os.environ["GIT_CEILING_DIRECTORIES"] = old

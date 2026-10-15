@@ -168,3 +168,44 @@ describe("POST /api/calculate-vehicles", () => {
     expect(await response.json()).toEqual({ success: false, error: "Invalid optimization direction" });
   });
 });
+
+describe("POST /api/calculate-vehicles clusteringAlgorithm allowlist", () => {
+  it.each(["not_a_real_algo", "", "SWEEP", 7, null])(
+    "rejects %j with 400 before the optimizer is called",
+    async (bad) => {
+      requireAdminMock.mockResolvedValue({ id: "admin-1" });
+
+      const { POST } = await import("./route");
+      const response = await POST(validRequest({ clusteringAlgorithm: bad }) as never);
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: "Invalid clusteringAlgorithm" });
+      expect(optimizeRoutesMock).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(["kmeans", "fuzzy_cmeans", "fuzzy_cmeans_enhanced", "hierarchical_fcm", "k_medoids", "sweep", "clarke_wright"])(
+    "forwards the known name %s unchanged",
+    async (name) => {
+      requireAdminMock.mockResolvedValue({ id: "admin-1" });
+      optimizeRoutesMock.mockResolvedValue(happySolverResult({ direction: "pickup" }));
+
+      const { POST } = await import("./route");
+      const response = await POST(validRequest({ clusteringAlgorithm: name }) as never);
+
+      expect(response.status).toBe(200);
+      expect(optimizeRoutesMock.mock.calls[0][2]).toMatchObject({ clustering_algorithm: name });
+    }
+  );
+
+  it("defaults to sweep when the field is absent", async () => {
+    requireAdminMock.mockResolvedValue({ id: "admin-1" });
+    optimizeRoutesMock.mockResolvedValue(happySolverResult({ direction: "pickup" }));
+
+    const { POST } = await import("./route");
+    const response = await POST(validRequest() as never);
+
+    expect(response.status).toBe(200);
+    expect(optimizeRoutesMock.mock.calls[0][2]).toMatchObject({ clustering_algorithm: "sweep" });
+  });
+});

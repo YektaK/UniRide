@@ -22,6 +22,7 @@ import { normalizeAlgorithmName } from "@/lib/algorithm-constants";
 import type { IEResponseData, HourlyDemandData, BottleneckData, TimeShiftSuggestion, IERawData } from "@/types/ie-resource";
 import { requireAdmin, handleApiError } from "@/lib/admin-auth";
 import { DUDULLU_DEPOT } from "@/services/dudullu-campus";
+import { isClusteringAlgorithmName } from "@/lib/clustering-algorithms";
 
 // Student info kept in a local lookup map for result enrichment
 interface StudentLookupEntry {
@@ -153,7 +154,7 @@ export async function POST(request: NextRequest) {
             swCapacity?: number;
             soCapacity?: number;
             strategy?: string;
-            clusteringAlgorithm?: string;
+            clusteringAlgorithm?: unknown;
             vehicles?: OptimizationOptions["vehicles"];
             direction?: unknown;
         };
@@ -180,6 +181,14 @@ export async function POST(request: NextRequest) {
 
         const normalizedDirection: "pickup" | "dropoff" =
             directionRaw === "dropoff" ? "dropoff" : "pickup";
+
+        // Kümeleme algoritması: paylaşılan izin listesi (bilinmeyen ad optimizer'a gitmez).
+        if (!isClusteringAlgorithmName(clusteringAlgorithm)) {
+            return NextResponse.json(
+                { error: "Invalid clusteringAlgorithm" },
+                { status: 400 }
+            );
+        }
 
         // Girdi doğrulama
         if (!students || !Array.isArray(students)) {

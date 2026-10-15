@@ -9,6 +9,7 @@ import type { Vehicle } from "@/types";
 import type { DbUser } from "@/types/db";
 import { format, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
+import { escapeHtml } from "@/lib/escape-html";
 
 export interface AssignmentWithDetails {
   assignment: RouteAssignment;
@@ -152,7 +153,7 @@ const generatePDFHTML = (
     <html>
     <head>
       <meta charset="UTF-8">
-      <title>Şoför Görevlendirmeleri - ${formattedDate}</title>
+      <title>Şoför Görevlendirmeleri - ${escapeHtml(formattedDate)}</title>
       <style>
         body {
           font-family: Arial, sans-serif;
@@ -225,7 +226,7 @@ const generatePDFHTML = (
     </head>
     <body>
       <h1>Şoför Görevlendirmeleri</h1>
-      <div class="date">${formattedDate}</div>
+      <div class="date">${escapeHtml(formattedDate)}</div>
   `;
 
   // Summary table
@@ -249,13 +250,13 @@ const generatePDFHTML = (
     const { assignment, vehicle, driver, students } = item;
     html += `
       <tr>
-        <td>${vehicle?.name || "Bilinmeyen"}</td>
-        <td>${vehicle?.plateNumber || "-"}</td>
-        <td>${driver?.name || "Atanmamış"}</td>
-        <td>${format(parseISO(assignment.pickupTime), "HH:mm", { locale: tr })}</td>
-        <td>${format(parseISO(assignment.estimatedDropoffTime), "HH:mm", { locale: tr })}</td>
-        <td>${students.length}</td>
-        <td>${getStatusLabel(assignment.status)}</td>
+        <td>${escapeHtml(vehicle?.name || "Bilinmeyen")}</td>
+        <td>${escapeHtml(vehicle?.plateNumber || "-")}</td>
+        <td>${escapeHtml(driver?.name || "Atanmamış")}</td>
+        <td>${escapeHtml(format(parseISO(assignment.pickupTime), "HH:mm", { locale: tr }))}</td>
+        <td>${escapeHtml(format(parseISO(assignment.estimatedDropoffTime), "HH:mm", { locale: tr }))}</td>
+        <td>${escapeHtml(students.length)}</td>
+        <td>${escapeHtml(getStatusLabel(assignment.status))}</td>
       </tr>
     `;
   });
@@ -271,18 +272,18 @@ const generatePDFHTML = (
     html += `
       <div class="assignment-card">
         <div class="assignment-header">
-          ${vehicle?.name || "Bilinmeyen Araç"} ${vehicle?.plateNumber ? `(${vehicle.plateNumber})` : ""}
+          ${escapeHtml(vehicle?.name || "Bilinmeyen Araç")} ${vehicle?.plateNumber ? `(${escapeHtml(vehicle.plateNumber)})` : ""}
         </div>
         <div class="assignment-details">
-          <div><strong>Şoför:</strong> ${driver?.name || "Atanmamış"}</div>
-          <div><strong>Alış Saati:</strong> ${format(parseISO(assignment.pickupTime), "HH:mm", { locale: tr })}</div>
-          <div><strong>Tahmini Varış:</strong> ${format(parseISO(assignment.estimatedDropoffTime), "HH:mm", { locale: tr })}</div>
-          <div><strong>Kapasite:</strong> ${students.length} / ${vehicle ? vehicle.seatingCapacity + vehicle.wheelchairCapacity : "-"}</div>
-          <div><strong>Durum:</strong> ${getStatusLabel(assignment.status)}</div>
+          <div><strong>Şoför:</strong> ${escapeHtml(driver?.name || "Atanmamış")}</div>
+          <div><strong>Alış Saati:</strong> ${escapeHtml(format(parseISO(assignment.pickupTime), "HH:mm", { locale: tr }))}</div>
+          <div><strong>Tahmini Varış:</strong> ${escapeHtml(format(parseISO(assignment.estimatedDropoffTime), "HH:mm", { locale: tr }))}</div>
+          <div><strong>Kapasite:</strong> ${escapeHtml(students.length)} / ${escapeHtml(vehicle ? vehicle.seatingCapacity + vehicle.wheelchairCapacity : "-")}</div>
+          <div><strong>Durum:</strong> ${escapeHtml(getStatusLabel(assignment.status))}</div>
         </div>
         <div class="students-list">
           <strong>Öğrenciler:</strong><br>
-          ${students.map((s) => `<span class="student-badge">${s.name}${s.studentNumber ? ` (${s.studentNumber})` : ""}</span>`).join("")}
+          ${students.map((s) => `<span class="student-badge">${escapeHtml(s.name)}${s.studentNumber ? ` (${escapeHtml(s.studentNumber)})` : ""}</span>`).join("")}
         </div>
       </div>
     `;

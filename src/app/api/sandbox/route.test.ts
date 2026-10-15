@@ -61,3 +61,50 @@ describe("POST /api/sandbox (fail-closed travel-time matrix)", () => {
     expect(await response.json()).toEqual({ error: "Optimization failed" });
   });
 });
+
+describe("POST /api/sandbox clusteringAlgorithm allowlist", () => {
+  const withAlgo = (value?: unknown) =>
+    new Request("http://localhost/api/sandbox", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        students: [{ id: "s1", location_code: "L1", disability_type: "So" }],
+        vehicles: [{ name: "V1", swCapacity: 4, soCapacity: 5 }],
+        ...(value === undefined ? {} : { clusteringAlgorithm: value }),
+      }),
+    });
+
+  it.each(["not_a_real_algo", "", "SWEEP", 7, null])(
+    "rejects %j with 400 before the optimizer is called",
+    async (bad) => {
+      const { POST } = await import("./route");
+      const response = await POST(withAlgo(bad) as never);
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: "Invalid clusteringAlgorithm" });
+      expect(optimizerFetchMock).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(["kmeans", "fuzzy_cmeans", "fuzzy_cmeans_enhanced", "hierarchical_fcm", "k_medoids", "sweep", "clarke_wright"])(
+    "forwards the known name %s unchanged",
+    async (name) => {
+      optimizerFetchMock.mockResolvedValue(new Response(JSON.stringify({ routes: [] }), { status: 200 }));
+
+      const { POST } = await import("./route");
+      const response = await POST(withAlgo(name) as never);
+
+      expect(response.status).toBe(200);
+      expect(JSON.parse(optimizerFetchMock.mock.calls[0][1].body).clustering_algorithm).toBe(name);
+    }
+  );
+
+  it("defaults to sweep when the field is absent", async () => {
+    optimizerFetchMock.mockResolvedValue(new Response(JSON.stringify({ routes: [] }), { status: 200 }));
+
+    const { POST } = await import("./route");
+    await POST(withAlgo() as never);
+
+    expect(JSON.parse(optimizerFetchMock.mock.calls[0][1].body).clustering_algorithm).toBe("sweep");
+  });
+});

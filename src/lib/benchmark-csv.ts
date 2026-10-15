@@ -30,10 +30,20 @@ export const BENCHMARK_CSV_HEADERS = [
   "error_reason",
 ] as const;
 
+/**
+ * One CSV cell. Decided by the runtime type of the value, not by looking at the
+ * text: numbers (including negative numbers) and booleans are written as is;
+ * TEXT cells that begin with `=`, `+`, `-`, `@`, TAB or CR get a leading single
+ * quote so a spreadsheet app shows them as text instead of running them as a
+ * formula (OWASP "CSV Injection"). Only pass real numbers for numeric columns.
+ */
 export function escapeCSV(value: string | number | boolean | null | undefined): string {
   if (value === null || value === undefined) return "";
-  const str = String(value);
-  if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+  let str = String(value);
+  if (typeof value === "string" && /^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
+  if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
     return `"${str.replace(/"/g, '""')}"`;
   }
   return str;

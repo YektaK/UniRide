@@ -17,6 +17,11 @@ export const CLUSTERING_ALGORITHM_NAMES = [
 
 export type ClusteringAlgorithmName = (typeof CLUSTERING_ALGORITHM_NAMES)[number];
 
+/** Type guard over the shared allowlist (exact, case-sensitive match). */
+export function isClusteringAlgorithmName(value: unknown): value is ClusteringAlgorithmName {
+  return typeof value === "string" && (CLUSTERING_ALGORITHM_NAMES as readonly string[]).includes(value);
+}
+
 /** Option list for the admin selectors (display order, not registry order). */
 export const CLUSTERING_ALGORITHM_OPTIONS: ReadonlyArray<{ name: ClusteringAlgorithmName; label: string }> = [
   { name: "sweep", label: "Sweep Algoritması (Önerilen)" },

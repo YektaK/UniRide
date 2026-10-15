@@ -152,18 +152,14 @@ def test_working_copy_drift_times_out_loudly_instead_of_reporting_no_drift(tmp_p
         cb.working_copy_drift(tmp_path)
 
 
-def test_working_copy_drift_fails_on_an_unexpected_git_exit(tmp_path: Path, monkeypatch):
-    _raise_for(monkeypatch, "diff", subprocess.CalledProcessError(128, "git", stderr=b"fatal: detected dubious ownership"))
-    with pytest.raises(cb.GitQueryFailed, match="dubious ownership"):
-        cb.working_copy_drift(tmp_path)
+def test_working_copy_drift_fails_on_an_unexpected_git_exit_inside_a_repository(tmp_path: Path, monkeypatch):
+    repo = _committed_source_repo(tmp_path)
+    _raise_for(monkeypatch, "diff", subprocess.CalledProcessError(128, "git", stderr=b"fatal: bad object"))
+    with pytest.raises(cb.GitQueryFailed, match="bad object"):
+        cb.working_copy_drift(repo)
 
 
-def test_working_copy_drift_keeps_its_documented_empty_result_outside_a_repository_or_without_git(tmp_path: Path, monkeypatch):
-    _raise_for(
-        monkeypatch, "diff",
-        subprocess.CalledProcessError(128, "git", stderr=b"fatal: not a git repository (or any of the parent directories): .git"),
-    )
-    assert cb.working_copy_drift(tmp_path) == []
+def test_working_copy_drift_keeps_its_documented_empty_result_without_git(tmp_path: Path, monkeypatch):
     _raise_for(monkeypatch, "diff", FileNotFoundError("git"))
     assert cb.working_copy_drift(tmp_path) == []
 
@@ -248,3 +244,113 @@ def test_quarantine_rolls_back_when_reading_the_index_bytes_times_out(tmp_path: 
         _quarantine(repo)
     assert (repo / Path(*SOURCE_ROOT.parts) / "core" / "solver.py").read_bytes() == LF_TEXT
     assert not (repo / "archive").exists()
+
+
+# ------------------------------------- real git: what git does when it cannot trust a directory
+# GIT_TEST_ASSUME_DIFFERENT_OWNER=1 makes git refuse a repository as "dubious ownership". ``git diff``
+# then exits 129 with "Not a git repository" (the SAME words as for a real non-repository) and
+# ``git cat-file`` exits 128: the exit status and the message alone cannot tell the two apart, so the
+# code asks ``git rev-parse --git-dir`` first (review round 1, 2026-10-15).
+
+def _distrusted(monkeypatch):
+    monkeypatch.setenv("GIT_TEST_ASSUME_DIFFERENT_OWNER", "1")
+
+
+def test_the_dubious_ownership_switch_reaches_git_through_the_isolated_environment(monkeypatch):
+    _distrusted(monkeypatch)
+    assert cb.git_environment()["GIT_TEST_ASSUME_DIFFERENT_OWNER"] == "1"
+
+
+def test_working_copy_drift_never_reports_no_drift_for_a_repository_git_distrusts(tmp_path: Path, monkeypatch):
+    repo = _committed_source_repo(tmp_path)
+    (repo / Path(*SOURCE_ROOT.parts) / "core" / "solver.py").write_bytes(b"VALUE = 999\n")  # a real hand edit
+    assert cb.working_copy_drift(repo / Path(*SOURCE_ROOT.parts)) == ["core/solver.py"]  # git can see it
+    _distrusted(monkeypatch)
+    with pytest.raises(cb.GitQueryFailed, match="dubious ownership"):
+        cb.working_copy_drift(repo / Path(*SOURCE_ROOT.parts))
+
+
+def test_committed_bytes_and_index_has_blob_do_not_fall_back_for_a_repository_git_distrusts(tmp_path: Path, monkeypatch):
+    repo = _committed_source_repo(tmp_path)
+    target = repo / Path(*SOURCE_ROOT.parts) / "core" / "solver.py"
+    assert cb.index_has_blob(target) is True
+    _distrusted(monkeypatch)
+    with pytest.raises(cb.GitQueryFailed, match="dubious ownership"):
+        cb.committed_bytes(target)
+    with pytest.raises(cb.GitQueryFailed, match="dubious ownership"):
+        cb.index_has_blob(target)
+
+
+def test_verify_manifest_is_never_clean_for_a_repository_git_distrusts(tmp_path: Path, monkeypatch):
+    repo = _committed_source_repo(tmp_path)
+    manifest = _quarantine(repo)
+    archive = repo / Path(*ARCHIVE_ROOT.parts)
+    _git(repo, "add", "-A")
+    (archive / "core" / "solver.py").write_bytes(b"VALUE = 999\n")  # hand-edited archive file
+    _distrusted(monkeypatch)
+    errors = verify_manifest(manifest, archive, repo_root=repo)
+    assert errors and all("cannot" in error for error in errors)
+
+
+def test_a_real_non_repository_keeps_the_documented_results(tmp_path: Path, caplog):
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    target = plain / "x.txt"
+    target.write_bytes(b"disk\r\n")
+    assert cb.working_copy_drift(plain) == []
+    assert cb.index_has_blob(target) is False
+    assert cb.committed_bytes(target) == b"disk\r\n"
+    assert "falling back to disk bytes" in caplog.text
+
+
+def test_an_untracked_file_in_a_real_repository_keeps_the_disk_fallback(tmp_path: Path):
+    repo = _committed_source_repo(tmp_path)
+    loose = repo / "loose.txt"
+    loose.write_bytes(b"disk\r\n")
+    assert cb.index_has_blob(loose) is False
+    assert cb.committed_bytes(loose) == b"disk\r\n"
+
+
+def test_a_corrupt_index_inside_a_repository_is_not_read_as_not_in_the_index(tmp_path: Path):
+    repo = _committed_source_repo(tmp_path)
+    target = repo / Path(*SOURCE_ROOT.parts) / "core" / "solver.py"
+    (repo / ".git" / "index").write_bytes(b"garbage")
+    with pytest.raises(cb.GitQueryFailed, match="index"):
+        cb.committed_bytes(target)
+    with pytest.raises(cb.GitQueryFailed, match="index"):
+        cb.index_has_blob(target)
+    with pytest.raises(cb.GitQueryFailed, match="index"):
+        cb.working_copy_drift(repo)
+
+
+def test_a_corrupt_dot_git_is_not_read_as_not_a_repository(tmp_path: Path):
+    repo = _committed_source_repo(tmp_path)
+    target = repo / Path(*SOURCE_ROOT.parts) / "core" / "solver.py"
+    (repo / ".git" / "HEAD").write_bytes(b"garbage\n")  # git now answers "not a git repository"
+    with pytest.raises(cb.GitQueryFailed, match="not recognise"):
+        cb.working_copy_drift(repo)
+    with pytest.raises(cb.GitQueryFailed, match="not recognise"):
+        cb.committed_bytes(target)
+
+
+def test_the_repository_probe_is_cached_per_directory(tmp_path: Path, monkeypatch):
+    repo = _committed_source_repo(tmp_path)
+    folder = repo / "loose"
+    folder.mkdir()
+    files = []
+    for name in ("a.txt", "b.txt", "c.txt"):
+        (folder / name).write_bytes(b"disk\n")
+        files.append(folder / name)
+    real_run = subprocess.run
+    probes: list[list[str]] = []
+
+    def counting_run(command, **kwargs):
+        if command[:3] == ["git", "rev-parse", "--git-dir"]:
+            probes.append(list(command))
+        return real_run(command, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", counting_run)
+    cache: dict = {}
+    for item in files:  # untracked everywhere: every lookup fails with exit 128 and needs the probe
+        assert cb.committed_bytes(item, repository_cache=cache) == b"disk\n"
+    assert len(probes) == 1

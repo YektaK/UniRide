@@ -168,6 +168,18 @@ describe("proxy bearer gate", () => {
     }
   );
 
+  it.each(["Basic x", "bearer lowercase", "Token abc"])(
+    "rejects a non-Bearer Authorization header (%s) with 401 and never builds a Supabase client",
+    async (value) => {
+      const { proxy } = await import("./proxy");
+      const res = await proxy(
+        new NextRequest("http://x/api/benchmark/run", { headers: { authorization: value } })
+      );
+      expect(res.status).toBe(401);
+      expect(createClientMock).not.toHaveBeenCalled();
+    }
+  );
+
   it("does not gate look-alike prefixes such as /api/benchmarkX", async () => {
     const { proxy } = await import("./proxy");
     const res = await proxy(new NextRequest("http://x/api/benchmarkX"));

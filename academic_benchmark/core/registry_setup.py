@@ -8,6 +8,7 @@ from uniride_core.algorithms.registry import list_algorithm_names
 from uniride_core.adapters.matrix_builder import MatrixBuilder
 from uniride_core.algorithms.sota_tsp.base_solver import BaseTSPSolver
 from uniride_core.algorithms.engine_factory import CORE_TSP_SOLVERS, FCM_TSP_SOLVERS, create_matrix_engine
+from academic_benchmark.core.reported_cost import report_cycle_cost
 import importlib
 
 
@@ -126,12 +127,12 @@ def _make_core_tsp_executor(algorithm_name, solver):
             seed=seed,
             dimension=problem.dimension,
             optimal=optimal,
-            tour_cost=round(float(cost), 2),
+            tour_cost=float(cost),
             gap_pct=round(gap, 4) if gap is not None else None,
             elapsed_sec=round(elapsed, 4),
             iterations=int(params.get("max_iterations", 0) or 0),
             tour=tour_indices,
-            objective_cost=round(float(cost), 2),
+            objective_cost=float(cost),
             problem_type=str(getattr(problem, "problem_type", "tsp") or "tsp").lower(),
             matrix_kind=matrix_kind,
         )
@@ -163,12 +164,12 @@ def _make_matrix_tsp_executor(algorithm_name: str):
             seed=seed,
             dimension=problem.dimension,
             optimal=optimal,
-            tour_cost=round(cost, 2),
+            tour_cost=cost,
             gap_pct=round(gap, 4) if gap is not None else None,
             elapsed_sec=round(elapsed, 4),
             iterations=int(params.get("max_iterations", params.get("iterations", 0)) or 0),
             tour=[int(node) + 1 for node in getattr(result, "tour", [])] if getattr(result, "tour", None) else None,
-            objective_cost=round(cost, 2),
+            objective_cost=cost,
             problem_type=str(getattr(problem, "problem_type", "tsp") or "tsp").lower(),
             matrix_kind=getattr(routing_problem.matrix, "kind", "distance"),
         )
@@ -429,7 +430,7 @@ def _make_legacy_executor(strategy_payload: any, algorithm_type: str, algorithm_
             b = tour_indices[(k + 1) % len(tour_indices)] - 1
             tour_length += dist_matrix[a][b]
             
-        tour_length = int(tour_length) if not is_tm else round(tour_length, 2)
+        tour_length = tour_length if is_tm else report_cycle_cost(tour_length, dist_matrix)
         
         optimal = getattr(problem, "optimal", None)
         gap = None
@@ -708,12 +709,12 @@ def _make_numba_metah_executor(
             seed=seed,
             dimension=problem.dimension,
             optimal=optimal,
-            tour_cost=round(cost, 2),
+            tour_cost=cost,
             gap_pct=round(gap, 4) if gap is not None else None,
             elapsed_sec=round(elapsed, 4),
             iterations=int(getattr(result, "iterations", 0) or 0),
             tour=tour,
-            objective_cost=round(cost, 2),
+            objective_cost=cost,
             problem_type=str(getattr(problem, "problem_type", "tsp") or "tsp").lower(),
             matrix_kind=matrix_kind,
             evaluations=evaluations,

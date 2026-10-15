@@ -60,6 +60,7 @@ from academic_benchmark.core.algorithm_resolution import (
     resolve_algorithm_id,
 )
 from academic_benchmark.core.algorithm_errors import AlgorithmSelectionError, CandidateAlgorithmError, ExecutorUnavailableError, PlannedAlgorithmError
+from academic_benchmark.core.reported_cost import report_cycle_cost
 from academic_benchmark.core.execution_gateway import execute_preflighted, serialize_preflight_decision
 from academic_benchmark.core.preflight import PreflightRequest, probe_runtime_backends, preflight_run
 from academic_benchmark.engine_core import AcademicAlgorithmDomain, GovernedExecutionRequest, classify_academic_algorithm_id
@@ -630,7 +631,8 @@ def run_single_test_with_matrix(
         a = tour_indices[k]
         b = tour_indices[(k + 1) % len(tour_indices)]
         tour_length += time_matrix[a - 1][b - 1]
-    tour_length = round(tour_length, 2) if getattr(problem, "is_time_matrix", False) else int(tour_length)
+    if not getattr(problem, "is_time_matrix", False):
+        tour_length = report_cycle_cost(tour_length, time_matrix)
 
     optimal = getattr(problem, "optimal", None)
     if optimal and optimal > 0:
@@ -1455,7 +1457,7 @@ def _execute_benchmark_tasks(tasks, workers, metadata, stage_label):
             "timestamp": datetime.now().isoformat(),
             "problem": result["problem"],
             "strategy": result["strategy"],
-            "avg_length": round(result["avg_length"], 4),
+            "avg_length": result["avg_length"],
             "avg_gap": None if math.isnan(result["avg_gap"]) else round(result["avg_gap"], 6),
             "avg_time_ms": round(result["avg_time_ms"], 4),
             "n_runs": result["n_runs"],
@@ -1464,7 +1466,7 @@ def _execute_benchmark_tasks(tasks, workers, metadata, stage_label):
             "gap_type": gap_type_val,
             "problem_type": result.get("problem_type", "tsp"),
             "matrix_kind": result.get("matrix_kind", "distance"),
-            "objective_cost": round(float(result.get("objective_cost", result["avg_length"])), 4),
+            "objective_cost": float(result.get("objective_cost", result["avg_length"])),
             "num_vehicles": result.get("num_vehicles"),
             "capacity_violations": result.get("capacity_violations", 0),
             "tw_violations": result.get("tw_violations", 0),

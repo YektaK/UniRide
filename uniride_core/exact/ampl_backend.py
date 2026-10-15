@@ -451,8 +451,9 @@ class AmplSession:
     def declared_lambda_bounds(self, enumeration) -> list:
         """Declared upper bounds of ``lam`` (the cover floor of E02), read back from AMPL."""
         self._load(enumeration, None, None, sum(it.multiplicity for it in enumeration.items))
-        values = self._ampl.get_parameter("lam_ub").get_values().to_dict()
-        return [int(round(values[r])) for r in range(len(enumeration.columns))]
+        self._ampl.eval("drop FixCount;")
+        values = self._ampl.get_data("{r in COLS} lam[r].ub0").to_dict()  # declared variable bound (not the param)
+        return [int(round(v)) if math.isfinite(v) else v for v in (values[r] for r in range(len(enumeration.columns)))]
 
     def _call(self, stage: str, k_fix: Optional[int], peak: bool, ncols: int) -> StageResult:
         a = self._ampl

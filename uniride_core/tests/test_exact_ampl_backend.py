@@ -18,7 +18,7 @@ from exact_enum_helpers import random_instance
 REPO = Path(__file__).resolve().parents[2]
 EXACT = REPO / "uniride_core" / "exact"
 # Default run: the first ORACLE_DEFAULT generator seeds per solver; UNIRIDE_EXACT_FULL_ORACLE=1 runs all 500
-# (measured runtime in docs/paper/results/week-2026-10-05-exact/wp-e2-calibration/README.md).
+# (measured 2026-10-15: all 500 take 374 s with Gurobi and 555 s with HiGHS; the first 120 about 70 s and 130 s).
 ORACLE_ALL = 500
 ORACLE_DEFAULT = 500 if os.environ.get("UNIRIDE_EXACT_FULL_ORACLE") == "1" else 120
 SOLVERS = ("gurobi", "highs")

@@ -1,0 +1,195 @@
+{
+  "any_limit_hit": false,
+  "dirty_working_tree": true,
+  "fleet": "single_4sw5so",
+  "git_commit": "73d0009",
+  "host_os": "Windows-11",
+  "limits": {
+    "gurobi_peak_work_limit": 300.0,
+    "gurobi_work_limit": 30.0,
+    "mip_gap": 0.0,
+    "mip_gap_abs": 0.99,
+    "peak_wall_seconds": 600,
+    "seed": 0,
+    "threads": 1,
+    "wall_seconds": 60
+  },
+  "peak_waves": {
+    "2026-10-05": {
+      "legs": 20,
+      "wave_ids": [
+        "2026-10-05:pickup:525"
+      ]
+    },
+    "2026-10-06": {
+      "legs": 11,
+      "wave_ids": [
+        "2026-10-06:pickup:525"
+      ]
+    },
+    "2026-10-07": {
+      "legs": 11,
+      "wave_ids": [
+        "2026-10-07:pickup:525"
+      ]
+    },
+    "2026-10-08": {
+      "legs": 10,
+      "wave_ids": [
+        "2026-10-08:pickup:525"
+      ]
+    },
+    "2026-10-09": {
+      "legs": 13,
+      "wave_ids": [
+        "2026-10-09:pickup:525"
+      ]
+    }
+  },
+  "per_solver_and_R": {
+    "gurobi_R50": {
+      "calls": 171,
+      "limit_hit": 0,
+      "max_call_seconds": 2.101,
+      "max_call_seconds_peak": 1.0835,
+      "max_work_units": 0.05,
+      "statuses": {
+        "optimal": 171
+      },
+      "stop_reasons": {
+        "optimal": 171
+      }
+    },
+    "gurobi_R60": {
+      "calls": 171,
+      "limit_hit": 0,
+      "max_call_seconds": 1.168,
+      "max_call_seconds_peak": 1.168,
+      "max_work_units": 0.1,
+      "statuses": {
+        "optimal": 171
+      },
+      "stop_reasons": {
+        "optimal": 171
+      }
+    },
+    "gurobi_R70": {
+      "calls": 171,
+      "limit_hit": 0,
+      "max_call_seconds": 1.4776,
+      "max_call_seconds_peak": 1.4776,
+      "max_work_units": 0.35,
+      "statuses": {
+        "optimal": 171
+      },
+      "stop_reasons": {
+        "optimal": 171
+      }
+    },
+    "gurobi_R90": {
+      "calls": 171,
+      "limit_hit": 0,
+      "max_call_seconds": 5.6836,
+      "max_call_seconds_peak": 5.6836,
+      "max_work_units": 1.64,
+      "statuses": {
+        "optimal": 171
+      },
+      "stop_reasons": {
+        "optimal": 171
+      }
+    },
+    "highs_R50": {
+      "calls": 171,
+      "limit_hit": 0,
+      "max_call_seconds": 4.5666,
+      "max_call_seconds_peak": 4.5666,
+      "max_work_units": null,
+      "statuses": {
+        "optimal": 171
+      },
+      "stop_reasons": {
+        "optimal": 171
+      }
+    },
+    "highs_R60": {
+      "calls": 171,
+      "limit_hit": 0,
+      "max_call_seconds": 2.6775,
+      "max_call_seconds_peak": 2.6775,
+      "max_work_units": null,
+      "statuses": {
+        "optimal": 171
+      },
+      "stop_reasons": {
+        "optimal": 171
+      }
+    },
+    "highs_R70": {
+      "calls": 171,
+      "limit_hit": 0,
+      "max_call_seconds": 11.9436,
+      "max_call_seconds_peak": 11.9436,
+      "max_work_units": null,
+      "statuses": {
+        "optimal": 171
+      },
+      "stop_reasons": {
+        "optimal": 171
+      }
+    },
+    "highs_R90": {
+      "calls": 171,
+      "limit_hit": 0,
+      "max_call_seconds": 114.0805,
+      "max_call_seconds_peak": 114.0805,
+      "max_work_units": null,
+      "statuses": {
+        "optimal": 171
+      },
+      "stop_reasons": {
+        "optimal": 171
+      }
+    }
+  },
+  "proven_optimum_agreement": {
+    "agree": 228,
+    "disagree": 0
+  },
+  "purpose": "WP-E2 work-limit calibration (engineering measurement; no certification, no gap, no claim)",
+  "python_version": "3.14.6",
+  "rides": [
+    50,
+    60,
+    70,
+    90
+  ],
+  "solvers": {
+    "gurobi": {
+      "ampl_location": "local AMPL installation used",
+      "ampl_version": "AMPL Version 20260809 (MSVC 19.44.35228.0, 64-bit)",
+      "amplpy_version": "0.18.0",
+      "option_string": "mip:bestbound=1 tech:threads=1 tech:seed=0 mip:gap=0 mip:gapabs=0.99 lim:time=60 lim:work=30 outlev=1",
+      "option_string_peak": "mip:bestbound=1 tech:threads=1 tech:seed=0 mip:gap=0 mip:gapabs=0.99 lim:time=600 lim:work=300 outlev=1",
+      "solver_version": "Gurobi 13.0.3"
+    },
+    "highs": {
+      "ampl_location": "local AMPL installation used",
+      "ampl_version": "AMPL Version 20260809 (MSVC 19.44.35228.0, 64-bit)",
+      "amplpy_version": "0.18.0",
+      "option_string": "mip:bestbound=1 tech:threads=1 tech:seed=0 mip:gap=0 mip:gapabs=0.99 lim:time=60",
+      "option_string_peak": "mip:bestbound=1 tech:threads=1 tech:seed=0 mip:gap=0 mip:gapabs=0.99 lim:time=600",
+      "solver_version": "HiGHS 1.15.1"
+    }
+  },
+  "source_campaign": "docs/paper/results/week-2026-10-05-4sw5so",
+  "wave_status_counts": {
+    "gurobi": {
+      "optimal": 228
+    },
+    "highs": {
+      "optimal": 228
+    }
+  },
+  "waves_per_ride": 57
+}

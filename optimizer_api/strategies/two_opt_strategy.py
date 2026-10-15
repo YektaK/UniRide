@@ -183,7 +183,8 @@ class TwoOptStrategy(BaseRoutingStrategy):
             sw_capacity=request.sw_capacity,
             so_capacity=request.so_capacity,
             max_tour_time=request.max_travel_time,
-            clustering_algorithm=request.clustering_algorithm or "sweep"
+            clustering_algorithm=request.clustering_algorithm or "sweep",
+            rng=rng,  # strategy's own seeded generator: clustering never uses global random (H12)
         )
 
         def route_optimizer(location_codes: List[str]) -> Dict:

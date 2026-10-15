@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import math
+import random
 from typing import Callable, Dict, List, Optional
 
-from uniride_core.algorithms.clustering import Cluster, Point
+from uniride_core.algorithms.clustering import Cluster, Point, resolve_rng
 from uniride_core.algorithms.clustering_strategies import get_clustering_strategy
 
 RouteOptimizer = Callable[[List[str]], Dict]
@@ -49,11 +50,16 @@ class VehicleCalculator:
         so_capacity: int = 5,
         max_tour_time: int = 120,
         clustering_algorithm: str = "sweep",
+        rng: Optional[random.Random] = None,
     ):
         self.sw_capacity = sw_capacity
         self.so_capacity = so_capacity
         self.max_tour_time = max_tour_time
         self.clustering_algorithm = clustering_algorithm
+        # The caller's seeded generator (audit H12). One generator serves every
+        # clustering attempt of this calculator, so the retry loop in
+        # ``calculate`` still explores different partitions, reproducibly.
+        self.rng = resolve_rng(rng)
 
     def estimate_vehicle_count(self, students: List[Point]) -> int:
         """Estimate the minimum number of vehicles required by vector capacity."""
@@ -71,6 +77,7 @@ class VehicleCalculator:
             self.clustering_algorithm,
             self.sw_capacity,
             self.so_capacity,
+            rng=self.rng,
         )
         return strategy.cluster_students(students, num_vehicles, **kwargs)
 

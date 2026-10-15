@@ -1,25 +1,28 @@
 import math
 import random
-from typing import List, Tuple
-from uniride_core.algorithms.clustering import Point, Cluster, calculate_centroid, validate_cluster_capacity
+from typing import List, Optional, Tuple
+from uniride_core.algorithms.clustering import Point, Cluster, calculate_centroid, resolve_rng, validate_cluster_capacity
 from uniride_core.algorithms.clustering_strategies.base import BaseClusteringStrategy
 from uniride_core.algorithms.distance import haversine_distance
 
-def _initialize_membership_matrix(n: int, k: int) -> List[List[float]]:
+def _initialize_membership_matrix(n: int, k: int, rng: random.Random) -> List[List[float]]:
     U = []
     for _ in range(n):
-        row = [random.random() for _ in range(k)]
+        row = [rng.random() for _ in range(k)]
         s = sum(row)
         U.append([x / s for x in row])
     return U
 
-def fuzzy_c_means_core(points: List[Point], k: int, filter_limit: int = 100, m: float = 2.0) -> List[Cluster]:
+def fuzzy_c_means_core(
+    points: List[Point], k: int, filter_limit: int = 100, m: float = 2.0, rng: Optional[random.Random] = None
+) -> List[Cluster]:
     if not points or k <= 0: return []
+    rng = resolve_rng(rng)
     if k >= len(points):
         return [Cluster(centroid=(p.lat, p.lng), points=[p], sw_count=1 if p.disability_type == "Sw" else 0, so_count=1 if p.disability_type == "So" else 0) for p in points]
 
     n = len(points)
-    U = _initialize_membership_matrix(n, k)
+    U = _initialize_membership_matrix(n, k, rng)
     centroids = [(0.0, 0.0)] * k
     
     for iteration in range(filter_limit):
@@ -78,7 +81,7 @@ class FuzzyCMeansClusteringStrategy(BaseClusteringStrategy):
     """
     
     def cluster_students(self, students: List[Point], num_vehicles: int, **kwargs) -> List[Cluster]:
-        clusters = fuzzy_c_means_core(students, num_vehicles)
+        clusters = fuzzy_c_means_core(students, num_vehicles, rng=self.rng)
         
         # Fallback to recursively split over-capacity clusters just in case
         validated_clusters = []
@@ -103,4 +106,4 @@ class FuzzyCMeansClusteringStrategy(BaseClusteringStrategy):
     def _split_cluster(self, cluster: Cluster) -> List[Cluster]:
         if len(cluster.points) <= 1:
             return [cluster]
-        return fuzzy_c_means_core(cluster.points, 2)
+        return fuzzy_c_means_core(cluster.points, 2, rng=self.rng)

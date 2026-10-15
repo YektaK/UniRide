@@ -1,14 +1,17 @@
 import random
-from typing import List, Tuple
-from uniride_core.algorithms.clustering import Point, Cluster, calculate_centroid, validate_cluster_capacity
+from typing import List, Optional, Tuple
+from uniride_core.algorithms.clustering import Point, Cluster, calculate_centroid, resolve_rng, validate_cluster_capacity
 from uniride_core.algorithms.clustering_strategies.base import BaseClusteringStrategy
 from uniride_core.algorithms.distance import haversine_distance
 
-def initialize_centroids_kmeans_plus_plus(points: List[Point], k: int) -> List[Tuple[float, float]]:
+def initialize_centroids_kmeans_plus_plus(
+    points: List[Point], k: int, rng: Optional[random.Random] = None
+) -> List[Tuple[float, float]]:
     if k <= 0 or not points:
         return []
+    rng = resolve_rng(rng)
     centroids = []
-    first_idx = random.randint(0, len(points) - 1)
+    first_idx = rng.randint(0, len(points) - 1)
     centroids.append((points[first_idx].lat, points[first_idx].lng))
 
     while len(centroids) < k:
@@ -20,7 +23,7 @@ def initialize_centroids_kmeans_plus_plus(points: List[Point], k: int) -> List[T
         total_dist = sum(distances)
         if total_dist == 0:
             break
-        r = random.random() * total_dist
+        r = rng.random() * total_dist
         cumulative = 0
         for i, d in enumerate(distances):
             cumulative += d
@@ -29,12 +32,15 @@ def initialize_centroids_kmeans_plus_plus(points: List[Point], k: int) -> List[T
                 break
     return centroids
 
-def kmeans_clustering_core(points: List[Point], k: int, max_iterations: int = 100) -> List[Cluster]:
+def kmeans_clustering_core(
+    points: List[Point], k: int, max_iterations: int = 100, rng: Optional[random.Random] = None
+) -> List[Cluster]:
     if not points or k <= 0: return []
+    rng = resolve_rng(rng)
     if k >= len(points):
         return [Cluster(centroid=(p.lat, p.lng), points=[p], sw_count=1 if p.disability_type == "Sw" else 0, so_count=1 if p.disability_type == "So" else 0) for p in points]
 
-    centroids = initialize_centroids_kmeans_plus_plus(points, k)
+    centroids = initialize_centroids_kmeans_plus_plus(points, k, rng)
     prev_assignments = [-1] * len(points)
 
     for iteration in range(max_iterations):
@@ -74,7 +80,7 @@ class KMeansClusteringStrategy(BaseClusteringStrategy):
     """
     
     def cluster_students(self, students: List[Point], num_vehicles: int, **kwargs) -> List[Cluster]:
-        clusters = kmeans_clustering_core(students, num_vehicles)
+        clusters = kmeans_clustering_core(students, num_vehicles, rng=self.rng)
         
         # Validate and split over-capacity clusters
         validated_clusters = []
@@ -99,4 +105,4 @@ class KMeansClusteringStrategy(BaseClusteringStrategy):
     def _split_cluster(self, cluster: Cluster) -> List[Cluster]:
         if len(cluster.points) <= 1:
             return [cluster]
-        return kmeans_clustering_core(cluster.points, 2)
+        return kmeans_clustering_core(cluster.points, 2, rng=self.rng)

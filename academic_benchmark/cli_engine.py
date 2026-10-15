@@ -604,8 +604,10 @@ def run_single_test_with_matrix(
     duration_func = create_np_duration_func(np_matrix, unique_locs)
 
     indices = list(range(1, dimension + 1))
-    random.seed(seed)
-    random.shuffle(indices)
+    # Local generator (same permutation as random.seed(seed) + random.shuffle): the
+    # process-global ``random`` state is shared across threads and runs, so it is
+    # never reseeded here (audit H12).
+    random.Random(seed).shuffle(indices)
     initial_route = [f"L{i}" for i in indices]
 
     start_time = time.time()

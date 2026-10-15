@@ -1,22 +1,25 @@
 from typing import List, Dict, Optional
 import random
-from uniride_core.algorithms.clustering import Point, Cluster, calculate_centroid, matrix_travel_time, validate_cluster_capacity
+from uniride_core.algorithms.clustering import Point, Cluster, calculate_centroid, matrix_travel_time, resolve_rng, validate_cluster_capacity
 from uniride_core.algorithms.clustering_strategies.base import BaseClusteringStrategy
 
 def get_duration(p1: Point, p2: Point, time_matrix: Dict) -> float:
     """Directed matrix time; raises ``MissingTravelTimeError`` (no haversine stand-in)."""
     return matrix_travel_time(p1, p2, time_matrix)
 
-def initialize_medoids(points: List[Point], k: int) -> List[Point]:
+def initialize_medoids(points: List[Point], k: int, rng: Optional[random.Random] = None) -> List[Point]:
     if k <= 0 or not points: return []
-    return random.sample(points, min(k, len(points)))
+    return resolve_rng(rng).sample(points, min(k, len(points)))
 
-def k_medoids_clustering_core(points: List[Point], k: int, time_matrix: Dict, max_iterations: int = 50) -> List[Cluster]:
+def k_medoids_clustering_core(
+    points: List[Point], k: int, time_matrix: Dict, max_iterations: int = 50, rng: Optional[random.Random] = None
+) -> List[Cluster]:
     if not points or k <= 0: return []
+    rng = resolve_rng(rng)
     if k >= len(points):
         return [Cluster(centroid=(p.lat, p.lng), points=[p], sw_count=1 if p.disability_type == "Sw" else 0, so_count=1 if p.disability_type == "So" else 0) for p in points]
 
-    medoids = initialize_medoids(points, k)
+    medoids = initialize_medoids(points, k, rng)
     prev_assignments = [-1] * len(points)
     
     for iteration in range(max_iterations):
@@ -69,7 +72,7 @@ class KMedoidsClusteringStrategy(BaseClusteringStrategy):
     
     def cluster_students(self, students: List[Point], num_vehicles: int, **kwargs) -> List[Cluster]:
         time_matrix = kwargs.get("time_matrix", {})
-        clusters = k_medoids_clustering_core(students, num_vehicles, time_matrix)
+        clusters = k_medoids_clustering_core(students, num_vehicles, time_matrix, rng=self.rng)
         
         # Validate and split over-capacity clusters
         validated_clusters = []
@@ -94,4 +97,4 @@ class KMedoidsClusteringStrategy(BaseClusteringStrategy):
     def _split_cluster(self, cluster: Cluster, time_matrix: Dict) -> List[Cluster]:
         if len(cluster.points) <= 1:
             return [cluster]
-        return k_medoids_clustering_core(cluster.points, 2, time_matrix)
+        return k_medoids_clustering_core(cluster.points, 2, time_matrix, rng=self.rng)

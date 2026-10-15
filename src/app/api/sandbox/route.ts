@@ -25,6 +25,7 @@ import {
 import type { Database } from "@/lib/supabase";
 import type { IERawData, IEResponseData, HourlyDemandData, BottleneckData, TimeShiftSuggestion } from "@/types/ie-resource";
 import { DUDULLU_DEPOT } from "@/services/dudullu-campus";
+import { isClusteringAlgorithmName } from "@/lib/clustering-algorithms";
 
 // Default depot — Doğuş Üniversitesi Dudullu Kampüsü
 const DEFAULT_DEPOT = { ...DUDULLU_DEPOT };
@@ -143,7 +144,12 @@ export async function POST(request: NextRequest) {
             allowTimeShift = false,
             strategy = "genetic_algorithm",
             clusteringAlgorithm = "sweep"
-        } = body;
+        } = body as Omit<ReoptimizeRequest, "clusteringAlgorithm"> & { clusteringAlgorithm?: unknown };
+
+        // Shared allowlist: an unknown name never reaches the optimizer.
+        if (!isClusteringAlgorithmName(clusteringAlgorithm)) {
+            return createErrorResponse("Invalid clusteringAlgorithm", 400);
+        }
 
         if (!students || students.length === 0) {
             return createErrorResponse("Öğrenci listesi gerekli", 400);

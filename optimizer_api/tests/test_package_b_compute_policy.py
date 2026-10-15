@@ -479,6 +479,25 @@ def test_runtime_config_rejects_too_few_algorithms(monkeypatch):
         runtime_config.validate_runtime_configuration()
 
 
+def _probe_sys_path_prelude():
+    """Script lines that mirror the supported layout for a direct-module probe.
+
+    The optimizer runs as `python main.py` from optimizer_api/ (optimizer_api
+    modules imported as top-level modules) while `uniride_core` comes from the
+    project install (`pip install -e .`) or the repo root. The probe
+    interpreter may not have the editable install (for example a bare
+    system Python), so the repo root is put on sys.path explicitly; the
+    optimizer_api directory stays first so its modules resolve as top-level.
+    """
+    optimizer_api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    repo_root = os.path.dirname(optimizer_api_dir)
+    return (
+        "import sys\n"
+        f"sys.path.insert(0, {repo_root!r})\n"
+        f"sys.path.insert(0, {optimizer_api_dir!r})\n"
+    )
+
+
 def _direct_probe(script_text, tmp_path, name):
     script = tmp_path / name
     script.write_text(script_text, encoding="utf-8")
@@ -500,11 +519,9 @@ def _direct_probe(script_text, tmp_path, name):
 
 
 def test_direct_module_runtime_config_fallback(tmp_path):
-    optimizer_api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     result = _direct_probe(
-        "import sys\n"
-        f"sys.path.insert(0, {optimizer_api_dir!r})\n"
-        "from runtime_config import validate_runtime_configuration\n"
+        _probe_sys_path_prelude()
+        + "from runtime_config import validate_runtime_configuration\n"
         "validate_runtime_configuration()\n"
         "print('DIRECT_RUNTIME_OK')\n",
         tmp_path,
@@ -514,11 +531,9 @@ def test_direct_module_runtime_config_fallback(tmp_path):
 
 
 def test_direct_module_schemas_fallback(tmp_path):
-    optimizer_api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     result = _direct_probe(
-        "import sys\n"
-        f"sys.path.insert(0, {optimizer_api_dir!r})\n"
-        "from models.schemas import OptimizationRequest\n"
+        _probe_sys_path_prelude()
+        + "from models.schemas import OptimizationRequest\n"
         "request = OptimizationRequest(algorithm='ga', students=[], depot={'id': 'D', 'lat': 0.0, 'lng': 0.0})\n"
         "print('DIRECT_SCHEMAS_OK', len(request.students))\n",
         tmp_path,

@@ -306,6 +306,7 @@ Validate the profile and quarantine before preparing any run:
 
 ```bash
 python -m pytest academic_benchmark/tests/test_bildiri_study_profile.py -q -p no:cacheprovider
+# stage the archive first (git add -A): verify reports archived files that git does not track
 python -m academic_benchmark.archive_manifest verify --repo-root . --manifest archive/academic_benchmark/bildiri2026_legacy/manifest.json
 ```
 

@@ -19,7 +19,7 @@ from typing import Callable, Iterable, Literal
 
 from pydantic import Field, ValidationError, model_validator
 
-from academic_benchmark.committed_bytes import committed_bytes, git_environment, working_copy_drift
+from academic_benchmark.committed_bytes import committed_bytes, git_environment, index_has_blob, working_copy_drift
 from academic_benchmark.contracts.common import RepositoryRelativePath, Sha256Digest, StrictContract
 
 
@@ -87,12 +87,12 @@ def sha256_file(path: Path) -> str:
 
 
 def _canonical_bytes(archived: Path, original_path: str, repo_root: Path | None) -> bytes:
-    """Bytes a manifest entry describes: the committed blob, not this platform's working copy.
+    """Bytes a manifest entry describes: the git INDEX blob, not this platform's working copy.
 
     The blob is read at the archived file's own path (``:./name``) once the archive is staged or
     committed; with ``repo_root`` it is also looked up at ``original_path`` (the pre-move location
-    that is still in the index during a quarantine). Only when neither is tracked do the disk
-    bytes stand in, with a logged warning."""
+    that is still in the index during a quarantine, before anything is staged). Only when neither
+    is tracked do the disk bytes stand in, with a logged warning."""
     fallback = () if repo_root is None else ((repo_root, original_path),)
     return committed_bytes(archived, fallback_sources=fallback)
 
@@ -209,7 +209,20 @@ def build_manifest(
         entries=entries,
     )
 
-def verify_manifest(manifest: ArchiveManifest, archived_root: Path, repo_root: Path | None = None) -> list[str]:
+def verify_manifest(
+    manifest: ArchiveManifest,
+    archived_root: Path,
+    repo_root: Path | None = None,
+    *,
+    allow_unstaged_archive: bool = False,
+) -> list[str]:
+    """Problems found when comparing ``archived_root`` with ``manifest`` (empty list: none).
+
+    With ``repo_root`` an archived file that is not in the git index at its own path, while the
+    pre-move original path still is, is reported: its index bytes cannot be checked at the archive
+    path, so the comparison would only describe the original. ``quarantine_tracked_tree`` verifies
+    in exactly that state (files moved, nothing staged yet) and passes
+    ``allow_unstaged_archive=True``; every other caller wants the report."""
     errors: list[str] = []
     source_root = PurePosixPath(manifest.source_root)
     archive_root = PurePosixPath(manifest.archive_root)
@@ -237,13 +250,20 @@ def verify_manifest(manifest: ArchiveManifest, archived_root: Path, repo_root: P
         path = archived_root / Path(*archived_relative.parts)
         if not path.is_file():
             errors.append(f"missing: {relative.as_posix()}")
+        elif (
+            repo_root is not None
+            and not allow_unstaged_archive
+            and not index_has_blob(path)
+            and index_has_blob(path, git_cwd=repo_root, index_spec=entry.original_path)
+        ):
+            errors.append(f"archive file not tracked in git (stage it): {relative.as_posix()}")
         else:
             data = _canonical_bytes(path, entry.original_path, repo_root)
             if len(data) != entry.byte_size:
                 errors.append(f"size mismatch: {relative.as_posix()}")
             elif hashlib.sha256(data).hexdigest() != entry.sha256:
                 errors.append(f"checksum mismatch: {relative.as_posix()}")
-    # the manifest equals the committed blob, so a hand-edited working copy is only visible to git
+    # the manifest equals the index blob, so a hand-edited working copy is only visible to git
     if archived_root.is_dir():
         errors.extend(f"working copy differs from committed: {drifted}" for drifted in working_copy_drift(archived_root))
     return errors
@@ -252,15 +272,49 @@ class QuarantineBlocked(RuntimeError):
     """Raised when legacy evidence cannot be quarantined safely."""
 
 
+# same bound as ``committed_bytes.working_copy_drift`` (a diff over a whole tree)
+_GIT_QUERY_TIMEOUT_SECONDS = 120
+
+
 def _uncommitted_changes(repo_root: Path, source_root: PurePosixPath) -> list[str]:
     """Tracked files under ``source_root`` whose content differs from HEAD (staged or not), or, in a
     repository without a commit yet, from the index. ``git diff`` normalises line endings itself."""
     environment = git_environment()
-    has_head = subprocess.run(
-        ["git", "rev-parse", "--verify", "--quiet", "HEAD"], cwd=repo_root, capture_output=True, env=environment
-    ).returncode == 0
-    command = ["git", "diff", "--name-only", "-z", *(["HEAD"] if has_head else []), "--", source_root.as_posix()]
-    completed = subprocess.run(command, cwd=repo_root, capture_output=True, check=True, env=environment)
+    try:
+        head = subprocess.run(
+            ["git", "rev-parse", "--verify", "--quiet", "HEAD"], cwd=repo_root, capture_output=True,
+            env=environment, timeout=_GIT_QUERY_TIMEOUT_SECONDS,
+        )
+        # --verify --quiet exits 1 for "no such ref" (a repository without a commit); any other
+        # non-zero status (not a repository, corrupt, ...) is a failure, not "no HEAD"
+        if head.returncode not in (0, 1):
+            detail = (head.stderr or b"").decode("utf-8", "replace").strip()
+            raise QuarantineBlocked(
+                "cannot determine the uncommitted state: git rev-parse HEAD failed"
+                + (f" ({detail})" if detail else f" (exit status {head.returncode})")
+                + "; nothing moved"
+            )
+        has_head = head.returncode == 0
+        command = ["git", "diff", "--name-only", "-z", *(["HEAD"] if has_head else []), "--", source_root.as_posix()]
+        completed = subprocess.run(
+            command, cwd=repo_root, capture_output=True, check=True, env=environment,
+            timeout=_GIT_QUERY_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise QuarantineBlocked(
+            f"cannot determine the uncommitted state: git timed out after {_GIT_QUERY_TIMEOUT_SECONDS} s; nothing moved"
+        ) from exc
+    except subprocess.CalledProcessError as exc:
+        detail = (exc.stderr or b"").decode("utf-8", "replace").strip()
+        raise QuarantineBlocked(
+            "cannot determine the uncommitted state: git diff failed"
+            + (f" ({detail})" if detail else f" (exit status {exc.returncode})")
+            + "; nothing moved"
+        ) from exc
+    except OSError as exc:
+        raise QuarantineBlocked(
+            f"cannot determine the uncommitted state: git unavailable ({type(exc).__name__}); nothing moved"
+        ) from exc
     return sorted(item.decode("utf-8", "replace") for item in completed.stdout.split(b"\0") if item)
 
 
@@ -633,7 +687,8 @@ def quarantine_tracked_tree(
             repo_root=repo_root,
         )
         write_manifest(manifest, _checked_path(repo_root, destination_root, destination_root / "manifest.json"))
-        errors = verify_manifest(manifest, destination_root, repo_root)
+        # files are moved but nothing is staged yet: the originals are still in the index
+        errors = verify_manifest(manifest, destination_root, repo_root, allow_unstaged_archive=True)
         if errors:
             raise QuarantineBlocked("; ".join(errors))
         for relative in ignored:

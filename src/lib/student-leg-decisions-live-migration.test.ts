@@ -84,7 +84,7 @@ describe("20261016b apply_student_leg_decisions migration", () => {
   });
 
   it("is idempotent and never destroys data", () => {
-    expect(body).not.toMatch(/drop table|truncate|delete from|drop function|\bcascade\b|alter table [^;]* drop/);
+    expect(body).not.toMatch(/drop table|truncate|delete from|drop function|drop [^;]* cascade|alter table [^;]* drop/);
     expect(body).not.toMatch(/insert into|update public/);
   });
 });

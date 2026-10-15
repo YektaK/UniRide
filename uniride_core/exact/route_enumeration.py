@@ -33,7 +33,9 @@ COLUMN_CAP_DEFAULT = 2_000_000
 # Largest measured wave: 171 053 labels (2026-10-05 08:45 pickup, 20 legs, R = 90; every fleet);
 # docs/paper/results/week-2026-10-05-exact/wp-e1-enumeration/. 5 000 000 is about 29x that maximum,
 # about 25-30 s of enumeration on the measuring machine (so it fires long before the 10 min wall
-# limit even on a much slower host) and about 1.3 GB peak at the measured ~250 bytes per label.
+# limit even on a much slower host). Reviewer's basis (2026-10-15): on that wave tracemalloc peaked at
+# 44 MB (about 257 bytes per label); on a synthetic 22-location instance the cap fired deterministically
+# at 5 000 001 labels after 22.5-36.5 s with a peak working set of 949 MB.
 LABEL_CAP_DEFAULT = 5_000_000
 WALL_CLOCK_LIMIT_DEFAULT = 600.0  # seconds (10 min safety limit)
 ENUMERATION_STATUSES = ("complete", "count_cap", "timing_dependent_abort")

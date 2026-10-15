@@ -3,6 +3,7 @@ its brute-force oracle; verification rows of section 8 that need no AMPL."""
 from __future__ import annotations
 
 import ast
+import hashlib
 import itertools
 import os
 import re
@@ -522,3 +523,16 @@ def test_archived_ga_routes_lie_inside_the_enumerated_search_space():
                     shorter += col.tour < tour
     print(f"archived GA routes checked: {routes}; enumerated column strictly shorter: {shorter}")
     assert routes > 0
+
+
+# ---------- golden output (catches any change of iteration order or tie-break) ----------
+GOLDEN_TIE_INSTANCE_SHA256 = "e27d48a5435b7abf5e4409a44cea7b23097b8608a1fa0a8a28ef066a264b13f9"
+
+
+def test_golden_column_digest_on_a_tie_heavy_instance():
+    """8 locations with all inter-stop arcs equal: almost every (S, t) has many equal-cost
+    orders, so the digest pins the deterministic tie-break and column order."""
+    res = _enum(_big_instance())
+    payload = repr([(c.type_id, c.multiplicity, c.stop_order, c.cost, c.ride, c.tour) for c in res.columns])
+    assert (len(res.columns), res.label_count) == (218, 792)
+    assert hashlib.sha256(payload.encode("ascii")).hexdigest() == GOLDEN_TIE_INSTANCE_SHA256

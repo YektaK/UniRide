@@ -132,6 +132,7 @@ import {
   Cell as RechartsCell,
   Legend as RechartsLegend,
 } from "recharts";
+import { buildBenchmarkCsv } from "@/lib/benchmark-csv";
 
 // ============================================================
 // CSS Animation Keyframes (injected via style tag)
@@ -409,15 +410,6 @@ function getPipelineBorder(pipeline: string): string {
     case "heuristic": return "border-slate-400/30 hover:border-slate-400/60";
     default: return "border-primary/30 hover:border-primary/60";
   }
-}
-
-function escapeCSV(value: string | number | null | undefined): string {
-  if (value === null || value === undefined) return "";
-  const str = String(value);
-  if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-    return `"${str.replace(/"/g, '""')}"`;
-  }
-  return str;
 }
 
 function getRankBadge(rank: number) {
@@ -847,11 +839,7 @@ function BenchmarkSuite() {
 
   const handleExportCSV = () => {
     if (!results) return;
-    const headers = ["algorithm", "problem", "run_number", "tour_length", "elapsed_ms", "gap_percent", "timestamp"];
-    const rows = results.results.map((r) =>
-      [escapeCSV(r.algorithm), escapeCSV(r.problem), escapeCSV(r.run_number), escapeCSV(r.tour_length), escapeCSV(r.elapsed_ms), escapeCSV(r.gap_percent), escapeCSV(r.timestamp)].join(",")
-    );
-    const csv = [headers.join(","), ...rows].join("\n");
+    const csv = buildBenchmarkCsv(results.results);
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

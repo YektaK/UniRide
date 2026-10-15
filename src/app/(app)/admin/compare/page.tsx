@@ -19,16 +19,9 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import type { User } from "@/types";
+import { CLUSTERING_ALGORITHM_OPTIONS } from "@/lib/clustering-algorithms";
 
-const clusteringAlgorithms = [
-    { name: "sweep", label: "Sweep Algoritması (Önerilen)" },
-    { name: "clarke_wright", label: "Clarke-Wright Savings" },
-    { name: "k_medoids", label: "K-Medoids (Süre Tabanlı)" },
-    { name: "fuzzy_cmeans", label: "Fuzzy C-Means" },
-    { name: "fuzzy_cmeans_enhanced", label: "Enhanced Fuzzy C-Means" },
-    { name: "hierarchical_fcm", label: "Hierarchical FCM (Büyük Veri)" },
-    { name: "kmeans", label: "K-Means (Eski)" },
-];
+const clusteringAlgorithms = CLUSTERING_ALGORITHM_OPTIONS;
 
 export default function AlgorithmComparisonPage() {
     const t = useTranslations('page.admin.compare');
@@ -247,15 +240,20 @@ export default function AlgorithmComparisonPage() {
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="text-center">
-                                                    {res.success && res.fallback_reason ? (
-                                                        <Badge variant="outline" className="border-amber-500 text-amber-700" title={res.algorithm_executed}>
-                                                            {t('greedyFallback')} ({res.fallback_reason})
-                                                        </Badge>
-                                                    ) : res.success ? (
-                                                        <Badge variant="outline" className="border-green-500 text-green-700">{tc('success')}</Badge>
-                                                    ) : (
-                                                        <Badge variant="destructive">{tc('error')}</Badge>
-                                                    )}
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        {res.success ? (
+                                                            !res.fallback_reason && (
+                                                                <Badge variant="outline" className="border-green-500 text-green-700">{tc('success')}</Badge>
+                                                            )
+                                                        ) : (
+                                                            <Badge variant="destructive">{tc('error')}</Badge>
+                                                        )}
+                                                        {res.fallback_reason && (
+                                                            <Badge variant="outline" className="border-amber-500 text-amber-700" title={res.algorithm_executed}>
+                                                                {t('greedyFallback')} ({res.fallback_reason})
+                                                            </Badge>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="text-center font-semibold">{res.total_vehicles || "-"}</TableCell>
                                                 <TableCell className="text-center font-semibold">{res.total_duration_minutes ? res.total_duration_minutes.toFixed(1) : "-"}</TableCell>

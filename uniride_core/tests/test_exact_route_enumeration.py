@@ -3,7 +3,6 @@ its brute-force oracle; verification rows of section 8 that need no AMPL."""
 from __future__ import annotations
 
 import ast
-import hashlib
 import itertools
 import os
 import re

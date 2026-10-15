@@ -19,7 +19,15 @@ from typing import Callable, Iterable, Literal
 
 from pydantic import Field, ValidationError, model_validator
 
-from academic_benchmark.committed_bytes import committed_bytes, git_environment, index_has_blob, working_copy_drift
+from academic_benchmark.committed_bytes import (
+    GIT_QUERY_TIMEOUT_SECONDS,
+    GitQueryFailed,
+    committed_bytes,
+    git_environment,
+    index_has_blob,
+    run_git,
+    working_copy_drift,
+)
 from academic_benchmark.contracts.common import RepositoryRelativePath, Sha256Digest, StrictContract
 
 
@@ -86,15 +94,21 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _canonical_bytes(archived: Path, original_path: str, repo_root: Path | None) -> bytes:
+def _canonical_bytes(
+    archived: Path, original_path: str, repo_root: Path | None, repository_cache: dict[Path, bool] | None = None
+) -> bytes:
     """Bytes a manifest entry describes: the git INDEX blob, not this platform's working copy.
 
     The blob is read at the archived file's own path (``:./name``) once the archive is staged or
     committed; with ``repo_root`` it is also looked up at ``original_path`` (the pre-move location
     that is still in the index during a quarantine, before anything is staged). Only when neither
-    is tracked do the disk bytes stand in, with a logged warning."""
+    is tracked do the disk bytes stand in, with a logged warning. A git timeout or unexpected
+    failure is not that case: it raises ``QuarantineBlocked`` (no disk fallback)."""
     fallback = () if repo_root is None else ((repo_root, original_path),)
-    return committed_bytes(archived, fallback_sources=fallback)
+    try:
+        return committed_bytes(archived, fallback_sources=fallback, repository_cache=repository_cache)
+    except GitQueryFailed as exc:
+        raise QuarantineBlocked(f"cannot read the index bytes of {original_path}: {exc}") from exc
 
 
 EvidenceClassifier = Callable[[PurePosixPath], EvidenceClass]
@@ -188,9 +202,10 @@ def build_manifest(
         if not _is_repository_relative_path(value):
             raise ValueError("paths must be repository-relative")
     entries = list(withheld)
+    repository_cache: dict[Path, bool] = {}  # one git probe per directory, not per file
     for relative in paths:
         archived = archived_root / Path(*relative.parts)
-        data = _canonical_bytes(archived, (source_root / relative).as_posix(), repo_root)
+        data = _canonical_bytes(archived, (source_root / relative).as_posix(), repo_root, repository_cache)
         entries.append(
             ArchiveEntry(
                 original_path=(source_root / relative).as_posix(),
@@ -224,6 +239,7 @@ def verify_manifest(
     in exactly that state (files moved, nothing staged yet) and passes
     ``allow_unstaged_archive=True``; every other caller wants the report."""
     errors: list[str] = []
+    repository_cache: dict[Path, bool] = {}  # one git probe per directory, not per file
     source_root = PurePosixPath(manifest.source_root)
     archive_root = PurePosixPath(manifest.archive_root)
     for entry in manifest.entries:
@@ -250,30 +266,39 @@ def verify_manifest(
         path = archived_root / Path(*archived_relative.parts)
         if not path.is_file():
             errors.append(f"missing: {relative.as_posix()}")
-        elif (
-            repo_root is not None
-            and not allow_unstaged_archive
-            and not index_has_blob(path)
-            and index_has_blob(path, git_cwd=repo_root, index_spec=entry.original_path)
-        ):
-            errors.append(f"archive file not tracked in git (stage it): {relative.as_posix()}")
-        else:
-            data = _canonical_bytes(path, entry.original_path, repo_root)
-            if len(data) != entry.byte_size:
-                errors.append(f"size mismatch: {relative.as_posix()}")
-            elif hashlib.sha256(data).hexdigest() != entry.sha256:
-                errors.append(f"checksum mismatch: {relative.as_posix()}")
+            continue
+        try:
+            if (
+                repo_root is not None
+                and not allow_unstaged_archive
+                and not index_has_blob(path, repository_cache=repository_cache)
+                and index_has_blob(path, git_cwd=repo_root, index_spec=entry.original_path, repository_cache=repository_cache)
+            ):
+                errors.append(f"archive file not tracked in git (stage it): {relative.as_posix()}")
+                continue
+            data = _canonical_bytes(path, entry.original_path, repo_root, repository_cache)
+        except (GitQueryFailed, QuarantineBlocked) as exc:
+            # git gave no answer: the file is unverified, which is a problem, not a clean result
+            errors.append(f"cannot verify {relative.as_posix()}: {exc}")
+            continue
+        if len(data) != entry.byte_size:
+            errors.append(f"size mismatch: {relative.as_posix()}")
+        elif hashlib.sha256(data).hexdigest() != entry.sha256:
+            errors.append(f"checksum mismatch: {relative.as_posix()}")
     # the manifest equals the index blob, so a hand-edited working copy is only visible to git
     if archived_root.is_dir():
-        errors.extend(f"working copy differs from committed: {drifted}" for drifted in working_copy_drift(archived_root))
+        try:
+            errors.extend(f"working copy differs from committed: {drifted}" for drifted in working_copy_drift(archived_root, repository_cache=repository_cache))
+        except GitQueryFailed as exc:
+            errors.append(f"cannot check the working copy for drift: {exc}")
     return errors
 
 class QuarantineBlocked(RuntimeError):
     """Raised when legacy evidence cannot be quarantined safely."""
 
 
-# same bound as ``committed_bytes.working_copy_drift`` (a diff over a whole tree)
-_GIT_QUERY_TIMEOUT_SECONDS = 120
+# one bound for every git call here and in ``committed_bytes``
+_GIT_QUERY_TIMEOUT_SECONDS = GIT_QUERY_TIMEOUT_SECONDS
 
 
 def _uncommitted_changes(repo_root: Path, source_root: PurePosixPath) -> list[str]:
@@ -327,31 +352,40 @@ def _require_repository_relative(value: PurePosixPath | str) -> PurePosixPath:
     return path
 
 
+def _git_query(repo_root: Path, arguments: list[str], what: str) -> bytes:
+    """stdout of a read-only git query (shared timeout, isolated environment). A timeout, a
+    non-zero exit or a git that cannot start raises ``QuarantineBlocked``: the caller must never
+    read a failed query as an empty answer."""
+    try:
+        return run_git(arguments, repo_root)
+    except GitQueryFailed as exc:
+        raise QuarantineBlocked(f"cannot {what}: {exc}") from exc
+
+
+def _decode_git_text(data: bytes, what: str) -> str:
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise QuarantineBlocked(f"cannot {what}: git returned non-UTF-8 output") from exc
+
+
 def _git_paths(repo_root: Path, *arguments: str) -> list[PurePosixPath]:
-    completed = subprocess.run(
-        ["git", *arguments], cwd=repo_root, check=True, capture_output=True
-    )
+    stdout = _git_query(repo_root, list(arguments), f"list files (git {arguments[0] if arguments else ''})")
     return sorted(
-        (PurePosixPath(raw.decode("utf-8")) for raw in completed.stdout.split(b"\0") if raw),
+        (PurePosixPath(_decode_git_text(raw, "list files (git path)")) for raw in stdout.split(b"\0") if raw),
         key=lambda item: item.as_posix(),
     )
 
 
 def _git_directory(repo_root: Path) -> Path:
-    completed = subprocess.run(
-        ["git", "rev-parse", "--absolute-git-dir"],
-        cwd=repo_root, check=True, capture_output=True, text=True, encoding="utf-8", errors="strict",
-    )
-    return Path(completed.stdout.strip()).resolve()
+    stdout = _git_query(repo_root, ["rev-parse", "--absolute-git-dir"], "locate the git directory")
+    return Path(_decode_git_text(stdout, "locate the git directory").strip()).resolve()
 
 
 def _canonical_repo_root(repo_root: Path) -> Path:
     candidate = repo_root.resolve()
-    completed = subprocess.run(
-        ["git", "rev-parse", "--show-toplevel"], cwd=candidate,
-        check=True, capture_output=True, text=True, encoding="utf-8", errors="strict",
-    )
-    top_level = Path(completed.stdout.strip()).resolve()
+    stdout = _git_query(candidate, ["rev-parse", "--show-toplevel"], "locate the repository root")
+    top_level = Path(_decode_git_text(stdout, "locate the repository root").strip()).resolve()
     if candidate != top_level:
         raise QuarantineBlocked("repo_root must resolve exactly to the git toplevel")
     return top_level

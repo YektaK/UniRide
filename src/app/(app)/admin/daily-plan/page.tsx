@@ -21,6 +21,7 @@ import {
   type PlanWave,
 } from "@/services/daily-plan-view";
 import { isRealServiceDate } from "@/services/istanbul-service-date";
+import { solverSourceLabelKey } from "@/services/plan-solver-config";
 
 type ViewState =
   | { kind: "idle" }
@@ -63,6 +64,33 @@ function parseLimit(text: string, range: { readonly min: number; readonly max: n
  * When the travel times were last updated (max time_matrix.updated_at). The matrix LOAD age is
  * not shown: the snapshot step refreshes first, so it is ~0 s and would read as fresh data.
  */
+/**
+ * Which algorithm settings and seed produced the plan (H17). Several optimizer calls with
+ * different values read "mixed"; an unknown source value is shown raw; nothing is shown when
+ * the optimizer reported neither (older optimizer).
+ */
+function SolverConfigNote({ plan }: { plan: DailyPlanView }) {
+  const t = useTranslations("page.admin.dailyPlan.solverConfig");
+  const config = plan.solverConfig;
+  if (!config) return null;
+  const parts: string[] = [];
+  if (config.source) {
+    if (config.source.kind === "mixed") parts.push(t("mixed"));
+    else {
+      const key = solverSourceLabelKey(config.source.value);
+      parts.push(key ? t(`sources.${key}`) : config.source.value);
+    }
+  }
+  if (config.seed) {
+    parts.push(t("seed", { seed: config.seed.kind === "mixed" ? t("mixed") : String(config.seed.value) }));
+  }
+  return (
+    <p data-testid="solver-config" className="text-sm text-muted-foreground">
+      {t("line", { details: parts.join(" · ") })}
+    </p>
+  );
+}
+
 function MatrixAgeNote({ plan }: { plan: DailyPlanView }) {
   const t = useTranslations("page.admin.dailyPlan.matrixAge");
   const age = plan.matrixAge;
@@ -422,6 +450,7 @@ function PlanBody({ plan, t }: { plan: DailyPlanView; t: Translate }) {
     <div className="space-y-6">
       <PreviewBanner plan={plan} />
       <MatrixAgeNote plan={plan} />
+      <SolverConfigNote plan={plan} />
       {!plan.isEmptyDay && (
         <div
           data-testid="status-banner"

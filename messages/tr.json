@@ -270,6 +270,17 @@
           "ageHours": "{count} saat",
           "ageDays": "{count} gün"
         },
+        "solverConfig": {
+          "line": "Algoritma ayarları: {details}",
+          "seed": "tohum {seed}",
+          "mixed": "karışık",
+          "sources": {
+            "default": "yerleşik varsayılanlar",
+            "request": "istekle gelen ayarlar",
+            "promoted": "terfi ettirilmiş akademik ayarlar",
+            "promotedRequest": "terfi ettirilmiş akademik ayarlar + istek değişiklikleri"
+          }
+        },
         "banner": {
           "title": "Önizleme — yayınlanamaz, varsayımsal",
           "titlePlain": "Önizleme — yayınlanamaz",

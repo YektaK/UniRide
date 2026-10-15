@@ -270,6 +270,17 @@
           "ageHours": "{count} h",
           "ageDays": "{count} d"
         },
+        "solverConfig": {
+          "line": "Algorithm settings: {details}",
+          "seed": "seed {seed}",
+          "mixed": "mixed",
+          "sources": {
+            "default": "built-in defaults",
+            "request": "settings sent with the request",
+            "promoted": "promoted academic config",
+            "promotedRequest": "promoted academic config + request overrides"
+          }
+        },
         "banner": {
           "title": "Preview — not publishable, hypothetical",
           "titlePlain": "Preview — not publishable",

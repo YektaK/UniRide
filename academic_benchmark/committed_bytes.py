@@ -1,10 +1,13 @@
-"""Canonical (committed) bytes of a tracked file, independent of the platform's line-ending conversion.
+"""Canonical bytes of a tracked file as git stores them in the INDEX (staged bytes), independent of
+the platform's line-ending conversion.
 
 Archive and quarantine manifests (A01 Bildiri/YAEM archives, A13 legacy results) describe what git
-stores. The reference is the INDEX (``git cat-file blob :<path>``), not HEAD, on purpose: a quarantine
-moves files before anything is staged or committed, the pre-move path is still in the index, and
-repositories without a commit yet (and archives staged but not yet committed) must keep working.
-``quarantine_tracked_tree`` ties the index to HEAD by refusing a source that differs from HEAD. A Windows working copy with ``core.autocrlf=true`` holds CRLF bytes for the same blob, so
+stores. The reference is the index (``git cat-file blob :<path>``), not HEAD and not the disk, on
+purpose: a quarantine moves files before anything is staged or committed, the pre-move path is
+still in the index, and repositories without a commit yet (and archives staged but not yet
+committed) must keep working. The index equals the committed bytes only while nothing is staged
+over them; ``quarantine_tracked_tree`` ties the two together by refusing a source that differs from
+HEAD. A Windows working copy with ``core.autocrlf=true`` holds CRLF bytes for the same blob, so
 hashing the disk would make a manifest that verifies on one platform only (2026-10-14 finding).
 """
 
@@ -64,7 +67,8 @@ def committed_bytes(
     index_spec: str | None = None,
     fallback_sources: Sequence[tuple[Path | str, str]] = (),
 ) -> bytes:
-    """Return ``git cat-file blob :<index_spec>`` run in ``git_cwd``; fall back to the bytes on disk.
+    """Return the index (staged) bytes, ``git cat-file blob :<index_spec>`` run in ``git_cwd``; fall
+    back to the bytes on disk. The name says "committed" for history; the source is the index.
 
     Defaults address the file relative to its own directory (``:./name``), which is correct
     wherever the repository root is. ``index_spec`` is passed to git verbatim after the ``:`` (a
@@ -80,5 +84,19 @@ def committed_bytes(
         blob, reason = _git_blob(cwd, spec)
         if blob is not None:
             return blob
-    LOGGER.warning("committed bytes unavailable for %s (%s); falling back to disk bytes", path, reason)
+    LOGGER.warning("index bytes unavailable for %s (%s); falling back to disk bytes", path, reason)
     return path.read_bytes()
+
+
+def index_has_blob(
+    disk_path: Path | str,
+    *,
+    git_cwd: Path | str | None = None,
+    index_spec: str | None = None,
+) -> bool:
+    """True when git's index holds a blob at the same address ``committed_bytes`` would read first
+    (default ``:./<name>`` relative to the file's own directory). Never falls back to the disk."""
+    path = Path(disk_path)
+    cwd = Path(git_cwd) if git_cwd is not None else path.parent
+    blob, _ = _git_blob(cwd, index_spec if index_spec is not None else f"./{path.name}")
+    return blob is not None

@@ -445,3 +445,81 @@ def test_brute_force_is_test_only():
             if re.search(r"exact\.brute_force|from \.brute_force import|exact import [^\n]*brute_force", text):
                 offenders.append(str(path.relative_to(REPO)))
     assert offenders == []
+
+
+# ---------- archived waves (WP-E1 acceptance: counts logged, GA routes inside the search space) ----------
+RESULTS = REPO / "docs" / "paper" / "results"
+COUNTS_CSV = RESULTS / "week-2026-10-05-exact" / "wp-e1-enumeration" / "enumeration_counts.csv"
+
+
+@pytest.fixture(scope="module")
+def archived_enumerations():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("exact_archive_loader_e1", REPO / "scripts" / "exact_archive_loader.py")
+    loader = importlib.util.module_from_spec(spec)
+    sys.modules["exact_archive_loader_e1"] = loader
+    spec.loader.exec_module(loader)
+    from uniride_core.exact.route_enumeration import enumerate_wave
+
+    campaigns = loader.load_all_valid(RESULTS)
+    label = {"4sw5so": "single_4sw5so", "fleet": "large+sedan", "minivan-cap3": "large+doblo_cap3"}
+    out = {}
+    for key, camp in campaigns.items():
+        for ride in camp.rides:
+            for w in camp.waves_for(ride):
+                out[(label[key], ride, w.wave_id)] = (w, enumerate_wave(w, camp.fleet_types))
+    return out
+
+
+def test_every_archived_wave_completes_under_default_caps_and_matches_the_logged_counts(archived_enumerations):
+    import csv
+
+    assert len(archived_enumerations) == 3 * 4 * 57
+    for (_, _, _), (_, res) in archived_enumerations.items():
+        assert res.status == "complete" and res.model == "SP" and res.cap_fired is None
+    with COUNTS_CSV.open(encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh))
+    assert len(rows) == len(archived_enumerations)
+    for row in rows:
+        _, res = archived_enumerations[(row["fleet"], int(row["R"]), row["wave_id"])]
+        assert (int(row["columns"]), int(row["labels"]), row["status"]) == (res.column_count, res.label_count, res.status)
+
+
+def test_archived_ga_routes_lie_inside_the_enumerated_search_space():
+    """Every archived single-type GA route (4sw5so, all R) is matched by the column of its
+    multiset with a tour <= the GA route minutes, and the GA minutes equal the F1 recomputation."""
+    import importlib.util
+    import json
+
+    spec = importlib.util.spec_from_file_location("exact_archive_loader_e1b", REPO / "scripts" / "exact_archive_loader.py")
+    loader = importlib.util.module_from_spec(spec)
+    sys.modules["exact_archive_loader_e1b"] = loader
+    spec.loader.exec_module(loader)
+    from uniride_core.exact.route_enumeration import enumerate_wave
+
+    camp = loader.load_campaign(RESULTS / "week-2026-10-05-4sw5so")
+    routes = shorter = 0
+    for ride in camp.rides:
+        waves = {w.wave_id: w for w in camp.waves_for(ride)}
+        for f in sorted((RESULTS / "week-2026-10-05-4sw5so").glob(f"*_R{ride}_repeat1.response.json")):
+            for job in json.loads(f.read_text(encoding="utf-8"))["jobs"]:
+                w = waves[job["id"]]
+                res = enumerate_wave(w, camp.fleet_types)
+                cols = {c.multiplicity: c for c in res.columns}
+                node = {o: i + 1 for i, o in enumerate(w.occurrence_ids)}
+                item_of = {nd: idx for idx, it in enumerate(res.items) for nd in it.nodes}
+                for r in job["result"]["routes"]:
+                    order = [node[o] for o in r["student_ids"]]
+                    tour, ride_min = _route_cost(w.direction, w.matrix, order)
+                    assert tour == r["total_duration_minutes"]
+                    assert ride_min <= ride and tour <= w.max_tour_minutes
+                    mult = [0] * len(res.items)
+                    for nd in order:
+                        mult[item_of[nd]] += 1
+                    col = cols[tuple(mult)]
+                    assert col.tour <= tour
+                    routes += 1
+                    shorter += col.tour < tour
+    print(f"archived GA routes checked: {routes}; enumerated column strictly shorter: {shorter}")
+    assert routes > 0

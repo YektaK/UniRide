@@ -29,9 +29,12 @@ from dataclasses import dataclass, field
 from typing import Callable, Optional, Sequence, Tuple
 
 COLUMN_CAP_DEFAULT = 2_000_000
-# Label cap: proposed from the WP-E1 measurement over all archived waves
-# (docs/paper/results/week-2026-10-05-exact/wp-e1-enumeration/); pending review before WP-E2.
-LABEL_CAP_DEFAULT = 20_000_000
+# Label cap: PROPOSED from the WP-E1 measurement, pending review before WP-E2 (design 1.1).
+# Largest measured wave: 171 053 labels (2026-10-05 08:45 pickup, 20 legs, R = 90; every fleet);
+# docs/paper/results/week-2026-10-05-exact/wp-e1-enumeration/. 5 000 000 is about 29x that maximum,
+# about 25-30 s of enumeration on the measuring machine (so it fires long before the 10 min wall
+# limit even on a much slower host) and about 1.3 GB peak at the measured ~250 bytes per label.
+LABEL_CAP_DEFAULT = 5_000_000
 WALL_CLOCK_LIMIT_DEFAULT = 600.0  # seconds (10 min safety limit)
 ENUMERATION_STATUSES = ("complete", "count_cap", "timing_dependent_abort")
 _CLOCK_CHECK_EVERY = 4096

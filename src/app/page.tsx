@@ -132,6 +132,7 @@ import {
   Cell as RechartsCell,
   Legend as RechartsLegend,
 } from "recharts";
+import { buildBenchmarkCsv } from "@/lib/benchmark-csv";
 
 // ============================================================
 // CSS Animation Keyframes (injected via style tag)

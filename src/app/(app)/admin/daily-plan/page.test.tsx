@@ -578,6 +578,18 @@ describe("DailyPlanPage", () => {
       expect(screen.getByTestId("solver-config").textContent).toBe("Algoritma ayarları: yerleşik varsayılanlar · tohum 42");
     });
 
+    it("shows the promoted settings in Turkish", async () => {
+      await generateIn("tr", withConfig({ sources: ["promoted"], seeds: [7] }));
+      expect(screen.getByTestId("solver-config").textContent).toBe("Algoritma ayarları: akademik çalışmadan alınan ayarlar · tohum 7");
+    });
+
+    it("shows the promoted settings with request overrides in Turkish", async () => {
+      await generateIn("tr", withConfig({ sources: ["promoted+request"], seeds: [7] }));
+      expect(screen.getByTestId("solver-config").textContent).toBe(
+        "Algoritma ayarları: akademik çalışmadan alınan ayarlar + istekle değiştirilenler · tohum 7",
+      );
+    });
+
     it("shows the promoted academic config and seed in English", async () => {
       await generateIn("en", withConfig({ sources: ["promoted"], seeds: [7] }));
       expect(screen.getByTestId("solver-config").textContent).toBe("Algorithm settings: promoted academic config · seed 7");

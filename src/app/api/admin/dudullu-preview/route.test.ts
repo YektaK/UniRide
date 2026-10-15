@@ -1623,6 +1623,27 @@ describe("POST /api/admin/dudullu-preview solver configuration provenance (H17)"
     expect(body.solverConfig).toEqual({ sources: [null], seeds: [null] });
   });
 
+  it("has no solverConfig and no line when wave 1 solves but wave 2 fails", async () => {
+    setAdmin(admittedRows([onTimePickup, { ...onTimePickup, direction: "dropoff" }]));
+    let optimizeCalls = 0;
+    optimizerFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/internal/matrix-snapshot") return Response.json(matrix);
+      optimizeCalls += 1;
+      if (optimizeCalls === 1) return Response.json(withSource("2026-09-30:pickup:student-1", "default", 42));
+      return Response.json({ detail: "boom" }, { status: 500 });
+    });
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+    const { parseDudulluPreviewResponse } = await import("@/services/dudullu-preview-response");
+    const { buildDailyPlanView } = await import("@/services/daily-plan-view");
+
+    expect(optimizeCalls).toBe(2);
+    expect(body.reasonCodes).toContain("OPTIMIZER_UNAVAILABLE");
+    expect(body.solverConfig ?? null).toBeNull();
+    expect(buildDailyPlanView(parseDudulluPreviewResponse(body)).solverConfig).toBeNull();
+  });
+
   it("has no solverConfig when the plan is blocked before any solve", async () => {
     setAdmin(admittedRows());
     optimizerFetchMock.mockImplementation(async (path: string) => {

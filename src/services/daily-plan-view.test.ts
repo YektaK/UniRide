@@ -645,3 +645,43 @@ describe("matrix age (M4, C2 gate kept: age is shown, a stale matrix blocks the 
     }
   });
 });
+
+describe("solver configuration provenance (H17)", () => {
+  const withConfig = (solverConfig: unknown) => parseDudulluPreviewResponse({ ...matrixAgeBase(), solverConfig });
+  const load = (name: string) => JSON.parse(readFileSync(new URL(`../../messages/${name}.json`, import.meta.url), "utf8"));
+
+  it("shows a single source and seed", () => {
+    expect(buildDailyPlanView(withConfig({ sources: ["default"], seeds: [42] })).solverConfig).toEqual({
+      source: { kind: "single", value: "default" },
+      seed: { kind: "single", value: 42 },
+    });
+  });
+
+  it("shows mixed when the waves used different sources or seeds", () => {
+    expect(buildDailyPlanView(withConfig({ sources: ["default", "promoted"], seeds: [42, 43] })).solverConfig).toEqual({
+      source: { kind: "mixed" }, seed: { kind: "mixed" },
+    });
+  });
+
+  it("keeps an unknown source value raw", () => {
+    expect(buildDailyPlanView(withConfig({ sources: ["experimental"], seeds: [1] })).solverConfig?.source)
+      .toEqual({ kind: "single", value: "experimental" });
+  });
+
+  it("has nothing when the response carries no field, null, or only unreported calls", () => {
+    expect(buildDailyPlanView(parseDudulluPreviewResponse(matrixAgeBase())).solverConfig).toBeNull();
+    expect(buildDailyPlanView(withConfig(null)).solverConfig).toBeNull();
+    expect(buildDailyPlanView(withConfig({ sources: [null], seeds: [null] })).solverConfig).toBeNull();
+  });
+
+  it("has tr and en copy for every solver configuration key", () => {
+    const keys = ["line", "seed", "mixed", "sources.default", "sources.request", "sources.promoted", "sources.promotedRequest"];
+    for (const locale of ["tr", "en"] as const) {
+      const copy = load(locale).page.admin.dailyPlan.solverConfig as Record<string, unknown>;
+      for (const key of keys) {
+        const value = key.split(".").reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], copy);
+        expect(String(value ?? "").trim(), `${locale} solverConfig.${key}`).toBeTruthy();
+      }
+    }
+  });
+});

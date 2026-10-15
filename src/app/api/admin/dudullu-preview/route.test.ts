@@ -1569,3 +1569,91 @@ describe("POST /api/admin/dudullu-preview matrix age (M4, C2 gate kept)", () => 
     expect(optimizerFetchMock.mock.calls.map(([path]) => path)).toEqual(["/api/v1/internal/matrix-snapshot"]);
   });
 });
+
+describe("POST /api/admin/dudullu-preview solver configuration provenance (H17)", () => {
+  const withSource = (occurrenceId: string, source?: string, seed?: number) => ({
+    ...solverResult(occurrenceId),
+    ...(source === undefined ? {} : { effective_config_source: source }),
+    ...(seed === undefined ? {} : { effective_seed: seed }),
+  });
+
+  it("carries the source and seed the optimizer reported", async () => {
+    setAdmin(admittedRows());
+    mockTransport([withSource("2026-09-30:pickup:student-1", "default", 42)]);
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+
+    expect(body.status).toBe("preview_ready");
+    expect(body.solverConfig).toEqual({ sources: ["default"], seeds: [42] });
+  });
+
+  it("lists both values when two waves report different sources", async () => {
+    setAdmin(admittedRows([onTimePickup, { ...onTimePickup, direction: "dropoff" }]));
+    mockTransport([
+      withSource("2026-09-30:pickup:student-1", "default", 42),
+      withSource("2026-09-30:dropoff:student-1", "promoted", 42),
+    ]);
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+
+    expect(body.solverConfig).toEqual({ sources: ["default", "promoted"], seeds: [42] });
+  });
+
+  it("marks an older optimizer that reports nothing as null entries (the page shows nothing)", async () => {
+    setAdmin(admittedRows());
+    mockTransport([solverResult("2026-09-30:pickup:student-1")]);
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+
+    expect(body.status).toBe("preview_ready");
+    expect(body.solverConfig).toEqual({ sources: [null], seeds: [null] });
+  });
+
+  it("ignores a malformed value instead of blocking the plan", async () => {
+    setAdmin(admittedRows());
+    mockTransport([{ ...solverResult("2026-09-30:pickup:student-1"), effective_config_source: 5, effective_seed: "x" }]);
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+
+    expect(body.status).toBe("preview_ready");
+    expect(body.solverConfig).toEqual({ sources: [null], seeds: [null] });
+  });
+
+  it("has no solverConfig and no line when wave 1 solves but wave 2 fails", async () => {
+    setAdmin(admittedRows([onTimePickup, { ...onTimePickup, direction: "dropoff" }]));
+    let optimizeCalls = 0;
+    optimizerFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/internal/matrix-snapshot") return Response.json(matrix);
+      optimizeCalls += 1;
+      if (optimizeCalls === 1) return Response.json(withSource("2026-09-30:pickup:student-1", "default", 42));
+      return Response.json({ detail: "boom" }, { status: 500 });
+    });
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+    const { parseDudulluPreviewResponse } = await import("@/services/dudullu-preview-response");
+    const { buildDailyPlanView } = await import("@/services/daily-plan-view");
+
+    expect(optimizeCalls).toBe(2);
+    expect(body.reasonCodes).toContain("OPTIMIZER_UNAVAILABLE");
+    expect(body.solverConfig ?? null).toBeNull();
+    expect(buildDailyPlanView(parseDudulluPreviewResponse(body)).solverConfig).toBeNull();
+  });
+
+  it("has no solverConfig when the plan is blocked before any solve", async () => {
+    setAdmin(admittedRows());
+    optimizerFetchMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/internal/matrix-snapshot") return Response.json({ detail: "Matrix snapshot stale" }, { status: 503 });
+      throw new Error("must not solve");
+    });
+    const { POST } = await import("./route");
+
+    const body = await (await POST(post({ serviceDate: "2026-09-30" }))).json();
+
+    expect(body.solverConfig ?? null).toBeNull();
+  });
+});

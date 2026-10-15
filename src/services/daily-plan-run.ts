@@ -24,6 +24,7 @@ import type { MatrixSnapshot, PreviewJobInput, PreviewOptimizationResult, Previe
 import { serviceDateBounds } from "@/services/istanbul-service-date";
 import { DUDULLU_DEPOT } from "@/services/dudullu-campus";
 import { buildMatrixAge, type MatrixAge } from "@/services/matrix-age";
+import { collectSolverConfig, type SolverConfigReport, type SolverConfigSummary } from "@/services/plan-solver-config";
 import {
   MATRIX_UNAVAILABLE_CODE, OPTIMIZER_SNAPSHOT_STALE_DETAIL, classifyOptimizerMatrixError, readOptimizerErrorDetail,
 } from "@/services/optimizer-matrix-errors";
@@ -91,6 +92,10 @@ const optimizerResultSchema = z.object({
     sw_count: z.number(), so_count: z.number(), student_ids: z.array(z.string()),
   })),
   total_duration_minutes: z.number().optional(), feasibility_certificate: z.unknown().optional(),
+  // H17 provenance (optional on older optimizers). A malformed value is dropped on its own and
+  // never blocks the plan.
+  effective_config_source: z.string().nullable().optional().catch(undefined),
+  effective_seed: z.number().int().nullable().optional().catch(undefined),
 });
 
 type QueryResult = { data: unknown; error: unknown };
@@ -514,6 +519,8 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
   let retryAfterSeconds: number | undefined;
   // Load time and age of the matrix the plan used (M4, T09); a stale matrix never gets this far.
   let matrixAge: MatrixAge | null = null;
+  // Which algorithm settings and seed the optimizer calls used (H17); set once all waves solved.
+  let solverConfig: SolverConfigSummary | null = null;
   const finish = <T extends ReturnType<typeof buildDudulluPreview>>(result: T) => ({
     ...withReasonCodes(result, extraReasons),
     ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
@@ -525,6 +532,7 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
     limits,
     occurrenceLabels,
     matrixAge,
+    solverConfig,
   });
 
   const loaded = await loadDailyPlanDemand(client, serviceDate, assumeConfirmed, demandState);
@@ -582,6 +590,7 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
   matrixAge = buildMatrixAge(matrix.provenance);
 
   const jobs: PreviewJobInput[] = [];
+  const solverReports: SolverConfigReport[] = [];
   for (const group of groupWaves(admitted)) {
     const first = group[0]!;
     // Virtual: at most min(legs in the wave, policy cap) identical vehicles per call.
@@ -589,6 +598,7 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
       ? vehicles.slice(0, Math.min(group.length, OPTIMIZER_MAX_VEHICLES))
       : vehicles;
     let result: PreviewOptimizationResult;
+    let reported: SolverConfigReport;
     let response: Response;
     try {
       response = await optimizerFetch("/api/v1/optimize", {
@@ -626,6 +636,7 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
       const parsed = optimizerResultSchema.safeParse(await response.json());
       if (!parsed.success) throw new Error("optimizer result invalid");
       result = parsed.data;
+      reported = parsed.data;
     } catch {
       return finish(blockedPreview(serviceDate, admitted, matrix, "OPTIMIZATION_NOT_SUCCESSFUL"));
     }
@@ -639,11 +650,13 @@ export async function runDailyPlan(deps: DailyPlanDeps, params: DailyPlanParams)
       // No suitable route was computed within the ride limit.
       return finish(blockedPreview(serviceDate, admitted, matrix, "RIDE_TIME_LIMIT_INFEASIBLE"));
     }
+    solverReports.push(reported);
     jobs.push({
       id: `${serviceDate}:${first.direction}:${first.anchorMinutes}`,
       serviceDate, direction: first.direction, anchorMinutes: first.anchorMinutes,
       demands: group, ...nodeMaps(group), result,
     });
   }
+  solverConfig = collectSolverConfig(solverReports);
   return finish(buildDudulluPreview({ serviceDate, demands: admitted, vehicles, matrix, jobs }));
 }

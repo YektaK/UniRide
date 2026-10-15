@@ -126,6 +126,14 @@ export const dudulluPreviewResponseSchema = z.object({
     dataUpdatedAt: z.string().nullable().default(null),
     dataAgeSeconds: z.number().finite().nonnegative().nullable().default(null),
   }).nullable().optional(),
+  /**
+   * Distinct algorithm-settings sources and seeds the optimizer reported over the plan's calls
+   * (H17); null in an entry = a call reported none. Absent or null when no call was made.
+   */
+  solverConfig: z.object({
+    sources: z.array(z.string().nullable()),
+    seeds: z.array(z.number().int().nullable()),
+  }).nullable().optional(),
 });
 
 export type DudulluPreviewResponse = z.infer<typeof dudulluPreviewResponseSchema>;

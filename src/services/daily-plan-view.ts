@@ -1,5 +1,6 @@
 import { DUDULLU_CAMPUS } from "./dudullu-campus";
 import { longestStudentRideMinutes } from "./dudullu-preview";
+import { buildPlanSolverConfig, type PlanSolverConfig } from "./plan-solver-config";
 import type { DudulluPreviewJobView, DudulluPreviewResponse } from "./dudullu-preview-response";
 
 /**
@@ -233,6 +234,8 @@ export interface DailyPlanView {
   readonly retryAfterSeconds: number | null;
   /** Matrix load time and age; null when the response carries none. */
   readonly matrixAge: PlanMatrixAge | null;
+  /** Which algorithm settings and seed produced the plan (H17); null when not reported. */
+  readonly solverConfig: PlanSolverConfig | null;
   readonly summary: PlanSummary;
   readonly reasons: readonly PlanReason[];
   /** True when no admitted trip exists on that day (nothing to plan). */
@@ -607,6 +610,7 @@ export function buildDailyPlanView(response: DudulluPreviewResponse): DailyPlanV
     limits: response.limits,
     retryAfterSeconds: response.retryAfterSeconds ?? null,
     matrixAge: buildPlanMatrixAge(response.matrixAge),
+    solverConfig: buildPlanSolverConfig(response.solverConfig),
     summary: {
       status: response.status,
       tone: isEmptyDay ? "neutral" : statusTone(response.status),

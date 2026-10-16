@@ -52,6 +52,7 @@ RESULTS = REPO / "docs" / "paper" / "results"
 SOURCE = RESULTS / "week-2026-10-05-4sw5so"
 DEFAULT_OUT = RESULTS / "week-2026-10-05-exact" / "wp-e3-goal1-single"
 FLEET = "single_4sw5so"
+EXACT_ROUTES_FILENAME = "exact_routes.json"
 
 WAVE_CSV_FIELDS = (
     "date", "R", "fleet", "wave_id", "direction", "anchor", "students", "peak", "model", "columns", "labels",
@@ -62,7 +63,8 @@ WAVE_CSV_FIELDS = (
     "free_status", "free_stop_reason", "free_timing_dependent",
     "solver", "solver_version", "enumeration_seconds", "solve_seconds",
     "exact_certified", "ga_recertified", "objective_check", "exact_le_ga",
-    "highs_status", "highs_K", "highs_D", "highs_agrees", "highs_seconds",
+    "highs_status", "highs_K", "highs_D", "highs_agrees", "highs_free_status", "highs_D_LB_free", "highs_free_agrees",
+    "highs_seconds",
     "ga_protocol", "ga_seed", "ga_commit", "ga_dirty_tree",
 )
 
@@ -126,6 +128,54 @@ def _seconds(sp) -> float:
     return round(sum(s.wall_seconds or 0.0 for s in (sp.stage1, sp.stage2, sp.free) if s is not None), 4)
 
 
+_BOUNDED = ("optimal", "feasible_with_gap", "bound_only")
+
+
+def highs_check(sp, highs) -> tuple:
+    """Compare the HiGHS re-solve with a Gurobi-``optimal`` result: ``(agrees, free_agrees, errors)``.
+
+    Blocking (design section 6): a different proven (K*, D*) or a different proven free-stage value; a
+    HiGHS incumbent better than the Gurobi proven optimum; a HiGHS bound above it; a ``rejected`` HiGHS
+    result. A HiGHS run that is merely not proven (limit, no incumbent) is neither agreement nor error.
+    """
+    errors: list = []
+    agrees = free_agrees = None
+    if highs.status == "rejected":
+        errors.append(f"HiGHS result rejected ({highs.note or 'solver failure or failed cross-check'})")
+    if highs.status in ("optimal", "infeasible_proven"):
+        agrees = highs.status == "optimal" and (highs.k, highs.d) == (sp.k, sp.d)
+        if not agrees:
+            errors.append(f"HiGHS ({highs.status}, K={highs.k}, D={highs.d}) differs from Gurobi (K={sp.k}, D={sp.d})")
+    k_star, d_star = sp.k, sp.d
+    s1, s2, fr = highs.stage1, highs.stage2, highs.free
+    if s1 is not None and s1.status in _BOUNDED:
+        if s1.objective is not None and s1.objective < k_star:
+            errors.append(f"HiGHS stage-1 incumbent K={s1.objective} is below the Gurobi proven K*={k_star}")
+        if s1.bound_ceil is not None and s1.bound_ceil > k_star:
+            errors.append(f"HiGHS stage-1 bound {s1.bound_ceil} is above the Gurobi proven K*={k_star}")
+    if s2 is not None and s2.status in _BOUNDED and s2.k_fix == k_star:
+        if s2.objective is not None and s2.objective < d_star:
+            errors.append(f"HiGHS stage-2 incumbent D={s2.objective} is below the Gurobi proven D*={d_star}")
+        if s2.bound_ceil is not None and s2.bound_ceil > d_star:
+            errors.append(f"HiGHS stage-2 bound {s2.bound_ceil} is above the Gurobi proven D*={d_star}")
+    g_free = sp.free
+    if fr is not None and g_free is not None and g_free.status == "optimal":
+        d_free = g_free.objective
+        if fr.status in _BOUNDED:
+            if fr.objective is not None and fr.objective < d_free:
+                errors.append(f"HiGHS free-stage incumbent {fr.objective} is below the Gurobi proven free optimum {d_free}")
+            if fr.bound_ceil is not None and fr.bound_ceil > d_free:
+                errors.append(f"HiGHS free-stage bound {fr.bound_ceil} is above the Gurobi proven free optimum {d_free}")
+        if fr.status == "optimal":
+            free_agrees = fr.objective == d_free
+            if not free_agrees:
+                errors.append(f"HiGHS free-stage optimum {fr.objective} differs from Gurobi {d_free}")
+        elif fr.status == "infeasible_proven":
+            free_agrees = False
+            errors.append("HiGHS free stage proved infeasible where Gurobi has an optimum")
+    return agrees, free_agrees, errors
+
+
 def evaluate_wave(wave, ga_result, arcs_doc, sp, *, ga_labels, enum_info, highs=None, type_spec=None,
                   fleet: str = FLEET, peak=None) -> dict:
     """Certify, cross-check and compare one wave. Returns ``{"row", "stages", "errors"}``.
@@ -156,6 +206,7 @@ def evaluate_wave(wave, ga_result, arcs_doc, sp, *, ga_labels, enum_info, highs=
             k_ga, d_ga = cert.recompute_objective(wave, seqs)
         except KeyError:
             k_ga = len(seqs)
+            errors.append(f"{tag}: GA duration could not be recomputed (a student_ids entry is not an occurrence of the wave)")
         archived_total = ga_result.get("total_duration_minutes")
         if d_ga is not None and archived_total is not None and abs(float(archived_total) - d_ga) > 1e-6:
             errors.append(f"{tag}: archived GA total {archived_total} differs from the matrix recomputation {d_ga}")
@@ -193,7 +244,7 @@ def evaluate_wave(wave, ga_result, arcs_doc, sp, *, ga_labels, enum_info, highs=
     d_star = sp.d if usable else None
     k_proven = sp.k if (usable and sp.stage1 is not None and sp.stage1.status == "optimal") else None
     k_lb = sp.k_lb if status not in ("rejected", "not_run", "input_rejected", "timing_dependent_abort") else None
-    d_lb = sp.d_lb if k_lb is not None else None
+    d_lb = sp.d_lb if (k_lb is not None and k_proven is not None) else None  # D_LB is valid only for a proven K*
 
     gap = {"dK": None, "gD": None, "gD_note": "unavailable_no_GA", "gD_free": None}
     exact_le_ga = None
@@ -206,15 +257,18 @@ def evaluate_wave(wave, ga_result, arcs_doc, sp, *, ga_labels, enum_info, highs=
         if exact_optimal:
             exact_le_ga = (k_star, d_star) <= (k_ga, d_ga)
 
-    # ---- HiGHS verification of a Gurobi-optimal result (section 6)
-    h_status = h_k = h_d = h_agrees = h_secs = None
+    # ---- HiGHS verification of a Gurobi-optimal result (section 6): stage 1, stage 2 and the free stage
+    h_status = h_k = h_d = h_agrees = h_secs = h_free_status = h_free_lb = h_free_agrees = None
+    highs_stages: list = []
     if highs is not None and exact_optimal:
         h_status, h_k, h_d, h_secs = highs.status, highs.k, highs.d, _seconds(highs)
-        if highs.status in ("optimal", "infeasible_proven"):
-            h_agrees = (highs.status == "optimal" and (highs.k, highs.d) == (sp.k, sp.d))
-            if not h_agrees:
-                errors.append(f"{tag}: HiGHS ({highs.status}, K={highs.k}, D={highs.d}) differs from Gurobi "
-                              f"(K={sp.k}, D={sp.d})")
+        h_free_status = None if highs.free is None else highs.free.status
+        h_free_lb = highs.d_lb_free
+        h_agrees, h_free_agrees, h_errors = highs_check(sp, highs)
+        errors.extend(f"{tag}: {m}" for m in h_errors)
+        highs_stages = [stage_row(s) for s in (highs.stage1, highs.stage2, highs.free) if s is not None]
+        for hs in highs_stages:
+            errors.extend(f"{tag}: HiGHS stage row: {m}" for m in protocol.validate_stage_row(hs))
 
     row = {
         "date": wave.service_date, "R": wave.max_ride_minutes, "fleet": fleet, "wave_id": wave.wave_id,
@@ -230,6 +284,7 @@ def evaluate_wave(wave, ga_result, arcs_doc, sp, *, ga_labels, enum_info, highs=
         "enumeration_seconds": round(enum_info.get("seconds", 0.0), 4), "solve_seconds": _seconds(sp),
         "exact_certified": exact_ok, "ga_recertified": ga_ok, "objective_check": objective_check,
         "exact_le_ga": exact_le_ga, "highs_status": h_status, "highs_K": h_k, "highs_D": h_d, "highs_agrees": h_agrees,
+        "highs_free_status": h_free_status, "highs_D_LB_free": h_free_lb, "highs_free_agrees": h_free_agrees,
         "highs_seconds": h_secs, **ga_labels,
     }
     _stage_cols("stage1", sp.stage1, row)
@@ -238,7 +293,22 @@ def evaluate_wave(wave, ga_result, arcs_doc, sp, *, ga_labels, enum_info, highs=
     if status == "not_run" and not row["note"]:
         row["note"] = "not solved"
     stages = [stage_row(s) for s in (sp.stage1, sp.stage2, sp.free) if s is not None]
-    return {"row": row, "stages": stages, "errors": errors}
+    exact_routes = None
+    if sp.routes:
+        exact_routes = {"wave_id": wave.wave_id, "service_date": wave.service_date, "R": wave.max_ride_minutes,
+                        "status": status, "certified": exact_ok,
+                        "routes": [{"type_id": r.type_id, "column_index": r.column_index, "copy": r.copy,
+                                    "occurrence_ids": list(r.occurrence_ids), "cost": r.cost, "ride": r.ride,
+                                    "tour": r.tour} for r in sp.routes]}
+    return {"row": row, "stages": stages, "errors": errors, "highs_stages": highs_stages, "exact_routes": exact_routes}
+
+
+def recertify_stored_routes(wave, stored: dict, arcs_doc: dict, type_spec=None) -> dict:
+    """Certificate of the archived exact routes of a wave (``exact_routes.json`` entry), no solver needed."""
+    caps = {} if type_spec is None else dict(sw_capacity=type_spec.sw_capacity, so_capacity=type_spec.so_capacity,
+                                              cooldown_minutes=type_spec.cooldown_minutes)
+    routes = [tuple(r["occurrence_ids"]) for r in stored["routes"]]
+    return certificate(cert.request_payload(wave, **caps), cert.response_payload(wave, routes), arcs_doc)
 
 
 def write_wave_csv(path, rows) -> None:
@@ -249,18 +319,42 @@ def write_wave_csv(path, rows) -> None:
 
 
 # ---------------------------------------------------------------- run helpers
-def _git(*args) -> str:
-    return subprocess.run(["git", *args], cwd=REPO, capture_output=True, text=True).stdout.strip()
+RESULTS_REL = "docs/paper/results"
 
 
-def _git_state(out: Path) -> tuple:
+def _git(*args, repo: Path = REPO) -> str:
+    return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True).stdout.strip()
+
+
+def check_out_dir(out: Path, source: Path, repo: Path = REPO) -> str:
+    """Refusal message for an unsafe output directory, else ''.
+
+    An output directory inside the repository must lie strictly below ``docs/paper/results`` (so it can
+    never be the repository root, an ancestor of source code, or a source directory) and must neither
+    contain nor lie inside the source campaign: the dirty flag ignores it, so it must not be able to
+    hide real changes. A directory outside the repository excludes nothing from the dirty check.
+    """
+    out_r, src_r, repo_r = Path(out).resolve(), Path(source).resolve(), Path(repo).resolve()
+    try:
+        rel = out_r.relative_to(repo_r)
+    except ValueError:
+        return ""
+    results = repo_r / RESULTS_REL
+    if out_r == results or results not in out_r.parents:
+        return f"--out must lie strictly below {RESULTS_REL}/ when inside the repository (got {rel.as_posix() or '.'})"
+    if out_r == src_r or out_r in src_r.parents or src_r in out_r.parents:
+        return "--out must not contain or lie inside the source campaign directory"
+    return ""
+
+
+def _git_state(out: Path, repo: Path = REPO) -> tuple:
     """(full commit, dirty flag). The output directory itself is ignored when it lies inside the repo."""
     spec = ["status", "--porcelain"]
     try:
-        spec += ["--", ".", f":(exclude){out.resolve().relative_to(REPO).as_posix()}"]
+        spec += ["--", ".", f":(exclude){Path(out).resolve().relative_to(Path(repo).resolve()).as_posix()}"]
     except ValueError:
         pass
-    return _git("rev-parse", "HEAD"), bool(_git(*spec))
+    return _git("rev-parse", "HEAD", repo=repo), bool(_git(*spec, repo=repo))
 
 
 def _rel(path: Path) -> str:
@@ -294,6 +388,10 @@ def parse_args(argv):
 def main(argv=None) -> int:
     args = parse_args(argv)
     source, out = Path(args.source), Path(args.out)
+    refusal = check_out_dir(out, source)
+    if refusal:
+        print(f"refused: {refusal}", file=sys.stderr)
+        return 2
 
     gurobi_settings = ab.SolverSettings(solver="gurobi")
     highs_settings = ab.SolverSettings(solver="highs")
@@ -330,7 +428,7 @@ def _run(args, source, out, gurobi, highs, gurobi_settings, highs_settings) -> i
     rides = [int(r) for r in args.rides.split(",") if r] or list(camp.rides)
     want = {w for w in args.wave_ids.split(",") if w}
 
-    rows, wave_docs, errors = [], [], []
+    rows, wave_docs, errors, route_docs = [], [], [], []
     matrix_sha, slice_sha = {}, {}
     caps_fired = 0
     t_start = time.perf_counter()
@@ -365,7 +463,7 @@ def _run(args, source, out, gurobi, highs, gurobi_settings, highs_settings) -> i
                 return 3
             h_sp = None
             if highs is not None and sp.status == "optimal":
-                h_sp = ab.solve_wave(wave, enum, peak=peak, session=highs, d_lb_free=False)
+                h_sp = ab.solve_wave(wave, enum, peak=peak, session=highs, d_lb_free=True)
                 if h_sp.status == "backend_unavailable":
                     print(f"backend unavailable during {wave.wave_id} (HiGHS): {h_sp.note}", file=sys.stderr)
                     return 3
@@ -377,10 +475,19 @@ def _run(args, source, out, gurobi, highs, gurobi_settings, highs_settings) -> i
             wave_docs.append({"wave_id": wave.wave_id, "service_date": wave.service_date, "R": ride, "peak": peak,
                               "model": enum_info["model"], "columns": enum_info["columns"],
                               "labels": enum_info["labels"], "cap_fired": enum_info["cap_fired"],
-                              "stages": ev["stages"], "result": row})
+                              "stages": ev["stages"], "highs_stages": ev["highs_stages"], "result": row})
+            if ev["exact_routes"] is not None:
+                route_docs.append(ev["exact_routes"])
             print(f"R{ride} {wave.wave_id} legs={wave.legs} cols={enum.column_count} {row['status']} "
                   f"K_GA={row['K_GA']} K*={row['K_star']} D_GA={row['D_GA']} D*={row['D_star']} dK={row['dK']} "
-                  f"t={row['solve_seconds']:.2f}s highs={row['highs_agrees']}", flush=True)
+                  f"t={row['solve_seconds']:.2f}s highs={row['highs_agrees']}/{row['highs_free_agrees']}", flush=True)
+
+    routes_doc = {"protocol": protocol.PROTOCOL_ID, "schema_version": 1, "fleet": FLEET, "git_commit": commit,
+                  "note": "exact routes per wave (occurrence ids in stop order, integer minutes); re-certifiable "
+                          "without a solver through uniride_core.exact.certification",
+                  "waves": route_docs}
+    routes_text = json.dumps(routes_doc, indent=1, sort_keys=True) + "\n"
+    errors.extend(f"exact_routes: {e}" for e in protocol.private_data_errors(routes_doc))
 
     manifest = {
         "protocol": protocol.PROTOCOL_ID, "schema_version": protocol.MANIFEST_SCHEMA_VERSION,
@@ -398,6 +505,8 @@ def _run(args, source, out, gurobi, highs, gurobi_settings, highs_settings) -> i
         "verification_solver": None if highs is None else _solver_block(highs, highs_settings),
         "enumeration": dict(protocol.ENUMERATION_CAPS, count_caps_fired=caps_fired),
         "waves": wave_docs,
+        "exact_routes": {"file": EXACT_ROUTES_FILENAME, "sha256": hashlib.sha256(routes_text.encode("utf-8")).hexdigest(),
+                         "waves": len(route_docs)},
         "options": {"highs_verify": bool(highs), "rides": rides, "wave_ids": sorted(want), "limit": args.limit},
         "total_wall_seconds": round(time.perf_counter() - t_start, 1),
         "blocking_errors": errors,
@@ -409,6 +518,7 @@ def _run(args, source, out, gurobi, highs, gurobi_settings, highs_settings) -> i
         manifest["blocking_errors"] = errors
     out.mkdir(parents=True, exist_ok=True)
     (out / protocol.MANIFEST_FILENAME).write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (out / EXACT_ROUTES_FILENAME).write_bytes(routes_text.encode("utf-8"))  # bytes: the manifest sha256 is of these bytes
     write_wave_csv(out / "wave_gaps.csv", rows)
     summary = summarise(rows)
     (out / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -425,7 +535,8 @@ def summarise(rows) -> dict:
     for r in rows:
         p = per.setdefault(str(r["R"]), {"waves": 0, "statuses": {}, "stage_stop_reasons": {}, "dK_zero": 0, "dK_positive": 0,
                                          "dK_unavailable": 0, "timing_dependent_rows": 0, "highs_agrees": 0,
-                                         "highs_disagrees": 0, "highs_not_proven_or_not_run": 0, "exact_le_ga_true": 0,
+                                         "highs_disagrees": 0, "highs_not_proven_or_not_run": 0, "highs_free_agrees": 0,
+                                         "highs_free_disagrees": 0, "highs_free_not_proven_or_not_run": 0, "exact_le_ga_true": 0,
                                          "exact_le_ga_false": 0, "gD_comparable": 0, "gD_not_comparable": 0})
         p["waves"] += 1
         p["statuses"][r["status"]] = p["statuses"].get(r["status"], 0) + 1
@@ -444,6 +555,9 @@ def summarise(rows) -> dict:
             p["highs_disagrees"] += 1
         else:
             p["highs_not_proven_or_not_run"] += 1
+        key = {True: "highs_free_agrees", False: "highs_free_disagrees"}.get(r["highs_free_agrees"],
+                                                                              "highs_free_not_proven_or_not_run")
+        p[key] += 1
         if r["exact_le_ga"] is True:
             p["exact_le_ga_true"] += 1
         elif r["exact_le_ga"] is False:

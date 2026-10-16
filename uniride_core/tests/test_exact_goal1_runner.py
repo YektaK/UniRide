@@ -333,6 +333,26 @@ def test_subset_run_writes_valid_manifest_and_csv(runner, tmp_path):
     by_id = {r["wave_id"]: r for r in rows}
     assert by_id[PEAK]["peak"] == "True" and by_id["2026-10-05:pickup:765"]["peak"] == "False"
     assert not manifest["blocking_errors"]
+    # DUZELT round 1: HiGHS free stage, HiGHS stage rows, archived exact routes
+    for r in rows:
+        assert r["highs_free_agrees"] == "True" and r["highs_free_status"] == "optimal"
+    for w in manifest["waves"]:
+        assert [s["stage"] for s in w["highs_stages"]] == ["stage1", "stage2", "free"]
+        assert all(protocol.validate_stage_row(s) == [] for s in w["highs_stages"])
+    routes_file = out / manifest["exact_routes"]["file"]
+    import hashlib
+
+    assert hashlib.sha256(routes_file.read_bytes()).hexdigest() == manifest["exact_routes"]["sha256"]
+    stored = json.loads(routes_file.read_text(encoding="utf-8"))
+    assert protocol.private_data_errors(stored) == []
+    assert [w["wave_id"] for w in stored["waves"]] == ids and manifest["exact_routes"]["waves"] == 4
+    arcs50 = json.loads((SW5SO / "2026-10-05_R50_repeat1.matrix.json").read_text(encoding="utf-8"))
+    arcs50_06 = json.loads((SW5SO / "2026-10-06_R50_repeat1.matrix.json").read_text(encoding="utf-8"))
+    waves = {w.wave_id: w for w in camp.waves_for(50)}
+    for entry in stored["waves"]:
+        doc = arcs50 if entry["service_date"] == "2026-10-05" else arcs50_06
+        assert entry["certified"] is True
+        assert runner.recertify_stored_routes(waves[entry["wave_id"]], entry, doc)["is_feasible"] is True
 
 
 @pytest.mark.requires_ampl
@@ -363,3 +383,230 @@ def test_determinism_five_waves_solved_twice_with_gurobi():
         second = snapshot(session)
     assert first == second
     assert all(row[4] == "optimal" for row in first)
+
+
+# ======================= DUZELT round 1 =======================
+# ---------- item 1: R / T through the unmodified request builder ----------
+def _types(note):
+    """Violation types of an 'exact certificate failed: a,b' note, without the derived hard_violation marker."""
+    assert note.startswith("exact certificate failed: "), note
+    return set(note.split(": ", 1)[1].split(",")) - {"hard_violation"}
+
+
+@pytest.mark.parametrize("wid", ["2026-10-05:pickup:765", "2026-10-05:dropoff:1035"])
+def test_exact_routes_violating_only_the_ride_limit_are_rejected(runner, campaign, wid):
+    """R = 90 GA routes fed as the exact side of the same wave at R = 50: only the ride limit is violated."""
+    date = wid[:10]
+    arcs50, jobs50 = _archive(date, 50)
+    arcs90, jobs90 = _archive(date, 90)
+    wave50, wave90 = _wave(campaign, wid, 50), _wave(campaign, wid, 90)
+    seqs = _ga_seqs(jobs90[wid])
+    assert _evaluate(runner, wave90, jobs90[wid], arcs90, _fake_sp(wave90, seqs))["row"]["status"] == "optimal"
+    ev = _evaluate(runner, wave50, jobs50[wid], arcs50, _fake_sp(wave50, seqs))
+    assert ev["row"]["status"] == "rejected" and ev["row"]["exact_certified"] is False
+    assert _types(ev["row"]["note"]) == {"ride_time_violation"}                 # nothing else is violated
+    assert any("exact certificate failed" in e and "ride_time_violation" in e for e in ev["errors"])
+
+
+@pytest.mark.parametrize("wid", ["2026-10-05:pickup:765", "2026-10-05:dropoff:1035"])
+def test_exact_routes_violating_only_the_tour_limit_are_rejected(runner, campaign, wid):
+    import dataclasses
+
+    date = wid[:10]
+    arcs90, jobs90 = _archive(date, 90)
+    wave = dataclasses.replace(_wave(campaign, wid, 90), max_tour_minutes=80)   # tours are 88 / 89, rides 57 / 79
+    ev = _evaluate(runner, wave, jobs90[wid], arcs90, _fake_sp(wave, _ga_seqs(jobs90[wid])))
+    assert ev["row"]["status"] == "rejected"
+    assert _types(ev["row"]["note"]) == {"duration_violation"}
+
+
+def test_type_spec_capacities_reach_the_certificate(runner, campaign):
+    from uniride_core.exact import VehicleTypeSpec
+
+    arcs_doc, jobs = _archive()
+    wave = _wave(campaign, "2026-10-05:pickup:765")
+    sp = _fake_sp(wave, _ga_seqs(jobs[wave.wave_id]))
+    ok = runner.evaluate_wave(wave, jobs[wave.wave_id], arcs_doc, sp, ga_labels=GA_LABELS, enum_info=ENUM,
+                              type_spec=VehicleTypeSpec("large", 4, 5, 10))
+    assert ok["row"]["status"] == "optimal"
+    tight = runner.evaluate_wave(wave, jobs[wave.wave_id], arcs_doc, sp, ga_labels=GA_LABELS, enum_info=ENUM,
+                                 type_spec=VehicleTypeSpec("large", 1, 1, 10))
+    assert tight["row"]["status"] == "rejected" and tight["row"]["exact_certified"] is False
+
+
+# ---------- item 2: dirty flag and output directory ----------
+def _git_in(repo, *args):
+    return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@example.invalid", *args], cwd=repo,
+                          capture_output=True, text=True, check=True).stdout
+
+
+@pytest.fixture()
+def tiny_repo(tmp_path):
+    repo = tmp_path / "repo"
+    (repo / "docs" / "paper" / "results" / "x" / "run").mkdir(parents=True)
+    (repo / "src").mkdir()
+    (repo / "src" / "code.py").write_text("a = 1\n", encoding="utf-8")
+    (repo / "docs" / "paper" / "results" / "x" / "run" / "out.txt").write_text("1\n", encoding="utf-8")
+    _git_in(repo, "init", "-q")
+    _git_in(repo, "add", "-A")
+    _git_in(repo, "commit", "-q", "-m", "init")
+    return repo
+
+
+def test_git_state_dirty_flag_and_output_exclusion(runner, tiny_repo):
+    out = tiny_repo / "docs" / "paper" / "results" / "x" / "run"
+    commit, dirty = runner._git_state(out, repo=tiny_repo)
+    assert len(commit) == 40 and dirty is False
+    (out / "out.txt").write_text("2\n", encoding="utf-8")                       # tracked change INSIDE out: ignored
+    assert runner._git_state(out, repo=tiny_repo)[1] is False
+    (tiny_repo / "src" / "code.py").write_text("a = 2\n", encoding="utf-8")     # tracked change OUTSIDE out
+    assert runner._git_state(out, repo=tiny_repo)[1] is True
+    _git_in(tiny_repo, "checkout", "--", "src/code.py")
+    (tiny_repo / "src" / "new.py").write_text("b = 1\n", encoding="utf-8")      # untracked file outside out
+    assert runner._git_state(out, repo=tiny_repo)[1] is True
+
+
+def test_out_directory_rule(runner, tiny_repo, tmp_path):
+    results = tiny_repo / "docs" / "paper" / "results"
+    src = results / "src_campaign"
+    src.mkdir()
+    assert runner.check_out_dir(results / "x" / "run", src, repo=tiny_repo) == ""
+    assert runner.check_out_dir(tmp_path / "elsewhere", src, repo=tiny_repo) == ""      # outside the repository
+    for bad in (tiny_repo, tiny_repo / "docs", results, tiny_repo / "src", tiny_repo / "docs" / "other", src,
+                src / "child"):
+        assert runner.check_out_dir(bad, src, repo=tiny_repo), bad
+    assert runner.check_out_dir(results / "x", results / "x" / "s", repo=tiny_repo)    # contains the source
+
+
+def test_runner_refuses_an_unsafe_out_directory_before_anything_else(tmp_path):
+    # an AMPL directory without an executable: a runner that did not refuse would exit 3, never run a campaign
+    env = dict(os.environ, UNIRIDE_AMPL_DIR=str(tmp_path))
+    for bad in (str(REPO), str(REPO / "docs"), str(REPO / "docs" / "paper" / "results"), "."):
+        res = subprocess.run([sys.executable, str(SCRIPT), "--out", bad], cwd=REPO, env=env, capture_output=True,
+                             text=True, timeout=300)
+        assert res.returncode == 2 and "refused" in res.stderr, (bad, res.stderr[-300:])
+
+
+# ---------- items 3 and 5: HiGHS free stage, non-proven results, stage rows ----------
+def _highs_pair(campaign):
+    import dataclasses
+
+    arcs_doc, jobs = _archive()
+    wave = _wave(campaign, PEAK)
+    sp = _fake_sp(wave, _ga_seqs(jobs[PEAK]))
+    return wave, jobs, arcs_doc, sp, dataclasses.replace(sp, solver="highs")
+
+
+def _ev_highs(runner, wave, jobs, arcs_doc, sp, h):
+    return runner.evaluate_wave(wave, jobs[PEAK], arcs_doc, sp, ga_labels=GA_LABELS, enum_info=ENUM, highs=h)
+
+
+def test_highs_free_stage_is_compared_and_a_difference_is_blocking(runner, campaign):
+    import dataclasses
+
+    wave, jobs, arcs_doc, sp, same = _highs_pair(campaign)
+    ev = _ev_highs(runner, wave, jobs, arcs_doc, sp, same)
+    assert ev["errors"] == [] and ev["row"]["highs_free_agrees"] is True and ev["row"]["highs_free_status"] == "optimal"
+    assert ev["row"]["highs_D_LB_free"] == sp.d_lb_free
+    assert [s["stage"] for s in ev["highs_stages"]] == ["stage1", "stage2", "free"]
+    off = dataclasses.replace(same, free=dataclasses.replace(same.free, objective=same.free.objective + 1,
+                                                             bound=same.free.bound + 1, bound_ceil=same.free.bound_ceil + 1),
+                              d_lb_free=same.d_lb_free + 1)
+    ev = _ev_highs(runner, wave, jobs, arcs_doc, sp, off)
+    assert ev["row"]["highs_free_agrees"] is False and any("free-stage" in e for e in ev["errors"])
+    # a free stage that HiGHS did not prove is neither agreement nor error
+    unproven = dataclasses.replace(same, free=dataclasses.replace(same.free, status="feasible_with_gap",
+                                                                  stop_reason="wall_limit", timing_dependent=True))
+    ev = _ev_highs(runner, wave, jobs, arcs_doc, sp, unproven)
+    assert ev["row"]["highs_free_agrees"] is None and ev["errors"] == []
+
+
+def test_highs_incumbent_better_or_bound_above_the_proven_optimum_is_blocking(runner, campaign):
+    import dataclasses
+
+    wave, jobs, arcs_doc, sp, same = _highs_pair(campaign)
+    s2 = dataclasses.replace(same.stage2, status="feasible_with_gap", stop_reason="wall_limit", timing_dependent=True,
+                             objective=sp.d - 1)
+    ev = _ev_highs(runner, wave, jobs, arcs_doc, sp, dataclasses.replace(same, status="feasible_with_gap", stage2=s2))
+    assert any("incumbent" in e and "below" in e for e in ev["errors"]), ev["errors"]
+    s1 = dataclasses.replace(same.stage1, status="feasible_with_gap", stop_reason="wall_limit", timing_dependent=True,
+                             bound_ceil=sp.k + 1)
+    ev = _ev_highs(runner, wave, jobs, arcs_doc, sp, dataclasses.replace(same, status="feasible_with_gap", stage1=s1))
+    assert any("bound" in e and "above" in e for e in ev["errors"]), ev["errors"]
+    s2 = dataclasses.replace(same.stage2, status="bound_only", stop_reason="wall_limit", timing_dependent=True,
+                             objective=None, bound_ceil=sp.d + 1)
+    ev = _ev_highs(runner, wave, jobs, arcs_doc, sp, dataclasses.replace(same, status="bound_only", stage2=s2))
+    assert any("stage-2 bound" in e for e in ev["errors"]), ev["errors"]
+    fr = dataclasses.replace(same.free, status="feasible_with_gap", stop_reason="wall_limit", timing_dependent=True,
+                             objective=sp.free.objective - 1)
+    ev = _ev_highs(runner, wave, jobs, arcs_doc, sp, dataclasses.replace(same, free=fr))
+    assert any("free-stage incumbent" in e for e in ev["errors"]), ev["errors"]
+
+
+def test_highs_rejected_is_a_blocking_error(runner, campaign):
+    import dataclasses
+
+    wave, jobs, arcs_doc, sp, same = _highs_pair(campaign)
+    rej = dataclasses.replace(same, status="rejected", note="stage 2 infeasible after a stage-1 incumbent")
+    ev = _ev_highs(runner, wave, jobs, arcs_doc, sp, rej)
+    assert any("HiGHS result rejected" in e for e in ev["errors"])
+
+
+def test_highs_stage_rows_follow_the_stage_row_schema(runner, campaign):
+    import dataclasses
+
+    wave, jobs, arcs_doc, sp, same = _highs_pair(campaign)
+    ev = _ev_highs(runner, wave, jobs, arcs_doc, sp, same)
+    for row in ev["highs_stages"]:
+        assert runner.protocol.validate_stage_row(row) == []
+        assert {"status", "stop_reason", "timing_dependent", "wall_seconds", "bound", "objective"} <= set(row)
+    bad = dataclasses.replace(same, stage1=dataclasses.replace(same.stage1, stop_reason="wall_limit", timing_dependent=False))
+    ev = _ev_highs(runner, wave, jobs, arcs_doc, sp, bad)                       # a schema-invalid stage row is surfaced
+    assert any("HiGHS stage row" in e for e in ev["errors"])
+
+
+# ---------- item 4: archived exact routes re-certify without a solver ----------
+def test_stored_exact_routes_recertify_through_the_bridge(runner, campaign):
+    arcs_doc, jobs = _archive()
+    wave = _wave(campaign, PEAK)
+    ev = _evaluate(runner, wave, jobs[PEAK], arcs_doc, _fake_sp(wave, _ga_seqs(jobs[PEAK])))
+    stored = json.loads(json.dumps(ev["exact_routes"]))                        # as written to exact_routes.json
+    assert stored["wave_id"] == PEAK and stored["certified"] is True and stored["status"] == "optimal"
+    assert {"type_id", "occurrence_ids", "cost", "ride", "tour", "column_index", "copy"} <= set(stored["routes"][0])
+    assert runner.recertify_stored_routes(wave, stored, arcs_doc)["is_feasible"] is True
+    assert runner.protocol.private_data_errors(stored) == []
+    tampered = json.loads(json.dumps(stored))
+    first, second = tampered["routes"][0]["occurrence_ids"], tampered["routes"][1]["occurrence_ids"]
+    tampered["routes"][0]["occurrence_ids"] = first + second                    # two routes merged: capacity violated
+    del tampered["routes"][1]
+    assert runner.recertify_stored_routes(wave, tampered, arcs_doc)["is_feasible"] is False
+
+
+# ---------- items 6 and 7: GA duration errors, stage 1 not proven ----------
+def test_unrecomputable_ga_duration_is_a_blocking_error(runner, campaign):
+    arcs_doc, jobs = _archive()
+    wave = _wave(campaign, PEAK)
+    ga = deepcopy(jobs[PEAK])
+    ga["routes"][0]["student_ids"][0] = "2026-10-05:pickup:Unknown~1"
+    ev = _evaluate(runner, wave, ga, arcs_doc, _fake_sp(wave, _ga_seqs(jobs[PEAK])))
+    assert ev["row"]["D_GA"] is None
+    assert any("GA duration could not be recomputed" in e for e in ev["errors"])
+
+
+def test_archived_ga_total_differing_from_the_matrix_recomputation_is_blocking(runner, campaign):
+    arcs_doc, jobs = _archive()
+    wave = _wave(campaign, PEAK)
+    ga = deepcopy(jobs[PEAK])
+    ga["total_duration_minutes"] += 5
+    ev = _evaluate(runner, wave, ga, arcs_doc, _fake_sp(wave, _ga_seqs(jobs[PEAK])))
+    assert any("archived GA total" in e for e in ev["errors"])
+
+
+def test_stage1_not_proven_gives_no_gd_and_no_d_lb(runner, campaign):
+    arcs_doc, jobs = _archive()
+    wave = _wave(campaign, PEAK)
+    sp = _fake_sp(wave, _ga_seqs(jobs[PEAK]), status="feasible_with_gap", k_star_proven=False)
+    assert sp.d_lb is not None                                                  # a bound that must not be used
+    row = _evaluate(runner, wave, jobs[PEAK], arcs_doc, sp)["row"]
+    assert row["gD_note"] == "unavailable_stage1_not_proven" and row["gD"] is None
+    assert row["D_LB"] is None and row["exact_le_ga"] is None

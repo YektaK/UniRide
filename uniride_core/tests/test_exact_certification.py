@@ -267,3 +267,37 @@ def test_bridge_modules_import_no_optimizer_api_or_academic_benchmark_or_amplpy(
         assert not roots & {"optimizer_api", "academic_benchmark", "amplpy", "models", "verification"}, (name, roots)
     code = "import sys, uniride_core.exact.certification, uniride_core.exact.gaps; sys.exit(1 if 'amplpy' in sys.modules else 0)"
     assert subprocess.run([sys.executable, "-B", "-c", code], cwd=REPO).returncode == 0
+
+
+# ---------- the real request builder carries the wave limits (DUZELT round 1, item 1a) ----------
+@pytest.mark.parametrize("ride", [50, 60, 70, 90])
+def test_request_payload_carries_the_wave_limits_and_template(campaign, ride):
+    from uniride_core.exact import certification as cert
+
+    for wave in campaign.waves_for(ride):
+        req = cert.request_payload(wave)
+        assert req["max_ride_time"] == wave.max_ride_minutes == ride
+        assert req["max_travel_time"] == wave.max_tour_minutes == 150
+        assert (req["sw_capacity"], req["so_capacity"]) == (4, 5)
+        assert len(req["vehicles"]) == min(wave.legs, 50)
+        assert all((v["sw_capacity"], v["so_capacity"], v["cooldown_minutes"]) == (4, 5, 10) for v in req["vehicles"])
+        assert len({v["vehicle_id"] for v in req["vehicles"]}) == len(req["vehicles"])
+        assert req["direction"] == wave.direction and req["use_time_windows"] is False and req["is_asymmetric"] is True
+        assert req["depot"]["id"] == wave.depot_code and req["expected_matrix_sha256"] == wave.declared_snapshot_sha256
+        assert [s["occurrence_id"] for s in req["students"]] == list(wave.occurrence_ids)
+
+
+def test_request_payload_caps_the_virtual_fleet_at_50_and_takes_template_arguments():
+    from uniride_core.exact import WaveInstance, certification as cert, compute_matrix_sha256
+
+    n = 55
+    matrix = tuple(tuple(0 if i == j else 5 for j in range(n + 1)) for i in range(n + 1))
+    wave = WaveInstance(
+        wave_id="w", service_date="2026-10-05", direction="dropoff", anchor_minutes=1035, max_ride_minutes=60,
+        max_tour_minutes=120, depot_code="D.Kampus", occurrence_ids=tuple(f"o{i}" for i in range(n)),
+        location_codes=tuple(f"L{i}" for i in range(n)), classes=("So",) * n, matrix=matrix,
+        matrix_sha256=compute_matrix_sha256(matrix), arc_slice_sha256="s" * 64, declared_snapshot_sha256="d" * 64)
+    req = cert.request_payload(wave, sw_capacity=1, so_capacity=2, cooldown_minutes=7)
+    assert len(req["vehicles"]) == 50
+    assert (req["sw_capacity"], req["so_capacity"]) == (1, 2) and req["vehicles"][0]["cooldown_minutes"] == 7
+    assert (req["max_ride_time"], req["max_travel_time"], req["target_time"]) == (60, 120, "17:15")

@@ -313,7 +313,7 @@ def test_subset_run_writes_valid_manifest_and_csv(runner, tmp_path):
     _require("highs")
     ids = [PEAK, "2026-10-05:pickup:765", "2026-10-05:dropoff:975", "2026-10-06:pickup:525"]
     out = tmp_path / "out"
-    rc = runner.main(["--rides", "90", "--wave-ids", ",".join(ids), "--out", str(out)])
+    rc = runner.main(["--rides", "50", "--wave-ids", ",".join(ids), "--out", str(out)])
     assert rc == 0
     manifest = json.loads((out / "exact_manifest.json").read_text(encoding="utf-8"))
     assert protocol.validate_manifest(manifest) == []
@@ -321,9 +321,9 @@ def test_subset_run_writes_valid_manifest_and_csv(runner, tmp_path):
     assert manifest["solver"]["name"] == "gurobi" and manifest["verification_solver"]["name"] == "highs"
     assert manifest["source_campaign"]["path"] == "docs/paper/results/week-2026-10-05-4sw5so"
     camp = runner.loader.load_campaign(SW5SO)
-    ids = [w.wave_id for w in camp.waves_for(90) if w.wave_id in ids]  # campaign order
+    ids = [w.wave_id for w in camp.waves_for(50) if w.wave_id in ids]  # campaign order
     assert len(ids) == 4 and [w["wave_id"] for w in manifest["waves"]] == ids
-    assert sorted(manifest["matrix_sha256"]) == ["2026-10-05_R90", "2026-10-06_R90"]
+    assert sorted(manifest["matrix_sha256"]) == ["2026-10-05_R50", "2026-10-06_R50"]
     assert manifest["peak_waves"]["2026-10-05"]["wave_ids"] == [PEAK]
     rows = list(csv.DictReader((out / "wave_gaps.csv").open(encoding="utf-8")))
     assert [r["wave_id"] for r in rows] == ids

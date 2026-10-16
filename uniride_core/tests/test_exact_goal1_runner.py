@@ -307,7 +307,7 @@ def _require(solver: str) -> None:
 
 @pytest.mark.requires_ampl
 def test_subset_run_writes_valid_manifest_and_csv(runner, tmp_path):
-    from academic_benchmark.exact_reference import protocol
+    protocol = runner.protocol  # uniride_core tests must not import academic_benchmark (architecture guard)
 
     _require("gurobi")
     _require("highs")

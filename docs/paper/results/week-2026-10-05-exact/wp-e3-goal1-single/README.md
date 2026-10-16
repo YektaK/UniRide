@@ -10,7 +10,7 @@ routes. It is a descriptive measurement of one snapshot week; it makes no superi
 - Command: `UNIRIDE_AMPL_DIR=<local AMPL directory> python scripts/run_exact_wave_gaps.py`
   (HiGHS verification is on by default). Offline: it reads only
   `docs/paper/results/week-2026-10-05-4sw5so/` (never the DB or HTTP).
-- Commit of the run: `97259e2b1f59eea0192a01f30a485727fd912dff`, `dirty_working_tree: false`
+- Commit of the run: `85481b07cb41a85146405e8f78f17fb9bbc7a3fc`, `dirty_working_tree: false`
   (the results were produced from a clean worktree; this directory was added afterwards).
 - Source campaign (the GA side): `docs/paper/results/week-2026-10-05-4sw5so`, manifest sha256
   `f152ca63068be91be03c7ca27cf767fef52cc9345a6cb69d155f75a137f90b15`, GA commit `6be127d`
@@ -27,8 +27,15 @@ routes. It is a descriptive measurement of one snapshot week; it makes no superi
   per-date `*.matrix.json` slice. The archived GA routes of the same wave pass through the same
   call and the same arcs. K and D are recomputed from the certified routes in integer arithmetic
   and equal the solver objective. A failed certificate would give status `rejected`.
-- HiGHS 1.15.1 re-solved every Gurobi-`optimal` wave (stage 1 and stage 2, same limits, no work
-  limit); a difference in the proven (K*, D*) would be blocking.
+- HiGHS 1.15.1 re-solved every Gurobi-`optimal` wave (stage 1, stage 2 and the free stage, same
+  limits, no work limit). Blocking: a different proven (K*, D*), a different proven free-stage value
+  (`D_LB_free`), a HiGHS incumbent below or a HiGHS bound above the Gurobi proven optimum, a
+  `rejected` HiGHS result.
+- Whole-campaign behaviour: if the loader refuses or rejects the archive (class cross-check, sha,
+  arc values, missing file) the runner exits with code 2 and writes no rows; a wave without an
+  archived GA job gets a per-wave `input_rejected` row (not occurred). Without AMPL the runner exits
+  with code 3 and writes nothing. An output directory inside the repository must lie strictly below
+  `docs/paper/results/` and not contain the source campaign (the dirty flag ignores it).
 
 ## Files
 
@@ -38,17 +45,25 @@ routes. It is a descriptive measurement of one snapshot week; it makes no superi
   the sha256 of each archived arc slice, the peak-wave list (D-B), AMPL / amplpy / solver versions
   and option strings, caps, per wave the model, column and label counts, the stage rows with status,
   stop reason, `timing_dependent`, `non_lexicographic`, objective, bound, wall seconds, Gurobi work
-  units, the wave result row, `blocking_errors` (empty), Python version, host OS.
+  units, the HiGHS stage rows (`highs_stages`: status, stop reason, `timing_dependent`, objective,
+  bound, wall seconds), the wave result row, the `exact_routes` reference (file name, sha256),
+  `blocking_errors` (empty), Python version, host OS.
+- `exact_routes.json`: the expanded exact routes of every wave (type, column index and copy,
+  occurrence ids in stop order, integer cost / ride / tour minutes, `certified`), so the exact side
+  can be re-certified without a licensed re-solve:
+  `scripts/run_exact_wave_gaps.py: recertify_stored_routes`.
 - `wave_gaps.csv`: one row per (R, wave) with the single-type columns of the WP-E6 list: date, R,
   fleet (`single_4sw5so`), wave id, direction, anchor, students, peak flag, model, columns, labels,
   `K_GA`, `K_LB` (and its source), `K_star`, `D_GA`, `D_LB`, `D_star`, `D_LB_free`, `dK`, `gD`
   (with `gD_note`), `gD_free`, wave `status`, per-stage status / stop reason / `timing_dependent` /
   `non_lexicographic`, solver, runtimes, certificate and cross-check results, HiGHS result, and the
   GA labels `ga_protocol` = `native`, `ga_seed` = 42, `ga_commit` = `6be127d`, `ga_dirty_tree` =
-  `True` (read from the source manifest). `D_GA` is the GA duration recomputed on the matrix; it
+  `True` (read from the source manifest). HiGHS columns: `highs_status`, `highs_K`, `highs_D`,
+  `highs_agrees`, `highs_free_status`, `highs_D_LB_free`, `highs_free_agrees`, `highs_seconds`
+  (stage 1 + stage 2 + free). `D_GA` is the GA duration recomputed on the matrix; it
   equals the archived total of every wave. `K_star`, `D_star` are the incumbent values; they are
   proven optima when `status` is `optimal`. The WP-E6 columns `option` and `quota` are typed-fleet
-  columns and are not produced here.
+  only and are not produced here; WP-E6 adds them before typed rows are mixed in.
 - `summary.json`: counts per R (statuses, stop reasons, `dK`, HiGHS agreement, exact <= GA).
 
 ## Measured facts (this machine, one run)
@@ -56,7 +71,9 @@ routes. It is a descriptive measurement of one snapshot week; it makes no superi
 Every row has a status label; no wave is dropped. All 228 rows are `optimal` (all 684 stage rows
 have stop reason `optimal`, none `timing_dependent`, no wall or work limit fired); exact and GA
 certificates are `is_feasible: true` on all 228 rows; the objective cross-check is `ok` on all
-228; exact <= GA holds on all 228 rows; HiGHS gives the same (K*, D*) as Gurobi on all 228.
+228; exact <= GA holds on all 228 rows; HiGHS gives the same (K*, D*) as Gurobi on all 228 and
+proves the same free-stage optimum (`D_LB_free`) on all 228 (all 684 HiGHS stage rows are `optimal`,
+none `timing_dependent`).
 
 | R | waves | `dK = 0` | `dK = 1` | `gD` defined | `gD > 0` | mean `gD` | max `gD` | sum K_GA | sum K* | sum D_GA | sum D* |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -79,9 +96,9 @@ comparable; `gD_free` shown) are all 08:45 pickup waves:
 
 Largest enumeration: 45 170 columns and 171 053 labels (the 20-leg wave at R = 90). Largest Gurobi
 work: 1.64 work units on any call. `K_LB` comes from the solver bound on 183 rows and from AMPL's
-presolve on 45 rows. Total run: 870 s (Gurobi solve calls 250 s, HiGHS re-solves 600 s; the two
-HiGHS calls on the 20-leg wave at R = 90 took 205 s together, inside that wave's 600 s peak-wave
-limit; HiGHS has no work limit, so on a slower host that wave's HiGHS rows could be
+presolve on 45 rows. Total run: 1 144 s (Gurobi solve calls 255 s, HiGHS re-solves 869 s; the three
+HiGHS calls on the 20-leg wave at R = 90 took 263 s together, the longest single call 101 s, inside
+that wave's 600 s peak-wave limit; HiGHS has no work limit, so on a slower host that wave's HiGHS rows could be
 `timing_dependent`).
 
 ## Wording rule

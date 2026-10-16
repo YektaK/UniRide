@@ -10,6 +10,9 @@
       "gD_not_comparable": 1,
       "highs_agrees": 57,
       "highs_disagrees": 0,
+      "highs_free_agrees": 57,
+      "highs_free_disagrees": 0,
+      "highs_free_not_proven_or_not_run": 0,
       "highs_not_proven_or_not_run": 0,
       "stage_stop_reasons": {
         "optimal": 171
@@ -30,6 +33,9 @@
       "gD_not_comparable": 1,
       "highs_agrees": 57,
       "highs_disagrees": 0,
+      "highs_free_agrees": 57,
+      "highs_free_disagrees": 0,
+      "highs_free_not_proven_or_not_run": 0,
       "highs_not_proven_or_not_run": 0,
       "stage_stop_reasons": {
         "optimal": 171
@@ -50,6 +56,9 @@
       "gD_not_comparable": 1,
       "highs_agrees": 57,
       "highs_disagrees": 0,
+      "highs_free_agrees": 57,
+      "highs_free_disagrees": 0,
+      "highs_free_not_proven_or_not_run": 0,
       "highs_not_proven_or_not_run": 0,
       "stage_stop_reasons": {
         "optimal": 171
@@ -70,6 +79,9 @@
       "gD_not_comparable": 1,
       "highs_agrees": 57,
       "highs_disagrees": 0,
+      "highs_free_agrees": 57,
+      "highs_free_disagrees": 0,
+      "highs_free_not_proven_or_not_run": 0,
       "highs_not_proven_or_not_run": 0,
       "stage_stop_reasons": {
         "optimal": 171

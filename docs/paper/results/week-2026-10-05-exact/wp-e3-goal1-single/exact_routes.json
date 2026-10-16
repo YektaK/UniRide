@@ -1,0 +1,6505 @@
+{
+ "fleet": "single_4sw5so",
+ "git_commit": "85481b07cb41a85146405e8f78f17fb9bbc7a3fc",
+ "note": "exact routes per wave (occurrence ids in stop order, integer minutes); re-certifiable without a solver through uniride_core.exact.certification",
+ "protocol": "exact_reference_v1",
+ "schema_version": 1,
+ "waves": [
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 21,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So7~1"
+     ],
+     "ride": 11,
+     "tour": 21,
+     "type_id": "large"
+    },
+    {
+     "column_index": 5,
+     "copy": 0,
+     "cost": 82,
+     "occurrence_ids": [
+      "2026-10-05:pickup:Sw5~1",
+      "2026-10-05:pickup:Sw7~1"
+     ],
+     "ride": 47,
+     "tour": 82,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:pickup:765"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 66,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:Sw5~1"
+     ],
+     "ride": 35,
+     "tour": 66,
+     "type_id": "large"
+    },
+    {
+     "column_index": 3,
+     "copy": 0,
+     "cost": 41,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So9~1",
+      "2026-10-05:dropoff:So8~1"
+     ],
+     "ride": 24,
+     "tour": 41,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:1035"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 83,
+     "copy": 0,
+     "cost": 93,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So6~1",
+      "2026-10-05:pickup:So10~1"
+     ],
+     "ride": 43,
+     "tour": 93,
+     "type_id": "large"
+    },
+    {
+     "column_index": 99,
+     "copy": 0,
+     "cost": 25,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So9~1",
+      "2026-10-05:pickup:So1~1"
+     ],
+     "ride": 15,
+     "tour": 25,
+     "type_id": "large"
+    },
+    {
+     "column_index": 146,
+     "copy": 0,
+     "cost": 83,
+     "occurrence_ids": [
+      "2026-10-05:pickup:Sw1~1",
+      "2026-10-05:pickup:Sw3~1"
+     ],
+     "ride": 43,
+     "tour": 83,
+     "type_id": "large"
+    },
+    {
+     "column_index": 1166,
+     "copy": 0,
+     "cost": 74,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So5~1",
+      "2026-10-05:pickup:Sw2~1",
+      "2026-10-05:pickup:So16~1",
+      "2026-10-05:pickup:So15~1"
+     ],
+     "ride": 50,
+     "tour": 74,
+     "type_id": "large"
+    },
+    {
+     "column_index": 1808,
+     "copy": 0,
+     "cost": 79,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So3~1",
+      "2026-10-05:pickup:So8~1",
+      "2026-10-05:pickup:So12~1",
+      "2026-10-05:pickup:So14~1",
+      "2026-10-05:pickup:So13~1"
+     ],
+     "ride": 49,
+     "tour": 79,
+     "type_id": "large"
+    },
+    {
+     "column_index": 2120,
+     "copy": 0,
+     "cost": 79,
+     "occurrence_ids": [
+      "2026-10-05:pickup:Sw4~1",
+      "2026-10-05:pickup:So18~1",
+      "2026-10-05:pickup:Sw6~1",
+      "2026-10-05:pickup:So2~1",
+      "2026-10-05:pickup:So19~1"
+     ],
+     "ride": 49,
+     "tour": 79,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:pickup:525"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 55,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:Sw4~1"
+     ],
+     "ride": 30,
+     "tour": 55,
+     "type_id": "large"
+    },
+    {
+     "column_index": 11,
+     "copy": 0,
+     "cost": 57,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So14~1",
+      "2026-10-05:dropoff:Sw7~1",
+      "2026-10-05:dropoff:Sw3~1"
+     ],
+     "ride": 50,
+     "tour": 57,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:975"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 4,
+     "copy": 0,
+     "cost": 46,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:Sw2~1"
+     ],
+     "ride": 24,
+     "tour": 46,
+     "type_id": "large"
+    },
+    {
+     "column_index": 7,
+     "copy": 0,
+     "cost": 83,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So10~1",
+      "2026-10-05:dropoff:So6~1"
+     ],
+     "ride": 46,
+     "tour": 83,
+     "type_id": "large"
+    },
+    {
+     "column_index": 8,
+     "copy": 0,
+     "cost": 83,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So1~1",
+      "2026-10-05:dropoff:Sw1~1"
+     ],
+     "ride": 46,
+     "tour": 83,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:735"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 37,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So12~1"
+     ],
+     "ride": 20,
+     "tour": 37,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:855"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 29,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So11~1"
+     ],
+     "ride": 15,
+     "tour": 29,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:pickup:945"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 48,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So11~1",
+      "2026-10-05:dropoff:So19~1"
+     ],
+     "ride": 32,
+     "tour": 48,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:1095"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 54,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So16~1"
+     ],
+     "ride": 28,
+     "tour": 54,
+     "type_id": "large"
+    },
+    {
+     "column_index": 8,
+     "copy": 0,
+     "cost": 74,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So5~1",
+      "2026-10-05:dropoff:Sw6~1",
+      "2026-10-05:dropoff:So18~1"
+     ],
+     "ride": 50,
+     "tour": 74,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:795"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 1,
+     "copy": 0,
+     "cost": 51,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So4~1"
+     ],
+     "ride": 21,
+     "tour": 51,
+     "type_id": "large"
+    },
+    {
+     "column_index": 3,
+     "copy": 0,
+     "cost": 91,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So17~1",
+      "2026-10-05:pickup:Sw9~1"
+     ],
+     "ride": 46,
+     "tour": 91,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:pickup:705"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 1,
+     "copy": 0,
+     "cost": 81,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So17~1"
+     ],
+     "ride": 45,
+     "tour": 81,
+     "type_id": "large"
+    },
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 65,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So15~1",
+      "2026-10-05:dropoff:So4~1"
+     ],
+     "ride": 44,
+     "tour": 65,
+     "type_id": "large"
+    },
+    {
+     "column_index": 16,
+     "copy": 0,
+     "cost": 54,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So7~1",
+      "2026-10-05:dropoff:Sw9~1",
+      "2026-10-05:dropoff:So3~1"
+     ],
+     "ride": 32,
+     "tour": 54,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:915"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 46,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So2~1",
+      "2026-10-05:dropoff:So13~1"
+     ],
+     "ride": 28,
+     "tour": 46,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:675"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 1,
+     "copy": 0,
+     "cost": 21,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So10~1"
+     ],
+     "ride": 11,
+     "tour": 21,
+     "type_id": "large"
+    },
+    {
+     "column_index": 34,
+     "copy": 0,
+     "cost": 100,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So6~1",
+      "2026-10-06:pickup:So12~1"
+     ],
+     "ride": 50,
+     "tour": 100,
+     "type_id": "large"
+    },
+    {
+     "column_index": 101,
+     "copy": 0,
+     "cost": 84,
+     "occurrence_ids": [
+      "2026-10-06:pickup:Sw5~1",
+      "2026-10-06:pickup:So15~1",
+      "2026-10-06:pickup:So1~1"
+     ],
+     "ride": 49,
+     "tour": 84,
+     "type_id": "large"
+    },
+    {
+     "column_index": 207,
+     "copy": 0,
+     "cost": 65,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So13~1",
+      "2026-10-06:pickup:So4~1",
+      "2026-10-06:pickup:Sw7~1",
+      "2026-10-06:pickup:Sw2~1",
+      "2026-10-06:pickup:So2~1"
+     ],
+     "ride": 43,
+     "tour": 65,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:525"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 4,
+     "copy": 0,
+     "cost": 50,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So12~1",
+      "2026-10-06:dropoff:So13~1"
+     ],
+     "ride": 32,
+     "tour": 50,
+     "type_id": "large"
+    },
+    {
+     "column_index": 7,
+     "copy": 0,
+     "cost": 76,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So15~1",
+      "2026-10-06:dropoff:Sw5~1"
+     ],
+     "ride": 45,
+     "tour": 76,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:795"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 83,
+     "occurrence_ids": [
+      "2026-10-06:pickup:Sw1~1",
+      "2026-10-06:pickup:Sw3~1"
+     ],
+     "ride": 43,
+     "tour": 83,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:885"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 77,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:Sw1~1"
+     ],
+     "ride": 40,
+     "tour": 77,
+     "type_id": "large"
+    },
+    {
+     "column_index": 4,
+     "copy": 0,
+     "cost": 52,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:Sw3~1",
+      "2026-10-06:dropoff:Sw7~1"
+     ],
+     "ride": 30,
+     "tour": 52,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:1095"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 5,
+     "copy": 0,
+     "cost": 81,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So1~1",
+      "2026-10-06:dropoff:So6~1"
+     ],
+     "ride": 44,
+     "tour": 81,
+     "type_id": "large"
+    },
+    {
+     "column_index": 8,
+     "copy": 0,
+     "cost": 56,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So10~1",
+      "2026-10-06:dropoff:Sw2~1"
+     ],
+     "ride": 34,
+     "tour": 56,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:735"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 1,
+     "copy": 0,
+     "cost": 54,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So16~1"
+     ],
+     "ride": 26,
+     "tour": 54,
+     "type_id": "large"
+    },
+    {
+     "column_index": 4,
+     "copy": 0,
+     "cost": 35,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So7~1",
+      "2026-10-06:pickup:So11~1"
+     ],
+     "ride": 25,
+     "tour": 35,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:765"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 29,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So11~1"
+     ],
+     "ride": 14,
+     "tour": 29,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:915"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 51,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So4~1"
+     ],
+     "ride": 30,
+     "tour": 51,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:675"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 30,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:Sw8~1"
+     ],
+     "ride": 14,
+     "tour": 30,
+     "type_id": "large"
+    },
+    {
+     "column_index": 3,
+     "copy": 0,
+     "cost": 65,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So2~1",
+      "2026-10-06:dropoff:So16~1"
+     ],
+     "ride": 39,
+     "tour": 65,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:1035"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 91,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So17~1",
+      "2026-10-06:pickup:Sw9~1"
+     ],
+     "ride": 46,
+     "tour": 91,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:705"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 1,
+     "copy": 0,
+     "cost": 81,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So17~1"
+     ],
+     "ride": 45,
+     "tour": 81,
+     "type_id": "large"
+    },
+    {
+     "column_index": 16,
+     "copy": 0,
+     "cost": 61,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So7~1",
+      "2026-10-06:dropoff:Sw9~1",
+      "2026-10-06:dropoff:So14~1",
+      "2026-10-06:dropoff:So19~1"
+     ],
+     "ride": 45,
+     "tour": 61,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:975"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 57,
+     "occurrence_ids": [
+      "2026-10-06:pickup:Sw8~1",
+      "2026-10-06:pickup:So19~1"
+     ],
+     "ride": 43,
+     "tour": 57,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:585"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 35,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So14~1"
+     ],
+     "ride": 17,
+     "tour": 35,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:645"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 79,
+     "copy": 0,
+     "cost": 95,
+     "occurrence_ids": [
+      "2026-10-07:pickup:So17~1",
+      "2026-10-07:pickup:So11~1",
+      "2026-10-07:pickup:So7~1"
+     ],
+     "ride": 50,
+     "tour": 95,
+     "type_id": "large"
+    },
+    {
+     "column_index": 107,
+     "copy": 0,
+     "cost": 83,
+     "occurrence_ids": [
+      "2026-10-07:pickup:Sw5~1",
+      "2026-10-07:pickup:So15~1",
+      "2026-10-07:pickup:Sw3~1"
+     ],
+     "ride": 48,
+     "tour": 83,
+     "type_id": "large"
+    },
+    {
+     "column_index": 207,
+     "copy": 0,
+     "cost": 69,
+     "occurrence_ids": [
+      "2026-10-07:pickup:So12~1",
+      "2026-10-07:pickup:So14~1",
+      "2026-10-07:pickup:Sw7~1",
+      "2026-10-07:pickup:So4~1",
+      "2026-10-07:pickup:So2~1"
+     ],
+     "ride": 49,
+     "tour": 69,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:pickup:525"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 12,
+     "copy": 0,
+     "cost": 76,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So15~1",
+      "2026-10-07:dropoff:Sw5~1"
+     ],
+     "ride": 45,
+     "tour": 76,
+     "type_id": "large"
+    },
+    {
+     "column_index": 16,
+     "copy": 0,
+     "cost": 52,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So7~1",
+      "2026-10-07:dropoff:So14~1",
+      "2026-10-07:dropoff:So2~1"
+     ],
+     "ride": 36,
+     "tour": 52,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:735"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 71,
+     "occurrence_ids": [
+      "2026-10-07:pickup:Sw4~1",
+      "2026-10-07:pickup:So5~1"
+     ],
+     "ride": 41,
+     "tour": 71,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:pickup:825"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 55,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:Sw4~1"
+     ],
+     "ride": 30,
+     "tour": 55,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:1035"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 8,
+     "copy": 0,
+     "cost": 57,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:Sw3~1",
+      "2026-10-07:dropoff:So16~1"
+     ],
+     "ride": 31,
+     "tour": 57,
+     "type_id": "large"
+    },
+    {
+     "column_index": 14,
+     "copy": 0,
+     "cost": 67,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So11~1",
+      "2026-10-07:dropoff:Sw6~1",
+      "2026-10-07:dropoff:So18~1"
+     ],
+     "ride": 43,
+     "tour": 67,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:1095"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 24,
+     "copy": 0,
+     "cost": 98,
+     "occurrence_ids": [
+      "2026-10-07:pickup:So6~1",
+      "2026-10-07:pickup:So8~1",
+      "2026-10-07:pickup:So9~1"
+     ],
+     "ride": 48,
+     "tour": 98,
+     "type_id": "large"
+    },
+    {
+     "column_index": 25,
+     "copy": 0,
+     "cost": 66,
+     "occurrence_ids": [
+      "2026-10-07:pickup:Sw2~1",
+      "2026-10-07:pickup:So13~1",
+      "2026-10-07:pickup:So10~1"
+     ],
+     "ride": 42,
+     "tour": 66,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:pickup:705"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 11,
+     "copy": 0,
+     "cost": 42,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So10~1",
+      "2026-10-07:dropoff:So8~1"
+     ],
+     "ride": 25,
+     "tour": 42,
+     "type_id": "large"
+    },
+    {
+     "column_index": 17,
+     "copy": 0,
+     "cost": 81,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So9~1",
+      "2026-10-07:dropoff:So6~1"
+     ],
+     "ride": 44,
+     "tour": 81,
+     "type_id": "large"
+    },
+    {
+     "column_index": 36,
+     "copy": 0,
+     "cost": 61,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So13~1",
+      "2026-10-07:dropoff:So4~1",
+      "2026-10-07:dropoff:Sw2~1"
+     ],
+     "ride": 39,
+     "tour": 61,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:855"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 37,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So12~1"
+     ],
+     "ride": 20,
+     "tour": 37,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:915"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 71,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:Sw8~1",
+      "2026-10-07:dropoff:So5~1",
+      "2026-10-07:dropoff:Sw7~1"
+     ],
+     "ride": 49,
+     "tour": 71,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:975"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 5,
+     "copy": 0,
+     "cost": 62,
+     "occurrence_ids": [
+      "2026-10-07:pickup:Sw6~1",
+      "2026-10-07:pickup:So18~1"
+     ],
+     "ride": 34,
+     "tour": 62,
+     "type_id": "large"
+    },
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 69,
+     "occurrence_ids": [
+      "2026-10-07:pickup:So16~1",
+      "2026-10-07:pickup:Sw8~1"
+     ],
+     "ride": 41,
+     "tour": 69,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:pickup:765"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 81,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So17~1"
+     ],
+     "ride": 45,
+     "tour": 81,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:675"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 7,
+     "copy": 0,
+     "cost": 66,
+     "occurrence_ids": [
+      "2026-10-08:pickup:Sw5~1"
+     ],
+     "ride": 31,
+     "tour": 66,
+     "type_id": "large"
+    },
+    {
+     "column_index": 174,
+     "copy": 0,
+     "cost": 75,
+     "occurrence_ids": [
+      "2026-10-08:pickup:Sw4~1",
+      "2026-10-08:pickup:Sw9~1",
+      "2026-10-08:pickup:So9~1",
+      "2026-10-08:pickup:So1~1"
+     ],
+     "ride": 45,
+     "tour": 75,
+     "type_id": "large"
+    },
+    {
+     "column_index": 186,
+     "copy": 0,
+     "cost": 69,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So12~1",
+      "2026-10-08:pickup:So14~1",
+      "2026-10-08:pickup:So4~1",
+      "2026-10-08:pickup:Sw7~1",
+      "2026-10-08:pickup:Sw2~1"
+     ],
+     "ride": 49,
+     "tour": 69,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:525"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 1,
+     "copy": 0,
+     "cost": 66,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:Sw5~1"
+     ],
+     "ride": 35,
+     "tour": 66,
+     "type_id": "large"
+    },
+    {
+     "column_index": 4,
+     "copy": 0,
+     "cost": 43,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So7~1",
+      "2026-10-08:dropoff:Sw9~1"
+     ],
+     "ride": 24,
+     "tour": 43,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:1035"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 8,
+     "copy": 0,
+     "cost": 64,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So1~1",
+      "2026-10-08:dropoff:Sw4~1"
+     ],
+     "ride": 39,
+     "tour": 64,
+     "type_id": "large"
+    },
+    {
+     "column_index": 17,
+     "copy": 0,
+     "cost": 52,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:Sw2~1",
+      "2026-10-08:dropoff:Sw7~1",
+      "2026-10-08:dropoff:So4~1"
+     ],
+     "ride": 31,
+     "tour": 52,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:735"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 87,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So6~1"
+     ],
+     "ride": 50,
+     "tour": 87,
+     "type_id": "large"
+    },
+    {
+     "column_index": 3,
+     "copy": 0,
+     "cost": 43,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So14~1",
+      "2026-10-08:dropoff:So12~1"
+     ],
+     "ride": 26,
+     "tour": 43,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:855"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 4,
+     "copy": 0,
+     "cost": 30,
+     "occurrence_ids": [
+      "2026-10-08:pickup:Sw8~1"
+     ],
+     "ride": 16,
+     "tour": 30,
+     "type_id": "large"
+    },
+    {
+     "column_index": 5,
+     "copy": 0,
+     "cost": 88,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So17~1",
+      "2026-10-08:pickup:So11~1"
+     ],
+     "ride": 43,
+     "tour": 88,
+     "type_id": "large"
+    },
+    {
+     "column_index": 8,
+     "copy": 0,
+     "cost": 62,
+     "occurrence_ids": [
+      "2026-10-08:pickup:Sw6~1",
+      "2026-10-08:pickup:So18~1"
+     ],
+     "ride": 34,
+     "tour": 62,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:705"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 3,
+     "copy": 0,
+     "cost": 34,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So2~1"
+     ],
+     "ride": 18,
+     "tour": 34,
+     "type_id": "large"
+    },
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 83,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So11~1",
+      "2026-10-08:dropoff:So17~1"
+     ],
+     "ride": 47,
+     "tour": 83,
+     "type_id": "large"
+    },
+    {
+     "column_index": 9,
+     "copy": 0,
+     "cost": 86,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So15~1",
+      "2026-10-08:dropoff:Sw1~1"
+     ],
+     "ride": 49,
+     "tour": 86,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:975"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 34,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So2~1"
+     ],
+     "ride": 16,
+     "tour": 34,
+     "type_id": "large"
+    },
+    {
+     "column_index": 1,
+     "copy": 0,
+     "cost": 77,
+     "occurrence_ids": [
+      "2026-10-08:pickup:Sw1~1"
+     ],
+     "ride": 37,
+     "tour": 77,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:765"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 30,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:Sw8~1"
+     ],
+     "ride": 14,
+     "tour": 30,
+     "type_id": "large"
+    },
+    {
+     "column_index": 3,
+     "copy": 0,
+     "cost": 62,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:Sw6~1",
+      "2026-10-08:dropoff:So18~1"
+     ],
+     "ride": 38,
+     "tour": 62,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:915"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 70,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So16~1",
+      "2026-10-08:pickup:So13~1"
+     ],
+     "ride": 42,
+     "tour": 70,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:885"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 72,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So13~1",
+      "2026-10-08:dropoff:So16~1"
+     ],
+     "ride": 46,
+     "tour": 72,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:1095"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 66,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So15~1",
+      "2026-10-08:pickup:So7~1"
+     ],
+     "ride": 40,
+     "tour": 66,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:825"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 41,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So9~1",
+      "2026-10-08:dropoff:So8~1"
+     ],
+     "ride": 24,
+     "tour": 41,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:795"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 94,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So6~1",
+      "2026-10-08:pickup:So8~1"
+     ],
+     "ride": 44,
+     "tour": 94,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:645"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 9,
+     "copy": 0,
+     "cost": 77,
+     "occurrence_ids": [
+      "2026-10-09:pickup:Sw1~1"
+     ],
+     "ride": 37,
+     "tour": 77,
+     "type_id": "large"
+    },
+    {
+     "column_index": 134,
+     "copy": 0,
+     "cost": 98,
+     "occurrence_ids": [
+      "2026-10-09:pickup:So6~1",
+      "2026-10-09:pickup:So8~1",
+      "2026-10-09:pickup:So9~1"
+     ],
+     "ride": 48,
+     "tour": 98,
+     "type_id": "large"
+    },
+    {
+     "column_index": 387,
+     "copy": 0,
+     "cost": 77,
+     "occurrence_ids": [
+      "2026-10-09:pickup:Sw4~1",
+      "2026-10-09:pickup:So18~1",
+      "2026-10-09:pickup:Sw6~1",
+      "2026-10-09:pickup:So14~1"
+     ],
+     "ride": 47,
+     "tour": 77,
+     "type_id": "large"
+    },
+    {
+     "column_index": 412,
+     "copy": 0,
+     "cost": 73,
+     "occurrence_ids": [
+      "2026-10-09:pickup:So5~1",
+      "2026-10-09:pickup:Sw2~1",
+      "2026-10-09:pickup:So12~1",
+      "2026-10-09:pickup:So11~1",
+      "2026-10-09:pickup:So10~1"
+     ],
+     "ride": 49,
+     "tour": 73,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:pickup:525"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 40,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So13~1"
+     ],
+     "ride": 22,
+     "tour": 40,
+     "type_id": "large"
+    },
+    {
+     "column_index": 13,
+     "copy": 0,
+     "cost": 71,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:Sw4~1",
+      "2026-10-09:dropoff:So18~1",
+      "2026-10-09:dropoff:Sw6~1"
+     ],
+     "ride": 49,
+     "tour": 71,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:dropoff:795"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 24,
+     "copy": 0,
+     "cost": 81,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So9~1",
+      "2026-10-09:dropoff:So6~1"
+     ],
+     "ride": 44,
+     "tour": 81,
+     "type_id": "large"
+    },
+    {
+     "column_index": 29,
+     "copy": 0,
+     "cost": 53,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So14~1",
+      "2026-10-09:dropoff:Sw2~1"
+     ],
+     "ride": 31,
+     "tour": 53,
+     "type_id": "large"
+    },
+    {
+     "column_index": 68,
+     "copy": 0,
+     "cost": 48,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So10~1",
+      "2026-10-09:dropoff:So11~1",
+      "2026-10-09:dropoff:So12~1",
+      "2026-10-09:dropoff:So8~1"
+     ],
+     "ride": 31,
+     "tour": 48,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:dropoff:735"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 7,
+     "copy": 0,
+     "cost": 95,
+     "occurrence_ids": [
+      "2026-10-09:pickup:So17~1",
+      "2026-10-09:pickup:So2~1"
+     ],
+     "ride": 50,
+     "tour": 95,
+     "type_id": "large"
+    },
+    {
+     "column_index": 17,
+     "copy": 0,
+     "cost": 56,
+     "occurrence_ids": [
+      "2026-10-09:pickup:So7~1",
+      "2026-10-09:pickup:So3~1",
+      "2026-10-09:pickup:So1~1"
+     ],
+     "ride": 46,
+     "tour": 56,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:pickup:825"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 4,
+     "copy": 0,
+     "cost": 77,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:Sw1~1"
+     ],
+     "ride": 40,
+     "tour": 77,
+     "type_id": "large"
+    },
+    {
+     "column_index": 5,
+     "copy": 0,
+     "cost": 79,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So1~1",
+      "2026-10-09:dropoff:So17~1"
+     ],
+     "ride": 43,
+     "tour": 79,
+     "type_id": "large"
+    },
+    {
+     "column_index": 8,
+     "copy": 0,
+     "cost": 47,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So5~1",
+      "2026-10-09:dropoff:So2~1"
+     ],
+     "ride": 31,
+     "tour": 47,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:dropoff:1035"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 52,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So3~1"
+     ],
+     "ride": 30,
+     "tour": 52,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:dropoff:975"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 40,
+     "occurrence_ids": [
+      "2026-10-09:pickup:So13~1"
+     ],
+     "ride": 18,
+     "tour": 40,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:pickup:585"
+  },
+  {
+   "R": 50,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 21,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So7~1"
+     ],
+     "ride": 10,
+     "tour": 21,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:dropoff:1095"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 92,
+     "occurrence_ids": [
+      "2026-10-05:pickup:Sw5~1",
+      "2026-10-05:pickup:Sw7~1",
+      "2026-10-05:pickup:So7~1"
+     ],
+     "ride": 57,
+     "tour": 92,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:pickup:765"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 88,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So9~1",
+      "2026-10-05:dropoff:So8~1",
+      "2026-10-05:dropoff:Sw5~1"
+     ],
+     "ride": 57,
+     "tour": 88,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:1035"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 413,
+     "copy": 0,
+     "cost": 108,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So6~1",
+      "2026-10-05:pickup:So3~1",
+      "2026-10-05:pickup:So10~1"
+     ],
+     "ride": 58,
+     "tour": 108,
+     "type_id": "large"
+    },
+    {
+     "column_index": 1714,
+     "copy": 0,
+     "cost": 100,
+     "occurrence_ids": [
+      "2026-10-05:pickup:Sw1~1",
+      "2026-10-05:pickup:So16~1",
+      "2026-10-05:pickup:So15~1",
+      "2026-10-05:pickup:So1~1"
+     ],
+     "ride": 60,
+     "tour": 100,
+     "type_id": "large"
+    },
+    {
+     "column_index": 6047,
+     "copy": 0,
+     "cost": 77,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So14~1",
+      "2026-10-05:pickup:So13~1",
+      "2026-10-05:pickup:Sw6~1",
+      "2026-10-05:pickup:So12~1",
+      "2026-10-05:pickup:So8~1",
+      "2026-10-05:pickup:So9~1"
+     ],
+     "ride": 59,
+     "tour": 77,
+     "type_id": "large"
+    },
+    {
+     "column_index": 6208,
+     "copy": 0,
+     "cost": 89,
+     "occurrence_ids": [
+      "2026-10-05:pickup:Sw4~1",
+      "2026-10-05:pickup:So18~1",
+      "2026-10-05:pickup:So5~1",
+      "2026-10-05:pickup:Sw2~1",
+      "2026-10-05:pickup:So2~1",
+      "2026-10-05:pickup:So19~1",
+      "2026-10-05:pickup:Sw3~1"
+     ],
+     "ride": 59,
+     "tour": 89,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:pickup:525"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 1,
+     "copy": 0,
+     "cost": 16,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:Sw3~1"
+     ],
+     "ride": 9,
+     "tour": 16,
+     "type_id": "large"
+    },
+    {
+     "column_index": 12,
+     "copy": 0,
+     "cost": 79,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:Sw4~1",
+      "2026-10-05:dropoff:So14~1",
+      "2026-10-05:dropoff:Sw7~1"
+     ],
+     "ride": 57,
+     "tour": 79,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:975"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 12,
+     "copy": 0,
+     "cost": 97,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:Sw2~1",
+      "2026-10-05:dropoff:Sw1~1"
+     ],
+     "ride": 60,
+     "tour": 97,
+     "type_id": "large"
+    },
+    {
+     "column_index": 13,
+     "copy": 0,
+     "cost": 95,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So1~1",
+      "2026-10-05:dropoff:So10~1",
+      "2026-10-05:dropoff:So6~1"
+     ],
+     "ride": 58,
+     "tour": 95,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:735"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 37,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So12~1"
+     ],
+     "ride": 20,
+     "tour": 37,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:855"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 29,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So11~1"
+     ],
+     "ride": 15,
+     "tour": 29,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:pickup:945"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 48,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So11~1",
+      "2026-10-05:dropoff:So19~1"
+     ],
+     "ride": 32,
+     "tour": 48,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:1095"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 54,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So16~1"
+     ],
+     "ride": 28,
+     "tour": 54,
+     "type_id": "large"
+    },
+    {
+     "column_index": 11,
+     "copy": 0,
+     "cost": 73,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So5~1",
+      "2026-10-05:dropoff:So18~1",
+      "2026-10-05:dropoff:Sw6~1"
+     ],
+     "ride": 51,
+     "tour": 73,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:795"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 1,
+     "copy": 0,
+     "cost": 51,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So4~1"
+     ],
+     "ride": 21,
+     "tour": 51,
+     "type_id": "large"
+    },
+    {
+     "column_index": 4,
+     "copy": 0,
+     "cost": 91,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So17~1",
+      "2026-10-05:pickup:Sw9~1"
+     ],
+     "ride": 46,
+     "tour": 91,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:pickup:705"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 96,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So3~1",
+      "2026-10-05:dropoff:So17~1"
+     ],
+     "ride": 60,
+     "tour": 96,
+     "type_id": "large"
+    },
+    {
+     "column_index": 26,
+     "copy": 0,
+     "cost": 83,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So7~1",
+      "2026-10-05:dropoff:Sw9~1",
+      "2026-10-05:dropoff:So4~1",
+      "2026-10-05:dropoff:So15~1"
+     ],
+     "ride": 59,
+     "tour": 83,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:915"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 46,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So2~1",
+      "2026-10-05:dropoff:So13~1"
+     ],
+     "ride": 28,
+     "tour": 46,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:675"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 33,
+     "copy": 0,
+     "cost": 93,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So6~1",
+      "2026-10-06:pickup:So10~1"
+     ],
+     "ride": 43,
+     "tour": 93,
+     "type_id": "large"
+    },
+    {
+     "column_index": 129,
+     "copy": 0,
+     "cost": 82,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So15~1",
+      "2026-10-06:pickup:Sw5~1",
+      "2026-10-06:pickup:So1~1"
+     ],
+     "ride": 56,
+     "tour": 82,
+     "type_id": "large"
+    },
+    {
+     "column_index": 381,
+     "copy": 0,
+     "cost": 75,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So12~1",
+      "2026-10-06:pickup:So13~1",
+      "2026-10-06:pickup:So4~1",
+      "2026-10-06:pickup:Sw7~1",
+      "2026-10-06:pickup:Sw2~1",
+      "2026-10-06:pickup:So2~1"
+     ],
+     "ride": 55,
+     "tour": 75,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:525"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 4,
+     "copy": 0,
+     "cost": 50,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So12~1",
+      "2026-10-06:dropoff:So13~1"
+     ],
+     "ride": 32,
+     "tour": 50,
+     "type_id": "large"
+    },
+    {
+     "column_index": 9,
+     "copy": 0,
+     "cost": 76,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So15~1",
+      "2026-10-06:dropoff:Sw5~1"
+     ],
+     "ride": 45,
+     "tour": 76,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:795"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 83,
+     "occurrence_ids": [
+      "2026-10-06:pickup:Sw1~1",
+      "2026-10-06:pickup:Sw3~1"
+     ],
+     "ride": 43,
+     "tour": 83,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:885"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 77,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:Sw1~1"
+     ],
+     "ride": 40,
+     "tour": 77,
+     "type_id": "large"
+    },
+    {
+     "column_index": 4,
+     "copy": 0,
+     "cost": 52,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:Sw3~1",
+      "2026-10-06:dropoff:Sw7~1"
+     ],
+     "ride": 30,
+     "tour": 52,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:1095"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 5,
+     "copy": 0,
+     "cost": 81,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So1~1",
+      "2026-10-06:dropoff:So6~1"
+     ],
+     "ride": 44,
+     "tour": 81,
+     "type_id": "large"
+    },
+    {
+     "column_index": 8,
+     "copy": 0,
+     "cost": 56,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So10~1",
+      "2026-10-06:dropoff:Sw2~1"
+     ],
+     "ride": 34,
+     "tour": 56,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:735"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 80,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So16~1",
+      "2026-10-06:pickup:So11~1",
+      "2026-10-06:pickup:So7~1"
+     ],
+     "ride": 52,
+     "tour": 80,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:765"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 29,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So11~1"
+     ],
+     "ride": 14,
+     "tour": 29,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:915"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 51,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So4~1"
+     ],
+     "ride": 30,
+     "tour": 51,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:675"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 30,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:Sw8~1"
+     ],
+     "ride": 14,
+     "tour": 30,
+     "type_id": "large"
+    },
+    {
+     "column_index": 3,
+     "copy": 0,
+     "cost": 65,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So2~1",
+      "2026-10-06:dropoff:So16~1"
+     ],
+     "ride": 39,
+     "tour": 65,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:1035"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 91,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So17~1",
+      "2026-10-06:pickup:Sw9~1"
+     ],
+     "ride": 46,
+     "tour": 91,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:705"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 42,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So14~1",
+      "2026-10-06:dropoff:So19~1"
+     ],
+     "ride": 26,
+     "tour": 42,
+     "type_id": "large"
+    },
+    {
+     "column_index": 17,
+     "copy": 0,
+     "cost": 93,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So7~1",
+      "2026-10-06:dropoff:Sw9~1",
+      "2026-10-06:dropoff:So17~1"
+     ],
+     "ride": 57,
+     "tour": 93,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:975"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 57,
+     "occurrence_ids": [
+      "2026-10-06:pickup:Sw8~1",
+      "2026-10-06:pickup:So19~1"
+     ],
+     "ride": 43,
+     "tour": 57,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:585"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 35,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So14~1"
+     ],
+     "ride": 17,
+     "tour": 35,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:645"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 35,
+     "copy": 0,
+     "cost": 84,
+     "occurrence_ids": [
+      "2026-10-07:pickup:So17~1",
+      "2026-10-07:pickup:So7~1"
+     ],
+     "ride": 39,
+     "tour": 84,
+     "type_id": "large"
+    },
+    {
+     "column_index": 148,
+     "copy": 0,
+     "cost": 81,
+     "occurrence_ids": [
+      "2026-10-07:pickup:So15~1",
+      "2026-10-07:pickup:Sw5~1",
+      "2026-10-07:pickup:Sw3~1"
+     ],
+     "ride": 55,
+     "tour": 81,
+     "type_id": "large"
+    },
+    {
+     "column_index": 366,
+     "copy": 0,
+     "cost": 70,
+     "occurrence_ids": [
+      "2026-10-07:pickup:So11~1",
+      "2026-10-07:pickup:So12~1",
+      "2026-10-07:pickup:So14~1",
+      "2026-10-07:pickup:Sw7~1",
+      "2026-10-07:pickup:So4~1",
+      "2026-10-07:pickup:So2~1"
+     ],
+     "ride": 56,
+     "tour": 70,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:pickup:525"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 12,
+     "copy": 0,
+     "cost": 76,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So15~1",
+      "2026-10-07:dropoff:Sw5~1"
+     ],
+     "ride": 45,
+     "tour": 76,
+     "type_id": "large"
+    },
+    {
+     "column_index": 17,
+     "copy": 0,
+     "cost": 52,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So7~1",
+      "2026-10-07:dropoff:So14~1",
+      "2026-10-07:dropoff:So2~1"
+     ],
+     "ride": 36,
+     "tour": 52,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:735"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 71,
+     "occurrence_ids": [
+      "2026-10-07:pickup:Sw4~1",
+      "2026-10-07:pickup:So5~1"
+     ],
+     "ride": 41,
+     "tour": 71,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:pickup:825"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 55,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:Sw4~1"
+     ],
+     "ride": 30,
+     "tour": 55,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:1035"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 9,
+     "copy": 0,
+     "cost": 57,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:Sw3~1",
+      "2026-10-07:dropoff:So16~1"
+     ],
+     "ride": 31,
+     "tour": 57,
+     "type_id": "large"
+    },
+    {
+     "column_index": 19,
+     "copy": 0,
+     "cost": 67,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So11~1",
+      "2026-10-07:dropoff:Sw6~1",
+      "2026-10-07:dropoff:So18~1"
+     ],
+     "ride": 43,
+     "tour": 67,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:1095"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 28,
+     "copy": 0,
+     "cost": 98,
+     "occurrence_ids": [
+      "2026-10-07:pickup:So6~1",
+      "2026-10-07:pickup:So8~1",
+      "2026-10-07:pickup:So9~1"
+     ],
+     "ride": 48,
+     "tour": 98,
+     "type_id": "large"
+    },
+    {
+     "column_index": 29,
+     "copy": 0,
+     "cost": 63,
+     "occurrence_ids": [
+      "2026-10-07:pickup:So10~1",
+      "2026-10-07:pickup:So13~1",
+      "2026-10-07:pickup:Sw2~1"
+     ],
+     "ride": 53,
+     "tour": 63,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:pickup:705"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 18,
+     "copy": 0,
+     "cost": 81,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So9~1",
+      "2026-10-07:dropoff:So6~1"
+     ],
+     "ride": 44,
+     "tour": 81,
+     "type_id": "large"
+    },
+    {
+     "column_index": 64,
+     "copy": 0,
+     "cost": 76,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So10~1",
+      "2026-10-07:dropoff:So8~1",
+      "2026-10-07:dropoff:So13~1",
+      "2026-10-07:dropoff:So4~1",
+      "2026-10-07:dropoff:Sw2~1"
+     ],
+     "ride": 54,
+     "tour": 76,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:855"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 37,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So12~1"
+     ],
+     "ride": 20,
+     "tour": 37,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:915"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 71,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:Sw8~1",
+      "2026-10-07:dropoff:So5~1",
+      "2026-10-07:dropoff:Sw7~1"
+     ],
+     "ride": 49,
+     "tour": 71,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:975"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 62,
+     "occurrence_ids": [
+      "2026-10-07:pickup:Sw6~1",
+      "2026-10-07:pickup:So18~1"
+     ],
+     "ride": 34,
+     "tour": 62,
+     "type_id": "large"
+    },
+    {
+     "column_index": 7,
+     "copy": 0,
+     "cost": 66,
+     "occurrence_ids": [
+      "2026-10-07:pickup:Sw8~1",
+      "2026-10-07:pickup:So16~1"
+     ],
+     "ride": 52,
+     "tour": 66,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:pickup:765"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 81,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So17~1"
+     ],
+     "ride": 45,
+     "tour": 81,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:675"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 13,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So1~1"
+     ],
+     "ride": 6,
+     "tour": 13,
+     "type_id": "large"
+    },
+    {
+     "column_index": 218,
+     "copy": 0,
+     "cost": 88,
+     "occurrence_ids": [
+      "2026-10-08:pickup:Sw5~1",
+      "2026-10-08:pickup:So4~1",
+      "2026-10-08:pickup:Sw7~1",
+      "2026-10-08:pickup:Sw2~1"
+     ],
+     "ride": 53,
+     "tour": 88,
+     "type_id": "large"
+    },
+    {
+     "column_index": 305,
+     "copy": 0,
+     "cost": 88,
+     "occurrence_ids": [
+      "2026-10-08:pickup:Sw4~1",
+      "2026-10-08:pickup:So14~1",
+      "2026-10-08:pickup:So12~1",
+      "2026-10-08:pickup:Sw9~1",
+      "2026-10-08:pickup:So9~1"
+     ],
+     "ride": 58,
+     "tour": 88,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:525"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 5,
+     "copy": 0,
+     "cost": 91,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So7~1",
+      "2026-10-08:dropoff:Sw9~1",
+      "2026-10-08:dropoff:Sw5~1"
+     ],
+     "ride": 60,
+     "tour": 91,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:1035"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 13,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So1~1"
+     ],
+     "ride": 7,
+     "tour": 13,
+     "type_id": "large"
+    },
+    {
+     "column_index": 28,
+     "copy": 0,
+     "cost": 79,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:Sw4~1",
+      "2026-10-08:dropoff:So4~1",
+      "2026-10-08:dropoff:Sw7~1",
+      "2026-10-08:dropoff:Sw2~1"
+     ],
+     "ride": 57,
+     "tour": 79,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:735"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 1,
+     "copy": 0,
+     "cost": 35,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So14~1"
+     ],
+     "ride": 18,
+     "tour": 35,
+     "type_id": "large"
+    },
+    {
+     "column_index": 4,
+     "copy": 0,
+     "cost": 92,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So12~1",
+      "2026-10-08:dropoff:So6~1"
+     ],
+     "ride": 55,
+     "tour": 92,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:855"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 12,
+     "copy": 0,
+     "cost": 97,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So17~1",
+      "2026-10-08:pickup:Sw8~1"
+     ],
+     "ride": 52,
+     "tour": 97,
+     "type_id": "large"
+    },
+    {
+     "column_index": 15,
+     "copy": 0,
+     "cost": 67,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So11~1",
+      "2026-10-08:pickup:So18~1",
+      "2026-10-08:pickup:Sw6~1"
+     ],
+     "ride": 53,
+     "tour": 67,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:705"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 3,
+     "copy": 0,
+     "cost": 34,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So2~1"
+     ],
+     "ride": 18,
+     "tour": 34,
+     "type_id": "large"
+    },
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 83,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So11~1",
+      "2026-10-08:dropoff:So17~1"
+     ],
+     "ride": 47,
+     "tour": 83,
+     "type_id": "large"
+    },
+    {
+     "column_index": 11,
+     "copy": 0,
+     "cost": 86,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So15~1",
+      "2026-10-08:dropoff:Sw1~1"
+     ],
+     "ride": 49,
+     "tour": 86,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:975"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 91,
+     "occurrence_ids": [
+      "2026-10-08:pickup:Sw1~1",
+      "2026-10-08:pickup:So2~1"
+     ],
+     "ride": 51,
+     "tour": 91,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:765"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 77,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:Sw8~1",
+      "2026-10-08:dropoff:Sw6~1",
+      "2026-10-08:dropoff:So18~1"
+     ],
+     "ride": 53,
+     "tour": 77,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:915"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 70,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So16~1",
+      "2026-10-08:pickup:So13~1"
+     ],
+     "ride": 42,
+     "tour": 70,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:885"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 70,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So16~1",
+      "2026-10-08:dropoff:So13~1"
+     ],
+     "ride": 52,
+     "tour": 70,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:1095"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 61,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So7~1",
+      "2026-10-08:pickup:So15~1"
+     ],
+     "ride": 51,
+     "tour": 61,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:825"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 41,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So9~1",
+      "2026-10-08:dropoff:So8~1"
+     ],
+     "ride": 24,
+     "tour": 41,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:795"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 94,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So6~1",
+      "2026-10-08:pickup:So8~1"
+     ],
+     "ride": 44,
+     "tour": 94,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:645"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 8,
+     "copy": 0,
+     "cost": 20,
+     "occurrence_ids": [
+      "2026-10-09:pickup:So9~1"
+     ],
+     "ride": 10,
+     "tour": 20,
+     "type_id": "large"
+    },
+    {
+     "column_index": 51,
+     "copy": 0,
+     "cost": 97,
+     "occurrence_ids": [
+      "2026-10-09:pickup:Sw1~1",
+      "2026-10-09:pickup:So14~1"
+     ],
+     "ride": 57,
+     "tour": 97,
+     "type_id": "large"
+    },
+    {
+     "column_index": 604,
+     "copy": 0,
+     "cost": 108,
+     "occurrence_ids": [
+      "2026-10-09:pickup:So6~1",
+      "2026-10-09:pickup:So8~1",
+      "2026-10-09:pickup:So12~1",
+      "2026-10-09:pickup:So11~1",
+      "2026-10-09:pickup:So10~1"
+     ],
+     "ride": 58,
+     "tour": 108,
+     "type_id": "large"
+    },
+    {
+     "column_index": 808,
+     "copy": 0,
+     "cost": 89,
+     "occurrence_ids": [
+      "2026-10-09:pickup:Sw4~1",
+      "2026-10-09:pickup:So18~1",
+      "2026-10-09:pickup:Sw6~1",
+      "2026-10-09:pickup:So5~1",
+      "2026-10-09:pickup:Sw2~1"
+     ],
+     "ride": 59,
+     "tour": 89,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:pickup:525"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 14,
+     "copy": 0,
+     "cost": 76,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:Sw4~1",
+      "2026-10-09:dropoff:So18~1",
+      "2026-10-09:dropoff:Sw6~1",
+      "2026-10-09:dropoff:So13~1"
+     ],
+     "ride": 58,
+     "tour": 76,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:dropoff:795"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 27,
+     "copy": 0,
+     "cost": 81,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So9~1",
+      "2026-10-09:dropoff:So6~1"
+     ],
+     "ride": 44,
+     "tour": 81,
+     "type_id": "large"
+    },
+    {
+     "column_index": 141,
+     "copy": 0,
+     "cost": 77,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So10~1",
+      "2026-10-09:dropoff:So11~1",
+      "2026-10-09:dropoff:So12~1",
+      "2026-10-09:dropoff:So8~1",
+      "2026-10-09:dropoff:So14~1",
+      "2026-10-09:dropoff:Sw2~1"
+     ],
+     "ride": 55,
+     "tour": 77,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:dropoff:735"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 43,
+     "occurrence_ids": [
+      "2026-10-09:pickup:So2~1",
+      "2026-10-09:pickup:So1~1"
+     ],
+     "ride": 25,
+     "tour": 43,
+     "type_id": "large"
+    },
+    {
+     "column_index": 21,
+     "copy": 0,
+     "cost": 99,
+     "occurrence_ids": [
+      "2026-10-09:pickup:So17~1",
+      "2026-10-09:pickup:So3~1",
+      "2026-10-09:pickup:So7~1"
+     ],
+     "ride": 54,
+     "tour": 99,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:pickup:825"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 13,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So1~1"
+     ],
+     "ride": 7,
+     "tour": 13,
+     "type_id": "large"
+    },
+    {
+     "column_index": 7,
+     "copy": 0,
+     "cost": 91,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So2~1",
+      "2026-10-09:dropoff:So17~1"
+     ],
+     "ride": 55,
+     "tour": 91,
+     "type_id": "large"
+    },
+    {
+     "column_index": 12,
+     "copy": 0,
+     "cost": 97,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So5~1",
+      "2026-10-09:dropoff:Sw1~1"
+     ],
+     "ride": 60,
+     "tour": 97,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:dropoff:1035"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 52,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So3~1"
+     ],
+     "ride": 30,
+     "tour": 52,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:dropoff:975"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 40,
+     "occurrence_ids": [
+      "2026-10-09:pickup:So13~1"
+     ],
+     "ride": 18,
+     "tour": 40,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:pickup:585"
+  },
+  {
+   "R": 60,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 21,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So7~1"
+     ],
+     "ride": 10,
+     "tour": 21,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:dropoff:1095"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 92,
+     "occurrence_ids": [
+      "2026-10-05:pickup:Sw5~1",
+      "2026-10-05:pickup:Sw7~1",
+      "2026-10-05:pickup:So7~1"
+     ],
+     "ride": 57,
+     "tour": 92,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:pickup:765"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 88,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So9~1",
+      "2026-10-05:dropoff:So8~1",
+      "2026-10-05:dropoff:Sw5~1"
+     ],
+     "ride": 57,
+     "tour": 88,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:1035"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 651,
+     "copy": 0,
+     "cost": 92,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So16~1",
+      "2026-10-05:pickup:So15~1",
+      "2026-10-05:pickup:Sw1~1"
+     ],
+     "ride": 64,
+     "tour": 92,
+     "type_id": "large"
+    },
+    {
+     "column_index": 1214,
+     "copy": 0,
+     "cost": 56,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So10~1",
+      "2026-10-05:pickup:So12~1",
+      "2026-10-05:pickup:So14~1",
+      "2026-10-05:pickup:So13~1"
+     ],
+     "ride": 46,
+     "tour": 56,
+     "type_id": "large"
+    },
+    {
+     "column_index": 5493,
+     "copy": 0,
+     "cost": 116,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So6~1",
+      "2026-10-05:pickup:So3~1",
+      "2026-10-05:pickup:So8~1",
+      "2026-10-05:pickup:So9~1",
+      "2026-10-05:pickup:So1~1"
+     ],
+     "ride": 66,
+     "tour": 116,
+     "type_id": "large"
+    },
+    {
+     "column_index": 14536,
+     "copy": 0,
+     "cost": 98,
+     "occurrence_ids": [
+      "2026-10-05:pickup:Sw4~1",
+      "2026-10-05:pickup:So18~1",
+      "2026-10-05:pickup:Sw6~1",
+      "2026-10-05:pickup:So5~1",
+      "2026-10-05:pickup:Sw2~1",
+      "2026-10-05:pickup:So2~1",
+      "2026-10-05:pickup:So19~1",
+      "2026-10-05:pickup:Sw3~1"
+     ],
+     "ride": 68,
+     "tour": 98,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:pickup:525"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 14,
+     "copy": 0,
+     "cost": 88,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:Sw3~1",
+      "2026-10-05:dropoff:So14~1",
+      "2026-10-05:dropoff:Sw4~1",
+      "2026-10-05:dropoff:Sw7~1"
+     ],
+     "ride": 66,
+     "tour": 88,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:975"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 81,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So1~1",
+      "2026-10-05:dropoff:So6~1"
+     ],
+     "ride": 44,
+     "tour": 81,
+     "type_id": "large"
+    },
+    {
+     "column_index": 18,
+     "copy": 0,
+     "cost": 107,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So10~1",
+      "2026-10-05:dropoff:Sw2~1",
+      "2026-10-05:dropoff:Sw1~1"
+     ],
+     "ride": 70,
+     "tour": 107,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:735"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 37,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So12~1"
+     ],
+     "ride": 20,
+     "tour": 37,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:855"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 29,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So11~1"
+     ],
+     "ride": 15,
+     "tour": 29,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:pickup:945"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 48,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So11~1",
+      "2026-10-05:dropoff:So19~1"
+     ],
+     "ride": 32,
+     "tour": 48,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:1095"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 14,
+     "copy": 0,
+     "cost": 96,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:Sw6~1",
+      "2026-10-05:dropoff:So18~1",
+      "2026-10-05:dropoff:So5~1",
+      "2026-10-05:dropoff:So16~1"
+     ],
+     "ride": 70,
+     "tour": 96,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:795"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 111,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So17~1",
+      "2026-10-05:pickup:Sw9~1",
+      "2026-10-05:pickup:So4~1"
+     ],
+     "ride": 66,
+     "tour": 111,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:pickup:705"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 8,
+     "copy": 0,
+     "cost": 65,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So15~1",
+      "2026-10-05:dropoff:So4~1"
+     ],
+     "ride": 44,
+     "tour": 65,
+     "type_id": "large"
+    },
+    {
+     "column_index": 35,
+     "copy": 0,
+     "cost": 98,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So7~1",
+      "2026-10-05:dropoff:Sw9~1",
+      "2026-10-05:dropoff:So3~1",
+      "2026-10-05:dropoff:So17~1"
+     ],
+     "ride": 62,
+     "tour": 98,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:915"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 46,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So2~1",
+      "2026-10-05:dropoff:So13~1"
+     ],
+     "ride": 28,
+     "tour": 46,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:675"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 11,
+     "copy": 0,
+     "cost": 29,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So10~1",
+      "2026-10-06:pickup:So1~1"
+     ],
+     "ride": 19,
+     "tour": 29,
+     "type_id": "large"
+    },
+    {
+     "column_index": 105,
+     "copy": 0,
+     "cost": 113,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So6~1",
+      "2026-10-06:pickup:So12~1",
+      "2026-10-06:pickup:So13~1"
+     ],
+     "ride": 63,
+     "tour": 113,
+     "type_id": "large"
+    },
+    {
+     "column_index": 622,
+     "copy": 0,
+     "cost": 102,
+     "occurrence_ids": [
+      "2026-10-06:pickup:Sw5~1",
+      "2026-10-06:pickup:So15~1",
+      "2026-10-06:pickup:So4~1",
+      "2026-10-06:pickup:Sw7~1",
+      "2026-10-06:pickup:Sw2~1",
+      "2026-10-06:pickup:So2~1"
+     ],
+     "ride": 67,
+     "tour": 102,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:525"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 4,
+     "copy": 0,
+     "cost": 50,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So12~1",
+      "2026-10-06:dropoff:So13~1"
+     ],
+     "ride": 32,
+     "tour": 50,
+     "type_id": "large"
+    },
+    {
+     "column_index": 9,
+     "copy": 0,
+     "cost": 76,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So15~1",
+      "2026-10-06:dropoff:Sw5~1"
+     ],
+     "ride": 45,
+     "tour": 76,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:795"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 83,
+     "occurrence_ids": [
+      "2026-10-06:pickup:Sw1~1",
+      "2026-10-06:pickup:Sw3~1"
+     ],
+     "ride": 43,
+     "tour": 83,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:885"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 103,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:Sw3~1",
+      "2026-10-06:dropoff:Sw7~1",
+      "2026-10-06:dropoff:Sw1~1"
+     ],
+     "ride": 66,
+     "tour": 103,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:1095"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 4,
+     "copy": 0,
+     "cost": 29,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So10~1",
+      "2026-10-06:dropoff:So1~1"
+     ],
+     "ride": 23,
+     "tour": 29,
+     "type_id": "large"
+    },
+    {
+     "column_index": 9,
+     "copy": 0,
+     "cost": 101,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:Sw2~1",
+      "2026-10-06:dropoff:So6~1"
+     ],
+     "ride": 64,
+     "tour": 101,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:735"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 76,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So7~1",
+      "2026-10-06:pickup:So11~1",
+      "2026-10-06:pickup:So16~1"
+     ],
+     "ride": 66,
+     "tour": 76,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:765"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 29,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So11~1"
+     ],
+     "ride": 14,
+     "tour": 29,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:915"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 51,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So4~1"
+     ],
+     "ride": 30,
+     "tour": 51,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:675"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 77,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:Sw8~1",
+      "2026-10-06:dropoff:So16~1",
+      "2026-10-06:dropoff:So2~1"
+     ],
+     "ride": 61,
+     "tour": 77,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:1035"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 91,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So17~1",
+      "2026-10-06:pickup:Sw9~1"
+     ],
+     "ride": 46,
+     "tour": 91,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:705"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 42,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So14~1",
+      "2026-10-06:dropoff:So19~1"
+     ],
+     "ride": 26,
+     "tour": 42,
+     "type_id": "large"
+    },
+    {
+     "column_index": 23,
+     "copy": 0,
+     "cost": 93,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So7~1",
+      "2026-10-06:dropoff:Sw9~1",
+      "2026-10-06:dropoff:So17~1"
+     ],
+     "ride": 57,
+     "tour": 93,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:975"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 57,
+     "occurrence_ids": [
+      "2026-10-06:pickup:Sw8~1",
+      "2026-10-06:pickup:So19~1"
+     ],
+     "ride": 43,
+     "tour": 57,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:585"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 35,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So14~1"
+     ],
+     "ride": 17,
+     "tour": 35,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:645"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 449,
+     "copy": 0,
+     "cost": 111,
+     "occurrence_ids": [
+      "2026-10-07:pickup:So17~1",
+      "2026-10-07:pickup:So14~1",
+      "2026-10-07:pickup:So12~1",
+      "2026-10-07:pickup:So11~1",
+      "2026-10-07:pickup:So7~1"
+     ],
+     "ride": 66,
+     "tour": 111,
+     "type_id": "large"
+    },
+    {
+     "column_index": 626,
+     "copy": 0,
+     "cost": 105,
+     "occurrence_ids": [
+      "2026-10-07:pickup:Sw5~1",
+      "2026-10-07:pickup:So15~1",
+      "2026-10-07:pickup:So4~1",
+      "2026-10-07:pickup:Sw7~1",
+      "2026-10-07:pickup:So2~1",
+      "2026-10-07:pickup:Sw3~1"
+     ],
+     "ride": 70,
+     "tour": 105,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:pickup:525"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 3,
+     "copy": 0,
+     "cost": 21,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So7~1"
+     ],
+     "ride": 10,
+     "tour": 21,
+     "type_id": "large"
+    },
+    {
+     "column_index": 26,
+     "copy": 0,
+     "cost": 98,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So14~1",
+      "2026-10-07:dropoff:So2~1",
+      "2026-10-07:dropoff:So15~1",
+      "2026-10-07:dropoff:Sw5~1"
+     ],
+     "ride": 67,
+     "tour": 98,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:735"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 71,
+     "occurrence_ids": [
+      "2026-10-07:pickup:Sw4~1",
+      "2026-10-07:pickup:So5~1"
+     ],
+     "ride": 41,
+     "tour": 71,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:pickup:825"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 55,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:Sw4~1"
+     ],
+     "ride": 30,
+     "tour": 55,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:1035"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 3,
+     "copy": 0,
+     "cost": 16,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:Sw3~1"
+     ],
+     "ride": 9,
+     "tour": 16,
+     "type_id": "large"
+    },
+    {
+     "column_index": 25,
+     "copy": 0,
+     "cost": 95,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So11~1",
+      "2026-10-07:dropoff:So18~1",
+      "2026-10-07:dropoff:Sw6~1",
+      "2026-10-07:dropoff:So16~1"
+     ],
+     "ride": 69,
+     "tour": 95,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:1095"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 30,
+     "copy": 0,
+     "cost": 98,
+     "occurrence_ids": [
+      "2026-10-07:pickup:So6~1",
+      "2026-10-07:pickup:So8~1",
+      "2026-10-07:pickup:So9~1"
+     ],
+     "ride": 48,
+     "tour": 98,
+     "type_id": "large"
+    },
+    {
+     "column_index": 31,
+     "copy": 0,
+     "cost": 63,
+     "occurrence_ids": [
+      "2026-10-07:pickup:So10~1",
+      "2026-10-07:pickup:So13~1",
+      "2026-10-07:pickup:Sw2~1"
+     ],
+     "ride": 53,
+     "tour": 63,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:pickup:705"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 19,
+     "copy": 0,
+     "cost": 81,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So9~1",
+      "2026-10-07:dropoff:So6~1"
+     ],
+     "ride": 44,
+     "tour": 81,
+     "type_id": "large"
+    },
+    {
+     "column_index": 70,
+     "copy": 0,
+     "cost": 76,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So10~1",
+      "2026-10-07:dropoff:So8~1",
+      "2026-10-07:dropoff:So13~1",
+      "2026-10-07:dropoff:So4~1",
+      "2026-10-07:dropoff:Sw2~1"
+     ],
+     "ride": 54,
+     "tour": 76,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:855"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 37,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So12~1"
+     ],
+     "ride": 20,
+     "tour": 37,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:915"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 71,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:Sw8~1",
+      "2026-10-07:dropoff:So5~1",
+      "2026-10-07:dropoff:Sw7~1"
+     ],
+     "ride": 49,
+     "tour": 71,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:975"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 3,
+     "copy": 0,
+     "cost": 30,
+     "occurrence_ids": [
+      "2026-10-07:pickup:Sw8~1"
+     ],
+     "ride": 16,
+     "tour": 30,
+     "type_id": "large"
+    },
+    {
+     "column_index": 10,
+     "copy": 0,
+     "cost": 89,
+     "occurrence_ids": [
+      "2026-10-07:pickup:So16~1",
+      "2026-10-07:pickup:So18~1",
+      "2026-10-07:pickup:Sw6~1"
+     ],
+     "ride": 61,
+     "tour": 89,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:pickup:765"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 81,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So17~1"
+     ],
+     "ride": 45,
+     "tour": 81,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:675"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 268,
+     "copy": 0,
+     "cost": 87,
+     "occurrence_ids": [
+      "2026-10-08:pickup:Sw2~1",
+      "2026-10-08:pickup:Sw7~1",
+      "2026-10-08:pickup:So4~1",
+      "2026-10-08:pickup:Sw5~1"
+     ],
+     "ride": 63,
+     "tour": 87,
+     "type_id": "large"
+    },
+    {
+     "column_index": 479,
+     "copy": 0,
+     "cost": 93,
+     "occurrence_ids": [
+      "2026-10-08:pickup:Sw4~1",
+      "2026-10-08:pickup:So14~1",
+      "2026-10-08:pickup:So12~1",
+      "2026-10-08:pickup:Sw9~1",
+      "2026-10-08:pickup:So9~1",
+      "2026-10-08:pickup:So1~1"
+     ],
+     "ride": 63,
+     "tour": 93,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:525"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 91,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So7~1",
+      "2026-10-08:dropoff:Sw9~1",
+      "2026-10-08:dropoff:Sw5~1"
+     ],
+     "ride": 60,
+     "tour": 91,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:1035"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 30,
+     "copy": 0,
+     "cost": 88,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So1~1",
+      "2026-10-08:dropoff:Sw4~1",
+      "2026-10-08:dropoff:So4~1",
+      "2026-10-08:dropoff:Sw7~1",
+      "2026-10-08:dropoff:Sw2~1"
+     ],
+     "ride": 66,
+     "tour": 88,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:735"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 98,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So14~1",
+      "2026-10-08:dropoff:So12~1",
+      "2026-10-08:dropoff:So6~1"
+     ],
+     "ride": 61,
+     "tour": 98,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:855"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 12,
+     "copy": 0,
+     "cost": 83,
+     "occurrence_ids": [
+      "2026-10-08:pickup:Sw8~1",
+      "2026-10-08:pickup:So17~1"
+     ],
+     "ride": 69,
+     "tour": 83,
+     "type_id": "large"
+    },
+    {
+     "column_index": 16,
+     "copy": 0,
+     "cost": 67,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So11~1",
+      "2026-10-08:pickup:So18~1",
+      "2026-10-08:pickup:Sw6~1"
+     ],
+     "ride": 53,
+     "tour": 67,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:705"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 83,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So11~1",
+      "2026-10-08:dropoff:So17~1"
+     ],
+     "ride": 47,
+     "tour": 83,
+     "type_id": "large"
+    },
+    {
+     "column_index": 17,
+     "copy": 0,
+     "cost": 99,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So2~1",
+      "2026-10-08:dropoff:So15~1",
+      "2026-10-08:dropoff:Sw1~1"
+     ],
+     "ride": 62,
+     "tour": 99,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:975"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 91,
+     "occurrence_ids": [
+      "2026-10-08:pickup:Sw1~1",
+      "2026-10-08:pickup:So2~1"
+     ],
+     "ride": 51,
+     "tour": 91,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:765"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 77,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:Sw8~1",
+      "2026-10-08:dropoff:Sw6~1",
+      "2026-10-08:dropoff:So18~1"
+     ],
+     "ride": 53,
+     "tour": 77,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:915"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 70,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So16~1",
+      "2026-10-08:pickup:So13~1"
+     ],
+     "ride": 42,
+     "tour": 70,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:885"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 70,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So16~1",
+      "2026-10-08:dropoff:So13~1"
+     ],
+     "ride": 52,
+     "tour": 70,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:1095"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 61,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So7~1",
+      "2026-10-08:pickup:So15~1"
+     ],
+     "ride": 51,
+     "tour": 61,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:825"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 41,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So9~1",
+      "2026-10-08:dropoff:So8~1"
+     ],
+     "ride": 24,
+     "tour": 41,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:795"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 90,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So8~1",
+      "2026-10-08:pickup:So6~1"
+     ],
+     "ride": 68,
+     "tour": 90,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:645"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 169,
+     "copy": 0,
+     "cost": 98,
+     "occurrence_ids": [
+      "2026-10-09:pickup:So6~1",
+      "2026-10-09:pickup:So8~1",
+      "2026-10-09:pickup:So9~1"
+     ],
+     "ride": 48,
+     "tour": 98,
+     "type_id": "large"
+    },
+    {
+     "column_index": 227,
+     "copy": 0,
+     "cost": 102,
+     "occurrence_ids": [
+      "2026-10-09:pickup:Sw1~1",
+      "2026-10-09:pickup:So5~1",
+      "2026-10-09:pickup:Sw2~1"
+     ],
+     "ride": 62,
+     "tour": 102,
+     "type_id": "large"
+    },
+    {
+     "column_index": 1410,
+     "copy": 0,
+     "cost": 92,
+     "occurrence_ids": [
+      "2026-10-09:pickup:Sw4~1",
+      "2026-10-09:pickup:So18~1",
+      "2026-10-09:pickup:Sw6~1",
+      "2026-10-09:pickup:So14~1",
+      "2026-10-09:pickup:So12~1",
+      "2026-10-09:pickup:So11~1",
+      "2026-10-09:pickup:So10~1"
+     ],
+     "ride": 62,
+     "tour": 92,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:pickup:525"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 14,
+     "copy": 0,
+     "cost": 76,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:Sw4~1",
+      "2026-10-09:dropoff:So18~1",
+      "2026-10-09:dropoff:Sw6~1",
+      "2026-10-09:dropoff:So13~1"
+     ],
+     "ride": 58,
+     "tour": 76,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:dropoff:795"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 27,
+     "copy": 0,
+     "cost": 81,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So9~1",
+      "2026-10-09:dropoff:So6~1"
+     ],
+     "ride": 44,
+     "tour": 81,
+     "type_id": "large"
+    },
+    {
+     "column_index": 168,
+     "copy": 0,
+     "cost": 77,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So10~1",
+      "2026-10-09:dropoff:So11~1",
+      "2026-10-09:dropoff:So12~1",
+      "2026-10-09:dropoff:So8~1",
+      "2026-10-09:dropoff:So14~1",
+      "2026-10-09:dropoff:Sw2~1"
+     ],
+     "ride": 55,
+     "tour": 77,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:dropoff:735"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 11,
+     "copy": 0,
+     "cost": 29,
+     "occurrence_ids": [
+      "2026-10-09:pickup:So7~1",
+      "2026-10-09:pickup:So1~1"
+     ],
+     "ride": 19,
+     "tour": 29,
+     "type_id": "large"
+    },
+    {
+     "column_index": 18,
+     "copy": 0,
+     "cost": 110,
+     "occurrence_ids": [
+      "2026-10-09:pickup:So17~1",
+      "2026-10-09:pickup:So3~1",
+      "2026-10-09:pickup:So2~1"
+     ],
+     "ride": 65,
+     "tour": 110,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:pickup:825"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 5,
+     "copy": 0,
+     "cost": 79,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So1~1",
+      "2026-10-09:dropoff:So17~1"
+     ],
+     "ride": 43,
+     "tour": 79,
+     "type_id": "large"
+    },
+    {
+     "column_index": 19,
+     "copy": 0,
+     "cost": 99,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So2~1",
+      "2026-10-09:dropoff:So5~1",
+      "2026-10-09:dropoff:Sw1~1"
+     ],
+     "ride": 62,
+     "tour": 99,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:dropoff:1035"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 52,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So3~1"
+     ],
+     "ride": 30,
+     "tour": 52,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:dropoff:975"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 40,
+     "occurrence_ids": [
+      "2026-10-09:pickup:So13~1"
+     ],
+     "ride": 18,
+     "tour": 40,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:pickup:585"
+  },
+  {
+   "R": 70,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 21,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So7~1"
+     ],
+     "ride": 10,
+     "tour": 21,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:dropoff:1095"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 89,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So7~1",
+      "2026-10-05:pickup:Sw7~1",
+      "2026-10-05:pickup:Sw5~1"
+     ],
+     "ride": 79,
+     "tour": 89,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:pickup:765"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 88,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So9~1",
+      "2026-10-05:dropoff:So8~1",
+      "2026-10-05:dropoff:Sw5~1"
+     ],
+     "ride": 57,
+     "tour": 88,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:1035"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 8199,
+     "copy": 0,
+     "cost": 99,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So10~1",
+      "2026-10-05:pickup:So6~1",
+      "2026-10-05:pickup:So8~1",
+      "2026-10-05:pickup:So9~1",
+      "2026-10-05:pickup:So1~1"
+     ],
+     "ride": 89,
+     "tour": 99,
+     "type_id": "large"
+    },
+    {
+     "column_index": 40641,
+     "copy": 0,
+     "cost": 106,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So14~1",
+      "2026-10-05:pickup:So12~1",
+      "2026-10-05:pickup:So3~1",
+      "2026-10-05:pickup:Sw4~1",
+      "2026-10-05:pickup:So18~1",
+      "2026-10-05:pickup:Sw6~1",
+      "2026-10-05:pickup:So13~1"
+     ],
+     "ride": 88,
+     "tour": 106,
+     "type_id": "large"
+    },
+    {
+     "column_index": 42650,
+     "copy": 0,
+     "cost": 124,
+     "occurrence_ids": [
+      "2026-10-05:pickup:Sw1~1",
+      "2026-10-05:pickup:So15~1",
+      "2026-10-05:pickup:So16~1",
+      "2026-10-05:pickup:Sw2~1",
+      "2026-10-05:pickup:So5~1",
+      "2026-10-05:pickup:So2~1",
+      "2026-10-05:pickup:So19~1",
+      "2026-10-05:pickup:Sw3~1"
+     ],
+     "ride": 84,
+     "tour": 124,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:pickup:525"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 14,
+     "copy": 0,
+     "cost": 84,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:Sw4~1",
+      "2026-10-05:dropoff:So14~1",
+      "2026-10-05:dropoff:Sw7~1",
+      "2026-10-05:dropoff:Sw3~1"
+     ],
+     "ride": 77,
+     "tour": 84,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:975"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 13,
+     "copy": 0,
+     "cost": 96,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:Sw1~1",
+      "2026-10-05:dropoff:Sw2~1"
+     ],
+     "ride": 74,
+     "tour": 96,
+     "type_id": "large"
+    },
+    {
+     "column_index": 14,
+     "copy": 0,
+     "cost": 87,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So1~1",
+      "2026-10-05:dropoff:So6~1",
+      "2026-10-05:dropoff:So10~1"
+     ],
+     "ride": 76,
+     "tour": 87,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:735"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 37,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So12~1"
+     ],
+     "ride": 20,
+     "tour": 37,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:855"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 29,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So11~1"
+     ],
+     "ride": 15,
+     "tour": 29,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:pickup:945"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 48,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So11~1",
+      "2026-10-05:dropoff:So19~1"
+     ],
+     "ride": 32,
+     "tour": 48,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:1095"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 14,
+     "copy": 0,
+     "cost": 96,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:Sw6~1",
+      "2026-10-05:dropoff:So18~1",
+      "2026-10-05:dropoff:So5~1",
+      "2026-10-05:dropoff:So16~1"
+     ],
+     "ride": 70,
+     "tour": 96,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:795"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 111,
+     "occurrence_ids": [
+      "2026-10-05:pickup:So17~1",
+      "2026-10-05:pickup:Sw9~1",
+      "2026-10-05:pickup:So4~1"
+     ],
+     "ride": 66,
+     "tour": 111,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:pickup:705"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 9,
+     "copy": 0,
+     "cost": 65,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So15~1",
+      "2026-10-05:dropoff:So4~1"
+     ],
+     "ride": 44,
+     "tour": 65,
+     "type_id": "large"
+    },
+    {
+     "column_index": 45,
+     "copy": 0,
+     "cost": 98,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So7~1",
+      "2026-10-05:dropoff:Sw9~1",
+      "2026-10-05:dropoff:So3~1",
+      "2026-10-05:dropoff:So17~1"
+     ],
+     "ride": 62,
+     "tour": 98,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:915"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 46,
+     "occurrence_ids": [
+      "2026-10-05:dropoff:So2~1",
+      "2026-10-05:dropoff:So13~1"
+     ],
+     "ride": 28,
+     "tour": 46,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-05",
+   "status": "optimal",
+   "wave_id": "2026-10-05:dropoff:675"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 103,
+     "copy": 0,
+     "cost": 95,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So10~1",
+      "2026-10-06:pickup:So12~1",
+      "2026-10-06:pickup:So6~1"
+     ],
+     "ride": 85,
+     "tour": 95,
+     "type_id": "large"
+    },
+    {
+     "column_index": 1155,
+     "copy": 0,
+     "cost": 123,
+     "occurrence_ids": [
+      "2026-10-06:pickup:Sw5~1",
+      "2026-10-06:pickup:So15~1",
+      "2026-10-06:pickup:So4~1",
+      "2026-10-06:pickup:Sw7~1",
+      "2026-10-06:pickup:Sw2~1",
+      "2026-10-06:pickup:So2~1",
+      "2026-10-06:pickup:So13~1",
+      "2026-10-06:pickup:So1~1"
+     ],
+     "ride": 88,
+     "tour": 123,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:525"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 14,
+     "copy": 0,
+     "cost": 106,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So12~1",
+      "2026-10-06:dropoff:So13~1",
+      "2026-10-06:dropoff:So15~1",
+      "2026-10-06:dropoff:Sw5~1"
+     ],
+     "ride": 75,
+     "tour": 106,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:795"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 82,
+     "occurrence_ids": [
+      "2026-10-06:pickup:Sw3~1",
+      "2026-10-06:pickup:Sw1~1"
+     ],
+     "ride": 73,
+     "tour": 82,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:885"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 101,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:Sw3~1",
+      "2026-10-06:dropoff:Sw1~1",
+      "2026-10-06:dropoff:Sw7~1"
+     ],
+     "ride": 79,
+     "tour": 101,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:1095"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 14,
+     "copy": 0,
+     "cost": 123,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So1~1",
+      "2026-10-06:dropoff:So10~1",
+      "2026-10-06:dropoff:Sw2~1",
+      "2026-10-06:dropoff:So6~1"
+     ],
+     "ride": 86,
+     "tour": 123,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:735"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 76,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So7~1",
+      "2026-10-06:pickup:So11~1",
+      "2026-10-06:pickup:So16~1"
+     ],
+     "ride": 66,
+     "tour": 76,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:765"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 29,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So11~1"
+     ],
+     "ride": 14,
+     "tour": 29,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:915"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 51,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So4~1"
+     ],
+     "ride": 30,
+     "tour": 51,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:675"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 77,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:Sw8~1",
+      "2026-10-06:dropoff:So16~1",
+      "2026-10-06:dropoff:So2~1"
+     ],
+     "ride": 61,
+     "tour": 77,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:1035"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 91,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So17~1",
+      "2026-10-06:pickup:Sw9~1"
+     ],
+     "ride": 46,
+     "tour": 91,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:705"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 30,
+     "copy": 0,
+     "cost": 118,
+     "occurrence_ids": [
+      "2026-10-06:dropoff:So7~1",
+      "2026-10-06:dropoff:Sw9~1",
+      "2026-10-06:dropoff:So14~1",
+      "2026-10-06:dropoff:So19~1",
+      "2026-10-06:dropoff:So17~1"
+     ],
+     "ride": 82,
+     "tour": 118,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:dropoff:975"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 57,
+     "occurrence_ids": [
+      "2026-10-06:pickup:Sw8~1",
+      "2026-10-06:pickup:So19~1"
+     ],
+     "ride": 43,
+     "tour": 57,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:585"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 35,
+     "occurrence_ids": [
+      "2026-10-06:pickup:So14~1"
+     ],
+     "ride": 17,
+     "tour": 35,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-06",
+   "status": "optimal",
+   "wave_id": "2026-10-06:pickup:645"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 527,
+     "copy": 0,
+     "cost": 103,
+     "occurrence_ids": [
+      "2026-10-07:pickup:So11~1",
+      "2026-10-07:pickup:So12~1",
+      "2026-10-07:pickup:So14~1",
+      "2026-10-07:pickup:So17~1",
+      "2026-10-07:pickup:So7~1"
+     ],
+     "ride": 89,
+     "tour": 103,
+     "type_id": "large"
+    },
+    {
+     "column_index": 1078,
+     "copy": 0,
+     "cost": 102,
+     "occurrence_ids": [
+      "2026-10-07:pickup:So2~1",
+      "2026-10-07:pickup:Sw7~1",
+      "2026-10-07:pickup:So4~1",
+      "2026-10-07:pickup:So15~1",
+      "2026-10-07:pickup:Sw5~1",
+      "2026-10-07:pickup:Sw3~1"
+     ],
+     "ride": 84,
+     "tour": 102,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:pickup:525"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 30,
+     "copy": 0,
+     "cost": 107,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So7~1",
+      "2026-10-07:dropoff:So14~1",
+      "2026-10-07:dropoff:So2~1",
+      "2026-10-07:dropoff:So15~1",
+      "2026-10-07:dropoff:Sw5~1"
+     ],
+     "ride": 76,
+     "tour": 107,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:735"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 71,
+     "occurrence_ids": [
+      "2026-10-07:pickup:Sw4~1",
+      "2026-10-07:pickup:So5~1"
+     ],
+     "ride": 41,
+     "tour": 71,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:pickup:825"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 55,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:Sw4~1"
+     ],
+     "ride": 30,
+     "tour": 55,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:1035"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 30,
+     "copy": 0,
+     "cost": 103,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:Sw3~1",
+      "2026-10-07:dropoff:So16~1",
+      "2026-10-07:dropoff:So18~1",
+      "2026-10-07:dropoff:Sw6~1",
+      "2026-10-07:dropoff:So11~1"
+     ],
+     "ride": 88,
+     "tour": 103,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:1095"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 17,
+     "copy": 0,
+     "cost": 56,
+     "occurrence_ids": [
+      "2026-10-07:pickup:Sw2~1",
+      "2026-10-07:pickup:So13~1"
+     ],
+     "ride": 32,
+     "tour": 56,
+     "type_id": "large"
+    },
+    {
+     "column_index": 44,
+     "copy": 0,
+     "cost": 93,
+     "occurrence_ids": [
+      "2026-10-07:pickup:So9~1",
+      "2026-10-07:pickup:So6~1",
+      "2026-10-07:pickup:So8~1",
+      "2026-10-07:pickup:So10~1"
+     ],
+     "ride": 83,
+     "tour": 93,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:pickup:705"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 50,
+     "copy": 0,
+     "cost": 61,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So13~1",
+      "2026-10-07:dropoff:So4~1",
+      "2026-10-07:dropoff:Sw2~1"
+     ],
+     "ride": 39,
+     "tour": 61,
+     "type_id": "large"
+    },
+    {
+     "column_index": 75,
+     "copy": 0,
+     "cost": 93,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So9~1",
+      "2026-10-07:dropoff:So6~1",
+      "2026-10-07:dropoff:So8~1",
+      "2026-10-07:dropoff:So10~1"
+     ],
+     "ride": 82,
+     "tour": 93,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:855"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 37,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So12~1"
+     ],
+     "ride": 20,
+     "tour": 37,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:915"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 71,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:Sw8~1",
+      "2026-10-07:dropoff:So5~1",
+      "2026-10-07:dropoff:Sw7~1"
+     ],
+     "ride": 49,
+     "tour": 71,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:975"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 14,
+     "copy": 0,
+     "cost": 101,
+     "occurrence_ids": [
+      "2026-10-07:pickup:Sw8~1",
+      "2026-10-07:pickup:So16~1",
+      "2026-10-07:pickup:So18~1",
+      "2026-10-07:pickup:Sw6~1"
+     ],
+     "ride": 87,
+     "tour": 101,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:pickup:765"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 81,
+     "occurrence_ids": [
+      "2026-10-07:dropoff:So17~1"
+     ],
+     "ride": 45,
+     "tour": 81,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-07",
+   "status": "optimal",
+   "wave_id": "2026-10-07:dropoff:675"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 480,
+     "copy": 0,
+     "cost": 92,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So1~1",
+      "2026-10-08:pickup:Sw5~1",
+      "2026-10-08:pickup:So4~1",
+      "2026-10-08:pickup:Sw7~1",
+      "2026-10-08:pickup:Sw2~1"
+     ],
+     "ride": 85,
+     "tour": 92,
+     "type_id": "large"
+    },
+    {
+     "column_index": 518,
+     "copy": 0,
+     "cost": 84,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So9~1",
+      "2026-10-08:pickup:Sw9~1",
+      "2026-10-08:pickup:Sw4~1",
+      "2026-10-08:pickup:So14~1",
+      "2026-10-08:pickup:So12~1"
+     ],
+     "ride": 74,
+     "tour": 84,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:525"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 91,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So7~1",
+      "2026-10-08:dropoff:Sw9~1",
+      "2026-10-08:dropoff:Sw5~1"
+     ],
+     "ride": 60,
+     "tour": 91,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:1035"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 30,
+     "copy": 0,
+     "cost": 87,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:Sw2~1",
+      "2026-10-08:dropoff:Sw7~1",
+      "2026-10-08:dropoff:So4~1",
+      "2026-10-08:dropoff:Sw4~1",
+      "2026-10-08:dropoff:So1~1"
+     ],
+     "ride": 81,
+     "tour": 87,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:735"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 98,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So14~1",
+      "2026-10-08:dropoff:So12~1",
+      "2026-10-08:dropoff:So6~1"
+     ],
+     "ride": 61,
+     "tour": 98,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:855"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 12,
+     "copy": 0,
+     "cost": 83,
+     "occurrence_ids": [
+      "2026-10-08:pickup:Sw8~1",
+      "2026-10-08:pickup:So17~1"
+     ],
+     "ride": 69,
+     "tour": 83,
+     "type_id": "large"
+    },
+    {
+     "column_index": 17,
+     "copy": 0,
+     "cost": 67,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So11~1",
+      "2026-10-08:pickup:So18~1",
+      "2026-10-08:pickup:Sw6~1"
+     ],
+     "ride": 53,
+     "tour": 67,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:705"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 83,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So11~1",
+      "2026-10-08:dropoff:So17~1"
+     ],
+     "ride": 47,
+     "tour": 83,
+     "type_id": "large"
+    },
+    {
+     "column_index": 20,
+     "copy": 0,
+     "cost": 99,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So2~1",
+      "2026-10-08:dropoff:So15~1",
+      "2026-10-08:dropoff:Sw1~1"
+     ],
+     "ride": 62,
+     "tour": 99,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:975"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 91,
+     "occurrence_ids": [
+      "2026-10-08:pickup:Sw1~1",
+      "2026-10-08:pickup:So2~1"
+     ],
+     "ride": 51,
+     "tour": 91,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:765"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 6,
+     "copy": 0,
+     "cost": 77,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:Sw8~1",
+      "2026-10-08:dropoff:Sw6~1",
+      "2026-10-08:dropoff:So18~1"
+     ],
+     "ride": 53,
+     "tour": 77,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:915"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 70,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So16~1",
+      "2026-10-08:pickup:So13~1"
+     ],
+     "ride": 42,
+     "tour": 70,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:885"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 70,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So16~1",
+      "2026-10-08:dropoff:So13~1"
+     ],
+     "ride": 52,
+     "tour": 70,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:1095"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 61,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So7~1",
+      "2026-10-08:pickup:So15~1"
+     ],
+     "ride": 51,
+     "tour": 61,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:825"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 41,
+     "occurrence_ids": [
+      "2026-10-08:dropoff:So9~1",
+      "2026-10-08:dropoff:So8~1"
+     ],
+     "ride": 24,
+     "tour": 41,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:dropoff:795"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 2,
+     "copy": 0,
+     "cost": 90,
+     "occurrence_ids": [
+      "2026-10-08:pickup:So8~1",
+      "2026-10-08:pickup:So6~1"
+     ],
+     "ride": 68,
+     "tour": 90,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-08",
+   "status": "optimal",
+   "wave_id": "2026-10-08:pickup:645"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 47,
+     "copy": 0,
+     "cost": 81,
+     "occurrence_ids": [
+      "2026-10-09:pickup:So9~1",
+      "2026-10-09:pickup:So6~1"
+     ],
+     "ride": 71,
+     "tour": 81,
+     "type_id": "large"
+    },
+    {
+     "column_index": 644,
+     "copy": 0,
+     "cost": 107,
+     "occurrence_ids": [
+      "2026-10-09:pickup:So14~1",
+      "2026-10-09:pickup:So5~1",
+      "2026-10-09:pickup:Sw2~1",
+      "2026-10-09:pickup:Sw1~1"
+     ],
+     "ride": 89,
+     "tour": 107,
+     "type_id": "large"
+    },
+    {
+     "column_index": 2542,
+     "copy": 0,
+     "cost": 89,
+     "occurrence_ids": [
+      "2026-10-09:pickup:So10~1",
+      "2026-10-09:pickup:So11~1",
+      "2026-10-09:pickup:So12~1",
+      "2026-10-09:pickup:So8~1",
+      "2026-10-09:pickup:Sw4~1",
+      "2026-10-09:pickup:So18~1",
+      "2026-10-09:pickup:Sw6~1"
+     ],
+     "ride": 79,
+     "tour": 89,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:pickup:525"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 14,
+     "copy": 0,
+     "cost": 76,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:Sw4~1",
+      "2026-10-09:dropoff:So18~1",
+      "2026-10-09:dropoff:Sw6~1",
+      "2026-10-09:dropoff:So13~1"
+     ],
+     "ride": 58,
+     "tour": 76,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:dropoff:795"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 70,
+     "copy": 0,
+     "cost": 88,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So9~1",
+      "2026-10-09:dropoff:So6~1",
+      "2026-10-09:dropoff:So8~1"
+     ],
+     "ride": 71,
+     "tour": 88,
+     "type_id": "large"
+    },
+    {
+     "column_index": 183,
+     "copy": 0,
+     "cost": 68,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So10~1",
+      "2026-10-09:dropoff:So11~1",
+      "2026-10-09:dropoff:So12~1",
+      "2026-10-09:dropoff:So14~1",
+      "2026-10-09:dropoff:Sw2~1"
+     ],
+     "ride": 46,
+     "tour": 68,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:dropoff:735"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 30,
+     "copy": 0,
+     "cost": 130,
+     "occurrence_ids": [
+      "2026-10-09:pickup:So17~1",
+      "2026-10-09:pickup:So3~1",
+      "2026-10-09:pickup:So2~1",
+      "2026-10-09:pickup:So7~1",
+      "2026-10-09:pickup:So1~1"
+     ],
+     "ride": 85,
+     "tour": 130,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:pickup:825"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 4,
+     "copy": 0,
+     "cost": 77,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:Sw1~1"
+     ],
+     "ride": 40,
+     "tour": 77,
+     "type_id": "large"
+    },
+    {
+     "column_index": 21,
+     "copy": 0,
+     "cost": 99,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So1~1",
+      "2026-10-09:dropoff:So17~1",
+      "2026-10-09:dropoff:So5~1",
+      "2026-10-09:dropoff:So2~1"
+     ],
+     "ride": 83,
+     "tour": 99,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:dropoff:1035"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 52,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So3~1"
+     ],
+     "ride": 30,
+     "tour": 52,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:dropoff:975"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 40,
+     "occurrence_ids": [
+      "2026-10-09:pickup:So13~1"
+     ],
+     "ride": 18,
+     "tour": 40,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:pickup:585"
+  },
+  {
+   "R": 90,
+   "certified": true,
+   "routes": [
+    {
+     "column_index": 0,
+     "copy": 0,
+     "cost": 21,
+     "occurrence_ids": [
+      "2026-10-09:dropoff:So7~1"
+     ],
+     "ride": 10,
+     "tour": 21,
+     "type_id": "large"
+    }
+   ],
+   "service_date": "2026-10-09",
+   "status": "optimal",
+   "wave_id": "2026-10-09:dropoff:1095"
+  }
+ ]
+}

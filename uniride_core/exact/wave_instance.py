@@ -107,6 +107,14 @@ class WaveInstance:
 
 @dataclass(frozen=True)
 class ExactResult:
+    """Per-wave exact result.
+
+    ``route_count`` is the total number of routes of every type. ``k_lb`` bounds the stage-1
+    objective: K (all routes) for a single type, but K_m (routes of the minimised type only) in the
+    typed case, so in the typed case ``k_lb`` must be compared with K_m, never with ``route_count``
+    (WP-E4 note).
+    """
+
     wave_id: str
     status: str
     routes: tuple  # tuple of tuples of occurrence ids

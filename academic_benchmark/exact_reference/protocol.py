@@ -6,7 +6,10 @@ docs/designs/EXACT_SOLVER_AMPL_DESIGN.md section 4; WP-E2).
   averaged or tested statistically together with heuristic rows (``assert_not_pooled``).
 * Status labels: the per-stage/per-wave labels of section 4. The set itself lives in
   ``uniride_core.exact.EXACT_STATUSES`` because core must not import academic_benchmark; this
-  module gives each label its protocol meaning, and a test keeps the two identical.
+  module gives each label its protocol meaning, refuses to import if the two differ, and a test
+  keeps them identical.
+* ``wall_seconds`` in a stage row is the wall time of the AMPL ``solve`` call: it includes AMPL's
+  model generation and the solver start, while ``lim:time`` limits only the solver run.
 * ``exact_manifest.json`` (one per campaign): required fields and ``validate_manifest``. The
   manifest never holds absolute paths, user names, e-mail addresses or license text; the AMPL
   location is recorded only as "local AMPL installation used" (section 7).
@@ -37,9 +40,8 @@ STATUS_LABELS = {
 if set(STATUS_LABELS) != set(EXACT_STATUSES) - {"not_run"}:  # pragma: no cover - guarded by a test as well
     raise ImportError("exact_reference_v1 status labels differ from uniride_core.exact.EXACT_STATUSES")
 
-# Section 4 names the first four. WP-E2 adds two observed solver outcomes (to be confirmed in review):
-# "gap_tolerance" (solver says solved but incumbent - ceil(bound) >= 1) and "solver_failure"
-# (AMPL solve_result failure/unbounded, or a fractional incumbent): both never count as optimal.
+# Section 4. gap_tolerance, solver_failure and other_limit were accepted by the owner on 2026-10-16
+# (DECISION_LOG E03); other_limit counts as timing_dependent, like wall_limit.
 STOP_REASONS = {
     "optimal": "Proven optimal.",
     "work_limit": "Deterministic work limit (Gurobi lim:work).",
@@ -47,14 +49,17 @@ STOP_REASONS = {
     "infeasible": "Proven infeasible.",
     "gap_tolerance": "Solver reported solved but the integer gap is not closed.",
     "solver_failure": "Solver failure or an invalid (fractional) incumbent.",
-    "other_limit": "Another solver limit.",
+    "other_limit": "Another solver limit; always timing_dependent.",
 }
+TIMING_STOP_REASONS = ("wall_limit", "other_limit")
 STAGES = ("stage1", "stage2", "free")
 MODELS = ("SP", "compact")
 AMPL_LOCATION_VALUES = ("local AMPL installation used", "amplpy default lookup")
 WALL_LIMIT_SECONDS = 60  # owner decisions EQ1, D-C (per solver call)
 PEAK_WALL_LIMIT_SECONDS = 600  # every call on a peak wave (D-B)
 THREADS = 1
+GUROBI_WORK_LIMIT = 20  # work units per call; owner decision 2026-10-16 (E03)
+GUROBI_PEAK_WORK_LIMIT = 200  # every call on a peak wave
 ENUMERATION_CAPS = {"column_cap": COLUMN_CAP_DEFAULT, "label_cap": LABEL_CAP_DEFAULT,
                     "wall_clock_limit_seconds": int(WALL_CLOCK_LIMIT_DEFAULT)}
 
@@ -63,7 +68,7 @@ MANIFEST_FIELDS = {
     "source_campaign": dict, "matrix_sha256": dict, "peak_waves": dict, "ampl": dict, "solver": dict,
     "enumeration": dict, "waves": list, "python_version": str, "host_os": str,
 }
-SOLVER_FIELDS = ("name", "version", "option_string", "threads", "seed", "time_limit_seconds",
+SOLVER_FIELDS = ("name", "version", "option_string", "peak_option_string", "threads", "seed", "time_limit_seconds",
                  "peak_time_limit_seconds", "work_limit", "peak_work_limit", "mip_gap", "mip_gap_abs")
 WAVE_FIELDS = ("wave_id", "service_date", "R", "peak", "model", "columns", "labels", "stages")
 STAGE_FIELDS = ("stage", "status", "stop_reason", "timing_dependent", "non_lexicographic", "objective", "bound",
@@ -117,8 +122,8 @@ def validate_stage_row(row: Mapping) -> List[str]:
         errors.append(f"stop_reason missing for status {status!r}")
     if status == "skipped_no_stage1_incumbent" and stage != "stage2":
         errors.append("skipped_no_stage1_incumbent is a stage-2 status")
-    if reason == "wall_limit" and row["timing_dependent"] is not True:
-        errors.append("a wall_limit stop must be timing_dependent: true")
+    if reason in TIMING_STOP_REASONS and row["timing_dependent"] is not True:
+        errors.append(f"a {reason} stop must be timing_dependent: true")
     if row["non_lexicographic"] and stage != "stage2":
         errors.append("non_lexicographic applies to stage 2 only")
     if status in _INCUMBENT_STATUSES and row["objective"] is None:
@@ -164,21 +169,54 @@ def validate_manifest(doc: Mapping) -> List[str]:
         errors.append(f"solver.threads must be {THREADS} (section 4)")
     if (solver.get("time_limit_seconds"), solver.get("peak_time_limit_seconds")) != (WALL_LIMIT_SECONDS, PEAK_WALL_LIMIT_SECONDS):
         errors.append("solver time limits must be 60 s and 600 s on peak waves (EQ1, D-C)")
-    if _BARE_BESTBOUND.search(str(solver.get("option_string", ""))):
-        errors.append("solver.option_string uses the bare bestbound=1 (use mip:bestbound=1, F17)")
+    errors.extend(_option_string_errors(solver))
     for f, want in ENUMERATION_CAPS.items():
         if doc["enumeration"].get(f) != want:
             errors.append(f"enumeration.{f} must be {want}")
+    peak_ids = {w for v in doc["peak_waves"].values() if isinstance(v, Mapping) for w in v.get("wave_ids", ())}
     for i, wave in enumerate(doc["waves"]):
         missing = [f for f in WAVE_FIELDS if f not in wave]
         if missing:
             errors.append(f"waves[{i}] missing {missing}")
             continue
+        if wave["peak"] is not (wave["wave_id"] in peak_ids):
+            errors.append(f"waves[{i}].peak must be {wave['wave_id'] in peak_ids} (peak_waves list, D-B)")
         if wave["model"] not in MODELS:
             errors.append(f"waves[{i}].model must be one of {MODELS}")
         for row in wave["stages"]:
             errors.extend(f"waves[{i}]: {e}" for e in validate_stage_row(row))
     return errors + private_data_errors(doc)
+
+
+def _g(value) -> str:
+    return f"{value:g}" if isinstance(value, (int, float)) and not isinstance(value, bool) else str(value)
+
+
+def _option_string_errors(solver: Mapping) -> List[str]:
+    """The verbatim option strings must agree with the declared limits, threads and seed."""
+    errors = []
+    name = solver.get("name")
+    if name == "gurobi" and (solver.get("work_limit"), solver.get("peak_work_limit")) != (GUROBI_WORK_LIMIT, GUROBI_PEAK_WORK_LIMIT):
+        errors.append(f"solver.work_limit/peak_work_limit must be {GUROBI_WORK_LIMIT}/{GUROBI_PEAK_WORK_LIMIT} for gurobi (E03)")
+    if name != "gurobi" and (solver.get("work_limit"), solver.get("peak_work_limit")) != (None, None):
+        errors.append("solver.work_limit applies to gurobi only (null otherwise)")
+    for key, time_key, work_key in (("option_string", "time_limit_seconds", "work_limit"),
+                                    ("peak_option_string", "peak_time_limit_seconds", "peak_work_limit")):
+        text = str(solver.get(key, ""))
+        tokens = text.split()
+        if _BARE_BESTBOUND.search(text):
+            errors.append(f"solver.{key} uses the bare bestbound=1 (use mip:bestbound=1, F17)")
+        if "mip:bestbound=1" not in tokens:
+            errors.append(f"solver.{key} must request mip:bestbound=1")
+        if f"lim:time={_g(solver.get(time_key))}" not in tokens:
+            errors.append(f"solver.{key} lim:time disagrees with solver.{time_key}")
+        if f"tech:threads={solver.get('threads')}" not in tokens:
+            errors.append(f"solver.{key} tech:threads disagrees with solver.threads")
+        work = solver.get(work_key)
+        works = [t for t in tokens if t.startswith("lim:work=")]
+        if (work is None and works) or (work is not None and works != [f"lim:work={_g(work)}"]):
+            errors.append(f"solver.{key} lim:work disagrees with solver.{work_key}")
+    return errors
 
 
 def assert_not_pooled(rows: Iterable[Mapping]) -> None:

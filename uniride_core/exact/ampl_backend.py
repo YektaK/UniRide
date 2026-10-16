@@ -40,10 +40,11 @@ LOCATION_LABELS = {"env": "local AMPL installation used", "local_config": "local
 
 DEFAULT_WALL_LIMIT_SECONDS = 60  # owner decision EQ1 / D-C: per solver call
 PEAK_WALL_LIMIT_SECONDS = 600  # every call on a peak wave (D-B)
-# Gurobi deterministic work limit (work units), the primary stop (section 4). Calibrated in WP-E2 on
-# the archived waves (docs/paper/results/week-2026-10-05-exact/wp-e2-calibration/): half the wall limit.
-DEFAULT_WORK_LIMIT = 30.0
-PEAK_WORK_LIMIT = 300.0
+# Gurobi deterministic work limit (work units), the primary stop (section 4): owner decision
+# 2026-10-16 (DECISION_LOG E03). The WP-E2 calibration (max 1.64 work units on the GOAL 1 grid,
+# docs/paper/results/week-2026-10-05-exact/wp-e2-calibration/) is far below either value.
+DEFAULT_WORK_LIMIT = 20.0
+PEAK_WORK_LIMIT = 200.0
 MIP_GAP = 0.0
 MIP_GAP_ABS = 0.99  # integer objectives: incumbent - bound < 1 proves optimality
 SUPPORTED_SOLVERS = ("gurobi", "highs", "cplex", "copt")
@@ -51,7 +52,16 @@ _WORK_LIMIT_SOLVERS = frozenset({"gurobi"})  # confirmed `lim:work` (F17); HiGHS
 _SEED_OPTION = {"gurobi": "tech:seed", "highs": "tech:seed", "cplex": "tech:seed", "copt": None}  # COPT 8.0.6 refuses tech:seed
 _LOG_OPTION = {"gurobi": "outlev=1"}  # log parsed for work units only, never stored
 _HUGE = 1e20
-_INT_TOL = 1e-6
+# A solver returns an integer variable within its integrality tolerance (Gurobi IntFeasTol default
+# 1e-5; HiGHS mip_feasibility_tolerance default 1e-6), so incumbents and lam values are rounded
+# with the looser 1e-5. The bound rounding ceil(b - 1e-6) is the design's rule (section 1.2).
+_INT_TOL = 1e-5
+_BOUND_TOL = 1e-6
+# Stops that depend on machine speed (owner decision 2026-10-16, E03: other_limit counts as timing-dependent).
+_TIMING_REASONS = ("wall_limit", "other_limit")
+_BOUND_SENTINEL = -1e30  # written into .bestbound before every solve; read back as "no bound"
+# A missing solver binary or license (backend_unavailable), as opposed to a backend defect.
+_ABSENT = re.compile(r"licen|cannot invoke|no such program|can.t find", re.I)
 STAGES = ("stage1", "stage2", "free")
 
 
@@ -169,12 +179,12 @@ def classify_outcome(num: int, message: str, objective: Optional[float], bound: 
     if bound is not None and math.isfinite(float(bound)) and abs(float(bound)) < _HUGE:
         b = float(bound)
     # every objective coefficient is >= 0 and lam >= 0, so 0 is always a valid bound
-    b_ceil, source = (max(0, math.ceil(b - _INT_TOL)), "solver") if b is not None else (0, "trivial_zero")
+    b_ceil, source = (max(0, math.ceil(b - _BOUND_TOL)), "solver") if b is not None else (0, "trivial_zero")
     if num < 100 and "determined by presolve" in msg and objective is not None:
         # AMPL presolve fixed every variable (the solver did not run, so any .bestbound suffix is stale):
         # the feasible set is that single point and its value is exact
         b = float(objective)
-        b_ceil, source = math.ceil(b - _INT_TOL), "ampl_presolve"
+        b_ceil, source = math.ceil(b - _BOUND_TOL), "ampl_presolve"
     has_incumbent = num < 200 or 400 <= num < 450
     inc = None
     if has_incumbent:
@@ -190,7 +200,7 @@ def classify_outcome(num: int, message: str, objective: Optional[float], bound: 
         status, reason = "feasible_with_gap", limit
     else:
         status, reason = "bound_only", limit
-    return StageResult(status=status, stop_reason=reason, timing_dependent=reason == "wall_limit",
+    return StageResult(status=status, stop_reason=reason, timing_dependent=reason in _TIMING_REASONS,
                        objective=inc, bound=b, bound_ceil=b_ceil, bound_source=source)
 
 
@@ -200,10 +210,12 @@ _BOUND_STATUSES = ("optimal", "feasible_with_gap", "bound_only")
 def run_stages(call: Callable[[str, Optional[int]], StageResult], *, d_lb_free: bool = True) -> dict:
     """Lexicographic two-stage driver (section 1.1). ``call(stage, k_fix)`` performs one solver call."""
     s1 = dataclasses.replace(call("stage1", None), stage="stage1")
-    out = dict(stage1=s1, stage2=None, free=None, k_lb_solver=None, d_lb=None, d_lb_free=None, non_lexicographic=False)
+    out = dict(stage1=s1, stage2=None, free=None, k_lb_solver=None, k_lb_solver_source=None, d_lb=None,
+               d_lb_free=None, non_lexicographic=False)
     if s1.status not in _BOUND_STATUSES:
         return out
     out["k_lb_solver"] = s1.bound_ceil
+    out["k_lb_solver_source"] = s1.bound_source
     if s1.objective is None:
         out["stage2"] = StageResult(stage="stage2", status="skipped_no_stage1_incumbent")
     else:
@@ -275,7 +287,7 @@ class SPSolveResult:
     stage1: Optional[StageResult] = None
     stage2: Optional[StageResult] = None
     free: Optional[StageResult] = None
-    k: Optional[int] = None  # K (single type) or K_m (typed) of the reported routes
+    k: Optional[int] = None  # K (single type) or K_m (typed: routes of the minimised type only) of the reported routes
     d: Optional[int] = None
     k_lb: Optional[int] = None
     k_lb_source: Optional[str] = None
@@ -312,11 +324,20 @@ def _unavailable(wave_id: str, note: str, peak: bool = False) -> SPSolveResult:
     return SPSolveResult(wave_id, "backend_unavailable", note=note, peak=peak)
 
 
-def _k_lower_bound(enumeration, k_lb_solver: Optional[int], single_type: bool) -> Tuple[Optional[int], Optional[str]]:
-    """Section 1.2: single type max(solver bound, capacity floors, clique floor); typed: solver bound."""
+_K_LB_SOURCES = {"solver": "solver_bound", "ampl_presolve": "ampl_presolve", "trivial_zero": "trivial_zero"}
+
+
+def _k_lower_bound(enumeration, k_lb_solver: Optional[int], single_type: bool,
+                   bound_source: Optional[str] = "solver") -> Tuple[Optional[int], Optional[str]]:
+    """Section 1.2: single type max(solver bound, capacity floors, clique floor); typed: solver bound.
+
+    The source names where the maximum comes from: ``solver_bound``, ``ampl_presolve`` (AMPL settled
+    the model), ``trivial_zero`` (no solver bound; 0 is valid because lam >= 0), ``capacity_floor``
+    or ``clique_floor``.
+    """
     if k_lb_solver is None:
         return None, None
-    best, source = k_lb_solver, "solver_bound"
+    best, source = k_lb_solver, _K_LB_SOURCES.get(bound_source or "solver", "solver_bound")
     if single_type:
         from .route_enumeration import clique_floor
 
@@ -403,19 +424,26 @@ class AmplSession:
         a.option[f"{self.settings.solver}_options"] = solver_option_string(self.settings, peak=False)
         try:
             a.solve()
-        except Exception as exc:  # noqa: BLE001 - a solver that cannot start is unavailable
-            raise ExactBackendUnavailable(f"{self.settings.solver} could not run: {type(exc).__name__}") from exc
+        except Exception as exc:  # noqa: BLE001 - classified below
+            if _ABSENT.search(str(exc)) or _ABSENT.search("\n".join(self._log)):
+                raise ExactBackendUnavailable(f"{self.settings.solver} could not run (solver or license missing)") from exc
+            raise
         msg = str(a.get_value("solve_message"))
-        log = "\n".join(self._log)
-        self._log.clear()
         num = int(a.get_value("solve_result_num"))
-        if re.search(r"licen", msg, re.I) or (num >= 500 and re.search(r"licen", log, re.I)):
-            raise ExactBackendUnavailable(f"{self.settings.solver}: license problem")
+        self._check_absent(num, msg)
         if num >= 500:
-            raise ExactBackendUnavailable(f"{self.settings.solver} failed on the probe model: {_scrub(msg.splitlines()[0] if msg else '')}")
+            # an AMPL/solver that starts but fails on a trivial model is a backend defect, not absence
+            raise RuntimeError(f"{self.settings.solver} failed on the probe model: {_scrub(msg.splitlines()[0] if msg else '')}")
         m = re.match(r"^(\w+) (\d+\.\d+\.\d+):", msg)
         a.reset()
         return f"{m.group(1)} {m.group(2)}" if m else None
+
+    def _check_absent(self, num: int, msg: str) -> None:
+        """Raise ``ExactBackendUnavailable`` only for a missing solver binary or license."""
+        log = "\n".join(self._log)
+        self._log.clear()
+        if _ABSENT.search(msg) or (num >= 500 and _ABSENT.search(log)):
+            raise ExactBackendUnavailable(f"{self.settings.solver}: solver or license missing")
 
     def close(self) -> None:
         if self._ampl is not None:
@@ -455,6 +483,11 @@ class AmplSession:
         values = self._ampl.get_data("{r in COLS} lam[r].ub0").to_dict()  # declared variable bound (not the param)
         return [int(round(v)) if math.isfinite(v) else v for v in (values[r] for r in range(len(enumeration.columns)))]
 
+    def _read_bound(self, name: str) -> Optional[float]:
+        """``<objective>.bestbound``, or None when it still holds the pre-solve sentinel (no bound returned)."""
+        value = float(self._ampl.get_value(f"{name}.bestbound"))
+        return None if value <= _BOUND_SENTINEL / 10 else value
+
     def _call(self, stage: str, k_fix: Optional[int], peak: bool, ncols: int) -> StageResult:
         a = self._ampl
         if k_fix is None:
@@ -466,6 +499,8 @@ class AmplSession:
         a.eval(f"objective {name};")
         a.option["solver"] = self.settings.solver
         a.option[f"{self.settings.solver}_options"] = solver_option_string(self.settings, peak=peak)
+        # reset the suffix so a solve that returns no bound can never expose an earlier solve's bound
+        a.eval(f"let {name}.bestbound := {_BOUND_SENTINEL:g};")
         self._log.clear()
         t0 = time.perf_counter()
         a.solve()
@@ -473,14 +508,9 @@ class AmplSession:
         num = int(a.get_value("solve_result_num"))
         msg = str(a.get_value("solve_message"))
         log = "\n".join(self._log)
-        self._log.clear()
-        if re.search(r"licen", msg, re.I) or (num >= 500 and re.search(r"licen", log, re.I)):
-            raise ExactBackendUnavailable(f"{self.settings.solver}: license problem")
+        self._check_absent(num, msg)
         objective = a.get_objective(name).value()
-        try:
-            bound = a.get_value(f"{name}.bestbound")
-        except Exception:  # noqa: BLE001 - suffix absent (e.g. presolve-only solve)
-            bound = None
+        bound = self._read_bound(name)
         out = classify_outcome(num, msg, objective, bound)
         selection = ()
         if out.objective is not None and ncols:
@@ -525,12 +555,16 @@ class AmplSession:
         s1, s2 = stages["stage1"], stages["stage2"]
         solver_version = self.solver_version
         single = minimize_type is None and len(enumeration.types) == 1
-        k_lb, k_src = _k_lower_bound(enumeration, stages["k_lb_solver"], single)
+        k_lb, k_src = _k_lower_bound(enumeration, stages["k_lb_solver"], single, stages["k_lb_solver_source"])
         base = dict(stage1=s1, stage2=s2, free=stages["free"], d_lb=stages["d_lb"], d_lb_free=stages["d_lb_free"],
                     non_lexicographic=stages["non_lexicographic"], solver_version=solver_version, k_lb=k_lb,
                     k_lb_source=k_src, **common)
         if s1.status in ("infeasible_proven", "rejected"):
             return SPSolveResult(wave_id, s1.status, **base)
+        if s2 is not None and s2.status in ("infeasible_proven", "rejected"):
+            # stage 2 fixes K to the value of an existing stage-1 incumbent, so it cannot be infeasible:
+            # a proven-infeasible (or failed) stage 2 is a solver contradiction, never a result
+            return SPSolveResult(wave_id, "rejected", note=f"stage 2 {s2.status} after a stage-1 incumbent", **base)
         src = s2 if s2 is not None and s2.objective is not None else s1
         if src.objective is None:
             return SPSolveResult(wave_id, "bound_only", **base)
@@ -541,7 +575,7 @@ class AmplSession:
         mismatch = k != expected_k or (src is s2 and d != s2.objective)
         if quota is not None and sum(1 for r in routes if r.type_id == quota[0]) > quota[1]:
             mismatch = True
-        if mismatch or (s2 is not None and s2.status == "rejected"):
+        if mismatch:
             return SPSolveResult(wave_id, "rejected", note="objective cross-check failed", **base)
         status = "optimal" if s1.status == "optimal" and s2 is not None and s2.status == "optimal" else "feasible_with_gap"
         return SPSolveResult(wave_id, status, k=k, d=d, selection=src.selection, routes=routes, **base)
@@ -572,20 +606,32 @@ def solve_wave(wave, enumeration, *, minimize_type: Optional[str] = None, quota=
                          settings=settings, d_lb_free=d_lb_free, session=session)
 
 
-def probe_backend(solver: str = "gurobi") -> Optional[str]:
-    """None when AMPL and ``solver`` can solve a one-student wave optimally, else the reason."""
+@dataclass(frozen=True)
+class ProbeResult:
+    available: bool
+    reason: Optional[str] = None  # set only when the backend is unavailable
+    status: Optional[str] = None  # status of the one-student probe solve (expected: optimal, K = 1, D = 10)
+    k: Optional[int] = None
+    d: Optional[int] = None
+    routes: int = 0
+
+
+def probe_backend(solver: str = "gurobi") -> ProbeResult:
+    """Solve a one-student wave through the full backend path.
+
+    ``available`` is False ONLY when the result is ``backend_unavailable`` (amplpy, AMPL, the solver
+    or its license is absent). Every other failure is a backend defect: exceptions propagate and a
+    wrong probe solve is returned as it is, so callers (tests) fail instead of skipping.
+    """
     from .route_enumeration import enumerate_routes
     from .wave_instance import VehicleTypeSpec
 
-    try:
-        enum = enumerate_routes("pickup", ((0, 5), (5, 0)), ("A",), ("So",), (VehicleTypeSpec("t", 0, 1, 10),),
-                                max_ride=60, max_tour=150)
-        res = solve_columns(enum, settings=SolverSettings(solver=solver), d_lb_free=False)
-    except Exception as exc:  # noqa: BLE001 - probing must never raise
-        return f"{type(exc).__name__}"
+    enum = enumerate_routes("pickup", ((0, 5), (5, 0)), ("A",), ("So",), (VehicleTypeSpec("t", 0, 1, 10),),
+                            max_ride=60, max_tour=150)
+    res = solve_columns(enum, settings=SolverSettings(solver=solver), d_lb_free=False)
     if res.status == "backend_unavailable":
-        return res.note
-    return None if res.status == "optimal" and (res.k, res.d) == (1, 10) else f"probe status {res.status}"
+        return ProbeResult(False, reason=res.note)
+    return ProbeResult(True, status=res.status, k=res.k, d=res.d, routes=len(res.routes))
 
 
 def host_description() -> str:

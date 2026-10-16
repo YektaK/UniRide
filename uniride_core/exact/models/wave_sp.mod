@@ -15,6 +15,7 @@
 set COLS;                                  # column indices (enumeration order)
 set ITEMS;                                 # (location, class) items of the wave
 set NZ within {COLS, ITEMS};               # (r, i) with a[r, i] > 0
+suffix bestbound OUT;                      # solver best bound; reset by the backend before every solve
 
 param a {NZ} integer > 0;                  # students of item i served by column r
 param demand {ITEMS} integer > 0;          # n_(loc,cls)

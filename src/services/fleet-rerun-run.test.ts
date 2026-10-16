@@ -156,6 +156,49 @@ describe("B1: the run gates of runFleetRerun", () => {
   });
 });
 
+describe("N-d: the first non-OK optimizer answer stops the run", () => {
+  it("aborts after the retries are exhausted, writes no further network call, keeps a failed manifest and does not write the cell", async () => {
+    let atFailure = -1;
+    const s = await setup([60, 70], {
+      fetchWrap: (inner) => async (p, i) => {
+        const body = i?.body ? JSON.parse(String(i.body)) : null;
+        if (atFailure >= 0 && p.endsWith("/v1/optimize")) throw new Error("a call was made after the failure");
+        if (p.endsWith("/v1/optimize") && body?.algorithm === "ga_split_hf" && body.vehicle_types?.[0]?.max_routes === 1) {
+          atFailure = s.t.calls.length;
+          return new Response("{}", { status: 500 });
+        }
+        return inner(p, i);
+      },
+    });
+    await expect(runFleetRerun(s.deps, parseFleetArgs(argv("60,70")))).rejects.toThrow(/non-OK optimizer answer/);
+    expect(atFailure).toBeGreaterThan(0);
+    expect(s.t.calls.length).toBe(atFailure); // nothing reached the optimizer after the failure, in this or the next cell
+    const manifest = manifestOf(s.fsx);
+    expect(manifest.state).toBe("failed");
+    expect(manifest.runs).toEqual([]);
+  });
+});
+
+describe("V-2: a rule (e) second run is labelled", () => {
+  it("a campaign is labelled run_kind campaign and has no README; a subset run records the flag, run_kind and a one-line README", async () => {
+    const full = await setup([60]);
+    await runFleetRerun(full.deps, parseFleetArgs(argv()));
+    expect(manifestOf(full.fsx)).toMatchObject({ run_kind: "campaign" });
+    expect(manifestOf(full.fsx).parameters).not.toHaveProperty("allow_subset_dates");
+    expect([...full.fsx.files.keys()].some((p) => p.endsWith("README.md"))).toBe(false);
+
+    const second = await setup([60]);
+    await runFleetRerun(second.deps, parseFleetArgs(argv("60", ["--allow-subset-dates"])));
+    const manifest = manifestOf(second.fsx);
+    expect(manifest.run_kind).toBe("rule_e_second_run");
+    expect(manifest.parameters.allow_subset_dates).toBe(true);
+    expect(manifest.state).toBe("completed");
+    const readme = [...second.fsx.files.entries()].find(([p]) => p.endsWith("README.md"))![1];
+    expect(readme.trim().split("\n")).toHaveLength(1);
+    expect(readme).toMatch(/rule \(e\) second run/i);
+  });
+});
+
 describe("B2: the wave composition is re-checked on every cell", () => {
   it("aborts before writing the cell when the live demand differs from the archive at capture time", async () => {
     const data = rows();

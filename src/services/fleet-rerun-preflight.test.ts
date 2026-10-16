@@ -75,6 +75,7 @@ describe("preflight against the real historical archives (design WP-E10 (a)-(c))
     const oneDay = clone(); oneDay.cli.dates = [ref.parameters.dates[1]]; oneDay.days = [oneDay.days[1]];
     expect(failedIds(oneDay)).toEqual(expect.arrayContaining(["grid", "occurrence_ids"]));
     oneDay.cli.allowSubsetDates = true;
+    expect(evaluatePreflight(ref, oneDay).checks.find((c) => c.id === "grid")!.message).toMatch(/rule \(e\).*ordered subset/);
     expect(evaluatePreflight(ref, oneDay).checks.filter((c) => !c.ok)).toEqual([]);
     const foreign = clone(); foreign.cli.dates = ["2026-10-12"]; foreign.cli.allowSubsetDates = true;
     expect(failedIds(foreign)).toContain("grid");

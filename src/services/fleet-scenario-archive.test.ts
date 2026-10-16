@@ -147,6 +147,11 @@ describe("WP-E10 manifest: old format stays readable, new format is strict", () 
     }
     expect(() => assertOutsideHistoricalArchives(path.resolve(process.cwd(), "docs/paper/results/week-2026-10-05-fleet-rerun"))).not.toThrow();
     expect(() => assertOutsideHistoricalArchives(path.resolve(process.cwd(), ".temp/experiments/x"))).not.toThrow();
+    // P-1: a run worktree writes its campaign and a rule (e) second run below docs/paper/results, next to (not inside) the historical archives
+    const results = "docs/paper/results";
+    expect(() => assertOutsideHistoricalArchives(path.resolve(process.cwd(), results, "week-2026-10-05-fleet-rerun-large-sedan"))).not.toThrow();
+    expect(() => assertOutsideHistoricalArchives(path.resolve(process.cwd(), results, "week-2026-10-05-fleet-rerun-large-sedan/rule_e_second_run_2026-10-05"))).not.toThrow();
+    expect(() => assertOutsideHistoricalArchives(path.resolve(process.cwd(), results, "week-2026-10-05-fleet/rule_e_second_run_2026-10-05"))).toThrow();
   });
 });
 
@@ -171,7 +176,7 @@ describe("WP-E10 extended manifest (v2)", () => {
       ga_defaults: {}, ga_effective_configuration: {}, effective_seed: 42, hf_effective_configuration: {}, hf_effective_seed: 42,
       selection_solver: { name: "cp-sat", version: "9.15.6755", random_seed: 20261008, num_workers: 1, time_limit_seconds: 30 },
       vehicle_count_scope: "s", weekly_cars_definition: "d", runs: [run], state: "completed", completed_at: "2026-10-18T11:00:00.000Z",
-      archive_format: FLEET_ARCHIVE_FORMAT, pinned_commit: sha.slice(0, 12), preflight,
+      archive_format: FLEET_ARCHIVE_FORMAT, run_kind: "campaign", pinned_commit: sha.slice(0, 12), preflight,
       compute_policy: { rate_limit_window_seconds: 1 },
       optimizer_policy: { profile_id: "production-conservative-v1", limits: {}, responses_checked: 12, limits_identical: true },
     };
@@ -194,6 +199,9 @@ describe("WP-E10 extended manifest (v2)", () => {
     ["a backslash path in the preflight record", (m) => { (m.preflight as Record<string, unknown>).reference_waves_archive = "docs\w"; }],
     ["no compute policy", (m) => { delete m.compute_policy; }],
     ["optimizer policy that changed during the run", (m) => { (m.optimizer_policy as Record<string, unknown>).limits_identical = false; }],
+    ["no run_kind", (m) => { delete m.run_kind; }],
+    ["the subset flag on a campaign", (m) => { (m.parameters as Record<string, unknown>).allow_subset_dates = true; }],
+    ["a rule (e) second run without the subset flag", (m) => { m.run_kind = "rule_e_second_run"; }],
     ["a completed run with a blocked day", (m) => { (m.runs as Array<Record<string, unknown>>)[0].day_status = "blocked_data"; }],
     ["a completed run that misses a grid cell", (m) => { (m.parameters as Record<string, unknown>).ride_limits = [RIDE, 70]; }],
   ])("rejects %s", async (_name, change) => {

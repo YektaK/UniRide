@@ -76,7 +76,7 @@ export function transport(options: { selection?: (request: SelectionRequest) => 
     const body = init?.body ? JSON.parse(String(init.body)) : null;
     calls.push({ path, body });
     if (path === "/api/v1/internal/matrix-snapshot") return Response.json(matrixOf(d));
-    if (path === "/api/v1/optimize") {
+    if (path.endsWith("/v1/optimize")) {
       const request = body as OptimizeBody;
       const all = request.students;
       if (request.algorithm === "ga_split") {

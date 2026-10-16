@@ -5,12 +5,12 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import { runFleetScenarioDay } from "@/services/fleet-scenario-run";
-import { fleetManifestSchema } from "@/services/fleet-scenario-report";
+import { fleetManifestSchema, manifestRun } from "@/services/fleet-scenario-report";
 import {
   FLEET_ARCHIVE_FORMAT, HISTORICAL_ARCHIVE_DIRS, assertOutsideHistoricalArchives, menuArchive, menuArchiveSchema,
   selectionArchive, selectionArchiveSchema, extendedFleetManifestSchema,
 } from "@/services/fleet-scenario-archive";
-import { params, pickSelection, reader, rows, transport, type SelectionRequest } from "./fleet-scenario-fixtures";
+import { DATE, params, pickSelection, reader, rows, transport, type SelectionRequest } from "./fleet-scenario-fixtures";
 
 const clock = () => new Date("2026-09-30T00:00:00Z");
 const RIDE = 60;
@@ -147,5 +147,51 @@ describe("WP-E10 manifest: old format stays readable, new format is strict", () 
     }
     expect(() => assertOutsideHistoricalArchives(path.resolve(process.cwd(), "docs/paper/results/week-2026-10-05-fleet-rerun"))).not.toThrow();
     expect(() => assertOutsideHistoricalArchives(path.resolve(process.cwd(), ".temp/experiments/x"))).not.toThrow();
+  });
+});
+
+describe("WP-E10 extended manifest (v2)", () => {
+  const sha = "f".repeat(40);
+  const preflight = {
+    ok: true, checks: [{ id: "clean_tree", ok: true, message: "clean" }], reference_manifest: "m", reference_git_commit: "8ab88ca", reference_waves_archive: "w",
+    live: { matrix_sha256: ["a".repeat(64)], waves: 2, legs: 6, waves_by_date: { [DATE]: 2 }, legs_by_date: { [DATE]: 6 } },
+  };
+  async function manifest(): Promise<Record<string, unknown>> {
+    const { day } = await runDay();
+    const run = manifestRun(day, RIDE, ["f.json"], "m.json", { sha256: "x" }, [], [], {
+      menuOptionsFile: "2026-09-30_R60.menu_options.json",
+      selectionExchangeFiles: [{ scenario: "L1", file: "a.json" }, { scenario: "L2", file: "b.json" }],
+    });
+    return {
+      git_commit: sha, dirty_working_tree: false, timestamp: "2026-10-18T10:00:00.000Z",
+      parameters: { dates: [DATE], ride_limits: [RIDE], tour_limit: 150, scenarios: ["A", "L1", "L2"], max_cars: null, node_budget: 200000, selection_time_limit_seconds: 30, admission_mode: "assume_confirmed" },
+      fleet_types: [{ typeId: "large", swCapacity: 4, soCapacity: 5, cooldownMinutes: 10 }, { typeId: "sedan", swCapacity: 0, soCapacity: 4, cooldownMinutes: 10 }],
+      fleet_types_source: "cli", fixed_type: "large", minimize_type: "sedan", db_vehicles_consulted: false,
+      algorithms: { baseline: "ga_split", menu: "ga_split_hf" }, termination_protocol: "native",
+      ga_defaults: {}, ga_effective_configuration: {}, effective_seed: 42, hf_effective_configuration: {}, hf_effective_seed: 42,
+      selection_solver: { name: "cp-sat", version: "9.15.6755", random_seed: 20261008, num_workers: 1, time_limit_seconds: 30 },
+      vehicle_count_scope: "s", weekly_cars_definition: "d", runs: [run], state: "completed", completed_at: "2026-10-18T11:00:00.000Z",
+      archive_format: FLEET_ARCHIVE_FORMAT, pinned_commit: sha.slice(0, 12), preflight,
+    };
+  }
+  it("accepts a clean, pinned, preflighted manifest with the per-option and selection files", async () => {
+    const value = await manifest();
+    expect(() => extendedFleetManifestSchema.parse(value)).not.toThrow();
+  });
+  it.each<[string, (m: Record<string, unknown>) => void]>([
+    ["dirty tree", (m) => { m.dirty_working_tree = true; }],
+    ["commit other than the pinned one", (m) => { m.pinned_commit = "e".repeat(12); }],
+    ["no pinned commit", (m) => { delete m.pinned_commit; }],
+    ["no preflight", (m) => { delete m.preflight; }],
+    ["failed preflight", (m) => { m.preflight = { ...preflight, ok: false }; }],
+    ["no archive format", (m) => { delete m.archive_format; }],
+    ["a run without the per-option file", (m) => { (m.runs as Array<Record<string, unknown>>)[0].menu_options_file = null; }],
+    ["a run without the selection exchange list", (m) => { delete (m.runs as Array<Record<string, unknown>>)[0].selection_exchange_files; }],
+    ["a completed run with a blocked day", (m) => { (m.runs as Array<Record<string, unknown>>)[0].day_status = "blocked_data"; }],
+    ["a completed run that misses a grid cell", (m) => { (m.parameters as Record<string, unknown>).ride_limits = [RIDE, 70]; }],
+  ])("rejects %s", async (_name, change) => {
+    const value = await manifest();
+    change(value);
+    expect(() => extendedFleetManifestSchema.parse(value)).toThrow();
   });
 });

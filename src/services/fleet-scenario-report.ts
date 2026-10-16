@@ -213,6 +213,13 @@ export const extendedFleetManifestSchema = fleetManifestSchema.superRefine((mani
   if (manifest.dirty_working_tree) fail("a re-run archive requires a clean working tree");
   if (!manifest.pinned_commit || !manifest.git_commit.startsWith(manifest.pinned_commit)) fail("git_commit must equal the pinned commit");
   if (!manifest.preflight?.ok) fail("a passed preflight is required");
+  if (manifest.state === "completed") {
+    // Acceptance of the re-run grid: every (date, R) cell present exactly once and ready.
+    const expected = manifest.parameters.dates.length * manifest.parameters.ride_limits.length;
+    const cells = new Set(manifest.runs.map((run) => `${run.date}|${run.ride_limit}`));
+    if (manifest.runs.length !== expected || cells.size !== expected) fail("a completed re-run needs every (date, R) cell exactly once");
+    if (manifest.runs.some((run) => run.day_status !== "ready")) fail("a completed re-run needs every day ready");
+  }
   for (const run of manifest.runs) {
     const wantsMenu = run.day_status === "ready" && run.menu_sizes.length > 0;
     if (wantsMenu && !run.menu_options_file) fail(`run ${run.date} R${run.ride_limit} lacks menu_options_file`);

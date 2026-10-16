@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("server-only", () => ({})); // audit L4: admin helpers import server-only
 
 const { requireAdminMock, getSupabaseAdminMock, optimizerFetchMock } = vi.hoisted(() => ({
   requireAdminMock: vi.fn(),

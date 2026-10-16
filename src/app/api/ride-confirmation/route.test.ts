@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("server-only", () => ({})); // audit L4: admin helpers import server-only
 
 const mocks = vi.hoisted(() => ({
   getCurrentUserFromRequest: vi.fn(),

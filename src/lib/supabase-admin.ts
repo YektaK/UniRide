@@ -4,6 +4,7 @@
  * SERVER-SIDE ONLY - Never import this in client components!
  */
 
+import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase";
 

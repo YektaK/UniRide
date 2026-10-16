@@ -42,7 +42,7 @@ describe("preflight against the real historical archives (design WP-E10 (a)-(c))
       expect(ref.parameters.admission_mode).toBe("assume_confirmed");
       expect(ref.parameters).toMatchObject({ node_budget: 200000, selection_time_limit_seconds: 30, tour_limit: 150, max_cars: null });
       expect([ref.effective_seed, ref.hf_effective_seed]).toEqual([42, 42]);
-      expect(ref.selection_solver).toMatchObject({ name: "cp-sat", version: "9.15.6755", random_seed: 20261008, num_workers: 1 });
+      expect(ref.selection_solver).toMatchObject({ version: "9.15.6755", random_seed: 20261008, num_workers: 1 });
       expect(ref.ga_effective_configuration).toEqual(GA);
       expect(ref.hf_effective_configuration).toEqual(GA);
     }

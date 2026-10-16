@@ -3,6 +3,7 @@
  * Validates that the current user has admin role
  */
 
+import "server-only";
 import { headers } from "next/headers";
 import { getSupabaseAdmin } from "./supabase-admin";
 import { createClient } from "@supabase/supabase-js";

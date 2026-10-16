@@ -17,7 +17,7 @@ const result = (scenario: "A" | number, over: Partial<ScenarioResult> = {}): Sce
 });
 const day = (date: string, scenarios: ScenarioResult[], status: FleetScenarioDay["status"] = "ready"): FleetScenarioDay => ({
   serviceDate: date, status, reasonCodes: [], dbVehiclesConsulted: false, limits: { maxRideTimeMinutes: 60, maxTourMinutes: 150 },
-  students: 5, legs: 10, waves: 4, occurrenceLabels: {}, matrix: null, menu: [], menuDetail: [], scenarios,
+  students: 5, legs: 10, waves: 4, occurrenceLabels: {}, matrix: null, menu: [], menuDetail: [], waveDemand: {}, scenarios,
 });
 const fixed = { typeId: "large" }, minimise = { typeId: "sedan" };
 const WEEK = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09"];

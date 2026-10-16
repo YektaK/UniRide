@@ -167,9 +167,16 @@ const runSchema = z.object({
 /** Archive format of the WP-E10 re-run: per-option menu files and per-(date, R, L) selection exchanges. */
 export const FLEET_ARCHIVE_FORMAT = "fleet_archive_v2";
 const preflightCheckSchema = z.object({ id: z.string(), ok: z.boolean(), message: z.string() });
+/** Repo-relative POSIX path: no drive letter, no leading slash, no backslash, no parent step. A published file must not name a local directory. */
+export const repoRelativePathSchema = z.string().min(1).refine(
+  (value) => !/^[A-Za-z]:/.test(value) && !value.startsWith("/") && !value.includes("\\") && !value.split("/").includes(".."),
+  "must be a repo-relative POSIX path",
+);
 const preflightRecordSchema = z.object({
   ok: z.boolean(), checks: z.array(preflightCheckSchema),
-  reference_manifest: z.string(), reference_git_commit: z.string(), reference_waves_archive: z.string(),
+  /** Exact limit of the occurrence comparison (anonymised alias), see OCCURRENCE_CHECK_LIMIT. */
+  occurrence_check_limit: z.string().min(1),
+  reference_manifest: repoRelativePathSchema, reference_git_commit: z.string(), reference_waves_archive: repoRelativePathSchema,
   live: z.object({
     matrix_sha256: z.array(z.string()), waves: z.number().int(), legs: z.number().int(),
     waves_by_date: z.record(z.string(), z.number().int()), legs_by_date: z.record(z.string(), z.number().int()),
@@ -199,6 +206,12 @@ export const fleetManifestSchema = z.object({
   archive_format: z.literal(FLEET_ARCHIVE_FORMAT).optional(),
   pinned_commit: z.string().regex(/^[0-9a-f]{7,40}$/).optional(),
   preflight: preflightRecordSchema.optional(),
+  /** Compute-policy values the CLI environment (and, through the session wrapper, the optimizer) runs with, rate limit included. */
+  compute_policy: z.record(z.string(), z.unknown()).optional(),
+  /** `applied_policy` the running optimizer reported in its /optimize answers (profile and effective limits). */
+  optimizer_policy: z.object({
+    profile_id: z.string(), limits: z.record(z.string(), z.unknown()), responses_checked: z.number().int(), limits_identical: z.boolean(),
+  }).optional(),
 });
 export type FleetManifest = z.infer<typeof fleetManifestSchema>;
 export type FleetPreflightRecord = z.infer<typeof preflightRecordSchema>;
@@ -214,6 +227,8 @@ export const extendedFleetManifestSchema = fleetManifestSchema.superRefine((mani
   if (!manifest.pinned_commit || !manifest.git_commit.startsWith(manifest.pinned_commit)) fail("git_commit must equal the pinned commit");
   if (!manifest.preflight?.ok) fail("a passed preflight is required");
   if (manifest.state === "completed") {
+    if (!manifest.compute_policy) fail("compute_policy must be recorded");
+    if (!manifest.optimizer_policy || manifest.optimizer_policy.responses_checked < 1 || !manifest.optimizer_policy.limits_identical) fail("optimizer_policy must be recorded and identical over all answers");
     // Acceptance of the re-run grid: every (date, R) cell present exactly once and ready.
     const expected = manifest.parameters.dates.length * manifest.parameters.ride_limits.length;
     const cells = new Set(manifest.runs.map((run) => `${run.date}|${run.ride_limit}`));

@@ -27,6 +27,17 @@ def test_prints_the_manifest_configuration_as_one_json_line():
     assert value["ga"]["config"]["local_search_type"] == "hybrid"
     assert value["hf"]["config"] == value["ga"]["config"]
     assert value["cp"] == {"version": "9.15.6755", "seed": 20261008, "workers": 1}
+    policy = value["compute_policy"]
+    assert policy["profile_id"] == "production-conservative-v1"
+    assert policy["rate_limit_requests"] == 30 and policy["rate_limit_window_seconds"] == 60  # defaults without the session env
+
+
+def test_compute_policy_follows_the_environment_and_refuses_values_above_the_ceiling():
+    env = dict(os.environ, UNIRIDE_RATE_LIMIT_WINDOW_SECONDS="1")
+    out = subprocess.run([sys.executable, os.path.join(HERE, "capture_fleet_solver_config.py")], capture_output=True, text=True, timeout=120, check=True, env=env, cwd=os.path.dirname(HERE))
+    assert json.loads(out.stdout.strip().splitlines()[-1])["compute_policy"]["rate_limit_window_seconds"] == 1
+    bad = subprocess.run([sys.executable, os.path.join(HERE, "capture_fleet_solver_config.py")], capture_output=True, text=True, timeout=120, env=dict(os.environ, UNIRIDE_RATE_LIMIT_REQUESTS="31"), cwd=os.path.dirname(HERE))
+    assert bad.returncode != 0  # the hard ceiling of the requests per window is 30: it cannot be raised
 
 
 def test_num_workers_is_read_from_the_source_and_unknown_when_not_unique():

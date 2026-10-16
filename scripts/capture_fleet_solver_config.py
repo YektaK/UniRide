@@ -16,6 +16,7 @@ import json
 import os
 import re
 import sys
+from dataclasses import asdict
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -32,12 +33,16 @@ def capture():
     from strategies.ga_split_strategy import GASplitStrategy
     from uniride_core.planning import typed_day_selection as day_selection
     import ortools
+    from compute_policy import load_compute_policy
 
     ga = GASplitStrategy()
     hf = GASplitHFStrategy()
     return {
         "ga": {"defaults": ga.DEFAULT_CONFIG, "config": ga.config, "seed": ga.seed},
         "hf": {"config": hf.config, "seed": hf.seed},
+        # Compute-policy values of THIS process environment (rate limit included). The session wrapper gives the
+        # optimizer the same environment; the optimizer's own applied_policy is recorded from its /optimize answers.
+        "compute_policy": asdict(load_compute_policy()),
         "cp": {
             "version": getattr(ortools, "__version__", None),
             "seed": day_selection.SOLVER_SEED,

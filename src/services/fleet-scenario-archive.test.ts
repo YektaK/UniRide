@@ -153,7 +153,7 @@ describe("WP-E10 manifest: old format stays readable, new format is strict", () 
 describe("WP-E10 extended manifest (v2)", () => {
   const sha = "f".repeat(40);
   const preflight = {
-    ok: true, checks: [{ id: "clean_tree", ok: true, message: "clean" }], reference_manifest: "m", reference_git_commit: "8ab88ca", reference_waves_archive: "w",
+    ok: true, checks: [{ id: "clean_tree", ok: true, message: "clean" }], occurrence_check_limit: "limit", reference_manifest: "docs/m.json", reference_git_commit: "8ab88ca", reference_waves_archive: "docs/w",
     live: { matrix_sha256: ["a".repeat(64)], waves: 2, legs: 6, waves_by_date: { [DATE]: 2 }, legs_by_date: { [DATE]: 6 } },
   };
   async function manifest(): Promise<Record<string, unknown>> {
@@ -172,6 +172,8 @@ describe("WP-E10 extended manifest (v2)", () => {
       selection_solver: { name: "cp-sat", version: "9.15.6755", random_seed: 20261008, num_workers: 1, time_limit_seconds: 30 },
       vehicle_count_scope: "s", weekly_cars_definition: "d", runs: [run], state: "completed", completed_at: "2026-10-18T11:00:00.000Z",
       archive_format: FLEET_ARCHIVE_FORMAT, pinned_commit: sha.slice(0, 12), preflight,
+      compute_policy: { rate_limit_window_seconds: 1 },
+      optimizer_policy: { profile_id: "production-conservative-v1", limits: {}, responses_checked: 12, limits_identical: true },
     };
   }
   it("accepts a clean, pinned, preflighted manifest with the per-option and selection files", async () => {
@@ -188,6 +190,10 @@ describe("WP-E10 extended manifest (v2)", () => {
     ["a run without the per-option file", (m) => { (m.runs as Array<Record<string, unknown>>)[0].menu_options_file = null; }],
     ["a run without the selection exchange list", (m) => { delete (m.runs as Array<Record<string, unknown>>)[0].selection_exchange_files; }],
     ["a completed run with an optimizer HTTP failure (an option was lost)", (m) => { (m.runs as Array<Record<string, unknown>>)[0].optimizer_http_failures = [{ path: "/api/v1/optimize", status: 429 }]; }],
+    ["an absolute path in the preflight record", (m) => { (m.preflight as Record<string, unknown>).reference_manifest = "C:/Users/x/run_manifest.json"; }],
+    ["a backslash path in the preflight record", (m) => { (m.preflight as Record<string, unknown>).reference_waves_archive = "docs\w"; }],
+    ["no compute policy", (m) => { delete m.compute_policy; }],
+    ["optimizer policy that changed during the run", (m) => { (m.optimizer_policy as Record<string, unknown>).limits_identical = false; }],
     ["a completed run with a blocked day", (m) => { (m.runs as Array<Record<string, unknown>>)[0].day_status = "blocked_data"; }],
     ["a completed run that misses a grid cell", (m) => { (m.parameters as Record<string, unknown>).ride_limits = [RIDE, 70]; }],
   ])("rejects %s", async (_name, change) => {

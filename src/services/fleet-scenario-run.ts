@@ -211,6 +211,8 @@ export interface FleetScenarioDay {
   readonly menu: readonly MenuWaveRecord[];
   /** WP-E10: routes and certificates of every menu option (same waves and option order as `menu`). */
   readonly menuDetail: readonly MenuWaveDetail[];
+  /** WP-E10: per wave the raw occurrence ids and the Sw/So counts of the demand (raw ids: anonymise before writing). */
+  readonly waveDemand: Readonly<Record<string, { readonly occurrenceIds: readonly string[]; readonly sw: number; readonly so: number }>>;
   readonly scenarios: readonly ScenarioResult[];
 }
 
@@ -351,7 +353,7 @@ export async function runFleetScenarioDay(
   if (integerScenarios.length > 0 && minimiseType === null) throw new Error("Fixed-L scenarios need a minimise type");
   const blocked = (reasonCodes: readonly string[], extra: Partial<FleetScenarioDay> = {}): FleetScenarioDay => ({
     ...dayBase, status: "blocked_data", reasonCodes, students: 0, legs: 0, waves: 0,
-    occurrenceLabels: {}, matrix: null, menu: [], menuDetail: [], scenarios: [], ...extra,
+    occurrenceLabels: {}, matrix: null, menu: [], menuDetail: [], waveDemand: {}, scenarios: [], ...extra,
   });
 
   // ---- demand: exactly as the daily plan loads it (read-only, K1 admission assumption) ----
@@ -371,7 +373,7 @@ export async function runFleetScenarioDay(
     });
     return {
       ...dayBase, status: "empty_day", reasonCodes: [...new Set([...state.extraReasons, "NO_ADMITTED_DEMAND"])],
-      students: 0, legs: 0, waves: 0, occurrenceLabels: {}, matrix: null, menu: [], menuDetail: [],
+      students: 0, legs: 0, waves: 0, occurrenceLabels: {}, matrix: null, menu: [], menuDetail: [], waveDemand: {},
       scenarios: params.scenarios.map(zero),
     };
   }
@@ -781,7 +783,12 @@ export async function runFleetScenarioDay(
   return {
     ...dayBase, status: "ready", reasonCodes: [...new Set([...state.extraReasons])] as PreviewReasonCode[],
     students, legs: admitted.length, waves: groups.length,
-    occurrenceLabels: state.occurrenceLabels, matrix, menu: menuRecords, menuDetail: menuDetails, scenarios: scenarioResults,
+    occurrenceLabels: state.occurrenceLabels, matrix, menu: menuRecords, menuDetail: menuDetails,
+    waveDemand: Object.fromEntries(groups.map((group) => [`${serviceDate}:${group[0]!.direction}:${group[0]!.anchorMinutes}`, {
+      occurrenceIds: group.map((demand) => demand.occurrenceId),
+      sw: group.filter((demand) => demand.disabilityType === "Sw").length, so: group.filter((demand) => demand.disabilityType === "So").length,
+    }])),
+    scenarios: scenarioResults,
   };
 }
 

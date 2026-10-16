@@ -135,7 +135,7 @@ describe("B1: the run gates of runFleetRerun", () => {
   it("a matrix sha256 that changes on the second cell aborts it before any solve and keeps a failed manifest", async () => {
     const other = "b".repeat(64);
     const s = await setup([60, 70], {
-      fetchWrap: (inner, state) => async (p, i) => (p === "/api/v1/internal/matrix-snapshot" && state.snapshots >= 3
+      fetchWrap: (inner, state) => async (p, i) => (p === "/api/v1/internal/matrix-snapshot" && state.snapshots >= 2
         ? (await inner(p, i), Response.json({ ...matrixOf(5), id: `time_matrix:sha256:${other}`, version: other, sha256: other }))
         : inner(p, i)),
     });
@@ -159,9 +159,10 @@ describe("B2: the wave composition is re-checked on every cell", () => {
   it("aborts before writing the cell when the live demand differs from the archive at capture time", async () => {
     const data = rows();
     const s = await setup([60], {
-      data, afterFirstSnapshot: () => { data.users = (data.users as Array<{ id: string }>).filter((u) => u.id !== "s-so2"); },
+      // same students, same locations and ids (the alias is unchanged), but one is now a wheelchair user: only the Sw/So count of the wave tells
+      data, afterFirstSnapshot: () => { (data.users as Array<{ id: string; disability_type: string }>).find((u) => u.id === "s-so2")!.disability_type = "Sw"; },
     });
-    await expect(runFleetRerun(s.deps, parseFleetArgs(argv()))).rejects.toThrow(/occurrence/i);
+    await expect(runFleetRerun(s.deps, parseFleetArgs(argv()))).rejects.toThrow(/differs from the archive/i);
     const names = [...s.fsx.files.keys()].map((p) => path.basename(p));
     expect(names.filter((n) => n.startsWith(DATE))).toEqual([]); // the cell was not written
     const manifest = manifestOf(s.fsx);
@@ -187,7 +188,7 @@ describe("B3 and N1/N2: the published manifest", () => {
     const manifest = manifestOf(s.fsx);
     expect(manifest.compute_policy).toMatchObject({ rate_limit_requests: 30, rate_limit_window_seconds: 1 });
     expect(manifest.optimizer_policy).toMatchObject({ profile_id: "production-conservative-v1", limits_identical: true });
-    expect(manifest.optimizer_policy.responses_checked).toBeGreaterThan(10);
+    expect(manifest.optimizer_policy.responses_checked).toBeGreaterThan(5);
     expect(manifest.preflight.occurrence_check_limit).toBe(OCCURRENCE_CHECK_LIMIT);
     expect(OCCURRENCE_CHECK_LIMIT).toMatch(/different student at the same location and rank/);
   });

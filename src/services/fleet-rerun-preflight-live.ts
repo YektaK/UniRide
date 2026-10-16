@@ -5,8 +5,8 @@ import {
 } from "@/services/daily-plan-run";
 import { anonymizeResponse } from "@/services/plan-experiments";
 import {
-  assertPreflight, evaluatePreflight, PINNED,
-  type LiveDay, type PreflightObservation, type PreflightPins, type PreflightReference, type PreflightReport, type SolverCapture,
+  assertPreflight, evaluatePreflight, OCCURRENCE_CHECK_LIMIT, PINNED,
+  type LiveDay, type WaveClasses, type PreflightObservation, type PreflightPins, type PreflightReference, type PreflightReport, type SolverCapture,
 } from "@/services/fleet-rerun-preflight";
 import type { FleetPreflightRecord } from "@/services/fleet-scenario-report";
 
@@ -30,6 +30,21 @@ export function readOnlyReader(client: DailyPlanReader): DailyPlanReader {
   }) as unknown as DailyPlanReader;
 }
 
+/**
+ * Anonymised, sorted occurrence ids per wave (the alias of the archives), from the demand of a day. The raw ids never
+ * leave this function. `labels` is the day's occurrence-label map, which drives the anonymiser.
+ */
+export function anonymiseWaves(
+  labels: Readonly<Record<string, string>>, demand: Readonly<Record<string, { readonly occurrenceIds: readonly string[]; readonly sw: number; readonly so: number }>>,
+): { waves: Record<string, string[]>; classes: Record<string, WaveClasses> } {
+  const raw = Object.fromEntries(Object.entries(demand).map(([id, wave]) => [id, [...wave.occurrenceIds]]));
+  const anonymous = anonymizeResponse({ occurrenceLabels: labels, waves: raw }) as { waves: Record<string, string[]> };
+  return {
+    waves: Object.fromEntries(Object.entries(anonymous.waves).map(([id, ids]) => [id, [...ids].sort()])),
+    classes: Object.fromEntries(Object.entries(demand).map(([id, wave]) => [id, { sw: wave.sw, so: wave.so }])),
+  };
+}
+
 /** Waves and matrix of each date, loaded exactly as `runFleetScenarioDay` loads them (`assume_confirmed`). */
 export async function collectLiveDays(
   deps: Pick<DailyPlanDeps, "reader" | "optimizerFetch">, dates: readonly string[],
@@ -38,19 +53,21 @@ export async function collectLiveDays(
   for (const date of dates) {
     const state = createDailyPlanDemandState(true);
     const loaded = await loadDailyPlanDemand(deps.reader, date, true, state);
-    if (loaded.kind === "blocked") { days.push({ date, status: "blocked_data", matrix: null, waves: {} }); continue; }
-    if (loaded.kind === "empty") { days.push({ date, status: "empty_day", matrix: null, waves: {} }); continue; }
+    if (loaded.kind === "blocked") { days.push({ date, status: "blocked_data", matrix: null, waves: {}, classes: {} }); continue; }
+    if (loaded.kind === "empty") { days.push({ date, status: "empty_day", matrix: null, waves: {}, classes: {} }); continue; }
     const matrix = await fetchMatrixSnapshot(deps.optimizerFetch, loaded.admitted);
-    const raw: Record<string, string[]> = {};
+    const demand: Record<string, { occurrenceIds: string[]; sw: number; so: number }> = {};
     for (const group of groupWaves(loaded.admitted)) {
       const first = group[0]!;
-      raw[`${date}:${first.direction}:${first.anchorMinutes}`] = group.map((demand) => demand.occurrenceId);
+      demand[`${date}:${first.direction}:${first.anchorMinutes}`] = {
+        occurrenceIds: group.map((item) => item.occurrenceId),
+        sw: group.filter((item) => item.disabilityType === "Sw").length, so: group.filter((item) => item.disabilityType === "So").length,
+      };
     }
     // Same anonymiser as the archive files, so ids are comparable and no raw student id leaves this function.
-    const anonymous = anonymizeResponse({ occurrenceLabels: state.occurrenceLabels, waves: raw }) as { waves: Record<string, string[]> };
-    const waves = Object.fromEntries(Object.entries(anonymous.waves).map(([id, ids]) => [id, [...ids].sort()]));
+    const { waves, classes } = anonymiseWaves(state.occurrenceLabels, demand);
     days.push({
-      date, status: "ready", waves,
+      date, status: "ready", waves, classes,
       matrix: matrix === null ? null : { sha256: matrix.sha256, source: matrix.source, id: matrix.id, version: matrix.version },
     });
   }
@@ -78,7 +95,7 @@ export async function runFleetRerunPreflight(
   const wavesByDate = Object.fromEntries(days.map((day) => [day.date, Object.keys(day.waves).length]));
   const legsByDate = Object.fromEntries(days.map((day) => [day.date, Object.values(day.waves).reduce((n, ids) => n + ids.length, 0)]));
   const record: FleetPreflightRecord = {
-    ok: report.ok, checks: report.checks,
+    ok: report.ok, checks: report.checks, occurrence_check_limit: OCCURRENCE_CHECK_LIMIT,
     reference_manifest: reference.manifestPath, reference_git_commit: reference.gitCommit, reference_waves_archive: reference.wavesArchive,
     live: {
       matrix_sha256: [...new Set(days.flatMap((day) => (day.matrix ? [day.matrix.sha256] : [])))].sort(),

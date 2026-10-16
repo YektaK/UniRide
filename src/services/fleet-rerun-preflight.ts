@@ -48,7 +48,10 @@ export interface PreflightReference {
   matrixSha256s: string[];
   /** date -> wave id -> sorted anonymised occurrence ids. */
   waves: Record<string, Record<string, string[]>>;
+  /** date -> wave id -> Sw and So passenger counts of the wave (sum over the routes of the 4sw5so archive). */
+  waveClasses: Record<string, Record<string, WaveClasses>>;
 }
+export interface WaveClasses { sw: number; so: number }
 
 export interface SolverCapture {
   ga: { config: Record<string, unknown>; seed: number };
@@ -61,6 +64,8 @@ export interface LiveDay {
   matrix: { sha256: string; source: string; id: string; version: string } | null;
   /** wave id -> sorted occurrence ids in the anonymised form of the archives (never raw student ids). */
   waves: Record<string, string[]>;
+  /** wave id -> Sw and So counts of the live demand. */
+  classes: Record<string, WaveClasses>;
 }
 export interface PreflightObservation {
   git: { head: string; dirty: boolean };
@@ -72,6 +77,28 @@ export interface PreflightObservation {
   };
   solver: SolverCapture;
   days: LiveDay[];
+}
+
+/**
+ * Exact limit of the occurrence comparison (design rule (a)). The archives hold only anonymised ids, so the comparison
+ * is made on that alias, not on student identity. Rule (d), the base routes equal to the 4sw5so routes, is the backstop.
+ */
+export const OCCURRENCE_CHECK_LIMIT =
+  "The alias is <location_code>~<rank of the raw id among that day's occurrences at that location> (plan-experiments anonymizeResponse). " +
+  "The check detects added or removed students, a change of location, direction or anchor, a rank shift, and a change of the Sw/So count of a wave. " +
+  "It cannot detect a different student at the same location and rank; rule (d) (base routes equal to the 4sw5so routes) is the backstop.";
+
+/** Differences between the archived and the live composition of one date (wave ids, ids, Sw/So counts). */
+export function compareWaves(
+  archived: Record<string, string[]>, archivedClasses: Record<string, WaveClasses>,
+  live: Record<string, string[]>, liveClasses: Record<string, WaveClasses>,
+): string[] {
+  const problems: string[] = [];
+  for (const waveId of new Set([...Object.keys(archived), ...Object.keys(live)])) {
+    if (!same(archived[waveId], live[waveId])) problems.push(`${waveId}: occurrence ids differ (archive ${archived[waveId]?.length ?? "absent"}, live ${live[waveId]?.length ?? "absent"})`);
+    else if (!same(archivedClasses[waveId], liveClasses[waveId])) problems.push(`${waveId}: Sw/So counts differ (archive ${stable(archivedClasses[waveId])}, live ${stable(liveClasses[waveId])})`);
+  }
+  return problems;
 }
 
 export interface PreflightCheck { id: string; ok: boolean; message: string }
@@ -161,9 +188,7 @@ export function evaluatePreflight(
     const archived = reference.waves[day.date];
     if (day.status !== "ready") waveProblems.push(`${day.date}: day status ${day.status}`);
     if (!archived) { waveProblems.push(`${day.date}: not in the reference archive`); continue; }
-    for (const waveId of new Set([...Object.keys(archived), ...Object.keys(day.waves)])) {
-      if (!same(archived[waveId], day.waves[waveId])) waveProblems.push(`${waveId}: occurrence ids differ (archive ${archived[waveId]?.length ?? "absent"}, live ${day.waves[waveId]?.length ?? "absent"})`);
-    }
+    waveProblems.push(...compareWaves(archived, reference.waveClasses[day.date] ?? {}, day.waves, day.classes));
   }
   const liveDates = new Set(observed.days.map((day) => day.date));
   for (const date of Object.keys(reference.waves)) if (!liveDates.has(date)) waveProblems.push(`${date}: not inspected`);

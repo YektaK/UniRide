@@ -129,3 +129,6 @@ scratch/
 .idx/
 .temp/
 .wrongstack/
+
+# Exact solver: optional local AMPL location (design EXACT_SOLVER_AMPL_DESIGN.md section 7)
+uniride_core/exact/ampl_local.json

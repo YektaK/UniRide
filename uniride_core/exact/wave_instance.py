@@ -7,8 +7,8 @@ from dataclasses import dataclass
 from typing import Optional, Sequence
 
 # Design EXACT_SOLVER_AMPL_DESIGN.md section 4 / 1.1. "not_run" is only a pre-solve placeholder.
-# TODO(WP-E2): academic_benchmark/exact_reference/protocol.py becomes the single definition of
-# these statuses and must import this set or replace it.
+# academic_benchmark/exact_reference/protocol.py (WP-E2) gives every label its protocol meaning and
+# imports this set (core must not import academic_benchmark); a test keeps the two identical.
 EXACT_STATUSES = frozenset(
     {
         "not_run",
@@ -107,12 +107,25 @@ class WaveInstance:
 
 @dataclass(frozen=True)
 class ExactResult:
+    """Per-wave exact result.
+
+    ``route_count`` is the total number of routes of every type. ``k_lb`` bounds the stage-1
+    objective: K (all routes) for a single type, but K_m (routes of the minimised type only) in the
+    typed case, so in the typed case ``k_lb`` must be compared with K_m, never with ``route_count``
+    (WP-E4 note).
+    """
+
     wave_id: str
     status: str
     routes: tuple  # tuple of tuples of occurrence ids
     route_count: Optional[int]
     total_cost: Optional[int]
-    # TODO(WP-E2): stop_reason, timing_dependent, non_lexicographic, K_LB, D_LB, D_LB_free.
+    stop_reason: Optional[str] = None
+    timing_dependent: bool = False
+    non_lexicographic: bool = False
+    k_lb: Optional[int] = None
+    d_lb: Optional[int] = None  # conditional on K = K* (design 1.2)
+    d_lb_free: Optional[int] = None
 
     def __post_init__(self) -> None:
         if self.status not in EXACT_STATUSES:

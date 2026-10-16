@@ -30,9 +30,13 @@ include = ["uniride_core*", "optimizer_api*", "academic_benchmark*"]
 
 [tool.setuptools.package-data]
 "academic_benchmark.schemas" = ["*.schema.json"]
+"uniride_core.exact" = ["models/*.mod"]
 
 [tool.pytest.ini_options]
 testpaths = ["uniride_core/tests", "optimizer_api/tests", "academic_benchmark/tests"]
+markers = [
+    "requires_ampl: needs a local AMPL installation, solver and license (skipped with a reason when absent; design EXACT_SOLVER_AMPL_DESIGN.md section 7)",
+]
 norecursedirs = [
     "*.egg",
     ".*",

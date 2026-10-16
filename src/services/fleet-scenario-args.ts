@@ -31,6 +31,14 @@ export interface FleetArgs {
   nodeBudget: number;
   selectionTimeLimitSeconds: number;
   out: string;
+  /** WP-E10: run the read-only input preflight and stop (no solve, no write). */
+  preflightOnly: boolean;
+  /** WP-E10: the commit the run is pinned to (lower-case hex prefix, 7 to 40 characters). */
+  pinCommit: string | null;
+  /** WP-E10: manifest of the historical campaign the live inputs are compared with. */
+  referenceManifest: string | null;
+  /** WP-E10: historical archive whose responses hold the wave composition (default chosen by the runner). */
+  referenceWaves: string | null;
 }
 
 /** Largest fixed L: the menu holds quota options q = 0..L plus the baseline (router cap: 6 options). */
@@ -67,10 +75,15 @@ export function parseFleetType(text: string): FleetTypeSpec {
   return spec;
 }
 
-export function parseFleetArgs(argv: readonly string[], now = new Date()): FleetArgs {
+export function parseFleetArgs(rawArgv: readonly string[], now = new Date()): FleetArgs {
+  // --preflight-only is the only value-less flag; take it out so the rest stays a list of flag/value pairs.
+  if (rawArgv.filter((item) => item === "--preflight-only").length > 1) throw new Error("Invalid or duplicate fleet argument");
+  const preflightOnly = rawArgv.includes("--preflight-only");
+  const argv = rawArgv.filter((item) => item !== "--preflight-only");
   const shared = new Set(["--week-of", "--dates", "--ride-limits", "--tour-limit", "--out"]);
   const own = new Set([
     "--fleet-types", "--fixed-type", "--minimize-type", "--scenarios", "--max-cars", "--node-budget", "--selection-time-limit",
+    "--pin-commit", "--reference-manifest", "--reference-waves",
   ]);
   const base: string[] = [];
   const args = new Map<string, string>();
@@ -104,6 +117,8 @@ export function parseFleetArgs(argv: readonly string[], now = new Date()): Fleet
     fixedTypeId = fleetTypes[0].typeId;
   }
   if (!known(fixedTypeId)) throw new Error("Unknown fixed type");
+  const pinCommit = args.get("--pin-commit") ?? null;
+  if (pinCommit !== null && !/^[0-9a-f]{7,40}$/.test(pinCommit)) throw new Error("--pin-commit must be a lower-case hex commit prefix");
   const scenarios: ScenarioKey[] = (args.get("--scenarios") ?? "A,1,2,3").split(",").map((value) => {
     const text = value.trim();
     return text === "A" ? "A" : integer(text, 0, MAX_FLEET_SCENARIO_L);
@@ -123,6 +138,8 @@ export function parseFleetArgs(argv: readonly string[], now = new Date()): Fleet
     maxCars: args.has("--max-cars") ? integer(args.get("--max-cars")!, 0, 50) : null,
     nodeBudget: integer(args.get("--node-budget") ?? "200000", 1000, 5_000_000),
     selectionTimeLimitSeconds: integer(args.get("--selection-time-limit") ?? "30", 1, 600),
+    preflightOnly, pinCommit,
+    referenceManifest: args.get("--reference-manifest") ?? null, referenceWaves: args.get("--reference-waves") ?? null,
   };
 }
 

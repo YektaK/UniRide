@@ -15,7 +15,10 @@ import { params, pickSelection, reader, rows, transport, type SelectionRequest }
 const clock = () => new Date("2026-09-30T00:00:00Z");
 const RIDE = 60;
 
-async function runDay(scenarios: Array<"A" | number> = ["A", 1, 2], selection = pickSelection("q1", () => ["large", "car"])) {
+async function runDay(
+  scenarios: Array<"A" | number> = ["A", 1, 2],
+  selection: (request: SelectionRequest) => { status: number; body: unknown } = pickSelection("q1", () => ["large", "car"]),
+) {
   const t = transport({ selection });
   const day = await runFleetScenarioDay({ reader: reader(rows()).client, optimizerFetch: t.fetch, clock }, params({ scenarios }));
   return { day, t };

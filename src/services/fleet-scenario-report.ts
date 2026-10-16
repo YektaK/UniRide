@@ -160,6 +160,20 @@ const runSchema = z.object({
     scenario: z.string(), status: z.string(), cars: z.number().nullable(), cars_status: z.string().nullable(),
     selection_status: z.string().nullable(), assignment_status: z.string().nullable(),
   })),
+  // WP-E10 (archive format v2). Absent in the historical manifests, which stay readable.
+  menu_options_file: z.string().nullable().optional(),
+  selection_exchange_files: z.array(z.object({ scenario: z.string(), file: z.string() })).optional(),
+});
+/** Archive format of the WP-E10 re-run: per-option menu files and per-(date, R, L) selection exchanges. */
+export const FLEET_ARCHIVE_FORMAT = "fleet_archive_v2";
+const preflightCheckSchema = z.object({ id: z.string(), ok: z.boolean(), message: z.string() });
+const preflightRecordSchema = z.object({
+  ok: z.boolean(), checks: z.array(preflightCheckSchema),
+  reference_manifest: z.string(), reference_git_commit: z.string(), reference_waves_archive: z.string(),
+  live: z.object({
+    matrix_sha256: z.array(z.string()), waves: z.number().int(), legs: z.number().int(),
+    waves_by_date: z.record(z.string(), z.number().int()), legs_by_date: z.record(z.string(), z.number().int()),
+  }),
 });
 export const fleetManifestSchema = z.object({
   git_commit: z.string().min(7), dirty_working_tree: z.boolean(), timestamp: z.string(),
@@ -181,13 +195,37 @@ export const fleetManifestSchema = z.object({
   }),
   vehicle_count_scope: z.string(), weekly_cars_definition: z.string(),
   runs: z.array(runSchema), state: z.enum(["running", "completed", "failed"]), completed_at: z.string().nullable(),
+  // WP-E10 (archive format v2). Absent in the historical manifests, which stay readable.
+  archive_format: z.literal(FLEET_ARCHIVE_FORMAT).optional(),
+  pinned_commit: z.string().regex(/^[0-9a-f]{7,40}$/).optional(),
+  preflight: preflightRecordSchema.optional(),
 });
 export type FleetManifest = z.infer<typeof fleetManifestSchema>;
+export type FleetPreflightRecord = z.infer<typeof preflightRecordSchema>;
+/**
+ * Manifest of a WP-E10 re-run: everything optional in the historical format is mandatory here (design
+ * section 9, rules (a), (b), (f), (g)): clean tree at the pinned commit, the passed preflight, and the
+ * per-option and selection-exchange files of every run that built a menu.
+ */
+export const extendedFleetManifestSchema = fleetManifestSchema.superRefine((manifest, ctx) => {
+  const fail = (message: string) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+  if (manifest.archive_format !== FLEET_ARCHIVE_FORMAT) fail("archive_format must be fleet_archive_v2");
+  if (manifest.dirty_working_tree) fail("a re-run archive requires a clean working tree");
+  if (!manifest.pinned_commit || !manifest.git_commit.startsWith(manifest.pinned_commit)) fail("git_commit must equal the pinned commit");
+  if (!manifest.preflight?.ok) fail("a passed preflight is required");
+  for (const run of manifest.runs) {
+    const wantsMenu = run.day_status === "ready" && run.menu_sizes.length > 0;
+    if (wantsMenu && !run.menu_options_file) fail(`run ${run.date} R${run.ride_limit} lacks menu_options_file`);
+    // A scenario whose request could not be built (SELECTION_INTERVAL_PRECISION) has no exchange file; the list itself must exist.
+    if (wantsMenu && run.selection_exchange_files === undefined) fail(`run ${run.date} R${run.ride_limit} lacks selection_exchange_files`);
+  }
+});
 export type FleetManifestRun = z.infer<typeof runSchema>;
 
 export function manifestRun(
   day: FleetScenarioDay, ride: number, responseFiles: readonly string[], matrixFile: string | null,
   matrixProvenance: unknown, rateLimitWaits: FleetManifestRun["rate_limit_waits"], httpFailures: FleetManifestRun["optimizer_http_failures"],
+  archive?: { menuOptionsFile: string | null; selectionExchangeFiles: ReadonlyArray<{ scenario: string; file: string }> },
 ): FleetManifestRun {
   return {
     date: day.serviceDate, ride_limit: ride, day_status: day.status, response_files: [...responseFiles],
@@ -201,5 +239,6 @@ export function manifestRun(
       scenario: scenarioName(result.scenario), status: result.status, cars: result.cars, cars_status: result.carsStatus,
       selection_status: result.selection?.status ?? null, assignment_status: result.assignment?.status ?? null,
     })),
+    ...(archive ? { menu_options_file: archive.menuOptionsFile, selection_exchange_files: [...archive.selectionExchangeFiles] } : {}),
   };
 }

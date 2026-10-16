@@ -145,7 +145,7 @@ async function main() {
         day = {
           serviceDate: date, status: "blocked_data", reasonCodes: ["SCENARIO_RUN_UNAVAILABLE"], dbVehiclesConsulted: false,
           limits: { maxRideTimeMinutes: ride, maxTourMinutes: args.tourLimit }, students: 0, legs: 0, waves: 0,
-          occurrenceLabels: {}, matrix: null, menu: [], scenarios: [],
+          occurrenceLabels: {}, matrix: null, menu: [], menuDetail: [], scenarios: [],
         };
       }
       const captured = matrix as ExperimentMatrix | null;

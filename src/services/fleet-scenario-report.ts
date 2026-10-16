@@ -188,6 +188,8 @@ export const fleetManifestSchema = z.object({
     dates: z.array(z.string()), ride_limits: z.array(z.number()), tour_limit: z.number(),
     scenarios: z.array(z.string()), max_cars: z.number().nullable(), node_budget: z.number(),
     selection_time_limit_seconds: z.number(), admission_mode: z.literal("assume_confirmed"),
+    /** Rule (e): this run covers a subset of the campaign dates (one day run again). Absent in a campaign. */
+    allow_subset_dates: z.boolean().optional(),
   }),
   fleet_types: z.array(fleetTypeSchema).min(1), fleet_types_source: z.literal("cli"),
   fixed_type: z.string(), minimize_type: z.string().nullable(), db_vehicles_consulted: z.literal(false),
@@ -204,6 +206,8 @@ export const fleetManifestSchema = z.object({
   runs: z.array(runSchema), state: z.enum(["running", "completed", "failed"]), completed_at: z.string().nullable(),
   // WP-E10 (archive format v2). Absent in the historical manifests, which stay readable.
   archive_format: z.literal(FLEET_ARCHIVE_FORMAT).optional(),
+  /** `campaign` (the archive WP-E4 reads) or `rule_e_second_run` (one day run again to prove determinism; never an archive). */
+  run_kind: z.enum(["campaign", "rule_e_second_run"]).optional(),
   pinned_commit: z.string().regex(/^[0-9a-f]{7,40}$/).optional(),
   preflight: preflightRecordSchema.optional(),
   /** Compute-policy values the CLI environment (and, through the session wrapper, the optimizer) runs with, rate limit included. */
@@ -226,6 +230,10 @@ export const extendedFleetManifestSchema = fleetManifestSchema.superRefine((mani
   if (manifest.dirty_working_tree) fail("a re-run archive requires a clean working tree");
   if (!manifest.pinned_commit || !manifest.git_commit.startsWith(manifest.pinned_commit)) fail("git_commit must equal the pinned commit");
   if (!manifest.preflight?.ok) fail("a passed preflight is required");
+  if (!manifest.run_kind) fail("run_kind must be campaign or rule_e_second_run");
+  if ((manifest.parameters.allow_subset_dates === true) !== (manifest.run_kind === "rule_e_second_run")) {
+    fail("allow_subset_dates and run_kind rule_e_second_run must go together");
+  }
   if (manifest.state === "completed") {
     if (!manifest.compute_policy) fail("compute_policy must be recorded");
     if (!manifest.optimizer_policy || manifest.optimizer_policy.responses_checked < 1 || !manifest.optimizer_policy.limits_identical) fail("optimizer_policy must be recorded and identical over all answers");

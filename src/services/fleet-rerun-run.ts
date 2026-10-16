@@ -113,6 +113,7 @@ export async function runFleetRerun(deps: RerunDeps, args: FleetArgs): Promise<R
       dates: args.dates, ride_limits: args.rideLimits, tour_limit: args.tourLimit,
       scenarios: args.scenarios.map(scenarioName), max_cars: args.maxCars, node_budget: args.nodeBudget,
       selection_time_limit_seconds: args.selectionTimeLimitSeconds, admission_mode: "assume_confirmed",
+      ...(args.allowSubsetDates ? { allow_subset_dates: true } : {}),
     },
     fleet_types: args.fleetTypes, fleet_types_source: "cli", fixed_type: args.fixedTypeId, minimize_type: args.minimizeTypeId,
     db_vehicles_consulted: false,
@@ -126,7 +127,7 @@ export async function runFleetRerun(deps: RerunDeps, args: FleetArgs): Promise<R
     vehicle_count_scope: "cars are the minimum over the per-wave option menus (heuristic GA routes) and exact for the chosen fixed routes when proven; not a global minimum",
     weekly_cars_definition: "weekly_cars = maximum over weekdays (same cars every day); cars_day_sum and monday_cars..friday_cars give the per-day need (borrow per day)",
     runs: [], state: "running", completed_at: null,
-    archive_format: FLEET_ARCHIVE_FORMAT, pinned_commit: args.pinCommit, preflight: preflight.record,
+    archive_format: FLEET_ARCHIVE_FORMAT, run_kind: args.allowSubsetDates ? "rule_e_second_run" : "campaign", pinned_commit: args.pinCommit, preflight: preflight.record,
     ...(solver.compute_policy ? { compute_policy: solver.compute_policy } : {}),
   };
   const checkpoint = () => {
@@ -136,6 +137,9 @@ export async function runFleetRerun(deps: RerunDeps, args: FleetArgs): Promise<R
     fs.write(path.join(out, "scenario_weekly.csv"), toCsv(aggregateFleetWeeks(dailyRows), FLEET_WEEKLY_COLUMNS));
     fs.write(path.join(out, "car_usage_windows.csv"), toCsv(windowRows, CAR_WINDOW_COLUMNS));
   };
+  if (args.allowSubsetDates) {
+    fs.write(path.join(out, "README.md"), `Rule (e) second run of ${args.dates.join(", ")} (determinism check of the fleet re-run); not a campaign archive, compare it with scripts/verify_fleet_rerun.py --double-run-dir.\n`);
+  }
   checkpoint();
 
   // What the running optimizer reports as its applied policy; every /optimize answer must agree.
@@ -149,9 +153,12 @@ export async function runFleetRerun(deps: RerunDeps, args: FleetArgs): Promise<R
     for (const date of args.dates) for (const ride of args.rideLimits) {
       let matrix: ExperimentMatrix | null = null;
       let matrixDrift = false;
+      let optimizerFailure: { path: string; status: number } | null = null;
       const rateLimitWaits: Array<{ path: string; status: number; wait_seconds: number; attempt: number }> = [];
       const httpFailures: Array<{ path: string; status: number }> = [];
       const fetchWithSnapshot = async (requestPath: string, init?: RequestInit) => {
+        // N-d: after the first non-OK answer (its retries are exhausted) nothing more is sent; the cell is abandoned below.
+        if (optimizerFailure) return new Response("{}", { status: 503 });
         // 429 handling identical to experiments:plan: up to two waits of at most 60 s each.
         const response = await fetchWithRateLimitRetry(deps.optimizerFetch, requestPath, init, {
           onRetry: (seconds, attempt) => {
@@ -159,7 +166,7 @@ export async function runFleetRerun(deps: RerunDeps, args: FleetArgs): Promise<R
             log(`Optimizer rate limit: waiting ${seconds}s before retry ${attempt}.`);
           },
         });
-        if (!response.ok) httpFailures.push({ path: requestPath, status: response.status });
+        if (!response.ok) { httpFailures.push({ path: requestPath, status: response.status }); optimizerFailure ??= { path: requestPath, status: response.status }; }
         if (requestPath === "/api/v1/internal/matrix-snapshot" && response.ok) {
           let declared: unknown = null;
           try { const body = await response.clone().json(); declared = (body as { sha256?: unknown } | null)?.sha256; matrix = captureMatrixSnapshot(body); }
@@ -195,6 +202,7 @@ export async function runFleetRerun(deps: RerunDeps, args: FleetArgs): Promise<R
           occurrenceLabels: {}, matrix: null, menu: [], menuDetail: [], waveDemand: {}, scenarios: [],
         };
       }
+      if (optimizerFailure && !matrixDrift) throw new RerunAbort(`Non-OK optimizer answer (HTTP ${(optimizerFailure as { status: number }).status}) for ${date} R${ride} after its retries; the run is stopped and the cell was not written.`);
       if (matrixDrift) throw new RerunAbort("Matrix snapshot sha256 changed during the run; stopped before any solve of this cell.");
       // (a) the wave composition must equal the archive at every capture, not only in the preflight.
       if (day.status !== "blocked_data") {

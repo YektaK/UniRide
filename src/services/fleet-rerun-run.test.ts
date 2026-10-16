@@ -170,7 +170,7 @@ describe("N-d: the first non-OK optimizer answer stops the run", () => {
         return inner(p, i);
       },
     });
-    await expect(runFleetRerun(s.deps, parseFleetArgs(argv("60,70")))).rejects.toThrow(/non-OK optimizer answer/);
+    await expect(runFleetRerun(s.deps, parseFleetArgs(argv("60,70")))).rejects.toThrow(/non-OK optimizer answer/i);
     expect(atFailure).toBeGreaterThan(0);
     expect(s.t.calls.length).toBe(atFailure); // nothing reached the optimizer after the failure, in this or the next cell
     const manifest = manifestOf(s.fsx);

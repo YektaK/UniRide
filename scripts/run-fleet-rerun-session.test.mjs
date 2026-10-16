@@ -34,8 +34,8 @@ function deps(over = {}) {
   const emitter = new EventEmitter();
   return {
     stopped, emitter, exits,
-    spawn: over.spawn ?? fakeSpawn(), isPortFree: async () => true, probeHealth: HEALTHY, sleep: async () => {},
-    healthTimeoutMs: 50, openLog: () => 99, closeLog: () => {}, stopTree: (child) => stopped.push(child.pid),
+    spawn: over.spawn ?? fakeSpawn(), isPortFree: async () => true, probeHealth: HEALTHY, sleep: () => new Promise((resolve) => setImmediate(resolve)),
+    healthTimeoutMs: 50, openLog: () => 99, closeLog: () => {}, stopTree: (child) => { if (child) stopped.push(child.pid); },
     exit: (code) => { exits.push(code); }, log: () => {}, ...over,
   };
 }
@@ -94,7 +94,7 @@ test("a wrong interpreter fails fast with a clear message and does not wait for 
   await assert.rejects(() => runSession(args(), { UNIRIDE_PYTHON: "no-such-python" }, ROOT, d), /could not start the optimizer.*UNIRIDE_PYTHON/i);
   assert.ok(Date.now() - started < 2000, "must not wait for the 60 s timeout");
   assert.equal(d.spawn.calls.length, 1, "the run is never started");
-  assert.deepEqual(d.stopped, []);
+  assert.deepEqual(d.stopped, [5000]); // only the process the session itself tried to start
 });
 
 test("an unhealthy optimizer (another app answers /health) stops the session without starting the run", async () => {

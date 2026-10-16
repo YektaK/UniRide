@@ -152,7 +152,11 @@ export function evaluatePreflight(
     [reference.parameters.ride_limits, reference.parameters.tour_limit, reference.parameters.scenarios,
       reference.parameters.max_cars, reference.fixed_type, reference.minimize_type],
   );
-  check("grid", gridOk, gridOk ? "dates, ride limits, tour limit, scenarios, cap and type roles equal the reference" : "dates, ride limits, tour limit, scenarios, cap or type roles differ from the reference");
+  check("grid", gridOk, gridOk
+    ? (cli.allowSubsetDates ? "rule (e) second run: the dates are an ordered subset of the reference dates; ride limits, tour limit, scenarios, cap and type roles equal the reference"
+      : "dates, ride limits, tour limit, scenarios, cap and type roles equal the reference")
+    : (cli.allowSubsetDates ? "the dates are not an ordered subset of the reference dates, or ride limits, tour limit, scenarios, cap or type roles differ from the reference"
+      : "dates, ride limits, tour limit, scenarios, cap or type roles differ from the reference"));
   const admissionOk = cli.admissionMode === reference.parameters.admission_mode && cli.admissionMode === pins.admissionMode;
   check("admission_mode", admissionOk, admissionOk ? `admission_mode ${cli.admissionMode}` : `admission_mode ${cli.admissionMode} (expected ${pins.admissionMode})`);
   const nodeOk = cli.nodeBudget === reference.parameters.node_budget && cli.nodeBudget === pins.nodeBudget;

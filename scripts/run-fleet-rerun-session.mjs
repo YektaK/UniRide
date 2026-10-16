@@ -11,8 +11,11 @@
  * raised, so the window is lowered to 1 second (30 requests per second). The campaign is sequential and each GA call
  * takes seconds, so no request is ever rejected. No other compute-policy variable is touched. The run records the
  * effective values (manifest compute_policy and optimizer_policy).
+ *
+ * Every effect of `runSession` (spawn, port probe, health probe, log file, process-tree stop, signals, exit) is
+ * injectable, so the tests never start a real interpreter and cannot hang.
  */
-import { spawn, spawnSync } from "node:child_process";
+import { spawn as nodeSpawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
@@ -76,54 +79,84 @@ export function buildSessionEnv(parent, key, port, python) {
   return env;
 }
 
-function stopTree(child) {
+/** Stops the process tree of a child this session started (never anything else). */
+export function stopTree(child) {
   if (!child || child.exitCode !== null || child.killed) return;
   if (process.platform === "win32") spawnSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore" });
   else child.kill("SIGTERM");
 }
 
-async function waitForHealth(port, isAlive) {
-  const deadline = Date.now() + HEALTH_TIMEOUT_MS;
+/**
+ * SIGINT/SIGTERM: stop what the session started, then exit 130. `stop` is the session's own closure over its two children;
+ * returns a function that removes the handlers again (the session does so when it ends).
+ */
+export function installSignalHandlers({ emitter = process, stop, exit = (code) => process.exit(code), log = console.log, signals = ["SIGINT", "SIGTERM"] }) {
+  const handlers = signals.map((signal) => {
+    const handler = () => { stop(); log(`${signal}: the processes of this session were stopped`); exit(130); };
+    emitter.on(signal, handler);
+    return [signal, handler];
+  });
+  return () => { for (const [signal, handler] of handlers) emitter.off(signal, handler); };
+}
+
+async function waitForHealth(port, d, isAlive) {
+  const deadline = Date.now() + d.healthTimeoutMs;
   while (Date.now() < deadline && isAlive()) {
     try {
-      const response = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(2000) });
-      if (healthOk(response.status, await response.text())) return true;
+      const answer = await d.probeHealth(port);
+      if (answer && healthOk(answer.status, answer.text)) return true;
     } catch { /* not up yet */ }
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await d.sleep(1000);
   }
   return false;
 }
 
-export async function runSession(argv, parentEnv = process.env, repoRoot = process.cwd()) {
+const defaultProbeHealth = async (port) => {
+  const response = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(2000) });
+  return { status: response.status, text: await response.text() };
+};
+
+export async function runSession(argv, parentEnv = process.env, repoRoot = process.cwd(), overrides = {}) {
+  const d = {
+    spawn: nodeSpawn, isPortFree, probeHealth: defaultProbeHealth, sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    healthTimeoutMs: HEALTH_TIMEOUT_MS, openLog: (file) => fs.openSync(file, "a"), closeLog: (fd) => fs.closeSync(fd), stopTree,
+    emitter: process, exit: (code) => process.exit(code), log: console.log, ...overrides,
+  };
   const { port, log, cli } = parseSessionArgs(argv);
   assertLogOutsideRepo(log, repoRoot);
   const python = parentEnv.UNIRIDE_PYTHON;
   if (!python) throw new Error("Set UNIRIDE_PYTHON: one interpreter serves both the optimizer and the CLI");
-  if (!(await isPortFree(port))) throw new Error(`Port ${port} is already in use; choose another --port`);
+  if (!(await d.isPortFree(port))) throw new Error(`Port ${port} is already in use; choose another --port`);
 
   const key = generateEphemeralKey();
   const optimizerEnv = buildSessionEnv(parentEnv, key, port, python);
   const command = pythonCommand(python);
-  const logFd = fs.openSync(log, "a");
-  const optimizer = spawn(command.command, command.args, {
+  const logFd = d.openLog(log);
+  const optimizer = d.spawn(command.command, command.args, {
     cwd: path.join(repoRoot, command.cwd), env: optimizerEnv, stdio: ["ignore", logFd, logFd], windowsHide: true,
   });
-  console.log(`optimizer started: PID ${optimizer.pid}, port ${port}, log ${path.basename(log)}`);
+  let startError = null;
+  // A wrong UNIRIDE_PYTHON (or any spawn failure) must fail now, not after the 90 s health wait.
+  optimizer.on("error", (error) => { startError = error; });
+  d.log(`optimizer started: PID ${optimizer.pid}, port ${port}, log ${path.basename(log)}`);
   let cliChild = null;
-  const stopAll = () => { stopTree(cliChild); stopTree(optimizer); };
-  for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => { stopAll(); console.log(`${signal}: optimizer PID ${optimizer.pid} stopped`); process.exit(130); });
+  const stopAll = () => { d.stopTree(cliChild); d.stopTree(optimizer); };
+  const uninstall = installSignalHandlers({ emitter: d.emitter, stop: stopAll, exit: d.exit, log: d.log });
   let code = 1;
   try {
-    if (!(await waitForHealth(port, () => optimizer.exitCode === null))) throw new Error("The optimizer did not report a healthy /health in time");
-    console.log("optimizer healthy; starting the run");
-    cliChild = spawn(process.execPath, ["--conditions=react-server", "--import", "tsx", "scripts/run-fleet-scenarios.ts", ...cli], {
+    const healthy = await waitForHealth(port, d, () => optimizer.exitCode === null && startError === null);
+    if (startError) throw new Error("Could not start the optimizer; check UNIRIDE_PYTHON (the interpreter must exist and have the optimizer requirements)");
+    if (!healthy) throw new Error("The optimizer did not report a healthy /health in time");
+    d.log("optimizer healthy; starting the run");
+    cliChild = d.spawn(process.execPath, ["--conditions=react-server", "--import", "tsx", "scripts/run-fleet-scenarios.ts", ...cli], {
       cwd: repoRoot, env: buildChildEnv(optimizerEnv, key), stdio: "inherit", windowsHide: true,
     });
     code = await new Promise((resolve) => { cliChild.on("exit", (exit) => resolve(exit ?? 1)); cliChild.on("error", () => resolve(1)); });
   } finally {
+    uninstall();
     stopAll();
-    console.log(`optimizer PID ${optimizer.pid} stopped`);
-    fs.closeSync(logFd);
+    d.log(`optimizer PID ${optimizer.pid} stopped`);
+    d.closeLog(logFd);
   }
   return code;
 }

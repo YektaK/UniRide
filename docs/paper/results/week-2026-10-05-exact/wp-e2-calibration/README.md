@@ -26,7 +26,7 @@ Production:
   enumerates each wave with WP-E1 defaults, solves with `uniride_core/exact/ampl_backend.py`).
 - Fleet: single type 4 Sw / 5 So, R = 50, 60, 70, 90, all 57 waves; peak waves (D-B) are the five
   08:45 pickup waves. Limits as in production of GOAL 1: 60 s per call, 600 s per call on a peak
-  wave, Gurobi work limit 30 (300 on a peak wave), threads 1, seed 0, `mip:gap=0`,
+  wave, Gurobi work limit 30 (300 on a peak wave; now 20/200, see below), threads 1, seed 0, `mip:gap=0`,
   `mip:gapabs=0.99`.
 - Solvers: Gurobi 13.0.3 and HiGHS 1.15.1 via AMPL 20260809, amplpy 0.18.0 (academic license).
 
@@ -43,11 +43,11 @@ Findings (this machine, single run, 2026-10-15):
   so a HiGHS run on a slower host could become `timing_dependent` on that wave.
 - Wall seconds include AMPL's model generation and the solver process start (on waves with at
   most 3 columns a call averages 0.35 s with Gurobi and 0.53 s with HiGHS; calls that AMPL's
-  presolve settles take under 1 ms); `lim:time` limits the solver run only.
-- Gurobi work-unit rate on this machine, measured separately on a synthetic hard SP stopped by
-  `lim:time`: 7.9 work units in 14.7 s and 21.1 in 30.3 s (about 0.5-0.7 units per second).
-  At that rate the work limit 30 fires after about 43-55 s, before the 60 s wall limit, and 300
-  after about 430-550 s, before 600 s. On the grid both limits are far from binding.
+  presolve settles take at most 1.5 ms with Gurobi and 1.1 ms with HiGHS); `lim:time` limits the solver run only.
+- Work limit: the calibration ran with a Gurobi work limit of 30 work units per call (300 on a
+  peak wave). No call came near either limit (at most 1.64 work units). The setting has since
+  changed to 20 (200 on a peak wave), owner decision 2026-10-16 (DECISION_LOG E03); the run was not
+  repeated because no call is near the new limit either.
 - SP vs brute-force oracle (unit test, 500 generator instances): identical (K, D) and status on
   all 500 for both solvers (334 optimal, 166 proven infeasible, 38 instances use a column more
   than once); runtime 374 s with Gurobi and 555 s with HiGHS. The default test run uses the first

@@ -176,7 +176,7 @@ describe("WP-E10 extended manifest (v2)", () => {
       ga_defaults: {}, ga_effective_configuration: {}, effective_seed: 42, hf_effective_configuration: {}, hf_effective_seed: 42,
       selection_solver: { name: "cp-sat", version: "9.15.6755", random_seed: 20261008, num_workers: 1, time_limit_seconds: 30 },
       vehicle_count_scope: "s", weekly_cars_definition: "d", runs: [run], state: "completed", completed_at: "2026-10-18T11:00:00.000Z",
-      archive_format: FLEET_ARCHIVE_FORMAT, run_kind: "campaign", pinned_commit: sha.slice(0, 12), preflight,
+      archive_format: FLEET_ARCHIVE_FORMAT, run_kind: "campaign", pinned_commit: sha.slice(0, 12), preflight: structuredClone(preflight),
       compute_policy: { rate_limit_window_seconds: 1 },
       optimizer_policy: { profile_id: "production-conservative-v1", limits: {}, responses_checked: 12, limits_identical: true },
     };
@@ -196,7 +196,7 @@ describe("WP-E10 extended manifest (v2)", () => {
     ["a run without the selection exchange list", (m) => { delete (m.runs as Array<Record<string, unknown>>)[0].selection_exchange_files; }],
     ["a completed run with an optimizer HTTP failure (an option was lost)", (m) => { (m.runs as Array<Record<string, unknown>>)[0].optimizer_http_failures = [{ path: "/api/v1/optimize", status: 429 }]; }],
     ["an absolute path in the preflight record", (m) => { (m.preflight as Record<string, unknown>).reference_manifest = "C:/Users/x/run_manifest.json"; }],
-    ["a backslash path in the preflight record", (m) => { (m.preflight as Record<string, unknown>).reference_waves_archive = "docs\w"; }],
+    ["a backslash path in the preflight record", (m) => { (m.preflight as Record<string, unknown>).reference_waves_archive = "docs\\w"; }],
     ["no compute policy", (m) => { delete m.compute_policy; }],
     ["optimizer policy that changed during the run", (m) => { (m.optimizer_policy as Record<string, unknown>).limits_identical = false; }],
     ["no run_kind", (m) => { delete m.run_kind; }],

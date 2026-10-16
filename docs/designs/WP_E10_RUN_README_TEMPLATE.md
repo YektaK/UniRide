@@ -10,6 +10,25 @@ Copy into the results directory of a re-run (`docs/paper/results/week-2026-10-05
 
 Pinned commit `<sha>`, `dirty_working_tree: false`, GA seed 42, native termination, CP-SAT 9.15.6755 (`random_seed` 20261008, `num_workers` 1), selection time limit 30 s, node budget 200000, `admission_mode: assume_confirmed` (manifest fields). Fleet types and grid equal the historical manifest `<reference manifest>`.
 
+## Procedure: one fresh detached worktree per run
+
+The preflight refuses a dirty tree, and the output of a run is untracked, so a second run in the same checkout is refused and committing the output would move the pin. Therefore **each run (large+sedan campaign, Doblò campaign, rule (e) second run) gets its own fresh detached worktree at the pinned commit**, and its `--out` lies inside that worktree. The pin is the merged commit that contains this code (`git rev-parse --short=12 HEAD` of the merged branch). The dirty check is never relaxed and the output directory is never excluded from it.
+
+```text
+git worktree add <run-worktree> <pin> --detach
+cmd /c mklink /J <run-worktree>
+ode_modules <main>
+ode_modules
+cd <run-worktree>
+set UNIRIDE_PYTHON=<main>.venv-jitScriptspython.exe
+node --env-file=<main>optimizer_api.env --env-file=<main>.env.local scripts/run-fleet-rerun-session.mjs --port 8011 --log <log outside the repo> -- <run arguments> --out <out inside this worktree>
+```
+
+Afterwards the results are copied (not moved by git) into a results branch of the main repository for merging; the run worktree is then removed (`cmd /c rmdir <run-worktree>
+ode_modules`, then `git worktree remove <run-worktree>`). Never recursive-delete a worktree that holds the junction.
+
+A rule (e) second run is **not** a campaign: it is written with `--dates <one date> --allow-subset-dates`, its manifest says `run_kind: rule_e_second_run` and `parameters.allow_subset_dates: true`, and it contains a one-line README. It is copied to `<campaign directory>/rule_e_second_run_<date>/` (never to `docs/paper/results/` as a sibling campaign), and `scripts/verify_fleet_rerun.py` refuses it as `--rerun-dir`.
+
 ## What the preflight proves, and what it cannot
 
 The run refuses before any solve unless the live inputs equal the historical campaign (manifest `preflight`, one entry per check). The occurrence check has an exact limit, repeated here and in the manifest (`preflight.occurrence_check_limit`):
@@ -31,7 +50,7 @@ The session wrapper starts the optimizer with `UNIRIDE_RATE_LIMIT_WINDOW_SECONDS
 
 ```text
 python scripts/verify_fleet_rerun.py --rerun-dir <this directory> --single-archive docs/paper/results/week-2026-10-05-4sw5so \
-  --historical-dir <old fleet archive of the same campaign> --double-run-dir <second run of one day> --base <pinned commit>
+  --historical-dir <old fleet archive of the same campaign> --double-run-dir <this directory>/rule_e_second_run_<date> --base <pinned commit>
 ```
 
 Rule (d) base routes, selected-option categories (including the expected H06 category), rule (e) determinism of one full day run twice, rule (g) historical archives untouched. Result: `<pass/fail and the printed report>`.

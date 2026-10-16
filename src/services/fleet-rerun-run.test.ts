@@ -246,6 +246,12 @@ describe("N2/N3: the run README template", () => {
   it("repeats the exact limit of the occurrence check that the manifest records", () => {
     expect(template).toContain(OCCURRENCE_CHECK_LIMIT);
   });
+  it("P-1: prescribes one fresh detached worktree per run, the pinned merged commit, and never relaxes the dirty check", () => {
+    expect(template).toMatch(/each run .* gets its own fresh detached worktree at the pinned commit/);
+    expect(template).toContain("git worktree add <run-worktree> <pin> --detach");
+    expect(template).toMatch(/never relaxed and the output directory is never excluded/);
+    expect(template).toContain("rule_e_second_run_<date>/");
+  });
   it("says that a write-time archive schema failure aborts the whole campaign", () => {
     expect(template).toMatch(/schema failure aborts the whole campaign/);
     expect(template).toMatch(/fail closed/);

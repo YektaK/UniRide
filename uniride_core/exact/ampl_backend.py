@@ -60,13 +60,25 @@ _BOUND_TOL = 1e-6
 # Stops that depend on machine speed (owner decision 2026-10-16, E03: other_limit counts as timing-dependent).
 _TIMING_REASONS = ("wall_limit", "other_limit")
 _BOUND_SENTINEL = -1e30  # written into .bestbound before every solve; read back as "no bound"
-# A missing solver binary or license (backend_unavailable), as opposed to a backend defect.
-_ABSENT = re.compile(r"licen|cannot invoke|no such program|can.t find", re.I)
+# A missing license (backend_unavailable), as opposed to a backend defect; see backend_absent().
+_LICENSE_ABSENT = re.compile(r"licen[cs]e (not found|expired|invalid|error)|\bno\b.*licen[cs]e", re.I)
 STAGES = ("stage1", "stage2", "free")
 
 
 class ExactBackendUnavailable(RuntimeError):
     """amplpy, AMPL or a solver license is missing (status ``backend_unavailable``)."""
+
+
+def backend_absent(solver: str, text: str) -> bool:
+    """True only for a missing solver binary (phrases anchored to ``solver``) or a missing license.
+
+    Used only on the open/probe path, and only on an exception text or on the solve message and
+    the solve command's own output when ``solve_result_num >= 500``. Anything else that mentions
+    "can't find" or "licen" is a backend defect and must fail, not skip.
+    """
+    name = re.escape(solver)
+    missing = re.compile(rf"can.t find (file )?\W?{name}\b|cannot invoke {name}\b", re.I)
+    return bool(missing.search(text) or _LICENSE_ABSENT.search(text))
 
 
 @dataclass(frozen=True)
@@ -422,28 +434,25 @@ class AmplSession:
         a.eval("var x {1..2} binary; minimize o: x[1] + 2 * x[2]; subject to c: x[1] + x[2] >= 1;")
         a.option["solver"] = self.settings.solver
         a.option[f"{self.settings.solver}_options"] = solver_option_string(self.settings, peak=False)
+        solver = self.settings.solver
         try:
-            a.solve()
+            # the solve command's own output: AMPL reports a missing solver only there
+            # ("Cannot invoke <solver>: no such program.", solve_result_num 999, solve_message "?")
+            output = a.solve(return_output=True) or ""
         except Exception as exc:  # noqa: BLE001 - classified below
-            if _ABSENT.search(str(exc)) or _ABSENT.search("\n".join(self._log)):
-                raise ExactBackendUnavailable(f"{self.settings.solver} could not run (solver or license missing)") from exc
+            if backend_absent(solver, str(exc)):
+                raise ExactBackendUnavailable(f"{solver} could not run (solver or license missing)") from exc
             raise
         msg = str(a.get_value("solve_message"))
         num = int(a.get_value("solve_result_num"))
-        self._check_absent(num, msg)
+        if num >= 500 and backend_absent(solver, f"{msg}\n{output}"):
+            raise ExactBackendUnavailable(f"{solver}: solver or license missing")
         if num >= 500:
             # an AMPL/solver that starts but fails on a trivial model is a backend defect, not absence
             raise RuntimeError(f"{self.settings.solver} failed on the probe model: {_scrub(msg.splitlines()[0] if msg else '')}")
         m = re.match(r"^(\w+) (\d+\.\d+\.\d+):", msg)
         a.reset()
         return f"{m.group(1)} {m.group(2)}" if m else None
-
-    def _check_absent(self, num: int, msg: str) -> None:
-        """Raise ``ExactBackendUnavailable`` only for a missing solver binary or license."""
-        log = "\n".join(self._log)
-        self._log.clear()
-        if _ABSENT.search(msg) or (num >= 500 and _ABSENT.search(log)):
-            raise ExactBackendUnavailable(f"{self.settings.solver}: solver or license missing")
 
     def close(self) -> None:
         if self._ampl is not None:
@@ -507,8 +516,8 @@ class AmplSession:
         secs = time.perf_counter() - t0
         num = int(a.get_value("solve_result_num"))
         msg = str(a.get_value("solve_message"))
-        log = "\n".join(self._log)
-        self._check_absent(num, msg)
+        log = "\n".join(self._log)  # parsed for Gurobi work units only, never stored
+        self._log.clear()
         objective = a.get_objective(name).value()
         bound = self._read_bound(name)
         out = classify_outcome(num, msg, objective, bound)

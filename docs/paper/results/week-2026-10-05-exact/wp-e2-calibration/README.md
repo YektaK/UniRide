@@ -44,6 +44,9 @@ Findings (this machine, single run, 2026-10-15):
 - Wall seconds include AMPL's model generation and the solver process start (on waves with at
   most 3 columns a call averages 0.35 s with Gurobi and 0.53 s with HiGHS; calls that AMPL's
   presolve settles take at most 1.5 ms with Gurobi and 1.1 ms with HiGHS); `lim:time` limits the solver run only.
+- `calibration_waves.csv` predates the new `K_LB_source` labels (presolve-settled waves now report
+  `ampl_presolve`) and the 20/200 work limit; the reviewer's reruns at R = 90 and R = 50 (342 calls)
+  gave identical bounds and statuses.
 - Work limit: the calibration ran with a Gurobi work limit of 30 work units per call (300 on a
   peak wave). No call came near either limit (at most 1.64 work units). The setting has since
   changed to 20 (200 on a peak wave), owner decision 2026-10-16 (DECISION_LOG E03); the run was not

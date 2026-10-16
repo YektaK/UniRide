@@ -181,6 +181,77 @@ def test_probe_reports_unavailable_only_for_backend_unavailable(monkeypatch):
     assert probe.available is True and probe.status == "rejected"  # _require then fails the tests
 
 
+class _FakeAmpl:
+    """Mocked AMPL for the open/probe path: no real solver and no license file is touched."""
+
+    def __init__(self, num=0, message="Gurobi 13.0.3: optimal solution; objective 1", output="", raises=None):
+        self.option = {}
+        self._num, self._msg, self._out, self._raises = num, message, output, raises
+
+    def reset(self):
+        pass
+
+    def eval(self, text):
+        pass
+
+    def solve(self, return_output=False):
+        if self._raises is not None:
+            raise self._raises
+        return self._out if return_output else None
+
+    def get_value(self, name):
+        return {"solve_message": self._msg, "solve_result_num": self._num}[name]
+
+
+@pytest.mark.parametrize("fake,absent", [
+    (dict(num=999, message="?", output="Cannot invoke gurobi: no such program."), True),
+    (dict(num=500, message="Gurobi 13.0.3: license not found"), True),
+    (dict(num=500, message="Gurobi 13.0.3: No Gurobi license found"), True),
+    (dict(raises=RuntimeError("can't find file gurobi")), True),
+    # defects that merely mention "can't find" or "licen": must FAIL, never skip
+    (dict(num=500, message="Gurobi 13.0.3: can't find file 'routes.tab'"), False),
+    (dict(num=500, message='Gurobi 13.0.3: Unknown option or invalid key "mip:licensefoo"'), False),
+    (dict(num=999, message="?", output="Cannot invoke highs: no such program."), False),  # another solver
+    (dict(raises=RuntimeError("can't find set COLS in the licensed model")), False),
+])
+def test_absence_is_only_a_missing_named_solver_or_license(fake, absent):
+    from uniride_core.exact import ampl_backend as ab
+
+    s = ab.AmplSession(ab.SolverSettings(solver="gurobi"))
+    s._ampl = _FakeAmpl(**fake)
+    expected = ab.ExactBackendUnavailable if absent else RuntimeError
+    with pytest.raises(expected) as info:
+        s._solver_version()
+    if not absent:
+        assert not isinstance(info.value, ab.ExactBackendUnavailable)
+
+
+def test_probe_skips_for_missing_solver_and_fails_for_a_defect_message(monkeypatch):
+    from uniride_core.exact import ampl_backend as ab
+
+    monkeypatch.setattr(sys.modules[__name__], "_PROBE", {})
+    outcomes = []
+    for fake, want in ((dict(num=999, message="?", output="Cannot invoke gurobi: no such program."), "skip"),
+                       (dict(num=500, message="Gurobi 13.0.3: can't find file 'x.tab'"), "fail"),
+                       (dict(num=500, message="Gurobi 13.0.3: licensing banner parse error at key 3"), "fail")):
+        def fake_open(self, fake=fake):
+            self._ampl = _FakeAmpl(**fake)
+            self.solver_version = self._solver_version()
+
+        monkeypatch.setattr(ab.AmplSession, "open", fake_open)
+        monkeypatch.setattr(ab.AmplSession, "close", lambda self: None)
+        _PROBE.pop("gurobi", None)
+        try:  # a skip must not escape: the test itself would then be reported as skipped
+            _require("gurobi")
+            got = "ran"
+        except pytest.skip.Exception:
+            got = "skip"
+        except pytest.fail.Exception:
+            got = "fail"
+        outcomes.append((got, want))
+    assert [g for g, _ in outcomes] == [w for _, w in outcomes]
+
+
 def test_probe_exception_propagates_and_is_never_a_skip(monkeypatch):
     from uniride_core.exact import ampl_backend as ab
 

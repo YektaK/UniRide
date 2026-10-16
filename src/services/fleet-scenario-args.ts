@@ -39,6 +39,8 @@ export interface FleetArgs {
   referenceManifest: string | null;
   /** WP-E10: historical archive whose responses hold the wave composition (default chosen by the runner). */
   referenceWaves: string | null;
+  /** Rule (e): allow a non-empty subset of the reference dates (one full day run twice); everything else must still equal the reference. */
+  allowSubsetDates: boolean;
 }
 
 /** Largest fixed L: the menu holds quota options q = 0..L plus the baseline (router cap: 6 options). */
@@ -77,9 +79,11 @@ export function parseFleetType(text: string): FleetTypeSpec {
 
 export function parseFleetArgs(rawArgv: readonly string[], now = new Date()): FleetArgs {
   // --preflight-only is the only value-less flag; take it out so the rest stays a list of flag/value pairs.
-  if (rawArgv.filter((item) => item === "--preflight-only").length > 1) throw new Error("Invalid or duplicate fleet argument");
+  const flags = ["--preflight-only", "--allow-subset-dates"];
+  for (const flag of flags) if (rawArgv.filter((item) => item === flag).length > 1) throw new Error("Invalid or duplicate fleet argument");
   const preflightOnly = rawArgv.includes("--preflight-only");
-  const argv = rawArgv.filter((item) => item !== "--preflight-only");
+  const allowSubsetDates = rawArgv.includes("--allow-subset-dates");
+  const argv = rawArgv.filter((item) => !flags.includes(item));
   const shared = new Set(["--week-of", "--dates", "--ride-limits", "--tour-limit", "--out"]);
   const own = new Set([
     "--fleet-types", "--fixed-type", "--minimize-type", "--scenarios", "--max-cars", "--node-budget", "--selection-time-limit",
@@ -138,7 +142,7 @@ export function parseFleetArgs(rawArgv: readonly string[], now = new Date()): Fl
     maxCars: args.has("--max-cars") ? integer(args.get("--max-cars")!, 0, 50) : null,
     nodeBudget: integer(args.get("--node-budget") ?? "200000", 1000, 5_000_000),
     selectionTimeLimitSeconds: integer(args.get("--selection-time-limit") ?? "30", 1, 600),
-    preflightOnly, pinCommit,
+    preflightOnly, allowSubsetDates, pinCommit,
     referenceManifest: args.get("--reference-manifest") ?? null, referenceWaves: args.get("--reference-waves") ?? null,
   };
 }

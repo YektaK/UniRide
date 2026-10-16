@@ -83,6 +83,7 @@ export async function runFleetRerun(deps: RerunDeps, args: FleetArgs): Promise<R
       dates: args.dates, rideLimits: args.rideLimits, tourLimit: args.tourLimit, scenarios: args.scenarios.map(scenarioName),
       maxCars: args.maxCars, nodeBudget: args.nodeBudget, selectionTimeLimitSeconds: args.selectionTimeLimitSeconds,
       admissionMode: "assume_confirmed", fleetTypes: args.fleetTypes, fixedType: args.fixedTypeId, minimizeType: args.minimizeTypeId,
+      allowSubsetDates: args.allowSubsetDates,
     },
   }, reference, pins);
   log(formatPreflightReport(preflight.report));

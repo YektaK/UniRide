@@ -71,6 +71,15 @@ describe("preflight against the real historical archives (design WP-E10 (a)-(c))
     // occurrence ids
     const occ = clone(); const wave = Object.keys(occ.days[0].waves)[0]; occ.days[0].waves[wave] = occ.days[0].waves[wave].slice(1);
     expect(failedIds(occ)).toContain("occurrence_ids");
+    // rule (e): a one-day subset of the reference dates is accepted only when it is explicitly allowed
+    const oneDay = clone(); oneDay.cli.dates = [ref.parameters.dates[1]]; oneDay.days = [oneDay.days[1]];
+    expect(failedIds(oneDay)).toEqual(expect.arrayContaining(["grid", "occurrence_ids"]));
+    oneDay.cli.allowSubsetDates = true;
+    expect(evaluatePreflight(ref, oneDay).checks.filter((c) => !c.ok)).toEqual([]);
+    const foreign = clone(); foreign.cli.dates = ["2026-10-12"]; foreign.cli.allowSubsetDates = true;
+    expect(failedIds(foreign)).toContain("grid");
+    const reordered = clone(); reordered.cli.dates = [...ref.parameters.dates].reverse(); reordered.cli.allowSubsetDates = true;
+    expect(failedIds(reordered)).toContain("grid");
     // N2: same ids, but a student of the wave changes class (Sw/So)
     const cls = clone(); const w2 = Object.keys(cls.days[0].classes)[0]; cls.days[0].classes[w2] = { sw: cls.days[0].classes[w2].sw + 1, so: cls.days[0].classes[w2].so - 1 };
     expect(failedIds(cls)).toContain("occurrence_ids");

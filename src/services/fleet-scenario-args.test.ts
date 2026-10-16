@@ -48,6 +48,9 @@ describe("parseFleetArgs", () => {
     const args = parseFleetArgs(["--preflight-only", ...base, "--pin-commit", "f7e014c", "--reference-manifest", "a/run_manifest.json", "--reference-waves", "b"]);
     expect(args).toMatchObject({ preflightOnly: true, pinCommit: "f7e014c", referenceManifest: "a/run_manifest.json", referenceWaves: "b" });
     const plain = parseFleetArgs(base);
+    expect(parseFleetArgs([...base, "--allow-subset-dates"]).allowSubsetDates).toBe(true);
+    expect(plain.allowSubsetDates).toBe(false);
+    expect(() => parseFleetArgs([...base, "--allow-subset-dates", "--allow-subset-dates"])).toThrow();
     expect(plain).toMatchObject({ preflightOnly: false, pinCommit: null, referenceManifest: null, referenceWaves: null });
     expect(parseFleetArgs([...base, "--preflight-only"]).preflightOnly).toBe(true);
   });

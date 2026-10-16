@@ -6,7 +6,7 @@ import { runDailyPlan } from "@/services/daily-plan-run";
 import { runFleetScenarioDay, scenarioResponse } from "@/services/fleet-scenario-run";
 import type { FleetTypeSpec } from "@/services/fleet-scenario-args";
 import {
-  DATE, large, sedan, rows, reader, transport, pickSelection, params, matrixOf,
+  DATE, large, sedan, rows, reader, transport, pickSelection, params,
   type OptimizeBody, type SelectionRequest,
 } from "./fleet-scenario-fixtures";
 const clock = () => new Date("2026-09-30T00:00:00Z");

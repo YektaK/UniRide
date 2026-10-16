@@ -74,6 +74,8 @@ export interface PreflightObservation {
     dates: string[]; rideLimits: number[]; tourLimit: number; scenarios: string[]; maxCars: number | null;
     nodeBudget: number; selectionTimeLimitSeconds: number; admissionMode: string;
     fleetTypes: FleetTypeSpec[]; fixedType: string; minimizeType: string | null;
+    /** Rule (e): the dates may be a non-empty, ordered subset of the reference dates (one full day run twice). */
+    allowSubsetDates?: boolean;
   };
   solver: SolverCapture;
   days: LiveDay[];
@@ -142,9 +144,12 @@ export function evaluatePreflight(
 
   const typesOk = same(cli.fleetTypes.map(normalizeType), reference.fleet_types.map(normalizeType));
   check("fleet_types", typesOk, typesOk ? "CLI fleet types equal the reference manifest" : "CLI fleet types differ from the reference manifest");
-  const gridOk = same(
-    [cli.dates, cli.rideLimits, cli.tourLimit, cli.scenarios, cli.maxCars, cli.fixedType, cli.minimizeType],
-    [reference.parameters.dates, reference.parameters.ride_limits, reference.parameters.tour_limit, reference.parameters.scenarios,
+  const datesOk = cli.allowSubsetDates
+    ? cli.dates.length > 0 && cli.dates.every((date, k) => reference.parameters.dates.includes(date) && (k === 0 || reference.parameters.dates.indexOf(date) > reference.parameters.dates.indexOf(cli.dates[k - 1]!)))
+    : same(cli.dates, reference.parameters.dates);
+  const gridOk = datesOk && same(
+    [cli.rideLimits, cli.tourLimit, cli.scenarios, cli.maxCars, cli.fixedType, cli.minimizeType],
+    [reference.parameters.ride_limits, reference.parameters.tour_limit, reference.parameters.scenarios,
       reference.parameters.max_cars, reference.fixed_type, reference.minimize_type],
   );
   check("grid", gridOk, gridOk ? "dates, ride limits, tour limit, scenarios, cap and type roles equal the reference" : "dates, ride limits, tour limit, scenarios, cap or type roles differ from the reference");
@@ -191,9 +196,12 @@ export function evaluatePreflight(
     waveProblems.push(...compareWaves(archived, reference.waveClasses[day.date] ?? {}, day.waves, day.classes));
   }
   const liveDates = new Set(observed.days.map((day) => day.date));
-  for (const date of Object.keys(reference.waves)) if (!liveDates.has(date)) waveProblems.push(`${date}: not inspected`);
+  if (!cli.allowSubsetDates) for (const date of Object.keys(reference.waves)) if (!liveDates.has(date)) waveProblems.push(`${date}: not inspected`);
   const waves = countWaves(liveWaves), legs = countLegs(liveWaves);
-  if (waves !== pins.waveCount || legs !== pins.legCount) waveProblems.push(`live totals ${waves} waves / ${legs} legs (expected ${pins.waveCount} / ${pins.legCount})`);
+  // A full run must reproduce the totals named by the design; an allowed subset must reproduce the reference totals of its own dates.
+  const expectedWaves = cli.allowSubsetDates ? countWaves(Object.fromEntries([...liveDates].map((date) => [date, reference.waves[date] ?? {}]))) : pins.waveCount;
+  const expectedLegs = cli.allowSubsetDates ? countLegs(Object.fromEntries([...liveDates].map((date) => [date, reference.waves[date] ?? {}]))) : pins.legCount;
+  if (waves !== expectedWaves || legs !== expectedLegs) waveProblems.push(`live totals ${waves} waves / ${legs} legs (expected ${expectedWaves} / ${expectedLegs})`);
   check("occurrence_ids", waveProblems.length === 0, waveProblems.length === 0 ? `${waves} waves and ${legs} legs equal the archive` : waveProblems.slice(0, 12).join("; ") + (waveProblems.length > 12 ? `; ... ${waveProblems.length} problems` : ""));
 
   // The reference itself must be the campaign the design names.

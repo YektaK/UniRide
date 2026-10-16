@@ -308,7 +308,28 @@ def recertify_stored_routes(wave, stored: dict, arcs_doc: dict, type_spec=None) 
     caps = {} if type_spec is None else dict(sw_capacity=type_spec.sw_capacity, so_capacity=type_spec.so_capacity,
                                               cooldown_minutes=type_spec.cooldown_minutes)
     routes = [tuple(r["occurrence_ids"]) for r in stored["routes"]]
-    return certificate(cert.request_payload(wave, **caps), cert.response_payload(wave, routes), arcs_doc)
+    result = dict(certificate(cert.request_payload(wave, **caps), cert.response_payload(wave, routes), arcs_doc))
+    # The stored per-route cost, ride and tour must equal the values recomputed on the wave matrix (blocking).
+    extra = []
+    for n, (seq, r) in enumerate(zip(routes, stored["routes"])):
+        recomputed = {"cost": cert.tour_cost(wave, seq), "ride": _ride_minutes(wave, seq), "tour": cert.tour_cost(wave, seq)}
+        for field, value in recomputed.items():
+            if r.get(field) != value:
+                extra.append({"type": f"stored_{field}_mismatch", "route_index": n, "stored": r.get(field),
+                              "recomputed": value})
+    if extra:
+        result["violations"] = list(result.get("violations") or []) + extra
+        result["violation_count"] = int(result.get("violation_count") or 0) + len(extra)
+        result["is_feasible"] = False
+    return result
+
+
+def _ride_minutes(wave, occurrence_ids) -> int:
+    """Ride minutes of one route: pickup = tour minus its first arc, dropoff = tour minus its closing arc."""
+    index = {occ: i + 1 for i, occ in enumerate(wave.occurrence_ids)}
+    path = [0] + [index[o] for o in occurrence_ids] + [0]
+    arcs = [wave.matrix[a][b] for a, b in zip(path, path[1:])]
+    return sum(arcs[1:]) if wave.direction == "pickup" else sum(arcs[:-1])
 
 
 def write_wave_csv(path, rows) -> None:

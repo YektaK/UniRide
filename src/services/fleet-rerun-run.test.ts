@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
@@ -194,5 +195,16 @@ describe("B3 and N1/N2: the published manifest", () => {
   });
   it("refuses a reference path outside the repository", () => {
     expect(() => loadFleetReference({ manifestPath: path.resolve("C:/elsewhere/run_manifest.json"), wavesDir: WAVES_DIR, root: process.cwd() })).toThrow();
+  });
+});
+
+describe("N2/N3: the run README template", () => {
+  const template = fs.readFileSync(path.resolve(process.cwd(), "docs/designs/WP_E10_RUN_README_TEMPLATE.md"), "utf8");
+  it("repeats the exact limit of the occurrence check that the manifest records", () => {
+    expect(template).toContain(OCCURRENCE_CHECK_LIMIT);
+  });
+  it("says that a write-time archive schema failure aborts the whole campaign", () => {
+    expect(template).toMatch(/schema failure aborts the whole campaign/);
+    expect(template).toMatch(/fail closed/);
   });
 });

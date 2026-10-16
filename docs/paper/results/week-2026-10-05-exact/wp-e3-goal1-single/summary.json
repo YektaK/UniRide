@@ -1,0 +1,86 @@
+{
+  "per_R": {
+    "50": {
+      "dK_positive": 1,
+      "dK_unavailable": 0,
+      "dK_zero": 56,
+      "exact_le_ga_false": 0,
+      "exact_le_ga_true": 57,
+      "gD_comparable": 56,
+      "gD_not_comparable": 1,
+      "highs_agrees": 57,
+      "highs_disagrees": 0,
+      "highs_not_proven_or_not_run": 0,
+      "stage_stop_reasons": {
+        "optimal": 171
+      },
+      "statuses": {
+        "optimal": 57
+      },
+      "timing_dependent_rows": 0,
+      "waves": 57
+    },
+    "60": {
+      "dK_positive": 1,
+      "dK_unavailable": 0,
+      "dK_zero": 56,
+      "exact_le_ga_false": 0,
+      "exact_le_ga_true": 57,
+      "gD_comparable": 56,
+      "gD_not_comparable": 1,
+      "highs_agrees": 57,
+      "highs_disagrees": 0,
+      "highs_not_proven_or_not_run": 0,
+      "stage_stop_reasons": {
+        "optimal": 171
+      },
+      "statuses": {
+        "optimal": 57
+      },
+      "timing_dependent_rows": 0,
+      "waves": 57
+    },
+    "70": {
+      "dK_positive": 1,
+      "dK_unavailable": 0,
+      "dK_zero": 56,
+      "exact_le_ga_false": 0,
+      "exact_le_ga_true": 57,
+      "gD_comparable": 56,
+      "gD_not_comparable": 1,
+      "highs_agrees": 57,
+      "highs_disagrees": 0,
+      "highs_not_proven_or_not_run": 0,
+      "stage_stop_reasons": {
+        "optimal": 171
+      },
+      "statuses": {
+        "optimal": 57
+      },
+      "timing_dependent_rows": 0,
+      "waves": 57
+    },
+    "90": {
+      "dK_positive": 1,
+      "dK_unavailable": 0,
+      "dK_zero": 56,
+      "exact_le_ga_false": 0,
+      "exact_le_ga_true": 57,
+      "gD_comparable": 56,
+      "gD_not_comparable": 1,
+      "highs_agrees": 57,
+      "highs_disagrees": 0,
+      "highs_not_proven_or_not_run": 0,
+      "stage_stop_reasons": {
+        "optimal": 171
+      },
+      "statuses": {
+        "optimal": 57
+      },
+      "timing_dependent_rows": 0,
+      "waves": 57
+    }
+  },
+  "purpose": "WP-E3 GOAL 1 single type: descriptive gap measurement, no superiority claim",
+  "waves": 228
+}

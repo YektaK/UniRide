@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("server-only", () => ({})); // audit L4: admin helpers import server-only
 import { AppError } from "@/lib/admin-auth";
 
 const { optimizeRoutesMock, requireAdminMock } = vi.hoisted(() => ({

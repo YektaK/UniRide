@@ -71,6 +71,9 @@ describe("preflight against the real historical archives (design WP-E10 (a)-(c))
     // occurrence ids
     const occ = clone(); const wave = Object.keys(occ.days[0].waves)[0]; occ.days[0].waves[wave] = occ.days[0].waves[wave].slice(1);
     expect(failedIds(occ)).toContain("occurrence_ids");
+    // N2: same ids, but a student of the wave changes class (Sw/So)
+    const cls = clone(); const w2 = Object.keys(cls.days[0].classes)[0]; cls.days[0].classes[w2] = { sw: cls.days[0].classes[w2].sw + 1, so: cls.days[0].classes[w2].so - 1 };
+    expect(failedIds(cls)).toContain("occurrence_ids");
     // fleet types
     const types = clone(); types.cli.fleetTypes = [types.cli.fleetTypes[0], { ...types.cli.fleetTypes[1], soCapacity: 3 }];
     expect(failedIds(types)).toContain("fleet_types");
@@ -123,7 +126,7 @@ function observationFrom(ref: PreflightReference): PreflightObservation {
     days: Object.entries(ref.waves).map(([date, waves]) => ({
       date, status: "ready",
       matrix: { sha256: PINNED.matrixSha256, source: "supabase", id: `time_matrix:sha256:${PINNED.matrixSha256}`, version: PINNED.matrixSha256 },
-      waves: structuredClone(waves),
+      waves: structuredClone(waves), classes: structuredClone(ref.waveClasses[date]),
     })),
   };
 }
@@ -143,6 +146,7 @@ async function liveReference(): Promise<PreflightReference> {
   return {
     ...base, parameters: { ...base.parameters, dates: [DATE], ride_limits: [60], scenarios: ["A", "L1", "L2"] },
     matrixSha256s: ["a".repeat(64)], waves: wavesByDate,
+    waveClasses: Object.fromEntries(days.map((d) => [d.date, d.classes])),
   };
 }
 

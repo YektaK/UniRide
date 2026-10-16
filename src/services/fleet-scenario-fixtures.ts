@@ -63,6 +63,9 @@ export const route = (students: OptimizeBody["students"], vehicleId: string, typ
   ...(type ? { vehicle_type: type } : {}),
 });
 
+/** What the optimizer reports in `applied_policy` of every /optimize answer (limits are the effective per-request caps). */
+export const APPLIED_POLICY = { profile_id: "production-conservative-v1", algorithm_requested: "x", student_count: 3, vehicle_count: 1, limits: { max_iterations: { requested: null, applied: 100 } } };
+
 export type SelectionRequest = {
   waves: Array<{ wave_id: string; options: Array<{ option_id: string; baseline: boolean; routes: Array<{ start: number; end: number; minutes: number; large_ok: boolean; car_ok: boolean }> }> }>;
   max_large: number;
@@ -80,16 +83,16 @@ export function transport(options: { selection?: (request: SelectionRequest) => 
       const request = body as OptimizeBody;
       const all = request.students;
       if (request.algorithm === "ga_split") {
-        return Response.json({ success: true, routes: [route(all, "V1", undefined, d)], total_duration_minutes: round2(d * (all.length + 1)), feasibility_certificate: { is_feasible: true } });
+        return Response.json({ success: true, routes: [route(all, "V1", undefined, d)], total_duration_minutes: round2(d * (all.length + 1)), feasibility_certificate: { is_feasible: true }, applied_policy: APPLIED_POLICY });
       }
       const quota = request.vehicle_types!.find((t) => t.type_id === "large")!.max_routes!;
       const sw = all.filter((s) => s.disability_type === "Sw");
       const so = all.filter((s) => s.disability_type === "So");
       if (quota === 0 && sw.length > 0) {
-        return Response.json({ success: false, routes: [], feasibility_certificate: { is_feasible: false } });
+        return Response.json({ success: false, routes: [], feasibility_certificate: { is_feasible: false }, applied_policy: APPLIED_POLICY });
       }
       const routes = [...(sw.length ? [route(sw, "H1", "large", d)] : []), ...(so.length ? [route(so, "H2", "sedan", d)] : [])];
-      return Response.json({ success: true, routes, total_duration_minutes: round2(routes.reduce((s, r) => s + r.total_duration_minutes, 0)), feasibility_certificate: { is_feasible: true } });
+      return Response.json({ success: true, routes, total_duration_minutes: round2(routes.reduce((s, r) => s + r.total_duration_minutes, 0)), feasibility_certificate: { is_feasible: true }, applied_policy: APPLIED_POLICY });
     }
     if (path === "/api/v1/internal/fleet-selection") {
       const scripted = options.selection?.(body as SelectionRequest);

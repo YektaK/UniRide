@@ -57,6 +57,14 @@ def _wave(campaign, wave_id, ride=90):
     return next(w for w in campaign.waves_for(ride) if w.wave_id == wave_id)
 
 
+def _ride(wave, seq) -> int:
+    """Independent ride minutes of one route: pickup = tour minus its first arc, dropoff = tour minus its closing arc."""
+    index = {occ: i + 1 for i, occ in enumerate(wave.occurrence_ids)}
+    path = [0] + [index[o] for o in seq] + [0]
+    arcs = [wave.matrix[a][b] for a, b in zip(path, path[1:])]
+    return sum(arcs[1:]) if wave.direction == "pickup" else sum(arcs[:-1])
+
+
 def _fake_sp(wave, seqs, *, status="optimal", k_lb=None, d_lb=None, d_lb_free=None, d=None, k_star_proven=True):
     """An ``SPSolveResult`` standing in for the solver (no AMPL): routes are given by their visiting order."""
     from uniride_core.exact import certification as cert
@@ -64,7 +72,7 @@ def _fake_sp(wave, seqs, *, status="optimal", k_lb=None, d_lb=None, d_lb_free=No
 
     k, true_d = cert.recompute_objective(wave, seqs)
     d = true_d if d is None else d
-    routes = tuple(ExpandedRoute("large", i, 0, tuple(s), cert.tour_cost(wave, s), 0, cert.tour_cost(wave, s))
+    routes = tuple(ExpandedRoute("large", i, 0, tuple(s), cert.tour_cost(wave, s), _ride(wave, s), cert.tour_cost(wave, s))
                    for i, s in enumerate(seqs))
     s1_status = "optimal" if k_star_proven else "feasible_with_gap"
     s1 = StageResult("stage1", s1_status, s1_status if k_star_proven else "work_limit", objective=k, bound=float(k),
@@ -543,6 +551,20 @@ def test_highs_incumbent_better_or_bound_above_the_proven_optimum_is_blocking(ru
     assert any("free-stage incumbent" in e for e in ev["errors"]), ev["errors"]
 
 
+def test_highs_stage1_incumbent_below_k_star_and_free_bound_above_free_optimum_are_blocking(runner, campaign):
+    import dataclasses
+
+    wave, jobs, arcs_doc, sp, same = _highs_pair(campaign)
+    s1 = dataclasses.replace(same.stage1, status="feasible_with_gap", stop_reason="wall_limit", timing_dependent=True,
+                             objective=sp.k - 1)
+    ev = _ev_highs(runner, wave, jobs, arcs_doc, sp, dataclasses.replace(same, status="feasible_with_gap", stage1=s1))
+    assert any("stage-1 incumbent" in e and "below" in e for e in ev["errors"]), ev["errors"]
+    fr = dataclasses.replace(same.free, status="feasible_with_gap", stop_reason="wall_limit", timing_dependent=True,
+                             objective=None, bound_ceil=sp.free.objective + 1)
+    ev = _ev_highs(runner, wave, jobs, arcs_doc, sp, dataclasses.replace(same, free=fr))
+    assert any("free-stage bound" in e and "above" in e for e in ev["errors"]), ev["errors"]
+
+
 def test_highs_rejected_is_a_blocking_error(runner, campaign):
     import dataclasses
 
@@ -580,6 +602,36 @@ def test_stored_exact_routes_recertify_through_the_bridge(runner, campaign):
     tampered["routes"][0]["occurrence_ids"] = first + second                    # two routes merged: capacity violated
     del tampered["routes"][1]
     assert runner.recertify_stored_routes(wave, tampered, arcs_doc)["is_feasible"] is False
+
+
+@pytest.mark.parametrize("field,kind", [("cost", "stored_cost_mismatch"), ("ride", "stored_ride_mismatch"),
+                                        ("tour", "stored_tour_mismatch")])
+def test_stored_route_cost_ride_tour_must_match_the_recomputed_values(runner, campaign, field, kind):
+    arcs_doc, jobs = _archive()
+    wave = _wave(campaign, PEAK)
+    ev = _evaluate(runner, wave, jobs[PEAK], arcs_doc, _fake_sp(wave, _ga_seqs(jobs[PEAK])))
+    stored = json.loads(json.dumps(ev["exact_routes"]))
+    assert runner.recertify_stored_routes(wave, stored, arcs_doc)["is_feasible"] is True
+    wrong = json.loads(json.dumps(stored))
+    wrong["routes"][0][field] += 1
+    cert_doc = runner.recertify_stored_routes(wave, wrong, arcs_doc)
+    assert cert_doc["is_feasible"] is False and cert_doc["violation_count"] >= 1
+    assert kind in {v["type"] for v in cert_doc["violations"]}, cert_doc["violations"]
+    assert kind in runner._violation_types(cert_doc)
+
+
+def test_committed_exact_routes_file_recertifies_cleanly_without_a_solver(runner):
+    out = REPO / "docs" / "paper" / "results" / "week-2026-10-05-exact" / "wp-e3-goal1-single"
+    stored = json.loads((out / "exact_routes.json").read_text(encoding="utf-8"))
+    camp = runner.loader.load_campaign(SW5SO)
+    n = 0
+    for entry in stored["waves"]:
+        wave = next(w for w in camp.waves_for(entry["R"]) if w.wave_id == entry["wave_id"])
+        doc = json.loads((SW5SO / f"{entry['service_date']}_R{entry['R']}_repeat1.matrix.json").read_text(encoding="utf-8"))
+        res = runner.recertify_stored_routes(wave, entry, doc)
+        assert res["is_feasible"] is True and not res.get("violations"), (entry["wave_id"], entry["R"], res.get("violations"))
+        n += 1
+    assert n == len(stored["waves"]) and n > 200
 
 
 # ---------- items 6 and 7: GA duration errors, stage 1 not proven ----------

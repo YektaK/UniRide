@@ -217,8 +217,8 @@ def test_exact_not_above_ga_violations():
     ok = dict(exact_optimal=True, k_star=4, d_star=300, k_ga=5, d_ga=250, k_lb=4, d_lb=300)
     assert gaps.exact_vs_ga_violations(**ok) == []                         # fewer routes wins over duration
     assert gaps.exact_vs_ga_violations(**dict(ok, k_ga=4, d_ga=300)) == []  # equal is allowed
-    assert gaps.exact_vs_ga_violations(**dict(ok, k_ga=3, d_ga=900))       # exact needs more routes than the GA
-    assert gaps.exact_vs_ga_violations(**dict(ok, k_ga=4, d_ga=299))       # equal K, GA shorter
+    assert gaps.exact_vs_ga_violations(**dict(ok, k_ga=3, d_ga=900, k_lb=None))  # exact needs more routes than the GA
+    assert gaps.exact_vs_ga_violations(**dict(ok, k_ga=4, d_ga=299, d_lb=None))  # equal K, GA shorter (no D_LB masking)
     # the exact claim is blocking only when the exact stage is optimal
     assert gaps.exact_vs_ga_violations(**dict(ok, exact_optimal=False, k_ga=3, d_ga=900, k_lb=2, d_lb=None)) == []
 

@@ -1,6 +1,10 @@
 """WP-E2: AMPL set-partitioning backend (design EXACT_SOLVER_AMPL_DESIGN.md sections 1.1 Step B,
-1.2, 2, 4, 7, 8). Tests that need AMPL carry the ``requires_ampl`` marker and are skipped with a
-reason when AMPL, a solver or its license is absent (CI has no AMPL)."""
+1.2, 2, 4, 7, 8). Tests that need AMPL carry the ``requires_ampl`` marker. They are skipped with a
+reason ONLY when the backend reports ``backend_unavailable`` (amplpy, AMPL, the solver or its license
+is absent; CI has no AMPL). Any other probe failure is a backend defect and fails the tests.
+
+SP vs oracle: the default run uses the first 120 generator instances per solver; set
+``UNIRIDE_EXACT_FULL_ORACLE=1`` to run all 500 (design section 8)."""
 from __future__ import annotations
 
 import ast
@@ -57,16 +61,25 @@ def _single(sw=4, so=5, total=None):
     return (VehicleTypeSpec("large", sw, so, 10, total),)
 
 
-_SKIP_CACHE: dict = {}
+_PROBE: dict = {}
 
 
 def _require(solver: str) -> None:
+    """Skip only for a genuinely absent backend; fail on any other probe problem."""
     from uniride_core.exact import ampl_backend
 
-    if solver not in _SKIP_CACHE:
-        _SKIP_CACHE[solver] = ampl_backend.probe_backend(solver)
-    if _SKIP_CACHE[solver] is not None:
-        pytest.skip(f"AMPL/{solver} unavailable: {_SKIP_CACHE[solver]}")
+    if solver not in _PROBE:
+        try:
+            _PROBE[solver] = ampl_backend.probe_backend(solver)
+        except Exception as exc:  # noqa: BLE001 - a backend defect must fail, never skip
+            _PROBE[solver] = exc
+    res = _PROBE[solver]
+    if isinstance(res, Exception):
+        pytest.fail(f"AMPL/{solver} probe raised (backend defect, not absence): {type(res).__name__}: {res}")
+    if not res.available:
+        pytest.skip(f"AMPL/{solver} unavailable: {res.reason}")
+    # the probe really ran and solved the one-student wave correctly
+    assert (res.status, res.k, res.d, res.routes) == ("optimal", 1, 10, 1), f"AMPL/{solver} probe solve wrong: {res}"
 
 
 @pytest.fixture(scope="module", params=SOLVERS)
@@ -148,7 +161,44 @@ def test_empty_ampl_dir_gives_backend_unavailable_without_raising(tmp_path, monk
     assert res.status == "backend_unavailable"
     assert res.stage1 is None and res.routes == ()
     assert "UNIRIDE_AMPL_DIR" in res.note and str(tmp_path) not in res.note
-    assert ampl_backend.probe_backend("gurobi") is not None
+    probe = ampl_backend.probe_backend("gurobi")
+    assert probe.available is False and probe.reason and probe.status is None
+
+
+def _fake_result(status, **kw):
+    from uniride_core.exact.ampl_backend import SPSolveResult
+
+    return SPSolveResult("probe", status, **kw)
+
+
+def test_probe_reports_unavailable_only_for_backend_unavailable(monkeypatch):
+    from uniride_core.exact import ampl_backend as ab
+
+    monkeypatch.setattr(ab, "solve_columns", lambda *a, **k: _fake_result("backend_unavailable", note="no AMPL"))
+    assert ab.probe_backend("gurobi") == ab.ProbeResult(False, reason="no AMPL")
+    monkeypatch.setattr(ab, "solve_columns", lambda *a, **k: _fake_result("rejected", note="cross-check"))
+    probe = ab.probe_backend("gurobi")
+    assert probe.available is True and probe.status == "rejected"  # _require then fails the tests
+
+
+def test_probe_exception_propagates_and_is_never_a_skip(monkeypatch):
+    from uniride_core.exact import ampl_backend as ab
+
+    def boom(*a, **k):
+        raise ValueError("selection does not cover every occurrence exactly once")
+
+    monkeypatch.setattr(ab, "solve_columns", boom)
+    with pytest.raises(ValueError):
+        ab.probe_backend("gurobi")
+    _PROBE.pop("fake-solver", None)
+    monkeypatch.setattr(ab, "probe_backend", lambda solver: boom())
+    with pytest.raises(pytest.fail.Exception):
+        _require("fake-solver")
+    _PROBE.pop("fake-solver", None)
+    monkeypatch.setattr(ab, "probe_backend", lambda solver: ab.ProbeResult(True, status="feasible_with_gap", k=1, d=12))
+    with pytest.raises(AssertionError):
+        _require("fake-solver")
+    _PROBE.pop("fake-solver", None)
 
 
 def test_missing_amplpy_gives_backend_unavailable(monkeypatch):
@@ -169,11 +219,12 @@ def test_option_strings_use_qualified_names_only():
         for opt in ("mip:bestbound=1", "tech:threads=1", "tech:seed=0", "mip:gap=0", "mip:gapabs=0.99"):
             assert opt in s.split()
         assert not re.search(r"(^|\s)bestbound=", s)
-    assert "lim:time=60" in g.split() and f"lim:work={ab.DEFAULT_WORK_LIMIT:g}" in g.split()
+    assert (ab.DEFAULT_WORK_LIMIT, ab.PEAK_WORK_LIMIT) == (20, 200)  # owner decision 2026-10-16 (E03)
+    assert "lim:time=60" in g.split() and "lim:work=20" in g.split()
     assert "lim:time=600" in h.split() and not any(o.startswith("lim:work") for o in h.split())
     assert ab.wall_limit_seconds(False) == 60 and ab.wall_limit_seconds(True) == 600
     gp = ab.solver_option_string(ab.SolverSettings(solver="gurobi"), peak=True)
-    assert f"lim:work={ab.PEAK_WORK_LIMIT:g}" in gp.split()
+    assert "lim:work=200" in gp.split()
 
 
 @pytest.mark.parametrize("num,msg,obj,bound,want", [
@@ -188,6 +239,10 @@ def test_option_strings_use_qualified_names_only():
      ("feasible_with_gap", "work_limit", False, 19, 12)),
     (472, "HiGHS 1.15.1: time limit, no solution", 0.0, float("-inf"), ("bound_only", "wall_limit", True, None, 0)),
     (479, "Gurobi 13.0.3: work limit, no solution", 0.0, 4.5, ("bound_only", "work_limit", False, None, 5)),
+    (400, "x: limit, feasible solution; objective 5", 5.0, 3.0, ("feasible_with_gap", "other_limit", True, 5, 3)),
+    (470, "x: limit, no solution", 0.0, 2.0, ("bound_only", "other_limit", True, None, 2)),
+    (0, "x: optimal solution; objective 28", 28.0, 28.3, ("optimal", "optimal", False, 28, 28)),
+    (0, "x: optimal solution; objective 28", 28.000005, 28.0, ("optimal", "optimal", False, 28, 28)),
     (299, "Infeasible constraints determined by presolve.", 0.0, None, ("infeasible_proven", "infeasible", False, None, None)),
     (200, "Gurobi 13.0.3: infeasible problem", 0.0, None, ("infeasible_proven", "infeasible", False, None, None)),
     (500, "Gurobi 13.0.3: Unknown option", 0.0, None, ("rejected", "solver_failure", False, None, None)),
@@ -249,6 +304,39 @@ def test_proven_stage1_gives_lexicographic_stage2_and_d_lb():
     out = run_stages(call, d_lb_free=True)
     assert calls[1] == ("stage2", 3)
     assert out["stage2"].non_lexicographic is False and out["d_lb"] == 291 and out["k_lb_solver"] == 3
+
+
+def test_k_lb_source_names_a_trivial_zero_bound():
+    from uniride_core.exact.ampl_backend import _k_lower_bound, run_stages
+
+    call, _ = _fake({"stage1": (472, "time limit, no solution", 0.0, float("-inf")),
+                     "free": (0, "optimal solution", 10.0, 10.0)})
+    out = run_stages(call)
+    assert (out["k_lb_solver"], out["k_lb_solver_source"]) == (0, "trivial_zero")
+    res = _enum(random_instance(1))  # typed instance: no capacity or clique floor
+    assert _k_lower_bound(res, 0, False, "trivial_zero") == (0, "trivial_zero")
+    assert _k_lower_bound(res, 2, False, "solver") == (2, "solver_bound")
+    assert _k_lower_bound(res, 2, False, "ampl_presolve") == (2, "ampl_presolve")
+
+
+def test_stage2_infeasible_after_a_stage1_incumbent_is_rejected(monkeypatch):
+    """K is fixed to an existing incumbent's value, so a proven-infeasible stage 2 is a contradiction."""
+    import dataclasses
+
+    from uniride_core.exact import ampl_backend as ab
+
+    inst = dict(direction="pickup", matrix=_loc_matrix([[0, 7], [7, 0]], (1, 1)), location_codes=("A", "A"),
+                classes=("Sw", "Sw"), types=_single(sw=1, so=0), ride=50, tour=150)
+    res = _enum(inst)
+    outcomes = {"stage1": dataclasses.replace(ab.classify_outcome(0, "optimal solution", 2.0, 2.0), selection=((0, 2),)),
+                "stage2": ab.classify_outcome(200, "infeasible problem", 0.0, None),
+                "free": ab.classify_outcome(0, "optimal solution", 28.0, 28.0)}
+    s = ab.AmplSession(ab.SolverSettings())
+    monkeypatch.setattr(s, "_load", lambda *a, **k: None)
+    monkeypatch.setattr(s, "_call", lambda stage, k_fix, peak, ncols: outcomes[stage])
+    sp = s.solve_columns(res, occurrence_ids=("a~1", "a~2"))
+    assert sp.status == "rejected" and sp.routes == () and sp.k is None
+    assert "stage 2 infeasible_proven" in sp.note
 
 
 def test_stage1_infeasible_skips_everything_else():
@@ -380,6 +468,37 @@ def test_stage2_keeps_the_stage1_route_count(session):
     assert _oracle(inst).objective == (1, 40)
     assert (sp.k, sp.d, sp.d_lb) == (1, 40, 40) and sp.status == "optimal"
     assert sp.d_lb_free == 30 and sp.free.objective == 30
+
+
+@pytest.mark.requires_ampl
+def test_fleet_limit_v_max_below_legs_is_enforced(session):
+    """Typed: two large (1 So) routes give K_m = 0; with V_max = 1 only one car route (2 So) fits."""
+    from uniride_core.exact import VehicleTypeSpec, ampl_backend
+
+    L = [[0, 5, 5], [5, 0, 3], [5, 3, 0]]
+    inst = dict(direction="pickup", matrix=_loc_matrix(L, (1, 2)), location_codes=("A", "B"), classes=("So", "So"),
+                types=(VehicleTypeSpec("large", 0, 1, 10), VehicleTypeSpec("car", 0, 2, 10)), ride=60, tour=150)
+    res = _enum(inst)
+    free = ampl_backend.solve_columns(res, occurrence_ids=(1, 2), minimize_type="car", session=session)
+    one = ampl_backend.solve_columns(res, occurrence_ids=(1, 2), minimize_type="car", v_max=1, session=session)
+    none = ampl_backend.solve_columns(res, occurrence_ids=(1, 2), minimize_type="car", v_max=0, session=session)
+    assert (free.status, free.k, free.d, len(free.routes)) == ("optimal", 0, 20, 2)
+    assert (one.status, one.k, one.d, len(one.routes)) == ("optimal", 1, 13, 1)
+    assert none.status == "infeasible_proven"
+
+
+@pytest.mark.requires_ampl
+def test_bestbound_is_reset_before_every_solve(session):
+    """A solve that returns no bound (AMPL presolve settles the model) must not expose an older bound."""
+    inst = dict(direction="pickup", matrix=_loc_matrix([[0, 7], [7, 0]], (1, 1)), location_codes=("A", "A"),
+                classes=("Sw", "Sw"), types=_single(sw=1, so=0), ride=50, tour=150)
+    res = _enum(inst)
+    session._load(res, None, None, 2)
+    session._ampl.eval("let RouteCount.bestbound := 5;")  # a stale value from an imagined earlier solve
+    st = session._call("stage1", None, False, len(res.columns))
+    assert st.solver_message.startswith("Solution determined by presolve")
+    assert session._read_bound("RouteCount") is None  # the sentinel written before the solve survived
+    assert (st.status, st.objective, st.bound_ceil, st.bound_source) == ("optimal", 2, 2, "ampl_presolve")
 
 
 @pytest.mark.requires_ampl

@@ -187,6 +187,7 @@ describe("WP-E10 extended manifest (v2)", () => {
     ["no archive format", (m) => { delete m.archive_format; }],
     ["a run without the per-option file", (m) => { (m.runs as Array<Record<string, unknown>>)[0].menu_options_file = null; }],
     ["a run without the selection exchange list", (m) => { delete (m.runs as Array<Record<string, unknown>>)[0].selection_exchange_files; }],
+    ["a completed run with an optimizer HTTP failure (an option was lost)", (m) => { (m.runs as Array<Record<string, unknown>>)[0].optimizer_http_failures = [{ path: "/api/v1/optimize", status: 429 }]; }],
     ["a completed run with a blocked day", (m) => { (m.runs as Array<Record<string, unknown>>)[0].day_status = "blocked_data"; }],
     ["a completed run that misses a grid cell", (m) => { (m.parameters as Record<string, unknown>).ride_limits = [RIDE, 70]; }],
   ])("rejects %s", async (_name, change) => {

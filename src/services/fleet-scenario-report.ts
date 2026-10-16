@@ -219,6 +219,8 @@ export const extendedFleetManifestSchema = fleetManifestSchema.superRefine((mani
     const cells = new Set(manifest.runs.map((run) => `${run.date}|${run.ride_limit}`));
     if (manifest.runs.length !== expected || cells.size !== expected) fail("a completed re-run needs every (date, R) cell exactly once");
     if (manifest.runs.some((run) => run.day_status !== "ready")) fail("a completed re-run needs every day ready");
+    // A non-OK optimizer answer (also a 429 that survived the retries) drops a menu option: the archive would not hold every option.
+    if (manifest.runs.some((run) => run.optimizer_http_failures.length > 0)) fail("a completed re-run must have no optimizer HTTP failure");
   }
   for (const run of manifest.runs) {
     const wantsMenu = run.day_status === "ready" && run.menu_sizes.length > 0;

@@ -9,7 +9,7 @@ import {
 } from "@/services/fleet-rerun-preflight";
 import { loadFleetReference } from "@/services/fleet-rerun-reference";
 import { collectLiveDays, readOnlyReader, runFleetRerunPreflight, type PreflightDeps } from "@/services/fleet-rerun-preflight-live";
-import type { FleetTypeSpec } from "@/services/fleet-scenario-args";
+import { parseFleetArgs, type FleetTypeSpec } from "@/services/fleet-scenario-args";
 import { DATE, large, matrixOf, reader, rows, sedan, transport } from "./fleet-scenario-fixtures";
 
 const RESULTS = path.resolve(process.cwd(), "docs/paper/results");
@@ -80,6 +80,33 @@ describe("preflight against the real historical archives (design WP-E10 (a)-(c))
     // configuration
     const cfg = clone(); cfg.solver.ga.config = { ...GA, population_size: 51 };
     expect(failedIds(cfg)).toContain("ga_configuration");
+  });
+});
+
+describe("the documented re-run commands match the old manifests (design (a): fleet types, grid, limits)", () => {
+  // Command lines of the two campaigns as documented in their READMEs (equivalent invocations), plus the WP-E10 flags.
+  const common = ["--week-of", "2026-10-05", "--ride-limits", "50,60,70,90", "--tour-limit", "150", "--fixed-type", "large", "--pin-commit", "f7e014c", "--reference-manifest", "m"];
+  const cases: Array<[string, string, string[]]> = [
+    ["large+sedan", LARGE_SEDAN_MANIFEST, [...common, "--fleet-types", "large:4sw5so:cd10,sedan:0sw4so:cd10", "--minimize-type", "sedan", "--scenarios", "A,1,2,3"]],
+    ["large+Doblo cap3", DOBLO_MANIFEST, [...common, "--fleet-types", "large:4sw5so:cd10,minivan:1sw3so:cap3:cd10", "--minimize-type", "minivan", "--scenarios", "0,1,2"]],
+  ];
+  it.each(cases)("%s: the parsed command line passes the fleet-type, grid, limit and admission checks", (_name, manifestPath, argv) => {
+    const ref = loadFleetReference({ manifestPath, wavesDir: WAVES_DIR });
+    const args = parseFleetArgs(argv);
+    const obs = observationFrom(ref);
+    obs.cli = {
+      dates: args.dates, rideLimits: args.rideLimits, tourLimit: args.tourLimit, scenarios: args.scenarios.map((s) => (s === "A" ? "A" : `L${s}`)),
+      maxCars: args.maxCars, nodeBudget: args.nodeBudget, selectionTimeLimitSeconds: args.selectionTimeLimitSeconds, admissionMode: "assume_confirmed",
+      fleetTypes: args.fleetTypes, fixedType: args.fixedTypeId, minimizeType: args.minimizeTypeId,
+    };
+    expect(evaluatePreflight(ref, obs).checks.filter((c) => !c.ok)).toEqual([]);
+  });
+  it("a large+sedan command line is refused against the Doblo manifest (the minivan is not a sedan)", () => {
+    const ref = loadFleetReference({ manifestPath: DOBLO_MANIFEST, wavesDir: WAVES_DIR });
+    const args = parseFleetArgs(cases[0][2]);
+    const obs = observationFrom(ref);
+    obs.cli = { ...obs.cli, fleetTypes: args.fleetTypes, minimizeType: args.minimizeTypeId, scenarios: ["A", "L1", "L2", "L3"] };
+    expect(evaluatePreflight(ref, obs).checks.filter((c) => !c.ok).map((c) => c.id)).toEqual(expect.arrayContaining(["fleet_types", "grid"]));
   });
 });
 

@@ -370,3 +370,32 @@ def test_slice_csv_schema_has_no_min_of_ga_and_union_and_claims_only_proven_rows
             assert int(r["union_cars"]) <= int(r["ga_cars"])
         else:
             assert r["cars_difference_union_minus_ga"] == ""
+
+
+# ---------------------------------------------------------------- an endpoint off the centi-minute grid refuses the cell
+def _off_grid(day):
+    """The union menu with one exact route whose start is 0.005 minutes off the 1/100-minute grid."""
+    union = []
+    for w in day["union_waves"]:
+        options = []
+        for o in w.options:
+            if o.option_id == "xbase" and not union:
+                bad = fsr.RouteFacts(o.routes[0].start_minutes + 0.005, o.routes[0].end_minutes, o.routes[0].step_durations,
+                                     o.routes[0].direction, o.routes[0].sw_count, o.routes[0].so_count)
+                o = udm.MenuOption(o.option_id, o.baseline, (bad,) + o.routes[1:], o.origin, o.stops, o.route_data)
+            options.append(o)
+        union.append(udm.WaveMenu(w.wave_id, w.direction, w.anchor_minutes, tuple(options)))
+    return dict(day, union_waves=union)
+
+
+def test_an_exact_endpoint_off_the_centi_minute_grid_is_refused_never_rounded(ctxs, e4a, day_large_sedan):
+    with pytest.raises(fsr.SelectionIntervalPrecision):
+        run_cell(ctxs["large+sedan"], _off_grid(day_large_sedan), e4a, 3, cli=lambda cases: (None, "no cli"))
+
+
+def test_the_runner_reports_a_refused_cell_as_a_blocking_error(monkeypatch, tmp_path, ctxs, e4a):
+    original = ud.prepare_day
+    monkeypatch.setattr(ud, "prepare_day", lambda *a, **k: _off_grid(original(*a, **k)))
+    code = ud.main(["--fleets", "large+sedan", "--rides", str(RIDE), "--dates", DATE, "--limits", "3", "--out", str(tmp_path / "o")])
+    manifest = json.loads((tmp_path / "o" / ud.MANIFEST_FILENAME).read_text(encoding="utf-8"))
+    assert code == 1 and any("SELECTION_INTERVAL_PRECISION" in e for e in manifest["blocking_errors"])

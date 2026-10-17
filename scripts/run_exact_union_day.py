@@ -606,11 +606,15 @@ def main(argv=None) -> int:
                     replay_row = e4a["replay_rows"].get((fleet.name, date, ride, limit))
                     if replay_row is None:
                         errors.append(f"{ctx.name} {date} R{ride} L{limit}: no WP-E4a replay row for the cell")
-                    row, cell_errors, info = solve_cell_row(
-                        ctx, date, ride, limit, ga_waves=ga_waves, union_waves=union_waves, exact_info=exact_info, archived=archived,
-                        menu_limits=menu_doc["limits"], caps=caps, day_sums=sums, producer_limit_s=fleet.selection_time_limit,
-                        solve=fsr.solve_request, to_body=fsr.result_body, clock=time.perf_counter, cli=run_cli, cpsat=cpsat,
-                        e4a_replay_row=replay_row)
+                    try:
+                        row, cell_errors, info = solve_cell_row(
+                            ctx, date, ride, limit, ga_waves=ga_waves, union_waves=union_waves, exact_info=exact_info, archived=archived,
+                            menu_limits=menu_doc["limits"], caps=caps, day_sums=sums, producer_limit_s=fleet.selection_time_limit,
+                            solve=fsr.solve_request, to_body=fsr.result_body, clock=time.perf_counter, cli=run_cli, cpsat=cpsat,
+                            e4a_replay_row=replay_row)
+                    except fsr.SelectionIntervalPrecision as exc:  # the cell is refused, never rounded (design 1.5)
+                        errors.append(f"{ctx.name} {date} R{ride} L{limit}: SELECTION_INTERVAL_PRECISION, cell refused: {exc}")
+                        continue
                     rows.append(row)
                     errors.extend(cell_errors)
                     cli_calls += info["cli_calls"]

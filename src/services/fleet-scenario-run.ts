@@ -273,6 +273,8 @@ function typeAccepts(type: FleetTypeSpec, facts: RouteFacts, limits: FleetScenar
   return facts.minutes <= tour + 1e-9 &&
     longestStudentRideMinutes(facts.route.route_details, facts.direction) <= ride + 1e-9;
 }
+/** WP-E4b: named export for the independent confirmation CLI (scripts/verify-typed-selection.ts); the body above is unchanged. */
+export { typeAccepts };
 
 interface WaveMenu {
   readonly waveId: string;

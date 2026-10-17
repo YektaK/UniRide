@@ -883,3 +883,18 @@ def test_help_says_when_stop_on_error_and_unit_timeout_apply_and_what_the_cache_
     text = " ".join(capsys.readouterr().out.split())
     assert "recorded as null" in text and "ignored when --jobs > 1" in text and "not applied in serial runs" in text
     assert "still written to the cache" in text and "errors kept" in text
+
+
+@pytest.mark.parametrize("first_argv, second_argv", [(["--jobs", "2"], []), ([], ["--jobs", "2", "--unit-timeout", "100"])],
+                         ids=["worker-then-serial", "serial-then-parallel"])
+def test_cache_hits_do_not_carry_the_mode_of_the_run_that_wrote_them(runner, tmp_path, monkeypatch, first_argv, second_argv):
+    monkeypatch.setattr(runner, "_solve_unit", lambda unit, hv, peaks, sessions=None: _fake_unit_result())
+    monkeypatch.setattr(runner, "_run_worker", lambda unit, args, peaks, path: _fake_unit_result("worker"))
+    units, ctx = _two_units(), _cache_ctx(tmp_path)
+    first_args = runner.parse_args(["--cache-dir", str(tmp_path / "cache"), *first_argv])
+    runner._solve_units(units, first_args, set(), None, None, ctx)
+    args = runner.parse_args(["--cache-dir", str(tmp_path / "cache"), *second_argv])
+    res = runner._solve_units(units, args, set(), None, None, ctx)
+    assert [r["unit_run"]["source"] for r in res] == ["cache", "cache"]
+    inv = runner.build_run_history(args, res, units, wall_seconds=1.0, unit_seconds=1.0, cache_used=True)["invocations"][0]
+    assert inv["stop_on_error"] is None and inv["unit_timeout_seconds"] is None

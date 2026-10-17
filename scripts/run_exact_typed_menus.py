@@ -128,7 +128,10 @@ def fleet_name(path: Path) -> str:
 
 
 def load_fleet_context(path) -> FleetContext:
+    """Context of a WP-E10 re-run archive; the historical fleet archives are refused (never pooled, decision D-A)."""
     path = Path(path)
+    if loader.classify(path) not in loader.RERUN.values():
+        raise loader.CampaignRefused(f"{path.name}: only the WP-E10 re-run archives are a GA source of the typed study")
     camp = loader.load_campaign(path)
     manifest = json.loads((path / "run_manifest.json").read_text(encoding="utf-8"))
     by_id = {t.type_id: t for t in camp.fleet_types}

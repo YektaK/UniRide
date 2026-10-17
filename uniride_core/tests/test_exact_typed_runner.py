@@ -518,3 +518,9 @@ def test_determinism_five_typed_waves_solved_twice_with_gurobi(runner, ls_ctx):
         second = snapshot(session)
     assert first == second
     assert any(row[5] == "optimal" for row in first)
+
+
+def test_historical_fleet_archives_are_refused_as_a_ga_source(runner):
+    for tail in (("week-2026-10-05-fleet",), ("week-2026-10-05-fleet", "extra", "minivan-cap3")):
+        with pytest.raises(runner.loader.CampaignRefused):
+            runner.load_fleet_context(RESULTS.joinpath(*tail))

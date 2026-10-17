@@ -25,7 +25,10 @@ VALID = {
     ("week-2026-10-05-4sw5so",): "4sw5so",
     ("week-2026-10-05-fleet",): "fleet",
     ("week-2026-10-05-fleet", "extra", "minivan-cap3"): "minivan-cap3",
-    # WP-E10 re-runs (pin f29aa3d88488): the only GA source of the typed exact study (decision D-A)
+}
+# WP-E10 re-runs (pin f29aa3d88488): the only GA source of the typed exact study (decision D-A, WP-E4). Kept apart
+# from VALID so that ``load_all_valid`` and the WP-E0..E3 measurements keep their historical campaign set.
+RERUN = {
     ("week-2026-10-05-fleet-rerun-large-sedan",): "rerun-large-sedan",
     ("week-2026-10-05-fleet-rerun-doblo-cap3",): "rerun-doblo-cap3",
 }
@@ -72,7 +75,7 @@ def classify(path) -> str:
     for tail, why in INVALID.items():
         if parts[-len(tail):] == tail:
             raise CampaignRefused(f"{path}: {why}")
-    for tail, key in VALID.items():
+    for tail, key in {**VALID, **RERUN}.items():
         if parts[-len(tail):] == tail:
             return key
     raise CampaignRefused(f"{path}: not one of the valid campaign directories {sorted(VALID.values())}")

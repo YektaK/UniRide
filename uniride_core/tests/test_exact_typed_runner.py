@@ -881,7 +881,7 @@ def test_help_says_when_stop_on_error_and_unit_timeout_apply_and_what_the_cache_
     with pytest.raises(SystemExit):
         runner.parse_args(["--help"])
     text = " ".join(capsys.readouterr().out.split())
-    assert "recorded as null" in text and "ignored when --jobs > 1" in text and "not applied in serial runs" in text
+    assert "recorded as null" in text and "only one unit left to solve" in text and "more than one unit to solve" in text and "not applied in serial runs" in text
     assert "still written to the cache" in text and "errors kept" in text
 
 

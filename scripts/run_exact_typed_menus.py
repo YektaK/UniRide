@@ -41,8 +41,11 @@ import dataclasses
 import hashlib
 import importlib.util
 import json
+import os
 import platform
+import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -433,13 +436,37 @@ def parse_args(argv):
     ap.add_argument("--limit", type=int, default=0, help="first N waves per R (default: all)")
     ap.add_argument("--jobs", type=int, default=1,
                     help="worker processes, one unit of work = (fleet, R, date); results are merged in a fixed order")
+    ap.add_argument("--cache-dir", default="",
+                    help="per-unit result cache (default: a folder in the system temp dir named after the commit); a "
+                         "finished unit is never solved again, so an interrupted run resumes")
+    ap.add_argument("--unit-timeout", type=float, default=7200.0,
+                    help="wall seconds after which a stuck unit worker is killed and retried once (jobs > 1)")
+    ap.add_argument("--worker-unit", default="", help=argparse.SUPPRESS)
+    ap.add_argument("--worker-peaks", default="", help=argparse.SUPPRESS)
+    ap.add_argument("--worker-out", default="", help=argparse.SUPPRESS)
     ap.add_argument("--highs-verify", action=argparse.BooleanOptionalAction, default=True,
                     help="re-solve every Gurobi-optimal option with HiGHS (default: on)")
     return ap.parse_args(argv)
 
 
+def _worker_main(args) -> int:
+    """One (fleet, R, date) unit in its own process; the result goes to a JSON file (atomic rename)."""
+    unit = tuple(json.loads(args.worker_unit))
+    unit = (unit[0], unit[1], unit[2], tuple(unit[3]))
+    res = _solve_unit(unit, bool(args.highs_verify), set(json.loads(args.worker_peaks)))
+    if res.get("unavailable"):
+        print(f"backend unavailable: {res['unavailable']}", file=sys.stderr)
+        return 3
+    tmp = Path(args.worker_out + ".tmp")
+    tmp.write_text(json.dumps(res, sort_keys=True), encoding="utf-8")
+    tmp.replace(args.worker_out)
+    return 0
+
+
 def main(argv=None) -> int:
     args = parse_args(argv)
+    if args.worker_unit:
+        return _worker_main(args)
     out = Path(args.out)
     names = [n for n in args.fleets.split(",") if n]
     unknown = [n for n in names if n not in SOURCES]
@@ -517,7 +544,7 @@ def _run(args, names, out, gurobi, highs, gurobi_settings, highs_settings) -> in
                 waves = waves[: args.limit]
             for date in sorted({w.service_date for w in waves}):
                 units.append((ctx.name, ride, date, tuple(w.wave_id for w in waves if w.service_date == date)))
-    results = _solve_units(units, args, peak_ids, gurobi, highs)
+    results = _solve_units(units, args, peak_ids, gurobi, highs, commit)
     for res in results:
         if res.get("unavailable"):
             print(f"backend unavailable: {res['unavailable']}", file=sys.stderr)
@@ -664,19 +691,61 @@ def _solve_unit(unit, highs_verify: bool, peak_ids, sessions=None) -> dict:
     return out
 
 
-def _solve_units(units, args, peak_ids, gurobi, highs) -> list:
-    """Results of every unit in the order of ``units`` (independent of the number of worker processes)."""
-    if args.jobs <= 1 or len(units) <= 1:
-        return [_solve_unit(u, bool(highs), peak_ids, sessions=(gurobi, highs)) for u in units]
-    from concurrent.futures import ProcessPoolExecutor
+def _cache_path(args, commit: str, unit) -> Path:
+    base = Path(args.cache_dir) if args.cache_dir else Path(tempfile.gettempdir()) / f"uniride_wp_e4a_cache_{commit[:12]}"
+    base.mkdir(parents=True, exist_ok=True)
+    key = hashlib.sha256(json.dumps([list(unit[:3]), list(unit[3]), bool(args.highs_verify)]).encode("utf-8")).hexdigest()[:10]
+    return base / f"{unit[0].replace('+', '_')}_R{unit[1]}_{unit[2]}_{key}.json"
 
-    # spawned workers inherit ``sys.path``; they must be able to import this module by name when it was loaded by path
-    scripts = str(REPO / "scripts")
-    if scripts not in sys.path:
-        sys.path.insert(0, scripts)
-    with ProcessPoolExecutor(max_workers=min(args.jobs, len(units))) as pool:
-        futures = [pool.submit(_solve_unit, u, bool(highs), peak_ids) for u in units]
-        return [f.result() for f in futures]
+
+def _run_worker(unit, args, peak_ids, path: Path) -> dict:
+    """Solve one unit in a subprocess with a wall limit; a stuck worker is killed (with its AMPL children) and retried once."""
+    cmd = [sys.executable, str(Path(__file__).resolve()), "--worker-unit", json.dumps([unit[0], unit[1], unit[2], list(unit[3])]),
+           "--worker-peaks", json.dumps(sorted(peak_ids)), "--worker-out", str(path),
+           "--highs-verify" if args.highs_verify else "--no-highs-verify"]
+    last = "unit worker failed"
+    for attempt in (1, 2):
+        proc = subprocess.Popen(cmd)
+        try:
+            code = proc.wait(timeout=args.unit_timeout)
+        except subprocess.TimeoutExpired:
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], capture_output=True) if os.name == "nt" else proc.kill()
+            proc.wait()
+            last = f"unit worker exceeded {args.unit_timeout:.0f} s (attempt {attempt})"
+            print(f"{last}: {unit[:3]}", file=sys.stderr, flush=True)
+            continue
+        if code == 3:
+            return {"unavailable": f"unit {unit[:3]}: AMPL backend unavailable"}
+        if code == 0 and path.exists():
+            return json.loads(path.read_text(encoding="utf-8"))
+        last = f"unit worker exited with code {code} (attempt {attempt})"
+    return {"unavailable": None, "failed": f"unit {unit[:3]}: {last}", "rows": [], "option_docs": [], "errors": [f"unit {unit[:3]}: {last}"],
+            "route_docs": [], "matrix_sha": {}, "slice_sha": {}, "caps_fired": 0}
+
+
+def _solve_units(units, args, peak_ids, gurobi, highs, commit: str = "nocommit") -> list:
+    """Results of every unit in the order of ``units`` (independent of the number of worker processes).
+
+    Every finished unit is cached on disk (``--cache-dir``); a cached unit is read, never solved again.
+    """
+    paths = [_cache_path(args, commit, u) for u in units]
+    results: list = [json.loads(p.read_text(encoding="utf-8")) if p.exists() else None for p in paths]
+    todo = [i for i, r in enumerate(results) if r is None]
+    if not todo:
+        return results
+    if args.jobs <= 1 or len(todo) <= 1:
+        for i in todo:
+            results[i] = _solve_unit(units[i], bool(highs), peak_ids, sessions=(gurobi, highs))
+            if not results[i].get("unavailable"):
+                paths[i].write_text(json.dumps(results[i], sort_keys=True), encoding="utf-8")
+        return results
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=min(args.jobs, len(todo))) as pool:
+        futures = {i: pool.submit(_run_worker, units[i], args, peak_ids, paths[i]) for i in todo}
+        for i, f in futures.items():
+            results[i] = f.result()
+    return results
 
 
 def _count(items, key) -> dict:

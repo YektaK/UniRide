@@ -480,8 +480,10 @@ def test_parallel_workers_give_the_same_results_as_a_serial_run(runner, tmp_path
     _require("gurobi")
     ids = _subset_ids(runner)
     common = ["--fleets", "large+doblo_cap3", "--rides", "90", "--wave-ids", ",".join(ids), "--no-highs-verify"]
-    assert runner.main(common + ["--jobs", "1", "--out", str(tmp_path / "a")]) == 0
-    assert runner.main(common + ["--jobs", "2", "--out", str(tmp_path / "b")]) == 0
+    cache_a, cache_b = tmp_path / "cache_a", tmp_path / "cache_b"
+    assert runner.main(common + ["--jobs", "1", "--cache-dir", str(cache_a), "--out", str(tmp_path / "a")]) == 0
+    assert runner.main(common + ["--jobs", "2", "--cache-dir", str(cache_b), "--out", str(tmp_path / "b")]) == 0
+    assert len(list(cache_a.glob("*.json"))) == len(list(cache_b.glob("*.json"))) == 2  # two (fleet, R, date) units
     timing = {"enumeration_seconds", "solve_seconds", "highs_seconds"}
 
     def stable(path):
@@ -489,6 +491,17 @@ def test_parallel_workers_give_the_same_results_as_a_serial_run(runner, tmp_path
 
     assert stable(tmp_path / "a" / "option_gaps.csv") == stable(tmp_path / "b" / "option_gaps.csv")
     assert (tmp_path / "a" / "exact_routes.json").read_bytes() == (tmp_path / "b" / "exact_routes.json").read_bytes()
+    # resume: a finished unit comes from the cache and is never solved again
+    def boom(*args, **kwargs):
+        raise AssertionError("a cached unit was solved again")
+
+    runner_solve = runner._solve_unit
+    runner._solve_unit, runner._run_worker = boom, boom
+    try:
+        assert runner.main(common + ["--jobs", "2", "--cache-dir", str(cache_b), "--out", str(tmp_path / "c")]) == 0
+    finally:
+        runner._solve_unit = runner_solve
+    assert stable(tmp_path / "c" / "option_gaps.csv") == stable(tmp_path / "b" / "option_gaps.csv")
 
 
 @pytest.mark.requires_ampl

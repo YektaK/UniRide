@@ -1,0 +1,17 @@
+date,weekday,ride_limit,tour_limit,scenario,large_limit,cars,cars_status,large_vehicles,large_vehicles_proven,large_routes,car_routes,routes,waves,students,legs,large_vehicle_minutes,car_vehicle_minutes,total_vehicle_minutes,ride_passengers,ride_mean,ride_median,ride_p90,ride_max,car_first_start,car_last_end,car_busy_minutes,status,selection_status,assignment_status,reason_codes
+2026-10-05,monday,50,150,A,6,0,,6,true,26,0,26,12,27,54,1600,0,1600,54,28.314815,26.5,46,50,,,,ok,,,[]
+2026-10-05,monday,50,150,L1,1,,,,,0,0,0,12,27,54,0,0,,,,,,,,,,infeasible_for_L,infeasible_for_L,,"[""SW_DEMAND_EXCEEDS_LARGE_CAPACITY""]"
+2026-10-05,monday,50,150,L2,2,,,,,0,0,0,12,27,54,0,0,,,,,,,,,,infeasible_for_L,infeasible_for_L,,"[""SW_DEMAND_EXCEEDS_LARGE_CAPACITY""]"
+2026-10-05,monday,50,150,L3,3,4,proven_over_menu,3,,17,10,27,12,27,54,1036,623,1659,54,28.462963,28,46,50,07:12,17:56,623,ok,optimal,proven,[]
+2026-10-05,monday,60,150,A,5,0,,5,true,21,0,21,12,27,54,1475,0,1475,54,31.796296,28,57,60,,,,ok,,,[]
+2026-10-05,monday,60,150,L1,1,,,,,0,0,0,12,27,54,0,0,,,,,,,,,,infeasible_for_L,infeasible_for_L,,"[""SW_DEMAND_EXCEEDS_LARGE_CAPACITY""]"
+2026-10-05,monday,60,150,L2,2,,,,,0,0,0,12,27,54,0,0,,,,,,,,,,infeasible_for_L,infeasible_for_L,,"[""SW_DEMAND_EXCEEDS_LARGE_CAPACITY""]"
+2026-10-05,monday,60,150,L3,3,2,proven_over_menu,3,,16,5,21,12,27,54,1121,351,1472,54,31.740741,28.5,57,60,07:12,16:51,351,ok,optimal,proven,[]
+2026-10-05,monday,70,150,A,4,0,,4,true,17,0,17,12,27,54,1355,0,1355,54,36.166667,32,66,70,,,,ok,,,[]
+2026-10-05,monday,70,150,L1,1,,,,,0,0,0,12,27,54,0,0,,,,,,,,,,infeasible_for_L,infeasible_for_L,,"[""SW_DEMAND_EXCEEDS_LARGE_CAPACITY""]"
+2026-10-05,monday,70,150,L2,2,3,proven_over_menu,2,,12,6,18,12,27,54,965,458,1423,54,33.777778,29.5,64,70,07:02,16:20,458,ok,optimal,proven,[]
+2026-10-05,monday,70,150,L3,3,1,proven_over_menu,3,,16,1,17,12,27,54,1257,98,1355,54,36.166667,32,66,70,07:07,08:45,98,ok,optimal,proven,[]
+2026-10-05,monday,90,150,A,4,0,,4,true,17,0,17,12,27,54,1338,0,1338,54,40.925926,37.5,76,90,,,,ok,,,[]
+2026-10-05,monday,90,150,L1,1,,,,,0,0,0,12,27,54,0,0,,,,,,,,,,infeasible_for_L,infeasible_for_L,,"[""SW_DEMAND_EXCEEDS_LARGE_CAPACITY""]"
+2026-10-05,monday,90,150,L2,2,2,proven_over_menu,2,,12,5,17,12,27,54,983,336,1319,54,40.537037,37,76,84,07:01,16:20,336,ok,optimal,proven,[]
+2026-10-05,monday,90,150,L3,3,1,proven_over_menu,3,,16,1,17,12,27,54,1285,34,1319,54,40.537037,37,76,84,08:11,08:45,34,ok,optimal,proven,[]

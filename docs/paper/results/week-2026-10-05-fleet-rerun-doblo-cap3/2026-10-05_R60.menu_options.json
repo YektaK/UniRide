@@ -1,0 +1,5213 @@
+{
+  "format": "fleet_archive_v2",
+  "kind": "menu_options",
+  "serviceDate": "2026-10-05",
+  "rideLimit": 60,
+  "limits": {
+    "maxRideTimeMinutes": 60,
+    "maxTourMinutes": 150
+  },
+  "matrix": {
+    "id": "time_matrix:sha256:bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+    "version": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+    "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+    "source": "supabase"
+  },
+  "occurrenceLabels": {
+    "2026-10-05:pickup:Sw5~1": "Sw5",
+    "2026-10-05:dropoff:Sw5~1": "Sw5",
+    "2026-10-05:pickup:Sw4~1": "Sw4",
+    "2026-10-05:dropoff:Sw4~1": "Sw4",
+    "2026-10-05:pickup:Sw3~1": "Sw3",
+    "2026-10-05:dropoff:Sw3~1": "Sw3",
+    "2026-10-05:pickup:Sw2~1": "Sw2",
+    "2026-10-05:dropoff:Sw2~1": "Sw2",
+    "2026-10-05:pickup:So10~1": "So10",
+    "2026-10-05:dropoff:So10~1": "So10",
+    "2026-10-05:pickup:So1~1": "So1",
+    "2026-10-05:dropoff:So1~1": "So1",
+    "2026-10-05:pickup:So12~1": "So12",
+    "2026-10-05:dropoff:So12~1": "So12",
+    "2026-10-05:pickup:So11~1": "So11",
+    "2026-10-05:dropoff:So11~1": "So11",
+    "2026-10-05:pickup:So5~1": "So5",
+    "2026-10-05:dropoff:So5~1": "So5",
+    "2026-10-05:pickup:So4~1": "So4",
+    "2026-10-05:dropoff:So4~1": "So4",
+    "2026-10-05:pickup:So3~1": "So3",
+    "2026-10-05:dropoff:So3~1": "So3",
+    "2026-10-05:pickup:So2~1": "So2",
+    "2026-10-05:dropoff:So2~1": "So2",
+    "2026-10-05:pickup:Sw9~1": "Sw9",
+    "2026-10-05:dropoff:Sw9~1": "Sw9",
+    "2026-10-05:pickup:Sw7~1": "Sw7",
+    "2026-10-05:dropoff:Sw7~1": "Sw7",
+    "2026-10-05:pickup:Sw6~1": "Sw6",
+    "2026-10-05:dropoff:Sw6~1": "Sw6",
+    "2026-10-05:pickup:Sw1~1": "Sw1",
+    "2026-10-05:dropoff:Sw1~1": "Sw1",
+    "2026-10-05:pickup:So19~1": "So19",
+    "2026-10-05:dropoff:So19~1": "So19",
+    "2026-10-05:pickup:So18~1": "So18",
+    "2026-10-05:dropoff:So18~1": "So18",
+    "2026-10-05:pickup:So17~1": "So17",
+    "2026-10-05:dropoff:So17~1": "So17",
+    "2026-10-05:pickup:So16~1": "So16",
+    "2026-10-05:dropoff:So16~1": "So16",
+    "2026-10-05:pickup:So15~1": "So15",
+    "2026-10-05:dropoff:So15~1": "So15",
+    "2026-10-05:pickup:So14~1": "So14",
+    "2026-10-05:dropoff:So14~1": "So14",
+    "2026-10-05:pickup:So13~1": "So13",
+    "2026-10-05:dropoff:So13~1": "So13",
+    "2026-10-05:pickup:So9~1": "So9",
+    "2026-10-05:dropoff:So9~1": "So9",
+    "2026-10-05:pickup:So8~1": "So8",
+    "2026-10-05:dropoff:So8~1": "So8",
+    "2026-10-05:pickup:So7~1": "So7",
+    "2026-10-05:dropoff:So7~1": "So7",
+    "2026-10-05:pickup:So6~1": "So6",
+    "2026-10-05:dropoff:So6~1": "So6"
+  },
+  "waves": [
+    {
+      "waveId": "2026-10-05:pickup:765",
+      "direction": "pickup",
+      "anchorMinutes": 765,
+      "legs": 3,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "reason": null,
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 92,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle1",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw5",
+                  "duration": 35
+                },
+                {
+                  "location1": "Sw5",
+                  "location2": "Sw7",
+                  "duration": 25
+                },
+                {
+                  "location1": "Sw7",
+                  "location2": "So7",
+                  "duration": 21
+                },
+                {
+                  "location1": "So7",
+                  "location2": "D.Kampus",
+                  "duration": 11
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:Sw5~1",
+                "2026-10-05:pickup:Sw7~1",
+                "2026-10-05:pickup:So7~1"
+              ],
+              "swCount": 2,
+              "soCount": 1,
+              "totalDurationMinutes": 92,
+              "minutes": 92,
+              "profileError": null,
+              "rideMinutes": [
+                57,
+                32,
+                11
+              ],
+              "interval": {
+                "startMinutes": 673,
+                "endMinutes": 765,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:Sw5~1",
+                  "2026-10-05:pickup:Sw7~1",
+                  "2026-10-05:pickup:So7~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "included",
+          "reason": null,
+          "routeCount": 2,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 119,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle9",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So7",
+                  "duration": 10
+                },
+                {
+                  "location1": "So7",
+                  "location2": "Sw7",
+                  "duration": 21
+                },
+                {
+                  "location1": "Sw7",
+                  "location2": "D.Kampus",
+                  "duration": 22
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So7~1",
+                "2026-10-05:pickup:Sw7~1"
+              ],
+              "swCount": 1,
+              "soCount": 1,
+              "totalDurationMinutes": 53,
+              "minutes": 53,
+              "profileError": null,
+              "rideMinutes": [
+                43,
+                22
+              ],
+              "interval": {
+                "startMinutes": 712,
+                "endMinutes": 765,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So7~1",
+                  "2026-10-05:pickup:Sw7~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle10",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw5",
+                  "duration": 35
+                },
+                {
+                  "location1": "Sw5",
+                  "location2": "D.Kampus",
+                  "duration": 31
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:Sw5~1"
+              ],
+              "swCount": 1,
+              "soCount": 0,
+              "totalDurationMinutes": 66,
+              "minutes": 66,
+              "profileError": null,
+              "rideMinutes": [
+                31
+              ],
+              "interval": {
+                "startMinutes": 699,
+                "endMinutes": 765,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:Sw5~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 92,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle6",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw5",
+                  "duration": 35
+                },
+                {
+                  "location1": "Sw5",
+                  "location2": "Sw7",
+                  "duration": 25
+                },
+                {
+                  "location1": "Sw7",
+                  "location2": "So7",
+                  "duration": 21
+                },
+                {
+                  "location1": "So7",
+                  "location2": "D.Kampus",
+                  "duration": 11
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:Sw5~1",
+                "2026-10-05:pickup:Sw7~1",
+                "2026-10-05:pickup:So7~1"
+              ],
+              "swCount": 2,
+              "soCount": 1,
+              "totalDurationMinutes": 92,
+              "minutes": 92,
+              "profileError": null,
+              "rideMinutes": [
+                57,
+                32,
+                11
+              ],
+              "interval": {
+                "startMinutes": 673,
+                "endMinutes": 765,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:Sw5~1",
+                  "2026-10-05:pickup:Sw7~1",
+                  "2026-10-05:pickup:So7~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 92,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle6",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw5",
+                  "duration": 35
+                },
+                {
+                  "location1": "Sw5",
+                  "location2": "Sw7",
+                  "duration": 25
+                },
+                {
+                  "location1": "Sw7",
+                  "location2": "So7",
+                  "duration": 21
+                },
+                {
+                  "location1": "So7",
+                  "location2": "D.Kampus",
+                  "duration": 11
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:Sw5~1",
+                "2026-10-05:pickup:Sw7~1",
+                "2026-10-05:pickup:So7~1"
+              ],
+              "swCount": 2,
+              "soCount": 1,
+              "totalDurationMinutes": 92,
+              "minutes": 92,
+              "profileError": null,
+              "rideMinutes": [
+                57,
+                32,
+                11
+              ],
+              "interval": {
+                "startMinutes": 673,
+                "endMinutes": 765,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:Sw5~1",
+                  "2026-10-05:pickup:Sw7~1",
+                  "2026-10-05:pickup:So7~1"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:1035",
+      "direction": "dropoff",
+      "anchorMinutes": 1035,
+      "legs": 3,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "reason": null,
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 88,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle1",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So9",
+                  "duration": 10
+                },
+                {
+                  "location1": "So9",
+                  "location2": "So8",
+                  "duration": 14
+                },
+                {
+                  "location1": "So8",
+                  "location2": "Sw5",
+                  "duration": 33
+                },
+                {
+                  "location1": "Sw5",
+                  "location2": "D.Kampus",
+                  "duration": 31
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So9~1",
+                "2026-10-05:dropoff:So8~1",
+                "2026-10-05:dropoff:Sw5~1"
+              ],
+              "swCount": 1,
+              "soCount": 2,
+              "totalDurationMinutes": 88,
+              "minutes": 88,
+              "profileError": null,
+              "rideMinutes": [
+                10,
+                24,
+                57
+              ],
+              "interval": {
+                "startMinutes": 1035,
+                "endMinutes": 1123,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So9~1",
+                  "2026-10-05:dropoff:So8~1",
+                  "2026-10-05:dropoff:Sw5~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 88,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle9",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So9",
+                  "duration": 10
+                },
+                {
+                  "location1": "So9",
+                  "location2": "So8",
+                  "duration": 14
+                },
+                {
+                  "location1": "So8",
+                  "location2": "Sw5",
+                  "duration": 33
+                },
+                {
+                  "location1": "Sw5",
+                  "location2": "D.Kampus",
+                  "duration": 31
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So9~1",
+                "2026-10-05:dropoff:So8~1",
+                "2026-10-05:dropoff:Sw5~1"
+              ],
+              "swCount": 1,
+              "soCount": 2,
+              "totalDurationMinutes": 88,
+              "minutes": 88,
+              "profileError": null,
+              "rideMinutes": [
+                10,
+                24,
+                57
+              ],
+              "interval": {
+                "startMinutes": 1035,
+                "endMinutes": 1123,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So9~1",
+                  "2026-10-05:dropoff:So8~1",
+                  "2026-10-05:dropoff:Sw5~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 88,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle6",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So9",
+                  "duration": 10
+                },
+                {
+                  "location1": "So9",
+                  "location2": "So8",
+                  "duration": 14
+                },
+                {
+                  "location1": "So8",
+                  "location2": "Sw5",
+                  "duration": 33
+                },
+                {
+                  "location1": "Sw5",
+                  "location2": "D.Kampus",
+                  "duration": 31
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So9~1",
+                "2026-10-05:dropoff:So8~1",
+                "2026-10-05:dropoff:Sw5~1"
+              ],
+              "swCount": 1,
+              "soCount": 2,
+              "totalDurationMinutes": 88,
+              "minutes": 88,
+              "profileError": null,
+              "rideMinutes": [
+                10,
+                24,
+                57
+              ],
+              "interval": {
+                "startMinutes": 1035,
+                "endMinutes": 1123,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So9~1",
+                  "2026-10-05:dropoff:So8~1",
+                  "2026-10-05:dropoff:Sw5~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 88,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle6",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So9",
+                  "duration": 10
+                },
+                {
+                  "location1": "So9",
+                  "location2": "So8",
+                  "duration": 14
+                },
+                {
+                  "location1": "So8",
+                  "location2": "Sw5",
+                  "duration": 33
+                },
+                {
+                  "location1": "Sw5",
+                  "location2": "D.Kampus",
+                  "duration": 31
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So9~1",
+                "2026-10-05:dropoff:So8~1",
+                "2026-10-05:dropoff:Sw5~1"
+              ],
+              "swCount": 1,
+              "soCount": 2,
+              "totalDurationMinutes": 88,
+              "minutes": 88,
+              "profileError": null,
+              "rideMinutes": [
+                10,
+                24,
+                57
+              ],
+              "interval": {
+                "startMinutes": 1035,
+                "endMinutes": 1123,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So9~1",
+                  "2026-10-05:dropoff:So8~1",
+                  "2026-10-05:dropoff:Sw5~1"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:pickup:525",
+      "direction": "pickup",
+      "anchorMinutes": 525,
+      "legs": 20,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "reason": null,
+          "routeCount": 5,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 400,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle1",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw4",
+                  "duration": 30
+                },
+                {
+                  "location1": "Sw4",
+                  "location2": "So18",
+                  "duration": 8
+                },
+                {
+                  "location1": "So18",
+                  "location2": "Sw6",
+                  "duration": 11
+                },
+                {
+                  "location1": "Sw6",
+                  "location2": "So13",
+                  "duration": 9
+                },
+                {
+                  "location1": "So13",
+                  "location2": "So14",
+                  "duration": 9
+                },
+                {
+                  "location1": "So14",
+                  "location2": "D.Kampus",
+                  "duration": 17
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:Sw4~1",
+                "2026-10-05:pickup:So18~1",
+                "2026-10-05:pickup:Sw6~1",
+                "2026-10-05:pickup:So13~1",
+                "2026-10-05:pickup:So14~1"
+              ],
+              "swCount": 2,
+              "soCount": 3,
+              "totalDurationMinutes": 84,
+              "minutes": 84,
+              "profileError": null,
+              "rideMinutes": [
+                54,
+                46,
+                35,
+                26,
+                17
+              ],
+              "interval": {
+                "startMinutes": 441,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:Sw4~1",
+                  "2026-10-05:pickup:So18~1",
+                  "2026-10-05:pickup:Sw6~1",
+                  "2026-10-05:pickup:So13~1",
+                  "2026-10-05:pickup:So14~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle2",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So12",
+                  "duration": 20
+                },
+                {
+                  "location1": "So12",
+                  "location2": "So8",
+                  "duration": 6
+                },
+                {
+                  "location1": "So8",
+                  "location2": "So3",
+                  "duration": 10
+                },
+                {
+                  "location1": "So3",
+                  "location2": "So9",
+                  "duration": 17
+                },
+                {
+                  "location1": "So9",
+                  "location2": "So1",
+                  "duration": 9
+                },
+                {
+                  "location1": "So1",
+                  "location2": "D.Kampus",
+                  "duration": 6
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So12~1",
+                "2026-10-05:pickup:So8~1",
+                "2026-10-05:pickup:So3~1",
+                "2026-10-05:pickup:So9~1",
+                "2026-10-05:pickup:So1~1"
+              ],
+              "swCount": 0,
+              "soCount": 5,
+              "totalDurationMinutes": 68,
+              "minutes": 68,
+              "profileError": null,
+              "rideMinutes": [
+                48,
+                42,
+                32,
+                15,
+                6
+              ],
+              "interval": {
+                "startMinutes": 457,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So12~1",
+                  "2026-10-05:pickup:So8~1",
+                  "2026-10-05:pickup:So3~1",
+                  "2026-10-05:pickup:So9~1",
+                  "2026-10-05:pickup:So1~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 2,
+              "vehicleId": "Vehicle3",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw3",
+                  "duration": 9
+                },
+                {
+                  "location1": "Sw3",
+                  "location2": "So19",
+                  "duration": 17
+                },
+                {
+                  "location1": "So19",
+                  "location2": "So2",
+                  "duration": 1
+                },
+                {
+                  "location1": "So2",
+                  "location2": "So5",
+                  "duration": 8
+                },
+                {
+                  "location1": "So5",
+                  "location2": "Sw2",
+                  "duration": 5
+                },
+                {
+                  "location1": "Sw2",
+                  "location2": "D.Kampus",
+                  "duration": 22
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:Sw3~1",
+                "2026-10-05:pickup:So19~1",
+                "2026-10-05:pickup:So2~1",
+                "2026-10-05:pickup:So5~1",
+                "2026-10-05:pickup:Sw2~1"
+              ],
+              "swCount": 2,
+              "soCount": 3,
+              "totalDurationMinutes": 62,
+              "minutes": 62,
+              "profileError": null,
+              "rideMinutes": [
+                53,
+                36,
+                35,
+                27,
+                22
+              ],
+              "interval": {
+                "startMinutes": 463,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:Sw3~1",
+                  "2026-10-05:pickup:So19~1",
+                  "2026-10-05:pickup:So2~1",
+                  "2026-10-05:pickup:So5~1",
+                  "2026-10-05:pickup:Sw2~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 3,
+              "vehicleId": "Vehicle4",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw1",
+                  "duration": 40
+                },
+                {
+                  "location1": "Sw1",
+                  "location2": "So16",
+                  "duration": 25
+                },
+                {
+                  "location1": "So16",
+                  "location2": "So15",
+                  "duration": 4
+                },
+                {
+                  "location1": "So15",
+                  "location2": "D.Kampus",
+                  "duration": 24
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:Sw1~1",
+                "2026-10-05:pickup:So16~1",
+                "2026-10-05:pickup:So15~1"
+              ],
+              "swCount": 1,
+              "soCount": 2,
+              "totalDurationMinutes": 93,
+              "minutes": 93,
+              "profileError": null,
+              "rideMinutes": [
+                53,
+                28,
+                24
+              ],
+              "interval": {
+                "startMinutes": 432,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:Sw1~1",
+                  "2026-10-05:pickup:So16~1",
+                  "2026-10-05:pickup:So15~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 4,
+              "vehicleId": "Vehicle5",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So6",
+                  "duration": 50
+                },
+                {
+                  "location1": "So6",
+                  "location2": "So10",
+                  "duration": 32
+                },
+                {
+                  "location1": "So10",
+                  "location2": "D.Kampus",
+                  "duration": 11
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So6~1",
+                "2026-10-05:pickup:So10~1"
+              ],
+              "swCount": 0,
+              "soCount": 2,
+              "totalDurationMinutes": 93,
+              "minutes": 93,
+              "profileError": null,
+              "rideMinutes": [
+                43,
+                11
+              ],
+              "interval": {
+                "startMinutes": 432,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So6~1",
+                  "2026-10-05:pickup:So10~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "included",
+          "reason": null,
+          "routeCount": 7,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 466,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle9",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw4",
+                  "duration": 30
+                },
+                {
+                  "location1": "Sw4",
+                  "location2": "So18",
+                  "duration": 8
+                },
+                {
+                  "location1": "So18",
+                  "location2": "So1",
+                  "duration": 27
+                },
+                {
+                  "location1": "So1",
+                  "location2": "D.Kampus",
+                  "duration": 6
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:Sw4~1",
+                "2026-10-05:pickup:So18~1",
+                "2026-10-05:pickup:So1~1"
+              ],
+              "swCount": 1,
+              "soCount": 2,
+              "totalDurationMinutes": 71,
+              "minutes": 71,
+              "profileError": null,
+              "rideMinutes": [
+                41,
+                33,
+                6
+              ],
+              "interval": {
+                "startMinutes": 454,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:Sw4~1",
+                  "2026-10-05:pickup:So18~1",
+                  "2026-10-05:pickup:So1~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle10",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So2",
+                  "duration": 18
+                },
+                {
+                  "location1": "So2",
+                  "location2": "So19",
+                  "duration": 1
+                },
+                {
+                  "location1": "So19",
+                  "location2": "Sw3",
+                  "duration": 14
+                },
+                {
+                  "location1": "Sw3",
+                  "location2": "D.Kampus",
+                  "duration": 7
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So2~1",
+                "2026-10-05:pickup:So19~1",
+                "2026-10-05:pickup:Sw3~1"
+              ],
+              "swCount": 1,
+              "soCount": 2,
+              "totalDurationMinutes": 40,
+              "minutes": 40,
+              "profileError": null,
+              "rideMinutes": [
+                22,
+                21,
+                7
+              ],
+              "interval": {
+                "startMinutes": 485,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So2~1",
+                  "2026-10-05:pickup:So19~1",
+                  "2026-10-05:pickup:Sw3~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 2,
+              "vehicleId": "Vehicle11",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So5",
+                  "duration": 24
+                },
+                {
+                  "location1": "So5",
+                  "location2": "Sw2",
+                  "duration": 5
+                },
+                {
+                  "location1": "Sw2",
+                  "location2": "D.Kampus",
+                  "duration": 22
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So5~1",
+                "2026-10-05:pickup:Sw2~1"
+              ],
+              "swCount": 1,
+              "soCount": 1,
+              "totalDurationMinutes": 51,
+              "minutes": 51,
+              "profileError": null,
+              "rideMinutes": [
+                27,
+                22
+              ],
+              "interval": {
+                "startMinutes": 474,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So5~1",
+                  "2026-10-05:pickup:Sw2~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 3,
+              "vehicleId": "Vehicle12",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw1",
+                  "duration": 40
+                },
+                {
+                  "location1": "Sw1",
+                  "location2": "So16",
+                  "duration": 25
+                },
+                {
+                  "location1": "So16",
+                  "location2": "So15",
+                  "duration": 4
+                },
+                {
+                  "location1": "So15",
+                  "location2": "D.Kampus",
+                  "duration": 24
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:Sw1~1",
+                "2026-10-05:pickup:So16~1",
+                "2026-10-05:pickup:So15~1"
+              ],
+              "swCount": 1,
+              "soCount": 2,
+              "totalDurationMinutes": 93,
+              "minutes": 93,
+              "profileError": null,
+              "rideMinutes": [
+                53,
+                28,
+                24
+              ],
+              "interval": {
+                "startMinutes": 432,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:Sw1~1",
+                  "2026-10-05:pickup:So16~1",
+                  "2026-10-05:pickup:So15~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 4,
+              "vehicleId": "Vehicle13",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So6",
+                  "duration": 50
+                },
+                {
+                  "location1": "So6",
+                  "location2": "So3",
+                  "duration": 31
+                },
+                {
+                  "location1": "So3",
+                  "location2": "So9",
+                  "duration": 17
+                },
+                {
+                  "location1": "So9",
+                  "location2": "D.Kampus",
+                  "duration": 10
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So6~1",
+                "2026-10-05:pickup:So3~1",
+                "2026-10-05:pickup:So9~1"
+              ],
+              "swCount": 0,
+              "soCount": 3,
+              "totalDurationMinutes": 108,
+              "minutes": 108,
+              "profileError": null,
+              "rideMinutes": [
+                58,
+                27,
+                10
+              ],
+              "interval": {
+                "startMinutes": 417,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So6~1",
+                  "2026-10-05:pickup:So3~1",
+                  "2026-10-05:pickup:So9~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 5,
+              "vehicleId": "Vehicle14",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So10",
+                  "duration": 10
+                },
+                {
+                  "location1": "So10",
+                  "location2": "So12",
+                  "duration": 13
+                },
+                {
+                  "location1": "So12",
+                  "location2": "So8",
+                  "duration": 6
+                },
+                {
+                  "location1": "So8",
+                  "location2": "D.Kampus",
+                  "duration": 17
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So10~1",
+                "2026-10-05:pickup:So12~1",
+                "2026-10-05:pickup:So8~1"
+              ],
+              "swCount": 0,
+              "soCount": 3,
+              "totalDurationMinutes": 46,
+              "minutes": 46,
+              "profileError": null,
+              "rideMinutes": [
+                36,
+                23,
+                17
+              ],
+              "interval": {
+                "startMinutes": 479,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So10~1",
+                  "2026-10-05:pickup:So12~1",
+                  "2026-10-05:pickup:So8~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 6,
+              "vehicleId": "Vehicle15",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So14",
+                  "duration": 18
+                },
+                {
+                  "location1": "So14",
+                  "location2": "So13",
+                  "duration": 7
+                },
+                {
+                  "location1": "So13",
+                  "location2": "Sw6",
+                  "duration": 10
+                },
+                {
+                  "location1": "Sw6",
+                  "location2": "D.Kampus",
+                  "duration": 22
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So14~1",
+                "2026-10-05:pickup:So13~1",
+                "2026-10-05:pickup:Sw6~1"
+              ],
+              "swCount": 1,
+              "soCount": 2,
+              "totalDurationMinutes": 57,
+              "minutes": 57,
+              "profileError": null,
+              "rideMinutes": [
+                39,
+                32,
+                22
+              ],
+              "interval": {
+                "startMinutes": 468,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So14~1",
+                  "2026-10-05:pickup:So13~1",
+                  "2026-10-05:pickup:Sw6~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "included",
+          "reason": null,
+          "routeCount": 6,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 432,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle6",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw4",
+                  "duration": 30
+                },
+                {
+                  "location1": "Sw4",
+                  "location2": "So18",
+                  "duration": 8
+                },
+                {
+                  "location1": "So18",
+                  "location2": "Sw6",
+                  "duration": 11
+                },
+                {
+                  "location1": "Sw6",
+                  "location2": "So13",
+                  "duration": 9
+                },
+                {
+                  "location1": "So13",
+                  "location2": "So14",
+                  "duration": 9
+                },
+                {
+                  "location1": "So14",
+                  "location2": "D.Kampus",
+                  "duration": 17
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:Sw4~1",
+                "2026-10-05:pickup:So18~1",
+                "2026-10-05:pickup:Sw6~1",
+                "2026-10-05:pickup:So13~1",
+                "2026-10-05:pickup:So14~1"
+              ],
+              "swCount": 2,
+              "soCount": 3,
+              "totalDurationMinutes": 84,
+              "minutes": 84,
+              "profileError": null,
+              "rideMinutes": [
+                54,
+                46,
+                35,
+                26,
+                17
+              ],
+              "interval": {
+                "startMinutes": 441,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:Sw4~1",
+                  "2026-10-05:pickup:So18~1",
+                  "2026-10-05:pickup:Sw6~1",
+                  "2026-10-05:pickup:So13~1",
+                  "2026-10-05:pickup:So14~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle10",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So12",
+                  "duration": 20
+                },
+                {
+                  "location1": "So12",
+                  "location2": "So8",
+                  "duration": 6
+                },
+                {
+                  "location1": "So8",
+                  "location2": "So9",
+                  "duration": 11
+                },
+                {
+                  "location1": "So9",
+                  "location2": "D.Kampus",
+                  "duration": 10
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So12~1",
+                "2026-10-05:pickup:So8~1",
+                "2026-10-05:pickup:So9~1"
+              ],
+              "swCount": 0,
+              "soCount": 3,
+              "totalDurationMinutes": 47,
+              "minutes": 47,
+              "profileError": null,
+              "rideMinutes": [
+                27,
+                21,
+                10
+              ],
+              "interval": {
+                "startMinutes": 478,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So12~1",
+                  "2026-10-05:pickup:So8~1",
+                  "2026-10-05:pickup:So9~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 2,
+              "vehicleId": "Vehicle11",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So6",
+                  "duration": 50
+                },
+                {
+                  "location1": "So6",
+                  "location2": "So3",
+                  "duration": 31
+                },
+                {
+                  "location1": "So3",
+                  "location2": "So10",
+                  "duration": 16
+                },
+                {
+                  "location1": "So10",
+                  "location2": "D.Kampus",
+                  "duration": 11
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So6~1",
+                "2026-10-05:pickup:So3~1",
+                "2026-10-05:pickup:So10~1"
+              ],
+              "swCount": 0,
+              "soCount": 3,
+              "totalDurationMinutes": 108,
+              "minutes": 108,
+              "profileError": null,
+              "rideMinutes": [
+                58,
+                27,
+                11
+              ],
+              "interval": {
+                "startMinutes": 417,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So6~1",
+                  "2026-10-05:pickup:So3~1",
+                  "2026-10-05:pickup:So10~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 3,
+              "vehicleId": "Vehicle12",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw1",
+                  "duration": 40
+                },
+                {
+                  "location1": "Sw1",
+                  "location2": "So16",
+                  "duration": 25
+                },
+                {
+                  "location1": "So16",
+                  "location2": "So15",
+                  "duration": 4
+                },
+                {
+                  "location1": "So15",
+                  "location2": "D.Kampus",
+                  "duration": 24
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:Sw1~1",
+                "2026-10-05:pickup:So16~1",
+                "2026-10-05:pickup:So15~1"
+              ],
+              "swCount": 1,
+              "soCount": 2,
+              "totalDurationMinutes": 93,
+              "minutes": 93,
+              "profileError": null,
+              "rideMinutes": [
+                53,
+                28,
+                24
+              ],
+              "interval": {
+                "startMinutes": 432,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:Sw1~1",
+                  "2026-10-05:pickup:So16~1",
+                  "2026-10-05:pickup:So15~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 4,
+              "vehicleId": "Vehicle13",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So2",
+                  "duration": 18
+                },
+                {
+                  "location1": "So2",
+                  "location2": "So5",
+                  "duration": 8
+                },
+                {
+                  "location1": "So5",
+                  "location2": "Sw2",
+                  "duration": 5
+                },
+                {
+                  "location1": "Sw2",
+                  "location2": "D.Kampus",
+                  "duration": 22
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So2~1",
+                "2026-10-05:pickup:So5~1",
+                "2026-10-05:pickup:Sw2~1"
+              ],
+              "swCount": 1,
+              "soCount": 2,
+              "totalDurationMinutes": 53,
+              "minutes": 53,
+              "profileError": null,
+              "rideMinutes": [
+                35,
+                27,
+                22
+              ],
+              "interval": {
+                "startMinutes": 472,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So2~1",
+                  "2026-10-05:pickup:So5~1",
+                  "2026-10-05:pickup:Sw2~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 5,
+              "vehicleId": "Vehicle14",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So19",
+                  "duration": 18
+                },
+                {
+                  "location1": "So19",
+                  "location2": "Sw3",
+                  "duration": 14
+                },
+                {
+                  "location1": "Sw3",
+                  "location2": "So1",
+                  "duration": 9
+                },
+                {
+                  "location1": "So1",
+                  "location2": "D.Kampus",
+                  "duration": 6
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So19~1",
+                "2026-10-05:pickup:Sw3~1",
+                "2026-10-05:pickup:So1~1"
+              ],
+              "swCount": 1,
+              "soCount": 2,
+              "totalDurationMinutes": 47,
+              "minutes": 47,
+              "profileError": null,
+              "rideMinutes": [
+                29,
+                15,
+                6
+              ],
+              "interval": {
+                "startMinutes": 478,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So19~1",
+                  "2026-10-05:pickup:Sw3~1",
+                  "2026-10-05:pickup:So1~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "included",
+          "reason": null,
+          "routeCount": 5,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 386,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle6",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw4",
+                  "duration": 30
+                },
+                {
+                  "location1": "Sw4",
+                  "location2": "So18",
+                  "duration": 8
+                },
+                {
+                  "location1": "So18",
+                  "location2": "Sw6",
+                  "duration": 11
+                },
+                {
+                  "location1": "Sw6",
+                  "location2": "So13",
+                  "duration": 9
+                },
+                {
+                  "location1": "So13",
+                  "location2": "So14",
+                  "duration": 9
+                },
+                {
+                  "location1": "So14",
+                  "location2": "D.Kampus",
+                  "duration": 17
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:Sw4~1",
+                "2026-10-05:pickup:So18~1",
+                "2026-10-05:pickup:Sw6~1",
+                "2026-10-05:pickup:So13~1",
+                "2026-10-05:pickup:So14~1"
+              ],
+              "swCount": 2,
+              "soCount": 3,
+              "totalDurationMinutes": 84,
+              "minutes": 84,
+              "profileError": null,
+              "rideMinutes": [
+                54,
+                46,
+                35,
+                26,
+                17
+              ],
+              "interval": {
+                "startMinutes": 441,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:Sw4~1",
+                  "2026-10-05:pickup:So18~1",
+                  "2026-10-05:pickup:Sw6~1",
+                  "2026-10-05:pickup:So13~1",
+                  "2026-10-05:pickup:So14~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle7",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So12",
+                  "duration": 20
+                },
+                {
+                  "location1": "So12",
+                  "location2": "So8",
+                  "duration": 6
+                },
+                {
+                  "location1": "So8",
+                  "location2": "So5",
+                  "duration": 14
+                },
+                {
+                  "location1": "So5",
+                  "location2": "Sw2",
+                  "duration": 5
+                },
+                {
+                  "location1": "Sw2",
+                  "location2": "So2",
+                  "duration": 9
+                },
+                {
+                  "location1": "So2",
+                  "location2": "So19",
+                  "duration": 1
+                },
+                {
+                  "location1": "So19",
+                  "location2": "Sw3",
+                  "duration": 14
+                },
+                {
+                  "location1": "Sw3",
+                  "location2": "D.Kampus",
+                  "duration": 7
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So12~1",
+                "2026-10-05:pickup:So8~1",
+                "2026-10-05:pickup:So5~1",
+                "2026-10-05:pickup:Sw2~1",
+                "2026-10-05:pickup:So2~1",
+                "2026-10-05:pickup:So19~1",
+                "2026-10-05:pickup:Sw3~1"
+              ],
+              "swCount": 2,
+              "soCount": 5,
+              "totalDurationMinutes": 76,
+              "minutes": 76,
+              "profileError": null,
+              "rideMinutes": [
+                56,
+                50,
+                36,
+                31,
+                22,
+                21,
+                7
+              ],
+              "interval": {
+                "startMinutes": 449,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So12~1",
+                  "2026-10-05:pickup:So8~1",
+                  "2026-10-05:pickup:So5~1",
+                  "2026-10-05:pickup:Sw2~1",
+                  "2026-10-05:pickup:So2~1",
+                  "2026-10-05:pickup:So19~1",
+                  "2026-10-05:pickup:Sw3~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 2,
+              "vehicleId": "Vehicle11",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So6",
+                  "duration": 50
+                },
+                {
+                  "location1": "So6",
+                  "location2": "So3",
+                  "duration": 31
+                },
+                {
+                  "location1": "So3",
+                  "location2": "So10",
+                  "duration": 16
+                },
+                {
+                  "location1": "So10",
+                  "location2": "D.Kampus",
+                  "duration": 11
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So6~1",
+                "2026-10-05:pickup:So3~1",
+                "2026-10-05:pickup:So10~1"
+              ],
+              "swCount": 0,
+              "soCount": 3,
+              "totalDurationMinutes": 108,
+              "minutes": 108,
+              "profileError": null,
+              "rideMinutes": [
+                58,
+                27,
+                11
+              ],
+              "interval": {
+                "startMinutes": 417,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So6~1",
+                  "2026-10-05:pickup:So3~1",
+                  "2026-10-05:pickup:So10~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 3,
+              "vehicleId": "Vehicle12",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So9",
+                  "duration": 10
+                },
+                {
+                  "location1": "So9",
+                  "location2": "So1",
+                  "duration": 9
+                },
+                {
+                  "location1": "So1",
+                  "location2": "D.Kampus",
+                  "duration": 6
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So9~1",
+                "2026-10-05:pickup:So1~1"
+              ],
+              "swCount": 0,
+              "soCount": 2,
+              "totalDurationMinutes": 25,
+              "minutes": 25,
+              "profileError": null,
+              "rideMinutes": [
+                15,
+                6
+              ],
+              "interval": {
+                "startMinutes": 500,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So9~1",
+                  "2026-10-05:pickup:So1~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 4,
+              "vehicleId": "Vehicle13",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw1",
+                  "duration": 40
+                },
+                {
+                  "location1": "Sw1",
+                  "location2": "So16",
+                  "duration": 25
+                },
+                {
+                  "location1": "So16",
+                  "location2": "So15",
+                  "duration": 4
+                },
+                {
+                  "location1": "So15",
+                  "location2": "D.Kampus",
+                  "duration": 24
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:Sw1~1",
+                "2026-10-05:pickup:So16~1",
+                "2026-10-05:pickup:So15~1"
+              ],
+              "swCount": 1,
+              "soCount": 2,
+              "totalDurationMinutes": 93,
+              "minutes": 93,
+              "profileError": null,
+              "rideMinutes": [
+                53,
+                28,
+                24
+              ],
+              "interval": {
+                "startMinutes": 432,
+                "endMinutes": 525,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:Sw1~1",
+                  "2026-10-05:pickup:So16~1",
+                  "2026-10-05:pickup:So15~1"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:975",
+      "direction": "dropoff",
+      "anchorMinutes": 975,
+      "legs": 4,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "reason": null,
+          "routeCount": 2,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 95,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle1",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw3",
+                  "duration": 9
+                },
+                {
+                  "location1": "Sw3",
+                  "location2": "D.Kampus",
+                  "duration": 7
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:Sw3~1"
+              ],
+              "swCount": 1,
+              "soCount": 0,
+              "totalDurationMinutes": 16,
+              "minutes": 16,
+              "profileError": null,
+              "rideMinutes": [
+                9
+              ],
+              "interval": {
+                "startMinutes": 975,
+                "endMinutes": 991,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:Sw3~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle2",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So14",
+                  "duration": 18
+                },
+                {
+                  "location1": "So14",
+                  "location2": "Sw4",
+                  "duration": 19
+                },
+                {
+                  "location1": "Sw4",
+                  "location2": "Sw7",
+                  "duration": 20
+                },
+                {
+                  "location1": "Sw7",
+                  "location2": "D.Kampus",
+                  "duration": 22
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So14~1",
+                "2026-10-05:dropoff:Sw4~1",
+                "2026-10-05:dropoff:Sw7~1"
+              ],
+              "swCount": 2,
+              "soCount": 1,
+              "totalDurationMinutes": 79,
+              "minutes": 79,
+              "profileError": null,
+              "rideMinutes": [
+                18,
+                37,
+                57
+              ],
+              "interval": {
+                "startMinutes": 975,
+                "endMinutes": 1054,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So14~1",
+                  "2026-10-05:dropoff:Sw4~1",
+                  "2026-10-05:dropoff:Sw7~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "included",
+          "reason": null,
+          "routeCount": 3,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 123,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle9",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So14",
+                  "duration": 18
+                },
+                {
+                  "location1": "So14",
+                  "location2": "Sw7",
+                  "duration": 12
+                },
+                {
+                  "location1": "Sw7",
+                  "location2": "D.Kampus",
+                  "duration": 22
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So14~1",
+                "2026-10-05:dropoff:Sw7~1"
+              ],
+              "swCount": 1,
+              "soCount": 1,
+              "totalDurationMinutes": 52,
+              "minutes": 52,
+              "profileError": null,
+              "rideMinutes": [
+                18,
+                30
+              ],
+              "interval": {
+                "startMinutes": 975,
+                "endMinutes": 1027,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So14~1",
+                  "2026-10-05:dropoff:Sw7~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle10",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw4",
+                  "duration": 30
+                },
+                {
+                  "location1": "Sw4",
+                  "location2": "D.Kampus",
+                  "duration": 25
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:Sw4~1"
+              ],
+              "swCount": 1,
+              "soCount": 0,
+              "totalDurationMinutes": 55,
+              "minutes": 55,
+              "profileError": null,
+              "rideMinutes": [
+                30
+              ],
+              "interval": {
+                "startMinutes": 975,
+                "endMinutes": 1030,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:Sw4~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 2,
+              "vehicleId": "Vehicle11",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw3",
+                  "duration": 9
+                },
+                {
+                  "location1": "Sw3",
+                  "location2": "D.Kampus",
+                  "duration": 7
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:Sw3~1"
+              ],
+              "swCount": 1,
+              "soCount": 0,
+              "totalDurationMinutes": 16,
+              "minutes": 16,
+              "profileError": null,
+              "rideMinutes": [
+                9
+              ],
+              "interval": {
+                "startMinutes": 975,
+                "endMinutes": 991,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:Sw3~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 2,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 95,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle9",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw3",
+                  "duration": 9
+                },
+                {
+                  "location1": "Sw3",
+                  "location2": "D.Kampus",
+                  "duration": 7
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:Sw3~1"
+              ],
+              "swCount": 1,
+              "soCount": 0,
+              "totalDurationMinutes": 16,
+              "minutes": 16,
+              "profileError": null,
+              "rideMinutes": [
+                9
+              ],
+              "interval": {
+                "startMinutes": 975,
+                "endMinutes": 991,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:Sw3~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle7",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So14",
+                  "duration": 18
+                },
+                {
+                  "location1": "So14",
+                  "location2": "Sw4",
+                  "duration": 19
+                },
+                {
+                  "location1": "Sw4",
+                  "location2": "Sw7",
+                  "duration": 20
+                },
+                {
+                  "location1": "Sw7",
+                  "location2": "D.Kampus",
+                  "duration": 22
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So14~1",
+                "2026-10-05:dropoff:Sw4~1",
+                "2026-10-05:dropoff:Sw7~1"
+              ],
+              "swCount": 2,
+              "soCount": 1,
+              "totalDurationMinutes": 79,
+              "minutes": 79,
+              "profileError": null,
+              "rideMinutes": [
+                18,
+                37,
+                57
+              ],
+              "interval": {
+                "startMinutes": 975,
+                "endMinutes": 1054,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So14~1",
+                  "2026-10-05:dropoff:Sw4~1",
+                  "2026-10-05:dropoff:Sw7~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 2,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 95,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle6",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw3",
+                  "duration": 9
+                },
+                {
+                  "location1": "Sw3",
+                  "location2": "D.Kampus",
+                  "duration": 7
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:Sw3~1"
+              ],
+              "swCount": 1,
+              "soCount": 0,
+              "totalDurationMinutes": 16,
+              "minutes": 16,
+              "profileError": null,
+              "rideMinutes": [
+                9
+              ],
+              "interval": {
+                "startMinutes": 975,
+                "endMinutes": 991,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:Sw3~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle7",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So14",
+                  "duration": 18
+                },
+                {
+                  "location1": "So14",
+                  "location2": "Sw4",
+                  "duration": 19
+                },
+                {
+                  "location1": "Sw4",
+                  "location2": "Sw7",
+                  "duration": 20
+                },
+                {
+                  "location1": "Sw7",
+                  "location2": "D.Kampus",
+                  "duration": 22
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So14~1",
+                "2026-10-05:dropoff:Sw4~1",
+                "2026-10-05:dropoff:Sw7~1"
+              ],
+              "swCount": 2,
+              "soCount": 1,
+              "totalDurationMinutes": 79,
+              "minutes": 79,
+              "profileError": null,
+              "rideMinutes": [
+                18,
+                37,
+                57
+              ],
+              "interval": {
+                "startMinutes": 975,
+                "endMinutes": 1054,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So14~1",
+                  "2026-10-05:dropoff:Sw4~1",
+                  "2026-10-05:dropoff:Sw7~1"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:735",
+      "direction": "dropoff",
+      "anchorMinutes": 735,
+      "legs": 5,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "reason": null,
+          "routeCount": 2,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 192,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle1",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw2",
+                  "duration": 24
+                },
+                {
+                  "location1": "Sw2",
+                  "location2": "Sw1",
+                  "duration": 36
+                },
+                {
+                  "location1": "Sw1",
+                  "location2": "D.Kampus",
+                  "duration": 37
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:Sw2~1",
+                "2026-10-05:dropoff:Sw1~1"
+              ],
+              "swCount": 2,
+              "soCount": 0,
+              "totalDurationMinutes": 97,
+              "minutes": 97,
+              "profileError": null,
+              "rideMinutes": [
+                24,
+                60
+              ],
+              "interval": {
+                "startMinutes": 735,
+                "endMinutes": 832,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:Sw2~1",
+                  "2026-10-05:dropoff:Sw1~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle2",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So1",
+                  "duration": 7
+                },
+                {
+                  "location1": "So1",
+                  "location2": "So10",
+                  "duration": 15
+                },
+                {
+                  "location1": "So10",
+                  "location2": "So6",
+                  "duration": 36
+                },
+                {
+                  "location1": "So6",
+                  "location2": "D.Kampus",
+                  "duration": 37
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So1~1",
+                "2026-10-05:dropoff:So10~1",
+                "2026-10-05:dropoff:So6~1"
+              ],
+              "swCount": 0,
+              "soCount": 3,
+              "totalDurationMinutes": 95,
+              "minutes": 95,
+              "profileError": null,
+              "rideMinutes": [
+                7,
+                22,
+                58
+              ],
+              "interval": {
+                "startMinutes": 735,
+                "endMinutes": 830,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So1~1",
+                  "2026-10-05:dropoff:So10~1",
+                  "2026-10-05:dropoff:So6~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "included",
+          "reason": null,
+          "routeCount": 3,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 212,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle9",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So10",
+                  "duration": 10
+                },
+                {
+                  "location1": "So10",
+                  "location2": "So6",
+                  "duration": 36
+                },
+                {
+                  "location1": "So6",
+                  "location2": "D.Kampus",
+                  "duration": 37
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So10~1",
+                "2026-10-05:dropoff:So6~1"
+              ],
+              "swCount": 0,
+              "soCount": 2,
+              "totalDurationMinutes": 83,
+              "minutes": 83,
+              "profileError": null,
+              "rideMinutes": [
+                10,
+                46
+              ],
+              "interval": {
+                "startMinutes": 735,
+                "endMinutes": 818,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So10~1",
+                  "2026-10-05:dropoff:So6~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle10",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw2",
+                  "duration": 24
+                },
+                {
+                  "location1": "Sw2",
+                  "location2": "D.Kampus",
+                  "duration": 22
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:Sw2~1"
+              ],
+              "swCount": 1,
+              "soCount": 0,
+              "totalDurationMinutes": 46,
+              "minutes": 46,
+              "profileError": null,
+              "rideMinutes": [
+                24
+              ],
+              "interval": {
+                "startMinutes": 735,
+                "endMinutes": 781,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:Sw2~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 2,
+              "vehicleId": "Vehicle11",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So1",
+                  "duration": 7
+                },
+                {
+                  "location1": "So1",
+                  "location2": "Sw1",
+                  "duration": 39
+                },
+                {
+                  "location1": "Sw1",
+                  "location2": "D.Kampus",
+                  "duration": 37
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So1~1",
+                "2026-10-05:dropoff:Sw1~1"
+              ],
+              "swCount": 1,
+              "soCount": 1,
+              "totalDurationMinutes": 83,
+              "minutes": 83,
+              "profileError": null,
+              "rideMinutes": [
+                7,
+                46
+              ],
+              "interval": {
+                "startMinutes": 735,
+                "endMinutes": 818,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So1~1",
+                  "2026-10-05:dropoff:Sw1~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 2,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 192,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle6",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw2",
+                  "duration": 24
+                },
+                {
+                  "location1": "Sw2",
+                  "location2": "Sw1",
+                  "duration": 36
+                },
+                {
+                  "location1": "Sw1",
+                  "location2": "D.Kampus",
+                  "duration": 37
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:Sw2~1",
+                "2026-10-05:dropoff:Sw1~1"
+              ],
+              "swCount": 2,
+              "soCount": 0,
+              "totalDurationMinutes": 97,
+              "minutes": 97,
+              "profileError": null,
+              "rideMinutes": [
+                24,
+                60
+              ],
+              "interval": {
+                "startMinutes": 735,
+                "endMinutes": 832,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:Sw2~1",
+                  "2026-10-05:dropoff:Sw1~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle10",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So1",
+                  "duration": 7
+                },
+                {
+                  "location1": "So1",
+                  "location2": "So10",
+                  "duration": 15
+                },
+                {
+                  "location1": "So10",
+                  "location2": "So6",
+                  "duration": 36
+                },
+                {
+                  "location1": "So6",
+                  "location2": "D.Kampus",
+                  "duration": 37
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So1~1",
+                "2026-10-05:dropoff:So10~1",
+                "2026-10-05:dropoff:So6~1"
+              ],
+              "swCount": 0,
+              "soCount": 3,
+              "totalDurationMinutes": 95,
+              "minutes": 95,
+              "profileError": null,
+              "rideMinutes": [
+                7,
+                22,
+                58
+              ],
+              "interval": {
+                "startMinutes": 735,
+                "endMinutes": 830,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So1~1",
+                  "2026-10-05:dropoff:So10~1",
+                  "2026-10-05:dropoff:So6~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 2,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 192,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle6",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "Sw2",
+                  "duration": 24
+                },
+                {
+                  "location1": "Sw2",
+                  "location2": "Sw1",
+                  "duration": 36
+                },
+                {
+                  "location1": "Sw1",
+                  "location2": "D.Kampus",
+                  "duration": 37
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:Sw2~1",
+                "2026-10-05:dropoff:Sw1~1"
+              ],
+              "swCount": 2,
+              "soCount": 0,
+              "totalDurationMinutes": 97,
+              "minutes": 97,
+              "profileError": null,
+              "rideMinutes": [
+                24,
+                60
+              ],
+              "interval": {
+                "startMinutes": 735,
+                "endMinutes": 832,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:Sw2~1",
+                  "2026-10-05:dropoff:Sw1~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle7",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So1",
+                  "duration": 7
+                },
+                {
+                  "location1": "So1",
+                  "location2": "So10",
+                  "duration": 15
+                },
+                {
+                  "location1": "So10",
+                  "location2": "So6",
+                  "duration": 36
+                },
+                {
+                  "location1": "So6",
+                  "location2": "D.Kampus",
+                  "duration": 37
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So1~1",
+                "2026-10-05:dropoff:So10~1",
+                "2026-10-05:dropoff:So6~1"
+              ],
+              "swCount": 0,
+              "soCount": 3,
+              "totalDurationMinutes": 95,
+              "minutes": 95,
+              "profileError": null,
+              "rideMinutes": [
+                7,
+                22,
+                58
+              ],
+              "interval": {
+                "startMinutes": 735,
+                "endMinutes": 830,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So1~1",
+                  "2026-10-05:dropoff:So10~1",
+                  "2026-10-05:dropoff:So6~1"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:855",
+      "direction": "dropoff",
+      "anchorMinutes": 855,
+      "legs": 1,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "reason": null,
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 37,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle1",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So12",
+                  "duration": 20
+                },
+                {
+                  "location1": "So12",
+                  "location2": "D.Kampus",
+                  "duration": 17
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So12~1"
+              ],
+              "swCount": 0,
+              "soCount": 1,
+              "totalDurationMinutes": 37,
+              "minutes": 37,
+              "profileError": null,
+              "rideMinutes": [
+                20
+              ],
+              "interval": {
+                "startMinutes": 855,
+                "endMinutes": 892,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So12~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 37,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle9",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So12",
+                  "duration": 20
+                },
+                {
+                  "location1": "So12",
+                  "location2": "D.Kampus",
+                  "duration": 17
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So12~1"
+              ],
+              "swCount": 0,
+              "soCount": 1,
+              "totalDurationMinutes": 37,
+              "minutes": 37,
+              "profileError": null,
+              "rideMinutes": [
+                20
+              ],
+              "interval": {
+                "startMinutes": 855,
+                "endMinutes": 892,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So12~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 37,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle6",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So12",
+                  "duration": 20
+                },
+                {
+                  "location1": "So12",
+                  "location2": "D.Kampus",
+                  "duration": 17
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So12~1"
+              ],
+              "swCount": 0,
+              "soCount": 1,
+              "totalDurationMinutes": 37,
+              "minutes": 37,
+              "profileError": null,
+              "rideMinutes": [
+                20
+              ],
+              "interval": {
+                "startMinutes": 855,
+                "endMinutes": 892,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So12~1"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:pickup:945",
+      "direction": "pickup",
+      "anchorMinutes": 945,
+      "legs": 1,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "reason": null,
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 29,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle1",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So11",
+                  "duration": 14
+                },
+                {
+                  "location1": "So11",
+                  "location2": "D.Kampus",
+                  "duration": 15
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So11~1"
+              ],
+              "swCount": 0,
+              "soCount": 1,
+              "totalDurationMinutes": 29,
+              "minutes": 29,
+              "profileError": null,
+              "rideMinutes": [
+                15
+              ],
+              "interval": {
+                "startMinutes": 916,
+                "endMinutes": 945,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So11~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 29,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle9",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So11",
+                  "duration": 14
+                },
+                {
+                  "location1": "So11",
+                  "location2": "D.Kampus",
+                  "duration": 15
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So11~1"
+              ],
+              "swCount": 0,
+              "soCount": 1,
+              "totalDurationMinutes": 29,
+              "minutes": 29,
+              "profileError": null,
+              "rideMinutes": [
+                15
+              ],
+              "interval": {
+                "startMinutes": 916,
+                "endMinutes": 945,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So11~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 29,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle6",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So11",
+                  "duration": 14
+                },
+                {
+                  "location1": "So11",
+                  "location2": "D.Kampus",
+                  "duration": 15
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So11~1"
+              ],
+              "swCount": 0,
+              "soCount": 1,
+              "totalDurationMinutes": 29,
+              "minutes": 29,
+              "profileError": null,
+              "rideMinutes": [
+                15
+              ],
+              "interval": {
+                "startMinutes": 916,
+                "endMinutes": 945,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So11~1"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:1095",
+      "direction": "dropoff",
+      "anchorMinutes": 1095,
+      "legs": 2,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "reason": null,
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 48,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle1",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So11",
+                  "duration": 14
+                },
+                {
+                  "location1": "So11",
+                  "location2": "So19",
+                  "duration": 18
+                },
+                {
+                  "location1": "So19",
+                  "location2": "D.Kampus",
+                  "duration": 16
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So11~1",
+                "2026-10-05:dropoff:So19~1"
+              ],
+              "swCount": 0,
+              "soCount": 2,
+              "totalDurationMinutes": 48,
+              "minutes": 48,
+              "profileError": null,
+              "rideMinutes": [
+                14,
+                32
+              ],
+              "interval": {
+                "startMinutes": 1095,
+                "endMinutes": 1143,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So11~1",
+                  "2026-10-05:dropoff:So19~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 48,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle9",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So11",
+                  "duration": 14
+                },
+                {
+                  "location1": "So11",
+                  "location2": "So19",
+                  "duration": 18
+                },
+                {
+                  "location1": "So19",
+                  "location2": "D.Kampus",
+                  "duration": 16
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So11~1",
+                "2026-10-05:dropoff:So19~1"
+              ],
+              "swCount": 0,
+              "soCount": 2,
+              "totalDurationMinutes": 48,
+              "minutes": 48,
+              "profileError": null,
+              "rideMinutes": [
+                14,
+                32
+              ],
+              "interval": {
+                "startMinutes": 1095,
+                "endMinutes": 1143,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So11~1",
+                  "2026-10-05:dropoff:So19~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 48,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle6",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So11",
+                  "duration": 14
+                },
+                {
+                  "location1": "So11",
+                  "location2": "So19",
+                  "duration": 18
+                },
+                {
+                  "location1": "So19",
+                  "location2": "D.Kampus",
+                  "duration": 16
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So11~1",
+                "2026-10-05:dropoff:So19~1"
+              ],
+              "swCount": 0,
+              "soCount": 2,
+              "totalDurationMinutes": 48,
+              "minutes": 48,
+              "profileError": null,
+              "rideMinutes": [
+                14,
+                32
+              ],
+              "interval": {
+                "startMinutes": 1095,
+                "endMinutes": 1143,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So11~1",
+                  "2026-10-05:dropoff:So19~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 48,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle6",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So11",
+                  "duration": 14
+                },
+                {
+                  "location1": "So11",
+                  "location2": "So19",
+                  "duration": 18
+                },
+                {
+                  "location1": "So19",
+                  "location2": "D.Kampus",
+                  "duration": 16
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So11~1",
+                "2026-10-05:dropoff:So19~1"
+              ],
+              "swCount": 0,
+              "soCount": 2,
+              "totalDurationMinutes": 48,
+              "minutes": 48,
+              "profileError": null,
+              "rideMinutes": [
+                14,
+                32
+              ],
+              "interval": {
+                "startMinutes": 1095,
+                "endMinutes": 1143,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So11~1",
+                  "2026-10-05:dropoff:So19~1"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:795",
+      "direction": "dropoff",
+      "anchorMinutes": 795,
+      "legs": 4,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "reason": null,
+          "routeCount": 2,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 127,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle1",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So5",
+                  "duration": 24
+                },
+                {
+                  "location1": "So5",
+                  "location2": "So18",
+                  "duration": 16
+                },
+                {
+                  "location1": "So18",
+                  "location2": "Sw6",
+                  "duration": 11
+                },
+                {
+                  "location1": "Sw6",
+                  "location2": "D.Kampus",
+                  "duration": 22
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So5~1",
+                "2026-10-05:dropoff:So18~1",
+                "2026-10-05:dropoff:Sw6~1"
+              ],
+              "swCount": 1,
+              "soCount": 2,
+              "totalDurationMinutes": 73,
+              "minutes": 73,
+              "profileError": null,
+              "rideMinutes": [
+                24,
+                40,
+                51
+              ],
+              "interval": {
+                "startMinutes": 795,
+                "endMinutes": 868,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So5~1",
+                  "2026-10-05:dropoff:So18~1",
+                  "2026-10-05:dropoff:Sw6~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle2",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So16",
+                  "duration": 28
+                },
+                {
+                  "location1": "So16",
+                  "location2": "D.Kampus",
+                  "duration": 26
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So16~1"
+              ],
+              "swCount": 0,
+              "soCount": 1,
+              "totalDurationMinutes": 54,
+              "minutes": 54,
+              "profileError": null,
+              "rideMinutes": [
+                28
+              ],
+              "interval": {
+                "startMinutes": 795,
+                "endMinutes": 849,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So16~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 2,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 127,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle9",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So5",
+                  "duration": 24
+                },
+                {
+                  "location1": "So5",
+                  "location2": "So18",
+                  "duration": 16
+                },
+                {
+                  "location1": "So18",
+                  "location2": "Sw6",
+                  "duration": 11
+                },
+                {
+                  "location1": "Sw6",
+                  "location2": "D.Kampus",
+                  "duration": 22
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So5~1",
+                "2026-10-05:dropoff:So18~1",
+                "2026-10-05:dropoff:Sw6~1"
+              ],
+              "swCount": 1,
+              "soCount": 2,
+              "totalDurationMinutes": 73,
+              "minutes": 73,
+              "profileError": null,
+              "rideMinutes": [
+                24,
+                40,
+                51
+              ],
+              "interval": {
+                "startMinutes": 795,
+                "endMinutes": 868,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So5~1",
+                  "2026-10-05:dropoff:So18~1",
+                  "2026-10-05:dropoff:Sw6~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle10",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So16",
+                  "duration": 28
+                },
+                {
+                  "location1": "So16",
+                  "location2": "D.Kampus",
+                  "duration": 26
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So16~1"
+              ],
+              "swCount": 0,
+              "soCount": 1,
+              "totalDurationMinutes": 54,
+              "minutes": 54,
+              "profileError": null,
+              "rideMinutes": [
+                28
+              ],
+              "interval": {
+                "startMinutes": 795,
+                "endMinutes": 849,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So16~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 2,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 127,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle9",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So5",
+                  "duration": 24
+                },
+                {
+                  "location1": "So5",
+                  "location2": "So18",
+                  "duration": 16
+                },
+                {
+                  "location1": "So18",
+                  "location2": "Sw6",
+                  "duration": 11
+                },
+                {
+                  "location1": "Sw6",
+                  "location2": "D.Kampus",
+                  "duration": 22
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So5~1",
+                "2026-10-05:dropoff:So18~1",
+                "2026-10-05:dropoff:Sw6~1"
+              ],
+              "swCount": 1,
+              "soCount": 2,
+              "totalDurationMinutes": 73,
+              "minutes": 73,
+              "profileError": null,
+              "rideMinutes": [
+                24,
+                40,
+                51
+              ],
+              "interval": {
+                "startMinutes": 795,
+                "endMinutes": 868,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So5~1",
+                  "2026-10-05:dropoff:So18~1",
+                  "2026-10-05:dropoff:Sw6~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle7",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So16",
+                  "duration": 28
+                },
+                {
+                  "location1": "So16",
+                  "location2": "D.Kampus",
+                  "duration": 26
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So16~1"
+              ],
+              "swCount": 0,
+              "soCount": 1,
+              "totalDurationMinutes": 54,
+              "minutes": 54,
+              "profileError": null,
+              "rideMinutes": [
+                28
+              ],
+              "interval": {
+                "startMinutes": 795,
+                "endMinutes": 849,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So16~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 2,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 127,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle6",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So5",
+                  "duration": 24
+                },
+                {
+                  "location1": "So5",
+                  "location2": "So18",
+                  "duration": 16
+                },
+                {
+                  "location1": "So18",
+                  "location2": "Sw6",
+                  "duration": 11
+                },
+                {
+                  "location1": "Sw6",
+                  "location2": "D.Kampus",
+                  "duration": 22
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So5~1",
+                "2026-10-05:dropoff:So18~1",
+                "2026-10-05:dropoff:Sw6~1"
+              ],
+              "swCount": 1,
+              "soCount": 2,
+              "totalDurationMinutes": 73,
+              "minutes": 73,
+              "profileError": null,
+              "rideMinutes": [
+                24,
+                40,
+                51
+              ],
+              "interval": {
+                "startMinutes": 795,
+                "endMinutes": 868,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So5~1",
+                  "2026-10-05:dropoff:So18~1",
+                  "2026-10-05:dropoff:Sw6~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle7",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So16",
+                  "duration": 28
+                },
+                {
+                  "location1": "So16",
+                  "location2": "D.Kampus",
+                  "duration": 26
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So16~1"
+              ],
+              "swCount": 0,
+              "soCount": 1,
+              "totalDurationMinutes": 54,
+              "minutes": 54,
+              "profileError": null,
+              "rideMinutes": [
+                28
+              ],
+              "interval": {
+                "startMinutes": 795,
+                "endMinutes": 849,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So16~1"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:pickup:705",
+      "direction": "pickup",
+      "anchorMinutes": 705,
+      "legs": 3,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "reason": null,
+          "routeCount": 2,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 142,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle1",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So17",
+                  "duration": 45
+                },
+                {
+                  "location1": "So17",
+                  "location2": "Sw9",
+                  "duration": 27
+                },
+                {
+                  "location1": "Sw9",
+                  "location2": "D.Kampus",
+                  "duration": 19
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So17~1",
+                "2026-10-05:pickup:Sw9~1"
+              ],
+              "swCount": 1,
+              "soCount": 1,
+              "totalDurationMinutes": 91,
+              "minutes": 91,
+              "profileError": null,
+              "rideMinutes": [
+                46,
+                19
+              ],
+              "interval": {
+                "startMinutes": 614,
+                "endMinutes": 705,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So17~1",
+                  "2026-10-05:pickup:Sw9~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle2",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So4",
+                  "duration": 30
+                },
+                {
+                  "location1": "So4",
+                  "location2": "D.Kampus",
+                  "duration": 21
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So4~1"
+              ],
+              "swCount": 0,
+              "soCount": 1,
+              "totalDurationMinutes": 51,
+              "minutes": 51,
+              "profileError": null,
+              "rideMinutes": [
+                21
+              ],
+              "interval": {
+                "startMinutes": 654,
+                "endMinutes": 705,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So4~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 2,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 142,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle9",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So17",
+                  "duration": 45
+                },
+                {
+                  "location1": "So17",
+                  "location2": "Sw9",
+                  "duration": 27
+                },
+                {
+                  "location1": "Sw9",
+                  "location2": "D.Kampus",
+                  "duration": 19
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So17~1",
+                "2026-10-05:pickup:Sw9~1"
+              ],
+              "swCount": 1,
+              "soCount": 1,
+              "totalDurationMinutes": 91,
+              "minutes": 91,
+              "profileError": null,
+              "rideMinutes": [
+                46,
+                19
+              ],
+              "interval": {
+                "startMinutes": 614,
+                "endMinutes": 705,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So17~1",
+                  "2026-10-05:pickup:Sw9~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle10",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So4",
+                  "duration": 30
+                },
+                {
+                  "location1": "So4",
+                  "location2": "D.Kampus",
+                  "duration": 21
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So4~1"
+              ],
+              "swCount": 0,
+              "soCount": 1,
+              "totalDurationMinutes": 51,
+              "minutes": 51,
+              "profileError": null,
+              "rideMinutes": [
+                21
+              ],
+              "interval": {
+                "startMinutes": 654,
+                "endMinutes": 705,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So4~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 2,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 142,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle9",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So17",
+                  "duration": 45
+                },
+                {
+                  "location1": "So17",
+                  "location2": "Sw9",
+                  "duration": 27
+                },
+                {
+                  "location1": "Sw9",
+                  "location2": "D.Kampus",
+                  "duration": 19
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So17~1",
+                "2026-10-05:pickup:Sw9~1"
+              ],
+              "swCount": 1,
+              "soCount": 1,
+              "totalDurationMinutes": 91,
+              "minutes": 91,
+              "profileError": null,
+              "rideMinutes": [
+                46,
+                19
+              ],
+              "interval": {
+                "startMinutes": 614,
+                "endMinutes": 705,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So17~1",
+                  "2026-10-05:pickup:Sw9~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle7",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So4",
+                  "duration": 30
+                },
+                {
+                  "location1": "So4",
+                  "location2": "D.Kampus",
+                  "duration": 21
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So4~1"
+              ],
+              "swCount": 0,
+              "soCount": 1,
+              "totalDurationMinutes": 51,
+              "minutes": 51,
+              "profileError": null,
+              "rideMinutes": [
+                21
+              ],
+              "interval": {
+                "startMinutes": 654,
+                "endMinutes": 705,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So4~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 2,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 142,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle6",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So17",
+                  "duration": 45
+                },
+                {
+                  "location1": "So17",
+                  "location2": "Sw9",
+                  "duration": 27
+                },
+                {
+                  "location1": "Sw9",
+                  "location2": "D.Kampus",
+                  "duration": 19
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So17~1",
+                "2026-10-05:pickup:Sw9~1"
+              ],
+              "swCount": 1,
+              "soCount": 1,
+              "totalDurationMinutes": 91,
+              "minutes": 91,
+              "profileError": null,
+              "rideMinutes": [
+                46,
+                19
+              ],
+              "interval": {
+                "startMinutes": 614,
+                "endMinutes": 705,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So17~1",
+                  "2026-10-05:pickup:Sw9~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle7",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So4",
+                  "duration": 30
+                },
+                {
+                  "location1": "So4",
+                  "location2": "D.Kampus",
+                  "duration": 21
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:pickup:So4~1"
+              ],
+              "swCount": 0,
+              "soCount": 1,
+              "totalDurationMinutes": 51,
+              "minutes": 51,
+              "profileError": null,
+              "rideMinutes": [
+                21
+              ],
+              "interval": {
+                "startMinutes": 654,
+                "endMinutes": 705,
+                "occurrenceIds": [
+                  "2026-10-05:pickup:So4~1"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:915",
+      "direction": "dropoff",
+      "anchorMinutes": 915,
+      "legs": 6,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "reason": null,
+          "routeCount": 2,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 179,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle1",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So7",
+                  "duration": 10
+                },
+                {
+                  "location1": "So7",
+                  "location2": "Sw9",
+                  "duration": 14
+                },
+                {
+                  "location1": "Sw9",
+                  "location2": "So4",
+                  "duration": 18
+                },
+                {
+                  "location1": "So4",
+                  "location2": "So15",
+                  "duration": 17
+                },
+                {
+                  "location1": "So15",
+                  "location2": "D.Kampus",
+                  "duration": 24
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So7~1",
+                "2026-10-05:dropoff:Sw9~1",
+                "2026-10-05:dropoff:So4~1",
+                "2026-10-05:dropoff:So15~1"
+              ],
+              "swCount": 1,
+              "soCount": 3,
+              "totalDurationMinutes": 83,
+              "minutes": 83,
+              "profileError": null,
+              "rideMinutes": [
+                10,
+                24,
+                42,
+                59
+              ],
+              "interval": {
+                "startMinutes": 915,
+                "endMinutes": 998,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So7~1",
+                  "2026-10-05:dropoff:Sw9~1",
+                  "2026-10-05:dropoff:So4~1",
+                  "2026-10-05:dropoff:So15~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle2",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So3",
+                  "duration": 30
+                },
+                {
+                  "location1": "So3",
+                  "location2": "So17",
+                  "duration": 30
+                },
+                {
+                  "location1": "So17",
+                  "location2": "D.Kampus",
+                  "duration": 36
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So3~1",
+                "2026-10-05:dropoff:So17~1"
+              ],
+              "swCount": 0,
+              "soCount": 2,
+              "totalDurationMinutes": 96,
+              "minutes": 96,
+              "profileError": null,
+              "rideMinutes": [
+                30,
+                60
+              ],
+              "interval": {
+                "startMinutes": 915,
+                "endMinutes": 1011,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So3~1",
+                  "2026-10-05:dropoff:So17~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "included",
+          "reason": null,
+          "routeCount": 3,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 200,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle9",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So15",
+                  "duration": 26
+                },
+                {
+                  "location1": "So15",
+                  "location2": "So4",
+                  "duration": 18
+                },
+                {
+                  "location1": "So4",
+                  "location2": "D.Kampus",
+                  "duration": 21
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So15~1",
+                "2026-10-05:dropoff:So4~1"
+              ],
+              "swCount": 0,
+              "soCount": 2,
+              "totalDurationMinutes": 65,
+              "minutes": 65,
+              "profileError": null,
+              "rideMinutes": [
+                26,
+                44
+              ],
+              "interval": {
+                "startMinutes": 915,
+                "endMinutes": 980,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So15~1",
+                  "2026-10-05:dropoff:So4~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle10",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So17",
+                  "duration": 45
+                },
+                {
+                  "location1": "So17",
+                  "location2": "D.Kampus",
+                  "duration": 36
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So17~1"
+              ],
+              "swCount": 0,
+              "soCount": 1,
+              "totalDurationMinutes": 81,
+              "minutes": 81,
+              "profileError": null,
+              "rideMinutes": [
+                45
+              ],
+              "interval": {
+                "startMinutes": 915,
+                "endMinutes": 996,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So17~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 2,
+              "vehicleId": "Vehicle11",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So7",
+                  "duration": 10
+                },
+                {
+                  "location1": "So7",
+                  "location2": "So3",
+                  "duration": 18
+                },
+                {
+                  "location1": "So3",
+                  "location2": "Sw9",
+                  "duration": 7
+                },
+                {
+                  "location1": "Sw9",
+                  "location2": "D.Kampus",
+                  "duration": 19
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So7~1",
+                "2026-10-05:dropoff:So3~1",
+                "2026-10-05:dropoff:Sw9~1"
+              ],
+              "swCount": 1,
+              "soCount": 2,
+              "totalDurationMinutes": 54,
+              "minutes": 54,
+              "profileError": null,
+              "rideMinutes": [
+                10,
+                28,
+                35
+              ],
+              "interval": {
+                "startMinutes": 915,
+                "endMinutes": 969,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So7~1",
+                  "2026-10-05:dropoff:So3~1",
+                  "2026-10-05:dropoff:Sw9~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 3,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 200,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle9",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So15",
+                  "duration": 26
+                },
+                {
+                  "location1": "So15",
+                  "location2": "So4",
+                  "duration": 18
+                },
+                {
+                  "location1": "So4",
+                  "location2": "D.Kampus",
+                  "duration": 21
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So15~1",
+                "2026-10-05:dropoff:So4~1"
+              ],
+              "swCount": 0,
+              "soCount": 2,
+              "totalDurationMinutes": 65,
+              "minutes": 65,
+              "profileError": null,
+              "rideMinutes": [
+                26,
+                44
+              ],
+              "interval": {
+                "startMinutes": 915,
+                "endMinutes": 980,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So15~1",
+                  "2026-10-05:dropoff:So4~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle10",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So17",
+                  "duration": 45
+                },
+                {
+                  "location1": "So17",
+                  "location2": "D.Kampus",
+                  "duration": 36
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So17~1"
+              ],
+              "swCount": 0,
+              "soCount": 1,
+              "totalDurationMinutes": 81,
+              "minutes": 81,
+              "profileError": null,
+              "rideMinutes": [
+                45
+              ],
+              "interval": {
+                "startMinutes": 915,
+                "endMinutes": 996,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So17~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 2,
+              "vehicleId": "Vehicle8",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So7",
+                  "duration": 10
+                },
+                {
+                  "location1": "So7",
+                  "location2": "So3",
+                  "duration": 18
+                },
+                {
+                  "location1": "So3",
+                  "location2": "Sw9",
+                  "duration": 7
+                },
+                {
+                  "location1": "Sw9",
+                  "location2": "D.Kampus",
+                  "duration": 19
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So7~1",
+                "2026-10-05:dropoff:So3~1",
+                "2026-10-05:dropoff:Sw9~1"
+              ],
+              "swCount": 1,
+              "soCount": 2,
+              "totalDurationMinutes": 54,
+              "minutes": 54,
+              "profileError": null,
+              "rideMinutes": [
+                10,
+                28,
+                35
+              ],
+              "interval": {
+                "startMinutes": 915,
+                "endMinutes": 969,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So7~1",
+                  "2026-10-05:dropoff:So3~1",
+                  "2026-10-05:dropoff:Sw9~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 3,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 200,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle9",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So15",
+                  "duration": 26
+                },
+                {
+                  "location1": "So15",
+                  "location2": "So4",
+                  "duration": 18
+                },
+                {
+                  "location1": "So4",
+                  "location2": "D.Kampus",
+                  "duration": 21
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So15~1",
+                "2026-10-05:dropoff:So4~1"
+              ],
+              "swCount": 0,
+              "soCount": 2,
+              "totalDurationMinutes": 65,
+              "minutes": 65,
+              "profileError": null,
+              "rideMinutes": [
+                26,
+                44
+              ],
+              "interval": {
+                "startMinutes": 915,
+                "endMinutes": 980,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So15~1",
+                  "2026-10-05:dropoff:So4~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 1,
+              "vehicleId": "Vehicle7",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So17",
+                  "duration": 45
+                },
+                {
+                  "location1": "So17",
+                  "location2": "D.Kampus",
+                  "duration": 36
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So17~1"
+              ],
+              "swCount": 0,
+              "soCount": 1,
+              "totalDurationMinutes": 81,
+              "minutes": 81,
+              "profileError": null,
+              "rideMinutes": [
+                45
+              ],
+              "interval": {
+                "startMinutes": 915,
+                "endMinutes": 996,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So17~1"
+                ]
+              }
+            },
+            {
+              "routeIndex": 2,
+              "vehicleId": "Vehicle8",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So7",
+                  "duration": 10
+                },
+                {
+                  "location1": "So7",
+                  "location2": "So3",
+                  "duration": 18
+                },
+                {
+                  "location1": "So3",
+                  "location2": "Sw9",
+                  "duration": 7
+                },
+                {
+                  "location1": "Sw9",
+                  "location2": "D.Kampus",
+                  "duration": 19
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So7~1",
+                "2026-10-05:dropoff:So3~1",
+                "2026-10-05:dropoff:Sw9~1"
+              ],
+              "swCount": 1,
+              "soCount": 2,
+              "totalDurationMinutes": 54,
+              "minutes": 54,
+              "profileError": null,
+              "rideMinutes": [
+                10,
+                28,
+                35
+              ],
+              "interval": {
+                "startMinutes": 915,
+                "endMinutes": 969,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So7~1",
+                  "2026-10-05:dropoff:So3~1",
+                  "2026-10-05:dropoff:Sw9~1"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "waveId": "2026-10-05:dropoff:675",
+      "direction": "dropoff",
+      "anchorMinutes": 675,
+      "legs": 2,
+      "options": [
+        {
+          "optionId": "base",
+          "kind": "baseline",
+          "quota": null,
+          "status": "included",
+          "reason": null,
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 46,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle1",
+              "vehicleType": null,
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So2",
+                  "duration": 18
+                },
+                {
+                  "location1": "So2",
+                  "location2": "So13",
+                  "duration": 10
+                },
+                {
+                  "location1": "So13",
+                  "location2": "D.Kampus",
+                  "duration": 18
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So2~1",
+                "2026-10-05:dropoff:So13~1"
+              ],
+              "swCount": 0,
+              "soCount": 2,
+              "totalDurationMinutes": 46,
+              "minutes": 46,
+              "profileError": null,
+              "rideMinutes": [
+                18,
+                28
+              ],
+              "interval": {
+                "startMinutes": 675,
+                "endMinutes": 721,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So2~1",
+                  "2026-10-05:dropoff:So13~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q0",
+          "kind": "quota",
+          "quota": 0,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 46,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle9",
+              "vehicleType": "minivan",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So2",
+                  "duration": 18
+                },
+                {
+                  "location1": "So2",
+                  "location2": "So13",
+                  "duration": 10
+                },
+                {
+                  "location1": "So13",
+                  "location2": "D.Kampus",
+                  "duration": 18
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So2~1",
+                "2026-10-05:dropoff:So13~1"
+              ],
+              "swCount": 0,
+              "soCount": 2,
+              "totalDurationMinutes": 46,
+              "minutes": 46,
+              "profileError": null,
+              "rideMinutes": [
+                18,
+                28
+              ],
+              "interval": {
+                "startMinutes": 675,
+                "endMinutes": 721,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So2~1",
+                  "2026-10-05:dropoff:So13~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q1",
+          "kind": "quota",
+          "quota": 1,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 46,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle6",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So2",
+                  "duration": 18
+                },
+                {
+                  "location1": "So2",
+                  "location2": "So13",
+                  "duration": 10
+                },
+                {
+                  "location1": "So13",
+                  "location2": "D.Kampus",
+                  "duration": 18
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So2~1",
+                "2026-10-05:dropoff:So13~1"
+              ],
+              "swCount": 0,
+              "soCount": 2,
+              "totalDurationMinutes": 46,
+              "minutes": 46,
+              "profileError": null,
+              "rideMinutes": [
+                18,
+                28
+              ],
+              "interval": {
+                "startMinutes": 675,
+                "endMinutes": 721,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So2~1",
+                  "2026-10-05:dropoff:So13~1"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "optionId": "q2",
+          "kind": "quota",
+          "quota": 2,
+          "status": "skipped_duplicate",
+          "reason": "same route partition as an earlier option",
+          "routeCount": 1,
+          "success": true,
+          "certificate": {
+            "is_feasible": true,
+            "violation_count": 0,
+            "violations": [],
+            "certify_error": null
+          },
+          "error": null,
+          "totalDurationMinutes": 46,
+          "routes": [
+            {
+              "routeIndex": 0,
+              "vehicleId": "Vehicle6",
+              "vehicleType": "large",
+              "steps": [
+                {
+                  "location1": "D.Kampus",
+                  "location2": "So2",
+                  "duration": 18
+                },
+                {
+                  "location1": "So2",
+                  "location2": "So13",
+                  "duration": 10
+                },
+                {
+                  "location1": "So13",
+                  "location2": "D.Kampus",
+                  "duration": 18
+                }
+              ],
+              "studentIds": [
+                "2026-10-05:dropoff:So2~1",
+                "2026-10-05:dropoff:So13~1"
+              ],
+              "swCount": 0,
+              "soCount": 2,
+              "totalDurationMinutes": 46,
+              "minutes": 46,
+              "profileError": null,
+              "rideMinutes": [
+                18,
+                28
+              ],
+              "interval": {
+                "startMinutes": 675,
+                "endMinutes": 721,
+                "occurrenceIds": [
+                  "2026-10-05:dropoff:So2~1",
+                  "2026-10-05:dropoff:So13~1"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

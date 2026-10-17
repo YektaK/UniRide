@@ -504,12 +504,9 @@ def test_parallel_workers_give_the_same_results_as_a_serial_run(runner, tmp_path
     def boom(*args, **kwargs):
         raise AssertionError("a cached unit was solved again")
 
-    runner_solve = runner._solve_unit
-    runner._solve_unit, runner._run_worker = boom, boom
-    try:
-        assert runner.main(common + ["--jobs", "2", "--cache-dir", str(cache_b), "--out", str(tmp_path / "c")]) == 0
-    finally:
-        runner._solve_unit = runner_solve
+    monkeypatch.setattr(runner, "_solve_unit", boom)  # restored by monkeypatch (no leak into other tests)
+    monkeypatch.setattr(runner, "_run_worker", boom)
+    assert runner.main(common + ["--jobs", "2", "--cache-dir", str(cache_b), "--out", str(tmp_path / "c")]) == 0
     assert stable(tmp_path / "c" / "option_gaps.csv") == stable(tmp_path / "b" / "option_gaps.csv")
 
 

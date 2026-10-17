@@ -537,3 +537,41 @@ def test_historical_fleet_archives_are_refused_as_a_ga_source(runner):
     for tail in (("week-2026-10-05-fleet",), ("week-2026-10-05-fleet", "extra", "minivan-cap3")):
         with pytest.raises(runner.loader.CampaignRefused):
             runner.load_fleet_context(RESULTS.joinpath(*tail))
+
+
+RESULTS_DIR = RESULTS / "week-2026-10-05-exact" / "wp-e4a-typed-options"
+
+
+@pytest.mark.skipif(not (RESULTS_DIR / "exact_manifest.json").exists(), reason="campaign results not committed yet")
+def test_committed_campaign_results_are_consistent_and_recertify_without_a_solver(runner):
+    """The committed WP-E4a results: valid manifest, no blocking error, every stored exact option re-certifies."""
+    import hashlib
+
+    manifest = json.loads((RESULTS_DIR / "exact_manifest.json").read_text(encoding="utf-8"))
+    assert runner.protocol.validate_manifest(manifest) == [] and manifest["blocking_errors"] == []
+    assert manifest["dirty_working_tree"] is False and manifest["work_package"] == "WP-E4a"
+    routes_file = RESULTS_DIR / manifest["exact_routes"]["file"]
+    assert hashlib.sha256(routes_file.read_bytes()).hexdigest() == manifest["exact_routes"]["sha256"]
+    stored = json.loads(routes_file.read_text(encoding="utf-8"))
+    rows = list(csv.DictReader((RESULTS_DIR / "option_gaps.csv").open(encoding="utf-8")))
+    assert len(rows) == len(manifest["waves"]) == 1872
+    assert len({(r["fleet"], r["date"], r["R"], r["wave_id"], r["option"]) for r in rows}) == len(rows)
+    assert {r["ga_protocol"] for r in rows} == {"native"} and {r["ga_seed"] for r in rows} == {"42"}
+    assert all(r["exact_le_ga"] == "True" for r in rows if r["status"] == "optimal" and r["comparison"] == "compared")
+    assert not any(r["comparison"] == "exact_infeasible_ga_feasible" for r in rows)
+    replay_rows = list(csv.DictReader((RESULTS_DIR / "replay.csv").open(encoding="utf-8")))
+    assert len(replay_rows) == 120 and all(r["label"] in runner.replay.MATCH_LABELS for r in replay_rows)
+    ctxs = {name: runner.load_fleet_context(path) for name, path in runner.SOURCES.items()}
+    waves = {name: {(w.service_date, ride, w.wave_id): w for ride in c.campaign.rides for w in c.campaign.waves_for(ride)}
+             for name, c in ctxs.items()}
+    arcs: dict = {}
+    assert manifest["exact_routes"]["options"] == len(stored["waves"]) and stored["waves"]
+    for entry in stored["waves"]:
+        name = entry["fleet"]
+        key = (name, entry["service_date"], entry["R"])
+        if key not in arcs:
+            arcs[key] = json.loads((runner.SOURCES[name] / f"{entry['service_date']}_R{entry['R']}.matrix.json")
+                                   .read_text(encoding="utf-8"))
+        wave = waves[name][(entry["service_date"], entry["R"], entry["wave_id"])]
+        result = runner.recertify_stored_option(wave, entry, arcs[key], ctxs[name])
+        assert result["is_feasible"] is True, (name, entry["wave_id"], entry["option"], result["violations"][:2])

@@ -399,3 +399,33 @@ def test_the_runner_reports_a_refused_cell_as_a_blocking_error(monkeypatch, tmp_
     code = ud.main(["--fleets", "large+sedan", "--rides", str(RIDE), "--dates", DATE, "--limits", "3", "--out", str(tmp_path / "o")])
     manifest = json.loads((tmp_path / "o" / ud.MANIFEST_FILENAME).read_text(encoding="utf-8"))
     assert code == 1 and any("SELECTION_INTERVAL_PRECISION" in e for e in manifest["blocking_errors"])
+
+
+# ---------------------------------------------------------------- the committed campaign
+def test_committed_campaign_results_are_consistent():
+    out = ud.DEFAULT_OUT
+    manifest = json.loads((out / ud.MANIFEST_FILENAME).read_text(encoding="utf-8"))
+    summary = json.loads((out / "summary.json").read_text(encoding="utf-8"))
+    with (out / "day_gaps.csv").open(encoding="utf-8", newline="") as fh:
+        rows = list(csv.DictReader(fh))
+    assert len(rows) == 120 and tuple(rows[0].keys()) == ud.CSV_FIELDS
+    assert manifest["dirty_working_tree"] is False and len(manifest["git_commit"]) == 40 and manifest["blocking_errors"] == []
+    assert ud.validate_manifest(manifest) == []
+    counts = {k: sum(r["label"] == k for r in rows) for k in udm.LABELS}
+    assert counts == manifest["labels"] == summary["labels"] and sum(counts.values()) == 120
+    assert manifest["ga_recompute"] == {"cells": 120, "equal_to_archived_response": 120}
+    assert all(r["ga_equals_archived_response"] == "True" for r in rows)
+    for r in rows:
+        proven = r["label"] == udm.LABEL_PROVEN
+        assert (r["claim"] == udm.CLAIM) == proven
+        if proven:
+            assert r["ga_status"] == r["union_status"] == "optimal" and int(r["union_cars"]) <= int(r["ga_cars"])
+            assert (r["ga_confirmation"], r["union_confirmation"]) == (udm.CONFIRMED, udm.CONFIRMED)
+        else:
+            assert r["cars_difference_union_minus_ga"] == "" and r["not_proven_reason"]
+        if r["union_rerun"] == "True":
+            assert r["union_time_limit_s"] == "60.0" and r["union_first_status"] in udm.TIME_LIMITED_STATUSES
+    readme = (out / "README.md").read_text(encoding="utf-8")
+    assert udm.CLAIM in readme and "min(GA, union)" in readme
+    assert f"`{manifest['git_commit'][:12]}`" in readme
+    assert not [h for h in rows[0] if "min(" in h.lower() or h.lower() in ("min_cars", "best_cars")]

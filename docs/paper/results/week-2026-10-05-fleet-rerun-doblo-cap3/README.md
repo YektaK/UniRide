@@ -1,32 +1,49 @@
-# WP-E10 fleet re-run: large + Doblo cap3 (week of 2026-10-05)
+# WP-E10 fleet re-run: large + Doblò cap3 (week of 2026-10-05)
 
-Design: [`EXACT_SOLVER_AMPL_DESIGN.md`](../../../designs/EXACT_SOLVER_AMPL_DESIGN.md) section 9 ("WP-E10 input rule and acceptance"); decisions: DECISION_LOG E01, E05. Descriptive archive of one snapshot week; no superiority, causality or cost claim. These rows are never pooled with the historical archives (`week-2026-10-05-fleet`, `week-2026-10-05-4sw5so`), which stay untouched and are historical evidence only.
+Design: [`EXACT_SOLVER_AMPL_DESIGN.md`](../../../designs/EXACT_SOLVER_AMPL_DESIGN.md) section 9 ("WP-E10 input rule and acceptance"); decisions: DECISION_LOG E01, E05. Descriptive archive of one snapshot week; single run, single seed (42), native termination protocol; no superiority, causality or cost claim. These rows are never pooled with the historical archives (`week-2026-10-05-fleet`, `week-2026-10-05-4sw5so`), which stay untouched and are historical evidence only.
 
 ## Command
 
-Run from a fresh detached worktree at the pin (`C:\wt\e10-db`, with the `node_modules` junction), through the session wrapper, `UNIRIDE_PYTHON` set to the project `.venv-jit` interpreter, the Supabase environment passed only through Node `--env-file`:
+Command used (not recorded in the manifest); `<main>` is the main checkout, `<run-worktree>` a fresh detached worktree at the pin:
 
 ```text
 node --env-file=<main>\optimizer_api\.env --env-file=<main>\.env.local scripts/run-fleet-rerun-session.mjs --port 8011 --log <log outside the repo> -- --week-of 2026-10-05 --ride-limits 50,60,70,90 --tour-limit 150 --fleet-types large:4sw5so:cd10,minivan:1sw3so:cap3:cd10 --fixed-type large --minimize-type minivan --scenarios 0,1,2 --pin-commit f29aa3d88488 --reference-manifest docs/paper/results/week-2026-10-05-fleet/extra/minivan-cap3/run_manifest.json --out docs/paper/results/week-2026-10-05-fleet-rerun-doblo-cap3
 ```
 
-Pinned commit `f29aa3d88488`, `dirty_working_tree: false`, GA seed 42, native termination, CP-SAT 9.15.6755 (`random_seed` 20261008, `num_workers` 1), selection time limit 30 s, node budget 200000, `admission_mode: assume_confirmed` (manifest fields). Fleet types and grid equal the historical manifest `docs/paper/results/week-2026-10-05-fleet/extra/minivan-cap3/run_manifest.json`.
+The run followed the procedure in `docs/designs/WP_E10_RUN_README_TEMPLATE.md`. The manifest records: pinned commit `f29aa3d88488`, `dirty_working_tree: false`, GA seed 42, native termination, CP-SAT 9.15.6755 (`random_seed` 20261008, `num_workers` 1), selection time limit 30 s, node budget 200000, `admission_mode: assume_confirmed`, and `python_provenance` (repo-relative: `uniride_core/__init__.py`, `optimizer_api/__init__.py`, `academic_benchmark/__init__.py`). Fleet types and grid equal the historical manifest `docs/paper/results/week-2026-10-05-fleet/extra/minivan-cap3/run_manifest.json`.
 
-## Run facts
+## Run facts (from `run_manifest.json`)
 
-- Preflight (read-only, run before the full run as a separate preflight-only run and again at the start of the full run): 14 of 14 checks passed (`clean_tree`, `pinned_commit`, `fleet_types`, `grid`, `admission_mode`, `node_budget`, `selection_time_limit`, `ga_configuration`, `hf_configuration`, `seeds`, `selection_solver`, `matrix_sha256`, `occurrence_ids`, `reference_matches_design`); all five live matrices declare sha256 `bfb2dd85...`; 57 waves and 226 legs equal the archive.
-- Manifest `timestamp` 2026-10-17T04:44:45Z (UTC), `completed_at` 2026-10-17T04:49:18Z; duration about 4 min 33 s. State `completed`, `run_kind: campaign`, 20 (date, R) cells all `ready`, 60 scenario rows.
-- Optimizer log (kept outside the repository): 868 `POST /api/v1/optimize`, 60 `POST /api/v1/internal/fleet-selection` and 25 `POST /api/v1/internal/matrix-snapshot` calls, all answered 200; no 429, no retry; `rate_limit_waits` and `optimizer_http_failures` are empty in every cell.
-- Python provenance (manifest `python_provenance`, repo-relative): `uniride_core/__init__.py`, `optimizer_api/__init__.py`, `academic_benchmark/__init__.py`.
+- State `completed`, `run_kind: campaign`; 20 (date, R) cells, all `ready`; 60 scenario rows.
+- `timestamp` 2026-10-17T04:44:45.985Z, `completed_at` 2026-10-17T04:49:18.157Z (UTC); duration 4 min 32 s.
+- `optimizer_policy.responses_checked`: 868 `/optimize` responses checked; `limits_identical: true`.
+- `rate_limit_waits` and `optimizer_http_failures` are empty in every cell.
+
+## What the preflight proves, and what it cannot
+
+The run refuses before any solve unless the live inputs equal the historical campaign; the manifest `preflight` holds one entry per check, and all 14 are `ok` (`clean_tree`, `pinned_commit`, `fleet_types`, `grid`, `admission_mode`, `node_budget`, `selection_time_limit`, `ga_configuration`, `hf_configuration`, `seeds`, `selection_solver`, `matrix_sha256`, `occurrence_ids`, `reference_matches_design`). All five live matrices declare sha256 `bfb2dd85...`; 57 waves and 226 legs equal the archive. The occurrence check has an exact limit, also recorded in the manifest (`preflight.occurrence_check_limit`):
+
+> The alias is <location_code>~<rank of the raw id among that day's occurrences at that location> (plan-experiments anonymizeResponse). The check detects added or removed students, a change of location, direction or anchor, a rank shift, and a change of the Sw/So count of a wave. It cannot detect a different student at the same location and rank; rule (d) (base routes equal to the 4sw5so routes) is the backstop.
+
+The same composition check runs again on every (date, R) cell at capture time and after the run in `scripts/verify_fleet_rerun.py`.
+
+## Failure behaviour
+
+- The extended archive (`<date>_R<R>.menu_options.json`, `<date>_R<R>_L<n>.selection_exchange.json`) is validated against its schema before it is written. A schema failure aborts the whole campaign (fail closed); the manifest is kept with `state: "failed"` and the cells written so far. Nothing is repaired or skipped.
+- A changed matrix sha256, a composition difference or a non-OK optimizer answer (also a 429 that survived the retries) aborts or invalidates the run: a completed manifest requires every (date, R) cell `ready` exactly once and `optimizer_http_failures` empty in every cell. This manifest is `completed` and meets both conditions.
+
+## Optimizer policy and rate limit
+
+The session wrapper starts the optimizer with `UNIRIDE_RATE_LIMIT_WINDOW_SECONDS=1`, so a sequential campaign does not wait on the rate limit; no other compute-policy variable is changed. Manifest `compute_policy` (profile `production-conservative-v1`): `rate_limit_requests` 30, `rate_limit_window_seconds` 1, `max_students` 250, `max_vehicles` 50, `max_algorithms` 6, `max_workers` 2, `deadline_seconds` 120, `solver_seconds` 60, `max_iterations` 2000, `max_population` 250, `local_search_seconds` 2. The `optimizer_policy` (same profile) is taken from every `/optimize` answer (868 responses checked, limits identical). The limit only gates admission; GA stopping is native and requests are sequential.
 
 ## Acceptance
 
-Run on the results branch (`results/wp-e10-fleet-rerun`, which contains the pinned commit and the copied results). No rule (e) second run was made for this campaign (owner decision 2026-10-17: large+sedan only), so `--double-run-dir` is not passed.
+No rule (e) second run was made for this campaign (owner decision 2026-10-17: large+sedan only), so `--double-run-dir` is not passed. `verification.txt` is the verifier output for this directory (`--base f29aa3d88488`):
 
 ```text
 <main>\.venv-jit\Scripts\python.exe scripts/verify_fleet_rerun.py --rerun-dir docs/paper/results/week-2026-10-05-fleet-rerun-doblo-cap3 --single-archive docs/paper/results/week-2026-10-05-4sw5so --historical-dir docs/paper/results/week-2026-10-05-fleet/extra/minivan-cap3 --base f29aa3d88488
 ```
 
-Result: exit code 0, `failures: []`. Full printed report in `verification.txt`: 20 cells; 228 waves checked against 4sw5so (rule (d), base routes equal); selected-option categories `identical` 654, `selection_changed_h06_expected` 30; rule (g) historical archives untouched (`history_untouched: true`).
+Result: exit code 0, `failures: []`: 20 cells; 228 waves checked against 4sw5so (rule (d), base routes equal); selected-option categories `identical` 654, `selection_changed_h06_expected` 30; rule (g) historical archives untouched (`history_untouched: true`).
 
-The H06 category is narrow (see `docs/designs/WP_E10_RUN_README_TEMPLATE.md`): the verifier compares only the archived selected options, so H06 is a necessary cause of those 30 selection changes, not proven to be the only one.
+The H06 category is narrow on purpose. With both days optimal, equal cars and every archived selected option unchanged in the re-run menu, the verifier accepts a changed selection only when the total vehicle-minutes are lower and the car-minutes higher (the order change of H06: before it car-minutes ranked before total vehicle-minutes), or when both are equal (an option-index tie); every other change fails as `selection_changed_unexplained`. Limit: the verifier compares only the archived selected options; options that were never selected cannot be compared, so the new selection may use a new or changed option. H06 is then a necessary cause of the 30 changes, not proven to be the only one. `scenario_outcome_differs` is also fail-closed; none occurred.

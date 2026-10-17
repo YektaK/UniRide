@@ -662,3 +662,27 @@ def test_stage1_not_proven_gives_no_gd_and_no_d_lb(runner, campaign):
     row = _evaluate(runner, wave, jobs[PEAK], arcs_doc, sp)["row"]
     assert row["gD_note"] == "unavailable_stage1_not_proven" and row["gD"] is None
     assert row["D_LB"] is None and row["exact_le_ga"] is None
+
+
+class _FakeSession:
+    """An AMPL session stand-in: no solver is needed to reach the point where the runner writes its files."""
+    ampl_version, amplpy_version, location, solver_version = "fake", "fake", "fake", "fake"
+
+    def __init__(self, settings):
+        self.settings = settings
+
+    def open(self):
+        pass
+
+    def close(self):
+        pass
+
+
+def test_manifest_and_summary_are_written_with_lf_line_endings(runner, tmp_path, monkeypatch):
+    monkeypatch.setattr(runner.ab, "AmplSession", _FakeSession)
+    monkeypatch.setattr(runner, "check_out_dir", lambda out, source: None)
+    out = tmp_path / "out"
+    runner.main(["--wave-ids", "no-such-wave", "--no-highs-verify", "--out", str(out)])
+    for name in ("exact_manifest.json", "summary.json"):
+        data = (out / name).read_bytes()
+        assert data.endswith(b"\n") and b"\r" not in data, name

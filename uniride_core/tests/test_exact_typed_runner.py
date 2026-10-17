@@ -769,12 +769,12 @@ def test_run_history_records_source_attempts_kills_and_failed_stage_rows_verbati
              ("large+doblo_cap3", 70, "2026-10-05", ("d",))]
     failed = {"fleet": "large+sedan", "wave_id": "c", "option": "q1", "solver": "highs", "stage": "stage1",
               "status": "rejected", "stop_reason": "solver_failure", "solve_result_num": 999}
-    results = [{"unit_run": {"source": "solved", "attempts": 1, "timeout_kills": 0, "exit_codes": [0], "wall_seconds": 5.0}},
-               {"unit_run": {"source": "solved", "attempts": 2, "timeout_kills": 1, "exit_codes": ["timeout", 0], "wall_seconds": 9.0},
+    results = [{"unit_run": {"source": "solved", "mode": "worker", "attempts": 1, "timeout_kills": 0, "exit_codes": [0], "wall_seconds": 5.0}},
+               {"unit_run": {"source": "solved", "mode": "worker", "attempts": 2, "timeout_kills": 1, "exit_codes": ["timeout", 0], "wall_seconds": 9.0},
                 "failed_stage_rows": [failed]},
                {"unit_run": {"source": "cache", "attempts": 1, "timeout_kills": 0}}]
     h = runner.build_run_history(args, results, units, wall_seconds=20.0, unit_seconds=18.0, cache_used=True)
-    assert h["invocations"] == [{"jobs": 3, "unit_timeout_seconds": 100.0, "cache_used": True, "stop_on_error": True,
+    assert h["invocations"] == [{"jobs": 3, "unit_timeout_seconds": 100.0, "cache_used": True, "stop_on_error": None,
                                  "wall_seconds": 20.0, "unit_phase_wall_seconds": 18.0}]
     assert (h["units_planned"], h["units_solved"], h["units_from_cache"], h["retries"], h["timeout_kills"]) == (3, 2, 1, 1, 1)
     assert h["stopped_early"] is False and h["units"][1]["failed_stage_rows"] == [failed]
@@ -826,3 +826,60 @@ def test_exact_results_are_byte_exact_in_git(name):
     res = subprocess.run(["git", "check-attr", "text", f"docs/paper/results/week-2026-10-05-exact/{name}/exact_routes.json"],
                          cwd=REPO, capture_output=True, text=True)
     assert res.stdout.strip().endswith("text: unset"), res.stdout + res.stderr
+
+
+# ---------- WP-E4a polish: LF output and honest invocation record ----------
+class _FakeSession:
+    """An AMPL session stand-in: no solver is needed to reach the point where the runner writes its files."""
+    ampl_version, amplpy_version, location, solver_version = "fake", "fake", "fake", "fake"
+
+    def __init__(self, settings):
+        self.settings = settings
+
+    def open(self):
+        pass
+
+    def close(self):
+        pass
+
+
+def test_manifest_and_summary_are_written_with_lf_line_endings(runner, tmp_path, monkeypatch):
+    monkeypatch.setattr(runner.ab, "AmplSession", _FakeSession)
+    monkeypatch.setattr(runner.wg, "check_out_dir", lambda out, source: None)
+    monkeypatch.setattr(runner, "replay_rows", lambda ctx: [])
+    out = tmp_path / "out"
+    runner.main(["--wave-ids", "no-such-wave", "--no-highs-verify", "--out", str(out)])
+    for name in ("exact_manifest.json", "summary.json"):
+        data = (out / name).read_bytes()
+        assert data.endswith(b"\n") and b"\r" not in data, name
+
+
+def _two_units():
+    return [("large+doblo_cap3", 90, d, ("w",)) for d in ("2026-10-05", "2026-10-06")]
+
+
+def test_invocation_records_null_for_options_that_did_not_apply(runner, monkeypatch):
+    monkeypatch.setattr(runner, "_solve_unit", lambda unit, hv, peaks, sessions=None: _fake_unit_result())
+    monkeypatch.setattr(runner, "_run_worker", lambda unit, args, peaks, path: _fake_unit_result("worker"))
+    units = _two_units()
+    # serial: stop_on_error applies, the unit timeout (worker processes only) does not
+    args = runner.parse_args(["--unit-timeout", "100"])
+    res = runner._solve_units(units, args, set(), None, None, None)
+    inv = runner.build_run_history(args, res, units, wall_seconds=1.0, unit_seconds=1.0, cache_used=False)["invocations"][0]
+    assert inv["stop_on_error"] is True and inv["unit_timeout_seconds"] is None
+    args = runner.parse_args(["--no-stop-on-error"])
+    res = runner._solve_units(units, args, set(), None, None, None)
+    assert runner.build_run_history(args, res, units, wall_seconds=1.0, unit_seconds=1.0, cache_used=False)["invocations"][0]["stop_on_error"] is False
+    # parallel: the unit timeout applies, stop_on_error is ignored
+    args = runner.parse_args(["--jobs", "2", "--unit-timeout", "100"])
+    res = runner._solve_units(units, args, set(), None, None, None)
+    inv = runner.build_run_history(args, res, units, wall_seconds=1.0, unit_seconds=1.0, cache_used=False)["invocations"][0]
+    assert inv["stop_on_error"] is None and inv["unit_timeout_seconds"] == 100.0
+
+
+def test_help_says_when_stop_on_error_and_unit_timeout_apply_and_what_the_cache_keeps(runner, capsys):
+    with pytest.raises(SystemExit):
+        runner.parse_args(["--help"])
+    text = " ".join(capsys.readouterr().out.split())
+    assert "recorded as null" in text and "ignored when --jobs > 1" in text and "not applied in serial runs" in text
+    assert "still written to the cache" in text and "errors kept" in text

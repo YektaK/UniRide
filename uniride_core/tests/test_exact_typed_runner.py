@@ -454,6 +454,14 @@ def test_typed_option_run_writes_valid_manifest_csv_and_stored_routes(runner, tm
     assert manifest["solver"]["name"] == "gurobi" and manifest["verification_solver"]["name"] == "highs"
     assert manifest["python_provenance"]["uniride_core"] == "uniride_core/__init__.py"
     assert manifest["options"]["jobs"] == 1
+    history = manifest["run_history"]  # B2: one invocation, serial, every unit solved, no retry, no failed stage row
+    assert len(history["invocations"]) == 1 and history["invocations"][0]["jobs"] == 1
+    assert history["invocations"][0]["cache_used"] is False
+    assert history["units_planned"] == history["units_solved"] == len(history["units"]) == 2  # two dates
+    assert history["units_from_cache"] == 0 and history["retries"] == 0 and history["timeout_kills"] == 0
+    assert history["stopped_early"] is False and all(u["failed_stage_rows"] == [] for u in history["units"])
+    assert all(u["source"] == "solved" and u["attempts"] == 1 for u in history["units"])
+    assert "this invocation only" in manifest["total_wall_seconds_scope"]
     rows = list(csv.DictReader((out / "option_gaps.csv").open(encoding="utf-8")))
     ctx = runner.load_fleet_context(DOBLO)
     planned = sum(len(runner.option_plan(ctx, w)) for w in ctx.campaign.waves_for(90) if w.wave_id in ids)
@@ -476,7 +484,8 @@ def test_typed_option_run_writes_valid_manifest_csv_and_stored_routes(runner, tm
 
 
 @pytest.mark.requires_ampl
-def test_parallel_workers_give_the_same_results_as_a_serial_run(runner, tmp_path):
+def test_parallel_workers_give_the_same_results_as_a_serial_run(runner, tmp_path, monkeypatch):
+    monkeypatch.setattr(runner.wg, "_git_state", lambda out, repo=None: ("a" * 40, False))  # the cache needs a clean tree
     _require("gurobi")
     ids = _subset_ids(runner)
     common = ["--fleets", "large+doblo_cap3", "--rides", "90", "--wave-ids", ",".join(ids), "--no-highs-verify"]

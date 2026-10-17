@@ -141,7 +141,8 @@ def diff_json(a, b, path: str = "") -> list:
         for i, (x, y) in enumerate(zip(a, b)):
             out.extend(diff_json(x, y, f"{path}[{i}]"))
     elif isinstance(a, bool) or isinstance(b, bool) or a is None or b is None:
-        if a is not b and a != b:
+        # type-strict: True is not 1, False is not 0, None is not 0 (Python's == would equate them)
+        if type(a) is not type(b) or a != b:
             out.append(f"{path}: {a!r} (archive) vs {b!r} (replay)")
     elif a != b:
         out.append(f"{path}: {a!r} (archive) vs {b!r} (replay)")

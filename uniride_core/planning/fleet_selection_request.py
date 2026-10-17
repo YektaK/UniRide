@@ -65,7 +65,14 @@ class RouteFacts:
 
 
 def js_round(value: float) -> int:
-    """JavaScript ``Math.round``: halves round toward +infinity."""
+    """JavaScript ``Math.round``: halves round toward +infinity.
+
+    ``floor(x + 0.5)`` equals ``Math.round`` for every value this port sees (centi-minute grid values, minutes times
+    10^6). It differs from the ECMAScript definition only at the edges of binary floating point: for
+    ``x = 0.49999999999999994`` the sum ``x + 0.5`` rounds to 1.0 so this gives 1 where ``Math.round`` gives 0, and
+    for ``|x| >= 2**52`` (already an integer) the sum can round away from ``x``. Neither occurs for interval
+    endpoints (multiples of 0.01 below 2880 minutes) or route minutes of at most 2880.
+    """
     return math.floor(value + 0.5)
 
 

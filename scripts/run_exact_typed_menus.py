@@ -45,7 +45,6 @@ import os
 import platform
 import subprocess
 import sys
-import tempfile
 import time
 from pathlib import Path
 
@@ -437,8 +436,12 @@ def parse_args(argv):
     ap.add_argument("--jobs", type=int, default=1,
                     help="worker processes, one unit of work = (fleet, R, date); results are merged in a fixed order")
     ap.add_argument("--cache-dir", default="",
-                    help="per-unit result cache (default: a folder in the system temp dir named after the commit); a "
-                         "finished unit is never solved again, so an interrupted run resumes")
+                    help="per-unit result cache, OFF unless given. A cache file is used only when its stored key (sha256 of "
+                         "the full commit, solver and verification option strings and versions, AMPL version, source "
+                         "manifest sha256 values, unit, wave ids and the HiGHS flag) equals the current key; refused on a "
+                         "dirty tree. The published campaign does not use it.")
+    ap.add_argument("--stop-on-error", action=argparse.BooleanOptionalAction, default=True,
+                    help="serial runs: stop solving after the first unit with a blocking error (default: on)")
     ap.add_argument("--unit-timeout", type=float, default=7200.0,
                     help="wall seconds after which a stuck unit worker is killed and retried once (jobs > 1)")
     ap.add_argument("--worker-unit", default="", help=argparse.SUPPRESS)
@@ -506,6 +509,9 @@ def _run(args, names, out, gurobi, highs, gurobi_settings, highs_settings) -> in
         return 2
     peak_ids = {i for v in peaks.values() for i in v["wave_ids"]}
     commit, dirty = wg._git_state(out)
+    if args.cache_dir and dirty:
+        print("refused: --cache-dir is not allowed on a dirty working tree (the cache key needs a clean commit)", file=sys.stderr)
+        return 2
     want = {w for w in args.wave_ids.split(",") if w}
     rides_filter = [int(r) for r in args.rides.split(",") if r]
     t_start = time.perf_counter()
@@ -544,7 +550,16 @@ def _run(args, names, out, gurobi, highs, gurobi_settings, highs_settings) -> in
                 waves = waves[: args.limit]
             for date in sorted({w.service_date for w in waves}):
                 units.append((ctx.name, ride, date, tuple(w.wave_id for w in waves if w.service_date == date)))
-    results = _solve_units(units, args, peak_ids, gurobi, highs, commit)
+    solver_block = wg._solver_block(gurobi, gurobi_settings)
+    verification_block = None if highs is None else wg._solver_block(highs, highs_settings)
+    cache_ctx = None
+    if args.cache_dir:
+        cache_ctx = {"dir": args.cache_dir, "commit": commit, "dirty": dirty, "solver": solver_block,
+                     "verification": verification_block, "ampl_version": gurobi.ampl_version,
+                     "source_sha": {n: d["manifest_sha256"] for n, d in source_docs.items()}}
+    t_units = time.perf_counter()
+    results = _solve_units(units, args, peak_ids, gurobi, highs, cache_ctx)
+    unit_seconds = round(time.perf_counter() - t_units, 1)
     for res in results:
         if res.get("unavailable"):
             print(f"backend unavailable: {res['unavailable']}", file=sys.stderr)
@@ -571,8 +586,8 @@ def _run(args, names, out, gurobi, highs, gurobi_settings, highs_settings) -> in
         "source_campaigns": source_docs, "ga_labels": {c.name: c.ga_labels for c in ctxs},
         "matrix_sha256": matrix_sha, "matrix_slice_sha256": slice_sha, "peak_waves": peaks,
         "ampl": {"version": gurobi.ampl_version, "amplpy_version": gurobi.amplpy_version, "location": gurobi.location},
-        "solver": wg._solver_block(gurobi, gurobi_settings),
-        "verification_solver": None if highs is None else wg._solver_block(highs, highs_settings),
+        "solver": solver_block,
+        "verification_solver": verification_block,
         "enumeration": dict(protocol.ENUMERATION_CAPS, count_caps_fired=caps_fired),
         "waves": option_docs,
         "replay": {"cells": len(replay_all), "reproduced": len(replay_all) - len(failed), "labels": _count(replay_all, "label"),
@@ -583,6 +598,10 @@ def _run(args, names, out, gurobi, highs, gurobi_settings, highs_settings) -> in
         "options": {"highs_verify": bool(highs), "rides": rides_filter, "wave_ids": sorted(want), "limit": args.limit,
                     "fleets": names, "jobs": args.jobs},
         "total_wall_seconds": round(time.perf_counter() - t_start, 1),
+        "total_wall_seconds_scope": "this invocation only: replay gate plus the units solved in it (units read from a "
+                                    "cache are excluded; see run_history)",
+        "run_history": build_run_history(args, results, units, wall_seconds=round(time.perf_counter() - t_start, 1),
+                                         unit_seconds=unit_seconds, cache_used=bool(cache_ctx)),
         "blocking_errors": errors,
         "python_version": platform.python_version(), "host_os": ab.host_description(),
     }
@@ -633,7 +652,8 @@ def _worker_sessions(highs_verify: bool):
 def _solve_unit(unit, highs_verify: bool, peak_ids, sessions=None) -> dict:
     """All options of the waves of one (fleet, R, date); self-contained so it can run in a worker process."""
     fleet, ride, date, wave_ids = unit
-    out = {"rows": [], "option_docs": [], "errors": [], "route_docs": [], "matrix_sha": {}, "slice_sha": {}, "caps_fired": 0}
+    out = {"rows": [], "option_docs": [], "errors": [], "route_docs": [], "matrix_sha": {}, "slice_sha": {}, "caps_fired": 0,
+           "failed_stage_rows": []}
     try:
         gurobi, highs = sessions if sessions is not None else _worker_sessions(highs_verify)
     except ab.ExactBackendUnavailable as exc:
@@ -677,6 +697,10 @@ def _solve_unit(unit, highs_verify: bool, peak_ids, sessions=None) -> dict:
             row = ev["row"]
             out["rows"].append(row)
             out["errors"].extend(ev["errors"])
+            for solver_name, stage_rows in (("gurobi", ev["stages"]), ("highs", ev["highs_stages"])):
+                out["failed_stage_rows"].extend(
+                    {"fleet": ctx.name, "wave_id": wave.wave_id, "option": option_id, "solver": solver_name, **sr}
+                    for sr in stage_rows if sr["status"] == "rejected" or sr["stop_reason"] == "solver_failure")
             out["option_docs"].append({"fleet": ctx.name, "option": option_id, "kind": kind, "quota": quota,
                                        "wave_id": wave.wave_id, "service_date": wave.service_date, "R": ride, "peak": peak,
                                        "model": info["model"], "columns": info["columns"], "labels": info["labels"],
@@ -691,61 +715,164 @@ def _solve_unit(unit, highs_verify: bool, peak_ids, sessions=None) -> dict:
     return out
 
 
-def _cache_path(args, commit: str, unit) -> Path:
-    base = Path(args.cache_dir) if args.cache_dir else Path(tempfile.gettempdir()) / f"uniride_wp_e4a_cache_{commit[:12]}"
+def cache_key(unit, *, commit: str, dirty: bool, solver: dict, verification, ampl_version, source_sha: dict,
+              highs_verify: bool) -> str:
+    """sha256 identifying everything a unit result depends on (a cache file is used only when its key equals this)."""
+    payload = {"commit": commit, "dirty": bool(dirty), "solver": solver, "verification": verification,
+               "ampl_version": ampl_version, "source_sha": dict(sorted(source_sha.items())),
+               "unit": [unit[0], unit[1], unit[2]], "wave_ids": list(unit[3]), "highs_verify": bool(highs_verify)}
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+
+
+def _cache_file(cache_ctx: dict, unit, key: str) -> Path:
+    base = Path(cache_ctx["dir"])
     base.mkdir(parents=True, exist_ok=True)
-    key = hashlib.sha256(json.dumps([list(unit[:3]), list(unit[3]), bool(args.highs_verify)]).encode("utf-8")).hexdigest()[:10]
-    return base / f"{unit[0].replace('+', '_')}_R{unit[1]}_{unit[2]}_{key}.json"
+    return base / f"{unit[0].replace('+', '_')}_R{unit[1]}_{unit[2]}_{key[:16]}.json"
+
+
+def _cache_key_for(cache_ctx: dict, unit, highs_verify: bool) -> str:
+    return cache_key(unit, commit=cache_ctx["commit"], dirty=cache_ctx["dirty"], solver=cache_ctx["solver"],
+                     verification=cache_ctx["verification"], ampl_version=cache_ctx["ampl_version"],
+                     source_sha=cache_ctx["source_sha"], highs_verify=highs_verify)
+
+
+def _cache_read(path: Path, key: str):
+    """The cached result, or None when the file is missing, unreadable or was written under another key."""
+    if not path.exists():
+        return None
+    try:
+        entry = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(entry, dict) or entry.get("cache_key") != key or "result" not in entry:
+        return None
+    return entry["result"]
+
+
+def _kill_tree(proc) -> None:
+    """Kill the worker process this runner started (by its own PID) and its children; never by image name."""
+    if os.name == "nt":
+        subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], capture_output=True)
+    else:
+        proc.kill()
+
+
+def _failed_unit(unit, why: str, run: dict) -> dict:
+    return {"unavailable": None, "failed": f"unit {unit[:3]}: {why}", "rows": [], "option_docs": [],
+            "errors": [f"unit {unit[:3]}: {why}"], "route_docs": [], "matrix_sha": {}, "slice_sha": {}, "caps_fired": 0,
+            "failed_stage_rows": [], "unit_run": run}
 
 
 def _run_worker(unit, args, peak_ids, path: Path) -> dict:
-    """Solve one unit in a subprocess with a wall limit; a stuck worker is killed (with its AMPL children) and retried once."""
+    """Solve one unit in a subprocess with a wall limit.
+
+    A worker that exceeds the limit or crashes is killed and relaunched ONCE with identical settings (a crash/hang
+    relaunch, not a different configuration); attempts and timeout kills are returned in ``unit_run``.
+    """
     cmd = [sys.executable, str(Path(__file__).resolve()), "--worker-unit", json.dumps([unit[0], unit[1], unit[2], list(unit[3])]),
            "--worker-peaks", json.dumps(sorted(peak_ids)), "--worker-out", str(path),
            "--highs-verify" if args.highs_verify else "--no-highs-verify"]
+    run = {"attempts": 0, "timeout_kills": 0, "exit_codes": []}
     last = "unit worker failed"
     for attempt in (1, 2):
+        run["attempts"] = attempt
         proc = subprocess.Popen(cmd)
         try:
             code = proc.wait(timeout=args.unit_timeout)
         except subprocess.TimeoutExpired:
-            subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], capture_output=True) if os.name == "nt" else proc.kill()
+            _kill_tree(proc)
             proc.wait()
+            run["timeout_kills"] += 1
+            run["exit_codes"].append("timeout")
             last = f"unit worker exceeded {args.unit_timeout:.0f} s (attempt {attempt})"
             print(f"{last}: {unit[:3]}", file=sys.stderr, flush=True)
             continue
+        run["exit_codes"].append(code)
         if code == 3:
-            return {"unavailable": f"unit {unit[:3]}: AMPL backend unavailable"}
-        if code == 0 and path.exists():
-            return json.loads(path.read_text(encoding="utf-8"))
+            return {"unavailable": f"unit {unit[:3]}: AMPL backend unavailable", "unit_run": run}
+        if code == 0 and Path(path).exists():
+            res = json.loads(Path(path).read_text(encoding="utf-8"))
+            res["unit_run"] = run
+            return res
         last = f"unit worker exited with code {code} (attempt {attempt})"
-    return {"unavailable": None, "failed": f"unit {unit[:3]}: {last}", "rows": [], "option_docs": [], "errors": [f"unit {unit[:3]}: {last}"],
-            "route_docs": [], "matrix_sha": {}, "slice_sha": {}, "caps_fired": 0}
+    return _failed_unit(unit, last, run)
 
 
-def _solve_units(units, args, peak_ids, gurobi, highs, commit: str = "nocommit") -> list:
+def _solve_units(units, args, peak_ids, gurobi, highs, cache_ctx=None) -> list:
     """Results of every unit in the order of ``units`` (independent of the number of worker processes).
 
-    Every finished unit is cached on disk (``--cache-dir``); a cached unit is read, never solved again.
+    ``cache_ctx`` is None (no cache: every unit is solved) or the key ingredients of ``--cache-dir``; a cached unit is
+    used only when its stored key equals the current key. Every result carries ``unit_run``: its source (``solved`` or
+    ``cache``), attempts and timeout kills.
     """
-    paths = [_cache_path(args, commit, u) for u in units]
-    results: list = [json.loads(p.read_text(encoding="utf-8")) if p.exists() else None for p in paths]
+    keys = [None if cache_ctx is None else _cache_key_for(cache_ctx, u, bool(args.highs_verify)) for u in units]
+    paths = [None if cache_ctx is None else _cache_file(cache_ctx, u, k) for u, k in zip(units, keys)]
+    results: list = [None] * len(units)
+    for i in range(len(units)):
+        if paths[i] is not None:
+            hit = _cache_read(paths[i], keys[i])
+            if hit is not None:
+                hit["unit_run"] = dict(hit.get("unit_run") or {}, source="cache")
+                results[i] = hit
     todo = [i for i, r in enumerate(results) if r is None]
-    if not todo:
-        return results
+
+    def finish(i, res, seconds):
+        res["unit_run"] = dict(res.get("unit_run") or {"attempts": 1, "timeout_kills": 0}, source="solved",
+                               wall_seconds=round(seconds, 1), jobs=args.jobs)
+        results[i] = res
+        if paths[i] is not None and not res.get("unavailable") and not res.get("failed"):
+            paths[i].write_text(json.dumps({"cache_key": keys[i], "result": res}, sort_keys=True), encoding="utf-8")
+
+    stop_at = None
     if args.jobs <= 1 or len(todo) <= 1:
         for i in todo:
-            results[i] = _solve_unit(units[i], bool(highs), peak_ids, sessions=(gurobi, highs))
-            if not results[i].get("unavailable"):
-                paths[i].write_text(json.dumps(results[i], sort_keys=True), encoding="utf-8")
-        return results
+            t0 = time.perf_counter()
+            res = _solve_unit(units[i], bool(highs), peak_ids, sessions=(gurobi, highs))
+            finish(i, res, time.perf_counter() - t0)
+            if res.get("unavailable"):
+                stop_at = i
+                break
+            if res.get("errors") and args.stop_on_error:
+                print(f"stopping after unit {units[i][:3]}: blocking error(s); remaining units are not solved", file=sys.stderr, flush=True)
+                stop_at = i
+                break
+        return results if stop_at is None else results[: stop_at + 1]
     from concurrent.futures import ThreadPoolExecutor
+    import tempfile
+
+    def one(i):
+        t0 = time.perf_counter()
+        with tempfile.TemporaryDirectory(prefix="uniride_unit_") as tmp:
+            res = _run_worker(units[i], args, peak_ids, Path(tmp) / "unit.json")
+        return i, res, time.perf_counter() - t0
 
     with ThreadPoolExecutor(max_workers=min(args.jobs, len(todo))) as pool:
-        futures = {i: pool.submit(_run_worker, units[i], args, peak_ids, paths[i]) for i in todo}
-        for i, f in futures.items():
-            results[i] = f.result()
+        for i, res, seconds in pool.map(one, todo):
+            finish(i, res, seconds)
     return results
+
+
+def build_run_history(args, results, units, *, wall_seconds: float, unit_seconds: float, cache_used: bool) -> dict:
+    """What happened in this invocation, per unit: source, attempts, timeout kills, and every failed stage row verbatim."""
+    unit_rows = []
+    for unit, res in zip(units, results):
+        run = res.get("unit_run") or {}
+        unit_rows.append({"unit": f"{unit[0]}|R{unit[1]}|{unit[2]}", "waves": len(unit[3]), "source": run.get("source", "solved"),
+                          "attempts": run.get("attempts", 1), "timeout_kills": run.get("timeout_kills", 0),
+                          "exit_codes": run.get("exit_codes", []), "wall_seconds": run.get("wall_seconds"),
+                          "failed_stage_rows": res.get("failed_stage_rows", []), "failed": res.get("failed")})
+    return {
+        "invocations": [{"jobs": args.jobs, "unit_timeout_seconds": args.unit_timeout, "cache_used": cache_used,
+                         "stop_on_error": bool(args.stop_on_error), "wall_seconds": wall_seconds,
+                         "unit_phase_wall_seconds": unit_seconds}],
+        "units_planned": len(units), "units_reported": len(results),
+        "stopped_early": len(results) < len(units),
+        "units_solved": sum(r["source"] == "solved" for r in unit_rows),
+        "units_from_cache": sum(r["source"] == "cache" for r in unit_rows),
+        "retries": sum(max(0, r["attempts"] - 1) for r in unit_rows),
+        "timeout_kills": sum(r["timeout_kills"] for r in unit_rows),
+        "units": unit_rows,
+    }
 
 
 def _count(items, key) -> dict:

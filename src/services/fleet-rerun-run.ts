@@ -62,6 +62,15 @@ const stable = (value: unknown): string => JSON.stringify(value, (_key, item) =>
   item && typeof item === "object" && !Array.isArray(item)
     ? Object.fromEntries(Object.entries(item as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : 1))) : item);
 
+/** Parses the last line of the capture script's output; a capture without python_provenance (or without the seeds) fails at the start of the run, not at its end. */
+export function parseSolverCapture(text: string): RerunSolverCapture {
+  try {
+    const parsed = JSON.parse(text.trim().split(/\r?\n/).at(-1)!);
+    if (!parsed?.ga || !Number.isInteger(parsed.ga.seed) || !Number.isInteger(parsed.hf?.seed) || !parsed.python_provenance) throw new Error();
+    return parsed;
+  } catch { throw new Error("Could not capture local solver configuration; check the Python runtime locally."); }
+}
+
 export async function runFleetRerun(deps: RerunDeps, args: FleetArgs): Promise<RerunResult> {
   const { fs, log } = deps;
   const pins = deps.pins ?? PINNED;

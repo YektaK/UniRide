@@ -114,26 +114,29 @@ def scenario_files(directory, date, ride):
 def outcome_of(scenario):
     selection = scenario.get("selection") or {}
     return {
+        # scenario.cars is the assignment's minimumCount; selection.cars is the CP-SAT stage-1 value: both are compared
         "status": scenario.get("status"), "cars": scenario.get("cars"), "largeVehicles": scenario.get("largeVehicles"),
-        "selection.status": selection.get("status"), "waves": sorted((selection.get("optionByWave") or {}).keys()),
+        "selection.cars": selection.get("cars"), "selection.status": selection.get("status"), "waves": sorted((selection.get("optionByWave") or {}).keys()),
     }
 
 
 def h06_improvement(old, new):
-    """True only for a change that H06 explains on an UNCHANGED menu, with both runs optimal and equal cars.
+    """True only for a change that H06 explains, with both runs optimal, equal cars and every archived selected option unchanged in the re-run menu.
 
     DECISION_LOG H06 (2026-10-13) changed the day-selection order (typed_day_selection.py):
         before H06: (cars, car-minutes, total vehicle-minutes, option indices)
         after  H06: (cars, total vehicle-minutes, car-minutes, option indices)
-    Same menu, same cars. The old run minimised car-minutes first, so the old selection has the least car-minutes among
+    Same cars, archived selected options unchanged. The old run minimised car-minutes first, so the old selection has the least car-minutes among
     the equal-cars selections and, among those, the least total. The new run minimises total first. A genuinely different
     selection is therefore possible in exactly two ways:
       1. total vehicle-minutes strictly lower AND car-minutes strictly higher: the new order trades car-minutes for total
          (the old order would never have accepted the higher car-minutes);
       2. both values equal: only the option-index tie-break (stage 4) differs.
-    The other combinations cannot come from H06 on an unchanged menu, because the OLD order would already have chosen the
+    The other combinations cannot come from H06 when the archived selected options are unchanged, because the OLD order would already have chosen the
     new selection: total lower with car-minutes equal or lower, or total equal with car-minutes lower (the old order prefers
     lower car-minutes first). A total that is higher can never win under the new order. All of these are unexplained.
+    Limit: only the archived SELECTED options can be compared. Options that were never selected cannot be, so the new
+    selection may use a new or changed option. H06 is then a necessary cause of the change, not proven to be the only one.
     Both carMinutes values and both totals are required; a missing value is unexplained.
     """
     eps = 1e-6

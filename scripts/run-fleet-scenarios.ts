@@ -48,7 +48,7 @@ async function main() {
   Object.assign(process.env, buildChildEnv(process.env, shared.key));
 
   // Import only after loading environment: these modules capture configuration at import time.
-  const [{ runFleetRerun, RerunAbort }, { getSupabaseAdmin }, { optimizerFetch }] = await Promise.all([
+  const [{ runFleetRerun, RerunAbort, parseSolverCapture }, { getSupabaseAdmin }, { optimizerFetch }] = await Promise.all([
     import("../src/services/fleet-rerun-run"), import("../src/lib/supabase-admin"), import("../src/lib/optimizer-server"),
   ]);
   const python = resolvePythonBin(process.env, root);
@@ -58,9 +58,7 @@ async function main() {
       const text = execFileSync(python, [path.join(root, "scripts", "capture_fleet_solver_config.py")], {
         cwd: root, env: process.env, windowsHide: true, timeout: 60_000, stdio: ["ignore", "pipe", "pipe"],
       }).toString();
-      const parsed = JSON.parse(text.trim().split(/\r?\n/).at(-1)!);
-      if (!parsed?.ga || !Number.isInteger(parsed.ga.seed) || !Number.isInteger(parsed.hf?.seed)) throw new Error();
-      return parsed;
+      return parseSolverCapture(text);
     } catch { throw new Error("Could not capture local solver configuration; check the Python runtime locally."); }
   };
   const git = (...gitArgs: string[]) => execFileSync("git", gitArgs, { cwd: root, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] }).toString();

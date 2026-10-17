@@ -53,7 +53,7 @@ The session wrapper puts the run worktree first on `PYTHONPATH` (the project ven
 
 Afterwards the results are copied (not moved by git) into a results branch of the main repository for merging; the run worktree is then removed (`cmd /c rmdir <run-worktree>\node_modules`, then `git worktree remove <run-worktree>`). Never recursive-delete a worktree that holds the junction.
 
-A rule (e) second run is **not** a campaign: it is written with `--dates <one date> --allow-subset-dates`, its manifest says `run_kind: rule_e_second_run` and `parameters.allow_subset_dates: true`, and it contains a one-line README. Owner decision 2026-10-17: it is made for large+sedan only. It is copied to `<campaign directory>/rule_e_second_run_<date>/` (never to `docs/paper/results/` as a sibling campaign), and `scripts/verify_fleet_rerun.py` refuses it as `--rerun-dir`.
+A rule (e) second run is **not** a campaign: it is written with `--dates <one date> --allow-subset-dates`, its manifest says `run_kind: rule_e_second_run` and `parameters.allow_subset_dates: true`, and it contains a one-line README. Owner decision 2026-10-17: it is made for large+sedan only, in the worktree `C:\wt\e10-e2`. It is copied to `<campaign directory>/rule_e_second_run_<date>/` (never to `docs/paper/results/` as a sibling campaign), and `scripts/verify_fleet_rerun.py` refuses it as `--rerun-dir`.
 
 ## What the preflight proves, and what it cannot
 
@@ -75,12 +75,14 @@ The session wrapper starts the optimizer with `UNIRIDE_RATE_LIMIT_WINDOW_SECONDS
 ## Acceptance (run after the campaign)
 
 ```text
-python scripts/verify_fleet_rerun.py --rerun-dir <this directory> --single-archive docs/paper/results/week-2026-10-05-4sw5so \
+<main>\.venv-jit\Scripts\python.exe scripts/verify_fleet_rerun.py --rerun-dir <this directory> --single-archive docs/paper/results/week-2026-10-05-4sw5so \
   --historical-dir <old fleet archive of the same campaign> --double-run-dir <this directory>/rule_e_second_run_<date> --base <pinned commit>
 ```
 
+The second run is made in the worktree `C:\wt\e10-e2`; its manifest says `run_kind: rule_e_second_run`. `--base <pinned commit>` is meaningful only when the verifier runs on the results branch (a checkout whose history contains the pinned commit and the copied results); in a run worktree omit it.
+
 Rule (d) base routes, selected-option categories, rule (e) determinism of one full day run twice, rule (g) historical archives untouched. Result: `<pass/fail and the printed report>`.
 
-The H06 category is narrow on purpose. With the same menu, both days optimal and equal cars, the verifier accepts a changed selection only when the total vehicle-minutes are lower and the car-minutes higher (the order change of H06: before it car-minutes ranked before total vehicle-minutes), or when both are equal (an option-index tie). Every other change is `selection_changed_unexplained` and fails.
+The H06 category is narrow on purpose. With both days optimal, equal cars and every archived selected option unchanged in the re-run menu, the verifier accepts a changed selection only when the total vehicle-minutes are lower and the car-minutes higher (the order change of H06: before it car-minutes ranked before total vehicle-minutes), or when both are equal (an option-index tie). Every other change is `selection_changed_unexplained` and fails. Limit: the verifier compares only the archived selected options; options that were never selected cannot be compared, so the new selection may use a new or changed option. H06 is then a necessary cause of the change, not proven to be the only one.
 
 `scenario_outcome_differs` is also fail-closed. A failure caused only by `largeVehicles` or by the assignment's `cars` needs **manual review**, not an automatic accept: they are not in the CP-SAT objective, so a genuine H06 reorder of the selection can change them. The rule stays fail-closed; a reviewer decides, case by case, and records the decision.

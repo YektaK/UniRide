@@ -12,7 +12,7 @@ For one typed fleet archive (``week-2026-10-05-fleet-rerun-*``) and every (date,
    ``car_minutes``, ``total_minutes`` and the ``selection`` with its labels.
 
 Offline: reads only the archive directory (never the DB or HTTP). A mismatch is reported, never tolerated or
-special-cased. Labels: ``match``, ``match_not_optimal`` (identical, CP-SAT not optimal in the archive and the
+special-cased. Labels: ``match``, ``match_infeasible_for_L``, ``match_not_optimal`` (identical, CP-SAT not optimal in the archive and the
 replay), ``request_mismatch``, ``response_mismatch``, ``archived_http_error``, ``router_refused``.
 
 Run: python scripts/exact_typed_replay.py <fleet archive dir>
@@ -34,7 +34,7 @@ for _p in (str(REPO / "optimizer_api"), str(REPO)):
 from uniride_core.planning import fleet_selection_request as fsr  # noqa: E402
 
 COMPARED_FIELDS = ("status", "cars", "large_peak", "car_minutes", "total_minutes")
-MATCH_LABELS = ("match", "match_not_optimal")
+MATCH_LABELS = ("match", "match_infeasible_for_L", "match_not_optimal")
 
 
 def _load_loader():
@@ -202,8 +202,10 @@ def replay_loaded_cell(fleet: Fleet, cell: dict) -> dict:
         row["label"] = "request_mismatch"
     elif row["response_diffs"]:
         row["label"] = "response_mismatch"
+    elif row["archived_status"] == "infeasible_for_L":
+        row["label"] = "match_infeasible_for_L"  # proven by the day model (a forced-large demand exceeds L)
     elif row["archived_status"] != "optimal":
-        row["label"] = "match_not_optimal"
+        row["label"] = "match_not_optimal"  # identical, but CP-SAT stopped on its limit or was indeterminate
     return row
 
 

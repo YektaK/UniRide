@@ -110,6 +110,6 @@ def test_full_replay_on_the_real_wp_e10_archive(replay, directory, expected_cell
     fleet = replay.load_fleet(directory)
     rows = replay.replay_fleet(fleet)
     assert len(rows) == expected_cells
-    failures = [r for r in rows if r["label"] not in ("match", "match_not_optimal")]
+    failures = [r for r in rows if r["label"] not in replay.MATCH_LABELS]
     assert failures == [], [(r["date"], r["R"], r["L"], r["label"], r["request_diffs"][:2], r["response_diffs"][:2]) for r in failures]
     assert all(r["solver_version"] == "9.15.6755" for r in rows)

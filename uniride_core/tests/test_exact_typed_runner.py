@@ -77,6 +77,14 @@ def _typed_routes(option):
     return [(r["vehicleType"], tuple(r["studentIds"])) for r in option["routes"]]
 
 
+def _ride(wave, seq) -> int:
+    """Independent ride minutes: pickup = tour minus its first arc, dropoff = tour minus its closing arc."""
+    index = {occ: i + 1 for i, occ in enumerate(wave.occurrence_ids)}
+    path = [0] + [index[o] for o in seq] + [0]
+    arcs = [wave.matrix[x][y] for x, y in zip(path, path[1:])]
+    return sum(arcs[1:]) if wave.direction == "pickup" else sum(arcs[:-1])
+
+
 def _fake_sp(wave, typed_routes, minimize, *, status="optimal", k_lb=None, d_lb=None, d_lb_free=None, d=None, k=None,
              solver="gurobi", peak=False):
     """An ``SPSolveResult`` standing in for the typed solver (no AMPL)."""
@@ -85,7 +93,7 @@ def _fake_sp(wave, typed_routes, minimize, *, status="optimal", k_lb=None, d_lb=
     true_k, true_d, _ = cert.recompute_typed_objective(wave, typed_routes, minimize)
     k = true_k if k is None else k
     d = true_d if d is None else d
-    routes = tuple(ExpandedRoute(t, i, 0, tuple(s), cert.tour_cost(wave, s), 0, cert.tour_cost(wave, s))
+    routes = tuple(ExpandedRoute(t, i, 0, tuple(s), cert.tour_cost(wave, s), _ride(wave, s), cert.tour_cost(wave, s))
                    for i, (t, s) in enumerate(typed_routes))
     s1 = StageResult("stage1", "optimal", "optimal", objective=k, bound=float(k), bound_ceil=k, bound_source="solver",
                      wall_seconds=0.1)
@@ -118,8 +126,9 @@ def test_option_plan_is_base_then_quota_range_min_maxl_legs_4(runner, ls_ctx, do
 
 def test_plan_matches_the_ga_menu_of_the_archive(runner, ls_ctx, doblo_ctx):
     for ctx, directory in ((ls_ctx, LARGE_SEDAN), (doblo_ctx, DOBLO)):
-        _, menu = _archive(directory)
+        menus = {}
         for wave in ctx.campaign.waves_for(90):
+            menu = menus.setdefault(wave.service_date, _archive(directory, wave.service_date)[1])
             archived = [o["optionId"] for o in next(w for w in menu["waves"] if w["waveId"] == wave.wave_id)["options"]]
             assert [o for o, _, _ in runner.option_plan(ctx, wave)] == archived
 
@@ -160,7 +169,7 @@ def test_base_option_uses_the_single_type_path(runner, ls_ctx):
     arcs_doc, menu = _archive(LARGE_SEDAN)
     wave = _wave(ls_ctx, PEAK)
     opt = _option(menu, PEAK, "base")
-    sp = _fake_sp(wave, [("large", tuple(r["studentIds"])) for r in opt["routes"]], None, peak=True)
+    sp = _fake_sp(wave, [("large", tuple(r["studentIds"])) for r in opt["routes"]], None, peak=True, k=len(opt["routes"]))
     ev = _eval(runner, ls_ctx, wave, "base", "base", None, opt, arcs_doc, sp)
     assert ev["errors"] == [], ev["errors"]
     assert ev["row"]["k_kind"] == "K" and ev["row"]["K_GA"] == len(opt["routes"]) and ev["row"]["quota"] is None

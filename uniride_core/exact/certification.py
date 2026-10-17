@@ -124,3 +124,84 @@ def objective_mismatches(k: int, d: int, solver_k: Optional[float], solver_d: Op
         elif abs(float(mine) - float(theirs)) > tol:
             problems.append(f"{name}: recomputed {mine} differs from solver {theirs}")
     return problems
+
+
+# ---------------------------------------------------------------- typed path (WP-E4a, design section 3)
+def typed_request_payload(wave, types: Sequence, *, minimize_type: str, quota: Optional[Tuple[str, int]] = None) -> dict:
+    """The operational ``ga_split_hf`` request of ``wave``: ``vehicle_types`` (pools, ``total_capacity``, own
+    limits, ``max_routes`` on the quota type) and ``minimize_type``, as ``fleet-scenario-run.ts`` builds it.
+
+    ``types`` are ``VehicleTypeSpec``-like objects; ``quota`` is ``(type_id, q)`` or None. No ``vehicles``
+    list (mutually exclusive with ``vehicle_types``).
+    """
+    specs = []
+    for t in types:
+        spec = {"type_id": t.type_id, "sw_capacity": t.sw_capacity, "so_capacity": t.so_capacity}
+        if t.total_capacity is not None:
+            spec["total_capacity"] = t.total_capacity
+        if t.ride_limit_minutes is not None:
+            spec["max_ride_time"] = t.ride_limit_minutes
+        if t.tour_limit_minutes is not None:
+            spec["max_travel_time"] = t.tour_limit_minutes
+        if quota is not None and t.type_id == quota[0]:
+            spec["max_routes"] = quota[1]
+        specs.append(spec)
+    return {
+        "algorithm": "ga_split_hf", "mode": "sandbox", "direction": wave.direction,
+        "target_time": _clock(wave.anchor_minutes), "expected_matrix_sha256": wave.declared_snapshot_sha256,
+        "use_time_windows": False, "is_asymmetric": True,
+        "max_travel_time": wave.max_tour_minutes, "max_ride_time": wave.max_ride_minutes,
+        "depot": {"id": wave.depot_code, **DEPOT_COORDINATES},
+        "students": [{"id": s.id, "occurrence_id": s.occurrence_id, "name": s.id, "location_code": s.location_code,
+                      "disability_type": s.disability_type} for s in _students(wave)],
+        "vehicle_types": specs, "minimize_type": minimize_type,
+    }
+
+
+def typed_response_payload(wave, routes: Iterable, *, algorithm_used: str = "exact_sp", success: bool = True,
+                           type_ids: Optional[Sequence[str]] = None) -> dict:
+    """Wrap ``(type_id, occurrence_ids)`` routes in the operational response with ``vehicle_type`` and ``fleet_mix``."""
+    routes = [(t, tuple(seq)) for t, seq in routes]
+    out = response_payload(wave, [seq for _, seq in routes], algorithm_used=algorithm_used, success=success)
+    for route, (type_id, _) in zip(out["routes"], routes):
+        route["vehicle_type"] = type_id
+    ids = list(type_ids) if type_ids is not None else sorted({t for t, _ in routes})
+    mix = {t: 0 for t in ids}
+    for type_id, _ in routes:
+        mix[type_id] = mix.get(type_id, 0) + 1
+    out["fleet_mix"] = mix
+    return out
+
+
+def ga_option_response_payload(wave, option: dict, *, typed: bool, algorithm_used: Optional[str] = None,
+                               type_ids: Optional[Sequence[str]] = None) -> dict:
+    """An archived WP-E10 menu option (``<date>_R<R>.menu_options.json``) as an operational response.
+
+    The optimizer's own steps are kept. ``typed`` adds each route's ``vehicleType`` and the ``fleet_mix``.
+    """
+    routes = []
+    for r in option["routes"]:
+        body = {"vehicle_id": r["vehicleId"],
+                "route_details": [{"location1": s["location1"], "location2": s["location2"],
+                                   "duration": s["duration"], "distance": 0} for s in r["steps"]],
+                "total_duration_minutes": r["totalDurationMinutes"], "total_distance_km": 0,
+                "sw_count": r["swCount"], "so_count": r["soCount"], "student_ids": list(r["studentIds"])}
+        if typed:
+            body["vehicle_type"] = r["vehicleType"]
+        routes.append(body)
+    out = {"algorithm_used": algorithm_used or ("ga_split_hf" if typed else "ga_split"),
+           "success": bool(option.get("success")), "routes": routes, "total_vehicles": len(routes),
+           "total_duration_minutes": option.get("totalDurationMinutes") or sum(r["total_duration_minutes"] for r in routes)}
+    if typed:
+        ids = list(type_ids) if type_ids is not None else sorted({r["vehicle_type"] for r in routes})
+        mix = {t: 0 for t in ids}
+        for r in routes:
+            mix[r["vehicle_type"]] = mix.get(r["vehicle_type"], 0) + 1
+        out["fleet_mix"] = mix
+    return out
+
+
+def recompute_typed_objective(wave, routes: Iterable, minimize_type: str) -> Tuple[int, int, int]:
+    """``(K_m, D, route count)`` in integers: routes of the minimised type, summed tour minutes, all routes."""
+    kept = [(t, tuple(seq)) for t, seq in routes if tuple(seq)]
+    return (sum(1 for t, _ in kept if t == minimize_type), sum(tour_cost(wave, seq) for _, seq in kept), len(kept))

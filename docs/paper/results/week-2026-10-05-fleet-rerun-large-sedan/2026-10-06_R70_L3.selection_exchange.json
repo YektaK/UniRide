@@ -1,0 +1,451 @@
+{
+  "format": "fleet_archive_v2",
+  "kind": "selection_exchange",
+  "serviceDate": "2026-10-06",
+  "rideLimit": 70,
+  "largeLimit": 3,
+  "occurrenceLabels": {
+    "2026-10-06:pickup:Sw5~1": "Sw5",
+    "2026-10-06:dropoff:Sw5~1": "Sw5",
+    "2026-10-06:pickup:Sw3~1": "Sw3",
+    "2026-10-06:dropoff:Sw3~1": "Sw3",
+    "2026-10-06:pickup:Sw2~1": "Sw2",
+    "2026-10-06:dropoff:Sw2~1": "Sw2",
+    "2026-10-06:pickup:So10~1": "So10",
+    "2026-10-06:dropoff:So10~1": "So10",
+    "2026-10-06:pickup:So1~1": "So1",
+    "2026-10-06:dropoff:So1~1": "So1",
+    "2026-10-06:pickup:So12~1": "So12",
+    "2026-10-06:dropoff:So12~1": "So12",
+    "2026-10-06:pickup:So11~1": "So11",
+    "2026-10-06:dropoff:So11~1": "So11",
+    "2026-10-06:pickup:So4~1": "So4",
+    "2026-10-06:dropoff:So4~1": "So4",
+    "2026-10-06:pickup:So2~1": "So2",
+    "2026-10-06:dropoff:So2~1": "So2",
+    "2026-10-06:pickup:Sw9~1": "Sw9",
+    "2026-10-06:dropoff:Sw9~1": "Sw9",
+    "2026-10-06:pickup:Sw8~1": "Sw8",
+    "2026-10-06:dropoff:Sw8~1": "Sw8",
+    "2026-10-06:pickup:Sw7~1": "Sw7",
+    "2026-10-06:dropoff:Sw7~1": "Sw7",
+    "2026-10-06:pickup:Sw1~1": "Sw1",
+    "2026-10-06:dropoff:Sw1~1": "Sw1",
+    "2026-10-06:pickup:So19~1": "So19",
+    "2026-10-06:dropoff:So19~1": "So19",
+    "2026-10-06:pickup:So17~1": "So17",
+    "2026-10-06:dropoff:So17~1": "So17",
+    "2026-10-06:pickup:So16~1": "So16",
+    "2026-10-06:dropoff:So16~1": "So16",
+    "2026-10-06:pickup:So15~1": "So15",
+    "2026-10-06:dropoff:So15~1": "So15",
+    "2026-10-06:pickup:So14~1": "So14",
+    "2026-10-06:dropoff:So14~1": "So14",
+    "2026-10-06:pickup:So13~1": "So13",
+    "2026-10-06:dropoff:So13~1": "So13",
+    "2026-10-06:pickup:So7~1": "So7",
+    "2026-10-06:dropoff:So7~1": "So7",
+    "2026-10-06:pickup:So6~1": "So6",
+    "2026-10-06:dropoff:So6~1": "So6"
+  },
+  "request": {
+    "time_scale": 100,
+    "waves": [
+      {
+        "wave_id": "2026-10-06:pickup:525",
+        "options": [
+          {
+            "option_id": "base",
+            "baseline": true,
+            "routes": [
+              {
+                "start": 42300,
+                "end": 52500,
+                "minutes": 102,
+                "large_ok": true,
+                "car_ok": false
+              },
+              {
+                "start": 49600,
+                "end": 52500,
+                "minutes": 29,
+                "large_ok": true,
+                "car_ok": true
+              },
+              {
+                "start": 41200,
+                "end": 52500,
+                "minutes": 113,
+                "large_ok": true,
+                "car_ok": true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "wave_id": "2026-10-06:dropoff:795",
+        "options": [
+          {
+            "option_id": "base",
+            "baseline": true,
+            "routes": [
+              {
+                "start": 79500,
+                "end": 84500,
+                "minutes": 50,
+                "large_ok": true,
+                "car_ok": true
+              },
+              {
+                "start": 79500,
+                "end": 87100,
+                "minutes": 76,
+                "large_ok": true,
+                "car_ok": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "wave_id": "2026-10-06:pickup:885",
+        "options": [
+          {
+            "option_id": "base",
+            "baseline": true,
+            "routes": [
+              {
+                "start": 80200,
+                "end": 88500,
+                "minutes": 83,
+                "large_ok": true,
+                "car_ok": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "wave_id": "2026-10-06:dropoff:1095",
+        "options": [
+          {
+            "option_id": "base",
+            "baseline": true,
+            "routes": [
+              {
+                "start": 109500,
+                "end": 119800,
+                "minutes": 103,
+                "large_ok": true,
+                "car_ok": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "wave_id": "2026-10-06:dropoff:735",
+        "options": [
+          {
+            "option_id": "base",
+            "baseline": true,
+            "routes": [
+              {
+                "start": 73500,
+                "end": 76400,
+                "minutes": 29,
+                "large_ok": true,
+                "car_ok": true
+              },
+              {
+                "start": 73500,
+                "end": 83600,
+                "minutes": 101,
+                "large_ok": true,
+                "car_ok": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "wave_id": "2026-10-06:pickup:765",
+        "options": [
+          {
+            "option_id": "base",
+            "baseline": true,
+            "routes": [
+              {
+                "start": 68900,
+                "end": 76500,
+                "minutes": 76,
+                "large_ok": true,
+                "car_ok": true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "wave_id": "2026-10-06:dropoff:915",
+        "options": [
+          {
+            "option_id": "base",
+            "baseline": true,
+            "routes": [
+              {
+                "start": 91500,
+                "end": 94400,
+                "minutes": 29,
+                "large_ok": true,
+                "car_ok": true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "wave_id": "2026-10-06:dropoff:675",
+        "options": [
+          {
+            "option_id": "base",
+            "baseline": true,
+            "routes": [
+              {
+                "start": 67500,
+                "end": 72600,
+                "minutes": 51,
+                "large_ok": true,
+                "car_ok": true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "wave_id": "2026-10-06:dropoff:1035",
+        "options": [
+          {
+            "option_id": "base",
+            "baseline": true,
+            "routes": [
+              {
+                "start": 103500,
+                "end": 111200,
+                "minutes": 77,
+                "large_ok": true,
+                "car_ok": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "wave_id": "2026-10-06:pickup:705",
+        "options": [
+          {
+            "option_id": "base",
+            "baseline": true,
+            "routes": [
+              {
+                "start": 61400,
+                "end": 70500,
+                "minutes": 91,
+                "large_ok": true,
+                "car_ok": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "wave_id": "2026-10-06:dropoff:975",
+        "options": [
+          {
+            "option_id": "base",
+            "baseline": true,
+            "routes": [
+              {
+                "start": 97500,
+                "end": 106800,
+                "minutes": 93,
+                "large_ok": true,
+                "car_ok": false
+              },
+              {
+                "start": 97500,
+                "end": 101700,
+                "minutes": 42,
+                "large_ok": true,
+                "car_ok": true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "wave_id": "2026-10-06:pickup:585",
+        "options": [
+          {
+            "option_id": "base",
+            "baseline": true,
+            "routes": [
+              {
+                "start": 52800,
+                "end": 58500,
+                "minutes": 57,
+                "large_ok": true,
+                "car_ok": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "wave_id": "2026-10-06:pickup:645",
+        "options": [
+          {
+            "option_id": "base",
+            "baseline": true,
+            "routes": [
+              {
+                "start": 61000,
+                "end": 64500,
+                "minutes": 35,
+                "large_ok": true,
+                "car_ok": true
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "max_large": 3,
+    "cooldown_large": 1000,
+    "cooldown_car": 1000,
+    "time_limit_seconds": 30
+  },
+  "httpStatus": 200,
+  "response": {
+    "status": "optimal",
+    "cars": 1,
+    "large_peak": 3,
+    "car_minutes": 108,
+    "total_minutes": 1237,
+    "selection": {
+      "2026-10-06:pickup:525": {
+        "option_id": "base",
+        "option_index": 0,
+        "labels": [
+          "large",
+          "car",
+          "large"
+        ]
+      },
+      "2026-10-06:dropoff:795": {
+        "option_id": "base",
+        "option_index": 0,
+        "labels": [
+          "car",
+          "large"
+        ]
+      },
+      "2026-10-06:pickup:885": {
+        "option_id": "base",
+        "option_index": 0,
+        "labels": [
+          "large"
+        ]
+      },
+      "2026-10-06:dropoff:1095": {
+        "option_id": "base",
+        "option_index": 0,
+        "labels": [
+          "large"
+        ]
+      },
+      "2026-10-06:dropoff:735": {
+        "option_id": "base",
+        "option_index": 0,
+        "labels": [
+          "car",
+          "large"
+        ]
+      },
+      "2026-10-06:pickup:765": {
+        "option_id": "base",
+        "option_index": 0,
+        "labels": [
+          "large"
+        ]
+      },
+      "2026-10-06:dropoff:915": {
+        "option_id": "base",
+        "option_index": 0,
+        "labels": [
+          "large"
+        ]
+      },
+      "2026-10-06:dropoff:675": {
+        "option_id": "base",
+        "option_index": 0,
+        "labels": [
+          "large"
+        ]
+      },
+      "2026-10-06:dropoff:1035": {
+        "option_id": "base",
+        "option_index": 0,
+        "labels": [
+          "large"
+        ]
+      },
+      "2026-10-06:pickup:705": {
+        "option_id": "base",
+        "option_index": 0,
+        "labels": [
+          "large"
+        ]
+      },
+      "2026-10-06:dropoff:975": {
+        "option_id": "base",
+        "option_index": 0,
+        "labels": [
+          "large",
+          "large"
+        ]
+      },
+      "2026-10-06:pickup:585": {
+        "option_id": "base",
+        "option_index": 0,
+        "labels": [
+          "large"
+        ]
+      },
+      "2026-10-06:pickup:645": {
+        "option_id": "base",
+        "option_index": 0,
+        "labels": [
+          "large"
+        ]
+      }
+    },
+    "diagnostics": {
+      "lower_bound_L": 1,
+      "claim": "minimum cars over the given menus only"
+    },
+    "stats": {
+      "wall_time_s": 0.015908300003502518,
+      "num_workers": 1,
+      "random_seed": 20261008,
+      "stage_values": {
+        "cars": 1,
+        "total_minutes": 1237000,
+        "car_minutes": 108000,
+        "option_index": 0
+      },
+      "routes": 18
+    }
+  }
+}

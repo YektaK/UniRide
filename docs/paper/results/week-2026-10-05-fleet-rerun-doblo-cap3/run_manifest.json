@@ -1,0 +1,2652 @@
+{
+  "git_commit": "f29aa3d884882ada678e11ba3d5761b1ea65665a",
+  "dirty_working_tree": false,
+  "timestamp": "2026-10-17T04:44:45.985Z",
+  "parameters": {
+    "dates": [
+      "2026-10-05",
+      "2026-10-06",
+      "2026-10-07",
+      "2026-10-08",
+      "2026-10-09"
+    ],
+    "ride_limits": [
+      50,
+      60,
+      70,
+      90
+    ],
+    "tour_limit": 150,
+    "scenarios": [
+      "L0",
+      "L1",
+      "L2"
+    ],
+    "max_cars": null,
+    "node_budget": 200000,
+    "selection_time_limit_seconds": 30,
+    "admission_mode": "assume_confirmed"
+  },
+  "fleet_types": [
+    {
+      "typeId": "large",
+      "swCapacity": 4,
+      "soCapacity": 5,
+      "cooldownMinutes": 10
+    },
+    {
+      "typeId": "minivan",
+      "swCapacity": 1,
+      "soCapacity": 3,
+      "cooldownMinutes": 10,
+      "totalCapacity": 3
+    }
+  ],
+  "fleet_types_source": "cli",
+  "fixed_type": "large",
+  "minimize_type": "minivan",
+  "db_vehicles_consulted": false,
+  "algorithms": {
+    "baseline": "ga_split",
+    "menu": "ga_split_hf"
+  },
+  "termination_protocol": "native",
+  "ga_defaults": {
+    "population_size": 50,
+    "max_iterations": 100,
+    "crossover_rate": 0.85,
+    "mutation_rate": 0.2,
+    "elite_count": 3,
+    "tournament_size": 4,
+    "max_no_improvement": 25,
+    "seed": null,
+    "local_search_type": "hybrid",
+    "local_search_interval": 10,
+    "diversify_threshold": 30
+  },
+  "ga_effective_configuration": {
+    "population_size": 50,
+    "max_iterations": 100,
+    "crossover_rate": 0.85,
+    "mutation_rate": 0.2,
+    "elite_count": 3,
+    "tournament_size": 4,
+    "max_no_improvement": 25,
+    "seed": null,
+    "local_search_type": "hybrid",
+    "local_search_interval": 10,
+    "diversify_threshold": 30
+  },
+  "effective_seed": 42,
+  "hf_effective_configuration": {
+    "population_size": 50,
+    "max_iterations": 100,
+    "crossover_rate": 0.85,
+    "mutation_rate": 0.2,
+    "elite_count": 3,
+    "tournament_size": 4,
+    "max_no_improvement": 25,
+    "seed": null,
+    "local_search_type": "hybrid",
+    "local_search_interval": 10,
+    "diversify_threshold": 30
+  },
+  "hf_effective_seed": 42,
+  "selection_solver": {
+    "name": "cp-sat",
+    "version": "9.15.6755",
+    "random_seed": 20261008,
+    "num_workers": 1,
+    "time_limit_seconds": 30
+  },
+  "vehicle_count_scope": "cars are the minimum over the per-wave option menus (heuristic GA routes) and exact for the chosen fixed routes when proven; not a global minimum",
+  "weekly_cars_definition": "weekly_cars = maximum over weekdays (same cars every day); cars_day_sum and monday_cars..friday_cars give the per-day need (borrow per day)",
+  "runs": [
+    {
+      "date": "2026-10-05",
+      "ride_limit": 50,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-05_R50_L0.response.json",
+        "2026-10-05_R50_L1.response.json",
+        "2026-10-05_R50_L2.response.json"
+      ],
+      "matrix_file": "2026-10-05_R50.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-17T04:45:10.008007+00:00"
+      },
+      "rate_limit_waits": [],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-05:pickup:765",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:1035",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:pickup:525",
+          "options": 4,
+          "skipped": 0
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:975",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:735",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:855",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:pickup:945",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:1095",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:795",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:pickup:705",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:915",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:675",
+          "options": 1,
+          "skipped": 3
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "L0",
+          "status": "ok",
+          "cars": 8,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L1",
+          "status": "ok",
+          "cars": 6,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 5,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ],
+      "menu_options_file": "2026-10-05_R50.menu_options.json",
+      "selection_exchange_files": [
+        {
+          "scenario": "L0",
+          "file": "2026-10-05_R50_L0.selection_exchange.json"
+        },
+        {
+          "scenario": "L1",
+          "file": "2026-10-05_R50_L1.selection_exchange.json"
+        },
+        {
+          "scenario": "L2",
+          "file": "2026-10-05_R50_L2.selection_exchange.json"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-05",
+      "ride_limit": 60,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-05_R60_L0.response.json",
+        "2026-10-05_R60_L1.response.json",
+        "2026-10-05_R60_L2.response.json"
+      ],
+      "matrix_file": "2026-10-05_R60.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-17T04:45:29.029787+00:00"
+      },
+      "rate_limit_waits": [],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-05:pickup:765",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:1035",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:pickup:525",
+          "options": 4,
+          "skipped": 0
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:975",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:735",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:855",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:pickup:945",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:1095",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:795",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:pickup:705",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:915",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:675",
+          "options": 1,
+          "skipped": 3
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "L0",
+          "status": "ok",
+          "cars": 7,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L1",
+          "status": "ok",
+          "cars": 5,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 3,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ],
+      "menu_options_file": "2026-10-05_R60.menu_options.json",
+      "selection_exchange_files": [
+        {
+          "scenario": "L0",
+          "file": "2026-10-05_R60_L0.selection_exchange.json"
+        },
+        {
+          "scenario": "L1",
+          "file": "2026-10-05_R60_L1.selection_exchange.json"
+        },
+        {
+          "scenario": "L2",
+          "file": "2026-10-05_R60_L2.selection_exchange.json"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-05",
+      "ride_limit": 70,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-05_R70_L0.response.json",
+        "2026-10-05_R70_L1.response.json",
+        "2026-10-05_R70_L2.response.json"
+      ],
+      "matrix_file": "2026-10-05_R70.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-17T04:45:49.888878+00:00"
+      },
+      "rate_limit_waits": [],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-05:pickup:765",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:1035",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:pickup:525",
+          "options": 4,
+          "skipped": 0
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:975",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:735",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:855",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:pickup:945",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:1095",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:795",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:pickup:705",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:915",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:675",
+          "options": 1,
+          "skipped": 3
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "L0",
+          "status": "ok",
+          "cars": 7,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L1",
+          "status": "ok",
+          "cars": 4,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 3,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ],
+      "menu_options_file": "2026-10-05_R70.menu_options.json",
+      "selection_exchange_files": [
+        {
+          "scenario": "L0",
+          "file": "2026-10-05_R70_L0.selection_exchange.json"
+        },
+        {
+          "scenario": "L1",
+          "file": "2026-10-05_R70_L1.selection_exchange.json"
+        },
+        {
+          "scenario": "L2",
+          "file": "2026-10-05_R70_L2.selection_exchange.json"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-05",
+      "ride_limit": 90,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-05_R90_L0.response.json",
+        "2026-10-05_R90_L1.response.json",
+        "2026-10-05_R90_L2.response.json"
+      ],
+      "matrix_file": "2026-10-05_R90.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-17T04:46:09.684000+00:00"
+      },
+      "rate_limit_waits": [],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-05:pickup:765",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:1035",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:pickup:525",
+          "options": 4,
+          "skipped": 0
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:975",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:735",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:855",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:pickup:945",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:1095",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:795",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:pickup:705",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:915",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-05:dropoff:675",
+          "options": 1,
+          "skipped": 3
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "L0",
+          "status": "ok",
+          "cars": 7,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L1",
+          "status": "ok",
+          "cars": 4,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 2,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ],
+      "menu_options_file": "2026-10-05_R90.menu_options.json",
+      "selection_exchange_files": [
+        {
+          "scenario": "L0",
+          "file": "2026-10-05_R90_L0.selection_exchange.json"
+        },
+        {
+          "scenario": "L1",
+          "file": "2026-10-05_R90_L1.selection_exchange.json"
+        },
+        {
+          "scenario": "L2",
+          "file": "2026-10-05_R90_L2.selection_exchange.json"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-06",
+      "ride_limit": 50,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-06_R50_L0.response.json",
+        "2026-10-06_R50_L1.response.json",
+        "2026-10-06_R50_L2.response.json"
+      ],
+      "matrix_file": "2026-10-06_R50.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-17T04:46:26.903771+00:00"
+      },
+      "rate_limit_waits": [],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-06:pickup:525",
+          "options": 3,
+          "skipped": 1
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:795",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:885",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:1095",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:735",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:765",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:915",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:675",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:1035",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:705",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:975",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:585",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:645",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "L0",
+          "status": "ok",
+          "cars": 6,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L1",
+          "status": "ok",
+          "cars": 4,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 3,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ],
+      "menu_options_file": "2026-10-06_R50.menu_options.json",
+      "selection_exchange_files": [
+        {
+          "scenario": "L0",
+          "file": "2026-10-06_R50_L0.selection_exchange.json"
+        },
+        {
+          "scenario": "L1",
+          "file": "2026-10-06_R50_L1.selection_exchange.json"
+        },
+        {
+          "scenario": "L2",
+          "file": "2026-10-06_R50_L2.selection_exchange.json"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-06",
+      "ride_limit": 60,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-06_R60_L0.response.json",
+        "2026-10-06_R60_L1.response.json",
+        "2026-10-06_R60_L2.response.json"
+      ],
+      "matrix_file": "2026-10-06_R60.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-17T04:46:38.109328+00:00"
+      },
+      "rate_limit_waits": [],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-06:pickup:525",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:795",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:885",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:1095",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:735",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:765",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:915",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:675",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:1035",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:705",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:975",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:585",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:645",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "L0",
+          "status": "ok",
+          "cars": 5,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L1",
+          "status": "ok",
+          "cars": 3,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 2,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ],
+      "menu_options_file": "2026-10-06_R60.menu_options.json",
+      "selection_exchange_files": [
+        {
+          "scenario": "L0",
+          "file": "2026-10-06_R60_L0.selection_exchange.json"
+        },
+        {
+          "scenario": "L1",
+          "file": "2026-10-06_R60_L1.selection_exchange.json"
+        },
+        {
+          "scenario": "L2",
+          "file": "2026-10-06_R60_L2.selection_exchange.json"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-06",
+      "ride_limit": 70,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-06_R70_L0.response.json",
+        "2026-10-06_R70_L1.response.json",
+        "2026-10-06_R70_L2.response.json"
+      ],
+      "matrix_file": "2026-10-06_R70.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-17T04:46:49.206721+00:00"
+      },
+      "rate_limit_waits": [],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-06:pickup:525",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:795",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:885",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:1095",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:735",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:765",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:915",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:675",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:1035",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:705",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:975",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:585",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:645",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "L0",
+          "status": "ok",
+          "cars": 5,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L1",
+          "status": "ok",
+          "cars": 3,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 2,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ],
+      "menu_options_file": "2026-10-06_R70.menu_options.json",
+      "selection_exchange_files": [
+        {
+          "scenario": "L0",
+          "file": "2026-10-06_R70_L0.selection_exchange.json"
+        },
+        {
+          "scenario": "L1",
+          "file": "2026-10-06_R70_L1.selection_exchange.json"
+        },
+        {
+          "scenario": "L2",
+          "file": "2026-10-06_R70_L2.selection_exchange.json"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-06",
+      "ride_limit": 90,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-06_R90_L0.response.json",
+        "2026-10-06_R90_L1.response.json",
+        "2026-10-06_R90_L2.response.json"
+      ],
+      "matrix_file": "2026-10-06_R90.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-17T04:46:59.692653+00:00"
+      },
+      "rate_limit_waits": [],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-06:pickup:525",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:795",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:pickup:885",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:1095",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:735",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:pickup:765",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:915",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:675",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:1035",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:705",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:dropoff:975",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-06:pickup:585",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-06:pickup:645",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "L0",
+          "status": "ok",
+          "cars": 5,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L1",
+          "status": "ok",
+          "cars": 3,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 1,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ],
+      "menu_options_file": "2026-10-06_R90.menu_options.json",
+      "selection_exchange_files": [
+        {
+          "scenario": "L0",
+          "file": "2026-10-06_R90_L0.selection_exchange.json"
+        },
+        {
+          "scenario": "L1",
+          "file": "2026-10-06_R90_L1.selection_exchange.json"
+        },
+        {
+          "scenario": "L2",
+          "file": "2026-10-06_R90_L2.selection_exchange.json"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-07",
+      "ride_limit": 50,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-07_R50_L0.response.json",
+        "2026-10-07_R50_L1.response.json",
+        "2026-10-07_R50_L2.response.json"
+      ],
+      "matrix_file": "2026-10-07_R50.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-17T04:47:10.053544+00:00"
+      },
+      "rate_limit_waits": [],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-07:pickup:525",
+          "options": 4,
+          "skipped": 0
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:735",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:pickup:825",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:1035",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:1095",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:pickup:705",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:855",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:915",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:975",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:pickup:765",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:675",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "L0",
+          "status": "ok",
+          "cars": 6,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L1",
+          "status": "ok",
+          "cars": 5,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 4,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ],
+      "menu_options_file": "2026-10-07_R50.menu_options.json",
+      "selection_exchange_files": [
+        {
+          "scenario": "L0",
+          "file": "2026-10-07_R50_L0.selection_exchange.json"
+        },
+        {
+          "scenario": "L1",
+          "file": "2026-10-07_R50_L1.selection_exchange.json"
+        },
+        {
+          "scenario": "L2",
+          "file": "2026-10-07_R50_L2.selection_exchange.json"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-07",
+      "ride_limit": 60,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-07_R60_L0.response.json",
+        "2026-10-07_R60_L1.response.json",
+        "2026-10-07_R60_L2.response.json"
+      ],
+      "matrix_file": "2026-10-07_R60.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-17T04:47:21.466271+00:00"
+      },
+      "rate_limit_waits": [],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-07:pickup:525",
+          "options": 3,
+          "skipped": 1
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:735",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:pickup:825",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:1035",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:1095",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:pickup:705",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:855",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:915",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:975",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:pickup:765",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:675",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "L0",
+          "status": "ok",
+          "cars": 6,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L1",
+          "status": "ok",
+          "cars": 5,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 4,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ],
+      "menu_options_file": "2026-10-07_R60.menu_options.json",
+      "selection_exchange_files": [
+        {
+          "scenario": "L0",
+          "file": "2026-10-07_R60_L0.selection_exchange.json"
+        },
+        {
+          "scenario": "L1",
+          "file": "2026-10-07_R60_L1.selection_exchange.json"
+        },
+        {
+          "scenario": "L2",
+          "file": "2026-10-07_R60_L2.selection_exchange.json"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-07",
+      "ride_limit": 70,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-07_R70_L0.response.json",
+        "2026-10-07_R70_L1.response.json",
+        "2026-10-07_R70_L2.response.json"
+      ],
+      "matrix_file": "2026-10-07_R70.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-17T04:47:32.648423+00:00"
+      },
+      "rate_limit_waits": [],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-07:pickup:525",
+          "options": 4,
+          "skipped": 0
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:735",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:pickup:825",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:1035",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:1095",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:pickup:705",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:855",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:915",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:975",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:pickup:765",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:675",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "L0",
+          "status": "ok",
+          "cars": 6,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L1",
+          "status": "ok",
+          "cars": 5,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 4,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ],
+      "menu_options_file": "2026-10-07_R70.menu_options.json",
+      "selection_exchange_files": [
+        {
+          "scenario": "L0",
+          "file": "2026-10-07_R70_L0.selection_exchange.json"
+        },
+        {
+          "scenario": "L1",
+          "file": "2026-10-07_R70_L1.selection_exchange.json"
+        },
+        {
+          "scenario": "L2",
+          "file": "2026-10-07_R70_L2.selection_exchange.json"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-07",
+      "ride_limit": 90,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-07_R90_L0.response.json",
+        "2026-10-07_R90_L1.response.json",
+        "2026-10-07_R90_L2.response.json"
+      ],
+      "matrix_file": "2026-10-07_R90.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-17T04:47:44.438859+00:00"
+      },
+      "rate_limit_waits": [],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-07:pickup:525",
+          "options": 4,
+          "skipped": 0
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:735",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:pickup:825",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:1035",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:1095",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:pickup:705",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:855",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:915",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:975",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:pickup:765",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-07:dropoff:675",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "L0",
+          "status": "ok",
+          "cars": 6,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L1",
+          "status": "ok",
+          "cars": 4,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 2,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ],
+      "menu_options_file": "2026-10-07_R90.menu_options.json",
+      "selection_exchange_files": [
+        {
+          "scenario": "L0",
+          "file": "2026-10-07_R90_L0.selection_exchange.json"
+        },
+        {
+          "scenario": "L1",
+          "file": "2026-10-07_R90_L1.selection_exchange.json"
+        },
+        {
+          "scenario": "L2",
+          "file": "2026-10-07_R90_L2.selection_exchange.json"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-08",
+      "ride_limit": 50,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-08_R50_L0.response.json",
+        "2026-10-08_R50_L1.response.json",
+        "2026-10-08_R50_L2.response.json"
+      ],
+      "matrix_file": "2026-10-08_R50.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-17T04:47:55.214540+00:00"
+      },
+      "rate_limit_waits": [],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-08:pickup:525",
+          "options": 3,
+          "skipped": 1
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:1035",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:735",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:855",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:705",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:975",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:765",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:915",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:885",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:1095",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:825",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:795",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:645",
+          "options": 1,
+          "skipped": 3
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "L0",
+          "status": "ok",
+          "cars": 6,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L1",
+          "status": "ok",
+          "cars": 4,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 3,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ],
+      "menu_options_file": "2026-10-08_R50.menu_options.json",
+      "selection_exchange_files": [
+        {
+          "scenario": "L0",
+          "file": "2026-10-08_R50_L0.selection_exchange.json"
+        },
+        {
+          "scenario": "L1",
+          "file": "2026-10-08_R50_L1.selection_exchange.json"
+        },
+        {
+          "scenario": "L2",
+          "file": "2026-10-08_R50_L2.selection_exchange.json"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-08",
+      "ride_limit": 60,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-08_R60_L0.response.json",
+        "2026-10-08_R60_L1.response.json",
+        "2026-10-08_R60_L2.response.json"
+      ],
+      "matrix_file": "2026-10-08_R60.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-17T04:48:06.093910+00:00"
+      },
+      "rate_limit_waits": [],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-08:pickup:525",
+          "options": 3,
+          "skipped": 1
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:1035",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:735",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:855",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:705",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:975",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:765",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:915",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-08:pickup:885",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:1095",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:825",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:795",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:645",
+          "options": 1,
+          "skipped": 3
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "L0",
+          "status": "ok",
+          "cars": 5,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L1",
+          "status": "ok",
+          "cars": 3,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 2,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ],
+      "menu_options_file": "2026-10-08_R60.menu_options.json",
+      "selection_exchange_files": [
+        {
+          "scenario": "L0",
+          "file": "2026-10-08_R60_L0.selection_exchange.json"
+        },
+        {
+          "scenario": "L1",
+          "file": "2026-10-08_R60_L1.selection_exchange.json"
+        },
+        {
+          "scenario": "L2",
+          "file": "2026-10-08_R60_L2.selection_exchange.json"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-08",
+      "ride_limit": 70,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-08_R70_L0.response.json",
+        "2026-10-08_R70_L1.response.json",
+        "2026-10-08_R70_L2.response.json"
+      ],
+      "matrix_file": "2026-10-08_R70.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-17T04:48:16.537832+00:00"
+      },
+      "rate_limit_waits": [],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-08:pickup:525",
+          "options": 4,
+          "skipped": 0
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:1035",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:735",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:855",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:705",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:975",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:765",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:915",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-08:pickup:885",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:1095",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:825",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:795",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:645",
+          "options": 1,
+          "skipped": 3
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "L0",
+          "status": "ok",
+          "cars": 5,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L1",
+          "status": "ok",
+          "cars": 3,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 2,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ],
+      "menu_options_file": "2026-10-08_R70.menu_options.json",
+      "selection_exchange_files": [
+        {
+          "scenario": "L0",
+          "file": "2026-10-08_R70_L0.selection_exchange.json"
+        },
+        {
+          "scenario": "L1",
+          "file": "2026-10-08_R70_L1.selection_exchange.json"
+        },
+        {
+          "scenario": "L2",
+          "file": "2026-10-08_R70_L2.selection_exchange.json"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-08",
+      "ride_limit": 90,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-08_R90_L0.response.json",
+        "2026-10-08_R90_L1.response.json",
+        "2026-10-08_R90_L2.response.json"
+      ],
+      "matrix_file": "2026-10-08_R90.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-17T04:48:27.514313+00:00"
+      },
+      "rate_limit_waits": [],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-08:pickup:525",
+          "options": 4,
+          "skipped": 0
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:1035",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:735",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:855",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:705",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:975",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:765",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:915",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-08:pickup:885",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:1095",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:825",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:dropoff:795",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-08:pickup:645",
+          "options": 1,
+          "skipped": 3
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "L0",
+          "status": "ok",
+          "cars": 5,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L1",
+          "status": "ok",
+          "cars": 3,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 2,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ],
+      "menu_options_file": "2026-10-08_R90.menu_options.json",
+      "selection_exchange_files": [
+        {
+          "scenario": "L0",
+          "file": "2026-10-08_R90_L0.selection_exchange.json"
+        },
+        {
+          "scenario": "L1",
+          "file": "2026-10-08_R90_L1.selection_exchange.json"
+        },
+        {
+          "scenario": "L2",
+          "file": "2026-10-08_R90_L2.selection_exchange.json"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-09",
+      "ride_limit": 50,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-09_R50_L0.response.json",
+        "2026-10-09_R50_L1.response.json",
+        "2026-10-09_R50_L2.response.json"
+      ],
+      "matrix_file": "2026-10-09_R50.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-17T04:48:38.455543+00:00"
+      },
+      "rate_limit_waits": [],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-09:pickup:525",
+          "options": 3,
+          "skipped": 1
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:795",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:735",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:pickup:825",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:1035",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:975",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:pickup:585",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:1095",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "L0",
+          "status": "ok",
+          "cars": 6,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L1",
+          "status": "ok",
+          "cars": 5,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 4,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ],
+      "menu_options_file": "2026-10-09_R50.menu_options.json",
+      "selection_exchange_files": [
+        {
+          "scenario": "L0",
+          "file": "2026-10-09_R50_L0.selection_exchange.json"
+        },
+        {
+          "scenario": "L1",
+          "file": "2026-10-09_R50_L1.selection_exchange.json"
+        },
+        {
+          "scenario": "L2",
+          "file": "2026-10-09_R50_L2.selection_exchange.json"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-09",
+      "ride_limit": 60,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-09_R60_L0.response.json",
+        "2026-10-09_R60_L1.response.json",
+        "2026-10-09_R60_L2.response.json"
+      ],
+      "matrix_file": "2026-10-09_R60.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-17T04:48:47.993532+00:00"
+      },
+      "rate_limit_waits": [],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-09:pickup:525",
+          "options": 4,
+          "skipped": 0
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:795",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:735",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:pickup:825",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:1035",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:975",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:pickup:585",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:1095",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "L0",
+          "status": "ok",
+          "cars": 6,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L1",
+          "status": "ok",
+          "cars": 4,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 3,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ],
+      "menu_options_file": "2026-10-09_R60.menu_options.json",
+      "selection_exchange_files": [
+        {
+          "scenario": "L0",
+          "file": "2026-10-09_R60_L0.selection_exchange.json"
+        },
+        {
+          "scenario": "L1",
+          "file": "2026-10-09_R60_L1.selection_exchange.json"
+        },
+        {
+          "scenario": "L2",
+          "file": "2026-10-09_R60_L2.selection_exchange.json"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-09",
+      "ride_limit": 70,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-09_R70_L0.response.json",
+        "2026-10-09_R70_L1.response.json",
+        "2026-10-09_R70_L2.response.json"
+      ],
+      "matrix_file": "2026-10-09_R70.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-17T04:48:58.644711+00:00"
+      },
+      "rate_limit_waits": [],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-09:pickup:525",
+          "options": 3,
+          "skipped": 1
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:795",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:735",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:pickup:825",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:1035",
+          "options": 1,
+          "skipped": 3
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:975",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:pickup:585",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:1095",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "L0",
+          "status": "ok",
+          "cars": 6,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L1",
+          "status": "ok",
+          "cars": 4,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 3,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ],
+      "menu_options_file": "2026-10-09_R70.menu_options.json",
+      "selection_exchange_files": [
+        {
+          "scenario": "L0",
+          "file": "2026-10-09_R70_L0.selection_exchange.json"
+        },
+        {
+          "scenario": "L1",
+          "file": "2026-10-09_R70_L1.selection_exchange.json"
+        },
+        {
+          "scenario": "L2",
+          "file": "2026-10-09_R70_L2.selection_exchange.json"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-09",
+      "ride_limit": 90,
+      "day_status": "ready",
+      "response_files": [
+        "2026-10-09_R90_L0.response.json",
+        "2026-10-09_R90_L1.response.json",
+        "2026-10-09_R90_L2.response.json"
+      ],
+      "matrix_file": "2026-10-09_R90.matrix.json",
+      "matrix_provenance": {
+        "source": "supabase",
+        "sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "location_count": 29,
+        "loaded_at": "2026-10-17T04:49:09.724356+00:00"
+      },
+      "rate_limit_waits": [],
+      "optimizer_http_failures": [],
+      "menu_sizes": [
+        {
+          "wave_id": "2026-10-09:pickup:525",
+          "options": 4,
+          "skipped": 0
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:795",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:735",
+          "options": 3,
+          "skipped": 1
+        },
+        {
+          "wave_id": "2026-10-09:pickup:825",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:1035",
+          "options": 2,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:975",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:pickup:585",
+          "options": 1,
+          "skipped": 2
+        },
+        {
+          "wave_id": "2026-10-09:dropoff:1095",
+          "options": 1,
+          "skipped": 2
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario": "L0",
+          "status": "ok",
+          "cars": 6,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L1",
+          "status": "ok",
+          "cars": 4,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        },
+        {
+          "scenario": "L2",
+          "status": "ok",
+          "cars": 2,
+          "cars_status": "proven_over_menu",
+          "selection_status": "optimal",
+          "assignment_status": "proven"
+        }
+      ],
+      "menu_options_file": "2026-10-09_R90.menu_options.json",
+      "selection_exchange_files": [
+        {
+          "scenario": "L0",
+          "file": "2026-10-09_R90_L0.selection_exchange.json"
+        },
+        {
+          "scenario": "L1",
+          "file": "2026-10-09_R90_L1.selection_exchange.json"
+        },
+        {
+          "scenario": "L2",
+          "file": "2026-10-09_R90_L2.selection_exchange.json"
+        }
+      ]
+    }
+  ],
+  "state": "completed",
+  "completed_at": "2026-10-17T04:49:18.157Z",
+  "archive_format": "fleet_archive_v2",
+  "run_kind": "campaign",
+  "pinned_commit": "f29aa3d88488",
+  "preflight": {
+    "ok": true,
+    "checks": [
+      {
+        "id": "clean_tree",
+        "ok": true,
+        "message": "clean working tree"
+      },
+      {
+        "id": "pinned_commit",
+        "ok": true,
+        "message": "HEAD f29aa3d88488 is the pinned commit"
+      },
+      {
+        "id": "fleet_types",
+        "ok": true,
+        "message": "CLI fleet types equal the reference manifest"
+      },
+      {
+        "id": "grid",
+        "ok": true,
+        "message": "dates, ride limits, tour limit, scenarios, cap and type roles equal the reference"
+      },
+      {
+        "id": "admission_mode",
+        "ok": true,
+        "message": "admission_mode assume_confirmed"
+      },
+      {
+        "id": "node_budget",
+        "ok": true,
+        "message": "node_budget 200000 (expected 200000)"
+      },
+      {
+        "id": "selection_time_limit",
+        "ok": true,
+        "message": "selection_time_limit_seconds 30 (expected 30)"
+      },
+      {
+        "id": "ga_configuration",
+        "ok": true,
+        "message": "GA effective configuration equals the reference"
+      },
+      {
+        "id": "hf_configuration",
+        "ok": true,
+        "message": "HF effective configuration equals the reference"
+      },
+      {
+        "id": "seeds",
+        "ok": true,
+        "message": "effective seeds ga 42, hf 42 (expected 42)"
+      },
+      {
+        "id": "selection_solver",
+        "ok": true,
+        "message": "CP-SAT 9.15.6755, random_seed 20261008, num_workers 1 (expected 9.15.6755, 20261008, 1)"
+      },
+      {
+        "id": "matrix_sha256",
+        "ok": true,
+        "message": "all 5 live matrices declare bfb2dd85..."
+      },
+      {
+        "id": "occurrence_ids",
+        "ok": true,
+        "message": "57 waves and 226 legs equal the archive"
+      },
+      {
+        "id": "reference_matches_design",
+        "ok": true,
+        "message": "reference archive equals the values named by the design"
+      }
+    ],
+    "occurrence_check_limit": "The alias is <location_code>~<rank of the raw id among that day's occurrences at that location> (plan-experiments anonymizeResponse). The check detects added or removed students, a change of location, direction or anchor, a rank shift, and a change of the Sw/So count of a wave. It cannot detect a different student at the same location and rank; rule (d) (base routes equal to the 4sw5so routes) is the backstop.",
+    "reference_manifest": "docs/paper/results/week-2026-10-05-fleet/extra/minivan-cap3/run_manifest.json",
+    "reference_git_commit": "4200acb7a8ab7bac60f4d411128c82e9dc8054e9",
+    "reference_waves_archive": "docs/paper/results/week-2026-10-05-4sw5so",
+    "live": {
+      "matrix_sha256": [
+        "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5"
+      ],
+      "waves": 57,
+      "legs": 226,
+      "waves_by_date": {
+        "2026-10-05": 12,
+        "2026-10-06": 13,
+        "2026-10-07": 11,
+        "2026-10-08": 13,
+        "2026-10-09": 8
+      },
+      "legs_by_date": {
+        "2026-10-05": 54,
+        "2026-10-06": 42,
+        "2026-10-07": 46,
+        "2026-10-08": 46,
+        "2026-10-09": 38
+      }
+    }
+  },
+  "compute_policy": {
+    "profile_id": "production-conservative-v1",
+    "max_students": 250,
+    "max_vehicles": 50,
+    "max_algorithms": 6,
+    "max_workers": 2,
+    "deadline_seconds": 120,
+    "solver_seconds": 60,
+    "max_iterations": 2000,
+    "max_population": 250,
+    "local_search_seconds": 2,
+    "rate_limit_requests": 30,
+    "rate_limit_window_seconds": 1
+  },
+  "python_provenance": {
+    "uniride_core": "uniride_core/__init__.py",
+    "optimizer_api": "optimizer_api/__init__.py",
+    "academic_benchmark": "academic_benchmark/__init__.py"
+  },
+  "optimizer_policy": {
+    "profile_id": "production-conservative-v1",
+    "limits": {
+      "diversify_threshold": {
+        "value": 30,
+        "source": "strategy_default",
+        "enforcement": "request-local ga_config.diversify_threshold"
+      },
+      "elite_count": {
+        "value": 3,
+        "source": "strategy_default",
+        "enforcement": "request-local ga_config.elite_count"
+      },
+      "local_search_interval": {
+        "value": 10,
+        "source": "strategy_default",
+        "enforcement": "request-local ga_config.local_search_interval"
+      },
+      "max_iterations": {
+        "value": 100,
+        "source": "strategy_default",
+        "enforcement": "request-local ga_config.max_iterations"
+      },
+      "max_no_improvement": {
+        "value": 25,
+        "source": "strategy_default",
+        "enforcement": "request-local ga_config.max_no_improvement"
+      },
+      "population_size": {
+        "value": 50,
+        "source": "strategy_default",
+        "enforcement": "request-local ga_config.population_size"
+      },
+      "tournament_size": {
+        "value": 4,
+        "source": "strategy_default",
+        "enforcement": "request-local ga_config.tournament_size"
+      }
+    },
+    "responses_checked": 868,
+    "limits_identical": true
+  }
+}

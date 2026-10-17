@@ -439,11 +439,17 @@ def parse_args(argv):
                     help="per-unit result cache, OFF unless given. A cache file is used only when its stored key (sha256 of "
                          "the full commit, solver and verification option strings and versions, AMPL version, source "
                          "manifest sha256 values, unit, wave ids and the HiGHS flag) equals the current key; refused on a "
-                         "dirty tree. The published campaign does not use it.")
+                         "dirty tree. A unit with blocking errors is still written to the cache with its errors kept (also "
+                         "in parallel mode, where --stop-on-error does not stop anything), so a cache hit reports them "
+                         "again. The published campaign does not use it.")
     ap.add_argument("--stop-on-error", action=argparse.BooleanOptionalAction, default=True,
-                    help="serial runs: stop solving after the first unit with a blocking error (default: on)")
+                    help="stop solving after the first unit with a blocking error (default: on). Applies only when units run "
+                         "serially (--jobs 1, or only one unit left to solve); otherwise stop_on_error is recorded as null "
+                         "in the manifest run_history (it did not apply)")
     ap.add_argument("--unit-timeout", type=float, default=7200.0,
-                    help="wall seconds after which a stuck unit worker is killed and retried once (jobs > 1)")
+                    help="wall seconds after which a stuck unit worker is killed and retried once. Applies only when units "
+                         "run in worker processes (--jobs > 1 and more than one unit to solve); not applied in serial runs, "
+                         "where unit_timeout_seconds is recorded as null in the manifest run_history")
     ap.add_argument("--worker-unit", default="", help=argparse.SUPPRESS)
     ap.add_argument("--worker-peaks", default="", help=argparse.SUPPRESS)
     ap.add_argument("--worker-out", default="", help=argparse.SUPPRESS)
@@ -610,12 +616,13 @@ def _run(args, names, out, gurobi, highs, gurobi_settings, highs_settings) -> in
         errors.extend(f"manifest: {p}" for p in problems)
         manifest["blocking_errors"] = errors
     out.mkdir(parents=True, exist_ok=True)
-    (out / protocol.MANIFEST_FILENAME).write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (out / protocol.MANIFEST_FILENAME).write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8",
+                                                  newline="\n")
     (out / EXACT_ROUTES_FILENAME).write_bytes(routes_text.encode("utf-8"))
     write_option_csv(out / "option_gaps.csv", rows)
     write_replay_csv(out / "replay.csv", replay_all)
     summary = summarise(rows, replay_all)
-    (out / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (out / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
     print(json.dumps(summary["replay"], sort_keys=True))
     if errors:
         print(f"{len(errors)} blocking error(s):", file=sys.stderr)
@@ -812,12 +819,12 @@ def _solve_units(units, args, peak_ids, gurobi, highs, cache_ctx=None) -> list:
         if paths[i] is not None:
             hit = _cache_read(paths[i], keys[i])
             if hit is not None:
-                hit["unit_run"] = dict(hit.get("unit_run") or {}, source="cache")
+                hit["unit_run"] = dict(hit.get("unit_run") or {}, source="cache", mode=None)
                 results[i] = hit
     todo = [i for i, r in enumerate(results) if r is None]
 
-    def finish(i, res, seconds):
-        res["unit_run"] = dict(res.get("unit_run") or {"attempts": 1, "timeout_kills": 0}, source="solved",
+    def finish(i, res, seconds, mode):
+        res["unit_run"] = dict(res.get("unit_run") or {"attempts": 1, "timeout_kills": 0}, source="solved", mode=mode,
                                wall_seconds=round(seconds, 1), jobs=args.jobs)
         results[i] = res
         if paths[i] is not None and not res.get("unavailable") and not res.get("failed"):
@@ -828,7 +835,7 @@ def _solve_units(units, args, peak_ids, gurobi, highs, cache_ctx=None) -> list:
         for i in todo:
             t0 = time.perf_counter()
             res = _solve_unit(units[i], bool(highs), peak_ids, sessions=(gurobi, highs))
-            finish(i, res, time.perf_counter() - t0)
+            finish(i, res, time.perf_counter() - t0, "serial")
             if res.get("unavailable"):
                 stop_at = i
                 break
@@ -848,7 +855,7 @@ def _solve_units(units, args, peak_ids, gurobi, highs, cache_ctx=None) -> list:
 
     with ThreadPoolExecutor(max_workers=min(args.jobs, len(todo))) as pool:
         for i, res, seconds in pool.map(one, todo):
-            finish(i, res, seconds)
+            finish(i, res, seconds, "worker")
     return results
 
 
@@ -861,9 +868,15 @@ def build_run_history(args, results, units, *, wall_seconds: float, unit_seconds
                           "attempts": run.get("attempts", 1), "timeout_kills": run.get("timeout_kills", 0),
                           "exit_codes": run.get("exit_codes", []), "wall_seconds": run.get("wall_seconds"),
                           "failed_stage_rows": res.get("failed_stage_rows", []), "failed": res.get("failed")})
+    modes = {r["unit_run"].get("mode") for r in results
+             if r.get("unit_run") and r["unit_run"].get("source") == "solved"}  # cache hits applied neither option
     return {
-        "invocations": [{"jobs": args.jobs, "unit_timeout_seconds": args.unit_timeout, "cache_used": cache_used,
-                         "stop_on_error": bool(args.stop_on_error), "wall_seconds": wall_seconds,
+        # null = the option did not apply to how this invocation solved its units (stop_on_error: serial path only;
+        # unit timeout: worker processes only)
+        "invocations": [{"jobs": args.jobs, "cache_used": cache_used,
+                         "unit_timeout_seconds": args.unit_timeout if "worker" in modes else None,
+                         "stop_on_error": bool(args.stop_on_error) if "serial" in modes else None,
+                         "wall_seconds": wall_seconds,
                          "unit_phase_wall_seconds": unit_seconds}],
         "units_planned": len(units), "units_reported": len(results),
         "stopped_early": len(results) < len(units),

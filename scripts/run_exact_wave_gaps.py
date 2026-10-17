@@ -538,11 +538,12 @@ def _run(args, source, out, gurobi, highs, gurobi_settings, highs_settings) -> i
         errors.extend(f"manifest: {p}" for p in problems)
         manifest["blocking_errors"] = errors
     out.mkdir(parents=True, exist_ok=True)
-    (out / protocol.MANIFEST_FILENAME).write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (out / protocol.MANIFEST_FILENAME).write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8",
+                                                  newline="\n")
     (out / EXACT_ROUTES_FILENAME).write_bytes(routes_text.encode("utf-8"))  # bytes: the manifest sha256 is of these bytes
     write_wave_csv(out / "wave_gaps.csv", rows)
     summary = summarise(rows)
-    (out / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (out / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
     print(json.dumps(summary["per_R"], sort_keys=True))
     if errors:
         print(f"{len(errors)} blocking error(s):", file=sys.stderr)

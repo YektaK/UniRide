@@ -160,6 +160,27 @@ const runSchema = z.object({
     scenario: z.string(), status: z.string(), cars: z.number().nullable(), cars_status: z.string().nullable(),
     selection_status: z.string().nullable(), assignment_status: z.string().nullable(),
   })),
+  // WP-E10 (archive format v2). Absent in the historical manifests, which stay readable.
+  menu_options_file: z.string().nullable().optional(),
+  selection_exchange_files: z.array(z.object({ scenario: z.string(), file: z.string() })).optional(),
+});
+/** Archive format of the WP-E10 re-run: per-option menu files and per-(date, R, L) selection exchanges. */
+export const FLEET_ARCHIVE_FORMAT = "fleet_archive_v2";
+const preflightCheckSchema = z.object({ id: z.string(), ok: z.boolean(), message: z.string() });
+/** Repo-relative POSIX path: no drive letter, no leading slash, no backslash, no parent step. A published file must not name a local directory. */
+export const repoRelativePathSchema = z.string().min(1).refine(
+  (value) => !/^[A-Za-z]:/.test(value) && !value.startsWith("/") && !value.includes("\\") && !value.split("/").includes(".."),
+  "must be a repo-relative POSIX path",
+);
+const preflightRecordSchema = z.object({
+  ok: z.boolean(), checks: z.array(preflightCheckSchema),
+  /** Exact limit of the occurrence comparison (anonymised alias), see OCCURRENCE_CHECK_LIMIT. */
+  occurrence_check_limit: z.string().min(1),
+  reference_manifest: repoRelativePathSchema, reference_git_commit: z.string(), reference_waves_archive: repoRelativePathSchema,
+  live: z.object({
+    matrix_sha256: z.array(z.string()), waves: z.number().int(), legs: z.number().int(),
+    waves_by_date: z.record(z.string(), z.number().int()), legs_by_date: z.record(z.string(), z.number().int()),
+  }),
 });
 export const fleetManifestSchema = z.object({
   git_commit: z.string().min(7), dirty_working_tree: z.boolean(), timestamp: z.string(),
@@ -167,6 +188,8 @@ export const fleetManifestSchema = z.object({
     dates: z.array(z.string()), ride_limits: z.array(z.number()), tour_limit: z.number(),
     scenarios: z.array(z.string()), max_cars: z.number().nullable(), node_budget: z.number(),
     selection_time_limit_seconds: z.number(), admission_mode: z.literal("assume_confirmed"),
+    /** Rule (e): this run covers a subset of the campaign dates (one day run again). Absent in a campaign. */
+    allow_subset_dates: z.boolean().optional(),
   }),
   fleet_types: z.array(fleetTypeSchema).min(1), fleet_types_source: z.literal("cli"),
   fixed_type: z.string(), minimize_type: z.string().nullable(), db_vehicles_consulted: z.literal(false),
@@ -181,13 +204,65 @@ export const fleetManifestSchema = z.object({
   }),
   vehicle_count_scope: z.string(), weekly_cars_definition: z.string(),
   runs: z.array(runSchema), state: z.enum(["running", "completed", "failed"]), completed_at: z.string().nullable(),
+  // WP-E10 (archive format v2). Absent in the historical manifests, which stay readable.
+  archive_format: z.literal(FLEET_ARCHIVE_FORMAT).optional(),
+  /** Repo-relative location of uniride_core, optimizer_api and academic_benchmark as the run's interpreter resolved them (all inside the run worktree). */
+  python_provenance: z.record(z.string(), repoRelativePathSchema).optional(),
+  /** `campaign` (the archive WP-E4 reads) or `rule_e_second_run` (one day run again to prove determinism; never an archive). */
+  run_kind: z.enum(["campaign", "rule_e_second_run"]).optional(),
+  pinned_commit: z.string().regex(/^[0-9a-f]{7,40}$/).optional(),
+  preflight: preflightRecordSchema.optional(),
+  /** Compute-policy values the CLI environment (and, through the session wrapper, the optimizer) runs with, rate limit included. */
+  compute_policy: z.record(z.string(), z.unknown()).optional(),
+  /** `applied_policy` the running optimizer reported in its /optimize answers (profile and effective limits). */
+  optimizer_policy: z.object({
+    profile_id: z.string(), limits: z.record(z.string(), z.unknown()), responses_checked: z.number().int(), limits_identical: z.boolean(),
+  }).optional(),
 });
 export type FleetManifest = z.infer<typeof fleetManifestSchema>;
+export type FleetPreflightRecord = z.infer<typeof preflightRecordSchema>;
+/**
+ * Manifest of a WP-E10 re-run: everything optional in the historical format is mandatory here (design
+ * section 9, rules (a), (b), (f), (g)): clean tree at the pinned commit, the passed preflight, and the
+ * per-option and selection-exchange files of every run that built a menu.
+ */
+export const extendedFleetManifestSchema = fleetManifestSchema.superRefine((manifest, ctx) => {
+  const fail = (message: string) => ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+  if (manifest.archive_format !== FLEET_ARCHIVE_FORMAT) fail("archive_format must be fleet_archive_v2");
+  if (manifest.dirty_working_tree) fail("a re-run archive requires a clean working tree");
+  if (!manifest.pinned_commit || !manifest.git_commit.startsWith(manifest.pinned_commit)) fail("git_commit must equal the pinned commit");
+  if (!manifest.preflight?.ok) fail("a passed preflight is required");
+  if (!manifest.run_kind) fail("run_kind must be campaign or rule_e_second_run");
+  if ((manifest.parameters.allow_subset_dates === true) !== (manifest.run_kind === "rule_e_second_run")) {
+    fail("allow_subset_dates and run_kind rule_e_second_run must go together");
+  }
+  if (manifest.state === "completed") {
+    if (!manifest.compute_policy) fail("compute_policy must be recorded");
+    if (!manifest.python_provenance || !["uniride_core", "optimizer_api", "academic_benchmark"].every((name) => name in manifest.python_provenance!)) {
+      fail("python_provenance must be recorded for uniride_core, optimizer_api and academic_benchmark");
+    }
+    if (!manifest.optimizer_policy || manifest.optimizer_policy.responses_checked < 1 || !manifest.optimizer_policy.limits_identical) fail("optimizer_policy must be recorded and identical over all answers");
+    // Acceptance of the re-run grid: every (date, R) cell present exactly once and ready.
+    const expected = manifest.parameters.dates.length * manifest.parameters.ride_limits.length;
+    const cells = new Set(manifest.runs.map((run) => `${run.date}|${run.ride_limit}`));
+    if (manifest.runs.length !== expected || cells.size !== expected) fail("a completed re-run needs every (date, R) cell exactly once");
+    if (manifest.runs.some((run) => run.day_status !== "ready")) fail("a completed re-run needs every day ready");
+    // A non-OK optimizer answer (also a 429 that survived the retries) drops a menu option: the archive would not hold every option.
+    if (manifest.runs.some((run) => run.optimizer_http_failures.length > 0)) fail("a completed re-run must have no optimizer HTTP failure");
+  }
+  for (const run of manifest.runs) {
+    const wantsMenu = run.day_status === "ready" && run.menu_sizes.length > 0;
+    if (wantsMenu && !run.menu_options_file) fail(`run ${run.date} R${run.ride_limit} lacks menu_options_file`);
+    // A scenario whose request could not be built (SELECTION_INTERVAL_PRECISION) has no exchange file; the list itself must exist.
+    if (wantsMenu && run.selection_exchange_files === undefined) fail(`run ${run.date} R${run.ride_limit} lacks selection_exchange_files`);
+  }
+});
 export type FleetManifestRun = z.infer<typeof runSchema>;
 
 export function manifestRun(
   day: FleetScenarioDay, ride: number, responseFiles: readonly string[], matrixFile: string | null,
   matrixProvenance: unknown, rateLimitWaits: FleetManifestRun["rate_limit_waits"], httpFailures: FleetManifestRun["optimizer_http_failures"],
+  archive?: { menuOptionsFile: string | null; selectionExchangeFiles: ReadonlyArray<{ scenario: string; file: string }> },
 ): FleetManifestRun {
   return {
     date: day.serviceDate, ride_limit: ride, day_status: day.status, response_files: [...responseFiles],
@@ -201,5 +276,6 @@ export function manifestRun(
       scenario: scenarioName(result.scenario), status: result.status, cars: result.cars, cars_status: result.carsStatus,
       selection_status: result.selection?.status ?? null, assignment_status: result.assignment?.status ?? null,
     })),
+    ...(archive ? { menu_options_file: archive.menuOptionsFile, selection_exchange_files: [...archive.selectionExchangeFiles] } : {}),
   };
 }

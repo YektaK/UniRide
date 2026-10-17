@@ -12,11 +12,12 @@ const result = (scenario: "A" | number, over: Partial<ScenarioResult> = {}): Sce
   carUsageWindows: scenario === "A" ? [] : [{ carId: "C1", windowStartMinutes: 500, windowEndMinutes: 620.5, busyMinutes: 40, routeCount: 2, waves: ["w1", "w2"] }],
   selection: scenario === "A" ? null : { status: "optimal", cars: 1, carMinutes: 20, claim: null, optionByWave: {}, diagnostics: {}, stats: {} },
   assignment: scenario === "A" ? null : { status: "proven", reasonCodes: [], nodes: 4, lowerBoundsByType: {}, problems: [] },
+  selectionExchange: null,
   ...over,
 });
 const day = (date: string, scenarios: ScenarioResult[], status: FleetScenarioDay["status"] = "ready"): FleetScenarioDay => ({
   serviceDate: date, status, reasonCodes: [], dbVehiclesConsulted: false, limits: { maxRideTimeMinutes: 60, maxTourMinutes: 150 },
-  students: 5, legs: 10, waves: 4, occurrenceLabels: {}, matrix: null, menu: [], scenarios,
+  students: 5, legs: 10, waves: 4, occurrenceLabels: {}, matrix: null, menu: [], menuDetail: [], waveDemand: {}, scenarios,
 });
 const fixed = { typeId: "large" }, minimise = { typeId: "sedan" };
 const WEEK = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09"];

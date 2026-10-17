@@ -131,6 +131,8 @@ export interface ScenarioResult {
     readonly lowerBoundsByType: Readonly<Record<string, number>>;
     readonly problems: readonly string[];
   } | null;
+  /** WP-E10: request and response of the day selection of this L (null for scenario A and when no request was sent). */
+  readonly selectionExchange: SelectionExchange | null;
 }
 
 export interface MenuOptionRecord {
@@ -149,6 +151,52 @@ export interface MenuWaveRecord {
   readonly options: readonly MenuOptionRecord[];
 }
 
+/** WP-E10: one route of a menu option as the optimizer returned it, plus the verified interval and arc minutes. */
+export interface MenuRouteDetail {
+  readonly routeIndex: number;
+  readonly vehicleId: string;
+  readonly vehicleType: string | null;
+  /** Visit order of the route (depot first, depot last), durations as the optimizer reported them. */
+  readonly steps: readonly { location1: string; location2: string; duration: number }[];
+  readonly studentIds: readonly string[];
+  readonly swCount: number;
+  readonly soCount: number;
+  readonly totalDurationMinutes: number;
+  /** Route minutes recomputed on the authoritative arcs (same definition as `ScenarioRoute.minutes`); null if that failed. */
+  readonly minutes: number | null;
+  readonly profileError: string | null;
+  /** Per-passenger pure ride minutes on the authoritative arcs (empty when `minutes` is null). */
+  readonly rideMinutes: readonly number[];
+  /** Verified interval (start, end, occurrence ids); null only for an option that failed verification. */
+  readonly interval: { readonly startMinutes: number; readonly endMinutes: number; readonly occurrenceIds: readonly string[] } | null;
+}
+/** WP-E10: every menu option with its routes and the certificate of the optimizer answer, kept even when skipped. */
+export interface MenuOptionDetail extends Omit<MenuOptionRecord, "routes"> {
+  /** Route count of the summary record (null when the option has no routes). */
+  readonly routeCount: number | null;
+  /** `success` of the optimizer answer; null when there was no answer (transport, HTTP error, invalid body). */
+  readonly success: boolean | null;
+  readonly certificate: unknown;
+  readonly error: string | null;
+  readonly totalDurationMinutes: number | null;
+  readonly routes: readonly MenuRouteDetail[];
+}
+export interface MenuWaveDetail {
+  readonly waveId: string;
+  readonly direction: "pickup" | "dropoff";
+  readonly anchorMinutes: number;
+  readonly legs: number;
+  readonly options: readonly MenuOptionDetail[];
+}
+/** WP-E10: the exact /internal/fleet-selection request body and what came back. */
+export interface SelectionExchange {
+  readonly request: unknown;
+  /** HTTP status; null on a transport error. */
+  readonly httpStatus: number | null;
+  /** Parsed response body; null when the call failed or the status was not 2xx. */
+  readonly response: unknown;
+}
+
 export interface FleetScenarioDay {
   readonly serviceDate: string;
   readonly status: "ready" | "empty_day" | "blocked_data";
@@ -161,6 +209,10 @@ export interface FleetScenarioDay {
   readonly occurrenceLabels: Readonly<Record<string, string>>;
   readonly matrix: MatrixSnapshot | null;
   readonly menu: readonly MenuWaveRecord[];
+  /** WP-E10: routes and certificates of every menu option (same waves and option order as `menu`). */
+  readonly menuDetail: readonly MenuWaveDetail[];
+  /** WP-E10: per wave the raw occurrence ids and the Sw/So counts of the demand (raw ids: anonymise before writing). */
+  readonly waveDemand: Readonly<Record<string, { readonly occurrenceIds: readonly string[]; readonly sw: number; readonly so: number }>>;
   readonly scenarios: readonly ScenarioResult[];
 }
 
@@ -228,10 +280,43 @@ interface WaveMenu {
   readonly job: PreviewJobInput;
   readonly options: Array<{ optionId: string; baseline: boolean; verified: VerifiedPreviewJob }>;
   readonly record: MenuOptionRecord[];
+  readonly detail: MenuOptionDetail[];
 }
 
 function signature(job: VerifiedPreviewJob): string {
   return JSON.stringify(job.intervals.map((interval) => [...interval.occurrenceIds].sort()).sort());
+}
+
+/**
+ * WP-E10: the archived form of one optimizer answer. Intervals and arc minutes are present only for a
+ * verified option (`verified` given); a verification failure of the arc profile is recorded, not thrown,
+ * because the option is not used by any scenario.
+ */
+function optionRoutes(
+  result: OptimizeResult, direction: "pickup" | "dropoff", verified: VerifiedPreviewJob | null, arcs: MatrixSnapshot["arcs"],
+): MenuRouteDetail[] {
+  let profile: ReturnType<typeof routeRideProfile> | null = null;
+  let profileError: string | null = null;
+  if (verified) {
+    try { profile = routeRideProfile([{ direction, result }], arcs); }
+    catch (error) { profileError = error instanceof Error ? error.message : "profile failed"; }
+  }
+  return result.routes.map((route, index) => {
+    const interval = verified?.intervals[index] ?? null;
+    return {
+      routeIndex: index, vehicleId: route.vehicle_id, vehicleType: route.vehicle_type ?? null,
+      steps: route.route_details.map((step) => ({ location1: step.location1, location2: step.location2, duration: step.duration })),
+      studentIds: route.student_ids, swCount: route.sw_count, soCount: route.so_count,
+      totalDurationMinutes: route.total_duration_minutes,
+      minutes: profile ? round6(profile[index]!.routeMinutes) : null, profileError,
+      rideMinutes: profile ? profile[index]!.rides.map(round6) : [],
+      interval: interval ? { startMinutes: interval.startMinutes, endMinutes: interval.endMinutes, occurrenceIds: interval.occurrenceIds } : null,
+    };
+  });
+}
+
+function withoutRoutes(rec: MenuOptionRecord): Omit<MenuOptionRecord, "routes"> {
+  return { optionId: rec.optionId, kind: rec.kind, quota: rec.quota, status: rec.status, reason: rec.reason };
 }
 
 function windowsFromAssignment(
@@ -268,7 +353,7 @@ export async function runFleetScenarioDay(
   if (integerScenarios.length > 0 && minimiseType === null) throw new Error("Fixed-L scenarios need a minimise type");
   const blocked = (reasonCodes: readonly string[], extra: Partial<FleetScenarioDay> = {}): FleetScenarioDay => ({
     ...dayBase, status: "blocked_data", reasonCodes, students: 0, legs: 0, waves: 0,
-    occurrenceLabels: {}, matrix: null, menu: [], scenarios: [], ...extra,
+    occurrenceLabels: {}, matrix: null, menu: [], menuDetail: [], waveDemand: {}, scenarios: [], ...extra,
   });
 
   // ---- demand: exactly as the daily plan loads it (read-only, K1 admission assumption) ----
@@ -284,11 +369,11 @@ export async function runFleetScenarioDay(
       scenario, largeLimit: scenario === "A" ? 0 : scenario, status: "ok", reasonCodes: [], cars: 0,
       carsStatus: scenario === "A" ? null : "proven_over_menu", largeVehicles: 0,
       largeVehiclesProven: scenario === "A" ? true : null, routes: [], largeRoutes: 0, carRoutes: 0,
-      minutesByType: {}, totalVehicleMinutes: 0, ride: null, carUsageWindows: [], selection: null, assignment: null,
+      minutesByType: {}, totalVehicleMinutes: 0, ride: null, carUsageWindows: [], selection: null, assignment: null, selectionExchange: null,
     });
     return {
       ...dayBase, status: "empty_day", reasonCodes: [...new Set([...state.extraReasons, "NO_ADMITTED_DEMAND"])],
-      students: 0, legs: 0, waves: 0, occurrenceLabels: {}, matrix: null, menu: [],
+      students: 0, legs: 0, waves: 0, occurrenceLabels: {}, matrix: null, menu: [], menuDetail: [], waveDemand: {},
       scenarios: params.scenarios.map(zero),
     };
   }
@@ -349,6 +434,7 @@ export async function runFleetScenarioDay(
   const fixedTemplate = template(fixedType);
   const fixedVehicles = buildVirtualFleet(fixedTemplate, admitted.length);
   const baselineJobs: PreviewJobInput[] = [];
+  const baselineResults: OptimizeResult[] = [];
   for (const group of groups) {
     const first = group[0]!;
     const waveVehicles = fixedVehicles.slice(0, Math.min(group.length, OPTIMIZER_MAX_VEHICLES));
@@ -372,6 +458,7 @@ export async function runFleetScenarioDay(
       return blocked(["RIDE_TIME_LIMIT_INFEASIBLE"], common);
     }
     baselineJobs.push(makeJob(group, reply.result));
+    baselineResults.push(reply.result);
   }
   const baselinePreview = buildDudulluPreview({
     serviceDate, demands: admitted, vehicles: fixedVehicles, matrix, jobs: baselineJobs,
@@ -438,6 +525,7 @@ export async function runFleetScenarioDay(
       minutesByType: rounded,
       totalVehicleMinutes: round6(Object.values(minutesByType).reduce((sum, value) => sum + value, 0)),
       ride: rideStatistics(rides),
+      selectionExchange: null,
     };
   };
   const failedScenario = (
@@ -446,7 +534,7 @@ export async function runFleetScenarioDay(
   ): ScenarioResult => ({
     scenario, largeLimit: scenario === "A" ? null : scenario, status, reasonCodes, cars: null, carsStatus: null,
     largeVehicles: null, largeVehiclesProven: null, routes: [], largeRoutes: 0, carRoutes: 0, minutesByType: {},
-    totalVehicleMinutes: null, ride: null, carUsageWindows: [], selection, assignment,
+    totalVehicleMinutes: null, ride: null, carUsageWindows: [], selection, assignment, selectionExchange: null,
   });
 
   // Scenario A: the existing single-type path (assignPhysicalVehicles through buildDudulluPreview).
@@ -475,6 +563,7 @@ export async function runFleetScenarioDay(
   // ---- menu (only when a fixed-L scenario is requested) -----------------------------------
   const menu: WaveMenu[] = [];
   let menuRecords: MenuWaveRecord[] = [];
+  let menuDetails: MenuWaveDetail[] = [];
   const maxL = integerScenarios.length ? Math.max(...integerScenarios) : -1;
   if (integerScenarios.length > 0 && minimiseType !== null) {
     const maxCaps = {
@@ -484,16 +573,38 @@ export async function runFleetScenarioDay(
     for (const [waveIndex, group] of groups.entries()) {
       const baseJob = baselineJobs[waveIndex]!;
       const record: MenuOptionRecord[] = [];
-      const entry: WaveMenu = { waveId: baseJob.id, group, job: baseJob, options: [], record };
+      const detail: MenuOptionDetail[] = [];
+      const entry: WaveMenu = { waveId: baseJob.id, group, job: baseJob, options: [], record, detail };
+      const optionDetail = (
+        rec: MenuOptionRecord, result: OptimizeResult | null, error: string | null, verified: VerifiedPreviewJob | null,
+      ): MenuOptionDetail => ({
+        ...withoutRoutes(rec), routeCount: rec.routes, success: result?.success ?? null, certificate: result?.feasibility_certificate ?? null, error,
+        totalDurationMinutes: result?.total_duration_minutes ?? null,
+        routes: result ? optionRoutes(result, group[0]!.direction, verified, matrix.arcs) : [],
+      });
       const seen = new Set<string>();
       const baseVerified = baselineVerified[waveIndex]!;
+      const baseResult = baselineResults[waveIndex]!;
       entry.options.push({ optionId: "base", baseline: true, verified: baseVerified });
       seen.add(signature(baseVerified));
-      record.push({ optionId: "base", kind: "baseline", quota: null, status: "included", routes: baseVerified.intervals.length, reason: null });
+      const baseRecord: MenuOptionRecord = { optionId: "base", kind: "baseline", quota: null, status: "included", routes: baseVerified.intervals.length, reason: null };
+      record.push(baseRecord);
+      detail.push({
+        ...withoutRoutes(baseRecord), routeCount: baseRecord.routes, success: baseResult.success, certificate: baseResult.feasibility_certificate ?? null, error: null,
+        totalDurationMinutes: baseResult.total_duration_minutes ?? null,
+        routes: optionRoutes(baseResult, baseJob.direction, baseVerified, matrix.arcs),
+      });
       for (let q = 0; q <= Math.min(maxL, group.length, MENU_MAX_QUOTA); q++) {
         const optionId = `q${q}`;
-        const skip = (status: MenuOptionRecord["status"], reason: string, routes: number | null = null) =>
-          record.push({ optionId, kind: "quota", quota: q, status, routes, reason });
+        // Archive (WP-E10) the optimizer answer of every quota option, also the skipped ones.
+        let answer: OptimizeResult | null = null;
+        let answerError: string | null = null;
+        let answerVerified: VerifiedPreviewJob | null = null;
+        const skip = (status: MenuOptionRecord["status"], reason: string, routes: number | null = null) => {
+          const skipped: MenuOptionRecord = { optionId, kind: "quota", quota: q, status, routes, reason };
+          record.push(skipped);
+          detail.push(optionDetail(skipped, answer, answerError, answerVerified));
+        };
         const specs = [fixedType, minimiseType].map((type) => ({
           type_id: type.typeId, sw_capacity: type.swCapacity, so_capacity: type.soCapacity,
           ...(type.totalCapacity === undefined ? {} : { total_capacity: type.totalCapacity }),
@@ -506,7 +617,12 @@ export async function runFleetScenarioDay(
           max_travel_time: maxTourMinutes, max_ride_time: maxRideTimeMinutes,
           vehicle_types: specs, minimize_type: minimiseType.typeId,
         });
-        if ("error" in reply) { skip(reply.error.startsWith("http_") ? "skipped_http_error" : "skipped_invalid", reply.error); continue; }
+        if ("error" in reply) {
+          answerError = reply.error;
+          skip(reply.error.startsWith("http_") ? "skipped_http_error" : "skipped_invalid", reply.error);
+          continue;
+        }
+        answer = reply.result;
         if (!reply.result.success) { skip("skipped_infeasible", "optimizer reported no feasible typed split"); continue; }
         const job = makeJob(group, reply.result);
         const verified = buildDudulluPreview({
@@ -517,17 +633,24 @@ export async function runFleetScenarioDay(
           continue;
         }
         const option = verified.jobs[0]!;
+        answerVerified = option;
         const sig = signature(option);
         if (seen.has(sig)) { skip("skipped_duplicate", "same route partition as an earlier option", option.intervals.length); continue; }
         seen.add(sig);
         entry.options.push({ optionId, baseline: false, verified: option });
-        record.push({ optionId, kind: "quota", quota: q, status: "included", routes: option.intervals.length, reason: null });
+        const included: MenuOptionRecord = { optionId, kind: "quota", quota: q, status: "included", routes: option.intervals.length, reason: null };
+        record.push(included);
+        detail.push(optionDetail(included, answer, null, option));
       }
       menu.push(entry);
     }
     menuRecords = menu.map((entry) => ({
       waveId: entry.waveId, direction: entry.group[0]!.direction, anchorMinutes: entry.group[0]!.anchorMinutes,
       legs: entry.group.length, options: entry.record,
+    }));
+    menuDetails = menu.map((entry) => ({
+      waveId: entry.waveId, direction: entry.group[0]!.direction, anchorMinutes: entry.group[0]!.anchorMinutes,
+      legs: entry.group.length, options: entry.detail,
     }));
   }
 
@@ -541,6 +664,7 @@ export async function runFleetScenarioDay(
       ...(params.maxCars === null || params.maxCars === undefined ? {} : { maxCount: params.maxCars }) },
   ];
 
+  let lastExchange: SelectionExchange | null = null;
   const scenarioL = async (limit: number): Promise<ScenarioResult> => {
     // CX-01: interval endpoints and cooldowns travel as integer centi-minutes (time_scale 100).
     // Endpoints are anchor +/- a sum of matrix-snapshot arc minutes; anchors are whole minutes. Nothing enforces
@@ -577,6 +701,7 @@ export async function runFleetScenarioDay(
     };
     if (inexact) return failedScenario(limit, "blocked_data", ["SELECTION_INTERVAL_PRECISION"], null);
     const reply = await postJson("/api/v1/internal/fleet-selection", request);
+    lastExchange = { request, httpStatus: reply?.status ?? null, response: reply?.json ?? null };
     const parsed = reply?.json === null || reply === null ? null : selectionResponseSchema.safeParse(reply.json);
     if (!parsed?.success) {
       return failedScenario(limit, "selection_unavailable", [reply === null ? "SELECTION_TRANSPORT_ERROR" : `SELECTION_HTTP_${reply.status}`], null);
@@ -650,12 +775,20 @@ export async function runFleetScenarioDay(
   };
 
   for (const scenario of params.scenarios) {
-    scenarioResults.push(scenario === "A" ? scenarioA() : await scenarioL(scenario));
+    if (scenario === "A") { scenarioResults.push(scenarioA()); continue; }
+    lastExchange = null;
+    const result = await scenarioL(scenario);
+    scenarioResults.push({ ...result, selectionExchange: lastExchange });
   }
   return {
     ...dayBase, status: "ready", reasonCodes: [...new Set([...state.extraReasons])] as PreviewReasonCode[],
     students, legs: admitted.length, waves: groups.length,
-    occurrenceLabels: state.occurrenceLabels, matrix, menu: menuRecords, scenarios: scenarioResults,
+    occurrenceLabels: state.occurrenceLabels, matrix, menu: menuRecords, menuDetail: menuDetails,
+    waveDemand: Object.fromEntries(groups.map((group) => [`${serviceDate}:${group[0]!.direction}:${group[0]!.anchorMinutes}`, {
+      occurrenceIds: group.map((demand) => demand.occurrenceId),
+      sw: group.filter((demand) => demand.disabilityType === "Sw").length, so: group.filter((demand) => demand.disabilityType === "So").length,
+    }])),
+    scenarios: scenarioResults,
   };
 }
 

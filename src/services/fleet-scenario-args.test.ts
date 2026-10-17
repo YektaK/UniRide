@@ -44,6 +44,22 @@ describe("parseFleetArgs", () => {
     expect(parseFleetArgs(["--week-of", "2026-10-05", "--fleet-types", "large:4sw5so", "--scenarios", "A"]))
       .toMatchObject({ fixedTypeId: "large", minimizeTypeId: null, scenarios: ["A"] });
   });
+  it("WP-E10: parses the preflight flags (a value-less --preflight-only anywhere, pinned commit, reference paths)", () => {
+    const args = parseFleetArgs(["--preflight-only", ...base, "--pin-commit", "f7e014c", "--reference-manifest", "a/run_manifest.json", "--reference-waves", "b"]);
+    expect(args).toMatchObject({ preflightOnly: true, pinCommit: "f7e014c", referenceManifest: "a/run_manifest.json", referenceWaves: "b" });
+    const plain = parseFleetArgs(base);
+    expect(parseFleetArgs([...base, "--allow-subset-dates"]).allowSubsetDates).toBe(true);
+    expect(plain.allowSubsetDates).toBe(false);
+    expect(() => parseFleetArgs([...base, "--allow-subset-dates", "--allow-subset-dates"])).toThrow();
+    expect(plain).toMatchObject({ preflightOnly: false, pinCommit: null, referenceManifest: null, referenceWaves: null });
+    expect(parseFleetArgs([...base, "--preflight-only"]).preflightOnly).toBe(true);
+  });
+  it.each(["xyz", "f7e01", "F7E014C", "f7e014c;rm"])("WP-E10: rejects the malformed pinned commit %j", (commit) => {
+    expect(() => parseFleetArgs([...base, "--pin-commit", commit])).toThrow();
+  });
+  it("WP-E10: rejects a duplicated --preflight-only", () => {
+    expect(() => parseFleetArgs([...base, "--preflight-only", "--preflight-only"])).toThrow();
+  });
   const without = (flag: string) => {
     const copy = [...base];
     copy.splice(copy.indexOf(flag), 2);

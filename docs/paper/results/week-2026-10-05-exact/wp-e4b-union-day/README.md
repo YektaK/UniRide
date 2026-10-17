@@ -1,0 +1,63 @@
+# WP-E4b: day-level selection over the union of the GA and the per-wave exact menus (week of 2026-10-05)
+
+Design: [`EXACT_SOLVER_AMPL_DESIGN.md`](../../../../designs/EXACT_SOLVER_AMPL_DESIGN.md) section 1.5 ("Day level over the union menu"), section 8 (row "Union day level"), section 9 (WP-E4, WP-E6 `day_gaps.csv`); decisions DECISION_LOG E01-E06 and H01-H06. This is a descriptive archive of one snapshot week. The GA side is one seed-42 run under the native (secondary) termination protocol, taken only from the WP-E10 re-runs (`week-2026-10-05-fleet-rerun-large-sedan`, `week-2026-10-05-fleet-rerun-doblo-cap3`, pin `f29aa3d88488`, clean tree). The exact options are the certified WP-E4a options (`wp-e4a-typed-options`, code commit `3fcbf9b9efc4`). No superiority claim is made, in either direction. These rows are not pooled, ranked or tested together with heuristic rows (`exact_reference_v1` separation).
+
+**Claim of a `proven_over_union_menu` row, and nothing beyond it:** minimum cars over the union of the GA and per-wave exact menus; never above the GA-menu result (when both runs are optimal); not a global day optimum (EQ3). The report never shows `min(GA, union)`: there is no such column, and the difference `cars_difference_union_minus_ga` is filled only for a proven row.
+
+## What was run
+
+- Code commit `652b5ea48072` (clean tree: manifest `dirty_working_tree` false), branch `feat/wp-e4b-union-day`. Command: `scripts/run_exact_union_day.py` (no arguments: both fleets, all four R, all five dates, all L), one serial invocation of 35.0 s, no cache, no restart, no manual step. Python: `.venv-jit` with `PYTHONPATH` set to the worktree root; `python_provenance` in the manifest shows the three packages imported from this checkout. Offline: no AMPL, no database, no HTTP.
+- 120 cells (fleet, date, R, L): large+doblo_cap3 L = 0, 1, 2 and large+sedan L = 1, 2, 3, each with 5 dates and 4 R values.
+- Per cell two direct `solve_day_selection` calls through the Python port (`uniride_core/planning/fleet_selection_request.py`, `time_scale = 100`): one over the GA menus alone, one over the union menu. CP-SAT 9.15.6755, `random_seed` 20261008, 1 worker, exactly as the WP-E10 archives record. Time limit 30 s (the producer's value, from the source manifests); a union run that stopped on its time limit would be re-run once at 60 s (the compute-policy ceiling) and the limit recorded. In this campaign no union run stopped on its time limit: 0 re-runs, every solve ended `optimal` or `infeasible_for_L` (longest union solve 0.44 s). A proven infeasibility is final and is not re-run.
+- Every selection (GA-menu and union) went through the TypeScript confirmation CLI `scripts/verify-typed-selection.ts`, invoked as `node --conditions=react-server --import tsx` (Node v25.5.0, tsx 4.19.4): one call per cell, 92 calls (the 28 cells where both runs are `infeasible_for_L` have no selection to confirm). The CLI rebuilds the intervals and route facts from `route_details`, the anchor and the direction, compares them with the Python values (`start`, `end`, `minutes`, `large_ok`, `car_ok`, both cooldowns), calls `assignTypedVehicles`, `verifyTypedAssignment` and the producer's `typeAccepts` (named export) on every assigned route, and reports the TS minimum car count. A selection counts as confirmed when there is no interval difference, no problem, no recheck failure, the assignment is `proven` or `witness`, and (assignment `proven`) the TS car count equals the CP-SAT car count.
+
+## GA-menu recomputation versus the archive
+
+The recomputation over the GA menus equals the archived WP-E10 selection response in 120 of 120 cells (`status`, `cars`, `large_peak`, `car_minutes`, `total_minutes`, `selection` with option ids, indices and labels), the rebuilt request equals the archived request field by field in 120 of 120, and the status equals the WP-E4a `replay.csv` row in 120 of 120. Column `ga_equals_archived_response`; a mismatch would be a blocking error (there is none).
+
+## Union menu rules (what was built)
+
+Per (fleet, date, R) one union menu, shared by all L (the archived requests offer every included GA option at every L; only `max_large` differs; the exact menu is one per (date, R) as in design 1.5):
+
+- GA options first, in their WP-E10 order, with the producer's own within-GA dedupe already applied (as archived).
+- Then the certified exact options in the order `xbase, xq0..xqQ` (`Q` = the campaign's maximum L bounded by the legs and 4, as WP-E4a). Infeasible exact options (167 `q` options, all large+sedan) are not menu entries.
+- An exact option is never deduped against a GA option. Exact options are deduped among themselves only when their routes are identical (same partition, same stop order, same per-route minutes; the first one in the order is kept). `exact_options_certified` counts the certified exact options before that dedupe, `exact_options_deduped_among_exact` those dropped, `exact_options_added` those in the union menu; the manifest lists every dropped option (`menu_rules.exact_dedupe_log`, 1111 entries over the campaign).
+- Exact options carry `baseline: false` (the flag has no effect on `solve_day_selection`).
+- Intervals and request bodies of the exact options are built with the same port as the GA options (`centi`, `start + 1`, `round6` minutes, cooldown `null` = 10 minutes, `large_ok`/`car_ok` = `typeAccepts`, `max_cars` when set): a pickup route ends at the anchor and starts `total` minutes before, a dropoff route starts at the anchor; the arcs are integer minutes from the archived matrix slice. An endpoint off the centi-minute grid would refuse the cell with `SELECTION_INTERVAL_PRECISION` (never rounded); none occurred, and no exact route lies outside the service day. The TS CLI recomputes the same intervals independently (test: every exact option of four example days, pickup and dropoff waves, has zero interval differences).
+
+## Result (descriptive; one seed-42 GA run, one snapshot week)
+
+Labels over the 120 cells: `proven_over_union_menu` 91, `union_not_proven` 29, `not_independently_confirmed` 0, `verification_failed` 0. No blocking error; `timing_dependent` is false in every cell.
+
+| Fleet, L | cells | union cars < GA-menu cars | union cars = GA-menu cars | `union_not_proven` | GA-menu / union status in the `union_not_proven` cells |
+|---|---|---|---|---|---|
+| large+doblo_cap3, L = 0 | 20 | 3 | 17 | 0 | - |
+| large+doblo_cap3, L = 1 | 20 | 2 | 18 | 0 | - |
+| large+doblo_cap3, L = 2 | 20 | 2 | 18 | 0 | - |
+| large+sedan, L = 1 | 20 | 0 | 0 | 20 | `infeasible_for_L` / `infeasible_for_L` |
+| large+sedan, L = 2 | 20 | 1 | 10 | 9 | 8 cells `infeasible_for_L` / `infeasible_for_L`; 1 cell (2026-10-05, R = 60) GA `infeasible_for_L`, union `optimal` with 3 cars |
+| large+sedan, L = 3 | 20 | 3 | 17 | 0 | - |
+
+- "Union cars < GA-menu cars" and "= GA-menu cars" are counted only in `proven_over_union_menu` rows (both runs `optimal` and both selections confirmed); in those 91 rows union cars never exceed the GA-menu cars (the blocking check holds). The 11 rows with fewer cars are all on 2026-10-05, 2026-10-06 or 2026-10-09, in each case the union selects an exact option for the 08:45 pickup wave (`pickup:525`; on 2026-10-09 R = 90 also `dropoff:735`) (`union_waves_selecting_exact`).
+- In the 29 `union_not_proven` cells nothing is claimed. 28 of them are cells where the GA menus themselves are proven `infeasible_for_L` and the union is too; they are labelled `union_not_proven` only because the label set of design 1.5 has no value for "nothing to prove" (see open questions). In the one cell where the union is `optimal` and confirmed (3 cars) the GA-menu run is `infeasible_for_L`, so there is no GA-menu car count to compare with and no "never above the GA-menu result" claim is made.
+- Among the 80 proven rows with equal car counts, the union total minutes are lower in 46 and equal in 34 (never higher); this is a statement about these menus and cells, not a claim about the GA.
+- Router caps (the direct call bypasses them; the union request is checked against the router's 6 options per wave, 40 routes per option and 1000 routes in total): the GA-menu requests exceed none (as in WP-E10). The union request exceeds the options-per-wave cap in 11 of 20 cells at each L for large+doblo_cap3 (at most 8 options in a wave, in at most 1 wave per cell) and in none for large+sedan (at most 6); it exceeds neither the routes-per-option cap (at most 8 routes in an option) nor the total-routes cap (at most 103 routes in a request). Columns `union_cap_options_per_wave`, `union_cap_routes_per_option`, `union_cap_total_routes` and the counts next to them; this is why the union is solved by a direct call and cannot be reproduced through the production endpoint without raising the caps.
+
+## Files
+
+| File | Content |
+|---|---|
+| `union_day_manifest.json` | commit and dirty flag, source campaigns (path, manifest sha256, GA labels), the WP-E4a input (sha256 of `exact_routes.json`, `option_gaps.csv` and the manifest), CP-SAT version, seed, workers and time limits, router caps, Node and tsx versions with the CLI command, `python_provenance`, run history (invocation, per-cell wall seconds, CLI calls and errors, re-runs), the GA-recompute count, the union dedupe log, the claim, label counts, blocking errors (empty) |
+| `day_gaps.csv` | one row per (fleet, date, R, L): 120 rows |
+| `summary.json` | per (fleet, L): cells, label counts, union cars below / equal / above (proven rows), statuses, re-runs, caps exceeded |
+
+`day_gaps.csv` columns: `ga_*` and `union_*` hold, for the GA-menu run and the union run, `status`, `time_limit_s`, `cars`, `large_peak`, `car_minutes`, `total_minutes` and the wall seconds (`union_rerun`, `union_first_status` and `union_first_wall_seconds` describe the 30 s run when a 60 s re-run happened). `label`, `timing_dependent`, `not_proven_reason` (why a row is not proven), `claim` (the exact claim text, only on `proven_over_union_menu` rows). `ga_confirmation*` and `union_confirmation*`: `confirmed`, `failed`, `missing` or `not_needed` (no selection), with the detail and the TS assignment status and TS car count. Menu sizes and the router-cap flags and counts. The day sums below. GA labels (`ga_commit`, `ga_protocol`, `ga_seed`, `ga_dirty_tree`) from the source manifests.
+
+**Day sums from WP-E4a (`dK_day_*`, `gD_day_*`, excluded counts).** Defined per (date, R, fleet) over the WP-E4a option rows (`option_gaps.csv`), per option kind and never pooled across kinds, and repeated on each L row of that (fleet, date, R) because they do not depend on L: for kind `base` (xbase against the GA `base`) and kind `q` (xq0..xqQ against the GA option `qN` of the same kind), over the options with `comparison = compared` (a feasible exact option and a feasible GA option): `dK_day` = the sum of `dK` (`K` for `base`, `K_m` for `q`); `gD_day` = (sum of `D_GA` - sum of `D_LB`) / sum of `D_LB` over the options where `gD` is defined (`K_GA = K*`); `gD_excluded` = compared options without a defined `gD`; `*_not_compared` = options of that kind that are not `compared` (`both_infeasible`, `ga_infeasible_exact_feasible`). The quotas `q0..qQ` are summed without weights. Design 1.2 defines the day aggregation per wave; this typed, per-kind extension is the definition used here and is listed as an open question.
+
+## Limits of these results
+
+- One snapshot week (5 service days), one GA seed (42), one native-termination run. The comparison describes those GA menus; it says nothing about the GA in general or about other weeks.
+- `proven_over_union_menu` is a statement over the union menu only. The day objective works on route intervals and concurrency, while the per-wave exact objective is `(K_m, D)`; a global day model is out of scope (EQ3). A union row below the GA-menu result shows that these exact options help in that cell, not what the day optimum is.
+- The certificate has no waiting time (design section 3 note), shared by GA, exact model and day model.
+- The GA-menu cells that are `infeasible_for_L` say nothing about the union beyond what the table states.

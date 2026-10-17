@@ -1,0 +1,160 @@
+{
+  "cells": 120,
+  "claim": "minimum cars over the union of the GA and per-wave exact menus; never above the GA-menu result (when both runs are optimal); not a global day optimum (EQ3)",
+  "labels": {
+    "not_independently_confirmed": 0,
+    "proven_over_union_menu": 91,
+    "union_not_proven": 29,
+    "verification_failed": 0
+  },
+  "per_fleet_L": {
+    "large+doblo_cap3|L0": {
+      "cells": 20,
+      "ga_statuses": {
+        "optimal": 20
+      },
+      "labels": {
+        "proven_over_union_menu": 20
+      },
+      "not_proven": 0,
+      "router_caps_exceeded_by_union": {
+        "options_per_wave": 11,
+        "routes_per_option": 0,
+        "total_routes": 0
+      },
+      "timing_dependent": 0,
+      "union_cars_above_ga": 0,
+      "union_cars_below_ga": 3,
+      "union_cars_equal_ga": 17,
+      "union_reruns": 0,
+      "union_selects_exact_in_cells": 10,
+      "union_statuses": {
+        "optimal": 20
+      }
+    },
+    "large+doblo_cap3|L1": {
+      "cells": 20,
+      "ga_statuses": {
+        "optimal": 20
+      },
+      "labels": {
+        "proven_over_union_menu": 20
+      },
+      "not_proven": 0,
+      "router_caps_exceeded_by_union": {
+        "options_per_wave": 11,
+        "routes_per_option": 0,
+        "total_routes": 0
+      },
+      "timing_dependent": 0,
+      "union_cars_above_ga": 0,
+      "union_cars_below_ga": 2,
+      "union_cars_equal_ga": 18,
+      "union_reruns": 0,
+      "union_selects_exact_in_cells": 12,
+      "union_statuses": {
+        "optimal": 20
+      }
+    },
+    "large+doblo_cap3|L2": {
+      "cells": 20,
+      "ga_statuses": {
+        "optimal": 20
+      },
+      "labels": {
+        "proven_over_union_menu": 20
+      },
+      "not_proven": 0,
+      "router_caps_exceeded_by_union": {
+        "options_per_wave": 11,
+        "routes_per_option": 0,
+        "total_routes": 0
+      },
+      "timing_dependent": 0,
+      "union_cars_above_ga": 0,
+      "union_cars_below_ga": 2,
+      "union_cars_equal_ga": 18,
+      "union_reruns": 0,
+      "union_selects_exact_in_cells": 15,
+      "union_statuses": {
+        "optimal": 20
+      }
+    },
+    "large+sedan|L1": {
+      "cells": 20,
+      "ga_statuses": {
+        "infeasible_for_L": 20
+      },
+      "labels": {
+        "union_not_proven": 20
+      },
+      "not_proven": 20,
+      "router_caps_exceeded_by_union": {
+        "options_per_wave": 0,
+        "routes_per_option": 0,
+        "total_routes": 0
+      },
+      "timing_dependent": 0,
+      "union_cars_above_ga": 0,
+      "union_cars_below_ga": 0,
+      "union_cars_equal_ga": 0,
+      "union_reruns": 0,
+      "union_selects_exact_in_cells": 0,
+      "union_statuses": {
+        "infeasible_for_L": 20
+      }
+    },
+    "large+sedan|L2": {
+      "cells": 20,
+      "ga_statuses": {
+        "infeasible_for_L": 9,
+        "optimal": 11
+      },
+      "labels": {
+        "proven_over_union_menu": 11,
+        "union_not_proven": 9
+      },
+      "not_proven": 9,
+      "router_caps_exceeded_by_union": {
+        "options_per_wave": 0,
+        "routes_per_option": 0,
+        "total_routes": 0
+      },
+      "timing_dependent": 0,
+      "union_cars_above_ga": 0,
+      "union_cars_below_ga": 1,
+      "union_cars_equal_ga": 10,
+      "union_reruns": 0,
+      "union_selects_exact_in_cells": 9,
+      "union_statuses": {
+        "infeasible_for_L": 8,
+        "optimal": 12
+      }
+    },
+    "large+sedan|L3": {
+      "cells": 20,
+      "ga_statuses": {
+        "optimal": 20
+      },
+      "labels": {
+        "proven_over_union_menu": 20
+      },
+      "not_proven": 0,
+      "router_caps_exceeded_by_union": {
+        "options_per_wave": 0,
+        "routes_per_option": 0,
+        "total_routes": 0
+      },
+      "timing_dependent": 0,
+      "union_cars_above_ga": 0,
+      "union_cars_below_ga": 3,
+      "union_cars_equal_ga": 17,
+      "union_reruns": 0,
+      "union_selects_exact_in_cells": 12,
+      "union_statuses": {
+        "optimal": 20
+      }
+    }
+  },
+  "purpose": "WP-E4b union-menu day selection: descriptive comparison of one seed-42 native GA run's menus with the union of the GA and per-wave exact menus; no superiority claim, never min(GA, union)"
+}

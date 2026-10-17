@@ -69,14 +69,49 @@ export function healthOk(status, bodyText) {
   } catch { return false; }
 }
 
-/** One environment for both processes: the same UNIRIDE_PYTHON, the shared ephemeral key, the lowered rate-limit window. */
-export function buildSessionEnv(parent, key, port, python) {
+/**
+ * One environment for both processes: the same UNIRIDE_PYTHON, the shared ephemeral key, the lowered rate-limit window,
+ * and the run worktree FIRST on PYTHONPATH. The project venv carries an editable install that maps uniride_core,
+ * optimizer_api and academic_benchmark to the main checkout; without this the optimizer (and the CLI's Python capture)
+ * would execute the main checkout's code while the manifest names the pinned, clean worktree.
+ */
+export function buildSessionEnv(parent, key, port, python, repoRoot) {
   const env = buildPythonEnv(parent, key);
+  env.PYTHONPATH = parent.PYTHONPATH ? [repoRoot, parent.PYTHONPATH].join(path.delimiter) : repoRoot;
   env.UNIRIDE_PYTHON = python;
   env.OPTIMIZER_PORT = String(port);
   env.OPTIMIZER_API_URL = `http://127.0.0.1:${port}`;
   env[RATE_LIMIT_WINDOW_ENV] = RATE_LIMIT_WINDOW_SECONDS;
   return env;
+}
+
+// One line (python -c): where do the three project packages resolve, without importing them.
+export const PROVENANCE_MODULES = ["uniride_core", "optimizer_api", "academic_benchmark"];
+export const PROVENANCE_ONE_LINER =
+  "import json,importlib.util as u;print(json.dumps({n:(u.find_spec(n).origin or list(u.find_spec(n).submodule_search_locations)[0]) for n in "
+  + JSON.stringify(PROVENANCE_MODULES).replace(/"/g, "'") + "}))";
+
+/**
+ * Refuses the run unless uniride_core, optimizer_api and academic_benchmark resolve inside `repoRoot`, as seen by the
+ * optimizer's own interpreter, environment and working directory. Returns the repo-relative POSIX paths.
+ */
+export function checkPythonProvenance({ python, env, repoRoot, spawnSync: run = spawnSync }) {
+  const answer = run(python, ["-c", PROVENANCE_ONE_LINER], {
+    cwd: path.join(repoRoot, "optimizer_api"), env, encoding: "utf8", timeout: 60_000, windowsHide: true,
+  });
+  let found;
+  try { found = JSON.parse(answer?.stdout ?? ""); } catch { found = null; }
+  if (!answer || answer.status !== 0 || !found) throw new Error("Python provenance check failed: UNIRIDE_PYTHON could not resolve the project packages");
+  const resolved = {};
+  for (const name of PROVENANCE_MODULES) {
+    if (typeof found[name] !== "string") throw new Error(`Python provenance check failed: ${name} was not reported`);
+    const relative = path.relative(path.resolve(repoRoot), path.resolve(found[name]));
+    if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) {
+      throw new Error(`Python provenance: ${name} resolves outside the run worktree (an editable install of another checkout?); the run would execute other code than the manifest names`);
+    }
+    resolved[name] = relative.split(path.sep).join("/");
+  }
+  return resolved;
 }
 
 /** Stops the process tree of a child this session started (never anything else). */
@@ -120,7 +155,7 @@ export async function runSession(argv, parentEnv = process.env, repoRoot = proce
   const d = {
     spawn: nodeSpawn, isPortFree, probeHealth: defaultProbeHealth, sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     healthTimeoutMs: HEALTH_TIMEOUT_MS, openLog: (file) => fs.openSync(file, "a"), closeLog: (fd) => fs.closeSync(fd), stopTree,
-    emitter: process, exit: (code) => process.exit(code), log: console.log, ...overrides,
+    emitter: process, exit: (code) => process.exit(code), log: console.log, spawnSync, writeLog: (fd, text) => fs.writeSync(fd, text), ...overrides,
   };
   const { port, log, cli } = parseSessionArgs(argv);
   assertLogOutsideRepo(log, repoRoot);
@@ -129,9 +164,15 @@ export async function runSession(argv, parentEnv = process.env, repoRoot = proce
   if (!(await d.isPortFree(port))) throw new Error(`Port ${port} is already in use; choose another --port`);
 
   const key = generateEphemeralKey();
-  const optimizerEnv = buildSessionEnv(parentEnv, key, port, python);
+  const optimizerEnv = buildSessionEnv(parentEnv, key, port, python, repoRoot);
   const command = pythonCommand(python);
   const logFd = d.openLog(log);
+  // Provenance first, with the optimizer's interpreter, env and cwd, before anything is spawned.
+  let provenance;
+  try { provenance = checkPythonProvenance({ python, env: optimizerEnv, repoRoot, spawnSync: d.spawnSync }); }
+  catch (error) { d.closeLog(logFd); throw error; }
+  d.writeLog(logFd, `python provenance (repo-relative): ${JSON.stringify(provenance)}\n`);
+  d.log(`python provenance: ${JSON.stringify(provenance)}`);
   const optimizer = d.spawn(command.command, command.args, {
     cwd: path.join(repoRoot, command.cwd), env: optimizerEnv, stdio: ["ignore", logFd, logFd], windowsHide: true,
   });

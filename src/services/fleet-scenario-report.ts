@@ -206,6 +206,8 @@ export const fleetManifestSchema = z.object({
   runs: z.array(runSchema), state: z.enum(["running", "completed", "failed"]), completed_at: z.string().nullable(),
   // WP-E10 (archive format v2). Absent in the historical manifests, which stay readable.
   archive_format: z.literal(FLEET_ARCHIVE_FORMAT).optional(),
+  /** Repo-relative location of uniride_core, optimizer_api and academic_benchmark as the run's interpreter resolved them (all inside the run worktree). */
+  python_provenance: z.record(z.string(), repoRelativePathSchema).optional(),
   /** `campaign` (the archive WP-E4 reads) or `rule_e_second_run` (one day run again to prove determinism; never an archive). */
   run_kind: z.enum(["campaign", "rule_e_second_run"]).optional(),
   pinned_commit: z.string().regex(/^[0-9a-f]{7,40}$/).optional(),
@@ -236,6 +238,9 @@ export const extendedFleetManifestSchema = fleetManifestSchema.superRefine((mani
   }
   if (manifest.state === "completed") {
     if (!manifest.compute_policy) fail("compute_policy must be recorded");
+    if (!manifest.python_provenance || !["uniride_core", "optimizer_api", "academic_benchmark"].every((name) => name in manifest.python_provenance!)) {
+      fail("python_provenance must be recorded for uniride_core, optimizer_api and academic_benchmark");
+    }
     if (!manifest.optimizer_policy || manifest.optimizer_policy.responses_checked < 1 || !manifest.optimizer_policy.limits_identical) fail("optimizer_policy must be recorded and identical over all answers");
     // Acceptance of the re-run grid: every (date, R) cell present exactly once and ready.
     const expected = manifest.parameters.dates.length * manifest.parameters.ride_limits.length;

@@ -31,6 +31,8 @@ export interface RerunSolverCapture extends SolverCapture {
   ga: SolverCapture["ga"] & { defaults: Record<string, unknown> };
   /** Compute-policy values of the CLI environment (rate limit included); the session wrapper gives the optimizer the same. */
   compute_policy?: Record<string, unknown>;
+  /** Repo-relative location of the project packages as the interpreter resolved them; the capture refuses any outside the repository. */
+  python_provenance?: Record<string, string>;
 }
 export interface RerunDeps {
   root: string;
@@ -129,6 +131,7 @@ export async function runFleetRerun(deps: RerunDeps, args: FleetArgs): Promise<R
     runs: [], state: "running", completed_at: null,
     archive_format: FLEET_ARCHIVE_FORMAT, run_kind: args.allowSubsetDates ? "rule_e_second_run" : "campaign", pinned_commit: args.pinCommit, preflight: preflight.record,
     ...(solver.compute_policy ? { compute_policy: solver.compute_policy } : {}),
+    ...(solver.python_provenance ? { python_provenance: solver.python_provenance } : {}),
   };
   const checkpoint = () => {
     extendedFleetManifestSchema.parse(manifest);

@@ -14,20 +14,46 @@ Pinned commit `<sha>`, `dirty_working_tree: false`, GA seed 42, native terminati
 
 The preflight refuses a dirty tree, and the output of a run is untracked, so a second run in the same checkout is refused and committing the output would move the pin. Therefore **each run (large+sedan campaign, Doblò campaign, rule (e) second run) gets its own fresh detached worktree at the pinned commit**, and its `--out` lies inside that worktree. The pin is the merged commit that contains this code (`git rev-parse --short=12 HEAD` of the merged branch). The dirty check is never relaxed and the output directory is never excluded from it.
 
+Use a short run-worktree path, for example `C:\wt\e10-ls` (large+sedan), `C:\wt\e10-db` (Doblò), `C:\wt\e10-e2` (second run): deep paths hit the Windows long-path limit (do not change git config for this). `<main>` is the main checkout, `<run-worktree>` the short path.
+
+Create the worktree and the `node_modules` junction (cmd form, also valid when typed in PowerShell or Git Bash as `cmd /c ...`):
+
 ```text
 git worktree add <run-worktree> <pin> --detach
-cmd /c mklink /J <run-worktree>
-ode_modules <main>
-ode_modules
-cd <run-worktree>
-set UNIRIDE_PYTHON=<main>.venv-jitScriptspython.exe
-node --env-file=<main>optimizer_api.env --env-file=<main>.env.local scripts/run-fleet-rerun-session.mjs --port 8011 --log <log outside the repo> -- <run arguments> --out <out inside this worktree>
+cmd /c mklink /J <run-worktree>\node_modules <main>\node_modules
 ```
 
-Afterwards the results are copied (not moved by git) into a results branch of the main repository for merging; the run worktree is then removed (`cmd /c rmdir <run-worktree>
-ode_modules`, then `git worktree remove <run-worktree>`). Never recursive-delete a worktree that holds the junction.
+Then run from the worktree. The interpreter is set once; it serves the optimizer and the CLI. The Supabase environment arrives only through Node's `--env-file` by path (nothing is copied or printed).
 
-A rule (e) second run is **not** a campaign: it is written with `--dates <one date> --allow-subset-dates`, its manifest says `run_kind: rule_e_second_run` and `parameters.allow_subset_dates: true`, and it contains a one-line README. It is copied to `<campaign directory>/rule_e_second_run_<date>/` (never to `docs/paper/results/` as a sibling campaign), and `scripts/verify_fleet_rerun.py` refuses it as `--rerun-dir`.
+PowerShell:
+
+```text
+Set-Location <run-worktree>
+$env:UNIRIDE_PYTHON = "<main>\.venv-jit\Scripts\python.exe"
+node --env-file=<main>\optimizer_api\.env --env-file=<main>\.env.local scripts/run-fleet-rerun-session.mjs --port 8011 --log <log outside the repo> -- <run arguments> --out <out inside this worktree>
+```
+
+Git Bash:
+
+```text
+cd <run-worktree>
+export UNIRIDE_PYTHON="<main>/.venv-jit/Scripts/python.exe"
+node --env-file=<main>/optimizer_api/.env --env-file=<main>/.env.local scripts/run-fleet-rerun-session.mjs --port 8011 --log <log outside the repo> -- <run arguments> --out <out inside this worktree>
+```
+
+cmd:
+
+```text
+cd /d <run-worktree>
+set UNIRIDE_PYTHON=<main>\.venv-jit\Scripts\python.exe
+node --env-file=<main>\optimizer_api\.env --env-file=<main>\.env.local scripts/run-fleet-rerun-session.mjs --port 8011 --log <log outside the repo> -- <run arguments> --out <out inside this worktree>
+```
+
+The session wrapper puts the run worktree first on `PYTHONPATH` (the project venv has an editable install that maps `uniride_core`, `optimizer_api` and `academic_benchmark` to the main checkout), and before it starts the optimizer it asks the same interpreter, with the same environment and working directory, where the three packages resolve; it refuses the run unless all three lie inside the run worktree. The result is written to the log and, through the CLI's Python capture, to the manifest (`python_provenance`, repo-relative).
+
+Afterwards the results are copied (not moved by git) into a results branch of the main repository for merging; the run worktree is then removed (`cmd /c rmdir <run-worktree>\node_modules`, then `git worktree remove <run-worktree>`). Never recursive-delete a worktree that holds the junction.
+
+A rule (e) second run is **not** a campaign: it is written with `--dates <one date> --allow-subset-dates`, its manifest says `run_kind: rule_e_second_run` and `parameters.allow_subset_dates: true`, and it contains a one-line README. Owner decision 2026-10-17: it is made for large+sedan only. It is copied to `<campaign directory>/rule_e_second_run_<date>/` (never to `docs/paper/results/` as a sibling campaign), and `scripts/verify_fleet_rerun.py` refuses it as `--rerun-dir`.
 
 ## What the preflight proves, and what it cannot
 
@@ -53,4 +79,8 @@ python scripts/verify_fleet_rerun.py --rerun-dir <this directory> --single-archi
   --historical-dir <old fleet archive of the same campaign> --double-run-dir <this directory>/rule_e_second_run_<date> --base <pinned commit>
 ```
 
-Rule (d) base routes, selected-option categories (including the expected H06 category), rule (e) determinism of one full day run twice, rule (g) historical archives untouched. Result: `<pass/fail and the printed report>`.
+Rule (d) base routes, selected-option categories, rule (e) determinism of one full day run twice, rule (g) historical archives untouched. Result: `<pass/fail and the printed report>`.
+
+The H06 category is narrow on purpose. With the same menu, both days optimal and equal cars, the verifier accepts a changed selection only when the total vehicle-minutes are lower and the car-minutes higher (the order change of H06: before it car-minutes ranked before total vehicle-minutes), or when both are equal (an option-index tie). Every other change is `selection_changed_unexplained` and fails.
+
+`scenario_outcome_differs` is also fail-closed. A failure caused only by `largeVehicles` or by the assignment's `cars` needs **manual review**, not an automatic accept: they are not in the CP-SAT objective, so a genuine H06 reorder of the selection can change them. The rule stays fail-closed; a reviewer decides, case by case, and records the decision.

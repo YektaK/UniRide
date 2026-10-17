@@ -19,6 +19,37 @@ import sys
 from dataclasses import asdict
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROVENANCE_MODULES = ("uniride_core", "optimizer_api", "academic_benchmark")
+
+
+def _find(name):
+    import importlib.util
+    spec = importlib.util.find_spec(name)
+    if spec is None:
+        return None
+    return spec.origin if spec.origin and spec.origin != "namespace" else (list(spec.submodule_search_locations or [None])[0])
+
+
+def python_provenance(root=ROOT, resolve=_find):
+    """Repo-relative location of the three project packages; refuses a package that resolves outside `root`.
+
+    The check runs BEFORE this script inserts the repository root into sys.path (see below), so it shows what the
+    environment alone resolves: with the session wrapper's PYTHONPATH it is the run worktree; an editable install of
+    another checkout would otherwise win and the run would execute that checkout's code under a manifest that names this one.
+    """
+    found = {}
+    for name in PROVENANCE_MODULES:
+        location = resolve(name)
+        if location is None:
+            raise RuntimeError(f"python provenance: {name} cannot be resolved")
+        relative = os.path.relpath(os.path.abspath(location), os.path.abspath(root))
+        if relative.startswith("..") or os.path.isabs(relative):
+            raise RuntimeError(f"python provenance: {name} resolves outside the repository (an editable install of another checkout?)")
+        found[name] = relative.replace(os.sep, "/")
+    return found
+
+
+PROVENANCE = python_provenance() if __name__ == "__main__" else None
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "optimizer_api"))
 
@@ -40,6 +71,7 @@ def capture():
     return {
         "ga": {"defaults": ga.DEFAULT_CONFIG, "config": ga.config, "seed": ga.seed},
         "hf": {"config": hf.config, "seed": hf.seed},
+        "python_provenance": PROVENANCE,
         # Compute-policy values of THIS process environment (rate limit included). The session wrapper gives the
         # optimizer the same environment; the optimizer's own applied_policy is recorded from its /optimize answers.
         "compute_policy": asdict(load_compute_policy()),

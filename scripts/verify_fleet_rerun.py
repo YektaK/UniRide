@@ -12,7 +12,7 @@ Checks (exit code 1 when any fails):
   (d) selected per (cell, L, wave), the archived selected option is compared with the same option of the re-run; every difference gets a category:
                  identical                         same routes, same selection
                  selection_changed_h06_expected    narrow: both days optimal with equal cars and largeVehicles, every archived selected option identical
-                                                   in the re-run menu, new total vehicle-minutes lower (or equal with car-minutes not higher):
+                                                   in the re-run menu, and either total lower with car-minutes higher, or both equal (index tie):
                                                    the H06 order change (total vehicle-minutes before car-minutes, 2026-10-13)
                  selection_changed_unexplained     any other changed selection                              (unexplained, fails)
                  scenario_outcome_differs          status, cars, largeVehicles, selection status or wave keys differ, or a scenario exists on one side only (fails)
@@ -120,25 +120,35 @@ def outcome_of(scenario):
 
 
 def h06_improvement(old, new):
-    """The re-run selection is an improvement under the H06 order: total vehicle-minutes before car-minutes.
+    """True only for a change that H06 explains on an UNCHANGED menu, with both runs optimal and equal cars.
 
-    DECISION_LOG H06 (2026-10-13) changed the day-selection objective from (cars, car-minutes, total vehicle-minutes) to
-    (cars, total vehicle-minutes, car-minutes). With the same menus and the same cars, a re-run may therefore pick another
-    option whenever it lowers the total vehicle-minutes, or keeps them and lowers the car-minutes. Anything else (more total
-    minutes, or equal total and more car-minutes) cannot be explained by H06 and is not accepted.
+    DECISION_LOG H06 (2026-10-13) changed the day-selection order (typed_day_selection.py):
+        before H06: (cars, car-minutes, total vehicle-minutes, option indices)
+        after  H06: (cars, total vehicle-minutes, car-minutes, option indices)
+    Same menu, same cars. The old run minimised car-minutes first, so the old selection has the least car-minutes among
+    the equal-cars selections and, among those, the least total. The new run minimises total first. A genuinely different
+    selection is therefore possible in exactly two ways:
+      1. total vehicle-minutes strictly lower AND car-minutes strictly higher: the new order trades car-minutes for total
+         (the old order would never have accepted the higher car-minutes);
+      2. both values equal: only the option-index tie-break (stage 4) differs.
+    The other combinations cannot come from H06 on an unchanged menu, because the OLD order would already have chosen the
+    new selection: total lower with car-minutes equal or lower, or total equal with car-minutes lower (the old order prefers
+    lower car-minutes first). A total that is higher can never win under the new order. All of these are unexplained.
+    Both carMinutes values and both totals are required; a missing value is unexplained.
     """
+    eps = 1e-6
+
     def num(scenario, key):
         value = scenario.get(key)
         return value if isinstance(value, (int, float)) else None
     old_total, new_total = num(old, "totalVehicleMinutes"), num(new, "totalVehicleMinutes")
     old_car, new_car = num(old.get("selection") or {}, "carMinutes"), num(new.get("selection") or {}, "carMinutes")
-    if old_total is None or new_total is None:
+    if None in (old_total, new_total, old_car, new_car):
         return False
-    if new_total < old_total - 1e-9:
+    d_total, d_car = new_total - old_total, new_car - old_car
+    if d_total < -eps and d_car > eps:
         return True
-    if abs(new_total - old_total) <= 1e-9:
-        return old_car is not None and new_car is not None and new_car <= old_car + 1e-9
-    return False
+    return abs(d_total) <= eps and abs(d_car) <= eps
 
 
 def check_selected_options(rerun_dir, hist_dir, cells, manifest, failures, report):
@@ -199,8 +209,10 @@ def check_selected_options(rerun_dir, hist_dir, cells, manifest, failures, repor
 def check_double_run(first_dir, second_dir, failures, report):
     second_manifest_path = os.path.join(second_dir, "run_manifest.json")
     second = load(second_manifest_path) if os.path.exists(second_manifest_path) else {}
-    if second.get("run_kind") != "rule_e_second_run" or not (second.get("parameters") or {}).get("allow_subset_dates") or second.get("state") != "completed":
-        failures.append("(e) the second run is not labelled as a rule (e) second run (run_kind, parameters.allow_subset_dates) or not completed")
+    if second.get("run_kind") != "rule_e_second_run" or not (second.get("parameters") or {}).get("allow_subset_dates"):
+        failures.append("(e) the second run is not labelled as a rule (e) second run (run_kind, parameters.allow_subset_dates)")
+    if second.get("state") != "completed":
+        failures.append("(e) the second run is not completed")
     names = sorted(n for n in os.listdir(second_dir) if n.endswith(".menu_options.json"))
     if not names:
         failures.append("(e) the second run holds no *.menu_options.json")

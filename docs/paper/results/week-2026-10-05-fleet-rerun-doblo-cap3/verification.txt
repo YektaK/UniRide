@@ -1,0 +1,12 @@
+{
+  "report": {
+    "cells": 20,
+    "waves_checked_against_4sw5so": 228,
+    "selected_option_categories": {
+      "identical": 654,
+      "selection_changed_h06_expected": 30
+    },
+    "history_untouched": true
+  },
+  "failures": []
+}

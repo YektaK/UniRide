@@ -26,6 +26,12 @@ VALID = {
     ("week-2026-10-05-fleet",): "fleet",
     ("week-2026-10-05-fleet", "extra", "minivan-cap3"): "minivan-cap3",
 }
+# WP-E10 re-runs (pin f29aa3d88488): the only GA source of the typed exact study (decision D-A, WP-E4). Kept apart
+# from VALID so that ``load_all_valid`` and the WP-E0..E3 measurements keep their historical campaign set.
+RERUN = {
+    ("week-2026-10-05-fleet-rerun-large-sedan",): "rerun-large-sedan",
+    ("week-2026-10-05-fleet-rerun-doblo-cap3",): "rerun-doblo-cap3",
+}
 # named for a clear refusal message; anything not in VALID is refused as well
 INVALID = {
     ("week-2026-10-05",): "INVALID: wrong capacity 4 Sw / 10 So, superseded by week-2026-10-05-4sw5so (X01)",
@@ -69,7 +75,7 @@ def classify(path) -> str:
     for tail, why in INVALID.items():
         if parts[-len(tail):] == tail:
             raise CampaignRefused(f"{path}: {why}")
-    for tail, key in VALID.items():
+    for tail, key in {**VALID, **RERUN}.items():
         if parts[-len(tail):] == tail:
             return key
     raise CampaignRefused(f"{path}: not one of the valid campaign directories {sorted(VALID.values())}")
@@ -197,7 +203,7 @@ def load_campaign(path, reference_dir=None) -> Campaign:
     elif reference_dir:
         ref_dir = Path(reference_dir)
     else:
-        ref_dir = (path.parent if key == "fleet" else path.parents[2]) / REFERENCE_DIR
+        ref_dir = (path.parents[2] if key == "minivan-cap3" else path.parent) / REFERENCE_DIR
     waves: dict = {}
     types: tuple = ()
     for mfile in sorted(path.glob("*.matrix.json")):

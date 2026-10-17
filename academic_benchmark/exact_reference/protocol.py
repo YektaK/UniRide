@@ -65,7 +65,7 @@ ENUMERATION_CAPS = {"column_cap": COLUMN_CAP_DEFAULT, "label_cap": LABEL_CAP_DEF
 
 MANIFEST_FIELDS = {
     "protocol": str, "schema_version": int, "git_commit": str, "dirty_working_tree": bool,
-    "source_campaign": dict, "matrix_sha256": dict, "peak_waves": dict, "ampl": dict, "solver": dict,
+    "matrix_sha256": dict, "peak_waves": dict, "ampl": dict, "solver": dict,
     "enumeration": dict, "waves": list, "python_version": str, "host_os": str,
 }
 SOLVER_FIELDS = ("name", "version", "option_string", "peak_option_string", "threads", "seed", "time_limit_seconds",
@@ -149,9 +149,18 @@ def validate_manifest(doc: Mapping) -> List[str]:
         errors.append(f"schema_version must be {MANIFEST_SCHEMA_VERSION}")
     if not re.fullmatch(r"[0-9a-f]{7,40}", doc["git_commit"]):
         errors.append("git_commit must be a hex commit id")
-    src = doc["source_campaign"]
-    if not isinstance(src.get("path"), str) or not re.fullmatch(r"[0-9a-f]{64}", str(src.get("manifest_sha256"))):
-        errors.append("source_campaign needs a relative path and a manifest_sha256")
+    # One source campaign (``source_campaign``, WP-E3) or several (``source_campaigns``: name -> campaign, WP-E4a).
+    sources = []
+    if isinstance(doc.get("source_campaign"), dict):
+        sources.append(("source_campaign", doc["source_campaign"]))
+    if isinstance(doc.get("source_campaigns"), dict):
+        sources.extend((f"source_campaigns[{name}]", src) for name, src in doc["source_campaigns"].items())
+    if not sources:
+        errors.append("missing field source_campaign (or a non-empty source_campaigns)")
+    for label, src in sources:
+        if not isinstance(src, dict) or not isinstance(src.get("path"), str) or not re.fullmatch(
+                r"[0-9a-f]{64}", str(src.get("manifest_sha256"))):
+            errors.append(f"{label} needs a relative path and a manifest_sha256")
     for key, sha in doc["matrix_sha256"].items():
         if not re.fullmatch(r"\d{4}-\d{2}-\d{2}_R\d+", key) or not re.fullmatch(r"[0-9a-f]{64}", str(sha)):
             errors.append(f"matrix_sha256 entry {key!r} invalid")

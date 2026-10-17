@@ -254,8 +254,6 @@ def classify(cell: CellSolve, ga_confirmation: Confirmation, union_confirmation:
         return Verdict(LABEL_PROVEN, False, "", tuple(errors), CLAIM)
     if union.status in TIME_LIMITED_STATUSES:
         reason = f"union run {union.status} at {union.time_limit_s:g} s" + (" (re-run)" if cell.rerun else "")
-    elif union.status != STATUS_OPTIMAL:
-        reason = f"union run {union.status}"
-    else:
-        reason = f"GA-menu run {ga.status}"
+    else:  # a proven status of at least one run that is not optimal (e.g. infeasible_for_L): final, not clock dependent
+        reason = f"GA-menu run {ga.status}; union run {union.status}"
     return Verdict(LABEL_NOT_PROVEN, timing, reason, tuple(errors), "")

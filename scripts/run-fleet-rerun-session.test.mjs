@@ -9,6 +9,10 @@ import {
 
 const ROOT = path.resolve("repo-root-fixture");
 const OUTSIDE_LOG = path.join(path.dirname(ROOT), "elsewhere", "optimizer.log");
+const INSIDE = JSON.stringify({
+  uniride_core: path.join(ROOT, "uniride_core", "__init__.py"), optimizer_api: path.join(ROOT, "optimizer_api", "__init__.py"),
+  academic_benchmark: path.join(ROOT, "academic_benchmark", "__init__.py"),
+});
 const HEALTHY = async () => ({ status: 200, text: JSON.stringify({ status: "ok", message: "UniRide Optimization Engine is running." }) });
 const args = (log = OUTSIDE_LOG, port = 18011) => ["--port", String(port), "--log", log, "--", "--preflight-only", "--week-of", "2026-10-05"];
 
@@ -30,10 +34,14 @@ function fakeSpawn({ errorOnOptimizer = false, cliHangs = false, cliExit = 0 } =
 }
 function deps(over = {}) {
   const stopped = [];
+  const synced = [];
+  const logged = [];
   const exits = [];
   const emitter = new EventEmitter();
   return {
-    stopped, emitter, exits,
+    stopped, emitter, exits, synced, logged,
+    spawnSync: (command, spawnArgs, options) => { synced.push({ command, args: spawnArgs, options }); return { status: 0, stdout: over.provenance ?? INSIDE }; },
+    writeLog: (fd, text) => { logged.push(text); },
     spawn: over.spawn ?? fakeSpawn(), isPortFree: async () => true, probeHealth: HEALTHY, sleep: () => new Promise((resolve) => setImmediate(resolve)),
     healthTimeoutMs: 50, openLog: () => 99, closeLog: () => {}, stopTree: (child) => { if (child) stopped.push(child.pid); },
     exit: (code) => { exits.push(code); }, log: () => {}, ...over,
@@ -89,7 +97,8 @@ test("runSession refuses before it spawns anything: a log inside the repo, a mis
 });
 
 test("a wrong interpreter fails fast with a clear message and does not wait for the health timeout", async () => {
-  const d = deps({ spawn: fakeSpawn({ errorOnOptimizer: true }), probeHealth: async () => null, healthTimeoutMs: 60_000 });
+  // a short health timeout: a regression (no 'error' handler) fails after 2 s with another message, not after the 60 s node test timeout
+  const d = deps({ spawn: fakeSpawn({ errorOnOptimizer: true }), probeHealth: async () => null, healthTimeoutMs: 2_000 });
   const started = Date.now();
   await assert.rejects(() => runSession(args(), { UNIRIDE_PYTHON: "no-such-python" }, ROOT, d), /could not start the optimizer.*UNIRIDE_PYTHON/i);
   assert.ok(Date.now() - started < 2000, "must not wait for the 60 s timeout");
@@ -147,9 +156,47 @@ test("installSignalHandlers: both signals call stop once with its own targets an
   assert.equal(emitter.listenerCount("SIGINT") + emitter.listenerCount("SIGTERM"), 0);
 });
 
+test("P-provenance: the Python modules must resolve inside the run worktree, checked with the optimizer's interpreter, env and cwd before anything is spawned", async () => {
+  const d = deps();
+  await runSession(args(), { UNIRIDE_PYTHON: "py", PYTHONPATH: "other" }, ROOT, d);
+  assert.equal(d.synced.length, 1);
+  const [check] = d.synced;
+  assert.equal(check.command, "py");
+  assert.equal(check.args[0], "-c");
+  assert.ok(!check.args[1].includes("\n"), "python -c must be one line");
+  for (const name of ["uniride_core", "optimizer_api", "academic_benchmark"]) assert.ok(check.args[1].includes(name));
+  assert.equal(check.options.cwd, path.join(ROOT, "optimizer_api"));
+  assert.equal(check.options.env.PYTHONPATH, [ROOT, "other"].join(path.delimiter));
+  assert.equal(d.spawn.calls[0].options.env.PYTHONPATH, check.options.env.PYTHONPATH); // the optimizer gets the very same env
+  assert.equal(d.spawn.calls[1].options.env.PYTHONPATH, check.options.env.PYTHONPATH); // and so does the run (its Python capture)
+  // the resolved, repo-relative result goes to the log; no absolute path
+  const line = d.logged.join("");
+  assert.ok(line.includes('"uniride_core":"uniride_core/__init__.py"'), line);
+  assert.ok(!line.includes(ROOT));
+});
+
+test("a module that resolves outside the run worktree (editable install of another checkout) refuses the run before any spawn", async () => {
+  const outside = JSON.stringify({ uniride_core: path.join(path.dirname(ROOT), "main-checkout", "uniride_core", "__init__.py"),
+    optimizer_api: path.join(ROOT, "optimizer_api", "__init__.py"), academic_benchmark: path.join(ROOT, "academic_benchmark", "__init__.py") });
+  const d = deps({ provenance: outside });
+  await assert.rejects(() => runSession(args(), { UNIRIDE_PYTHON: "py" }, ROOT, d), /uniride_core.*outside the run worktree/);
+  assert.equal(d.spawn.calls.length, 0);
+  assert.equal(d.synced.length, 1);
+});
+
+test("a failing or unreadable provenance check refuses the run before any spawn", async () => {
+  for (const answer of [{ status: 1, stdout: "" }, { status: 0, stdout: "not json" }, { status: 0, stdout: JSON.stringify({ uniride_core: "x" }) }]) {
+    const d = deps({ spawnSync: () => answer });
+    await assert.rejects(() => runSession(args(), { UNIRIDE_PYTHON: "py" }, ROOT, d), /provenance/i);
+    assert.equal(d.spawn.calls.length, 0);
+  }
+});
+
 test("one environment for both processes: same interpreter, shared key, lowered window, nothing else touched", () => {
   const parent = { PATH: "p", SUPABASE_SERVICE_ROLE_KEY: "secret-value", UNIRIDE_COMPUTE_MAX_ITERATIONS: "700" };
-  const env = buildSessionEnv(parent, "k".repeat(64), 8011, "C:/py/python.exe");
+  const env = buildSessionEnv(parent, "k".repeat(64), 8011, "C:/py/python.exe", ROOT);
+  assert.equal(env.PYTHONPATH, ROOT); // the run worktree first: the editable install of another checkout must not win
+  assert.equal(buildSessionEnv({ PYTHONPATH: "a" }, "k", 8011, "py", ROOT).PYTHONPATH, [ROOT, "a"].join(path.delimiter));
   assert.equal(env.UNIRIDE_PYTHON, "C:/py/python.exe");
   assert.equal(env.OPTIMIZER_PORT, "8011");
   assert.equal(env.OPTIMIZER_API_URL, "http://127.0.0.1:8011");
@@ -158,5 +205,5 @@ test("one environment for both processes: same interpreter, shared key, lowered 
   assert.equal(env.UNIRIDE_RATE_LIMIT_REQUESTS, undefined);
   assert.equal(env.UNIRIDE_COMPUTE_MAX_ITERATIONS, "700");
   assert.equal(env.SUPABASE_SERVICE_ROLE_KEY, "secret-value");
-  assert.deepEqual(Object.keys(parent).sort(), ["PATH", "SUPABASE_SERVICE_ROLE_KEY", "UNIRIDE_COMPUTE_MAX_ITERATIONS"]);
+  assert.deepEqual(Object.keys(parent).sort(), ["PATH", "SUPABASE_SERVICE_ROLE_KEY", "UNIRIDE_COMPUTE_MAX_ITERATIONS"]); // parent untouched
 });

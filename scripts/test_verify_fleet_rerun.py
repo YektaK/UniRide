@@ -206,16 +206,19 @@ def test_a_scenario_only_in_the_rerun_or_only_in_the_old_archive_fails(archive):
 
 
 def test_a_genuine_h06_case_passes(archive):
-    # same cars and large vehicles, the old option is still in the menu with identical routes, total vehicle-minutes now lower
-    rewrite(archive, response("base", selected_routes(STEPS, IDS), total=90.0))
+    # Old: total 100 / car 10. New: total 90 / car 12. Pre-H06 (cars, car-minutes, total) the old option wins (car 10 < 12);
+    # post-H06 (cars, total, car-minutes) the new one wins (total 90 < 100). Same menu, so only the order explains the change.
+    rewrite(archive, response("base", selected_routes(STEPS, IDS), total=90.0, car_minutes=12.0))
     failures, report = run(archive)
     assert failures == [] and report["selected_option_categories"] == {"selection_changed_h06_expected": 1}
 
 
-def test_equal_total_minutes_with_lower_or_equal_car_minutes_passes(archive):
-    rewrite(archive, response("base", selected_routes(STEPS, IDS), total=100.0, car_minutes=9.0))
-    assert run(archive)[0] == []
+def test_an_option_index_tie_passes(archive):
+    # identical objective values: only the option-index tie-break (stage 4) can differ
     rewrite(archive, response("base", selected_routes(STEPS, IDS), total=100.0, car_minutes=10.0))
+    failures, report = run(archive)
+    assert failures == [] and report["selected_option_categories"] == {"selection_changed_h06_expected": 1}
+    rewrite(archive, response("base", selected_routes(STEPS, IDS), total=100.0000004, car_minutes=10.0000004))  # inside eps = 1e-6
     assert run(archive)[0] == []
 
 
@@ -223,6 +226,11 @@ def test_equal_total_minutes_with_lower_or_equal_car_minutes_passes(archive):
     ("total vehicle-minutes worse", response("base", selected_routes(STEPS, IDS), total=110.0)),
     ("equal total minutes but worse car-minutes", response("base", selected_routes(STEPS, IDS), total=100.0, car_minutes=11.0)),
     ("new total minutes missing", response("base", selected_routes(STEPS, IDS), total=None)),
+    # impossible under H06 on an unchanged menu: the OLD order (cars, car-minutes, total) would already have chosen the new option
+    ("total lower and car-minutes equal (old order would have chosen it)", response("base", selected_routes(STEPS, IDS), total=90.0, car_minutes=10.0)),
+    ("total lower and car-minutes lower (old order would have chosen it)", response("base", selected_routes(STEPS, IDS), total=90.0, car_minutes=9.0)),
+    ("total equal and car-minutes lower (old order would have chosen it)", response("base", selected_routes(STEPS, IDS), total=100.0, car_minutes=9.0)),
+    ("new car-minutes missing", response("base", selected_routes(STEPS, IDS), total=90.0, car_minutes=None)),
 ])
 def test_a_changed_selection_that_is_not_an_h06_improvement_fails(archive, name, new_response):
     rewrite(archive, new_response)
@@ -233,7 +241,7 @@ def test_a_changed_selection_that_is_not_an_h06_improvement_fails(archive, name,
 
 def test_h06_needs_the_archived_option_to_be_identical_in_the_rerun_menu(archive):
     edit(menu(archive), lambda v: v["waves"][0]["options"][1].update({"routes": [route(STEPS_OTHER, IDS)]}))
-    rewrite(archive, response("base", selected_routes(STEPS, IDS), total=90.0))
+    rewrite(archive, response("base", selected_routes(STEPS, IDS), total=90.0, car_minutes=12.0))
     failures, report = run(archive)
     assert "selection_changed_h06_expected" not in report["selected_option_categories"]
     assert failures
@@ -241,7 +249,7 @@ def test_h06_needs_the_archived_option_to_be_identical_in_the_rerun_menu(archive
 
 def test_the_new_selection_is_really_read(archive):
     """Guards the verifier reading the re-run selection: a changed selection must never be filed as identical."""
-    rewrite(archive, response("base", selected_routes(STEPS, IDS), total=90.0))
+    rewrite(archive, response("base", selected_routes(STEPS, IDS), total=90.0, car_minutes=12.0))
     _, report = run(archive)
     assert report["selected_option_categories"].get("identical", 0) == 0
     assert report["selected_option_categories"] == {"selection_changed_h06_expected": 1}
@@ -285,6 +293,10 @@ def test_double_run_must_be_a_labelled_subset_run_and_byte_identical(archive, tm
     (second / name).write_bytes(data)
     write(str(second / "run_manifest.json"), manifest())  # a campaign is not a second run
     assert any("not labelled as a rule (e) second run" in f for f in run(archive, "--double-run-dir", str(second))[0])
+    failed = subset_manifest()
+    failed["state"] = "failed"  # P1: labelled correctly but not completed
+    write(str(second / "run_manifest.json"), failed)
+    assert any("second run is not completed" in f for f in run(archive, "--double-run-dir", str(second))[0])
     write(str(second / "run_manifest.json"), subset_manifest())
     (second / name).unlink()
     assert any("holds no" in f for f in run(archive, "--double-run-dir", str(second))[0])

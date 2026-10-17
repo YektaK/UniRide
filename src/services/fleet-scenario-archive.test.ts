@@ -178,6 +178,7 @@ describe("WP-E10 extended manifest (v2)", () => {
       vehicle_count_scope: "s", weekly_cars_definition: "d", runs: [run], state: "completed", completed_at: "2026-10-18T11:00:00.000Z",
       archive_format: FLEET_ARCHIVE_FORMAT, run_kind: "campaign", pinned_commit: sha.slice(0, 12), preflight: structuredClone(preflight),
       compute_policy: { rate_limit_window_seconds: 1 },
+      python_provenance: { uniride_core: "uniride_core/__init__.py", optimizer_api: "optimizer_api/__init__.py", academic_benchmark: "academic_benchmark/__init__.py" },
       optimizer_policy: { profile_id: "production-conservative-v1", limits: {}, responses_checked: 12, limits_identical: true },
     };
   }
@@ -185,28 +186,30 @@ describe("WP-E10 extended manifest (v2)", () => {
     const value = await manifest();
     expect(() => extendedFleetManifestSchema.parse(value)).not.toThrow();
   });
-  it.each<[string, (m: Record<string, unknown>) => void]>([
-    ["dirty tree", (m) => { m.dirty_working_tree = true; }],
-    ["commit other than the pinned one", (m) => { m.pinned_commit = "e".repeat(12); }],
-    ["no pinned commit", (m) => { delete m.pinned_commit; }],
-    ["no preflight", (m) => { delete m.preflight; }],
-    ["failed preflight", (m) => { m.preflight = { ...preflight, ok: false }; }],
-    ["no archive format", (m) => { delete m.archive_format; }],
-    ["a run without the per-option file", (m) => { (m.runs as Array<Record<string, unknown>>)[0].menu_options_file = null; }],
-    ["a run without the selection exchange list", (m) => { delete (m.runs as Array<Record<string, unknown>>)[0].selection_exchange_files; }],
-    ["a completed run with an optimizer HTTP failure (an option was lost)", (m) => { (m.runs as Array<Record<string, unknown>>)[0].optimizer_http_failures = [{ path: "/api/v1/optimize", status: 429 }]; }],
-    ["an absolute path in the preflight record", (m) => { (m.preflight as Record<string, unknown>).reference_manifest = "C:/Users/x/run_manifest.json"; }],
-    ["a backslash path in the preflight record", (m) => { (m.preflight as Record<string, unknown>).reference_waves_archive = "docs\\w"; }],
-    ["no compute policy", (m) => { delete m.compute_policy; }],
-    ["optimizer policy that changed during the run", (m) => { (m.optimizer_policy as Record<string, unknown>).limits_identical = false; }],
-    ["no run_kind", (m) => { delete m.run_kind; }],
-    ["the subset flag on a campaign", (m) => { (m.parameters as Record<string, unknown>).allow_subset_dates = true; }],
-    ["a rule (e) second run without the subset flag", (m) => { m.run_kind = "rule_e_second_run"; }],
-    ["a completed run with a blocked day", (m) => { (m.runs as Array<Record<string, unknown>>)[0].day_status = "blocked_data"; }],
-    ["a completed run that misses a grid cell", (m) => { (m.parameters as Record<string, unknown>).ride_limits = [RIDE, 70]; }],
-  ])("rejects %s", async (_name, change) => {
+  it.each<[string, (m: Record<string, unknown>) => void, string]>([
+    ["dirty tree", (m) => { m.dirty_working_tree = true; }, "clean working tree"],
+    ["commit other than the pinned one", (m) => { m.pinned_commit = "e".repeat(12); }, "pinned commit"],
+    ["no pinned commit", (m) => { delete m.pinned_commit; }, "pinned commit"],
+    ["no preflight", (m) => { delete m.preflight; }, "passed preflight"],
+    ["failed preflight", (m) => { m.preflight = { ...preflight, ok: false }; }, "passed preflight"],
+    ["no archive format", (m) => { delete m.archive_format; }, "archive_format"],
+    ["a run without the per-option file", (m) => { (m.runs as Array<Record<string, unknown>>)[0].menu_options_file = null; }, "menu_options_file"],
+    ["a run without the selection exchange list", (m) => { delete (m.runs as Array<Record<string, unknown>>)[0].selection_exchange_files; }, "selection_exchange_files"],
+    ["a completed run with an optimizer HTTP failure (an option was lost)", (m) => { (m.runs as Array<Record<string, unknown>>)[0].optimizer_http_failures = [{ path: "/api/v1/optimize", status: 429 }]; }, "no optimizer HTTP failure"],
+    ["an absolute path in the preflight record", (m) => { (m.preflight as Record<string, unknown>).reference_manifest = "C:/Users/x/run_manifest.json"; }, "repo-relative POSIX path"],
+    ["a backslash path in the preflight record", (m) => { (m.preflight as Record<string, unknown>).reference_waves_archive = "docs\\w"; }, "repo-relative POSIX path"],
+    ["no compute policy", (m) => { delete m.compute_policy; }, "compute_policy must be recorded"],
+    ["optimizer policy that changed during the run", (m) => { (m.optimizer_policy as Record<string, unknown>).limits_identical = false; }, "optimizer_policy must be recorded"],
+    ["no python provenance", (m) => { delete m.python_provenance; }, "python_provenance must be recorded"],
+    ["an absolute python provenance path", (m) => { (m.python_provenance as Record<string, unknown>).uniride_core = "C:/main/uniride_core/__init__.py"; }, "repo-relative POSIX path"],
+    ["no run_kind", (m) => { delete m.run_kind; }, "run_kind must be campaign or rule_e_second_run"],
+    ["the subset flag on a campaign", (m) => { (m.parameters as Record<string, unknown>).allow_subset_dates = true; }, "must go together"],
+    ["a rule (e) second run without the subset flag", (m) => { m.run_kind = "rule_e_second_run"; }, "must go together"],
+    ["a completed run with a blocked day", (m) => { (m.runs as Array<Record<string, unknown>>)[0].day_status = "blocked_data"; }, "every day ready"],
+    ["a completed run that misses a grid cell", (m) => { (m.parameters as Record<string, unknown>).ride_limits = [RIDE, 70]; }, "every (date, R) cell exactly once"],
+  ])("rejects %s", async (_name, change, message) => {
     const value = await manifest();
     change(value);
-    expect(() => extendedFleetManifestSchema.parse(value)).toThrow();
+    expect(() => extendedFleetManifestSchema.parse(value)).toThrow(message);
   });
 });

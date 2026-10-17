@@ -24,6 +24,7 @@ const SOLVER = {
   ga: { defaults: GA, config: GA, seed: 42 }, hf: { config: GA, seed: 42 },
   cp: { version: "9.15.6755", seed: 20261008, workers: 1 },
   compute_policy: { profile_id: "production-conservative-v1", rate_limit_requests: 30, rate_limit_window_seconds: 1 },
+  python_provenance: { uniride_core: "uniride_core/__init__.py", optimizer_api: "optimizer_api/__init__.py", academic_benchmark: "academic_benchmark/__init__.py" },
 };
 const pins: PreflightPins = { ...PINNED, matrixSha256: "a".repeat(64), waveCount: 2, legCount: 6 };
 const OUT = "docs/paper/results/week-2026-10-05-fleet-rerun-test";
@@ -231,6 +232,7 @@ describe("B3 and N1/N2: the published manifest", () => {
     await runFleetRerun(s.deps, parseFleetArgs(argv()));
     const manifest = manifestOf(s.fsx);
     expect(manifest.compute_policy).toMatchObject({ rate_limit_requests: 30, rate_limit_window_seconds: 1 });
+    expect(manifest.python_provenance.uniride_core).toBe("uniride_core/__init__.py"); // repo-relative, from the capture
     expect(manifest.optimizer_policy).toMatchObject({ profile_id: "production-conservative-v1", limits_identical: true });
     expect(manifest.optimizer_policy.responses_checked).toBeGreaterThan(5);
     expect(manifest.preflight.occurrence_check_limit).toBe(OCCURRENCE_CHECK_LIMIT);
@@ -251,6 +253,22 @@ describe("N2/N3: the run README template", () => {
     expect(template).toContain("git worktree add <run-worktree> <pin> --detach");
     expect(template).toMatch(/never relaxed and the output directory is never excluded/);
     expect(template).toContain("rule_e_second_run_<date>/");
+  });
+  it("B-3: the worktree procedure is written as complete, correctly escaped lines (cmd, PowerShell and Git Bash forms)", () => {
+    const lines = template.split("\n").map((line) => line.trimEnd());
+    const has = (line: string) => expect(lines, line).toContain(line);
+    has("cmd /c mklink /J <run-worktree>\\node_modules <main>\\node_modules");
+    has("$env:UNIRIDE_PYTHON = \"<main>\\.venv-jit\\Scripts\\python.exe\"");
+    has("export UNIRIDE_PYTHON=\"<main>/.venv-jit/Scripts/python.exe\"");
+    expect(lines.some((line) => line.includes("--env-file=<main>\\optimizer_api\\.env --env-file=<main>\\.env.local scripts/run-fleet-rerun-session.mjs"))).toBe(true);
+    expect(lines.some((line) => line.includes("--env-file=<main>/optimizer_api/.env --env-file=<main>/.env.local scripts/run-fleet-rerun-session.mjs"))).toBe(true);
+    // no line of the file may start with the tail of a path that a stripped backslash or a stray line break cut off
+    expect(lines.filter((line) => /^(ode_modules|ptimizer_api|venv-jit|env\.local)/.test(line))).toEqual([]);
+    expect(template).toMatch(/C:\\wt\\e10-ls/); // P6: a short run-worktree path (Windows long-path limit)
+  });
+  it("P2: a scenario_outcome_differs from largeVehicles or the assignment's cars needs manual review", () => {
+    expect(template).toMatch(/scenario_outcome_differs[\s\S]*largeVehicles[\s\S]*manual review/);
+    expect(template).toMatch(/not in the CP-SAT objective/);
   });
   it("says that a write-time archive schema failure aborts the whole campaign", () => {
     expect(template).toMatch(/schema failure aborts the whole campaign/);

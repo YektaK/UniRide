@@ -152,3 +152,37 @@ def test_manifest_example_is_not_mutated_by_validation():
     before = copy.deepcopy(m)
     _proto().validate_manifest(m)
     assert m == before
+
+
+# ---- WP-E4a: several source campaigns (backward compatible with the single ``source_campaign``) ----
+def _multi_manifest():
+    m = _manifest()
+    one = m.pop("source_campaign")
+    m["source_campaigns"] = {"large+sedan": dict(one, path="docs/paper/results/week-2026-10-05-fleet-rerun-large-sedan"),
+                             "large+doblo_cap3": dict(one, path="docs/paper/results/week-2026-10-05-fleet-rerun-doblo-cap3")}
+    return m
+
+
+def test_manifest_with_source_campaigns_instead_of_source_campaign_is_valid():
+    assert _proto().validate_manifest(_multi_manifest()) == []
+
+
+@pytest.mark.parametrize("mutate,needle", [
+    (lambda m: m.pop("source_campaigns"), "source_campaign"),
+    (lambda m: m.update(source_campaigns={}), "source_campaign"),
+    (lambda m: m["source_campaigns"]["large+sedan"].update(path="/home/x/results"), "absolute path"),
+    (lambda m: m["source_campaigns"]["large+sedan"].update(manifest_sha256="nothex"), "manifest_sha256"),
+    (lambda m: m["source_campaigns"]["large+sedan"].pop("path"), "relative path"),
+])
+def test_invalid_source_campaigns_are_reported(mutate, needle):
+    m = _multi_manifest()
+    mutate(m)
+    errors = _proto().validate_manifest(m)
+    assert any(needle in e for e in errors), errors
+
+
+def test_single_source_campaign_manifests_stay_valid_and_one_source_is_required():
+    m = _manifest()
+    assert _proto().validate_manifest(m) == []
+    m.pop("source_campaign")
+    assert any("source_campaign" in e for e in _proto().validate_manifest(m))

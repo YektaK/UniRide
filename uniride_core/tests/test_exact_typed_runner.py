@@ -575,3 +575,248 @@ def test_committed_campaign_results_are_consistent_and_recertify_without_a_solve
         wave = waves[name][(entry["service_date"], entry["R"], entry["wave_id"])]
         result = runner.recertify_stored_option(wave, entry, arcs[key], ctxs[name])
         assert result["is_feasible"] is True, (name, entry["wave_id"], entry["option"], result["violations"][:2])
+
+
+# ======================= DUZELT round 1 =======================
+# ---------- B1: the cache is off by default and keyed on everything a result depends on ----------
+BASE_KEY = dict(commit="a" * 40, dirty=False,
+                solver={"name": "gurobi", "version": "Gurobi 13.0.3", "option_string": "mip:bestbound=1 lim:time=60 lim:work=20"},
+                verification={"name": "highs", "version": "HiGHS 1.15.1", "option_string": "mip:bestbound=1 lim:time=60"},
+                ampl_version="AMPL 20260809", source_sha={"large+sedan": "1" * 64, "large+doblo_cap3": "2" * 64},
+                highs_verify=True)
+UNIT = ("large+doblo_cap3", 90, "2026-10-05", ("w1", "w2"))
+
+
+def test_cache_is_off_unless_a_directory_is_given(runner):
+    assert runner.parse_args([]).cache_dir == ""
+    assert runner.parse_args([]).stop_on_error is True
+
+
+@pytest.mark.parametrize("name,change", [
+    ("commit", dict(commit="b" * 40)),
+    ("dirty", dict(dirty=True)),
+    ("solver option string", dict(solver={**BASE_KEY["solver"], "option_string": "mip:bestbound=1 lim:time=90 lim:work=20"})),
+    ("solver version", dict(solver={**BASE_KEY["solver"], "version": "Gurobi 13.0.4"})),
+    ("verification option string", dict(verification={**BASE_KEY["verification"], "option_string": "mip:bestbound=1 lim:time=90"})),
+    ("verification version", dict(verification={**BASE_KEY["verification"], "version": "HiGHS 1.16"})),
+    ("ampl version", dict(ampl_version="AMPL 20270101")),
+    ("source manifest sha", dict(source_sha={**BASE_KEY["source_sha"], "large+sedan": "3" * 64})),
+    ("highs flag", dict(highs_verify=False)),
+])
+def test_cache_key_changes_with_every_ingredient(runner, name, change):
+    base = runner.cache_key(UNIT, **BASE_KEY)
+    assert runner.cache_key(UNIT, **BASE_KEY) == base  # deterministic
+    assert runner.cache_key(UNIT, **{**BASE_KEY, **change}) != base, name
+
+
+def test_cache_key_changes_with_unit_and_wave_ids(runner):
+    base = runner.cache_key(UNIT, **BASE_KEY)
+    assert runner.cache_key(("large+sedan",) + UNIT[1:], **BASE_KEY) != base
+    assert runner.cache_key(UNIT[:3] + (("w1",),), **BASE_KEY) != base
+    assert runner.cache_key(UNIT[:1] + (70,) + UNIT[2:], **BASE_KEY) != base
+
+
+def _cache_ctx(tmp_path, **override):
+    return {"dir": str(tmp_path / "cache"), **{k: v for k, v in BASE_KEY.items() if k != "highs_verify"}, **override}
+
+
+def _fake_unit_result(tag="solved"):
+    return {"rows": [{"tag": tag}], "option_docs": [], "errors": [], "route_docs": [], "matrix_sha": {}, "slice_sha": {},
+            "caps_fired": 0, "failed_stage_rows": []}
+
+
+def test_cache_file_is_used_only_under_its_own_key(runner, tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(runner, "_solve_unit", lambda unit, hv, peaks, sessions=None: calls.append(unit) or _fake_unit_result(len(calls) and f"call{len(calls)}"))
+    args = runner.parse_args(["--cache-dir", str(tmp_path / "cache")])
+    ctx = _cache_ctx(tmp_path)
+    first = runner._solve_units([UNIT], args, set(), None, None, ctx)
+    assert len(calls) == 1 and first[0]["unit_run"]["source"] == "solved"
+    again = runner._solve_units([UNIT], args, set(), None, None, ctx)
+    assert len(calls) == 1 and again[0]["unit_run"]["source"] == "cache" and again[0]["rows"] == first[0]["rows"]
+    # another commit or other options: a different key, the cached file is not used
+    runner._solve_units([UNIT], args, set(), None, None, _cache_ctx(tmp_path, commit="b" * 40))
+    assert len(calls) == 2
+    runner._solve_units([UNIT], args, set(), None, None,
+                        _cache_ctx(tmp_path, solver={**BASE_KEY["solver"], "option_string": "lim:time=90 mip:bestbound=1"}))
+    assert len(calls) == 3
+
+
+def test_stale_cache_file_under_the_expected_name_but_another_stored_key_is_ignored(runner, tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(runner, "_solve_unit", lambda unit, hv, peaks, sessions=None: calls.append(unit) or _fake_unit_result())
+    args = runner.parse_args([])
+    ctx = _cache_ctx(tmp_path)
+    key = runner._cache_key_for(ctx, UNIT, True)
+    path = runner._cache_file(ctx, UNIT, key)
+    path.write_text(json.dumps({"cache_key": "0" * 64, "result": _fake_unit_result("STALE")}), encoding="utf-8")
+    res = runner._solve_units([UNIT], args, set(), None, None, ctx) if False else runner._solve_units(
+        [UNIT], runner.parse_args(["--highs-verify"]), set(), None, object(), ctx)
+    assert len(calls) == 1 and res[0]["rows"] == [{"tag": "solved"}]
+    assert runner._cache_read(path, key)["rows"] == [{"tag": "solved"}]  # overwritten under the right key
+    assert runner._cache_read(path, "f" * 64) is None
+
+
+def test_no_cache_context_never_reads_or_writes_a_file(runner, tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(runner, "_solve_unit", lambda unit, hv, peaks, sessions=None: calls.append(unit) or _fake_unit_result())
+    monkeypatch.chdir(tmp_path)
+    runner._solve_units([UNIT], runner.parse_args([]), set(), None, None, None)
+    runner._solve_units([UNIT], runner.parse_args([]), set(), None, None, None)
+    assert len(calls) == 2 and list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.requires_ampl
+def test_cache_refused_on_a_dirty_tree(runner, tmp_path, monkeypatch):
+    _require("gurobi")
+    _require("highs")
+    monkeypatch.setattr(runner.wg, "_git_state", lambda out, repo=None: ("a" * 40, True))
+    rc = runner.main(["--fleets", "large+doblo_cap3", "--rides", "90", "--wave-ids", _subset_ids(runner)[0],
+                      "--cache-dir", str(tmp_path / "cache"), "--out", str(tmp_path / "out")])
+    assert rc == 2 and not (tmp_path / "out").exists()
+
+
+# ---------- stop on error (serial) ----------
+def test_serial_run_stops_after_the_first_unit_with_a_blocking_error(runner, monkeypatch):
+    units = [("large+doblo_cap3", 90, d, ("w",)) for d in ("2026-10-05", "2026-10-06", "2026-10-07")]
+    calls = []
+
+    def fake(unit, hv, peaks, sessions=None):
+        calls.append(unit[2])
+        res = _fake_unit_result()
+        if unit[2] == "2026-10-06":
+            res["errors"] = ["boom"]
+        return res
+
+    monkeypatch.setattr(runner, "_solve_unit", fake)
+    out = runner._solve_units(units, runner.parse_args([]), set(), None, None, None)
+    assert calls == ["2026-10-05", "2026-10-06"] and len(out) == 2
+    calls.clear()
+    out = runner._solve_units(units, runner.parse_args(["--no-stop-on-error"]), set(), None, None, None)
+    assert len(calls) == 3 and len(out) == 3
+
+
+# ---------- P2: worker timeout / kill / single retry (fake worker) ----------
+class _FakeProc:
+    plan: list = []
+    launched: list = []
+
+    def __init__(self, cmd):
+        self.cmd = cmd
+        self.pid = 4200 + len(_FakeProc.launched)
+        _FakeProc.launched.append(self)
+        self.behaviour = _FakeProc.plan.pop(0)
+
+    def wait(self, timeout=None):
+        if self.behaviour == "timeout" and timeout is not None:
+            self.behaviour = "killed"
+            raise subprocess.TimeoutExpired(self.cmd, timeout)
+        if self.behaviour == "killed":
+            return -9
+        if self.behaviour == "ok":
+            out = Path(self.cmd[self.cmd.index("--worker-out") + 1])
+            out.write_text(json.dumps(_fake_unit_result("worker")), encoding="utf-8")
+            return 0
+        return self.behaviour  # an integer exit code
+
+
+@pytest.fixture()
+def fake_worker(runner, monkeypatch):
+    _FakeProc.plan, _FakeProc.launched = [], []
+    killed = []
+    monkeypatch.setattr(runner.subprocess, "Popen", _FakeProc)
+    monkeypatch.setattr(runner, "_kill_tree", lambda proc: killed.append(proc.pid))
+    return killed
+
+
+def test_hung_worker_is_killed_and_relaunched_once_with_identical_settings(runner, fake_worker, tmp_path):
+    _FakeProc.plan = ["timeout", "ok"]
+    args = runner.parse_args(["--unit-timeout", "5"])
+    res = runner._run_worker(UNIT, args, {"p"}, tmp_path / "u.json")
+    assert res["rows"] == [{"tag": "worker"}]
+    assert res["unit_run"] == {"attempts": 2, "timeout_kills": 1, "exit_codes": ["timeout", 0]}
+    assert fake_worker == [_FakeProc.launched[0].pid]  # only the process this runner started, by its own PID
+    assert _FakeProc.launched[0].cmd == _FakeProc.launched[1].cmd  # identical settings
+
+
+def test_worker_that_hangs_twice_fails_the_unit_with_no_third_launch(runner, fake_worker, tmp_path):
+    _FakeProc.plan = ["timeout", "timeout", "ok"]
+    res = runner._run_worker(UNIT, runner.parse_args(["--unit-timeout", "5"]), set(), tmp_path / "u.json")
+    assert res["failed"] and "exceeded" in res["failed"] and res["errors"] and res["rows"] == []
+    assert res["unit_run"]["attempts"] == 2 and res["unit_run"]["timeout_kills"] == 2 and len(_FakeProc.launched) == 2
+    assert len(fake_worker) == 2
+
+
+def test_worker_crash_is_retried_once_and_backend_unavailable_is_not(runner, fake_worker, tmp_path):
+    _FakeProc.plan = [1, "ok"]
+    res = runner._run_worker(UNIT, runner.parse_args([]), set(), tmp_path / "u.json")
+    assert res["unit_run"] == {"attempts": 2, "timeout_kills": 0, "exit_codes": [1, 0]}
+    _FakeProc.plan, _FakeProc.launched = [3, "ok"], []
+    res = runner._run_worker(UNIT, runner.parse_args([]), set(), tmp_path / "u2.json")
+    assert res["unavailable"] and len(_FakeProc.launched) == 1
+
+
+# ---------- B2: run_history ----------
+def test_run_history_records_source_attempts_kills_and_failed_stage_rows_verbatim(runner):
+    args = runner.parse_args(["--jobs", "3", "--unit-timeout", "100"])
+    units = [("large+sedan", 50, "2026-10-05", ("a", "b")), ("large+sedan", 50, "2026-10-06", ("c",)),
+             ("large+doblo_cap3", 70, "2026-10-05", ("d",))]
+    failed = {"fleet": "large+sedan", "wave_id": "c", "option": "q1", "solver": "highs", "stage": "stage1",
+              "status": "rejected", "stop_reason": "solver_failure", "solve_result_num": 999}
+    results = [{"unit_run": {"source": "solved", "attempts": 1, "timeout_kills": 0, "exit_codes": [0], "wall_seconds": 5.0}},
+               {"unit_run": {"source": "solved", "attempts": 2, "timeout_kills": 1, "exit_codes": ["timeout", 0], "wall_seconds": 9.0},
+                "failed_stage_rows": [failed]},
+               {"unit_run": {"source": "cache", "attempts": 1, "timeout_kills": 0}}]
+    h = runner.build_run_history(args, results, units, wall_seconds=20.0, unit_seconds=18.0, cache_used=True)
+    assert h["invocations"] == [{"jobs": 3, "unit_timeout_seconds": 100.0, "cache_used": True, "stop_on_error": True,
+                                 "wall_seconds": 20.0, "unit_phase_wall_seconds": 18.0}]
+    assert (h["units_planned"], h["units_solved"], h["units_from_cache"], h["retries"], h["timeout_kills"]) == (3, 2, 1, 1, 1)
+    assert h["stopped_early"] is False and h["units"][1]["failed_stage_rows"] == [failed]
+    assert h["units"][0]["unit"] == "large+sedan|R50|2026-10-05" and h["units"][2]["source"] == "cache"
+    assert runner.build_run_history(args, results[:2], units, wall_seconds=1, unit_seconds=1, cache_used=False)["stopped_early"] is True
+
+
+def _only_rejected_highs(runner, monkeypatch):
+    from uniride_core.exact.ampl_backend import SPSolveResult, StageResult
+
+    gurobi, highs = object(), object()
+
+    def fake_solve(wave, enum, **kw):
+        if kw["session"] is gurobi:
+            return SPSolveResult(wave.wave_id, "infeasible_proven", peak=False, solver="gurobi",
+                                 stage1=StageResult("stage1", "infeasible_proven", "infeasible"))
+        return SPSolveResult(wave.wave_id, "rejected", note="solver failure", peak=False, solver="highs",
+                             stage1=StageResult("stage1", "rejected", "solver_failure", solve_result_num=999))
+
+    monkeypatch.setattr(runner.ab, "solve_wave", fake_solve)
+    return gurobi, highs
+
+
+def test_highs_rejected_on_a_gurobi_infeasible_option_blocks_and_the_failed_row_is_kept(runner, monkeypatch):
+    sessions = _only_rejected_highs(runner, monkeypatch)
+    unit = ("large+doblo_cap3", 90, "2026-10-05", (_subset_ids(runner)[0],))
+    res = runner._solve_unit(unit, True, set(), sessions=sessions)
+    assert any("HiGHS result rejected" in e for e in res["errors"])
+    kept = [r for r in res["failed_stage_rows"] if r["solver"] == "highs"]
+    assert kept and kept[0]["status"] == "rejected" and kept[0]["stop_reason"] == "solver_failure"
+    assert kept[0]["solve_result_num"] == 999 and kept[0]["wave_id"] == unit[3][0]
+
+
+def test_evaluation_blocks_a_rejected_highs_result_on_an_infeasible_proven_option(runner, ls_ctx):
+    from uniride_core.exact.ampl_backend import SPSolveResult
+
+    arcs_doc, menu = _archive(LARGE_SEDAN)
+    wave = _wave(ls_ctx, PEAK)
+    gurobi = SPSolveResult(wave.wave_id, "infeasible_proven", peak=True)
+    rejected = SPSolveResult(wave.wave_id, "rejected", note="solver failure", peak=True, solver="highs")
+    ev = _eval(runner, ls_ctx, wave, "q0", "q", 0, _option(menu, PEAK, "q0"), arcs_doc, gurobi, highs=rejected)
+    assert any("HiGHS result rejected" in e for e in ev["errors"])
+
+
+# ---------- B3: line endings ----------
+@pytest.mark.parametrize("name", ["wp-e3-goal1-single", "wp-e4a-typed-options"])
+def test_exact_results_are_byte_exact_in_git(name):
+    """``-text``: no line-ending conversion, so a fresh checkout keeps the sha256 held in the manifest."""
+    res = subprocess.run(["git", "check-attr", "text", f"docs/paper/results/week-2026-10-05-exact/{name}/exact_routes.json"],
+                         cwd=REPO, capture_output=True, text=True)
+    assert res.stdout.strip().endswith("text: unset"), res.stdout + res.stderr

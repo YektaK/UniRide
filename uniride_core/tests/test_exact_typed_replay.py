@@ -113,3 +113,11 @@ def test_full_replay_on_the_real_wp_e10_archive(replay, directory, expected_cell
     failures = [r for r in rows if r["label"] not in replay.MATCH_LABELS]
     assert failures == [], [(r["date"], r["R"], r["L"], r["label"], r["request_diffs"][:2], r["response_diffs"][:2]) for r in failures]
     assert all(r["solver_version"] == "9.15.6755" for r in rows)
+
+
+def test_diff_json_is_type_strict_for_booleans_and_none(replay):
+    assert replay.diff_json({"v": True}, {"v": 1}) and replay.diff_json({"v": 1}, {"v": True})
+    assert replay.diff_json({"v": False}, {"v": 0}) and replay.diff_json({"v": 0}, {"v": False})
+    assert replay.diff_json({"v": None}, {"v": 0}) and replay.diff_json({"v": 0}, {"v": None})
+    assert replay.diff_json({"v": True}, {"v": True}) == [] and replay.diff_json({"v": None}, {"v": None}) == []
+    assert replay.diff_json({"v": 1}, {"v": 1.0}) == []  # numbers still compare by value

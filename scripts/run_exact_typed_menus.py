@@ -428,6 +428,8 @@ def parse_args(argv):
     ap.add_argument("--rides", default="", help="comma list of R values (default: all of the campaign)")
     ap.add_argument("--wave-ids", default="", help="comma list of wave ids (default: all waves)")
     ap.add_argument("--limit", type=int, default=0, help="first N waves per R (default: all)")
+    ap.add_argument("--jobs", type=int, default=1,
+                    help="worker processes, one unit of work = (fleet, R, date); results are merged in a fixed order")
     ap.add_argument("--highs-verify", action=argparse.BooleanOptionalAction, default=True,
                     help="re-solve every Gurobi-optimal option with HiGHS (default: on)")
     return ap.parse_args(argv)
@@ -497,6 +499,7 @@ def _run(args, names, out, gurobi, highs, gurobi_settings, highs_settings) -> in
     matrix_sha, slice_sha = {}, {}
     caps_fired = 0
     source_docs: dict = {}
+    units: list = []
     for ctx in ctxs:
         mpath = ctx.path / "run_manifest.json"
         source_docs[ctx.name] = {
@@ -505,67 +508,24 @@ def _run(args, names, out, gurobi, highs, gurobi_settings, highs_settings) -> in
             "termination_protocol": ctx.ga_labels["ga_protocol"], "effective_seed": ctx.ga_labels["ga_seed"],
             "fixed_type": ctx.fixed.type_id, "minimize_type": ctx.minimise.type_id,
             "selection_solver": ctx.manifest["selection_solver"]}
-        rides = rides_filter or list(ctx.campaign.rides)
-        for ride in rides:
+        for ride in rides_filter or list(ctx.campaign.rides):
             waves = [w for w in ctx.campaign.waves_for(ride) if not want or w.wave_id in want]
             if args.limit:
                 waves = waves[: args.limit]
-            cache: dict = {}
-            for wave in waves:
-                key = (wave.service_date, ride)
-                if key not in cache:
-                    cache[key] = (json.loads((ctx.path / f"{wave.service_date}_R{ride}.matrix.json").read_text(encoding="utf-8")),
-                                  json.loads((ctx.path / f"{wave.service_date}_R{ride}.menu_options.json").read_text(encoding="utf-8")))
-                arcs_doc, menu_doc = cache[key]
-                matrix_sha[f"{wave.service_date}_R{ride}"] = wave.declared_snapshot_sha256
-                slice_sha[f"{wave.service_date}_R{ride}"] = wave.arc_slice_sha256
-                peak = wave.wave_id in peak_ids
-                enums: dict = {}
-
-                def enum_for(kind):
-                    nonlocal caps_fired
-                    if kind not in enums:
-                        t0 = time.perf_counter()
-                        types = [ctx.fixed] if kind == "base" else [ctx.fixed, ctx.minimise]
-                        enum = enumerate_wave(wave, types)
-                        caps_fired += enum.status == "count_cap"
-                        enums[kind] = (enum, {"model": enum.model, "columns": enum.column_count, "labels": enum.label_count,
-                                              "seconds": time.perf_counter() - t0, "cap_fired": enum.cap_fired})
-                    return enums[kind]
-
-                for option_id, kind, quota in option_plan(ctx, wave):
-                    ga_opt = ga_option(menu_doc, wave.wave_id, option_id)
-                    kw = {} if kind == "base" else dict(minimize_type=ctx.minimise.type_id, quota=(ctx.fixed.type_id, quota))
-                    if kind == "base" and xbase_guard(ctx.fixed):
-                        enum, info = enum_for(kind)
-                        sp = ab.SPSolveResult(wave.wave_id, "not_run", peak=peak)
-                    else:
-                        enum, info = enum_for(kind)
-                        sp = ab.solve_wave(wave, enum, peak=peak, session=gurobi, **kw)
-                    if sp.status == "backend_unavailable":
-                        print(f"backend unavailable during {wave.wave_id} {option_id}: {sp.note}", file=sys.stderr)
-                        return 3
-                    h_sp = None
-                    if highs is not None and sp.status in ("optimal", "infeasible_proven"):
-                        h_sp = ab.solve_wave(wave, enum, peak=peak, session=highs, d_lb_free=True, **kw)
-                        if h_sp.status == "backend_unavailable":
-                            print(f"backend unavailable during {wave.wave_id} {option_id} (HiGHS): {h_sp.note}", file=sys.stderr)
-                            return 3
-                    ev = evaluate_option(wave, kind, quota, ga_opt, arcs_doc, sp, ctx=ctx, enum_info=info, highs=h_sp, peak=peak)
-                    row = ev["row"]
-                    rows.append(row)
-                    errors.extend(ev["errors"])
-                    option_docs.append({"fleet": ctx.name, "option": option_id, "kind": kind, "quota": quota,
-                                        "wave_id": wave.wave_id, "service_date": wave.service_date, "R": ride, "peak": peak,
-                                        "model": info["model"], "columns": info["columns"], "labels": info["labels"],
-                                        "cap_fired": info["cap_fired"], "stages": ev["stages"],
-                                        "highs_stages": ev["highs_stages"], "result": row})
-                    if ev["exact_routes"] is not None:
-                        route_docs.append(ev["exact_routes"])
-                    print(f"{ctx.name} R{ride} {wave.wave_id} {option_id} legs={wave.legs} cols={info['columns']} {row['status']} "
-                          f"{row['k_kind']}_GA={row['K_GA']} {row['k_kind']}*={row['K_star']} D_GA={row['D_GA']} "
-                          f"D*={row['D_star']} dK={row['dK']} {row['comparison']} t={row['solve_seconds']:.2f}s "
-                          f"highs={row['highs_agrees']}/{row['highs_free_agrees']}", flush=True)
+            for date in sorted({w.service_date for w in waves}):
+                units.append((ctx.name, ride, date, tuple(w.wave_id for w in waves if w.service_date == date)))
+    results = _solve_units(units, args, peak_ids, gurobi, highs)
+    for res in results:
+        if res.get("unavailable"):
+            print(f"backend unavailable: {res['unavailable']}", file=sys.stderr)
+            return 3
+        rows.extend(res["rows"])
+        option_docs.extend(res["option_docs"])
+        errors.extend(res["errors"])
+        route_docs.extend(res["route_docs"])
+        matrix_sha.update(res["matrix_sha"])
+        slice_sha.update(res["slice_sha"])
+        caps_fired += res["caps_fired"]
 
     routes_doc = {"protocol": protocol.PROTOCOL_ID, "schema_version": 1, "work_package": "WP-E4a", "git_commit": commit,
                   "note": "exact option routes per (fleet, wave, option) with the vehicle type of every route (occurrence ids "
@@ -591,7 +551,7 @@ def _run(args, names, out, gurobi, highs, gurobi_settings, highs_settings) -> in
         "exact_routes": {"file": EXACT_ROUTES_FILENAME, "sha256": hashlib.sha256(routes_text.encode("utf-8")).hexdigest(),
                          "options": len(route_docs)},
         "options": {"highs_verify": bool(highs), "rides": rides_filter, "wave_ids": sorted(want), "limit": args.limit,
-                    "fleets": names},
+                    "fleets": names, "jobs": args.jobs},
         "total_wall_seconds": round(time.perf_counter() - t_start, 1),
         "blocking_errors": errors,
         "python_version": platform.python_version(), "host_os": ab.host_description(),
@@ -613,6 +573,107 @@ def _run(args, names, out, gurobi, highs, gurobi_settings, highs_settings) -> in
         for e in errors[:50]:
             print(f"  {e}", file=sys.stderr)
     return 1 if errors else 0
+
+
+_WORKER: dict = {}
+
+
+def _ctx_cached(name: str) -> FleetContext:
+    key = ("ctx", name)
+    if key not in _WORKER:
+        _WORKER[key] = load_fleet_context(SOURCES[name])
+    return _WORKER[key]
+
+
+def _worker_sessions(highs_verify: bool):
+    """Per-process AMPL sessions (opened once, closed at exit); raises ExactBackendUnavailable."""
+    import atexit
+
+    if "sessions" not in _WORKER:
+        sessions = [ab.AmplSession(ab.SolverSettings(solver="gurobi"))]
+        if highs_verify:
+            sessions.append(ab.AmplSession(ab.SolverSettings(solver="highs")))
+        for sess in sessions:
+            sess.open()
+            atexit.register(sess.close)
+        _WORKER["sessions"] = (sessions[0], sessions[1] if highs_verify else None)
+    return _WORKER["sessions"]
+
+
+def _solve_unit(unit, highs_verify: bool, peak_ids, sessions=None) -> dict:
+    """All options of the waves of one (fleet, R, date); self-contained so it can run in a worker process."""
+    fleet, ride, date, wave_ids = unit
+    out = {"rows": [], "option_docs": [], "errors": [], "route_docs": [], "matrix_sha": {}, "slice_sha": {}, "caps_fired": 0}
+    try:
+        gurobi, highs = sessions if sessions is not None else _worker_sessions(highs_verify)
+    except ab.ExactBackendUnavailable as exc:
+        return {**out, "unavailable": str(exc)}
+    ctx = _ctx_cached(fleet)
+    arcs_doc = json.loads((ctx.path / f"{date}_R{ride}.matrix.json").read_text(encoding="utf-8"))
+    menu_doc = json.loads((ctx.path / f"{date}_R{ride}.menu_options.json").read_text(encoding="utf-8"))
+    by_id = {w.wave_id: w for w in ctx.campaign.waves_for(ride)}
+    for wave_id in wave_ids:
+        wave = by_id[wave_id]
+        out["matrix_sha"][f"{date}_R{ride}"] = wave.declared_snapshot_sha256
+        out["slice_sha"][f"{date}_R{ride}"] = wave.arc_slice_sha256
+        peak = wave.wave_id in peak_ids
+        enums: dict = {}
+
+        def enum_for(kind):
+            if kind not in enums:
+                t0 = time.perf_counter()
+                enum = enumerate_wave(wave, [ctx.fixed] if kind == "base" else [ctx.fixed, ctx.minimise])
+                out["caps_fired"] += enum.status == "count_cap"
+                enums[kind] = (enum, {"model": enum.model, "columns": enum.column_count, "labels": enum.label_count,
+                                      "seconds": time.perf_counter() - t0, "cap_fired": enum.cap_fired})
+            return enums[kind]
+
+        for option_id, kind, quota in option_plan(ctx, wave):
+            ga_opt = ga_option(menu_doc, wave.wave_id, option_id)
+            kw = {} if kind == "base" else dict(minimize_type=ctx.minimise.type_id, quota=(ctx.fixed.type_id, quota))
+            enum, info = enum_for(kind)
+            if kind == "base" and xbase_guard(ctx.fixed):
+                sp = ab.SPSolveResult(wave.wave_id, "not_run", peak=peak)
+            else:
+                sp = ab.solve_wave(wave, enum, peak=peak, session=gurobi, **kw)
+            if sp.status == "backend_unavailable":
+                return {**out, "unavailable": f"{wave.wave_id} {option_id}: {sp.note}"}
+            h_sp = None
+            if highs is not None and sp.status in ("optimal", "infeasible_proven"):
+                h_sp = ab.solve_wave(wave, enum, peak=peak, session=highs, d_lb_free=True, **kw)
+                if h_sp.status == "backend_unavailable":
+                    return {**out, "unavailable": f"{wave.wave_id} {option_id} (HiGHS): {h_sp.note}"}
+            ev = evaluate_option(wave, kind, quota, ga_opt, arcs_doc, sp, ctx=ctx, enum_info=info, highs=h_sp, peak=peak)
+            row = ev["row"]
+            out["rows"].append(row)
+            out["errors"].extend(ev["errors"])
+            out["option_docs"].append({"fleet": ctx.name, "option": option_id, "kind": kind, "quota": quota,
+                                       "wave_id": wave.wave_id, "service_date": wave.service_date, "R": ride, "peak": peak,
+                                       "model": info["model"], "columns": info["columns"], "labels": info["labels"],
+                                       "cap_fired": info["cap_fired"], "stages": ev["stages"],
+                                       "highs_stages": ev["highs_stages"], "result": row})
+            if ev["exact_routes"] is not None:
+                out["route_docs"].append(ev["exact_routes"])
+            print(f"{ctx.name} R{ride} {wave.wave_id} {option_id} legs={wave.legs} cols={info['columns']} {row['status']} "
+                  f"{row['k_kind']}_GA={row['K_GA']} {row['k_kind']}*={row['K_star']} D_GA={row['D_GA']} "
+                  f"D*={row['D_star']} dK={row['dK']} {row['comparison']} t={row['solve_seconds']:.2f}s "
+                  f"highs={row['highs_agrees']}/{row['highs_free_agrees']}", flush=True)
+    return out
+
+
+def _solve_units(units, args, peak_ids, gurobi, highs) -> list:
+    """Results of every unit in the order of ``units`` (independent of the number of worker processes)."""
+    if args.jobs <= 1 or len(units) <= 1:
+        return [_solve_unit(u, bool(highs), peak_ids, sessions=(gurobi, highs)) for u in units]
+    from concurrent.futures import ProcessPoolExecutor
+
+    # spawned workers inherit ``sys.path``; they must be able to import this module by name when it was loaded by path
+    scripts = str(REPO / "scripts")
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+    with ProcessPoolExecutor(max_workers=min(args.jobs, len(units))) as pool:
+        futures = [pool.submit(_solve_unit, u, bool(highs), peak_ids) for u in units]
+        return [f.result() for f in futures]
 
 
 def _count(items, key) -> dict:

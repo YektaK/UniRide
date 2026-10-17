@@ -428,12 +428,22 @@ def test_typed_exact_options_equal_the_brute_force_oracle_on_archived_waves(runn
     assert checked >= 6
 
 
+def _subset_ids(runner):
+    """Small waves of two dates (never the 20-leg peak wave: HiGHS needs minutes there)."""
+    ctx = runner.load_fleet_context(DOBLO)
+    waves = [w for w in ctx.campaign.waves_for(90) if 2 <= w.legs <= 5]
+    first = [w.wave_id for w in waves if w.service_date == "2026-10-05"][:2]
+    second = [w.wave_id for w in waves if w.service_date == "2026-10-06"][:1]
+    assert len(first) == 2 and len(second) == 1
+    return first + second
+
+
 @pytest.mark.requires_ampl
 def test_typed_option_run_writes_valid_manifest_csv_and_stored_routes(runner, tmp_path):
     protocol = runner.protocol
     _require("gurobi")
     _require("highs")
-    ids = ["2026-10-05:pickup:765", "2026-10-05:dropoff:975", PEAK]
+    ids = _subset_ids(runner)
     out = tmp_path / "out"
     rc = runner.main(["--fleets", "large+doblo_cap3", "--rides", "90", "--wave-ids", ",".join(ids), "--out", str(out)])
     assert rc == 0
@@ -442,22 +452,43 @@ def test_typed_option_run_writes_valid_manifest_csv_and_stored_routes(runner, tm
     assert manifest["work_package"] == "WP-E4a" and not manifest["blocking_errors"]
     assert manifest["source_campaigns"]["large+doblo_cap3"]["path"] == "docs/paper/results/week-2026-10-05-fleet-rerun-doblo-cap3"
     assert manifest["solver"]["name"] == "gurobi" and manifest["verification_solver"]["name"] == "highs"
+    assert manifest["python_provenance"]["uniride_core"] == "uniride_core/__init__.py"
+    assert manifest["options"]["jobs"] == 1
     rows = list(csv.DictReader((out / "option_gaps.csv").open(encoding="utf-8")))
-    assert {r["option"] for r in rows} == {"base", "q0", "q1", "q2"} and len(rows) == 4 * len(ids) - 0 or len(rows) >= 8
+    ctx = runner.load_fleet_context(DOBLO)
+    planned = sum(len(runner.option_plan(ctx, w)) for w in ctx.campaign.waves_for(90) if w.wave_id in ids)
+    assert len(rows) == planned and {r["option"] for r in rows} >= {"base", "q0", "q1"}
     for r in rows:
         assert r["status"] in ("optimal", "infeasible_proven") and r["highs_agrees"] in ("True", "")
+        assert r["ga_protocol"] == "native" and r["ga_seed"] == "42" and r["ga_commit"] == "f29aa3d"
         if r["status"] == "optimal":
             assert r["exact_certified"] == "True" and r["objective_check"] == "ok" and r["exact_le_ga"] == "True"
+            assert r["ga_cert_agree"] == "True"
     replay = list(csv.DictReader((out / "replay.csv").open(encoding="utf-8")))
-    assert len(replay) == 15  # 5 dates x R in {90} x L in {0,1,2}
+    assert len(replay) == 60  # the replay gate always covers the whole fleet: 5 dates x 4 R x L0, L1, L2
     stored = json.loads((out / manifest["exact_routes"]["file"]).read_text(encoding="utf-8"))
-    ctx = runner.load_fleet_context(DOBLO)
     arcs = {d: json.loads((DOBLO / f"{d}_R90.matrix.json").read_text(encoding="utf-8"))
             for d in {e["service_date"] for e in stored["waves"]}}
     waves = {w.wave_id: w for w in ctx.campaign.waves_for(90)}
     assert stored["waves"]
     for entry in stored["waves"]:
         assert runner.recertify_stored_option(waves[entry["wave_id"]], entry, arcs[entry["service_date"]], ctx)["is_feasible"]
+
+
+@pytest.mark.requires_ampl
+def test_parallel_workers_give_the_same_results_as_a_serial_run(runner, tmp_path):
+    _require("gurobi")
+    ids = _subset_ids(runner)
+    common = ["--fleets", "large+doblo_cap3", "--rides", "90", "--wave-ids", ",".join(ids), "--no-highs-verify"]
+    assert runner.main(common + ["--jobs", "1", "--out", str(tmp_path / "a")]) == 0
+    assert runner.main(common + ["--jobs", "2", "--out", str(tmp_path / "b")]) == 0
+    timing = {"enumeration_seconds", "solve_seconds", "highs_seconds"}
+
+    def stable(path):
+        return [{k: v for k, v in r.items() if k not in timing} for r in csv.DictReader(path.open(encoding="utf-8"))]
+
+    assert stable(tmp_path / "a" / "option_gaps.csv") == stable(tmp_path / "b" / "option_gaps.csv")
+    assert (tmp_path / "a" / "exact_routes.json").read_bytes() == (tmp_path / "b" / "exact_routes.json").read_bytes()
 
 
 @pytest.mark.requires_ampl

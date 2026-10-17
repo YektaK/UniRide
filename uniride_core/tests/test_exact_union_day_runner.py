@@ -187,7 +187,8 @@ def run_cell(ctx, day, e4a, limit, *, cli, solve=fsr.solve_request, to_body=fsr.
         ctx, DATE, RIDE, limit, ga_waves=day["ga_waves"], union_waves=day["union_waves"], exact_info=day["exact_info"],
         archived=ud.load_archived_exchange(ctx, DATE, RIDE, limit), menu_limits=day["menu_doc"]["limits"], caps=ud.router_caps(),
         day_sums=day["sums"], producer_limit_s=fleet.selection_time_limit, solve=solve, to_body=to_body, clock=__import__("time").perf_counter,
-        cli=cli, cpsat={"version": fleet.solver["version"], "seed": fleet.solver["random_seed"], "workers": fleet.solver["num_workers"]})
+        cli=cli, cpsat={"version": fleet.solver["version"], "seed": fleet.solver["random_seed"], "workers": fleet.solver["num_workers"]},
+        e4a_replay_row=e4a["replay_rows"].get((ctx.replay_fleet.name, DATE, RIDE, limit)))
 
 
 def test_the_ga_menu_recomputation_equals_the_archived_response_in_every_cell_of_the_day(ctxs, e4a):
@@ -197,6 +198,20 @@ def test_the_ga_menu_recomputation_equals_the_archived_response_in_every_cell_of
             row, errors, _ = run_cell(ctx, day, e4a, limit, cli=lambda cases: (None, "no cli"))
             assert errors == [], (name, limit, errors)
             assert row["ga_equals_archived_response"] is True and row["ga_status"] == row["ga_archived_status"]
+
+
+def test_the_recomputation_is_also_checked_against_the_e4a_replay_rows(ctxs, e4a, day_large_sedan):
+    ctx = ctxs["large+sedan"]
+    assert e4a["replay_rows"][(ctx.replay_fleet.name, DATE, RIDE, 3)]["replay_status"] == "optimal"
+    forged = dict(e4a["replay_rows"][(ctx.replay_fleet.name, DATE, RIDE, 3)], replay_status="feasible")
+    fleet = ctx.replay_fleet
+    _, errors, _ = ud.solve_cell_row(
+        ctx, DATE, RIDE, 3, ga_waves=day_large_sedan["ga_waves"], union_waves=day_large_sedan["union_waves"], exact_info=day_large_sedan["exact_info"],
+        archived=ud.load_archived_exchange(ctx, DATE, RIDE, 3), menu_limits=day_large_sedan["menu_doc"]["limits"], caps=ud.router_caps(),
+        day_sums=day_large_sedan["sums"], producer_limit_s=fleet.selection_time_limit, solve=fsr.solve_request, to_body=fsr.result_body,
+        clock=__import__("time").perf_counter, cli=lambda cases: (None, "no cli"),
+        cpsat={"version": fleet.solver["version"], "seed": fleet.solver["random_seed"], "workers": fleet.solver["num_workers"]}, e4a_replay_row=forged)
+    assert any("differs from the WP-E4a replay" in e for e in errors)
 
 
 def test_a_changed_ga_selection_is_a_blocking_recompute_mismatch(ctxs, e4a, day_large_sedan):

@@ -127,7 +127,9 @@ def load_e4a(e4a_dir: Path) -> dict:
     return {"manifest": manifest, "routes_doc": doc, "routes_sha256": routes_sha,
             "manifest_sha256": sha256_file(e4a_dir / protocol.MANIFEST_FILENAME),
             "option_gaps_sha256": sha256_file(e4a_dir / "option_gaps.csv"),
-            "option_gaps_rows": list(csv.DictReader((e4a_dir / "option_gaps.csv").open(encoding="utf-8", newline="")))}
+            "option_gaps_rows": list(csv.DictReader((e4a_dir / "option_gaps.csv").open(encoding="utf-8", newline=""))),
+            "replay_rows": {(r["fleet"], r["date"], int(r["R"]), int(r["L"])): r for r in
+                            csv.DictReader((e4a_dir / "replay.csv").open(encoding="utf-8", newline=""))}}
 
 
 def loader_error(message: str) -> Exception:
@@ -358,7 +360,8 @@ def blank(value):
 
 
 def solve_cell_row(ctx, date: str, ride: int, limit: int, *, ga_waves: list, union_waves: list, exact_info: dict, archived: dict,
-                   menu_limits: dict, caps: dict, day_sums: dict, producer_limit_s: float, solve, to_body, clock, cli, cpsat: dict) -> tuple:
+                   menu_limits: dict, caps: dict, day_sums: dict, producer_limit_s: float, solve, to_body, clock, cli, cpsat: dict,
+                   e4a_replay_row=None) -> tuple:
     """One CSV row (and its blocking errors) of (fleet, date, R, L)."""
     tag = f"{ctx.name} {date} R{ride} L{limit}"
     errors: list = []
@@ -378,6 +381,9 @@ def solve_cell_row(ctx, date: str, ride: int, limit: int, *, ga_waves: list, uni
     response_diffs = replay.compare_response(archived["response"], dict(ga.body)) if isinstance(archived.get("response"), dict) else ["no archived response"]
     if response_diffs:
         errors.append(f"{tag}: the recomputed GA-menu selection differs from the archived WP-E10 response: {response_diffs[:3]}")
+    if e4a_replay_row is not None and (e4a_replay_row["replay_status"] != ga.status or e4a_replay_row["label"] not in replay.MATCH_LABELS):
+        errors.append(f"{tag}: the recomputed GA-menu status {ga.status} differs from the WP-E4a replay "
+                      f"({e4a_replay_row['replay_status']}, {e4a_replay_row['label']})")
     stats = ga.body.get("stats") or {}
     if ga.status in udm.SELECTION_STATUSES and (stats.get("random_seed"), stats.get("num_workers")) != (cpsat["seed"], cpsat["workers"]):
         errors.append(f"{tag}: CP-SAT seed/workers {stats.get('random_seed')}/{stats.get('num_workers')} differ from the archive")
@@ -597,10 +603,14 @@ def main(argv=None) -> int:
                 for limit in limits_filter or list(fleet.l_values):
                     archived = load_archived_exchange(ctx, date, ride, limit)
                     t_cell = time.perf_counter()
+                    replay_row = e4a["replay_rows"].get((fleet.name, date, ride, limit))
+                    if replay_row is None:
+                        errors.append(f"{ctx.name} {date} R{ride} L{limit}: no WP-E4a replay row for the cell")
                     row, cell_errors, info = solve_cell_row(
                         ctx, date, ride, limit, ga_waves=ga_waves, union_waves=union_waves, exact_info=exact_info, archived=archived,
                         menu_limits=menu_doc["limits"], caps=caps, day_sums=sums, producer_limit_s=fleet.selection_time_limit,
-                        solve=fsr.solve_request, to_body=fsr.result_body, clock=time.perf_counter, cli=run_cli, cpsat=cpsat)
+                        solve=fsr.solve_request, to_body=fsr.result_body, clock=time.perf_counter, cli=run_cli, cpsat=cpsat,
+                        e4a_replay_row=replay_row)
                     rows.append(row)
                     errors.extend(cell_errors)
                     cli_calls += info["cli_calls"]

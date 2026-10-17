@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { RerunAbort, dirtyFromPorcelain, readGitState, runFleetRerun, type RerunDeps, type RerunFs } from "@/services/fleet-rerun-run";
+import { RerunAbort, dirtyFromPorcelain, parseSolverCapture, readGitState, runFleetRerun, type RerunDeps, type RerunFs } from "@/services/fleet-rerun-run";
 import { PINNED, OCCURRENCE_CHECK_LIMIT, type PreflightPins, type PreflightReference } from "@/services/fleet-rerun-preflight";
 import { collectLiveDays } from "@/services/fleet-rerun-preflight-live";
 import { loadFleetReference } from "@/services/fleet-rerun-reference";
@@ -243,6 +243,26 @@ describe("B3 and N1/N2: the published manifest", () => {
   });
 });
 
+describe("capture parsing: a run without python_provenance fails at the start", () => {
+  const ok = JSON.stringify({ ...SOLVER, ga: { ...SOLVER.ga } });
+  it("accepts a complete capture (last line of the output)", () => {
+    expect(parseSolverCapture(`noise\n${ok}\n`).python_provenance).toEqual(SOLVER.python_provenance);
+  });
+  it.each<[string, (v: Record<string, unknown>) => void]>([
+    ["no python_provenance", (v) => { delete v.python_provenance; }],
+    ["null python_provenance", (v) => { v.python_provenance = null; }],
+    ["no ga seed", (v) => { (v.ga as Record<string, unknown>).seed = null; }],
+    ["no hf seed", (v) => { (v.hf as Record<string, unknown>).seed = "x"; }],
+  ])("refuses %s with the safe capture message", (_name, change) => {
+    const value = JSON.parse(ok);
+    change(value);
+    expect(() => parseSolverCapture(JSON.stringify(value))).toThrow(/Could not capture local solver configuration/);
+  });
+  it("refuses output that is not JSON", () => {
+    expect(() => parseSolverCapture("Traceback ...")).toThrow(/Could not capture local solver configuration/);
+  });
+});
+
 describe("N2/N3: the run README template", () => {
   const template = fs.readFileSync(path.resolve(process.cwd(), "docs/designs/WP_E10_RUN_README_TEMPLATE.md"), "utf8");
   it("repeats the exact limit of the occurrence check that the manifest records", () => {
@@ -265,6 +285,22 @@ describe("N2/N3: the run README template", () => {
     // no line of the file may start with the tail of a path that a stripped backslash or a stray line break cut off
     expect(lines.filter((line) => /^(ode_modules|ptimizer_api|venv-jit|env\.local)/.test(line))).toEqual([]);
     expect(template).toMatch(/C:\\wt\\e10-ls/); // P6: a short run-worktree path (Windows long-path limit)
+  });
+  it("polish: the H06 limit, the acceptance interpreter, --base and the second-run worktree are stated", () => {
+    expect(template).toMatch(/options that were never selected cannot be compared/);
+    expect(template).toMatch(/necessary cause[\s\S]*not proven to be the only one/);
+    expect(template).not.toMatch(/same menu/);
+    expect(template.split("\n")).toContainEqual(expect.stringMatching(/^<main>\\\.venv-jit\\Scripts\\python\.exe scripts\/verify_fleet_rerun\.py /));
+    expect(template).not.toMatch(/^python scripts\/verify_fleet_rerun/m);
+    expect(template).toMatch(/--base <pinned commit>` is meaningful only when the verifier runs on the results branch/);
+    expect(template.split("C:\\wt\\e10-e2").length - 1).toBeGreaterThanOrEqual(3);
+    expect(template).toMatch(/second run is made in the worktree `C:\\wt\\e10-e2`; its manifest says `run_kind: rule_e_second_run`/);
+  });
+  it("polish: DECISION_LOG E05 words the H06 limit the same way", () => {
+    const log = fs.readFileSync(path.resolve(process.cwd(), "docs/DECISION_LOG.md"), "utf8");
+    const e05 = log.slice(log.indexOf("### E05"), log.indexOf("## Open questions and evidence limits"));
+    expect(e05).toMatch(/never selected/);
+    expect(e05).not.toMatch(/unchanged menu/);
   });
   it("P2: a scenario_outcome_differs from largeVehicles or the assignment's cars needs manual review", () => {
     expect(template).toMatch(/scenario_outcome_differs[\s\S]*largeVehicles[\s\S]*manual review/);

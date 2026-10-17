@@ -44,9 +44,9 @@ def write(path, value):
         json.dump(value, handle, indent=2)
 
 
-def response(selected_option, routes, status="ok", cars=1, large=1, total=100.0, car_minutes=10.0, sel_status="optimal", waves=None):
+def response(selected_option, routes, status="ok", cars=1, large=1, total=100.0, car_minutes=10.0, sel_status="optimal", waves=None, sel_cars=None):
     waves = [WAVE] if waves is None else waves
-    selection = {"status": sel_status, "cars": cars, "carMinutes": car_minutes, "optionByWave": {w: selected_option for w in waves}}
+    selection = {"status": sel_status, "cars": cars if sel_cars is None else sel_cars, "carMinutes": car_minutes, "optionByWave": {w: selected_option for w in waves}}
     return {"scenario": {"scenario": 1, "status": status, "cars": cars, "largeVehicles": large, "totalVehicleMinutes": total,
                          "routes": routes, "selection": selection}}
 
@@ -168,6 +168,7 @@ def rewrite(root, new_response):
 @pytest.mark.parametrize("name, new_response", [
     ("new scenario infeasible", infeasible()),
     ("cars differ", response("q1", selected_routes(STEPS, IDS), cars=2)),
+    ("only the CP-SAT stage-1 selection.cars differs (scenario.cars equal)", response("q1", selected_routes(STEPS, IDS), sel_cars=2)),
     ("largeVehicles differ", response("q1", selected_routes(STEPS, IDS), large=2)),
     ("selection status differs (feasible, not optimal)", response("q1", selected_routes(STEPS, IDS), sel_status="feasible")),
     ("scenario status differs", response("q1", selected_routes(STEPS, IDS), status="verification_failed")),
@@ -245,6 +246,13 @@ def test_h06_needs_the_archived_option_to_be_identical_in_the_rerun_menu(archive
     failures, report = run(archive)
     assert "selection_changed_h06_expected" not in report["selected_option_categories"]
     assert failures
+
+
+def test_the_h06_limit_is_worded_honestly():
+    """Only the archived SELECTED options are compared; unselected ones cannot be, so H06 is a necessary, not a proven sole, cause."""
+    doc = V.h06_improvement.__doc__
+    assert "never selected" in doc and "necessary" in doc
+    assert "UNCHANGED menu" not in doc and "unchanged menu" not in doc
 
 
 def test_the_new_selection_is_really_read(archive):

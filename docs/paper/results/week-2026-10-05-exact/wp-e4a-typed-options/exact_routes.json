@@ -1,5 +1,5 @@
 {
- "git_commit": "de549d3b112e63e4d8a493b6afc4848c671fe093",
+ "git_commit": "3fcbf9b9efc41bd4055bb268d735d1b08e06995e",
  "note": "exact option routes per (fleet, wave, option) with the vehicle type of every route (occurrence ids in stop order, integer minutes); re-certifiable without a solver through scripts/run_exact_typed_menus.py recertify_stored_option",
  "protocol": "exact_reference_v1",
  "schema_version": 1,

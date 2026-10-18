@@ -531,6 +531,10 @@ def test_solver_noise_on_a_large_integer_objective_is_snapped_not_rejected():
     obj2, bound2 = ab.snap_to_integer_data(106740.0001, 106740.0001)
     out2 = ab.classify_outcome(0, "optimal", obj2, bound2)
     assert (out2.objective, out2.bound_ceil) == (106740, 106740)
+    # a real fractional bound just above the integer is NOT weakened: incumbent 106741 with bound 106740.02 proves optimality
+    obj3, bound3 = ab.snap_to_integer_data(106741.0, 106740.02)
+    out3 = ab.classify_outcome(0, "optimal", obj3, bound3)
+    assert (out3.status, out3.bound_ceil) == ("optimal", 106741)
 
 
 def test_a_genuinely_fractional_objective_is_not_snapped():

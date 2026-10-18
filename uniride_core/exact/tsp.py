@@ -429,7 +429,8 @@ def compare_solvers(primary: TspResult, secondary: TspResult) -> SolverCompariso
     if secondary.status in ("rejected", "infeasible_proven", "backend_unavailable", "not_run"):
         if primary.status == "infeasible_proven" and secondary.status == "infeasible_proven":
             return SolverComparison("agree", False, "both proven infeasible")
-        return SolverComparison("secondary_failed", True, f"second solver status {secondary.status}")
+        note = f": {secondary.note}" if secondary.note else ""
+        return SolverComparison("secondary_failed", True, f"second solver status {secondary.status}{note}")
     if primary.status == "optimal" and secondary.status == "optimal":
         if primary.ub == secondary.ub:
             return SolverComparison("agree", False, "")
@@ -458,7 +459,7 @@ class _AmplRounds:
 
     def __init__(self, session, matrix, directed: bool, mtz: bool = False):
         a = session.ampl
-        self.session, self.mtz, self.n = session, mtz, len(matrix)
+        self.session, self.mtz, self.n, self.matrix = session, mtz, len(matrix), matrix
         a.reset()
         a.read(_model_path("tsp_mtz.mod" if mtz else "tsp_dfj.mod"))
         a.param["n"] = self.n
@@ -476,7 +477,7 @@ class _AmplRounds:
             a.param["csize"] = {k + 1: len(c) for k, c in enumerate(cuts)}
             a.param["member"] = {(k + 1, i): 1 for k, c in enumerate(cuts) for i in c}
             self.installed = len(cuts)
-        res = self.session.solve_objective("Tour", wall_limit=time_limit)
+        res = self.session.solve_objective("Tour", wall_limit=time_limit, snap_integer=True)
         arcs = None
         status, reason = res.status, res.stop_reason
         if res.objective is not None:
@@ -489,6 +490,10 @@ class _AmplRounds:
                 if round(v) > 0:
                     chosen.append((int(key[0]), int(key[1])))
             arcs = tuple(sorted(chosen))
+            recomputed = sum(int(self.matrix[i][j]) for i, j in arcs)
+            if recomputed != res.objective:  # exact integer arithmetic on the rounded incumbent
+                return RoundOutcome("rejected", "solver_failure", None, None, None, res.wall_seconds or 0.0,
+                                    f"objective {res.objective} differs from the cost {recomputed} of the chosen arcs")
         return RoundOutcome(status, reason, res.objective, res.bound_ceil, arcs, res.wall_seconds or 0.0, res.solver_message)
 
 

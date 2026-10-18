@@ -62,7 +62,7 @@ from uniride_core.planning import union_day_menu as udm  # noqa: E402
 RESULTS = REPO / "docs" / "paper" / "results"
 E4A_DIR = RESULTS / "week-2026-10-05-exact" / "wp-e4a-typed-options"
 DEFAULT_OUT = RESULTS / "week-2026-10-05-exact" / "wp-e4b-union-day"
-MANIFEST_FILENAME = "union_day_manifest.json"
+MANIFEST_FILENAME = protocol.UNION_DAY_MANIFEST_FILENAME  # the schema owner is academic_benchmark.exact_reference.protocol (WP-E6)
 WORK_PACKAGE = "WP-E4b"
 RERUN_TIME_LIMIT_S = 60.0  # lead decision 2026-10-10: the compute-policy ceiling (compute_policy.py solver_seconds)
 SERVICE_DAY_END_MINUTES = 24 * 60  # dudullu-preview.ts SERVICE_DAY_END_MINUTES
@@ -523,22 +523,6 @@ def summarise(rows: list) -> dict:
             "labels": {k: sum(1 for r in rows if r["label"] == k) for k in udm.LABELS}}
 
 
-def required_manifest_keys() -> tuple:
-    return ("protocol", "work_package", "git_commit", "dirty_working_tree", "source_campaigns", "exact_options_source", "cpsat",
-            "time_scale", "router_caps", "tools", "python_provenance", "python_version", "host_os", "run_history", "claim",
-            "ga_recompute", "labels", "blocking_errors", "total_wall_seconds")
-
-
-def validate_manifest(manifest: dict) -> list:
-    problems = [f"missing {k}" for k in required_manifest_keys() if k not in manifest]
-    if manifest.get("time_scale") != 100:
-        problems.append("time_scale must be 100")
-    if manifest.get("claim") != udm.CLAIM:
-        problems.append("claim text differs from the design wording")
-    problems.extend(protocol.private_data_errors(manifest))
-    return problems
-
-
 def parse_args(argv):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--out", default=str(DEFAULT_OUT))
@@ -649,7 +633,7 @@ def main(argv=None) -> int:
     wall = round(time.perf_counter() - t_start, 1)
     summary = summarise(rows)
     manifest = {
-        "protocol": "union_day_v1", "work_package": WORK_PACKAGE, "git_commit": commit, "dirty_working_tree": dirty,
+        "protocol": protocol.UNION_DAY_PROTOCOL_ID, "work_package": WORK_PACKAGE, "git_commit": commit, "dirty_working_tree": dirty,
         "fleets": names, "source_campaigns": sources,
         "exact_options_source": {"path": wg._rel(e4a_dir), "exact_routes_sha256": e4a["routes_sha256"],
                                  "option_gaps_sha256": e4a["option_gaps_sha256"], "manifest_sha256": e4a["manifest_sha256"],
@@ -673,7 +657,7 @@ def main(argv=None) -> int:
                         "cli_errors": sum(bool(c["cli_error"]) for c in cell_log), "cells": cell_log},
         "total_wall_seconds": wall, "blocking_errors": errors,
     }
-    problems = validate_manifest(manifest)
+    problems = protocol.validate_union_day_manifest(manifest)
     if problems:
         errors.extend(f"manifest: {p}" for p in problems)
         manifest["blocking_errors"] = errors

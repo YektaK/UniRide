@@ -1,0 +1,7 @@
+fleet,L,cells,proven_over_union_menu,ga_menu_infeasible_for_L,both_infeasible_for_L,union_not_proven,not_independently_confirmed,verification_failed,union_cars_below_ga,union_cars_equal_ga,union_cars_above_ga
+large+sedan,1,20,0,0,20,0,0,0,0,0,0
+large+sedan,2,20,11,1,8,0,0,0,1,10,0
+large+sedan,3,20,20,0,0,0,0,0,3,17,0
+large+doblo_cap3,0,20,20,0,0,0,0,0,3,17,0
+large+doblo_cap3,1,20,20,0,0,0,0,0,2,18,0
+large+doblo_cap3,2,20,20,0,0,0,0,0,2,18,0

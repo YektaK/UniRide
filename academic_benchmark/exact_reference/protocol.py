@@ -233,3 +233,57 @@ def assert_not_pooled(rows: Iterable[Mapping]) -> None:
     bad = sorted({str(r.get("protocol")) for r in rows if r.get("protocol") != PROTOCOL_ID})
     if bad:
         raise ValueError(f"exact_reference_v1 rows must not be pooled with other protocols: {bad}")
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# union_day_v1 (WP-E4b manifest; moved here from scripts/run_exact_union_day.py by WP-E6, design section 1.5
+# "Manifest validator"). The union-menu day level is a CP-SAT selection over the GA menus and the per-wave exact menus.
+# It is its own protocol id: it is neither exact_reference_v1 nor a heuristic row, and is never pooled with either.
+# ---------------------------------------------------------------------------------------------------------------
+UNION_DAY_PROTOCOL_ID = "union_day_v1"
+UNION_DAY_MANIFEST_FILENAME = "union_day_manifest.json"
+UNION_DAY_TIME_SCALE = 100  # centi-minutes, as the producer and the router (F16)
+UNION_DAY_REQUIRED_KEYS = (
+    "protocol", "work_package", "git_commit", "dirty_working_tree", "source_campaigns", "exact_options_source", "cpsat",
+    "time_scale", "router_caps", "tools", "python_provenance", "python_version", "host_os", "run_history", "claim",
+    "ga_recompute", "labels", "blocking_errors", "total_wall_seconds")
+_SHA256 = re.compile(r"[0-9a-f]{64}")
+
+
+def validate_union_day_manifest(manifest: Mapping) -> List[str]:
+    """Schema errors of a ``union_day_manifest.json`` (empty when valid); never mutates ``manifest``."""
+    from uniride_core.planning import union_day_menu as udm  # lazy: keeps the exact_reference_v1 import path light
+
+    problems = [f"missing {k}" for k in UNION_DAY_REQUIRED_KEYS if k not in manifest]
+    if manifest.get("protocol", UNION_DAY_PROTOCOL_ID) != UNION_DAY_PROTOCOL_ID:
+        problems.append(f"protocol must be {UNION_DAY_PROTOCOL_ID!r}")
+    if "time_scale" in manifest and manifest["time_scale"] != UNION_DAY_TIME_SCALE:
+        problems.append(f"time_scale must be {UNION_DAY_TIME_SCALE}")
+    if "claim" in manifest and manifest["claim"] != udm.CLAIM:
+        problems.append("claim text differs from the design wording")
+    if "git_commit" in manifest and not re.fullmatch(r"[0-9a-f]{7,40}", str(manifest["git_commit"])):
+        problems.append("git_commit must be a hex commit id")
+    if "dirty_working_tree" in manifest and not isinstance(manifest["dirty_working_tree"], bool):
+        problems.append("dirty_working_tree must be bool")
+    if "labels" in manifest and (not isinstance(manifest["labels"], Mapping)
+                                 or set(manifest["labels"]) != set(udm.LABELS)):
+        problems.append(f"labels must carry exactly the keys {sorted(udm.LABELS)}")
+    sources = manifest.get("source_campaigns")
+    if "source_campaigns" in manifest:
+        if not isinstance(sources, Mapping) or not sources:
+            problems.append("source_campaigns must be a non-empty mapping")
+        else:
+            for name, src in sources.items():
+                if not isinstance(src, Mapping) or not isinstance(src.get("path"), str) \
+                        or not _SHA256.fullmatch(str(src.get("manifest_sha256"))):
+                    problems.append(f"source_campaigns[{name}] needs a relative path and a manifest_sha256")
+    exact = manifest.get("exact_options_source")
+    if "exact_options_source" in manifest:
+        if not isinstance(exact, Mapping):
+            problems.append("exact_options_source must be a mapping")
+        else:
+            for key in ("exact_routes_sha256", "option_gaps_sha256", "manifest_sha256"):
+                if not _SHA256.fullmatch(str(exact.get(key))):
+                    problems.append(f"exact_options_source.{key} must be a sha256")
+    problems.extend(private_data_errors(manifest))
+    return problems

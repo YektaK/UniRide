@@ -324,7 +324,7 @@ def test_slice_run_writes_manifest_csv_and_summary_without_blocking_errors(slice
     out, code = slice_out
     manifest = json.loads((out / ud.MANIFEST_FILENAME).read_text(encoding="utf-8"))
     assert code == 0 and manifest["blocking_errors"] == []
-    assert ud.validate_manifest(manifest) == []
+    assert ud.protocol.validate_union_day_manifest(manifest) == []
     assert (out / "day_gaps.csv").is_file() and (out / "summary.json").is_file()
     for name in (ud.MANIFEST_FILENAME, "day_gaps.csv", "summary.json"):
         assert b"\r" not in (out / name).read_bytes(), name  # LF writes
@@ -409,7 +409,7 @@ def test_committed_campaign_results_are_consistent():
         rows = list(csv.DictReader(fh))
     assert len(rows) == 120 and tuple(rows[0].keys()) == ud.CSV_FIELDS
     assert manifest["dirty_working_tree"] is False and len(manifest["git_commit"]) == 40 and manifest["blocking_errors"] == []
-    assert ud.validate_manifest(manifest) == []
+    assert ud.protocol.validate_union_day_manifest(manifest) == []
     counts = {k: sum(r["label"] == k for r in rows) for k in udm.LABELS}
     assert counts == manifest["labels"] == summary["labels"] and sum(counts.values()) == 120
     assert manifest["ga_recompute"] == {"cells": 120, "equal_to_archived_response": 120}

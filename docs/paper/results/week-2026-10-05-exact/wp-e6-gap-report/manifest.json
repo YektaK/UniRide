@@ -1,0 +1,105 @@
+{
+  "day_label_counts": {
+    "both_infeasible_for_L": 28,
+    "ga_menu_infeasible_for_L": 1,
+    "not_independently_confirmed": 0,
+    "proven_over_union_menu": 91,
+    "union_not_proven": 0,
+    "verification_failed": 0
+  },
+  "dirty_working_tree": false,
+  "ga_labels": {
+    "large+doblo_cap3": {
+      "ga_commit": "f29aa3d",
+      "ga_dirty_tree": "False",
+      "ga_protocol": "native",
+      "ga_seed": "42"
+    },
+    "large+sedan": {
+      "ga_commit": "f29aa3d",
+      "ga_dirty_tree": "False",
+      "ga_protocol": "native",
+      "ga_seed": "42"
+    },
+    "single_4sw5so": {
+      "ga_commit": "6be127d",
+      "ga_dirty_tree": "True",
+      "ga_protocol": "native",
+      "ga_seed": "42"
+    }
+  },
+  "git_commit": "620803021328b23128bdc4401ade3b0ac0b94393",
+  "host_os": "Windows-11",
+  "inputs": {
+    "docs/paper/results/week-2026-10-05-4sw5so/run_manifest.json": "f152ca63068be91be03c7ca27cf767fef52cc9345a6cb69d155f75a137f90b15",
+    "docs/paper/results/week-2026-10-05-exact/wp-e3-goal1-single/exact_manifest.json": "7d6fc40ddf03603566fa92775aa90b8dfdba2e65e042d0b31151db2ccf0cfb38",
+    "docs/paper/results/week-2026-10-05-exact/wp-e3-goal1-single/exact_routes.json": "f8ed80ccf0234b34662aa9ef27e1a17ce4d9c057ac9c585845ddbe602a5227f1",
+    "docs/paper/results/week-2026-10-05-exact/wp-e3-goal1-single/wave_gaps.csv": "fcb962d128fab3993df189a571decb9eba754bcc6180bcbd80f2d3727ffb2f33",
+    "docs/paper/results/week-2026-10-05-exact/wp-e4a-typed-options/exact_manifest.json": "c6437056b5be9f5300cbc0bdaa35b2831ab807e186a987109c57a115a6fef3a2",
+    "docs/paper/results/week-2026-10-05-exact/wp-e4a-typed-options/exact_routes.json": "840d51ad73bd177f2bd3eeed7879d9deace945433f771eff172a7da17e4b2e64",
+    "docs/paper/results/week-2026-10-05-exact/wp-e4a-typed-options/option_gaps.csv": "154cba7f5f34b0addb689fd7f5ad14e8cd31459e80c99c2ba1b76534b1503a20",
+    "docs/paper/results/week-2026-10-05-exact/wp-e4a-typed-options/replay.csv": "9c1291ee66502a867124f5f2a7f459b8e31d6c2831c6820f101e404fa859d0d5",
+    "docs/paper/results/week-2026-10-05-exact/wp-e4b-union-day/day_gaps.csv": "19bcd43c9fa8cd7263968d4e6f3e4059baf561213f2d02d556e484aa2f26e295",
+    "docs/paper/results/week-2026-10-05-exact/wp-e4b-union-day/day_sums.csv": "41021440e7334bb1fec1c4f159e02e85286eb908152bba3551a50ea3757ba95e",
+    "docs/paper/results/week-2026-10-05-exact/wp-e4b-union-day/union_day_manifest.json": "423ee8ac22652e5560c0691f6dfe26185a598dc0e89b7a8f34f16faec40d1c09",
+    "docs/paper/results/week-2026-10-05-fleet-rerun-doblo-cap3/run_manifest.json": "b7dcd7da657a4cb660f1f4bba54b7c9b14285a127fce5e18346c692b158c1e5b",
+    "docs/paper/results/week-2026-10-05-fleet-rerun-large-sedan/run_manifest.json": "279a06fc19f222740e93bf842bb65ca407f221e7c3c159b6d0e084b019d7643b"
+  },
+  "outputs": {
+    "README.md": "6f11a860fb77fac11b473855d95a45a28f296f02b5ef2ee9f1494154da99c404",
+    "day_gaps.csv": "19bcd43c9fa8cd7263968d4e6f3e4059baf561213f2d02d556e484aa2f26e295",
+    "day_sums.csv": "c3d1bc48a9e876b5c48b0207b304dcef5199ff662313949ac4b9c213be50a6f1",
+    "figure_gap_single.png": "22942d0c926ccf4f8f602cb16af290adbba58824767fff3f59e23e55b150265b",
+    "figure_gap_single.svg": "58b97d83f9a33d098b3c90ed025088bd690d50ca7aabbfbb9dff96311d99f324",
+    "figure_gap_typed.png": "28fe22442511d3cc8018c72933178a46b344a388c80fbc247be386aff31f1757",
+    "figure_gap_typed.svg": "5fa0ac648416b62f41a6ef60380f20e2980fc494b39bbe7f1047ed7a1c375256",
+    "table_by_R.csv": "3d69de65999ffbfd98940765e038ec4120f6b31496c7960fd7ce78c34baca3f4",
+    "table_by_R.md": "261f8bef8ec0bc4d1532576a919310d76e4cf613e02d73d3b412dd2d9d2bd681",
+    "table_day_labels.csv": "dce6befd22072e9fd412da6799985f1e3b67abcd3c19f6f77affdece5e59f7c6",
+    "wave_gaps.csv": "eeb7176c68e59a9eadaf7fb6784212d84d78f8fe259ffa80dd43e21f1e52b8ce"
+  },
+  "protocols": {
+    "README.md": "descriptive",
+    "day_gaps.csv": "union_day_v1",
+    "day_sums.csv": "exact_reference_v1 (per-wave sums, fleets separate); day level over the union menu is union_day_v1 (day_gaps.csv)",
+    "figure_gap_single.png": "exact_reference_v1",
+    "figure_gap_single.svg": "exact_reference_v1",
+    "figure_gap_typed.png": "exact_reference_v1",
+    "figure_gap_typed.svg": "exact_reference_v1",
+    "table_by_R.csv": "exact_reference_v1",
+    "table_by_R.md": "exact_reference_v1",
+    "table_day_labels.csv": "union_day_v1",
+    "wave_gaps.csv": "exact_reference_v1"
+  },
+  "python_provenance": {
+    "academic_benchmark": "academic_benchmark/__init__.py",
+    "uniride_core": "uniride_core/__init__.py"
+  },
+  "replay_gate": {
+    "cells": 120,
+    "labels": {
+      "match": 91,
+      "match_infeasible_for_L": 29
+    }
+  },
+  "row_counts": {
+    "day_gaps.csv": 120,
+    "day_sums.csv": 60,
+    "table_by_R.csv": 20,
+    "table_day_labels.csv": 6,
+    "wave_gaps.csv": 2100
+  },
+  "source_results": {
+    "wp-e3-goal1-single": "docs/paper/results/week-2026-10-05-exact/wp-e3-goal1-single",
+    "wp-e4a-typed-options": "docs/paper/results/week-2026-10-05-exact/wp-e4a-typed-options",
+    "wp-e4b-union-day": "docs/paper/results/week-2026-10-05-exact/wp-e4b-union-day"
+  },
+  "versions": {
+    "matplotlib": "3.11.2",
+    "pillow": "13.0.0",
+    "plotting": "matplotlib via scripts/exact_gap_figure.py (Agg backend)",
+    "python": "3.14.6",
+    "zlib": "1.3.1.zlib-ng"
+  },
+  "work_package": "WP-E6"
+}

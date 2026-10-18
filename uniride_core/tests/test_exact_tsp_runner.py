@@ -538,3 +538,265 @@ def test_geo_pi_sensitivity_counts_the_arcs_that_differ_between_the_two_pi_value
     variant = runner.geo_pi_variant_matrix(coords, 3.141592)
     expected = sum(1 for i in range(40) for j in range(40) if i != j and variant[i][j] != base[i][j])
     assert runner.count_differing_arcs(base, variant) == expected
+
+
+# ================================================================ WP-E7 polish (review items 1-6)
+# ---------------------------------------------------------------- item 1: measured run history
+def _manifest_with(runner, **kw):
+    recs = [_record(runner)]
+    inst = {"mini": {"data_source": "tsp_file", "file": "mini.tsp", "sha256": "a" * 64, "matrix_sha256": "b" * 64}}
+    args = dict(
+        instances=inst, git={"commit": "0123456789abcdef0123456789abcdef01234567", "dirty": False},
+        versions={"ampl": "AMPL 20260809", "amplpy": "0.18.0", "gurobi": "Gurobi 13.0.3", "highs": "HiGHS 1.15.1",
+                  "ampl_location": "local AMPL installation used"},
+        provenance={"uniride_core": "uniride_core/__init__.py"}, total_wall_seconds=12.5, mtz_limit_seconds=120.0,
+        published_source={"table": "problems.optimal", "cross_checks": ["x"], "discrepancies": []},
+        started_utc="2026-10-18T10:00:00Z", ended_utc="2026-10-18T10:00:13Z")
+    args.update(kw)
+    return runner.build_manifest(recs, **args)
+
+
+def test_run_history_records_measured_timestamps_and_this_runs_invocation_count(runner):
+    h = _manifest_with(runner)["run_history"]
+    assert h["started_utc"] == "2026-10-18T10:00:00Z" and h["ended_utc"] == "2026-10-18T10:00:13Z"
+    assert h["invocations_in_this_manifest"] == 1
+    assert "invocations_at_this_commit" not in h, "the old field claimed a count across the commit that nothing measured"
+    assert h["serial"] is True and h["cache"] == "none" and h["retries"] == 0
+
+
+def test_run_history_takes_the_timestamps_it_is_given_not_a_literal(runner):
+    h = _manifest_with(runner, started_utc="2030-01-02T03:04:05Z", ended_utc="2030-01-02T03:05:00Z")["run_history"]
+    assert (h["started_utc"], h["ended_utc"]) == ("2030-01-02T03:04:05Z", "2030-01-02T03:05:00Z")
+
+
+def test_utc_stamp_is_iso_utc_with_z(runner):
+    import datetime
+
+    stamp = runner.utc_stamp(datetime.datetime(2026, 10, 18, 10, 0, 7, 999999, tzinfo=datetime.timezone.utc))
+    assert stamp == "2026-10-18T10:00:07Z"
+    assert runner.utc_stamp().endswith("Z") and len(runner.utc_stamp()) == 20
+
+
+# ---------------------------------------------------------------- item 2: a non-empty -wal is refused
+def test_a_non_empty_wal_next_to_the_database_is_refused(runner, tmp_path):
+    db = tmp_path / "tsplib.db"
+    _make_wal_db(db)
+    assert runner.wal_refusal(db) == "", "no -wal file: nothing to refuse"
+    (tmp_path / "tsplib.db-wal").write_bytes(b"")
+    assert runner.wal_refusal(db) == "", "an EMPTY -wal file (as next to the real database) must not trip the check"
+    (tmp_path / "tsplib.db-wal").write_bytes(b"\x37\x7f\x06\x82 uncheckpointed frames")
+    msg = runner.wal_refusal(db)
+    assert "tsplib.db-wal" in msg and "immutable" in msg
+
+
+def test_the_runner_exits_2_before_any_solver_when_a_non_empty_wal_exists(tmp_path):
+    db = tmp_path / "tsplib.db"
+    _make_wal_db(db)
+    (tmp_path / "tsplib.db-wal").write_bytes(b"not empty")
+    out = REPO / "docs" / "paper" / "results" / "tsplib-exact-reference" / "_test_wal_refused"
+    # UNIRIDE_AMPL_DIR points at an empty directory: if the WAL check came after the backend start the exit code would be 3
+    res = _run_cli("--allow-dirty", "--data-dir", str(tmp_path), "--out", str(out), env_extra={"UNIRIDE_AMPL_DIR": str(tmp_path)})
+    assert res.returncode == 2, (res.returncode, res.stderr[-400:])
+    assert "tsplib.db-wal" in res.stderr
+    assert not out.exists()
+
+
+def test_verify_tours_cli_also_refuses_a_non_empty_wal(tmp_path):
+    db = tmp_path / "tsplib.db"
+    _make_wal_db(db)
+    (tmp_path / "tsplib.db-wal").write_bytes(b"not empty")
+    tours = tmp_path / "t"
+    tours.mkdir()
+    (tours / "tours.json").write_text(json.dumps({"node_base": 1, "tours": {}}), encoding="utf-8")
+    res = _run_cli("--data-dir", str(tmp_path), "--verify-tours", str(tours))
+    assert res.returncode == 2 and "tsplib.db-wal" in res.stderr, (res.returncode, res.stderr[-300:])
+
+
+def test_database_record_has_file_name_size_and_sha256_of_a_copy(runner, tmp_path):
+    db = tmp_path / "tsplib.db"
+    _make_wal_db(db)
+    rec = runner.database_record(db)
+    assert rec == {"file": "tsplib.db", "size_bytes": db.stat().st_size, "sha256": _sha(db)}
+
+
+# ---------------------------------------------------------------- item 3: GEO wording and a blocking sensitivity re-solve
+def test_spec_distance_docstring_states_the_pi_choice_instead_of_claiming_independence(runner):
+    doc = runner.spec_distance.__doc__
+    assert "math.pi" in doc and "3.141592" in doc and "E10" in doc
+    assert "written from the document" not in doc
+
+
+def test_manifest_convention_wording_says_the_pi_choice_is_shared(runner):
+    c = runner.convention_record(geo_pi_blocking=True)
+    text = json.dumps(c)
+    assert "independent transcription" not in text, "the old wording suggested an independent check of pi"
+    assert "math.pi" in c["GEO"] and "shared" in c["asserted"] and "3.141592" in c["asserted"]
+    assert c["geo_pi_sensitivity_blocking"] is True
+    assert runner.convention_record(geo_pi_blocking=False)["geo_pi_sensitivity_blocking"] is False
+
+
+def _geo_primary(ub=100, status="optimal"):
+    return _res(status=status, ub=ub, lb=ub if status == "optimal" else ub - 5)
+
+
+def test_a_differing_optimum_under_the_other_pi_blocks_when_the_flag_is_on(runner):
+    coords = _random_coords("GEO", 40, seed=11)
+    matrix = runner.build_matrix("GEO", coords)
+    assert runner.count_differing_arcs(matrix, runner.geo_pi_variant_matrix(coords, runner.TSPLIB_GEO_PI)) > 0
+    alt = lambda m: _res(ub=101, lb=101, tour=None)  # noqa: E731
+    note, blocking = runner.geo_pi_sensitivity("mini", matrix, coords, _geo_primary(), solve=alt, blocking=True)
+    assert note["outcome"] == "different_optimum" and note["ub"] == 101
+    assert len(blocking) == 1 and "mini" in blocking[0] and "3.141592" in blocking[0]
+    note, blocking = runner.geo_pi_sensitivity("mini", matrix, coords, _geo_primary(), solve=alt, blocking=False)
+    assert note["outcome"] == "different_optimum" and blocking == [], "flag off: recorded only, as in stage 1"
+
+
+def test_the_same_optimum_unproven_and_identical_matrices_do_not_block(runner):
+    coords = _random_coords("GEO", 40, seed=11)
+    matrix = runner.build_matrix("GEO", coords)
+    note, blocking = runner.geo_pi_sensitivity("mini", matrix, coords, _geo_primary(),
+                                               solve=lambda m: _res(ub=100, lb=100, tour=None), blocking=True)
+    assert (note["outcome"], blocking) == ("same_optimum", [])
+    note, blocking = runner.geo_pi_sensitivity("mini", matrix, coords, _geo_primary(),
+                                               solve=lambda m: _res("feasible_with_gap", ub=110, lb=90), blocking=True)
+    assert (note["outcome"], blocking) == ("unproven", [])
+    calls = []
+    same = [(0.0, 0.0), (1.0, 1.0), (2.0, 2.0)]  # integer degrees: both pi values give the same arcs
+    m3 = runner.build_matrix("GEO", same)
+    assert runner.count_differing_arcs(m3, runner.geo_pi_variant_matrix(same, runner.TSPLIB_GEO_PI)) == 0
+    note, blocking = runner.geo_pi_sensitivity("mini", m3, same, _geo_primary(), solve=lambda m: calls.append(1), blocking=True)
+    assert note["outcome"] == "identical_matrix" and blocking == [] and calls == []
+
+
+def test_the_sensitivity_flag_defaults_to_on(runner):
+    assert runner.parse_args([]).geo_pi_blocking is True
+    assert runner.parse_args(["--no-geo-pi-blocking"]).geo_pi_blocking is False
+
+
+# ---------------------------------------------------------------- item 4: the canonical coordinate text is documented
+def test_manifest_states_the_canonical_coordinate_text_format(runner):
+    fmt = runner.coordinate_text_record()
+    assert fmt["line_format"] == "{i} {x!r} {y!r}\\n" and fmt["encoding"] == "ASCII" and fmt["index_base"] == 0
+    # the documented format is the one the hash is computed over
+    coords = [(1.5, 2.0), (3.0, 4.25)]
+    canonical = "".join(f"{i} {x!r} {y!r}\n" for i, (x, y) in enumerate(coords)).encode("ascii")
+    assert runner.coordinate_text_sha256(coords) == hashlib.sha256(canonical).hexdigest()
+
+
+# ---------------------------------------------------------------- item 5: published tours cross-check the coordinates
+def _tour_db(path: Path, tours):
+    conn = sqlite3.connect(path)
+    conn.execute("create table if not exists opt_tours (problem_name text primary key, tour_nodes text not null, "
+                 "tour_length real, source text, added_at text not null)")
+    conn.executemany("insert into opt_tours values (?, ?, null, 'tsplib_file', '2026-01-01')",
+                     [(k, json.dumps(v)) for k, v in tours.items()])
+    conn.commit()
+    conn.close()
+
+
+def _line4_db(path: Path, tours=None):
+    """The fixture database plus ``line4``: four nodes on the x axis, tour length 6."""
+    _make_wal_db(path)
+    conn = sqlite3.connect(path)
+    conn.execute("insert into problems (name, dimension, optimal, edge_weight_type, problem_type) "
+                 "values ('line4', 4, 6, 'EUC_2D', 'TSP')")
+    conn.executemany("insert into coordinates values ('line4', ?, ?, 0.0)", [(i, float(i)) for i in range(4)])
+    conn.commit()
+    conn.close()
+    _tour_db(path, tours or {})
+
+
+def test_published_tour_length_on_the_used_coordinates_must_equal_the_published_optimum(runner):
+    m = _mini()
+    spec = _spec(runner, optimum=24)
+    assert runner.check_published_tour(spec, m, [1, 2, 3, 4, 5, 6]) == []
+    assert runner.check_published_tour(_spec(runner, optimum=23), m, [1, 2, 3, 4, 5, 6]), "length 24 != published 23"
+    assert runner.check_published_tour(spec, m, [1, 2, 4, 3, 5, 6]), "a different tour with another length"
+    assert runner.check_published_tour(spec, m, [1, 2, 3, 4, 5, 5]), "not a permutation"
+    assert runner.check_published_tour(spec, m, [1, 2, 3, 4, 5]), "wrong size"
+
+
+def test_published_tour_is_read_from_opt_tours_read_only_and_from_opt_tour_files(runner, tmp_path):
+    db = tmp_path / "tsplib.db"
+    _make_wal_db(db)
+    _tour_db(db, {"a10": [1, 3, 2]})
+    conn = runner.open_db_readonly(db)
+    try:
+        assert runner.read_published_tour(conn, "a10", None) == ([1, 3, 2], "opt_tours")
+        assert runner.read_published_tour(conn, "b99", None) is None
+        files = tmp_path / "tours"
+        files.mkdir()
+        (files / "kroA100.opt.tour").write_text(
+            "NAME : kroA100.opt.tour\nCOMMENT : Optimal tour (21282)\nTYPE : TOUR\nDIMENSION : 4\nTOUR_SECTION\n1\n3\n2\n4\n-1\nEOF\n",
+            encoding="utf-8")
+        assert runner.read_published_tour(conn, "kroa100", files) == ([1, 3, 2, 4], "opt_tour_file")
+        assert runner.read_published_tour(conn, "nothere", files) is None
+    finally:
+        conn.close()
+
+
+def test_a_published_tour_that_does_not_match_the_coordinates_blocks_the_instance(runner, tmp_path):
+    db = tmp_path / "tsplib.db"
+    _line4_db(db, {"line4": [1, 2, 3, 4]})
+    ro = runner.open_db_readonly(db)
+    try:
+        spec = runner.InstanceSpec("line4", "TSP", 4, "EUC_2D", 6, "tsplib")
+        rec = runner.load_instance(spec, tmp_path, ro)[2]
+        assert rec["published_tour_check"] == {"source": "opt_tours", "tour_length": 6, "equals_published_optimum": True}
+        bad = runner.InstanceSpec("line4", "TSP", 4, "EUC_2D", 7, "tsplib")
+        with pytest.raises(runner.PublishedTourError):
+            runner.load_instance(bad, tmp_path, ro)
+    finally:
+        ro.close()
+
+
+def test_an_instance_without_a_published_tour_is_labelled_not_blocked(runner, tmp_path):
+    db = tmp_path / "tsplib.db"
+    _line4_db(db)
+    ro = runner.open_db_readonly(db)
+    try:
+        spec = runner.InstanceSpec("line4", "TSP", 4, "EUC_2D", 6, "tsplib")
+        rec = runner.load_instance(spec, tmp_path, ro)[2]
+    finally:
+        ro.close()
+    assert rec["published_tour_check"] == {"source": "none", "tour_length": None, "equals_published_optimum": None}
+
+
+def test_the_real_database_published_tours_match_the_coordinates_of_the_verification_set():
+    if not DB_PATH.is_file():
+        pytest.skip("tsplib.db not present in this checkout (git-ignored)")
+    runner = _load_script()
+    conn = runner.open_db_readonly(DB_PATH)
+    try:
+        specs = [s for s in runner.read_instance_set(conn) if s.problem_type == "TSP"]
+        checked = []
+        for s in specs:
+            pub = runner.read_published_tour(conn, s.name, None)
+            if pub is None:
+                continue
+            matrix = runner.build_matrix(s.edge_weight_type, runner.read_db_coordinates(conn, s.name))
+            assert runner.check_published_tour(s, matrix, pub[0]) == [], s.name
+            checked.append(s.name)
+    finally:
+        conn.close()
+    assert len(checked) >= 10, checked
+
+
+# ---------------------------------------------------------------- item 6: --verify-tours compares with the published optimum
+def test_verify_tours_compares_every_tour_length_with_the_published_optimum(runner):
+    m = _mini()
+    doc = {"node_base": 1, "tours": {"mini": {"n": 6, "length": 24, "status": "optimal", "tour": [1, 2, 3, 4, 5, 6]}}}
+    assert runner.verify_tours(doc, lambda name: m, optimum_for=lambda name: 24) == []
+    errs = runner.verify_tours(doc, lambda name: m, optimum_for=lambda name: 23)
+    assert errs and "published" in errs[0] and "23" in errs[0]
+    bracket = {"node_base": 1, "tours": {"mini": {"n": 6, "length": 24, "status": "feasible_with_gap", "tour": [1, 2, 3, 4, 5, 6]}}}
+    assert runner.verify_tours(bracket, lambda name: m, optimum_for=lambda name: 23) == [], "a non-proven tour may be longer"
+    too_short = runner.verify_tours(bracket, lambda name: m, optimum_for=lambda name: 25)
+    assert too_short and "shorter" in too_short[0], "no tour can be shorter than the published optimum"
+
+
+def test_verify_tours_reports_an_instance_without_a_published_optimum(runner):
+    m = _mini()
+    doc = {"node_base": 1, "tours": {"mini": {"n": 6, "length": 24, "status": "optimal", "tour": [1, 2, 3, 4, 5, 6]}}}
+    errs = runner.verify_tours(doc, lambda name: m, optimum_for=lambda name: None)
+    assert errs and "no published optimum" in errs[0]

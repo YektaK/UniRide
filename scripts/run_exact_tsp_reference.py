@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import csv
 import dataclasses
+import datetime
 import hashlib
 import json
 import math
@@ -57,6 +58,7 @@ EXPECTED_TSP_NAMES = ("burma14", "ulysses16", "ulysses22", "att48", "eil51", "be
                       "kroa100", "krob100", "kroc100", "krod100", "kroe100", "rd100")
 ATSP_NAMES = ("ft53",)
 TSPLIB_GEO_PI = 3.141592  # the constant printed in the TSPLIB95 document; the repo's GEO function uses math.pi
+OPT_TOUR_DIR = REPO / "archive" / "academic_benchmark" / "bildiri2026_legacy" / "bildiri2026" / "data" / "tsplib"  # read as data only
 
 REFERENCE_CSV_FIELDS = (
     "protocol", "instance", "problem_type", "n", "edge_weight_type", "reference_optimum", "reference_source", "exact_status",
@@ -82,7 +84,10 @@ class InstanceSpec:
 
 # ---------------------------------------------------------------- distance convention
 def spec_distance(ewt: str, p, q, pi: float = math.pi) -> int:
-    """TSPLIB95 distance written from the document, independent of ``uniride_core.algorithms.distance``."""
+    """A second transcription of the TSPLIB95 distance rules, separate from ``uniride_core.algorithms.distance`` (it is
+    not an independent check of the GEO constant). The GEO branch uses ``math.pi``, the same constant as the repository's
+    TSPLIB distance code (DECISION_LOG E10), while the TSPLIB95 document prints PI = 3.141592; the effect of that
+    difference is measured by the sensitivity re-solve (``geo_pi_sensitivity``)."""
     if ewt == "EUC_2D":
         return int(math.sqrt((p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2) + 0.5)  # nint
     if ewt == "ATT":
@@ -141,7 +146,55 @@ def matrix_sha256(matrix) -> str:
     return hashlib.sha256(json.dumps([list(map(int, r)) for r in matrix], separators=(",", ":")).encode("ascii")).hexdigest()
 
 
+def utc_stamp(now=None) -> str:
+    """UTC time as ``YYYY-MM-DDTHH:MM:SSZ``."""
+    now = now or datetime.datetime.now(datetime.timezone.utc)
+    return now.astimezone(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def coordinate_text_record() -> dict:
+    """The canonical coordinate text behind ``sha256`` of an instance with data_source ``tsplib_db_coordinates``."""
+    return {"line_format": "{i} {x!r} {y!r}\\n", "encoding": "ASCII", "index_base": 0,
+            "description": "one line per node in database order: 0-based index, repr() of the x and y floats, separated by "
+                           "single spaces, terminated by a line feed; no header; sha256 of those bytes"}
+
+
+def coordinate_text_sha256(coords) -> str:
+    canonical = "".join(f"{i} {x!r} {y!r}\n" for i, (x, y) in enumerate(coords)).encode("ascii")
+    return hashlib.sha256(canonical).hexdigest()
+
+
+def convention_record(*, geo_pi_blocking: bool) -> dict:
+    return {"EUC_2D": "nint", "ATT": "pseudo-Euclidean (TSPLIB95)", "GEO": "TSPLIB95 GEO with math.pi (T06/O02, E10)",
+            "asserted": "every arc against a second transcription of the TSPLIB95 rules written for this runner "
+                        "(spec_distance); both it and the repository code use math.pi for GEO, so the pi choice is shared and "
+                        "not independently checked; a re-solve with pi = 3.141592 (the value printed in TSPLIB95) is recorded "
+                        "in geo_pi_sensitivity",
+            "geo_pi_sensitivity_blocking": bool(geo_pi_blocking)}
+
+
 # ---------------------------------------------------------------- tsplib.db (strictly read-only) and published optima
+def wal_refusal(db_path) -> str:
+    """Refusal message when a non-empty ``-wal`` file sits next to the database, else ''. The immutable read-only open
+    ignores that file, so its frames (committed but not yet checkpointed data) would be silently left out."""
+    wal = Path(str(db_path) + "-wal")
+    if wal.is_file() and wal.stat().st_size > 0:
+        return (f"{wal.name} next to the database is not empty ({wal.stat().st_size} bytes); the read-only immutable open "
+                f"ignores it, so the data read could differ from the database as its writer sees it. Checkpoint the "
+                f"database outside this runner (or move the -wal file away) and run again")
+    return ""
+
+
+def database_record(db_path) -> dict:
+    """File name, size and sha256 of the database file as read (recorded in the manifest)."""
+    path = Path(db_path)
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 24), b""):
+            h.update(chunk)
+    return {"file": path.name, "size_bytes": path.stat().st_size, "sha256": h.hexdigest()}
+
+
 def open_db_readonly(path) -> sqlite3.Connection:
     """Read-only and immutable: writes fail and no -wal/-shm file is created next to the database."""
     uri = Path(path).resolve().as_uri() + "?mode=ro&immutable=1"
@@ -209,12 +262,66 @@ def cross_check_optima(specs, parser_values: dict, atsp_values: dict) -> list:
     return out
 
 
+class PublishedTourError(ValueError):
+    """The published optimal tour does not have the published length on the used data."""
+
+
+def _parse_tour_file(text: str) -> list:
+    nodes, in_section = [], False
+    for line in text.splitlines():
+        token = line.strip()
+        if token.upper().startswith("TOUR_SECTION"):
+            in_section = True
+        elif in_section:
+            if token in ("-1", "EOF"):
+                break
+            if token:
+                nodes.append(int(token))
+    return nodes
+
+
+def read_published_tour(conn, name: str, tour_dir):
+    """(1-based node list, source) of the published optimal tour, or None. First the ``opt_tours`` table of the database
+    (read-only connection), then ``<name>.opt.tour`` in ``tour_dir`` (case-insensitive name; the file is read as data)."""
+    has_table = conn.execute("select 1 from sqlite_master where type='table' and name='opt_tours'").fetchone()
+    if has_table:
+        row = conn.execute("select tour_nodes from opt_tours where problem_name=?", (name,)).fetchone()
+        if row is not None:
+            return [int(v) for v in json.loads(row[0])], "opt_tours"
+    if tour_dir is not None and Path(tour_dir).is_dir():
+        want = f"{name}.opt.tour".lower()
+        for cand in sorted(Path(tour_dir).iterdir()):
+            if cand.name.lower() == want and cand.is_file():
+                return _parse_tour_file(cand.read_text(encoding="utf-8")), "opt_tour_file"
+    return None
+
+
+def check_published_tour(spec, matrix, tour_one_based) -> list:
+    """Errors when the published tour is not a Hamiltonian cycle of the used matrix or its length differs from the
+    published optimum (empty list: the used coordinates reproduce the published optimum)."""
+    return [f"{spec.name}: published tour: {e}"
+            for e in tsp.validate_tour(matrix, [int(v) - 1 for v in tour_one_based], spec.published_optimum)]
+
+
+def _attach_published_tour_check(rec: dict, spec, matrix, conn, tour_dir) -> None:
+    pub = read_published_tour(conn, spec.name, tour_dir)
+    if pub is None:
+        rec["published_tour_check"] = {"source": "none", "tour_length": None, "equals_published_optimum": None}
+        return
+    nodes, source = pub
+    errors = check_published_tour(spec, matrix, nodes)
+    if errors:
+        raise PublishedTourError("; ".join(errors))
+    rec["published_tour_check"] = {"source": source, "tour_length": tsp.tour_length(matrix, tuple(v - 1 for v in nodes)),
+                                   "equals_published_optimum": True}
+
+
 # ---------------------------------------------------------------- instance data
 def _sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def load_instance(spec: InstanceSpec, data_dir: Path, conn) -> tuple:
+def load_instance(spec: InstanceSpec, data_dir: Path, conn, tour_dir=OPT_TOUR_DIR) -> tuple:
     """(matrix, coordinates or None, data record). Instance files are used when present; otherwise the node
     coordinates in the read-only database (recorded as such). The convention is asserted here."""
     if spec.problem_type == "ATSP":
@@ -224,6 +331,7 @@ def load_instance(spec: InstanceSpec, data_dir: Path, conn) -> tuple:
                 if len(matrix) != spec.n:
                     raise ValueError(f"{spec.name}: file has {len(matrix)} nodes, database says {spec.n}")
                 rec = {"data_source": "atsp_file", "file": cand.name, "sha256": _sha256_file(cand)}
+                _attach_published_tour_check(rec, spec, matrix, conn, tour_dir)
                 return matrix, None, rec
         raise FileNotFoundError(f"{spec.name}: no .atsp file in the data directory")
     path = data_dir / f"{spec.name}.tsp"
@@ -240,10 +348,10 @@ def load_instance(spec: InstanceSpec, data_dir: Path, conn) -> tuple:
         if len(db_coords) != spec.n:
             raise ValueError(f"{spec.name}: database has {len(db_coords)} coordinates, expected {spec.n}")
         coords = db_coords
-        canonical = "".join(f"{i} {x!r} {y!r}\n" for i, (x, y) in enumerate(coords)).encode("ascii")
-        rec = {"data_source": "tsplib_db_coordinates", "file": None, "sha256": hashlib.sha256(canonical).hexdigest()}
+        rec = {"data_source": "tsplib_db_coordinates", "file": None, "sha256": coordinate_text_sha256(coords)}
     matrix = build_matrix(spec.edge_weight_type, coords)
     assert_convention(spec.edge_weight_type, coords, matrix)
+    _attach_published_tour_check(rec, spec, matrix, conn, tour_dir)
     return matrix, coords, rec
 
 
@@ -349,9 +457,10 @@ def tours_document(records) -> dict:
             "tours": tours}
 
 
-def verify_tours(doc: dict, matrix_for) -> list:
+def verify_tours(doc: dict, matrix_for, optimum_for=None) -> list:
     """Re-check a tours.json without a solver: every tour is a Hamiltonian cycle whose recomputed length equals
-    the recorded one. ``matrix_for(name)`` returns the instance matrix."""
+    the recorded one. ``matrix_for(name)`` returns the instance matrix. With ``optimum_for(name)`` (the published
+    optimum) a proven (``optimal``) tour must have exactly that length and no tour may be shorter than it."""
     errors = []
     if doc.get("node_base") != 1:
         errors.append("node_base must be 1")
@@ -362,11 +471,49 @@ def verify_tours(doc: dict, matrix_for) -> list:
             continue
         zero_based = [v - 1 for v in t["tour"]]
         errors.extend(f"{name}: {e}" for e in tsp.validate_tour(matrix, zero_based, t.get("length")))
+        if optimum_for is not None:
+            published = optimum_for(name)
+            length = t.get("length")
+            if published is None:
+                errors.append(f"{name}: no published optimum to compare the tour length with")
+            elif t.get("status", "optimal") == "optimal" and length != published:
+                errors.append(f"{name}: tour length {length} differs from the published optimum {published}")
+            elif length is not None and length < published:
+                errors.append(f"{name}: tour length {length} is shorter than the published optimum {published}")
     return errors
 
 
+def geo_pi_sensitivity(name: str, matrix, coords, primary, *, solve, blocking: bool) -> tuple:
+    """Re-solve a GEO instance with pi = 3.141592 (the TSPLIB95 printed value) when that changes any arc. Returns
+    (note, blocking errors): a proven optimum that differs from the primary proven optimum, or a failed re-solve, blocks
+    when ``blocking``; an unproven re-solve is recorded and does not block."""
+    variant = geo_pi_variant_matrix(coords, TSPLIB_GEO_PI)
+    differing = count_differing_arcs(matrix, variant)
+    n = len(matrix)
+    note = {"pi": TSPLIB_GEO_PI, "arcs_differing": differing, "arcs_total": n * (n - 1)}
+    if not differing:
+        note["outcome"] = "identical_matrix"
+        return note, []
+    alt = solve(variant)
+    note.update({"status": alt.status, "ub": alt.ub, "lb": alt.lb})
+    problem = None
+    if alt.status in ("rejected", "infeasible_proven", "backend_unavailable", "not_run"):
+        note["outcome"] = "failed"
+        problem = f"{name}: GEO pi {TSPLIB_GEO_PI} sensitivity re-solve failed (status {alt.status}; {alt.note or 'no note'})"
+    elif alt.status == "optimal" and primary.status == "optimal":
+        if alt.ub == primary.ub:
+            note["outcome"] = "same_optimum"
+        else:
+            note["outcome"] = "different_optimum"
+            problem = (f"{name}: GEO pi {TSPLIB_GEO_PI} gives the proven optimum {alt.ub}, math.pi gives {primary.ub}: "
+                       "the result depends on the constant")
+    else:
+        note["outcome"] = "unproven"
+    return note, ([problem] if problem and blocking else [])
+
+
 def build_manifest(records, *, instances, git, versions, provenance, total_wall_seconds, mtz_limit_seconds, published_source,
-                   budget_seconds=BUDGET_SECONDS, extra=None) -> dict:
+                   started_utc, ended_utc, budget_seconds=BUDGET_SECONDS, extra=None) -> dict:
     def solver_block(name, label):
         settings = ab.SolverSettings(solver=name, seed=SEED, wall_limit=budget_seconds, work_limit=None, peak_work_limit=None)
         return {"name": name, "version": versions[label], "option_string": ab.solver_option_string(settings, peak=False),
@@ -394,7 +541,8 @@ def build_manifest(records, *, instances, git, versions, provenance, total_wall_
                    "budget_rule": "one wall-clock budget per instance and solver; every cut-loop re-solve gets the time "
                                   "that remains (lim:time in the option string is the first solve's value)",
                    "run_mode": "serial, one invocation, no cache"},
-        "run_history": {"invocations_at_this_commit": 1, "serial": True, "cache": "none", "retries": 0},
+        "run_history": {"invocations_in_this_manifest": 1, "started_utc": started_utc, "ended_utc": ended_utc,
+                        "serial": True, "cache": "none", "retries": 0},
         "instances": instances, "published_optimum_source": published_source, "python_provenance": provenance,
         "python_version": platform.python_version(), "host_os": f"{platform.system()}-{platform.release()}",
         "claim": protocol.TSP_REFERENCE_CLAIM, "blocking_errors": blocking, "total_wall_seconds": round(total_wall_seconds, 1),
@@ -507,12 +655,20 @@ def parse_args(argv):
                     help="re-solve every Gurobi-optimal instance with HiGHS (default: on)")
     ap.add_argument("--budget-seconds", type=float, default=BUDGET_SECONDS,
                     help="total wall time per instance and solver (the protocol value is 600; another value makes the manifest invalid)")
+    ap.add_argument("--geo-pi-blocking", action=argparse.BooleanOptionalAction, default=True,
+                    help="a proven optimum that differs under pi = 3.141592 is a blocking error (default: on)")
+    ap.add_argument("--opt-tour-dir", default=str(OPT_TOUR_DIR),
+                    help="directory with <name>.opt.tour files, used when the database has no published tour (read as data)")
     ap.add_argument("--verify-tours", default="", metavar="DIR", help="re-check DIR/tours.json against the instance data; no AMPL")
     return ap.parse_args(argv)
 
 
 def _verify_tours_cli(args) -> int:
     data_dir = Path(args.data_dir)
+    refusal = wal_refusal(data_dir / DB_NAME)
+    if refusal:
+        print(f"refused: {refusal}", file=sys.stderr)
+        return 2
     doc = json.loads((Path(args.verify_tours) / "tours.json").read_text(encoding="utf-8"))
     conn = open_db_readonly(data_dir / DB_NAME)
     try:
@@ -521,10 +677,14 @@ def _verify_tours_cli(args) -> int:
 
         def matrix_for(name):
             if name not in cache:
-                cache[name] = load_instance(specs[name], data_dir, conn)[0]
+                cache[name] = load_instance(specs[name], data_dir, conn, Path(args.opt_tour_dir))[0]
             return cache[name]
 
-        errors = verify_tours(doc, matrix_for)
+        try:
+            errors = verify_tours(doc, matrix_for,
+                                  optimum_for=lambda name: specs[name].published_optimum if name in specs else None)
+        except (ValueError, ConventionError, KeyError) as exc:
+            errors = [f"cannot verify: {exc}"]
     finally:
         conn.close()
     print(f"tours checked: {len(doc.get('tours', {}))}; errors: {len(errors)}")
@@ -544,6 +704,10 @@ def main(argv=None) -> int:
         return 2
     commit, dirty = git_state(out)
     refusal = dirty_refusal(dirty=dirty, allow_dirty=args.allow_dirty)
+    if refusal:
+        print(f"refused: {refusal}", file=sys.stderr)
+        return 2
+    refusal = wal_refusal(Path(args.data_dir) / DB_NAME)
     if refusal:
         print(f"refused: {refusal}", file=sys.stderr)
         return 2
@@ -567,6 +731,7 @@ def main(argv=None) -> int:
 
 def _run(args, out: Path, commit: str, dirty: bool, gurobi, highs) -> int:
     t_start = time.perf_counter()
+    started_utc = utc_stamp()
     data_dir = Path(args.data_dir)
     db_path = data_dir / DB_NAME
     if not db_path.is_file():
@@ -588,7 +753,7 @@ def _run(args, out: Path, commit: str, dirty: bool, gurobi, highs) -> int:
         loaded = {}
         for s in specs:
             try:
-                loaded[s.name] = load_instance(s, data_dir, conn)
+                loaded[s.name] = load_instance(s, data_dir, conn, Path(args.opt_tour_dir))
             except (ValueError, FileNotFoundError, ConventionError) as exc:
                 print(f"refused: {s.name}: {exc}", file=sys.stderr)
                 return 2
@@ -609,28 +774,27 @@ def _run(args, out: Path, commit: str, dirty: bool, gurobi, highs) -> int:
         p = rec["primary"]
         print(f"{s.name:10s} n={s.n:3d} ref={s.published_optimum} {p.status} UB={p.ub} LB={p.lb} {rec['verdict']} "
               f"{p.wall_seconds:.1f}s highs={rec['comparison'].label if rec['comparison'] else '-'}", flush=True)
-        if s.edge_weight_type == "GEO" and coords is not None:  # informational: the TSPLIB95 document prints PI = 3.141592
-            variant = geo_pi_variant_matrix(coords, TSPLIB_GEO_PI)
-            differing = count_differing_arcs(matrix, variant)
-            note = {"pi": TSPLIB_GEO_PI, "arcs_differing": differing, "arcs_total": s.n * (s.n - 1)}
-            if differing:
-                alt = tsp.solve_tsp(variant, session=gurobi, budget_seconds=budget)
-                note.update({"status": alt.status, "ub": alt.ub, "lb": alt.lb})
+        if s.edge_weight_type == "GEO" and coords is not None:  # the TSPLIB95 document prints PI = 3.141592
+            note, geo_blocking = geo_pi_sensitivity(
+                s.name, matrix, coords, p, solve=lambda m: tsp.solve_tsp(m, session=gurobi, budget_seconds=budget),
+                blocking=args.geo_pi_blocking)
             geo_notes[s.name] = note
+            rec["blocking"].extend(geo_blocking)
 
     versions = {"ampl": gurobi.ampl_version, "amplpy": gurobi.amplpy_version, "ampl_location": gurobi.location,
                 "gurobi": gurobi.solver_version, "highs": highs.solver_version if highs is not None else "not run"}
     published = {"table": "problems.optimal (read-only, immutable open)", "second_sources":
                  ["TSPLIB_OPTIMALS in uniride_core/algorithms/tsplib_parser.py", "academic_benchmark/tsplib_data/atsp/MANIFEST.json (ft53)"],
                  "cross_checks": ["problems.optimal vs the parser table for every instance", "ft53 vs the ATSP manifest"],
-                 "discrepancies": discrepancies, "best_solutions_used": False}
+                 "discrepancies": discrepancies, "best_solutions_used": False,
+                 "coordinate_cross_check": "the published optimal tour (opt_tours table, else .opt.tour file) recomputed on the "
+                                           "used coordinates equals problems.optimal; per instance in instances[].published_tour_check"}
     manifest = build_manifest(
         records, instances=instances, git={"commit": commit, "dirty": dirty}, versions=versions, provenance=provenance(),
         total_wall_seconds=time.perf_counter() - t_start, mtz_limit_seconds=MTZ_SECONDS, published_source=published,
-        budget_seconds=budget,
-        extra={"geo_pi_sensitivity": geo_notes,
-               "convention": {"EUC_2D": "nint", "ATT": "pseudo-Euclidean (TSPLIB95)", "GEO": "TSPLIB95 GEO with math.pi (T06/O02)",
-                              "asserted": "every arc against an independent transcription, before any solve"},
+        budget_seconds=budget, started_utc=started_utc, ended_utc=utc_stamp(),
+        extra={"geo_pi_sensitivity": geo_notes, "database": database_record(db_path), "coordinate_text": coordinate_text_record(),
+               "convention": convention_record(geo_pi_blocking=args.geo_pi_blocking),
                "highs_verify": highs is not None, "instance_filter": [s.name for s in specs]})
     problems = protocol.validate_tsp_reference_manifest(manifest)
     manifest["blocking_errors"] = list(manifest["blocking_errors"]) + [f"manifest: {p}" for p in problems] \

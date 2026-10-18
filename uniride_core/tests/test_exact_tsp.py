@@ -293,10 +293,18 @@ def test_a_time_limited_round_whose_incumbent_is_a_tour_gives_a_bracket():
 def test_a_solver_that_ignores_an_existing_cut_is_rejected_instead_of_looping_forever():
     tsp = _tsp()
     m = _ring_matrix(6)
-    res = tsp.solve_cut_loop(m, lambda cuts, tl: _outcome(tsp, _edges((0, 1, 2), (3, 4, 5)), 30),
-                             directed=False, budget_seconds=600.0, clock=FakeClock())
+    calls = []
+
+    def stubborn_solver(cuts, time_limit):
+        calls.append(cuts)
+        # the loop clock is fake and never advances, so a loop that keeps adding cuts would never end: this cap turns
+        # that hang (a wrong-component-cut mutation) into a fast failure
+        assert len(calls) <= 10, "the cut loop did not stop: the solver ignored its cuts and the loop kept adding them"
+        return _outcome(tsp, _edges((0, 1, 2), (3, 4, 5)), 30)
+
+    res = tsp.solve_cut_loop(m, stubborn_solver, directed=False, budget_seconds=600.0, clock=FakeClock())
     assert res.status == "rejected" and "cut" in res.note
-    assert res.rounds == 2
+    assert res.rounds == 2 and len(calls) == 2
 
 
 def test_the_final_tour_length_is_checked_against_the_objective():
@@ -636,3 +644,71 @@ def test_highs_proves_pr76_in_spite_of_a_noisy_objective(session):
     m = runner.build_matrix("EUC_2D", coords)
     res = _tsp().solve_tsp(m, session=session, budget_seconds=300.0)
     assert (res.status, res.ub, res.lb) == ("optimal", 108159, 108159), (res.status, res.note)
+
+
+# ================================================================ WP-E7 polish (review items 7 and 8)
+# ---------------------------------------------------------------- item 8: an honest fake solver, with a round cap
+class _RoundCapExceeded(AssertionError):
+    pass
+
+
+def _honest_fake_solver(matrix, max_rounds):
+    """A fake degree-constrained solver (directed, n <= 7): the cheapest permutation without fixed points that is not
+    closed on any cut set it was given. It is exact for the model, so a correct loop converges to the brute-force
+    optimum; a loop that adds wrong cuts is stopped after ``max_rounds`` solves instead of hanging."""
+    n = len(matrix)
+    tsp = _tsp()
+    perms = sorted((sum(matrix[i][p[i]] for i in range(n)), p) for p in itertools.permutations(range(n))
+                   if all(p[i] != i for i in range(n)))
+    calls = []
+
+    def solve_round(cuts, time_limit):
+        calls.append(cuts)
+        if len(calls) > max_rounds:
+            raise _RoundCapExceeded(f"the cut loop needed more than {max_rounds} solves")
+        for cost, p in perms:
+            if all({p[i] for i in c} != set(c) for c in cuts):
+                return tsp.RoundOutcome("optimal", "optimal", cost, cost, tuple((i, p[i]) for i in range(n)))
+        return tsp.RoundOutcome("infeasible_proven", "infeasible", None, None, None)
+
+    return solve_round, calls
+
+
+@pytest.mark.parametrize("seed", [1, 2, 3])
+def test_the_cut_loop_with_an_honest_fake_solver_reaches_the_brute_force_optimum_within_a_round_cap(seed):
+    tsp = _tsp()
+    m = random_matrix(seed, 7, symmetric=False)
+    solve_round, calls = _honest_fake_solver(m, max_rounds=25)
+    res = tsp.solve_cut_loop(m, solve_round, directed=True, budget_seconds=600.0, clock=FakeClock())
+    assert res.status == "optimal" and res.ub == brute_force_tsp(m), (seed, res.status, res.ub, res.note)
+    assert tsp.validate_tour(m, res.tour, res.ub) == []
+    assert len(calls) == res.rounds and res.cuts >= 1, "these matrices have cheap cycles: at least one cut round"
+
+
+# ---------------------------------------------------------------- item 7: the MTZ model has no CUTS set
+def test_the_mtz_model_refuses_subtour_cuts_and_labels_the_case_instead_of_crashing():
+    tsp = _tsp()
+    m = _ring_matrix(4)
+    x = {(0, 1): 1.0, (1, 2): 1.0, (2, 3): 1.0, (0, 3): 1.0, (0, 2): 0.0, (1, 3): 0.0}
+    cost = sum(m[i][j] for (i, j), v in x.items() if v > 0.5)
+    session = _StubSession(x, cost)
+    rounds = tsp._AmplRounds(session, m, True, mtz=True)
+    out = rounds(((0, 1), (2, 3)), 10.0)
+    assert out.status == "rejected" and out.stop_reason == "solver_failure"
+    assert "MTZ" in out.solver_message and "CUTS" in out.solver_message
+    assert "CUTS" not in session.ampl.set and "csize" not in session.ampl.param, "nothing may be installed in the MTZ model"
+    # without cuts the MTZ round still works
+    assert tsp._AmplRounds(_StubSession(x, cost), m, True, mtz=True)((), 10.0).status == "optimal"
+    # the DFJ model is unchanged: cuts are installed
+    dfj_session = _StubSession(x, cost)
+    assert tsp._AmplRounds(dfj_session, m, False)(((0, 1),), 10.0).status == "optimal" and "CUTS" in dfj_session.ampl.set
+
+
+def test_a_subtour_in_an_mtz_solution_ends_the_loop_with_a_labelled_rejection():
+    tsp = _tsp()
+    m = _ring_matrix(6)
+    two_triangles = {(0, 1): 1.0, (1, 2): 1.0, (2, 0): 1.0, (3, 4): 1.0, (4, 5): 1.0, (5, 3): 1.0}  # directed 3-cycles
+    cost = sum(m[i][j] for (i, j), v in two_triangles.items() if v > 0.5)
+    rounds = tsp._AmplRounds(_StubSession(two_triangles, cost), m, True, mtz=True)
+    res = tsp.solve_cut_loop(m, rounds, directed=True, budget_seconds=600.0, clock=FakeClock())
+    assert res.status == "rejected" and res.stop_reason == "solver_failure" and "MTZ" in res.note, (res.status, res.note)

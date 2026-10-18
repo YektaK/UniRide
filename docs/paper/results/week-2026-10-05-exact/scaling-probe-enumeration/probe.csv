@@ -1,0 +1,325 @@
+fleet,direction,n,k_label,k,R,seed,anchor,tour,status,cap_fired,items,labels,columns,max_labels_per_level,levels,seconds,wall_seconds,peak_mem_mb,note
+single_4sw5so,pickup,20,10,10,50,1,525,150,complete,,14,6123,2237,1498,9,0.106,1.174,36.9,
+single_4sw5so,pickup,20,10,10,50,2,525,150,complete,,12,3336,1157,761,9,0.04,1.204,36.3,
+single_4sw5so,pickup,20,10,10,50,3,525,150,complete,,14,7187,2743,1882,9,0.104,1.538,37.3,
+single_4sw5so,pickup,30,10,10,50,1,525,150,complete,,16,29164,12722,7022,9,0.387,1.424,45.1,
+single_4sw5so,pickup,30,10,10,50,2,525,150,complete,,16,15312,7421,3941,9,0.373,1.13,41.0,
+single_4sw5so,pickup,30,10,10,50,3,525,150,complete,,16,24203,10574,6741,9,0.488,1.565,43.6,
+single_4sw5so,pickup,50,10,10,50,1,525,150,complete,,17,15393,6184,3394,9,0.351,1.842,40.3,
+single_4sw5so,pickup,50,10,10,50,2,525,150,complete,,16,54852,22958,13867,9,1.064,2.376,54.1,
+single_4sw5so,pickup,50,10,10,50,3,525,150,complete,,17,72186,28072,17824,9,1.012,2.083,60.3,
+single_4sw5so,pickup,80,10,10,50,1,525,150,complete,,20,185561,66056,51983,9,3.357,4.243,98.3,
+single_4sw5so,pickup,80,10,10,50,2,525,150,complete,,20,307075,136800,85557,9,6.495,7.358,155.1,
+single_4sw5so,pickup,80,10,10,50,3,525,150,complete,,19,1055046,360691,326647,9,24.842,26.139,383.8,
+single_4sw5so,pickup,20,10,10,70,1,525,150,complete,,14,26739,8865,6563,9,0.421,1.468,42.5,
+single_4sw5so,pickup,20,10,10,70,2,525,150,complete,,12,8939,3233,2149,9,0.131,1.136,37.7,
+single_4sw5so,pickup,20,10,10,70,3,525,150,complete,,14,55560,18107,14893,9,0.886,1.858,50.9,
+single_4sw5so,pickup,30,10,10,70,1,525,150,complete,,16,228615,67859,61378,9,4.236,5.335,96.3,
+single_4sw5so,pickup,30,10,10,70,2,525,150,complete,,16,134647,41401,36217,9,2.204,3.199,72.5,
+single_4sw5so,pickup,30,10,10,70,3,525,150,complete,,16,197321,54801,57531,9,3.793,4.851,87.0,
+single_4sw5so,pickup,50,10,10,70,1,525,150,complete,,17,114300,46047,28623,9,2.423,3.651,74.9,
+single_4sw5so,pickup,50,10,10,70,2,525,150,complete,,16,261563,84485,77973,9,5.449,6.474,112.7,
+single_4sw5so,pickup,50,10,10,70,3,525,150,complete,,17,508990,169466,153780,9,10.945,12.078,196.4,
+single_4sw5so,pickup,80,10,10,70,1,525,150,complete,,20,1297426,347649,439479,9,33.206,34.483,417.9,
+single_4sw5so,pickup,80,10,10,70,2,525,150,complete,,20,2709272,793176,904512,9,68.01,69.704,867.2,
+single_4sw5so,pickup,80,10,10,70,3,525,150,label_cap,label_cap,19,5000001,962673,2818386,9,73.493,75.297,1293.8,
+single_4sw5so,pickup,20,10,10,90,1,525,150,complete,,14,65396,21181,17332,9,0.919,1.872,53.6,
+single_4sw5so,pickup,20,10,10,90,2,525,150,complete,,12,23728,10420,5667,9,0.336,1.247,43.4,
+single_4sw5so,pickup,20,10,10,90,3,525,150,complete,,14,125270,25402,33914,9,1.658,2.582,62.3,
+single_4sw5so,pickup,30,10,10,90,1,525,150,complete,,16,591551,125399,185764,9,8.922,9.969,169.0,
+single_4sw5so,pickup,30,10,10,90,2,525,150,complete,,16,407603,98150,117895,9,6.199,7.232,133.3,
+single_4sw5so,pickup,30,10,10,90,3,525,150,complete,,16,472092,144620,145348,9,7.844,8.872,166.3,
+single_4sw5so,pickup,50,10,10,90,1,525,150,complete,,17,517019,188502,155848,9,10.237,11.296,208.6,
+single_4sw5so,pickup,50,10,10,90,2,525,150,complete,,16,568188,195855,176466,9,10.666,11.736,216.3,
+single_4sw5so,pickup,50,10,10,90,3,525,150,complete,,17,1472467,409500,484347,9,29.407,30.706,450.8,
+single_4sw5so,pickup,80,10,10,90,1,525,150,complete,,20,3197316,975996,1219023,9,79.872,81.44,1041.3,
+single_4sw5so,pickup,80,10,10,90,2,525,150,label_cap,label_cap,20,5000001,922153,2227238,9,82.649,84.545,1254.6,
+single_4sw5so,pickup,80,10,10,90,3,525,150,label_cap,label_cap,19,5000001,433031,2724445,8,60.685,62.237,963.8,
+single_4sw5so,pickup,20,20,20,50,1,525,150,complete,,20,4543,2104,1945,7,0.11,0.996,36.8,
+single_4sw5so,pickup,20,20,20,50,2,525,150,complete,,20,4110,1996,1759,7,0.089,0.984,36.9,
+single_4sw5so,pickup,20,20,20,50,3,525,150,complete,,20,4211,2135,1932,6,0.067,0.977,37.0,
+single_4sw5so,pickup,30,20,20,50,1,525,150,complete,,22,39925,16038,10282,9,0.724,1.607,48.7,
+single_4sw5so,pickup,30,20,20,50,2,525,150,complete,,24,32297,13819,8947,9,0.631,1.509,46.8,
+single_4sw5so,pickup,30,20,20,50,3,525,150,complete,,24,38765,15370,11692,9,0.888,1.777,49.0,
+single_4sw5so,pickup,50,20,20,50,1,525,150,complete,,30,262457,111470,72737,9,7.688,8.638,141.4,
+single_4sw5so,pickup,50,20,20,50,2,525,150,complete,,31,633327,242069,172635,9,18.911,19.982,276.3,
+single_4sw5so,pickup,50,20,20,50,3,525,150,complete,,28,166204,69098,41132,9,4.538,5.425,100.5,
+single_4sw5so,pickup,80,20,20,50,1,525,150,complete,,36,3333995,1048926,1025077,9,115.058,116.878,1229.3,
+single_4sw5so,pickup,80,20,20,50,2,525,150,complete,,34,1805250,777920,523758,9,64.092,65.436,818.6,
+single_4sw5so,pickup,80,20,20,50,3,525,150,complete,,34,957652,370438,270028,9,31.806,32.968,415.3,
+single_4sw5so,pickup,20,20,20,70,1,525,150,complete,,20,48470,15228,15843,9,0.794,1.725,49.2,
+single_4sw5so,pickup,20,20,20,70,2,525,150,complete,,20,46525,15216,15828,8,0.728,1.686,49.1,
+single_4sw5so,pickup,20,20,20,70,3,525,150,complete,,20,50503,17559,18097,9,1.001,2.019,50.3,
+single_4sw5so,pickup,30,20,20,70,1,525,150,complete,,22,402051,115656,111694,9,7.967,8.943,149.7,
+single_4sw5so,pickup,30,20,20,70,2,525,150,complete,,24,493352,154977,138769,9,10.075,11.114,183.3,
+single_4sw5so,pickup,30,20,20,70,3,525,150,complete,,24,564210,158784,164035,9,11.856,12.865,195.5,
+single_4sw5so,pickup,50,20,20,70,1,525,150,label_cap,label_cap,30,5000001,1219042,1618633,9,121.115,123.094,1558.3,
+single_4sw5so,pickup,50,20,20,70,2,525,150,label_cap,label_cap,31,5000001,612337,2799192,7,64.558,66.296,1361.9,
+single_4sw5so,pickup,50,20,20,70,3,525,150,complete,,28,1895876,612644,553784,9,51.979,53.292,667.1,
+single_4sw5so,pickup,80,20,20,70,1,525,150,not_run_smaller_capped,,,,,,,,,,n=50 did not complete
+single_4sw5so,pickup,80,20,20,70,2,525,150,not_run_smaller_capped,,,,,,,,,,n=50 did not complete
+single_4sw5so,pickup,80,20,20,70,3,525,150,not_run_smaller_capped,,,,,,,,,,n=50 did not complete
+single_4sw5so,pickup,20,20,20,90,1,525,150,complete,,20,202614,58282,61099,9,3.735,4.625,90.6,
+single_4sw5so,pickup,20,20,20,90,2,525,150,complete,,20,198011,54778,61799,9,3.397,4.334,88.0,
+single_4sw5so,pickup,20,20,20,90,3,525,150,complete,,20,259549,68091,76964,9,4.397,5.255,99.4,
+single_4sw5so,pickup,30,20,20,90,1,525,150,complete,,22,1267960,338025,378448,9,25.559,26.636,381.9,
+single_4sw5so,pickup,30,20,20,90,2,525,150,complete,,24,2321754,607654,695431,9,49.959,51.385,668.3,
+single_4sw5so,pickup,30,20,20,90,3,525,150,complete,,24,2205757,582637,669898,9,49.998,51.3,627.7,
+single_4sw5so,pickup,50,20,20,90,1,525,150,label_cap,label_cap,30,5000001,775154,2213600,7,60.983,62.777,1267.6,
+single_4sw5so,pickup,50,20,20,90,2,525,150,label_cap,label_cap,31,5000001,1106555,3453087,7,76.768,78.864,1554.4,
+single_4sw5so,pickup,50,20,20,90,3,525,150,label_cap,label_cap,28,5000001,1097262,1883630,8,84.076,86.002,1503.8,
+single_4sw5so,pickup,80,20,20,90,1,525,150,not_run_smaller_capped,,,,,,,,,,n=50 did not complete
+single_4sw5so,pickup,80,20,20,90,2,525,150,not_run_smaller_capped,,,,,,,,,,n=50 did not complete
+single_4sw5so,pickup,80,20,20,90,3,525,150,not_run_smaller_capped,,,,,,,,,,n=50 did not complete
+single_4sw5so,pickup,30,all,26,50,1,525,150,complete,,26,21644,10218,7149,8,0.437,1.38,43.9,
+single_4sw5so,pickup,30,all,26,50,2,525,150,complete,,26,21498,10531,7140,8,0.503,1.408,44.0,
+single_4sw5so,pickup,30,all,26,50,3,525,150,complete,,28,39851,17829,12830,9,0.912,1.84,50.9,
+single_4sw5so,pickup,50,all,26,50,1,525,150,complete,,37,311392,131612,94046,9,10.357,11.536,166.9,
+single_4sw5so,pickup,50,all,26,50,2,525,150,complete,,31,301013,130744,83250,9,9.161,10.302,158.2,
+single_4sw5so,pickup,50,all,26,50,3,525,150,complete,,33,497169,210465,135335,9,16.457,17.585,240.5,
+single_4sw5so,pickup,80,all,26,50,1,525,150,complete,,42,2528386,1070800,733552,9,109.616,111.24,1163.8,
+single_4sw5so,pickup,80,all,26,50,2,525,150,complete,,42,2613366,1095708,710674,9,108.79,110.363,1205.2,
+single_4sw5so,pickup,80,all,26,50,3,525,150,complete,,40,2157188,931898,583868,9,87.37,88.897,1001.4,
+single_4sw5so,pickup,30,all,26,70,1,525,150,complete,,26,350402,116637,121317,9,8.028,9.343,146.5,
+single_4sw5so,pickup,30,all,26,70,2,525,150,complete,,26,449314,146824,147328,9,10.127,11.138,175.5,
+single_4sw5so,pickup,30,all,26,70,3,525,150,complete,,28,961668,278918,283470,9,23.182,24.295,322.0,
+single_4sw5so,pickup,50,all,26,70,1,525,150,label_cap,label_cap,37,5000001,699832,2705738,7,86.66,88.603,1295.9,
+single_4sw5so,pickup,50,all,26,70,2,525,150,label_cap,label_cap,31,5000001,868042,1910444,8,101.189,103.283,1361.5,
+single_4sw5so,pickup,50,all,26,70,3,525,150,label_cap,label_cap,33,5000001,637783,2784518,7,78.479,80.517,1230.5,
+single_4sw5so,pickup,80,all,26,70,1,525,150,not_run_smaller_capped,,,,,,,,,,n=50 did not complete
+single_4sw5so,pickup,80,all,26,70,2,525,150,not_run_smaller_capped,,,,,,,,,,n=50 did not complete
+single_4sw5so,pickup,80,all,26,70,3,525,150,not_run_smaller_capped,,,,,,,,,,n=50 did not complete
+single_4sw5so,pickup,30,all,26,90,1,525,150,complete,,26,1876915,570880,602661,9,46.047,47.658,593.4,
+single_4sw5so,pickup,30,all,26,90,2,525,150,complete,,26,2646967,691922,814692,9,62.632,64.087,788.1,
+single_4sw5so,pickup,30,all,26,90,3,525,150,label_cap,label_cap,28,5000001,1034580,1592749,9,106.343,108.294,1389.0,
+single_4sw5so,pickup,50,all,26,90,1,525,150,not_run_smaller_capped,,,,,,,,,,n=30 did not complete
+single_4sw5so,pickup,50,all,26,90,2,525,150,not_run_smaller_capped,,,,,,,,,,n=30 did not complete
+single_4sw5so,pickup,50,all,26,90,3,525,150,not_run_smaller_capped,,,,,,,,,,n=30 did not complete
+single_4sw5so,pickup,80,all,26,90,1,525,150,not_run_smaller_capped,,,,,,,,,,n=30 did not complete
+single_4sw5so,pickup,80,all,26,90,2,525,150,not_run_smaller_capped,,,,,,,,,,n=30 did not complete
+single_4sw5so,pickup,80,all,26,90,3,525,150,not_run_smaller_capped,,,,,,,,,,n=30 did not complete
+large+sedan,pickup,20,10,10,50,1,525,150,complete,,14,6123,2395,1498,9,0.07,0.968,37.1,
+large+sedan,pickup,20,10,10,50,2,525,150,complete,,12,3336,1296,761,9,0.046,0.871,36.5,
+large+sedan,pickup,20,10,10,50,3,525,150,complete,,14,7187,2887,1882,9,0.112,1.039,37.6,
+large+sedan,pickup,30,10,10,50,1,525,150,complete,,16,29164,13006,7022,9,0.465,1.334,44.9,
+large+sedan,pickup,30,10,10,50,2,525,150,complete,,16,15312,7774,3941,9,0.297,1.237,40.8,
+large+sedan,pickup,30,10,10,50,3,525,150,complete,,16,24203,10939,6741,9,0.418,1.341,43.6,
+large+sedan,pickup,50,10,10,50,1,525,150,complete,,17,15393,6471,3394,9,0.269,1.18,40.5,
+large+sedan,pickup,50,10,10,50,2,525,150,complete,,16,54852,23351,13867,9,0.964,1.836,54.3,
+large+sedan,pickup,50,10,10,50,3,525,150,complete,,17,72186,28556,17824,9,1.393,2.372,60.6,
+large+sedan,pickup,80,10,10,50,1,525,150,complete,,20,185561,66414,51983,9,4.18,5.197,97.6,
+large+sedan,pickup,80,10,10,50,2,525,150,complete,,20,307075,137430,85557,9,7.969,8.963,155.6,
+large+sedan,pickup,80,10,10,50,3,525,150,complete,,19,1055046,361610,326647,9,23.736,24.886,385.7,
+large+sedan,pickup,20,10,10,70,1,525,150,complete,,14,26739,9167,6563,9,0.375,1.319,42.5,
+large+sedan,pickup,20,10,10,70,2,525,150,complete,,12,8939,3491,2149,9,0.137,1.149,37.6,
+large+sedan,pickup,20,10,10,70,3,525,150,complete,,14,55560,18356,14893,9,0.79,1.835,51.0,
+large+sedan,pickup,30,10,10,70,1,525,150,complete,,16,228615,68303,61378,9,3.666,4.7,96.8,
+large+sedan,pickup,30,10,10,70,2,525,150,complete,,16,134647,41992,36217,9,1.9,2.882,72.7,
+large+sedan,pickup,30,10,10,70,3,525,150,complete,,16,197321,55324,57531,9,3.134,4.096,87.2,
+large+sedan,pickup,50,10,10,70,1,525,150,complete,,17,114300,46654,28623,9,2.143,3.312,75.1,
+large+sedan,pickup,50,10,10,70,2,525,150,complete,,16,261563,85189,77973,9,4.427,5.401,113.3,
+large+sedan,pickup,50,10,10,70,3,525,150,complete,,17,508990,170303,153780,9,10.478,11.504,197.4,
+large+sedan,pickup,80,10,10,70,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,80,10,10,70,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,80,10,10,70,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,20,10,10,90,1,525,150,complete,,14,65396,21557,17332,9,0.989,1.951,53.9,
+large+sedan,pickup,20,10,10,90,2,525,150,complete,,12,23728,10714,5667,9,0.304,1.288,43.5,
+large+sedan,pickup,20,10,10,90,3,525,150,complete,,14,125270,25718,33914,9,1.693,3.177,62.4,
+large+sedan,pickup,30,10,10,90,1,525,150,complete,,16,591551,125910,185764,9,9.587,10.668,169.0,
+large+sedan,pickup,30,10,10,90,2,525,150,complete,,16,407603,98844,117895,9,6.53,7.619,134.4,
+large+sedan,pickup,30,10,10,90,3,525,150,complete,,16,472092,145192,145348,9,8.637,9.763,167.2,
+large+sedan,pickup,50,10,10,90,1,525,150,complete,,17,517019,189244,155848,9,10.541,11.822,209.4,
+large+sedan,pickup,50,10,10,90,2,525,150,complete,,16,568188,196681,176466,9,11.697,12.862,217.5,
+large+sedan,pickup,50,10,10,90,3,525,150,complete,,17,1472467,410448,484347,9,31.222,32.472,454.6,
+large+sedan,pickup,80,10,10,90,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,80,10,10,90,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,80,10,10,90,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,20,20,20,50,1,525,150,complete,,20,4543,2457,1945,7,0.088,0.994,37.1,
+large+sedan,pickup,20,20,20,50,2,525,150,complete,,20,4110,2442,1759,7,0.092,1.169,37.1,
+large+sedan,pickup,20,20,20,50,3,525,150,complete,,20,4211,2446,1932,6,0.104,1.193,37.0,
+large+sedan,pickup,30,20,20,50,1,525,150,complete,,22,39925,16758,10282,9,0.85,1.791,49.2,
+large+sedan,pickup,30,20,20,50,2,525,150,complete,,24,32297,14758,8947,9,0.716,1.584,47.5,
+large+sedan,pickup,30,20,20,50,3,525,150,complete,,24,38765,16246,11692,9,0.857,1.816,49.2,
+large+sedan,pickup,50,20,20,50,1,525,150,complete,,30,262457,114614,72737,9,7.936,9.75,142.6,
+large+sedan,pickup,50,20,20,50,2,525,150,complete,,31,633327,244466,172635,9,21.058,22.475,277.5,
+large+sedan,pickup,50,20,20,50,3,525,150,complete,,28,166204,70529,41132,9,4.677,5.682,101.3,
+large+sedan,pickup,80,20,20,50,1,525,150,complete,,36,3333995,1052186,1025077,9,123.209,125.004,1231.2,
+large+sedan,pickup,80,20,20,50,2,525,150,complete,,34,1805250,780873,523758,9,68.539,70.075,819.7,
+large+sedan,pickup,80,20,20,50,3,525,150,complete,,34,957652,374405,270028,9,34.249,35.406,417.1,
+large+sedan,pickup,20,20,20,70,1,525,150,complete,,20,48470,16088,15843,9,0.911,2.007,49.7,
+large+sedan,pickup,20,20,20,70,2,525,150,complete,,20,46525,16354,15828,8,0.756,1.786,49.1,
+large+sedan,pickup,20,20,20,70,3,525,150,complete,,20,50503,18402,18097,9,1.029,1.956,50.9,
+large+sedan,pickup,30,20,20,70,1,525,150,complete,,22,402051,117230,111694,9,7.882,8.845,150.0,
+large+sedan,pickup,30,20,20,70,2,525,150,complete,,24,493352,157323,138769,9,10.982,12.107,184.5,
+large+sedan,pickup,30,20,20,70,3,525,150,complete,,24,564210,160866,164035,9,13.142,14.271,196.2,
+large+sedan,pickup,50,20,20,70,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,50,20,20,70,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,50,20,20,70,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,80,20,20,70,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,80,20,20,70,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,80,20,20,70,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,20,20,20,90,1,525,150,complete,,20,202614,59579,61099,9,3.915,4.923,91.1,
+large+sedan,pickup,20,20,20,90,2,525,150,complete,,20,198011,56152,61799,9,3.856,5.112,88.4,
+large+sedan,pickup,20,20,20,90,3,525,150,complete,,20,259549,69377,76964,9,4.789,5.948,99.9,
+large+sedan,pickup,30,20,20,90,1,525,150,complete,,22,1267960,340180,378448,9,28.913,30.268,383.0,
+large+sedan,pickup,30,20,20,90,2,525,150,complete,,24,2321754,610974,695431,9,56.649,58.353,669.9,
+large+sedan,pickup,30,20,20,90,3,525,150,complete,,24,2205757,585431,669898,9,53.67,55.161,634.8,
+large+sedan,pickup,50,20,20,90,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,50,20,20,90,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,50,20,20,90,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,80,20,20,90,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,80,20,20,90,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,80,20,20,90,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,30,all,26,50,1,525,150,complete,,26,21644,12135,7149,8,0.522,1.469,44.8,
+large+sedan,pickup,30,all,26,50,2,525,150,complete,,26,21498,11478,7140,8,0.579,1.495,44.8,
+large+sedan,pickup,30,all,26,50,3,525,150,complete,,28,39851,19162,12830,9,1.043,2.009,51.7,
+large+sedan,pickup,50,all,26,50,1,525,150,complete,,37,311392,135855,94046,9,11.288,12.279,169.4,
+large+sedan,pickup,50,all,26,50,2,525,150,complete,,31,301013,134633,83250,9,10.378,11.562,160.9,
+large+sedan,pickup,50,all,26,50,3,525,150,complete,,33,497169,212964,135335,9,17.443,18.631,241.9,
+large+sedan,pickup,80,all,26,50,1,525,150,complete,,42,2528386,1076980,733552,9,116.038,117.901,1162.2,
+large+sedan,pickup,80,all,26,50,2,525,150,complete,,42,2613366,1103891,710674,9,120.13,121.833,1209.6,
+large+sedan,pickup,80,all,26,50,3,525,150,complete,,40,2157188,936702,583868,9,98.054,99.679,1004.0,
+large+sedan,pickup,30,all,26,70,1,525,150,complete,,26,350402,120199,121317,9,8.81,9.853,147.1,
+large+sedan,pickup,30,all,26,70,2,525,150,complete,,26,449314,149142,147328,9,11.207,12.27,177.3,
+large+sedan,pickup,30,all,26,70,3,525,150,complete,,28,961668,282496,283470,9,25.562,26.934,323.5,
+large+sedan,pickup,50,all,26,70,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,50,all,26,70,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,50,all,26,70,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,80,all,26,70,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,80,all,26,70,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,80,all,26,70,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,30,all,26,90,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,30,all,26,90,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,30,all,26,90,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,50,all,26,90,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,50,all,26,90,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,50,all,26,90,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,80,all,26,90,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,80,all,26,90,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,pickup,80,all,26,90,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,20,10,10,50,1,525,150,complete,,14,6123,2464,1498,9,0.094,1.196,37.1,
+large+doblo_cap3,pickup,20,10,10,50,2,525,150,complete,,12,3336,1302,761,9,0.107,1.254,36.3,
+large+doblo_cap3,pickup,20,10,10,50,3,525,150,complete,,14,7187,3008,1882,9,0.126,1.369,37.4,
+large+doblo_cap3,pickup,30,10,10,50,1,525,150,complete,,16,29164,13133,7022,9,0.48,1.893,45.4,
+large+doblo_cap3,pickup,30,10,10,50,2,525,150,complete,,16,15312,7850,3941,9,0.294,1.317,40.8,
+large+doblo_cap3,pickup,30,10,10,50,3,525,150,complete,,16,24203,11006,6741,9,0.394,1.574,43.4,
+large+doblo_cap3,pickup,50,10,10,50,1,525,150,complete,,17,15393,6510,3394,9,0.304,1.397,40.4,
+large+doblo_cap3,pickup,50,10,10,50,2,525,150,complete,,16,54852,23341,13867,9,1.015,2.197,54.8,
+large+doblo_cap3,pickup,50,10,10,50,3,525,150,complete,,17,72186,28549,17824,9,1.4,2.406,60.6,
+large+doblo_cap3,pickup,80,10,10,50,1,525,150,complete,,20,185561,66540,51983,9,4.238,5.37,98.4,
+large+doblo_cap3,pickup,80,10,10,50,2,525,150,complete,,20,307075,137552,85557,9,7.744,8.884,155.5,
+large+doblo_cap3,pickup,80,10,10,50,3,525,150,complete,,19,1055046,361570,326647,9,25.532,26.81,384.0,
+large+doblo_cap3,pickup,20,10,10,70,1,525,150,complete,,14,26739,9237,6563,9,0.436,1.543,42.9,
+large+doblo_cap3,pickup,20,10,10,70,2,525,150,complete,,12,8939,3495,2149,9,0.144,1.466,37.8,
+large+doblo_cap3,pickup,20,10,10,70,3,525,150,complete,,14,55560,18462,14893,9,0.86,2.07,50.8,
+large+doblo_cap3,pickup,30,10,10,70,1,525,150,complete,,16,228615,68388,61378,9,3.948,5.037,96.5,
+large+doblo_cap3,pickup,30,10,10,70,2,525,150,complete,,16,134647,41977,36217,9,2.339,3.506,72.3,
+large+doblo_cap3,pickup,30,10,10,70,3,525,150,complete,,16,197321,55357,57531,9,3.34,4.715,86.9,
+large+doblo_cap3,pickup,50,10,10,70,1,525,150,complete,,17,114300,46645,28623,9,2.351,3.549,75.0,
+large+doblo_cap3,pickup,50,10,10,70,2,525,150,complete,,16,261563,85080,77973,9,4.84,6.081,113.1,
+large+doblo_cap3,pickup,50,10,10,70,3,525,150,complete,,17,508990,170172,153780,9,11.382,12.952,197.0,
+large+doblo_cap3,pickup,80,10,10,70,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,80,10,10,70,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,80,10,10,70,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,20,10,10,90,1,525,150,complete,,14,65396,21580,17332,9,1.106,2.694,54.2,
+large+doblo_cap3,pickup,20,10,10,90,2,525,150,complete,,12,23728,10702,5667,9,0.316,1.317,43.1,
+large+doblo_cap3,pickup,20,10,10,90,3,525,150,complete,,14,125270,25787,33914,9,1.856,2.894,62.4,
+large+doblo_cap3,pickup,30,10,10,90,1,525,150,complete,,16,591551,125948,185764,9,9.983,11.776,169.5,
+large+doblo_cap3,pickup,30,10,10,90,2,525,150,complete,,16,407603,98760,117895,9,7.172,8.654,133.5,
+large+doblo_cap3,pickup,30,10,10,90,3,525,150,complete,,16,472092,145187,145348,9,7.839,8.952,167.3,
+large+doblo_cap3,pickup,50,10,10,90,1,525,150,complete,,17,517019,189152,155848,9,10.686,11.814,208.8,
+large+doblo_cap3,pickup,50,10,10,90,2,525,150,complete,,16,568188,196479,176466,9,11.736,13.04,217.3,
+large+doblo_cap3,pickup,50,10,10,90,3,525,150,complete,,17,1472467,410244,484347,9,33.733,35.074,454.4,
+large+doblo_cap3,pickup,80,10,10,90,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,80,10,10,90,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,80,10,10,90,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,20,20,20,50,1,525,150,complete,,20,4543,2663,1945,7,0.111,1.536,37.2,
+large+doblo_cap3,pickup,20,20,20,50,2,525,150,complete,,20,4110,2598,1759,7,0.077,1.061,36.8,
+large+doblo_cap3,pickup,20,20,20,50,3,525,150,complete,,20,4211,2741,1932,6,0.086,1.303,37.2,
+large+doblo_cap3,pickup,30,20,20,50,1,525,150,complete,,22,39925,16849,10282,9,0.91,2.131,48.9,
+large+doblo_cap3,pickup,30,20,20,50,2,525,150,complete,,24,32297,14889,8947,9,0.843,1.758,47.3,
+large+doblo_cap3,pickup,30,20,20,50,3,525,150,complete,,24,38765,16403,11692,9,0.985,2.189,49.1,
+large+doblo_cap3,pickup,50,20,20,50,1,525,150,complete,,30,262457,113757,72737,9,8.866,10.255,142.8,
+large+doblo_cap3,pickup,50,20,20,50,2,525,150,complete,,31,633327,244411,172635,9,21.765,23.004,276.9,
+large+doblo_cap3,pickup,50,20,20,50,3,525,150,complete,,28,166204,70520,41132,9,5.116,6.297,101.5,
+large+doblo_cap3,pickup,80,20,20,50,1,525,150,complete,,36,3333995,1051876,1025077,9,131.403,133.467,1232.2,
+large+doblo_cap3,pickup,80,20,20,50,2,525,150,complete,,34,1805250,780628,523758,9,71.033,72.727,819.7,
+large+doblo_cap3,pickup,80,20,20,50,3,525,150,complete,,34,957652,373298,270028,9,36.385,37.73,416.5,
+large+doblo_cap3,pickup,20,20,20,70,1,525,150,complete,,20,48470,16218,15843,9,0.897,1.932,49.5,
+large+doblo_cap3,pickup,20,20,20,70,2,525,150,complete,,20,46525,16224,15828,8,1.046,2.142,49.3,
+large+doblo_cap3,pickup,20,20,20,70,3,525,150,complete,,20,50503,18535,18097,9,0.924,1.949,51.1,
+large+doblo_cap3,pickup,30,20,20,70,1,525,150,complete,,22,402051,116979,111694,9,8.959,10.191,150.2,
+large+doblo_cap3,pickup,30,20,20,70,2,525,150,complete,,24,493352,156744,138769,9,11.552,12.775,184.4,
+large+doblo_cap3,pickup,30,20,20,70,3,525,150,complete,,24,564210,160470,164035,9,12.781,13.944,196.2,
+large+doblo_cap3,pickup,50,20,20,70,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,50,20,20,70,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,50,20,20,70,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,80,20,20,70,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,80,20,20,70,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,80,20,20,70,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,20,20,20,90,1,525,150,complete,,20,202614,59352,61099,9,3.79,4.812,91.7,
+large+doblo_cap3,pickup,20,20,20,90,2,525,150,complete,,20,198011,55865,61799,9,3.641,4.69,88.1,
+large+doblo_cap3,pickup,20,20,20,90,3,525,150,complete,,20,259549,69175,76964,9,4.802,5.879,99.7,
+large+doblo_cap3,pickup,30,20,20,90,1,525,150,complete,,22,1267960,339479,378448,9,28.395,30.007,382.7,
+large+doblo_cap3,pickup,30,20,20,90,2,525,150,complete,,24,2321754,609620,695431,9,56.255,57.851,669.4,
+large+doblo_cap3,pickup,30,20,20,90,3,525,150,complete,,24,2205757,584508,669898,9,57.258,58.942,634.7,
+large+doblo_cap3,pickup,50,20,20,90,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,50,20,20,90,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,50,20,20,90,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,80,20,20,90,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,80,20,20,90,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,80,20,20,90,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,30,all,26,50,1,525,150,complete,,26,21644,11651,7149,8,0.55,1.63,44.6,
+large+doblo_cap3,pickup,30,all,26,50,2,525,150,complete,,26,21498,11746,7140,8,0.576,1.688,44.8,
+large+doblo_cap3,pickup,30,all,26,50,3,525,150,complete,,28,39851,19453,12830,9,1.149,2.249,51.9,
+large+doblo_cap3,pickup,50,all,26,50,1,525,150,complete,,37,311392,134966,94046,9,12.393,13.471,169.0,
+large+doblo_cap3,pickup,50,all,26,50,2,525,150,complete,,31,301013,133259,83250,9,10.667,11.903,159.5,
+large+doblo_cap3,pickup,50,all,26,50,3,525,150,complete,,33,497169,213144,135335,9,19.001,20.193,242.4,
+large+doblo_cap3,pickup,80,all,26,50,1,525,150,complete,,42,2528386,1075774,733552,9,115.081,116.733,1166.9,
+large+doblo_cap3,pickup,80,all,26,50,2,525,150,complete,,42,2613366,1100982,710674,9,120.572,122.508,1208.2,
+large+doblo_cap3,pickup,80,all,26,50,3,525,150,complete,,40,2157188,936039,583868,9,96.405,98.375,1004.4,
+large+doblo_cap3,pickup,30,all,26,70,1,525,150,complete,,26,350402,118869,121317,9,8.895,10.04,146.6,
+large+doblo_cap3,pickup,30,all,26,70,2,525,150,complete,,26,449314,148876,147328,9,10.754,12.161,177.4,
+large+doblo_cap3,pickup,30,all,26,70,3,525,150,complete,,28,961668,281639,283470,9,24.492,25.818,323.2,
+large+doblo_cap3,pickup,50,all,26,70,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,50,all,26,70,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,50,all,26,70,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,80,all,26,70,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,80,all,26,70,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,80,all,26,70,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,30,all,26,90,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,30,all,26,90,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,30,all,26,90,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,50,all,26,90,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,50,all,26,90,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,50,all,26,90,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,80,all,26,90,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,80,all,26,90,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,pickup,80,all,26,90,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+single_4sw5so,dropoff,50,all,26,50,1,525,150,complete,,37,232888,108429,68748,9,8.419,9.492,143.2,
+single_4sw5so,dropoff,50,all,26,50,2,525,150,complete,,31,213676,92774,59180,9,6.516,7.579,124.5,
+single_4sw5so,dropoff,50,all,26,50,3,525,150,complete,,33,379218,164827,101821,9,13.145,14.333,197.1,
+single_4sw5so,dropoff,50,all,26,70,1,525,150,label_cap,label_cap,37,5000001,1333288,2275862,8,125.918,128.102,1742.5,
+single_4sw5so,dropoff,50,all,26,70,2,525,150,label_cap,label_cap,31,5000001,1144777,1553237,9,135.909,138.052,1557.0,
+single_4sw5so,dropoff,50,all,26,70,3,525,150,label_cap,label_cap,33,5000001,1343006,2728398,8,110.653,112.823,1643.0,
+single_4sw5so,dropoff,50,all,26,90,1,525,150,label_cap,label_cap,37,5000001,420556,3682579,6,61.279,63.486,1148.4,
+single_4sw5so,dropoff,50,all,26,90,2,525,150,label_cap,label_cap,31,5000001,811052,2204169,7,81.36,83.762,1311.0,
+single_4sw5so,dropoff,50,all,26,90,3,525,150,label_cap,label_cap,33,5000001,1201843,3590279,7,89.657,92.251,1625.2,
+large+sedan,dropoff,50,all,26,50,1,525,150,complete,,37,232888,112085,68748,9,8.585,9.672,145.7,
+large+sedan,dropoff,50,all,26,50,2,525,150,complete,,31,213676,96246,59180,9,6.988,8.04,126.1,
+large+sedan,dropoff,50,all,26,50,3,525,150,complete,,33,379218,166940,101821,9,13.436,14.597,198.1,
+large+sedan,dropoff,50,all,26,70,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,dropoff,50,all,26,70,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,dropoff,50,all,26,70,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,dropoff,50,all,26,90,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,dropoff,50,all,26,90,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+sedan,dropoff,50,all,26,90,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,dropoff,50,all,26,50,1,525,150,complete,,37,232888,111500,68748,9,8.899,10.108,144.9,
+large+doblo_cap3,dropoff,50,all,26,50,2,525,150,complete,,31,213676,95095,59180,9,7.254,8.364,125.2,
+large+doblo_cap3,dropoff,50,all,26,50,3,525,150,complete,,33,379218,167275,101821,9,12.9,13.964,198.3,
+large+doblo_cap3,dropoff,50,all,26,70,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,dropoff,50,all,26,70,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,dropoff,50,all,26,70,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,dropoff,50,all,26,90,1,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,dropoff,50,all,26,90,2,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size
+large+doblo_cap3,dropoff,50,all,26,90,3,525,150,not_run_single_not_complete,,,,,,,,,,single type did not complete at this size

@@ -28,7 +28,7 @@
       "ga_seed": "42"
     }
   },
-  "git_commit": "1d73d2a4b87623bd1d5eef88a9b0c9336a74958f",
+  "git_commit": "620803021328b23128bdc4401ade3b0ac0b94393",
   "host_os": "Windows-11",
   "inputs": {
     "docs/paper/results/week-2026-10-05-4sw5so/run_manifest.json": "f152ca63068be91be03c7ca27cf767fef52cc9345a6cb69d155f75a137f90b15",
@@ -46,15 +46,15 @@
     "docs/paper/results/week-2026-10-05-fleet-rerun-large-sedan/run_manifest.json": "279a06fc19f222740e93bf842bb65ca407f221e7c3c159b6d0e084b019d7643b"
   },
   "outputs": {
-    "README.md": "f164fa3dfdd8ae1cf19293919e4c926404190dc8c748f01e4dd85186f601c14c",
+    "README.md": "6f11a860fb77fac11b473855d95a45a28f296f02b5ef2ee9f1494154da99c404",
     "day_gaps.csv": "19bcd43c9fa8cd7263968d4e6f3e4059baf561213f2d02d556e484aa2f26e295",
     "day_sums.csv": "c3d1bc48a9e876b5c48b0207b304dcef5199ff662313949ac4b9c213be50a6f1",
-    "figure_gap_single.png": "50cdb253aa42683277f6fd05550f40e54d7e13ad5335d3439db30352f536a4e1",
-    "figure_gap_single.svg": "1eb2cb883d12dae2d2b26203c220b92a1b7bb662b6cfd0ded876c99d990089e3",
-    "figure_gap_typed.png": "c715b3b05c251a8aec048db71f6843b08d892a52d8e71cf944cff933da7322fa",
-    "figure_gap_typed.svg": "880129d95cdfbeb98a5534ab8e4e5d30788bc0d527d457685302f387d5882c55",
-    "table_by_R.csv": "d9a8bfbb0d6490d8126185c3ddd6f19e5daf8d422a1f24165ae7c1f283d174e5",
-    "table_by_R.md": "059309cff02f22858b9859f6b078c25f1e4d404d69f168669f1512bc5da82373",
+    "figure_gap_single.png": "22942d0c926ccf4f8f602cb16af290adbba58824767fff3f59e23e55b150265b",
+    "figure_gap_single.svg": "58b97d83f9a33d098b3c90ed025088bd690d50ca7aabbfbb9dff96311d99f324",
+    "figure_gap_typed.png": "28fe22442511d3cc8018c72933178a46b344a388c80fbc247be386aff31f1757",
+    "figure_gap_typed.svg": "5fa0ac648416b62f41a6ef60380f20e2980fc494b39bbe7f1047ed7a1c375256",
+    "table_by_R.csv": "3d69de65999ffbfd98940765e038ec4120f6b31496c7960fd7ce78c34baca3f4",
+    "table_by_R.md": "261f8bef8ec0bc4d1532576a919310d76e4cf613e02d73d3b412dd2d9d2bd681",
     "table_day_labels.csv": "dce6befd22072e9fd412da6799985f1e3b67abcd3c19f6f77affdece5e59f7c6",
     "wave_gaps.csv": "eeb7176c68e59a9eadaf7fb6784212d84d78f8fe259ffa80dd43e21f1e52b8ce"
   },
@@ -95,8 +95,9 @@
     "wp-e4b-union-day": "docs/paper/results/week-2026-10-05-exact/wp-e4b-union-day"
   },
   "versions": {
-    "csv_json_svg_png": "standard library only",
-    "plotting": "scripts/exact_gap_figure.py (no matplotlib)",
+    "matplotlib": "3.11.2",
+    "pillow": "13.0.0",
+    "plotting": "matplotlib via scripts/exact_gap_figure.py (Agg backend)",
     "python": "3.14.6",
     "zlib": "1.3.1.zlib-ng"
   },

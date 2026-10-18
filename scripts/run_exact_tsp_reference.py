@@ -405,6 +405,9 @@ def build_manifest(records, *, instances, git, versions, provenance, total_wall_
 
 def build_readme(records, manifest) -> str:
     rows = reference_rows(records)
+    sources = {}
+    for inst in manifest["instances"].values():
+        sources[inst["data_source"]] = sources.get(inst["data_source"], 0) + 1
     lines = ["# TSPLIB exact reference, stage 1 verification", "",
              "Facts of one run of `scripts/run_exact_tsp_reference.py` (WP-E7, DECISION_LOG E09). This is a verification "
              "subset, not a paper instance set: the 16 TSPLIB TSP instances with n <= 100 and a published optimum, plus the "
@@ -421,6 +424,10 @@ def build_readme(records, manifest) -> str:
              "solver proved it. `reference.csv` has one row per instance; `tours.json` holds the tours "
              "(`--verify-tours` re-checks them without a solver); `manifest.json` holds versions, option strings, the sha256 of "
              "every instance input and the published-value sources.",
+             f"- Instances in this run: {len(rows)}. Instance data: {sources.get('tsp_file', 0)} from `.tsp` files, "
+             f"{sources.get('atsp_file', 0)} from `.atsp` files, {sources.get('tsplib_db_coordinates', 0)} from the node coordinates "
+             "in the read-only database (no `.tsp` file in the checkout; the manifest records the sha256 of the canonical "
+             "coordinate text instead of a file hash).",
              f"- Verdicts: {json.dumps(manifest['verdicts'], sort_keys=True)}; blocking errors: {len(manifest['blocking_errors'])}.", "",
              "| instance | n | published | status | UB | LB | verdict | HiGHS | rounds | cuts | wall s |",
              "|---|---|---|---|---|---|---|---|---|---|---|"]

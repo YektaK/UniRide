@@ -317,9 +317,9 @@ def test_verdict_reproduced_bracketed_and_defect(runner):
 
 def test_a_proven_highs_difference_blocks_the_instance(runner):
     rec = runner.evaluate_instance(_spec(runner), _mini(), solve_primary=lambda m: _res(),
-                                   solve_secondary=lambda m: _res(ub=25, lb=25, solver="highs"))
-    assert rec["comparison"].label == "disagree" and rec["blocking"], rec["blocking"]
-    assert any("highs" in b.lower() for b in rec["blocking"])
+                                   solve_secondary=lambda m: _res(ub=25, lb=25, solver="highs", tour=None))
+    assert rec["comparison"].label == "disagree"
+    assert len(rec["blocking"]) == 1 and "HiGHS disagree" in rec["blocking"][0], rec["blocking"]  # the comparison alone blocks
 
 
 def test_agreeing_highs_does_not_block_and_is_recorded(runner):
@@ -360,8 +360,8 @@ def test_a_primary_tour_that_is_invalid_for_the_matrix_blocks(runner):
 
 def test_a_proven_mtz_difference_blocks_but_a_time_limited_mtz_does_not(runner):
     base = dict(solve_primary=lambda m: _res(), solve_secondary=lambda m: _res(solver="highs"))
-    bad = runner.evaluate_instance(_spec(runner), _mini(), solve_mtz=lambda m: _res(ub=25, lb=25, solver="gurobi"), **base)
-    assert any("mtz" in b.lower() for b in bad["blocking"])
+    bad = runner.evaluate_instance(_spec(runner), _mini(), solve_mtz=lambda m: _res(ub=25, lb=25, tour=None), **base)
+    assert len(bad["blocking"]) == 1 and "MTZ" in bad["blocking"][0], bad["blocking"]
     slow = runner.evaluate_instance(_spec(runner), _mini(),
                                     solve_mtz=lambda m: _res("feasible_with_gap", ub=30, lb=10), **base)
     assert slow["blocking"] == [] and slow["mtz_comparison"].label == "secondary_time_limited"

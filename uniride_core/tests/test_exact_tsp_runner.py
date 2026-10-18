@@ -412,7 +412,7 @@ def _manifest(runner, recs=None):
 
 
 def test_manifest_validates_and_has_no_private_data(runner):
-    from academic_benchmark.exact_reference import protocol
+    protocol = runner.protocol  # the script's own import: uniride_core tests never import academic_benchmark
 
     manifest = _manifest(runner)
     assert protocol.validate_tsp_reference_manifest(manifest) == []
@@ -443,7 +443,7 @@ def test_write_outputs_writes_the_four_files_and_the_tours_in_one_based_form(run
     readme = (out / "README.md").read_text(encoding="utf-8")
     assert "verification subset" in readme.lower() and "not a paper instance set" in readme.lower()
     assert "superior" not in readme.lower().replace("no superiority claim", "")
-    from academic_benchmark.exact_reference import protocol
+    protocol = runner.protocol  # the script's own import: uniride_core tests never import academic_benchmark
 
     assert protocol.private_data_errors({"readme": readme, "csv": (out / "reference.csv").read_text(encoding="utf-8")}) == []
 

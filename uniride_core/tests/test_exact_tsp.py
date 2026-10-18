@@ -293,10 +293,18 @@ def test_a_time_limited_round_whose_incumbent_is_a_tour_gives_a_bracket():
 def test_a_solver_that_ignores_an_existing_cut_is_rejected_instead_of_looping_forever():
     tsp = _tsp()
     m = _ring_matrix(6)
-    res = tsp.solve_cut_loop(m, lambda cuts, tl: _outcome(tsp, _edges((0, 1, 2), (3, 4, 5)), 30),
-                             directed=False, budget_seconds=600.0, clock=FakeClock())
+    calls = []
+
+    def stubborn_solver(cuts, time_limit):
+        calls.append(cuts)
+        # the loop clock is fake and never advances, so a loop that keeps adding cuts would never end: this cap turns
+        # that hang (a wrong-component-cut mutation) into a fast failure
+        assert len(calls) <= 10, "the cut loop did not stop: the solver ignored its cuts and the loop kept adding them"
+        return _outcome(tsp, _edges((0, 1, 2), (3, 4, 5)), 30)
+
+    res = tsp.solve_cut_loop(m, stubborn_solver, directed=False, budget_seconds=600.0, clock=FakeClock())
     assert res.status == "rejected" and "cut" in res.note
-    assert res.rounds == 2
+    assert res.rounds == 2 and len(calls) == 2
 
 
 def test_the_final_tour_length_is_checked_against_the_objective():
@@ -670,7 +678,7 @@ def _honest_fake_solver(matrix, max_rounds):
 def test_the_cut_loop_with_an_honest_fake_solver_reaches_the_brute_force_optimum_within_a_round_cap(seed):
     tsp = _tsp()
     m = random_matrix(seed, 7, symmetric=False)
-    solve_round, calls = _honest_fake_solver(m, max_rounds=60)
+    solve_round, calls = _honest_fake_solver(m, max_rounds=25)
     res = tsp.solve_cut_loop(m, solve_round, directed=True, budget_seconds=600.0, clock=FakeClock())
     assert res.status == "optimal" and res.ub == brute_force_tsp(m), (seed, res.status, res.ub, res.note)
     assert tsp.validate_tour(m, res.tour, res.ub) == []
@@ -699,7 +707,7 @@ def test_the_mtz_model_refuses_subtour_cuts_and_labels_the_case_instead_of_crash
 def test_a_subtour_in_an_mtz_solution_ends_the_loop_with_a_labelled_rejection():
     tsp = _tsp()
     m = _ring_matrix(6)
-    two_triangles = {(0, 1): 1.0, (1, 2): 1.0, (0, 2): 1.0, (3, 4): 1.0, (4, 5): 1.0, (3, 5): 1.0}
+    two_triangles = {(0, 1): 1.0, (1, 2): 1.0, (2, 0): 1.0, (3, 4): 1.0, (4, 5): 1.0, (5, 3): 1.0}  # directed 3-cycles
     cost = sum(m[i][j] for (i, j), v in two_triangles.items() if v > 0.5)
     rounds = tsp._AmplRounds(_StubSession(two_triangles, cost), m, True, mtz=True)
     res = tsp.solve_cut_loop(m, rounds, directed=True, budget_seconds=600.0, clock=FakeClock())

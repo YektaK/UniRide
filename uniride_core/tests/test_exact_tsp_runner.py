@@ -408,7 +408,8 @@ def _manifest(runner, recs=None):
         versions={"ampl": "AMPL 20260809", "amplpy": "0.18.0", "gurobi": "Gurobi 13.0.3", "highs": "HiGHS 1.15.1",
                   "ampl_location": "local AMPL installation used"},
         provenance={"uniride_core": "uniride_core/__init__.py"}, total_wall_seconds=12.5, mtz_limit_seconds=120.0,
-        published_source={"table": "problems.optimal", "cross_checks": ["x"], "discrepancies": []})
+        published_source={"table": "problems.optimal", "cross_checks": ["x"], "discrepancies": []},
+        started_utc="2026-10-18T10:00:00Z", ended_utc="2026-10-18T10:00:13Z")
 
 
 def test_manifest_validates_and_has_no_private_data(runner):
@@ -666,6 +667,15 @@ def test_the_same_optimum_unproven_and_identical_matrices_do_not_block(runner):
     assert runner.count_differing_arcs(m3, runner.geo_pi_variant_matrix(same, runner.TSPLIB_GEO_PI)) == 0
     note, blocking = runner.geo_pi_sensitivity("mini", m3, same, _geo_primary(), solve=lambda m: calls.append(1), blocking=True)
     assert note["outcome"] == "identical_matrix" and blocking == [] and calls == []
+
+
+def test_a_failed_sensitivity_re_solve_blocks_only_when_the_flag_is_on(runner):
+    coords = _random_coords("GEO", 40, seed=11)
+    matrix = runner.build_matrix("GEO", coords)
+    bad = lambda m: _res("rejected", ub=None, lb=None, tour=None, note="solver failed")  # noqa: E731
+    note, blocking = runner.geo_pi_sensitivity("mini", matrix, coords, _geo_primary(), solve=bad, blocking=True)
+    assert note["outcome"] == "failed" and len(blocking) == 1 and "solver failed" in blocking[0]
+    assert runner.geo_pi_sensitivity("mini", matrix, coords, _geo_primary(), solve=bad, blocking=False)[1] == []
 
 
 def test_the_sensitivity_flag_defaults_to_on(runner):

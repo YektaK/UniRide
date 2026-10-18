@@ -472,6 +472,10 @@ class _AmplRounds:
 
     def __call__(self, cuts, time_limit: float) -> RoundOutcome:
         a = self.session.ampl
+        if cuts and self.mtz:  # tsp_mtz.mod has no CUTS set: a cut request means the MTZ solution had a subtour
+            return RoundOutcome("rejected", "solver_failure", None, None, None, 0.0,
+                                "the MTZ model has no CUTS set and cannot take subtour cuts; an MTZ solution with a subtour "
+                                "is a model or solver defect")
         if cuts and len(cuts) != self.installed:
             a.set["CUTS"] = list(range(1, len(cuts) + 1))
             a.param["csize"] = {k + 1: len(c) for k, c in enumerate(cuts)}

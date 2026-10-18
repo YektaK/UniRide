@@ -395,5 +395,7 @@ def build_gap_figure(panels: Sequence[Sequence[dict]], panel_titles: Sequence[st
             cy = Y(pt["y"])
             scene.marker(pt["shape"], cx, cy, 4.5, KIND_COLOR[pt["kind"]], hollow=pt["shape"] == SHAPE_DKPOS, opacity=0.55)
             if pt["n"] > 1:
-                scene.text(cx + 7, cy - 5, "x%d" % pt["n"], size=11, color=KIND_COLOR[pt["kind"]])
+                # four label heights (student parity x option kind): neighbouring labels never overlap
+                level = (pt["students"] % 2) + (2 if pt["kind"] == "q" and len(kinds) > 1 else 0)
+                scene.text(cx, cy - 9 - level * 10, "x%d" % pt["n"], size=11, anchor="middle", color=KIND_COLOR[pt["kind"]])
     return scene

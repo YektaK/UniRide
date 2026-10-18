@@ -20,6 +20,9 @@ from pathlib import Path
 
 import pytest
 
+matplotlib = pytest.importorskip(
+    "matplotlib", reason="matplotlib is the optional paper-figure dependency (requirements-paper.txt)")
+
 REPO = Path(__file__).resolve().parents[2]
 for _p in (REPO / "optimizer_api", REPO):
     if str(_p) not in sys.path:
@@ -236,7 +239,11 @@ def _expected_table():
             "dK_zero": sum(r["dK"] == "0" for r in compared), "dK_positive": sum(int(r["dK"]) > 0 for r in compared),
             "gD_comparable": len(comparable), "gD_positive": sum(v > 0 for v in gd), "gD_mean": statistics.fmean(gd),
             "gD_max": max(gd), "gD_not_comparable": sum(r["gD_note"] == "not_comparable_K_GA_gt_Kstar" for r in compared),
-            "highs_rows": sum(r["highs_status"] != "" for r in rs), "highs_agrees": sum(r["highs_agrees"] == "True" for r in rs)}
+            "highs_same_K_D_optimal": sum(r["status"] == "optimal" and r["highs_status"] == "optimal"
+                                          and r["highs_agrees"] == "True" for r in rs),
+            "highs_both_infeasible": sum(r["status"] == "infeasible_proven" and r["highs_status"] == "infeasible_proven"
+                                         and r["highs_agrees"] == "True" for r in rs),
+            "highs_free_same_optimal": sum(r["status"] == "optimal" and r["highs_free_agrees"] == "True" for r in rs)}
     return out
 
 
@@ -253,7 +260,7 @@ def test_table_by_R_matches_an_independent_recomputation_and_never_pools_fleets(
         want = expected[key]
         for col in ("rows", "exact_feasible", "exact_infeasible_proven", "compared", "both_infeasible",
                     "ga_infeasible_exact_feasible", "dK_zero", "dK_positive", "gD_comparable", "gD_positive",
-                    "gD_not_comparable", "highs_rows", "highs_agrees"):
+                    "gD_not_comparable", "highs_same_K_D_optimal", "highs_both_infeasible", "highs_free_same_optimal"):
             assert int(row[col]) == want[col], (key, col)
         assert float(row["dK_zero_share"]) == pytest.approx(want["dK_zero"] / want["compared"], abs=5e-7)
         assert float(row["gD_mean"]) == pytest.approx(want["gD_mean"], abs=5e-7), key
@@ -271,6 +278,10 @@ def test_table_denominators_include_no_infeasible_or_uncompared_rows(report):
         assert int(row["gD_comparable"]) <= int(row["compared"])
         infeasible_seen |= int(row["exact_infeasible_proven"]) > 0
         assert float(row["dK_zero_share"]) == pytest.approx(int(row["dK_zero"]) / int(row["compared"]), abs=5e-7)
+        # each HiGHS count stays inside its own denominator (optimal rows / proven-infeasible rows)
+        assert int(row["highs_same_K_D_optimal"]) <= int(row["exact_feasible"])
+        assert int(row["highs_free_same_optimal"]) <= int(row["exact_feasible"])
+        assert int(row["highs_both_infeasible"]) <= int(row["exact_infeasible_proven"])
     assert infeasible_seen  # the q rows of large+sedan hold proven-infeasible options; they must stay out of 'compared'
 
 
@@ -293,6 +304,15 @@ def test_day_label_table_counts_the_day_rows(report):
         assert int(row["cells"]) == len(mine)
         for label in ("proven_over_union_menu", "ga_menu_infeasible_for_L", "both_infeasible_for_L", "union_not_proven"):
             assert int(row[label]) == sum(r["label"] == label for r in mine)
+        diffs = [int(r["cars_difference_union_minus_ga"]) for r in mine if r["label"] == "proven_over_union_menu"]
+        assert int(row["union_cars_below_ga"]) == sum(d < 0 for d in diffs)
+        assert int(row["union_cars_equal_ga"]) == sum(d == 0 for d in diffs)
+        assert int(row["union_cars_above_ga"]) == sum(d > 0 for d in diffs)
+        assert (int(row["union_cars_below_ga"]) + int(row["union_cars_equal_ga"]) + int(row["union_cars_above_ga"])
+                == int(row["proven_over_union_menu"]))
+    by = {(r["fleet"], r["L"]): r for r in rows}
+    doblo2 = by[("large+doblo_cap3", "2")]
+    assert (doblo2["union_cars_below_ga"], doblo2["union_cars_equal_ga"]) == ("2", "18")  # counted by cars, not car-minutes
     assert sum(int(r["cells"]) for r in rows) == 120
 
 
@@ -360,6 +380,15 @@ def test_report_refuses_an_invalid_union_manifest_and_unclean_sources(tmp_path):
         _build_mirror(m2, tmp_path / "second" / "out")
 
 
+@pytest.mark.parametrize("which,name", [("e3", "exact_manifest.json"), ("e4a", "exact_manifest.json"),
+                                        ("e4b", "union_day_manifest.json")])
+def test_report_refuses_a_source_run_made_on_a_dirty_tree(tmp_path, which, name):
+    m = _mirror(tmp_path)
+    _rewrite_json(m[which] / name, lambda d: d.__setitem__("dirty_working_tree", True))
+    with pytest.raises(gr.ReportRefused, match="dirty tree"):
+        _build_mirror(m, tmp_path / "out")
+
+
 def test_report_refuses_day_sums_that_disagree_with_the_option_rows(tmp_path):
     m = _mirror(tmp_path)
     path = m["e4b"] / "day_sums.csv"
@@ -389,54 +418,94 @@ def test_two_runs_give_byte_identical_outputs_including_figures(report, tmp_path
 
 
 # ----------------------------------------------------------------------------------------------------- figures
-def _png_info(data: bytes):
+def _png_tags(data: bytes):
     assert data[:8] == b"\x89PNG\r\n\x1a\n"
-    pos, chunks = 8, {}
+    pos, tags = 8, []
     while pos < len(data):
         n, tag = struct.unpack(">I4s", data[pos:pos + 8])
-        chunks.setdefault(tag, data[pos + 8:pos + 8 + n])
-        assert struct.unpack(">I", data[pos + 8 + n:pos + 12 + n])[0] == zlib.crc32(tag + data[pos + 8:pos + 8 + n]) & 0xFFFFFFFF
+        tags.append(tag)
         pos += 12 + n
-    w, h = struct.unpack(">II", chunks[b"IHDR"][:8])
-    return w, h, chunks
+    return tags
 
 
-def test_figures_are_valid_svg_and_png_with_one_marker_per_distinct_point(report):
-    rows = _csv(report / "wave_gaps.csv")
-    for stem, fleets in (("figure_gap_single", {"single_4sw5so"}), ("figure_gap_typed", {"large+sedan", "large+doblo_cap3"})):
-        svg = (report / f"{stem}.svg").read_text(encoding="utf-8")
-        root = ET.fromstring(svg)
-        ns = "{http://www.w3.org/2000/svg}"
-        markers = len(root.findall(f".//{ns}circle")) + len(root.findall(f".//{ns}polygon"))
-        keys = set()
-        for r in rows:
-            if r["fleet"] not in fleets or r["dK"] == "":
-                continue
-            y = r["gD_free"] if int(r["dK"]) >= 1 else r["gD"]
-            keys.add((r["fleet"], r["R"], int(r["students"]), round(float(y), 6), int(r["dK"]) >= 1, r["option"]))
-        legend = 2 if stem == "figure_gap_single" else 3  # legend glyphs: one per series plus the dK >= 1 triangle
-        assert markers == len(keys) + legend, stem
-        assert not re.search(r"\d{4}-\d{2}-\d{2}T|\bCreated\b|<dc:date", svg)
-        w, h, chunks = _png_info((report / f"{stem}.png").read_bytes())
-        assert (w, h) == (int(root.get("width")) * fig.PNG_SCALE, int(root.get("height")) * fig.PNG_SCALE)
-        assert struct.unpack(">IIB", chunks[b"pHYs"]) == (int(round(fig.PNG_DPI / 0.0254)),) * 2 + (1,)
-        raw = zlib.decompress(chunks[b"IDAT"])
-        assert len(raw) == h * (1 + 3 * w) and set(raw) - {0xFF} != set()  # not blank
+def _expected_drawn(rows, fleet_set, ride, kind=None):
+    """Distinct (students, gD, option) of the rows with a gD, plus the dK >= 1 count, from the CSV only."""
+    mine = [r for r in rows if r["fleet"] in fleet_set and r["R"] == str(ride) and (kind is None or r["option"] == kind)]
+    keys = {(int(r["students"]), round(float(r["gD"]), 6), r["option"]) for r in mine if r["gD"] != ""}
+    return keys, sum(r["dK"] != "" and int(r["dK"]) >= 1 for r in mine)
 
 
-def test_figure_scene_draws_dk_positive_rows_at_gd_free_and_skips_rows_without_ga():
-    base = dict(option="base", students="3", dK="0", gD="0.02", gD_free="0.02")
-    rows = [base, dict(base, dK="1", gD="", gD_free="0.05"), dict(base, dK="", gD="", gD_free=""), dict(base, students="3")]
-    pts = fig.gap_points(rows)
-    assert {(p["shape"], p["y"], p["n"]) for p in pts} == {("circle", 0.02, 2), ("triangle", 0.05, 1)}
+def _all_text(figure) -> str:
+    return " ".join(t.get_text() for t in figure.findobj(matplotlib.text.Text))
 
 
-def test_png_font_covers_the_characters_the_report_uses(report):
-    used = set()
+def test_figures_are_valid_svg_and_png_without_dates_or_software_metadata(report):
     for stem in ("figure_gap_single", "figure_gap_typed"):
-        for text in ET.fromstring((report / f"{stem}.svg").read_text(encoding="utf-8")).iter("{http://www.w3.org/2000/svg}text"):
-            used |= set((text.text or "").upper())
-    assert used - set(fig._GLYPHS) == set()
+        svg = (report / f"{stem}.svg").read_text(encoding="utf-8")
+        assert ET.fromstring(svg).tag.endswith("svg")
+        assert not re.search(r"<dc:date|Created|Matplotlib v|\d{4}-\d{2}-\d{2}T", svg), stem
+        png = (report / f"{stem}.png").read_bytes()
+        assert b"tEXt" not in set(_png_tags(png)) and b"Software" not in png, stem
+
+
+def test_panels_draw_distinct_gd_points_only_and_state_the_excluded_counts(report):
+    rows = _csv(report / "wave_gaps.csv")
+    figs = gr.figure_objects(rows)
+    single, typed = figs["single"], figs["typed"]
+    assert len(single.axes) == 4 and len(typed.axes) == 8
+    for ax, ride in zip(single.axes, gr.RIDES):
+        keys, n_pos = _expected_drawn(rows, {"single_4sw5so"}, ride)
+        assert n_pos > 0 and sum(len(c.get_offsets()) for c in ax.collections) == len(keys)
+        assert f"dK \u2265 1: {n_pos} waves (gD undefined, not drawn)" in [t.get_text() for t in ax.texts]
+    i = 0
+    for fleet in gr.TYPED_FLEETS:
+        for ride in gr.RIDES:
+            ax = typed.axes[i]
+            i += 1
+            keys, _ = _expected_drawn(rows, {fleet}, ride)
+            assert sum(len(c.get_offsets()) for c in ax.collections) == len(keys)
+            nb, nq = (_expected_drawn(rows, {fleet}, ride, k)[1] for k in ("base", "q"))
+            assert f"dK \u2265 1: {nb} base waves, {nq} q options (gD undefined, not drawn)" in [t.get_text() for t in ax.texts]
+
+
+def test_y_axis_is_scaled_on_the_drawn_gd_values_only(report):
+    rows = _csv(report / "wave_gaps.csv")
+    figs = gr.figure_objects(rows)
+    for name, fleets in (("single", {"single_4sw5so"}), ("typed", set(gr.TYPED_FLEETS))):
+        top = max(float(r["gD"]) for r in rows if r["fleet"] in fleets and r["gD"] != "")
+        free_top = max(float(r["gD_free"]) for r in rows if r["fleet"] in fleets and r["gD_free"] != "")
+        assert free_top > 1.05 * top  # plotting the gD_free of dK >= 1 rows would stretch the axis beyond the gD values
+        for ax in figs[name].axes:
+            assert top <= ax.get_ylim()[1] <= 1.2 * top and ax.get_ylim()[1] < free_top, name
+            assert all(y <= top + 1e-9 for c in ax.collections for y in c.get_offsets()[:, 1])
+
+
+def test_figure_text_uses_the_notation_and_has_no_count_labels_or_stale_notes(report):
+    rows = _csv(report / "wave_gaps.csv")
+    figs = gr.figure_objects(rows)
+    for name, fg in figs.items():
+        blob = _all_text(fg)
+        assert not re.search(r"\bGD\b|\bDK\b|GD_FREE", blob), name
+        assert not re.search(r"(^|\s)x\d+(\s|$)", blob), name  # no 'x11' labels that look like data
+        assert "gD" in blob and "dK" in blob and "gD_free" not in blob
+    single = _all_text(figs["single"])
+    assert "0.14" not in single and "offset" not in single.lower()
+    typed = _all_text(figs["typed"])
+    assert "base" in typed and "marker area" in typed.lower()
+
+
+def test_matplotlib_is_pinned_for_paper_scripts_only_and_its_version_is_recorded(report):
+    manifest = json.loads((report / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["versions"]["matplotlib"] == matplotlib.__version__
+    req = (REPO / "requirements-paper.txt").read_text(encoding="utf-8")
+    assert f"matplotlib=={matplotlib.__version__}" in req and "paper scripts only" in req.lower()
+    for name in ("pyproject.toml", "requirements.txt", "optimizer_api/requirements.txt", "requirements-exact.txt"):
+        path = REPO / name
+        if path.is_file():
+            assert "matplotlib" not in path.read_text(encoding="utf-8").lower(), name
+    figure_src = (REPO / "scripts" / "exact_gap_figure.py").read_text(encoding="utf-8")
+    assert "matplotlib" in figure_src and "def to_png" not in figure_src and "zlib" not in figure_src  # no hand-written writers
+    assert "svg.hashsalt" in figure_src and '"Date": None' in figure_src
 
 
 # ------------------------------------------------------------------------------------------------------ README
@@ -446,5 +515,37 @@ def test_readme_states_the_wording_rule_and_labels(report):
                    "both_infeasible_for_L", "ga_menu_infeasible_for_L", "proven_over_union_menu", "HiGHS", "not a global day optimum",
                    "never pooled"):
         assert needle in text, needle
-    for banned in ("outperform", "superior to", "better than the GA"):  # "not a superiority claim" is the negation
-        assert banned not in text
+    for banned in (r"\bsuperior\b", r"\boutperform", r"better than"):  # "superiority" (negated) is allowed
+        assert not re.search(banned, text), banned
+
+
+def test_readme_highs_summary_separates_optimal_rows_from_proven_infeasible_rows(report):
+    text = (report / "README.md").read_text(encoding="utf-8")
+    src = [dict(r, fleet="single_4sw5so") for r in _csv(E3 / "wave_gaps.csv")] + _csv(E4A / "option_gaps.csv")
+    for fleet in FLEETS:
+        rs = [r for r in src if r["fleet"] == fleet]
+        opt = [r for r in rs if r["status"] == "optimal"]
+        inf = [r for r in rs if r["status"] == "infeasible_proven"]
+        same = sum(r["highs_status"] == "optimal" and r["highs_agrees"] == "True" for r in opt)
+        both = sum(r["highs_status"] == "infeasible_proven" and r["highs_agrees"] == "True" for r in inf)
+        free = sum(r["highs_free_agrees"] == "True" for r in opt)
+        line = (f"{fleet}: {same} of {len(opt)} optimal rows have the same (K, D) in HiGHS and Gurobi; {both} of {len(inf)} "
+                f"proven-infeasible rows are proven infeasible by both; the free-stage optimum is equal in {free} of {len(opt)} optimal rows")
+        assert line in text, line
+    assert "re-solves equal the Gurobi (K, D)" not in text
+
+
+def test_readme_label_meanings_follow_decision_log_e07(report):
+    text = (report / "README.md").read_text(encoding="utf-8")
+    assert "### E07" in (REPO / "docs" / "DECISION_LOG.md").read_text(encoding="utf-8") and "DECISION_LOG E07" in text
+    for needle in ("`union_not_proven` also covers a time-limited GA-menu run with an optimal union run",
+                   "`verification_failed` also covers the impossible state",
+                   "`both_infeasible_for_L` and `ga_menu_infeasible_for_L` also cover `infeasible_data`",
+                   "no \"never above the GA-menu result\" claim and no GA-vs-union difference"):
+        assert needle in text, needle
+
+
+def test_readme_notes_base_rows_repeat_and_unhashed_inputs(report):
+    text = (report / "README.md").read_text(encoding="utf-8")
+    assert "not independent results" in text and "228" in text and "same GA base routes" in text
+    assert "not hashed by their own manifests" in text and "WP-E6 pins them" in text

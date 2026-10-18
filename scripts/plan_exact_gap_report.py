@@ -9,7 +9,7 @@ section 9 ("Paper deliverable (WP-E6)"). OFFLINE and archive-only: it reads ONLY
 * ``wp-e4b-union-day``     union-menu day level (``day_gaps.csv``, ``day_sums.csv``, ``union_day_manifest.json``);
 
 and the GA source manifests those manifests name (the 4sw5so archive and the two WP-E10 re-runs). It never solves anything:
-no AMPL, no solver, no DB, no HTTP. Standard library only (see ``exact_gap_figure.py`` for the figures).
+no AMPL, no solver, no DB, no HTTP. Standard library plus matplotlib for the figures (``exact_gap_figure.py``; ``requirements-paper.txt``).
 
 Every input file is read once through one registry that records its sha256. The report REFUSES (``ReportRefused``) inputs
 whose sha256 differs from what the source manifests record (``exact_routes.json``, the GA ``run_manifest.json`` files, the
@@ -39,7 +39,11 @@ for _p in (str(REPO / "scripts"), str(REPO / "optimizer_api"), str(REPO)):
         sys.path.insert(0, _p)
 
 from academic_benchmark.exact_reference import protocol  # noqa: E402
-import exact_gap_figure as figure  # noqa: E402  (same directory)
+try:  # matplotlib is the optional paper-figure dependency (requirements-paper.txt)
+    import exact_gap_figure as figure  # noqa: E402  (same directory)
+except ImportError as _exc:  # pragma: no cover - exercised only without matplotlib
+    figure = None
+    _FIGURE_IMPORT_ERROR = _exc
 
 RESULTS_REL = "docs/paper/results"
 EXACT_REL = f"{RESULTS_REL}/week-2026-10-05-exact"
@@ -78,7 +82,8 @@ DAY_SUMS_FIELDS = (
 TABLE_FIELDS = (
     "fleet", "R", "option_kind", "rows", "exact_feasible", "exact_infeasible_proven", "compared", "both_infeasible",
     "ga_infeasible_exact_feasible", "dK_zero", "dK_zero_share", "dK_positive", "dK_max", "gD_comparable", "gD_positive",
-    "gD_mean", "gD_max", "gD_not_comparable", "status_counts", "highs_rows", "highs_agrees")
+    "gD_mean", "gD_max", "gD_not_comparable", "status_counts", "highs_same_K_D_optimal", "highs_both_infeasible",
+    "highs_free_same_optimal")
 
 DAY_LABEL_FIELDS = ("fleet", "L", "cells") + UNION_LABELS + (
     "union_cars_below_ga", "union_cars_equal_ga", "union_cars_above_ga")
@@ -285,7 +290,11 @@ def table_rows(rows: list) -> list:
             "gD_mean": f"{sum(gd) / len(gd):.6f}" if gd else "", "gD_max": f"{max(gd):.6f}" if gd else "",
             "gD_not_comparable": sum(r["gD_note"] == "not_comparable_K_GA_gt_Kstar" for r in compared),
             "status_counts": ";".join(f"{k}={statuses[k]}" for k in sorted(statuses)),
-            "highs_rows": sum(r["highs_status"] != "" for r in rs), "highs_agrees": sum(r["highs_agrees"] == "True" for r in rs)})
+            "highs_same_K_D_optimal": sum(r["status"] == "optimal" and r["highs_status"] == "optimal" and r["highs_agrees"] == "True"
+                                          for r in rs),
+            "highs_both_infeasible": sum(r["status"] == "infeasible_proven" and r["highs_status"] == "infeasible_proven"
+                                         and r["highs_agrees"] == "True" for r in rs),
+            "highs_free_same_optimal": sum(r["status"] == "optimal" and r["highs_free_agrees"] == "True" for r in rs)})
     return out
 
 
@@ -319,8 +328,10 @@ def markdown_tables(table: list, labels: list) -> str:
         "Denominators: `rows` = every source row of the group; `compared` = rows with a feasible exact result and a feasible GA "
         "result of the same kind; `dK_zero_share` = `dK_zero / compared`; `gD_comparable` = compared rows with `K_GA = K*` "
         "(the only rows `gD_mean` and `gD_max` use; a `K_GA > K*` row has no `gD`); `exact_infeasible_proven`, `both_infeasible` "
-        "and `ga_infeasible_exact_feasible` rows are outside `compared`. `highs_rows` = rows re-solved with HiGHS, "
-        "`highs_agrees` = those whose (K, D) equal Gurobi's.",
+        "and `ga_infeasible_exact_feasible` rows are outside `compared`. HiGHS cross-check: `highs_same_K_D_optimal` = optimal "
+        "rows (denominator `exact_feasible`) whose (K, D) in HiGHS equal Gurobi's; `highs_both_infeasible` = proven-infeasible rows "
+        "(denominator `exact_infeasible_proven`) that HiGHS also proves infeasible; `highs_free_same_optimal` = optimal rows "
+        "whose free-stage optimum `D_LB_free` is equal in HiGHS and Gurobi.",
         "",
         md(TABLE_FIELDS, table),
         "",
@@ -378,6 +389,20 @@ def git_state(out: Path, git_repo: Path) -> tuple:
     return _git(git_repo, "rev-parse", "HEAD"), bool(_git(git_repo, *spec))
 
 
+def matplotlib_version() -> str:
+    if figure is None:
+        raise ReportRefused("matplotlib is required (pip install -r requirements-paper.txt)")
+    import matplotlib
+
+    return matplotlib.__version__
+
+
+def pillow_version() -> str:
+    import PIL
+
+    return PIL.__version__
+
+
 def python_provenance(git_repo: Path) -> dict:
     import academic_benchmark
     import uniride_core
@@ -392,24 +417,34 @@ def python_provenance(git_repo: Path) -> dict:
 
 
 # ------------------------------------------------------------------------------------------------------ figures
-def figures(rows: list) -> dict:
+def figure_objects(rows: list) -> dict:
+    """The two matplotlib figures (single type; typed fleets), built under the fixed rc context."""
+    if figure is None:
+        raise ReportRefused(f"matplotlib is required for the figures (pip install -r requirements-paper.txt): {_FIGURE_IMPORT_ERROR}")
     single = [r for r in rows if r["fleet"] == SINGLE_FLEET]
-    scene1 = figure.build_gap_figure(
-        [[r for r in single if int(r["R"]) == ride] for ride in RIDES], [f"R = {ride} min" for ride in RIDES], 2,
-        "Gap of the GA wave routes to the exact reference, single type 4 Sw / 5 So (WP-E3)",
-        "Snapshot week 2026-10-05, 57 waves per R; GA = one seed-42 native run; exact_reference_v1; descriptive gap", ("base",),
-        "Per-wave duration gap gD against students per wave, one panel per R, marker by dK (single type).")
-    panels, titles = [], []
-    for fleet in TYPED_FLEETS:
-        for ride in RIDES:
-            panels.append([r for r in rows if r["fleet"] == fleet and int(r["R"]) == ride])
-            titles.append(f"{fleet}, R = {ride}")
-    scene2 = figure.build_gap_figure(
-        panels, titles, 4, "Gap of the GA menu options to the exact options, typed fleets (WP-E4a)",
-        "Snapshot week 2026-10-05; GA = one seed-42 native run (WP-E10 re-run); exact_reference_v1; fleets in separate panels",
-        ("base", "q"), "Per-option duration gap gD against students per wave, one panel per fleet and R, marker by dK, colour by option kind.")
-    return {"figure_gap_single.svg": scene1.to_svg().encode("utf-8"), "figure_gap_single.png": scene1.to_png(),
-            "figure_gap_typed.svg": scene2.to_svg().encode("utf-8"), "figure_gap_typed.png": scene2.to_png()}
+    with figure.figure_context():
+        fig1 = figure.build_gap_figure(
+            [[r for r in single if int(r["R"]) == ride] for ride in RIDES], [f"R = {ride} min" for ride in RIDES], 2,
+            "Gap of the GA wave routes to the exact reference, single type 4 Sw / 5 So (WP-E3)",
+            "Snapshot week 2026-10-05, 57 waves per R; GA = one seed-42 native run; protocol exact_reference_v1; descriptive gap",
+            ("base",))
+        panels, titles = [], []
+        for fleet in TYPED_FLEETS:
+            for ride in RIDES:
+                panels.append([r for r in rows if r["fleet"] == fleet and int(r["R"]) == ride])
+                titles.append(f"{fleet}, R = {ride} min")
+        fig2 = figure.build_gap_figure(
+            panels, titles, 4, "Gap of the GA menu options to the exact options, typed fleets (WP-E4a)",
+            "Snapshot week 2026-10-05; GA = one seed-42 native run (WP-E10 re-run); protocol exact_reference_v1; one panel per fleet and R",
+            ("base", "q"))
+    return {"single": fig1, "typed": fig2}
+
+
+def figures(rows: list) -> dict:
+    objs = figure_objects(rows)
+    one, two = figure.render(objs["single"]), figure.render(objs["typed"])
+    return {"figure_gap_single.svg": one["svg"], "figure_gap_single.png": one["png"],
+            "figure_gap_typed.svg": two["svg"], "figure_gap_typed.png": two["png"]}
 
 
 # ------------------------------------------------------------------------------------------------------ README
@@ -425,7 +460,16 @@ def readme_text(ctx: dict) -> str:
                          f"positive in {r['gD_positive']}, mean {r['gD_mean']}, max {r['gD_max']}")
         return "; ".join(parts)
 
-    highs = {f: (sum(int(r["highs_rows"]) for r in t if r["fleet"] == f), sum(int(r["highs_agrees"]) for r in t if r["fleet"] == f)) for f in FLEETS}
+    def highs_line(fleet):
+        rs = [r for r in ctx["wave_rows"] if r["fleet"] == fleet]
+        opt = [r for r in rs if r["status"] == "optimal"]
+        inf = [r for r in rs if r["status"] == "infeasible_proven"]
+        same = sum(r["highs_status"] == "optimal" and r["highs_agrees"] == "True" for r in opt)
+        both = sum(r["highs_status"] == "infeasible_proven" and r["highs_agrees"] == "True" for r in inf)
+        free = sum(r["highs_free_agrees"] == "True" for r in opt)
+        return (f"{fleet}: {same} of {len(opt)} optimal rows have the same (K, D) in HiGHS and Gurobi; {both} of {len(inf)} "
+                f"proven-infeasible rows are proven infeasible by both; the free-stage optimum is equal in {free} of {len(opt)} optimal rows")
+
     labels = ctx["day_label_counts"]
     lines = [
         "# WP-E6 gap report: the exact references against the GA, week of 2026-10-05",
@@ -444,8 +488,8 @@ def readme_text(ctx: dict) -> str:
         "fixed-budget rows or with each other across fleets.",
         "- The day level over the union menu (`union_day_v1`) is the minimum number of cars over the union of the GA and the per-wave "
         "exact menus; it is not a global day optimum (EQ3). The day-level value is never `min(GA, union)`: the report shows no such value.",
-        "- HiGHS cross-check (EQ4): "
-        + "; ".join(f"{f}: {highs[f][1]} of {highs[f][0]} HiGHS re-solves equal the Gurobi (K, D)" for f in FLEETS) + ".",
+        "- HiGHS cross-check (EQ4; HiGHS 1.15.1 re-solved every row, Gurobi is the primary solver): "
+        + "; ".join(highs_line(f) for f in FLEETS) + ".",
         "",
         "## Files",
         "",
@@ -502,23 +546,46 @@ def readme_text(ctx: dict) -> str:
         "",
         f"Labels over the {len(ctx['day_rows'])} cells: " + ", ".join(f"{k} {labels[k]}" for k in UNION_LABELS) + ". Meanings:",
         "",
+        "Label meanings follow docs/DECISION_LOG.md E07 (cited as DECISION_LOG E07; WP-E4b review, owner decision 2026-10-18 for the two "
+        "infeasibility labels, lead decisions for the edge cases):",
+        "",
         "- `proven_over_union_menu`: both CP-SAT runs `optimal` and the TypeScript assignment confirms: minimum cars over the union of the "
         "GA and per-wave exact menus; never above the GA-menu result (when both runs are optimal); not a global day optimum (EQ3).",
-        "- `both_infeasible_for_L`: both runs proven infeasible for the limit L; nothing to compare, no claim (owner label 2026-10-18).",
-        "- `ga_menu_infeasible_for_L`: the GA-menu run is proven infeasible and the union run is optimal and confirmed: union cars proven over "
-        "the union menu, no GA-vs-union difference shown (owner label 2026-10-18).",
-        "- `union_not_proven`: only when the union run still stopped on its time limit after the 60 s re-run (timing dependent).",
-        "- `not_independently_confirmed`, `verification_failed`: the TypeScript confirmation is missing or failed.",
+        "- `both_infeasible_for_L`: the GA-menu run and the union run are both proven infeasible; nothing is compared and no claim is made.",
+        "- `ga_menu_infeasible_for_L`: the GA-menu run is proven infeasible and the union run is optimal and confirmed; the union cars are "
+        "reported as proven over the union menu, with no \"never above the GA-menu result\" claim and no GA-vs-union difference.",
+        "- `both_infeasible_for_L` and `ga_menu_infeasible_for_L` also cover `infeasible_data`, not only `infeasible_for_L`.",
+        "- `union_not_proven`: a union run that is still time-limited after the single 60 s re-run (`timing_dependent: true`). "
+        "`union_not_proven` also covers a time-limited GA-menu run with an optimal union run, because the GA side is then not proven and "
+        "the GA run is never re-run.",
+        "- `verification_failed`: the TypeScript confirmation failed. `verification_failed` also covers the impossible state: the GA-menu "
+        "run has a selection while the union run is proven infeasible (the union menu contains the GA menu), which is a blocking error.",
+        "- `not_independently_confirmed`: the TypeScript confirmation is missing.",
+        "- A proven infeasibility is final and is never re-run. Labels occurring in this campaign: only `proven_over_union_menu`, "
+        "`both_infeasible_for_L` and `ga_menu_infeasible_for_L`; the edge cases above (a time-limited GA-menu run, the impossible state, `infeasible_data`) did not occur (E07).",
         "",
         f"Replay gate (WP-E4a `replay.csv`): {ctx['replay_text']}.",
         "",
         "## Figures",
         "",
-        "x = students per wave (0 to 21), y = `gD` for rows with `dK = 0` (filled circle) and `gD_free` for rows with `dK >= 1` (hollow "
-        "triangle: `gD` is not defined there because `K_GA > K*`). One panel per R for the single type; for the typed fleets one panel "
-        "per fleet and R, colour = option kind (`base`, `q`; at the same coordinates `base` and `q` are offset by 0.14 students). One "
-        "marker per distinct (students, y, kind); `xN` marks N coincident rows. Rows without a GA answer or without an exact result are "
-        "not drawn. Standard-library SVG and PNG writer (no plotting dependency); no timestamps; PNG at 2x pixels, 192 dpi.",
+        "x = students per wave, y = `gD`, one panel per R (single type) or per fleet and R (typed fleets); filled circles are rows with "
+        "`dK = 0`, the only rows with a defined `gD`. Rows with `dK >= 1` (`K_GA > K*`) have no `gD`: they are not drawn, each panel "
+        "states their count (\"dK \u2265 1: n waves (gD undefined, not drawn)\") and the y axis is scaled on the drawn `gD` values only "
+        "(`gD_free` is never plotted on the `gD` axis; it stays in `wave_gaps.csv`). Marker area grows with the number of coincident "
+        "rows (no count labels); in the typed figure `base` and `q` are offset by 0.14 students so both show. Rows without a GA answer or "
+        "without an exact result are not drawn and are counted in the panel. Figures are written with matplotlib "
+        + ctx["matplotlib_text"] + " (Agg backend, 200 dpi, fixed `svg.hashsalt`, text as paths, no date, creator or software metadata); "
+        "see `requirements-paper.txt`.",
+        "",
+        "## Notes on the inputs",
+        "",
+        "- The typed `base` rows (`xbase` against the GA `base`) repeat the single-type statistics: the same large type and the same GA "
+        "base routes (the WP-E10 verifier checked 228 waves against the 4sw5so archive, base routes equal, in "
+        "`week-2026-10-05-fleet-rerun-large-sedan/README.md` and `...-doblo-cap3/README.md`). The `base` rows of the three fleets are "
+        "therefore not independent results; the table's `base` rows are identical across fleets.",
+        "- WP-E3 `wave_gaps.csv` and WP-E4b `day_gaps.csv` and `day_sums.csv` are not hashed by their own manifests ("
+        "the WP-E3 and WP-E4a manifests record the sha256 of `exact_routes.json`, the WP-E4b manifest that of the WP-E4a files). WP-E6 pins them: their sha256 is in "
+        "`manifest.json` under `inputs`.",
         "",
         "## Reproduce",
         "",
@@ -549,7 +616,8 @@ def build_report(out: Path, *, repo: Path = REPO, e3_dir: Path = E3_DIR, e4a_dir
     union = inputs.json(Path(e4b_dir) / protocol.UNION_DAY_MANIFEST_FILENAME)
     errors = protocol.validate_union_day_manifest(union)
     _need(not errors, f"WP-E4b manifest is not valid under union_day_v1: {errors[:3]}")
-    _need(union.get("blocking_errors") == [] and union.get("dirty_working_tree") is False, "WP-E4b manifest records blocking errors or a dirty tree")
+    _need(union.get("blocking_errors") == [], "WP-E4b manifest records blocking errors")
+    _need(union.get("dirty_working_tree") is False, "WP-E4b run was made on a dirty tree")
 
     # the union manifest records the WP-E4a files it used
     exact_src = union["exact_options_source"]
@@ -602,7 +670,7 @@ def build_report(out: Path, *, repo: Path = REPO, e3_dir: Path = E3_DIR, e4a_dir
            "single_sum_rows": single_sums, "n_single": len(e3_rows), "n_typed": len(e4a_rows), "day_label_counts": counts,
            "ga_label_text": "; ".join(f"{f}: {labels[f]['ga_protocol']}, seed {labels[f]['ga_seed']}, commit {labels[f]['ga_commit']}, "
                                       f"dirty tree {labels[f]['ga_dirty_tree']}" for f in FLEETS),
-           "empty_text": empty_columns_text(rows),
+           "empty_text": empty_columns_text(rows), "matplotlib_text": matplotlib_version(),
            "replay_text": f"{len(replay_rows)} (fleet, date, R, L) cells, request and response differences 0 in all; labels "
                           + ", ".join(f"{k} {replay_counts[k]}" for k in sorted(replay_counts))}
     outputs = {
@@ -626,8 +694,8 @@ def build_report(out: Path, *, repo: Path = REPO, e3_dir: Path = E3_DIR, e4a_dir
         "source_results": {"wp-e3-goal1-single": inputs.rel(e3_dir), "wp-e4a-typed-options": inputs.rel(e4a_dir),
                            "wp-e4b-union-day": inputs.rel(e4b_dir)},
         "ga_labels": labels,
-        "versions": {"python": platform.python_version(), "zlib": zlib.ZLIB_VERSION, "csv_json_svg_png": "standard library only",
-                     "plotting": "scripts/exact_gap_figure.py (no matplotlib)"},
+        "versions": {"python": platform.python_version(), "zlib": zlib.ZLIB_VERSION, "matplotlib": matplotlib_version(),
+                     "pillow": pillow_version(), "plotting": "matplotlib via scripts/exact_gap_figure.py (Agg backend)"},
         "python_provenance": python_provenance(git_repo),
         "host_os": platform.system() + "-" + platform.release(),
         "row_counts": {"wave_gaps.csv": len(rows), "day_gaps.csv": len(day_rows), "day_sums.csv": len(single_sums) + len(sums_rows),

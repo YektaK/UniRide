@@ -394,6 +394,7 @@ def build_manifest(records, *, instances, git, versions, provenance, total_wall_
                    "budget_rule": "one wall-clock budget per instance and solver; every cut-loop re-solve gets the time "
                                   "that remains (lim:time in the option string is the first solve's value)",
                    "run_mode": "serial, one invocation, no cache"},
+        "run_history": {"invocations_at_this_commit": 1, "serial": True, "cache": "none", "retries": 0},
         "instances": instances, "published_optimum_source": published_source, "python_provenance": provenance,
         "python_version": platform.python_version(), "host_os": f"{platform.system()}-{platform.release()}",
         "claim": protocol.TSP_REFERENCE_CLAIM, "blocking_errors": blocking, "total_wall_seconds": round(total_wall_seconds, 1),

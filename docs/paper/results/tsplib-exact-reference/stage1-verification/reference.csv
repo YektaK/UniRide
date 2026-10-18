@@ -1,0 +1,18 @@
+protocol,instance,problem_type,n,edge_weight_type,reference_optimum,reference_source,exact_status,stop_reason,ub,lb,gap_to_reference,reference_in_bracket,verdict,ub_source,cut_rounds,cuts,solver,solver_version,wall_seconds,timing_dependent,highs_status,highs_value,highs_lb,highs_wall_seconds,highs_timing_dependent,highs_agreement,mtz_status,mtz_value,mtz_wall_seconds,mtz_agreement
+exact_reference_v1,burma14,TSP,14,GEO,3323,tsplib,optimal,optimal,3323,3323,0,true,reproduced,solver_incumbent,2,3,gurobi,Gurobi 13.0.3,1.31,false,optimal,3323,3323,2.25,false,agree,optimal,3323,1.154,agree
+exact_reference_v1,ulysses16,TSP,16,GEO,6859,tsplib,optimal,optimal,6859,6859,0,true,reproduced,solver_incumbent,4,8,gurobi,Gurobi 13.0.3,2.437,false,optimal,6859,6859,4.374,false,agree,optimal,6859,6.084,agree
+exact_reference_v1,ulysses22,TSP,22,GEO,7013,tsplib,optimal,optimal,7013,7013,0,true,reproduced,solver_incumbent,5,14,gurobi,Gurobi 13.0.3,2.951,false,optimal,7013,7013,5.79,false,agree,feasible_with_gap,7013,120.613,secondary_time_limited
+exact_reference_v1,att48,TSP,48,ATT,10628,tsplib,optimal,optimal,10628,10628,0,true,reproduced,solver_incumbent,7,22,gurobi,Gurobi 13.0.3,4.641,false,optimal,10628,10628,10.831,false,agree,,,,
+exact_reference_v1,eil51,TSP,51,EUC_2D,426,tsplib,optimal,optimal,426,426,0,true,reproduced,solver_incumbent,2,3,gurobi,Gurobi 13.0.3,1.326,false,optimal,426,426,4.521,false,agree,,,,
+exact_reference_v1,berlin52,TSP,52,EUC_2D,7542,tsplib,optimal,optimal,7542,7542,0,true,reproduced,solver_incumbent,2,7,gurobi,Gurobi 13.0.3,1.204,false,optimal,7542,7542,2.489,false,agree,,,,
+exact_reference_v1,ft53,ATSP,53,EXPLICIT,6905,tsplib,optimal,optimal,6905,6905,0,true,reproduced,solver_incumbent,7,26,gurobi,Gurobi 13.0.3,5.867,false,optimal,6905,6905,11.556,false,agree,,,,
+exact_reference_v1,st70,TSP,70,EUC_2D,675,tsplib,optimal,optimal,675,675,0,true,reproduced,solver_incumbent,5,24,gurobi,Gurobi 13.0.3,3.443,false,optimal,675,675,6.407,false,agree,,,,
+exact_reference_v1,eil76,TSP,76,EUC_2D,538,tsplib,optimal,optimal,538,538,0,true,reproduced,solver_incumbent,2,3,gurobi,Gurobi 13.0.3,1.318,false,optimal,538,538,4.34,false,agree,,,,
+exact_reference_v1,pr76,TSP,76,EUC_2D,108159,tsplib,optimal,optimal,108159,108159,0,true,reproduced,solver_incumbent,10,44,gurobi,Gurobi 13.0.3,14.028,false,optimal,108159,108159,78.032,false,agree,,,,
+exact_reference_v1,gr96,TSP,96,GEO,55209,tsplib,optimal,optimal,55209,55209,0,true,reproduced,solver_incumbent,10,39,gurobi,Gurobi 13.0.3,14.36,false,optimal,55209,55209,46.422,false,agree,,,,
+exact_reference_v1,kroa100,TSP,100,EUC_2D,21282,tsplib,optimal,optimal,21282,21282,0,true,reproduced,solver_incumbent,8,44,gurobi,Gurobi 13.0.3,7.832,false,optimal,21282,21282,21.139,false,agree,,,,
+exact_reference_v1,krob100,TSP,100,EUC_2D,22141,tsplib,optimal,optimal,22141,22141,0,true,reproduced,solver_incumbent,9,56,gurobi,Gurobi 13.0.3,14.499,false,optimal,22141,22141,56.597,false,agree,,,,
+exact_reference_v1,kroc100,TSP,100,EUC_2D,20749,tsplib,optimal,optimal,20749,20749,0,true,reproduced,solver_incumbent,8,42,gurobi,Gurobi 13.0.3,8.912,false,optimal,20749,20749,26.152,false,agree,,,,
+exact_reference_v1,krod100,TSP,100,EUC_2D,21294,tsplib,optimal,optimal,21294,21294,0,true,reproduced,solver_incumbent,8,45,gurobi,Gurobi 13.0.3,8.557,false,optimal,21294,21294,29.153,false,agree,,,,
+exact_reference_v1,kroe100,TSP,100,EUC_2D,22068,tsplib,optimal,optimal,22068,22068,0,true,reproduced,solver_incumbent,7,41,gurobi,Gurobi 13.0.3,8.073,false,optimal,22068,22068,33.839,false,agree,,,,
+exact_reference_v1,rd100,TSP,100,EUC_2D,7910,tsplib,optimal,optimal,7910,7910,0,true,reproduced,solver_incumbent,6,38,gurobi,Gurobi 13.0.3,6.516,false,optimal,7910,7910,22.322,false,agree,,,,

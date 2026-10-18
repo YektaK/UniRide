@@ -6,6 +6,7 @@ Synthetic waves at real stop locations; scoping measurement, no paper claim. Gen
 - Caps: 2 000 000 columns, 5 000 000 labels, wall-clock 600 s; subprocess timeout 660 s.
 - A size counts as completed only when every seed completed; `capped` is any other status of any seed.
 - Labels and columns are the maximum over the seeds that ran (one value per n).
+- In capped runs the column count is the count reached before the cap fired, so it is a lower bound.
 
 ## pickup
 

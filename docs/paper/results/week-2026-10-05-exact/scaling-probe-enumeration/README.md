@@ -14,6 +14,11 @@ Facts only. The probe makes no paper claim: no superiority, causality or proof s
 - Class: the number of Sw students is n x 68/226 (the Sw share of the legs of the archive waves) rounded half up, on uniformly random students. The class is drawn independently of the stop, so one stop can hold Sw and So students (two items at one location). In the archive a stop code carries its class.
 - Seeds 1, 2, 3 per cell; the instance is `random.Random("scaling-probe:<seed>:<n>:<k>")`, identical for every R, fleet and direction.
 
+## Effects of the synthetic design
+- Mixed stops. Real stop codes carry one class, and co-located students of one class merge into one item (`_items` in `route_enumeration.py`). The probe draws the class independently of the stop, so one stop can hold both an Sw and an So item. At k = 26 and n = 50 the waves have 31 to 37 items and at n = 80 they have 40 to 42 items (single type, pickup), whereas real data would have at most 26 items at 26 stops. The probe is therefore heavier than real data at large n; the bias runs in one direction (conservative). Concrete case: the capped cell at R = 90, n = 30, k = 26 comes from seed 3, which has 28 items; seeds 1 and 2 have 26 items and completed with 1 876 915 and 2 646 967 labels.
+- Seed variance. For the same (n, k, R) the label count across the three seeds varies by up to about 6.2 times (pickup, single type, k = 10, n = 20, R = 70: 8 939 to 55 560 labels). Where a seed capped, its count is cut at 5 000 001, so the true spread is at least this large (a lower bound).
+- Typed fleets. Their label counts equal the single type's in every run that has both, because the large 4/5 type dominates (sedan 0/4 and minivan 1/3 with total capacity 3 fit inside it), so typed enumeration adds only columns.
+
 ## Grid and stopping rules
 - n in 20, 30, 50, 80; R in 50, 70, 90; fleets: single type 4 Sw / 5 So (large); large + sedan (0 Sw / 4 So); large + Doblo (minivan 1 Sw / 3 So, total capacity 3), types as in the WP-E10 manifests.
 - Typed fleets ran only where the single type completed (all seeds) at that (direction, n, k, R).

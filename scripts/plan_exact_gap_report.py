@@ -436,7 +436,7 @@ def readme_text(ctx: dict) -> str:
         "",
         "## Wording rule",
         "",
-        "- A single snapshot week (service dates 2026-10-05 to 2026-10-09, one DB snapshot, one distance matrix).",
+        "- A single snapshot week (service dates 2026-10-05 to 2026-10-09).",
         "- A descriptive gap measurement, not a superiority claim.",
         f"- The GA side is one run at seed 42 under the native termination protocol (secondary protocol); the gap is the gap of that "
         f"run, not of the GA in general. GA labels per row come from the GA source manifests: {ctx['ga_label_text']}.",

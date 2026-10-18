@@ -29,12 +29,14 @@
     "cells": 120,
     "equal_to_archived_response": 120
   },
-  "git_commit": "652b5ea48072222d7e5798c0e17c604c832ef5fd",
+  "git_commit": "12c0f80859fc524499f56d8e9854c16e1566fb9a",
   "host_os": "Windows-11",
   "labels": {
+    "both_infeasible_for_L": 28,
+    "ga_menu_infeasible_for_L": 1,
     "not_independently_confirmed": 0,
     "proven_over_union_menu": 91,
-    "union_not_proven": 29,
+    "union_not_proven": 0,
     "verification_failed": 0
   },
   "menu_rules": {
@@ -8959,28 +8961,28 @@
       {
         "cell": "large+sedan|R50|2026-10-05|L1",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
         "wall_seconds": 0.0
       },
       {
         "cell": "large+sedan|R50|2026-10-05|L2",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
-        "wall_seconds": 0.45
+        "wall_seconds": 0.9
       },
       {
         "cell": "large+sedan|R50|2026-10-05|L3",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.34
+        "wall_seconds": 0.87
       },
       {
         "cell": "large+sedan|R50|2026-10-06|L1",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
         "wall_seconds": 0.0
       },
@@ -8989,47 +8991,47 @@
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.31
+        "wall_seconds": 0.66
       },
       {
         "cell": "large+sedan|R50|2026-10-06|L3",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.35
+        "wall_seconds": 0.68
       },
       {
         "cell": "large+sedan|R50|2026-10-07|L1",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
         "wall_seconds": 0.0
       },
       {
         "cell": "large+sedan|R50|2026-10-07|L2",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
-        "wall_seconds": 0.0
+        "wall_seconds": 0.01
       },
       {
         "cell": "large+sedan|R50|2026-10-07|L3",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.32
+        "wall_seconds": 0.63
       },
       {
         "cell": "large+sedan|R50|2026-10-08|L1",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
         "wall_seconds": 0.0
       },
       {
         "cell": "large+sedan|R50|2026-10-08|L2",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
         "wall_seconds": 0.01
       },
@@ -9038,12 +9040,12 @@
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.36
+        "wall_seconds": 0.63
       },
       {
         "cell": "large+sedan|R50|2026-10-09|L1",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
         "wall_seconds": 0.0
       },
@@ -9052,40 +9054,40 @@
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.31
+        "wall_seconds": 0.98
       },
       {
         "cell": "large+sedan|R50|2026-10-09|L3",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.33
+        "wall_seconds": 0.75
       },
       {
         "cell": "large+sedan|R60|2026-10-05|L1",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
         "wall_seconds": 0.0
       },
       {
         "cell": "large+sedan|R60|2026-10-05|L2",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "ga_menu_infeasible_for_L",
         "union_rerun": false,
-        "wall_seconds": 0.31
+        "wall_seconds": 0.85
       },
       {
         "cell": "large+sedan|R60|2026-10-05|L3",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.36
+        "wall_seconds": 0.77
       },
       {
         "cell": "large+sedan|R60|2026-10-06|L1",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
         "wall_seconds": 0.0
       },
@@ -9094,40 +9096,40 @@
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.34
+        "wall_seconds": 0.7
       },
       {
         "cell": "large+sedan|R60|2026-10-06|L3",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.32
+        "wall_seconds": 0.71
       },
       {
         "cell": "large+sedan|R60|2026-10-07|L1",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
         "wall_seconds": 0.01
       },
       {
         "cell": "large+sedan|R60|2026-10-07|L2",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
-        "wall_seconds": 0.01
+        "wall_seconds": 0.02
       },
       {
         "cell": "large+sedan|R60|2026-10-07|L3",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.35
+        "wall_seconds": 0.73
       },
       {
         "cell": "large+sedan|R60|2026-10-08|L1",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
         "wall_seconds": 0.0
       },
@@ -9136,19 +9138,19 @@
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.31
+        "wall_seconds": 0.67
       },
       {
         "cell": "large+sedan|R60|2026-10-08|L3",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.33
+        "wall_seconds": 0.68
       },
       {
         "cell": "large+sedan|R60|2026-10-09|L1",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
         "wall_seconds": 0.0
       },
@@ -9157,19 +9159,19 @@
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.31
+        "wall_seconds": 0.58
       },
       {
         "cell": "large+sedan|R60|2026-10-09|L3",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.34
+        "wall_seconds": 0.68
       },
       {
         "cell": "large+sedan|R70|2026-10-05|L1",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
         "wall_seconds": 0.0
       },
@@ -9178,61 +9180,61 @@
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.35
+        "wall_seconds": 0.66
       },
       {
         "cell": "large+sedan|R70|2026-10-05|L3",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.35
+        "wall_seconds": 0.64
       },
       {
         "cell": "large+sedan|R70|2026-10-06|L1",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
-        "wall_seconds": 0.0
+        "wall_seconds": 0.01
       },
       {
         "cell": "large+sedan|R70|2026-10-06|L2",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
-        "wall_seconds": 0.0
+        "wall_seconds": 0.01
       },
       {
         "cell": "large+sedan|R70|2026-10-06|L3",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.33
+        "wall_seconds": 0.64
       },
       {
         "cell": "large+sedan|R70|2026-10-07|L1",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
-        "wall_seconds": 0.0
+        "wall_seconds": 0.01
       },
       {
         "cell": "large+sedan|R70|2026-10-07|L2",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
-        "wall_seconds": 0.0
+        "wall_seconds": 0.01
       },
       {
         "cell": "large+sedan|R70|2026-10-07|L3",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.37
+        "wall_seconds": 0.62
       },
       {
         "cell": "large+sedan|R70|2026-10-08|L1",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
         "wall_seconds": 0.0
       },
@@ -9241,19 +9243,19 @@
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.33
+        "wall_seconds": 0.63
       },
       {
         "cell": "large+sedan|R70|2026-10-08|L3",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.35
+        "wall_seconds": 0.59
       },
       {
         "cell": "large+sedan|R70|2026-10-09|L1",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
         "wall_seconds": 0.0
       },
@@ -9262,19 +9264,19 @@
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.33
+        "wall_seconds": 0.6
       },
       {
         "cell": "large+sedan|R70|2026-10-09|L3",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.33
+        "wall_seconds": 0.64
       },
       {
         "cell": "large+sedan|R90|2026-10-05|L1",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
         "wall_seconds": 0.0
       },
@@ -9283,61 +9285,61 @@
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.34
+        "wall_seconds": 0.67
       },
       {
         "cell": "large+sedan|R90|2026-10-05|L3",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.35
+        "wall_seconds": 0.62
       },
       {
         "cell": "large+sedan|R90|2026-10-06|L1",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
-        "wall_seconds": 0.0
+        "wall_seconds": 0.01
       },
       {
         "cell": "large+sedan|R90|2026-10-06|L2",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
-        "wall_seconds": 0.0
+        "wall_seconds": 0.01
       },
       {
         "cell": "large+sedan|R90|2026-10-06|L3",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.34
+        "wall_seconds": 0.61
       },
       {
         "cell": "large+sedan|R90|2026-10-07|L1",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
-        "wall_seconds": 0.0
+        "wall_seconds": 0.01
       },
       {
         "cell": "large+sedan|R90|2026-10-07|L2",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
-        "wall_seconds": 0.0
+        "wall_seconds": 0.01
       },
       {
         "cell": "large+sedan|R90|2026-10-07|L3",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.45
+        "wall_seconds": 0.71
       },
       {
         "cell": "large+sedan|R90|2026-10-08|L1",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
         "wall_seconds": 0.0
       },
@@ -9346,19 +9348,19 @@
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.32
+        "wall_seconds": 0.64
       },
       {
         "cell": "large+sedan|R90|2026-10-08|L3",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.32
+        "wall_seconds": 0.61
       },
       {
         "cell": "large+sedan|R90|2026-10-09|L1",
         "cli_error": null,
-        "label": "union_not_proven",
+        "label": "both_infeasible_for_L",
         "union_rerun": false,
         "wall_seconds": 0.0
       },
@@ -9367,434 +9369,434 @@
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.33
+        "wall_seconds": 0.74
       },
       {
         "cell": "large+sedan|R90|2026-10-09|L3",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.33
+        "wall_seconds": 0.89
       },
       {
         "cell": "large+doblo_cap3|R50|2026-10-05|L0",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.34
+        "wall_seconds": 0.79
       },
       {
         "cell": "large+doblo_cap3|R50|2026-10-05|L1",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.39
+        "wall_seconds": 0.73
       },
       {
         "cell": "large+doblo_cap3|R50|2026-10-05|L2",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.43
+        "wall_seconds": 0.8
       },
       {
         "cell": "large+doblo_cap3|R50|2026-10-06|L0",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.36
+        "wall_seconds": 0.69
       },
       {
         "cell": "large+doblo_cap3|R50|2026-10-06|L1",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.37
+        "wall_seconds": 0.71
       },
       {
         "cell": "large+doblo_cap3|R50|2026-10-06|L2",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.39
+        "wall_seconds": 0.81
       },
       {
         "cell": "large+doblo_cap3|R50|2026-10-07|L0",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.38
+        "wall_seconds": 0.7
       },
       {
         "cell": "large+doblo_cap3|R50|2026-10-07|L1",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.39
+        "wall_seconds": 0.86
       },
       {
         "cell": "large+doblo_cap3|R50|2026-10-07|L2",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.38
+        "wall_seconds": 1.02
       },
       {
         "cell": "large+doblo_cap3|R50|2026-10-08|L0",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.34
+        "wall_seconds": 0.76
       },
       {
         "cell": "large+doblo_cap3|R50|2026-10-08|L1",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.39
+        "wall_seconds": 1.08
       },
       {
         "cell": "large+doblo_cap3|R50|2026-10-08|L2",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.49
+        "wall_seconds": 1.23
       },
       {
         "cell": "large+doblo_cap3|R50|2026-10-09|L0",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.33
+        "wall_seconds": 0.8
       },
       {
         "cell": "large+doblo_cap3|R50|2026-10-09|L1",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.33
+        "wall_seconds": 0.85
       },
       {
         "cell": "large+doblo_cap3|R50|2026-10-09|L2",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.37
+        "wall_seconds": 0.84
       },
       {
         "cell": "large+doblo_cap3|R60|2026-10-05|L0",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.33
+        "wall_seconds": 0.88
       },
       {
         "cell": "large+doblo_cap3|R60|2026-10-05|L1",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.34
+        "wall_seconds": 0.84
       },
       {
         "cell": "large+doblo_cap3|R60|2026-10-05|L2",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.4
+        "wall_seconds": 1.11
       },
       {
         "cell": "large+doblo_cap3|R60|2026-10-06|L0",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.34
+        "wall_seconds": 1.01
       },
       {
         "cell": "large+doblo_cap3|R60|2026-10-06|L1",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.33
+        "wall_seconds": 0.86
       },
       {
         "cell": "large+doblo_cap3|R60|2026-10-06|L2",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.37
+        "wall_seconds": 0.69
       },
       {
         "cell": "large+doblo_cap3|R60|2026-10-07|L0",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.34
+        "wall_seconds": 0.72
       },
       {
         "cell": "large+doblo_cap3|R60|2026-10-07|L1",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.34
+        "wall_seconds": 0.69
       },
       {
         "cell": "large+doblo_cap3|R60|2026-10-07|L2",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.37
+        "wall_seconds": 0.83
       },
       {
         "cell": "large+doblo_cap3|R60|2026-10-08|L0",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.32
+        "wall_seconds": 0.7
       },
       {
         "cell": "large+doblo_cap3|R60|2026-10-08|L1",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.32
+        "wall_seconds": 0.92
       },
       {
         "cell": "large+doblo_cap3|R60|2026-10-08|L2",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.37
+        "wall_seconds": 0.78
       },
       {
         "cell": "large+doblo_cap3|R60|2026-10-09|L0",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.34
+        "wall_seconds": 0.71
       },
       {
         "cell": "large+doblo_cap3|R60|2026-10-09|L1",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.38
+        "wall_seconds": 0.75
       },
       {
         "cell": "large+doblo_cap3|R60|2026-10-09|L2",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.41
+        "wall_seconds": 0.73
       },
       {
         "cell": "large+doblo_cap3|R70|2026-10-05|L0",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.35
+        "wall_seconds": 0.7
       },
       {
         "cell": "large+doblo_cap3|R70|2026-10-05|L1",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.38
+        "wall_seconds": 0.78
       },
       {
         "cell": "large+doblo_cap3|R70|2026-10-05|L2",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.43
+        "wall_seconds": 0.77
       },
       {
         "cell": "large+doblo_cap3|R70|2026-10-06|L0",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.35
+        "wall_seconds": 0.64
       },
       {
         "cell": "large+doblo_cap3|R70|2026-10-06|L1",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.37
+        "wall_seconds": 0.77
       },
       {
         "cell": "large+doblo_cap3|R70|2026-10-06|L2",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.37
+        "wall_seconds": 0.71
       },
       {
         "cell": "large+doblo_cap3|R70|2026-10-07|L0",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.34
+        "wall_seconds": 0.78
       },
       {
         "cell": "large+doblo_cap3|R70|2026-10-07|L1",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.4
+        "wall_seconds": 0.83
       },
       {
         "cell": "large+doblo_cap3|R70|2026-10-07|L2",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.41
+        "wall_seconds": 0.89
       },
       {
         "cell": "large+doblo_cap3|R70|2026-10-08|L0",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.35
+        "wall_seconds": 0.64
       },
       {
         "cell": "large+doblo_cap3|R70|2026-10-08|L1",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.4
+        "wall_seconds": 0.7
       },
       {
         "cell": "large+doblo_cap3|R70|2026-10-08|L2",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.38
+        "wall_seconds": 0.79
       },
       {
         "cell": "large+doblo_cap3|R70|2026-10-09|L0",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.36
+        "wall_seconds": 0.88
       },
       {
         "cell": "large+doblo_cap3|R70|2026-10-09|L1",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.41
+        "wall_seconds": 0.75
       },
       {
         "cell": "large+doblo_cap3|R70|2026-10-09|L2",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.39
+        "wall_seconds": 0.83
       },
       {
         "cell": "large+doblo_cap3|R90|2026-10-05|L0",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.4
+        "wall_seconds": 0.72
       },
       {
         "cell": "large+doblo_cap3|R90|2026-10-05|L1",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.38
+        "wall_seconds": 0.8
       },
       {
         "cell": "large+doblo_cap3|R90|2026-10-05|L2",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.4
+        "wall_seconds": 0.82
       },
       {
         "cell": "large+doblo_cap3|R90|2026-10-06|L0",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.37
+        "wall_seconds": 0.73
       },
       {
         "cell": "large+doblo_cap3|R90|2026-10-06|L1",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.41
+        "wall_seconds": 0.72
       },
       {
         "cell": "large+doblo_cap3|R90|2026-10-06|L2",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.38
+        "wall_seconds": 0.69
       },
       {
         "cell": "large+doblo_cap3|R90|2026-10-07|L0",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.39
+        "wall_seconds": 0.65
       },
       {
         "cell": "large+doblo_cap3|R90|2026-10-07|L1",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.38
+        "wall_seconds": 0.73
       },
       {
         "cell": "large+doblo_cap3|R90|2026-10-07|L2",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.45
+        "wall_seconds": 0.89
       },
       {
         "cell": "large+doblo_cap3|R90|2026-10-08|L0",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.4
+        "wall_seconds": 0.65
       },
       {
         "cell": "large+doblo_cap3|R90|2026-10-08|L1",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.4
+        "wall_seconds": 0.75
       },
       {
         "cell": "large+doblo_cap3|R90|2026-10-08|L2",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.39
+        "wall_seconds": 0.82
       },
       {
         "cell": "large+doblo_cap3|R90|2026-10-09|L0",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.34
+        "wall_seconds": 0.68
       },
       {
         "cell": "large+doblo_cap3|R90|2026-10-09|L1",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.37
+        "wall_seconds": 0.69
       },
       {
         "cell": "large+doblo_cap3|R90|2026-10-09|L2",
         "cli_error": null,
         "label": "proven_over_union_menu",
         "union_rerun": false,
-        "wall_seconds": 0.46
+        "wall_seconds": 0.97
       }
     ],
     "cells_planned": 120,
@@ -9804,7 +9806,7 @@
     "invocations": [
       {
         "serial": true,
-        "wall_seconds": 35.0
+        "wall_seconds": 75.3
       }
     ],
     "union_reruns": 0
@@ -9853,6 +9855,6 @@
     "node": "v25.5.0",
     "tsx": "4.19.4"
   },
-  "total_wall_seconds": 35.0,
+  "total_wall_seconds": 75.3,
   "work_package": "WP-E4b"
 }

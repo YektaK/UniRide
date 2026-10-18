@@ -2,14 +2,17 @@
   "cells": 120,
   "claim": "minimum cars over the union of the GA and per-wave exact menus; never above the GA-menu result (when both runs are optimal); not a global day optimum (EQ3)",
   "labels": {
+    "both_infeasible_for_L": 28,
+    "ga_menu_infeasible_for_L": 1,
     "not_independently_confirmed": 0,
     "proven_over_union_menu": 91,
-    "union_not_proven": 29,
+    "union_not_proven": 0,
     "verification_failed": 0
   },
   "per_fleet_L": {
     "large+doblo_cap3|L0": {
       "cells": 20,
+      "ga_menu_infeasible_union_cars": [],
       "ga_statuses": {
         "optimal": 20
       },
@@ -34,6 +37,7 @@
     },
     "large+doblo_cap3|L1": {
       "cells": 20,
+      "ga_menu_infeasible_union_cars": [],
       "ga_statuses": {
         "optimal": 20
       },
@@ -58,6 +62,7 @@
     },
     "large+doblo_cap3|L2": {
       "cells": 20,
+      "ga_menu_infeasible_union_cars": [],
       "ga_statuses": {
         "optimal": 20
       },
@@ -82,13 +87,14 @@
     },
     "large+sedan|L1": {
       "cells": 20,
+      "ga_menu_infeasible_union_cars": [],
       "ga_statuses": {
         "infeasible_for_L": 20
       },
       "labels": {
-        "union_not_proven": 20
+        "both_infeasible_for_L": 20
       },
-      "not_proven": 20,
+      "not_proven": 0,
       "router_caps_exceeded_by_union": {
         "options_per_wave": 0,
         "routes_per_option": 0,
@@ -106,15 +112,23 @@
     },
     "large+sedan|L2": {
       "cells": 20,
+      "ga_menu_infeasible_union_cars": [
+        {
+          "R": 60,
+          "date": "2026-10-05",
+          "union_cars": 3
+        }
+      ],
       "ga_statuses": {
         "infeasible_for_L": 9,
         "optimal": 11
       },
       "labels": {
-        "proven_over_union_menu": 11,
-        "union_not_proven": 9
+        "both_infeasible_for_L": 8,
+        "ga_menu_infeasible_for_L": 1,
+        "proven_over_union_menu": 11
       },
-      "not_proven": 9,
+      "not_proven": 0,
       "router_caps_exceeded_by_union": {
         "options_per_wave": 0,
         "routes_per_option": 0,
@@ -133,6 +147,7 @@
     },
     "large+sedan|L3": {
       "cells": 20,
+      "ga_menu_infeasible_union_cars": [],
       "ga_statuses": {
         "optimal": 20
       },

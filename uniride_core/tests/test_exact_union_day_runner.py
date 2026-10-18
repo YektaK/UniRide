@@ -181,14 +181,14 @@ def replay_cooldown(ctx, type_):
 
 
 # ---------------------------------------------------------------- one cell: recomputation, labels, caps
-def run_cell(ctx, day, e4a, limit, *, cli, solve=fsr.solve_request, to_body=fsr.result_body):
+def run_cell(ctx, day, e4a, limit, *, cli, solve=fsr.solve_request, to_body=fsr.result_body, ride=RIDE):
     fleet = ctx.replay_fleet
     return ud.solve_cell_row(
-        ctx, DATE, RIDE, limit, ga_waves=day["ga_waves"], union_waves=day["union_waves"], exact_info=day["exact_info"],
-        archived=ud.load_archived_exchange(ctx, DATE, RIDE, limit), menu_limits=day["menu_doc"]["limits"], caps=ud.router_caps(),
-        day_sums=day["sums"], producer_limit_s=fleet.selection_time_limit, solve=solve, to_body=to_body, clock=__import__("time").perf_counter,
+        ctx, DATE, ride, limit, ga_waves=day["ga_waves"], union_waves=day["union_waves"], exact_info=day["exact_info"],
+        archived=ud.load_archived_exchange(ctx, DATE, ride, limit), menu_limits=day["menu_doc"]["limits"], caps=ud.router_caps(),
+        producer_limit_s=fleet.selection_time_limit, solve=solve, to_body=to_body, clock=__import__("time").perf_counter,
         cli=cli, cpsat={"version": fleet.solver["version"], "seed": fleet.solver["random_seed"], "workers": fleet.solver["num_workers"]},
-        e4a_replay_row=e4a["replay_rows"].get((ctx.replay_fleet.name, DATE, RIDE, limit)))
+        e4a_replay_row=e4a["replay_rows"].get((ctx.replay_fleet.name, DATE, ride, limit)))
 
 
 def test_the_ga_menu_recomputation_equals_the_archived_response_in_every_cell_of_the_day(ctxs, e4a):
@@ -208,7 +208,7 @@ def test_the_recomputation_is_also_checked_against_the_e4a_replay_rows(ctxs, e4a
     _, errors, _ = ud.solve_cell_row(
         ctx, DATE, RIDE, 3, ga_waves=day_large_sedan["ga_waves"], union_waves=day_large_sedan["union_waves"], exact_info=day_large_sedan["exact_info"],
         archived=ud.load_archived_exchange(ctx, DATE, RIDE, 3), menu_limits=day_large_sedan["menu_doc"]["limits"], caps=ud.router_caps(),
-        day_sums=day_large_sedan["sums"], producer_limit_s=fleet.selection_time_limit, solve=fsr.solve_request, to_body=fsr.result_body,
+        producer_limit_s=fleet.selection_time_limit, solve=fsr.solve_request, to_body=fsr.result_body,
         clock=__import__("time").perf_counter, cli=lambda cases: (None, "no cli"),
         cpsat={"version": fleet.solver["version"], "seed": fleet.solver["random_seed"], "workers": fleet.solver["num_workers"]}, e4a_replay_row=forged)
     assert any("differs from the WP-E4a replay" in e for e in errors)
@@ -359,12 +359,11 @@ def test_slice_csv_schema_has_no_min_of_ga_and_union_and_claims_only_proven_rows
     forbidden = [h for h in header if "min(" in h.lower() or h.lower() in ("min_cars", "best_cars", "cars_min", "cars_best", "min_ga_union")]
     assert forbidden == []
     for key in ("ga_status", "union_status", "ga_time_limit_s", "union_time_limit_s", "label", "ga_large_peak",
-                "ga_car_minutes", "ga_total_minutes", "union_large_peak", "union_car_minutes", "union_total_minutes", "dK_day_base", "gD_day_base",
-                "gD_excluded_waves_base", "dK_day_q", "gD_day_q", "union_cap_options_per_wave", "union_cap_routes_per_option", "union_cap_total_routes"):
+                "ga_car_minutes", "ga_total_minutes", "union_large_peak", "union_car_minutes", "union_total_minutes", "union_cap_options_per_wave", "union_cap_routes_per_option", "union_cap_total_routes"):
         assert key in header
     for r in rows:
         assert r["label"] in udm.LABELS
-        assert (r["claim"] == udm.CLAIM) == (r["label"] == udm.LABEL_PROVEN)
+        assert r["claim"] == {udm.LABEL_PROVEN: udm.CLAIM, udm.LABEL_GA_INFEASIBLE: udm.CLAIM_UNION_ONLY}.get(r["label"], "")
         assert r["ga_equals_archived_response"] == "True" and r["ga_ts_cars"] in ("", r["ga_cars"])
         if r["label"] == udm.LABEL_PROVEN:
             assert int(r["union_cars"]) <= int(r["ga_cars"])
@@ -417,7 +416,7 @@ def test_committed_campaign_results_are_consistent():
     assert all(r["ga_equals_archived_response"] == "True" for r in rows)
     for r in rows:
         proven = r["label"] == udm.LABEL_PROVEN
-        assert (r["claim"] == udm.CLAIM) == proven
+        assert r["claim"] == {udm.LABEL_PROVEN: udm.CLAIM, udm.LABEL_GA_INFEASIBLE: udm.CLAIM_UNION_ONLY}.get(r["label"], "")
         if proven:
             assert r["ga_status"] == r["union_status"] == "optimal" and int(r["union_cars"]) <= int(r["ga_cars"])
             assert (r["ga_confirmation"], r["union_confirmation"]) == (udm.CONFIRMED, udm.CONFIRMED)
@@ -425,7 +424,76 @@ def test_committed_campaign_results_are_consistent():
             assert r["cars_difference_union_minus_ga"] == "" and r["not_proven_reason"]
         if r["union_rerun"] == "True":
             assert r["union_time_limit_s"] == "60.0" and r["union_first_status"] in udm.TIME_LIMITED_STATUSES
+    assert counts[udm.LABEL_BOTH_INFEASIBLE] == 28 and counts[udm.LABEL_GA_INFEASIBLE] == 1 and counts[udm.LABEL_NOT_PROVEN] == 0
+    ga_inf = next(r for r in rows if r["label"] == udm.LABEL_GA_INFEASIBLE)
+    assert (ga_inf["fleet"], ga_inf["date"], ga_inf["R"], ga_inf["L"], ga_inf["union_cars"], ga_inf["cars_difference_union_minus_ga"]) == (
+        "large+sedan", "2026-10-05", "60", "2", "3", "")
+    with (out / "day_sums.csv").open(encoding="utf-8", newline="") as fh:
+        assert len(list(csv.DictReader(fh))) == 40
     readme = (out / "README.md").read_text(encoding="utf-8")
     assert udm.CLAIM in readme and "min(GA, union)" in readme
     assert f"`{manifest['git_commit'][:12]}`" in readme
     assert not [h for h in rows[0] if "min(" in h.lower() or h.lower() in ("min_cars", "best_cars")]
+
+
+# ---------------------------------------------------------------- owner decision 2026-10-18: labels on real cells
+def test_a_cell_where_both_runs_are_proven_infeasible_is_both_infeasible_for_L_and_calls_no_cli(ctxs, e4a, day_large_sedan):
+    calls = []
+    row, errors, info = run_cell(ctxs["large+sedan"], day_large_sedan, e4a, 1, cli=lambda cases: calls.append(cases) or ({}, ""))
+    assert (row["ga_status"], row["union_status"]) == ("infeasible_for_L", "infeasible_for_L")
+    assert row["label"] == udm.LABEL_BOTH_INFEASIBLE and row["claim"] == "" and row["cars_difference_union_minus_ga"] == ""
+    assert row["timing_dependent"] is False and errors == [] and info["cli_calls"] == 0 and calls == []
+    assert "infeasible_for_L" in row["not_proven_reason"]
+
+
+@needs_node
+def test_sedan_2026_10_05_R60_L2_is_ga_menu_infeasible_for_L_with_the_union_cars_and_no_difference(ctxs, e4a):
+    ctx = ctxs["large+sedan"]
+    day = ud.prepare_day(ctx, 60, DATE, e4a)
+    row, errors, _ = run_cell(ctx, day, e4a, 2, cli=ud.run_cli, ride=60)
+    assert errors == []
+    assert (row["ga_status"], row["union_status"], row["union_cars"]) == ("infeasible_for_L", "optimal", 3)
+    assert row["label"] == udm.LABEL_GA_INFEASIBLE and row["union_confirmation"] == udm.CONFIRMED and row["ga_confirmation"] == udm.CONFIRM_NOT_NEEDED
+    assert row["claim"] == udm.CLAIM_UNION_ONLY and "never above" not in row["claim"]
+    assert row["cars_difference_union_minus_ga"] == "" and row["ga_cars"] == ""
+    assert row["timing_dependent"] is False
+
+
+# ---------------------------------------------------------------- P3: the union REQUEST carries every exact option at every L
+def test_the_union_request_at_every_L_carries_every_exact_option_including_xq_above_L(ctxs, e4a):
+    seen_above_l = 0
+    for name, ctx in ctxs.items():
+        day = ud.prepare_day(ctx, RIDE, DATE, e4a)
+        expected = [[o.option_id for o in w.options] for w in day["union_waves"]]
+        exact_ids = {o.option_id for w in day["union_waves"] for o in w.options if o.origin == "exact"}
+        for limit in ctx.replay_fleet.l_values:
+            requests = []
+
+            def recording(request, *, time_limit_s, _r=requests):
+                _r.append(request)
+                return fsr.solve_request(request, time_limit_s=time_limit_s)
+
+            run_cell(ctx, day, e4a, limit, cli=lambda cases: (None, "no cli"), solve=recording)
+            union_request = requests[1]  # call 0 = GA menus, call 1 = union (first run)
+            assert union_request["max_large"] == limit
+            assert [[o["option_id"] for o in w["options"]] for w in union_request["waves"]] == expected, (name, limit)
+            carried = {o["option_id"] for w in union_request["waves"] for o in w["options"]}
+            assert exact_ids <= carried
+            seen_above_l += sum(1 for oid in exact_ids if oid.startswith("xq") and int(oid[2:]) > limit)
+    assert seen_above_l > 0, "the example day must contain an exact xq option with q above L, or the test proves nothing"
+
+
+# ---------------------------------------------------------------- P4: day sums in their own file
+def test_day_sums_csv_has_one_row_per_fleet_date_R_with_renamed_q_aggregates(slice_out):
+    out, _ = slice_out
+    with (out / "day_sums.csv").open(encoding="utf-8", newline="") as fh:
+        reader = csv.DictReader(fh)
+        header, rows = list(reader.fieldnames), list(reader)
+    assert tuple(header) == ud.DAY_SUMS_FIELDS
+    assert len(rows) == 2 and {(r["fleet"], r["date"], r["R"]) for r in rows} == {(f, DATE, str(RIDE)) for f in ("large+sedan", "large+doblo_cap3")}
+    for name in ("dK_day_base", "gD_day_base", "dK_sum_over_q_options", "gD_over_q_options"):
+        assert name in header
+    assert not {"dK_day_q", "gD_day_q"} & set(header)
+    with (out / "day_gaps.csv").open(encoding="utf-8", newline="") as fh:
+        gap_header = csv.DictReader(fh).fieldnames
+    assert not set(ud.DAY_SUMS_FIELDS[3:]) & set(gap_header)

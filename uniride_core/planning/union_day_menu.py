@@ -15,7 +15,12 @@ Rules reproduced exactly:
 * ``union cars <= GA-menu cars`` is claimed, and checked as a blocking test, ONLY when both runs are
   ``optimal``; a union run that stopped on its time limit is re-run ONCE with the longer limit; if it is still
   not optimal the row is ``union_not_proven`` with ``timing_dependent`` set and no claim is made;
-* the report never shows ``min(GA, union)``.
+* the report never shows ``min(GA, union)``;
+* owner decision 2026-10-18: a run that is proven ``infeasible_for_L`` (or ``infeasible_data``) is a final, clock
+  independent result. Both runs infeasible gives ``both_infeasible_for_L`` (nothing to compare, no claim); GA-menu
+  run infeasible and union optimal and confirmed gives ``ga_menu_infeasible_for_L`` (union cars proven over the union
+  menu, NO "never above the GA-menu result" claim, never a GA-vs-union difference); ``union_not_proven`` is only the
+  union still not optimal after the re-run (a time-limit stop, ``timing_dependent``).
 """
 from __future__ import annotations
 
@@ -28,14 +33,22 @@ CLAIM = ("minimum cars over the union of the GA and per-wave exact menus; never 
          "(when both runs are optimal); not a global day optimum (EQ3)")
 
 LABEL_PROVEN = "proven_over_union_menu"
+LABEL_GA_INFEASIBLE = "ga_menu_infeasible_for_L"
+LABEL_BOTH_INFEASIBLE = "both_infeasible_for_L"
 LABEL_NOT_PROVEN = "union_not_proven"
 LABEL_NOT_CONFIRMED = "not_independently_confirmed"
 LABEL_FAILED = "verification_failed"
-LABELS = (LABEL_PROVEN, LABEL_NOT_PROVEN, LABEL_NOT_CONFIRMED, LABEL_FAILED)
+LABELS = (LABEL_PROVEN, LABEL_GA_INFEASIBLE, LABEL_BOTH_INFEASIBLE, LABEL_NOT_PROVEN, LABEL_NOT_CONFIRMED, LABEL_FAILED)
+
+# The claim of a ga_menu_infeasible_for_L row: the union minimum only, no comparison with the GA-menu result.
+CLAIM_UNION_ONLY = ("minimum cars over the union of the GA and per-wave exact menus; "
+                    "not a global day optimum (EQ3)")
 
 STATUS_OPTIMAL = "optimal"
 # A time-limited CP-SAT stop: a witness (``feasible``) or no solution (``indeterminate``). Only these depend on the clock.
 TIME_LIMITED_STATUSES = ("feasible", "indeterminate")
+# Proven, clock independent infeasibility of a run (no selection).
+PROVEN_INFEASIBLE_STATUSES = ("infeasible_for_L", "infeasible_data")
 # Statuses of a run that carries a selection to confirm.
 SELECTION_STATUSES = ("optimal", "feasible")
 
@@ -197,7 +210,8 @@ def confirmation_from_cli(result: Optional[Mapping[str, Any]], run: RunRecord) -
     """The confirmation of one run from its TS CLI result (None = no result: the check is missing).
 
     ``failed`` when the CLI reports problems, recheck failures, interval differences, a non-proven/witness
-    assignment status, or (assignment proven) a car count that differs from the CP-SAT one.
+    assignment status, or a car count that contradicts the CP-SAT one: for an ``optimal`` run a proven TS minimum must
+    equal the CP-SAT cars; for a ``feasible`` run (a witness, an upper bound) it may only not exceed them.
     """
     if run.status not in SELECTION_STATUSES:
         return Confirmation(CONFIRM_NOT_NEEDED)
@@ -217,8 +231,11 @@ def confirmation_from_cli(result: Optional[Mapping[str, Any]], run: RunRecord) -
             reasons.append(f"assignment {ts_status}")
         if not reasons:
             reasons.append("CLI reported ok=false")
-    if ts_status == "proven" and ts_cars is not None and run.cars is not None and ts_cars != run.cars:
-        reasons.append(f"TS proven minimum {ts_cars} cars differs from the CP-SAT cars {run.cars}")
+    if ts_status == "proven" and ts_cars is not None and run.cars is not None:
+        if run.status == STATUS_OPTIMAL and ts_cars != run.cars:
+            reasons.append(f"TS proven minimum {ts_cars} cars differs from the CP-SAT cars {run.cars}")
+        elif run.status != STATUS_OPTIMAL and ts_cars > run.cars:
+            reasons.append(f"TS proven minimum {ts_cars} cars exceeds the CP-SAT witness cars {run.cars}")
     if reasons:
         return Confirmation(CONFIRM_FAILED, "; ".join(reasons), ts_cars, ts_status)
     return Confirmation(CONFIRMED, "", ts_cars, ts_status)
@@ -242,6 +259,11 @@ def classify(cell: CellSolve, ga_confirmation: Confirmation, union_confirmation:
         errors.append(bound_error)
     timing = any(r.status in TIME_LIMITED_STATUSES for r in (ga, union))
     confirmations = (ga_confirmation, union_confirmation)
+    if union.status in PROVEN_INFEASIBLE_STATUSES and ga.status in SELECTION_STATUSES:
+        # every GA-menu option is in the union menu, so a GA selection is a feasible union selection
+        message = (f"impossible state: the union is proven {union.status} although the GA-menu run has a selection "
+                   f"({ga.status}, {ga.cars} cars)")
+        return Verdict(LABEL_FAILED, timing, message, tuple(errors) + (message,), "")
     if any(c.status == CONFIRM_FAILED for c in confirmations):
         reason = "; ".join(f"{n}: {c.detail}" for n, c in (("ga", ga_confirmation), ("union", union_confirmation))
                            if c.status == CONFIRM_FAILED)
@@ -252,8 +274,11 @@ def classify(cell: CellSolve, ga_confirmation: Confirmation, union_confirmation:
         return Verdict(LABEL_NOT_CONFIRMED, timing, reason, tuple(errors), "")
     if ga.status == STATUS_OPTIMAL and union.status == STATUS_OPTIMAL:
         return Verdict(LABEL_PROVEN, False, "", tuple(errors), CLAIM)
-    if union.status in TIME_LIMITED_STATUSES:
-        reason = f"union run {union.status} at {union.time_limit_s:g} s" + (" (re-run)" if cell.rerun else "")
-    else:  # a proven status of at least one run that is not optimal (e.g. infeasible_for_L): final, not clock dependent
-        reason = f"GA-menu run {ga.status}; union run {union.status}"
+    states = f"GA-menu run {ga.status}; union run {union.status}"
+    if ga.status in PROVEN_INFEASIBLE_STATUSES and union.status in PROVEN_INFEASIBLE_STATUSES:
+        return Verdict(LABEL_BOTH_INFEASIBLE, False, states, tuple(errors), "")
+    if ga.status in PROVEN_INFEASIBLE_STATUSES and union.status == STATUS_OPTIMAL:
+        return Verdict(LABEL_GA_INFEASIBLE, False, states, tuple(errors), CLAIM_UNION_ONLY)
+    reason = (f"union run {union.status} at {union.time_limit_s:g} s" + (" (re-run)" if cell.rerun else "")
+              if union.status in TIME_LIMITED_STATUSES else states)
     return Verdict(LABEL_NOT_PROVEN, timing, reason, tuple(errors), "")

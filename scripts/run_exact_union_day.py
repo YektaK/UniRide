@@ -20,7 +20,8 @@ Per (fleet, date, R, L) two day selections at one commit and ``time_scale = 100`
   deduped against a GA option, deduped among themselves only when their routes are identical).
 
 Time limit: the producer's 30 s; a union run that stopped on its time limit is re-run ONCE at 60 s (the compute
-policy ceiling) and the limit is recorded; still not optimal gives ``union_not_proven`` with ``timing_dependent``.
+policy ceiling) and the limit is recorded; still not optimal gives ``union_not_proven`` with ``timing_dependent`` (a proven infeasibility is final: ``both_infeasible_for_L`` when both runs
+are infeasible, ``ga_menu_infeasible_for_L`` when only the GA-menu run is; owner decision 2026-10-18).
 ``union cars <= GA-menu cars`` is checked (blocking) only when both runs are ``optimal``. Every selection, GA and
 union, goes through the TS CLI; a missing check gives ``not_independently_confirmed``, a failed one
 ``verification_failed``. The report never shows ``min(GA, union)``.
@@ -101,9 +102,17 @@ CSV_FIELDS = (
     "union_max_options_per_wave", "union_waves_over_options_cap", "union_cap_options_per_wave",
     "union_max_routes_per_option", "union_options_over_routes_cap", "union_cap_routes_per_option",
     "union_total_routes", "union_cap_total_routes",
-    "base_waves_compared", "dK_day_base", "gD_day_base", "gD_excluded_waves_base", "base_options_not_compared",
-    "q_options_compared", "dK_day_q", "gD_day_q", "gD_excluded_options_q", "q_options_not_compared",
     "cpsat_version", "cpsat_seed", "cpsat_workers", "ga_commit", "ga_protocol", "ga_seed", "ga_dirty_tree",
+)
+
+
+# One row per (fleet, date, R): the WP-E4a day sums, independent of L. The q aggregates count OPTIONS (one per wave and
+# quota), not waves; the base aggregates count waves (one xbase per wave), per design 1.2 "Day aggregation".
+DAY_SUMS_FILENAME = "day_sums.csv"
+DAY_SUMS_FIELDS = (
+    "fleet", "date", "R",
+    "base_waves_compared", "dK_day_base", "gD_day_base", "gD_excluded_waves_base", "base_options_not_compared",
+    "q_options_compared", "dK_sum_over_q_options", "gD_over_q_options", "gD_excluded_q_options", "q_options_not_compared",
 )
 
 
@@ -360,7 +369,7 @@ def blank(value):
 
 
 def solve_cell_row(ctx, date: str, ride: int, limit: int, *, ga_waves: list, union_waves: list, exact_info: dict, archived: dict,
-                   menu_limits: dict, caps: dict, day_sums: dict, producer_limit_s: float, solve, to_body, clock, cli, cpsat: dict,
+                   menu_limits: dict, caps: dict, producer_limit_s: float, solve, to_body, clock, cli, cpsat: dict,
                    e4a_replay_row=None) -> tuple:
     """One CSV row (and its blocking errors) of (fleet, date, R, L)."""
     tag = f"{ctx.name} {date} R{ride} L{limit}"
@@ -450,12 +459,6 @@ def solve_cell_row(ctx, date: str, ride: int, limit: int, *, ga_waves: list, uni
         "union_options_over_routes_cap": union_flags["options_over_routes_cap"],
         "union_cap_routes_per_option": union_flags["cap_routes_per_option"], "union_total_routes": union_flags["total_routes"],
         "union_cap_total_routes": union_flags["cap_total_routes"],
-        "base_waves_compared": day_sums["base"]["compared"], "dK_day_base": day_sums["base"]["dK_day"],
-        "gD_day_base": blank(day_sums["base"]["gD_day"]), "gD_excluded_waves_base": day_sums["base"]["gD_excluded"],
-        "base_options_not_compared": day_sums["base"]["not_compared"],
-        "q_options_compared": day_sums["q"]["compared"], "dK_day_q": day_sums["q"]["dK_day"],
-        "gD_day_q": blank(day_sums["q"]["gD_day"]), "gD_excluded_options_q": day_sums["q"]["gD_excluded"],
-        "q_options_not_compared": day_sums["q"]["not_compared"],
         "cpsat_version": cpsat["version"], "cpsat_seed": cpsat["seed"], "cpsat_workers": cpsat["workers"],
         "ga_commit": ctx.ga_labels["ga_commit"], "ga_protocol": ctx.ga_labels["ga_protocol"], "ga_seed": ctx.ga_labels["ga_seed"],
         "ga_dirty_tree": ctx.ga_labels["ga_dirty_tree"],
@@ -473,13 +476,29 @@ def write_csv(path: Path, rows: list) -> None:
         wr.writerows(rows)
 
 
+def day_sums_row(fleet: str, date: str, ride: int, sums: dict) -> dict:
+    base, q = sums["base"], sums["q"]
+    return {"fleet": fleet, "date": date, "R": ride,
+            "base_waves_compared": base["compared"], "dK_day_base": base["dK_day"], "gD_day_base": blank(base["gD_day"]),
+            "gD_excluded_waves_base": base["gD_excluded"], "base_options_not_compared": base["not_compared"],
+            "q_options_compared": q["compared"], "dK_sum_over_q_options": q["dK_day"], "gD_over_q_options": blank(q["gD_day"]),
+            "gD_excluded_q_options": q["gD_excluded"], "q_options_not_compared": q["not_compared"]}
+
+
+def write_day_sums(path: Path, rows: list) -> None:
+    with Path(path).open("w", newline="", encoding="utf-8") as fh:
+        wr = csv.DictWriter(fh, fieldnames=list(DAY_SUMS_FIELDS), lineterminator="\n", extrasaction="raise")
+        wr.writeheader()
+        wr.writerows(rows)
+
+
 def summarise(rows: list) -> dict:
     per: dict = {}
     for r in rows:
         p = per.setdefault(f"{r['fleet']}|L{r['L']}", {
             "cells": 0, "labels": {}, "union_cars_below_ga": 0, "union_cars_equal_ga": 0, "union_cars_above_ga": 0,
             "not_proven": 0, "timing_dependent": 0, "ga_statuses": {}, "union_statuses": {}, "union_reruns": 0,
-            "union_selects_exact_in_cells": 0, "router_caps_exceeded_by_union": {"options_per_wave": 0, "routes_per_option": 0, "total_routes": 0}})
+            "union_selects_exact_in_cells": 0, "ga_menu_infeasible_union_cars": [], "router_caps_exceeded_by_union": {"options_per_wave": 0, "routes_per_option": 0, "total_routes": 0}})
         p["cells"] += 1
         p["labels"][r["label"]] = p["labels"].get(r["label"], 0) + 1
         p["ga_statuses"][r["ga_status"]] = p["ga_statuses"].get(r["ga_status"], 0) + 1
@@ -487,7 +506,9 @@ def summarise(rows: list) -> dict:
         if r["label"] == udm.LABEL_PROVEN:
             diff = int(r["cars_difference_union_minus_ga"])
             p["union_cars_below_ga" if diff < 0 else "union_cars_equal_ga" if diff == 0 else "union_cars_above_ga"] += 1
-        else:
+        elif r["label"] == udm.LABEL_GA_INFEASIBLE:  # union cars proven over the union menu; no GA-menu value to compare with
+            p["ga_menu_infeasible_union_cars"].append({"date": r["date"], "R": r["R"], "union_cars": int(r["union_cars"])})
+        elif r["label"] == udm.LABEL_NOT_PROVEN:
             p["not_proven"] += 1
         p["timing_dependent"] += bool(r["timing_dependent"])
         p["union_reruns"] += bool(r["union_rerun"])
@@ -575,6 +596,7 @@ def main(argv=None) -> int:
     dates_filter = [d for d in args.dates.split(",") if d]
     limits_filter = [int(x) for x in args.limits.split(",") if x]
     cli_calls = 0
+    day_sum_rows: list = []
     for ctx in ctxs:
         fleet = ctx.replay_fleet
         if ortools.__version__ != fleet.solver["version"]:
@@ -600,6 +622,7 @@ def main(argv=None) -> int:
                     day["menu_doc"], day["ga_waves"], day["union_waves"], day["exact_info"], day["sums"])
                 dedupe_log.extend({"fleet": ctx.name, "date": date, "R": ride, **d} for d in exact_info["dedupe_log"])
                 skipped_log.extend({"fleet": ctx.name, "date": date, "R": ride, **s} for s in exact_info["skipped"])
+                day_sum_rows.append(day_sums_row(ctx.name, date, ride, sums))
                 for limit in limits_filter or list(fleet.l_values):
                     archived = load_archived_exchange(ctx, date, ride, limit)
                     t_cell = time.perf_counter()
@@ -609,7 +632,7 @@ def main(argv=None) -> int:
                     try:
                         row, cell_errors, info = solve_cell_row(
                             ctx, date, ride, limit, ga_waves=ga_waves, union_waves=union_waves, exact_info=exact_info, archived=archived,
-                            menu_limits=menu_doc["limits"], caps=caps, day_sums=sums, producer_limit_s=fleet.selection_time_limit,
+                            menu_limits=menu_doc["limits"], caps=caps, producer_limit_s=fleet.selection_time_limit,
                             solve=fsr.solve_request, to_body=fsr.result_body, clock=time.perf_counter, cli=run_cli, cpsat=cpsat,
                             e4a_replay_row=replay_row)
                     except fsr.SelectionIntervalPrecision as exc:  # the cell is refused, never rounded (design 1.5)
@@ -657,6 +680,7 @@ def main(argv=None) -> int:
     out.mkdir(parents=True, exist_ok=True)
     (out / MANIFEST_FILENAME).write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
     write_csv(out / "day_gaps.csv", rows)
+    write_day_sums(out / DAY_SUMS_FILENAME, day_sum_rows)
     (out / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
     print(json.dumps(summary["labels"], sort_keys=True))
     if errors:

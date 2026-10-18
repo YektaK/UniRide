@@ -152,11 +152,10 @@ def test_a_union_run_that_is_still_not_optimal_after_the_rerun_is_not_proven_and
     assert "60" in verdict.reason and verdict.blocking_errors == ()
 
 
-def test_a_proven_infeasibility_of_the_union_is_final_and_not_clock_dependent():
-    cell, solver = solve(body("optimal", 4), body("infeasible_for_L", None, selection={}))
+def test_a_proven_infeasibility_of_the_union_is_final_and_never_rerun():
+    cell, solver = solve(body("infeasible_for_L", None, selection={}), body("infeasible_for_L", None, selection={}))
     assert solver.calls == [("ga", 30), ("union", 30)]
-    verdict = udm.classify(cell, udm.Confirmation(udm.CONFIRMED), udm.Confirmation(udm.CONFIRM_NOT_NEEDED))
-    assert (verdict.label, verdict.timing_dependent) == (udm.LABEL_NOT_PROVEN, False)
+    assert cell.rerun is False
 
 
 def test_union_above_ga_blocks_only_when_both_runs_are_optimal():
@@ -226,3 +225,89 @@ def test_the_result_never_carries_a_min_of_ga_and_union():
     names = set(udm.Verdict.__dataclass_fields__) | set(udm.CellSolve.__dataclass_fields__) | set(dir(udm))
     assert not [n for n in names if n.lower() in ("min_cars", "best_cars", "min_ga_union", "best_of")]
     assert not hasattr(cell, "min_cars")
+
+
+# ---------------------------------------------------------------- owner decision 2026-10-18: labels for proven infeasibility
+def infeasible(status="infeasible_for_L"):
+    return body(status, None, selection={})
+
+
+@pytest.mark.parametrize("ga_status,union_status", [("infeasible_for_L", "infeasible_for_L"), ("infeasible_data", "infeasible_for_L"),
+                                                    ("infeasible_for_L", "infeasible_data"), ("infeasible_data", "infeasible_data")])
+def test_both_runs_proven_infeasible_is_both_infeasible_for_L_with_no_claim(ga_status, union_status):
+    cell, solver = solve(infeasible(ga_status), infeasible(union_status))
+    verdict = udm.classify(cell, C_NA, C_NA)
+    assert verdict.label == udm.LABEL_BOTH_INFEASIBLE == "both_infeasible_for_L"
+    assert verdict.claim == "" and verdict.timing_dependent is False and verdict.blocking_errors == ()
+    assert ga_status in verdict.reason and union_status in verdict.reason
+
+
+@pytest.mark.parametrize("ga_status", ["infeasible_for_L", "infeasible_data"])
+def test_ga_menu_infeasible_and_union_optimal_confirmed_is_ga_menu_infeasible_for_L_without_the_never_above_ga_claim(ga_status):
+    cell, _ = solve(infeasible(ga_status), body("optimal", 3))
+    verdict = udm.classify(cell, C_NA, C_OK)
+    assert verdict.label == udm.LABEL_GA_INFEASIBLE == "ga_menu_infeasible_for_L"
+    assert verdict.claim == udm.CLAIM_UNION_ONLY and verdict.timing_dependent is False and verdict.blocking_errors == ()
+    assert "never above" not in udm.CLAIM_UNION_ONLY and "not a global day optimum (EQ3)" in udm.CLAIM_UNION_ONLY
+    assert "minimum cars over the union of the GA and per-wave exact menus" in udm.CLAIM_UNION_ONLY
+
+
+def test_ga_menu_infeasible_union_optimal_needs_the_union_confirmation():
+    cell, _ = solve(infeasible(), body("optimal", 3))
+    assert udm.classify(cell, C_NA, C_MISSING).label == udm.LABEL_NOT_CONFIRMED
+    assert udm.classify(cell, C_NA, C_FAIL).label == udm.LABEL_FAILED
+
+
+def test_union_not_proven_is_only_the_union_still_on_its_time_limit_after_the_rerun():
+    cell, _ = solve(body("optimal", 4), body("feasible", 4), body("feasible", 4))
+    verdict = udm.classify(cell, C_OK, C_OK)
+    assert (verdict.label, verdict.timing_dependent, verdict.claim) == (udm.LABEL_NOT_PROVEN, True, "")
+    cell, _ = solve(body("optimal", 4), body("indeterminate", None, selection={}), body("indeterminate", None, selection={}))
+    verdict = udm.classify(cell, C_OK, C_NA)
+    assert (verdict.label, verdict.timing_dependent) == (udm.LABEL_NOT_PROVEN, True)
+
+
+def test_mirror_cases_ga_not_optimal_with_an_optimal_union_is_not_a_ga_menu_infeasible_row():
+    # the GA-menu run stopped on its clock (feasible): not a proven infeasibility, nothing is claimed
+    cell, _ = solve(body("feasible", 4), body("optimal", 3))
+    verdict = udm.classify(cell, C_OK, C_OK)
+    assert verdict.label == udm.LABEL_NOT_PROVEN and verdict.timing_dependent is True and verdict.claim == ""
+
+
+def test_the_label_set_has_six_values():
+    assert udm.LABELS == ("proven_over_union_menu", "ga_menu_infeasible_for_L", "both_infeasible_for_L", "union_not_proven",
+                          "not_independently_confirmed", "verification_failed")
+
+
+# ---------------------------------------------------------------- P2: impossible state
+@pytest.mark.parametrize("ga_status", ["optimal", "feasible"])
+@pytest.mark.parametrize("union_status", ["infeasible_for_L", "infeasible_data"])
+def test_a_ga_selection_with_a_proven_infeasible_union_is_a_blocking_impossible_state(ga_status, union_status):
+    cell, _ = solve(body(ga_status, 3), infeasible(union_status))
+    verdict = udm.classify(cell, C_OK, C_NA)
+    assert len(verdict.blocking_errors) == 1 and "impossible" in verdict.blocking_errors[0]
+    assert verdict.label == udm.LABEL_FAILED and verdict.claim == ""
+
+
+def test_no_impossible_state_error_for_the_possible_combinations():
+    for ga, union, conf in ((infeasible(), infeasible(), (C_NA, C_NA)), (infeasible(), body("optimal", 3), (C_NA, C_OK)),
+                            (body("optimal", 3), body("optimal", 3), (C_OK, C_OK))):
+        cell, _ = solve(ga, union)
+        assert udm.classify(cell, *conf).blocking_errors == ()
+
+
+# ---------------------------------------------------------------- P1: TS vs CP-SAT car count
+def _cli(status, cars):
+    return {"ok": True, "assignment": {"status": status, "cars": cars}, "problems": [], "recheck": {"failures": []}, "intervalDifferences": []}
+
+
+def test_ts_car_count_must_equal_cp_sat_only_for_an_optimal_run_and_may_not_exceed_it_for_a_witness():
+    optimal = udm.RunRecord("optimal", 3, 1, 1.0, 2.0, {}, 30, 0.1)
+    feasible = udm.RunRecord("feasible", 3, 1, 1.0, 2.0, {}, 30, 0.1)
+    assert udm.confirmation_from_cli(_cli("proven", 3), optimal).status == udm.CONFIRMED
+    assert udm.confirmation_from_cli(_cli("proven", 2), optimal).status == udm.CONFIRM_FAILED  # optimal: must be equal
+    assert udm.confirmation_from_cli(_cli("proven", 4), optimal).status == udm.CONFIRM_FAILED
+    assert udm.confirmation_from_cli(_cli("proven", 3), feasible).status == udm.CONFIRMED
+    assert udm.confirmation_from_cli(_cli("proven", 2), feasible).status == udm.CONFIRMED  # a witness is an upper bound
+    got = udm.confirmation_from_cli(_cli("proven", 4), feasible)
+    assert got.status == udm.CONFIRM_FAILED and "exceeds" in got.detail

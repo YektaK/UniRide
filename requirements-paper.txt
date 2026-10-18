@@ -1,4 +1,5 @@
 # Optional extra for the paper figures only (WP-E6: scripts/exact_gap_figure.py).
 # For paper scripts only; NOT an operational or runtime dependency: optimizer_api requirements and pyproject stay unchanged.
-# Install: pip install -r requirements-paper.txt (pinned to the version verified in .venv-jit).
+# Install: pip install -r requirements-paper.txt (both pins are the versions verified in .venv-jit; the PNG bytes depend on Pillow as well as matplotlib).
 matplotlib==3.11.2
+pillow==13.0.0

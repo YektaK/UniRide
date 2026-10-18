@@ -30,7 +30,6 @@ import json
 import platform
 import subprocess
 import sys
-import zlib
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -403,6 +402,29 @@ def pillow_version() -> str:
     return PIL.__version__
 
 
+def pillow_zlib_version() -> str:
+    """The zlib that Pillow links and that writes the PNG bytes (not the stdlib zlib)."""
+    from PIL import features
+
+    version = features.version("zlib")
+    if version is None:
+        raise ReportRefused("Pillow reports no zlib version; the PNG writer cannot be recorded")
+    return version
+
+
+def highs_version(e3: dict, e4a: dict) -> str:
+    """The HiGHS version string that both exact manifests record for the verification solver; they must agree."""
+    found = {}
+    for work_package, manifest in (("WP-E3", e3), ("WP-E4a", e4a)):
+        solver = manifest.get("verification_solver") or {}
+        version = solver.get("version")
+        _need(solver.get("name") == "highs" and isinstance(version, str) and version.startswith("HiGHS "),
+              f"{work_package} exact_manifest.json records no HiGHS version under verification_solver")
+        found[work_package] = version
+    _need(len(set(found.values())) == 1, f"the HiGHS version differs between the exact manifests: {found}")
+    return found["WP-E3"]
+
+
 def python_provenance(git_repo: Path) -> dict:
     import academic_benchmark
     import uniride_core
@@ -488,7 +510,7 @@ def readme_text(ctx: dict) -> str:
         "fixed-budget rows or with each other across fleets.",
         "- The day level over the union menu (`union_day_v1`) is the minimum number of cars over the union of the GA and the per-wave "
         "exact menus; it is not a global day optimum (EQ3). The day-level value is never `min(GA, union)`: the report shows no such value.",
-        "- HiGHS cross-check (EQ4; HiGHS 1.15.1 re-solved every row, Gurobi is the primary solver): "
+        f"- HiGHS cross-check (EQ4; {ctx['highs_version']} re-solved every row, Gurobi is the primary solver): "
         + "; ".join(highs_line(f) for f in FLEETS) + ".",
         "",
         "## Files",
@@ -670,7 +692,7 @@ def build_report(out: Path, *, repo: Path = REPO, e3_dir: Path = E3_DIR, e4a_dir
            "single_sum_rows": single_sums, "n_single": len(e3_rows), "n_typed": len(e4a_rows), "day_label_counts": counts,
            "ga_label_text": "; ".join(f"{f}: {labels[f]['ga_protocol']}, seed {labels[f]['ga_seed']}, commit {labels[f]['ga_commit']}, "
                                       f"dirty tree {labels[f]['ga_dirty_tree']}" for f in FLEETS),
-           "empty_text": empty_columns_text(rows), "matplotlib_text": matplotlib_version(),
+           "empty_text": empty_columns_text(rows), "highs_version": highs_version(e3, e4a), "matplotlib_text": matplotlib_version(),
            "replay_text": f"{len(replay_rows)} (fleet, date, R, L) cells, request and response differences 0 in all; labels "
                           + ", ".join(f"{k} {replay_counts[k]}" for k in sorted(replay_counts))}
     outputs = {
@@ -694,8 +716,8 @@ def build_report(out: Path, *, repo: Path = REPO, e3_dir: Path = E3_DIR, e4a_dir
         "source_results": {"wp-e3-goal1-single": inputs.rel(e3_dir), "wp-e4a-typed-options": inputs.rel(e4a_dir),
                            "wp-e4b-union-day": inputs.rel(e4b_dir)},
         "ga_labels": labels,
-        "versions": {"python": platform.python_version(), "zlib": zlib.ZLIB_VERSION, "matplotlib": matplotlib_version(),
-                     "pillow": pillow_version(), "plotting": "matplotlib via scripts/exact_gap_figure.py (Agg backend)"},
+        "versions": {"python": platform.python_version(), "matplotlib": matplotlib_version(),
+                     "pillow": pillow_version(), "pillow_zlib": pillow_zlib_version(), "plotting": "matplotlib via scripts/exact_gap_figure.py (Agg backend)"},
         "python_provenance": python_provenance(git_repo),
         "host_os": platform.system() + "-" + platform.release(),
         "row_counts": {"wave_gaps.csv": len(rows), "day_gaps.csv": len(day_rows), "day_sums.csv": len(single_sums) + len(sums_rows),

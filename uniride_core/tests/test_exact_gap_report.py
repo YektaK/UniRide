@@ -15,13 +15,17 @@ import statistics
 import struct
 import sys
 import xml.etree.ElementTree as ET
-import zlib
 from pathlib import Path
 
 import pytest
 
-matplotlib = pytest.importorskip(
-    "matplotlib", reason="matplotlib is the optional paper-figure dependency (requirements-paper.txt)")
+try:  # the optional paper-figure dependency (requirements-paper.txt): only the figure tests need it
+    import matplotlib
+    import matplotlib.text
+except ImportError:
+    matplotlib = None
+needs_matplotlib = pytest.mark.skipif(
+    matplotlib is None, reason="matplotlib is the optional paper-figure dependency (requirements-paper.txt)")
 
 REPO = Path(__file__).resolve().parents[2]
 for _p in (REPO / "optimizer_api", REPO):
@@ -47,7 +51,7 @@ def _load(name):
 
 
 gr = _load("plan_exact_gap_report")
-fig = _load("exact_gap_figure")
+fig = _load("exact_gap_figure") if matplotlib is not None else None
 
 
 def _csv(path):
@@ -65,9 +69,23 @@ def _outputs(out):
 
 @pytest.fixture(scope="module")
 def report(tmp_path_factory):
+    """The report built from the committed inputs. Without matplotlib the figures are stood in by empty files, so that the
+    non-figure tests (tables, README, manifest) still run; the figure tests are skipped by ``needs_matplotlib``."""
     out = tmp_path_factory.mktemp("gap_report") / "out"
-    gr.build_report(out)
-    return out
+    if matplotlib is not None:
+        gr.build_report(out)
+        yield out
+        return
+    patch = pytest.MonkeyPatch()
+    patch.setattr(gr, "figures", lambda rows: {n: b"" for n in gr.OUTPUT_FILES if n.startswith("figure_")})
+    patch.setattr(gr, "matplotlib_version", lambda: "absent")
+    patch.setattr(gr, "pillow_version", lambda: "absent")
+    patch.setattr(gr, "pillow_zlib_version", lambda: "absent")
+    try:
+        gr.build_report(out)
+        yield out
+    finally:
+        patch.undo()
 
 
 def _mirror(tmp_path: Path) -> dict:
@@ -338,12 +356,46 @@ def test_manifest_lists_every_input_with_its_sha_and_every_output(report):
     assert manifest["work_package"] == "WP-E6"
     assert set(manifest["python_provenance"]) == {"uniride_core", "academic_benchmark"}
     assert all(not Path(v).is_absolute() for v in manifest["python_provenance"].values())
-    assert manifest["versions"]["python"] and manifest["versions"]["zlib"] == zlib.ZLIB_VERSION
+    assert manifest["versions"]["python"] and "zlib" not in manifest["versions"]  # the stdlib zlib no longer writes the PNGs
     assert manifest["protocols"]["wave_gaps.csv"] == "exact_reference_v1" and manifest["protocols"]["day_gaps.csv"] == "union_day_v1"
     assert gr.protocol.private_data_errors(manifest) == []  # protocol module via the script (core tests import no academic_benchmark)
 
 
 # ---------------------------------------------------------------------------------------------------- refusals
+def _set_highs_version(m, key, version):
+    """Rewrite one exact manifest and re-pin its sha256 in the union manifest (which records the WP-E4a manifest hash)."""
+    _rewrite_json(m[key] / "exact_manifest.json", lambda d: d["verification_solver"].__setitem__("version", version))
+    if key == "e4a":
+        _rewrite_json(m["e4b"] / "union_day_manifest.json",
+                      lambda d: d["exact_options_source"].__setitem__("manifest_sha256", _sha(m[key] / "exact_manifest.json")))
+
+
+def test_highs_version_is_read_from_the_exact_manifests_and_must_agree(tmp_path):
+    m = _mirror(tmp_path)
+    for key in ("e3", "e4a"):
+        _set_highs_version(m, key, "HiGHS 9.9.9")
+    _build_mirror(m, tmp_path / "out")
+    text = (tmp_path / "out" / "README.md").read_text(encoding="utf-8")
+    assert "HiGHS 9.9.9 re-solved every row" in text and "1.15.1" not in text
+    m2 = _mirror(tmp_path / "second")
+    _set_highs_version(m2, "e4a", "HiGHS 9.9.9")
+    with pytest.raises(gr.ReportRefused, match="HiGHS version"):
+        _build_mirror(m2, tmp_path / "second" / "out")
+
+
+def test_report_refuses_an_exact_manifest_without_a_highs_version(tmp_path):
+    m = _mirror(tmp_path)
+    _rewrite_json(m["e3"] / "exact_manifest.json", lambda d: d["verification_solver"].pop("version"))
+    with pytest.raises(gr.ReportRefused, match="HiGHS version"):
+        _build_mirror(m, tmp_path / "out")
+
+
+def test_readme_states_the_highs_version_of_the_committed_manifests(report):
+    versions = {json.loads((d / "exact_manifest.json").read_text(encoding="utf-8"))["verification_solver"]["version"] for d in (E3, E4A)}
+    assert len(versions) == 1
+    assert f"{versions.pop()} re-solved every row" in (report / "README.md").read_text(encoding="utf-8")
+
+
 @pytest.mark.parametrize("which,name", [("e3", "exact_routes.json"), ("e4a", "exact_routes.json")])
 def test_report_refuses_exact_routes_whose_sha_differs_from_the_manifest(tmp_path, which, name):
     m = _mirror(tmp_path)
@@ -409,6 +461,7 @@ def test_output_directory_rule(tmp_path):
 
 
 # -------------------------------------------------------------------------------------------------- determinism
+@needs_matplotlib
 def test_two_runs_give_byte_identical_outputs_including_figures(report, tmp_path):
     gr.build_report(tmp_path / "second")
     first, second = _outputs(report), _outputs(tmp_path / "second")
@@ -439,6 +492,7 @@ def _all_text(figure) -> str:
     return " ".join(t.get_text() for t in figure.findobj(matplotlib.text.Text))
 
 
+@needs_matplotlib
 def test_figures_are_valid_svg_and_png_without_dates_or_software_metadata(report):
     for stem in ("figure_gap_single", "figure_gap_typed"):
         svg = (report / f"{stem}.svg").read_text(encoding="utf-8")
@@ -448,6 +502,7 @@ def test_figures_are_valid_svg_and_png_without_dates_or_software_metadata(report
         assert b"tEXt" not in set(_png_tags(png)) and b"Software" not in png, stem
 
 
+@needs_matplotlib
 def test_panels_draw_distinct_gd_points_only_and_state_the_excluded_counts(report):
     rows = _csv(report / "wave_gaps.csv")
     figs = gr.figure_objects(rows)
@@ -456,7 +511,7 @@ def test_panels_draw_distinct_gd_points_only_and_state_the_excluded_counts(repor
     for ax, ride in zip(single.axes, gr.RIDES):
         keys, n_pos = _expected_drawn(rows, {"single_4sw5so"}, ride)
         assert n_pos > 0 and sum(len(c.get_offsets()) for c in ax.collections) == len(keys)
-        assert f"dK \u2265 1: {n_pos} waves (gD undefined, not drawn)" in [t.get_text() for t in ax.texts]
+        assert f"dK \u2265 1: {n_pos} wave{'' if n_pos == 1 else 's'} (gD undefined, not drawn)" in [t.get_text() for t in ax.texts]
     i = 0
     for fleet in gr.TYPED_FLEETS:
         for ride in gr.RIDES:
@@ -465,9 +520,52 @@ def test_panels_draw_distinct_gd_points_only_and_state_the_excluded_counts(repor
             keys, _ = _expected_drawn(rows, {fleet}, ride)
             assert sum(len(c.get_offsets()) for c in ax.collections) == len(keys)
             nb, nq = (_expected_drawn(rows, {fleet}, ride, k)[1] for k in ("base", "q"))
-            assert f"dK \u2265 1: {nb} base waves, {nq} q options (gD undefined, not drawn)" in [t.get_text() for t in ax.texts]
+            assert f"dK \u2265 1: {nb} base wave{'' if nb == 1 else 's'}, {nq} q option{'' if nq == 1 else 's'} (gD undefined, not drawn)" in [t.get_text() for t in ax.texts]
 
 
+def _synthetic(option, dK, gD="", students=3):
+    return {"option": option, "dK": dK, "gD": gD, "students": students}
+
+
+@needs_matplotlib
+def test_counts_of_one_use_the_singular_in_the_panel_notes():
+    one = fig.build_gap_figure([[_synthetic("base", "1"), _synthetic("q50", "1"), _synthetic("base", "")]], ["p"], 1, "t", "s",
+                               ("base", "q"))
+    texts = [t.get_text() for t in one.axes[0].texts]
+    assert "dK ≥ 1: 1 base wave, 1 q option (gD undefined, not drawn)" in texts
+    assert any(t.endswith(": 1 option, not drawn") for t in texts), texts
+    two = fig.build_gap_figure([[_synthetic("base", "2"), _synthetic("base", "1"), _synthetic("q50", "1"), _synthetic("q70", "3")]],
+                               ["p"], 1, "t", "s", ("base", "q"))
+    assert "dK ≥ 1: 2 base waves, 2 q options (gD undefined, not drawn)" in [t.get_text() for t in two.axes[0].texts]
+    flat = fig.build_gap_figure([[_synthetic("base", "1")]], ["p"], 1, "t", "s", ("base",))
+    assert "dK ≥ 1: 1 wave (gD undefined, not drawn)" in [t.get_text() for t in flat.axes[0].texts]
+    flat2 = fig.build_gap_figure([[_synthetic("base", "1"), _synthetic("base", "4")]], ["p"], 1, "t", "s", ("base",))
+    assert "dK ≥ 1: 2 waves (gD undefined, not drawn)" in [t.get_text() for t in flat2.axes[0].texts]
+
+
+@needs_matplotlib
+def test_legend_notation_is_plain_text_throughout_and_the_typed_figure_states_its_offset(report):
+    figs = gr.figure_objects(_csv(report / "wave_gaps.csv"))
+    for name, fg in figs.items():
+        assert "$" not in _all_text(fg), name  # no mathtext mixed with the plain K, gD, dK
+    typed = _all_text(figs["typed"])
+    assert "K_m" in typed and "±0.14 students" in typed and "offset" in typed.lower()
+    assert str(abs(fig.KIND_DODGE["q"])) in typed and fig.KIND_DODGE["base"] == -fig.KIND_DODGE["q"]
+    assert "offset" not in _all_text(figs["single"]).lower()
+
+
+@needs_matplotlib
+def test_missing_comparison_note_says_what_is_counted(report):
+    rows = _csv(report / "wave_gaps.csv")
+    fg = gr.figure_objects(rows)["typed"]
+    blob = [t.get_text() for ax in fg.axes for t in ax.texts]
+    assert not any("no GA answer" in t or "no exact result" in t for t in blob)
+    notes = [t for t in blob if t.startswith("GA option infeasible or exact option proven infeasible: ")]
+    assert notes and sum(int(re.search(r": (\d+) option", t).group(1)) for t in notes) == sum(r["dK"] == "" for r in rows)
+    assert all(r["ga_option_status"] == "skipped_infeasible" or r["status"] == "infeasible_proven" for r in rows if r["dK"] == "")
+
+
+@needs_matplotlib
 def test_y_axis_is_scaled_on_the_drawn_gd_values_only(report):
     rows = _csv(report / "wave_gaps.csv")
     figs = gr.figure_objects(rows)
@@ -480,6 +578,7 @@ def test_y_axis_is_scaled_on_the_drawn_gd_values_only(report):
             assert all(y <= top + 1e-9 for c in ax.collections for y in c.get_offsets()[:, 1])
 
 
+@needs_matplotlib
 def test_figure_text_uses_the_notation_and_has_no_count_labels_or_stale_notes(report):
     rows = _csv(report / "wave_gaps.csv")
     figs = gr.figure_objects(rows)
@@ -494,6 +593,7 @@ def test_figure_text_uses_the_notation_and_has_no_count_labels_or_stale_notes(re
     assert "base" in typed and "marker area" in typed.lower()
 
 
+@needs_matplotlib
 def test_matplotlib_is_pinned_for_paper_scripts_only_and_its_version_is_recorded(report):
     manifest = json.loads((report / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["versions"]["matplotlib"] == matplotlib.__version__
@@ -506,6 +606,19 @@ def test_matplotlib_is_pinned_for_paper_scripts_only_and_its_version_is_recorded
     figure_src = (REPO / "scripts" / "exact_gap_figure.py").read_text(encoding="utf-8")
     assert "matplotlib" in figure_src and "def to_png" not in figure_src and "zlib" not in figure_src  # no hand-written writers
     assert "svg.hashsalt" in figure_src and '"Date": None' in figure_src
+
+
+@needs_matplotlib
+def test_pillow_is_pinned_with_matplotlib_and_its_version_and_zlib_are_recorded(report):
+    import PIL
+    from PIL import features
+
+    manifest = json.loads((report / "manifest.json").read_text(encoding="utf-8"))
+    req = (REPO / "requirements-paper.txt").read_text(encoding="utf-8").lower()
+    assert re.search(rf"^pillow=={re.escape(PIL.__version__)}\s*$", req, re.M), req  # the PNG bytes depend on Pillow
+    assert manifest["versions"]["pillow"] == PIL.__version__
+    assert manifest["versions"]["pillow_zlib"] == features.version("zlib")  # the zlib that writes the PNGs, not the stdlib one
+    assert "zlib" not in manifest["versions"]
 
 
 # ------------------------------------------------------------------------------------------------------ README

@@ -28,7 +28,7 @@
       "ga_seed": "42"
     }
   },
-  "git_commit": "620803021328b23128bdc4401ade3b0ac0b94393",
+  "git_commit": "ac198f43ac76f92374632c16c1d4b9e989ff7967",
   "host_os": "Windows-11",
   "inputs": {
     "docs/paper/results/week-2026-10-05-4sw5so/run_manifest.json": "f152ca63068be91be03c7ca27cf767fef52cc9345a6cb69d155f75a137f90b15",
@@ -49,10 +49,10 @@
     "README.md": "6f11a860fb77fac11b473855d95a45a28f296f02b5ef2ee9f1494154da99c404",
     "day_gaps.csv": "19bcd43c9fa8cd7263968d4e6f3e4059baf561213f2d02d556e484aa2f26e295",
     "day_sums.csv": "c3d1bc48a9e876b5c48b0207b304dcef5199ff662313949ac4b9c213be50a6f1",
-    "figure_gap_single.png": "22942d0c926ccf4f8f602cb16af290adbba58824767fff3f59e23e55b150265b",
-    "figure_gap_single.svg": "58b97d83f9a33d098b3c90ed025088bd690d50ca7aabbfbb9dff96311d99f324",
-    "figure_gap_typed.png": "28fe22442511d3cc8018c72933178a46b344a388c80fbc247be386aff31f1757",
-    "figure_gap_typed.svg": "5fa0ac648416b62f41a6ef60380f20e2980fc494b39bbe7f1047ed7a1c375256",
+    "figure_gap_single.png": "e872907f54e44698a6128b86f3fcdc577934d12e8c2f91eaf7dd29b4debfbece",
+    "figure_gap_single.svg": "4713e79c2fcb49771fa1ab9ff7283eaa1d00622a8c6018d647ec266dd3dd1a81",
+    "figure_gap_typed.png": "72fc3c69f909ad289d092a02b8af2294648c2a746e5daf465580f0ff4de3292a",
+    "figure_gap_typed.svg": "bc003c76e6b767f6e18d13380800677857291a5d23d7d1dae89ebfa766dc1476",
     "table_by_R.csv": "3d69de65999ffbfd98940765e038ec4120f6b31496c7960fd7ce78c34baca3f4",
     "table_by_R.md": "261f8bef8ec0bc4d1532576a919310d76e4cf613e02d73d3b412dd2d9d2bd681",
     "table_day_labels.csv": "dce6befd22072e9fd412da6799985f1e3b67abcd3c19f6f77affdece5e59f7c6",
@@ -97,9 +97,9 @@
   "versions": {
     "matplotlib": "3.11.2",
     "pillow": "13.0.0",
+    "pillow_zlib": "1.3.1.zlib-ng",
     "plotting": "matplotlib via scripts/exact_gap_figure.py (Agg backend)",
-    "python": "3.14.6",
-    "zlib": "1.3.1.zlib-ng"
+    "python": "3.14.6"
   },
   "work_package": "WP-E6"
 }

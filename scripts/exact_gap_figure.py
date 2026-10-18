@@ -61,7 +61,8 @@ def gap_groups(rows: Sequence[dict]) -> Dict[str, List[tuple]]:
 
 
 def excluded_counts(rows: Sequence[dict]) -> dict:
-    """Rows not drawn: ``dK >= 1`` (gD undefined) per kind, and rows without a GA answer or an exact result."""
+    """Rows not drawn: ``dK >= 1`` (gD undefined) per kind, and rows with a blank ``dK`` (the GA option is infeasible or the
+    exact option is proven infeasible, so there is no pair of K values to compare)."""
     out = {"base": 0, "q": 0, "missing": 0}
     for r in rows:
         if r["dK"] == "":
@@ -69,6 +70,10 @@ def excluded_counts(rows: Sequence[dict]) -> dict:
         elif int(r["dK"]) >= 1:
             out["base" if r["option"] == "base" else "q"] += 1
     return out
+
+
+def _plural(n: int, noun: str) -> str:
+    return f"{n} {noun}" if n == 1 else f"{n} {noun}s"
 
 
 def _nice_top(top: float) -> float:
@@ -106,21 +111,23 @@ def build_gap_figure(panels: Sequence[Sequence[dict]], panel_titles: Sequence[st
                        marker="o", color=KIND_COLOR[kind], alpha=0.6, linewidths=0.4, edgecolors=KIND_COLOR[kind], zorder=3)
         ex = excluded_counts(rows)
         if typed:
-            note = f"dK ≥ 1: {ex['base']} base waves, {ex['q']} q options (gD undefined, not drawn)"
+            note = f"dK ≥ 1: {_plural(ex['base'], 'base wave')}, {_plural(ex['q'], 'q option')} (gD undefined, not drawn)"
         else:
-            note = f"dK ≥ 1: {ex['base'] + ex['q']} waves (gD undefined, not drawn)"
+            note = f"dK ≥ 1: {_plural(ex['base'] + ex['q'], 'wave')} (gD undefined, not drawn)"
         ax.text(0.02, 0.97, note, transform=ax.transAxes, fontsize=7, va="top", ha="left", color="#333333")
         if ex["missing"]:
-            ax.text(0.02, 0.90, f"no GA answer or no exact result: {ex['missing']} options, not drawn", transform=ax.transAxes,
-                    fontsize=7, va="top", ha="left", color="#333333")
+            ax.text(0.02, 0.90, f"GA option infeasible or exact option proven infeasible: {_plural(ex['missing'], 'option')}, not drawn",
+                    transform=ax.transAxes, fontsize=7, va="top", ha="left", color="#333333")
     for ax in list(axes.flat)[len(panels):]:
         ax.set_visible(False)
     fig.suptitle(title, x=0.01, ha="left", fontsize=12, fontweight="bold")
+    if typed:
+        subtitle += f"; base and q markers are shifted by ±{KIND_DODGE['q']} students (offset, so that both show)"
     fig.text(0.01, 0.945 if n_rows == 1 else 0.958, subtitle, ha="left", va="top", fontsize=8.5, color="#444444")
     unit = "rows" if typed else "waves"
     handles, labels = [], []
     for kind in kinds:
-        label = "base: K, xbase against GA base; dK = 0, y = gD" if kind == "base" else "q: $K_m$, xq against GA q; dK = 0, y = gD"
+        label = "base: K, xbase against GA base; dK = 0, y = gD" if kind == "base" else "q: K_m, xq against GA q; dK = 0, y = gD"
         handles.append(Line2D([], [], marker="o", linestyle="", color=KIND_COLOR[kind], alpha=0.6, markersize=6))
         labels.append(label if typed else "dK = 0, y = gD")
     for n in SIZE_KEYS:

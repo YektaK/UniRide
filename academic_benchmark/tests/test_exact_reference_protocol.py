@@ -186,3 +186,86 @@ def test_single_source_campaign_manifests_stay_valid_and_one_source_is_required(
     assert _proto().validate_manifest(m) == []
     m.pop("source_campaign")
     assert any("source_campaign" in e for e in _proto().validate_manifest(m))
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# WP-E6: the union_day_v1 manifest schema (WP-E4b manifest) is owned by protocol.py, not by the runner script.
+# ---------------------------------------------------------------------------------------------------------------
+import json  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+_UNION_MANIFEST = (Path(__file__).resolve().parents[2] / "docs" / "paper" / "results" / "week-2026-10-05-exact"
+                   / "wp-e4b-union-day" / "union_day_manifest.json")
+
+
+def _union_manifest():
+    return json.loads(_UNION_MANIFEST.read_text(encoding="utf-8"))
+
+
+def test_union_day_protocol_id_and_filename_are_registered():
+    p = _proto()
+    assert p.UNION_DAY_PROTOCOL_ID == "union_day_v1"
+    assert p.UNION_DAY_MANIFEST_FILENAME == "union_day_manifest.json"
+    assert p.UNION_DAY_TIME_SCALE == 100
+
+
+def test_committed_wp_e4b_manifest_is_valid_under_the_registered_schema():
+    assert _proto().validate_union_day_manifest(_union_manifest()) == []
+
+
+@pytest.mark.parametrize("key", ["protocol", "work_package", "git_commit", "dirty_working_tree", "source_campaigns",
+                                 "exact_options_source", "cpsat", "time_scale", "router_caps", "tools",
+                                 "python_provenance", "python_version", "host_os", "run_history", "claim",
+                                 "ga_recompute", "labels", "blocking_errors", "total_wall_seconds"])
+def test_union_day_manifest_requires_every_key(key):
+    m = _union_manifest()
+    del m[key]
+    assert any(key in e for e in _proto().validate_union_day_manifest(m))
+
+
+def test_union_day_manifest_rejects_a_wrong_protocol_id_time_scale_and_claim():
+    p = _proto()
+    for field, value, needle in (("protocol", "exact_reference_v1", "protocol"), ("time_scale", 1, "time_scale"),
+                                 ("claim", "union is the global day optimum", "claim")):
+        m = _union_manifest()
+        m[field] = value
+        assert any(needle in e for e in p.validate_union_day_manifest(m)), field
+
+
+def test_union_day_manifest_rejects_private_data_and_bad_hashes_and_labels():
+    p = _proto()
+    m = _union_manifest()
+    m["host_os"] = r"C:\Users\someone\box"
+    assert any("absolute path" in e for e in p.validate_union_day_manifest(m))
+    m = _union_manifest()
+    m["tools"]["owner"] = "someone@example.org"
+    assert any("e-mail" in e for e in p.validate_union_day_manifest(m))
+    m = _union_manifest()
+    next(iter(m["source_campaigns"].values()))["manifest_sha256"] = "xyz"
+    assert any("manifest_sha256" in e for e in p.validate_union_day_manifest(m))
+    m = _union_manifest()
+    m["exact_options_source"]["exact_routes_sha256"] = "12"
+    assert any("exact_routes_sha256" in e for e in p.validate_union_day_manifest(m))
+    m = _union_manifest()
+    m["labels"].pop("union_not_proven")
+    assert any("labels" in e for e in p.validate_union_day_manifest(m))
+    m = _union_manifest()
+    m["git_commit"] = "not-a-commit"
+    assert any("git_commit" in e for e in p.validate_union_day_manifest(m))
+
+
+def test_validator_does_not_mutate_and_exact_reference_validator_is_unchanged():
+    p = _proto()
+    m = _union_manifest()
+    before = json.dumps(m, sort_keys=True)
+    p.validate_union_day_manifest(m)
+    assert json.dumps(m, sort_keys=True) == before
+    assert p.validate_manifest(_manifest()) == []  # exact_reference_v1 schema untouched
+
+
+def test_runner_has_no_local_validator_and_uses_the_protocol_one():
+    import re
+
+    text = (Path(__file__).resolve().parents[2] / "scripts" / "run_exact_union_day.py").read_text(encoding="utf-8")
+    assert not re.search(r"^def (validate_manifest|required_manifest_keys)\b", text, re.M)
+    assert "protocol.validate_union_day_manifest(" in text

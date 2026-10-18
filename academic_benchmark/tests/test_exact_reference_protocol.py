@@ -269,3 +269,87 @@ def test_runner_has_no_local_validator_and_uses_the_protocol_one():
     text = (Path(__file__).resolve().parents[2] / "scripts" / "run_exact_union_day.py").read_text(encoding="utf-8")
     assert not re.search(r"^def (validate_manifest|required_manifest_keys)\b", text, re.M)
     assert "protocol.validate_union_day_manifest(" in text
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# WP-E7: the TSP/ATSP reference manifest (GOAL 2 stage 1). Same protocol id as the wave campaigns; rows are
+# Hamiltonian-cycle rows and the manifest is its own kind, so validate_manifest / validate_union_day_manifest stay unchanged.
+# ---------------------------------------------------------------------------------------------------------------
+def _tsp_manifest():
+    p = _proto()
+    opts = "mip:bestbound=1 tech:threads=1 tech:seed=0 mip:gap=0 mip:gapabs=0.99 lim:time=600"
+    return {
+        "protocol": p.PROTOCOL_ID, "manifest_kind": p.TSP_REFERENCE_KIND, "schema_version": p.TSP_REFERENCE_SCHEMA_VERSION,
+        "work_package": "WP-E7", "solution_kind": "hamiltonian_cycle", "git_commit": "0123456789abcdef0123456789abcdef01234567",
+        "dirty_working_tree": False,
+        "ampl": {"version": "AMPL Version 20260809", "amplpy_version": "0.18.0", "location": "local AMPL installation used"},
+        "solvers": {
+            "gurobi": {"name": "gurobi", "version": "Gurobi 13.0.3", "option_string": opts, "threads": 1, "seed": 0,
+                       "time_limit_seconds": 600, "work_limit": None},
+            "highs": {"name": "highs", "version": "HiGHS 1.15.1", "option_string": opts, "threads": 1, "seed": 0,
+                      "time_limit_seconds": 600, "work_limit": None}},
+        "limits": {"total_seconds_per_instance": 600, "threads": 1, "seed": 0, "mtz_limit_seconds": 120.0},
+        "instances": {"eil51": {"problem_type": "TSP", "n": 51, "edge_weight_type": "EUC_2D", "data_source": "tsp_file",
+                                "file": "eil51.tsp", "sha256": "a" * 64, "matrix_sha256": "b" * 64,
+                                "published_optimum": 426, "published_source": "tsplib"}},
+        "published_optimum_source": {"table": "problems.optimal", "cross_checks": ["tsplib_parser.TSPLIB_OPTIMALS"],
+                                     "discrepancies": []},
+        "python_provenance": {"uniride_core": "uniride_core/__init__.py"}, "python_version": "3.13.1", "host_os": "Windows-11",
+        "claim": p.TSP_REFERENCE_CLAIM, "blocking_errors": [], "total_wall_seconds": 1.5,
+    }
+
+
+def test_tsp_reference_manifest_is_valid_and_registered():
+    p = _proto()
+    assert p.validate_tsp_reference_manifest(_tsp_manifest()) == []
+    assert p.TSP_REFERENCE_TOTAL_SECONDS == 600 and p.TSP_REFERENCE_KIND == "tsp_reference"
+    assert p.assert_not_pooled([{"protocol": p.PROTOCOL_ID}]) is None
+
+
+@pytest.mark.parametrize("key", ["protocol", "manifest_kind", "schema_version", "git_commit", "dirty_working_tree", "ampl",
+                                 "solvers", "limits", "instances", "published_optimum_source", "python_provenance",
+                                 "claim", "blocking_errors", "solution_kind"])
+def test_tsp_reference_manifest_requires_every_key(key):
+    m = _tsp_manifest()
+    del m[key]
+    assert any(key in e for e in _proto().validate_tsp_reference_manifest(m))
+
+
+@pytest.mark.parametrize("mutate,needle", [
+    (lambda m: m.update(protocol="other"), "protocol"),
+    (lambda m: m.update(manifest_kind="wave"), "manifest_kind"),
+    (lambda m: m.update(git_commit="not-a-sha"), "git_commit"),
+    (lambda m: m.update(solution_kind="vehicle_routes"), "solution_kind"),
+    (lambda m: m.update(claim="TSPLIB solved, beats all heuristics"), "claim"),
+    (lambda m: m["limits"].update(threads=4), "threads"),
+    (lambda m: m["limits"].update(total_seconds_per_instance=60), "600"),
+    (lambda m: m["solvers"]["gurobi"].update(threads=2), "threads"),
+    (lambda m: m["solvers"]["gurobi"].update(option_string="bestbound=1 tech:threads=1 lim:time=600"), "bestbound"),
+    (lambda m: m["solvers"]["gurobi"].update(option_string="mip:bestbound=1 tech:threads=1 tech:seed=0 lim:time=60"), "lim:time"),
+    (lambda m: m["solvers"]["gurobi"].update(option_string=m["solvers"]["gurobi"]["option_string"] + " lim:work=20"), "work"),
+    (lambda m: m["solvers"].pop("highs"), "highs"),
+    (lambda m: m["instances"]["eil51"].update(sha256="xyz"), "sha256"),
+    (lambda m: m["instances"]["eil51"].update(matrix_sha256="xyz"), "matrix_sha256"),
+    (lambda m: m["instances"]["eil51"].pop("published_optimum"), "published_optimum"),
+    (lambda m: m["instances"]["eil51"].update(published_source="our heuristic"), "published_source"),
+    (lambda m: m["instances"]["eil51"].update(data_source="best_solutions"), "data_source"),
+    (lambda m: m["ampl"].update(location="C:/Users/someone/AMPL"), "location"),
+    (lambda m: m.update(note="see C:/Users/someone/x"), "absolute path"),
+    (lambda m: m.update(note="Licensed to someone, licence file"), "license"),
+    (lambda m: m.update(note="owner@example.com"), "e-mail"),
+])
+def test_tsp_reference_manifest_rejects_invalid_content(mutate, needle):
+    m = _tsp_manifest()
+    mutate(m)
+    assert any(needle.lower() in e.lower() for e in _proto().validate_tsp_reference_manifest(m)), needle
+
+
+def test_tsp_reference_validator_does_not_mutate_and_other_validators_are_unchanged():
+    import json
+
+    p = _proto()
+    m = _tsp_manifest()
+    before = json.dumps(m, sort_keys=True)
+    p.validate_tsp_reference_manifest(m)
+    assert json.dumps(m, sort_keys=True) == before
+    assert p.validate_manifest(_manifest()) == []

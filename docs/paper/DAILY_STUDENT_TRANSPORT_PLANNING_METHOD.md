@@ -1,6 +1,6 @@
 # Daily student transport planning with separate passenger capacities
 
-[EKSİK: dated method-note review provenance file] Checked code baseline: `f7b8570`. [EKSİK: committed method-note review provenance for this baseline] The sensitivity campaign and the heterogeneous fleet and Pareto analyses were executed and archived. The exact-reference solves and the fleet re-run for the typed exact comparison remain planned; the checked implementation contains only the WP-E0 contracts and offline archive loader.
+[EKSİK: dated method-note review provenance file] Checked code baseline: `f7b8570`. [EKSİK: committed method-note review provenance for this baseline] The sensitivity campaign and the heterogeneous fleet and Pareto analyses were executed and archived. The exact-reference work packages for the week of 2026-10-05 (route enumeration, AMPL set partitioning, the single-type and typed gap campaigns, the union-menu day level and the gap report) and the mixed-fleet GA re-run for the typed exact comparison were executed and merged between 2026-10-15 and 2026-10-18. Section 7 reflects the repository at commit `6c02f9d`.
 
 ## 1. Problem setting
 
@@ -211,23 +211,77 @@ The front is an approximation over the tested L and R values and heuristic menus
 
 Achieved service level and fleet size can be studied descriptively, but these single-snapshot, single-seed native results do not support superiority, causal attribution or a global fleet optimum. Later algorithm comparisons require primary fixed objective-evaluation budgets; native-termination evidence must remain separately labelled.
 
-**Corrections and their effect on reported results.** CX-01 replaced outward whole-minute interval rounding with centi-minute endpoints and cooldowns (`time_scale = 100`); off-grid values fail closed rather than being rounded. The recorded archive effect is none because the archived arcs and interval endpoints are whole minutes. (see `results/week-2026-10-05-fleet/cx01_replay_check.md`) CX-03 makes the typed GA decode cost-only for one type without an active quota, restoring the documented parity with the untyped GA; two-type quota decoding is unchanged. The typed campaigns used two types, and the single-type campaign used `ga_split`, so CX-03 does not change their reported routes. The core archives were produced at `6be127d`, `8ab88ca` and `4200acb`, before CX-01/CX-03, and each manifest records a dirty tree; L4 records `afc7208` and a dirty tree as well. These remain historical native, single-seed archives; the planned typed exact comparison requires a new campaign at one pinned commit.
+**Corrections and their effect on reported results.** CX-01 replaced outward whole-minute interval rounding with centi-minute endpoints and cooldowns (`time_scale = 100`); off-grid values fail closed rather than being rounded. The recorded archive effect is none because the archived arcs and interval endpoints are whole minutes. (see `results/week-2026-10-05-fleet/cx01_replay_check.md`) CX-03 makes the typed GA decode cost-only for one type without an active quota, restoring the documented parity with the untyped GA; two-type quota decoding is unchanged. The typed campaigns used two types, and the single-type campaign used `ga_split`, so CX-03 does not change their reported routes. The core archives were produced at `6be127d`, `8ab88ca` and `4200acb`, before CX-01/CX-03, and each manifest records a dirty tree; L4 records `afc7208` and a dirty tree as well. These remain historical native, single-seed archives; the typed exact comparison in Section 7 uses a separate re-run of both mixed-fleet campaigns at one pinned commit (f29aa3d, clean working tree), and the historical rows are not pooled with the re-run rows.
 
-## 7. Further study
+## 7. Exact reference and optimality gap of the genetic algorithm
+
+This section compares the route sets of one genetic algorithm (GA) run with a per-wave exact reference for one snapshot week. The comparison only measures the gap; it does not rank the two methods.
+
+### Method
+
+**Data and GA side.** The measurement uses a single snapshot week, 2026-10-05 to 2026-10-09, with 57 waves and 226 passenger legs, ride limits R = 50, 60, 70 and 90 minutes and a tour cap of 150 minutes. The GA side is a single run of the route-first, cluster-second GA of §4.1 with seed 42 under the native termination protocol, the secondary protocol. For the single-type fleet (4 wheelchair positions, Sw, and 5 seated positions, So) the GA routes come from the archived campaign, produced at commit 6be127d with a dirty working tree. For the two mixed fleets they come from a re-run at commit f29aa3d with a clean tree that archived every menu option. Every gap below is the gap of that run, not of the GA in general.
+
+**Exact reference per wave.** The exact reference solves each wave separately. All feasible routes of the wave are enumerated, with one column per multiset of (location, class) and vehicle type, carrying the cheapest feasible stop order. Because the travel-time matrix is non-metric, a stop order may revisit a location. A set-partitioning model then selects routes with integer multiplicities. It is solved in two lexicographic stages: the first minimises the number of routes, the second minimises total route duration D with that count fixed. For the single type the count is K; for a mixed fleet it is K_m, the routes of the minimised type. A separate solve without a count objective gives a duration lower bound, D_LB_free.
+
+**Mixed fleets.** Two mixed fleets were studied: large + sedan and large + Doblò. The large vehicle is the minibus (4 Sw / 5 So); the sedan has 0 Sw / 4 So; the Doblò minivan carries at most 1 Sw, 3 So and 3 passengers in total. For each wave the exact menu mirrors the GA menu: a base option that uses the large type only, and q options with at most q large routes that minimise the routes of the small type. The two fleets give 1872 options, 1004 for large + sedan and 868 for large + Doblò.
+
+**Solvers and limits.** The models were solved through AMPL, with Gurobi 13.0.3 as the primary solver. Each solver call had a wall-clock limit of 60 s, or 600 s on the per-day peak wave, the wave with the most legs. Gurobi also had a deterministic work limit of 20 work units, or 200 on peak waves. Every call used one thread and seed 0. Every optimal result was re-solved with HiGHS 1.15.1, and any disagreement in a proven value was defined as blocking.
+
+**Certification.** Each exact route set and the archived GA route set of the same wave were checked by the same independent certificate, the operational response certifier, on the same captured travel-time matrix. Route counts and durations were recomputed from the certified routes in integer arithmetic and had to equal the solver objective.
+
+**Protocol and gap definitions.** Exact results form a separate protocol, `exact_reference_v1`, and are never ranked, averaged or tested together with heuristic results. The only quantity that crosses the protocols is the gap of a GA result against a certified exact value. K* and D* are the proven optimal route count and total route duration of the exact reference for a wave or option; K_GA and D_GA are the GA's values for the same wave or option. The route-count gap is dK = K_GA − K*. The duration gap is gD = (D_GA − D*)/D*. It is defined only where K_GA = K*; where K_GA > K*, gD is undefined.
+
+**Day level.** For the mixed fleets, the day's vehicle selection was solved by CP-SAT for each (fleet, date, R, L) cell, where L is the number of owned minibuses and limits the minibus peak. Cars are the peak number of concurrently busy small-type vehicles, including the 10-minute cooldown; the selection minimises cars first, then total vehicle-minutes, then car-minutes. Each cell was solved twice: once over the GA menus alone, and once over the union menu, which combines the GA and per-wave exact menus. The TypeScript vehicle-assignment check independently confirmed every selection. The union-menu result is the minimum car count over that union menu, not a global day optimum, because no day-level exact model was solved (out of scope). Results are never reported as min(GA, union).
+
+**Reproducibility.** Every campaign is archived with a manifest that records the git commit, the solver and AMPL versions, the option strings and the input file hashes. The final mixed-fleet exact results come from a single clean serial run; an earlier parallel run was discarded. The exact routes are stored, so they can be re-certified without a solver licence.
+
+### Results: week of 2026-10-05
+
+**Single type (4 Sw / 5 So).** All 228 wave instances (57 waves × 4 values of R) were solved to proven optimality, and no solver limit was reached. HiGHS gave the same (K, D) and the same D_LB_free on all 228. Table 7.1 gives the gaps per R.
+
+| R (min) | Waves with dK = 0 | Weekly routes, GA / exact | Waves with gD > 0 (of 56) | Mean gD | Max gD |
+|---:|---:|---:|---:|---:|---:|
+| 50 | 56 of 57 | 109 / 108 | 3 | 0.000552 | 0.018462 |
+| 60 | 56 of 57 | 94 / 93 | 6 | 0.004200 | 0.089947 |
+| 70 | 56 of 57 | 82 / 81 | 3 | 0.001067 | 0.027778 |
+| 90 | 56 of 57 | 73 / 72 | 3 | 0.001135 | 0.034146 |
+
+Table 7.1. Single type; one seed-42 GA run under native termination, single snapshot week. Mean and max gD are taken over the 56 waves per R with K_GA = K*.
+
+In each R, one 08:45 pickup peak wave has dK = 1. Figure 7.1 (`figure_gap_single`; single type; per-wave duration gap against students per wave) has one panel per R; Figure 7.2 (`figure_gap_typed`) shows the two mixed fleets for each R, with base and q options separately; both are in `results/week-2026-10-05-exact/wp-e6-gap-report/`. Rows with dK ≥ 1 are not drawn, because their gD is undefined, and each panel gives their count.
+
+**Mixed fleets, per-wave options.** Of the 1872 options, 1705 were solved to proven optimality and 167 were proven infeasible, all of them large + sedan q options. HiGHS agreed on every option: same (K, D) on the 1705 optimal options, same infeasibility on the 167 and same D_LB_free. In the 1703 option pairs where both sides had a solution, the exact optimum was never worse than the GA option of the same kind. In 2 options the GA found no solution while the exact model did; both are large + sedan options for the 2026-10-05 08:45 pickup wave with q = 2, at R = 50 and R = 60.
+
+For the q options, dK compares K_m, the routes of the minimised small type (sedan or Doblò): dK = K_m,GA − K_m*. Per fleet and R, the share of q options with dK = 0 ranged from 0.9625 (large + Doblò, R = 50: 154 of 160) to 0.99375 (large + Doblò, R = 70 and 90: 159 of 160). dK never exceeded 1. Mean gD per (fleet, R) lay between 0.000339 and 0.003823. The largest single q-option value was 0.1317, for large + sedan at R = 90. The per-(fleet, R) values are in `results/week-2026-10-05-exact/wp-e6-gap-report/table_by_R.csv`. The base options of both mixed fleets repeat the single-type statistics exactly, because they use the same large type and the same GA base routes, so they are not independent results.
+
+**Day level.** Table 7.2 gives the outcomes per fleet and L.
+
+| Fleet | L | Cells | Both CP-SAT runs optimal and TypeScript-confirmed | Union one car fewer | Union same | Union more | Both menus infeasible | GA-menu run proven infeasible, union run optimal and confirmed |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| large + sedan | 1 | 20 | 0 | – | – | – | 20 | 0 |
+| large + sedan | 2 | 20 | 11 | 1 | 10 | 0 | 8 | 1 |
+| large + sedan | 3 | 20 | 20 | 3 | 17 | 0 | 0 | 0 |
+| large + Doblò | 0 | 20 | 20 | 3 | 17 | 0 | 0 | 0 |
+| large + Doblò | 1 | 20 | 20 | 2 | 18 | 0 | 0 | 0 |
+| large + Doblò | 2 | 20 | 20 | 2 | 18 | 0 | 0 | 0 |
+
+Table 7.2. Day-level vehicle selection over the GA menus and over the union menu, per fleet and L; one seed-42 GA run, single snapshot week.
+
+Where both runs are optimal and confirmed, the union menu needs one car fewer in 4 and the same number in 27 of 31 cells for large + sedan, and one fewer in 7 and the same in 53 of 60 for large + Doblò; it never needs more. The union-only cell (large + sedan, 2026-10-05, R = 60, L = 2) needs 3 cars. Every cell with one car fewer selects an exact option for the 08:45 pickup wave.
+
+**Limitations.** These results cover one snapshot week and one GA seed. The certificate, the GA and the exact model all assume no waiting time at stops, and the travel-time matrix is a fixed snapshot without traffic.
+
+## 8. Further study
 
 Further studies can add individual passenger windows, boarding times, driver assignment, traffic-aware matrices and publication of approved daily plans, subject to separate contracts and evidence. Further work could examine anchor shifts, cooldown variation and class staggering as possible changes to the peak resource requirement. Heterogeneous routing with Sw/So pools is now represented by the archived scenarios, while a joint optimum over all route sets and vehicle types remains outside their evidence. Matrix-based clustering remains a separate research question; geometric grouping does not replace road-network evaluation.
 
-The approved exact-reference plan uses complete feasible-route enumeration followed by two-stage set partitioning in AMPL: first route count for the single type, or borrowed-type route count under a large-route quota for a typed wave, then travel duration with the first-stage count fixed. Gurobi is the main solver and HiGHS the cross-check. Each solver call (stage 1, stage 2 and the free-duration-bound solve) has a 60-second wall limit, or 600 seconds on peak waves; a peak is the largest-leg wave per date, including ties. The archive census contains 57 waves and 226 legs per R, with 50 waves of 1–6 legs and a largest wave of 20; the five peak pickup waves are anchored at 08:45 and contain 20, 11, 11, 10 and 13 legs.
+Section 7 reports the executed exact reference, the mixed-fleet GA re-run and the gap report. The compact fallback model (WP-E5) was not needed: no wave reached the enumeration caps (2 000 000 columns, 5 000 000 labels), and at most 47 027 columns and at most 171 053 labels were needed in any wave. For waves larger than those of this week, the exact-reference design names branch-and-price (column generation) as the upgrade path if complete enumeration becomes too large; it is not implemented. Exact references for TSP/ATSP and CVRP benchmark instances (GOAL 2, WP-E7 to WP-E9) are planned but not started; they wait for an owner decision on the instance set and time limits.
 
-Before the typed comparison, WP-E10 will re-run both large+sedan and large+Doblò(cap3) campaigns at a clean pinned commit, using GA seed 42 and native termination, and archive every menu option's routes, minutes, intervals and certificate. A read-only preflight must match live inputs to the archive; mismatch stops the re-run for an owner decision, and archived input replay through the current production path is not the approved fallback. Historical typed rows will not be pooled with the re-run. The day comparison will solve GA menus and the union of GA and per-wave exact menus at one commit with `time_scale = 100`, without deduplicating exact options against GA options by partition alone. Only optimal results in both CP-SAT runs, with independent TypeScript assignment confirmation, can receive `proven_over_union_menu`; otherwise the prescribed labels include `union_not_proven` or `not_independently_confirmed`. A union solve lacking proof will be retried once at 60 seconds; none of these labels denotes a global day optimum.
-
-Only WP-E0, the contracts and offline archive loader, is implemented at the checked baseline; no exact route enumeration, AMPL solve, WP-E10 re-run or exact-gap result is reported here. The existing exact single-route TSP helper is not a capacitated multi-route or day-level reference. Planned gap reporting distinguishes route-count bounds, duration bounds conditional on a proven first-stage count, and a separate free-count duration bound, with time-limited and unresolved cases labelled explicitly.
-
-## 8. Validity and scope
+## 9. Validity and scope
 
 The archived daily student counts are 27, 21, 23, 23 and 19 from Monday to Friday, and full-snapshot matrix provenance records 29 locations. Earlier planning notes reported 28 students in a D0 read-only inventory dated 2026-10-04. The archived matrices are per-date slices: their declared snapshot hash and location count describe the full snapshot and cannot be recomputed from the slice alone. Larger networks, multiple campuses, wheelchair handling delays and variable traffic require new evidence.
 
-The sensitivity, heterogeneous fleet and Pareto analyses were executed for one snapshot week with one run per cell, GA seed 42 and native termination; the exact-reference solves and WP-E10 re-run remain planned. Validity limits include assumed confirmations, a captured matrix, heuristic route generation, assignment proofs conditional on fixed routes, and fleet minima conditional on generated menus. The approximate Pareto front excludes cost and lender availability and does not validate service accessibility, traffic realism or boarding-time assumptions. No superiority, causality, global optimality or validated service quality is claimed.
+The sensitivity, heterogeneous fleet and Pareto analyses were executed for one snapshot week with one run per cell, GA seed 42 and native termination; the exact-reference solves and the WP-E10 mixed-fleet re-run were executed and merged, and the historical fleet archives remain historical and are not pooled with the re-run rows. Validity limits include assumed confirmations, a captured matrix, heuristic route generation, assignment proofs conditional on fixed routes, and fleet minima conditional on generated menus. The approximate Pareto front excludes cost and lender availability and does not validate service accessibility, traffic realism or boarding-time assumptions. No superiority, causality, global optimality or validated service quality is claimed.
 
 ## References and implementation provenance
 
@@ -241,6 +295,6 @@ Review metadata: [EKSİK: method-note review date, checked baseline and access-h
 - [Core feasibility](../../uniride_core/algorithms/feasibility_certificate.py), [independent certificate](../../optimizer_api/verification/response_certifier.py), and [matrix binding](../../optimizer_api/routers/optimization.py).
 - [Typed decoder](../../uniride_core/algorithms/typed_split_decoder.py), [typed GA](../../uniride_core/algorithms/ga_split_typed_engine.py), [day selection](../../uniride_core/planning/typed_day_selection.py), and [fleet-selection router](../../optimizer_api/routers/fleet_selection.py).
 - [Fleet-scenario producer](../../src/services/fleet-scenario-run.ts), [typed vehicle assignment](../../src/services/typed-fleet-assignment.ts), and [archived ride-metric computation](../../src/services/plan-experiments.ts).
-- [WP-E0 contracts](../../uniride_core/exact/wave_instance.py), [archive loader](../../scripts/exact_archive_loader.py), [exact-reference plan](../designs/EXACT_SOLVER_AMPL_DESIGN.md), and [heterogeneous fleet design](../designs/HETEROGENEOUS_FLEET_DESIGN.md).
-- [Exact single-route helper](../../uniride_core/algorithms/string_exact_tsp.py), [architecture](../../CURRENT_ARCHITECTURE.md), and [fair comparison protocol](../../ACADEMIC_FAIRNESS_PROTOCOL_DESIGN.md).
+- [WP-E0 contracts](../../uniride_core/exact/wave_instance.py), [archive loader](../../scripts/exact_archive_loader.py), [exact-reference code](../../uniride_core/exact/) (route enumeration, AMPL backend, certification), [single-type gap runner](../../scripts/run_exact_wave_gaps.py), [typed exact menus](../../scripts/run_exact_typed_menus.py), [union-menu day level](../../scripts/run_exact_union_day.py), [gap report](../../scripts/plan_exact_gap_report.py), [exact-reference results](results/week-2026-10-05-exact/), [large + sedan re-run](results/week-2026-10-05-fleet-rerun-large-sedan/), [large + Doblò re-run](results/week-2026-10-05-fleet-rerun-doblo-cap3/), [exact-reference plan](../designs/EXACT_SOLVER_AMPL_DESIGN.md), and [heterogeneous fleet design](../designs/HETEROGENEOUS_FLEET_DESIGN.md).
+- [Exact single-route helper](../../uniride_core/algorithms/string_exact_tsp.py) (not a capacitated multi-route or day-level reference), [architecture](../../CURRENT_ARCHITECTURE.md), and [fair comparison protocol](../../ACADEMIC_FAIRNESS_PROTOCOL_DESIGN.md).
 - [Prior planning notes](../DEMO_ROADMAP_2026-10-04.md) and [decision library](../DECISION_LOG.md).

@@ -1,0 +1,323 @@
+{
+  "caps": {
+    "column_cap": 2000000,
+    "label_cap": 5000000,
+    "memory_guard_mb": 2500,
+    "subprocess_timeout_seconds": 660.0,
+    "wall_clock_limit_seconds": 600.0
+  },
+  "claim": "none: synthetic waves, scoping measurement only",
+  "cpu_count": 12,
+  "dirty_working_tree": false,
+  "enumerations_run": 231,
+  "fleet_sources": {
+    "large+doblo_cap3": {
+      "file": "docs/paper/results/week-2026-10-05-fleet-rerun-doblo-cap3/run_manifest.json",
+      "sha256": "b7dcd7da657a4cb660f1f4bba54b7c9b14285a127fce5e18346c692b158c1e5b",
+      "types": [
+        {
+          "cooldown_minutes": 10,
+          "ride_limit_minutes": null,
+          "so_capacity": 5,
+          "sw_capacity": 4,
+          "total_capacity": null,
+          "tour_limit_minutes": null,
+          "type_id": "large"
+        },
+        {
+          "cooldown_minutes": 10,
+          "ride_limit_minutes": null,
+          "so_capacity": 3,
+          "sw_capacity": 1,
+          "total_capacity": 3,
+          "tour_limit_minutes": null,
+          "type_id": "minivan"
+        }
+      ]
+    },
+    "large+sedan": {
+      "file": "docs/paper/results/week-2026-10-05-fleet-rerun-large-sedan/run_manifest.json",
+      "sha256": "279a06fc19f222740e93bf842bb65ca407f221e7c3c159b6d0e084b019d7643b",
+      "types": [
+        {
+          "cooldown_minutes": 10,
+          "ride_limit_minutes": null,
+          "so_capacity": 5,
+          "sw_capacity": 4,
+          "total_capacity": null,
+          "tour_limit_minutes": null,
+          "type_id": "large"
+        },
+        {
+          "cooldown_minutes": 10,
+          "ride_limit_minutes": null,
+          "so_capacity": 4,
+          "sw_capacity": 0,
+          "total_capacity": null,
+          "tour_limit_minutes": null,
+          "type_id": "sedan"
+        }
+      ]
+    },
+    "single_4sw5so": {
+      "file": "docs/paper/results/week-2026-10-05-4sw5so/2026-10-05_R50_repeat1.response.json",
+      "sha256": "c484071702048fa3a12de7a9dd866dfbbd59c454dceee627357ae942011af23b",
+      "types": [
+        {
+          "cooldown_minutes": 10,
+          "ride_limit_minutes": null,
+          "so_capacity": 5,
+          "sw_capacity": 4,
+          "total_capacity": null,
+          "tour_limit_minutes": null,
+          "type_id": "large"
+        }
+      ]
+    }
+  },
+  "git_commit": "25fc8a214b6d8e1bbab065d6c03d1b4de6bc3d4a",
+  "grid": {
+    "anchor": 525,
+    "dropoff_cells": [
+      [
+        50,
+        "all"
+      ]
+    ],
+    "k": {
+      "10": 10,
+      "20": 20,
+      "all": 26
+    },
+    "overridden_from_default": false,
+    "rides": [
+      50,
+      70,
+      90
+    ],
+    "sizes": [
+      20,
+      30,
+      50,
+      80
+    ],
+    "tour": 150
+  },
+  "host_os": "Windows",
+  "host_release": "11",
+  "locations": {
+    "depot": "D.Kampus",
+    "stops_in_archive": [
+      "So1",
+      "So10",
+      "So11",
+      "So12",
+      "So13",
+      "So14",
+      "So15",
+      "So16",
+      "So17",
+      "So18",
+      "So19",
+      "So2",
+      "So3",
+      "So4",
+      "So5",
+      "So6",
+      "So7",
+      "So8",
+      "So9",
+      "Sw1",
+      "Sw2",
+      "Sw3",
+      "Sw4",
+      "Sw5",
+      "Sw6",
+      "Sw7",
+      "Sw8",
+      "Sw9"
+    ],
+    "usable_stops": [
+      "So1",
+      "So10",
+      "So11",
+      "So12",
+      "So13",
+      "So14",
+      "So15",
+      "So16",
+      "So17",
+      "So18",
+      "So19",
+      "So2",
+      "So4",
+      "So5",
+      "So6",
+      "So7",
+      "So8",
+      "So9",
+      "Sw1",
+      "Sw2",
+      "Sw3",
+      "Sw4",
+      "Sw5",
+      "Sw6",
+      "Sw7",
+      "Sw9"
+    ]
+  },
+  "matrix_source": {
+    "arcs_in_union": 810,
+    "declared_snapshot_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+    "directory": "docs/paper/results/week-2026-10-05-4sw5so",
+    "files": [
+      {
+        "arcs": 756,
+        "declared_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "file_sha256": "6e46d9d2d11559b8ddc5e78c5ccb1b04a34f58644543bd7f78c229b5b3e1826b",
+        "name": "2026-10-05_R50_repeat1.matrix.json"
+      },
+      {
+        "arcs": 756,
+        "declared_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "file_sha256": "57753414dc0a9ca14917fde7b1e350e49a6f3fe096cb6094ffe781dfced0b5b2",
+        "name": "2026-10-05_R60_repeat1.matrix.json"
+      },
+      {
+        "arcs": 756,
+        "declared_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "file_sha256": "c632b80aa60fe328c7774d36ca955abe4fca66231129dd8e4ed7d6ed374c6e84",
+        "name": "2026-10-05_R70_repeat1.matrix.json"
+      },
+      {
+        "arcs": 756,
+        "declared_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "file_sha256": "efcc3aa77a9255948e85a81f46690cb76aa580e0ad6318d38301f7833da520b7",
+        "name": "2026-10-05_R90_repeat1.matrix.json"
+      },
+      {
+        "arcs": 462,
+        "declared_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "file_sha256": "90ff3d4a23fc1f3b8c2d3fd8a22a3c551c2de10b2897d6e2a6c7e6f4464808fc",
+        "name": "2026-10-06_R50_repeat1.matrix.json"
+      },
+      {
+        "arcs": 462,
+        "declared_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "file_sha256": "7530f129776596332cc241a84db2f91063173998d0108122d4f8d36f3aaf5d73",
+        "name": "2026-10-06_R60_repeat1.matrix.json"
+      },
+      {
+        "arcs": 462,
+        "declared_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "file_sha256": "e38ae908edf1c5b4dd23fa7fe769af606bee8d9f5d92350a7e6bdabb6b969f47",
+        "name": "2026-10-06_R70_repeat1.matrix.json"
+      },
+      {
+        "arcs": 462,
+        "declared_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "file_sha256": "43e9dc7834491f3aae966abc50042c229fca7064e9763a3a05dd734422d1b8db",
+        "name": "2026-10-06_R90_repeat1.matrix.json"
+      },
+      {
+        "arcs": 552,
+        "declared_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "file_sha256": "734cef1009849c661b635d5e483461579ed45d89c55388f2f394c8b0b9b6c2b1",
+        "name": "2026-10-07_R50_repeat1.matrix.json"
+      },
+      {
+        "arcs": 552,
+        "declared_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "file_sha256": "61ecc76bf0dad8c652fe4dc0bd90bdeb5d0f2f42db1b5161c58091f49448df81",
+        "name": "2026-10-07_R60_repeat1.matrix.json"
+      },
+      {
+        "arcs": 552,
+        "declared_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "file_sha256": "f01b64fe0ecc57d079a4a0d945aecd199b7a80f27cae43fbde7a67d0028f2d73",
+        "name": "2026-10-07_R70_repeat1.matrix.json"
+      },
+      {
+        "arcs": 552,
+        "declared_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "file_sha256": "906c1ff0e2950ea16b7ca191e2449dd5f0c309d1c42818c169d4bca17d572fca",
+        "name": "2026-10-07_R90_repeat1.matrix.json"
+      },
+      {
+        "arcs": 552,
+        "declared_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "file_sha256": "73dd20d49d1d672f59a1322641bd01ddf57850c3606877b67f71bfec0052849e",
+        "name": "2026-10-08_R50_repeat1.matrix.json"
+      },
+      {
+        "arcs": 552,
+        "declared_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "file_sha256": "00932bee798713e25f741a7335418f97c4ac125a7e7279bbe41b8457d26785dd",
+        "name": "2026-10-08_R60_repeat1.matrix.json"
+      },
+      {
+        "arcs": 552,
+        "declared_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "file_sha256": "7e8783748d1af3f5ac36ecc669531b55eba05185666f72097e258bb866084ec7",
+        "name": "2026-10-08_R70_repeat1.matrix.json"
+      },
+      {
+        "arcs": 552,
+        "declared_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "file_sha256": "78d73a1fe5eebfcb74eeaaa9cdb53f34180eb88ecefe6f365ca8e29a4ee915c5",
+        "name": "2026-10-08_R90_repeat1.matrix.json"
+      },
+      {
+        "arcs": 380,
+        "declared_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "file_sha256": "7241a8ec19d5cbc419707418bec442a2e92ee68e316aa27ec4b3c538b1ddd288",
+        "name": "2026-10-09_R50_repeat1.matrix.json"
+      },
+      {
+        "arcs": 380,
+        "declared_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "file_sha256": "95e5859b136d24befb440e46b62e71a1729afb27f44c666dc8f360bc36956189",
+        "name": "2026-10-09_R60_repeat1.matrix.json"
+      },
+      {
+        "arcs": 380,
+        "declared_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "file_sha256": "af81995a357e81ec77734c59162a091fd6e845b5ea5de17d37fd995eac78d22e",
+        "name": "2026-10-09_R70_repeat1.matrix.json"
+      },
+      {
+        "arcs": 380,
+        "declared_sha256": "bfb2dd85087c1d5a4310ad23644f3b2ea53886db5c03dd5bf536912eb2dd31e5",
+        "file_sha256": "5ab0547b104a091e7940fe11dc0f7ce7b6d6567e880817185692b2e120c28139",
+        "name": "2026-10-09_R90_repeat1.matrix.json"
+      }
+    ]
+  },
+  "outputs": {
+    "README.md": "cb4c6383e158e9fba69588788dd531fe088bd5fb5408f514e667e20aaa66e3a0",
+    "probe.csv": "453a5e6e01668176323192829e70aef6384fdb89aab4c9697001fd7f49af1c25",
+    "summary.md": "c6b53fe06c2332a4e90b7d2c59223a6f334d9ef7d274bb2cf7ee60d4e3c8436a"
+  },
+  "packages": {
+    "third_party": []
+  },
+  "peak_working_set_mb_max": 1742.5,
+  "python_implementation": "CPython",
+  "python_provenance": {
+    "uniride_core": "uniride_core/__init__.py"
+  },
+  "python_version": "3.14.6",
+  "rows": 324,
+  "seed_rule": "random.Random(\"scaling-probe:<seed>:<n>:<k>\")",
+  "seeds": [
+    1,
+    2,
+    3
+  ],
+  "sw_share": {
+    "legs": 226,
+    "sw_legs": 68
+  },
+  "total_wall_seconds": 5322.2,
+  "work_package": "scaling probe of WP-E1 route enumeration (scoping measurement, no paper claim)"
+}

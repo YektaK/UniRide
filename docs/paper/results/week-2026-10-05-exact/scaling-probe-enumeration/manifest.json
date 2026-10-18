@@ -294,9 +294,9 @@
     ]
   },
   "outputs": {
-    "README.md": "cb4c6383e158e9fba69588788dd531fe088bd5fb5408f514e667e20aaa66e3a0",
+    "README.md": "e12db7b4bd6814d2cd927ee6957c99f5533b2c71c6255dea1ea03d579a9e6ff9",
     "probe.csv": "453a5e6e01668176323192829e70aef6384fdb89aab4c9697001fd7f49af1c25",
-    "summary.md": "c6b53fe06c2332a4e90b7d2c59223a6f334d9ef7d274bb2cf7ee60d4e3c8436a"
+    "summary.md": "ce33288f52190dfebb32d40ea7314a0494dcbd269d58b95d62d1a9e6971288c5"
   },
   "packages": {
     "third_party": []
@@ -307,6 +307,15 @@
     "uniride_core": "uniride_core/__init__.py"
   },
   "python_version": "3.14.6",
+  "report_regenerated": {
+    "dirty_working_tree": false,
+    "git_commit": "bae2630aad857ad13e319cc7947816c1c640aa10",
+    "note": "README.md and summary.md regenerated from probe.csv and manifest.json; probe.csv unchanged and verified by sha256; the probe-run fields of this manifest are those of the original run",
+    "python_provenance": {
+      "uniride_core": "uniride_core/__init__.py"
+    },
+    "python_version": "3.14.6"
+  },
   "rows": 324,
   "seed_rule": "random.Random(\"scaling-probe:<seed>:<n>:<k>\")",
   "seeds": [

@@ -465,7 +465,8 @@ def summary_markdown(rows: list, facts: dict) -> str:
     lines += [f"- Caps: {_fmt(COLUMN_CAP_DEFAULT)} columns, {_fmt(LABEL_CAP_DEFAULT)} labels, wall-clock "
               f"{WALL_CLOCK_LIMIT_DEFAULT:.0f} s; subprocess timeout {SUBPROCESS_TIMEOUT:.0f} s.",
               "- A size counts as completed only when every seed completed; `capped` is any other status of any seed.",
-              "- Labels and columns are the maximum over the seeds that ran (one value per n).", ""]
+              "- Labels and columns are the maximum over the seeds that ran (one value per n).",
+              "- In capped runs the column count is the count reached before the cap fired, so it is a lower bound.", ""]
     for direction in ("pickup", "dropoff"):
         sub = [c for c in cells if c["direction"] == direction]
         if not sub:
@@ -539,6 +540,102 @@ def csv_text(rows: list) -> str:
     return buf.getvalue()
 
 
+def _and(parts) -> str:
+    parts = [str(p) for p in parts]
+    return parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " and " + parts[-1]
+
+
+def _dedupe(values) -> list:
+    out: list = []
+    for v in values:
+        if v not in out:
+            out.append(v)
+    return out
+
+
+def _items_text(values) -> str:
+    return f"{_and(_dedupe(values))} items"
+
+
+def design_effects_lines(rows: list, facts: dict) -> list:
+    """README section on the effects of the synthetic design; every number is computed from ``rows``.
+
+    ``rows`` may come straight from a run (typed values) or from probe.csv (strings).
+    """
+    ran = [r for r in rows if r["status"] not in NOT_RUN and r["labels"] != ""]
+    single = [r for r in ran if r["fleet"] == SINGLE and r["direction"] == "pickup"]
+    stops = len(facts["usable"])
+    lines = ["## Effects of the synthetic design"]
+    # ---- mixed stops: items per cell at k = all, and the mixed-seed cell
+    allk = [r for r in single if int(r["k"]) == stops and r["items"] != ""]
+    sizes = sorted({int(r["n"]) for r in allk})[-2:]
+    mixed = ("- Mixed stops. Real stop codes carry one class, and co-located students of one class merge into one item "
+             "(`_items` in `route_enumeration.py`). The probe draws the class independently of the stop, so one stop "
+             "can hold both an Sw and an So item.")
+    ranges = []
+    for n in sizes:
+        items = [int(r["items"]) for r in allk if int(r["n"]) == n]
+        lo, hi = min(items), max(items)
+        ranges.append((n, f"{lo} item{'s' if lo != 1 else ''}" if lo == hi else f"{lo} to {hi} items"))
+    if ranges:
+        text = f"At k = {stops} and n = {ranges[0][0]} the waves have {ranges[0][1]}"
+        for n, rng in ranges[1:]:
+            text += f" and at n = {n} they have {rng}"
+        mixed += (f" {text} (single type, pickup), whereas real data would have at most {stops} items at {stops} stops."
+                  " The probe is therefore heavier than real data at large n; the bias runs in one direction "
+                  "(conservative).")
+    cells: dict = {}
+    for r in allk:
+        cells.setdefault((int(r["n"]), int(r["R"])), []).append(r)
+    mixed_cells = sorted(key for key, rs in cells.items()
+                         if any(r["status"] == "complete" for r in rs) and any(r["status"] != "complete" for r in rs))
+    if mixed_cells:
+        n, ride = mixed_cells[0]
+        rs = sorted(cells[(n, ride)], key=lambda r: int(r["seed"]))
+        bad = [r for r in rs if r["status"] != "complete"]
+        good = [r for r in rs if r["status"] == "complete"]
+        bad_seeds, good_seeds = [int(r["seed"]) for r in bad], [int(r["seed"]) for r in good]
+        mixed += (f" Concrete case: the capped cell at R = {ride}, n = {n}, k = {stops} comes from "
+                  f"seed{'s' if len(bad) > 1 else ''} {_and(bad_seeds)}, which {'have' if len(bad) > 1 else 'has'} "
+                  f"{_items_text(int(r['items']) for r in bad)}; seed{'s' if len(good) > 1 else ''} {_and(good_seeds)} "
+                  f"{'have' if len(good) > 1 else 'has'} {_items_text(int(r['items']) for r in good)} and completed "
+                  f"with {_and(_fmt(r['labels']) for r in good)} labels.")
+    lines.append(mixed)
+    # ---- seed variance: largest max/min label ratio over the (n, k, R) cells of the single type, pickup
+    spread: dict = {}
+    for r in single:
+        spread.setdefault((int(r["n"]), int(r["k"]), int(r["R"])), []).append(int(r["labels"]))
+    best = None
+    for (n, kv, ride), vals in sorted(spread.items()):
+        if len(vals) >= 2 and min(vals) > 0:
+            ratio = max(vals) / min(vals)
+            if best is None or ratio > best[0]:
+                best = (ratio, n, kv, ride, min(vals), max(vals))
+    if best:
+        words = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five"}
+        count = len(facts["seeds"])
+        lines.append(f"- Seed variance. For the same (n, k, R) the label count across the {words.get(count, count)} "
+                     f"seeds varies by up to about {best[0]:.1f} times (pickup, single type, k = {best[2]}, n = {best[1]}, "
+                     f"R = {best[3]}: {_fmt(best[4])} to {_fmt(best[5])} labels). Where a seed capped, its count is cut "
+                     f"at {_fmt(LABEL_CAP_DEFAULT + 1)}, so the true spread is at least this large (a lower bound).")
+    # ---- typed fleets against the single type, run by run
+    base = {(r["direction"], int(r["n"]), int(r["k"]), int(r["R"]), int(r["seed"])): int(r["labels"])
+            for r in ran if r["fleet"] == SINGLE}
+    pairs = [(base[key], int(r["labels"])) for r in ran if r["fleet"] != SINGLE
+             for key in [(r["direction"], int(r["n"]), int(r["k"]), int(r["R"]), int(r["seed"]))] if key in base]
+    if pairs:
+        differ = sum(a != b for a, b in pairs)
+        if differ == 0:
+            lines.append("- Typed fleets. Their label counts equal the single type's in every run that has both, because "
+                         "the large 4/5 type dominates (sedan 0/4 and minivan 1/3 with total capacity 3 fit inside it), "
+                         "so typed enumeration adds only columns.")
+        else:
+            lines.append(f"- Typed fleets. Their label counts differ from the single type's in {differ} of {len(pairs)} "
+                         "runs that have both.")
+    lines.append("")
+    return lines
+
+
 def readme_text(facts: dict, rows: list) -> str:
     ran = [r for r in rows if r["status"] not in NOT_RUN]
     counts: dict = {}
@@ -571,6 +668,7 @@ def readme_text(facts: dict, rows: list) -> str:
         "carries its class.",
         f"- Seeds {', '.join(str(s) for s in facts['seeds'])} per cell; the instance is `random.Random(\"scaling-probe:"
         "<seed>:<n>:<k>\")`, identical for every R, fleet and direction.", "",
+        *design_effects_lines(rows, facts),
         "## Grid and stopping rules",
         f"- n in {', '.join(str(n) for n in facts['sizes'])}; R in {', '.join(str(r) for r in facts['rides'])}; "
         "fleets: single type 4 Sw / 5 So (large); large + sedan (0 Sw / 4 So); large + Doblo (minivan 1 Sw / 3 So, "
@@ -594,8 +692,46 @@ def readme_text(facts: dict, rows: list) -> str:
         f"- Reproduce: `PYTHONPATH=<repo root> python scripts/probe_exact_enumeration_scaling.py` from a clean commit.", ""])
 
 
+def report_only(from_dir) -> None:
+    """Rewrite README.md and summary.md (and the manifest's output hashes and report block) from an existing run.
+
+    Reads probe.csv and manifest.json of ``from_dir``; never writes probe.csv (its sha256 must equal the manifest's, else
+    refused); runs no enumeration. The probe-run fields of the manifest (commit, dirty flag, timings) stay as they were.
+    """
+    d = Path(from_dir)
+    check_out_dir(d, REPO)
+    manifest = json.loads((d / "manifest.json").read_text(encoding="utf-8"))
+    csv_bytes = (d / "probe.csv").read_bytes()
+    if hashlib.sha256(csv_bytes).hexdigest() != manifest["outputs"]["probe.csv"]:
+        raise ProbeRefused("probe.csv does not match the sha256 recorded in manifest.json")
+    rows = list(csv.DictReader(io.StringIO(csv_bytes.decode("utf-8"), newline="")))
+    arcs, files = load_union_arcs()
+    if files[0]["declared_sha256"] != manifest["matrix_source"]["declared_snapshot_sha256"]:
+        raise ProbeRefused("the matrix archive declares another snapshot than the manifest")
+    names = [DEPOT] + usable_stops(arcs, DEPOT)[0]
+    grid, locations, share = manifest["grid"], manifest["locations"], manifest["sw_share"]
+    facts = {"sw_num": share["sw_legs"], "sw_den": share["legs"], "all_stops": locations["stops_in_archive"],
+             "usable": locations["usable_stops"], "snapshot_sha256": manifest["matrix_source"]["declared_snapshot_sha256"],
+             "missing_arcs": [(a, b) for a in names for b in names if a != b and (a, b) not in arcs],
+             "seeds": manifest["seeds"], "sizes": grid["sizes"], "rides": grid["rides"], "dropoff": grid["dropoff_cells"],
+             "mem_limit_mb": manifest["caps"]["memory_guard_mb"], "total_seconds": manifest["total_wall_seconds"]}
+    _write(d / "summary.md", summary_markdown(rows, facts))
+    _write(d / "README.md", readme_text(facts, rows))
+    commit, dirty = git_state(d)
+    manifest["outputs"] = {**manifest["outputs"],
+                           **{n: _sha256_file(d / n) for n in ("summary.md", "README.md")}}
+    manifest["report_regenerated"] = {
+        "git_commit": commit, "dirty_working_tree": dirty, "python_version": platform.python_version(),
+        "python_provenance": python_provenance(),
+        "note": "README.md and summary.md regenerated from probe.csv and manifest.json; probe.csv unchanged and "
+                "verified by sha256; the probe-run fields of this manifest are those of the original run"}
+    _write(d / "manifest.json", json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+
+
 def main(argv) -> int:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--report-only", action="store_true", help="rewrite README.md/summary.md from an existing run")
+    ap.add_argument("--from", dest="from_dir", default=None, help="results directory for --report-only")
     ap.add_argument("--out", default=str(DEFAULT_OUT))
     ap.add_argument("--worker", default=None, help="internal: run one enumeration from a JSON spec")
     ap.add_argument("--timeout", type=float, default=SUBPROCESS_TIMEOUT)
@@ -606,6 +742,17 @@ def main(argv) -> int:
     args = ap.parse_args(argv[1:])
     if args.worker is not None:
         return worker_main(json.loads(args.worker))
+    if args.report_only:
+        if not args.from_dir:
+            print("refused: --report-only needs --from DIR", file=sys.stderr)
+            return 2
+        try:
+            report_only(args.from_dir)
+        except ProbeRefused as exc:
+            print(f"refused: {exc}", file=sys.stderr)
+            return 2
+        print(f"report regenerated in {args.from_dir}", flush=True)
+        return 0
     out = Path(args.out)
     try:
         check_out_dir(out, REPO)

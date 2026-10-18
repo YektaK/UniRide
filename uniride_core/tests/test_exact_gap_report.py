@@ -320,9 +320,7 @@ def test_manifest_lists_every_input_with_its_sha_and_every_output(report):
     assert all(not Path(v).is_absolute() for v in manifest["python_provenance"].values())
     assert manifest["versions"]["python"] and manifest["versions"]["zlib"] == zlib.ZLIB_VERSION
     assert manifest["protocols"]["wave_gaps.csv"] == "exact_reference_v1" and manifest["protocols"]["day_gaps.csv"] == "union_day_v1"
-    from academic_benchmark.exact_reference import protocol
-
-    assert protocol.private_data_errors(manifest) == []
+    assert gr.protocol.private_data_errors(manifest) == []  # protocol module via the script (core tests import no academic_benchmark)
 
 
 # ---------------------------------------------------------------------------------------------------- refusals

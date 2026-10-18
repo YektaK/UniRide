@@ -28,7 +28,7 @@
       "ga_seed": "42"
     }
   },
-  "git_commit": "6c0fce628043542c5b70bba9b1f363ebdd7d72c4",
+  "git_commit": "1d73d2a4b87623bd1d5eef88a9b0c9336a74958f",
   "host_os": "Windows-11",
   "inputs": {
     "docs/paper/results/week-2026-10-05-4sw5so/run_manifest.json": "f152ca63068be91be03c7ca27cf767fef52cc9345a6cb69d155f75a137f90b15",
@@ -46,7 +46,7 @@
     "docs/paper/results/week-2026-10-05-fleet-rerun-large-sedan/run_manifest.json": "279a06fc19f222740e93bf842bb65ca407f221e7c3c159b6d0e084b019d7643b"
   },
   "outputs": {
-    "README.md": "23b0e690306032f4d946f0f71d2f81eda73095c183651d7b073f9c4d8b8efaad",
+    "README.md": "f164fa3dfdd8ae1cf19293919e4c926404190dc8c748f01e4dd85186f601c14c",
     "day_gaps.csv": "19bcd43c9fa8cd7263968d4e6f3e4059baf561213f2d02d556e484aa2f26e295",
     "day_sums.csv": "c3d1bc48a9e876b5c48b0207b304dcef5199ff662313949ac4b9c213be50a6f1",
     "figure_gap_single.png": "50cdb253aa42683277f6fd05550f40e54d7e13ad5335d3439db30352f536a4e1",

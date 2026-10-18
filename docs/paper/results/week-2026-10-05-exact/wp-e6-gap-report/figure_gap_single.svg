@@ -1,0 +1,202 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 876 740" width="876" height="740" font-family="Arial, Helvetica, sans-serif">
+<title>Gap of the GA wave routes to the exact reference, single type 4 Sw / 5 So (WP-E3)</title>
+<desc>Per-wave duration gap gD against students per wave, one panel per R, marker by dK (single type).</desc>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="70" y="24" font-size="16" text-anchor="start" fill="#222222" font-weight="bold">Gap of the GA wave routes to the exact reference, single type 4 Sw / 5 So (WP-E3)</text>
+<text x="70" y="44" font-size="12" text-anchor="start" fill="#444444">Snapshot week 2026-10-05, 57 waves per R; GA = one seed-42 native run; exact_reference_v1; descriptive gap</text>
+<circle cx="75" cy="72" r="4.5" fill="#0072B2" fill-opacity="1" stroke="#0072B2" stroke-width="0.6"/>
+<text x="84" y="76" font-size="11" text-anchor="start" fill="#222222">wave; dK = 0, y = gD</text>
+<polygon points="233,66.6 237.95,76.05 228.05,76.05" fill="none" stroke="#444444" stroke-width="1.6"/>
+<text x="242" y="76" font-size="11" text-anchor="start" fill="#222222">dK &gt;= 1, gD not defined: y = gD_free (hollow)</text>
+<text x="70" y="96" font-size="11" text-anchor="start" fill="#444444">A point is one wave (or option) per distinct (students, y); 'xN' = N coincident rows. Base and q are offset by +-0.14 students.</text>
+<rect x="70" y="120" width="360" height="250" fill="#ffffff" stroke="#888888" stroke-width="0.8"/>
+<line x1="70" y1="355.85" x2="430" y2="355.85" stroke="#eeeeee" stroke-width="1"/>
+<text x="65" y="359.85" font-size="11" text-anchor="end" fill="#333333">0</text>
+<line x1="70" y1="316.54" x2="430" y2="316.54" stroke="#eeeeee" stroke-width="1"/>
+<text x="65" y="320.54" font-size="11" text-anchor="end" fill="#333333">0.02</text>
+<line x1="70" y1="277.23" x2="430" y2="277.23" stroke="#eeeeee" stroke-width="1"/>
+<text x="65" y="281.23" font-size="11" text-anchor="end" fill="#333333">0.04</text>
+<line x1="70" y1="237.92" x2="430" y2="237.92" stroke="#eeeeee" stroke-width="1"/>
+<text x="65" y="241.92" font-size="11" text-anchor="end" fill="#333333">0.06</text>
+<line x1="70" y1="198.62" x2="430" y2="198.62" stroke="#eeeeee" stroke-width="1"/>
+<text x="65" y="202.62" font-size="11" text-anchor="end" fill="#333333">0.08</text>
+<line x1="70" y1="159.31" x2="430" y2="159.31" stroke="#eeeeee" stroke-width="1"/>
+<text x="65" y="163.31" font-size="11" text-anchor="end" fill="#333333">0.1</text>
+<line x1="70" y1="120" x2="430" y2="120" stroke="#eeeeee" stroke-width="1"/>
+<text x="65" y="124" font-size="11" text-anchor="end" fill="#333333">0.12</text>
+<line x1="70" y1="120" x2="70" y2="370" stroke="#f0f0f0" stroke-width="1"/>
+<text x="70" y="384" font-size="11" text-anchor="middle" fill="#333333">0</text>
+<line x1="155.71" y1="120" x2="155.71" y2="370" stroke="#f0f0f0" stroke-width="1"/>
+<text x="155.71" y="384" font-size="11" text-anchor="middle" fill="#333333">5</text>
+<line x1="241.43" y1="120" x2="241.43" y2="370" stroke="#f0f0f0" stroke-width="1"/>
+<text x="241.43" y="384" font-size="11" text-anchor="middle" fill="#333333">10</text>
+<line x1="327.14" y1="120" x2="327.14" y2="370" stroke="#f0f0f0" stroke-width="1"/>
+<text x="327.14" y="384" font-size="11" text-anchor="middle" fill="#333333">15</text>
+<line x1="412.86" y1="120" x2="412.86" y2="370" stroke="#f0f0f0" stroke-width="1"/>
+<text x="412.86" y="384" font-size="11" text-anchor="middle" fill="#333333">20</text>
+<line x1="70" y1="355.85" x2="430" y2="355.85" stroke="#999999" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="250" y="112" font-size="12" text-anchor="middle" fill="#111111" font-weight="bold">R = 50 min</text>
+<text x="250" y="402" font-size="11" text-anchor="middle" fill="#222222">Students per wave</text>
+<text x="22" y="245" font-size="11" text-anchor="middle" fill="#222222" transform="rotate(-90 22 245)">gD (or gD_free, hollow)</text>
+<circle cx="87.14" cy="355.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="87.14" y="336.85" font-size="11" text-anchor="middle" fill="#0072B2">x11</text>
+<circle cx="104.29" cy="355.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="104.29" y="346.85" font-size="11" text-anchor="middle" fill="#0072B2">x12</text>
+<circle cx="121.43" cy="355.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="121.43" y="336.85" font-size="11" text-anchor="middle" fill="#0072B2">x10</text>
+<circle cx="138.57" cy="355.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="138.57" y="346.85" font-size="11" text-anchor="middle" fill="#0072B2">x6</text>
+<circle cx="155.71" cy="355.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="155.71" y="336.85" font-size="11" text-anchor="middle" fill="#0072B2">x9</text>
+<circle cx="172.86" cy="355.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="172.86" y="346.85" font-size="11" text-anchor="middle" fill="#0072B2">x2</text>
+<circle cx="190" cy="355.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<circle cx="207.14" cy="345.05" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<circle cx="241.43" cy="355.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<circle cx="258.57" cy="355.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<polygon points="258.57,278.84 263.52,288.29 253.62,288.29" fill="none" stroke="#0072B2" stroke-width="1.6"/>
+<circle cx="292.86" cy="319.56" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<circle cx="412.86" cy="342.23" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<rect x="486" y="120" width="360" height="250" fill="#ffffff" stroke="#888888" stroke-width="0.8"/>
+<line x1="486" y1="355.85" x2="846" y2="355.85" stroke="#eeeeee" stroke-width="1"/>
+<text x="481" y="359.85" font-size="11" text-anchor="end" fill="#333333">0</text>
+<line x1="486" y1="316.54" x2="846" y2="316.54" stroke="#eeeeee" stroke-width="1"/>
+<text x="481" y="320.54" font-size="11" text-anchor="end" fill="#333333">0.02</text>
+<line x1="486" y1="277.23" x2="846" y2="277.23" stroke="#eeeeee" stroke-width="1"/>
+<text x="481" y="281.23" font-size="11" text-anchor="end" fill="#333333">0.04</text>
+<line x1="486" y1="237.92" x2="846" y2="237.92" stroke="#eeeeee" stroke-width="1"/>
+<text x="481" y="241.92" font-size="11" text-anchor="end" fill="#333333">0.06</text>
+<line x1="486" y1="198.62" x2="846" y2="198.62" stroke="#eeeeee" stroke-width="1"/>
+<text x="481" y="202.62" font-size="11" text-anchor="end" fill="#333333">0.08</text>
+<line x1="486" y1="159.31" x2="846" y2="159.31" stroke="#eeeeee" stroke-width="1"/>
+<text x="481" y="163.31" font-size="11" text-anchor="end" fill="#333333">0.1</text>
+<line x1="486" y1="120" x2="846" y2="120" stroke="#eeeeee" stroke-width="1"/>
+<text x="481" y="124" font-size="11" text-anchor="end" fill="#333333">0.12</text>
+<line x1="486" y1="120" x2="486" y2="370" stroke="#f0f0f0" stroke-width="1"/>
+<text x="486" y="384" font-size="11" text-anchor="middle" fill="#333333">0</text>
+<line x1="571.71" y1="120" x2="571.71" y2="370" stroke="#f0f0f0" stroke-width="1"/>
+<text x="571.71" y="384" font-size="11" text-anchor="middle" fill="#333333">5</text>
+<line x1="657.43" y1="120" x2="657.43" y2="370" stroke="#f0f0f0" stroke-width="1"/>
+<text x="657.43" y="384" font-size="11" text-anchor="middle" fill="#333333">10</text>
+<line x1="743.14" y1="120" x2="743.14" y2="370" stroke="#f0f0f0" stroke-width="1"/>
+<text x="743.14" y="384" font-size="11" text-anchor="middle" fill="#333333">15</text>
+<line x1="828.86" y1="120" x2="828.86" y2="370" stroke="#f0f0f0" stroke-width="1"/>
+<text x="828.86" y="384" font-size="11" text-anchor="middle" fill="#333333">20</text>
+<line x1="486" y1="355.85" x2="846" y2="355.85" stroke="#999999" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="666" y="112" font-size="12" text-anchor="middle" fill="#111111" font-weight="bold">R = 60 min</text>
+<text x="666" y="402" font-size="11" text-anchor="middle" fill="#222222">Students per wave</text>
+<circle cx="503.14" cy="355.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="503.14" y="336.85" font-size="11" text-anchor="middle" fill="#0072B2">x11</text>
+<circle cx="520.29" cy="355.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="520.29" y="346.85" font-size="11" text-anchor="middle" fill="#0072B2">x12</text>
+<circle cx="537.43" cy="355.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="537.43" y="336.85" font-size="11" text-anchor="middle" fill="#0072B2">x10</text>
+<circle cx="554.57" cy="355.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="554.57" y="346.85" font-size="11" text-anchor="middle" fill="#0072B2">x6</text>
+<circle cx="571.71" cy="355.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="571.71" y="336.85" font-size="11" text-anchor="middle" fill="#0072B2">x9</text>
+<circle cx="588.86" cy="355.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="588.86" y="346.85" font-size="11" text-anchor="middle" fill="#0072B2">x2</text>
+<circle cx="606" cy="318.29" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<circle cx="623.14" cy="330.97" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<circle cx="657.43" cy="179.07" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<circle cx="674.57" cy="347.49" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<circle cx="674.57" cy="285.09" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<circle cx="708.86" cy="211.89" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<polygon points="828.86,213.82 833.81,223.27 823.91,223.27" fill="none" stroke="#0072B2" stroke-width="1.6"/>
+<rect x="70" y="440" width="360" height="250" fill="#ffffff" stroke="#888888" stroke-width="0.8"/>
+<line x1="70" y1="675.85" x2="430" y2="675.85" stroke="#eeeeee" stroke-width="1"/>
+<text x="65" y="679.85" font-size="11" text-anchor="end" fill="#333333">0</text>
+<line x1="70" y1="636.54" x2="430" y2="636.54" stroke="#eeeeee" stroke-width="1"/>
+<text x="65" y="640.54" font-size="11" text-anchor="end" fill="#333333">0.02</text>
+<line x1="70" y1="597.23" x2="430" y2="597.23" stroke="#eeeeee" stroke-width="1"/>
+<text x="65" y="601.23" font-size="11" text-anchor="end" fill="#333333">0.04</text>
+<line x1="70" y1="557.92" x2="430" y2="557.92" stroke="#eeeeee" stroke-width="1"/>
+<text x="65" y="561.92" font-size="11" text-anchor="end" fill="#333333">0.06</text>
+<line x1="70" y1="518.62" x2="430" y2="518.62" stroke="#eeeeee" stroke-width="1"/>
+<text x="65" y="522.62" font-size="11" text-anchor="end" fill="#333333">0.08</text>
+<line x1="70" y1="479.31" x2="430" y2="479.31" stroke="#eeeeee" stroke-width="1"/>
+<text x="65" y="483.31" font-size="11" text-anchor="end" fill="#333333">0.1</text>
+<line x1="70" y1="440" x2="430" y2="440" stroke="#eeeeee" stroke-width="1"/>
+<text x="65" y="444" font-size="11" text-anchor="end" fill="#333333">0.12</text>
+<line x1="70" y1="440" x2="70" y2="690" stroke="#f0f0f0" stroke-width="1"/>
+<text x="70" y="704" font-size="11" text-anchor="middle" fill="#333333">0</text>
+<line x1="155.71" y1="440" x2="155.71" y2="690" stroke="#f0f0f0" stroke-width="1"/>
+<text x="155.71" y="704" font-size="11" text-anchor="middle" fill="#333333">5</text>
+<line x1="241.43" y1="440" x2="241.43" y2="690" stroke="#f0f0f0" stroke-width="1"/>
+<text x="241.43" y="704" font-size="11" text-anchor="middle" fill="#333333">10</text>
+<line x1="327.14" y1="440" x2="327.14" y2="690" stroke="#f0f0f0" stroke-width="1"/>
+<text x="327.14" y="704" font-size="11" text-anchor="middle" fill="#333333">15</text>
+<line x1="412.86" y1="440" x2="412.86" y2="690" stroke="#f0f0f0" stroke-width="1"/>
+<text x="412.86" y="704" font-size="11" text-anchor="middle" fill="#333333">20</text>
+<line x1="70" y1="675.85" x2="430" y2="675.85" stroke="#999999" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="250" y="432" font-size="12" text-anchor="middle" fill="#111111" font-weight="bold">R = 70 min</text>
+<text x="250" y="722" font-size="11" text-anchor="middle" fill="#222222">Students per wave</text>
+<text x="22" y="565" font-size="11" text-anchor="middle" fill="#222222" transform="rotate(-90 22 565)">gD (or gD_free, hollow)</text>
+<circle cx="87.14" cy="675.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="87.14" y="656.85" font-size="11" text-anchor="middle" fill="#0072B2">x11</text>
+<circle cx="104.29" cy="675.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="104.29" y="666.85" font-size="11" text-anchor="middle" fill="#0072B2">x12</text>
+<circle cx="121.43" cy="675.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="121.43" y="656.85" font-size="11" text-anchor="middle" fill="#0072B2">x10</text>
+<circle cx="138.57" cy="675.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="138.57" y="666.85" font-size="11" text-anchor="middle" fill="#0072B2">x6</text>
+<circle cx="155.71" cy="675.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="155.71" y="656.85" font-size="11" text-anchor="middle" fill="#0072B2">x9</text>
+<circle cx="172.86" cy="675.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="172.86" y="666.85" font-size="11" text-anchor="middle" fill="#0072B2">x2</text>
+<circle cx="190" cy="675.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<circle cx="207.14" cy="650.97" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<circle cx="241.43" cy="621.25" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<circle cx="258.57" cy="675.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<polygon points="258.57,570.36 263.52,579.81 253.62,579.81" fill="none" stroke="#0072B2" stroke-width="1.6"/>
+<circle cx="292.86" cy="675.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<circle cx="412.86" cy="637.84" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<rect x="486" y="440" width="360" height="250" fill="#ffffff" stroke="#888888" stroke-width="0.8"/>
+<line x1="486" y1="675.85" x2="846" y2="675.85" stroke="#eeeeee" stroke-width="1"/>
+<text x="481" y="679.85" font-size="11" text-anchor="end" fill="#333333">0</text>
+<line x1="486" y1="636.54" x2="846" y2="636.54" stroke="#eeeeee" stroke-width="1"/>
+<text x="481" y="640.54" font-size="11" text-anchor="end" fill="#333333">0.02</text>
+<line x1="486" y1="597.23" x2="846" y2="597.23" stroke="#eeeeee" stroke-width="1"/>
+<text x="481" y="601.23" font-size="11" text-anchor="end" fill="#333333">0.04</text>
+<line x1="486" y1="557.92" x2="846" y2="557.92" stroke="#eeeeee" stroke-width="1"/>
+<text x="481" y="561.92" font-size="11" text-anchor="end" fill="#333333">0.06</text>
+<line x1="486" y1="518.62" x2="846" y2="518.62" stroke="#eeeeee" stroke-width="1"/>
+<text x="481" y="522.62" font-size="11" text-anchor="end" fill="#333333">0.08</text>
+<line x1="486" y1="479.31" x2="846" y2="479.31" stroke="#eeeeee" stroke-width="1"/>
+<text x="481" y="483.31" font-size="11" text-anchor="end" fill="#333333">0.1</text>
+<line x1="486" y1="440" x2="846" y2="440" stroke="#eeeeee" stroke-width="1"/>
+<text x="481" y="444" font-size="11" text-anchor="end" fill="#333333">0.12</text>
+<line x1="486" y1="440" x2="486" y2="690" stroke="#f0f0f0" stroke-width="1"/>
+<text x="486" y="704" font-size="11" text-anchor="middle" fill="#333333">0</text>
+<line x1="571.71" y1="440" x2="571.71" y2="690" stroke="#f0f0f0" stroke-width="1"/>
+<text x="571.71" y="704" font-size="11" text-anchor="middle" fill="#333333">5</text>
+<line x1="657.43" y1="440" x2="657.43" y2="690" stroke="#f0f0f0" stroke-width="1"/>
+<text x="657.43" y="704" font-size="11" text-anchor="middle" fill="#333333">10</text>
+<line x1="743.14" y1="440" x2="743.14" y2="690" stroke="#f0f0f0" stroke-width="1"/>
+<text x="743.14" y="704" font-size="11" text-anchor="middle" fill="#333333">15</text>
+<line x1="828.86" y1="440" x2="828.86" y2="690" stroke="#f0f0f0" stroke-width="1"/>
+<text x="828.86" y="704" font-size="11" text-anchor="middle" fill="#333333">20</text>
+<line x1="486" y1="675.85" x2="846" y2="675.85" stroke="#999999" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="666" y="432" font-size="12" text-anchor="middle" fill="#111111" font-weight="bold">R = 90 min</text>
+<text x="666" y="722" font-size="11" text-anchor="middle" fill="#222222">Students per wave</text>
+<circle cx="503.14" cy="675.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="503.14" y="656.85" font-size="11" text-anchor="middle" fill="#0072B2">x11</text>
+<circle cx="520.29" cy="675.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="520.29" y="666.85" font-size="11" text-anchor="middle" fill="#0072B2">x12</text>
+<circle cx="537.43" cy="675.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="537.43" y="656.85" font-size="11" text-anchor="middle" fill="#0072B2">x10</text>
+<circle cx="554.57" cy="675.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="554.57" y="666.85" font-size="11" text-anchor="middle" fill="#0072B2">x6</text>
+<circle cx="571.71" cy="675.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="571.71" y="656.85" font-size="11" text-anchor="middle" fill="#0072B2">x9</text>
+<circle cx="588.86" cy="675.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<text x="588.86" y="666.85" font-size="11" text-anchor="middle" fill="#0072B2">x2</text>
+<circle cx="606" cy="675.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<circle cx="623.14" cy="675.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<circle cx="657.43" cy="653.51" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<circle cx="674.57" cy="675.85" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<circle cx="674.57" cy="608.74" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<circle cx="708.86" cy="640.37" r="4.5" fill="#0072B2" fill-opacity="0.55" stroke="#0072B2" stroke-width="0.6"/>
+<polygon points="828.86,461.36 833.81,470.81 823.91,470.81" fill="none" stroke="#0072B2" stroke-width="1.6"/>
+</svg>

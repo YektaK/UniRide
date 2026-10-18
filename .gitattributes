@@ -5,3 +5,5 @@ academic_benchmark/*/legacy_pre_2026-10-13/** -text
 # WP-E3/WP-E4a exact-solver results are byte-exact artefacts: their manifests hold sha256 values of the files
 # (exact_routes.json), so no line-ending conversion may ever touch them (-text, like the quarantined legacy results).
 docs/paper/results/week-2026-10-05-exact/** -text
+# WP-E7: the TSP reference manifest holds sha256 values of reference.csv, tours.json and README.md: byte-exact, no line-ending conversion.
+docs/paper/results/tsplib-exact-reference/** -text

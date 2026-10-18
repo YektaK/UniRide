@@ -1,0 +1,323 @@
+{
+  "ampl": {
+    "amplpy_version": "0.18.0",
+    "location": "local AMPL installation used",
+    "version": "AMPL Version 20260809 (MSVC 19.44.35228.0, 64-bit)"
+  },
+  "blocking_errors": [],
+  "claim": "Verification subset (a correctness check of the exact TSP/ATSP pipeline and of the TSPLIB distance convention), not a paper instance set; published TSPLIB optima are reference values; no superiority claim.",
+  "convention": {
+    "ATT": "pseudo-Euclidean (TSPLIB95)",
+    "EUC_2D": "nint",
+    "GEO": "TSPLIB95 GEO with math.pi (T06/O02)",
+    "asserted": "every arc against an independent transcription, before any solve"
+  },
+  "dirty_working_tree": false,
+  "geo_pi_sensitivity": {
+    "burma14": {
+      "arcs_differing": 0,
+      "arcs_total": 182,
+      "pi": 3.141592
+    },
+    "gr96": {
+      "arcs_differing": 8,
+      "arcs_total": 9120,
+      "lb": 55209,
+      "pi": 3.141592,
+      "status": "optimal",
+      "ub": 55209
+    },
+    "ulysses16": {
+      "arcs_differing": 0,
+      "arcs_total": 240,
+      "pi": 3.141592
+    },
+    "ulysses22": {
+      "arcs_differing": 0,
+      "arcs_total": 462,
+      "pi": 3.141592
+    }
+  },
+  "git_commit": "461117c5f4e39460e0482a55033ba90e52717f3d",
+  "highs_verify": true,
+  "host_os": "Windows-11",
+  "instance_filter": [
+    "burma14",
+    "ulysses16",
+    "ulysses22",
+    "att48",
+    "eil51",
+    "berlin52",
+    "ft53",
+    "st70",
+    "eil76",
+    "pr76",
+    "gr96",
+    "kroa100",
+    "krob100",
+    "kroc100",
+    "krod100",
+    "kroe100",
+    "rd100"
+  ],
+  "instances": {
+    "att48": {
+      "data_source": "tsplib_db_coordinates",
+      "edge_weight_type": "ATT",
+      "file": null,
+      "matrix_sha256": "b3bff113da43abb812fe94a3de64cb1f26e5c30768be24655e41a84204d5376c",
+      "n": 48,
+      "problem_type": "TSP",
+      "published_optimum": 10628,
+      "published_source": "tsplib",
+      "sha256": "8608de380f371a5d159d431f7e80cb85ecee7bf634ee268c0ec00c4cfe298a14"
+    },
+    "berlin52": {
+      "data_source": "tsp_file",
+      "edge_weight_type": "EUC_2D",
+      "file": "berlin52.tsp",
+      "matrix_sha256": "ce0eec901dc459efcf0bb17ee0740e35b55a1e0d14e00d01cd4b0e1d8504dc6b",
+      "n": 52,
+      "problem_type": "TSP",
+      "published_optimum": 7542,
+      "published_source": "tsplib",
+      "sha256": "8496a5838133e3c3eb25a9fa8893b1ac302593fc8dc325350643a0cabd8abadc"
+    },
+    "burma14": {
+      "data_source": "tsplib_db_coordinates",
+      "edge_weight_type": "GEO",
+      "file": null,
+      "matrix_sha256": "2096792dd922c5cd511df64c9e87304a2b952cb05f1eb8da94d7c2ebabe3efa2",
+      "n": 14,
+      "problem_type": "TSP",
+      "published_optimum": 3323,
+      "published_source": "tsplib",
+      "sha256": "95a859a785ed8af942c5fe57a548714b04b9931c66c083fd08abe014260045d7"
+    },
+    "eil51": {
+      "data_source": "tsp_file",
+      "edge_weight_type": "EUC_2D",
+      "file": "eil51.tsp",
+      "matrix_sha256": "82c263d30e5fac473062297340bc756db42baea3c96e3eac3db14ac344cd502f",
+      "n": 51,
+      "problem_type": "TSP",
+      "published_optimum": 426,
+      "published_source": "tsplib",
+      "sha256": "66c05ad077ffd64d5778e358bbd16be049f8c8ae880cbd24f034487331d1ccce"
+    },
+    "eil76": {
+      "data_source": "tsp_file",
+      "edge_weight_type": "EUC_2D",
+      "file": "eil76.tsp",
+      "matrix_sha256": "9483f37ed0d9c755dcb06c20429d60602a5af0afa0952ad48dc14ba5df196d37",
+      "n": 76,
+      "problem_type": "TSP",
+      "published_optimum": 538,
+      "published_source": "tsplib",
+      "sha256": "74a81d109969e0e46ecc62ff9bd051bfce36b508326bfcd22168e58d03af2447"
+    },
+    "ft53": {
+      "data_source": "atsp_file",
+      "edge_weight_type": "EXPLICIT",
+      "file": "ft53.atsp",
+      "matrix_sha256": "cfc205f3e8bd0088329815e5f8d2bfa68b849c4aaca79365c63817e245eb2227",
+      "n": 53,
+      "problem_type": "ATSP",
+      "published_optimum": 6905,
+      "published_source": "tsplib",
+      "sha256": "692ae545e226d88aa095e3e726c8a1dadf4ecc9b97852d0cdbb2ca2a98dd2634"
+    },
+    "gr96": {
+      "data_source": "tsplib_db_coordinates",
+      "edge_weight_type": "GEO",
+      "file": null,
+      "matrix_sha256": "09fbdbb72382f0253816dec96aef226bf794afafb3f0381391504382700cfed7",
+      "n": 96,
+      "problem_type": "TSP",
+      "published_optimum": 55209,
+      "published_source": "tsplib",
+      "sha256": "dbe13b6a4e0fa75e51e71c88bf8ae384dfbf995128d1fb871d86980ef9603beb"
+    },
+    "kroa100": {
+      "data_source": "tsplib_db_coordinates",
+      "edge_weight_type": "EUC_2D",
+      "file": null,
+      "matrix_sha256": "6354005991631e12d6e7349a4fd7a672bdb4a47894539aa86c4fdf169a1f3450",
+      "n": 100,
+      "problem_type": "TSP",
+      "published_optimum": 21282,
+      "published_source": "tsplib",
+      "sha256": "fca46a74a926a541659ba09f9f2e833479f5052f0a47e0638c31d5de69cc7822"
+    },
+    "krob100": {
+      "data_source": "tsplib_db_coordinates",
+      "edge_weight_type": "EUC_2D",
+      "file": null,
+      "matrix_sha256": "b89fb58240ea1c7ec7594c169a9c4bedfdb5da9a7e85cb3ff554243e1fa5d9d9",
+      "n": 100,
+      "problem_type": "TSP",
+      "published_optimum": 22141,
+      "published_source": "tsplib",
+      "sha256": "fde8d511e3239072c95bf2907d9fa1cd71b2fb9b3e8e8738c2204a9006630817"
+    },
+    "kroc100": {
+      "data_source": "tsplib_db_coordinates",
+      "edge_weight_type": "EUC_2D",
+      "file": null,
+      "matrix_sha256": "c2d9b75e6d004c1f10cc77f43b3fc7aab27483d11a59625957497be4e918b636",
+      "n": 100,
+      "problem_type": "TSP",
+      "published_optimum": 20749,
+      "published_source": "tsplib",
+      "sha256": "a68018751beeb5195c204b4d4603e38ece90af0b0a14824ee3ba373cb9e9a597"
+    },
+    "krod100": {
+      "data_source": "tsplib_db_coordinates",
+      "edge_weight_type": "EUC_2D",
+      "file": null,
+      "matrix_sha256": "7d891e562bb7cbdd4193f71a43910ae626e114f5cb54deaafb7dbf6b86e6d45d",
+      "n": 100,
+      "problem_type": "TSP",
+      "published_optimum": 21294,
+      "published_source": "tsplib",
+      "sha256": "57789264a39725844c6ba63cbe05542a328e35edb5f1b9240383e3566f33c64f"
+    },
+    "kroe100": {
+      "data_source": "tsplib_db_coordinates",
+      "edge_weight_type": "EUC_2D",
+      "file": null,
+      "matrix_sha256": "0fc6bdbee8c3a7c77c94e4e23594d83c8563cd709a13ea801ca276d455f9734a",
+      "n": 100,
+      "problem_type": "TSP",
+      "published_optimum": 22068,
+      "published_source": "tsplib",
+      "sha256": "fd67b6740fb8d5e4c0f7c3bc43cb764a2364415e0f5c0286d17c85d1e18c8cea"
+    },
+    "pr76": {
+      "data_source": "tsplib_db_coordinates",
+      "edge_weight_type": "EUC_2D",
+      "file": null,
+      "matrix_sha256": "952b48e5325446aaf1a5fbe4b6491d1562a82e4b023a5847ed92c949cc20333f",
+      "n": 76,
+      "problem_type": "TSP",
+      "published_optimum": 108159,
+      "published_source": "tsplib",
+      "sha256": "744f19e4b4659d353dbe9e553a09fd372545ecb6a23fe6c381bea0a39f545efd"
+    },
+    "rd100": {
+      "data_source": "tsp_file",
+      "edge_weight_type": "EUC_2D",
+      "file": "rd100.tsp",
+      "matrix_sha256": "be84e2cf137c32c4651ae341559098cb2bf39650a44682a66790824273ad74b3",
+      "n": 100,
+      "problem_type": "TSP",
+      "published_optimum": 7910,
+      "published_source": "tsplib",
+      "sha256": "6f62863c4f5d9fe1d7226077923716b8d0ba76d58bae7eb65fdaff127c5cdf5c"
+    },
+    "st70": {
+      "data_source": "tsp_file",
+      "edge_weight_type": "EUC_2D",
+      "file": "st70.tsp",
+      "matrix_sha256": "03b1ca22915478fd63527dec6419fbfa5c64e7e5d77eb8941dda1629e4469334",
+      "n": 70,
+      "problem_type": "TSP",
+      "published_optimum": 675,
+      "published_source": "tsplib",
+      "sha256": "60c09e8886609bf22d6dc699fe7d7aa1924207d084578aad1a377ec65cf15b1b"
+    },
+    "ulysses16": {
+      "data_source": "tsplib_db_coordinates",
+      "edge_weight_type": "GEO",
+      "file": null,
+      "matrix_sha256": "929a0cfb765c029138e350c982354ad277721f2708010341407be784eb142e5f",
+      "n": 16,
+      "problem_type": "TSP",
+      "published_optimum": 6859,
+      "published_source": "tsplib",
+      "sha256": "48d4b396dbb5b8adf55ae9587b51ef159596ea3f03e21dacd62903343a056ba1"
+    },
+    "ulysses22": {
+      "data_source": "tsplib_db_coordinates",
+      "edge_weight_type": "GEO",
+      "file": null,
+      "matrix_sha256": "2dd3b6e5452bf2a7498e5b1ae9d6e3bc23496dbb2b382c0303437826e4abb6f4",
+      "n": 22,
+      "problem_type": "TSP",
+      "published_optimum": 7013,
+      "published_source": "tsplib",
+      "sha256": "dcd42842c762797062651f5354f55155b5f3d9166011dae2fea191e9418ca32c"
+    }
+  },
+  "limits": {
+    "budget_rule": "one wall-clock budget per instance and solver; every cut-loop re-solve gets the time that remains (lim:time in the option string is the first solve's value)",
+    "mtz_limit_seconds": 120.0,
+    "mtz_max_n": 40,
+    "run_mode": "serial, one invocation, no cache",
+    "seed": 0,
+    "threads": 1,
+    "total_seconds_per_instance": 600
+  },
+  "manifest_kind": "tsp_reference",
+  "outputs": {
+    "README.md": "d0e68c5a35ac03d1df02b326c6863c0f667eb4b753837d1fba17df8e7ed3d105",
+    "reference.csv": "6b5fe1228ad0bc04dd4d55329dc48e2e52c7eeefc0cbb3047e55b2253117b39f",
+    "tours.json": "b50ada36d0aab78c6fe1854113d5444158cf50d6c26eacf68b574da5550f8e5b"
+  },
+  "protocol": "exact_reference_v1",
+  "published_optimum_source": {
+    "best_solutions_used": false,
+    "cross_checks": [
+      "problems.optimal vs the parser table for every instance",
+      "ft53 vs the ATSP manifest"
+    ],
+    "discrepancies": [],
+    "second_sources": [
+      "TSPLIB_OPTIMALS in uniride_core/algorithms/tsplib_parser.py",
+      "academic_benchmark/tsplib_data/atsp/MANIFEST.json (ft53)"
+    ],
+    "table": "problems.optimal (read-only, immutable open)"
+  },
+  "python_provenance": {
+    "academic_benchmark": "academic_benchmark/__init__.py",
+    "uniride_core": "uniride_core/__init__.py"
+  },
+  "python_version": "3.14.6",
+  "run_history": {
+    "cache": "none",
+    "invocations_at_this_commit": 1,
+    "retries": 0,
+    "serial": true
+  },
+  "schema_version": 1,
+  "solution_kind": "hamiltonian_cycle",
+  "solvers": {
+    "gurobi": {
+      "mip_gap": 0.0,
+      "mip_gap_abs": 0.99,
+      "name": "gurobi",
+      "option_string": "mip:bestbound=1 tech:threads=1 tech:seed=0 mip:gap=0 mip:gapabs=0.99 lim:time=600 outlev=1",
+      "seed": 0,
+      "threads": 1,
+      "time_limit_seconds": 600,
+      "version": "Gurobi 13.0.3",
+      "work_limit": null
+    },
+    "highs": {
+      "mip_gap": 0.0,
+      "mip_gap_abs": 0.99,
+      "name": "highs",
+      "option_string": "mip:bestbound=1 tech:threads=1 tech:seed=0 mip:gap=0 mip:gapabs=0.99 lim:time=600",
+      "seed": 0,
+      "threads": 1,
+      "time_limit_seconds": 600,
+      "version": "HiGHS 1.15.1",
+      "work_limit": null
+    }
+  },
+  "total_wall_seconds": 617.5,
+  "verdicts": {
+    "reproduced": 17
+  },
+  "work_package": "WP-E7"
+}

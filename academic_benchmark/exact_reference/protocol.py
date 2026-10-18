@@ -287,3 +287,135 @@ def validate_union_day_manifest(manifest: Mapping) -> List[str]:
                     problems.append(f"exact_options_source.{key} must be a sha256")
     problems.extend(private_data_errors(manifest))
     return problems
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# WP-E7 (GOAL 2 stage 1, DECISION_LOG E09): the TSP/ATSP reference manifest. Rows are Hamiltonian-cycle rows of
+# the same protocol id (exact_reference_v1); the manifest is its own kind, so ``validate_manifest`` (wave
+# campaigns) and ``validate_union_day_manifest`` are unchanged. The published TSPLIB optimum is a reference
+# value (``reference_optimum``, source ``tsplib``), never a computed result and never labelled ``optimal``
+# unless a solver proved it (design section 5).
+# ---------------------------------------------------------------------------------------------------------------
+TSP_REFERENCE_KIND = "tsp_reference"
+TSP_REFERENCE_SCHEMA_VERSION = 1
+TSP_REFERENCE_MANIFEST_FILENAME = "manifest.json"
+TSP_REFERENCE_TOTAL_SECONDS = 600  # wall time in total per instance, all cut-loop re-solves together (EQ6, E09)
+TSP_REFERENCE_SOLUTION_KIND = "hamiltonian_cycle"
+TSP_REFERENCE_CLAIM = ("Verification subset (a correctness check of the exact TSP/ATSP pipeline and of the TSPLIB distance "
+                       "convention), not a paper instance set; published TSPLIB optima are reference values; no superiority "
+                       "claim.")
+TSP_REFERENCE_DATA_SOURCES = ("tsp_file", "atsp_file", "tsplib_db_coordinates")
+TSP_REFERENCE_PUBLISHED_SOURCES = ("tsplib",)
+TSP_REFERENCE_REQUIRED_KEYS = (
+    "protocol", "manifest_kind", "schema_version", "work_package", "solution_kind", "git_commit", "dirty_working_tree", "ampl",
+    "solvers", "limits", "instances", "published_optimum_source", "python_provenance", "python_version", "host_os", "claim",
+    "blocking_errors", "total_wall_seconds")
+_TSP_INSTANCE_FIELDS = ("problem_type", "n", "edge_weight_type", "data_source", "sha256", "matrix_sha256", "published_optimum",
+                        "published_source")
+
+
+def validate_tsp_reference_manifest(manifest: Mapping) -> List[str]:
+    """Schema errors of a TSP reference ``manifest.json`` (empty when valid); never mutates ``manifest``."""
+    problems = [f"missing {k}" for k in TSP_REFERENCE_REQUIRED_KEYS if k not in manifest]
+    if manifest.get("protocol", PROTOCOL_ID) != PROTOCOL_ID:
+        problems.append(f"protocol must be {PROTOCOL_ID!r}")
+    if manifest.get("manifest_kind", TSP_REFERENCE_KIND) != TSP_REFERENCE_KIND:
+        problems.append(f"manifest_kind must be {TSP_REFERENCE_KIND!r}")
+    if manifest.get("schema_version", TSP_REFERENCE_SCHEMA_VERSION) != TSP_REFERENCE_SCHEMA_VERSION:
+        problems.append(f"schema_version must be {TSP_REFERENCE_SCHEMA_VERSION}")
+    if manifest.get("solution_kind", TSP_REFERENCE_SOLUTION_KIND) != TSP_REFERENCE_SOLUTION_KIND:
+        problems.append(f"solution_kind must be {TSP_REFERENCE_SOLUTION_KIND!r}")
+    if "claim" in manifest and manifest["claim"] != TSP_REFERENCE_CLAIM:
+        problems.append("claim text differs from the protocol wording")
+    if "git_commit" in manifest and not re.fullmatch(r"[0-9a-f]{7,40}", str(manifest["git_commit"])):
+        problems.append("git_commit must be a hex commit id")
+    if "dirty_working_tree" in manifest and not isinstance(manifest["dirty_working_tree"], bool):
+        problems.append("dirty_working_tree must be bool")
+    if "blocking_errors" in manifest and not isinstance(manifest["blocking_errors"], list):
+        problems.append("blocking_errors must be a list")
+    ampl = manifest.get("ampl")
+    if "ampl" in manifest:
+        if not isinstance(ampl, Mapping):
+            problems.append("ampl must be a mapping")
+        else:
+            for f in ("version", "amplpy_version", "location"):
+                if not ampl.get(f):
+                    problems.append(f"ampl.{f} missing")
+            if ampl.get("location") not in AMPL_LOCATION_VALUES:
+                problems.append(f"ampl.location must be one of {AMPL_LOCATION_VALUES}")
+    limits = manifest.get("limits")
+    if "limits" in manifest:
+        if not isinstance(limits, Mapping):
+            problems.append("limits must be a mapping")
+        else:
+            if limits.get("threads") != THREADS:
+                problems.append(f"limits.threads must be {THREADS} (E09)")
+            if limits.get("total_seconds_per_instance") != TSP_REFERENCE_TOTAL_SECONDS:
+                problems.append(f"limits.total_seconds_per_instance must be {TSP_REFERENCE_TOTAL_SECONDS} "
+                                "(E09: 600 s in total per instance)")
+    solvers = manifest.get("solvers")
+    if "solvers" in manifest:
+        if not isinstance(solvers, Mapping):
+            problems.append("solvers must be a mapping")
+        else:
+            for name in ("gurobi", "highs"):
+                if not isinstance(solvers.get(name), Mapping):
+                    problems.append(f"solvers.{name} missing")
+                    continue
+                problems.extend(_tsp_solver_errors(name, solvers[name]))
+    instances = manifest.get("instances")
+    if "instances" in manifest:
+        if not isinstance(instances, Mapping) or not instances:
+            problems.append("instances must be a non-empty mapping")
+        else:
+            for name, inst in instances.items():
+                problems.extend(_tsp_instance_errors(name, inst))
+    problems.extend(private_data_errors(manifest))
+    return problems
+
+
+def _tsp_solver_errors(name: str, solver: Mapping) -> List[str]:
+    errors = []
+    for f in ("name", "version", "option_string", "threads", "seed", "time_limit_seconds", "work_limit"):
+        if f not in solver:
+            errors.append(f"solvers.{name}.{f} missing")
+    if errors:
+        return errors
+    if solver["threads"] != THREADS:
+        errors.append(f"solvers.{name}.threads must be {THREADS}")
+    if solver["time_limit_seconds"] != TSP_REFERENCE_TOTAL_SECONDS:
+        errors.append(f"solvers.{name}.time_limit_seconds must be {TSP_REFERENCE_TOTAL_SECONDS}")
+    if solver["work_limit"] is not None:
+        errors.append(f"solvers.{name}.work_limit must be null (no work limit in the GOAL 2 verification run)")
+    text = str(solver["option_string"])
+    tokens = text.split()
+    if _BARE_BESTBOUND.search(text):
+        errors.append(f"solvers.{name}.option_string uses the bare bestbound=1 (use mip:bestbound=1, F17)")
+    if "mip:bestbound=1" not in tokens:
+        errors.append(f"solvers.{name}.option_string must request mip:bestbound=1")
+    if f"lim:time={_g(solver['time_limit_seconds'])}" not in tokens:
+        errors.append(f"solvers.{name}.option_string lim:time disagrees with time_limit_seconds")
+    if f"tech:threads={solver['threads']}" not in tokens:
+        errors.append(f"solvers.{name}.option_string tech:threads disagrees with threads")
+    if any(t.startswith("lim:work=") for t in tokens):
+        errors.append(f"solvers.{name}.option_string must not carry a work limit")
+    return errors
+
+
+def _tsp_instance_errors(name: str, inst) -> List[str]:
+    if not isinstance(inst, Mapping):
+        return [f"instances[{name}] must be a mapping"]
+    errors = [f"instances[{name}] missing {f}" for f in _TSP_INSTANCE_FIELDS if f not in inst]
+    if errors:
+        return errors
+    if inst["data_source"] not in TSP_REFERENCE_DATA_SOURCES:
+        errors.append(f"instances[{name}].data_source must be one of {TSP_REFERENCE_DATA_SOURCES}")
+    for f in ("sha256", "matrix_sha256"):
+        if not _SHA256.fullmatch(str(inst[f])):
+            errors.append(f"instances[{name}].{f} must be a sha256")
+    if inst["published_source"] not in TSP_REFERENCE_PUBLISHED_SOURCES:
+        errors.append(f"instances[{name}].published_source must be one of {TSP_REFERENCE_PUBLISHED_SOURCES} "
+                      "(best_solutions is our own run history)")
+    if not isinstance(inst["published_optimum"], int) or isinstance(inst["published_optimum"], bool):
+        errors.append(f"instances[{name}].published_optimum must be an integer")
+    return errors

@@ -65,6 +65,28 @@ _LICENSE_ABSENT = re.compile(r"licen[cs]e (not found|expired|invalid|error)|\bno
 STAGES = ("stage1", "stage2", "free")
 
 
+def snap_to_integer_data(objective: Optional[float], bound: Optional[float], rel_tol: float = 1e-6, abs_cap: float = 0.25,
+                         bound_rel_tol: float = 1e-8) -> Tuple[Optional[float], Optional[float]]:
+    """Remove solver floating-point noise from an objective and a bound of a model with integer data (WP-E7).
+
+    A MIP solver keeps its integer variables within an integrality tolerance, so with large integer costs the reported
+    objective can sit a little off an integer (HiGHS 1.15.1 reported 106739.9999 for an objective of 106740 on pr76).
+    The objective is snapped to the nearest integer when it is within ``min(rel_tol * |objective|, abs_cap)`` of it; a
+    genuinely fractional value is left alone, so ``classify_outcome`` still rejects it. The bound is lowered by the
+    relative noise allowance, so a bound just above an integer is not rounded up past the true bound; the lowering is
+    far below 1, so a bound that proves optimality (incumbent minus bound below 1) still does.
+    """
+    obj = objective
+    if objective is not None and math.isfinite(float(objective)) and abs(float(objective)) < _HUGE:
+        nearest = round(float(objective))
+        if abs(float(objective) - nearest) <= min(rel_tol * max(1.0, abs(float(objective))), abs_cap):
+            obj = float(nearest)
+    b = bound
+    if bound is not None and math.isfinite(float(bound)) and abs(float(bound)) < _HUGE:
+        b = float(bound) - max(0.0, bound_rel_tol * abs(float(bound)) - _BOUND_TOL)
+    return obj, b
+
+
 class ExactBackendUnavailable(RuntimeError):
     """amplpy, AMPL or a solver license is missing (status ``backend_unavailable``)."""
 
@@ -453,6 +475,50 @@ class AmplSession:
         m = re.match(r"^(\w+) (\d+\.\d+\.\d+):", msg)
         a.reset()
         return f"{m.group(1)} {m.group(2)}" if m else None
+
+    @property
+    def ampl(self):
+        """The open ``amplpy.AMPL`` object (for models other than the set-partitioning one, WP-E7)."""
+        if self._ampl is None:
+            raise ExactBackendUnavailable("the AMPL session is not open")
+        return self._ampl
+
+    def solve_objective(self, objective: str, *, wall_limit: float, snap_integer: bool = False) -> StageResult:
+        """Solve the model currently loaded in the session for one objective and classify the outcome.
+
+        Used by the TSP/ATSP models (WP-E7): the caller loads model and data through ``ampl`` and the
+        model declares ``suffix bestbound OUT``. ``wall_limit`` replaces the settings' wall limit for
+        this call (the cut loop passes the remaining share of its total budget); there is no work limit
+        unless the settings carry one. ``snap_integer`` removes solver noise from the objective and the bound
+        (``snap_to_integer_data``) for models whose objective is integer by construction. The suffix is reset first, so a solve that returns no bound can
+        never expose an earlier solve's bound. The log is not stored.
+        """
+        a = self.ampl
+        settings = dataclasses.replace(self.settings, wall_limit=wall_limit)
+        a.eval(f"objective {objective};")
+        a.option["solver"] = settings.solver
+        a.option[f"{settings.solver}_options"] = solver_option_string(settings, peak=False)
+        a.eval(f"let {objective}.bestbound := {_BOUND_SENTINEL:g};")
+        self._log.clear()
+        t0 = time.perf_counter()
+        a.solve()
+        secs = time.perf_counter() - t0
+        num = int(a.get_value("solve_result_num"))
+        msg = str(a.get_value("solve_message"))
+        log = "\n".join(self._log)
+        self._log.clear()
+        obj_value, bound_value = a.get_objective(objective).value(), self._read_bound(objective)
+        if snap_integer:
+            obj_value, bound_value = snap_to_integer_data(obj_value, bound_value)
+        out = classify_outcome(num, msg, obj_value, bound_value)
+        work = None
+        m = re.findall(r"\(([\d.]+) work units\)", log)
+        if m:
+            work = float(m[-1])
+        first = _scrub(msg.splitlines()[0]) if msg else ""
+        return dataclasses.replace(out, solve_result=str(a.solve_result), solve_result_num=num, solver_message=first,
+                                   wall_seconds=round(secs, 4), work_units=work, time_limit=wall_limit,
+                                   work_limit=settings.work(False))
 
     def close(self) -> None:
         if self._ampl is not None:

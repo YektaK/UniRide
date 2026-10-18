@@ -454,6 +454,46 @@ class AmplSession:
         a.reset()
         return f"{m.group(1)} {m.group(2)}" if m else None
 
+    @property
+    def ampl(self):
+        """The open ``amplpy.AMPL`` object (for models other than the set-partitioning one, WP-E7)."""
+        if self._ampl is None:
+            raise ExactBackendUnavailable("the AMPL session is not open")
+        return self._ampl
+
+    def solve_objective(self, objective: str, *, wall_limit: float) -> StageResult:
+        """Solve the model currently loaded in the session for one objective and classify the outcome.
+
+        Used by the TSP/ATSP models (WP-E7): the caller loads model and data through ``ampl`` and the
+        model declares ``suffix bestbound OUT``. ``wall_limit`` replaces the settings' wall limit for
+        this call (the cut loop passes the remaining share of its total budget); there is no work limit
+        unless the settings carry one. The suffix is reset first, so a solve that returns no bound can
+        never expose an earlier solve's bound. The log is not stored.
+        """
+        a = self.ampl
+        settings = dataclasses.replace(self.settings, wall_limit=wall_limit)
+        a.eval(f"objective {objective};")
+        a.option["solver"] = settings.solver
+        a.option[f"{settings.solver}_options"] = solver_option_string(settings, peak=False)
+        a.eval(f"let {objective}.bestbound := {_BOUND_SENTINEL:g};")
+        self._log.clear()
+        t0 = time.perf_counter()
+        a.solve()
+        secs = time.perf_counter() - t0
+        num = int(a.get_value("solve_result_num"))
+        msg = str(a.get_value("solve_message"))
+        log = "\n".join(self._log)
+        self._log.clear()
+        out = classify_outcome(num, msg, a.get_objective(objective).value(), self._read_bound(objective))
+        work = None
+        m = re.findall(r"\(([\d.]+) work units\)", log)
+        if m:
+            work = float(m[-1])
+        first = _scrub(msg.splitlines()[0]) if msg else ""
+        return dataclasses.replace(out, solve_result=str(a.solve_result), solve_result_num=num, solver_message=first,
+                                   wall_seconds=round(secs, 4), work_units=work, time_limit=wall_limit,
+                                   work_limit=settings.work(False))
+
     def close(self) -> None:
         if self._ampl is not None:
             try:

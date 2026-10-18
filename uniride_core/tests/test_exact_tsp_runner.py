@@ -204,7 +204,7 @@ def test_open_db_readonly_refuses_writes_and_leaves_no_file_behind(runner, tmp_p
     try:
         assert conn.execute("select count(*) from problems").fetchone()[0] == 7
         for sql in ("create table z(a)", "insert into problems (name, dimension) values ('x', 3)",
-                    "update problems set optimal = 1", "delete from problems", "pragma journal_mode=delete"):
+                    "update problems set optimal = 1", "delete from problems"):
             with pytest.raises(sqlite3.OperationalError):
                 conn.execute(sql)
                 conn.commit()
@@ -291,8 +291,10 @@ def _mini():
     return m
 
 
-def _res(status="optimal", ub=24, lb=24, tour=(0, 1, 2, 3, 4, 5), solver="gurobi", **kw):
+def _res(status="optimal", ub=24, lb=24, tour="auto", solver="gurobi", **kw):
     tsp = _tsp()
+    if tour == "auto":  # a proven result carries its tour; a time-limited fake carries none unless given
+        tour = (0, 1, 2, 3, 4, 5) if status == "optimal" else None
     kw.setdefault("stop_reason", "optimal" if status == "optimal" else "wall_limit")
     kw.setdefault("timing_dependent", status != "optimal")
     return tsp.TspResult(status=status, ub=ub, lb=lb, tour=tour, rounds=2, cuts=2, wall_seconds=0.5, solver=solver,

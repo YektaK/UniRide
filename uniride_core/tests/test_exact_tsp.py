@@ -76,6 +76,10 @@ def random_matrix(seed: int, n: int, symmetric: bool):
         for i in range(n):
             for j in range(i + 1, n):
                 m[j][i] = m[i][j]
+        if n >= 6:  # cheap triangles far from each other: the degree-2 relaxation takes them as subtours
+            for g in range(0, n - n % 3, 3):
+                for a, b in ((g, g + 1), (g + 1, g + 2), (g, g + 2)):
+                    m[a][b] = m[b][a] = rng.randint(1, 3)
     return tuple(tuple(r) for r in m)
 
 
@@ -202,8 +206,8 @@ def test_cuts_are_added_in_a_fixed_order_whatever_the_order_of_the_arcs():
         def solve_round(cuts, time_limit, arcs=tuple(arcs), calls=calls):
             calls.append(cuts)
             if not cuts:
-                return _outcome(tsp, arcs, 50)
-            return _outcome(tsp, _edges((0, 1, 2, 3, 4, 5, 6, 7)), 80)
+                return _outcome(tsp, arcs, 1)
+            return _outcome(tsp, _edges((0, 1, 2, 3, 4, 5, 6, 7)), tsp.tour_length(m, tuple(range(8))))
 
         tsp.solve_cut_loop(m, solve_round, directed=False, budget_seconds=600.0, clock=FakeClock())
         seen.append(calls[1])
@@ -234,8 +238,8 @@ def test_a_cut_is_added_for_every_component_of_the_solution_and_for_no_other_nod
     def solve_round(cuts, time_limit):
         calls.append(cuts)
         if not cuts:
-            return _outcome(tsp, _edges((0, 4, 8), (1, 2, 3), (5, 6, 7)), 40)
-        return _outcome(tsp, _edges(tuple(range(9))), 90)
+            return _outcome(tsp, _edges((0, 4, 8), (1, 2, 3), (5, 6, 7)), 1)
+        return _outcome(tsp, _edges(tuple(range(9))), tsp.tour_length(m, tuple(range(9))))
 
     tsp.solve_cut_loop(m, solve_round, directed=False, budget_seconds=600.0, clock=FakeClock())
     assert calls[1] == ((0, 4, 8), (1, 2, 3), (5, 6, 7))
@@ -244,7 +248,7 @@ def test_a_cut_is_added_for_every_component_of_the_solution_and_for_no_other_nod
 def test_the_time_budget_is_shared_between_the_re_solves():
     tsp = _tsp()
     n = 8
-    m = _ring_matrix(n)
+    m = tuple(tuple(10 * v for v in row) for row in _ring_matrix(n))  # every tour is longer than the fake bounds below
     clock = FakeClock()
     limits = []
     splits = [((0, 1, 2), (3, 4, 5, 6, 7)), ((0, 1, 3), (2, 4, 5, 6, 7)), ((0, 1, 4), (2, 3, 5, 6, 7)),

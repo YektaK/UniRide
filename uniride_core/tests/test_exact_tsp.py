@@ -515,3 +515,120 @@ def test_a_real_solve_obeys_a_tiny_total_budget_and_is_labelled_timing_dependent
     assert res.status != "optimal" or res.rounds >= 1  # either it finished within the budget or it says it did not
     if res.status != "optimal":
         assert res.timing_dependent is True and res.stop_reason in ("wall_limit", "other_limit")
+
+
+# ---------------------------------------------------------------- solver noise on the objective (found in the WP-E7 campaign)
+# HiGHS 1.15.1 reported "optimal solution; objective 106739.9999" for pr76 (true value 106740): integrality tolerance times
+# large costs. The incumbent is an integer solution; the objective must be snapped, not rejected.
+def test_solver_noise_on_a_large_integer_objective_is_snapped_not_rejected():
+    from uniride_core.exact import ampl_backend as ab
+
+    obj, bound = ab.snap_to_integer_data(106739.9999, 106739.9999)
+    assert obj == 106740.0
+    out = ab.classify_outcome(0, "HiGHS 1.15.1: optimal solution; objective 106739.9999", obj, bound)
+    assert (out.status, out.objective, out.bound_ceil) == ("optimal", 106740, 106740)
+    # noise above an integer bound must not round the bound up past the true optimum
+    obj2, bound2 = ab.snap_to_integer_data(106740.0001, 106740.0001)
+    out2 = ab.classify_outcome(0, "optimal", obj2, bound2)
+    assert (out2.objective, out2.bound_ceil) == (106740, 106740)
+
+
+def test_a_genuinely_fractional_objective_is_not_snapped():
+    from uniride_core.exact import ampl_backend as ab
+
+    obj, bound = ab.snap_to_integer_data(106740.4, 106739.2)
+    assert obj == 106740.4
+    assert ab.classify_outcome(0, "optimal", obj, bound).status == "rejected"
+    small, _ = ab.snap_to_integer_data(7.3, 7.0)
+    assert small == 7.3, "relative tolerance 1e-6 does not swallow 0.3 on a small objective"
+
+
+def test_snapping_leaves_missing_and_infinite_values_alone():
+    from uniride_core.exact import ampl_backend as ab
+
+    assert ab.snap_to_integer_data(None, None) == (None, None)
+    assert ab.snap_to_integer_data(5.0, float("-inf")) == (5.0, float("-inf"))
+
+
+class _StubVar:
+    def __init__(self, values):
+        self._values = values
+
+    def get_values(self):
+        class _Frame:
+            def __init__(self, v):
+                self._v = v
+
+            def to_dict(self):
+                return self._v
+
+        return _Frame(self._values)
+
+
+class _StubAmpl:
+    def __init__(self, x):
+        self.param, self.set, self.var = {}, {}, {"x": _StubVar(x)}
+
+    def reset(self):
+        pass
+
+    def read(self, path):
+        pass
+
+
+class _StubSession:
+    def __init__(self, x, objective):
+        from uniride_core.exact.ampl_backend import StageResult
+
+        self.ampl = _StubAmpl(x)
+        self._res = StageResult(status="optimal", stop_reason="optimal", objective=objective, bound_ceil=objective, wall_seconds=0.1)
+
+    def solve_objective(self, name, **kw):
+        return self._res
+
+
+def test_a_round_whose_chosen_arcs_cost_something_else_than_the_reported_objective_is_rejected():
+    tsp = _tsp()
+    m = _ring_matrix(4)
+    x = {(0, 1): 1.0, (1, 2): 1.0, (2, 3): 1.0, (0, 3): 1.0, (0, 2): 0.0, (1, 3): 0.0}
+    cost = sum(m[i][j] for (i, j), v in x.items() if v > 0.5)
+    ok = tsp._AmplRounds(_StubSession(x, cost), m, False)((), 10.0)
+    assert ok.status == "optimal" and ok.objective == cost
+    bad = tsp._AmplRounds(_StubSession(x, cost + 1), m, False)((), 10.0)
+    assert bad.status == "rejected" and "objective" in (bad.solver_message or "")
+
+
+def test_a_failed_second_solver_reports_its_note_in_the_blocking_reason():
+    tsp = _tsp()
+    cmp = tsp.compare_solvers(_res(tsp, "optimal", 100, 100),
+                              _res(tsp, "rejected", None, None, note="the solver returned a solution that violates an existing subtour cut"))
+    assert cmp.blocking and "violates an existing subtour cut" in cmp.reason
+
+
+@pytest.mark.requires_ampl
+def test_highs_proves_pr76_in_spite_of_a_noisy_objective(session):
+    import os
+
+    from uniride_core.exact import ampl_backend
+
+    data = Path(os.environ.get("UNIRIDE_TSPLIB_DATA_DIR") or REPO / "academic_benchmark" / "tsplib_data")
+    db = data / "tsplib.db"
+    if not db.is_file():
+        pytest.skip("tsplib.db (git-ignored) not present: pr76 coordinates unavailable")
+    if session.settings.solver != "highs":
+        pytest.skip("regression for the HiGHS objective noise; Gurobi is covered by the other tests")
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("run_exact_tsp_reference_pr76", REPO / "scripts" / "run_exact_tsp_reference.py")
+    runner = importlib.util.module_from_spec(spec)
+    sys.modules["run_exact_tsp_reference_pr76"] = runner
+    spec.loader.exec_module(runner)
+    conn = runner.open_db_readonly(db)
+    try:
+        coords = runner.read_db_coordinates(conn, "pr76")
+    finally:
+        conn.close()
+    assert ampl_backend is not None
+    m = runner.build_matrix("EUC_2D", coords)
+    res = _tsp().solve_tsp(m, session=session, budget_seconds=300.0)
+    assert (res.status, res.ub, res.lb) == ("optimal", 108159, 108159), (res.status, res.note)

@@ -178,7 +178,9 @@ _SECTION = re.compile(r"^\s*[A-Z_]+_SECTION\b|^\s*EOF\b", re.MULTILINE)
 
 
 def _problem_name_from_artifact(data: bytes, dataset_id: str) -> str:
-    """TSPLIB problem name from the ``NAME:`` header (the TSPLIB NAME header)."""
+    """TSPLIB problem name from the ``NAME:`` header (pattern of
+    ``uniride_core/algorithms/tsplib_parser.py``, tightened so that a NAME line without a value
+    is refused)."""
     text = data.decode("utf-8", errors="replace")
     section = _SECTION.search(text)
     header = text[: section.start()] if section else text

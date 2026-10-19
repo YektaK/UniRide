@@ -22,6 +22,21 @@ DATA_DIR = Path(os.environ.get("UNIRIDE_TSPLIB_DATA_DIR", REPO / "academic_bench
 DB_PATH = DATA_DIR / "tsplib.db"
 
 
+def _has_problems_table(path: Path) -> bool:
+    """True when ``path`` is a SQLite file with a ``problems`` table. Read-only and immutable: no -wal/-shm/journal
+    file is created and the file is never written (a first read elsewhere can leave an empty tsplib.db, audit M16)."""
+    uri = path.resolve().as_uri() + "?mode=ro&immutable=1"
+    try:
+        conn = sqlite3.connect(uri, uri=True)
+        try:
+            row = conn.execute("select 1 from sqlite_master where type='table' and name='problems'").fetchone()
+        finally:
+            conn.close()
+    except sqlite3.Error:
+        return False
+    return row is not None
+
+
 def _load_script():
     spec = importlib.util.spec_from_file_location("run_exact_tsp_reference_published_tours", SCRIPT)
     module = importlib.util.module_from_spec(spec)
@@ -106,6 +121,8 @@ def test_test_only_helper_reads_opt_tours_read_only_and_from_opt_tour_files(runn
 def test_the_real_database_published_tours_match_the_coordinates_of_the_verification_set():
     if not DB_PATH.is_file():
         pytest.skip("tsplib.db not present in this checkout (git-ignored)")
+    if not _has_problems_table(DB_PATH):
+        pytest.skip("tsplib.db has no 'problems' table (empty file created by a first read, audit M16)")
     runner = _load_script()
     conn = runner.open_db_readonly(DB_PATH)
     try:

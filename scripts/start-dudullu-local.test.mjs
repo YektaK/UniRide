@@ -14,6 +14,7 @@ import {
   buildChildEnv,
   buildPythonEnv,
   RELOAD_ENV_NAME,
+  ACADEMIC_ENV_NAME,
   pythonCommand,
   webCommand,
   resolvePythonBin,
@@ -376,6 +377,14 @@ test("buildPythonEnv preserves an explicit UNIRIDE_API_RELOAD value", () => {
   assert.equal(buildPythonEnv({ UNIRIDE_API_RELOAD: "1" }, "k").UNIRIDE_API_RELOAD, "1");
   assert.equal(buildPythonEnv({ UNIRIDE_API_RELOAD: "true" }, "k").UNIRIDE_API_RELOAD, "true");
   assert.equal(buildPythonEnv({ UNIRIDE_API_RELOAD: "" }, "k").UNIRIDE_API_RELOAD, "0");
+});
+
+test("buildPythonEnv enables the academic router for the local launcher (H8) unless set explicitly", () => {
+  assert.equal(ACADEMIC_ENV_NAME, "UNIRIDE_ACADEMIC_PROCESS");
+  assert.equal(buildPythonEnv({}, "k").UNIRIDE_ACADEMIC_PROCESS, "1");
+  assert.equal(buildPythonEnv({ UNIRIDE_ACADEMIC_PROCESS: "" }, "k").UNIRIDE_ACADEMIC_PROCESS, "1");
+  assert.equal(buildPythonEnv({ UNIRIDE_ACADEMIC_PROCESS: "0" }, "k").UNIRIDE_ACADEMIC_PROCESS, "0");
+  assert.equal("UNIRIDE_ACADEMIC_PROCESS" in buildChildEnv({}, "k"), false);
 });
 
 test("buildChildEnv alone never sets the reload variable (web child is untouched)", () => {

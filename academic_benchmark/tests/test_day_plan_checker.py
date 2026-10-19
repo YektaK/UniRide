@@ -270,3 +270,59 @@ def test_a_tampered_archive_arc_is_caught():
             rec["duration_minutes"] += 400  # the first route of the first wave now exceeds the tour limit
     kwargs = dp.plan_from_single_type_response(response, matrix, type_spec=dp.TypeSpec("large", 4, 5, 10), depot="D.Kampus")
     assert "TOUR_LIMIT" in dp.check_day_plan(**kwargs).codes
+
+
+# ---------------------------------------------------------------- repeated location codes, route-internal duplicates
+def _two_students_one_stop(arcs=None):
+    wave = dp.Wave("w1", "pickup", 600, {occ("w1", "So1"): "So1", "w1:So1~2": "So1"})
+    routes = [dp.Route("w1", "large", (occ("w1", "So1"), "w1:So1~2"))]
+    return dict(waves=[wave], routes=routes, arcs=make_arcs(["So1"]) if arcs is None else arcs)
+
+
+def test_two_consecutive_stops_at_one_location_cost_zero_and_need_no_arc():
+    kwargs = _two_students_one_stop()
+    assert ("So1", "So1") not in kwargs["arcs"]
+    report = run(**kwargs)
+    assert report.ok, report.violations
+    assert report.total_minutes == 20  # D -> So1 (10) + 0 + So1 -> D (10)
+    arcs = {**kwargs["arcs"], ("So1", "So1"): 99}  # the step costs 0 even if the matrix holds another value
+    assert run(**dict(kwargs, arcs=arcs)).total_minutes == 20
+
+
+def test_one_route_listing_the_same_occurrence_twice_is_a_duplicate():
+    wave = dp.Wave("w1", "pickup", 600, {occ("w1", "So1"): "So1"})
+    routes = [dp.Route("w1", "large", (occ("w1", "So1"), occ("w1", "So1")))]
+    report = run(waves=[wave], routes=routes, arcs=make_arcs(["So1"]))
+    assert report.codes == ("DUPLICATE_OCCURRENCE",)
+
+
+# ---------------------------------------------------------------- malformed input
+def test_bad_direction():
+    waves = good()["waves"]
+    waves[0] = dp.Wave("w1", "sideways", 600, waves[0].occurrences)
+    assert "BAD_DIRECTION" in run(waves=waves).codes
+
+
+@pytest.mark.parametrize("anchor", [600.5, "600", None, True])
+def test_bad_anchor(anchor):
+    waves = good()["waves"]
+    waves[0] = dp.Wave("w1", "pickup", anchor, waves[0].occurrences)
+    assert "BAD_ANCHOR" in run(waves=waves).codes
+
+
+def test_empty_route():
+    routes = good()["routes"]
+    routes.append(dp.Route("w2", "large", ()))
+    assert run(routes=routes).codes == ("EMPTY_ROUTE",)
+
+
+def test_unknown_wave():
+    routes = good()["routes"]
+    routes[2] = dp.Route("w9", "large", routes[2].stops)
+    assert "UNKNOWN_WAVE" in run(routes=routes).codes
+
+
+def test_unknown_class():
+    wave = dp.Wave("w1", "pickup", 600, {occ("w1", "Xx1"): "Xx1"})
+    report = run(waves=[wave], routes=[dp.Route("w1", "large", (occ("w1", "Xx1"),))], arcs=make_arcs(["Xx1"]))
+    assert report.codes == ("UNKNOWN_CLASS",)

@@ -6,9 +6,10 @@ visiting order and has a vehicle type.
 
 Independence: standard library only. It imports nothing from ``uniride_core`` (``exact``, ``planning``), ``optimizer_api``,
 ``scripts`` or the rest of ``academic_benchmark``, and it shares no function with the solver, the enumerator or the
-production selection code; the vehicle-type rules below are written out again from the decisions (H01: the sedan type has
-0 Sw seats; H03: a Doblo has at most 1 Sw and 3 seats in total) and a static import guard keeps it that way
-(``test_exact_reference_boundaries.py``).
+production selection code, and a static import guard keeps it that way (``test_exact_reference_boundaries.py``). The
+module defines no vehicle types of its own: the types (seat limits, total seats, cooldown, optional ride and tour limits;
+for example H01: the sedan has 0 Sw seats, H03: a Doblo has at most 1 Sw and 3 seats in total) are inputs, taken by the
+caller from the source manifest of the plan.
 
 Rules checked (violation codes in brackets):
 
@@ -27,7 +28,9 @@ Rules checked (violation codes in brackets):
    [OUTSIDE_SERVICE_DAY];
 6. per-type peak of the half-open busy intervals [start, end + cooldown): once in integer minutes and once at
    ``time_scale`` (default 100) with the production grid rule ``end = max(start + 1, end * time_scale)``. Both peaks are
-   reported; they must be equal [PEAK_GRID_MISMATCH]. Optional caps per type (the large fleet bound L) [PEAK_ABOVE_CAP];
+   reported; they must be equal [PEAK_GRID_MISMATCH]. A difference is a disagreement between the integer-minute model and
+   the production grid, not an infeasible plan; it can only occur with a 0-minute tour (an empty minute interval that the
+   grid still counts as one unit) and stays blocking. Optional caps per type (the large fleet bound L) [PEAK_ABOVE_CAP];
 7. claimed values: the peak of a type (compared with the time_scale peak) [CLAIMED_PEAK], the total vehicle minutes
    [CLAIMED_TOTAL_MINUTES], the minutes of a type [CLAIMED_TYPE_MINUTES], the route count [CLAIMED_ROUTE_COUNT] and the
    minutes of a single route [CLAIMED_ROUTE_MINUTES].

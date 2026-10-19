@@ -64,6 +64,15 @@ def _import_violations(path: Path, source: str) -> list[int]:
             else:
                 module = node.module or ""
             candidates = [module, *(f"{module}.{alias.name}" for alias in node.names)]
+        elif isinstance(node, ast.Call):
+            func = node.func
+            called = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
+            if called not in {"import_module", "__import__"} or not node.args:
+                continue
+            first = node.args[0]
+            if not (isinstance(first, ast.Constant) and isinstance(first.value, str)):
+                continue
+            candidates = [first.value]
         else:
             continue
         if any(_is_quarantined_import(name) for name in candidates):
@@ -131,6 +140,23 @@ def test_import_violation_helper_resolves_relative_imports_from_package_inits():
     ) == [1]
 
 
+def test_import_violation_helper_catches_dynamic_import_strings():
+    source = "\n".join(
+        (
+            "import importlib",
+            "importlib.import_module('academic_benchmark.yaem2026.solver')",
+            "importlib.import_module('archive.academic_benchmark.yaem2026_legacy.core')",
+            "__import__('yaem2026')",
+            "importlib.import_module('academic_benchmark.yaem2026_safe')",
+            "importlib.import_module(name)",
+        )
+    )
+
+    assert _import_violations(
+        REPO / "academic_benchmark" / "boundary_probe.py", source
+    ) == [2, 3, 4]
+
+
 def test_import_violation_helper_respects_component_boundaries():
     source = "\n".join(
         (
@@ -174,10 +200,12 @@ def test_historical_archive_file_classification_only_excludes_root_metadata():
     assert _is_historical_archive_file(ARCHIVE / "nested" / "QUARANTINE.md")
 
 def _active_python_files():
+    yield from sorted(REPO.glob("*.py"))
     for root in (
         REPO / "academic_benchmark",
         REPO / "uniride_core",
         REPO / ("optimizer" + "_api"),
+        REPO / "scripts",
     ):
         for path in root.rglob("*.py"):
             if "__pycache__" not in path.parts:

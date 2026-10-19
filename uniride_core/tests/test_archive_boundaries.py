@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import ast
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 
-ACTIVE_ROOTS = ("academic_benchmark", "optimizer_api", "src", "uniride_core")
+ACTIVE_ROOTS = ("academic_benchmark", "optimizer_api", "scripts", "src", "uniride_core")
 ARCHIVE_MARKERS = (
     ".proposed_changes",
     "docs/old",
@@ -14,6 +17,7 @@ ARCHIVE_MARKERS = (
 
 
 def _python_files(project_root: Path):
+    yield from sorted(project_root.glob("*.py"))
     for root_name in ACTIVE_ROOTS:
         root = project_root / root_name
         if not root.exists():
@@ -31,27 +35,111 @@ def _constant_text(node: ast.AST) -> str | None:
     return None
 
 
+IMPORT_MARKERS = ("_archived", ".proposed_changes", "docs.old")
+# the quarantined archive/ tree, matched on whole dotted components ("archive_old_docs" is not "archive")
+ARCHIVE_NAMESPACE = "archive"
+DYNAMIC_IMPORTERS = {"import_module", "__import__"}
+
+
+def _is_archive_namespace(name: str) -> bool:
+    return name == ARCHIVE_NAMESPACE or name.startswith(ARCHIVE_NAMESPACE + ".")
+
+
+def _reaches_archive(name: str) -> bool:
+    normalised = name.replace("/", ".").replace("\\", ".")
+    return _is_archive_namespace(normalised) or any(marker in normalised for marker in IMPORT_MARKERS)
+
+
+def _import_offences(source: str) -> list[int]:
+    """Line numbers of static and dynamic (importlib.import_module / __import__ string) imports of archived code."""
+    offences: list[int] = []
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Import):
+            names = [alias.name for alias in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            names = [module, *(f"{module}.{alias.name}" for alias in node.names)] if module == ARCHIVE_NAMESPACE else [module]
+        elif isinstance(node, ast.Call):
+            func = node.func
+            called = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
+            first = _constant_text(node.args[0]) if node.args else None
+            if called not in DYNAMIC_IMPORTERS or first is None:
+                continue
+            names = [first]
+        else:
+            continue
+        if any(_reaches_archive(name) for name in names):
+            offences.append(node.lineno)
+    return sorted(offences)
+
+
+def test_import_offence_helper_rejects_the_archive_namespace_and_dynamic_imports():
+    static = "\n".join(
+        (
+            "import archive",
+            "import archive.academic_benchmark.bildiri2026_legacy.bildiri2026",
+            "from archive.docs import x",
+            "from archive import academic_benchmark",
+        )
+    )
+    dynamic = "\n".join(
+        (
+            "import importlib",
+            "importlib.import_module('archive.academic_benchmark.yaem2026_legacy')",
+            "__import__('archive.docs')",
+        )
+    )
+    assert _import_offences(static) == [1, 2, 3, 4]
+    assert _import_offences(dynamic) == [2, 3]
+
+
+def test_import_offence_helper_respects_component_boundaries():
+    source = "\n".join(
+        (
+            "import archived_tools",
+            "import my_archive.thing",
+            "importlib.import_module('archive_old_docs')",
+        )
+    )
+    assert _import_offences(source) == []
+
+
+def test_archive_package_is_not_importable():
+    project_root = Path(__file__).resolve().parents[1].parent
+    env = {key: value for key, value in os.environ.items() if key != "PYTHONPATH"}
+    env["PYTHONPATH"] = str(project_root)
+    for statement in (
+        "import archive",
+        "import archive.academic_benchmark",
+        "import archive.academic_benchmark.yaem2026_legacy",
+    ):
+        result = subprocess.run(
+            [sys.executable, "-c", statement],
+            cwd=project_root,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        assert result.returncode != 0, statement
+        assert "ImportError" in result.stderr, (statement, result.stderr)
+        assert "QUARANTINE.md" in result.stderr, (statement, result.stderr)
+
+
+def test_root_and_scripts_python_files_are_scanned():
+    project_root = Path(__file__).resolve().parents[1].parent
+    scanned = {path.relative_to(project_root).as_posix() for path in _python_files(project_root)}
+    assert "scripts/run_exact_tsp_reference.py" in scanned
+    assert any("/" not in name for name in scanned), "no repository-root *.py file is scanned"
+
+
 def test_active_python_does_not_import_archived_modules_or_paths():
     project_root = Path(__file__).resolve().parents[1].parent
-    offenders: list[str] = []
-
-    for path in _python_files(project_root):
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                names = [alias.name for alias in node.names]
-            elif isinstance(node, ast.ImportFrom):
-                names = [node.module or ""]
-            else:
-                continue
-
-            if any(
-                marker in name.replace("/", ".").replace("\\", ".")
-                for name in names
-                for marker in ("_archived", ".proposed_changes", "docs.old")
-            ):
-                offenders.append(str(path.relative_to(project_root)))
-
+    offenders = [
+        f"{path.relative_to(project_root)}:{line}"
+        for path in _python_files(project_root)
+        for line in _import_offences(path.read_text(encoding="utf-8"))
+    ]
     assert offenders == []
 
 

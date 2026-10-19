@@ -192,9 +192,10 @@ def test_a_disagreement_between_manifest_and_database_blocks_the_normal_runner_p
     _fixture_db(data / "tsplib.db", override)
     out = tmp_path / "results-unused"
     args = runner.parse_args(["--data-dir", str(data), "--out", str(out), "--instances", "burma14,ulysses16,ft53"])
-    rc = runner._run(args, out, "0" * 40, False, None, None)  # compares before any solver is touched: sessions stay None
+    # the comparison is a preflight that main() runs before any AMPL session opens (WP-E8 polish item 4); main maps it to exit 2
+    specs, refused = runner._preflight_instances(args)
     err = " ".join(capsys.readouterr().err.split())
-    assert rc == 2 and "refused" in err and expect in err, err
+    assert refused is True and specs is None and "refused" in err and expect in err, err
     assert not out.exists(), "nothing is written when the inputs disagree"
 
 
@@ -212,6 +213,8 @@ def test_agreeing_manifest_and_database_reach_instance_loading_and_the_first_sol
         raise ReachedSolve
 
     monkeypatch.setattr(runner, "evaluate_instance", stop)  # every instance loaded without refusal; the solve is not run
+    specs, refused = runner._preflight_instances(args)
+    assert refused is False
     with pytest.raises(ReachedSolve):
-        runner._run(args, out, "0" * 40, False, None, None)
+        runner._run(args, out, "0" * 40, False, None, None, specs)
     assert "refused" not in capsys.readouterr().err

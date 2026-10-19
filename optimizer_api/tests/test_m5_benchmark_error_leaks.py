@@ -109,3 +109,25 @@ def test_matrix_native_worker_failure_text_is_not_exposed_in_run_status(monkeypa
     assert state.status.value == "failed"
     assert "SECRET" not in state.message
     assert "secret" not in state.message.lower()
+
+
+def test_default_run_worker_failure_text_is_not_exposed_in_run_status(monkeypatch):
+    """B1: the default /run worker (not matrix_native) must also keep exception text out of run status."""
+    monkeypatch.setattr(benchmark, "_load_benchmark_problem", lambda name: types.SimpleNamespace(name=name))
+
+    class ExplodingRunner:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def run(self, *args, **kwargs):
+            raise RuntimeError(SECRET)
+
+    monkeypatch.setattr(benchmark, "BenchmarkRunner", ExplodingRunner)
+
+    run_id = "m5-default-run-leak"
+    benchmark._start_benchmark_impl(run_id, [{"id": "genetic_algorithm", "params": {}}], ["p"], {"n_runs": 1})
+    state = benchmark.benchmark_state_manager.get_run(run_id)
+    state.thread.join(timeout=30)
+    assert state.status.value == "failed"
+    assert "SECRET" not in state.message
+    assert "secret" not in state.message.lower()

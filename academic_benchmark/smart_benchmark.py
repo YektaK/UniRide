@@ -66,7 +66,7 @@ from academic_benchmark.cli_engine import (
 # Sources SOTA solvers from uniride_core.algorithms.sota_tsp/
 from academic_benchmark.core.algorithm_resolution import IdentifierSource, RESOLVER_GOVERNED_IDENTIFIERS, resolve_algorithm_id
 from academic_benchmark.core.algorithm_errors import AlgorithmSelectionError, ExecutorUnavailableError
-from academic_benchmark.core.execution_gateway import execute_preflighted, serialize_preflight_decision
+from academic_benchmark.core.execution_gateway import execute_preflighted, governed_contract_seed, serialize_preflight_decision
 from academic_benchmark.core.preflight import PreflightRequest, RuntimeBackendAvailability, preflight_run, probe_runtime_backends
 from uniride_core.algorithms.capabilities import BackendPolicy, CAPABILITY_CATALOG, ExecutionProtocol, LifecycleStatus
 from academic_benchmark.sota_engine import (
@@ -434,6 +434,29 @@ class TuningOrchestrator:
 _SMART_BACKEND_POLICY = BackendPolicy.PREFER_NUMBA_OBJECTIVE
 
 
+# Base seed of the governed Smart seed schedule (contract seeds derive from it).
+SMART_GOVERNED_BASE_SEED = 42
+
+
+def _smart_task_seed(
+    request: GovernedExecutionRequest | None, problem_name: str, run_idx: int
+) -> int:
+    """Seed of one Smart task.
+
+    Governed runs use the contract seed (identical across algorithms for one
+    problem/replicate, audit H13).  Non-governed routing tasks keep ``42 + run_idx``.
+    """
+    if request is None:
+        return 42 + run_idx
+    return governed_contract_seed(
+        request.protocol,
+        request.evaluation_budget,
+        SMART_GOVERNED_BASE_SEED,
+        problem_name,
+        run_idx,
+    )
+
+
 def _governed_request_for_smart(
     algorithm_id: str,
     backend_policy: BackendPolicy,
@@ -578,6 +601,7 @@ def _run_governed_task(
         registered_algorithm_ids=registered_algorithm_ids,
         runtime_backends=runtime,
         registry_getter=AlgorithmRegistry.get_executor,
+        comparison_base_seed=SMART_GOVERNED_BASE_SEED,
     )
     result.preflight_decision_metadata = serialize_preflight_decision(decision)
     return result
@@ -663,9 +687,10 @@ def run_unified_benchmark(
 
         for algo in algorithms:
             for run_idx in range(1, n_runs + 1):
-                seed = 42 + run_idx
+                request = governed_requests.get(algo)
+                seed = _smart_task_seed(request, p.name, run_idx)
                 params = algo_params.get(f"{p.name}::{algo}", {}).copy()
-                tasks.append(BenchmarkTask(problem_name=p.name, algorithm=algo, run_idx=run_idx, seed=seed, params=params, governed_request=governed_requests.get(algo)))
+                tasks.append(BenchmarkTask(problem_name=p.name, algorithm=algo, run_idx=run_idx, seed=seed, params=params, governed_request=request))
 
     # Warmup
     run_warmup(algorithms, problems)
@@ -705,6 +730,12 @@ def run_unified_benchmark(
         decision_metadata = getattr(res, "preflight_decision_metadata", {})
         if not isinstance(decision_metadata, dict):
             decision_metadata = {}
+        governed_provenance: Dict[str, Any] = {}
+        if decision_metadata and getattr(res, "seed_group", None):
+            governed_provenance = {
+                "seed_group": res.seed_group,
+                "comparison_base_seed": SMART_GOVERNED_BASE_SEED,
+            }
         try:
             from academic_benchmark.tsplib_manager import save_benchmark_result
             save_benchmark_result(
@@ -727,7 +758,7 @@ def run_unified_benchmark(
                     "capacity_violations": getattr(res, "capacity_violations", 0),
                     "tw_violations": getattr(res, "tw_violations", 0),
                     "params": {"seed": res.seed},
-                    "metadata": {"param_source": param_source, **decision_metadata},
+                    "metadata": {"param_source": param_source, **decision_metadata, **governed_provenance},
                 },
                 db_path=TSPLIB_DB,
             )

@@ -88,3 +88,10 @@ class ExecutorUnavailableError(AlgorithmSelectionError):
 class ResultContractViolation(AlgorithmSelectionError):
     def __init__(self, detail: str) -> None:
         super().__init__("result_contract_violation", detail)
+
+
+class SeedContractViolation(AlgorithmSelectionError):
+    """A governed run was handed a seed that is not the contract seed."""
+
+    def __init__(self, detail: str) -> None:
+        super().__init__("seed_contract_violation", detail)

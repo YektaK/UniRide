@@ -669,15 +669,6 @@ def param_signature(params: Dict[str, Any]) -> str:
     return hashlib.sha256(normalized.encode()).hexdigest()[:16]
 
 
-def make_deterministic_seed(problem_name: str, algo_name: str,
-                            run_idx: int, algo_idx: int,
-                            seed_base: int) -> int:
-    """Hashlib tabanlı deterministik seed üretir."""
-    raw = f"{problem_name}|{algo_name}|{run_idx}|{algo_idx}|{seed_base}".encode("utf-8")
-    digest = hashlib.sha256(raw).hexdigest()
-    return int(digest[:8], 16) & 0x7FFFFFFF
-
-
 # ── Seçim Araçları ───────────────────────────────────────────────────────────
 
 def parse_index_or_all(raw: str, item_count: int) -> Optional[List[int]]:

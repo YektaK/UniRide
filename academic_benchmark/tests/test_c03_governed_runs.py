@@ -55,6 +55,23 @@ class _Problem7:
     is_time_matrix: bool = False
 
 
+# Fair ALNS runs require the exact scientific parameter set (no hidden defaults,
+# fairness.py ALNS_REQUIRED_PARAMS); the other algorithms accept empty params.
+ALNS_PARAMS = {
+    "max_iterations": 8,
+    "max_no_improvement": 3,
+    "remove_ratio": 0.34,
+    "min_remove": 1,
+    "segment_length": 2,
+    "weight_update_factor": 0.2,
+    "use_sa": True,
+}
+
+
+def _params_for(algorithm_id: str) -> dict:
+    return dict(ALNS_PARAMS) if algorithm_id == "ALNS-TSP" else {}
+
+
 def _manifest(base_seed: int) -> FairComparisonManifest:
     return FairComparisonManifest(
         evaluation_budget=BUDGET,
@@ -87,13 +104,17 @@ def _run_smart(monkeypatch, problem, algorithms, n_runs):
     monkeypatch.setattr(smart_benchmark, "_current_results", [])
     monkeypatch.setattr(smart_benchmark, "_current_metadata", {})
     monkeypatch.setattr(smart_benchmark, "_shutdown_requested", False)
+    monkeypatch.setattr(
+        smart_benchmark, "_db_get_best",
+        lambda _problem, algorithm_id, _db: {"params": _params_for(algorithm_id)},
+    )
     monkeypatch.setattr(tsplib_manager, "save_benchmark_run", lambda *_a, **_k: None)
     monkeypatch.setattr(
         tsplib_manager, "save_benchmark_result",
         lambda _run_id, payload, **_k: saved.append(payload),
     )
     smart_benchmark.run_unified_benchmark(
-        [problem], list(algorithms), "default", n_runs, 2, {"results": {}}
+        [problem], list(algorithms), "db", n_runs, 2, {"results": {}}
     )
     return smart_benchmark._current_results, saved
 
@@ -135,7 +156,8 @@ def test_governed_cli_run_produces_validated_results_with_contract_seeds() -> No
     for combo_idx in (0, 3):
         for algorithm_id in ALGORITHMS:
             aggregate = cli_engine._evaluate_param_combo(
-                (problem, algorithm_id, algorithm_id, {}, combo_idx, 2, _request(algorithm_id))
+                (problem, algorithm_id, algorithm_id, _params_for(algorithm_id), combo_idx, 2,
+                 _request(algorithm_id))
             )
             rows = aggregate["per_run_fairness"]
             assert [row["algorithm_id"] for row in rows] == [algorithm_id] * 2

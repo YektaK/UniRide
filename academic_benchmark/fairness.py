@@ -253,6 +253,44 @@ class FairComparisonManifest:
         digest = hashlib.sha256(self._seed_payload(problem, replicate).encode("utf-8")).hexdigest()
         return f"{normalize_problem(problem)}:r{replicate}:{digest[:16]}"
 
+    @staticmethod
+    def _memetic_polish_count_errors(polish_policy, result) -> list:
+        """Phase flags of a memetic result must equal the polish evaluations it spent."""
+        phases = ("initial", "periodic", "final")
+        errors = []
+        counts = {}
+        for key in ("executed", "evaluations"):
+            value = polish_policy.get(key)
+            if not isinstance(value, dict) or set(value) != set(phases) or any(
+                not isinstance(value[phase], int)
+                or isinstance(value[phase], bool)
+                or value[phase] < 0
+                for phase in phases
+            ):
+                errors.append(
+                    f"memetic_2opt polish_policy must carry '{key}' as non-negative "
+                    "integer counts for initial, periodic and final"
+                )
+            else:
+                counts[key] = value
+        if len(counts) == 2:
+            for phase in phases:
+                if polish_policy[phase] is not (counts["evaluations"][phase] > 0):
+                    errors.append(
+                        f"polish_policy {phase} flag must equal "
+                        f"(polish evaluations spent in that phase > 0)"
+                    )
+                if counts["evaluations"][phase] > 0 and counts["executed"][phase] < 1:
+                    errors.append(
+                        f"polish_policy {phase} spent evaluations without an executed polish call"
+                    )
+            objective_evaluations = getattr(result, "objective_evaluations", None)
+            if isinstance(objective_evaluations, int) and (
+                sum(counts["evaluations"].values()) > objective_evaluations
+            ):
+                errors.append("polish evaluations exceed the objective evaluations")
+        return errors
+
     def validate_result(self, result: RunResult) -> None:
         errors: List[str] = []
         required_fields = self.REQUIRED_RESULT_FIELDS
@@ -313,14 +351,28 @@ class FairComparisonManifest:
                     if polish_policy["operator"] is not None:
                         errors.append("pure variant cannot declare a polish operator")
                 elif variant == "memetic_2opt":
-                    if not all(polish_policy[field] for field in bool_fields):
+                    # Phase flags are derived from executed polish (audit M19): a
+                    # memetic result must show that some phase ran, and ``enabled``
+                    # must agree with the phases. A phase that never ran (for
+                    # example periodic polish when the interval was not reached)
+                    # is reported False, not forced True.
+                    phase_flags = [
+                        polish_policy[field]
+                        for field in ("initial", "periodic", "final")
+                    ]
+                    if not any(phase_flags):
                         errors.append(
-                            "memetic_2opt variant must enable every polish phase"
+                            "memetic_2opt variant must execute at least one polish phase"
+                        )
+                    if polish_policy["enabled"] is not any(phase_flags):
+                        errors.append(
+                            "polish_policy enabled flag must match the executed phases"
                         )
                     if polish_policy["operator"] != "2-opt":
                         errors.append(
                             "memetic_2opt variant must declare operator '2-opt'"
                         )
+                    errors.extend(self._memetic_polish_count_errors(polish_policy, result))
                 else:
                     errors.append("unsupported fair variant")
         if getattr(result, "execution_backend", None) == "unknown":

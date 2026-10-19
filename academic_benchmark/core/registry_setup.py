@@ -605,6 +605,47 @@ for canonical_id, payload in _CANONICAL_LOCAL_SEARCH_REGISTRATIONS.items():
     )
 
 
+def _executed_polish_policy(extra_stats, polish_enabled=False):
+    """Build ``polish_policy`` from the polish work the solver actually did.
+
+    A phase flag is never taken from the ``polish_enabled`` boolean. In fixed-budget
+    mode the solver reports the candidate evaluations each polish phase spent
+    (``polish_evaluations``); a phase is reported only when it spent at least one
+    (audit M19: a polish call that finds the budget already exhausted did nothing).
+    ``executed`` keeps the per-phase call counts as information. Where no counter
+    exists (the native path, owned by C-10) the flags fall back to the call counts
+    and ``evaluations`` is omitted.
+    """
+    phases = ("initial", "periodic", "final")
+    calls = {
+        phase: int((extra_stats.get("polish_executed") or {}).get(phase, 0) or 0)
+        for phase in phases
+    }
+    counted = extra_stats.get("polish_evaluations")
+    if counted is not None:
+        evaluations = {phase: int(counted.get(phase, 0) or 0) for phase in phases}
+        ran = {phase: evaluations[phase] > 0 for phase in phases}
+    else:
+        evaluations = None
+        ran = {phase: calls[phase] > 0 for phase in phases}
+    any_ran = any(ran.values())
+    policy = {
+        "enabled": any_ran,
+        "initial": ran["initial"],
+        "periodic": ran["periodic"],
+        "final": ran["final"],
+        "operator": "2-opt" if any_ran else None,
+    }
+    if any_ran or polish_enabled:
+        # Pure results keep the historical five-key shape (pinned by the fixed-budget
+        # golden); memetic results always carry the counts, even when they are all
+        # zero, so the validator can reject them.
+        policy["executed"] = calls
+        if evaluations is not None:
+            policy["evaluations"] = evaluations
+    return policy
+
+
 def _make_numba_metah_executor(
     algorithm_name, solver_cls, default_params, routing_engine_name=None,
     variant="memetic_2opt", polish_enabled=True,
@@ -674,6 +715,15 @@ def _make_numba_metah_executor(
             cfg["evaluation_budget"] = manifest.evaluation_budget
 
         solver = solver_cls(**cfg)
+        if polish_enabled and (
+            int(solver.polish_iters) <= 0 and int(solver.final_polish_iters) <= 0
+        ):
+            raise ValueError(
+                f"{algorithm_name} is a memetic 2-opt configuration but polish_iters="
+                f"{solver.polish_iters} and final_polish_iters={solver.final_polish_iters} "
+                "execute no polish; give at least one phase a positive polish budget "
+                "or use the Pure variant"
+            )
         start_time = _time.perf_counter()
         result = solver.solve_with_matrix(
             matrix, recalculate=protocol_manifest is None, closed_tsp=True
@@ -692,6 +742,7 @@ def _make_numba_metah_executor(
 
         extra_stats = dict(getattr(result, "extra_stats", {}) or {})
         evaluations = int(extra_stats.get("objective_evaluations") or 0)
+        polish_policy = _executed_polish_policy(extra_stats, polish_enabled)
         budget_terminated = bool(extra_stats.get("budget_terminated", False))
         if budget_terminated:
             termination_reason = "evaluation_budget_exhausted"
@@ -739,11 +790,7 @@ def _make_numba_metah_executor(
                     f"max_no_improvement={cfg.get('max_no_improvement')}"
                 ),
                 execution_backend=str(extra_stats.get("execution_backend", "unknown")),
-                polish_policy={
-                    "enabled": polish_enabled, "initial": polish_enabled,
-                    "periodic": polish_enabled, "final": polish_enabled,
-                    "operator": "2-opt" if polish_enabled else None,
-                },
+                polish_policy=polish_policy,
             )
             native_manifest.validate_result(native_result)
             return native_result
@@ -765,18 +812,14 @@ def _make_numba_metah_executor(
             termination_reason=termination_reason,
             initialization_policy=(
                 "paired_seed_random_population_all_nodes_with_initial_2opt"
-                if polish_enabled else "paired_seed_random_population_all_nodes"
+                if polish_policy["initial"] else "paired_seed_random_population_all_nodes"
             ),
             termination_policy=(
                 f"{manifest.budget_policy};max_iterations={cfg.get('max_iterations')};"
                 f"max_no_improvement={cfg.get('max_no_improvement')}"
             ),
             execution_backend=str(extra_stats.get("execution_backend", "unknown")),
-            polish_policy={
-                "enabled": polish_enabled, "initial": polish_enabled,
-                "periodic": polish_enabled, "final": polish_enabled,
-                "operator": "2-opt" if polish_enabled else None,
-            },
+            polish_policy=polish_policy,
         )
         manifest.validate_result(fair_result)
         return fair_result

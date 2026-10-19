@@ -122,7 +122,10 @@ def test_gwo_hho_variant_and_polish_metadata_are_truthful(algorithm, variant, po
     assert result.variant == variant
     assert result.polish_policy["enabled"] is polished
     assert result.polish_policy["initial"] is polished
-    assert result.polish_policy["periodic"] is polished
+    # Periodic polish runs only when ``polish_interval`` is reached; this run
+    # (2 iterations, default interval 25) never reaches it, so the flag is False
+    # (audit M19: flags come from executed polish, not from the boolean).
+    assert result.polish_policy["periodic"] is False
     assert result.polish_policy["final"] is polished
 
 

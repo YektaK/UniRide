@@ -69,6 +69,8 @@ class GWOOptimizer(BaseTSPSolver):
         self.final_polish_iters = final_polish_iters
         self._rng = random.Random(self.random_seed)
         self.polish_enabled = polish_enabled
+        self._polish_executed = {"initial": 0, "periodic": 0, "final": 0}
+        self._polish_evaluations = {"initial": 0, "periodic": 0, "final": 0}
         self._fair_mode = evaluation_budget is not None
         self._objective_budget = ObjectiveEvaluationBudget(evaluation_budget)
 
@@ -114,7 +116,11 @@ class GWOOptimizer(BaseTSPSolver):
 
     # ----- Two-opt polish helper (Numba-accelerated) ---------------
     def _polish(
-        self, route: List[int], iters: int, initial_cost: Optional[float] = None
+        self,
+        route: List[int],
+        iters: int,
+        initial_cost: Optional[float] = None,
+        phase: Optional[str] = None,
     ) -> Tuple[List[int], float, bool]:
         if self._fair_mode:
             result = improve_two_opt_budgeted(
@@ -122,6 +128,12 @@ class GWOOptimizer(BaseTSPSolver):
                 max_iterations=iters, first_improvement=False,
                 initial_cost=initial_cost,
             )
+            if phase is not None:
+                # Candidate evaluations only: the one evaluation that prices the
+                # starting tour (initial_cost is None) is not polish work.
+                self._polish_evaluations[phase] += result.evaluations - (
+                    1 if initial_cost is None else 0
+                )
             polished = result.route, result.cost, result.budget_exhausted
             self._backend_observation.polish.add("python")
             return polished
@@ -150,6 +162,8 @@ class GWOOptimizer(BaseTSPSolver):
     def solve(self, coordinates: List[Tuple[float, float]]) -> TSPResult:
         self._backend_observation.reset()
         self._rng = random.Random(self.random_seed)
+        self._polish_executed = {"initial": 0, "periodic": 0, "final": 0}
+        self._polish_evaluations = {"initial": 0, "periodic": 0, "final": 0}
         self._objective_budget.used = 0
         self._set_problem(coordinates)
         t0 = time.perf_counter()
@@ -174,8 +188,10 @@ class GWOOptimizer(BaseTSPSolver):
             self._rng.shuffle(perm)
             if self.polish_enabled:
                 polished, plen, polish_exhausted = self._polish(
-                    perm, self.polish_iters
+                    perm, self.polish_iters, phase="initial"
                 )
+                if self.polish_iters > 0:
+                    self._polish_executed["initial"] += 1
                 budget_terminated = budget_terminated or polish_exhausted
             else:
                 polished, plen = perm, self._evaluate(perm)
@@ -260,8 +276,10 @@ class GWOOptimizer(BaseTSPSolver):
             # Periodic memetic polish on the alpha wolf.
             if self.polish_enabled and self.polish_interval > 0 and it > 0 and it % self.polish_interval == 0:
                 polished, plen, polish_exhausted = self._polish(
-                    alpha.position, self.polish_iters, alpha.tour_length
+                    alpha.position, self.polish_iters, alpha.tour_length, phase="periodic"
                 )
+                if self.polish_iters > 0:
+                    self._polish_executed["periodic"] += 1
                 budget_terminated = budget_terminated or polish_exhausted
                 if plen < alpha.tour_length:
                     alpha = _Wolf(polished[:], 1.0 / (plen + 1e-10), plen)
@@ -280,8 +298,10 @@ class GWOOptimizer(BaseTSPSolver):
         # Final aggressive 2-opt on best.
         if self.polish_enabled:
             best_chrom, best_len, polish_exhausted = self._polish(
-                best_chrom, self.final_polish_iters, best_len
+                best_chrom, self.final_polish_iters, best_len, phase="final"
             )
+            if self.final_polish_iters > 0:
+                self._polish_executed["final"] += 1
             budget_terminated = budget_terminated or polish_exhausted
 
         elapsed_ms = (time.perf_counter() - t0) * 1000
@@ -304,6 +324,12 @@ class GWOOptimizer(BaseTSPSolver):
                 "evaluation_budget": self._objective_budget.limit,
                 "budget_terminated": budget_terminated,
                 "variant": "memetic_2opt" if self.polish_enabled else "pure",
+                "polish_executed": dict(self._polish_executed),
+                # Candidate evaluations spent by each polish phase (fixed-budget
+                # mode only; the native path has no counter, see C-10).
+                "polish_evaluations": (
+                    dict(self._polish_evaluations) if self._fair_mode else None
+                ),
                 "execution_backend": self._backend_observation.label(),
             },
             history=history,

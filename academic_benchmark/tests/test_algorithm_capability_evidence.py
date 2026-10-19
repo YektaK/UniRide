@@ -162,7 +162,17 @@ def _prove_fixed(
     for problem in PROBLEMS:
         params, budget, expected_evaluations = _fixed_params(algorithm_id)
         if polish_enabled:
-            params.update(polish_iters=0, final_polish_iters=0)
+            # Zero polish is rejected for memetic IDs (audit M19); one final-phase
+            # polish iteration keeps the pinned evaluation counts and stays runnable.
+            params.update(polish_iters=0, final_polish_iters=1)
+            # The final polish now really runs and drains the remaining budget, so the
+            # evaluation count equals the budget (HHO previously stopped at 8 of 12).
+            # The search must finish before the budget so that the final polish has
+            # evaluations left to spend (it gets only what the search leaves): GWO
+            # search uses 6 of 13, HHO 12 of 19; the polish scan is cut by the budget.
+            budget = 13 if "GWO" in algorithm_id else 19
+            params["fair_comparison"]["evaluation_budget"] = budget
+            expected_evaluations = budget
         manifest = FairComparisonManifest.from_value(params["fair_comparison"])
         first = executor(problem, params, seed=987_654, run_idx=0)
         replay = executor(problem, params, seed=123_456, run_idx=0)
@@ -182,6 +192,17 @@ def _prove_fixed(
         assert first.variant == expected_variant
         assert first.polish_policy["enabled"] is polish_enabled
         assert first.polish_policy["operator"] == ("2-opt" if polish_enabled else None)
+        if polish_enabled:
+            # B2: the memetic evidence must show that polish really spent evaluations.
+            polish_evaluations = first.polish_policy["evaluations"]
+            assert polish_evaluations["final"] > 0
+            assert first.polish_policy["final"] is True
+            pure_id = algorithm_id.replace("Memetic-2opt", "Pure")
+            pure = AlgorithmRegistry.get_executor(pure_id)(
+                problem, params, seed=987_654, run_idx=0
+            )
+            assert first.objective_evaluations > pure.objective_evaluations
+            assert sum(polish_evaluations.values()) <= first.objective_evaluations
 
 
 def _native_params(algorithm_id: str) -> dict[str, Any]:

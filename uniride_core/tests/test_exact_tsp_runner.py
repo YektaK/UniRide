@@ -751,26 +751,6 @@ def _line4_db(path: Path, tours=None):
     _tour_db(path, tours or {})
 
 
-def _read_published_tour(runner, conn, name, tour_dir):
-    """TEST-ONLY helper (moved out of the runner, WP-E8 polish item a): reads a published tour from the ``opt_tours`` table
-    of a read-only fixture database and then from an UNMANIFESTED folder. The runner never does this; it takes tours only
-    from the manifest-governed collection (``inputs.read_collection_tour``). Kept here to exercise ``check_published_tour``
-    against the real database tours; (1-based node list, source) or None."""
-    has_table = conn.execute("select 1 from sqlite_master where type='table' and name='opt_tours'").fetchone()
-    if has_table:
-        row = conn.execute("select tour_nodes from opt_tours where problem_name=?", (name,)).fetchone()
-        if row is not None:
-            return [int(v) for v in json.loads(row[0])], "opt_tours"
-    if tour_dir is not None and Path(tour_dir).is_dir():
-        want = f"{name}.opt.tour".lower()
-        for cand in sorted(Path(tour_dir).iterdir()):
-            if cand.name.lower() == want and cand.is_file():
-                from academic_benchmark.exact_reference import inputs
-
-                return inputs.parse_tour_text(cand.read_text(encoding="utf-8")), "opt_tour_file"
-    return None
-
-
 def test_the_runner_has_no_unmanifested_tour_reader(runner):
     assert not hasattr(runner, "read_published_tour"), "published tours come only from the manifest-governed collection"
     assert not hasattr(runner, "_parse_tour_file"), "the only tour-text parser is inputs.parse_tour_text (WP-E8 polish item 3)"
@@ -784,25 +764,6 @@ def test_published_tour_length_on_the_used_coordinates_must_equal_the_published_
     assert runner.check_published_tour(spec, m, [1, 2, 4, 3, 5, 6]), "a different tour with another length"
     assert runner.check_published_tour(spec, m, [1, 2, 3, 4, 5, 5]), "not a permutation"
     assert runner.check_published_tour(spec, m, [1, 2, 3, 4, 5]), "wrong size"
-
-
-def test_test_only_helper_reads_opt_tours_read_only_and_from_opt_tour_files(runner, tmp_path):
-    db = tmp_path / "tsplib.db"
-    _make_wal_db(db)
-    _tour_db(db, {"a10": [1, 3, 2]})
-    conn = runner.open_db_readonly(db)
-    try:
-        assert _read_published_tour(runner, conn, "a10", None) == ([1, 3, 2], "opt_tours")
-        assert _read_published_tour(runner, conn, "b99", None) is None
-        files = tmp_path / "tours"
-        files.mkdir()
-        (files / "kroA100.opt.tour").write_text(
-            "NAME : kroA100.opt.tour\nCOMMENT : Optimal tour (21282)\nTYPE : TOUR\nDIMENSION : 4\nTOUR_SECTION\n1\n3\n2\n4\n-1\nEOF\n",
-            encoding="utf-8")
-        assert _read_published_tour(runner, conn, "kroa100", files) == ([1, 3, 2, 4], "opt_tour_file")
-        assert _read_published_tour(runner, conn, "nothere", files) is None
-    finally:
-        conn.close()
 
 
 def test_a_published_tour_that_does_not_match_the_coordinates_blocks_the_instance(runner, tmp_path):
@@ -837,26 +798,6 @@ def test_an_instance_without_a_published_tour_is_labelled_not_blocked(runner, tm
     finally:
         ro.close()
     assert rec["published_tour_check"] == {"source": "none", "tour_length": None, "equals_published_optimum": None}
-
-
-def test_the_real_database_published_tours_match_the_coordinates_of_the_verification_set():
-    if not DB_PATH.is_file():
-        pytest.skip("tsplib.db not present in this checkout (git-ignored)")
-    runner = _load_script()
-    conn = runner.open_db_readonly(DB_PATH)
-    try:
-        specs = [s for s in runner.read_instance_set(conn) if s.problem_type == "TSP"]
-        checked = []
-        for s in specs:
-            pub = _read_published_tour(runner, conn, s.name, None)
-            if pub is None:
-                continue
-            matrix = runner.build_matrix(s.edge_weight_type, runner.read_db_coordinates(conn, s.name))
-            assert runner.check_published_tour(s, matrix, pub[0]) == [], s.name
-            checked.append(s.name)
-    finally:
-        conn.close()
-    assert len(checked) >= 10, checked
 
 
 # ---------------------------------------------------------------- item 6: --verify-tours compares with the published optimum

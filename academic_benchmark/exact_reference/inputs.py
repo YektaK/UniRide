@@ -137,13 +137,13 @@ def atsp_entries(manifest_path=ATSP_MANIFEST) -> list:
     return list(_load_manifest(Path(manifest_path), ATSP_SCHEMA)["instances"])
 
 
-def read_atsp_file(name: str, manifest_path=ATSP_MANIFEST, dataset_root=TSPLIB_DATA_DIR):
+def read_atsp_file(name: str, manifest_path=ATSP_MANIFEST, dataset_root=TSPLIB_DATA_DIR, repo_root=REPO_ROOT):
     """(file text, manifest entry) of an ATSP instance listed in the ATSP collection manifest (sha256 verified), or
-    None. ``artifact_path`` of the entry is relative to the repository root and must stay inside ``dataset_root``."""
+    None. ``artifact_path`` of the entry is relative to ``repo_root`` and must stay inside ``dataset_root``."""
     entry = _entry(_load_manifest(Path(manifest_path), ATSP_SCHEMA), name)
     if entry is None:
         return None
-    path = _confined(Path(dataset_root), entry["artifact_path"], f"{entry['name']}: artifact_path", anchor=REPO_ROOT)
+    path = _confined(Path(dataset_root), entry["artifact_path"], f"{entry['name']}: artifact_path", anchor=Path(repo_root))
     return _verified_bytes(path, entry, "instance file").decode("utf-8"), entry
 
 

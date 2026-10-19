@@ -29,9 +29,12 @@ import re
 from pathlib import Path, PurePosixPath
 from typing import Optional
 
+from pydantic import Field, StrictInt
+
 from academic_benchmark.contracts.common import JsonValue, RepositoryRelativePath, Sha256Digest, StrictContract
-from academic_benchmark.exact_reference import protocol
+from academic_benchmark.exact_reference import inputs, protocol
 from academic_benchmark.exact_reference.rows import ExactReferenceRowV1
+from academic_benchmark.validation import hamiltonian_cycle as hc
 
 TSP_REFERENCE_CSV_FIELDS_V1 = (
     "protocol", "instance", "problem_type", "n", "edge_weight_type", "reference_optimum", "reference_source", "exact_status",
@@ -63,6 +66,7 @@ class ExactReferenceSet(StrictContract):
     manifest_sha256: Sha256Digest
     manifest: dict[str, JsonValue]
     rows: list[ExactReferenceRowV1]
+    tours: dict[str, list[StrictInt]] = Field(default_factory=dict)  # tsp_reference only: 1-based node lists of tours.json
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -324,7 +328,10 @@ def _tsp_rows(directory: Path, rel: PurePosixPath, manifest: dict, manifest_sha:
                 lb=_int_or_none(rec["highs_lb"], f"{where} highs_lb"), ub=_int_or_none(rec["highs_value"], f"{where} highs_value"),
                 timing_dependent=bool(_bool_or_none(rec["highs_timing_dependent"], f"{where} highs_timing_dependent")),
                 wall_seconds=_float_or_none(rec["highs_wall_seconds"], f"{where} highs_wall_seconds")))
-    return rows
+    for name, tour in tours.items():
+        if not isinstance(tour.get("tour"), list):
+            raise ExactReferenceRefused(f"tours.json {name}: the tour is not a list")
+    return rows, {name: tour["tour"] for name, tour in tours.items()}
 
 
 # ---------------------------------------------------------------- wave_campaign (WP-E3, WP-E4a)
@@ -414,12 +421,12 @@ def load_exact_reference(results_dir, *, repo_root) -> ExactReferenceSet:
     manifest_sha = sha256_bytes(path.read_bytes())
     if kind == KIND_TSP:
         _manifest_checks(manifest, protocol.validate_tsp_reference_manifest(manifest), str(rel))
-        rows = _tsp_rows(directory, rel, manifest, manifest_sha)
+        rows, tours = _tsp_rows(directory, rel, manifest, manifest_sha)
     else:
         _manifest_checks(manifest, protocol.validate_manifest(manifest), str(rel))
-        rows = _wave_rows(directory, rel, manifest, manifest_sha, Path(repo_root))
+        rows, tours = _wave_rows(directory, rel, manifest, manifest_sha, Path(repo_root)), {}
     return ExactReferenceSet(results_dir=str(rel), manifest_kind=kind, manifest_sha256=manifest_sha, manifest=manifest,
-                             rows=sorted(rows, key=_sort_key))
+                             rows=sorted(rows, key=_sort_key), tours=tours)
 
 
 def read_index(repo_root) -> list:
@@ -446,3 +453,127 @@ def discover_exact_references(repo_root) -> tuple:
             raise ExactReferenceRefused(f"{entry['results_dir']}: {len(loaded.rows)} rows, results_index.json says {entry.get('rows')}")
         sets.append(loaded)
     return tuple(sets)
+
+
+# ---------------------------------------------------------------- independent validation of the Hamiltonian-cycle rows (Task 5)
+def _canonical_matrix_sha256(matrix) -> str:
+    """The fingerprint the WP-E7 runner records as ``matrix_sha256`` (json of the integer rows), recomputed here."""
+    text = json.dumps([[int(v) for v in row] for row in matrix], separators=(",", ":"))
+    return sha256_bytes(text.encode("ascii"))
+
+
+def _dataset_cost(name: str, inst: dict, dataset_root: Path, repo_root: Path):
+    try:
+        return _dataset_cost_checked(name, inst, dataset_root, repo_root)
+    except ExactReferenceRefused:
+        raise
+    except (inputs.InputRefused, ValueError, KeyError) as exc:  # an altered or missing artifact, a malformed file
+        raise ExactReferenceRefused(f"{name}: dataset artifact refused: {exc}") from exc
+
+
+def _dataset_cost_checked(name: str, inst: dict, dataset_root: Path, repo_root: Path):
+    """(cost callable, n, matrix sha256) of one stage-1 instance recomputed from the tracked dataset artifacts after every
+    sha256 check; any mismatch is a refusal before a length is computed."""
+    n, ewt = inst["n"], inst["edge_weight_type"]
+    if inst["data_source"] == "atsp_file":
+        found = inputs.read_atsp_file(name, dataset_root / "atsp" / inputs.MANIFEST_NAME, dataset_root, repo_root)
+        if found is None:
+            raise ExactReferenceRefused(f"{name}: the ATSP collection lists no such instance")
+        text, entry = found
+        if entry["sha256"] != inst["sha256"]:
+            raise ExactReferenceRefused(f"{name}: the tracked file sha256 {entry['sha256']} differs from the stage-1 manifest {inst['sha256']}")
+        matrix = hc.parse_full_matrix(text)
+        if len(matrix) != n or int(entry["dimension"]) != n:
+            raise ExactReferenceRefused(f"{name}: dimension of the tracked file differs from the stage-1 manifest")
+        return hc.matrix_cost(matrix), n, _canonical_matrix_sha256(matrix)
+    found = inputs.read_tsp_file(name, dataset_root / "tsp")
+    if found is None:
+        raise ExactReferenceRefused(f"{name}: the TSP collection lists no such instance (a missing artifact fails, it never skips)")
+    text, entry = found
+    coords = hc.parse_coordinates(text)
+    header = hc.parse_header(text)
+    if inputs.coordinate_text_sha256(coords) != entry["coordinate_text_sha256"]:
+        raise ExactReferenceRefused(f"{name}: coordinates differ from the collection manifest fingerprint")
+    if inst["data_source"] == "tsp_file":
+        if entry["sha256"] != inst["sha256"]:
+            raise ExactReferenceRefused(f"{name}: the tracked file sha256 {entry['sha256']} differs from the stage-1 manifest {inst['sha256']}")
+    elif inst["data_source"] == "tsplib_db_coordinates":
+        if inputs.coordinate_text_sha256(coords) != inst["sha256"]:
+            raise ExactReferenceRefused(f"{name}: the canonical coordinate text sha256 differs from the stage-1 manifest {inst['sha256']}")
+    else:
+        raise ExactReferenceRefused(f"{name}: unsupported data_source {inst['data_source']!r}")
+    if len(coords) != n or int(entry["dimension"]) != n or int(header.get("DIMENSION", -1)) != n:
+        raise ExactReferenceRefused(f"{name}: dimension of the tracked file differs from the stage-1 manifest")
+    if entry["edge_weight_type"] != ewt or header.get("EDGE_WEIGHT_TYPE", "").upper() != ewt:
+        raise ExactReferenceRefused(f"{name}: EDGE_WEIGHT_TYPE of the tracked file differs from the stage-1 manifest")
+    cost = hc.coordinate_cost(ewt, coords)
+    matrix = [[0 if i == j else cost(i, j) for j in range(n)] for i in range(n)]
+    return cost, n, _canonical_matrix_sha256(matrix)
+
+
+def validate_hamiltonian_rows(loaded: ExactReferenceSet, *, dataset_root, repo_root=None) -> ExactReferenceSet:
+    """A copy of ``loaded`` whose primary Hamiltonian-cycle rows have ``ub_validated = true`` after the independent validator
+    recomputed each tour length from the tracked dataset artifacts and found it equal to ``ub``.
+
+    For every instance, before any tour length is computed (all artifacts first, then all tours): the artifact file is read through the verified readers (sha256 against its
+    collection manifest, archive refusal, confined path), its fingerprint (file sha256 for ``tsp_file``/``atsp_file``, canonical
+    coordinate-text sha256 for ``tsplib_db_coordinates``) equals the stage-1 manifest entry, dimension and edge weight type
+    agree, and the matrix the validator builds has the ``matrix_sha256`` the solver run recorded. Then the tour must be a
+    Hamiltonian cycle (1-based, node_base 1 from ``tours.json``) of exactly the claimed ``ub``. Any failure raises
+    :class:`ExactReferenceRefused`; a missing artifact fails (never a skip). HiGHS verification rows carry no tour and stay
+    ``not_validated``. Wave sets are refused (OQ3: their rows are certified by the producing run).
+
+    ``dataset_root`` is ``academic_benchmark/tsplib_data``; ``repo_root`` (default: two levels above it) anchors the
+    repository-relative ``artifact_path`` of the ATSP collection manifest."""
+    if loaded.manifest_kind != KIND_TSP:
+        raise ExactReferenceRefused(f"{loaded.manifest_kind} rows are certified by the producing run and are not validated here (OQ3)")
+    dataset_root = Path(dataset_root)
+    repo = Path(repo_root) if repo_root is not None else dataset_root.resolve().parents[1]
+    instances = loaded.manifest["instances"]
+    primary = [row for row in loaded.rows if row.solver_role == "primary" and row.ub is not None]
+    costs = {}
+    for row in primary:  # pass 1: every artifact is verified before a single tour length is computed
+        name = row.instance_id
+        if name not in costs:
+            cost, n, matrix_sha = _dataset_cost(name, instances[name], dataset_root, repo)
+            if matrix_sha != instances[name]["matrix_sha256"]:
+                raise ExactReferenceRefused(f"{name}: the matrix rebuilt by the independent validator has sha256 {matrix_sha}, the solver "
+                                            f"run recorded {instances[name]['matrix_sha256']}")
+            costs[name] = (cost, n)
+    validated = set()
+    for row in primary:  # pass 2: the tours
+        name = row.instance_id
+        tour = loaded.tours.get(name)
+        if tour is None:
+            raise ExactReferenceRefused(f"{name}: no tour to validate")
+        cost, n = costs[name]
+        errors = hc.validate_hamiltonian_cycle(tour, n=n, node_base=1, cost=cost, claimed_length=row.ub)
+        if errors:
+            raise ExactReferenceRefused(f"{name}: tour is not a valid Hamiltonian cycle of length {row.ub}: {errors}")
+        validated.add(name)
+    rows = [row.model_copy(update={"ub_validated": True, "ub_validation_basis": "independent_hamiltonian_validator"})
+            if row.solver_role == "primary" and row.instance_id in validated else row for row in loaded.rows]
+    updated = loaded.model_copy(update={"rows": rows})
+    return ExactReferenceSet.model_validate(updated.model_dump())  # the contract is applied again to every updated row
+
+
+def cross_check_published_tours(loaded: ExactReferenceSet, *, dataset_root, repo_root=None) -> list:
+    """Instances (sorted) whose published optimal tour in ``opt_tours/`` was recomputed by the independent validator and has
+    exactly ``reference_optimum`` as its length; a mismatch raises. Instances without a published tour (``source: none``)
+    are skipped by design (nothing is synthesised from our own runs)."""
+    dataset_root = Path(dataset_root)
+    repo = Path(repo_root) if repo_root is not None else dataset_root.resolve().parents[1]
+    instances = loaded.manifest["instances"]
+    checked = []
+    for row in loaded.rows:
+        if row.solver_role != "primary":
+            continue
+        published = inputs.read_collection_tour(row.instance_id, dataset_root / "opt_tours")
+        if published is None:
+            continue
+        cost, n, _ = _dataset_cost(row.instance_id, instances[row.instance_id], dataset_root, repo)
+        errors = hc.validate_hamiltonian_cycle(published[0], n=n, node_base=1, cost=cost, claimed_length=row.reference_optimum)
+        if errors:
+            raise ExactReferenceRefused(f"{row.instance_id}: published tour: {errors}")
+        checked.append(row.instance_id)
+    return sorted(checked)

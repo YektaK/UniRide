@@ -466,3 +466,220 @@ def test_a_valid_results_copy_below_an_archive_named_folder_is_refused_by_name(t
         load_exact_reference(f"{prefix}/stage1", repo_root=tmp_path)
     shutil.copytree(REPO / STAGE1, tmp_path / "docs" / "ok" / "stage1")
     assert len(load_exact_reference("docs/ok/stage1", repo_root=tmp_path).rows) == 34  # same bytes elsewhere: accepted
+
+
+# ================================================================ Task 5: independent validation of the committed tours
+DATA = REPO / "academic_benchmark" / "tsplib_data"
+
+
+def _dataset_copy(root: Path) -> Path:
+    """A fake repository root holding the tracked dataset collections (never the database)."""
+    target = root / "academic_benchmark" / "tsplib_data"
+    shutil.copytree(DATA, target, ignore=shutil.ignore_patterns("*.db", "*.db-*", "*.bak*"))
+    return target
+
+
+def test_all_17_stage1_tours_are_validated_from_the_tracked_artifacts_with_no_skip(stage1):
+    """CI gate: 17 of 17, a missing artifact would fail (there is no skip anywhere in this module)."""
+    assert all(not r.ub_validated and r.ub_validation_basis == "not_validated" for r in stage1.rows), "loading validates nothing"
+    validated = reader.validate_hamiltonian_rows(stage1, dataset_root=DATA, repo_root=REPO)
+    primary = [r for r in validated.rows if r.solver_role == "primary"]
+    verification = [r for r in validated.rows if r.solver_role == "verification"]
+    assert len(primary) == 17 and all(r.ub_validated and r.ub_validation_basis == "independent_hamiltonian_validator" for r in primary)
+    assert {r.instance_id for r in primary} == set(EXPECTED_TSP)
+    assert len(verification) == 17 and all(not r.ub_validated and r.ub_validation_basis == "not_validated" for r in verification), \
+        "HiGHS rows carry no tour: not validated"
+    assert all(r.status == "optimal" and r.ub == r.reference_optimum for r in validated.rows)
+    assert all(not r.ub_validated for r in stage1.rows), "the input set is not modified"
+
+
+def test_validation_is_deterministic(stage1):
+    first = reader.validate_hamiltonian_rows(stage1, dataset_root=DATA, repo_root=REPO).model_dump_json()
+    assert first == reader.validate_hamiltonian_rows(stage1, dataset_root=DATA, repo_root=REPO).model_dump_json()
+
+
+def test_the_tracked_artifacts_match_the_stage1_manifest_fingerprints(stage1):
+    manifest = stage1.manifest
+    collection = {e["name"]: e for e in json.loads((DATA / "tsp" / "MANIFEST.json").read_text(encoding="utf-8"))["instances"]}
+    from academic_benchmark.exact_reference import inputs
+    from academic_benchmark.validation import hamiltonian_cycle as hc
+
+    kinds = {}
+    for name, inst in manifest["instances"].items():
+        kinds[inst["data_source"]] = kinds.get(inst["data_source"], 0) + 1
+        if inst["data_source"] == "atsp_file":
+            assert _sha((DATA / "ft53.atsp").read_bytes()) == inst["sha256"]
+            continue
+        raw = (DATA / "tsp" / collection[name]["file_name"]).read_bytes()
+        if inst["data_source"] == "tsp_file":
+            assert _sha(raw) == inst["sha256"], name
+        else:
+            coords = hc.parse_coordinates(raw.decode("utf-8"))
+            assert inputs.coordinate_text_sha256(coords) == inst["sha256"], name
+        assert collection[name]["dimension"] == inst["n"] and collection[name]["edge_weight_type"] == inst["edge_weight_type"]
+    assert kinds == {"tsp_file": 5, "tsplib_db_coordinates": 11, "atsp_file": 1}
+
+
+def test_a_swapped_pair_of_nodes_in_a_copied_tours_json_is_detected(stage1_root):
+    doc = json.loads((stage1_root / STAGE1 / "tours.json").read_text(encoding="utf-8"))
+    tour = doc["tours"]["eil51"]["tour"]
+    tour[3], tour[10] = tour[10], tour[3]  # still a permutation, but another length; the recorded length is unchanged
+    _rewrite_output(stage1_root, "tours.json", (json.dumps(doc, indent=2, sort_keys=True) + "\n").encode("utf-8"))
+    loaded = load_exact_reference(STAGE1, repo_root=stage1_root)  # the Task 4 checks cannot see it
+    with pytest.raises(ExactReferenceRefused, match="eil51.*recomputed closed length"):
+        reader.validate_hamiltonian_rows(loaded, dataset_root=DATA, repo_root=REPO)
+
+
+def test_a_repeated_node_and_a_subtour_in_a_copied_tours_json_are_detected(stage1_root):
+    for mutate, match in ((lambda t: t.__setitem__(5, t[4]), "repeats a node"), (lambda t: t.pop(), "subtour")):
+        doc = json.loads((REPO / STAGE1 / "tours.json").read_text(encoding="utf-8"))
+        mutate(doc["tours"]["st70"]["tour"])
+        _rewrite_output(stage1_root, "tours.json", (json.dumps(doc, indent=2, sort_keys=True) + "\n").encode("utf-8"))
+        loaded = load_exact_reference(STAGE1, repo_root=stage1_root)
+        with pytest.raises(ExactReferenceRefused, match=match):
+            reader.validate_hamiltonian_rows(loaded, dataset_root=DATA, repo_root=REPO)
+
+
+def test_a_reversed_atsp_tour_is_a_different_cycle(stage1_root):
+    doc = json.loads((REPO / STAGE1 / "tours.json").read_text(encoding="utf-8"))
+    doc["tours"]["ft53"]["tour"].reverse()
+    _rewrite_output(stage1_root, "tours.json", (json.dumps(doc, indent=2, sort_keys=True) + "\n").encode("utf-8"))
+    loaded = load_exact_reference(STAGE1, repo_root=stage1_root)
+    with pytest.raises(ExactReferenceRefused, match="ft53.*recomputed closed length"):
+        reader.validate_hamiltonian_rows(loaded, dataset_root=DATA, repo_root=REPO)
+
+
+def _never_compute_a_length(monkeypatch):
+    from academic_benchmark.validation import hamiltonian_cycle as hc
+
+    def boom(*args, **kwargs):
+        raise AssertionError("a length was computed before the artifact checks finished")
+
+    monkeypatch.setattr(hc, "closed_length", boom)
+    monkeypatch.setattr(hc, "validate_hamiltonian_cycle", boom)
+
+
+def test_a_changed_coordinate_is_refused_by_the_sha_check_before_any_length_is_computed(stage1, tmp_path, monkeypatch):
+    data = _dataset_copy(tmp_path)
+    path = data / "tsp" / "eil51.tsp"
+    text = path.read_bytes().decode("utf-8")
+    assert "37 52" in text
+    path.write_bytes(text.replace("37 52", "37 53", 1).encode("utf-8"))
+    _never_compute_a_length(monkeypatch)
+    with pytest.raises(ExactReferenceRefused, match="eil51.*sha256"):
+        reader.validate_hamiltonian_rows(stage1, dataset_root=data, repo_root=tmp_path)
+
+
+def test_a_changed_coordinate_with_a_rewritten_file_sha_is_refused_by_the_coordinate_fingerprint(stage1, tmp_path, monkeypatch):
+    data = _dataset_copy(tmp_path)
+    path = data / "tsp" / "eil51.tsp"
+    changed = path.read_bytes().decode("utf-8").replace("37 52", "37 53", 1).encode("utf-8")
+    path.write_bytes(changed)
+    manifest = json.loads((data / "tsp" / "MANIFEST.json").read_text(encoding="utf-8"))
+    for entry in manifest["instances"]:
+        if entry["name"] == "eil51":
+            entry["sha256"] = _sha(changed)  # an attacker also fixes the file sha, not the coordinate fingerprint
+    (data / "tsp" / "MANIFEST.json").write_bytes((json.dumps(manifest, indent=2) + "\n").encode("utf-8"))
+    _never_compute_a_length(monkeypatch)
+    with pytest.raises(ExactReferenceRefused, match="eil51.*(fingerprint|sha256)"):
+        reader.validate_hamiltonian_rows(stage1, dataset_root=data, repo_root=tmp_path)
+
+
+def test_a_db_coordinate_instance_with_both_fingerprints_rewritten_still_fails_against_stage1(stage1, tmp_path, monkeypatch):
+    data = _dataset_copy(tmp_path)
+    from academic_benchmark.exact_reference import inputs
+    from academic_benchmark.validation import hamiltonian_cycle as hc
+
+    path = data / "tsp" / "kroA100.tsp"
+    text = path.read_bytes().decode("utf-8")
+    first = [line for line in text.splitlines() if line.startswith("1 ")][0]
+    x, y = first.split()[1:3]
+    changed = text.replace(first, f"1 {float(x) + 1!r} {y}", 1).encode("utf-8")
+    path.write_bytes(changed)
+    manifest = json.loads((data / "tsp" / "MANIFEST.json").read_text(encoding="utf-8"))
+    for entry in manifest["instances"]:
+        if entry["name"] == "kroa100":
+            entry["sha256"] = _sha(changed)
+            entry["coordinate_text_sha256"] = inputs.coordinate_text_sha256(hc.parse_coordinates(changed.decode("utf-8")))
+    (data / "tsp" / "MANIFEST.json").write_bytes((json.dumps(manifest, indent=2) + "\n").encode("utf-8"))
+    _never_compute_a_length(monkeypatch)
+    with pytest.raises(ExactReferenceRefused, match="kroa100.*stage-1 manifest"):
+        reader.validate_hamiltonian_rows(stage1, dataset_root=data, repo_root=tmp_path)
+
+
+@pytest.mark.parametrize("victim, relative", [("kroA100", "tsp/kroA100.tsp"), ("ft53", "ft53.atsp")])
+def test_a_missing_artifact_fails_it_does_not_skip(stage1, tmp_path, victim, relative):
+    data = _dataset_copy(tmp_path)
+    (data / relative).unlink()
+    with pytest.raises(ExactReferenceRefused, match=f"{victim}.*missing"):
+        reader.validate_hamiltonian_rows(stage1, dataset_root=data, repo_root=tmp_path)
+
+
+def test_an_altered_ft53_matrix_is_refused_by_its_sha(stage1, tmp_path):
+    data = _dataset_copy(tmp_path)
+    path = data / "ft53.atsp"
+    raw = path.read_bytes()
+    path.write_bytes(raw.replace(b"223", b"224", 1))
+    with pytest.raises(ExactReferenceRefused, match="ft53.*sha256"):
+        reader.validate_hamiltonian_rows(stage1, dataset_root=data, repo_root=tmp_path)
+
+
+def test_an_instance_missing_from_the_collection_manifest_fails(stage1, tmp_path):
+    data = _dataset_copy(tmp_path)
+    manifest = json.loads((data / "tsp" / "MANIFEST.json").read_text(encoding="utf-8"))
+    manifest["instances"] = [e for e in manifest["instances"] if e["name"] != "rd100"]
+    (data / "tsp" / "MANIFEST.json").write_bytes((json.dumps(manifest, indent=2) + "\n").encode("utf-8"))
+    with pytest.raises(ExactReferenceRefused, match="rd100.*lists no such instance"):
+        reader.validate_hamiltonian_rows(stage1, dataset_root=data, repo_root=tmp_path)
+
+
+def test_wave_sets_are_never_validated_here(e3):
+    with pytest.raises(ExactReferenceRefused, match="certified by the producing run"):
+        reader.validate_hamiltonian_rows(e3, dataset_root=DATA, repo_root=REPO)
+
+
+def test_published_tours_where_the_collection_holds_one_have_the_reference_length(stage1):
+    checked = reader.cross_check_published_tours(stage1, dataset_root=DATA, repo_root=REPO)
+    assert len(checked) == 13
+    assert not {"burma14", "ft53", "krob100", "kroe100"} & set(checked)  # no published tour: skipped by design
+
+
+def test_a_published_tour_with_another_length_is_refused(stage1, tmp_path):
+    data = _dataset_copy(tmp_path)
+    manifest_path = data / "opt_tours" / "MANIFEST.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    entry = next(e for e in manifest["instances"] if e["name"].lower() == "eil51")
+    tour_path = data / "opt_tours" / entry["file_name"]
+    lines = tour_path.read_bytes().decode("utf-8").split("\n")
+    start = next(i for i, line in enumerate(lines) if line.startswith("TOUR_SECTION")) + 1
+    lines[start + 2], lines[start + 9] = lines[start + 9], lines[start + 2]
+    changed = "\n".join(lines).encode("utf-8")
+    tour_path.write_bytes(changed)
+    entry["sha256"] = _sha(changed)
+    manifest_path.write_bytes((json.dumps(manifest, indent=2) + "\n").encode("utf-8"))
+    with pytest.raises(ExactReferenceRefused, match="eil51.*published tour"):
+        reader.validate_hamiltonian_rows(stage1, dataset_root=data, repo_root=tmp_path)  # the stage-1 tours are fine ...
+        reader.cross_check_published_tours(stage1, dataset_root=data, repo_root=tmp_path)  # ... the published one is not
+
+
+def test_a_primary_row_without_an_incumbent_is_never_marked_validated(stage1):
+    rows = list(stage1.rows)
+    index = next(i for i, r in enumerate(rows) if r.solver_role == "primary" and r.instance_id == "eil51")
+    rows[index] = rows[index].model_copy(update={"status": "bound_only", "stop_reason": "wall_limit", "timing_dependent": True,
+                                                  "ub": None, "lb": 400})
+    modified = stage1.model_copy(update={"rows": rows})
+    validated = reader.validate_hamiltonian_rows(modified, dataset_root=DATA, repo_root=REPO)
+    by_id = {(r.instance_id, r.solver_role): r for r in validated.rows}
+    assert not by_id[("eil51", "primary")].ub_validated and by_id[("eil51", "primary")].ub_validation_basis == "not_validated"
+    assert sum(r.ub_validated for r in validated.rows) == 16
+
+
+def test_a_distance_disagreement_between_validator_and_solver_matrix_is_refused_before_the_tours(stage1, monkeypatch):
+    """The validator rebuilds the matrix and its sha256 must equal the one the solver run recorded: this proves that both
+    sides use one distance convention, and it is checked before any tour is looked at."""
+    from academic_benchmark.validation import hamiltonian_cycle as hc
+
+    original = hc.tsplib_distance
+    monkeypatch.setattr(hc, "tsplib_distance", lambda ewt, a, b, **kw: original(ewt, a, b, **kw) + 1)
+    with pytest.raises(ExactReferenceRefused, match="rebuilt by the independent validator"):
+        reader.validate_hamiltonian_rows(stage1, dataset_root=DATA, repo_root=REPO)

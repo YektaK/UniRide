@@ -319,7 +319,7 @@ def test_governed_smart_batch_aborts_on_any_task_failure_and_saves_nothing(monke
             monkeypatch, _Problem7(), ["Core-TwoOpt-TSP", "ALNS-TSP"], 2,
             param_source="default", log=log,
         )
-    assert "completed" not in log["run_statuses"]
+    assert log["run_statuses"] == []
     assert log["metadata_saves"] == []
     assert smart_benchmark._current_results == []
     assert log["saved"] == []
@@ -343,6 +343,47 @@ def test_non_governed_smart_batch_still_skips_a_failed_task(monkeypatch) -> None
     assert sorted(row["run"] for row in results) == [1, 3]
     assert len(saved) == 2
     assert "completed" in log["run_statuses"]
+
+
+def test_governed_legacy_config_batch_aborts_on_any_task_failure_and_saves_nothing(monkeypatch) -> None:
+    """Same abort rule in the legacy ``run_benchmark`` loop (config-driven batches)."""
+    from academic_benchmark.engine_core import BenchmarkConfig, BenchmarkTask
+
+    saves: list[dict] = []
+    metadata_saves: list[tuple] = []
+    monkeypatch.setattr(smart_benchmark, "run_warmup", lambda *_a: None)
+    monkeypatch.setattr(
+        smart_benchmark, "ProcessPoolExecutor", concurrent.futures.ThreadPoolExecutor
+    )
+    monkeypatch.setattr(smart_benchmark, "_check_interrupt_key", lambda: False)
+    monkeypatch.setattr(smart_benchmark, "_save_best_solution", lambda **k: saves.append(k))
+    monkeypatch.setattr(
+        smart_benchmark, "save_metadata", lambda *a, **_k: metadata_saves.append(a)
+    )
+    monkeypatch.setattr(smart_benchmark, "_current_results", [])
+    monkeypatch.setattr(smart_benchmark, "_current_metadata", {})
+    monkeypatch.setattr(smart_benchmark, "_shutdown_requested", False)
+    problem = _Problem7()
+    tasks = []
+    for algorithm_id in ("Core-TwoOpt-TSP", "ALNS-TSP"):
+        request = _request(algorithm_id)
+        # ALNS-TSP gets no scientific params, so its executor raises a plain ValueError.
+        tasks.append(
+            BenchmarkTask(
+                problem.name, algorithm_id, 1,
+                smart_benchmark._smart_task_seed(request, problem.name, 1), {}, request,
+            )
+        )
+    config = BenchmarkConfig("c03-legacy", "now", tasks)
+    saved_results: dict = {}
+
+    with pytest.raises(ValueError, match="ALNS parameter schema mismatch"):
+        smart_benchmark.run_benchmark(config, [problem], saved_results, 2)
+
+    assert saves == []
+    assert metadata_saves == []
+    assert smart_benchmark._current_results == []
+    assert saved_results == {}
 
 
 # ------------------------------------------- P2: CLI row provenance --------

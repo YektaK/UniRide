@@ -1,4 +1,4 @@
-"""A NAME header line must not borrow its value from the next line (DECISION_LOG A17).
+r"""A NAME header line must not borrow its value from the next line (DECISION_LOG A17).
 
 The old pattern ``^NAME\s*[:\s]\s*(\S+)`` let ``\s`` match a line break, so ``NAME:`` with
 no value took the first word of the following header line (``TYPE:``).

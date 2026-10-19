@@ -187,6 +187,17 @@ def _prove_fixed(
         assert first.variant == expected_variant
         assert first.polish_policy["enabled"] is polish_enabled
         assert first.polish_policy["operator"] == ("2-opt" if polish_enabled else None)
+        if polish_enabled:
+            # B2: the memetic evidence must show that polish really spent evaluations.
+            polish_evaluations = first.polish_policy["evaluations"]
+            assert polish_evaluations["final"] > 0
+            assert first.polish_policy["final"] is True
+            pure_id = algorithm_id.replace("Memetic-2opt", "Pure")
+            pure = AlgorithmRegistry.get_executor(pure_id)(
+                problem, params, seed=987_654, run_idx=0
+            )
+            assert first.objective_evaluations > pure.objective_evaluations
+            assert sum(polish_evaluations.values()) <= first.objective_evaluations
 
 
 def _native_params(algorithm_id: str) -> dict[str, Any]:

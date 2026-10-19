@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { optimizerFetch } from "@/lib/optimizer-server";
+import { optimizerFetch, academicServiceDisabledResponse } from "@/lib/optimizer-server";
 import { denyUnlessBenchmarkAdmin } from "@/lib/benchmark-auth";
 
 export async function GET(request: NextRequest) {
@@ -14,6 +14,8 @@ export async function GET(request: NextRequest) {
     });
 
     if (!response.ok) {
+      const disabled = await academicServiceDisabledResponse(response);
+      if (disabled) return disabled;
       const errorText = await response.text().catch(() => "Unknown error");
       return NextResponse.json(
         { detail: `Python API error: ${response.status}`, error: errorText },

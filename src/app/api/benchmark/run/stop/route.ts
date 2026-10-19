@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerToken } from '@/lib/benchmark-owner-cookie';
-import { optimizerFetch } from "@/lib/optimizer-server";
+import { optimizerFetch, academicServiceDisabledResponse } from "@/lib/optimizer-server";
 import { denyUnlessBenchmarkAdmin } from "@/lib/benchmark-auth";
 
 /**
@@ -49,6 +49,8 @@ export async function POST(request: NextRequest) {
     );
 
     if (!response.ok) {
+      const disabled = await academicServiceDisabledResponse(response);
+      if (disabled) return disabled;
       const error = await response.json().catch(() => ({}));
       return NextResponse.json(
         { error: error.detail || error.error || 'Durdurma başarısız' },

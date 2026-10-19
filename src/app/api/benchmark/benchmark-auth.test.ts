@@ -12,7 +12,10 @@ vi.mock("@/lib/admin-auth", async () => {
   return { ...actual, requireAdmin: requireAdminMock };
 });
 
-vi.mock("@/lib/optimizer-server", () => ({ optimizerFetch: optimizerFetchMock }));
+vi.mock("@/lib/optimizer-server", async (importActual) => ({
+  ...(await importActual<typeof import("@/lib/optimizer-server")>()),
+  optimizerFetch: optimizerFetchMock,
+}));
 
 import { AppError } from "@/lib/admin-auth";
 

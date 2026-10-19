@@ -173,10 +173,38 @@ async function benchmarkFetch(url: string, options: RequestInit = {}): Promise<R
   if (!token) {
     throw new Error("Benchmark requires an admin sign-in");
   }
-  return fetch(url, {
+  const response = await fetch(url, {
     ...options,
     headers: { ...(options.headers as Record<string, string> | undefined), Authorization: `Bearer ${token}` },
   });
+  if (await isAcademicDisabledResponse(response)) throw new AcademicServiceDisabledError();
+  return response;
+}
+
+/** Fixed code sent by the BFF when the optimizer does not host the academic router (audit H8). */
+export const ACADEMIC_SERVICE_DISABLED_CODE = "ACADEMIC_SERVICE_DISABLED";
+
+export class AcademicServiceDisabledError extends Error {
+  readonly code = ACADEMIC_SERVICE_DISABLED_CODE;
+  constructor() {
+    super(ACADEMIC_SERVICE_DISABLED_CODE);
+    this.name = "AcademicServiceDisabledError";
+  }
+}
+
+export function isAcademicServiceDisabledError(err: unknown): err is AcademicServiceDisabledError {
+  return err instanceof AcademicServiceDisabledError;
+}
+
+async function isAcademicDisabledResponse(response: Response): Promise<boolean> {
+  if (response.status !== 503) return false;
+  try {
+    const source = typeof response.clone === "function" ? response.clone() : response;
+    const body = (await source.json()) as { code?: unknown } | null;
+    return body?.code === ACADEMIC_SERVICE_DISABLED_CODE;
+  } catch {
+    return false;
+  }
 }
 
 /**

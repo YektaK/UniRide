@@ -572,6 +572,8 @@
         },
         "noProblems": "Problem Bulunamadı",
         "noProblemsHint": "Seçili kategoriye uyan problem yok. Başka bir kategori seçin.",
+        "academicDisabledTitle": "Akademik benchmark servisi kapalı",
+        "academicDisabledDesc": "Bu sunucudaki optimizasyon servisi akademik benchmark servisini çalıştırmıyor. Bu sayfayı kullanmak için akademik makinede optimizasyon servisini UNIRIDE_ACADEMIC_PROCESS=1 ile başlatın.",
         "runTitle": "Çalışma Durumu",
         "status": "Durum",
         "statusLoading": "Çalışma durumu yükleniyor...",

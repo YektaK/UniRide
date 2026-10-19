@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from routers import optimization, utils, strategies, benchmark, readiness, fleet_selection
+from routers import optimization, utils, strategies, readiness, fleet_selection
 from strategies import get_available_strategy_names
 try:
     from optimizer_api.runtime_config import optimizer_host, reload_enabled, validate_bind_host, validate_runtime_configuration
@@ -29,6 +29,18 @@ logger = logging.getLogger(__name__)
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
 
 validate_runtime_configuration()
+
+# H8 (audit 2026-10-01): the benchmark/academic router belongs to the academic
+# process, never to production. It is mounted only when the flag is exactly "1"
+# (unset or any other value = not mounted). The flag is read after load_dotenv
+# above, so optimizer_api/.env can set it for local academic work.
+ACADEMIC_PROCESS_ENV = "UNIRIDE_ACADEMIC_PROCESS"
+
+
+def academic_process_enabled() -> bool:
+    return os.getenv(ACADEMIC_PROCESS_ENV) == "1"
+
+
 # Create FastAPI app
 app = FastAPI(
     title="UniRide Optimization Engine API",
@@ -106,9 +118,15 @@ def health_check() -> dict:
 app.include_router(optimization.router)
 app.include_router(utils.router)
 app.include_router(strategies.router)
-app.include_router(benchmark.router)
 app.include_router(readiness.router)
 app.include_router(fleet_selection.router)
+
+if academic_process_enabled():
+    # Imported lazily: with the flag unset, routers.benchmark, benchmark_runner
+    # and benchmark_state are never loaded into the production process.
+    from routers import benchmark
+
+    app.include_router(benchmark.router)
 
 if __name__ == "__main__":
     import uvicorn

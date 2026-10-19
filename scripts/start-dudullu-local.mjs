@@ -12,6 +12,9 @@ import { pathToFileURL } from "node:url";
 export const WEB_KEY_NAME = "OPTIMIZER_INTERNAL_API_KEY";
 export const PYTHON_KEY_NAME = "INTERNAL_API_KEY";
 export const RELOAD_ENV_NAME = "UNIRIDE_API_RELOAD";
+// H8: the optimizer mounts the benchmark/academic router only when this is exactly "1".
+// The local launcher serves local academic work, so it turns it on by default.
+export const ACADEMIC_ENV_NAME = "UNIRIDE_ACADEMIC_PROCESS";
 
 const WEB_ENV_FILE = ".env.local";
 const PYTHON_ENV_FILE = path.join("optimizer_api", ".env");
@@ -90,6 +93,10 @@ export function buildPythonEnv(parent, key) {
   const explicit = env[RELOAD_ENV_NAME];
   if (typeof explicit !== "string" || explicit.trim() === "") {
     env[RELOAD_ENV_NAME] = "0";
+  }
+  const academic = env[ACADEMIC_ENV_NAME];
+  if (typeof academic !== "string" || academic.trim() === "") {
+    env[ACADEMIC_ENV_NAME] = "1";
   }
   return env;
 }

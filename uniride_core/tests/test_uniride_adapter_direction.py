@@ -16,6 +16,11 @@ class _TripDirection(str, Enum):
     DROPOFF = "dropoff"
 
 
+class _DisabilityType(str, Enum):
+    SW = "Sw"
+    SO = "So"
+
+
 class _PlainEnum(Enum):
     PICKUP = "pickup"
     DROPOFF = "dropoff"
@@ -41,13 +46,6 @@ def test_enum_directions_become_plain_strings(enum_cls):
     assert _direction(enum_cls.DROPOFF) == "dropoff"
 
 
-def test_optimizer_api_trip_direction_enum_is_normalised():
-    from optimizer_api.models.schemas import TripDirection
-
-    assert _direction(TripDirection.PICKUP) == "pickup"
-    assert _direction(TripDirection.DROPOFF) == "dropoff"
-
-
 @pytest.mark.parametrize("raw, expected", [("pickup", "pickup"), ("DropOff", "dropoff"), (" PICKUP ", "pickup")])
 def test_plain_strings_are_normalised(raw, expected):
     assert _direction(raw) == expected
@@ -62,9 +60,7 @@ def test_missing_direction_defaults_to_pickup():
 @pytest.mark.parametrize("disability, expected", [("Sw", [1, 0]), ("So", [0, 1]), ("sw", [1, 0])])
 def test_disability_enum_and_string_map_to_the_same_demand(disability, expected):
     """Same ``str(enum)`` pattern as L11, in ``_student_demand``."""
-    from optimizer_api.models.schemas import DisabilityType
-
-    value = {"Sw": DisabilityType.SW, "So": DisabilityType.SO, "sw": "sw"}[disability]
+    value = {"Sw": _DisabilityType.SW, "So": _DisabilityType.SO, "sw": "sw"}[disability]
     request = _request("pickup")
     request["students"][0]["disability_type"] = value
     problem = uniride_request_to_problem(request)

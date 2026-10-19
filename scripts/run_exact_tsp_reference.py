@@ -264,30 +264,29 @@ def cross_check_optima(specs, parser_values: dict, atsp_values: dict) -> list:
     return out
 
 
+def cross_check_manifest_specs(db_specs, collection: dict) -> list:
+    """Disagreements between the DB instance specs (``problems``: dimension, published optimum) and the committed
+    manifest-governed collections (``collection_specs``). Empty list: they agree. An instance the collections do not list
+    is not compared here (the older database-coordinates rule applies to it). A disagreement blocks the run (exit 2)."""
+    out = []
+    for s in db_specs:
+        c = collection.get(s.name)
+        if c is None:
+            continue
+        if c.n != s.n:
+            out.append(f"{s.name}: manifest dimension {c.n} differs from problems.dimension {s.n}")
+        if c.published_optimum != s.published_optimum:
+            out.append(f"{s.name}: manifest published_optimum {c.published_optimum} differs from problems.optimal "
+                       f"{s.published_optimum}")
+    return out
+
+
 class PublishedTourError(ValueError):
     """The published optimal tour does not have the published length on the used data."""
 
 
 def _parse_tour_file(text: str) -> list:
     return inputs.parse_tour_text(text)
-
-
-def read_published_tour(conn, name: str, tour_dir):
-    """Database cross-check helper, not an input of the runner (the runner takes tours from the manifest-governed
-    collection, ``inputs.read_collection_tour``): (1-based node list, source) of the published optimal tour, or None.
-    First the ``opt_tours`` table of the database (read-only connection), then ``<name>.opt.tour`` in ``tour_dir``
-    (case-insensitive name; the file is read as data)."""
-    has_table = conn.execute("select 1 from sqlite_master where type='table' and name='opt_tours'").fetchone()
-    if has_table:
-        row = conn.execute("select tour_nodes from opt_tours where problem_name=?", (name,)).fetchone()
-        if row is not None:
-            return [int(v) for v in json.loads(row[0])], "opt_tours"
-    if tour_dir is not None and Path(tour_dir).is_dir():
-        want = f"{name}.opt.tour".lower()
-        for cand in sorted(Path(tour_dir).iterdir()):
-            if cand.name.lower() == want and cand.is_file():
-                return _parse_tour_file(cand.read_text(encoding="utf-8")), "opt_tour_file"
-    return None
 
 
 def check_published_tour(spec, matrix, tour_one_based) -> list:
@@ -664,10 +663,13 @@ def provenance() -> dict:
     return out
 
 
+_ARCHIVE_NOTE = "any path component named archive (any letter case) is refused, exit 2"
+
+
 def parse_args(argv):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--out", default=str(DEFAULT_OUT))
-    ap.add_argument("--data-dir", default=str(DEFAULT_DATA_DIR), help="directory with tsplib.db and the instance files")
+    ap.add_argument("--data-dir", default=str(DEFAULT_DATA_DIR), help=f"directory with tsplib.db and the instance files; {_ARCHIVE_NOTE}")
     ap.add_argument("--instances", default="", help="comma list of instance names (default: the whole verification set)")
     ap.add_argument("--allow-dirty", action="store_true", help="development runs only; the manifest records the dirty flag")
     ap.add_argument("--highs-verify", action=argparse.BooleanOptionalAction, default=True,
@@ -677,10 +679,11 @@ def parse_args(argv):
     ap.add_argument("--geo-pi-blocking", action=argparse.BooleanOptionalAction, default=True,
                     help="a proven optimum that differs under pi = 3.141592 is a blocking error (default: on)")
     ap.add_argument("--tsp-dir", default=str(TSP_DIR),
-                    help="active instance collection (MANIFEST.json + .tsp files); a path in the archive directory is refused")
+                    help=f"active instance collection (MANIFEST.json + .tsp files); {_ARCHIVE_NOTE}")
     ap.add_argument("--opt-tour-dir", default=str(OPT_TOUR_DIR),
-                    help="active published-tour collection (MANIFEST.json + .opt.tour files); a path in the archive directory is refused")
-    ap.add_argument("--verify-tours", default="", metavar="DIR", help="re-check DIR/tours.json against the instance data; no AMPL")
+                    help=f"active published-tour collection (MANIFEST.json + .opt.tour files); {_ARCHIVE_NOTE}")
+    ap.add_argument("--verify-tours", default="", metavar="DIR",
+                    help=f"re-check DIR/tours.json against the instance data; no AMPL; {_ARCHIVE_NOTE}")
     return ap.parse_args(argv)
 
 
@@ -796,6 +799,15 @@ def _run(args, out: Path, commit: str, dirty: bool, gurobi, highs) -> int:
                 return 2
         else:
             check_instance_set(specs)
+        try:
+            mismatches = cross_check_manifest_specs(specs, collection_specs(Path(args.tsp_dir)))
+        except (ValueError, OSError) as exc:  # inputs.InputRefused is a ValueError
+            print(f"refused: {exc}", file=sys.stderr)
+            return 2
+        if mismatches:
+            for m in mismatches:
+                print(f"refused: {m}", file=sys.stderr)
+            return 2
         discrepancies = cross_check_optima(specs, parser_optima(), atsp_manifest_optima())
         specs = [s for s in specs if not wanted or s.name in wanted]
         loaded = {}

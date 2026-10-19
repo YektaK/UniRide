@@ -375,7 +375,7 @@ def _joint_manifest():
             "gurobi": {"name": "gurobi", "version": "12.0", "options": "tech:threads=1 lim:time=600", "threads": 1, "seed": 0,
                        "time_limit_seconds": 600, "work_limit": 200},
         },
-        "enumeration": {"column_cap": 100000, "label_cap": 2000000, "columns_per_day": {"2026-10-05_R60": 45302}},
+        "enumeration": {"column_cap": _proto().ENUMERATION_CAPS["column_cap"], "label_cap": _proto().ENUMERATION_CAPS["label_cap"], "columns_per_day": {"2026-10-05_R60": 45302}},
         "mps_sha256": {"single_4sw5so|2026-10-05|R60|stage1": _SHA_A},
         "output_sha256": {"day_joint.csv": _SHA_B},
         "run_history": {"invocations": [{"serial": True, "wall_seconds": 12.5}], "cells_planned": 1, "cells_solved": 1},

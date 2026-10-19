@@ -1,6 +1,6 @@
 """Academic-layer registry of the comparison protocols and their pooling groups (WP-E8 Task 6; DECISION_LOG A04, E12 OQ4).
 
-Four protocol kinds exist. Rows of different kinds are never pooled, ranked, averaged or tested together:
+Five protocol kinds exist. Rows of different kinds are never pooled, ranked, averaged or tested together:
 
 =============================  ==========================  ===================  ========  ==========
 kind                           version label               pooling group        rankable  statistics
@@ -9,10 +9,11 @@ kind                           version label               pooling group        
 ``algorithm_native_termination``  ``uniride-native-tsp-v1``  ``native``         yes       yes
 ``exact_reference_v1``         ``exact_reference_v1``      ``exact_reference_v1``  no     no
 ``union_day_v1``               ``union_day_v1``            ``union_day_v1``     no        no
+``exact_day_joint_v1``         ``exact_day_joint_v1``      ``exact_day_joint_v1``  no     no
 =============================  ==========================  ===================  ========  ==========
 
-"Rankable" and "statistics" hold within one pooling group of heuristic rows only. Exact and union-day rows are references and
-selections, never competitors (design docs/designs/EXACT_SOLVER_AMPL_DESIGN.md section 4; A04).
+"Rankable" and "statistics" hold within one pooling group of heuristic rows only. Exact, union-day and joint-day rows are
+references and selections, never competitors (design docs/designs/EXACT_SOLVER_AMPL_DESIGN.md section 4; A04).
 
 This registry lives in the academic layer on purpose (owner decision OQ4, 2026-10-18): ``uniride_core``'s
 ``ExecutionProtocol`` stays ``fixed_budget``/``native_termination`` and no preflight path accepts ``exact_reference_v1``.
@@ -34,6 +35,7 @@ FIXED_BUDGET = "fixed_evaluation_budget"
 NATIVE_TERMINATION = "algorithm_native_termination"
 EXACT_REFERENCE = exact_protocol.PROTOCOL_ID  # "exact_reference_v1"
 UNION_DAY = exact_protocol.UNION_DAY_PROTOCOL_ID  # "union_day_v1"
+DAY_JOINT = exact_protocol.DAY_JOINT_PROTOCOL_ID  # "exact_day_joint_v1" (WP-E11 J7)
 
 # labels of the existing fixed-budget and native modules, repeated here so that this registry imports neither of them;
 # a test compares them with ``fairness.FairComparisonManifest`` and ``native_protocol`` constants
@@ -56,6 +58,7 @@ PROTOCOL_KINDS = (
     ProtocolKind(NATIVE_TERMINATION, NATIVE_VERSION, "native", True, True),
     ProtocolKind(EXACT_REFERENCE, EXACT_REFERENCE, EXACT_REFERENCE, False, False),
     ProtocolKind(UNION_DAY, UNION_DAY, UNION_DAY, False, False),
+    ProtocolKind(DAY_JOINT, DAY_JOINT, DAY_JOINT, False, False),
 )
 _BY_KIND = {k.kind: k for k in PROTOCOL_KINDS}
 
@@ -76,7 +79,7 @@ def classify_row(row) -> ProtocolKind:
         raise TypeError(f"cannot classify a {type(row).__name__}: rows are ExactReferenceRowV1 or mappings")
     found = set()
     protocol_id = row.get("protocol")
-    if protocol_id in (EXACT_REFERENCE, UNION_DAY):
+    if protocol_id in (EXACT_REFERENCE, UNION_DAY, DAY_JOINT):
         found.add(protocol_id)
     regime = row.get("comparison_regime")
     if regime in (FIXED_BUDGET, NATIVE_TERMINATION):
@@ -105,7 +108,7 @@ def assert_single_pooling_group(rows: Iterable) -> str:
 
 
 def assert_rankable(rows: Iterable) -> None:
-    """Raise ``ValueError`` when any row belongs to a kind that is never ranked (exact and union-day rows), and when the rows
+    """Raise ``ValueError`` when any row belongs to a kind that is never ranked (exact, union-day and joint-day rows), and when the rows
     span more than one pooling group (a ranking is only meaningful inside one)."""
     rows = list(rows)
     unrankable = sorted({classify_row(r).kind for r in rows if not classify_row(r).rankable})

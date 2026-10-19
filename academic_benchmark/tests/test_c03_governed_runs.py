@@ -344,3 +344,61 @@ def test_non_governed_smart_batch_still_skips_a_failed_task(monkeypatch) -> None
     assert len(saved) == 2
     assert "completed" in log["run_statuses"]
 
+
+# ------------------------------------------- P2: CLI row provenance --------
+
+def _cli_persisted_rows(monkeypatch, tmp_path, task):
+    import academic_benchmark.tsplib_manager as tsplib_manager
+
+    saved: list[dict] = []
+    monkeypatch.setattr(cli_engine, "RESULTS_DIR", str(tmp_path))
+    monkeypatch.setattr(cli_engine, "save_metadata", lambda *_a, **_k: None)
+    monkeypatch.setattr(tsplib_manager, "save_benchmark_run", lambda *_a, **_k: None)
+    monkeypatch.setattr(
+        tsplib_manager, "save_benchmark_result",
+        lambda _run_id, payload, **_k: saved.append(payload),
+    )
+    cli_engine._execute_benchmark_tasks([task], 1, {}, "BENCH")
+    return saved
+
+
+def test_governed_cli_rows_persist_seed_provenance(monkeypatch, tmp_path) -> None:
+    problem = cli_engine._make_problem_dict(_Problem7())
+    task = (problem, "Core-TwoOpt-TSP", "Core-TwoOpt-TSP", {}, 4, 2, _request("Core-TwoOpt-TSP"))
+    (payload,) = _cli_persisted_rows(monkeypatch, tmp_path, task)
+    manifest = _manifest(CLI_BASE_SEED)
+    metadata = payload["metadata"]
+    assert metadata["comparison_base_seed"] == CLI_BASE_SEED
+    assert metadata["protocol_version"] == "uniride-fair-tsp-v2"
+    assert metadata["seed_groups"] == [manifest.seed_group("c03-tsp7", r) for r in range(2)]
+    assert metadata["seed_group"] in metadata["seed_groups"]
+    assert metadata["canonical_algorithm_id"] == "Core-TwoOpt-TSP"  # decision metadata kept
+
+
+def test_non_governed_cli_rows_carry_no_seed_provenance(monkeypatch, tmp_path) -> None:
+    task = (
+        cli_engine._make_problem_dict(_cvrp()), "Core-Greedy-Routing", "Core-Greedy-Routing", {}, 0, 1,
+    )
+    (payload,) = _cli_persisted_rows(monkeypatch, tmp_path, task)
+    for key in ("comparison_base_seed", "protocol_version", "seed_group", "seed_groups"):
+        assert key not in payload["metadata"]
+
+
+def test_gateway_rejects_an_empty_problem_name() -> None:
+    problem = _Problem7(name="  ")
+    with pytest.raises(AlgorithmSelectionError, match="problem name"):
+        execute_preflighted(
+            requested_algorithm_id="Core-TwoOpt-TSP",
+            identifier_source=IdentifierSource.INTERNAL,
+            problem=problem,
+            params={},
+            seed=1,
+            run_idx=0,
+            protocol=ExecutionProtocol.FIXED_BUDGET,
+            backend_policy=BackendPolicy.PYTHON_ONLY,
+            evaluation_budget=BUDGET,
+            registered_algorithm_ids=frozenset({"Core-TwoOpt-TSP"}),
+            runtime_backends=_RUNTIME,
+            registry_getter=lambda _id: (lambda *_a: None),
+            comparison_base_seed=7,
+        )

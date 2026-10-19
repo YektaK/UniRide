@@ -12,4 +12,3 @@ def test_worker_backend_selection_supports_fallback():
         except Exception:
             pass
     assert importable, "No benchmark worker backend is importable"
-

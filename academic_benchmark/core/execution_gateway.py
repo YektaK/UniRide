@@ -282,6 +282,10 @@ def execute_preflighted(
             decision.protocol, decision.evaluation_budget, comparison_base_seed
         )
         problem_name = str(getattr(problem, "name", ""))
+        if not problem_name.strip():
+            raise SeedContractViolation(
+                "governed runs need a non-empty problem name to derive the contract seed"
+            )
         if seed != manifest.paired_seed(problem_name, run_idx):
             raise SeedContractViolation(
                 "seed is not the contract seed for this problem and replicate"

@@ -61,7 +61,7 @@ from academic_benchmark.core.algorithm_resolution import (
 )
 from academic_benchmark.core.algorithm_errors import AlgorithmSelectionError, CandidateAlgorithmError, ExecutorUnavailableError, PlannedAlgorithmError
 from academic_benchmark.core.reported_cost import report_cycle_cost
-from academic_benchmark.core.execution_gateway import execute_preflighted, governed_contract_seed, serialize_preflight_decision
+from academic_benchmark.core.execution_gateway import execute_preflighted, governed_comparison_manifest, governed_contract_seed, serialize_preflight_decision
 from academic_benchmark.core.preflight import PreflightRequest, probe_runtime_backends, preflight_run
 from academic_benchmark.engine_core import AcademicAlgorithmDomain, GovernedExecutionRequest, classify_academic_algorithm_id
 from uniride_core.algorithms.capabilities import BackendPolicy, CAPABILITY_CATALOG, ExecutionProtocol, LifecycleStatus
@@ -1075,6 +1075,11 @@ def _evaluate_governed_param_combo(
         "problem_type": best["problem_type"],
         "matrix_kind": best["matrix_kind"],
         "preflight_decision_metadata": decision_metadata,
+        "seed_groups": [row["seed_group"] for row in rows],
+        "comparison_base_seed": CLI_GOVERNED_BASE_SEED,
+        "comparison_protocol_version": governed_comparison_manifest(
+            request.protocol, request.evaluation_budget, CLI_GOVERNED_BASE_SEED
+        ).protocol_version,
     }
 
 def _run_pool(tasks: List[Tuple], workers: int, on_result=None) -> List[Dict[str, Any]]:
@@ -1465,6 +1470,14 @@ def _execute_benchmark_tasks(tasks, workers, metadata, stage_label):
         decision_metadata = result.get("preflight_decision_metadata", {})
         if not isinstance(decision_metadata, dict):
             decision_metadata = {}
+        governed_provenance: Dict[str, Any] = {}
+        if decision_metadata and result.get("seed_group"):
+            governed_provenance = {
+                "seed_group": result["seed_group"],
+                "seed_groups": result.get("seed_groups"),
+                "comparison_base_seed": result.get("comparison_base_seed"),
+                "protocol_version": result.get("comparison_protocol_version"),
+            }
         row = {
             "timestamp": datetime.now().isoformat(),
             "problem": result["problem"],
@@ -1517,6 +1530,7 @@ def _execute_benchmark_tasks(tasks, workers, metadata, stage_label):
                         "n_runs": result.get("n_runs"),
                         "stage": stage_label,
                         **decision_metadata,
+                        **governed_provenance,
                     },
                     "timestamp": row["timestamp"],
                 },

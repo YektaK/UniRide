@@ -789,6 +789,13 @@ def run_unified_benchmark(
                 executor.shutdown(wait=False, cancel_futures=True)
                 raise
             except Exception as exc:
+                if governed_batch:
+                    # A governed batch never drops a failed task: abort, save nothing
+                    # and re-raise (unification design, Result Validation).
+                    for pending in fut_maps:
+                        pending.cancel()
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    raise
                 print(f"\n[ERROR] Task failed: {exc}")
                 continue
 
@@ -1203,6 +1210,11 @@ def run_benchmark(config: BenchmarkConfig, all_problems: List[ProblemInstance], 
                 executor.shutdown(wait=False, cancel_futures=True)
                 raise
             except Exception as exc:
+                if governed_batch:
+                    for pending in fut_maps:
+                        pending.cancel()
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    raise
                 print(f"\n[ERROR] Task failed: {exc}")
                 continue
             if _check_interrupt_key():

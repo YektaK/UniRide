@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "manifest_file": "manifest.json",
+      "manifest_kind": "tsp_reference",
+      "manifest_sha256": "a168bc0d95de165439403c70e2ed34237a14661e421eca6015d71ab191bb4810",
+      "results_dir": "docs/paper/results/tsplib-exact-reference/stage1-verification",
+      "rows": 34
+    },
+    {
+      "manifest_file": "exact_manifest.json",
+      "manifest_kind": "wave_campaign",
+      "manifest_sha256": "7d6fc40ddf03603566fa92775aa90b8dfdba2e65e042d0b31151db2ccf0cfb38",
+      "results_dir": "docs/paper/results/week-2026-10-05-exact/wp-e3-goal1-single",
+      "rows": 1368
+    },
+    {
+      "manifest_file": "exact_manifest.json",
+      "manifest_kind": "wave_campaign",
+      "manifest_sha256": "c6437056b5be9f5300cbc0bdaa35b2831ab807e186a987109c57a115a6fef3a2",
+      "results_dir": "docs/paper/results/week-2026-10-05-exact/wp-e4a-typed-options",
+      "rows": 10564
+    }
+  ],
+  "note": "Explicit list of the committed exact_reference_v1 result directories (no glob discovery). manifest_sha256 is the sha256 of the manifest file bytes; rows is the number of rows the reader produces. Written by a script from the committed results; never hand-edited.",
+  "schema_version": "uniride-exact-results-index/v1"
+}

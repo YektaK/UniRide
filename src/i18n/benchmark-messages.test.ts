@@ -213,6 +213,6 @@ describe("benchmark message catalog contract", () => {
   });
 
   it("collects all current benchmark page translation keys", () => {
-    expect(benchmarkKeys).toHaveLength(196);
+    expect(benchmarkKeys).toHaveLength(183);
   });
 });

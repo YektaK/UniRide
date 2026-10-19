@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 
-ACTIVE_ROOTS = ("academic_benchmark", "optimizer_api", "src", "uniride_core")
+ACTIVE_ROOTS = ("academic_benchmark", "optimizer_api", "scripts", "src", "uniride_core")
 ARCHIVE_MARKERS = (
     ".proposed_changes",
     "docs/old",
@@ -17,6 +17,7 @@ ARCHIVE_MARKERS = (
 
 
 def _python_files(project_root: Path):
+    yield from sorted(project_root.glob("*.py"))
     for root_name in ACTIVE_ROOTS:
         root = project_root / root_name
         if not root.exists():
@@ -35,23 +36,39 @@ def _constant_text(node: ast.AST) -> str | None:
 
 
 IMPORT_MARKERS = ("_archived", ".proposed_changes", "docs.old")
+# the quarantined archive/ tree, matched on whole dotted components ("archive_old_docs" is not "archive")
+ARCHIVE_NAMESPACE = "archive"
+DYNAMIC_IMPORTERS = {"import_module", "__import__"}
+
+
+def _is_archive_namespace(name: str) -> bool:
+    return name == ARCHIVE_NAMESPACE or name.startswith(ARCHIVE_NAMESPACE + ".")
+
+
+def _reaches_archive(name: str) -> bool:
+    normalised = name.replace("/", ".").replace("\\", ".")
+    return _is_archive_namespace(normalised) or any(marker in normalised for marker in IMPORT_MARKERS)
 
 
 def _import_offences(source: str) -> list[int]:
-    """Line numbers of imports that reach archived code."""
+    """Line numbers of static and dynamic (importlib.import_module / __import__ string) imports of archived code."""
     offences: list[int] = []
     for node in ast.walk(ast.parse(source)):
         if isinstance(node, ast.Import):
             names = [alias.name for alias in node.names]
         elif isinstance(node, ast.ImportFrom):
-            names = [node.module or ""]
+            module = node.module or ""
+            names = [module, *(f"{module}.{alias.name}" for alias in node.names)] if module == ARCHIVE_NAMESPACE else [module]
+        elif isinstance(node, ast.Call):
+            func = node.func
+            called = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
+            first = _constant_text(node.args[0]) if node.args else None
+            if called not in DYNAMIC_IMPORTERS or first is None:
+                continue
+            names = [first]
         else:
             continue
-        if any(
-            marker in name.replace("/", ".").replace("\\", ".")
-            for name in names
-            for marker in IMPORT_MARKERS
-        ):
+        if any(_reaches_archive(name) for name in names):
             offences.append(node.lineno)
     return sorted(offences)
 

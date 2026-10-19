@@ -96,8 +96,8 @@ def _fair_registry(algorithm_id: str):
 
     def execute(problem, params, seed, run_idx):
         manifest = FairComparisonManifest.from_value(params["fair_comparison"])
-        tour = [1, 2, 3, 4]
-        cost = float(sum(problem.dist_matrix[i][(i + 1) % 4] for i in range(4)))
+        tour = [[1, 2, 3, 4], [1, 3, 2, 4], [1, 2, 4, 3]][(run_idx + len(algorithm_id)) % 3]  # costs vary by run and algorithm, so means, medians and gaps are not integers
+        cost = float(sum(problem.dist_matrix[tour[i] - 1][tour[(i + 1) % 4] - 1] for i in range(4)))
         return FairRunResult(
             problem=problem.name, algorithm=algorithm_id, algorithm_id=algorithm_id, algorithm_family=family,
             variant="pure", run=run_idx, seed=seed, seed_group=manifest.seed_group(problem.name, run_idx), dimension=4,

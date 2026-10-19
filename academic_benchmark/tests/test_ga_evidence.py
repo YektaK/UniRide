@@ -402,3 +402,107 @@ def test_ga_manifests_reject_foreign_variants_and_reasons() -> None:
     row.termination_reason = "no_improving_move"
     with pytest.raises(FairnessValidationError, match="GA fixed termination_reason"):
         manifest.validate_result(row)
+
+
+# ----- pilot allowlists: Core-GA-TSP is an optional, strictly validated member -----
+
+def _pilot_algorithm_blocks() -> dict[str, dict]:
+    alns = {
+        "max_iterations": 8, "max_no_improvement": 3, "remove_ratio": 0.34,
+        "min_remove": 2, "segment_length": 2, "weight_update_factor": 0.8,
+        "use_sa": True, "sa_start_temp": 5.0, "sa_cooling_rate": 0.9,
+    }
+    return {
+        "Core-GWO-TSP-Pure": {"pack_size": 4, "max_iterations": 2, "max_no_improvement": 10},
+        "Core-HHO-TSP-Pure": {"hawks": 4, "max_iterations": 2, "dive_count": 0, "max_no_improvement": 10},
+        "Core-TwoOpt-TSP": {"max_iterations": 20, "first_improvement": False},
+        "Core-ThreeOpt-TSP": {"max_iterations": 20, "first_improvement": False, "window": 4},
+        "Core-OrOpt-TSP": {"max_iterations": 3, "first_improvement": False, "window": 3},
+        "ALNS-TSP": alns,
+    }
+
+
+def _write(tmp_path, name, value):
+    import json
+
+    path = tmp_path / name
+    path.write_text(json.dumps(value), encoding="utf-8")
+    return path
+
+
+def _fair_pilot_config(blocks):
+    blocks = {k: v for k, v in blocks.items() if k != "Core-OrOpt-TSP"}
+    return {
+        "protocol_version": "uniride-fair-tsp-v2",
+        "comparison_regime": "fixed_evaluation_budget",
+        "problems": ["tiny-tsp", "tiny-atsp"],
+        "algorithms": blocks,
+        "runs": 1,
+        "evaluation_budget": 100,
+        "base_seed": 17,
+        "budget_policy": "atomic_upper_bound_v1",
+        "workers": 1,
+        "replay_replicates": [],
+        "allow_repository_output": False,
+        "overwrite": False,
+    }
+
+
+def _native_pilot_config(blocks):
+    return {
+        "protocol_version": "uniride-native-tsp-v1",
+        "comparison_regime": "algorithm_native_termination",
+        "problems": ["tiny-tsp", "tiny-atsp"],
+        "algorithms": blocks,
+        "runs": 1,
+        "base_seed": 71,
+        "workers": 1,
+        "replay_replicates": [0],
+        "allow_repository_output": False,
+        "overwrite": False,
+    }
+
+
+def test_fair_pilot_accepts_optional_ga_block_and_rejects_bad_ones(tmp_path) -> None:
+    from academic_benchmark.fair_pilot import FairPilotError, load_fair_pilot_config
+
+    blocks = _pilot_algorithm_blocks()
+    without = load_fair_pilot_config(_write(tmp_path, "a.json", _fair_pilot_config(blocks)))
+    assert "Core-GA-TSP" not in without.algorithms
+    with_ga = load_fair_pilot_config(
+        _write(tmp_path, "b.json", _fair_pilot_config({**blocks, "Core-GA-TSP": dict(GA_PARAMS)}))
+    )
+    assert with_ga.algorithms["Core-GA-TSP"] == GA_PARAMS
+    for bad in (
+        {**GA_PARAMS, "polish_iters": 10},
+        {k: v for k, v in GA_PARAMS.items() if k != "population_size"},
+    ):
+        with pytest.raises(FairPilotError, match="Core-GA-TSP"):
+            load_fair_pilot_config(
+                _write(tmp_path, "c.json", _fair_pilot_config({**blocks, "Core-GA-TSP": bad}))
+            )
+    with pytest.raises(FairPilotError, match="exactly the approved"):
+        load_fair_pilot_config(
+            _write(tmp_path, "d.json", _fair_pilot_config({**blocks, "Core-PSO-TSP": {}}))
+        )
+
+
+def test_native_pilot_accepts_optional_ga_block_and_rejects_bad_ones(tmp_path) -> None:
+    from academic_benchmark.native_pilot import NativePilotError, load_native_pilot_config
+
+    blocks = _pilot_algorithm_blocks()
+    without = load_native_pilot_config(_write(tmp_path, "a.json", _native_pilot_config(blocks)))
+    assert "Core-GA-TSP" not in without.algorithms
+    with_ga = load_native_pilot_config(
+        _write(tmp_path, "b.json", _native_pilot_config({**blocks, "Core-GA-TSP": dict(GA_PARAMS)}))
+    )
+    assert with_ga.algorithms["Core-GA-TSP"] == GA_PARAMS
+    for bad in (
+        {**GA_PARAMS, "final_polish_iters": 300},
+        {k: v for k, v in GA_PARAMS.items() if k != "elite_count"},
+        {**GA_PARAMS, "elite_count": POP},
+    ):
+        with pytest.raises(NativePilotError, match="Core-GA-TSP"):
+            load_native_pilot_config(
+                _write(tmp_path, "c.json", _native_pilot_config({**blocks, "Core-GA-TSP": bad}))
+            )

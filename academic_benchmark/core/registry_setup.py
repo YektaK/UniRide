@@ -591,6 +591,10 @@ AlgorithmRegistry.register("Core-Greedy-Routing")(_core_greedy_executor)
 
 
 for algo_name, solver in CORE_TSP_SOLVERS.items():
+    if algo_name == "Core-GA-TSP":
+        # C-16a: owned by the canonical GAOptimizer executor registered below
+        # (_make_canonical_ga_executor); the string-waypoint memetic GA is not reused.
+        continue
     AlgorithmRegistry.register(algo_name)(_make_core_tsp_executor(algo_name, solver))
 
 _CANONICAL_LOCAL_SEARCH_REGISTRATIONS = {
@@ -824,6 +828,148 @@ def _make_numba_metah_executor(
         manifest.validate_result(fair_result)
         return fair_result
     return executor
+
+
+def _make_canonical_ga_executor(algorithm_name="Core-GA-TSP"):
+    """Manifest-aware executor for the canonical pure GA (C-16a).
+
+    Fixed-budget and native runs take the strict scientific parameter schema (all keys
+    required, unknown keys rejected) and the paired seed from the manifest; the GA has
+    no polish stage, so ``polish_policy`` is always the no-polish shape.
+    """
+    defaults = {
+        "population_size": 100, "max_iterations": 500, "crossover_rate": 0.85,
+        "mutation_rate": 0.15, "elite_count": 2, "tournament_size": 3,
+        "max_no_improvement": 100,
+    }
+    aliases = {"generations": "max_iterations", "iterations": "max_iterations"}
+
+    def executor(problem, params, seed, run_idx):
+        import time as _time
+        from academic_benchmark.engine_core import RunResult
+        from academic_benchmark.fairness import (
+            FairRunResult,
+            fair_manifest_from_params,
+            validate_scientific_ga_params,
+        )
+        from academic_benchmark.native_protocol import native_manifest_from_params
+        from uniride_core.algorithms.tsp_matrix_metaheuristics import GAOptimizer
+
+        manifest = fair_manifest_from_params(params)
+        native_manifest = native_manifest_from_params(params)
+        if manifest is not None and native_manifest is not None:
+            raise ValueError("fair_comparison and native_comparison are mutually exclusive")
+        protocol_manifest = manifest or native_manifest
+        if protocol_manifest is not None:
+            if _is_routing_problem(problem):
+                raise ValueError("academic TSP comparison mode does not accept routing problems")
+            seed = protocol_manifest.paired_seed(problem.name, run_idx)
+            cfg = validate_scientific_ga_params({
+                key: value for key, value in params.items()
+                if key not in {"fair_comparison", "native_comparison"}
+            })
+        elif _is_routing_problem(problem):
+            return _run_core_routing_executor(
+                problem, params, seed, run_idx, algorithm_name
+            )
+        else:
+            cfg = dict(defaults)
+            for key, value in params.items():
+                key = aliases.get(key, key)
+                if key in defaults:
+                    cfg[key] = value
+
+        matrix, matrix_kind = _problem_matrix(problem)
+        solver = GAOptimizer(
+            **cfg,
+            random_seed=seed,
+            evaluation_budget=manifest.evaluation_budget if manifest is not None else None,
+        )
+        start_time = _time.perf_counter()
+        result = solver.solve_with_matrix(
+            matrix, recalculate=protocol_manifest is None, closed_tsp=True
+        )
+        elapsed = _time.perf_counter() - start_time
+
+        cost = float(result.tour_length)
+        optimal = getattr(problem, "optimal", None)
+        gap = ((cost - optimal) / optimal) * 100 if optimal and optimal > 0 else None
+        tour = [int(node) + 1 for node in result.tour] if result.tour is not None else None
+
+        extra_stats = dict(result.extra_stats or {})
+        evaluations = int(extra_stats.get("objective_evaluations") or 0)
+        budget_terminated = bool(extra_stats.get("budget_terminated", False))
+        # The solver reports max_no_improvement; result rows use the vocabulary shared
+        # with GWO/HHO/ALNS (stagnation_limit).
+        termination_reason = {"max_no_improvement": "stagnation_limit"}.get(
+            extra_stats["termination_reason"], extra_stats["termination_reason"]
+        )
+        common_kwargs = dict(
+            problem=problem.name,
+            algorithm=algorithm_name,
+            run=run_idx,
+            seed=seed,
+            dimension=problem.dimension,
+            optimal=optimal,
+            tour_cost=cost,
+            gap_pct=round(gap, 4) if gap is not None else None,
+            elapsed_sec=round(elapsed, 4),
+            iterations=int(result.iterations or 0),
+            tour=tour,
+            objective_cost=cost,
+            problem_type=str(getattr(problem, "problem_type", "tsp") or "tsp").lower(),
+            matrix_kind=matrix_kind,
+            evaluations=evaluations,
+        )
+        if protocol_manifest is None:
+            return RunResult(**common_kwargs)
+
+        polish_policy = _executed_polish_policy(extra_stats, False)
+        termination_detail = (
+            f"max_iterations={cfg['max_iterations']};"
+            f"max_no_improvement={cfg['max_no_improvement']}"
+        )
+        protocol_kwargs = dict(
+            algorithm_id=algorithm_name,
+            algorithm_family="GA",
+            variant="pure",
+            objective_evaluations=evaluations,
+            acceptance_policy="population_evolution",
+            neighborhood_window=None,
+            termination_reason=termination_reason,
+            initialization_policy="paired_seed_random_population_all_nodes",
+            execution_backend=str(extra_stats.get("execution_backend", "unknown")),
+            polish_policy=polish_policy,
+        )
+        if native_manifest is not None:
+            native_result = FairRunResult(
+                **common_kwargs,
+                **protocol_kwargs,
+                seed_group=native_manifest.seed_group(problem.name, run_idx),
+                evaluation_budget=None,
+                budget_terminated=False,
+                comparison_regime=native_manifest.comparison_regime,
+                termination_policy=f"algorithm_native_termination;{termination_detail}",
+            )
+            native_manifest.validate_result(native_result)
+            return native_result
+
+        fair_result = FairRunResult(
+            **common_kwargs,
+            **protocol_kwargs,
+            seed_group=manifest.seed_group(problem.name, run_idx),
+            evaluation_budget=manifest.evaluation_budget,
+            budget_terminated=budget_terminated,
+            comparison_regime=manifest.comparison_regime or "fixed_evaluation_budget",
+            termination_policy=f"{manifest.budget_policy};{termination_detail}",
+        )
+        manifest.validate_result(fair_result)
+        return fair_result
+
+    return executor
+
+
+AlgorithmRegistry.register("Core-GA-TSP")(_make_canonical_ga_executor("Core-GA-TSP"))
 
 
 # Override Core-GWO-TSP, Core-HHO-TSP, Numba-GWO, Numba-HHO with

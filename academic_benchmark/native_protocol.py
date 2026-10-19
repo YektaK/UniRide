@@ -18,6 +18,8 @@ APPROVED_NATIVE_ALGORITHMS = frozenset({
     "Core-ThreeOpt-TSP",
     "ALNS-TSP",
 })
+# Optional member of a native pilot configuration (not required of existing configs).
+OPTIONAL_NATIVE_ALGORITHMS = frozenset({"Core-GA-TSP"})
 
 
 @dataclass(frozen=True)
@@ -36,6 +38,7 @@ class NativeComparisonManifest:
         "Numba-2-opt": "2-opt",
         "Numba-3-opt-bounded": "3-opt",
         "ALNS-TSP": "ALNS",
+        "Core-GA-TSP": "GA",
     }
     TERMINATION_REASONS = frozenset({
         "max_iterations",
@@ -184,6 +187,13 @@ class NativeComparisonManifest:
                 errors.append("ALNS neighborhood_window must be null")
             if reason not in {"max_iterations", "stagnation_limit"}:
                 errors.append("ALNS native termination_reason is invalid")
+        elif family == "GA":
+            if acceptance != "population_evolution":
+                errors.append("GA acceptance_policy must be population_evolution")
+            if window is not None:
+                errors.append("GA neighborhood_window must be null")
+            if reason not in {"max_iterations", "stagnation_limit"}:
+                errors.append("GA native termination_reason is invalid")
         if reason not in self.TERMINATION_REASONS:
             errors.append("unsupported native termination_reason")
         if getattr(result, "execution_backend", None) in {None, "", "unknown"}:
@@ -204,6 +214,7 @@ NativeRunResult = FairRunResult
 
 __all__ = [
     "APPROVED_NATIVE_ALGORITHMS",
+    "OPTIONAL_NATIVE_ALGORITHMS",
     "NATIVE_PROTOCOL",
     "NATIVE_TERMINATION_REGIME",
     "NativeComparisonManifest",

@@ -96,6 +96,43 @@ def validate_scientific_alns_params(params: Mapping[str, Any]) -> dict[str, Any]
     return dict(params)
 
 
+GA_REQUIRED_PARAMS = frozenset({
+    "population_size", "max_iterations", "max_no_improvement", "crossover_rate",
+    "mutation_rate", "elite_count", "tournament_size",
+})
+GA_OPTIONAL_PARAMS = frozenset()
+
+
+def validate_scientific_ga_params(params: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate the exact scientific GA configuration schema (C-16a).
+
+    Every key is required and unknown keys (for example a polish or 2-opt knob that the
+    pure GA does not have) are rejected, so a result row can never be produced from a
+    configuration the solver silently ignored.
+    """
+    missing = GA_REQUIRED_PARAMS - params.keys()
+    unknown = params.keys() - GA_REQUIRED_PARAMS - GA_OPTIONAL_PARAMS
+    if missing or unknown:
+        raise ValueError(
+            "GA parameter schema mismatch; "
+            f"missing={sorted(missing)}, unknown={sorted(unknown)}"
+        )
+    for field, minimum in (
+        ("population_size", 2), ("max_iterations", 1), ("max_no_improvement", 1),
+        ("tournament_size", 1), ("elite_count", 0),
+    ):
+        value = params[field]
+        if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
+            raise ValueError(f"invalid GA parameter: {field}")
+    if params["elite_count"] >= params["population_size"]:
+        raise ValueError("invalid GA parameter: elite_count")
+    for field in ("crossover_rate", "mutation_rate"):
+        value = params[field]
+        if not _is_finite_alns_number(value) or not 0 <= value <= 1:
+            raise ValueError(f"invalid GA parameter: {field}")
+    return dict(params)
+
+
 @dataclass
 class FairRunResult(RunResult):
     """Backward-compatible RunResult carrying the academic fairness contract."""
@@ -178,6 +215,7 @@ class FairComparisonManifest:
         "Numba-GWO": "GWO",
         "Numba-HHO": "HHO",
         "ALNS-TSP": "ALNS",
+        "Core-GA-TSP": "GA",
     }
     POLISH_POLICY_FIELDS = ("enabled", "initial", "periodic", "final", "operator")
     MANIFEST_FIELDS = (
@@ -415,6 +453,17 @@ class FairComparisonManifest:
                     "evaluation_budget_exhausted", "max_iterations", "stagnation_limit",
                 }:
                     errors.append("ALNS fixed termination_reason is invalid")
+            elif family == "GA":
+                if getattr(result, "variant", None) != "pure":
+                    errors.append("GA comparison accepts only pure variants")
+                if acceptance_policy != "population_evolution":
+                    errors.append("GA acceptance_policy must be population_evolution")
+                if neighborhood_window is not None:
+                    errors.append("GA neighborhood_window must be null")
+                if termination_reason not in {
+                    "evaluation_budget_exhausted", "max_iterations", "stagnation_limit",
+                }:
+                    errors.append("GA fixed termination_reason is invalid")
             if termination_reason not in self.TERMINATION_REASONS:
                 errors.append("unsupported termination_reason")
 

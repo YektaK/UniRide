@@ -97,7 +97,7 @@ def test_secondary_memetic_without_native_claim_is_rejected(tmp_path):
         json.loads((root / "studies" / "study.json").read_text(encoding="utf-8"))
     )
     # ... the service refuses it because no verified native claim exists.
-    with pytest.raises(StudyServiceError, match="Core-GWO-TSP-Memetic-2opt.*native_termination"):
+    with pytest.raises(StudyServiceError, match="native_termination claim for Core-GWO-TSP-Memetic-2opt"):
         _plan(root)
 
 

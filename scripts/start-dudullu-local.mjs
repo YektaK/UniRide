@@ -88,14 +88,16 @@ export function buildChildEnv(parent, key) {
 // optimizer when a Python file changes; on Windows that exits the supervised
 // process and the launcher tears the whole stack down. Default the optimizer
 // child to no reload, but respect an explicit UNIRIDE_API_RELOAD from the user.
-export function buildPythonEnv(parent, key) {
+export function buildPythonEnv(parent, key, pythonEnvFile = new Map()) {
   const env = buildChildEnv(parent, key);
   const explicit = env[RELOAD_ENV_NAME];
   if (typeof explicit !== "string" || explicit.trim() === "") {
     env[RELOAD_ENV_NAME] = "0";
   }
+  // An explicit value in optimizer_api/.env (even "0") is the owner's choice: do not override it.
   const academic = env[ACADEMIC_ENV_NAME];
-  if (typeof academic !== "string" || academic.trim() === "") {
+  const inDotenv = pythonEnvFile.has(ACADEMIC_ENV_NAME);
+  if (!inDotenv && (typeof academic !== "string" || academic.trim() === "")) {
     env[ACADEMIC_ENV_NAME] = "1";
   }
   return env;
@@ -339,7 +341,11 @@ export function startStack(options, deps = {}) {
     pythonCommand(options.pythonBin).args,
     {
       cwd: path.join(options.rootDir, "optimizer_api"),
-      env: buildPythonEnv(process.env, options.shared.key),
+      env: buildPythonEnv(
+        process.env,
+        options.shared.key,
+        readEnvFileOrEmpty(path.join(options.rootDir, PYTHON_ENV_FILE)),
+      ),
       stdio: "inherit",
     },
   );

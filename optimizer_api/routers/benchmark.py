@@ -367,8 +367,10 @@ def _start_benchmark_impl(run_id: str, algorithms: List[Dict], problems: List[st
                     ))
                 runner = BenchmarkRunner(strategies_registry=STRATEGY_REGISTRY, state_manager=benchmark_state_manager, run_id=run_id)
                 runner.run(problems=benchmark_problems, algorithms=algo_configs, n_runs=n_runs, seed=settings.get("seed", 42), skip_cached=settings.get("skip_cached", False))
-            except Exception as e:
-                benchmark_state_manager.fail_run(run_id, f"Error: {str(e)}")
+            except Exception:
+                # M5: details stay in the server log; run status (client-readable) is fixed text.
+                logger.exception("Benchmark run failed for run_id=%s", run_id)
+                benchmark_state_manager.fail_run(run_id, "Benchmark run failed")
             finally:
                 benchmark_state_manager.ensure_terminal(run_id)
         

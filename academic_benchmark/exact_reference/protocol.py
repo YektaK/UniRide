@@ -419,3 +419,120 @@ def _tsp_instance_errors(name: str, inst) -> List[str]:
     if not isinstance(inst["published_optimum"], int) or isinstance(inst["published_optimum"], bool):
         errors.append(f"instances[{name}].published_optimum must be an integer")
     return errors
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# WP-E11 J7 (DECISION_LOG E13, E14; docs/designs/JOINT_DAY_MODEL_DESIGN.md sections 4.3 and 6.1): the joint day model.
+# One exact day model over all enumerated routes of a service date. It is its own protocol id: it is neither
+# exact_reference_v1 wave rows, nor union_day_v1 (menu-conditioned) rows, nor a heuristic row, and is never pooled,
+# ranked, averaged or tested with any of them. ``validate_manifest``, ``validate_union_day_manifest`` and
+# ``validate_tsp_reference_manifest`` are unchanged.
+# ---------------------------------------------------------------------------------------------------------------
+DAY_JOINT_PROTOCOL_ID = "exact_day_joint_v1"
+DAY_JOINT_MANIFEST_FILENAME = "day_joint_manifest.json"
+DAY_JOINT_MANIFEST_SCHEMA_VERSION = 1
+DAY_JOINT_TIME_LIMIT_SECONDS = PEAK_WALL_LIMIT_SECONDS  # E14 Q3: 600 s per solver call, threads 1
+DAY_JOINT_CLAIM = ("Exact joint day model over all enumerated routes of a service date (solver-proven value or bound); a "
+                   "separate protocol, never pooled with exact_reference_v1 wave rows, union_day_v1 menu rows or heuristic "
+                   "rows; prototype results are reproduction targets, never tuning targets.")
+
+# Cell labels (``day_status``), design section 4.3. Paper wording (E13): "no day plan exists with at most L large vehicles"
+# is allowed for ``infeasible_certified`` only; ``infeasible_solver_proven`` reads "infeasible, solver-proven".
+DAY_JOINT_DAY_STATUSES = {
+    "optimal": "Every stage optimal on the primary solver; plan certified and checked.",
+    "optimal_stage1_by_bound": "Stage-1 incumbent equals LB0, LB0w or LB_S although the solver stopped on a limit.",
+    "feasible_with_gap": "Certified incumbent and a bound below it; the bound source is named.",
+    "bound_only": "A bound, no incumbent.",
+    "infeasible_certified": "A section 3.2 certificate (tier named), independent of the day MIP.",
+    "infeasible_solver_proven": "The solver proves infeasibility without a certificate; the cross-check field names agreement.",
+    "not_run_enumeration_cap": "Some wave of the date did not enumerate completely.",
+    "rejected": "Certificate, checker or objective cross-check failed (an error to investigate).",
+    "input_rejected": "The archive is inconsistent (as exact design section 4).",
+    "backend_unavailable": "A solver or its license is missing (as exact design section 4).",
+}
+# Stage rows carry ``status``, ``stop_reason``, ``timing_dependent`` and ``non_lexicographic`` with the meanings of exact
+# design section 4: the same vocabulary, not a new one.
+DAY_JOINT_STOP_REASONS = dict(STOP_REASONS)
+DAY_JOINT_TIMING_STOP_REASONS = TIMING_STOP_REASONS
+
+DAY_JOINT_REQUIRED_KEYS = (
+    "protocol", "schema_version", "work_package", "git_commit", "dirty_working_tree", "python_provenance", "python_version",
+    "host_os", "source_manifests", "solvers", "enumeration", "mps_sha256", "output_sha256", "run_history", "claim",
+    "blocking_errors", "total_wall_seconds")
+_DAY_JOINT_SOLVER_FIELDS = ("name", "version", "options", "threads", "seed", "time_limit_seconds", "work_limit")
+
+
+def validate_day_joint_manifest(manifest: Mapping) -> List[str]:
+    """Schema errors of a ``day_joint_manifest.json`` (empty when valid); never mutates ``manifest``.
+
+    Like the other manifests it never holds absolute paths, e-mail addresses or license text, and it must carry the
+    ``run_history`` of the run (E06)."""
+    problems = [f"missing {k}" for k in DAY_JOINT_REQUIRED_KEYS if k not in manifest]
+    if manifest.get("protocol", DAY_JOINT_PROTOCOL_ID) != DAY_JOINT_PROTOCOL_ID:
+        problems.append(f"protocol must be {DAY_JOINT_PROTOCOL_ID!r}")
+    if manifest.get("schema_version", DAY_JOINT_MANIFEST_SCHEMA_VERSION) != DAY_JOINT_MANIFEST_SCHEMA_VERSION:
+        problems.append(f"schema_version must be {DAY_JOINT_MANIFEST_SCHEMA_VERSION}")
+    if "claim" in manifest and manifest["claim"] != DAY_JOINT_CLAIM:
+        problems.append("claim text differs from the protocol wording")
+    if "git_commit" in manifest and not re.fullmatch(r"[0-9a-f]{7,40}", str(manifest["git_commit"])):
+        problems.append("git_commit must be a hex commit id")
+    if "dirty_working_tree" in manifest and not isinstance(manifest["dirty_working_tree"], bool):
+        problems.append("dirty_working_tree must be bool")
+    if "blocking_errors" in manifest and not isinstance(manifest["blocking_errors"], list):
+        problems.append("blocking_errors must be a list")
+    history = manifest.get("run_history")
+    if "run_history" in manifest and (not isinstance(history, Mapping) or not history):
+        problems.append("run_history must be a non-empty mapping (E06)")
+    sources = manifest.get("source_manifests")
+    if "source_manifests" in manifest:
+        if not isinstance(sources, Mapping) or not sources:
+            problems.append("source_manifests must be a non-empty mapping")
+        else:
+            for name, src in sources.items():
+                if not isinstance(src, Mapping) or not isinstance(src.get("path"), str) \
+                        or not _SHA256.fullmatch(str(src.get("manifest_sha256"))):
+                    problems.append(f"source_manifests[{name}] needs a relative path and a manifest_sha256")
+    solvers = manifest.get("solvers")
+    if "solvers" in manifest:
+        if not isinstance(solvers, Mapping):
+            problems.append("solvers must be a mapping")
+        else:
+            if not isinstance(solvers.get("highs"), Mapping):
+                problems.append("solvers.highs missing (primary solver, E14 Q4)")
+            for name, solver in solvers.items():
+                problems.extend(_day_joint_solver_errors(name, solver))
+    enumeration = manifest.get("enumeration")
+    if "enumeration" in manifest:
+        if not isinstance(enumeration, Mapping):
+            problems.append("enumeration must be a mapping")
+        else:
+            for f in ("column_cap", "label_cap"):
+                if enumeration.get(f) != ENUMERATION_CAPS[f]:
+                    problems.append(f"enumeration.{f} must be {ENUMERATION_CAPS[f]}")
+            if not isinstance(enumeration.get("columns_per_day"), Mapping):
+                problems.append("enumeration.columns_per_day must be a mapping")
+    for key in ("mps_sha256", "output_sha256"):
+        table = manifest.get(key)
+        if key in manifest:
+            if not isinstance(table, Mapping):
+                problems.append(f"{key} must be a mapping")
+            else:
+                problems.extend(f"{key}[{k}] must be a sha256" for k, sha in table.items() if not _SHA256.fullmatch(str(sha)))
+    problems.extend(private_data_errors(manifest))
+    return problems
+
+
+def _day_joint_solver_errors(name: str, solver) -> List[str]:
+    if not isinstance(solver, Mapping):
+        return [f"solvers.{name} must be a mapping"]
+    errors = [f"solvers.{name}.{f} missing" for f in _DAY_JOINT_SOLVER_FIELDS if f not in solver]
+    if errors:
+        return errors
+    if solver["threads"] != THREADS:
+        errors.append(f"solvers.{name}.threads must be {THREADS} (E14 Q3)")
+    if solver["time_limit_seconds"] != DAY_JOINT_TIME_LIMIT_SECONDS:
+        errors.append(f"solvers.{name}.time_limit_seconds must be {DAY_JOINT_TIME_LIMIT_SECONDS} (E14 Q3)")
+    work = solver["work_limit"]
+    if work is not None and (not isinstance(work, (int, float)) or isinstance(work, bool) or work <= 0):
+        errors.append(f"solvers.{name}.work_limit must be null or a positive number")
+    return errors

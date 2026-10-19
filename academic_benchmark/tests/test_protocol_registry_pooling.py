@@ -45,18 +45,20 @@ def exact_rows():
 
 
 UNION_ROW = {"protocol": "union_day_v1", "day": "2026-10-05"}
+JOINT_ROW = {"protocol": "exact_day_joint_v1", "date": "2026-10-05", "day_status": "optimal"}  # WP-E11 J7
 
 
 # ---------------------------------------------------------------- the registry
-def test_the_registry_has_exactly_the_four_kinds_with_their_pooling_rules():
+def test_the_registry_has_exactly_the_five_kinds_with_their_pooling_rules():
     table = {k.kind: (k.version_label, k.pooling_group, k.rankable, k.statistics) for k in registry.PROTOCOL_KINDS}
     assert table == {
         "fixed_evaluation_budget": ("uniride-fair-tsp-v2", "fixed_budget", True, True),
         "algorithm_native_termination": ("uniride-native-tsp-v1", "native", True, True),
         "exact_reference_v1": ("exact_reference_v1", "exact_reference_v1", False, False),
         "union_day_v1": ("union_day_v1", "union_day_v1", False, False),
+        "exact_day_joint_v1": ("exact_day_joint_v1", "exact_day_joint_v1", False, False),
     }
-    assert len({k.pooling_group for k in registry.PROTOCOL_KINDS}) == 4, "every kind is its own pooling group"
+    assert len({k.pooling_group for k in registry.PROTOCOL_KINDS}) == 5, "every kind is its own pooling group"
     with pytest.raises(ValueError, match="unknown protocol kind"):
         registry.kind_of("exact_reference_v2")
 
@@ -67,11 +69,12 @@ def test_registry_labels_equal_the_labels_of_the_fixed_budget_native_and_exact_m
     assert registry.FAIR_V2_VERSION == FairComparisonManifest.V2_PROTOCOL
     assert registry.NATIVE_VERSION == NATIVE_PROTOCOL and registry.NATIVE_TERMINATION == NATIVE_TERMINATION_REGIME
     assert registry.EXACT_REFERENCE == exact_protocol.PROTOCOL_ID and registry.UNION_DAY == exact_protocol.UNION_DAY_PROTOCOL_ID
+    assert registry.DAY_JOINT == exact_protocol.DAY_JOINT_PROTOCOL_ID
 
 
 def test_core_execution_protocol_is_unchanged_and_preflight_rejects_a_foreign_protocol():
     assert {p.value for p in ExecutionProtocol} == {"fixed_budget", "native_termination"}
-    for foreign in ("exact_reference_v1", "union_day_v1"):
+    for foreign in ("exact_reference_v1", "union_day_v1", "exact_day_joint_v1"):
         request = SimpleNamespace(protocol=foreign, evaluation_budget=None)
         with pytest.raises(preflight.UnsupportedProtocolError, match="Unsupported execution protocol"):
             preflight._validate_protocol_budget(request)
@@ -83,6 +86,7 @@ def test_real_rows_are_classified_by_their_existing_fields(fixed_rows, native_ro
     assert {registry.classify_row(r).kind for r in native_rows} == {"algorithm_native_termination"}
     assert {registry.classify_row(r).kind for r in exact_rows} == {"exact_reference_v1"}
     assert registry.classify_row(UNION_ROW).kind == "union_day_v1"
+    assert registry.classify_row(JOINT_ROW).kind == "exact_day_joint_v1"
     assert len(fixed_rows) == 40 and len(native_rows) == 24  # 40 = 5 algorithms x 2 problems x (3 runs + 1 replay), runs=3 since WP-E8 polish item 5
     # the golden pilot rows carry these fields today
     assert {r["protocol_version"] for r in fixed_rows} == {"uniride-fair-tsp-v1"}  # the stub executor leaves comparison_regime empty
@@ -122,9 +126,22 @@ def test_rows_of_one_group_may_meet(fixed_rows, native_rows, exact_rows):
     assert registry.assert_single_pooling_group([]) == ""
 
 
+def test_a_joint_day_row_is_never_pooled_with_union_day_exact_reference_or_heuristic_rows(fixed_rows, native_rows, exact_rows):
+    for other in (exact_rows[:2], [UNION_ROW], fixed_rows[:2], native_rows[:2], [{"protocol": "exact_reference_v1"}]):
+        for rows in ([JOINT_ROW, *other], [*other, JOINT_ROW]):
+            with pytest.raises(ValueError, match="different pooling groups"):
+                registry.assert_single_pooling_group(rows)
+    assert registry.assert_single_pooling_group([JOINT_ROW, dict(JOINT_ROW, date="2026-10-06")]) == "exact_day_joint_v1"
+
+
+def test_a_joint_day_row_with_a_second_protocol_field_is_refused():
+    with pytest.raises(ValueError, match="several protocol kinds"):
+        registry.classify_row({"protocol": "exact_day_joint_v1", "comparison_regime": "fixed_evaluation_budget"})
+
+
 # ---------------------------------------------------------------- no ranking
 def test_exact_and_union_rows_are_never_rankable(exact_rows):
-    for rows in (exact_rows, exact_rows[:1], [UNION_ROW]):
+    for rows in (exact_rows, exact_rows[:1], [UNION_ROW], [JOINT_ROW]):
         with pytest.raises(ValueError, match="never ranked"):
             registry.assert_rankable(rows)
 
@@ -147,6 +164,8 @@ def test_assert_not_pooled_behaves_as_before(fixed_rows):
         exact_protocol.assert_not_pooled([{"protocol": "exact_reference_v1"}, fixed_rows[0]])
     with pytest.raises(ValueError, match="must not be pooled"):
         exact_protocol.assert_not_pooled([{"protocol": "union_day_v1"}])
+    with pytest.raises(ValueError, match="must not be pooled"):
+        exact_protocol.assert_not_pooled([{"protocol": "exact_day_joint_v1"}])
 
 
 def test_an_exact_row_is_not_a_mapping_and_cannot_enter_the_dict_based_aggregators(exact_rows, fixed_rows):

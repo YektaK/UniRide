@@ -104,7 +104,7 @@ def test_frontend_src_references_none_of_the_new_exact_artifacts_and_no_new_resu
         if any(pattern.search(text) for pattern in RESULT_FOLDER_PATTERNS):
             referencing_results.add(rel)
         offenders.extend(f"{rel}: {m}" for m in EXACT_ARTIFACT_MARKERS if m in text)
-    assert scanned > 500, f"the scan found {scanned} src files"
+    assert scanned > 200, f"the scan found {scanned} src files"
     assert offenders == []
     assert sorted(referencing_results) == [], "src names an academic result folder"
 

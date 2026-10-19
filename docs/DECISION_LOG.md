@@ -602,6 +602,7 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
   - The Bildiri 2026 study profile is not linked to the exact reference until Package D.
 - **Why:** keeps the protocols separated as A04 and design §4 require, closes the archive-as-default-input residual (unification design §273), and lets the new validator run in CI without depending on a git-ignored database.
 - **Evidence:** the plan file above; the gate-run results summarised in this entry; design §5 "Entry into `academic_benchmark`", §9 WP-E8 row. Related: A04, E06, E09, E10.
+- **2026-10-19, companion task done (merge `0f687cf6`, Sonnet review ONAY).** 16 `.tsp` files in `academic_benchmark/tsplib_data/tsp/`: 10 byte copies of local untracked files (berlin52, eil51, eil76, st70, rd100, kroA-E100; the five kro files are CRLF byte copies), 6 rebuilt read-only from `tsplib.db` (burma14, ulysses16, ulysses22, att48, pr76, gr96; the COMMENT line says so); 13 published tours copied as committed archive blobs to `academic_benchmark/tsplib_data/opt_tours/` (burma14, kroB100, kroE100 and ft53 have none). All coordinate fingerprints and matrix hashes equal the WP-E7 stage-1 manifest. Lead-accepted deviations from the plan text: `-text` instead of `text eol=lf` for the data files (byte-exact copies), provenance kind `db_reconstruction`, field `copied_on`.
 
 ## Open questions and evidence limits
 

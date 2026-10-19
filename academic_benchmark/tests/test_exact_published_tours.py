@@ -121,3 +121,14 @@ def test_the_real_database_published_tours_match_the_coordinates_of_the_verifica
     finally:
         conn.close()
     assert len(checked) >= 10, checked
+
+
+def test_the_real_database_test_skips_on_an_empty_database_file(tmp_path, monkeypatch):
+    """A first read in a fresh worktree creates an empty tsplib.db (audit M16); that must skip, not fail."""
+    empty = tmp_path / "tsplib.db"
+    sqlite3.connect(empty).close()
+    monkeypatch.setattr(sys.modules[__name__], "DB_PATH", empty)
+    with pytest.raises(pytest.skip.Exception):
+        test_the_real_database_published_tours_match_the_coordinates_of_the_verification_set()
+    # the guard opened the file read-only and immutable: no journal files appeared next to it
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["tsplib.db"]

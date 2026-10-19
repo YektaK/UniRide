@@ -49,7 +49,8 @@ def _script(dotenv_line: str = _DOTENV_OFF) -> str:
 
 
 def _run(script: str, flag: str | None) -> dict:
-    env = {k: v for k, v in os.environ.items() if k != "UNIRIDE_ACADEMIC_PROCESS"}
+    # PYTHON_DOTENV_DISABLED (set in CI) would turn load_dotenv into a no-op, hiding the .env case.
+    env = {k: v for k, v in os.environ.items() if k not in ("UNIRIDE_ACADEMIC_PROCESS", "PYTHON_DOTENV_DISABLED")}
     env.update({
         "INTERNAL_API_KEY": "h8-test-key",
         "APP_ENV": "development",

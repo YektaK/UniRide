@@ -10,10 +10,10 @@
     "Core-HHO-TSP-Memetic-2opt"
   ],
   "algorithm_parameters": {
-    "Core-GWO-TSP-Pure": {"pack_size": 4, "max_iterations": 2},
-    "Core-GWO-TSP-Memetic-2opt": {"pack_size": 4, "max_iterations": 2, "polish_iters": 0, "final_polish_iters": 1},
-    "Core-HHO-TSP-Pure": {"hawks": 4, "dive_count": 0, "max_iterations": 2},
-    "Core-HHO-TSP-Memetic-2opt": {"hawks": 4, "dive_count": 0, "max_iterations": 2, "polish_iters": 0, "final_polish_iters": 1}
+    "Core-GWO-TSP-Pure": {"pack_size": 4, "max_iterations": 60000, "max_no_improvement": 60000},
+    "Core-GWO-TSP-Memetic-2opt": {"pack_size": 4, "max_iterations": 60000, "max_no_improvement": 60000, "polish_iters": 1, "final_polish_iters": 1},
+    "Core-HHO-TSP-Pure": {"hawks": 4, "dive_count": 0, "max_iterations": 60000, "max_no_improvement": 60000},
+    "Core-HHO-TSP-Memetic-2opt": {"hawks": 4, "dive_count": 0, "max_iterations": 60000, "max_no_improvement": 60000, "polish_iters": 1, "final_polish_iters": 1}
   },
   "dataset_manifest_refs": ["academic_benchmark/datasets/ft53.json"],
   "primary_protocol": {
@@ -27,7 +27,7 @@
     "algorithm_ids": ["Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"],
     "termination": {"max_iterations": 2}
   },
-  "fixed_budget_levels": [100, 500],
+  "fixed_budget_levels": [10000, 50000],
   "run_count": 3,
   "base_seed": 2026,
   "seed_protocol_version": "sha256-seed-v1",

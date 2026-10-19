@@ -167,6 +167,11 @@ def _prove_fixed(
             params.update(polish_iters=0, final_polish_iters=1)
             # The final polish now really runs and drains the remaining budget, so the
             # evaluation count equals the budget (HHO previously stopped at 8 of 12).
+            # The search must finish before the budget so that the final polish has
+            # evaluations left to spend (it gets only what the search leaves): GWO
+            # search uses 6 of 13, HHO 12 of 19; the polish scan is cut by the budget.
+            budget = 13 if "GWO" in algorithm_id else 19
+            params["fair_comparison"]["evaluation_budget"] = budget
             expected_evaluations = budget
         manifest = FairComparisonManifest.from_value(params["fair_comparison"])
         first = executor(problem, params, seed=987_654, run_idx=0)

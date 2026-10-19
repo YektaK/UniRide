@@ -207,7 +207,7 @@ def test_the_collection_reader_refuses_an_unknown_schema(inputs, tmp_path):
 
 # ---------------------------------------------------------------- archive refusal and the runner defaults
 @pytest.mark.parametrize("path", [
-    "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib",
+    "archive/legacy_pkg/data/tsplib",
     "./archive/x",
     "academic_benchmark/../archive/x",
     "ARCHIVE/x",

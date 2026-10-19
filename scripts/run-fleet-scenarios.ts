@@ -6,7 +6,7 @@ import { resolveSharedKey, buildChildEnv, resolvePythonBin } from "./start-dudul
 import { parseFleetArgs } from "../src/services/fleet-scenario-args";
 import { loadFleetReference } from "../src/services/fleet-rerun-reference";
 import type { RerunSolverCapture } from "../src/services/fleet-rerun-run";
-import { assertOutsideHistoricalArchives } from "./fleet-archive-guard";
+import { cliGuardDeps } from "./fleet-cli-guard";
 
 const usage = "npm run experiments:fleet -- --week-of YYYY-MM-DD [--ride-limits 50,60,70,90] [--tour-limit 150] --fleet-types large:4sw5so:cd10,sedan:0sw4so:cd10 [--fixed-type large] [--minimize-type sedan] [--scenarios A,1,2,3] [--max-cars N] [--node-budget 200000] [--selection-time-limit 30] --pin-commit <hex commit> --reference-manifest <old run_manifest.json> [--reference-waves <4sw5so archive dir>] [--preflight-only] [--allow-subset-dates] [--out <new results directory>]\n" +
   "Type grammar: <id>:<n>sw<m>so[:cd<min>][:r<R>][:t<T>]. Scenario A = minimum all-large; an integer is the fixed number of large vehicles L (0..4).\n" +
@@ -70,7 +70,7 @@ async function main() {
     loadReference: () => loadFleetReference({
       manifestPath: path.resolve(root, args.referenceManifest!), wavesDir: path.resolve(root, args.referenceWaves ?? DEFAULT_REFERENCE_WAVES), root,
     }),
-    assertOutputAllowed: assertOutsideHistoricalArchives,
+    ...cliGuardDeps(),
     fs: {
       exists: (file) => fs.existsSync(file), mkdir: (dir) => { fs.mkdirSync(dir, { recursive: true }); },
       write: (file, text) => fs.writeFileSync(file, text),

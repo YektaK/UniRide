@@ -285,10 +285,6 @@ class PublishedTourError(ValueError):
     """The published optimal tour does not have the published length on the used data."""
 
 
-def _parse_tour_file(text: str) -> list:
-    return inputs.parse_tour_text(text)
-
-
 def check_published_tour(spec, matrix, tour_one_based) -> list:
     """Errors when the published tour is not a Hamiltonian cycle of the used matrix or its length differs from the
     published optimum (empty list: the used coordinates reproduce the published optimum)."""
@@ -762,6 +758,9 @@ def main(argv=None) -> int:
     if refusal:
         print(f"refused: {refusal}", file=sys.stderr)
         return 2
+    specs, refused = _preflight_instances(args)  # every input refusal (exit 2) comes before any AMPL session opens
+    if refused:
+        return 2
     gurobi = ab.AmplSession(ab.SolverSettings(solver="gurobi", seed=SEED, work_limit=None, peak_work_limit=None))
     highs = ab.AmplSession(ab.SolverSettings(solver="highs", seed=SEED, work_limit=None, peak_work_limit=None)) \
         if args.highs_verify else None
@@ -774,40 +773,54 @@ def main(argv=None) -> int:
                 print(f"backend unavailable ({s.settings.solver}): {exc}; GOAL 2 needs AMPL with Gurobi and HiGHS "
                       f"(set UNIRIDE_AMPL_DIR)", file=sys.stderr)
                 return 3
-        return _run(args, out, commit, dirty, gurobi, highs)
+        return _run(args, out, commit, dirty, gurobi, highs, specs)
     finally:
         for s in sessions:
             s.close()
 
 
-def _run(args, out: Path, commit: str, dirty: bool, gurobi, highs) -> int:
+def _preflight_instances(args) -> tuple:
+    """(instance specs of the database, refused): the checks that need only the database and the committed manifests
+    (database present, requested instances known, instance set unchanged, manifest versus database dimensions and
+    published optima). Runs before any AMPL session opens, so a manifest/database disagreement exits 2 even when no
+    backend exists (otherwise exit 3 would hide it). Messages go to stderr; ``refused`` is True when the run must stop."""
+    db_path = Path(args.data_dir) / DB_NAME
+    if not db_path.is_file():
+        print("refused: tsplib.db not found in --data-dir", file=sys.stderr)
+        return None, True
+    conn = open_db_readonly(db_path)
+    try:
+        specs = read_instance_set(conn)
+    finally:
+        conn.close()
+    wanted = [w for w in args.instances.split(",") if w]
+    if wanted:
+        unknown = sorted(set(wanted) - {s.name for s in specs})
+        if unknown:
+            print(f"refused: unknown instances {unknown}", file=sys.stderr)
+            return None, True
+    else:
+        check_instance_set(specs)
+    try:
+        mismatches = cross_check_manifest_specs(specs, collection_specs(Path(args.tsp_dir)))
+    except (ValueError, OSError) as exc:  # inputs.InputRefused is a ValueError
+        print(f"refused: {exc}", file=sys.stderr)
+        return None, True
+    if mismatches:
+        for m in mismatches:
+            print(f"refused: {m}", file=sys.stderr)
+        return None, True
+    return specs, False
+
+
+def _run(args, out: Path, commit: str, dirty: bool, gurobi, highs, specs) -> int:
     t_start = time.perf_counter()
     started_utc = utc_stamp()
     data_dir = Path(args.data_dir)
     db_path = data_dir / DB_NAME
-    if not db_path.is_file():
-        print("refused: tsplib.db not found in --data-dir", file=sys.stderr)
-        return 2
+    wanted = [w for w in args.instances.split(",") if w]
     conn = open_db_readonly(db_path)
     try:
-        specs = read_instance_set(conn)
-        wanted = [w for w in args.instances.split(",") if w]
-        if wanted:
-            unknown = sorted(set(wanted) - {s.name for s in specs})
-            if unknown:
-                print(f"refused: unknown instances {unknown}", file=sys.stderr)
-                return 2
-        else:
-            check_instance_set(specs)
-        try:
-            mismatches = cross_check_manifest_specs(specs, collection_specs(Path(args.tsp_dir)))
-        except (ValueError, OSError) as exc:  # inputs.InputRefused is a ValueError
-            print(f"refused: {exc}", file=sys.stderr)
-            return 2
-        if mismatches:
-            for m in mismatches:
-                print(f"refused: {m}", file=sys.stderr)
-            return 2
         discrepancies = cross_check_optima(specs, parser_optima(), atsp_manifest_optima())
         specs = [s for s in specs if not wanted or s.name in wanted]
         loaded = {}

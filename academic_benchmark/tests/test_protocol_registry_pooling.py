@@ -83,7 +83,7 @@ def test_real_rows_are_classified_by_their_existing_fields(fixed_rows, native_ro
     assert {registry.classify_row(r).kind for r in native_rows} == {"algorithm_native_termination"}
     assert {registry.classify_row(r).kind for r in exact_rows} == {"exact_reference_v1"}
     assert registry.classify_row(UNION_ROW).kind == "union_day_v1"
-    assert len(fixed_rows) == 30 and len(native_rows) == 24
+    assert len(fixed_rows) == 40 and len(native_rows) == 24  # 40 = 5 algorithms x 2 problems x (3 runs + 1 replay), runs=3 since WP-E8 polish item 5
     # the golden pilot rows carry these fields today
     assert {r["protocol_version"] for r in fixed_rows} == {"uniride-fair-tsp-v1"}  # the stub executor leaves comparison_regime empty
     assert {r["comparison_regime"] for r in fixed_rows} == {""}

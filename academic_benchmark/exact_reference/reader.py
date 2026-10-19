@@ -178,8 +178,11 @@ def _bool(text: str, what: str) -> bool:
     return text == "true"
 
 
-def _bool_or_none(text: str, what: str) -> Optional[bool]:
-    return None if text == "" else _bool(text, what)
+def _nonempty(text: str, what: str) -> str:
+    """A cell that must carry a value (a solver row that exists): an empty cell is refused, never read as a default."""
+    if text == "":
+        raise ExactReferenceRefused(f"{what}: the cell is empty although the solver row exists (an empty value is not false)")
+    return text
 
 
 # ---------------------------------------------------------------- tsp_reference (WP-E7)
@@ -326,7 +329,8 @@ def _tsp_rows(directory: Path, rel: PurePosixPath, manifest: dict, manifest_sha:
                 solver_version=solvers["highs"]["version"], option_string=solvers["highs"]["option_string"],
                 status=highs_status, stop_reason="optimal" if highs_status == "optimal" else None,  # a proven optimum stops as optimal (protocol rule)
                 lb=_int_or_none(rec["highs_lb"], f"{where} highs_lb"), ub=_int_or_none(rec["highs_value"], f"{where} highs_value"),
-                timing_dependent=bool(_bool_or_none(rec["highs_timing_dependent"], f"{where} highs_timing_dependent")),
+                timing_dependent=_bool(_nonempty(rec["highs_timing_dependent"], f"{where} highs_timing_dependent"),
+                                       f"{where} highs_timing_dependent"),
                 wall_seconds=_float_or_none(rec["highs_wall_seconds"], f"{where} highs_wall_seconds")))
     for name, tour in tours.items():
         if not isinstance(tour.get("tour"), list):

@@ -180,12 +180,12 @@ def test_every_published_tour_is_a_hamiltonian_cycle_of_the_used_data_with_the_p
     assert count == 13
 
 
-def test_a_tour_file_with_several_nodes_per_line_is_parsed(runner):
+def test_a_tour_file_with_several_nodes_per_line_is_parsed(inputs):
     """ulysses16.opt.tour keeps all nodes on one line; the reader must not stop at, or choke on, such a line."""
     text = "NAME : t\nTYPE : TOUR\nDIMENSION : 5\nTOUR_SECTION\n1 3 2\n5 4\n-1\nEOF\n"
-    assert runner._parse_tour_file(text) == [1, 3, 2, 5, 4]
-    assert runner._parse_tour_file("TOUR_SECTION\r\n1\r\n2\r\n-1\r\nEOF\r\n") == [1, 2]
-    assert runner._parse_tour_file("TOUR_SECTION\n1 2 -1\nEOF\n") == [1, 2]
+    assert inputs.parse_tour_text(text) == [1, 3, 2, 5, 4]
+    assert inputs.parse_tour_text("TOUR_SECTION\r\n1\r\n2\r\n-1\r\nEOF\r\n") == [1, 2]
+    assert inputs.parse_tour_text("TOUR_SECTION\n1 2 -1\nEOF\n") == [1, 2]
 
 
 def test_the_collection_reader_refuses_a_tour_file_that_differs_from_its_manifest(inputs, tmp_path):

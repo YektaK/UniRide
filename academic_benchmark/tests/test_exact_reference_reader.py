@@ -253,6 +253,8 @@ def test_a_row_of_another_protocol_is_refused(stage1_root):
     ("highs_agreement", "disagree", "contradiction"),
     ("highs_value", "7541", "HiGHS proved"),
     ("timing_dependent", "maybe", "true/false"),
+    ("highs_timing_dependent", "", "highs_timing_dependent.*empty"),  # WP-E8 polish item 2: no silent False
+    ("highs_timing_dependent", "maybe", "true/false"),
     ("ub", "seven", "not an integer"),
 ])
 def test_an_inconsistent_csv_cell_is_refused(stage1_root, column, value, match):
@@ -582,6 +584,35 @@ def test_a_changed_coordinate_with_a_rewritten_file_sha_is_refused_by_the_coordi
     (data / "tsp" / "MANIFEST.json").write_bytes((json.dumps(manifest, indent=2) + "\n").encode("utf-8"))
     _never_compute_a_length(monkeypatch)
     with pytest.raises(ExactReferenceRefused, match="eil51.*(fingerprint|sha256)"):
+        reader.validate_hamiltonian_rows(stage1, dataset_root=data, repo_root=tmp_path)
+
+
+def _consistent_collection_copy_with_other_bytes(manifest_path: Path, instance: str, artifact: Path) -> str:
+    """Change the bytes of one tracked artifact WITHOUT changing what it parses to (a trailing blank line) and make the
+    collection manifest entry agree (file sha256), so every collection check passes and only the comparison with the
+    stage-1 manifest can notice. Returns the new file sha256."""
+    changed = artifact.read_bytes() + b"\n"
+    artifact.write_bytes(changed)
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    entries = [e for e in manifest["instances"] if e["name"] == instance]
+    assert len(entries) == 1
+    entries[0]["sha256"] = _sha(changed)
+    manifest_path.write_bytes((json.dumps(manifest, indent=2) + "\n").encode("utf-8"))
+    return _sha(changed)
+
+
+@pytest.mark.parametrize("instance, relative, manifest_relative", [
+    ("eil51", "tsp/eil51.tsp", "tsp/MANIFEST.json"),  # data_source tsp_file
+    ("ft53", "ft53.atsp", "atsp/MANIFEST.json"),      # data_source atsp_file
+])
+def test_a_consistent_collection_copy_with_another_file_sha_is_refused_against_the_stage1_manifest(
+        stage1, tmp_path, instance, relative, manifest_relative):
+    """WP-E8 polish item 1 (mutant M15): the collection manifest and the file agree with each other and the parsed content
+    is unchanged; only the stage-1 manifest fingerprint of the file differs, and that comparison alone has to refuse."""
+    data = _dataset_copy(tmp_path)
+    new_sha = _consistent_collection_copy_with_other_bytes(data / manifest_relative, instance, data / relative)
+    assert new_sha != stage1.manifest["instances"][instance]["sha256"]
+    with pytest.raises(ExactReferenceRefused, match=f"{instance}: the tracked file sha256 {new_sha} differs from the stage-1 manifest"):
         reader.validate_hamiltonian_rows(stage1, dataset_root=data, repo_root=tmp_path)
 
 

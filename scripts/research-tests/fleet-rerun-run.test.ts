@@ -312,3 +312,25 @@ describe("N2/N3: the run README template", () => {
     expect(template).toMatch(/fail closed/);
   });
 });
+
+describe("E1: runFleetRerun calls the injected output guard", () => {
+  const ARCHIVE_OUT = "docs/paper/results/week-2026-10-05-fleet/x";
+  const withOut = (out: string) => argv().map((arg) => (arg === OUT ? out : arg));
+
+  it("refuses an --out inside a historical archive with the real guard and makes no mkdir or write", async () => {
+    const s = await setup([60]);
+    await expect(runFleetRerun(s.deps, parseFleetArgs(withOut(ARCHIVE_OUT)))).rejects.toThrow("inside a historical archive");
+    expect(s.fsx.dirs.size).toBe(0);
+    expect(s.fsx.files.size).toBe(0);
+    expect(solves(s.t.calls)).toBe(0);
+  });
+
+  it("asks the injected guard for the resolved output directory and the root, before it creates anything", async () => {
+    const s = await setup([60]);
+    const seen: Array<{ out: string; root: string; dirsAtCall: number }> = [];
+    s.deps.assertOutputAllowed = (out, root) => { seen.push({ out, root, dirsAtCall: s.fsx.dirs.size }); };
+    const result = await runFleetRerun(s.deps, parseFleetArgs(withOut(ARCHIVE_OUT)));
+    expect(result.exitCode).toBe(0);
+    expect(seen).toEqual([{ out: path.resolve(s.deps.root, ARCHIVE_OUT), root: s.deps.root, dirsAtCall: 0 }]);
+  });
+});

@@ -608,28 +608,44 @@ for canonical_id, payload in _CANONICAL_LOCAL_SEARCH_REGISTRATIONS.items():
     )
 
 
-def _executed_polish_policy(extra_stats):
-    """Build ``polish_policy`` from the polish calls the solver actually executed.
+def _executed_polish_policy(extra_stats, polish_enabled=False):
+    """Build ``polish_policy`` from the polish work the solver actually did.
 
-    The phase flags are never taken from the ``polish_enabled`` boolean: a phase is
-    reported only when the solver counted at least one polish call in it (audit M19).
+    A phase flag is never taken from the ``polish_enabled`` boolean. In fixed-budget
+    mode the solver reports the candidate evaluations each polish phase spent
+    (``polish_evaluations``); a phase is reported only when it spent at least one
+    (audit M19: a polish call that finds the budget already exhausted did nothing).
+    ``executed`` keeps the per-phase call counts as information. Where no counter
+    exists (the native path, owned by C-10) the flags fall back to the call counts
+    and ``evaluations`` is omitted.
     """
-    executed = {
+    phases = ("initial", "periodic", "final")
+    calls = {
         phase: int((extra_stats.get("polish_executed") or {}).get(phase, 0) or 0)
-        for phase in ("initial", "periodic", "final")
+        for phase in phases
     }
-    any_executed = any(count > 0 for count in executed.values())
+    counted = extra_stats.get("polish_evaluations")
+    if counted is not None:
+        evaluations = {phase: int(counted.get(phase, 0) or 0) for phase in phases}
+        ran = {phase: evaluations[phase] > 0 for phase in phases}
+    else:
+        evaluations = None
+        ran = {phase: calls[phase] > 0 for phase in phases}
+    any_ran = any(ran.values())
     policy = {
-        "enabled": any_executed,
-        "initial": executed["initial"] > 0,
-        "periodic": executed["periodic"] > 0,
-        "final": executed["final"] > 0,
-        "operator": "2-opt" if any_executed else None,
+        "enabled": any_ran,
+        "initial": ran["initial"],
+        "periodic": ran["periodic"],
+        "final": ran["final"],
+        "operator": "2-opt" if any_ran else None,
     }
-    if any_executed:
+    if any_ran or polish_enabled:
         # Pure results keep the historical five-key shape (pinned by the fixed-budget
-        # golden); the per-phase counts appear exactly when some polish ran.
-        policy["executed"] = executed
+        # golden); memetic results always carry the counts, even when they are all
+        # zero, so the validator can reject them.
+        policy["executed"] = calls
+        if evaluations is not None:
+            policy["evaluations"] = evaluations
     return policy
 
 
@@ -729,7 +745,7 @@ def _make_numba_metah_executor(
 
         extra_stats = dict(getattr(result, "extra_stats", {}) or {})
         evaluations = int(extra_stats.get("objective_evaluations") or 0)
-        polish_policy = _executed_polish_policy(extra_stats)
+        polish_policy = _executed_polish_policy(extra_stats, polish_enabled)
         budget_terminated = bool(extra_stats.get("budget_terminated", False))
         if budget_terminated:
             termination_reason = "evaluation_budget_exhausted"

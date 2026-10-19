@@ -99,16 +99,21 @@ def test_backward_compatible_gwo_hho_aliases_disclose_memetic_policy(algorithm):
     assert result.variant == "memetic_2opt"
     # Flags derive from executed polish (audit M19): the run has 2 iterations and the
     # default polish interval is 25, so periodic polish never executes.
-    assert result.polish_policy == {
+    policy = result.polish_policy
+    evaluations = policy["evaluations"]
+    assert policy == {
         "enabled": True,
         "initial": True,
         "periodic": False,
         "final": True,
         "operator": "2-opt",
-        "executed": {"initial": result.polish_policy["executed"]["initial"],
-                     "periodic": 0, "final": 1},
+        "executed": {"initial": policy["executed"]["initial"], "periodic": 0, "final": 1},
+        "evaluations": evaluations,
     }
-    assert result.polish_policy["executed"]["initial"] > 0
+    assert policy["executed"]["initial"] > 0
+    # Every reported phase spent polish evaluations; the unreported one spent none.
+    assert evaluations["initial"] > 0 and evaluations["final"] > 0
+    assert evaluations["periodic"] == 0
 
 
 def test_budgeted_search_result_includes_initial_objective_evaluation():

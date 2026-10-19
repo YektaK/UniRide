@@ -13,12 +13,17 @@ A study JSON (``uniride-study/v1``) is turned into an immutable plan of rows:
 Budget levels are never merged: every fixed-budget row carries its own level and native rows carry
 none, so the fixed and native protocols stay separate by construction (AGENTS.md).
 
-Seeds: fixed-budget rows use ``FairComparisonManifest`` (protocol version and budget policy of the
-primary protocol, the study's ``base_seed``), native rows use ``NativeComparisonManifest`` with the
-secondary protocol version, because that is the manifest the native pilot validates results with.
-The problem identity in the seed payload is the dataset manifest's ``dataset_id``. Replicates are
+Seeds: the plan builds its manifests with the governed gateway's own factory
+(``governed_comparison_manifest``): a ``FairComparisonManifest`` (fair v2) for fixed-budget rows and
+a ``NativeComparisonManifest`` for native rows, both with the study's ``base_seed``. A study whose
+primary or secondary ``protocol_version`` differs from the gateway constants is refused (fail
+closed). The problem identity in the seed payload is the TSPLIB problem name, read from the
+``NAME:`` header of the artifact (``problem_name``; ``normalize_problem`` is applied by the
+manifest), because that is what executors, pilots and validators pass as ``problem.name``. The
+manifest's ``dataset_id`` is only the row's dataset key and never enters a seed. Replicates are
 numbered from 0, like the pilots. Neither seed depends on the algorithm or the budget level, so
-rows of one dataset and replicate are paired across algorithms and levels.
+rows of one problem and replicate are paired across algorithms and levels. A native algorithm list
+of ``None`` means all study algorithms.
 
 The service never runs a solver, never reads ``tsplib.db`` and never writes files.
 """
@@ -27,6 +32,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Sequence
@@ -36,8 +42,11 @@ from pydantic import ValidationError
 from academic_benchmark.contracts import DatasetManifestV1, StudyManifestV1
 from academic_benchmark.contracts.common import validate_repository_relative_path
 from academic_benchmark.core.algorithm_resolution import IdentifierSource, resolve_algorithm_id
-from academic_benchmark.fairness import FairComparisonManifest
-from academic_benchmark.native_protocol import NativeComparisonManifest
+from academic_benchmark.core.execution_gateway import (
+    GOVERNED_FAIR_PROTOCOL_VERSION,
+    governed_comparison_manifest,
+)
+from academic_benchmark.native_protocol import NATIVE_PROTOCOL
 from uniride_core.algorithms.capabilities import (
     BackendKind,
     BackendPolicy,
@@ -64,6 +73,7 @@ class ResolvedDataset:
     manifest_path: str
     manifest: DatasetManifestV1
     artifact_sha256: str
+    problem_name: str
 
     @property
     def dataset_id(self) -> str:
@@ -82,6 +92,7 @@ class ClaimCheck:
 @dataclass(frozen=True)
 class PlanRow:
     dataset_id: str
+    problem_name: str
     algorithm_id: str
     protocol: ExecutionProtocol
     budget_level: int | None
@@ -130,6 +141,19 @@ def load_study(study_path: str, *, repository_root: Path) -> StudyManifestV1:
         study = StudyManifestV1.model_validate(payload)
     except ValidationError as exc:
         raise StudyServiceError(f"study manifest {study_path!r} is invalid: {exc}") from exc
+    if study.primary_protocol.protocol_version != GOVERNED_FAIR_PROTOCOL_VERSION:
+        raise StudyServiceError(
+            f"primary protocol_version {study.primary_protocol.protocol_version!r} differs from the "
+            f"governed gateway version {GOVERNED_FAIR_PROTOCOL_VERSION!r}"
+        )
+    if (
+        study.secondary_protocol is not None
+        and study.secondary_protocol.protocol_version != NATIVE_PROTOCOL
+    ):
+        raise StudyServiceError(
+            f"secondary protocol_version {study.secondary_protocol.protocol_version!r} differs "
+            f"from the governed gateway version {NATIVE_PROTOCOL!r}"
+        )
     if study.seed_protocol_version != SUPPORTED_SEED_PROTOCOL:
         raise StudyServiceError(
             f"unsupported seed_protocol_version {study.seed_protocol_version!r}; "
@@ -147,6 +171,32 @@ def load_study(study_path: str, *, repository_root: Path) -> StudyManifestV1:
         if resolution.canonical_id != algorithm_id or resolution.alias_used:
             raise StudyServiceError(f"algorithm id {algorithm_id!r} is an alias")
     return study
+
+
+_NAME_HEADER = re.compile(r"^NAME\s*[:\s]\s*(\S+)", re.IGNORECASE | re.MULTILINE)
+_SECTION = re.compile(r"^\s*[A-Z_]+_SECTION\b|^\s*EOF\b", re.MULTILINE)
+
+
+def _problem_name_from_artifact(data: bytes, dataset_id: str) -> str:
+    """TSPLIB problem name from the ``NAME:`` header (same pattern as the TSPLIB parser)."""
+    text = data.decode("utf-8", errors="replace")
+    section = _SECTION.search(text)
+    header = text[: section.start()] if section else text
+    names = {match.group(1) for match in _NAME_HEADER.finditer(header)}
+    if len(names) != 1:
+        raise StudyServiceError(
+            f"artifact of dataset {dataset_id!r} needs exactly one NAME: header "
+            f"(the seed identity), found {len(names)}"
+        )
+    return next(iter(names))
+
+
+def _native_algorithm_ids(study: StudyManifestV1) -> tuple[str, ...]:
+    """Algorithms run under the native protocol; ``None`` means all study algorithms."""
+    if study.secondary_protocol is None:
+        return ()
+    listed = study.secondary_protocol.algorithm_ids
+    return tuple(study.algorithm_ids if listed is None else listed)
 
 
 def resolve_datasets(
@@ -183,7 +233,8 @@ def resolve_datasets(
             Path(repository_root), manifest.artifact_path, f"artifact of dataset {manifest.dataset_id!r}"
         )
         try:
-            digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+            artifact_bytes = artifact.read_bytes()
+            digest = hashlib.sha256(artifact_bytes).hexdigest()
         except OSError as exc:
             raise StudyServiceError(
                 f"artifact of dataset {manifest.dataset_id!r} is not readable: {manifest.artifact_path!r}"
@@ -193,7 +244,8 @@ def resolve_datasets(
                 f"checksum mismatch for dataset {manifest.dataset_id!r}: manifest "
                 f"{manifest.checksum.value}, artifact {digest}"
             )
-        resolved.append(ResolvedDataset(ref, manifest, digest))
+        problem_name = _problem_name_from_artifact(artifact_bytes, manifest.dataset_id)
+        resolved.append(ResolvedDataset(ref, manifest, digest, problem_name))
     return tuple(resolved)
 
 
@@ -272,10 +324,8 @@ def preflight_study(
     needed: list[tuple[str, ExecutionProtocol]] = [
         (algorithm_id, ExecutionProtocol.FIXED_BUDGET) for algorithm_id in study.algorithm_ids
     ]
-    if study.secondary_protocol is not None:
-        native_ids = study.secondary_protocol.algorithm_ids
-        for algorithm_id in native_ids if native_ids is not None else study.algorithm_ids:
-            needed.append((algorithm_id, ExecutionProtocol.NATIVE_TERMINATION))
+    for algorithm_id in _native_algorithm_ids(study):
+        needed.append((algorithm_id, ExecutionProtocol.NATIVE_TERMINATION))
     checks: list[ClaimCheck] = []
     for algorithm_id, protocol in needed:
         for contract in contracts:
@@ -290,51 +340,45 @@ def expand_plan(
     study: StudyManifestV1,
     datasets: Sequence[ResolvedDataset],
 ) -> tuple[PlanRow, ...]:
-    """Expand the study into rows; fixed rows carry their budget level, native rows carry none."""
+    """Expand the study into rows; fixed rows carry their budget level, native rows carry none.
+
+    The seed manifests come from the governed gateway's factory, so a plan seed is by construction
+    the seed the gateway accepts for ``problem.name == problem_name`` and the same replicate.
+    """
     rows: list[PlanRow] = []
     try:
         fixed_manifests = {
-            level: FairComparisonManifest(
-                evaluation_budget=level,
-                base_seed=study.base_seed,
-                protocol_version=study.primary_protocol.protocol_version,
-                budget_policy=study.primary_protocol.budget_policy,
-                comparison_regime=(
-                    FairComparisonManifest.FIXED_EVALUATION_REGIME
-                    if study.primary_protocol.protocol_version == FairComparisonManifest.V2_PROTOCOL
-                    else None
-                ),
+            level: governed_comparison_manifest(
+                ExecutionProtocol.FIXED_BUDGET, level, study.base_seed
             )
             for level in study.fixed_budget_levels
         }
         native_manifest = (
-            NativeComparisonManifest(
-                base_seed=study.base_seed,
-                protocol_version=study.secondary_protocol.protocol_version,
+            governed_comparison_manifest(
+                ExecutionProtocol.NATIVE_TERMINATION, None, study.base_seed
             )
             if study.secondary_protocol is not None
             else None
         )
     except ValueError as exc:
         raise StudyServiceError(f"study seed manifest is invalid: {exc}") from exc
-    native_ids: Sequence[str] = ()
-    if study.secondary_protocol is not None:
-        native_ids = study.secondary_protocol.algorithm_ids or study.algorithm_ids
+    native_ids = _native_algorithm_ids(study)
     for dataset in datasets:
-        problem = dataset.dataset_id
+        name = dataset.problem_name
         for algorithm_id in study.algorithm_ids:
             for level in study.fixed_budget_levels:
                 manifest = fixed_manifests[level]
                 for replicate in range(study.run_count):
                     rows.append(
                         PlanRow(
-                            problem,
-                            algorithm_id,
-                            ExecutionProtocol.FIXED_BUDGET,
-                            level,
-                            replicate,
-                            manifest.paired_seed(problem, replicate),
-                            manifest.seed_group(problem, replicate),
+                            dataset_id=dataset.dataset_id,
+                            problem_name=name,
+                            algorithm_id=algorithm_id,
+                            protocol=ExecutionProtocol.FIXED_BUDGET,
+                            budget_level=level,
+                            replicate=replicate,
+                            seed=manifest.paired_seed(name, replicate),
+                            seed_group=manifest.seed_group(name, replicate),
                         )
                     )
         if native_manifest is not None:
@@ -342,13 +386,14 @@ def expand_plan(
                 for replicate in range(study.run_count):
                     rows.append(
                         PlanRow(
-                            problem,
-                            algorithm_id,
-                            ExecutionProtocol.NATIVE_TERMINATION,
-                            None,
-                            replicate,
-                            native_manifest.paired_seed(problem, replicate),
-                            native_manifest.seed_group(problem, replicate),
+                            dataset_id=dataset.dataset_id,
+                            problem_name=name,
+                            algorithm_id=algorithm_id,
+                            protocol=ExecutionProtocol.NATIVE_TERMINATION,
+                            budget_level=None,
+                            replicate=replicate,
+                            seed=native_manifest.paired_seed(name, replicate),
+                            seed_group=native_manifest.seed_group(name, replicate),
                         )
                     )
     return tuple(rows)

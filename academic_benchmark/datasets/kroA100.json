@@ -20,6 +20,6 @@
   "best_known": {
     "status": "optimal",
     "value": 21282.0,
-    "provenance": "TSPLIB95 published optimum recorded in academic_benchmark/tsplib_data/tsp/MANIFEST.json (published_optimum); published optimal tour academic_benchmark/tsplib_data/opt_tours/kroA100.opt.tour (sha256 65499d540c5aa7e90750065a5c6ff82f9774f284facf9d29af0146bce4332dd1) listed in academic_benchmark/tsplib_data/opt_tours/MANIFEST.json"
+    "provenance": "TSPLIB95 published optimum recorded in academic_benchmark/tsplib_data/tsp/MANIFEST.json (published_optimum); published optimal tour academic_benchmark/tsplib_data/opt_tours/kroA100.opt.tour (sha256 65499d540c5aa7e90750065a5c6ff82f9774f284facf9d29af0146bce4332dd1) listed in academic_benchmark/tsplib_data/opt_tours/MANIFEST.json. Source disclosure: authority_url is derived from the opt_tours/MANIFEST.json URL and was not downloaded; retrieved_on is the tsp/MANIFEST.json copy date (local_copy); the file bytes were not compared with the TSPLIB95 server copy."
   }
 }

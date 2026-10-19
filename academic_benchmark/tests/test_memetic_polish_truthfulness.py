@@ -163,7 +163,7 @@ def test_memetic_run_whose_polish_spent_no_evaluation_is_rejected(algorithm_id, 
     params = _params(algorithm_id, polish_iters=0, final_polish_iters=1)
     params["fair_comparison"] = {"evaluation_budget": budget, "base_seed": 41}
     executor = AlgorithmRegistry.get_executor(algorithm_id)
-    with pytest.raises(ValueError, match="polish"):
+    with pytest.raises(ValueError, match="must execute at least one polish phase"):
         executor(_problem(), params, seed=1, run_idx=0)
 
 
@@ -176,8 +176,15 @@ def test_phase_flags_equal_polish_evaluations_across_budgets(algorithm_id):
         executor = AlgorithmRegistry.get_executor(algorithm_id)
         try:
             result = executor(_problem(), params, seed=1, run_idx=0)
-        except ValueError:
-            continue  # rejected (atomic init or no polish evaluation): fine
+        except ValueError as error:
+            # Only the two expected rejections may be skipped; any other error
+            # (for example a flag/evaluation contradiction) must fail the sweep.
+            message = str(error)
+            assert (
+                "cannot complete atomic population initialization" in message
+                or "must execute at least one polish phase" in message
+            ), (budget, message)
+            continue
         accepted += 1
         policy = result.polish_policy
         evaluations = policy["evaluations"]

@@ -86,6 +86,7 @@ describe("served web application boundary", () => {
   });
 
   it("no file under src/, tests included, names an academic result folder", () => {
+    expect(srcFiles.length).toBeGreaterThan(200);
     const offenders = srcFiles.filter((file) => resultFolderReferences(fs.readFileSync(file, "utf8")).length > 0).map(rel);
     expect(offenders).toEqual([]);
   });

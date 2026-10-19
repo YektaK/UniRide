@@ -30,11 +30,16 @@ NEW_MODULE_FILES = (
     + sorted((PKG / "exact_reference").glob("*.py")))
 LEGACY_LITERAL = "academic_benchmark" + "/" + "bildiri2026"
 EXACT_ARTIFACT_MARKERS = ("exact_reference", "tsplib-exact-reference", "week-2026-10-05-exact")
-# src files that already named other result folders before WP-E8 (the fleet-scenario feature); any new file fails the test
-KNOWN_SRC_RESULT_REFERENCES = {
-    "src/services/fleet-rerun-preflight.test.ts", "src/services/fleet-rerun-run.test.ts",
-    "src/services/fleet-scenario-archive.test.ts", "src/services/fleet-scenario-archive.ts",
-}
+# No src file may name an academic result folder (no exceptions: the WP-E10 fleet re-run guards and the tests that read the
+# historical archives live under scripts/). Literal paths, path.join/path.resolve segment lists and folder names all count.
+RESULT_FOLDER_PATTERNS = (
+    re.compile(r"docs[\\/]+paper", re.IGNORECASE),
+    re.compile(r"""["'`]docs["'`]\s*,\s*["'`]paper["'`]""", re.IGNORECASE),
+    re.compile(r"""["'`]paper["'`]\s*,\s*["'`]results["'`]""", re.IGNORECASE),
+    re.compile(r"""["'`]paper[\\/]+results""", re.IGNORECASE),
+    re.compile(r"week-2026-10-05", re.IGNORECASE),
+    re.compile(r"tsplib-exact-reference", re.IGNORECASE),
+)
 
 PINNED_LF_SHA256 = {  # at the WP-E8 base commit
     "academic_benchmark/studies/bildiri2026/study.json": "d4d098a8503053f1bb6ff112d0c3908aac1a46639f1e28cd3de8d4f793a0f068",
@@ -87,6 +92,7 @@ def test_production_python_names_no_result_folder_in_a_string():
 
 def test_frontend_src_references_none_of_the_new_exact_artifacts_and_no_new_result_folder():
     referencing_results, offenders = set(), []
+    scanned = 0
     for path in sorted((REPO / "src").rglob("*")):
         if not path.is_file() or path.suffix not in (".ts", ".tsx", ".js", ".jsx", ".json", ".mjs"):
             continue
@@ -94,11 +100,26 @@ def test_frontend_src_references_none_of_the_new_exact_artifacts_and_no_new_resu
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
         rel = path.relative_to(REPO).as_posix()
-        if "docs/paper/results" in text:
+        scanned += 1
+        if any(pattern.search(text) for pattern in RESULT_FOLDER_PATTERNS):
             referencing_results.add(rel)
         offenders.extend(f"{rel}: {m}" for m in EXACT_ARTIFACT_MARKERS if m in text)
+    assert scanned > 200, f"the scan found {scanned} src files"
     assert offenders == []
-    assert referencing_results <= KNOWN_SRC_RESULT_REFERENCES, sorted(referencing_results - KNOWN_SRC_RESULT_REFERENCES)
+    assert sorted(referencing_results) == [], "src names an academic result folder"
+
+
+@pytest.mark.parametrize("text", [
+    'const a = "docs/paper/results/x";', 'const a = "docs\\\\paper\\\\results";',
+    'join(process.cwd(), "docs", "paper", "results", "w")', 'path.resolve(root, "paper", "results")',
+    'const n = "week-2026-10-05-fleet";', 'const n = "tsplib-exact-reference";',
+])
+def test_result_folder_patterns_catch_literal_and_path_join_spellings(text):
+    assert any(pattern.search(text) for pattern in RESULT_FOLDER_PATTERNS)
+
+
+def test_result_folder_patterns_ignore_the_benchmark_api_route():
+    assert not any(p.search('fetch("/api/benchmark/results/1")') for p in RESULT_FOLDER_PATTERNS)
 
 
 # ---------------------------------------------------------------- archive paths

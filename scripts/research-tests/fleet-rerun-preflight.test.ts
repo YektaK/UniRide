@@ -10,7 +10,7 @@ import {
 import { loadFleetReference } from "@/services/fleet-rerun-reference";
 import { collectLiveDays, readOnlyReader, runFleetRerunPreflight, type PreflightDeps } from "@/services/fleet-rerun-preflight-live";
 import { parseFleetArgs, type FleetTypeSpec } from "@/services/fleet-scenario-args";
-import { DATE, large, matrixOf, reader, rows, sedan, transport } from "./fleet-scenario-fixtures";
+import { DATE, large, matrixOf, reader, rows, sedan, transport } from "@/services/fleet-scenario-fixtures";
 
 const RESULTS = path.resolve(process.cwd(), "docs/paper/results");
 const LARGE_SEDAN_MANIFEST = path.join(RESULTS, "week-2026-10-05-fleet/run_manifest.json");

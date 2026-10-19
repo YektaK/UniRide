@@ -9,8 +9,9 @@ import { PINNED, OCCURRENCE_CHECK_LIMIT, type PreflightPins, type PreflightRefer
 import { collectLiveDays } from "@/services/fleet-rerun-preflight-live";
 import { loadFleetReference } from "@/services/fleet-rerun-reference";
 import { extendedFleetManifestSchema } from "@/services/fleet-scenario-archive";
+import { assertOutsideHistoricalArchives } from "../fleet-archive-guard";
 import { parseFleetArgs } from "@/services/fleet-scenario-args";
-import { DATE, matrixOf, pickSelection, reader, rows, transport } from "./fleet-scenario-fixtures";
+import { DATE, matrixOf, pickSelection, reader, rows, transport } from "@/services/fleet-scenario-fixtures";
 
 const RESULTS = path.resolve(process.cwd(), "docs/paper/results");
 const LARGE_SEDAN_MANIFEST = path.join(RESULTS, "week-2026-10-05-fleet/run_manifest.json");
@@ -73,7 +74,7 @@ async function setup(rides: number[], opts: Setup = {}) {
   const deps: RerunDeps = {
     root: process.cwd(), reader: db.client, optimizerFetch: opts.fetchWrap ? opts.fetchWrap(inner, state) : inner,
     git: (args) => { gitCalls.push(args); return args[0] === "rev-parse" ? `${opts.head ?? HEAD}\n` : opts.status ?? ""; },
-    captureSolver: () => structuredClone(SOLVER), loadReference: () => reference, fs: fsx.fsApi, log: (l) => log.push(l),
+    captureSolver: () => structuredClone(SOLVER), loadReference: () => reference, assertOutputAllowed: assertOutsideHistoricalArchives, fs: fsx.fsApi, log: (l) => log.push(l),
     now: () => new Date("2026-10-18T10:00:00Z"), pins,
   };
   const reference = await harnessReference(rides);
@@ -309,5 +310,27 @@ describe("N2/N3: the run README template", () => {
   it("says that a write-time archive schema failure aborts the whole campaign", () => {
     expect(template).toMatch(/schema failure aborts the whole campaign/);
     expect(template).toMatch(/fail closed/);
+  });
+});
+
+describe("E1: runFleetRerun calls the injected output guard", () => {
+  const ARCHIVE_OUT = "docs/paper/results/week-2026-10-05-fleet/x";
+  const withOut = (out: string) => argv().map((arg) => (arg === OUT ? out : arg));
+
+  it("refuses an --out inside a historical archive with the real guard and makes no mkdir or write", async () => {
+    const s = await setup([60]);
+    await expect(runFleetRerun(s.deps, parseFleetArgs(withOut(ARCHIVE_OUT)))).rejects.toThrow("inside a historical archive");
+    expect(s.fsx.dirs.size).toBe(0);
+    expect(s.fsx.files.size).toBe(0);
+    expect(solves(s.t.calls)).toBe(0);
+  });
+
+  it("asks the injected guard for the resolved output directory and the root, before it creates anything", async () => {
+    const s = await setup([60]);
+    const seen: Array<{ out: string; root: string; dirsAtCall: number }> = [];
+    s.deps.assertOutputAllowed = (out, root) => { seen.push({ out, root, dirsAtCall: s.fsx.dirs.size }); };
+    const result = await runFleetRerun(s.deps, parseFleetArgs(withOut(ARCHIVE_OUT)));
+    expect(result.exitCode).toBe(0);
+    expect(seen).toEqual([{ out: path.resolve(s.deps.root, ARCHIVE_OUT), root: s.deps.root, dirsAtCall: 0 }]);
   });
 });

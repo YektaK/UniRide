@@ -256,7 +256,8 @@ def test_archived_4sw5so_ga_routes_of_one_day_pass_and_give_a_peak():
     kwargs = dp.plan_from_single_type_response(response, matrix, type_spec=dp.TypeSpec("large", 4, 5, 10), depot="D.Kampus")
     report = dp.check_day_plan(**kwargs)
     assert report.ok, report.violations
-    assert report.route_count == 17
+    assert report.route_count == 20 == sum(j["routeCount"] for j in response["vehicleSummary"]["routesPerJob"])
+    assert report.total_minutes == 1307 == sum(r["total_duration_minutes"] for j in response["jobs"] for r in j["result"]["routes"])
     assert dict(report.peaks_minutes) == dict(report.peaks_centi) == {"large": 4}
     # the archive's own summary names the same peak of concurrent routes (a separate production computation)
     assert response["vehicleSummary"]["peakConcurrentRoutes"] == 4

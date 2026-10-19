@@ -9,8 +9,9 @@ import { PINNED, OCCURRENCE_CHECK_LIMIT, type PreflightPins, type PreflightRefer
 import { collectLiveDays } from "@/services/fleet-rerun-preflight-live";
 import { loadFleetReference } from "@/services/fleet-rerun-reference";
 import { extendedFleetManifestSchema } from "@/services/fleet-scenario-archive";
+import { assertOutsideHistoricalArchives } from "../fleet-archive-guard";
 import { parseFleetArgs } from "@/services/fleet-scenario-args";
-import { DATE, matrixOf, pickSelection, reader, rows, transport } from "./fleet-scenario-fixtures";
+import { DATE, matrixOf, pickSelection, reader, rows, transport } from "@/services/fleet-scenario-fixtures";
 
 const RESULTS = path.resolve(process.cwd(), "docs/paper/results");
 const LARGE_SEDAN_MANIFEST = path.join(RESULTS, "week-2026-10-05-fleet/run_manifest.json");
@@ -73,7 +74,7 @@ async function setup(rides: number[], opts: Setup = {}) {
   const deps: RerunDeps = {
     root: process.cwd(), reader: db.client, optimizerFetch: opts.fetchWrap ? opts.fetchWrap(inner, state) : inner,
     git: (args) => { gitCalls.push(args); return args[0] === "rev-parse" ? `${opts.head ?? HEAD}\n` : opts.status ?? ""; },
-    captureSolver: () => structuredClone(SOLVER), loadReference: () => reference, fs: fsx.fsApi, log: (l) => log.push(l),
+    captureSolver: () => structuredClone(SOLVER), loadReference: () => reference, assertOutputAllowed: assertOutsideHistoricalArchives, fs: fsx.fsApi, log: (l) => log.push(l),
     now: () => new Date("2026-10-18T10:00:00Z"), pins,
   };
   const reference = await harnessReference(rides);

@@ -1,4 +1,3 @@
-import path from "node:path";
 import { z } from "zod";
 import type { FleetScenarioDay, ScenarioResult } from "./fleet-scenario-run";
 import { scenarioName, FLEET_ARCHIVE_FORMAT, extendedFleetManifestSchema } from "./fleet-scenario-report";
@@ -8,24 +7,6 @@ import { scenarioName, FLEET_ARCHIVE_FORMAT, extendedFleetManifestSchema } from 
 // module, so this file has no `server-only` dependency.
 
 export { FLEET_ARCHIVE_FORMAT, extendedFleetManifestSchema };
-
-/** Historical campaigns (rule (g)): never written to, never a target of a re-run. Paths relative to the repository root. */
-export const HISTORICAL_ARCHIVE_DIRS = [
-  "docs/paper/results/week-2026-10-05",
-  "docs/paper/results/week-2026-10-05-4sw5so",
-  "docs/paper/results/week-2026-10-05-fleet",
-] as const;
-
-/** Refuses an output directory that is, or lies inside, a historical archive directory. */
-export function assertOutsideHistoricalArchives(out: string, root = process.cwd()): void {
-  const target = path.resolve(out);
-  for (const dir of HISTORICAL_ARCHIVE_DIRS) {
-    const relative = path.relative(path.resolve(root, dir), target);
-    if (relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative))) {
-      throw new Error("Output directory lies inside a historical archive; choose a new directory.");
-    }
-  }
-}
 
 const stepSchema = z.object({ location1: z.string(), location2: z.string(), duration: z.number() });
 const routeSchema = z.object({

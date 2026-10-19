@@ -8,7 +8,7 @@ import {
 } from "@/services/fleet-scenario-report";
 import { runFleetScenarioDay, scenarioResponse, type FleetScenarioDay } from "@/services/fleet-scenario-run";
 import {
-  FLEET_ARCHIVE_FORMAT, assertOutsideHistoricalArchives, extendedFleetManifestSchema, menuArchive, menuArchiveName, menuArchiveSchema,
+  FLEET_ARCHIVE_FORMAT, extendedFleetManifestSchema, menuArchive, menuArchiveName, menuArchiveSchema,
   selectionArchive, selectionArchiveName, selectionArchiveSchema,
 } from "@/services/fleet-scenario-archive";
 import { PINNED, compareWaves, formatPreflightReport, type PreflightPins, type PreflightReference, type SolverCapture } from "@/services/fleet-rerun-preflight";
@@ -42,6 +42,8 @@ export interface RerunDeps {
   git: (args: string[]) => string;
   captureSolver: () => RerunSolverCapture;
   loadReference: () => PreflightReference;
+  /** Output-directory guard (the CLI injects the historical-archive refusal; this module names no result folder). Throws to refuse. */
+  assertOutputAllowed: (out: string, root: string) => void;
   fs: RerunFs;
   log: (line: string) => void;
   now?: () => Date;
@@ -108,7 +110,7 @@ export async function runFleetRerun(deps: RerunDeps, args: FleetArgs): Promise<R
 
   const git = readGitState(deps.git);
   const out = path.resolve(deps.root, args.out);
-  assertOutsideHistoricalArchives(out, deps.root);
+  deps.assertOutputAllowed(out, deps.root);
   // Refuse overwriting an existing campaign, including its provenance and results.
   if (fs.exists(out)) throw new Error("Output directory already exists; choose a fresh --out directory.");
   fs.mkdir(out);

@@ -602,15 +602,15 @@ def test_the_runner_exits_2_before_any_solver_when_a_non_empty_wal_exists(tmp_pa
     assert not out.exists()
 
 
-def test_verify_tours_cli_also_refuses_a_non_empty_wal(tmp_path):
-    db = tmp_path / "tsplib.db"
-    _make_wal_db(db)
+def test_verify_tours_cli_does_not_read_the_database_so_a_wal_next_to_it_is_irrelevant(tmp_path):
+    # WP-E8 companion: --verify-tours takes instances, optima and tours from the active manifest-governed folders
+    (tmp_path / "tsplib.db").write_bytes(b"this is not a database")
     (tmp_path / "tsplib.db-wal").write_bytes(b"not empty")
     tours = tmp_path / "t"
     tours.mkdir()
     (tours / "tours.json").write_text(json.dumps({"node_base": 1, "tours": {}}), encoding="utf-8")
     res = _run_cli("--data-dir", str(tmp_path), "--verify-tours", str(tours))
-    assert res.returncode == 2 and "tsplib.db-wal" in res.stderr, (res.returncode, res.stderr[-300:])
+    assert res.returncode == 0 and "tours checked: 0; errors: 0" in res.stdout, (res.returncode, res.stderr[-300:])
 
 
 def test_database_record_has_file_name_size_and_sha256_of_a_copy(runner, tmp_path):
@@ -747,15 +747,22 @@ def test_published_tour_is_read_from_opt_tours_read_only_and_from_opt_tour_files
 
 def test_a_published_tour_that_does_not_match_the_coordinates_blocks_the_instance(runner, tmp_path):
     db = tmp_path / "tsplib.db"
-    _line4_db(db, {"line4": [1, 2, 3, 4]})
+    _line4_db(db)
+    tours = tmp_path / "tours"  # WP-E8 companion: published tours come from a manifest-governed folder, not from the database
+    tours.mkdir()
+    body = b"NAME : line4.opt.tour\nTYPE : TOUR\nDIMENSION : 4\nTOUR_SECTION\n1 2\n3 4\n-1\nEOF\n"
+    (tours / "line4.opt.tour").write_bytes(body)
+    (tours / "MANIFEST.json").write_text(json.dumps({"schema_version": "uniride-opt-tour-collection/v1", "instances": [
+        {"name": "line4", "file_name": "line4.opt.tour", "source": "archive_copy", "sha256": hashlib.sha256(body).hexdigest()}]}),
+        encoding="utf-8")
     ro = runner.open_db_readonly(db)
     try:
         spec = runner.InstanceSpec("line4", "TSP", 4, "EUC_2D", 6, "tsplib")
-        rec = runner.load_instance(spec, tmp_path, ro)[2]
-        assert rec["published_tour_check"] == {"source": "opt_tours", "tour_length": 6, "equals_published_optimum": True}
+        rec = runner.load_instance(spec, tmp_path, ro, tours)[2]
+        assert rec["published_tour_check"] == {"source": "opt_tour_file", "tour_length": 6, "equals_published_optimum": True}
         bad = runner.InstanceSpec("line4", "TSP", 4, "EUC_2D", 7, "tsplib")
         with pytest.raises(runner.PublishedTourError):
-            runner.load_instance(bad, tmp_path, ro)
+            runner.load_instance(bad, tmp_path, ro, tours)
     finally:
         ro.close()
 

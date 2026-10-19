@@ -292,7 +292,7 @@ The owner approved the lead's recommendations on 2026-10-09 ("Onaylıyorum"), wi
 |---|---|---|---|
 | EQ1 | Time and work limits (GOAL 1)? | 60 s wall limit, 600 s on peak waves; deterministic work limit and 1 thread unchanged (§4). Scope per solver call: see D-C. Peak wave: see D-B. | Decided |
 | EQ2 | Which typed fleets enter the paper table? | Both: large+sedan and large+Doblò (cap3) | Decided |
-| EQ3 | Is "exact per wave, day = CP-SAT over menus" sufficient? | Sufficient for now; a global day-level model is out of scope. | Decided |
+| EQ3 | Is "exact per wave, day = CP-SAT over menus" sufficient? | Sufficient for now; a global day-level model is out of scope. | Decided 2026-10-09; **reopened 2026-10-20** (DECISION_LOG E13): global joint day model as WP-E11, design addendum [`JOINT_DAY_MODEL_DESIGN.md`](JOINT_DAY_MODEL_DESIGN.md) |
 | EQ4 | Report HiGHS cross-check results in the paper or only in the archive? | The paper carries a short note on the HiGHS cross-check; details go in the archive | Decided |
 | EQ5 | GA repeats: the archived GA is one seed (42). | GA at seed 42 now, labelled single-seed; a multi-seed gap measurement comes later | Decided; multi-seed later |
 | EQ6 | GOAL 2 instance set and time limit | Stage 1: the 16 TSPLIB TSP instances with n <= 100 and a published optimum plus ATSP `ft53`; 600 s wall time in total per instance, 1 thread, fixed seed. CVRP (WP-E9) and n > 100 deferred until a study profile uses them; WP-E8's benchmark wiring waits for unification gates 1-2 (DECISION_LOG E09). | Decided 2026-10-18 |

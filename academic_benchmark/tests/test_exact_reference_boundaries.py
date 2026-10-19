@@ -26,7 +26,8 @@ PKG = REPO / "academic_benchmark"
 ARCHIVE = "arch" + "ive"
 NEW_ACADEMIC_MODULES = ("academic_benchmark.exact_reference", "academic_benchmark.validation", "academic_benchmark.protocol_registry")
 NEW_MODULE_FILES = (
-    [PKG / "protocol_registry.py", PKG / "validation" / "__init__.py", PKG / "validation" / "hamiltonian_cycle.py"]
+    [PKG / "protocol_registry.py", PKG / "validation" / "__init__.py", PKG / "validation" / "hamiltonian_cycle.py",
+       PKG / "validation" / "day_plan.py"]
     + sorted((PKG / "exact_reference").glob("*.py")))
 LEGACY_LITERAL = "academic_benchmark" + "/" + "bildiri2026"
 EXACT_ARTIFACT_MARKERS = ("exact_reference", "tsplib-exact-reference", "week-2026-10-05-exact")
@@ -143,7 +144,29 @@ def test_the_runner_and_the_inputs_module_hold_no_legacy_bildiri_path_either():
 
 def test_the_new_file_list_covers_the_modules_of_this_work_package():
     names = {p.name for p in NEW_MODULE_FILES}
-    assert {"rows.py", "reader.py", "inputs.py", "protocol.py", "protocol_registry.py", "hamiltonian_cycle.py"} <= names
+    assert {"rows.py", "reader.py", "inputs.py", "protocol.py", "protocol_registry.py", "hamiltonian_cycle.py",
+            "day_plan.py"} <= names
+
+
+# WP-E11 J6: the day-plan checker stays independent of the solver and planning code it verifies (design section 5.1).
+FORBIDDEN_CHECKER_IMPORTS = ("uniride_core", "optimizer_api", "scripts", "academic_benchmark")
+
+
+def test_the_day_plan_checker_imports_only_the_standard_library():
+    import sys
+
+    path = PKG / "validation" / "day_plan.py"
+    assert path.is_file()
+    tops = set()
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"), filename=str(path))):
+        if isinstance(node, ast.Import):
+            tops.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            assert node.level == 0, "relative import in the day-plan checker"
+            tops.add((node.module or "").split(".")[0])
+    assert tops, "the scan found no import at all"
+    assert not [t for t in tops if t in FORBIDDEN_CHECKER_IMPORTS], sorted(tops)
+    assert not [t for t in tops if t not in sys.stdlib_module_names], sorted(tops)
 
 
 @pytest.mark.parametrize("bad", [f"{ARCHIVE}/x", f"docs/{ARCHIVE}/x", f"docs/{ARCHIVE.upper()}/x"])

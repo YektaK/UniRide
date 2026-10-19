@@ -57,3 +57,15 @@ def test_missing_direction_defaults_to_pickup():
     request = _request("pickup")
     del request["direction"]
     assert uniride_request_to_problem(request).constraints.direction == "pickup"
+
+
+@pytest.mark.parametrize("disability, expected", [("Sw", [1, 0]), ("So", [0, 1]), ("sw", [1, 0])])
+def test_disability_enum_and_string_map_to_the_same_demand(disability, expected):
+    """Same ``str(enum)`` pattern as L11, in ``_student_demand``."""
+    from optimizer_api.models.schemas import DisabilityType
+
+    value = {"Sw": DisabilityType.SW, "So": DisabilityType.SO, "sw": "sw"}[disability]
+    request = _request("pickup")
+    request["students"][0]["disability_type"] = value
+    problem = uniride_request_to_problem(request)
+    assert problem.constraints.demands[1] == expected

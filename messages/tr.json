@@ -724,32 +724,6 @@
         "consistency": "Tutarlılık",
         "coverage": "Kapsam"
       },
-      "advisor": {
-        "title": "AI Danışman",
-        "description": "Seçimlerinize göre AI ile algoritma önerisi alın",
-        "connecting": "Bağlanıyor...",
-        "apiActive": "API Aktif",
-        "apiOffline": "API Kapalı",
-        "aiTitle": "AI Algoritma Danışmanı",
-        "aiSubtitle": "Seçimlerinize özel öneriler",
-        "goals": {
-          "quality": "Kalite",
-          "balanced": "Dengeli",
-          "speed": "Hız"
-        },
-        "analyzing": "AI analiz yapıyor...",
-        "selectGoal": "Hedefinizi seçin ve danışmanı yeniden çalıştırın",
-        "analyzingBtn": "Analiz Ediliyor...",
-        "getAdvice": "Öneri Al ({n} algo)",
-        "buttonLabel": "AI Danışman",
-        "connectionError": "Danışmana ulaşılamadı. Lütfen tekrar deneyin.",
-        "emptyState": "Öneri almak için bir hedef seçin.",
-        "goalBalanced": "Dengeli",
-        "goalQuality": "En iyi kalite",
-        "goalSpeed": "En hızlı",
-        "tooltip": "Mevcut seçiminiz için öneri alın.",
-        "unavailable": "AI danışman şu anda kullanılamıyor."
-      },
       "hero": {
         "title": "Rotalama algoritmalarını TSPLIB standart veri setleri üzerinde karşılaştırın.",
         "subtitle": "Sistematik benchmark ile kalite ve performans ölçümleri yapın.",

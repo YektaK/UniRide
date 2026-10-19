@@ -23,7 +23,7 @@ def extract_time_windows(
     
     time_windows = {}
     for entry in filtered_entries:
-        tw = extractor.extract(entry, direction)
+        tw = extractor.extract(entry.model_dump(), direction.value)
         time_windows[entry.id] = tw
     
     return time_windows

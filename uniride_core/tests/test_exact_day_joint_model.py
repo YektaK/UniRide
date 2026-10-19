@@ -382,3 +382,63 @@ def test_aggregation_adds_aggregates_only_for_groups_of_equal_wave_type_and_tour
             members = [agg.variables[i] for i, _ in link.terms[1:]]
             assert len({(m.ref[0], m.type_id, m.tour) for m in members}) == 1 and len(members) > 1
     assert agg.counts["concurrency_nonzeros"] <= plain.counts["concurrency_nonzeros"]
+
+
+# ------------------------------------------------------------------ the MPS file says what the model says
+def _parse_mps(data: bytes):
+    """Minimal free-format MPS reader (the subset the writer emits)."""
+    section, rows, cols, rhs, bounds, integer = None, {}, {}, {}, {}, False
+    obj = {}
+    for line in data.decode("ascii").splitlines():
+        if not line.startswith(" ") and not line.startswith("    "):
+            section = line.split()[0]
+            continue
+        f = line.split()
+        if section == "ROWS":
+            rows[f[1]] = f[0]
+        elif section == "COLUMNS":
+            if f[0] == "MARKER":
+                integer = f[2] == "'INTORG'"
+                continue
+            assert integer, "every variable is integer"
+            if f[1] == "obj":
+                obj[f[0]] = int(f[2])
+                cols.setdefault(f[0], {})
+            else:
+                cols.setdefault(f[0], {})[f[1]] = int(f[2])
+        elif section == "RHS":
+            rhs[f[1]] = int(f[2])
+        elif section == "BOUNDS":
+            kind, _, name, value = f
+            lo, up = bounds.get(name, (0, None))
+            bounds[name] = (int(value), up) if kind == "LO" else (lo, int(value)) if kind == "UP" else (int(value), int(value))
+    return rows, cols, obj, rhs, bounds
+
+
+@pytest.mark.parametrize("aggregate", [False, True])
+def test_mps_text_round_trips_to_the_model(aggregate):
+    waves = [make_wave("w1", "pickup", 500, [("SwA", "Sw"), ("SoB", "So")], ARCS, ride=60),
+             make_wave("w2", "dropoff", 505, [("SoB", "So")] * 3, ARCS, ride=60)]
+    inst = cell(waves, (LARGE, CAR))
+    for stage in (1, 2, 3):
+        m = build_joint_model(inst, stage=stage, large_limit=1, fixed={"peak": 1, "total_minutes": 120}, aggregate=aggregate)
+        rows, cols, obj, rhs, bounds = _parse_mps(m.to_mps())
+        assert list(rows) == ["obj"] + [r.name for r in m.rows]
+        assert [r.sense for r in m.rows] == [rows[r.name] for r in m.rows]
+        assert list(cols) == [v.name for v in m.variables]  # column order is the model order
+        for r in m.rows:
+            assert rhs.get(r.name, 0) == r.rhs
+            assert {m.variables[vi].name: c for vi, c in r.terms} == {n: cols[n][r.name] for n in cols if r.name in cols[n]}
+        for v in m.variables:
+            assert obj.get(v.name, 0) == v.objective
+            assert bounds[v.name] == (v.lower, v.upper)
+
+
+def test_selection_from_values_lists_chosen_columns():
+    from uniride_core.exact.day_joint import selection_from_values
+
+    wave = make_wave("w", "pickup", 500, [("SwA", "Sw"), ("SwA", "Sw")], ARCS)
+    inst = cell([wave], (VehicleTypeSpec("one", 1, 0, 10),))
+    m = build_joint_model(inst, stage=1)
+    sol = enumerate_stage_optimum(m)
+    assert selection_from_values(m, sol.values) == ((0, 0, 2),)

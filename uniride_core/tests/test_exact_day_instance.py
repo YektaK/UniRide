@@ -200,12 +200,14 @@ def test_column_data_carries_type_multiplicity_tour_and_class_counts():
     wave = make_wave("w1", "pickup", 525, LOCS, ARCS)
     inst = build_day_instance([wave], (LARGE, CAR))
     day_wave = inst.waves[0]
-    assert [(i.location_code, i.cls, i.multiplicity) for i in day_wave.items] == [("SwA", "Sw", 2), ("SoB", "So", 1)]
+    assert sorted((i.location_code, i.cls, i.multiplicity) for i in day_wave.items) == [("SoB", "So", 1), ("SwA", "Sw", 2)]
+    sw_items = [i for i, it in enumerate(day_wave.items) if it.cls == "Sw"]
     for col in day_wave.columns:
         enum_col = day_wave.enumeration.columns[col.column_index]
         assert (col.type_id, col.multiplicity, col.stop_order, col.tour, col.ride) == (
             enum_col.type_id, enum_col.multiplicity, enum_col.stop_order, enum_col.tour, enum_col.ride)
-        assert col.sw_count == col.multiplicity[0] and col.so_count == col.multiplicity[1]
+        assert col.sw_count == sum(col.multiplicity[i] for i in sw_items)
+        assert col.sw_count + col.so_count == sum(col.multiplicity)
         assert col.type_index == {"large": 0, "car": 1}[col.type_id]
         # the sedan has no Sw seat
         assert not (col.type_id == "car" and col.sw_count)

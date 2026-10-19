@@ -145,6 +145,8 @@ python main.py
 Pop-Location
 ```
 
+The benchmark/academic router (`/api/v1/benchmark/*`, `/academic/*`) is mounted only when `UNIRIDE_ACADEMIC_PROCESS=1` (audit H8). `npm run dev:dudullu` sets it for the optimizer it starts; when starting `python main.py` by hand for academic work, set it in the shell or in `optimizer_api/.env`. Unset (the production default), the optimizer does not import `routers.benchmark`, the optimizer_api `benchmark_runner` or `benchmark_state` (other academic code still loads through the strategies, audit H17), and the admin benchmark page shows "Academic benchmark service is off".
+
 ```powershell
 npm run dev
 ```

@@ -168,7 +168,7 @@ def get_academic_leaderboard(
         )
     except Exception as exc:
         logger.exception("Academic leaderboard query failed")
-        raise HTTPException(status_code=503, detail=f"Academic DB unavailable: {exc}")
+        raise HTTPException(status_code=503, detail="Academic database unavailable")
 
 
 @router.get("/academic/best")
@@ -197,7 +197,7 @@ def get_academic_best_result(
         raise
     except Exception as exc:
         logger.exception("Academic best-result query failed")
-        raise HTTPException(status_code=503, detail=f"Academic DB unavailable: {exc}")
+        raise HTTPException(status_code=503, detail="Academic database unavailable")
 
 
 @router.get("/academic/benchmark-results")
@@ -217,7 +217,7 @@ def get_academic_benchmark_results(
         )
     except Exception as exc:
         logger.exception("Academic benchmark-results query failed")
-        raise HTTPException(status_code=503, detail=f"Academic benchmark results unavailable: {exc}")
+        raise HTTPException(status_code=503, detail="Academic benchmark results unavailable")
 
 
 @router.get("/academic/problems")
@@ -239,7 +239,7 @@ def get_academic_problems(
         )
     except Exception as exc:
         logger.exception("Academic problems query failed")
-        raise HTTPException(status_code=503, detail=f"Academic problems unavailable: {exc}")
+        raise HTTPException(status_code=503, detail="Academic problems unavailable")
 
 
 @router.get("/problems")
@@ -367,8 +367,10 @@ def _start_benchmark_impl(run_id: str, algorithms: List[Dict], problems: List[st
                     ))
                 runner = BenchmarkRunner(strategies_registry=STRATEGY_REGISTRY, state_manager=benchmark_state_manager, run_id=run_id)
                 runner.run(problems=benchmark_problems, algorithms=algo_configs, n_runs=n_runs, seed=settings.get("seed", 42), skip_cached=settings.get("skip_cached", False))
-            except Exception as e:
-                benchmark_state_manager.fail_run(run_id, f"Error: {str(e)}")
+            except Exception:
+                # M5: details stay in the server log; run status (client-readable) is fixed text.
+                logger.exception("Benchmark run failed for run_id=%s", run_id)
+                benchmark_state_manager.fail_run(run_id, "Benchmark run failed")
             finally:
                 benchmark_state_manager.ensure_terminal(run_id)
         
@@ -502,6 +504,9 @@ def _start_matrix_native_benchmark_impl(run_id: str, algorithms: List[Dict], pro
                 f"Matrix-native benchmark completed: {len(collected)} results",
             )
         except Exception as exc:
+            # M5: details stay in the server log and the academic DB; the run
+            # status (readable by the client) carries a fixed message only.
+            logger.exception("Matrix-native benchmark failed for run_id=%s", run_id)
             save_benchmark_run(
                 run_id,
                 source="web_matrix_native",
@@ -509,7 +514,7 @@ def _start_matrix_native_benchmark_impl(run_id: str, algorithms: List[Dict], pro
                 settings=state.parameters,
                 metadata={"error": str(exc)},
             )
-            benchmark_state_manager.fail_run(run_id, f"Error: {str(exc)}")
+            benchmark_state_manager.fail_run(run_id, "Matrix-native benchmark failed")
         finally:
             benchmark_state_manager.ensure_terminal(run_id)
 
@@ -641,16 +646,16 @@ def download_benchmark_problem(problem_name: str) -> Dict:
     if info and info.file_path:
         return {
             "problem_name": name_lower, "status": "already_existed",
-            "file_path": info.file_path, "message": f"Problem already available at {info.file_path}"
+            "file_name": os.path.basename(info.file_path), "message": "Problem already available"
         }
     result_path = download_tsplib_problem(name_lower)
     if result_path:
         return {
             "problem_name": name_lower, "status": "downloaded",
-            "file_path": result_path, "message": f"Successfully downloaded to {result_path}"
+            "file_name": os.path.basename(result_path), "message": "Successfully downloaded"
         }
     return {
-        "problem_name": name_lower, "status": "failed", "file_path": None,
+        "problem_name": name_lower, "status": "failed", "file_name": None,
         "message": "Could not download from TSPLIB archive"
     }
 
@@ -740,7 +745,9 @@ def _load_and_validate_cli_json(filepath: str) -> List[Dict]:
         raise HTTPException(status_code=404, detail="File not found")
     try:
         with file_handle as f: data = json.load(f)
-    except json.JSONDecodeError as e: raise HTTPException(status_code=400, detail=f"JSON error: {e}")
+    except json.JSONDecodeError:
+        logger.warning("CLI result file is not valid JSON: %s", os.path.basename(filepath))
+        raise HTTPException(status_code=400, detail="Invalid JSON file")
     if not isinstance(data, list) or not data: raise HTTPException(status_code=400, detail="Invalid JSON array")
     missing = [f for f in ["problem", "strategy", "dimension"] if f not in data[0]]
     if missing: raise HTTPException(status_code=400, detail=f"Missing fields: {missing}")

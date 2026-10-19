@@ -572,6 +572,8 @@
         },
         "noProblems": "No Problems Found",
         "noProblemsHint": "No problems match the selected category. Choose another category.",
+        "academicDisabledTitle": "Academic benchmark service is off",
+        "academicDisabledDesc": "The optimizer on this server does not run the academic benchmark service. Start the optimizer with UNIRIDE_ACADEMIC_PROCESS=1 on the academic machine to use this page.",
         "runTitle": "Run Status",
         "status": "Status",
         "statusLoading": "Loading run status...",

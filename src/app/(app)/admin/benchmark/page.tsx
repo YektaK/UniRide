@@ -60,6 +60,7 @@ import {
   type BenchmarkResult,
   type BenchmarkResultsResponse,
   checkBenchmarkApiHealth,
+  isAcademicServiceDisabledError,
   fetchProblems,
   fetchAcademicProblems,
   fetchParamSpaces,
@@ -160,6 +161,8 @@ export default function BenchmarkPage() {
   // Problems
   const [problems, setProblems] = useState<BenchmarkProblem[]>([]);
   const [problemsLoading, setProblemsLoading] = useState(true);
+  // H8: the optimizer only hosts the benchmark router when UNIRIDE_ACADEMIC_PROCESS=1.
+  const [academicDisabled, setAcademicDisabled] = useState(false);
   const [problemCategoryFilter, setProblemCategoryFilter] = useState<string>("all");
   const [selectedProblems, setSelectedProblems] = useState<Set<string>>(new Set());
 
@@ -228,9 +231,12 @@ export default function BenchmarkPage() {
         setProblems(Array.from(merged.values()));
       } catch (err) {
         console.error("Failed to load problems:", err);
+        if (isAcademicServiceDisabledError(err)) setAcademicDisabled(true);
         toast({
           title: t('toast.problemsLoadFailed'),
-          description: err instanceof Error ? err.message : t('toast.serverUnreachable'),
+          description: isAcademicServiceDisabledError(err)
+            ? t('academicDisabledDesc')
+            : err instanceof Error ? err.message : t('toast.serverUnreachable'),
           variant: "destructive",
         });
       } finally {
@@ -325,9 +331,12 @@ export default function BenchmarkPage() {
       // Start polling
       startPolling(response.run_id);
     } catch (err) {
+      if (isAcademicServiceDisabledError(err)) setAcademicDisabled(true);
       toast({
         title: t('toast.startFailedTitle'),
-        description: err instanceof Error ? err.message : t('toast.serverError'),
+        description: isAcademicServiceDisabledError(err)
+          ? t('academicDisabledDesc')
+          : err instanceof Error ? err.message : t('toast.serverError'),
         variant: "destructive",
       });
     } finally {
@@ -555,6 +564,14 @@ export default function BenchmarkPage() {
           </div>
         </CardContent>
       </Card>
+
+      {academicDisabled && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{t('academicDisabledTitle')}</AlertTitle>
+          <AlertDescription>{t('academicDisabledDesc')}</AlertDescription>
+        </Alert>
+      )}
 
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>

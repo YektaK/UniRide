@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOwnerToken } from '@/lib/benchmark-owner-cookie';
-import { optimizerFetch } from "@/lib/optimizer-server";
+import { optimizerFetch, academicServiceDisabledResponse } from "@/lib/optimizer-server";
 import { denyUnlessBenchmarkAdmin } from "@/lib/benchmark-auth";
 
 /**
@@ -47,6 +47,8 @@ export async function GET(request: NextRequest) {
     );
 
     if (!response.ok) {
+      const disabled = await academicServiceDisabledResponse(response);
+      if (disabled) return disabled;
       if (response.status === 404) {
         return NextResponse.json(
           { error: 'Benchmark çalışması bulunamadı' },

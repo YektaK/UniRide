@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateBenchmarkRunId, isValidBenchmarkRunId } from '@/lib/benchmark-run-id';
 import { buildBenchmarkBackendRequest } from '@/lib/benchmark-backend-request';
 import { getOwnerToken, setOwnerCookie, isRunExistsStatus } from '@/lib/benchmark-owner-cookie';
-import { optimizerFetch } from "@/lib/optimizer-server";
+import { optimizerFetch, academicServiceDisabledResponse } from "@/lib/optimizer-server";
 import { denyUnlessBenchmarkAdmin } from "@/lib/benchmark-auth";
 
 /**
@@ -119,6 +119,8 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
+      const disabled = await academicServiceDisabledResponse(response);
+      if (disabled) return disabled;
       const error = await response.json().catch(() => ({}));
       console.error(`[Benchmark] Backend error:`, error);
       const d = error.detail;
@@ -158,11 +160,9 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('[API /api/benchmark/run] Error:', error);
+    // L5: raw error text stays in the server log, never in the response.
     return NextResponse.json(
-      { 
-        error: error?.message || 'Benchmark başlatılamadı',
-        details: error?.toString?.()
-      },
+      { error: 'Benchmark başlatılamadı' },
       { status: 500 }
     );
   }

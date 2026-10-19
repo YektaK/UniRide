@@ -11,6 +11,8 @@ import {
   fetchAcademicLeaderboard,
   fetchAcademicProblems,
   fetchResults,
+  fetchProblems,
+  isAcademicServiceDisabledError,
   pollStatus,
   startBenchmark,
 } from "./benchmark-service";
@@ -252,5 +254,34 @@ describe("benchmark-service academic problems", () => {
       vi.fn().mockResolvedValue({ ok: false, status: 422, json: async () => ({ error: "bounds exceeded: x" }) })
     );
     await expect(startBenchmark([{ id: "ga", params: {} }], ["p"], { n_runs: 1, seed: 42 })).rejects.toThrow("bounds exceeded: x");
+  });
+});
+
+describe("benchmark-service academic service disabled (H8)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("raises AcademicServiceDisabledError when the BFF answers 503 ACADEMIC_SERVICE_DISABLED", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ code: "ACADEMIC_SERVICE_DISABLED", error: "off" }), { status: 503 })
+      )
+    );
+
+    const error = await fetchProblems().catch((e: unknown) => e);
+    expect(isAcademicServiceDisabledError(error)).toBe(true);
+  });
+
+  it("keeps other 503 answers as ordinary errors", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail: "down" }), { status: 503 }))
+    );
+
+    const error = await fetchProblems().catch((e: unknown) => e);
+    expect(isAcademicServiceDisabledError(error)).toBe(false);
+    expect((error as Error).message).toBe("down");
   });
 });

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getOwnerToken } from "@/lib/benchmark-owner-cookie";
-import { optimizerFetch } from "@/lib/optimizer-server";
+import { optimizerFetch, academicServiceDisabledResponse } from "@/lib/optimizer-server";
 import { denyUnlessBenchmarkAdmin } from "@/lib/benchmark-auth";
 
 const StopBenchmarkRequestSchema = z.object({
@@ -39,6 +39,8 @@ export async function POST(request: NextRequest) {
     );
 
     if (!response.ok) {
+      const disabled = await academicServiceDisabledResponse(response);
+      if (disabled) return disabled;
       const errorText = await response.text().catch(() => "Unknown error");
       return NextResponse.json(
         { detail: `Python API error: ${response.status}`, error: errorText },

@@ -9,6 +9,10 @@ validation files), the native-termination pilot (``native_pilot.run_native_pilot
 Only time-dependent values are pinned: elapsed time (1.0 ms through a counter replacing ``time`` in ``fair_pilot``),
 git/environment metadata (constants) and database timestamps (dropped by ``_strip_volatile``).
 
+The fair-pilot stub was later changed to ``runs: 3`` (WP-E8 polish item 5: with two runs the mean of the varying costs is a
+multiple of 0.5, so a 2-dp rounding of ``mean_cost`` was invisible) and the fixture regenerated with ``capture_golden`` from
+fixed-budget/native modules identical to commit f53d5ed1; only the ``fair_pilot`` part of the fixture changed.
+
 The test also pins the sha256 of the committed exact result files and of the Bildiri study profile, so a rewrite of
 committed evidence is detected.
 """
@@ -201,7 +205,7 @@ def _render_fair(tmp_path: Path) -> dict:
     config = {
         "protocol_version": "uniride-fair-tsp-v1", "problems": ["tiny-tsp", "tiny-atsp"],
         "algorithms": {a: dict(_ALNS_PARAMS) if a == "ALNS-TSP" else {} for a in APPROVED_ALGORITHMS},
-        "runs": 2, "evaluation_budget": 20, "base_seed": 123, "budget_policy": "atomic_upper_bound_v1", "workers": 1,
+        "runs": 3, "evaluation_budget": 20, "base_seed": 123, "budget_policy": "atomic_upper_bound_v1", "workers": 1,
         "replay_replicates": [0], "allow_repository_output": False, "overwrite": False,
     }
     path = tmp_path / "fair.json"

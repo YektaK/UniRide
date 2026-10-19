@@ -1,6 +1,6 @@
 # WP-E8 Exact Reference Protocol Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (- [ ]) syntax for tracking. This plan needs owner approval before any code is written.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (- [ ]) syntax for tracking. Approved by the owner on 2026-10-18; the decisions are recorded in the last section.
 
 **Goal:** Make the committed `exact_reference_v1` results readable, independently validated and discoverable inside `academic_benchmark`, as typed rows that cannot be pooled, ranked or tested together with fixed-budget or native-termination rows, without changing any fixed-budget or native output.
 
@@ -12,7 +12,7 @@
 
 - Work in your own worktree and branch: `git -C <main> worktree add .claude/worktrees/wp-e8 -b feat/wp-e8-exact-reference WIP`. Never `git checkout`/`git switch` in the main checkout; preserve its dirty tree; do not change git config. Commit every task separately; do not merge or push.
 - Python: only `.venv-jit` with `PYTHONPATH=<worktree>` (the editable install points at main). No interactive Python (no bare `python`/`py`, no `python -i`, no `python -` or heredoc); scripts go to a file and run as `python path/script.py`; `python -c` only for one line. Time-limit long commands and cap their output. Never kill processes by image name; PID only. Short-path temp folders only under `C:\wt\`.
-- Do not open, copy, write or lock `academic_benchmark/tsplib_data/tsplib.db*`. WP-E8 reads no database at all.
+- Do not open, copy, write or lock `academic_benchmark/tsplib_data/tsplib.db*`. WP-E8 reads no database at all; only the companion task reads `tsplib.db`, read-only and immutable (`mode=ro&immutable=1`), refusing a non-empty `-wal` file as the WP-E7 runner does.
 - Do not change: `uniride_core/**`, `optimizer_api/**`, `src/**`, `scripts/run_exact_*.py`, the fixed-budget and native modules (`fairness.py`, `fair_pilot.py`, `native_protocol.py`, `native_pilot.py`, `matrix_run_summary.py`, `results_reader.py`, `data_export.py`, `core/preflight.py`, `core/execution_gateway.py`, `core/registry_setup.py`), `uniride_core/algorithms/capabilities.py` (`ExecutionProtocol` stays `fixed_budget`/`native_termination`), the existing three files in `academic_benchmark/schemas/`, `academic_benchmark/studies/**`, anything under `archive/` or `docs/paper/results/`.
 - No gap column (`gap_to_LB`, `gap_to_reference_optimum`, or any `gap_*` field) is computed or stored by WP-E8 code. No CVRP (E09: WP-E9 deferred). No campaign, no re-solve.
 - Never read a path under `archive/`. The reader refuses one at run time; a test scans the new modules statically.
@@ -28,7 +28,7 @@
 | P3 | WP-E7 stage 1 merged, results committed | `5e52a79b`; `docs/paper/results/tsplib-exact-reference/stage1-verification/` (17 of 17 reproduced, `-text` in `.gitattributes`); polish merged `ebec5a21` | met |
 | P4 | Package C context | C1-C3 merged (capability catalog `uniride_core/algorithms/capabilities.py`, preflight, gateway); no hybrids, no study loader, no YAEM profile. WP-E8 is a Package C item (design §9 WP-E8 row) and does not claim Gate C | partial, acceptable |
 | P5 | Active dataset location for published tours (companion task, below) | Runner default `OPT_TOUR_DIR` at `scripts/run_exact_tsp_reference.py:61` points into `archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib` | **open, prerequisite for Task 5 only** |
-| P6 | Dataset artifacts for the 16 TSP instances | `*.tsp` is git-ignored (`.gitignore:51`); stage 1 read 5 instances from local `.tsp` files and 11 from `tsplib.db` coordinates; only `ft53.atsp` and `atsp/*.atsp` are tracked | **open, OQ1** |
+| P6 | Dataset artifacts for the 16 TSP instances | `*.tsp` is git-ignored (`.gitignore:51`); stage 1 read 5 instances from local `.tsp` files and 11 from `tsplib.db` coordinates; only `ft53.atsp` and `atsp/*.atsp` are tracked | resolved (owner, 2026-10-18, OQ1): the companion task commits the 16 `.tsp` files; prerequisite for Task 5 |
 
 Known residuals carried, not fixed here: M17 (`archive/` has no `__init__.py`, importable as a namespace package; audit line 1233), H9 (one ID maps to several implementations; audit §H9, line 885), WP-E7 default archive read (P5).
 
@@ -50,15 +50,22 @@ Branch `fix/opt-tours-active-dataset`, its own small plan, review and merge befo
      "problem_type": "TSP", "artifact_path": "academic_benchmark/tsplib_data/opt_tours/kroA100.opt.tour",
      "size_bytes": 0, "sha256": "<64 hex>",
      "authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/kroA100.opt.tour.gz",
-     "provenance": {"kind": "archive_copy|authority_download", "archive_entry_sha256": "<64 hex or null>"},
+     "provenance": {"kind": "archive_copy", "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/kroA100.opt.tour",
+                    "archive_entry_sha256": "<64 hex, equal to the Bildiri archive manifest entry>"},
      "retrieved_on": "2026-10-xx"}
   ]
 }
 ```
 
+- **Source (owner, 2026-10-18, OQ5):** the tours are copied from the Bildiri archive; nothing is downloaded. `authority_url` names the original TSPLIB95 location for reference only and is not fetched. The copy's sha256 must equal the archive manifest entry's sha256.
 - **Coverage:** the archive holds tours for 13 of the 16 TSP verification instances (not burma14, krob100, kroe100); ATSP has no published tours (`atsp/MANIFEST.json` note). Missing tours stay missing (`published_tour_check.source = "none"`), never synthesized from our own runs.
 - **Runner:** `OPT_TOUR_DIR` default becomes the new directory; `--opt-tour-dir` refuses a path that resolves under `archive/` (exit 2). A test asserts the default and the refusal. Committed WP-E7 results are not regenerated.
-- If OQ1 is answered "commit the instances", the same branch adds `academic_benchmark/tsplib_data/tsp/<name>.tsp` (16 files), a `uniride-tsp-collection/v1` manifest of the same shape, and a `.gitignore` negation `!academic_benchmark/tsplib_data/tsp/*.tsp`. Each file's sha256 (or, for the 11 database-sourced instances, the sha256 of the canonical coordinate text) must equal `instances[].sha256` in the committed stage-1 manifest; a mismatch blocks.
+- **TSP instance files (owner, 2026-10-18, OQ1).** The same branch commits the 16 TSP verification instances as `academic_benchmark/tsplib_data/tsp/<name>.tsp` (public TSPLIB research data), with `.gitignore` negation `!academic_benchmark/tsplib_data/tsp/*.tsp` and `.gitattributes` line `academic_benchmark/tsplib_data/tsp/** text eol=lf`. Nothing is downloaded. Source order per instance:
+  1. an existing local copy (the untracked `academic_benchmark/tsplib_data/<name>.tsp` in the main checkout; at the stage-1 run 5 instances came from such files), copied byte for byte (`provenance.kind = "local_copy"`);
+  2. else an archived copy, if the archive holds one (`"archive_copy"`, with the archive entry sha256); at `65fb0b00` the Bildiri archive directory `bildiri2026/data/tsplib/` holds no `.tsp` file, so this case is expected to be empty;
+  3. else a reconstruction from the `tsplib.db` node coordinates, opened read-only and immutable (`"db_reconstruction"`): header `NAME`, `TYPE: TSP`, `COMMENT: reconstructed from tsplib.db coordinates (UniRide, <date>)`, `DIMENSION`, `EDGE_WEIGHT_TYPE` from the database, `NODE_COORD_SECTION` with 1-based ids and `repr()` floats so parsing returns the identical floats, `EOF`.
+- **Manifest** `academic_benchmark/tsplib_data/tsp/MANIFEST.json`, schema `uniride-tsp-collection/v1`, one entry per instance: `name`, `dimension`, `problem_type`, `edge_weight_type`, `artifact_path`, `size_bytes`, `sha256` (file bytes), `coordinate_text_sha256` (sha256 of the canonical coordinate text `"{i} {x!r} {y!r}\n"`, ASCII, 0-based, of the parsed coordinates), `provenance` (`kind`; `source_path` repo-relative for `local_copy`/`archive_copy`, `null` for `db_reconstruction`; `source_sha256`; for a reconstruction the database table and query used, the database sha256 and size), `published_optimum` and `retrieved_on`.
+- **Blocking checks:** for the 5 instances with `data_source = tsp_file` in the committed stage-1 manifest, the committed file's sha256 equals `instances[].sha256`; for the 11 with `tsplib_db_coordinates`, the `coordinate_text_sha256` of the parsed committed file equals `instances[].sha256`; `dimension` and `edge_weight_type` equal the stage-1 manifest. Any mismatch blocks the companion task.
 
 ## File Map
 
@@ -106,7 +113,7 @@ Branch `fix/opt-tours-active-dataset`, its own small plan, review and merge befo
 | `reference_optimum_source` | `"tsplib"` or `null` | both null or both set; `best_solutions` impossible (enum) |
 | `timing_dependent` | bool | true whenever `stop_reason` is `wall_limit`/`other_limit` |
 | `wall_seconds` | float or `null` | informational, never compared |
-| `ub_validated` | bool | true only after the independent validator (hamiltonian) or the existing certificate check (waves, see OQ3) |
+| `ub_validated` | bool | true only after the independent validator (`hamiltonian_cycle`); wave rows stay false with reason `certified_by_producing_run` (owner, 2026-10-18, OQ3) |
 | `source` | object | `results_dir` (repo-relative), `manifest_kind` (`tsp_reference`/`wave_campaign`), `manifest_sha256`, `work_package`, `git_commit` |
 
 No `algorithm_id`, no `evaluation_budget`, no `gap_*` field can exist (extra forbidden; explicit tests). A row is `optimal` only from the solver's status, never because `ub == reference_optimum`.
@@ -137,7 +144,7 @@ No `algorithm_id`, no `evaluation_budget`, no `gap_*` field can exist (extra for
 | `exact_reference_v1` | `exact_reference_v1` | `exact_reference_v1` | no | no |
 | `union_day_v1` | `union_day_v1` | `union_day_v1` | no | no |
 
-`assert_single_pooling_group(rows)` raises when rows from two groups meet; `assert_rankable(rows)` raises for exact and union rows. The existing `protocol.assert_not_pooled` is kept unchanged. `ExecutionProtocol` in core is not extended (OQ4).
+`assert_single_pooling_group(rows)` raises when rows from two groups meet; `assert_rankable(rows)` raises for exact and union rows. The existing `protocol.assert_not_pooled` is kept unchanged. `ExecutionProtocol` in core is not extended (owner, 2026-10-18, OQ4).
 
 ### Where the gap columns go later (not built)
 
@@ -196,16 +203,16 @@ Package D, after Gate C: an analysis module (proposed `academic_benchmark/analys
 **Verify:** `... -m pytest academic_benchmark/tests/test_exact_reference_reader.py -q` → all passed.
 **Accept:** reader never imports `scripts.*`, never opens `tsplib.db`, never writes.
 
-### Task 5: Validate the committed tours (needs the companion task and OQ1)
+### Task 5: Validate the committed tours (needs the merged companion task)
 
 **Files:** extend `reader.py` (`validate_hamiltonian_rows(set, *, dataset_root)`), tests in `test_exact_reference_reader.py`.
 
-- [ ] **Red tests:** for each stage-1 instance, the dataset artifact's sha256 (file bytes, or the canonical coordinate text `"{i} {x!r} {y!r}\n"`, ASCII, 0-based, as recorded in the WP-E7 runner) equals `instances[].sha256`; the validator's recomputed length of each tour equals `ub`; a swapped pair of nodes in a copied `tours.json` is detected; an artifact with one changed coordinate is refused by the sha check before any length is computed.
-- [ ] Rows get `ub_validated = true` only here. If an instance's artifact is absent, the row stays `ub_validated = false` and the test that needs it skips with the reason `requires_tsplib_artifacts` (never a silent pass); the always-on tests use synthetic fixtures.
+- [ ] **Red tests:** for each stage-1 instance, the tracked artifact (`tsplib_data/tsp/<name>.tsp`, or `ft53.atsp`) matches `instances[].sha256` of the stage-1 manifest: the file sha256 for `tsp_file`/`atsp_file` instances, the canonical coordinate text sha256 (`"{i} {x!r} {y!r}\n"`, ASCII, 0-based, as in the WP-E7 runner) for `tsplib_db_coordinates` instances; the reader also checks the artifact against `tsplib_data/tsp/MANIFEST.json`; the validator's recomputed length of each tour equals `ub`; a swapped pair of nodes in a copied `tours.json` is detected; an artifact with one changed coordinate is refused by the sha check before any length is computed.
+- [ ] Rows get `ub_validated = true` only here. The 16 `.tsp` files and `ft53.atsp` are tracked, so a missing artifact is a test failure, never a skip; synthetic fixtures cover the error paths.
 - [ ] Optional cross-check: where the companion `opt_tours/` holds a published tour, its recomputed length equals `reference_optimum`.
 
-**Verify:** `... -m pytest academic_benchmark/tests/test_exact_reference_reader.py -q -rs` → passed; skips listed with reason.
-**Accept:** with tracked artifacts (OQ1 = commit), 17 of 17 tours validated and 0 skips.
+**Verify:** `... -m pytest academic_benchmark/tests/test_exact_reference_reader.py -q -rs` → all passed, 0 skipped.
+**Accept:** 17 of 17 tours validated in CI and locally, 0 skips.
 
 ### Task 6: Protocol registry and no-pooling
 
@@ -233,18 +240,18 @@ Package D, after Gate C: an analysis module (proposed `academic_benchmark/analys
 
 - [ ] Design §9 WP-E8 row: scope as built; "gap columns" replaced by "gap columns: Package D (analysis layer), after Gate C"; WP-E8 status paragraph with test counts.
 - [ ] `exact_reference/__init__.py` docstring.
-- [ ] DECISION_LOG entry with the owner's answers to OQ1-OQ5 (dated).
+- [ ] DECISION_LOG entry recording the owner decisions OQ1-OQ6 of 2026-10-18 (last section of this plan).
 
 **Accept:** no results file, archive file or study profile changed (`git diff 65fb0b00 --stat -- archive docs/paper/results academic_benchmark/studies` empty).
 
 ## WP-E8 Acceptance Gate
 
-1. Rows validated: every row from `results_index.json` loads; all 17 stage-1 tours recomputed by the independent validator equal `ub` (needs OQ1 = commit; otherwise the skips are listed and the gate is reported as partial, not passed).
+1. Rows validated: every row from `results_index.json` loads; all 17 stage-1 tours recomputed by the independent validator from the tracked artifacts equal `ub`, in CI, with 0 skips.
 2. Fixed-budget and native outputs byte-identical: `test_fixed_budget_tables_unchanged.py` green, and `git diff --exit-code 65fb0b00 -- <fixed/native module list>` empty.
 3. No pooling, proven by Task 6 tests; `assert_not_pooled` tests unchanged and green.
 4. Boundary tests (Task 7) green; schema check rc 0.
 5. Archive manifests still verify (159 and 233 entries).
-6. Full suite: `academic_benchmark/tests` = 1275 passed + the new tests, 3 skipped (streamlit only) + any listed `requires_tsplib_artifacts` skips; `uniride_core/tests` exact and boundary tests green; gate batch 150 passed with no JIT skip.
+6. Full suite: `academic_benchmark/tests` = 1275 passed + the new tests, 3 skipped (streamlit only), no other skip; `uniride_core/tests` exact and boundary tests green; gate batch 150 passed with no JIT skip.
 7. Independent review (denetci) ONAY.
 
 ## Risks
@@ -258,7 +265,7 @@ Package D, after Gate C: an analysis module (proposed `academic_benchmark/analys
 | Committed result drift (CRLF, rewrite) | sha256 pins over raw bytes (Task 1, Task 4); `-text` attribute already present |
 | Nondeterminism | reader output sorted; two loads byte-identical; `wall_seconds` carried but never compared; `timing_dependent` rows labelled |
 | Fixed-budget path changes by accident | golden bytes, `git diff --exit-code` over the module list, AST no-import tests |
-| Missing dataset artifacts make validation a silent pass | explicit `ub_validated = false` and named skip; gate reported partial |
+| Missing or altered dataset artifacts make validation a silent pass | artifacts tracked (OQ1); a missing file fails the test; sha256 against the stage-1 manifest and the collection manifest before any length is computed |
 | Scope creep into gaps or CVRP | row model forbids `gap_*`; no `vehicle_routes` validation code beyond OQ3 |
 
 ## Review checklist and mutation targets
@@ -275,13 +282,13 @@ Also check: no change under `uniride_core/`, `optimizer_api/`, `src/`, `archive/
 
 ## Effort
 
-WP-E8: about 2.5 days (Task 1 0.25 d, Task 2 0.5 d, Task 3 0.25 d, Task 4 0.75 d, Task 5 0.25 d, Tasks 6-7 0.25 d, Task 8 and review rounds 0.25 d). Companion task: about 0.5 day (plus the downloads if OQ1/OQ5 choose them). Medium risk (protocol plumbing); no solver time.
+WP-E8: about 2.5 days (Task 1 0.25 d, Task 2 0.5 d, Task 3 0.25 d, Task 4 0.75 d, Task 5 0.25 d, Tasks 6-7 0.25 d, Task 8 and review rounds 0.25 d). Companion task: about 0.75 day (tour copies, the 16 `.tsp` files by local copy, archive copy or read-only reconstruction, two manifests, runner default; no download). Medium risk (protocol plumbing); no solver time.
 
-## Open questions for the owner
+## Owner decisions (resolved 2026-10-18, owner)
 
-1. **OQ1 - instance artifacts for validation.** 11 of the 16 TSP instances exist only as coordinates in `tsplib.db`, and `*.tsp` is git-ignored. Should the companion task commit the 16 `.tsp` files (re-downloaded from TSPLIB95 or exported, sha-matched to the stage-1 manifest) so Task 5 runs in CI, or should Task 5 run only locally where the files exist (gate reported partial)?
-2. **OQ2 - `gap_to_reference` in the committed `reference.csv`.** WP-E7 already wrote `gap_to_reference` (exact UB minus published optimum). Should the WP-E8 reader only check it for consistency and drop it (this plan's default), or carry it in the row as an exact-side quantity distinct from the excluded heuristic gaps?
-3. **OQ3 - wave rows (`vehicle_routes`).** Should WP-E8 re-certify the WP-E3/WP-E4a exact routes through the existing core certificate (`uniride_core/exact/certification.py`), or only verify schema and sha256 and record `ub_validated = false` with reason "certified by the producing run" (this plan's default, keeps WP-E8 off the VRP contract)?
-4. **OQ4 - where the protocol kind is registered.** This plan registers `exact_reference_v1` in an academic-layer registry and leaves `uniride_core.algorithms.capabilities.ExecutionProtocol` (used by preflight and 21 call sites) unchanged, since exact solves are not dispatched through the capability/preflight path. Confirm, or require an `ExecutionProtocol` member (wider change, preflight and evidence tests affected).
-5. **OQ5 - companion task provenance.** For the published tours, copy the 13 files from the Bildiri archive (provenance `archive_copy` with the archive entry sha256), or re-download them from TSPLIB95 (provenance `authority_download`, needs your download permission per file set)?
-6. **OQ6 - study profile link.** Should `bildiri2026/study.json` point at the exact reference for ft53 now (a study-schema change), or wait for Package D (this plan's default: no study change)?
+1. **OQ1 - instance artifacts: commit them.** The 16 TSP verification instances are committed as `.tsp` files (public TSPLIB research data) in `academic_benchmark/tsplib_data/tsp/` with `MANIFEST.json` recording each file's sha256 and source. Source: a local or archived copy where one exists, otherwise a reconstruction from `tsplib.db` coordinates (read-only, `mode=ro&immutable=1`) with recorded provenance. No download. This is part of the companion task (owner step 4). Effect: Task 5 runs in CI and the gate is no longer partial.
+2. **OQ2 - `gap_to_reference`: plan default.** The reader checks the existing exact-vs-published `gap_to_reference` column of `reference.csv` for consistency (`ub - reference_optimum`) and drops it; the row model carries no `gap_*` field.
+3. **OQ3 - wave rows: plan default.** For the WP-E3/WP-E4a wave results WP-E8 checks schema and fingerprints (sha256) only and does not re-certify; their rows keep `ub_validated = false` with reason `certified_by_producing_run`.
+4. **OQ4 - registration: academic layer.** `exact_reference_v1` is registered in `academic_benchmark/protocol_registry.py`; `uniride_core.algorithms.capabilities.ExecutionProtocol` stays unchanged.
+5. **OQ5 - published tours: copy from the archive.** The 13 available `.opt.tour` files are copied (not moved) from the Bildiri archive with `provenance.kind = "archive_copy"` and the archive entry sha256; nothing is downloaded.
+6. **OQ6 - study profile: unlinked.** `academic_benchmark/studies/bildiri2026/study.json` is not linked to the exact reference until Package D.

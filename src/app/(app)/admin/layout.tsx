@@ -10,7 +10,7 @@
  */
 
 import type { ReactNode } from "react";
-import React from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -21,6 +21,14 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const isAdmin = !!user && user.role === "admin";
+
+  // Admin değilse ana sayfaya yönlendir (render sırasında değil, effect içinde)
+  useEffect(() => {
+    if (!isLoading && !isAdmin) {
+      router.replace("/");
+    }
+  }, [isLoading, isAdmin, router]);
 
   // Kimlik doğrulama yüklenirken bekle
   if (isLoading) {
@@ -31,9 +39,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     );
   }
 
-  // Admin değilse ana sayfaya yönlendir
-  if (!user || user.role !== "admin") {
-    router.replace("/");
+  if (!isAdmin) {
     return (
       <div className="flex items-center justify-center min-h-64">
         <div className="text-destructive text-sm">Erişim reddedildi. Yönlendiriliyor...</div>

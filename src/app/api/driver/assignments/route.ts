@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireRole } from "@/lib/admin-auth";
+import { handleApiError, requireRole } from "@/lib/admin-auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
 
         if (error) {
             console.error("Error fetching assignments:", error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json({ error: "Internal server error" }, { status: 500 });
         }
 
         // Transform snake_case to camelCase
@@ -50,7 +50,8 @@ export async function GET(request: Request) {
         return NextResponse.json(assignments);
     } catch (error: unknown) {
         console.error("Driver assignments API error:", error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        // AppError keeps its 401/403/404 status; anything else becomes a fixed 500.
+        return handleApiError(error);
     }
 }
 
@@ -93,7 +94,7 @@ export async function PUT(request: Request) {
 
         if (error) {
             console.error("Error updating assignment:", error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json({ error: "Internal server error" }, { status: 500 });
         }
 
         return NextResponse.json({
@@ -103,6 +104,7 @@ export async function PUT(request: Request) {
         });
     } catch (error: unknown) {
         console.error("Driver assignments API error:", error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        // AppError keeps its 401/403/404 status; anything else becomes a fixed 500.
+        return handleApiError(error);
     }
 }

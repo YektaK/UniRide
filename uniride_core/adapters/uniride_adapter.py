@@ -46,6 +46,16 @@ def _minutes(value: Any) -> Optional[int]:
     return None
 
 
+def _normalize_direction(value: Any) -> str:
+    """Return a plain lowercase direction string for an enum or a string.
+
+    ``str(TripDirection.PICKUP)`` is ``'TripDirection.PICKUP'``, so read
+    ``.value`` first and fall back to the raw value for plain strings.
+    """
+    raw = getattr(value, "value", value)
+    return str(raw).strip().lower()
+
+
 def _student_demand(student: Any) -> List[int]:
     disability = str(_get(student, "disability_type", "So"))
     return [1, 0] if disability.lower() == "sw" else [0, 1]
@@ -131,7 +141,7 @@ def uniride_request_to_problem(
             service_times=[0] * len(labels),
             depot_index=0,
             max_route_duration=float(_get(request, "max_travel_time", 120)),
-            direction=str(_get(request, "direction", "pickup")),
+            direction=_normalize_direction(_get(request, "direction", "pickup")),
             target_time=_minutes(_get(request, "target_time")),
             offset_minutes=int(_get(request, "offset_minutes", 15)),
         ),

@@ -51,6 +51,11 @@ def test_academic_reader_failures_return_fixed_detail(client, monkeypatch, url):
     assert "RuntimeError" not in response.text
 
 
+def _no_path_in_values(payload, needle: str) -> bool:
+    """JSON text escapes Windows backslashes, so compare decoded values, not raw text."""
+    return all(needle not in value for value in payload.values() if isinstance(value, str))
+
+
 def test_download_response_does_not_expose_absolute_server_paths(client, monkeypatch, tmp_path):
     local = tmp_path / "berlin52.tsp"
     local.write_text("x", encoding="utf-8")
@@ -58,13 +63,13 @@ def test_download_response_does_not_expose_absolute_server_paths(client, monkeyp
     monkeypatch.setattr(benchmark, "get_problem_by_name", lambda name: types.SimpleNamespace(file_path=str(local)))
     response = client.post("/api/v1/benchmark/download/berlin52", headers=HEADERS)
     assert response.status_code == 200
-    assert str(tmp_path) not in response.text
+    assert _no_path_in_values(response.json(), str(tmp_path))
 
     monkeypatch.setattr(benchmark, "get_problem_by_name", lambda name: None)
     monkeypatch.setattr(benchmark, "download_tsplib_problem", lambda name: str(local))
     response = client.post("/api/v1/benchmark/download/berlin52", headers=HEADERS)
     assert response.status_code == 200
-    assert str(tmp_path) not in response.text
+    assert _no_path_in_values(response.json(), str(tmp_path))
 
 
 def test_cli_preview_json_error_does_not_echo_parser_text(client, monkeypatch, tmp_path):

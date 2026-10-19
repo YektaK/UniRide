@@ -1,0 +1,25 @@
+{
+  "schema_version": "uniride-dataset/v1",
+  "dataset_id": "tsplib-berlin52",
+  "artifact_path": "academic_benchmark/tsplib_data/tsp/berlin52.tsp",
+  "source": {
+    "authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/berlin52.tsp.gz",
+    "retrieved_on": "2026-10-19"
+  },
+  "checksum": {
+    "algorithm": "sha256",
+    "value": "8496a5838133e3c3eb25a9fa8893b1ac302593fc8dc325350643a0cabd8abadc"
+  },
+  "problem_type": "TSP",
+  "dimension": 52,
+  "matrix_semantics": {
+    "directed": false,
+    "edge_weight_type": "EUC_2D",
+    "diagonal_semantics": "zero"
+  },
+  "best_known": {
+    "status": "optimal",
+    "value": 7542.0,
+    "provenance": "TSPLIB95 published optimum recorded in academic_benchmark/tsplib_data/tsp/MANIFEST.json (published_optimum); published optimal tour academic_benchmark/tsplib_data/opt_tours/berlin52.opt.tour (sha256 8f3915f397dcdbf9f07bd570fc41faa7e9b3d27391537f048164b2f937d1ccc9) listed in academic_benchmark/tsplib_data/opt_tours/MANIFEST.json. Source disclosure: authority_url is derived from the opt_tours/MANIFEST.json URL and was not downloaded; retrieved_on is the tsp/MANIFEST.json copy date (local_copy); the file bytes were not compared with the TSPLIB95 server copy."
+  }
+}

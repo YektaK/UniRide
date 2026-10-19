@@ -356,3 +356,14 @@ def test_dataset_problem_type_must_be_declared_by_the_study(tmp_path):
     root = _tmp_study(tmp_path, mutate)
     with pytest.raises(StudyServiceError, match="problem"):
         _plan(root)
+
+
+@pytest.mark.parametrize("header", [b"NAME:\nTYPE: ATSP\nDIMENSION: 3\n", b"NAME\nTYPE: ATSP\nDIMENSION: 3\n"])
+def test_name_header_without_a_value_is_refused(tmp_path, header):
+    root = _tmp_study(tmp_path)
+    (root / "data" / "tiny.atsp").write_bytes(header)
+    (root / "datasets" / "tiny.json").write_text(
+        json.dumps(_dataset_payload(checksum=hashlib.sha256(header).hexdigest())), encoding="utf-8"
+    )
+    with pytest.raises(StudyServiceError, match="NAME"):
+        _plan(root)

@@ -1,0 +1,25 @@
+{
+  "schema_version": "uniride-dataset/v1",
+  "dataset_id": "tsplib-st70",
+  "artifact_path": "academic_benchmark/tsplib_data/tsp/st70.tsp",
+  "source": {
+    "authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/st70.tsp.gz",
+    "retrieved_on": "2026-10-19"
+  },
+  "checksum": {
+    "algorithm": "sha256",
+    "value": "60c09e8886609bf22d6dc699fe7d7aa1924207d084578aad1a377ec65cf15b1b"
+  },
+  "problem_type": "TSP",
+  "dimension": 70,
+  "matrix_semantics": {
+    "directed": false,
+    "edge_weight_type": "EUC_2D",
+    "diagonal_semantics": "zero"
+  },
+  "best_known": {
+    "status": "optimal",
+    "value": 675.0,
+    "provenance": "TSPLIB95 published optimum recorded in academic_benchmark/tsplib_data/tsp/MANIFEST.json (published_optimum); published optimal tour academic_benchmark/tsplib_data/opt_tours/st70.opt.tour (sha256 a64c8d6db03df9efadad41d80245a269542300a9a5e8138284b23513fa72fe91) listed in academic_benchmark/tsplib_data/opt_tours/MANIFEST.json"
+  }
+}

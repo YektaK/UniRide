@@ -1,0 +1,25 @@
+{
+  "schema_version": "uniride-dataset/v1",
+  "dataset_id": "tsplib-kroa100",
+  "artifact_path": "academic_benchmark/tsplib_data/tsp/kroA100.tsp",
+  "source": {
+    "authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/kroA100.tsp.gz",
+    "retrieved_on": "2026-10-19"
+  },
+  "checksum": {
+    "algorithm": "sha256",
+    "value": "32326e43edca13a967d9812acab73e50e5de2b8599a0dc9b5c1804d47658c943"
+  },
+  "problem_type": "TSP",
+  "dimension": 100,
+  "matrix_semantics": {
+    "directed": false,
+    "edge_weight_type": "EUC_2D",
+    "diagonal_semantics": "zero"
+  },
+  "best_known": {
+    "status": "optimal",
+    "value": 21282.0,
+    "provenance": "TSPLIB95 published optimum recorded in academic_benchmark/tsplib_data/tsp/MANIFEST.json (published_optimum); published optimal tour academic_benchmark/tsplib_data/opt_tours/kroA100.opt.tour (sha256 65499d540c5aa7e90750065a5c6ff82f9774f284facf9d29af0146bce4332dd1) listed in academic_benchmark/tsplib_data/opt_tours/MANIFEST.json"
+  }
+}

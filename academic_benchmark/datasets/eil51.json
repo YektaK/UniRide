@@ -1,0 +1,25 @@
+{
+  "schema_version": "uniride-dataset/v1",
+  "dataset_id": "tsplib-eil51",
+  "artifact_path": "academic_benchmark/tsplib_data/tsp/eil51.tsp",
+  "source": {
+    "authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/eil51.tsp.gz",
+    "retrieved_on": "2026-10-19"
+  },
+  "checksum": {
+    "algorithm": "sha256",
+    "value": "66c05ad077ffd64d5778e358bbd16be049f8c8ae880cbd24f034487331d1ccce"
+  },
+  "problem_type": "TSP",
+  "dimension": 51,
+  "matrix_semantics": {
+    "directed": false,
+    "edge_weight_type": "EUC_2D",
+    "diagonal_semantics": "zero"
+  },
+  "best_known": {
+    "status": "optimal",
+    "value": 426.0,
+    "provenance": "TSPLIB95 published optimum recorded in academic_benchmark/tsplib_data/tsp/MANIFEST.json (published_optimum); published optimal tour academic_benchmark/tsplib_data/opt_tours/eil51.opt.tour (sha256 fb84e8aba84b163b782d60bc5a6d3d402bccf5d5d77355d03b4713044617c8fc) listed in academic_benchmark/tsplib_data/opt_tours/MANIFEST.json"
+  }
+}

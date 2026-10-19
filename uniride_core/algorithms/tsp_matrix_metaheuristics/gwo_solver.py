@@ -20,6 +20,7 @@ from .base_solver import BaseTSPSolver, TSPResult
 from uniride_core.algorithms import numba_accel as _nb
 from uniride_core.algorithms.objective_budget import (
     ObjectiveEvaluationBudget,
+    StageCappedBudget,
     improve_two_opt_budgeted,
     two_opt_evaluation_upper_bound,
 )
@@ -57,6 +58,8 @@ class GWOOptimizer(BaseTSPSolver):
         random_seed: Optional[int] = None,
         polish_enabled: bool = True,
         evaluation_budget: Optional[int] = None,
+        shared_budget: Optional[ObjectiveEvaluationBudget] = None,
+        stage_cap: Optional[int] = None,
     ):
         super().__init__("GWO", random_seed)
         self.pack_size = pack_size
@@ -71,8 +74,26 @@ class GWOOptimizer(BaseTSPSolver):
         self.polish_enabled = polish_enabled
         self._polish_executed = {"initial": 0, "periodic": 0, "final": 0}
         self._polish_evaluations = {"initial": 0, "periodic": 0, "final": 0}
-        self._fair_mode = evaluation_budget is not None
-        self._objective_budget = ObjectiveEvaluationBudget(evaluation_budget)
+        if shared_budget is None and stage_cap is not None:
+            raise ValueError("stage_cap requires an injected shared_budget")
+        if shared_budget is not None and evaluation_budget is not None:
+            raise ValueError(
+                "pass either evaluation_budget (own counter) or shared_budget "
+                "(injected counter), not both"
+            )
+        # Injected counter (C-05): the solver spends on a stage-capped view of
+        # a counter owned by the caller and never resets it. Without injection
+        # the solver owns its counter and solve() resets it, as before.
+        self._injected_budget = shared_budget is not None
+        self._fair_mode = evaluation_budget is not None or self._injected_budget
+        if self._injected_budget:
+            self._objective_budget = StageCappedBudget(shared_budget, stage_cap)
+            if self._objective_budget.limit is None:
+                raise ValueError(
+                    "an injected counter needs a stage cap or a total limit"
+                )
+        else:
+            self._objective_budget = ObjectiveEvaluationBudget(evaluation_budget)
 
     # ----- Swap-sequence movement (discrete GWO velocity) ----------
     def _diff_swaps(self, current: List[int], target: List[int]) -> List[Tuple[int, int]]:
@@ -164,7 +185,9 @@ class GWOOptimizer(BaseTSPSolver):
         self._rng = random.Random(self.random_seed)
         self._polish_executed = {"initial": 0, "periodic": 0, "final": 0}
         self._polish_evaluations = {"initial": 0, "periodic": 0, "final": 0}
-        self._objective_budget.used = 0
+        if not self._injected_budget:
+            self._objective_budget.used = 0
+        start_used = self._objective_budget.used
         self._set_problem(coordinates)
         t0 = time.perf_counter()
 
@@ -320,8 +343,12 @@ class GWOOptimizer(BaseTSPSolver):
                 "polish_interval": self.polish_interval,
             },
             extra_stats={
-                "objective_evaluations": self._objective_budget.used,
-                "evaluation_budget": self._objective_budget.limit,
+                "objective_evaluations": self._objective_budget.used - start_used,
+                "evaluation_budget": (
+                    self._objective_budget.limit
+                    if self._objective_budget.limit is None
+                    else self._objective_budget.limit - start_used
+                ),
                 "budget_terminated": budget_terminated,
                 "variant": "memetic_2opt" if self.polish_enabled else "pure",
                 "polish_executed": dict(self._polish_executed),
@@ -331,6 +358,14 @@ class GWOOptimizer(BaseTSPSolver):
                     dict(self._polish_evaluations) if self._fair_mode else None
                 ),
                 "execution_backend": self._backend_observation.label(),
+                **(
+                    {
+                        "shared_counter_used": self._objective_budget.used,
+                        "stage_cap": self._objective_budget.stage_cap,
+                    }
+                    if self._injected_budget
+                    else {}
+                ),
             },
             history=history,
             seed=self.random_seed,

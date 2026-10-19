@@ -353,3 +353,122 @@ def test_tsp_reference_validator_does_not_mutate_and_other_validators_are_unchan
     p.validate_tsp_reference_manifest(m)
     assert json.dumps(m, sort_keys=True) == before
     assert p.validate_manifest(_manifest()) == []
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# WP-E11 J7: the exact_day_joint_v1 protocol (joint day model, design docs/designs/JOINT_DAY_MODEL_DESIGN.md 4.3, 6.1).
+# Its own protocol id and manifest; exact_reference_v1 and union_day_v1 schemas stay as they are.
+# ---------------------------------------------------------------------------------------------------------------
+_SHA_A, _SHA_B = "a" * 64, "b" * 64
+
+
+def _joint_manifest():
+    return {
+        "protocol": "exact_day_joint_v1", "schema_version": 1, "work_package": "WP-E11",
+        "git_commit": "0123abc", "dirty_working_tree": False,
+        "python_provenance": {"executable": "venv python", "pythonpath_first": "worktree"},
+        "python_version": "3.13.0", "host_os": "Windows 11",
+        "source_manifests": {"4sw5so": {"path": "docs/paper/results/week/manifest.json", "manifest_sha256": _SHA_A}},
+        "solvers": {
+            "highs": {"name": "highs", "version": "1.7.2", "options": {"threads": 1}, "threads": 1, "seed": 0,
+                      "time_limit_seconds": 600, "work_limit": None},
+            "gurobi": {"name": "gurobi", "version": "12.0", "options": "tech:threads=1 lim:time=600", "threads": 1, "seed": 0,
+                       "time_limit_seconds": 600, "work_limit": 200},
+        },
+        "enumeration": {"column_cap": 100000, "label_cap": 2000000, "columns_per_day": {"2026-10-05_R60": 45302}},
+        "mps_sha256": {"single_4sw5so|2026-10-05|R60|stage1": _SHA_A},
+        "output_sha256": {"day_joint.csv": _SHA_B},
+        "run_history": {"invocations": [{"serial": True, "wall_seconds": 12.5}], "cells_planned": 1, "cells_solved": 1},
+        "claim": _proto().DAY_JOINT_CLAIM, "blocking_errors": [], "total_wall_seconds": 12.5,
+    }
+
+
+def test_day_joint_protocol_identity_and_vocabulary():
+    p = _proto()
+    assert p.DAY_JOINT_PROTOCOL_ID == "exact_day_joint_v1"
+    assert p.DAY_JOINT_MANIFEST_FILENAME == "day_joint_manifest.json"
+    assert len({p.PROTOCOL_ID, p.UNION_DAY_PROTOCOL_ID, p.DAY_JOINT_PROTOCOL_ID}) == 3
+    assert set(p.DAY_JOINT_DAY_STATUSES) == {
+        "optimal", "optimal_stage1_by_bound", "feasible_with_gap", "bound_only", "infeasible_certified",
+        "infeasible_solver_proven", "not_run_enumeration_cap", "rejected", "input_rejected", "backend_unavailable"}
+    assert all(isinstance(v, str) and v for v in p.DAY_JOINT_DAY_STATUSES.values())
+    # stage rows carry the stop reasons of exact design section 4 with the same meanings
+    assert p.DAY_JOINT_STOP_REASONS == p.STOP_REASONS
+    assert p.DAY_JOINT_TIMING_STOP_REASONS == p.TIMING_STOP_REASONS == ("wall_limit", "other_limit")
+
+
+def test_valid_day_joint_manifest_passes_and_is_not_mutated():
+    p = _proto()
+    m = _joint_manifest()
+    before = json.dumps(m, sort_keys=True)
+    assert p.validate_day_joint_manifest(m) == []
+    assert json.dumps(m, sort_keys=True) == before
+
+
+@pytest.mark.parametrize("mutate,needle", [
+    (lambda m: m["source_manifests"]["4sw5so"].update(path="C:\\Users\\someone\\Desktop\\manifest.json"), "absolute path"),
+    (lambda m: m["source_manifests"]["4sw5so"].update(path="/Users/someone/manifest.json"), "absolute path"),
+    (lambda m: m["python_provenance"].update(executable="/home/someone/venv/bin/python"), "absolute path"),
+    (lambda m: m["solvers"]["highs"].update(version="owner@example.com"), "e-mail"),
+    (lambda m: m["solvers"]["gurobi"].update(options="license file XYZ-123"), "license"),
+    (lambda m: m["solvers"]["gurobi"].update(options="Licence expires 2027-10"), "license"),
+])
+def test_day_joint_manifest_refuses_private_data(mutate, needle):
+    m = _joint_manifest()
+    mutate(m)
+    assert any(needle in e for e in _proto().validate_day_joint_manifest(m)), needle
+
+
+def test_day_joint_manifest_refuses_a_missing_or_empty_run_history():
+    p = _proto()
+    m = _joint_manifest()
+    del m["run_history"]
+    assert any("run_history" in e for e in p.validate_day_joint_manifest(m))
+    m = _joint_manifest()
+    m["run_history"] = {}
+    assert any("run_history" in e for e in p.validate_day_joint_manifest(m))
+    m = _joint_manifest()
+    m["run_history"] = "serial"
+    assert any("run_history" in e for e in p.validate_day_joint_manifest(m))
+
+
+@pytest.mark.parametrize("key", ["protocol", "schema_version", "work_package", "git_commit", "dirty_working_tree", "python_provenance", "python_version", "host_os", "source_manifests", "solvers", "enumeration", "mps_sha256", "output_sha256", "run_history", "claim", "blocking_errors", "total_wall_seconds"])
+def test_day_joint_manifest_requires_every_key(key):
+    m = _joint_manifest()
+    del m[key]
+    assert any(key in e for e in _proto().validate_day_joint_manifest(m))
+
+
+@pytest.mark.parametrize("mutate,needle", [
+    (lambda m: m.update(protocol="exact_reference_v1"), "protocol must be"),
+    (lambda m: m.update(protocol="union_day_v1"), "protocol must be"),
+    (lambda m: m.update(schema_version=2), "schema_version"),
+    (lambda m: m.update(git_commit="HEAD"), "git_commit"),
+    (lambda m: m.update(dirty_working_tree="no"), "dirty_working_tree"),
+    (lambda m: m.update(claim="Joint day model beats the union menu."), "claim"),
+    (lambda m: m.update(source_manifests={}), "source_manifests"),
+    (lambda m: m["source_manifests"]["4sw5so"].update(manifest_sha256="abc"), "manifest_sha256"),
+    (lambda m: m["solvers"]["highs"].update(threads=4), "threads"),
+    (lambda m: m["solvers"]["highs"].update(time_limit_seconds=60), "time_limit_seconds"),
+    (lambda m: m["solvers"]["highs"].pop("seed"), "seed"),
+    (lambda m: m["solvers"].pop("highs"), "solvers.highs"),
+    (lambda m: m["enumeration"].update(column_cap=5), "column_cap"),
+    (lambda m: m["enumeration"].pop("columns_per_day"), "columns_per_day"),
+    (lambda m: m["mps_sha256"].update(x="nothex"), "mps_sha256"),
+    (lambda m: m["output_sha256"].update(x="nothex"), "output_sha256"),
+])
+def test_day_joint_manifest_rejects_invalid_content(mutate, needle):
+    m = _joint_manifest()
+    mutate(m)
+    assert any(needle in e for e in _proto().validate_day_joint_manifest(m)), needle
+
+
+def test_other_validators_do_not_accept_a_joint_manifest_and_stay_unchanged():
+    p = _proto()
+    assert p.validate_manifest(_manifest()) == []
+    assert p.validate_union_day_manifest(_union_manifest()) == []
+    assert p.validate_day_joint_manifest(_manifest()) != []
+    assert p.validate_day_joint_manifest(_union_manifest()) != []
+    assert any("protocol" in e for e in p.validate_union_day_manifest({**_union_manifest(), "protocol": "exact_day_joint_v1"}))
+    with pytest.raises(ValueError):
+        p.assert_not_pooled([{"protocol": "exact_day_joint_v1"}])

@@ -1,0 +1,260 @@
+{
+  "$defs": {
+    "ExactReferenceSourceV1": {
+      "additionalProperties": false,
+      "description": "Where the row came from: a committed results directory and the sha256 of its manifest.",
+      "properties": {
+        "git_commit": {
+          "pattern": "^[0-9a-f]{7,40}$",
+          "title": "Git Commit",
+          "type": "string"
+        },
+        "manifest_kind": {
+          "enum": [
+            "tsp_reference",
+            "wave_campaign"
+          ],
+          "title": "Manifest Kind",
+          "type": "string"
+        },
+        "manifest_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Manifest Sha256",
+          "type": "string"
+        },
+        "results_dir": {
+          "format": "uniride-repository-relative-path",
+          "title": "Results Dir",
+          "type": "string"
+        },
+        "work_package": {
+          "minLength": 1,
+          "title": "Work Package",
+          "type": "string"
+        }
+      },
+      "required": [
+        "results_dir",
+        "manifest_kind",
+        "manifest_sha256",
+        "work_package",
+        "git_commit"
+      ],
+      "title": "ExactReferenceSourceV1",
+      "type": "object"
+    }
+  },
+  "$id": "uniride-exact-reference-row/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "instance_id": {
+      "minLength": 1,
+      "title": "Instance Id",
+      "type": "string"
+    },
+    "lb": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Lb"
+    },
+    "option_string": {
+      "minLength": 1,
+      "title": "Option String",
+      "type": "string"
+    },
+    "problem_contract": {
+      "enum": [
+        "TSP",
+        "ATSP",
+        "uniride_wave"
+      ],
+      "title": "Problem Contract",
+      "type": "string"
+    },
+    "protocol": {
+      "const": "exact_reference_v1",
+      "title": "Protocol",
+      "type": "string"
+    },
+    "reference_optimum": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reference Optimum"
+    },
+    "reference_optimum_source": {
+      "anyOf": [
+        {
+          "const": "tsplib",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reference Optimum Source"
+    },
+    "row_schema_version": {
+      "const": "uniride-exact-reference-row/v1",
+      "title": "Row Schema Version",
+      "type": "string"
+    },
+    "solution_kind": {
+      "enum": [
+        "hamiltonian_cycle",
+        "vehicle_routes"
+      ],
+      "title": "Solution Kind",
+      "type": "string"
+    },
+    "solver_name": {
+      "minLength": 1,
+      "title": "Solver Name",
+      "type": "string"
+    },
+    "solver_role": {
+      "enum": [
+        "primary",
+        "verification"
+      ],
+      "title": "Solver Role",
+      "type": "string"
+    },
+    "solver_version": {
+      "minLength": 1,
+      "title": "Solver Version",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/ExactReferenceSourceV1"
+    },
+    "stage": {
+      "anyOf": [
+        {
+          "enum": [
+            "stage1",
+            "stage2",
+            "free"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Stage"
+    },
+    "status": {
+      "enum": [
+        "optimal",
+        "feasible_with_gap",
+        "bound_only",
+        "infeasible_proven",
+        "rejected",
+        "backend_unavailable",
+        "input_rejected",
+        "timing_dependent_abort",
+        "skipped_no_stage1_incumbent"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "stop_reason": {
+      "anyOf": [
+        {
+          "enum": [
+            "optimal",
+            "work_limit",
+            "wall_limit",
+            "infeasible",
+            "gap_tolerance",
+            "solver_failure",
+            "other_limit"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Stop Reason"
+    },
+    "timing_dependent": {
+      "title": "Timing Dependent",
+      "type": "boolean"
+    },
+    "ub": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Ub"
+    },
+    "ub_validated": {
+      "title": "Ub Validated",
+      "type": "boolean"
+    },
+    "ub_validation_basis": {
+      "enum": [
+        "independent_hamiltonian_validator",
+        "certified_by_producing_run",
+        "not_validated"
+      ],
+      "title": "Ub Validation Basis",
+      "type": "string"
+    },
+    "wall_seconds": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Wall Seconds"
+    }
+  },
+  "required": [
+    "row_schema_version",
+    "protocol",
+    "solution_kind",
+    "problem_contract",
+    "instance_id",
+    "solver_role",
+    "solver_name",
+    "solver_version",
+    "option_string",
+    "status",
+    "timing_dependent",
+    "ub_validated",
+    "ub_validation_basis",
+    "source"
+  ],
+  "title": "ExactReferenceRowV1",
+  "type": "object"
+}

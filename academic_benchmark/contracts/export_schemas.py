@@ -4,6 +4,8 @@ import argparse
 import json
 from pathlib import Path
 
+from academic_benchmark.exact_reference.rows import ExactReferenceRowV1
+
 from .dataset import DatasetManifestV1
 from .run import RunManifestV1
 from .study import StudyManifestV1
@@ -14,6 +16,7 @@ MODELS = {
     "study-v1.schema.json": StudyManifestV1,
     "dataset-v1.schema.json": DatasetManifestV1,
     "run-v1.schema.json": RunManifestV1,
+    "exact-reference-row-v1.schema.json": ExactReferenceRowV1,
 }
 
 

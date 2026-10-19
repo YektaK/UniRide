@@ -57,7 +57,8 @@ def _normalize_direction(value: Any) -> str:
 
 
 def _student_demand(student: Any) -> List[int]:
-    disability = str(_get(student, "disability_type", "So"))
+    raw = _get(student, "disability_type", "So")
+    disability = str(getattr(raw, "value", raw))
     return [1, 0] if disability.lower() == "sw" else [0, 1]
 
 

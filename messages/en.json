@@ -724,32 +724,6 @@
         "consistency": "Consistency",
         "coverage": "Coverage"
       },
-      "advisor": {
-        "title": "AI Advisor",
-        "description": "Get AI-powered algorithm recommendations based on your selections.",
-        "connecting": "Connecting...",
-        "apiActive": "API Active",
-        "apiOffline": "API Offline",
-        "aiTitle": "AI Algorithm Advisor",
-        "aiSubtitle": "Personalized recommendations for your selections",
-        "goals": {
-          "quality": "Quality",
-          "balanced": "Balanced",
-          "speed": "Speed"
-        },
-        "analyzing": "AI is analyzing...",
-        "selectGoal": "Select your goal and run the advisor again",
-        "analyzingBtn": "Analyzing...",
-        "getAdvice": "Get Advice ({n} algo)",
-        "buttonLabel": "AI Advisor",
-        "connectionError": "The advisor could not be reached. Please try again.",
-        "emptyState": "Choose a goal to receive a recommendation.",
-        "goalBalanced": "Balanced",
-        "goalQuality": "Best quality",
-        "goalSpeed": "Fastest",
-        "tooltip": "Get a recommendation for your current selection.",
-        "unavailable": "The AI advisor is currently unavailable."
-      },
       "hero": {
         "title": "Compare routing algorithms on TSPLIB standard datasets.",
         "subtitle": "Run systematic benchmarks to measure quality and performance.",

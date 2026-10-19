@@ -68,22 +68,17 @@ import {
   Grid3X3,
   Crosshair,
   ChevronUp,
-  X,
   Sun,
   Moon,
-  Bot,
   Info,
   BarChart2,
   PieChart as PieChartIcon,
   ArrowUpRight,
   Lightbulb,
   ChevronDown,
-  Send,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ALGORITHM_OPTIONS_GROUPED,
   ALGORITHM_DISPLAY_NAMES,
@@ -507,12 +502,6 @@ function BenchmarkSuite() {
   // Dark mode
   const [isDark, setIsDark] = useState(false);
 
-  // AI Advisor
-  const [showAdvisor, setShowAdvisor] = useState(false);
-  const [advisorLoading, setAdvisorLoading] = useState(false);
-  const [advisorAdvice, setAdvisorAdvice] = useState<string | null>(null);
-  const [advisorGoal, setAdvisorGoal] = useState<string>("balanced");
-
   // Algorithm Info Dialog
   const [selectedAlgoInfo, setSelectedAlgoInfo] = useState<string | null>(null);
 
@@ -535,39 +524,6 @@ function BenchmarkSuite() {
       return next;
     });
   }, []);
-
-  // AI Advisor handler
-  const handleGetAdvice = useCallback(async () => {
-    if (selectedProblems.size === 0 || selectedAlgorithms.size === 0) {
-      toast({ title: tc('warning'), description: t('toast.selectWarningDesc'), variant: "destructive" });
-      return;
-    }
-    setAdvisorLoading(true);
-    setAdvisorAdvice(null);
-    setShowAdvisor(true);
-    try {
-      const problemsArr = problems.filter((p) => selectedProblems.has(p.name));
-      const res = await fetch("/api/ai-advisor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          problems: problemsArr,
-          selectedAlgorithms: Array.from(selectedAlgorithms),
-          goal: advisorGoal,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setAdvisorAdvice(data.advice);
-      } else {
-        setAdvisorAdvice(t('advisor.unavailable'));
-      }
-    } catch {
-      setAdvisorAdvice(t('advisor.connectionError'));
-    } finally {
-      setAdvisorLoading(false);
-    }
-  }, [selectedProblems, selectedAlgorithms, problems, advisorGoal, toast]);
 
   // ---- Check API availability ----
   useEffect(() => {
@@ -1119,27 +1075,6 @@ function BenchmarkSuite() {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* AI Advisor Button */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleGetAdvice}
-                      disabled={selectedProblems.size === 0 || selectedAlgorithms.size === 0}
-                      className="h-7 px-2.5 text-[11px] gap-1.5 transition-all duration-300 hover:bg-teal-500/10 hover:text-teal-600"
-                    >
-                      <Bot className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">{t('advisor.buttonLabel')}</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p className="text-xs">{t('advisor.tooltip')}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
               {isDemoMode && (
                 <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-500/30 text-[10px] px-2 transition-all duration-300 hover:bg-amber-500/20">
                   <FlaskConical className="h-3 w-3 mr-1" />
@@ -1170,86 +1105,6 @@ function BenchmarkSuite() {
           </div>
         </div>
       </header>
-
-      {/* ============ AI ADVISOR PANEL ============ */}
-      {showAdvisor && (
-        <div className="fixed right-4 top-16 z-50 w-[380px] max-w-[calc(100vw-2rem)] animate-slide-in-right">
-          <Card className="shadow-xl border-l-4 border-l-teal-500 bg-background/95 backdrop-blur-md">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center animate-pulse-glow">
-                    <Bot className="h-3.5 w-3.5 text-white" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-xs">{t('advisor.title')}</CardTitle>
-                    <CardDescription className="text-[9px]">{t('advisor.description')}</CardDescription>
-                  </div>
-                </div>
-                <button onClick={() => setShowAdvisor(false)} className="h-6 w-6 rounded-md hover:bg-muted flex items-center justify-center transition-colors">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {/* Goal Selector */}
-              <div className="flex gap-1.5">
-                {[
-                  { key: "quality", label: t('advisor.goalQuality'), icon: Trophy, color: "data-[state=active]:bg-emerald-500/10 data-[state=active]:text-emerald-700" },
-                  { key: "balanced", label: t('advisor.goalBalanced'), icon: Gauge, color: "data-[state=active]:bg-teal-500/10 data-[state=active]:text-teal-700" },
-                  { key: "speed", label: t('advisor.goalSpeed'), icon: Zap, color: "data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-700" },
-                ].map((g) => (
-                  <button
-                    key={g.key}
-                    onClick={() => setAdvisorGoal(g.key)}
-                    className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-[10px] font-medium border transition-all duration-200 ${
-                      advisorGoal === g.key
-                        ? g.color + " border-current/30"
-                        : "border-transparent hover:bg-muted/50"
-                    }`}
-                  >
-                    <g.icon className="h-3 w-3" />
-                    {g.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Advice Display */}
-              {advisorLoading ? (
-                <div className="flex items-center gap-2 py-6 justify-center">
-                  <Loader2 className="h-4 w-4 animate-spin text-teal-500" />
-                  <span className="text-xs text-muted-foreground">{t('advisor.analyzing')}</span>
-                </div>
-              ) : advisorAdvice ? (
-                <ScrollArea className="max-h-[300px]">
-                  <div className="text-xs leading-relaxed whitespace-pre-wrap text-muted-foreground prose prose-xs prose-teal dark:prose-invert max-w-none">
-                    {advisorAdvice}
-                  </div>
-                </ScrollArea>
-              ) : (
-                <div className="text-center py-4">
-                  <Lightbulb className="h-6 w-6 mx-auto text-amber-500 mb-2" />
-                  <p className="text-[11px] text-muted-foreground">{t('advisor.emptyState')}</p>
-                </div>
-              )}
-
-              {/* Action Button */}
-              <Button
-                size="sm"
-                onClick={handleGetAdvice}
-                disabled={advisorLoading || selectedProblems.size === 0 || selectedAlgorithms.size === 0}
-                className="w-full h-8 text-[11px] bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white shadow-md transition-all duration-300 hover:shadow-lg"
-              >
-                {advisorLoading ? (
-                  <><Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> {t('advisor.analyzing')}</>
-                ) : (
-                  <><Send className="mr-1.5 h-3 w-3" /> {t('advisor.getAdvice', { count: selectedAlgorithms.size })}</>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* ============ HERO SECTION ============ */}
       {showHero && (
@@ -2702,9 +2557,6 @@ function BenchmarkSuite() {
               </span>
               <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/60 text-[10px] text-muted-foreground transition-colors duration-200 hover:text-emerald-600 cursor-default">
                 <MonitorSmartphone className="h-3 w-3" /> Responsive
-              </span>
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/60 text-[10px] text-muted-foreground transition-colors duration-200 hover:text-purple-600 cursor-default">
-                <Bot className="h-3 w-3" /> {t('advisor.buttonLabel')}
               </span>
             </div>
             <div className="flex items-center gap-3 text-[10px] text-muted-foreground">

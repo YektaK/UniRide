@@ -131,6 +131,23 @@ def test_import_violation_helper_resolves_relative_imports_from_package_inits():
     ) == [1]
 
 
+def test_import_violation_helper_catches_dynamic_import_strings():
+    source = "\n".join(
+        (
+            "import importlib",
+            "importlib.import_module('academic_benchmark.yaem2026.solver')",
+            "importlib.import_module('archive.academic_benchmark.yaem2026_legacy.core')",
+            "__import__('yaem2026')",
+            "importlib.import_module('academic_benchmark.yaem2026_safe')",
+            "importlib.import_module(name)",
+        )
+    )
+
+    assert _import_violations(
+        REPO / "academic_benchmark" / "boundary_probe.py", source
+    ) == [2, 3, 4]
+
+
 def test_import_violation_helper_respects_component_boundaries():
     source = "\n".join(
         (

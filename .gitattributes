@@ -12,3 +12,5 @@ academic_benchmark/tsplib_data/tsp/*.tsp -text
 academic_benchmark/tsplib_data/tsp/MANIFEST.json text eol=lf
 academic_benchmark/tsplib_data/opt_tours/*.opt.tour -text
 academic_benchmark/tsplib_data/opt_tours/MANIFEST.json text eol=lf
+academic_benchmark/tests/fixtures/fixed_budget_tables_golden_v1.json -text
+academic_benchmark/exact_reference/results_index.json text eol=lf

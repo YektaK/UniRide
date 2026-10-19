@@ -66,7 +66,24 @@ def coordinate_text_sha256(coords) -> str:
     return hashlib.sha256(canonical).hexdigest()
 
 
+def _confined(base: Path, relative, what: str, anchor: Path | None = None) -> Path:
+    """``(anchor or base) / relative`` after resolution, which must stay inside ``base``: an absolute ``relative``, a ``..``
+    escape or a link leading outside is refused (a manifest names files of its own folder or of the dataset root, nothing
+    else)."""
+    text = str(relative)
+    if not text or Path(text).is_absolute() or Path(text).drive:
+        raise InputRefused(f"{what} {text!r} must be a relative path inside {base.name}/")
+    root = base.resolve()
+    target = ((anchor if anchor is not None else root) / text).resolve()
+    if target != root and root not in target.parents:
+        raise InputRefused(f"{what} {text!r} leaves its folder ({base.name}/); a manifest names only files below it")
+    return target
+
+
 def _load_manifest(manifest_path: Path, schema: str) -> dict:
+    message = archive_refusal(manifest_path)
+    if message:
+        raise InputRefused(message)
     if not manifest_path.is_file():
         raise InputRefused(f"manifest not found: {manifest_path.name} (collection folder {manifest_path.parent.name})")
     doc = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -84,6 +101,11 @@ def _entry(doc: dict, name: str):
 
 
 def _verified_bytes(path: Path, entry: dict, what: str) -> bytes:
+    """Bytes of a manifest-listed file after two checks: the resolved path is not in the archive directory, and the sha256
+    equals the manifest's. Every library reader of this module reads through here."""
+    message = archive_refusal(path.resolve())
+    if message:
+        raise InputRefused(f"{entry['name']}: {message}")
     if not path.is_file():
         raise InputRefused(f"{entry['name']}: {what} {path.name} is missing")
     data = path.read_bytes()
@@ -106,7 +128,8 @@ def read_tsp_file(name: str, tsp_dir=TSP_DIR):
     entry = _entry(_load_manifest(tsp_dir / MANIFEST_NAME, TSP_SCHEMA), name)
     if entry is None:
         return None
-    return _verified_bytes(tsp_dir / entry["file_name"], entry, "instance file").decode("utf-8"), entry
+    path = _confined(tsp_dir, entry["file_name"], f"{entry['name']}: file_name")
+    return _verified_bytes(path, entry, "instance file").decode("utf-8"), entry
 
 
 # ---------------------------------------------------------------- ATSP (ft53)
@@ -114,13 +137,13 @@ def atsp_entries(manifest_path=ATSP_MANIFEST) -> list:
     return list(_load_manifest(Path(manifest_path), ATSP_SCHEMA)["instances"])
 
 
-def read_atsp_file(name: str, manifest_path=ATSP_MANIFEST):
+def read_atsp_file(name: str, manifest_path=ATSP_MANIFEST, dataset_root=TSPLIB_DATA_DIR, repo_root=REPO_ROOT):
     """(file text, manifest entry) of an ATSP instance listed in the ATSP collection manifest (sha256 verified), or
-    None. ``artifact_path`` of the entry is relative to the repository root."""
+    None. ``artifact_path`` of the entry is relative to ``repo_root`` and must stay inside ``dataset_root``."""
     entry = _entry(_load_manifest(Path(manifest_path), ATSP_SCHEMA), name)
     if entry is None:
         return None
-    path = REPO_ROOT / entry["artifact_path"]
+    path = _confined(Path(dataset_root), entry["artifact_path"], f"{entry['name']}: artifact_path", anchor=Path(repo_root))
     return _verified_bytes(path, entry, "instance file").decode("utf-8"), entry
 
 
@@ -147,5 +170,6 @@ def read_collection_tour(name: str, tour_dir=OPT_TOUR_DIR):
     entry = _entry(_load_manifest(tour_dir / MANIFEST_NAME, TOUR_SCHEMA), name)
     if entry is None or entry.get("source") == "none":
         return None
-    text = _verified_bytes(tour_dir / entry["file_name"], entry, "tour file").decode("utf-8")
+    path = _confined(tour_dir, entry["file_name"], f"{entry['name']}: file_name")
+    text = _verified_bytes(path, entry, "tour file").decode("utf-8")
     return parse_tour_text(text), "opt_tour_file"

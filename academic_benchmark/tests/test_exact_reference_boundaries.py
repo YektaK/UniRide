@@ -1,0 +1,153 @@
+"""WP-E8 Task 7: import, archive-path, schema and study-profile boundaries of the exact reference protocol.
+
+* production code (``optimizer_api``, ``uniride_core``) imports none of the new academic modules, and the frontend ``src``
+  references none of the new exact artifacts (unification design: production never depends on academic artifacts);
+* the new modules hold no archive path string and no legacy Bildiri path, and the reader refuses archive paths at run time;
+* the Bildiri study profile and the three pre-existing schemas are byte-identical to the WP-E8 base commit (pinned sha256 over
+  LF-normalised bytes: a Windows checkout with core.autocrlf holds CRLF);
+* the two archive manifests still verify (YAEM 159 entries, Bildiri 233), with the existing ``archive_manifest verify`` command.
+
+Archive-like path pieces are built from components; the legacy paths are never spelled out as one literal.
+"""
+from __future__ import annotations
+
+import ast
+import hashlib
+import re
+from pathlib import Path
+
+import pytest
+
+from academic_benchmark import archive_manifest
+from academic_benchmark.exact_reference.reader import ExactReferenceRefused, load_exact_reference
+
+REPO = Path(__file__).resolve().parents[2]
+PKG = REPO / "academic_benchmark"
+ARCHIVE = "arch" + "ive"
+NEW_ACADEMIC_MODULES = ("academic_benchmark.exact_reference", "academic_benchmark.validation", "academic_benchmark.protocol_registry")
+NEW_MODULE_FILES = (
+    [PKG / "protocol_registry.py", PKG / "validation" / "__init__.py", PKG / "validation" / "hamiltonian_cycle.py"]
+    + sorted((PKG / "exact_reference").glob("*.py")))
+LEGACY_LITERAL = "academic_benchmark" + "/" + "bildiri2026"
+EXACT_ARTIFACT_MARKERS = ("exact_reference", "tsplib-exact-reference", "week-2026-10-05-exact")
+# src files that already named other result folders before WP-E8 (the fleet-scenario feature); any new file fails the test
+KNOWN_SRC_RESULT_REFERENCES = {
+    "src/services/fleet-rerun-preflight.test.ts", "src/services/fleet-rerun-run.test.ts",
+    "src/services/fleet-scenario-archive.test.ts", "src/services/fleet-scenario-archive.ts",
+}
+
+PINNED_LF_SHA256 = {  # at the WP-E8 base commit
+    "academic_benchmark/studies/bildiri2026/study.json": "d4d098a8503053f1bb6ff112d0c3908aac1a46639f1e28cd3de8d4f793a0f068",
+    "academic_benchmark/schemas/study-v1.schema.json": "193a2e38e033fd8d7b54c791e69b412aa8803b557bc0deaca39d0c8e01a650a8",
+    "academic_benchmark/schemas/dataset-v1.schema.json": "6584167fee1ed3d18008fa3a6aea17ce6a31f2970bcab990ec8c0ff800178da1",
+    "academic_benchmark/schemas/run-v1.schema.json": "a17b7d8639c06be3b421a2e0cb2664276cb326f9d245e3213f363e18fd466846",
+}
+
+
+def _production_python(root: str):
+    base = REPO / root
+    for path in sorted(base.rglob("*.py")):
+        parts = set(path.parts)
+        if "tests" in parts or "__pycache__" in parts or "node_modules" in parts:
+            continue
+        yield path
+
+
+def _imported_names(path: Path) -> list:
+    names = []
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"), filename=str(path))):
+        if isinstance(node, ast.Import):
+            names.extend(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            names.append(module)
+            names.extend(f"{module}.{alias.name}" for alias in node.names)
+    return names
+
+
+@pytest.mark.parametrize("root", ["optimizer_api", "uniride_core"])
+def test_production_python_imports_none_of_the_new_academic_modules(root):
+    files = list(_production_python(root))
+    assert len(files) > 20, f"{root}: the scan found {len(files)} files"
+    offenders = [f"{p.relative_to(REPO).as_posix()} imports {name}" for p in files for name in _imported_names(p)
+                 if any(name == m or name.startswith(m + ".") for m in NEW_ACADEMIC_MODULES)]
+    assert offenders == []
+
+
+def test_production_python_names_no_result_folder_in_a_string():
+    """No string constant of production code (comments are not strings) names a ``docs/paper/results`` path."""
+    offenders = []
+    for root in ("optimizer_api", "uniride_core"):
+        for path in _production_python(root):
+            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"), filename=str(path))):
+                if isinstance(node, ast.Constant) and isinstance(node.value, str) and "docs/paper/results" in node.value.replace("\\", "/"):
+                    offenders.append(f"{path.relative_to(REPO).as_posix()}:{node.lineno}")
+    assert offenders == [], "production code reads no academic result artifact"
+
+
+def test_frontend_src_references_none_of_the_new_exact_artifacts_and_no_new_result_folder():
+    referencing_results, offenders = set(), []
+    for path in sorted((REPO / "src").rglob("*")):
+        if not path.is_file() or path.suffix not in (".ts", ".tsx", ".js", ".jsx", ".json", ".mjs"):
+            continue
+        if "node_modules" in path.parts:
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        rel = path.relative_to(REPO).as_posix()
+        if "docs/paper/results" in text:
+            referencing_results.add(rel)
+        offenders.extend(f"{rel}: {m}" for m in EXACT_ARTIFACT_MARKERS if m in text)
+    assert offenders == []
+    assert referencing_results <= KNOWN_SRC_RESULT_REFERENCES, sorted(referencing_results - KNOWN_SRC_RESULT_REFERENCES)
+
+
+# ---------------------------------------------------------------- archive paths
+_ARCHIVE_PATH = re.compile(r"archive[/\\]|/\s*[\"']archive[\"']|[\"']archive[\"']\s*/|[\"']archive[\"']\s*,\s*[\"']")
+
+
+@pytest.mark.parametrize("path", NEW_MODULE_FILES, ids=lambda p: p.relative_to(PKG).as_posix())
+def test_new_modules_hold_no_archive_path_segment_and_no_legacy_bildiri_path(path):
+    assert path.is_file(), path
+    text = path.read_text(encoding="utf-8")
+    hits = [(n, line.strip()) for n, line in enumerate(text.splitlines(), 1) if _ARCHIVE_PATH.search(line)]
+    assert hits == []
+    assert LEGACY_LITERAL not in text and "bildiri2026_legacy" not in text and "yaem2026_legacy" not in text
+
+
+def test_the_runner_and_the_inputs_module_hold_no_legacy_bildiri_path_either():
+    for path in (REPO / "scripts" / "run_exact_tsp_reference.py", PKG / "exact_reference" / "inputs.py"):
+        text = path.read_text(encoding="utf-8")
+        assert LEGACY_LITERAL not in text and "bildiri2026_legacy" not in text, path.name
+
+
+def test_the_new_file_list_covers_the_modules_of_this_work_package():
+    names = {p.name for p in NEW_MODULE_FILES}
+    assert {"rows.py", "reader.py", "inputs.py", "protocol.py", "protocol_registry.py", "hamiltonian_cycle.py"} <= names
+
+
+@pytest.mark.parametrize("bad", [f"{ARCHIVE}/x", f"docs/{ARCHIVE}/x", f"docs/{ARCHIVE.upper()}/x"])
+def test_the_reader_refuses_archive_paths_at_run_time(bad):
+    with pytest.raises(ExactReferenceRefused):
+        load_exact_reference(bad, repo_root=REPO)
+
+
+# ---------------------------------------------------------------- unchanged study profile and schemas
+@pytest.mark.parametrize("relative", sorted(PINNED_LF_SHA256))
+def test_study_profile_and_existing_schemas_are_byte_identical_to_the_base(relative):
+    data = (REPO / relative).read_bytes().replace(b"\r\n", b"\n")
+    assert hashlib.sha256(data).hexdigest() == PINNED_LF_SHA256[relative]
+
+
+def test_the_bildiri_study_profile_stays_unlinked_from_the_exact_reference():
+    text = (PKG / "studies" / "bildiri2026" / "study.json").read_text(encoding="utf-8")
+    assert "exact_reference" not in text and "exact-reference" not in text
+    for path in sorted((PKG / "studies").rglob("*.py")):
+        assert not [n for n in _imported_names(path) if "exact_reference" in n or "protocol_registry" in n], path.name
+
+
+# ---------------------------------------------------------------- the archive manifests still verify
+@pytest.mark.parametrize("legacy_dir, count", [("yaem2026_legacy", 159), ("bildiri2026_legacy", 233)])
+def test_archive_manifests_verify(capsys, legacy_dir, count):
+    manifest = "/".join((ARCHIVE, "academic_benchmark", legacy_dir, "manifest.json"))
+    assert archive_manifest.main(["verify", "--repo-root", str(REPO), "--manifest", manifest]) == 0
+    assert f"verified {count} entries" in capsys.readouterr().out

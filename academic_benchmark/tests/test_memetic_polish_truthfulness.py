@@ -127,12 +127,8 @@ def test_bildiri_memetic_entries_have_nonzero_polish():
     payload = json.loads(STUDY_PATH.read_text(encoding="utf-8"))
     for algorithm_id in MEMETIC_IDS:
         params = payload["algorithm_parameters"][algorithm_id]
-        # ft53 (n=53) needs 4 * (1 + 1378) = 5516 evaluations for one initial 2-opt
-        # pass per individual, so initial polish cannot fit the profile's 100/500
-        # budget levels; the polish lives in the final phase, which the fixed-budget
-        # accounting truncates cleanly.
+        assert params["polish_iters"] >= 1
         assert params["final_polish_iters"] >= 1
-        assert params.get("polish_iters", 0) + params["final_polish_iters"] >= 1
 
 
 # ---------------------------------------------------------------------------
@@ -250,3 +246,42 @@ def test_validator_rejects_phase_flag_that_contradicts_polish_evaluations():
     too_many.polish_policy["evaluations"]["final"] = result.objective_evaluations + 1
     with pytest.raises(FairnessValidationError, match="polish"):
         manifest.validate_result(too_many)
+
+
+def _ft53_problem() -> ProblemInstance:
+    from uniride_core.algorithms.tsplib_parser import parse_atsp_text
+
+    path = STUDY_PATH.parents[2] / "tsplib_data" / "ft53.atsp"
+    matrix = parse_atsp_text(path.read_text())["explicit_matrix"]
+    return ProblemInstance(
+        name="ft53", dimension=len(matrix), coordinates=[], problem_type="atsp",
+        dist_matrix=matrix, optimal=6905.0,
+    )
+
+
+def test_bildiri_profile_runs_on_ft53_at_every_budget_level_and_spends_polish():
+    """Owner decision 2026-10-19: the budget levels leave room for initial polish."""
+    payload = json.loads(STUDY_PATH.read_text(encoding="utf-8"))
+    problem = _ft53_problem()
+    assert min(payload["fixed_budget_levels"]) >= 5516  # 4 x (1 + 53*52/2)
+    for budget in payload["fixed_budget_levels"]:
+        for algorithm_id in payload["algorithm_ids"]:
+            params = dict(payload["algorithm_parameters"][algorithm_id])
+            params["fair_comparison"] = {
+                "evaluation_budget": budget, "base_seed": payload["base_seed"],
+            }
+            result = AlgorithmRegistry.get_executor(algorithm_id)(
+                problem, params, seed=1, run_idx=0
+            )
+            label = (algorithm_id, budget)
+            # Pure and memetic variants alike must be able to use the budget.
+            assert result.termination_reason == "evaluation_budget_exhausted", label
+            assert 0.99 * budget <= result.objective_evaluations <= budget, label
+            if "Memetic" in algorithm_id:
+                evaluations = result.polish_policy["evaluations"]
+                assert evaluations["initial"] > 0, label
+                assert result.polish_policy["initial"] is True, label
+                for phase in PHASES:
+                    assert result.polish_policy[phase] is (evaluations[phase] > 0), label
+            else:
+                assert result.polish_policy["enabled"] is False, label

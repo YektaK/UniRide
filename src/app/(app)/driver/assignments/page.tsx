@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,8 +34,16 @@ export default function DriverAssignmentsPage() {
     const { toast } = useToast();
     const [assignments, setAssignments] = useState<AssignmentWithDetails[]>([]);
     const [loading, setLoading] = useState(true);
+    // Latest-request guard (L15): a response that belongs to a previous user
+    // (or an unmounted page) must not overwrite current state.
+    const latestRequestId = useRef(0);
+    const invalidateInFlightRequests = useCallback(() => {
+        latestRequestId.current++;
+    }, []);
 
-    const loadAssignments = async () => {
+    const loadAssignments = useCallback(async () => {
+        const requestId = ++latestRequestId.current;
+        const isStale = () => requestId !== latestRequestId.current;
         try {
             setLoading(true);
             const { data: { session } } = await getSupabaseClient().auth.getSession();
@@ -66,8 +74,10 @@ export default function DriverAssignmentsPage() {
                     new Date(a.pickupTime).getTime() - new Date(b.pickupTime).getTime()
                 );
 
+            if (isStale()) return;
             setAssignments(enrichedAssignments);
         } catch (error: any) {
+            if (isStale()) return;
             console.error("Error loading assignments:", error);
             toast({
                 title: "Yükleme Hatası",
@@ -75,16 +85,18 @@ export default function DriverAssignmentsPage() {
                 variant: "destructive",
             });
         } finally {
-            setLoading(false);
+            if (!isStale()) setLoading(false);
         }
-    };
+    }, [user?.id, toast]);
 
     useEffect(() => {
         if (user?.id) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount initial data load; loading flag flips synchronously. Upstream fix: data-fetching framework.
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- loadAssignments flips the loading flag synchronously before fetching; the stale-response guard in it is what makes this safe.
             loadAssignments();
         }
-    }, [user?.id]);
+        // Invalidate any in-flight request when the user changes or the page unmounts.
+        return invalidateInFlightRequests;
+    }, [loadAssignments, user?.id, invalidateInFlightRequests]);
 
     const getStatusBadge = (status: RouteAssignment["status"]) => {
         const config = {

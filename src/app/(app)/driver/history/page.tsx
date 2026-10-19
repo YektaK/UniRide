@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
@@ -29,8 +29,16 @@ export default function DriverHistoryPage() {
     const { toast } = useToast();
     const [assignments, setAssignments] = useState<AssignmentWithDetails[]>([]);
     const [loading, setLoading] = useState(true);
+    // Latest-request guard (L15): a response that belongs to a previous user
+    // (or an unmounted page) must not overwrite current state.
+    const latestRequestId = useRef(0);
+    const invalidateInFlightRequests = useCallback(() => {
+        latestRequestId.current++;
+    }, []);
 
-    const loadHistory = async () => {
+    const loadHistory = useCallback(async () => {
+        const requestId = ++latestRequestId.current;
+        const isStale = () => requestId !== latestRequestId.current;
         try {
             setLoading(true);
             const { data: { session } } = await getSupabaseClient().auth.getSession();
@@ -61,8 +69,10 @@ export default function DriverHistoryPage() {
                     new Date(b.pickupTime).getTime() - new Date(a.pickupTime).getTime()
                 );
 
+            if (isStale()) return;
             setAssignments(completedAssignments);
         } catch (error: any) {
+            if (isStale()) return;
             console.error("Error loading history:", error);
             toast({
                 title: "Yükleme Hatası",
@@ -70,16 +80,18 @@ export default function DriverHistoryPage() {
                 variant: "destructive",
             });
         } finally {
-            setLoading(false);
+            if (!isStale()) setLoading(false);
         }
-    };
+    }, [user?.id, toast]);
 
     useEffect(() => {
         if (user?.id) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount initial data load; loading flag flips synchronously. Upstream fix: data-fetching framework.
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- loadHistory flips the loading flag synchronously before fetching; the stale-response guard in it is what makes this safe.
             loadHistory();
         }
-    }, [user?.id]);
+        // Invalidate any in-flight request when the user changes or the page unmounts.
+        return invalidateInFlightRequests;
+    }, [loadHistory, user?.id, invalidateInFlightRequests]);
 
     if (!user || user.role !== "driver") {
         return (

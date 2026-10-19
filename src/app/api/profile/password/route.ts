@@ -6,7 +6,30 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { createErrorResponse, createSuccessResponse, requireAuthenticatedUser } from "@/lib/admin-auth";
+import {
+    createErrorResponse,
+    createSuccessResponse,
+    handleApiError,
+    requireAuthenticatedUser,
+} from "@/lib/admin-auth";
+
+/**
+ * Map a Supabase Auth admin error to an HTTP status and a fixed client message.
+ * Provider text is never returned; it goes to the server log only.
+ */
+function mapPasswordProviderError(error: { status?: number; code?: string }) {
+    const status = error.status;
+    if (error.code === "weak_password" || error.code === "same_password" || status === 400 || status === 422) {
+        return { status: 400, message: "Şifre kabul edilmedi. Lütfen farklı ve daha güçlü bir şifre deneyin." };
+    }
+    if (status === 401 || status === 404 || error.code === "user_not_found") {
+        return { status: 401, message: "Oturum geçersiz. Lütfen tekrar giriş yapın." };
+    }
+    if (status === 403) {
+        return { status: 403, message: "Şifre değiştirme yetkiniz yok." };
+    }
+    return { status: 500, message: "Şifre güncellenemedi." };
+}
 
 const updatePasswordSchema = z.object({
     newPassword: z.string().min(6, "Şifre en az 6 karakter olmalıdır.").optional(),
@@ -36,7 +59,9 @@ export async function PATCH(request: NextRequest) {
                 password: newPassword,
             });
             if (pwError) {
-                return createErrorResponse(pwError.message, 500);
+                console.error("Profile password update failed:", pwError);
+                const mapped = mapPasswordProviderError(pwError);
+                return createErrorResponse(mapped.message, mapped.status);
             }
         }
 
@@ -47,12 +72,14 @@ export async function PATCH(request: NextRequest) {
                 .update({ password_hint: passwordHint, updated_at: new Date().toISOString() } as never)
                 .eq("id", user.id);
             if (dbError) {
-                return createErrorResponse(dbError.message, 500);
+                console.error("Profile password hint update failed:", dbError);
+                return createErrorResponse("Şifre ipucu güncellenemedi.", 500);
             }
         }
 
         return createSuccessResponse({ message: "Bilgiler başarıyla güncellendi." });
     } catch (error: unknown) {
-        return createErrorResponse(error instanceof Error ? error.message : "Internal server error", 500);
+        // AppError keeps its 401/403 status; anything else becomes a fixed 500 (details logged).
+        return handleApiError(error);
     }
 }

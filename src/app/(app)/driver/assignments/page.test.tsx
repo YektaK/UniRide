@@ -14,7 +14,9 @@ vi.mock("next/link", () => ({
   default: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a>,
 }));
 vi.mock("@/hooks/use-auth", () => ({ useAuth: mocks.useAuth }));
-vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast: vi.fn() }) }));
+// toast is a module-level, referentially stable function in the real hook.
+const toastFn = vi.fn();
+vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast: toastFn }) }));
 vi.mock("@/lib/admin-api", () => ({
   adminApi: { vehicles: { getAll: mocks.getVehicles } },
 }));

@@ -7,9 +7,10 @@ const { getSupabaseAdminMock, requireRoleMock } = vi.hoisted(() => ({
   requireRoleMock: vi.fn(),
 }));
 
-vi.mock("@/lib/admin-auth", () => ({
-  requireRole: requireRoleMock,
-}));
+vi.mock("@/lib/admin-auth", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/admin-auth")>("@/lib/admin-auth");
+  return { ...actual, requireRole: requireRoleMock };
+});
 
 vi.mock("@/lib/supabase-admin", () => ({
   getSupabaseAdmin: getSupabaseAdminMock,
@@ -70,10 +71,6 @@ describe("driver assignments error mapping (L5)", () => {
   afterEach(() => vi.restoreAllMocks());
 
   async function loadWithRealAuthErrors() {
-    vi.doMock("@/lib/admin-auth", async () => {
-      const actual = await vi.importActual<typeof import("@/lib/admin-auth")>("@/lib/admin-auth");
-      return { ...actual, requireRole: requireRoleMock };
-    });
     return import("./route");
   }
 
@@ -92,10 +89,11 @@ describe("driver assignments error mapping (L5)", () => {
     ["unauthenticated", "unauthorized", 401],
     ["forbidden", "forbidden", 403],
   ] as const)("GET keeps the %s status instead of reporting 500", async (_label, factory, status) => {
-    const { AppError } = await vi.importActual<typeof import("@/lib/admin-auth")>("@/lib/admin-auth");
-    requireRoleMock.mockRejectedValue(AppError[factory]());
     vi.spyOn(console, "error").mockImplementation(() => {});
     const { GET } = await loadWithRealAuthErrors();
+    // Same module registry as the route, so instanceof AppError holds.
+    const { AppError } = await import("@/lib/admin-auth");
+    requireRoleMock.mockRejectedValue(AppError[factory]());
     const response = await GET(new Request("http://x/api/driver/assignments"));
     expect(response.status).toBe(status);
   });

@@ -27,7 +27,7 @@ function isGatedApiPath(pathname: string): boolean {
  * to its own scripts; the same value is returned on the response. HSTS is sent by next.config.ts
  * headers() for all paths, so it is deliberately not repeated here.
  */
-function nextWithCsp(request: NextRequest, extraRequestHeaders?: Headers) {
+function nextWithCsp(request: NextRequest) {
     const nonce = generateNonce();
     const csp = buildContentSecurityPolicy({
         nonce,
@@ -37,7 +37,7 @@ function nextWithCsp(request: NextRequest, extraRequestHeaders?: Headers) {
         optimizerUrls: [process.env.NEXT_PUBLIC_OPTIMIZER_API_URL],
     });
 
-    const headers = new Headers(extraRequestHeaders ?? request.headers);
+    const headers = new Headers(request.headers);
     headers.set('x-nonce', nonce);
     headers.set('Content-Security-Policy', csp);
 
@@ -77,10 +77,9 @@ export async function proxy(request: NextRequest) {
         );
     }
 
-    // Forward user info via headers for downstream use
-    const headers = new Headers(request.headers);
-    headers.set('x-user-id', user.id);
-    return nextWithCsp(request, headers);
+    // The verified user is not forwarded: route handlers re-authenticate from
+    // the bearer token (requireRole) and nothing reads an x-user-id header.
+    return nextWithCsp(request);
 }
 
 export const config = {

@@ -9,8 +9,11 @@ const mocks = vi.hoisted(() => ({
   getAllUsers: vi.fn(),
 }));
 
-vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
-vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast: vi.fn() }) }));
+const translate = (key: string) => key;
+vi.mock("next-intl", () => ({ useTranslations: () => translate }));
+// toast is a module-level, referentially stable function in the real hook.
+const toastFn = vi.fn();
+vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast: toastFn }) }));
 vi.mock("@/lib/database", () => ({
   getAllRouteAssignments: mocks.getAllRouteAssignments,
   getAllVehicles: mocks.getAllVehicles,

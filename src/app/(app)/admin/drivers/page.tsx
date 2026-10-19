@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,8 +27,16 @@ export default function DriverAssignmentsPage() {
   );
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  // Latest-request guard (M7): only the newest load may write state, so a slow
+  // response for an earlier date can never overwrite the date now selected.
+  const latestRequestId = useRef(0);
+  const invalidateInFlightRequests = useCallback(() => {
+    latestRequestId.current++;
+  }, []);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    const requestId = ++latestRequestId.current;
+    const isStale = () => requestId !== latestRequestId.current;
     try {
       setLoading(true);
       const [assignmentsData, vehiclesData, usersData] = await Promise.all([
@@ -36,10 +44,12 @@ export default function DriverAssignmentsPage() {
         getAllVehicles(),
         getAllUsers(),
       ]);
+      if (isStale()) return;
       setAssignments(assignmentsData);
       setVehicles(vehiclesData);
       setUsers(usersData);
     } catch (error: any) {
+      if (isStale()) return;
       toast({
         title: tc('error'),
         description: error.message || tc('error'),
@@ -47,14 +57,16 @@ export default function DriverAssignmentsPage() {
       });
       console.error("Error loading data:", error);
     } finally {
-      setLoading(false);
+      if (!isStale()) setLoading(false);
     }
-  };
+  }, [selectedDate, toast, tc]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount initial data load; loading flag flips synchronously. Upstream fix: data-fetching framework.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loadData flips the loading flag synchronously before fetching; the stale-response guard above is what makes this safe.
     loadData();
-  }, [selectedDate]);
+    // Invalidate any in-flight request when the date changes or the page unmounts.
+    return invalidateInFlightRequests;
+  }, [loadData, invalidateInFlightRequests]);
 
   const getVehicle = (vehicleId: string) => {
     return vehicles.find((v) => v.id === vehicleId);

@@ -162,8 +162,7 @@ export function handleApiError(error: unknown) {
     if (error instanceof AppError) {
         return createErrorResponse(error.message, error.statusCode);
     }
-    // Fallback for unexpected errors
-    const message = error instanceof Error ? error.message : "Internal server error";
+    // Fallback for unexpected errors: details stay in the server log only (L5)
     console.error("Unhandled API error:", error);
-    return createErrorResponse(message, 500);
+    return createErrorResponse("Internal server error", 500);
 }

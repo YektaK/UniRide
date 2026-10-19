@@ -90,17 +90,21 @@ def _request(algorithm_id: str) -> GovernedExecutionRequest:
 
 # ---------------------------------------------------------------- Smart ----
 
-def _run_smart(monkeypatch, problem, algorithms, n_runs):
+def _run_smart(monkeypatch, problem, algorithms, n_runs, param_source="db", log=None):
     import academic_benchmark.tsplib_manager as tsplib_manager
 
     saved: list[dict] = []
+    log = {} if log is None else log
+    log.update(run_statuses=[], metadata_saves=[], saved=saved)
     monkeypatch.setattr(smart_benchmark, "run_warmup", lambda *_a: None)
     monkeypatch.setattr(
         smart_benchmark, "ProcessPoolExecutor", concurrent.futures.ThreadPoolExecutor
     )
     monkeypatch.setattr(smart_benchmark, "_check_interrupt_key", lambda: False)
     monkeypatch.setattr(smart_benchmark, "_save_best_solution", lambda **_k: None)
-    monkeypatch.setattr(smart_benchmark, "save_metadata", lambda *_a, **_k: None)
+    monkeypatch.setattr(
+        smart_benchmark, "save_metadata", lambda *a, **_k: log["metadata_saves"].append(a)
+    )
     monkeypatch.setattr(smart_benchmark, "_current_results", [])
     monkeypatch.setattr(smart_benchmark, "_current_metadata", {})
     monkeypatch.setattr(smart_benchmark, "_shutdown_requested", False)
@@ -108,13 +112,16 @@ def _run_smart(monkeypatch, problem, algorithms, n_runs):
         smart_benchmark, "_db_get_best",
         lambda _problem, algorithm_id, _db: {"params": _params_for(algorithm_id)},
     )
-    monkeypatch.setattr(tsplib_manager, "save_benchmark_run", lambda *_a, **_k: None)
+    monkeypatch.setattr(
+        tsplib_manager, "save_benchmark_run",
+        lambda _run_id, **kwargs: log["run_statuses"].append(kwargs.get("status")),
+    )
     monkeypatch.setattr(
         tsplib_manager, "save_benchmark_result",
         lambda _run_id, payload, **_k: saved.append(payload),
     )
     smart_benchmark.run_unified_benchmark(
-        [problem], list(algorithms), "db", n_runs, 2, {"results": {}}
+        [problem], list(algorithms), param_source, n_runs, 2, {"results": {}}
     )
     return smart_benchmark._current_results, saved
 
@@ -298,3 +305,42 @@ def test_non_governed_cli_seeds_and_tuple_shape_are_unchanged(monkeypatch) -> No
 def test_make_deterministic_seed_is_removed() -> None:
     """L9 seed-helper bullet: the algorithm-name-hashing helper must not exist."""
     assert not hasattr(benchmark_utils, "make_deterministic_seed")
+
+
+# ----------------------------------------- B1: no silent partial batches ----
+
+def test_governed_smart_batch_aborts_on_any_task_failure_and_saves_nothing(monkeypatch) -> None:
+    """ALNS with the ``default`` source has no scientific params and raises a plain
+    ValueError.  A governed batch must not drop that task, save the other rows and
+    mark the run completed (unification design: failures are never dropped silently)."""
+    log: dict = {}
+    with pytest.raises(ValueError, match="ALNS parameter schema mismatch"):
+        _run_smart(
+            monkeypatch, _Problem7(), ["Core-TwoOpt-TSP", "ALNS-TSP"], 2,
+            param_source="default", log=log,
+        )
+    assert "completed" not in log["run_statuses"]
+    assert log["metadata_saves"] == []
+    assert smart_benchmark._current_results == []
+    assert log["saved"] == []
+
+
+def test_non_governed_smart_batch_still_skips_a_failed_task(monkeypatch) -> None:
+    """Non-governed batches keep their behaviour: a failed task is reported and skipped."""
+    real = smart_benchmark._run_single_task
+
+    def flaky(args):
+        task, _problem = args
+        if task.run_idx == 2:
+            raise RuntimeError("boom")
+        return real(args)
+
+    monkeypatch.setattr(smart_benchmark, "_run_single_task", flaky)
+    log: dict = {}
+    results, saved = _run_smart(
+        monkeypatch, _cvrp(), ["Core-Greedy-Routing"], 3, log=log
+    )
+    assert sorted(row["run"] for row in results) == [1, 3]
+    assert len(saved) == 2
+    assert "completed" in log["run_statuses"]
+

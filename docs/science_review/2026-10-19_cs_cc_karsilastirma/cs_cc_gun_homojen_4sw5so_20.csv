@@ -1,0 +1,21 @@
+date,R,sirali_filo_cs_rotalari,sirali_filo_cc_rotalari,ga_filo,cs_lb0,cs_seq_fleet_kayitli,cs_ortak_K,ga_dakika,sirali_dakika,cs_ortak_dakika,cs_kanit,cs_ortak_sure_s,cs_plan_bagimsiz_denetim
+2026-10-05,50,6,6,6,6,6,6,1600,1597,1597.0,joint MIP optimal,16.0,0 hata
+2026-10-09,70,5,5,5,3,5,4,958,956,984.0,joint MIP optimal,9.9,0 hata
+2026-10-06,60,4,4,4,3,4,4,1307,1298,1298.0,joint MIP optimal,1.3,0 hata
+2026-10-07,50,6,6,6,3,6,5,1302,1293,1323.0,joint MIP optimal,1.1,0 hata
+2026-10-07,90,4,4,4,2,4,4,1141,1134,1134.0,joint MIP optimal,18.1,0 hata
+2026-10-08,70,4,4,4,2,4,3,1294,1289,1317.0,joint MIP optimal,2.4,0 hata
+2026-10-09,60,5,5,5,4,5,5,1029,1004,1004.0,joint MIP optimal,5.5,0 hata
+2026-10-05,70,4,4,4,4,4,4,1355,1348,1348.0,joint MIP optimal,598.9,0 hata
+2026-10-07,60,6,6,6,3,6,5,1252,1248,1278.0,joint MIP optimal,2.1,0 hata
+2026-10-05,90,3,3,4,3,3,3,1338,1303,,seq plan = LB0 (MIP status -9),,no_plan_in_jsonl (seq plan = LB0 used)
+2026-10-06,70,4,4,4,3,4,4,1237,1237,1237.0,joint MIP optimal,3.4,0 hata
+2026-10-07,70,6,6,6,2,6,5,1209,1198,1228.0,joint MIP optimal,3.0,0 hata
+2026-10-08,50,5,5,5,3,5,4,1494,1494,1499.0,joint MIP optimal,0.5,0 hata
+2026-10-08,60,4,4,4,3,4,4,1387,1370,1370.0,joint MIP optimal,1.4,0 hata
+2026-10-08,90,4,4,4,2,4,3,1286,1284,1313.0,joint MIP optimal,7.7,0 hata
+2026-10-05,60,4,4,5,4,4,4,1475,1449,1449.0,joint MIP optimal,76.5,0 hata
+2026-10-06,50,5,5,5,4,5,4,1334,1334,1346.0,joint MIP optimal,0.5,0 hata
+2026-10-06,90,3,3,3,2,3,3,1164,1164,1164.0,joint MIP optimal,24.4,0 hata
+2026-10-09,50,6,6,6,4,6,6,1092,1085,1085.0,joint MIP optimal,1.7,0 hata
+2026-10-09,90,4,4,4,3,4,3,933,928,930.0,joint MIP optimal,39.6,0 hata

@@ -1,0 +1,61 @@
+date,R,L,cc_ga_durum,cc_ga_sedan,cc_birlesik_durum,cc_birlesik_sedan,cc_etiket,cs_durum,cs_sedan,cs_dakika,cs_sinir,kategori,cs_plan_bagimsiz_denetim
+2026-10-05,50,1,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-05,50,2,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-05,50,3,optimal,4.0,optimal,3.0,proven_over_union_menu,ok,3.0,1599.0,,eşit,0 hata
+2026-10-05,60,1,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-05,60,2,infeasible_for_L,,optimal,3.0,ga_menu_infeasible_for_L,ok,3.0,1491.0,,eşit,0 hata
+2026-10-05,60,3,optimal,2.0,optimal,1.0,proven_over_union_menu,ok,1.0,1449.0,,eşit,0 hata
+2026-10-05,70,1,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-05,70,2,optimal,3.0,optimal,2.0,proven_over_union_menu,ok,2.0,1349.0,,eşit,0 hata
+2026-10-05,70,3,optimal,1.0,optimal,1.0,proven_over_union_menu,ok,1.0,1348.0,,eşit,0 hata
+2026-10-05,90,1,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-05,90,2,optimal,2.0,optimal,2.0,proven_over_union_menu,"acik: S in {1,2}",,,LB 1 (homojen min filo 3 > L) / UB 2 (kampanya planı),"CS açık (S∈{1,2}); CC menü sonucu 2",plan yok (açık hücre)
+2026-10-05,90,3,optimal,1.0,optimal,0.0,proven_over_union_menu,ok (homojen K=3=LB0 planı),0.0,,,eşit,homojen sıralı plan K=3 (iki tarafın dalga rotalarından 3 yeniden hesaplandı)
+2026-10-06,50,1,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-06,50,2,optimal,3.0,optimal,3.0,proven_over_union_menu,ok,2.0,1346.0,,CS daha az sedan,0 hata
+2026-10-06,50,3,optimal,2.0,optimal,2.0,proven_over_union_menu,ok,1.0,1346.0,,CS daha az sedan,0 hata
+2026-10-06,60,1,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-06,60,2,optimal,2.0,optimal,2.0,proven_over_union_menu,ok,2.0,1305.0,,eşit,0 hata
+2026-10-06,60,3,optimal,1.0,optimal,1.0,proven_over_union_menu,ok,1.0,1298.0,,eşit,0 hata
+2026-10-06,70,1,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-06,70,2,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,ok,2.0,1244.0,,"CS uygun, CC menüsü uygunsuz",0 hata
+2026-10-06,70,3,optimal,1.0,optimal,1.0,proven_over_union_menu,ok,1.0,1237.0,,eşit,0 hata
+2026-10-06,90,1,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-06,90,2,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,ok,2.0,1186.0,,"CS uygun, CC menüsü uygunsuz",0 hata
+2026-10-06,90,3,optimal,0.0,optimal,0.0,proven_over_union_menu,ok,0.0,1164.0,,eşit,0 hata
+2026-10-07,50,1,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-07,50,2,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-07,50,3,optimal,4.0,optimal,4.0,proven_over_union_menu,ok,3.0,1372.0,,CS daha az sedan,0 hata
+2026-10-07,60,1,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-07,60,2,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-07,60,3,optimal,3.0,optimal,3.0,proven_over_union_menu,ok,2.0,1288.0,,CS daha az sedan,0 hata
+2026-10-07,70,1,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-07,70,2,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-07,70,3,optimal,3.0,optimal,3.0,proven_over_union_menu,ok,2.0,1240.0,,CS daha az sedan,0 hata
+2026-10-07,90,1,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-07,90,2,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-07,90,3,optimal,1.0,optimal,1.0,proven_over_union_menu,ok,1.0,1134.0,,eşit,0 hata
+2026-10-08,50,1,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-08,50,2,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-08,50,3,optimal,2.0,optimal,2.0,proven_over_union_menu,ok,1.0,1499.0,,CS daha az sedan,0 hata
+2026-10-08,60,1,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-08,60,2,optimal,2.0,optimal,2.0,proven_over_union_menu,ok,2.0,1378.0,,eşit,0 hata
+2026-10-08,60,3,optimal,1.0,optimal,1.0,proven_over_union_menu,ok,1.0,1370.0,,eşit,0 hata
+2026-10-08,70,1,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-08,70,2,optimal,2.0,optimal,2.0,proven_over_union_menu,ok,1.0,1327.0,,CS daha az sedan,0 hata
+2026-10-08,70,3,optimal,1.0,optimal,1.0,proven_over_union_menu,ok,0.0,1317.0,,CS daha az sedan,0 hata
+2026-10-08,90,1,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-08,90,2,optimal,2.0,optimal,2.0,proven_over_union_menu,ok,1.0,1323.0,,CS daha az sedan,0 hata
+2026-10-08,90,3,optimal,1.0,optimal,1.0,proven_over_union_menu,ok,0.0,1313.0,,CS daha az sedan,0 hata
+2026-10-09,50,1,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-09,50,2,optimal,4.0,optimal,4.0,proven_over_union_menu,ok,4.0,1122.0,,eşit,0 hata
+2026-10-09,50,3,optimal,3.0,optimal,3.0,proven_over_union_menu,ok,3.0,1085.0,,eşit,0 hata
+2026-10-09,60,1,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-09,60,2,optimal,3.0,optimal,3.0,proven_over_union_menu,ok,3.0,1004.0,,eşit,0 hata
+2026-10-09,60,3,optimal,2.0,optimal,2.0,proven_over_union_menu,ok,2.0,1004.0,,eşit,0 hata
+2026-10-09,70,1,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-09,70,2,optimal,3.0,optimal,3.0,proven_over_union_menu,ok,2.0,984.0,,CS daha az sedan,0 hata
+2026-10-09,70,3,optimal,2.0,optimal,2.0,proven_over_union_menu,ok,1.0,984.0,,CS daha az sedan,0 hata
+2026-10-09,90,1,infeasible_for_L,,infeasible_for_L,,both_infeasible_for_L,infeasible,,,,ikisi de uygunsuz,plan yok (çözücü uygunsuz dedi; sertifika yok)
+2026-10-09,90,2,optimal,2.0,optimal,2.0,proven_over_union_menu,ok,2.0,931.0,,eşit,0 hata
+2026-10-09,90,3,optimal,0.0,optimal,0.0,proven_over_union_menu,ok,0.0,930.0,,eşit,0 hata

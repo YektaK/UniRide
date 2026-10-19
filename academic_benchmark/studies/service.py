@@ -173,12 +173,12 @@ def load_study(study_path: str, *, repository_root: Path) -> StudyManifestV1:
     return study
 
 
-_NAME_HEADER = re.compile(r"^NAME\s*[:\s]\s*(\S+)", re.IGNORECASE | re.MULTILINE)
+_NAME_HEADER = re.compile(r"^NAME[ \t]*[: \t][ \t]*(\S+)", re.IGNORECASE | re.MULTILINE)
 _SECTION = re.compile(r"^\s*[A-Z_]+_SECTION\b|^\s*EOF\b", re.MULTILINE)
 
 
 def _problem_name_from_artifact(data: bytes, dataset_id: str) -> str:
-    """TSPLIB problem name from the ``NAME:`` header (same pattern as the TSPLIB parser)."""
+    """TSPLIB problem name from the ``NAME:`` header (the TSPLIB NAME header)."""
     text = data.decode("utf-8", errors="replace")
     section = _SECTION.search(text)
     header = text[: section.start()] if section else text

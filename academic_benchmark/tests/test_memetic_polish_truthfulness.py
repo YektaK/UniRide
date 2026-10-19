@@ -48,7 +48,7 @@ def _run(algorithm_id: str, **overrides):
 
 @pytest.mark.parametrize("algorithm_id", MEMETIC_IDS + ("Core-GWO-TSP", "Core-HHO-TSP"))
 def test_memetic_with_zero_polish_is_rejected_before_execution(algorithm_id):
-    with pytest.raises(ValueError, match="polish"):
+    with pytest.raises(ValueError, match="execute no polish"):
         _run(algorithm_id, polish_iters=0, final_polish_iters=0)
 
 
@@ -57,7 +57,7 @@ def test_zero_polish_is_rejected_without_a_protocol_manifest_too(algorithm_id):
     params = _params(algorithm_id, polish_iters=0, final_polish_iters=0)
     params.pop("fair_comparison")
     executor = AlgorithmRegistry.get_executor(algorithm_id)
-    with pytest.raises(ValueError, match="polish"):
+    with pytest.raises(ValueError, match="execute no polish"):
         executor(_problem(), params, seed=1, run_idx=0)
 
 
@@ -133,3 +133,120 @@ def test_bildiri_memetic_entries_have_nonzero_polish():
         # accounting truncates cleanly.
         assert params["final_polish_iters"] >= 1
         assert params.get("polish_iters", 0) + params["final_polish_iters"] >= 1
+
+
+# ---------------------------------------------------------------------------
+# DUZELT round 1: a phase counts as executed only when it spent evaluations.
+# ---------------------------------------------------------------------------
+from copy import deepcopy
+
+from academic_benchmark.fairness import FairComparisonManifest, FairnessValidationError
+
+PHASES = ("initial", "periodic", "final")
+
+
+def _valid_memetic(algorithm_id: str = "Core-GWO-TSP-Memetic-2opt", **overrides):
+    params = _params(
+        algorithm_id, polish_iters=1, final_polish_iters=1, polish_interval=1,
+        **overrides,
+    )
+    params["fair_comparison"] = {"evaluation_budget": 5000, "base_seed": 41}
+    executor = AlgorithmRegistry.get_executor(algorithm_id)
+    return (
+        executor(_problem(), params, seed=1, run_idx=0),
+        FairComparisonManifest.from_value(params["fair_comparison"]),
+    )
+
+
+@pytest.mark.parametrize(
+    ("algorithm_id", "budget"),
+    [("Core-GWO-TSP-Memetic-2opt", 5), ("Core-HHO-TSP-Memetic-2opt", 4)],
+)
+def test_memetic_run_whose_polish_spent_no_evaluation_is_rejected(algorithm_id, budget):
+    """B1: the final polish was called but the budget was already spent."""
+    params = _params(algorithm_id, polish_iters=0, final_polish_iters=1)
+    params["fair_comparison"] = {"evaluation_budget": budget, "base_seed": 41}
+    executor = AlgorithmRegistry.get_executor(algorithm_id)
+    with pytest.raises(ValueError, match="polish"):
+        executor(_problem(), params, seed=1, run_idx=0)
+
+
+@pytest.mark.parametrize("algorithm_id", MEMETIC_IDS)
+def test_phase_flags_equal_polish_evaluations_across_budgets(algorithm_id):
+    accepted = 0
+    for budget in range(4, 120, 3):
+        params = _params(algorithm_id, polish_iters=0, final_polish_iters=1)
+        params["fair_comparison"] = {"evaluation_budget": budget, "base_seed": 41}
+        executor = AlgorithmRegistry.get_executor(algorithm_id)
+        try:
+            result = executor(_problem(), params, seed=1, run_idx=0)
+        except ValueError:
+            continue  # rejected (atomic init or no polish evaluation): fine
+        accepted += 1
+        policy = result.polish_policy
+        evaluations = policy["evaluations"]
+        for phase in PHASES:
+            assert policy[phase] is (evaluations[phase] > 0), (budget, phase)
+        assert sum(evaluations.values()) > 0, budget
+        assert sum(evaluations.values()) <= result.objective_evaluations
+    assert accepted > 0
+
+
+@pytest.mark.parametrize("algorithm_id", MEMETIC_IDS)
+def test_polish_policy_records_polish_evaluations_per_phase(algorithm_id):
+    result, _ = _valid_memetic(algorithm_id)
+    evaluations = result.polish_policy["evaluations"]
+    assert evaluations["initial"] > 0
+    assert evaluations["periodic"] > 0
+    assert evaluations["final"] > 0
+    assert sum(evaluations.values()) < result.objective_evaluations
+
+
+@pytest.mark.parametrize("algorithm_id", MEMETIC_IDS)
+def test_initial_and_periodic_polish_without_final_reports_final_false(algorithm_id):
+    """P2: final_polish_iters=0 must not be reported as a final polish."""
+    params = _params(algorithm_id, polish_iters=1, final_polish_iters=0, polish_interval=1)
+    params["fair_comparison"] = {"evaluation_budget": 5000, "base_seed": 41}
+    result = AlgorithmRegistry.get_executor(algorithm_id)(
+        _problem(), params, seed=1, run_idx=0
+    )
+    assert result.polish_policy["final"] is False
+    assert result.polish_policy["evaluations"]["final"] == 0
+    assert result.polish_policy["executed"]["final"] == 0
+    assert result.polish_policy["initial"] is True
+
+
+def test_validator_rejects_memetic_record_without_polish_evaluations():
+    result, manifest = _valid_memetic()
+    manifest.validate_result(result)
+    for key in ("evaluations", "executed"):
+        broken = deepcopy(result)
+        del broken.polish_policy[key]
+        with pytest.raises(FairnessValidationError, match="polish"):
+            manifest.validate_result(broken)
+
+
+def test_validator_rejects_phase_flag_that_contradicts_polish_evaluations():
+    result, manifest = _valid_memetic()
+    manifest.validate_result(result)
+
+    flag_without_evaluations = deepcopy(result)
+    flag_without_evaluations.polish_policy["evaluations"]["final"] = 0
+    with pytest.raises(FairnessValidationError, match="polish"):
+        manifest.validate_result(flag_without_evaluations)
+
+    evaluations_without_flag = deepcopy(result)
+    evaluations_without_flag.polish_policy["periodic"] = False
+    with pytest.raises(FairnessValidationError, match="polish"):
+        manifest.validate_result(evaluations_without_flag)
+
+    all_zero = deepcopy(result)
+    all_zero.polish_policy["evaluations"] = {phase: 0 for phase in PHASES}
+    all_zero.polish_policy.update(initial=False, periodic=False, final=False, enabled=False)
+    with pytest.raises(FairnessValidationError, match="polish"):
+        manifest.validate_result(all_zero)
+
+    too_many = deepcopy(result)
+    too_many.polish_policy["evaluations"]["final"] = result.objective_evaluations + 1
+    with pytest.raises(FairnessValidationError, match="polish"):
+        manifest.validate_result(too_many)

@@ -644,6 +644,21 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 - **Rejected/why:** keeping menu-conditioned day selection only (it cannot reach the fleet reductions); using the prototype numbers in a paper directly (no production evidence, solver-status infeasibility without certificates).
 - **Evidence:** the comparison report §3-§6. **Check first:** paper numbers stay from the production pipeline (E06); the joint model's results are a separate methodological contribution (second paper), not pooled with the menu-conditioned E4b results.
 
+### E14 - WP-E11 joint day model: design and plan approved with owner answers
+
+- **Date/status:** 2026-10-20; owner approval of `docs/designs/JOINT_DAY_MODEL_DESIGN.md` and `docs/superpowers/plans/2026-10-20-wp-e11-joint-day-model.md` (merged with this entry).
+- **Chosen:**
+  - Q1: large + Doblò cap3 is in the same campaign as `single_4sw5so` and large + sedan (140 cells).
+  - Q2: tie-breaks follow H06 (cars or K, then total vehicle-minutes, then car-minutes; no option-index key). Prototype minute totals are then compared only where the order agrees; vehicle counts are compared directly.
+  - Q3: 600 s per solver call, threads 1; a Gurobi work limit is set from the J10 calibration; longer limits only as a separately labelled run.
+  - Q4: HiGHS through the `highspy` Python package is the primary solver (licence-free, reproducible); Gurobi through the existing AMPL path is the cross-check. The owner's AMPL portal shows the Gurobi trial valid for about 351 more days (to about 2027-10); the local AMPL licence may need reactivation before J5/J10 (the earlier date was 2026-11-05).
+  - Q5: every proven cell used in a paper table needs the Gurobi cross-check.
+  - Q6: day-level comparison with the GA side is descriptive only, from existing GA sources.
+  - Q7: the extra lower bounds LB0w and LB_S are added.
+  - Q8: solver-proven infeasibility without a certificate is accepted when both solvers agree; an LP Farkas certificate is decided after J2.
+- **Rejected/why:** everything through AMPL (licence-dependent, harder for reviewers to reproduce); HiGHS only (no second solver for paper tables); prototype tie-break order (departs from H06).
+- **Evidence:** the design note and plan. **Check first:** protocol `exact_day_joint_v1` is its own pooling group, never pooled with `exact_reference_v1` or `union_day_v1`; prototype results are reproduction targets, never tuning targets.
+
 ## Open questions and evidence limits
 
 The October audit remains authoritative for its unresolved tracker entries, subject to fresh source verification before fixes. This log closes no audit item. In particular:

@@ -433,6 +433,21 @@ Evidence labels: **owner decision** = approved scope in the owner/lead handoff o
 - **Open:** the MT4 storage and provenance part of H8; H17 imports (`academic_benchmark.*`, `uniride_core.benchmark_runner` still load through the strategies and `promoted_config_loader`); how production is launched is not in the repository (audit Q15; owner 2026-10-19: there is no hosted deployment yet, only the local checkout), so at go-live the deployed optimizer must keep the flag unset (go-live checklist item); the 404 heuristic would also call a wrong `OPTIMIZER_API_URL` "disabled" (a `/health` academic flag would be sturdier).
 - **Evidence:** `optimizer_api/tests/test_h8_academic_router_gate.py`, `optimizer_api/tests/test_m5_benchmark_error_leaks.py`, `src/app/api/benchmark/academic-disabled.test.ts`, `scripts/start-dudullu-local.test.mjs`; audit tracker rows H8, M5, L5. **Check first:** a manual `python main.py` without the flag has no `/api/v1/benchmark/*` routes.
 
+### A17 - Gate C (Package C) plan and owner decisions
+
+- **Date/status:** 2026-10-19; owner decisions on the Gate C plan `docs/superpowers/plans/2026-10-19-gate-c-catalog-composition-experiment-services.md` (merged with this entry). Baseline at `559826b5`: focused gate batch 562 passed; `academic_benchmark/tests -m "not requires_ampl"` 1527 passed, 1 failed (environment: an empty `tsplib.db` created in a fresh worktree turns a skip into a failure; fixed in item C-01), 3 skipped.
+- **Chosen:**
+  - Q1: the YAEM active profile mirrors the legacy set (berlin52, eil51, st70, kroA100; 2-opt, 3-opt, Or-opt, GWO/HHO Pure, -2opt, -3opt, -ALNS; `GWO-LKH`/`HHO-LKH` become the truthful 3-opt hybrids), status draft, smoke only; budgets and run counts are placeholders until a paper plan.
+  - Q2/P1: GA and PSO are promoted before Gate C. `Core-GA-TSP` and `Core-PSO-TSP` are pure (no hidden 2-opt, every evaluation counted). A counted memetic GA `Core-GA-TSP-Memetic-2opt` (initial and final 2-opt, explicit non-zero polish) is added as a **design addition** to the normative table (design `:116-131`); the Gate C conformance test lists it. Reason: the Bildiri 2026 (Göbeklitepe) paper compared 2-opt, 3-opt, Or-opt, GA and PSO (`archive/academic_benchmark/bildiri2026_legacy/bildiri2026/Bildiri.md:9-11`); its GA ran 2-opt on every initial chromosome and a final 2-opt (`archive/.../core/ga_solver.py:62-69, 150-156`), and its PSO, labelled "PSO", was a memetic PSO with uncounted 2-opt (`pso_solver.py:12-18, 110-151, 212-217`). The archived code is reference only (not executable, no parity claim); the paper text must say which GA/PSO produced the published numbers. No memetic PSO is added.
+  - Q3: GWO/HHO Memetic-2opt get native claims after their polish is counted; the Bildiri memetic entries get a small non-zero polish.
+  - Q4: H10+M25 (together), H11 and M14 go to a separate MT6 plan right after Gate C, before any paper-scale run.
+  - Q5: the four hybrid IDs stay as normative (`Core-*-Memetic-3opt`, `Core-*-Memetic-ALNS`); new composition kinds `global_then_final_3opt` / `global_then_final_alns` and "final polish once" labels carry the semantics.
+  - Q10 (H9): matrix engines are renamed `Matrix-*-legacy`; `Core-*` IDs resolve only through the catalog and gateway; rows under old names are not pooled with rows under new names.
+  - P2/P3, C-19: the active Bildiri profile is aligned to the paper set (2-opt, 3-opt, Or-opt, GA, PSO, the memetic GA and the current GWO/HHO entries) on berlin52, eil51, st70, kroA100, rd100, eil76 (gil262 excluded: no committed file, n > 100 deferred by E09; ft53 kept as the exact-reference instance); new rows are not pooled with old ones.
+  - Lead decision inside C-06: the polish stage reuses the cost the global stage already counted; the gateway's independent recomputation is the check.
+- **Rejected/why:** deferring GA/PSO (the owner's paper used them); a memetic PSO (not requested); renaming the hybrid IDs (design change without need); retiring the web matrix mode.
+- **Evidence:** the plan's sections 1 and 4. **Check first:** the plan's lane order; results-changing items carry an A14-style no-pooling note in their tracker rows.
+
 ## Daily workflow
 
 ### W01 — independent legs and production admission

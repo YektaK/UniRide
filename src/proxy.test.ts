@@ -213,13 +213,15 @@ describe("proxy bearer gate", () => {
     expect(res.status).toBe(401);
   });
 
-  it("forwards x-user-id and a CSP for a valid token", async () => {
+  it("sets a CSP for a valid token and no longer forwards an unread x-user-id (L6)", async () => {
     stubAnonClient({ data: { user: { id: "user-42" } }, error: null });
     const { proxy } = await import("./proxy");
     const res = await proxy(
       new NextRequest("http://x/api/benchmark/run", { headers: { authorization: "Bearer good" } })
     );
     expect(res.status).toBe(200);
-    expect(res.headers.get("x-middleware-request-x-user-id")).toBe("user-42");
+    expect(res.headers.get("Content-Security-Policy")).toBeTruthy();
+    expect(res.headers.get("x-middleware-request-x-nonce")).toBeTruthy();
+    expect(res.headers.get("x-middleware-request-x-user-id")).toBeNull();
   });
 });

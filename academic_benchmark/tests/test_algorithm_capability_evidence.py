@@ -162,7 +162,12 @@ def _prove_fixed(
     for problem in PROBLEMS:
         params, budget, expected_evaluations = _fixed_params(algorithm_id)
         if polish_enabled:
-            params.update(polish_iters=0, final_polish_iters=0)
+            # Zero polish is rejected for memetic IDs (audit M19); one final-phase
+            # polish iteration keeps the pinned evaluation counts and stays runnable.
+            params.update(polish_iters=0, final_polish_iters=1)
+            # The final polish now really runs and drains the remaining budget, so the
+            # evaluation count equals the budget (HHO previously stopped at 8 of 12).
+            expected_evaluations = budget
         manifest = FairComparisonManifest.from_value(params["fair_comparison"])
         first = executor(problem, params, seed=987_654, run_idx=0)
         replay = executor(problem, params, seed=123_456, run_idx=0)

@@ -11,9 +11,9 @@
   ],
   "algorithm_parameters": {
     "Core-GWO-TSP-Pure": {"pack_size": 4, "max_iterations": 2},
-    "Core-GWO-TSP-Memetic-2opt": {"pack_size": 4, "max_iterations": 2, "polish_iters": 0, "final_polish_iters": 0},
+    "Core-GWO-TSP-Memetic-2opt": {"pack_size": 4, "max_iterations": 2, "polish_iters": 0, "final_polish_iters": 1},
     "Core-HHO-TSP-Pure": {"hawks": 4, "dive_count": 0, "max_iterations": 2},
-    "Core-HHO-TSP-Memetic-2opt": {"hawks": 4, "dive_count": 0, "max_iterations": 2, "polish_iters": 0, "final_polish_iters": 0}
+    "Core-HHO-TSP-Memetic-2opt": {"hawks": 4, "dive_count": 0, "max_iterations": 2, "polish_iters": 0, "final_polish_iters": 1}
   },
   "dataset_manifest_refs": ["academic_benchmark/datasets/ft53.json"],
   "primary_protocol": {

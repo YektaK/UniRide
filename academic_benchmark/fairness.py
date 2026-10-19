@@ -313,9 +313,22 @@ class FairComparisonManifest:
                     if polish_policy["operator"] is not None:
                         errors.append("pure variant cannot declare a polish operator")
                 elif variant == "memetic_2opt":
-                    if not all(polish_policy[field] for field in bool_fields):
+                    # Phase flags are derived from executed polish (audit M19): a
+                    # memetic result must show that some phase ran, and ``enabled``
+                    # must agree with the phases. A phase that never ran (for
+                    # example periodic polish when the interval was not reached)
+                    # is reported False, not forced True.
+                    phase_flags = [
+                        polish_policy[field]
+                        for field in ("initial", "periodic", "final")
+                    ]
+                    if not any(phase_flags):
                         errors.append(
-                            "memetic_2opt variant must enable every polish phase"
+                            "memetic_2opt variant must execute at least one polish phase"
+                        )
+                    if polish_policy["enabled"] is not any(phase_flags):
+                        errors.append(
+                            "polish_policy enabled flag must match the executed phases"
                         )
                     if polish_policy["operator"] != "2-opt":
                         errors.append(

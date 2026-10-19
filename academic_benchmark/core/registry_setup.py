@@ -608,6 +608,31 @@ for canonical_id, payload in _CANONICAL_LOCAL_SEARCH_REGISTRATIONS.items():
     )
 
 
+def _executed_polish_policy(extra_stats):
+    """Build ``polish_policy`` from the polish calls the solver actually executed.
+
+    The phase flags are never taken from the ``polish_enabled`` boolean: a phase is
+    reported only when the solver counted at least one polish call in it (audit M19).
+    """
+    executed = {
+        phase: int((extra_stats.get("polish_executed") or {}).get(phase, 0) or 0)
+        for phase in ("initial", "periodic", "final")
+    }
+    any_executed = any(count > 0 for count in executed.values())
+    policy = {
+        "enabled": any_executed,
+        "initial": executed["initial"] > 0,
+        "periodic": executed["periodic"] > 0,
+        "final": executed["final"] > 0,
+        "operator": "2-opt" if any_executed else None,
+    }
+    if any_executed:
+        # Pure results keep the historical five-key shape (pinned by the fixed-budget
+        # golden); the per-phase counts appear exactly when some polish ran.
+        policy["executed"] = executed
+    return policy
+
+
 def _make_numba_metah_executor(
     algorithm_name, solver_cls, default_params, routing_engine_name=None,
     variant="memetic_2opt", polish_enabled=True,
@@ -677,6 +702,15 @@ def _make_numba_metah_executor(
             cfg["evaluation_budget"] = manifest.evaluation_budget
 
         solver = solver_cls(**cfg)
+        if polish_enabled and (
+            int(solver.polish_iters) <= 0 and int(solver.final_polish_iters) <= 0
+        ):
+            raise ValueError(
+                f"{algorithm_name} is a memetic 2-opt configuration but polish_iters="
+                f"{solver.polish_iters} and final_polish_iters={solver.final_polish_iters} "
+                "execute no polish; give at least one phase a positive polish budget "
+                "or use the Pure variant"
+            )
         start_time = _time.perf_counter()
         result = solver.solve_with_matrix(
             matrix, recalculate=protocol_manifest is None, closed_tsp=True
@@ -695,6 +729,7 @@ def _make_numba_metah_executor(
 
         extra_stats = dict(getattr(result, "extra_stats", {}) or {})
         evaluations = int(extra_stats.get("objective_evaluations") or 0)
+        polish_policy = _executed_polish_policy(extra_stats)
         budget_terminated = bool(extra_stats.get("budget_terminated", False))
         if budget_terminated:
             termination_reason = "evaluation_budget_exhausted"
@@ -742,11 +777,7 @@ def _make_numba_metah_executor(
                     f"max_no_improvement={cfg.get('max_no_improvement')}"
                 ),
                 execution_backend=str(extra_stats.get("execution_backend", "unknown")),
-                polish_policy={
-                    "enabled": polish_enabled, "initial": polish_enabled,
-                    "periodic": polish_enabled, "final": polish_enabled,
-                    "operator": "2-opt" if polish_enabled else None,
-                },
+                polish_policy=polish_policy,
             )
             native_manifest.validate_result(native_result)
             return native_result
@@ -768,18 +799,14 @@ def _make_numba_metah_executor(
             termination_reason=termination_reason,
             initialization_policy=(
                 "paired_seed_random_population_all_nodes_with_initial_2opt"
-                if polish_enabled else "paired_seed_random_population_all_nodes"
+                if polish_policy["initial"] else "paired_seed_random_population_all_nodes"
             ),
             termination_policy=(
                 f"{manifest.budget_policy};max_iterations={cfg.get('max_iterations')};"
                 f"max_no_improvement={cfg.get('max_no_improvement')}"
             ),
             execution_backend=str(extra_stats.get("execution_backend", "unknown")),
-            polish_policy={
-                "enabled": polish_enabled, "initial": polish_enabled,
-                "periodic": polish_enabled, "final": polish_enabled,
-                "operator": "2-opt" if polish_enabled else None,
-            },
+            polish_policy=polish_policy,
         )
         manifest.validate_result(fair_result)
         return fair_result

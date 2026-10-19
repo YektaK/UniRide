@@ -79,6 +79,7 @@ class HHOOptimizer(BaseTSPSolver):
         self.final_polish_iters = final_polish_iters
         self._rng = random.Random(self.random_seed)
         self.polish_enabled = polish_enabled
+        self._polish_executed = {"initial": 0, "periodic": 0, "final": 0}
         self._fair_mode = evaluation_budget is not None
         self._objective_budget = ObjectiveEvaluationBudget(evaluation_budget)
 
@@ -220,6 +221,7 @@ class HHOOptimizer(BaseTSPSolver):
     def solve(self, coordinates: List[Tuple[float, float]]) -> TSPResult:
         self._backend_observation.reset()
         self._rng = random.Random(self.random_seed)
+        self._polish_executed = {"initial": 0, "periodic": 0, "final": 0}
         self._objective_budget.used = 0
         self._set_problem(coordinates)
         t0 = time.perf_counter()
@@ -246,6 +248,8 @@ class HHOOptimizer(BaseTSPSolver):
                 polished, plen, polish_exhausted = self._polish(
                     perm, self.polish_iters
                 )
+                if self.polish_iters > 0:
+                    self._polish_executed["initial"] += 1
                 budget_terminated = budget_terminated or polish_exhausted
             else:
                 polished, plen = perm, self._evaluate(perm)
@@ -320,6 +324,8 @@ class HHOOptimizer(BaseTSPSolver):
                 polished, plen, polish_exhausted = self._polish(
                     prey.position, self.polish_iters, prey.tour_length
                 )
+                if self.polish_iters > 0:
+                    self._polish_executed["periodic"] += 1
                 budget_terminated = budget_terminated or polish_exhausted
                 if plen < prey.tour_length:
                     prey = _Hawk(polished[:], 1.0 / (plen + 1e-10), plen)
@@ -339,6 +345,8 @@ class HHOOptimizer(BaseTSPSolver):
             best_chrom, best_len, polish_exhausted = self._polish(
                 best_chrom, self.final_polish_iters, best_len
             )
+            if self.final_polish_iters > 0:
+                self._polish_executed["final"] += 1
             budget_terminated = budget_terminated or polish_exhausted
 
         elapsed_ms = (time.perf_counter() - t0) * 1000
@@ -363,6 +371,7 @@ class HHOOptimizer(BaseTSPSolver):
                 "evaluation_budget": self._objective_budget.limit,
                 "budget_terminated": budget_terminated,
                 "variant": "memetic_2opt" if self.polish_enabled else "pure",
+                "polish_executed": dict(self._polish_executed),
                 "execution_backend": self._backend_observation.label(),
             },
             history=history,

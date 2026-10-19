@@ -97,13 +97,18 @@ def test_backward_compatible_gwo_hho_aliases_disclose_memetic_policy(algorithm):
 
     assert result.algorithm_id == algorithm
     assert result.variant == "memetic_2opt"
+    # Flags derive from executed polish (audit M19): the run has 2 iterations and the
+    # default polish interval is 25, so periodic polish never executes.
     assert result.polish_policy == {
         "enabled": True,
         "initial": True,
-        "periodic": True,
+        "periodic": False,
         "final": True,
         "operator": "2-opt",
+        "executed": {"initial": result.polish_policy["executed"]["initial"],
+                     "periodic": 0, "final": 1},
     }
+    assert result.polish_policy["executed"]["initial"] > 0
 
 
 def test_budgeted_search_result_includes_initial_objective_evaluation():
@@ -165,8 +170,15 @@ def test_manifest_rejects_incomplete_and_contradictory_polish_policies():
     memetic = AlgorithmRegistry.get_executor("Core-HHO-TSP-Memetic-2opt")(
         _problem(), _params(), seed=1, run_idx=0
     )
-    memetic.polish_policy["final"] = False
-    with pytest.raises(FairnessValidationError, match="must enable every polish phase"):
+    memetic.polish_policy.update(initial=False, periodic=False, final=False)
+    with pytest.raises(FairnessValidationError, match="must execute at least one polish phase"):
+        manifest.validate_result(memetic)
+
+    memetic = AlgorithmRegistry.get_executor("Core-HHO-TSP-Memetic-2opt")(
+        _problem(), _params(), seed=1, run_idx=0
+    )
+    memetic.polish_policy["enabled"] = False
+    with pytest.raises(FairnessValidationError, match="enabled flag must match"):
         manifest.validate_result(memetic)
 
 

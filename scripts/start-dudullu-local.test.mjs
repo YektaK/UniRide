@@ -387,6 +387,13 @@ test("buildPythonEnv enables the academic router for the local launcher (H8) unl
   assert.equal("UNIRIDE_ACADEMIC_PROCESS" in buildChildEnv({}, "k"), false);
 });
 
+test("buildPythonEnv does not force the academic flag over optimizer_api/.env (P1)", () => {
+  const dotenvOff = new Map([["UNIRIDE_ACADEMIC_PROCESS", "0"]]);
+  assert.notEqual(buildPythonEnv({}, "k", dotenvOff).UNIRIDE_ACADEMIC_PROCESS, "1");
+  // an unrelated .env still gets the local default
+  assert.equal(buildPythonEnv({}, "k", new Map([["OTHER", "x"]])).UNIRIDE_ACADEMIC_PROCESS, "1");
+});
+
 test("buildChildEnv alone never sets the reload variable (web child is untouched)", () => {
   assert.equal("UNIRIDE_API_RELOAD" in buildChildEnv({}, "k"), false);
 });

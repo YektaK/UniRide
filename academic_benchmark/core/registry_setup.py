@@ -219,12 +219,9 @@ def _run_fair_local_search(problem, params, run_idx, algorithm_name, strategy_pa
         )
         family = "3-opt"
     elapsed = time.perf_counter() - started
-    if search.budget_exhausted:
-        termination_reason = "evaluation_budget_exhausted"
-    elif search.iterations >= max_iterations:
-        termination_reason = "max_iterations"
-    else:
-        termination_reason = "no_improving_move"
+    # L8: report the solver's own reason; re-deriving it from the iteration counter mislabels a search
+    # that converged on its last permitted iteration.
+    termination_reason = search.termination_reason
 
     optimal = getattr(problem, "optimal", None)
     gap = ((search.cost - optimal) / optimal) * 100 if optimal and optimal > 0 else None

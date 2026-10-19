@@ -602,6 +602,41 @@ def test_the_runner_exits_2_before_any_solver_when_a_non_empty_wal_exists(tmp_pa
     assert not out.exists()
 
 
+def _berlin52_db(path: Path, dimension: int) -> None:
+    """The fixture database holding only ``berlin52`` with the published optimum 7542 and the given dimension (the
+    committed TSP collection manifest says 52)."""
+    _make_wal_db(path)
+    conn = sqlite3.connect(path)
+    conn.execute("insert into problems (name, dimension, optimal, edge_weight_type, problem_type) "
+                 "values ('berlin52', ?, 7542, 'EUC_2D', 'TSP')", (dimension,))
+    conn.commit()
+    conn.close()
+
+
+def test_a_manifest_database_mismatch_exits_2_before_any_ampl_session_is_opened(tmp_path):
+    """WP-E8 polish item 4: AMPL is absent (UNIRIDE_AMPL_DIR = an empty directory), so a check that ran after the sessions
+    open would be preceded by exit 3."""
+    _berlin52_db(tmp_path / "tsplib.db", dimension=51)
+    out = REPO / "docs" / "paper" / "results" / "tsplib-exact-reference" / "_test_manifest_mismatch"
+    res = _run_cli("--allow-dirty", "--data-dir", str(tmp_path), "--instances", "berlin52", "--out", str(out),
+                   env_extra={"UNIRIDE_AMPL_DIR": str(tmp_path)})
+    assert res.returncode == 2, (res.returncode, res.stderr[-400:])
+    assert "berlin52" in res.stderr and "manifest dimension 52 differs from problems.dimension 51" in res.stderr
+    assert "backend unavailable" not in res.stderr
+    assert not out.exists()
+
+
+def test_a_matching_database_without_ampl_still_exits_3(tmp_path):
+    """The control of the test above: the same fixture with the manifest dimension passes the check, so the exit 3 of the
+    missing backend is what remains."""
+    _berlin52_db(tmp_path / "tsplib.db", dimension=52)
+    out = REPO / "docs" / "paper" / "results" / "tsplib-exact-reference" / "_test_manifest_match"
+    res = _run_cli("--allow-dirty", "--data-dir", str(tmp_path), "--instances", "berlin52", "--out", str(out),
+                   env_extra={"UNIRIDE_AMPL_DIR": str(tmp_path)})
+    assert res.returncode == 3, (res.returncode, res.stderr[-400:])
+    assert not out.exists()
+
+
 def test_verify_tours_cli_does_not_read_the_database_so_a_wal_next_to_it_is_irrelevant(tmp_path):
     # WP-E8 companion: --verify-tours takes instances, optima and tours from the active manifest-governed folders
     (tmp_path / "tsplib.db").write_bytes(b"this is not a database")
@@ -730,12 +765,15 @@ def _read_published_tour(runner, conn, name, tour_dir):
         want = f"{name}.opt.tour".lower()
         for cand in sorted(Path(tour_dir).iterdir()):
             if cand.name.lower() == want and cand.is_file():
-                return runner._parse_tour_file(cand.read_text(encoding="utf-8")), "opt_tour_file"
+                from academic_benchmark.exact_reference import inputs
+
+                return inputs.parse_tour_text(cand.read_text(encoding="utf-8")), "opt_tour_file"
     return None
 
 
 def test_the_runner_has_no_unmanifested_tour_reader(runner):
     assert not hasattr(runner, "read_published_tour"), "published tours come only from the manifest-governed collection"
+    assert not hasattr(runner, "_parse_tour_file"), "the only tour-text parser is inputs.parse_tour_text (WP-E8 polish item 3)"
 
 
 def test_published_tour_length_on_the_used_coordinates_must_equal_the_published_optimum(runner):

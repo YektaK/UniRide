@@ -372,7 +372,8 @@ def test_smart_worker_postflight_violation_raises_and_is_not_converted_to_error(
             )
 
     monkeypatch.setattr(smart_benchmark, "AlgorithmRegistry", Registry)
-    task = BenchmarkTask("entrypoint-atsp", "Core-TwoOpt-TSP", 0, 42, {}, _request())
+    contract_seed = smart_benchmark._smart_task_seed(_request(), "entrypoint-atsp", 0)
+    task = BenchmarkTask("entrypoint-atsp", "Core-TwoOpt-TSP", 0, contract_seed, {}, _request())
 
     with pytest.raises(ResultContractViolation):
         smart_benchmark._run_single_task((task, _Problem()))

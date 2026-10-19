@@ -241,7 +241,6 @@ def test_bildiri2026_registry_executors_run_problem_dict_wrapper(algorithm):
             "hawks": 4,
             "polish_iters": 1,
             "final_polish_iters": 1,
-            "fair_comparison": {"evaluation_budget": 500, "base_seed": 1000},
         },
         1,
         1,

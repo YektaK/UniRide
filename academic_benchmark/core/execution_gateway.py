@@ -7,7 +7,10 @@ from collections.abc import Callable, Mapping
 from numbers import Real
 from typing import Any
 
-from academic_benchmark.core.algorithm_errors import ResultContractViolation
+from academic_benchmark.core.algorithm_errors import (
+    ResultContractViolation,
+    SeedContractViolation,
+)
 from academic_benchmark.core.algorithm_resolution import IdentifierSource, resolve_algorithm_id
 from academic_benchmark.core.preflight import (
     PreflightDecision,
@@ -16,6 +19,8 @@ from academic_benchmark.core.preflight import (
     preflight_run,
 )
 from academic_benchmark.engine_core import RunResult
+from academic_benchmark.fairness import FairComparisonManifest
+from academic_benchmark.native_protocol import NativeComparisonManifest
 from uniride_core.algorithms.capabilities import (
     BackendKind,
     BackendPolicy,
@@ -186,6 +191,49 @@ def validate_preflighted_result(result: RunResult, decision: PreflightDecision) 
         raise _violation("observed execution_backend differs from the selected backend profile")
 
 
+# Fair protocol the governed CLI and Smart entry points run under (audit H13 fix
+# sketch): v2 fixed-evaluation-budget manifests with the atomic upper-bound policy.
+GOVERNED_FAIR_PROTOCOL_VERSION = "uniride-fair-tsp-v2"
+GOVERNED_FAIR_REGIME = "fixed_evaluation_budget"
+
+
+def governed_comparison_manifest(
+    protocol: ExecutionProtocol,
+    evaluation_budget: int | None,
+    base_seed: int,
+) -> FairComparisonManifest | NativeComparisonManifest:
+    """Build the comparison manifest a governed run executes under.
+
+    Fixed-budget runs get a :class:`FairComparisonManifest` carrying the authorized
+    budget; native-termination runs get a :class:`NativeComparisonManifest` without
+    one.  The seed schedule depends only on protocol version, ``base_seed``,
+    normalized problem identity and replicate (fairness design, seed protocol).
+    """
+    if protocol is ExecutionProtocol.FIXED_BUDGET:
+        return FairComparisonManifest(
+            evaluation_budget=evaluation_budget,  # type: ignore[arg-type]
+            base_seed=base_seed,
+            protocol_version=GOVERNED_FAIR_PROTOCOL_VERSION,
+            comparison_regime=GOVERNED_FAIR_REGIME,
+        )
+    if protocol is ExecutionProtocol.NATIVE_TERMINATION:
+        return NativeComparisonManifest(base_seed=base_seed)
+    raise _violation("governed comparison manifest requires a supported protocol")
+
+
+def governed_contract_seed(
+    protocol: ExecutionProtocol,
+    evaluation_budget: int | None,
+    base_seed: int,
+    problem_name: str,
+    replicate: int,
+) -> int:
+    """Contract seed of one (problem, replicate) pair for a governed entry point."""
+    return governed_comparison_manifest(protocol, evaluation_budget, base_seed).paired_seed(
+        problem_name, replicate
+    )
+
+
 def execute_preflighted(
     *,
     requested_algorithm_id: str,
@@ -200,8 +248,17 @@ def execute_preflighted(
     registered_algorithm_ids: frozenset[str],
     runtime_backends: RuntimeBackendAvailability,
     registry_getter: Callable[[str], Callable[..., RunResult]],
+    comparison_base_seed: int | None = None,
 ) -> tuple[RunResult, PreflightDecision]:
-    """Resolve, authorize, execute, and validate one academic algorithm run."""
+    """Resolve, authorize, execute, and validate one academic algorithm run.
+
+    ``comparison_base_seed`` is for entry points that do not build their own manifest
+    (governed CLI and Smart runs, audit H13).  When given, the gateway builds the
+    ``fair_comparison`` or ``native_comparison`` manifest from the preflight decision,
+    injects it into a copy of ``params`` and requires ``seed`` to be the contract seed
+    for ``(problem.name, run_idx)``.  Callers that already carry a manifest (the pilots)
+    leave it ``None`` and keep their behaviour.
+    """
     resolution = resolve_algorithm_id(requested_algorithm_id, identifier_source)
     decision = preflight_run(
         PreflightRequest(
@@ -214,8 +271,33 @@ def execute_preflighted(
             runtime_backends=runtime_backends,
         )
     )
+    executor_params: Mapping[str, Any] = params
+    if comparison_base_seed is not None:
+        if "fair_comparison" in params or "native_comparison" in params:
+            raise ValueError(
+                "params already carry a comparison manifest; the gateway builds it "
+                "when comparison_base_seed is given"
+            )
+        manifest = governed_comparison_manifest(
+            decision.protocol, decision.evaluation_budget, comparison_base_seed
+        )
+        problem_name = str(getattr(problem, "name", ""))
+        if not problem_name.strip():
+            raise SeedContractViolation(
+                "governed runs need a non-empty problem name to derive the contract seed"
+            )
+        if seed != manifest.paired_seed(problem_name, run_idx):
+            raise SeedContractViolation(
+                "seed is not the contract seed for this problem and replicate"
+            )
+        key = (
+            "fair_comparison"
+            if decision.protocol is ExecutionProtocol.FIXED_BUDGET
+            else "native_comparison"
+        )
+        executor_params = {**params, key: manifest}
     executor = registry_getter(decision.executor_registry_id)
-    result = executor(problem, params, seed, run_idx)
+    result = executor(problem, executor_params, seed, run_idx)
     validate_preflighted_result(result, decision)
     if resolution.alias_used:
         setattr(result, "requested_algorithm_id", resolution.requested_id)
@@ -225,7 +307,11 @@ def execute_preflighted(
 
 
 __all__ = [
+    "GOVERNED_FAIR_PROTOCOL_VERSION",
+    "GOVERNED_FAIR_REGIME",
     "execute_preflighted",
+    "governed_comparison_manifest",
+    "governed_contract_seed",
     "serialize_preflight_decision",
     "validate_preflighted_result",
 ]

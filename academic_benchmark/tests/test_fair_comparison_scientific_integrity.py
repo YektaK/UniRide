@@ -272,6 +272,7 @@ def test_cli_aggregate_preserves_full_contract_for_every_replicate():
     }
     params = _params()
     params.update({"max_iterations": 1, "pack_size": 4})
+    params.pop("fair_comparison")  # the gateway injects the manifest (C-03)
     aggregate = _evaluate_param_combo(
         (
             problem_dict,

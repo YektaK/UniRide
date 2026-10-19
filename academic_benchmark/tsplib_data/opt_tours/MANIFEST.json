@@ -1,0 +1,308 @@
+{
+  "schema_version": "uniride-opt-tour-collection/v1",
+  "collection_id": "tsplib95-opt-tours",
+  "tour_convention": {
+    "node_base": 1,
+    "closed": true,
+    "terminator": -1
+  },
+  "note": "Copies (never moves) of the published TSPLIB95 optimal tours held in the Bildiri archive data folder; nothing downloaded. authority_url names the original location for reference only and was not fetched. archive_entry_sha256 is the sha256 of the entry in the archive manifest.",
+  "instances": [
+    {
+      "name": "burma14",
+      "file_name": "burma14.opt.tour",
+      "dimension": 14,
+      "type": "TOUR",
+      "problem_type": "TSP",
+      "source": "none",
+      "note": "no published optimal tour in the archive or the database; never synthesised from our own runs"
+    },
+    {
+      "name": "ulysses16",
+      "file_name": "ulysses16.opt.tour",
+      "dimension": 16,
+      "type": "TOUR",
+      "problem_type": "TSP",
+      "source": "archive_copy",
+      "artifact_path": "academic_benchmark/tsplib_data/opt_tours/ulysses16.opt.tour",
+      "size_bytes": 161,
+      "sha256": "c56e31536a66f6b6ab9a59696297b044cce4449bd626aaad2f69ed873b0902e6",
+      "authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/ulysses16.opt.tour.gz",
+      "provenance": {
+        "kind": "archive_copy",
+        "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/ulysses16.opt.tour",
+        "archive_entry_sha256": "c56e31536a66f6b6ab9a59696297b044cce4449bd626aaad2f69ed873b0902e6",
+        "note": "committed (LF) bytes of the archive entry; a Windows checkout with autocrlf holds CRLF copies of the archive file with another hash"
+      },
+      "db_opt_tours_table_equal": true,
+      "copied_on": "2026-10-19"
+    },
+    {
+      "name": "ulysses22",
+      "file_name": "ulysses22.opt.tour",
+      "dimension": 22,
+      "type": "TOUR",
+      "problem_type": "TSP",
+      "source": "archive_copy",
+      "artifact_path": "academic_benchmark/tsplib_data/opt_tours/ulysses22.opt.tour",
+      "size_bytes": 173,
+      "sha256": "b10550056f959727a88c49687aa1b1996d631330868c66f554f275dde5945cd3",
+      "authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/ulysses22.opt.tour.gz",
+      "provenance": {
+        "kind": "archive_copy",
+        "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/ulysses22.opt.tour",
+        "archive_entry_sha256": "b10550056f959727a88c49687aa1b1996d631330868c66f554f275dde5945cd3",
+        "note": "committed (LF) bytes of the archive entry; a Windows checkout with autocrlf holds CRLF copies of the archive file with another hash"
+      },
+      "db_opt_tours_table_equal": true,
+      "copied_on": "2026-10-19"
+    },
+    {
+      "name": "att48",
+      "file_name": "att48.opt.tour",
+      "dimension": 48,
+      "type": "TOUR",
+      "problem_type": "TSP",
+      "source": "archive_copy",
+      "artifact_path": "academic_benchmark/tsplib_data/opt_tours/att48.opt.tour",
+      "size_bytes": 245,
+      "sha256": "7ee2e1e733bd4f0c544ade34003fa40037df805653595c1cd30bd2f9db6c7e3d",
+      "authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/att48.opt.tour.gz",
+      "provenance": {
+        "kind": "archive_copy",
+        "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/att48.opt.tour",
+        "archive_entry_sha256": "7ee2e1e733bd4f0c544ade34003fa40037df805653595c1cd30bd2f9db6c7e3d",
+        "note": "committed (LF) bytes of the archive entry; a Windows checkout with autocrlf holds CRLF copies of the archive file with another hash"
+      },
+      "db_opt_tours_table_equal": true,
+      "copied_on": "2026-10-19"
+    },
+    {
+      "name": "eil51",
+      "file_name": "eil51.opt.tour",
+      "dimension": 51,
+      "type": "TOUR",
+      "problem_type": "TSP",
+      "source": "archive_copy",
+      "artifact_path": "academic_benchmark/tsplib_data/opt_tours/eil51.opt.tour",
+      "size_bytes": 257,
+      "sha256": "fb84e8aba84b163b782d60bc5a6d3d402bccf5d5d77355d03b4713044617c8fc",
+      "authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/eil51.opt.tour.gz",
+      "provenance": {
+        "kind": "archive_copy",
+        "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/eil51.opt.tour",
+        "archive_entry_sha256": "fb84e8aba84b163b782d60bc5a6d3d402bccf5d5d77355d03b4713044617c8fc",
+        "note": "committed (LF) bytes of the archive entry; a Windows checkout with autocrlf holds CRLF copies of the archive file with another hash"
+      },
+      "db_opt_tours_table_equal": true,
+      "copied_on": "2026-10-19"
+    },
+    {
+      "name": "berlin52",
+      "file_name": "berlin52.opt.tour",
+      "dimension": 52,
+      "type": "TOUR",
+      "problem_type": "TSP",
+      "source": "archive_copy",
+      "artifact_path": "academic_benchmark/tsplib_data/opt_tours/berlin52.opt.tour",
+      "size_bytes": 219,
+      "sha256": "8f3915f397dcdbf9f07bd570fc41faa7e9b3d27391537f048164b2f937d1ccc9",
+      "authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/berlin52.opt.tour.gz",
+      "provenance": {
+        "kind": "archive_copy",
+        "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/berlin52.opt.tour",
+        "archive_entry_sha256": "8f3915f397dcdbf9f07bd570fc41faa7e9b3d27391537f048164b2f937d1ccc9",
+        "note": "committed (LF) bytes of the archive entry; a Windows checkout with autocrlf holds CRLF copies of the archive file with another hash"
+      },
+      "db_opt_tours_table_equal": true,
+      "copied_on": "2026-10-19"
+    },
+    {
+      "name": "st70",
+      "file_name": "st70.opt.tour",
+      "dimension": 70,
+      "type": "TOUR",
+      "problem_type": "TSP",
+      "source": "archive_copy",
+      "artifact_path": "academic_benchmark/tsplib_data/opt_tours/st70.opt.tour",
+      "size_bytes": 308,
+      "sha256": "a64c8d6db03df9efadad41d80245a269542300a9a5e8138284b23513fa72fe91",
+      "authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/st70.opt.tour.gz",
+      "provenance": {
+        "kind": "archive_copy",
+        "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/st70.opt.tour",
+        "archive_entry_sha256": "a64c8d6db03df9efadad41d80245a269542300a9a5e8138284b23513fa72fe91",
+        "note": "committed (LF) bytes of the archive entry; a Windows checkout with autocrlf holds CRLF copies of the archive file with another hash"
+      },
+      "db_opt_tours_table_equal": true,
+      "copied_on": "2026-10-19"
+    },
+    {
+      "name": "eil76",
+      "file_name": "eil76.opt.tour",
+      "dimension": 76,
+      "type": "TOUR",
+      "problem_type": "TSP",
+      "source": "archive_copy",
+      "artifact_path": "academic_benchmark/tsplib_data/opt_tours/eil76.opt.tour",
+      "size_bytes": 331,
+      "sha256": "ffdd42640b7882b8618febfcde132dfc1f97d01ae9c495b94f7c7ee8c1473e64",
+      "authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/eil76.opt.tour.gz",
+      "provenance": {
+        "kind": "archive_copy",
+        "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/eil76.opt.tour",
+        "archive_entry_sha256": "ffdd42640b7882b8618febfcde132dfc1f97d01ae9c495b94f7c7ee8c1473e64",
+        "note": "committed (LF) bytes of the archive entry; a Windows checkout with autocrlf holds CRLF copies of the archive file with another hash"
+      },
+      "db_opt_tours_table_equal": true,
+      "copied_on": "2026-10-19"
+    },
+    {
+      "name": "pr76",
+      "file_name": "pr76.opt.tour",
+      "dimension": 76,
+      "type": "TOUR",
+      "problem_type": "TSP",
+      "source": "archive_copy",
+      "artifact_path": "academic_benchmark/tsplib_data/opt_tours/pr76.opt.tour",
+      "size_bytes": 328,
+      "sha256": "9851e6a294ef790eabd3961be9d0ac22e30881e8b7c1671020322847c6965f62",
+      "authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/pr76.opt.tour.gz",
+      "provenance": {
+        "kind": "archive_copy",
+        "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/pr76.opt.tour",
+        "archive_entry_sha256": "9851e6a294ef790eabd3961be9d0ac22e30881e8b7c1671020322847c6965f62",
+        "note": "committed (LF) bytes of the archive entry; a Windows checkout with autocrlf holds CRLF copies of the archive file with another hash"
+      },
+      "db_opt_tours_table_equal": true,
+      "copied_on": "2026-10-19"
+    },
+    {
+      "name": "gr96",
+      "file_name": "gr96.opt.tour",
+      "dimension": 96,
+      "type": "TOUR",
+      "problem_type": "TSP",
+      "source": "archive_copy",
+      "artifact_path": "academic_benchmark/tsplib_data/opt_tours/gr96.opt.tour",
+      "size_bytes": 388,
+      "sha256": "9ab8ce5797c3fbb0f4241e89871ab1900715ef01376af0dae781a8fe34cc840a",
+      "authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/gr96.opt.tour.gz",
+      "provenance": {
+        "kind": "archive_copy",
+        "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/gr96.opt.tour",
+        "archive_entry_sha256": "9ab8ce5797c3fbb0f4241e89871ab1900715ef01376af0dae781a8fe34cc840a",
+        "note": "committed (LF) bytes of the archive entry; a Windows checkout with autocrlf holds CRLF copies of the archive file with another hash"
+      },
+      "db_opt_tours_table_equal": true,
+      "copied_on": "2026-10-19"
+    },
+    {
+      "name": "kroa100",
+      "file_name": "kroA100.opt.tour",
+      "dimension": 100,
+      "type": "TOUR",
+      "problem_type": "TSP",
+      "source": "archive_copy",
+      "artifact_path": "academic_benchmark/tsplib_data/opt_tours/kroA100.opt.tour",
+      "size_bytes": 409,
+      "sha256": "65499d540c5aa7e90750065a5c6ff82f9774f284facf9d29af0146bce4332dd1",
+      "authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/kroA100.opt.tour.gz",
+      "provenance": {
+        "kind": "archive_copy",
+        "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/kroA100.opt.tour",
+        "archive_entry_sha256": "65499d540c5aa7e90750065a5c6ff82f9774f284facf9d29af0146bce4332dd1",
+        "note": "committed (LF) bytes of the archive entry; a Windows checkout with autocrlf holds CRLF copies of the archive file with another hash"
+      },
+      "db_opt_tours_table_equal": true,
+      "copied_on": "2026-10-19"
+    },
+    {
+      "name": "krob100",
+      "file_name": "kroB100.opt.tour",
+      "dimension": 100,
+      "type": "TOUR",
+      "problem_type": "TSP",
+      "source": "none",
+      "note": "no published optimal tour in the archive or the database; never synthesised from our own runs"
+    },
+    {
+      "name": "kroc100",
+      "file_name": "kroC100.opt.tour",
+      "dimension": 100,
+      "type": "TOUR",
+      "problem_type": "TSP",
+      "source": "archive_copy",
+      "artifact_path": "academic_benchmark/tsplib_data/opt_tours/kroC100.opt.tour",
+      "size_bytes": 407,
+      "sha256": "c5af19ce345254a2e85d1121544fb8f128744de1e0c7d68223efd0754de155e8",
+      "authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/kroC100.opt.tour.gz",
+      "provenance": {
+        "kind": "archive_copy",
+        "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/kroC100.opt.tour",
+        "archive_entry_sha256": "c5af19ce345254a2e85d1121544fb8f128744de1e0c7d68223efd0754de155e8",
+        "note": "committed (LF) bytes of the archive entry; a Windows checkout with autocrlf holds CRLF copies of the archive file with another hash"
+      },
+      "db_opt_tours_table_equal": true,
+      "copied_on": "2026-10-19"
+    },
+    {
+      "name": "krod100",
+      "file_name": "kroD100.opt.tour",
+      "dimension": 100,
+      "type": "TOUR",
+      "problem_type": "TSP",
+      "source": "archive_copy",
+      "artifact_path": "academic_benchmark/tsplib_data/opt_tours/kroD100.opt.tour",
+      "size_bytes": 408,
+      "sha256": "12a06b91381720ef838ae92c82aae38b0821845dc3c206fa2b9932978fd066ad",
+      "authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/kroD100.opt.tour.gz",
+      "provenance": {
+        "kind": "archive_copy",
+        "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/kroD100.opt.tour",
+        "archive_entry_sha256": "12a06b91381720ef838ae92c82aae38b0821845dc3c206fa2b9932978fd066ad",
+        "note": "committed (LF) bytes of the archive entry; a Windows checkout with autocrlf holds CRLF copies of the archive file with another hash"
+      },
+      "db_opt_tours_table_equal": true,
+      "copied_on": "2026-10-19"
+    },
+    {
+      "name": "kroe100",
+      "file_name": "kroE100.opt.tour",
+      "dimension": 100,
+      "type": "TOUR",
+      "problem_type": "TSP",
+      "source": "none",
+      "note": "no published optimal tour in the archive or the database; never synthesised from our own runs"
+    },
+    {
+      "name": "rd100",
+      "file_name": "rd100.opt.tour",
+      "dimension": 100,
+      "type": "TOUR",
+      "problem_type": "TSP",
+      "source": "archive_copy",
+      "artifact_path": "academic_benchmark/tsplib_data/opt_tours/rd100.opt.tour",
+      "size_bytes": 508,
+      "sha256": "300f49c2947bf18d5ea7ebf2ca507b8ab998b050fbd0a83414f52d409f81ad62",
+      "authority_url": "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/rd100.opt.tour.gz",
+      "provenance": {
+        "kind": "archive_copy",
+        "archive_path": "archive/academic_benchmark/bildiri2026_legacy/bildiri2026/data/tsplib/rd100.opt.tour",
+        "archive_entry_sha256": "300f49c2947bf18d5ea7ebf2ca507b8ab998b050fbd0a83414f52d409f81ad62",
+        "note": "committed (LF) bytes of the archive entry; a Windows checkout with autocrlf holds CRLF copies of the archive file with another hash"
+      },
+      "db_opt_tours_table_equal": true,
+      "copied_on": "2026-10-19"
+    },
+    {
+      "name": "ft53",
+      "file_name": "ft53.opt.tour",
+      "dimension": 53,
+      "type": "TOUR",
+      "problem_type": "ATSP",
+      "source": "none",
+      "note": "Optimal tours are not published for ATSP (atsp/MANIFEST.json note)"
+    }
+  ]
+}

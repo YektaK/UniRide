@@ -1,0 +1,358 @@
+{
+  "schema_version": "uniride-tsp-collection/v1",
+  "collection_id": "tsplib95-tsp-verification-16",
+  "note": "The 16 TSP instances with n <= 100 and a published optimum (DECISION_LOG E09). Public TSPLIB95 research data; nothing downloaded. published_optimum is problems.optimal of tsplib.db (cross-checked with TSPLIB_OPTIMALS in the parser module). coordinate_text_sha256 is the sha256 of the lines '{i} {x!r} {y!r}' + LF (ASCII, 0-based) of the parsed coordinates, as in the WP-E7 runner.",
+  "coordinate_text": {
+    "line_format": "{i} {x!r} {y!r}\\n",
+    "encoding": "ASCII",
+    "index_base": 0
+  },
+  "instances": [
+    {
+      "name": "burma14",
+      "file_name": "burma14.tsp",
+      "problem_type": "TSP",
+      "dimension": 14,
+      "edge_weight_type": "GEO",
+      "artifact_path": "academic_benchmark/tsplib_data/tsp/burma14.tsp",
+      "size_bytes": 396,
+      "sha256": "e35bf01bde7a2b13e5f58104e4d0e652ad87a800c8fc1fdd53027e7f086dc1f8",
+      "coordinate_text_sha256": "95a859a785ed8af942c5fe57a548714b04b9931c66c083fd08abe014260045d7",
+      "published_optimum": 3323,
+      "provenance": {
+        "kind": "db_reconstruction",
+        "source_path": null,
+        "source_sha256": "e35bf01bde7a2b13e5f58104e4d0e652ad87a800c8fc1fdd53027e7f086dc1f8",
+        "table": "coordinates",
+        "query": "select x, y from coordinates where problem_name=? order by node_idx",
+        "database": {
+          "file": "tsplib.db",
+          "size_bytes": 1004810240,
+          "sha256": "9e3e597286acfa1b40c0377a2e05714c06e0525155d5dd7e2e3823aecd60ae38"
+        },
+        "note": "source_sha256 is the sha256 of the rebuilt file; no earlier file existed for this instance"
+      },
+      "retrieved_on": "2026-10-19"
+    },
+    {
+      "name": "ulysses16",
+      "file_name": "ulysses16.tsp",
+      "problem_type": "TSP",
+      "dimension": 16,
+      "edge_weight_type": "GEO",
+      "artifact_path": "academic_benchmark/tsplib_data/tsp/ulysses16.tsp",
+      "size_bytes": 430,
+      "sha256": "830dbb1c81607780efbd27692003da46344a5c03ac0f3cfc3bacdec30c41c6ae",
+      "coordinate_text_sha256": "48d4b396dbb5b8adf55ae9587b51ef159596ea3f03e21dacd62903343a056ba1",
+      "published_optimum": 6859,
+      "provenance": {
+        "kind": "db_reconstruction",
+        "source_path": null,
+        "source_sha256": "830dbb1c81607780efbd27692003da46344a5c03ac0f3cfc3bacdec30c41c6ae",
+        "table": "coordinates",
+        "query": "select x, y from coordinates where problem_name=? order by node_idx",
+        "database": {
+          "file": "tsplib.db",
+          "size_bytes": 1004810240,
+          "sha256": "9e3e597286acfa1b40c0377a2e05714c06e0525155d5dd7e2e3823aecd60ae38"
+        },
+        "note": "source_sha256 is the sha256 of the rebuilt file; no earlier file existed for this instance"
+      },
+      "retrieved_on": "2026-10-19"
+    },
+    {
+      "name": "ulysses22",
+      "file_name": "ulysses22.tsp",
+      "problem_type": "TSP",
+      "dimension": 22,
+      "edge_weight_type": "GEO",
+      "artifact_path": "academic_benchmark/tsplib_data/tsp/ulysses22.tsp",
+      "size_bytes": 519,
+      "sha256": "f1487e22b5e67dbd0fcc5202deba38e8521a5a8ee025805f76977f9f700f37c0",
+      "coordinate_text_sha256": "dcd42842c762797062651f5354f55155b5f3d9166011dae2fea191e9418ca32c",
+      "published_optimum": 7013,
+      "provenance": {
+        "kind": "db_reconstruction",
+        "source_path": null,
+        "source_sha256": "f1487e22b5e67dbd0fcc5202deba38e8521a5a8ee025805f76977f9f700f37c0",
+        "table": "coordinates",
+        "query": "select x, y from coordinates where problem_name=? order by node_idx",
+        "database": {
+          "file": "tsplib.db",
+          "size_bytes": 1004810240,
+          "sha256": "9e3e597286acfa1b40c0377a2e05714c06e0525155d5dd7e2e3823aecd60ae38"
+        },
+        "note": "source_sha256 is the sha256 of the rebuilt file; no earlier file existed for this instance"
+      },
+      "retrieved_on": "2026-10-19"
+    },
+    {
+      "name": "att48",
+      "file_name": "att48.tsp",
+      "problem_type": "TSP",
+      "dimension": 48,
+      "edge_weight_type": "ATT",
+      "artifact_path": "academic_benchmark/tsplib_data/tsp/att48.tsp",
+      "size_bytes": 992,
+      "sha256": "aa6798fdbdf1a98b354d0b0e35b617e0887c48de2d83c0c5b45a3f5fca24bb91",
+      "coordinate_text_sha256": "8608de380f371a5d159d431f7e80cb85ecee7bf634ee268c0ec00c4cfe298a14",
+      "published_optimum": 10628,
+      "provenance": {
+        "kind": "db_reconstruction",
+        "source_path": null,
+        "source_sha256": "aa6798fdbdf1a98b354d0b0e35b617e0887c48de2d83c0c5b45a3f5fca24bb91",
+        "table": "coordinates",
+        "query": "select x, y from coordinates where problem_name=? order by node_idx",
+        "database": {
+          "file": "tsplib.db",
+          "size_bytes": 1004810240,
+          "sha256": "9e3e597286acfa1b40c0377a2e05714c06e0525155d5dd7e2e3823aecd60ae38"
+        },
+        "note": "source_sha256 is the sha256 of the rebuilt file; no earlier file existed for this instance"
+      },
+      "retrieved_on": "2026-10-19"
+    },
+    {
+      "name": "eil51",
+      "file_name": "eil51.tsp",
+      "problem_type": "TSP",
+      "dimension": 51,
+      "edge_weight_type": "EUC_2D",
+      "artifact_path": "academic_benchmark/tsplib_data/tsp/eil51.tsp",
+      "size_bytes": 579,
+      "sha256": "66c05ad077ffd64d5778e358bbd16be049f8c8ae880cbd24f034487331d1ccce",
+      "coordinate_text_sha256": "4e18313517fb6a381d173671d245c88d298e791b19cf615aa7762ad2f9b41ec3",
+      "published_optimum": 426,
+      "provenance": {
+        "kind": "local_copy",
+        "source_path": "academic_benchmark/tsplib_data/eil51.tsp",
+        "source_sha256": "66c05ad077ffd64d5778e358bbd16be049f8c8ae880cbd24f034487331d1ccce",
+        "note": "byte-for-byte copy of an untracked local file; the source path is relative to the checkout that held it"
+      },
+      "retrieved_on": "2026-10-19"
+    },
+    {
+      "name": "berlin52",
+      "file_name": "berlin52.tsp",
+      "problem_type": "TSP",
+      "dimension": 52,
+      "edge_weight_type": "EUC_2D",
+      "artifact_path": "academic_benchmark/tsplib_data/tsp/berlin52.tsp",
+      "size_bytes": 916,
+      "sha256": "8496a5838133e3c3eb25a9fa8893b1ac302593fc8dc325350643a0cabd8abadc",
+      "coordinate_text_sha256": "482d28e0ae81be2aa5d87420cfa30681dfce1badd3cb1edbbfece57a97f0f844",
+      "published_optimum": 7542,
+      "provenance": {
+        "kind": "local_copy",
+        "source_path": "academic_benchmark/tsplib_data/berlin52.tsp",
+        "source_sha256": "8496a5838133e3c3eb25a9fa8893b1ac302593fc8dc325350643a0cabd8abadc",
+        "note": "byte-for-byte copy of an untracked local file; the source path is relative to the checkout that held it"
+      },
+      "retrieved_on": "2026-10-19"
+    },
+    {
+      "name": "st70",
+      "file_name": "st70.tsp",
+      "problem_type": "TSP",
+      "dimension": 70,
+      "edge_weight_type": "EUC_2D",
+      "artifact_path": "academic_benchmark/tsplib_data/tsp/st70.tsp",
+      "size_bytes": 734,
+      "sha256": "60c09e8886609bf22d6dc699fe7d7aa1924207d084578aad1a377ec65cf15b1b",
+      "coordinate_text_sha256": "96a361f88aada01531eae72353ea77ed43d794ca631b30c5e5a718ce2ec8d4a4",
+      "published_optimum": 675,
+      "provenance": {
+        "kind": "local_copy",
+        "source_path": "academic_benchmark/tsplib_data/st70.tsp",
+        "source_sha256": "60c09e8886609bf22d6dc699fe7d7aa1924207d084578aad1a377ec65cf15b1b",
+        "note": "byte-for-byte copy of an untracked local file; the source path is relative to the checkout that held it"
+      },
+      "retrieved_on": "2026-10-19"
+    },
+    {
+      "name": "eil76",
+      "file_name": "eil76.tsp",
+      "problem_type": "TSP",
+      "dimension": 76,
+      "edge_weight_type": "EUC_2D",
+      "artifact_path": "academic_benchmark/tsplib_data/tsp/eil76.tsp",
+      "size_bytes": 801,
+      "sha256": "74a81d109969e0e46ecc62ff9bd051bfce36b508326bfcd22168e58d03af2447",
+      "coordinate_text_sha256": "2d13310d9c31dbf5d5ba59dd1aa7e08dc0d068f6dde408400de6245c02ecb246",
+      "published_optimum": 538,
+      "provenance": {
+        "kind": "local_copy",
+        "source_path": "academic_benchmark/tsplib_data/eil76.tsp",
+        "source_sha256": "74a81d109969e0e46ecc62ff9bd051bfce36b508326bfcd22168e58d03af2447",
+        "note": "byte-for-byte copy of an untracked local file; the source path is relative to the checkout that held it"
+      },
+      "retrieved_on": "2026-10-19"
+    },
+    {
+      "name": "pr76",
+      "file_name": "pr76.tsp",
+      "problem_type": "TSP",
+      "dimension": 76,
+      "edge_weight_type": "EUC_2D",
+      "artifact_path": "academic_benchmark/tsplib_data/tsp/pr76.tsp",
+      "size_bytes": 1544,
+      "sha256": "e7388669133dc13651fca32236e2324f52b3c0967eda3b6795db24ea974f1a1a",
+      "coordinate_text_sha256": "744f19e4b4659d353dbe9e553a09fd372545ecb6a23fe6c381bea0a39f545efd",
+      "published_optimum": 108159,
+      "provenance": {
+        "kind": "db_reconstruction",
+        "source_path": null,
+        "source_sha256": "e7388669133dc13651fca32236e2324f52b3c0967eda3b6795db24ea974f1a1a",
+        "table": "coordinates",
+        "query": "select x, y from coordinates where problem_name=? order by node_idx",
+        "database": {
+          "file": "tsplib.db",
+          "size_bytes": 1004810240,
+          "sha256": "9e3e597286acfa1b40c0377a2e05714c06e0525155d5dd7e2e3823aecd60ae38"
+        },
+        "note": "source_sha256 is the sha256 of the rebuilt file; no earlier file existed for this instance"
+      },
+      "retrieved_on": "2026-10-19"
+    },
+    {
+      "name": "gr96",
+      "file_name": "gr96.tsp",
+      "problem_type": "TSP",
+      "dimension": 96,
+      "edge_weight_type": "GEO",
+      "artifact_path": "academic_benchmark/tsplib_data/tsp/gr96.tsp",
+      "size_bytes": 1604,
+      "sha256": "1af0e9176d76ef03bc7022dd401026867e470e5308deb4dbea4569919b9777c5",
+      "coordinate_text_sha256": "dbe13b6a4e0fa75e51e71c88bf8ae384dfbf995128d1fb871d86980ef9603beb",
+      "published_optimum": 55209,
+      "provenance": {
+        "kind": "db_reconstruction",
+        "source_path": null,
+        "source_sha256": "1af0e9176d76ef03bc7022dd401026867e470e5308deb4dbea4569919b9777c5",
+        "table": "coordinates",
+        "query": "select x, y from coordinates where problem_name=? order by node_idx",
+        "database": {
+          "file": "tsplib.db",
+          "size_bytes": 1004810240,
+          "sha256": "9e3e597286acfa1b40c0377a2e05714c06e0525155d5dd7e2e3823aecd60ae38"
+        },
+        "note": "source_sha256 is the sha256 of the rebuilt file; no earlier file existed for this instance"
+      },
+      "retrieved_on": "2026-10-19"
+    },
+    {
+      "name": "kroa100",
+      "file_name": "kroA100.tsp",
+      "problem_type": "TSP",
+      "dimension": 100,
+      "edge_weight_type": "EUC_2D",
+      "artifact_path": "academic_benchmark/tsplib_data/tsp/kroA100.tsp",
+      "size_bytes": 1452,
+      "sha256": "32326e43edca13a967d9812acab73e50e5de2b8599a0dc9b5c1804d47658c943",
+      "coordinate_text_sha256": "fca46a74a926a541659ba09f9f2e833479f5052f0a47e0638c31d5de69cc7822",
+      "published_optimum": 21282,
+      "provenance": {
+        "kind": "local_copy",
+        "source_path": "optimizer_api/tests/tsplib_data/kroA100.tsp",
+        "source_sha256": "32326e43edca13a967d9812acab73e50e5de2b8599a0dc9b5c1804d47658c943",
+        "note": "byte-for-byte copy of an untracked local file; the source path is relative to the checkout that held it"
+      },
+      "retrieved_on": "2026-10-19"
+    },
+    {
+      "name": "krob100",
+      "file_name": "kroB100.tsp",
+      "problem_type": "TSP",
+      "dimension": 100,
+      "edge_weight_type": "EUC_2D",
+      "artifact_path": "academic_benchmark/tsplib_data/tsp/kroB100.tsp",
+      "size_bytes": 1459,
+      "sha256": "8a065b545aa7a79d551b9815e4d702b59359ffdb5d895ef971c607abe7876d7e",
+      "coordinate_text_sha256": "fde8d511e3239072c95bf2907d9fa1cd71b2fb9b3e8e8738c2204a9006630817",
+      "published_optimum": 22141,
+      "provenance": {
+        "kind": "local_copy",
+        "source_path": "optimizer_api/tests/tsplib_data/kroB100.tsp",
+        "source_sha256": "8a065b545aa7a79d551b9815e4d702b59359ffdb5d895ef971c607abe7876d7e",
+        "note": "byte-for-byte copy of an untracked local file; the source path is relative to the checkout that held it"
+      },
+      "retrieved_on": "2026-10-19"
+    },
+    {
+      "name": "kroc100",
+      "file_name": "kroC100.tsp",
+      "problem_type": "TSP",
+      "dimension": 100,
+      "edge_weight_type": "EUC_2D",
+      "artifact_path": "academic_benchmark/tsplib_data/tsp/kroC100.tsp",
+      "size_bytes": 1448,
+      "sha256": "dc3d683d5647164ef0ccabaff6e6102a25500cb5fc39adeaadd549f1765010e3",
+      "coordinate_text_sha256": "a68018751beeb5195c204b4d4603e38ece90af0b0a14824ee3ba373cb9e9a597",
+      "published_optimum": 20749,
+      "provenance": {
+        "kind": "local_copy",
+        "source_path": "optimizer_api/tests/tsplib_data/kroC100.tsp",
+        "source_sha256": "dc3d683d5647164ef0ccabaff6e6102a25500cb5fc39adeaadd549f1765010e3",
+        "note": "byte-for-byte copy of an untracked local file; the source path is relative to the checkout that held it"
+      },
+      "retrieved_on": "2026-10-19"
+    },
+    {
+      "name": "krod100",
+      "file_name": "kroD100.tsp",
+      "problem_type": "TSP",
+      "dimension": 100,
+      "edge_weight_type": "EUC_2D",
+      "artifact_path": "academic_benchmark/tsplib_data/tsp/kroD100.tsp",
+      "size_bytes": 1448,
+      "sha256": "e83173e62ce1d2d99fa56bdc6b5005ce128bb3712a66c814288e60ca909d6e05",
+      "coordinate_text_sha256": "57789264a39725844c6ba63cbe05542a328e35edb5f1b9240383e3566f33c64f",
+      "published_optimum": 21294,
+      "provenance": {
+        "kind": "local_copy",
+        "source_path": "optimizer_api/tests/tsplib_data/kroD100.tsp",
+        "source_sha256": "e83173e62ce1d2d99fa56bdc6b5005ce128bb3712a66c814288e60ca909d6e05",
+        "note": "byte-for-byte copy of an untracked local file; the source path is relative to the checkout that held it"
+      },
+      "retrieved_on": "2026-10-19"
+    },
+    {
+      "name": "kroe100",
+      "file_name": "kroE100.tsp",
+      "problem_type": "TSP",
+      "dimension": 100,
+      "edge_weight_type": "EUC_2D",
+      "artifact_path": "academic_benchmark/tsplib_data/tsp/kroE100.tsp",
+      "size_bytes": 1449,
+      "sha256": "b9e7ad8864a08237691187b1add81b0a492ef56b3956b0d9385de61e6a59be02",
+      "coordinate_text_sha256": "fd67b6740fb8d5e4c0f7c3bc43cb764a2364415e0f5c0286d17c85d1e18c8cea",
+      "published_optimum": 22068,
+      "provenance": {
+        "kind": "local_copy",
+        "source_path": "optimizer_api/tests/tsplib_data/kroE100.tsp",
+        "source_sha256": "b9e7ad8864a08237691187b1add81b0a492ef56b3956b0d9385de61e6a59be02",
+        "note": "byte-for-byte copy of an untracked local file; the source path is relative to the checkout that held it"
+      },
+      "retrieved_on": "2026-10-19"
+    },
+    {
+      "name": "rd100",
+      "file_name": "rd100.tsp",
+      "problem_type": "TSP",
+      "dimension": 100,
+      "edge_weight_type": "EUC_2D",
+      "artifact_path": "academic_benchmark/tsplib_data/tsp/rd100.tsp",
+      "size_bytes": 2821,
+      "sha256": "6f62863c4f5d9fe1d7226077923716b8d0ba76d58bae7eb65fdaff127c5cdf5c",
+      "coordinate_text_sha256": "f596fead1fd4550973f392c183cd91328f14507dcc63a6fad789a98fb88595f7",
+      "published_optimum": 7910,
+      "provenance": {
+        "kind": "local_copy",
+        "source_path": "academic_benchmark/tsplib_data/rd100.tsp",
+        "source_sha256": "6f62863c4f5d9fe1d7226077923716b8d0ba76d58bae7eb65fdaff127c5cdf5c",
+        "note": "byte-for-byte copy of an untracked local file; the source path is relative to the checkout that held it"
+      },
+      "retrieved_on": "2026-10-19"
+    }
+  ]
+}

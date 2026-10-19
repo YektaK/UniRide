@@ -7,3 +7,8 @@ academic_benchmark/*/legacy_pre_2026-10-13/** -text
 docs/paper/results/week-2026-10-05-exact/** -text
 # WP-E7: the TSP reference manifest holds sha256 values of reference.csv, tours.json and README.md: byte-exact, no line-ending conversion.
 docs/paper/results/tsplib-exact-reference/** -text
+# WP-E8 companion: the 16 TSP verification instances and the published optimal tours are tracked, byte-exact (copies keep their source bytes; sha256 in MANIFEST.json)
+academic_benchmark/tsplib_data/tsp/*.tsp -text
+academic_benchmark/tsplib_data/tsp/MANIFEST.json text eol=lf
+academic_benchmark/tsplib_data/opt_tours/*.opt.tour -text
+academic_benchmark/tsplib_data/opt_tours/MANIFEST.json text eol=lf

@@ -49,6 +49,8 @@ next-env.d.ts
 
 # TSP build artifacts
 *.tsp
+# WP-E8 companion: the 16 TSP verification instances (public TSPLIB data) are tracked
+!academic_benchmark/tsplib_data/tsp/*.tsp
 
 # firebase
 firebase-debug.log

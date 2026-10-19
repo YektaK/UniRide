@@ -2,10 +2,12 @@
 reproduce the published TSPLIB optima of the 16 TSP instances with n <= 100 and ATSP ft53 with the exact DFJ
 cut-loop solver, Gurobi primary and HiGHS re-solve.
 
-Offline: reads the TSPLIB instance files (or, for instances without a file in the checkout, the node coordinates
-in ``tsplib.db``) and the published optima in ``problems.optimal``; the database is opened strictly read-only and
-immutable (``mode=ro&immutable=1``: no write, no -wal/-shm file). ``best_solutions`` (our own heuristic runs) is
-never read. Nothing is downloaded.
+Offline: reads the TSPLIB instance files of the active collection ``academic_benchmark/tsplib_data/tsp`` and the
+published optimal tours of ``academic_benchmark/tsplib_data/opt_tours`` (both manifest-governed, sha256 checked, see
+``academic_benchmark.exact_reference.inputs``), and the published optima and the instance list in ``problems.optimal``
+of ``tsplib.db``; the database is opened strictly read-only and immutable (``mode=ro&immutable=1``: no write, no
+-wal/-shm file) and gives no coordinates and no tours while the committed files exist. Any input path in the archive
+directory is refused (exit 2). ``best_solutions`` (our own heuristic runs) is never read. Nothing is downloaded.
 
 Each instance gets 600 s wall time in total (all cut-loop re-solves together), 1 thread, seed 0. The distance
 convention (nint for EUC_2D, the ATT pseudo-Euclidean rule, the GEO rule) is asserted against an independent
@@ -16,7 +18,7 @@ data); 3 AMPL, Gurobi or HiGHS unavailable.
 
 Writes (strictly below docs/paper/results/, E04): reference.csv, tours.json, manifest.json, README.md. This is a
 verification subset, not a paper instance set; exact rows are never pooled with heuristic rows; no superiority claim.
-``--verify-tours DIR`` re-checks a tours.json without AMPL.
+``--verify-tours DIR`` re-checks a tours.json without AMPL and without a database.
 """
 from __future__ import annotations
 
@@ -40,7 +42,7 @@ for _p in (str(REPO),):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from academic_benchmark.exact_reference import protocol  # noqa: E402
+from academic_benchmark.exact_reference import inputs, protocol  # noqa: E402
 from uniride_core.algorithms import tsplib_parser  # noqa: E402
 from uniride_core.exact import ampl_backend as ab  # noqa: E402
 from uniride_core.exact import tsp  # noqa: E402
@@ -58,7 +60,8 @@ EXPECTED_TSP_NAMES = ("burma14", "ulysses16", "ulysses22", "att48", "eil51", "be
                       "kroa100", "krob100", "kroc100", "krod100", "kroe100", "rd100")
 ATSP_NAMES = ("ft53",)
 TSPLIB_GEO_PI = 3.141592  # the constant printed in the TSPLIB95 document; the repo's GEO function uses math.pi
-OPT_TOUR_DIR = REPO / "archive" / "academic_benchmark" / "bildiri2026_legacy" / "bildiri2026" / "data" / "tsplib"  # read as data only
+TSP_DIR = inputs.TSP_DIR  # active instance collection (manifest-governed)
+OPT_TOUR_DIR = inputs.OPT_TOUR_DIR  # active published-tour collection (manifest-governed)
 
 REFERENCE_CSV_FIELDS = (
     "protocol", "instance", "problem_type", "n", "edge_weight_type", "reference_optimum", "reference_source", "exact_status",
@@ -160,8 +163,7 @@ def coordinate_text_record() -> dict:
 
 
 def coordinate_text_sha256(coords) -> str:
-    canonical = "".join(f"{i} {x!r} {y!r}\n" for i, (x, y) in enumerate(coords)).encode("ascii")
-    return hashlib.sha256(canonical).hexdigest()
+    return inputs.coordinate_text_sha256(coords)
 
 
 def convention_record(*, geo_pi_blocking: bool) -> dict:
@@ -267,22 +269,14 @@ class PublishedTourError(ValueError):
 
 
 def _parse_tour_file(text: str) -> list:
-    nodes, in_section = [], False
-    for line in text.splitlines():
-        token = line.strip()
-        if token.upper().startswith("TOUR_SECTION"):
-            in_section = True
-        elif in_section:
-            if token in ("-1", "EOF"):
-                break
-            if token:
-                nodes.append(int(token))
-    return nodes
+    return inputs.parse_tour_text(text)
 
 
 def read_published_tour(conn, name: str, tour_dir):
-    """(1-based node list, source) of the published optimal tour, or None. First the ``opt_tours`` table of the database
-    (read-only connection), then ``<name>.opt.tour`` in ``tour_dir`` (case-insensitive name; the file is read as data)."""
+    """Database cross-check helper, not an input of the runner (the runner takes tours from the manifest-governed
+    collection, ``inputs.read_collection_tour``): (1-based node list, source) of the published optimal tour, or None.
+    First the ``opt_tours`` table of the database (read-only connection), then ``<name>.opt.tour`` in ``tour_dir``
+    (case-insensitive name; the file is read as data)."""
     has_table = conn.execute("select 1 from sqlite_master where type='table' and name='opt_tours'").fetchone()
     if has_table:
         row = conn.execute("select tour_nodes from opt_tours where problem_name=?", (name,)).fetchone()
@@ -303,8 +297,8 @@ def check_published_tour(spec, matrix, tour_one_based) -> list:
             for e in tsp.validate_tour(matrix, [int(v) - 1 for v in tour_one_based], spec.published_optimum)]
 
 
-def _attach_published_tour_check(rec: dict, spec, matrix, conn, tour_dir) -> None:
-    pub = read_published_tour(conn, spec.name, tour_dir)
+def _attach_published_tour_check(rec: dict, spec, matrix, tour_dir) -> None:
+    pub = inputs.read_collection_tour(spec.name, tour_dir) if tour_dir is not None else None
     if pub is None:
         rec["published_tour_check"] = {"source": "none", "tour_length": None, "equals_published_optimum": None}
         return
@@ -321,19 +315,44 @@ def _sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def load_instance(spec: InstanceSpec, data_dir: Path, conn, tour_dir=OPT_TOUR_DIR) -> tuple:
-    """(matrix, coordinates or None, data record). Instance files are used when present; otherwise the node
-    coordinates in the read-only database (recorded as such). The convention is asserted here."""
+def load_instance(spec: InstanceSpec, data_dir: Path, conn, tour_dir=OPT_TOUR_DIR, tsp_dir=None) -> tuple:
+    """(matrix, coordinates or None, data record). With ``tsp_dir`` (the active collection) the committed, manifest-checked
+    instance file is used and ``conn`` may be None: no database read. Without it, or for an instance the collection does not
+    list, the older rule applies: instance file in ``data_dir``, otherwise the node coordinates in the read-only database
+    (recorded as such). The published tour comes from ``tour_dir`` (manifest-governed collection). The convention is
+    asserted here."""
     if spec.problem_type == "ATSP":
+        found = inputs.read_atsp_file(spec.name) if tsp_dir is not None else None
+        if found is not None:
+            matrix = load_atsp_matrix(found[0], spec.name)
+            if len(matrix) != spec.n:
+                raise ValueError(f"{spec.name}: file has {len(matrix)} nodes, expected {spec.n}")
+            rec = {"data_source": "atsp_file", "file": Path(found[1]["artifact_path"]).name, "sha256": found[1]["sha256"]}
+            _attach_published_tour_check(rec, spec, matrix, tour_dir)
+            return matrix, None, rec
         for cand in (data_dir / f"{spec.name}.atsp", data_dir / "atsp" / f"{spec.name}.atsp"):
             if cand.is_file():
                 matrix = load_atsp_matrix(cand.read_text(encoding="utf-8"), spec.name)
                 if len(matrix) != spec.n:
                     raise ValueError(f"{spec.name}: file has {len(matrix)} nodes, database says {spec.n}")
                 rec = {"data_source": "atsp_file", "file": cand.name, "sha256": _sha256_file(cand)}
-                _attach_published_tour_check(rec, spec, matrix, conn, tour_dir)
+                _attach_published_tour_check(rec, spec, matrix, tour_dir)
                 return matrix, None, rec
         raise FileNotFoundError(f"{spec.name}: no .atsp file in the data directory")
+    committed = inputs.read_tsp_file(spec.name, tsp_dir) if tsp_dir is not None else None
+    if committed is not None:
+        text, entry = committed
+        data = tsplib_parser.parse_tsplib_text(text, spec.name)
+        if data is None or data["edge_weight_type"] != spec.edge_weight_type or len(data["coordinates"]) != spec.n:
+            raise ValueError(f"{spec.name}: committed instance file disagrees with the instance spec (type or node count)")
+        coords = data["coordinates"]
+        if coordinate_text_sha256(coords) != entry["coordinate_text_sha256"]:
+            raise ValueError(f"{spec.name}: coordinates of the committed instance file differ from the manifest fingerprint")
+        matrix = build_matrix(spec.edge_weight_type, coords)
+        assert_convention(spec.edge_weight_type, coords, matrix)
+        rec = {"data_source": "tsp_file", "file": entry["file_name"], "sha256": entry["sha256"]}
+        _attach_published_tour_check(rec, spec, matrix, tour_dir)
+        return matrix, coords, rec
     path = data_dir / f"{spec.name}.tsp"
     db_coords = read_db_coordinates(conn, spec.name)
     if path.is_file():
@@ -351,7 +370,7 @@ def load_instance(spec: InstanceSpec, data_dir: Path, conn, tour_dir=OPT_TOUR_DI
         rec = {"data_source": "tsplib_db_coordinates", "file": None, "sha256": coordinate_text_sha256(coords)}
     matrix = build_matrix(spec.edge_weight_type, coords)
     assert_convention(spec.edge_weight_type, coords, matrix)
-    _attach_published_tour_check(rec, spec, matrix, conn, tour_dir)
+    _attach_published_tour_check(rec, spec, matrix, tour_dir)
     return matrix, coords, rec
 
 
@@ -657,36 +676,61 @@ def parse_args(argv):
                     help="total wall time per instance and solver (the protocol value is 600; another value makes the manifest invalid)")
     ap.add_argument("--geo-pi-blocking", action=argparse.BooleanOptionalAction, default=True,
                     help="a proven optimum that differs under pi = 3.141592 is a blocking error (default: on)")
+    ap.add_argument("--tsp-dir", default=str(TSP_DIR),
+                    help="active instance collection (MANIFEST.json + .tsp files); a path in the archive directory is refused")
     ap.add_argument("--opt-tour-dir", default=str(OPT_TOUR_DIR),
-                    help="directory with <name>.opt.tour files, used when the database has no published tour (read as data)")
+                    help="active published-tour collection (MANIFEST.json + .opt.tour files); a path in the archive directory is refused")
     ap.add_argument("--verify-tours", default="", metavar="DIR", help="re-check DIR/tours.json against the instance data; no AMPL")
     return ap.parse_args(argv)
 
 
+def collection_specs(tsp_dir=TSP_DIR) -> dict:
+    """Instance specs of the verification set from the manifests alone (no database): the TSP collection with its
+    published optima, plus the ATSP instances of ``ATSP_NAMES`` from the ATSP collection manifest."""
+    specs = {}
+    for e in inputs.tsp_entries(tsp_dir):
+        specs[e["name"]] = InstanceSpec(e["name"], e["problem_type"], int(e["dimension"]), e["edge_weight_type"],
+                                        int(e["published_optimum"]), "tsplib")
+    for e in inputs.atsp_entries():
+        if e["name"] in ATSP_NAMES:
+            specs[e["name"]] = InstanceSpec(e["name"], "ATSP", int(e["dimension"]), e["edge_weight_type"], int(e["optimal"]), "tsplib")
+    return specs
+
+
+def archive_input_refusal(args) -> str:
+    """Refusal message when an input path of the command line lies in the archive directory, else ''."""
+    for flag, value in (("--data-dir", args.data_dir), ("--tsp-dir", args.tsp_dir), ("--opt-tour-dir", args.opt_tour_dir),
+                        ("--verify-tours", args.verify_tours)):
+        if value:
+            message = inputs.archive_refusal(value)
+            if message:
+                return f"{flag}: {message}"
+    return ""
+
+
 def _verify_tours_cli(args) -> int:
+    """Re-check tours.json from the committed collections only: instances, published optima and tours come from the
+    manifests; the database is never opened."""
     data_dir = Path(args.data_dir)
-    refusal = wal_refusal(data_dir / DB_NAME)
-    if refusal:
-        print(f"refused: {refusal}", file=sys.stderr)
-        return 2
     doc = json.loads((Path(args.verify_tours) / "tours.json").read_text(encoding="utf-8"))
-    conn = open_db_readonly(data_dir / DB_NAME)
+    tsp_dir, tour_dir = Path(args.tsp_dir), Path(args.opt_tour_dir)
     try:
-        specs = {s.name: s for s in read_instance_set(conn)}
-        cache = {}
+        specs = collection_specs(tsp_dir)
+    except (ValueError, OSError) as exc:
+        print(f"refused: {exc}", file=sys.stderr)
+        return 2
+    cache = {}
 
-        def matrix_for(name):
-            if name not in cache:
-                cache[name] = load_instance(specs[name], data_dir, conn, Path(args.opt_tour_dir))[0]
-            return cache[name]
+    def matrix_for(name):
+        if name not in cache:
+            cache[name] = load_instance(specs[name], data_dir, None, tour_dir, tsp_dir)[0]
+        return cache[name]
 
-        try:
-            errors = verify_tours(doc, matrix_for,
-                                  optimum_for=lambda name: specs[name].published_optimum if name in specs else None)
-        except (ValueError, ConventionError, KeyError) as exc:
-            errors = [f"cannot verify: {exc}"]
-    finally:
-        conn.close()
+    try:
+        errors = verify_tours(doc, matrix_for,
+                              optimum_for=lambda name: specs[name].published_optimum if name in specs else None)
+    except (ValueError, ConventionError, KeyError, OSError) as exc:
+        errors = [f"cannot verify: {exc}"]
     print(f"tours checked: {len(doc.get('tours', {}))}; errors: {len(errors)}")
     for e in errors:
         print(f"  {e}", file=sys.stderr)
@@ -695,6 +739,10 @@ def _verify_tours_cli(args) -> int:
 
 def main(argv=None) -> int:
     args = parse_args(argv)
+    refusal = archive_input_refusal(args)
+    if refusal:
+        print(f"refused: {refusal}", file=sys.stderr)
+        return 2
     if args.verify_tours:
         return _verify_tours_cli(args)
     out = Path(args.out)
@@ -753,8 +801,8 @@ def _run(args, out: Path, commit: str, dirty: bool, gurobi, highs) -> int:
         loaded = {}
         for s in specs:
             try:
-                loaded[s.name] = load_instance(s, data_dir, conn, Path(args.opt_tour_dir))
-            except (ValueError, FileNotFoundError, ConventionError) as exc:
+                loaded[s.name] = load_instance(s, data_dir, conn, Path(args.opt_tour_dir), Path(args.tsp_dir))
+            except (ValueError, FileNotFoundError, ConventionError) as exc:  # inputs.InputRefused is a ValueError
                 print(f"refused: {s.name}: {exc}", file=sys.stderr)
                 return 2
     finally:
@@ -787,7 +835,7 @@ def _run(args, out: Path, commit: str, dirty: bool, gurobi, highs) -> int:
                  ["TSPLIB_OPTIMALS in uniride_core/algorithms/tsplib_parser.py", "academic_benchmark/tsplib_data/atsp/MANIFEST.json (ft53)"],
                  "cross_checks": ["problems.optimal vs the parser table for every instance", "ft53 vs the ATSP manifest"],
                  "discrepancies": discrepancies, "best_solutions_used": False,
-                 "coordinate_cross_check": "the published optimal tour (opt_tours table, else .opt.tour file) recomputed on the "
+                 "coordinate_cross_check": "the published optimal tour (committed opt_tours collection, sha256-checked) recomputed on the "
                                            "used coordinates equals problems.optimal; per instance in instances[].published_tour_check"}
     manifest = build_manifest(
         records, instances=instances, git={"commit": commit, "dirty": dirty}, versions=versions, provenance=provenance(),

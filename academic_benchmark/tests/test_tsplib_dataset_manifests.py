@@ -126,3 +126,19 @@ def test_paths_are_repository_relative_without_archive_or_database(stem: str) ->
 
 def test_gil262_is_not_part_of_the_study_manifests() -> None:
     assert not (DATASETS_DIR / "gil262.json").exists()
+
+
+SOURCE_DISCLOSURE = (
+    "authority_url is derived from the opt_tours/MANIFEST.json URL and was not downloaded; "
+    "retrieved_on is the tsp/MANIFEST.json copy date (local_copy); "
+    "the file bytes were not compared with the TSPLIB95 server copy."
+)
+
+
+@pytest.mark.parametrize("stem", sorted(STUDY_INSTANCES))
+def test_source_disclosure_is_present_and_matches_local_copy_provenance(stem: str) -> None:
+    # DatasetManifestV1 has no source note field (extra fields are forbidden), so the
+    # disclosure lives in best_known.provenance, the schema's free-text field.
+    manifest = _load_manifest(stem)
+    assert SOURCE_DISCLOSURE in manifest.best_known.provenance
+    assert _collection_entry(stem)["provenance"]["kind"] == "local_copy"

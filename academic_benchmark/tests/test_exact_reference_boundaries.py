@@ -145,7 +145,7 @@ def test_the_runner_and_the_inputs_module_hold_no_legacy_bildiri_path_either():
 def test_the_new_file_list_covers_the_modules_of_this_work_package():
     names = {p.name for p in NEW_MODULE_FILES}
     assert {"rows.py", "reader.py", "inputs.py", "protocol.py", "protocol_registry.py", "hamiltonian_cycle.py",
-            "day_plan.py"} <= names
+            "day_plan.py", "day_compare.py"} <= names
 
 
 # WP-E11 J6: the day-plan checker stays independent of the solver and planning code it verifies (design section 5.1).

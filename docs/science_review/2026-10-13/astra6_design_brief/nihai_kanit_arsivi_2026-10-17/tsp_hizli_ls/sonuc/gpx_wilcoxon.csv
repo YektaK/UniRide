@@ -1,0 +1,16 @@
+comparison,n_pairs,n_nonzero,wins_ref,ties,losses_ref,mean_diff_gap_pct,median_diff_gap_pct,W,p,p_holm
+px_on vs px_off,20,15,7,5,8,0.023355,0,55,0.776337,1
+px_on vs px_off [pcb1173],5,5,5,0,0,-0.0643324,-0.0562469,,,
+px_on vs px_off [pr1002],5,5,0,0,5,0.150939,0.0590631,,,
+px_on vs px_off [pr439],5,0,0,5,0,0,0,,,
+px_on vs px_off [rat783],5,5,2,0,3,0.00681354,0.0227118,,,
+px_on vs ils_fast,20,15,7,5,8,0.014226,0,54,0.733271,1
+px_on vs ils_fast [pcb1173],5,5,2,0,3,0.048513,0.0773395,,,
+px_on vs ils_fast [pr1002],5,5,1,0,4,0.0983613,0.128163,,,
+px_on vs ils_fast [pr439],5,1,1,4,0,-0.00820765,0,,,
+px_on vs ils_fast [rat783],5,4,3,1,1,-0.0817624,-0.0681354,,,
+px_off vs ils_fast,20,15,9,5,6,-0.00912899,0,57,0.864705,1
+px_off vs ils_fast [pcb1173],5,5,2,0,3,0.112845,0.205653,,,
+px_off vs ils_fast [pr1002],5,5,2,0,3,-0.0525777,0.093034,,,
+px_off vs ils_fast [pr439],5,1,1,4,0,-0.00820765,0,,,
+px_off vs ils_fast [rat783],5,4,4,1,0,-0.088576,-0.0794913,,,

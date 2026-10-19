@@ -1,0 +1,21 @@
+comparison,n_pairs,n_nonzero,wins_ref,ties,losses_ref,mean_diff_gap_pct,median_diff_gap_pct,W,p,p_holm
+ils_fast vs repo_ils,40,25,25,15,0,-2.0011,-0.319824,0,1.22347e-05,2.44694e-05
+ils_fast vs repo_ils [a280],5,5,5,0,0,-4.48236,-4.53664,,,
+ils_fast vs repo_ils [eil101],5,4,4,1,0,-0.508744,-0.476948,,,
+ils_fast vs repo_ils [lin105],5,0,0,5,0,0,0,,,
+ils_fast vs repo_ils [lin318],5,5,5,0,0,-3.11452,-3.16686,,,
+ils_fast vs repo_ils [pr136],5,2,2,3,0,-0.12793,0,,,
+ils_fast vs repo_ils [pr152],5,4,4,1,0,-0.238593,-0.184577,,,
+ils_fast vs repo_ils [pr439],5,5,5,0,0,-7.53668,-7.91852,,,
+ils_fast vs repo_ils [rd100],5,0,0,5,0,0,0,,,
+ils_fast vs lkh,50,14,0,36,14,0.0576396,0,0,0.000967428,0.000967428
+ils_fast vs lkh [a280],5,0,0,5,0,0,0,,,
+ils_fast vs lkh [eil101],5,0,0,5,0,0,0,,,
+ils_fast vs lkh [lin105],5,0,0,5,0,0,0,,,
+ils_fast vs lkh [lin318],5,3,0,2,3,0.162745,0.271241,,,
+ils_fast vs lkh [pr1002],5,5,0,0,5,0.276863,0.261731,,,
+ils_fast vs lkh [pr136],5,0,0,5,0,0,0,,,
+ils_fast vs lkh [pr152],5,0,0,5,0,0,0,,,
+ils_fast vs lkh [pr439],5,2,0,3,2,0.0164153,0,,,
+ils_fast vs lkh [rat783],5,4,0,1,4,0.120372,0.0908471,,,
+ils_fast vs lkh [rd100],5,0,0,5,0,0,0,,,

@@ -1,0 +1,43 @@
+﻿senaryo,donem,ay,p10,medyan,p90,ortalama,P_toplam_ge_100,P_alt_sartlar_1_2_8,P_SCIE_ge_40,model
+A,Eki 2027,12,0.0,10.0,10.0,6.955,0.0,0.0,0.0,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A,Mar 2028,17,5.0,13.0,18.0,13.02,0.0,0.0,0.0,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A,Eki 2028,24,8.0,23.0,38.0,22.633,0.0,0.0,0.0,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A,Mar 2029,29,8.0,23.0,38.0,22.633,0.0,0.0,0.0,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A,Eki 2029,36,8.0,23.0,38.0,22.633,0.0,0.0,0.0,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A,Mar 2030,41,8.0,23.0,38.0,22.633,0.0,0.0,0.0,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A,Eki 2030,48,8.0,23.0,38.0,22.633,0.0,0.0,0.0,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A+B,Eki 2027,12,0.0,10.0,10.0,7.067,0.0,0.0,0.0,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A+B,Mar 2028,17,8.0,18.0,34.0,21.094,0.0,0.0,0.0,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A+B,Eki 2028,24,42.0,70.0,97.0,69.809,0.091,0.35,0.447,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A+B,Mar 2029,29,55.0,84.0,114.0,83.825,0.254,0.533,0.679,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A+B,Eki 2029,36,74.0,102.0,129.0,101.61,0.554,0.683,0.869,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A+B,Mar 2030,41,74.0,102.0,129.0,101.61,0.554,0.683,0.869,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A+B,Eki 2030,48,74.0,102.0,129.0,101.61,0.554,0.683,0.869,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A+B+C,Eki 2027,12,0.0,10.0,10.0,6.998,0.0,0.0,0.0,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A+B+C,Mar 2028,17,8.0,18.0,34.0,21.044,0.0,0.0,0.0,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A+B+C,Eki 2028,24,44.0,72.0,100.1,71.958,0.109,0.358,0.454,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A+B+C,Mar 2029,29,55.0,86.0,117.0,85.789,0.287,0.53,0.674,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A+B+C,Eki 2029,36,89.0,124.0,159.0,124.12,0.815,0.75,0.954,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A+B+C,Mar 2030,41,97.5,132.0,165.5,131.928,0.886,0.767,0.976,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A+B+C,Eki 2030,48,108.167,145.5,181.0,144.907,0.943,0.778,0.99,"yeniden gönderim zinciri (p2=0.55, +9 ay, bir alt çeyrek)"
+A,Eki 2027,12,0.0,10.0,10.0,6.955,0.0,0.0,,tek deneme
+A,Mar 2028,17,5.0,13.0,18.0,13.02,0.0,0.0,,tek deneme
+A,Eki 2028,24,8.0,23.0,38.0,22.633,0.0,0.0,,tek deneme
+A,Mar 2029,29,8.0,23.0,38.0,22.633,0.0,0.0,,tek deneme
+A,Eki 2029,36,8.0,23.0,38.0,22.633,0.0,0.0,,tek deneme
+A,Mar 2030,41,8.0,23.0,38.0,22.633,0.0,0.0,,tek deneme
+A,Eki 2030,48,8.0,23.0,38.0,22.633,0.0,0.0,,tek deneme
+A+B,Eki 2027,12,0.0,10.0,10.0,7.067,0.0,0.0,,tek deneme
+A+B,Mar 2028,17,8.0,18.0,34.0,21.094,0.0,0.0,,tek deneme
+A+B,Eki 2028,24,38.0,67.0,96.0,66.586,0.072,0.356,,tek deneme
+A+B,Mar 2029,29,44.0,76.0,109.0,76.188,0.181,0.485,,tek deneme
+A+B,Eki 2029,36,51.0,83.0,116.0,83.362,0.267,0.485,,tek deneme
+A+B,Mar 2030,41,51.0,83.0,116.0,83.362,0.267,0.485,,tek deneme
+A+B,Eki 2030,48,51.0,83.0,116.0,83.362,0.267,0.485,,tek deneme
+A+B+C,Eki 2027,12,0.0,10.0,10.0,6.936,0.0,0.0,,tek deneme
+A+B+C,Mar 2028,17,8.0,18.0,34.0,20.945,0.0,0.0,,tek deneme
+A+B+C,Eki 2028,24,39.0,68.0,97.0,68.337,0.086,0.354,,tek deneme
+A+B+C,Mar 2029,29,46.0,78.0,110.0,78.038,0.206,0.481,,tek deneme
+A+B+C,Eki 2029,36,67.0,105.0,145.0,105.544,0.57,0.609,,tek deneme
+A+B+C,Mar 2030,41,67.0,105.0,145.0,105.544,0.57,0.609,,tek deneme
+A+B+C,Eki 2030,48,70.0,109.0,152.0,110.322,0.624,0.637,,tek deneme

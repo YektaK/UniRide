@@ -1,0 +1,16 @@
+bolum,olcu,deger,not_
+dalga,karşılaştırılan hücre,228,arşivde 228
+dalga,rota ve dakika aynı,228,
+dalga,yeni koşuda OPTIMAL,228,"{'highs': 225, 'highs-2stage': 2, 'cpsat': 1}"
+dalga,sertifika ihlali (yeni),0,
+gün,karşılaştırılan hücre,20,arşivde 20
+gün,"K, rota, dakika ve aşama durumları aynı",19,
+gün,FARK 2026-10-05 R90,"arşiv {'K': 11, 'routes': nan, 'minutes': nan, 's1': 1, 's2': nan, 's3': nan} yeni {'K': nan, 'routes': nan, 'minutes': nan, 's1': -9, 's2': nan, 's3': nan}",
+öğrenme,lodo_metrics satır (ortak / yalnız arşiv / yalnız yeni),"{'both': 42, 'left_only': 0, 'right_only': 0}",
+öğrenme,lodo_metrics en büyük |fark| AUC,0.0,
+öğrenme,lodo_metrics en büyük |fark| AP,0.0,
+öğrenme,lodo_metrics en büyük |fark| taban_orani,0.0,
+öğrenme,lodo_metrics en büyük |fark| dogruluk,0.0,
+öğrenme,lodo_metrics en büyük |fark| n_cift,0.0,
+öğrenme,recall@k en büyük |fark|,0.0,8 model
+öğrenme,yapıcı: aynı rota ve dakika,1840/1840,arşivde 1840

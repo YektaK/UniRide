@@ -1,0 +1,137 @@
+dosya,bayt,sha256,kaynak_artifact,kaynak_surum
+uretim_dalga_gun/kod/wave_exact.py,4673,0febfdf48d0af23adfc56e0d56c12d5cdd6178fc4e8f0e448b8e799a474b9ce6,22e9316b-f434-4d06-b773-3e2fab06e66b,ebfb8bda-6eba-4867-8e8e-78674538c48c
+uretim_dalga_gun/kod/run_waves.py,5184,51e95ec7483ffd0c744675d7767ee2dfc1c01205d9a26f80af4cce4d144a7315,41905ed2-5463-4a8d-a455-514c54209048,3c1a77ba-e17d-4896-8edc-657dd2678eeb
+uretim_dalga_gun/kod/run_day_joint.py,5081,203cfd9fd923b84f78e9b3a6c6bb8447df7ef84a99eb447573b9a5dd8f0c7ecd,49107969-2c8f-4410-a520-cf535725a13f,c000e307-f3e1-443c-be9d-55551c8462e1
+uretim_dalga_gun/kod/run_day_typed.py,5121,21f6c61f33d638e7a83be6bd7d4c1faceeabf928c1911591ac1f2e592fd7f2cf,44403ceb-bf43-408f-b090-47295ae31d3c,5ff66bcb-2435-42b4-b3d3-1792738f02b5
+uretim_dalga_gun/kod/esn_sp.py,5408,f7e4fbcaaa9ed47062cb14ec6f6a623c938da890841bf8c46b8349caad6c34cb,2c6edf45-7c7d-42d5-b170-831673ec8251,3256f520-f222-48e1-bb75-ae498d22fdc5
+uretim_dalga_gun/kod/run_esn.py,4852,47681306f391ad323f5cacace43f0417272f17f467378e6b706ea6d855d4150c,98434f52-de14-4afb-93db-3bc728049096,963f8f6a-bd49-401e-921b-cc8690fe532a
+uretim_dalga_gun/kod/esn_sp_v3.py,3921,8048310875b1de62ab5bf7e2e135bd17a4644c2e5d6b09ec0511b498a27843d3,5631e1fa-5fd5-459e-8dcc-099c4a71665f,b0dce88b-9fd7-4626-b205-808f91379385
+uretim_dalga_gun/kod/run_esn_v3.py,1864,9cf6b459761a2b01ed16bc213fa098b9754784b9b8b18a7ca1f6fee67d96d588,9fb6f903-faa3-41c1-879b-58a626fc2e96,de8eb984-b630-4756-a3cc-8f42563a1149
+uretim_dalga_gun/kod/run_ga_equal.py,1773,418adb9b53da7239996edc991f902d80225281c17035ffed74ff7a356f0ec13a,0a15046a-bf95-4c9e-8449-6ae3a00a6cc1,ab27177f-845b-469c-b571-fd3588ce1c7d
+uretim_dalga_gun/sonuc/wave_exact_4sw5so.jsonl,139409,794be28aa98ef55abb4b3792b67a570ed4ba12ef7a08743e684ae966e9f7da5e,3b4e0581-752b-4a2d-b691-1c65db088cc3,41838ea0-3ccd-4df8-8b86-c8551b239089
+uretim_dalga_gun/sonuc/wave_exact_vs_ga.csv,49001,fde62218516297c1230fc71cc35126b1ae813461d47ef76196b2c2eab787ce0a,a50c1952-1002-4dd7-8541-83d042d0e10e,1ef63ad6-0f61-4d76-9c74-7b7562bff475
+uretim_dalga_gun/sonuc/wave_summary_by_R.csv,254,0dccf5bb05817217ee99c8cef5776e94eb1bfeefbc4bdeda352765d4374f33b0,fffb4b31-0278-48e8-abe0-4f62292e890c,51fe97ec-8bf7-48e1-8243-de35865a9001
+uretim_dalga_gun/sonuc/wave_ga_suboptimal.csv,887,44bca4a3d64b7dd758fe0b8a1dc6446b83e83a1be455f1c3691fdc554f55a21e,71f82ad1-d93b-4516-b9bb-bb9cef2ca295,37f76426-d508-4a31-9d71-b280243bd555
+uretim_dalga_gun/sonuc/day_joint_4sw5so.jsonl,68421,3665a633afb386650a4f841961219639e4178d53d352739d7a4eaf70988465ba,a1b7866e-e445-4fd9-949c-232f06897afa,8f770755-9ff6-43d2-af9f-382e43c166e1
+uretim_dalga_gun/sonuc/day_level_4sw5so.csv,1690,273ab6e99624cd4cc22973be41d22dab4b828cf981ac2cf9134978cc0b0bb329,9b4ff881-b578-4229-8959-a9f76d7238eb,eb91c967-9a96-488a-b874-f6ae2e9017ca
+uretim_dalga_gun/sonuc/weekly_fleet_4sw5so.csv,129,8512b73ce4e131999063f3d361a1b70e752703dced1d2d0418ccb6b9c45a2f1e,332cc4a8-6f3a-4161-be90-5838b6d325b7,4911ee26-e0c8-43b2-87e4-56f0ed1c12c1
+uretim_dalga_gun/sonuc/day_typed.jsonl,111254,428b4dd16be2959153241b099c4e124f422b5725400894a170c39de81e5394f4,f3d9edd8-712b-4126-8c80-2974cc2ff9aa,ac909b46-af06-412c-bad7-b4f0ecefb00a
+uretim_dalga_gun/sonuc/day_typed_vs_campaign.csv,5507,0f89313118517445f783472d7ed23ded73a57abdaddec5ae2bdeb13b5d2ab463,aaa59804-60ba-46cd-805f-14e75f8d51ea,912d5084-636e-4fed-9f7b-9dac97f0cd12
+uretim_dalga_gun/sonuc/weekly_typed_vs_campaign.csv,1098,64ff9020293dd36949fe5605885507e4cab43c3fa08bb0472af359b5f8887f2b,4eef7fb0-62a2-4926-8e60-2f33f23ab10e,215cd3f7-64ff-4d00-9e23-ce994a6b5588
+uretim_dalga_gun/sonuc/esn_real.jsonl,74835,81378acba2c851d5e25250651ee1d3676449bc750312e806a3df0cef95a01396,d48be49d-dae2-4f8a-bc6a-cebcddae7b3f,ea1acb69-d630-4032-90dc-6bc81a5c0be3
+uretim_dalga_gun/sonuc/esn_real_v2.jsonl,77339,fb1a877a741bf8144a8240526a3108f61419b61cfa2b4f908b72bb09a5b642b1,ccfe1ee8-85f6-4b6c-a993-d7923e32a7bd,e9839b0f-4324-471e-85fb-b16f16d8c759
+uretim_dalga_gun/sonuc/esn_scale_v2.jsonl,10186,53d65acd4211501037907709a52cd031870ebc43cbe3c9e0bc1f067e05c0481e,1f0e6c7e-cee8-4e5f-9abb-d8f19bbf48fa,cc07cbad-b808-4ec8-89e1-ba9e426ffd08
+uretim_dalga_gun/sonuc/esn_scale_v3.jsonl,6011,7623c2fc5fff4944992ce72d0f475c0aab5999ff897bdf27e18783c3306e4b04,e2da09a1-0436-4842-ab71-4ab2c14caac2,a8173e4b-bfc2-4e78-8d12-ad55046ea555
+uretim_dalga_gun/sonuc/scale_esn_vs_ga.csv,1795,0d816ab6d1c21d4c38ac3be2452701d1a0088f0a557933cd628b0db59c494eb1,289ed7e0-0562-4dfe-bd2b-bd0ccb24a841,2eda44bb-ecc1-4823-aefb-9f9c7e1cd977
+uretim_dalga_gun/sonuc/ga_equal_time.jsonl,15054,cbeb7025f97ef4eadb83a32664870dcbadd53ef1834a3a9d5286edc2a54ebf50,d785777c-781d-4942-8081-34b2c7b48270,52e84058-b60c-427b-acaf-d39af9a4dc18
+tsp_hizli_ls/kod/fast_ls.py,20136,0600abb13bc4076b187871203e837c0f180b00fcc58f38eaca812fc798723644,5e3b7143-6729-4eb8-aff1-6b98035e5419,21a30d74-fcf7-479e-89ea-33146a8d75d4
+tsp_hizli_ls/kod/ils_fast.py,8509,dfbb6205f93b73e3c95ee1095bba5f420170ee44e391c404dfc0e9a8a297da86,643d25c8-4e50-4dd7-a1dd-fa1e0bcd01be,5defbdf9-5b9d-4e79-9717-31d67929303f
+tsp_hizli_ls/kod/px_ils.py,11945,8dfcd4c62e813bcb457cddfe71b9df5c85a2cd24165c8363b3da403c061453e1,363b45d6-d3ab-4840-8943-21d346ae9af8,04d2e421-9d48-4994-87a9-704e0816f7e8
+tsp_hizli_ls/kod/inst.py,2532,14da2eca351b2b2e3eaadf0468526cdf82afbedd958c3823c88a005ed22f1c43,3f5a490b-645b-41a1-a2a1-dcd539830990,2c1acf1e-fb74-4331-97d2-fe62846cbf54
+tsp_hizli_ls/kod/test_contracts.py,11063,7ce932103ce94a1854b2418049b5f3f38f7fd525cde9fcb8e96956c8a9f8c51c,e1537c5c-4c80-4faa-abd2-9358ca624b81,9524d46b-54af-4177-9dfb-fda557866dca
+tsp_hizli_ls/kod/bench_runner.py,6285,1ffba4c3db38545f3b0d9949aa745afc620a2adb5ec1e0ac0bacb01667f48424,1145a2ee-693c-43e0-aa34-50b8b8cac976,995373fe-80d2-47aa-9d8d-517a7ce31c0f
+tsp_hizli_ls/kod/make_tasks.py,1483,e0856a459b2b0ddc5ec621e651057144f7030f6b653c212da8ad0a936ba1720d,88ccf9d8-51e8-4866-9473-3524c45cdf4c,58c92dab-40ef-48f5-a55d-280bf582abd4
+tsp_hizli_ls/kod/analysis.py,3426,23904850ce6c31af365538dd90959a06a6286e2a43e0d9192e048f3a8277c26d,934f679f-26ab-4830-a5a2-24d151f065e1,239010f8-1c31-44d9-ac45-7bd6ab0fcde0
+tsp_hizli_ls/kod/d1_experiment.py,6737,3b006f198ee94cdcbda6a5f7eb5eb9a33f5b2abad934484ca69b238e170a0859,d243ea26-3400-408f-ac54-f1da3821bbf0,92726e6c-eb4d-47f7-b00a-23278b246fa6
+tsp_hizli_ls/kod/d1_analysis.py,4573,13c5ffe00fc6469c7db9f2d39c986221f5fdaeb94f760ed63394769a26286a43,7e6187e9-bf5a-4b38-83f7-918f990305ea,3cd6d1bd-36a1-4f00-a0b8-c28bf3991849
+tsp_hizli_ls/sonuc/tasks_main.json,13943,bb479c059f56543ad3cd39e5319aeb3d899bf901ff46141140381863c6647226,8af8bbdb-45d3-4871-b802-e539487304e6,84df5291-3a08-4a22-9c93-c3a78a5f4b1f
+tsp_hizli_ls/sonuc/main_raw.csv,22048,16021fe39ae5ed163d6f7dbf9cfc045d5fc8304723ee63255062daf7c7b52466,9405a756-acbe-4b37-98b1-19fff0f3b4d1,155f0a4e-4d3a-4b54-9f21-64796e20d586
+tsp_hizli_ls/sonuc/main_summary.csv,2136,50cd99dd12b1d8b0ad2821b0598c2b43db6345c1fe611f03bd8eeada856e401f,89ad42db-945d-4085-a405-79063c161057,e5c482aa-1883-4063-a2a5-d7bb47f55a66
+tsp_hizli_ls/sonuc/main_wilcoxon.csv,1187,e5da9c0906b5eb50457811927e01fbbcc92479330d079fa4bf532a4209798743,d5ee2731-e0b9-4430-848f-da551d26f7a9,4cecb171-fd97-48f7-844e-e081ffaaa7bd
+tsp_hizli_ls/sonuc/main_ils_fast_telemetry.csv,739,cd096e75a4acadcd5429a3f431fc091e3d3a1fe8383502e2623a842edb376073,214137c4-7a74-488d-8cea-513d31bc8e4a,32b7f2cb-708c-4a0a-a587-825926b19d43
+tsp_hizli_ls/sonuc/main_all.jsonl,254888,4cb90a644a490c346fe9ffb032ac7c6fd9e8321b0f39911c9b3933d135f784ff,a5c4b756-c61f-427c-a2f7-854322f7eb04,fd9eeb7a-9ec8-4138-adee-c5583bcabcb3
+tsp_hizli_ls/sonuc/atsp_raw.csv,3086,90c96fe495e5f8db2039215265c264e83efa62e8c22faca4b29d87929f3da99b,677271d5-9925-4f6c-891f-cca30bde2864,f235e237-5ca6-4ed8-82f7-e98055902c85
+tsp_hizli_ls/sonuc/atsp_summary.csv,227,db32464ac6b3c9aa37b17ca120474db6c8319867bc38fbf032f4e1adfc080957,7b090235-11ec-4c31-a09b-21d328610488,938db332-7cf6-489f-9734-e197d0c6beef
+tsp_hizli_ls/sonuc/gpx_raw.csv,16317,70213d31905af2e6ac61902848f32426733c0ebd27f4807f028c7c4976b1d52d,63c6115b-7aaa-4526-925d-99e45330da31,8a6ac782-1cbf-47ac-ae22-fef2ba889e8a
+tsp_hizli_ls/sonuc/gpx_summary.csv,1099,08d7aa9227650cbcd887d50df80661e8eba36e51928f44b4f8f57f2091721050,edcabad3-f514-412d-b2e8-9a35463a2dd5,d592a154-ce2a-48c0-8a94-72be94ac4ea8
+tsp_hizli_ls/sonuc/gpx_wilcoxon.csv,975,b75356b2df7941436d4c10b20dd63b42edf20bca7fb0f72bce381f3d226d90b6,004cf2d0-e437-4e2f-8e26-7c6779253c89,7b0537c0-d1da-4d81-a4ce-50ad8af179ba
+tsp_hizli_ls/sonuc/gpx_telemetry.csv,916,a350a6c4e4d451342cd8c2742f07e3017f88bca9d63c9360561140d5dd800802,2842ab1c-10df-4ca6-8c45-25ebb4c56adf,d97ff305-901a-4263-a9af-9b7812101b12
+tsp_hizli_ls/sonuc/gpx_all.jsonl,301109,59c195aec7b74cdf2c09fae6ae57bb52b95102f9400aebf87cf28aaa8a659784,dd80e425-a729-4863-9483-7ad1f50c852c,87acd7fa-dc3f-4ab9-8a67-7520e9023773
+tsp_hizli_ls/sonuc/tuning_raw.csv,5518,bcf109483916889148f9eb4ea11f314a08ffb8bf7f20e7bc67521c040452f5f6,eab10650-642b-4f13-aeef-21ddb9af731b,e68538e0-9bf7-4432-a44e-87349f79d4ee
+tsp_hizli_ls/sonuc/D1_results.csv,11123,54f59bd02d346d95c6a5a6dca3a129f78ae8f7ef16beb3d9b62ce84eb5515e1a,eb609339-7665-4684-9a4e-4b92c2c70bc4,7c2c7071-6bf4-476f-94f5-279f1b597b08
+tsp_hizli_ls/sonuc/D1_summary.csv,2266,78aaccb12ebbcc4159068919d1d2abcc53be82413a765c9aa7a609318e9d470c,d888c4af-8708-462c-aca2-2e1f31ce50ff,45b9f8fe-e3e3-4407-8daa-81cd9e00c1a4
+uclu_kiyas_e2bso_r2dma_paoea/kod/bench_run.py,1604,12de88bea0d40cb296a424b5b1419803e9cd19beed00cffafb0ec203669af4e8,fda147f7-bf50-4a69-9599-4f78595ef048,fbeda935-9d44-47ce-83df-06fd1e5fd722
+uclu_kiyas_e2bso_r2dma_paoea/kod/analysis.py,2635,d36d71a7b4a5d87053cef1ac6bafa0cb8d479e343e9fe2ec3312284fc96f6f4b,ba13b46a-cf98-436b-91c4-4ff20c9a50d6,352fb02e-4552-4a22-8dce-7e46a2cd5f5b
+uclu_kiyas_e2bso_r2dma_paoea/kod/bench_common.py,4568,9e16dff72385505cbe716c35e696d5de8546b9bcde301d3264ccbfee01fd4361,ef7fa23b-8289-41a2-9e89-e99dba23d596,8ab73c5a-c873-44e5-af4b-17fd5d7ed6bd
+uclu_kiyas_e2bso_r2dma_paoea/kod/instrument.py,6223,6fe668377afa3bd413b1669b80f2d3909dff3028290deebc582a35758b68aa66,1371d49a-63b0-49fa-b49e-d06ca2247283,843ea5e4-0205-4c20-9ab7-1a2abd014937
+uclu_kiyas_e2bso_r2dma_paoea/kod/diag_mech.py,4626,cf0383f70f76c62b15382bd51df5fb7bf53fd0ce645240d417e0a4fe6e51263e,b08f02ad-0c82-49a7-8d4d-68d382db7a22,5ca01b77-dbd4-45d4-b722-5f3eb4e08688
+uclu_kiyas_e2bso_r2dma_paoea/kod/loss_probe.py,3457,be3529fe3aab3f28c48bdbc3e1308e7ab099c0581beceaf990866415018307b9,e761a36a-fe8c-458e-8fdd-8af194aa1812,0e998442-4de9-4101-8848-97461f95acd7
+uclu_kiyas_e2bso_r2dma_paoea/sonuc/jobs_main.json,15185,dd54da690397b8e4c6cb41deaf69d7022b0ac8cdef62ed3ce016dcd330bc998f,fef73bd2-0dbe-4f98-9970-8bdb63c57412,71009328-1ac8-43f2-842e-284106bf2feb
+uclu_kiyas_e2bso_r2dma_paoea/sonuc/bench_runs_raw.csv,24832,a00d14e3a18e12f9077e192e884a7d18240e420fe25ede9ee256efd9b229fff6,43f03c5a-70b0-4cd4-a644-dd10cb0b469d,b72fa4c9-2d75-4308-b6a7-dd427670eae1
+uclu_kiyas_e2bso_r2dma_paoea/sonuc/bench_summary_overall.csv,502,55ca52f24121831d32a8ad448e5f88afe4bbd9ab1d2b3f8a0258841bae0b842d,9efc2142-b804-4ed1-9e43-73089a7eaeb1,7d45eb26-a909-409b-8036-3842d1a5d4dd
+uclu_kiyas_e2bso_r2dma_paoea/sonuc/bench_summary_by_instance.csv,3354,de3c0342773e61fd0711f74284ef5ffaea8ae520d09e8267aa1485a5265dce48,5f9f2ecd-c462-4d3f-a0bc-e132de2048fc,95181390-e094-41c5-837c-f87ecf35de20
+uclu_kiyas_e2bso_r2dma_paoea/sonuc/bench_wilcoxon.csv,1086,9c14455bd9a95dc460bf643d0ac917dd1f7eb9be231479ce70ca8bb0f83cbc1c,e890187a-f7b7-42d5-b3c9-196305b4ed8b,b637d78f-9e78-4390-9e42-ff416d1a2c4c
+uclu_kiyas_e2bso_r2dma_paoea/sonuc/matched_time_e2bso_vs_ils.csv,3204,9791512a05fabd9ff395f3e6cfb8cda8f821e6375a22976e7c1325459d70a349,9e6e3c3f-0eee-41fc-9d4c-e66af1a3dfc2,d4cdb99a-191c-4f4a-95e2-6bc46b607a54
+uclu_kiyas_e2bso_r2dma_paoea/sonuc/matched_time_paoea_vs_ils.csv,2130,d5f6ca2c5b458e8285d04402304c6d511f0abe9aa1873976efcad76527e43e3d,9d153d71-2592-4831-b1ab-5a59af267c4a,e516d949-1456-433c-b10b-bafb864d1a20
+uclu_kiyas_e2bso_r2dma_paoea/sonuc/paoea_ablation_prod.csv,249,a72375a784386fcfd4e97e12ab4d35f605770a0fe159acf7618200730e88889e,97272779-3902-4ef8-b40f-1a2950576507,13d0cd7e-4381-4551-a304-bcadd409ad08
+uclu_kiyas_e2bso_r2dma_paoea/sonuc/injection_loss_probe.csv,3208,e9dae5a915191b68044499181b13814810b22db6414261aa6490987243cebbc6,60d4f622-8e40-4eee-9622-30898a3a2c04,62a5bdf5-5ed0-49c5-8679-bde17c1c97d7
+uclu_kiyas_e2bso_r2dma_paoea/sonuc/diag_berlin52.json,1363,4da853cdb7735994834bfa216ecece2aac7074c385e0bb5b07f4443fa0d4e15f,25e0d48d-2eee-4565-a880-431b85a21c10,b04dec4b-e04f-4cd4-84d4-71fe4adae37a
+uclu_kiyas_e2bso_r2dma_paoea/sonuc/diag_rd100.json,1348,f282c0dc5d082ce20460f1099e3408b9d286311629c8c5ced64de7a49b18b97e,19a339c3-338f-45a5-bd2d-f49873700550,b23b0798-7956-4452-9c74-40ae3d0bbaa1
+uclu_kiyas_e2bso_r2dma_paoea/sonuc/diag_pr226.json,1361,550219e697494af400d6ceb45225b32da85d0526e9ac3e5395091a6b04de970c,b5e75d39-3b49-4afc-a39b-efdad7739d81,a7115297-ddeb-49bf-a72b-2dff5cf040dd
+ogrenme_oruntu/kod/learned_patterns_lodo.py,12806,fb5671ca0c8f795e23adbb231abc454b2e34e326f0bcd5c12c51166bb630bf00,a63d4707-bce8-48e3-87f7-dbbe3ab39029,d227f132-7eda-4341-89de-928a2629a61c
+ogrenme_oruntu/kod/landscape_demo.py,6205,7ee3f7056040947951a4bf8d1e50e7fe92f8b91d7521ea335a8a4413f8bb46e1,e9bd1438-32a3-4924-bbec-dccaa7ea3292,57d8b1fa-ef00-48c5-bc47-9a0cc09d3797
+ogrenme_oruntu/kod/prune_exp.py,4988,1587bfd76a1cacfd7a9ee12dd01f6f9f264909a9ad99d6dfa126c022d1772795,28e72653-710a-4f09-9d80-88026bcdcc8f,67313742-1632-4344-8e97-0756b0bf828c
+ogrenme_oruntu/kod/tsp_learned_cands.py,2973,2d8085873df90c8b9ca994af3bc5671744c58ac0e5b61d526aecdc275b6f1a7d,4c748360-4185-437c-95b4-eba9a3ff0209,fc474ea1-b2ff-4567-b835-bc28fe694e63
+ogrenme_oruntu/kod/run_esn_learned.py,3194,c49312432a72b1d38eb18de0e867d45769da552f5dac2b313db4123b49c4b7f9,f6529416-94d2-49fb-85f7-17aeae23d230,1e12c8c1-9aec-4003-82b8-27890bc93aec
+ogrenme_oruntu/kod/esn_sp_v3L.py,4028,a452848f1fcf86b62794b441fcf81a8bff38f25ebda12a215fefbb3e776635f7,a8e09098-6dca-4fbe-a068-f24c102a12da,0fc19fc6-aa3d-4bb6-8c0c-205b9a9be03a
+ogrenme_oruntu/sonuc/landscape.json,538632,9b71da9caef64c1984c769a71706917e1aa7e509fa00333e291cdc7a0b12e5d4,721f4ffe-ff61-4d9d-b333-459f1794625d,e7446804-f8f7-402b-b0db-cd35cf42ba95
+ogrenme_oruntu/sonuc/lodo_metrics.csv,2831,bf979817dbdab12440b025de9d7f26d0d89f790e407dafd3c6a5e3c0d4c2a9c8,b589ff76-02e6-40dc-9252-4f05a482b8db,642bc87b-8ace-46c4-ab5b-61cccd3a9d75
+ogrenme_oruntu/sonuc/lodo_auc_by_day.csv,2493,8d82e67d14327b1be82a1369f2b752da7e61bb8a4d0a00719201dc508077667f,1b35fc97-1d78-401d-ac97-e7bd5b558b14,7ffcb23f-ddcb-42cc-8778-0b7a1cf73785
+ogrenme_oruntu/sonuc/recall_at_k.csv,407,5f781a694c5c4679ac3a3039c6f16dafa50579cdfb5416919cb49e4b4ca09653,3e3c0838-f917-49db-82e4-6f2b1ca409c5,a08f3185-ea1c-43cb-a424-8420f6377802
+ogrenme_oruntu/sonuc/forward_chaining_auc.csv,697,8d5f247390ff2284be0a38b38ed933e25fde9fbad8273ceaa31a17767a503fbb,2cac7fc7-4aad-42f5-aa93-19171d5a8406,566932b9-cb2b-42be-bff4-0bdabf9867d2
+ogrenme_oruntu/sonuc/succ_feature_importance_fold1005.csv,431,be0e6e7c2b1e00deca5ac8d01c243b63978c8ceabbfde0dffb911d3283fb357b,7d3318ba-5cd2-4704-951e-10cb4c588341,3fda6e58-49d4-4b1a-9c0f-c27ead173108
+ogrenme_oruntu/sonuc/construct_learned_vs_cw.csv,163412,75a3583d20698048f658d7c088c8897a64b5f25b84905120dd3e6ec8f061b902,3d0fd876-0722-43d9-a516-3513db14e64a,4e13902c-a7d0-4f40-935b-9f20f2c13ad2
+ogrenme_oruntu/sonuc/prune_learned_arcs_all.csv,284330,eb7f079661f134201b698658e0a0f17e710155c4a60b8a89811d23d75a8faebc,3811613e-e2b5-48cf-9013-9532037f705b,840b1dc9-8b68-4e50-b8f9-97b295702a3f
+ogrenme_oruntu/sonuc/prune_learned_arcs_summary.csv,4914,b1a8621fb1dd80f1dade3578d342cb9018dc08b323a4fde0ecff4a8577040a88,72e46a9d-af1d-48d9-9d58-7db8e295315d,23be077b-daa0-403e-bdcf-b82e3d58f07b
+ogrenme_oruntu/sonuc/esn_learned_vs_geo.csv,1524,d4ea5f8e9e168e03ede4eab00b6d09736087f6b0f64489782a3ea4fc036f032c,4319e7ad-2458-44b0-92de-0e7e6f21dc74,38c05fd7-1bab-4d66-984a-0900f836d46d
+ogrenme_oruntu/sonuc/tsp_learned_cands.csv,8870,170e30a12686719fc62d89d4792e9b714658f7504043c7315c887c4bc4baed53,be0e3e7e-990a-499c-9d3c-7f90e233e255,f0c140c8-a419-4e60-b47e-a8637a8d523e
+raporlar_ilk_surum/ALGORITHM_DEVELOPMENT_RESULTS_2026-10-14.md,27135,1cfdfcd3c0eaf94576d82db9006641d74154ef57e62dbbd4df2e0968bee5d08d,,315d1c45-7b00-4da7-8ab7-27030727281b
+raporlar_ilk_surum/TSP_FAST_LS_REPORT.md,35645,63e5b08844583a4fac8a61b55ecf7aac57f45e2a54988a9c6732802d9216a4f0,,3183a1f1-7ee6-46fe-8a59-dbc75c72252f
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-05_R50_repeat1.matrix.json,82923,6e46d9d2d11559b8ddc5e78c5ccb1b04a34f58644543bd7f78c229b5b3e1826b,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-05_R50_repeat1.response.json,67283,c484071702048fa3a12de7a9dd866dfbbd59c454dceee627357ae942011af23b,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-05_R60_repeat1.matrix.json,82923,57753414dc0a9ca14917fde7b1e350e49a6f3fe096cb6094ffe781dfced0b5b2,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-05_R60_repeat1.response.json,60345,402f820272e1b634bbbb70888f2f5942bcb4da00b5d5f0cc391137644eabff51,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-05_R70_repeat1.matrix.json,82923,c632b80aa60fe328c7774d36ca955abe4fca66231129dd8e4ed7d6ed374c6e84,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-05_R70_repeat1.response.json,54827,593da9b3dcb096e09d6e35af2552c0b7fc294a0683d7d937cebafedcc5a85b62,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-05_R90_repeat1.matrix.json,82923,efcc3aa77a9255948e85a81f46690cb76aa580e0ad6318d38301f7833da520b7,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-05_R90_repeat1.response.json,54845,f38be2e73e8dd2179354ecbbb515885427aaa1985a25e641753eca70cb581956,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-06_R50_repeat1.matrix.json,50974,90ff3d4a23fc1f3b8c2d3fd8a22a3c551c2de10b2897d6e2a6c7e6f4464808fc,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-06_R50_repeat1.response.json,57979,da73bf85fde215380bace79d42ddddf877bc87d65f2a1aafdc933ba144b1c499,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-06_R60_repeat1.matrix.json,50974,7530f129776596332cc241a84db2f91063173998d0108122d4f8d36f3aaf5d73,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-06_R60_repeat1.response.json,55216,a58c1308212083d91c8e49c7e565858a4c68a5dc2d01dfb5fe465b86f2db6c88,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-06_R70_repeat1.matrix.json,50974,e38ae908edf1c5b4dd23fa7fe769af606bee8d9f5d92350a7e6bdabb6b969f47,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-06_R70_repeat1.response.json,52447,e11639ff989fade9c2eb1fd27d7b5088bd71b36ab922222b8d0a81ce360b5c2e,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-06_R90_repeat1.matrix.json,50974,43e9dc7834491f3aae966abc50042c229fca7064e9763a3a05dd734422d1b8db,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-06_R90_repeat1.response.json,46907,12c07dabd380eb5c9dd0acd6324cab73b151029fec65d71a3cefd14c237d5934,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-07_R50_repeat1.matrix.json,60741,734cef1009849c661b635d5e483461579ed45d89c55388f2f394c8b0b9b6c2b1,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-07_R50_repeat1.response.json,55342,09486055d4442957749c72193242b07ec275231653f41ef0f330347c2e487df1,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-07_R60_repeat1.matrix.json,60741,61ecc76bf0dad8c652fe4dc0bd90bdeb5d0f2f42db1b5161c58091f49448df81,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-07_R60_repeat1.response.json,52573,a359a739b44cfe3f5b41e35c7a9bd4e901304e67cd4a5c79ed3a6154b8831d9a,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-07_R70_repeat1.matrix.json,60741,f01b64fe0ecc57d079a4a0d945aecd199b7a80f27cae43fbde7a67d0028f2d73,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-07_R70_repeat1.response.json,52591,68634744f746d391c2b3dca055f1d14ef74ec409620db368666ef1626428e5ab,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-07_R90_repeat1.matrix.json,60741,906c1ff0e2950ea16b7ca191e2449dd5f0c309d1c42818c169d4bca17d572fca,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-07_R90_repeat1.response.json,47055,d37530c428aa00bd8a2ef89a086989dfd26100bd237eacd919584f2a8e0c5e1a,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-08_R50_repeat1.matrix.json,60705,73dd20d49d1d672f59a1322641bd01ddf57850c3606877b67f71bfec0052849e,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-08_R50_repeat1.response.json,62195,ef7cb1f4aed807c50d0682ec9577022b5d8d8e510f82de13248a906f819b2edf,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-08_R60_repeat1.matrix.json,60705,00932bee798713e25f741a7335418f97c4ac125a7e7279bbe41b8457d26785dd,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-08_R60_repeat1.response.json,56651,3a2f69b9d20fd04c302e2da9fc61633a6cf470b4613496356176c22181245978,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-08_R70_repeat1.matrix.json,60705,7e8783748d1af3f5ac36ecc669531b55eba05185666f72097e258bb866084ec7,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-08_R70_repeat1.response.json,51110,ae0f9f35ba2c787720bdff28ac2a7496228f0c3f9649a4d59848f172769d54f2,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-08_R90_repeat1.matrix.json,60705,78d73a1fe5eebfcb74eeaaa9cdb53f34180eb88ecefe6f365ca8e29a4ee915c5,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-08_R90_repeat1.response.json,51110,65fa6b4ba7fec320f0e6ca3dcf9dc3ade7f1bbaceb65bf8ef5cc12a95508e1aa,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-09_R50_repeat1.matrix.json,41987,7241a8ec19d5cbc419707418bec442a2e92ee68e316aa27ec4b3c538b1ddd288,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-09_R50_repeat1.response.json,46036,a5ba0407eb01186e5c8b9103357be9bdf519d569a4f2540ad448b46010f44d3c,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-09_R60_repeat1.matrix.json,41987,95e5859b136d24befb440e46b62e71a1729afb27f44c666dc8f360bc36956189,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-09_R60_repeat1.response.json,43260,ef39d903e9aa1302fff1030e3063a66af747fddcdbe1845cd9fa79eb4a130118,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-09_R70_repeat1.matrix.json,41987,af81995a357e81ec77734c59162a091fd6e845b5ea5de17d37fd995eac78d22e,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-09_R70_repeat1.response.json,40503,cb279378cc21aae3a314ea8ccafa8ea87cefca4ec163b69e5cb6a1b67ec1d759,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-09_R90_repeat1.matrix.json,41987,5ab0547b104a091e7940fe11dc0f7ce7b6d6567e880817185692b2e120c28139,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/2026-10-09_R90_repeat1.response.json,39124,94c6e97495c3e0361bbd7d17f2bd06caed7b604d74eb6a3bc45e4755617a41c1,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/README.md,2607,67bf7a8beafe8b2b626f4e06d5ccec9f50ced0e22b6cf7e6801d70731e88624f,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/fleet_mix.csv,2122,335430a1addf6aeba07b64e51c4a826b14458832be30896a7487919e85d1777e,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/fleet_mix_analysis.md,8197,dca5c317c473b2ba2ee6d82fdeec055428152c11abf72f64d58582625cd7cbf2,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/fleet_mix_classification.csv,995,72c148375d1fe66be3548fb86a2c22dd455598669024acf6eeb0d525cb6a960c,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/run_manifest.json,15853,f152ca63068be91be03c7ca27cf767fef52cc9345a6cb69d155f75a137f90b15,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/schedule_verification.md,16356,30d647f076ebe4ff7acb8d669e44c15e204c537b90d26d9422be6837092a76cd,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/summary.csv,3140,9e87bc434388789bdddc50dfc09412c538cca500550210e72bf90cfa9f290616,depo girdisi,
+../../../../paper/results/week-2026-10-05-4sw5so/weekly.csv,2015,ddf1a82adf0cc6e9d2006ace1e7236f02fac9816f7756b7cf9772c28e9301c7e,depo girdisi,

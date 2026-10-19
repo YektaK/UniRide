@@ -1,0 +1,19 @@
+inst,part,variant,n_starts,mean_diff_vs_repo_pct,ci95_lo,ci95_hi,repo_mean_gap_to_opt_pct,repo_mean_ls_s,fast_mean_ls_s,within_0_5_point,within_0_5_ci,repo_kps,fast_kps,speedup,criterion_50x,repo_source,fast_source,main_bench_repo_iter_per_s
+a280,ls_quality,fast_k10_or3,30,-0.96047,-2.1847,0.26375,8.2293,4.7232,0.0044132,False,False,,,,,,,
+a280,ls_quality,fast_k10_2o,30,-0.39635,-1.8112,1.0185,8.2293,4.7232,0.0044132,True,False,,,,,,,
+a280,ls_quality,fast_k20_or3,30,-2.5133,-3.6313,-1.3953,8.2293,4.7232,0.0044132,False,False,,,,,,,
+a280,ls_quality_kicked,fast_k10_or3,10,1.9116,0.11094,3.7123,6.4366,1.8674,0.001909,False,False,,,,,,,
+a280,ls_quality_kicked,fast_k10_2o,10,2.489,0.62988,4.3481,6.4366,1.8674,0.001909,False,False,,,,,,,
+a280,ls_quality_kicked,fast_k20_or3,10,-0.038818,-1.1602,1.0826,6.4366,1.8674,0.001909,True,False,,,,,,,
+pr1002,ls_quality_kicked,fast_k10_or3,3,4.1975,-2.3363,10.731,5.0649,203.02,0.0055277,False,False,,,,,,,
+pr1002,ls_quality_kicked,fast_k10_2o,3,5.3172,0.2331,10.401,5.0649,203.02,0.0055277,False,False,,,,,,,
+pr1002,ls_quality_kicked,fast_k20_or3,3,-0.24451,-2.4272,1.9382,5.0649,203.02,0.0055277,True,False,,,,,,,
+pr439,ls_quality,fast_k10_or3,5,0.33847,-3.9007,4.5777,8.6913,39.476,0.01011,True,False,,,,,,,
+pr439,ls_quality,fast_k10_2o,5,0.9523,-2.7224,4.627,8.6913,39.476,0.01011,False,False,,,,,,,
+pr439,ls_quality,fast_k20_or3,5,-1.0305,-4.0805,2.0194,8.6913,39.476,0.01011,False,False,,,,,,,
+pr439,ls_quality_kicked,fast_k10_or3,3,1.7645,-8.1106,11.64,5.1842,11.429,0.0033134,False,False,,,,,,,
+pr439,ls_quality_kicked,fast_k10_2o,3,1.7936,-8.0118,11.599,5.1842,11.429,0.0033134,False,False,,,,,,,
+pr439,ls_quality_kicked,fast_k20_or3,3,1.014,-6.4023,8.4303,5.1842,11.429,0.0033134,False,False,,,,,,,
+a280,kicks_per_s,ILS-fast vs repo ILS,,,,,,,,,,0.52934,12531,23672,True,"kick loop from repo local optimum, 3 starts x ~20 s",ILS-fast 3 starts x 5 s,0.60394
+pr439,kicks_per_s,ILS-fast vs repo ILS,,,,,,,,,,0.13579,13623,1.0033e+05,True,"kick loop from repo local optimum, 3 starts x ~20 s",ILS-fast 3 starts x 5 s,0.015483
+pr1002,kicks_per_s,ILS-fast vs repo ILS,,,,,,,,,,0.0049256,8307.7,1.6866e+06,True,3 repo LS calls on kicked tours (1/mean time),"main benchmark ILS-fast, 5 runs x 30 s",

@@ -1,0 +1,9 @@
+# Çalışmanın yapıldığı ortamdaki sürümler (Python 3.11.17, Windows)
+numpy==2.4.6
+scipy==1.17.1
+pandas==2.3.3
+numba==0.68.0
+ortools==9.15.6755
+scikit-learn==1.9.1
+elkai==2.0.1  # yalnız akademik/ticari olmayan kullanım (LKH lisansı)
+matplotlib==3.11.2

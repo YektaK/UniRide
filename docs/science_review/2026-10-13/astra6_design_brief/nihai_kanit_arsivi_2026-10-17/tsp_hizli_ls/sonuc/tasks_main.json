@@ -1,0 +1,1282 @@
+[
+{
+"arm": "ils_fast",
+"inst": "rd100",
+"seed": 0,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "rd100",
+"seed": 0,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "rd100",
+"seed": 0,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "rd100",
+"seed": 1,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "rd100",
+"seed": 1,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "rd100",
+"seed": 1,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "rd100",
+"seed": 2,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "rd100",
+"seed": 2,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "rd100",
+"seed": 2,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "rd100",
+"seed": 3,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "rd100",
+"seed": 3,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "rd100",
+"seed": 3,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "rd100",
+"seed": 4,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "rd100",
+"seed": 4,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "rd100",
+"seed": 4,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "eil101",
+"seed": 0,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "eil101",
+"seed": 0,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "eil101",
+"seed": 0,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "eil101",
+"seed": 1,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "eil101",
+"seed": 1,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "eil101",
+"seed": 1,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "eil101",
+"seed": 2,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "eil101",
+"seed": 2,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "eil101",
+"seed": 2,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "eil101",
+"seed": 3,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "eil101",
+"seed": 3,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "eil101",
+"seed": 3,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "eil101",
+"seed": 4,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "eil101",
+"seed": 4,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "eil101",
+"seed": 4,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "lin105",
+"seed": 0,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "lin105",
+"seed": 0,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "lin105",
+"seed": 0,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "lin105",
+"seed": 1,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "lin105",
+"seed": 1,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "lin105",
+"seed": 1,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "lin105",
+"seed": 2,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "lin105",
+"seed": 2,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "lin105",
+"seed": 2,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "lin105",
+"seed": 3,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "lin105",
+"seed": 3,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "lin105",
+"seed": 3,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "lin105",
+"seed": 4,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "lin105",
+"seed": 4,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "lin105",
+"seed": 4,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "pr136",
+"seed": 0,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "pr136",
+"seed": 0,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "pr136",
+"seed": 0,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "pr136",
+"seed": 1,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "pr136",
+"seed": 1,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "pr136",
+"seed": 1,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "pr136",
+"seed": 2,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "pr136",
+"seed": 2,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "pr136",
+"seed": 2,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "pr136",
+"seed": 3,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "pr136",
+"seed": 3,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "pr136",
+"seed": 3,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "pr136",
+"seed": 4,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "pr136",
+"seed": 4,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "pr136",
+"seed": 4,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "pr152",
+"seed": 0,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "pr152",
+"seed": 0,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "pr152",
+"seed": 0,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "pr152",
+"seed": 1,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "pr152",
+"seed": 1,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "pr152",
+"seed": 1,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "pr152",
+"seed": 2,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "pr152",
+"seed": 2,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "pr152",
+"seed": 2,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "pr152",
+"seed": 3,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "pr152",
+"seed": 3,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "pr152",
+"seed": 3,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "pr152",
+"seed": 4,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "pr152",
+"seed": 4,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "pr152",
+"seed": 4,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "a280",
+"seed": 0,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "a280",
+"seed": 0,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "a280",
+"seed": 0,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "a280",
+"seed": 1,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "a280",
+"seed": 1,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "a280",
+"seed": 1,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "a280",
+"seed": 2,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "a280",
+"seed": 2,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "a280",
+"seed": 2,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "a280",
+"seed": 3,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "a280",
+"seed": 3,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "a280",
+"seed": 3,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "a280",
+"seed": 4,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "a280",
+"seed": 4,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "a280",
+"seed": 4,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "lin318",
+"seed": 0,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "lin318",
+"seed": 0,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "lin318",
+"seed": 0,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "lin318",
+"seed": 1,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "lin318",
+"seed": 1,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "lin318",
+"seed": 1,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "lin318",
+"seed": 2,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "lin318",
+"seed": 2,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "lin318",
+"seed": 2,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "lin318",
+"seed": 3,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "lin318",
+"seed": 3,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "lin318",
+"seed": 3,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "lin318",
+"seed": 4,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "lin318",
+"seed": 4,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "lin318",
+"seed": 4,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "pr439",
+"seed": 0,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "pr439",
+"seed": 0,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "pr439",
+"seed": 0,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "pr439",
+"seed": 1,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "pr439",
+"seed": 1,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "pr439",
+"seed": 1,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "pr439",
+"seed": 2,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "pr439",
+"seed": 2,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "pr439",
+"seed": 2,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "pr439",
+"seed": 3,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "pr439",
+"seed": 3,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "pr439",
+"seed": 3,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "pr439",
+"seed": 4,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "repo_ils",
+"inst": "pr439",
+"seed": 4,
+"T": 30,
+"params": {}
+},
+{
+"arm": "lkh",
+"inst": "pr439",
+"seed": 4,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "rat783",
+"seed": 0,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "lkh",
+"inst": "rat783",
+"seed": 0,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "rat783",
+"seed": 1,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "lkh",
+"inst": "rat783",
+"seed": 1,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "rat783",
+"seed": 2,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "lkh",
+"inst": "rat783",
+"seed": 2,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "rat783",
+"seed": 3,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "lkh",
+"inst": "rat783",
+"seed": 3,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "rat783",
+"seed": 4,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "lkh",
+"inst": "rat783",
+"seed": 4,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "pr1002",
+"seed": 0,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "lkh",
+"inst": "pr1002",
+"seed": 0,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "pr1002",
+"seed": 1,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "lkh",
+"inst": "pr1002",
+"seed": 1,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "pr1002",
+"seed": 2,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "lkh",
+"inst": "pr1002",
+"seed": 2,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "pr1002",
+"seed": 3,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "lkh",
+"inst": "pr1002",
+"seed": 3,
+"T": 0,
+"params": {
+"runs": 10
+}
+},
+{
+"arm": "ils_fast",
+"inst": "pr1002",
+"seed": 4,
+"T": 30,
+"params": {
+"K": 10,
+"Lmax": 100,
+"use_or3": true
+}
+},
+{
+"arm": "lkh",
+"inst": "pr1002",
+"seed": 4,
+"T": 0,
+"params": {
+"runs": 10
+}
+}
+]

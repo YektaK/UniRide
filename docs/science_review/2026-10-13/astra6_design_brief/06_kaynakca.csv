@@ -1,0 +1,219 @@
+﻿etiket,yazarlar,yil,baslik,yayin_yeri,doi,dogrulama
+Abu Khurma 2025,Khurma,2025,"The Runge–Kutta Optimization Algorithm: A Comprehensive Survey of Methodology, Variants, Applications, and Performance Evaluation",Archives of Computational Methods in Engineering,10.1007/s11831-025-10293-w,crossref
+Accorsi & Vigo 2021,Accorsi; Vigo,2021,A Fast and Scalable Heuristic for the Solution of Large-Scale Capacitated Vehicle Routing Problems,Transportation Science,10.1287/trsc.2021.1059,crossref
+Accorsi & Vigo 2024,Accorsi; Vigo,2024,Routing one million customers in a handful of minutes,Computers & Operations Research,10.1016/j.cor.2024.106562,crossref
+Accorsi vd. 2022,Accorsi; Lodi; Vigo,2022,Guidelines for the computational testing of machine learning approaches to vehicle routing problems,Operations Research Letters,10.1016/j.orl.2022.01.018,crossref
+Ahmadianfar vd. 2020,Ahmadianfar; Bozorg-Haddad; Chu,2020,Gradient-based optimizer: A new metaheuristic optimization algorithm,Information Sciences,10.1016/j.ins.2020.06.037,crossref
+Ahmadianfar vd. 2021,Ahmadianfar; Heidari; Gandomi et al.,2021,RUN beyond the metaphor: An efficient optimization algorithm based on Runge Kutta method,Expert Systems with Applications,10.1016/j.eswa.2021.115079,crossref
+Applegate vd. 2003,Applegate; Cook; Rohe,2003,Chained Lin-Kernighan for Large Traveling Salesman Problems,INFORMS Journal on Computing,10.1287/ijoc.15.1.82.15157,crossref
+Aranha vd. 2021,Aranha; Camacho Villalón; Campelo et al.,2021,"Metaphor-based metaheuristics, a call for action: the elephant in the room",Swarm Intelligence,10.1007/s11721-021-00202-9,crossref
+Arnold & Sörensen 2019,Arnold; Sörensen,2019,Knowledge-guided local search for the vehicle routing problem,Computers & Operations Research,10.1016/j.cor.2019.01.002,crossref
+Arnold vd. 2019,Arnold; Gendreau; Sörensen,2019,Efficiently solving very large-scale routing problems,Computers & Operations Research,10.1016/j.cor.2019.03.006,crossref
+Babin vd. 2007,Babin; Deneault; Laporte,2007,Improvements to the Or-opt heuristic for the symmetric travelling salesman problem,Journal of the Operational Research Society,10.1057/palgrave.jors.2602160,crossref
+Baytürk vd. 2022,Baytürk; Küçükdeniz; Esnaf,2022,Fuzzy c-means and simulated annealing for planar location-routing problem,Journal of Intelligent & Fuzzy Systems,10.3233/jifs-221168,crossref
+Bean 1994,Bean,1994,Genetic Algorithms and Random Keys for Sequencing and Optimization,ORSA Journal on Computing,10.1287/ijoc.6.2.154,crossref
+Beasley 1983,Beasley,1983,Route first—Cluster second methods for vehicle routing,Omega,10.1016/0305-0483(83)90033-6,crossref
+Benatti vd. 2024,Benatti; Pedroso; Ribeiro,2024,"Fuzzy clustering with capacity constraints: Algorithm, convergence analysis and numerical experiments",Expert Systems with Applications,10.1016/j.eswa.2024.125191,crossref
+Bentley 1992,Bentley,1992,Fast Algorithms for Geometric Traveling Salesman Problems,ORSA Journal on Computing,10.1287/ijoc.4.4.387,crossref
+Berthold 2013,Berthold,2013,Measuring the impact of primal heuristics,Operations Research Letters,10.1016/j.orl.2013.08.007,crossref
+Berto vd. 2024,Federico Berto; Chuanbo Hua; Nayeli Gast Zepeda et al.,2024,RouteFinder: Towards Foundation Models for Vehicle Routing Problems,EUR Research Repository (Erasmus University Rotterdam),10.48550/arxiv.2406.15007,non-crossref
+Bhattacharya vd. 2025,Bhattacharya; Siddiqui; Sarangi,2025,Benchmarking Improved Metaphor-Less Optimization Algorithms on Traveling Salesman Problem,2025 IEEE International Conference on Computer Vision and Machine Intelligence (CVMI),10.1109/cvmi66673.2025.11337504,crossref
+Braekers vd. 2014,Braekers; Caris; Janssens,2014,Exact and meta-heuristic approach for a general heterogeneous dial-a-ride problem with multiple depots,Transportation Research Part B: Methodological,10.1016/j.trb.2014.05.007,crossref
+Bunte & Kliewer 2009,Bunte; Kliewer,2009,An overview on vehicle scheduling models,Public Transport,10.1007/s12469-010-0018-5,crossref
+Buriol vd. 2004,Buriol; França; Moscato,2004,A New Memetic Algorithm for the Asymmetric Traveling Salesman Problem,Journal of Heuristics,10.1023/b:heur.0000045321.59202.52,crossref
+Burke & Bykov 2017,Burke; Bykov,2017,The late acceptance Hill-Climbing heuristic,European Journal of Operational Research,10.1016/j.ejor.2016.07.012,crossref
+Burke vd. 2013,Burke; Gendreau; Hyde et al.,2013,Hyper-heuristics: a survey of the state of the art,Journal of the Operational Research Society,10.1057/jors.2013.71,crossref
+Camacho Villalón vd. 2020,Camacho Villalón; Stützle; Dorigo,2020,"Grey Wolf, Firefly and Bat Algorithms: Three Widespread Algorithms that Do Not Contain Any Novelty",Lecture Notes in Computer Science,10.1007/978-3-030-60376-2_10,crossref
+Camacho‐Villalón vd. 2022,Camacho‐Villalón; Dorigo; Stützle,2022,"Exposing the grey wolf, moth‐flame, whale, firefly, bat, and antlion algorithms: six misleading optimization techniques inspired by<i>bestial</i>metaphors",International Transactions in Operational Research,10.1111/itor.13176,crossref
+Cattaruzza vd. 2016,Cattaruzza; Absi; Feillet,2016,Vehicle routing problems with multiple trips,4OR,10.1007/s10288-016-0306-2,crossref
+Chen vd. 2010,Wei-Neng Chen; Jun Zhang; Chung et al.,2010,A Novel Set-Based Particle Swarm Optimization Method for Discrete Optimization Problems,IEEE Transactions on Evolutionary Computation,10.1109/tevc.2009.2030331,crossref
+Christiaens & Vanden Berghe 2020,Christiaens; Vanden Berghe,2020,Slack Induction by String Removals for Vehicle Routing Problems,Transportation Science,10.1287/trsc.2019.0914,crossref
+Cirasella vd. 2001,Cirasella; Johnson; McGeoch et al.,2001,"The Asymmetric Traveling Salesman Problem: Algorithms, Instance Generators, and Tests",Lecture Notes in Computer Science,10.1007/3-540-44808-x_3,crossref
+Clarke & Wright 1964,Clarke; Wright,1964,Scheduling of Vehicles from a Central Depot to a Number of Delivery Points,Operations Research,10.1287/opre.12.4.568,crossref
+Clerc & Kennedy 2002,Clerc; Kennedy,2002,"The particle swarm - explosion, stability, and convergence in a multidimensional complex space",IEEE Transactions on Evolutionary Computation,10.1109/4235.985692,crossref
+Clerc 2004,Clerc,2004,"Discrete Particle Swarm Optimization, illustrated by the Traveling Salesman Problem",Studies in Fuzziness and Soft Computing,10.1007/978-3-540-39930-8_8,crossref
+Cook & Seymour 2003,Cook; Seymour,2003,Tour Merging via Branch-Decomposition,INFORMS Journal on Computing,10.1287/ijoc.15.3.233.16078,crossref
+Cordeau 2006,Cordeau,2006,A Branch-and-Cut Algorithm for the Dial-a-Ride Problem,Operations Research,10.1287/opre.1060.0283,crossref
+Costa vd. 2019,Costa; Contardo; Desaulniers,2019,Exact Branch-Price-and-Cut Algorithms for Vehicle Routing,Transportation Science,10.1287/trsc.2018.0878,crossref
+Croes 1958,Croes,1958,A Method for Solving Traveling-Salesman Problems,Operations Research,10.1287/opre.6.6.791,crossref
+Cruz-Salinas & Gómez Perdomo 2017,Cruz-Salinas; Perdomo,2017,Self-adaptation of genetic operators through genetic programming techniques,Proceedings of the Genetic and Evolutionary Computation Conference,10.1145/3071178.3071214,crossref
+Cáceres vd. 2019,Caceres; Batta; He,2019,Special need students school bus routing: Consideration for mixed load and heterogeneous fleet,Socio-Economic Planning Sciences,10.1016/j.seps.2018.02.008,crossref
+Dantzig & Fulkerson 1954,Dantzig; Fulkerson,1954,Minimizing the number of tankers to meet a fixed schedule,Naval Research Logistics Quarterly,10.1002/nav.3800010309,crossref
+Derrac vd. 2011,Derrac; García; Molina et al.,2011,A practical tutorial on the use of nonparametric statistical tests as a methodology for comparing evolutionary and swarm intelligence algorithms,Swarm and Evolutionary Computation,10.1016/j.swevo.2011.02.002,crossref
+Desrochers & Laporte 1991,Desrochers; Laporte,1991,Improvements and extensions to the Miller-Tucker-Zemlin subtour elimination constraints,Operations Research Letters,10.1016/0167-6377(91)90083-2,crossref
+Diastivena vd. 2021,Diastivena; Wahyuningsih; Satyananda,2021,Grey Wolf Optimizer algorithm for solving the multi depot vehicle routing problem and its implementation,Journal of Physics: Conference Series,10.1088/1742-6596/1872/1/012001,crossref
+Dilworth 1950,Dilworth,1950,A Decomposition Theorem for Partially Ordered Sets,The Annals of Mathematics,10.2307/1969503,crossref
+Dou vd. 2024,Zhi-Chao Dou; Zhi-Chao Dou; Shu-Chuan Chu et al.,2024,GBRUN: A Gradient Search-based Binary Runge Kutta Optimizer for Feature Selection,網際網路技術學刊,10.53106/160792642024052503001,crossref
+Drake vd. 2020,Drake; Kheiri; Özcan et al.,2020,Recent advances in selection hyper-heuristics,European Journal of Operational Research,10.1016/j.ejor.2019.07.073,crossref
+Duhamel vd. 2011,Duhamel; Lacomme; Prodhon,2011,Efficient frameworks for greedy split and new depth first search split procedures for routing problems,Computers & Operations Research,10.1016/j.cor.2010.09.010,crossref
+Duhamel vd. 2012,Duhamel; Lacomme; Prodhon,2012,A hybrid evolutionary local search with depth first search split procedure for the heterogeneous vehicle routing problems,Engineering Applications of Artificial Intelligence,10.1016/j.engappai.2011.10.002,crossref
+Eberhart & Shi 2000,Eberhart; Shi,2000,Comparing inertia weights and constriction factors in particle swarm optimization,Proceedings of the 2000 Congress on Evolutionary Computation. CEC00 (Cat. No.00TH8512),10.1109/cec.2000.870279,crossref
+Ellegood vd. 2020,Ellegood; Solomon; North et al.,2020,School bus routing problem: Contemporary trends and research directions,Omega,10.1016/j.omega.2019.03.014,crossref
+Esnaf & Küçükdeniz 2009,Esnaf; Küçükdeniz,2009,A fuzzy clustering-based hybrid method for a multi-facility location problem,Journal of Intelligent Manufacturing,10.1007/s10845-008-0233-y,crossref
+Ewbank vd. 2015,Ewbank; Wanke; Hadi-Vencheh,2015,An unsupervised fuzzy clustering approach to the capacitated vehicle routing problem,Neural Computing and Applications,10.1007/s00521-015-1901-4,crossref
+Fallahi vd. 2008,Fallahi; Prins; Wolfler Calvo,2008,A memetic algorithm and a tabu search for the multi-compartment vehicle routing problem,Computers & Operations Research,10.1016/j.cor.2006.10.006,crossref
+Feng & Liao 2014,Feng; Liao,2014,Hybrid evolutionary fuzzy learning scheme in the applications of traveling salesman problems,Information Sciences,10.1016/j.ins.2014.02.098,crossref
+Ferland & Michelon 1988,Ferland; Michelon,1988,The Vehicle Scheduling Problem with Multiple Vehicle Types,Journal of the Operational Research Society,10.1057/jors.1988.97,crossref
+Fernandes & Rosa 2007,Fernandes; Rosa,2007,Self-adjusting the intensity of assortative mating in genetic algorithms,Soft Computing,10.1007/s00500-007-0265-9,crossref
+Fialho vd. 2010,Fialho; Da Costa; Schoenauer et al.,2010,Analyzing bandit-based adaptive operator selection mechanisms,Annals of Mathematics and Artificial Intelligence,10.1007/s10472-010-9213-y,crossref
+Fischetti & Toth 1997,Fischetti; Toth,1997,A Polyhedral Approach to the Asymmetric Traveling Salesman Problem,Management Science,10.1287/mnsc.43.11.1520,crossref
+Fischetti vd. 2003,Fischetti; Lodi; Toth,2003,Solving Real-World ATSP Instances by Branch-and-Cut,Lecture Notes in Computer Science,10.1007/3-540-36478-1_8,crossref
+Fisher & Jaikumar 1981,Fisher; Jaikumar,1981,A generalized assignment heuristic for vehicle routing,Networks,10.1002/net.3230110205,crossref
+Franzin & Stützle 2019,Franzin; Stützle,2019,Revisiting simulated annealing: A component-based analysis,Computers & Operations Research,10.1016/j.cor.2018.12.015,crossref
+Freisleben & Merz 1996,Freisleben; Merz,1996,A genetic local search algorithm for solving symmetric and asymmetric traveling salesman problems,Proceedings of IEEE International Conference on Evolutionary Computation,10.1109/icec.1996.542671,crossref
+Fügenschuh 2009,Fügenschuh,2009,Solving a school bus scheduling problem with integer programming,European Journal of Operational Research,10.1016/j.ejor.2007.10.055,crossref
+Gertsbakh & Stern 1978,Gertsbakh; Stern,1978,Minimal Resources for Fixed and Variable Job Schedules,Operations Research,10.1287/opre.26.1.68,crossref
+Gharehchopogh & Abdollahzadeh 2021,Gharehchopogh; Abdollahzadeh,2021,An efficient harris hawk optimization algorithm for solving the travelling salesman problem,Cluster Computing,10.1007/s10586-021-03304-5,crossref
+Gibbons vd. 2026,Ethan Gibbons; Mario Ventresca; Beatrice M. Ombuki-Berman,2026,Split Algorithm in Linear Time for the Vehicle Routing Problem with Simultaneous Pickup and Delivery and Time Windows,arXiv (Cornell University),10.48550/arxiv.2601.17572,non-crossref
+Gillett & Miller 1974,Gillett; Miller,1974,A Heuristic Algorithm for the Vehicle-Dispatch Problem,Operations Research,10.1287/opre.22.2.340,crossref
+Gintner vd. 2005,Gintner; Kliewer; Suhl,2005,Solving large multiple-depot multiple-vehicle-type bus scheduling problems in practice,OR Spectrum,10.1007/s00291-005-0207-9,crossref
+Goksal vd. 2013,Goksal; Karaoglan; Altiparmak,2013,A hybrid discrete particle swarm optimization for vehicle routing problem with simultaneous pickup and delivery,Computers & Industrial Engineering,10.1016/j.cie.2012.01.005,crossref
+Golden vd. 1984,Golden; Assad; Levy et al.,1984,The fleet size and mix vehicle routing problem,Computers & Operations Research,10.1016/0305-0548(84)90007-8,crossref
+Gómez 2004,Gomez,2004,Self Adaptation of Operator Rates in Evolutionary Algorithms,Lecture Notes in Computer Science,10.1007/978-3-540-24854-5_113,crossref
+Hassold & Ceder 2014,Hassold; Ceder,2014,Public transport vehicle scheduling featuring multiple vehicle types,Transportation Research Part B: Methodological,10.1016/j.trb.2014.04.009,crossref
+Heidari vd. 2019,Heidari; Mirjalili; Faris et al.,2019,Harris hawks optimization: Algorithm and applications,Future Generation Computer Systems,10.1016/j.future.2019.02.028,crossref
+Helsgaun 2000,Helsgaun,2000,An effective implementation of the Lin–Kernighan traveling salesman heuristic,European Journal of Operational Research,10.1016/s0377-2217(99)00284-2,crossref
+Helsgaun 2009,Helsgaun,2009,General k-opt submoves for the Lin–Kernighan TSP heuristic,Mathematical Programming Computation,10.1007/s12532-009-0004-6,crossref
+Helsgaun 2017,Keld Helsgaun,2017,An Extension of the Lin-Kernighan-Helsgaun TSP Solver for Constrained Traveling Salesman and Vehicle Routing Problems (LKH-3 teknik raporu),Roskilde University technical report,10.13140/rg.2.2.25569.40807,non-crossref
+Ho vd. 2018,Ho; Szeto; Kuo et al.,2018,A survey of dial-a-ride problems: Literature review and recent developments,Transportation Research Part B: Methodological,10.1016/j.trb.2018.02.001,crossref
+Homberger & Gehring 1999,Homberger; Gehring,1999,Two Evolutionary Metaheuristics For The Vehicle Routing Problem With Time Windows,INFOR: Information Systems and Operational Research,10.1080/03155986.1999.11732386,crossref
+HosseinNejad vd. 2026,HosseinNejad; Navin; Heikalabad et al.,2026,Discrete gorilla troops optimization with two neighborhood searches for symmetric traveling salesman problem,Journal of Computational and Applied Mathematics,10.1016/j.cam.2026.117427,crossref
+Hunsaker & Savelsbergh 2002,Hunsaker; Savelsbergh,2002,Efficient feasibility testing for dial-a-ride problems,Operations Research Letters,10.1016/s0167-6377(02)00120-7,crossref
+Hvattum 2025,Hvattum,2025,Where to Split in Hybrid Genetic Search for the Capacitated Vehicle Routing Problem,Algorithms,10.3390/a18030165,crossref
+Jiang vd. 2025,Jiang; Yang; Duan et al.,2025,Clustering-Assisted Ant Colony Optimization for Large-Scale Travelling Salesman Problem,Proceedings of the Genetic and Evolutionary Computation Conference Companion,10.1145/3712255.3726580,crossref
+Johnson & McGeoch 2007,Johnson; McGeoch,2007,Experimental Analysis of Heuristics for the STSP,Combinatorial Optimization,10.1007/0-306-48213-4_9,crossref
+Johnson vd. 2007,Johnson; Gutin; McGeoch et al.,2007,Experimental Analysis of Heuristics for the ATSP,Combinatorial Optimization,10.1007/0-306-48213-4_10,crossref
+Jonker & Volgenant 1983,Jonker; Volgenant,1983,Transforming asymmetric into symmetric traveling salesman problems,Operations Research Letters,10.1016/0167-6377(83)90048-2,crossref
+Kanellakis & Papadimitriou 1980,Kanellakis; Papadimitriou,1980,Local Search for the Asymmetric Traveling Salesman Problem,Operations Research,10.1287/opre.28.5.1086,crossref
+Karp 1977,Karp,1977,Probabilistic Analysis of Partitioning Algorithms for the Traveling-Salesman Problem in the Plane,Mathematics of Operations Research,10.1287/moor.2.3.209,crossref
+Karp 1979,Karp,1979,A Patching Algorithm for the Nonsymmetric Traveling-Salesman Problem,SIAM Journal on Computing,10.1137/0208045,crossref
+Kerscher vd. 2026,Kerscher; Minner; Lehuédé et al.,2026,Solving heterogeneous vehicle routing problems using decomposition and set covering,Computers & Operations Research,10.1016/j.cor.2026.107505,crossref
+Kerschke vd. 2018,Kerschke; Kotthoff; Bossek et al.,2018,Leveraging TSP Solver Complementarity through Machine Learning,Evolutionary Computation,10.1162/evco_a_00215,crossref
+Kim vd. 2012,Kim; Kim; Park,2012,A school bus scheduling problem,European Journal of Operational Research,10.1016/j.ejor.2011.11.035,crossref
+Kinable vd. 2014,Kinable; Spieksma; Vanden Berghe,2014,School bus routing—a column generation approach,International Transactions in Operational Research,10.1111/itor.12080,crossref
+Kirkpatrick vd. 1983,Kirkpatrick; Gelatt; Vecchi,1983,Optimization by Simulated Annealing,Science,10.1126/science.220.4598.671,crossref
+Kolen vd. 2007,Kolen; Lenstra; Papadimitriou et al.,2007,Interval scheduling: A survey,Naval Research Logistics (NRL),10.1002/nav.20231,crossref
+Koç vd. 2015,Koç; Bektaş; Jabali et al.,2015,A hybrid evolutionary algorithm for heterogeneous fleet vehicle routing problems with time windows,Computers & Operations Research,10.1016/j.cor.2015.05.004,crossref
+Koç vd. 2016,Koç; Bektaş; Jabali et al.,2016,Thirty years of heterogeneous vehicle routing,European Journal of Operational Research,10.1016/j.ejor.2015.07.020,crossref
+Krasnogor & Smith 2005,Krasnogor; Smith,2005,"A Tutorial for Competent Memetic Algorithms: Model, Taxonomy, and Design Issues",IEEE Transactions on Evolutionary Computation,10.1109/tevc.2005.850260,crossref
+Kroon vd. 1995,Kroon; Salomon; Van Wassenhove,1995,Exact and approximation algorithms for the operational fixed interval scheduling problem,European Journal of Operational Research,10.1016/0377-2217(93)e0335-u,crossref
+Küçükdeniz vd. 2012,Küçükdeniz; Baray; Ecerkale et al.,2012,Integrated use of fuzzy c-means and convex programming for capacitated multi-facility location problem,Expert Systems with Applications,10.1016/j.eswa.2011.09.102,crossref
+Kůdela 2022,Kudela,2022,A critical problem in benchmarking and analysis of evolutionary computation methods,Nature Machine Intelligence,10.1038/s42256-022-00579-0,crossref
+Labadi vd. 2008,Labadi; Prins; Reghioui,2008,A memetic algorithm for the vehicle routing problem with time windows,RAIRO - Operations Research,10.1051/ro:2008021,crossref
+Laghlita vd. 2025,Laghlita; Mansouri; Tobi et al.,2025,"Comparative Study of Metaheuristic Algorithms on Small, Medium, and Large-Scale Instances of the Traveling Salesman Problem","2025 International Conference on Circuit, Systems and Communication (ICCSC)",10.1109/iccsc66714.2025.11134979,crossref
+Larrañaga vd. 1999,Larrañaga; Kuijpers; Murga et al.,1999,Genetic Algorithms for the Travelling Salesman Problem: A Review of Representations and Operators,Artificial Intelligence Review,10.1023/a:1006529012972,crossref
+LaTorre vd. 2021,LaTorre; Molina; Osaba et al.,2021,A prescription of methodological guidelines for comparing bio-inspired optimization algorithms,Swarm and Evolutionary Computation,10.1016/j.swevo.2021.100973,crossref
+Li & Chow 2021,Li; Chow,2021,"School Bus Routing Problem with a Mixed Ride, Mixed Load, and Heterogeneous Fleet",Transportation Research Record: Journal of the Transportation Research Board,10.1177/03611981211016860,crossref
+Liao vd. 2012,Liao; Yau; Chen,2012,Evolutionary algorithm to traveling salesman problems,Computers & Mathematics with Applications,10.1016/j.camwa.2011.12.018,crossref
+Lin 1965,Lin,1965,Computer Solutions of the Traveling Salesman Problem,Bell System Technical Journal,10.1002/j.1538-7305.1965.tb04146.x,crossref
+Liu vd. 2020,Liu; Li; Li et al.,2020,A Slime Mold-Ant Colony Fusion Algorithm for Solving Traveling Salesman Problem,IEEE Access,10.1109/access.2020.3035584,crossref
+Liu vd. 2024,Liu; Wang; Liu et al.,2024,A Full-Coverage Path Planning Method for an Orchard Mower Based on the Dung Beetle Optimization Algorithm,Agriculture,10.3390/agriculture14060865,crossref
+Luo vd. 2023,Luo; Lin; Liu et al.,2023,Neural Combinatorial Optimization with Heavy Decoder: Toward Large Scale Generalization,Advances in Neural Information Processing Systems 36,10.52202/075280-0387,crossref
+Lv vd. 2022,Lv; Zhang; Lian et al.,2022,A two-echelon fuzzy clustering based heuristic for large-scale bike sharing repositioning problem,Transportation Research Part B: Methodological,10.1016/j.trb.2022.04.003,crossref
+López-Ibáñez vd. 2016,López-Ibáñez; Dubois-Lacoste; Pérez Cáceres et al.,2016,The irace package: Iterated racing for automatic algorithm configuration,Operations Research Perspectives,10.1016/j.orp.2016.09.002,crossref
+Maia vd. 2024,Maia; Plastino; Souza,2024,An improved hybrid genetic search with data mining for the CVRP,Networks,10.1002/net.22213,crossref
+Mariescu-Istodor & Fränti 2021,Mariescu-Istodor; Fränti,2021,Solving the Large-Scale TSP Problem in 1 h: Santa Claus Challenge 2020,Frontiers in Robotics and AI,10.3389/frobt.2021.689908,crossref
+Mendoza vd. 2010,Mendoza; Castanier; Guéret et al.,2010,A memetic algorithm for the multi-compartment vehicle routing problem with stochastic demands,Computers & Operations Research,10.1016/j.cor.2009.06.015,crossref
+Miller vd. 1960,Miller; Tucker; Zemlin,1960,Integer Programming Formulation of Traveling Salesman Problems,Journal of the ACM,10.1145/321043.321046,crossref
+Mirjalili vd. 2014,Mirjalili; Mirjalili; Lewis,2014,Grey Wolf Optimizer,Advances in Engineering Software,10.1016/j.advengsoft.2013.12.007,crossref
+Nagata & Kobayashi 2013,Nagata; Kobayashi,2013,A Powerful Genetic Algorithm Using Edge Assembly Crossover for the Traveling Salesman Problem,INFORMS Journal on Computing,10.1287/ijoc.1120.0506,crossref
+Nagata & Soler 2012,Nagata; Soler,2012,A new genetic algorithm for the asymmetric traveling salesman problem,Expert Systems with Applications,10.1016/j.eswa.2012.02.029,crossref
+Nagata 2006,Nagata,2006,Fast EAX Algorithm Considering Population Diversity for Traveling Salesman Problems,Lecture Notes in Computer Science,10.1007/11730095_15,crossref
+Nagata 2020,Nagata,2020,High-Order Entropy-Based Population Diversity Measures in the Traveling Salesman Problem,Evolutionary Computation,10.1162/evco_a_00268,crossref
+Nagata vd. 2010,Nagata; Bräysy; Dullaert,2010,A penalty-based edge assembly memetic algorithm for the vehicle routing problem with time windows,Computers & Operations Research,10.1016/j.cor.2009.06.022,crossref
+Ong & Keane 2004,Ong; Keane,2004,Meta-Lamarckian Learning in Memetic Algorithms,IEEE Transactions on Evolutionary Computation,10.1109/tevc.2003.819944,crossref
+Osaba vd. 2021,Osaba; Villar-Rodriguez; Del Ser et al.,2021,"A Tutorial On the design, experimentation and application of metaheuristic algorithms to real-World optimization problems",Swarm and Evolutionary Computation,10.1016/j.swevo.2021.100888,crossref
+Oueslati vd. 2024,Oueslati; Manita; Chhabra et al.,2024,"Chaos Game Optimization: A comprehensive study of its variants, applications, and future directions",Computer Science Review,10.1016/j.cosrev.2024.100647,crossref
+Pan vd. 2023,Pan; Jin; Ding et al.,2023,H-TSP: Hierarchically Solving the Large-Scale Traveling Salesman Problem,Proceedings of the AAAI Conference on Artificial Intelligence,10.1609/aaai.v37i8.26120,crossref
+Panwar & Deep 2021,Panwar; Deep,2021,Discrete Grey Wolf Optimizer for symmetric travelling salesman problem,Applied Soft Computing,10.1016/j.asoc.2021.107298,crossref
+Panwar & Deep 2021,Panwar; Deep,2021,Transformation operators based grey wolf optimizer for travelling salesman problem,Journal of Computational Science,10.1016/j.jocs.2021.101454,crossref
+Park & Jun 2009,Park; Jun,2009,A simple and fast algorithm for K-medoids clustering,Expert Systems with Applications,10.1016/j.eswa.2008.01.039,crossref
+Park & Kim 2010,Park; Kim,2010,The school bus routing problem: A review,European Journal of Operational Research,10.1016/j.ejor.2009.05.017,crossref
+Parragh 2011,Parragh,2011,Introducing heterogeneous users and vehicles into models and algorithms for the dial-a-ride problem,Transportation Research Part C: Emerging Technologies,10.1016/j.trc.2010.06.002,crossref
+Pecin vd. 2017,Pecin; Contardo; Desaulniers et al.,2017,New Enhancements for the Exact Solution of the Vehicle Routing Problem with Time Windows,INFORMS Journal on Computing,10.1287/ijoc.2016.0744,crossref
+Pekel Özmen 2024,PEKEL ÖZMEN,2024,Two-stage clustering and routing problem by using FCM and K-means with Genetic Algorithm,Sigma Journal of Engineering and Natural Sciences – Sigma Mühendislik ve Fen Bilimleri Dergisi,10.14744/sigma.2023.00096,crossref
+Penna vd. 2017,Penna; Subramanian; Ochi et al.,2017,A hybrid heuristic for a broad class of vehicle routing problems with heterogeneous fleet,Annals of Operations Research,10.1007/s10479-017-2642-9,crossref
+Perron vd. 2023,Laurent Perron; Frédéric Didier; Steven Gay,2023,The CP-SAT-LP Solver (Invited Talk),"CP 2023, LIPIcs vol. 280",10.4230/lipics.cp.2023.3,non-crossref
+Pessoa vd. 2020,Pessoa; Sadykov; Uchoa et al.,2020,A generic exact solver for vehicle routing and related problems,Mathematical Programming,10.1007/s10107-020-01523-z,crossref
+Pillay & Qu 2020,Pillay; Qu,2020,Assessing hyper-heuristic performance,Journal of the Operational Research Society,10.1080/01605682.2020.1796538,crossref
+Pisinger & Ropke 2007,Pisinger; Ropke,2007,A general heuristic for vehicle routing problems,Computers & Operations Research,10.1016/j.cor.2005.09.012,crossref
+Potvin & Rousseau 1993,Potvin; Rousseau,1993,A parallel route building algorithm for the vehicle routing and scheduling problem with time windows,European Journal of Operational Research,10.1016/0377-2217(93)90221-8,crossref
+Prins 2004,Prins,2004,A simple and effective evolutionary algorithm for the vehicle routing problem,Computers & Operations Research,10.1016/s0305-0548(03)00158-8,crossref
+Prins 2009,Prins,2009,Two memetic algorithms for heterogeneous fleet vehicle routing problems,Engineering Applications of Artificial Intelligence,10.1016/j.engappai.2008.10.006,crossref
+Prins vd. 2014,Prins; Lacomme; Prodhon,2014,Order-first split-second methods for vehicle routing problems: A review,Transportation Research Part C: Emerging Technologies,10.1016/j.trc.2014.01.011,crossref
+Qu & Bard 2015,Qu; Bard,2015,A Branch-and-Price-and-Cut Algorithm for Heterogeneous Pickup and Delivery Problems with Configurable Vehicle Capacity,Transportation Science,10.1287/trsc.2014.0524,crossref
+Rajwar & Deep 2024,Rajwar; Deep,2024,Uncovering structural bias in population-based optimization algorithms: A theoretical and simulation-based analysis of the Generalized Signature Test,Expert Systems with Applications,10.1016/j.eswa.2023.122332,crossref
+Rego vd. 2011,Rego; Gamboa; Glover et al.,2011,"Traveling salesman problem heuristics: Leading methods, implementations and latest advances",European Journal of Operational Research,10.1016/j.ejor.2010.09.010,crossref
+Reinelt 1991,Reinelt,1991,TSPLIB—A Traveling Salesman Problem Library,ORSA Journal on Computing,10.1287/ijoc.3.4.376,crossref
+Rezaee Jordehi & Jasni 2012,Rezaee Jordehi; Jasni,2012,Particle swarm optimisation for discrete optimisation problems: a review,Artificial Intelligence Review,10.1007/s10462-012-9373-8,crossref
+Riera-Ledesma & Salazar-González 2012,Riera-Ledesma; Salazar-González,2012,Solving school bus routing using the multiple vehicle traveling purchaser problem: A branch-and-cut approach,Computers & Operations Research,10.1016/j.cor.2011.04.015,crossref
+Rist & Forbes 2021,Rist; Forbes,2021,A New Formulation for the Dial-a-Ride Problem,Transportation Science,10.1287/trsc.2021.1044,crossref
+Roberti & Toth 2012,Roberti; Toth,2012,Models and algorithms for the Asymmetric Traveling Salesman Problem: an experimental comparison,EURO Journal on Transportation and Logistics,10.1007/s13676-012-0010-0,crossref
+Ronald 2002,Ronald,2002,Distance functions for order-based encodings,Proceedings of 1997 IEEE International Conference on Evolutionary Computation (ICEC '97),10.1109/icec.1997.592266,crossref
+Ropke & Pisinger 2006,Ropke; Pisinger,2006,An Adaptive Large Neighborhood Search Heuristic for the Pickup and Delivery Problem with Time Windows,Transportation Science,10.1287/trsc.1050.0135,crossref
+Sales vd. 2018,Sales; Melo; Bonates et al.,2018,Memetic Algorithm for the Heterogeneous Fleet School Bus Routing Problem,Journal of Urban Planning and Development,10.1061/(asce)up.1943-5444.0000454,crossref
+Santini vd. 2018,Santini; Ropke; Hvattum,2018,A comparison of acceptance criteria for the adaptive large neighbourhood search metaheuristic,Journal of Heuristics,10.1007/s10732-018-9377-x,crossref
+Santini vd. 2023,Santini; Schneider; Vidal et al.,2023,Decomposition Strategies for Vehicle Routing Heuristics,INFORMS Journal on Computing,10.1287/ijoc.2023.1288,crossref
+Schrimpf vd. 2000,Schrimpf; Schneider; Stamm-Wilbrandt et al.,2000,Record Breaking Optimization Results Using the Ruin and Recreate Principle,Journal of Computational Physics,10.1006/jcph.1999.6413,crossref
+Sena vd. 2025,Sena; Ribeiro; Silva et al.,2025,Performance Benchmarking of OR-Tools Methods for Capacitated Vehicle Routing Problems with Time Windows,Communications in Computer and Information Science,10.1007/978-3-032-00137-5_7,crossref
+Shalaby vd. 2021,Shalaby; Mohammed; Kassem,2021,Supervised Fuzzy C-Means Techniques to Solve the Capacitated Vehicle Routing Problem,The International Arab Journal of Information Technology,10.34028/iajit/18/3a/9,crossref
+Shaw 1998,Shaw,1998,Using Constraint Programming and Local Search Methods to Solve Vehicle Routing Problems,Lecture Notes in Computer Science,10.1007/3-540-49481-2_30,crossref
+Shi & Eberhart 1998,Shi; Eberhart,1998,A modified particle swarm optimizer,1998 IEEE International Conference on Evolutionary Computation Proceedings. IEEE World Congress on Computational Intelligence (Cat. No.98TH8360),10.1109/icec.1998.699146,crossref
+Shi vd. 2007,Shi; Liang; Lee et al.,2007,Particle swarm optimization-based algorithms for TSP and generalized TSP,Information Processing Letters,10.1016/j.ipl.2007.03.010,crossref
+Shibutani & Kimura 2025,Shibutani; Kimura,2025,Grey wolf optimizer with adaptive large neighborhood search for the traveling salesman problems,"Nonlinear Theory and Its Applications, IEICE",10.1587/nolta.16.1022,crossref
+Silva vd. 2024,Silva; Lima; Silva et al.,2024,Time-Dependency of Guided Local Search to Solve the Capacitated Vehicle Routing Problem with Time Windows,Communications in Computer and Information Science,10.1007/978-3-031-53025-8_7,crossref
+Solomon 1987,Solomon,1987,Algorithms for the Vehicle Routing and Scheduling Problems with Time Window Constraints,Operations Research,10.1287/opre.35.2.254,crossref
+Sopto vd. 2018,Sopto; Ayon; Akhand et al.,2018,Modified Grey Wolf Optimization to Solve Traveling Salesman Problem,2018 International Conference on Innovation in Engineering and Technology (ICIET),10.1109/ciet.2018.8660872,crossref
+Squillero & Tonda 2016,Squillero; Tonda,2016,Divergence of character and premature convergence: A survey of methodologies for promoting diversity in evolutionary optimization,Information Sciences,10.1016/j.ins.2015.09.056,crossref
+Subramanian vd. 2012,Subramanian; Penna; Uchoa et al.,2012,A hybrid algorithm for the Heterogeneous Fleet Vehicle Routing Problem,European Journal of Operational Research,10.1016/j.ejor.2012.03.016,crossref
+Sörensen 2013,Sörensen,2013,Metaheuristics—the metaphor exposed,International Transactions in Operational Research,10.1111/itor.12001,crossref
+Taillard & Helsgaun 2019,Taillard; Helsgaun,2019,POPMUSIC for the travelling salesman problem,European Journal of Operational Research,10.1016/j.ejor.2018.06.039,crossref
+Taillard & Voss 2002,Taillard; Voss,2002,Popmusic — Partial Optimization Metaheuristic under Special Intensification Conditions,Operations Research/Computer Science Interfaces Series,10.1007/978-1-4615-1507-4_27,crossref
+Taillard 1999,Taillard,1999,A heuristic column generation method for the heterogeneous fleet VRP,RAIRO - Operations Research,10.1051/ro:1999101,crossref
+Talatahari & Azizi 2020,Talatahari; Azizi,2020,Chaos Game Optimization: a novel metaheuristic algorithm,Artificial Intelligence Review,10.1007/s10462-020-09867-w,crossref
+Tasgetiren vd. 2007,Tasgetiren; Liang; Sevkli et al.,2007,A particle swarm optimization algorithm for makespan and total flowtime minimization in the permutation flowshop sequencing problem,European Journal of Operational Research,10.1016/j.ejor.2005.12.024,crossref
+Thyssens vd. 2023,Daniela Thyssens; Tim Dernedde; Jonas K. Falkner et al.,2023,Routing Arena: A Benchmark Suite for Neural Routing Solvers,arXiv (Cornell University),10.48550/arxiv.2310.04140,non-crossref
+Tinós vd. 2014,Tinós; Whitley; Ochoa,2014,Generalized asymmetric partition crossover (GAPX) for the asymmetric TSP,Proceedings of the 2014 Annual Conference on Genetic and Evolutionary Computation,10.1145/2576768.2598245,crossref
+Toth & Vigo 2003,Toth; Vigo,2003,The Granular Tabu Search and Its Application to the Vehicle-Routing Problem,INFORMS Journal on Computing,10.1287/ijoc.15.4.333.24890,crossref
+Turkeš vd. 2021,Turkeš; Sörensen; Hvattum,2021,Meta-analysis of metaheuristics: Quantifying the effect of adaptiveness in adaptive large neighborhood search,European Journal of Operational Research,10.1016/j.ejor.2020.10.045,crossref
+Uchoa vd. 2017,Uchoa; Pecin; Pessoa et al.,2017,New benchmark instances for the Capacitated Vehicle Routing Problem,European Journal of Operational Research,10.1016/j.ejor.2016.08.012,crossref
+Valenzuela & Jones 1993,Valenzuela; Jones,1993,Evolutionary Divide and Conquer (I): A Novel Genetic Approach to the TSP,Evolutionary Computation,10.1162/evco.1993.1.4.313,crossref
+Vazifeh vd. 2018,Vazifeh; Santi; Resta et al.,2018,Addressing the minimum fleet problem in on-demand urban mobility,Nature,10.1038/s41586-018-0095-1,crossref
+Vercraene vd. 2023,Vercraene; Lehuédé; Monteiro et al.,2023,The Dial-a-Ride Problem with School Bell Time Adjustment,Transportation Science,10.1287/trsc.2022.1160,crossref
+Vidal 2016,Vidal,2016,Technical note: Split algorithm in O(n) for the capacitated vehicle routing problem,Computers & Operations Research,10.1016/j.cor.2015.11.012,crossref
+Vidal 2022,Vidal,2022,Hybrid genetic search for the CVRP: Open-source implementation and SWAP* neighborhood,Computers & Operations Research,10.1016/j.cor.2021.105643,crossref
+Vidal vd. 2012,Vidal; Crainic; Gendreau et al.,2012,A Hybrid Genetic Algorithm for Multidepot and Periodic Vehicle Routing Problems,Operations Research,10.1287/opre.1120.1048,crossref
+Vidal vd. 2013,Vidal; Crainic; Gendreau et al.,2013,A hybrid genetic algorithm with adaptive diversity management for a large class of vehicle routing problems with time-windows,Computers & Operations Research,10.1016/j.cor.2012.07.018,crossref
+Vidal vd. 2014,Vidal; Crainic; Gendreau et al.,2014,A unified solution framework for multi-attribute vehicle routing problems,European Journal of Operational Research,10.1016/j.ejor.2013.09.045,crossref
+Vidal vd. 2014,Vidal; Crainic; Gendreau et al.,2014,Time-window relaxations in vehicle routing heuristics,Journal of Heuristics,10.1007/s10732-014-9273-y,crossref
+Voigt 2025,Voigt,2025,A review and ranking of operators in adaptive large neighborhood search for vehicle routing problems,European Journal of Operational Research,10.1016/j.ejor.2024.05.033,crossref
+Voudouris & Tsang 1999,Voudouris; Tsang,1999,Guided local search and its application to the traveling salesman problem,European Journal of Operational Research,10.1016/s0377-2217(98)00099-x,crossref
+Wahby Shalaby vd. 2020,Wahby Shalaby; Mohammed; Kassem,2020,Modified Fuzzy C-Means Clustering Approach to Solve the Capacitated Vehicle Routing Problem,2020 21st International Arab Conference on Information Technology (ACIT),10.1109/acit50332.2020.9300082,crossref
+Wang vd. 2003,Kang-Ping Wang; Lan Huang; Chun-Guang Zhou et al.,2003,Particle swarm optimization for traveling salesman problem,Proceedings of the 2003 International Conference on Machine Learning and Cybernetics (IEEE Cat. No.03EX693),10.1109/icmlc.2003.1259748,crossref
+Wang vd. 2023,Wang; Pi; Peng et al.,2023,OBRUN algorithm for the capacity-constrained joint replenishment and delivery problem with trade credits,Applied Intelligence,10.1007/s10489-023-05055-9,crossref
+Wang vd. 2024,Wang; Snášel; Mirjalili et al.,2024,Artificial Protozoa Optimizer (APO): A novel bio-inspired metaheuristic algorithm for engineering optimization,Knowledge-Based Systems,10.1016/j.knosys.2024.111737,crossref
+Wang vd. 2025,Wang; Yang; Liao et al.,2025,The School Bus Routing Problem: A comprehensive review,European Transport Studies,10.1016/j.ets.2025.100043,crossref
+Windras Mara vd. 2022,Windras Mara; Norcahyo; Jodiawan et al.,2022,A survey of adaptive large neighborhood search algorithms and applications,Computers & Operations Research,10.1016/j.cor.2022.105903,crossref
+Wong & Bell 2006,Wong; Bell,2006,Solution of the Dial-a-Ride Problem with multi-dimensional capacity constraints,International Transactions in Operational Research,10.1111/j.1475-3995.2006.00544.x,crossref
+Wouda vd. 2024,Wouda; Lan; Kool,2024,PyVRP: A High-Performance VRP Solver Package,INFORMS Journal on Computing,10.1287/ijoc.2023.0055,crossref
+Ye vd. 2024,Ye; Wang; Liang et al.,2024,GLOP: Learning Global Partition and Local Construction for Solving Large-Scale Routing Problems in Real-Time,Proceedings of the AAAI Conference on Artificial Intelligence,10.1609/aaai.v38i18.30009,crossref
+You & Yang 2026,You; Yang,2026,RouteOpt: An Open-Source Modular Exact Solver for Vehicle Routing Problems,INFORMS Journal on Computing,10.1287/ijoc.2025.1415,crossref
+Zhang & Han 2022,Zhang; Han,2022,Discrete sparrow search algorithm for symmetric traveling salesman problem,Applied Soft Computing,10.1016/j.asoc.2022.108469,crossref
+Zheng vd. 2023,Zheng; Zhong; Chen et al.,2023,A reinforced hybrid genetic algorithm for the traveling salesman problem,Computers & Operations Research,10.1016/j.cor.2023.106249,crossref
+AOEA kodu (Cruz-Salinas & Gómez),,,,,https://github.com/afcruzs/AOEA,url
+Concorde,,,,,https://www.math.uwaterloo.ca/tsp/concorde/,url
+Davis 1985,,,,,https://openalex.org/W1589975099,url
+Demšar 2006,,,,,https://openalex.org/W1565746575,url
+DIMACS ATSP sayfası,,,,,http://dimacs.rutgers.edu/archive/Challenges/TSP/atsp.html,url
+DIMACS TSP Challenge sonuç sayfası,,,,,http://dimacs.rutgers.edu/archive/Challenges/TSP/results.html,url
+DIMACS VRP sonuçları,,,,,https://dimacs.rutgers.edu/programs/implementation-challenges/vehicle-routing/implementation-challenge-vehicle-routing/results,url
+"Kool vd. 2023, EURO-NeurIPS 2022 raporu",,,,,https://proceedings.mlr.press/v220/kool23a/kool23a.pdf,url
+Heidari resmi HHO.m,,,,,https://github.com/aliasgharheidaricom/Harris-Hawks-Optimization-Algorithm-and-Applications/blob/master/HHO.m,url
+"Kool vd. 2022, HGS-VRPTW",,,,,https://wouterkool.github.io/pdf/paper-kool-hgs-vrptw.pdf,url
+LKH-2 kullanım kılavuzu,,,,,http://akira.ruc.dk/~keld/research/LKH/LKH-2.0/DOC/LKH-2.0_USER_GUIDE.pdf,url
+Moscato 1989,,,,,https://openalex.org/W18216792,url
+Oliver vd. 1987,,,,,https://openalex.org/W99032621,url
+"Or, doktora tezi",,,,,https://openalex.org/W3036211873,url
+ORTEC DIMACS duyurusu,,,,,https://ortec.com/en/news/ortec-wins-dimacs-2022,url
+VROOM v1.14 (Coupey vd.),,,,,https://github.com/VROOM-Project/vroom,url
+TSPLIB ATSP listesi (ZIB),,,,,http://elib.zib.de/pub/mp-testdata/tsp/tsplib/atsp/index.html,url

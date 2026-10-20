@@ -23,6 +23,8 @@ def _check(objective: Sequence[int], name: str) -> tuple:
     for value in values:
         if isinstance(value, bool) or not isinstance(value, int):
             raise ValueError(f"{name}: objective values must be integers, got {value!r}")
+        if value < 0:
+            raise ValueError(f"{name}: objective values must be non-negative, got {value!r}")
     return values
 
 

@@ -880,6 +880,12 @@ def _make_canonical_ga_executor(algorithm_name="Core-GA-TSP"):
                 engine_name=algorithm_name,
             )
         else:
+            for alias in ("pop_size", "elite_size"):
+                if alias in params and aliases[alias] in params:
+                    raise ValueError(
+                        f"GA parameters {alias!r} and {aliases[alias]!r} are aliases of "
+                        "the same setting; give only one"
+                    )
             cfg = dict(defaults)
             for key, value in params.items():
                 key = aliases.get(key, key)

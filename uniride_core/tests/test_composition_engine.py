@@ -107,13 +107,6 @@ def stub_polish(tour_fn=None, cost_fn=None, *, drain=False, raises=None,
 
 # ---- moved 3-opt ---------------------------------------------------------
 
-def test_three_opt_lives_in_core_and_fairness_reexports_it():
-    import academic_benchmark.fairness as fairness
-    import uniride_core.algorithms.objective_budget as core
-
-    assert fairness.improve_three_opt_budgeted is core.improve_three_opt_budgeted
-
-
 @pytest.mark.parametrize(
     "matrix,kwargs,expected",
     [

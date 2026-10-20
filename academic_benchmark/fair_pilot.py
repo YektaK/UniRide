@@ -23,6 +23,7 @@ from academic_benchmark.fairness import (
     FairRunResult,
     validate_evaluation_budget,
     validate_scientific_alns_params,
+    validate_scientific_ga_params,
 )
 from academic_benchmark.core.algorithm_resolution import IdentifierSource
 from academic_benchmark.core.execution_gateway import (
@@ -48,6 +49,8 @@ APPROVED_ALGORITHMS = frozenset({
     "Core-ThreeOpt-TSP",
     "ALNS-TSP",
 })
+# C-16a: optional members; an existing configuration without them stays valid.
+OPTIONAL_ALGORITHMS = frozenset({"Core-GA-TSP"})
 _V1_ALGORITHM_ALIASES = {
     "Numba-2-opt": "Core-TwoOpt-TSP",
     "Numba-3-opt-bounded": "Core-ThreeOpt-TSP",
@@ -197,13 +200,21 @@ def load_fair_pilot_config(path: str | Path) -> FairPilotConfig:
                 )
             canonical_algorithms[canonical_id] = block
         algorithms = canonical_algorithms
-    if not isinstance(algorithms, dict) or set(algorithms) != APPROVED_ALGORITHMS:
+    if (
+        not isinstance(algorithms, dict)
+        or not APPROVED_ALGORITHMS <= set(algorithms) <= APPROVED_ALGORITHMS | OPTIONAL_ALGORITHMS
+    ):
         raise FairPilotError(
-            "algorithms must contain exactly the approved pure variants: "
-            f"{sorted(APPROVED_ALGORITHMS)}"
+            "algorithms must contain exactly the approved pure variants "
+            f"{sorted(APPROVED_ALGORITHMS)} and optionally {sorted(OPTIONAL_ALGORITHMS)}"
         )
     if any(not isinstance(value, dict) for value in algorithms.values()):
         raise FairPilotError("each algorithm parameter block must be an object")
+    if "Core-GA-TSP" in algorithms:
+        try:
+            validate_scientific_ga_params(algorithms["Core-GA-TSP"])
+        except ValueError as exc:
+            raise FairPilotError(f"Core-GA-TSP: {exc}") from exc
     if protocol_version == V2_PROTOCOL:
         _validate_v2_algorithm_policy(algorithms)
     runs = _strict_int(data["runs"], "runs", 1)
@@ -439,7 +450,7 @@ def _registered_algorithm_ids() -> frozenset[str]:
 
 
 def _backend_policy(algorithm_id: str) -> BackendPolicy:
-    if algorithm_id in _GWO_HHO:
+    if algorithm_id in _GWO_HHO | OPTIONAL_ALGORITHMS:
         return BackendPolicy.REQUIRE_NUMBA_OBJECTIVE
     return BackendPolicy.PYTHON_ONLY
 
@@ -526,7 +537,7 @@ def run_fair_pilot(
             for replicate in range(config.runs):
                 seed = config.manifest.paired_seed(problem.name, replicate)
                 primary: Dict[str, Dict[str, Any]] = {}
-                for algorithm_id in sorted(APPROVED_ALGORITHMS):
+                for algorithm_id in sorted(config.algorithms):
                     params = dict(config.algorithms[algorithm_id])
                     params["fair_comparison"] = config.fair_comparison
                     result, decision, elapsed_ms = _execute_preflighted_run(
@@ -551,7 +562,7 @@ def run_fair_pilot(
                     rows.append(row)
                     primary[algorithm_id] = row
                 if replicate in config.replay_replicates:
-                    for algorithm_id in sorted(APPROVED_ALGORITHMS):
+                    for algorithm_id in sorted(config.algorithms):
                         params = dict(config.algorithms[algorithm_id])
                         params["fair_comparison"] = config.fair_comparison
                         result, decision, elapsed_ms = _execute_preflighted_run(

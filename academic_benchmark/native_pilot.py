@@ -19,7 +19,14 @@ from academic_benchmark.core.preflight import (
 )
 from uniride_core.algorithms.capabilities import BackendPolicy, ExecutionProtocol
 
-from academic_benchmark.fairness import ALNS_OPTIONAL_PARAMS, ALNS_REQUIRED_PARAMS, validate_scientific_alns_params
+from academic_benchmark.fairness import (
+    ALNS_OPTIONAL_PARAMS,
+    ALNS_REQUIRED_PARAMS,
+    GA_OPTIONAL_PARAMS,
+    GA_REQUIRED_PARAMS,
+    validate_scientific_alns_params,
+    validate_scientific_ga_params,
+)
 from academic_benchmark.fair_pilot import (
     FairPilotError,
     _closed_cost,
@@ -41,6 +48,7 @@ from academic_benchmark.native_protocol import (
     NATIVE_TERMINATION_REGIME,
     NativeComparisonManifest,
     NativeRunResult,
+    OPTIONAL_NATIVE_ALGORITHMS,
 )
 
 
@@ -74,6 +82,7 @@ _ALLOWED_ALGORITHM_KEYS = {
         "max_iterations", "first_improvement", "window",
     }),
     "ALNS-TSP": ALNS_REQUIRED_PARAMS | ALNS_OPTIONAL_PARAMS,
+    "Core-GA-TSP": GA_REQUIRED_PARAMS | GA_OPTIONAL_PARAMS,
 }
 _REQUIRED_ALGORITHM_KEYS = {
     "Core-GWO-TSP-Pure": frozenset({
@@ -90,6 +99,7 @@ _REQUIRED_ALGORITHM_KEYS = {
         "max_iterations", "first_improvement", "window",
     }),
     "ALNS-TSP": ALNS_REQUIRED_PARAMS,
+    "Core-GA-TSP": GA_REQUIRED_PARAMS,
 }
 _REPLAY_FIELDS = (
     "tour",
@@ -173,7 +183,7 @@ def _strict_number(
 def _validate_algorithm_parameters(
     algorithms: Mapping[str, Mapping[str, Any]],
 ) -> None:
-    for algorithm_id in sorted(APPROVED_NATIVE_ALGORITHMS):
+    for algorithm_id in sorted(algorithms):
         block = algorithms[algorithm_id]
         missing = _REQUIRED_ALGORITHM_KEYS[algorithm_id] - block.keys()
         unknown = block.keys() - _ALLOWED_ALGORITHM_KEYS[algorithm_id]
@@ -184,6 +194,12 @@ def _validate_algorithm_parameters(
             )
         if algorithm_id == "ALNS-TSP":
             validate_scientific_alns_params(block)
+            continue
+        if algorithm_id == "Core-GA-TSP":
+            try:
+                validate_scientific_ga_params(block)
+            except ValueError as exc:
+                raise NativePilotError(f"Core-GA-TSP: {exc}") from exc
             continue
         _strict_int(block["max_iterations"], f"{algorithm_id}.max_iterations", 1)
 
@@ -285,10 +301,16 @@ def load_native_pilot_config(path: str | Path) -> NativePilotConfig:
     ):
         raise NativePilotError("problems must be a non-empty list of unique names")
     algorithms = data["algorithms"]
-    if not isinstance(algorithms, dict) or set(algorithms) != APPROVED_NATIVE_ALGORITHMS:
+    if (
+        not isinstance(algorithms, dict)
+        or not APPROVED_NATIVE_ALGORITHMS
+        <= set(algorithms)
+        <= APPROVED_NATIVE_ALGORITHMS | OPTIONAL_NATIVE_ALGORITHMS
+    ):
         raise NativePilotError(
-            "algorithms must contain exactly the approved pure variants: "
-            f"{sorted(APPROVED_NATIVE_ALGORITHMS)}"
+            "algorithms must contain exactly the approved pure variants "
+            f"{sorted(APPROVED_NATIVE_ALGORITHMS)} and optionally "
+            f"{sorted(OPTIONAL_NATIVE_ALGORITHMS)}"
         )
     if any(not isinstance(value, dict) for value in algorithms.values()):
         raise NativePilotError("each algorithm parameter block must be an object")
@@ -456,7 +478,7 @@ def run_native_pilot(
         runtime_backends = runtime_probe()
         registered_algorithm_ids = frozenset(registered_algorithms_provider())
         for problem, _, _ in resolved:
-            for algorithm_id in sorted(APPROVED_NATIVE_ALGORITHMS):
+            for algorithm_id in sorted(config.algorithms):
                 preflight_run(
                     PreflightRequest(
                         resolution=resolve_algorithm_id(
@@ -466,7 +488,7 @@ def run_native_pilot(
                         protocol=ExecutionProtocol.NATIVE_TERMINATION,
                         backend_policy=(
                             BackendPolicy.REQUIRE_NUMBA_OBJECTIVE
-                            if algorithm_id in _GWO_HHO
+                            if algorithm_id in _GWO_HHO | OPTIONAL_NATIVE_ALGORITHMS
                             else BackendPolicy.PYTHON_ONLY
                         ),
                         evaluation_budget=None,
@@ -480,7 +502,7 @@ def run_native_pilot(
             for replicate in range(config.runs):
                 seed = config.manifest.paired_seed(problem.name, replicate)
                 primary: Dict[str, Dict[str, Any]] = {}
-                for algorithm_id in sorted(APPROVED_NATIVE_ALGORITHMS):
+                for algorithm_id in sorted(config.algorithms):
                     params = dict(config.algorithms[algorithm_id])
                     params["native_comparison"] = config.native_comparison
                     result, decision, elapsed_ms = _execute_preflighted_run(
@@ -491,7 +513,7 @@ def run_native_pilot(
                         seed=seed,
                         run_idx=replicate,
                         protocol=ExecutionProtocol.NATIVE_TERMINATION,
-                        backend_policy=(BackendPolicy.REQUIRE_NUMBA_OBJECTIVE if algorithm_id in _GWO_HHO else BackendPolicy.PYTHON_ONLY),
+                        backend_policy=(BackendPolicy.REQUIRE_NUMBA_OBJECTIVE if algorithm_id in _GWO_HHO | OPTIONAL_NATIVE_ALGORITHMS else BackendPolicy.PYTHON_ONLY),
                         evaluation_budget=None,
                         registered_algorithm_ids=registered_algorithm_ids,
                         runtime_backends=runtime_backends,
@@ -514,7 +536,7 @@ def run_native_pilot(
                     rows.append(row)
                     primary[algorithm_id] = row
                 if replicate in config.replay_replicates:
-                    for algorithm_id in sorted(APPROVED_NATIVE_ALGORITHMS):
+                    for algorithm_id in sorted(config.algorithms):
                         params = dict(config.algorithms[algorithm_id])
                         params["native_comparison"] = config.native_comparison
                         result, decision, elapsed_ms = _execute_preflighted_run(
@@ -525,7 +547,7 @@ def run_native_pilot(
                             seed=seed,
                             run_idx=replicate,
                             protocol=ExecutionProtocol.NATIVE_TERMINATION,
-                            backend_policy=(BackendPolicy.REQUIRE_NUMBA_OBJECTIVE if algorithm_id in _GWO_HHO else BackendPolicy.PYTHON_ONLY),
+                            backend_policy=(BackendPolicy.REQUIRE_NUMBA_OBJECTIVE if algorithm_id in _GWO_HHO | OPTIONAL_NATIVE_ALGORITHMS else BackendPolicy.PYTHON_ONLY),
                             evaluation_budget=None,
                             registered_algorithm_ids=registered_algorithm_ids,
                             runtime_backends=runtime_backends,

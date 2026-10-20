@@ -47,6 +47,83 @@ class ObjectiveEvaluationBudget:
         return closed_tour_cost(route, matrix)
 
 
+class StageCappedBudget:
+    """A stage-capped view over ONE shared :class:`ObjectiveEvaluationBudget`.
+
+    The view owns no count: every spend lands on the shared counter, so stages
+    of one run cannot double count or leak budget. ``stage_cap`` is an absolute
+    ceiling on the shared ``used`` value for this stage (a global stage that may
+    use units up to 60 has ``stage_cap=60`` whatever was spent before it).
+    ``can_spend`` honours both the stage cap and the shared total limit.
+    ``used`` is read-only so a stage cannot reset the shared counter.
+
+    Build the view when its stage starts. The ``stage_cap >= shared.used``
+    check runs only at construction; a view built early and used after other
+    stages spent units is not re-validated (a stage that finds no room is
+    refused by ``can_spend`` instead).
+
+    The view offers the same ``used``/``limit``/``remaining``/``can_spend``/
+    ``consume``/``evaluate`` surface that the budgeted local searches read.
+    """
+
+    def __init__(
+        self,
+        shared: ObjectiveEvaluationBudget,
+        stage_cap: Optional[int] = None,
+    ) -> None:
+        if stage_cap is not None:
+            if isinstance(stage_cap, bool) or not isinstance(stage_cap, int) or stage_cap < 1:
+                raise ValueError("stage cap must be a positive integer")
+            if stage_cap < shared.used:
+                raise ValueError(
+                    f"stage cap {stage_cap} is below the shared count {shared.used}"
+                )
+        self._shared = shared
+        self._stage_cap = stage_cap
+
+    @property
+    def shared(self) -> ObjectiveEvaluationBudget:
+        return self._shared
+
+    @property
+    def stage_cap(self) -> Optional[int]:
+        return self._stage_cap
+
+    @property
+    def used(self) -> int:
+        return self._shared.used
+
+    @property
+    def limit(self) -> Optional[int]:
+        """Effective absolute ceiling: the smaller of stage cap and total limit."""
+        limits = [v for v in (self._stage_cap, self._shared.limit) if v is not None]
+        return min(limits) if limits else None
+
+    @property
+    def remaining(self) -> Optional[int]:
+        limit = self.limit
+        return None if limit is None else limit - self._shared.used
+
+    def can_spend(self, count: int = 1) -> bool:
+        if count < 0:
+            raise ValueError("evaluation count cannot be negative")
+        limit = self.limit
+        return limit is None or self._shared.used + count <= limit
+
+    def consume(self, count: int = 1) -> None:
+        if not self.can_spend(count):
+            raise EvaluationBudgetExhausted(
+                f"stage evaluation budget exhausted: used={self._shared.used}, "
+                f"requested={count}, stage_cap={self._stage_cap}, "
+                f"limit={self._shared.limit}"
+            )
+        self._shared.consume(count)
+
+    def evaluate(self, route: Sequence[int], matrix: Sequence[Sequence[float]]) -> float:
+        self.consume()
+        return closed_tour_cost(route, matrix)
+
+
 @dataclass(frozen=True)
 class BudgetedSearchResult:
     route: List[int]

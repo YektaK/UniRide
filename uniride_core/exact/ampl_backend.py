@@ -94,9 +94,10 @@ class ExactBackendUnavailable(RuntimeError):
 def backend_absent(solver: str, text: str) -> bool:
     """True only for a missing solver binary (phrases anchored to ``solver``) or a missing license.
 
-    Used only on the open/probe path, and only on an exception text or on the solve message and
-    the solve command's own output when ``solve_result_num >= 500``. Anything else that mentions
-    "can't find" or "licen" is a backend defect and must fail, not skip.
+    Used on the open/probe path and on the stage path (the Gurobi day backend, WP-E11 J5), and only on
+    an exception text, or on the solve message and the solver output (the solve command's own output
+    or the captured log) when ``solve_result_num >= 500``. Anything else that mentions "can't find"
+    or "licen" (a normal start-up log names the licence) is a backend defect and must fail, not skip.
     """
     name = re.escape(solver)
     missing = re.compile(rf"can.t find (file )?\W?{name}\b|cannot invoke {name}\b", re.I)

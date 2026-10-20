@@ -389,6 +389,30 @@ def test_an_ampl_session_error_during_a_stage_is_backend_unavailable_not_raised(
     assert broken.status == "backend_unavailable"
 
 
+def test_the_session_error_note_records_only_the_exception_type_never_its_text(monkeypatch):
+    import amplpy
+
+    secret = "internal token ZX-SECRET-4711 path C:/somewhere/ampl"  # no word the scrubber would catch
+    res = _run_with(monkeypatch, _FakeAmpl(solve_error=amplpy.AMPLException("file", 3, 1, secret)))
+    assert res.status == "backend_unavailable"
+    assert res.note == "AMPL session failed during a stage: AMPLException"
+    assert "ZX-SECRET" not in res.note and "somewhere" not in res.note
+    pipe = _run_with(monkeypatch, _FakeAmpl(solve_error=BrokenPipeError("ZX-SECRET-4711")))
+    assert pipe.note == "AMPL session failed during a stage: BrokenPipeError"
+
+
+def test_a_failure_whose_log_is_a_normal_gurobi_startup_log_stays_rejected(monkeypatch):
+    # made-up licence id; the lines name a licence but say nothing about it being missing, expired or invalid
+    log = ["Set parameter LicenseID to value 100000",
+           "Academic license 100000 - for non-commercial use only - registered to Nobody",
+           "Gurobi Optimizer version 13.0.3 build v13.0.3rc0 (win64 - Windows 11.0 (26100.2))",
+           "Optimize a model with 12 rows, 9 columns and 30 nonzeros"]
+    res = _run_with(monkeypatch, _FakeAmpl(num=500, message="Gurobi 13.0.3: out of memory"), log=log)
+    assert res.status == "rejected" and res.stages[0].result.status == "rejected"
+    assert res.stages[0].result.stop_reason == "solver_failure"
+    assert "Nobody" not in repr(res) and "100000" not in repr(res)  # the log is never stored
+
+
 def test_a_licence_lost_failure_result_is_backend_unavailable_but_other_failures_stay_rejected(monkeypatch):
     lost = _run_with(monkeypatch, _FakeAmpl(num=500, message="?"), log=["Gurobi: license expired"])
     assert lost.status == "backend_unavailable" and "license" in lost.note

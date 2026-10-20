@@ -263,3 +263,87 @@ def test_non_lexicographic_and_timing_dependent_are_reported():
                          stop_reason="optimal")
     out = label(day(first, second))
     assert "non_lexicographic" in out.flags and "timing_dependent" in out.flags
+
+
+# ---------------------------------------------------------------- review round 1, E1: by-bound needs a verified section 3 bound
+CLIP_MSG = f"{BOUND_ABOVE_INCUMBENT}: ceil(bound - 1e-6)=6 > incumbent=5; bound clipped to the incumbent"
+
+
+def test_p1_a_clipped_solver_bound_never_makes_a_stage_1_value_optimal_by_bound():
+    # highs_backend clips a contradicting bound to the incumbent and leaves the clip note: bound 5 == incumbent 5 is no proof
+    res = day(sr("feasible_with_gap", 5, 5, msg=CLIP_MSG), sr("feasible_with_gap", 90, 80))
+    out = label(res)
+    assert out.label == "feasible_with_gap" and out.label != "optimal_stage1_by_bound"
+    assert not out.proof_claim_allowed
+    clipped = [c for c in out.bounds_considered if c.name == "solver"][0]
+    assert clipped.proof == PROOF_UNVERIFIED  # visible, never used
+    assert out.bound_source != "solver"
+
+
+def test_p2_an_unclipped_solver_bound_equal_to_the_incumbent_is_not_a_section_3_bound():
+    res = day(sr("feasible_with_gap", 5, 5), sr("feasible_with_gap", 90, 80))
+    for bounds in (None, DayBounds(lb0=bound(3, [PROOF_SOLVER]), lb0w=bound(4, [PROOF_SOLVER]))):
+        out = label(res, bounds=bounds)
+        assert out.label == "feasible_with_gap" and not out.proof_claim_allowed
+
+
+def test_p2_the_typed_case_needs_lb_s_not_the_solver_bound():
+    res = day(sr("feasible_with_gap", 2, 2), sr("feasible_with_gap", 90, 80), sr("feasible_with_gap", 40, 30), mode="typed")
+    assert label(res).label == "feasible_with_gap"
+    assert label(res, bounds=DayBounds(lb_s=bound(1, [PROOF_SOLVER]))).label == "feasible_with_gap"
+
+
+def test_p3_a_section_3_bound_that_ties_the_solver_bound_is_reported_as_the_source():
+    by_bound = label(day(sr("feasible_with_gap", 5, 5), sr("optimal", 90, 90)), bounds=DayBounds(lb0w=bound(5, [PROOF_SOLVER])))
+    assert by_bound.label == "optimal_stage1_by_bound" and by_bound.bound_source == "lb0w"
+    gap = label(day(sr("feasible_with_gap", 6, 5), sr("feasible_with_gap", 90, 80)), bounds=DayBounds(lb0w=bound(5, [PROOF_SOLVER])))
+    assert gap.label == "feasible_with_gap" and (gap.bound_used, gap.bound_source) == (5, "lb0w")
+
+
+# ---------------------------------------------------------------- E2: a contradicting solver bound withholds the proof claim
+def test_e2_a_bound_above_incumbent_flag_on_any_stage_withholds_the_proof_claim():
+    for first, second in ((sr("optimal", 5, 5, msg=CLIP_MSG), sr("optimal", 90, 90)),
+                          (sr("optimal", 5, 5), sr("optimal", 90, 90, msg=CLIP_MSG))):
+        out = label(day(first, second), crosscheck="agree")
+        assert out.label == "optimal" and any(f.startswith("bound_above_incumbent") for f in out.flags)
+        assert not out.proof_claim_allowed and out.proof_claim_reason == "bound_above_incumbent"
+
+
+def test_e2_the_infeasible_and_certificate_labels_also_lose_the_claim_when_a_stage_is_flagged():
+    out = label(day(sr("infeasible_proven", reason="infeasible", msg=CLIP_MSG)), checker_ok=None)
+    assert out.label == "infeasible_solver_proven" and not out.proof_claim_allowed
+    assert out.proof_claim_reason == "bound_above_incumbent"
+
+
+# ---------------------------------------------------------------- C1: the certificate is checked, not trusted
+def _cert(tier, proofs, kind=None, limit=1, lower=2):
+    kind = kind or (CERT_CAPACITY_FLOOR if tier == 1 else CERT_WAVE_MIN_LARGE)
+    return InfeasibilityCertificate(INFEASIBLE_CERTIFIED, tier, kind, limit, lower, 525,
+                                    tuple(Contribution(f"w{i}", 1, p) for i, p in enumerate(proofs)))
+
+
+def _cert_label(c):
+    return label(None, bounds=DayBounds(certificate=c), checker_ok=None)
+
+
+def test_p4_a_tier_2_certificate_with_an_unverified_contribution_is_rejected():
+    out = _cert_label(_cert(2, [PROOF_SOLVER, PROOF_UNVERIFIED]))
+    assert out.label == "rejected" and out.reason == "certificate_invalid" and not out.proof_claim_allowed
+
+
+def test_p5_a_tier_1_certificate_with_a_solver_contribution_is_rejected():
+    out = _cert_label(_cert(1, [PROOF_ARITHMETIC, PROOF_SOLVER]))
+    assert out.label == "rejected" and out.reason == "certificate_invalid" and not out.proof_claim_allowed
+
+
+@pytest.mark.parametrize("bad", [_cert(1, [PROOF_UNVERIFIED]), _cert(3, [PROOF_ARITHMETIC]),
+                                 _cert(1, [PROOF_ARITHMETIC], kind=CERT_WAVE_MIN_LARGE),
+                                 _cert(2, [PROOF_SOLVER], kind=CERT_CAPACITY_FLOOR),
+                                 _cert(1, [PROOF_ARITHMETIC], limit=2, lower=2)])
+def test_inconsistent_certificates_are_rejected(bad):
+    assert _cert_label(bad).label == "rejected"
+
+
+@pytest.mark.parametrize("good", [_cert(1, [PROOF_ARITHMETIC, PROOF_ARITHMETIC]), _cert(2, [PROOF_SOLVER, PROOF_ARITHMETIC])])
+def test_consistent_certificates_are_accepted(good):
+    assert _cert_label(good).label == "infeasible_certified"

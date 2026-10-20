@@ -197,6 +197,52 @@ def test_the_blocking_checks_refuse_malformed_numbers(call):
         call()
 
 
+# ---------------------------------------------------------------- review round 1
+def test_c4_a_prototype_plan_without_a_checker_verdict_against_a_production_infeasibility_proof_is_refused():
+    for label in ("infeasible_certified", "infeasible_solver_proven"):
+        with pytest.raises(ValueError, match="checker"):
+            reproduction_category(PrototypeClaim.value((2, 100), plan_checked=None), production_label=label)
+
+
+def test_c4_a_failed_checker_verdict_is_a_verdict():
+    out = reproduction_category(PrototypeClaim.value((2, 100), plan_checked=False), production_label="infeasible_certified")
+    assert out.category == "production_better" and out.note == "prototype_plan_not_verified"
+
+
+def test_c5_the_docstring_tells_the_runner_to_check_values_against_bounds():
+    doc = dc.reproduction_category.__doc__
+    assert "check_value_not_below_bounds" in doc and "feasible_with_gap" in doc and "bound_only" in doc
+
+
+def test_c6_leading_optimal_stages_are_proven_even_when_a_later_stage_hit_a_limit():
+    statuses = ("optimal", "feasible_with_gap", "feasible_with_gap")
+    kw = dict(production_label="feasible_with_gap", production_objective=(5, 800, 50), production_stage_statuses=statuses)
+    with pytest.raises(BlockingDefect) as err:  # smaller S, stage 1 proven
+        reproduction_category(PrototypeClaim.value((4, 900, 60), plan_checked=True), **kw)
+    assert err.value.code == dc.BLOCKING_PROTOTYPE_BEATS_OPTIMUM
+    # a smaller stage-2 value at equal S is not proven: not blocking
+    out = reproduction_category(PrototypeClaim.value((5, 700, 60), plan_checked=True), **kw)
+    assert out.category == "production_worse"
+    # without statuses the old behaviour stays (nothing proven for feasible_with_gap)
+    out = reproduction_category(PrototypeClaim.value((4, 900, 60), plan_checked=True), production_label="feasible_with_gap",
+                                production_objective=(5, 800, 50))
+    assert out.category == "production_worse"
+
+
+def test_c6_two_leading_optimal_stages_prove_two_components():
+    statuses = ("optimal", "optimal", "feasible_with_gap")
+    with pytest.raises(BlockingDefect):
+        reproduction_category(PrototypeClaim.value((5, 700, 60), plan_checked=True), production_label="feasible_with_gap",
+                              production_objective=(5, 800, 50), production_stage_statuses=statuses)
+
+
+def test_c6_a_later_optimal_stage_after_a_gap_stage_is_not_counted():
+    statuses = ("feasible_with_gap", "optimal", "optimal")
+    out = reproduction_category(PrototypeClaim.value((4, 900, 60), plan_checked=True), production_label="feasible_with_gap",
+                                production_objective=(5, 800, 50), production_stage_statuses=statuses)
+    assert out.category == "production_worse"
+
+
 def test_a_blocking_defect_is_an_exception_with_a_code_and_a_message():
     err = BlockingDefect(dc.BLOCKING_VALUE_BELOW_BOUND, "x")
     assert err.code == dc.BLOCKING_VALUE_BELOW_BOUND and "x" in str(err)

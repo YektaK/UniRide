@@ -183,6 +183,15 @@ def test_solve_result_mapping(num, message, obj, bound, status, reason, timing):
         assert (r.objective, r.bound_ceil) == (3, 3)
 
 
+def test_an_infeasibility_settled_by_ampl_presolve_is_labelled_and_never_counts_as_a_solver_agreement():
+    r = classify_gurobi_outcome(299, "presolve finds no feasible solution possible", None, None)
+    assert (r.status, r.bound_source) == ("infeasible_proven", "ampl_presolve")
+    assert classify_gurobi_outcome(200, "Gurobi 13.0.3: infeasible problem", None, None).bound_source is None
+    settled = run_day_stages(_typed_cell(), large_limit=1, solve_stage=lambda m, s: StageSolve(r))
+    plain = run_day_stages(_typed_cell(), large_limit=1, solve_stage=lambda m, s: StageSolve(_INFEASIBLE))
+    assert crosscheck_day_results(plain, settled).verdict == "inconclusive"
+
+
 def test_infeasible_or_unbounded_is_never_a_proof_of_infeasibility():
     r = classify_gurobi_outcome(300, "Gurobi: infeasible or unbounded problem", None, None)
     assert r.status == "rejected"
@@ -234,11 +243,15 @@ def test_stage_solve_from_values_rejects_fractional_row_violating_and_mismatchin
 def test_option_string_is_verbatim_and_has_the_design_values():
     s = GurobiSettings()
     assert (s.threads, s.seed, s.mip_gap, s.mip_gap_abs, s.time_limit, s.work_limit) == (1, 0, 0.0, 0.99, 600.0, None)
-    assert s.option_string() == "mip:bestbound=1 tech:threads=1 tech:seed=0 mip:gap=0 mip:gapabs=0.99 lim:time=600 outlev=1"
-    assert s.option_string() == solver_option_string(SolverSettings(solver="gurobi", wall_limit=600, work_limit=None), peak=False)
-    w = GurobiSettings(time_limit=0.5, work_limit=7.5)
+    gurobi_part = "mip:bestbound=1 tech:threads=1 tech:seed=0 mip:gap=0 mip:gapabs=0.99 lim:time=600 outlev=1"
+    assert s.option_string() == "ampl:presolve=0 " + gurobi_part
+    assert s.solver_options_string() == gurobi_part == solver_option_string(
+        SolverSettings(solver="gurobi", wall_limit=600, work_limit=None), peak=False)
+    assert s.ampl_options() == (("presolve", 0),)
+    w = GurobiSettings(time_limit=0.5, work_limit=7.5, ampl_presolve=None)
     assert w.option_string() == ("mip:bestbound=1 tech:threads=1 tech:seed=0 mip:gap=0 mip:gapabs=0.99 lim:time=0.5 "
                                  "lim:work=7.5 outlev=1")
+    assert w.ampl_options() == () and w.solver_options_string() == w.option_string()
     assert w.option_string() == " ".join(f"{k}={format(v, 'g') if isinstance(v, float) else v}" for k, v in w.options())
 
 
@@ -302,16 +315,28 @@ def test_importing_the_backend_loads_neither_amplpy_nor_highspy():
 
 
 def test_the_module_imports_nothing_from_academic_benchmark_or_optimizer_api():
-    text = (REPO_ROOT / "uniride_core" / "exact" / "gurobi_day_backend.py").read_text(encoding="utf-8")
-    assert "academic_benchmark" not in text.replace("Imports nothing from ``academic_benchmark``", "")
-    assert "optimizer_api" not in text
+    import ast
+
+    tree = ast.parse((REPO_ROOT / "uniride_core" / "exact" / "gurobi_day_backend.py").read_text(encoding="utf-8"))
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported |= {a.name.split(".")[0] for a in node.names}
+        elif isinstance(node, ast.ImportFrom) and node.level == 0:
+            imported.add((node.module or "").split(".")[0])
+    assert not imported & {"academic_benchmark", "optimizer_api", "src", "amplpy", "highspy", "gurobipy"}, imported
 
 
 # ------------------------------------------------------------------ 5. real Gurobi through AMPL (unit-test sized)
+# every oracle cell plain, every third cell also aggregated (each AMPL solve costs about a second)
+GUROBI_CASES = [(c, False) for c in HAND] + [(c, True) for c in HAND[::3]]
+
+
 @pytest.mark.requires_gurobi
-@pytest.mark.parametrize("aggregate", [False, True], ids=["plain", "aggregated"])
-@pytest.mark.parametrize("name,waves,types,large_limit", HAND, ids=[c[0] for c in HAND])
-def test_hand_instances_through_gurobi_give_the_oracle_tuple(session, name, waves, types, large_limit, aggregate):
+@pytest.mark.parametrize("case,aggregate", GUROBI_CASES,
+                         ids=[f"{c[0]}-{'aggregated' if a else 'plain'}" for c, a in GUROBI_CASES])
+def test_hand_instances_through_gurobi_give_the_oracle_tuple(session, case, aggregate):
+    name, waves, types, large_limit = case
     oracle = brute_force_day_optimum(waves, types, large_limit=large_limit).objective
     res = run_day_stages_gurobi(build_day_instance(waves, types), large_limit=large_limit, aggregate=aggregate, session=session)
     if oracle is None:
@@ -336,7 +361,8 @@ def test_stage_rows_carry_wall_seconds_time_limit_and_work_limit(session):
         assert s.result.wall_seconds is not None and s.result.wall_seconds >= 0
         assert s.result.time_limit == 30.0 and s.result.work_limit == 500.0
         assert s.result.solve_result_num is not None and s.result.solve_result
-    assert res.solver_options.endswith("lim:time=30 lim:work=500 outlev=1")
+    assert res.solver_options == ("ampl:presolve=0 mip:bestbound=1 tech:threads=1 tech:seed=0 mip:gap=0 mip:gapabs=0.99 "
+                                  "lim:time=30 lim:work=500 outlev=1")
 
 
 @pytest.mark.requires_gurobi
@@ -391,4 +417,5 @@ def test_an_infeasible_typed_cell_is_infeasible_proven_from_both_and_the_raw_sta
     raw_highs, raw_gurobi = h.stages[0].result.solve_result, g.stages[0].result
     assert raw_highs in ("kInfeasible", "kUnboundedOrInfeasible")
     assert raw_gurobi.solve_result_num is not None and 200 <= raw_gurobi.solve_result_num < 300
+    assert raw_gurobi.bound_source != "ampl_presolve", raw_gurobi.solver_message  # Gurobi itself proved it
     assert crosscheck_day_results(h, g).verdict == "agree"

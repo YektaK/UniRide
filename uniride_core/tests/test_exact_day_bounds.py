@@ -189,12 +189,17 @@ def test_dp_wave_values_equal_the_single_wave_oracle():
 
 # ------------------------------------------------------------------ (c) every bound <= brute-force day optimum
 def test_c_every_bound_is_at_most_the_day_optimum_on_the_j3_oracle_set():
-    feasible = infeasible = certificates = 0
+    feasible = infeasible = certificates = unservable = 0
     for name, waves, types, L in HAND + RANDOM:
         if not _fits(waves, types):
             continue
-        inst, b = bounds_of(waves, types, L)
         oracle = brute_force_day_optimum(waves, types, large_limit=L).objective
+        try:
+            inst, b = bounds_of(waves, types, L)
+        except db.WaveInfeasible:  # a wave without any route set: the oracle must agree that no day exists
+            assert oracle is None, name
+            unservable += 1
+            continue
         assert b.lb0w is None or b.lb0w.value >= b.lb0.value, name
         if len(types) == 1:
             assert oracle is not None, name

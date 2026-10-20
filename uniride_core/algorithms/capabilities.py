@@ -281,6 +281,34 @@ def _hybrid_claims(
     return tuple(claims)
 
 
+def _ga_claims() -> tuple[CapabilityClaim, ...]:
+    """Pure canonical GA (C-16a): Numba objective, no polish, exact accounting."""
+    evidence_by_contract = (
+        (ProblemContract.TSP, ExecutionProtocol.FIXED_BUDGET, "test_ga_fixed_tsp_evidence"),
+        (ProblemContract.ATSP, ExecutionProtocol.FIXED_BUDGET, "test_ga_fixed_atsp_evidence"),
+        (ProblemContract.TSP, ExecutionProtocol.NATIVE_TERMINATION, "test_ga_native_tsp_evidence"),
+        (ProblemContract.ATSP, ExecutionProtocol.NATIVE_TERMINATION, "test_ga_native_atsp_evidence"),
+    )
+    return tuple(
+        CapabilityClaim(
+            problem=problem,
+            protocol=protocol,
+            backend_profile=ExecutionBackendProfile(
+                BackendKind.NUMBA_NOPYTHON, BackendKind.NONE
+            ),
+            composition=CompositionKind.PURE,
+            directed_cost_preserved=problem is ProblemContract.ATSP,
+            exact_objective_accounting=True,
+            fixed_seed_deterministic=True,
+            truthful_result_reporting=True,
+            evidence_ids=(
+                "academic_benchmark/tests/test_ga_evidence.py::" + evidence_function,
+            ),
+        )
+        for problem, protocol, evidence_function in evidence_by_contract
+    )
+
+
 _INITIAL_CAPABILITIES: tuple[AlgorithmCapability, ...] = (
     AlgorithmCapability(
         "Core-TwoOpt-TSP", "TwoOpt", "2-opt", LifecycleStatus.VERIFIED,
@@ -299,7 +327,7 @@ _INITIAL_CAPABILITIES: tuple[AlgorithmCapability, ...] = (
         ),
     ),
     AlgorithmCapability("Core-OrOpt-TSP", "OrOpt", "Or-opt", LifecycleStatus.CANDIDATE),
-    AlgorithmCapability("Core-GA-TSP", "GA", "Genetic Algorithm", LifecycleStatus.CANDIDATE),
+    AlgorithmCapability("Core-GA-TSP", "GA", "Genetic Algorithm", LifecycleStatus.VERIFIED, claims=_ga_claims()),
     AlgorithmCapability("Core-PSO-TSP", "PSO", "Particle Swarm Optimization", LifecycleStatus.CANDIDATE),
     AlgorithmCapability("Core-GWO-TSP-Pure", "GWO", "Grey Wolf Optimizer (pure)", LifecycleStatus.VERIFIED, claims=_numba_metaheuristic_claims(fixed_evidence="test_core_gwo_pure_fixed_tsp_and_atsp_numba_evidence", native_evidence="test_core_gwo_pure_native_tsp_and_atsp_numba_evidence", composition=CompositionKind.PURE, polish=BackendKind.NONE)),
     AlgorithmCapability("Core-HHO-TSP-Pure", "HHO", "Harris Hawks Optimizer (pure)", LifecycleStatus.VERIFIED, claims=_numba_metaheuristic_claims(fixed_evidence="test_core_hho_pure_fixed_tsp_and_atsp_numba_evidence", native_evidence="test_core_hho_pure_native_tsp_and_atsp_numba_evidence", composition=CompositionKind.PURE, polish=BackendKind.NONE)),

@@ -25,10 +25,16 @@ import math
 from dataclasses import dataclass
 from typing import Dict, List, Mapping, Optional, Tuple, Union
 
-from .day_instance import DayInstance, DayWave
+from .day_instance import READY, DayInstance, DayWave
 
 PROOF_ARITHMETIC = "arithmetic_floor"  # needs no solver; checkable by hand from Sw counts and anchors
 PROOF_SOLVER = "solver_proven"  # solver-proven wave value or proven wave lower bound
+PROOF_UNVERIFIED = "unverified"  # a bare number: never accepted by the large-route certificate (tier 2)
+_TIER2_PROOFS = (PROOF_SOLVER, PROOF_ARITHMETIC)
+
+OBJ_K_ANY = "k_any"  # minimum number of routes of the wave over all types (k_w of a homogeneous day, k_any_w)
+OBJ_L = "l_large"  # minimum number of large routes of the wave (l_w)
+MAX_SP_LEGS = 50  # the wave SP caps its fleet at min(legs, 50) (wave_sp.mod Fleet): beyond 50 legs it is a restriction
 
 INFEASIBLE_CERTIFIED = "infeasible_certified"
 CERT_CAPACITY_FLOOR = "certificate_capacity_floor"  # tier 1
@@ -41,10 +47,18 @@ class WaveInfeasible(ValueError):
     """A wave has no feasible route set at all, so the whole day has no plan."""
 
 
+class DayNotReady(ValueError):
+    """The day instance is not READY (an enumeration did not complete): it has no columns and no day claim."""
+
+
 @dataclass(frozen=True)
 class WaveValue:
+    """A lower bound ``value`` on one wave quantity; ``proof`` says how it is known, ``objective`` which quantity it is
+    (``OBJ_K_ANY`` or ``OBJ_L``; ``None`` only for a bare number)."""
+
     value: int
-    proof: str = PROOF_SOLVER
+    proof: str = PROOF_UNVERIFIED
+    objective: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -107,12 +121,20 @@ def _as_value(wave_id: str, v: Union[int, WaveValue]) -> WaveValue:
     return wv
 
 
-def _values(instance: DayInstance, values: Mapping[str, Union[int, WaveValue]], what: str) -> Dict[str, WaveValue]:
+def _values(instance: DayInstance, values: Mapping[str, Union[int, WaveValue]], what: str, objective: str,
+            strict: bool = False) -> Dict[str, WaveValue]:
+    """Per-wave values; a tagged value must hold ``objective`` (``strict``: it must be tagged and proven)."""
     out = {}
     for w in instance.waves:
         if w.wave_id not in values:
             raise ValueError(f"missing {what} for wave {w.wave_id}")
-        out[w.wave_id] = _as_value(w.wave_id, values[w.wave_id])
+        wv = _as_value(w.wave_id, values[w.wave_id])
+        if wv.objective is not None and wv.objective != objective:
+            raise ValueError(f"wave {w.wave_id}: {what} expected, the value holds {wv.objective}")
+        if strict and (wv.objective != objective or wv.proof not in _TIER2_PROOFS):
+            raise ValueError(f"wave {w.wave_id}: {what} must be tagged {objective} with proof in {_TIER2_PROOFS}, "
+                             f"got objective {wv.objective}, proof {wv.proof}")
+        out[w.wave_id] = wv
     return out
 
 
@@ -168,7 +190,7 @@ def _entries(instance: DayInstance, values: Dict[str, WaveValue], cooldown: int,
 def lb0(instance: DayInstance, k: Mapping[str, Union[int, WaveValue]]) -> BoundResult:
     """LB0 <= K*_day: ``k_w`` routes of wave w are all busy on J_w, and busy routes at one minute need distinct vehicles."""
     _require_types(instance, 1, "LB0")
-    vals = _values(instance, k, "k_w")
+    vals = _values(instance, k, "k_w", OBJ_K_ANY)
     return _sweep(_entries(instance, vals, instance.types[0].cooldown_minutes, _anchor_window))
 
 
@@ -176,7 +198,7 @@ def lb0w(instance: DayInstance, k: Mapping[str, Union[int, WaveValue]]) -> Bound
     """LB0w <= K*_day and LB0w >= LB0: the same sum over windows widened by the smallest tour of the wave, which every
     route of the wave contains in its busy interval (and which contain J_w)."""
     _require_types(instance, 1, "LB0w")
-    vals = _values(instance, k, "k_w")
+    vals = _values(instance, k, "k_w", OBJ_K_ANY)
     return _sweep(_entries(instance, vals, instance.types[0].cooldown_minutes, _widened_window))
 
 
@@ -193,7 +215,7 @@ def capacity_floor_large(instance: DayInstance, large_type_index: int = 0) -> Di
         sw = sum(it.multiplicity for it in w.items if it.cls == "Sw")
         # every Sw rides a large route (other type has no Sw seat) and a large route seats at most ``per_route`` Sw
         floor = math.ceil(sw / per_route) if other.sw_capacity == 0 and per_route > 0 and sw > 0 else 0
-        out[w.wave_id] = WaveValue(floor, PROOF_ARITHMETIC)
+        out[w.wave_id] = WaveValue(floor, PROOF_ARITHMETIC, OBJ_L)
     return out
 
 
@@ -201,7 +223,7 @@ def _merged_large_values(instance: DayInstance, l: Optional[Mapping], large_type
     floors = capacity_floor_large(instance, large_type_index)
     if not l:
         return floors
-    solver = _values(instance, l, "l_w")
+    solver = _values(instance, l, "l_w", OBJ_L, strict=True)  # tier 2 takes only proven, l_w-tagged values
     # both are lower bounds of the same quantity, so their maximum is one too
     return {wid: (solver[wid] if solver[wid].value > floors[wid].value else floors[wid]) for wid in floors}
 
@@ -221,7 +243,7 @@ def lb_cars(instance: DayInstance, k_any: Mapping[str, Union[int, WaveValue]], l
     list the k_any_w summed at the best point; ``value`` is that sum minus L."""
     _require_types(instance, 2, "LB_S")
     _check_limit(large_limit)
-    vals = _values(instance, k_any, "k_any_w")
+    vals = _values(instance, k_any, "k_any_w", OBJ_K_ANY)
     cooldown = min(t.cooldown_minutes for t in instance.types)
     swept = _sweep(_entries(instance, vals, cooldown, _anchor_window))
     return BoundResult(max(0, swept.value - large_limit), swept.point, swept.contributions)
@@ -275,18 +297,36 @@ def compute_day_bounds(instance: DayInstance, *, k: Optional[Mapping] = None, l:
 
 
 # ------------------------------------------------------------------ wave values
-def wave_value_from_sp(result) -> WaveValue:
-    """Proven lower bound of the stage-1 count of an ``SPSolveResult`` (``k_w``, ``l_w`` or ``k_any_w`` by how the wave
-    SP was called): the stage-1 optimum when proven, else the proven bound ``k_lb``. A bound is a valid lower bound but
-    is not the wave optimum. Refuses results without a proof (unavailable, not run, infeasible, rejected)."""
+def wave_value_from_sp(result, *, legs: int, minimize_type: Optional[str] = None,
+                       large_type_id: Optional[str] = None) -> WaveValue:
+    """Proven lower bound of the stage-1 count of an ``SPSolveResult``: the stage-1 optimum when proven, else the proven
+    bound ``k_lb`` (a valid lower bound, not the wave optimum). Refuses results without a proof (unavailable, not run,
+    infeasible, rejected).
+
+    The objective tag follows how the wave SP was called: ``minimize_type=None`` gives ``k_any_w`` (``OBJ_K_ANY``),
+    ``minimize_type == large_type_id`` gives ``l_w`` (``OBJ_L``); any other minimised type is refused.
+    Condition: the wave SP caps its fleet at ``min(legs, 50)``; with ``legs > MAX_SP_LEGS`` it is a restriction of the
+    wave problem, its optimum is no longer a lower bound, and the value is refused.
+    """
+    if isinstance(legs, bool) or not isinstance(legs, int) or legs < 0:
+        raise ValueError("legs must be a non-negative integer")
+    if legs > MAX_SP_LEGS:
+        raise ValueError(f"wave {result.wave_id}: {legs} legs > {MAX_SP_LEGS}: the wave SP fleet cap makes it a restriction, "
+                         "no valid lower bound")
+    if minimize_type is None:
+        objective = OBJ_K_ANY
+    elif minimize_type == large_type_id:
+        objective = OBJ_L
+    else:
+        raise ValueError("only minimize_type None (k_any_w) or the large type (l_w) give a wave value")
     if result.status in _NOT_SERVED:
         raise ValueError(f"wave {result.wave_id}: status {result.status} gives no wave value")
     s1 = result.stage1
     if s1 is not None and s1.status == "optimal" and s1.objective is not None:
-        return WaveValue(int(s1.objective), PROOF_SOLVER)
+        return WaveValue(int(s1.objective), PROOF_SOLVER, objective)
     if result.k_lb is None:
         raise ValueError(f"wave {result.wave_id}: no proven bound")
-    return WaveValue(int(result.k_lb), PROOF_SOLVER)
+    return WaveValue(int(result.k_lb), PROOF_SOLVER, objective)
 
 
 def _wave_minimum(day_wave: DayWave, counted: Optional[frozenset], state_cap: int) -> int:
@@ -324,10 +364,13 @@ def _wave_minimum(day_wave: DayWave, counted: Optional[frozenset], state_cap: in
 
 def dp_wave_values(instance: DayInstance, *, large_type_index: int = 0, state_cap: int = 200_000) -> WaveValues:
     """Exact ``k_any_w`` (and ``l_w`` for a typed day) of every wave by a pure DP over the day columns (tiny waves only;
-    the run uses the wave SP). The values are exact on the day's filtered columns, hence valid lower bounds (F-wave)."""
-    k_any = {w.wave_id: WaveValue(_wave_minimum(w, None, state_cap), PROOF_SOLVER) for w in instance.waves}
+    the run uses the wave SP). The values are exact on the day's filtered columns, hence valid lower bounds (F-wave).
+    Refuses an instance that is not READY (``DayNotReady``): it has no columns, which is not infeasibility."""
+    if instance.status != READY:
+        raise DayNotReady(f"day instance status {instance.status}: no columns, no wave values")
+    k_any = {w.wave_id: WaveValue(_wave_minimum(w, None, state_cap), PROOF_SOLVER, OBJ_K_ANY) for w in instance.waves}
     l: Dict[str, WaveValue] = {}
     if len(instance.types) == 2:
         large_id = frozenset([instance.types[large_type_index].type_id])
-        l = {w.wave_id: WaveValue(_wave_minimum(w, large_id, state_cap), PROOF_SOLVER) for w in instance.waves}
+        l = {w.wave_id: WaveValue(_wave_minimum(w, large_id, state_cap), PROOF_SOLVER, OBJ_L) for w in instance.waves}
     return WaveValues(k_any, l)

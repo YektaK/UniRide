@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ast
 import csv
+import dataclasses
 from pathlib import Path
 
 import pytest
@@ -188,9 +189,10 @@ def test_dp_wave_values_equal_the_single_wave_oracle():
 
 
 # ------------------------------------------------------------------ (c) every bound <= brute-force day optimum
-def test_c_every_bound_is_at_most_the_day_optimum_on_the_j3_oracle_set():
+def _validity_sweep(cases):
+    """Check every bound of every fitting case against the oracle; returns (feasible, infeasible, certificates, unservable)."""
     feasible = infeasible = certificates = unservable = 0
-    for name, waves, types, L in HAND + RANDOM:
+    for name, waves, types, L in cases:
         if not _fits(waves, types):
             continue
         oracle = brute_force_day_optimum(waves, types, large_limit=L).objective
@@ -217,22 +219,142 @@ def test_c_every_bound_is_at_most_the_day_optimum_on_the_j3_oracle_set():
         assert b.lb_s.value <= oracle[0], f"{name}: LB_S {b.lb_s} > optimum {oracle}"
         # the certificate under solver-proven wave minima must not fire either
         assert db.infeasibility_certificate(inst, L, l=db.dp_wave_values(inst).l) is None, name
-    assert feasible >= 60 and infeasible >= 5
-    assert certificates >= 1  # at least one oracle-infeasible cell is explained by a certificate
+    return feasible, infeasible, certificates, unservable
+
+
+def test_c_every_bound_is_at_most_the_day_optimum_on_the_j3_oracle_set():
+    # exact counts pin the claim: all 21 oracle-infeasible typed cells of this set carry a certificate (cooldown 10 each)
+    assert _validity_sweep(HAND + RANDOM) == (147, 21, 21, 0)
+
+
+EXPECTED_CD_SWEEP = (508, 107, 63, 0)  # (feasible, oracle-infeasible, certified, unservable); measured, then pinned
+CD_PAIRS = ((0, 30), (30, 0), (5, 30), (30, 5), (0, 5))  # (large, other-type) cooldowns, unlike the J3 set (10, 10)
+
+
+def cooldown_cases():
+    """The typed J3 oracle days again, with unequal cooldowns per type (wave fixtures are the J3 ones, types are replaced)."""
+    for name, waves, types, L in HAND + RANDOM:
+        if len(types) == 2:
+            for cdl, cds in CD_PAIRS:
+                yield (f"{name}-cd{cdl}-{cds}", waves,
+                       (dataclasses.replace(types[0], cooldown_minutes=cdl), dataclasses.replace(types[1], cooldown_minutes=cds)), L)
+
+
+def test_c_bounds_are_valid_on_typed_oracle_days_with_unequal_cooldowns():
+    # a certificate is claimed only when the oracle agrees; with cooldown 0 a window is empty, so not every infeasible
+    # cell is explained (counts are pinned, not "all")
+    assert _validity_sweep(list(cooldown_cases())) == EXPECTED_CD_SWEEP
+
+
+def _mixed_cooldown_day():
+    # two Sw waves dropped off at 500 and 520; a large route takes 20 min, so with large cooldown 0 one large vehicle serves
+    # both one after the other, while the car (cooldown 30) could not carry Sw anyway
+    waves = [one_sw("w1", 500, "dropoff"), one_sw("w2", 520, "dropoff")]
+    large0 = dataclasses.replace(LARGE, cooldown_minutes=0)
+    car30 = dataclasses.replace(CAR, cooldown_minutes=30)
+    return waves, (large0, car30)
+
+
+def test_lb_s_and_certificate_use_the_cooldown_of_the_types_they_count():
+    waves, types = _mixed_cooldown_day()
+    oracle = brute_force_day_optimum(waves, types, large_limit=1).objective
+    assert oracle is not None and oracle[0] == 0  # one large vehicle, no car
+    inst = cell(waves, types)
+    values = db.dp_wave_values(inst)
+    # LB_S counts all types with the SMALLEST cooldown (0 here): a window with the car's 30 would claim a car
+    assert db.lb_cars(inst, values.k_any, 1).value == 0
+    # the certificate counts large routes with the LARGE type's cooldown (0): the car's 30 would claim 2 concurrent large
+    assert db.infeasibility_certificate(inst, 1) is None
+    assert db.infeasibility_certificate(inst, 1, l=values.l) is None
+    assert db.lb_large(inst, values.l).value <= 1
+
+
+# ------------------------------------------------------------------ widened window endpoints and wave-value tags
+def test_widened_window_endpoints_are_pinned():
+    cd = LARGE.cooldown_minutes
+    # pickup, tau_min 20: window [a - 20, a + cd) -> w1 [480, 510); a second pickup wave ending at 480 does not touch it
+    w1 = one_sw("w1", 500)
+    for anchor2, want in ((470, 1), (471, 2)):  # w2 window [anchor2 - 20, anchor2 + cd): 450..480 | 451..481
+        _, b = bounds_of([w1, one_sw("w2", anchor2)], (LARGE,))
+        assert b.lb0w.value == want, (anchor2, b.lb0w)
+    _, single = bounds_of([w1], (LARGE,))
+    assert single.lb0w.point == 480
+    # dropoff, tau_min 20: window [a, a + 20 + cd) -> [500, 530); a later dropoff wave anchored at 530 does not touch it
+    d1 = one_sw("d1", 500, "dropoff")
+    for anchor2, want in ((529, 2), (530, 1)):
+        _, b = bounds_of([d1, one_sw("d2", anchor2, "dropoff")], (LARGE,))
+        assert b.lb0w.value == want, (anchor2, b.lb0w)
+    assert 20 + cd == 30
+
+
+def test_tier2_refuses_unverified_and_wrongly_tagged_wave_values():
+    inst = cell([one_so("w1", 500), one_so("w2", 500)], (LARGE, DOBLO_SHORT))
+    assert db.WaveValue(1).proof == db.PROOF_UNVERIFIED  # a bare number is never "solver proven"
+    assert db.PROOF_UNVERIFIED not in (db.PROOF_SOLVER, db.PROOF_ARITHMETIC)
+    with pytest.raises(ValueError):  # bare ints
+        db.infeasibility_certificate(inst, 1, l={"w1": 1, "w2": 1})
+    with pytest.raises(ValueError):  # explicitly unverified, even with the right objective
+        db.infeasibility_certificate(inst, 1, l={w: db.WaveValue(1, db.PROOF_UNVERIFIED, db.OBJ_L) for w in ("w1", "w2")})
+    with pytest.raises(ValueError):  # proven but untagged
+        db.infeasibility_certificate(inst, 1, l={w: db.WaveValue(1, db.PROOF_SOLVER) for w in ("w1", "w2")})
+    with pytest.raises(ValueError):
+        db.lb_large(inst, {"w1": 1, "w2": 1})
+    ok = {w: db.WaveValue(1, db.PROOF_SOLVER, db.OBJ_L) for w in ("w1", "w2")}
+    assert db.infeasibility_certificate(inst, 1, l=ok).tier == 2
+
+
+def test_objective_tags_are_checked_where_l_and_k_any_are_consumed():
+    inst = cell([one_so("w1", 500), one_so("w2", 500)], (LARGE, DOBLO_SHORT))
+    values = db.dp_wave_values(inst)
+    assert all(v.objective == db.OBJ_L for v in values.l.values())
+    assert all(v.objective == db.OBJ_K_ANY for v in values.k_any.values())
+    with pytest.raises(ValueError):  # k_any passed as l_w
+        db.infeasibility_certificate(inst, 1, l=values.k_any)
+    with pytest.raises(ValueError):
+        db.lb_large(inst, values.k_any)
+    with pytest.raises(ValueError):  # l_w passed as k_any_w
+        db.lb_cars(inst, values.l, 1)
+    homog = cell([one_sw("w1", 500)], (LARGE,))
+    with pytest.raises(ValueError):
+        db.lb0(homog, {"w1": db.WaveValue(1, db.PROOF_SOLVER, db.OBJ_L)})
+    floors = db.capacity_floor_large(cell([five_sw("w1", 500)], (LARGE, CAR)))
+    assert floors["w1"].objective == db.OBJ_L
 
 
 # ------------------------------------------------------------------ plumbing
-def test_wave_value_from_sp_result_uses_only_proven_values():
+def test_wave_value_from_sp_result_uses_only_proven_values_and_tags_the_objective():
     from uniride_core.exact.ampl_backend import SPSolveResult, StageResult
 
     s1 = StageResult(status="optimal", objective=2, bound=2)
-    assert db.wave_value_from_sp(SPSolveResult("w", "feasible_with_gap", stage1=s1, k=3, k_lb=2)).value == 2
-    v = db.wave_value_from_sp(SPSolveResult("w", "bound_only", stage1=StageResult(status="feasible_with_gap", objective=4, bound=3), k_lb=3))
-    assert v.value == 3 and v.proof == db.PROOF_SOLVER
+    v = db.wave_value_from_sp(SPSolveResult("w", "feasible_with_gap", stage1=s1, k=3, k_lb=2), legs=5)
+    assert (v.value, v.proof, v.objective) == (2, db.PROOF_SOLVER, db.OBJ_K_ANY)
+    bound_only = SPSolveResult("w", "bound_only", stage1=StageResult(status="feasible_with_gap", objective=4, bound=3), k_lb=3)
+    v = db.wave_value_from_sp(bound_only, legs=5, minimize_type="large", large_type_id="large")
+    assert v.value == 3 and v.proof == db.PROOF_SOLVER and v.objective == db.OBJ_L
+    with pytest.raises(ValueError):  # a minimised type that is not the large type gives neither l_w nor k_any_w
+        db.wave_value_from_sp(bound_only, legs=5, minimize_type="car", large_type_id="large")
     with pytest.raises(ValueError):
-        db.wave_value_from_sp(SPSolveResult("w", "backend_unavailable"))
+        db.wave_value_from_sp(SPSolveResult("w", "backend_unavailable"), legs=5)
     with pytest.raises(ValueError):
-        db.wave_value_from_sp(SPSolveResult("w", "infeasible_proven"))
+        db.wave_value_from_sp(SPSolveResult("w", "infeasible_proven"), legs=5)
+
+
+def test_wave_value_from_sp_refuses_waves_above_the_sp_fleet_cap():
+    from uniride_core.exact.ampl_backend import SPSolveResult, StageResult
+
+    res = SPSolveResult("w", "optimal", stage1=StageResult(status="optimal", objective=7, bound=7), k=7)
+    assert db.MAX_SP_LEGS == 50
+    assert db.wave_value_from_sp(res, legs=50).value == 7  # v_max = legs: the cap does not bind
+    with pytest.raises(ValueError, match="restriction"):  # v_max = 50 < legs: the SP is a restriction, optimum is no bound
+        db.wave_value_from_sp(res, legs=51)
+
+
+def test_dp_on_a_not_ready_instance_says_not_ready_not_infeasible():
+    capped = build_day_instance([five_sw("w1", 500)], (LARGE, CAR), column_cap=1)
+    assert capped.status == "not_run_enumeration_cap"
+    with pytest.raises(db.DayNotReady) as exc:
+        db.dp_wave_values(capped)
+    assert not isinstance(exc.value, db.WaveInfeasible) and "infeasible" not in str(exc.value)
 
 
 def test_missing_or_negative_wave_values_are_refused():
@@ -293,7 +415,7 @@ def test_d_k_w_equals_wp_e3_kstar_on_three_archived_waves():
         wave = by_id[row["wave_id"]]
         inst = build_day_instance([wave], camp.fleet_types, service_date=wave.service_date)
         res = ampl_backend.solve_wave(wave, inst.waves[0].enumeration, settings=settings)
-        value = db.wave_value_from_sp(res)
+        value = db.wave_value_from_sp(res, legs=wave.legs)
         assert value.value == int(row["K_star"]), (row["wave_id"], value, row["K_star"])
         assert value.proof == db.PROOF_SOLVER
 

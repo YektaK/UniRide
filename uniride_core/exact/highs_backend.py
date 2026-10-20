@@ -15,6 +15,12 @@
   the solver's objective: the solution values are rounded (refused as ``rejected`` when one is fractional beyond the
   integrality tolerance), re-checked against every bound and row of the model in integers, and the objective is
   recomputed from them.
+* HiGHS keeps one global scheduler per process, and ``resetGlobalScheduler`` is process-global too. The reset is done
+  before every stage, so solves must run one at a time per process (E06: serial runs); two threads solving at once in
+  one process would reset each other's scheduler.
+* ``StageResult.wall_seconds`` is the wall time of the ``run()`` call and ``time_limit`` the limit given to it. A bound
+  that contradicts the incumbent (``ceil(bound - 1e-6) > incumbent``) is still clipped to the incumbent, but the stage's
+  ``solver_message`` then starts with ``bound_above_incumbent`` so that a two-solver comparison can see it.
 * Stage 1 (or a later stage) with an incumbent but no proof makes every later stage ``non_lexicographic``; with no
   incumbent later stages are skipped (``skipped_no_stage1_incumbent`` / ``skipped_no_stage2_incumbent``).
 
@@ -23,7 +29,9 @@ Offline research tooling: not imported by optimizer_api or src, not in the produ
 """
 from __future__ import annotations
 
+import dataclasses
 import math
+import time
 from dataclasses import dataclass
 from typing import Callable, Mapping, Optional, Tuple
 
@@ -38,6 +46,7 @@ _INT_TOL = 1e-5  # integrality tolerance of the incumbent values (HiGHS default 
 _BOUND_TOL = 1e-6
 _HUGE = 1e20
 _TIMING_REASONS = ("wall_limit", "other_limit")
+BOUND_ABOVE_INCUMBENT = "bound_above_incumbent"  # prefix of StageResult.solver_message when the clip fired
 _BOUND_STATUSES = ("optimal", "feasible_with_gap", "bound_only")
 _OTHER_LIMITS = frozenset({"kIterationLimit", "kSolutionLimit", "kInterrupt", "kHighsInterrupt", "kObjectiveBound",
                            "kObjectiveTarget", "kMemoryLimit"})
@@ -105,11 +114,14 @@ def classify_highs_outcome(model_status: str, *, incumbent: Optional[int], bound
     if bound is not None and math.isfinite(float(bound)) and abs(float(bound)) < _HUGE:
         b = float(bound)
     b_ceil, source = (max(0, math.ceil(b - _BOUND_TOL)), "solver") if b is not None else (0, "trivial_zero")
+    note = None
     if incumbent is not None:
+        if b_ceil > incumbent:  # the bound contradicts the incumbent: clip, but leave a trace for a two-solver comparison
+            note = f"{BOUND_ABOVE_INCUMBENT}: ceil(bound - 1e-6)={b_ceil} > incumbent={incumbent}; bound clipped to the incumbent"
         b_ceil = min(b_ceil, incumbent)
     if name == "kOptimal":
         if incumbent is None:
-            return StageResult(status="rejected", stop_reason="solver_failure", solve_result=name, bound=b)
+            return StageResult(status="rejected", stop_reason="solver_failure", solve_result=name, bound=b, solver_message=note)
         if incumbent - b_ceil < 1:
             status, reason = "optimal", "optimal"
         else:  # the solver reported solved, the runner's own check did not confirm it
@@ -118,7 +130,8 @@ def classify_highs_outcome(model_status: str, *, incumbent: Optional[int], bound
         reason = "wall_limit" if name == "kTimeLimit" else "other_limit"
         status = "feasible_with_gap" if incumbent is not None else "bound_only"
     return StageResult(status=status, stop_reason=reason, timing_dependent=reason in _TIMING_REASONS,
-                       objective=incumbent, bound=b, bound_ceil=b_ceil, bound_source=source, solve_result=name)
+                       objective=incumbent, bound=b, bound_ceil=b_ceil, bound_source=source, solve_result=name,
+                       solver_message=note)
 
 
 def _status_name(status) -> str:
@@ -186,8 +199,12 @@ def highs_solve_stage(model: JointModel, settings: Optional[HighsSettings] = Non
         if h.setOptionValue(key, val) != highspy.HighsStatus.kOk:
             raise RuntimeError(f"HiGHS refused option {key}={val}")
     if h.passModel(lp) == highspy.HighsStatus.kError:
-        return StageSolve(StageResult(status="rejected", stop_reason="solver_failure", solve_result="pass_model_error"))
+        return StageSolve(StageResult(status="rejected", stop_reason="solver_failure", solve_result="pass_model_error",
+                                      time_limit=settings.time_limit))
+    started = time.perf_counter()
     h.run()
+    wall = time.perf_counter() - started  # the run() call only (model passing and checks excluded)
+    timing = dict(wall_seconds=wall, time_limit=settings.time_limit)
     status = _status_name(h.getModelStatus())
     info = h.getInfo()
     values, incumbent = None, None
@@ -195,10 +212,10 @@ def highs_solve_stage(model: JointModel, settings: Optional[HighsSettings] = Non
         col_value = list(h.getSolution().col_value)
         checked = check_integer_solution(model, {v.name: col_value[i] for i, v in enumerate(model.variables)})
         if checked is None:  # fractional, out of bounds or violating a row: never an incumbent
-            return StageSolve(StageResult(status="rejected", stop_reason="solver_failure", solve_result=status))
+            return StageSolve(StageResult(status="rejected", stop_reason="solver_failure", solve_result=status, **timing))
         values, incumbent = checked
     _, bound = snap_to_integer_data(None, info.mip_dual_bound)
-    return StageSolve(classify_highs_outcome(status, incumbent=incumbent, bound=bound), values)
+    return StageSolve(dataclasses.replace(classify_highs_outcome(status, incumbent=incumbent, bound=bound), **timing), values)
 
 
 # ---------------------------------------------------------------- day runner

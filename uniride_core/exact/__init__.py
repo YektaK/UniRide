@@ -10,6 +10,7 @@ from .day_instance import (
     DayWave,
     build_day_instance,
 )
+from .highs_backend import HighsSettings, DaySolveResult, highs_probe, run_day_stages
 from .wave_instance import (
     EXACT_STATUSES,
     ExactResult,
@@ -21,4 +22,5 @@ from .wave_instance import (
 __all__ = [
     "EXACT_STATUSES", "ExactResult", "VehicleTypeSpec", "WaveInstance", "compute_matrix_sha256",
     "NOT_RUN_ENUMERATION_CAP", "DayColumn", "DayInstance", "DayWave", "build_day_instance",
+    "HighsSettings", "DaySolveResult", "highs_probe", "run_day_stages",
 ]

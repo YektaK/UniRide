@@ -192,8 +192,9 @@ def test_an_infeasibility_settled_by_ampl_presolve_is_labelled_and_never_counts_
     assert crosscheck_day_results(plain, settled).verdict == "inconclusive"
 
 
-def test_infeasible_or_unbounded_is_never_a_proof_of_infeasibility():
-    r = classify_gurobi_outcome(300, "Gurobi: infeasible or unbounded problem", None, None)
+@pytest.mark.parametrize("num", [220, 299, 300])
+def test_infeasible_or_unbounded_is_never_a_proof_of_infeasibility(num):
+    r = classify_gurobi_outcome(num, "Gurobi: infeasible or unbounded problem", None, None)
     assert r.status == "rejected"
 
 

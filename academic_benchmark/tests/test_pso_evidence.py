@@ -573,3 +573,45 @@ def test_native_pilot_accepts_optional_pso_block_and_rejects_bad_ones(tmp_path) 
             load_native_pilot_config(
                 _write(tmp_path, "c.json", _native_pilot_config({**blocks, "Core-PSO-TSP": bad}))
             )
+
+
+# ----- published capability claims (C-16b promotion) -----
+
+def test_pso_claims_cite_all_four_focused_evidence_nodes() -> None:
+    from pathlib import Path
+
+    from uniride_core.algorithms.capabilities import (
+        BackendKind,
+        CompositionKind,
+        ExecutionProtocol,
+        LifecycleStatus,
+        ProblemContract,
+        get_algorithm_capability,
+    )
+
+    capability = get_algorithm_capability("Core-PSO-TSP")
+    assert capability is not None
+    assert capability.lifecycle is LifecycleStatus.VERIFIED
+    prefix = "academic_benchmark/tests/test_pso_evidence.py::"
+    assert {e for claim in capability.claims for e in claim.evidence_ids} == {
+        prefix + "test_pso_fixed_tsp_evidence",
+        prefix + "test_pso_fixed_atsp_evidence",
+        prefix + "test_pso_native_tsp_evidence",
+        prefix + "test_pso_native_atsp_evidence",
+    }
+    assert {(claim.problem, claim.protocol) for claim in capability.claims} == {
+        (problem, protocol)
+        for problem in (ProblemContract.TSP, ProblemContract.ATSP)
+        for protocol in (ExecutionProtocol.FIXED_BUDGET, ExecutionProtocol.NATIVE_TERMINATION)
+    }
+    for claim in capability.claims:
+        assert claim.composition is CompositionKind.PURE
+        assert claim.backend_profile.objective is BackendKind.NUMBA_NOPYTHON
+        assert claim.backend_profile.polish is BackendKind.NONE
+        assert claim.directed_cost_preserved is (claim.problem is ProblemContract.ATSP)
+        assert claim.exact_objective_accounting and claim.fixed_seed_deterministic
+        assert claim.truthful_result_reporting
+        for evidence_id in claim.evidence_ids:
+            path, _, function = evidence_id.partition("::")
+            source = (Path(__file__).resolve().parents[2] / path).read_text(encoding="utf-8")
+            assert f"def {function}(" in source

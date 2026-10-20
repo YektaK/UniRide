@@ -263,22 +263,42 @@ def test_atomic_phase_boundary_triplet(k, refused):
 # ---- polish stage --------------------------------------------------------
 
 def test_polish_with_zero_remaining_returns_global_tour_and_spends_nothing():
-    # B=11, cap=floor(11*0.9)=9... use B == global use so no unit is left.
-    # initial tour 1 + phase 9 = 10 units; B=10 leaves 0 for polish.
+    # floor(B * fraction) < B, so the engine always leaves the polish stage at
+    # least one unit; a polish stage handed an exhausted view is exercised directly.
+    tour = list(range(9))
+    cost = closed_tour_cost(tour, SYM9)
+    exhausted = StageCappedBudget(ObjectiveEvaluationBudget(10, used=10), None)
+    out = three_opt_polish_stage(SYM9, THREE_OPT_PARAMS).run(tour, cost, exhausted)
+    assert out.tour == tour
+    assert out.cost == cost
+    assert out.evaluations == 0
+    assert out.termination_reason == "evaluation_budget_exhausted"
+    assert exhausted.used == 10
+
+
+def test_polish_with_the_minimum_allocation_is_cut_by_the_total_budget():
+    # B=2, cap=1: the initial tour uses the one global unit, polish gets 1.
     result = run_composition(
         SYM9,
-        global_stage=stub_global(SYM9, 9),
+        global_stage=stub_global(SYM9, 0),
         polish_stage=three_opt_polish_stage(SYM9, THREE_OPT_PARAMS),
-        evaluation_budget=10,
-        global_fraction=0.9,
+        evaluation_budget=2,
+        global_fraction=0.5,
     )
-    assert result.global_stage.consumed_evaluations == 10
-    assert result.polish_stage.allocated_evaluations == 0
-    assert result.polish_stage.consumed_evaluations == 0
+    assert result.global_stage.consumed_evaluations == 1
+    assert result.polish_stage.allocated_evaluations == 1
+    assert result.polish_stage.consumed_evaluations == 1
+    assert result.termination_reason == "evaluation_budget_exhausted"
+    assert result.evaluations == 2
+
+
+def test_unchanged_polish_is_reported_as_unchanged():
+    result = run_composition(
+        SYM9, global_stage=stub_global(SYM9, 1),
+        polish_stage=stub_polish(), evaluation_budget=100, global_fraction=0.5,
+    )
     assert result.polish_changed_tour is False
     assert result.tour == list(range(9))
-    assert result.cost == closed_tour_cost(list(range(9)), SYM9)
-    assert result.evaluations == 10
 
 
 def test_polish_does_not_recount_the_incoming_tour():
@@ -532,7 +552,7 @@ def test_pure_swarm_then_three_opt_fixed_budget(algorithm, params):
     assert first.evaluations == g.consumed_evaluations + p.consumed_evaluations
     assert sorted(first.tour) == list(range(9))
     assert first.cost == pytest.approx(closed_tour_cost(first.tour, SYM9))
-    assert first.cost <= g.details["global_cost"] + 1e-9
+    assert first.cost <= g.details["cost"] + 1e-9
     # no hidden polish inside the global stage
     assert g.details["polish_executed"] == {"initial": 0, "periodic": 0, "final": 0}
     assert g.seed == 11 and p.seed is None

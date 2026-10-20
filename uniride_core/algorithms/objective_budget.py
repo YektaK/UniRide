@@ -57,6 +57,11 @@ class StageCappedBudget:
     ``can_spend`` honours both the stage cap and the shared total limit.
     ``used`` is read-only so a stage cannot reset the shared counter.
 
+    Build the view when its stage starts. The ``stage_cap >= shared.used``
+    check runs only at construction; a view built early and used after other
+    stages spent units is not re-validated (a stage that finds no room is
+    refused by ``can_spend`` instead).
+
     The view offers the same ``used``/``limit``/``remaining``/``can_spend``/
     ``consume``/``evaluate`` surface that the budgeted local searches read.
     """

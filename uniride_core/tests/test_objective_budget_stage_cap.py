@@ -112,6 +112,7 @@ def test_injected_counter_is_not_reset_and_stage_cap_holds(factory):
     assert stats["objective_evaluations"] == shared.used - 10
     assert stats["shared_counter_used"] == shared.used
     assert stats["stage_cap"] == 60
+    assert stats["evaluation_budget"] == 60 - 10  # the stage allowance
 
 
 @pytest.mark.parametrize("factory", [_gwo, _hho])
@@ -184,3 +185,29 @@ def test_default_result_has_no_injection_keys(factory):
     ).solve(_coordinates())
     assert "shared_counter_used" not in result.extra_stats
     assert "stage_cap" not in result.extra_stats
+
+
+@pytest.mark.parametrize(
+    "make, size_key",
+    [(GWOOptimizer, "pack_size"), (HHOOptimizer, "hawks")],
+)
+def test_memetic_polish_is_held_to_the_stage_cap(make, size_key):
+    """Polish must spend through the capped view, not the raw shared counter.
+
+    Initialization polish fits the cap (polish_iters=1) but the final polish
+    (final_polish_iters=200) would run far past it if it bypassed the view.
+    """
+    shared = ObjectiveEvaluationBudget(5000, used=10)
+    cap = 600
+    result = make(
+        **{size_key: 6},
+        max_iterations=5, max_no_improvement=10**6, random_seed=5,
+        polish_enabled=True, polish_iters=1, final_polish_iters=200,
+        polish_interval=2, shared_budget=shared, stage_cap=cap,
+    ).solve(_coordinates())
+    stats = result.extra_stats
+    assert 10 < shared.used <= cap  # not reset, held to the cap
+    assert stats["objective_evaluations"] == shared.used - 10
+    assert sum(stats["polish_evaluations"].values()) <= stats["objective_evaluations"]
+    assert stats["polish_evaluations"]["final"] > 0
+    assert stats["budget_terminated"] is True  # the final polish hit the cap

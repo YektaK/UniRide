@@ -49,6 +49,16 @@ class HHOOptimizer(BaseTSPSolver):
     Tour-length evaluation is done via ``self._tour_length_fast`` (cached
     numpy matrix + Numba JIT kernel), making each candidate cost evaluation
     an inexpensive array-backed computation rather than a Python loop.
+
+    Injected counter (C-05): pass ``shared_budget`` (an
+    ``ObjectiveEvaluationBudget`` owned by the caller) to spend on a shared
+    counter that ``solve()`` never resets. ``stage_cap`` is an ABSOLUTE ceiling
+    on the shared ``used`` value, not a per-stage allowance: the stage stops
+    before ``shared_budget.used`` would exceed it or the shared total limit,
+    whichever is smaller. C-06 passes ``floor(B * global_fraction)`` with the
+    counter starting at 0, so there the absolute cap equals the stage
+    allowance. ``stage_cap`` requires ``shared_budget`` and cannot be combined
+    with ``evaluation_budget``.
     """
 
     def __init__(

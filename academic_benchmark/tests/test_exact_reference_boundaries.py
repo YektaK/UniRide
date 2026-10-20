@@ -182,11 +182,59 @@ def test_study_profile_and_existing_schemas_are_byte_identical_to_the_base(relat
     assert hashlib.sha256(data).hexdigest() == PINNED_LF_SHA256[relative]
 
 
+# Study code may use the pooling API of the shared protocol registry (Gate C C-12 refuses mixed-pooling files, Package D
+# pools through it) and nothing else of it; the registry itself imports the exact-reference modules, so the allowlist is
+# explicit and the exact-reference protocol ids stay banned from study source text (DECISION_LOG E12, A17).
+STUDY_REGISTRY_MODULE = "academic_benchmark.protocol_registry"
+STUDY_REGISTRY_ALLOWLIST = ("assert_single_pooling_group",)
+
+
+def _study_import_violations(path: Path) -> list:
+    """Imports of a study file that link it to the exact reference: any import naming ``exact_reference``, and any import of
+    ``protocol_registry`` other than ``from academic_benchmark.protocol_registry import <allowlisted names>``."""
+    bad = []
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"), filename=str(path))):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if "exact_reference" in alias.name or "protocol_registry" in alias.name:
+                    bad.append(f"line {node.lineno}: import {alias.name}")
+        elif isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            names = [alias.name for alias in node.names]
+            shown = f"line {node.lineno}: from {'.' * node.level}{module} import {', '.join(names)}"
+            if "exact_reference" in module or any("exact_reference" in n for n in names):
+                bad.append(shown)
+            elif "protocol_registry" in module:
+                if node.level != 0 or module != STUDY_REGISTRY_MODULE or not set(names) <= set(STUDY_REGISTRY_ALLOWLIST):
+                    bad.append(shown)
+            elif any("protocol_registry" in n for n in names):
+                bad.append(shown)
+    return bad
+
+
+def _exact_reference_protocol_ids() -> set:
+    from academic_benchmark.exact_reference import protocol
+
+    ids = {value for name, value in vars(protocol).items()
+           if isinstance(value, str) and value and (name.endswith("PROTOCOL_ID") or name == "TSP_REFERENCE_KIND")}  # not the generic solution kind
+    assert {"exact_reference_v1", "union_day_v1", "exact_day_joint_v1"} <= ids, ids  # the scan must not go quiet on a rename
+    return ids
+
+
+def _study_text_violations(path: Path, ids: set) -> list:
+    text = path.read_text(encoding="utf-8")
+    return sorted({token for token in ids | {"exact_reference", "exact-reference"} if token in text})
+
+
 def test_the_bildiri_study_profile_stays_unlinked_from_the_exact_reference():
     text = (PKG / "studies" / "bildiri2026" / "study.json").read_text(encoding="utf-8")
     assert "exact_reference" not in text and "exact-reference" not in text
-    for path in sorted((PKG / "studies").rglob("*.py")):
-        assert not [n for n in _imported_names(path) if "exact_reference" in n or "protocol_registry" in n], path.name
+    ids = _exact_reference_protocol_ids()
+    files = sorted((PKG / "studies").rglob("*.py"))
+    assert files, "the scan found no study module"
+    for path in files:
+        assert _study_import_violations(path) == [], path.name
+        assert _study_text_violations(path, ids) == [], path.name
 
 
 # ---------------------------------------------------------------- the archive manifests still verify

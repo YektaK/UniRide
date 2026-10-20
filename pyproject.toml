@@ -36,6 +36,7 @@ include = ["uniride_core*", "optimizer_api*", "academic_benchmark*"]
 testpaths = ["uniride_core/tests", "optimizer_api/tests", "academic_benchmark/tests"]
 markers = [
     "requires_ampl: needs a local AMPL installation, solver and license (skipped with a reason when absent; design EXACT_SOLVER_AMPL_DESIGN.md section 7)",
+    "requires_highspy: needs the optional highspy package (skipped with a reason when absent; design JOINT_DAY_MODEL_DESIGN.md 4.1, WP-E11 J4)",
 ]
 norecursedirs = [
     "*.egg",

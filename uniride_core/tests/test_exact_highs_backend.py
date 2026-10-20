@@ -344,3 +344,19 @@ def test_highspy_is_not_imported_at_module_load():
     env = dict(os.environ, PYTHONPATH=str(REPO_ROOT))
     out = subprocess.run([sys.executable, "-c", code], cwd=str(REPO_ROOT), env=env, capture_output=True, text=True, timeout=120)
     assert out.returncode == 0 and out.stdout.strip() == "ok", out.stderr[-500:]
+
+
+@pytest.mark.requires_highspy
+def test_a_solve_after_another_highs_run_with_more_threads_still_runs_single_threaded(highs):
+    # HiGHS keeps one global scheduler; a stage must not be rejected because an earlier run in the process used
+    # other threads (found in J4: the stage ended with model status kNotset and was labelled `rejected`)
+    hp = highs_backend._import_highspy()
+    model = build_joint_model(_typed_cell(), stage=1, large_limit=1)
+    hp.Highs.resetGlobalScheduler(True)
+    other = hp.Highs()
+    other.setOptionValue("output_flag", False)
+    other.setOptionValue("threads", 4)
+    other.passModel(highs_backend.to_highs_lp(model, hp))
+    other.run()
+    out = highs_solve_stage(model)
+    assert out.result.status == "optimal" and out.result.objective == enumerate_stage_optimum(model).objective

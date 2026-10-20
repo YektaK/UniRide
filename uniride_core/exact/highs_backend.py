@@ -151,10 +151,8 @@ def check_integer_solution(model: JointModel, raw: Mapping[str, float]) -> Optio
     return values, sum(v.objective * values[v.name] for v in model.variables)
 
 
-def highs_solve_stage(model: JointModel, settings: Optional[HighsSettings] = None) -> StageSolve:
-    """One stage as one HiGHS call. Raises ``HighsBackendUnavailable`` when ``highspy`` is missing."""
-    settings = settings or HighsSettings()
-    highspy = _import_highspy()
+def to_highs_lp(model: JointModel, highspy):
+    """The stage as a HiGHS LP/MIP object (row-wise sparse matrix, every variable integer)."""
     inf = highspy.kHighsInf
     lp = highspy.HighsLp()
     lp.num_col_, lp.num_row_ = len(model.variables), len(model.rows)
@@ -172,6 +170,14 @@ def highs_solve_stage(model: JointModel, settings: Optional[HighsSettings] = Non
         start.append(len(index))
     lp.a_matrix_.format_ = highspy.MatrixFormat.kRowwise
     lp.a_matrix_.start_, lp.a_matrix_.index_, lp.a_matrix_.value_ = start, index, value
+    return lp
+
+
+def highs_solve_stage(model: JointModel, settings: Optional[HighsSettings] = None) -> StageSolve:
+    """One stage as one HiGHS call. Raises ``HighsBackendUnavailable`` when ``highspy`` is missing."""
+    settings = settings or HighsSettings()
+    highspy = _import_highspy()
+    lp = to_highs_lp(model, highspy)
     h = highspy.Highs()
     for key, val in settings.options():
         if h.setOptionValue(key, val) != highspy.HighsStatus.kOk:

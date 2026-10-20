@@ -43,6 +43,7 @@ from .ampl_backend import (
     SolverSettings,
     StageResult,
     _scrub,
+    backend_absent,
     classify_outcome,
 )
 from .day_instance import READY, DayInstance
@@ -90,6 +91,7 @@ class GurobiBackendUnavailable(HighsBackendUnavailable):
     """
 
 
+_AMPL_PRESOLVE_INFEASIBLE = "presolve finds no feasible solution"  # AMPL message, lower case
 AMPL_PREFIX = "ampl:"  # options with this prefix are AMPL options, the rest are the Gurobi driver's options
 
 
@@ -99,7 +101,9 @@ class GurobiSettings(HighsSettings):
 
     ``ampl_presolve`` is the AMPL ``presolve`` option (default 0). With AMPL's own presolve on, AMPL itself settles a
     stage whose bounds and rows are inconsistent (message "presolve finds no feasible solution possible", result 299)
-    and Gurobi never runs, so it would not be a second solver's proof. ``None`` leaves AMPL's default untouched.
+    and Gurobi never runs, so it would not be a second solver's proof. ``None`` makes this adapter set nothing: the
+    session keeps whatever value of ``presolve`` was set in it last (AMPL's own default, on, only in a fresh session),
+    so results may then depend on earlier calls in a reused session.
     """
     work_limit: Optional[float] = None
     ampl_presolve: Optional[int] = 0
@@ -158,9 +162,17 @@ def gurobi_probe() -> Tuple[bool, Optional[str], str]:
 # ---------------------------------------------------------------- the J3 model in AMPL
 def load_day_model(ampl, model: JointModel) -> None:
     """Replace the model of the AMPL session by ``DAY_MIP_MODEL`` filled with the stage's data (amplpy data API)."""
+    variables, rows = model.variables, model.rows
+    for ri, r in enumerate(rows):  # refuse before AMPL is touched: a dict would collapse a duplicate pair silently
+        if r.sense not in ("E", "L", "G"):
+            raise ValueError(f"row {r.name!r} has the sense {r.sense!r}, expected E, L or G")
+        seen = set()
+        for vi, _ in r.terms:
+            if vi in seen:
+                raise ValueError(f"row {r.name!r} lists variable index {vi} more than once")
+            seen.add(vi)
     ampl.reset()
     ampl.eval(DAY_MIP_MODEL)
-    variables, rows = model.variables, model.rows
     ampl.set["VARS"] = list(range(len(variables)))
     for sense in ("E", "L", "G"):
         ampl.set[f"ROWS_{sense}"] = [i for i, r in enumerate(rows) if r.sense == sense]
@@ -203,9 +215,9 @@ def classify_gurobi_outcome(num: int, message: str, objective: Optional[float], 
     """Map AMPL ``solve_result_num`` and message of a Gurobi stage to the protocol labels (design 4)."""
     msg = str(message).lower()
     if 200 <= num < 300 and "unbounded" not in msg:
-        # "presolve" in the message: AMPL settled it and Gurobi never ran (see GurobiSettings.ampl_presolve)
+        # AMPL's own phrase: AMPL settled it and Gurobi never ran (see GurobiSettings.ampl_presolve)
         return StageResult(status="infeasible_proven", stop_reason="infeasible",
-                           bound_source="ampl_presolve" if "presolve" in msg else None)
+                           bound_source="ampl_presolve" if _AMPL_PRESOLVE_INFEASIBLE in msg else None)
     if 200 <= num < 400:  # unbounded, or "infeasible or unbounded": no proof of anything
         return StageResult(status="rejected", stop_reason="solver_failure")
     return classify_outcome(num, message, objective, bound)
@@ -227,8 +239,19 @@ def stage_solve_from_values(model: JointModel, out: StageResult, raw: Optional[M
 
 
 # ---------------------------------------------------------------- one stage on Gurobi
+def _is_session_error(exc: BaseException) -> bool:
+    """An error of the AMPL process or its connection (amplpy ``AMPLException``, broken pipe), not of our data."""
+    return isinstance(exc, (OSError, EOFError)) or any(c.__name__ == "AMPLException" for c in type(exc).__mro__)
+
+
 def gurobi_solve_stage(session: AmplSession, model: JointModel, settings: Optional[GurobiSettings] = None) -> StageSolve:
-    """One stage as one Gurobi call through the open AMPL session."""
+    """One stage as one Gurobi call through the open AMPL session.
+
+    Raises ``GurobiBackendUnavailable`` (which ``run_day_stages`` reports as ``backend_unavailable``, never raising it
+    to the caller) when the AMPL session fails during the solve (amplpy ``AMPLException``, a broken pipe) or when the
+    solver result is a failure (500 or more) whose message or log names a missing solver or licence. Any other failure
+    is a defect and propagates; a failure without that evidence is ``rejected``.
+    """
     settings = settings or GurobiSettings()
     ampl = session.ampl
     load_day_model(ampl, model)
@@ -239,12 +262,20 @@ def gurobi_solve_stage(session: AmplSession, model: JointModel, settings: Option
     ampl.eval(f"let {OBJECTIVE}.bestbound := {_BOUND_SENTINEL:g};")  # no earlier bound can leak into this stage
     session._log.clear()
     t0 = time.perf_counter()
-    ampl.solve()
+    try:
+        ampl.solve()
+    except Exception as exc:  # noqa: BLE001 - classified below
+        if _is_session_error(exc):
+            note = " ".join(_scrub(str(exc)).splitlines())[:200]
+            raise GurobiBackendUnavailable(f"AMPL session failed during a stage: {type(exc).__name__}: {note}") from exc
+        raise
     seconds = time.perf_counter() - t0
     num = int(ampl.get_value("solve_result_num"))
     message = str(ampl.get_value("solve_message"))
     log = "\n".join(session._log)  # read for work units only, never stored
     session._log.clear()
+    if num >= 500 and backend_absent(SOLVER, f"{message}\n{log}"):
+        raise GurobiBackendUnavailable(f"{SOLVER}: solver or license missing")
     objective = ampl.get_objective(OBJECTIVE).value()
     bound_value = float(ampl.get_value(f"{OBJECTIVE}.bestbound"))
     bound = None if bound_value <= _BOUND_SENTINEL / 10 else bound_value

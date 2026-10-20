@@ -340,6 +340,7 @@ class _FakeAmpl:
         self.calls, self.option = [], {}
         self.solve_error, self.num, self.message = solve_error, num, message
         self.solve_result = "failure"
+        self.log, self.sink = list(log or ()), None
 
     def reset(self):
         self.calls.append("reset")
@@ -348,6 +349,8 @@ class _FakeAmpl:
         self.calls.append("eval")
 
     def solve(self):
+        if self.sink is not None:
+            self.sink.extend(self.log)  # the output handler of the real session fills `_log` during the solve
         if self.solve_error is not None:
             raise self.solve_error
 
@@ -370,7 +373,9 @@ class _FakeSession:
 
 def _run_with(monkeypatch, fake, log=()):
     monkeypatch.setattr(gb, "load_day_model", lambda ampl, model: None)
-    return run_day_stages_gurobi(_typed_cell(), large_limit=1, session=_FakeSession(fake, log))
+    session = _FakeSession(fake)
+    fake.log, fake.sink = list(log), session._log
+    return run_day_stages_gurobi(_typed_cell(), large_limit=1, session=session)
 
 
 def test_an_ampl_session_error_during_a_stage_is_backend_unavailable_not_raised(monkeypatch):

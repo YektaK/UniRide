@@ -4,3 +4,6 @@
 # Install: pip install -r requirements-exact.txt (pinned to the version verified in .venv-jit, F13).
 amplpy==0.18.0
 ampltools==0.7.5
+# Joint day model (WP-E11 J4): HiGHS through highspy, imported lazily (uniride_core/exact/highs_backend.py).
+# 1.15.1 is the HiGHS version of the AMPL HiGHS driver used in WP-E2/E3, so both paths run the same solver release.
+highspy==1.15.1

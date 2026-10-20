@@ -24,8 +24,11 @@ from academic_benchmark.fairness import (
     ALNS_REQUIRED_PARAMS,
     GA_OPTIONAL_PARAMS,
     GA_REQUIRED_PARAMS,
+    PSO_OPTIONAL_PARAMS,
+    PSO_REQUIRED_PARAMS,
     validate_scientific_alns_params,
     validate_scientific_ga_params,
+    validate_scientific_pso_params,
 )
 from academic_benchmark.fair_pilot import (
     FairPilotError,
@@ -83,6 +86,7 @@ _ALLOWED_ALGORITHM_KEYS = {
     }),
     "ALNS-TSP": ALNS_REQUIRED_PARAMS | ALNS_OPTIONAL_PARAMS,
     "Core-GA-TSP": GA_REQUIRED_PARAMS | GA_OPTIONAL_PARAMS,
+    "Core-PSO-TSP": PSO_REQUIRED_PARAMS | PSO_OPTIONAL_PARAMS,
 }
 _REQUIRED_ALGORITHM_KEYS = {
     "Core-GWO-TSP-Pure": frozenset({
@@ -100,6 +104,7 @@ _REQUIRED_ALGORITHM_KEYS = {
     }),
     "ALNS-TSP": ALNS_REQUIRED_PARAMS,
     "Core-GA-TSP": GA_REQUIRED_PARAMS,
+    "Core-PSO-TSP": PSO_REQUIRED_PARAMS,
 }
 _REPLAY_FIELDS = (
     "tour",
@@ -200,6 +205,12 @@ def _validate_algorithm_parameters(
                 validate_scientific_ga_params(block)
             except ValueError as exc:
                 raise NativePilotError(f"Core-GA-TSP: {exc}") from exc
+            continue
+        if algorithm_id == "Core-PSO-TSP":
+            try:
+                validate_scientific_pso_params(block)
+            except ValueError as exc:
+                raise NativePilotError(f"Core-PSO-TSP: {exc}") from exc
             continue
         _strict_int(block["max_iterations"], f"{algorithm_id}.max_iterations", 1)
 

@@ -483,7 +483,7 @@ def test_fair_pilot_accepts_optional_ga_block_and_rejects_bad_ones(tmp_path) -> 
             )
     with pytest.raises(FairPilotError, match="exactly the approved"):
         load_fair_pilot_config(
-            _write(tmp_path, "d.json", _fair_pilot_config({**blocks, "Core-PSO-TSP": {}}))
+            _write(tmp_path, "d.json", _fair_pilot_config({**blocks, "Core-Foreign-TSP": {}}))
         )
 
 

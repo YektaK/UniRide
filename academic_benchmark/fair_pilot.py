@@ -24,6 +24,7 @@ from academic_benchmark.fairness import (
     validate_evaluation_budget,
     validate_scientific_alns_params,
     validate_scientific_ga_params,
+    validate_scientific_pso_params,
 )
 from academic_benchmark.core.algorithm_resolution import IdentifierSource
 from academic_benchmark.core.execution_gateway import (
@@ -49,8 +50,8 @@ APPROVED_ALGORITHMS = frozenset({
     "Core-ThreeOpt-TSP",
     "ALNS-TSP",
 })
-# C-16a: optional members; an existing configuration without them stays valid.
-OPTIONAL_ALGORITHMS = frozenset({"Core-GA-TSP"})
+# C-16a/C-16b: optional members; an existing configuration without them stays valid.
+OPTIONAL_ALGORITHMS = frozenset({"Core-GA-TSP", "Core-PSO-TSP"})
 _V1_ALGORITHM_ALIASES = {
     "Numba-2-opt": "Core-TwoOpt-TSP",
     "Numba-3-opt-bounded": "Core-ThreeOpt-TSP",
@@ -215,6 +216,11 @@ def load_fair_pilot_config(path: str | Path) -> FairPilotConfig:
             validate_scientific_ga_params(algorithms["Core-GA-TSP"])
         except ValueError as exc:
             raise FairPilotError(f"Core-GA-TSP: {exc}") from exc
+    if "Core-PSO-TSP" in algorithms:
+        try:
+            validate_scientific_pso_params(algorithms["Core-PSO-TSP"])
+        except ValueError as exc:
+            raise FairPilotError(f"Core-PSO-TSP: {exc}") from exc
     if protocol_version == V2_PROTOCOL:
         _validate_v2_algorithm_policy(algorithms)
     runs = _strict_int(data["runs"], "runs", 1)

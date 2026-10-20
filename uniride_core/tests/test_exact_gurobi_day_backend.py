@@ -162,6 +162,40 @@ def test_an_unavailable_or_rejected_side_is_inconclusive():
     assert crosscheck_day_results(ok, rejected).verdict == "inconclusive"
 
 
+def _homogeneous_day(results):
+    w1 = make_wave("w1", "pickup", 500, [("SwA", "Sw"), ("SoB", "So")], ARCS)
+    w2 = make_wave("w2", "pickup", 500, [("SoB", "So"), ("SoB", "So")], ARCS)
+
+    def solve(model, s):
+        return StageSolve(results[model.stage])
+
+    return run_day_stages(cell([w1, w2], (LARGE,)), solve_stage=solve)
+
+
+def test_one_proven_side_with_an_equal_objective_is_not_an_agreement_when_the_other_stops_on_gap_tolerance():
+    # stage 3 of one solver is feasible_with_gap 12 (reason gap_tolerance, not timing-dependent, lexicographic),
+    # the other proves 12 optimal: the values are equal but only one side proved it
+    proven = _fake_day({1: _opt(2), 2: _opt(30), 3: _opt(12)})
+    gapped = _fake_day({1: _opt(2), 2: _opt(30), 3: _gap(12, 11, reason="gap_tolerance")})
+    last = gapped.stages[2].result
+    assert (last.status, last.stop_reason, last.timing_dependent, last.non_lexicographic) == (
+        "feasible_with_gap", "gap_tolerance", False, False)
+    for a, b in ((proven, gapped), (gapped, proven)):
+        check = crosscheck_day_results(a, b)
+        assert [s.verdict for s in check.stages] == ["agree", "agree", "inconclusive"]
+        assert check.verdict == "inconclusive" and check.label == "crosscheck: inconclusive"
+
+
+def test_a_homogeneous_stage_one_gap_tolerance_on_one_side_is_inconclusive_in_both_orders():
+    proven = _homogeneous_day({1: _opt(2), 2: _opt(30)})
+    gapped = _homogeneous_day({1: _gap(2, 1, reason="gap_tolerance"), 2: _opt(30)})
+    assert gapped.stages[0].result.stop_reason == "gap_tolerance" and not gapped.stages[0].result.timing_dependent
+    for a, b in ((proven, gapped), (gapped, proven)):
+        check = crosscheck_day_results(a, b)
+        assert check.stages[0].verdict == "inconclusive"
+        assert check.verdict == "inconclusive"
+
+
 # ------------------------------------------------------------------ 2. status mapping and integer re-check
 @pytest.mark.parametrize("num,message,obj,bound,status,reason,timing", [
     (0, "Gurobi 13.0.3: optimal solution; objective 3", 3.0, 3.0, "optimal", "optimal", False),
@@ -187,6 +221,9 @@ def test_an_infeasibility_settled_by_ampl_presolve_is_labelled_and_never_counts_
     r = classify_gurobi_outcome(299, "presolve finds no feasible solution possible", None, None)
     assert (r.status, r.bound_source) == ("infeasible_proven", "ampl_presolve")
     assert classify_gurobi_outcome(200, "Gurobi 13.0.3: infeasible problem", None, None).bound_source is None
+    # only AMPL's own phrase counts; a solver message that merely mentions presolve is the solver's proof
+    mention = classify_gurobi_outcome(200, "Gurobi 13.0.3: infeasible problem after presolve removed 4 rows", None, None)
+    assert (mention.status, mention.bound_source) == ("infeasible_proven", None)
     settled = run_day_stages(_typed_cell(), large_limit=1, solve_stage=lambda m, s: StageSolve(r))
     plain = run_day_stages(_typed_cell(), large_limit=1, solve_stage=lambda m, s: StageSolve(_INFEASIBLE))
     assert crosscheck_day_results(plain, settled).verdict == "inconclusive"
@@ -294,6 +331,84 @@ def test_a_session_failing_midway_is_reported_not_raised():
 
     res = run_day_stages_gurobi(_typed_cell(), large_limit=1, session=Session(), stage_solver=vanish)
     assert res.status == "backend_unavailable" and res.note == "gone"
+
+
+class _FakeAmpl:
+    """Just enough of an amplpy session for one stage; records every call."""
+
+    def __init__(self, *, solve_error=None, num=0, message="", log=None):
+        self.calls, self.option = [], {}
+        self.solve_error, self.num, self.message = solve_error, num, message
+        self.solve_result = "failure"
+
+    def reset(self):
+        self.calls.append("reset")
+
+    def eval(self, text):
+        self.calls.append("eval")
+
+    def solve(self):
+        if self.solve_error is not None:
+            raise self.solve_error
+
+    def get_value(self, name):
+        return {"solve_result_num": self.num, "solve_message": self.message}.get(name, -1e30)
+
+    def get_objective(self, name):
+        return type("O", (), {"value": staticmethod(lambda: None)})()
+
+
+class _FakeSession:
+    solver_version = "Gurobi 0.0.0"
+
+    def __init__(self, ampl, log=()):
+        self.ampl, self._log = ampl, list(log)
+
+    def close(self):
+        pass
+
+
+def _run_with(monkeypatch, fake, log=()):
+    monkeypatch.setattr(gb, "load_day_model", lambda ampl, model: None)
+    return run_day_stages_gurobi(_typed_cell(), large_limit=1, session=_FakeSession(fake, log))
+
+
+def test_an_ampl_session_error_during_a_stage_is_backend_unavailable_not_raised(monkeypatch):
+    import amplpy  # the real error type of the session's error handler
+
+    err = amplpy.AMPLException("file", 3, 1, "Gurobi license expired for licensee someone@example.org")
+    res = _run_with(monkeypatch, _FakeAmpl(solve_error=err))
+    assert res.status == "backend_unavailable" and res.solver == "gurobi" and "AMPLException" in res.note
+    assert "someone@example.org" not in res.note  # licence text is scrubbed
+    broken = _run_with(monkeypatch, _FakeAmpl(solve_error=BrokenPipeError("pipe")))
+    assert broken.status == "backend_unavailable"
+
+
+def test_a_licence_lost_failure_result_is_backend_unavailable_but_other_failures_stay_rejected(monkeypatch):
+    lost = _run_with(monkeypatch, _FakeAmpl(num=500, message="?"), log=["Gurobi: license expired"])
+    assert lost.status == "backend_unavailable" and "license" in lost.note
+    gone = _run_with(monkeypatch, _FakeAmpl(num=999, message="Cannot invoke gurobi: no such program."))
+    assert gone.status == "backend_unavailable"
+    defect = _run_with(monkeypatch, _FakeAmpl(num=500, message="Gurobi: out of memory"))
+    assert defect.status == "rejected" and defect.stages[0].result.status == "rejected"
+
+
+def test_an_error_that_is_not_a_session_error_propagates(monkeypatch):
+    with pytest.raises(ValueError):
+        _run_with(monkeypatch, _FakeAmpl(solve_error=ValueError("our own defect")))
+
+
+def test_load_day_model_refuses_an_unknown_row_sense_and_a_duplicate_pair_before_touching_ampl():
+    model = build_joint_model(_typed_cell(), stage=1, large_limit=1)
+    assert model.rows[0].terms
+    row = model.rows[0]
+    bad_sense = dataclasses.replace(model, rows=(dataclasses.replace(row, sense="X"),) + model.rows[1:])
+    dup = dataclasses.replace(model, rows=(dataclasses.replace(row, terms=row.terms + (row.terms[0],)),) + model.rows[1:])
+    for broken in (bad_sense, dup):
+        fake = _FakeAmpl()
+        with pytest.raises(ValueError):
+            gb.load_day_model(fake, broken)
+        assert fake.calls == []  # nothing was sent to AMPL
 
 
 def test_input_that_is_not_ready_is_input_rejected_without_opening_a_session(monkeypatch):
@@ -416,7 +531,7 @@ def test_an_infeasible_typed_cell_is_infeasible_proven_from_both_and_the_raw_sta
     assert h.status == "infeasible_proven", f"{name}: HiGHS {h.status} raw {h.stages[0].result.solve_result}"
     assert g.status == "infeasible_proven", f"{name}: Gurobi {g.status} raw {g.stages[0].result.solve_result}"
     raw_highs, raw_gurobi = h.stages[0].result.solve_result, g.stages[0].result
-    assert raw_highs in ("kInfeasible", "kUnboundedOrInfeasible")
+    assert raw_highs == "kInfeasible"
     assert raw_gurobi.solve_result_num is not None and 200 <= raw_gurobi.solve_result_num < 300
     assert raw_gurobi.bound_source != "ampl_presolve", raw_gurobi.solver_message  # Gurobi itself proved it
     assert crosscheck_day_results(h, g).verdict == "agree"

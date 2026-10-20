@@ -983,6 +983,14 @@ def _make_canonical_pso_executor(algorithm_name="Core-PSO-TSP"):
     required, unknown keys rejected) and the paired seed from the manifest; the PSO has
     no polish stage, so ``polish_policy`` is always the no-polish shape. The counted
     diversity re-initialization is a solver parameter (``reinit_interval``), not polish.
+
+    Outside the two protocols (no ``fair_comparison`` / ``native_comparison`` key) the
+    executor is the legacy path: unknown keys are silently ignored, missing keys take the
+    defaults below and no parameter validation runs (same as the GA executor). Only the
+    protocol path validates strictly. The fixed parts of the diversity step
+    (``REINIT_RANDOM_FRACTION``, ``REINIT_MAX_SWAPS``) are not parameters; they are
+    written into every protocol row's ``termination_policy`` so that changing them makes
+    a different pooling identity.
     """
     # Defaults of the archived Bildiri PSO (reference only), used outside the protocols.
     defaults = {
@@ -1076,7 +1084,9 @@ def _make_canonical_pso_executor(algorithm_name="Core-PSO-TSP"):
         termination_detail = (
             f"max_iterations={cfg['max_iterations']};"
             f"max_no_improvement={cfg['max_no_improvement']};"
-            f"reinit_interval={cfg['reinit_interval']}"
+            f"reinit_interval={cfg['reinit_interval']};"
+            f"reinit_random_fraction={PSOOptimizer.REINIT_RANDOM_FRACTION};"
+            f"reinit_max_swaps={PSOOptimizer.REINIT_MAX_SWAPS}"
         )
         protocol_kwargs = dict(
             algorithm_id=algorithm_name,

@@ -57,9 +57,10 @@ EVALUATION_BUDGET_EXHAUSTED = "evaluation_budget_exhausted"
 # Native stopping conditions that count as "the stage completed". A native stage
 # that ended any other way (budget exhaustion cannot happen without a budget)
 # did not complete and fails the composite run.
+# The vocabulary is the one the native validators accept; ``time_limit`` is
+# deliberately absent (a wall-clock stop is not deterministic).
 NATIVE_COMPLETE_REASONS = frozenset({
     "max_iterations", "stagnation_limit", "no_improving_move",
-    "no_improvement", "time_limit",
 })
 
 _COST_TOLERANCE = 1e-9
@@ -98,6 +99,9 @@ class StageSpec:
     run: Callable[..., Any]
     params: Mapping[str, Any] = field(default_factory=dict)
     seed: Optional[int] = None  # None: deterministic stage, no secondary seed
+    # The matrix the stage was built for. When given it must equal the engine's
+    # matrix: both stages share one matrix (design rule 2). None skips the check.
+    matrix: Optional[Sequence[Sequence[float]]] = None
 
 
 @dataclass(frozen=True)
@@ -181,8 +185,16 @@ def resolve_global_fraction(
     return float(global_fraction)
 
 
-def _stage_cap(evaluation_budget: int, fraction: float) -> int:
-    # Exact decimal arithmetic: 100 * 0.29 is 28.999999999999996 in binary floats.
+def global_stage_cap(evaluation_budget: int, fraction: float) -> int:
+    """Global-stage ceiling ``floor(B * fraction)`` in exact decimal arithmetic.
+
+    Shared with the C-08 validators so that producer and checker use one rule.
+    The fraction is read by its written decimal (``Fraction(str(f))``), never by
+    its binary value: ``100 * 0.29`` is 28.999999999999996 in floats but the cap
+    is 29. A repeating fraction is read as written too: ``1/3`` is
+    ``0.3333333333333333``, so ``B=30000`` gives 9999, where float arithmetic
+    gives 10000.
+    """
     cap = math.floor(Fraction(str(fraction)) * evaluation_budget)
     if cap < 1:
         raise CompositionError(
@@ -216,6 +228,17 @@ def _validate_tour(
     return nodes
 
 
+def _check_stage_matrix(spec: StageSpec, matrix, label: str) -> None:
+    if spec.matrix is None or spec.matrix is matrix:
+        return
+    declared = [list(row) for row in spec.matrix]
+    if declared != [list(row) for row in matrix]:
+        raise CompositionError(
+            f"{label} stage {spec.stage_id} was built for a different matrix than "
+            "the composition runs on; both stages must share one matrix"
+        )
+
+
 def run_composition(
     matrix: Sequence[Sequence[float]],
     *,
@@ -229,6 +252,8 @@ def run_composition(
 
     ``evaluation_budget=None`` selects native mode (no budget, no fraction).
     """
+    _check_stage_matrix(global_stage, matrix, "global")
+    _check_stage_matrix(polish_stage, matrix, "polish")
     native = evaluation_budget is None
     if native:
         if global_fraction is not None:
@@ -319,7 +344,7 @@ def _polish_record(
 
 def _run_fixed(matrix, global_spec, polish_spec, budget_total, fraction) -> CompositionResult:
     shared = ObjectiveEvaluationBudget(budget_total)
-    cap = _stage_cap(budget_total, fraction)
+    cap = global_stage_cap(budget_total, fraction)
 
     # Global stage: pure, capped at floor(B * fraction) on the shared counter.
     global_result = _call_global(global_spec, shared, cap)
@@ -353,11 +378,10 @@ def _run_fixed(matrix, global_spec, polish_spec, budget_total, fraction) -> Comp
         )
 
     changed = polish_tour != global_tour
-    termination = (
-        EVALUATION_BUDGET_EXHAUSTED
-        if polish_result.termination_reason == EVALUATION_BUDGET_EXHAUSTED
-        else str(polish_result.termination_reason)
-    )
+    # The aggregate reason is the polish stage's own: the polish stage is last,
+    # so it reports ``evaluation_budget_exhausted`` exactly when the total budget
+    # cut it. The global stage's ceiling stays in its own record.
+    termination = str(polish_result.termination_reason)
     return CompositionResult(
         tour=polish_tour,
         cost=float(polish_result.cost),
@@ -383,10 +407,17 @@ def _run_native(matrix, global_spec, polish_spec) -> CompositionResult:
             "native composite requires both stages to complete; global stage "
             f"ended with {global_result.termination_reason!r}"
         )
+    polish_counter = ObjectiveEvaluationBudget(None)
     polish_result = _call_polish(
-        polish_spec, global_tour, float(global_result.cost), ObjectiveEvaluationBudget(None)
+        polish_spec, global_tour, float(global_result.cost), polish_counter
     )
     polish_tour = _validate_tour(polish_result.tour, matrix, polish_result.cost, "polish")
+    if int(polish_result.evaluations) != polish_counter.used:
+        raise CompositionError(
+            "polish stage accounting mismatch: the stage reports "
+            f"{polish_result.evaluations} evaluations but its counter holds "
+            f"{polish_counter.used}"
+        )
     if polish_result.termination_reason not in NATIVE_COMPLETE_REASONS:
         raise CompositionError(
             "native composite requires both stages to complete; polish stage "
@@ -505,7 +536,7 @@ def swarm_global_stage(
             },
         )
 
-    return StageSpec(stage_id, run, dict(params), seed=seed)
+    return StageSpec(stage_id, run, dict(params), seed=seed, matrix=matrix)
 
 
 def three_opt_polish_stage(
@@ -536,7 +567,7 @@ def three_opt_polish_stage(
             extra={"mode": search.mode},
         )
 
-    return StageSpec("Core-ThreeOpt-TSP", run, dict(params), seed=None)
+    return StageSpec("Core-ThreeOpt-TSP", run, dict(params), seed=None, matrix=matrix)
 
 
 __all__ = [
@@ -548,6 +579,7 @@ __all__ = [
     "SMOKE_GLOBAL_FRACTION",
     "StageRecord",
     "StageSpec",
+    "global_stage_cap",
     "resolve_global_fraction",
     "run_composition",
     "swarm_global_stage",

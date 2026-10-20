@@ -19,11 +19,6 @@ from uniride_core.algorithms.objective_budget import (
     improve_two_opt_budgeted,
     two_opt_evaluation_upper_bound,
 )
-from uniride_core.algorithms.three_opt import (
-    generate_three_opt_candidates,
-    is_symmetric_matrix,
-    iter_three_opt_cuts,
-)
 
 
 class FairnessValidationError(ValueError):

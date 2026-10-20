@@ -567,3 +567,108 @@ def test_pure_swarm_native_run_sums_separate_stage_counts():
         result.global_stage.consumed_evaluations
         + result.polish_stage.consumed_evaluations
     )
+
+
+# ---- review round 1 -------------------------------------------------------
+
+from uniride_core.algorithms.composition import global_stage_cap  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    "budget,fraction,expected",
+    [
+        (10, 0.75, 7),      # 7.5: round() would give 8
+        (7, 0.5, 3),        # 3.5: round() would give 4
+        (3, 0.99, 2),       # 2.97: round() would give 3
+        (100, 0.29, 29),    # binary float product is 28.999999999999996
+        (35, 0.8, 28),
+        # A repeating fraction is read by its written decimal: 1/3 is
+        # 0.3333333333333333, so the product is 9999.99... and the cap 9999,
+        # where float arithmetic (30000 * (1/3) == 10000.0) would say 10000.
+        (30000, 1 / 3, 9999),
+    ],
+)
+def test_global_stage_cap_is_a_floor_of_the_written_decimal(budget, fraction, expected):
+    assert global_stage_cap(budget, fraction) == expected
+
+
+@pytest.mark.parametrize("budget,fraction,cap", [(10, 0.75, 7), (7, 0.5, 3)])
+def test_engine_allocates_the_floored_cap(budget, fraction, cap):
+    result = run_composition(
+        SYM9, global_stage=stub_global(SYM9, 0), polish_stage=stub_polish(),
+        evaluation_budget=budget, global_fraction=fraction,
+    )
+    assert result.global_stage.allocated_evaluations == cap
+    assert result.global_stage.consumed_evaluations <= cap
+
+
+@pytest.mark.parametrize("reason", ["time_limit", "no_improvement", "evaluation_budget_exhausted"])
+def test_native_reasons_outside_the_validator_vocabulary_are_rejected(reason):
+    with pytest.raises(CompositionError, match="complete"):
+        run_composition(
+            SYM9, global_stage=stub_global(SYM9, 3, reason_when_done=reason),
+            polish_stage=stub_polish(),
+        )
+    with pytest.raises(CompositionError, match="complete"):
+        run_composition(
+            SYM9, global_stage=stub_global(SYM9, 3), polish_stage=stub_polish(reason=reason),
+        )
+
+
+def test_native_polish_that_underreports_its_counter_is_refused():
+    def run(tour, cost, budget):
+        budget.consume(5)
+        return PolishStageResult(
+            tour=list(tour), cost=cost, iterations=0, evaluations=2,
+            termination_reason="no_improving_move",
+        )
+
+    with pytest.raises(CompositionError, match="account"):
+        run_composition(
+            SYM9, global_stage=stub_global(SYM9, 3),
+            polish_stage=StageSpec("Under", run, {}, seed=None),
+        )
+
+
+def test_aggregate_reason_is_the_polish_reason_and_global_ceiling_stays_in_its_record():
+    # global stage refused its atomic phase (ceiling reached); polish ends naturally
+    natural = run_composition(
+        SYM9, global_stage=stub_global(SYM9, 50),
+        polish_stage=stub_polish(reason="max_iterations"),
+        evaluation_budget=B, global_fraction=FRACTION,
+    )
+    assert natural.global_stage.termination_reason == "evaluation_budget_exhausted"
+    assert natural.termination_reason == "max_iterations"
+    # polish cut by the total budget
+    cut = run_composition(
+        SYM9, global_stage=stub_global(SYM9, 0),
+        polish_stage=three_opt_polish_stage(SYM9, THREE_OPT_PARAMS),
+        evaluation_budget=2, global_fraction=0.5,
+    )
+    assert cut.termination_reason == "evaluation_budget_exhausted"
+    assert cut.polish_stage.consumed_evaluations == cut.polish_stage.allocated_evaluations
+
+
+def test_both_stages_must_share_the_composition_matrix():
+    other = _sym(9, 4)
+    assert other != SYM9 and len(other) == len(SYM9)
+    with pytest.raises(CompositionError, match="matrix"):
+        run_composition(
+            SYM9, global_stage=stub_global(SYM9, 1),
+            polish_stage=three_opt_polish_stage(other, THREE_OPT_PARAMS),
+            evaluation_budget=100, global_fraction=0.5,
+        )
+    with pytest.raises(CompositionError, match="matrix"):
+        run_composition(
+            SYM9, global_stage=swarm_global_stage("GWO", other, GWO_PARAMS, seed=1),
+            polish_stage=three_opt_polish_stage(SYM9, THREE_OPT_PARAMS),
+            evaluation_budget=100, global_fraction=0.5,
+        )
+    # an equal copy is the same matrix
+    copy = [list(row) for row in SYM9]
+    result = run_composition(
+        SYM9, global_stage=stub_global(SYM9, 1),
+        polish_stage=three_opt_polish_stage(copy, THREE_OPT_PARAMS),
+        evaluation_budget=100, global_fraction=0.5,
+    )
+    assert result.evaluations <= 100

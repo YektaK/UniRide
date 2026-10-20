@@ -842,7 +842,13 @@ def _make_canonical_ga_executor(algorithm_name="Core-GA-TSP"):
         "mutation_rate": 0.15, "elite_count": 2, "tournament_size": 3,
         "max_no_improvement": 100,
     }
-    aliases = {"generations": "max_iterations", "iterations": "max_iterations"}
+    # Non-protocol callers only: the DOE/Optuna GA space (NUMBA_PARAM_SPACES["GA"],
+    # shared with Numba-GA) names the population and elite keys pop_size/elite_size.
+    # Protocol runs stay on the strict schema and take no aliases.
+    aliases = {
+        "generations": "max_iterations", "iterations": "max_iterations",
+        "pop_size": "population_size", "elite_size": "elite_count",
+    }
 
     def executor(problem, params, seed, run_idx):
         import time as _time
@@ -870,7 +876,8 @@ def _make_canonical_ga_executor(algorithm_name="Core-GA-TSP"):
             })
         elif _is_routing_problem(problem):
             return _run_core_routing_executor(
-                problem, params, seed, run_idx, algorithm_name
+                problem, params, seed, run_idx, algorithm_name,
+                engine_name=algorithm_name,
             )
         else:
             cfg = dict(defaults)

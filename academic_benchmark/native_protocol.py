@@ -188,6 +188,8 @@ class NativeComparisonManifest:
             if reason not in {"max_iterations", "stagnation_limit"}:
                 errors.append("ALNS native termination_reason is invalid")
         elif family == "GA":
+            if getattr(result, "variant", None) != "pure":
+                errors.append("GA comparison accepts only pure variants")
             if acceptance != "population_evolution":
                 errors.append("GA acceptance_policy must be population_evolution")
             if window is not None:

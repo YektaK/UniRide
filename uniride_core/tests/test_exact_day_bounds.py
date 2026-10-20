@@ -296,3 +296,17 @@ def test_d_k_w_equals_wp_e3_kstar_on_three_archived_waves():
         value = db.wave_value_from_sp(res)
         assert value.value == int(row["K_star"]), (row["wave_id"], value, row["K_star"])
         assert value.proof == db.PROOF_SOLVER
+
+
+# ------------------------------------------------------------------ the widened window must use the SMALLEST tour
+def test_widened_window_uses_the_smallest_tour_not_the_longest():
+    # wave columns have tours 10 ({P}), 38 ({P,Q} in one route) and 60 ({Q} alone); the best plan serves w1 with the
+    # single 38-minute route, so a second wave that ends before it starts can reuse the vehicle: day optimum 1
+    d = "D.Kampus"
+    arcs = {(d, "P"): 5, ("P", d): 5, (d, "Q"): 30, ("Q", d): 30, ("P", "Q"): 3, ("Q", "P"): 3}
+    w1 = make_wave("w1", "pickup", 500, [("P", "Sw"), ("Q", "So")], arcs, ride=60, tour=90)
+    w2 = make_wave("w2", "pickup", 452, [("P", "Sw")], arcs, ride=60, tour=90)  # busy [442, 462)
+    inst, b = bounds_of([w1, w2], (LARGE,))
+    assert sorted({c.tour for c in inst.waves[0].columns}) == [10, 38, 60]
+    assert brute_force_day_optimum([w1, w2], (LARGE,)).objective[0] == 1
+    assert b.lb0w.value == 1  # a window widened by the longest tour (60) would claim 2 and be invalid

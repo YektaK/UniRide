@@ -41,6 +41,10 @@ ATSP_DOWNLOAD_URL = "http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/atsp/
 _DOWNLOAD_TIMEOUT = 30
 _DOWNLOAD_USER_AGENT = "UniRide-Optimizer/1.0 (+https://uniride.dev)"
 _VALID_PROBLEM_NAME = re.compile(r"^[a-zA-Z0-9_-]+$")
+# NAME header. Only blanks/tabs may separate keyword, separator and value: ``\s`` would match a
+# line break, so a value-less ``NAME:`` line took the first word of the next header line
+# (``TYPE:``). A value-less NAME gets no match and falls back to ``name_hint`` like an absent NAME.
+_NAME_HEADER_PATTERN = r"^NAME[ \t]*[: \t][ \t]*(\S+)"
 
 # Known TSPLIB optimal solutions (source: TSPLIB95)
 TSPLIB_OPTIMALS: Dict[str, int] = {
@@ -121,7 +125,7 @@ def parse_tsplib_text(content: str, name_hint: str = "") -> Optional[Dict]:
     ewt_m = re.search(r"EDGE_WEIGHT_TYPE\s*[:\s]\s*(\S+)", header, re.IGNORECASE)
     type_m = re.search(r"TYPE\s*[:\s]\s*(\S+)", header, re.IGNORECASE)
     name_matches = list(re.finditer(
-        r"^NAME\s*[:\s]\s*(\S+)", header, re.IGNORECASE | re.MULTILINE
+        _NAME_HEADER_PATTERN, header, re.IGNORECASE | re.MULTILINE
     ))
     if not dim_m:
         return None
@@ -195,7 +199,7 @@ def parse_atsp_text(content: str, name_hint: str = "") -> Optional[Dict]:
         return None
     dimension = int(dim_m.group(1))
     name_matches = list(re.finditer(
-        r"^NAME\s*[:\s]\s*(\S+)", header, re.IGNORECASE | re.MULTILINE
+        _NAME_HEADER_PATTERN, header, re.IGNORECASE | re.MULTILINE
     ))
     ewt_m = re.search(r"EDGE_WEIGHT_TYPE\s*[:\s]\s*(\S+)", header, re.IGNORECASE)
     fmt_m = re.search(r"EDGE_WEIGHT_FORMAT\s*[:\s]\s*(\S+)", header, re.IGNORECASE)

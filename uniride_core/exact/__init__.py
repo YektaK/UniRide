@@ -11,6 +11,13 @@ from .day_instance import (
     DayWave,
     build_day_instance,
 )
+from .gurobi_day_backend import (
+    CrossCheck,
+    GurobiSettings,
+    crosscheck_day_results,
+    gurobi_probe,
+    run_day_stages_gurobi,
+)
 from .highs_backend import HighsSettings, DaySolveResult, highs_probe, run_day_stages
 from .wave_instance import (
     EXACT_STATUSES,
@@ -25,4 +32,5 @@ __all__ = [
     "NOT_RUN_ENUMERATION_CAP", "DayColumn", "DayInstance", "DayWave", "build_day_instance",
     "HighsSettings", "DaySolveResult", "highs_probe", "run_day_stages",
     "DayBounds", "InfeasibilityCertificate", "compute_day_bounds",
+    "CrossCheck", "GurobiSettings", "crosscheck_day_results", "gurobi_probe", "run_day_stages_gurobi",
 ]

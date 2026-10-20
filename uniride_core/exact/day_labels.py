@@ -11,9 +11,16 @@ table (``crosscheck_status``, design 6.1), so the label stays the design label a
   ``optimal_stage1_by_bound``, ``infeasible_solver_proven`` and a tier-2 ``infeasible_certified`` need the cross-check
   verdict ``agree`` (E14: every optimal / solver-proven-infeasible paper cell, and tier 2 rests on solver-proven wave
   minima, design 3.2). A tier-1 certificate rests on arithmetic only and needs none. All other labels claim no proof.
+* A stage whose solver bound was clipped to the incumbent (flag ``bound_above_incumbent``) withholds the claim for every
+  label (reason ``bound_above_incumbent``); such a bound is listed as unverified and never used.
+* A certificate whose tier and contributions disagree (tier 1 not all arithmetic, tier 2 with an unverified or unknown
+  proof, wrong kind, bound not above the limit) makes the cell ``rejected`` (``certificate_invalid``).
 * ``proof_claim_reason`` says why (``crosscheck_agree``, ``crosscheck_not_run``, ``crosscheck_inconclusive``,
   ``arithmetic_certificate``, ``not_a_proof_label``, ``rejected``). A cross-check verdict ``blocking`` (the two solvers
   disagree, design 4.1) makes the cell ``rejected`` ("certificate, checker or objective cross-check failed", design 4.3).
+
+``optimal_stage1_by_bound`` needs a verified LB0, LB0w or LB_S equal to the stage-1 value; the solver's own bound never
+qualifies, and on a tie the section 3 bound is the reported source.
 
 Bounds (design 3 and 4.3): the stage-1 value is K (homogeneous: LB0, LB0w) or S (typed: LB_S). ``bound_used`` is the best
 bound among the solver's stage-1 bound and those §3 bounds, with its source and proof tag. A bound whose contributing wave
@@ -29,7 +36,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
-from .day_bounds import PROOF_ARITHMETIC, PROOF_SOLVER, PROOF_UNVERIFIED, BoundResult, DayBounds
+from .day_bounds import CERT_CAPACITY_FLOOR, CERT_WAVE_MIN_LARGE, PROOF_ARITHMETIC, PROOF_SOLVER, PROOF_UNVERIFIED, BoundResult, DayBounds
 from .highs_backend import BOUND_ABOVE_INCUMBENT
 
 LABEL_OPTIMAL = "optimal"
@@ -55,7 +62,8 @@ CROSSCHECK_VERDICTS = (CROSSCHECK_AGREE, CROSSCHECK_BLOCKING, CROSSCHECK_INCONCL
 SOURCE_SOLVER = "solver"
 SOURCE_CERTIFICATE = "certificate"
 _PROOF_RANK = {PROOF_ARITHMETIC: 2, PROOF_SOLVER: 1, PROOF_UNVERIFIED: 0}
-_SOURCE_ORDER = ("solver", "trivial_zero", "ampl_presolve", "lb0w", "lb0", "lb_s")  # ties: earlier wins
+_SECTION3_BOUNDS = ("lb0", "lb0w", "lb_s")  # the only bounds that may make a stage-1 value optimal (design 4.3)
+_SOURCE_ORDER = ("lb0w", "lb0", "lb_s", "solver", "trivial_zero", "ampl_presolve")  # ties: earlier wins (a section 3 bound is named first)
 
 
 @dataclass(frozen=True)
@@ -104,6 +112,8 @@ def _candidates(stage1, bounds: Optional[DayBounds], typed: bool) -> Tuple[Bound
     if stage1 is not None and stage1.bound_ceil is not None:
         source = stage1.bound_source or SOURCE_SOLVER
         proof = PROOF_ARITHMETIC if source == "trivial_zero" else PROOF_SOLVER
+        if str(stage1.solver_message or "").startswith(BOUND_ABOVE_INCUMBENT):
+            proof = PROOF_UNVERIFIED  # clipped to the incumbent: it contradicts the solver, so it grants nothing
         out.append(BoundCandidate(source, int(stage1.bound_ceil), proof))
     if bounds is not None:
         wanted = (("lb_s", bounds.lb_s),) if typed else (("lb0", bounds.lb0), ("lb0w", bounds.lb0w))
@@ -136,10 +146,28 @@ def _flags(result) -> Tuple[str, ...]:
     return tuple(flags)
 
 
-def _gate(label: str, crosscheck: str, certificate_tier: Optional[int]) -> Tuple[bool, str]:
-    """Whether a paper table may present this cell as proven (E14), and why."""
+def _certificate_problem(c) -> Optional[str]:
+    """Why a certificate is not trusted (``None`` when it is consistent with its tier). Tier 1 rests on the arithmetic
+    capacity floor only; tier 2 may add solver-proven wave minima but no unverified number (design 3.2)."""
+    if c.tier not in (1, 2):
+        return f"tier {c.tier!r} is not 1 or 2"
+    proofs = {x.proof for x in c.contributions}
+    if c.tier == 1 and (proofs - {PROOF_ARITHMETIC} or c.kind != CERT_CAPACITY_FLOOR):
+        return "tier 1 needs arithmetic contributions and the capacity-floor kind"
+    if c.tier == 2 and (PROOF_UNVERIFIED in proofs or proofs - {PROOF_ARITHMETIC, PROOF_SOLVER} or c.kind != CERT_WAVE_MIN_LARGE):
+        return "tier 2 needs verified contributions and the wave-minimum kind"
+    if not c.lower_bound > c.large_limit:
+        return "the bound does not exceed the large-vehicle limit"
+    return None
+
+
+def _gate(label: str, crosscheck: str, certificate_tier: Optional[int], flags: Tuple[str, ...] = ()) -> Tuple[bool, str]:
+    """Whether a paper table may present this cell as proven (E14), and why. A solver bound that contradicts the incumbent
+    (flag ``bound_above_incumbent``) on any stage withholds the claim: HiGHS clips it before the cross-check sees it."""
     if label == LABEL_REJECTED:
         return False, "rejected"
+    if any(f.startswith(BOUND_ABOVE_INCUMBENT) for f in flags):
+        return False, BOUND_ABOVE_INCUMBENT
     if label == LABEL_INFEASIBLE_CERTIFIED and certificate_tier == 1:
         return True, "arithmetic_certificate"
     if label in (LABEL_OPTIMAL, LABEL_OPTIMAL_STAGE1_BY_BOUND, LABEL_INFEASIBLE_SOLVER_PROVEN, LABEL_INFEASIBLE_CERTIFIED):
@@ -174,7 +202,7 @@ def label_cell(*, enumeration_complete: bool, result, bounds: Optional[DayBounds
 
     def make(label: str, reason: str = "", *, used: Optional[BoundCandidate] = None, tier: Optional[int] = None,
              extra_flags: Tuple[str, ...] = ()) -> CellLabel:
-        allowed, why = _gate(label, crosscheck, tier)
+        allowed, why = _gate(label, crosscheck, tier, flags)
         return CellLabel(label=label, reason=reason, bound_used=None if used is None else used.value,
                          bound_source=None if used is None else used.name,
                          bound_proof=None if used is None else used.proof, bounds_considered=candidates,
@@ -193,6 +221,8 @@ def label_cell(*, enumeration_complete: bool, result, bounds: Optional[DayBounds
     if crosscheck == CROSSCHECK_BLOCKING:
         return make(LABEL_REJECTED, "crosscheck_disagreement")
     if certificate is not None:
+        if _certificate_problem(certificate) is not None:
+            return make(LABEL_REJECTED, "certificate_invalid")
         if has_plan:
             return make(LABEL_REJECTED, "certificate_contradicts_plan")
         cert_candidate = BoundCandidate(SOURCE_CERTIFICATE, certificate.lower_bound, PROOF_ARITHMETIC
@@ -217,6 +247,9 @@ def label_cell(*, enumeration_complete: bool, result, bounds: Optional[DayBounds
         extra = ("value_below_unverified_bound",)
     if result.status == "optimal":
         return make(LABEL_OPTIMAL, used=best, extra_flags=extra)
-    if stage1.status != "optimal" and best is not None and value == best.value:
-        return make(LABEL_OPTIMAL_STAGE1_BY_BOUND, used=best, extra_flags=extra)
+    # design 4.3: by bound only when the stage-1 value equals a verified LB0, LB0w or LB_S (never the solver's own bound,
+    # which may be clipped to the incumbent)
+    matching = [c for c in candidates if c.name in _SECTION3_BOUNDS and c.proof != PROOF_UNVERIFIED and c.value == value]
+    if stage1.status != "optimal" and matching:
+        return make(LABEL_OPTIMAL_STAGE1_BY_BOUND, used=_best_verified(tuple(matching)), extra_flags=extra)
     return make(LABEL_FEASIBLE_WITH_GAP, used=best, extra_flags=extra)

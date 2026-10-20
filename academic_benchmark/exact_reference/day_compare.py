@@ -148,27 +148,46 @@ class ReproductionResult:
     note: str = ""
 
 
-def _proven_prefix(label: str, length: int, override: Optional[int]) -> int:
+def _proven_prefix(label: str, length: int, override: Optional[int], statuses: Optional[Sequence[str]] = None) -> int:
     if override is not None:
         return min(_int(override, "production_proven_prefix"), length)
+    prefix = 0
     if label == "optimal":
-        return length
-    if label == "optimal_stage1_by_bound":
-        return min(1, length)
-    return 0
+        prefix = length
+    elif label == "optimal_stage1_by_bound":
+        prefix = min(1, length)
+    if statuses is not None:  # the leading stages that ended optimal are proven even when a later stage hit a limit
+        leading = 0
+        for status in statuses:
+            if status != "optimal":
+                break
+            leading += 1
+        prefix = max(prefix, min(leading, length))
+    return prefix
 
 
 def reproduction_category(prototype: PrototypeClaim, *, production_label: str,
                           production_objective: Optional[Sequence[int]] = None, same_routes: Optional[bool] = None,
                           components: Optional[int] = None,
-                          production_proven_prefix: Optional[int] = None) -> ReproductionResult:
+                          production_proven_prefix: Optional[int] = None,
+                          production_stage_statuses: Optional[Sequence[str]] = None) -> ReproductionResult:
     """The category of design 6.3 for one cell.
 
     ``production_objective`` is required for the labels that carry a value (``optimal``, ``optimal_stage1_by_bound``,
     ``feasible_with_gap``). ``components`` compares only the first values of both tuples (a prototype that reports no car
     minutes). ``same_routes=False`` turns an equal objective into ``co_optimal_alternative`` (route identity is otherwise
     never looked at). ``production_proven_prefix`` overrides how many leading objective values production proved (default:
-    all for ``optimal``, the first for ``optimal_stage1_by_bound``, none otherwise).
+    all for ``optimal``, the first for ``optimal_stage1_by_bound``, none otherwise). ``production_stage_statuses`` (the
+    ``stage_statuses`` of the cell label) raises that default to the number of leading stages that ended ``optimal``, so a
+    ``feasible_with_gap`` cell whose stage 1 is proven still blocks a checked prototype plan with a smaller K or S.
+
+    Runner duty (design 5.3): this function raises ``BlockingDefect`` only where production proved a value. When production
+    is ``bound_only`` or ``feasible_with_gap`` (or ``production_open``) and the prototype plan passes the checker, the
+    runner must also call ``check_value_not_below_bounds`` with the prototype value and the valid bounds of the cell (a
+    checked plan below a valid bound is a defect of the bound or of production, not a category).
+
+    A prototype value against a production infeasibility proof needs the checker verdict (``plan_checked`` True or False);
+    ``None`` is refused (design 6.3: run the checker on every disagreement).
 
     Raises ``BlockingDefect`` for the disagreement rule, ``NotComparable`` when both sides are open, ``ValueError`` for a
     ``rejected`` production cell (it is a defect, not a result) or an unknown label.
@@ -191,6 +210,9 @@ def reproduction_category(prototype: PrototypeClaim, *, production_label: str,
             return ReproductionResult(CATEGORY_PROTOTYPE_OPEN)
         if prototype.kind == "infeasible":
             return ReproductionResult(CATEGORY_EQUAL)
+        if prototype.plan_checked is None:
+            raise ValueError("a prototype value against a production infeasibility proof needs the checker verdict on "
+                             "its plan (plan_checked True or False), design 6.3")
         if verified:
             raise BlockingDefect(BLOCKING_PROTOTYPE_PLAN_VS_INFEASIBLE,
                                  f"a prototype plan {prototype.objective} passes the checker but production proved "
@@ -213,7 +235,7 @@ def reproduction_category(prototype: PrototypeClaim, *, production_label: str,
         p, q = p[:n], q[:n]
     elif len(p) != len(q):
         raise ValueError(f"objective tuples differ in length: {len(p)} and {len(q)}")
-    m = _proven_prefix(production_label, len(q), production_proven_prefix)
+    m = _proven_prefix(production_label, len(q), production_proven_prefix, production_stage_statuses)
     if verified and m and p[:m] < q[:m]:
         raise BlockingDefect(BLOCKING_PROTOTYPE_BEATS_OPTIMUM,
                              f"a prototype plan {p} passes the checker and beats the proven production value {q} "

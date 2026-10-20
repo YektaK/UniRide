@@ -266,8 +266,8 @@ def gurobi_solve_stage(session: AmplSession, model: JointModel, settings: Option
         ampl.solve()
     except Exception as exc:  # noqa: BLE001 - classified below
         if _is_session_error(exc):
-            note = " ".join(_scrub(str(exc)).splitlines())[:200]
-            raise GurobiBackendUnavailable(f"AMPL session failed during a stage: {type(exc).__name__}: {note}") from exc
+            # the exception type only, as ampl_backend.open does: the text can carry licence or path details
+            raise GurobiBackendUnavailable(f"AMPL session failed during a stage: {type(exc).__name__}") from exc
         raise
     seconds = time.perf_counter() - t0
     num = int(ampl.get_value("solve_result_num"))

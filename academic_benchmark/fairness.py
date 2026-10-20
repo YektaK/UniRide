@@ -133,6 +133,45 @@ def validate_scientific_ga_params(params: Mapping[str, Any]) -> dict[str, Any]:
     return dict(params)
 
 
+PSO_REQUIRED_PARAMS = frozenset({
+    "swarm_size", "max_iterations", "max_no_improvement", "inertia_weight",
+    "cognitive_coeff", "social_coeff", "max_velocity_size", "reinit_interval",
+})
+PSO_OPTIONAL_PARAMS = frozenset()
+
+
+def validate_scientific_pso_params(params: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate the exact scientific PSO configuration schema (C-16b).
+
+    Every key is required and unknown keys (for example a polish or 2-opt knob that the
+    pure PSO does not have) are rejected, so a result row can never be produced from a
+    configuration the solver silently ignored. ``reinit_interval`` 0 disables the
+    counted diversity re-initialization.
+    """
+    missing = PSO_REQUIRED_PARAMS - params.keys()
+    unknown = params.keys() - PSO_REQUIRED_PARAMS - PSO_OPTIONAL_PARAMS
+    if missing or unknown:
+        raise ValueError(
+            "PSO parameter schema mismatch; "
+            f"missing={sorted(missing)}, unknown={sorted(unknown)}"
+        )
+    for field, minimum in (
+        ("swarm_size", 2), ("max_iterations", 1), ("max_no_improvement", 1),
+        ("max_velocity_size", 1), ("reinit_interval", 0),
+    ):
+        value = params[field]
+        if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
+            raise ValueError(f"invalid PSO parameter: {field}")
+    value = params["inertia_weight"]
+    if not _is_finite_alns_number(value) or not 0 <= value <= 1:
+        raise ValueError("invalid PSO parameter: inertia_weight")
+    for field in ("cognitive_coeff", "social_coeff"):
+        value = params[field]
+        if not _is_finite_alns_number(value) or value < 0:
+            raise ValueError(f"invalid PSO parameter: {field}")
+    return dict(params)
+
+
 @dataclass
 class FairRunResult(RunResult):
     """Backward-compatible RunResult carrying the academic fairness contract."""
@@ -216,6 +255,7 @@ class FairComparisonManifest:
         "Numba-HHO": "HHO",
         "ALNS-TSP": "ALNS",
         "Core-GA-TSP": "GA",
+        "Core-PSO-TSP": "PSO",
     }
     POLISH_POLICY_FIELDS = ("enabled", "initial", "periodic", "final", "operator")
     MANIFEST_FIELDS = (
@@ -464,6 +504,17 @@ class FairComparisonManifest:
                     "evaluation_budget_exhausted", "max_iterations", "stagnation_limit",
                 }:
                     errors.append("GA fixed termination_reason is invalid")
+            elif family == "PSO":
+                if getattr(result, "variant", None) != "pure":
+                    errors.append("PSO comparison accepts only pure variants")
+                if acceptance_policy != "population_evolution":
+                    errors.append("PSO acceptance_policy must be population_evolution")
+                if neighborhood_window is not None:
+                    errors.append("PSO neighborhood_window must be null")
+                if termination_reason not in {
+                    "evaluation_budget_exhausted", "max_iterations", "stagnation_limit",
+                }:
+                    errors.append("PSO fixed termination_reason is invalid")
             if termination_reason not in self.TERMINATION_REASONS:
                 errors.append("unsupported termination_reason")
 

@@ -178,6 +178,9 @@ def highs_solve_stage(model: JointModel, settings: Optional[HighsSettings] = Non
     settings = settings or HighsSettings()
     highspy = _import_highspy()
     lp = to_highs_lp(model, highspy)
+    # HiGHS keeps one global scheduler for the whole process; a run that used other threads would make `threads=1`
+    # fail (model status kNotset). Reset it so every stage really runs single-threaded (design 4.2).
+    highspy.Highs.resetGlobalScheduler(True)
     h = highspy.Highs()
     for key, val in settings.options():
         if h.setOptionValue(key, val) != highspy.HighsStatus.kOk:

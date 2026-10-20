@@ -49,7 +49,7 @@ def highs():
     """Skip, with the reason, only when highspy is genuinely absent; a broken install fails."""
     available, version, reason = highs_probe()
     if not available:
-        pytest.skip(f"highspy unavailable: {reason}")
+        pytest.skip(reason)
     return version
 
 
@@ -360,3 +360,43 @@ def test_a_solve_after_another_highs_run_with_more_threads_still_runs_single_thr
     other.run()
     out = highs_solve_stage(model)
     assert out.result.status == "optimal" and out.result.objective == enumerate_stage_optimum(model).objective
+
+
+# ------------------------------------------------------------------ J4 polish
+def test_a_bound_above_the_incumbent_is_clipped_and_the_contradiction_is_recorded():
+    r = classify_highs_outcome("kOptimal", incumbent=3, bound=3.4)  # ceil(3.4 - 1e-6) = 4 > 3
+    assert r.bound_ceil == 3 and r.status == "optimal"
+    assert r.solver_message is not None and r.solver_message.startswith("bound_above_incumbent")
+    assert "4" in r.solver_message and "3" in r.solver_message  # ceil(bound) and incumbent are named
+    # a consistent bound (also one that merely rounds to the incumbent) leaves no note
+    assert classify_highs_outcome("kOptimal", incumbent=3, bound=3.0).solver_message is None
+    assert classify_highs_outcome("kOptimal", incumbent=3, bound=2.2).solver_message is None
+    assert classify_highs_outcome("kTimeLimit", incumbent=3, bound=3.7).solver_message.startswith("bound_above_incumbent")
+
+
+@pytest.mark.requires_highspy
+def test_highs_stage_records_wall_seconds_of_the_run_call_and_the_time_limit(highs, monkeypatch):
+    model = build_joint_model(_typed_cell(), stage=1, large_limit=1)
+    out = highs_solve_stage(model, HighsSettings(time_limit=12.5))
+    assert out.result.time_limit == 12.5
+    assert out.result.wall_seconds is not None and 0.0 <= out.result.wall_seconds < 60
+    ticks = iter([100.0, 102.5])
+
+    class FakeTime:
+        @staticmethod
+        def perf_counter():
+            return next(ticks)
+
+    monkeypatch.setattr(highs_backend, "time", FakeTime)  # only the module's own clock, never the global time module
+    out = highs_solve_stage(model)
+    assert out.result.wall_seconds == 2.5 and out.result.time_limit == 600.0
+    monkeypatch.undo()
+    # also on the refusal path of a bad solution the stage still records its timing
+    bad = highs_solve_stage(model, HighsSettings(time_limit=0.0))
+    assert bad.result.wall_seconds is not None and bad.result.time_limit == 0.0
+
+
+def test_skip_reason_names_the_cause_once(monkeypatch):
+    monkeypatch.setitem(sys.modules, "highspy", None)
+    available, version, reason = highs_probe()
+    assert not available and reason.count("highspy unavailable") == 1

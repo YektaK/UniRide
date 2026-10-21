@@ -28,7 +28,13 @@ OFFLINE: reads the committed archives through ``scripts/exact_archive_loader.py`
 * Output rule (E04): ``--out`` must lie below ``docs/paper/results`` when inside the repository, must not overlap a
   source campaign or an existing results folder, and must not exist non-empty; otherwise exit 2 before any work.
 * Label hook: ``label_day_cell(facts)`` below is the ONLY place that decides ``day_status``, ``bound_used`` and
-  ``bound_source`` for a solved cell. J9b (``uniride_core/exact/day_labels.py``) fills it at integration.
+  ``bound_source`` for a solved cell: an adapter on J9b's ``uniride_core.exact.day_labels.label_cell`` (day verdict
+  ``crosscheck_status`` -> ``crosscheck``, wave-value verdict ``wave_values_status`` -> ``wave_values_crosscheck``, the
+  independent checker -> ``checker_ok``, the primary ``DaySolveResult`` and the J2 ``DayBounds``). Statuses the runner set
+  itself are final: ``input_rejected`` and a rejection by the certificate, the checker or the TypeScript CLI are never
+  replaced by a label (``settle_label``). ``day_joint.csv`` carries the label fields ``bound_proof``, ``flags``,
+  ``unverified_bounds``, ``proof_claim_allowed``, ``proof_claim_reason`` and ``reason``; a paper table presents a cell as
+  proven only when ``proof_claim_allowed`` is ``True``.
 
 Files (design 6.1): ``day_joint_manifest.json``, ``day_joint.csv``, ``day_joint_stages.csv``, ``day_joint_plans.json``,
 ``day_joint_week.csv``, ``lb0.csv``. Not written here: ``README.md`` (lead, J11), ``comparison.csv`` and
@@ -67,6 +73,7 @@ from academic_benchmark.validation import day_plan as checker  # noqa: E402
 from uniride_core.exact import ampl_backend as ab  # noqa: E402
 from uniride_core.exact import certification as cert  # noqa: E402
 from uniride_core.exact import day_bounds as bounds_mod  # noqa: E402
+from uniride_core.exact import day_labels  # noqa: E402
 from uniride_core.exact import gurobi_day_backend as gdb  # noqa: E402
 from uniride_core.exact import highs_backend as hb  # noqa: E402
 from uniride_core.exact.day_instance import READY, build_day_instance  # noqa: E402
@@ -104,7 +111,7 @@ OUT_FILES = ("day_joint.csv", "day_joint_stages.csv", "day_joint_plans.json", "d
 CSV_FIELDS = (
     "fleet", "date", "R", "L", "waves", "legs", "columns", "columns_outside_day", "day_status", "K_or_S", "large_peak",
     "total_minutes", "car_minutes", "routes", "lb0", "lb0w", "lb_L", "lb_S", "bound_used", "bound_source",
-    "certificate_tier", "timing_dependent", "non_lexicographic", "crosscheck_solver", "crosscheck_status", "wave_values_status", "checker_ok",
+    "bound_proof", "proof_claim_allowed", "proof_claim_reason", "reason", "flags", "unverified_bounds", "certificate_tier", "timing_dependent", "non_lexicographic", "crosscheck_solver", "crosscheck_status", "wave_values_status", "checker_ok",
     "ts_confirmation", "wall_seconds", "note",
 )
 STAGE_FIELDS = ("fleet", "date", "R", "L", "solver", "stage", "status", "stop_reason", "objective", "bound", "bound_ceil",
@@ -257,47 +264,36 @@ def real_deps(cfg: Config) -> Deps:
     return Deps(hb.run_day_stages, gurobi_run if cfg.crosscheck else None, waves, ud.run_cli, close)
 
 
-# ---------------------------------------------------------------- the label hook (J9b fills it at integration)
+# ---------------------------------------------------------------- the label hook (J9b's label_cell)
 def label_day_cell(facts: dict) -> dict:
-    """THE label hook: ``day_status``, ``bound_used``, ``bound_source`` (and a ``reason``) of a cell.
+    """THE label hook: an adapter on ``day_labels.label_cell`` (J9b); no label logic lives here.
 
-    ``facts`` (plain values): fleet, date, ride, large_limit, solve_status (primary ``DaySolveResult.status``, or
-    ``"certificate"`` for a certificate cell), objective, stage_statuses, timing_dependent, non_lexicographic,
-    bound_above_incumbent, crosscheck_status (agree / blocking / inconclusive / not_run), wave_values_status (the same four
-    words, owner decision E14 2026-10-21), stage1_bound_ceil, bounds, certificate (None, or tier / kind / lower_bound /
-    point / contributions) and certificate_tier.
-
-    The placeholder FAILS CLOSED until J9b's ``label_cell`` replaces it: ``optimal`` only when the two solvers agree, every
-    stage is optimal, no timing / non-lexicographic / bound-above-incumbent flag is set and the wave values are not
-    contradicted (a plain ``optimal`` needs no wave value; ``blocking`` is a solver contradiction and withholds it);
-    otherwise ``feasible_with_gap`` (an incumbent) or ``bound_only`` with the reason. A tier-2 certificate leans on
-    solver-proven wave minima and is withheld unless ``wave_values_status == agree``; a tier-1 certificate needs none.
+    ``facts``: the plain values fleet, date, ride, large_limit, solve_status, objective, stage_statuses, timing_dependent,
+    non_lexicographic, bound_above_incumbent, crosscheck_status, wave_values_status, stage1_bound_ceil, bounds,
+    certificate and certificate_tier (for logs and spies), plus the objects ``label_cell`` takes: ``enumeration_complete``,
+    ``result`` (the primary ``DaySolveResult`` or ``None``), ``day_bounds`` (the J2 ``DayBounds``) and ``checker_ok``
+    (``None`` when there is no plan). Returns ``day_status``, ``reason``, ``bound_used``, ``bound_source``,
+    ``bound_proof``, ``flags``, ``unverified_bounds``, ``certificate_tier``, ``proof_claim_allowed``, ``proof_claim_reason``.
+    Raises ``ValueError`` (from ``label_cell``) on inconsistent facts; the caller turns that into a rejected cell.
     """
-    wave_status = facts.get("wave_values_status", NOT_RUN)
-    cert_ = facts.get("certificate")
-    if cert_ is not None:
-        info = {"bound_used": cert_["lower_bound"], "bound_source": cert_["kind"]}
-        if cert_["tier"] == 1 or (cert_["tier"] == 2 and wave_status == AGREE):
-            return {"day_status": "infeasible_certified", "reason": "", **info}
-        return {"day_status": "bound_only", "bound_used": cert_["lower_bound"], "bound_source": cert_["kind"] + "_withheld",
-                "reason": f"tier-{cert_['tier']} certificate withheld: wave values {wave_status}, not cross-checked by both solvers"}
-    status = facts["solve_status"]
-    reasons = []
-    if facts["crosscheck_status"] != AGREE:
-        reasons.append(f"cross-check {facts['crosscheck_status']}")
-    if wave_status == BLOCKING:
-        reasons.append("wave values contradicted by the two solvers")
-    for flag in ("timing_dependent", "non_lexicographic", "bound_above_incumbent"):
-        if facts.get(flag):
-            reasons.append(flag)
-    if any(st != "optimal" for st in facts.get("stage_statuses", ())):
-        reasons.append("a stage is not optimal")
-    reason = "; ".join(reasons)
-    if status == "optimal":
-        return {"day_status": "feasible_with_gap" if reasons else "optimal", "bound_used": None, "bound_source": "", "reason": reason}
-    mapping = {"feasible_with_gap": "feasible_with_gap", "bound_only": "bound_only", "infeasible_proven": "infeasible_solver_proven",
-               "rejected": "rejected", "input_rejected": "input_rejected"}
-    return {"day_status": mapping.get(status, "rejected"), "bound_used": None, "bound_source": "", "reason": reason}
+    cell = day_labels.label_cell(
+        enumeration_complete=facts["enumeration_complete"], result=facts.get("result"), bounds=facts.get("day_bounds"),
+        crosscheck=facts["crosscheck_status"], checker_ok=facts.get("checker_ok"),
+        wave_values_crosscheck=facts["wave_values_status"])
+    return {"day_status": cell.label, "reason": cell.reason, "bound_used": cell.bound_used, "bound_source": cell.bound_source or "",
+            "bound_proof": cell.bound_proof or "", "flags": ";".join(cell.flags),
+            "unverified_bounds": ";".join(f"{name}:{wave}" for name, wave in cell.unverified_bounds),
+            "certificate_tier": cell.certificate_tier, "proof_claim_allowed": cell.proof_claim_allowed,
+            "proof_claim_reason": cell.proof_claim_reason}
+
+
+def settle_label(label: dict, forced: Optional[str] = None, reason: str = "") -> dict:
+    """The label of a cell after the runner's own verdicts: a status the runner set (``forced``: rejected by the certificate,
+    the checker or the TypeScript CLI) is final, whatever the label says, and a forced status never claims a proof."""
+    if forced is None:
+        return label
+    return dict(label, day_status=forced, proof_claim_allowed=False, proof_claim_reason=forced,
+                reason=reason or label.get("reason", ""))
 
 
 # ---------------------------------------------------------------- inputs
@@ -583,14 +579,33 @@ def solve_cell(fleet: FleetInput, date: str, ride: int, limit, cfg: Config, deps
     errors: list = []
     base = {"fleet": fleet.name, "date": date, "R": ride, "L": limit}
     row = dict(base, waves="", legs="", columns="", columns_outside_day="", day_status="", K_or_S="", large_peak="", total_minutes="",
-               car_minutes="", routes="", lb0="", lb0w="", lb_L="", lb_S="", bound_used="", bound_source="", certificate_tier="",
+               car_minutes="", routes="", lb0="", lb0w="", lb_L="", lb_S="", bound_used="", bound_source="", bound_proof="",
+               proof_claim_allowed=False, proof_claim_reason="", reason="", flags="", unverified_bounds="", certificate_tier="",
                timing_dependent="", non_lexicographic="", crosscheck_solver="", crosscheck_status="not_run", wave_values_status="", checker_ok="",
                ts_confirmation="", wall_seconds="", note="")
     out = {"row": row, "stages": [], "plan": None, "lb_rows": [], "mps": {}, "errors": errors, "columns": None, "versions": {}}
 
     def finish(status, note=""):
         row.update(day_status=status, note=note, wall_seconds=round(time.perf_counter() - t0, 2))
+        if status in ("input_rejected", "rejected") and not row["reason"]:
+            row["reason"] = note  # a runner status without a label: its text is the reason, never a claim
         return out
+
+    def labelled(facts):
+        """``label_day_cell`` with inconsistent facts (``ValueError``) failing closed as a rejected cell."""
+        try:
+            return label_day_cell(facts)
+        except ValueError as exc:
+            errors.append(f"{tag}: label_cell refused the facts: {exc}")
+            return {"day_status": "rejected", "reason": f"label_cell refused: {exc}", "proof_claim_allowed": False,
+                    "proof_claim_reason": "rejected"}
+
+    def apply_label(label):
+        row.update(bound_used="" if label.get("bound_used") is None else label["bound_used"], bound_source=label.get("bound_source") or "",
+                   bound_proof=label.get("bound_proof") or "", flags=label.get("flags") or "",
+                   unverified_bounds=label.get("unverified_bounds") or "", reason=label.get("reason") or "",
+                   proof_claim_allowed=bool(label.get("proof_claim_allowed", False)),
+                   proof_claim_reason=label.get("proof_claim_reason") or "")
 
     try:
         waves = tuple(w for w in fleet.campaign.waves_for(ride) if w.service_date == date)
@@ -607,7 +622,12 @@ def solve_cell(fleet: FleetInput, date: str, ride: int, limit, cfg: Config, deps
                columns_outside_day=instance.filtered_total)
     out["columns"] = instance.enumerated_columns
     if instance.status != READY:
-        return finish("not_run_enumeration_cap", "waves not complete: " + ",".join(b.wave_id for b in instance.blocking))
+        note = "waves not complete: " + ",".join(b.wave_id for b in instance.blocking)
+        label = labelled(dict(_facts_base(fleet, date, ride, limit), enumeration_complete=False, result=None, day_bounds=None,
+                              checker_ok=None, crosscheck_status="not_run", wave_values_status="not_run"))
+        label = settle_label(label, forced=None if label["day_status"] == "not_run_enumeration_cap" else "rejected")
+        apply_label(label)
+        return finish(label["day_status"], note)
 
     # J2 bounds and certificate
     try:
@@ -641,15 +661,20 @@ def solve_cell(fleet: FleetInput, date: str, ride: int, limit, cfg: Config, deps
                                    wave_value_source=f"{c.kind};wave_values={wstatus}"))
         certificate = {"tier": c.tier, "kind": c.kind, "lower_bound": c.lower_bound, "point": c.point, "large_limit": c.large_limit,
                        "contributions": [(x.wave_id, x.value, x.proof) for x in c.contributions]}
-        label = label_day_cell(dict(_facts_base(fleet, date, ride, limit), solve_status="certificate", objective=None,
-                                    stage_statuses=[], timing_dependent=False, non_lexicographic=False, bound_above_incumbent=False,
-                                    crosscheck_status="not_run", wave_values_status=wstatus, stage1_bound_ceil=None,
-                                    bounds={n: _bound_dict(getattr(bnds, n)) for n in ("lb0", "lb0w", "lb_l", "lb_s")},
-                                    certificate=certificate, certificate_tier=c.tier))
-        row.update(bound_used=label.get("bound_used", ""), bound_source=label.get("bound_source", ""))
-        if label["day_status"] == "infeasible_certified":
+        label = labelled(dict(_facts_base(fleet, date, ride, limit), solve_status="certificate", objective=None,
+                              stage_statuses=[], timing_dependent=False, non_lexicographic=False, bound_above_incumbent=False,
+                              crosscheck_status="not_run", wave_values_status=wstatus, stage1_bound_ceil=None,
+                              bounds={n: _bound_dict(getattr(bnds, n)) for n in ("lb0", "lb0w", "lb_l", "lb_s")},
+                              certificate=certificate, certificate_tier=c.tier, enumeration_complete=True, result=None,
+                              day_bounds=bnds, checker_ok=None))
+        if label["day_status"] == "rejected":  # a blocking wave verdict or an inconsistent certificate: nothing more to solve
+            apply_label(label)
+            return finish("rejected", label.get("reason", ""))
+        if label["day_status"] == "infeasible_certified" and label["proof_claim_allowed"]:
+            apply_label(label)
             return finish("infeasible_certified", f"{c.kind}: LB_L {c.lower_bound} > L {c.large_limit}")
-        out["note_prefix"] = label.get("reason", "")  # withheld: the day MIP is still solved below
+        # an unclaimed (tier-2 without two-solver wave agreement) certificate: the day MIP is still solved below
+        out["note_prefix"] = f"tier-{c.tier} certificate withheld ({label.get('proof_claim_reason', '')})"
 
     # J3/J4 primary solver, J5 cross-check
     kw = dict(aggregate=cfg.aggregate)
@@ -680,6 +705,7 @@ def solve_cell(fleet: FleetInput, date: str, ride: int, limit, cfg: Config, deps
     status_override = "rejected" if cc_status == gdb.BLOCKING or highs.status == "rejected" else None
     notes = []
     plan = plan_from_result(instance, highs) if highs.objective is not None else None
+    plan_ok = None  # the independent checker's verdict on the plan (None: no plan)
     if plan is not None:
         try:
             problems = certify_plan(fleet, instance, plan, arcs_doc)
@@ -688,7 +714,7 @@ def solve_cell(fleet: FleetInput, date: str, ride: int, limit, cfg: Config, deps
             problems, report = [f"plan check raised {type(exc).__name__}: {exc}"], None
         if report is not None and not report.ok:
             problems += [f"checker {v.code}: {v.where}" for v in report.violations[:5]]
-        row["checker_ok"] = report is not None and report.ok and not problems
+        row["checker_ok"] = plan_ok = report is not None and report.ok and not problems
         if problems:
             status_override = "rejected"
             errors.extend(f"{tag}: {p}" for p in problems)
@@ -712,8 +738,6 @@ def solve_cell(fleet: FleetInput, date: str, ride: int, limit, cfg: Config, deps
              "end": dw.wave.anchor_minutes if dw.wave.direction == "pickup" else dw.wave.anchor_minutes + r.tour}
             for wi, dw in enumerate(instance.waves) for r in plan[wi]]}
 
-    if status_override is not None:
-        return finish(status_override, " | ".join(notes) or "solver disagreement or rejected stage")
     stage1 = highs.stages[0].result if highs.stages else None
     stage_results = [s.result for s in highs.stages] + [st.result for st in (guro.stages if guro is not None else ())]
     facts = dict(_facts_base(fleet, date, ride, limit), solve_status=highs.status, objective=highs.objective,
@@ -723,10 +747,13 @@ def solve_cell(fleet: FleetInput, date: str, ride: int, limit, cfg: Config, deps
                  crosscheck_status=cc_status, wave_values_status=wstatus,
                  stage1_bound_ceil=None if stage1 is None else stage1.bound_ceil,
                  bounds={n: _bound_dict(getattr(bnds, n)) for n in ("lb0", "lb0w", "lb_l", "lb_s")}, certificate=None,
-                 certificate_tier=None if certificate is None else certificate["tier"])
-    label = label_day_cell(facts)
-    row.update(bound_used="" if label.get("bound_used") is None else label["bound_used"], bound_source=label.get("bound_source", ""))
+                 certificate_tier=None if certificate is None else certificate["tier"],
+                 enumeration_complete=True, result=highs, day_bounds=bnds, checker_ok=plan_ok)
+    label = settle_label(labelled(facts), forced=status_override)  # the runner's own rejection is final
+    apply_label(label)
     note = " | ".join(x for x in (out.get("note_prefix"), " | ".join(notes), label.get("reason"), highs.note) if x)
+    if status_override is not None:
+        note = " | ".join(notes) or "solver disagreement or rejected stage"
     return finish(label["day_status"], note)
 
 
@@ -747,7 +774,7 @@ def week_rows(rows: list) -> list:
         values = [r["K_or_S"] for r in items if r["K_or_S"] != ""]
         out.append({"fleet": fleet, "R": ride, "L": limit, "dates": len(items), "weekly_fleet_max": max(values) if values else "",
                     "vehicle_days_sum": sum(values) if values else "",
-                    "cells_not_proven": sum(1 for r in items if r["day_status"] != "optimal"),
+                    "cells_not_proven": sum(1 for r in items if r["proof_claim_allowed"] is not True),
                     "cells_without_value": len(items) - len(values)})
     return out
 

@@ -105,31 +105,41 @@ def _time_limited_stage1(result):
     return dataclasses.replace(result, status="feasible_with_gap", stages=tuple(stages))
 
 
-def _date_where_lb0_equals_stage1(tmp_path):
-    rc, out = run(tmp_path / "probe", "--fleets", HOMO, "--rides", "50")
-    stages = {(r["date"]): r for r in read_csv(out / "day_joint_stages.csv") if r["solver"] == "highs" and r["stage"] == "1"}
-    for r in read_csv(out / "day_joint.csv"):
-        if r["lb0"] != "" and int(r["lb0"]) == int(float(stages[r["date"]]["objective"])):
-            return r["date"]
-    pytest.fail("no committed day has LB0 == the fake stage-1 value; the by-bound cell cannot be built")
+def _lb0_equal_to_stage1(monkeypatch, tmp_path):
+    """The committed days never give LB0 == the fake stage-1 value on a day that runs in seconds (only 2026-10-05, minutes of
+    fake DP), so the cell is built on DATE: a first run reads the stage-1 value K, the second run's J2 bounds carry an LB0
+    equal to K (same contributions, solver-proven wave values) - a valid bound, because K is the optimum of that cell."""
+    rc, row, out = one_row(tmp_path / "probe")
+    stage1 = [r for r in read_csv(out / "day_joint_stages.csv") if r["solver"] == "highs" and r["stage"] == "1"][0]
+    k = int(float(stage1["objective"]))
+    assert int(row["lb0"]) < k, "the committed bound is below K: the planted LB0 is a real tightening"
+    real = rj.day_bounds
+    bm = rj.bounds_mod
+
+    def tightened(instance, fleet, limit, deps, cfg, errors, tag):
+        b, records = real(instance, fleet, limit, deps, cfg, errors, tag)
+        lb0 = bm.BoundResult(k, b.lb0.point, b.lb0.contributions)
+        return dataclasses.replace(b, lb0=lb0), records
+
+    monkeypatch.setattr(rj, "day_bounds", tightened)
+    return k
 
 
-def test_by_bound_cell_claims_with_wave_agreement_and_an_inconclusive_day_verdict(tmp_path):
-    date = _date_where_lb0_equals_stage1(tmp_path)
-    deps = make_deps(highs_hook=_time_limited_stage1)
-    rc, row, _ = one_row(tmp_path / "run", deps=deps, subset=("--rides", "50", "--dates", date))
-    assert row["day_status"] == "optimal_stage1_by_bound"
-    assert row["crosscheck_status"] != "blocking" and row["crosscheck_status"] != "agree"
+def test_by_bound_cell_claims_with_wave_agreement_and_an_inconclusive_day_verdict(tmp_path, monkeypatch):
+    k = _lb0_equal_to_stage1(monkeypatch, tmp_path)
+    rc, row, _ = one_row(tmp_path / "run", deps=make_deps(highs_hook=_time_limited_stage1))
+    assert row["day_status"] == "optimal_stage1_by_bound" and row["lb0"] == str(k)
+    assert row["crosscheck_status"] not in ("blocking", "agree")  # the day verdict is inconclusive and does not block
     assert row["wave_values_status"] == "agree"
-    assert row["bound_source"] in ("lb0", "lb0w") and row["bound_proof"] == "solver_proven"
+    assert row["bound_source"] == "lb0" and row["bound_proof"] == "solver_proven" and row["bound_used"] == str(k)
     assert row["proof_claim_allowed"] == "True" and row["proof_claim_reason"] == "checked_plan_and_wave_values_agree"
 
 
-def test_by_bound_cell_without_wave_agreement_does_not_claim(tmp_path):
-    date = _date_where_lb0_equals_stage1(tmp_path)
+def test_by_bound_cell_without_wave_agreement_does_not_claim(tmp_path, monkeypatch):
+    _lb0_equal_to_stage1(monkeypatch, tmp_path)
     deps = base.deps_with_waves(base.skewed_wave_solver("bound"), highs_hook=_time_limited_stage1)
-    rc, row, _ = one_row(tmp_path / "run", deps=deps, subset=("--rides", "50", "--dates", date))
-    assert row["wave_values_status"] == "inconclusive"
+    rc, row, _ = one_row(tmp_path / "run", deps=deps)
+    assert row["wave_values_status"] == "inconclusive" and row["day_status"] == "optimal_stage1_by_bound"
     assert row["proof_claim_allowed"] == "False" and row["proof_claim_reason"] == "wave_values_crosscheck_inconclusive"
 
 

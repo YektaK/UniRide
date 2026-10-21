@@ -14,6 +14,7 @@ import pytest
 
 from academic_benchmark import cli_engine, smart_benchmark
 from academic_benchmark.core.algorithm_errors import (BackendUnavailableError, CandidateAlgorithmError, ExecutorUnavailableError, PlannedAlgorithmError, ResultContractViolation, UnsupportedProtocolError)
+from academic_benchmark.tests.synthetic_catalog import force_lifecycle
 from academic_benchmark.engine_core import BenchmarkConfig, BenchmarkTask, GovernedExecutionRequest, RunResult
 from academic_benchmark.core.preflight import RuntimeBackendAvailability
 from uniride_core.algorithms.capabilities import (
@@ -306,6 +307,7 @@ def test_smart_persistence_includes_preflight_decision_metadata(monkeypatch) -> 
     }
 
 def test_cli_governed_candidate_rejects_before_registry_or_direct_fallback(monkeypatch) -> None:
+    force_lifecycle(monkeypatch, "Core-GA-TSP", LifecycleStatus.CANDIDATE)
     class ExplodingRegistry:
         @staticmethod
         def list_algorithms():
@@ -402,6 +404,9 @@ def test_cli_task_builder_preserves_legacy_tuple_and_adds_governed_request() -> 
     assert task[6] == governed.governed_request
 
 def test_smart_selection_excludes_every_raw_governed_alias_and_preserves_non_c1(monkeypatch) -> None:
+    # Every live governed ID may be VERIFIED; a synthetic CANDIDATE keeps the lifecycle
+    # filter of _selectable_algorithm_ids observable (it must be excluded).
+    force_lifecycle(monkeypatch, "Core-GA-TSP", LifecycleStatus.CANDIDATE)
     verified_ids = [
         algorithm_id
         for algorithm_id, capability in CAPABILITY_CATALOG.items()
@@ -422,14 +427,19 @@ def test_smart_selection_excludes_every_raw_governed_alias_and_preserves_non_c1(
 
     monkeypatch.setattr(smart_benchmark, "AlgorithmRegistry", Registry)
 
-    assert smart_benchmark._selectable_algorithm_ids() == [
+    selectable = smart_benchmark._selectable_algorithm_ids()
+    assert "Core-GA-TSP" in Registry.list_algorithms()
+    assert "Core-GA-TSP" not in selectable
+    assert selectable == [
         *verified_ids,
         "Core-Greedy-Routing",
     ]
+    assert len(verified_ids) == len(CAPABILITY_CATALOG) - 1
 
 
 @pytest.mark.parametrize("algorithm_id", ["Core-GA-TSP", "Numba-GA"])
 def test_smart_public_runner_rejects_governed_candidate_before_setup(monkeypatch, algorithm_id) -> None:
+    force_lifecycle(monkeypatch, "Core-GA-TSP", LifecycleStatus.CANDIDATE)  # Numba-GA resolves to it
     def explode(*_args, **_kwargs):
         raise AssertionError("governed candidate reached Smart setup")
 
@@ -500,7 +510,20 @@ def test_cli_alias_selection_uses_canonical_spec_and_governed_request() -> None:
     assert selected[0].governed_request.requested_algorithm_id == "Numba-2-opt"
 
 
-def test_cli_candidate_alias_fails_instead_of_becoming_zero_tasks() -> None:
+def test_cli_planned_governed_id_fails_in_lifecycle_validation(monkeypatch) -> None:
+    force_lifecycle(monkeypatch, "Core-PSO-TSP", LifecycleStatus.PLANNED)
+    request = cli_engine.GovernedExecutionRequest(
+        "Core-PSO-TSP", "Core-PSO-TSP", ExecutionProtocol.FIXED_BUDGET, 10, BackendPolicy.PYTHON_ONLY
+    )
+
+    with pytest.raises(PlannedAlgorithmError):
+        cli_engine._validate_governed_lifecycle(request)
+    with pytest.raises(PlannedAlgorithmError):
+        cli_engine._select_cli_specs([], ["Core-PSO-TSP"], "fixed_evaluation_budget", 10, "python_only")
+
+
+def test_cli_candidate_alias_fails_instead_of_becoming_zero_tasks(monkeypatch) -> None:
+    force_lifecycle(monkeypatch, "Core-GA-TSP", LifecycleStatus.CANDIDATE)  # Numba-GA resolves to it
     with pytest.raises(CandidateAlgorithmError):
         cli_engine._select_cli_specs(
             [], ["Numba-GA"], "fixed_evaluation_budget", 10, "python_only"
@@ -517,10 +540,13 @@ def test_cli_config_governed_spec_requires_explicit_execution_request() -> None:
     ("algorithm_id", "error_type"),
     [
         ("Numba-GA", CandidateAlgorithmError),
-        ("Core-PSO-TSP", CandidateAlgorithmError),  # no PLANNED catalog ID remains after C-09
+        ("Core-PSO-TSP", PlannedAlgorithmError),  # synthetic PLANNED entry below
     ],
 )
 def test_smart_selection_rejects_lifecycle_before_runtime_or_registry(monkeypatch, algorithm_id, error_type) -> None:
+    # Synthetic lifecycle entries: independent of which live IDs are promoted.
+    force_lifecycle(monkeypatch, "Core-GA-TSP", LifecycleStatus.CANDIDATE)  # Numba-GA resolves to it
+    force_lifecycle(monkeypatch, "Core-PSO-TSP", LifecycleStatus.PLANNED)
     def explode(*_args, **_kwargs):
         raise AssertionError("selection reached runtime or registry setup")
 

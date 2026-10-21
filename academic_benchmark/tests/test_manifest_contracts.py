@@ -7,6 +7,8 @@ import pytest
 from pydantic import ValidationError
 
 from academic_benchmark.core.algorithm_errors import CandidateAlgorithmError
+from academic_benchmark.tests.synthetic_catalog import force_lifecycle
+from uniride_core.algorithms.capabilities import LifecycleStatus as _Lifecycle
 from academic_benchmark.core.algorithm_resolution import IdentifierSource, resolve_algorithm_id
 from academic_benchmark.core.preflight import PreflightRequest, RuntimeBackendAvailability, preflight_run
 from academic_benchmark.contracts import DatasetManifestV1, RunManifestV1, StudyManifestV1
@@ -166,11 +168,9 @@ def test_study_requires_exact_parameter_keys_for_algorithm_ids():
         "GWO",
         "SOTA-ALNS-TSP",
         "unknown",
-        "Core-GA-TSP",  # CANDIDATE: the ALNS hybrids are VERIFIED since C-09
-        "Core-PSO-TSP",
     ],
 )
-def test_study_rejects_alias_unknown_and_candidate_primary_ids(algorithm_id: str):
+def test_study_rejects_alias_and_unknown_primary_ids(algorithm_id: str):
     payload = _study_payload()
     payload["algorithm_ids"] = [algorithm_id]
     payload["algorithm_parameters"] = {algorithm_id: {}}
@@ -184,11 +184,9 @@ def test_study_rejects_alias_unknown_and_candidate_primary_ids(algorithm_id: str
         "Numba-GWO",
         "SOTA-ALNS-TSP",
         "unknown",
-        "Core-GA-TSP",  # CANDIDATE: the ALNS hybrids are VERIFIED since C-09
-        "Core-PSO-TSP",
     ],
 )
-def test_study_rejects_alias_unknown_and_candidate_secondary_ids(algorithm_id: str):
+def test_study_rejects_alias_and_unknown_secondary_ids(algorithm_id: str):
     payload = _study_payload()
     payload["secondary_protocol"]["algorithm_ids"] = [algorithm_id]
     with pytest.raises(ValidationError):
@@ -197,8 +195,9 @@ def test_study_rejects_alias_unknown_and_candidate_secondary_ids(algorithm_id: s
 
 @pytest.mark.parametrize("candidate_id", ["Core-GA-TSP", "Core-PSO-TSP"])
 def test_study_rejects_canonical_candidate_primary_ids_with_typed_error(
-    candidate_id: str,
+    candidate_id: str, monkeypatch: pytest.MonkeyPatch
 ):
+    force_lifecycle(monkeypatch, candidate_id, _Lifecycle.CANDIDATE)
     payload = _study_payload()
     payload["algorithm_ids"] = [candidate_id]
     payload["algorithm_parameters"] = {candidate_id: {}}
@@ -214,8 +213,9 @@ def test_study_rejects_canonical_candidate_primary_ids_with_typed_error(
 
 @pytest.mark.parametrize("candidate_id", ["Core-GA-TSP", "Core-PSO-TSP"])
 def test_study_rejects_canonical_candidate_secondary_ids_with_typed_error(
-    candidate_id: str,
+    candidate_id: str, monkeypatch: pytest.MonkeyPatch
 ):
+    force_lifecycle(monkeypatch, candidate_id, _Lifecycle.CANDIDATE)
     payload = _study_payload()
     payload["secondary_protocol"]["algorithm_ids"] = [candidate_id]
 
@@ -238,6 +238,8 @@ def test_study_rejects_canonical_candidate_secondary_ids_with_typed_error(
         "Core-GWO-TSP-Memetic-2opt",
         "Core-HHO-TSP-Memetic-2opt",
         "ALNS-TSP",
+        "Core-GA-TSP",
+        "Core-PSO-TSP",
     ],
 )
 def test_study_accepts_verified_canonical_primary_ids(algorithm_id: str):

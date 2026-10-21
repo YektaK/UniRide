@@ -11,9 +11,12 @@ from academic_benchmark.core.algorithm_errors import (
     BackendUnavailableError,
     CandidateAlgorithmError,
     ExecutorUnavailableError,
+    PlannedAlgorithmError,
     UnsupportedProblemContractError,
     UnsupportedProtocolError,
 )
+from academic_benchmark.tests.synthetic_catalog import force_lifecycle
+from uniride_core.algorithms.capabilities import LifecycleStatus as _Lifecycle
 from academic_benchmark.core.algorithm_resolution import IdentifierSource
 from academic_benchmark.core.preflight import RuntimeBackendAvailability
 from academic_benchmark.fair_pilot import _execute_preflighted_run
@@ -61,13 +64,13 @@ _PYTHON = RuntimeBackendAvailability(
             CandidateAlgorithmError,
         ),
         (
-            "Core-PSO-TSP",  # no PLANNED catalog ID remains after C-09; planned: test_algorithm_preflight.py
+            "Core-PSO-TSP",  # forced to a synthetic PLANNED entry in the test body
             _Problem(),
             ExecutionProtocol.FIXED_BUDGET,
             10,
             frozenset({"Core-PSO-TSP"}),
             _PYTHON,
-            CandidateAlgorithmError,
+            PlannedAlgorithmError,
         ),
         (
             "Core-TwoOpt-TSP",
@@ -137,7 +140,13 @@ def test_pilot_preflight_failures_happen_before_registry_getter(
     registered: frozenset[str],
     runtime: RuntimeBackendAvailability,
     error: type[Exception],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # Candidate/planned rows use synthetic lifecycle entries, not the live catalog state.
+    if error is CandidateAlgorithmError:
+        force_lifecycle(monkeypatch, algorithm_id, _Lifecycle.CANDIDATE)
+    elif error is PlannedAlgorithmError:
+        force_lifecycle(monkeypatch, algorithm_id, _Lifecycle.PLANNED)
     with pytest.raises(error):
         _execute_preflighted_run(
             requested_algorithm_id=algorithm_id,

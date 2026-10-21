@@ -26,12 +26,37 @@ APPROVED_AUTHORITY_URL = (
     "https://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/atsp/ft53.atsp.gz"
 )
 APPROVED_OPTIMUM_PROVENANCE = "TSPLIB95 canonical ATSP optimum"
+# C-19 (owner 2026-10-19/21): the paper's algorithm set plus the current GWO/HHO entries.
 PRIMARY_ALGORITHM_IDS = [
+    "Core-TwoOpt-TSP",
+    "Core-ThreeOpt-TSP",
+    "Core-OrOpt-TSP",
+    "Core-GA-TSP",
+    "Core-PSO-TSP",
+    "Core-GA-TSP-Memetic-2opt",
     "Core-GWO-TSP-Pure",
-    "Core-GWO-TSP-Memetic-2opt",
     "Core-HHO-TSP-Pure",
+    "Core-GWO-TSP-Memetic-2opt",
     "Core-HHO-TSP-Memetic-2opt",
 ]
+DATASET_REFS = [
+    "academic_benchmark/datasets/berlin52.json",
+    "academic_benchmark/datasets/eil51.json",
+    "academic_benchmark/datasets/st70.json",
+    "academic_benchmark/datasets/kroA100.json",
+    "academic_benchmark/datasets/rd100.json",
+    "academic_benchmark/datasets/eil76.json",
+    "academic_benchmark/datasets/ft53.json",
+]
+# n(n-1)/2 (one full 2-opt scan) per dataset; levels are 20 and 100 scans (owner 2026-10-21)
+SCAN_SIZES = {
+    "tsplib-berlin52": 1326, "tsplib-eil51": 1275, "tsplib-st70": 2415, "tsplib-kroa100": 4950,
+    "tsplib-rd100": 4950, "tsplib-eil76": 2850, "tsplib-ft53": 1378,
+}
+GA_C16A_DEFAULTS = {
+    "max_iterations": 500, "crossover_rate": 0.85, "mutation_rate": 0.15, "elite_count": 2,
+    "tournament_size": 3, "max_no_improvement": 100,
+}
 SECONDARY_ALGORITHM_IDS = ["Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"]
 
 
@@ -99,14 +124,45 @@ class TestStudyManifest:
         assert study_manifest.schema_version == "uniride-study/v1"
         assert study_manifest.study_id == "bildiri2026"
         assert study_manifest.status == "draft"
-        assert study_manifest.problem_families == ["ATSP"]
+        assert study_manifest.problem_families == ["TSP", "ATSP"]
+        assert study_manifest.run_count == 3  # smoke placeholder; the paper's 30 runs are paper-scale
         assert study_manifest.seed_protocol_version == "sha256-seed-v1"
         assert study_manifest.output_policy.repository_outputs == "smoke_only"
 
-    def test_primary_protocol_retains_all_four_variants(self, study_manifest: StudyManifestV1):
+    def test_primary_protocol_holds_the_ten_paper_aligned_ids(self, study_manifest: StudyManifestV1):
         assert study_manifest.algorithm_ids == PRIMARY_ALGORITHM_IDS
         assert set(study_manifest.algorithm_parameters) == set(PRIMARY_ALGORITHM_IDS)
         assert study_manifest.primary_protocol.protocol_id == "fixed_evaluation_budget"
+
+    def test_budget_levels_are_20_and_100_two_opt_scans_per_instance(
+        self, study_manifest: StudyManifestV1
+    ):
+        assert study_manifest.fixed_budget_levels is None
+        scaled = study_manifest.scaled_fixed_budget_levels
+        assert scaled.rule == "two_opt_scan_multiples_v1"
+        assert scaled.scan_multipliers == [20, 100]
+        assert scaled.levels_by_dataset == {
+            dataset_id: [20 * k, 100 * k] for dataset_id, k in SCAN_SIZES.items()
+        }
+
+    def test_ga_entries_use_population_20_and_explicit_c16a_defaults(
+        self, study_manifest: StudyManifestV1
+    ):
+        params = study_manifest.algorithm_parameters
+        assert params["Core-GA-TSP"] == {"population_size": 20, **GA_C16A_DEFAULTS}
+        assert params["Core-GA-TSP-Memetic-2opt"] == {
+            "population_size": 20, **GA_C16A_DEFAULTS,
+            "initial_polish_iters": 1, "final_polish_iters": 1,
+        }
+
+    def test_memetic_entries_use_one_scan_per_polish(self, study_manifest: StudyManifestV1):
+        params = study_manifest.algorithm_parameters
+        for algorithm_id in ("Core-GWO-TSP-Memetic-2opt", "Core-HHO-TSP-Memetic-2opt"):
+            entry = params[algorithm_id]
+            assert (entry["polish_iters"], entry["final_polish_iters"]) == (1, 1), algorithm_id
+            assert entry["polish_interval"] == 25, algorithm_id  # the solver default, stated
+        for algorithm_id in ("Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"):
+            assert not {"polish_iters", "final_polish_iters", "polish_interval"} & set(params[algorithm_id])
 
     def test_secondary_protocol_selects_native_compatible_intersection(
         self, study_manifest: StudyManifestV1
@@ -115,7 +171,9 @@ class TestStudyManifest:
         assert secondary is not None
         assert secondary.protocol_version == NATIVE_PROTOCOL
         assert secondary.algorithm_ids == SECONDARY_ALGORITHM_IDS
-        assert set(secondary.algorithm_ids) == (
+        # C-19 keeps the native protocol unchanged (GWO/HHO pure); 2-opt, 3-opt and Or-opt are
+        # native-approved too but were not added (no owner decision for the native slice).
+        assert set(secondary.algorithm_ids) <= (
             set(study_manifest.algorithm_ids) & APPROVED_NATIVE_ALGORITHMS
         )
         assert set(secondary.algorithm_ids) <= APPROVED_NATIVE_ALGORITHMS
@@ -130,12 +188,10 @@ class TestStudyManifest:
             for algorithm_id in study_manifest.algorithm_ids
         )
 
-    def test_dataset_manifest_reference_is_the_validated_ft53_manifest(
+    def test_dataset_refs_are_the_six_paper_instances_and_ft53(
         self, study_manifest: StudyManifestV1
     ):
-        assert study_manifest.dataset_manifest_refs == [
-            "academic_benchmark/datasets/ft53.json"
-        ]
+        assert study_manifest.dataset_manifest_refs == DATASET_REFS
 
     def test_secondary_algorithm_ids_remain_optional_for_existing_manifests(
         self, study_manifest_payload: dict

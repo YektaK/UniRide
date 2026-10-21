@@ -8,8 +8,10 @@ Vocabulary: exactly the ``day_status`` labels of design 4.3 (``LABELS``). The cr
 table (``crosscheck_status``, design 6.1), so the label stays the design label and the proof claim is gated next to it:
 
 * ``proof_claim_allowed`` is true only when a paper table may present the cell as proven. ``optimal``
-  and ``infeasible_solver_proven`` need the day verdict ``agree``; ``optimal_stage1_by_bound`` needs the day verdict and
-  the wave-values verdict ``wave_values_crosscheck`` (its bound is built from wave values); a tier-2
+  and ``infeasible_solver_proven`` need the day verdict ``agree``; ``optimal_stage1_by_bound`` rests on the checked plan
+  and a section 3 bound and needs the wave-values verdict ``wave_values_crosscheck`` ``agree`` when that bound has
+  solver-proven wave values (nothing when it is arithmetic only; the day verdict may be ``inconclusive`` or ``not_run``,
+  because stage 1 of such a cell is never proven on both solvers); a tier-2
   ``infeasible_certified`` needs the wave-values verdict (E14 and its 2026-10-21 note, design 3.2). A tier-1 certificate
   rests on arithmetic only and needs neither. A ``blocking`` verdict of either kind makes the cell ``rejected``. All other labels claim no proof.
 * A stage whose solver bound was clipped to the incumbent (flag ``bound_above_incumbent``) withholds the claim for every
@@ -164,11 +166,15 @@ def _certificate_problem(c) -> Optional[str]:
 
 
 def _gate(label: str, crosscheck: str, certificate_tier: Optional[int], flags: Tuple[str, ...] = (),
-          wave_values_crosscheck: str = CROSSCHECK_NOT_RUN) -> Tuple[bool, str]:
+          wave_values_crosscheck: str = CROSSCHECK_NOT_RUN, bound_proof: Optional[str] = None) -> Tuple[bool, str]:
     """Whether a paper table may present this cell as proven (E14 and its 2026-10-21 note), and why.
 
     * ``optimal`` and ``infeasible_solver_proven`` rest on a day MIP: the day verdict ``crosscheck`` must be ``agree``.
-    * ``optimal_stage1_by_bound`` rests on a day MIP incumbent AND on a bound built from wave values: both verdicts.
+    * ``optimal_stage1_by_bound`` rests on the plan that the independent checker verified (the upper bound; a rejected
+      checker verdict never reaches this function) and on a section 3 bound (the lower bound): the wave verdict must be
+      ``agree`` when the bound used has solver-proven wave values, and none is needed when it is arithmetic only. The day
+      verdict is not asked (J5 gives ``agree`` only when every stage is proven on both solvers, which stage 1 of a
+      by-bound cell never is); ``blocking`` already made the cell ``rejected``.
     * a tier-2 ``infeasible_certified`` rests on solver-proven wave minima only (no day MIP): the wave verdict.
     * a tier-1 certificate is arithmetic and needs neither.
     A solver bound that contradicts the incumbent (flag ``bound_above_incumbent``) on any stage withholds the claim:
@@ -184,11 +190,11 @@ def _gate(label: str, crosscheck: str, certificate_tier: Optional[int], flags: T
     if label == LABEL_INFEASIBLE_CERTIFIED:  # tier 2
         return wave_values_crosscheck == CROSSCHECK_AGREE, f"wave_values_crosscheck_{wave_values_crosscheck}"
     if label == LABEL_OPTIMAL_STAGE1_BY_BOUND:
-        if crosscheck != CROSSCHECK_AGREE:
-            return False, f"crosscheck_{crosscheck}"
+        if bound_proof == PROOF_ARITHMETIC:
+            return True, "arithmetic_bound"
         if wave_values_crosscheck != CROSSCHECK_AGREE:
             return False, f"wave_values_crosscheck_{wave_values_crosscheck}"
-        return True, "crosscheck_and_wave_values_agree"
+        return True, "checked_plan_and_wave_values_agree"
     return False, "not_a_proof_label"
 
 
@@ -206,9 +212,13 @@ def label_cell(*, enumeration_complete: bool, result, bounds: Optional[DayBounds
     ``k_any_w``, ``k_w``) that the bounds of ``bounds`` were built from (E14 note 2026-10-21). The runner passes ``agree``
     only when every solver-proven wave value used by the bounds was confirmed by the second solver, ``blocking`` when one
     disagreed (the cell becomes ``rejected``), ``inconclusive`` when the second solver could not decide, ``not_run`` when
-    it was not asked; a cell whose bounds use no solver wave value passes ``not_run`` and cannot claim tier 2 or by-bound.
-    The day verdict ``crosscheck`` is about the day MIP only. Precedence: enumeration cap, solver rejection / checker failure / solver disagreement, certificate (a certificate with
-    a plan is a contradiction), solver status.
+    it was not asked. A cell whose by-bound bound is arithmetic only needs no wave verdict; tier 2 always does.
+    Runner rule for ``k_w`` (used by LB0 and LB0w): pass ``agree`` only when both solvers proved the same ``k_w`` in this
+    run. A committed WP-E3 ``K*`` counts only if it was itself proven by two solvers; otherwise the runner solves the wave
+    with Gurobi as well. The same holds for ``l_w`` and ``k_any_w``. The day verdict ``crosscheck`` is about the day MIP
+    only (J5 gives ``agree`` only when every stage is proven on both solvers). Precedence: enumeration cap, solver
+    rejection / checker failure / solver disagreement, certificate (a certificate with a plan is a contradiction), solver
+    status.
     """
     if crosscheck not in CROSSCHECK_VERDICTS:
         raise ValueError(f"cross-check verdict must be one of {CROSSCHECK_VERDICTS}, got {crosscheck!r}")
@@ -227,7 +237,7 @@ def label_cell(*, enumeration_complete: bool, result, bounds: Optional[DayBounds
 
     def make(label: str, reason: str = "", *, used: Optional[BoundCandidate] = None, tier: Optional[int] = None,
              extra_flags: Tuple[str, ...] = ()) -> CellLabel:
-        allowed, why = _gate(label, crosscheck, tier, flags, wave_values_crosscheck)
+        allowed, why = _gate(label, crosscheck, tier, flags, wave_values_crosscheck, None if used is None else used.proof)
         return CellLabel(label=label, reason=reason, bound_used=None if used is None else used.value,
                          bound_source=None if used is None else used.name,
                          bound_proof=None if used is None else used.proof, bounds_considered=candidates,

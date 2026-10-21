@@ -204,6 +204,32 @@ def test_live_profile_smoke_slice_takes_the_lowest_level_per_dataset():
         select_smoke_rows(plan, replicates=1, budget_level=10000)
 
 
+def test_profile_ga_entries_really_run_with_population_20_on_ft53():
+    """The profile's population 20 reaches the solver (owner 2026-10-21), seen through the counts."""
+    from academic_benchmark.core import registry_setup  # noqa: F401
+    from academic_benchmark.engine_core import AlgorithmRegistry, ProblemInstance
+    from uniride_core.algorithms.tsplib_parser import parse_atsp_text
+
+    payload = json.loads((REPOSITORY_ROOT / BILDIRI_STUDY).read_text(encoding="utf-8"))
+    text = (REPOSITORY_ROOT / "academic_benchmark" / "tsplib_data" / "ft53.atsp").read_text(encoding="utf-8")
+    matrix = parse_atsp_text(text, "ft53")["explicit_matrix"]
+    problem = ProblemInstance(name="ft53", dimension=53, coordinates=[], problem_type="atsp",
+                              dist_matrix=matrix, optimal=6905.0)
+    budget = 20 * 1378
+    results = {}
+    for algorithm_id in ("Core-GA-TSP", "Core-GA-TSP-Memetic-2opt"):
+        params = dict(payload["algorithm_parameters"][algorithm_id])
+        params["fair_comparison"] = {"evaluation_budget": budget, "base_seed": payload["base_seed"]}
+        results[algorithm_id] = AlgorithmRegistry.get_executor(algorithm_id)(problem, params, seed=1, run_idx=0)
+    pure = results["Core-GA-TSP"]
+    # 20 initial evaluations + 500 generations x (20 - 2 elites) children; population 100 would need 49100
+    assert (pure.objective_evaluations, pure.termination_reason) == (20 + 500 * 18, "max_iterations")
+    memetic = results["Core-GA-TSP-Memetic-2opt"]
+    # the initial 2-opt starts after the 20 initial evaluations and takes the rest of the budget
+    assert memetic.polish_policy["evaluations"]["initial"] == budget - 20
+    assert memetic.objective_evaluations == budget
+
+
 def test_rows_file_allows_one_level_per_dataset_only_when_asked(tmp_path):
     fixed = {"comparison_regime": "fixed_evaluation_budget", "protocol_version": "uniride-fair-tsp-v2"}
     rows = [dict(fixed, dataset_id="a", evaluation_budget=60), dict(fixed, dataset_id="b", evaluation_budget=120)]

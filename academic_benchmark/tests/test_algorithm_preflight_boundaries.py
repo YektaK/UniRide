@@ -11,7 +11,6 @@ from academic_benchmark.core.algorithm_errors import (
     BackendUnavailableError,
     CandidateAlgorithmError,
     ExecutorUnavailableError,
-    PlannedAlgorithmError,
     UnsupportedProblemContractError,
     UnsupportedProtocolError,
 )
@@ -62,13 +61,13 @@ _PYTHON = RuntimeBackendAvailability(
             CandidateAlgorithmError,
         ),
         (
-            "Core-GWO-TSP-Memetic-ALNS",
+            "Core-PSO-TSP",  # no PLANNED catalog ID remains after C-09; planned: test_algorithm_preflight.py
             _Problem(),
             ExecutionProtocol.FIXED_BUDGET,
             10,
-            frozenset({"Core-GWO-TSP-Memetic-ALNS"}),
+            frozenset({"Core-PSO-TSP"}),
             _PYTHON,
-            PlannedAlgorithmError,
+            CandidateAlgorithmError,
         ),
         (
             "Core-TwoOpt-TSP",

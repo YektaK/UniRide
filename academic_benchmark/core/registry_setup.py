@@ -1346,6 +1346,7 @@ _make_hybrid_3opt_executor = _make_hybrid_executor  # the C-08 name, kept as an 
 
 for _hybrid_id in (
     "Core-GWO-TSP-Memetic-3opt", "Core-HHO-TSP-Memetic-3opt",
+    "Core-GWO-TSP-Memetic-ALNS", "Core-HHO-TSP-Memetic-ALNS",
 ):
     AlgorithmRegistry.register(_hybrid_id)(_make_hybrid_executor(_hybrid_id))
 

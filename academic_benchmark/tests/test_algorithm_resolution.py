@@ -122,9 +122,9 @@ def test_forbidden_pseudo_and_legacy_ids_fail_with_replacement_hints(
     "canonical_id",
     (
         "Core-TwoOpt-TSP",
-        # a canonical ID that stays CANDIDATE (not selectable) after the Gate C hybrid
-        # promotions; every Memetic-3opt/ALNS ID is VERIFIED
-        "Core-OrOpt-TSP",
+        # a CANDIDATE ID: identity resolution does not depend on the lifecycle; every
+        # Memetic-3opt/ALNS ID is VERIFIED after C-09 and no catalog ID is PLANNED
+        "Core-PSO-TSP",
     ),
 )
 def test_candidate_and_planned_canonical_ids_resolve_identity_without_selectability(

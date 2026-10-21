@@ -47,6 +47,7 @@ class CompositionKind(str, Enum):
     LOCAL_SEARCH = "local_search"
     POPULATION_BASED = "population_based"
     GLOBAL_THEN_FINAL_3OPT = "global_then_final_3opt"
+    GLOBAL_THEN_FINAL_ALNS = "global_then_final_alns"
 
 
 @dataclass(frozen=True)
@@ -242,23 +243,26 @@ def _alns_claims() -> tuple[CapabilityClaim, ...]:
     )
 
 
-def _hybrid_3opt_claims(
+def _hybrid_claims(
     family_function: str,
+    kind: CompositionKind,
 ) -> tuple[CapabilityClaim, ...]:
-    """TSP/ATSP fixed-budget and native claims of a ``global_then_final_3opt`` hybrid (C-08).
+    """TSP/ATSP fixed-budget and native claims of a final-polish-once hybrid (C-08, C-09).
 
-    ``family_function`` is ``gwo`` or ``hho``; each protocol cites its own evidence node in
-    ``test_hybrid_3opt_evidence.py``. The objective backend is Numba (the pure global
-    stage); the 3-opt polish is Python.
+    ``family_function`` is ``gwo`` or ``hho``; ``kind`` is ``global_then_final_3opt`` or
+    ``global_then_final_alns``. Each protocol cites its own evidence node in
+    ``test_hybrid_3opt_evidence.py`` or ``test_hybrid_alns_evidence.py``. The objective
+    backend is Numba (the pure global stage); the polish (3-opt or ALNS) is Python.
     """
+    polish_name = "3opt" if kind is CompositionKind.GLOBAL_THEN_FINAL_3OPT else "alns"
     claims: list[CapabilityClaim] = []
     for protocol, label in (
         (ExecutionProtocol.FIXED_BUDGET, "fixed"),
         (ExecutionProtocol.NATIVE_TERMINATION, "native"),
     ):
         evidence_id = (
-            "academic_benchmark/tests/test_hybrid_3opt_evidence.py::"
-            f"test_core_{family_function}_memetic_3opt_{label}_tsp_and_atsp_evidence"
+            f"academic_benchmark/tests/test_hybrid_{polish_name}_evidence.py::"
+            f"test_core_{family_function}_memetic_{polish_name}_{label}_tsp_and_atsp_evidence"
         )
         for problem in (ProblemContract.TSP, ProblemContract.ATSP):
             claims.append(CapabilityClaim(
@@ -267,7 +271,7 @@ def _hybrid_3opt_claims(
                 backend_profile=ExecutionBackendProfile(
                     BackendKind.NUMBA_NOPYTHON, BackendKind.PYTHON
                 ),
-                composition=CompositionKind.GLOBAL_THEN_FINAL_3OPT,
+                composition=kind,
                 directed_cost_preserved=problem is ProblemContract.ATSP,
                 exact_objective_accounting=True,
                 fixed_seed_deterministic=True,
@@ -308,10 +312,10 @@ _INITIAL_CAPABILITIES: tuple[AlgorithmCapability, ...] = (
         LifecycleStatus.VERIFIED,
         claims=_alns_claims(),
     ),
-    AlgorithmCapability("Core-GWO-TSP-Memetic-3opt", "GWO", "Grey Wolf Optimizer + 3-opt (final polish once)", LifecycleStatus.VERIFIED, claims=_hybrid_3opt_claims("gwo")),
-    AlgorithmCapability("Core-HHO-TSP-Memetic-3opt", "HHO", "Harris Hawks Optimizer + 3-opt (final polish once)", LifecycleStatus.VERIFIED, claims=_hybrid_3opt_claims("hho")),
-    AlgorithmCapability("Core-GWO-TSP-Memetic-ALNS", "GWO", "Grey Wolf Optimizer (memetic ALNS)", LifecycleStatus.PLANNED, planning_note="Reserved for the approved C2 ALNS composition."),
-    AlgorithmCapability("Core-HHO-TSP-Memetic-ALNS", "HHO", "Harris Hawks Optimizer (memetic ALNS)", LifecycleStatus.PLANNED, planning_note="Reserved for the approved C2 ALNS composition."),
+    AlgorithmCapability("Core-GWO-TSP-Memetic-3opt", "GWO", "Grey Wolf Optimizer + 3-opt (final polish once)", LifecycleStatus.VERIFIED, claims=_hybrid_claims("gwo", CompositionKind.GLOBAL_THEN_FINAL_3OPT)),
+    AlgorithmCapability("Core-HHO-TSP-Memetic-3opt", "HHO", "Harris Hawks Optimizer + 3-opt (final polish once)", LifecycleStatus.VERIFIED, claims=_hybrid_claims("hho", CompositionKind.GLOBAL_THEN_FINAL_3OPT)),
+    AlgorithmCapability("Core-GWO-TSP-Memetic-ALNS", "GWO", "Grey Wolf Optimizer + ALNS (final polish once)", LifecycleStatus.VERIFIED, claims=_hybrid_claims("gwo", CompositionKind.GLOBAL_THEN_FINAL_ALNS)),
+    AlgorithmCapability("Core-HHO-TSP-Memetic-ALNS", "HHO", "Harris Hawks Optimizer + ALNS (final polish once)", LifecycleStatus.VERIFIED, claims=_hybrid_claims("hho", CompositionKind.GLOBAL_THEN_FINAL_ALNS)),
 )
 
 CAPABILITY_CATALOG = build_capability_catalog(_INITIAL_CAPABILITIES)

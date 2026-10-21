@@ -446,14 +446,20 @@ def test_alns_preflight_selects_exact_python_no_polish_claim(
     )
 
 
-@pytest.mark.parametrize(
-    "planned_id",
-    ["Core-GWO-TSP-Memetic-ALNS", "Core-HHO-TSP-Memetic-ALNS"],
-)
-def test_planned_alns_hybrids_remain_non_selectable(planned_id: str) -> None:
+def test_a_planned_capability_remains_non_selectable() -> None:
+    # No catalog ID is PLANNED after C-09 (every Memetic-3opt/ALNS hybrid is VERIFIED), so the
+    # PLANNED lifecycle is pinned with a synthetic catalog entry.
+    planned_id = "Core-Synthetic-Planned"
+    synthetic = build_capability_catalog((
+        AlgorithmCapability(
+            planned_id, "GWO", "synthetic planned entry", LifecycleStatus.PLANNED,
+            planning_note="test fixture, not an algorithm",
+        ),
+    ))
     with pytest.raises(PlannedAlgorithmError):
         preflight_run(
-            PreflightRequest(
+            capability_lookup=synthetic.get,
+            request=PreflightRequest(
                 resolution=_resolution(planned_id),
                 problem=_TSP,
                 protocol=ExecutionProtocol.FIXED_BUDGET,

@@ -1021,6 +1021,10 @@ def _make_canonical_ga_executor(algorithm_name="Core-GA-TSP", memetic=False):
 
 
 AlgorithmRegistry.register("Core-GA-TSP")(_make_canonical_ga_executor("Core-GA-TSP"))
+# C-16c: promotion commit only (a registry ID needs its catalog entry).
+AlgorithmRegistry.register("Core-GA-TSP-Memetic-2opt")(
+    _make_canonical_ga_executor("Core-GA-TSP-Memetic-2opt", memetic=True)
+)
 
 
 def _make_canonical_pso_executor(algorithm_name="Core-PSO-TSP"):

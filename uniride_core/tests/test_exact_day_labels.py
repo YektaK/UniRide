@@ -347,3 +347,62 @@ def test_inconsistent_certificates_are_rejected(bad):
 @pytest.mark.parametrize("good", [_cert(1, [PROOF_ARITHMETIC, PROOF_ARITHMETIC]), _cert(2, [PROOF_SOLVER, PROOF_ARITHMETIC])])
 def test_consistent_certificates_are_accepted(good):
     assert _cert_label(good).label == "infeasible_certified"
+
+
+# ---------------------------------------------------------------- C2 (owner, E14 note 2026-10-21): wave values are cross-checked too
+BY_BOUND = day(sr("feasible_with_gap", 5, 4), sr("optimal", 90, 90))
+BY_BOUND_BOUNDS = DayBounds(lb0w=bound(5, [PROOF_SOLVER]))
+
+
+def test_the_wave_values_verdict_vocabulary_is_the_crosscheck_vocabulary():
+    with pytest.raises(ValueError, match="wave-values"):
+        label(solved(), wave_values_crosscheck="yes")
+
+
+def test_c2_by_bound_needs_both_the_day_and_the_wave_values_agreement():
+    ok = label(BY_BOUND, bounds=BY_BOUND_BOUNDS, crosscheck="agree", wave_values_crosscheck="agree")
+    assert ok.label == "optimal_stage1_by_bound" and ok.proof_claim_allowed
+    assert ok.proof_claim_reason == "crosscheck_and_wave_values_agree" and ok.wave_values_crosscheck_status == "agree"
+    for wave in ("not_run", "inconclusive"):
+        out = label(BY_BOUND, bounds=BY_BOUND_BOUNDS, crosscheck="agree", wave_values_crosscheck=wave)
+        assert out.label == "optimal_stage1_by_bound" and not out.proof_claim_allowed
+        assert out.proof_claim_reason == f"wave_values_crosscheck_{wave}"
+    for day_verdict in ("not_run", "inconclusive"):
+        out = label(BY_BOUND, bounds=BY_BOUND_BOUNDS, crosscheck=day_verdict, wave_values_crosscheck="agree")
+        assert not out.proof_claim_allowed and out.proof_claim_reason == f"crosscheck_{day_verdict}"
+
+
+def test_c2_a_tier_2_certificate_needs_the_wave_values_agreement_and_no_day_crosscheck():
+    c = DayBounds(certificate=cert(2))
+    out = label(None, bounds=c, crosscheck="not_run", wave_values_crosscheck="agree", checker_ok=None)
+    assert out.label == "infeasible_certified" and out.proof_claim_allowed
+    assert out.proof_claim_reason == "wave_values_crosscheck_agree"  # no day MIP was proven: the day verdict is not asked
+    for wave in ("not_run", "inconclusive"):
+        out = label(None, bounds=c, crosscheck="agree", wave_values_crosscheck=wave, checker_ok=None)
+        assert not out.proof_claim_allowed and out.proof_claim_reason == f"wave_values_crosscheck_{wave}"
+
+
+def test_c2_a_tier_1_certificate_needs_neither_gate():
+    out = label(None, bounds=DayBounds(certificate=cert(1)), crosscheck="not_run", wave_values_crosscheck="not_run", checker_ok=None)
+    assert out.proof_claim_allowed and out.proof_claim_reason == "arithmetic_certificate"
+
+
+def test_c2_optimal_and_solver_proven_infeasible_are_gated_by_the_day_verdict_only():
+    assert label(solved(), crosscheck="agree", wave_values_crosscheck="not_run").proof_claim_allowed
+    res = day(sr("infeasible_proven", reason="infeasible"))
+    assert label(res, crosscheck="agree", wave_values_crosscheck="not_run", checker_ok=None).proof_claim_allowed
+    assert not label(solved(), crosscheck="not_run", wave_values_crosscheck="agree").proof_claim_allowed
+
+
+@pytest.mark.parametrize("res, bounds, ok", [(solved(), None, True), (BY_BOUND, BY_BOUND_BOUNDS, True),
+                                              (day(sr("infeasible_proven", reason="infeasible")), None, None),
+                                              (None, DayBounds(certificate=cert(2)), None)])
+def test_c2_a_blocking_wave_values_verdict_rejects_the_cell(res, bounds, ok):
+    out = label(res, bounds=bounds, crosscheck="agree", wave_values_crosscheck="blocking", checker_ok=ok)
+    assert out.label == "rejected" and out.reason == "wave_values_crosscheck_disagreement" and not out.proof_claim_allowed
+
+
+def test_c2_open_labels_still_make_no_claim_with_both_verdicts_agreeing():
+    res = day(sr("feasible_with_gap", 6, 4), sr("feasible_with_gap", 90, 80))
+    out = label(res, crosscheck="agree", wave_values_crosscheck="agree")
+    assert not out.proof_claim_allowed and out.proof_claim_reason == "not_a_proof_label"

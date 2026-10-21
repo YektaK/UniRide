@@ -246,3 +246,34 @@ def test_c6_a_later_optimal_stage_after_a_gap_stage_is_not_counted():
 def test_a_blocking_defect_is_an_exception_with_a_code_and_a_message():
     err = BlockingDefect(dc.BLOCKING_VALUE_BELOW_BOUND, "x")
     assert err.code == dc.BLOCKING_VALUE_BELOW_BOUND and "x" in str(err)
+
+
+# ---------------------------------------------------------------- C3 (owner, E14 note 2026-10-21): both_open
+@pytest.mark.parametrize("label", ["bound_only", "not_run_enumeration_cap", "input_rejected", "backend_unavailable"])
+def test_c3_both_open_when_neither_side_has_a_value_or_a_proof(label):
+    out = reproduction_category(PrototypeClaim.open(), production_label=label)
+    assert out.category == "both_open"
+
+
+def test_c3_the_design_6_3_example_2026_10_05_r90_l2_open_on_both_sides():
+    # prototype: S in {1, 2} (open); production: a bound and no plan
+    out = reproduction_category(PrototypeClaim.open(), production_label="bound_only")
+    assert out.category == "both_open" and out.prototype_claim_verified is None and out.note == ""
+
+
+def test_c3_both_open_is_neither_agreement_nor_disagreement():
+    both = reproduction_category(PrototypeClaim.open(), production_label="bound_only")
+    assert both.agreement is None
+    assert reproduction_category(PrototypeClaim.value((5, 800)), production_label="optimal", production_objective=(5, 800)).agreement is True
+    assert reproduction_category(PrototypeClaim.value((6, 800)), production_label="optimal", production_objective=(5, 800)).agreement is False
+
+
+def test_c3_a_production_value_against_an_open_prototype_stays_prototype_open():
+    assert reproduction_category(PrototypeClaim.open(), production_label="feasible_with_gap",
+                                 production_objective=(2, 100)).category == "prototype_open"
+
+
+def test_c3_not_comparable_is_gone_and_the_vocabulary_has_seven_categories():
+    assert not hasattr(dc, "NotComparable")
+    assert set(dc.REPRODUCTION_CATEGORIES) == {"equal", "production_better", "production_worse", "production_open",
+                                               "prototype_open", "co_optimal_alternative", "both_open"}

@@ -1,0 +1,556 @@
+{
+ "_note": "Captured on WIP 276f234f BEFORE the Core-* routing refusal (seed 42, params max_iterations=5). CVRP-*/CVRPTW-* names must stay identical.",
+ "results": {
+  "CVRP-Core-GA-TSP": {
+   "algorithm": "CVRP-Core-GA-TSP",
+   "cost": 48.0,
+   "routes": [
+    [
+     4,
+     2
+    ],
+    [
+     3,
+     1
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRP-Core-GWO-TSP": {
+   "algorithm": "CVRP-Core-GWO-TSP",
+   "cost": 48.0,
+   "routes": [
+    [
+     4,
+     3
+    ],
+    [
+     1,
+     2
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRP-Core-Greedy-Routing": {
+   "algorithm": "CVRP-Core-Greedy-Routing",
+   "cost": 48.0,
+   "routes": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRP-Core-HHO-TSP": {
+   "algorithm": "CVRP-Core-HHO-TSP",
+   "cost": 48.0,
+   "routes": [
+    [
+     4,
+     3
+    ],
+    [
+     1,
+     2
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRP-Core-PSO-TSP": {
+   "algorithm": "CVRP-Core-PSO-TSP",
+   "cost": 48.0,
+   "routes": [
+    [
+     2,
+     3
+    ],
+    [
+     1,
+     4
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRP-Core-TwoOpt-TSP": {
+   "algorithm": "CVRP-Core-TwoOpt-TSP",
+   "cost": 48.0,
+   "routes": [
+    [
+     4,
+     2
+    ],
+    [
+     3,
+     1
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRP-GA-Split": {
+   "algorithm": "CVRP-GA-Split",
+   "cost": 48.0,
+   "routes": [
+    [
+     4,
+     2
+    ],
+    [
+     3,
+     1
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRP-GWO-Split": {
+   "algorithm": "CVRP-GWO-Split",
+   "cost": 48.0,
+   "routes": [
+    [
+     4,
+     3
+    ],
+    [
+     1,
+     2
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRP-HHO-Split": {
+   "algorithm": "CVRP-HHO-Split",
+   "cost": 48.0,
+   "routes": [
+    [
+     4,
+     3
+    ],
+    [
+     1,
+     2
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRP-Numba-2-opt": {
+   "algorithm": "CVRP-Numba-2-opt",
+   "cost": 48.0,
+   "routes": [
+    [
+     4,
+     2
+    ],
+    [
+     3,
+     1
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRP-Numba-3-opt-bounded": {
+   "algorithm": "CVRP-Numba-3-opt-bounded",
+   "cost": 48.0,
+   "routes": [
+    [
+     4,
+     2
+    ],
+    [
+     3,
+     1
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRP-Numba-GA": {
+   "algorithm": "CVRP-Numba-GA",
+   "cost": 48.0,
+   "routes": [
+    [
+     4,
+     2
+    ],
+    [
+     3,
+     1
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRP-Numba-GWO": {
+   "algorithm": "CVRP-Numba-GWO",
+   "cost": 48.0,
+   "routes": [
+    [
+     4,
+     3
+    ],
+    [
+     1,
+     2
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRP-Numba-HHO": {
+   "algorithm": "CVRP-Numba-HHO",
+   "cost": 48.0,
+   "routes": [
+    [
+     4,
+     3
+    ],
+    [
+     1,
+     2
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRP-Numba-Hybrid": {
+   "algorithm": "CVRP-Numba-Hybrid",
+   "cost": 48.0,
+   "routes": [
+    [
+     4,
+     2
+    ],
+    [
+     3,
+     1
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRP-Numba-Or-opt": {
+   "algorithm": "CVRP-Numba-Or-opt",
+   "cost": 48.0,
+   "routes": [
+    [
+     4,
+     2
+    ],
+    [
+     3,
+     1
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRP-Numba-PSO": {
+   "algorithm": "CVRP-Numba-PSO",
+   "cost": 48.0,
+   "routes": [
+    [
+     2,
+     3
+    ],
+    [
+     1,
+     4
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRP-Numba-Swap": {
+   "algorithm": "CVRP-Numba-Swap",
+   "cost": 48.0,
+   "routes": [
+    [
+     4,
+     2
+    ],
+    [
+     3,
+     1
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRP-PSO-Split": {
+   "algorithm": "CVRP-PSO-Split",
+   "cost": 48.0,
+   "routes": [
+    [
+     2,
+     3
+    ],
+    [
+     1,
+     4
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRPTW-Core-GA-TSP": {
+   "algorithm": "CVRPTW-Core-GA-TSP",
+   "cost": 43.0,
+   "routes": [
+    [
+     2
+    ],
+    [
+     1,
+     3
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRPTW-Core-GWO-TSP": {
+   "algorithm": "CVRPTW-Core-GWO-TSP",
+   "cost": 43.0,
+   "routes": [
+    [
+     2
+    ],
+    [
+     1,
+     3
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRPTW-Core-Greedy-Routing": {
+   "algorithm": "CVRPTW-Core-Greedy-Routing",
+   "cost": 43.0,
+   "routes": [
+    [
+     1
+    ],
+    [
+     2,
+     3
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRPTW-Core-HHO-TSP": {
+   "algorithm": "CVRPTW-Core-HHO-TSP",
+   "cost": 43.0,
+   "routes": [
+    [
+     2
+    ],
+    [
+     1,
+     3
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRPTW-Core-PSO-TSP": {
+   "algorithm": "CVRPTW-Core-PSO-TSP",
+   "cost": 43.0,
+   "routes": [
+    [
+     2
+    ],
+    [
+     1,
+     3
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRPTW-Core-TwoOpt-TSP": {
+   "algorithm": "CVRPTW-Core-TwoOpt-TSP",
+   "cost": 43.0,
+   "routes": [
+    [
+     2
+    ],
+    [
+     1,
+     3
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRPTW-GA-Split": {
+   "algorithm": "CVRPTW-GA-Split",
+   "cost": 43.0,
+   "routes": [
+    [
+     2
+    ],
+    [
+     1,
+     3
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRPTW-GWO-Split": {
+   "algorithm": "CVRPTW-GWO-Split",
+   "cost": 43.0,
+   "routes": [
+    [
+     2
+    ],
+    [
+     1,
+     3
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRPTW-HHO-Split": {
+   "algorithm": "CVRPTW-HHO-Split",
+   "cost": 43.0,
+   "routes": [
+    [
+     2
+    ],
+    [
+     1,
+     3
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRPTW-Numba-2-opt": {
+   "algorithm": "CVRPTW-Numba-2-opt",
+   "cost": 43.0,
+   "routes": [
+    [
+     2
+    ],
+    [
+     1,
+     3
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRPTW-Numba-3-opt-bounded": {
+   "algorithm": "CVRPTW-Numba-3-opt-bounded",
+   "cost": 43.0,
+   "routes": [
+    [
+     2
+    ],
+    [
+     1,
+     3
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRPTW-Numba-GA": {
+   "algorithm": "CVRPTW-Numba-GA",
+   "cost": 43.0,
+   "routes": [
+    [
+     2
+    ],
+    [
+     1,
+     3
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRPTW-Numba-GWO": {
+   "algorithm": "CVRPTW-Numba-GWO",
+   "cost": 43.0,
+   "routes": [
+    [
+     2
+    ],
+    [
+     1,
+     3
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRPTW-Numba-HHO": {
+   "algorithm": "CVRPTW-Numba-HHO",
+   "cost": 43.0,
+   "routes": [
+    [
+     2
+    ],
+    [
+     1,
+     3
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRPTW-Numba-Hybrid": {
+   "algorithm": "CVRPTW-Numba-Hybrid",
+   "cost": 43.0,
+   "routes": [
+    [
+     2
+    ],
+    [
+     1,
+     3
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRPTW-Numba-Or-opt": {
+   "algorithm": "CVRPTW-Numba-Or-opt",
+   "cost": 43.0,
+   "routes": [
+    [
+     2
+    ],
+    [
+     1,
+     3
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRPTW-Numba-PSO": {
+   "algorithm": "CVRPTW-Numba-PSO",
+   "cost": 43.0,
+   "routes": [
+    [
+     2
+    ],
+    [
+     1,
+     3
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRPTW-Numba-Swap": {
+   "algorithm": "CVRPTW-Numba-Swap",
+   "cost": 43.0,
+   "routes": [
+    [
+     2
+    ],
+    [
+     1,
+     3
+    ]
+   ],
+   "veh": 2
+  },
+  "CVRPTW-PSO-Split": {
+   "algorithm": "CVRPTW-PSO-Split",
+   "cost": 43.0,
+   "routes": [
+    [
+     2
+    ],
+    [
+     1,
+     3
+    ]
+   ],
+   "veh": 2
+  }
+ }
+}

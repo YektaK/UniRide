@@ -35,6 +35,8 @@ This module imports nothing from ``academic_benchmark``.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 from dataclasses import dataclass, field
 from fractions import Fraction
@@ -570,7 +572,198 @@ def three_opt_polish_stage(
     return StageSpec("Core-ThreeOpt-TSP", run, dict(params), seed=None, matrix=matrix)
 
 
+# ---- ALNS polish stage (C-07) --------------------------------------------
+
+# Strict ALNS parameter schema of the ``polish`` namespace. The same rules live
+# in ``academic_benchmark.fairness.validate_scientific_alns_params`` (the C3
+# schema); core cannot import that layer, so the rules are restated here and a
+# parity test in ``academic_benchmark/tests`` keeps the two in step. C-09 may
+# make ``fairness.py`` import these constants instead.
+ALNS_REQUIRED_PARAMS = frozenset({
+    "max_iterations", "max_no_improvement", "remove_ratio", "min_remove",
+    "segment_length", "weight_update_factor", "use_sa",
+})
+ALNS_OPTIONAL_PARAMS = frozenset({"sa_start_temp", "sa_cooling_rate"})
+
+# ALNS's own termination reasons -> the shared vocabulary. A fixed-budget polish
+# stage may end with {evaluation_budget_exhausted, max_iterations,
+# no_improving_move, stagnation_limit}; a native one only with {max_iterations,
+# stagnation_limit, no_improving_move}. ALNS never stops for lack of an
+# improving move, so ``no_improving_move`` is in the vocabulary but unreachable.
+# ``max_no_improve`` / ``max_no_improvement`` are the parameter names under which
+# the stagnation stop is configured; they map to ``stagnation_limit``.
+# Any other reason (for example a wall-clock ``time_limit``) is an error.
+ALNS_POLISH_TERMINATION_MAP: Mapping[str, str] = {
+    "evaluation_budget_exhausted": "evaluation_budget_exhausted",
+    "max_iterations": "max_iterations",
+    "stagnation_limit": "stagnation_limit",
+    "max_no_improve": "stagnation_limit",
+    "max_no_improvement": "stagnation_limit",
+}
+
+POLISH_SEED_DERIVATION = (
+    "sha256(json.dumps([protocol_version, run_seed, 'polish'], "
+    "separators=(',', ':'), ensure_ascii=True).encode('ascii'))[:8] big-endian >> 1"
+)
+
+
+def derive_polish_seed(protocol_version: str, run_seed: int) -> int:
+    """Stable ALNS polish seed ``SHA-256(protocol_version, run_seed, "polish")``.
+
+    Encoding (part of the algorithm identity, design rule 7): the ASCII JSON text
+    of the list ``[protocol_version, run_seed, "polish"]`` with separators ``","``
+    and ``":"`` (so the fields cannot run together), hashed with SHA-256; the seed
+    is the first 8 digest bytes read big-endian and shifted right by one bit, a
+    non-negative 63-bit integer that fits signed 64-bit storage. Python
+    ``hash()`` is never involved, so the value is the same in every process
+    whatever ``PYTHONHASHSEED`` is.
+    """
+    if not isinstance(protocol_version, str) or not protocol_version:
+        raise TypeError("protocol_version must be a non-empty string")
+    if isinstance(run_seed, bool) or not isinstance(run_seed, int):
+        raise TypeError("run_seed must be an integer")
+    if run_seed < 0:
+        raise ValueError("run_seed must not be negative")
+    payload = json.dumps(
+        [protocol_version, run_seed, "polish"], separators=(",", ":"), ensure_ascii=True
+    ).encode("ascii")
+    return int.from_bytes(hashlib.sha256(payload).digest()[:8], "big") >> 1
+
+
+def map_alns_termination(reason: str, *, native: bool) -> str:
+    """Map an ALNS termination reason into the shared vocabulary (see the table)."""
+    mapped = ALNS_POLISH_TERMINATION_MAP.get(reason)
+    if mapped is None:
+        raise CompositionError(f"unsupported ALNS termination reason {reason!r}")
+    if native and mapped not in NATIVE_COMPLETE_REASONS:
+        raise CompositionError(
+            f"native ALNS polish cannot end with {reason!r}: no evaluation budget "
+            "exists in native mode"
+        )
+    return mapped
+
+
+def _finite_number(value: Any) -> bool:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
+
+
+def validate_alns_polish_params(
+    params: Mapping[str, Any], *, strict: bool = True
+) -> Dict[str, Any]:
+    """Validate the ``polish`` namespace of an ALNS composition.
+
+    ``strict`` (default; paper-scale manifests) requires every required ALNS
+    hyperparameter; unknown names are always refused. Value rules follow the C3
+    schema.
+    """
+    unknown = sorted(set(params) - ALNS_REQUIRED_PARAMS - ALNS_OPTIONAL_PARAMS)
+    if unknown:
+        raise CompositionError(
+            f"unknown ALNS polish parameters: {', '.join(unknown)}"
+        )
+    if strict:
+        _require_explicit(params, sorted(ALNS_REQUIRED_PARAMS), "ALNS polish stage")
+
+    def bad(name: str) -> CompositionError:
+        return CompositionError(f"invalid ALNS polish parameter: {name}")
+
+    for name in ("max_iterations", "max_no_improvement", "min_remove", "segment_length"):
+        if name in params:
+            value = params[name]
+            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+                raise bad(name)
+    if "remove_ratio" in params:
+        value = params["remove_ratio"]
+        if not _finite_number(value) or not 0 < value <= 1:
+            raise bad("remove_ratio")
+    if "weight_update_factor" in params:
+        value = params["weight_update_factor"]
+        if not _finite_number(value) or not 0 <= value <= 1:
+            raise bad("weight_update_factor")
+    if "use_sa" in params and not isinstance(params["use_sa"], bool):
+        raise bad("use_sa")
+    start_temp = params.get("sa_start_temp")
+    if start_temp is not None and (not _finite_number(start_temp) or start_temp < 0):
+        raise bad("sa_start_temp")
+    if params.get("use_sa") is True and start_temp is not None and start_temp <= 0:
+        raise bad("sa_start_temp")
+    cooling = params.get("sa_cooling_rate")
+    if cooling is not None and (not _finite_number(cooling) or not 0 < cooling <= 1):
+        raise bad("sa_cooling_rate")
+    return dict(params)
+
+
+def alns_polish_stage(
+    matrix: Sequence[Sequence[float]],
+    params: Mapping[str, Any],
+    *,
+    protocol_version: str,
+    run_seed: int,
+    strict: bool = True,
+) -> StageSpec:
+    """Canonical ``ALNS-TSP`` polish on the supplied tour and its known cost.
+
+    ``params`` is the ``polish`` namespace (strict by default: every required
+    ALNS hyperparameter explicit). The stage's seed is
+    :func:`derive_polish_seed` and is recorded in the spec and the stage record.
+    The incoming tour is not re-counted. ALNS may walk through worse tours but
+    returns its best-found tour, which starts as the incoming one, so a polish
+    result is never worse than its input. Reasons are mapped by
+    :func:`map_alns_termination`.
+    """
+    clean = validate_alns_polish_params(params, strict=strict)
+    seed = derive_polish_seed(protocol_version, run_seed)
+
+    def run(tour, cost, budget) -> PolishStageResult:
+        from uniride_core.algorithms.sota_tsp.alns_tsp import ALNS_TSP, ALNSConfig
+
+        defaults = ALNSConfig()
+        config = ALNSConfig(
+            iterations=clean.get("max_iterations", defaults.iterations),
+            max_no_improve=clean.get("max_no_improvement", defaults.max_no_improve),
+            remove_ratio=clean.get("remove_ratio", defaults.remove_ratio),
+            min_remove=clean.get("min_remove", defaults.min_remove),
+            segment_length=clean.get("segment_length", defaults.segment_length),
+            weight_update_factor=clean.get(
+                "weight_update_factor", defaults.weight_update_factor
+            ),
+            use_sa=clean.get("use_sa", defaults.use_sa),
+            sa_start_temp=clean.get("sa_start_temp", defaults.sa_start_temp),
+            sa_cooling_rate=clean.get("sa_cooling_rate", defaults.sa_cooling_rate),
+            seed=seed,
+        )
+        native = budget.limit is None
+        search = ALNS_TSP(config).solve_accounted_from_tour(
+            [list(row) for row in matrix], tour, cost, budget
+        )
+        reason = map_alns_termination(search.termination_reason, native=native)
+        return PolishStageResult(
+            tour=list(search.route),
+            cost=float(search.cost),
+            iterations=int(search.iterations),
+            evaluations=int(search.evaluations),
+            termination_reason=reason,
+            extra={
+                "protocol_version": protocol_version,
+                "run_seed": run_seed,
+                "derived_seed": seed,
+                "seed_derivation": POLISH_SEED_DERIVATION,
+                "alns_termination_reason": search.termination_reason,
+            },
+        )
+
+    return StageSpec("ALNS-TSP", run, dict(params), seed=seed, matrix=matrix)
+
+
 __all__ = [
+    "ALNS_OPTIONAL_PARAMS",
+    "ALNS_POLISH_TERMINATION_MAP",
+    "ALNS_REQUIRED_PARAMS",
     "COMPOSITE_COMPLETE",
     "CompositionError",
     "CompositionResult",
@@ -579,9 +772,13 @@ __all__ = [
     "SMOKE_GLOBAL_FRACTION",
     "StageRecord",
     "StageSpec",
+    "alns_polish_stage",
+    "derive_polish_seed",
     "global_stage_cap",
+    "map_alns_termination",
     "resolve_global_fraction",
     "run_composition",
     "swarm_global_stage",
     "three_opt_polish_stage",
+    "validate_alns_polish_params",
 ]

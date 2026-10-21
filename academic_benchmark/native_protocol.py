@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 from academic_benchmark.composite_protocol import (
     COMPOSITE_ALGORITHMS,
     COMPOSITE_COMPLETE_REASON,
-    COMPOSITE_VARIANT,
+    is_composite_variant,
     validate_composite_policy,
     validate_composite_result,
 )
@@ -42,6 +42,8 @@ class NativeComparisonManifest:
         "Core-HHO-TSP-Pure": "HHO",
         "Core-GWO-TSP-Memetic-3opt": "GWO",
         "Core-HHO-TSP-Memetic-3opt": "HHO",
+        "Core-GWO-TSP-Memetic-ALNS": "GWO",
+        "Core-HHO-TSP-Memetic-ALNS": "HHO",
         "Core-TwoOpt-TSP": "2-opt",
         "Core-ThreeOpt-TSP": "3-opt",
         "Numba-2-opt": "2-opt",
@@ -138,7 +140,7 @@ class NativeComparisonManifest:
             errors.append("unsupported native algorithm_id")
         elif family != expected_family:
             errors.append("algorithm_family does not match algorithm_id")
-        composite_row = getattr(result, "variant", None) == COMPOSITE_VARIANT
+        composite_row = is_composite_variant(getattr(result, "variant", None))
         if getattr(result, "variant", None) != "pure" and not composite_row:
             errors.append("native comparison accepts only pure variants")
         if getattr(result, "objective_evaluations", None) != result.evaluations:
@@ -227,7 +229,11 @@ class NativeComparisonManifest:
         if reason not in self.TERMINATION_REASONS:
             errors.append("unsupported native termination_reason")
         if composite_row or algorithm_id in COMPOSITE_ALGORITHMS:
-            errors.extend(validate_composite_result(result, fixed_budget=None))
+            errors.extend(
+                validate_composite_result(
+                    result, fixed_budget=None, protocol_version=self.protocol_version
+                )
+            )
         elif reason == COMPOSITE_COMPLETE_REASON:
             errors.append("composite_complete is reserved for composite rows")
         if getattr(result, "execution_backend", None) in {None, "", "unknown"}:

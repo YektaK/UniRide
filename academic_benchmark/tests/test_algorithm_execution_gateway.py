@@ -18,6 +18,8 @@ from academic_benchmark.core.execution_gateway import (
     validate_preflighted_result,
 )
 from academic_benchmark.core.preflight import PreflightRequest, RuntimeBackendAvailability, preflight_run
+from academic_benchmark.tests.synthetic_catalog import force_lifecycle
+from uniride_core.algorithms.capabilities import LifecycleStatus as _Lifecycle
 from academic_benchmark.fairness import FairRunResult
 from uniride_core.algorithms.capabilities import BackendPolicy, ExecutionProtocol
 
@@ -148,8 +150,10 @@ class _ExplodingGetter:
     ],
 )
 def test_resolution_and_preflight_failures_happen_before_registry_lookup(
-    requested_id: str, problem: object, error: type[Exception]
+    requested_id: str, problem: object, error: type[Exception], monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # Core-GA-TSP is a synthetic CANDIDATE here; the live lifecycle is irrelevant.
+    force_lifecycle(monkeypatch, "Core-GA-TSP", _Lifecycle.CANDIDATE)
     with pytest.raises(error):
         _execute(
             requested_algorithm_id=requested_id,

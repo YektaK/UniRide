@@ -18,6 +18,8 @@ from academic_benchmark.core.algorithm_errors import (
     UnknownAlgorithmError,
 )
 from academic_benchmark.core.algorithm_resolution import IdentifierSource, ResolutionResult
+from academic_benchmark.tests.synthetic_catalog import force_lifecycle
+from uniride_core.algorithms.capabilities import LifecycleStatus as _Lifecycle
 from academic_benchmark.core.preflight import (
     PreflightRequest,
     RuntimeBackendAvailability,
@@ -393,9 +395,11 @@ def test_decision_and_provenance_are_immutable() -> None:
 
 
 @pytest.mark.parametrize("candidate_id", ["Core-GA-TSP", "Core-PSO-TSP"])
-def test_current_candidate_catalog_entries_remain_non_selectable(
-    candidate_id: str,
+def test_candidate_catalog_entries_remain_non_selectable(
+    candidate_id: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # Synthetic CANDIDATE entry through the live default lookup; independent of promotions.
+    force_lifecycle(monkeypatch, candidate_id, _Lifecycle.CANDIDATE)
     with pytest.raises(CandidateAlgorithmError):
         preflight_run(
             PreflightRequest(

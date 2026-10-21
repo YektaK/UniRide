@@ -1,0 +1,117 @@
+{
+  "aggregate": true,
+  "blocking_errors": [],
+  "claim": "Exact joint day model over all enumerated routes of a service date (solver-proven value or bound); a separate protocol, never pooled with exact_reference_v1 wave rows, union_day_v1 menu rows or heuristic rows; prototype results are reproduction targets, never tuning targets.",
+  "crosscheck_enabled": true,
+  "development_run": false,
+  "dirty_working_tree": false,
+  "enumeration": {
+    "column_cap": 2000000,
+    "columns_per_day": {
+      "single_4sw5so|2026-10-05|R70": 14654,
+      "single_4sw5so|2026-10-05|R90": 45302
+    },
+    "label_cap": 5000000,
+    "wall_clock_limit_seconds": 600
+  },
+  "git_commit": "87cef0346d181ba7f06d22be3682731b7dc6a545",
+  "host_os": "Windows-11",
+  "mps_sha256": {
+    "single_4sw5so|2026-10-05|R70|L-|stage1": "b6cc9cdc4b6c834664d5a6f2b6f8baf96c46957e6c898e598b8f2158faf48f8f",
+    "single_4sw5so|2026-10-05|R70|L-|stage2": "aaf3265a9cba0336256a29ef77536668dbc126394b5cc8ecbe418cc0c4385ebf",
+    "single_4sw5so|2026-10-05|R90|L-|stage1": "2fe5ec0e33b808ca632c6c8462d2ff1d7afdfc6c63d5c0c11deb767e2b13fcdf",
+    "single_4sw5so|2026-10-05|R90|L-|stage2": "39983afc3e0f695f407914396e6c09e8be44cb1f3da708fd63ff84c1a5ae2ef5"
+  },
+  "options": {
+    "dates": [
+      "2026-10-05"
+    ],
+    "fleets": [
+      "single_4sw5so"
+    ],
+    "limits": [],
+    "rides": [
+      70,
+      90
+    ]
+  },
+  "output_sha256": {
+    "day_joint.csv": "28def27ddfd8aa86fa58fdbc9e4314e139b7be8b5e55282a35754dcfab55ec2c",
+    "day_joint_plans.json": "51069fd76a3f9f4c4186bc863885cbf07760399ab4151ecbbb6bf6cab54e0c00",
+    "day_joint_stages.csv": "5f39ab381391148f244cfc6452345ec8da33e6c9f161869bee0e170574e2cd63",
+    "day_joint_week.csv": "75ef05b5535f23fce9eafdcc18e95fe0e558fc1cee9c59149458eb69b976f668",
+    "lb0.csv": "4cc0b507332c09d2ae3169d742430e5ed268b598f6483069665968d2e86968a8"
+  },
+  "protocol": "exact_day_joint_v1",
+  "python_provenance": {
+    "academic_benchmark": "academic_benchmark/__init__.py",
+    "optimizer_api": "optimizer_api/__init__.py",
+    "uniride_core": "uniride_core/__init__.py"
+  },
+  "python_version": "3.14.6",
+  "run_history": {
+    "cache": "none",
+    "cells": [
+      {
+        "cell": "single_4sw5so|2026-10-05|R70|L-",
+        "day_status": "optimal",
+        "wall_seconds": 76.93
+      },
+      {
+        "cell": "single_4sw5so|2026-10-05|R90|L-",
+        "day_status": "optimal",
+        "wall_seconds": 360.42
+      }
+    ],
+    "cells_planned": 2,
+    "cells_solved": 2,
+    "invocations": [
+      {
+        "jobs": 1,
+        "serial": true,
+        "wall_seconds": 438.2
+      }
+    ],
+    "jobs": 1
+  },
+  "run_label": "",
+  "schema_version": 1,
+  "sensitivity_run": false,
+  "solvers": {
+    "gurobi": {
+      "name": "gurobi",
+      "options": "mip:bestbound=1 tech:threads=1 tech:seed=0 mip:gap=0 mip:gapabs=0.99 lim:time=600 outlev=1",
+      "seed": 0,
+      "threads": 1,
+      "time_limit_seconds": 600.0,
+      "version": "Gurobi 13.0.3",
+      "work_limit": null
+    },
+    "highs": {
+      "name": "highs",
+      "options": "output_flag=false threads=1 random_seed=0 mip_rel_gap=0 mip_abs_gap=0.99 time_limit=600",
+      "seed": 0,
+      "threads": 1,
+      "time_limit_seconds": 600.0,
+      "version": "1.15.1",
+      "work_limit": null
+    }
+  },
+  "source_manifests": {
+    "single_4sw5so": {
+      "fixed_type": null,
+      "git_commit": "6be127d048ae6c871baffd0c1992e0eb617231b2",
+      "manifest_sha256": "f152ca63068be91be03c7ca27cf767fef52cc9345a6cb69d155f75a137f90b15",
+      "minimised_type": null,
+      "path": "docs/paper/results/week-2026-10-05-4sw5so"
+    }
+  },
+  "tools": {
+    "cli_command": "node --conditions=react-server --import tsx scripts/verify-typed-selection.ts",
+    "node": "v25.5.0",
+    "tsx": null
+  },
+  "total_wall_seconds": 438.2,
+  "wave_values": "sp",
+  "work_package": "WP-E11"
+}

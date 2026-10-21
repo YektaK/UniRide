@@ -105,6 +105,14 @@ def _require_numba() -> None:
     assert availability.numba_nopython, availability.detail
 
 
+def _without_timing(composition: dict) -> dict:
+    """Stage records minus the wall times, which differ between two identical runs."""
+    record = copy.deepcopy(composition)
+    for stage in record["stages"]:
+        stage.pop("elapsed_sec")
+    return record
+
+
 def _closed_cost(tour: list[int], matrix: list[list[float]]) -> float:
     route = [node - 1 for node in tour]
     return sum(
@@ -188,8 +196,8 @@ def _prove_fixed(algorithm: str) -> None:
         assert first.seed == manifest.paired_seed(problem.name, 0)
         _assert_common(first, problem, algorithm, native=False)
         manifest.validate_result(first)
-        assert (replay.tour, replay.tour_cost, replay.evaluations, replay.composition) == (
-            first.tour, first.tour_cost, first.evaluations, first.composition,
+        assert (replay.tour, replay.tour_cost, replay.evaluations, _without_timing(replay.composition)) == (
+            first.tour, first.tour_cost, first.evaluations, _without_timing(first.composition),
         )
 
 
@@ -203,8 +211,8 @@ def _prove_native(algorithm: str) -> None:
         assert first.seed == manifest.paired_seed(problem.name, 0)
         _assert_common(first, problem, algorithm, native=True)
         manifest.validate_result(first)
-        assert (replay.tour, replay.tour_cost, replay.evaluations, replay.composition) == (
-            first.tour, first.tour_cost, first.evaluations, first.composition,
+        assert (replay.tour, replay.tour_cost, replay.evaluations, _without_timing(replay.composition)) == (
+            first.tour, first.tour_cost, first.evaluations, _without_timing(first.composition),
         )
 
 
@@ -297,31 +305,32 @@ def test_registered_executor_is_selectable_through_the_governed_gateway(algorith
     _require_numba()
     assert AlgorithmRegistry.get_executor(algorithm) is not None
     runtime = probe_runtime_backends()
-    problem = ATSP
-    for protocol, budget, params in (
-        (ExecutionProtocol.FIXED_BUDGET, BUDGET,
-         {"global": GLOBAL_PARAMS[algorithm], "polish": POLISH_PARAMS,
-          "global_fraction": FRACTION}),
-        (ExecutionProtocol.NATIVE_TERMINATION, None,
-         {"global": GLOBAL_PARAMS[algorithm], "polish": POLISH_PARAMS}),
-    ):
-        result, decision = execute_preflighted(
-            requested_algorithm_id=algorithm,
-            identifier_source=IdentifierSource.MANIFEST,
-            problem=problem, params=params,
-            seed=governed_contract_seed(protocol, budget, BASE_SEED, problem.name, 0),
-            run_idx=0, protocol=protocol,
-            backend_policy=BackendPolicy.REQUIRE_NUMBA_OBJECTIVE,
-            evaluation_budget=budget,
-            registered_algorithm_ids=frozenset(AlgorithmRegistry.list_algorithms()),
-            runtime_backends=runtime,
-            registry_getter=AlgorithmRegistry.get_executor,
-            comparison_base_seed=BASE_SEED,
-        )
-        assert decision.selected_claim.composition is CompositionKind.GLOBAL_THEN_FINAL_3OPT
-        assert decision.selected_backend == PROFILE
-        if protocol is ExecutionProtocol.NATIVE_TERMINATION:
-            assert result.termination_reason == "composite_complete"
+    for problem in (TSP, ATSP):
+        for protocol, budget, params in (
+            (ExecutionProtocol.FIXED_BUDGET, BUDGET,
+             {"global": GLOBAL_PARAMS[algorithm], "polish": POLISH_PARAMS,
+              "global_fraction": FRACTION}),
+            (ExecutionProtocol.NATIVE_TERMINATION, None,
+             {"global": GLOBAL_PARAMS[algorithm], "polish": POLISH_PARAMS}),
+        ):
+            result, decision = execute_preflighted(
+                requested_algorithm_id=algorithm,
+                identifier_source=IdentifierSource.MANIFEST,
+                problem=problem, params=params,
+                seed=governed_contract_seed(protocol, budget, BASE_SEED, problem.name, 0),
+                run_idx=0, protocol=protocol,
+                backend_policy=BackendPolicy.REQUIRE_NUMBA_OBJECTIVE,
+                evaluation_budget=budget,
+                registered_algorithm_ids=frozenset(AlgorithmRegistry.list_algorithms()),
+                runtime_backends=runtime,
+                registry_getter=AlgorithmRegistry.get_executor,
+                comparison_base_seed=BASE_SEED,
+            )
+            assert decision.selected_claim.composition is CompositionKind.GLOBAL_THEN_FINAL_3OPT
+            assert decision.selected_claim.problem.value == problem.problem_type
+            assert decision.selected_backend == PROFILE
+            if protocol is ExecutionProtocol.NATIVE_TERMINATION:
+                assert result.termination_reason == "composite_complete"
 
 
 def _gateway_run(algorithm, tamper, protocol, budget, params):

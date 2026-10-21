@@ -489,3 +489,50 @@ def test_asymmetric_matrix_keeps_directed_costs():
     )
     assert out.cost == pytest.approx(closed_tour_cost(out.tour, ASYM8))
     assert out.cost <= closed_tour_cost(tour, ASYM8) + 1e-9
+
+
+# ---- C-09 polish: deterministic never-worse on every return path ----------------
+
+WORSE_FIXED = [0, 6, 1, 7, 2, 8, 3, 9, 4, 10, 5, 11]  # interleaved: far longer than the circle
+
+
+class _AlwaysWorse:
+    """Repair operator that ignores the partial tour and returns one fixed worse tour."""
+
+    def repair(self, partial, removed, matrix):
+        return list(WORSE_FIXED)
+
+
+def _worse_only_solver(**overrides) -> ALNS_TSP:
+    solver = ALNS_TSP(_config(**overrides))
+    solver._repair_ops = tuple(_AlwaysWorse() for _ in solver._repair_ops)
+    solver._accept = lambda current, new, temp: True  # the walk always follows the worse tour
+    return solver
+
+
+@pytest.mark.parametrize(
+    "overrides,limit,expected",
+    [
+        (dict(iterations=15, max_no_improve=10_000), 6, "evaluation_budget_exhausted"),
+        (dict(iterations=500, max_no_improve=4), None, "stagnation_limit"),
+        (dict(iterations=9, max_no_improve=10_000), None, "max_iterations"),
+    ],
+)
+def test_never_worse_holds_on_every_return_path_when_every_candidate_is_worse(
+    overrides, limit, expected
+):
+    cost = closed_tour_cost(IDENTITY12, CIRCLE12)
+    assert closed_tour_cost(WORSE_FIXED, CIRCLE12) > cost  # the fixture really is worse
+    result = _worse_only_solver(**overrides).solve_accounted_from_tour(
+        CIRCLE12, list(IDENTITY12), cost, ObjectiveEvaluationBudget(limit)
+    )
+    assert result.termination_reason == expected
+    assert result.iterations >= 1  # candidates were really generated and accepted
+    assert result.route == IDENTITY12
+    assert result.cost == cost
+
+
+def test_derive_polish_seed_golden_literal_catches_a_silent_encoding_change():
+    # computed once from the documented encoding; a change of separators, field order,
+    # digest slice or the right shift changes this value (and is a new variant, rule 9)
+    assert derive_polish_seed("uniride-fair-tsp-v2", 1000) == 5272418355014093478

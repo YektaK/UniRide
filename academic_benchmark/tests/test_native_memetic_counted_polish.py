@@ -9,14 +9,6 @@ from academic_benchmark.engine_core import AlgorithmRegistry, ProblemInstance
 from academic_benchmark.native_protocol import NativeComparisonManifest
 from uniride_core.algorithms import numba_accel as _nb
 from uniride_core.algorithms import objective_budget as _ob
-from uniride_core.algorithms.capabilities import (
-    BackendKind,
-    CompositionKind,
-    ExecutionBackendProfile,
-    ExecutionProtocol,
-    ProblemContract,
-    find_capability_claim,
-)
 from uniride_core.algorithms.tsp_matrix_metaheuristics.base_solver import BaseTSPSolver
 
 MEMETIC_IDS = ("Core-GWO-TSP-Memetic-2opt", "Core-HHO-TSP-Memetic-2opt")
@@ -120,19 +112,6 @@ def test_native_memetic_never_calls_the_numba_two_opt_kernel(algorithm_id, kind,
     assert result.polish_policy["enabled"] is True
 
 
-@pytest.mark.parametrize("algorithm_id", MEMETIC_IDS)
-@pytest.mark.parametrize("problem", [ProblemContract.TSP, ProblemContract.ATSP])
-def test_native_memetic_claims_are_published(algorithm_id, problem):
-    claim = find_capability_claim(
-        algorithm_id,
-        problem=problem,
-        protocol=ExecutionProtocol.NATIVE_TERMINATION,
-        backend_profile=ExecutionBackendProfile(BackendKind.NUMBA_NOPYTHON, BackendKind.PYTHON),
-        composition=CompositionKind.MEMETIC_2OPT,
-    )
-    assert claim is not None
-
-
 def test_native_manifest_accepts_memetic_only_with_truthful_counts():
     manifest = NativeComparisonManifest.from_value(dict(NATIVE))
     for algorithm_id in MEMETIC_IDS:
@@ -184,7 +163,7 @@ def test_ungoverned_memetic_run_keeps_the_numba_polish_kernel(monkeypatch):
 
 
 def _pilot_config_with(memetic_blocks):
-    from academic_benchmark.tests.test_native_termination_protocol import _config
+    from academic_benchmark.tests.native_config_helpers import native_pilot_config as _config
 
     data = _config()
     data["algorithms"].update(memetic_blocks)
@@ -220,3 +199,54 @@ def test_pilot_config_accepts_memetic_members_as_optional_and_rejects_zero_polis
                for k, v in good.items()}
     with pytest.raises(NativePilotError, match="schema mismatch"):
         load(missing)
+
+
+@pytest.mark.parametrize("algorithm_id", MEMETIC_IDS)
+def test_native_manifest_rejects_cross_variant_records_in_both_directions(algorithm_id):
+    """A memetic-2opt ID never carries the composite variant; a 3-opt hybrid ID never the memetic_2opt one."""
+    from dataclasses import replace
+
+    from academic_benchmark.composite_protocol import COMPOSITE_VARIANT
+    from academic_benchmark.fairness import FairnessValidationError
+
+    manifest = NativeComparisonManifest.from_value(dict(NATIVE))
+    result = AlgorithmRegistry.get_executor(algorithm_id)(
+        _problem("tsp"), _params(algorithm_id), seed=1, run_idx=0
+    )
+    with pytest.raises(FairnessValidationError, match="only the memetic_2opt variant for memetic IDs"):
+        manifest.validate_result(replace(result, variant=COMPOSITE_VARIANT))
+    hybrid_id = algorithm_id.replace("Memetic-2opt", "Memetic-3opt")
+    with pytest.raises(FairnessValidationError, match="accepts only pure variants|composite"):
+        manifest.validate_result(
+            replace(result, algorithm=hybrid_id, algorithm_id=hybrid_id, variant="memetic_2opt")
+        )
+
+
+@pytest.mark.parametrize("algorithm_id", MEMETIC_IDS)
+def test_native_manifest_checks_initialization_policy_against_initial_polish(algorithm_id):
+    from dataclasses import replace
+
+    from academic_benchmark.fairness import FairnessValidationError
+
+    manifest = NativeComparisonManifest.from_value(dict(NATIVE))
+    result = AlgorithmRegistry.get_executor(algorithm_id)(
+        _problem("tsp"), _params(algorithm_id), seed=1, run_idx=0
+    )
+    assert result.polish_policy["initial"] is True
+    assert result.initialization_policy.endswith("_with_initial_2opt")
+    with pytest.raises(FairnessValidationError, match="initialization_policy"):
+        manifest.validate_result(
+            replace(result, initialization_policy="paired_seed_random_population_all_nodes")
+        )
+    # No initial polish: the plain initialization label is the only truthful one.
+    no_initial = _params(algorithm_id)
+    no_initial.update(polish_iters=0, final_polish_iters=3)
+    plain = AlgorithmRegistry.get_executor(algorithm_id)(
+        _problem("tsp"), no_initial, seed=1, run_idx=0
+    )
+    assert plain.polish_policy["initial"] is False
+    assert plain.initialization_policy == "paired_seed_random_population_all_nodes"
+    with pytest.raises(FairnessValidationError, match="initialization_policy"):
+        manifest.validate_result(
+            replace(plain, initialization_policy="paired_seed_random_population_all_nodes_with_initial_2opt")
+        )

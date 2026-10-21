@@ -270,9 +270,14 @@ def test_bildiri_profile_runs_on_ft53_at_every_budget_level_and_spends_polish():
     """Owner decision 2026-10-19: the budget levels leave room for initial polish."""
     payload = json.loads(STUDY_PATH.read_text(encoding="utf-8"))
     problem = _ft53_problem()
-    assert min(payload["fixed_budget_levels"]) >= 5516  # 4 x (1 + 53*52/2)
-    for budget in payload["fixed_budget_levels"]:
-        for algorithm_id in payload["algorithm_ids"]:
+    # C-19 (owner 2026-10-21): ft53 levels are 20 and 100 full 2-opt scans (1378 candidates each)
+    levels = payload["scaled_fixed_budget_levels"]["levels_by_dataset"]["tsplib-ft53"]
+    assert levels == [20 * 1378, 100 * 1378]
+    assert min(levels) >= 5516  # 4 x (1 + 53*52/2)
+    swarm_ids = [a for a in payload["algorithm_ids"] if a.startswith(("Core-GWO-", "Core-HHO-"))]
+    assert len(swarm_ids) == 4
+    for budget in levels:
+        for algorithm_id in swarm_ids:
             params = dict(payload["algorithm_parameters"][algorithm_id])
             params["fair_comparison"] = {
                 "evaluation_budget": budget, "base_seed": payload["base_seed"],

@@ -43,8 +43,8 @@ RESULT_FOLDER_PATTERNS = (
 )
 
 PINNED_LF_SHA256 = {  # at the WP-E8 base commit
-    "academic_benchmark/studies/bildiri2026/study.json": "4bfeb48d8d4be1ac8ab3c35f0fec8eb604b9aea73097da360852bb68427920a5",
-    "academic_benchmark/schemas/study-v1.schema.json": "193a2e38e033fd8d7b54c791e69b412aa8803b557bc0deaca39d0c8e01a650a8",
+    "academic_benchmark/studies/bildiri2026/study.json": "7a76a11f1399bb5aa0e401677272ad7078748f3540f5cb61b13cd9a9d0da0450",
+    "academic_benchmark/schemas/study-v1.schema.json": "a4e963794dcfe1e5fe05de917879ed5bc839788cfcc55b99d4a451411e26d425",
     "academic_benchmark/schemas/dataset-v1.schema.json": "6584167fee1ed3d18008fa3a6aea17ce6a31f2970bcab990ec8c0ff800178da1",
     "academic_benchmark/schemas/run-v1.schema.json": "a17b7d8639c06be3b421a2e0cb2664276cb326f9d245e3213f363e18fd466846",
 }

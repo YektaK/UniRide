@@ -1,21 +1,41 @@
 {
   "schema_version": "uniride-study/v1",
   "study_id": "bildiri2026",
-  "title": "Bildiri 2026 Canonical ATSP Reproduction Profile",
+  "title": "Bildiri 2026 Canonical TSP/ATSP Reproduction Profile",
   "status": "draft",
   "algorithm_ids": [
+    "Core-TwoOpt-TSP",
+    "Core-ThreeOpt-TSP",
+    "Core-OrOpt-TSP",
+    "Core-GA-TSP",
+    "Core-PSO-TSP",
+    "Core-GA-TSP-Memetic-2opt",
     "Core-GWO-TSP-Pure",
-    "Core-GWO-TSP-Memetic-2opt",
     "Core-HHO-TSP-Pure",
+    "Core-GWO-TSP-Memetic-2opt",
     "Core-HHO-TSP-Memetic-2opt"
   ],
   "algorithm_parameters": {
-    "Core-GWO-TSP-Pure": {"pack_size": 4, "max_iterations": 60000, "max_no_improvement": 60000},
-    "Core-GWO-TSP-Memetic-2opt": {"pack_size": 4, "max_iterations": 60000, "max_no_improvement": 60000, "polish_iters": 1, "final_polish_iters": 1},
-    "Core-HHO-TSP-Pure": {"hawks": 4, "dive_count": 0, "max_iterations": 60000, "max_no_improvement": 60000},
-    "Core-HHO-TSP-Memetic-2opt": {"hawks": 4, "dive_count": 0, "max_iterations": 60000, "max_no_improvement": 60000, "polish_iters": 1, "final_polish_iters": 1}
+    "Core-TwoOpt-TSP": {},
+    "Core-ThreeOpt-TSP": {},
+    "Core-OrOpt-TSP": {},
+    "Core-GA-TSP": {"population_size": 20, "max_iterations": 500, "crossover_rate": 0.85, "mutation_rate": 0.15, "elite_count": 2, "tournament_size": 3, "max_no_improvement": 100},
+    "Core-PSO-TSP": {"swarm_size": 50, "max_iterations": 500, "inertia_weight": 0.729, "cognitive_coeff": 1.49445, "social_coeff": 1.49445, "max_velocity_size": 5, "max_no_improvement": 100, "reinit_interval": 50},
+    "Core-GA-TSP-Memetic-2opt": {"population_size": 20, "max_iterations": 500, "crossover_rate": 0.85, "mutation_rate": 0.15, "elite_count": 2, "tournament_size": 3, "max_no_improvement": 100, "initial_polish_iters": 1, "final_polish_iters": 1},
+    "Core-GWO-TSP-Pure": {"pack_size": 4, "max_iterations": 495000, "max_no_improvement": 495000},
+    "Core-HHO-TSP-Pure": {"hawks": 4, "dive_count": 0, "max_iterations": 495000, "max_no_improvement": 495000},
+    "Core-GWO-TSP-Memetic-2opt": {"pack_size": 4, "max_iterations": 60000, "max_no_improvement": 60000, "polish_iters": 1, "polish_interval": 25, "final_polish_iters": 1},
+    "Core-HHO-TSP-Memetic-2opt": {"hawks": 4, "dive_count": 0, "max_iterations": 60000, "max_no_improvement": 60000, "polish_iters": 1, "polish_interval": 25, "final_polish_iters": 1}
   },
-  "dataset_manifest_refs": ["academic_benchmark/datasets/ft53.json"],
+  "dataset_manifest_refs": [
+    "academic_benchmark/datasets/berlin52.json",
+    "academic_benchmark/datasets/eil51.json",
+    "academic_benchmark/datasets/st70.json",
+    "academic_benchmark/datasets/kroA100.json",
+    "academic_benchmark/datasets/rd100.json",
+    "academic_benchmark/datasets/eil76.json",
+    "academic_benchmark/datasets/ft53.json"
+  ],
   "primary_protocol": {
     "protocol_id": "fixed_evaluation_budget",
     "protocol_version": "uniride-fair-tsp-v2",
@@ -27,11 +47,23 @@
     "algorithm_ids": ["Core-GWO-TSP-Pure", "Core-HHO-TSP-Pure"],
     "termination": {"max_iterations": 2}
   },
-  "fixed_budget_levels": [10000, 50000],
+  "scaled_fixed_budget_levels": {
+    "rule": "two_opt_scan_multiples_v1",
+    "scan_multipliers": [20, 100],
+    "levels_by_dataset": {
+      "tsplib-berlin52": [26520, 132600],
+      "tsplib-eil51": [25500, 127500],
+      "tsplib-st70": [48300, 241500],
+      "tsplib-kroa100": [99000, 495000],
+      "tsplib-rd100": [99000, 495000],
+      "tsplib-eil76": [57000, 285000],
+      "tsplib-ft53": [27560, 137800]
+    }
+  },
   "run_count": 3,
   "base_seed": 2026,
   "seed_protocol_version": "sha256-seed-v1",
-  "problem_families": ["ATSP"],
+  "problem_families": ["TSP", "ATSP"],
   "analysis_plan_id": "bildiri2026-reproduction-v1",
   "output_policy": {"repository_outputs": "smoke_only", "paper_scale_location": "external"},
   "paper_metadata": {"paper_id": "bildiri2026", "year": 2026, "venue": "draft"}

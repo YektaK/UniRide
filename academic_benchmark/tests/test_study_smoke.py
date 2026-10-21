@@ -60,9 +60,18 @@ def _loader(**kwargs):
     return lambda name: problem
 
 
+FT53_LEVELS = (20 * 1378, 100 * 1378)  # C-19: 20 and 100 full 2-opt scans of ft53
+
+
 @pytest.fixture(scope="module")
 def plan():
-    return build_study_plan(BILDIRI_STUDY, repository_root=REPOSITORY_ROOT)
+    """The Bildiri plan restricted to ft53 (the loader here serves ft53 only)."""
+    full = build_study_plan(BILDIRI_STUDY, repository_root=REPOSITORY_ROOT)
+    return dataclasses.replace(
+        full,
+        datasets=tuple(d for d in full.datasets if d.dataset_id == "tsplib-ft53"),
+        rows=tuple(r for r in full.rows if r.dataset_id == "tsplib-ft53"),
+    )
 
 
 def _one_fixed_row(plan):
@@ -88,8 +97,8 @@ def test_bildiri_ft53_lowest_budget_writes_two_valid_files(plan, passed_run):
     report, out = passed_run
     assert isinstance(report, SmokeReport) and report.status == "passed"
     fixed, native = _read(out / "fixed_runs.jsonl"), _read(out / "native_runs.jsonl")
-    assert len(fixed) == 4 and len(native) == 2
-    lowest = min(plan.study.fixed_budget_levels)
+    assert len(fixed) == len(plan.study.algorithm_ids) == 10 and len(native) == 2
+    lowest = min(FT53_LEVELS)
     assert {row["evaluation_budget"] for row in fixed} == {lowest}
     assert {row["evaluation_budget"] for row in native} == {None}
     for row in fixed + native:
@@ -119,9 +128,9 @@ def test_smoke_caps_replicates_at_three_and_uses_lowest_level(plan):
     rows = select_smoke_rows(plan, replicates=10)
     assert max(r.replicate for r in rows) == 2
     assert {r.budget_level for r in rows if r.protocol is ExecutionProtocol.FIXED_BUDGET} == {
-        min(plan.study.fixed_budget_levels)
+        min(FT53_LEVELS)
     }
-    top = max(plan.study.fixed_budget_levels)
+    top = max(FT53_LEVELS)
     rows = select_smoke_rows(plan, replicates=1, budget_level=top)
     assert {r.budget_level for r in rows if r.protocol is ExecutionProtocol.FIXED_BUDGET} == {top}
     with pytest.raises(StudySmokeError, match="budget level"):

@@ -10,6 +10,13 @@ A study JSON (``uniride-study/v1``) is turned into an immutable plan of rows:
 4. ``expand_plan``       one row per (dataset, protocol, algorithm, budget level, replicate) with
                          the paired seed and seed group.
 
+Budget levels (C-19): a study gives either one ``fixed_budget_levels`` list for every dataset or a
+``scaled_fixed_budget_levels`` table (rule ``two_opt_scan_multiples_v1``: ``multiplier x n(n-1)/2``
+per dataset). ``fixed_budget_levels_for`` recomputes every table entry from the dataset manifest's
+``dimension`` (which must equal the artifact's ``DIMENSION:`` header) and refuses a mismatch, a
+missing or an extra dataset key; ``expand_plan`` uses it, so a plan is never built from an
+unchecked table. All algorithms of a study get the same levels on a given dataset.
+
 Budget levels are never merged: every fixed-budget row carries its own level and native rows carry
 none, so the fixed and native protocols stay separate by construction (AGENTS.md).
 
@@ -40,6 +47,7 @@ from typing import Sequence
 from pydantic import ValidationError
 
 from academic_benchmark.contracts import DatasetManifestV1, StudyManifestV1
+from academic_benchmark.contracts.study import TWO_OPT_SCAN_RULE, two_opt_scan_size
 from academic_benchmark.contracts.common import validate_repository_relative_path
 from academic_benchmark.core.algorithm_resolution import IdentifierSource, resolve_algorithm_id
 from academic_benchmark.core.execution_gateway import (
@@ -74,6 +82,7 @@ class ResolvedDataset:
     manifest: DatasetManifestV1
     artifact_sha256: str
     problem_name: str
+    artifact_dimension: int | None = None  # the artifact's DIMENSION: header, if it has one
 
     @property
     def dataset_id(self) -> str:
@@ -193,6 +202,17 @@ def _problem_name_from_artifact(data: bytes, dataset_id: str) -> str:
     return next(iter(names))
 
 
+_DIMENSION_HEADER = re.compile(r"^DIMENSION[ \t]*[: \t][ \t]*(\d+)\s*$", re.IGNORECASE | re.MULTILINE)
+
+
+def _dimension_from_artifact(data: bytes) -> int | None:
+    text = data.decode("utf-8", errors="replace")
+    section = _SECTION.search(text)
+    header = text[: section.start()] if section else text
+    values = {int(match.group(1)) for match in _DIMENSION_HEADER.finditer(header)}
+    return next(iter(values)) if len(values) == 1 else None
+
+
 def _native_algorithm_ids(study: StudyManifestV1) -> tuple[str, ...]:
     """Algorithms run under the native protocol; ``None`` means all study algorithms."""
     if study.secondary_protocol is None:
@@ -247,8 +267,58 @@ def resolve_datasets(
                 f"{manifest.checksum.value}, artifact {digest}"
             )
         problem_name = _problem_name_from_artifact(artifact_bytes, manifest.dataset_id)
-        resolved.append(ResolvedDataset(ref, manifest, digest, problem_name))
+        resolved.append(
+            ResolvedDataset(
+                ref, manifest, digest, problem_name, _dimension_from_artifact(artifact_bytes)
+            )
+        )
     return tuple(resolved)
+
+
+def fixed_budget_levels_for(study: StudyManifestV1, dataset: ResolvedDataset) -> tuple[int, ...]:
+    """The fixed budget levels of ``dataset`` in ``study``, recomputed and checked (C-19)."""
+    if study.fixed_budget_levels is not None:
+        return tuple(study.fixed_budget_levels)
+    scaled = study.scaled_fixed_budget_levels
+    if scaled is None or scaled.rule != TWO_OPT_SCAN_RULE:
+        raise StudyServiceError("study has no fixed budget levels this service can compute")
+    dataset_id = dataset.dataset_id
+    if dataset_id not in scaled.levels_by_dataset:
+        raise StudyServiceError(
+            f"scaled_fixed_budget_levels has no entry for dataset {dataset_id!r}; its keys must be "
+            "the study's dataset ids"
+        )
+    n = dataset.manifest.dimension
+    if dataset.artifact_dimension != n:
+        raise StudyServiceError(
+            f"dataset {dataset_id!r}: manifest dimension {n} differs from the artifact DIMENSION "
+            f"header {dataset.artifact_dimension}; scaled budgets need both to agree"
+        )
+    scan = two_opt_scan_size(n)
+    expected = tuple(multiplier * scan for multiplier in scaled.scan_multipliers)
+    stated = tuple(scaled.levels_by_dataset[dataset_id])
+    if stated != expected:
+        raise StudyServiceError(
+            f"scaled budget levels of dataset {dataset_id!r} are {list(stated)}; rule "
+            f"{scaled.rule} with multipliers {scaled.scan_multipliers} and n(n-1)/2 = {scan} "
+            f"(n = {n}) gives {list(expected)}"
+        )
+    return expected
+
+
+def check_budget_levels(
+    study: StudyManifestV1, datasets: Sequence[ResolvedDataset]
+) -> dict[str, tuple[int, ...]]:
+    """Levels per dataset id; a scaled table must name exactly the study's datasets."""
+    scaled = study.scaled_fixed_budget_levels
+    if scaled is not None:
+        ids = {dataset.dataset_id for dataset in datasets}
+        if set(scaled.levels_by_dataset) != ids:
+            raise StudyServiceError(
+                f"scaled_fixed_budget_levels keys {sorted(scaled.levels_by_dataset)} must equal "
+                f"the study's dataset ids {sorted(ids)}"
+            )
+    return {dataset.dataset_id: fixed_budget_levels_for(study, dataset) for dataset in datasets}
 
 
 def _backend_policy_accepts(policy: BackendPolicy, profile: ExecutionBackendProfile) -> bool:
@@ -348,12 +418,14 @@ def expand_plan(
     the seed the gateway accepts for ``problem.name == problem_name`` and the same replicate.
     """
     rows: list[PlanRow] = []
+    levels_by_dataset = check_budget_levels(study, datasets)
     try:
         fixed_manifests = {
             level: governed_comparison_manifest(
                 ExecutionProtocol.FIXED_BUDGET, level, study.base_seed
             )
-            for level in study.fixed_budget_levels
+            for levels in levels_by_dataset.values()
+            for level in levels
         }
         native_manifest = (
             governed_comparison_manifest(
@@ -368,7 +440,7 @@ def expand_plan(
     for dataset in datasets:
         name = dataset.problem_name
         for algorithm_id in study.algorithm_ids:
-            for level in study.fixed_budget_levels:
+            for level in levels_by_dataset[dataset.dataset_id]:
                 manifest = fixed_manifests[level]
                 for replicate in range(study.run_count):
                     rows.append(
@@ -410,6 +482,7 @@ def build_study_plan(
     """Load, resolve, preflight and expand a study in one call."""
     study = load_study(study_path, repository_root=repository_root)
     datasets = resolve_datasets(study, repository_root=repository_root)
+    check_budget_levels(study, datasets)
     claims = preflight_study(study, datasets, backend_policy=backend_policy)
     rows = expand_plan(study, datasets)
     return StudyPlan(study, backend_policy, datasets, claims, rows)

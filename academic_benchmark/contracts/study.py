@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, PositiveInt, model_validator
 from pydantic import field_validator
@@ -55,6 +55,66 @@ class PaperMetadataV1(StrictContract):
     venue: str = Field(min_length=1)
 
 
+TWO_OPT_SCAN_RULE = "two_opt_scan_multiples_v1"
+
+
+def two_opt_scan_size(dimension: int) -> int:
+    """Candidates in one full 2-opt scan of an ``n``-node tour: ``n(n-1)/2``."""
+    return dimension * (dimension - 1) // 2
+
+
+def _dimension_of_scan_size(scan_size: int) -> int | None:
+    """``n >= 2`` with ``n(n-1)/2 == scan_size``, or ``None`` when there is none."""
+    n = int(((8 * scan_size + 1) ** 0.5 + 1) / 2)
+    for candidate in (n - 1, n, n + 1):
+        if candidate >= 2 and two_opt_scan_size(candidate) == scan_size:
+            return candidate
+    return None
+
+
+class ScaledFixedBudgetLevelsV1(StrictContract):
+    """Per-dataset fixed budget levels from a declared rule (C-19, owner 2026-10-21).
+
+    ``two_opt_scan_multiples_v1``: level ``i`` of a dataset is ``scan_multipliers[i] x n(n-1)/2``
+    objective evaluations, ``n`` the dataset dimension (one full 2-opt scan per unit). The table is
+    stated in full so that the study says which budgets run; the contract checks that it is
+    internally consistent and the study service recomputes every entry from the dataset manifest.
+    Keys are dataset ids.
+    """
+
+    rule: Literal["two_opt_scan_multiples_v1"]
+    scan_multipliers: list[PositiveInt] = Field(min_length=1)
+    levels_by_dataset: dict[str, list[PositiveInt]]
+
+    @model_validator(mode="after")
+    def validate_table_follows_the_rule(self) -> "ScaledFixedBudgetLevelsV1":
+        multipliers = self.scan_multipliers
+        if any(b <= a for a, b in zip(multipliers, multipliers[1:])):
+            raise ValueError("scan_multipliers must be strictly increasing (and so unique)")
+        if not self.levels_by_dataset:
+            raise ValueError("levels_by_dataset must name at least one dataset")
+        for dataset_id, levels in self.levels_by_dataset.items():
+            if len(levels) != len(multipliers):
+                raise ValueError(
+                    f"levels_by_dataset[{dataset_id!r}] needs one level per multiplier "
+                    f"({len(multipliers)}), found {len(levels)}"
+                )
+            if any(level % multiplier for level, multiplier in zip(levels, multipliers)) or len(
+                {level // multiplier for level, multiplier in zip(levels, multipliers)}
+            ) != 1:
+                raise ValueError(
+                    f"levels_by_dataset[{dataset_id!r}] = {levels} is not multiplier x n(n-1)/2 "
+                    f"for one n (multipliers {multipliers})"
+                )
+            scan_size = levels[0] // multipliers[0]
+            if _dimension_of_scan_size(scan_size) is None:
+                raise ValueError(
+                    f"levels_by_dataset[{dataset_id!r}]: {scan_size} evaluations per scan is not "
+                    "n(n-1)/2 for any integer n >= 2"
+                )
+        return self
+
+
 class StudyManifestV1(StrictContract):
     model_config = StrictContract.model_config | {"json_schema_extra": {"$id": "uniride-study/v1"}}
 
@@ -67,7 +127,10 @@ class StudyManifestV1(StrictContract):
     dataset_manifest_refs: list[RepositoryRelativePath] = Field(min_length=1)
     primary_protocol: FixedBudgetProtocolV1
     secondary_protocol: NativeProtocolV1 | None = None
-    fixed_budget_levels: list[PositiveInt] = Field(min_length=1)
+    # exactly one of the two budget declarations (C-19): one list for every dataset, or the
+    # per-dataset table of a declared scaling rule
+    fixed_budget_levels: Annotated[list[PositiveInt], Field(min_length=1)] | None = None
+    scaled_fixed_budget_levels: ScaledFixedBudgetLevelsV1 | None = None
     run_count: PositiveInt
     base_seed: int
     seed_protocol_version: str = Field(min_length=1)
@@ -87,7 +150,13 @@ class StudyManifestV1(StrictContract):
             raise ValueError("algorithm_ids must be unique")
         if set(self.algorithm_parameters) != set(self.algorithm_ids):
             raise ValueError("algorithm_parameters keys must exactly match algorithm_ids")
-        if len(set(self.fixed_budget_levels)) != len(self.fixed_budget_levels):
+        if (self.fixed_budget_levels is None) == (self.scaled_fixed_budget_levels is None):
+            raise ValueError(
+                "give exactly one of fixed_budget_levels and scaled_fixed_budget_levels"
+            )
+        if self.fixed_budget_levels is not None and len(set(self.fixed_budget_levels)) != len(
+            self.fixed_budget_levels
+        ):
             raise ValueError("fixed_budget_levels must be unique")
         if self.secondary_protocol is not None:
             secondary_ids = self.secondary_protocol.algorithm_ids

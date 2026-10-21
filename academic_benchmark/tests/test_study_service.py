@@ -70,6 +70,8 @@ def _tmp_study(root: Path, mutate=None, *, dataset: dict | None = None) -> Path:
     )
     payload = _bildiri_payload()
     payload["dataset_manifest_refs"] = ["datasets/tiny.json"]
+    # C-19: the profile's levels are scaled per dataset; the tiny dataset (n = 3) gets its own
+    payload["scaled_fixed_budget_levels"]["levels_by_dataset"] = {"tiny": [60, 300]}
     if mutate is not None:
         mutate(payload)
     (root / "studies" / "study.json").write_text(json.dumps(payload), encoding="utf-8")
@@ -88,7 +90,8 @@ def test_bildiri_profile_loads_and_expands():
     native = [row for row in plan.rows if row.protocol is ExecutionProtocol.NATIVE_TERMINATION]
     datasets = len(study.dataset_manifest_refs)
     assert len(fixed) == (
-        datasets * len(study.algorithm_ids) * len(study.fixed_budget_levels) * study.run_count
+        datasets * len(study.algorithm_ids) * len(study.scaled_fixed_budget_levels.scan_multipliers)
+        * study.run_count
     )
     assert len(native) == (
         datasets * len(study.secondary_protocol.algorithm_ids) * study.run_count
@@ -202,7 +205,7 @@ def test_alias_algorithm_id_is_rejected(tmp_path, alias):
 
 def test_every_row_carries_its_budget_level_and_levels_are_never_merged(tmp_path):
     plan = _plan(_tmp_study(tmp_path))
-    levels = plan.study.fixed_budget_levels
+    levels = [60, 300]  # 20 and 100 scans of the tiny n = 3 dataset (C-19 scaled levels)
     fixed = [row for row in plan.rows if row.protocol is ExecutionProtocol.FIXED_BUDGET]
     assert {row.budget_level for row in fixed} == set(levels)
     for level in levels:
@@ -275,8 +278,13 @@ def test_plan_seeds_equal_the_gateway_seeds_for_ft53_fixed_and_native():
         ExecutionProtocol.FIXED_BUDGET,
         ExecutionProtocol.NATIVE_TERMINATION,
     }
-    assert {r.dataset_id for r in plan.rows} == {"tsplib-ft53"}
-    _assert_rows_match_gateway(plan.rows, plan.study, "ft53")
+    assert "tsplib-ft53" in {r.dataset_id for r in plan.rows}  # C-19: plus the six TSP instances
+    ft53_rows = [r for r in plan.rows if r.dataset_id == "tsplib-ft53"]
+    assert {r.protocol for r in ft53_rows} == {
+        ExecutionProtocol.FIXED_BUDGET,
+        ExecutionProtocol.NATIVE_TERMINATION,
+    }
+    _assert_rows_match_gateway(ft53_rows, plan.study, "ft53")
 
 
 @pytest.mark.parametrize(
@@ -291,6 +299,9 @@ def test_plan_seeds_equal_the_gateway_seeds_for_c18_instances(ref, family, name)
     payload = _bildiri_payload()
     payload["dataset_manifest_refs"] = [ref]
     payload["problem_families"] = [family]
+    table = payload["scaled_fixed_budget_levels"]["levels_by_dataset"]
+    key = "tsplib-" + name.lower()
+    payload["scaled_fixed_budget_levels"]["levels_by_dataset"] = {key: table[key]}
     study = StudyManifestV1.model_validate(payload)
     datasets = resolve_datasets(study, repository_root=REPOSITORY_ROOT)
     claims = preflight_study(study, datasets)
@@ -375,7 +386,8 @@ def test_plan_is_immutable(tmp_path):
 
 def test_python_only_policy_rejects_numba_only_algorithms(tmp_path):
     root = _tmp_study(tmp_path)
-    with pytest.raises(StudyServiceError, match="Core-GWO-TSP-Pure"):
+    # C-19: Core-GA-TSP (Numba objective only, like GWO/HHO) is now the first refused entry
+    with pytest.raises(StudyServiceError, match="no verified fixed_budget claim for Core-GA-TSP "):
         _plan(root, backend_policy=BackendPolicy.PYTHON_ONLY)
 
 

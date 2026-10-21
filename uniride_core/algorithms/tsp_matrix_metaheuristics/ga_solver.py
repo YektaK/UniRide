@@ -254,10 +254,17 @@ class GAOptimizer(BaseTSPSolver):
 
         if self._fair_mode:
             init_required = self.initialization_evaluation_bound()
+            if self.polish_enabled:
+                # A memetic fixed run must be able to start its polish: the population
+                # phase plus at least one candidate tour. A budget that ends exactly with
+                # the population would spend it and then produce a row that executed no
+                # polish (C-04: refuse before execution).
+                init_required += 1
             if not self._objective_budget.can_spend(init_required):
                 raise ValueError(
-                    "fair GA budget cannot complete atomic population initialization: "
-                    f"required_upper_bound={init_required}, "
+                    "fair GA budget cannot complete atomic population initialization"
+                    + (" and start the polish" if self.polish_enabled else "")
+                    + f": required_upper_bound={init_required}, "
                     f"budget={self._objective_budget.limit}"
                 )
 

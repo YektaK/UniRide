@@ -1,6 +1,6 @@
 # C-19 design note: instance-scaled fixed budget levels in the study contract (2026-10-21)
 
-Owner decision (DECISION_LOG A17, 2026-10-21): the Bildiri profile's fixed budget levels are 20 x and 100 x n(n-1)/2 objective evaluations per instance (n = the dataset dimension), so every algorithm gets the same budget on a given instance, but the number differs between instances.
+Owner decision (DECISION_LOG A17, 2026-10-21; revised the same day from 20 x / 100 x): the Bildiri profile's fixed budget levels are 50 x and 250 x n(n-1)/2 objective evaluations per instance (n = the dataset dimension), so every algorithm gets the same budget on a given instance, but the number differs between instances.
 
 ## Today
 
@@ -12,10 +12,10 @@ A single list cannot state per-instance levels truthfully: any number put in it 
 
 ## Options
 
-1. **Explicit per-dataset table plus the declared rule, recomputed by a validator (chosen).** New optional field `scaled_fixed_budget_levels` = `{rule: "two_opt_scan_multiples_v1", scan_multipliers: [20, 100], levels_by_dataset: {dataset_id: [levels]}}`. `fixed_budget_levels` becomes optional; exactly one of the two must be given.
+1. **Explicit per-dataset table plus the declared rule, recomputed by a validator (chosen).** New optional field `scaled_fixed_budget_levels` = `{rule: "two_opt_scan_multiples_v1", scan_multipliers: [50, 250], levels_by_dataset: {dataset_id: [levels]}}`. `fixed_budget_levels` becomes optional; exactly one of the two must be given.
 2. Rule only (multipliers in the study, levels computed at plan time). Smaller JSON, but the study file no longer says which budgets run; a reader has to recompute them.
 3. Sidecar budget file next to `study.json`. The study contract would still carry a `fixed_budget_levels` value that is not what runs. Rejected (not truthful).
-4. Reuse `fixed_budget_levels` for the multipliers. Changes the meaning of an existing field; an older reader would run budgets of 20 and 100. Rejected.
+4. Reuse `fixed_budget_levels` for the multipliers. Changes the meaning of an existing field; an older reader would run budgets of 50 and 250. Rejected.
 
 ## Choice and why
 
@@ -43,3 +43,10 @@ Not changed: `PaperMetadataV1` (the GA/PSO provenance note goes into the commit 
 - Parameter note: the C-04 `max_iterations`/`max_no_improvement` 60000 of pure GWO/HHO would stop them before the 100-scan budget (pure GWO spends about one evaluation per iteration; 100 x 1275 = 127500 > 60000), so the profile sets 495000 (the largest level) for the two pure entries; the memetic entries keep 60000 (they never reach it at these budgets).
 - Smoke observation (one replicate, no claim): with the explicit C-16a/C-16b defaults the pure GA (population 20, 500 generations) stops at 9020 evaluations and the PSO (swarm 50, 500 iterations) at 25500, both by `max_iterations`, below every level of the profile; at the 20-scan level the memetic GA spends the whole budget after its 20 initial evaluations in the initial 2-opt (no generation).
 - Provenance (plan section 1.4): the published Bildiri 2026 GA and PSO numbers came from the archived memetic GA and memetic PSO; the profile's `Core-GA-TSP` and `Core-PSO-TSP` are the pure canonical algorithms. `PaperMetadataV1` is not changed for this note.
+
+## Revision after the first C-19 smoke (owner 2026-10-21, DECISION_LOG A17 "revising C-19")
+
+- Levels are now 50 x and 250 x n(n-1)/2 (replacing 20 x / 100 x): eil51 63750/318750, berlin52 66300/331500, ft53 68900/344500, st70 120750/603750, eil76 142500/712500, kroA100 and rd100 247500/1237500.
+- The budget is the stopping rule. Pure GA, PSO, memetic GA, pure GWO and pure HHO use `max_iterations` = `max_no_improvement` = 1237500, a value derived from the profile: the largest level (250 x 4950). Each generation or iteration of these algorithms spends at least one objective evaluation, so a limit equal to the largest budget cannot stop a run first. PSO `reinit_interval` 50 stays: it is a counted diversity step, not a stopping rule. Memetic GWO/HHO keep the C-04 value 60000: they run about 1150 iterations per 64000 evaluations at eil51, so about 22000 at the largest level, well below 60000 (checked by `test_bildiri_budget_is_the_stopping_rule.py`).
+- 2-opt, 3-opt and Or-opt take no parameters; their registry iteration limit (1000 improving iterations, each at least one full scan) cannot fire before 250 scans. 2-opt and Or-opt may still stop earlier at a local optimum (`no_improving_move`), which is their documented stopping reason, not an iteration limit; they have no restart.
+- This supersedes the parameter note and the smoke observation of the previous section (the 495000 value and the GA/PSO stops at 9020/25500 evaluations).

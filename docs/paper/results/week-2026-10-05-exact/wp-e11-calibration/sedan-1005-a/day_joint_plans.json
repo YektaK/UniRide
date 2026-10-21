@@ -1,0 +1,424 @@
+{
+ "large+sedan|2026-10-05|R70|L2": {
+  "routes": [
+   {
+    "end": 765,
+    "occurrence_ids": [
+     "2026-10-05:pickup:Sw5~1",
+     "2026-10-05:pickup:Sw7~1",
+     "2026-10-05:pickup:So7~1"
+    ],
+    "start": 673,
+    "tour": 92,
+    "type_id": "large",
+    "wave_id": "2026-10-05:pickup:765"
+   },
+   {
+    "end": 1123,
+    "occurrence_ids": [
+     "2026-10-05:dropoff:So9~1",
+     "2026-10-05:dropoff:So8~1",
+     "2026-10-05:dropoff:Sw5~1"
+    ],
+    "start": 1035,
+    "tour": 88,
+    "type_id": "large",
+    "wave_id": "2026-10-05:dropoff:1035"
+   },
+   {
+    "end": 525,
+    "occurrence_ids": [
+     "2026-10-05:pickup:So10~1",
+     "2026-10-05:pickup:So12~1",
+     "2026-10-05:pickup:So14~1",
+     "2026-10-05:pickup:So13~1"
+    ],
+    "start": 469,
+    "tour": 56,
+    "type_id": "sedan",
+    "wave_id": "2026-10-05:pickup:525"
+   },
+   {
+    "end": 525,
+    "occurrence_ids": [
+     "2026-10-05:pickup:So6~1",
+     "2026-10-05:pickup:So3~1",
+     "2026-10-05:pickup:So8~1",
+     "2026-10-05:pickup:So9~1"
+    ],
+    "start": 414,
+    "tour": 111,
+    "type_id": "sedan",
+    "wave_id": "2026-10-05:pickup:525"
+   },
+   {
+    "end": 525,
+    "occurrence_ids": [
+     "2026-10-05:pickup:So16~1",
+     "2026-10-05:pickup:So15~1",
+     "2026-10-05:pickup:Sw1~1",
+     "2026-10-05:pickup:So1~1"
+    ],
+    "start": 427,
+    "tour": 98,
+    "type_id": "large",
+    "wave_id": "2026-10-05:pickup:525"
+   },
+   {
+    "end": 525,
+    "occurrence_ids": [
+     "2026-10-05:pickup:Sw4~1",
+     "2026-10-05:pickup:So18~1",
+     "2026-10-05:pickup:Sw6~1",
+     "2026-10-05:pickup:So5~1",
+     "2026-10-05:pickup:Sw2~1",
+     "2026-10-05:pickup:So2~1",
+     "2026-10-05:pickup:So19~1",
+     "2026-10-05:pickup:Sw3~1"
+    ],
+    "start": 427,
+    "tour": 98,
+    "type_id": "large",
+    "wave_id": "2026-10-05:pickup:525"
+   },
+   {
+    "end": 1063,
+    "occurrence_ids": [
+     "2026-10-05:dropoff:Sw3~1",
+     "2026-10-05:dropoff:So14~1",
+     "2026-10-05:dropoff:Sw4~1",
+     "2026-10-05:dropoff:Sw7~1"
+    ],
+    "start": 975,
+    "tour": 88,
+    "type_id": "large",
+    "wave_id": "2026-10-05:dropoff:975"
+   },
+   {
+    "end": 816,
+    "occurrence_ids": [
+     "2026-10-05:dropoff:So1~1",
+     "2026-10-05:dropoff:So6~1"
+    ],
+    "start": 735,
+    "tour": 81,
+    "type_id": "sedan",
+    "wave_id": "2026-10-05:dropoff:735"
+   },
+   {
+    "end": 842,
+    "occurrence_ids": [
+     "2026-10-05:dropoff:So10~1",
+     "2026-10-05:dropoff:Sw2~1",
+     "2026-10-05:dropoff:Sw1~1"
+    ],
+    "start": 735,
+    "tour": 107,
+    "type_id": "large",
+    "wave_id": "2026-10-05:dropoff:735"
+   },
+   {
+    "end": 892,
+    "occurrence_ids": [
+     "2026-10-05:dropoff:So12~1"
+    ],
+    "start": 855,
+    "tour": 37,
+    "type_id": "large",
+    "wave_id": "2026-10-05:dropoff:855"
+   },
+   {
+    "end": 945,
+    "occurrence_ids": [
+     "2026-10-05:pickup:So11~1"
+    ],
+    "start": 916,
+    "tour": 29,
+    "type_id": "large",
+    "wave_id": "2026-10-05:pickup:945"
+   },
+   {
+    "end": 1143,
+    "occurrence_ids": [
+     "2026-10-05:dropoff:So11~1",
+     "2026-10-05:dropoff:So19~1"
+    ],
+    "start": 1095,
+    "tour": 48,
+    "type_id": "large",
+    "wave_id": "2026-10-05:dropoff:1095"
+   },
+   {
+    "end": 891,
+    "occurrence_ids": [
+     "2026-10-05:dropoff:Sw6~1",
+     "2026-10-05:dropoff:So18~1",
+     "2026-10-05:dropoff:So5~1",
+     "2026-10-05:dropoff:So16~1"
+    ],
+    "start": 795,
+    "tour": 96,
+    "type_id": "large",
+    "wave_id": "2026-10-05:dropoff:795"
+   },
+   {
+    "end": 705,
+    "occurrence_ids": [
+     "2026-10-05:pickup:So17~1",
+     "2026-10-05:pickup:Sw9~1",
+     "2026-10-05:pickup:So4~1"
+    ],
+    "start": 594,
+    "tour": 111,
+    "type_id": "large",
+    "wave_id": "2026-10-05:pickup:705"
+   },
+   {
+    "end": 980,
+    "occurrence_ids": [
+     "2026-10-05:dropoff:So15~1",
+     "2026-10-05:dropoff:So4~1"
+    ],
+    "start": 915,
+    "tour": 65,
+    "type_id": "sedan",
+    "wave_id": "2026-10-05:dropoff:915"
+   },
+   {
+    "end": 1013,
+    "occurrence_ids": [
+     "2026-10-05:dropoff:So7~1",
+     "2026-10-05:dropoff:Sw9~1",
+     "2026-10-05:dropoff:So3~1",
+     "2026-10-05:dropoff:So17~1"
+    ],
+    "start": 915,
+    "tour": 98,
+    "type_id": "large",
+    "wave_id": "2026-10-05:dropoff:915"
+   },
+   {
+    "end": 721,
+    "occurrence_ids": [
+     "2026-10-05:dropoff:So2~1",
+     "2026-10-05:dropoff:So13~1"
+    ],
+    "start": 675,
+    "tour": 46,
+    "type_id": "sedan",
+    "wave_id": "2026-10-05:dropoff:675"
+   }
+  ]
+ },
+ "large+sedan|2026-10-05|R90|L2": {
+  "routes": [
+   {
+    "end": 765,
+    "occurrence_ids": [
+     "2026-10-05:pickup:So7~1",
+     "2026-10-05:pickup:Sw7~1",
+     "2026-10-05:pickup:Sw5~1"
+    ],
+    "start": 676,
+    "tour": 89,
+    "type_id": "large",
+    "wave_id": "2026-10-05:pickup:765"
+   },
+   {
+    "end": 1123,
+    "occurrence_ids": [
+     "2026-10-05:dropoff:So9~1",
+     "2026-10-05:dropoff:So8~1",
+     "2026-10-05:dropoff:Sw5~1"
+    ],
+    "start": 1035,
+    "tour": 88,
+    "type_id": "large",
+    "wave_id": "2026-10-05:dropoff:1035"
+   },
+   {
+    "end": 525,
+    "occurrence_ids": [
+     "2026-10-05:pickup:So1~1"
+    ],
+    "start": 512,
+    "tour": 13,
+    "type_id": "sedan",
+    "wave_id": "2026-10-05:pickup:525"
+   },
+   {
+    "end": 525,
+    "occurrence_ids": [
+     "2026-10-05:pickup:So9~1",
+     "2026-10-05:pickup:So6~1",
+     "2026-10-05:pickup:So8~1",
+     "2026-10-05:pickup:So12~1"
+    ],
+    "start": 430,
+    "tour": 95,
+    "type_id": "sedan",
+    "wave_id": "2026-10-05:pickup:525"
+   },
+   {
+    "end": 525,
+    "occurrence_ids": [
+     "2026-10-05:pickup:So14~1",
+     "2026-10-05:pickup:So13~1",
+     "2026-10-05:pickup:Sw6~1",
+     "2026-10-05:pickup:So18~1",
+     "2026-10-05:pickup:Sw4~1",
+     "2026-10-05:pickup:So3~1",
+     "2026-10-05:pickup:So10~1"
+    ],
+    "start": 423,
+    "tour": 102,
+    "type_id": "large",
+    "wave_id": "2026-10-05:pickup:525"
+   },
+   {
+    "end": 525,
+    "occurrence_ids": [
+     "2026-10-05:pickup:Sw1~1",
+     "2026-10-05:pickup:So15~1",
+     "2026-10-05:pickup:So16~1",
+     "2026-10-05:pickup:Sw2~1",
+     "2026-10-05:pickup:So5~1",
+     "2026-10-05:pickup:So2~1",
+     "2026-10-05:pickup:So19~1",
+     "2026-10-05:pickup:Sw3~1"
+    ],
+    "start": 401,
+    "tour": 124,
+    "type_id": "large",
+    "wave_id": "2026-10-05:pickup:525"
+   },
+   {
+    "end": 1059,
+    "occurrence_ids": [
+     "2026-10-05:dropoff:Sw4~1",
+     "2026-10-05:dropoff:So14~1",
+     "2026-10-05:dropoff:Sw7~1",
+     "2026-10-05:dropoff:Sw3~1"
+    ],
+    "start": 975,
+    "tour": 84,
+    "type_id": "large",
+    "wave_id": "2026-10-05:dropoff:975"
+   },
+   {
+    "end": 831,
+    "occurrence_ids": [
+     "2026-10-05:dropoff:Sw1~1",
+     "2026-10-05:dropoff:Sw2~1"
+    ],
+    "start": 735,
+    "tour": 96,
+    "type_id": "large",
+    "wave_id": "2026-10-05:dropoff:735"
+   },
+   {
+    "end": 822,
+    "occurrence_ids": [
+     "2026-10-05:dropoff:So1~1",
+     "2026-10-05:dropoff:So6~1",
+     "2026-10-05:dropoff:So10~1"
+    ],
+    "start": 735,
+    "tour": 87,
+    "type_id": "sedan",
+    "wave_id": "2026-10-05:dropoff:735"
+   },
+   {
+    "end": 892,
+    "occurrence_ids": [
+     "2026-10-05:dropoff:So12~1"
+    ],
+    "start": 855,
+    "tour": 37,
+    "type_id": "large",
+    "wave_id": "2026-10-05:dropoff:855"
+   },
+   {
+    "end": 945,
+    "occurrence_ids": [
+     "2026-10-05:pickup:So11~1"
+    ],
+    "start": 916,
+    "tour": 29,
+    "type_id": "large",
+    "wave_id": "2026-10-05:pickup:945"
+   },
+   {
+    "end": 1143,
+    "occurrence_ids": [
+     "2026-10-05:dropoff:So11~1",
+     "2026-10-05:dropoff:So19~1"
+    ],
+    "start": 1095,
+    "tour": 48,
+    "type_id": "large",
+    "wave_id": "2026-10-05:dropoff:1095"
+   },
+   {
+    "end": 891,
+    "occurrence_ids": [
+     "2026-10-05:dropoff:Sw6~1",
+     "2026-10-05:dropoff:So18~1",
+     "2026-10-05:dropoff:So5~1",
+     "2026-10-05:dropoff:So16~1"
+    ],
+    "start": 795,
+    "tour": 96,
+    "type_id": "large",
+    "wave_id": "2026-10-05:dropoff:795"
+   },
+   {
+    "end": 705,
+    "occurrence_ids": [
+     "2026-10-05:pickup:So17~1",
+     "2026-10-05:pickup:Sw9~1",
+     "2026-10-05:pickup:So4~1"
+    ],
+    "start": 594,
+    "tour": 111,
+    "type_id": "large",
+    "wave_id": "2026-10-05:pickup:705"
+   },
+   {
+    "end": 980,
+    "occurrence_ids": [
+     "2026-10-05:dropoff:So15~1",
+     "2026-10-05:dropoff:So4~1"
+    ],
+    "start": 915,
+    "tour": 65,
+    "type_id": "sedan",
+    "wave_id": "2026-10-05:dropoff:915"
+   },
+   {
+    "end": 1013,
+    "occurrence_ids": [
+     "2026-10-05:dropoff:So7~1",
+     "2026-10-05:dropoff:Sw9~1",
+     "2026-10-05:dropoff:So3~1",
+     "2026-10-05:dropoff:So17~1"
+    ],
+    "start": 915,
+    "tour": 98,
+    "type_id": "large",
+    "wave_id": "2026-10-05:dropoff:915"
+   },
+   {
+    "end": 721,
+    "occurrence_ids": [
+     "2026-10-05:dropoff:So2~1",
+     "2026-10-05:dropoff:So13~1"
+    ],
+    "start": 675,
+    "tour": 46,
+    "type_id": "sedan",
+    "wave_id": "2026-10-05:dropoff:675"
+   }
+  ]
+ }
+}

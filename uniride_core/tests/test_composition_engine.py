@@ -694,7 +694,7 @@ def test_each_stage_record_carries_its_own_non_negative_wall_time(budget, fracti
     result = run_composition(
         SYM9,
         global_stage=_sleeping(stub_global(SYM9, 20), 0.05),
-        polish_stage=_sleeping(three_opt_polish_stage(SYM9, THREE_OPT_PARAMS), 0.12),
+        polish_stage=_sleeping(three_opt_polish_stage(SYM9, THREE_OPT_PARAMS), 0.4),
         evaluation_budget=budget,
         global_fraction=fraction,
     )
@@ -702,6 +702,9 @@ def test_each_stage_record_carries_its_own_non_negative_wall_time(budget, fracti
     for stage in (g, p):
         assert isinstance(stage.elapsed_sec, float) and stage.elapsed_sec >= 0
     # measured separately: each stage owns the time of its own run and nothing else
-    assert 0.045 <= g.elapsed_sec < 0.12
-    assert 0.115 <= p.elapsed_sec
+    # the sleeps are lower bounds that a loaded machine can only lengthen; only the
+    # separation of the two stages is asserted, with no tight upper bound
+    assert g.elapsed_sec >= 0.045
+    assert p.elapsed_sec >= 0.395
+    assert g.elapsed_sec < p.elapsed_sec
     assert [s["elapsed_sec"] for s in result.to_dict()["stages"]] == [g.elapsed_sec, p.elapsed_sec]

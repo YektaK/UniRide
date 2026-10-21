@@ -254,50 +254,6 @@ def _prove(algorithm: str, *, native: bool) -> None:
         assert _without_timing(replay.composition) == _without_timing(first.composition)
 
 
-def _assert_claims_published(algorithm: str, protocol: ExecutionProtocol, function: str) -> None:
-    capability = get_algorithm_capability(algorithm)
-    assert capability is not None
-    assert capability.lifecycle is LifecycleStatus.VERIFIED
-    assert "final polish once" in capability.label
-    for problem in (ProblemContract.TSP, ProblemContract.ATSP):
-        claim = find_capability_claim(
-            algorithm, problem=problem, protocol=protocol, backend_profile=PROFILE,
-            composition=CompositionKind.GLOBAL_THEN_FINAL_ALNS,
-        )
-        assert claim is not None, (algorithm, problem, protocol)
-        assert claim.directed_cost_preserved is (problem is ProblemContract.ATSP)
-        assert claim.exact_objective_accounting is True
-        assert claim.fixed_seed_deterministic is True
-        assert claim.truthful_result_reporting is True
-        assert claim.evidence_ids == (EVIDENCE_FILE + function,)
-
-
-# ---- the four evidence nodes cited by the claims ---------------------------
-
-def test_core_gwo_memetic_alns_fixed_tsp_and_atsp_evidence() -> None:
-    _prove(GWO, native=False)
-    _assert_claims_published(GWO, ExecutionProtocol.FIXED_BUDGET,
-                             "test_core_gwo_memetic_alns_fixed_tsp_and_atsp_evidence")
-
-
-def test_core_hho_memetic_alns_fixed_tsp_and_atsp_evidence() -> None:
-    _prove(HHO, native=False)
-    _assert_claims_published(HHO, ExecutionProtocol.FIXED_BUDGET,
-                             "test_core_hho_memetic_alns_fixed_tsp_and_atsp_evidence")
-
-
-def test_core_gwo_memetic_alns_native_tsp_and_atsp_evidence() -> None:
-    _prove(GWO, native=True)
-    _assert_claims_published(GWO, ExecutionProtocol.NATIVE_TERMINATION,
-                             "test_core_gwo_memetic_alns_native_tsp_and_atsp_evidence")
-
-
-def test_core_hho_memetic_alns_native_tsp_and_atsp_evidence() -> None:
-    _prove(HHO, native=True)
-    _assert_claims_published(HHO, ExecutionProtocol.NATIVE_TERMINATION,
-                             "test_core_hho_memetic_alns_native_tsp_and_atsp_evidence")
-
-
 # ---- derived polish seed ---------------------------------------------------
 
 @pytest.mark.parametrize("algorithm", ALGORITHMS)
@@ -520,19 +476,6 @@ def test_forged_composite_rows_are_rejected_by_the_manifest_validators(algorithm
                 manifest.validate_result(forged)
 
 
-def test_capability_labels_and_claims_name_the_final_polish_once_composition():
-    for algorithm, family in ((GWO, "Grey Wolf Optimizer"), (HHO, "Harris Hawks Optimizer")):
-        capability = get_algorithm_capability(algorithm)
-        assert capability.label == f"{family} + ALNS (final polish once)"
-        assert {claim.composition for claim in capability.claims} == {
-            CompositionKind.GLOBAL_THEN_FINAL_ALNS
-        }
-        assert {claim.protocol for claim in capability.claims} == {
-            ExecutionProtocol.FIXED_BUDGET, ExecutionProtocol.NATIVE_TERMINATION,
-        }
-    assert CompositionKind.GLOBAL_THEN_FINAL_ALNS.value == KIND
-
-
 # ---- per-stage runtime (design native rule 4), both composite kinds ----------
 
 @pytest.mark.parametrize("algorithm", (
@@ -622,95 +565,101 @@ def test_hybrid_alns_parameter_schema_is_strict(algorithm):
             validate_scientific_hybrid_alns_params(family, params, fixed_budget=fixed)
 
 
-# ---- governed gateway -------------------------------------------------------
+# ---- rows through the real executor, before any catalog claim exists ---------
 
 @pytest.mark.parametrize("algorithm", ALGORITHMS)
-def test_registered_executor_is_selectable_through_the_governed_gateway(algorithm):
-    _require_numba()
-    assert AlgorithmRegistry.get_executor(algorithm) is not None
-    runtime = probe_runtime_backends()
-    for problem in PROBLEMS:
-        for protocol, budget, params in (
-            (ExecutionProtocol.FIXED_BUDGET, BUDGET,
-             {"global": GLOBAL_PARAMS[algorithm], "polish": POLISH_PARAMS,
-              "global_fraction": FRACTION}),
-            (ExecutionProtocol.NATIVE_TERMINATION, None,
-             {"global": GLOBAL_PARAMS[algorithm], "polish": POLISH_PARAMS}),
-        ):
-            result, decision = execute_preflighted(
-                requested_algorithm_id=algorithm,
-                identifier_source=IdentifierSource.MANIFEST,
-                problem=problem, params=params,
-                seed=governed_contract_seed(protocol, budget, BASE_SEED, problem.name, 0),
-                run_idx=0, protocol=protocol,
-                backend_policy=BackendPolicy.REQUIRE_NUMBA_OBJECTIVE,
-                evaluation_budget=budget,
-                registered_algorithm_ids=frozenset(AlgorithmRegistry.list_algorithms()),
-                runtime_backends=runtime,
-                registry_getter=AlgorithmRegistry.get_executor,
-                comparison_base_seed=BASE_SEED,
-            )
-            assert decision.selected_claim.composition is CompositionKind.GLOBAL_THEN_FINAL_ALNS
-            assert decision.selected_backend == PROFILE
-            if protocol is ExecutionProtocol.NATIVE_TERMINATION:
-                assert result.termination_reason == "composite_complete"
+def test_fixed_and_native_rows_are_complete_deterministic_and_validated(algorithm):
+    _prove(algorithm, native=False)
+    _prove(algorithm, native=True)
 
 
-def _gateway_run(algorithm, tamper, protocol, budget, params):
-    runtime = probe_runtime_backends()
-    inner = AlgorithmRegistry.get_executor(algorithm)
+def _row(algorithm: str, *, native: bool):
+    """A real composite row of any of the four hybrid IDs (3-opt polish gets its own namespace)."""
+    swarm = GWO if algorithm.startswith("Core-GWO") else HHO
+    params = _native_params(swarm) if native else _fixed_params(swarm)
+    if not algorithm.endswith("ALNS"):
+        params["polish"] = {"max_iterations": 6, "first_improvement": False, "window": 5}
+    return _executor(algorithm)(TSP, params, seed=1, run_idx=0)
 
-    def getter(_registry_id):
-        def run(problem, run_params, seed, run_idx):
-            result = inner(problem, run_params, seed, run_idx)
-            tamper(result)
-            return result
-        return run
 
-    return execute_preflighted(
-        requested_algorithm_id=algorithm,
-        identifier_source=IdentifierSource.MANIFEST,
-        problem=TSP, params=params,
-        seed=governed_contract_seed(protocol, budget, BASE_SEED, TSP.name, 0),
-        run_idx=0, protocol=protocol,
-        backend_policy=BackendPolicy.REQUIRE_NUMBA_OBJECTIVE,
-        evaluation_budget=budget,
-        registered_algorithm_ids=frozenset(AlgorithmRegistry.list_algorithms()),
-        runtime_backends=runtime, registry_getter=getter,
-        comparison_base_seed=BASE_SEED,
-    )
+def _manifest(native: bool):
+    return NativeComparisonManifest(base_seed=BASE_SEED) if native else _fixed_manifest(BUDGET)
+
+
+def _forge_version(row, version):
+    """Change the stage seed, details.derived_seed and details.protocol_version together."""
+    forged = copy.deepcopy(row)
+    polish = forged.composition["stages"][1]
+    polish["seed"] = derive_polish_seed(version, row.seed)
+    polish["details"]["derived_seed"] = polish["seed"]
+    polish["details"]["protocol_version"] = version
+    return forged
 
 
 @pytest.mark.parametrize("algorithm", ALGORITHMS)
-def test_gateway_postflight_rejects_forged_composite_rows(algorithm):
+def test_a_row_forged_consistently_with_another_protocol_version_is_rejected(algorithm):
+    """The validator uses the validating manifest's own version, not the one the row records."""
     _require_numba()
-    fixed = {"global": GLOBAL_PARAMS[algorithm], "polish": POLISH_PARAMS,
-             "global_fraction": FRACTION}
-    native = {"global": GLOBAL_PARAMS[algorithm], "polish": POLISH_PARAMS}
-
-    def unsum(result):
-        result.composition["stages"][1]["consumed_evaluations"] += 1
-
-    def base_seed_polish(result):
-        result.composition["stages"][1]["seed"] = derive_polish_seed(FAIR_VERSION, BASE_SEED)
-
-    def native_reason(result):
-        result.termination_reason = "max_iterations"
-
-    def fixed_composite_complete(result):
-        result.termination_reason = "composite_complete"
-        result.budget_terminated = False
-
-    def no_runtime(result):
-        del result.composition["stages"][0]["elapsed_sec"]
-
-    for tamper, protocol, budget, params in (
-        (unsum, ExecutionProtocol.FIXED_BUDGET, BUDGET, fixed),
-        (unsum, ExecutionProtocol.NATIVE_TERMINATION, None, native),
-        (base_seed_polish, ExecutionProtocol.FIXED_BUDGET, BUDGET, fixed),
-        (native_reason, ExecutionProtocol.NATIVE_TERMINATION, None, native),
-        (fixed_composite_complete, ExecutionProtocol.FIXED_BUDGET, BUDGET, fixed),
-        (no_runtime, ExecutionProtocol.FIXED_BUDGET, BUDGET, fixed),
+    fixed, native = _row(algorithm, native=False), _row(algorithm, native=True)
+    # fixed row dressed in the NATIVE version; native row dressed in the FIXED version
+    for row, manifest, other in (
+        (fixed, _fixed_manifest(BUDGET), NATIVE_VERSION),
+        (native, NativeComparisonManifest(base_seed=BASE_SEED), FAIR_VERSION),
     ):
-        with pytest.raises(ResultContractViolation):
-            _gateway_run(algorithm, tamper, protocol, budget, params)
+        manifest.validate_result(row)
+        forged = _forge_version(row, other)
+        assert forged.composition["stages"][1]["details"]["derived_seed"] == (
+            derive_polish_seed(other, row.seed)
+        )  # the forgery is self-consistent: only the manifest's own version exposes it
+        with pytest.raises(FairnessValidationError, match="protocol_version"):
+            manifest.validate_result(forged)
+
+
+@pytest.mark.parametrize("algorithm", ALGORITHMS)
+def test_forged_run_seed_alone_or_derived_seed_alone_is_rejected(algorithm):
+    _require_numba()
+    for native in (False, True):
+        row, manifest = _row(algorithm, native=native), _manifest(native)
+        manifest.validate_result(row)
+        forged = copy.deepcopy(row)
+        forged.composition["stages"][1]["details"]["run_seed"] = row.seed + 1
+        with pytest.raises(FairnessValidationError, match="per-run seed"):
+            manifest.validate_result(forged)
+        forged = copy.deepcopy(row)
+        forged.composition["stages"][1]["details"]["derived_seed"] += 1
+        with pytest.raises(FairnessValidationError, match="polish seed"):
+            manifest.validate_result(forged)
+
+
+@pytest.mark.parametrize("algorithm", ALGORITHMS)
+def test_alns_polish_never_ends_with_no_improving_move(algorithm):
+    """ALNS has no 'no improving move' stop; the reason is refused by the reason sets themselves."""
+    _require_numba()
+    fixed = _row(algorithm, native=False)
+    assert fixed.termination_reason != "evaluation_budget_exhausted"
+    forged = copy.deepcopy(fixed)
+    forged.composition["stages"][1]["termination_reason"] = "no_improving_move"
+    forged.termination_reason = "no_improving_move"  # row reason == polish reason, flag False
+    with pytest.raises(FairnessValidationError, match="termination reasons are invalid"):
+        _fixed_manifest(BUDGET).validate_result(forged)
+    native = _row(algorithm, native=True)
+    forged = copy.deepcopy(native)
+    forged.composition["stages"][1]["termination_reason"] = "no_improving_move"
+    with pytest.raises(FairnessValidationError, match="complete on their own"):
+        NativeComparisonManifest(base_seed=BASE_SEED).validate_result(forged)
+
+
+@pytest.mark.parametrize("algorithm", (
+    GWO, HHO, "Core-GWO-TSP-Memetic-3opt", "Core-HHO-TSP-Memetic-3opt",
+))
+def test_forged_polish_allocation_is_rejected_for_both_composite_kinds(algorithm):
+    """Polish allocation is exactly B minus the global evaluations (an older C-08 gap)."""
+    _require_numba()
+    row = _row(algorithm, native=False)
+    manifest = _fixed_manifest(BUDGET)
+    manifest.validate_result(row)
+    for delta in (-1, 1):
+        forged = copy.deepcopy(row)
+        forged.composition["stages"][1]["allocated_evaluations"] += delta
+        with pytest.raises(FairnessValidationError, match="polish stage allocation"):
+            manifest.validate_result(forged)

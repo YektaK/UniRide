@@ -606,11 +606,12 @@ ALNS_REQUIRED_PARAMS = frozenset({
 })
 ALNS_OPTIONAL_PARAMS = frozenset({"sa_start_temp", "sa_cooling_rate"})
 
-# ALNS's own termination reasons -> the shared vocabulary. A fixed-budget polish
-# stage may end with {evaluation_budget_exhausted, max_iterations,
-# no_improving_move, stagnation_limit}; a native one only with {max_iterations,
-# stagnation_limit, no_improving_move}. ALNS never stops for lack of an
-# improving move, so ``no_improving_move`` is in the vocabulary but unreachable.
+# ALNS's own termination reasons -> the shared vocabulary. A fixed-budget ALNS
+# polish stage ends with one of {evaluation_budget_exhausted, max_iterations,
+# stagnation_limit}; a native one only with {max_iterations, stagnation_limit}.
+# ALNS never stops for lack of an improving move, so a fixed ALNS polish never
+# ends with ``no_improving_move`` (the 3-opt polish does) and the composite
+# validators refuse it for ALNS.
 # ``max_no_improve`` / ``max_no_improvement`` are the parameter names under which
 # the stagnation stop is configured; they map to ``stagnation_limit``.
 # Any other reason (for example a wall-clock ``time_limit``) is an error.

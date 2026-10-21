@@ -119,16 +119,6 @@ def test_category_prototype_open():
     assert reproduction_category(PrototypeClaim.open(), production_label="infeasible_solver_proven").category == "prototype_open"
 
 
-def test_both_open_has_no_category_in_the_design():
-    with pytest.raises(dc.NotComparable):
-        reproduction_category(PrototypeClaim.open(), production_label="bound_only")
-
-
-def test_the_category_vocabulary_is_the_design_vocabulary():
-    assert set(dc.REPRODUCTION_CATEGORIES) == {"equal", "production_better", "production_worse", "production_open",
-                                               "prototype_open", "co_optimal_alternative"}
-
-
 def test_a_rejected_production_cell_is_not_a_result_to_compare():
     with pytest.raises(ValueError, match="rejected"):
         reproduction_category(PrototypeClaim.value((5, 800)), production_label="rejected")

@@ -65,10 +65,6 @@ class BlockingDefect(Exception):
         self.message = message
 
 
-class NotComparable(ValueError):
-    """Neither side has a value or a proof: the design names no reproduction category for it."""
-
-
 def _int(value, name: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"{name}: must be an integer, got {value!r}")
@@ -110,8 +106,9 @@ CATEGORY_PRODUCTION_WORSE = "production_worse"
 CATEGORY_PRODUCTION_OPEN = "production_open"
 CATEGORY_PROTOTYPE_OPEN = "prototype_open"
 CATEGORY_CO_OPTIMAL = CO_OPTIMAL_ALTERNATIVE
+CATEGORY_BOTH_OPEN = "both_open"  # owner decision (E14 note 2026-10-21): neither side has a value or a proof
 REPRODUCTION_CATEGORIES = (CATEGORY_EQUAL, CATEGORY_PRODUCTION_BETTER, CATEGORY_PRODUCTION_WORSE, CATEGORY_PRODUCTION_OPEN,
-                           CATEGORY_PROTOTYPE_OPEN, CATEGORY_CO_OPTIMAL)
+                           CATEGORY_PROTOTYPE_OPEN, CATEGORY_CO_OPTIMAL, CATEGORY_BOTH_OPEN)
 NOTE_PROTOTYPE_NOT_VERIFIED = "prototype_plan_not_verified"
 
 _VALUE_LABELS = ("optimal", "optimal_stage1_by_bound", "feasible_with_gap")
@@ -146,6 +143,17 @@ class ReproductionResult:
     category: str
     prototype_claim_verified: Optional[bool] = None  # only for a prototype value: did its plan pass the checker
     note: str = ""
+
+    @property
+    def agreement(self) -> Optional[bool]:
+        """True for ``equal`` and ``co_optimal_alternative``, False for ``production_better`` / ``production_worse``, and
+        ``None`` (neither agreement nor disagreement) when a side is open: ``both_open``, ``production_open``,
+        ``prototype_open``."""
+        if self.category in (CATEGORY_EQUAL, CATEGORY_CO_OPTIMAL):
+            return True
+        if self.category in (CATEGORY_PRODUCTION_BETTER, CATEGORY_PRODUCTION_WORSE):
+            return False
+        return None
 
 
 def _proven_prefix(label: str, length: int, override: Optional[int], statuses: Optional[Sequence[str]] = None) -> int:
@@ -189,7 +197,7 @@ def reproduction_category(prototype: PrototypeClaim, *, production_label: str,
     A prototype value against a production infeasibility proof needs the checker verdict (``plan_checked`` True or False);
     ``None`` is refused (design 6.3: run the checker on every disagreement).
 
-    Raises ``BlockingDefect`` for the disagreement rule, ``NotComparable`` when both sides are open, ``ValueError`` for a
+    Raises ``BlockingDefect`` for the disagreement rule and ``ValueError`` for a
     ``rejected`` production cell (it is a defect, not a result) or an unknown label.
     """
     if production_label == "rejected":
@@ -202,7 +210,7 @@ def reproduction_category(prototype: PrototypeClaim, *, production_label: str,
 
     if production_label in _OPEN_LABELS:
         if prototype.kind == "open":
-            raise NotComparable(f"both sides are open (production {production_label})")
+            return ReproductionResult(CATEGORY_BOTH_OPEN)
         return ReproductionResult(CATEGORY_PRODUCTION_OPEN, verified, note)
 
     if production_label in _INFEASIBLE_LABELS:

@@ -7,10 +7,11 @@ and the infeasibility certificate), the verdict of the independent plan checker 
 Vocabulary: exactly the ``day_status`` labels of design 4.3 (``LABELS``). The cross-check is a separate field of the same
 table (``crosscheck_status``, design 6.1), so the label stays the design label and the proof claim is gated next to it:
 
-* ``proof_claim_allowed`` is true only when a paper table may present the cell as proven. ``optimal``,
-  ``optimal_stage1_by_bound``, ``infeasible_solver_proven`` and a tier-2 ``infeasible_certified`` need the cross-check
-  verdict ``agree`` (E14: every optimal / solver-proven-infeasible paper cell, and tier 2 rests on solver-proven wave
-  minima, design 3.2). A tier-1 certificate rests on arithmetic only and needs none. All other labels claim no proof.
+* ``proof_claim_allowed`` is true only when a paper table may present the cell as proven. ``optimal``
+  and ``infeasible_solver_proven`` need the day verdict ``agree``; ``optimal_stage1_by_bound`` needs the day verdict and
+  the wave-values verdict ``wave_values_crosscheck`` (its bound is built from wave values); a tier-2
+  ``infeasible_certified`` needs the wave-values verdict (E14 and its 2026-10-21 note, design 3.2). A tier-1 certificate
+  rests on arithmetic only and needs neither. A ``blocking`` verdict of either kind makes the cell ``rejected``. All other labels claim no proof.
 * A stage whose solver bound was clipped to the incumbent (flag ``bound_above_incumbent``) withholds the claim for every
   label (reason ``bound_above_incumbent``); such a bound is listed as unverified and never used.
 * A certificate whose tier and contributions disagree (tier 1 not all arithmetic, tier 2 with an unverified or unknown
@@ -89,6 +90,7 @@ class CellLabel:
     stage_statuses: Tuple[str, ...] = ()
     flags: Tuple[str, ...] = ()
     crosscheck_status: str = CROSSCHECK_NOT_RUN
+    wave_values_crosscheck_status: str = CROSSCHECK_NOT_RUN
     proof_claim_allowed: bool = False
     proof_claim_reason: str = ""
 
@@ -161,34 +163,57 @@ def _certificate_problem(c) -> Optional[str]:
     return None
 
 
-def _gate(label: str, crosscheck: str, certificate_tier: Optional[int], flags: Tuple[str, ...] = ()) -> Tuple[bool, str]:
-    """Whether a paper table may present this cell as proven (E14), and why. A solver bound that contradicts the incumbent
-    (flag ``bound_above_incumbent``) on any stage withholds the claim: HiGHS clips it before the cross-check sees it."""
+def _gate(label: str, crosscheck: str, certificate_tier: Optional[int], flags: Tuple[str, ...] = (),
+          wave_values_crosscheck: str = CROSSCHECK_NOT_RUN) -> Tuple[bool, str]:
+    """Whether a paper table may present this cell as proven (E14 and its 2026-10-21 note), and why.
+
+    * ``optimal`` and ``infeasible_solver_proven`` rest on a day MIP: the day verdict ``crosscheck`` must be ``agree``.
+    * ``optimal_stage1_by_bound`` rests on a day MIP incumbent AND on a bound built from wave values: both verdicts.
+    * a tier-2 ``infeasible_certified`` rests on solver-proven wave minima only (no day MIP): the wave verdict.
+    * a tier-1 certificate is arithmetic and needs neither.
+    A solver bound that contradicts the incumbent (flag ``bound_above_incumbent``) on any stage withholds the claim:
+    HiGHS clips it before the cross-check sees it."""
     if label == LABEL_REJECTED:
         return False, "rejected"
     if any(f.startswith(BOUND_ABOVE_INCUMBENT) for f in flags):
         return False, BOUND_ABOVE_INCUMBENT
     if label == LABEL_INFEASIBLE_CERTIFIED and certificate_tier == 1:
         return True, "arithmetic_certificate"
-    if label in (LABEL_OPTIMAL, LABEL_OPTIMAL_STAGE1_BY_BOUND, LABEL_INFEASIBLE_SOLVER_PROVEN, LABEL_INFEASIBLE_CERTIFIED):
+    if label in (LABEL_OPTIMAL, LABEL_INFEASIBLE_SOLVER_PROVEN):
         return crosscheck == CROSSCHECK_AGREE, f"crosscheck_{crosscheck}"
+    if label == LABEL_INFEASIBLE_CERTIFIED:  # tier 2
+        return wave_values_crosscheck == CROSSCHECK_AGREE, f"wave_values_crosscheck_{wave_values_crosscheck}"
+    if label == LABEL_OPTIMAL_STAGE1_BY_BOUND:
+        if crosscheck != CROSSCHECK_AGREE:
+            return False, f"crosscheck_{crosscheck}"
+        if wave_values_crosscheck != CROSSCHECK_AGREE:
+            return False, f"wave_values_crosscheck_{wave_values_crosscheck}"
+        return True, "crosscheck_and_wave_values_agree"
     return False, "not_a_proof_label"
 
 
 # ------------------------------------------------------------------ the label
 def label_cell(*, enumeration_complete: bool, result, bounds: Optional[DayBounds] = None,
-               crosscheck: str = CROSSCHECK_NOT_RUN, checker_ok: Optional[bool] = None) -> CellLabel:
+               crosscheck: str = CROSSCHECK_NOT_RUN, checker_ok: Optional[bool] = None,
+               wave_values_crosscheck: str = CROSSCHECK_NOT_RUN) -> CellLabel:
     """The design 4.3 label of one cell.
 
     ``result`` is the primary solver's ``DaySolveResult`` (``None`` when the solver did not run, e.g. a certified or an
     enumeration-capped cell); ``bounds`` the J2 ``DayBounds`` (``None`` when none were computed); ``crosscheck`` one of
     ``CROSSCHECK_VERDICTS`` (an input: this module does not talk to the second solver); ``checker_ok`` the verdict of the
     independent plan checker on the plan of the cell, required (``True``/``False``) whenever the solver found a plan.
-    Precedence: enumeration cap, solver rejection / checker failure / solver disagreement, certificate (a certificate with
+    ``wave_values_crosscheck`` (same vocabulary) is the verdict of the two-solver check of the wave values (``l_w``,
+    ``k_any_w``, ``k_w``) that the bounds of ``bounds`` were built from (E14 note 2026-10-21). The runner passes ``agree``
+    only when every solver-proven wave value used by the bounds was confirmed by the second solver, ``blocking`` when one
+    disagreed (the cell becomes ``rejected``), ``inconclusive`` when the second solver could not decide, ``not_run`` when
+    it was not asked; a cell whose bounds use no solver wave value passes ``not_run`` and cannot claim tier 2 or by-bound.
+    The day verdict ``crosscheck`` is about the day MIP only. Precedence: enumeration cap, solver rejection / checker failure / solver disagreement, certificate (a certificate with
     a plan is a contradiction), solver status.
     """
     if crosscheck not in CROSSCHECK_VERDICTS:
         raise ValueError(f"cross-check verdict must be one of {CROSSCHECK_VERDICTS}, got {crosscheck!r}")
+    if wave_values_crosscheck not in CROSSCHECK_VERDICTS:
+        raise ValueError(f"wave-values cross-check verdict must be one of {CROSSCHECK_VERDICTS}, got {wave_values_crosscheck!r}")
     stages = tuple(getattr(result, "stages", ()) or ()) if result is not None else ()
     stage1 = stages[0].result if stages else None
     has_plan = stage1 is not None and stage1.objective is not None
@@ -202,12 +227,13 @@ def label_cell(*, enumeration_complete: bool, result, bounds: Optional[DayBounds
 
     def make(label: str, reason: str = "", *, used: Optional[BoundCandidate] = None, tier: Optional[int] = None,
              extra_flags: Tuple[str, ...] = ()) -> CellLabel:
-        allowed, why = _gate(label, crosscheck, tier, flags)
+        allowed, why = _gate(label, crosscheck, tier, flags, wave_values_crosscheck)
         return CellLabel(label=label, reason=reason, bound_used=None if used is None else used.value,
                          bound_source=None if used is None else used.name,
                          bound_proof=None if used is None else used.proof, bounds_considered=candidates,
                          unverified_bounds=unverified, certificate_tier=tier, stage_statuses=statuses,
-                         flags=flags + extra_flags, crosscheck_status=crosscheck, proof_claim_allowed=allowed,
+                         flags=flags + extra_flags, crosscheck_status=crosscheck, wave_values_crosscheck_status=wave_values_crosscheck,
+                         proof_claim_allowed=allowed,
                          proof_claim_reason=why)
 
     if not enumeration_complete:
@@ -220,6 +246,8 @@ def label_cell(*, enumeration_complete: bool, result, bounds: Optional[DayBounds
         return make(LABEL_REJECTED, "checker_failed")
     if crosscheck == CROSSCHECK_BLOCKING:
         return make(LABEL_REJECTED, "crosscheck_disagreement")
+    if wave_values_crosscheck == CROSSCHECK_BLOCKING:
+        return make(LABEL_REJECTED, "wave_values_crosscheck_disagreement")
     if certificate is not None:
         if _certificate_problem(certificate) is not None:
             return make(LABEL_REJECTED, "certificate_invalid")

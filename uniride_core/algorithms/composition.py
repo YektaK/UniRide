@@ -38,6 +38,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import time
 from dataclasses import dataclass, field
 from fractions import Fraction
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
@@ -117,6 +118,9 @@ class StageRecord:
     termination_reason: str
     iterations: int
     details: Dict[str, Any]
+    # Wall time of this stage's own run (design native rule 4: runtimes are measured
+    # separately for both stages). The run total of a result row stays its own clock.
+    elapsed_sec: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -129,6 +133,7 @@ class StageRecord:
             "termination_reason": self.termination_reason,
             "iterations": self.iterations,
             "details": dict(self.details),
+            "elapsed_sec": self.elapsed_sec,
         }
 
 
@@ -275,32 +280,39 @@ def run_composition(
     )
 
 
-def _call_global(spec: StageSpec, shared, cap) -> GlobalStageResult:
+def _call_global(spec: StageSpec, shared, cap) -> Tuple[GlobalStageResult, float]:
+    started = time.perf_counter()
     try:
         result = spec.run(shared, cap)
     except Exception as exc:  # a failed global stage fails the composition
         raise CompositionError(f"global stage {spec.stage_id} failed: {exc}") from exc
+    elapsed = time.perf_counter() - started
     if not isinstance(result, GlobalStageResult):
         raise CompositionError(
             f"global stage {spec.stage_id} did not return a GlobalStageResult"
         )
-    return result
+    return result, elapsed
 
 
-def _call_polish(spec: StageSpec, tour: List[int], cost: float, budget) -> PolishStageResult:
+def _call_polish(
+    spec: StageSpec, tour: List[int], cost: float, budget
+) -> Tuple[PolishStageResult, float]:
+    started = time.perf_counter()
     try:
         result = spec.run(list(tour), cost, budget)
     except Exception as exc:  # never silently return an unpolished result
         raise CompositionError(f"polish stage {spec.stage_id} failed: {exc}") from exc
+    elapsed = time.perf_counter() - started
     if not isinstance(result, PolishStageResult):
         raise CompositionError(
             f"polish stage {spec.stage_id} did not return a PolishStageResult"
         )
-    return result
+    return result, elapsed
 
 
 def _global_record(
-    spec: StageSpec, result: GlobalStageResult, allocated: Optional[int], cost: float
+    spec: StageSpec, result: GlobalStageResult, allocated: Optional[int], cost: float,
+    elapsed: float,
 ) -> StageRecord:
     return StageRecord(
         name="global",
@@ -316,6 +328,7 @@ def _global_record(
             "stage_ceiling_reached": bool(result.stage_ceiling_reached),
             "cost": cost,
         },
+        elapsed_sec=elapsed,
     )
 
 
@@ -325,6 +338,7 @@ def _polish_record(
     allocated: Optional[int],
     cost: float,
     changed: bool,
+    elapsed: float,
 ) -> StageRecord:
     return StageRecord(
         name="polish",
@@ -341,6 +355,7 @@ def _polish_record(
             "polish_changed_tour": changed,
             "cost": cost,
         },
+        elapsed_sec=elapsed,
     )
 
 
@@ -349,7 +364,7 @@ def _run_fixed(matrix, global_spec, polish_spec, budget_total, fraction) -> Comp
     cap = global_stage_cap(budget_total, fraction)
 
     # Global stage: pure, capped at floor(B * fraction) on the shared counter.
-    global_result = _call_global(global_spec, shared, cap)
+    global_result, global_elapsed = _call_global(global_spec, shared, cap)
     global_tour = _validate_tour(global_result.tour, matrix, global_result.cost, "global")
     global_used = shared.used
     if global_used > cap:
@@ -365,7 +380,7 @@ def _run_fixed(matrix, global_spec, polish_spec, budget_total, fraction) -> Comp
 
     # Polish stage: the rest of the budget, a view built now that the stage starts.
     polish_view = StageCappedBudget(shared, None)
-    polish_result = _call_polish(
+    polish_result, polish_elapsed = _call_polish(
         polish_spec, global_tour, float(global_result.cost), polish_view
     )
     polish_tour = _validate_tour(polish_result.tour, matrix, polish_result.cost, "polish")
@@ -392,17 +407,19 @@ def _run_fixed(matrix, global_spec, polish_spec, budget_total, fraction) -> Comp
         evaluation_budget=budget_total,
         global_fraction=fraction,
         termination_reason=termination,
-        global_stage=_global_record(global_spec, global_result, cap, float(global_result.cost)),
+        global_stage=_global_record(
+            global_spec, global_result, cap, float(global_result.cost), global_elapsed
+        ),
         polish_stage=_polish_record(
             polish_spec, polish_result, budget_total - global_used,
-            float(polish_result.cost), changed,
+            float(polish_result.cost), changed, polish_elapsed,
         ),
         polish_changed_tour=changed,
     )
 
 
 def _run_native(matrix, global_spec, polish_spec) -> CompositionResult:
-    global_result = _call_global(global_spec, None, None)
+    global_result, global_elapsed = _call_global(global_spec, None, None)
     global_tour = _validate_tour(global_result.tour, matrix, global_result.cost, "global")
     if global_result.termination_reason not in NATIVE_COMPLETE_REASONS:
         raise CompositionError(
@@ -410,7 +427,7 @@ def _run_native(matrix, global_spec, polish_spec) -> CompositionResult:
             f"ended with {global_result.termination_reason!r}"
         )
     polish_counter = ObjectiveEvaluationBudget(None)
-    polish_result = _call_polish(
+    polish_result, polish_elapsed = _call_polish(
         polish_spec, global_tour, float(global_result.cost), polish_counter
     )
     polish_tour = _validate_tour(polish_result.tour, matrix, polish_result.cost, "polish")
@@ -434,9 +451,12 @@ def _run_native(matrix, global_spec, polish_spec) -> CompositionResult:
         evaluation_budget=None,
         global_fraction=None,
         termination_reason=COMPOSITE_COMPLETE,
-        global_stage=_global_record(global_spec, global_result, None, float(global_result.cost)),
+        global_stage=_global_record(
+            global_spec, global_result, None, float(global_result.cost), global_elapsed
+        ),
         polish_stage=_polish_record(
-            polish_spec, polish_result, None, float(polish_result.cost), changed
+            polish_spec, polish_result, None, float(polish_result.cost), changed,
+            polish_elapsed,
         ),
         polish_changed_tour=changed,
     )
@@ -448,12 +468,13 @@ _HIDDEN_POLISH_KEYS = frozenset({
     "polish_enabled", "polish_iters", "polish_interval", "final_polish_iters",
 })
 
-_SWARM_REQUIRED = {
+SWARM_REQUIRED_PARAMS = {
     "GWO": ("pack_size", "max_iterations", "initial_a", "exploration_rate",
             "max_no_improvement"),
     "HHO": ("hawks", "max_iterations", "initial_energy", "jump_probability",
             "max_no_improvement", "dive_count", "levy_scale"),
 }
+_SWARM_REQUIRED = SWARM_REQUIRED_PARAMS  # the old private name, kept as an alias
 _THREE_OPT_REQUIRED = ("max_iterations", "first_improvement", "window")
 
 
@@ -479,7 +500,7 @@ def swarm_global_stage(
     stage performs no hidden polish. ``strict`` (the default) requires every
     swarm hyperparameter to be given, as paper-scale manifests do.
     """
-    if algorithm not in _SWARM_REQUIRED:
+    if algorithm not in SWARM_REQUIRED_PARAMS:
         raise CompositionError(f"unsupported global algorithm {algorithm!r}")
     hidden = sorted(_HIDDEN_POLISH_KEYS.intersection(params))
     if hidden:
@@ -488,7 +509,7 @@ def swarm_global_stage(
             f"namespace: {', '.join(hidden)} (polish belongs to the polish stage)"
         )
     if strict:
-        _require_explicit(params, _SWARM_REQUIRED[algorithm], f"{algorithm} global stage")
+        _require_explicit(params, SWARM_REQUIRED_PARAMS[algorithm], f"{algorithm} global stage")
     kwargs = dict(params)
     stage_id = f"Core-{algorithm}-TSP-Pure"
 
@@ -576,9 +597,9 @@ def three_opt_polish_stage(
 
 # Strict ALNS parameter schema of the ``polish`` namespace. The same rules live
 # in ``academic_benchmark.fairness.validate_scientific_alns_params`` (the C3
-# schema); core cannot import that layer, so the rules are restated here and a
-# parity test in ``academic_benchmark/tests`` keeps the two in step. C-09 may
-# make ``fairness.py`` import these constants instead.
+# schema). Core cannot import ``academic_benchmark``, so the rules live HERE and
+# ``academic_benchmark.fairness`` imports the names and delegates the value checks
+# to :func:`validate_alns_polish_params` (C-09); the parity test keeps that true.
 ALNS_REQUIRED_PARAMS = frozenset({
     "max_iterations", "max_no_improvement", "remove_ratio", "min_remove",
     "segment_length", "weight_update_factor", "use_sa",
@@ -770,6 +791,7 @@ __all__ = [
     "GlobalStageResult",
     "PolishStageResult",
     "SMOKE_GLOBAL_FRACTION",
+    "SWARM_REQUIRED_PARAMS",
     "StageRecord",
     "StageSpec",
     "alns_polish_stage",

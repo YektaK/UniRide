@@ -1,0 +1,13 @@
+fleet,date,R,L,solver,stage,status,stop_reason,objective,bound,bound_ceil,bound_source,timing_dependent,non_lexicographic,wall_seconds,work_units,solve_result,mps_sha256
+large+doblo_cap3,2026-10-05,70,1,highs,1,optimal,optimal,4,4.0,4,solver,False,False,17.866392899999482,,kOptimal,8f2aadf1ace6f177975a3d2aaa00edcdd854db5003be9fda6345e67b7180c551
+large+doblo_cap3,2026-10-05,70,1,highs,2,optimal,optimal,1394,1393.99998706,1394,solver,False,False,10.63174170000093,,kOptimal,218d55772b6c375c4a90186ee2765bedd2ba60c66b6a6ffed8011e79fc89b487
+large+doblo_cap3,2026-10-05,70,1,highs,3,optimal,optimal,943,942.9999915700001,943,solver,False,False,8.517030400000294,,kOptimal,4b9c790a6e04f5cfe3b9a83b8470e67edba34730dfda80cea46fea1e84f188ed
+large+doblo_cap3,2026-10-05,70,1,gurobi,1,optimal,optimal,4,4.0,4,solver,False,False,0.8185,0.53,solved,8f2aadf1ace6f177975a3d2aaa00edcdd854db5003be9fda6345e67b7180c551
+large+doblo_cap3,2026-10-05,70,1,gurobi,2,optimal,optimal,1394,1394.0,1394,solver,False,False,0.6958,0.4,solved,218d55772b6c375c4a90186ee2765bedd2ba60c66b6a6ffed8011e79fc89b487
+large+doblo_cap3,2026-10-05,70,1,gurobi,3,optimal,optimal,943,943.0,943,solver,False,False,0.8351,0.64,solved,4b9c790a6e04f5cfe3b9a83b8470e67edba34730dfda80cea46fea1e84f188ed
+large+doblo_cap3,2026-10-05,90,1,highs,1,optimal,optimal,4,4.0,4,solver,False,False,193.71257810000134,,kOptimal,63637f9b232a03571161c84da955dbf91ed5d3a238f0f37fb6b73ce3c51d0117
+large+doblo_cap3,2026-10-05,90,1,highs,2,optimal,optimal,1360,1359.9999874,1360,solver,False,False,139.6680025000005,,kOptimal,77aaff75a5d49556035454dc23c565e2966e761bbb2ed80eccbb7a87d2448360
+large+doblo_cap3,2026-10-05,90,1,highs,3,optimal,optimal,907,906.9999919299995,907,solver,False,False,86.07441740000104,,kOptimal,4607e562ba4d0e8dd8d017ae662383c6b25c559e26dbee9ef677d5a48c483485
+large+doblo_cap3,2026-10-05,90,1,gurobi,1,optimal,optimal,4,4.0,4,solver,False,False,2.676,1.74,solved,63637f9b232a03571161c84da955dbf91ed5d3a238f0f37fb6b73ce3c51d0117
+large+doblo_cap3,2026-10-05,90,1,gurobi,2,optimal,optimal,1360,1360.0,1360,solver,False,False,1.9075,1.59,solved,77aaff75a5d49556035454dc23c565e2966e761bbb2ed80eccbb7a87d2448360
+large+doblo_cap3,2026-10-05,90,1,gurobi,3,optimal,optimal,907,907.0,907,solver,False,False,3.9636,3.68,solved,4607e562ba4d0e8dd8d017ae662383c6b25c559e26dbee9ef677d5a48c483485

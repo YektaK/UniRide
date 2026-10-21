@@ -1,0 +1,121 @@
+{
+  "aggregate": true,
+  "blocking_errors": [],
+  "claim": "Exact joint day model over all enumerated routes of a service date (solver-proven value or bound); a separate protocol, never pooled with exact_reference_v1 wave rows, union_day_v1 menu rows or heuristic rows; prototype results are reproduction targets, never tuning targets.",
+  "crosscheck_enabled": true,
+  "development_run": false,
+  "dirty_working_tree": false,
+  "enumeration": {
+    "column_cap": 2000000,
+    "columns_per_day": {
+      "large+doblo_cap3|2026-10-05|R70": 15835,
+      "large+doblo_cap3|2026-10-05|R90": 46571
+    },
+    "label_cap": 5000000,
+    "wall_clock_limit_seconds": 600
+  },
+  "git_commit": "9697b4ebbcf9ea3d48376fa604e3cbb7e08bfda3",
+  "host_os": "Windows-11",
+  "mps_sha256": {
+    "large+doblo_cap3|2026-10-05|R70|L1|stage1": "8f2aadf1ace6f177975a3d2aaa00edcdd854db5003be9fda6345e67b7180c551",
+    "large+doblo_cap3|2026-10-05|R70|L1|stage2": "218d55772b6c375c4a90186ee2765bedd2ba60c66b6a6ffed8011e79fc89b487",
+    "large+doblo_cap3|2026-10-05|R70|L1|stage3": "4b9c790a6e04f5cfe3b9a83b8470e67edba34730dfda80cea46fea1e84f188ed",
+    "large+doblo_cap3|2026-10-05|R90|L1|stage1": "63637f9b232a03571161c84da955dbf91ed5d3a238f0f37fb6b73ce3c51d0117",
+    "large+doblo_cap3|2026-10-05|R90|L1|stage2": "77aaff75a5d49556035454dc23c565e2966e761bbb2ed80eccbb7a87d2448360",
+    "large+doblo_cap3|2026-10-05|R90|L1|stage3": "4607e562ba4d0e8dd8d017ae662383c6b25c559e26dbee9ef677d5a48c483485"
+  },
+  "options": {
+    "dates": [
+      "2026-10-05"
+    ],
+    "fleets": [
+      "large+doblo_cap3"
+    ],
+    "limits": [
+      1
+    ],
+    "rides": [
+      70,
+      90
+    ]
+  },
+  "output_sha256": {
+    "day_joint.csv": "b26bf64cb5012ffb32cc27c56ce2ac343014ed778afa838f91ae540b5fcba8b1",
+    "day_joint_plans.json": "d49559cf0eb2f3d18cfc6dcc970e193596c1138dd0676c341ee00dc48a1ebd46",
+    "day_joint_stages.csv": "6a8ef09005a075b3075e45ba25e3255a66b044d072db473a5a52f69252f60299",
+    "day_joint_week.csv": "8e0b236669aa8ec04812e9e2cc2d239eecd8265bf88b4ab6db1275f5b6ebac4e",
+    "lb0.csv": "a1f4b0459ba3f742a23fc6c3f8cc36f6ba3b30b9ee0695f703c4a1468720a064"
+  },
+  "protocol": "exact_day_joint_v1",
+  "python_provenance": {
+    "academic_benchmark": "academic_benchmark/__init__.py",
+    "optimizer_api": "optimizer_api/__init__.py",
+    "uniride_core": "uniride_core/__init__.py"
+  },
+  "python_version": "3.14.6",
+  "run_history": {
+    "cache": "none",
+    "cells": [
+      {
+        "cell": "large+doblo_cap3|2026-10-05|R70|L1",
+        "day_status": "optimal",
+        "wall_seconds": 138.21
+      },
+      {
+        "cell": "large+doblo_cap3|2026-10-05|R90|L1",
+        "day_status": "optimal",
+        "wall_seconds": 705.9
+      }
+    ],
+    "cells_planned": 2,
+    "cells_solved": 2,
+    "invocations": [
+      {
+        "jobs": 1,
+        "serial": true,
+        "wall_seconds": 845.8
+      }
+    ],
+    "jobs": 1
+  },
+  "run_label": "",
+  "schema_version": 1,
+  "sensitivity_run": false,
+  "solvers": {
+    "gurobi": {
+      "name": "gurobi",
+      "options": "mip:bestbound=1 tech:threads=1 tech:seed=0 mip:gap=0 mip:gapabs=0.99 lim:time=600 outlev=1",
+      "seed": 0,
+      "threads": 1,
+      "time_limit_seconds": 600.0,
+      "version": "Gurobi 13.0.3",
+      "work_limit": null
+    },
+    "highs": {
+      "name": "highs",
+      "options": "output_flag=false threads=1 random_seed=0 mip_rel_gap=0 mip_abs_gap=0.99 time_limit=600",
+      "seed": 0,
+      "threads": 1,
+      "time_limit_seconds": 600.0,
+      "version": "1.15.1",
+      "work_limit": null
+    }
+  },
+  "source_manifests": {
+    "large+doblo_cap3": {
+      "fixed_type": "large",
+      "git_commit": "f29aa3d884882ada678e11ba3d5761b1ea65665a",
+      "manifest_sha256": "b7dcd7da657a4cb660f1f4bba54b7c9b14285a127fce5e18346c692b158c1e5b",
+      "minimised_type": "minivan",
+      "path": "docs/paper/results/week-2026-10-05-fleet-rerun-doblo-cap3"
+    }
+  },
+  "tools": {
+    "cli_command": "node --conditions=react-server --import tsx scripts/verify-typed-selection.ts",
+    "node": "v25.5.0",
+    "tsx": null
+  },
+  "total_wall_seconds": 845.8,
+  "wave_values": "sp",
+  "work_package": "WP-E11"
+}

@@ -725,12 +725,9 @@ def _make_numba_metah_executor(
     path used by _make_core_tsp_executor. This routes Core-GWO-TSP and
     Core-HHO-TSP to the fast numba_accel pipeline.
 
-    ``routing_engine_name`` overrides the engine used for CVRP/CVRPTW routing
-    problems (defaults to ``algorithm_name``). Set it to a canonical matrix
-    engine name (e.g. "Core-GWO-TSP") when the algorithm alias itself is not
-    directly resolvable by ``create_matrix_engine``.
+    ``routing_engine_name`` is kept for signature compatibility and is unused: the executors are
+    registered behind the catalog routing refusal and never see CVRP/CVRPTW problems.
     """
-    _eng_name = routing_engine_name or algorithm_name
     # Legacy param aliases used by the old tsp_meta_engines executors → new
     # GWOOptimizer / HHOOptimizer constructor names.
     _ALIASES = {
@@ -761,12 +758,9 @@ def _make_numba_metah_executor(
                 raise ValueError("academic TSP comparison mode does not accept routing problems")
             seed = protocol_manifest.paired_seed(problem.name, run_idx)
 
-        if _is_routing_problem(problem):
-            return _run_core_routing_executor(
-                problem, params, seed, run_idx, algorithm_name,
-                engine_name=_eng_name,
-            )
-
+        # Routing problems never get here: every catalog executor is registered behind
+        # _register_catalog_executor, which refuses them (the CVRP-*/CVRPTW-* aliases keep
+        # the legacy matrix engines).
         matrix, matrix_kind = _problem_matrix(problem)
 
         cfg = dict(default_params)
@@ -953,12 +947,6 @@ def _make_canonical_ga_executor(algorithm_name="Core-GA-TSP", memetic=False):
                 key: value for key, value in params.items()
                 if key not in {"fair_comparison", "native_comparison"}
             })
-        elif _is_routing_problem(problem):
-            # The memetic ID has no engine of its own: it routes through the GA engine.
-            return _run_core_routing_executor(
-                problem, params, seed, run_idx, algorithm_name,
-                engine_name="Matrix-GA-TSP-legacy",
-            )
         else:
             for alias in ("pop_size", "elite_size"):
                 if alias in params and aliases[alias] in params:
@@ -1135,11 +1123,6 @@ def _make_canonical_pso_executor(algorithm_name="Core-PSO-TSP"):
                 key: value for key, value in params.items()
                 if key not in {"fair_comparison", "native_comparison"}
             })
-        elif _is_routing_problem(problem):
-            return _run_core_routing_executor(
-                problem, params, seed, run_idx, algorithm_name,
-                engine_name="Matrix-PSO-TSP-legacy",
-            )
         else:
             cfg = dict(defaults)
             for key, value in params.items():

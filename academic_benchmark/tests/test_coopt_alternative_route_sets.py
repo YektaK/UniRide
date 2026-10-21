@@ -98,9 +98,57 @@ def test_one_route_more_is_a_mismatch_even_at_equal_minutes():
     assert compare_objectives((3, 300), (4, 300)) == MISMATCH
 
 
-def test_route_identity_is_not_compared():
-    # different groupings, same (K, D): never a mismatch
+def test_equal_objective_tuples_are_a_co_optimal_alternative():
+    # a pure tuple-level check (no routes are involved); the route-level pairs are in the parametrised test above
     assert compare_objectives((2, 142), (2, 142)) == CO_OPTIMAL_ALTERNATIVE
+    assert compare_objectives((2, 142, 60), (2, 142, 60)) == CO_OPTIMAL_ALTERNATIVE  # a typed day tuple
+
+
+@pytest.mark.parametrize("a, b", [((2, 142, 60), (2, 142)), ((2, 142), (2, 142, 60)), ((2,), (2, 142)), ((2, 142, 60), (2, 142, 61, 0))])
+def test_the_comparison_refuses_tuples_of_different_length(a, b):
+    # a wave tuple (K, D) and a typed-day tuple (S, total, car minutes) are never compared with each other
+    with pytest.raises(ValueError, match="length"):
+        compare_objectives(a, b)
+
+
+@pytest.mark.parametrize("bad", [(-1, 5), (5, -1), (0, -142)])
+def test_the_comparison_refuses_negative_objective_values(bad):
+    with pytest.raises(ValueError, match="non-negative"):
+        compare_objectives(bad, (5, 5))
+    with pytest.raises(ValueError, match="non-negative"):
+        compare_objectives((5, 5), bad)
+
+
+@pytest.mark.parametrize("bad", [(1.5, 2), (2, 142.0), ("2", 142), (None, 1), (2, float("nan"))])
+def test_the_comparison_refuses_non_integer_objective_values(bad):
+    with pytest.raises(ValueError, match="integers"):
+        compare_objectives(bad, (2, 142))
+    with pytest.raises(ValueError, match="integers"):
+        compare_objectives((2, 142), bad)
+
+
+def test_the_comparison_accepts_zero_values():
+    assert compare_objectives((0, 0), (0, 0)) == CO_OPTIMAL_ALTERNATIVE
+
+
+def test_the_fixture_arcs_are_the_archived_matrix_slice_with_the_recorded_sha256():
+    """Each row's arcs are copied unchanged from the archived time matrix named in ``arc_source``: the file hash, the
+    matrix hash declared inside the file and every copied arc must match the committed archive."""
+    seen = {}
+    for row in ROWS:
+        src = row["arc_source"]
+        path = REPO / src["file"]
+        if src["file"] not in seen:
+            raw = path.read_bytes()
+            assert hashlib.sha256(raw).hexdigest() == src["file_sha256"], src["file"]
+            doc = json.loads(raw)
+            assert doc["sha256"] == src["matrix_sha256"], src["file"]
+            seen[src["file"]] = {(a["origin_code"], a["destination_code"]): a["duration_minutes"] for a in doc["arcs"]}
+        archived = seen[src["file"]]
+        assert row["arcs"], row["wave_id"]
+        for origin, dest, minutes in row["arcs"]:
+            assert archived[(origin, dest)] == minutes, (row["wave_id"], origin, dest)
+        assert len({(o, d) for o, d, _ in row["arcs"]}) == len(row["arcs"])  # no duplicated arc
 
 
 @pytest.mark.parametrize("bad", [((1, 2), (1, 2, 3)), ((1, True), (1, 1)), ((1.0, 2), (1, 2)), ((), ())])

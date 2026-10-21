@@ -4,6 +4,7 @@ Never imported by optimizer_api or src and never registered in the production
 registry. This package must not import amplpy at import time.
 """
 from .day_bounds import DayBounds, InfeasibilityCertificate, compute_day_bounds
+from .day_labels import CellLabel, label_cell
 from .day_instance import (
     NOT_RUN_ENUMERATION_CAP,
     DayColumn,
@@ -33,4 +34,5 @@ __all__ = [
     "HighsSettings", "DaySolveResult", "highs_probe", "run_day_stages",
     "DayBounds", "InfeasibilityCertificate", "compute_day_bounds",
     "CrossCheck", "GurobiSettings", "crosscheck_day_results", "gurobi_probe", "run_day_stages_gurobi",
+    "CellLabel", "label_cell",
 ]

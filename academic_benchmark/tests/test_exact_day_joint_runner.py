@@ -617,7 +617,14 @@ def test_arithmetic_floor_appears_only_for_the_trivial_floors(tmp_path, monkeypa
     assert rc == 0
     assert all(r.verdict == "not_run" and r.used.proof == "arithmetic_floor" and r.used.value == (0 if r.kind == "l" else 1)
                for r in records)
-    assert any(r.kind == "l" for r in records) and any(r.kind == "k_any" for r in records)
+    assert records and all(r.kind == "k_any" for r in records)  # trivial mode asks for no l_w at all
+    from types import SimpleNamespace
+
+    cfg = rj.Config(wave_values="trivial")
+    for minimize_type, value in ((None, 1), ("large", 0)):  # the floors: 1 route for k_any, 0 large routes for l
+        rec = rj._wave_record(make_deps(), cfg, SimpleNamespace(wave_id="w"), None, minimize_type=minimize_type, large_id="large",
+                              peak=False, errors=[], tag="t")
+        assert (rec.used.value, rec.used.proof, rec.verdict) == (value, "arithmetic_floor", "not_run")
 
 
 def test_blocked_k_any_values_are_unverified_and_used_as_such(tmp_path, monkeypatch):

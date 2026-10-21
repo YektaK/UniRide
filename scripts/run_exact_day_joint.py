@@ -110,7 +110,8 @@ CSV_FIELDS = (
 STAGE_FIELDS = ("fleet", "date", "R", "L", "solver", "stage", "status", "stop_reason", "objective", "bound", "bound_ceil",
                 "bound_source", "timing_dependent", "non_lexicographic", "wall_seconds", "work_units", "solve_result", "mps_sha256")
 WEEK_FIELDS = ("fleet", "R", "L", "dates", "weekly_fleet_max", "vehicle_days_sum", "cells_not_proven", "cells_without_value")
-LB_FIELDS = ("fleet", "date", "R", "L", "bound", "value", "point", "contributions", "wave_value_source")
+LB_FIELDS = ("fleet", "date", "R", "L", "bound", "value", "point", "contributions", "wave_value_source", "used_value",
+             "used_proof")  # wave_* rows: used_value/used_proof = what the bounds really received (a blocked l_w becomes 0)
 
 
 class BackendUnavailable(RuntimeError):
@@ -388,6 +389,7 @@ class WaveRecord:
     used: object  # WaveValue passed to the bounds
     verdict: str  # agree / blocking / inconclusive / not_run
     detail: str  # both solvers' values, e.g. "gurobi=3[optimal];highs=3[optimal]"
+    in_bounds: object = None  # the WaveValue the bounds received when it differs from ``used`` (a blocked l_w: floor 0)
 
 
 def _solver_value(deps, wave, day_wave, minimize_type, large_id, solver, peak):
@@ -459,8 +461,12 @@ def day_bounds(instance, fleet: FleetInput, limit, deps, cfg, errors, tag) -> tu
             lrec = _wave_record(deps, cfg, dw.wave, dw, minimize_type=fleet.fixed_id, large_id=fleet.fixed_id, peak=peak,
                                 errors=errors, tag=tag)
             records.append(lrec)
-            l[dw.wave_id] = lrec.used if lrec.used.proof != bounds_mod.PROOF_UNVERIFIED else bounds_mod.WaveValue(
-                0, bounds_mod.PROOF_ARITHMETIC, bounds_mod.OBJ_L)
+            if lrec.used.proof == bounds_mod.PROOF_UNVERIFIED:
+                floor0 = bounds_mod.WaveValue(0, bounds_mod.PROOF_ARITHMETIC, bounds_mod.OBJ_L)
+                records[-1] = dataclasses.replace(lrec, in_bounds=floor0)
+                l[dw.wave_id] = floor0
+            else:
+                l[dw.wave_id] = lrec.used
     if typed:
         return bounds_mod.compute_day_bounds(instance, l=l or None, k_any=k_any, large_limit=limit, large_type_index=0), records
     return bounds_mod.compute_day_bounds(instance, k=k_any), records
@@ -615,7 +621,8 @@ def solve_cell(fleet: FleetInput, date: str, ride: int, limit, cfg: Config, deps
     for r in records:  # both solvers' values of every wave, whether or not a bound contributes
         out["lb_rows"].append(dict(base, bound=f"wave_{r.kind}", value=r.used.value, point="",
                                    contributions=f"{r.wave_id}:{r.used.value}:{r.used.proof}",
-                                   wave_value_source=f"{r.detail};verdict={r.verdict}"))
+                                   wave_value_source=f"{r.detail};verdict={r.verdict}",
+                                   used_value=(r.in_bounds or r.used).value, used_proof=(r.in_bounds or r.used).proof))
     for name in ("lb0", "lb0w", "lb_l", "lb_s"):
         b = getattr(bnds, name)
         if b is not None:

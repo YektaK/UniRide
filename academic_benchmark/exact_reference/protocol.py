@@ -16,6 +16,7 @@ docs/designs/EXACT_SOLVER_AMPL_DESIGN.md section 4; WP-E2).
 """
 from __future__ import annotations
 
+import math
 import re
 from typing import Iterable, List, Mapping
 
@@ -538,8 +539,9 @@ def _day_joint_solver_errors(name: str, solver, sensitivity: bool = False) -> Li
         errors.append(f"solvers.{name}.threads must be {THREADS} (E14 Q3)")
     limit = solver["time_limit_seconds"]
     if sensitivity:  # a labelled sensitivity run (never pooled with the 600 s protocol run) may use another positive limit
-        if isinstance(limit, bool) or not isinstance(limit, (int, float)) or not limit > 0:
-            errors.append(f"solvers.{name}.time_limit_seconds must be a positive number")
+        if isinstance(limit, bool) or not isinstance(limit, (int, float)) or not limit > 0 \
+                or not math.isfinite(limit):
+            errors.append(f"solvers.{name}.time_limit_seconds must be a finite positive number")
     elif limit != DAY_JOINT_TIME_LIMIT_SECONDS:
         errors.append(f"solvers.{name}.time_limit_seconds must be {DAY_JOINT_TIME_LIMIT_SECONDS} unless sensitivity_run is true "
                       "with a non-empty run_label (E14 Q3)")

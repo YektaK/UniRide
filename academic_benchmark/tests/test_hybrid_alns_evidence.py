@@ -541,8 +541,9 @@ def test_capability_labels_and_claims_name_the_final_polish_once_composition():
 def test_every_composite_row_carries_a_non_negative_wall_time_per_stage(algorithm):
     _require_numba()
     alns = algorithm.endswith("ALNS")
+    swarm = GWO if algorithm.startswith("Core-GWO") else HHO  # same global stage for both kinds
     for native in (False, True):
-        params = _native_params(algorithm) if native else _fixed_params(algorithm)
+        params = _native_params(swarm) if native else _fixed_params(swarm)
         if not alns:
             params["polish"] = {"max_iterations": 6, "first_improvement": False, "window": 5}
         row = _executor(algorithm)(TSP, params, seed=1, run_idx=0)

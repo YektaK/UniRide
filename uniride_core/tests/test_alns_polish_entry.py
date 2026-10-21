@@ -297,7 +297,14 @@ def test_same_inputs_replay_identically_and_different_run_seed_walks_differently
             global_fraction=0.5,
         ).to_dict()
 
-    assert run(7) == run(7)
+    def untimed(record):  # wall times differ between two identical runs
+        record = dict(record)
+        record["stages"] = [
+            {k: v for k, v in stage.items() if k != "elapsed_sec"} for stage in record["stages"]
+        ]
+        return record
+
+    assert untimed(run(7)) == untimed(run(7))
     assert run(7)["stages"][1]["seed"] != run(8)["stages"][1]["seed"]
 
 

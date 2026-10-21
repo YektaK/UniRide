@@ -46,6 +46,7 @@ class CompositionKind(str, Enum):
     MEMETIC_2OPT = "memetic_2opt"
     LOCAL_SEARCH = "local_search"
     POPULATION_BASED = "population_based"
+    GLOBAL_THEN_FINAL_3OPT = "global_then_final_3opt"
 
 
 @dataclass(frozen=True)

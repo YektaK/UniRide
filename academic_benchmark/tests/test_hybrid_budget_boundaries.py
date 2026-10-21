@@ -19,7 +19,7 @@ from academic_benchmark.fairness import (
     FairnessValidationError,
 )
 from academic_benchmark.native_protocol import NativeComparisonManifest
-from uniride_core.algorithms.composition import global_stage_cap
+from uniride_core.algorithms.composition import CompositionError, global_stage_cap
 
 BASE_SEED = 417
 KIND = "global_then_final_3opt"
@@ -122,42 +122,61 @@ def _fixed_manifest(budget: int) -> FairComparisonManifest:
     )
 
 
+def _completes_naturally(algorithm: str, cap: int, natural: int) -> bool:
+    """Run with B = 2 * cap, f = 0.5 (so the global cap is exactly ``cap``)."""
+    try:
+        result = _run_fixed(algorithm, 2 * cap, 0.5)
+    except CompositionError:
+        return False  # the cap does not even fit the atomic initialization
+    return _stages(result)[0]["consumed_evaluations"] == natural
+
+
 @pytest.mark.parametrize("algorithm", ALGORITHMS)
 def test_global_cap_boundary_triplet_through_the_real_executor(algorithm):
-    """Cap one below / exactly at / one above the global stage's natural spend G."""
+    """Cap one below / exactly at / one above the smallest cap the global stage completes in.
+
+    A swarm phase is atomic and starts only if its upper bound fits the remaining ceiling
+    (``atomic_upper_bound_v1``), so the smallest completing cap can exceed the stage's
+    natural spend G; it is found by scanning, then the triplet is run around it.
+    """
     _require_numba()
     unlimited = _run_fixed(algorithm, 100_000, 0.5)
-    global_natural = _stages(unlimited)[0]["consumed_evaluations"]
+    natural = _stages(unlimited)[0]["consumed_evaluations"]
     assert _stages(unlimited)[0]["termination_reason"] == "max_iterations"
-    assert global_natural > 4  # more than one atomic phase, so one-below really bites
+    assert natural > 4  # more than one atomic phase, so one-below really bites
+    boundary = next(
+        cap for cap in range(natural, 4 * natural) if _completes_naturally(algorithm, cap, natural)
+    )
+    assert not _completes_naturally(algorithm, boundary - 1, natural)
 
-    below = _run_fixed(algorithm, 2 * global_natural - 2, 0.5)  # cap = G - 1
-    at = _run_fixed(algorithm, 2 * global_natural, 0.5)  # cap = G
-    above = _run_fixed(algorithm, 2 * global_natural + 2, 0.5)  # cap = G + 1
+    below_budget, below = 2 * (boundary - 1), None
+    try:
+        below = _run_fixed(algorithm, below_budget, 0.5)
+    except CompositionError:
+        pass  # below the atomic initialization upper bound: the run is refused outright
+    at_budget, at = 2 * boundary, _run_fixed(algorithm, 2 * boundary, 0.5)
+    above_budget, above = 2 * (boundary + 1), _run_fixed(algorithm, 2 * (boundary + 1), 0.5)
 
-    g_below, p_below = _stages(below)
-    g_at, p_at = _stages(at)
-    g_above, p_above = _stages(above)
-
-    assert g_below["allocated_evaluations"] == global_natural - 1
-    assert g_at["allocated_evaluations"] == global_natural
-    assert g_above["allocated_evaluations"] == global_natural + 1
-    # one below: the last atomic phase is refused; the stage's own ceiling stop stays
-    # in the global record
-    assert g_below["consumed_evaluations"] < global_natural
-    assert g_below["consumed_evaluations"] <= g_below["allocated_evaluations"]
-    assert g_below["termination_reason"] == "evaluation_budget_exhausted"
-    assert g_below["details"]["stage_ceiling_reached"] is True
-    # exactly at / one above: the stage completes on its own
-    for g in (g_at, g_above):
-        assert g["consumed_evaluations"] == global_natural
+    for result, budget, cap in (
+        (at, at_budget, boundary), (above, above_budget, boundary + 1),
+    ):
+        g, p = _stages(result)
+        assert g["allocated_evaluations"] == cap
+        assert g["consumed_evaluations"] == natural
         assert g["termination_reason"] == "max_iterations"
         assert g["details"]["stage_ceiling_reached"] is False
-    for result, budget, g, p in (
-        (below, 2 * global_natural - 2, g_below, p_below),
-        (at, 2 * global_natural, g_at, p_at),
-        (above, 2 * global_natural + 2, g_above, p_above),
-    ):
+    if below is not None:
+        g, _p = _stages(below)
+        assert g["allocated_evaluations"] == boundary - 1
+        assert g["consumed_evaluations"] < natural  # the last atomic phase is refused
+        assert g["consumed_evaluations"] <= g["allocated_evaluations"]
+        # the stage's own ceiling stop stays in the global record
+        assert g["termination_reason"] == "evaluation_budget_exhausted"
+        assert g["details"]["stage_ceiling_reached"] is True
+    for result, budget in ((below, below_budget), (at, at_budget), (above, above_budget)):
+        if result is None:
+            continue
+        g, p = _stages(result)
         assert result.evaluations == result.objective_evaluations
         assert result.evaluations == g["consumed_evaluations"] + p["consumed_evaluations"]
         assert result.evaluations <= budget
@@ -181,8 +200,8 @@ def test_polish_cut_by_the_total_budget_reports_exhaustion_and_fills_the_budget(
     for budget in range(2, natural + 2):
         try:
             result = _run_fixed(algorithm, budget, 0.5)
-        except ValueError:
-            continue  # cap below one unit: the engine refuses to start
+        except CompositionError:
+            continue  # cap below the atomic initialization: the run is refused
         seen.setdefault(result.termination_reason, result)
         assert result.evaluations <= budget
         assert result.budget_terminated is (

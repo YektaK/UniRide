@@ -166,11 +166,11 @@ def test_study_requires_exact_parameter_keys_for_algorithm_ids():
         "GWO",
         "SOTA-ALNS-TSP",
         "unknown",
-        "Core-GWO-TSP-Memetic-ALNS",
-        "Core-HHO-TSP-Memetic-ALNS",
+        "Core-GA-TSP",  # CANDIDATE: the ALNS hybrids are VERIFIED since C-09
+        "Core-PSO-TSP",
     ],
 )
-def test_study_rejects_alias_unknown_and_planned_primary_ids(algorithm_id: str):
+def test_study_rejects_alias_unknown_and_candidate_primary_ids(algorithm_id: str):
     payload = _study_payload()
     payload["algorithm_ids"] = [algorithm_id]
     payload["algorithm_parameters"] = {algorithm_id: {}}
@@ -184,11 +184,11 @@ def test_study_rejects_alias_unknown_and_planned_primary_ids(algorithm_id: str):
         "Numba-GWO",
         "SOTA-ALNS-TSP",
         "unknown",
-        "Core-GWO-TSP-Memetic-ALNS",
-        "Core-HHO-TSP-Memetic-ALNS",
+        "Core-GA-TSP",  # CANDIDATE: the ALNS hybrids are VERIFIED since C-09
+        "Core-PSO-TSP",
     ],
 )
-def test_study_rejects_alias_unknown_and_planned_secondary_ids(algorithm_id: str):
+def test_study_rejects_alias_unknown_and_candidate_secondary_ids(algorithm_id: str):
     payload = _study_payload()
     payload["secondary_protocol"]["algorithm_ids"] = [algorithm_id]
     with pytest.raises(ValidationError):
@@ -359,3 +359,25 @@ def test_schema_snapshots_are_package_resources():
     root = files("academic_benchmark.schemas")
     for name in ("study-v1.schema.json", "dataset-v1.schema.json", "run-v1.schema.json"):
         assert json.loads(root.joinpath(name).read_text(encoding="utf-8"))["$id"]
+
+
+def test_study_rejects_a_planned_capability_and_accepts_it_once_verified(monkeypatch):
+    """No catalog ID is PLANNED after C-09, so the PLANNED branch is pinned with a synthetic one."""
+    from academic_benchmark.contracts import study as study_module
+    from uniride_core.algorithms.capabilities import AlgorithmCapability, LifecycleStatus
+
+    algorithm_id = "Core-TwoOpt-TSP"
+    payload = _study_payload()
+    payload["algorithm_ids"] = [algorithm_id]
+    payload["algorithm_parameters"] = {algorithm_id: {}}
+    StudyManifestV1.model_validate(payload)  # VERIFIED in the real catalog: accepted
+
+    def planned(canonical_id):
+        return AlgorithmCapability(
+            canonical_id, "TwoOpt", "synthetic planned entry", LifecycleStatus.PLANNED,
+            planning_note="test fixture, not an algorithm",
+        )
+
+    monkeypatch.setattr(study_module, "get_algorithm_capability", planned)
+    with pytest.raises(ValidationError):
+        StudyManifestV1.model_validate(payload)

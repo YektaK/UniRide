@@ -517,7 +517,7 @@ def test_cli_config_governed_spec_requires_explicit_execution_request() -> None:
     ("algorithm_id", "error_type"),
     [
         ("Numba-GA", CandidateAlgorithmError),
-        ("Core-GWO-TSP-Memetic-ALNS", PlannedAlgorithmError),
+        ("Core-PSO-TSP", CandidateAlgorithmError),  # no PLANNED catalog ID remains after C-09
     ],
 )
 def test_smart_selection_rejects_lifecycle_before_runtime_or_registry(monkeypatch, algorithm_id, error_type) -> None:

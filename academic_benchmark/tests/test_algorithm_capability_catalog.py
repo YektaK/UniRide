@@ -218,6 +218,8 @@ def test_default_catalog_contains_only_evidence_gated_lifecycles():
         "ALNS-TSP",
         "Core-GWO-TSP-Memetic-3opt",
         "Core-HHO-TSP-Memetic-3opt",
+        "Core-GWO-TSP-Memetic-ALNS",
+        "Core-HHO-TSP-Memetic-ALNS",
     }
     assert all(
         bool(capability.claims) is (capability.canonical_id in verified)
@@ -316,8 +318,10 @@ def test_alns_publishes_exactly_four_pure_python_evidence_claims() -> None:
     ):
         hybrid = get_algorithm_capability(hybrid_id)
         assert hybrid is not None
-        assert hybrid.lifecycle is LifecycleStatus.PLANNED
-        assert hybrid.claims == ()
+        assert hybrid.lifecycle is LifecycleStatus.VERIFIED  # C-09; evidence in test_hybrid_alns_evidence.py
+        assert {claim.composition for claim in hybrid.claims} == {
+            CompositionKind.GLOBAL_THEN_FINAL_ALNS
+        }
         assert hybrid.production_ready is False
 
 
@@ -343,6 +347,8 @@ def test_verified_capabilities_have_exact_canonical_academic_executors():
         "ALNS-TSP",
         "Core-GWO-TSP-Memetic-3opt",
         "Core-HHO-TSP-Memetic-3opt",
+        "Core-GWO-TSP-Memetic-ALNS",
+        "Core-HHO-TSP-Memetic-ALNS",
     }
     assert verified_ids <= registry_ids
     for canonical_id in verified_ids:
@@ -370,8 +376,8 @@ def test_catalog_lifecycle_truth_matches_academic_executor_availability():
         "ALNS-TSP": LifecycleStatus.VERIFIED,
         "Core-GWO-TSP-Memetic-3opt": LifecycleStatus.VERIFIED,
         "Core-HHO-TSP-Memetic-3opt": LifecycleStatus.VERIFIED,
-        "Core-GWO-TSP-Memetic-ALNS": LifecycleStatus.PLANNED,
-        "Core-HHO-TSP-Memetic-ALNS": LifecycleStatus.PLANNED,
+        "Core-GWO-TSP-Memetic-ALNS": LifecycleStatus.VERIFIED,
+        "Core-HHO-TSP-Memetic-ALNS": LifecycleStatus.VERIFIED,
     }
 
     candidate_ids = {

@@ -37,7 +37,7 @@ def _problem(kind: str) -> ProblemInstance:
     )
 
 
-def _params(algorithm_id: str) -> dict:
+def _params(algorithm_id: str, **overrides) -> dict:
     params = {
         "max_iterations": 3,
         "max_no_improvement": 99,
@@ -49,13 +49,15 @@ def _params(algorithm_id: str) -> dict:
         params["pack_size"] = 5
     else:
         params.update(hawks=5, dive_count=0, jump_probability=0.0)
+    params.update(overrides)
     return params
 
 
+@pytest.mark.parametrize("periodic", [False, True])
 @pytest.mark.parametrize("kind", ["tsp", "atsp"])
 @pytest.mark.parametrize("algorithm_id", MEMETIC_IDS)
 def test_native_memetic_objective_evaluations_equal_independent_count(
-    algorithm_id, kind, monkeypatch
+    algorithm_id, kind, periodic, monkeypatch
 ):
     """Independent count: every complete-tour pricing the run performed.
 
@@ -79,7 +81,9 @@ def test_native_memetic_objective_evaluations_equal_independent_count(
     monkeypatch.setattr(_ob, "closed_tour_cost", cost_spy)
 
     result = AlgorithmRegistry.get_executor(algorithm_id)(
-        _problem(kind), _params(algorithm_id), seed=1, run_idx=0
+        _problem(kind),
+        _params(algorithm_id, **({"polish_interval": 1} if periodic else {})),
+        seed=1, run_idx=0,
     )
     assert seen["polish"] > 0, "native polish priced no tour through the counted path"
     assert result.objective_evaluations == result.evaluations == seen["search"] + seen["polish"]
@@ -91,6 +95,9 @@ def test_native_memetic_objective_evaluations_equal_independent_count(
     assert evaluations["initial"] > 0 and evaluations["final"] > 0
     assert policy["initial"] is True and policy["final"] is True
     assert policy["executed"]["initial"] >= 1 and policy["executed"]["final"] == 1
+    # The default interval (25) never fires in 3 iterations; interval 1 must.
+    assert (evaluations["periodic"] > 0) is periodic
+    assert policy["periodic"] is periodic
     # Candidate evaluations only: the starting-tour pricing of each initial polish is
     # counted in objective_evaluations but is not polish work.
     assert sum(evaluations.values()) + policy["executed"]["initial"] == seen["polish"]

@@ -200,6 +200,16 @@ class NativeComparisonManifest:
                     errors.extend(
                         FairComparisonManifest._memetic_polish_count_errors(polish_policy, result)
                     )
+                    expected_init = (
+                        "paired_seed_random_population_all_nodes_with_initial_2opt"
+                        if polish_policy["initial"] is True
+                        else "paired_seed_random_population_all_nodes"
+                    )
+                    if getattr(result, "initialization_policy", None) != expected_init:
+                        errors.append(
+                            "initialization_policy must match polish_policy initial: "
+                            f"expected {expected_init}"
+                        )
                 elif composite_row:
                     errors.extend(validate_composite_policy(polish_policy, result))
                 else:
